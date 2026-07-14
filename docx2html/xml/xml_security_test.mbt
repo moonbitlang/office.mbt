@@ -459,6 +459,46 @@ test "limited XML writer bounds inverse namespace indexing before sizing" {
 }
 
 ///|
+test "limited XML writer charges empty namespace bindings and prefix sorting" {
+  let empty_namespaces : Map[String, String] = Map([])
+  for index in 0..<1_024 {
+    empty_namespaces["n\{index}"] = ""
+  }
+  try
+    @xml.write_xml_fragment_limited(
+      @xml.xml_element("root"),
+      max_output_bytes=0,
+      namespaces=empty_namespaces,
+    )
+  catch {
+    InvalidXml(message~) =>
+      inspect(message, content="XML serialization name work limit exceeded")
+    _ => fail("expected empty namespace binding work to be bounded")
+  } noraise {
+    _ => fail("expected empty namespace bindings to fail before sizing")
+  }
+
+  let common_prefix_namespaces : Map[String, String] = Map([])
+  let common_prefix = "p".repeat(256)
+  for index in 0..<1_024 {
+    common_prefix_namespaces[common_prefix + "\{index}"] = "u\{index}"
+  }
+  try
+    @xml.write_xml_fragment_limited(
+      @xml.xml_element("root"),
+      max_output_bytes=300 * 1_024,
+      namespaces=common_prefix_namespaces,
+    )
+  catch {
+    InvalidXml(message~) =>
+      inspect(message, content="XML serialization name work limit exceeded")
+    _ => fail("expected namespace sort work to be bounded")
+  } noraise {
+    _ => fail("expected long-prefix namespace sorting to fail closed")
+  }
+}
+
+///|
 test "limited XML writer rejects excessive nesting before recursive output" {
   let mut element = @xml.xml_element("n")
   for _ in 0..<256 {

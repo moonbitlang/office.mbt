@@ -429,12 +429,14 @@ pub fn write_xml_fragment_limited(
   } else {
     work_scaled.to_int()
   }
-  let uri_to_prefix = invert_map_limited(namespaces, name_work_limit)
+  let (uri_to_prefix, remaining_name_work) = invert_map_limited(
+    namespaces, name_work_limit,
+  )
   let sizer = XmlWriteSizer::{
     namespaces,
     uri_to_prefix,
     remaining_bytes: limit,
-    remaining_name_work: name_work_limit,
+    remaining_name_work,
   }
   sizer.size_element(element, is_root=true, depth=0)
   let output_bytes = limit - sizer.remaining_bytes
@@ -465,6 +467,12 @@ let xml_write_max_depth : Int = 256
 let xml_write_name_work_scale : Int = 64
 
 ///|
+/// `Array::sort_by` is worst-case O(n log n). This conservative multiplier
+/// covers pivot selection, its small-array bubble-sort path, heap-sort
+/// fallback, and the fixed work around every string comparison.
+let xml_write_sort_work_scale : Int = 8
+
+///|
 priv struct XmlWriteSizer {
   namespaces : Map[String, String]
   uri_to_prefix : Map[String, String]
@@ -492,6 +500,62 @@ fn XmlWriteSizer::charge_name_work(
     raise InvalidXml(message="XML serialization name work limit exceeded")
   }
   self.remaining_name_work -= units
+}
+
+///|
+fn checked_xml_sort_name_work(
+  item_count : Int,
+  max_name_chars : Int,
+  remaining : Int,
+) -> Int raise DocxError {
+  if item_count <= 1 {
+    return 0
+  }
+  let mut levels = 0
+  let mut value = item_count - 1
+  while value > 0 {
+    levels += 1
+    value /= 2
+  }
+  let mut work = xml_write_sort_work_scale
+  if item_count > remaining / work {
+    raise InvalidXml(message="XML serialization name work limit exceeded")
+  }
+  work *= item_count
+  if levels > remaining / work {
+    raise InvalidXml(message="XML serialization name work limit exceeded")
+  }
+  work *= levels
+  // Adding one charges the terminating comparison even when all names are
+  // empty. Check before adding so hostile maximum-length names cannot wrap.
+  if max_name_chars >= remaining / work {
+    raise InvalidXml(message="XML serialization name work limit exceeded")
+  }
+  work *= max_name_chars + 1
+  work
+}
+
+///|
+fn XmlWriteSizer::charge_attribute_sort_work(
+  self : XmlWriteSizer,
+  attributes : Map[String, String],
+) -> Unit raise DocxError {
+  let mut item_count = 0
+  let mut max_name_chars = 0
+  for name, _ in attributes {
+    // Charge the array materialization and one unit of map traversal before
+    // accumulating cardinality for the later sort.
+    self.charge_name_work(1)
+    item_count += 1
+    max_name_chars = max_name_chars.max(name.length())
+  }
+  self.charge_name_work(
+    checked_xml_sort_name_work(
+      item_count,
+      max_name_chars,
+      self.remaining_name_work,
+    ),
+  )
 }
 
 ///|
@@ -639,6 +703,7 @@ fn XmlWriteSizer::size_element(
       }
     }
   }
+  self.charge_attribute_sort_work(element.attributes)
   for name, value in element.attributes {
     self.size_attribute(name, value)
   }
@@ -667,25 +732,47 @@ fn invert_map(map : Map[String, String]) -> Map[String, String] {
 
 ///|
 /// Builds the namespace writer's URI index without doing work ahead of the
-/// limited writer's contract. Each insertion hashes the URI and can compare it
-/// with an existing equal URI, so charge both traversals before touching the
-/// inverse map. This matters when many short prefixes deliberately share one
-/// very large URI: the later sizing pass must not be the first bounded step.
+/// limited writer's contract. Every binding has a positive structural cost;
+/// URI hashing/equality, prefix handling, array materialization, and a
+/// conservative worst-case sort bound are charged before serialization. This
+/// covers both many aliases of a large URI and large maps of empty URIs.
 fn invert_map_limited(
   map : Map[String, String],
   name_work_limit : Int,
-) -> Map[String, String] raise DocxError {
+) -> (Map[String, String], Int) raise DocxError {
   let inverse : Map[String, String] = Map([])
   let mut remaining = if name_work_limit > 0 { name_work_limit } else { 0 }
+  let mut item_count = 0
+  let mut max_prefix_chars = 0
   for item in map {
     let (prefix, uri) = item
-    if uri.length() > remaining / 2 {
+    // Every binding has positive cost, including an empty prefix and URI.
+    // Prefix materialization, inverse-map hashing/equality, and the later
+    // namespace array copy are all charged before touching the inverse map.
+    if remaining < 4 {
       raise InvalidXml(message="XML serialization name work limit exceeded")
     }
-    remaining -= uri.length() * 2
+    remaining -= 4
+    if prefix.length() > remaining {
+      raise InvalidXml(message="XML serialization name work limit exceeded")
+    }
+    remaining -= prefix.length()
+    if uri.length() > remaining {
+      raise InvalidXml(message="XML serialization name work limit exceeded")
+    }
+    remaining -= uri.length()
+    if uri.length() > remaining {
+      raise InvalidXml(message="XML serialization name work limit exceeded")
+    }
+    remaining -= uri.length()
+    item_count += 1
+    max_prefix_chars = max_prefix_chars.max(prefix.length())
     inverse[uri] = prefix
   }
-  inverse
+  remaining -= checked_xml_sort_name_work(
+    item_count, max_prefix_chars, remaining,
+  )
+  (inverse, remaining)
 }
 
 ///|
@@ -761,27 +848,31 @@ fn XmlWriter::write_namespace_attributes(
   namespaces.sort_by(fn(a, b) {
     let (prefix_a, _) = a
     let (prefix_b, _) = b
-    xml_namespace_attribute_name(prefix_a).compare(
-      xml_namespace_attribute_name(prefix_b),
-    )
+    // `xmlns` sorts before `xmlns:<prefix>`, and every non-empty name shares
+    // the `xmlns:` stem, so comparing prefixes produces the same order
+    // without allocating two derived attribute names per comparison.
+    prefix_a.compare(prefix_b)
   })
   for item in namespaces {
     let (prefix, uri) = item
-    write_serialized_xml_attribute(
-      builder,
-      xml_namespace_attribute_name(prefix),
-      uri,
-    )
+    write_serialized_xml_namespace_attribute(builder, prefix, uri)
   }
 }
 
 ///|
-fn xml_namespace_attribute_name(prefix : String) -> String {
-  if prefix == "" {
-    "xmlns"
-  } else {
-    "xmlns:" + prefix
+fn write_serialized_xml_namespace_attribute(
+  builder : StringBuilder,
+  prefix : String,
+  uri : String,
+) -> Unit {
+  builder.write_string(" xmlns")
+  if prefix != "" {
+    builder.write_string(":")
+    builder.write_string(prefix)
   }
+  builder.write_string("=\"")
+  builder.write_string(escape_xml_attribute(uri))
+  builder.write_string("\"")
 }
 
 ///|
