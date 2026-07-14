@@ -8,6 +8,17 @@ fn tiny_package() -> Bytes raise {
 }
 
 ///|
+fn namespace_heavy_splice_source(binding_count : Int) -> String {
+  let source = StringBuilder()
+  source.write_string("<root")
+  for index in 0..<binding_count {
+    source.write_string(" xmlns:n\{index}=\"urn:n\{index}\"")
+  }
+  source.write_string("></root>")
+  source.to_string()
+}
+
+///|
 fn[T] expect_splice_failure(
   action : () -> T raise @core.DocxError,
   expected_prefix : String,
@@ -182,6 +193,71 @@ test "D1: bounded preflight rejects compressible payloads and oversized manifest
     () => too_many_parts.check_against(archive, limits=manifest_limits),
     "the splice preservation manifest limit is 256 parts",
   )
+}
+
+///|
+test "D1: splice XML validation charges namespace snapshots cumulatively" {
+  let source = namespace_heavy_splice_source(32)
+  guard source.find("</root>") is Some(insert_at)
+  let archive = @mbtzip.Archive::new()
+  archive.add("dense.xml", @utf8.encode(source))
+  let plan = @splice.SplicePlan::new()
+  plan.edit_part(
+    "dense.xml",
+    @splice.span_edit(
+      start=insert_at,
+      end=insert_at,
+      @utf8.encode("<child/>".repeat(16)),
+    ),
+  )
+  let limits = @splice.splice_limits(
+    max_archive_entries=16,
+    max_changed_parts=4,
+    max_part_name_chars=64,
+    max_entry_uncompressed_bytes=16_384,
+    max_total_uncompressed_bytes=32_768,
+    max_materialized_bytes=16_384,
+    max_xml_tokens=400,
+  )
+  expect_splice_failure(
+    () => plan.check_against(archive, limits~),
+    "splicing 'dense.xml' exceeded XML resource limits: XML token budget exceeded",
+  )
+}
+
+///|
+test "D1: splice XML parser budget is shared across edited parts" {
+  let archive = @mbtzip.Archive::new()
+  archive.add("a.xml", b"<a/>")
+  archive.add("b.xml", b"<b/>")
+  let limits = @splice.splice_limits(
+    max_archive_entries=16,
+    max_changed_parts=4,
+    max_part_name_chars=64,
+    max_entry_uncompressed_bytes=1_024,
+    max_total_uncompressed_bytes=4_096,
+    max_materialized_bytes=1_024,
+    max_xml_tokens=3,
+  )
+  let one = @splice.SplicePlan::new()
+  one.edit_part("a.xml", @splice.span_edit(start=0, end=0, b""))
+  one.check_against(archive, limits~)
+  let two = @splice.SplicePlan::new()
+  two.edit_part("a.xml", @splice.span_edit(start=0, end=0, b""))
+  two.edit_part("b.xml", @splice.span_edit(start=0, end=0, b""))
+  try two.check_against(archive, limits~) catch {
+    Unsupported(message~) => {
+      assert_true(message.has_prefix("splicing '"))
+      assert_true(
+        message.contains(
+          "exceeded XML resource limits: XML token budget exceeded",
+        ),
+      )
+    }
+    _ => fail("expected aggregate splice XML resource failure")
+  } noraise {
+    _ => fail("expected the second edited part to exhaust the shared budget")
+  }
 }
 
 ///|
