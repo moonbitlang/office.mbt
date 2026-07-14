@@ -420,6 +420,27 @@ pub fn TransactionBudget::max_candidate_package_bytes(
 }
 
 ///|
+/// Verifies that `archive` still carries the unforgeable bounded-read
+/// provenance established by this transaction boundary and that its serialized
+/// source size matches `original`. Mutating an archive clears that provenance;
+/// a shallow fork supplied by `transact` retains it.
+pub fn TransactionBudget::source_archive_is_bounded(
+  _self : TransactionBudget,
+  original : BytesView,
+  archive : @zip.Archive,
+) -> Bool {
+  match
+    archive.bounded_source_package_size(
+      max_entries=transaction_max_archive_entries,
+      max_entry_uncompressed_bytes=transaction_max_entry_uncompressed_bytes,
+      max_total_uncompressed_bytes=transaction_max_total_uncompressed_bytes,
+    ) {
+    Some(package_bytes) => package_bytes == original.length()
+    None => false
+  }
+}
+
+///|
 /// An additional pinned-package identifier run before the mandatory portable
 /// OPC gate and any generic Office DOM parse. Custom command families can
 /// enforce their own bounded package boundary while reusing the transaction's
