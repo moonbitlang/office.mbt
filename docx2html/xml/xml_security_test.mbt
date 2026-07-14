@@ -26,6 +26,37 @@ fn namespace_heavy_source(binding_count : Int, child_count : Int) -> String {
 }
 
 ///|
+fn reused_long_namespace_source(uri_chars : Int, child_count : Int) -> String {
+  let builder = StringBuilder()
+  builder.write_string("<root xmlns:n=\"")
+  builder.write_string("u".repeat(uri_chars))
+  builder.write_string("\">")
+  for _ in 0..<child_count {
+    builder.write_string("<n:x/>")
+  }
+  builder.write_string("</root>")
+  builder.to_string()
+}
+
+///|
+fn popped_namespace_scope_source(
+  binding_count : Int,
+  sibling_count : Int,
+) -> String {
+  let builder = StringBuilder()
+  builder.write_string("<root><heavy")
+  for index in 0..<binding_count {
+    builder.write_string(" xmlns:n\{index}=\"urn:n\{index}\"")
+  }
+  builder.write_string("/>")
+  for _ in 0..<sibling_count {
+    builder.write_string("<light/>")
+  }
+  builder.write_string("</root>")
+  builder.to_string()
+}
+
+///|
 fn strict_xml_error(source : String) -> String raise {
   try @xml.read_xml_string_strict(source) catch {
     InvalidXml(message~) => message
@@ -205,7 +236,7 @@ test "limited XML parser bounds tokens, token length, and copied characters" {
 test "one limited XML budget is cumulative across package parts" {
   let budget = @xml.xml_read_budget(
     max_source_units=12,
-    max_tokens=6,
+    max_tokens=4,
     max_materialized_chars=8,
     max_token_chars=4,
   )
@@ -224,11 +255,11 @@ test "one limited XML budget is cumulative across package parts" {
 }
 
 ///|
-test "limited XML parser charges inherited namespace scope snapshots" {
+test "limited XML parser charges namespace scope delta work" {
   let source = @utf8.encode(namespace_heavy_source(32, 16))
   let bounded = @xml.xml_read_budget(
     max_source_units=16 * 1024,
-    max_tokens=400,
+    max_tokens=180,
     max_materialized_chars=16 * 1024,
     max_token_chars=128,
   )
@@ -238,12 +269,45 @@ test "limited XML parser charges inherited namespace scope snapshots" {
   )
   let ample = @xml.xml_read_budget(
     max_source_units=16 * 1024,
-    max_tokens=2_000,
+    max_tokens=400,
     max_materialized_chars=16 * 1024,
     max_token_chars=128,
   )
   inspect(
     @xml.read_xml_bytes_strict_limited(source, ample).name,
+    content="root",
+  )
+}
+
+///|
+test "limited XML parser charges names derived from reused namespace URIs" {
+  let source = @utf8.encode(reused_long_namespace_source(4_096, 64))
+  let budget = @xml.xml_read_budget(
+    max_source_units=64 * 1024,
+    max_tokens=10_000,
+    max_materialized_chars=64 * 1024,
+    max_token_chars=8 * 1024,
+  )
+  inspect(
+    limited_xml_error(source, budget),
+    content="XML materialized character budget exceeded",
+  )
+}
+
+///|
+test "namespace scope deltas stay linear after a large child scope" {
+  let source = @utf8.encode(popped_namespace_scope_source(256, 2_000))
+  let budget = @xml.xml_read_budget(
+    max_source_units=128 * 1024,
+    // Element/name tokens, declaration deltas, and derived prefixes are all
+    // linear in 256 declarations plus 2,000 siblings. A full namespace-map
+    // snapshot for every sibling would exceed this structural-work ceiling.
+    max_tokens=6_000,
+    max_materialized_chars=256 * 1024,
+    max_token_chars=4 * 1024,
+  )
+  inspect(
+    @xml.read_xml_bytes_strict_limited(source, budget).name,
     content="root",
   )
 }
