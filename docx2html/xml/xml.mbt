@@ -925,10 +925,10 @@ fn write_serialized_xml_attribute(
 }
 
 ///|
-/// Maximum element nesting depth accepted by the tolerant XML parser. Strict
-/// parsing uses a smaller ceiling because its additional namespace and lexical
-/// checks require larger stack frames on the Wasm backend.
-let xml_max_depth : Int = 512
+/// Maximum element nesting depth accepted by the tolerant XML parser. Keep it
+/// aligned with strict parsing and serialization so every recursive XML path
+/// reaches its typed guard before exhausting the Wasm stack.
+let xml_max_depth : Int = 256
 
 ///|
 let strict_xml_max_depth : Int = 256
@@ -1140,6 +1140,25 @@ fn XmlParser::record_namespace_binding(
 }
 
 ///|
+fn XmlParser::decode_namespace_binding(
+  self : XmlParser,
+  raw_value : String,
+) -> String raise DocxError {
+  // Entity replacement never exceeds the lexical value's length. Charge that
+  // conservative upper bound before allocating the decoded string retained by
+  // the namespace scope; the raw token was charged separately when read.
+  match self.budget {
+    Some(budget) => budget.charge_derived_chars(raw_value.length())
+    None => ()
+  }
+  if self.strict {
+    decode_xml_entities_strict(raw_value, attribute=true)
+  } else {
+    decode_xml_entities(raw_value)
+  }
+}
+
+///|
 fn XmlParser::restore_namespace_bindings(
   self : XmlParser,
   changes : Array[NamespaceBindingChange],
@@ -1181,11 +1200,13 @@ fn XmlParser::parse_element_inner_tolerant(
       self.skip_whitespace()
       let attr_value = self.read_quoted_value()
       if attr_name == "xmlns" {
-        self.record_namespace_binding("", attr_value, namespace_changes)
+        let namespace_uri = self.decode_namespace_binding(attr_value)
+        self.record_namespace_binding("", namespace_uri, namespace_changes)
       } else if attr_name.has_prefix("xmlns:") {
         self.charge_derived_name(attr_name.length() - 6)
         let prefix = attr_name[6:].to_owned()
-        self.record_namespace_binding(prefix, attr_value, namespace_changes)
+        let namespace_uri = self.decode_namespace_binding(attr_value)
+        self.record_namespace_binding(prefix, namespace_uri, namespace_changes)
       } else {
         raw_attributes.push((attr_name, attr_value))
       }
@@ -1243,19 +1264,13 @@ fn XmlParser::parse_element_inner_strict(
       self.skip_whitespace()
       let attr_value = self.read_quoted_value()
       if attr_name == "xmlns" {
-        let namespace_uri = decode_xml_entities_strict(
-          attr_value,
-          attribute=true,
-        )
+        let namespace_uri = self.decode_namespace_binding(attr_value)
         validate_namespace_declaration("", namespace_uri)
         self.record_namespace_binding("", namespace_uri, namespace_changes)
       } else if attr_name.has_prefix("xmlns:") {
         self.charge_derived_name(attr_name.length() - 6)
         let prefix = attr_name[6:].to_owned()
-        let namespace_uri = decode_xml_entities_strict(
-          attr_value,
-          attribute=true,
-        )
+        let namespace_uri = self.decode_namespace_binding(attr_value)
         validate_namespace_declaration(prefix, namespace_uri)
         self.record_namespace_binding(prefix, namespace_uri, namespace_changes)
       } else {

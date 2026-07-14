@@ -127,6 +127,22 @@ test "strict XML expands valid namespaces and entities" {
 }
 
 ///|
+test "tolerant XML expands entities in namespace declarations" {
+  let namespace_uri = "http://schemas.microsoft.com/office/word/2010/wordml"
+  let root = @xml.read_xml_string(
+    "<q:root xmlns:q=\"http://schemas.microsoft.com/office/word/2010/wordm&#108;\" q:id=\"one\"/>",
+  )
+  inspect(
+    root.name,
+    content="{http://schemas.microsoft.com/office/word/2010/wordml}root",
+  )
+  debug_inspect(
+    root.attributes.get("{\{namespace_uri}}id"),
+    content="Some(\"one\")",
+  )
+}
+
+///|
 test "byte XML parsers reject contradictory encoding declarations" {
   let source = @utf8.encode(
     "<?xml version=\"1.0\" encoding=\"UTF-16\"?><root/>",
