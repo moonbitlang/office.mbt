@@ -637,6 +637,7 @@ fn read_docx_annotated_zip(
     comment_bodies.push(comment.body)
     comment_pairs.push((comment.comment_id, comment.body))
   }
+  let path_budget = AnnotationPathBudget::new(parts.xml_budget)
   let verify_ctx = build_verify_context(
     document_result.document,
     collector.headers,
@@ -644,8 +645,11 @@ fn read_docx_annotated_zip(
     footnote_bodies,
     endnote_bodies,
     comment_bodies,
+    path_budget,
   )
-  let index = build_annotation_index(zip, parts, collector, verify_ctx)
+  let index = build_annotation_index(
+    zip, parts, collector, verify_ctx, path_budget,
+  )
   let main_wordprocessing_dialect = annotation_story_dialect(index, "/body")
   let comments_wordprocessing_dialect = annotation_story_dialect(
     index, "/comments",
@@ -803,15 +807,20 @@ fn build_verify_context(
   footnote_bodies : Array[Array[DocumentElement]],
   endnote_bodies : Array[Array[DocumentElement]],
   comment_bodies : Array[Array[DocumentElement]],
-) -> VerifyContext {
+  path_budget : AnnotationPathBudget,
+) -> VerifyContext raise DocxError {
   let positions : Set[String] = Set([])
-  fn index_children(element : DocumentElement, prefix : String) -> Unit {
+  fn index_children(
+    element : DocumentElement,
+    prefix : String,
+  ) -> Unit raise DocxError {
     let ordinals : Map[String, Int] = Map([])
     for child in @paths.element_children(element) {
       match @paths.segment_kind(child) {
         Some(kind) => {
           let ordinal = ordinals.get(kind).unwrap_or(0) + 1
           ordinals[kind] = ordinal
+          path_budget.charge_descendant(Some(prefix), kind, ordinal)
           let path = "\{prefix}/\{kind}[\{ordinal}]"
           positions.add(path)
           index_children(child, path)
@@ -820,7 +829,11 @@ fn build_verify_context(
       }
     }
   }
-  fn index_story(root : String, body : Array[DocumentElement]) -> Unit {
+  fn index_story(
+    root : String,
+    body : Array[DocumentElement],
+  ) -> Unit raise DocxError {
+    path_budget.charge(root.length())
     positions.add(root)
     index_children(@document.document(body), root)
   }
@@ -853,12 +866,25 @@ fn verify_position(
   path : String,
   warnings : AnnotationWarningCollector,
   degraded : Set[String],
-) -> String {
-  let (story, node_path) = split_story_path(path)
+  path_budget : AnnotationPathBudget,
+) -> String raise DocxError {
+  // The scanner and parsed projection agree in the ordinary case. Reuse the
+  // already charged story-qualified string instead of materializing a second
+  // identical path for verification.
+  if ctx.positions.contains(path) {
+    return path
+  }
+  let (story, node_path) = split_story_path_charged(path, path_budget)
   let mut candidate = node_path
+  let mut verified = story
   while true {
-    let full = if candidate == "" { story } else { "\{story}/\{candidate}" }
+    if candidate == "" {
+      break
+    }
+    path_budget.charge(story.length() + 1 + candidate.length())
+    let full = "\{story}/\{candidate}"
     if ctx.positions.contains(full) {
+      verified = full
       break
     }
     // Trim the last segment (no rfind on String: scan code units).
@@ -870,13 +896,13 @@ fn verify_position(
       }
     }
     if last_slash >= 0 {
+      path_budget.charge(last_slash)
       candidate = candidate[0:last_slash].to_owned()
     } else {
       candidate = ""
       break
     }
   }
-  let verified = if candidate == "" { story } else { "\{story}/\{candidate}" }
   if verified != path && !degraded.contains(path) && !warnings.full() {
     degraded.add(path)
     warnings.add(
@@ -887,11 +913,38 @@ fn verify_position(
 }
 
 ///|
+/// Budgeted variant used by verification's degradation path. Valid positions
+/// bypass this split entirely; malformed paths cannot allocate uncharged story
+/// and descendant copies on every marker.
+fn split_story_path_charged(
+  path : String,
+  path_budget : AnnotationPathBudget,
+) -> (String, String) raise DocxError {
+  if !path.has_prefix("/") {
+    return ("", path)
+  }
+  let mut second_slash = -1
+  for at in 1..<path.length() {
+    if path[at] == '/' {
+      second_slash = at
+      break
+    }
+  }
+  if second_slash < 0 {
+    return (path, "")
+  }
+  let node_start = second_slash + 1
+  path_budget.charge(second_slash + path.length() - node_start)
+  (path[0:second_slash].to_owned(), path[node_start:].to_owned())
+}
+
+///|
 fn build_annotation_index(
   zip : ZipArchive,
   parts : DocumentParts,
   collector : HeaderFooterCollector,
   ctx : VerifyContext,
+  path_budget : AnnotationPathBudget,
 ) -> AnnotationIndex raise DocxError {
   let warnings = AnnotationWarningCollector::new(
     MAX_ANNOTATION_WARNINGS,
@@ -966,7 +1019,15 @@ fn build_annotation_index(
     kind_by_scanned_path[path] = story.kind
     match zip.read_bytes(path) {
       Some(bytes) => {
-        let scan = scan_story(bytes) catch {
+        let scan = scan_story(bytes, path_budget~) catch {
+          InvalidXml(message~) => {
+            if is_mutation_xml_resource_error(message) {
+              raise InvalidXml(message~)
+            }
+            identity_source_complete = false
+            warnings.add("annotation index: could not scan \{story_key}")
+            continue
+          }
           Unsupported(message~) => {
             identity_source_complete = false
             warnings.add(
@@ -1016,7 +1077,17 @@ fn build_annotation_index(
       )
     }
     read_identity_story_xml_strict(bytes, parts.xml_budget) |> ignore
-    let scan = scan_story(bytes) catch {
+    let scan = scan_story(bytes, path_budget~) catch {
+      InvalidXml(message~) => {
+        if is_mutation_xml_resource_error(message) {
+          raise InvalidXml(message~)
+        }
+        identity_source_complete = false
+        warnings.add(
+          "annotation index: could not scan relationship-reachable \{reachable.kind} part '\{warnings.text(reachable.path)}'",
+        )
+        continue
+      }
       Unsupported(message~) => {
         identity_source_complete = false
         warnings.add(
@@ -1060,8 +1131,11 @@ fn build_annotation_index(
   let degraded : Set[String] = Set([])
   let (comments, spans) = build_comments(
     definitions, extended, scans, identity_only_comment_ids, warnings, ctx, degraded,
+    path_budget,
   )
-  let (footnotes, endnotes) = build_notes(parts, scans, warnings, ctx, degraded)
+  let (footnotes, endnotes) = build_notes(
+    parts, scans, warnings, ctx, degraded, path_budget,
+  )
   // Plan-locked ordinal-fallback diagnostic: ids that cannot take the
   // [@id=...] form (empty, or containing ']'/'='/'/') are emitted as
   // ordinal paths, and the agent is told why. Duplicate ids already
@@ -1363,7 +1437,8 @@ fn build_comments(
   warnings : AnnotationWarningCollector,
   ctx : VerifyContext,
   degraded : Set[String],
-) -> (Array[CommentInfo], Array[AnchorSpan]) {
+  path_budget : AnnotationPathBudget,
+) -> (Array[CommentInfo], Array[AnchorSpan]) raise DocxError {
   // One CommentInfo PER DEFINITION in comments.xml order (duplicate ids
   // are each exposed ordinally per the plan; id addressing over them is
   // J2's "ambiguous" error), then marker-only ids in first-marker order.
@@ -1497,10 +1572,10 @@ fn build_comments(
                     )
                   }
                   let (raw_end, end_boundary) = marker_position(
-                    story, marker, scan,
+                    story, marker, scan, path_budget,
                   )
                   let end_path = verify_position(
-                    ctx, raw_end, warnings, degraded,
+                    ctx, raw_end, warnings, degraded, path_budget,
                   )
                   dangling_end_anchors.push(
                     (
@@ -1528,9 +1603,11 @@ fn build_comments(
               )
             }
             let (raw_start, start_boundary) = marker_position(
-              story, dangling, scan,
+              story, dangling, scan, path_budget,
             )
-            let start_path = verify_position(ctx, raw_start, warnings, degraded)
+            let start_path = verify_position(
+              ctx, raw_start, warnings, degraded, path_budget,
+            )
             dangling_start_anchors.push(
               (
                 dangling.seq(),
@@ -1575,9 +1652,10 @@ fn build_comments(
             }
             let reference_path = verify_position(
               ctx,
-              marker_path(story, marker, scan),
+              marker_path(story, marker, scan, path_budget),
               warnings,
               degraded,
+              path_budget,
             )
             if pair_index >= 0 {
               pair_references[pair_index].push(reference_path)
@@ -1595,17 +1673,25 @@ fn build_comments(
                   },
                 ),
               )
-              spans.push(point_span(id, story, marker, bucket.node_spans))
+              spans.push(
+                point_span(id, story, marker, bucket.node_spans, path_budget),
+              )
             }
           }
           for pair_index, pair in pairs {
             let (start, end) = pair
             let (raw_start, start_boundary) = marker_position(
-              story, start, scan,
+              story, start, scan, path_budget,
             )
-            let (raw_end, end_boundary) = marker_position(story, end, scan)
-            let start_path = verify_position(ctx, raw_start, warnings, degraded)
-            let end_path = verify_position(ctx, raw_end, warnings, degraded)
+            let (raw_end, end_boundary) = marker_position(
+              story, end, scan, path_budget,
+            )
+            let start_path = verify_position(
+              ctx, raw_start, warnings, degraded, path_budget,
+            )
+            let end_path = verify_position(
+              ctx, raw_end, warnings, degraded, path_budget,
+            )
             paired_range_anchors.push(
               (
                 start.seq(),
@@ -1753,8 +1839,9 @@ fn point_span(
   story : String,
   marker : ScannedMarker,
   node_spans : Map[String, (Int, Int)],
-) -> AnchorSpan {
-  match paragraph_prefix(marker.container_path()) {
+  path_budget : AnnotationPathBudget,
+) -> AnchorSpan raise DocxError {
+  match paragraph_prefix(marker.container_path(), path_budget) {
     Some(paragraph) =>
       match node_spans.get(paragraph) {
         Some((low, high)) => { comment_id: id, story, low, high }
@@ -1767,26 +1854,30 @@ fn point_span(
 ///|
 /// "tbl[1]/tr[1]/tc[1]/p[1]/r[1]" -> the longest prefix ending in a `p`
 /// segment ("tbl[1]/tr[1]/tc[1]/p[1]").
-fn paragraph_prefix(container : String?) -> String? {
+fn paragraph_prefix(
+  container : String?,
+  path_budget : AnnotationPathBudget,
+) -> String? raise DocxError {
   match container {
     Some(path) => {
-      let segments : Array[String] = path
-        .split("/")
-        .map(v => v[:].to_owned())
-        .collect()
-      for at = segments.length() - 1; at >= 0; at = at - 1 {
-        if segments[at].has_prefix("p[") {
-          let builder = StringBuilder::new()
-          for i in 0..<=at {
-            if i > 0 {
-              builder.write_string("/")
-            }
-            builder.write_string(segments[i])
+      let mut segment_start = 0
+      let mut paragraph_end = -1
+      for at in 0..<=path.length() {
+        if at == path.length() || path[at] == '/' {
+          if at >= segment_start + 2 &&
+            path[segment_start] == 'p' &&
+            path[segment_start + 1] == '[' {
+            paragraph_end = at
           }
-          return Some(builder.to_string())
+          segment_start = at + 1
         }
       }
-      None
+      if paragraph_end < 0 {
+        None
+      } else {
+        path_budget.charge(paragraph_end)
+        Some(path[0:paragraph_end].to_owned())
+      }
     }
     None => None
   }
@@ -1800,18 +1891,21 @@ fn marker_position(
   story : String,
   marker : ScannedMarker,
   scan : StoryScan,
-) -> (String, AnnotationBoundary) {
+  path_budget : AnnotationPathBudget,
+) -> (String, AnnotationBoundary) raise DocxError {
   match marker.container_path() {
     Some(container) => {
       let boundary = match marker.after_child() {
         Some(_) => InsideEnd
         None => InsideStart
       }
+      path_budget.charge(story.length() + 1 + container.length())
       ("\{story}/\{container}", boundary)
     }
     None =>
       match scan.story_level_position(marker.seq()) {
-        Some(position) =>
+        Some(position) => {
+          path_budget.charge(story.length() + 1 + position.path.length())
           (
             "\{story}/\{position.path}",
             if position.node_is_after {
@@ -1820,6 +1914,7 @@ fn marker_position(
               After
             },
           )
+        }
         None => (story, InsideStart)
       }
   }
@@ -1830,8 +1925,9 @@ fn marker_path(
   story : String,
   marker : ScannedMarker,
   scan : StoryScan,
-) -> String {
-  marker_position(story, marker, scan).0
+  path_budget : AnnotationPathBudget,
+) -> String raise DocxError {
+  marker_position(story, marker, scan, path_budget).0
 }
 
 ///|
@@ -1841,7 +1937,8 @@ fn build_notes(
   warnings : AnnotationWarningCollector,
   ctx : VerifyContext,
   degraded : Set[String],
-) -> (Array[NoteInfo], Array[NoteInfo]) {
+  path_budget : AnnotationPathBudget,
+) -> (Array[NoteInfo], Array[NoteInfo]) raise DocxError {
   let footnotes : Array[NoteInfo] = []
   let endnotes : Array[NoteInfo] = []
   let footnote_refs : Map[String, Array[String]] = Map([])
@@ -1858,9 +1955,10 @@ fn build_notes(
         Some(refs) => {
           let path = verify_position(
             ctx,
-            marker_path(story, marker, scan),
+            marker_path(story, marker, scan, path_budget),
             warnings,
             degraded,
+            path_budget,
           )
           match refs.get(marker.id()) {
             Some(existing) => existing.push(path)
