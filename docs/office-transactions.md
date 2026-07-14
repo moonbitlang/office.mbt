@@ -207,10 +207,19 @@ acceptance/CI tier rather than a portable runtime dependency.
 
 The built-in DOCX hook first performs bounded strict OPC validation. When that
 passes, it rebuilds the candidate annotation index under another cumulative XML
-budget and rejects duplicate, empty, or ambiguous comment identities. This
-backstop applies to generic pinned splice plans as well as the high-level
-comment planners, so bypassing a convenience method cannot publish stale
-semantic state.
+budget and rejects duplicate, empty, or ambiguous comment identities and
+globally duplicate paragraph ids across reachable stories. Authoritative
+Transitional or Strict relationships select the unique main, comments, and
+commentsExtended parts; conventional-path decoys and ambiguous targets fail
+closed. This backstop applies to generic pinned splice plans as well as the
+high-level comment planners, so bypassing a convenience method cannot publish
+stale semantic state.
+
+`transact_docx` also installs `office-docx-bounded` as its custom identifier.
+It applies cumulative XML limits to source and candidate OPC metadata before
+the generic portable detector runs. The successful transaction report therefore
+records three independent gates in order: `office-docx-bounded`,
+`office-portable-opc`, and `office-docx-package`.
 
 ## Preservation report
 

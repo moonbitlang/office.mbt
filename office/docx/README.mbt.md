@@ -26,8 +26,8 @@ or either semantic/generic ordering fails with
 `office.docx.stale_semantic_state`. The final validator rebuilds a bounded
 candidate annotation index and rejects duplicate, empty, or ambiguous comment
 identities before publication. That gate validates parsed definitions, marker
-ids, last-paragraph `paraId` values, and raw `commentEx` keys structurally;
-warning wording is never used as a security decision.
+ids, globally unique reachable-story `paraId` values, and raw `commentEx` keys
+structurally; warning wording is never used as a security decision.
 
 Plan adoption is atomic. A rejected merge leaves the session unchanged. Every
 edited part must carry the exact immutable payload from which its offsets were
@@ -38,6 +38,8 @@ manifest, 1,024-scalar part names, archive entry and expanded-size ceilings,
 overflow-safe result sizes, and a transaction-derived XML token ceiling. Caller
 replacement bytes, added payloads, and materialized edited parts share at most
 8 MiB of the already reserved transaction working memory.
+Added-part names are bounded before canonical-path parsing or diagnostic
+construction.
 
 Strict source validation and annotation indexing each use their own cumulative
 XML budget across all package parts. Part bytes are charged before UTF-8 decode;
@@ -55,7 +57,14 @@ an otherwise-unused story cannot trigger an unbounded decode or DOM build.
 Portable OPC validation rejects duplicate content-type defaults after
 case-normalizing extensions, duplicate overrides after normalizing package
 paths, and missing or duplicate relationship ids within every `.rels` scope.
-No declaration is silently replaced in a validation map.
+No declaration is silently replaced in a validation map. The unique root
+`officeDocument` relationship and unique comments/commentsExtended
+relationships authoritatively select parts in both Transitional and Strict
+namespaces; conventional-path decoys and multiple distinct targets fail closed.
+
+Annotation verification preindexes parsed projection paths. Story-level marker
+locations are assigned with sorted monotonic sweeps, so distributed markers do
+not trigger repeated full-tree or path-resolution scans.
 
 Comment bodies receive a second preflight before any derived XML tree or reply
 paragraph-id array is allocated. It bounds depth, node count, and reachable
@@ -71,10 +80,12 @@ When the callback returns, `transact_docx` finalizes automatically:
   no candidate and preserving the exact input serialization;
 - a real plan writes through the transaction's hard package-size ceiling and
   returns `transaction_mutation_with_manifest` with the plan's exact part set;
-- portable Office validation and `office-docx-package` validation run over the
-  candidate archive, producing at most 64 findings bounded to 512 scalars while
-  validation is running; the DOCX hook uses bounded XML parsing for both OPC
-  structure and candidate annotation identities; and
+- `office-docx-bounded` runs before generic Office identification over both the
+  source and candidate, followed by independent portable Office validation and
+  `office-docx-package` candidate validation; findings are capped at 64 and 512
+  scalars while validation is running, and the DOCX hook uses cumulative
+  bounded XML parsing for OPC structure and candidate annotation identities;
+  and
 - A4 enforces the manifest, checks for concurrent source changes, and publishes
   atomically through `moonbitlang/async`.
 
