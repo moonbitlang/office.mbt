@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 
 LOCK_DIR="$ROOT/.tools/openxml-validator/.lock"
+BUILD_STAMP="$ROOT/.tools/openxml-validator/.build-ready"
 
 acquire_lock() {
   local attempts=0
@@ -40,6 +41,31 @@ release_lock() {
     rmdir "$LOCK_DIR" >/dev/null 2>&1 || true
     LOCK_HELD=0
   fi
+}
+
+validator_build_is_current() {
+  [[ -f "$BUILD_STAMP" ]] &&
+    [[ -f "$VALIDATOR_DLL" ]] &&
+    [[ ! "$DOTNET_PROJECT" -nt "$BUILD_STAMP" ]] &&
+    [[ ! "$VALIDATOR_SOURCE" -nt "$BUILD_STAMP" ]]
+}
+
+# The shared output directory needs serialization only while MSBuild writes it.
+# Validator processes read the completed DLL and distinct Office files, so they
+# can safely run concurrently. Rearm signal handling immediately after the
+# mid-script release; release_lock intentionally ignores signals while it owns
+# the atomic rmdir + flag-clear sequence.
+ensure_validator_built() {
+  if validator_build_is_current; then
+    return
+  fi
+  acquire_lock
+  if ! validator_build_is_current; then
+    "$DOTNET" build "$DOTNET_PROJECT" -p:UseAppHost=false >/dev/null
+    touch "$BUILD_STAMP"
+  fi
+  release_lock
+  trap handle_signal INT TERM
 }
 
 handle_signal() {
@@ -134,9 +160,9 @@ for attempt in $(seq 1 "$attempts"); do
 done
 
 DOTNET_PROJECT="$ROOT/tools/openxml-validator/OpenXmlValidator.csproj"
+VALIDATOR_SOURCE="$ROOT/tools/openxml-validator/Program.cs"
+VALIDATOR_DLL="$ROOT/tools/openxml-validator/bin/Debug/net8.0/OpenXmlValidator.dll"
 trap release_lock EXIT
 trap handle_signal INT TERM
-acquire_lock
-"$DOTNET" build "$DOTNET_PROJECT" -p:UseAppHost=false >/dev/null
-VALIDATOR_DLL="$ROOT/tools/openxml-validator/bin/Debug/net8.0/OpenXmlValidator.dll"
+ensure_validator_built
 "$DOTNET" "$VALIDATOR_DLL" "$XLSX"
