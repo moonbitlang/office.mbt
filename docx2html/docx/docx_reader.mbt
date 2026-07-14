@@ -308,6 +308,8 @@ pub fn read_docx_with_messages(
 /// header/footer stories).
 priv struct DocumentParts {
   zip : ZipArchive
+  xml_budget : @xml.XmlReadBudget?
+  main_document_path : String
   root : XmlElement
   styles : Map[String, StyleInfo]
   numbering : NumberingMap
@@ -325,13 +327,15 @@ fn DocumentParts::build(
   zip : ZipArchive,
   external_files? : ExternalFileAccess = default_external_file_access(),
   read_images? : Bool = true,
+  xml_budget? : @xml.XmlReadBudget,
 ) -> DocumentParts raise DocxError {
-  let main_document_path = find_main_document_path(zip)
+  let main_document_path = find_main_document_path(zip, xml_budget?)
   let relationships = read_relationships(
     zip,
     relationships_path_for_part(main_document_path),
+    xml_budget?,
   )
-  let content_types = read_content_types(zip)
+  let content_types = read_content_types(zip, xml_budget?)
   let base_path = split_zip_path(main_document_path).0
   let styles = read_styles(
     zip,
@@ -342,9 +346,14 @@ fn DocumentParts::build(
       base_path~,
       fallback_path="word/styles.xml",
     ),
+    xml_budget?,
   )
   let numbering = read_numbering_for_document(
-    zip, relationships, styles, base_path,
+    zip,
+    relationships,
+    styles,
+    base_path,
+    xml_budget?,
   )
   let notes_result = read_notes_for_document(
     zip,
@@ -355,6 +364,7 @@ fn DocumentParts::build(
     base_path,
     external_files~,
     read_images~,
+    xml_budget?,
   )
   let comments_result = read_comments_for_document(
     zip,
@@ -365,10 +375,13 @@ fn DocumentParts::build(
     base_path,
     external_files~,
     read_images~,
+    xml_budget?,
   )
-  let root = read_xml_part(zip, main_document_path)
+  let root = read_xml_part(zip, main_document_path, xml_budget?)
   {
     zip,
+    xml_budget,
+    main_document_path,
     root,
     styles,
     numbering,
@@ -420,9 +433,27 @@ fn read_docx_zip_with_messages(
 }
 
 ///|
-fn read_xml_part(zip : ZipArchive, path : String) -> XmlElement raise DocxError {
-  match zip.read_text(path) {
-    Some(text) => read_xml_string(text, namespace_map=office_namespace_map())
+fn read_xml_part(
+  zip : ZipArchive,
+  path : String,
+  xml_budget? : @xml.XmlReadBudget,
+) -> XmlElement raise DocxError {
+  match zip.read_bytes(path) {
+    Some(bytes) =>
+      match xml_budget {
+        Some(budget) =>
+          @xml.read_xml_bytes_limited(
+            bytes,
+            budget,
+            namespace_map=office_namespace_map(),
+          )
+        None => {
+          let text = @utf8.decode(bytes, ignore_bom=true) catch {
+            _ => raise InvalidXml(message="part is not valid UTF-8: " + path)
+          }
+          read_xml_string(text, namespace_map=office_namespace_map())
+        }
+      }
     None => raise MissingPart(message="missing DOCX part: " + path)
   }
 }
@@ -452,8 +483,11 @@ fn office_namespace_map() -> Map[String, String] {
 }
 
 ///|
-fn find_main_document_path(zip : ZipArchive) -> String raise DocxError {
-  let relationships = read_relationships(zip, "_rels/.rels")
+fn find_main_document_path(
+  zip : ZipArchive,
+  xml_budget? : @xml.XmlReadBudget,
+) -> String raise DocxError {
+  let relationships = read_relationships(zip, "_rels/.rels", xml_budget?)
   let path = find_part_path(
     zip,
     relationships,
@@ -483,12 +517,10 @@ fn strip_leading_slash(path : String) -> String {
 fn read_relationships(
   zip : ZipArchive,
   path : String,
+  xml_budget? : @xml.XmlReadBudget,
 ) -> Relationships raise DocxError {
-  match zip.read_text(path) {
-    Some(text) =>
-      read_relationships_xml(
-        read_xml_string(text, namespace_map=office_namespace_map()),
-      )
+  match zip.read_bytes(path) {
+    Some(_) => read_relationships_xml(read_xml_part(zip, path, xml_budget?))
     None => { relationships: [] }
   }
 }
@@ -572,12 +604,15 @@ fn relationships_path_for_part(path : String) -> String {
 }
 
 ///|
-fn read_content_types(zip : ZipArchive) -> ContentTypes raise DocxError {
+fn read_content_types(
+  zip : ZipArchive,
+  xml_budget? : @xml.XmlReadBudget,
+) -> ContentTypes raise DocxError {
   let defaults : Map[String, String] = Map([])
   let overrides : Map[String, String] = Map([])
-  match zip.read_text("[Content_Types].xml") {
-    Some(text) => {
-      let root = read_xml_string(text, namespace_map=office_namespace_map())
+  match zip.read_bytes("[Content_Types].xml") {
+    Some(_) => {
+      let root = read_xml_part(zip, "[Content_Types].xml", xml_budget?)
       for element in root.elements_by_tag_name("content-types:Default") {
         let extension = element.attributes.get_or_default("Extension", "")
         let content_type = element.attributes.get_or_default("ContentType", "")
@@ -638,6 +673,7 @@ fn read_numbering_for_document(
   document_relationships : Relationships,
   styles : Map[String, StyleInfo],
   base_path : String,
+  xml_budget? : @xml.XmlReadBudget,
 ) -> NumberingMap raise DocxError {
   let path = find_part_path(
     zip,
@@ -647,7 +683,7 @@ fn read_numbering_for_document(
     fallback_path="word/numbering.xml",
   )
   if zip.exists(path) {
-    read_numbering_xml(read_xml_part(zip, path), styles)
+    read_numbering_xml(read_xml_part(zip, path, xml_budget?), styles)
   } else {
     NumberingMap::empty()
   }
@@ -826,6 +862,7 @@ fn read_notes_for_document(
   base_path : String,
   external_files? : ExternalFileAccess = default_external_file_access(),
   read_images? : Bool = true,
+  xml_budget? : @xml.XmlReadBudget,
 ) -> NotesReadResult raise DocxError {
   let notes : Array[Note] = []
   let messages : Array[Message] = []
@@ -841,6 +878,7 @@ fn read_notes_for_document(
     base_path~,
     external_files~,
     read_images~,
+    xml_budget?,
   )
   notes.append(footnotes.notes)
   messages.append(footnotes.messages)
@@ -856,6 +894,7 @@ fn read_notes_for_document(
     base_path~,
     external_files~,
     read_images~,
+    xml_budget?,
   )
   notes.append(endnotes.notes)
   messages.append(endnotes.messages)
@@ -875,6 +914,7 @@ fn read_note_part(
   base_path~ : String,
   external_files? : ExternalFileAccess = default_external_file_access(),
   read_images? : Bool = true,
+  xml_budget? : @xml.XmlReadBudget,
 ) -> NotesReadResult raise DocxError {
   let path = find_part_path(
     zip,
@@ -889,6 +929,7 @@ fn read_note_part(
   let part_relationships = read_relationships(
     zip,
     relationships_path_for_part(path),
+    xml_budget?,
   )
   let reader = BodyReader::{
     styles,
@@ -901,7 +942,7 @@ fn read_note_part(
     external_files,
     read_images,
   }
-  let root = read_xml_part(zip, path)
+  let root = read_xml_part(zip, path, xml_budget?)
   let notes : Array[Note] = []
   for note_element in root.elements_by_tag_name("w:" + note_type) {
     let note_kind = note_element.attributes.get("w:type")
@@ -931,6 +972,7 @@ fn read_comments_for_document(
   base_path : String,
   external_files? : ExternalFileAccess = default_external_file_access(),
   read_images? : Bool = true,
+  xml_budget? : @xml.XmlReadBudget,
 ) -> CommentsReadResult raise DocxError {
   let path = find_part_path(
     zip,
@@ -945,6 +987,7 @@ fn read_comments_for_document(
   let part_relationships = read_relationships(
     zip,
     relationships_path_for_part(path),
+    xml_budget?,
   )
   let reader = BodyReader::{
     styles,
@@ -957,7 +1000,7 @@ fn read_comments_for_document(
     external_files,
     read_images,
   }
-  let root = read_xml_part(zip, path)
+  let root = read_xml_part(zip, path, xml_budget?)
   let comments : Array[Comment] = []
   for comment_element in root.elements_by_tag_name("w:comment") {
     comments.push({
@@ -991,11 +1034,12 @@ fn read_optional_attribute(element : XmlElement, name : String) -> String {
 fn read_styles(
   zip : ZipArchive,
   path : String,
+  xml_budget? : @xml.XmlReadBudget,
 ) -> Map[String, StyleInfo] raise DocxError {
   let styles : Map[String, StyleInfo] = Map([])
-  match zip.read_text(path) {
-    Some(text) => {
-      let root = read_xml_string(text, namespace_map=office_namespace_map())
+  match zip.read_bytes(path) {
+    Some(_) => {
+      let root = read_xml_part(zip, path, xml_budget?)
       for style in root.elements_by_tag_name("w:style") {
         let style_id = style.attributes.get_or_default("w:styleId", "")
         if style_id != "" {

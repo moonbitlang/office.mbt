@@ -40,6 +40,18 @@ pub struct DocxEditSession {
 }
 
 ///|
+let candidate_xml_source_units : Int = 8 * 1024 * 1024
+
+///|
+let candidate_xml_tokens : Int = 131_072
+
+///|
+let candidate_xml_materialized_chars : Int = 8 * 1024 * 1024
+
+///|
+let candidate_xml_token_chars : Int = 8 * 1024 * 1024
+
+///|
 fn bounded_docx_text(text : String, limit : Int) -> String {
   let output = StringBuilder::new()
   let mut count = 0
@@ -62,6 +74,14 @@ fn docx_error_message(error : @docxcore.DocxError) -> String {
     | MissingPart(message~)
     | Unsupported(message~) => message
   }
+}
+
+///|
+fn is_xml_resource_finding(message : String) -> Bool {
+  message.contains("XML source budget exceeded") ||
+  message.contains("XML token budget exceeded") ||
+  message.contains("XML token length budget exceeded") ||
+  message.contains("XML materialized character budget exceeded")
 }
 
 ///|
@@ -148,13 +168,20 @@ fn open_edit_session(
     archive,
     max_findings=budget.max_validation_findings(),
     max_message_chars=budget.max_validation_message_chars(),
+    max_xml_source_units=budget.max_splice_materialized_bytes(),
+    max_xml_tokens=budget.max_splice_xml_tokens(),
+    max_xml_materialized_chars=budget.max_splice_materialized_bytes(),
+    max_xml_token_chars=budget.max_splice_materialized_bytes(),
   )
   if !findings.is_empty() {
     let duplicate = findings.search_by(fn(finding) {
       finding.has_prefix("duplicate entry name:")
     })
+    let resource_limited = findings.search_by(is_xml_resource_finding)
     let code = if duplicate is Some(_) {
       "office.docx.duplicate_part"
+    } else if resource_limited is Some(_) {
+      "office.docx.resource_limit"
     } else {
       "office.docx.invalid_package"
     }
@@ -168,12 +195,24 @@ fn open_edit_session(
       }),
     )
   }
-  let annotated = @word.read_docx_annotated_archive(archive) catch {
-    error =>
+  let xml_budget = @xml.xml_read_budget(
+    max_source_units=budget.max_splice_materialized_bytes(),
+    max_tokens=budget.max_splice_xml_tokens(),
+    max_materialized_chars=budget.max_splice_materialized_bytes(),
+    max_token_chars=budget.max_splice_materialized_bytes(),
+  )
+  let annotated = @word.read_docx_annotated_archive_limited(archive, xml_budget) catch {
+    error => {
+      let message = docx_error_message(error)
       raise docx_failure(
-        "office.docx.invalid_package",
-        "source DOCX could not be indexed: \{docx_error_message(error)}",
+        if is_xml_resource_finding(message) {
+          "office.docx.resource_limit"
+        } else {
+          "office.docx.invalid_package"
+        },
+        "source DOCX could not be indexed: \{message}",
       )
+    }
   }
   let splice_limits = @splice.splice_limits(
     max_archive_entries=budget.max_archive_entries(),
@@ -405,6 +444,10 @@ pub fn package_validator() -> @transaction.TransactionValidator raise @transacti
       archive,
       max_findings=64,
       max_message_chars=512,
+      max_xml_source_units=candidate_xml_source_units,
+      max_xml_tokens=candidate_xml_tokens,
+      max_xml_materialized_chars=candidate_xml_materialized_chars,
+      max_xml_token_chars=candidate_xml_token_chars,
     )
     let findings : Array[@transaction.ValidationFinding] = []
     let limit = if truncated && raw.length() == 64 { 63 } else { raw.length() }

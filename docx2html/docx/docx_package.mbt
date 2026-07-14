@@ -306,6 +306,7 @@ fn HeaderFooterCollector::read_part_story(
   let part_relationships = read_relationships(
     self.parts.zip,
     relationships_path_for_part(path),
+    xml_budget?=self.parts.xml_budget,
   )
   let reader = BodyReader::{
     styles: self.parts.styles,
@@ -318,7 +319,11 @@ fn HeaderFooterCollector::read_part_story(
     external_files: self.parts.external_files,
     read_images: true,
   }
-  let root = read_xml_part(self.parts.zip, path)
+  let root = read_xml_part(
+    self.parts.zip,
+    path,
+    xml_budget?=self.parts.xml_budget,
+  )
   let body = reader.read_children(root.children)
   self.messages.append(reader.messages)
   body

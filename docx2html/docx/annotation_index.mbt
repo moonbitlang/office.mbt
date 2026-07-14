@@ -390,6 +390,7 @@ pub fn read_docx_annotated(
     open_zip(docx),
     external_file_access,
     read_external_file,
+    None,
   )
 }
 
@@ -407,6 +408,25 @@ pub fn read_docx_annotated_archive(
     open_zip_archive(archive),
     external_file_access,
     read_external_file,
+    None,
+  )
+}
+
+///|
+/// Builds package and annotation indexes from an existing archive while every
+/// XML part shares one cumulative parser budget. Source bytes are charged
+/// before UTF-8 decoding and parser tokens before DOM allocation.
+pub fn read_docx_annotated_archive_limited(
+  archive : @mbtzip.Archive,
+  xml_budget : @xml.XmlReadBudget,
+  external_file_access? : Bool = false,
+  read_external_file? : (String) -> Bytes? = no_external_file_reader,
+) -> DocxAnnotatedResult raise DocxError {
+  read_docx_annotated_zip(
+    open_zip_archive(archive),
+    external_file_access,
+    read_external_file,
+    Some(xml_budget),
   )
 }
 
@@ -415,11 +435,12 @@ fn read_docx_annotated_zip(
   zip : ZipArchive,
   external_file_access : Bool,
   read_external_file : (String) -> Bytes?,
+  xml_budget : @xml.XmlReadBudget?,
 ) -> DocxAnnotatedResult raise DocxError {
   let external_files = external_file_access_options(
     external_file_access, read_external_file,
   )
-  let parts = DocumentParts::build(zip, external_files~)
+  let parts = DocumentParts::build(zip, external_files~, xml_budget?)
   let document_result = parts.read_document()
   let collector = HeaderFooterCollector::new(parts)
   let sections = collect_sections(parts.root, collector)
@@ -517,42 +538,31 @@ fn read_docx_annotated_zip(
   // main-part relationship names it. PARSED comparison — substring
   // scans false-positive on comments and miss character-reference
   // spellings the parser normalizes.
-  let types_text = zip.read_text("[Content_Types].xml") catch { _ => None }
-  match types_text {
-    Some(text) => {
-      let declared_types : Set[String] = Set([])
-      let parsed_root : XmlElement? = Some(@xml.read_xml_string(text)) catch {
-        _ => None
-      }
-      match parsed_root {
-        Some(root) => collect_content_types(root, declared_types)
-        // An unparseable [Content_Types].xml makes sidecar detection
-        // impossible — surface a sentinel so mutating commands fail
-        // closed instead of silently proceeding blind.
-        None =>
-          sidecar_types.push(
-            "[Content_Types].xml is not well-formed; sidecar detection impossible",
-          )
-      }
-      for
-        sidecar_content_type in (
-          [
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsIds+xml",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.people+xml",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtensible+xml",
-          ] : ReadOnlyArray[String]) {
-        if declared_types.contains(sidecar_content_type) &&
-          sidecar_types.search(sidecar_content_type) is None {
-          sidecar_types.push(sidecar_content_type)
-        }
+  if zip.exists("[Content_Types].xml") {
+    let declared_types : Set[String] = Set([])
+    for _, content_type in parts.content_types.defaults {
+      declared_types.add(content_type)
+    }
+    for _, content_type in parts.content_types.overrides {
+      declared_types.add(content_type)
+    }
+    for
+      sidecar_content_type in (
+        [
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsIds+xml",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.people+xml",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtensible+xml",
+        ] : ReadOnlyArray[String]) {
+      if declared_types.contains(sidecar_content_type) &&
+        sidecar_types.search(sidecar_content_type) is None {
+        sidecar_types.push(sidecar_content_type)
       }
     }
-    None => ()
   }
   {
     package_result,
     index,
-    main_part: main_story_path(zip),
+    main_part: parts.main_document_path,
     comments_part_name: comments_part_resolved,
     sidecar_types,
     comments_extended_part_name: comments_extended_resolved,
@@ -714,7 +724,7 @@ fn build_annotation_index(
   // Story list in the plan's fixed rank order: body, header[1..],
   // footer[1..], footnotes, endnotes. Header/footer paths come from the
   // collector's dedup maps (index -> path).
-  let stories : Array[(String, String)] = [("/body", main_story_path(zip))]
+  let stories : Array[(String, String)] = [("/body", parts.main_document_path)]
   for pair in inverted_part_paths(collector.header_index_by_path) {
     let (index, path) = pair
     stories.push(("/header[\{index + 1}]", path))
@@ -815,27 +825,6 @@ fn build_annotation_index(
 ///|
 /// Every ContentType attribute value declared in [Content_Types].xml
 /// (Override and Default alike), parsed — character references decoded.
-fn collect_content_types(element : XmlElement, types : Set[String]) -> Unit {
-  match element.attributes.get("ContentType") {
-    Some(content_type) => types.add(content_type)
-    None => ()
-  }
-  for child in element.children {
-    match child {
-      XmlElement(inner) => collect_content_types(inner, types)
-      _ => ()
-    }
-  }
-}
-
-///|
-fn main_story_path(zip : ZipArchive) -> String {
-  find_main_document_path(zip) catch {
-    _ => "word/document.xml"
-  }
-}
-
-///|
 fn inverted_part_paths(
   index_by_path : Map[String, Int],
 ) -> Array[(Int, String)] {
@@ -880,7 +869,7 @@ fn read_comment_definitions(
   if !zip.exists(path) {
     return definitions
   }
-  let root = read_xml_part(zip, path) catch {
+  let root = read_xml_part(zip, path, xml_budget?=parts.xml_budget) catch {
     _ => {
       warnings.push("annotation index: could not parse the comments part")
       return definitions
@@ -925,7 +914,7 @@ fn read_comments_extended(
   if !zip.exists(path) {
     return records
   }
-  let root = read_xml_part(zip, path) catch {
+  let root = read_xml_part(zip, path, xml_budget?=parts.xml_budget) catch {
     _ => {
       warnings.push(
         "annotation index: could not parse the commentsExtended part",
