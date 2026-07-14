@@ -1598,18 +1598,17 @@ fn XmlParser::read_name(self : XmlParser) -> String raise DocxError {
     return xml_substring(self.source, start, self.pos)
   }
   while self.pos < self.source.length() {
-    let c = self.source[self.pos]
-    if (c >= 'a' && c <= 'z') ||
-      (c >= 'A' && c <= 'Z') ||
-      (c >= '0' && c <= '9') ||
-      c == ':' ||
-      c == '_' ||
-      c == '-' ||
-      c == '.' {
-      self.pos = self.pos + 1
-    } else {
+    let char = match self.source.get_char(self.pos) {
+      Some(char) => char
+      None => raise InvalidXml(message="invalid UTF-16 in XML content")
+    }
+    // The compatibility parser remains permissive about the first character
+    // (for example, it historically accepted digit-start names), but valid
+    // Unicode XML names must not be truncated to their ASCII prefix.
+    if !is_xml_name_char(char) {
       break
     }
+    self.pos += char.utf16_len()
   }
   if self.pos == start {
     raise InvalidXml(message="expected XML name")
@@ -1715,17 +1714,28 @@ fn XmlParser::skip_until(
 fn decode_xml_entities(value : String) -> String raise DocxError {
   let builder = StringBuilder()
   let mut index = 0
+  let mut no_remaining_semicolon = false
   while index < value.length() {
     if value[index] == '&' {
-      match value[index:].find(";") {
-        Some(length) => {
-          let entity = xml_substring(value, index + 1, index + length)
-          builder.write_string(decode_xml_entity(entity))
-          index = index + length + 1
+      if no_remaining_semicolon {
+        builder.write_char('&')
+        index += 1
+      } else {
+        let mut entity_end = index + 1
+        while entity_end < value.length() && value[entity_end] != ';' {
+          entity_end += 1
         }
-        None => {
+        if entity_end < value.length() {
+          let entity = xml_substring(value, index + 1, entity_end)
+          builder.write_string(decode_xml_entity(entity))
+          index = entity_end + 1
+        } else {
+          // Cache the failed suffix scan. Without this, tolerant parsing of a
+          // long run of unterminated ampersands rescans the complete suffix
+          // once per ampersand.
+          no_remaining_semicolon = true
           builder.write_char('&')
-          index = index + 1
+          index += 1
         }
       }
     } else {
