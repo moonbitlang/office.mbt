@@ -96,6 +96,10 @@ fn ScannedMarker::after_child(self : ScannedMarker) -> String? {
 priv struct ScannedNode {
   path : String
   kind : String
+  // Monotonic ordinal assigned when the projection node opens. Close-order
+  // storage alone cannot recover open order without sorting; this ordinal
+  // lets the scanner rebuild it with one bounded array pass.
+  open_order : Int
   open_seq : Int
   close_seq : Int
   byte_start : Int
@@ -147,6 +151,24 @@ priv struct StoryScan {
   // The story's ROOT element span (kind = its local name, path = "").
   // L1 splices new definitions just before root.close_tag_start.
   root : ScannedNode?
+  // Private structural accounting used by the complexity regression tests.
+  // Every retraction step represents one checkpoint operation or one item
+  // discarded; no retained prefix is inspected.
+  work : AnnotationScanWork
+}
+
+///|
+/// Structural work counters for the annotation scanner's adversarial paths.
+/// Keep these counters in sync whenever those paths inspect another slot: the
+/// white-box tests assert input-linear bounds rather than wall-clock timing.
+priv struct AnnotationScanWork {
+  mut projection_opens : Int
+  mut emitted_nodes : Int
+  mut emitted_markers : Int
+  mut ordering_steps : Int
+  mut story_position_steps : Int
+  mut retraction_calls : Int
+  mut retraction_steps : Int
 }
 
 ///|
@@ -182,6 +204,24 @@ fn StoryScan::story_level_position(
 }
 
 ///|
+/// White-box complexity counters. Kept as one private tuple so production
+/// callers cannot depend on instrumentation details.
+fn StoryScan::complexity_counters(
+  self : StoryScan,
+) -> (Int, Int, Int, Int, Int, Int, Int) {
+  let work = self.work
+  (
+    work.projection_opens,
+    work.emitted_nodes,
+    work.emitted_markers,
+    work.ordering_steps,
+    work.story_position_steps,
+    work.retraction_calls,
+    work.retraction_steps,
+  )
+}
+
+///|
 /// One open element during the walk.
 priv struct ScanFrame {
   // Resolved local name (for the node's kind on close) + WML-ness.
@@ -196,6 +236,7 @@ priv struct ScanFrame {
   projection_kind : String?
   counters : Map[String, Int]
   mut last_closed_child : String?
+  projection_open_order : Int
   open_seq : Int
   byte_start : Int
   // Earliest interior insertion offset (just past the open tag, moved
@@ -241,6 +282,11 @@ priv struct ScanFrame {
   // late-deleted row can roll back exactly its own contributions —
   // the reader excludes deleted rows BEFORE span calculation.
   registered_columns : Array[Int]
+  // Exact output checkpoints at element open. Late tcPr/trPr decisions can
+  // discard the subtree with tail truncation instead of rescanning/copying
+  // everything accumulated earlier in the story.
+  node_checkpoint : Int
+  marker_checkpoint : Int
 }
 
 ///|
@@ -332,6 +378,16 @@ fn scan_story(part : BytesView) -> StoryScan raise DocxError {
   // Prefix -> stack of URIs (innermost last). "" is the default namespace.
   let namespaces : Map[String, Array[String]] = Map([])
   let mut seq = 0
+  let mut projection_open_count = 0
+  let work : AnnotationScanWork = {
+    projection_opens: 0,
+    emitted_nodes: 0,
+    emitted_markers: 0,
+    ordering_steps: 0,
+    story_position_steps: 0,
+    retraction_calls: 0,
+    retraction_steps: 0,
+  }
   let length = part.length()
   let mut index = 0
   fn resolve(prefix : String) -> String {
@@ -443,7 +499,7 @@ fn scan_story(part : BytesView) -> StoryScan raise DocxError {
               (Some(cell), Some(table)) =>
                 if cell.vmerge_continue &&
                   table.origin_columns.contains(cell.grid_column) {
-                  retract_cell(cell, nodes, markers)
+                  retract_cell(cell, nodes, markers, work)
                 }
               _ => ()
             }
@@ -460,6 +516,7 @@ fn scan_story(part : BytesView) -> StoryScan raise DocxError {
                     nearest_frame_by_kind(frames, "tbl"),
                     nodes,
                     markers,
+                    work,
                   )
                 }
               None => ()
@@ -488,11 +545,12 @@ fn scan_story(part : BytesView) -> StoryScan raise DocxError {
               _ => ()
             }
           }
-          finish_frame(frame, seq, index, close_end, nodes, frames)
+          finish_frame(frame, seq, index, close_end, nodes, frames, work)
           if frames.length() == 0 && root is None {
             root = Some({
               path: "",
               kind: frame.local_name,
+              open_order: -1,
               open_seq: frame.open_seq,
               close_seq: seq,
               byte_start: frame.byte_start,
@@ -583,6 +641,7 @@ fn scan_story(part : BytesView) -> StoryScan raise DocxError {
             container_path,
             after_child,
           })
+          work.emitted_markers += 1
           if id is None {
             warnings.add(
               "annotation scanner: a \{kind} marker has no w:id attribute",
@@ -594,6 +653,7 @@ fn scan_story(part : BytesView) -> StoryScan raise DocxError {
     }
     let mut counter_owner : Map[String, Int]? = None
     let mut projection_kind_value : String? = None
+    let mut projection_open_order = -1
     let projection = if suppressed {
       None
     } else {
@@ -606,6 +666,9 @@ fn scan_story(part : BytesView) -> StoryScan raise DocxError {
           let ordinal = bump_counter(counters, kind)
           counter_owner = Some(counters)
           projection_kind_value = Some(kind)
+          projection_open_order = projection_open_count
+          projection_open_count += 1
+          work.projection_opens += 1
           let parent_path = match current_projection() {
             Some(frame) => frame.projection_path
             None => None
@@ -700,6 +763,7 @@ fn scan_story(part : BytesView) -> StoryScan raise DocxError {
           nodes.push({
             path,
             kind,
+            open_order: projection_open_order,
             open_seq: seq - 1,
             close_seq: seq,
             byte_start: index,
@@ -707,6 +771,7 @@ fn scan_story(part : BytesView) -> StoryScan raise DocxError {
             content_start: -1,
             close_tag_start: -1,
           })
+          work.emitted_nodes += 1
           record_closed_child(frames, path)
         }
         None => ()
@@ -717,6 +782,7 @@ fn scan_story(part : BytesView) -> StoryScan raise DocxError {
         root = Some({
           path: "",
           kind: local_name,
+          open_order: -1,
           open_seq: seq - 1,
           close_seq: seq,
           byte_start: index,
@@ -789,6 +855,7 @@ fn scan_story(part : BytesView) -> StoryScan raise DocxError {
         projection_kind: projection_kind_value,
         counters: Map([]),
         last_closed_child: None,
+        projection_open_order,
         open_seq: seq,
         byte_start: index,
         content_start: tag_end,
@@ -807,6 +874,8 @@ fn scan_story(part : BytesView) -> StoryScan raise DocxError {
         properties_seen: false,
         first_properties,
         registered_columns: [],
+        node_checkpoint: nodes.length(),
+        marker_checkpoint: markers.length(),
       })
     }
     index = tag_end
@@ -814,49 +883,81 @@ fn scan_story(part : BytesView) -> StoryScan raise DocxError {
   if frames.length() > 0 {
     warnings.add("annotation scanner: unbalanced open tags at end of part")
   }
+  let nodes_by_open = nodes_in_open_order(nodes, projection_open_count, work)
   {
     nodes,
     markers,
     warnings: warnings.finish(),
-    story_level_positions: build_story_level_positions(nodes, markers),
+    story_level_positions: build_story_level_positions(
+      nodes, nodes_by_open, markers, work,
+    ),
     root,
+    work,
   }
+}
+
+///|
+/// Reconstructs surviving nodes in open order without sorting. Retractions can
+/// leave holes in the scan-time ordinals, so fill exact slots and compact them
+/// with a second monotonic pass. The slot array is bounded by projection opens.
+fn nodes_in_open_order(
+  nodes : Array[ScannedNode],
+  projection_open_count : Int,
+  work : AnnotationScanWork,
+) -> Array[ScannedNode] {
+  let slots : Array[ScannedNode?] = Array::make(projection_open_count, None)
+  work.ordering_steps += projection_open_count
+  for node in nodes {
+    work.ordering_steps += 1
+    if node.open_order >= 0 && node.open_order < slots.length() {
+      slots[node.open_order] = Some(node)
+    }
+  }
+  let ordered : Array[ScannedNode] = []
+  for slot in slots {
+    match slot {
+      Some(node) => ordered.push(node)
+      None => ()
+    }
+  }
+  ordered
 }
 
 ///|
 /// Computes every story-level marker's nearest following/preceding projection
 /// node with two monotonic sweeps. This replaces one full node scan per marker.
 fn build_story_level_positions(
-  nodes : Array[ScannedNode],
+  nodes_by_close : Array[ScannedNode],
+  nodes_by_open : Array[ScannedNode],
   markers : Array[ScannedMarker],
+  work : AnnotationScanWork,
 ) -> Map[Int, StoryLevelMarkerPosition] {
   let positions : Map[Int, StoryLevelMarkerPosition] = Map([])
-  let ordered_markers : Array[ScannedMarker] = []
-  for marker in markers {
-    if marker.container_path is None {
-      ordered_markers.push(marker)
-    }
-  }
-  ordered_markers.sort_by_key(marker => marker.seq)
-  let by_open = nodes.copy()
-  by_open.sort_by_key(node => node.open_seq)
-  let by_close = nodes.copy()
-  by_close.sort_by_key(node => node.close_seq)
   let mut open_at = 0
   let mut close_at = 0
   let mut nearest_before : ScannedNode? = None
-  for marker in ordered_markers {
-    while open_at < by_open.length() && by_open[open_at].open_seq <= marker.seq {
+  // `markers` is emitted in document order, `nodes_by_open` follows the
+  // scan-time ordinal, and `nodes_by_close` is the scanner's native order.
+  // Each cursor only advances: no copies and no attacker-sized sort.
+  for marker in markers {
+    work.story_position_steps += 1
+    if marker.container_path is Some(_) {
+      continue
+    }
+    while open_at < nodes_by_open.length() &&
+          nodes_by_open[open_at].open_seq <= marker.seq {
       open_at += 1
+      work.story_position_steps += 1
     }
-    while close_at < by_close.length() &&
-          by_close[close_at].close_seq < marker.seq {
-      nearest_before = Some(by_close[close_at])
+    while close_at < nodes_by_close.length() &&
+          nodes_by_close[close_at].close_seq < marker.seq {
+      nearest_before = Some(nodes_by_close[close_at])
       close_at += 1
+      work.story_position_steps += 1
     }
-    if open_at < by_open.length() {
+    if open_at < nodes_by_open.length() {
       positions[marker.seq] = {
-        path: by_open[open_at].path,
+        path: nodes_by_open[open_at].path,
         node_is_after: true,
       }
     } else {
@@ -913,31 +1014,14 @@ fn purge_subtree(
   frame : ScanFrame,
   nodes : Array[ScannedNode],
   markers : Array[ScannedMarker],
+  work : AnnotationScanWork,
 ) -> Unit {
-  let kept_nodes : Array[ScannedNode] = []
-  for node in nodes {
-    if node.open_seq <= frame.open_seq {
-      kept_nodes.push(node)
-    }
-  }
-  if kept_nodes.length() != nodes.length() {
-    nodes.clear()
-    for node in kept_nodes {
-      nodes.push(node)
-    }
-  }
-  let kept_markers : Array[ScannedMarker] = []
-  for marker in markers {
-    if marker.seq <= frame.open_seq {
-      kept_markers.push(marker)
-    }
-  }
-  if kept_markers.length() != markers.length() {
-    markers.clear()
-    for marker in kept_markers {
-      markers.push(marker)
-    }
-  }
+  work.retraction_calls += 1
+  work.retraction_steps += 1 +
+    (nodes.length() - frame.node_checkpoint) +
+    (markers.length() - frame.marker_checkpoint)
+  nodes.truncate(frame.node_checkpoint)
+  markers.truncate(frame.marker_checkpoint)
 }
 
 ///|
@@ -948,6 +1032,7 @@ fn retract_row(
   table : ScanFrame?,
   nodes : Array[ScannedNode],
   markers : Array[ScannedMarker],
+  work : AnnotationScanWork,
 ) -> Unit {
   match (row.projection_path, row.counter_owner) {
     (Some(_), Some(counters)) => {
@@ -958,7 +1043,7 @@ fn retract_row(
       row.projection_path = None
       row.counter_owner = None
       row.suppressed = true
-      purge_subtree(row, nodes, markers)
+      purge_subtree(row, nodes, markers, work)
       // Roll back exactly the origins this row's cells introduced —
       // the reader never lets a deleted row participate in merging.
       match table {
@@ -981,6 +1066,7 @@ fn retract_cell(
   cell : ScanFrame,
   nodes : Array[ScannedNode],
   markers : Array[ScannedMarker],
+  work : AnnotationScanWork,
 ) -> Unit {
   match (cell.projection_path, cell.counter_owner) {
     (Some(_), Some(counters)) => {
@@ -991,7 +1077,7 @@ fn retract_cell(
       cell.projection_path = None
       cell.counter_owner = None
       cell.suppressed = true
-      purge_subtree(cell, nodes, markers)
+      purge_subtree(cell, nodes, markers, work)
     }
     _ => ()
   }
@@ -1023,12 +1109,14 @@ fn finish_frame(
   byte_end : Int,
   nodes : Array[ScannedNode],
   frames : Array[ScanFrame],
+  work : AnnotationScanWork,
 ) -> Unit {
   match frame.projection_path {
     Some(path) => {
       nodes.push({
         path,
         kind: frame.projection_kind.unwrap_or(frame.local_name),
+        open_order: frame.projection_open_order,
         open_seq: frame.open_seq,
         close_seq,
         byte_start: frame.byte_start,
@@ -1036,6 +1124,7 @@ fn finish_frame(
         content_start: frame.content_start,
         close_tag_start,
       })
+      work.emitted_nodes += 1
       record_closed_child(frames, path)
     }
     None => ()
@@ -1779,5 +1868,68 @@ test "scanner review round 6: a deleted row rolls back its origin registrations"
     content=(
       #|["tr tbl[1]/tr[1]", "tr tbl[1]/tr[2]", "tc tbl[1]/tr[1]/tc[1]"]
     ),
+  )
+}
+
+///|
+test "scanner complexity: alternating late row and cell retractions stay linear" {
+  let count = 128
+  let xml = StringBuilder()
+  xml.write_string(
+    "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:tbl>",
+  )
+  // Establish the column-zero origin required for each late vMerge
+  // continuation below to be retracted.
+  xml.write_string("<w:tr><w:tc><w:p><w:r/></w:p></w:tc></w:tr>")
+  for index in 0..<count {
+    // The first properties element arrives after content, so two completed
+    // projection nodes and a marker must be truncated from this cell.
+    xml.write_string(
+      "<w:tr><w:tc><w:p><w:r><w:commentReference w:id=\"c\{index}\"/></w:r></w:p><w:tcPr><w:vMerge/></w:tcPr></w:tc></w:tr>",
+    )
+    // The first row-properties element likewise arrives after a completed
+    // cell and retracts the entire row subtree.
+    xml.write_string(
+      "<w:tr><w:tc><w:p><w:r><w:commentReference w:id=\"r\{index}\"/></w:r></w:p></w:tc><w:trPr><w:del/></w:trPr></w:tr>",
+    )
+  }
+  xml.write_string("</w:tbl>")
+  // Retained story-level markers exercise both monotonic nearest-node sweeps.
+  for index in 0..<count {
+    xml.write_string("<w:commentReference w:id=\"s\{index}\"/><w:p/>")
+  }
+  xml.write_string("</w:body></w:document>")
+  let scan = scan_text(xml.to_string())
+  assert_eq(scan.markers().length(), count)
+  let retained = scan.markers()
+  match scan.story_level_position(retained[0].seq()) {
+    Some(position) => assert_eq(position.path, "p[1]")
+    None => fail("expected a position for the first story-level marker")
+  }
+  match scan.story_level_position(retained[count - 1].seq()) {
+    Some(position) => assert_eq(position.path, "p[128]")
+    None => fail("expected a position for the last story-level marker")
+  }
+  let (
+    projection_opens,
+    emitted_nodes,
+    emitted_markers,
+    ordering_steps,
+    story_position_steps,
+    retraction_calls,
+    retraction_steps,
+  ) = scan.complexity_counters()
+  assert_eq(retraction_calls, count * 2)
+  // Checkpoint truncation can discard each emitted item at most once. Any
+  // retained-prefix scan would violate this structural work bound.
+  assert_true(
+    retraction_steps <= retraction_calls + emitted_nodes + emitted_markers,
+  )
+  // Open-order reconstruction visits one slot per projection open and each
+  // surviving node once; story fallback visits every retained marker and
+  // advances each node cursor at most once.
+  assert_eq(ordering_steps, projection_opens + scan.nodes().length())
+  assert_true(
+    story_position_steps <= scan.markers().length() + scan.nodes().length() * 2,
   )
 }
