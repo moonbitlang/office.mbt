@@ -55,9 +55,12 @@ bounded A4 transaction boundary:
 - candidate packages pass both portable Office detection and the strict,
   archive-backed DOCX package validator before atomic publication.
 
-D1 is an SDK foundation, not a newly advertised CLI command. The A2 capability
-registry remains unchanged until the later DOCX outline/get/text/query and
-concrete mutation command slices are implemented end to end.
+D1 is an SDK foundation, not a newly advertised CLI command. No partial command
+record is added to the A2 registry: its existing raw mutation records already
+advertise `office.transaction/1`, whose `preservation` member is the
+authoritative changed/added/removed/untouched report used by D1. Later DOCX
+outline/get/text/query and concrete mutation slices will add typed command
+records only when they are implemented end to end.
 
 ## Deferred beyond major parity
 
