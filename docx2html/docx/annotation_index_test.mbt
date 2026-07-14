@@ -463,6 +463,42 @@ test "commentsExtended strict parsing consumes the cumulative XML budget" {
 }
 
 ///|
+test "a second comments parse preserves XML resource failure typing" {
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:document>
+  let comments =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="0"><w:p/></w:comment></w:comments>
+  let bytes = fixture_docx(document, comments_xml=Some(comments))
+  let archive = try! @mbtzip.read(bytes)
+  let mut source_limit = 0
+  for part in [
+    "_rels/.rels",
+    "word/_rels/document.xml.rels",
+    "[Content_Types].xml",
+    "word/comments.xml",
+    "word/document.xml",
+  ] {
+    guard archive.get(part) is Some(content) else {
+      fail("resource fixture is missing \{part}")
+    }
+    source_limit += content.length()
+  }
+  let budget = @xml.xml_read_budget(
+    max_source_units=source_limit,
+    max_tokens=1_000_000,
+    max_materialized_chars=1_000_000,
+    max_token_chars=1_000_000,
+  )
+  try @docx.read_docx_annotated_archive_limited(archive, budget) catch {
+    InvalidXml(message~) =>
+      inspect(message, content="XML source budget exceeded")
+    _ => fail("expected the comments reread resource failure to stay typed")
+  } noraise {
+    _ => fail("expected the comments reread to exhaust its shared budget")
+  }
+}
+
+///|
 test "comment resolution matches decoded ids on default-namespaced entries" {
   let document =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:document>
