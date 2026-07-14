@@ -1282,25 +1282,6 @@ fn XmlParser::record_namespace_binding(
 }
 
 ///|
-fn XmlParser::decode_namespace_binding(
-  self : XmlParser,
-  raw_value : String,
-) -> String raise DocxError {
-  // Strict element attributes are already normalized and entity-decoded
-  // directly from the borrowed parser source, so their lexical token charge
-  // covers this retained namespace value. The tolerant parser still holds a
-  // raw token and must separately charge its decoded projection.
-  if self.strict {
-    return raw_value
-  }
-  match self.budget {
-    Some(budget) => budget.charge_derived_chars(raw_value.length())
-    None => ()
-  }
-  decode_xml_entities(raw_value)
-}
-
-///|
 fn XmlParser::restore_namespace_bindings(
   self : XmlParser,
   changes : Array[NamespaceBindingChange],
@@ -1340,15 +1321,13 @@ fn XmlParser::parse_element_inner_tolerant(
       self.skip_whitespace()
       self.expect("=")
       self.skip_whitespace()
-      let attr_value = self.read_quoted_value()
+      let attr_value = self.read_quoted_value_tolerant_decoded()
       if attr_name == "xmlns" {
-        let namespace_uri = self.decode_namespace_binding(attr_value)
-        self.record_namespace_binding("", namespace_uri, namespace_changes)
+        self.record_namespace_binding("", attr_value, namespace_changes)
       } else if attr_name.has_prefix("xmlns:") {
         self.charge_derived_name(attr_name.length() - 6)
         let prefix = attr_name[6:].to_owned()
-        let namespace_uri = self.decode_namespace_binding(attr_value)
-        self.record_namespace_binding(prefix, namespace_uri, namespace_changes)
+        self.record_namespace_binding(prefix, attr_value, namespace_changes)
       } else {
         raw_attributes.push((attr_name, attr_value))
       }
@@ -1406,15 +1385,13 @@ fn XmlParser::parse_element_inner_strict(
       self.skip_whitespace()
       let attr_value = self.read_quoted_value_strict_decoded()
       if attr_name == "xmlns" {
-        let namespace_uri = self.decode_namespace_binding(attr_value)
-        validate_namespace_declaration("", namespace_uri)
-        self.record_namespace_binding("", namespace_uri, namespace_changes)
+        validate_namespace_declaration("", attr_value)
+        self.record_namespace_binding("", attr_value, namespace_changes)
       } else if attr_name.has_prefix("xmlns:") {
         self.charge_derived_name(attr_name.length() - 6)
         let prefix = attr_name[6:].to_owned()
-        let namespace_uri = self.decode_namespace_binding(attr_value)
-        validate_namespace_declaration(prefix, namespace_uri)
-        self.record_namespace_binding(prefix, namespace_uri, namespace_changes)
+        validate_namespace_declaration(prefix, attr_value)
+        self.record_namespace_binding(prefix, attr_value, namespace_changes)
       } else {
         raw_attributes.push((attr_name, attr_value))
       }
@@ -1485,7 +1462,7 @@ fn XmlParser::parse_children(
       let text = if self.strict {
         self.read_text_strict_decoded()
       } else {
-        decode_xml_entities(self.read_text())
+        self.read_text_tolerant_decoded()
       }
       if text != "" {
         children.push(XmlText(text))
@@ -1516,11 +1493,7 @@ fn XmlParser::build_element(
       }
       expanded_attributes[expanded] = true
     }
-    attributes[self.map_name(name, is_attribute=true)] = if self.strict {
-      value
-    } else {
-      decode_xml_entities(value)
-    }
+    attributes[self.map_name(name, is_attribute=true)] = value
   }
   { name: self.map_name(raw_name, is_attribute=false), attributes, children }
 }
@@ -1994,6 +1967,34 @@ fn XmlParser::read_quoted_value(self : XmlParser) -> String raise DocxError {
 }
 
 ///|
+/// Reads one tolerant element attribute directly into its retained,
+/// entity-decoded value. Keeping the parser source borrowed avoids retaining a
+/// raw token, an entity substring, and growable decoder buffers concurrently.
+fn XmlParser::read_quoted_value_tolerant_decoded(
+  self : XmlParser,
+) -> String raise DocxError {
+  if self.pos >= self.source.length() {
+    raise InvalidXml(message="expected quoted attribute value")
+  }
+  let quote = self.source[self.pos]
+  if quote != '"' && quote != '\'' {
+    raise InvalidXml(message="expected quoted attribute value")
+  }
+  self.pos += 1
+  let start = self.pos
+  while self.pos < self.source.length() && self.source[self.pos] != quote {
+    self.pos += 1
+  }
+  if self.pos >= self.source.length() {
+    raise InvalidXml(message="unterminated attribute value")
+  }
+  self.charge_token(self.pos - start)
+  let value = decode_tolerant_xml_range(self.source, start, self.pos)
+  self.pos += 1
+  value
+}
+
+///|
 /// Reads one strict element attribute directly into its retained normalized,
 /// entity-decoded value. The parser source remains borrowed throughout; no raw
 /// or separately normalized token-sized strings are materialized.
@@ -2031,16 +2032,18 @@ fn XmlParser::read_quoted_value_strict_decoded(
 }
 
 ///|
-fn XmlParser::read_text(self : XmlParser) -> String raise DocxError {
+/// Reads tolerant character data into one retained decoded string. Entity
+/// decoding is fused over the borrowed parser source just as it is for
+/// tolerant attributes.
+fn XmlParser::read_text_tolerant_decoded(
+  self : XmlParser,
+) -> String raise DocxError {
   let start = self.pos
   while self.pos < self.source.length() && self.source[self.pos] != '<' {
-    if self.strict && self.starts_with("]]>") {
-      raise InvalidXml(message="']]>' is not allowed in XML character data")
-    }
-    self.pos = self.pos + 1
+    self.pos += 1
   }
   self.charge_token(self.pos - start)
-  xml_substring(self.source, start, self.pos)
+  decode_tolerant_xml_range(self.source, start, self.pos)
 }
 
 ///|
@@ -2145,46 +2148,6 @@ fn XmlParser::skip_until(
 }
 
 ///|
-fn decode_xml_entities(value : String) -> String raise DocxError {
-  let builder = StringBuilder()
-  let mut index = 0
-  let mut no_remaining_semicolon = false
-  while index < value.length() {
-    if value[index] == '&' {
-      if no_remaining_semicolon {
-        builder.write_char('&')
-        index += 1
-      } else {
-        let mut entity_end = index + 1
-        while entity_end < value.length() && value[entity_end] != ';' {
-          entity_end += 1
-        }
-        if entity_end < value.length() {
-          let entity = xml_substring(value, index + 1, entity_end)
-          builder.write_string(decode_xml_entity(entity))
-          index = entity_end + 1
-        } else {
-          // Cache the failed suffix scan. Without this, tolerant parsing of a
-          // long run of unterminated ampersands rescans the complete suffix
-          // once per ampersand.
-          no_remaining_semicolon = true
-          builder.write_char('&')
-          index += 1
-        }
-      }
-    } else {
-      let char = match value.get_char(index) {
-        Some(char) => char
-        None => raise InvalidXml(message="invalid UTF-16 in XML content")
-      }
-      builder.write_char(char)
-      index = index + char.utf16_len()
-    }
-  }
-  builder.to_string()
-}
-
-///|
 fn xml_source_range_equals(
   source : String,
   start : Int,
@@ -2200,6 +2163,165 @@ fn xml_source_range_equals(
     }
   }
   true
+}
+
+///|
+/// Decodes one tolerant entity from a borrowed source range. Unknown or
+/// malformed references return `None` and are retained verbatim by the caller.
+fn tolerant_xml_entity_char(source : String, start : Int, end : Int) -> Char? {
+  if xml_source_range_equals(source, start, end, "amp") {
+    return Some('&')
+  }
+  if xml_source_range_equals(source, start, end, "lt") {
+    return Some('<')
+  }
+  if xml_source_range_equals(source, start, end, "gt") {
+    return Some('>')
+  }
+  if xml_source_range_equals(source, start, end, "quot") {
+    return Some('"')
+  }
+  if xml_source_range_equals(source, start, end, "apos") {
+    return Some('\'')
+  }
+  if start >= end || source[start] != '#' {
+    return None
+  }
+  let (base, digits_start) = if start + 1 < end &&
+    (source[start + 1] == 'x' || source[start + 1] == 'X') {
+    (16, start + 2)
+  } else {
+    (10, start + 1)
+  }
+  if digits_start >= end {
+    return None
+  }
+  let mut codepoint = 0
+  for index in digits_start..<end {
+    guard xml_entity_digit_value(source[index], base) is Some(digit) else {
+      return None
+    }
+    if codepoint > (0x10FFFF - digit) / base {
+      return None
+    }
+    codepoint = codepoint * base + digit
+  }
+  codepoint.to_char()
+}
+
+///|
+/// Computes the exact retained size of a tolerant token without allocating an
+/// entity substring. A failed semicolon search is cached so unterminated runs
+/// remain linear.
+fn tolerant_xml_decoded_shape(
+  source : String,
+  start : Int,
+  end : Int,
+) -> (Int, Bool) raise DocxError {
+  let mut index = start
+  let mut output_units = 0
+  let mut changed = false
+  let mut no_remaining_semicolon = false
+  while index < end {
+    if source[index] == '&' && !no_remaining_semicolon {
+      let mut entity_end = index + 1
+      while entity_end < end && source[entity_end] != ';' {
+        entity_end += 1
+      }
+      if entity_end < end {
+        match tolerant_xml_entity_char(source, index + 1, entity_end) {
+          Some(char) => {
+            output_units += char.utf16_len()
+            changed = true
+          }
+          None => output_units += entity_end - index + 1
+        }
+        index = entity_end + 1
+        continue
+      }
+      no_remaining_semicolon = true
+    }
+    let char = match source.get_char(index) {
+      Some(char) => char
+      None => raise InvalidXml(message="invalid UTF-16 in XML content")
+    }
+    output_units += char.utf16_len()
+    index += char.utf16_len()
+  }
+  (output_units, changed)
+}
+
+///|
+fn write_xml_source_range(
+  output : StringBuilder,
+  source : String,
+  start : Int,
+  end : Int,
+) -> Unit raise DocxError {
+  let mut index = start
+  while index < end {
+    let char = match source.get_char(index) {
+      Some(char) => char
+      None => raise InvalidXml(message="invalid UTF-16 in XML content")
+    }
+    output.write_char(char)
+    index += char.utf16_len()
+  }
+}
+
+///|
+fn write_tolerant_xml_decoded_range(
+  output : StringBuilder,
+  source : String,
+  start : Int,
+  end : Int,
+) -> Unit raise DocxError {
+  let mut index = start
+  let mut no_remaining_semicolon = false
+  while index < end {
+    if source[index] == '&' && !no_remaining_semicolon {
+      let mut entity_end = index + 1
+      while entity_end < end && source[entity_end] != ';' {
+        entity_end += 1
+      }
+      if entity_end < end {
+        match tolerant_xml_entity_char(source, index + 1, entity_end) {
+          Some(char) => output.write_char(char)
+          None => write_xml_source_range(output, source, index, entity_end + 1)
+        }
+        index = entity_end + 1
+        continue
+      }
+      no_remaining_semicolon = true
+    }
+    let char = match source.get_char(index) {
+      Some(char) => char
+      None => raise InvalidXml(message="invalid UTF-16 in XML content")
+    }
+    output.write_char(char)
+    index += char.utf16_len()
+  }
+}
+
+///|
+/// Fuses tolerant entity decoding over a borrowed parser range. The unchanged
+/// fast path makes one exact copy; transformed tokens use a size pass and one
+/// exactly-sized output allocation.
+fn decode_tolerant_xml_range(
+  source : String,
+  start : Int,
+  end : Int,
+) -> String raise DocxError {
+  let (output_units, changed) = tolerant_xml_decoded_shape(source, start, end)
+  if output_units == 0 {
+    return ""
+  }
+  if !changed {
+    return xml_substring(source, start, end)
+  }
+  let output = xml_string_builder_for_units(output_units)
+  write_tolerant_xml_decoded_range(output, source, start, end)
+  output.to_string()
 }
 
 ///|
@@ -2415,101 +2537,6 @@ fn decode_strict_xml_range(
     entities~,
   )
   output.to_string()
-}
-
-///|
-fn decode_xml_entity(entity : String) -> String {
-  match entity {
-    "amp" => "&"
-    "lt" => "<"
-    "gt" => ">"
-    "quot" => "\""
-    "apos" => "'"
-    _ =>
-      match decode_numeric_xml_entity(entity) {
-        Some(value) => value
-        None => "&" + entity + ";"
-      }
-  }
-}
-
-///|
-fn decode_numeric_xml_entity(entity : String) -> String? {
-  if entity.length() < 2 || entity[0] != '#' || !is_xmldom_entity_word(entity) {
-    return None
-  }
-  match parse_xmldom_numeric_entity(entity[1:].to_owned()) {
-    None => Some("\u{0}")
-    Some(codepoint) =>
-      match Int::to_char(codepoint) {
-        Some(char) => Some(char.to_string())
-        None => None
-      }
-  }
-}
-
-///|
-fn is_xmldom_entity_word(entity : String) -> Bool {
-  for index in 1..<entity.length() {
-    let char = entity[index]
-    if !((char >= '0' && char <= '9') ||
-      (char >= 'A' && char <= 'Z') ||
-      (char >= 'a' && char <= 'z') ||
-      char == '_') {
-      return false
-    }
-  }
-  true
-}
-
-///|
-fn parse_xmldom_numeric_entity(text : String) -> Int? {
-  js_parse_int(replace_first_lower_x_with_hex_prefix(text))
-}
-
-///|
-fn replace_first_lower_x_with_hex_prefix(text : String) -> String {
-  let builder = StringBuilder()
-  let mut replaced = false
-  for index in 0..<text.length() {
-    if !replaced && text[index] == 'x' {
-      builder.write_string("0x")
-      replaced = true
-    } else {
-      builder.write_string(text[index:index + 1].to_owned())
-    }
-  }
-  builder.to_string()
-}
-
-///|
-fn js_parse_int(text : String) -> Int? {
-  let mut index = 0
-  let mut radix = 10
-  if text.length() >= 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X') {
-    radix = 16
-    index = 2
-  }
-  let mut value = 0
-  let mut saw_digit = false
-  while index < text.length() {
-    match xml_entity_digit_value(text[index], radix) {
-      Some(digit) => {
-        saw_digit = true
-        if value > (0x10FFFF - digit) / radix {
-          return Some(0x110000)
-        }
-        value = value * radix + digit
-        index += 1
-      }
-      None => break
-    }
-  }
-  if saw_digit {
-    Some(value)
-  } else {
-    None
-  }
 }
 
 ///|

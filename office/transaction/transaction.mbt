@@ -32,9 +32,10 @@ let transaction_materialization_working_reserve : Int64 = 64L * 1024L * 1024L
 ///|
 /// DOCX splice validation retains caller replacement buffers, edited payloads,
 /// one decoded source, and the source/candidate XML trees concurrently. Strict
-/// token normalization/entity decoding is fused over borrowed input, so no raw
-/// or normalized token-sized copies join that peak. This factor also leaves one
-/// payload share for parser collections and allocator headroom.
+/// and tolerant token decoding is fused over borrowed input, and the annotation
+/// scanner filters irrelevant attributes and bounds the values it consumes, so
+/// no raw or decoder-working token-sized copies join that peak. This factor also
+/// leaves one payload share for parser collections and allocator headroom.
 let transaction_splice_materialization_divisor : Int64 = 8L
 
 ///|

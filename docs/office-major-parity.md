@@ -56,9 +56,11 @@ bounded A4 transaction boundary:
   added-part names are bounded before canonical-path parsing or diagnostic
   construction, and final edited-part XML validation charges one aggregate
   parser budget across the complete composed plan rather than resetting a
-  per-part allowance; strict source normalization and entity decoding operate
-  over borrowed ranges and allocate one exactly sized retained token, keeping
-  transient UTF-16 buffers inside the transaction working reserve;
+  per-part allowance; strict source normalization and strict/tolerant entity
+  decoding operate over borrowed ranges and allocate one exactly sized retained
+  token, while the annotation scanner skips irrelevant attributes and bounds
+  the values it consumes before decoding, keeping transient buffers inside the
+  transaction working reserve;
 - strict OPC validation and the archive-backed annotation index each charge one
   cumulative XML budget across package parts before UTF-8 decode and DOM
   allocation, including inherited namespace bindings before scope snapshots;
