@@ -173,8 +173,8 @@ priv struct HeaderFooterCollector {
   parts : DocumentParts
   headers : Array[@document.HeaderFooterPart]
   footers : Array[@document.HeaderFooterPart]
-  header_index_by_path : Map[String, Int]
-  footer_index_by_path : Map[String, Int]
+  header_index_by_path : StableStringMap[Int]
+  footer_index_by_path : StableStringMap[Int]
   messages : Array[Message]
 }
 
@@ -184,8 +184,8 @@ fn HeaderFooterCollector::new(parts : DocumentParts) -> HeaderFooterCollector {
     parts,
     headers: [],
     footers: [],
-    header_index_by_path: Map([]),
-    footer_index_by_path: Map([]),
+    header_index_by_path: SortedMap([]),
+    footer_index_by_path: SortedMap([]),
     messages: [],
   }
 }

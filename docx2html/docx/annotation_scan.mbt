@@ -310,7 +310,7 @@ priv struct ScanFrame {
   // the local name); child ordinal counters; last closed child.
   mut projection_path : String?
   projection_kind : String?
-  counters : Map[String, Int]
+  counters : StableStringMap[Int]
   mut last_closed_child : String?
   projection_open_order : Int
   open_seq : Int
@@ -328,7 +328,7 @@ priv struct ScanFrame {
   // any child opens is safe).
   mut suppressed : Bool
   // Where this frame's own ordinal was bumped, for vMerge retraction.
-  mut counter_owner : Map[String, Int]?
+  mut counter_owner : StableStringMap[Int]?
   // Property containers (tcPr/pPr/rPr/...): the reader never surfaces
   // markers from inside them.
   in_properties : Bool
@@ -454,9 +454,9 @@ fn scan_story(
   let mut root : ScannedNode? = None
   let mut root_namespace_uri : String? = None
   let frames : Array[ScanFrame] = []
-  let root_counters : Map[String, Int] = Map([])
+  let root_counters : StableStringMap[Int] = SortedMap([])
   // Prefix -> stack of URIs (innermost last). "" is the default namespace.
-  let namespaces : Map[String, Array[String]] = Map([])
+  let namespaces : StableStringMap[Array[String]] = SortedMap([])
   let mut seq = 0
   let mut projection_open_count = 0
   let work : AnnotationScanWork = {
@@ -738,7 +738,7 @@ fn scan_story(
         None => ()
       }
     }
-    let mut counter_owner : Map[String, Int]? = None
+    let mut counter_owner : StableStringMap[Int]? = None
     let mut projection_kind_value : String? = None
     let mut projection_open_order = -1
     let projection = if suppressed {
@@ -941,7 +941,7 @@ fn scan_story(
         declared,
         projection_path: projection,
         projection_kind: projection_kind_value,
-        counters: Map([]),
+        counters: SortedMap([]),
         last_closed_child: None,
         projection_open_order,
         open_seq: seq,
@@ -1065,8 +1065,8 @@ fn build_story_level_positions(
 /// flattens transparent containers into their parent flow).
 fn nearest_counters(
   frames : Array[ScanFrame],
-  root_counters : Map[String, Int],
-) -> Map[String, Int] {
+  root_counters : StableStringMap[Int],
+) -> StableStringMap[Int] {
   for at = frames.length() - 1; at >= 0; at = at - 1 {
     if !frames[at].transparent {
       return frames[at].counters
@@ -1173,7 +1173,7 @@ fn retract_cell(
 }
 
 ///|
-fn bump_counter(counters : Map[String, Int], kind : String) -> Int {
+fn bump_counter(counters : StableStringMap[Int], kind : String) -> Int {
   let next = counters.get_or_default(kind, 0) + 1
   counters[kind] = next
   next
@@ -1335,7 +1335,7 @@ fn utf8_slice(
 fn attribute_value(
   attributes : Array[(String, String)],
   local_name : String,
-  namespaces : Map[String, Array[String]],
+  namespaces : StableStringMap[Array[String]],
 ) -> String? {
   for pair in attributes {
     let (name, value) = pair

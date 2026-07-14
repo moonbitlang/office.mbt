@@ -56,8 +56,8 @@ fn unzip_write_entries(
 fn zip_archive_from_write_entries(
   entries : Array[ZipWriteEntry],
 ) -> ZipArchive raise DocxError {
-  let map : Map[String, BytesView] = Map([])
-  let physical_names : Map[String, String] = Map([])
+  let map : StableStringMap[BytesView] = SortedMap([])
+  let physical_names : StableStringMap[String] = SortedMap([])
   for entry in entries {
     let canonical_name = entry.path.to_lower()
     match physical_names.get(canonical_name) {
@@ -72,7 +72,7 @@ fn zip_archive_from_write_entries(
     physical_names[canonical_name] = entry.path
     map[entry.path] = entry.content
   }
-  @zip.zip_archive(map)
+  @zip.zip_archive_entries(map.iter())
 }
 
 ///|
