@@ -337,8 +337,8 @@ test "tolerant XML decodes long unterminated entity runs in one pass" {
 ///|
 test "tolerant XML preserves unknown entities beside decoded entities" {
   inspect(
-    @xml.read_xml_string("<root>&amp;&unknown;&#bogus;</root>").text(),
-    content="&&unknown;&#bogus;",
+    @xml.read_xml_string("<root>&amp;&unknown;&#-1;</root>").text(),
+    content="&&unknown;&#-1;",
   )
 }
 
