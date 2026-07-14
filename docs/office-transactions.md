@@ -138,6 +138,16 @@ checks the 8,192-entry, 64 MiB per-entry, 256 MiB aggregate, 256-part manifest,
 and 1,024-scalar part-name ceilings, plus overflow-safe result sizes and an XML
 markup-token cap derived from the splice allowance.
 
+Format adapters may subdivide that opaque working allowance before producing
+replacement bytes. The DOCX edit session gives one comment fragment at most one
+eighth of the splice allowance (1 MiB at the normal ceiling). It first bounds
+the caller-mutable body by depth, node count, and reachable UTF-8 input, then
+runs an escape-aware UTF-8 sizing pass over the derived XML before allocating
+the fragment string. Source OPC validation, source annotation indexing, and
+candidate validation each use a fresh cumulative XML budget for their phase;
+within a phase all package parts share source-byte, token, copied-character,
+token-size, and nesting ceilings.
+
 ZIP expansion and serialization do not hide another package-sized allocation
 inside that reserve. DEFLATE first validates and counts output without retaining
 bytes, then decodes into one exact fixed buffer. Serialization likewise performs
@@ -186,6 +196,13 @@ identified format, a read-only view of candidate bytes, and an isolated shallow
 fork of the already materialized candidate archive. Validators should consume
 that archive instead of parsing the bytes again. OpenXML SDK checks remain an
 acceptance/CI tier rather than a portable runtime dependency.
+
+The built-in DOCX hook first performs bounded strict OPC validation. When that
+passes, it rebuilds the candidate annotation index under another cumulative XML
+budget and rejects duplicate, empty, or ambiguous comment identities. This
+backstop applies to generic pinned splice plans as well as the high-level
+comment planners, so bypassing a convenience method cannot publish stale
+semantic state.
 
 ## Preservation report
 

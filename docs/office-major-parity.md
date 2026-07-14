@@ -50,6 +50,18 @@ bounded A4 transaction boundary:
 - every plan receives an overflow-safe preflight for archive/manifest/name and
   expanded-size limits, XML-token cardinality, and the combined replacement,
   added-part, and edited-payload working-memory ceiling before materialization;
+- strict OPC validation and the archive-backed annotation index each charge one
+  cumulative XML budget across package parts before UTF-8 decode and DOM
+  allocation, bounding sibling-dense and many-part inputs rather than granting
+  every part a fresh parser allowance;
+- comment bodies are structurally preflighted before derived trees or reply
+  paragraph ids are allocated, then serialized only after an escape-aware exact
+  UTF-8 sizing pass; the transaction grants a fragment at most one eighth of
+  its splice allowance;
+- a session permits one semantic comment operation because ids and threading
+  resolve against its immutable source snapshot; generic pinned plans remain
+  composable, with a bounded candidate annotation gate rejecting duplicate,
+  empty, or ambiguous identities;
 - a true no-op explicitly reuses the transaction's exact input buffer, while a
   real edit serializes through the transaction's candidate-size ceiling;
 - untouched ZIP local records and producer metadata flow through the
@@ -57,7 +69,8 @@ bounded A4 transaction boundary:
   enforces that only declared part payloads changed; and
 - candidate packages pass both portable Office detection and the strict,
   archive-backed DOCX package validator before atomic publication; validator
-  findings and messages are bounded as they are produced.
+  findings and messages are bounded as they are produced, and attacker-derived
+  XML diagnostics are truncated before joining.
 
 D1 is an SDK foundation, not a newly advertised CLI command. No partial command
 record is added to the A2 registry: its existing raw mutation records already
