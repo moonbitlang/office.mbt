@@ -62,6 +62,8 @@ pub fn read_embedded_style_map(BytesView) -> String? raise @core.DocxError
 
 pub fn validate_annotation_identity_state(DocxAnnotatedResult) -> Unit raise @core.DocxError
 
+pub fn validate_global_para_id_state_archive_limited(DocxAnnotatedResult, @zip.Archive, @xml.XmlReadBudget) -> Unit raise @core.DocxError
+
 pub fn write_docx(Array[@document.DocumentElement]) -> Bytes raise @core.DocxError
 
 pub fn write_docx_with_annotations(Array[@document.DocumentElement], comments? : Array[CommentSpec], footnotes? : Array[NoteSpec], endnotes? : Array[NoteSpec]) -> Bytes raise @core.DocxError

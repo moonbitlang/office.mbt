@@ -104,7 +104,10 @@ fn plan_comment_reply_zip(
   // Fresh paraIds: collision scope is every paraId in the reachable
   // parts (duplicates there are unrepairable and fail closed).
   let used_para_ids = collect_para_ids(
-    zip, annotated, comments_part, xml_budget,
+    zip,
+    annotated,
+    Some(comments_part),
+    xml_budget,
   )
   let mut next_para_seed = 1
   fn allocate_para_id() -> String {
@@ -294,7 +297,10 @@ fn plan_comment_resolution_zip(
   // The duplicate-paraId gate runs UNCONDITIONALLY (review round 1):
   // resolving on an ambiguous key would mutate the wrong thread.
   let used_para_ids = collect_para_ids(
-    zip, annotated, comments_part, xml_budget,
+    zip,
+    annotated,
+    Some(comments_part),
+    xml_budget,
   )
   let key = match comment.last_para_id() {
     Some(existing) => existing
@@ -421,12 +427,19 @@ fn allocate_comment_id(
 fn collect_para_ids(
   zip : ZipArchive,
   annotated : DocxAnnotatedResult,
-  comments_part : String,
+  comments_part : String?,
   xml_budget : @xml.XmlReadBudget,
 ) -> Set[String] raise DocxError {
   let para_ids : Set[String] = Set([])
-  let parts : Array[String] = [annotated.main_story_part(), comments_part]
+  let parts : Array[String] = [annotated.main_story_part()]
   let seen_parts : Set[String] = Set(parts)
+  match comments_part {
+    Some(part) if !seen_parts.contains(part) => {
+      seen_parts.add(part)
+      parts.push(part)
+    }
+    _ => ()
+  }
   // Sibling story parts named through the MAIN part's relationships.
   let (main_dir, main_base) = split_part_path(annotated.main_story_part())
   let rels_part = if main_dir == "" {
@@ -469,6 +482,24 @@ fn collect_para_ids(
     }
   }
   para_ids
+}
+
+///|
+/// Validates every reachable story's `w14:paraId` values under one cumulative
+/// XML budget. This is the candidate-side gate for generic splice plans; the
+/// reply/resolution planners use the same traversal before allocating IDs.
+pub fn validate_global_para_id_state_archive_limited(
+  annotated : DocxAnnotatedResult,
+  archive : @mbtzip.Archive,
+  xml_budget : @xml.XmlReadBudget,
+) -> Unit raise DocxError {
+  collect_para_ids(
+    open_zip_archive(archive),
+    annotated,
+    annotated.comments_part(),
+    xml_budget,
+  )
+  |> ignore
 }
 
 ///|

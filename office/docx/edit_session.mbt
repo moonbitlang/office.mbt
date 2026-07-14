@@ -482,6 +482,16 @@ fn docx_validator_message(text : String) -> String {
 }
 
 ///|
+fn candidate_xml_budget() -> @xml.XmlReadBudget {
+  @xml.xml_read_budget(
+    max_source_units=candidate_xml_source_units,
+    max_tokens=candidate_xml_tokens,
+    max_materialized_chars=candidate_xml_materialized_chars,
+    max_token_chars=candidate_xml_token_chars,
+  )
+}
+
+///|
 /// Builds the strict archive-backed DOCX validator used by edit transactions.
 /// It consumes the already inflated candidate archive and emits at most 64
 /// bounded findings under one stable validator identity.
@@ -526,16 +536,16 @@ pub fn package_validator() -> @transaction.TransactionValidator raise @transacti
     }
     if findings.is_empty() {
       try {
-        let xml_budget = @xml.xml_read_budget(
-          max_source_units=candidate_xml_source_units,
-          max_tokens=candidate_xml_tokens,
-          max_materialized_chars=candidate_xml_materialized_chars,
-          max_token_chars=candidate_xml_token_chars,
-        )
         let annotated = @word.read_docx_annotated_archive_limited(
-          archive, xml_budget,
+          archive,
+          candidate_xml_budget(),
         )
         @word.validate_annotation_identity_state(annotated)
+        @word.validate_global_para_id_state_archive_limited(
+          annotated,
+          archive,
+          candidate_xml_budget(),
+        )
       } catch {
         error => {
           let message = docx_error_message(error)
