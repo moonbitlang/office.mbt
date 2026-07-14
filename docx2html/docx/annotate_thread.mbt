@@ -801,7 +801,9 @@ fn scan_comment_ex_part(
     if bytes[at] == b'<' {
       if at + 1 < limit && (bytes[at + 1] == b'?' || bytes[at + 1] == b'!') {
         // Skip the declaration/PI/comment wholesale.
-        let close = if at + 3 < limit &&
+        let close = if bytes[at + 1] == b'?' {
+          "?>"
+        } else if at + 3 < limit &&
           bytes[at + 1] == b'!' &&
           bytes[at + 2] == b'-' &&
           bytes[at + 3] == b'-' {

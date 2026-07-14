@@ -350,13 +350,13 @@ pub fn write_xml_fragment_limited(
   namespaces? : Map[String, String] = Map([]),
 ) -> String raise DocxError {
   let limit = if max_output_bytes > 0 { max_output_bytes } else { 0 }
-  let uri_to_prefix = invert_map(namespaces)
   let work_scaled = limit.to_int64() * xml_write_name_work_scale.to_int64()
   let name_work_limit = if work_scaled > 2147483647L {
     2147483647
   } else {
     work_scaled.to_int()
   }
+  let uri_to_prefix = invert_map_limited(namespaces, name_work_limit)
   let sizer = XmlWriteSizer::{
     namespaces,
     uri_to_prefix,
@@ -588,6 +588,29 @@ fn invert_map(map : Map[String, String]) -> Map[String, String] {
   for item in map {
     let (key, value) = item
     inverse[value] = key
+  }
+  inverse
+}
+
+///|
+/// Builds the namespace writer's URI index without doing work ahead of the
+/// limited writer's contract. Each insertion hashes the URI and can compare it
+/// with an existing equal URI, so charge both traversals before touching the
+/// inverse map. This matters when many short prefixes deliberately share one
+/// very large URI: the later sizing pass must not be the first bounded step.
+fn invert_map_limited(
+  map : Map[String, String],
+  name_work_limit : Int,
+) -> Map[String, String] raise DocxError {
+  let inverse : Map[String, String] = Map([])
+  let mut remaining = if name_work_limit > 0 { name_work_limit } else { 0 }
+  for item in map {
+    let (prefix, uri) = item
+    if uri.length() > remaining / 2 {
+      raise InvalidXml(message="XML serialization name work limit exceeded")
+    }
+    remaining -= uri.length() * 2
+    inverse[uri] = prefix
   }
   inverse
 }
