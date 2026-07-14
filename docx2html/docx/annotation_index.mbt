@@ -671,8 +671,11 @@ fn read_docx_annotated_zip(
   package_result.messages.clear()
   package_result.messages.append(combined)
   // REAL relationship matches only — reader filename fallbacks must not make
-  // conventional annotation parts look wired. Generic mutation plans could
-  // otherwise publish disconnected comment metadata or note stories.
+  // conventional annotation parts look wired. A conventional part is safe
+  // only when it is the exact physical entry selected by the authoritative
+  // relationship; alongside a relocated relationship target it is a decoy.
+  // Generic mutation plans could otherwise preserve split-view comment
+  // metadata or note stories.
   let comments_part_resolved = parts.comments_part_path
   let comments_extended_resolved = parts.comments_extended_part_path
   let orphan_annotation_parts : Array[(String, String)] = []
@@ -686,8 +689,13 @@ fn read_docx_annotated_zip(
       (parts.endnotes_part_path, "word/endnotes.xml", "endnotes"),
     ] {
     let (resolved, conventional_path, role) = candidate
-    if resolved is None && zip.exists(conventional_path) {
-      orphan_annotation_parts.push((conventional_path, role))
+    match zip.resolve_path(conventional_path) {
+      Some(physical_path) =>
+        match resolved {
+          Some(authoritative_path) if authoritative_path == physical_path => ()
+          _ => orphan_annotation_parts.push((physical_path, role))
+        }
+      None => ()
     }
   }
   let sidecar_types : Array[String] = []
