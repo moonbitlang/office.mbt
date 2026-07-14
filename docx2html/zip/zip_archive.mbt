@@ -1,8 +1,39 @@
 ///|
-/// In-memory ZIP archive used to read DOCX parts.
-pub(all) struct ZipArchive {
-  entries : Map[String, BytesView]
+/// In-memory ZIP archive used to read DOCX parts. OPC part-name comparison is
+/// case-insensitive, while `canonical_names` retains the archive's exact
+/// spelling so preservation edits always address the physical entry.
+pub struct ZipArchive {
+  priv entries : Map[String, BytesView]
+  priv canonical_names : Map[String, String]
 } derive(Debug, Eq)
+
+///|
+fn canonical_part_name(path : String) -> String {
+  path.to_lower()
+}
+
+///|
+/// Builds an owned part view and rejects case-equivalent aliases before they
+/// can collapse into the canonical lookup index.
+pub fn zip_archive(
+  source : Map[String, BytesView],
+) -> ZipArchive raise DocxError {
+  let entries : Map[String, BytesView] = Map([])
+  let canonical_names : Map[String, String] = Map([])
+  for name, bytes in source {
+    let key = canonical_part_name(name)
+    match canonical_names.get(key) {
+      Some(existing) if existing != name =>
+        raise InvalidZip(
+          message="duplicate ZIP entry names after case normalization: \{existing}, \{name}",
+        )
+      _ => ()
+    }
+    entries[name] = bytes
+    canonical_names[key] = name
+  }
+  { entries, canonical_names }
+}
 
 ///|
 /// Builds the DOCX reader's immutable part view from an already materialized
@@ -18,7 +49,7 @@ pub fn open_zip_archive(
     }
     map[entry.name()] = entry.data()
   }
-  { entries: map }
+  zip_archive(map)
 }
 
 ///|
@@ -33,13 +64,26 @@ pub fn open_zip(data : BytesView) -> ZipArchive raise DocxError {
 ///|
 /// Returns whether a ZIP entry exists.
 pub fn ZipArchive::exists(self : ZipArchive, path : String) -> Bool {
-  self.entries.contains(path)
+  self.resolve_path(path) is Some(_)
+}
+
+///|
+/// Resolves an OPC path to the archive's exact entry spelling.
+pub fn ZipArchive::resolve_path(self : ZipArchive, path : String) -> String? {
+  if self.entries.contains(path) {
+    Some(path)
+  } else {
+    self.canonical_names.get(canonical_part_name(path))
+  }
 }
 
 ///|
 /// Reads a ZIP entry as bytes.
 pub fn ZipArchive::read_bytes(self : ZipArchive, path : String) -> BytesView? {
-  self.entries.get(path)
+  match self.resolve_path(path) {
+    Some(actual) => self.entries.get(actual)
+    None => None
+  }
 }
 
 ///|

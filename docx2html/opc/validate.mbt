@@ -283,6 +283,7 @@ fn validate_docx_archive_into(
 ) -> Unit {
   // Raw entry sweep: names + CRC integrity, before any part-level logic.
   let parts : Map[String, BytesView] = Map([])
+  let canonical_names : Map[String, String] = Map([])
   let seen : Set[String] = Set([])
   for entry in archive.entries() {
     if findings.full() {
@@ -302,15 +303,55 @@ fn validate_docx_archive_into(
       )
     }
     if !name.has_suffix("/") {
+      let key = name.to_lower()
+      match canonical_names.get(key) {
+        Some(existing) if existing != name =>
+          findings.add(
+            "duplicate entry name: \{findings.text(name)} (case-equivalent to \{findings.text(existing)})",
+          )
+        Some(_) => ()
+        None => canonical_names[key] = name
+      }
       parts[name] = entry.data()
     }
   }
-  let content_types = check_content_types(parts, findings)
-  check_relationships(parts, findings)
+  let content_types = check_content_types(parts, canonical_names, findings)
+  check_relationships(parts, canonical_names, findings)
   match content_types {
     Some(types) => check_content_type_coverage(parts, types, findings)
     None => ()
   }
+}
+
+///|
+fn actual_part_name(
+  canonical_names : Map[String, String],
+  requested : String,
+) -> String? {
+  canonical_names.get(requested.to_lower())
+}
+
+///|
+fn find_part(
+  parts : Map[String, BytesView],
+  canonical_names : Map[String, String],
+  requested : String,
+) -> (String, BytesView)? {
+  guard actual_part_name(canonical_names, requested) is Some(actual) else {
+    return None
+  }
+  match parts.get(actual) {
+    Some(bytes) => Some((actual, bytes))
+    None => None
+  }
+}
+
+///|
+fn contains_part(
+  canonical_names : Map[String, String],
+  requested : String,
+) -> Bool {
+  actual_part_name(canonical_names, requested) is Some(_)
 }
 
 ///|
@@ -342,13 +383,15 @@ priv struct ContentTypes {
 ///|
 fn check_content_types(
   parts : Map[String, BytesView],
+  canonical_names : Map[String, String],
   findings : FindingCollector,
 ) -> ContentTypes? {
-  guard parts.get(CONTENT_TYPES_PART) is Some(bytes) else {
+  guard find_part(parts, canonical_names, CONTENT_TYPES_PART)
+    is Some((content_types_name, bytes)) else {
     findings.add("missing required part: \{CONTENT_TYPES_PART}")
     return None
   }
-  guard parse_xml_part(CONTENT_TYPES_PART, bytes, findings) is Some(root) else {
+  guard parse_xml_part(content_types_name, bytes, findings) is Some(root) else {
     return None
   }
   let defaults : Map[String, String] = Map([])
@@ -394,12 +437,13 @@ fn check_content_types(
             if part_name.has_prefix("/") {
               match normalize_override_part_name(part_name) {
                 Some(key) => {
-                  if overrides.contains(key) {
+                  let collision_key = key.to_lower()
+                  if overrides.contains(collision_key) {
                     findings.add(
                       "\{CONTENT_TYPES_PART}: duplicate Override PartName after path normalization: \{findings.text(key)}",
                     )
                   } else {
-                    overrides[key] = content_type
+                    overrides[collision_key] = content_type
                   }
                   if key != part_name {
                     findings.add(
@@ -407,7 +451,7 @@ fn check_content_types(
                     )
                   }
                   let target = key[1:].to_owned()
-                  if !parts.contains(target) {
+                  if !contains_part(canonical_names, target) {
                     findings.add(
                       "\{CONTENT_TYPES_PART}: Override names a missing part: \{findings.text(key)}",
                     )
@@ -456,10 +500,10 @@ fn check_content_type_coverage(
       findings.stop()
       return
     }
-    if name == CONTENT_TYPES_PART {
+    if name.to_lower() == CONTENT_TYPES_PART.to_lower() {
       continue
     }
-    if types.overrides.contains("/" + name) {
+    if types.overrides.contains(("/" + name).to_lower()) {
       continue
     }
     let extension = part_extension(name)
@@ -492,6 +536,7 @@ fn part_extension(name : String) -> String? {
 ///|
 fn check_relationships(
   parts : Map[String, BytesView],
+  canonical_names : Map[String, String],
   findings : FindingCollector,
 ) -> Unit {
   if findings.full() {
@@ -499,9 +544,9 @@ fn check_relationships(
     return
   }
   // Root rels: required, and must carry the officeDocument relationship.
-  match parts.get(ROOT_RELS_PART) {
-    Some(bytes) =>
-      match parse_xml_part(ROOT_RELS_PART, bytes, findings) {
+  match find_part(parts, canonical_names, ROOT_RELS_PART) {
+    Some((root_rels_name, bytes)) =>
+      match parse_xml_part(root_rels_name, bytes, findings) {
         Some(root) => {
           let main_parts : Array[String] = []
           for_each_relationship(ROOT_RELS_PART, root, findings, (
@@ -533,8 +578,9 @@ fn check_relationships(
           })
           match main_parts {
             [part] =>
-              match parts.get(part) {
-                Some(bytes) => check_main_part(part, bytes, findings)
+              match find_part(parts, canonical_names, part) {
+                Some((actual, bytes)) =>
+                  check_main_part(actual, bytes, findings)
                 None =>
                   findings.add(
                     "officeDocument relationship targets a missing part: \{findings.text(part)}",
@@ -558,12 +604,13 @@ fn check_relationships(
       findings.stop()
       return
     }
-    if name == ROOT_RELS_PART || !is_rels_part(name) {
+    let canonical_name = name.to_lower()
+    if canonical_name == ROOT_RELS_PART || !is_rels_part(canonical_name) {
       continue
     }
     match parse_xml_part(name, bytes, findings) {
       Some(root) => {
-        let base = rels_base_dir(name)
+        let base = rels_base_dir(canonical_name)
         for_each_relationship(name, root, findings, (
           _id,
           _rel_type,
@@ -573,7 +620,7 @@ fn check_relationships(
           if !external {
             match resolve_target(base, target) {
               Some(resolved) =>
-                if !parts.contains(resolved) {
+                if !contains_part(canonical_names, resolved) {
                   findings.add(
                     "relationship target missing: \{findings.text(name)} -> \{findings.text(target)} (resolved \{findings.text(resolved)})",
                   )

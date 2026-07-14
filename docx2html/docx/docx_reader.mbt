@@ -649,12 +649,12 @@ fn find_main_document(
       { path: authoritative, relationship_dialect }
     }
     None =>
-      if zip.exists("word/document.xml") {
-        { path: "word/document.xml", relationship_dialect: None }
-      } else {
-        raise MissingPart(
-          message="Could not find main document part. Are you sure this is a valid .docx file?",
-        )
+      match zip.resolve_path("word/document.xml") {
+        Some(actual) => { path: actual, relationship_dialect: None }
+        None =>
+          raise MissingPart(
+            message="Could not find main document part. Are you sure this is a valid .docx file?",
+          )
       }
   }
 }
@@ -767,21 +767,19 @@ fn resolve_unique_internal_part(
     guard @opc.resolve_target(base_path, relationship.target) is Some(resolved) else {
       raise Unsupported(message="the \{label} relationship target is invalid")
     }
-    if !seen.contains(resolved) {
-      seen.add(resolved)
-      targets.push(resolved)
+    guard zip.resolve_path(resolved) is Some(actual) else {
+      raise MissingPart(
+        message="the \{label} relationship targets a missing part",
+      )
+    }
+    if !seen.contains(actual) {
+      seen.add(actual)
+      targets.push(actual)
     }
   }
   match targets {
     [] => None
-    [target] =>
-      if zip.exists(target) {
-        Some(target)
-      } else {
-        raise MissingPart(
-          message="the \{label} relationship targets a missing part",
-        )
-      }
+    [target] => Some(target)
     _ =>
       raise Unsupported(
         message="the document declares multiple distinct \{label} relationship targets",
@@ -831,21 +829,21 @@ fn resolve_reachable_annotation_story_parts(
     guard @opc.resolve_target(base_path, relationship.target) is Some(path) else {
       raise Unsupported(message="the \{kind} relationship target is invalid")
     }
-    match kind_by_path.get(path) {
-      Some(existing_kind) if existing_kind != kind =>
-        raise Unsupported(
-          message="annotation story part '\{path}' is targeted as both \{existing_kind} and \{kind}",
-        )
-      Some(_) => continue
-      None => ()
-    }
-    if !zip.exists(path) {
+    guard zip.resolve_path(path) is Some(actual) else {
       raise MissingPart(
         message="the \{kind} relationship targets missing part '\{path}'",
       )
     }
-    kind_by_path[path] = kind
-    resolved_parts.push({ kind, path })
+    match kind_by_path.get(actual) {
+      Some(existing_kind) if existing_kind != kind =>
+        raise Unsupported(
+          message="annotation story part '\{actual}' is targeted as both \{existing_kind} and \{kind}",
+        )
+      Some(_) => continue
+      None => ()
+    }
+    kind_by_path[actual] = kind
+    resolved_parts.push({ kind, path: actual })
   }
   resolved_parts
 }
@@ -861,7 +859,11 @@ fn find_part_path(
   for target in relationships.find_targets_by_type(relationship_type) {
     // OPC-normalized ('../' forms resolve; review: L2 round 2).
     match @opc.resolve_target(base_path, target) {
-      Some(path) if zip.exists(path) => return path
+      Some(path) =>
+        match zip.resolve_path(path) {
+          Some(actual) => return actual
+          None => ()
+        }
       _ => ()
     }
   }
@@ -953,12 +955,13 @@ fn resolve_header_footer_reference_part(
       message="the \{kind} reference relationship '\{id}' has an invalid target",
     )
   }
-  if !zip.exists(path) {
-    raise MissingPart(
-      message="the \{kind} reference relationship '\{id}' targets missing part '\{path}'",
-    )
+  match zip.resolve_path(path) {
+    Some(actual) => actual
+    None =>
+      raise MissingPart(
+        message="the \{kind} reference relationship '\{id}' targets missing part '\{path}'",
+      )
   }
-  path
 }
 
 ///|

@@ -58,7 +58,7 @@ fn zip_archive_from_write_entries(entries : Array[ZipWriteEntry]) -> ZipArchive 
   for entry in entries {
     map[entry.path] = entry.content
   }
-  { entries: map }
+  try! @zip.zip_archive(map)
 }
 
 ///|

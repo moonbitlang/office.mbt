@@ -55,6 +55,49 @@ test "a minimal well-formed package is valid" {
 }
 
 ///|
+test "OPC part lookup preserves spelling while comparing case-insensitively" {
+  let archive = @mbtzip.Archive::new()
+  archive.add(
+    "[Content_Types].xml",
+    utf8_bytes(
+      "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Override PartName=\"/CUSTOM/MAIN.XML\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/></Types>",
+    ),
+  )
+  archive.add(
+    "_rels/.rels",
+    utf8_bytes(
+      "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"main\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"custom/main.xml\"/></Relationships>",
+    ),
+  )
+  archive.add("CUSTOM/MAIN.XML", utf8_bytes(MINIMAL_DOCUMENT_XML))
+  archive.add(
+    "CUSTOM/_rels/MAIN.XML.rels",
+    utf8_bytes(
+      "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"/>",
+    ),
+  )
+  debug_inspect(
+    @opc.validate_docx_package(try! @mbtzip.write(archive)),
+    content="[]",
+  )
+
+  let aliases = @mbtzip.Archive::new()
+  aliases.add("word/document.xml", utf8_bytes("<w:document/>"))
+  aliases.add("WORD/DOCUMENT.XML", utf8_bytes("<w:document/>"))
+  let (findings, _) = @opc.validate_docx_archive_limited(
+    aliases,
+    max_findings=8,
+    max_message_chars=256,
+  )
+  assert_true(
+    findings.search_by(finding => {
+      finding.has_prefix("duplicate entry name: WORD/DOCUMENT.XML")
+    })
+    is Some(_),
+  )
+}
+
+///|
 test "relationship targets share fallible package-root normalization" {
   assert_eq(
     @opc.resolve_target("word", "media/./image.png"),
@@ -73,10 +116,7 @@ test "relationship targets share fallible package-root normalization" {
   assert_eq(@opc.resolve_target("", "word//document.xml"), None)
   assert_eq(@opc.resolve_target("", "https://example.test/x.xml"), None)
   assert_eq(@opc.resolve_target("", "1:document.xml"), None)
-  assert_eq(
-    @opc.resolve_target("", "./1:document.xml"),
-    Some("1:document.xml"),
-  )
+  assert_eq(@opc.resolve_target("", "./1:document.xml"), Some("1:document.xml"))
 }
 
 ///|

@@ -15,6 +15,36 @@ async fn write_docx_session_file(path : String, bytes : Bytes) -> Unit {
 }
 
 ///|
+fn mixed_case_docx_session_fixture() -> Bytes raise {
+  let archive = @zip.Archive::new()
+  archive.add(
+    "[Content_Types].xml",
+    @utf8.encode(
+      "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Override PartName=\"/CUSTOM/MAIN.XML\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/></Types>",
+    ),
+  )
+  archive.add(
+    "_rels/.rels",
+    @utf8.encode(
+      "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"main\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"custom/main.xml\"/></Relationships>",
+    ),
+  )
+  archive.add(
+    "CUSTOM/MAIN.XML",
+    @utf8.encode(
+      "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p/><w:sectPr/></w:body></w:document>",
+    ),
+  )
+  archive.add(
+    "CUSTOM/_rels/MAIN.XML.rels",
+    @utf8.encode(
+      "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"/>",
+    ),
+  )
+  @zip.write(archive)
+}
+
+///|
 async fn docx_session_error_code(
   run : async () -> @transaction.TransactionReport,
 ) -> String {
@@ -63,6 +93,42 @@ async test "D1 session no-op reuses the exact transaction source" {
     assert_eq(report.validations[1].name, "office-portable-opc")
     assert_eq(report.validations[2].name, "office-docx-package")
     assert_eq(@afs.read_file(input).binary(), original)
+  })
+}
+
+///|
+async test "D1 resolves case-equivalent OPC targets to exact part spelling" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/mixed.docx"
+    let output = "\{directory}/mixed-output.docx"
+    let original = mixed_case_docx_session_fixture()
+    let archive = @zip.read(original)
+    guard archive.get("CUSTOM/MAIN.XML") is Some(document) else {
+      fail("mixed-case fixture is missing its main part")
+    }
+    guard document.find(b"</w:body>") is Some(insert_at) else {
+      fail("mixed-case fixture main part has no body close")
+    }
+    write_docx_session_file(input, original)
+    let report = @docx.transact_docx(
+      @transaction.transaction_options(input, output_path=output),
+      session => {
+        assert_eq(session.annotated().main_story_part(), "CUSTOM/MAIN.XML")
+        session.queue_span_edit(
+          "CUSTOM/MAIN.XML",
+          start=insert_at,
+          end=insert_at,
+          b"<!--case-preserved-->",
+        )
+      },
+    )
+    assert_true(report.committed)
+    let result = @zip.read(@afs.read_file(output).binary())
+    guard result.get("CUSTOM/MAIN.XML") is Some(actual) else {
+      fail("candidate lost the exact main-part spelling")
+    }
+    assert_true(actual.find(b"<!--case-preserved-->") is Some(_))
+    assert_true(result.get("custom/main.xml") is None)
   })
 }
 
@@ -211,13 +277,14 @@ async test "D1 span edits cannot introduce a foreign XML declaration" {
     let code = docx_session_error_code(() => {
       @docx.transact_docx(
         @transaction.transaction_options(input, output_path=output),
-        session =>
+        session => {
           session.queue_span_edit(
             "word/document.xml",
             start=encoding_at,
             end=encoding_at + b"UTF-8".length(),
             b"ISO-8859-1",
-          ),
+          )
+        },
       )
     })
     assert_eq(code, "office.docx.unsupported_encoding")
