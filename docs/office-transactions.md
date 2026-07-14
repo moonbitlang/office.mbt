@@ -139,6 +139,11 @@ checks the 8,192-entry, 64 MiB per-entry, 256 MiB aggregate, 256-part manifest,
 and 1,024-scalar part-name ceilings, plus overflow-safe result sizes and an XML
 markup-token cap derived from the splice allowance.
 
+Plan adoption copies every mutable map and edit array before the callback can
+continue. Replacement and addition payloads are MoonBit `Bytes`, and source
+pins are `BytesView`; both are immutable, so sharing their storage cannot alter
+an adopted plan after its atomic preflight.
+
 Format adapters may subdivide that opaque working allowance before producing
 replacement bytes. The DOCX edit session gives one comment fragment at most one
 eighth of the splice allowance (1 MiB at the normal ceiling). It first bounds

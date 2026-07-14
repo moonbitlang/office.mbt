@@ -118,8 +118,9 @@ pub fn SplicePlan::new() -> SplicePlan {
 }
 
 ///|
-/// Returns an independently mutable plan snapshot while sharing immutable
-/// source and replacement byte buffers.
+/// Returns an independently mutable plan snapshot. Every map and edit array is
+/// copied; replacement/addition `Bytes` and source `BytesView` values may be
+/// shared because MoonBit exposes both as immutable byte sequences.
 pub fn SplicePlan::copy(self : SplicePlan) -> SplicePlan {
   let part_edits : Map[String, Array[SpanEdit]] = Map([])
   for name, edits in self.part_edits {
