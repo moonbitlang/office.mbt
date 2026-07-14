@@ -955,6 +955,51 @@ test "distinct comments relationship targets fail closed" {
 }
 
 ///|
+test "singleton annotation relationships reject duplicate ids for one target" {
+  let cases : Array[(String, String, String, String, String, String)] = [
+    (
+      "comments", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+      "comments.xml", "word/comments.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml",
+      "<w:comments xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>",
+    ),
+    (
+      "commentsExtended", "http://schemas.microsoft.com/office/2011/relationships/commentsExtended",
+      "commentsExtended.xml", "word/commentsExtended.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml",
+      "<w15:commentsEx xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\"/>",
+    ),
+    (
+      "footnotes", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
+      "footnotes.xml", "word/footnotes.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml",
+      "<w:footnotes xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>",
+    ),
+    (
+      "endnotes", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes",
+      "endnotes.xml", "word/endnotes.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml",
+      "<w:endnotes xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>",
+    ),
+  ]
+  for case in cases {
+    let (label, relationship_type, target, part_path, content_type, story_xml) = case
+    let source = unreferenced_story_fixture(
+      relationship_type, target, part_path, content_type, story_xml,
+    )
+    let duplicate = with_main_relationship(
+      source, "rIdDuplicate", relationship_type, target,
+    )
+    try @docx.read_docx_annotated(duplicate) catch {
+      Unsupported(message~) =>
+        assert_eq(
+          message,
+          "the document declares multiple \{label} relationships",
+        )
+      _ => fail("expected duplicate \{label} relationship failure")
+    } noraise {
+      _ => fail("expected duplicate \{label} relationships to fail")
+    }
+  }
+}
+
+///|
 test "distinct commentsExtended relationship targets fail closed" {
   let document =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:document>

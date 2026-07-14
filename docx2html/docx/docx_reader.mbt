@@ -468,6 +468,7 @@ fn DocumentParts::build(
     [TRANSITIONAL_COMMENTS_RELATIONSHIP, STRICT_COMMENTS_RELATIONSHIP],
     base_path,
     "comments",
+    reject_multiple_relationships=true,
   )
   let comments_extended_part_path = resolve_unique_internal_part(
     zip,
@@ -475,6 +476,7 @@ fn DocumentParts::build(
     [COMMENTS_EXTENDED_RELATIONSHIP],
     base_path,
     "commentsExtended",
+    reject_multiple_relationships=true,
   )
   let footnotes_part_path = resolve_unique_internal_part(
     zip,
@@ -482,6 +484,7 @@ fn DocumentParts::build(
     [TRANSITIONAL_FOOTNOTES_RELATIONSHIP, STRICT_FOOTNOTES_RELATIONSHIP],
     base_path,
     "footnotes",
+    reject_multiple_relationships=true,
   )
   let endnotes_part_path = resolve_unique_internal_part(
     zip,
@@ -489,6 +492,7 @@ fn DocumentParts::build(
     [TRANSITIONAL_ENDNOTES_RELATIONSHIP, STRICT_ENDNOTES_RELATIONSHIP],
     base_path,
     "endnotes",
+    reject_multiple_relationships=true,
   )
   let styles = read_styles(
     zip,
@@ -779,11 +783,6 @@ fn resolve_unique_internal_part(
       continue
     }
     matches += 1
-    if reject_multiple_relationships && matches > 1 {
-      raise Unsupported(
-        message="the document declares multiple \{label} relationships",
-      )
-    }
     match relationship.target_mode {
       None | Some("Internal") => ()
       _ =>
@@ -807,7 +806,14 @@ fn resolve_unique_internal_part(
   }
   match targets {
     [] => None
-    [target] => Some(target)
+    [target] =>
+      if reject_multiple_relationships && matches > 1 {
+        raise Unsupported(
+          message="the document declares multiple \{label} relationships",
+        )
+      } else {
+        Some(target)
+      }
     _ =>
       raise Unsupported(
         message="the document declares multiple distinct \{label} relationship targets",
@@ -1357,6 +1363,7 @@ fn read_comments_for_document(
         [TRANSITIONAL_COMMENTS_RELATIONSHIP, STRICT_COMMENTS_RELATIONSHIP],
         base_path,
         "comments",
+        reject_multiple_relationships=true,
       )
   }
   let path = authoritative.unwrap_or("word/comments.xml")
