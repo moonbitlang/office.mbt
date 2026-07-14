@@ -1156,6 +1156,124 @@ test "preservation comparison fails closed on invalid or undeclared archives" {
 }
 
 ///|
+test "near-envelope transaction reserve covers fused strict XML splice peak" {
+  let retained = transaction_max_live_materialized_bytes -
+    transaction_materialization_working_reserve
+  let budget = transaction_mutation_budget(
+    retained, transaction_max_live_materialized_bytes, transaction_materialization_working_reserve,
+  )
+  assert_eq(
+    budget.max_splice_materialized_bytes().to_int64(),
+    transaction_max_splice_materialized_bytes,
+  )
+  let splice_peak = transaction_splice_peak_working_bytes(
+    budget.max_splice_materialized_bytes().to_int64(),
+  )
+  assert_eq(splice_peak, transaction_materialization_working_reserve)
+  assert_eq(retained + splice_peak, transaction_max_live_materialized_bytes)
+}
+
+///|
+fn wb_near_splice_limit_docx(token_units : Int) -> (Bytes, Int) raise {
+  let prefix =
+    #|<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>
+  let suffix = "</w:t></w:r></w:p><w:sectPr/></w:body></w:document>"
+  if token_units <= 7 {
+    fail("near-limit DOCX token must leave room for transformed content")
+  }
+  let document = StringBuilder(
+    size_hint=(prefix.length() + token_units + suffix.length()) * 2,
+  )
+  document.write_string(prefix)
+  document.write_string("x".repeat(token_units - 7))
+  document.write_string("\r\n&amp;")
+  document.write_string(suffix)
+  let source = @zip.read(@word.new_blank_docx())
+  let result = @zip.Archive::new()
+  for entry in source.entries() {
+    result.add(
+      entry.name(),
+      if entry.name() == "word/document.xml" {
+        @utf8.encode(document.to_string())
+      } else {
+        entry.data().to_owned()
+      },
+      compression=entry.compression(),
+      data_descriptor=entry.data_descriptor(),
+    )
+  }
+  (@zip.write(result), prefix.length() + 1)
+}
+
+///|
+async test "near-envelope transaction validates a near-limit transformed DOCX edit" {
+  wb_with_transaction_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let token_units = transaction_max_splice_materialized_bytes.to_int() -
+      16 * 1024
+    let (original, insert_at) = wb_near_splice_limit_docx(token_units)
+    wb_write(input, original)
+    let original_cost = wb_archive_retained_cost(original)
+    let candidate_allowance = original_cost + 1024L * 1024L
+    let live_limit = transaction_materialization_working_reserve +
+      original_cost +
+      candidate_allowance
+    let splice_completed = Ref(false)
+    ignore(
+      transact_with_identifier_and_faults(
+        transaction_options(input, dry_run=true),
+        (_format, _bytes, archive, budget) => {
+          assert_eq(
+            budget.max_candidate_package_bytes().to_int64(),
+            candidate_allowance,
+          )
+          assert_eq(
+            budget.max_splice_materialized_bytes().to_int64(),
+            transaction_max_splice_materialized_bytes,
+          )
+          let part = "word/document.xml"
+          guard archive.get(part) is Some(source) else {
+            fail("near-limit DOCX must contain its main story")
+          }
+          let plan = @splice.SplicePlan::new()
+          plan.pin_part(part, source)
+          plan.edit_part(
+            part,
+            @splice.span_edit(start=insert_at, end=insert_at, b""),
+          )
+          let limits = @splice.splice_limits(
+            max_archive_entries=budget.max_archive_entries(),
+            max_changed_parts=budget.max_preservation_parts(),
+            max_part_name_chars=budget.max_part_name_chars(),
+            max_entry_uncompressed_bytes=budget.max_entry_uncompressed_bytes(),
+            max_total_uncompressed_bytes=budget.max_total_uncompressed_bytes(),
+            max_materialized_bytes=budget.max_splice_materialized_bytes(),
+            max_xml_tokens=budget.max_splice_xml_tokens(),
+          )
+          let candidate = @splice.splice_docx_archive(
+            archive,
+            plan,
+            max_output_bytes=budget.max_candidate_package_bytes(),
+            require_pins=true,
+            limits~,
+          )
+          splice_completed.val = true
+          transaction_mutation_with_manifest(candidate, [part])
+        },
+        [],
+        None,
+        no_transaction_faults(),
+        materialization_limit=live_limit,
+        materialization_reserve=transaction_materialization_working_reserve,
+      ),
+    )
+    assert_true(splice_completed.val)
+    assert_eq(@afs.read_file(input).binary(), original)
+    wb_assert_no_temp(directory)
+  })
+}
+
+///|
 test "transaction package and archive materialization limits fail closed" {
   assert_eq(
     wb_sync_error_code(() => {

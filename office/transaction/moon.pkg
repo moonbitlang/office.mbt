@@ -21,6 +21,7 @@ import {
 
 import {
   "bobzhang/docx2html" @word,
+  "bobzhang/docx2html/splice",
   "moonbitlang/async",
   "moonbitlang/core/encoding/utf8",
 } for "wbtest"

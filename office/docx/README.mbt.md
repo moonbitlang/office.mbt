@@ -37,7 +37,10 @@ Before allocating edited payloads, the session also checks the 256-part
 manifest, 1,024-scalar part names, archive entry and expanded-size ceilings,
 overflow-safe result sizes, and a transaction-derived XML token ceiling. Caller
 replacement bytes, added payloads, and materialized edited parts share at most
-8 MiB of the already reserved transaction working memory.
+8 MiB of the already reserved transaction working memory. Strict XML tokens
+are normalized and entity-decoded directly from borrowed source ranges into
+one exactly sized retained string, so raw and normalized token-sized copies do
+not multiply that peak.
 Added-part names are bounded before canonical-path parsing or diagnostic
 construction. The final strict-XML pass charges one aggregate parser budget
 across all edited parts in the composed plan; dividing markup among many parts
