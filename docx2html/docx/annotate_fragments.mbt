@@ -40,9 +40,10 @@ pub fn comment_definition_fragment(
   spec : CommentSpec,
   id~ : String,
   para_ids? : Array[String] = [],
+  max_output_bytes? : Int = 8 * 1024 * 1024,
 ) -> String raise DocxError {
+  check_comment_body_for_fragment(spec.body, max_output_bytes)
   check_attribute_value("the comment id", id)
-  check_comment_body(spec.body)
   if para_ids.length() > 0 && para_ids.length() != spec.body.length() {
     raise Unsupported(
       message="paraId stamping needs exactly one id per body paragraph",
@@ -91,8 +92,9 @@ pub fn comment_definition_fragment(
   if para_ids.length() > 0 {
     namespaces["w14"] = W14_NAMESPACE
   }
-  @xml.write_xml_fragment(
+  @xml.write_xml_fragment_limited(
     @xml.xml_element("w:comment", attributes~, children~),
+    max_output_bytes~,
     namespaces~,
   )
 }

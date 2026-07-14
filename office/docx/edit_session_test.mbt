@@ -96,6 +96,84 @@ async test "D1 session rejects sibling-dense XML before indexing" {
 }
 
 ///|
+async test "D1 session bounds comment fragments before derived allocation" {
+  with_docx_session_test_dir(directory => {
+    let blank_path = "\{directory}/blank.docx"
+    let blank_output = "\{directory}/blank-output.docx"
+    let blank = @word_fixture.new_blank_docx()
+    write_docx_session_file(blank_path, blank)
+    let oversized_text = "x".repeat(1024 * 1024 + 1)
+    let oversized = @word_fixture.comment_spec(author="D1", from=0, to=0, [
+      @word_fixture.paragraph([
+        @word_fixture.run([@word_fixture.text(oversized_text)]),
+      ]),
+    ])
+    let addition_code = docx_session_error_code(() => {
+      @docx.transact_docx(
+        @transaction.transaction_options(blank_path, output_path=blank_output),
+        session => {
+          session.queue_comment_addition(
+            at_relative="p[1]",
+            to_relative="p[1]",
+            oversized,
+          )
+          |> ignore
+        },
+      )
+    })
+    assert_eq(addition_code, "office.docx.resource_limit")
+    assert_false(@afs.exists(blank_output))
+    assert_eq(@afs.read_file(blank_path).binary(), blank)
+    let threaded_path = "\{directory}/threaded.docx"
+    let threaded_output = "\{directory}/threaded-output.docx"
+    let threaded = @word_fixture.write_docx_with_comments(
+      [
+        @word_fixture.paragraph([
+          @word_fixture.run([@word_fixture.text("Claim")]),
+        ]),
+      ],
+      [
+        @word_fixture.comment_spec(author="Ada", from=0, to=0, [
+          @word_fixture.paragraph([
+            @word_fixture.run([@word_fixture.text("Explain")]),
+          ]),
+        ]),
+      ],
+    )
+    write_docx_session_file(threaded_path, threaded)
+    let reply_body = [
+      @word_fixture.paragraph([
+        @word_fixture.run([@word_fixture.text("bounded")]),
+      ]),
+    ]
+    let reply = @word_fixture.comment_spec(
+      author="Bob",
+      from=0,
+      to=0,
+      reply_body,
+    )
+    let extra = @word_fixture.paragraph([
+      @word_fixture.run([@word_fixture.text("wide")]),
+    ])
+    for _ in 0..<5_000 {
+      reply_body.push(extra)
+    }
+    let reply_code = docx_session_error_code(() => {
+      @docx.transact_docx(
+        @transaction.transaction_options(
+          threaded_path,
+          output_path=threaded_output,
+        ),
+        session => session.queue_comment_reply(parent_id="0", reply) |> ignore,
+      )
+    })
+    assert_eq(reply_code, "office.docx.resource_limit")
+    assert_false(@afs.exists(threaded_output))
+    assert_eq(@afs.read_file(threaded_path).binary(), threaded)
+  })
+}
+
+///|
 async test "D1 session adopts annotation plans with an exact preservation manifest" {
   with_docx_session_test_dir(directory => {
     let input = "\{directory}/input.docx"

@@ -19,6 +19,7 @@ pub fn plan_comment_addition(
   at_relative~ : String,
   to_relative~ : String,
   spec : CommentSpec,
+  max_fragment_bytes? : Int = 8 * 1024 * 1024,
 ) -> (@splice.SplicePlan, String) raise DocxError {
   plan_comment_addition_zip(
     annotated,
@@ -26,6 +27,7 @@ pub fn plan_comment_addition(
     at_relative~,
     to_relative~,
     spec,
+    max_fragment_bytes,
   )
 }
 
@@ -39,6 +41,7 @@ pub fn plan_comment_addition_archive(
   at_relative~ : String,
   to_relative~ : String,
   spec : CommentSpec,
+  max_fragment_bytes? : Int = 8 * 1024 * 1024,
 ) -> (@splice.SplicePlan, String) raise DocxError {
   plan_comment_addition_zip(
     annotated,
@@ -46,6 +49,7 @@ pub fn plan_comment_addition_archive(
     at_relative~,
     to_relative~,
     spec,
+    max_fragment_bytes,
   )
 }
 
@@ -56,6 +60,7 @@ fn plan_comment_addition_zip(
   at_relative~ : String,
   to_relative~ : String,
   spec : CommentSpec,
+  max_fragment_bytes : Int,
 ) -> (@splice.SplicePlan, String) raise DocxError {
   check_mutation_gates(annotated)
   // Anchor spans — misses report the sibling count so agents can
@@ -111,7 +116,11 @@ fn plan_comment_addition_zip(
   let new_id = candidate.to_string()
   // Fragments (namespace-self-contained per the L0 locked rule).
   let (start_fragment, end_fragment) = comment_anchor_fragments(id=new_id)
-  let definition = comment_definition_fragment(spec, id=new_id)
+  let definition = comment_definition_fragment(
+    spec,
+    id=new_id,
+    max_output_bytes=max_fragment_bytes,
+  )
   let main_part = annotated.main_story_part()
   guard zip.read_bytes(main_part) is Some(main_bytes) else {
     raise Unsupported(message="the package is missing its main part")

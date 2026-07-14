@@ -138,7 +138,183 @@ fn check_comment_who(
 /// would allocate no relationship (an anchor-only link is still a
 /// hyperlink), so this cannot be left to the relationship-delta guard.
 fn check_comment_body(body : Array[DocumentElement]) -> Unit raise DocxError {
-  check_annotation_body(body, what="comment")
+  check_comment_body_limited(
+    body,
+    max_input_bytes=8 * 1024 * 1024,
+    max_nodes=32_768,
+  )
+}
+
+///|
+/// Rechecks a caller-mutable comment body under the fragment allowance before
+/// any derived XML tree or per-paragraph metadata array is allocated.
+fn check_comment_body_for_fragment(
+  body : Array[DocumentElement],
+  max_fragment_bytes : Int,
+) -> Unit raise DocxError {
+  if max_fragment_bytes <= 0 {
+    raise Unsupported(
+      message="comment fragment resource limit exceeded before serialization",
+    )
+  }
+  let derived_nodes = max_fragment_bytes / 256
+  let max_nodes = if derived_nodes < 4 { 4 } else { derived_nodes }
+  check_comment_body_limited(
+    body,
+    max_input_bytes=max_fragment_bytes,
+    max_nodes~,
+  )
+}
+
+///|
+priv struct CommentBodyInputBudget {
+  mut remaining_bytes : Int
+  mut remaining_nodes : Int
+}
+
+///|
+fn comment_body_limit_exceeded() -> Unit raise DocxError {
+  raise Unsupported(
+    message="comment fragment resource limit exceeded before serialization",
+  )
+}
+
+///|
+fn CommentBodyInputBudget::charge_node(
+  self : CommentBodyInputBudget,
+  depth : Int,
+) -> Unit raise DocxError {
+  if depth >= 64 || self.remaining_nodes <= 0 {
+    comment_body_limit_exceeded()
+  }
+  self.remaining_nodes -= 1
+}
+
+///|
+fn CommentBodyInputBudget::charge_string(
+  self : CommentBodyInputBudget,
+  value : String,
+) -> Unit raise DocxError {
+  for character in value {
+    let code = character.to_int()
+    let bytes = if code <= 0x7F {
+      1
+    } else if code <= 0x7FF {
+      2
+    } else if code >= 0xD800 && code <= 0xDFFF {
+      raise Unsupported(
+        message="comment text contains invalid Unicode and cannot be serialized",
+      )
+    } else if code <= 0xFFFF {
+      3
+    } else if code <= 0x10FFFF {
+      4
+    } else {
+      raise Unsupported(
+        message="comment text contains invalid Unicode and cannot be serialized",
+      )
+    }
+    if bytes > self.remaining_bytes {
+      comment_body_limit_exceeded()
+    }
+    self.remaining_bytes -= bytes
+  }
+}
+
+///|
+fn CommentBodyInputBudget::charge_optional_string(
+  self : CommentBodyInputBudget,
+  value : String?,
+) -> Unit raise DocxError {
+  match value {
+    Some(text) => self.charge_string(text)
+    None => ()
+  }
+}
+
+///|
+fn CommentBodyInputBudget::visit(
+  self : CommentBodyInputBudget,
+  element : DocumentElement,
+  depth : Int,
+) -> Unit raise DocxError {
+  self.charge_node(depth)
+  match element {
+    Paragraph(children~, properties~) => {
+      self.charge_optional_string(properties.style_id)
+      self.charge_optional_string(properties.style_name)
+      self.charge_optional_string(properties.alignment)
+      self.charge_optional_string(properties.indent.start)
+      self.charge_optional_string(properties.indent.end)
+      self.charge_optional_string(properties.indent.first_line)
+      self.charge_optional_string(properties.indent.hanging)
+      for child in children {
+        self.visit(child, depth + 1)
+      }
+    }
+    Run(children~, properties~) => {
+      self.charge_optional_string(properties.style_id)
+      self.charge_optional_string(properties.style_name)
+      self.charge_optional_string(properties.font)
+      self.charge_optional_string(properties.highlight)
+      for child in children {
+        self.visit(child, depth + 1)
+      }
+    }
+    Text(value) => self.charge_string(value)
+    Document(children~, ..)
+    | TableRow(children~, ..)
+    | TableCell(children~, ..) =>
+      for child in children {
+        self.visit(child, depth + 1)
+      }
+    Table(children~, properties~) => {
+      self.charge_optional_string(properties.style_id)
+      self.charge_optional_string(properties.style_name)
+      for child in children {
+        self.visit(child, depth + 1)
+      }
+    }
+    BookmarkStart(value) | CommentReference(value) => self.charge_string(value)
+    // These variants are rejected immediately by the semantic body check, so
+    // their potentially large unreachable payloads need not be traversed.
+    Hyperlink(..) | NoteReference(..) | Image(_) => ()
+    Tab | Checkbox(_) | Break(_) => ()
+  }
+}
+
+///|
+fn check_comment_body_limited(
+  body : Array[DocumentElement],
+  max_input_bytes~ : Int,
+  max_nodes~ : Int,
+) -> Unit raise DocxError {
+  if body.length() == 0 {
+    raise Unsupported(
+      message="a comment needs a non-empty body (at least one paragraph)",
+    )
+  }
+  let budget = CommentBodyInputBudget::{
+    remaining_bytes: if max_input_bytes > 0 {
+      max_input_bytes
+    } else {
+      0
+    },
+    remaining_nodes: if max_nodes > 0 {
+      max_nodes
+    } else {
+      0
+    },
+  }
+  for block in body {
+    guard block is Paragraph(..) else {
+      raise Unsupported(
+        message="comment bodies are paragraph-only in this writer (got \{block_kind_name(block)})",
+      )
+    }
+    budget.visit(block, 0)
+    check_annotation_content(block, what="comment")
+  }
 }
 
 ///|
