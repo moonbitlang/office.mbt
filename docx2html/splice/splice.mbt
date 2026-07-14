@@ -1149,13 +1149,22 @@ fn declared_encoding(bytes : BytesView) -> EncodingDeclaration {
     bytes[at + 4] == b'l') {
     return NoDeclaration
   }
+  // Only the exact `xml` processing-instruction target introduces an XML
+  // declaration. Valid targets such as `xml-stylesheet` and `xmlversion`
+  // merely share the prefix and must continue to strict XML validation as
+  // ordinary processing instructions.
+  if at + 5 < bytes.length() &&
+    !is_decl_space(bytes[at + 5]) &&
+    bytes[at + 5] != b'?' {
+    return NoDeclaration
+  }
   // Walk the declaration as PSEUDO-ATTRIBUTES (name = "value" | 'value'),
   // never scanning inside quoted values — "encoding" appearing inside a
   // VALUE is just text (review round 2). Any structural deviation is a
   // malformed declaration and fails closed. The XML grammar demands
   // WHITESPACE after '<?xml' and between pseudo-attributes, and at
-  // least one pseudo-attribute (VersionInfo) — '<?xmlversion...',
-  // '<?xml?>', and 'value"name' runs are all malformed (round 3).
+  // least one pseudo-attribute (VersionInfo) — '<?xml?>' and
+  // 'value"name' runs are malformed (round 3).
   let limit = bytes.length()
   let mut cursor = at + 5
   if cursor >= limit || !is_decl_space(bytes[cursor]) {

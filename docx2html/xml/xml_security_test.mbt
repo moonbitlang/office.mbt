@@ -154,6 +154,15 @@ test "strict XML rejects malformed entities and illegal characters" {
 }
 
 ///|
+test "tolerant XML decodes long unterminated entity runs in one pass" {
+  let count = 32_768
+  let text = "&".repeat(count)
+  let root = @xml.read_xml_string("<root>" + text + "</root>")
+  assert_eq(root.text().length(), count)
+  assert_true(root.text().has_prefix("&&&&"))
+}
+
+///|
 test "strict XML enforces qualified names and namespace bindings" {
   for
     source in [

@@ -592,8 +592,6 @@ test "L0 review round 3: the declaration walker enforces the XML grammar" {
       "'\{name}' has a malformed XML declaration",
     )
   }
-  // No whitespace after <?xml.
-  reject("<?xmlversion=\"1.0\"?><r></r>", "a.xml")
   // No whitespace BETWEEN pseudo-attributes (would hide a devious
   // first-encoding under last-wins).
   reject("<?xml version=\"1.0\"encoding=\"UTF-8\"?><r></r>", "b.xml")
@@ -604,6 +602,23 @@ test "L0 review round 3: the declaration walker enforces the XML grammar" {
   reject(
     "<?xml version=\"1.0\" encoding=\"ISO-8859-1\" encoding=\"UTF-8\"?><r></r>",
     "e.xml",
+  )
+  // Prefix-sharing processing-instruction targets are not declarations.
+  let pi = @mbtzip.Archive::new()
+  let pi_source = "<?xml-stylesheet type=\"text/xsl\" href=\"style.xsl\"?><?xmlversion version=\"1.0\"?><r></r>"
+  pi.add("pi.xml", @utf8.encode(pi_source))
+  let pi_bytes = @mbtzip.write(pi)
+  let pi_plan = @splice.SplicePlan::new()
+  guard pi_source.find("</r>") is Some(pi_at)
+  pi_plan.edit_part(
+    "pi.xml",
+    @splice.span_edit(start=pi_at, end=pi_at, @utf8.encode("<ok/>")),
+  )
+  guard @mbtzip.read(@splice.splice_docx(pi_bytes, pi_plan)).get("pi.xml")
+    is Some(pi_result)
+  inspect(
+    @utf8.decode(pi_result, ignore_bom=true),
+    content="<?xml-stylesheet type=\"text/xsl\" href=\"style.xsl\"?><?xmlversion version=\"1.0\"?><r><ok/></r>",
   )
 }
 
