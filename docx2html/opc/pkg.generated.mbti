@@ -10,11 +10,11 @@ pub fn resolve_target(String, String) -> String
 
 pub fn validate_docx_archive(@zip.Archive) -> Array[String]
 
-pub fn validate_docx_archive_limited(@zip.Archive, max_findings~ : Int, max_message_chars~ : Int) -> (Array[String], Bool)
+pub fn validate_docx_archive_limited(@zip.Archive, max_findings~ : Int, max_message_chars~ : Int, max_xml_source_units? : Int, max_xml_tokens? : Int, max_xml_materialized_chars? : Int, max_xml_token_chars? : Int) -> (Array[String], Bool)
 
 pub fn validate_docx_package(BytesView) -> Array[String]
 
-pub fn validate_docx_package_limited(BytesView, max_findings~ : Int, max_message_chars~ : Int) -> (Array[String], Bool)
+pub fn validate_docx_package_limited(BytesView, max_findings~ : Int, max_message_chars~ : Int, max_xml_source_units? : Int, max_xml_tokens? : Int, max_xml_materialized_chars? : Int, max_xml_token_chars? : Int) -> (Array[String], Bool)
 
 // Errors
 pub(all) suberror PackageBuildError {

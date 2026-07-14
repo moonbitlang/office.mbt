@@ -142,25 +142,35 @@ pub struct XmlReadBudget {
 }
 
 ///|
-/// Builds a cumulative XML read budget. All ceilings are non-negative;
-/// a zero ceiling is valid and makes the corresponding first charge fail.
+/// Builds a cumulative XML read budget. Negative ceilings clamp to zero; a
+/// zero ceiling is valid and makes the corresponding first charge fail.
 pub fn xml_read_budget(
   max_source_units~ : Int,
   max_tokens~ : Int,
   max_materialized_chars~ : Int,
   max_token_chars~ : Int,
-) -> XmlReadBudget raise DocxError {
-  if max_source_units < 0 ||
-    max_tokens < 0 ||
-    max_materialized_chars < 0 ||
-    max_token_chars < 0 {
-    raise InvalidXml(message="XML read budgets must be non-negative")
-  }
+) -> XmlReadBudget {
   {
-    remaining_source_units: max_source_units,
-    remaining_tokens: max_tokens,
-    remaining_materialized_chars: max_materialized_chars,
-    max_token_chars,
+    remaining_source_units: if max_source_units > 0 {
+      max_source_units
+    } else {
+      0
+    },
+    remaining_tokens: if max_tokens > 0 {
+      max_tokens
+    } else {
+      0
+    },
+    remaining_materialized_chars: if max_materialized_chars > 0 {
+      max_materialized_chars
+    } else {
+      0
+    },
+    max_token_chars: if max_token_chars > 0 {
+      max_token_chars
+    } else {
+      0
+    },
   }
 }
 
