@@ -690,12 +690,13 @@ test "docx main document path follows package relationships and fallback" {
 }
 
 ///|
-test "docx part targets match Mammoth URI resolution" {
-  inspect(
+test "docx part targets use fallible OPC resolution" {
+  assert_eq(
     resolve_part_target("one/two", "three/four"),
-    content="one/two/three/four",
+    Some("one/two/three/four"),
   )
-  inspect(resolve_part_target("one/two", "/three/four"), content="three/four")
+  assert_eq(resolve_part_target("one/two", "/three/./four"), Some("three/four"))
+  assert_eq(resolve_part_target("one/two", "../../../escape"), None)
 }
 
 ///|

@@ -22,6 +22,20 @@ test "XLSX relationship IDs use one bounded lookup index" {
 }
 
 ///|
+test "raw relationship targets use the shared fallible OPC resolver" {
+  assert_eq(
+    normalize_relationship_target("word/", "/word/./document.xml"),
+    Some("word/document.xml"),
+  )
+  assert_eq(
+    normalize_relationship_target("word/", "../custom/main.xml"),
+    Some("custom/main.xml"),
+  )
+  assert_eq(normalize_relationship_target("word/", "../../escape.xml"), None)
+  assert_eq(normalize_relationship_target("", "/../escape.xml"), None)
+}
+
+///|
 fn wb_raw_archive_limit_kind(run : () -> Unit raise RawError) -> String raise {
   try run() catch {
     RawError(code~, details~, ..) => {

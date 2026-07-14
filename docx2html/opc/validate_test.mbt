@@ -55,6 +55,53 @@ test "a minimal well-formed package is valid" {
 }
 
 ///|
+test "relationship targets share fallible package-root normalization" {
+  assert_eq(
+    @opc.resolve_target("word", "media/./image.png"),
+    Some("word/media/image.png"),
+  )
+  assert_eq(
+    @opc.resolve_target("word/", "../custom/main.xml"),
+    Some("custom/main.xml"),
+  )
+  assert_eq(
+    @opc.resolve_target("ignored/base", "/word/./document.xml"),
+    Some("word/document.xml"),
+  )
+  assert_eq(@opc.resolve_target("word", "../../escape.xml"), None)
+  assert_eq(@opc.resolve_target("", "/../escape.xml"), None)
+  assert_eq(@opc.resolve_target("", "word//document.xml"), None)
+  assert_eq(@opc.resolve_target("", "https://example.test/x.xml"), None)
+}
+
+///|
+test "package-rooted relationship dot segments validate consistently" {
+  let rooted = MINIMAL_ROOT_RELS_XML.replace(
+    old="Target=\"word/document.xml\"",
+    new="Target=\"/word/./document.xml\"",
+  )
+  debug_inspect(
+    @opc.validate_docx_package(minimal_docx(root_rels=Some(rooted))),
+    content="[]",
+  )
+  let escaping = MINIMAL_ROOT_RELS_XML.replace(
+    old="Target=\"word/document.xml\"",
+    new="Target=\"/../word/document.xml\"",
+  )
+  let findings = @opc.validate_docx_package(
+    minimal_docx(root_rels=Some(escaping)),
+  )
+  assert_true(
+    findings.search_by(finding => {
+      finding.contains(
+        "_rels/.rels: officeDocument relationship has an invalid target: /../word/document.xml",
+      )
+    })
+    is Some(_),
+  )
+}
+
+///|
 test "archive-backed validation matches byte validation" {
   let valid = minimal_docx()
   let invalid = minimal_docx(extra=[("word/media/image1.png", b"not-png")])

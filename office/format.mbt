@@ -1019,32 +1019,15 @@ fn normalize_internal_target(target : StringView) -> String? {
     target.contains("#") {
     return None
   }
-  let path = if target.has_prefix("/") { target[1:] } else { target }
-  let segments : Array[String] = []
-  for item in path.split("/") {
-    let segment = item.to_owned()
-    match segment {
-      "" => return None
-      "." => ()
-      ".." =>
-        if segments.length() == 0 {
-          return None
-        } else {
-          let _ = segments.pop()
-        }
-      _ =>
-        if is_valid_opc_part_segment(segment) {
-          segments.push(segment)
-        } else {
-          return None
-        }
+  guard @opc.resolve_target("", target.to_owned()) is Some(normalized) else {
+    return None
+  }
+  for segment in normalized.split("/") {
+    if !is_valid_opc_part_segment(segment) {
+      return None
     }
   }
-  if segments.length() == 0 {
-    None
-  } else {
-    Some(segments.join("/"))
-  }
+  Some(normalized)
 }
 
 ///|
@@ -1128,12 +1111,16 @@ fn relationship_source_part(part : String) -> String? {
 
 ///|
 fn resolve_relationship_target(base : String, target : StringView) -> String? {
-  guard is_package_uri_reference(target) else { return None }
-  if target.has_prefix("/") {
-    normalize_internal_target(target)
-  } else {
-    normalize_internal_target(base + target.to_owned())
+  guard is_package_uri_reference(target) &&
+    @opc.resolve_target(base, target.to_owned()) is Some(normalized) else {
+    return None
   }
+  for segment in normalized.split("/") {
+    if !is_valid_opc_part_segment(segment) {
+      return None
+    }
+  }
+  Some(normalized)
 }
 
 ///|

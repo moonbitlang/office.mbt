@@ -365,18 +365,23 @@ fn add_malformed_docx_relationship(data : BytesView) -> Bytes raise {
 }
 
 ///|
-fn add_empty_segment_to_xlsx_main_target(data : BytesView) -> Bytes raise {
+fn replace_xlsx_main_target(data : BytesView, target : String) -> Bytes raise {
   let archive = @zip.read(data)
   let root_relationships = archive.get("_rels/.rels").unwrap()
   let text = @utf8.decode(root_relationships, ignore_bom=true)
   let updated = text.replace(
     old="Target=\"xl/workbook.xml\"",
-    new="Target=\"xl//workbook.xml\"",
+    new="Target=\"\{target}\"",
   )
   if updated == text {
-    fail("test could not add an empty relationship target segment")
+    fail("test could not replace the generated XLSX main target")
   }
   replace_archive_part(data, "_rels/.rels", @utf8.encode(updated))
+}
+
+///|
+fn add_empty_segment_to_xlsx_main_target(data : BytesView) -> Bytes raise {
+  replace_xlsx_main_target(data, "xl//workbook.xml")
 }
 
 ///|
@@ -728,6 +733,23 @@ test "detect_format rejects empty relationship target segments" {
       )
   } noraise {
     _ => fail("expected an empty relationship target segment")
+  }
+}
+
+///|
+test "detect_format shares package-rooted OPC target normalization" {
+  let source = @excel.write(@excel.new_file())
+  let rooted = replace_xlsx_main_target(source, "/xl/./workbook.xml")
+  assert_eq(@office.detect_format("book.xlsx", rooted), Xlsx)
+  let escaping = replace_xlsx_main_target(source, "/../xl/workbook.xml")
+  try @office.detect_format("book.xlsx", escaping) catch {
+    error =>
+      inspect(
+        Show::to_string(error),
+        content="invalid Office package: XLSX officeDocument relationship has an invalid Target",
+      )
+  } noraise {
+    _ => fail("expected above-root package target rejection")
   }
 }
 

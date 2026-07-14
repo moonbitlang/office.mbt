@@ -604,25 +604,7 @@ fn normalize_relationship_target(base : String, target : String) -> String? {
     target.has_prefix("//") {
     return None
   }
-  let joined = if target.has_prefix("/") {
-    target[1:].to_owned()
-  } else {
-    base + target
-  }
-  let output : Array[String] = []
-  for segment in joined.split("/") {
-    match segment {
-      "" => return None
-      "." => ()
-      ".." => if output.is_empty() { return None } else { ignore(output.pop()) }
-      _ => output.push(segment.to_owned())
-    }
-  }
-  if output.is_empty() {
-    None
-  } else {
-    Some(output.join("/"))
-  }
+  @opc.resolve_target(base, target)
 }
 
 ///|

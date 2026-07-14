@@ -764,9 +764,8 @@ fn resolve_unique_internal_part(
     if relationship.target == "" {
       raise Unsupported(message="the \{label} relationship has no target")
     }
-    let resolved = @opc.resolve_target(base_path, relationship.target)
-    if resolved == "" {
-      raise Unsupported(message="the \{label} relationship target is empty")
+    guard @opc.resolve_target(base_path, relationship.target) is Some(resolved) else {
+      raise Unsupported(message="the \{label} relationship target is invalid")
     }
     if !seen.contains(resolved) {
       seen.add(resolved)
@@ -829,9 +828,8 @@ fn resolve_reachable_annotation_story_parts(
     if relationship.target == "" {
       raise Unsupported(message="the \{kind} relationship has no target")
     }
-    let path = @opc.resolve_target(base_path, relationship.target)
-    if path == "" {
-      raise Unsupported(message="the \{kind} relationship target is empty")
+    guard @opc.resolve_target(base_path, relationship.target) is Some(path) else {
+      raise Unsupported(message="the \{kind} relationship target is invalid")
     }
     match kind_by_path.get(path) {
       Some(existing_kind) if existing_kind != kind =>
@@ -862,9 +860,9 @@ fn find_part_path(
 ) -> String {
   for target in relationships.find_targets_by_type(relationship_type) {
     // OPC-normalized ('../' forms resolve; review: L2 round 2).
-    let path = @opc.resolve_target(base_path, target)
-    if zip.exists(path) {
-      return path
+    match @opc.resolve_target(base_path, target) {
+      Some(path) if zip.exists(path) => return path
+      _ => ()
     }
   }
   fallback_path
@@ -950,10 +948,9 @@ fn resolve_header_footer_reference_part(
       message="the \{kind} reference relationship '\{id}' has no target",
     )
   }
-  let path = @opc.resolve_target(base_path, relationship.target)
-  if path == "" {
+  guard @opc.resolve_target(base_path, relationship.target) is Some(path) else {
     raise Unsupported(
-      message="the \{kind} reference relationship '\{id}' has an empty target",
+      message="the \{kind} reference relationship '\{id}' has an invalid target",
     )
   }
   if !zip.exists(path) {
@@ -2711,13 +2708,15 @@ fn BodyReader::read_image_by_relationship(
     return None
   }
   match self.relationships.find_by_id(relationship_id) {
-    Some(rel) => {
-      let path = resolve_part_target(self.base_path, rel.target)
-      match self.zip.read_bytes(path) {
-        Some(data) => Some(self.make_image(path, data, alt_text~))
+    Some(rel) =>
+      match resolve_part_target(self.base_path, rel.target) {
+        Some(path) =>
+          match self.zip.read_bytes(path) {
+            Some(data) => Some(self.make_image(path, data, alt_text~))
+            None => None
+          }
         None => None
       }
-    }
     None => None
   }
 }
@@ -2969,14 +2968,8 @@ fn read_drawing_alt_text(element : XmlElement) -> String? {
 }
 
 ///|
-fn resolve_part_target(base_path : String, target : String) -> String {
-  strip_leading_slash(
-    if target.has_prefix("/") {
-      target
-    } else {
-      join_zip_path([base_path, target])
-    },
-  )
+fn resolve_part_target(base_path : String, target : String) -> String? {
+  @opc.resolve_target(base_path, target)
 }
 
 ///|

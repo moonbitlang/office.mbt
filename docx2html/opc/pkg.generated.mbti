@@ -6,7 +6,7 @@ import {
 }
 
 // Values
-pub fn resolve_target(String, String) -> String
+pub fn resolve_target(String, String) -> String?
 
 pub fn validate_docx_archive(@zip.Archive) -> Array[String]
 

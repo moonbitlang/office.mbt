@@ -1,6 +1,7 @@
 import {
   "bobzhang/office",
   "bobzhang/mbtexcel/zip",
+  "bobzhang/docx2html/opc",
   "bobzhang/docx2html/xml",
   "moonbitlang/core/debug",
   "moonbitlang/core/encoding/utf16",
