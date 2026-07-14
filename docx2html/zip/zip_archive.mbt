@@ -5,16 +5,29 @@ pub(all) struct ZipArchive {
 } derive(Debug, Eq)
 
 ///|
+/// Builds the DOCX reader's immutable part view from an already materialized
+/// archive. Entry names remain fail-closed: the map view must never silently
+/// collapse duplicate ZIP records.
+pub fn open_zip_archive(
+  archive : @mbtzip.Archive,
+) -> ZipArchive raise DocxError {
+  let map : Map[String, Bytes] = Map([])
+  for entry in archive.entries() {
+    if map.contains(entry.name()) {
+      raise InvalidZip(message="duplicate ZIP entry name: \{entry.name()}")
+    }
+    map[entry.name()] = entry.data()
+  }
+  { entries: map }
+}
+
+///|
 /// Opens ZIP bytes into an in-memory archive.
 pub fn open_zip(data : BytesView) -> ZipArchive raise DocxError {
   let archive = @mbtzip.read(data) catch {
     err => raise InvalidZip(message="invalid ZIP archive: \{repr(err)}")
   }
-  let map : Map[String, Bytes] = Map([])
-  for entry in archive.entries() {
-    map[entry.name()] = entry.data()
-  }
-  { entries: map }
+  open_zip_archive(archive)
 }
 
 ///|

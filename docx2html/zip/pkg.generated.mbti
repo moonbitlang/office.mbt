@@ -11,6 +11,8 @@ pub fn join_zip_path(Array[String]) -> String
 
 pub fn open_zip(BytesView) -> ZipArchive raise @core.DocxError
 
+pub fn open_zip_archive(@bobzhang/mbtexcel/zip.Archive) -> ZipArchive raise @core.DocxError
+
 pub fn split_zip_path(String) -> (String, String)
 
 // Errors

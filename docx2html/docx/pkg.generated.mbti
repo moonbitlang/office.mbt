@@ -6,6 +6,7 @@ import {
   "bobzhang/docx2html/core",
   "bobzhang/docx2html/document",
   "bobzhang/docx2html/splice",
+  "bobzhang/mbtexcel/zip",
   "moonbitlang/core/debug",
 }
 
@@ -41,6 +42,8 @@ pub fn plan_comment_resolution(DocxAnnotatedResult, BytesView, comment_id~ : Str
 pub fn read_docx(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @document.DocumentElement raise @core.DocxError
 
 pub fn read_docx_annotated(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocxAnnotatedResult raise @core.DocxError
+
+pub fn read_docx_annotated_archive(@zip.Archive, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocxAnnotatedResult raise @core.DocxError
 
 pub fn read_docx_package(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocxPackageResult raise @core.DocxError
 

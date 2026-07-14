@@ -97,6 +97,33 @@ fn comment_summary(comment : @docx.CommentInfo) -> String {
 }
 
 ///|
+test "archive-backed annotated reads match byte-backed reads" {
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:body><w:p><w:r><w:t>shared archive</w:t></w:r></w:p></w:body>
+    #|</w:document>
+  let bytes = fixture_docx(document)
+  let from_bytes = @docx.read_docx_annotated(bytes)
+  let archive = try! @mbtzip.read(bytes)
+  let from_archive = @docx.read_docx_annotated_archive(archive)
+  assert_eq(from_archive.main_story_part(), from_bytes.main_story_part())
+  assert_eq(
+    from_archive.annotations().warnings(),
+    from_bytes.annotations().warnings(),
+  )
+  assert_eq(
+    from_archive.annotations().comments().length(),
+    from_bytes.annotations().comments().length(),
+  )
+  let byte_span = from_bytes.body_paragraph_span("p[1]").unwrap()
+  let archive_span = from_archive.body_paragraph_span("p[1]").unwrap()
+  assert_eq(archive_span.byte_start(), byte_span.byte_start())
+  assert_eq(archive_span.byte_end(), byte_span.byte_end())
+  assert_eq(archive_span.content_start(), byte_span.content_start())
+  assert_eq(archive_span.close_tag_start(), byte_span.close_tag_start())
+}
+
+///|
 test "index: ranges, points, threading, and coverage on a conformance-shaped fixture" {
   // Comment 0: a multi-paragraph range (start in p2, end in p3) with its
   // reference in p3; two body paragraphs, distinct first/last paraIds

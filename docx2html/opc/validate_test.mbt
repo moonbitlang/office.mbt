@@ -55,6 +55,19 @@ test "a minimal well-formed package is valid" {
 }
 
 ///|
+test "archive-backed validation matches byte validation" {
+  let valid = minimal_docx()
+  let invalid = minimal_docx(extra=[("word/media/image1.png", b"not-png")])
+  for data in [valid, invalid] {
+    let archive = try! @mbtzip.read(data)
+    assert_eq(
+      @opc.validate_docx_archive(archive),
+      @opc.validate_docx_package(data),
+    )
+  }
+}
+
+///|
 test "OPC validation uses strict XML for every structural part" {
   let duplicate_types = MINIMAL_CONTENT_TYPES_XML.replace(
     old="<Default Extension=\"rels\"",

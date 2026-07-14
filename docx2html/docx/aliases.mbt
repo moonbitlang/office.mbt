@@ -58,6 +58,11 @@ fn open_zip(data : BytesView) -> ZipArchive raise DocxError {
 }
 
 ///|
+fn open_zip_archive(archive : @mbtzip.Archive) -> ZipArchive raise DocxError {
+  @zip.open_zip_archive(archive)
+}
+
+///|
 fn split_zip_path(path : String) -> (String, String) {
   @zip.split_zip_path(path)
 }

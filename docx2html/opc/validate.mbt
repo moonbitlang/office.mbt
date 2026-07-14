@@ -40,6 +40,24 @@ pub fn validate_docx_package(data : BytesView) -> Array[String] {
       return findings
     }
   }
+  validate_docx_archive_into(archive, findings)
+  findings
+}
+
+///|
+/// Validates an already materialized DOCX archive without reading or inflating
+/// the package again. The caller retains ownership; validation is read-only.
+pub fn validate_docx_archive(archive : @mbtzip.Archive) -> Array[String] {
+  let findings = []
+  validate_docx_archive_into(archive, findings)
+  findings
+}
+
+///|
+fn validate_docx_archive_into(
+  archive : @mbtzip.Archive,
+  findings : Array[String],
+) -> Unit {
   // Raw entry sweep: names + CRC integrity, before any part-level logic.
   let parts : Map[String, Bytes] = Map([])
   let seen : Set[String] = Set([])
@@ -64,7 +82,6 @@ pub fn validate_docx_package(data : BytesView) -> Array[String] {
     Some(types) => check_content_type_coverage(parts, types, findings)
     None => ()
   }
-  findings
 }
 
 ///|
