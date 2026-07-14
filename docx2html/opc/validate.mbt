@@ -363,8 +363,16 @@ fn check_content_types(
             element.attributes.get("Extension"),
             element.attributes.get("ContentType"),
           ) {
-          (Some(extension), Some(content_type)) =>
-            defaults[extension.to_lower()] = content_type
+          (Some(extension), Some(content_type)) => {
+            let key = extension.to_lower()
+            if defaults.contains(key) {
+              findings.add(
+                "\{CONTENT_TYPES_PART}: duplicate Default Extension after case normalization: \{findings.text(key)}",
+              )
+            } else {
+              defaults[key] = content_type
+            }
+          }
           _ =>
             findings.add(
               "\{CONTENT_TYPES_PART}: Default missing Extension or ContentType",
@@ -376,16 +384,28 @@ fn check_content_types(
             element.attributes.get("PartName"),
             element.attributes.get("ContentType"),
           ) {
-          (Some(part_name), Some(content_type)) => {
-            overrides[part_name] = content_type
+          (Some(part_name), Some(content_type)) =>
             // Only a '/'-prefixed PartName can be resolved to an entry; an
             // empty or slash-less one is itself the finding (and slicing it
             // would abort on attacker-supplied input).
             if part_name.has_prefix("/") {
-              let target = part_name[1:].to_owned()
+              let key = normalize_override_part_name(part_name)
+              if overrides.contains(key) {
+                findings.add(
+                  "\{CONTENT_TYPES_PART}: duplicate Override PartName after path normalization: \{findings.text(key)}",
+                )
+              } else {
+                overrides[key] = content_type
+              }
+              if key != part_name {
+                findings.add(
+                  "\{CONTENT_TYPES_PART}: Override PartName is not canonical: \{findings.text(part_name)}",
+                )
+              }
+              let target = key[1:].to_owned()
               if !parts.contains(target) {
                 findings.add(
-                  "\{CONTENT_TYPES_PART}: Override names a missing part: \{findings.text(part_name)}",
+                  "\{CONTENT_TYPES_PART}: Override names a missing part: \{findings.text(key)}",
                 )
               }
             } else {
@@ -393,7 +413,6 @@ fn check_content_types(
                 "\{CONTENT_TYPES_PART}: Override PartName must start with '/': \{findings.text(part_name)}",
               )
             }
-          }
           _ =>
             findings.add(
               "\{CONTENT_TYPES_PART}: Override missing PartName or ContentType",
@@ -403,6 +422,14 @@ fn check_content_types(
     }
   }
   Some({ defaults, overrides })
+}
+
+///|
+fn normalize_override_part_name(part_name : String) -> String {
+  // Callers establish the leading slash. `resolve_target` removes redundant
+  // separators and dot segments, giving declarations one collision key while
+  // the separate canonicality finding rejects noncanonical spellings.
+  "/" + resolve_target("", part_name[1:].to_owned())
 }
 
 ///|
@@ -464,7 +491,12 @@ fn check_relationships(
       match parse_xml_part(ROOT_RELS_PART, bytes, findings) {
         Some(root) => {
           let mut main_part : String? = None
-          for_each_relationship(root, (rel_type, target, external) => {
+          for_each_relationship(ROOT_RELS_PART, root, findings, (
+            _id,
+            rel_type,
+            target,
+            external,
+          ) => {
             if !external &&
               rel_type.has_suffix(OFFICE_DOCUMENT_RELATIONSHIP_SUFFIX) &&
               main_part is None {
@@ -500,7 +532,12 @@ fn check_relationships(
     match parse_xml_part(name, bytes, findings) {
       Some(root) => {
         let base = rels_base_dir(name)
-        for_each_relationship(root, (_rel_type, target, external) => {
+        for_each_relationship(name, root, findings, (
+          _id,
+          _rel_type,
+          target,
+          external,
+        ) => {
           if !external {
             let resolved = resolve_target(base, target)
             if !parts.contains(resolved) {
@@ -535,18 +572,37 @@ fn check_main_part(
 
 ///|
 fn for_each_relationship(
+  part_name : String,
   root : @xml.XmlElement,
-  visit : (String, String, Bool) -> Unit,
+  findings : FindingCollector,
+  visit : (String, String, String, Bool) -> Unit,
 ) -> Unit {
+  let ids : Set[String] = Set([])
   for node in root.children {
+    if findings.full() {
+      findings.stop()
+      break
+    }
     guard node is XmlElement(element) else { continue }
     if local_name(element.name) != "Relationship" {
       continue
     }
+    let id = element.attributes.get("Id").unwrap_or("")
+    if id == "" {
+      findings.add(
+        "\{findings.text(part_name)}: Relationship missing a non-empty Id",
+      )
+    } else if ids.contains(id) {
+      findings.add(
+        "\{findings.text(part_name)}: duplicate Relationship Id: \{findings.text(id)}",
+      )
+    } else {
+      ids.add(id)
+    }
     let rel_type = element.attributes.get("Type").unwrap_or("")
     let target = element.attributes.get("Target").unwrap_or("")
     let external = element.attributes.get("TargetMode") is Some("External")
-    visit(rel_type, target, external)
+    visit(id, rel_type, target, external)
   }
 }
 

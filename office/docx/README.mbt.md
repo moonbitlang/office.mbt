@@ -46,6 +46,11 @@ budget jointly limits source bytes, token count, copied characters, token size,
 and nesting, so many individually small parts or sibling-dense XML cannot turn
 per-part limits into aggregate growth.
 
+Portable OPC validation rejects duplicate content-type defaults after
+case-normalizing extensions, duplicate overrides after normalizing package
+paths, and missing or duplicate relationship ids within every `.rels` scope.
+No declaration is silently replaced in a validation map.
+
 Comment bodies receive a second preflight before any derived XML tree or reply
 paragraph-id array is allocated. It bounds depth, node count, and reachable
 UTF-8 input. The fragment writer then performs an escape-aware UTF-8 sizing pass
