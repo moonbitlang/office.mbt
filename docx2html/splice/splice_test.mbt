@@ -145,6 +145,46 @@ test "D1: source-pinned plans compose and serialize through a hard ceiling" {
 }
 
 ///|
+test "D1: bounded preflight rejects compressible payloads and oversized manifests" {
+  let archive = @mbtzip.read(tiny_package())
+  let materialization_limits = @splice.splice_limits(
+    max_archive_entries=512,
+    max_changed_parts=256,
+    max_part_name_chars=256,
+    max_entry_uncompressed_bytes=16_384,
+    max_total_uncompressed_bytes=32_768,
+    max_materialized_bytes=128,
+    max_xml_tokens=4_096,
+  )
+  let compressible = @splice.SplicePlan::new()
+  compressible.edit_part(
+    "a.xml",
+    @splice.span_edit(start=3, end=3, @utf8.encode("<x/>".repeat(512))),
+  )
+  expect_splice_failure(
+    () => compressible.check_against(archive, limits=materialization_limits),
+    "the splice materialization limit is 128 bytes",
+  )
+  let manifest_limits = @splice.splice_limits(
+    max_archive_entries=512,
+    max_changed_parts=256,
+    max_part_name_chars=256,
+    max_entry_uncompressed_bytes=16_384,
+    max_total_uncompressed_bytes=32_768,
+    max_materialized_bytes=16_384,
+    max_xml_tokens=4_096,
+  )
+  let too_many_parts = @splice.SplicePlan::new()
+  for index in 0..<257 {
+    too_many_parts.add_part("added/part-\{index}.xml", @utf8.encode("<x/>"))
+  }
+  expect_splice_failure(
+    () => too_many_parts.check_against(archive, limits=manifest_limits),
+    "the splice preservation manifest limit is 256 parts",
+  )
+}
+
+///|
 test "D1: stale, unpinned, conflicting, and noncanonical plans fail closed" {
   let archive = @mbtzip.read(tiny_package())
   guard archive.get("a.xml") is Some(a_bytes)

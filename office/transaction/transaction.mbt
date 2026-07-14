@@ -30,6 +30,16 @@ let transaction_max_live_materialized_bytes : Int64 = 384L * 1024L * 1024L
 let transaction_materialization_working_reserve : Int64 = 64L * 1024L * 1024L
 
 ///|
+/// DOCX splice validation retains caller replacement buffers, edited payloads,
+/// decoded text, and a strict XML tree concurrently. Only this conservative
+/// share of the already charged working reserve may be used for the payload
+/// buffers themselves; the remainder stays reserved for parser structures.
+let transaction_splice_materialization_divisor : Int64 = 8L
+
+///|
+let transaction_max_splice_materialized_bytes : Int64 = 8L * 1024L * 1024L
+
+///|
 /// Before inflation, reserve the source buffer, copied local/central records,
 /// decoded names, and bounded entry/runtime bookkeeping. The post-read check
 /// replaces this conservative preflight with `Archive::retained_size_estimate`.
@@ -512,6 +522,7 @@ fn live_materialization_error(
 fn transaction_mutation_budget(
   retained : Int64,
   live_limit : Int64,
+  working_reserve : Int64,
 ) -> TransactionBudget {
   let remaining = live_limit - retained
   let package_limit = transaction_max_package_bytes.to_int64()
@@ -522,7 +533,16 @@ fn transaction_mutation_budget(
   } else {
     transaction_max_package_bytes
   }
-  { max_candidate_package_bytes, }
+  let splice_share = working_reserve /
+    transaction_splice_materialization_divisor
+  let max_splice_materialized_bytes = if splice_share <= 0L {
+    0
+  } else if splice_share < transaction_max_splice_materialized_bytes {
+    splice_share.to_int()
+  } else {
+    transaction_max_splice_materialized_bytes.to_int()
+  }
+  { max_candidate_package_bytes, max_splice_materialized_bytes }
 }
 
 ///|
@@ -1193,7 +1213,7 @@ async fn transact_with_identifier_and_faults(
   )
   let mutation_retained = materialization_reserve + original_archive_cost
   let budget = transaction_mutation_budget(
-    mutation_retained, materialization_limit,
+    mutation_retained, materialization_limit, materialization_reserve,
   )
   let mutation = mutate(format, original, original_archive.fork(), budget) catch {
     TransactionError(..) as error => raise normalize_mutation_error(error)

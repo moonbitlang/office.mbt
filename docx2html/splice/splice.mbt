@@ -60,6 +60,58 @@ pub struct SplicePlan {
 }
 
 ///|
+/// Transaction-grade limits applied before a splice allocates edited payloads
+/// or serialized package bytes. The type is opaque so callers must construct a
+/// complete, internally consistent limit set.
+pub struct SpliceLimits {
+  priv max_archive_entries : Int
+  priv max_changed_parts : Int
+  priv max_part_name_chars : Int
+  priv max_entry_uncompressed_bytes : Int
+  priv max_total_uncompressed_bytes : Int
+  priv max_materialized_bytes : Int
+  priv max_xml_tokens : Int
+}
+
+///|
+/// Builds the fail-closed resource contract for a preservation splice.
+pub fn splice_limits(
+  max_archive_entries~ : Int,
+  max_changed_parts~ : Int,
+  max_part_name_chars~ : Int,
+  max_entry_uncompressed_bytes~ : Int,
+  max_total_uncompressed_bytes~ : Int,
+  max_materialized_bytes~ : Int,
+  max_xml_tokens~ : Int,
+) -> SpliceLimits raise @core.DocxError {
+  if max_archive_entries <= 0 ||
+    max_changed_parts <= 0 ||
+    max_part_name_chars <= 0 ||
+    max_entry_uncompressed_bytes <= 0 ||
+    max_total_uncompressed_bytes <= 0 ||
+    max_materialized_bytes < 0 ||
+    max_xml_tokens <= 0 {
+    raise Unsupported(
+      message="splice limits must be positive (materialized bytes may be zero)",
+    )
+  }
+  if max_entry_uncompressed_bytes > max_total_uncompressed_bytes {
+    raise Unsupported(
+      message="the splice entry limit cannot exceed its aggregate uncompressed limit",
+    )
+  }
+  {
+    max_archive_entries,
+    max_changed_parts,
+    max_part_name_chars,
+    max_entry_uncompressed_bytes,
+    max_total_uncompressed_bytes,
+    max_materialized_bytes,
+    max_xml_tokens,
+  }
+}
+
+///|
 /// An empty plan.
 pub fn SplicePlan::new() -> SplicePlan {
   { part_edits: Map([]), new_parts: [], source_parts: Map([]) }
@@ -241,8 +293,9 @@ pub fn SplicePlan::check_against(
   self : SplicePlan,
   archive : @mbtzip.Archive,
   require_pins? : Bool = false,
+  limits? : SpliceLimits,
 ) -> Unit raise @core.DocxError {
-  let _ = build_spliced_archive(archive, self, require_pins)
+  let _ = build_spliced_archive(archive, self, require_pins, limits)
 }
 
 ///|
@@ -259,7 +312,7 @@ pub fn splice_docx(
         message="could not read the original package: \{to_repr(err)}",
       )
   }
-  let output = build_spliced_archive(archive, plan, false)
+  let output = build_spliced_archive(archive, plan, false, None)
   // The byte API can preserve a true no-op exactly, including archive bytes
   // the writer need not understand. Validation above still rejects ambiguous
   // duplicate names and stale pins before this fast path.
@@ -281,11 +334,12 @@ pub fn splice_docx_archive(
   plan : SplicePlan,
   max_output_bytes~ : Int,
   require_pins? : Bool = false,
+  limits? : SpliceLimits,
 ) -> Bytes raise @core.DocxError {
   if max_output_bytes < 0 {
     raise Unsupported(message="the splice output limit cannot be negative")
   }
-  let output = build_spliced_archive(original, plan, require_pins)
+  let output = build_spliced_archive(original, plan, require_pins, limits)
   @mbtzip.write_limited(output, max_output_bytes~) catch {
     OutputLimitExceeded(limit~) =>
       raise Unsupported(
@@ -297,16 +351,46 @@ pub fn splice_docx_archive(
 }
 
 ///|
-/// Checks and applies a plan to an isolated shallow fork. No serialization
-/// happens here, so all logical failures precede candidate allocation.
+/// One checked existing-part splice. Preparation sorts and validates the
+/// ranges and computes the exact result size/token count without allocating
+/// the edited payload.
+priv struct PreparedPartSplice {
+  name : String
+  source : Bytes
+  edits : Array[SpanEdit]
+  result_length : Int
+  replacement_bytes : Int64
+}
+
+///|
+fn checked_splice_size_add(
+  current : Int64,
+  additional : Int64,
+  what : String,
+) -> Int64 raise @core.DocxError {
+  if current < 0L ||
+    additional < 0L ||
+    current > 9223372036854775807L - additional {
+    raise Unsupported(message="the splice \{what} size overflows Int64")
+  }
+  current + additional
+}
+
+///|
+/// Checks and applies a plan to an isolated shallow fork. When limits are
+/// supplied, every count and exact output size is accepted before the first
+/// edited payload is allocated. No package serialization happens here.
 fn build_spliced_archive(
   archive : @mbtzip.Archive,
   plan : SplicePlan,
   require_pins : Bool,
+  limits : SpliceLimits?,
 ) -> @mbtzip.Archive raise @core.DocxError {
   // Duplicate entry NAMES are crafted-file territory: which one a
   // consumer sees is implementation-defined, so surgery refuses them.
   let seen : Set[String] = Set([])
+  let mut source_entry_count = 0
+  let mut source_uncompressed_bytes = 0L
   for entry in archive.entries() {
     if seen.contains(entry.name()) {
       raise InvalidZip(
@@ -314,8 +398,73 @@ fn build_spliced_archive(
       )
     }
     seen.add(entry.name())
+    source_entry_count = source_entry_count + 1
+    let entry_length = entry.data().length()
+    source_uncompressed_bytes = checked_splice_size_add(
+      source_uncompressed_bytes,
+      entry_length.to_int64(),
+      "source aggregate",
+    )
+    match limits {
+      Some(value) => {
+        if source_entry_count > value.max_archive_entries {
+          raise Unsupported(
+            message="the splice archive entry limit is \{value.max_archive_entries}, but the source has at least \{source_entry_count} entries",
+          )
+        }
+        if entry_length > value.max_entry_uncompressed_bytes {
+          raise Unsupported(
+            message="the splice entry uncompressed limit is \{value.max_entry_uncompressed_bytes} bytes, but '\{entry.name()}' has \{entry_length} bytes",
+          )
+        }
+        if source_uncompressed_bytes >
+          value.max_total_uncompressed_bytes.to_int64() {
+          raise Unsupported(
+            message="the splice aggregate uncompressed limit is \{value.max_total_uncompressed_bytes} bytes, but the source exceeds it",
+          )
+        }
+      }
+      None => ()
+    }
+  }
+  let mut changed_part_count = plan.new_parts.length().to_int64()
+  let mut span_edit_count = 0L
+  for _, edits in plan.part_edits {
+    changed_part_count = checked_splice_size_add(
+      changed_part_count, 1L, "preservation manifest",
+    )
+    span_edit_count = checked_splice_size_add(
+      span_edit_count,
+      edits.length().to_int64(),
+      "span edit count",
+    )
+  }
+  match limits {
+    Some(value) => {
+      if changed_part_count > value.max_changed_parts.to_int64() {
+        raise Unsupported(
+          message="the splice preservation manifest limit is \{value.max_changed_parts} parts, but the plan declares \{changed_part_count}",
+        )
+      }
+      if plan.new_parts.length() >
+        value.max_archive_entries - source_entry_count {
+        raise Unsupported(
+          message="the splice archive entry limit is \{value.max_archive_entries}, but the result would contain too many entries",
+        )
+      }
+      if span_edit_count > value.max_xml_tokens.to_int64() {
+        raise Unsupported(
+          message="the splice span edit limit is \{value.max_xml_tokens}, but the plan declares \{span_edit_count}",
+        )
+      }
+    }
+    None => ()
   }
   for name, _ in plan.part_edits {
+    match limits {
+      Some(value) => check_plan_part_name_limit(name, value.max_part_name_chars)
+      None => ()
+    }
     check_plan_part_name(name)
     if !seen.contains(name) {
       raise Unsupported(
@@ -329,7 +478,18 @@ fn build_spliced_archive(
     }
   }
   for entry in plan.new_parts {
-    let (name, _) = entry
+    let (name, bytes) = entry
+    match limits {
+      Some(value) => {
+        check_plan_part_name_limit(name, value.max_part_name_chars)
+        if bytes.length() > value.max_entry_uncompressed_bytes {
+          raise Unsupported(
+            message="the splice entry uncompressed limit is \{value.max_entry_uncompressed_bytes} bytes, but added part '\{name}' has \{bytes.length()} bytes",
+          )
+        }
+      }
+      None => ()
+    }
     check_plan_part_name(name)
     if seen.contains(name) {
       raise Unsupported(
@@ -338,6 +498,10 @@ fn build_spliced_archive(
     }
   }
   for name, expected in plan.source_parts {
+    match limits {
+      Some(value) => check_plan_part_name_limit(name, value.max_part_name_chars)
+      None => ()
+    }
     match archive.get(name) {
       Some(actual) if actual != expected =>
         raise Unsupported(
@@ -350,16 +514,71 @@ fn build_spliced_archive(
         )
     }
   }
-  // Apply per-part edits up front (fail before building anything).
+  // Prepare every existing-part edit and compute the exact result/archive
+  // sizes before allocating any replacement payload.
+  let prepared : Array[PreparedPartSplice] = []
+  let mut result_uncompressed_bytes = source_uncompressed_bytes
+  let mut materialized_bytes = 0L
   let edited : Map[String, Bytes] = Map([])
   for name, edits in plan.part_edits {
     match archive.get(name) {
-      Some(bytes) => edited[name] = apply_span_edits(name, bytes, edits)
+      Some(bytes) => {
+        let part = prepare_span_edits(name, bytes, edits, limits)
+        result_uncompressed_bytes = checked_splice_size_add(
+          result_uncompressed_bytes - bytes.length().to_int64(),
+          part.result_length.to_int64(),
+          "result aggregate",
+        )
+        materialized_bytes = checked_splice_size_add(
+          checked_splice_size_add(
+            materialized_bytes,
+            part.replacement_bytes,
+            "materialization",
+          ),
+          part.result_length.to_int64(),
+          "materialization",
+        )
+        prepared.push(part)
+      }
       None =>
         raise Unsupported(
           message="the splice plan edits '\{name}', which the package does not contain",
         )
     }
+  }
+  for entry in plan.new_parts {
+    let (_, bytes) = entry
+    result_uncompressed_bytes = checked_splice_size_add(
+      result_uncompressed_bytes,
+      bytes.length().to_int64(),
+      "result aggregate",
+    )
+    materialized_bytes = checked_splice_size_add(
+      materialized_bytes,
+      bytes.length().to_int64(),
+      "materialization",
+    )
+  }
+  match limits {
+    Some(value) => {
+      if result_uncompressed_bytes >
+        value.max_total_uncompressed_bytes.to_int64() {
+        raise Unsupported(
+          message="the splice aggregate uncompressed limit is \{value.max_total_uncompressed_bytes} bytes, but the result requires \{result_uncompressed_bytes}",
+        )
+      }
+      if materialized_bytes > value.max_materialized_bytes.to_int64() {
+        raise Unsupported(
+          message="the splice materialization limit is \{value.max_materialized_bytes} bytes, but replacements, added parts, and edited payloads require \{materialized_bytes}",
+        )
+      }
+    }
+    None => ()
+  }
+  // Only after the whole plan passes the global preflight may edited payloads
+  // and their temporary strict-XML validation trees be materialized.
+  for part in prepared {
+    edited[part.name] = apply_prepared_span_edits(part)
   }
   let output = archive.fork()
   for name, bytes in edited {
@@ -395,13 +614,62 @@ fn check_plan_part_name(name : String) -> Unit raise @core.DocxError {
 }
 
 ///|
-/// Applies one part's edits: encoding gate, sort, overlap/range checks,
-/// slice-splice, and the well-formedness belt on the result.
-fn apply_span_edits(
+/// Applies the transaction's Unicode-scalar ceiling to a plan-controlled name
+/// and rejects malformed UTF-16 before any diagnostic copies the name.
+fn check_plan_part_name_limit(
+  name : String,
+  max_chars : Int,
+) -> Unit raise @core.DocxError {
+  let mut offset = 0
+  let mut scalars = 0
+  while offset < name.length() {
+    let unit = name[offset]
+    if unit.is_leading_surrogate() {
+      if offset + 1 >= name.length() ||
+        !name[offset + 1].is_trailing_surrogate() {
+        raise Unsupported(
+          message="the splice part name limit requires valid UTF-16 names",
+        )
+      }
+      offset = offset + 2
+    } else if unit.is_trailing_surrogate() {
+      raise Unsupported(
+        message="the splice part name limit requires valid UTF-16 names",
+      )
+    } else {
+      offset = offset + 1
+    }
+    scalars = scalars + 1
+    if scalars > max_chars {
+      raise Unsupported(
+        message="the splice part name limit is \{max_chars} Unicode scalars",
+      )
+    }
+  }
+}
+
+///|
+/// Conservative strict-parser cardinality proxy counted directly over the
+/// future result segments: element starts plus attribute assignments.
+fn xml_markup_tokens(bytes : BytesView) -> Int64 {
+  let mut count = 0L
+  for byte in bytes {
+    if byte == b'<' || byte == b'=' {
+      count = count + 1L
+    }
+  }
+  count
+}
+
+///|
+/// Performs the encoding, ordering, overlap, range, exact-size, and XML-token
+/// preflight for one part without allocating its edited payload.
+fn prepare_span_edits(
   name : String,
   bytes : Bytes,
   edits : Array[SpanEdit],
-) -> Bytes raise @core.DocxError {
+  limits : SpliceLimits?,
+) -> PreparedPartSplice raise @core.DocxError {
   check_part_encoding(name, bytes)
   // Deterministic application order: by start; at EQUAL starts,
   // zero-width insertions land before a consuming edit, and edits that
@@ -443,15 +711,118 @@ fn apply_span_edits(
     }
     previous_end = edit.end
   }
-  let builder = Buffer()
+  let mut result_length = bytes.length().to_int64()
+  let mut replacement_bytes = 0L
+  let mut markup_tokens = 0L
   let mut cursor = 0
   for edit in sorted {
-    builder.write_bytesview(bytes[cursor:edit.start])
-    builder.write_bytes(edit.replacement)
+    result_length = checked_splice_size_add(
+      result_length - (edit.end - edit.start).to_int64(),
+      edit.replacement.length().to_int64(),
+      "edited part",
+    )
+    replacement_bytes = checked_splice_size_add(
+      replacement_bytes,
+      edit.replacement.length().to_int64(),
+      "replacement aggregate",
+    )
+    markup_tokens = checked_splice_size_add(
+      checked_splice_size_add(
+        markup_tokens,
+        xml_markup_tokens(bytes[cursor:edit.start]),
+        "XML token",
+      ),
+      xml_markup_tokens(edit.replacement),
+      "XML token",
+    )
     cursor = edit.end
   }
-  builder.write_bytesview(bytes[cursor:])
-  let result = builder.contents()
+  markup_tokens = checked_splice_size_add(
+    markup_tokens,
+    xml_markup_tokens(bytes[cursor:]),
+    "XML token",
+  )
+  if result_length > 2147483647L {
+    raise Unsupported(
+      message="splicing '\{name}' exceeds the maximum addressable part size",
+    )
+  }
+  match limits {
+    Some(value) => {
+      if result_length > value.max_entry_uncompressed_bytes.to_int64() {
+        raise Unsupported(
+          message="the splice entry uncompressed limit is \{value.max_entry_uncompressed_bytes} bytes, but edited part '\{name}' requires \{result_length}",
+        )
+      }
+      if markup_tokens > value.max_xml_tokens.to_int64() {
+        raise Unsupported(
+          message="the splice XML token limit is \{value.max_xml_tokens}, but edited part '\{name}' requires \{markup_tokens}",
+        )
+      }
+    }
+    None => ()
+  }
+  {
+    name,
+    source: bytes,
+    edits: sorted,
+    result_length: result_length.to_int(),
+    replacement_bytes,
+  }
+}
+
+///|
+fn apply_prepared_span_edits(
+  prepared : PreparedPartSplice,
+) -> Bytes raise @core.DocxError {
+  // Build a view-only segment table, then let Bytes::makei allocate and fill
+  // exactly one immutable result buffer. This avoids Buffer growth/copy peaks
+  // after the exact materialization preflight.
+  let segments : Array[BytesView] = []
+  let mut source_at = 0
+  for edit in prepared.edits {
+    let source_segment = prepared.source[source_at:edit.start]
+    if !source_segment.is_empty() {
+      segments.push(source_segment)
+    }
+    if !edit.replacement.is_empty() {
+      segments.push(edit.replacement)
+    }
+    source_at = edit.end
+  }
+  let tail = prepared.source[source_at:]
+  if !tail.is_empty() {
+    segments.push(tail)
+  }
+  let mut segment_total = 0L
+  for segment in segments {
+    segment_total = checked_splice_size_add(
+      segment_total,
+      segment.length().to_int64(),
+      "materialization segment",
+    )
+  }
+  if segment_total != prepared.result_length.to_int64() {
+    raise Unsupported(
+      message="the splice size preflight disagreed with materialization",
+    )
+  }
+  let segment_index = Ref(0)
+  let segment_start = Ref(0)
+  let result = Bytes::makei(prepared.result_length, output_index => {
+    while segment_index.val < segments.length() &&
+          output_index - segment_start.val >=
+          segments[segment_index.val].length() {
+      segment_start.val = segment_start.val +
+        segments[segment_index.val].length()
+      segment_index.val = segment_index.val + 1
+    }
+    if segment_index.val >= segments.length() {
+      b'\x00'
+    } else {
+      segments[segment_index.val][output_index - segment_start.val]
+    }
+  })
   // Well-formedness belt: a spliced part must still parse as strict, DTD-free
   // XML. This cannot vouch for schema validity or namespace WISDOM of a
   // fragment (that is the fragment author's contract, gated by the dual
@@ -460,13 +831,13 @@ fn apply_span_edits(
   let text = @utf8.decode(result, ignore_bom=true) catch {
     _ =>
       raise Unsupported(
-        message="splicing '\{name}' produced bytes that are not valid UTF-8",
+        message="splicing '\{prepared.name}' produced bytes that are not valid UTF-8",
       )
   }
   let _ = @xml.read_xml_string_strict(text) catch {
     err =>
       raise Unsupported(
-        message="splicing '\{name}' produced malformed XML (\{to_repr(err)}); refusing to emit",
+        message="splicing '\{prepared.name}' produced malformed XML (\{to_repr(err)}); refusing to emit",
       )
   }
   result

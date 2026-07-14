@@ -53,10 +53,18 @@ pub struct PreservationReport {
 }
 
 pub struct TransactionBudget {
-  max_candidate_package_bytes : Int
+  // private fields
 }
+pub fn TransactionBudget::max_archive_entries(Self) -> Int
 pub fn TransactionBudget::max_candidate_package_bytes(Self) -> Int
-pub fn TransactionBudget::source_archive_is_bounded(Self, BytesView, @zip.Archive) -> Bool
+pub fn TransactionBudget::max_entry_uncompressed_bytes(Self) -> Int
+pub fn TransactionBudget::max_part_name_chars(Self) -> Int
+pub fn TransactionBudget::max_preservation_parts(Self) -> Int
+pub fn TransactionBudget::max_splice_materialized_bytes(Self) -> Int
+pub fn TransactionBudget::max_splice_xml_tokens(Self) -> Int
+pub fn TransactionBudget::max_total_uncompressed_bytes(Self) -> Int
+pub fn TransactionBudget::max_validation_findings(Self) -> Int
+pub fn TransactionBudget::max_validation_message_chars(Self) -> Int
 
 pub struct TransactionIdentifier {
   name : String
