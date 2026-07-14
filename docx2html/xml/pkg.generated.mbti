@@ -21,6 +21,8 @@ pub fn read_xml_string_strict_limited(String, XmlReadBudget, namespace_map? : Ma
 
 pub fn write_xml_fragment(XmlElement, namespaces? : Map[String, String]) -> String
 
+pub fn write_xml_fragment_limited(XmlElement, max_output_bytes~ : Int, namespaces? : Map[String, String]) -> String raise @core.DocxError
+
 pub fn write_xml_string(XmlElement, namespaces? : Map[String, String]) -> String
 
 pub fn xml_element(String, attributes? : Map[String, String], children? : Array[XmlNode]) -> XmlElement
