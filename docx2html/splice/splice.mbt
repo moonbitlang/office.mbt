@@ -155,6 +155,14 @@ pub fn SplicePlan::pin_part(
   source : BytesView,
 ) -> Unit raise @core.DocxError {
   check_plan_part_name(name)
+  let key = package_part_identity(name)
+  for existing_name, _ in self.source_parts {
+    if package_part_identity(existing_name) == key && existing_name != name {
+      raise Unsupported(
+        message="the splice plan pins case-equivalent part names '\{existing_name}' and '\{name}'",
+      )
+    }
+  }
   match self.source_parts.get(name) {
     Some(existing) if existing != source =>
       raise Unsupported(
@@ -261,7 +269,23 @@ pub fn SplicePlan::edit_part(
   self : SplicePlan,
   name : String,
   edit : SpanEdit,
-) -> Unit {
+) -> Unit raise @core.DocxError {
+  let key = package_part_identity(name)
+  for entry in self.new_parts {
+    let (added, _) = entry
+    if package_part_identity(added) == key {
+      raise Unsupported(
+        message="the splice plan cannot both edit '\{name}' and add case-equivalent part '\{added}'",
+      )
+    }
+  }
+  for existing, _ in self.part_edits {
+    if package_part_identity(existing) == key && existing != name {
+      raise Unsupported(
+        message="the splice plan edits case-equivalent part names '\{existing}' and '\{name}'",
+      )
+    }
+  }
   match self.part_edits.get(name) {
     Some(edits) => edits.push(edit)
     None => self.part_edits[name] = [edit]
@@ -306,17 +330,32 @@ fn SplicePlan::add_checked_part(
   name : String,
   bytes : Bytes,
 ) -> Unit raise @core.DocxError {
-  if self.part_edits.contains(name) {
-    raise Unsupported(
-      message="the splice plan cannot both edit and add a part named '\{name}'",
-    )
+  let key = package_part_identity(name)
+  for edited, _ in self.part_edits {
+    if package_part_identity(edited) == key {
+      if edited == name {
+        raise Unsupported(
+          message="the splice plan cannot both edit and add a part named '\{name}'",
+        )
+      } else {
+        raise Unsupported(
+          message="the splice plan cannot both add '\{name}' and edit case-equivalent part '\{edited}'",
+        )
+      }
+    }
   }
   for entry in self.new_parts {
     let (existing, _) = entry
-    if existing == name {
-      raise Unsupported(
-        message="the splice plan already adds a part named '\{name}'",
-      )
+    if package_part_identity(existing) == key {
+      if existing == name {
+        raise Unsupported(
+          message="the splice plan already adds a part named '\{name}'",
+        )
+      } else {
+        raise Unsupported(
+          message="the splice plan already adds case-equivalent part '\{existing}' for '\{name}'",
+        )
+      }
     }
   }
   self.new_parts.push((name, bytes))
@@ -424,18 +463,25 @@ fn build_spliced_archive(
   require_pins : Bool,
   limits : SpliceLimits?,
 ) -> @mbtzip.Archive raise @core.DocxError {
-  // Duplicate entry NAMES are crafted-file territory: which one a
-  // consumer sees is implementation-defined, so surgery refuses them.
-  let seen : Set[String] = Set([])
+  // OPC part identity is case-insensitive. Exact duplicates and case aliases
+  // are equally ambiguous, including on the true no-op fast path.
+  let seen : Map[String, String] = Map([])
   let mut source_entry_count = 0
   let mut source_uncompressed_bytes = 0L
   for entry in archive.entries() {
-    if seen.contains(entry.name()) {
-      raise InvalidZip(
-        message="the package holds duplicate zip entries named '\{entry.name()}'; refusing to splice",
-      )
+    let name = entry.name()
+    let key = package_part_identity(name)
+    match seen.get(key) {
+      Some(existing) if existing == name =>
+        raise InvalidZip(
+          message="the package holds duplicate zip entries named '\{name}'; refusing to splice",
+        )
+      Some(existing) =>
+        raise InvalidZip(
+          message="the package holds case-equivalent zip entries '\{existing}' and '\{name}'; refusing to splice",
+        )
+      None => seen[key] = name
     }
-    seen.add(entry.name())
     source_entry_count = source_entry_count + 1
     let entry_length = entry.data().length()
     source_uncompressed_bytes = checked_splice_size_add(
@@ -504,10 +550,16 @@ fn build_spliced_archive(
       None => ()
     }
     check_plan_part_name(name)
-    if !seen.contains(name) {
-      raise Unsupported(
-        message="the splice plan edits '\{name}', which the package does not contain",
-      )
+    match seen.get(package_part_identity(name)) {
+      Some(actual) if actual == name => ()
+      Some(actual) =>
+        raise Unsupported(
+          message="the splice plan must use exact source spelling '\{actual}', not case-equivalent '\{name}'",
+        )
+      None =>
+        raise Unsupported(
+          message="the splice plan edits '\{name}', which the package does not contain",
+        )
     }
     if require_pins && !plan.source_parts.contains(name) {
       raise Unsupported(
@@ -529,10 +581,17 @@ fn build_spliced_archive(
       None => ()
     }
     check_plan_part_name(name)
-    if seen.contains(name) {
-      raise Unsupported(
-        message="the splice plan adds '\{name}', which already exists in the package",
-      )
+    let key = package_part_identity(name)
+    match seen.get(key) {
+      Some(existing) if existing == name =>
+        raise Unsupported(
+          message="the splice plan adds '\{name}', which already exists in the package",
+        )
+      Some(existing) =>
+        raise Unsupported(
+          message="the splice plan adds '\{name}', case-equivalent to existing part '\{existing}'",
+        )
+      None => seen[key] = name
     }
   }
   for name, expected in plan.source_parts {
@@ -686,6 +745,11 @@ fn build_spliced_archive(
     output.add(name, bytes)
   }
   output
+}
+
+///|
+fn package_part_identity(name : String) -> String {
+  name.to_lower()
 }
 
 ///|

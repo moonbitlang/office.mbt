@@ -60,6 +60,10 @@ test "the builder fails closed" {
     "duplicate part name: word/document.xml",
   )
   expect_build_error(
+    builder => builder.add_part("WORD/DOCUMENT.XML", b"x"),
+    "duplicate part name after case normalization: word/document.xml and WORD/DOCUMENT.XML",
+  )
+  expect_build_error(
     builder => builder.add_part("word/media/logo.png", b"\x89PNG"),
     "no content type for part 'word/media/logo.png'",
   )
@@ -118,12 +122,28 @@ test "builder round 1 hardening: reserved names, orphan sources, metadata, deter
     "reserved part name '[Content_Types].xml'",
   )
   expect_build_error(
+    builder => builder.add_part("[CONTENT_TYPES].XML", b"x"),
+    "reserved part name '[CONTENT_TYPES].XML'",
+  )
+  expect_build_error(
     builder => builder.add_part("_rels/.rels", b"x"),
     "reserved part name '_rels/.rels'",
   )
   expect_build_error(
     builder => builder.add_part("word/_rels/document.xml.rels", b"x"),
     "reserved part name 'word/_rels/document.xml.rels'",
+  )
+  expect_build_error(
+    builder => builder.add_part("WORD/_RELS/DOCUMENT.XML.RELS", b"x"),
+    "reserved part name 'WORD/_RELS/DOCUMENT.XML.RELS'",
+  )
+  expect_build_error(
+    builder => {
+      builder.add_override(
+        "/WORD/DOCUMENT.XML", "application/case-equivalent+xml",
+      )
+    },
+    "duplicate Override PartName after case normalization: /word/document.xml and /WORD/DOCUMENT.XML",
   )
   // Trailing slash is a directory, not a part.
   expect_build_error(
