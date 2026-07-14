@@ -43,8 +43,9 @@ Strict source validation and annotation indexing each use their own cumulative
 XML budget across all package parts. Part bytes are charged before UTF-8 decode;
 elements, names, attributes, and text are charged before DOM allocation. The
 budget jointly limits source bytes, token count, copied characters, token size,
-and nesting, so many individually small parts or sibling-dense XML cannot turn
-per-part limits into aggregate growth.
+nesting, and every inherited namespace binding copied into an element scope, so
+many individually small parts, sibling-dense XML, or namespace-heavy trees
+cannot turn nominally linear limits into aggregate growth.
 
 Portable OPC validation rejects duplicate content-type defaults after
 case-normalizing extensions, duplicate overrides after normalizing package

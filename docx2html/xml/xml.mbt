@@ -204,6 +204,20 @@ fn XmlReadBudget::charge_token(
 }
 
 ///|
+fn XmlReadBudget::charge_namespace_bindings(
+  self : XmlReadBudget,
+  bindings : Int,
+) -> Unit raise DocxError {
+  // A namespace-scope snapshot allocates one map entry per active binding.
+  // Charge that cardinality before Map::copy so deep namespace-heavy input
+  // cannot hide quadratic allocation behind a linear element token count.
+  if bindings < 0 || bindings > self.remaining_tokens {
+    raise InvalidXml(message="XML token budget exceeded")
+  }
+  self.remaining_tokens -= bindings
+}
+
+///|
 /// Parses tolerant XML while charging a caller-owned cumulative budget.
 /// String input is charged in UTF-16 storage units before parsing.
 pub fn read_xml_string_limited(
@@ -867,13 +881,24 @@ fn XmlParser::charge_token(
 }
 
 ///|
+fn XmlParser::snapshot_namespaces(
+  self : XmlParser,
+) -> Map[String, String] raise DocxError {
+  match self.budget {
+    Some(budget) => budget.charge_namespace_bindings(self.namespaces.length())
+    None => ()
+  }
+  self.namespaces.copy()
+}
+
+///|
 fn XmlParser::parse_element_inner_tolerant(
   self : XmlParser,
 ) -> XmlElement raise DocxError {
   self.expect("<")
   let raw_name = self.read_name()
   let raw_attributes : Array[(String, String)] = []
-  let saved_namespaces = self.namespaces.copy()
+  let saved_namespaces = self.snapshot_namespaces()
   while true {
     self.skip_whitespace()
     if self.starts_with("/>") {
@@ -920,7 +945,7 @@ fn XmlParser::parse_element_inner_strict(
   }
   let raw_attributes : Array[(String, String)] = []
   let raw_attribute_names : Map[String, Bool] = Map([])
-  let saved_namespaces = self.namespaces.copy()
+  let saved_namespaces = self.snapshot_namespaces()
   while true {
     let separated = self.skip_whitespace_and_report()
     if self.starts_with("/>") {
