@@ -1321,13 +1321,42 @@ fn decode_entities(value : String) -> String {
       at += 1
       continue
     }
-    // Find the terminating ';' within a sane distance.
+    // Named entities have a fixed small vocabulary. Numeric references may be
+    // arbitrarily zero-padded, so scan their digit run without an artificial
+    // length ceiling. Stopping at the first non-digit keeps malformed tolerant
+    // input linear rather than repeatedly searching to a distant semicolon.
+    let numeric = at + 1 < length && units[at + 1].to_int() == '#'.to_int()
+    let mut numeric_base = 10
+    let mut digits_start = at + 2
+    if numeric &&
+      digits_start < length &&
+      (
+        units[digits_start].to_int() == 'x'.to_int() ||
+        units[digits_start].to_int() == 'X'.to_int()
+      ) {
+      numeric_base = 16
+      digits_start += 1
+    }
     let mut semi = -1
     let mut probe = at + 1
-    while probe < length && probe <= at + 24 {
+    while probe < length && (numeric || probe <= at + 24) {
       if units[probe].to_int() == ';'.to_int() {
         semi = probe
         break
+      }
+      if numeric && probe >= digits_start {
+        let code = units[probe].to_int()
+        let digit = (code >= '0'.to_int() && code <= '9'.to_int()) ||
+          (
+            numeric_base == 16 &&
+            (
+              (code >= 'a'.to_int() && code <= 'f'.to_int()) ||
+              (code >= 'A'.to_int() && code <= 'F'.to_int())
+            )
+          )
+        if !digit {
+          break
+        }
       }
       probe += 1
     }

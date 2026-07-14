@@ -525,6 +525,64 @@ test "comment resolution matches decoded ids on default-namespaced entries" {
 }
 
 ///|
+test "comment resolution accepts arbitrarily padded numeric references" {
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:document>
+  let comments =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"><w:comment w:id="0"><w:p w14:paraId="ABCD0001"/></w:comment></w:comments>
+  let extended =
+    #|<commentsEx xmlns="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml"><commentEx w15:paraId="ABCD000&#000000000000000000000000000049;"/></commentsEx>
+  let source = fixture_docx(
+    document,
+    comments_xml=Some(comments),
+    comments_extended_xml=Some(extended),
+  )
+  let annotated = @docx.read_docx_annotated(source)
+  let plan = @docx.plan_comment_resolution(
+    annotated,
+    source,
+    comment_id="0",
+    done=true,
+  )
+  let result = @mbtzip.read(@splice.splice_docx(source, plan))
+  guard result.get("word/commentsExtended.xml") is Some(bytes)
+  let actual = @utf8.decode(bytes, ignore_bom=true)
+  assert_true(
+    actual.contains(
+      "w15:paraId=\"ABCD000&#000000000000000000000000000049;\" w15:done=\"1\"",
+    ),
+  )
+  assert_false(actual.contains("<w15:commentEx"))
+}
+
+///|
+test "comment resolution skips greater-than signs inside prolog PIs" {
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:document>
+  let comments =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"><w:comment w:id="0"><w:p w14:paraId="ABCD0001"/></w:comment></w:comments>
+  let extended =
+    #|<?producer x > <fake ?><commentsEx xmlns="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml"><commentEx w15:paraId="ABCD0001"/></commentsEx>
+  let source = fixture_docx(
+    document,
+    comments_xml=Some(comments),
+    comments_extended_xml=Some(extended),
+  )
+  let annotated = @docx.read_docx_annotated(source)
+  let plan = @docx.plan_comment_resolution(
+    annotated,
+    source,
+    comment_id="0",
+    done=true,
+  )
+  let result = @mbtzip.read(@splice.splice_docx(source, plan))
+  guard result.get("word/commentsExtended.xml") is Some(bytes)
+  let actual = @utf8.decode(bytes, ignore_bom=true)
+  assert_true(actual.has_prefix("<?producer x > <fake ?>"))
+  assert_true(actual.contains("w15:paraId=\"ABCD0001\" w15:done=\"1\""))
+}
+
+///|
 test "definitions referenced only by hidden stories report no public anchors" {
   let builder = @opc.PackageBuilder::new()
   builder.add_default(

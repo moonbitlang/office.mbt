@@ -381,6 +381,28 @@ test "limited XML writer bounds work from reused mapped namespace names" {
 }
 
 ///|
+test "limited XML writer bounds inverse namespace indexing before sizing" {
+  let shared_uri = "u".repeat(16 * 1024)
+  let namespaces : Map[String, String] = Map([])
+  for index in 0..<64 {
+    namespaces["n\{index}"] = shared_uri
+  }
+  try
+    @xml.write_xml_fragment_limited(
+      @xml.xml_element("root"),
+      max_output_bytes=8,
+      namespaces~,
+    )
+  catch {
+    InvalidXml(message~) =>
+      inspect(message, content="XML serialization name work limit exceeded")
+    _ => fail("expected inverse namespace work to be bounded")
+  } noraise {
+    _ => fail("expected inverse namespace indexing to fail closed")
+  }
+}
+
+///|
 test "limited XML writer rejects excessive nesting before recursive output" {
   let mut element = @xml.xml_element("n")
   for _ in 0..<256 {
