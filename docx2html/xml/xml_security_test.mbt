@@ -21,6 +21,19 @@ fn strict_xml_error(source : String) -> String raise {
 }
 
 ///|
+fn limited_xml_error(
+  source : Bytes,
+  budget : @xml.XmlReadBudget,
+) -> String raise {
+  try @xml.read_xml_bytes_strict_limited(source, budget) catch {
+    InvalidXml(message~) => message
+    _ => fail("expected InvalidXml")
+  } noraise {
+    _ => fail("expected limited XML parsing to fail")
+  }
+}
+
+///|
 test "strict XML rejects duplicate attributes without changing tolerant parsing" {
   let source = "<root id=\"first\" id=\"second\"/>"
   debug_inspect(
@@ -110,6 +123,84 @@ test "strict XML enforces declarations comments and attribute separators" {
     ).name,
     content="root",
   )
+}
+
+///|
+test "limited XML parser charges source before decoding" {
+  let budget = @xml.xml_read_budget(
+    max_source_units=3,
+    max_tokens=32,
+    max_materialized_chars=128,
+    max_token_chars=32,
+  )
+  inspect(
+    limited_xml_error(@utf8.encode("<a/>"), budget),
+    content="XML source budget exceeded",
+  )
+}
+
+///|
+test "limited XML parser bounds tokens, token length, and copied characters" {
+  let token_budget = @xml.xml_read_budget(
+    max_source_units=64,
+    max_tokens=3,
+    max_materialized_chars=64,
+    max_token_chars=16,
+  )
+  inspect(
+    limited_xml_error(@utf8.encode("<r><x/></r>"), token_budget),
+    content="XML token budget exceeded",
+  )
+  let length_budget = @xml.xml_read_budget(
+    max_source_units=64,
+    max_tokens=32,
+    max_materialized_chars=64,
+    max_token_chars=4,
+  )
+  inspect(
+    limited_xml_error(@utf8.encode("<abcdef/>"), length_budget),
+    content="XML token length budget exceeded",
+  )
+  let chars_budget = @xml.xml_read_budget(
+    max_source_units=64,
+    max_tokens=32,
+    max_materialized_chars=5,
+    max_token_chars=16,
+  )
+  inspect(
+    limited_xml_error(@utf8.encode("<a x=\"1234\"/>"), chars_budget),
+    content="XML materialized character budget exceeded",
+  )
+}
+
+///|
+test "one limited XML budget is cumulative across package parts" {
+  let budget = @xml.xml_read_budget(
+    max_source_units=12,
+    max_tokens=4,
+    max_materialized_chars=8,
+    max_token_chars=4,
+  )
+  inspect(
+    @xml.read_xml_bytes_strict_limited(@utf8.encode("<a/>"), budget).name,
+    content="a",
+  )
+  inspect(
+    @xml.read_xml_bytes_strict_limited(@utf8.encode("<b/>"), budget).name,
+    content="b",
+  )
+  inspect(
+    limited_xml_error(@utf8.encode("<c/>"), budget),
+    content="XML token budget exceeded",
+  )
+}
+
+///|
+test "strict XML bounds attacker-controlled diagnostic tokens before joining" {
+  let entity = "x".repeat(4096)
+  let message = strict_xml_error("<a>&\{entity};</a>")
+  assert_true(message.length() < 200)
+  assert_true(message.contains("…"))
 }
 
 ///|

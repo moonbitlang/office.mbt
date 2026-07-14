@@ -111,7 +111,7 @@ pub fn read_xml_string(
   source : String,
   namespace_map? : Map[String, String] = Map([]),
 ) -> XmlElement raise DocxError {
-  read_xml_string_with_mode(source, namespace_map, false)
+  read_xml_string_with_mode(source, namespace_map, false, None, false)
 }
 
 ///|
@@ -124,7 +124,124 @@ pub fn read_xml_string_strict(
   source : String,
   namespace_map? : Map[String, String] = Map([]),
 ) -> XmlElement raise DocxError {
-  read_xml_string_with_mode(source, namespace_map, true)
+  read_xml_string_with_mode(source, namespace_map, true, None, false)
+}
+
+///|
+/// A cumulative allocation budget shared by one or more XML parses.
+///
+/// Source storage is charged before decoding, and every materialized XML name,
+/// attribute value, text/CDATA segment, and element is charged before the
+/// parser copies or appends it. Reusing one budget across package parts bounds
+/// the aggregate DOM rather than granting every part an independent ceiling.
+pub struct XmlReadBudget {
+  priv mut remaining_source_units : Int
+  priv mut remaining_tokens : Int
+  priv mut remaining_materialized_chars : Int
+  priv max_token_chars : Int
+}
+
+///|
+/// Builds a cumulative XML read budget. All ceilings are non-negative;
+/// a zero ceiling is valid and makes the corresponding first charge fail.
+pub fn xml_read_budget(
+  max_source_units~ : Int,
+  max_tokens~ : Int,
+  max_materialized_chars~ : Int,
+  max_token_chars~ : Int,
+) -> XmlReadBudget raise DocxError {
+  if max_source_units < 0 ||
+    max_tokens < 0 ||
+    max_materialized_chars < 0 ||
+    max_token_chars < 0 {
+    raise InvalidXml(message="XML read budgets must be non-negative")
+  }
+  {
+    remaining_source_units: max_source_units,
+    remaining_tokens: max_tokens,
+    remaining_materialized_chars: max_materialized_chars,
+    max_token_chars,
+  }
+}
+
+///|
+fn XmlReadBudget::charge_source(
+  self : XmlReadBudget,
+  units : Int,
+) -> Unit raise DocxError {
+  if units < 0 || units > self.remaining_source_units {
+    raise InvalidXml(message="XML source budget exceeded")
+  }
+  self.remaining_source_units -= units
+}
+
+///|
+fn XmlReadBudget::charge_token(
+  self : XmlReadBudget,
+  chars : Int,
+) -> Unit raise DocxError {
+  if chars < 0 || chars > self.max_token_chars {
+    raise InvalidXml(message="XML token length budget exceeded")
+  }
+  if self.remaining_tokens <= 0 {
+    raise InvalidXml(message="XML token budget exceeded")
+  }
+  if chars > self.remaining_materialized_chars {
+    raise InvalidXml(message="XML materialized character budget exceeded")
+  }
+  self.remaining_tokens -= 1
+  self.remaining_materialized_chars -= chars
+}
+
+///|
+/// Parses tolerant XML while charging a caller-owned cumulative budget.
+/// String input is charged in UTF-16 storage units before parsing.
+pub fn read_xml_string_limited(
+  source : String,
+  budget : XmlReadBudget,
+  namespace_map? : Map[String, String] = Map([]),
+) -> XmlElement raise DocxError {
+  read_xml_string_with_mode(source, namespace_map, false, Some(budget), false)
+}
+
+///|
+/// Parses strict DTD-free XML while charging a caller-owned cumulative budget.
+/// String input is charged in UTF-16 storage units before parsing.
+pub fn read_xml_string_strict_limited(
+  source : String,
+  budget : XmlReadBudget,
+  namespace_map? : Map[String, String] = Map([]),
+) -> XmlElement raise DocxError {
+  read_xml_string_with_mode(source, namespace_map, true, Some(budget), false)
+}
+
+///|
+/// Decodes and parses tolerant UTF-8 XML. Source bytes are charged before a
+/// String is allocated, so oversized parts fail without a second full payload.
+pub fn read_xml_bytes_limited(
+  source : BytesView,
+  budget : XmlReadBudget,
+  namespace_map? : Map[String, String] = Map([]),
+) -> XmlElement raise DocxError {
+  budget.charge_source(source.length())
+  let text = @utf8.decode(source, ignore_bom=true) catch {
+    _ => raise InvalidXml(message="XML source is not valid UTF-8")
+  }
+  read_xml_string_with_mode(text, namespace_map, false, Some(budget), true)
+}
+
+///|
+/// Decodes and parses strict DTD-free UTF-8 XML under a cumulative budget.
+pub fn read_xml_bytes_strict_limited(
+  source : BytesView,
+  budget : XmlReadBudget,
+  namespace_map? : Map[String, String] = Map([]),
+) -> XmlElement raise DocxError {
+  budget.charge_source(source.length())
+  let text = @utf8.decode(source, ignore_bom=true) catch {
+    _ => raise InvalidXml(message="XML source is not valid UTF-8")
+  }
+  read_xml_string_with_mode(text, namespace_map, true, Some(budget), true)
 }
 
 ///|
@@ -132,7 +249,16 @@ fn read_xml_string_with_mode(
   source : String,
   namespace_map : Map[String, String],
   strict : Bool,
+  budget : XmlReadBudget?,
+  source_already_charged : Bool,
 ) -> XmlElement raise DocxError {
+  match budget {
+    Some(budget) =>
+      if !source_already_charged {
+        budget.charge_source(source.length())
+      }
+    None => ()
+  }
   if strict {
     validate_xml_characters(source)
   }
@@ -141,6 +267,7 @@ fn read_xml_string_with_mode(
     pos: 0,
     depth: 0,
     strict,
+    budget,
     seen_xml_declaration: false,
     namespace_map,
     namespaces: if strict {
@@ -360,6 +487,29 @@ let xml_max_depth : Int = 512
 let strict_xml_max_depth : Int = 256
 
 ///|
+let xml_diagnostic_token_chars : Int = 160
+
+///|
+/// Bounds attacker-controlled text before it participates in an error-message
+/// concatenation. Short diagnostics remain byte-for-byte unchanged.
+fn xml_diagnostic_token(value : String) -> String {
+  if value.length() <= xml_diagnostic_token_chars {
+    return value
+  }
+  let output = StringBuilder::new()
+  let mut count = 0
+  for character in value {
+    if count == xml_diagnostic_token_chars - 1 {
+      output.write_string("…") |> ignore
+      break
+    }
+    output.write_char(character) |> ignore
+    count += 1
+  }
+  output.to_string()
+}
+
+///|
 const XML_NAMESPACE_URI : String = "http://www.w3.org/XML/1998/namespace"
 
 ///|
@@ -457,6 +607,7 @@ priv struct XmlParser {
   mut pos : Int
   mut depth : Int
   strict : Bool
+  budget : XmlReadBudget?
   mut seen_xml_declaration : Bool
   namespace_map : Map[String, String]
   namespaces : Map[String, String]
@@ -468,6 +619,7 @@ fn XmlParser::parse_element(self : XmlParser) -> XmlElement raise DocxError {
   if self.depth >= max_depth {
     raise InvalidXml(message="XML nesting too deep")
   }
+  self.charge_token(0)
   self.depth = self.depth + 1
   let element = if self.strict {
     self.parse_element_inner_strict()
@@ -476,6 +628,17 @@ fn XmlParser::parse_element(self : XmlParser) -> XmlElement raise DocxError {
   }
   self.depth = self.depth - 1
   element
+}
+
+///|
+fn XmlParser::charge_token(
+  self : XmlParser,
+  chars : Int,
+) -> Unit raise DocxError {
+  match self.budget {
+    Some(budget) => budget.charge_token(chars)
+    None => ()
+  }
 }
 
 ///|
@@ -526,7 +689,9 @@ fn XmlParser::parse_element_inner_strict(
   self.expect("<")
   let raw_name = self.read_name()
   if !is_xml_qname(raw_name) {
-    raise InvalidXml(message="invalid XML qualified name: " + raw_name)
+    raise InvalidXml(
+      message="invalid XML qualified name: " + xml_diagnostic_token(raw_name),
+    )
   }
   let raw_attributes : Array[(String, String)] = []
   let raw_attribute_names : Map[String, Bool] = Map([])
@@ -552,10 +717,15 @@ fn XmlParser::parse_element_inner_strict(
       }
       let attr_name = self.read_name()
       if !is_xml_qname(attr_name) {
-        raise InvalidXml(message="invalid XML qualified name: " + attr_name)
+        raise InvalidXml(
+          message="invalid XML qualified name: " +
+            xml_diagnostic_token(attr_name),
+        )
       }
       if raw_attribute_names.contains(attr_name) {
-        raise InvalidXml(message="duplicate XML attribute: " + attr_name)
+        raise InvalidXml(
+          message="duplicate XML attribute: " + xml_diagnostic_token(attr_name),
+        )
       }
       raw_attribute_names[attr_name] = true
       self.skip_whitespace()
@@ -597,14 +767,17 @@ fn XmlParser::parse_children(
       self.pos = self.pos + 2
       let close_name = self.read_name()
       if self.strict && !is_xml_qname(close_name) {
-        raise InvalidXml(message="invalid XML qualified name: " + close_name)
+        raise InvalidXml(
+          message="invalid XML qualified name: " +
+            xml_diagnostic_token(close_name),
+        )
       }
       if close_name != raw_name {
         raise InvalidXml(
           message="mismatched closing tag: expected " +
-            raw_name +
+            xml_diagnostic_token(raw_name) +
             " got " +
-            close_name,
+            xml_diagnostic_token(close_name),
         )
       }
       self.skip_whitespace()
@@ -659,7 +832,7 @@ fn XmlParser::parse_children(
       }
     }
   }
-  raise InvalidXml(message="unclosed tag: " + raw_name)
+  raise InvalidXml(message="unclosed tag: " + xml_diagnostic_token(raw_name))
 }
 
 ///|
@@ -677,7 +850,8 @@ fn XmlParser::build_element(
       let expanded = self.expanded_name(name, is_attribute=true)
       if expanded_attributes.contains(expanded) {
         raise InvalidXml(
-          message="duplicate expanded XML attribute: " + expanded,
+          message="duplicate expanded XML attribute: " +
+            xml_diagnostic_token(expanded),
         )
       }
       expanded_attributes[expanded] = true
@@ -705,7 +879,10 @@ fn XmlParser::map_name(
         Some(uri) => self.map_uri_name(uri, local_name)
         None =>
           if self.strict {
-            raise InvalidXml(message="unbound XML namespace prefix: " + prefix)
+            raise InvalidXml(
+              message="unbound XML namespace prefix: " +
+                xml_diagnostic_token(prefix),
+            )
           } else {
             raw_name
           }
@@ -737,7 +914,10 @@ fn XmlParser::expanded_name(
       match self.namespaces.get(prefix) {
         Some(uri) => "{" + uri + "}" + local_name
         None =>
-          raise InvalidXml(message="unbound XML namespace prefix: " + prefix)
+          raise InvalidXml(
+            message="unbound XML namespace prefix: " +
+              xml_diagnostic_token(prefix),
+          )
       }
     }
     None =>
@@ -887,7 +1067,10 @@ fn XmlParser::parse_xml_declaration(self : XmlParser) -> Unit raise DocxError {
     }
     let name = self.read_name()
     if !is_xml_ncname(name) || names.contains(name) {
-      raise InvalidXml(message="invalid XML declaration attribute: " + name)
+      raise InvalidXml(
+        message="invalid XML declaration attribute: " +
+          xml_diagnostic_token(name),
+      )
     }
     names[name] = true
     self.skip_whitespace()
@@ -900,21 +1083,29 @@ fn XmlParser::parse_xml_declaration(self : XmlParser) -> Unit raise DocxError {
     match (position, name) {
       (0, "version") => {
         if value != "1.0" {
-          raise InvalidXml(message="unsupported XML version: " + value)
+          raise InvalidXml(
+            message="unsupported XML version: " + xml_diagnostic_token(value),
+          )
         }
         has_version = true
       }
       (1, "encoding") =>
         if !is_valid_xml_encoding_name(value) {
-          raise InvalidXml(message="invalid XML encoding name: " + value)
+          raise InvalidXml(
+            message="invalid XML encoding name: " + xml_diagnostic_token(value),
+          )
         }
       (1, "standalone") | (2, "standalone") =>
         if value != "yes" && value != "no" {
-          raise InvalidXml(message="invalid XML standalone value: " + value)
+          raise InvalidXml(
+            message="invalid XML standalone value: " +
+              xml_diagnostic_token(value),
+          )
         }
       _ =>
         raise InvalidXml(
-          message="misordered XML declaration attribute: " + name,
+          message="misordered XML declaration attribute: " +
+            xml_diagnostic_token(name),
         )
     }
     position = position + 1
@@ -1020,6 +1211,7 @@ fn XmlParser::read_name(self : XmlParser) -> String raise DocxError {
       }
       self.pos = self.pos + char.utf16_len()
     }
+    self.charge_token(self.pos - start)
     return xml_substring(self.source, start, self.pos)
   }
   while self.pos < self.source.length() {
@@ -1039,6 +1231,7 @@ fn XmlParser::read_name(self : XmlParser) -> String raise DocxError {
   if self.pos == start {
     raise InvalidXml(message="expected XML name")
   }
+  self.charge_token(self.pos - start)
   xml_substring(self.source, start, self.pos)
 }
 
@@ -1062,6 +1255,7 @@ fn XmlParser::read_quoted_value(self : XmlParser) -> String raise DocxError {
   if self.pos >= self.source.length() {
     raise InvalidXml(message="unterminated attribute value")
   }
+  self.charge_token(self.pos - start)
   let value = xml_substring(self.source, start, self.pos)
   self.pos = self.pos + 1
   value
@@ -1076,6 +1270,7 @@ fn XmlParser::read_text(self : XmlParser) -> String raise DocxError {
     }
     self.pos = self.pos + 1
   }
+  self.charge_token(self.pos - start)
   xml_substring(self.source, start, self.pos)
 }
 
@@ -1110,6 +1305,7 @@ fn XmlParser::read_until(
   let start = self.pos
   while self.pos + needle.length() <= self.source.length() {
     if self.starts_with(needle) {
+      self.charge_token(self.pos - start)
       return xml_substring(self.source, start, self.pos)
     }
     self.pos = self.pos + 1
@@ -1122,8 +1318,14 @@ fn XmlParser::skip_until(
   self : XmlParser,
   needle : String,
 ) -> Unit raise DocxError {
-  ignore(self.read_until(needle))
-  self.pos = self.pos + needle.length()
+  while self.pos + needle.length() <= self.source.length() {
+    if self.starts_with(needle) {
+      self.pos += needle.length()
+      return
+    }
+    self.pos += 1
+  }
+  raise InvalidXml(message="expected `" + needle + "`")
 }
 
 ///|
@@ -1162,7 +1364,9 @@ fn strict_numeric_xml_entity(entity : String) -> String raise DocxError {
   } else if entity.has_prefix("#") {
     (10, 1)
   } else {
-    raise InvalidXml(message="undeclared XML entity: &" + entity + ";")
+    raise InvalidXml(
+      message="undeclared XML entity: &" + xml_diagnostic_token(entity) + ";",
+    )
   }
   if start >= entity.length() {
     raise InvalidXml(message="malformed numeric XML entity")

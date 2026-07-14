@@ -7,15 +7,25 @@ import {
 }
 
 // Values
+pub fn read_xml_bytes_limited(BytesView, XmlReadBudget, namespace_map? : Map[String, String]) -> XmlElement raise @core.DocxError
+
+pub fn read_xml_bytes_strict_limited(BytesView, XmlReadBudget, namespace_map? : Map[String, String]) -> XmlElement raise @core.DocxError
+
 pub fn read_xml_string(String, namespace_map? : Map[String, String]) -> XmlElement raise @core.DocxError
 
+pub fn read_xml_string_limited(String, XmlReadBudget, namespace_map? : Map[String, String]) -> XmlElement raise @core.DocxError
+
 pub fn read_xml_string_strict(String, namespace_map? : Map[String, String]) -> XmlElement raise @core.DocxError
+
+pub fn read_xml_string_strict_limited(String, XmlReadBudget, namespace_map? : Map[String, String]) -> XmlElement raise @core.DocxError
 
 pub fn write_xml_fragment(XmlElement, namespaces? : Map[String, String]) -> String
 
 pub fn write_xml_string(XmlElement, namespaces? : Map[String, String]) -> String
 
 pub fn xml_element(String, attributes? : Map[String, String], children? : Array[XmlNode]) -> XmlElement
+
+pub fn xml_read_budget(max_source_units~ : Int, max_tokens~ : Int, max_materialized_chars~ : Int, max_token_chars~ : Int) -> XmlReadBudget raise @core.DocxError
 
 pub fn xml_text(String) -> XmlNode
 
@@ -51,6 +61,10 @@ pub fn XmlNode::not_equal(Self, Self) -> Bool
 #as_free_fn
 #deprecated
 pub fn XmlNode::to_repr(Self) -> @debug.Repr
+
+pub struct XmlReadBudget {
+  // private fields
+}
 
 // Type aliases
 
