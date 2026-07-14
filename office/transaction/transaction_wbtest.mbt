@@ -50,7 +50,11 @@ fn wb_archive_retained_cost(bytes : BytesView) -> Int64 raise {
     max_entry_uncompressed_bytes=transaction_max_entry_uncompressed_bytes,
     max_total_uncompressed_bytes=transaction_max_total_uncompressed_bytes,
   )
-  bytes.length().to_int64() + archive.retained_size_estimate()
+  bytes.length().to_int64() +
+  archive.retained_size_estimate() +
+  transaction_archive_name_reserve(
+    archive, "test package", "office.transaction.invalid_input",
+  )
 }
 
 ///|
@@ -61,6 +65,84 @@ fn wb_archive_payload_bytes(bytes : BytesView) -> Int64 raise {
     total = total + entry.data().length().to_int64()
   }
   total
+}
+
+///|
+test "archive name projections are bounded and charged before indexing" {
+  let oversized = @zip.Archive::new()
+  oversized.add(
+    "custom/" + "x".repeat(transaction_max_part_length) + ".xml",
+    b"",
+  )
+  let oversized_bytes = @zip.write(oversized)
+  try
+    ignore(
+      read_transaction_archive(
+        oversized_bytes, "input package", "office.transaction.invalid_input", 0L,
+        transaction_max_live_materialized_bytes,
+      ),
+    )
+  catch {
+    TransactionError(code~, details~, ..) => {
+      assert_eq(code, "office.transaction.resource_limit_exceeded")
+      guard details is Some(Object(fields)) else {
+        fail("expected structured entry-name limit details")
+      }
+      assert_eq(fields.get("kind"), Some(Json::string("entry_name_chars")))
+      assert_eq(
+        fields.get("limit"),
+        Some(Json::number(transaction_max_part_length.to_double())),
+      )
+    }
+  } noraise {
+    _ => fail("expected an oversized archive entry name to fail")
+  }
+
+  // Many individually legal names exercise aggregate projection accounting.
+  // The calibrated limit admits the archive itself and the conservative read
+  // preflight, but is one byte short once canonical-name copies are charged.
+  let many = @zip.Archive::new()
+  let suffix = "n".repeat(980)
+  for index in 0..<1_024 {
+    many.add("custom/\{index}-\{suffix}.xml", b"")
+  }
+  let many_bytes = @zip.write(many)
+  let parsed = @zip.read_limited(
+    many_bytes,
+    max_entries=transaction_max_archive_entries,
+    max_entry_uncompressed_bytes=transaction_max_entry_uncompressed_bytes,
+    max_total_uncompressed_bytes=transaction_max_total_uncompressed_bytes,
+  )
+  let base_cost = many_bytes.length().to_int64() +
+    parsed.retained_size_estimate()
+  let name_reserve = transaction_archive_name_reserve(
+    parsed, "input package", "office.transaction.invalid_input",
+  )
+  let live_limit = base_cost + name_reserve - 1L
+  assert_true(transaction_archive_preflight_overhead(many_bytes) < live_limit)
+  try
+    ignore(
+      read_transaction_archive(
+        many_bytes, "input package", "office.transaction.invalid_input", 0L, live_limit,
+      ),
+    )
+  catch {
+    TransactionError(code~, details~, ..) => {
+      assert_eq(code, "office.transaction.resource_limit_exceeded")
+      guard details is Some(Object(fields)) else {
+        fail("expected structured name-accounting details")
+      }
+      assert_eq(
+        fields.get("kind"),
+        Some(Json::string("live_materialized_bytes")),
+      )
+    }
+  } noraise {
+    _ =>
+      fail(
+        "expected aggregate archive-name projections to exhaust the envelope",
+      )
+  }
 }
 
 ///|
