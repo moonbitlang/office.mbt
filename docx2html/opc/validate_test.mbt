@@ -507,12 +507,16 @@ test "malformed entry names are findings" {
     @opc.validate_docx_package(
       minimal_docx(extra=[
         ("word/../secret.xml", utf8_bytes("<x/>")),
+        ("word/./dot.xml", utf8_bytes("<x/>")),
+        ("word//empty.xml", utf8_bytes("<x/>")),
         ("word\\windows.xml", utf8_bytes("<x/>")),
       ]),
     ),
     content=(
       #|[
       #|  "entry name contains a '..' segment: word/../secret.xml",
+      #|  "entry name contains a '.' segment: word/./dot.xml",
+      #|  "entry name contains an empty segment: word//empty.xml",
       #|  "entry name contains a backslash: word\\windows.xml",
       #|]
     ),
