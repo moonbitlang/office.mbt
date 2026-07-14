@@ -291,6 +291,16 @@ priv struct AnchorSpan {
 }
 
 ///|
+/// One publicly addressable annotation-bearing story and the semantic kind
+/// its OPC part is allowed to represent. Keeping `kind` beside the path is
+/// essential: a physical part must never become both body/header/footer/etc.
+priv struct PublicAnnotationStory {
+  public_path : String
+  kind : String
+  part_path : String
+}
+
+///|
 /// The annotation index. Opaque: fields stay private so the surface can
 /// evolve additively.
 pub struct AnnotationIndex {
@@ -778,17 +788,28 @@ fn build_annotation_index(
     MAX_ANNOTATION_WARNINGS,
     MAX_ANNOTATION_WARNING_CHARS,
   )
+  validate_section_story_references(parts)
   // Story list in the plan's fixed rank order: body, header[1..],
   // footer[1..], footnotes, endnotes. Header/footer paths come from the
   // collector's dedup maps (index -> path).
-  let stories : Array[(String, String)] = [("/body", parts.main_document_path)]
+  let stories : Array[PublicAnnotationStory] = [
+    { public_path: "/body", kind: "body", part_path: parts.main_document_path },
+  ]
   for pair in inverted_part_paths(collector.header_index_by_path) {
     let (index, path) = pair
-    stories.push(("/header[\{index + 1}]", path))
+    stories.push({
+      public_path: "/header[\{index + 1}]",
+      kind: "header",
+      part_path: path,
+    })
   }
   for pair in inverted_part_paths(collector.footer_index_by_path) {
     let (index, path) = pair
-    stories.push(("/footer[\{index + 1}]", path))
+    stories.push({
+      public_path: "/footer[\{index + 1}]",
+      kind: "footer",
+      part_path: path,
+    })
   }
   for
     note_part in [
@@ -798,27 +819,42 @@ fn build_annotation_index(
     let (note_kind, authoritative_path) = note_part
     let path = authoritative_path.unwrap_or("word/\{note_kind}.xml")
     if zip.exists(path) {
-      stories.push(("/\{note_kind}", path))
+      stories.push({
+        public_path: "/\{note_kind}",
+        kind: note_kind,
+        part_path: path,
+      })
     }
   }
   // The comments story ranks LAST (plan-fixed order); markers are legal
   // inside comment bodies.
   let comments_path = parts.comments_part_path.unwrap_or("word/comments.xml")
   if zip.exists(comments_path) {
-    stories.push(("/comments", comments_path))
+    stories.push({
+      public_path: "/comments",
+      kind: "comments",
+      part_path: comments_path,
+    })
   }
   let scans : Array[(String, StoryScan)] = []
   let identity_only_scans : Array[StoryScan] = []
-  let scanned_paths : Set[String] = Set([])
+  let kind_by_scanned_path : Map[String, String] = Map([])
   let mut identity_source_complete = true
   for story in stories {
-    let (story_key, path) = story
-    if scanned_paths.contains(path) {
-      raise Unsupported(
-        message="annotation story part '\{path}' has multiple public story identities",
-      )
+    let story_key = story.public_path
+    let path = story.part_path
+    match kind_by_scanned_path.get(path) {
+      Some(existing_kind) if existing_kind != story.kind =>
+        raise Unsupported(
+          message="annotation story part '\{path}' is targeted as both \{existing_kind} and \{story.kind}",
+        )
+      Some(_) =>
+        raise Unsupported(
+          message="annotation story part '\{path}' has multiple public story identities",
+        )
+      None => ()
     }
-    scanned_paths.add(path)
+    kind_by_scanned_path[path] = story.kind
     match zip.read_bytes(path) {
       Some(bytes) => {
         let scan = scan_story(bytes) catch {
@@ -853,10 +889,15 @@ fn build_annotation_index(
       parts.relationships,
       parts.base_path,
     ) {
-    if scanned_paths.contains(reachable.path) {
-      continue
+    match kind_by_scanned_path.get(reachable.path) {
+      Some(existing_kind) if existing_kind != reachable.kind =>
+        raise Unsupported(
+          message="annotation story part '\{reachable.path}' is targeted as both \{existing_kind} and \{reachable.kind}",
+        )
+      Some(_) => continue
+      None => ()
     }
-    scanned_paths.add(reachable.path)
+    kind_by_scanned_path[reachable.path] = reachable.kind
     guard zip.read_bytes(reachable.path) is Some(bytes) else {
       // The resolver has already checked this; retain an explicit fail-closed
       // guard if the archive abstraction ever becomes mutable during a read.
@@ -864,7 +905,7 @@ fn build_annotation_index(
         message="the \{reachable.kind} relationship targets missing part '\{reachable.path}'",
       )
     }
-    validate_identity_only_story_xml(bytes, parts.xml_budget)
+    read_identity_story_xml_strict(bytes, parts.xml_budget) |> ignore
     let scan = scan_story(bytes) catch {
       Unsupported(message~) => {
         identity_source_complete = false
@@ -895,9 +936,19 @@ fn build_annotation_index(
   identity_source_complete = identity_source_complete &&
     definitions_complete &&
     extended_complete
+  let identity_only_comment_ids : Set[String] = Set([])
+  for scan in identity_only_scans {
+    for marker in scan.markers {
+      match marker.kind {
+        CommentStart | CommentEnd | CommentRef =>
+          identity_only_comment_ids.add(marker.id)
+        FootnoteRef | EndnoteRef => ()
+      }
+    }
+  }
   let degraded : Set[String] = Set([])
   let (comments, spans) = build_comments(
-    definitions, extended, scans, warnings, ctx, degraded,
+    definitions, extended, scans, identity_only_comment_ids, warnings, ctx, degraded,
   )
   let (footnotes, endnotes) = build_notes(parts, scans, warnings, ctx, degraded)
   // Plan-locked ordinal-fallback diagnostic: ids that cannot take the
@@ -945,14 +996,50 @@ fn build_annotation_index(
 }
 
 ///|
+/// Section references are part of annotation story identity, even though the
+/// package projection tolerantly omits broken references. Mutation/indexing
+/// must resolve every reference through the matching typed internal
+/// relationship and reject missing ids, wrong kinds, external targets, and
+/// missing parts.
+fn validate_section_story_references(
+  parts : DocumentParts,
+) -> Unit raise DocxError {
+  fn walk(element : XmlElement, parts : DocumentParts) -> Unit raise DocxError {
+    let is_header = element.name == "w:headerReference"
+    let is_footer = element.name == "w:footerReference"
+    if is_header || is_footer {
+      guard element.attributes.get("r:id") is Some(id) else {
+        let kind = if is_header { "header" } else { "footer" }
+        raise Unsupported(message="the \{kind} reference has no r:id")
+      }
+      resolve_header_footer_reference_part(
+        parts.zip,
+        parts.relationships,
+        parts.base_path,
+        id,
+        is_header,
+      )
+      |> ignore
+    }
+    for child in element.children {
+      match child {
+        XmlElement(inner) => walk(inner, parts)
+        XmlText(_) => ()
+      }
+    }
+  }
+  walk(parts.root, parts)
+}
+
+///|
 /// Strictly parses an identity-only story before the raw span scanner touches
 /// it. Transaction reads share their caller-owned cumulative budget; unbounded
 /// library reads receive an input-linear local budget rather than an unlimited
 /// parser path.
-fn validate_identity_only_story_xml(
+fn read_identity_story_xml_strict(
   bytes : BytesView,
   shared_budget : @xml.XmlReadBudget?,
-) -> Unit raise DocxError {
+) -> XmlElement raise DocxError {
   let budget = match shared_budget {
     Some(value) => value
     None => {
@@ -960,7 +1047,7 @@ fn validate_identity_only_story_xml(
       // all input-linear but can exceed the byte count by a small constant.
       // Keep the fallback bounded while leaving room for those charged
       // derived allocations.
-      let scaled = bytes.length().to_int64() * 4L
+      let scaled = bytes.length().to_int64() * 8L
       let allowance = if scaled <= 0L {
         1
       } else if scaled > 2147483647L {
@@ -981,7 +1068,6 @@ fn validate_identity_only_story_xml(
     budget,
     namespace_map=office_namespace_map(),
   )
-  |> ignore
 }
 
 ///|
@@ -1055,7 +1141,7 @@ fn read_comments_extended(
   zip : ZipArchive,
   parts : DocumentParts,
   warnings : AnnotationWarningCollector,
-) -> (Map[String, CommentExRecord], Array[CommentExIdentity], Bool) {
+) -> (Map[String, CommentExRecord], Array[CommentExIdentity], Bool) raise DocxError {
   let records : Map[String, CommentExRecord] = Map([])
   let identities : Array[CommentExIdentity] = []
   let path = parts.comments_extended_part_path.unwrap_or(
@@ -1064,13 +1150,14 @@ fn read_comments_extended(
   if !zip.exists(path) {
     return (records, identities, true)
   }
-  let root = read_xml_part(zip, path, xml_budget?=parts.xml_budget) catch {
-    _ => {
-      warnings.add(
-        "annotation index: could not parse the commentsExtended part",
-      )
-      return (records, identities, false)
-    }
+  guard zip.read_bytes(path) is Some(bytes) else {
+    raise MissingPart(message="missing DOCX part: " + path)
+  }
+  let root = read_identity_story_xml_strict(bytes, parts.xml_budget)
+  if root.name != "w15:commentsEx" {
+    raise InvalidXml(
+      message="the commentsExtended part has an unexpected root element",
+    )
   }
   for record in root.elements_by_tag_name("w15:commentEx") {
     let raw_para_id = record.attributes.get("w15:paraId")
@@ -1154,6 +1241,7 @@ fn build_comments(
   definitions : Array[CommentDefinition],
   extended : Map[String, CommentExRecord],
   scans : Array[(String, StoryScan)],
+  identity_only_comment_ids : Set[String],
   warnings : AnnotationWarningCollector,
   ctx : VerifyContext,
   degraded : Set[String],
@@ -1447,9 +1535,15 @@ fn build_comments(
       !orphan_warned.contains(info.id) &&
       !warnings.full() {
       orphan_warned.add(info.id)
-      warnings.add(
-        "annotation index: comment '\{warnings.text(info.id)}' has no anchors in any story (orphan definition; content still exposed)",
-      )
+      if identity_only_comment_ids.contains(info.id) {
+        warnings.add(
+          "annotation index: comment '\{warnings.text(info.id)}' has no public anchors (referenced only in relationship-reachable hidden stories; content still exposed)",
+        )
+      } else {
+        warnings.add(
+          "annotation index: comment '\{warnings.text(info.id)}' has no anchors in any story (orphan definition; content still exposed)",
+        )
+      }
     }
   }
   (comments, spans)

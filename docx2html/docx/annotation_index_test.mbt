@@ -113,6 +113,36 @@ fn unreferenced_story_fixture(
 }
 
 ///|
+fn with_main_relationship(
+  bytes : BytesView,
+  id : String,
+  relationship_type : String,
+  target : String,
+  external? : Bool = false,
+) -> Bytes raise {
+  let archive = try! @mbtzip.read(bytes)
+  let rels = match archive.get("word/_rels/document.xml.rels") {
+    Some(rels_bytes) => @utf8.decode(rels_bytes, ignore_bom=true)
+    None =>
+      "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"></Relationships>"
+  }
+  let target_mode = if external { " TargetMode=\"External\"" } else { "" }
+  let relationship = "<Relationship Id=\"\{id}\" Type=\"\{relationship_type}\" Target=\"\{target}\"\{target_mode}/>"
+  let updated = rels.replace(
+    old="</Relationships>",
+    new=relationship + "</Relationships>",
+  )
+  if archive.get("word/_rels/document.xml.rels") is Some(_) {
+    assert_true(
+      archive.replace("word/_rels/document.xml.rels", @utf8.encode(updated)),
+    )
+  } else {
+    archive.add("word/_rels/document.xml.rels", @utf8.encode(updated))
+  }
+  try! @mbtzip.write(archive)
+}
+
+///|
 fn comment_summary(comment : @docx.CommentInfo) -> String {
   let anchors : Array[String] = []
   for anchor in comment.anchors() {
@@ -253,6 +283,191 @@ test "unreferenced Strict footers participate in identity validation only" {
   } noraise {
     _ => fail("expected the hidden footer marker to fail identity validation")
   }
+}
+
+///|
+test "section story references require matching typed internal relationships" {
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+    #|<w:body><w:p/><w:sectPr><w:headerReference w:type="default" r:id="rStory"/></w:sectPr></w:body>
+    #|</w:document>
+  let wrong_kind = with_main_relationship(
+    fixture_docx(document),
+    "rStory",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer",
+    "document.xml",
+  )
+  try @docx.read_docx_annotated(wrong_kind) catch {
+    Unsupported(message~) =>
+      assert_true(message.contains("is not a header relationship"))
+    _ => fail("expected a wrong-kind section relationship to fail")
+  } noraise {
+    _ => fail("expected a wrong-kind section relationship to fail")
+  }
+  let external = with_main_relationship(
+    fixture_docx(document),
+    "rStory",
+    "http://purl.oclc.org/ooxml/officeDocument/relationships/header",
+    "https://example.invalid/header.xml",
+    external=true,
+  )
+  try @docx.read_docx_annotated(external) catch {
+    Unsupported(message~) => assert_true(message.contains("must be internal"))
+    _ => fail("expected an external section relationship to fail")
+  } noraise {
+    _ => fail("expected an external section relationship to fail")
+  }
+}
+
+///|
+test "annotation story paths cannot alias body or comments under another kind" {
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:document>
+  let body_alias = with_main_relationship(
+    fixture_docx(document),
+    "rHiddenHeader",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header",
+    "document.xml",
+  )
+  try @docx.read_docx_annotated(body_alias) catch {
+    Unsupported(message~) =>
+      assert_true(message.contains("targeted as both body and header"))
+    _ => fail("expected body/header story aliasing to fail")
+  } noraise {
+    _ => fail("expected body/header story aliasing to fail")
+  }
+  let comments =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>
+  let comments_alias = with_main_relationship(
+    fixture_docx(document, comments_xml=Some(comments)),
+    "rHiddenFooter",
+    "http://purl.oclc.org/ooxml/officeDocument/relationships/footer",
+    "comments.xml",
+  )
+  try @docx.read_docx_annotated(comments_alias) catch {
+    Unsupported(message~) =>
+      assert_true(message.contains("targeted as both comments and footer"))
+    _ => fail("expected comments/footer story aliasing to fail")
+  } noraise {
+    _ => fail("expected comments/footer story aliasing to fail")
+  }
+}
+
+///|
+test "commentsExtended is strict-parsed under annotation identity rules" {
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:document>
+  let comments =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"><w:comment w:id="0"><w:p w14:paraId="ABCD0001"/></w:comment></w:comments>
+  let duplicate_expanded_attribute =
+    #|<w15:commentsEx xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:alias="http://schemas.microsoft.com/office/word/2012/wordml"><w15:commentEx w15:paraId="ABCD0001" alias:paraId="FFFF0001"/></w15:commentsEx>
+  let bytes = fixture_docx(
+    document,
+    comments_xml=Some(comments),
+    comments_extended_xml=Some(duplicate_expanded_attribute),
+  )
+  try @docx.read_docx_annotated(bytes) catch {
+    InvalidXml(message~) =>
+      inspect(
+        message,
+        content="duplicate expanded XML attribute: {http://schemas.microsoft.com/office/word/2012/wordml}paraId",
+      )
+    _ => fail("expected duplicate expanded commentsExtended attributes to fail")
+  } noraise {
+    _ => fail("expected duplicate expanded commentsExtended attributes to fail")
+  }
+}
+
+///|
+test "commentsExtended strict parsing consumes the cumulative XML budget" {
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:document>
+  let extended = StringBuilder()
+  extended.write_string(
+    "<w15:commentsEx xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\">",
+  )
+  for _ in 0..<512 {
+    extended.write_string("<w15:commentEx w15:paraId=\"00000000\"/>")
+  }
+  extended.write_string("</w15:commentsEx>")
+  let archive = try! @mbtzip.read(
+    fixture_docx(document, comments_extended_xml=Some(extended.to_string())),
+  )
+  let budget = @xml.xml_read_budget(
+    max_source_units=8 * 1024,
+    max_tokens=1_000_000,
+    max_materialized_chars=1_000_000,
+    max_token_chars=1_000_000,
+  )
+  try @docx.read_docx_annotated_archive_limited(archive, budget) catch {
+    InvalidXml(message~) =>
+      inspect(message, content="XML source budget exceeded")
+    _ => fail("expected commentsExtended to consume the shared XML budget")
+  } noraise {
+    _ => fail("expected commentsExtended to consume the shared XML budget")
+  }
+}
+
+///|
+test "definitions referenced only by hidden stories report no public anchors" {
+  let builder = @opc.PackageBuilder::new()
+  builder.add_default(
+    "rels", "application/vnd.openxmlformats-package.relationships+xml",
+  )
+  builder.add_default("xml", "application/xml")
+  builder.add_override(
+    "/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+  )
+  builder.add_override(
+    "/word/comments.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml",
+  )
+  builder.add_override(
+    "/word/header-hidden.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml",
+  )
+  builder.add_relationship(
+    "rIdMain", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "word/document.xml",
+  )
+  builder.add_relationship(
+    "rIdComments",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+    "comments.xml",
+    source="word/document.xml",
+  )
+  builder.add_relationship(
+    "rIdHidden",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header",
+    "header-hidden.xml",
+    source="word/document.xml",
+  )
+  builder.add_part(
+    "word/document.xml",
+    @utf8.encode(
+      "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p/></w:body></w:document>",
+    ),
+  )
+  builder.add_part(
+    "word/comments.xml",
+    @utf8.encode(
+      "<w:comments xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:comment w:id=\"7\"><w:p/></w:comment></w:comments>",
+    ),
+  )
+  builder.add_part(
+    "word/header-hidden.xml",
+    @utf8.encode(
+      "<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:p><w:r><w:commentReference w:id=\"7\"/></w:r></w:p></w:hdr>",
+    ),
+  )
+  let annotated = @docx.read_docx_annotated(builder.build())
+  assert_true(
+    annotated
+    .annotations()
+    .warnings()
+    .contains(
+      "annotation index: comment '7' has no public anchors (referenced only in relationship-reachable hidden stories; content still exposed)",
+    ),
+  )
+  @docx.validate_annotation_identity_state(annotated)
 }
 
 ///|
