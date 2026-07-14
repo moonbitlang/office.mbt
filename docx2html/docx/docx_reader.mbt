@@ -76,6 +76,24 @@ const STRICT_FOOTNOTES_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/offic
 const STRICT_ENDNOTES_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/officeDocument/relationships/endnotes"
 
 ///|
+const COMMENTS_CONTENT_TYPE : String = "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"
+
+///|
+const COMMENTS_EXTENDED_CONTENT_TYPE : String = "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml"
+
+///|
+const FOOTNOTES_CONTENT_TYPE : String = "application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"
+
+///|
+const ENDNOTES_CONTENT_TYPE : String = "application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml"
+
+///|
+const HEADER_CONTENT_TYPE : String = "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"
+
+///|
+const FOOTER_CONTENT_TYPE : String = "application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"
+
+///|
 priv enum OoxmlDialect {
   TransitionalOoxml
   StrictOoxml
@@ -494,6 +512,12 @@ fn DocumentParts::build(
     "endnotes",
     reject_multiple_relationships=true,
   )
+  content_types.require_annotation_part(comments_part_path, "comments")
+  content_types.require_annotation_part(
+    comments_extended_part_path, "commentsExtended",
+  )
+  content_types.require_annotation_part(footnotes_part_path, "footnotes")
+  content_types.require_annotation_part(endnotes_part_path, "endnotes")
   let styles = read_styles(
     zip,
     find_part_path(
@@ -1012,14 +1036,14 @@ fn read_content_types(
         let extension = element.attributes.get_or_default("Extension", "")
         let content_type = element.attributes.get_or_default("ContentType", "")
         if extension != "" && content_type != "" {
-          defaults[extension] = content_type
+          defaults[extension.to_lower()] = content_type
         }
       }
       for element in root.elements_by_tag_name("content-types:Override") {
         let part_name = element.attributes.get_or_default("PartName", "")
         let content_type = element.attributes.get_or_default("ContentType", "")
         if part_name != "" && content_type != "" {
-          overrides[strip_leading_slash(part_name)] = content_type
+          overrides[strip_leading_slash(part_name).to_lower()] = content_type
         }
       }
     }
@@ -1033,7 +1057,7 @@ fn ContentTypes::find_content_type(
   self : ContentTypes,
   path : String,
 ) -> String {
-  let normalized = strip_leading_slash(path)
+  let normalized = strip_leading_slash(path).to_lower()
   match self.overrides.get(normalized) {
     Some(content_type) => content_type
     None =>
@@ -1047,6 +1071,39 @@ fn ContentTypes::find_content_type(
         }
         None => ""
       }
+  }
+}
+
+///|
+fn expected_annotation_content_type(kind : String) -> String? {
+  match kind {
+    "comments" => Some(COMMENTS_CONTENT_TYPE)
+    "commentsExtended" => Some(COMMENTS_EXTENDED_CONTENT_TYPE)
+    "footnotes" => Some(FOOTNOTES_CONTENT_TYPE)
+    "endnotes" => Some(ENDNOTES_CONTENT_TYPE)
+    "header" => Some(HEADER_CONTENT_TYPE)
+    "footer" => Some(FOOTER_CONTENT_TYPE)
+    _ => None
+  }
+}
+
+///|
+/// Relationship roles, target existence, root QNames, and content types form one
+/// identity contract. A generic XML default is not sufficient for an OOXML
+/// annotation story even when the target's root element looks plausible.
+fn ContentTypes::require_annotation_part(
+  self : ContentTypes,
+  path : String?,
+  kind : String,
+) -> Unit raise DocxError {
+  guard path is Some(path) else { return }
+  guard expected_annotation_content_type(kind) is Some(expected) else { return }
+  let actual = self.find_content_type(path)
+  if actual.to_lower() != expected.to_lower() {
+    let declared = if actual == "" { "<undeclared>" } else { actual }
+    raise Unsupported(
+      message="the \{kind} relationship target '\{path}' has content type '\{declared}', expected '\{expected}'",
+    )
   }
 }
 
