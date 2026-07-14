@@ -54,7 +54,9 @@ bounded A4 transaction boundary:
   expanded-size limits, XML-token cardinality, and the combined replacement,
   added-part, and edited-payload working-memory ceiling before materialization;
   added-part names are bounded before canonical-path parsing or diagnostic
-  construction;
+  construction, and final edited-part XML validation charges one aggregate
+  parser budget across the complete composed plan rather than resetting a
+  per-part allowance;
 - strict OPC validation and the archive-backed annotation index each charge one
   cumulative XML budget across package parts before UTF-8 decode and DOM
   allocation, including inherited namespace bindings before scope snapshots;
@@ -62,13 +64,16 @@ bounded A4 transaction boundary:
   granting every part a fresh parser allowance; OPC maps reject duplicate
   normalized content-type keys and every relationship scope rejects missing or
   duplicate ids; the unique root `officeDocument` relationship and the unique
-  comments/commentsExtended relationships are authoritative for both
-  Transitional and Strict namespaces, so conventional-path decoys cannot be
-  validated in place of relocated parts;
+  comments/commentsExtended and footnotes/endnotes relationships are
+  authoritative for both Transitional and Strict namespaces, so
+  conventional-path decoys cannot be validated in place of relocated parts;
 - reply and resolution paraId collision scans reuse the session's cumulative
   XML budget across the main relationship graph, including wired but
   section-unreferenced header, footer, and note stories; the candidate gate
-  separately requires every reachable story paragraph id to be globally unique;
+  separately requires every reachable story paragraph id to be globally unique,
+  and relationship-reachable stories that have no public projection path still
+  participate in comment-marker identity validation without producing public
+  anchors;
 - comment bodies are structurally preflighted before derived trees or reply
   paragraph ids are allocated, then serialized only after an escape-aware exact
   UTF-8 sizing pass; the transaction grants a fragment at most one eighth of
@@ -81,10 +86,13 @@ bounded A4 transaction boundary:
   and commentEx records rather than diagnostic prose;
 - annotation construction buckets each story's markers and projection spans
   once, pairs ranges with an indexed FIFO, and attaches references with a
-  monotonic scan; parsed projection paths are preindexed, and story-level
-  marker locations use sorted monotonic sweeps instead of repeated tree/path
-  searches; diagnostics are set-deduplicated and capped at 256 messages of 512
-  characters, including an explicit omission notice;
+  monotonic scan; open-range ordinals and rollback checkpoints are maintained
+  during that scan, while fixed-width anchor merges avoid comparison sorting;
+  parsed projection paths are preindexed, and story-level marker locations use
+  monotonic sweeps instead of repeated tree/path searches, keeping annotation
+  indexing linear in scanned XML plus emitted annotations; diagnostics are
+  set-deduplicated and capped at 256 messages of 512 characters, including an
+  explicit omission notice;
 - a true no-op explicitly reuses the transaction's exact input buffer, while a
   real edit serializes through the transaction's candidate-size ceiling;
 - untouched ZIP local records and producer metadata flow through the

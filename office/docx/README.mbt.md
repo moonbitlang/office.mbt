@@ -39,7 +39,9 @@ overflow-safe result sizes, and a transaction-derived XML token ceiling. Caller
 replacement bytes, added payloads, and materialized edited parts share at most
 8 MiB of the already reserved transaction working memory.
 Added-part names are bounded before canonical-path parsing or diagnostic
-construction.
+construction. The final strict-XML pass charges one aggregate parser budget
+across all edited parts in the composed plan; dividing markup among many parts
+does not reset that allowance.
 
 Strict source validation and annotation indexing each use their own cumulative
 XML budget across all package parts. Part bytes are charged before UTF-8 decode;
@@ -53,18 +55,26 @@ Reply and resolution planning reuse the annotation index's remaining XML
 budget when they inspect the main relationship graph and paraIds. This includes
 header, footer, and note targets that are wired but not section-referenced, so
 an otherwise-unused story cannot trigger an unbounded decode or DOM build.
+Those reachable but unprojected stories also participate in comment-marker
+identity validation without receiving invented `/header[n]` or `/footer[n]`
+paths and without emitting public anchors.
 
 Portable OPC validation rejects duplicate content-type defaults after
 case-normalizing extensions, duplicate overrides after normalizing package
 paths, and missing or duplicate relationship ids within every `.rels` scope.
 No declaration is silently replaced in a validation map. The unique root
 `officeDocument` relationship and unique comments/commentsExtended
-relationships authoritatively select parts in both Transitional and Strict
-namespaces; conventional-path decoys and multiple distinct targets fail closed.
+and footnotes/endnotes relationships authoritatively select parts in both
+Transitional and Strict namespaces; all internal header/footer targets are
+normalized and scanned. Conventional-path decoys, external or missing story
+targets, cross-kind aliases, and multiple distinct singleton targets fail
+closed.
 
 Annotation verification preindexes parsed projection paths. Story-level marker
-locations are assigned with sorted monotonic sweeps, so distributed markers do
-not trigger repeated full-tree or path-resolution scans.
+locations are assigned with monotonic sweeps; open-range ordinals and rollback
+checkpoints are maintained during the scan, and fixed-width anchor merges avoid
+comparison sorting. Annotation indexing is therefore linear in scanned XML plus
+emitted annotations rather than repeatedly walking trees or resolving paths.
 
 Comment bodies receive a second preflight before any derived XML tree or reply
 paragraph-id array is allocated. It bounds depth, node count, and reachable
