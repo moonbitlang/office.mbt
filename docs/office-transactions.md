@@ -137,7 +137,10 @@ payloads, and materialized edited XML. The remaining reserve covers decoded
 text and strict-parser structures. Before allocation, the splice layer also
 checks the 8,192-entry, 64 MiB per-entry, 256 MiB aggregate, 256-part manifest,
 and 1,024-scalar part-name ceilings, plus overflow-safe result sizes and an XML
-markup-token cap derived from the splice allowance.
+markup-token cap derived from the splice allowance. Final validation of a
+composed splice plan uses one aggregate strict-XML budget across every edited
+part, so splitting the same markup among many parts cannot multiply the parser
+allowance.
 
 Plan adoption copies every mutable map and edit array before the callback can
 continue. Replacement and addition payloads are MoonBit `Bytes`, and source
@@ -208,12 +211,15 @@ acceptance/CI tier rather than a portable runtime dependency.
 The built-in DOCX hook first performs bounded strict OPC validation. When that
 passes, it rebuilds the candidate annotation index under another cumulative XML
 budget and rejects duplicate, empty, or ambiguous comment identities and
-globally duplicate paragraph ids across reachable stories. Authoritative
-Transitional or Strict relationships select the unique main, comments, and
-commentsExtended parts; conventional-path decoys and ambiguous targets fail
-closed. This backstop applies to generic pinned splice plans as well as the
-high-level comment planners, so bypassing a convenience method cannot publish
-stale semantic state.
+globally duplicate paragraph ids across reachable stories. Every internal
+Transitional or Strict header, footer, footnotes, and endnotes target is
+normalized and scanned; section-unreferenced stories participate only in
+identity checks and do not gain invented public paths or anchors. Authoritative
+relationships select the unique main, comments, commentsExtended, footnotes,
+and endnotes parts; conventional-path decoys, external/missing targets,
+cross-kind aliases, and ambiguous targets fail closed. This backstop applies to
+generic pinned splice plans as well as the high-level comment planners, so
+bypassing a convenience method cannot publish stale semantic state.
 
 `transact_docx` also installs `office-docx-bounded` as its custom identifier.
 It applies cumulative XML limits to source and candidate OPC metadata before
