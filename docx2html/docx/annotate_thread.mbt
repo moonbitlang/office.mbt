@@ -29,8 +29,15 @@ pub fn plan_comment_reply(
   original : BytesView,
   parent_id~ : String,
   spec : CommentSpec,
+  max_fragment_bytes? : Int = 8 * 1024 * 1024,
 ) -> (@splice.SplicePlan, String) raise DocxError {
-  plan_comment_reply_zip(annotated, open_zip(original), parent_id~, spec)
+  plan_comment_reply_zip(
+    annotated,
+    open_zip(original),
+    parent_id~,
+    spec,
+    max_fragment_bytes,
+  )
 }
 
 ///|
@@ -40,8 +47,15 @@ pub fn plan_comment_reply_archive(
   archive : @mbtzip.Archive,
   parent_id~ : String,
   spec : CommentSpec,
+  max_fragment_bytes? : Int = 8 * 1024 * 1024,
 ) -> (@splice.SplicePlan, String) raise DocxError {
-  plan_comment_reply_zip(annotated, open_zip_archive(archive), parent_id~, spec)
+  plan_comment_reply_zip(
+    annotated,
+    open_zip_archive(archive),
+    parent_id~,
+    spec,
+    max_fragment_bytes,
+  )
 }
 
 ///|
@@ -50,6 +64,7 @@ fn plan_comment_reply_zip(
   zip : ZipArchive,
   parent_id~ : String,
   spec : CommentSpec,
+  max_fragment_bytes : Int,
 ) -> (@splice.SplicePlan, String) raise DocxError {
   check_mutation_gates(annotated)
   let plan = @splice.SplicePlan::new()
@@ -119,6 +134,7 @@ fn plan_comment_reply_zip(
   }
   // The reply definition: dense id, every body paragraph stamped, the
   // LAST stamp being the reply's commentEx key.
+  check_comment_body_for_fragment(spec.body, max_fragment_bytes)
   let new_id = allocate_comment_id(annotated)
   let reply_para_ids : Array[String] = []
   for _ in 0..<spec_body_length(spec) {
@@ -128,6 +144,7 @@ fn plan_comment_reply_zip(
     spec,
     id=new_id,
     para_ids=reply_para_ids,
+    max_output_bytes=max_fragment_bytes,
   )
   match root_span.close_tag_start() {
     Some(insert_at) =>

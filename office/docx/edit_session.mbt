@@ -35,6 +35,7 @@ pub struct DocxEditSession {
   priv annotated : @word.DocxAnnotatedResult
   priv fingerprints : Array[DocxPartFingerprint]
   priv max_candidate_package_bytes : Int
+  priv max_comment_fragment_bytes : Int
   priv splice_limits : @splice.SpliceLimits
   priv mut plan : @splice.SplicePlan
 }
@@ -230,6 +231,7 @@ fn open_edit_session(
     annotated,
     fingerprints: source_fingerprints(archive),
     max_candidate_package_bytes: budget.max_candidate_package_bytes(),
+    max_comment_fragment_bytes: budget.max_splice_materialized_bytes() / 8,
     splice_limits,
     plan: @splice.SplicePlan::new(),
   }
@@ -258,6 +260,7 @@ pub fn DocxEditSession::queue_comment_addition(
     at_relative~,
     to_relative~,
     spec,
+    max_fragment_bytes=self.max_comment_fragment_bytes,
   ) catch {
     error => raise mapped_plan_failure(error)
   }
@@ -277,6 +280,7 @@ pub fn DocxEditSession::queue_comment_reply(
     self.archive,
     parent_id~,
     spec,
+    max_fragment_bytes=self.max_comment_fragment_bytes,
   ) catch {
     error => raise mapped_plan_failure(error)
   }

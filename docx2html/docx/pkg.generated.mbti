@@ -14,7 +14,7 @@ import {
 // Values
 pub fn comment_anchor_fragments(id~ : String) -> (String, String)
 
-pub fn comment_definition_fragment(CommentSpec, id~ : String, para_ids? : Array[String]) -> String raise @core.DocxError
+pub fn comment_definition_fragment(CommentSpec, id~ : String, para_ids? : Array[String], max_output_bytes? : Int) -> String raise @core.DocxError
 
 pub fn comment_reply(author~ : String, initials? : String, date? : String, reply_to~ : Int, done? : Bool, Array[@document.DocumentElement]) -> CommentSpec raise @core.DocxError
 
@@ -34,13 +34,13 @@ pub fn new_blank_docx() -> Bytes
 
 pub fn note_spec(Array[@document.DocumentElement]) -> NoteSpec raise @core.DocxError
 
-pub fn plan_comment_addition(DocxAnnotatedResult, BytesView, at_relative~ : String, to_relative~ : String, CommentSpec) -> (@splice.SplicePlan, String) raise @core.DocxError
+pub fn plan_comment_addition(DocxAnnotatedResult, BytesView, at_relative~ : String, to_relative~ : String, CommentSpec, max_fragment_bytes? : Int) -> (@splice.SplicePlan, String) raise @core.DocxError
 
-pub fn plan_comment_addition_archive(DocxAnnotatedResult, @zip.Archive, at_relative~ : String, to_relative~ : String, CommentSpec) -> (@splice.SplicePlan, String) raise @core.DocxError
+pub fn plan_comment_addition_archive(DocxAnnotatedResult, @zip.Archive, at_relative~ : String, to_relative~ : String, CommentSpec, max_fragment_bytes? : Int) -> (@splice.SplicePlan, String) raise @core.DocxError
 
-pub fn plan_comment_reply(DocxAnnotatedResult, BytesView, parent_id~ : String, CommentSpec) -> (@splice.SplicePlan, String) raise @core.DocxError
+pub fn plan_comment_reply(DocxAnnotatedResult, BytesView, parent_id~ : String, CommentSpec, max_fragment_bytes? : Int) -> (@splice.SplicePlan, String) raise @core.DocxError
 
-pub fn plan_comment_reply_archive(DocxAnnotatedResult, @zip.Archive, parent_id~ : String, CommentSpec) -> (@splice.SplicePlan, String) raise @core.DocxError
+pub fn plan_comment_reply_archive(DocxAnnotatedResult, @zip.Archive, parent_id~ : String, CommentSpec, max_fragment_bytes? : Int) -> (@splice.SplicePlan, String) raise @core.DocxError
 
 pub fn plan_comment_resolution(DocxAnnotatedResult, BytesView, comment_id~ : String, done~ : Bool) -> @splice.SplicePlan raise @core.DocxError
 
