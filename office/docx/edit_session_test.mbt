@@ -267,6 +267,45 @@ async test "D1 comment addition preserves true Strict OOXML dialect" {
 }
 
 ///|
+async test "D1 generic plans cannot publish mixed main OOXML dialects" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/mixed-dialect-input.docx"
+    let output = "\{directory}/mixed-dialect-output.docx"
+    let original = @word_fixture.new_blank_docx()
+    let archive = @zip.read(original)
+    guard archive.get("_rels/.rels") is Some(root_rels) else {
+      fail("fixture is missing root relationships")
+    }
+    let transitional = @utf8.encode(
+      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    )
+    let strict = @utf8.encode(
+      "http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument",
+    )
+    guard root_rels.find(transitional) is Some(start) else {
+      fail("fixture does not use the Transitional main relationship")
+    }
+    write_docx_session_file(input, original)
+    let code = docx_session_error_code(() => {
+      @docx.transact_docx(
+        @transaction.transaction_options(input, output_path=output),
+        session => {
+          session.queue_span_edit(
+            "_rels/.rels",
+            start~,
+            end=start + transitional.length(),
+            strict,
+          )
+        },
+      )
+    })
+    assert_eq(code, "office.transaction.validation_failed")
+    assert_false(@afs.exists(output))
+    assert_eq(@afs.read_file(input).binary(), original)
+  })
+}
+
+///|
 async test "D1 session isolates adopted plans from later caller mutations" {
   with_docx_session_test_dir(directory => {
     let input = "\{directory}/input.docx"

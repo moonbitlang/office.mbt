@@ -1512,7 +1512,7 @@ fn validate_main_identity(
   if root_rels.name != RELATIONSHIPS_ROOT {
     raise InvalidPackage("_rels/.rels root element is not Relationships")
   }
-  let main_targets : Array[String] = []
+  let main_targets : Array[(String, String)] = []
   for child in root_rels.children {
     guard child is XmlElement(element) && element.name == RELATIONSHIP_ELEMENT else {
       continue
@@ -1547,9 +1547,9 @@ fn validate_main_identity(
           "\{label} officeDocument relationship has an invalid Target",
         )
     }
-    main_targets.push(normalized)
+    main_targets.push((normalized, rel_type))
   }
-  let main_target = match main_targets {
+  let (main_target, main_relationship_type) = match main_targets {
     [] =>
       raise InvalidPackage(
         "\{label} root relationships do not declare an officeDocument relationship",
@@ -1566,17 +1566,23 @@ fn validate_main_identity(
     )
   }
   let main = read_xml_part(part_index, main_target)
-  let valid_root = match format {
-    Xlsx =>
-      main.name == TRANSITIONAL_WORKBOOK_ROOT ||
-      main.name == STRICT_WORKBOOK_ROOT
-    Docx =>
-      main.name == TRANSITIONAL_DOCUMENT_ROOT ||
-      main.name == STRICT_DOCUMENT_ROOT
+  let expected_main_relationship = match (format, main.name) {
+    (Xlsx, TRANSITIONAL_WORKBOOK_ROOT) | (Docx, TRANSITIONAL_DOCUMENT_ROOT) =>
+      Some(TRANSITIONAL_OFFICE_DOCUMENT_REL)
+    (Xlsx, STRICT_WORKBOOK_ROOT) | (Docx, STRICT_DOCUMENT_ROOT) =>
+      Some(STRICT_OFFICE_DOCUMENT_REL)
+    _ => None
   }
-  if !valid_root {
-    let expected = if format is Xlsx { "workbook" } else { "document" }
-    raise InvalidPackage("\{label} main part root element is not \{expected}")
+  match expected_main_relationship {
+    None => {
+      let expected = if format is Xlsx { "workbook" } else { "document" }
+      raise InvalidPackage("\{label} main part root element is not \{expected}")
+    }
+    Some(expected) if main_relationship_type != expected =>
+      raise InvalidPackage(
+        "\{label} officeDocument relationship dialect does not match the main OOXML namespace",
+      )
+    Some(_) => ()
   }
 }
 

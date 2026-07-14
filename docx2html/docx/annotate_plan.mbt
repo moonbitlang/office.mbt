@@ -338,6 +338,15 @@ fn check_mutation_gates(
 fn check_annotation_identity_state(
   annotated : DocxAnnotatedResult,
 ) -> Unit raise DocxError {
+  match
+    (annotated.main_relationship_dialect, annotated.main_wordprocessing_dialect) {
+    (Some(TransitionalOoxml), Some(StrictOoxml))
+    | (Some(StrictOoxml), Some(TransitionalOoxml)) =>
+      raise Unsupported(
+        message="the officeDocument relationship dialect does not match the main WordprocessingML namespace; refusing to annotate",
+      )
+    _ => ()
+  }
   for orphan in annotated.orphan_annotation_parts {
     let (path, role) = orphan
     raise Unsupported(

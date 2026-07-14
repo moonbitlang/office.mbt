@@ -1166,6 +1166,30 @@ test "detect_format identifies generated docx" {
 }
 
 ///|
+test "detect_format rejects mixed main relationship and OOXML dialects" {
+  let source = @word.new_blank_docx()
+  let archive = @zip.read(source)
+  guard archive.get("_rels/.rels") is Some(root_rels) else {
+    fail("test DOCX has no root relationships")
+  }
+  let relationships = @utf8.decode(root_rels, ignore_bom=true)
+  let transitional = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
+  let strict = "http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument"
+  let mixed = relationships.replace(old=transitional, new=strict)
+  assert_true(mixed != relationships)
+  let broken = replace_archive_part(source, "_rels/.rels", @utf8.encode(mixed))
+  try @office.detect_format("report.docx", broken) catch {
+    err =>
+      inspect(
+        Show::to_string(err),
+        content="invalid Office package: DOCX officeDocument relationship dialect does not match the main OOXML namespace",
+      )
+  } noraise {
+    _ => fail("expected mixed OOXML dialects to be rejected")
+  }
+}
+
+///|
 test "detect_format indexes thousands of long relationship part names" {
   let data = add_relationship_stress_parts(@word.new_blank_docx(), 2048)
   inspect(@office.detect_format("report.docx", data).name(), content="docx")
