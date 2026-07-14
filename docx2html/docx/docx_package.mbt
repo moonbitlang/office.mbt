@@ -251,7 +251,7 @@ fn HeaderFooterCollector::resolve_part(
   let kind = if is_header { "header" } else { "footer" }
   let path = resolve_header_footer_reference_part(
     self.parts.zip,
-    self.parts.relationships,
+    self.parts.relationship_index,
     self.parts.base_path,
     rel_id,
     is_header,

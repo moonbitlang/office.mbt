@@ -1125,7 +1125,7 @@ fn validate_section_story_references(
       }
       resolve_header_footer_reference_part(
         parts.zip,
-        parts.relationships,
+        parts.relationship_index,
         parts.base_path,
         id,
         is_header,

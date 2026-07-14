@@ -317,6 +317,24 @@ test "section story references require matching typed internal relationships" {
   } noraise {
     _ => fail("expected an external section relationship to fail")
   }
+  let duplicate = with_main_relationship(
+    with_main_relationship(
+      fixture_docx(document),
+      "rStory",
+      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header",
+      "document.xml",
+    ),
+    "rStory",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header",
+    "document.xml",
+  )
+  try @docx.read_docx_annotated(duplicate) catch {
+    Unsupported(message~) =>
+      assert_true(message.contains("duplicate relationship id 'rStory'"))
+    _ => fail("expected a duplicate section relationship id to fail")
+  } noraise {
+    _ => fail("expected a duplicate section relationship id to fail")
+  }
 }
 
 ///|

@@ -12,6 +12,31 @@ priv struct Relationships {
 }
 
 ///|
+/// One input-linear index shared by package projection and strict annotation
+/// validation. Values stay arrays so duplicate relationship IDs retain their
+/// fail-closed meaning instead of being silently overwritten.
+priv struct RelationshipIndex {
+  by_id : Map[String, Array[Relationship]]
+}
+
+///|
+fn RelationshipIndex::build(relationships : Relationships) -> RelationshipIndex {
+  let by_id : Map[String, Array[Relationship]] = Map([])
+  for relationship in relationships.relationships {
+    let matches = match by_id.get(relationship.id) {
+      Some(existing) => existing
+      None => {
+        let fresh : Array[Relationship] = []
+        by_id[relationship.id] = fresh
+        fresh
+      }
+    }
+    matches.push(relationship)
+  }
+  { by_id, }
+}
+
+///|
 const TRANSITIONAL_OFFICE_DOCUMENT_RELATIONSHIP : String = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
 
 ///|
@@ -405,6 +430,7 @@ priv struct DocumentParts {
   numbering : NumberingMap
   content_types : ContentTypes
   relationships : Relationships
+  relationship_index : RelationshipIndex
   base_path : String
   notes_result : NotesReadResult
   comments_result : CommentsReadResult
@@ -433,6 +459,7 @@ fn DocumentParts::build(
     relationships_path_for_part(main_document_path),
     xml_budget?,
   )
+  let relationship_index = RelationshipIndex::build(relationships)
   let content_types = read_content_types(zip, xml_budget?)
   let base_path = split_zip_path(main_document_path).0
   let comments_part_path = resolve_unique_internal_part(
@@ -515,6 +542,7 @@ fn DocumentParts::build(
     numbering,
     content_types,
     relationships,
+    relationship_index,
     base_path,
     notes_result,
     comments_result,
@@ -903,29 +931,23 @@ fn Relationships::find_by_id(
 /// cannot disagree about what a section reference means.
 fn resolve_header_footer_reference_part(
   zip : ZipArchive,
-  relationships : Relationships,
+  relationship_index : RelationshipIndex,
   base_path : String,
   id : String,
   is_header : Bool,
 ) -> String raise DocxError {
   let kind = if is_header { "header" } else { "footer" }
-  let mut matched : Relationship? = None
-  for relationship in relationships.relationships {
-    if relationship.id != id {
-      continue
-    }
-    if matched is Some(_) {
-      raise Unsupported(
-        message="the \{kind} reference names duplicate relationship id '\{id}'",
-      )
-    }
-    matched = Some(relationship)
-  }
-  guard matched is Some(relationship) else {
+  guard relationship_index.by_id.get(id) is Some(matches) else {
     raise Unsupported(
       message="the \{kind} reference names unknown relationship id '\{id}'",
     )
   }
+  if matches.length() != 1 {
+    raise Unsupported(
+      message="the \{kind} reference names duplicate relationship id '\{id}'",
+    )
+  }
+  let relationship = matches[0]
   let type_matches = if is_header {
     relationship.relationship_type == TRANSITIONAL_HEADER_RELATIONSHIP ||
     relationship.relationship_type == STRICT_HEADER_RELATIONSHIP
