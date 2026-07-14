@@ -623,6 +623,54 @@ test "dense comment ranges and references retain FIFO attachment order" {
 }
 
 ///|
+test "distributed comment markers verify against thousands of paragraphs linearly" {
+  let document = StringBuilder()
+  document.write_string(
+    "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>",
+  )
+  for _ in 0..<3_000 {
+    document.write_string(
+      "<w:p><w:r><w:commentReference w:id=\"0\"/></w:r></w:p>",
+    )
+  }
+  document.write_string("</w:body></w:document>")
+  let comments =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="0"><w:p/></w:comment></w:comments>
+  let annotated = @docx.read_docx_annotated(
+    fixture_docx(document.to_string(), comments_xml=Some(comments)),
+  )
+  let indexed = annotated.annotations().comments()
+  assert_eq(indexed.length(), 1)
+  let anchors = indexed[0].anchors()
+  assert_eq(anchors.length(), 3_000)
+  assert_eq(anchors[0].references(), ["/body/p[1]/r[1]"])
+  assert_eq(anchors[2_999].references(), ["/body/p[3000]/r[1]"])
+  assert_eq(annotated.annotations().warnings(), [])
+}
+
+///|
+test "story-level marker fallbacks use a monotonic nearest-node index" {
+  let document = StringBuilder()
+  document.write_string(
+    "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>",
+  )
+  for _ in 0..<2_000 {
+    document.write_string("<w:commentReference w:id=\"0\"/><w:p/>")
+  }
+  document.write_string("</w:body></w:document>")
+  let comments =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="0"><w:p/></w:comment></w:comments>
+  let annotated = @docx.read_docx_annotated(
+    fixture_docx(document.to_string(), comments_xml=Some(comments)),
+  )
+  let anchors = annotated.annotations().comments()[0].anchors()
+  assert_eq(anchors.length(), 2_000)
+  assert_eq(anchors[0].references(), ["/body/p[1]"])
+  assert_eq(anchors[1_999].references(), ["/body/p[2000]"])
+  assert_eq(annotated.annotations().warnings(), [])
+}
+
+///|
 test "index review round 1: multi-range FIFO, later-range interiors, cross-story rank" {
   // One id with TWO ranges in the body plus a range in a comment body
   // (cross-story, /comments ranks last). The reference between range 1's
