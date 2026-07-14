@@ -57,6 +57,9 @@ pub fn write_docx(body : Array[DocumentElement]) -> Bytes raise DocxError {
 const WORDPROCESSINGML_NAMESPACE : String = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 
 ///|
+const STRICT_WORDPROCESSINGML_NAMESPACE : String = "http://purl.oclc.org/ooxml/wordprocessingml/main"
+
+///|
 fn build_docx_package(
   builder : @opc.PackageBuilder,
   document_xml : String,

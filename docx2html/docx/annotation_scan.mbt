@@ -151,6 +151,10 @@ priv struct StoryScan {
   // The story's ROOT element span (kind = its local name, path = "").
   // L1 splices new definitions just before root.close_tag_start.
   root : ScannedNode?
+  // Namespace URI that expanded the root element's QName. Kept separately
+  // from the canonicalized reader DOM so mutations can preserve Strict vs
+  // Transitional WML exactly.
+  root_namespace_uri : String?
   // Private structural accounting used by the complexity regression tests.
   // Every retraction step represents one checkpoint operation or one item
   // discarded; no retained prefix is inspected.
@@ -175,6 +179,11 @@ priv struct AnnotationScanWork {
 /// The story's root-element span, when the part had one.
 fn StoryScan::root(self : StoryScan) -> ScannedNode? {
   self.root
+}
+
+///|
+fn StoryScan::root_namespace_uri(self : StoryScan) -> String? {
+  self.root_namespace_uri
 }
 
 ///|
@@ -373,6 +382,7 @@ fn scan_story(part : BytesView) -> StoryScan raise DocxError {
     MAX_ANNOTATION_WARNING_CHARS,
   )
   let mut root : ScannedNode? = None
+  let mut root_namespace_uri : String? = None
   let frames : Array[ScanFrame] = []
   let root_counters : Map[String, Int] = Map([])
   // Prefix -> stack of URIs (innermost last). "" is the default namespace.
@@ -596,6 +606,9 @@ fn scan_story(part : BytesView) -> StoryScan raise DocxError {
       None => ("", name)
     }
     let uri = resolve(prefix)
+    if frames.length() == 0 && root_namespace_uri is None {
+      root_namespace_uri = Some(uri)
+    }
     seq += 1
     let transparent = is_transparent_container(uri, local_name)
     // A subtree is suppressed if the reader drops it: w:del content,
@@ -892,6 +905,7 @@ fn scan_story(part : BytesView) -> StoryScan raise DocxError {
       nodes, nodes_by_open, markers, work,
     ),
     root,
+    root_namespace_uri,
     work,
   }
 }

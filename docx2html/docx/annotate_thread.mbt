@@ -169,6 +169,7 @@ fn plan_comment_reply_zip(
     id=new_id,
     para_ids=reply_para_ids,
     max_output_bytes=max_fragment_bytes,
+    wordprocessing_namespace=annotated.comment_definition_namespace(),
   )
   match root_span.close_tag_start() {
     Some(insert_at) =>

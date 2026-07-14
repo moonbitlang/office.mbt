@@ -1280,6 +1280,94 @@ async test "L1: plan_comment_addition splices a comment into an existing documen
 }
 
 ///|
+/// A true Strict package uses the Strict WML namespace and Strict office
+/// relationship types together. Add and reply must not introduce Transitional
+/// WML or a Transitional comments relationship at either stage.
+async test "L1 and L2 preserve true Strict OOXML comment dialect end to end" {
+  let dir = fresh_scratch_dir()
+  let strict_wml = "http://purl.oclc.org/ooxml/wordprocessingml/main"
+  let strict_office = "http://purl.oclc.org/ooxml/officeDocument/relationships/"
+  let transitional_wml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  let transitional_comments = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments"
+  let builder = @opc.PackageBuilder::new()
+  builder.add_default(
+    "rels", "application/vnd.openxmlformats-package.relationships+xml",
+  )
+  builder.add_default("xml", "application/xml")
+  builder.add_override(
+    "/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+  )
+  builder.add_relationship(
+    "rIdMain",
+    strict_office + "officeDocument",
+    "word/document.xml",
+  )
+  builder.add_part(
+    "word/document.xml",
+    @utf8.encode(
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:document xmlns:w=\"\{strict_wml}\"><w:body><w:p><w:r><w:t>Strict source</w:t></w:r></w:p><w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/></w:sectPr></w:body></w:document>",
+    ),
+  )
+  let original = builder.build()
+  let annotated = @docx2html.read_docx_annotated(original)
+  let root_spec = @docx2html.comment_spec(author="Strict root", from=0, to=0, [
+    @docx2html.paragraph([@docx2html.run([@docx2html.text("Root comment")])]),
+  ])
+  let (add_plan, root_id) = @docx_impl.plan_comment_addition(
+    annotated,
+    original,
+    at_relative="p[1]",
+    to_relative="p[1]",
+    root_spec,
+  )
+  inspect(root_id, content="0")
+  let added = @splice.splice_docx(original, add_plan)
+  validate_docx_via_sdk(dir, "strict_comment_added", added)
+  let added_archive = @mbtzip.read(added)
+  guard added_archive.get("word/document.xml") is Some(document_bytes)
+  guard added_archive.get("word/comments.xml") is Some(comments_bytes)
+  guard added_archive.get("word/_rels/document.xml.rels") is Some(rels_bytes)
+  let document_text = @utf8.decode(document_bytes, ignore_bom=true)
+  let comments_text = @utf8.decode(comments_bytes, ignore_bom=true)
+  let rels_text = @utf8.decode(rels_bytes, ignore_bom=true)
+  assert_true(document_text.contains(strict_wml))
+  assert_true(comments_text.contains(strict_wml))
+  assert_false(document_text.contains(transitional_wml))
+  assert_false(comments_text.contains(transitional_wml))
+  assert_true(rels_text.contains(strict_office + "comments"))
+  assert_false(rels_text.contains(transitional_comments))
+  let added_annotated = @docx2html.read_docx_annotated(added)
+  let reply_spec = @docx2html.comment_spec(
+    author="Strict reply",
+    from=0,
+    to=0,
+    [@docx2html.paragraph([@docx2html.run([@docx2html.text("Reply body")])])],
+  )
+  let (reply_plan, reply_id) = @docx_impl.plan_comment_reply(
+    added_annotated,
+    added,
+    parent_id="0",
+    reply_spec,
+  )
+  inspect(reply_id, content="1")
+  let replied = @splice.splice_docx(added, reply_plan)
+  validate_docx_via_sdk(dir, "strict_comment_replied", replied)
+  let replied_archive = @mbtzip.read(replied)
+  guard replied_archive.get("word/comments.xml") is Some(replied_comments)
+  let replied_text = @utf8.decode(replied_comments, ignore_bom=true)
+  assert_true(replied_text.contains(strict_wml))
+  assert_false(replied_text.contains(transitional_wml))
+  let verified = @docx2html.read_docx_annotated(replied)
+  assert_eq(verified.annotations().comments().length(), 2)
+  debug_inspect(
+    verified.annotations().comments()[1].parent_id(),
+    content=(
+      #|Some("0")
+    ),
+  )
+}
+
+///|
 /// L1 review round 1 — the adversarial matrix, all through the real
 /// wiring: single-quoted relationship ids (parse, don't probe),
 /// numeric id identity (10-digit ids fail closed), empty-id
