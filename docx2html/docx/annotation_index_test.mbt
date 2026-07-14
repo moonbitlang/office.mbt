@@ -175,6 +175,145 @@ test "archive-backed annotated reads share one cumulative XML budget" {
 }
 
 ///|
+test "Strict relocated main relationship outranks a conventional-path decoy" {
+  let builder = @opc.PackageBuilder::new()
+  builder.add_default(
+    "rels", "application/vnd.openxmlformats-package.relationships+xml",
+  )
+  builder.add_default("xml", "application/xml")
+  builder.add_override(
+    "/custom/main.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+  )
+  builder.add_relationship(
+    "rIdMain", "http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument",
+    "custom/main.xml",
+  )
+  builder.add_part(
+    "custom/main.xml",
+    @utf8.encode(
+      (
+        #|<w:document xmlns:w="http://purl.oclc.org/ooxml/wordprocessingml/main"><w:body><w:p><w:r><w:commentReference w:id="7"/></w:r></w:p></w:body></w:document>
+      ),
+    ),
+  )
+  builder.add_part(
+    "word/document.xml",
+    @utf8.encode(
+      (
+        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:commentReference w:id="99"/></w:r></w:p></w:body></w:document>
+      ),
+    ),
+  )
+  let annotated = @docx.read_docx_annotated(builder.build())
+  assert_eq(annotated.main_story_part(), "custom/main.xml")
+  let comments = annotated.annotations().comments()
+  assert_eq(comments.length(), 1)
+  assert_eq(comments[0].id(), "7")
+}
+
+///|
+test "distinct comments relationship targets fail closed" {
+  let builder = @opc.PackageBuilder::new()
+  builder.add_default(
+    "rels", "application/vnd.openxmlformats-package.relationships+xml",
+  )
+  builder.add_default("xml", "application/xml")
+  builder.add_override(
+    "/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+  )
+  builder.add_override(
+    "/word/comments-a.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml",
+  )
+  builder.add_override(
+    "/word/comments-b.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml",
+  )
+  builder.add_relationship(
+    "rIdMain", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "word/document.xml",
+  )
+  builder.add_relationship(
+    "rIdCommentsA",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+    "comments-a.xml",
+    source="word/document.xml",
+  )
+  builder.add_relationship(
+    "rIdCommentsB",
+    "http://purl.oclc.org/ooxml/officeDocument/relationships/comments",
+    "comments-b.xml",
+    source="word/document.xml",
+  )
+  builder.add_part(
+    "word/document.xml",
+    @utf8.encode(
+      (
+        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:document>
+      ),
+    ),
+  )
+  let comments =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>
+  builder.add_part("word/comments-a.xml", @utf8.encode(comments))
+  builder.add_part("word/comments-b.xml", @utf8.encode(comments))
+  let ambiguous = builder.build()
+  try @docx.read_docx_annotated(ambiguous) catch {
+    Unsupported(message~) =>
+      inspect(
+        message,
+        content="the document declares multiple distinct comments relationship targets",
+      )
+    _ => fail("expected ambiguous comments relationship failure")
+  } noraise {
+    _ => fail("expected ambiguous comments relationships to fail")
+  }
+}
+
+///|
+test "distinct commentsExtended relationship targets fail closed" {
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:document>
+  let extended =
+    #|<w15:commentsEx xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml"/>
+  let archive = try! @mbtzip.read(
+    fixture_docx(document, comments_extended_xml=Some(extended)),
+  )
+  guard archive.get("word/_rels/document.xml.rels") is Some(rels_bytes) else {
+    fail("fixture is missing main relationships")
+  }
+  let rels = @utf8.decode(rels_bytes, ignore_bom=true).replace(
+    old="</Relationships>",
+    new=(
+      #|<Relationship Id="rIdSecondExtended" Type="http://schemas.microsoft.com/office/2011/relationships/commentsExtended" Target="commentsExtended-2.xml"/></Relationships>
+    ),
+  )
+  assert_true(
+    archive.replace("word/_rels/document.xml.rels", @utf8.encode(rels)),
+  )
+  guard archive.get("[Content_Types].xml") is Some(types_bytes) else {
+    fail("fixture is missing content types")
+  }
+  let types = @utf8.decode(types_bytes, ignore_bom=true).replace(
+    old="</Types>",
+    new=(
+      #|<Override PartName="/word/commentsExtended-2.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml"/></Types>
+    ),
+  )
+  assert_true(archive.replace("[Content_Types].xml", @utf8.encode(types)))
+  archive.add("word/commentsExtended-2.xml", @utf8.encode(extended))
+  let ambiguous = try! @mbtzip.write(archive)
+  try @docx.read_docx_annotated(ambiguous) catch {
+    Unsupported(message~) =>
+      inspect(
+        message,
+        content="the document declares multiple distinct commentsExtended relationship targets",
+      )
+    _ => fail("expected ambiguous commentsExtended relationship failure")
+  } noraise {
+    _ => fail("expected ambiguous commentsExtended relationships to fail")
+  }
+}
+
+///|
 test "index: ranges, points, threading, and coverage on a conformance-shaped fixture" {
   // Comment 0: a multi-paragraph range (start in p2, end in p3) with its
   // reference in p3; two body paragraphs, distinct first/last paraIds
