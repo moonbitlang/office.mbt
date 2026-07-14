@@ -392,24 +392,31 @@ fn check_content_types(
             // empty or slash-less one is itself the finding (and slicing it
             // would abort on attacker-supplied input).
             if part_name.has_prefix("/") {
-              let key = normalize_override_part_name(part_name)
-              if overrides.contains(key) {
-                findings.add(
-                  "\{CONTENT_TYPES_PART}: duplicate Override PartName after path normalization: \{findings.text(key)}",
-                )
-              } else {
-                overrides[key] = content_type
-              }
-              if key != part_name {
-                findings.add(
-                  "\{CONTENT_TYPES_PART}: Override PartName is not canonical: \{findings.text(part_name)}",
-                )
-              }
-              let target = key[1:].to_owned()
-              if !parts.contains(target) {
-                findings.add(
-                  "\{CONTENT_TYPES_PART}: Override names a missing part: \{findings.text(key)}",
-                )
+              match normalize_override_part_name(part_name) {
+                Some(key) => {
+                  if overrides.contains(key) {
+                    findings.add(
+                      "\{CONTENT_TYPES_PART}: duplicate Override PartName after path normalization: \{findings.text(key)}",
+                    )
+                  } else {
+                    overrides[key] = content_type
+                  }
+                  if key != part_name {
+                    findings.add(
+                      "\{CONTENT_TYPES_PART}: Override PartName is not canonical: \{findings.text(part_name)}",
+                    )
+                  }
+                  let target = key[1:].to_owned()
+                  if !parts.contains(target) {
+                    findings.add(
+                      "\{CONTENT_TYPES_PART}: Override names a missing part: \{findings.text(key)}",
+                    )
+                  }
+                }
+                None =>
+                  findings.add(
+                    "\{CONTENT_TYPES_PART}: Override PartName is invalid: \{findings.text(part_name)}",
+                  )
               }
             } else {
               findings.add(
@@ -428,11 +435,14 @@ fn check_content_types(
 }
 
 ///|
-fn normalize_override_part_name(part_name : String) -> String {
+fn normalize_override_part_name(part_name : String) -> String? {
   // Callers establish the leading slash. `resolve_target` removes redundant
-  // separators and dot segments, giving declarations one collision key while
-  // the separate canonicality finding rejects noncanonical spellings.
-  "/" + resolve_target("", part_name[1:].to_owned())
+  // dot segments, giving declarations one collision key while the separate
+  // canonicality finding rejects noncanonical spellings.
+  match resolve_target("", part_name) {
+    Some(target) => Some("/" + target)
+    None => None
+  }
 }
 
 ///|
@@ -511,8 +521,13 @@ fn check_relationships(
                   "\{ROOT_RELS_PART}: officeDocument relationship has no target",
                 )
               } else {
-                let resolved = resolve_target("", target)
-                main_parts.push(resolved)
+                match resolve_target("", target) {
+                  Some(resolved) => main_parts.push(resolved)
+                  None =>
+                    findings.add(
+                      "\{ROOT_RELS_PART}: officeDocument relationship has an invalid target: \{findings.text(target)}",
+                    )
+                }
               }
             }
           })
@@ -556,11 +571,17 @@ fn check_relationships(
           external,
         ) => {
           if !external {
-            let resolved = resolve_target(base, target)
-            if !parts.contains(resolved) {
-              findings.add(
-                "relationship target missing: \{findings.text(name)} -> \{findings.text(target)} (resolved \{findings.text(resolved)})",
-              )
+            match resolve_target(base, target) {
+              Some(resolved) =>
+                if !parts.contains(resolved) {
+                  findings.add(
+                    "relationship target missing: \{findings.text(name)} -> \{findings.text(target)} (resolved \{findings.text(resolved)})",
+                  )
+                }
+              None =>
+                findings.add(
+                  "relationship target invalid: \{findings.text(name)} -> \{findings.text(target)}",
+                )
             }
           }
         })
@@ -640,29 +661,86 @@ fn rels_base_dir(rels_name : String) -> String {
 }
 
 ///|
-/// Resolves a relationship target against a base directory: pack-absolute
-/// targets (`/word/media/x.png`) are archive-rooted; relative targets may
-/// climb with `..` (clamped at the package root) and `.`/empty segments
-/// collapse. Shared OPC primitive — the package reader resolves
-/// header/footer targets with the same semantics validation checks them by.
-pub fn resolve_target(base : String, target : String) -> String {
-  if target.has_prefix("/") {
-    return target[1:].to_owned()
+/// Returns whether an internal relationship target starts with a URI scheme.
+fn target_has_uri_scheme(target : String) -> Bool {
+  let mut index = 0
+  for character in target {
+    if character == ':' {
+      return index > 0
+    }
+    if character == '/' || character == '?' || character == '#' {
+      return false
+    }
+    let valid = if index == 0 {
+      character.is_ascii_alphabetic()
+    } else {
+      character.is_ascii_alphabetic() ||
+      character.is_ascii_digit() ||
+      character == '+' ||
+      character == '-' ||
+      character == '.'
+    }
+    if !valid {
+      return false
+    }
+    index += 1
+  }
+  false
+}
+
+///|
+/// Resolves one internal relationship target against an archive-directory
+/// base. Package-rooted targets (`/word/media/x.png`) and relative targets use
+/// the same dot-segment normalization. Empty segments, URI schemes,
+/// query/fragment text, backslashes, empty results, and any traversal above
+/// the package root fail closed instead of being silently clamped.
+pub fn resolve_target(base : String, target : String) -> String? {
+  if target == "" ||
+    target.has_prefix("//") ||
+    target.contains("\\") ||
+    target.contains("?") ||
+    target.contains("#") ||
+    target_has_uri_scheme(target) {
+    return None
   }
   let segments : Array[String] = []
-  if base != "" {
-    for segment in base.split("/") {
-      segments.push(segment.to_owned())
+  if !target.has_prefix("/") && base != "" {
+    if base.has_prefix("/") {
+      return None
+    }
+    let normalized_base = if base.has_suffix("/") {
+      base[:base.length() - 1]
+    } else {
+      base
+    }
+    if normalized_base != "" {
+      for segment in normalized_base.split("/") {
+        if segment == "" || segment == "." || segment == ".." {
+          return None
+        }
+        segments.push(segment.to_owned())
+      }
     }
   }
-  for segment in target.split("/") {
+  let path = if target.has_prefix("/") { target[1:] } else { target }
+  for segment in path.split("/") {
     match segment.to_owned() {
-      "" | "." => ()
-      ".." => if segments.length() > 0 { let _ = segments.pop() }
+      "" => return None
+      "." => ()
+      ".." =>
+        if segments.length() > 0 {
+          let _ = segments.pop()
+        } else {
+          return None
+        }
       other => segments.push(other)
     }
   }
-  segments.join("/")
+  if segments.length() == 0 {
+    None
+  } else {
+    Some(segments.join("/"))
+  }
 }
 
 ///|

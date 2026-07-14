@@ -82,6 +82,17 @@ test "the builder fails closed" {
     },
     "relationship rId9 of 'word/document.xml' targets a part that was not added",
   )
+  expect_build_error(
+    builder => {
+      builder.add_relationship(
+        "rEscape",
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
+        "../../outside.xml",
+        source="word/document.xml",
+      )
+    },
+    "relationship rEscape of 'word/document.xml' has an invalid internal target",
+  )
 }
 
 ///|

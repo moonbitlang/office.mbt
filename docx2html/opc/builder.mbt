@@ -218,7 +218,11 @@ pub fn PackageBuilder::build(
       if relationship.external {
         continue
       }
-      let resolved = resolve_target(base, relationship.target)
+      guard resolve_target(base, relationship.target) is Some(resolved) else {
+        raise PackageBuildError(
+          "relationship \{relationship.id} of '\{source}' has an invalid internal target: \{relationship.target}",
+        )
+      }
       if !part_names.contains(resolved) {
         raise PackageBuildError(
           "relationship \{relationship.id} of '\{source}' targets a part that was not added: \{relationship.target} (resolved \{resolved})",
