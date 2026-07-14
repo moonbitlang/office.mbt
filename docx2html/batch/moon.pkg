@@ -1,6 +1,7 @@
 import {
   "bobzhang/docx2html/document",
   "moonbitlang/core/json",
+  "moonbitlang/core/sorted_set",
 }
 
 import {

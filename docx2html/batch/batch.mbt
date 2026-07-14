@@ -295,7 +295,7 @@ pub fn parse_batch(script : Json) -> BatchScript raise BatchError {
   }
   let ops : Array[OpSpec] = []
   let image_paths : Array[String] = []
-  let seen_paths : Set[String] = Set([])
+  let seen_paths : StableStringSet = SortedSet([])
   let kinds : Array[ParsedOpKind] = []
   let comments : Array[CommentOp] = []
   let block_ops : Array[Int] = []
@@ -388,7 +388,7 @@ fn parse_comment(
   at : String,
   kinds : Array[ParsedOpKind],
   image_paths : Array[String],
-  seen_paths : Set[String],
+  seen_paths : StableStringSet,
 ) -> CommentOp raise BatchError {
   let at_params = at + ".params"
   check_keys(
@@ -546,7 +546,7 @@ fn parse_comment_body(
   params : Map[String, Json],
   at_params : String,
   image_paths : Array[String],
-  seen_paths : Set[String],
+  seen_paths : StableStringSet,
 ) -> Array[ParagraphSpec] raise BatchError {
   let body : Array[ParagraphSpec] = []
   match (params.get("text"), params.get("paragraphs")) {
@@ -615,7 +615,7 @@ fn parse_paragraph(
   params : Map[String, Json],
   at : String,
   image_paths : Array[String],
-  seen_paths : Set[String],
+  seen_paths : StableStringSet,
   plain? : Bool = false,
   notes? : NoteCollector? = None,
 ) -> ParagraphSpec raise BatchError {
@@ -713,7 +713,7 @@ fn parse_inline(
   json : Json,
   at : String,
   image_paths : Array[String],
-  seen_paths : Set[String],
+  seen_paths : StableStringSet,
   allow_links~ : Bool,
   plain? : Bool = false,
   notes? : NoteCollector? = None,
@@ -951,7 +951,7 @@ fn parse_table(
   params : Map[String, Json],
   at : String,
   image_paths : Array[String],
-  seen_paths : Set[String],
+  seen_paths : StableStringSet,
   notes? : NoteCollector? = None,
 ) -> OpSpec raise BatchError {
   check_keys(params, ["rows", "header_rows"], at + ".params")
@@ -1158,7 +1158,7 @@ fn checked_attribute(value : String?, at : String) -> String? raise BatchError {
 ///|
 priv struct ScanFrame {
   is_object : Bool
-  keys : Set[String]
+  keys : StableStringSet
   mut expecting_key : Bool
   // Last decoded key of this object (addresses child containers/values).
   mut pending_key : String
@@ -1376,7 +1376,7 @@ pub fn check_script_text(text : String) -> Unit raise BatchError {
     if unit == '{'.to_int() || unit == '['.to_int() {
       frames.push({
         is_object: unit == '{'.to_int(),
-        keys: Set([]),
+        keys: SortedSet([]),
         expecting_key: unit == '{'.to_int(),
         pending_key: "",
         index: 0,
@@ -1834,7 +1834,7 @@ pub fn parse_annotate(json : Json) -> AnnotateEnvelope raise BatchError {
     raise BatchError("the envelope's comment.paragraphs must not be empty")
   }
   let image_paths : Array[String] = []
-  let seen_paths : Set[String] = Set([])
+  let seen_paths : StableStringSet = SortedSet([])
   let body : Array[ParagraphSpec] = []
   for index, paragraph_json in paragraphs_json {
     guard paragraph_json is Object(paragraph) else {
