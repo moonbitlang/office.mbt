@@ -38,6 +38,7 @@ pub struct DocxEditSession {
   priv max_comment_fragment_bytes : Int
   priv splice_limits : @splice.SpliceLimits
   priv mut plan : @splice.SplicePlan
+  priv mut semantic_comment_operation_queued : Bool
 }
 
 ///|
@@ -234,6 +235,18 @@ fn open_edit_session(
     max_comment_fragment_bytes: budget.max_splice_materialized_bytes() / 8,
     splice_limits,
     plan: @splice.SplicePlan::new(),
+    semantic_comment_operation_queued: false,
+  }
+}
+
+///|
+fn DocxEditSession::require_fresh_semantic_comment_state(
+  self : DocxEditSession,
+) -> Unit raise @transaction.TransactionError {
+  if self.semantic_comment_operation_queued {
+    raise docx_failure(
+      "office.docx.stale_semantic_state", "only one semantic comment operation may be queued per edit session because planners resolve identities and threading against the immutable source snapshot",
+    )
   }
 }
 
@@ -254,6 +267,7 @@ pub fn DocxEditSession::queue_comment_addition(
   to_relative~ : String,
   spec : @word.CommentSpec,
 ) -> String raise @transaction.TransactionError {
+  self.require_fresh_semantic_comment_state()
   let (plan, comment_id) = @word.plan_comment_addition_archive(
     self.annotated,
     self.archive,
@@ -265,6 +279,7 @@ pub fn DocxEditSession::queue_comment_addition(
     error => raise mapped_plan_failure(error)
   }
   self.queue_plan(plan)
+  self.semantic_comment_operation_queued = true
   comment_id
 }
 
@@ -275,6 +290,7 @@ pub fn DocxEditSession::queue_comment_reply(
   parent_id~ : String,
   spec : @word.CommentSpec,
 ) -> String raise @transaction.TransactionError {
+  self.require_fresh_semantic_comment_state()
   let (plan, comment_id) = @word.plan_comment_reply_archive(
     self.annotated,
     self.archive,
@@ -285,6 +301,7 @@ pub fn DocxEditSession::queue_comment_reply(
     error => raise mapped_plan_failure(error)
   }
   self.queue_plan(plan)
+  self.semantic_comment_operation_queued = true
   comment_id
 }
 
@@ -296,6 +313,7 @@ pub fn DocxEditSession::queue_comment_resolution(
   comment_id~ : String,
   done~ : Bool,
 ) -> Unit raise @transaction.TransactionError {
+  self.require_fresh_semantic_comment_state()
   let plan = @word.plan_comment_resolution_archive(
     self.annotated,
     self.archive,
@@ -305,6 +323,7 @@ pub fn DocxEditSession::queue_comment_resolution(
     error => raise mapped_plan_failure(error)
   }
   self.queue_plan(plan)
+  self.semantic_comment_operation_queued = true
 }
 
 ///|
@@ -469,6 +488,38 @@ pub fn package_validator() -> @transaction.TransactionValidator raise @transacti
           "docx.package.additional_findings", "additional DOCX package findings were omitted from the bounded report",
         ),
       )
+    }
+    if findings.is_empty() {
+      try {
+        let xml_budget = @xml.xml_read_budget(
+          max_source_units=candidate_xml_source_units,
+          max_tokens=candidate_xml_tokens,
+          max_materialized_chars=candidate_xml_materialized_chars,
+          max_token_chars=candidate_xml_token_chars,
+        )
+        let annotated = @word.read_docx_annotated_archive_limited(
+          archive, xml_budget,
+        )
+        @word.validate_annotation_identity_state(annotated)
+      } catch {
+        error => {
+          let message = docx_error_message(error)
+          findings.push(
+            @transaction.validation_finding(
+              if is_xml_resource_finding(message) {
+                "docx.annotation.resource_limit"
+              } else {
+                "docx.annotation.invalid"
+              },
+              docx_validator_message(
+                "candidate DOCX annotation state is unsafe: \{message}",
+              ),
+            ),
+          )
+        }
+      } noraise {
+        _ => ()
+      }
     }
     findings
   })
