@@ -107,10 +107,14 @@ materialization budget for the complete transaction. The transaction reserves
 serializer working state. It accounts for the original package buffer,
 inflated entry payloads, decoded names, preserved local/central ZIP records,
 entry bookkeeping, and—when bytes changed—the concurrently live candidate
-buffer and archive. Candidate inflation receives only the aggregate budget
-remaining after the original archive. A package that is individually legal
-but would make the two live archive snapshots exceed the envelope therefore
-fails with `kind=live_materialized_bytes` before any temporary file is created.
+buffer and archive. Every source and candidate ZIP entry name is limited to
+1,024 Unicode scalars before canonicalization, and the live-byte estimate
+reserves four UTF-16 normalized name projections for identification,
+validation, and preservation indexes. Candidate inflation receives only the
+aggregate budget remaining after the original archive. A package that is
+individually legal but would make the two live archive snapshots exceed the
+envelope therefore fails with `kind=live_materialized_bytes` before any
+temporary file is created.
 
 The mutation callback receives that remaining allowance as
 `TransactionBudget::max_candidate_package_bytes()`. Package serializers must

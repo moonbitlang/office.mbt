@@ -61,12 +61,15 @@ bounded A4 transaction boundary:
   cumulative XML budget across package parts before UTF-8 decode and DOM
   allocation, including inherited namespace bindings before scope snapshots;
   this bounds sibling-dense, namespace-heavy, and many-part inputs rather than
-  granting every part a fresh parser allowance; OPC maps reject duplicate
-  normalized content-type keys and every relationship scope rejects missing or
-  duplicate ids; the unique root `officeDocument` relationship and the unique
-  comments/commentsExtended and footnotes/endnotes relationships are
-  authoritative for both Transitional and Strict namespaces, so
-  conventional-path decoys cannot be validated in place of relocated parts;
+  granting every part a fresh parser allowance; annotation verification,
+  scanner paths, anchors, and degraded fallbacks additionally share one bounded
+  derived-path counter, charged before allocation and against the cumulative XML
+  character budget; OPC maps reject duplicate normalized content-type keys and
+  every relationship scope rejects missing or duplicate ids; the unique root
+  `officeDocument` relationship and the unique comments/commentsExtended and
+  footnotes/endnotes relationships are authoritative for both Transitional and
+  Strict namespaces, so conventional-path decoys cannot be validated in place
+  of relocated parts;
 - reply and resolution paraId collision scans reuse the session's cumulative
   XML budget across the main relationship graph, including wired but
   section-unreferenced header, footer, and note stories; the candidate gate
