@@ -840,8 +840,11 @@ fn scan_comment_ex_part(
   let root_declarations : Map[String, String] = Map([])
   for attribute in root_scan.entries {
     let (name, value, _, _) = attribute
-    if name.has_prefix("xmlns:") {
-      root_declarations[name.view(start_offset=6).to_owned()] = value
+    if name == "xmlns" {
+      root_declarations[""] = decode_entities(value)
+    } else if name.has_prefix("xmlns:") {
+      root_declarations[name.view(start_offset=6).to_owned()] =
+        decode_entities(value)
     }
   }
   if root_scan.self_closing {
@@ -926,8 +929,11 @@ fn scan_comment_ex_part(
       let own_declarations : Map[String, String] = Map([])
       for attribute in tag.entries {
         let (name, value, _, _) = attribute
-        if name.has_prefix("xmlns:") {
-          own_declarations[name.view(start_offset=6).to_owned()] = value
+        if name == "xmlns" {
+          own_declarations[""] = decode_entities(value)
+        } else if name.has_prefix("xmlns:") {
+          own_declarations[name.view(start_offset=6).to_owned()] =
+            decode_entities(value)
         }
       }
       fn prefix_uri(prefix : String) -> String? {
@@ -957,7 +963,11 @@ fn scan_comment_ex_part(
           if prefix_uri(attr_prefix) is Some(attr_uri) &&
             attr_uri == W15_NAMESPACE {
             if attr_local == "paraId" {
-              para_id = Some(canonical_para_id(value))
+              para_id = Some(canonical_para_id(decode_entities(value)))
+              // Unprefixed elements can use the W15 default namespace, but
+              // attributes cannot. Reuse the paraId attribute's bound prefix
+              // when a missing done attribute must be inserted.
+              done_prefix = attr_prefix
             }
             if attr_local == "done" {
               done_span = Some((value_start, value_end))
