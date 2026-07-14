@@ -72,6 +72,11 @@ test "relationship targets share fallible package-root normalization" {
   assert_eq(@opc.resolve_target("", "/../escape.xml"), None)
   assert_eq(@opc.resolve_target("", "word//document.xml"), None)
   assert_eq(@opc.resolve_target("", "https://example.test/x.xml"), None)
+  assert_eq(@opc.resolve_target("", "1:document.xml"), None)
+  assert_eq(
+    @opc.resolve_target("", "./1:document.xml"),
+    Some("1:document.xml"),
+  )
 }
 
 ///|
