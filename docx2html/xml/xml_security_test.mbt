@@ -287,6 +287,31 @@ test "strict XML normalizes source line endings but preserves references" {
 }
 
 ///|
+fn near_splice_limit_transformed_xml(token_units : Int) -> String {
+  let source = StringBuilder(size_hint=(token_units + 32) * 2)
+  source.write_string("<root>")
+  source.write_string("x".repeat(token_units - 7))
+  source.write_string("\r\n&amp;</root>")
+  source.to_string()
+}
+
+///|
+test "strict XML streams a near-splice-limit transformed token" {
+  let token_units = 8 * 1024 * 1024 - 128
+  let source = near_splice_limit_transformed_xml(token_units)
+  let budget = @xml.xml_read_budget(
+    max_source_units=source.length(),
+    max_tokens=32,
+    max_materialized_chars=token_units + 1024,
+    max_token_chars=8 * 1024 * 1024,
+  )
+  let root = @xml.read_xml_string_strict_limited(source, budget)
+  let text = root.text()
+  assert_eq(text.length(), token_units - 5)
+  assert_true(text.has_suffix("\n&"))
+}
+
+///|
 test "strict XML rejects malformed entities and illegal characters" {
   for
     source in [

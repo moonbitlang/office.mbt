@@ -31,13 +31,21 @@ let transaction_materialization_working_reserve : Int64 = 64L * 1024L * 1024L
 
 ///|
 /// DOCX splice validation retains caller replacement buffers, edited payloads,
-/// decoded text, and a strict XML tree concurrently. Only this conservative
-/// share of the already charged working reserve may be used for the payload
-/// buffers themselves; the remainder stays reserved for parser structures.
+/// one decoded source, and the source/candidate XML trees concurrently. Strict
+/// token normalization/entity decoding is fused over borrowed input, so no raw
+/// or normalized token-sized copies join that peak. This factor also leaves one
+/// payload share for parser collections and allocator headroom.
 let transaction_splice_materialization_divisor : Int64 = 8L
 
 ///|
 let transaction_max_splice_materialized_bytes : Int64 = 8L * 1024L * 1024L
+
+///|
+/// Conservative peak working set implied by one splice payload allowance.
+/// Kept executable so near-envelope tests lock the parser/transaction contract.
+fn transaction_splice_peak_working_bytes(materialized_bytes : Int64) -> Int64 {
+  materialized_bytes * transaction_splice_materialization_divisor
+}
 
 ///|
 /// Before inflation, reserve the source buffer, copied local/central records,
@@ -542,12 +550,17 @@ fn transaction_mutation_budget(
   }
   let splice_share = working_reserve /
     transaction_splice_materialization_divisor
-  let max_splice_materialized_bytes = if splice_share <= 0L {
-    0
-  } else if splice_share < transaction_max_splice_materialized_bytes {
-    splice_share.to_int()
+  let capped_splice_share = if splice_share <
+    transaction_max_splice_materialized_bytes {
+    splice_share
   } else {
-    transaction_max_splice_materialized_bytes.to_int()
+    transaction_max_splice_materialized_bytes
+  }
+  let max_splice_materialized_bytes = if capped_splice_share <= 0L ||
+    transaction_splice_peak_working_bytes(capped_splice_share) > working_reserve {
+    0
+  } else {
+    capped_splice_share.to_int()
   }
   { max_candidate_package_bytes, max_splice_materialized_bytes }
 }

@@ -1086,6 +1086,19 @@ fn xml_diagnostic_token(value : String) -> String {
 }
 
 ///|
+/// Pre-sizes the native/Wasm UTF-16 builder exactly when the byte-sized hint
+/// fits in `Int`. Exact sizing lets `to_string()` transfer the completed buffer
+/// without retaining a second token-sized allocation.
+fn xml_string_builder_for_units(units : Int) -> StringBuilder {
+  let bytes = units.to_int64() * 2L
+  if units > 0 && bytes <= 2147483647L {
+    StringBuilder(size_hint=bytes.to_int())
+  } else {
+    StringBuilder()
+  }
+}
+
+///|
 const XML_NAMESPACE_URI : String = "http://www.w3.org/XML/1998/namespace"
 
 ///|
@@ -1273,18 +1286,18 @@ fn XmlParser::decode_namespace_binding(
   self : XmlParser,
   raw_value : String,
 ) -> String raise DocxError {
-  // Entity replacement never exceeds the lexical value's length. Charge that
-  // conservative upper bound before allocating the decoded string retained by
-  // the namespace scope; the raw token was charged separately when read.
+  // Strict element attributes are already normalized and entity-decoded
+  // directly from the borrowed parser source, so their lexical token charge
+  // covers this retained namespace value. The tolerant parser still holds a
+  // raw token and must separately charge its decoded projection.
+  if self.strict {
+    return raw_value
+  }
   match self.budget {
     Some(budget) => budget.charge_derived_chars(raw_value.length())
     None => ()
   }
-  if self.strict {
-    decode_xml_entities_strict(raw_value, attribute=true)
-  } else {
-    decode_xml_entities(raw_value)
-  }
+  decode_xml_entities(raw_value)
 }
 
 ///|
@@ -1391,7 +1404,7 @@ fn XmlParser::parse_element_inner_strict(
       self.skip_whitespace()
       self.expect("=")
       self.skip_whitespace()
-      let attr_value = self.read_quoted_value()
+      let attr_value = self.read_quoted_value_strict_decoded()
       if attr_name == "xmlns" {
         let namespace_uri = self.decode_namespace_binding(attr_value)
         validate_namespace_declaration("", namespace_uri)
@@ -1442,16 +1455,12 @@ fn XmlParser::parse_children(
       self.skip_comment()
     } else if self.starts_with("<![CDATA[") {
       self.pos = self.pos + "<![CDATA[".length()
-      let cdata = self.read_until("]]>")
-      children.push(
-        XmlText(
-          if self.strict {
-            normalize_xml_source_text(cdata, attribute=false)
-          } else {
-            cdata
-          },
-        ),
-      )
+      let cdata = if self.strict {
+        self.read_until_strict_normalized("]]>")
+      } else {
+        self.read_until("]]>")
+      }
+      children.push(XmlText(cdata))
       self.pos = self.pos + "]]>".length()
     } else if self.starts_with("<?") {
       if self.strict {
@@ -1473,17 +1482,13 @@ fn XmlParser::parse_children(
         children.push(XmlElement(element))
       }
     } else {
-      let text = self.read_text()
+      let text = if self.strict {
+        self.read_text_strict_decoded()
+      } else {
+        decode_xml_entities(self.read_text())
+      }
       if text != "" {
-        children.push(
-          XmlText(
-            if self.strict {
-              decode_xml_entities_strict(text, attribute=false)
-            } else {
-              decode_xml_entities(text)
-            },
-          ),
-        )
+        children.push(XmlText(text))
       }
     }
   }
@@ -1512,7 +1517,7 @@ fn XmlParser::build_element(
       expanded_attributes[expanded] = true
     }
     attributes[self.map_name(name, is_attribute=true)] = if self.strict {
-      decode_xml_entities_strict(value, attribute=true)
+      value
     } else {
       decode_xml_entities(value)
     }
@@ -1910,7 +1915,7 @@ fn xml_substring(
     xml_boundary_splits_pair(source, end) {
     raise InvalidXml(message="invalid UTF-16 in XML content")
   }
-  let builder = StringBuilder()
+  let builder = xml_string_builder_for_units(end - start)
   for index in start..<end {
     builder.write_char(Int::unsafe_to_char(source[index].to_int()))
   }
@@ -1989,6 +1994,43 @@ fn XmlParser::read_quoted_value(self : XmlParser) -> String raise DocxError {
 }
 
 ///|
+/// Reads one strict element attribute directly into its retained normalized,
+/// entity-decoded value. The parser source remains borrowed throughout; no raw
+/// or separately normalized token-sized strings are materialized.
+fn XmlParser::read_quoted_value_strict_decoded(
+  self : XmlParser,
+) -> String raise DocxError {
+  if self.pos >= self.source.length() {
+    raise InvalidXml(message="expected quoted attribute value")
+  }
+  let quote = self.source[self.pos]
+  if quote != '"' && quote != '\'' {
+    raise InvalidXml(message="expected quoted attribute value")
+  }
+  self.pos += 1
+  let start = self.pos
+  while self.pos < self.source.length() && self.source[self.pos] != quote {
+    if self.source[self.pos] == '<' {
+      raise InvalidXml(message="raw '<' is not allowed in an attribute value")
+    }
+    self.pos += 1
+  }
+  if self.pos >= self.source.length() {
+    raise InvalidXml(message="unterminated attribute value")
+  }
+  self.charge_token(self.pos - start)
+  let value = decode_strict_xml_range(
+    self.source,
+    start,
+    self.pos,
+    attribute=true,
+    entities=true,
+  )
+  self.pos += 1
+  value
+}
+
+///|
 fn XmlParser::read_text(self : XmlParser) -> String raise DocxError {
   let start = self.pos
   while self.pos < self.source.length() && self.source[self.pos] != '<' {
@@ -1999,6 +2041,29 @@ fn XmlParser::read_text(self : XmlParser) -> String raise DocxError {
   }
   self.charge_token(self.pos - start)
   xml_substring(self.source, start, self.pos)
+}
+
+///|
+/// Reads strict character data into one retained decoded string, fusing XML
+/// line-ending normalization and entity replacement over the borrowed source.
+fn XmlParser::read_text_strict_decoded(
+  self : XmlParser,
+) -> String raise DocxError {
+  let start = self.pos
+  while self.pos < self.source.length() && self.source[self.pos] != '<' {
+    if self.starts_with("]]>") {
+      raise InvalidXml(message="']]>' is not allowed in XML character data")
+    }
+    self.pos += 1
+  }
+  self.charge_token(self.pos - start)
+  decode_strict_xml_range(
+    self.source,
+    start,
+    self.pos,
+    attribute=false,
+    entities=true,
+  )
 }
 
 ///|
@@ -2036,6 +2101,30 @@ fn XmlParser::read_until(
       return xml_substring(self.source, start, self.pos)
     }
     self.pos = self.pos + 1
+  }
+  raise InvalidXml(message="expected `" + needle + "`")
+}
+
+///|
+/// Reads strict CDATA content while normalizing literal line endings directly
+/// from the borrowed source. Entity-looking text remains literal in CDATA.
+fn XmlParser::read_until_strict_normalized(
+  self : XmlParser,
+  needle : String,
+) -> String raise DocxError {
+  let start = self.pos
+  while self.pos + needle.length() <= self.source.length() {
+    if self.starts_with(needle) {
+      self.charge_token(self.pos - start)
+      return decode_strict_xml_range(
+        self.source,
+        start,
+        self.pos,
+        attribute=false,
+        entities=false,
+      )
+    }
+    self.pos += 1
   }
   raise InvalidXml(message="expected `" + needle + "`")
 }
@@ -2096,22 +2185,93 @@ fn decode_xml_entities(value : String) -> String raise DocxError {
 }
 
 ///|
-fn strict_numeric_xml_entity(entity : String) -> String raise DocxError {
-  let (base, start) = if entity.has_prefix("#x") {
-    (16, 2)
-  } else if entity.has_prefix("#") {
-    (10, 1)
-  } else {
+fn xml_source_range_equals(
+  source : String,
+  start : Int,
+  end : Int,
+  expected : String,
+) -> Bool {
+  if end - start != expected.length() {
+    return false
+  }
+  for offset in 0..<expected.length() {
+    if source[start + offset] != expected[offset] {
+      return false
+    }
+  }
+  true
+}
+
+///|
+/// Bounds a source range before it participates in an error message without
+/// first copying an attacker-sized entity token.
+fn xml_diagnostic_range(
+  source : String,
+  start : Int,
+  end : Int,
+) -> String raise DocxError {
+  if end - start <= xml_diagnostic_token_chars {
+    return xml_substring(source, start, end)
+  }
+  let output = xml_string_builder_for_units(xml_diagnostic_token_chars)
+  let mut index = start
+  let mut count = 0
+  while index < end && count < xml_diagnostic_token_chars - 1 {
+    let char = match source.get_char(index) {
+      Some(char) => char
+      None => raise InvalidXml(message="invalid UTF-16 in XML content")
+    }
+    output.write_char(char)
+    index += char.utf16_len()
+    count += 1
+  }
+  if index < end {
+    output.write_string("…")
+  }
+  output.to_string()
+}
+
+///|
+/// Decodes one strict entity directly from the parser's borrowed source range.
+/// No entity-sized substring is allocated, including on error paths.
+fn strict_xml_entity_char(
+  source : String,
+  start : Int,
+  end : Int,
+) -> Char raise DocxError {
+  if xml_source_range_equals(source, start, end, "amp") {
+    return '&'
+  }
+  if xml_source_range_equals(source, start, end, "lt") {
+    return '<'
+  }
+  if xml_source_range_equals(source, start, end, "gt") {
+    return '>'
+  }
+  if xml_source_range_equals(source, start, end, "quot") {
+    return '"'
+  }
+  if xml_source_range_equals(source, start, end, "apos") {
+    return '\''
+  }
+  if start >= end || source[start] != '#' {
     raise InvalidXml(
-      message="undeclared XML entity: &" + xml_diagnostic_token(entity) + ";",
+      message="undeclared XML entity: &" +
+        xml_diagnostic_range(source, start, end) +
+        ";",
     )
   }
-  if start >= entity.length() {
+  let (base, digits_start) = if start + 1 < end && source[start + 1] == 'x' {
+    (16, start + 2)
+  } else {
+    (10, start + 1)
+  }
+  if digits_start >= end {
     raise InvalidXml(message="malformed numeric XML entity")
   }
   let mut codepoint = 0
-  for index = start; index < entity.length(); index = index + 1 {
-    let char = entity[index]
+  for index in digits_start..<end {
+    let char = source[index]
     let digit = if char >= '0' && char <= '9' {
       char.to_int() - '0'.to_int()
     } else if base == 16 && char >= 'A' && char <= 'F' {
@@ -2126,83 +2286,135 @@ fn strict_numeric_xml_entity(entity : String) -> String raise DocxError {
     }
     codepoint = codepoint * base + digit
   }
-  let char = match Int::to_char(codepoint) {
+  match Int::to_char(codepoint) {
     Some(char) if is_xml_character(char) => char
     _ => raise InvalidXml(message="numeric XML entity is not an XML character")
   }
-  char.to_string()
 }
 
 ///|
-fn decode_xml_entity_strict(entity : String) -> String raise DocxError {
-  match entity {
-    "amp" => "&"
-    "lt" => "<"
-    "gt" => ">"
-    "quot" => "\""
-    "apos" => "'"
-    _ => strict_numeric_xml_entity(entity)
-  }
-}
-
-///|
-/// Applies XML 1.0 source normalization before entity replacement. Character
-/// references are still encoded at this stage, so references such as `&#xD;`
-/// retain their referenced value while literal CR and CRLF sequences become LF.
-fn normalize_xml_source_text(
-  value : String,
+/// First pass over a borrowed strict token: validates every entity and computes
+/// the exact UTF-16 output size without allocating raw or normalized copies.
+fn strict_xml_decoded_shape(
+  source : String,
+  start : Int,
+  end : Int,
   attribute~ : Bool,
-) -> String raise DocxError {
-  let builder = StringBuilder()
-  let mut index = 0
-  while index < value.length() {
-    let char = match value.get_char(index) {
-      Some(char) => char
-      None => raise InvalidXml(message="invalid UTF-16 in XML content")
-    }
-    if char == '\r' {
-      let next = index + char.utf16_len()
-      if next < value.length() && value[next] == '\n' {
-        index = next
+  entities~ : Bool,
+) -> (Int, Bool) raise DocxError {
+  let mut index = start
+  let mut output_units = 0
+  let mut changed = false
+  while index < end {
+    if entities && source[index] == '&' {
+      let mut entity_end = index + 1
+      while entity_end < end && source[entity_end] != ';' {
+        entity_end += 1
       }
-      builder.write_char(if attribute { ' ' } else { '\n' })
-    } else if attribute && (char == '\t' || char == '\n') {
-      builder.write_char(' ')
-    } else {
-      builder.write_char(char)
-    }
-    index = index + char.utf16_len()
-  }
-  builder.to_string()
-}
-
-///|
-fn decode_xml_entities_strict(
-  value : String,
-  attribute~ : Bool,
-) -> String raise DocxError {
-  let normalized = normalize_xml_source_text(value, attribute~)
-  let builder = StringBuilder()
-  let mut index = 0
-  while index < normalized.length() {
-    if normalized[index] == '&' {
-      let length = match normalized[index:].find(";") {
-        Some(length) => length
-        None => raise InvalidXml(message="unterminated XML entity")
+      if entity_end >= end {
+        raise InvalidXml(message="unterminated XML entity")
       }
-      let entity = xml_substring(normalized, index + 1, index + length)
-      builder.write_string(decode_xml_entity_strict(entity))
-      index = index + length + 1
+      output_units += strict_xml_entity_char(source, index + 1, entity_end).utf16_len()
+      changed = true
+      index = entity_end + 1
     } else {
-      let char = match normalized.get_char(index) {
+      let char = match source.get_char(index) {
         Some(char) => char
         None => raise InvalidXml(message="invalid UTF-16 in XML content")
       }
-      builder.write_char(char)
-      index = index + char.utf16_len()
+      let next = index + char.utf16_len()
+      if char == '\r' {
+        changed = true
+        output_units += 1
+        index = if next < end && source[next] == '\n' { next + 1 } else { next }
+      } else if attribute && (char == '\t' || char == '\n') {
+        changed = true
+        output_units += 1
+        index = next
+      } else {
+        output_units += char.utf16_len()
+        index = next
+      }
     }
   }
-  builder.to_string()
+  (output_units, changed)
+}
+
+///|
+/// Second pass writes directly from the borrowed source into one exactly-sized
+/// result buffer. Character references are decoded before literal line-ending
+/// normalization, preserving values such as `&#xD;` as required by XML 1.0.
+fn write_strict_xml_decoded_range(
+  output : StringBuilder,
+  source : String,
+  start : Int,
+  end : Int,
+  attribute~ : Bool,
+  entities~ : Bool,
+) -> Unit raise DocxError {
+  let mut index = start
+  while index < end {
+    if entities && source[index] == '&' {
+      let mut entity_end = index + 1
+      while entity_end < end && source[entity_end] != ';' {
+        entity_end += 1
+      }
+      output.write_char(strict_xml_entity_char(source, index + 1, entity_end))
+      index = entity_end + 1
+    } else {
+      let char = match source.get_char(index) {
+        Some(char) => char
+        None => raise InvalidXml(message="invalid UTF-16 in XML content")
+      }
+      let next = index + char.utf16_len()
+      if char == '\r' {
+        output.write_char(if attribute { ' ' } else { '\n' })
+        index = if next < end && source[next] == '\n' { next + 1 } else { next }
+      } else if attribute && (char == '\t' || char == '\n') {
+        output.write_char(' ')
+        index = next
+      } else {
+        output.write_char(char)
+        index = next
+      }
+    }
+  }
+}
+
+///|
+/// Fuses strict source normalization and entity decoding over a borrowed range.
+/// The unchanged fast path makes one exact copy; transformed tokens use a
+/// validation/size pass followed by one exactly-sized output allocation.
+fn decode_strict_xml_range(
+  source : String,
+  start : Int,
+  end : Int,
+  attribute~ : Bool,
+  entities~ : Bool,
+) -> String raise DocxError {
+  let (output_units, changed) = strict_xml_decoded_shape(
+    source,
+    start,
+    end,
+    attribute~,
+    entities~,
+  )
+  if output_units == 0 {
+    return ""
+  }
+  if !changed {
+    return xml_substring(source, start, end)
+  }
+  let output = xml_string_builder_for_units(output_units)
+  write_strict_xml_decoded_range(
+    output,
+    source,
+    start,
+    end,
+    attribute~,
+    entities~,
+  )
+  output.to_string()
 }
 
 ///|
