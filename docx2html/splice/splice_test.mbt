@@ -140,7 +140,7 @@ test "D1: source-pinned plans compose and serialize through a hard ceiling" {
         require_pins=true,
       )
     },
-    "could not repack the package",
+    "the spliced package exceeds the output limit",
   )
 }
 

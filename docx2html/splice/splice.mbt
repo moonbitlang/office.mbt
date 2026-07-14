@@ -1,14 +1,16 @@
 // L0 — the byte-span preservation layer. The XML layer is canonicalizing
 // (write(parse(x)) != x), so annotation surgery on EXISTING documents
 // never reserializes: it splices well-formed fragments into the original
-// part bytes at scanner-derived offsets and repacks the zip, keeping
-// every untouched source record byte-for-byte. Guarantees (the L0 contract):
+// part bytes at scanner-derived offsets and repacks the zip, preserving
+// untouched source records under the ZIP format's offset rules. Guarantees
+// (the L0 contract):
 //
 // - Mutated parts are byte-identical OUTSIDE the declared edit spans.
-// - Untouched source entries retain their raw local/central records, order,
-//   names, compression payloads, descriptors, and archive metadata. Rewritten
-//   entries retain their source header policy while replacing only payload-
-//   dependent fields. Fresh in-memory archives have no source records to keep.
+// - Untouched source entries retain their raw local records, order, names,
+//   compression payloads, descriptors, and producer metadata. Central records
+//   retain all metadata except the required local-offset field when preceding
+//   sizes move. Rewritten entries retain their source header policy while
+//   replacing payload-dependent fields. Fresh archives have no source records.
 // - Fail-closed, all-or-nothing: duplicate zip entries, missing or
 //   already-existing parts, overlapping or out-of-range spans, non-UTF-8
 //   story encodings, and edits that leave a part XML-malformed all raise
@@ -285,6 +287,10 @@ pub fn splice_docx_archive(
   }
   let output = build_spliced_archive(original, plan, require_pins)
   @mbtzip.write_limited(output, max_output_bytes~) catch {
+    OutputLimitExceeded(limit~) =>
+      raise Unsupported(
+        message="the spliced package exceeds the output limit of \{limit} bytes",
+      )
     err =>
       raise InvalidZip(message="could not repack the package: \{to_repr(err)}")
   }

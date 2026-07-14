@@ -39,3 +39,11 @@ can detect contract drift. Command families publish explicit variant schemas;
 the raw record describes every `list`, `read`, `replace`, and `edit` input,
 output, constraint, and output mode. PowerPoint and MCP are intentionally
 absent.
+
+The `bobzhang/office/docx` package provides the preservation-safe SDK layer for
+editing existing DOCX files. Its async `transact_docx` entry point composes the
+A4 bounded read and atomic publisher with exact source-pinned byte-splice plans,
+strict archive-backed DOCX validation, and the authoritative transaction
+preservation report. It is deliberately not listed by `office help` yet: the
+package is the foundation for later user-facing DOCX commands, not a partial
+CLI promise.
