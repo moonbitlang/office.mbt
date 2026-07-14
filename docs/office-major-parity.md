@@ -53,7 +53,9 @@ bounded A4 transaction boundary:
 - strict OPC validation and the archive-backed annotation index each charge one
   cumulative XML budget across package parts before UTF-8 decode and DOM
   allocation, bounding sibling-dense and many-part inputs rather than granting
-  every part a fresh parser allowance;
+  every part a fresh parser allowance; OPC maps reject duplicate normalized
+  content-type keys and every relationship scope rejects missing or duplicate
+  ids;
 - comment bodies are structurally preflighted before derived trees or reply
   paragraph ids are allocated, then serialized only after an escape-aware exact
   UTF-8 sizing pass; the transaction grants a fragment at most one eighth of

@@ -305,6 +305,86 @@ test "content-type coverage requires a default or an override" {
 }
 
 ///|
+test "content types reject duplicate normalized declaration keys" {
+  let types =
+    #|<?xml version="1.0"?>
+    #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+    #|<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+    #|<Default Extension="xml" ContentType="application/xml"/>
+    #|<Default Extension="XML" ContentType="application/duplicate+xml"/>
+    #|<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+    #|<Override PartName="/word/./document.xml" ContentType="application/duplicate+xml"/>
+    #|</Types>
+  let findings = @opc.validate_docx_package(
+    minimal_docx(content_types=Some(types)),
+  )
+  assert_true(
+    findings.search_by(finding => {
+      finding.contains(
+        "duplicate Default Extension after case normalization: xml",
+      )
+    })
+    is Some(_),
+  )
+  assert_true(
+    findings.search_by(finding => {
+      finding.contains(
+        "duplicate Override PartName after path normalization: /word/document.xml",
+      )
+    })
+    is Some(_),
+  )
+  assert_true(
+    findings.search_by(finding => {
+      finding.contains(
+        "Override PartName is not canonical: /word/./document.xml",
+      )
+    })
+    is Some(_),
+  )
+}
+
+///|
+test "each relationships part requires unique non-empty ids" {
+  let root_rels =
+    #|<?xml version="1.0"?>
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+    #|<Relationship Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+    #|<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+    #|<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.com" TargetMode="External"/>
+    #|</Relationships>
+  let document_rels =
+    #|<?xml version="1.0"?>
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+    #|<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://one.example" TargetMode="External"/>
+    #|<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://two.example" TargetMode="External"/>
+    #|</Relationships>
+  let findings = @opc.validate_docx_package(
+    minimal_docx(root_rels=Some(root_rels), extra=[
+      ("word/_rels/document.xml.rels", utf8_bytes(document_rels)),
+    ]),
+  )
+  assert_true(
+    findings.search_by(finding => {
+      finding == "_rels/.rels: Relationship missing a non-empty Id"
+    })
+    is Some(_),
+  )
+  assert_true(
+    findings.search_by(finding => {
+      finding == "_rels/.rels: duplicate Relationship Id: rId1"
+    })
+    is Some(_),
+  )
+  assert_true(
+    findings.search_by(finding => {
+      finding == "word/_rels/document.xml.rels: duplicate Relationship Id: rId1"
+    })
+    is Some(_),
+  )
+}
+
+///|
 test "malformed entry names are findings" {
   debug_inspect(
     @opc.validate_docx_package(
