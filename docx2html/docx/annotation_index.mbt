@@ -452,6 +452,11 @@ pub struct DocxAnnotatedResult {
   // The comments part's zip entry when the package has one (resolved
   // by relationship type), for L1's splice-into-existing path.
   priv comments_part_name : String?
+  // A conventional comments part may remain readable for legacy inspection
+  // without being usable annotation state. Candidate validation must reject
+  // this orphan instead of treating the filename fallback as relationship
+  // wiring.
+  priv orphan_comments_part_present : Bool
   // Relationship types of known annotation sidecars present on the
   // main part that mutating commands cannot keep consistent.
   priv sidecar_types : Array[String]
@@ -669,6 +674,8 @@ fn read_docx_annotated_zip(
   // must not make an orphan word/comments.xml look wired (mutating it
   // without wiring would publish disconnected definitions).
   let comments_part_resolved = parts.comments_part_path
+  let orphan_comments_part_present = comments_part_resolved is None &&
+    zip.exists("word/comments.xml")
   let comments_extended_resolved = parts.comments_extended_part_path
   let sidecar_types : Array[String] = []
   for
@@ -712,6 +719,7 @@ fn read_docx_annotated_zip(
     index,
     main_part: parts.main_document_path,
     comments_part_name: comments_part_resolved,
+    orphan_comments_part_present,
     sidecar_types,
     comments_extended_part_name: comments_extended_resolved,
     main_wordprocessing_dialect,

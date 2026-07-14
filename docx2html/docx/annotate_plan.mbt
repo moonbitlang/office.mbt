@@ -338,6 +338,11 @@ fn check_mutation_gates(
 fn check_annotation_identity_state(
   annotated : DocxAnnotatedResult,
 ) -> Unit raise DocxError {
+  if annotated.orphan_comments_part_present {
+    raise Unsupported(
+      message="'word/comments.xml' exists but is not wired as the comments part (an orphan); refusing to annotate",
+    )
+  }
   let index = annotated.annotations()
   if !index.identity_source_complete {
     raise Unsupported(
