@@ -8,13 +8,15 @@ fn tiny_package() -> Bytes raise {
 }
 
 ///|
-fn namespace_heavy_splice_source(binding_count : Int) -> String {
+fn reused_namespace_splice_source(uri_chars : Int, child_count : Int) -> String {
   let source = StringBuilder()
-  source.write_string("<root")
-  for index in 0..<binding_count {
-    source.write_string(" xmlns:n\{index}=\"urn:n\{index}\"")
+  source.write_string("<root xmlns:n=\"")
+  source.write_string("u".repeat(uri_chars))
+  source.write_string("\">")
+  for _ in 0..<child_count {
+    source.write_string("<n:x/>")
   }
-  source.write_string("></root>")
+  source.write_string("</root>")
   source.to_string()
 }
 
@@ -196,20 +198,12 @@ test "D1: bounded preflight rejects compressible payloads and oversized manifest
 }
 
 ///|
-test "D1: splice XML validation charges namespace snapshots cumulatively" {
-  let source = namespace_heavy_splice_source(32)
-  guard source.find("</root>") is Some(insert_at)
+test "D1: splice XML validation charges reused namespace-derived names" {
+  let source = reused_namespace_splice_source(4_096, 32)
   let archive = @mbtzip.Archive::new()
   archive.add("dense.xml", @utf8.encode(source))
   let plan = @splice.SplicePlan::new()
-  plan.edit_part(
-    "dense.xml",
-    @splice.span_edit(
-      start=insert_at,
-      end=insert_at,
-      @utf8.encode("<child/>".repeat(16)),
-    ),
-  )
+  plan.edit_part("dense.xml", @splice.span_edit(start=0, end=0, b""))
   let limits = @splice.splice_limits(
     max_archive_entries=16,
     max_changed_parts=4,
@@ -217,11 +211,11 @@ test "D1: splice XML validation charges namespace snapshots cumulatively" {
     max_entry_uncompressed_bytes=16_384,
     max_total_uncompressed_bytes=32_768,
     max_materialized_bytes=16_384,
-    max_xml_tokens=400,
+    max_xml_tokens=10_000,
   )
   expect_splice_failure(
     () => plan.check_against(archive, limits~),
-    "splicing 'dense.xml' exceeded XML resource limits: XML token budget exceeded",
+    "splicing 'dense.xml' exceeded XML resource limits: XML materialized character budget exceeded",
   )
 }
 

@@ -206,15 +206,14 @@ fn XmlReadBudget::charge_token(
 ///|
 fn XmlReadBudget::charge_namespace_bindings(
   self : XmlReadBudget,
-  bindings : Int,
+  operations : Int,
 ) -> Unit raise DocxError {
-  // A namespace-scope snapshot allocates one map entry per active binding.
-  // Charge that cardinality before Map::copy so deep namespace-heavy input
-  // cannot hide quadratic allocation behind a linear element token count.
-  if bindings < 0 || bindings > self.remaining_tokens {
+  // Namespace declarations allocate one scope-delta record and later restore
+  // one map binding. Charge both operations before recording the declaration.
+  if operations < 0 || operations > self.remaining_tokens {
     raise InvalidXml(message="XML token budget exceeded")
   }
-  self.remaining_tokens -= bindings
+  self.remaining_tokens -= operations
 }
 
 ///|
@@ -853,6 +852,15 @@ priv struct XmlParser {
 }
 
 ///|
+/// One reversible namespace declaration. Scope restoration applies these
+/// deltas in reverse order, avoiding full-map snapshots and retained-capacity
+/// clear/copy cycles for sibling elements.
+priv struct NamespaceBindingChange {
+  prefix : String
+  previous : String?
+}
+
+///|
 fn XmlParser::parse_element(self : XmlParser) -> XmlElement raise DocxError {
   let max_depth = if self.strict { strict_xml_max_depth } else { xml_max_depth }
   if self.depth >= max_depth {
@@ -881,14 +889,58 @@ fn XmlParser::charge_token(
 }
 
 ///|
-fn XmlParser::snapshot_namespaces(
+/// Charges an owned name derived from already-tokenized source (for example,
+/// `{namespace-uri}local`). The charge happens before any builder allocation,
+/// so repeatedly reusing a long namespace URI cannot amplify a small source
+/// into unbounded derived strings.
+fn XmlParser::charge_derived_name(
   self : XmlParser,
-) -> Map[String, String] raise DocxError {
+  chars : Int,
+) -> Unit raise DocxError {
+  self.charge_token(chars)
+}
+
+///|
+fn xml_derived_name_length(
+  first : Int,
+  second : Int,
+  punctuation : Int,
+) -> Int raise DocxError {
+  let total = first.to_int64() + second.to_int64() + punctuation.to_int64()
+  if first < 0 || second < 0 || punctuation < 0 || total > 2147483647L {
+    raise InvalidXml(message="XML materialized character budget exceeded")
+  }
+  total.to_int()
+}
+
+///|
+fn XmlParser::record_namespace_binding(
+  self : XmlParser,
+  prefix : String,
+  namespace_uri : String,
+  changes : Array[NamespaceBindingChange],
+) -> Unit raise DocxError {
   match self.budget {
-    Some(budget) => budget.charge_namespace_bindings(self.namespaces.length())
+    // One delta allocation and one eventual restore/remove operation.
+    Some(budget) => budget.charge_namespace_bindings(2)
     None => ()
   }
-  self.namespaces.copy()
+  changes.push({ prefix, previous: self.namespaces.get(prefix) })
+  self.namespaces[prefix] = namespace_uri
+}
+
+///|
+fn XmlParser::restore_namespace_bindings(
+  self : XmlParser,
+  changes : Array[NamespaceBindingChange],
+) -> Unit {
+  for offset in 0..<changes.length() {
+    let change = changes[changes.length() - offset - 1]
+    match change.previous {
+      Some(previous) => self.namespaces[change.prefix] = previous
+      None => self.namespaces.remove(change.prefix)
+    }
+  }
 }
 
 ///|
@@ -898,21 +950,19 @@ fn XmlParser::parse_element_inner_tolerant(
   self.expect("<")
   let raw_name = self.read_name()
   let raw_attributes : Array[(String, String)] = []
-  let saved_namespaces = self.snapshot_namespaces()
+  let namespace_changes : Array[NamespaceBindingChange] = []
   while true {
     self.skip_whitespace()
     if self.starts_with("/>") {
       self.pos = self.pos + 2
       let element = self.build_element(raw_name, raw_attributes, [])
-      self.namespaces.clear()
-      self.namespaces.merge_in_place(saved_namespaces)
+      self.restore_namespace_bindings(namespace_changes)
       return element
     } else if self.starts_with(">") {
       self.pos = self.pos + 1
       let children = self.parse_children(raw_name)
       let element = self.build_element(raw_name, raw_attributes, children)
-      self.namespaces.clear()
-      self.namespaces.merge_in_place(saved_namespaces)
+      self.restore_namespace_bindings(namespace_changes)
       return element
     } else {
       let attr_name = self.read_name()
@@ -921,9 +971,11 @@ fn XmlParser::parse_element_inner_tolerant(
       self.skip_whitespace()
       let attr_value = self.read_quoted_value()
       if attr_name == "xmlns" {
-        self.namespaces[""] = attr_value
+        self.record_namespace_binding("", attr_value, namespace_changes)
       } else if attr_name.has_prefix("xmlns:") {
-        self.namespaces[attr_name[6:].to_owned()] = attr_value
+        self.charge_derived_name(attr_name.length() - 6)
+        let prefix = attr_name[6:].to_owned()
+        self.record_namespace_binding(prefix, attr_value, namespace_changes)
       } else {
         raw_attributes.push((attr_name, attr_value))
       }
@@ -945,21 +997,19 @@ fn XmlParser::parse_element_inner_strict(
   }
   let raw_attributes : Array[(String, String)] = []
   let raw_attribute_names : Map[String, Bool] = Map([])
-  let saved_namespaces = self.snapshot_namespaces()
+  let namespace_changes : Array[NamespaceBindingChange] = []
   while true {
     let separated = self.skip_whitespace_and_report()
     if self.starts_with("/>") {
       self.pos = self.pos + 2
       let element = self.build_element(raw_name, raw_attributes, [])
-      self.namespaces.clear()
-      self.namespaces.merge_in_place(saved_namespaces)
+      self.restore_namespace_bindings(namespace_changes)
       return element
     } else if self.starts_with(">") {
       self.pos = self.pos + 1
       let children = self.parse_children(raw_name)
       let element = self.build_element(raw_name, raw_attributes, children)
-      self.namespaces.clear()
-      self.namespaces.merge_in_place(saved_namespaces)
+      self.restore_namespace_bindings(namespace_changes)
       return element
     } else {
       if !separated {
@@ -988,15 +1038,16 @@ fn XmlParser::parse_element_inner_strict(
           attribute=true,
         )
         validate_namespace_declaration("", namespace_uri)
-        self.namespaces[""] = namespace_uri
+        self.record_namespace_binding("", namespace_uri, namespace_changes)
       } else if attr_name.has_prefix("xmlns:") {
+        self.charge_derived_name(attr_name.length() - 6)
         let prefix = attr_name[6:].to_owned()
         let namespace_uri = decode_xml_entities_strict(
           attr_value,
           attribute=true,
         )
         validate_namespace_declaration(prefix, namespace_uri)
-        self.namespaces[prefix] = namespace_uri
+        self.record_namespace_binding(prefix, namespace_uri, namespace_changes)
       } else {
         raw_attributes.push((attr_name, attr_value))
       }
@@ -1123,8 +1174,9 @@ fn XmlParser::map_name(
 ) -> String raise DocxError {
   match raw_name.find(":") {
     Some(index) => {
+      self.charge_derived_name(index)
       let prefix = raw_name[:index].to_owned()
-      let local_name = raw_name[index + 1:].to_owned()
+      let local_name = raw_name[index + 1:]
       match self.namespaces.get(prefix) {
         Some(uri) => self.map_uri_name(uri, local_name)
         None =>
@@ -1159,10 +1211,11 @@ fn XmlParser::expanded_name(
 ) -> String raise DocxError {
   match raw_name.find(":") {
     Some(index) => {
+      self.charge_derived_name(index)
       let prefix = raw_name[:index].to_owned()
-      let local_name = raw_name[index + 1:].to_owned()
+      let local_name = raw_name[index + 1:]
       match self.namespaces.get(prefix) {
-        Some(uri) => "{" + uri + "}" + local_name
+        Some(uri) => self.materialize_braced_name(uri, local_name)
         None =>
           raise InvalidXml(
             message="unbound XML namespace prefix: " +
@@ -1175,11 +1228,42 @@ fn XmlParser::expanded_name(
         raw_name
       } else {
         match self.namespaces.get("") {
-          Some(uri) if uri != "" => "{" + uri + "}" + raw_name
+          Some(uri) if uri != "" => self.materialize_braced_name(uri, raw_name)
           _ => raw_name
         }
       }
   }
+}
+
+///|
+fn XmlParser::materialize_braced_name(
+  self : XmlParser,
+  uri : String,
+  local_name : StringView,
+) -> String raise DocxError {
+  let chars = xml_derived_name_length(uri.length(), local_name.length(), 2)
+  self.charge_derived_name(chars)
+  let builder = StringBuilder()
+  builder.write_char('{')
+  builder.write_string(uri)
+  builder.write_char('}')
+  builder.write_view(local_name)
+  builder.to_string()
+}
+
+///|
+fn XmlParser::materialize_prefixed_name(
+  self : XmlParser,
+  prefix : String,
+  local_name : StringView,
+) -> String raise DocxError {
+  let chars = xml_derived_name_length(prefix.length(), local_name.length(), 1)
+  self.charge_derived_name(chars)
+  let builder = StringBuilder()
+  builder.write_string(prefix)
+  builder.write_char(':')
+  builder.write_view(local_name)
+  builder.to_string()
 }
 
 ///|
@@ -1211,16 +1295,20 @@ fn validate_namespace_declaration(
 fn XmlParser::map_uri_name(
   self : XmlParser,
   uri : String,
-  local_name : String,
-) -> String {
+  local_name : StringView,
+) -> String raise DocxError {
+  // Map lookup hashes the complete namespace URI. Charge that reused input
+  // before hashing so a single long declaration referenced by many short
+  // names cannot hide repeated O(uri.length) work behind tiny source tokens.
+  self.charge_derived_name(uri.length())
   match self.namespace_map.get(uri) {
     Some(prefix) =>
       if prefix == "" {
-        "{" + uri + "}" + local_name
+        self.materialize_braced_name(uri, local_name)
       } else {
-        prefix + ":" + local_name
+        self.materialize_prefixed_name(prefix, local_name)
       }
-    None => "{" + uri + "}" + local_name
+    None => self.materialize_braced_name(uri, local_name)
   }
 }
 

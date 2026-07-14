@@ -956,12 +956,23 @@ fn validate_identity_only_story_xml(
   let budget = match shared_budget {
     Some(value) => value
     None => {
-      let allowance = if bytes.length() > 0 { bytes.length() } else { 1 }
+      // Raw tokens plus namespace-prefix copies and mapped expanded names are
+      // all input-linear but can exceed the byte count by a small constant.
+      // Keep the fallback bounded while leaving room for those charged
+      // derived allocations.
+      let scaled = bytes.length().to_int64() * 4L
+      let allowance = if scaled <= 0L {
+        1
+      } else if scaled > 2147483647L {
+        2147483647
+      } else {
+        scaled.to_int()
+      }
       @xml.xml_read_budget(
         max_source_units=bytes.length(),
         max_tokens=allowance,
         max_materialized_chars=allowance,
-        max_token_chars=allowance,
+        max_token_chars=if bytes.length() > 0 { bytes.length() } else { 1 },
       )
     }
   }
