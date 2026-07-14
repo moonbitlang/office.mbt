@@ -51,6 +51,13 @@ nesting, and every inherited namespace binding copied into an element scope, so
 many individually small parts, sibling-dense XML, or namespace-heavy trees
 cannot turn nominally linear limits into aggregate growth.
 
+Annotation verification, raw marker scans, public anchors, and degraded-path
+fallbacks also share one 8 Mi-character derived-path budget across all stories.
+Paths are charged before they are materialized and, for transaction-backed
+reads, against the same cumulative XML copied-character budget. Deep or broad
+documents therefore cannot multiply retained descendant-path strings outside
+the XML accounting envelope.
+
 Reply and resolution planning reuse the annotation index's remaining XML
 budget when they inspect the main relationship graph and paraIds. This includes
 header, footer, and note targets that are wired but not section-referenced, so
