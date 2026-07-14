@@ -3,6 +3,14 @@
 pub type ZipArchive = @zip.ZipArchive
 
 ///|
+/// Builds a ZIP view from an entry map.
+pub fn zip_archive(
+  entries : Map[String, BytesView],
+) -> ZipArchive raise DocxError {
+  bridge_core_error(() => @zip.zip_archive(entries))
+}
+
+///|
 /// Opens ZIP bytes into an in-memory archive.
 pub fn open_zip(data : BytesView) -> ZipArchive raise DocxError {
   bridge_core_error(() => @zip.open_zip(data))

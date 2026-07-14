@@ -72,7 +72,7 @@ fn convert_document_to_html(
 fn empty_body_reader(relationships : Relationships) -> BodyReader {
   {
     styles: Map([]),
-    zip: { entries: Map([]) },
+    zip: try! @zip.zip_archive(Map([])),
     relationships,
     content_types: { defaults: Map([]), overrides: Map([]) },
     base_path: "word",
@@ -90,7 +90,7 @@ fn body_reader_with_numbering(
 ) -> BodyReader {
   {
     styles,
-    zip: { entries: Map([]) },
+    zip: try! @zip.zip_archive(Map([])),
     relationships: { relationships: [] },
     content_types: { defaults: Map([]), overrides: Map([]) },
     base_path: "word",
@@ -114,9 +114,17 @@ fn numbering_from_xml(
 
 ///|
 fn zip_with_text(path : String, text : String) -> ZipArchive {
-  let entries : Map[String, BytesView] = Map([])
-  entries[path] = @utf8.encode(text)
-  { entries, }
+  zip_with_text_entries([(path, text)])
+}
+
+///|
+fn zip_with_text_entries(entries : Array[(String, String)]) -> ZipArchive {
+  let encoded : Map[String, BytesView] = Map([])
+  for entry in entries {
+    let (path, text) = entry
+    encoded[path] = @utf8.encode(text)
+  }
+  try! @zip.zip_archive(encoded)
 }
 
 ///|
@@ -131,13 +139,6 @@ fn relationship_part(relationship_type : String, target : String) -> String {
   "\" Target=\"" +
   target +
   "\" /></Relationships>"
-}
-
-///|
-fn empty_docx_zip() -> ZipArchive {
-  let xml =
-    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body /></w:document>
-  zip_with_text("word/document.xml", xml)
 }
 
 ///|
@@ -664,11 +665,13 @@ test "docx external file URI paths follow Mammoth local URI rules" {
 ///|
 test "docx main document path follows package relationships and fallback" {
   let office_document_type = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
-  let from_relationship = zip_with_text(
-    "_rels/.rels",
-    relationship_part(office_document_type, "/word/document2.xml"),
-  )
-  from_relationship.entries["word/document2.xml"] = @utf8.encode(" ")
+  let from_relationship = zip_with_text_entries([
+    (
+      "_rels/.rels",
+      relationship_part(office_document_type, "/word/document2.xml"),
+    ),
+    ("word/document2.xml", " "),
+  ])
   let resolved = find_main_document(from_relationship)
   inspect(resolved.path, content="word/document2.xml")
   assert_true(resolved.relationship_dialect is Some(TransitionalOoxml))
@@ -676,14 +679,16 @@ test "docx main document path follows package relationships and fallback" {
   let resolved_fallback = find_main_document(fallback)
   inspect(resolved_fallback.path, content="word/document.xml")
   assert_true(resolved_fallback.relationship_dialect is None)
-  let strict = zip_with_text(
-    "_rels/.rels",
-    relationship_part(
-      STRICT_OFFICE_DOCUMENT_RELATIONSHIP,
-      "/strict/document.xml",
+  let strict = zip_with_text_entries([
+    (
+      "_rels/.rels",
+      relationship_part(
+        STRICT_OFFICE_DOCUMENT_RELATIONSHIP,
+        "/strict/document.xml",
+      ),
     ),
-  )
-  strict.entries["strict/document.xml"] = @utf8.encode(" ")
+    ("strict/document.xml", " "),
+  ])
   assert_true(
     find_main_document(strict).relationship_dialect is Some(StrictOoxml),
   )
@@ -766,7 +771,7 @@ test "docx related part paths use existing relationship targets before fallbacks
 
 ///|
 test "docx xml part reader reports missing parts" {
-  try read_xml_part({ entries: Map([]) }, "word/missing.xml") catch {
+  try read_xml_part(try! @zip.zip_archive(Map([])), "word/missing.xml") catch {
     MissingPart(message~) =>
       inspect(message, content="missing DOCX part: word/missing.xml")
     _ => fail("expected MissingPart")
@@ -1504,7 +1509,7 @@ test "docx table properties include table style name" {
         name: "Normal Table",
       },
     },
-    zip: { entries: Map([]) },
+    zip: try! @zip.zip_archive(Map([])),
     relationships: { relationships: [] },
     content_types: { defaults: Map([]), overrides: Map([]) },
     base_path: "word",
@@ -1646,8 +1651,10 @@ test "docx reader resolves hyperlink relationships from document part" {
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
     #|  <Relationship Id="rId6" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="http://www.example.com" TargetMode="External" />
     #|</Relationships>
-  let zip = zip_with_text("word/document.xml", document_xml)
-  zip.entries["word/_rels/document.xml.rels"] = @utf8.encode(relationships_xml)
+  let zip = zip_with_text_entries([
+    ("word/document.xml", document_xml),
+    ("word/_rels/document.xml.rels", relationships_xml),
+  ])
   let result = read_docx_zip_with_messages(zip)
   match result.document {
     Document(children~, ..) =>
@@ -1676,14 +1683,17 @@ test "docx reader resolves styles from document relationships" {
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:pStyle w:val="Custom" /></w:pPr></w:p></w:body></w:document>
   let styles_xml =
     #|<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:style w:type="paragraph" w:styleId="Custom"><w:name w:val="Custom Style" /></w:style></w:styles>
-  let zip = zip_with_text("word/document.xml", document_xml)
-  zip.entries["word/_rels/document.xml.rels"] = @utf8.encode(
-    relationship_part(
-      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
-      "custom-styles.xml",
+  let zip = zip_with_text_entries([
+    ("word/document.xml", document_xml),
+    (
+      "word/_rels/document.xml.rels",
+      relationship_part(
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
+        "custom-styles.xml",
+      ),
     ),
-  )
-  zip.entries["word/custom-styles.xml"] = @utf8.encode(styles_xml)
+    ("word/custom-styles.xml", styles_xml),
+  ])
   match read_docx_zip_with_messages(zip).document {
     Document(children~, ..) =>
       match children[0] {
@@ -1815,9 +1825,16 @@ test "docx note and comment reader warnings are preserved" {
       #|[Warning("An unrecognised element was ignored: w:not-an-element")]
     ),
   )
-  let docx = empty_docx_zip()
-  docx.entries["word/footnotes.xml"] = @utf8.encode(footnotes_xml)
-  docx.entries["word/comments.xml"] = @utf8.encode(comments_xml)
+  let docx = zip_with_text_entries([
+    (
+      "word/document.xml",
+      (
+        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body /></w:document>
+      ),
+    ),
+    ("word/footnotes.xml", footnotes_xml),
+    ("word/comments.xml", comments_xml),
+  ])
   debug_inspect(
     read_docx_zip_with_messages(docx).messages,
     content=(
@@ -1871,7 +1888,7 @@ test "docx document xml reader rejects missing body" {
       root,
       Map([]),
       NumberingMap::empty(),
-      { entries: Map([]) },
+      try! @zip.zip_archive(Map([])),
       { relationships: [] },
       { defaults: Map([]), overrides: Map([]) },
       "word",
@@ -3174,7 +3191,7 @@ test "docx transparent wrappers pass through children" {
 fn drawing_image_reader_with_images(read_images : Bool) -> BodyReader {
   {
     styles: Map([]),
-    zip: { entries: { "word/media/tiny.png": b"abc" } },
+    zip: try! @zip.zip_archive({ "word/media/tiny.png": b"abc" }),
     relationships: {
       relationships: [
         {
@@ -3284,7 +3301,7 @@ test "docx linked DrawingML images use the external loader" {
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   let reader = BodyReader::{
     styles: Map([]),
-    zip: { entries: Map([]) },
+    zip: try! @zip.zip_archive(Map([])),
     relationships: {
       relationships: [
         {
@@ -3322,7 +3339,7 @@ test "docx linked DrawingML image loader tries decoded file URI paths" {
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   let reader = BodyReader::{
     styles: Map([]),
-    zip: { entries: Map([]) },
+    zip: try! @zip.zip_archive(Map([])),
     relationships: {
       relationships: [
         {
@@ -3360,7 +3377,7 @@ test "docx embedded DrawingML images ignore relationship target mode" {
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   let reader = BodyReader::{
     styles: Map([]),
-    zip: { entries: { "word/media/hat.png": b"abc" } },
+    zip: try! @zip.zip_archive({ "word/media/hat.png": b"abc" }),
     relationships: {
       relationships: [
         {
@@ -3395,7 +3412,7 @@ test "docx DrawingML image relationship ids follow Mammoth truthiness" {
   )
   let linked_reader = BodyReader::{
     styles: Map([]),
-    zip: { entries: Map([]) },
+    zip: try! @zip.zip_archive(Map([])),
     relationships: {
       relationships: [
         {
@@ -3432,7 +3449,7 @@ test "docx DrawingML image relationship ids follow Mammoth truthiness" {
   )
   let blank_link_reader = BodyReader::{
     styles: Map([]),
-    zip: { entries: { "word/media/tiny.png": b"abc" } },
+    zip: try! @zip.zip_archive({ "word/media/tiny.png": b"abc" }),
     relationships: {
       relationships: [
         {
@@ -3618,7 +3635,7 @@ test "docx image reader records Mammoth-compatible warnings" {
   )
   let missing_entry_reader = BodyReader::{
     styles: Map([]),
-    zip: { entries: Map([]) },
+    zip: try! @zip.zip_archive(Map([])),
     relationships: {
       relationships: [
         {
@@ -3707,7 +3724,7 @@ test "docx image reader records Mammoth-compatible warnings" {
   )
   let external_reader = BodyReader::{
     styles: Map([]),
-    zip: { entries: Map([]) },
+    zip: try! @zip.zip_archive(Map([])),
     relationships: {
       relationships: [
         {
@@ -3740,7 +3757,7 @@ test "docx image reader records Mammoth-compatible warnings" {
   )
   let unsupported_reader = BodyReader::{
     styles: Map([]),
-    zip: { entries: { "word/media/hat.emf": b"abc" } },
+    zip: try! @zip.zip_archive({ "word/media/hat.emf": b"abc" }),
     relationships: {
       relationships: [
         {

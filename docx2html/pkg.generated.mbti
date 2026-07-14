@@ -178,6 +178,8 @@ pub fn xml_element(String, attributes? : Map[String, String], children? : Array[
 
 pub fn xml_text(String) -> @xml.XmlNode
 
+pub fn zip_archive(Map[String, BytesView]) -> @zip.ZipArchive raise DocxError
+
 // Errors
 pub(all) suberror DocxError {
   InvalidZip(message~ : String)

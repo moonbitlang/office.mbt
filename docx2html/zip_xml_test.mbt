@@ -27,7 +27,7 @@ test "zip archive reports invalid zip and invalid UTF-8 parts" {
   let entries : Map[String, BytesView] = {
     "bad.xml": Bytes::from_array([b'\xFF']),
   }
-  let zip = @docx2html.ZipArchive::{ entries, }
+  let zip = @docx2html.zip_archive(entries)
   try zip.read_text("bad.xml") catch {
     InvalidXml(message~) =>
       inspect(message, content="part is not valid UTF-8: bad.xml")
