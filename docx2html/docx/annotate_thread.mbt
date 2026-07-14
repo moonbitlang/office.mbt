@@ -224,7 +224,14 @@ fn plan_comment_reply_zip(
     done: false,
     parent_para_id: Some(canonical_para_id(parent_para_id)),
   })
-  queue_comments_extended_edits(plan, zip, annotated, None, additions)
+  queue_comments_extended_edits(
+    plan,
+    zip,
+    annotated,
+    None,
+    additions,
+    xml_budget,
+  )
   pin_splice_sources(plan, zip)
   (plan, new_id)
 }
@@ -341,7 +348,14 @@ fn plan_comment_resolution_zip(
       fresh
     }
   }
-  queue_comments_extended_edits(plan, zip, annotated, Some((key, done)), [])
+  queue_comments_extended_edits(
+    plan,
+    zip,
+    annotated,
+    Some((key, done)),
+    [],
+    xml_budget,
+  )
   pin_splice_sources(plan, zip)
   plan
 }
@@ -1046,6 +1060,7 @@ fn queue_comments_extended_edits(
   annotated : DocxAnnotatedResult,
   flip : (String, Bool)?,
   additions : Array[CommentExEntry],
+  xml_budget : @xml.XmlReadBudget,
 ) -> Unit raise DocxError {
   match annotated.comments_extended_part() {
     Some(part) => {
@@ -1182,15 +1197,9 @@ fn queue_comments_extended_edits(
           message="the main part has no relationships part; refusing",
         )
       }
-      let rels_text = @utf8.decode(rels_bytes, ignore_bom=true) catch {
-        _ => raise Unsupported(message="'\{rels_part}' is not UTF-8; refusing")
-      }
-      let rels_root = @xml.read_xml_string(rels_text) catch {
-        _ =>
-          raise Unsupported(
-            message="'\{rels_part}' is not well-formed XML; refusing",
-          )
-      }
+      let rels_root = read_mutation_relationships(
+        rels_part, rels_bytes, xml_budget,
+      )
       let existing_ids : Set[String] = Set([])
       collect_relationship_ids(rels_root, existing_ids)
       let mut ordinal = 1

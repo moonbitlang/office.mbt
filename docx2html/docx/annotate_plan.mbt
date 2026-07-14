@@ -21,6 +21,7 @@ pub fn plan_comment_addition(
   spec : CommentSpec,
   max_fragment_bytes? : Int = 8 * 1024 * 1024,
 ) -> (@splice.SplicePlan, String) raise DocxError {
+  let xml_budget = default_annotation_planner_xml_budget()
   plan_comment_addition_zip(
     annotated,
     open_zip(original),
@@ -28,6 +29,7 @@ pub fn plan_comment_addition(
     to_relative~,
     spec,
     max_fragment_bytes,
+    xml_budget,
   )
 }
 
@@ -41,8 +43,13 @@ pub fn plan_comment_addition_archive(
   at_relative~ : String,
   to_relative~ : String,
   spec : CommentSpec,
+  xml_budget? : @xml.XmlReadBudget,
   max_fragment_bytes? : Int = 8 * 1024 * 1024,
 ) -> (@splice.SplicePlan, String) raise DocxError {
+  let xml_budget = match xml_budget {
+    Some(value) => value
+    None => default_annotation_planner_xml_budget()
+  }
   plan_comment_addition_zip(
     annotated,
     open_zip_archive(archive),
@@ -50,6 +57,7 @@ pub fn plan_comment_addition_archive(
     to_relative~,
     spec,
     max_fragment_bytes,
+    xml_budget,
   )
 }
 
@@ -61,6 +69,7 @@ fn plan_comment_addition_zip(
   to_relative~ : String,
   spec : CommentSpec,
   max_fragment_bytes : Int,
+  xml_budget : @xml.XmlReadBudget,
 ) -> (@splice.SplicePlan, String) raise DocxError {
   check_mutation_gates(annotated)
   // Anchor spans — misses report the sibling count so agents can
@@ -221,19 +230,11 @@ fn plan_comment_addition_zip(
       match zip.read_bytes(rels_part) {
         Some(rels_bytes) => {
           // Allocate the id by PARSING the rels part — quoting and
-          // whitespace variants make substring probes unsound.
-          let rels_text = @utf8.decode(rels_bytes, ignore_bom=true) catch {
-            _ =>
-              raise Unsupported(
-                message="'\{rels_part}' is not UTF-8; refusing to annotate",
-              )
-          }
-          let rels_root = @xml.read_xml_string(rels_text) catch {
-            _ =>
-              raise Unsupported(
-                message="'\{rels_part}' is not well-formed XML; refusing to annotate",
-              )
-          }
+          // whitespace variants make substring probes unsound. Parse
+          // bytes directly under the caller's cumulative mutation budget.
+          let rels_root = read_mutation_relationships(
+            rels_part, rels_bytes, xml_budget,
+          )
           let existing_ids : Set[String] = Set([])
           collect_relationship_ids(rels_root, existing_ids)
           let mut ordinal = 1
@@ -523,6 +524,43 @@ fn canonical_comment_id(id : String) -> CommentIdClass {
     value = value * 10 + (units[at].to_int() - '0'.to_int())
   }
   CanonicalNumeric(value)
+}
+
+///|
+fn is_mutation_xml_resource_error(message : String) -> Bool {
+  message == "XML source budget exceeded" ||
+  message == "XML token budget exceeded" ||
+  message == "XML token length budget exceeded" ||
+  message == "XML materialized character budget exceeded" ||
+  message == "XML nesting too deep"
+}
+
+///|
+/// Strictly parses a relationship part under the one cumulative budget owned
+/// by the annotation operation. Resource failures retain their typed XML
+/// error so transaction callers can report `office.docx.resource_limit`;
+/// malformed input keeps the planner's fail-closed relationship diagnostic.
+fn read_mutation_relationships(
+  part : String,
+  bytes : BytesView,
+  xml_budget : @xml.XmlReadBudget,
+) -> XmlElement raise DocxError {
+  @xml.read_xml_bytes_strict_limited(
+    bytes,
+    xml_budget,
+    namespace_map=office_namespace_map(),
+  ) catch {
+    InvalidXml(message~) => {
+      if is_mutation_xml_resource_error(message) {
+        raise InvalidXml(message~)
+      }
+      if message == "XML source is not valid UTF-8" {
+        raise Unsupported(message="'\{part}' is not UTF-8; refusing")
+      }
+      raise Unsupported(message="'\{part}' is not well-formed XML; refusing")
+    }
+    _ => raise Unsupported(message="'\{part}' is not well-formed XML; refusing")
+  }
 }
 
 ///|

@@ -317,6 +317,7 @@ pub fn DocxEditSession::queue_comment_addition(
     at_relative~,
     to_relative~,
     spec,
+    xml_budget=self.xml_budget,
     max_fragment_bytes=self.max_comment_fragment_bytes,
   ) catch {
     error => raise mapped_plan_failure(error)
