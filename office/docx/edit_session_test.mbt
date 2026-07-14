@@ -174,6 +174,104 @@ async test "D1 session bounds comment fragments before derived allocation" {
 }
 
 ///|
+async test "D1 session rejects a second semantic comment operation" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let original = @word_fixture.new_blank_docx()
+    write_docx_session_file(input, original)
+    let specification = @word_fixture.comment_spec(author="D1", from=0, to=0, [
+      @word_fixture.paragraph([
+        @word_fixture.run([@word_fixture.text("one at a time")]),
+      ]),
+    ])
+    let first_id = Ref("")
+    let code = docx_session_error_code(() => {
+      @docx.transact_docx(
+        @transaction.transaction_options(input, output_path=output),
+        session => {
+          first_id.val = session.queue_comment_addition(
+            at_relative="p[1]",
+            to_relative="p[1]",
+            specification,
+          )
+          session.queue_comment_addition(
+            at_relative="p[1]",
+            to_relative="p[1]",
+            specification,
+          )
+          |> ignore
+        },
+      )
+    })
+    assert_eq(first_id.val, "0")
+    assert_eq(code, "office.docx.stale_semantic_state")
+    assert_false(@afs.exists(output))
+    assert_eq(@afs.read_file(input).binary(), original)
+  })
+}
+
+///|
+async test "D1 validator rejects generic duplicate comment identities" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let original = @word_fixture.write_docx_with_comments(
+      [
+        @word_fixture.paragraph([
+          @word_fixture.run([@word_fixture.text("Claim")]),
+        ]),
+      ],
+      [
+        @word_fixture.comment_spec(author="Ada", from=0, to=0, [
+          @word_fixture.paragraph([
+            @word_fixture.run([@word_fixture.text("Original")]),
+          ]),
+        ]),
+      ],
+    )
+    let archive = @zip.read(original)
+    let annotated = @word.read_docx_annotated_archive(archive)
+    guard annotated.comments_part() is Some(comments_part) else {
+      fail("fixture is missing its comments part")
+    }
+    guard annotated.story_root_span("/comments") is Some(comments_root) else {
+      fail("fixture is missing its comments root span")
+    }
+    guard comments_root.close_tag_start() is Some(insert_at) else {
+      fail("fixture comments root must use an explicit close tag")
+    }
+    guard archive.get(comments_part) is Some(comments_source) else {
+      fail("fixture comments part is unreadable")
+    }
+    let duplicate = @word.comment_definition_fragment(
+      @word_fixture.comment_spec(author="Mallory", from=0, to=0, [
+        @word_fixture.paragraph([
+          @word_fixture.run([@word_fixture.text("Duplicate identity")]),
+        ]),
+      ]),
+      id="0",
+    )
+    let plan = @splice.SplicePlan::new()
+    plan.pin_part(comments_part, comments_source)
+    plan.edit_part(
+      comments_part,
+      @splice.span_edit(start=insert_at, end=insert_at, @utf8.encode(duplicate)),
+    )
+    write_docx_session_file(input, original)
+    let code = docx_session_error_code(() => {
+      @docx.transact_docx(
+        @transaction.transaction_options(input, output_path=output),
+        session => session.queue_plan(plan),
+      )
+    })
+    assert_eq(code, "office.transaction.validation_failed")
+    assert_false(@afs.exists(output))
+    assert_eq(@afs.read_file(input).binary(), original)
+  })
+}
+
+///|
 async test "D1 session adopts annotation plans with an exact preservation manifest" {
   with_docx_session_test_dir(directory => {
     let input = "\{directory}/input.docx"

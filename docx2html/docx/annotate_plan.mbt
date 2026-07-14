@@ -320,6 +320,13 @@ fn check_mutation_gates(
       message="the document carries annotation sidecar parts this tool cannot keep consistent (\{sidecars.join(", ")}); refusing to annotate",
     )
   }
+  check_annotation_identity_state(annotated)
+}
+
+///|
+fn check_annotation_identity_state(
+  annotated : DocxAnnotatedResult,
+) -> Unit raise DocxError {
   for warning in annotated.annotations().warnings() {
     if warning.find("ambiguous") is Some(_) ||
       warning.find("duplicate") is Some(_) ||
@@ -336,6 +343,17 @@ fn check_mutation_gates(
       )
     }
   }
+}
+
+///|
+/// Rejects annotation state that cannot safely serve as the result of a
+/// comment mutation. This is the candidate-side counterpart to the planners'
+/// source gate and catches duplicate or ambiguous identities introduced by a
+/// caller-supplied generic splice plan.
+pub fn validate_annotation_identity_state(
+  annotated : DocxAnnotatedResult,
+) -> Unit raise DocxError {
+  check_annotation_identity_state(annotated)
 }
 
 ///|
