@@ -537,7 +537,10 @@ unknown keys are unaffected):
   diagnostic in `messages`. All index diagnostics (orphan definitions,
   dangling markers/references, duplicate ids, degradations, and ids that
   cannot take the `[@id=...]` form and therefore emit ordinal paths)
-  surface as `messages` warnings.
+  surface as `messages` warnings. Annotation diagnostics preserve first-seen
+  order, are deduplicated by exact text, and are capped at 256 entries and 512
+  characters per entry; the final entry reports when additional diagnostics
+  were omitted.
 
 ## `docx.batch/1` — authoring script (`docx batch <output> <script.json>`)
 

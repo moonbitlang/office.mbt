@@ -70,6 +70,10 @@ bounded A4 transaction boundary:
   adoption, and a bounded candidate annotation gate rejects duplicate, empty,
   or ambiguous identities by inspecting parsed definitions, markers, paraIds,
   and commentEx records rather than diagnostic prose;
+- annotation construction buckets each story's markers and projection spans
+  once, pairs ranges with an indexed FIFO, and attaches references with a
+  monotonic scan; diagnostics are set-deduplicated and capped at 256 messages
+  of 512 characters, including an explicit omission notice;
 - a true no-op explicitly reuses the transaction's exact input buffer, while a
   real edit serializes through the transaction's candidate-size ceiling;
 - untouched ZIP local records and producer metadata flow through the

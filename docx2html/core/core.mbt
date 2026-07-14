@@ -43,9 +43,20 @@ pub fn success(value : String) -> ConversionResult {
 /// Removes duplicate diagnostics while preserving order.
 pub fn dedupe_messages(messages : Array[Message]) -> Array[Message] {
   let result : Array[Message] = []
+  let warning_texts : Set[String] = Set([])
+  let error_texts : Set[String] = Set([])
   for message in messages {
-    if !result.contains(message) {
-      result.push(message)
+    match message {
+      Warning(value) =>
+        if !warning_texts.contains(value) {
+          warning_texts.add(value)
+          result.push(message)
+        }
+      Error(value) =>
+        if !error_texts.contains(value) {
+          error_texts.add(value)
+          result.push(message)
+        }
     }
   }
   result
