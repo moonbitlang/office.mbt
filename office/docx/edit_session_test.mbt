@@ -806,6 +806,67 @@ async test "D1 generic plans cannot introduce a second comments target" {
 }
 
 ///|
+async test "D1 generic plans cannot publish an unwired comments part" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let original = @word_fixture.new_blank_docx()
+    let archive = @zip.read(original)
+    guard archive.get("word/document.xml") is Some(document) else {
+      fail("fixture is missing its main document")
+    }
+    guard document.find(b"</w:body>") is Some(document_insert) else {
+      fail("fixture main document has no body close")
+    }
+    guard archive.get("[Content_Types].xml") is Some(types) else {
+      fail("fixture is missing content types")
+    }
+    guard types.find(b"</Types>") is Some(types_insert) else {
+      fail("fixture content types have no closing tag")
+    }
+    write_docx_session_file(input, original)
+    let code = docx_session_error_code(() => {
+      @docx.transact_docx(
+        @transaction.transaction_options(input, output_path=output),
+        session => {
+          session.queue_span_edit(
+            session.annotated().main_story_part(),
+            start=document_insert,
+            end=document_insert,
+            @utf8.encode(
+              (
+                #|<w:p><w:commentRangeStart w:id="0"/><w:r><w:t>claim</w:t></w:r><w:commentRangeEnd w:id="0"/><w:r><w:commentReference w:id="0"/></w:r></w:p>
+              ),
+            ),
+          )
+          session.queue_span_edit(
+            "[Content_Types].xml",
+            start=types_insert,
+            end=types_insert,
+            @utf8.encode(
+              (
+                #|<Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>
+              ),
+            ),
+          )
+          session.queue_added_part(
+            "word/comments.xml",
+            @utf8.encode(
+              (
+                #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="0" w:author="Mallory"><w:p/></w:comment></w:comments>
+              ),
+            ),
+          )
+        },
+      )
+    })
+    assert_eq(code, "office.transaction.validation_failed")
+    assert_false(@afs.exists(output))
+    assert_eq(@afs.read_file(input).binary(), original)
+  })
+}
+
+///|
 async test "D1 generic plans cannot publish dangling markers in unreferenced stories" {
   with_docx_session_test_dir(directory => {
     let input = "\{directory}/input.docx"
