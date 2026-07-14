@@ -969,6 +969,93 @@ async test "D1 generic plans reject every unwired conventional annotation part" 
 }
 
 ///|
+async test "D1 generic plans reject conventional decoys beside relocated annotation parts" {
+  with_docx_session_test_dir(directory => {
+    let cases : ReadOnlyArray[(String, String, String, String)] = [
+      (
+        "comments",
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml",
+        (
+          #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>
+        ),
+      ),
+      (
+        "commentsExtended",
+        "http://schemas.microsoft.com/office/2011/relationships/commentsExtended",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml",
+        (
+          #|<w15:commentsEx xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml"/>
+        ),
+      ),
+      (
+        "footnotes",
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml",
+        (
+          #|<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>
+        ),
+      ),
+      (
+        "endnotes",
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml",
+        (
+          #|<w:endnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>
+        ),
+      ),
+    ]
+    for item in cases {
+      let (role, relationship_type, content_type, xml) = item
+      let builder = @opc.PackageBuilder::new()
+      builder.add_default(
+        "rels", "application/vnd.openxmlformats-package.relationships+xml",
+      )
+      builder.add_default("xml", "application/xml")
+      builder.add_override(
+        "/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+      )
+      builder.add_relationship(
+        "rIdMain", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+        "word/document.xml",
+      )
+      builder.add_part(
+        "word/document.xml",
+        @utf8.encode(
+          (
+            #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/><w:sectPr/></w:body></w:document>
+          ),
+        ),
+      )
+      let relocated = "annotations/\{role}.xml"
+      builder.add_override("/\{relocated}", content_type)
+      builder.add_relationship(
+        "rIdAnnotation",
+        relationship_type,
+        "../\{relocated}",
+        source="word/document.xml",
+      )
+      builder.add_part(relocated, @utf8.encode(xml))
+      let original = builder.build()
+      let input = "\{directory}/\{role}-relocated-input.docx"
+      let output = "\{directory}/\{role}-relocated-output.docx"
+      write_docx_session_file(input, original)
+      let code = docx_session_error_code(() => {
+        @docx.transact_docx(
+          @transaction.transaction_options(input, output_path=output),
+          session => {
+            session.queue_added_part("word/\{role}.xml", @utf8.encode(xml))
+          },
+        )
+      })
+      assert_eq(code, "office.transaction.validation_failed")
+      assert_false(@afs.exists(output))
+      assert_eq(@afs.read_file(input).binary(), original)
+    }
+  })
+}
+
+///|
 async test "D1 generic plans cannot publish a wrong annotation content type" {
   with_docx_session_test_dir(directory => {
     let input = "\{directory}/wrong-comment-type-input.docx"

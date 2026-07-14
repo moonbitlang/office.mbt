@@ -2272,8 +2272,8 @@ async test "L2 round 2: Strict dot-dot comments parts resolve end to end" {
       "\" mc:Ignorable=\"w14\"><w:comment w:id=\"0\" w:author=\"Ada\"><w:p w14:paraId=\"7DDD0004\"><w:r><w:t>strictly noted</w:t></w:r></w:p></w:comment></w:comments>",
     ),
   )
-  // An ORPHAN word/comments.xml rides along: the filename fallback
-  // must not mask the Strict relationship (round 3).
+  // An ORPHAN word/comments.xml rides along: it must be rejected even though
+  // the Strict relationship authoritatively resolves a relocated part.
   archive.add(
     "word/comments.xml",
     @utf8.encode(
@@ -2283,30 +2283,53 @@ async test "L2 round 2: Strict dot-dot comments parts resolve end to end" {
     ),
   )
   let hostile_package = @mbtzip.write(archive)
-  let annotated = @docx2html.read_docx_annotated(hostile_package)
-  // The definition is INDEXED (the reader resolves the Strict '../'
-  // relationship) and the mutation layer sees the same part — the
-  // orphan's author must NOT appear.
+  let hostile = @docx2html.read_docx_annotated(hostile_package)
+  try
+    @docx_impl.plan_comment_resolution(
+      hostile,
+      hostile_package,
+      comment_id="0",
+      done=true,
+    )
+  catch {
+    Unsupported(message~) =>
+      inspect(
+        message,
+        content="'word/comments.xml' exists but is not wired as the comments part (an orphan); refusing to annotate",
+      )
+    error => fail("expected Unsupported, received \{repr(error)}")
+  } noraise {
+    _ => fail("expected the conventional comments decoy to be rejected")
+  }
+  let clean_archive = @mbtzip.Archive::new()
+  for entry in @mbtzip.read(hostile_package).entries() {
+    if entry.name() != "word/comments.xml" {
+      clean_archive.add(
+        entry.name(),
+        entry.data(),
+        compression=entry.compression(),
+        data_descriptor=entry.data_descriptor(),
+      )
+    }
+  }
+  let clean_package = @mbtzip.write(clean_archive)
+  let annotated = @docx2html.read_docx_annotated(clean_package)
   inspect(annotated.annotations().comments()[0].defined(), content="true")
   debug_inspect(
     annotated.annotations().comments()[0].author(),
-    content=(
-      #|Some("Ada")
-    ),
+    content="Some(\"Ada\")",
   )
   debug_inspect(
     annotated.comments_part(),
-    content=(
-      #|Some("annotations/comments.xml")
-    ),
+    content="Some(\"annotations/comments.xml\")",
   )
   let plan = @docx_impl.plan_comment_resolution(
     annotated,
-    hostile_package,
+    clean_package,
     comment_id="0",
     done=true,
   )
-  let resolved = @splice.splice_docx(hostile_package, plan)
+  let resolved = @splice.splice_docx(clean_package, plan)
   let verify = @docx2html.read_docx_annotated(resolved)
   debug_inspect(verify.annotations().comments()[0].done(), content="Some(true)")
 }
