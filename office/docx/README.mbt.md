@@ -25,7 +25,9 @@ pinned plans, but never both modes in one session. A second semantic operation
 or either semantic/generic ordering fails with
 `office.docx.stale_semantic_state`. The final validator rebuilds a bounded
 candidate annotation index and rejects duplicate, empty, or ambiguous comment
-identities before publication.
+identities before publication. That gate validates parsed definitions, marker
+ids, last-paragraph `paraId` values, and raw `commentEx` keys structurally;
+warning wording is never used as a security decision.
 
 Plan adoption is atomic. A rejected merge leaves the session unchanged. Every
 edited part must carry the exact immutable payload from which its offsets were

@@ -208,6 +208,10 @@ pub struct AnnotationIndex {
   priv warnings : Array[String]
   priv spans : Array[AnchorSpan]
   priv scans : Array[(String, StoryScan)]
+  // Raw records retained for structural identity validation. Security gates
+  // inspect these values directly instead of inferring state from warnings.
+  priv comment_ex_identities : Array[CommentExIdentity]
+  priv identity_source_complete : Bool
 }
 
 ///|
@@ -375,6 +379,12 @@ priv struct CommentDefinition {
 /// first paragraph, a divergence we deliberately do not copy).
 priv struct CommentExRecord {
   done : Bool
+  parent_para_id : String?
+}
+
+///|
+priv struct CommentExIdentity {
+  para_id : String?
   parent_para_id : String?
 }
 
@@ -758,18 +768,21 @@ fn build_annotation_index(
     stories.push(("/comments", comments_path))
   }
   let scans : Array[(String, StoryScan)] = []
+  let mut identity_source_complete = true
   for story in stories {
     let (story_key, path) = story
     match zip.read_bytes(path) {
       Some(bytes) => {
         let scan = scan_story(bytes) catch {
           Unsupported(message~) => {
+            identity_source_complete = false
             warnings.push(
               "annotation index: could not scan \{story_key} (\{message})",
             )
             continue
           }
           _ => {
+            identity_source_complete = false
             warnings.push("annotation index: could not scan \{story_key}")
             continue
           }
@@ -779,11 +792,18 @@ fn build_annotation_index(
         }
         scans.push((story_key, scan))
       }
-      None => ()
+      None => identity_source_complete = false
     }
   }
-  let definitions = read_comment_definitions(zip, parts, warnings)
-  let extended = read_comments_extended(zip, parts, warnings)
+  let (definitions, definitions_complete) = read_comment_definitions(
+    zip, parts, warnings,
+  )
+  let (extended, comment_ex_identities, extended_complete) = read_comments_extended(
+    zip, parts, warnings,
+  )
+  identity_source_complete = identity_source_complete &&
+    definitions_complete &&
+    extended_complete
   let degraded : Set[String] = Set([])
   let (comments, spans) = build_comments(
     definitions, extended, scans, warnings, ctx, degraded,
@@ -819,7 +839,16 @@ fn build_annotation_index(
   for note in endnotes {
     warn_unrepresentable("endnote", note.id())
   }
-  { comments, footnotes, endnotes, warnings, spans, scans }
+  {
+    comments,
+    footnotes,
+    endnotes,
+    warnings,
+    spans,
+    scans,
+    comment_ex_identities,
+    identity_source_complete,
+  }
 }
 
 ///|
@@ -841,7 +870,7 @@ fn read_comment_definitions(
   zip : ZipArchive,
   parts : DocumentParts,
   warnings : Array[String],
-) -> Array[CommentDefinition] {
+) -> (Array[CommentDefinition], Bool) {
   let definitions : Array[CommentDefinition] = []
   // RELATIONSHIPS first — Transitional then Strict — and the legacy
   // filename fallback only when neither resolves (L2 round 3: the
@@ -867,12 +896,12 @@ fn read_comment_definitions(
     }
   }
   if !zip.exists(path) {
-    return definitions
+    return (definitions, true)
   }
   let root = read_xml_part(zip, path, xml_budget?=parts.xml_budget) catch {
     _ => {
       warnings.push("annotation index: could not parse the comments part")
-      return definitions
+      return (definitions, false)
     }
   }
   for comment_element in root.elements_by_tag_name("w:comment") {
@@ -894,7 +923,7 @@ fn read_comment_definitions(
       last_para_id,
     })
   }
-  definitions
+  (definitions, true)
 }
 
 ///|
@@ -902,8 +931,9 @@ fn read_comments_extended(
   zip : ZipArchive,
   parts : DocumentParts,
   warnings : Array[String],
-) -> Map[String, CommentExRecord] {
+) -> (Map[String, CommentExRecord], Array[CommentExIdentity], Bool) {
   let records : Map[String, CommentExRecord] = Map([])
+  let identities : Array[CommentExIdentity] = []
   let path = find_part_path(
     zip,
     parts.relationships,
@@ -912,18 +942,21 @@ fn read_comments_extended(
     fallback_path="word/commentsExtended.xml",
   )
   if !zip.exists(path) {
-    return records
+    return (records, identities, true)
   }
   let root = read_xml_part(zip, path, xml_budget?=parts.xml_budget) catch {
     _ => {
       warnings.push(
         "annotation index: could not parse the commentsExtended part",
       )
-      return records
+      return (records, identities, false)
     }
   }
   for record in root.elements_by_tag_name("w15:commentEx") {
-    match record.attributes.get("w15:paraId") {
+    let raw_para_id = record.attributes.get("w15:paraId")
+    let raw_parent_para_id = record.attributes.get("w15:paraIdParent")
+    identities.push({ para_id: raw_para_id, parent_para_id: raw_parent_para_id })
+    match raw_para_id {
       Some(raw_para_id) => {
         let para_id = canonical_para_id(raw_para_id)
         if records.contains(para_id) {
@@ -938,7 +971,7 @@ fn read_comments_extended(
           is (Some("1") | Some("true") | Some("on"))
         records[para_id] = {
           done,
-          parent_para_id: match record.attributes.get("w15:paraIdParent") {
+          parent_para_id: match raw_parent_para_id {
             Some(parent) => Some(canonical_para_id(parent))
             None => None
           },
@@ -950,7 +983,7 @@ fn read_comments_extended(
         )
     }
   }
-  records
+  (records, identities, true)
 }
 
 ///|

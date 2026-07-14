@@ -267,7 +267,7 @@ async test "D1 session rejects generic and semantic plan composition in either o
 }
 
 ///|
-async test "D1 validator rejects generic duplicate comment identities" {
+async test "D1 validator rejects equivalent numeric comment identities" {
   with_docx_session_test_dir(directory => {
     let input = "\{directory}/input.docx"
     let output = "\{directory}/output.docx"
@@ -305,7 +305,7 @@ async test "D1 validator rejects generic duplicate comment identities" {
           @word_fixture.run([@word_fixture.text("Duplicate identity")]),
         ]),
       ]),
-      id="0",
+      id="00",
     )
     let plan = @splice.SplicePlan::new()
     plan.pin_part(comments_part, comments_source)

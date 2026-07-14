@@ -62,7 +62,8 @@ bounded A4 transaction boundary:
   pinned plans because identities, threading, and byte spans resolve against
   its immutable source snapshot; mixing the modes in either order fails before
   adoption, and a bounded candidate annotation gate rejects duplicate, empty,
-  or ambiguous identities;
+  or ambiguous identities by inspecting parsed definitions, markers, paraIds,
+  and commentEx records rather than diagnostic prose;
 - a true no-op explicitly reuses the transaction's exact input buffer, while a
   real edit serializes through the transaction's candidate-size ceiling;
 - untouched ZIP local records and producer metadata flow through the

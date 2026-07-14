@@ -97,6 +97,25 @@ fn comment_summary(comment : @docx.CommentInfo) -> String {
 }
 
 ///|
+fn expect_annotation_identity_failure(
+  bytes : BytesView,
+  expected : String,
+) -> Unit raise {
+  let annotated = @docx.read_docx_annotated(bytes)
+  try @docx.validate_annotation_identity_state(annotated) catch {
+    Unsupported(message~) =>
+      if !message.contains(expected) {
+        fail(
+          "expected identity failure containing '\{expected}', received '\{message}'",
+        )
+      }
+    _ => fail("expected an Unsupported identity failure")
+  } noraise {
+    _ => fail("expected structural annotation identity validation to fail")
+  }
+}
+
+///|
 test "archive-backed annotated reads match byte-backed reads" {
   let document =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
@@ -336,6 +355,80 @@ test "index negatives: duplicate definitions and duplicate commentEx records" {
       #|  "id=5 defined=true author=Second date=- paras=1 anchors=[-..- refs=/body/p[1]/r[1]]",
       #|]
     ),
+  )
+}
+
+///|
+test "identity validation canonicalizes comment ids and raw marker spellings" {
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:body><w:p><w:r><w:commentReference w:id="0"/></w:r></w:p></w:body>
+    #|</w:document>
+  let aliased_definitions =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:comment w:id="0" w:author="First"><w:p/></w:comment>
+    #|<w:comment w:id="00" w:author="Alias"><w:p/></w:comment>
+    #|</w:comments>
+  expect_annotation_identity_failure(
+    fixture_docx(document, comments_xml=Some(aliased_definitions)),
+    "multiple comment definitions for numeric id 0",
+  )
+  let marker_alias_document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:body><w:p><w:r><w:commentReference w:id="00"/></w:r></w:p></w:body>
+    #|</w:document>
+  let canonical_definition =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:comment w:id="0" w:author="First"><w:p/></w:comment>
+    #|</w:comments>
+  expect_annotation_identity_failure(
+    fixture_docx(marker_alias_document, comments_xml=Some(canonical_definition)),
+    "multiple lexical spellings for numeric comment id 0",
+  )
+}
+
+///|
+test "identity validation structurally checks paraId and commentEx keys" {
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:body><w:p/></w:body>
+    #|</w:document>
+  let duplicate_last_para =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml">
+    #|<w:comment w:id="0"><w:p w14:paraId="abcd0001"/></w:comment>
+    #|<w:comment w:id="1"><w:p w14:paraId="ABCD0001"/></w:comment>
+    #|</w:comments>
+  expect_annotation_identity_failure(
+    fixture_docx(document, comments_xml=Some(duplicate_last_para)),
+    "multiple comments with last-paragraph paraId ABCD0001",
+  )
+  let stamped_comment =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml">
+    #|<w:comment w:id="0"><w:p w14:paraId="ABCD0001"/></w:comment>
+    #|</w:comments>
+  let missing_comment_ex_key =
+    #|<w15:commentsEx xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml">
+    #|<w15:commentEx w15:done="1"/>
+    #|</w15:commentsEx>
+  expect_annotation_identity_failure(
+    fixture_docx(
+      document,
+      comments_xml=Some(stamped_comment),
+      comments_extended_xml=Some(missing_comment_ex_key),
+    ),
+    "commentsExtended record without w15:paraId",
+  )
+  let unknown_parent =
+    #|<w15:commentsEx xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml">
+    #|<w15:commentEx w15:paraId="ABCD0001" w15:paraIdParent="FFFF0001"/>
+    #|</w15:commentsEx>
+  expect_annotation_identity_failure(
+    fixture_docx(
+      document,
+      comments_xml=Some(stamped_comment),
+      comments_extended_xml=Some(unknown_parent),
+    ),
+    "unknown or self-referential parent paraId",
   )
 }
 
