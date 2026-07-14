@@ -43,8 +43,11 @@ pub fn success(value : String) -> ConversionResult {
 /// Removes duplicate diagnostics while preserving order.
 pub fn dedupe_messages(messages : Array[Message]) -> Array[Message] {
   let result : Array[Message] = []
-  let warning_texts : Set[String] = Set([])
-  let error_texts : Set[String] = Set([])
+  // Diagnostic text can contain attacker-controlled XML names. Ordered sets
+  // keep deduplication independent of runtime string-hash collisions while
+  // `result` continues to preserve first-seen order.
+  let warning_texts : @sorted_set.SortedSet[String] = SortedSet([])
+  let error_texts : @sorted_set.SortedSet[String] = SortedSet([])
   for message in messages {
     match message {
       Warning(value) =>

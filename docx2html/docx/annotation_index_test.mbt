@@ -76,6 +76,48 @@ fn fixture_docx(
 }
 
 ///|
+fn diagnostic_hash_clustered_element_names(
+  count : Int,
+  bucket_mask : Int,
+) -> Array[String] {
+  let names : Array[String] = []
+  let mut candidate = 0
+  while names.length() < count {
+    let name = "n\{candidate}"
+    if (name.hash() & bucket_mask) == 0 {
+      names.push(name)
+    }
+    candidate += 1
+  }
+  names
+}
+
+///|
+test "real DOCX diagnostics ignore deterministic string-hash clustering" {
+  let names = diagnostic_hash_clustered_element_names(256, 0x3FF)
+  let document = StringBuilder()
+  document.write_string(
+    "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>",
+  )
+  for name in names {
+    assert_eq(name.hash() & 0x3FF, 0)
+    document.write_string("<")
+    document.write_string(name)
+    document.write_string("/>")
+  }
+  document.write_string("<w:p/></w:body></w:document>")
+  let annotated = @docx.read_docx_annotated(fixture_docx(document.to_string()))
+  let messages = annotated.result().messages
+  assert_eq(messages.length(), names.length())
+  for index, name in names {
+    assert_eq(
+      messages[index],
+      @core.warning("An unrecognised element was ignored: " + name),
+    )
+  }
+}
+
+///|
 fn unreferenced_story_fixture(
   relationship_type : String,
   target : String,
