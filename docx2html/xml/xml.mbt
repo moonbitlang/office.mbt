@@ -350,10 +350,22 @@ pub fn write_xml_fragment_limited(
   namespaces? : Map[String, String] = Map([]),
 ) -> String raise DocxError {
   let limit = if max_output_bytes > 0 { max_output_bytes } else { 0 }
-  let sizer = XmlWriteSizer::{ namespaces, remaining_bytes: limit }
+  let uri_to_prefix = invert_map(namespaces)
+  let work_scaled = limit.to_int64() * xml_write_name_work_scale.to_int64()
+  let name_work_limit = if work_scaled > 2147483647L {
+    2147483647
+  } else {
+    work_scaled.to_int()
+  }
+  let sizer = XmlWriteSizer::{
+    namespaces,
+    uri_to_prefix,
+    remaining_bytes: limit,
+    remaining_name_work: name_work_limit,
+  }
   sizer.size_element(element, is_root=true, depth=0)
   let output_bytes = limit - sizer.remaining_bytes
-  let writer = XmlWriter::{ namespaces, uri_to_prefix: invert_map(namespaces) }
+  let writer = XmlWriter::{ namespaces, uri_to_prefix }
   let builder = StringBuilder(size_hint=output_bytes)
   writer.write_element(builder, element, is_root=true)
   builder.to_string()
@@ -371,9 +383,20 @@ priv struct XmlWriter {
 let xml_write_max_depth : Int = 256
 
 ///|
+/// Namespace mapping may inspect a Clark name several times (delimiter scan,
+/// owned lookup key, and hashing). Keep that work a fixed multiple of the
+/// caller's output ceiling so a reused giant URI cannot turn a small permitted
+/// fragment into quadratic serialization work. The multiplier comfortably
+/// covers the standard OOXML namespace-to-tag ratio while rejecting hostile
+/// amplification.
+let xml_write_name_work_scale : Int = 64
+
+///|
 priv struct XmlWriteSizer {
   namespaces : Map[String, String]
+  uri_to_prefix : Map[String, String]
   mut remaining_bytes : Int
+  mut remaining_name_work : Int
 }
 
 ///|
@@ -385,6 +408,17 @@ fn XmlWriteSizer::charge_bytes(
     raise InvalidXml(message="XML serialization byte limit exceeded")
   }
   self.remaining_bytes -= bytes
+}
+
+///|
+fn XmlWriteSizer::charge_name_work(
+  self : XmlWriteSizer,
+  units : Int,
+) -> Unit raise DocxError {
+  if units < 0 || units > self.remaining_name_work {
+    raise InvalidXml(message="XML serialization name work limit exceeded")
+  }
+  self.remaining_name_work -= units
 }
 
 ///|
@@ -449,19 +483,6 @@ fn XmlWriteSizer::charge_escaped_attribute(
 }
 
 ///|
-fn string_matches_view(value : String, view : StringView) -> Bool {
-  if value.length() != view.length() {
-    return false
-  }
-  for index in 0..<value.length() {
-    if value[index] != view[index] {
-      return false
-    }
-  }
-  true
-}
-
-///|
 fn XmlWriteSizer::charge_mapped_name(
   self : XmlWriteSizer,
   name : String,
@@ -470,19 +491,20 @@ fn XmlWriteSizer::charge_mapped_name(
     self.charge_raw(name)
     return
   }
+  // Charge before scanning the attacker-controlled Clark name.
+  self.charge_name_work(name.length())
   guard name.find("}") is Some(close) else {
     self.charge_raw(name)
     return
   }
   let uri = name[1:close]
   let local_name = name[close + 1:]
-  let mut matched_prefix : String? = None
-  for prefix, candidate_uri in self.namespaces {
-    if string_matches_view(candidate_uri, uri) {
-      matched_prefix = Some(prefix)
-    }
-  }
-  match matched_prefix {
+  // The owned key and its map hash each traverse the full URI. Charging both
+  // here proves the identical unmetered writer pass below stays within the
+  // same fixed-linear work envelope.
+  self.charge_name_work(uri.length())
+  self.charge_name_work(uri.length())
+  match self.uri_to_prefix.get(uri.to_owned()) {
     Some("") => self.charge_raw(local_name)
     Some(prefix) => {
       self.charge_raw(prefix)

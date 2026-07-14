@@ -343,6 +343,44 @@ test "limited XML writer sizes escaped UTF-8 output before serialization" {
 }
 
 ///|
+test "limited XML writer bounds work from reused mapped namespace names" {
+  let ordinary_uri = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  let ordinary_children : Array[@xml.XmlNode] = []
+  for _ in 0..<128 {
+    ordinary_children.push(XmlElement(@xml.xml_element("{\{ordinary_uri}}p")))
+  }
+  let ordinary = @xml.xml_element("root", children=ordinary_children)
+  let ordinary_namespaces : Map[String, String] = { "w": ordinary_uri }
+  let rendered = @xml.write_xml_fragment_limited(
+    ordinary,
+    max_output_bytes=4 * 1024,
+    namespaces=ordinary_namespaces,
+  )
+  assert_true(rendered.contains("<w:p/>"))
+
+  let hostile_uri = "u".repeat(16 * 1024)
+  let hostile_children : Array[@xml.XmlNode] = []
+  for _ in 0..<128 {
+    hostile_children.push(XmlElement(@xml.xml_element("{\{hostile_uri}}x")))
+  }
+  let hostile = @xml.xml_element("root", children=hostile_children)
+  let hostile_namespaces : Map[String, String] = { "n": hostile_uri }
+  try
+    @xml.write_xml_fragment_limited(
+      hostile,
+      max_output_bytes=20 * 1024,
+      namespaces=hostile_namespaces,
+    )
+  catch {
+    InvalidXml(message~) =>
+      inspect(message, content="XML serialization name work limit exceeded")
+    _ => fail("expected mapped-name work to be bounded")
+  } noraise {
+    _ => fail("expected a reused giant namespace URI to fail closed")
+  }
+}
+
+///|
 test "limited XML writer rejects excessive nesting before recursive output" {
   let mut element = @xml.xml_element("n")
   for _ in 0..<256 {
