@@ -309,8 +309,7 @@ fn pin_splice_sources(
 
 ///|
 /// The shared mutation gates: sidecars (relationship AND content type)
-/// and unrepairable annotation state (diagnostic classes plus the
-/// structural empty-id check a wording drift cannot evade).
+/// and structurally unrepairable annotation identity state.
 fn check_mutation_gates(
   annotated : DocxAnnotatedResult,
 ) -> Unit raise DocxError {
@@ -327,22 +326,144 @@ fn check_mutation_gates(
 fn check_annotation_identity_state(
   annotated : DocxAnnotatedResult,
 ) -> Unit raise DocxError {
-  for warning in annotated.annotations().warnings() {
-    if warning.find("ambiguous") is Some(_) ||
-      warning.find("duplicate") is Some(_) ||
-      warning.find("has no w:id") is Some(_) {
-      raise Unsupported(
-        message="the document's annotation state is not repairable (\{warning}); refusing to annotate",
-      )
+  let index = annotated.annotations()
+  if !index.identity_source_complete {
+    raise Unsupported(
+      message="the document's annotation identity sources could not be parsed and scanned completely; refusing to annotate",
+    )
+  }
+  let definition_spellings : Map[String, String] = Map([])
+  let last_para_ids : Set[String] = Set([])
+  for comment in index.comments {
+    if !comment.defined {
+      continue
+    }
+    let canonical_id = match canonical_comment_id(comment.id) {
+      CanonicalNumeric(value) => value.to_string()
+      NonNumeric =>
+        raise Unsupported(
+          message="the document holds a comment definition whose w:id is not a supported ST_DecimalNumber; refusing to annotate",
+        )
+      OutOfRange =>
+        raise Unsupported(
+          message="the document holds a comment definition whose w:id is outside the supported numeric range; refusing to annotate",
+        )
+    }
+    match definition_spellings.get(canonical_id) {
+      Some(_) =>
+        raise Unsupported(
+          message="the document holds multiple comment definitions for numeric id \{canonical_id}; refusing to annotate",
+        )
+      None => definition_spellings[canonical_id] = comment.id
+    }
+    match comment.last_para_id {
+      Some(raw_para_id) => {
+        guard canonical_para_identity(raw_para_id) is Some(para_id) else {
+          raise Unsupported(
+            message="the document holds a comment whose last paragraph has an invalid w14:paraId; refusing to annotate",
+          )
+        }
+        if last_para_ids.contains(para_id) {
+          raise Unsupported(
+            message="the document holds multiple comments with last-paragraph paraId \{para_id}; refusing to annotate",
+          )
+        }
+        last_para_ids.add(para_id)
+      }
+      None => ()
     }
   }
-  for comment in annotated.annotations().comments() {
-    if comment.id() == "" {
-      raise Unsupported(
-        message="the document holds a comment with an EMPTY id; refusing to annotate",
-      )
+  for story_entry in index.scans {
+    let (_, scan) = story_entry
+    for marker in scan.markers {
+      match marker.kind {
+        CommentStart | CommentEnd | CommentRef => ()
+        FootnoteRef | EndnoteRef => continue
+      }
+      let canonical_id = match canonical_comment_id(marker.id) {
+        CanonicalNumeric(value) => value.to_string()
+        NonNumeric =>
+          raise Unsupported(
+            message="the document holds a comment marker whose w:id is not a supported ST_DecimalNumber; refusing to annotate",
+          )
+        OutOfRange =>
+          raise Unsupported(
+            message="the document holds a comment marker whose w:id is outside the supported numeric range; refusing to annotate",
+          )
+      }
+      match definition_spellings.get(canonical_id) {
+        None =>
+          raise Unsupported(
+            message="the document holds a marker for comment id \{canonical_id} without a definition; refusing to annotate",
+          )
+        Some(definition_spelling) if definition_spelling != marker.id =>
+          raise Unsupported(
+            message="the document uses multiple lexical spellings for numeric comment id \{canonical_id}; refusing to annotate",
+          )
+        Some(_) => ()
+      }
     }
   }
+  let comment_ex_para_ids : Set[String] = Set([])
+  for identity in index.comment_ex_identities {
+    guard identity.para_id is Some(raw_para_id) else {
+      raise Unsupported(
+        message="the document holds a commentsExtended record without w15:paraId; refusing to annotate",
+      )
+    }
+    guard canonical_para_identity(raw_para_id) is Some(para_id) else {
+      raise Unsupported(
+        message="the document holds a commentsExtended record with an invalid w15:paraId; refusing to annotate",
+      )
+    }
+    if comment_ex_para_ids.contains(para_id) {
+      raise Unsupported(
+        message="the document holds multiple commentsExtended records for paraId \{para_id}; refusing to annotate",
+      )
+    }
+    comment_ex_para_ids.add(para_id)
+    if !last_para_ids.contains(para_id) {
+      raise Unsupported(
+        message="the document holds a commentsExtended record for unknown paraId \{para_id}; refusing to annotate",
+      )
+    }
+    match identity.parent_para_id {
+      Some(raw_parent) => {
+        guard canonical_para_identity(raw_parent) is Some(parent) else {
+          raise Unsupported(
+            message="the document holds a commentsExtended record with an invalid parent paraId; refusing to annotate",
+          )
+        }
+        if parent == para_id || !last_para_ids.contains(parent) {
+          raise Unsupported(
+            message="the document holds a commentsExtended record with an unknown or self-referential parent paraId; refusing to annotate",
+          )
+        }
+      }
+      None => ()
+    }
+  }
+}
+
+///|
+fn canonical_para_identity(value : String) -> String? {
+  if value.length() != 8 {
+    return None
+  }
+  let builder = StringBuilder::new()
+  for unit in value {
+    let code = unit.to_int()
+    if code >= '0'.to_int() && code <= '9'.to_int() {
+      builder.write_char(unit)
+    } else if code >= 'a'.to_int() && code <= 'f'.to_int() {
+      builder.write_char((code - 32).to_char().unwrap_or('?'))
+    } else if code >= 'A'.to_int() && code <= 'F'.to_int() {
+      builder.write_char(unit)
+    } else {
+      return None
+    }
+  }
+  Some(builder.to_string())
 }
 
 ///|
