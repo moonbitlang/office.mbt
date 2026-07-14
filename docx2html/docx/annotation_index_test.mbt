@@ -307,11 +307,11 @@ test "unreferenced Transitional headers participate in identity validation only"
 }
 
 ///|
-test "unreferenced Strict footers participate in identity validation only" {
+test "unreferenced footers participate in identity validation only" {
   let bytes = unreferenced_story_fixture(
-    "http://purl.oclc.org/ooxml/officeDocument/relationships/footer", "../stories/footer-hidden.xml",
-    "stories/footer-hidden.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml",
-    "<w:ftr xmlns:w=\"http://purl.oclc.org/ooxml/wordprocessingml/main\"><w:p><w:r><w:commentReference w:id=\"42\"/></w:r></w:p></w:ftr>",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer",
+    "../stories/footer-hidden.xml", "stories/footer-hidden.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml",
+    "<w:ftr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:p><w:r><w:commentReference w:id=\"42\"/></w:r></w:p></w:ftr>",
   )
   let annotated = @docx.read_docx_annotated(bytes)
   assert_eq(annotated.result().footers.length(), 0)
@@ -456,6 +456,69 @@ test "typed annotation relationships require matching expanded story roots" {
     _ => fail("expected a comments relationship/root mismatch to fail")
   } noraise {
     _ => fail("expected a comments relationship/root mismatch to fail")
+  }
+}
+
+///|
+test "annotation relationships and roots match the main OOXML dialect" {
+  let transitional_relationships = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/"
+  let strict_relationships = "http://purl.oclc.org/ooxml/officeDocument/relationships/"
+  let transitional_wml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  let strict_wml = "http://purl.oclc.org/ooxml/wordprocessingml/main"
+  let cases : Array[(String, String, String)] = [
+    (
+      "comments", "comments", "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml",
+    ),
+    (
+      "header", "hdr", "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml",
+    ),
+    (
+      "footer", "ftr", "application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml",
+    ),
+    (
+      "footnotes", "footnotes", "application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml",
+    ),
+    (
+      "endnotes", "endnotes", "application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml",
+    ),
+  ]
+  for entry in cases {
+    let (kind, root, content_type) = entry
+    let target = "dialect-\{kind}.xml"
+    let part_path = "word/\{target}"
+    let relationship_root_mismatch = unreferenced_story_fixture(
+      strict_relationships + kind,
+      target,
+      part_path,
+      content_type,
+      "<w:\{root} xmlns:w=\"\{transitional_wml}\"/>",
+    )
+    expect_annotation_identity_failure(
+      relationship_root_mismatch,
+      "the \{kind} relationship dialect does not match the target WordprocessingML namespace",
+    )
+    let story_main_mismatch = unreferenced_story_fixture(
+      strict_relationships + kind,
+      target,
+      part_path,
+      content_type,
+      "<w:\{root} xmlns:w=\"\{strict_wml}\"/>",
+    )
+    expect_annotation_identity_failure(
+      story_main_mismatch,
+      "the \{kind} annotation story at '\{part_path}' does not match the main WordprocessingML dialect",
+    )
+    // A matching Transitional graph remains accepted for every role.
+    let coherent = unreferenced_story_fixture(
+      transitional_relationships + kind,
+      target,
+      part_path,
+      content_type,
+      "<w:\{root} xmlns:w=\"\{transitional_wml}\"/>",
+    )
+    @docx.validate_annotation_identity_state(
+      @docx.read_docx_annotated(coherent),
+    )
   }
 }
 
@@ -899,7 +962,7 @@ test "relocated Strict footnotes and endnotes are parsed and publicly scanned" {
   )
   builder.add_relationship(
     "rIdComments",
-    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+    "http://purl.oclc.org/ooxml/officeDocument/relationships/comments",
     "comments.xml",
     source="word/document.xml",
   )

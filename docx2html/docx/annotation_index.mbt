@@ -326,16 +326,28 @@ fn validate_annotation_story_root(
   path : String,
   kind : String,
   scan : StoryScan,
-) -> Unit raise DocxError {
+) -> OoxmlDialect raise DocxError {
   let expected = annotation_story_root_local_name(kind)
   guard scan.root() is Some(root) &&
     scan.root_namespace_uri() is Some(uri) &&
-    is_wml_uri(uri) &&
+    wordprocessing_dialect(uri) is Some(dialect) &&
     root.kind == expected else {
     raise InvalidXml(
       message="the \{kind} annotation story part '\{path}' must have a WordprocessingML '\{expected}' root",
     )
   }
+  dialect
+}
+
+///|
+/// Dialect evidence for one annotation-bearing main-part relationship and
+/// its exact target root. Mutation validation compares both sides with the
+/// main document before a plan can be adopted or published.
+priv struct AnnotationStoryDialectIdentity {
+  kind : String
+  path : String
+  relationship_dialect : OoxmlDialect
+  root_dialect : OoxmlDialect
 }
 
 ///|
@@ -356,6 +368,7 @@ pub struct AnnotationIndex {
   // inspect these values directly instead of inferring state from warnings.
   priv comment_ex_identities : Array[CommentExIdentity]
   priv identity_source_complete : Bool
+  priv dialect_identities : Array[AnnotationStoryDialectIdentity]
 }
 
 ///|
@@ -986,6 +999,11 @@ fn build_annotation_index(
     MAX_ANNOTATION_WARNING_CHARS,
   )
   validate_section_story_references(parts)
+  let reachable_story_parts = resolve_reachable_annotation_story_parts(
+    zip,
+    parts.relationships,
+    parts.base_path,
+  )
   // Story list in the plan's fixed rank order: body, header[1..],
   // footer[1..], footnotes, endnotes. Header/footer paths come from the
   // collector's dedup maps (index -> path).
@@ -1036,6 +1054,8 @@ fn build_annotation_index(
   let scans : Array[(String, StoryScan)] = []
   let identity_only_scans : Array[StoryScan] = []
   let kind_by_scanned_path : StableStringMap[String] = SortedMap([])
+  let root_dialect_by_scanned_path : StableStringMap[OoxmlDialect] = SortedMap([])
+  let dialect_identities : Array[AnnotationStoryDialectIdentity] = []
   let mut identity_source_complete = true
   for story in stories {
     let story_key = story.public_path
@@ -1077,7 +1097,12 @@ fn build_annotation_index(
             continue
           }
         }
-        validate_annotation_story_root(path, story.kind, scan)
+        let root_dialect = validate_annotation_story_root(
+          path,
+          story.kind,
+          scan,
+        )
+        root_dialect_by_scanned_path[path] = root_dialect
         for warning in scan.warnings() {
           warnings.add(warning)
         }
@@ -1090,18 +1115,25 @@ fn build_annotation_index(
   // stories. Identity validation must additionally scan every normalized
   // relationship target, including unreferenced header/footer parts. These
   // scans receive no public path and therefore never create visible anchors.
-  for
-    reachable in resolve_reachable_annotation_story_parts(
-      zip,
-      parts.relationships,
-      parts.base_path,
-    ) {
+  for reachable in reachable_story_parts {
     match kind_by_scanned_path.get(reachable.path) {
       Some(existing_kind) if existing_kind != reachable.kind =>
         raise Unsupported(
           message="annotation story part '\{reachable.path}' is targeted as both \{existing_kind} and \{reachable.kind}",
         )
-      Some(_) => continue
+      Some(_) => {
+        match root_dialect_by_scanned_path.get(reachable.path) {
+          Some(root_dialect) =>
+            dialect_identities.push({
+              kind: reachable.kind,
+              path: reachable.path,
+              relationship_dialect: reachable.relationship_dialect,
+              root_dialect,
+            })
+          None => identity_source_complete = false
+        }
+        continue
+      }
       None => ()
     }
     kind_by_scanned_path[reachable.path] = reachable.kind
@@ -1143,7 +1175,17 @@ fn build_annotation_index(
         continue
       }
     }
-    validate_annotation_story_root(reachable.path, reachable.kind, scan)
+    let root_dialect = validate_annotation_story_root(
+      reachable.path,
+      reachable.kind,
+      scan,
+    )
+    dialect_identities.push({
+      kind: reachable.kind,
+      path: reachable.path,
+      relationship_dialect: reachable.relationship_dialect,
+      root_dialect,
+    })
     for warning in scan.warnings() {
       warnings.add(warning)
     }
@@ -1217,6 +1259,7 @@ fn build_annotation_index(
     identity_only_scans,
     comment_ex_identities,
     identity_source_complete,
+    dialect_identities,
   }
 }
 

@@ -347,6 +347,30 @@ fn check_annotation_identity_state(
       )
     _ => ()
   }
+  match annotated.main_wordprocessing_dialect {
+    Some(main_dialect) =>
+      for identity in annotated.index.dialect_identities {
+        if !same_ooxml_dialect(
+            identity.relationship_dialect,
+            identity.root_dialect,
+          ) {
+          raise Unsupported(
+            message="the \{identity.kind} relationship dialect does not match the target WordprocessingML namespace at '\{identity.path}'; refusing to annotate",
+          )
+        }
+        if !same_ooxml_dialect(identity.root_dialect, main_dialect) {
+          raise Unsupported(
+            message="the \{identity.kind} annotation story at '\{identity.path}' does not match the main WordprocessingML dialect; refusing to annotate",
+          )
+        }
+      }
+    None =>
+      if !annotated.index.dialect_identities.is_empty() {
+        raise Unsupported(
+          message="the main story's WordprocessingML dialect could not be determined; refusing to annotate",
+        )
+      }
+  }
   for orphan in annotated.orphan_annotation_parts {
     let (path, role) = orphan
     raise Unsupported(
