@@ -58,8 +58,10 @@ async test "D1 session no-op reuses the exact transaction source" {
     assert_false(report.committed)
     assert_true(report.preservation.whole_file_identical)
     assert_true(report.preservation.manifest_enforced)
-    assert_eq(report.validations.length(), 2)
-    assert_eq(report.validations[1].name, "office-docx-package")
+    assert_eq(report.validations.length(), 3)
+    assert_eq(report.validations[0].name, "office-docx-bounded")
+    assert_eq(report.validations[1].name, "office-portable-opc")
+    assert_eq(report.validations[2].name, "office-docx-package")
     assert_eq(@afs.read_file(input).binary(), original)
   })
 }
@@ -147,6 +149,44 @@ async test "D1 session rejects sibling-dense XML before indexing" {
     assert_eq(code, "office.docx.resource_limit")
     assert_false(callback_called.val)
     assert_eq(@afs.read_file(input).binary(), source)
+  })
+}
+
+///|
+async test "D1 bounded identifier rejects relationship-dense candidates before portable parsing" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let original = @word_fixture.new_blank_docx()
+    write_docx_session_file(input, original)
+    let relationships = StringBuilder()
+    relationships.write_string(
+      "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
+    )
+    for index in 0..<30_000 {
+      relationships.write_string(
+        "<Relationship Id=\"rId\{index}\" Type=\"urn:office-d1:test\" Target=\"https://example.invalid/\{index}\" TargetMode=\"External\"/>",
+      )
+    }
+    relationships.write_string("</Relationships>")
+    let candidate_part = @utf8.encode(relationships.to_string())
+    assert_true(candidate_part.length() < 8 * 1024 * 1024)
+    let callback_finished = Ref(false)
+    let code = docx_session_error_code(() => {
+      @docx.transact_docx(
+        @transaction.transaction_options(input, output_path=output),
+        session => {
+          session.queue_added_part(
+            "word/_rels/hostile.xml.rels", candidate_part,
+          )
+          callback_finished.val = true
+        },
+      )
+    })
+    assert_true(callback_finished.val)
+    assert_eq(code, "office.docx.resource_limit")
+    assert_false(@afs.exists(output))
+    assert_eq(@afs.read_file(input).binary(), original)
   })
 }
 
@@ -630,7 +670,7 @@ async test "D1 session adopts annotation plans with an exact preservation manife
     assert_eq(report.preservation.changed.length(), 3)
     assert_eq(report.preservation.added.length(), 1)
     assert_eq(report.preservation.added[0], "word/comments.xml")
-    assert_eq(report.validations.length(), 2)
+    assert_eq(report.validations.length(), 3)
     let candidate = @afs.read_file(output).binary()
     let annotated = @word_fixture.read_docx_annotated(candidate)
     assert_eq(annotated.annotations().comments().length(), 1)
@@ -792,7 +832,7 @@ async test "D1 session rejects unsafe plans and keeps failed adoption atomic" {
         session => session.queue_added_part("word/unwired.bin", b"unwired"),
       )
     })
-    assert_eq(unwired, "office.transaction.validation_failed")
+    assert_eq(unwired, "office.docx.invalid_package")
     assert_false(@afs.exists(invalid_output))
     assert_eq(@afs.read_file(input).binary(), original)
   })
