@@ -734,7 +734,7 @@ async test "POSIX output traversal preserves symlink then parent semantics" {
 #cfg(all(target="native", platform="windows"))
 async test "Windows current-drive-root input and output paths remain valid" {
   with_transaction_test_dir(directory => {
-    guard @env.current_dir() is Some(current)
+    guard @env.current_dir() is Some(current) else { return }
     let normalized_directory = directory.replace_all(old="/", new="\\")
     let normalized_current = current.replace_all(old="/", new="\\")
     let directory_chars = normalized_directory.to_array()
@@ -745,7 +745,9 @@ async test "Windows current-drive-root input and output paths remain valid" {
       normalized_current[:2].to_owned().to_lower() &&
       directory_chars[1] == ':' &&
       current_chars[1] == ':' &&
-      directory_chars[2] == '\\'
+      directory_chars[2] == '\\' else {
+      return
+    }
     let root_relative_directory = normalized_directory[2:].to_owned()
     let input = "\{directory}/input.docx"
     let output = "\{directory}/output.docx"

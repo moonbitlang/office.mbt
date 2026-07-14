@@ -60,6 +60,14 @@ jobs:
           moon check --target native office/docx
 
       - name: Test transactional editing packages
+        # Keep async-fs temporary fixtures on the checkout volume. The Windows
+        # suite deliberately exercises current-drive-root paths (for example,
+        # `\\a\\b.docx`), which are meaningful only when the fixture and the
+        # process working directory share a drive.
+        env:
+          TEMP: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
+          TMPDIR: ${{ runner.temp }}
         run: |
           moon test --target native office/transaction
           moon test --target native office/transaction/permission_contract
