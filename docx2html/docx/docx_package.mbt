@@ -249,18 +249,24 @@ fn HeaderFooterCollector::resolve_part(
   is_header~ : Bool,
 ) -> Int? {
   let kind = if is_header { "header" } else { "footer" }
-  guard self.parts.relationships.find_target_by_id(rel_id) is Some(target) else {
-    self.messages.push(
-      Warning(
-        "A \{kind} reference to unknown relationship \{rel_id} was ignored",
-      ),
-    )
-    return None
+  let path = resolve_header_footer_reference_part(
+    self.parts.zip,
+    self.parts.relationships,
+    self.parts.base_path,
+    rel_id,
+    is_header,
+  ) catch {
+    _ => {
+      // The package projection remains tolerant. Annotation-aware mutation
+      // runs the same resolver without this catch and therefore fails closed.
+      self.messages.push(
+        Warning(
+          "A \{kind} reference through invalid relationship \{rel_id} was ignored",
+        ),
+      )
+      return None
+    }
   }
-  // Normalize with the shared OPC resolver ('..' and '.' segments are
-  // legal in relationship targets); the reader's naive concatenator would
-  // miss parts that validate clean.
-  let path = @opc.resolve_target(self.parts.base_path, target)
   let index_by_path = if is_header {
     self.header_index_by_path
   } else {
@@ -269,12 +275,6 @@ fn HeaderFooterCollector::resolve_part(
   match index_by_path.get(path) {
     Some(index) => Some(index)
     None => {
-      if !self.parts.zip.exists(path) {
-        self.messages.push(
-          Warning("A \{kind} part is missing and was ignored: \{path}"),
-        )
-        return None
-      }
       // A malformed part or malformed part-rels must not abort the read —
       // outline/text/get all flow through here, and the body-only surface
       // never raised for a broken header. Warn and skip instead.

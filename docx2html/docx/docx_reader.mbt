@@ -839,6 +839,74 @@ fn Relationships::find_by_id(
 }
 
 ///|
+/// Resolves a section's header/footer reference through exactly one internal
+/// relationship of the matching semantic type. This is shared by the tolerant
+/// package projection and the strict annotation-identity gate so the two paths
+/// cannot disagree about what a section reference means.
+fn resolve_header_footer_reference_part(
+  zip : ZipArchive,
+  relationships : Relationships,
+  base_path : String,
+  id : String,
+  is_header : Bool,
+) -> String raise DocxError {
+  let kind = if is_header { "header" } else { "footer" }
+  let mut matched : Relationship? = None
+  for relationship in relationships.relationships {
+    if relationship.id != id {
+      continue
+    }
+    if matched is Some(_) {
+      raise Unsupported(
+        message="the \{kind} reference names duplicate relationship id '\{id}'",
+      )
+    }
+    matched = Some(relationship)
+  }
+  guard matched is Some(relationship) else {
+    raise Unsupported(
+      message="the \{kind} reference names unknown relationship id '\{id}'",
+    )
+  }
+  let type_matches = if is_header {
+    relationship.relationship_type == TRANSITIONAL_HEADER_RELATIONSHIP ||
+    relationship.relationship_type == STRICT_HEADER_RELATIONSHIP
+  } else {
+    relationship.relationship_type == TRANSITIONAL_FOOTER_RELATIONSHIP ||
+    relationship.relationship_type == STRICT_FOOTER_RELATIONSHIP
+  }
+  if !type_matches {
+    raise Unsupported(
+      message="the \{kind} reference relationship '\{id}' is not a \{kind} relationship",
+    )
+  }
+  match relationship.target_mode {
+    None | Some("Internal") => ()
+    _ =>
+      raise Unsupported(
+        message="the \{kind} reference relationship '\{id}' must be internal",
+      )
+  }
+  if relationship.target == "" {
+    raise Unsupported(
+      message="the \{kind} reference relationship '\{id}' has no target",
+    )
+  }
+  let path = @opc.resolve_target(base_path, relationship.target)
+  if path == "" {
+    raise Unsupported(
+      message="the \{kind} reference relationship '\{id}' has an empty target",
+    )
+  }
+  if !zip.exists(path) {
+    raise MissingPart(
+      message="the \{kind} reference relationship '\{id}' targets missing part '\{path}'",
+    )
+  }
+  path
+}
+
+///|
 fn relationships_path_for_part(path : String) -> String {
   let (dir, base) = split_zip_path(path)
   join_zip_path([dir, "_rels", base + ".rels"])
