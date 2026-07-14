@@ -240,7 +240,26 @@ pub fn plan_comment_addition(
       )
     }
   }
+  pin_splice_sources(plan, zip)
   (plan, new_id)
+}
+
+///|
+/// Pins every offset-bearing edit to the exact payload from which its spans
+/// were derived. This turns annotation plans into safe inputs for D1 edit
+/// sessions while leaving the lower-level unpinned splice API available.
+fn pin_splice_sources(
+  plan : @splice.SplicePlan,
+  zip : ZipArchive,
+) -> Unit raise DocxError {
+  for part in plan.unpinned_edited_parts() {
+    guard zip.read_bytes(part) is Some(source) else {
+      raise Unsupported(
+        message="the splice plan edits '\{part}', which the source package does not contain",
+      )
+    }
+    plan.pin_part(part, source)
+  }
 }
 
 ///|

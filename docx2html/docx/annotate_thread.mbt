@@ -163,6 +163,7 @@ pub fn plan_comment_reply(
     parent_para_id: Some(canonical_para_id(parent_para_id)),
   })
   queue_comments_extended_edits(plan, zip, annotated, None, additions)
+  pin_splice_sources(plan, zip)
   (plan, new_id)
 }
 
@@ -236,6 +237,7 @@ pub fn plan_comment_resolution(
     }
   }
   queue_comments_extended_edits(plan, zip, annotated, Some((key, done)), [])
+  pin_splice_sources(plan, zip)
   plan
 }
 
