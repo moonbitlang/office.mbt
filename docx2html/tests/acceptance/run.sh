@@ -11,6 +11,15 @@ set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 docx() { moon run --target wasm docx2html/cmd/docx -- "$@"; }
 
+# Keep first-run compiler warnings out of the CLI stdout assertions. CI builds
+# this target before reaching the harness, but the documented standalone entry
+# point must be deterministic on a fresh checkout too. Preserve diagnostics if
+# the build itself fails.
+if ! build_output="$(moon build --target wasm docx2html/cmd/docx 2>&1)"; then
+  printf '%s\n' "$build_output" >&2
+  exit 1
+fi
+
 work="$(mktemp -d "${TMPDIR:-/tmp}/docx-acceptance.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 cp "$here/minutes.json" "$work/minutes.json"
