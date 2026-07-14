@@ -1491,7 +1491,7 @@ async test "L1 round 1: the plan survives hostile packages or fails closed" {
     "",
   )
   expect_plan_failure(
-    huge_id, "the document holds comment id '9999999999', outside the supported numeric range",
+    huge_id, "the document holds a comment definition whose w:id is outside the supported numeric range",
   )
   // 5. An EMPTY-id definition fails closed structurally.
   let empty_id = base_package(
@@ -1509,7 +1509,9 @@ async test "L1 round 1: the plan survives hostile packages or fails closed" {
     ],
     "",
   )
-  expect_plan_failure(empty_id, "the document holds a comment with an EMPTY id")
+  expect_plan_failure(
+    empty_id, "the document holds a comment definition whose w:id is not a supported ST_DecimalNumber",
+  )
   // 6. A wired, EMPTY, self-closing comments root is rewritten.
   let empty_root = base_package(
     "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
@@ -2021,7 +2023,9 @@ async test "L2 round 1: entry-level splicing preserves foreign thread content" {
   } catch {
     Unsupported(message~) =>
       inspect(
-        message.has_prefix("duplicate w14:paraId '7CCC0003'"),
+        message.has_prefix(
+          "the document holds multiple comments with last-paragraph paraId 7CCC0003",
+        ),
         content="true",
       )
     err => fail("expected Unsupported, got \{repr(err)}")
