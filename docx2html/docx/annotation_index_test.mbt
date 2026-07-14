@@ -543,6 +543,57 @@ test "comment resolution matches decoded ids on default-namespaced entries" {
 }
 
 ///|
+test "comment reply and resolution reuse paraIds under encoded namespace URIs" {
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:document>
+  let comments =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:q="http://schemas.microsoft.com/office/word/2010/wordm&#108;"><w:comment w:id="0"><w:p q:paraId="ABCD0001"/></w:comment></w:comments>
+  let source = fixture_docx(document, comments_xml=Some(comments))
+  let annotated = @docx.read_docx_annotated(source)
+  debug_inspect(
+    annotated.annotations().comments()[0].last_para_id(),
+    content="Some(\"ABCD0001\")",
+  )
+
+  let resolution = @docx.plan_comment_resolution(
+    annotated,
+    source,
+    comment_id="0",
+    done=true,
+  )
+  let resolved = @splice.splice_docx(source, resolution)
+  let resolved_archive = @mbtzip.read(resolved)
+  guard resolved_archive.get("word/comments.xml") is Some(resolved_comments)
+  assert_eq(@utf8.decode(resolved_comments, ignore_bom=true), comments)
+  debug_inspect(
+    @docx.read_docx_annotated(resolved).annotations().comments()[0].done(),
+    content="Some(true)",
+  )
+
+  let reply_spec = @docx.comment_spec(author="Reply", from=0, to=0, [
+    @document.paragraph([@document.run([@document.text("reply")])]),
+  ])
+  let (reply_plan, reply_id) = @docx.plan_comment_reply(
+    annotated,
+    source,
+    parent_id="0",
+    reply_spec,
+  )
+  inspect(reply_id, content="1")
+  let replied = @splice.splice_docx(source, reply_plan)
+  let replied_archive = @mbtzip.read(replied)
+  guard replied_archive.get("word/comments.xml") is Some(replied_comments)
+  let replied_text = @utf8.decode(replied_comments, ignore_bom=true)
+  assert_true(replied_text.contains("<w:p q:paraId=\"ABCD0001\"/>"))
+  let verified = @docx.read_docx_annotated(replied)
+  assert_eq(verified.annotations().comments().length(), 2)
+  debug_inspect(
+    verified.annotations().comments()[1].parent_id(),
+    content="Some(\"0\")",
+  )
+}
+
+///|
 test "comment resolution accepts arbitrarily padded numeric references" {
   let document =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:document>
