@@ -433,6 +433,57 @@ test "identity validation structurally checks paraId and commentEx keys" {
 }
 
 ///|
+test "annotation diagnostics are capped while distinct marker ids remain indexed" {
+  let document = StringBuilder()
+  document.write_string(
+    "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p>",
+  )
+  for id in 0..<600 {
+    document.write_string("<w:commentReference w:id=\"\{id}\"/>")
+  }
+  document.write_string("</w:p></w:body></w:document>")
+  let annotated = @docx.read_docx_annotated(fixture_docx(document.to_string()))
+  assert_eq(annotated.annotations().comments().length(), 600)
+  let warnings = annotated.annotations().warnings()
+  assert_eq(warnings.length(), 256)
+  assert_eq(
+    warnings[255],
+    "annotation index: additional diagnostics were omitted",
+  )
+  for warning in warnings {
+    assert_true(warning.length() <= 512)
+  }
+}
+
+///|
+test "dense comment ranges and references retain FIFO attachment order" {
+  let document = StringBuilder()
+  document.write_string(
+    "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p>",
+  )
+  for _ in 0..<2_000 {
+    document.write_string(
+      "<w:commentRangeStart w:id=\"0\"/><w:commentRangeEnd w:id=\"0\"/><w:commentReference w:id=\"0\"/>",
+    )
+  }
+  document.write_string("</w:p></w:body></w:document>")
+  let comments =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:comment w:id="0"><w:p/></w:comment>
+    #|</w:comments>
+  let annotated = @docx.read_docx_annotated(
+    fixture_docx(document.to_string(), comments_xml=Some(comments)),
+  )
+  let indexed = annotated.annotations().comments()
+  assert_eq(indexed.length(), 1)
+  let anchors = indexed[0].anchors()
+  assert_eq(anchors.length(), 2_000)
+  assert_eq(anchors[0].references().length(), 1)
+  assert_eq(anchors[1_999].references().length(), 1)
+  assert_eq(annotated.annotations().warnings().length(), 0)
+}
+
+///|
 test "index review round 1: multi-range FIFO, later-range interiors, cross-story rank" {
   // One id with TWO ranges in the body plus a range in a comment body
   // (cross-story, /comments ranks last). The reference between range 1's

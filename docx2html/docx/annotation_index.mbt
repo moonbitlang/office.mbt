@@ -9,6 +9,98 @@
 // degrade to warnings; `docx validate` stays the strict gate.
 
 ///|
+const MAX_ANNOTATION_WARNINGS : Int = 256
+
+///|
+const MAX_ANNOTATION_WARNING_CHARS : Int = 512
+
+///|
+const MAX_STORY_SCAN_WARNINGS : Int = 64
+
+///|
+priv struct AnnotationWarningCollector {
+  messages : Array[String]
+  seen : Set[String]
+  max_messages : Int
+  max_chars : Int
+  mut truncated : Bool
+}
+
+///|
+fn AnnotationWarningCollector::new(
+  max_messages : Int,
+  max_chars : Int,
+) -> AnnotationWarningCollector {
+  { messages: [], seen: Set([]), max_messages, max_chars, truncated: false }
+}
+
+///|
+fn AnnotationWarningCollector::text(
+  self : AnnotationWarningCollector,
+  value : String,
+) -> String {
+  if self.max_chars <= 0 {
+    return ""
+  }
+  let output = StringBuilder::new()
+  let mut count = 0
+  let content_limit = if self.max_chars > 1 { self.max_chars - 1 } else { 0 }
+  for character in value {
+    if count == content_limit {
+      output.write_string("…") |> ignore
+      break
+    }
+    output.write_char(character) |> ignore
+    count += 1
+  }
+  if count < content_limit {
+    value
+  } else {
+    output.to_string()
+  }
+}
+
+///|
+fn AnnotationWarningCollector::full(self : AnnotationWarningCollector) -> Bool {
+  let at_capacity = self.max_messages <= 0 ||
+    self.messages.length() >= self.max_messages - 1
+  if at_capacity {
+    // Callers use this predicate before constructing potentially large
+    // diagnostics. Record the omission here so `finish` still emits the
+    // reserved truncation notice.
+    self.truncated = true
+  }
+  at_capacity
+}
+
+///|
+fn AnnotationWarningCollector::add(
+  self : AnnotationWarningCollector,
+  message : String,
+) -> Unit {
+  let bounded = self.text(message)
+  if self.seen.contains(bounded) {
+    return
+  }
+  if self.full() {
+    self.truncated = true
+    return
+  }
+  self.seen.add(bounded)
+  self.messages.push(bounded)
+}
+
+///|
+fn AnnotationWarningCollector::finish(
+  self : AnnotationWarningCollector,
+) -> Array[String] {
+  if self.truncated && self.messages.length() < self.max_messages {
+    self.messages.push("annotation index: additional diagnostics were omitted")
+  }
+  self.messages
+}
+
+///|
 /// Where a marker sits relative to its rendered projection node — the
 /// plan's boundary distinction, preserved so "before p[3]" and "after
 /// p[2]" do not collapse into the same position.
@@ -389,6 +481,14 @@ priv struct CommentExIdentity {
 }
 
 ///|
+priv struct CommentStoryMarkers {
+  story : String
+  scan : StoryScan
+  markers : Array[ScannedMarker]
+  node_spans : Map[String, (Int, Int)]
+}
+
+///|
 /// Reads DOCX bytes into the package representation PLUS the annotation
 /// index. The package half is identical to `read_docx_package`.
 pub fn read_docx_annotated(
@@ -603,7 +703,7 @@ priv struct VerifyContext {
 fn verify_position(
   ctx : VerifyContext,
   path : String,
-  warnings : Array[String],
+  warnings : AnnotationWarningCollector,
   degraded : Set[String],
 ) -> String {
   let (story, node_path) = split_story_path(path)
@@ -628,10 +728,10 @@ fn verify_position(
     }
   }
   let verified = if candidate == "" { story } else { "\{story}/\{candidate}" }
-  if verified != path && !degraded.contains(path) {
+  if verified != path && !degraded.contains(path) && !warnings.full() {
     degraded.add(path)
-    warnings.push(
-      "annotation index: position '\{path}' could not be verified against the parsed document; using '\{verified}'",
+    warnings.add(
+      "annotation index: position '\{warnings.text(path)}' could not be verified against the parsed document; using '\{warnings.text(verified)}'",
     )
   }
   verified
@@ -730,7 +830,10 @@ fn build_annotation_index(
   collector : HeaderFooterCollector,
   ctx : VerifyContext,
 ) -> AnnotationIndex {
-  let warnings : Array[String] = []
+  let warnings = AnnotationWarningCollector::new(
+    MAX_ANNOTATION_WARNINGS,
+    MAX_ANNOTATION_WARNING_CHARS,
+  )
   // Story list in the plan's fixed rank order: body, header[1..],
   // footer[1..], footnotes, endnotes. Header/footer paths come from the
   // collector's dedup maps (index -> path).
@@ -776,19 +879,19 @@ fn build_annotation_index(
         let scan = scan_story(bytes) catch {
           Unsupported(message~) => {
             identity_source_complete = false
-            warnings.push(
-              "annotation index: could not scan \{story_key} (\{message})",
+            warnings.add(
+              "annotation index: could not scan \{story_key} (\{warnings.text(message)})",
             )
             continue
           }
           _ => {
             identity_source_complete = false
-            warnings.push("annotation index: could not scan \{story_key}")
+            warnings.add("annotation index: could not scan \{story_key}")
             continue
           }
         }
         for warning in scan.warnings() {
-          warnings.push(warning)
+          warnings.add(warning)
         }
         scans.push((story_key, scan))
       }
@@ -821,10 +924,11 @@ fn build_annotation_index(
         id.find("=") is Some(_) ||
         id.find("/") is Some(_)
       ) &&
-      !warned_ids.contains("\{kind}:\{id}") {
+      !warned_ids.contains("\{kind}:\{id}") &&
+      !warnings.full() {
       warned_ids.add("\{kind}:\{id}")
-      warnings.push(
-        "annotation index: \{kind} id '\{id}' cannot be addressed as [@id=...]; ordinal paths are emitted for it",
+      warnings.add(
+        "annotation index: \{kind} id '\{warnings.text(id)}' cannot be addressed as [@id=...]; ordinal paths are emitted for it",
       )
     }
   }
@@ -843,7 +947,7 @@ fn build_annotation_index(
     comments,
     footnotes,
     endnotes,
-    warnings,
+    warnings: warnings.finish(),
     spans,
     scans,
     comment_ex_identities,
@@ -869,7 +973,7 @@ fn inverted_part_paths(
 fn read_comment_definitions(
   zip : ZipArchive,
   parts : DocumentParts,
-  warnings : Array[String],
+  warnings : AnnotationWarningCollector,
 ) -> (Array[CommentDefinition], Bool) {
   let definitions : Array[CommentDefinition] = []
   // RELATIONSHIPS first — Transitional then Strict — and the legacy
@@ -900,7 +1004,7 @@ fn read_comment_definitions(
   }
   let root = read_xml_part(zip, path, xml_budget?=parts.xml_budget) catch {
     _ => {
-      warnings.push("annotation index: could not parse the comments part")
+      warnings.add("annotation index: could not parse the comments part")
       return (definitions, false)
     }
   }
@@ -930,7 +1034,7 @@ fn read_comment_definitions(
 fn read_comments_extended(
   zip : ZipArchive,
   parts : DocumentParts,
-  warnings : Array[String],
+  warnings : AnnotationWarningCollector,
 ) -> (Map[String, CommentExRecord], Array[CommentExIdentity], Bool) {
   let records : Map[String, CommentExRecord] = Map([])
   let identities : Array[CommentExIdentity] = []
@@ -946,7 +1050,7 @@ fn read_comments_extended(
   }
   let root = read_xml_part(zip, path, xml_budget?=parts.xml_budget) catch {
     _ => {
-      warnings.push(
+      warnings.add(
         "annotation index: could not parse the commentsExtended part",
       )
       return (records, identities, false)
@@ -961,9 +1065,11 @@ fn read_comments_extended(
         let para_id = canonical_para_id(raw_para_id)
         if records.contains(para_id) {
           // First wins, deterministically (plan-locked policy).
-          warnings.push(
-            "annotation index: duplicate commentsExtended record for paraId \{para_id} ignored (first wins)",
-          )
+          if !warnings.full() {
+            warnings.add(
+              "annotation index: duplicate commentsExtended record for paraId \{warnings.text(para_id)} ignored (first wins)",
+            )
+          }
           continue
         }
         // ST_OnOff: 1/true/on are true; 0/false/off (and absence) false.
@@ -978,7 +1084,7 @@ fn read_comments_extended(
         }
       }
       None =>
-        warnings.push(
+        warnings.add(
           "annotation index: a commentsExtended record has no paraId",
         )
     }
@@ -994,7 +1100,7 @@ fn build_comments(
   definitions : Array[CommentDefinition],
   extended : Map[String, CommentExRecord],
   scans : Array[(String, StoryScan)],
-  warnings : Array[String],
+  warnings : AnnotationWarningCollector,
   ctx : VerifyContext,
   degraded : Set[String],
 ) -> (Array[CommentInfo], Array[AnchorSpan]) {
@@ -1003,30 +1109,57 @@ fn build_comments(
   // J2's "ambiguous" error), then marker-only ids in first-marker order.
   let entries : Array[(String, CommentDefinition?)] = []
   let known : Set[String] = Set([])
-  let duplicate_ids : Set[String] = Set([])
   for definition in definitions {
-    if known.contains(definition.id) {
-      duplicate_ids.add(definition.id)
-      warnings.push(
-        "annotation index: duplicate comment definition id '\{definition.id}' (each is exposed; id addressing will be ambiguous)",
+    if known.contains(definition.id) && !warnings.full() {
+      warnings.add(
+        "annotation index: duplicate comment definition id '\{warnings.text(definition.id)}' (each is exposed; id addressing will be ambiguous)",
       )
     }
     known.add(definition.id)
     entries.push((definition.id, Some(definition)))
   }
+  let marker_stories_by_id : Map[String, Array[CommentStoryMarkers]] = Map([])
   for entry in scans {
-    let (_, scan) = entry
+    let (story, scan) = entry
+    let story_markers : Map[String, Array[ScannedMarker]] = Map([])
+    let story_ids : Array[String] = []
+    let node_spans : Map[String, (Int, Int)] = Map([])
+    for node in scan.nodes {
+      node_spans[node.path] = (node.open_seq, node.close_seq)
+    }
     for marker in scan.markers() {
       match marker.kind() {
-        CommentStart | CommentEnd | CommentRef =>
+        CommentStart | CommentEnd | CommentRef => {
+          match story_markers.get(marker.id()) {
+            Some(markers) => markers.push(marker)
+            None => {
+              story_markers[marker.id()] = [marker]
+              story_ids.push(marker.id())
+            }
+          }
           if !known.contains(marker.id()) {
             known.add(marker.id())
             entries.push((marker.id(), None))
-            warnings.push(
-              "annotation index: markers reference comment id '\{marker.id()}' which has no definition",
-            )
+            if !warnings.full() {
+              warnings.add(
+                "annotation index: markers reference comment id '\{warnings.text(marker.id())}' which has no definition",
+              )
+            }
           }
+        }
         _ => ()
+      }
+    }
+    for id in story_ids {
+      let bucket : CommentStoryMarkers = {
+        story,
+        scan,
+        markers: story_markers.get(id).unwrap_or([]),
+        node_spans,
+      }
+      match marker_stories_by_id.get(id) {
+        Some(stories) => stories.push(bucket)
+        None => marker_stories_by_id[id] = [bucket]
       }
     }
   }
@@ -1042,9 +1175,11 @@ fn build_comments(
           // through it would be a guess — refuse, with a diagnostic.
           if !ambiguous_para_ids.contains(para_id) {
             ambiguous_para_ids.add(para_id)
-            warnings.push(
-              "annotation index: paraId \{para_id} is the last paragraph of multiple comments; replies through it cannot be resolved",
-            )
+            if !warnings.full() {
+              warnings.add(
+                "annotation index: paraId \{warnings.text(para_id)} is the last paragraph of multiple comments; replies through it cannot be resolved",
+              )
+            }
           }
         } else {
           id_by_last_para[para_id] = definition.id
@@ -1073,29 +1208,117 @@ fn build_comments(
       }
       None => []
     }
-    for story_entry in scans {
-      let (story, scan) = story_entry
-      // FIFO pairing within this story.
-      let story_anchors : Array[(Int, AnnotationAnchor)] = []
-      let open_starts : Array[ScannedMarker] = []
-      let pairs : Array[(ScannedMarker, ScannedMarker)] = []
-      for marker in scan.markers() {
-        if marker.id() != id {
-          continue
-        }
-        match marker.kind() {
-          CommentStart => open_starts.push(marker)
-          CommentEnd =>
-            if open_starts.length() > 0 {
-              let start = open_starts[0]
-              let _ = open_starts.remove(0)
-              pairs.push((start, marker))
-            } else {
-              warnings.push(
-                "annotation index: dangling commentRangeEnd for id '\{id}' in \{story}",
+    match marker_stories_by_id.get(id) {
+      Some(story_buckets) =>
+        for bucket in story_buckets {
+          let story = bucket.story
+          let scan = bucket.scan
+          // FIFO pairing within this story. An index-based queue avoids the
+          // quadratic front-removal cost of adversarial start/end runs.
+          let story_anchors : Array[(Int, AnnotationAnchor)] = []
+          let open_starts : Array[ScannedMarker] = []
+          let references : Array[ScannedMarker] = []
+          let pairs : Array[(ScannedMarker, ScannedMarker)] = []
+          let mut next_start = 0
+          for marker in bucket.markers {
+            match marker.kind() {
+              CommentStart => open_starts.push(marker)
+              CommentEnd =>
+                if next_start < open_starts.length() {
+                  pairs.push((open_starts[next_start], marker))
+                  next_start += 1
+                } else {
+                  if !warnings.full() {
+                    warnings.add(
+                      "annotation index: dangling commentRangeEnd for id '\{warnings.text(id)}' in \{story}",
+                    )
+                  }
+                  let (raw_end, end_boundary) = marker_position(
+                    story, marker, scan,
+                  )
+                  let end_path = verify_position(
+                    ctx, raw_end, warnings, degraded,
+                  )
+                  story_anchors.push(
+                    (
+                      marker.seq(),
+                      {
+                        story,
+                        start: None,
+                        start_boundary: None,
+                        end: Some(end_path),
+                        end_boundary: Some(end_boundary),
+                        references: [],
+                      },
+                    ),
+                  )
+                }
+              CommentRef => references.push(marker)
+              FootnoteRef | EndnoteRef => ()
+            }
+          }
+          for index in next_start..<open_starts.length() {
+            let dangling = open_starts[index]
+            if !warnings.full() {
+              warnings.add(
+                "annotation index: dangling commentRangeStart for id '\{warnings.text(id)}' in \{story}",
               )
-              let (raw_end, end_boundary) = marker_position(story, marker, scan)
-              let end_path = verify_position(ctx, raw_end, warnings, degraded)
+            }
+            let (raw_start, start_boundary) = marker_position(
+              story, dangling, scan,
+            )
+            let start_path = verify_position(ctx, raw_start, warnings, degraded)
+            story_anchors.push(
+              (
+                dangling.seq(),
+                {
+                  story,
+                  start: Some(start_path),
+                  start_boundary: Some(start_boundary),
+                  end: None,
+                  end_boundary: None,
+                  references: [],
+                },
+              ),
+            )
+          }
+          // Pair starts and ends are both monotonic under FIFO matching. Walk
+          // references and pair ends once: the first live pair contains the
+          // reference when its start precedes it; otherwise the immediately
+          // preceding pair is the nearest preceding range.
+          let pair_references : Array[Array[String]] = []
+          for _ in pairs {
+            pair_references.push([])
+          }
+          let mut first_live_pair = 0
+          for marker in references {
+            while first_live_pair < pairs.length() {
+              let (_, end) = pairs[first_live_pair]
+              if end.seq() < marker.seq() {
+                first_live_pair += 1
+              } else {
+                break
+              }
+            }
+            let mut pair_index = -1
+            if first_live_pair < pairs.length() {
+              let (start, _) = pairs[first_live_pair]
+              if start.seq() <= marker.seq() {
+                pair_index = first_live_pair
+              }
+            }
+            if pair_index < 0 && first_live_pair > 0 {
+              pair_index = first_live_pair - 1
+            }
+            let reference_path = verify_position(
+              ctx,
+              marker_path(story, marker, scan),
+              warnings,
+              degraded,
+            )
+            if pair_index >= 0 {
+              pair_references[pair_index].push(reference_path)
+            } else {
               story_anchors.push(
                 (
                   marker.seq(),
@@ -1103,140 +1326,51 @@ fn build_comments(
                     story,
                     start: None,
                     start_boundary: None,
-                    end: Some(end_path),
-                    end_boundary: Some(end_boundary),
-                    references: [],
+                    end: None,
+                    end_boundary: None,
+                    references: [reference_path],
                   },
                 ),
               )
+              spans.push(point_span(id, story, marker, bucket.node_spans))
             }
-          _ => ()
-        }
-      }
-      for dangling in open_starts {
-        warnings.push(
-          "annotation index: dangling commentRangeStart for id '\{id}' in \{story}",
-        )
-        let (raw_start, start_boundary) = marker_position(story, dangling, scan)
-        let start_path = verify_position(ctx, raw_start, warnings, degraded)
-        story_anchors.push(
-          (
-            dangling.seq(),
-            {
-              story,
-              start: Some(start_path),
-              start_boundary: Some(start_boundary),
-              end: None,
-              end_boundary: None,
-              references: [],
-            },
-          ),
-        )
-      }
-      // Range anchors + reference attachment. Containment first; else the
-      // nearest range whose END precedes the reference (Word's canonical
-      // emission puts the reference run right AFTER commentRangeEnd, so
-      // strict containment alone would orphan every normal reference —
-      // implementation-discovered refinement, reflected in the plan);
-      // only a reference with no containing and no preceding range forms
-      // a point anchor.
-      let pair_references : Array[Array[String]] = []
-      for _ in pairs {
-        pair_references.push([])
-      }
-      for marker in scan.markers() {
-        if marker.id() != id || marker.kind() != CommentRef {
-          continue
-        }
-        let mut attached = false
-        for pair_index, pair in pairs {
-          let (start, end) = pair
-          if start.seq() <= marker.seq() && marker.seq() <= end.seq() {
-            pair_references[pair_index].push(
-              verify_position(
-                ctx,
-                marker_path(story, marker, scan),
-                warnings,
-                degraded,
-              ),
-            )
-            attached = true
-            break
           }
-        }
-        if !attached {
-          let mut best_index = -1
-          let mut best_end = -1
           for pair_index, pair in pairs {
-            let (_, end) = pair
-            if end.seq() < marker.seq() && end.seq() > best_end {
-              best_end = end.seq()
-              best_index = pair_index
-            }
-          }
-          if best_index >= 0 {
-            pair_references[best_index].push(
-              verify_position(
-                ctx,
-                marker_path(story, marker, scan),
-                warnings,
-                degraded,
+            let (start, end) = pair
+            let (raw_start, start_boundary) = marker_position(
+              story, start, scan,
+            )
+            let (raw_end, end_boundary) = marker_position(story, end, scan)
+            let start_path = verify_position(ctx, raw_start, warnings, degraded)
+            let end_path = verify_position(ctx, raw_end, warnings, degraded)
+            story_anchors.push(
+              (
+                start.seq(),
+                {
+                  story,
+                  start: Some(start_path),
+                  start_boundary: Some(start_boundary),
+                  end: Some(end_path),
+                  end_boundary: Some(end_boundary),
+                  references: pair_references[pair_index],
+                },
               ),
             )
-            attached = true
+            spans.push({
+              comment_id: id,
+              story,
+              low: start.seq(),
+              high: end.seq(),
+            })
+          }
+          // Total anchor order within the story: start-else-end-else-first-
+          // reference position (v6); stories are already in rank order.
+          story_anchors.sort_by_key(pair => pair.0)
+          for pair in story_anchors {
+            anchors.push(pair.1)
           }
         }
-        if !attached {
-          story_anchors.push(
-            (
-              marker.seq(),
-              {
-                story,
-                start: None,
-                start_boundary: None,
-                end: None,
-                end_boundary: None,
-                references: [
-                  verify_position(
-                    ctx,
-                    marker_path(story, marker, scan),
-                    warnings,
-                    degraded,
-                  ),
-                ],
-              },
-            ),
-          )
-          spans.push(point_span(id, story, marker, scan))
-        }
-      }
-      for pair_index, pair in pairs {
-        let (start, end) = pair
-        let (raw_start, start_boundary) = marker_position(story, start, scan)
-        let (raw_end, end_boundary) = marker_position(story, end, scan)
-        let start_path = verify_position(ctx, raw_start, warnings, degraded)
-        let end_path = verify_position(ctx, raw_end, warnings, degraded)
-        story_anchors.push(
-          (
-            start.seq(),
-            {
-              story,
-              start: Some(start_path),
-              start_boundary: Some(start_boundary),
-              end: Some(end_path),
-              end_boundary: Some(end_boundary),
-              references: pair_references[pair_index],
-            },
-          ),
-        )
-        spans.push({ comment_id: id, story, low: start.seq(), high: end.seq() })
-      }
-      // Total anchor order within the story: start-else-end-else-first-
-      // reference position (v6); stories are already in rank order.
-      story_anchors.sort_by_key(pair => pair.0)
-      for pair in story_anchors {
-        anchors.push(pair.1)
-      }
+      None => ()
     }
     anchors_by_id[id] = anchors
     let info = comment_entry(
@@ -1253,10 +1387,11 @@ fn build_comments(
     if info.defined &&
       info.anchors.length() == 0 &&
       info.parent_id is None &&
-      !orphan_warned.contains(info.id) {
+      !orphan_warned.contains(info.id) &&
+      !warnings.full() {
       orphan_warned.add(info.id)
-      warnings.push(
-        "annotation index: comment '\{info.id}' has no anchors in any story (orphan definition; content still exposed)",
+      warnings.add(
+        "annotation index: comment '\{warnings.text(info.id)}' has no anchors in any story (orphan definition; content still exposed)",
       )
     }
   }
@@ -1274,7 +1409,7 @@ fn comment_entry(
   extended : Map[String, CommentExRecord],
   id_by_last_para : Map[String, String],
   ambiguous_para_ids : Set[String],
-  warnings : Array[String],
+  warnings : AnnotationWarningCollector,
 ) -> CommentInfo {
   let (done, parent_id) = match definition {
     Some(def) =>
@@ -1294,9 +1429,11 @@ fn comment_entry(
                       }) {
                       Some(parent) => Some(parent)
                       None => {
-                        warnings.push(
-                          "annotation index: comment '\{id}' replies to unknown paraId \{parent_para}",
-                        )
+                        if !warnings.full() {
+                          warnings.add(
+                            "annotation index: comment '\{warnings.text(id)}' replies to unknown paraId \{warnings.text(parent_para)}",
+                          )
+                        }
                         None
                       }
                     }
@@ -1346,22 +1483,14 @@ fn point_span(
   id : String,
   story : String,
   marker : ScannedMarker,
-  scan : StoryScan,
+  node_spans : Map[String, (Int, Int)],
 ) -> AnchorSpan {
   match paragraph_prefix(marker.container_path()) {
-    Some(paragraph) => {
-      for node in scan.nodes() {
-        if node.path() == paragraph {
-          return {
-            comment_id: id,
-            story,
-            low: node.open_seq(),
-            high: node.close_seq(),
-          }
-        }
+    Some(paragraph) =>
+      match node_spans.get(paragraph) {
+        Some((low, high)) => { comment_id: id, story, low, high }
+        None => { comment_id: id, story, low: marker.seq(), high: marker.seq() }
       }
-      { comment_id: id, story, low: marker.seq(), high: marker.seq() }
-    }
     None => { comment_id: id, story, low: marker.seq(), high: marker.seq() }
   }
 }
@@ -1458,7 +1587,7 @@ fn marker_path(
 fn build_notes(
   parts : DocumentParts,
   scans : Array[(String, StoryScan)],
-  warnings : Array[String],
+  warnings : AnnotationWarningCollector,
   ctx : VerifyContext,
   degraded : Set[String],
 ) -> (Array[NoteInfo], Array[NoteInfo]) {
@@ -1502,17 +1631,17 @@ fn build_notes(
     if note.note_type == "footnote" {
       // Duplicate ids make [@id=...] ambiguous — the plan-locked
       // diagnostic (comments get theirs at definition parse).
-      if seen_footnotes.contains(note.note_id) {
-        warnings.push(
-          "annotation index: duplicate footnote id '\{note.note_id}' (each is exposed; id addressing will be ambiguous)",
+      if seen_footnotes.contains(note.note_id) && !warnings.full() {
+        warnings.add(
+          "annotation index: duplicate footnote id '\{warnings.text(note.note_id)}' (each is exposed; id addressing will be ambiguous)",
         )
       }
       seen_footnotes.add(note.note_id)
       footnotes.push(info)
     } else {
-      if seen_endnotes.contains(note.note_id) {
-        warnings.push(
-          "annotation index: duplicate endnote id '\{note.note_id}' (each is exposed; id addressing will be ambiguous)",
+      if seen_endnotes.contains(note.note_id) && !warnings.full() {
+        warnings.add(
+          "annotation index: duplicate endnote id '\{warnings.text(note.note_id)}' (each is exposed; id addressing will be ambiguous)",
         )
       }
       seen_endnotes.add(note.note_id)
@@ -1523,17 +1652,21 @@ fn build_notes(
   // are review content an agent must see (plan: surface, don't skip).
   for id, refs in footnote_refs {
     if !seen_footnotes.contains(id) {
-      warnings.push(
-        "annotation index: footnote references target id '\{id}' which has no definition",
-      )
+      if !warnings.full() {
+        warnings.add(
+          "annotation index: footnote references target id '\{warnings.text(id)}' which has no definition",
+        )
+      }
       footnotes.push({ id, references: refs })
     }
   }
   for id, refs in endnote_refs {
     if !seen_endnotes.contains(id) {
-      warnings.push(
-        "annotation index: endnote references target id '\{id}' which has no definition",
-      )
+      if !warnings.full() {
+        warnings.add(
+          "annotation index: endnote references target id '\{warnings.text(id)}' which has no definition",
+        )
+      }
       endnotes.push({ id, references: refs })
     }
   }

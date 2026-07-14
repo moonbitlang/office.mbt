@@ -28,7 +28,7 @@ priv enum ScanMarkerKind {
   CommentRef
   FootnoteRef
   EndnoteRef
-} derive(Eq)
+}
 
 ///|
 impl Show for ScanMarkerKind with fn output(self, logger) {
@@ -304,7 +304,10 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
   }
   let nodes : Array[ScannedNode] = []
   let markers : Array[ScannedMarker] = []
-  let warnings : Array[String] = []
+  let warnings = AnnotationWarningCollector::new(
+    MAX_STORY_SCAN_WARNINGS,
+    MAX_ANNOTATION_WARNING_CHARS,
+  )
   let mut root : ScannedNode? = None
   let frames : Array[ScanFrame] = []
   let root_counters : Map[String, Int] = Map([])
@@ -481,7 +484,7 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
             })
           }
         }
-        None => warnings.push("annotation scanner: unbalanced closing tag")
+        None => warnings.add("annotation scanner: unbalanced closing tag")
       }
       index = close_end
       continue
@@ -563,7 +566,7 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
             after_child,
           })
           if id is None {
-            warnings.push(
+            warnings.add(
               "annotation scanner: a \{kind} marker has no w:id attribute",
             )
           }
@@ -619,7 +622,7 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
               is (None | Some("continue"))
           }
         None =>
-          warnings.push("annotation scanner: a vMerge outside any table cell")
+          warnings.add("annotation scanner: a vMerge outside any table cell")
       }
     }
     if is_wml_uri(uri) && local_name == "gridSpan" && parent_is("tcPr") {
@@ -791,9 +794,9 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
     index = tag_end
   }
   if frames.length() > 0 {
-    warnings.push("annotation scanner: unbalanced open tags at end of part")
+    warnings.add("annotation scanner: unbalanced open tags at end of part")
   }
-  { nodes, markers, warnings, root }
+  { nodes, markers, warnings: warnings.finish(), root }
 }
 
 ///|
