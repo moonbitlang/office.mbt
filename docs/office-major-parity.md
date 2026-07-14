@@ -53,16 +53,22 @@ bounded A4 transaction boundary:
 - every plan receives an overflow-safe preflight for archive/manifest/name and
   expanded-size limits, XML-token cardinality, and the combined replacement,
   added-part, and edited-payload working-memory ceiling before materialization;
+  added-part names are bounded before canonical-path parsing or diagnostic
+  construction;
 - strict OPC validation and the archive-backed annotation index each charge one
   cumulative XML budget across package parts before UTF-8 decode and DOM
   allocation, including inherited namespace bindings before scope snapshots;
   this bounds sibling-dense, namespace-heavy, and many-part inputs rather than
   granting every part a fresh parser allowance; OPC maps reject duplicate
   normalized content-type keys and every relationship scope rejects missing or
-  duplicate ids;
+  duplicate ids; the unique root `officeDocument` relationship and the unique
+  comments/commentsExtended relationships are authoritative for both
+  Transitional and Strict namespaces, so conventional-path decoys cannot be
+  validated in place of relocated parts;
 - reply and resolution paraId collision scans reuse the session's cumulative
   XML budget across the main relationship graph, including wired but
-  section-unreferenced header, footer, and note stories;
+  section-unreferenced header, footer, and note stories; the candidate gate
+  separately requires every reachable story paragraph id to be globally unique;
 - comment bodies are structurally preflighted before derived trees or reply
   paragraph ids are allocated, then serialized only after an escape-aware exact
   UTF-8 sizing pass; the transaction grants a fragment at most one eighth of
@@ -75,17 +81,21 @@ bounded A4 transaction boundary:
   and commentEx records rather than diagnostic prose;
 - annotation construction buckets each story's markers and projection spans
   once, pairs ranges with an indexed FIFO, and attaches references with a
-  monotonic scan; diagnostics are set-deduplicated and capped at 256 messages
-  of 512 characters, including an explicit omission notice;
+  monotonic scan; parsed projection paths are preindexed, and story-level
+  marker locations use sorted monotonic sweeps instead of repeated tree/path
+  searches; diagnostics are set-deduplicated and capped at 256 messages of 512
+  characters, including an explicit omission notice;
 - a true no-op explicitly reuses the transaction's exact input buffer, while a
   real edit serializes through the transaction's candidate-size ceiling;
 - untouched ZIP local records and producer metadata flow through the
   preservation-aware writer, while the A4 preservation report independently
   enforces that only declared part payloads changed; and
-- candidate packages pass both portable Office detection and the strict,
-  archive-backed DOCX package validator before atomic publication; validator
-  findings and messages are bounded as they are produced, and attacker-derived
-  XML diagnostics are truncated before joining.
+- source and candidate packages first pass the `office-docx-bounded` identifier,
+  whose cumulative XML limits cover every part inspected by the generic Office
+  detector; candidates then pass independent portable Office detection and the
+  strict archive-backed DOCX package validator before atomic publication;
+  validator findings and messages are bounded as they are produced, and
+  attacker-derived XML diagnostics are truncated before joining.
 
 D1 is an SDK foundation, not a newly advertised CLI command. No partial command
 record is added to the A2 registry: its existing raw mutation records already
