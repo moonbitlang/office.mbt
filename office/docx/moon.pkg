@@ -1,0 +1,19 @@
+import {
+  "bobzhang/office",
+  "bobzhang/office/transaction",
+  "bobzhang/mbtexcel/zip",
+  "bobzhang/docx2html/core" @docxcore,
+  "bobzhang/docx2html/docx" @word,
+  "bobzhang/docx2html/opc",
+  "bobzhang/docx2html/splice",
+  "moonbitlang/core/json",
+}
+
+import {
+  "bobzhang/docx2html" @word_fixture,
+  "moonbitlang/async",
+  "moonbitlang/async/fs" @afs,
+  "moonbitlang/core/encoding/utf8",
+} for "test"
+
+supported_targets = "native+wasm"

@@ -1,0 +1,44 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/office/docx"
+
+import {
+  "bobzhang/docx2html/splice",
+  "bobzhang/mbtexcel/zip",
+  "bobzhang/office/transaction",
+}
+
+// Values
+pub fn open_edit_session(Bytes, @zip.Archive, @transaction.TransactionBudget) -> DocxEditSession raise @transaction.TransactionError
+
+pub fn package_validator() -> @transaction.TransactionValidator raise @transaction.TransactionError
+
+pub async fn transact_docx(@transaction.TransactionOptions, (DocxEditSession) -> Unit raise, validators? : Array[@transaction.TransactionValidator]) -> @transaction.TransactionReport
+
+// Errors
+
+// Types and methods
+pub struct DocxEditSession {
+  // private fields
+}
+pub fn DocxEditSession::annotated(Self) -> @bobzhang/docx2html/docx.DocxAnnotatedResult
+pub fn DocxEditSession::finish(Self) -> @transaction.TransactionMutation raise @transaction.TransactionError
+pub fn DocxEditSession::is_noop(Self) -> Bool
+pub fn DocxEditSession::pending_parts(Self) -> Array[String]
+pub fn DocxEditSession::queue_added_part(Self, String, Bytes) -> Unit raise @transaction.TransactionError
+pub fn DocxEditSession::queue_plan(Self, @splice.SplicePlan) -> Unit raise @transaction.TransactionError
+pub fn DocxEditSession::queue_span_edit(Self, String, start~ : Int, end~ : Int, Bytes) -> Unit raise @transaction.TransactionError
+pub fn DocxEditSession::source_bytes(Self) -> Bytes
+pub fn DocxEditSession::source_part(Self, String) -> Bytes?
+pub fn DocxEditSession::source_part_fingerprints(Self) -> Array[DocxPartFingerprint]
+
+pub struct DocxPartFingerprint {
+  // private fields
+}
+pub fn DocxPartFingerprint::byte_length(Self) -> Int
+pub fn DocxPartFingerprint::crc32(Self) -> UInt
+pub fn DocxPartFingerprint::part(Self) -> String
+
+// Type aliases
+
+// Traits
+
