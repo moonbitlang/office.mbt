@@ -511,6 +511,26 @@ test "docx relationships reader finds targets by id and type" {
 }
 
 ///|
+test "section relationship index handles long shared-prefix ids linearly" {
+  let common = "r".repeat(1200)
+  let entries : Array[Relationship] = []
+  for ordinal in 0..<800 {
+    entries.push({
+      id: common + ordinal.to_string(),
+      relationship_type: TRANSITIONAL_HEADER_RELATIONSHIP,
+      target: "header\{ordinal}.xml",
+      target_mode: None,
+    })
+  }
+  let index = RelationshipIndex::build({ relationships: entries })
+  for ordinal in 0..<800 {
+    guard index.by_id.get(common + ordinal.to_string()) is Some(matches)
+    assert_eq(matches.length(), 1)
+    assert_eq(matches[0].target, "header\{ordinal}.xml")
+  }
+}
+
+///|
 test "annotation story resolver normalizes, deduplicates, and fails closed" {
   let zip = zip_with_text(
     "word/header.xml", "<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>",
