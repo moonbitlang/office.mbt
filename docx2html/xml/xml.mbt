@@ -2184,29 +2184,101 @@ fn tolerant_xml_entity_char(source : String, start : Int, end : Int) -> Char? {
   if xml_source_range_equals(source, start, end, "apos") {
     return Some('\'')
   }
-  if start >= end || source[start] != '#' {
+  if end - start < 2 || source[start] != '#' {
     return None
   }
-  let (base, digits_start) = if start + 1 < end &&
-    (source[start + 1] == 'x' || source[start + 1] == 'X') {
-    (16, start + 2)
+  let text_start = start + 1
+  let mut first_lower_x = -1
+  for index in text_start..<end {
+    let char = source[index]
+    if !((char >= '0' && char <= '9') ||
+      (char >= 'A' && char <= 'Z') ||
+      (char >= 'a' && char <= 'z') ||
+      char == '_') {
+      return None
+    }
+    if first_lower_x < 0 && char == 'x' {
+      first_lower_x = index
+    }
+  }
+  match parse_xmldom_numeric_xml_range(source, text_start, end, first_lower_x) {
+    None => Some('\u{0}')
+    Some(codepoint) => codepoint.to_char()
+  }
+}
+
+///|
+/// Returns one code unit from xmldom's historical transformed numeric token:
+/// the first lowercase `x` is replaced with `0x`. The virtual view preserves
+/// those compatibility semantics without allocating the transformed suffix.
+fn xmldom_numeric_virtual_unit(
+  source : String,
+  text_start : Int,
+  first_lower_x : Int,
+  virtual_index : Int,
+) -> UInt16 {
+  if first_lower_x < 0 {
+    return source[text_start + virtual_index]
+  }
+  let prefix_length = first_lower_x - text_start
+  if virtual_index < prefix_length {
+    source[text_start + virtual_index]
+  } else if virtual_index == prefix_length {
+    '0'
+  } else if virtual_index == prefix_length + 1 {
+    'x'
   } else {
-    (10, start + 1)
+    source[text_start + virtual_index - 1]
   }
-  if digits_start >= end {
-    return None
+}
+
+///|
+/// Allocation-free equivalent of xmldom's `parseInt(text.replace('x','0x'))`.
+/// `None` means no leading digit (decoded historically as NUL); the sentinel
+/// U+110000 distinguishes overflow so the caller preserves the entity raw.
+fn parse_xmldom_numeric_xml_range(
+  source : String,
+  text_start : Int,
+  text_end : Int,
+  first_lower_x : Int,
+) -> Int? {
+  let virtual_length = text_end -
+    text_start +
+    (if first_lower_x >= 0 { 1 } else { 0 })
+  let mut index = 0
+  let mut radix = 10
+  if virtual_length >= 2 &&
+    xmldom_numeric_virtual_unit(source, text_start, first_lower_x, 0) == '0' &&
+    (
+      xmldom_numeric_virtual_unit(source, text_start, first_lower_x, 1) == 'x' ||
+      xmldom_numeric_virtual_unit(source, text_start, first_lower_x, 1) == 'X'
+    ) {
+    radix = 16
+    index = 2
   }
-  let mut codepoint = 0
-  for index in digits_start..<end {
-    guard xml_entity_digit_value(source[index], base) is Some(digit) else {
-      return None
+  let mut value = 0
+  let mut saw_digit = false
+  while index < virtual_length {
+    let char = xmldom_numeric_virtual_unit(
+      source, text_start, first_lower_x, index,
+    )
+    match xml_entity_digit_value(char, radix) {
+      Some(digit) => {
+        saw_digit = true
+        if value > (0x10FFFF - digit) / radix {
+          return Some(0x110000)
+        }
+        value = value * radix + digit
+        index += 1
+      }
+      None => break
     }
-    if codepoint > (0x10FFFF - digit) / base {
-      return None
-    }
-    codepoint = codepoint * base + digit
   }
-  codepoint.to_char()
+  if saw_digit {
+    Some(value)
+  } else {
+    None
+  }
 }
 
 ///|
