@@ -327,9 +327,224 @@ pub fn write_xml_fragment(
 }
 
 ///|
+/// Serializes one XML fragment only after an allocation-free sizing pass has
+/// proved that its UTF-8 representation fits `max_output_bytes`. The sizing
+/// pass accounts for escaping and namespace declarations and rejects excessive
+/// nesting before the recursive writer runs.
+pub fn write_xml_fragment_limited(
+  element : XmlElement,
+  max_output_bytes~ : Int,
+  namespaces? : Map[String, String] = Map([]),
+) -> String raise DocxError {
+  let limit = if max_output_bytes > 0 { max_output_bytes } else { 0 }
+  let sizer = XmlWriteSizer::{ namespaces, remaining_bytes: limit }
+  sizer.size_element(element, is_root=true, depth=0)
+  let output_bytes = limit - sizer.remaining_bytes
+  let writer = XmlWriter::{ namespaces, uri_to_prefix: invert_map(namespaces) }
+  let builder = StringBuilder(size_hint=output_bytes)
+  writer.write_element(builder, element, is_root=true)
+  builder.to_string()
+}
+
+///|
 priv struct XmlWriter {
   namespaces : Map[String, String]
   uri_to_prefix : Map[String, String]
+}
+
+///|
+/// The strict parser and limited writer share the same conservative recursive
+/// depth ceiling, keeping their stack use portable on Wasm as well as native.
+let xml_write_max_depth : Int = 256
+
+///|
+priv struct XmlWriteSizer {
+  namespaces : Map[String, String]
+  mut remaining_bytes : Int
+}
+
+///|
+fn XmlWriteSizer::charge_bytes(
+  self : XmlWriteSizer,
+  bytes : Int,
+) -> Unit raise DocxError {
+  if bytes < 0 || bytes > self.remaining_bytes {
+    raise InvalidXml(message="XML serialization byte limit exceeded")
+  }
+  self.remaining_bytes -= bytes
+}
+
+///|
+fn XmlWriteSizer::charge_scalar(
+  self : XmlWriteSizer,
+  character : Char,
+) -> Unit raise DocxError {
+  let code = character.to_int()
+  let bytes = if code <= 0x7F {
+    1
+  } else if code <= 0x7FF {
+    2
+  } else if code >= 0xD800 && code <= 0xDFFF {
+    raise InvalidXml(message="XML serialization contains invalid Unicode")
+  } else if code <= 0xFFFF {
+    3
+  } else if code <= 0x10FFFF {
+    4
+  } else {
+    raise InvalidXml(message="XML serialization contains invalid Unicode")
+  }
+  self.charge_bytes(bytes)
+}
+
+///|
+fn XmlWriteSizer::charge_raw(
+  self : XmlWriteSizer,
+  value : StringView,
+) -> Unit raise DocxError {
+  for character in value {
+    self.charge_scalar(character)
+  }
+}
+
+///|
+fn XmlWriteSizer::charge_escaped_text(
+  self : XmlWriteSizer,
+  value : StringView,
+) -> Unit raise DocxError {
+  for character in value {
+    match character {
+      '&' => self.charge_bytes(5)
+      '<' | '>' => self.charge_bytes(4)
+      _ => self.charge_scalar(character)
+    }
+  }
+}
+
+///|
+fn XmlWriteSizer::charge_escaped_attribute(
+  self : XmlWriteSizer,
+  value : StringView,
+) -> Unit raise DocxError {
+  for character in value {
+    match character {
+      '&' => self.charge_bytes(5)
+      '<' | '>' => self.charge_bytes(4)
+      '"' => self.charge_bytes(6)
+      _ => self.charge_scalar(character)
+    }
+  }
+}
+
+///|
+fn string_matches_view(value : String, view : StringView) -> Bool {
+  if value.length() != view.length() {
+    return false
+  }
+  for index in 0..<value.length() {
+    if value[index] != view[index] {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn XmlWriteSizer::charge_mapped_name(
+  self : XmlWriteSizer,
+  name : String,
+) -> Unit raise DocxError {
+  if !name.has_prefix("{") {
+    self.charge_raw(name)
+    return
+  }
+  guard name.find("}") is Some(close) else {
+    self.charge_raw(name)
+    return
+  }
+  let uri = name[1:close]
+  let local_name = name[close + 1:]
+  let mut matched_prefix : String? = None
+  for prefix, candidate_uri in self.namespaces {
+    if string_matches_view(candidate_uri, uri) {
+      matched_prefix = Some(prefix)
+    }
+  }
+  match matched_prefix {
+    Some("") => self.charge_raw(local_name)
+    Some(prefix) => {
+      self.charge_raw(prefix)
+      self.charge_bytes(1)
+      self.charge_raw(local_name)
+    }
+    None => self.charge_raw(name)
+  }
+}
+
+///|
+fn XmlWriteSizer::size_attribute(
+  self : XmlWriteSizer,
+  name : StringView,
+  value : StringView,
+) -> Unit raise DocxError {
+  self.charge_bytes(1)
+  self.charge_raw(name)
+  self.charge_bytes(2)
+  self.charge_escaped_attribute(value)
+  self.charge_bytes(1)
+}
+
+///|
+fn XmlWriteSizer::size_node(
+  self : XmlWriteSizer,
+  node : XmlNode,
+  depth~ : Int,
+) -> Unit raise DocxError {
+  match node {
+    XmlElement(element) => self.size_element(element, depth~)
+    XmlText(value) => self.charge_escaped_text(value)
+  }
+}
+
+///|
+fn XmlWriteSizer::size_element(
+  self : XmlWriteSizer,
+  element : XmlElement,
+  is_root? : Bool = false,
+  depth~ : Int,
+) -> Unit raise DocxError {
+  if depth >= xml_write_max_depth {
+    raise InvalidXml(message="XML serialization nesting limit exceeded")
+  }
+  self.charge_bytes(1)
+  self.charge_mapped_name(element.name)
+  if is_root {
+    for prefix, uri in self.namespaces {
+      if prefix == "" {
+        self.size_attribute("xmlns", uri)
+      } else {
+        self.charge_bytes(1)
+        self.charge_bytes(6)
+        self.charge_raw(prefix)
+        self.charge_bytes(2)
+        self.charge_escaped_attribute(uri)
+        self.charge_bytes(1)
+      }
+    }
+  }
+  for name, value in element.attributes {
+    self.size_attribute(name, value)
+  }
+  if element.children.is_empty() {
+    self.charge_bytes(2)
+  } else {
+    self.charge_bytes(1)
+    for child in element.children {
+      self.size_node(child, depth=depth + 1)
+    }
+    self.charge_bytes(2)
+    self.charge_mapped_name(element.name)
+    self.charge_bytes(1)
+  }
 }
 
 ///|

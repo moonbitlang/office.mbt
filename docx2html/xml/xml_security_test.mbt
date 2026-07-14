@@ -34,6 +34,19 @@ fn limited_xml_error(
 }
 
 ///|
+fn limited_xml_write_error(
+  element : @xml.XmlElement,
+  max_output_bytes : Int,
+) -> String raise {
+  try @xml.write_xml_fragment_limited(element, max_output_bytes~) catch {
+    InvalidXml(message~) => message
+    _ => fail("expected InvalidXml")
+  } noraise {
+    _ => fail("expected limited XML serialization to fail")
+  }
+}
+
+///|
 test "strict XML rejects duplicate attributes without changing tolerant parsing" {
   let source = "<root id=\"first\" id=\"second\"/>"
   debug_inspect(
@@ -201,6 +214,40 @@ test "strict XML bounds attacker-controlled diagnostic tokens before joining" {
   let message = strict_xml_error("<a>&\{entity};</a>")
   assert_true(message.length() < 200)
   assert_true(message.contains("…"))
+}
+
+///|
+test "limited XML writer sizes escaped UTF-8 output before serialization" {
+  let escaped = @xml.xml_element("root", children=[@xml.xml_text("&&")])
+  inspect(
+    @xml.write_xml_fragment_limited(escaped, max_output_bytes=23),
+    content="<root>&amp;&amp;</root>",
+  )
+  inspect(
+    limited_xml_write_error(escaped, 22),
+    content="XML serialization byte limit exceeded",
+  )
+  let unicode = @xml.xml_element("x", children=[@xml.xml_text("界")])
+  inspect(
+    @xml.write_xml_fragment_limited(unicode, max_output_bytes=10),
+    content="<x>界</x>",
+  )
+  inspect(
+    limited_xml_write_error(unicode, 9),
+    content="XML serialization byte limit exceeded",
+  )
+}
+
+///|
+test "limited XML writer rejects excessive nesting before recursive output" {
+  let mut element = @xml.xml_element("n")
+  for _ in 0..<256 {
+    element = @xml.xml_element("n", children=[XmlElement(element)])
+  }
+  inspect(
+    limited_xml_write_error(element, 1024 * 1024),
+    content="XML serialization nesting limit exceeded",
+  )
 }
 
 ///|
