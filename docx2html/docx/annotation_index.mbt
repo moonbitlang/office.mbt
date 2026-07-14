@@ -386,7 +386,36 @@ pub fn read_docx_annotated(
   external_file_access? : Bool = false,
   read_external_file? : (String) -> Bytes? = no_external_file_reader,
 ) -> DocxAnnotatedResult raise DocxError {
-  let zip = open_zip(docx)
+  read_docx_annotated_zip(
+    open_zip(docx),
+    external_file_access,
+    read_external_file,
+  )
+}
+
+///|
+/// Builds the same package and annotation indexes from a caller-owned archive
+/// snapshot. Payload buffers are shared; the DOCX reader does not inflate the
+/// package a second time. Duplicate entry names fail before the map-backed view
+/// is constructed.
+pub fn read_docx_annotated_archive(
+  archive : @mbtzip.Archive,
+  external_file_access? : Bool = false,
+  read_external_file? : (String) -> Bytes? = no_external_file_reader,
+) -> DocxAnnotatedResult raise DocxError {
+  read_docx_annotated_zip(
+    open_zip_archive(archive),
+    external_file_access,
+    read_external_file,
+  )
+}
+
+///|
+fn read_docx_annotated_zip(
+  zip : ZipArchive,
+  external_file_access : Bool,
+  read_external_file : (String) -> Bytes?,
+) -> DocxAnnotatedResult raise DocxError {
   let external_files = external_file_access_options(
     external_file_access, read_external_file,
   )

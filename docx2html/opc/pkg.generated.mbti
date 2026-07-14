@@ -1,8 +1,14 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "bobzhang/docx2html/opc"
 
+import {
+  "bobzhang/mbtexcel/zip",
+}
+
 // Values
 pub fn resolve_target(String, String) -> String
+
+pub fn validate_docx_archive(@zip.Archive) -> Array[String]
 
 pub fn validate_docx_package(BytesView) -> Array[String]
 
