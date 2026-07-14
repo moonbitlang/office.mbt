@@ -62,6 +62,9 @@ let candidate_xml_materialized_chars : Int = 8 * 1024 * 1024
 let candidate_xml_token_chars : Int = 8 * 1024 * 1024
 
 ///|
+let bounded_identifier_name : String = "office-docx-bounded"
+
+///|
 fn bounded_docx_text(text : String, limit : Int) -> String {
   let output = StringBuilder::new()
   let mut count = 0
@@ -492,6 +495,52 @@ fn candidate_xml_budget() -> @xml.XmlReadBudget {
 }
 
 ///|
+/// Runs before the format-neutral Office DOM detector for both source and
+/// candidate archives. Every XML part that the portable detector will inspect
+/// has therefore already passed cumulative source/token/materialization caps.
+fn package_identifier() -> @transaction.TransactionIdentifier raise @transaction.TransactionError {
+  @transaction.transaction_identifier(bounded_identifier_name, (
+    _path,
+    _bytes,
+    archive,
+  ) => {
+    let (findings, truncated) = @opc.validate_docx_archive_limited(
+      archive,
+      max_findings=64,
+      max_message_chars=512,
+      max_xml_source_units=candidate_xml_source_units,
+      max_xml_tokens=candidate_xml_tokens,
+      max_xml_materialized_chars=candidate_xml_materialized_chars,
+      max_xml_token_chars=candidate_xml_token_chars,
+    )
+    if !findings.is_empty() {
+      let duplicate = findings.search_by(fn(finding) {
+        finding.has_prefix("duplicate entry name:")
+      })
+      let resource_limited = findings.search_by(is_xml_resource_finding)
+      let code = if duplicate is Some(_) {
+        "office.docx.duplicate_part"
+      } else if resource_limited is Some(_) {
+        "office.docx.resource_limit"
+      } else {
+        "office.docx.invalid_package"
+      }
+      raise docx_failure(
+        code,
+        "bounded DOCX package identification failed",
+        details=Json::object({
+          "identifier": Json::string(bounded_identifier_name),
+          "reported_finding_count": Json::number(findings.length().to_double()),
+          "findings_truncated": Json::boolean(truncated),
+          "first_finding": Json::string(bounded_docx_text(findings[0], 320)),
+        }),
+      )
+    }
+    Docx
+  })
+}
+
+///|
 /// Builds the strict archive-backed DOCX validator used by edit transactions.
 /// It consumes the already inflated candidate archive and emits at most 64
 /// bounded findings under one stable validator identity.
@@ -596,5 +645,6 @@ pub async fn transact_docx(
       session.finish()
     },
     validators~,
+    identifier=package_identifier(),
   )
 }
