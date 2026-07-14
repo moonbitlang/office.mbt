@@ -56,6 +56,14 @@ test "the builder fails closed" {
     "invalid part name 'word/../evil.xml'",
   )
   expect_build_error(
+    builder => builder.add_part("word/./extra.xml", b"x"),
+    "invalid part name 'word/./extra.xml'",
+  )
+  expect_build_error(
+    builder => builder.add_part("word//extra.xml", b"x"),
+    "invalid part name 'word//extra.xml'",
+  )
+  expect_build_error(
     builder => builder.add_part("word/document.xml", b"x"),
     "duplicate part name: word/document.xml",
   )

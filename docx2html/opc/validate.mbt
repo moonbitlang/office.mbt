@@ -367,7 +367,15 @@ fn check_entry_name(name : String, findings : FindingCollector) -> Unit {
     findings.add("entry name contains a backslash: \{findings.text(name)}")
   }
   for segment in name.split("/") {
-    if segment == ".." {
+    if segment == "" {
+      findings.add(
+        "entry name contains an empty segment: \{findings.text(name)}",
+      )
+      break
+    } else if segment == "." {
+      findings.add("entry name contains a '.' segment: \{findings.text(name)}")
+      break
+    } else if segment == ".." {
       findings.add("entry name contains a '..' segment: \{findings.text(name)}")
       break
     }
