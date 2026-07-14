@@ -867,6 +867,69 @@ async test "D1 generic plans cannot publish an unwired comments part" {
 }
 
 ///|
+async test "D1 generic plans reject every unwired conventional annotation part" {
+  with_docx_session_test_dir(directory => {
+    let original = @word_fixture.new_blank_docx()
+    let archive = @zip.read(original)
+    guard archive.get("[Content_Types].xml") is Some(types) else {
+      fail("fixture is missing content types")
+    }
+    guard types.find(b"</Types>") is Some(types_insert) else {
+      fail("fixture content types have no closing tag")
+    }
+    let cases : ReadOnlyArray[(String, String, String)] = [
+      (
+        "commentsExtended",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml",
+        (
+          #|<w15:commentsEx xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml"/>
+        ),
+      ),
+      (
+        "footnotes",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml",
+        (
+          #|<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>
+        ),
+      ),
+      (
+        "endnotes",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml",
+        (
+          #|<w:endnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>
+        ),
+      ),
+    ]
+    for item in cases {
+      let (role, content_type, xml) = item
+      let input = "\{directory}/\{role}-input.docx"
+      let output = "\{directory}/\{role}-output.docx"
+      let part = "word/\{role}.xml"
+      write_docx_session_file(input, original)
+      let code = docx_session_error_code(() => {
+        @docx.transact_docx(
+          @transaction.transaction_options(input, output_path=output),
+          session => {
+            session.queue_span_edit(
+              "[Content_Types].xml",
+              start=types_insert,
+              end=types_insert,
+              @utf8.encode(
+                "<Override PartName=\"/\{part}\" ContentType=\"\{content_type}\"/>",
+              ),
+            )
+            session.queue_added_part(part, @utf8.encode(xml))
+          },
+        )
+      })
+      assert_eq(code, "office.transaction.validation_failed")
+      assert_false(@afs.exists(output))
+      assert_eq(@afs.read_file(input).binary(), original)
+    }
+  })
+}
+
+///|
 async test "D1 generic plans cannot publish dangling markers in unreferenced stories" {
   with_docx_session_test_dir(directory => {
     let input = "\{directory}/input.docx"
