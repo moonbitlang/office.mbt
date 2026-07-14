@@ -31,11 +31,11 @@ pub fn DocxPartFingerprint::crc32(self : DocxPartFingerprint) -> UInt {
 /// snapshot. All queued spans use original-part coordinates; the aggregate
 /// plan is replaced only after a fully checked merge.
 pub struct DocxEditSession {
-  priv original : Bytes
   priv archive : @zip.Archive
   priv annotated : @word.DocxAnnotatedResult
   priv fingerprints : Array[DocxPartFingerprint]
   priv max_candidate_package_bytes : Int
+  priv splice_limits : @splice.SpliceLimits
   priv mut plan : @splice.SplicePlan
 }
 
@@ -111,6 +111,9 @@ fn mapped_plan_failure(
     "office.docx.missing_part"
   } else if message.contains("output limit") {
     "office.docx.output_limit"
+  } else if message.contains(" limit") ||
+    message.contains("maximum addressable part size") {
+    "office.docx.resource_limit"
   } else {
     "office.docx.invalid_plan"
   }
@@ -132,21 +135,20 @@ fn source_fingerprints(archive : @zip.Archive) -> Array[DocxPartFingerprint] {
 }
 
 ///|
-/// Opens a DOCX edit session only from the bounded archive provenance supplied
-/// by `office/transaction`. The source receives strict OPC validation and one
-/// archive-backed annotation/span index without a second ZIP inflation.
-pub fn open_edit_session(
-  original : Bytes,
+/// Opens a DOCX edit session only inside `transact_docx`, from its private
+/// bounded archive and opaque mutation budget. The source receives strict OPC
+/// validation and one archive-backed annotation/span index without a second
+/// ZIP inflation.
+fn open_edit_session(
   archive : @zip.Archive,
   budget : @transaction.TransactionBudget,
 ) -> DocxEditSession raise @transaction.TransactionError {
-  if !budget.source_archive_is_bounded(original, archive) {
-    raise docx_failure(
-      "office.docx.unbounded_source", "DOCX edit sessions require the pristine bounded archive supplied by office/transaction",
-    )
-  }
   let archive = archive.fork()
-  let findings = @opc.validate_docx_archive(archive)
+  let (findings, findings_truncated) = @opc.validate_docx_archive_limited(
+    archive,
+    max_findings=budget.max_validation_findings(),
+    max_message_chars=budget.max_validation_message_chars(),
+  )
   if !findings.is_empty() {
     let duplicate = findings.search_by(fn(finding) {
       finding.has_prefix("duplicate entry name:")
@@ -160,7 +162,8 @@ pub fn open_edit_session(
       code,
       "source DOCX failed strict package validation",
       details=Json::object({
-        "finding_count": Json::number(findings.length().to_double()),
+        "reported_finding_count": Json::number(findings.length().to_double()),
+        "findings_truncated": Json::boolean(findings_truncated),
         "first_finding": Json::string(bounded_docx_text(findings[0], 320)),
       }),
     )
@@ -172,29 +175,25 @@ pub fn open_edit_session(
         "source DOCX could not be indexed: \{docx_error_message(error)}",
       )
   }
+  let splice_limits = @splice.splice_limits(
+    max_archive_entries=budget.max_archive_entries(),
+    max_changed_parts=budget.max_preservation_parts(),
+    max_part_name_chars=budget.max_part_name_chars(),
+    max_entry_uncompressed_bytes=budget.max_entry_uncompressed_bytes(),
+    max_total_uncompressed_bytes=budget.max_total_uncompressed_bytes(),
+    max_materialized_bytes=budget.max_splice_materialized_bytes(),
+    max_xml_tokens=budget.max_splice_xml_tokens(),
+  ) catch {
+    error => raise mapped_plan_failure(error)
+  }
   {
-    original,
     archive,
     annotated,
     fingerprints: source_fingerprints(archive),
     max_candidate_package_bytes: budget.max_candidate_package_bytes(),
+    splice_limits,
     plan: @splice.SplicePlan::new(),
   }
-}
-
-///|
-/// Exact immutable source package bytes owned by this session.
-pub fn DocxEditSession::source_bytes(self : DocxEditSession) -> Bytes {
-  self.original
-}
-
-///|
-/// One immutable source part payload, when present.
-pub fn DocxEditSession::source_part(
-  self : DocxEditSession,
-  part : String,
-) -> Bytes? {
-  self.archive.get(part)
 }
 
 ///|
@@ -203,6 +202,66 @@ pub fn DocxEditSession::annotated(
   self : DocxEditSession,
 ) -> @word.DocxAnnotatedResult {
   self.annotated
+}
+
+///|
+/// Plans and atomically queues one comment addition against the session's
+/// already materialized archive. No package bytes are exposed or reinflated.
+pub fn DocxEditSession::queue_comment_addition(
+  self : DocxEditSession,
+  at_relative~ : String,
+  to_relative~ : String,
+  spec : @word.CommentSpec,
+) -> String raise @transaction.TransactionError {
+  let (plan, comment_id) = @word.plan_comment_addition_archive(
+    self.annotated,
+    self.archive,
+    at_relative~,
+    to_relative~,
+    spec,
+  ) catch {
+    error => raise mapped_plan_failure(error)
+  }
+  self.queue_plan(plan)
+  comment_id
+}
+
+///|
+/// Plans and atomically queues one comment reply against the session archive.
+pub fn DocxEditSession::queue_comment_reply(
+  self : DocxEditSession,
+  parent_id~ : String,
+  spec : @word.CommentSpec,
+) -> String raise @transaction.TransactionError {
+  let (plan, comment_id) = @word.plan_comment_reply_archive(
+    self.annotated,
+    self.archive,
+    parent_id~,
+    spec,
+  ) catch {
+    error => raise mapped_plan_failure(error)
+  }
+  self.queue_plan(plan)
+  comment_id
+}
+
+///|
+/// Plans and atomically queues a comment resolve/unresolve operation against
+/// the session archive.
+pub fn DocxEditSession::queue_comment_resolution(
+  self : DocxEditSession,
+  comment_id~ : String,
+  done~ : Bool,
+) -> Unit raise @transaction.TransactionError {
+  let plan = @word.plan_comment_resolution_archive(
+    self.annotated,
+    self.archive,
+    comment_id~,
+    done~,
+  ) catch {
+    error => raise mapped_plan_failure(error)
+  }
+  self.queue_plan(plan)
 }
 
 ///|
@@ -234,23 +293,20 @@ pub fn DocxEditSession::queue_plan(
   self : DocxEditSession,
   plan : @splice.SplicePlan,
 ) -> Unit raise @transaction.TransactionError {
-  let unpinned = plan.unpinned_edited_parts()
-  if !unpinned.is_empty() {
-    raise docx_failure(
-      "office.docx.unpinned_plan",
-      "preservation-safe DOCX sessions require exact source bytes for every edited part",
-      details=Json::object({
-        "parts": Json::array(
-          unpinned.map(fn(part) { Json::string(bounded_docx_text(part, 320)) }),
-        ),
-      }),
-    )
+  // Bound and validate the incoming plan before copying any of its maps or
+  // arrays into session state. This also rejects unpinned/stale sources.
+  plan.check_against(self.archive, require_pins=true, limits=self.splice_limits) catch {
+    error => raise mapped_plan_failure(error)
   }
   let candidate = self.plan.copy()
   candidate.merge(plan) catch {
     error => raise mapped_plan_failure(error)
   }
-  candidate.check_against(self.archive, require_pins=true) catch {
+  candidate.check_against(
+    self.archive,
+    require_pins=true,
+    limits=self.splice_limits,
+  ) catch {
     error => raise mapped_plan_failure(error)
   }
   self.plan = candidate
@@ -304,7 +360,7 @@ pub fn DocxEditSession::queue_added_part(
 /// exact input buffer; edited candidates use the transaction output ceiling and
 /// carry the exact sorted part manifest for the authoritative preservation
 /// report.
-pub fn DocxEditSession::finish(
+fn DocxEditSession::finish(
   self : DocxEditSession,
 ) -> @transaction.TransactionMutation raise @transaction.TransactionError {
   let declared = self.plan.declared_parts()
@@ -316,6 +372,7 @@ pub fn DocxEditSession::finish(
     self.plan,
     max_output_bytes=self.max_candidate_package_bytes,
     require_pins=true,
+    limits=self.splice_limits,
   ) catch {
     error => raise mapped_plan_failure(error)
   }
@@ -344,9 +401,13 @@ pub fn package_validator() -> @transaction.TransactionValidator raise @transacti
         ),
       ]
     }
-    let raw = @opc.validate_docx_archive(archive)
+    let (raw, truncated) = @opc.validate_docx_archive_limited(
+      archive,
+      max_findings=64,
+      max_message_chars=512,
+    )
     let findings : Array[@transaction.ValidationFinding] = []
-    let limit = if raw.length() <= 64 { raw.length() } else { 63 }
+    let limit = if truncated && raw.length() == 64 { 63 } else { raw.length() }
     for index in 0..<limit {
       findings.push(
         @transaction.validation_finding(
@@ -355,7 +416,7 @@ pub fn package_validator() -> @transaction.TransactionValidator raise @transacti
         ),
       )
     }
-    if raw.length() > 64 {
+    if truncated {
       findings.push(
         @transaction.validation_finding(
           "docx.package.additional_findings", "additional DOCX package findings were omitted from the bounded report",
@@ -380,14 +441,14 @@ pub async fn transact_docx(
   validators.insert(0, package_validator())
   @transaction.transact(
     options,
-    (format, original, archive, budget) => {
+    (format, _original, archive, budget) => {
       if format != Docx {
         raise docx_failure(
           "office.docx.wrong_format",
           "DOCX edit transaction received a \{format.name()} package",
         )
       }
-      let session = open_edit_session(original, archive, budget)
+      let session = open_edit_session(archive, budget)
       edit(session)
       session.finish()
     },

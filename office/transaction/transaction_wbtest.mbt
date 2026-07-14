@@ -1335,6 +1335,7 @@ test "post-return budget requires explicit original reuse" {
   let retained = 4096L
   let budget : TransactionBudget = {
     max_candidate_package_bytes: original.length() - 1,
+    max_splice_materialized_bytes: 1024,
   }
   let live_limit = retained + budget.max_candidate_package_bytes.to_int64()
   let failure = try {
@@ -1372,6 +1373,7 @@ test "post-return budget requires explicit original reuse" {
   let fitting_copy = Bytes::from_array(original.to_array())
   let exact_budget : TransactionBudget = {
     max_candidate_package_bytes: original.length(),
+    max_splice_materialized_bytes: 1024,
   }
   let canonicalized = enforce_returned_candidate_budget(
     transaction_mutation(fitting_copy),
@@ -1381,7 +1383,10 @@ test "post-return budget requires explicit original reuse" {
     retained + original.length().to_int64(),
   )
   assert_eq(canonicalized.bytes, original)
-  let zero_budget : TransactionBudget = { max_candidate_package_bytes: 0 }
+  let zero_budget : TransactionBudget = {
+    max_candidate_package_bytes: 0,
+    max_splice_materialized_bytes: 0,
+  }
   assert_eq(
     wb_sync_error_code(() => {
       enforce_returned_candidate_budget(

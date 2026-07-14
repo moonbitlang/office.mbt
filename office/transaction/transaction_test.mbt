@@ -206,11 +206,7 @@ async test "in-place no-op validates without replacing source" {
     write_test_file(input, original)
     let report = @transaction.transact(
       @transaction.transaction_options(input),
-      (_format, bytes, archive, budget) => {
-        assert_true(budget.source_archive_is_bounded(bytes, archive))
-        assert_false(
-          budget.source_archive_is_bounded(bytes, @zip.Archive::new()),
-        )
+      (_format, _bytes, _archive, _budget) => {
         @transaction.transaction_reuse_original()
       },
     )

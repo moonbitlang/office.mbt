@@ -404,7 +404,8 @@ pub fn transaction_options(
 /// been charged to the live-memory envelope. Candidate serializers must apply
 /// this ceiling during their sizing pass, before allocating package bytes.
 pub struct TransactionBudget {
-  max_candidate_package_bytes : Int
+  priv max_candidate_package_bytes : Int
+  priv max_splice_materialized_bytes : Int
 }
 
 ///|
@@ -420,23 +421,80 @@ pub fn TransactionBudget::max_candidate_package_bytes(
 }
 
 ///|
-/// Verifies that `archive` still carries the unforgeable bounded-read
-/// provenance established by this transaction boundary and that its serialized
-/// source size matches `original`. Mutating an archive clears that provenance;
-/// a shallow fork supplied by `transact` retains it.
-pub fn TransactionBudget::source_archive_is_bounded(
+/// Maximum combined bytes that a preservation splice may retain for caller
+/// replacements and materialized edited parts. This allowance comes from the
+/// transaction's already charged working reserve, independently of the
+/// serialized candidate allowance.
+pub fn TransactionBudget::max_splice_materialized_bytes(
+  self : TransactionBudget,
+) -> Int {
+  self.max_splice_materialized_bytes
+}
+
+///|
+/// Maximum archive entry count accepted by the transaction boundary.
+pub fn TransactionBudget::max_archive_entries(_self : TransactionBudget) -> Int {
+  transaction_max_archive_entries
+}
+
+///|
+/// Maximum uncompressed payload bytes for one archive entry.
+pub fn TransactionBudget::max_entry_uncompressed_bytes(
   _self : TransactionBudget,
-  original : BytesView,
-  archive : @zip.Archive,
-) -> Bool {
-  match
-    archive.bounded_source_package_size(
-      max_entries=transaction_max_archive_entries,
-      max_entry_uncompressed_bytes=transaction_max_entry_uncompressed_bytes,
-      max_total_uncompressed_bytes=transaction_max_total_uncompressed_bytes,
-    ) {
-    Some(package_bytes) => package_bytes == original.length()
-    None => false
+) -> Int {
+  transaction_max_entry_uncompressed_bytes
+}
+
+///|
+/// Maximum aggregate uncompressed payload bytes for one archive.
+pub fn TransactionBudget::max_total_uncompressed_bytes(
+  _self : TransactionBudget,
+) -> Int {
+  transaction_max_total_uncompressed_bytes
+}
+
+///|
+/// Maximum number of parts a preservation manifest may declare.
+pub fn TransactionBudget::max_preservation_parts(
+  _self : TransactionBudget,
+) -> Int {
+  transaction_max_part_count
+}
+
+///|
+/// Maximum Unicode scalar count for one declared part name.
+pub fn TransactionBudget::max_part_name_chars(_self : TransactionBudget) -> Int {
+  transaction_max_part_length
+}
+
+///|
+/// Maximum bounded validator findings accepted by the transaction report.
+pub fn TransactionBudget::max_validation_findings(
+  _self : TransactionBudget,
+) -> Int {
+  transaction_max_validator_findings
+}
+
+///|
+/// Maximum Unicode scalar count retained for one validator message.
+pub fn TransactionBudget::max_validation_message_chars(
+  _self : TransactionBudget,
+) -> Int {
+  transaction_max_message_length
+}
+
+///|
+/// Maximum XML markup-token count allowed while a splice validates one
+/// materialized part. The fixed ratio reserves ample working memory for the
+/// strict parser's tree, strings, maps, and arrays.
+pub fn TransactionBudget::max_splice_xml_tokens(
+  self : TransactionBudget,
+) -> Int {
+  let tokens = self.max_splice_materialized_bytes / 64
+  if tokens > 0 {
+    tokens
+  } else {
+    1
   }
 }
 

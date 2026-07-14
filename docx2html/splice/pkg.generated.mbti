@@ -11,7 +11,9 @@ pub fn span_edit(start~ : Int, end~ : Int, Bytes) -> SpanEdit raise @core.DocxEr
 
 pub fn splice_docx(BytesView, SplicePlan) -> Bytes raise @core.DocxError
 
-pub fn splice_docx_archive(@zip.Archive, SplicePlan, max_output_bytes~ : Int, require_pins? : Bool) -> Bytes raise @core.DocxError
+pub fn splice_docx_archive(@zip.Archive, SplicePlan, max_output_bytes~ : Int, require_pins? : Bool, limits? : SpliceLimits) -> Bytes raise @core.DocxError
+
+pub fn splice_limits(max_archive_entries~ : Int, max_changed_parts~ : Int, max_part_name_chars~ : Int, max_entry_uncompressed_bytes~ : Int, max_total_uncompressed_bytes~ : Int, max_materialized_bytes~ : Int, max_xml_tokens~ : Int) -> SpliceLimits raise @core.DocxError
 
 // Errors
 
@@ -20,11 +22,15 @@ pub struct SpanEdit {
   // private fields
 }
 
+pub struct SpliceLimits {
+  // private fields
+}
+
 pub struct SplicePlan {
   // private fields
 }
 pub fn SplicePlan::add_part(Self, String, Bytes) -> Unit raise @core.DocxError
-pub fn SplicePlan::check_against(Self, @zip.Archive, require_pins? : Bool) -> Unit raise @core.DocxError
+pub fn SplicePlan::check_against(Self, @zip.Archive, require_pins? : Bool, limits? : SpliceLimits) -> Unit raise @core.DocxError
 pub fn SplicePlan::copy(Self) -> Self
 pub fn SplicePlan::declared_parts(Self) -> Array[String]
 pub fn SplicePlan::edit_part(Self, String, SpanEdit) -> Unit
