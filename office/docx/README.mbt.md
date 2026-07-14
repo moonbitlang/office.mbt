@@ -47,6 +47,11 @@ nesting, and every inherited namespace binding copied into an element scope, so
 many individually small parts, sibling-dense XML, or namespace-heavy trees
 cannot turn nominally linear limits into aggregate growth.
 
+Reply and resolution planning reuse the annotation index's remaining XML
+budget when they inspect the main relationship graph and paraIds. This includes
+header, footer, and note targets that are wired but not section-referenced, so
+an otherwise-unused story cannot trigger an unbounded decode or DOM build.
+
 Portable OPC validation rejects duplicate content-type defaults after
 case-normalizing extensions, duplicate overrides after normalizing package
 paths, and missing or duplicate relationship ids within every `.rels` scope.

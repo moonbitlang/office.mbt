@@ -96,6 +96,83 @@ async test "D1 session rejects sibling-dense XML before indexing" {
 }
 
 ///|
+async test "D1 semantic planners bound unreferenced relationship stories" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let original = @word_fixture.write_docx_with_comments(
+      [
+        @word_fixture.paragraph([
+          @word_fixture.run([@word_fixture.text("Claim")]),
+        ]),
+      ],
+      [
+        @word_fixture.comment_spec(author="Ada", from=0, to=0, [
+          @word_fixture.paragraph([
+            @word_fixture.run([@word_fixture.text("Explain")]),
+          ]),
+        ]),
+      ],
+    )
+    let archive = @zip.read(original)
+    guard archive.get("word/_rels/document.xml.rels") is Some(rels_bytes) else {
+      fail("fixture is missing main relationships")
+    }
+    let rels = @utf8.decode(rels_bytes, ignore_bom=true)
+    let wired_rels = rels.replace(
+      old="</Relationships>",
+      new=(
+        #|<Relationship Id="rIdUnreferencedHeader" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="unreferenced-header.xml"/></Relationships>
+      ),
+    )
+    assert_true(
+      archive.replace("word/_rels/document.xml.rels", @utf8.encode(wired_rels)),
+    )
+    guard archive.get("[Content_Types].xml") is Some(types_bytes) else {
+      fail("fixture is missing content types")
+    }
+    let types = @utf8.decode(types_bytes, ignore_bom=true)
+    let wired_types = types.replace(
+      old="</Types>",
+      new=(
+        #|<Override PartName="/word/unreferenced-header.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/></Types>
+      ),
+    )
+    assert_true(
+      archive.replace("[Content_Types].xml", @utf8.encode(wired_types)),
+    )
+    let header = StringBuilder()
+    header.write_string(
+      "<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">",
+    )
+    for _ in 0..<70_000 {
+      header.write_string("<w:p/>")
+    }
+    header.write_string("</w:hdr>")
+    archive.add(
+      "word/unreferenced-header.xml",
+      @utf8.encode(header.to_string()),
+    )
+    let source = @zip.write(archive)
+    write_docx_session_file(input, source)
+    let reply = @word_fixture.comment_spec(author="Bob", from=0, to=0, [
+      @word_fixture.paragraph([
+        @word_fixture.run([@word_fixture.text("bounded reply")]),
+      ]),
+    ])
+    let code = docx_session_error_code(() => {
+      @docx.transact_docx(
+        @transaction.transaction_options(input, output_path=output),
+        session => session.queue_comment_reply(parent_id="0", reply) |> ignore,
+      )
+    })
+    assert_eq(code, "office.docx.resource_limit")
+    assert_false(@afs.exists(output))
+    assert_eq(@afs.read_file(input).binary(), source)
+  })
+}
+
+///|
 async test "D1 session bounds comment fragments before derived allocation" {
   with_docx_session_test_dir(directory => {
     let blank_path = "\{directory}/blank.docx"

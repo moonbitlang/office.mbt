@@ -44,6 +44,7 @@ pub struct DocxEditSession {
   priv max_candidate_package_bytes : Int
   priv max_comment_fragment_bytes : Int
   priv splice_limits : @splice.SpliceLimits
+  priv xml_budget : @xml.XmlReadBudget
   priv mut plan : @splice.SplicePlan
   priv mut plan_mode : DocxEditPlanMode
 }
@@ -134,6 +135,8 @@ fn mapped_plan_failure(
     "office.docx.unsupported_encoding"
   } else if message.contains("without pinned source bytes") {
     "office.docx.unpinned_plan"
+  } else if is_xml_resource_finding(message) {
+    "office.docx.resource_limit"
   } else if message.contains("does not contain") ||
     message.contains("no longer present") ||
     message.contains("missing") {
@@ -241,6 +244,7 @@ fn open_edit_session(
     max_candidate_package_bytes: budget.max_candidate_package_bytes(),
     max_comment_fragment_bytes: budget.max_splice_materialized_bytes() / 8,
     splice_limits,
+    xml_budget,
     plan: @splice.SplicePlan::new(),
     plan_mode: Empty,
   }
@@ -329,6 +333,7 @@ pub fn DocxEditSession::queue_comment_reply(
     self.archive,
     parent_id~,
     spec,
+    xml_budget=self.xml_budget,
     max_fragment_bytes=self.max_comment_fragment_bytes,
   ) catch {
     error => raise mapped_plan_failure(error)
@@ -352,6 +357,7 @@ pub fn DocxEditSession::queue_comment_resolution(
     self.archive,
     comment_id~,
     done~,
+    xml_budget=self.xml_budget,
   ) catch {
     error => raise mapped_plan_failure(error)
   }
