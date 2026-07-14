@@ -34,7 +34,7 @@ pub fn SplicePlan::add_part_limited(Self, String, Bytes, SpliceLimits) -> Unit r
 pub fn SplicePlan::check_against(Self, @zip.Archive, require_pins? : Bool, limits? : SpliceLimits) -> Unit raise @core.DocxError
 pub fn SplicePlan::copy(Self) -> Self
 pub fn SplicePlan::declared_parts(Self) -> Array[String]
-pub fn SplicePlan::edit_part(Self, String, SpanEdit) -> Unit
+pub fn SplicePlan::edit_part(Self, String, SpanEdit) -> Unit raise @core.DocxError
 pub fn SplicePlan::is_empty(Self) -> Bool
 pub fn SplicePlan::merge(Self, Self) -> Unit raise @core.DocxError
 pub fn SplicePlan::new() -> Self
