@@ -631,6 +631,18 @@ async test "D1 session rejects unsafe plans and keeps failed adoption atomic" {
       })
     })
     assert_eq(oversized_manifest, "office.docx.resource_limit")
+    let oversized_valid_name = docx_session_error_code(() => {
+      @docx.transact_docx(@transaction.transaction_options(input), session => {
+        session.queue_added_part("word/" + "a".repeat(1_024) + ".xml", b"<x/>")
+      })
+    })
+    assert_eq(oversized_valid_name, "office.docx.resource_limit")
+    let oversized_invalid_name = docx_session_error_code(() => {
+      @docx.transact_docx(@transaction.transaction_options(input), session => {
+        session.queue_added_part("/" + "a".repeat(1_024), b"<x/>")
+      })
+    })
+    assert_eq(oversized_invalid_name, "office.docx.resource_limit")
     let report = @docx.transact_docx(@transaction.transaction_options(input), session => {
       let part = session.annotated().main_story_part()
       let plan = @splice.SplicePlan::new()
