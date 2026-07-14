@@ -585,14 +585,14 @@ fn read_docx_annotated_zip(
     comment_bodies.push(comment.body)
     comment_pairs.push((comment.comment_id, comment.body))
   }
-  let verify_ctx : VerifyContext = {
-    document: document_result.document,
-    headers: collector.headers,
-    footers: collector.footers,
+  let verify_ctx = build_verify_context(
+    document_result.document,
+    collector.headers,
+    collector.footers,
     footnote_bodies,
     endnote_bodies,
     comment_bodies,
-  }
+  )
   let index = build_annotation_index(zip, parts, collector, verify_ctx)
   // The index's diagnostics are part of the document's message stream —
   // orphans, dangling markers, degradations, and unrepresentable ids
@@ -666,12 +666,59 @@ fn read_docx_annotated_zip(
 /// their nearest resolvable ancestor with a diagnostic — the guarantee
 /// that anchors never point at nodes the AST does not have.
 priv struct VerifyContext {
-  document : DocumentElement
-  headers : Array[@document.HeaderFooterPart]
-  footers : Array[@document.HeaderFooterPart]
-  footnote_bodies : Array[Array[DocumentElement]]
-  endnote_bodies : Array[Array[DocumentElement]]
-  comment_bodies : Array[Array[DocumentElement]]
+  positions : Set[String]
+}
+
+///|
+/// Indexes the parsed projection once. Scanner paths can then be verified in
+/// O(1) per candidate rather than resolving every ordinal from the beginning
+/// of its sibling list.
+fn build_verify_context(
+  document : DocumentElement,
+  headers : Array[@document.HeaderFooterPart],
+  footers : Array[@document.HeaderFooterPart],
+  footnote_bodies : Array[Array[DocumentElement]],
+  endnote_bodies : Array[Array[DocumentElement]],
+  comment_bodies : Array[Array[DocumentElement]],
+) -> VerifyContext {
+  let positions : Set[String] = Set([])
+  fn index_children(element : DocumentElement, prefix : String) -> Unit {
+    let ordinals : Map[String, Int] = Map([])
+    for child in @paths.element_children(element) {
+      match @paths.segment_kind(child) {
+        Some(kind) => {
+          let ordinal = ordinals.get(kind).unwrap_or(0) + 1
+          ordinals[kind] = ordinal
+          let path = "\{prefix}/\{kind}[\{ordinal}]"
+          positions.add(path)
+          index_children(child, path)
+        }
+        None => ()
+      }
+    }
+  }
+  fn index_story(root : String, body : Array[DocumentElement]) -> Unit {
+    positions.add(root)
+    index_children(@document.document(body), root)
+  }
+  positions.add("/body")
+  index_children(document, "/body")
+  for index, header in headers {
+    index_story("/header[\{index + 1}]", header.body)
+  }
+  for index, footer in footers {
+    index_story("/footer[\{index + 1}]", footer.body)
+  }
+  for index, body in footnote_bodies {
+    index_story("/footnotes/note[\{index + 1}]", body)
+  }
+  for index, body in endnote_bodies {
+    index_story("/endnotes/note[\{index + 1}]", body)
+  }
+  for index, body in comment_bodies {
+    index_story("/comments/comment[\{index + 1}]", body)
+  }
+  { positions, }
 }
 
 ///|
@@ -687,7 +734,8 @@ fn verify_position(
   let (story, node_path) = split_story_path(path)
   let mut candidate = node_path
   while true {
-    if position_resolves(ctx, story, candidate) {
+    let full = if candidate == "" { story } else { "\{story}/\{candidate}" }
+    if ctx.positions.contains(full) {
       break
     }
     // Trim the last segment (no rfind on String: scan code units).
@@ -713,92 +761,6 @@ fn verify_position(
     )
   }
   verified
-}
-
-///|
-fn position_resolves(
-  ctx : VerifyContext,
-  story : String,
-  node_path : String,
-) -> Bool {
-  // note[k]/comment[k] container heads index the TYPE-FILTERED, reader-
-  // ordered bodies; remaining steps resolve through the shared grammar.
-  fn container_indexed(
-    bodies : Array[Array[DocumentElement]],
-    head : String,
-    kind : String,
-  ) -> (Array[DocumentElement], String)? {
-    if !head.has_prefix(kind + "[") || !head.has_suffix("]") {
-      return None
-    }
-    let digits = head[kind.length() + 1:head.length() - 1].to_owned()
-    let mut value = 0
-    for ch in digits {
-      if ch is ('0'..='9') {
-        value = value * 10 + (ch.to_int() - '0'.to_int())
-      } else {
-        return None
-      }
-    }
-    if value < 1 || value > bodies.length() {
-      return None
-    }
-    Some((bodies[value - 1], ""))
-  }
-
-  let resolved : Result[Unit, Unit] = try {
-    match story {
-      "/body" => {
-        let _ = @paths.resolve_relative(ctx.document, node_path, prefix=story)
-        Ok(())
-      }
-      "/footnotes" | "/endnotes" | "/comments" => {
-        let bodies = match story {
-          "/footnotes" => ctx.footnote_bodies
-          "/endnotes" => ctx.endnote_bodies
-          _ => ctx.comment_bodies
-        }
-        let kind = if story == "/comments" { "comment" } else { "note" }
-        if node_path == "" {
-          Ok(())
-        } else {
-          let (head, rest) = match node_path.find("/") {
-            Some(slash) =>
-              (node_path[0:slash].to_owned(), node_path[slash + 1:].to_owned())
-            None => (node_path, "")
-          }
-          match container_indexed(bodies, head, kind) {
-            Some((body, _)) => {
-              let _ = @paths.resolve_relative(
-                @document.document(body),
-                rest,
-                prefix="\{story}/\{head}",
-              )
-              Ok(())
-            }
-            None => Err(())
-          }
-        }
-      }
-      _ => {
-        // /header[n] or /footer[n]
-        let _ = @paths.resolve_path(
-          ctx.document,
-          if node_path == "" {
-            story
-          } else {
-            "\{story}/\{node_path}"
-          },
-          headers=ctx.headers,
-          footers=ctx.footers,
-        )
-        Ok(())
-      }
-    }
-  } catch {
-    _ => Err(())
-  }
-  resolved is Ok(_)
 }
 
 ///|
@@ -1488,37 +1450,19 @@ fn marker_position(
       }
       ("\{story}/\{container}", boundary)
     }
-    None => {
-      let mut best_after : ScannedNode? = None
-      let mut best_before : ScannedNode? = None
-      for node in scan.nodes() {
-        if node.open_seq() > marker.seq() {
-          match best_after {
-            Some(current) =>
-              if node.open_seq() < current.open_seq() {
-                best_after = Some(node)
-              }
-            None => best_after = Some(node)
-          }
-        } else if node.close_seq() < marker.seq() {
-          match best_before {
-            Some(current) =>
-              if node.close_seq() > current.close_seq() {
-                best_before = Some(node)
-              }
-            None => best_before = Some(node)
-          }
-        }
+    None =>
+      match scan.story_level_position(marker.seq()) {
+        Some(position) =>
+          (
+            "\{story}/\{position.path}",
+            if position.node_is_after {
+              Before
+            } else {
+              After
+            },
+          )
+        None => (story, InsideStart)
       }
-      match best_after {
-        Some(node) => ("\{story}/\{node.path()}", Before)
-        None =>
-          match best_before {
-            Some(node) => ("\{story}/\{node.path()}", After)
-            None => (story, InsideStart)
-          }
-      }
-    }
   }
 }
 

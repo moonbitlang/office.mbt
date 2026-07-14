@@ -109,6 +109,15 @@ priv struct ScannedNode {
 }
 
 ///|
+/// Precomputed fallback for a marker outside every projection node. When
+/// `node_is_after` is true the marker is before `path`; otherwise it is after
+/// the nearest preceding node.
+priv struct StoryLevelMarkerPosition {
+  path : String
+  node_is_after : Bool
+}
+
+///|
 /// The story-relative projection path ("p[3]", "tbl[1]/tr[1]/tc[1]").
 fn ScannedNode::path(self : ScannedNode) -> String {
   self.path
@@ -134,6 +143,7 @@ priv struct StoryScan {
   nodes : Array[ScannedNode]
   markers : Array[ScannedMarker]
   warnings : Array[String]
+  story_level_positions : Map[Int, StoryLevelMarkerPosition]
   // The story's ROOT element span (kind = its local name, path = "").
   // L1 splices new definitions just before root.close_tag_start.
   root : ScannedNode?
@@ -161,6 +171,14 @@ fn StoryScan::markers(self : StoryScan) -> Array[ScannedMarker] {
 /// Non-fatal scan diagnostics.
 fn StoryScan::warnings(self : StoryScan) -> Array[String] {
   self.warnings
+}
+
+///|
+fn StoryScan::story_level_position(
+  self : StoryScan,
+  marker_seq : Int,
+) -> StoryLevelMarkerPosition? {
+  self.story_level_positions.get(marker_seq)
 }
 
 ///|
@@ -796,7 +814,60 @@ fn scan_story(part : BytesView) -> StoryScan raise DocxError {
   if frames.length() > 0 {
     warnings.add("annotation scanner: unbalanced open tags at end of part")
   }
-  { nodes, markers, warnings: warnings.finish(), root }
+  {
+    nodes,
+    markers,
+    warnings: warnings.finish(),
+    story_level_positions: build_story_level_positions(nodes, markers),
+    root,
+  }
+}
+
+///|
+/// Computes every story-level marker's nearest following/preceding projection
+/// node with two monotonic sweeps. This replaces one full node scan per marker.
+fn build_story_level_positions(
+  nodes : Array[ScannedNode],
+  markers : Array[ScannedMarker],
+) -> Map[Int, StoryLevelMarkerPosition] {
+  let positions : Map[Int, StoryLevelMarkerPosition] = Map([])
+  let ordered_markers : Array[ScannedMarker] = []
+  for marker in markers {
+    if marker.container_path is None {
+      ordered_markers.push(marker)
+    }
+  }
+  ordered_markers.sort_by_key(marker => marker.seq)
+  let by_open = nodes.copy()
+  by_open.sort_by_key(node => node.open_seq)
+  let by_close = nodes.copy()
+  by_close.sort_by_key(node => node.close_seq)
+  let mut open_at = 0
+  let mut close_at = 0
+  let mut nearest_before : ScannedNode? = None
+  for marker in ordered_markers {
+    while open_at < by_open.length() && by_open[open_at].open_seq <= marker.seq {
+      open_at += 1
+    }
+    while close_at < by_close.length() &&
+          by_close[close_at].close_seq < marker.seq {
+      nearest_before = Some(by_close[close_at])
+      close_at += 1
+    }
+    if open_at < by_open.length() {
+      positions[marker.seq] = {
+        path: by_open[open_at].path,
+        node_is_after: true,
+      }
+    } else {
+      match nearest_before {
+        Some(node) =>
+          positions[marker.seq] = { path: node.path, node_is_after: false }
+        None => ()
+      }
+    }
+  }
+  positions
 }
 
 ///|
