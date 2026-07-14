@@ -93,6 +93,19 @@ fn limited_xml_write_error(
 }
 
 ///|
+fn strict_encoded_xml_error(
+  source : String,
+  source_encoding : @xml.XmlSourceEncoding,
+) -> String raise {
+  try @xml.read_xml_string_strict_encoded(source, source_encoding) catch {
+    InvalidXml(message~) => message
+    _ => fail("expected InvalidXml")
+  } noraise {
+    _ => fail("expected strict encoded XML parsing to fail")
+  }
+}
+
+///|
 test "strict XML rejects duplicate attributes without changing tolerant parsing" {
   let source = "<root id=\"first\" id=\"second\"/>"
   debug_inspect(
@@ -182,10 +195,81 @@ test "byte XML parsers reject contradictory encoding declarations" {
   )
   inspect(
     @xml.read_xml_string_strict_encoded(
+      "<?xml version=\"1.0\" encoding=\"UTF-16BE\"?><root/>",
+      Utf16BigEndian,
+    ).name,
+    content="root",
+  )
+  inspect(
+    @xml.read_xml_string_strict_encoded(
+      "<?xml version=\"1.0\" encoding=\"UTF-16\"?><root/>",
+      Utf16LittleEndianWithBom,
+    ).name,
+    content="root",
+  )
+  inspect(
+    @xml.read_xml_string_strict_encoded(
+      "<?xml version=\"1.0\" encoding=\"utf-16\"?><root/>",
+      Utf16BigEndianWithBom,
+    ).name,
+    content="root",
+  )
+  inspect(
+    @xml.read_xml_string_strict_encoded(
       "<?xml version=\"1.0\" encoding=\"utf-8\"?><root/>",
       Utf8,
     ).name,
     content="root",
+  )
+  inspect(
+    strict_encoded_xml_error(
+      "<?xml version=\"1.0\" encoding=\"UTF-16\"?><root/>",
+      Utf16LittleEndian,
+    ),
+    content="XML encoding declaration does not match decoded source",
+  )
+  inspect(
+    strict_encoded_xml_error(
+      "<?xml version=\"1.0\" encoding=\"UTF-16\"?><root/>",
+      Utf16BigEndian,
+    ),
+    content="XML encoding declaration does not match decoded source",
+  )
+  inspect(
+    strict_encoded_xml_error(
+      "<?xml version=\"1.0\" encoding=\"UTF-16LE\"?><root/>",
+      Utf16LittleEndianWithBom,
+    ),
+    content="XML encoding declaration does not match decoded source",
+  )
+  inspect(
+    strict_encoded_xml_error(
+      "<?xml version=\"1.0\" encoding=\"UTF-16BE\"?><root/>",
+      Utf16BigEndianWithBom,
+    ),
+    content="XML encoding declaration does not match decoded source",
+  )
+  inspect(
+    strict_encoded_xml_error(
+      "<?xml version=\"1.0\" encoding=\"UTF-16BE\"?><root/>",
+      Utf16LittleEndian,
+    ),
+    content="XML encoding declaration does not match decoded source",
+  )
+  inspect(
+    strict_encoded_xml_error(
+      "<?xml version=\"1.0\" encoding=\"UTF-16LE\"?><root/>",
+      Utf16BigEndian,
+    ),
+    content="XML encoding declaration does not match decoded source",
+  )
+  inspect(
+    strict_encoded_xml_error("<root/>", Utf16LittleEndian),
+    content="XML encoding declaration is required for decoded source",
+  )
+  inspect(
+    strict_encoded_xml_error("<root/>", Utf16BigEndian),
+    content="XML encoding declaration is required for decoded source",
   )
 }
 

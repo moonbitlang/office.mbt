@@ -298,7 +298,7 @@ fn read_xml_part(
         _ =>
           raise InvalidPackage("\{name} is not valid UTF-8 or UTF-16 XML text")
       },
-      Utf16LittleEndian,
+      Utf16LittleEndianWithBom,
     )
   } else if bytes.length() >= 2 && bytes[0] == 0xfe && bytes[1] == 0xff {
     (
@@ -306,7 +306,7 @@ fn read_xml_part(
         _ =>
           raise InvalidPackage("\{name} is not valid UTF-8 or UTF-16 XML text")
       },
-      Utf16BigEndian,
+      Utf16BigEndianWithBom,
     )
   } else if bytes.length() >= 2 && bytes[0] == b'<' && bytes[1] == 0x00 {
     (

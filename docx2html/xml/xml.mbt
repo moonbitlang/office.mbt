@@ -129,10 +129,13 @@ pub fn read_xml_string_strict(
 
 ///|
 /// The byte encoding used to decode an XML source string. Passing it to
-/// `read_xml_string_strict_encoded` makes an optional XML declaration part of
-/// the strict contract instead of treating it as unaudited metadata.
+/// `read_xml_string_strict_encoded` makes the XML declaration part of the
+/// strict contract instead of treating it as unaudited metadata. BOMless
+/// UTF-16LE and UTF-16BE sources require a matching declaration.
 pub(all) enum XmlSourceEncoding {
   Utf8
+  Utf16LittleEndianWithBom
+  Utf16BigEndianWithBom
   Utf16LittleEndian
   Utf16BigEndian
 }
@@ -373,6 +376,14 @@ fn read_xml_string_with_mode(
     },
   }
   parser.skip_misc(document_start=true)
+  match source_encoding {
+    Some(encoding) if encoding.requires_declaration() &&
+      !parser.seen_xml_declaration =>
+      raise InvalidXml(
+        message="XML encoding declaration is required for decoded source",
+      )
+    _ => ()
+  }
   let root = parser.parse_element()
   parser.skip_misc(document_start=false)
   if parser.pos < parser.source.length() {
@@ -1742,8 +1753,17 @@ fn XmlSourceEncoding::matches_declaration(
   let normalized = value.to_lower()
   match self {
     Utf8 => normalized == "utf-8"
-    Utf16LittleEndian => normalized == "utf-16" || normalized == "utf-16le"
-    Utf16BigEndian => normalized == "utf-16" || normalized == "utf-16be"
+    Utf16LittleEndianWithBom | Utf16BigEndianWithBom => normalized == "utf-16"
+    Utf16LittleEndian => normalized == "utf-16le"
+    Utf16BigEndian => normalized == "utf-16be"
+  }
+}
+
+///|
+fn XmlSourceEncoding::requires_declaration(self : XmlSourceEncoding) -> Bool {
+  match self {
+    Utf16LittleEndian | Utf16BigEndian => true
+    Utf8 | Utf16LittleEndianWithBom | Utf16BigEndianWithBom => false
   }
 }
 

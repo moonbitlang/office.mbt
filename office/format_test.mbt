@@ -282,6 +282,35 @@ fn reencode_identification_parts_as_utf16(data : BytesView) -> Bytes raise {
 }
 
 ///|
+fn reencode_archive_part_as_utf16(
+  data : BytesView,
+  name : String,
+  declaration : String,
+  bom : Bool,
+  endianness : @utf16.Endian,
+) -> Bytes raise {
+  let source = @zip.read(data)
+  guard source.get(name) is Some(part) else {
+    fail("test archive did not contain \{name}")
+  }
+  let text = @utf8.decode(part, ignore_bom=true)
+  let updated = text.replace(old="UTF-8", new=declaration)
+  if updated == text {
+    fail("test archive part did not declare UTF-8")
+  }
+  replace_archive_part(data, name, @utf16.encode(updated, bom~, endianness~))
+}
+
+///|
+fn detect_format_error(filename : String, data : BytesView) -> String raise {
+  try @office.detect_format(filename, data) catch {
+    err => Show::to_string(err)
+  } noraise {
+    _ => fail("expected Office format detection to fail")
+  }
+}
+
+///|
 fn prefix_xlsx_package_xml(
   data : BytesView,
   dangling_sheet_target : Bool,
@@ -678,6 +707,65 @@ test "detect_format decodes UTF-16 package XML in either byte order" {
     @excel.write(@excel.new_file()),
   )
   inspect(@office.detect_format("book.xlsx", utf16).name(), content="xlsx")
+}
+
+///|
+test "detect_format accepts explicitly labelled BOMless UTF-16 package XML" {
+  let source = @excel.write(@excel.new_file())
+  let little = reencode_archive_part_as_utf16(
+    source,
+    "[Content_Types].xml",
+    "UTF-16LE",
+    false,
+    Little,
+  )
+  inspect(@office.detect_format("book.xlsx", little).name(), content="xlsx")
+  let big = reencode_archive_part_as_utf16(
+    source,
+    "[Content_Types].xml",
+    "UTF-16BE",
+    false,
+    Big,
+  )
+  inspect(@office.detect_format("book.xlsx", big).name(), content="xlsx")
+}
+
+///|
+test "detect_format rejects mismatched UTF-16 BOM and declarations" {
+  let source = @excel.write(@excel.new_file())
+  let expected = "invalid Office package: [Content_Types].xml is not well-formed XML"
+  let cases : Array[(@utf16.Endian, Bool, String)] = [
+    (Little, false, "UTF-16"),
+    (Big, false, "UTF-16"),
+    (Little, true, "UTF-16LE"),
+    (Big, true, "UTF-16BE"),
+  ]
+  for case in cases {
+    let (endianness, bom, declaration) = case
+    let broken = reencode_archive_part_as_utf16(
+      source, "[Content_Types].xml", declaration, bom, endianness,
+    )
+    assert_eq(detect_format_error("book.xlsx", broken), expected)
+  }
+}
+
+///|
+test "detect_format requires labels on BOMless UTF-16 package XML" {
+  let source = @excel.write(@excel.new_file())
+  guard @zip.read(source).get("[Content_Types].xml") is Some(part) else {
+    fail("test workbook is missing its content-types manifest")
+  }
+  let text = @utf8.decode(part, ignore_bom=true)
+  let expected = "invalid Office package: [Content_Types].xml is not well-formed XML"
+  let endiannesses : Array[@utf16.Endian] = [Little, Big]
+  for endianness in endiannesses {
+    let broken = replace_archive_part(
+      source,
+      "[Content_Types].xml",
+      @utf16.encode(text, bom=false, endianness~),
+    )
+    assert_eq(detect_format_error("book.xlsx", broken), expected)
+  }
 }
 
 ///|
