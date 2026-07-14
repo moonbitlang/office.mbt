@@ -241,23 +241,15 @@ fn plan_comment_addition_zip(
           while existing_ids.contains("rIdAnnotate\{ordinal}") {
             ordinal += 1
           }
-          // The close tag is located in the BYTES ('<' is illegal in
-          // attribute values, so this match is always real markup).
-          guard find_ascii_bytes(rels_bytes, "</Relationships>")
-            is Some(rels_at) else {
-            raise Unsupported(
-              message="could not locate the close of '\{rels_part}' (self-closing or unconventional relationships markup); refusing to annotate",
-            )
-          }
+          let rels_span = scan_xml_root_span(rels_part, rels_bytes)
+          let relationship_name = qualified_child_name(
+            rels_span.name,
+            "Relationship",
+          )
+          let relationship = "<\{relationship_name} Id=\"rIdAnnotate\{ordinal}\" Type=\"\{relationship_type}\" Target=\"comments.xml\"/>"
           plan.edit_part(
             rels_part,
-            @splice.span_edit(
-              start=rels_at,
-              end=rels_at,
-              @utf8.encode(
-                "<Relationship Id=\"rIdAnnotate\{ordinal}\" Type=\"\{relationship_type}\" Target=\"comments.xml\"/>",
-              ),
-            ),
+            xml_root_child_edit(rels_bytes, rels_span, relationship),
           )
         }
         None =>
@@ -275,19 +267,21 @@ fn plan_comment_addition_zip(
       guard zip.read_bytes("[Content_Types].xml") is Some(types_bytes) else {
         raise Unsupported(message="the package is missing [Content_Types].xml")
       }
-      guard find_ascii_bytes(types_bytes, "</Types>") is Some(types_at) else {
-        raise Unsupported(
-          message="could not locate the close of [Content_Types].xml; refusing to annotate",
-        )
-      }
+      read_mutation_xml_root(
+        "[Content_Types].xml",
+        types_bytes,
+        xml_budget,
+        expected_root="content-types:Types",
+      )
+      |> ignore
+      let types_span = scan_xml_root_span("[Content_Types].xml", types_bytes)
+      let override_name = qualified_child_name(types_span.name, "Override")
       plan.edit_part(
         "[Content_Types].xml",
-        @splice.span_edit(
-          start=types_at,
-          end=types_at,
-          @utf8.encode(
-            "<Override PartName=\"/\{comments_part_name}\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml\"/>",
-          ),
+        xml_root_child_edit(
+          types_bytes,
+          types_span,
+          "<\{override_name} PartName=\"/\{comments_part_name}\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml\"/>",
         ),
       )
     }
@@ -545,7 +539,25 @@ fn read_mutation_relationships(
   bytes : BytesView,
   xml_budget : @xml.XmlReadBudget,
 ) -> XmlElement raise DocxError {
-  @xml.read_xml_bytes_strict_limited(
+  read_mutation_xml_root(
+    part,
+    bytes,
+    xml_budget,
+    expected_root="relationships:Relationships",
+  )
+}
+
+///|
+/// Parses mutation-owned OPC metadata under the caller's cumulative budget and
+/// verifies the expanded root QName. Prefix spelling is intentionally free;
+/// the byte-level insertion helper below preserves the spelling it finds.
+fn read_mutation_xml_root(
+  part : String,
+  bytes : BytesView,
+  xml_budget : @xml.XmlReadBudget,
+  expected_root~ : String,
+) -> XmlElement raise DocxError {
+  let root = @xml.read_xml_bytes_strict_limited(
     bytes,
     xml_budget,
     namespace_map=office_namespace_map(),
@@ -561,6 +573,12 @@ fn read_mutation_relationships(
     }
     _ => raise Unsupported(message="'\{part}' is not well-formed XML; refusing")
   }
+  if root.name != expected_root {
+    raise Unsupported(
+      message="'\{part}' has root '\{root.name}', expected '\{expected_root}'; refusing",
+    )
+  }
+  root
 }
 
 ///|
@@ -578,56 +596,172 @@ fn collect_relationship_ids(element : XmlElement, ids : Set[String]) -> Unit {
 }
 
 ///|
-/// First occurrence of an ASCII needle in raw bytes as REAL MARKUP:
-/// XML comments and CDATA sections are skipped ('<' is illegal inside
-/// attribute values, so those three region kinds are the only places a
-/// '<'-led needle could match without being markup).
-fn find_ascii_bytes(bytes : BytesView, needle : String) -> Int? {
-  let needle_units = needle.code_units()
-  let limit = bytes.length() - needle_units.length()
-  fn starts_with(at : Int, text : String) -> Bool {
-    if at + text.length() > bytes.length() {
+priv struct RawXmlRootSpan {
+  name : String
+  start : Int
+  end : Int
+  close_start : Int?
+}
+
+///|
+fn ascii_bytes_start_with(bytes : BytesView, at : Int, text : String) -> Bool {
+  if at < 0 || at + text.length() > bytes.length() {
+    return false
+  }
+  for offset, unit in text.code_units() {
+    if bytes[at + offset].to_int() != unit.to_int() {
       return false
     }
-    for offset, unit in text.code_units() {
-      if bytes[at + offset].to_int() != unit.to_int() {
-        return false
-      }
-    }
-    true
   }
-  fn skip_past(from : Int, terminator : String) -> Int {
-    let mut at = from
-    while at <= bytes.length() - terminator.length() {
-      if starts_with(at, terminator) {
-        return at + terminator.length()
-      }
-      at += 1
-    }
-    bytes.length()
-  }
-  let mut at = 0
-  while at <= limit {
-    if starts_with(at, "<!--") {
-      at = skip_past(at + 4, "-->")
-      continue
-    }
-    if starts_with(at, "<![CDATA[") {
-      at = skip_past(at + 9, "]]>")
-      continue
-    }
-    // Processing instructions (and the XML declaration) may legally
-    // hold the needle's text too.
-    if starts_with(at, "<?") {
-      at = skip_past(at + 2, "?>")
-      continue
-    }
-    if starts_with(at, needle) {
-      return Some(at)
+  true
+}
+
+///|
+fn scan_past_ascii_terminator(
+  bytes : BytesView,
+  from : Int,
+  terminator : String,
+) -> Int raise DocxError {
+  let mut at = from
+  while at + terminator.length() <= bytes.length() {
+    if ascii_bytes_start_with(bytes, at, terminator) {
+      return at + terminator.length()
     }
     at += 1
   }
-  None
+  raise Unsupported(message="unterminated XML markup while locating a root")
+}
+
+///|
+/// Locates the document element and its matching close at the byte level after
+/// strict XML parsing has established well-formedness. The walk is quote-aware
+/// for open tags and skips comments, CDATA, and PIs, so prefixed roots and
+/// self-closing empty OPC metadata are safe mutation targets.
+fn scan_xml_root_span(
+  part : String,
+  bytes : BytesView,
+) -> RawXmlRootSpan raise DocxError {
+  let limit = bytes.length()
+  let mut root_start = -1
+  let mut cursor = 0
+  while cursor < limit {
+    if bytes[cursor] != b'<' {
+      cursor += 1
+      continue
+    }
+    if ascii_bytes_start_with(bytes, cursor, "<?") {
+      cursor = scan_past_ascii_terminator(bytes, cursor + 2, "?>")
+      continue
+    }
+    if ascii_bytes_start_with(bytes, cursor, "<!--") {
+      cursor = scan_past_ascii_terminator(bytes, cursor + 4, "-->")
+      continue
+    }
+    if ascii_bytes_start_with(bytes, cursor, "<!") ||
+      ascii_bytes_start_with(bytes, cursor, "</") {
+      raise Unsupported(
+        message="could not locate the root of '\{part}'; refusing",
+      )
+    }
+    root_start = cursor
+    break
+  }
+  if root_start < 0 {
+    raise Unsupported(
+      message="could not locate the root of '\{part}'; refusing",
+    )
+  }
+  let root_tag = scan_open_tag_attributes(bytes, root_start)
+  let name_start = root_start + 1
+  let name_end = name_start + tag_name_length(bytes, name_start)
+  let name = @utf8.decode(bytes[name_start:name_end], ignore_bom=true) catch {
+    _ =>
+      raise Unsupported(
+        message="the root name of '\{part}' is not UTF-8; refusing",
+      )
+  }
+  if root_tag.self_closing {
+    return {
+      name,
+      start: root_start,
+      end: root_tag.tag_gt + 1,
+      close_start: None,
+    }
+  }
+  let mut depth = 1
+  cursor = root_tag.tag_gt + 1
+  while cursor < limit {
+    if bytes[cursor] != b'<' {
+      cursor += 1
+      continue
+    }
+    if ascii_bytes_start_with(bytes, cursor, "<!--") {
+      cursor = scan_past_ascii_terminator(bytes, cursor + 4, "-->")
+      continue
+    }
+    if ascii_bytes_start_with(bytes, cursor, "<?") {
+      cursor = scan_past_ascii_terminator(bytes, cursor + 2, "?>")
+      continue
+    }
+    if ascii_bytes_start_with(bytes, cursor, "<![CDATA[") {
+      cursor = scan_past_ascii_terminator(bytes, cursor + 9, "]]>")
+      continue
+    }
+    if ascii_bytes_start_with(bytes, cursor, "</") {
+      let close_start = cursor
+      while cursor < limit && bytes[cursor] != b'>' {
+        cursor += 1
+      }
+      if cursor >= limit {
+        raise Unsupported(
+          message="could not locate the close of '\{part}'; refusing",
+        )
+      }
+      depth -= 1
+      cursor += 1
+      if depth == 0 {
+        return {
+          name,
+          start: root_start,
+          end: cursor,
+          close_start: Some(close_start),
+        }
+      }
+      continue
+    }
+    if ascii_bytes_start_with(bytes, cursor, "<!") {
+      raise Unsupported(message="unsupported XML markup in '\{part}'; refusing")
+    }
+    let tag = scan_open_tag_attributes(bytes, cursor)
+    if !tag.self_closing {
+      depth += 1
+    }
+    cursor = tag.tag_gt + 1
+  }
+  raise Unsupported(message="could not locate the close of '\{part}'; refusing")
+}
+
+///|
+fn qualified_child_name(root_name : String, local_name : String) -> String {
+  let (prefix, _) = split_qualified(root_name)
+  if prefix == "" {
+    local_name
+  } else {
+    "\{prefix}:\{local_name}"
+  }
+}
+
+///|
+fn xml_root_child_edit(
+  bytes : BytesView,
+  root : RawXmlRootSpan,
+  child : String,
+) -> @splice.SpanEdit raise DocxError {
+  match root.close_start {
+    Some(insert_at) =>
+      @splice.span_edit(start=insert_at, end=insert_at, @utf8.encode(child))
+    None => self_closing_rewrite_range(bytes, root.start, root.end, child)
+  }
 }
 
 ///|
