@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   transaction-platforms:
-    name: office transaction (${{ matrix.os }}, nightly)
+    name: office transactional editing (${{ matrix.os }}, nightly)
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
@@ -53,15 +53,17 @@ jobs:
       - name: Resolve dependencies
         run: moon update
 
-      - name: Check transaction package
+      - name: Check transactional editing packages
         run: |
           moon check --target native office/transaction
           moon check --target native office/transaction/permission_contract
+          moon check --target native office/docx
 
-      - name: Test transaction package
+      - name: Test transactional editing packages
         run: |
           moon test --target native office/transaction
           moon test --target native office/transaction/permission_contract
+          moon test --target native office/docx
 
   test:
     name: check + test (mbtexcel + docx2html + office + pdflite, nightly)
@@ -158,6 +160,9 @@ jobs:
 
       - name: Test raw OOXML bounds (wasm)
         run: moon test --target wasm office/raw
+
+      - name: Test DOCX edit sessions (wasm)
+        run: moon test --target wasm office/docx
 
       # Run all members' native test suites in one pass. Covers mbtexcel
       # (including OpenXML SDK schema validation via .NET), docx2html
