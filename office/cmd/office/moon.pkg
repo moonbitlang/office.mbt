@@ -2,6 +2,7 @@ import {
   "bobzhang/docx2html/core" @docx_core,
   "bobzhang/docx2html/docx",
   "bobzhang/docx2html/document",
+  "bobzhang/docx2html/opc",
   "bobzhang/docx2html/paths" @docx_paths,
   "bobzhang/docx2html/xml",
   "bobzhang/mbtexcel/zip",
@@ -15,6 +16,7 @@ import {
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
+  "moonbitlang/core/sorted_map",
 }
 
 supported_targets = "native+wasm"

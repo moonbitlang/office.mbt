@@ -206,6 +206,7 @@ test "duplicate annotation ids stay positional and stable lookup is ambiguous" {
     file: "duplicate.docx",
     annotated,
     entries: builder.entries,
+    entry_index: builder.entry_index,
     warnings: builder.warnings,
   }
   try
@@ -250,5 +251,146 @@ test "projection and serialized output limits fail explicitly" {
     CliFailure(error) => assert_eq(error.code, "office.docx.resource_limit")
   } noraise {
     _ => fail("expected output resource limit")
+  }
+}
+
+///|
+test "DOCX projection lookup uses its canonical path index" {
+  let projection = docx_read_test_projection()
+  for index, entry in projection.entries {
+    assert_eq(projection.entry_index.get(entry.path), Some(index))
+    guard find_projection_entry(projection, entry.path) is Some(found) else {
+      fail("indexed projection entry was not found")
+    }
+    assert_eq(found.path, entry.path)
+  }
+  assert_true(find_projection_entry(projection, "/docx/body/p[999]") is None)
+}
+
+///|
+test "DOCX warning retention and deduplication sets share one hard cap" {
+  let builder = DocxProjectionBuilder::new(1)
+  for index in 0..<1000 {
+    builder.warn("office.docx.reader_warning", "diagnostic \{index}")
+  }
+  assert_eq(builder.warnings.length(), docx_cli_max_warnings)
+  assert_eq(
+    builder.warnings[docx_cli_max_warnings - 1].code,
+    "office.docx.warnings_truncated",
+  )
+  let mut retained_keys = 0
+  for _ in builder.warning_keys {
+    retained_keys += 1
+  }
+  assert_eq(retained_keys, docx_cli_max_warnings - 1)
+}
+
+///|
+test "DOCX preview truncation excludes discarded paragraph separators" {
+  let exact = @word.paragraph([@word.run([@word.text("x".repeat(159))])])
+  let (exact_text, exact_truncated) = collect_docx_text_prefix(exact, 160)
+  assert_eq(exact_text, "x".repeat(159))
+  assert_false(exact_truncated)
+  let over = @word.paragraph([@word.run([@word.text("x".repeat(161))])])
+  let (over_text, over_truncated) = collect_docx_text_prefix(over, 160)
+  assert_eq(over_text, "x".repeat(160))
+  assert_true(over_truncated)
+  let internal = @word.document([
+    exact,
+    @word.paragraph([@word.run([@word.text("y")])]),
+  ])
+  let (_, internal_truncated) = collect_docx_text_prefix(internal, 160)
+  assert_true(internal_truncated)
+}
+
+///|
+test "DOCX reader classifies only exact XML budget failures as resources" {
+  let CliFailure(resource) = docx_reader_failure(
+    InvalidXml(message="XML token budget exceeded"),
+    "fixture.docx",
+  )
+  assert_eq(resource.code, "office.docx.resource_limit")
+  let CliFailure(ordinary) = docx_reader_failure(
+    InvalidXml(message="invalid limit element"),
+    "fixture.docx",
+  )
+  assert_eq(ordinary.code, "office.docx.read_failed")
+  assert_true(
+    docx_opc_resource_finding("[Content_Types].xml: XML source budget exceeded"),
+  )
+  assert_false(docx_opc_resource_finding("relationship limit is invalid"))
+}
+
+///|
+test "DOCX human output escapes control sequences in paths, kinds, and text" {
+  let projection = docx_read_test_projection()
+  let unsafe_path = "/docx/body/\u{009b}story"
+  let unsafe_kind = "body\u{009b}"
+  let unsafe_entry = {
+    ..projection.entries[0],
+    path: unsafe_path,
+    kind: unsafe_kind,
+  }
+  let text_result : DocxTextResult = {
+    records: [
+      {
+        path: unsafe_path,
+        stability: "snapshot-relative",
+        text: "text\u{009b}",
+      },
+    ],
+    matched_total: 1,
+    offset: 0,
+    limit: 1,
+    scanned_elements: 1,
+  }
+  let query_result : DocxQueryResult = {
+    records: [
+      {
+        entry: unsafe_entry,
+        preview: "preview\u{009b}",
+        preview_truncated: false,
+      },
+    ],
+    matched_total: 1,
+    offset: 0,
+    limit: 1,
+    scanned_elements: 1,
+    under: None,
+  }
+  let outputs = [
+    docx_get_human(unsafe_entry, "value\u{009b}", []),
+    docx_text_human(text_result, []),
+    docx_query_human(query_result, []),
+    docx_outline_human({ ..projection, entries: [unsafe_entry] }),
+  ]
+  for output in outputs {
+    assert_false(output.contains("\u{009b}"))
+    assert_true(output.contains("\\u009b"))
+  }
+}
+
+///|
+async test "bounded DOCX file reads use the DOCX resource code" {
+  try
+    read_bounded_file(
+      "../docx2html/tests/cram/fixtures/single-paragraph.docx",
+      1,
+      "office.file_read_failed",
+      "input package",
+      limit_code="office.docx.resource_limit",
+    )
+  catch {
+    CliFailure(error) => {
+      assert_eq(error.code, "office.docx.resource_limit")
+      guard error.details is Some(Object(fields)) else {
+        fail("expected resource-limit details")
+      }
+      assert_eq(fields.get("limit"), Some(Json::number(1)))
+      assert_true(fields.contains("actual"))
+    }
+    _ => fail("unexpected bounded DOCX read failure")
+  } noraise {
+    _ => fail("expected bounded DOCX read to fail")
   }
 }
