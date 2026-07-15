@@ -100,6 +100,43 @@ test "the builder rejects a name that exceeds the OPC central-header limit" {
 }
 
 ///|
+test "builder-generated relationships parts obey the complete central-header limit" {
+  // `_rels/` plus `.rels` adds 11 ASCII bytes to a root-level source part.
+  // Keep the exact boundary valid, then prove that one additional byte is
+  // rejected before the builder can emit a package its validator refuses.
+  let maximum_source = "a".repeat(65_478) + ".bin"
+  assert_eq(maximum_source.length(), 65_482)
+  let builder = minimal_builder()
+  builder.add_default("bin", "application/octet-stream")
+  builder.add_part(maximum_source, b"")
+  builder.add_relationship(
+    "rMaximum",
+    "urn:test:maximum-relationship-source",
+    "https://example.test/resource",
+    source=maximum_source,
+    external=true,
+  )
+  let valid = builder.build()
+  assert_eq(@opc.validate_docx_package(valid), [])
+  let oversized_source = "a".repeat(65_479) + ".bin"
+  assert_eq(oversized_source.length(), 65_483)
+  expect_build_error(
+    builder => {
+      builder.add_default("bin", "application/octet-stream")
+      builder.add_part(oversized_source, b"")
+      builder.add_relationship(
+        "rOversized",
+        "urn:test:oversized-relationship-source",
+        "https://example.test/resource",
+        source=oversized_source,
+        external=true,
+      )
+    },
+    "builder-emitted relationship part makes the OPC central-directory file header exceed 65535 bytes",
+  )
+}
+
+///|
 fn expect_build_error(
   configure : (@opc.PackageBuilder) -> Unit raise,
   expected_prefix : String,

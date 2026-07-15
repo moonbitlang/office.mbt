@@ -285,9 +285,9 @@ pub fn PackageBuilder::build(
         "builder-emitted relationship part is not a canonical OPC PartName: \{name}",
       )
     }
-    if zip_name.length() > DEFAULT_MAX_ZIP_ENTRY_NAME_CHARS {
+    if zip_name.length() > MAX_OPC_ZIP_ENTRY_NAME_BYTES_WITHOUT_METADATA {
       raise PackageBuildError(
-        "builder-emitted relationship part exceeds the ZIP entry-name limit: \{name}",
+        "builder-emitted relationship part makes the OPC central-directory file header exceed \{MAX_OPC_CENTRAL_DIRECTORY_FILE_HEADER_BYTES} bytes: \{name}",
       )
     }
     if zip_name.length() >
