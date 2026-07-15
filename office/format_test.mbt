@@ -1406,6 +1406,15 @@ test "detect_format accepts Unicode relationship Type IRIs" {
 }
 
 ///|
+test "detect_format accepts Relationship simple content" {
+  let data = add_root_relationship(
+    @word.new_blank_docx(),
+    "<Relationship Id=\"simpleContent\" Type=\"https://example.com/relationships/note\" Target=\"https://example.com/note\" TargetMode=\"External\">schema string content</Relationship>",
+  )
+  inspect(@office.detect_format("report.docx", data).name(), content="docx")
+}
+
+///|
 test "detect_format retains unknown MCE attributes for closed validation" {
   let annotated = replace_archive_part(
     @word.new_blank_docx(),
@@ -1478,7 +1487,7 @@ test "detect_format rejects content inside OPC metadata declarations" {
         add_root_relationship(
           source, "<Relationship Id=\"rNested\" Type=\"https://example.com/relationships/test\" Target=\"xl/workbook.xml\"><unexpected/></Relationship>",
         ),
-        "relationship in _rels/.rels is not an empty element",
+        "relationship in _rels/.rels contains a child element",
       ),
     ] {
     let (broken, expected) = case
