@@ -567,6 +567,10 @@ pub struct DocxAnnotatedResult {
   priv main_wordprocessing_dialect : OoxmlDialect?
   priv comments_wordprocessing_dialect : OoxmlDialect?
   priv main_relationship_dialect : OoxmlDialect?
+  // Tolerant projections deliberately omit hidden relationship-reachable
+  // stories and broken section references. They are useful for inspection but
+  // can never be a sound source for an annotation mutation plan.
+  priv read_policy : AnnotationReadPolicy
 }
 
 ///|
@@ -1023,6 +1027,7 @@ fn read_docx_annotated_zip(
     main_wordprocessing_dialect,
     comments_wordprocessing_dialect,
     main_relationship_dialect: parts.main_relationship_dialect,
+    read_policy: policy,
     footnote_bodies: footnote_pairs,
     endnote_bodies: endnote_pairs,
     comment_bodies: comment_pairs,
@@ -1352,6 +1357,13 @@ fn build_annotation_index(
     )
     match zip.read_bytes(path) {
       Some(bytes) => {
+        // Every byte offset a mutation-safe result exposes must come from
+        // well-formed XML. The package reader is intentionally tolerant, so
+        // establish strict well-formedness under the same cumulative budget
+        // before the raw span scanner is allowed to derive edit locations.
+        if policy is MutationSafe {
+          read_identity_story_xml_strict(bytes, parts.xml_budget) |> ignore
+        }
         let scan = scan_story(bytes, path_budget~, warning_collector=warnings) catch {
           InvalidXml(message~) => {
             if is_mutation_xml_resource_error(message) {
@@ -1553,10 +1565,12 @@ fn read_identity_story_xml_strict(
     Some(value) => value
     None => {
       // Raw tokens plus namespace-prefix copies and mapped expanded names are
-      // all input-linear but can exceed the byte count by a small constant.
+      // input-linear for ordinary OOXML namespace vocabularies but can exceed
+      // the byte count substantially when a compact prefix expands to the
+      // standard WordprocessingML URI on every element and attribute.
       // Keep the fallback bounded while leaving room for those charged
       // derived allocations.
-      let scaled = bytes.length().to_int64() * 8L
+      let scaled = bytes.length().to_int64() * 32L
       let allowance = if scaled <= 0L {
         1
       } else if scaled > 2147483647L {
