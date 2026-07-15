@@ -504,7 +504,12 @@ fn MceProcessor::filter_attributes(
       continue
     }
     match mce_namespace_from_expanded_name(name, self.budget) {
-      Some(namespace_uri) if namespace_uri == MCE_NAMESPACE_URI => continue
+      Some(namespace_uri) if namespace_uri == MCE_NAMESPACE_URI &&
+        (
+          name == MCE_IGNORABLE ||
+          name == MCE_PROCESS_CONTENT ||
+          name == MCE_MUST_UNDERSTAND
+        ) => continue
       Some(namespace_uri) if self.namespace_is_ignorable(namespace_uri) &&
         !self.application_understands(namespace_uri) => continue
       _ => output[name] = value
