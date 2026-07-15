@@ -220,7 +220,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "max-elements", "integer(1..200000)", false, "projection scan ceiling; default 50000",
         ),
         capability_field(
-          "max-output-chars", "integer(1..4194304)", false, "serialized output ceiling; default 1048576",
+          "max-output-chars", "integer(1..4194304)", false, "successful stdout ceiling including trailing LF; failure envelopes are separate; default 1048576",
         ),
         capability_field("json", "boolean", false, "emit office.output/1 JSON"),
       ],
@@ -277,7 +277,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "max-elements", "integer(1..200000)", false, "projection scan ceiling; default 50000",
         ),
         capability_field(
-          "max-output-chars", "integer(1..4194304)", false, "serialized output ceiling; default 1048576",
+          "max-output-chars", "integer(1..4194304)", false, "successful stdout ceiling including trailing LF; failure envelopes are separate; default 1048576",
         ),
         capability_field("json", "boolean", false, "emit office.output/1 JSON"),
       ],
@@ -348,7 +348,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "max-elements", "integer(1..200000)", false, "projection scan ceiling; default 50000",
         ),
         capability_field(
-          "max-output-chars", "integer(1..4194304)", false, "serialized output ceiling; default 1048576",
+          "max-output-chars", "integer(1..4194304)", false, "successful stdout ceiling including trailing LF; failure envelopes are separate; default 1048576",
         ),
         capability_field("json", "boolean", false, "emit office.output/1 JSON"),
       ],
@@ -404,11 +404,13 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           false, "exact kind; documented long-name aliases normalize before matching",
         ),
         capability_field(
-          "text", "literal-string", false, "literal substring predicate; regular expressions are not accepted",
+          "text", "literal-string(1..1048576 chars)", false, "literal substring predicate; regular expressions are not accepted",
         ),
-        capability_field("id", "string", false, "exact annotation id predicate"),
         capability_field(
-          "property", "array(NAME=VALUE)", false, "up to 16 predicates from style_id, style_name, alignment, bold, italic, underline, content_type, href, author, done",
+          "id", "string(1..1048576 chars)", false, "exact annotation id predicate, including ids outside selector path limits",
+        ),
+        capability_field(
+          "property", "array(NAME=VALUE)", false, "up to 16 exact predicates with values capped at 1048576 characters",
         ),
         capability_field(
           "ignore-case", "boolean", false, "case-insensitive --text matching",
@@ -423,7 +425,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "max-elements", "integer(1..200000)", false, "projection scan ceiling; default 50000",
         ),
         capability_field(
-          "max-output-chars", "integer(1..4194304)", false, "serialized output ceiling; default 1048576",
+          "max-output-chars", "integer(1..4194304)", false, "successful stdout ceiling including trailing LF; failure envelopes are separate; default 1048576",
         ),
         capability_field("json", "boolean", false, "emit office.output/1 JSON"),
       ],

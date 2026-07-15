@@ -162,6 +162,10 @@ Hyphenated aliases (`style-id`, `style-name`, `content-type`) plus `align`,
 `url`, and `resolved` normalize to those names. `--ignore-case` applies only
 to `--text`. Results carry a bounded text preview, declared properties,
 canonical identity, exact `matched_total`, and explicit pagination metadata.
+Exact text, id, and property values accept up to 1,048,576 Unicode scalar
+characters, matching the reader's maximum XML token size. An annotation id
+too long for `office.selector/1` therefore uses a positional projection path
+but remains discoverable through an exact `--id` query.
 
 ## Limits
 
@@ -171,10 +175,17 @@ stub. Default and hard user-facing limits are:
 | resource | default | hard limit |
 | --- | ---: | ---: |
 | projection elements | 50,000 | 200,000 |
-| serialized output characters | 1,048,576 | 4,194,304 |
+| successful command output characters | 1,048,576 | 4,194,304 |
 | text rows per page | 2,000 | 10,000 |
 | query matches per page | 100 | 1,000 |
+| exact query value characters | — | 1,048,576 |
 | property predicates | — | 16 |
+
+`--max-output-chars` covers every Unicode scalar written to stdout by a
+successful DOCX read, including its single trailing line feed. A failure
+envelope is emitted independently so a too-small success ceiling can still
+report the stable error code and exhausted resource; failure envelopes are not
+charged against this option.
 
 The package reader additionally caps the input file at 64 MiB, ZIP entries at
 4,096, one inflated entry at 32 MiB, total inflated bytes at 128 MiB, and uses
