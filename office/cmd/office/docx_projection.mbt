@@ -261,6 +261,11 @@ fn DocxProjectionBuilder::add_entry(
 ) -> DocxProjectionEntry raise CliFailure {
   self.require_entry_capacity()
   let selector = @lib.parse_selector(path) catch {
+    SelectorError(code="office.selector.depth_limit", ..) =>
+      raise docx_resource_failure(
+        "selector path segments",
+        @lib.SELECTOR_MAX_DEPTH,
+      )
     SelectorError(code~, message~, ..) =>
       raise docx_cli_failure(
         "office.docx.invalid_projection",
