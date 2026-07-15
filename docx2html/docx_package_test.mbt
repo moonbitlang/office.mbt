@@ -113,15 +113,37 @@ fn hf_package(
   extra? : Array[(String, String)] = [],
 ) -> Bytes {
   let archive = @mbtzip.Archive::new()
-  archive.add(
-    "[Content_Types].xml",
-    utf8_part(
-      (
-        #|<?xml version="1.0"?>
-        #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>
-      ),
+  let content_types = StringBuilder::new()
+  content_types.write_string(
+    (
+      #|<?xml version="1.0"?>
+      #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
     ),
   )
+  for entry in extra {
+    let (name, _) = entry
+    let role_content_type = if name.has_prefix("word/header") &&
+      name.has_suffix(".xml") {
+      Some(
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml",
+      )
+    } else if name.has_prefix("word/footer") && name.has_suffix(".xml") {
+      Some(
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml",
+      )
+    } else {
+      None
+    }
+    match role_content_type {
+      Some(content_type) =>
+        content_types.write_string(
+          "<Override PartName=\"/\{name}\" ContentType=\"\{content_type}\"/>",
+        )
+      None => ()
+    }
+  }
+  content_types.write_string("</Types>")
+  archive.add("[Content_Types].xml", utf8_part(content_types.to_string()))
   archive.add(
     "_rels/.rels",
     utf8_part(
