@@ -1036,7 +1036,7 @@ fn open_docx_projection(
     max_materialized_chars=docx_cli_max_xml_materialized_chars,
     max_token_chars=docx_cli_max_xml_token_chars,
   )
-  let annotated = @docx.read_docx_annotated_archive_limited(
+  let annotated = @docx.read_docx_annotated_archive_tolerant_limited(
     archive,
     xml_budget,
     max_diagnostics=docx_cli_max_warnings,
