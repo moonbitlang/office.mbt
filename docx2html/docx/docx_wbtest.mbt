@@ -4457,6 +4457,120 @@ test "mutation relationship parsing uses the effective MCE branch" {
 }
 
 ///|
+fn wrap_relationships_document_root_for_test(
+  relationships : String,
+) -> String raise {
+  guard relationships.find("<Relationships") is Some(root_start) else {
+    fail("expected an unprefixed Relationships document element")
+  }
+  let root = relationships[root_start:].to_owned()
+  (
+    #|<mc:AlternateContent
+    #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    #| xmlns:r="http://schemas.openxmlformats.org/package/2006/relationships">
+    #| <mc:Choice Requires="r">
+  ) +
+  root +
+  (
+    #| </mc:Choice>
+    #| <mc:Fallback><r:Relationships/></mc:Fallback>
+    #|</mc:AlternateContent>
+  )
+}
+
+///|
+test "comment creation refuses an MCE-synthesized Relationships root" {
+  let archive = @mbtzip.read(new_blank_docx())
+  let relationships = wrap_relationships_document_root_for_test(
+    (
+      #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>
+    ),
+  )
+  if archive.get("word/_rels/document.xml.rels") is Some(_) {
+    assert_true(
+      archive.replace(
+        "word/_rels/document.xml.rels",
+        @utf8.encode(relationships),
+      ),
+    )
+  } else {
+    archive.add("word/_rels/document.xml.rels", @utf8.encode(relationships))
+  }
+  let source = @mbtzip.write(archive)
+  assert_eq(@opc.validate_docx_package(source), [])
+  let annotated = read_docx_annotated(source)
+  let spec = comment_spec(author="MCE", from=0, to=0, [
+    paragraph([run([text("root")])]),
+  ])
+  try
+    plan_comment_addition(
+      annotated,
+      source,
+      at_relative="p[1]",
+      to_relative="p[1]",
+      spec,
+    )
+  catch {
+    Unsupported(message~) =>
+      inspect(
+        message,
+        content="'word/_rels/document.xml.rels' selects its Relationships root through Markup Compatibility; byte-preserving mutation is unsupported; refusing",
+      )
+    error =>
+      fail("expected a fail-closed MCE mutation error, got \{repr(error)}")
+  } noraise {
+    _ => fail("expected MCE-wrapped relationship mutation to be refused")
+  }
+}
+
+///|
+test "threaded comment creation refuses an MCE-synthesized Relationships root" {
+  let original = new_blank_docx()
+  let original_model = read_docx_annotated(original)
+  let root_spec = comment_spec(author="MCE", from=0, to=0, [
+    paragraph([run([text("root")])]),
+  ])
+  let (addition, root_id) = plan_comment_addition(
+    original_model,
+    original,
+    at_relative="p[1]",
+    to_relative="p[1]",
+    root_spec,
+  )
+  let commented = @splice.splice_docx(original, addition)
+  let archive = @mbtzip.read(commented)
+  guard archive.get("word/_rels/document.xml.rels") is Some(rels_bytes) else {
+    fail("expected the comment relationship part")
+  }
+  let rels_text = @utf8.decode(rels_bytes, ignore_bom=true)
+  assert_true(
+    archive.replace(
+      "word/_rels/document.xml.rels",
+      @utf8.encode(wrap_relationships_document_root_for_test(rels_text)),
+    ),
+  )
+  let wrapped = @mbtzip.write(archive)
+  assert_eq(@opc.validate_docx_package(wrapped), [])
+  let wrapped_model = read_docx_annotated(wrapped)
+  let reply_spec = comment_spec(author="MCE", from=0, to=0, [
+    paragraph([run([text("reply")])]),
+  ])
+  try
+    plan_comment_reply(wrapped_model, wrapped, parent_id=root_id, reply_spec)
+  catch {
+    Unsupported(message~) =>
+      inspect(
+        message,
+        content="'word/_rels/document.xml.rels' selects its Relationships root through Markup Compatibility; byte-preserving mutation is unsupported; refusing",
+      )
+    error =>
+      fail("expected a fail-closed MCE mutation error, got \{repr(error)}")
+  } noraise {
+    _ => fail("expected MCE-wrapped threaded mutation to be refused")
+  }
+}
+
+///|
 test "comment addition wires prefixed and self-closing OPC metadata" {
   let archive = @mbtzip.read(new_blank_docx())
   let relationships =

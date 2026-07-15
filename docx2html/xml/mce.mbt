@@ -739,13 +739,13 @@ fn process_markup_compatibility(
 }
 
 ///|
-fn read_xml_string_strict_mce_encoded_with_mode(
+fn read_xml_string_strict_mce_encoded_roots_with_mode(
   source : String,
   source_encoding : XmlSourceEncoding,
   budget : XmlReadBudget,
   application_namespaces : Array[String],
   source_already_charged : Bool,
-) -> XmlElement raise DocxError {
+) -> (String, XmlElement) raise DocxError {
   let root = read_xml_string_with_mode(
     source,
     Map([]),
@@ -755,7 +755,25 @@ fn read_xml_string_strict_mce_encoded_with_mode(
     Some(source_encoding),
     true,
   )
-  process_markup_compatibility(root, budget, application_namespaces)
+  let source_root_name = root.name
+  let effective_root = process_markup_compatibility(
+    root, budget, application_namespaces,
+  )
+  (source_root_name, effective_root)
+}
+
+///|
+fn read_xml_string_strict_mce_encoded_with_mode(
+  source : String,
+  source_encoding : XmlSourceEncoding,
+  budget : XmlReadBudget,
+  application_namespaces : Array[String],
+  source_already_charged : Bool,
+) -> XmlElement raise DocxError {
+  let (_, effective_root) = read_xml_string_strict_mce_encoded_roots_with_mode(
+    source, source_encoding, budget, application_namespaces, source_already_charged,
+  )
+  effective_root
 }
 
 ///|
@@ -791,6 +809,30 @@ pub fn read_xml_bytes_strict_mce_limited(
     _ => raise InvalidXml(message="XML source is not valid UTF-8")
   }
   read_xml_string_strict_mce_encoded_with_mode(
+    text,
+    Utf8,
+    budget,
+    application_namespaces,
+    true,
+  )
+}
+
+///|
+/// Strictly parses UTF-8 XML and returns both the expanded QName of the raw
+/// document element and the single root selected by Markup Compatibility.
+/// Mutation callers use the source identity to distinguish a byte-addressable
+/// application root from one synthesized by unwrapping `AlternateContent` or
+/// `ProcessContent`, without parsing or charging the source twice.
+pub fn read_xml_bytes_strict_mce_with_source_root_limited(
+  source : BytesView,
+  budget : XmlReadBudget,
+  application_namespaces : Array[String],
+) -> (String, XmlElement) raise DocxError {
+  budget.charge_source(source.length())
+  let text = @utf8.decode(source, ignore_bom=true) catch {
+    _ => raise InvalidXml(message="XML source is not valid UTF-8")
+  }
+  read_xml_string_strict_mce_encoded_roots_with_mode(
     text,
     Utf8,
     budget,
