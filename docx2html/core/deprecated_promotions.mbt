@@ -12,6 +12,14 @@ pub extend ConversionResult with Eq::{not_equal, equal}
 
 ///|
 #deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend DocxXmlResourceLimit with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend DocxXmlResourceLimit with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
 pub extend DocxError with @debug.Debug::{to_repr}
 
 ///|

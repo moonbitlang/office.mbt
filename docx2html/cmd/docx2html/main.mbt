@@ -19,7 +19,8 @@ async fn main {
     @docx.InvalidZip(message~)
     | @docx.InvalidXml(message~)
     | @docx.MissingPart(message~)
-    | @docx.Unsupported(message~) =>
+    | @docx.Unsupported(message~)
+    | @docx.ResourceLimit(message~, ..) =>
       raise @cli.CliError("docx2html: " + message)
     err => raise @cli.CliError("docx2html: " + err.to_string())
   }

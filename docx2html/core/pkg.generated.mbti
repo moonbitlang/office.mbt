@@ -8,7 +8,11 @@ import {
 // Values
 pub fn combine_results(Array[ConversionResult]) -> ConversionResult
 
+pub fn contextual_docx_xml_resource_limit_error(DocxXmlResourceLimit, String) -> DocxError
+
 pub fn dedupe_messages(Array[Message]) -> Array[Message]
+
+pub fn docx_xml_resource_limit_error(DocxXmlResourceLimit) -> DocxError
 
 pub fn error(String) -> Message
 
@@ -22,7 +26,9 @@ pub(all) suberror DocxError {
   InvalidXml(message~ : String)
   MissingPart(message~ : String)
   Unsupported(message~ : String)
+  ResourceLimit(limit~ : DocxXmlResourceLimit, message~ : String)
 } derive(Eq, @debug.Debug)
+pub fn DocxError::description(Self) -> String
 #deprecated
 pub fn DocxError::equal(Self, Self) -> Bool
 #deprecated
@@ -30,6 +36,7 @@ pub fn DocxError::not_equal(Self, Self) -> Bool
 #as_free_fn
 #deprecated
 pub fn DocxError::to_repr(Self) -> @debug.Repr
+pub fn DocxError::xml_resource_limit(Self) -> DocxXmlResourceLimit?
 
 // Types and methods
 pub(all) struct ConversionResult {
@@ -46,6 +53,22 @@ pub fn ConversionResult::not_equal(Self, Self) -> Bool
 #as_free_fn
 #deprecated
 pub fn ConversionResult::to_repr(Self) -> @debug.Repr
+
+pub(all) enum DocxXmlResourceLimit {
+  DocxXmlSourceUnits
+  DocxXmlTokens
+  DocxXmlTokenLength
+  DocxXmlMaterializedCharacters
+  DocxXmlNestingDepth
+} derive(Eq, @debug.Debug)
+#deprecated
+pub fn DocxXmlResourceLimit::equal(Self, Self) -> Bool
+pub fn DocxXmlResourceLimit::message(Self) -> String
+#deprecated
+pub fn DocxXmlResourceLimit::not_equal(Self, Self) -> Bool
+#as_free_fn
+#deprecated
+pub fn DocxXmlResourceLimit::to_repr(Self) -> @debug.Repr
 
 pub(all) enum Message {
   Warning(String)

@@ -1382,10 +1382,8 @@ fn build_annotation_index(
           read_identity_story_xml_strict(bytes, parts.xml_budget) |> ignore
         }
         let scan = scan_story(bytes, path_budget~, warning_collector=warnings) catch {
-          InvalidXml(message~) => {
-            if is_mutation_xml_resource_error(message) {
-              raise InvalidXml(message~)
-            }
+          ResourceLimit(..) as error => raise error
+          InvalidXml(_) => {
             identity_source_complete = false
             warnings.add("annotation index: could not scan \{story_key}")
             continue
@@ -1455,10 +1453,8 @@ fn build_annotation_index(
     }
     read_identity_story_xml_strict(bytes, parts.xml_budget) |> ignore
     let scan = scan_story(bytes, path_budget~, warning_collector=warnings) catch {
-      InvalidXml(message~) => {
-        if is_mutation_xml_resource_error(message) {
-          raise InvalidXml(message~)
-        }
+      ResourceLimit(..) as error => raise error
+      InvalidXml(_) => {
         identity_source_complete = false
         warnings.add(
           "annotation index: could not scan relationship-reachable \{reachable.kind} part '\{warnings.text(reachable.path)}'",
@@ -1651,10 +1647,8 @@ fn read_comment_definitions(
     return (definitions, true)
   }
   let root = read_xml_part(zip, path, xml_budget?=parts.xml_budget) catch {
-    InvalidXml(message~) => {
-      if is_mutation_xml_resource_error(message) {
-        raise InvalidXml(message~)
-      }
+    ResourceLimit(..) as error => raise error
+    InvalidXml(_) => {
       warnings.add("annotation index: could not parse the comments part")
       return (definitions, false)
     }

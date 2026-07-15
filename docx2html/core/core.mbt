@@ -18,13 +18,76 @@ pub fn error(message : String) -> Message {
 }
 
 ///|
+/// A machine-readable XML work or allocation guard. Keeping this distinct
+/// from diagnostic text prevents document-controlled names and identifiers
+/// from forging resource-limit status at higher API layers.
+pub(all) enum DocxXmlResourceLimit {
+  DocxXmlSourceUnits
+  DocxXmlTokens
+  DocxXmlTokenLength
+  DocxXmlMaterializedCharacters
+  DocxXmlNestingDepth
+} derive(Debug, Eq)
+
+///|
+/// Stable human-readable text retained for CLI and validation diagnostics.
+pub fn DocxXmlResourceLimit::message(self : DocxXmlResourceLimit) -> String {
+  match self {
+    DocxXmlSourceUnits => "XML source budget exceeded"
+    DocxXmlTokens => "XML token budget exceeded"
+    DocxXmlTokenLength => "XML token length budget exceeded"
+    DocxXmlMaterializedCharacters =>
+      "XML materialized character budget exceeded"
+    DocxXmlNestingDepth => "XML nesting too deep"
+  }
+}
+
+///|
 /// Errors raised for invalid archives, invalid XML, missing parts, or unsupported input.
 pub(all) suberror DocxError {
   InvalidZip(message~ : String)
   InvalidXml(message~ : String)
   MissingPart(message~ : String)
   Unsupported(message~ : String)
+  ResourceLimit(limit~ : DocxXmlResourceLimit, message~ : String)
 } derive(Debug, Eq)
+
+///|
+/// Constructs a typed XML resource error with its stable default diagnostic.
+pub fn docx_xml_resource_limit_error(limit : DocxXmlResourceLimit) -> DocxError {
+  ResourceLimit(limit~, message=limit.message())
+}
+
+///|
+/// Adds trusted operation context while preserving the machine discriminator.
+pub fn contextual_docx_xml_resource_limit_error(
+  limit : DocxXmlResourceLimit,
+  message : String,
+) -> DocxError {
+  ResourceLimit(limit~, message~)
+}
+
+///|
+/// Returns the typed XML resource discriminator, if this error represents a
+/// bounded parser/scanner guard rather than malformed document content.
+pub fn DocxError::xml_resource_limit(self : DocxError) -> DocxXmlResourceLimit? {
+  match self {
+    ResourceLimit(limit~, ..) => Some(limit)
+    _ => None
+  }
+}
+
+///|
+/// Returns the stable caller-facing message for every DOCX error variant.
+pub fn DocxError::description(self : DocxError) -> String {
+  match self {
+    InvalidZip(message~)
+    | InvalidXml(message~)
+    | MissingPart(message~)
+    | Unsupported(message~) => message
+    ResourceLimit(message~, ..) => message
+  }
+}
 
 ///|
 /// Converted value together with accumulated diagnostics.

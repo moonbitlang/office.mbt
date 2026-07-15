@@ -79,6 +79,18 @@ async fn docx_session_error_code(
 }
 
 ///|
+async fn docx_session_error_value(
+  run : async () -> @transaction.TransactionReport,
+) -> @transaction.TransactionError {
+  try run() catch {
+    @transaction.TransactionError(..) as error => error
+    error => fail("expected TransactionError, received \{error}")
+  } noraise {
+    _ => fail("expected DOCX session failure")
+  }
+}
+
+///|
 async test "D1 session no-op reuses the exact transaction source" {
   with_docx_session_test_dir(directory => {
     let input = "\{directory}/input.docx"
@@ -182,6 +194,94 @@ async test "D1 package resource status cannot be forged by a part name" {
     })
     assert_eq(code, "office.docx.invalid_package")
     assert_false(callback_called.val)
+    assert_eq(@afs.read_file(input).binary(), original)
+  })
+}
+
+///|
+async test "D1 source annotation failures cannot forge resource status" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/forged-source-annotation.docx"
+    let document =
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p/><w:sectPr><w:headerReference w:type="default" r:id="XML source budget exceeded"/></w:sectPr></w:body></w:document>
+    let archive = @zip.read(@word_fixture.new_blank_docx())
+    assert_true(archive.replace("word/document.xml", @utf8.encode(document)))
+    let original = @zip.write(archive)
+    write_docx_session_file(input, original)
+    let callback_called = Ref(false)
+    let code = docx_session_error_code(() => {
+      @docx.transact_docx(
+        @transaction.transaction_options(input, dry_run=true),
+        _ => callback_called.val = true,
+      )
+    })
+    assert_eq(code, "office.docx.invalid_package")
+    assert_false(callback_called.val)
+    assert_eq(@afs.read_file(input).binary(), original)
+  })
+}
+
+///|
+async test "D1 candidate annotation failures cannot forge resource status" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/forged-candidate-annotation.docx"
+    let output = "\{directory}/forged-candidate-output.docx"
+    let original = @word_fixture.new_blank_docx()
+    let archive = @zip.read(original)
+    guard archive.get("word/document.xml") is Some(document) else {
+      fail("blank fixture is missing its main document")
+    }
+    guard document.find(b"<w:sectPr>") is Some(section_start) else {
+      fail("blank fixture is missing its section properties")
+    }
+    let insert_at = section_start + b"<w:sectPr>".length()
+    let forged_reference =
+      #|<w:headerReference xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" w:type="default" r:id="XML source budget exceeded"/>
+    write_docx_session_file(input, original)
+    let callback_called = Ref(false)
+    let error = docx_session_error_value(() => {
+      @docx.transact_docx(
+        @transaction.transaction_options(input, output_path=output),
+        session => {
+          session.queue_span_edit(
+            "word/document.xml",
+            start=insert_at,
+            end=insert_at,
+            @utf8.encode(forged_reference),
+          )
+          callback_called.val = true
+        },
+      )
+    })
+    match error {
+      TransactionError(code~, details~, ..) => {
+        assert_eq(code, "office.transaction.validation_failed")
+        match details {
+          Some(Object(fields)) => {
+            assert_eq(
+              fields.get("validator"),
+              Some(Json::string("office-docx-package")),
+            )
+            guard fields.get("findings") is Some(Array(findings)) else {
+              fail("candidate validation details omitted findings")
+            }
+            guard findings.length() == 1 else {
+              fail("expected one candidate annotation finding")
+            }
+            guard findings[0] is Object(finding) else {
+              fail("candidate annotation finding is not an object")
+            }
+            assert_eq(
+              finding.get("code"),
+              Some(Json::string("docx.annotation.invalid")),
+            )
+          }
+          _ => fail("candidate annotation failure omitted object details")
+        }
+      }
+    }
+    assert_true(callback_called.val)
+    assert_false(@afs.exists(output))
     assert_eq(@afs.read_file(input).binary(), original)
   })
 }

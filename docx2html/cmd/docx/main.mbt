@@ -26,7 +26,8 @@ async fn main {
     @docx2html.InvalidZip(message~)
     | @docx2html.InvalidXml(message~)
     | @docx2html.MissingPart(message~)
-    | @docx2html.Unsupported(message~) =>
+    | @docx2html.Unsupported(message~)
+    | @docx2html.ResourceLimit(message~, ..) =>
       raise @cli.CliError("docx: " + message)
     err => {
       let msg = err.to_string()

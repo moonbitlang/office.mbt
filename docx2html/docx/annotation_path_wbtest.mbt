@@ -5,8 +5,10 @@ test "annotation scanner and verification share bounded path materialization" {
   let verify_budget = AnnotationPathBudget::new(None, max_chars=10)
   let document = @document.document([@document.paragraph([@document.run([])])])
   try build_verify_context(document, [], [], [], [], [], verify_budget) catch {
-    InvalidXml(message~) =>
+    ResourceLimit(limit~, message~) => {
+      debug_inspect(limit, content="DocxXmlMaterializedCharacters")
       inspect(message, content="XML materialized character budget exceeded")
+    }
     _ => fail("expected verification path materialization to be bounded")
   } noraise {
     _ => fail("expected verification paths to exhaust their budget")
@@ -18,8 +20,10 @@ test "annotation scanner and verification share bounded path materialization" {
   let shared_budget = AnnotationPathBudget::new(None, max_chars=30)
   ignore(build_verify_context(document, [], [], [], [], [], shared_budget))
   try scan_story(@utf8.encode(source), path_budget=shared_budget) catch {
-    InvalidXml(message~) =>
+    ResourceLimit(limit~, message~) => {
+      debug_inspect(limit, content="DocxXmlMaterializedCharacters")
       inspect(message, content="XML materialized character budget exceeded")
+    }
     _ => fail("expected shared scanner path materialization to be bounded")
   } noraise {
     _ =>

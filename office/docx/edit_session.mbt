@@ -81,21 +81,7 @@ fn bounded_docx_text(text : String, limit : Int) -> String {
 
 ///|
 fn docx_error_message(error : @docxcore.DocxError) -> String {
-  match error {
-    InvalidZip(message~)
-    | InvalidXml(message~)
-    | MissingPart(message~)
-    | Unsupported(message~) => message
-  }
-}
-
-///|
-fn is_xml_resource_finding(message : String) -> Bool {
-  message.contains("XML source budget exceeded") ||
-  message.contains("XML token budget exceeded") ||
-  message.contains("XML token length budget exceeded") ||
-  message.contains("XML materialized character budget exceeded") ||
-  message.contains("XML nesting too deep")
+  error.description()
 }
 
 ///|
@@ -140,7 +126,7 @@ fn mapped_plan_failure(
     "office.docx.unsupported_encoding"
   } else if message.contains("without pinned source bytes") {
     "office.docx.unpinned_plan"
-  } else if is_xml_resource_finding(message) {
+  } else if error.xml_resource_limit() is Some(_) {
     "office.docx.resource_limit"
   } else if message.contains("does not contain") ||
     message.contains("no longer present") ||
@@ -232,7 +218,7 @@ fn open_edit_session(
     error => {
       let message = docx_error_message(error)
       raise docx_failure(
-        if is_xml_resource_finding(message) {
+        if error.xml_resource_limit() is Some(_) {
           "office.docx.resource_limit"
         } else {
           "office.docx.invalid_package"
@@ -626,7 +612,7 @@ pub fn package_validator() -> @transaction.TransactionValidator raise @transacti
               let message = docx_error_message(error)
               findings.push(
                 @transaction.validation_finding(
-                  if is_xml_resource_finding(message) {
+                  if error.xml_resource_limit() is Some(_) {
                     "docx.annotation.resource_limit"
                   } else {
                     "docx.annotation.invalid"

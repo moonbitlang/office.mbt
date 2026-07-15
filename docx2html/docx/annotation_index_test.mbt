@@ -417,8 +417,10 @@ test "archive-backed annotated reads share one cumulative XML budget" {
     max_token_chars=64 * 1024,
   )
   try @docx.read_docx_annotated_archive_limited(archive, tiny) catch {
-    InvalidXml(message~) =>
+    ResourceLimit(limit~, message~) => {
+      debug_inspect(limit, content="DocxXmlTokens")
       inspect(message, content="XML token budget exceeded")
+    }
     _ => fail("expected bounded XML read failure")
   } noraise {
     _ => fail("expected tiny XML budget to reject the archive")
@@ -974,8 +976,10 @@ test "commentsExtended strict parsing consumes the cumulative XML budget" {
     max_token_chars=1_000_000,
   )
   try @docx.read_docx_annotated_archive_limited(archive, budget) catch {
-    InvalidXml(message~) =>
+    ResourceLimit(limit~, message~) => {
+      debug_inspect(limit, content="DocxXmlSourceUnits")
       inspect(message, content="XML source budget exceeded")
+    }
     _ => fail("expected commentsExtended to consume the shared XML budget")
   } noraise {
     _ => fail("expected commentsExtended to consume the shared XML budget")
@@ -1008,8 +1012,10 @@ test "a second comments parse preserves XML resource failure typing" {
     max_token_chars=1_000_000,
   )
   try @docx.read_docx_annotated_archive_limited(archive, budget) catch {
-    InvalidXml(message~) =>
+    ResourceLimit(limit~, message~) => {
+      debug_inspect(limit, content="DocxXmlSourceUnits")
       inspect(message, content="XML source budget exceeded")
+    }
     _ => fail("expected the comments reread resource failure to stay typed")
   } noraise {
     _ => fail("expected the comments reread to exhaust its shared budget")
@@ -1334,8 +1340,10 @@ test "identity-only stories consume the cumulative XML source budget" {
     max_token_chars=1_000_000,
   )
   try @docx.read_docx_annotated_archive_limited(archive, budget) catch {
-    InvalidXml(message~) =>
+    ResourceLimit(limit~, message~) => {
+      debug_inspect(limit, content="DocxXmlSourceUnits")
       inspect(message, content="XML source budget exceeded")
+    }
     _ => fail("expected the hidden header to consume the shared XML budget")
   } noraise {
     _ => fail("expected the hidden header to consume the shared XML budget")

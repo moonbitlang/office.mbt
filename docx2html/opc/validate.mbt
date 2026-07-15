@@ -276,15 +276,13 @@ fn xml_validation_resource_limit(
   error : @core.DocxError,
 ) -> DocxValidationResourceLimit? {
   match error {
-    InvalidXml(message~) =>
-      match message {
-        "XML source budget exceeded" => Some(XmlSourceUnits)
-        "XML token budget exceeded" => Some(XmlTokens)
-        "XML token length budget exceeded" => Some(XmlTokenLength)
-        "XML materialized character budget exceeded" =>
-          Some(XmlMaterializedCharacters)
-        "XML nesting too deep" => Some(XmlNestingDepth)
-        _ => None
+    ResourceLimit(limit~, ..) =>
+      match limit {
+        DocxXmlSourceUnits => Some(XmlSourceUnits)
+        DocxXmlTokens => Some(XmlTokens)
+        DocxXmlTokenLength => Some(XmlTokenLength)
+        DocxXmlMaterializedCharacters => Some(XmlMaterializedCharacters)
+        DocxXmlNestingDepth => Some(XmlNestingDepth)
       }
     _ => None
   }
@@ -1852,7 +1850,7 @@ fn parse_xml_part(
     err => {
       findings.mark_resource_limit(err)
       findings.add(
-        "malformed XML in \{findings.text(name)}: \{findings.text(repr(err))}",
+        "malformed XML in \{findings.text(name)}: \{findings.text(err.description())}",
       )
       return None
     }
@@ -1881,7 +1879,7 @@ fn parse_relationships_part(
     err => {
       findings.mark_resource_limit(err)
       findings.add(
-        "malformed XML in \{findings.text(name)}: \{findings.text(repr(err))}",
+        "malformed XML in \{findings.text(name)}: \{findings.text(err.description())}",
       )
       return None
     }

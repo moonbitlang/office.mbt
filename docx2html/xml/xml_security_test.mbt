@@ -80,6 +80,22 @@ fn limited_xml_error(
 }
 
 ///|
+fn limited_xml_resource_error(
+  source : Bytes,
+  budget : @xml.XmlReadBudget,
+) -> String raise {
+  try @xml.read_xml_bytes_strict_limited(source, budget) catch {
+    ResourceLimit(limit~, message~) => {
+      inspect(limit.message(), content=message)
+      message
+    }
+    _ => fail("expected a typed XML resource limit")
+  } noraise {
+    _ => fail("expected limited XML parsing to fail")
+  }
+}
+
+///|
 fn limited_xml_write_error(
   element : @xml.XmlElement,
   max_output_bytes : Int,
@@ -400,7 +416,7 @@ test "limited XML parser charges source before decoding" {
     max_token_chars=32,
   )
   inspect(
-    limited_xml_error(@utf8.encode("<a/>"), budget),
+    limited_xml_resource_error(@utf8.encode("<a/>"), budget),
     content="XML source budget exceeded",
   )
 }
@@ -414,7 +430,7 @@ test "limited XML parser bounds tokens, token length, and copied characters" {
     max_token_chars=16,
   )
   inspect(
-    limited_xml_error(@utf8.encode("<r><x/></r>"), token_budget),
+    limited_xml_resource_error(@utf8.encode("<r><x/></r>"), token_budget),
     content="XML token budget exceeded",
   )
   let length_budget = @xml.xml_read_budget(
@@ -424,7 +440,7 @@ test "limited XML parser bounds tokens, token length, and copied characters" {
     max_token_chars=4,
   )
   inspect(
-    limited_xml_error(@utf8.encode("<abcdef/>"), length_budget),
+    limited_xml_resource_error(@utf8.encode("<abcdef/>"), length_budget),
     content="XML token length budget exceeded",
   )
   let chars_budget = @xml.xml_read_budget(
@@ -434,7 +450,7 @@ test "limited XML parser bounds tokens, token length, and copied characters" {
     max_token_chars=16,
   )
   inspect(
-    limited_xml_error(@utf8.encode("<a x=\"1234\"/>"), chars_budget),
+    limited_xml_resource_error(@utf8.encode("<a x=\"1234\"/>"), chars_budget),
     content="XML materialized character budget exceeded",
   )
 }
@@ -456,7 +472,7 @@ test "one limited XML budget is cumulative across package parts" {
     content="b",
   )
   inspect(
-    limited_xml_error(@utf8.encode("<c/>"), budget),
+    limited_xml_resource_error(@utf8.encode("<c/>"), budget),
     content="XML token budget exceeded",
   )
 }
@@ -471,7 +487,7 @@ test "limited XML parser charges namespace scope delta work" {
     max_token_chars=128,
   )
   inspect(
-    limited_xml_error(source, bounded),
+    limited_xml_resource_error(source, bounded),
     content="XML token budget exceeded",
   )
   let ample = @xml.xml_read_budget(
@@ -496,7 +512,7 @@ test "limited XML parser charges names derived from reused namespace URIs" {
     max_token_chars=8 * 1024,
   )
   inspect(
-    limited_xml_error(source, budget),
+    limited_xml_resource_error(source, budget),
     content="XML materialized character budget exceeded",
   )
 }
@@ -724,8 +740,11 @@ test "limited XML writer rejects excessive nesting before recursive output" {
 ///|
 test "xml parser rejects element nesting deeper than its safety limit" {
   try @xml.read_xml_string(xml_security_nested_source(600)) catch {
-    InvalidXml(message~) => inspect(message, content="XML nesting too deep")
-    _ => fail("expected InvalidXml")
+    ResourceLimit(limit~, message~) => {
+      debug_inspect(limit, content="DocxXmlNestingDepth")
+      inspect(message, content="XML nesting too deep")
+    }
+    _ => fail("expected a typed XML resource limit")
   } noraise {
     _ => fail("expected deep nesting to raise")
   }
@@ -740,8 +759,11 @@ test "xml parser accepts moderate element nesting" {
 ///|
 test "strict XML depth limit fails closed on native and Wasm" {
   try @xml.read_xml_string_strict(xml_security_nested_source(300)) catch {
-    InvalidXml(message~) => inspect(message, content="XML nesting too deep")
-    _ => fail("expected InvalidXml")
+    ResourceLimit(limit~, message~) => {
+      debug_inspect(limit, content="DocxXmlNestingDepth")
+      inspect(message, content="XML nesting too deep")
+    }
+    _ => fail("expected a typed XML resource limit")
   } noraise {
     _ => fail("expected deep strict XML to raise")
   }

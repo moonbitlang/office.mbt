@@ -7,12 +7,17 @@ pub type Message = @core.Message
 pub type ConversionResult = @core.ConversionResult
 
 ///|
+/// Machine-readable XML work or allocation guard raised by DOCX processing.
+pub type DocxXmlResourceLimit = @core.DocxXmlResourceLimit
+
+///|
 /// Errors raised for invalid archives, invalid XML, missing parts, or unsupported input.
 pub(all) suberror DocxError {
   InvalidZip(message~ : String)
   InvalidXml(message~ : String)
   MissingPart(message~ : String)
   Unsupported(message~ : String)
+  ResourceLimit(limit~ : DocxXmlResourceLimit, message~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -48,5 +53,6 @@ fn[T] bridge_core_error(
     InvalidXml(message~) => raise InvalidXml(message~)
     MissingPart(message~) => raise MissingPart(message~)
     Unsupported(message~) => raise Unsupported(message~)
+    ResourceLimit(limit~, message~) => raise ResourceLimit(limit~, message~)
   }
 }

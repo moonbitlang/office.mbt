@@ -4378,8 +4378,10 @@ test "comment addition charges relationship XML to the caller budget" {
       xml_budget=tiny_budget,
     )
   catch {
-    InvalidXml(message~) =>
+    ResourceLimit(limit~, message~) => {
+      debug_inspect(limit, content="DocxXmlSourceUnits")
       inspect(message, content="XML source budget exceeded")
+    }
     error =>
       fail("expected a relationship XML budget failure, got \{repr(error)}")
   } noraise {
