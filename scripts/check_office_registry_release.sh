@@ -19,7 +19,7 @@ chmod +x "$SANDBOX/scripts/ensure_dotnet.sh" \
   "$SANDBOX/scripts/validate_xlsx.sh"
 
 grep -Fq '"bobzhang/mbtexcel@0.1.9"' "$MODULE/moon.mod"
-grep -Fq '"bobzhang/docx2html@0.1.45"' "$MODULE/moon.mod"
+grep -Fq '"bobzhang/docx2html@0.2.0"' "$MODULE/moon.mod"
 test -x "$SANDBOX/scripts/validate_docx.sh"
 test -x "$SANDBOX/scripts/validate_xlsx.sh"
 test -f "$SANDBOX/tools/openxml-validator/OpenXmlValidator.csproj"
@@ -29,7 +29,7 @@ moon update
 dependency_tree="$(moon tree)"
 printf '%s\n' "$dependency_tree"
 assert_selected_dependency "$dependency_tree" "bobzhang/mbtexcel" "0.1.9"
-assert_selected_dependency "$dependency_tree" "bobzhang/docx2html" "0.1.45"
+assert_selected_dependency "$dependency_tree" "bobzhang/docx2html" "0.2.0"
 moon check --frozen --target native
 moon check --frozen --target wasm
 # No package filter: the registry-resolved artifact must pass the Office root

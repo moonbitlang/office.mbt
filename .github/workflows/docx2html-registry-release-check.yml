@@ -31,7 +31,7 @@ jobs:
       # This script copies docx2html/ and its SDK validation harness beyond the
       # repository's moon.work boundary. It must resolve mbtexcel@0.1.9 from
       # Mooncakes, assert that exact moon tree selection, and freeze every
-      # subsequent build/test/publish-dry-run before docx2html@0.1.45 ships.
+      # subsequent build/test/publish-dry-run before docx2html@0.2.0 ships.
       - name: Verify isolated registry dependencies and publish payload
         env:
           TMPDIR: ${{ runner.temp }}
