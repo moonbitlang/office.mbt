@@ -28,6 +28,7 @@ pub struct ZipArchive {
 #deprecated
 pub fn ZipArchive::equal(Self, Self) -> Bool
 pub fn ZipArchive::exists(Self, String) -> Bool
+pub fn ZipArchive::logical_path(Self, String) -> String?
 #deprecated
 pub fn ZipArchive::not_equal(Self, Self) -> Bool
 pub fn ZipArchive::read_bytes(Self, String) -> BytesView?

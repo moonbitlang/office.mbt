@@ -56,8 +56,10 @@ pub fn PackageBuilder::new() -> PackageBuilder {
 }
 
 ///|
-/// Adds a part. The name is archive-form (`word/document.xml`, no leading
-/// slash); malformed, reserved (builder-emitted), or duplicate names raise.
+/// Adds a part by logical OPC name (`word/document.xml`, no leading slash).
+/// The builder maps non-ASCII scalars to their ASCII ZIP item spelling at
+/// serialization time. Malformed, reserved (builder-emitted), or duplicate
+/// names raise.
 pub fn PackageBuilder::add_part(
   self : PackageBuilder,
   name : String,
@@ -100,6 +102,11 @@ pub fn PackageBuilder::add_override(
   if !part_name.has_prefix("/") {
     raise PackageBuildError(
       "override PartName must start with '/': \{part_name}",
+    )
+  }
+  if normalize_override_part_name(part_name) != Some(part_name) {
+    raise PackageBuildError(
+      "override PartName is not a canonical logical part name: \{part_name}",
     )
   }
   check_metadata("Override PartName", part_name)
@@ -227,6 +234,11 @@ pub fn PackageBuilder::build(
         "override PartName must start with '/': \{part_name}",
       )
     }
+    if normalize_override_part_name(part_name) != Some(part_name) {
+      raise PackageBuildError(
+        "override PartName is not a canonical logical part name: \{part_name}",
+      )
+    }
     let override_key = builder_part_identity(part_name)
     match override_names.get(override_key) {
       Some(existing) if existing != part_name =>
@@ -259,7 +271,7 @@ pub fn PackageBuilder::build(
       if relationship.external {
         continue
       }
-      guard resolve_target(base, relationship.target) is Some(resolved) else {
+      guard resolve_part_target(base, relationship.target) is Some(resolved) else {
         raise PackageBuildError(
           "relationship \{relationship.id} of '\{source}' has an invalid internal target: \{relationship.target}",
         )
@@ -279,15 +291,17 @@ pub fn PackageBuilder::build(
   )
   for source, rels in self.relationships {
     let name = if source == "" { ROOT_RELS_PART } else { rels_part_for(source) }
+    let zip_name = zip_item_name_from_logical_part_name(name).unwrap()
     archive.add(
-      name,
+      zip_name,
       @utf8.encode(relationships_xml(rels)),
       compression=Deflate,
     )
   }
   for entry in self.parts {
     let (name, data) = entry
-    archive.add(name, data, compression=Deflate)
+    let zip_name = zip_item_name_from_logical_part_name(name).unwrap()
+    archive.add(zip_name, data, compression=Deflate)
   }
   @mbtzip.write(archive) catch {
     err =>
@@ -296,21 +310,14 @@ pub fn PackageBuilder::build(
 }
 
 ///|
-/// Part-name policy: the shared entry-name checks (shape) plus builder
-/// specifics — no trailing slash (a "directory" is not a part) and no
+/// Part-name policy: canonical logical PartName syntax plus builder specifics
+/// — no trailing slash (a "directory" is not a part) and no
 /// builder-owned names (`[Content_Types].xml` and anything shaped like a
 /// relationships part: the builder emits all relationships itself).
 fn check_part_name(name : String) -> Unit raise PackageBuildError {
-  let problems = FindingCollector::new(4, DEFAULT_MAX_FINDING_CHARS)
-  check_entry_name(name, problems)
-  if problems.findings.length() > 0 {
+  if name == "" || name.has_prefix("/") || name.has_suffix("/") {
     raise PackageBuildError(
-      "invalid part name '\{name}': \{problems.findings[0]}",
-    )
-  }
-  if name.has_suffix("/") {
-    raise PackageBuildError(
-      "invalid part name '\{name}': a part cannot be a directory entry",
+      "invalid part name '\{name}': expected a non-empty logical part name without a leading or trailing slash",
     )
   }
   let key = builder_part_identity(name)
@@ -321,11 +328,18 @@ fn check_part_name(name : String) -> Unit raise PackageBuildError {
       "reserved part name '\{name}': the builder emits content types and relationships itself",
     )
   }
+  for segment in name.split("/") {
+    if !is_valid_part_segment(segment) {
+      raise PackageBuildError(
+        "invalid part name '\{name}': not a canonical OPC logical PartName",
+      )
+    }
+  }
 }
 
 ///|
 fn builder_part_identity(name : String) -> String {
-  name.to_lower()
+  part_name_key(name)
 }
 
 ///|

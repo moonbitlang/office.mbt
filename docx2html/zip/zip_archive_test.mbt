@@ -28,6 +28,28 @@ test "DOCX view resolves case-equivalent names to exact archive spelling" {
 }
 
 ///|
+test "DOCX view resolves logical Unicode names to physical ZIP spellings" {
+  let archive = @zip.zip_archive({ "word/%C3%A9.xml": b"document" })
+  assert_eq(archive.resolve_path("word/é.xml"), Some("word/%C3%A9.xml"))
+  assert_eq(archive.logical_path("word/%C3%A9.xml"), Some("word/é.xml"))
+  assert_eq(archive.logical_path("WORD/é.XML"), Some("word/é.xml"))
+  assert_eq(archive.logical_path("word/É.xml"), None)
+  assert_eq(archive.read_bytes("word/é.xml"), Some(b"document"))
+}
+
+///|
+test "DOCX view rejects physical names that bypass OPC ZIP mapping" {
+  try {
+    let _ = @zip.zip_archive({ "word/é.xml": b"document" })
+    fail("expected a non-ASCII physical name to be rejected")
+  } catch {
+    @core.InvalidZip(message~) =>
+      assert_true(message.contains("does not map to a canonical OPC part name"))
+    _ => fail("expected InvalidZip")
+  }
+}
+
+///|
 test "DOCX view rejects case-equivalent aliases at construction" {
   try {
     let _ = @zip.zip_archive({
@@ -44,4 +66,15 @@ test "DOCX view rejects case-equivalent aliases at construction" {
       )
     _ => fail("expected InvalidZip")
   }
+}
+
+///|
+test "DOCX view ignores explicit directory records and their aliases" {
+  let archive = @mbtzip.Archive::new()
+  archive.add("word/", b"")
+  archive.add("WORD/", b"")
+  archive.add("word/document.xml", b"document")
+  let view = @zip.open_zip_archive(archive)
+  assert_false(view.exists("word/"))
+  assert_true(view.exists("word/document.xml"))
 }

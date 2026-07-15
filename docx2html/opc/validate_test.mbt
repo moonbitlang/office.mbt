@@ -14,6 +14,9 @@ const MINIMAL_ROOT_RELS_XML : String =
   #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>
 
 ///|
+const DOCX_MAIN_CONTENT_TYPE_FOR_TEST : String = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
+
+///|
 fn utf8_bytes(text : String) -> Bytes {
   @utf8.encode(text)
 }
@@ -70,6 +73,76 @@ fn minimal_docx(
 ///|
 test "a minimal well-formed package is valid" {
   debug_inspect(@opc.validate_docx_package(minimal_docx()), content="[]")
+  let report = @opc.validate_docx_archive_report_limited(
+    try! @mbtzip.read(minimal_docx()),
+    max_findings=8,
+    max_message_chars=256,
+  )
+  assert_eq(report.main_document_part(), Some("word/document.xml"))
+}
+
+///|
+test "explicit ZIP directory records are valid package metadata" {
+  let with_directories = minimal_docx(extra=[
+    ("word/", b""),
+    ("word/media/", b""),
+    ("WORD/", b""),
+  ])
+  debug_inspect(@opc.validate_docx_package(with_directories), content="[]")
+}
+
+///|
+test "byte-backed OPC validation bounds ZIP inflation before XML parsing" {
+  let data = minimal_docx()
+  let entry_report = @opc.validate_docx_package_report_limited(
+    data,
+    max_findings=8,
+    max_message_chars=1,
+    max_zip_entries=2,
+  )
+  assert_true(entry_report.resource_limit() is Some(ZipEntries))
+  assert_eq(entry_report.main_document_part(), None)
+  let expanded_entry_report = @opc.validate_docx_package_report_limited(
+    data,
+    max_findings=8,
+    max_message_chars=1,
+    max_zip_entry_uncompressed_bytes=1,
+  )
+  assert_true(
+    expanded_entry_report.resource_limit() is Some(ZipEntryUncompressedBytes),
+  )
+  let aggregate_report = @opc.validate_docx_package_report_limited(
+    data,
+    max_findings=8,
+    max_message_chars=1,
+    max_zip_entry_uncompressed_bytes=1024 * 1024,
+    max_zip_total_uncompressed_bytes=1,
+  )
+  assert_true(
+    aggregate_report.resource_limit() is Some(ZipTotalUncompressedBytes),
+  )
+}
+
+///|
+test "relationship validation requires the OPC package namespace" {
+  let foreign_child =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:foreign="urn:foreign"><foreign:Relationship Id="main" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>
+  let report = @opc.validate_docx_archive_report_limited(
+    try! @mbtzip.read(minimal_docx(root_rels=Some(foreign_child))),
+    max_findings=8,
+    max_message_chars=256,
+  )
+  assert_true(
+    report
+    .findings()
+    .search_by(finding => {
+      finding.contains(
+        "Relationship element is outside the OPC package relationships namespace",
+      )
+    })
+    is Some(_),
+  )
+  assert_eq(report.main_document_part(), None)
 }
 
 ///|
@@ -118,7 +191,7 @@ test "OPC part lookup preserves spelling while comparing case-insensitively" {
   archive.add(
     "[Content_Types].xml",
     utf8_bytes(
-      "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Override PartName=\"/CUSTOM/MAIN.XML\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/></Types>",
+      "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/CUSTOM/MAIN.XML\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/></Types>",
     ),
   )
   archive.add(
@@ -129,11 +202,12 @@ test "OPC part lookup preserves spelling while comparing case-insensitively" {
   )
   archive.add("CUSTOM/MAIN.XML", utf8_bytes(MINIMAL_DOCUMENT_XML))
   archive.add(
-    "CUSTOM/_rels/MAIN.XML.rels",
+    "custom/_RELS/main.xml.RELS",
     utf8_bytes(
-      "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"/>",
+      "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"metadata\" Type=\"urn:example:metadata\" Target=\"comments.xml\"/></Relationships>",
     ),
   )
+  archive.add("CUSTOM/comments.xml", utf8_bytes("<comments/>"))
   debug_inspect(
     @opc.validate_docx_package(try! @mbtzip.write(archive)),
     content="[]",
@@ -263,6 +337,16 @@ test "limited validation bounds aggregate XML work before DOM construction" {
     })
     is Some(_),
   )
+  let source_report = @opc.validate_docx_archive_report_limited(
+    archive,
+    max_findings=4,
+    max_message_chars=1,
+    max_xml_source_units=1,
+    max_xml_tokens=1024,
+    max_xml_materialized_chars=4096,
+    max_xml_token_chars=1024,
+  )
+  assert_true(source_report.resource_limit() is Some(XmlSourceUnits))
   let (token_findings, _) = @opc.validate_docx_archive_limited(
     archive,
     max_findings=4,
@@ -278,6 +362,59 @@ test "limited validation bounds aggregate XML work before DOM construction" {
     })
     is Some(_),
   )
+  let token_report = @opc.validate_docx_archive_report_limited(
+    archive,
+    max_findings=4,
+    max_message_chars=1,
+    max_xml_source_units=4096,
+    max_xml_tokens=1,
+    max_xml_materialized_chars=4096,
+    max_xml_token_chars=1024,
+  )
+  assert_true(token_report.resource_limit() is Some(XmlTokens))
+}
+
+///|
+test "typed OPC resource status cannot be forged by a part name" {
+  let data = minimal_docx(extra=[
+    ("word/XML source budget exceeded.bin", b"ordinary"),
+  ])
+  let report = @opc.validate_docx_archive_report_limited(
+    try! @mbtzip.read(data),
+    max_findings=8,
+    max_message_chars=256,
+  )
+  assert_true(report.resource_limit() is None)
+  assert_true(
+    report
+    .findings()
+    .any(finding => finding.contains("XML source budget exceeded")),
+  )
+}
+
+///|
+test "typed OPC resource status includes the XML nesting guard" {
+  let document = StringBuilder::new()
+  document.write_string(
+    "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>",
+  )
+  for _ in 0..<300 {
+    document.write_string("<x>")
+  }
+  for _ in 0..<300 {
+    document.write_string("</x>")
+  }
+  document.write_string("</w:body></w:document>")
+  let report = @opc.validate_docx_archive_report_limited(
+    try! @mbtzip.read(minimal_docx(document=Some(document.to_string()))),
+    max_findings=8,
+    max_message_chars=8,
+    max_xml_source_units=1024 * 1024,
+    max_xml_tokens=4096,
+    max_xml_materialized_chars=1024 * 1024,
+    max_xml_token_chars=4096,
+  )
+  assert_true(report.resource_limit() is Some(XmlNestingDepth))
 }
 
 ///|
@@ -378,6 +515,7 @@ test "the main part is found by following the officeDocument relationship" {
     content=(
       #|[
       #|  "[Content_Types].xml: Override names a missing part: /word/document.xml",
+      #|  "relationship target missing: _rels/.rels -> word/document.xml (resolved word/document.xml)",
       #|  "officeDocument relationship targets a missing part: word/document.xml",
       #|]
     ),
@@ -385,12 +523,163 @@ test "the main part is found by following the officeDocument relationship" {
 }
 
 ///|
-test "Strict main relationships are authoritative and multiple declarations fail" {
+test "OPC Pack-URI aliases cannot select a trusted main part" {
+  for
+    segment in [
+      "%77ord", "doc%2Fument.xml", "doc%5Cument.xml", "malformed%", "trailing.",
+    ] {
+    assert_false(@opc.is_valid_part_segment(segment))
+  }
+  for
+    target in [
+      "%77ord/document.xml", "word/doc%2Fument.xml", "word/doc%5Cument.xml", "word/malformed%.xml",
+      "word/trailing./document.xml",
+    ] {
+    assert_eq(@opc.resolve_part_target("", target), None)
+  }
+  let aliased_path = "%77ord/document.xml"
+  let alias_rels = MINIMAL_ROOT_RELS_XML.replace(
+    old="Target=\"word/document.xml\"",
+    new="Target=\"\{aliased_path}\"",
+  )
+  let alias_types = MINIMAL_CONTENT_TYPES_XML.replace(
+    old="</Types>",
+    new="<Override PartName=\"/\{aliased_path}\" ContentType=\"\{DOCX_MAIN_CONTENT_TYPE_FOR_TEST}\"/></Types>",
+  )
+  let report = @opc.validate_docx_archive_report_limited(
+    try! @mbtzip.read(
+      minimal_docx(
+        content_types=Some(alias_types),
+        root_rels=Some(alias_rels),
+        extra=[(aliased_path, utf8_bytes(MINIMAL_DOCUMENT_XML))],
+      ),
+    ),
+    max_findings=16,
+    max_message_chars=256,
+  )
+  assert_eq(report.main_document_part(), None)
+  assert_true(
+    report
+    .findings()
+    .any(finding => finding.contains("entry name is not a valid OPC URI path")),
+  )
+  assert_true(
+    report
+    .findings()
+    .any(finding => {
+      finding.contains("officeDocument relationship has an invalid target")
+    }),
+  )
+}
+
+///|
+test "OPC logical part names are distinct from physical ZIP item names" {
+  assert_true(@opc.is_valid_part_segment("é.xml"))
+  assert_true(@opc.is_valid_part_segment("𐐀.xml"))
+  assert_false(@opc.is_valid_part_segment("%C3%A9.xml"))
+  assert_false(@opc.is_valid_part_segment("%F0%90%90%80.xml"))
+  assert_eq(
+    @opc.logical_part_name_from_zip_item_name("word/%C3%A9.xml"),
+    Some("word/é.xml"),
+  )
+  assert_eq(
+    @opc.logical_part_name_from_zip_item_name("word/%f0%90%90%80.xml"),
+    Some("word/𐐀.xml"),
+  )
+  assert_eq(
+    @opc.logical_part_name_from_zip_item_name("word/%FF.xml"),
+    Some("word/%FF.xml"),
+  )
+  assert_eq(
+    @opc.logical_part_name_from_zip_item_name("word/%C2%80.xml"),
+    Some("word/%C2%80.xml"),
+  )
+  assert_eq(@opc.logical_part_name_from_zip_item_name("word/é.xml"), None)
+  assert_eq(@opc.logical_part_name_from_zip_item_name("word/%77ork.xml"), None)
+  assert_eq(@opc.part_name_key("WORD/É.XML"), "word/É.xml")
+  assert_false(@opc.part_name_key("É.xml") == @opc.part_name_key("é.xml"))
+}
+
+///|
+test "relationship TargetMode is validated before identity selection" {
+  let explicit_internal = MINIMAL_ROOT_RELS_XML.replace(
+    old="Target=\"word/document.xml\"",
+    new="Target=\"word/document.xml\" TargetMode=\"Internal\"",
+  )
+  let internal_report = @opc.validate_docx_archive_report_limited(
+    try! @mbtzip.read(minimal_docx(root_rels=Some(explicit_internal))),
+    max_findings=8,
+    max_message_chars=256,
+  )
+  assert_eq(internal_report.findings(), [])
+  assert_eq(internal_report.main_document_part(), Some("word/document.xml"))
+  let invalid_mode = MINIMAL_ROOT_RELS_XML.replace(
+    old="Target=\"word/document.xml\"",
+    new="Target=\"word/document.xml\" TargetMode=\"Bogus\"",
+  )
+  let invalid_report = @opc.validate_docx_archive_report_limited(
+    try! @mbtzip.read(minimal_docx(root_rels=Some(invalid_mode))),
+    max_findings=8,
+    max_message_chars=256,
+  )
+  assert_eq(invalid_report.main_document_part(), None)
+  assert_true(
+    invalid_report
+    .findings()
+    .any(finding => {
+      finding.contains("Relationship has invalid TargetMode: Bogus")
+    }),
+  )
+}
+
+///|
+test "root targets and relationship-part content types are all validated" {
+  let wrong_types = MINIMAL_CONTENT_TYPES_XML.replace(
+    old="application/vnd.openxmlformats-package.relationships+xml",
+    new="application/xml",
+  )
+  let dangling_root = MINIMAL_ROOT_RELS_XML.replace(
+    old="</Relationships>",
+    new="<Relationship Id=\"dangling\" Type=\"urn:example:metadata\" Target=\"missing.xml\"/></Relationships>",
+  )
+  let findings = @opc.validate_docx_package(
+    minimal_docx(content_types=Some(wrong_types), root_rels=Some(dangling_root)),
+  )
+  assert_true(
+    findings.any(finding => {
+      finding.contains(
+        "relationship part _rels/.rels has content type 'application/xml'",
+      )
+    }),
+  )
+  assert_true(
+    findings.any(finding => {
+      finding.contains(
+        "relationship target missing: _rels/.rels -> missing.xml",
+      )
+    }),
+  )
+}
+
+///|
+test "Strict main relationships require matching WordprocessingML" {
   let strict_rels =
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument" Target="word/document.xml"/></Relationships>
+  let strict_document =
+    #|<w:document xmlns:w="http://purl.oclc.org/ooxml/wordprocessingml/main"><w:body><w:p><w:r><w:t>hi</w:t></w:r></w:p></w:body></w:document>
   assert_eq(
-    @opc.validate_docx_package(minimal_docx(root_rels=Some(strict_rels))),
+    @opc.validate_docx_package(
+      minimal_docx(root_rels=Some(strict_rels), document=Some(strict_document)),
+    ),
     [],
+  )
+  let mixed_findings = @opc.validate_docx_package(
+    minimal_docx(root_rels=Some(strict_rels)),
+  )
+  assert_true(
+    mixed_findings.any(finding => {
+      finding.contains("does not match the officeDocument relationship dialect")
+    }),
   )
   let multiple = strict_rels.replace(
     old="</Relationships>",
@@ -410,6 +699,65 @@ test "Strict main relationships are authoritative and multiple declarations fail
 }
 
 ///|
+test "content-types and main document identity require exact namespaces and MIME" {
+  let foreign_root = MINIMAL_CONTENT_TYPES_XML.replace(
+    old="http://schemas.openxmlformats.org/package/2006/content-types",
+    new="urn:foreign-content-types",
+  )
+  let foreign_root_report = @opc.validate_docx_archive_report_limited(
+    try! @mbtzip.read(minimal_docx(content_types=Some(foreign_root))),
+    max_findings=8,
+    max_message_chars=256,
+  )
+  assert_true(
+    foreign_root_report
+    .findings()
+    .any(finding => {
+      finding.contains("root element is not in the OPC content-types namespace")
+    }),
+  )
+  assert_eq(foreign_root_report.main_document_part(), None)
+
+  let foreign_child = MINIMAL_CONTENT_TYPES_XML.replace(
+    old="<Override PartName=",
+    new="<foreign:Override xmlns:foreign=\"urn:foreign\" PartName=",
+  )
+  let foreign_child_report = @opc.validate_docx_archive_report_limited(
+    try! @mbtzip.read(minimal_docx(content_types=Some(foreign_child))),
+    max_findings=8,
+    max_message_chars=256,
+  )
+  assert_true(
+    foreign_child_report
+    .findings()
+    .any(finding => {
+      finding.contains(
+        "Override element is outside the OPC content-types namespace",
+      )
+    }),
+  )
+  assert_eq(foreign_child_report.main_document_part(), None)
+
+  let wrong_mime = MINIMAL_CONTENT_TYPES_XML.replace(
+    old=DOCX_MAIN_CONTENT_TYPE_FOR_TEST,
+    new="application/xml",
+  )
+  let wrong_mime_report = @opc.validate_docx_archive_report_limited(
+    try! @mbtzip.read(minimal_docx(content_types=Some(wrong_mime))),
+    max_findings=8,
+    max_message_chars=256,
+  )
+  assert_true(
+    wrong_mime_report
+    .findings()
+    .any(finding => {
+      finding.contains("expected '" + DOCX_MAIN_CONTENT_TYPE_FOR_TEST + "'")
+    }),
+  )
+  assert_eq(wrong_mime_report.main_document_part(), None)
+}
+
+///|
 test "a wrong main-part root and a missing officeDocument rel are findings" {
   debug_inspect(
     @opc.validate_docx_package(
@@ -422,7 +770,7 @@ test "a wrong main-part root and a missing officeDocument rel are findings" {
       ),
     ),
     content=(
-      #|["main part word/document.xml root element is 'wrong', expected a 'document' root"]
+      #|["main part word/document.xml root element does not match the officeDocument relationship dialect"]
     ),
   )
   let no_office_rel =
