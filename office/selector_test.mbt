@@ -28,7 +28,7 @@ test "canonical selectors parse, normalize, render, and classify" {
   for input in inputs {
     let selector = @office.parse_selector(input)
     rendered.push(
-      "\{selector.render()} | \{selector_stability_name(selector.stability)}",
+      "\{selector.render()} | \{selector_stability_name(selector.stability())}",
     )
     assert_eq(
       @office.parse_selector(selector.render()).render(),
@@ -58,15 +58,16 @@ test "selector AST exposes adapter-ready segments, keys, and coordinates" {
   let docx = @office.parse_selector(
     "/docx/comments/comment[id=\"review/one]=\\\"ready\\\"\"]",
   )
-  assert_eq(docx.format.name(), "docx")
-  assert_eq(docx.segments.length(), 2)
-  assert_eq(docx.segments[0].name, "comments")
-  assert_eq(docx.segments[1].name, "comment")
-  assert_eq(docx.segments[1].key_value("id"), Some("review/one]=\"ready\""))
-  assert_true(docx.coordinate is None)
+  assert_eq(docx.document_format().name(), "docx")
+  assert_eq(docx.segments().length(), 2)
+  assert_eq(docx.segments()[0].name(), "comments")
+  assert_true(docx.segments()[0].selection() is None)
+  assert_eq(docx.segments()[1].name(), "comment")
+  assert_eq(docx.segments()[1].key_value("id"), Some("review/one]=\"ready\""))
+  assert_true(docx.coordinate() is None)
   let xlsx = @office.parse_selector("/xlsx/sheet[name=\"Data\"]/range[C12:A1]")
-  assert_eq(xlsx.segments[0].key_value("name"), Some("Data"))
-  guard xlsx.coordinate is Some(Range(start, finish)) else {
+  assert_eq(xlsx.segments()[0].key_value("name"), Some("Data"))
+  guard xlsx.coordinate() is Some(Range(start, finish)) else {
     fail("expected an XLSX range coordinate")
   }
   assert_eq(start.render(), "A1")
