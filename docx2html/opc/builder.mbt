@@ -102,6 +102,11 @@ pub fn PackageBuilder::add_default(
 ) -> Unit raise PackageBuildError {
   check_metadata("Default extension", extension)
   check_metadata("Default content type", content_type)
+  if !is_valid_content_type_extension(extension) {
+    raise PackageBuildError(
+      "Default extension is not a valid OPC ST_Extension: \{extension}",
+    )
+  }
   if !is_valid_media_type(content_type) {
     raise PackageBuildError(
       "Default content type is not a valid media type: \{content_type}",
@@ -301,6 +306,11 @@ pub fn PackageBuilder::build(
   for extension, content_type in self.defaults {
     check_metadata("Default extension", extension)
     check_metadata("Default content type", content_type)
+    if !is_valid_content_type_extension(extension) {
+      raise PackageBuildError(
+        "Default extension is not a valid OPC ST_Extension: \{extension}",
+      )
+    }
     if !is_valid_media_type(content_type) {
       raise PackageBuildError(
         "Default content type is not a valid media type: \{content_type}",
@@ -605,5 +615,28 @@ test "build revalidates part names from raw state" {
       )
   } noraise {
     _ => fail("expected build-time duplicate-part rejection")
+  }
+}
+
+///|
+test "build revalidates content-type defaults from raw state" {
+  let builder : PackageBuilder = {
+    parts: [],
+    defaults: SortedMap([("bad.ext", "application/xml")]),
+    overrides: SortedMap([]),
+    relationships: SortedMap([]),
+    part_names: PartNameRegistry::new(),
+    zip_name_chars: 0,
+  }
+  try builder.build() catch {
+    PackageBuildError(message) =>
+      inspect(
+        message.has_prefix(
+          "Default extension is not a valid OPC ST_Extension: bad.ext",
+        ),
+        content="true",
+      )
+  } noraise {
+    _ => fail("expected build-time ST_Extension rejection")
   }
 }

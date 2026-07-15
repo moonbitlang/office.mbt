@@ -762,57 +762,72 @@ fn is_media_type_token_char(character : Char) -> Bool {
 }
 
 ///|
-/// RFC media type syntax used by OPC content-type declarations. Parameters are
-/// accepted when they are token or quoted-string values; whitespace is only
-/// permitted around parameter separators.
+fn is_media_type_quoted_char(character : Char) -> Bool {
+  let code = character.to_int()
+  character == '\t' ||
+  character == ' ' ||
+  code == 0x21 ||
+  (code >= 0x23 && code <= 0x5b) ||
+  (code >= 0x5d && code <= 0x7e) ||
+  (code >= 0x80 && code <= 0xff)
+}
+
+///|
+fn is_media_type_quoted_pair_char(character : Char) -> Bool {
+  let code = character.to_int()
+  character == '\t' ||
+  character == ' ' ||
+  (code >= 0x21 && code <= 0x7e) ||
+  (code >= 0x80 && code <= 0xff)
+}
+
+///|
+/// RFC 7230 token and quoted-string rules, composed as the RFC 7231 media-type
+/// grammar required by OPC. Optional whitespace surrounds semicolons only;
+/// parameter names, `=`, and values remain contiguous.
 fn is_valid_media_type(value : String) -> Bool {
-  if value == "" || value.trim() != value {
-    return false
-  }
   let characters = value.to_array()
   let mut index = 0
-  fn consume_token(characters : ArrayView[Char], start : Int) -> Int {
-    let mut at = start
-    while at < characters.length() && is_media_type_token_char(characters[at]) {
-      at += 1
-    }
-    at
+  while index < characters.length() &&
+        is_media_type_token_char(characters[index]) {
+    index += 1
   }
-  fn skip_ows(characters : ArrayView[Char], start : Int) -> Int {
-    let mut at = start
-    while at < characters.length() &&
-          (characters[at] == ' ' || characters[at] == '\t') {
-      at += 1
-    }
-    at
-  }
-  let type_end = consume_token(characters, index)
-  if type_end == index ||
-    type_end >= characters.length() ||
-    characters[type_end] != '/' {
+  if index == 0 || index >= characters.length() || characters[index] != '/' {
     return false
   }
-  index = type_end + 1
-  let subtype_end = consume_token(characters, index)
-  if subtype_end == index {
+  index += 1
+  let subtype_start = index
+  while index < characters.length() &&
+        is_media_type_token_char(characters[index]) {
+    index += 1
+  }
+  if index == subtype_start {
     return false
   }
-  index = subtype_end
   while index < characters.length() {
-    index = skip_ows(characters, index)
+    while index < characters.length() &&
+          (characters[index] == ' ' || characters[index] == '\t') {
+      index += 1
+    }
     if index >= characters.length() || characters[index] != ';' {
       return false
     }
-    index = skip_ows(characters, index + 1)
-    let name_end = consume_token(characters, index)
-    if name_end == index {
+    index += 1
+    while index < characters.length() &&
+          (characters[index] == ' ' || characters[index] == '\t') {
+      index += 1
+    }
+    let parameter_start = index
+    while index < characters.length() &&
+          is_media_type_token_char(characters[index]) {
+      index += 1
+    }
+    if index == parameter_start ||
+      index >= characters.length() ||
+      characters[index] != '=' {
       return false
     }
-    index = skip_ows(characters, name_end)
-    if index >= characters.length() || characters[index] != '=' {
-      return false
-    }
-    index = skip_ows(characters, index + 1)
+    index += 1
     if index >= characters.length() {
       return false
     }
@@ -828,10 +843,11 @@ fn is_valid_media_type(value : String) -> Bool {
         }
         if character == '\\' {
           index += 1
-          if index >= characters.length() {
+          if index >= characters.length() ||
+            !is_media_type_quoted_pair_char(characters[index]) {
             return false
           }
-        } else if character.to_int() < 0x20 && character != '\t' {
+        } else if !is_media_type_quoted_char(character) {
           return false
         }
         index += 1
@@ -840,14 +856,72 @@ fn is_valid_media_type(value : String) -> Bool {
         return false
       }
     } else {
-      let value_end = consume_token(characters, index)
-      if value_end == index {
+      let value_start = index
+      while index < characters.length() &&
+            is_media_type_token_char(characters[index]) {
+        index += 1
+      }
+      if index == value_start {
         return false
       }
-      index = value_end
     }
   }
   true
+}
+
+///|
+/// ECMA-376 Part 2 `ST_Extension`. A percent sign is legal only as a complete
+/// percent-encoded byte; dots and non-ASCII characters are not extension data.
+fn is_valid_content_type_extension(value : String) -> Bool {
+  if value == "" {
+    return false
+  }
+  let characters = value.to_array()
+  let mut index = 0
+  while index < characters.length() {
+    let character = characters[index]
+    if character.is_ascii_alphabetic() ||
+      character.is_ascii_digit() ||
+      character
+      is ('!'
+      | '$'
+      | '&'
+      | '('
+      | ')'
+      | '*'
+      | '+'
+      | ','
+      | ':'
+      | '='
+      | '@'
+      | '-'
+      | '_'
+      | '~') ||
+      character.to_int() == 0x27 {
+      index += 1
+    } else if character == '%' &&
+      index + 2 < characters.length() &&
+      opc_ascii_hex_digit(characters[index + 1]) &&
+      opc_ascii_hex_digit(characters[index + 2]) {
+      index += 3
+    } else {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn unexpected_xml_attribute(
+  element : @xml.XmlElement,
+  allowed : ArrayView[String],
+) -> String? {
+  for name, _ in element.attributes {
+    if !allowed.any(expected => expected == name) {
+      return Some(name)
+    }
+  }
+  None
 }
 
 ///|
@@ -870,6 +944,16 @@ fn check_content_types(
     )
     return None
   }
+  let mut valid = true
+  match unexpected_xml_attribute(root, []) {
+    Some(attribute) => {
+      findings.add(
+        "\{CONTENT_TYPES_PART}: Types has undeclared attribute: \{findings.text(attribute)}",
+      )
+      valid = false
+    }
+    None => ()
+  }
   let defaults : StableStringMap[String] = SortedMap([])
   let overrides : StableStringMap[String] = SortedMap([])
   let seen_defaults : StableStringSet = SortedSet([])
@@ -877,105 +961,196 @@ fn check_content_types(
   for node in root.children {
     if findings.full() {
       findings.stop()
+      valid = false
       break
     }
-    guard node is XmlElement(element) else { continue }
-    match element.name {
-      CONTENT_TYPES_DEFAULT =>
-        match
-          (
-            element.attributes.get("Extension"),
-            element.attributes.get("ContentType"),
-          ) {
-          (Some(extension), Some(content_type)) => {
-            let key = extension.to_lower()
-            let duplicate = seen_defaults.contains(key)
-            if duplicate {
-              findings.add(
-                "\{CONTENT_TYPES_PART}: duplicate Default Extension after case normalization: \{findings.text(key)}",
-              )
-            } else {
-              seen_defaults.add(key)
-            }
-            if !is_valid_media_type(content_type) {
-              findings.add(
-                "\{CONTENT_TYPES_PART}: Default has invalid ContentType: \{findings.text(content_type)}",
-              )
-            } else if !duplicate {
-              defaults[key] = content_type
-            }
-          }
-          _ =>
-            findings.add(
-              "\{CONTENT_TYPES_PART}: Default missing Extension or ContentType",
-            )
+    match node {
+      XmlText(text) =>
+        if text.trim() != "" {
+          findings.add("\{CONTENT_TYPES_PART}: Types contains unexpected text")
+          valid = false
         }
-      CONTENT_TYPES_OVERRIDE =>
-        match
-          (
-            element.attributes.get("PartName"),
-            element.attributes.get("ContentType"),
-          ) {
-          (Some(part_name), Some(content_type)) =>
-            // Only a '/'-prefixed PartName can be resolved to an entry; an
-            // empty or slash-less one is itself the finding (and slicing it
-            // would abort on attacker-supplied input).
-            if part_name.has_prefix("/") {
-              match normalize_override_part_name(part_name) {
-                Some(key) => {
-                  let collision_key = part_name_key(key)
-                  let duplicate = seen_overrides.contains(collision_key)
+      XmlElement(element) =>
+        match element.name {
+          CONTENT_TYPES_DEFAULT => {
+            let mut element_valid = true
+            match
+              unexpected_xml_attribute(element, ["Extension", "ContentType"]) {
+              Some(attribute) => {
+                findings.add(
+                  "\{CONTENT_TYPES_PART}: Default has undeclared attribute: \{findings.text(attribute)}",
+                )
+                element_valid = false
+                valid = false
+              }
+              None => ()
+            }
+            if !element.children.is_empty() {
+              findings.add(
+                "\{CONTENT_TYPES_PART}: Default element is not empty",
+              )
+              element_valid = false
+              valid = false
+            }
+            match
+              (
+                element.attributes.get("Extension"),
+                element.attributes.get("ContentType"),
+              ) {
+              (Some(extension), Some(content_type)) => {
+                let extension_valid = is_valid_content_type_extension(extension)
+                if !extension_valid {
+                  findings.add(
+                    "\{CONTENT_TYPES_PART}: Default has invalid Extension: \{findings.text(extension)}",
+                  )
+                  valid = false
+                }
+                let content_type_valid = is_valid_media_type(content_type)
+                if !content_type_valid {
+                  findings.add(
+                    "\{CONTENT_TYPES_PART}: Default has invalid ContentType: \{findings.text(content_type)}",
+                  )
+                  valid = false
+                }
+                if extension_valid {
+                  let key = extension.to_lower()
+                  let duplicate = seen_defaults.contains(key)
                   if duplicate {
                     findings.add(
-                      "\{CONTENT_TYPES_PART}: duplicate Override PartName after path normalization: \{findings.text(key)}",
+                      "\{CONTENT_TYPES_PART}: duplicate Default Extension after case normalization: \{findings.text(key)}",
                     )
+                    valid = false
                   } else {
-                    seen_overrides.add(collision_key)
-                  }
-                  if !is_valid_media_type(content_type) {
-                    findings.add(
-                      "\{CONTENT_TYPES_PART}: Override has invalid ContentType: \{findings.text(content_type)}",
-                    )
-                  } else if !duplicate {
-                    overrides[collision_key] = content_type
-                  }
-                  if key != part_name {
-                    findings.add(
-                      "\{CONTENT_TYPES_PART}: Override PartName is not canonical: \{findings.text(part_name)}",
-                    )
-                  }
-                  let target = key[1:].to_owned()
-                  if !contains_part(canonical_names, target) {
-                    findings.add(
-                      "\{CONTENT_TYPES_PART}: Override names a missing part: \{findings.text(key)}",
-                    )
+                    seen_defaults.add(key)
+                    if element_valid && content_type_valid {
+                      defaults[key] = content_type
+                    }
                   }
                 }
-                None =>
-                  findings.add(
-                    "\{CONTENT_TYPES_PART}: Override PartName is invalid: \{findings.text(part_name)}",
-                  )
               }
+              _ => {
+                findings.add(
+                  "\{CONTENT_TYPES_PART}: Default missing Extension or ContentType",
+                )
+                valid = false
+              }
+            }
+          }
+          CONTENT_TYPES_OVERRIDE => {
+            let mut element_valid = true
+            match
+              unexpected_xml_attribute(element, ["PartName", "ContentType"]) {
+              Some(attribute) => {
+                findings.add(
+                  "\{CONTENT_TYPES_PART}: Override has undeclared attribute: \{findings.text(attribute)}",
+                )
+                element_valid = false
+                valid = false
+              }
+              None => ()
+            }
+            if !element.children.is_empty() {
+              findings.add(
+                "\{CONTENT_TYPES_PART}: Override element is not empty",
+              )
+              element_valid = false
+              valid = false
+            }
+            match
+              (
+                element.attributes.get("PartName"),
+                element.attributes.get("ContentType"),
+              ) {
+              (Some(part_name), Some(content_type)) => {
+                let content_type_valid = is_valid_media_type(content_type)
+                if !content_type_valid {
+                  findings.add(
+                    "\{CONTENT_TYPES_PART}: Override has invalid ContentType: \{findings.text(content_type)}",
+                  )
+                  valid = false
+                }
+                if part_name.has_prefix("/") {
+                  match normalize_override_part_name(part_name) {
+                    Some(key) => {
+                      let collision_key = part_name_key(key)
+                      let duplicate = seen_overrides.contains(collision_key)
+                      if duplicate {
+                        findings.add(
+                          "\{CONTENT_TYPES_PART}: duplicate Override PartName after path normalization: \{findings.text(key)}",
+                        )
+                        valid = false
+                      } else {
+                        seen_overrides.add(collision_key)
+                      }
+                      if key != part_name {
+                        findings.add(
+                          "\{CONTENT_TYPES_PART}: Override PartName is not canonical: \{findings.text(part_name)}",
+                        )
+                        element_valid = false
+                        valid = false
+                      }
+                      let target = key[1:].to_owned()
+                      if part_name_key(target) ==
+                        part_name_key(CONTENT_TYPES_PART) {
+                        findings.add(
+                          "\{CONTENT_TYPES_PART}: Override names the reserved content-types stream",
+                        )
+                        element_valid = false
+                        valid = false
+                      } else if !contains_part(canonical_names, target) {
+                        findings.add(
+                          "\{CONTENT_TYPES_PART}: Override names a missing part: \{findings.text(key)}",
+                        )
+                        element_valid = false
+                        valid = false
+                      }
+                      if element_valid && content_type_valid && !duplicate {
+                        overrides[collision_key] = content_type
+                      }
+                    }
+                    None => {
+                      findings.add(
+                        "\{CONTENT_TYPES_PART}: Override PartName is invalid: \{findings.text(part_name)}",
+                      )
+                      valid = false
+                    }
+                  }
+                } else {
+                  findings.add(
+                    "\{CONTENT_TYPES_PART}: Override PartName must start with '/': \{findings.text(part_name)}",
+                  )
+                  valid = false
+                }
+              }
+              _ => {
+                findings.add(
+                  "\{CONTENT_TYPES_PART}: Override missing PartName or ContentType",
+                )
+                valid = false
+              }
+            }
+          }
+          _ => {
+            let child_name = local_name(element.name)
+            if child_name == "Default" || child_name == "Override" {
+              findings.add(
+                "\{CONTENT_TYPES_PART}: \{findings.text(child_name)} element is outside the OPC content-types namespace",
+              )
             } else {
               findings.add(
-                "\{CONTENT_TYPES_PART}: Override PartName must start with '/': \{findings.text(part_name)}",
+                "\{CONTENT_TYPES_PART}: Types contains unexpected element: \{findings.text(element.name)}",
               )
             }
-          _ =>
-            findings.add(
-              "\{CONTENT_TYPES_PART}: Override missing PartName or ContentType",
-            )
-        }
-      _ =>
-        if local_name(element.name) == "Default" ||
-          local_name(element.name) == "Override" {
-          findings.add(
-            "\{CONTENT_TYPES_PART}: \{findings.text(local_name(element.name))} element is outside the OPC content-types namespace",
-          )
+            valid = false
+          }
         }
     }
   }
-  Some({ defaults, overrides })
+  if valid {
+    Some({ defaults, overrides })
+  } else {
+    None
+  }
 }
 
 ///|

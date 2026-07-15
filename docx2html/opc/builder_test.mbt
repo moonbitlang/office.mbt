@@ -320,6 +320,26 @@ test "builder enforces package-wide names and metadata grammars" {
     "Default content type is not a valid media type",
   )
   expect_build_error(
+    builder => builder.add_default(".bin", "application/octet-stream"),
+    "Default extension is not a valid OPC ST_Extension",
+  )
+  expect_build_error(
+    builder => builder.add_default("bad%GG", "application/octet-stream"),
+    "Default extension is not a valid OPC ST_Extension",
+  )
+  expect_build_error(
+    builder => {
+      builder.add_default("bin", "application/octet-stream; charset =utf-8")
+    },
+    "Default content type is not a valid media type",
+  )
+  expect_build_error(
+    builder => {
+      builder.add_default("bin", "application/octet-stream; note=\"Ā\"")
+    },
+    "Default content type is not a valid media type",
+  )
+  expect_build_error(
     builder => builder.add_override("/word/document.xml", "application"),
     "Override content type is not a valid media type",
   )
@@ -336,6 +356,9 @@ test "builder enforces package-wide names and metadata grammars" {
   let parameterized = minimal_builder()
   parameterized.add_default(
     "bin", "application/octet-stream; charset=\"utf-8\"",
+  )
+  parameterized.add_default(
+    "a!$&'()*+,:=@-_~%2Fz", "application/x-test; note=\"é\"",
   )
   parameterized.add_part("word/data.bin", b"data")
   assert_eq(@opc.validate_docx_package(parameterized.build()), [])
