@@ -120,14 +120,17 @@ async fn run_docx_outline(matches : @argparse.Matches) -> Unit {
   if matches.flags.get_or_default("json", false) {
     println(
       checked_docx_json_output(
-        docx_outline_payload(projection),
+        docx_outline_payload(projection, max_output_chars=max_output),
         projection.warnings,
         max_output,
       ),
     )
   } else {
     println(
-      checked_docx_human_output(docx_outline_human(projection), max_output),
+      checked_docx_human_output(
+        docx_outline_human(projection, maximum=max_output),
+        max_output,
+      ),
     )
   }
 }
@@ -161,7 +164,7 @@ async fn run_docx_get(matches : @argparse.Matches) -> Unit {
     }
     println(
       checked_docx_human_output(
-        docx_get_human(entry, text, projection.warnings),
+        docx_get_human(entry, text, projection.warnings, maximum=max_output),
         max_output,
       ),
     )
@@ -195,7 +198,7 @@ async fn run_docx_text(matches : @argparse.Matches) -> Unit {
   } else {
     println(
       checked_docx_human_output(
-        docx_text_human(result, projection.warnings),
+        docx_text_human(result, projection.warnings, maximum=max_output),
         max_output,
       ),
     )
@@ -402,7 +405,7 @@ async fn run_docx_query(matches : @argparse.Matches) -> Unit {
   } else {
     println(
       checked_docx_human_output(
-        docx_query_human(result, projection.warnings),
+        docx_query_human(result, projection.warnings, maximum=max_output),
         max_output,
       ),
     )
