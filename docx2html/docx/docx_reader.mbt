@@ -1003,17 +1003,33 @@ fn read_relationships(
   xml_budget? : @xml.XmlReadBudget,
 ) -> Relationships raise DocxError {
   match zip.read_bytes(path) {
-    Some(bytes) => {
-      let budget = match xml_budget {
-        Some(value) => value
-        None => local_input_linear_xml_budget(bytes)
-      }
-      read_relationships_xml(
-        @opc.read_opc_relationships_xml_limited(bytes, budget),
-      )
-    }
+    Some(bytes) => decode_relationships_bytes(bytes, xml_budget?)
     None => { relationships: [] }
   }
+}
+
+///|
+fn read_required_relationships(
+  zip : ZipArchive,
+  path : String,
+  xml_budget? : @xml.XmlReadBudget,
+) -> Relationships raise DocxError {
+  match zip.read_bytes(path) {
+    Some(bytes) => decode_relationships_bytes(bytes, xml_budget?)
+    None => raise MissingPart(message="missing DOCX part: " + path)
+  }
+}
+
+///|
+fn decode_relationships_bytes(
+  bytes : BytesView,
+  xml_budget? : @xml.XmlReadBudget,
+) -> Relationships raise DocxError {
+  let budget = match xml_budget {
+    Some(value) => value
+    None => local_input_linear_xml_budget(bytes)
+  }
+  read_relationships_xml(@opc.read_opc_relationships_xml_limited(bytes, budget))
 }
 
 ///|
@@ -1026,10 +1042,7 @@ fn read_relationships_strict_limited(
   xml_budget : @xml.XmlReadBudget,
 ) -> Relationships raise DocxError {
   match zip.read_bytes(path) {
-    Some(bytes) =>
-      read_relationships_xml(
-        @opc.read_opc_relationships_xml_limited(bytes, xml_budget),
-      )
+    Some(bytes) => decode_relationships_bytes(bytes, xml_budget~)
     None => { relationships: [] }
   }
 }
