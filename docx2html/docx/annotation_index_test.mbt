@@ -428,6 +428,35 @@ test "archive-backed annotated reads share one cumulative XML budget" {
 }
 
 ///|
+test "global paraId validation preserves XML resource failures" {
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:document>
+  let bytes = fixture_docx(document)
+  let archive = try! @mbtzip.read(bytes)
+  let annotated = @docx.read_docx_annotated(bytes)
+  guard archive.get("word/document.xml") is Some(main)
+  let budget = @xml.xml_read_budget(
+    max_source_units=main.length() - 1,
+    max_tokens=4096,
+    max_materialized_chars=64 * 1024,
+    max_token_chars=64 * 1024,
+  )
+  try
+    @docx.validate_global_para_id_state_archive_limited(
+      annotated, archive, budget,
+    )
+  catch {
+    ResourceLimit(limit~, message~) => {
+      debug_inspect(limit, content="DocxXmlSourceUnits")
+      inspect(message, content="XML source budget exceeded")
+    }
+    error => fail("expected typed XML resource failure, got \{repr(error)}")
+  } noraise {
+    _ => fail("expected the main-story reread to exhaust its source budget")
+  }
+}
+
+///|
 test "limited annotated reads are pinned to the validated main part" {
   let document =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:document>
@@ -1347,6 +1376,46 @@ test "identity-only stories consume the cumulative XML source budget" {
     _ => fail("expected the hidden header to consume the shared XML budget")
   } noraise {
     _ => fail("expected the hidden header to consume the shared XML budget")
+  }
+}
+
+///|
+test "tolerant bounded reads preserve header resource failures" {
+  let large_header = "<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:p><w:r><w:t>" +
+    "x".repeat(1024) +
+    "</w:t></w:r></w:p></w:hdr>"
+  let bytes = unreferenced_story_fixture(
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header",
+    "header.xml", "word/header.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml",
+    large_header,
+  )
+  let archive = try! @mbtzip.read(bytes)
+  assert_true(
+    archive.replace(
+      "word/document.xml",
+      @utf8.encode(
+        (
+          #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p/><w:sectPr><w:headerReference w:type="default" r:id="rIdHidden"/></w:sectPr></w:body></w:document>
+        ),
+      ),
+    ),
+  )
+  let budget = @xml.xml_read_budget(
+    max_source_units=64 * 1024,
+    max_tokens=4096,
+    max_materialized_chars=64 * 1024,
+    max_token_chars=256,
+  )
+  try
+    @docx.read_docx_annotated_archive_tolerant_limited(archive, budget)
+  catch {
+    ResourceLimit(limit~, message~) => {
+      debug_inspect(limit, content="DocxXmlTokenLength")
+      inspect(message, content="XML token length budget exceeded")
+    }
+    error => fail("expected typed header resource failure, got \{repr(error)}")
+  } noraise {
+    _ => fail("expected an oversized header token to remain a hard limit")
   }
 }
 
