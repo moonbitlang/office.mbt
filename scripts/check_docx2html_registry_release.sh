@@ -2,17 +2,17 @@
 set -euo pipefail
 
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-ISOLATED="$(mktemp -d "${TMPDIR:-/tmp}/office-registry-check.XXXXXX")"
+ISOLATED="$(mktemp -d "${TMPDIR:-/tmp}/docx2html-registry-check.XXXXXX")"
 trap 'rm -rf "$ISOLATED"' EXIT
 
-cp -R "$ROOT/office/." "$ISOLATED/"
+cp -R "$ROOT/docx2html/." "$ISOLATED/"
 
 cd "$ISOLATED"
 moon update
 moon check --target native
 moon check --target wasm
-moon test --target native transaction
-moon test --target wasm transaction
+moon test --target native
+moon test --target wasm
 
 set +e
 publish_output="$(moon publish --dry-run 2>&1)"
