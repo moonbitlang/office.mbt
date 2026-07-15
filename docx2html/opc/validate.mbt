@@ -1642,13 +1642,10 @@ fn for_each_relationship(
           )
           valid = false
         }
-        XmlText(text) =>
-          if text.trim() != "" {
-            findings.add(
-              "\{findings.text(part_name)}: Relationship contains unexpected text",
-            )
-            valid = false
-          }
+        // CT_Relationship is simpleContent extending xsd:string. Preserve and
+        // accept its schema-valid character content; child elements remain
+        // forbidden by the complex type.
+        XmlText(_) => ()
       }
     }
     let id = @xml.collapse_xml_schema_whitespace(

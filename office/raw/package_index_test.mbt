@@ -686,6 +686,28 @@ test "raw inventory resolves DOCX parts through semantic aliases" {
 }
 
 ///|
+test "raw inventory accepts Relationship simple content" {
+  let original = @word.new_blank_docx()
+  let root_relationships = @zip.read(original).get("_rels/.rels").unwrap()
+  let text = @utf8.decode(root_relationships, ignore_bom=true)
+  let updated = text.replace(
+    old="Target=\"word/document.xml\"/>",
+    new="Target=\"word/document.xml\">schema string content</Relationship>",
+  )
+  assert_true(updated != text)
+  let data = raw_test_replace_entry(
+    original,
+    "_rels/.rels",
+    @utf8.encode(updated),
+  )
+  let inventory = @raw.raw_inventory("simple-content.docx", data)
+  debug_inspect(
+    inventory_alias_target(inventory, "/document"),
+    content="Some(\"word/document.xml\")",
+  )
+}
+
+///|
 test "raw inventory ignores deterministic hash clustering in package names" {
   let data = raw_test_add_hash_clustered_parts(@word.new_blank_docx(), 512)
   let inventory = @raw.raw_inventory("clustered.docx", data)

@@ -627,6 +627,11 @@ fn raw_xml_element_has_content(element : @xml.XmlElement) -> Bool {
 }
 
 ///|
+fn raw_xml_element_has_child_element(element : @xml.XmlElement) -> Bool {
+  element.children.any(child => child is XmlElement(_))
+}
+
+///|
 fn raw_is_ascii_hex_unit(unit : UInt16) -> Bool {
   (unit >= b'0'.to_uint16() && unit <= b'9'.to_uint16()) ||
   (unit >= b'a'.to_uint16() && unit <= b'f'.to_uint16()) ||
@@ -753,10 +758,12 @@ fn parse_relationships(
             )
           None => ()
         }
-        if raw_xml_element_has_content(element) {
+        // CT_Relationship is simpleContent extending xsd:string. Character
+        // content is valid; only a nested element violates the schema.
+        if raw_xml_element_has_child_element(element) {
           raise raw_error(
             "office.raw.invalid_relationship",
-            "relationship in '/\{canonical}' must be an empty element",
+            "relationship in '/\{canonical}' contains a child element",
           )
         }
         records = records + 1

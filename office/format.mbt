@@ -233,6 +233,11 @@ fn xml_element_has_content(element : @xml.XmlElement) -> Bool {
 }
 
 ///|
+fn xml_element_has_child_element(element : @xml.XmlElement) -> Bool {
+  element.children.any(child => child is XmlElement(_))
+}
+
+///|
 fn format_from_extension(path : StringView) -> DocumentFormat raise OfficeError {
   let lower = path.to_owned().to_lower()
   if lower.has_suffix(".xlsx") {
@@ -1428,9 +1433,11 @@ fn validate_package_structure(
           )
         }
       }
-      if xml_element_has_content(element) {
+      // CT_Relationship is simpleContent extending xsd:string, so text is
+      // schema-valid. Only nested elements violate its content model.
+      if xml_element_has_child_element(element) {
         findings.push(
-          "relationship in \{relationship_part} is not an empty element",
+          "relationship in \{relationship_part} contains a child element",
         )
       }
       let id = @xml.collapse_xml_schema_whitespace(
