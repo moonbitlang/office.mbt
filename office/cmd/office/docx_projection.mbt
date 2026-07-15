@@ -1,0 +1,772 @@
+///|
+let docx_cli_max_package_bytes : Int = 64 * 1024 * 1024
+
+///|
+let docx_cli_max_zip_entries : Int = 4096
+
+///|
+let docx_cli_max_zip_entry_bytes : Int = 32 * 1024 * 1024
+
+///|
+let docx_cli_max_zip_total_bytes : Int = 128 * 1024 * 1024
+
+///|
+let docx_cli_max_xml_source_units : Int = 64 * 1024 * 1024
+
+///|
+let docx_cli_max_xml_tokens : Int = 1024 * 1024
+
+///|
+let docx_cli_max_xml_materialized_chars : Int = 32 * 1024 * 1024
+
+///|
+let docx_cli_max_xml_token_chars : Int = 1024 * 1024
+
+///|
+let docx_cli_default_max_elements : Int = 50_000
+
+///|
+let docx_cli_hard_max_elements : Int = 200_000
+
+///|
+let docx_cli_max_warnings : Int = 128
+
+///|
+enum DocxProjectionRole {
+  StoryRoot
+  AnnotationCollection
+  AnnotationItem
+  ElementNode
+}
+
+///|
+struct DocxProjectionEntry {
+  path : String
+  parent : String?
+  kind : String
+  stability : @lib.SelectorStability
+  stable_id : String?
+  role : DocxProjectionRole
+  element : @document.DocumentElement?
+  children : Array[String]
+  properties : Map[String, String]
+  metadata : Json
+  source : Json
+}
+
+///|
+struct DocxProjection {
+  file : String
+  annotated : @docx.DocxAnnotatedResult
+  entries : Array[DocxProjectionEntry]
+  warnings : Array[@lib.ProtocolWarning]
+}
+
+///|
+struct AnnotationDetails {
+  metadata : Json
+  properties : Map[String, String]
+}
+
+///|
+struct DocxProjectionBuilder {
+  max_elements : Int
+  entries : Array[DocxProjectionEntry]
+  warnings : Array[@lib.ProtocolWarning]
+  warning_keys : Set[String]
+  mut warnings_truncated : Bool
+}
+
+///|
+fn docx_cli_failure(
+  code : String,
+  message : String,
+  details? : Json,
+) -> CliFailure {
+  CliFailure(@lib.protocol_error(code, message, details?))
+}
+
+///|
+fn docx_resource_failure(
+  resource : String,
+  limit : Int,
+  actual? : Int,
+) -> CliFailure {
+  let fields : Map[String, Json] = {
+    "resource": Json::string(resource),
+    "limit": Json::number(limit.to_double()),
+  }
+  match actual {
+    Some(value) => fields["actual"] = Json::number(value.to_double())
+    None => ()
+  }
+  docx_cli_failure(
+    "office.docx.resource_limit",
+    "DOCX \{resource} exceeds the configured limit of \{limit}",
+    details=Json::object(fields),
+  )
+}
+
+///|
+fn docx_zip_failure(error : @zip.ZipError, file : String) -> CliFailure {
+  match error {
+    ResourceLimitExceeded(kind~, limit~, actual~) =>
+      docx_cli_failure(
+        "office.docx.resource_limit",
+        "DOCX ZIP \{bounded_text(kind, 80)} exceeds the configured limit",
+        details=Json::object({
+          "file": Json::string(bounded_text(file, 160)),
+          "resource": Json::string(bounded_text(kind, 80)),
+          "limit": Json::number(limit.to_double()),
+          "actual": Json::number(actual.to_double()),
+        }),
+      )
+    OutputLimitExceeded(limit~) => docx_resource_failure("ZIP output", limit)
+    _ =>
+      docx_cli_failure(
+        "office.invalid_package",
+        "invalid DOCX package: archive is not a readable bounded ZIP",
+        details=Json::object({ "file": Json::string(bounded_text(file, 160)) }),
+      )
+  }
+}
+
+///|
+fn docx_reader_failure(
+  error : @docx_core.DocxError,
+  file : String,
+) -> CliFailure {
+  let (category, message) = match error {
+    InvalidZip(message~) => ("zip", message)
+    InvalidXml(message~) => ("xml", message)
+    MissingPart(message~) => ("missing-part", message)
+    Unsupported(message~) => ("unsupported", message)
+  }
+  let normalized = bounded_text(message, 320)
+  let code = if normalized.to_lower().contains("limit") {
+    "office.docx.resource_limit"
+  } else {
+    "office.docx.read_failed"
+  }
+  docx_cli_failure(
+    code,
+    "could not read DOCX \{category}: \{normalized}",
+    details=Json::object({
+      "file": Json::string(bounded_text(file, 160)),
+      "category": Json::string(category),
+    }),
+  )
+}
+
+///|
+fn DocxProjectionBuilder::new(max_elements : Int) -> DocxProjectionBuilder {
+  {
+    max_elements,
+    entries: [],
+    warnings: [],
+    warning_keys: Set([]),
+    warnings_truncated: false,
+  }
+}
+
+///|
+fn DocxProjectionBuilder::warn(
+  self : DocxProjectionBuilder,
+  code : String,
+  message : String,
+) -> Unit {
+  let bounded = bounded_text(message, 512)
+  let key = code + "\u{0}" + bounded
+  if self.warning_keys.contains(key) {
+    return
+  }
+  self.warning_keys.add(key)
+  if self.warnings.length() < docx_cli_max_warnings - 1 {
+    self.warnings.push(@lib.protocol_warning(code, bounded))
+  } else if !self.warnings_truncated {
+    self.warnings_truncated = true
+    self.warnings.push(
+      @lib.protocol_warning(
+        "office.docx.warnings_truncated",
+        "additional DOCX diagnostics were omitted after \{docx_cli_max_warnings - 1} unique warnings",
+      ),
+    )
+  }
+}
+
+///|
+fn selector_stability_text(stability : @lib.SelectorStability) -> String {
+  match stability {
+    Stable => "stable"
+    SnapshotRelative => "snapshot-relative"
+  }
+}
+
+///|
+fn DocxProjectionBuilder::add_entry(
+  self : DocxProjectionBuilder,
+  path : String,
+  parent : String?,
+  kind : String,
+  stable_id : String?,
+  role : DocxProjectionRole,
+  element : @document.DocumentElement?,
+  properties : Map[String, String],
+  metadata : Json,
+  source : Json,
+) -> DocxProjectionEntry raise CliFailure {
+  if self.entries.length() >= self.max_elements {
+    raise docx_resource_failure(
+      "projection elements",
+      self.max_elements,
+      actual=self.entries.length() + 1,
+    )
+  }
+  let selector = @lib.parse_selector(path) catch {
+    SelectorError(code~, message~, ..) =>
+      raise docx_cli_failure(
+        "office.docx.invalid_projection",
+        "DOCX reader produced an unaddressable path",
+        details=Json::object({
+          "path": Json::string(bounded_text(path, 240)),
+          "selector_code": Json::string(code),
+          "selector_message": Json::string(bounded_text(message, 240)),
+        }),
+      )
+  }
+  if selector.render() != path {
+    raise docx_cli_failure(
+      "office.docx.invalid_projection",
+      "DOCX reader produced a non-canonical path",
+      details=Json::object({
+        "path": Json::string(bounded_text(path, 240)),
+        "canonical": Json::string(bounded_text(selector.render(), 240)),
+      }),
+    )
+  }
+  let entry = {
+    path,
+    parent,
+    kind,
+    stability: selector.stability(),
+    stable_id,
+    role,
+    element,
+    children: [],
+    properties,
+    metadata,
+    source,
+  }
+  self.entries.push(entry)
+  entry
+}
+
+///|
+fn optional_property(
+  output : Map[String, String],
+  name : String,
+  value : String?,
+) -> Unit {
+  match value {
+    Some(text) => output[name] = text
+    None => ()
+  }
+}
+
+///|
+fn element_query_properties(
+  element : @document.DocumentElement,
+) -> Map[String, String] {
+  let output : Map[String, String] = Map([])
+  match element {
+    Paragraph(properties~, ..) => {
+      optional_property(output, "style_id", properties.style_id)
+      optional_property(output, "style_name", properties.style_name)
+      optional_property(output, "alignment", properties.alignment)
+    }
+    Run(properties~, ..) => {
+      optional_property(output, "style_id", properties.style_id)
+      optional_property(output, "style_name", properties.style_name)
+      output["bold"] = properties.is_bold.to_string()
+      output["italic"] = properties.is_italic.to_string()
+      output["underline"] = properties.is_underline.to_string()
+    }
+    Table(properties~, ..) => {
+      optional_property(output, "style_id", properties.style_id)
+      optional_property(output, "style_name", properties.style_name)
+    }
+    Hyperlink(href~, ..) => optional_property(output, "href", href)
+    Image(image) => output["content_type"] = image.content_type
+    _ => ()
+  }
+  output
+}
+
+///|
+fn canonical_index_path(path : String) -> String? {
+  try @lib.selector_from_docx_projection_path(path) catch {
+    _ => None
+  } noraise {
+    selector => Some(selector.render())
+  }
+}
+
+///|
+fn canonical_index_paths(paths : Array[String]) -> Json {
+  let values : Array[Json] = []
+  for path in paths {
+    match canonical_index_path(path) {
+      Some(canonical) => values.push(Json::string(canonical))
+      None => ()
+    }
+  }
+  Json::array(values)
+}
+
+///|
+fn comment_anchor_metadata(anchor : @docx.AnnotationAnchor) -> Json {
+  let fields : Map[String, Json] = {
+    "story": Json::string(anchor.story()),
+    "references": canonical_index_paths(anchor.references()),
+  }
+  match anchor.start() {
+    Some(path) =>
+      match canonical_index_path(path) {
+        Some(canonical) => fields["start"] = Json::string(canonical)
+        None => ()
+      }
+    None => ()
+  }
+  match anchor.end() {
+    Some(path) =>
+      match canonical_index_path(path) {
+        Some(canonical) => fields["end"] = Json::string(canonical)
+        None => ()
+      }
+    None => ()
+  }
+  match anchor.start_boundary() {
+    Some(boundary) => fields["start_boundary"] = Json::string("\{boundary}")
+    None => ()
+  }
+  match anchor.end_boundary() {
+    Some(boundary) => fields["end_boundary"] = Json::string("\{boundary}")
+    None => ()
+  }
+  Json::object(fields)
+}
+
+///|
+fn comment_details(
+  annotated : @docx.DocxAnnotatedResult,
+  ordinal : Int,
+) -> AnnotationDetails {
+  let fields : Map[String, Json] = Map([])
+  let properties : Map[String, String] = Map([])
+  let comments = annotated.annotations().comments()
+  if ordinal > 0 && ordinal <= comments.length() {
+    let info = comments[ordinal - 1]
+    fields["defined"] = Json::boolean(info.defined())
+    fields["body_paragraphs"] = Json::number(info.body_paragraphs().to_double())
+    match info.author() {
+      Some(value) => {
+        fields["author"] = Json::string(value)
+        properties["author"] = value
+      }
+      None => ()
+    }
+    match info.initials() {
+      Some(value) => fields["initials"] = Json::string(value)
+      None => ()
+    }
+    match info.date() {
+      Some(value) => fields["date"] = Json::string(value)
+      None => ()
+    }
+    match info.done() {
+      Some(value) => {
+        fields["done"] = Json::boolean(value)
+        properties["done"] = value.to_string()
+      }
+      None => ()
+    }
+    match info.parent_id() {
+      Some(value) => fields["parent_id"] = Json::string(value)
+      None => ()
+    }
+    let anchors : Array[Json] = []
+    for anchor in info.anchors() {
+      anchors.push(comment_anchor_metadata(anchor))
+    }
+    fields["anchors"] = Json::array(anchors)
+  }
+  { metadata: Json::object(fields), properties }
+}
+
+///|
+fn note_details(
+  annotated : @docx.DocxAnnotatedResult,
+  story : String,
+  id : String,
+) -> AnnotationDetails {
+  let notes = if story == "footnotes" {
+    annotated.annotations().footnotes()
+  } else {
+    annotated.annotations().endnotes()
+  }
+  let fields : Map[String, Json] = Map([])
+  for note in notes {
+    if note.id() == id {
+      fields["references"] = canonical_index_paths(note.references())
+      break
+    }
+  }
+  { metadata: Json::object(fields), properties: Map([]) }
+}
+
+///|
+fn has_at_most_chars(value : String, maximum : Int) -> Bool {
+  let mut count = 0
+  for _ in value {
+    count += 1
+    if count > maximum {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn stable_annotation_path(
+  story : String,
+  kind : String,
+  id : String,
+) -> String? {
+  if id == "" || !has_at_most_chars(id, @lib.SELECTOR_MAX_VALUE_LENGTH) {
+    return None
+  }
+  let candidate = "/docx/\{story}/\{kind}[id=\{Json::string(id).stringify()}]"
+  try @lib.parse_selector(candidate) catch {
+    _ => None
+  } noraise {
+    selector =>
+      if selector.render() == candidate {
+        Some(candidate)
+      } else {
+        None
+      }
+  }
+}
+
+///|
+fn annotation_id_counts(
+  pairs : Array[(String, Array[@document.DocumentElement])],
+) -> Map[String, Int] {
+  let counts : Map[String, Int] = Map([])
+  for pair in pairs {
+    let (id, _) = pair
+    counts[id] = counts.get(id).unwrap_or(0) + 1
+  }
+  counts
+}
+
+///|
+fn DocxProjectionBuilder::walk_element_children(
+  self : DocxProjectionBuilder,
+  parent : DocxProjectionEntry,
+  element : @document.DocumentElement,
+) -> Unit raise CliFailure {
+  let counters : Map[String, Int] = Map([])
+  for child in @docx_paths.element_children(element) {
+    match @docx_paths.segment_kind(child) {
+      Some(kind) => {
+        let ordinal = counters.get(kind).unwrap_or(0) + 1
+        counters[kind] = ordinal
+        let path = "\{parent.path}/\{kind}[\{ordinal}]"
+        let entry = self.add_entry(
+          path,
+          Some(parent.path),
+          kind,
+          None,
+          ElementNode,
+          Some(child),
+          element_query_properties(child),
+          Json::empty_object(),
+          parent.source,
+        )
+        parent.children.push(path)
+        self.walk_element_children(entry, child)
+      }
+      None => ()
+    }
+  }
+}
+
+///|
+fn DocxProjectionBuilder::add_story(
+  self : DocxProjectionBuilder,
+  path : String,
+  kind : String,
+  body : Array[@document.DocumentElement],
+  source : Json,
+) -> Unit raise CliFailure {
+  let document = @document.document(body)
+  let root = self.add_entry(
+    path,
+    None,
+    kind,
+    None,
+    StoryRoot,
+    Some(document),
+    Map([]),
+    Json::empty_object(),
+    source,
+  )
+  self.walk_element_children(root, document)
+}
+
+///|
+fn DocxProjectionBuilder::add_annotation_story(
+  self : DocxProjectionBuilder,
+  annotated : @docx.DocxAnnotatedResult,
+  story : String,
+  kind : String,
+  pairs : Array[(String, Array[@document.DocumentElement])],
+) -> Unit raise CliFailure {
+  let collection_path = "/docx/\{story}"
+  let combined_body : Array[@document.DocumentElement] = []
+  for pair in pairs {
+    let (_, body) = pair
+    combined_body.append(body)
+  }
+  let collection = self.add_entry(
+    collection_path,
+    None,
+    story,
+    None,
+    AnnotationCollection,
+    Some(@document.document(combined_body)),
+    Map([]),
+    Json::object({ "items": Json::number(pairs.length().to_double()) }),
+    Json::object({ "story": Json::string(story) }),
+  )
+  let counts = annotation_id_counts(pairs)
+  let mut duplicate_count = 0
+  let mut missing_count = 0
+  let mut unrepresentable_count = 0
+  for index, pair in pairs {
+    let ordinal = index + 1
+    let (id, body) = pair
+    let occurrence_count = counts.get(id).unwrap_or(0)
+    let stable_path = if occurrence_count == 1 {
+      stable_annotation_path(story, kind, id)
+    } else {
+      None
+    }
+    let path = match stable_path {
+      Some(value) => value
+      None => "\{collection_path}/\{kind}[\{ordinal}]"
+    }
+    if id == "" {
+      missing_count += 1
+    } else if occurrence_count > 1 {
+      duplicate_count += 1
+    } else if stable_path is None {
+      unrepresentable_count += 1
+    }
+    let details = if story == "comments" {
+      comment_details(annotated, ordinal)
+    } else {
+      note_details(annotated, story, id)
+    }
+    let metadata_fields : Map[String, Json] = {
+      "id": Json::string(id),
+      "ordinal": Json::number(ordinal.to_double()),
+    }
+    match details.metadata {
+      Object(values) =>
+        for key, value in values {
+          metadata_fields[key] = value
+        }
+      _ => ()
+    }
+    let item = self.add_entry(
+      path,
+      Some(collection_path),
+      kind,
+      if id == "" {
+        None
+      } else {
+        Some(id)
+      },
+      AnnotationItem,
+      Some(@document.document(body)),
+      details.properties,
+      Json::object(metadata_fields),
+      Json::object({
+        "story": Json::string(story),
+        "ordinal": Json::number(ordinal.to_double()),
+      }),
+    )
+    collection.children.push(path)
+    self.walk_element_children(item, @document.document(body))
+  }
+  if missing_count > 0 {
+    self.warn(
+      "office.docx.missing_annotation_id",
+      "\{missing_count} \{story} item(s) have an empty id and therefore use snapshot-relative positional paths",
+    )
+  }
+  if duplicate_count > 0 {
+    self.warn(
+      "office.docx.duplicate_annotation_id",
+      "\{duplicate_count} \{story} item(s) share duplicate ids and therefore use snapshot-relative positional paths",
+    )
+  }
+  if unrepresentable_count > 0 {
+    self.warn(
+      "office.docx.unrepresentable_annotation_id",
+      "\{unrepresentable_count} \{story} item(s) have ids outside office.selector/1 limits and therefore use snapshot-relative positional paths",
+    )
+  }
+}
+
+///|
+fn document_body_elements(
+  document : @document.DocumentElement,
+) -> Array[@document.DocumentElement] {
+  match document {
+    Document(children~, ..) => children
+    other => [other]
+  }
+}
+
+///|
+fn projection_from_annotated(
+  file : String,
+  annotated : @docx.DocxAnnotatedResult,
+  max_elements : Int,
+) -> DocxProjection raise CliFailure {
+  let builder = DocxProjectionBuilder::new(max_elements)
+  let result = annotated.result()
+  builder.add_story(
+    "/docx/body",
+    "body",
+    document_body_elements(result.document),
+    Json::object({
+      "story": Json::string("body"),
+      "part": Json::string(annotated.main_story_part()),
+    }),
+  )
+  for index, header in result.headers {
+    builder.add_story(
+      "/docx/header[\{index + 1}]",
+      "header",
+      header.body,
+      Json::object({
+        "story": Json::string("header"),
+        "part_index": Json::number((index + 1).to_double()),
+      }),
+    )
+  }
+  for index, footer in result.footers {
+    builder.add_story(
+      "/docx/footer[\{index + 1}]",
+      "footer",
+      footer.body,
+      Json::object({
+        "story": Json::string("footer"),
+        "part_index": Json::number((index + 1).to_double()),
+      }),
+    )
+  }
+  builder.add_annotation_story(
+    annotated,
+    "footnotes",
+    "note",
+    annotated.footnote_bodies(),
+  )
+  builder.add_annotation_story(
+    annotated,
+    "endnotes",
+    "note",
+    annotated.endnote_bodies(),
+  )
+  builder.add_annotation_story(
+    annotated,
+    "comments",
+    "comment",
+    annotated.comment_bodies(),
+  )
+  for message in result.messages {
+    match message {
+      Warning(text) => builder.warn("office.docx.reader_warning", text)
+      Error(text) => builder.warn("office.docx.reader_error", text)
+    }
+  }
+  for warning in annotated.annotations().warnings() {
+    builder.warn("office.docx.annotation_warning", warning)
+  }
+  { file, annotated, entries: builder.entries, warnings: builder.warnings }
+}
+
+///|
+fn open_docx_projection(
+  file : String,
+  data : BytesView,
+  max_elements : Int,
+) -> DocxProjection raise CliFailure {
+  if max_elements < 1 || max_elements > docx_cli_hard_max_elements {
+    raise docx_cli_failure(
+      "office.invalid_arguments",
+      "--max-elements must be between 1 and \{docx_cli_hard_max_elements}",
+      details=Json::object({
+        "argument": Json::string("max-elements"),
+        "minimum": Json::number(1),
+        "maximum": Json::number(docx_cli_hard_max_elements.to_double()),
+      }),
+    )
+  }
+  let archive = @zip.read_limited(
+    data,
+    max_entries=docx_cli_max_zip_entries,
+    max_entry_uncompressed_bytes=docx_cli_max_zip_entry_bytes,
+    max_total_uncompressed_bytes=docx_cli_max_zip_total_bytes,
+  ) catch {
+    error => raise docx_zip_failure(error, file)
+  }
+  let format = @lib.detect_archive_format(file, archive) catch {
+    error => raise CliFailure(identify_error(error, file))
+  }
+  if format is Xlsx {
+    raise docx_cli_failure(
+      "office.unsupported_operation",
+      "DOCX structured reads are not available for XLSX packages",
+      details=Json::object({
+        "format": Json::string("xlsx"),
+        "supported_format": Json::string("docx"),
+      }),
+    )
+  }
+  let xml_budget = @xml.xml_read_budget(
+    max_source_units=docx_cli_max_xml_source_units,
+    max_tokens=docx_cli_max_xml_tokens,
+    max_materialized_chars=docx_cli_max_xml_materialized_chars,
+    max_token_chars=docx_cli_max_xml_token_chars,
+  )
+  let annotated = @docx.read_docx_annotated_archive_limited(archive, xml_budget) catch {
+    error => raise docx_reader_failure(error, file)
+  }
+  projection_from_annotated(file, annotated, max_elements)
+}
+
+///|
+async fn read_docx_projection(
+  file : String,
+  max_elements : Int,
+) -> DocxProjection {
+  let data = read_bounded_file(
+    file, docx_cli_max_package_bytes, "office.file_read_failed", "input package",
+  )
+  open_docx_projection(file, data, max_elements)
+}

@@ -3,7 +3,7 @@ test "capability registry claims only wired commands" {
   for command in @lib.capability_commands() {
     assert_true(is_implemented_command(command.name))
   }
-  for name in ["help", "identify", "raw"] {
+  for name in ["help", "identify", "outline", "get", "text", "query", "raw"] {
     assert_true(@lib.find_capability_command(name) is Some(_))
   }
 }

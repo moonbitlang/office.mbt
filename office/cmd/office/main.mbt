@@ -130,14 +130,22 @@ fn build_command() -> @argparse.Command {
     about="Create, inspect, and edit XLSX and DOCX documents",
     disable_help_subcommand=true,
     subcommand_required=true,
-    subcommands=[help_command(), identify_command(), raw_command()],
+    subcommands=[
+      help_command(),
+      identify_command(),
+      outline_command(),
+      get_command(),
+      text_command(),
+      query_command(),
+      raw_command(),
+    ],
   )
 }
 
 ///|
 fn is_implemented_command(name : StringView) -> Bool {
   match name {
-    "help" | "identify" | "raw" => true
+    "help" | "identify" | "outline" | "get" | "text" | "query" | "raw" => true
     _ => false
   }
 }
@@ -151,6 +159,10 @@ async fn run_cli(args : Array[String]) -> Unit {
       match name {
         "help" => run_help(values)
         "identify" => run_identify(values)
+        "outline" => run_docx_outline(values)
+        "get" => run_docx_get(values)
+        "text" => run_docx_text(values)
+        "query" => run_docx_query(values)
         "raw" => run_raw(values)
         _ => ()
       }

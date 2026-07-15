@@ -1,4 +1,10 @@
 import {
+  "bobzhang/docx2html/core" @docx_core,
+  "bobzhang/docx2html/docx",
+  "bobzhang/docx2html/document",
+  "bobzhang/docx2html/paths" @docx_paths,
+  "bobzhang/docx2html/xml",
+  "bobzhang/mbtexcel/zip",
   "bobzhang/office" @lib,
   "bobzhang/office/raw",
   "bobzhang/office/transaction",
