@@ -319,12 +319,13 @@ test "DOCX exact queries cover the full supported XML token length" {
     offset: 0,
     limit: 1,
   }
+  let work = DocxQueryWorkBudget::new(4 * 1024 * 1024)
   assert_true(
     entry_matches_query(
       item,
-      None,
-      spec,
+      PreparedDocxQuery::build(spec, None, work),
       DocxTextBudget::new("query text scan characters", 1),
+      work,
     ),
   )
   try
@@ -346,6 +347,48 @@ test "DOCX exact queries cover the full supported XML token length" {
     }
   } noraise {
     _ => fail("expected query value above the XML token limit to fail")
+  }
+}
+
+///|
+test "DOCX query matching is linear-work and Unicode simple-case aware" {
+  let work = DocxQueryWorkBudget::new(100_000)
+  let adversarial = DocxLinearPattern::compile(
+    "a".repeat(127) + "b",
+    false,
+    work,
+  )
+  assert_false(adversarial.is_in("a".repeat(4096), work))
+  assert_true(adversarial.is_in("a".repeat(127) + "b", work))
+  let unicode = DocxLinearPattern::compile("école", true, work)
+  assert_true(unicode.is_in("L'ÉCOLE MoonBit", work))
+  let supplementary = DocxLinearPattern::compile("𐐨", true, work)
+  assert_true(supplementary.is_in("𐐀", work))
+}
+
+///|
+test "DOCX query predicate work has an independent hard budget" {
+  let equality_work = DocxQueryWorkBudget::new(16)
+  try query_strings_equal("x".repeat(32), "x".repeat(32), equality_work) catch {
+    CliFailure(error) => {
+      assert_eq(error.code, "office.docx.resource_limit")
+      guard error.details is Some(Object(details)) else {
+        fail("expected predicate work details")
+      }
+      assert_eq(
+        details.get("resource"),
+        Some(Json::string("query predicate work units")),
+      )
+    }
+  } noraise {
+    _ => fail("expected exact comparison work to be bounded")
+  }
+  let pattern_work = DocxQueryWorkBudget::new(32)
+  let pattern = DocxLinearPattern::compile("a", false, pattern_work)
+  try pattern.is_in("a".repeat(32), pattern_work) catch {
+    CliFailure(error) => assert_eq(error.code, "office.docx.resource_limit")
+  } noraise {
+    _ => fail("expected substring work to be bounded")
   }
 }
 

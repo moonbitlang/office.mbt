@@ -18,6 +18,7 @@ import {
   "moonbitlang/core/env",
   "moonbitlang/core/json",
   "moonbitlang/core/sorted_map",
+  "tonyfettes/unicode",
 }
 
 supported_targets = "native+wasm"
