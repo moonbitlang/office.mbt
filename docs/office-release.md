@@ -17,10 +17,10 @@ For the transaction and bounded-DOCX release train introduced by A4 and D2:
 4. run `scripts/check_docx2html_registry_release.sh` (or the manual
    `docx2html-registry-release-check` GitHub workflow) outside `moon.work` and
    require its native, Wasm, and publish-dry-run checks to pass;
-5. publish `bobzhang/docx2html@0.1.45` from `docx2html/`;
+5. publish `bobzhang/docx2html@0.2.0` from `docx2html/`;
 6. wait until that exact immutable version resolves from Mooncakes;
 7. with Office's source manifest already staged to require
-   `docx2html@0.1.45`, run `scripts/check_office_registry_release.sh` (or the manual
+   `docx2html@0.2.0`, run `scripts/check_office_registry_release.sh` (or the manual
    `office-registry-release-check` GitHub workflow) and require every native,
    Wasm, transaction, raw, DOCX, SDK-validation, and publish-dry-run check to
    pass. Both test commands are unfiltered full-module runs, so the Office root
@@ -29,10 +29,19 @@ For the transaction and bounded-DOCX release train introduced by A4 and D2:
 
 Never publish `office@0.1.0` first. Its manifest intentionally requires
 `mbtexcel@0.1.9`, which contains the strict bounded ZIP reader used by the
-transaction gate, and `docx2html@0.1.45`, which contains the bounded annotated
+transaction gate, and `docx2html@0.2.0`, which contains the bounded annotated
 reader used by DOCX commands. Repointing either dependency to its previous
 version would make a workspace build green while producing a broken or
 materially weaker registry artifact.
+
+## Intentional source-breaking boundary
+
+`docx2html@0.2.0` is a deliberate pre-1.0 source-breaking release. Bounded XML
+processing adds the machine-readable `ResourceLimit` constructor to the public
+`DocxError` cases, so exhaustive matches written for `0.1.x` must handle the new
+case. The project has no third-party compatibility obligation yet; making the
+break explicit in the version is preferable to hiding it behind a patch release
+or weakening typed resource-limit reporting.
 
 Publishing changes external registry state and remains an explicit maintainer
 action. The release checks copy each module outside the repository and outside

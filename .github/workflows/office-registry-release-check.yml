@@ -30,7 +30,7 @@ jobs:
 
       # This script copies office/ and its SDK validation harness into
       # RUNNER_TEMP, beyond the repository's moon.work boundary. It must
-      # resolve and assert exact mbtexcel@0.1.9 and docx2html@0.1.45 tree
+      # resolve and assert exact mbtexcel@0.1.9 and docx2html@0.2.0 tree
       # selections, then run the frozen full-module native and Wasm suites,
       # including root integration tests and child SDK-validity gates.
       - name: Verify isolated registry consumer
