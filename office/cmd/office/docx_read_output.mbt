@@ -23,22 +23,6 @@ let docx_cli_query_preview_chars : Int = 160
 let docx_cli_heading_preview_chars : Int = 512
 
 ///|
-struct DocxTextRecord {
-  path : String
-  stability : String
-  text : String
-}
-
-///|
-struct DocxTextResult {
-  records : Array[DocxTextRecord]
-  matched_total : Int
-  offset : Int
-  limit : Int
-  scanned_elements : Int
-}
-
-///|
 struct DocxPropertyPredicate {
   name : String
   value : String
@@ -57,25 +41,15 @@ struct DocxQuerySpec {
 }
 
 ///|
-struct DocxQueryRecord {
-  entry : DocxProjectionEntry
-  preview : String
-  preview_truncated : Bool
+struct BoundedDocxPayload {
+  data : Json
+  budget : DocxOutputBudget
+  warnings : Array[@lib.ProtocolWarning]
 }
 
 ///|
-struct DocxQueryResult {
-  records : Array[DocxQueryRecord]
-  matched_total : Int
-  offset : Int
-  limit : Int
-  scanned_elements : Int
-  under : String?
-}
-
-///|
-/// Counts compact JSON output before allocation and bounds retained outline
-/// records while they are produced. The counter measures Unicode scalar
+/// Counts compact JSON output before allocation and bounds retained records
+/// while they are produced. The counter measures Unicode scalar
 /// characters, matching the public `--max-output-chars` contract.
 struct DocxOutputBudget {
   maximum : Int
@@ -186,6 +160,105 @@ fn DocxOutputBudget::reserve_array_item(
 }
 
 ///|
+fn DocxOutputBudget::remaining(self : DocxOutputBudget) -> Int {
+  self.maximum - self.used
+}
+
+///|
+fn DocxOutputBudget::reserve_json_field(
+  self : DocxOutputBudget,
+  name : String,
+  value : Json,
+  has_previous : Bool,
+) -> Unit raise CliFailure {
+  if has_previous {
+    self.reserve_chars(1)
+  }
+  self.reserve_json_string(name)
+  self.reserve_chars(1)
+  self.reserve_json(value)
+}
+
+///|
+fn DocxOutputBudget::reserve_warning(
+  self : DocxOutputBudget,
+  warning : @lib.ProtocolWarning,
+) -> Unit raise CliFailure {
+  self.reserve_chars(1)
+  self.reserve_json_field("code", Json::string(warning.code), false)
+  self.reserve_json_field("message", Json::string(warning.message), true)
+  self.reserve_chars(1)
+}
+
+///|
+fn DocxOutputBudget::reserve_success_envelope(
+  self : DocxOutputBudget,
+  data : Json,
+  warnings : Array[@lib.ProtocolWarning],
+) -> Unit raise CliFailure {
+  self.reserve_chars(1)
+  self.reserve_json_field("schema", Json::string("office.output/1"), false)
+  self.reserve_json_field("success", Json::boolean(true), true)
+  self.reserve_json_field("data", data, true)
+  if !warnings.is_empty() {
+    self.reserve_chars(1)
+    self.reserve_json_string("warnings")
+    self.reserve_chars(2)
+    for index, warning in warnings {
+      if index > 0 {
+        self.reserve_chars(1)
+      }
+      self.reserve_warning(warning)
+    }
+    self.reserve_chars(1)
+  }
+  self.reserve_chars(1)
+}
+
+///|
+fn DocxOutputBudget::reserve_json_string_body(
+  self : DocxOutputBudget,
+  value : String,
+) -> Unit raise CliFailure {
+  for character in value {
+    let code = character.to_int()
+    if character is ('"' | '\\' | '\b' | '\t' | '\n' | '\f' | '\r') {
+      self.reserve_chars(2)
+    } else if code < 0x20 {
+      self.reserve_chars(6)
+    } else {
+      self.reserve_chars(1)
+    }
+  }
+}
+
+///|
+fn DocxOutputBudget::reserve_nonnegative_integer_growth(
+  self : DocxOutputBudget,
+  value : Int,
+) -> Unit raise CliFailure {
+  let mut remaining = value
+  let mut digits = 1
+  while remaining >= 10 {
+    remaining /= 10
+    digits += 1
+  }
+  // Payload skeletons use zero as a one-character placeholder.
+  self.reserve_chars(digits - 1)
+}
+
+///|
+fn DocxOutputBudget::reserve_boolean_growth_from_true(
+  self : DocxOutputBudget,
+  value : Bool,
+) -> Unit raise CliFailure {
+  // `true` is the four-character skeleton placeholder; `false` needs one more.
+  if !value {
+    self.reserve_chars(1)
+  }
+}
+
+///|
 fn checked_output_limit(maximum : Int) -> Int raise CliFailure {
   if maximum < 1 || maximum > docx_cli_hard_max_output_chars {
     raise docx_cli_failure(
@@ -220,19 +293,40 @@ fn ensure_docx_output_limit(
 }
 
 ///|
-fn checked_docx_json_output(
+fn bounded_docx_payload(
   data : Json,
   warnings : Array[@lib.ProtocolWarning],
   maximum : Int,
-) -> String raise CliFailure {
+) -> BoundedDocxPayload raise CliFailure {
   ignore(checked_output_limit(maximum))
-  let envelope = @lib.output_success(data, warnings~)
   let budget = DocxOutputBudget::new(maximum)
-  budget.reserve_json(envelope)
+  budget.reserve_success_envelope(data, warnings)
+  { data, budget, warnings }
+}
+
+///|
+fn checked_docx_json_output(
+  payload : BoundedDocxPayload,
+) -> String raise CliFailure {
+  let envelope = @lib.output_success(payload.data, warnings=payload.warnings)
   // Compact output makes the preflight count exact and avoids indentation
   // overhead that would otherwise need a second allocation-sized pass.
   let output = envelope.stringify()
-  ensure_docx_output_limit(output, maximum)
+  ensure_docx_output_limit(output, payload.budget.maximum)
+  let mut actual = 0
+  for _ in output {
+    actual += 1
+  }
+  if actual != payload.budget.used {
+    raise docx_cli_failure(
+      "office.docx.output_accounting_mismatch",
+      "internal DOCX output accounting did not match serialization",
+      details=Json::object({
+        "accounted": Json::number(payload.budget.used.to_double()),
+        "actual": Json::number(actual.to_double()),
+      }),
+    )
+  }
   output
 }
 
@@ -251,44 +345,87 @@ fn get_docx_payload(
   projection : DocxProjection,
   entry : DocxProjectionEntry,
   max_output_chars : Int,
-) -> Json raise CliFailure {
-  let fields = entry_base_json(projection, entry)
+) -> BoundedDocxPayload raise CliFailure {
+  let children : Array[Json] = []
+  let fields = entry_base_json(entry, children)
   fields["schema"] = Json::string(@lib.SCHEMA_DOCX_ELEMENT)
   fields["file"] = Json::string(projection.file)
   fields["format"] = Json::string("docx")
   match entry.element {
+    Some(_) => fields["text"] = Json::string("")
+    None => ()
+  }
+  let skeleton = Json::object(fields)
+  let bounded = bounded_docx_payload(
+    skeleton,
+    projection.warnings,
+    max_output_chars,
+  )
+  for path in entry.children {
+    let child = child_reference_json(projection, path)
+    bounded.budget.reserve_array_item(child, !children.is_empty())
+    children.push(child)
+  }
+  match entry.element {
     Some(_) => {
       let text_budget = DocxTextBudget::new(
         "element text characters",
-        max_output_chars.min(docx_cli_max_element_text_chars),
+        bounded.budget.remaining().min(docx_cli_max_element_text_chars),
       )
-      fields["text"] = Json::string(entry_text_with_budget(entry, text_budget))
+      let text = entry_text_with_budget(entry, text_budget)
+      bounded.budget.reserve_json_string_body(text)
+      fields["text"] = Json::string(text)
     }
     None => ()
   }
-  Json::object(fields)
+  {
+    data: Json::object(fields),
+    budget: bounded.budget,
+    warnings: bounded.warnings,
+  }
 }
 
 ///|
-fn text_record_json(record : DocxTextRecord) -> Json {
+fn text_record_json(entry : DocxProjectionEntry, text : String) -> Json {
   Json::object({
-    "path": Json::string(record.path),
-    "stability": Json::string(record.stability),
-    "text": Json::string(record.text),
+    "path": Json::string(entry.path),
+    "stability": Json::string(selector_stability_text(entry.stability)),
+    "text": Json::string(text),
   })
 }
 
 ///|
-fn build_docx_text_result(
+fn docx_text_payload(
   projection : DocxProjection,
   under : DocxProjectionEntry?,
+  under_path : String?,
   offset : Int,
   limit : Int,
   max_output_chars : Int,
-) -> DocxTextResult raise CliFailure {
-  let records : Array[DocxTextRecord] = []
-  let text_budget = DocxTextBudget::new(
-    "text result characters", max_output_chars,
+) -> BoundedDocxPayload raise CliFailure {
+  let entries : Array[Json] = []
+  let fields : Map[String, Json] = {
+    "schema": Json::string(@lib.SCHEMA_DOCX_TEXT),
+    "file": Json::string(projection.file),
+    "format": Json::string("docx"),
+    "entries": Json::array(entries),
+    // Dynamic non-negative integers use a one-character zero placeholder.
+    "matched_total": Json::number(0),
+    "offset": Json::number(offset.to_double()),
+    "limit": Json::number(limit.to_double()),
+    "returned": Json::number(0),
+    // `true` is the shorter boolean spelling; false growth is charged later.
+    "truncated": Json::boolean(true),
+    "scanned_elements": Json::number(projection.entries.length().to_double()),
+  }
+  match under_path {
+    Some(path) => fields["under"] = Json::string(path)
+    None => ()
+  }
+  let bounded = bounded_docx_payload(
+    Json::object(fields),
+    projection.warnings,
+    max_output_chars,
   )
   let mut matched = 0
   for entry in projection.entries {
@@ -297,50 +434,32 @@ fn build_docx_text_result(
       None => true
     }
     if in_scope && entry.kind == "p" {
-      if matched >= offset && records.length() < limit {
-        records.push({
-          path: entry.path,
-          stability: selector_stability_text(entry.stability),
-          text: entry_text_with_budget(entry, text_budget),
-        })
+      if matched >= offset && entries.length() < limit {
+        let text_budget = DocxTextBudget::new(
+          "text result characters",
+          bounded.budget.remaining(),
+        )
+        let text = entry_text_with_budget(entry, text_budget)
+        let json = text_record_json(entry, text)
+        bounded.budget.reserve_array_item(json, !entries.is_empty())
+        entries.push(json)
       }
       matched += 1
     }
   }
+  let returned = entries.length()
+  let truncated = offset + returned < matched
+  bounded.budget.reserve_nonnegative_integer_growth(matched)
+  bounded.budget.reserve_nonnegative_integer_growth(returned)
+  bounded.budget.reserve_boolean_growth_from_true(truncated)
+  fields["matched_total"] = Json::number(matched.to_double())
+  fields["returned"] = Json::number(returned.to_double())
+  fields["truncated"] = Json::boolean(truncated)
   {
-    records,
-    matched_total: matched,
-    offset,
-    limit,
-    scanned_elements: projection.entries.length(),
+    data: Json::object(fields),
+    budget: bounded.budget,
+    warnings: bounded.warnings,
   }
-}
-
-///|
-fn docx_text_payload(
-  projection : DocxProjection,
-  result : DocxTextResult,
-  under : String?,
-) -> Json {
-  let fields : Map[String, Json] = {
-    "schema": Json::string(@lib.SCHEMA_DOCX_TEXT),
-    "file": Json::string(projection.file),
-    "format": Json::string("docx"),
-    "entries": Json::array(result.records.map(text_record_json)),
-    "matched_total": Json::number(result.matched_total.to_double()),
-    "offset": Json::number(result.offset.to_double()),
-    "limit": Json::number(result.limit.to_double()),
-    "returned": Json::number(result.records.length().to_double()),
-    "truncated": Json::boolean(
-      result.offset + result.records.length() < result.matched_total,
-    ),
-    "scanned_elements": Json::number(result.scanned_elements.to_double()),
-  }
-  match under {
-    Some(path) => fields["under"] = Json::string(path)
-    None => ()
-  }
-  Json::object(fields)
 }
 
 ///|
@@ -360,15 +479,18 @@ fn query_property_json(properties : Map[String, String]) -> Json {
 }
 
 ///|
-fn query_record_json(record : DocxQueryRecord) -> Json {
-  let entry = record.entry
+fn query_record_json(
+  entry : DocxProjectionEntry,
+  preview : String,
+  preview_truncated : Bool,
+) -> Json {
   let fields : Map[String, Json] = {
     "path": Json::string(entry.path),
     "kind": Json::string(entry.kind),
     "role": Json::string(entry.role.name()),
     "stability": Json::string(selector_stability_text(entry.stability)),
-    "preview": Json::string(record.preview),
-    "preview_truncated": Json::boolean(record.preview_truncated),
+    "preview": Json::string(preview),
+    "preview_truncated": Json::boolean(preview_truncated),
     "properties": query_property_json(entry.properties),
   }
   match entry.stable_id {
@@ -401,77 +523,49 @@ fn text_contains(value : String, needle : String, ignore_case : Bool) -> Bool {
 }
 
 ///|
-fn build_docx_query_result(
-  projection : DocxProjection,
+fn entry_matches_query(
+  entry : DocxProjectionEntry,
   under : DocxProjectionEntry?,
   spec : DocxQuerySpec,
-) -> DocxQueryResult raise CliFailure {
-  let records : Array[DocxQueryRecord] = []
-  let scan_budget = DocxTextBudget::new(
-    "query text scan characters", docx_cli_max_query_text_scan_chars,
-  )
-  let mut matched = 0
-  for entry in projection.entries {
-    let in_scope = match under {
-      Some(root) => path_is_within(entry.path, root.path)
-      None => true
-    }
-    if !in_scope {
-      continue
-    }
-    match spec.kind {
-      Some(kind) if entry.kind != kind => continue
-      _ => ()
-    }
-    match spec.stable_id {
-      Some(id) if entry.stable_id != Some(id) => continue
-      _ => ()
-    }
-    if !entry_matches_properties(entry, spec.properties) {
-      continue
-    }
-    match spec.text {
-      Some(needle) => {
-        let value = entry_text_with_budget(entry, scan_budget)
-        if !text_contains(value, needle, spec.ignore_case) {
-          continue
-        }
-      }
-      None => ()
-    }
-    if matched >= spec.offset && records.length() < spec.limit {
-      let (preview, preview_truncated) = entry_text_prefix(
-        entry, docx_cli_query_preview_chars,
-      )
-      records.push({ entry, preview, preview_truncated })
-    }
-    matched += 1
+  scan_budget : DocxTextBudget,
+) -> Bool raise CliFailure {
+  let in_scope = match under {
+    Some(root) => path_is_within(entry.path, root.path)
+    None => true
   }
-  {
-    records,
-    matched_total: matched,
-    offset: spec.offset,
-    limit: spec.limit,
-    scanned_elements: projection.entries.length(),
-    under: under.map(entry => entry.path),
+  if !in_scope {
+    return false
+  }
+  match spec.kind {
+    Some(kind) if entry.kind != kind => return false
+    _ => ()
+  }
+  match spec.stable_id {
+    Some(id) if entry.stable_id != Some(id) => return false
+    _ => ()
+  }
+  if !entry_matches_properties(entry, spec.properties) {
+    return false
+  }
+  match spec.text {
+    Some(needle) => {
+      let value = entry_text_with_budget(entry, scan_budget)
+      text_contains(value, needle, spec.ignore_case)
+    }
+    None => true
   }
 }
 
 ///|
 fn docx_query_payload(
   projection : DocxProjection,
-  result : DocxQueryResult,
+  under : DocxProjectionEntry?,
   spec : DocxQuerySpec,
-) -> Json {
+  max_output_chars : Int,
+) -> BoundedDocxPayload raise CliFailure {
+  let filter_properties : Array[Json] = []
   let filters : Map[String, Json] = {
-    "properties": Json::array(
-      spec.properties.map(predicate => {
-        Json::object({
-          "name": Json::string(predicate.name),
-          "value": Json::string(predicate.value),
-        })
-      }),
-    ),
+    "properties": Json::array(filter_properties),
     "ignore_case": Json::boolean(spec.ignore_case),
   }
   match spec.kind {
@@ -495,21 +589,64 @@ fn docx_query_payload(
     "file": Json::string(projection.file),
     "format": Json::string("docx"),
     "filters": Json::object(filters),
-    "matches": Json::array(result.records.map(query_record_json)),
-    "matched_total": Json::number(result.matched_total.to_double()),
-    "offset": Json::number(result.offset.to_double()),
-    "limit": Json::number(result.limit.to_double()),
-    "returned": Json::number(result.records.length().to_double()),
-    "truncated": Json::boolean(
-      result.offset + result.records.length() < result.matched_total,
-    ),
-    "scanned_elements": Json::number(result.scanned_elements.to_double()),
+    "matches": Json::array([]),
+    "matched_total": Json::number(0),
+    "offset": Json::number(spec.offset.to_double()),
+    "limit": Json::number(spec.limit.to_double()),
+    "returned": Json::number(0),
+    "truncated": Json::boolean(true),
+    "scanned_elements": Json::number(projection.entries.length().to_double()),
   }
-  match result.under {
+  match spec.under {
     Some(path) => fields["under"] = Json::string(path)
     None => ()
   }
-  Json::object(fields)
+  let matches : Array[Json] = []
+  fields["matches"] = Json::array(matches)
+  let bounded = bounded_docx_payload(
+    Json::object(fields),
+    projection.warnings,
+    max_output_chars,
+  )
+  for predicate in spec.properties {
+    let record = Json::object({
+      "name": Json::string(predicate.name),
+      "value": Json::string(predicate.value),
+    })
+    bounded.budget.reserve_array_item(record, !filter_properties.is_empty())
+    filter_properties.push(record)
+  }
+  let scan_budget = DocxTextBudget::new(
+    "query text scan characters", docx_cli_max_query_text_scan_chars,
+  )
+  let mut matched = 0
+  for entry in projection.entries {
+    if !entry_matches_query(entry, under, spec, scan_budget) {
+      continue
+    }
+    if matched >= spec.offset && matches.length() < spec.limit {
+      let (preview, preview_truncated) = entry_text_prefix(
+        entry, docx_cli_query_preview_chars,
+      )
+      let record = query_record_json(entry, preview, preview_truncated)
+      bounded.budget.reserve_array_item(record, !matches.is_empty())
+      matches.push(record)
+    }
+    matched += 1
+  }
+  let returned = matches.length()
+  let truncated = spec.offset + returned < matched
+  bounded.budget.reserve_nonnegative_integer_growth(matched)
+  bounded.budget.reserve_nonnegative_integer_growth(returned)
+  bounded.budget.reserve_boolean_growth_from_true(truncated)
+  fields["matched_total"] = Json::number(matched.to_double())
+  fields["returned"] = Json::number(returned.to_double())
+  fields["truncated"] = Json::boolean(truncated)
+  {
+    data: Json::object(fields),
+    budget: bounded.budget,
+    warnings: bounded.warnings,
+  }
 }
 
 ///|
@@ -568,15 +705,32 @@ fn section_ref_json(reference : @document.SectionRef) -> Json {
 }
 
 ///|
-fn section_json(section : @document.DocumentSection) -> Json {
+fn bounded_section_json(
+  section : @document.DocumentSection,
+  budget : DocxOutputBudget,
+  has_previous : Bool,
+) -> Json raise CliFailure {
+  let headers : Array[Json] = []
+  let footers : Array[Json] = []
   let fields : Map[String, Json] = {
-    "headers": Json::array(section.headers.map(section_ref_json)),
-    "footers": Json::array(section.footers.map(section_ref_json)),
+    "headers": Json::array(headers),
+    "footers": Json::array(footers),
   }
   match section.ends_after_paragraph {
     Some(index) =>
       fields["ends_after_paragraph"] = Json::number(index.to_double())
     None => ()
+  }
+  budget.reserve_array_item(Json::object(fields), has_previous)
+  for reference in section.headers {
+    let record = section_ref_json(reference)
+    budget.reserve_array_item(record, !headers.is_empty())
+    headers.push(record)
+  }
+  for reference in section.footers {
+    let record = section_ref_json(reference)
+    budget.reserve_array_item(record, !footers.is_empty())
+    footers.push(record)
   }
   Json::object(fields)
 }
@@ -609,7 +763,7 @@ fn reader_diagnostics(
 fn docx_outline_payload(
   projection : DocxProjection,
   max_output_chars? : Int = docx_cli_default_max_output_chars,
-) -> Json raise CliFailure {
+) -> BoundedDocxPayload raise CliFailure {
   ignore(checked_output_limit(max_output_chars))
   let counts : Map[String, Int] = Map([])
   let mut footnotes = 0
@@ -661,9 +815,10 @@ fn docx_outline_payload(
     "sections": Json::array([]),
     "diagnostics": Json::array([]),
   })
-  let retention = DocxOutputBudget::new(max_output_chars)
-  retention.reserve_json(
-    @lib.output_success(skeleton, warnings=projection.warnings),
+  let bounded = bounded_docx_payload(
+    skeleton,
+    projection.warnings,
+    max_output_chars,
   )
   for entry in projection.entries {
     if entry.role is (StoryRoot | AnnotationCollection) {
@@ -674,7 +829,7 @@ fn docx_outline_payload(
         "stability": Json::string(selector_stability_text(entry.stability)),
         "source": entry.source,
       })
-      retention.reserve_array_item(record, !stories.is_empty())
+      bounded.budget.reserve_array_item(record, !stories.is_empty())
       stories.push(record)
     }
     match entry.element {
@@ -690,7 +845,7 @@ fn docx_outline_payload(
               "text": Json::string(text),
               "text_truncated": Json::boolean(truncated),
             })
-            retention.reserve_array_item(record, !headings.is_empty())
+            bounded.budget.reserve_array_item(record, !headings.is_empty())
             headings.push(record)
           }
           None => ()
@@ -703,7 +858,7 @@ fn docx_outline_payload(
           }
           set_optional_json(fields, "alt_text", image.alt_text)
           let record = Json::object(fields)
-          retention.reserve_array_item(record, !images.is_empty())
+          bounded.budget.reserve_array_item(record, !images.is_empty())
           images.push(record)
         }
         let retain_style = match entry.properties.get("style_id") {
@@ -718,7 +873,7 @@ fn docx_outline_payload(
         if retain_style {
           match outline_style_record(entry) {
             Some(style) => {
-              retention.reserve_array_item(style, !styles.is_empty())
+              bounded.budget.reserve_array_item(style, !styles.is_empty())
               styles.push(style)
             }
             None => ()
@@ -729,24 +884,30 @@ fn docx_outline_payload(
     }
   }
   for section in result.sections {
-    let record = section_json(section)
-    retention.reserve_array_item(record, !sections.is_empty())
-    sections.push(record)
+    sections.push(
+      bounded_section_json(section, bounded.budget, !sections.is_empty()),
+    )
   }
-  diagnostics.append(reader_diagnostics(projection, retention_budget=retention))
-  Json::object({
-    "schema": Json::string(@lib.SCHEMA_DOCX_OUTLINE),
-    "file": Json::string(projection.file),
-    "format": Json::string("docx"),
-    "scanned_elements": Json::number(projection.entries.length().to_double()),
-    "counts": Json::object(count_fields),
-    "stories": Json::array(stories),
-    "headings": Json::array(headings),
-    "styles_in_use": Json::array(styles),
-    "images": Json::array(images),
-    "sections": Json::array(sections),
-    "diagnostics": Json::array(diagnostics),
-  })
+  diagnostics.append(
+    reader_diagnostics(projection, retention_budget=bounded.budget),
+  )
+  {
+    data: Json::object({
+      "schema": Json::string(@lib.SCHEMA_DOCX_OUTLINE),
+      "file": Json::string(projection.file),
+      "format": Json::string("docx"),
+      "scanned_elements": Json::number(projection.entries.length().to_double()),
+      "counts": Json::object(count_fields),
+      "stories": Json::array(stories),
+      "headings": Json::array(headings),
+      "styles_in_use": Json::array(styles),
+      "images": Json::array(images),
+      "sections": Json::array(sections),
+      "diagnostics": Json::array(diagnostics),
+    }),
+    budget: bounded.budget,
+    warnings: bounded.warnings,
+  }
 }
 
 ///|
@@ -761,6 +922,11 @@ struct DocxHumanWriter {
 fn DocxHumanWriter::new(maximum : Int) -> DocxHumanWriter raise CliFailure {
   ignore(checked_output_limit(maximum))
   { maximum, output: StringBuilder::new(), used: 0, lines: 0 }
+}
+
+///|
+fn DocxHumanWriter::remaining(self : DocxHumanWriter) -> Int {
+  self.maximum - self.used
 }
 
 ///|
@@ -849,16 +1015,36 @@ fn DocxHumanWriter::write_warnings(
 
 ///|
 fn docx_text_human(
-  result : DocxTextResult,
+  projection : DocxProjection,
+  under : DocxProjectionEntry?,
+  offset : Int,
+  limit : Int,
   warnings : Array[@lib.ProtocolWarning],
   maximum? : Int = docx_cli_hard_max_output_chars,
 ) -> String raise CliFailure {
   let output = DocxHumanWriter::new(maximum)
-  for record in result.records {
-    output.begin_line()
-    output.write_terminal_safe(record.path)
-    output.write_char('\t')
-    output.write_terminal_safe(record.text, single_line=true)
+  let mut matched = 0
+  let mut returned = 0
+  for entry in projection.entries {
+    let in_scope = match under {
+      Some(root) => path_is_within(entry.path, root.path)
+      None => true
+    }
+    if in_scope && entry.kind == "p" {
+      if matched >= offset && returned < limit {
+        output.begin_line()
+        output.write_terminal_safe(entry.path)
+        output.write_char('\t')
+        let text_budget = DocxTextBudget::new(
+          "text result characters",
+          output.remaining(),
+        )
+        let text = entry_text_with_budget(entry, text_budget)
+        output.write_terminal_safe(text, single_line=true)
+        returned += 1
+      }
+      matched += 1
+    }
   }
   output.write_warnings(warnings)
   output.finish()
@@ -866,22 +1052,37 @@ fn docx_text_human(
 
 ///|
 fn docx_query_human(
-  result : DocxQueryResult,
+  projection : DocxProjection,
+  under : DocxProjectionEntry?,
+  spec : DocxQuerySpec,
   warnings : Array[@lib.ProtocolWarning],
   maximum? : Int = docx_cli_hard_max_output_chars,
 ) -> String raise CliFailure {
   let output = DocxHumanWriter::new(maximum)
-  for record in result.records {
-    output.begin_line()
-    output.write_terminal_safe(record.entry.path)
-    output.write_char('\t')
-    output.write_terminal_safe(record.entry.kind)
-    output.write_char('\t')
-    output.write_terminal_safe(record.preview, single_line=true)
+  let scan_budget = DocxTextBudget::new(
+    "query text scan characters", docx_cli_max_query_text_scan_chars,
+  )
+  let mut matched = 0
+  let mut returned = 0
+  for entry in projection.entries {
+    if !entry_matches_query(entry, under, spec, scan_budget) {
+      continue
+    }
+    if matched >= spec.offset && returned < spec.limit {
+      let (preview, _) = entry_text_prefix(entry, docx_cli_query_preview_chars)
+      output.begin_line()
+      output.write_terminal_safe(entry.path)
+      output.write_char('\t')
+      output.write_terminal_safe(entry.kind)
+      output.write_char('\t')
+      output.write_terminal_safe(preview, single_line=true)
+      returned += 1
+    }
+    matched += 1
   }
   output.begin_line()
   output.write_plain(
-    "# matched \{result.matched_total}; returned \{result.records.length()}; offset \{result.offset}",
+    "# matched \{matched}; returned \{returned}; offset \{spec.offset}",
   )
   output.write_warnings(warnings)
   output.finish()

@@ -19,6 +19,8 @@ type AnnotationProjectionIndex
 
 type AnnotationStoryPlan
 
+type BoundedDocxPayload
+
 type DocxCollectedText
 
 type DocxHumanWriter
@@ -35,19 +37,11 @@ type DocxProjectionRole
 
 type DocxPropertyPredicate
 
-type DocxQueryRecord
-
-type DocxQueryResult
-
 type DocxQuerySpec
 
 type DocxTextBudget
 
 type DocxTextCollector
-
-type DocxTextRecord
-
-type DocxTextResult
 
 type HelpQuery
 

@@ -121,8 +121,6 @@ async fn run_docx_outline(matches : @argparse.Matches) -> Unit {
     println(
       checked_docx_json_output(
         docx_outline_payload(projection, max_output_chars=max_output),
-        projection.warnings,
-        max_output,
       ),
     )
   } else {
@@ -145,11 +143,7 @@ async fn run_docx_get(matches : @argparse.Matches) -> Unit {
   let entry = resolve_projection_selector(projection, selector)
   if matches.flags.get_or_default("json", false) {
     println(
-      checked_docx_json_output(
-        get_docx_payload(projection, entry, max_output),
-        projection.warnings,
-        max_output,
-      ),
+      checked_docx_json_output(get_docx_payload(projection, entry, max_output)),
     )
   } else {
     let text = match entry.element {
@@ -184,21 +178,25 @@ async fn run_docx_text(matches : @argparse.Matches) -> Unit {
   )
   let projection = read_docx_projection(file, max_elements)
   let (under, under_path) = resolve_optional_under(projection, matches)
-  let result = build_docx_text_result(
-    projection, under, offset, limit, max_output,
-  )
   if matches.flags.get_or_default("json", false) {
     println(
       checked_docx_json_output(
-        docx_text_payload(projection, result, under_path),
-        projection.warnings,
-        max_output,
+        docx_text_payload(
+          projection, under, under_path, offset, limit, max_output,
+        ),
       ),
     )
   } else {
     println(
       checked_docx_human_output(
-        docx_text_human(result, projection.warnings, maximum=max_output),
+        docx_text_human(
+          projection,
+          under,
+          offset,
+          limit,
+          projection.warnings,
+          maximum=max_output,
+        ),
         max_output,
       ),
     )
@@ -393,19 +391,22 @@ async fn run_docx_query(matches : @argparse.Matches) -> Unit {
     offset,
     limit,
   }
-  let result = build_docx_query_result(projection, under, spec)
   if matches.flags.get_or_default("json", false) {
     println(
       checked_docx_json_output(
-        docx_query_payload(projection, result, spec),
-        projection.warnings,
-        max_output,
+        docx_query_payload(projection, under, spec, max_output),
       ),
     )
   } else {
     println(
       checked_docx_human_output(
-        docx_query_human(result, projection.warnings, maximum=max_output),
+        docx_query_human(
+          projection,
+          under,
+          spec,
+          projection.warnings,
+          maximum=max_output,
+        ),
         max_output,
       ),
     )
