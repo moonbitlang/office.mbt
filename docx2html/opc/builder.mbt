@@ -171,7 +171,17 @@ pub fn PackageBuilder::add_relationship(
     raise PackageBuildError("relationship Id is not an XML NCName: \{id}")
   }
   check_metadata("relationship Type", relationship_type)
+  if !is_absolute_relationship_type(relationship_type) {
+    raise PackageBuildError(
+      "relationship Type must be an absolute URI without a fragment: \{relationship_type}",
+    )
+  }
   check_metadata("relationship Target", target)
+  if external && !is_valid_external_relationship_target(target) {
+    raise PackageBuildError(
+      "external relationship Target is not a valid IRI reference: \{target}",
+    )
+  }
   let rels = match self.relationships.get(source) {
     Some(existing) => existing
     None => {
@@ -240,7 +250,18 @@ pub fn PackageBuilder::build(
         )
       }
       check_metadata("relationship Type", relationship.relationship_type)
+      if !is_absolute_relationship_type(relationship.relationship_type) {
+        raise PackageBuildError(
+          "relationship Type must be an absolute URI without a fragment: \{relationship.relationship_type}",
+        )
+      }
       check_metadata("relationship Target", relationship.target)
+      if relationship.external &&
+        !is_valid_external_relationship_target(relationship.target) {
+        raise PackageBuildError(
+          "external relationship Target is not a valid IRI reference: \{relationship.target}",
+        )
+      }
       if seen_ids.contains(relationship.id) {
         raise PackageBuildError(
           "duplicate relationship Id '\{relationship.id}' for source '\{source}'",
@@ -556,7 +577,21 @@ fn relationships_xml(rels : Array[PackageRelationship]) -> String {
 /// White-box: reach build()-time validation directly (the public setters
 /// already reject these states, and the fields are private outside the
 /// package — this pins the authoritative-revalidation layer itself).
-test "build revalidates duplicate relationship ids from raw state" {
+test "build revalidates relationship metadata from raw state" {
+  let raw_relationships : Array[PackageRelationship] = [
+    {
+      id: "rId1",
+      relationship_type: "types/test",
+      target: "word/document.xml",
+      external: false,
+    },
+    {
+      id: "rId1",
+      relationship_type: "urn:test",
+      target: "word/document.xml",
+      external: false,
+    },
+  ]
   let builder : PackageBuilder = {
     parts: [("word/document.xml", b"<d/>")],
     defaults: SortedMap([
@@ -564,27 +599,43 @@ test "build revalidates duplicate relationship ids from raw state" {
       ("xml", "application/xml"),
     ]),
     overrides: SortedMap([]),
-    relationships: SortedMap([
-      (
-        "",
-        [
-          {
-            id: "rId1",
-            relationship_type: "t",
-            target: "word/document.xml",
-            external: false,
-          },
-          {
-            id: "rId1",
-            relationship_type: "t",
-            target: "word/document.xml",
-            external: false,
-          },
-        ],
-      ),
-    ]),
+    relationships: SortedMap([("", raw_relationships)]),
     part_names: PartNameRegistry::new(),
     zip_name_chars: 0,
+  }
+  try builder.build() catch {
+    PackageBuildError(message) =>
+      inspect(
+        message.has_prefix(
+          "relationship Type must be an absolute URI without a fragment",
+        ),
+        content="true",
+      )
+  } noraise {
+    _ => fail("expected build-time relationship-Type rejection")
+  }
+  raw_relationships[0] = {
+    id: "rId1",
+    relationship_type: "urn:test",
+    target: "https://example.test/bad path",
+    external: true,
+  }
+  try builder.build() catch {
+    PackageBuildError(message) =>
+      inspect(
+        message.has_prefix(
+          "external relationship Target is not a valid IRI reference",
+        ),
+        content="true",
+      )
+  } noraise {
+    _ => fail("expected build-time external-Target rejection")
+  }
+  raw_relationships[0] = {
+    id: "rId1",
+    relationship_type: "urn:test",
+    target: "word/document.xml",
+    external: false,
   }
   try builder.build() catch {
     PackageBuildError(message) =>

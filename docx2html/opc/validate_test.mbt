@@ -1086,6 +1086,57 @@ test "Relationships require NCName ids and non-empty required attributes" {
 }
 
 ///|
+test "Relationships enforce Type URI and External Target IRI grammar" {
+  let root_rels =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+    #|<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+    #|<Relationship Id="relativeType" Type="types/test" Target="https://example.test" TargetMode="External"/>
+    #|<Relationship Id="fragmentType" Type="urn:test#kind" Target="https://example.test" TargetMode="External"/>
+    #|<Relationship Id="badPercentType" Type="https://example.test/%GG" Target="https://example.test" TargetMode="External"/>
+    #|<Relationship Id="spaceTarget" Type="urn:test" Target="https://example.test/bad path" TargetMode="External"/>
+    #|<Relationship Id="badIpv6Target" Type="urn:test" Target="https://[2001:db8:::1]/" TargetMode="External"/>
+    #|<Relationship Id="badPercentTarget" Type="urn:test" Target="../outside/%GG" TargetMode="External"/>
+    #|<Relationship Id="unicodeTarget" Type="urn:test" Target="https://例え.テスト/文書?q=值" TargetMode="External"/>
+    #|<Relationship Id="relativeTarget" Type="urn:test" Target="../outside/文書" TargetMode="External"/>
+    #|<Relationship Id="officeFile" Type="urn:test" Target="file:///C:\docs\文書.docx" TargetMode="External"/>
+    #|</Relationships>
+  let findings = @opc.validate_docx_package(
+    minimal_docx(root_rels=Some(root_rels)),
+  )
+  assert_true(
+    findings.contains(
+      "_rels/.rels: Relationship Type is not an absolute URI without a fragment: types/test",
+    ),
+  )
+  assert_true(
+    findings.contains(
+      "_rels/.rels: Relationship Type is not an absolute URI without a fragment: urn:test#kind",
+    ),
+  )
+  assert_true(
+    findings.contains(
+      "_rels/.rels: Relationship Type is not an absolute URI without a fragment: https://example.test/%GG",
+    ),
+  )
+  assert_true(
+    findings.contains(
+      "_rels/.rels: external Relationship Target is not a valid IRI reference: https://example.test/bad path",
+    ),
+  )
+  assert_true(
+    findings.contains(
+      "_rels/.rels: external Relationship Target is not a valid IRI reference: https://[2001:db8:::1]/",
+    ),
+  )
+  assert_true(
+    findings.contains(
+      "_rels/.rels: external Relationship Target is not a valid IRI reference: ../outside/%GG",
+    ),
+  )
+  assert_eq(findings.length(), 6)
+}
+
+///|
 test "internal relationships cannot target Relationships parts" {
   let root_rels =
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rMetadata" Type="urn:test" Target="_rels/.rels"/></Relationships>

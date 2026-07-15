@@ -1603,6 +1603,11 @@ fn for_each_relationship(
         "\{findings.text(part_name)}: Relationship missing a non-empty Type",
       )
       valid = false
+    } else if !is_absolute_relationship_type(rel_type) {
+      findings.add(
+        "\{findings.text(part_name)}: Relationship Type is not an absolute URI without a fragment: \{findings.text(rel_type)}",
+      )
+      valid = false
     }
     let target = element.attributes.get("Target").unwrap_or("")
     if target == "" {
@@ -1611,13 +1616,30 @@ fn for_each_relationship(
       )
       valid = false
     }
-    match element.attributes.get("TargetMode") {
-      None | Some("Internal") => if valid { visit(id, rel_type, target, false) }
-      Some("External") => if valid { visit(id, rel_type, target, true) }
-      Some(mode) =>
+    let external = match element.attributes.get("TargetMode") {
+      None | Some("Internal") => Some(false)
+      Some("External") => Some(true)
+      Some(mode) => {
         findings.add(
           "\{findings.text(part_name)}: Relationship has invalid TargetMode: \{findings.text(mode)}",
         )
+        valid = false
+        None
+      }
+    }
+    match external {
+      Some(true) if target != "" &&
+        !is_valid_external_relationship_target(target) => {
+        findings.add(
+          "\{findings.text(part_name)}: external Relationship Target is not a valid IRI reference: \{findings.text(target)}",
+        )
+        valid = false
+      }
+      _ => ()
+    }
+    match external {
+      Some(value) => if valid { visit(id, rel_type, target, value) }
+      None => ()
     }
   }
 }
