@@ -708,6 +708,77 @@ test "raw inventory accepts Relationship simple content" {
 }
 
 ///|
+test "raw inventory applies relationship MCE before schema checks" {
+  let process_content = raw_test_replace_entry(
+    @word.new_blank_docx(),
+    "_rels/.rels",
+    @utf16.encode(
+      (
+        #|<?xml version="1.0" encoding="UTF-16" standalone="yes"?>
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
+        #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        #| xmlns:v="urn:mbtexcel:test:vendor"
+        #| mc:Ignorable="v" mc:ProcessContent="v:Wrapper">
+        #| <v:Wrapper><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></v:Wrapper>
+        #|</Relationships>
+      ),
+      bom=true,
+    ),
+  )
+  debug_inspect(
+    inventory_alias_target(
+      @raw.raw_inventory("process-content.docx", process_content),
+      "/document",
+    ),
+    content="Some(\"word/document.xml\")",
+  )
+
+  let alternate_content = raw_test_replace_entry(
+    @word.new_blank_docx(),
+    "_rels/.rels",
+    @utf8.encode(
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
+        #| xmlns:r="http://schemas.openxmlformats.org/package/2006/relationships"
+        #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">
+        #| <mc:AlternateContent>
+        #|  <mc:Choice Requires="r"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></mc:Choice>
+        #|  <mc:Fallback><Relationship Id="decoy" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/missing.xml"/></mc:Fallback>
+        #| </mc:AlternateContent>
+        #|</Relationships>
+      ),
+    ),
+  )
+  debug_inspect(
+    inventory_alias_target(
+      @raw.raw_inventory("alternate-content.docx", alternate_content),
+      "/document",
+    ),
+    content="Some(\"word/document.xml\")",
+  )
+}
+
+///|
+test "raw inventory collapses relationship identity whitespace" {
+  let padded = raw_test_replace_entry(
+    @word.new_blank_docx(),
+    "_rels/.rels",
+    @utf8.encode(
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id=" &#x9; rId1 &#xA; " Type=" http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument " Target=" word/document.xml "/></Relationships>
+      ),
+    ),
+  )
+  debug_inspect(
+    inventory_alias_target(
+      @raw.raw_inventory("padded.docx", padded),
+      "/document",
+    ),
+    content="Some(\"word/document.xml\")",
+  )
+}
+
+///|
 test "raw inventory resolves Unicode logical OPC identities without folding non-ASCII case" {
   let builder = @opc.PackageBuilder::new()
   builder.add_default(
