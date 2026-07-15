@@ -844,6 +844,7 @@ fn read_docx_annotated_zip(
     } else {
       LegacyUndefinedAnnotationId
     },
+    strict_main_document=policy is MutationSafe,
   )
   let document_result = parts.read_document()
   let collector = HeaderFooterCollector::new(parts)
@@ -1361,7 +1362,7 @@ fn build_annotation_index(
         // well-formed XML. The package reader is intentionally tolerant, so
         // establish strict well-formedness under the same cumulative budget
         // before the raw span scanner is allowed to derive edit locations.
-        if policy is MutationSafe {
+        if policy is MutationSafe && path != parts.main_document_path {
           read_identity_story_xml_strict(bytes, parts.xml_budget) |> ignore
         }
         let scan = scan_story(bytes, path_budget~, warning_collector=warnings) catch {

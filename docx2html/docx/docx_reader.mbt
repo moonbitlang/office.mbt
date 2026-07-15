@@ -597,6 +597,7 @@ fn DocumentParts::build(
   diagnostics? : ReaderDiagnosticCollector,
   expected_main_document_path? : String,
   missing_annotation_id_mode? : MissingAnnotationIdMode = LegacyUndefinedAnnotationId,
+  strict_main_document? : Bool = false,
 ) -> DocumentParts raise DocxError {
   let main_document = find_main_document(
     zip,
@@ -723,7 +724,11 @@ fn DocumentParts::build(
     diagnostics?,
     missing_annotation_id_mode~,
   )
-  let root = read_xml_part(zip, main_document_path, xml_budget?)
+  let root = if strict_main_document {
+    read_xml_part_strict(zip, main_document_path, xml_budget?)
+  } else {
+    read_xml_part(zip, main_document_path, xml_budget?)
+  }
   {
     zip,
     xml_budget,
@@ -811,6 +816,31 @@ fn read_xml_part(
         }
       }
     None => raise MissingPart(message="missing DOCX part: " + path)
+  }
+}
+
+///|
+fn read_xml_part_strict(
+  zip : ZipArchive,
+  path : String,
+  xml_budget? : @xml.XmlReadBudget,
+) -> XmlElement raise DocxError {
+  guard zip.read_bytes(path) is Some(bytes) else {
+    raise MissingPart(message="missing DOCX part: " + path)
+  }
+  match xml_budget {
+    Some(budget) =>
+      @xml.read_xml_bytes_strict_limited(
+        bytes,
+        budget,
+        namespace_map=office_namespace_map(),
+      )
+    None => {
+      let text = @utf8.decode(bytes, ignore_bom=true) catch {
+        _ => raise InvalidXml(message="part is not valid UTF-8: " + path)
+      }
+      @xml.read_xml_string_strict(text, namespace_map=office_namespace_map())
+    }
   }
 }
 
