@@ -1517,6 +1517,37 @@ fn build_annotation_index(
   let (footnotes, endnotes) = build_notes(
     parts, scans, warnings, ctx, degraded, path_budget,
   )
+  // The legacy projection grammar has no escaping inside [@id=...]. Unique
+  // ids that are empty or contain a path delimiter therefore fall back to a
+  // snapshot-relative ordinal path. Surface that loss of stable identity so
+  // agents do not mistake the ordinal for a durable selector.
+  let warned_ids : StableStringSet = SortedSet([])
+  fn warn_unrepresentable(kind : String, id : String) -> Unit {
+    if (
+        id == "" ||
+        id.find("]") is Some(_) ||
+        id.find("=") is Some(_) ||
+        id.find("/") is Some(_)
+      ) &&
+      !warned_ids.contains("\{kind}:\{id}") &&
+      !warnings.full() {
+      warned_ids.add("\{kind}:\{id}")
+      warnings.add(
+        "annotation index: \{kind} id '\{warnings.text(id)}' cannot be addressed as [@id=...]; ordinal paths are emitted for it",
+      )
+    }
+  }
+  for comment in comments {
+    if comment.defined() {
+      warn_unrepresentable("comment", comment.id())
+    }
+  }
+  for note in footnotes {
+    warn_unrepresentable("footnote", note.id())
+  }
+  for note in endnotes {
+    warn_unrepresentable("endnote", note.id())
+  }
   {
     comments,
     footnotes,

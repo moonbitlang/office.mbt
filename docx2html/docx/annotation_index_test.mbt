@@ -2277,10 +2277,11 @@ test "index review round 3: drawings are opaque — run positions verified, imag
 }
 
 ///|
-test "delimiter-rich annotation ids do not emit obsolete path warnings" {
+test "delimiter-rich annotation ids warn when paths fall back to ordinals" {
   // A range anchored INSIDE a comment body covers that body paragraph
-  // (cross-story coverage). The canonical Office selector grammar escapes
-  // delimiter-rich ids, so the older ordinal-fallback warning must stay gone.
+  // (cross-story coverage). The emitted DOCX projection path still uses the
+  // legacy unescaped grammar, so delimiter-rich ids require an explicit
+  // stability warning even though the canonical Office selector can quote ids.
   let document =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
     #|<w:body><w:p><w:r><w:commentReference w:id="a/b"/></w:r></w:p></w:body>
@@ -2292,13 +2293,13 @@ test "delimiter-rich annotation ids do not emit obsolete path warnings" {
   let bytes = fixture_docx(document, comments_xml=Some(comments))
   let annotated = @docx.read_docx_annotated(bytes)
   let index = annotated.annotations()
-  let mut saw_obsolete_warning = false
+  let mut saw_fallback_warning = false
   for warning in index.warnings() {
     if warning.contains("cannot be addressed as [@id=...]") {
-      saw_obsolete_warning = true
+      saw_fallback_warning = true
     }
   }
-  assert_false(saw_obsolete_warning)
+  assert_true(saw_fallback_warning)
   // The point anchor still covers the body paragraph.
   debug_inspect(
     index.covering_comment_ids("/body/p[1]"),
