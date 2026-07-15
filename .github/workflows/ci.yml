@@ -172,6 +172,9 @@ jobs:
       - name: Test DOCX edit sessions (wasm)
         run: moon test --target wasm office/docx
 
+      - name: Test docx2html core (wasm)
+        run: moon test --target wasm docx2html/xml docx2html/zip docx2html/opc docx2html/docx
+
       # Run all members' native test suites in one pass. Covers mbtexcel
       # (including OpenXML SDK schema validation via .NET), docx2html
       # (converter/reader/fixtures/stress), and pdflite (reader/writer/

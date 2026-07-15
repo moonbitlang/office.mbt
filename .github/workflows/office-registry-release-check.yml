@@ -15,6 +15,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
       - name: Set up MoonBit (nightly)
         run: |
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s nightly
@@ -23,8 +28,9 @@ jobs:
       - name: MoonBit versions
         run: moon version --all
 
-      # This script copies office/ into RUNNER_TEMP, beyond the repository's
-      # moon.work boundary. It must resolve mbtexcel@0.1.9 from Mooncakes.
+      # This script copies office/ and its SDK validation harness into
+      # RUNNER_TEMP, beyond the repository's moon.work boundary. It must
+      # resolve mbtexcel@0.1.9 and docx2html@0.1.45 from Mooncakes.
       - name: Verify isolated registry consumer
         env:
           TMPDIR: ${{ runner.temp }}
