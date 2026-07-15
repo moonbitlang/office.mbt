@@ -1384,6 +1384,28 @@ test "raw resolver rejects collisions and namespace-spoofed OPC metadata before 
 }
 
 ///|
+test "raw inventory enforces ST_Extension on unused defaults" {
+  let original = @word.new_blank_docx()
+  for extension in ["é", "bad%GG"] {
+    let broken = raw_test_transform_xml_entry(original, "[Content_Types].xml", text => {
+      text.replace(
+        old="</Types>",
+        new="<Default Extension=\"\{extension}\" ContentType=\"application/octet-stream\"/></Types>",
+      )
+    })
+    try @raw.raw_inventory("invalid-extension.docx", broken) catch {
+      RawError(code~, message~, ..) => {
+        assert_eq(code, "office.raw.invalid_package")
+        assert_true(message.contains("Default has an invalid Extension"))
+        assert_true(message.contains(extension))
+      }
+    } noraise {
+      _ => fail("expected invalid ST_Extension to be rejected: \{extension}")
+    }
+  }
+}
+
+///|
 test "XLSX numeric aliases preserve workbook declaration ordinals" {
   let data = sheet_ordinal_gap_fixture()
   let inventory = @raw.raw_inventory("ordinal-gap.xlsx", data)

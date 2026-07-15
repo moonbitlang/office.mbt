@@ -487,6 +487,12 @@ fn parse_content_types(
                     ext.length(),
                   )
                 }
+                if !@opc.is_valid_content_type_extension(ext) {
+                  raise raw_error(
+                    "office.raw.invalid_package",
+                    "content-type Default has an invalid Extension: \{bounded_raw_text(ext, 120)}",
+                  )
+                }
                 if kind.length() > raw_max_content_type_length {
                   raise raw_xml_resource_limit(
                     actual_name,

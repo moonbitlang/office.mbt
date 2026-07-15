@@ -886,7 +886,7 @@ fn is_valid_media_type(value : String) -> Bool {
 ///|
 /// ECMA-376 Part 2 `ST_Extension`. A percent sign is legal only as a complete
 /// percent-encoded byte; dots and non-ASCII characters are not extension data.
-fn is_valid_content_type_extension(value : String) -> Bool {
+pub fn is_valid_content_type_extension(value : String) -> Bool {
   if value == "" {
     return false
   }

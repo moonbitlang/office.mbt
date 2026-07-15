@@ -1226,6 +1226,12 @@ fn validate_package_structure(
         ) {
         (Some(extension), Some(content_type)) if extension != "" &&
           content_type != "" => {
+          if !@opc.is_valid_content_type_extension(extension) {
+            findings.push(
+              "[Content_Types].xml: Default has an invalid Extension: \{extension}",
+            )
+            continue
+          }
           if !is_valid_media_type(content_type) {
             findings.push(
               "[Content_Types].xml: Default has an invalid ContentType: \{content_type}",

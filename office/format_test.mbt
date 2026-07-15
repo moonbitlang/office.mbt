@@ -72,6 +72,27 @@ fn append_content_type_override(
 }
 
 ///|
+fn append_content_type_default(
+  data : BytesView,
+  extension : String,
+  content_type : String,
+) -> Bytes raise {
+  let archive = @zip.read(data)
+  guard archive.get("[Content_Types].xml") is Some(bytes) else {
+    fail("test archive did not contain [Content_Types].xml")
+  }
+  let text = @utf8.decode(bytes, ignore_bom=true)
+  let updated = text.replace(
+    old="</Types>",
+    new="<Default Extension=\"\{extension}\" ContentType=\"\{content_type}\"/></Types>",
+  )
+  if updated == text {
+    fail("test could not extend [Content_Types].xml")
+  }
+  replace_archive_part(data, "[Content_Types].xml", @utf8.encode(updated))
+}
+
+///|
 fn format_hash_clustered_relationship_names(
   count : Int,
   bucket_mask : Int,
@@ -1212,6 +1233,26 @@ test "detect_format rejects malformed auxiliary content types" {
         )
     } noraise {
       _ => fail("expected a malformed auxiliary content type: \{content_type}")
+    }
+  }
+}
+
+///|
+test "detect_format enforces ST_Extension on unused defaults" {
+  let source = @excel.write(@excel.new_file())
+  for extension in ["é", "bad%GG"] {
+    let broken = append_content_type_default(
+      source, extension, "application/octet-stream",
+    )
+    try @office.detect_format("book.xlsx", broken) catch {
+      err =>
+        assert_true(
+          Show::to_string(err).contains(
+            "[Content_Types].xml: Default has an invalid Extension: \{extension}",
+          ),
+        )
+    } noraise {
+      _ => fail("expected invalid ST_Extension to be rejected: \{extension}")
     }
   }
 }
