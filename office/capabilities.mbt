@@ -229,6 +229,15 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "schema", "literal(office.docx.outline/1)", true, "versioned result schema",
         ),
         capability_field(
+          "file", "path", true, "the input path exactly as supplied",
+        ),
+        capability_field(
+          "format", "literal(docx)", true, "resolved document format",
+        ),
+        capability_field(
+          "scanned_elements", "integer", true, "number of elements in the bounded projection",
+        ),
+        capability_field(
           "counts", "object", true, "deterministic structural counts across every DOCX story",
         ),
         capability_field(
@@ -236,6 +245,15 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         ),
         capability_field(
           "headings", "array", true, "bounded heading previews with canonical paths",
+        ),
+        capability_field(
+          "styles_in_use", "array", true, "deduplicated styles referenced by projected elements",
+        ),
+        capability_field(
+          "images", "array", true, "image metadata with canonical paths and byte counts",
+        ),
+        capability_field(
+          "sections", "array", true, "section boundaries and effective header/footer references",
         ),
         capability_field(
           "diagnostics", "array", true, "reader and annotation source diagnostics",
@@ -268,21 +286,43 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "schema", "literal(office.docx.element/1)", true, "versioned result schema",
         ),
         capability_field(
-          "path", "office.selector/1", true, "resolved canonical path",
+          "file", "path", true, "the input path exactly as supplied",
         ),
         capability_field(
-          "stability", "enum(stable|snapshot-relative)", true, "selector stability classification",
+          "format", "literal(docx)", true, "resolved document format",
+        ),
+        capability_field(
+          "path", "office.selector/1", true, "resolved canonical path",
         ),
         capability_field(
           "kind", "string", true, "resolved story, annotation, or element kind",
         ),
         capability_field(
+          "role", "enum(story-root|annotation-collection|annotation-item|element)",
+          true, "projection role",
+        ),
+        capability_field(
+          "stability", "enum(stable|snapshot-relative)", true, "selector stability classification",
+        ),
+        capability_field(
+          "source", "object", true, "physical story source metadata",
+        ),
+        capability_field(
+          "parent", "office.selector/1", false, "canonical parent path; absent for projection roots",
+        ),
+        capability_field(
+          "id", "string", false, "annotation id when the resolved item carries one",
+        ),
+        capability_field(
           "children", "array", true, "addressable direct children with canonical paths",
         ),
-        capability_field("text", "string", true, "bounded raw text projection"),
         capability_field(
           "properties", "object", true, "declared formatting and element summary",
         ),
+        capability_field(
+          "metadata", "object", true, "role-specific annotation or collection metadata",
+        ),
+        capability_field("text", "string", true, "bounded raw text projection"),
       ],
       output_modes: ["human", "json"],
       variants: [],
@@ -317,6 +357,12 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "schema", "literal(office.docx.text/1)", true, "versioned result schema",
         ),
         capability_field(
+          "file", "path", true, "the input path exactly as supplied",
+        ),
+        capability_field(
+          "format", "literal(docx)", true, "resolved document format",
+        ),
+        capability_field(
           "entries", "array(object{path,text,stability})", true, "paragraphs in deterministic document order",
         ),
         capability_field(
@@ -327,6 +373,16 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         ),
         capability_field(
           "truncated", "boolean", true, "whether pagination omitted later matches",
+        ),
+        capability_field(
+          "offset", "integer", true, "applied zero-based match offset",
+        ),
+        capability_field("limit", "integer", true, "applied page-size ceiling"),
+        capability_field(
+          "scanned_elements", "integer", true, "number of elements in the bounded projection",
+        ),
+        capability_field(
+          "under", "office.selector/1", false, "resolved subtree root when one was requested",
         ),
       ],
       output_modes: ["human", "json"],
@@ -376,6 +432,15 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "schema", "literal(office.docx.query/1)", true, "versioned result schema",
         ),
         capability_field(
+          "file", "path", true, "the input path exactly as supplied",
+        ),
+        capability_field(
+          "format", "literal(docx)", true, "resolved document format",
+        ),
+        capability_field(
+          "filters", "object", true, "normalized predicates applied by this query",
+        ),
+        capability_field(
           "matches", "array", true, "deterministic document-order match records",
         ),
         capability_field(
@@ -386,6 +451,16 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         ),
         capability_field(
           "truncated", "boolean", true, "whether pagination omitted later matches",
+        ),
+        capability_field(
+          "offset", "integer", true, "applied zero-based match offset",
+        ),
+        capability_field("limit", "integer", true, "applied page-size ceiling"),
+        capability_field(
+          "scanned_elements", "integer", true, "number of elements in the bounded projection",
+        ),
+        capability_field(
+          "under", "office.selector/1", false, "resolved subtree root when one was requested",
         ),
       ],
       output_modes: ["human", "json"],

@@ -98,6 +98,68 @@ test "DOCX outline reports semantic annotation counts" {
 }
 
 ///|
+fn assert_docx_capability_payload_contract(
+  name : String,
+  payload : Json,
+) -> Unit raise {
+  guard @lib.capability_commands().search_by(command => command.name == name)
+    is Some(command_index) else {
+    fail("missing capability command \{name}")
+  }
+  let command = @lib.capability_commands()[command_index]
+  guard payload is Object(fields) else {
+    fail("expected object payload for \{name}")
+  }
+  let declared = command.outputs.map(field => field.name)
+  for key, _ in fields {
+    if !declared.contains(key) {
+      fail("\{name} payload field '\{key}' is not declared")
+    }
+  }
+  for field in command.outputs {
+    if field.required && !fields.contains(field.name) {
+      fail("\{name} required output '\{field.name}' was not emitted")
+    }
+  }
+}
+
+///|
+test "DOCX capability declarations cover every payload field" {
+  let projection = docx_read_test_projection()
+  assert_docx_capability_payload_contract(
+    "outline",
+    docx_outline_payload(projection),
+  )
+  let comment = resolve_projection_selector(
+    projection, "/docx/comments/comment[id=\"0\"]",
+  )
+  assert_docx_capability_payload_contract(
+    "get",
+    get_docx_payload(projection, comment, 100_000),
+  )
+  let text = build_docx_text_result(projection, None, 0, 2, 100_000)
+  assert_docx_capability_payload_contract(
+    "text",
+    docx_text_payload(projection, text, None),
+  )
+  let spec : DocxQuerySpec = {
+    under: None,
+    kind: Some("p"),
+    text: None,
+    stable_id: None,
+    properties: [],
+    ignore_case: false,
+    offset: 0,
+    limit: 2,
+  }
+  let query = build_docx_query_result(projection, None, spec)
+  assert_docx_capability_payload_contract(
+    "query",
+    docx_query_payload(projection, query, spec),
+  )
+}
+
+///|
 test "DOCX get distinguishes stable items and positional descendants" {
   let projection = docx_read_test_projection()
   let comment = resolve_projection_selector(
@@ -191,10 +253,16 @@ test "duplicate annotation ids stay positional and stable lookup is ambiguous" {
   let annotated = @docx.read_docx_annotated(docx_read_test_bytes())
   let builder = DocxProjectionBuilder::new(100)
   let body = [@document.paragraph([@document.run([@document.text("x")])])]
-  builder.add_annotation_story(annotated, "comments", "comment", [
+  let footnotes = annotation_story_plan("footnotes", "note", [])
+  let endnotes = annotation_story_plan("endnotes", "note", [])
+  let comments = annotation_story_plan("comments", "comment", [
     ("dup", body),
     ("dup", body),
   ])
+  let annotation_index = annotation_projection_index(
+    annotated, footnotes, endnotes, comments,
+  )
+  builder.add_annotation_story(annotation_index, comments)
   assert_eq(builder.entries[1].path, "/docx/comments/comment[1]")
   assert_eq(builder.entries[4].path, "/docx/comments/comment[2]")
   assert_true(
@@ -231,6 +299,61 @@ test "delimiter-rich unique annotation ids remain canonical and stable" {
   )
   guard path is Some(value) else { fail("expected stable path") }
   assert_eq(@lib.parse_selector(value).render(), value)
+}
+
+///|
+test "annotation metadata paths rewrite to emitted stable roots" {
+  let annotated = @docx.read_docx_annotated(docx_read_test_bytes())
+  let footnotes = annotation_story_plan(
+    "footnotes",
+    "note",
+    annotated.footnote_bodies(),
+  )
+  let endnotes = annotation_story_plan(
+    "endnotes",
+    "note",
+    annotated.endnote_bodies(),
+  )
+  let comments = annotation_story_plan(
+    "comments",
+    "comment",
+    annotated.comment_bodies(),
+  )
+  let annotation_index = annotation_projection_index(
+    annotated, footnotes, endnotes, comments,
+  )
+  assert_eq(
+    canonical_index_path(
+      "/comments/comment[1]/p[1]",
+      annotation_index.path_roots,
+    ),
+    Some("/docx/comments/comment[id=\"0\"]/p[1]"),
+  )
+  assert_eq(
+    canonical_index_path(
+      "/footnotes/note[1]/p[1]/r[1]",
+      annotation_index.path_roots,
+    ),
+    Some("/docx/footnotes/note[id=\"1\"]/p[1]/r[1]"),
+  )
+  assert_eq(
+    canonical_index_path("/body/p[1]/r[1]", annotation_index.path_roots),
+    Some("/docx/body/p[1]/r[1]"),
+  )
+  assert_eq(
+    canonical_index_path(
+      "/comments/comment[99]/p[1]",
+      annotation_index.path_roots,
+    ),
+    None,
+  )
+  let projection = projection_from_annotated("fixture.docx", annotated, 1000)
+  for
+    path in [
+      "/docx/comments/comment[id=\"0\"]/p[1]", "/docx/footnotes/note[id=\"1\"]/p[1]/r[1]",
+    ] {
+    assert_true(find_projection_entry(projection, path) is Some(_))
+  }
 }
 
 ///|
@@ -301,10 +424,49 @@ test "DOCX preview truncation excludes discarded paragraph separators" {
   ])
   let (_, internal_truncated) = collect_docx_text_prefix(internal, 160)
   assert_true(internal_truncated)
+  let collector = DocxTextCollector::new("preview", 160, false)
+  try! collector.write_string("z".repeat(2 * 1024 * 1024))
+  assert_eq(collector.used, 160)
+  assert_true(collector.truncated)
 }
 
 ///|
-test "DOCX reader classifies only exact XML budget failures as resources" {
+test "DOCX text budgets retain an independent per-element ceiling" {
+  let projection = docx_read_test_projection()
+  let oversized = {
+    ..projection.entries[0],
+    element: Some(
+      @word.paragraph([
+        @word.run([@word.text("x".repeat(docx_cli_max_element_text_chars + 1))]),
+      ]),
+    ),
+  }
+  let aggregate = DocxTextBudget::new(
+    "query text scan characters",
+    docx_cli_max_element_text_chars * 2,
+  )
+  try entry_text_with_budget(oversized, aggregate) catch {
+    CliFailure(error) => {
+      assert_eq(error.code, "office.docx.resource_limit")
+      guard error.details is Some(Object(details)) else {
+        fail("expected per-element resource details")
+      }
+      assert_eq(
+        details.get("resource"),
+        Some(Json::string("element text characters")),
+      )
+      assert_eq(
+        details.get("limit"),
+        Some(Json::number(docx_cli_max_element_text_chars.to_double())),
+      )
+    }
+  } noraise {
+    _ => fail("expected the independent per-element ceiling")
+  }
+}
+
+///|
+test "DOCX reader classifies only exact parser guard failures as resources" {
   let CliFailure(resource) = docx_reader_failure(
     InvalidXml(message="XML token budget exceeded"),
     "fixture.docx",
@@ -315,10 +477,22 @@ test "DOCX reader classifies only exact XML budget failures as resources" {
     "fixture.docx",
   )
   assert_eq(ordinary.code, "office.docx.read_failed")
-  assert_true(
-    docx_opc_resource_finding("[Content_Types].xml: XML source budget exceeded"),
+  let CliFailure(depth) = docx_reader_failure(
+    InvalidXml(message="XML nesting too deep"),
+    "fixture.docx",
   )
-  assert_false(docx_opc_resource_finding("relationship limit is invalid"))
+  assert_eq(depth.code, "office.docx.resource_limit")
+}
+
+///|
+test "DOCX OPC classification cannot be forged by an entry name" {
+  let archive = try! @zip.read(docx_read_test_bytes())
+  archive.add("word/XML source budget exceeded.bin", b"ordinary")
+  try validate_docx_read_archive("spoof.docx", archive) catch {
+    CliFailure(error) => assert_eq(error.code, "office.invalid_package")
+  } noraise {
+    _ => fail("expected the undeclared spoof part to invalidate the package")
+  }
 }
 
 ///|

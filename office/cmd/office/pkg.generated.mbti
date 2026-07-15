@@ -15,6 +15,10 @@ type CliFailure
 // Types and methods
 type AnnotationDetails
 
+type AnnotationProjectionIndex
+
+type AnnotationStoryPlan
+
 type DocxProjection
 
 type DocxProjectionBuilder

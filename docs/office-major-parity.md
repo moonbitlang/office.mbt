@@ -130,16 +130,21 @@ their end-to-end implementations are present:
   story/document order;
 - unique note/comment ids produce stable selector paths; all positional
   descendants are explicitly snapshot-relative, and duplicate/missing ids
-  degrade with bounded diagnostics rather than false stability;
+  degrade with bounded diagnostics rather than false stability; annotation
+  metadata paths are rewritten through the same emitted-root index so they
+  resolve when fed back to the CLI;
 - `text` and `query` expose exact bounded-scan totals plus deterministic
   offset/limit pagination; query accepts only declared literal predicates and
   never interprets regular expressions or arbitrary expressions;
 - package bytes, ZIP entries and expansion, XML source/tokens/materialization,
   projection nodes, scanned text, result counts, and serialized output all
-  have explicit ceilings and stable resource-limit failures; and
+  have explicit ceilings and stable resource-limit failures; OPC parser guards
+  retain typed status independently of attacker-controlled diagnostic text;
+  and
 - every machine result is wrapped in `office.output/1` and carries one of
   `office.docx.outline/1`, `office.docx.element/1`, `office.docx.text/1`, or
-  `office.docx.query/1`.
+  `office.docx.query/1`, while the capability registry declares every required
+  and optional field those payloads emit.
 
 See [office-docx-read.md](office-docx-read.md) for the command and schema
 contract.
