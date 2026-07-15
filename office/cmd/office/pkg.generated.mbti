@@ -25,6 +25,8 @@ type DocxCollectedText
 
 type DocxHumanWriter
 
+type DocxLinearPattern
+
 type DocxOutputBudget
 
 type DocxProjection
@@ -39,6 +41,8 @@ type DocxPropertyPredicate
 
 type DocxQuerySpec
 
+type DocxQueryWorkBudget
+
 type DocxTextBudget
 
 type DocxTextCollector
@@ -46,6 +50,8 @@ type DocxTextCollector
 type HelpQuery
 
 type OutputMode
+
+type PreparedDocxQuery
 
 // Type aliases
 
