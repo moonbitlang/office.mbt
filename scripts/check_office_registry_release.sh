@@ -32,15 +32,11 @@ assert_selected_dependency "$dependency_tree" "bobzhang/mbtexcel" "0.1.9"
 assert_selected_dependency "$dependency_tree" "bobzhang/docx2html" "0.1.45"
 moon check --frozen --target native
 moon check --frozen --target wasm
-moon test --frozen --target native transaction
-moon test --frozen --target wasm transaction
-moon test --frozen --target native transaction/sdk_validity
-moon test --frozen --target native raw
-moon test --frozen --target wasm raw
-moon test --frozen --target native raw/sdk_validity
-moon test --frozen --target native docx
-moon test --frozen --target wasm docx
-moon test --frozen --target native docx/sdk_validity
+# No package filter: the registry-resolved artifact must pass the Office root
+# integration suite and every child package. This includes transaction/raw/
+# DOCX SDK-validity packages on native and all portable packages on Wasm.
+moon test --frozen --target native
+moon test --frozen --target wasm
 
 set +e
 publish_output="$(moon publish --frozen --dry-run 2>&1)"

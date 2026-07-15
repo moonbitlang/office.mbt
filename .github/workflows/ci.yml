@@ -163,14 +163,16 @@ jobs:
       - name: Type check (wasm)
         run: moon check --target wasm
 
-      - name: Test Office transactions (wasm)
-        run: moon test --target wasm office/transaction
-
-      - name: Test raw OOXML bounds (wasm)
-        run: moon test --target wasm office/raw
-
-      - name: Test DOCX edit sessions (wasm)
-        run: moon test --target wasm office/docx
+      # Exercise the Office root capability/selector/protocol and shared
+      # OPC/MCE integration suites under Wasm, plus each portable editing
+      # package. A path argument selects one package, so list the child gates
+      # explicitly after the root rather than assuming `office` is recursive.
+      - name: Test Office root and edit packages (wasm)
+        run: |
+          moon test --target wasm office
+          moon test --target wasm office/transaction
+          moon test --target wasm office/raw
+          moon test --target wasm office/docx
 
       - name: Test docx2html (wasm)
         run: moon test --target wasm docx2html

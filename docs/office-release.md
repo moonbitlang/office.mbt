@@ -23,7 +23,8 @@ For the transaction and bounded-DOCX release train introduced by A4 and D2:
    `docx2html@0.1.45`, run `scripts/check_office_registry_release.sh` (or the manual
    `office-registry-release-check` GitHub workflow) and require every native,
    Wasm, transaction, raw, DOCX, SDK-validation, and publish-dry-run check to
-   pass;
+   pass. Both test commands are unfiltered full-module runs, so the Office root
+   integration suite cannot be hidden by green child-package checks;
 8. only then publish `bobzhang/office@0.1.0` from `office/`.
 
 Never publish `office@0.1.0` first. Its manifest intentionally requires
