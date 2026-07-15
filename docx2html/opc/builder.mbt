@@ -166,9 +166,9 @@ pub fn PackageBuilder::add_relationship(
   source? : String = "",
   external? : Bool = false,
 ) -> Unit raise PackageBuildError {
-  let normalized_id = collapse_xml_schema_whitespace(id)
-  let normalized_type = collapse_xml_schema_whitespace(relationship_type)
-  let normalized_target = collapse_xml_schema_whitespace(target)
+  let normalized_id = @xml.collapse_xml_schema_whitespace(id)
+  let normalized_type = @xml.collapse_xml_schema_whitespace(relationship_type)
+  let normalized_target = @xml.collapse_xml_schema_whitespace(target)
   check_metadata("relationship Id", normalized_id)
   if !is_valid_relationship_id(normalized_id) {
     raise PackageBuildError(

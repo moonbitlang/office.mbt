@@ -2,6 +2,8 @@
 package "bobzhang/docx2html/opc"
 
 import {
+  "bobzhang/docx2html/core",
+  "bobzhang/docx2html/xml",
   "bobzhang/mbtexcel/zip",
 }
 
@@ -11,6 +13,8 @@ pub fn is_valid_part_segment(StringView) -> Bool
 pub fn logical_part_name_from_zip_item_name(StringView) -> String?
 
 pub fn part_name_key(StringView) -> String
+
+pub fn read_opc_relationships_xml_limited(BytesView, @xml.XmlReadBudget) -> @xml.XmlElement raise @core.DocxError
 
 pub fn resolve_part_target(String, StringView) -> String?
 

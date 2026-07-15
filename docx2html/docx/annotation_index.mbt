@@ -1578,28 +1578,7 @@ fn read_identity_story_xml_strict(
 ) -> XmlElement raise DocxError {
   let budget = match shared_budget {
     Some(value) => value
-    None => {
-      // Raw tokens plus namespace-prefix copies and mapped expanded names are
-      // input-linear for ordinary OOXML namespace vocabularies but can exceed
-      // the byte count substantially when a compact prefix expands to the
-      // standard WordprocessingML URI on every element and attribute.
-      // Keep the fallback bounded while leaving room for those charged
-      // derived allocations.
-      let scaled = bytes.length().to_int64() * 32L
-      let allowance = if scaled <= 0L {
-        1
-      } else if scaled > 2147483647L {
-        2147483647
-      } else {
-        scaled.to_int()
-      }
-      @xml.xml_read_budget(
-        max_source_units=bytes.length(),
-        max_tokens=allowance,
-        max_materialized_chars=allowance,
-        max_token_chars=if bytes.length() > 0 { bytes.length() } else { 1 },
-      )
-    }
+    None => local_input_linear_xml_budget(bytes)
   }
   @xml.read_xml_bytes_strict_limited(
     bytes,

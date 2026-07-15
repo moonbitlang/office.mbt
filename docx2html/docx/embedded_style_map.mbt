@@ -107,11 +107,7 @@ fn write_relationships_with_embedded_style_map(
   zip : ZipArchive,
 ) -> String raise DocxError {
   let path = "word/_rels/document.xml.rels"
-  let root = read_xml_string(
-    read_required_zip_text(zip, path),
-    namespace_map=office_namespace_map(),
-  )
-  let relationships = read_relationships_xml(root).relationships
+  let relationships = read_relationships(zip, path).relationships
   write_relationships_xml(upsert_embedded_style_map_relationship(relationships))
 }
 

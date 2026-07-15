@@ -5,35 +5,6 @@
 // accepted as a narrow compatibility extension for External Targets only.
 
 ///|
-/// XML Schema `whiteSpace=collapse`: replace XML whitespace runs with one
-/// ASCII space and remove leading/trailing runs. Relationship Id, Type, and
-/// Target values use datatypes whose value spaces apply this normalization.
-fn collapse_xml_schema_whitespace(value : StringView) -> String {
-  let output = StringBuilder::new(size_hint=value.length())
-  let mut wrote_value = false
-  let mut pending_space = false
-  for character in value {
-    let whitespace = character == ' ' ||
-      character == '\t' ||
-      character == '\n' ||
-      character == '\r'
-    if whitespace {
-      if wrote_value {
-        pending_space = true
-      }
-    } else {
-      if pending_space {
-        output.write_char(' ') |> ignore
-        pending_space = false
-      }
-      output.write_char(character) |> ignore
-      wrote_value = true
-    }
-  }
-  output.to_string()
-}
-
-///|
 fn relationship_uri_pchar(character : Char) -> Bool {
   opc_uri_unreserved(character) ||
   opc_uri_sub_delimiter(character) ||

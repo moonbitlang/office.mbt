@@ -582,12 +582,22 @@ fn read_mutation_relationships(
   bytes : BytesView,
   xml_budget : @xml.XmlReadBudget,
 ) -> XmlElement raise DocxError {
-  read_mutation_xml_root(
-    part,
-    bytes,
-    xml_budget,
-    expected_root="relationships:Relationships",
-  )
+  let root = @opc.read_opc_relationships_xml_limited(bytes, xml_budget) catch {
+    ResourceLimit(..) as error => raise error
+    InvalidXml(message~) => {
+      if message == "XML source is not valid UTF-8" {
+        raise Unsupported(message="'\{part}' is not UTF-8; refusing")
+      }
+      raise Unsupported(message="'\{part}' is not well-formed XML; refusing")
+    }
+    _ => raise Unsupported(message="'\{part}' is not well-formed XML; refusing")
+  }
+  if root.name != PACKAGE_RELATIONSHIPS_ROOT {
+    raise Unsupported(
+      message="'\{part}' has root '\{root.name}', expected '\{PACKAGE_RELATIONSHIPS_ROOT}'; refusing",
+    )
+  }
+  root
 }
 
 ///|
@@ -628,7 +638,7 @@ fn collect_relationship_ids(
   ids : StableStringSet,
 ) -> Unit {
   match element.attributes.get("Id") {
-    Some(id) => ids.add(id)
+    Some(id) => ids.add(@xml.collapse_xml_schema_whitespace(id))
     None => ()
   }
   for child in element.children {
