@@ -521,6 +521,10 @@ fn validate_docx_archive_into(
   let parts : StableStringMap[BytesView] = SortedMap([])
   let canonical_names : StableStringMap[String] = SortedMap([])
   let logical_names : StableStringMap[String] = SortedMap([])
+  // Maps every proper ancestor key to the first descendant that claimed it.
+  // Together with `canonical_names`, this enforces OPC's non-derivability
+  // rule in input-linear path depth rather than an entry-count quadratic pass.
+  let descendant_by_ancestor : StableStringMap[String] = SortedMap([])
   let seen : StableStringSet = SortedSet([])
   for entry in archive.entries() {
     if findings.full() {
@@ -543,6 +547,27 @@ fn validate_docx_archive_into(
       match logical_name {
         Some(logical) => {
           let key = part_name_key(logical)
+          if logical != CONTENT_TYPES_PART {
+            match descendant_by_ancestor.get(key) {
+              Some(descendant) =>
+                findings.add(
+                  "part name is derivable from another part name: \{findings.text(name)} and \{findings.text(descendant)}",
+                )
+              None => ()
+            }
+            for ancestor in part_name_ancestor_keys(logical) {
+              match canonical_names.get(ancestor) {
+                Some(existing) =>
+                  findings.add(
+                    "part name is derivable from another part name: \{findings.text(existing)} and \{findings.text(name)}",
+                  )
+                None => ()
+              }
+              if !descendant_by_ancestor.contains(ancestor) {
+                descendant_by_ancestor[ancestor] = name
+              }
+            }
+          }
           match canonical_names.get(key) {
             Some(existing) if existing != name =>
               findings.add(
@@ -616,8 +641,14 @@ fn check_entry_name(name : String, findings : FindingCollector) -> String? {
   // The package content-types stream is reserved package metadata rather than
   // an OPC part name, so its bracketed spelling is the one deliberate Pack-URI
   // exception.
-  if part_name_key(name) == part_name_key(CONTENT_TYPES_PART) {
+  if name == CONTENT_TYPES_PART {
     return Some(CONTENT_TYPES_PART)
+  }
+  if part_name_key(name) == part_name_key(CONTENT_TYPES_PART) {
+    findings.add(
+      "reserved content-types entry must use exact spelling '[Content_Types].xml': \{findings.text(name)}",
+    )
+    return None
   }
   // Explicit ZIP directory records are not OPC parts, but they are valid and
   // preservation-safe package metadata. Validate their path without treating
@@ -658,6 +689,116 @@ priv struct ContentTypes {
 }
 
 ///|
+fn is_media_type_token_char(character : Char) -> Bool {
+  character.is_ascii_alphabetic() ||
+  character.is_ascii_digit() ||
+  character == '!' ||
+  character == '#' ||
+  character == '$' ||
+  character == '%' ||
+  character == '&' ||
+  character.to_int() == 0x27 ||
+  character == '*' ||
+  character == '+' ||
+  character == '-' ||
+  character == '.' ||
+  character == '^' ||
+  character == '_' ||
+  character == '`' ||
+  character == '|' ||
+  character == '~'
+}
+
+///|
+/// RFC media type syntax used by OPC content-type declarations. Parameters are
+/// accepted when they are token or quoted-string values; whitespace is only
+/// permitted around parameter separators.
+fn is_valid_media_type(value : String) -> Bool {
+  if value == "" || value.trim() != value {
+    return false
+  }
+  let characters = value.to_array()
+  let mut index = 0
+  fn consume_token(characters : ArrayView[Char], start : Int) -> Int {
+    let mut at = start
+    while at < characters.length() && is_media_type_token_char(characters[at]) {
+      at += 1
+    }
+    at
+  }
+  fn skip_ows(characters : ArrayView[Char], start : Int) -> Int {
+    let mut at = start
+    while at < characters.length() &&
+          (characters[at] == ' ' || characters[at] == '\t') {
+      at += 1
+    }
+    at
+  }
+  let type_end = consume_token(characters, index)
+  if type_end == index ||
+    type_end >= characters.length() ||
+    characters[type_end] != '/' {
+    return false
+  }
+  index = type_end + 1
+  let subtype_end = consume_token(characters, index)
+  if subtype_end == index {
+    return false
+  }
+  index = subtype_end
+  while index < characters.length() {
+    index = skip_ows(characters, index)
+    if index >= characters.length() || characters[index] != ';' {
+      return false
+    }
+    index = skip_ows(characters, index + 1)
+    let name_end = consume_token(characters, index)
+    if name_end == index {
+      return false
+    }
+    index = skip_ows(characters, name_end)
+    if index >= characters.length() || characters[index] != '=' {
+      return false
+    }
+    index = skip_ows(characters, index + 1)
+    if index >= characters.length() {
+      return false
+    }
+    if characters[index] == '"' {
+      index += 1
+      let mut closed = false
+      while index < characters.length() {
+        let character = characters[index]
+        if character == '"' {
+          closed = true
+          index += 1
+          break
+        }
+        if character == '\\' {
+          index += 1
+          if index >= characters.length() {
+            return false
+          }
+        } else if character.to_int() < 0x20 && character != '\t' {
+          return false
+        }
+        index += 1
+      }
+      if !closed {
+        return false
+      }
+    } else {
+      let value_end = consume_token(characters, index)
+      if value_end == index {
+        return false
+      }
+      index = value_end
+    }
+  }
+  true
+}
+
+///|
 fn check_content_types(
   parts : StableStringMap[BytesView],
   canonical_names : StableStringMap[String],
@@ -679,6 +820,8 @@ fn check_content_types(
   }
   let defaults : StableStringMap[String] = SortedMap([])
   let overrides : StableStringMap[String] = SortedMap([])
+  let seen_defaults : StableStringSet = SortedSet([])
+  let seen_overrides : StableStringSet = SortedSet([])
   for node in root.children {
     if findings.full() {
       findings.stop()
@@ -694,11 +837,19 @@ fn check_content_types(
           ) {
           (Some(extension), Some(content_type)) => {
             let key = extension.to_lower()
-            if defaults.contains(key) {
+            let duplicate = seen_defaults.contains(key)
+            if duplicate {
               findings.add(
                 "\{CONTENT_TYPES_PART}: duplicate Default Extension after case normalization: \{findings.text(key)}",
               )
             } else {
+              seen_defaults.add(key)
+            }
+            if !is_valid_media_type(content_type) {
+              findings.add(
+                "\{CONTENT_TYPES_PART}: Default has invalid ContentType: \{findings.text(content_type)}",
+              )
+            } else if !duplicate {
               defaults[key] = content_type
             }
           }
@@ -721,11 +872,19 @@ fn check_content_types(
               match normalize_override_part_name(part_name) {
                 Some(key) => {
                   let collision_key = part_name_key(key)
-                  if overrides.contains(collision_key) {
+                  let duplicate = seen_overrides.contains(collision_key)
+                  if duplicate {
                     findings.add(
                       "\{CONTENT_TYPES_PART}: duplicate Override PartName after path normalization: \{findings.text(key)}",
                     )
                   } else {
+                    seen_overrides.add(collision_key)
+                  }
+                  if !is_valid_media_type(content_type) {
+                    findings.add(
+                      "\{CONTENT_TYPES_PART}: Override has invalid ContentType: \{findings.text(content_type)}",
+                    )
+                  } else if !duplicate {
                     overrides[collision_key] = content_type
                   }
                   if key != part_name {
@@ -843,6 +1002,100 @@ priv enum DocumentDialect {
 }
 
 ///|
+fn xml_ncname_start(character : Char) -> Bool {
+  let value = character.to_int()
+  character.is_ascii_alphabetic() ||
+  character == '_' ||
+  (value >= 0x00c0 && value <= 0x00d6) ||
+  (value >= 0x00d8 && value <= 0x00f6) ||
+  (value >= 0x00f8 && value <= 0x02ff) ||
+  (value >= 0x0370 && value <= 0x037d) ||
+  (value >= 0x037f && value <= 0x1fff) ||
+  (value >= 0x200c && value <= 0x200d) ||
+  (value >= 0x2070 && value <= 0x218f) ||
+  (value >= 0x2c00 && value <= 0x2fef) ||
+  (value >= 0x3001 && value <= 0xd7ff) ||
+  (value >= 0xf900 && value <= 0xfdcf) ||
+  (value >= 0xfdf0 && value <= 0xfffd) ||
+  (value >= 0x10000 && value <= 0xeffff)
+}
+
+///|
+fn xml_ncname_character(character : Char) -> Bool {
+  let value = character.to_int()
+  xml_ncname_start(character) ||
+  character.is_ascii_digit() ||
+  character == '-' ||
+  character == '.' ||
+  value == 0x00b7 ||
+  (value >= 0x0300 && value <= 0x036f) ||
+  (value >= 0x203f && value <= 0x2040)
+}
+
+///|
+fn is_valid_relationship_id(id : String) -> Bool {
+  let characters = id.to_array()
+  if characters.length() == 0 || !xml_ncname_start(characters[0]) {
+    return false
+  }
+  for index in 1..<characters.length() {
+    if !xml_ncname_character(characters[index]) {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn has_relationships_segment(name : String) -> Bool {
+  for segment in name.split("/") {
+    if part_name_key(segment) == "_rels" {
+      return true
+    }
+  }
+  false
+}
+
+///|
+/// Derives the source described by a Relationships part. Only
+/// `dir/_rels/name.rels` (or the package-root `_rels/.rels`) is valid; a source
+/// may not itself live inside a relationships directory.
+fn relationship_source_part(name : String) -> String? {
+  let key = part_name_key(name)
+  if key == ROOT_RELS_PART {
+    return Some("")
+  }
+  let segments = name.split("/").collect()
+  if segments.length() < 2 ||
+    part_name_key(segments[segments.length() - 2]) != "_rels" {
+    return None
+  }
+  for index in 0..<(segments.length() - 2) {
+    if part_name_key(segments[index]) == "_rels" {
+      return None
+    }
+  }
+  let filename = segments[segments.length() - 1]
+  let filename_key = part_name_key(filename)
+  if !filename_key.has_suffix(".rels") || filename.length() <= 5 {
+    return None
+  }
+  let source_name = filename[:filename.length() - 5].to_owned()
+  let output = StringBuilder::new(size_hint=name.length())
+  for index in 0..<(segments.length() - 2) {
+    if index > 0 {
+      output.write_char('/') |> ignore
+    }
+    output.write_string(segments[index].to_owned()) |> ignore
+  }
+  if segments.length() > 2 {
+    output.write_char('/') |> ignore
+  }
+  output.write_string(source_name) |> ignore
+  Some(output.to_string())
+}
+
+///|
 fn office_document_dialect(rel_type : String) -> DocumentDialect? {
   match rel_type {
     TRANSITIONAL_OFFICE_DOCUMENT_RELATIONSHIP => Some(Transitional)
@@ -894,17 +1147,22 @@ fn check_relationships(
               return
             }
             match resolve_part_target("", target) {
-              Some(resolved) => {
-                if !contains_part(canonical_names, resolved) {
+              Some(resolved) =>
+                if is_rels_part(resolved) {
                   findings.add(
-                    "relationship target missing: \{ROOT_RELS_PART} -> \{findings.text(target)} (resolved \{findings.text(resolved)})",
+                    "relationship target must not be a Relationships part: \{ROOT_RELS_PART} -> \{findings.text(target)}",
                   )
+                } else {
+                  if !contains_part(canonical_names, resolved) {
+                    findings.add(
+                      "relationship target missing: \{ROOT_RELS_PART} -> \{findings.text(target)} (resolved \{findings.text(resolved)})",
+                    )
+                  }
+                  match dialect {
+                    Some(value) => main_parts.push((resolved, value))
+                    None => ()
+                  }
                 }
-                match dialect {
-                  Some(value) => main_parts.push((resolved, value))
-                  None => ()
-                }
-              }
               None => {
                 findings.add(
                   "relationship target invalid: \{ROOT_RELS_PART} -> \{findings.text(target)}",
@@ -954,8 +1212,23 @@ fn check_relationships(
     }
     guard logical_names.get(name) is Some(logical_name) else { continue }
     let canonical_name = part_name_key(logical_name)
-    if canonical_name == ROOT_RELS_PART || !is_rels_part(canonical_name) {
+    if canonical_name == ROOT_RELS_PART {
       continue
+    }
+    if !is_rels_part(logical_name) {
+      if has_relationships_segment(logical_name) {
+        findings.add("invalid Relationships part name: \{findings.text(name)}")
+      }
+      continue
+    }
+    guard relationship_source_part(logical_name) is Some(source) else {
+      findings.add("invalid Relationships part name: \{findings.text(name)}")
+      continue
+    }
+    if !contains_part(canonical_names, source) {
+      findings.add(
+        "relationship part \{findings.text(name)} describes missing source part: \{findings.text(source)}",
+      )
     }
     check_relationship_content_type(name, logical_name, content_types, findings)
     match parse_xml_part(name, bytes, findings) {
@@ -970,7 +1243,11 @@ fn check_relationships(
           if !external {
             match resolve_part_target(base, target) {
               Some(resolved) =>
-                if !contains_part(canonical_names, resolved) {
+                if is_rels_part(resolved) {
+                  findings.add(
+                    "relationship target must not be a Relationships part: \{findings.text(name)} -> \{findings.text(target)}",
+                  )
+                } else if !contains_part(canonical_names, resolved) {
                   findings.add(
                     "relationship target missing: \{findings.text(name)} -> \{findings.text(target)} (resolved \{findings.text(resolved)})",
                   )
@@ -1090,23 +1367,43 @@ fn for_each_relationship(
       }
       continue
     }
+    let mut valid = true
     let id = element.attributes.get("Id").unwrap_or("")
     if id == "" {
       findings.add(
         "\{findings.text(part_name)}: Relationship missing a non-empty Id",
       )
+      valid = false
+    } else if !is_valid_relationship_id(id) {
+      findings.add(
+        "\{findings.text(part_name)}: Relationship Id is not an XML NCName: \{findings.text(id)}",
+      )
+      valid = false
     } else if ids.contains(id) {
       findings.add(
         "\{findings.text(part_name)}: duplicate Relationship Id: \{findings.text(id)}",
       )
+      valid = false
     } else {
       ids.add(id)
     }
     let rel_type = element.attributes.get("Type").unwrap_or("")
+    if rel_type == "" {
+      findings.add(
+        "\{findings.text(part_name)}: Relationship missing a non-empty Type",
+      )
+      valid = false
+    }
     let target = element.attributes.get("Target").unwrap_or("")
+    if target == "" {
+      findings.add(
+        "\{findings.text(part_name)}: Relationship missing a non-empty Target",
+      )
+      valid = false
+    }
     match element.attributes.get("TargetMode") {
-      None | Some("Internal") => visit(id, rel_type, target, false)
-      Some("External") => visit(id, rel_type, target, true)
+      None | Some("Internal") => if valid { visit(id, rel_type, target, false) }
+      Some("External") => if valid { visit(id, rel_type, target, true) }
       Some(mode) =>
         findings.add(
           "\{findings.text(part_name)}: Relationship has invalid TargetMode: \{findings.text(mode)}",
@@ -1119,19 +1416,17 @@ fn for_each_relationship(
 /// `dir/_rels/name.rels` describes `dir/name`; its targets resolve against
 /// `dir`.
 fn is_rels_part(name : String) -> Bool {
-  let canonical = part_name_key(name)
-  canonical.has_suffix(".rels") &&
-  (canonical.has_prefix("_rels/") || canonical.find("/_rels/") is Some(_))
+  relationship_source_part(name) is Some(_)
 }
 
 ///|
 fn rels_base_dir(rels_name : String) -> String {
-  // OPC part-name equivalence folds ASCII case. Search the canonical key but
-  // slice the original logical name: ASCII folding preserves indices, while
-  // retaining the producer's spelling gives downstream diagnostics and edits
-  // the most precise identity available.
-  match part_name_key(rels_name).find("/_rels/") {
-    Some(index) => rels_name[:index].to_owned()
+  match relationship_source_part(rels_name) {
+    Some(source) =>
+      match source.rev_find("/") {
+        Some(index) => source[:index].to_owned()
+        None => ""
+      }
     None => ""
   }
 }

@@ -257,3 +257,39 @@ test "external relationships skip resolution and emit TargetMode" {
   let text = @utf8.decode(rels, ignore_bom=true)
   inspect(text.find("TargetMode=\"External\"") is Some(_), content="true")
 }
+
+///|
+test "builder enforces package-wide names and metadata grammars" {
+  expect_build_error(
+    builder => builder.add_part("word", b"ancestor"),
+    "part names must not be derivable from one another",
+  )
+  expect_build_error(
+    builder => builder.add_part("_rels", b"generated ancestor"),
+    "reserved part name '_rels'",
+  )
+  expect_build_error(
+    builder => builder.add_default("bin", "not a media type"),
+    "Default content type is not a valid media type",
+  )
+  expect_build_error(
+    builder => builder.add_override("/word/document.xml", "application"),
+    "Override content type is not a valid media type",
+  )
+  expect_build_error(
+    builder => {
+      builder.add_relationship("bad id", "urn:test", "word/document.xml")
+    },
+    "relationship Id is not an XML NCName",
+  )
+  expect_build_error(
+    builder => builder.add_relationship("rBadTarget", "urn:test", "_rels/.rels"),
+    "relationship rBadTarget of '' must not target a Relationships part",
+  )
+  let parameterized = minimal_builder()
+  parameterized.add_default(
+    "bin", "application/octet-stream; charset=\"utf-8\"",
+  )
+  parameterized.add_part("word/data.bin", b"data")
+  assert_eq(@opc.validate_docx_package(parameterized.build()), [])
+}

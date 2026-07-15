@@ -14,6 +14,23 @@ fn canonical_part_name(path : String) -> String {
 }
 
 ///|
+fn zip_part_name_ancestor_keys(name : String) -> Array[String] {
+  let key = canonical_part_name(name)
+  let segments = key.split("/").collect()
+  let ancestors : Array[String] = []
+  let mut prefix = ""
+  for index in 0..<(segments.length() - 1) {
+    prefix = if index == 0 {
+      segments[index].to_owned()
+    } else {
+      prefix + "/" + segments[index].to_owned()
+    }
+    ancestors.push(prefix)
+  }
+  ancestors
+}
+
+///|
 /// Builds an owned part view and rejects case-equivalent aliases before they
 /// can collapse into the canonical lookup index.
 pub fn zip_archive(
@@ -32,9 +49,12 @@ pub fn zip_archive_entries(
   let entries : StableStringMap[BytesView] = SortedMap([])
   let canonical_names : StableStringMap[String] = SortedMap([])
   let logical_names : StableStringMap[String] = SortedMap([])
+  let descendant_by_ancestor : StableStringMap[String] = SortedMap([])
   for pair in source {
     let (name, bytes) = pair
-    insert_zip_entry(entries, canonical_names, logical_names, name, bytes)
+    insert_zip_entry(
+      entries, canonical_names, logical_names, descendant_by_ancestor, name, bytes,
+    )
   }
   { entries, canonical_names, logical_names }
 }
@@ -44,6 +64,7 @@ fn insert_zip_entry(
   entries : StableStringMap[BytesView],
   canonical_names : StableStringMap[String],
   logical_names : StableStringMap[String],
+  descendant_by_ancestor : StableStringMap[String],
   name : String,
   bytes : BytesView,
 ) -> Unit raise DocxError {
@@ -56,9 +77,13 @@ fn insert_zip_entry(
   if entries.contains(name) {
     raise InvalidZip(message="duplicate ZIP entry name: \{name}")
   }
-  let logical_name = if canonical_part_name(name) ==
-    canonical_part_name("[Content_Types].xml") {
+  let logical_name = if name == "[Content_Types].xml" {
     "[Content_Types].xml"
+  } else if canonical_part_name(name) ==
+    canonical_part_name("[Content_Types].xml") {
+    raise InvalidZip(
+      message="the reserved content-types entry must use exact spelling '[Content_Types].xml': \{name}",
+    )
   } else {
     match @opc.logical_part_name_from_zip_item_name(name) {
       Some(value) => value
@@ -76,6 +101,27 @@ fn insert_zip_entry(
       )
     _ => ()
   }
+  if logical_name != "[Content_Types].xml" {
+    match descendant_by_ancestor.get(key) {
+      Some(descendant) =>
+        raise InvalidZip(
+          message="OPC part names must not be derivable from one another: \{name}, \{descendant}",
+        )
+      None => ()
+    }
+    for ancestor in zip_part_name_ancestor_keys(logical_name) {
+      match canonical_names.get(ancestor) {
+        Some(existing) =>
+          raise InvalidZip(
+            message="OPC part names must not be derivable from one another: \{existing}, \{name}",
+          )
+        None => ()
+      }
+      if !descendant_by_ancestor.contains(ancestor) {
+        descendant_by_ancestor[ancestor] = name
+      }
+    }
+  }
   entries[name] = bytes
   canonical_names[key] = name
   logical_names[name] = logical_name
@@ -91,11 +137,13 @@ pub fn open_zip_archive(
   let entries : StableStringMap[BytesView] = SortedMap([])
   let canonical_names : StableStringMap[String] = SortedMap([])
   let logical_names : StableStringMap[String] = SortedMap([])
+  let descendant_by_ancestor : StableStringMap[String] = SortedMap([])
   for entry in archive.entries() {
     insert_zip_entry(
       entries,
       canonical_names,
       logical_names,
+      descendant_by_ancestor,
       entry.name(),
       entry.data(),
     )
