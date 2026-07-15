@@ -76,6 +76,54 @@ fn fixture_docx(
 }
 
 ///|
+test "DOCX reader keeps logical Unicode identity separate from ZIP spelling" {
+  let builder = @opc.PackageBuilder::new()
+  builder.add_default(
+    "rels", "application/vnd.openxmlformats-package.relationships+xml",
+  )
+  builder.add_default("xml", "application/xml")
+  builder.add_override(
+    "/word/é.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+  )
+  builder.add_relationship(
+    "rId1", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "word/é.xml",
+  )
+  builder.add_relationship(
+    "rStyles",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
+    "ßtyles.xml",
+    source="word/é.xml",
+  )
+  builder.add_override(
+    "/word/ßtyles.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml",
+  )
+  builder.add_part(
+    "word/é.xml",
+    @utf8.encode(
+      (
+        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Unicode main part</w:t></w:r></w:p><w:sectPr/></w:body></w:document>
+      ),
+    ),
+  )
+  builder.add_part(
+    "word/ßtyles.xml",
+    @utf8.encode(
+      (
+        #|<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>
+      ),
+    ),
+  )
+  let bytes = builder.build()
+  let archive = @mbtzip.read(bytes)
+  assert_true(archive.get("word/%C3%A9.xml") is Some(_))
+  assert_true(archive.get("word/_rels/%C3%A9.xml.rels") is Some(_))
+  assert_true(archive.get("word/%C3%9Ftyles.xml") is Some(_))
+  let annotated = @docx.read_docx_annotated_archive(archive)
+  assert_eq(annotated.main_story_part(), "word/%C3%A9.xml")
+}
+
+///|
 fn diagnostic_hash_clustered_element_names(
   count : Int,
   bucket_mask : Int,
@@ -115,6 +163,100 @@ test "real DOCX diagnostics ignore deterministic string-hash clustering" {
       @core.warning("An unrecognised element was ignored: " + name),
     )
   }
+}
+
+///|
+test "bounded annotated reads cap diagnostics before retention" {
+  let document = StringBuilder()
+  document.write_string(
+    "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>",
+  )
+  for index in 0..<16 {
+    document.write_string("<n\{index}\{"x".repeat(100)}/>")
+  }
+  document.write_string("<w:p/></w:body></w:document>")
+  let archive = try! @mbtzip.read(fixture_docx(document.to_string()))
+  let budget = @xml.xml_read_budget(
+    max_source_units=1024 * 1024,
+    max_tokens=4096,
+    max_materialized_chars=1024 * 1024,
+    max_token_chars=4096,
+  )
+  let annotated = @docx.read_docx_annotated_archive_limited(
+    archive,
+    budget,
+    max_diagnostics=4,
+    max_diagnostic_chars=64,
+  )
+  let messages = annotated.result().messages
+  assert_eq(messages.length(), 4)
+  for index in 0..<3 {
+    guard messages[index] is Warning(text) else {
+      fail("expected bounded warning")
+    }
+    assert_true(text.length() <= 66)
+    assert_true(text.has_suffix("…"))
+  }
+  assert_eq(
+    messages[3],
+    @core.warning("additional DOCX diagnostics were omitted"),
+  )
+}
+
+///|
+test "bounded annotated reads also cap their truncation notice" {
+  let document = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><unknown/><w:p/></w:body></w:document>"
+  let archive = try! @mbtzip.read(fixture_docx(document))
+  let budget = @xml.xml_read_budget(
+    max_source_units=1024 * 1024,
+    max_tokens=4096,
+    max_materialized_chars=1024 * 1024,
+    max_token_chars=4096,
+  )
+  let annotated = @docx.read_docx_annotated_archive_limited(
+    archive,
+    budget,
+    max_diagnostics=1,
+    max_diagnostic_chars=1,
+  )
+  assert_eq(annotated.result().messages, [@core.warning("…")])
+}
+
+///|
+test "bounded annotated reads cap annotation diagnostics during production" {
+  let document = StringBuilder()
+  document.write_string(
+    "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p>",
+  )
+  for index in 0..<16 {
+    document.write_string(
+      "<w:r><w:commentReference w:id=\"missing-\{index}\"/></w:r>",
+    )
+  }
+  document.write_string("</w:p></w:body></w:document>")
+  let archive = try! @mbtzip.read(fixture_docx(document.to_string()))
+  let budget = @xml.xml_read_budget(
+    max_source_units=1024 * 1024,
+    max_tokens=4096,
+    max_materialized_chars=1024 * 1024,
+    max_token_chars=4096,
+  )
+  let annotated = @docx.read_docx_annotated_archive_limited(
+    archive,
+    budget,
+    max_diagnostics=4,
+    max_diagnostic_chars=64,
+  )
+  assert_eq(annotated.annotations().warnings().length(), 4)
+  assert_eq(
+    annotated.annotations().warnings()[3],
+    "annotation index: additional diagnostics were omitted",
+  )
+  assert_eq(annotated.result().messages.length(), 4)
+  assert_eq(
+    annotated.result().messages[3],
+    @core.warning("additional DOCX diagnostics were omitted"),
+  )
 }
 
 ///|
@@ -284,6 +426,56 @@ test "archive-backed annotated reads share one cumulative XML budget" {
 }
 
 ///|
+test "limited annotated reads are pinned to the validated main part" {
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:document>
+  let archive = try! @mbtzip.read(fixture_docx(document))
+  let budget = @xml.xml_read_budget(
+    max_source_units=64 * 1024,
+    max_tokens=4096,
+    max_materialized_chars=32 * 1024,
+    max_token_chars=8 * 1024,
+  )
+  try
+    @docx.read_docx_annotated_archive_limited(
+      archive,
+      budget,
+      expected_main_document_path="custom/unvalidated.xml",
+    )
+  catch {
+    Unsupported(message~) =>
+      assert_true(message.contains("different main document part"))
+    _ => fail("expected a validated main-part identity mismatch")
+  } noraise {
+    _ => fail("expected a validated main-part identity mismatch")
+  }
+}
+
+///|
+test "annotated story sources distinguish relationships from legacy fallback" {
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:document>
+  let bytes = fixture_docx(document)
+  let related = @docx.read_docx_annotated(bytes)
+  assert_eq(related.main_story_source().part(), "word/document.xml")
+  assert_eq(related.main_story_source().authority().name(), "relationship")
+  let archive = try! @mbtzip.read(bytes)
+  assert_true(
+    archive.replace(
+      "_rels/.rels",
+      @utf8.encode(
+        (
+          #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>
+        ),
+      ),
+    ),
+  )
+  let fallback = @docx.read_docx_annotated_archive(archive)
+  assert_eq(fallback.main_story_source().part(), "word/document.xml")
+  assert_eq(fallback.main_story_source().authority().name(), "legacy-fallback")
+}
+
+///|
 test "unreferenced Transitional headers participate in identity validation only" {
   let bytes = unreferenced_story_fixture(
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header",
@@ -377,6 +569,108 @@ test "section story references require matching typed internal relationships" {
   } noraise {
     _ => fail("expected a duplicate section relationship id to fail")
   }
+}
+
+///|
+test "tolerant annotated reads warn on broken section references while mutation reads fail" {
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:body><w:p/><w:sectPr><w:headerReference w:type="default"/></w:sectPr></w:body>
+    #|</w:document>
+  let archive = try! @mbtzip.read(fixture_docx(document))
+  fn budget() -> @xml.XmlReadBudget {
+    @xml.xml_read_budget(
+      max_source_units=1024 * 1024,
+      max_tokens=4096,
+      max_materialized_chars=1024 * 1024,
+      max_token_chars=4096,
+    )
+  }
+  let tolerant = @docx.read_docx_annotated_archive_tolerant_limited(
+    archive,
+    budget(),
+  )
+  assert_eq(tolerant.result().headers.length(), 0)
+  assert_true(
+    tolerant.result().messages.any(message => {
+      message ==
+      @core.warning("A header/footer reference without r:id was ignored")
+    }),
+  )
+  try @docx.read_docx_annotated_archive_limited(archive, budget()) catch {
+    Unsupported(message~) => assert_true(message.contains("has no r:id"))
+    _ => fail("expected mutation-safe read to reject the missing r:id")
+  } noraise {
+    _ => fail("expected mutation-safe read to fail closed")
+  }
+
+  let external_document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+    #|<w:body><w:p/><w:sectPr><w:headerReference w:type="default" r:id="rStory"/></w:sectPr></w:body>
+    #|</w:document>
+  let external_bytes = with_main_relationship(
+    fixture_docx(external_document),
+    "rStory",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header",
+    "https://example.invalid/header.xml",
+    external=true,
+  )
+  let external_archive = try! @mbtzip.read(external_bytes)
+  let external_tolerant = @docx.read_docx_annotated_archive_tolerant_limited(
+    external_archive,
+    budget(),
+  )
+  assert_eq(external_tolerant.result().headers.length(), 0)
+  assert_true(
+    external_tolerant.result().messages.any(message => {
+      message ==
+      @core.warning(
+        "A header reference through invalid relationship rStory was ignored",
+      )
+    }),
+  )
+  try
+    @docx.read_docx_annotated_archive_limited(external_archive, budget())
+  catch {
+    Unsupported(message~) => assert_true(message.contains("must be internal"))
+    _ => fail("expected mutation-safe read to reject the external header")
+  } noraise {
+    _ => fail("expected mutation-safe read to fail closed")
+  }
+}
+
+///|
+test "tolerant D2 ids distinguish missing attributes from literal undefined" {
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:document>
+  let comments =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment><w:p/></w:comment><w:comment w:id="undefined"><w:p/></w:comment></w:comments>
+  let footnotes =
+    #|<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote><w:p/></w:footnote><w:footnote w:id="undefined"><w:p/></w:footnote></w:footnotes>
+  let bytes = fixture_docx(
+    document,
+    comments_xml=Some(comments),
+    footnotes_xml=Some(footnotes),
+  )
+  let legacy = @docx.read_docx_annotated(bytes)
+  assert_eq(legacy.comment_bodies().map(pair => pair.0), [
+    "undefined", "undefined",
+  ])
+  assert_eq(legacy.footnote_bodies().map(pair => pair.0), [
+    "undefined", "undefined",
+  ])
+  let archive = try! @mbtzip.read(bytes)
+  let budget = @xml.xml_read_budget(
+    max_source_units=1024 * 1024,
+    max_tokens=4096,
+    max_materialized_chars=1024 * 1024,
+    max_token_chars=4096,
+  )
+  let tolerant = @docx.read_docx_annotated_archive_tolerant_limited(
+    archive, budget,
+  )
+  assert_eq(tolerant.comment_bodies().map(pair => pair.0), ["", "undefined"])
+  assert_eq(tolerant.footnote_bodies().map(pair => pair.0), ["", "undefined"])
 }
 
 ///|
@@ -1795,10 +2089,10 @@ test "index review round 3: drawings are opaque — run positions verified, imag
 }
 
 ///|
-test "J2 review round 1: cross-story coverage keys and unrepresentable ids warn" {
+test "delimiter-rich annotation ids do not emit obsolete path warnings" {
   // A range anchored INSIDE a comment body covers that body paragraph
-  // (cross-story coverage), and an id spelled with '/' cannot take the
-  // [@id=...] form — the ordinal-fallback diagnostic is emitted.
+  // (cross-story coverage). The canonical Office selector grammar escapes
+  // delimiter-rich ids, so the older ordinal-fallback warning must stay gone.
   let document =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
     #|<w:body><w:p><w:r><w:commentReference w:id="a/b"/></w:r></w:p></w:body>
@@ -1810,14 +2104,13 @@ test "J2 review round 1: cross-story coverage keys and unrepresentable ids warn"
   let bytes = fixture_docx(document, comments_xml=Some(comments))
   let annotated = @docx.read_docx_annotated(bytes)
   let index = annotated.annotations()
-  let mut saw_fallback = false
+  let mut saw_obsolete_warning = false
   for warning in index.warnings() {
-    if warning ==
-      "annotation index: comment id 'a/b' cannot be addressed as [@id=...]; ordinal paths are emitted for it" {
-      saw_fallback = true
+    if warning.contains("cannot be addressed as [@id=...]") {
+      saw_obsolete_warning = true
     }
   }
-  debug_inspect(saw_fallback, content="true")
+  assert_false(saw_obsolete_warning)
   // The point anchor still covers the body paragraph.
   debug_inspect(
     index.covering_comment_ids("/body/p[1]"),

@@ -37,6 +37,31 @@ fn RelationshipIndex::build(relationships : Relationships) -> RelationshipIndex 
 }
 
 ///|
+/// Relationship IDs are package-scoped identities. Missing and duplicate IDs
+/// are both unresolved here: callers must never choose an attacker-controlled
+/// first declaration from an ambiguous relationship set.
+fn RelationshipIndex::find_unique_by_id(
+  self : RelationshipIndex,
+  id : String,
+) -> Relationship? {
+  match self.by_id.get(id) {
+    Some([relationship]) => Some(relationship)
+    _ => None
+  }
+}
+
+///|
+fn RelationshipIndex::find_unique_target_by_id(
+  self : RelationshipIndex,
+  id : String,
+) -> String? {
+  match self.find_unique_by_id(id) {
+    Some(relationship) => Some(relationship.target)
+    None => None
+  }
+}
+
+///|
 const TRANSITIONAL_OFFICE_DOCUMENT_RELATIONSHIP : String = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
 
 ///|
@@ -74,6 +99,24 @@ const STRICT_FOOTNOTES_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/offic
 
 ///|
 const STRICT_ENDNOTES_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/officeDocument/relationships/endnotes"
+
+///|
+const TRANSITIONAL_STYLES_RELATIONSHIP : String = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles"
+
+///|
+const STRICT_STYLES_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/officeDocument/relationships/styles"
+
+///|
+const TRANSITIONAL_NUMBERING_RELATIONSHIP : String = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering"
+
+///|
+const STRICT_NUMBERING_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/officeDocument/relationships/numbering"
+
+///|
+const STYLES_CONTENT_TYPE : String = "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"
+
+///|
+const NUMBERING_CONTENT_TYPE : String = "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"
 
 ///|
 const COMMENTS_CONTENT_TYPE : String = "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"
@@ -150,6 +193,48 @@ priv struct ReachableAnnotationStoryPart {
   kind : String
   path : String
   relationship_dialect : OoxmlDialect
+}
+
+///|
+priv struct RelatedWordprocessingPart {
+  path : String
+  relationship_dialect : OoxmlDialect
+}
+
+///|
+priv enum WordprocessingPartRole {
+  StylesPartRole
+  NumberingPartRole
+}
+
+///|
+fn WordprocessingPartRole::label(self : WordprocessingPartRole) -> String {
+  match self {
+    StylesPartRole => "styles"
+    NumberingPartRole => "numbering"
+  }
+}
+
+///|
+fn WordprocessingPartRole::content_type(
+  self : WordprocessingPartRole,
+) -> String {
+  match self {
+    StylesPartRole => STYLES_CONTENT_TYPE
+    NumberingPartRole => NUMBERING_CONTENT_TYPE
+  }
+}
+
+///|
+fn same_wordprocessing_part_role(
+  left : WordprocessingPartRole,
+  right : WordprocessingPartRole,
+) -> Bool {
+  match (left, right) {
+    (StylesPartRole, StylesPartRole) | (NumberingPartRole, NumberingPartRole) =>
+      true
+    _ => false
+  }
 }
 
 ///|
@@ -443,6 +528,30 @@ pub fn read_docx_with_messages(
 }
 
 ///|
+/// Controls only the spelling of an absent annotation id. Existing reader
+/// APIs retain Mammoth's JavaScript-derived `"undefined"` sentinel; the new
+/// D2 projection uses an empty value so absence cannot alias a literal id.
+priv enum MissingAnnotationIdMode {
+  LegacyUndefinedAnnotationId
+  EmptyMissingAnnotationId
+}
+
+///|
+fn annotation_id_or_missing(
+  value : String?,
+  mode : MissingAnnotationIdMode,
+) -> String {
+  match value {
+    Some(id) => id
+    None =>
+      match mode {
+        LegacyUndefinedAnnotationId => "undefined"
+        EmptyMissingAnnotationId => ""
+      }
+  }
+}
+
+///|
 /// The assembled per-document reading context: every part-derived input the
 /// body/story readers need. Shared by `read_docx_zip_with_messages` (the
 /// frozen body-only surface) and `read_docx_package` (body + sections +
@@ -450,6 +559,8 @@ pub fn read_docx_with_messages(
 priv struct DocumentParts {
   zip : ZipArchive
   xml_budget : @xml.XmlReadBudget?
+  diagnostics : ReaderDiagnosticCollector?
+  missing_annotation_id_mode : MissingAnnotationIdMode
   main_document_path : String
   main_relationship_dialect : OoxmlDialect?
   root : XmlElement
@@ -478,17 +589,27 @@ fn DocumentParts::build(
   external_files? : ExternalFileAccess = default_external_file_access(),
   read_images? : Bool = true,
   xml_budget? : @xml.XmlReadBudget,
+  diagnostics? : ReaderDiagnosticCollector,
+  expected_main_document_path? : String,
+  missing_annotation_id_mode? : MissingAnnotationIdMode = LegacyUndefinedAnnotationId,
 ) -> DocumentParts raise DocxError {
-  let main_document = find_main_document(zip, xml_budget?)
+  let main_document = find_main_document(
+    zip,
+    xml_budget?,
+    expected_main_document_path?,
+  )
   let main_document_path = main_document.path
   let relationships = read_relationships(
     zip,
-    relationships_path_for_part(main_document_path),
+    relationships_path_for_part(zip, main_document_path),
     xml_budget?,
   )
   let relationship_index = RelationshipIndex::build(relationships)
   let content_types = read_content_types(zip, xml_budget?)
-  let base_path = split_zip_path(main_document_path).0
+  let logical_main_document_path = zip
+    .logical_path(main_document_path)
+    .unwrap_or(main_document_path)
+  let base_path = split_zip_path(logical_main_document_path).0
   let comments_part_path = resolve_unique_internal_part(
     zip,
     relationships,
@@ -521,30 +642,55 @@ fn DocumentParts::build(
     "endnotes",
     reject_multiple_relationships=true,
   )
-  content_types.require_annotation_part(comments_part_path, "comments")
+  content_types.require_annotation_part(zip, comments_part_path, "comments")
   content_types.require_annotation_part(
-    comments_extended_part_path, "commentsExtended",
+    zip, comments_extended_part_path, "commentsExtended",
   )
-  content_types.require_annotation_part(footnotes_part_path, "footnotes")
-  content_types.require_annotation_part(endnotes_part_path, "endnotes")
-  let styles = read_styles(
-    zip,
-    find_part_path(
-      zip,
-      relationships,
-      relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
-      base_path~,
-      fallback_path="word/styles.xml",
-    ),
-    xml_budget?,
-  )
-  let numbering = read_numbering_for_document(
+  content_types.require_annotation_part(zip, footnotes_part_path, "footnotes")
+  content_types.require_annotation_part(zip, endnotes_part_path, "endnotes")
+  let styles_part = resolve_unique_wordprocessing_part(
     zip,
     relationships,
-    styles,
     base_path,
-    xml_budget?,
+    StylesPartRole,
+    main_document.relationship_dialect,
   )
+  let numbering_part = resolve_unique_wordprocessing_part(
+    zip,
+    relationships,
+    base_path,
+    NumberingPartRole,
+    main_document.relationship_dialect,
+  )
+  let styles = match styles_part {
+    Some(part) => {
+      content_types.require_wordprocessing_part(zip, part, StylesPartRole)
+      read_styles_xml(
+        read_wordprocessing_role_xml_part(
+          zip,
+          part,
+          StylesPartRole,
+          xml_budget?,
+        ),
+      )
+    }
+    None => SortedMap([])
+  }
+  let numbering = match numbering_part {
+    Some(part) => {
+      content_types.require_wordprocessing_part(zip, part, NumberingPartRole)
+      read_numbering_xml(
+        read_wordprocessing_role_xml_part(
+          zip,
+          part,
+          NumberingPartRole,
+          xml_budget?,
+        ),
+        styles,
+      )
+    }
+    None => NumberingMap::empty()
+  }
   let notes_result = read_notes_for_document(
     zip,
     styles,
@@ -555,6 +701,8 @@ fn DocumentParts::build(
     external_files~,
     read_images~,
     xml_budget?,
+    diagnostics?,
+    missing_annotation_id_mode~,
   )
   let comments_result = read_comments_for_document(
     zip,
@@ -567,11 +715,15 @@ fn DocumentParts::build(
     read_images~,
     xml_budget?,
     comments_part_path?,
+    diagnostics?,
+    missing_annotation_id_mode~,
   )
   let root = read_xml_part(zip, main_document_path, xml_budget?)
   {
     zip,
     xml_budget,
+    diagnostics,
+    missing_annotation_id_mode,
     main_document_path,
     main_relationship_dialect: main_document.relationship_dialect,
     root,
@@ -601,13 +753,15 @@ fn DocumentParts::read_document(
     self.styles,
     self.numbering,
     self.zip,
-    self.relationships,
+    self.relationship_index,
     self.content_types,
     self.base_path,
     self.notes_result.notes,
     self.comments_result.comments,
     external_files=self.external_files,
     read_images=self.read_images,
+    diagnostics?=self.diagnostics,
+    missing_annotation_id_mode=self.missing_annotation_id_mode,
   )
 }
 
@@ -680,6 +834,52 @@ fn office_namespace_map() -> Map[String, String] {
 }
 
 ///|
+fn wordprocessing_role_namespace_map(
+  dialect : OoxmlDialect,
+) -> Map[String, String] {
+  let namespaces = office_namespace_map()
+  match dialect {
+    TransitionalOoxml =>
+      namespaces[STRICT_WORDPROCESSINGML_NAMESPACE] = "w-incompatible"
+    StrictOoxml => namespaces[WORDPROCESSINGML_NAMESPACE] = "w-incompatible"
+  }
+  namespaces
+}
+
+///|
+fn read_wordprocessing_role_xml_part(
+  zip : ZipArchive,
+  part : RelatedWordprocessingPart,
+  role : WordprocessingPartRole,
+  xml_budget? : @xml.XmlReadBudget,
+) -> XmlElement raise DocxError {
+  guard zip.read_bytes(part.path) is Some(bytes) else {
+    raise MissingPart(message="missing DOCX part: " + part.path)
+  }
+  let namespace_map = wordprocessing_role_namespace_map(
+    part.relationship_dialect,
+  )
+  let root = match xml_budget {
+    Some(budget) =>
+      @xml.read_xml_bytes_strict_limited(bytes, budget, namespace_map~)
+    None => {
+      let text = @utf8.decode(bytes, ignore_bom=true) catch {
+        _ => raise InvalidXml(message="part is not valid UTF-8: " + part.path)
+      }
+      @xml.read_xml_string_strict(text, namespace_map~)
+    }
+  }
+  let kind = role.label()
+  let expected_root = "w:" + kind
+  if root.name != expected_root {
+    raise Unsupported(
+      message="the \{kind} relationship target '\{part.path}' has root '\{root.name}', expected '\{expected_root}' in the relationship dialect",
+    )
+  }
+  root
+}
+
+///|
 priv struct MainDocumentPart {
   path : String
   relationship_dialect : OoxmlDialect?
@@ -689,6 +889,7 @@ priv struct MainDocumentPart {
 fn find_main_document(
   zip : ZipArchive,
   xml_budget? : @xml.XmlReadBudget,
+  expected_main_document_path? : String,
 ) -> MainDocumentPart raise DocxError {
   let relationships = read_relationships(zip, "_rels/.rels", xml_budget?)
   let path = resolve_unique_internal_part(
@@ -702,24 +903,41 @@ fn find_main_document(
     "officeDocument",
     reject_multiple_relationships=true,
   )
-  match path {
-    Some(authoritative) => {
-      let mut relationship_dialect : OoxmlDialect? = None
-      for relationship in relationships.relationships {
-        match office_relationship_dialect(relationship.relationship_type) {
-          Some(dialect) => relationship_dialect = Some(dialect)
-          None => ()
-        }
+  fn authoritative_part(authoritative : String) -> MainDocumentPart {
+    let mut relationship_dialect : OoxmlDialect? = None
+    for relationship in relationships.relationships {
+      match office_relationship_dialect(relationship.relationship_type) {
+        Some(dialect) => relationship_dialect = Some(dialect)
+        None => ()
       }
-      { path: authoritative, relationship_dialect }
     }
-    None =>
-      match zip.resolve_path("word/document.xml") {
-        Some(actual) => { path: actual, relationship_dialect: None }
-        None =>
-          raise MissingPart(
-            message="Could not find main document part. Are you sure this is a valid .docx file?",
+    { path: authoritative, relationship_dialect }
+  }
+  match expected_main_document_path {
+    Some(expected) =>
+      match path {
+        Some(authoritative) if authoritative == expected =>
+          authoritative_part(authoritative)
+        Some(_) =>
+          raise Unsupported(
+            message="the DOCX reader selected a different main document part than structural validation",
           )
+        None =>
+          raise Unsupported(
+            message="the structurally validated officeDocument relationship was not recognized by the DOCX reader",
+          )
+      }
+    None =>
+      match path {
+        Some(authoritative) => authoritative_part(authoritative)
+        None =>
+          match zip.resolve_path("word/document.xml") {
+            Some(actual) => { path: actual, relationship_dialect: None }
+            None =>
+              raise MissingPart(
+                message="Could not find main document part. Are you sure this is a valid .docx file?",
+              )
+          }
       }
   }
 }
@@ -824,7 +1042,8 @@ fn resolve_unique_internal_part(
     if relationship.target == "" {
       raise Unsupported(message="the \{label} relationship has no target")
     }
-    guard @opc.resolve_target(base_path, relationship.target) is Some(resolved) else {
+    guard @opc.resolve_part_target(base_path, relationship.target)
+      is Some(resolved) else {
       raise Unsupported(message="the \{label} relationship target is invalid")
     }
     guard zip.resolve_path(resolved) is Some(actual) else {
@@ -850,6 +1069,91 @@ fn resolve_unique_internal_part(
     _ =>
       raise Unsupported(
         message="the document declares multiple distinct \{label} relationship targets",
+      )
+  }
+}
+
+///|
+fn wordprocessing_role_relationship_identity(
+  relationship_type : String,
+) -> (WordprocessingPartRole, OoxmlDialect)? {
+  match relationship_type {
+    TRANSITIONAL_STYLES_RELATIONSHIP =>
+      Some((StylesPartRole, TransitionalOoxml))
+    STRICT_STYLES_RELATIONSHIP => Some((StylesPartRole, StrictOoxml))
+    TRANSITIONAL_NUMBERING_RELATIONSHIP =>
+      Some((NumberingPartRole, TransitionalOoxml))
+    STRICT_NUMBERING_RELATIONSHIP => Some((NumberingPartRole, StrictOoxml))
+    _ => None
+  }
+}
+
+///|
+/// Styles and numbering are optional relationship roles, not conventional
+/// filenames. A declared role must match the main package dialect and resolve
+/// to exactly one internal part before any XML from that target is consumed.
+fn resolve_unique_wordprocessing_part(
+  zip : ZipArchive,
+  relationships : Relationships,
+  base_path : String,
+  role : WordprocessingPartRole,
+  main_dialect : OoxmlDialect?,
+) -> RelatedWordprocessingPart? raise DocxError {
+  let kind = role.label()
+  let parts : Array[RelatedWordprocessingPart] = []
+  let seen : StableStringSet = SortedSet([])
+  let mut matches = 0
+  for relationship in relationships.relationships {
+    guard wordprocessing_role_relationship_identity(
+        relationship.relationship_type,
+      )
+      is Some((relationship_kind, relationship_dialect)) else {
+      continue
+    }
+    if !same_wordprocessing_part_role(relationship_kind, role) {
+      continue
+    }
+    match main_dialect {
+      Some(expected) if !same_ooxml_dialect(expected, relationship_dialect) =>
+        raise Unsupported(
+          message="the \{kind} relationship dialect does not match the main document relationship",
+        )
+      _ => ()
+    }
+    matches += 1
+    match relationship.target_mode {
+      None | Some("Internal") => ()
+      _ =>
+        raise Unsupported(message="the \{kind} relationship must be internal")
+    }
+    if relationship.target == "" {
+      raise Unsupported(message="the \{kind} relationship has no target")
+    }
+    guard @opc.resolve_part_target(base_path, relationship.target)
+      is Some(resolved) else {
+      raise Unsupported(message="the \{kind} relationship target is invalid")
+    }
+    guard zip.resolve_path(resolved) is Some(actual) else {
+      raise MissingPart(
+        message="the \{kind} relationship targets a missing part",
+      )
+    }
+    if !seen.contains(actual) {
+      seen.add(actual)
+      parts.push({ path: actual, relationship_dialect })
+    }
+  }
+  if matches > 1 {
+    raise Unsupported(
+      message="the document declares multiple \{kind} relationships",
+    )
+  }
+  match parts {
+    [] => None
+    [part] => Some(part)
+    _ =>
+      raise Unsupported(
+        message="the document declares multiple distinct \{kind} relationship targets",
       )
   }
 }
@@ -899,7 +1203,7 @@ fn resolve_reachable_annotation_story_parts(
     if relationship.target == "" {
       raise Unsupported(message="the \{kind} relationship has no target")
     }
-    guard @opc.resolve_target(base_path, relationship.target) is Some(path) else {
+    guard @opc.resolve_part_target(base_path, relationship.target) is Some(path) else {
       raise Unsupported(message="the \{kind} relationship target is invalid")
     }
     guard zip.resolve_path(path) is Some(actual) else {
@@ -932,54 +1236,6 @@ fn resolve_reachable_annotation_story_parts(
     resolved_parts.push({ kind, path: actual, relationship_dialect })
   }
   resolved_parts
-}
-
-///|
-fn find_part_path(
-  zip : ZipArchive,
-  relationships : Relationships,
-  relationship_type~ : String,
-  base_path~ : String,
-  fallback_path~ : String,
-) -> String {
-  for target in relationships.find_targets_by_type(relationship_type) {
-    // OPC-normalized ('../' forms resolve; review: L2 round 2).
-    match @opc.resolve_target(base_path, target) {
-      Some(path) =>
-        match zip.resolve_path(path) {
-          Some(actual) => return actual
-          None => ()
-        }
-      _ => ()
-    }
-  }
-  fallback_path
-}
-
-///|
-fn Relationships::find_target_by_id(
-  self : Relationships,
-  id : String,
-) -> String? {
-  for rel in self.relationships {
-    if rel.id == id {
-      return Some(rel.target)
-    }
-  }
-  None
-}
-
-///|
-fn Relationships::find_by_id(
-  self : Relationships,
-  id : String,
-) -> Relationship? {
-  for rel in self.relationships {
-    if rel.id == id {
-      return Some(rel)
-    }
-  }
-  None
 }
 
 ///|
@@ -1030,7 +1286,7 @@ fn resolve_header_footer_reference_part(
       message="the \{kind} reference relationship '\{id}' has no target",
     )
   }
-  guard @opc.resolve_target(base_path, relationship.target) is Some(path) else {
+  guard @opc.resolve_part_target(base_path, relationship.target) is Some(path) else {
     raise Unsupported(
       message="the \{kind} reference relationship '\{id}' has an invalid target",
     )
@@ -1045,8 +1301,9 @@ fn resolve_header_footer_reference_part(
 }
 
 ///|
-fn relationships_path_for_part(path : String) -> String {
-  let (dir, base) = split_zip_path(path)
+fn relationships_path_for_part(zip : ZipArchive, path : String) -> String {
+  let logical_path = zip.logical_path(path).unwrap_or(path)
+  let (dir, base) = split_zip_path(logical_path)
   join_zip_path([dir, "_rels", base + ".rels"])
 }
 
@@ -1064,14 +1321,18 @@ fn read_content_types(
         let extension = element.attributes.get_or_default("Extension", "")
         let content_type = element.attributes.get_or_default("ContentType", "")
         if extension != "" && content_type != "" {
-          defaults[extension.to_lower()] = content_type
+          defaults[@opc.part_name_key(extension)] = content_type
         }
       }
       for element in root.elements_by_tag_name("content-types:Override") {
         let part_name = element.attributes.get_or_default("PartName", "")
         let content_type = element.attributes.get_or_default("ContentType", "")
         if part_name != "" && content_type != "" {
-          overrides[strip_leading_slash(part_name).to_lower()] = content_type
+          match @opc.resolve_part_target("", part_name) {
+            Some(logical) if "/" + logical == part_name =>
+              overrides[@opc.part_name_key(logical)] = content_type
+            _ => ()
+          }
         }
       }
     }
@@ -1084,8 +1345,14 @@ fn read_content_types(
 fn ContentTypes::find_content_type(
   self : ContentTypes,
   path : String,
+  zip? : ZipArchive,
 ) -> String {
-  let normalized = strip_leading_slash(path).to_lower()
+  let requested = strip_leading_slash(path)
+  let logical = match zip {
+    Some(archive) => archive.logical_path(requested).unwrap_or(requested)
+    None => requested
+  }
+  let normalized = @opc.part_name_key(logical)
   match self.overrides.get(normalized) {
     Some(content_type) => content_type
     None =>
@@ -1121,16 +1388,35 @@ fn expected_annotation_content_type(kind : String) -> String? {
 /// annotation story even when the target's root element looks plausible.
 fn ContentTypes::require_annotation_part(
   self : ContentTypes,
+  zip : ZipArchive,
   path : String?,
   kind : String,
 ) -> Unit raise DocxError {
   guard path is Some(path) else { return }
   guard expected_annotation_content_type(kind) is Some(expected) else { return }
-  let actual = self.find_content_type(path)
+  let actual = self.find_content_type(path, zip~)
   if actual.to_lower() != expected.to_lower() {
     let declared = if actual == "" { "<undeclared>" } else { actual }
     raise Unsupported(
       message="the \{kind} relationship target '\{path}' has content type '\{declared}', expected '\{expected}'",
+    )
+  }
+}
+
+///|
+fn ContentTypes::require_wordprocessing_part(
+  self : ContentTypes,
+  zip : ZipArchive,
+  part : RelatedWordprocessingPart,
+  role : WordprocessingPartRole,
+) -> Unit raise DocxError {
+  let kind = role.label()
+  let expected = role.content_type()
+  let actual = self.find_content_type(part.path, zip~)
+  if actual.to_lower() != expected.to_lower() {
+    let declared = if actual == "" { "<undeclared>" } else { actual }
+    raise Unsupported(
+      message="the \{kind} relationship target '\{part.path}' has content type '\{declared}', expected '\{expected}'",
     )
   }
 }
@@ -1144,28 +1430,6 @@ fn fallback_content_type(extension : String) -> String {
     "bmp" => "image/bmp"
     "tif" | "tiff" => "image/tiff"
     _ => ""
-  }
-}
-
-///|
-fn read_numbering_for_document(
-  zip : ZipArchive,
-  document_relationships : Relationships,
-  styles : StableStringMap[StyleInfo],
-  base_path : String,
-  xml_budget? : @xml.XmlReadBudget,
-) -> NumberingMap raise DocxError {
-  let path = find_part_path(
-    zip,
-    document_relationships,
-    relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering",
-    base_path~,
-    fallback_path="word/numbering.xml",
-  )
-  if zip.exists(path) {
-    read_numbering_xml(read_xml_part(zip, path, xml_budget?), styles)
-  } else {
-    NumberingMap::empty()
   }
 }
 
@@ -1294,26 +1558,36 @@ fn NumberingMap::find_level(
   num_id : String,
   level : String,
 ) -> Numbering? {
-  match self.nums.get(num_id) {
-    Some(abstract_num_id) =>
-      match self.abstract_nums.get(abstract_num_id) {
-        Some(abstract_num) =>
-          match abstract_num.num_style_link {
-            Some(style_id) =>
-              match self.numbering_style_num_ids.get(style_id) {
-                Some(linked_num_id) => self.find_level(linked_num_id, level)
-                None => None
-              }
-            None =>
-              match abstract_num.levels.get(level) {
-                Some(numbering_level) => Some(numbering_level.to_numbering())
-                None => None
-              }
-          }
-        None => None
-      }
-    None => None
+  let seen : StableStringSet = SortedSet([])
+  let mut current_num_id = num_id
+  while true {
+    // numStyleLink is an arbitrary package graph. Resolve it iteratively so a
+    // malformed self-link or longer cycle cannot consume the native/Wasm
+    // stack before caller-owned document limits are reached.
+    if seen.contains(current_num_id) {
+      return None
+    }
+    seen.add(current_num_id)
+    guard self.nums.get(current_num_id) is Some(abstract_num_id) else {
+      return None
+    }
+    guard self.abstract_nums.get(abstract_num_id) is Some(abstract_num) else {
+      return None
+    }
+    match abstract_num.num_style_link {
+      Some(style_id) =>
+        match self.numbering_style_num_ids.get(style_id) {
+          Some(linked_num_id) => current_num_id = linked_num_id
+          None => return None
+        }
+      None =>
+        return match abstract_num.levels.get(level) {
+          Some(numbering_level) => Some(numbering_level.to_numbering())
+          None => None
+        }
+    }
   }
+  None
 }
 
 ///|
@@ -1343,6 +1617,8 @@ fn read_notes_for_document(
   external_files? : ExternalFileAccess = default_external_file_access(),
   read_images? : Bool = true,
   xml_budget? : @xml.XmlReadBudget,
+  diagnostics? : ReaderDiagnosticCollector,
+  missing_annotation_id_mode? : MissingAnnotationIdMode = LegacyUndefinedAnnotationId,
 ) -> NotesReadResult raise DocxError {
   let notes : Array[Note] = []
   let messages : Array[Message] = []
@@ -1356,6 +1632,8 @@ fn read_notes_for_document(
     external_files~,
     read_images~,
     xml_budget?,
+    diagnostics?,
+    missing_annotation_id_mode~,
   )
   notes.append(footnotes.notes)
   messages.append(footnotes.messages)
@@ -1369,6 +1647,8 @@ fn read_notes_for_document(
     external_files~,
     read_images~,
     xml_budget?,
+    diagnostics?,
+    missing_annotation_id_mode~,
   )
   notes.append(endnotes.notes)
   messages.append(endnotes.messages)
@@ -1386,23 +1666,27 @@ fn read_note_part_at_path(
   external_files? : ExternalFileAccess = default_external_file_access(),
   read_images? : Bool = true,
   xml_budget? : @xml.XmlReadBudget,
+  diagnostics? : ReaderDiagnosticCollector,
+  missing_annotation_id_mode? : MissingAnnotationIdMode = LegacyUndefinedAnnotationId,
 ) -> NotesReadResult raise DocxError {
   if !zip.exists(path) {
     return { notes: [], messages: [] }
   }
   let part_relationships = read_relationships(
     zip,
-    relationships_path_for_part(path),
+    relationships_path_for_part(zip, path),
     xml_budget?,
   )
   let reader = BodyReader::{
     styles,
     zip,
-    relationships: part_relationships,
+    relationship_index: RelationshipIndex::build(part_relationships),
     content_types,
-    base_path: split_zip_path(path).0,
+    base_path: split_zip_path(zip.logical_path(path).unwrap_or(path)).0,
     numbering,
     messages: [],
+    diagnostics,
+    missing_annotation_id_mode,
     external_files,
     read_images,
   }
@@ -1418,7 +1702,10 @@ fn read_note_part_at_path(
       note_kind != Some("continuationNotice") {
       notes.push({
         note_type,
-        note_id: attribute_or_js_undefined(note_element.attributes.get("w:id")),
+        note_id: annotation_id_or_missing(
+          note_element.attributes.get("w:id"),
+          missing_annotation_id_mode,
+        ),
         body: reader.read_children(note_element.children),
       })
     }
@@ -1438,6 +1725,8 @@ fn read_comments_for_document(
   read_images? : Bool = true,
   xml_budget? : @xml.XmlReadBudget,
   comments_part_path? : String,
+  diagnostics? : ReaderDiagnosticCollector,
+  missing_annotation_id_mode? : MissingAnnotationIdMode = LegacyUndefinedAnnotationId,
 ) -> CommentsReadResult raise DocxError {
   let authoritative = match comments_part_path {
     Some(path) => Some(path)
@@ -1457,17 +1746,19 @@ fn read_comments_for_document(
   }
   let part_relationships = read_relationships(
     zip,
-    relationships_path_for_part(path),
+    relationships_path_for_part(zip, path),
     xml_budget?,
   )
   let reader = BodyReader::{
     styles,
     zip,
-    relationships: part_relationships,
+    relationship_index: RelationshipIndex::build(part_relationships),
     content_types,
-    base_path: split_zip_path(path).0,
+    base_path: split_zip_path(zip.logical_path(path).unwrap_or(path)).0,
     numbering,
     messages: [],
+    diagnostics,
+    missing_annotation_id_mode,
     external_files,
     read_images,
   }
@@ -1475,8 +1766,9 @@ fn read_comments_for_document(
   let comments : Array[Comment] = []
   for comment_element in root.elements_by_tag_name("w:comment") {
     comments.push({
-      comment_id: attribute_or_js_undefined(
+      comment_id: annotation_id_or_missing(
         comment_element.attributes.get("w:id"),
+        missing_annotation_id_mode,
       ),
       body: reader.read_children(comment_element.children),
       author_name: read_optional_attribute(comment_element, "w:author"),
@@ -1502,27 +1794,17 @@ fn read_optional_attribute(element : XmlElement, name : String) -> String {
 }
 
 ///|
-fn read_styles(
-  zip : ZipArchive,
-  path : String,
-  xml_budget? : @xml.XmlReadBudget,
-) -> StableStringMap[StyleInfo] raise DocxError {
+fn read_styles_xml(root : XmlElement) -> StableStringMap[StyleInfo] {
   let styles : StableStringMap[StyleInfo] = SortedMap([])
-  match zip.read_bytes(path) {
-    Some(_) => {
-      let root = read_xml_part(zip, path, xml_budget?)
-      for style in root.elements_by_tag_name("w:style") {
-        let style_id = style.attributes.get_or_default("w:styleId", "")
-        if style_id != "" {
-          let style_info = read_style_info(style, style_id)
-          let key = style_lookup_key(style_info.style_type, style_id)
-          if !styles.contains(key) {
-            styles[key] = style_info
-          }
-        }
+  for style in root.elements_by_tag_name("w:style") {
+    let style_id = style.attributes.get_or_default("w:styleId", "")
+    if style_id != "" {
+      let style_info = read_style_info(style, style_id)
+      let key = style_lookup_key(style_info.style_type, style_id)
+      if !styles.contains(key) {
+        styles[key] = style_info
       }
     }
-    None => ()
   }
   styles
 }
@@ -1576,13 +1858,15 @@ fn read_document_xml_with_messages(
   styles : StableStringMap[StyleInfo],
   numbering : NumberingMap,
   zip : ZipArchive,
-  relationships : Relationships,
+  relationship_index : RelationshipIndex,
   content_types : ContentTypes,
   base_path : String,
   notes : Array[Note],
   comments : Array[Comment],
   external_files? : ExternalFileAccess = default_external_file_access(),
   read_images? : Bool = true,
+  diagnostics? : ReaderDiagnosticCollector,
+  missing_annotation_id_mode? : MissingAnnotationIdMode = LegacyUndefinedAnnotationId,
 ) -> DocxReadResult raise DocxError {
   let body = match root.first("w:body") {
     Some(body) => body
@@ -1594,11 +1878,13 @@ fn read_document_xml_with_messages(
   let reader = BodyReader::{
     styles,
     zip,
-    relationships,
+    relationship_index,
     content_types,
     base_path,
     numbering,
     messages: [],
+    diagnostics,
+    missing_annotation_id_mode,
     external_files,
     read_images,
   }
@@ -1612,11 +1898,13 @@ fn read_document_xml_with_messages(
 priv struct BodyReader {
   styles : StableStringMap[StyleInfo]
   zip : ZipArchive
-  relationships : Relationships
+  relationship_index : RelationshipIndex
   content_types : ContentTypes
   base_path : String
   numbering : NumberingMap
   messages : Array[Message]
+  diagnostics : ReaderDiagnosticCollector?
+  missing_annotation_id_mode : MissingAnnotationIdMode
   external_files : ExternalFileAccess
   read_images : Bool
 }
@@ -1672,21 +1960,30 @@ fn BodyReader::read_element(
       [
         NoteReference(
           note_type="footnote",
-          note_id=attribute_or_js_undefined(element.attributes.get("w:id")),
+          note_id=annotation_id_or_missing(
+            element.attributes.get("w:id"),
+            self.missing_annotation_id_mode,
+          ),
         ),
       ]
     "w:endnoteReference" =>
       [
         NoteReference(
           note_type="endnote",
-          note_id=attribute_or_js_undefined(element.attributes.get("w:id")),
+          note_id=annotation_id_or_missing(
+            element.attributes.get("w:id"),
+            self.missing_annotation_id_mode,
+          ),
         ),
       ]
     "w:footnoteRef" | "w:endnoteRef" => []
     "w:commentReference" =>
       [
         CommentReference(
-          attribute_or_js_undefined(element.attributes.get("w:id")),
+          annotation_id_or_missing(
+            element.attributes.get("w:id"),
+            self.missing_annotation_id_mode,
+          ),
         ),
       ]
     "w:br" => self.read_break(element)
@@ -1715,7 +2012,7 @@ fn BodyReader::read_element(
       if is_ignored_body_element(element.name) {
         []
       } else {
-        self.warn("An unrecognised element was ignored: " + element.name)
+        self.warn_parts(["An unrecognised element was ignored: ", element.name])
         []
       }
   }
@@ -1723,7 +2020,20 @@ fn BodyReader::read_element(
 
 ///|
 fn BodyReader::warn(self : BodyReader, message : String) -> Unit {
-  self.messages.push(Warning(message))
+  push_reader_message(self.messages, self.diagnostics, Warning(message))
+}
+
+///|
+fn BodyReader::warn_parts(self : BodyReader, parts : ArrayView[String]) -> Unit {
+  push_reader_warning_parts(self.messages, self.diagnostics, parts)
+}
+
+///|
+fn BodyReader::error_parts(
+  self : BodyReader,
+  parts : ArrayView[String],
+) -> Unit {
+  push_reader_error_parts(self.messages, self.diagnostics, parts)
 }
 
 ///|
@@ -1765,12 +2075,12 @@ fn BodyReader::read_symbol(
   match symbol_to_unicode(font, char) {
     Some(value) => [text(value)]
     None => {
-      self.warn(
-        "A w:sym element with an unsupported character was ignored: char " +
-        attribute_or_js_undefined(char_attribute) +
-        " in font " +
+      self.warn_parts([
+        "A w:sym element with an unsupported character was ignored: char ",
+        attribute_or_js_undefined(char_attribute),
+        " in font ",
         attribute_or_js_undefined(font_attribute),
-      )
+      ])
       []
     }
   }
@@ -2512,12 +2822,12 @@ fn BodyReader::warn_undefined_style(
   style_type : String,
   style_id : String,
 ) -> Unit {
-  self.warn(
-    style_warning_label(style_type) +
-    " style with ID " +
-    style_id +
+  self.warn_parts([
+    style_warning_label(style_type),
+    " style with ID ",
+    style_id,
     " was referenced but not defined in the document",
-  )
+  ])
 }
 
 ///|
@@ -2618,7 +2928,7 @@ fn BodyReader::read_break(
     Some("page") => [page_break()]
     Some("column") => [column_break()]
     Some(break_type) => {
-      self.warn("Unsupported break type: " + break_type)
+      self.warn_parts(["Unsupported break type: ", break_type])
       []
     }
   }
@@ -2633,7 +2943,7 @@ fn BodyReader::read_hyperlink(
   let anchor = non_empty_attribute(element, "w:anchor")
   match non_empty_attribute(element, "r:id") {
     Some(id) => {
-      let href = match self.relationships.find_target_by_id(id) {
+      let href = match self.relationship_index.find_unique_target_by_id(id) {
         Some(target) =>
           match anchor {
             Some(anchor) => Some(replace_url_fragment(target, anchor))
@@ -2743,7 +3053,7 @@ fn BodyReader::read_drawing_hyperlink(
     .elements_by_tag_name("a:hlinkClick") {
     match non_empty_attribute(link, "r:id") {
       Some(id) =>
-        match self.relationships.find_target_by_id(id) {
+        match self.relationship_index.find_unique_target_by_id(id) {
           Some(target) => return Some(target)
           None => ()
         }
@@ -2762,7 +3072,7 @@ fn BodyReader::read_blip(
   if !self.read_images {
     return None
   }
-  let message_count = self.messages.length()
+  let diagnostic_count = self.diagnostic_count()
   let image = match non_empty_attribute(blip, "r:embed") {
     Some(id) =>
       self.read_image_by_relationship(
@@ -2782,12 +3092,21 @@ fn BodyReader::read_blip(
   match image {
     Some(image) => Some(image)
     None => {
-      if self.messages.length() == message_count {
+      if self.diagnostic_count() == diagnostic_count {
         self.warn("Could not find image file for a:blip element")
       }
       None
     }
   }
+}
+
+///|
+fn BodyReader::diagnostic_count(self : BodyReader) -> Int {
+  let collected = match self.diagnostics {
+    Some(value) => value.received()
+    None => 0
+  }
+  self.messages.length() + collected
 }
 
 ///|
@@ -2824,7 +3143,7 @@ fn BodyReader::read_image_by_relationship(
   if !self.read_images {
     return None
   }
-  match self.relationships.find_by_id(relationship_id) {
+  match self.relationship_index.find_unique_by_id(relationship_id) {
     Some(rel) =>
       match resolve_part_target(self.base_path, rel.target) {
         Some(path) =>
@@ -2847,7 +3166,7 @@ fn BodyReader::read_linked_image_by_relationship(
   if !self.read_images {
     return None
   }
-  match self.relationships.find_by_id(relationship_id) {
+  match self.relationship_index.find_unique_by_id(relationship_id) {
     Some(rel) => self.read_external_image(rel.target, alt_text~)
     None => None
   }
@@ -2860,13 +3179,9 @@ fn BodyReader::read_external_image(
   alt_text~ : String?,
 ) -> Image? {
   if !self.external_files.enabled {
-    self.messages.push(
-      Error(
-        "could not read external image '" +
-        target +
-        "', external file access is disabled",
-      ),
-    )
+    self.error_parts([
+      "could not read external image '", target, "', external file access is disabled",
+    ])
     return None
   }
   for path in external_file_candidate_paths(target) {
@@ -2875,13 +3190,9 @@ fn BodyReader::read_external_image(
       None => ()
     }
   }
-  self.messages.push(
-    Error(
-      "could not find external image '" +
-      target +
-      "', path of input document is unknown",
-    ),
-  )
+  self.error_parts([
+    "could not find external image '", target, "', path of input document is unknown",
+  ])
   None
 }
 
@@ -3050,13 +3361,11 @@ fn BodyReader::make_image(
   data : BytesView,
   alt_text~ : String?,
 ) -> Image {
-  let content_type = self.content_types.find_content_type(path)
+  let content_type = self.content_types.find_content_type(path, zip=self.zip)
   if !is_supported_web_image_type(content_type) {
-    self.warn(
-      "Image of type " +
-      content_type +
-      " is unlikely to display in web browsers",
-    )
+    self.warn_parts([
+      "Image of type ", content_type, " is unlikely to display in web browsers",
+    ])
   }
   { content_type, alt_text, data: data.to_owned() }
 }
@@ -3086,7 +3395,7 @@ fn read_drawing_alt_text(element : XmlElement) -> String? {
 
 ///|
 fn resolve_part_target(base_path : String, target : String) -> String? {
-  @opc.resolve_target(base_path, target)
+  @opc.resolve_part_target(base_path, target)
 }
 
 ///|

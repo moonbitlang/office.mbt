@@ -456,7 +456,8 @@ fn collect_para_ids(
     _ => ()
   }
   // Sibling story parts named through the MAIN part's relationships.
-  let (main_dir, main_base) = split_part_path(annotated.main_story_part())
+  let logical_main = main_story_logical_part(annotated, zip)
+  let (main_dir, main_base) = split_part_path(logical_main)
   let rels_part = if main_dir == "" {
     "_rels/\{main_base}.rels"
   } else {
@@ -1293,25 +1294,18 @@ fn queue_comments_extended_edits(
           ),
           namespaces={ "w15": W15_NAMESPACE, "mc": MC_NAMESPACE },
         )
-      let (main_dir, main_base) = split_part_path(annotated.main_story_part())
-      let part_name = if main_dir == "" {
-        "commentsExtended.xml"
-      } else {
-        "\{main_dir}/commentsExtended.xml"
-      }
-      if zip.exists(part_name) {
+      let part_path = main_sibling_mutation_part_path(
+        annotated, zip, "commentsExtended.xml",
+      )
+      if zip.exists(part_path.logical) {
         raise Unsupported(
-          message="'\{part_name}' exists but is not wired as the commentsExtended part (an orphan); refusing",
+          message="'\{part_path.logical}' exists but is not wired as the commentsExtended part (an orphan); refusing",
         )
       }
-      plan.add_part(part_name, @utf8.encode(part_text))
-      let rels_part = if main_dir == "" {
-        "_rels/\{main_base}.rels"
-      } else {
-        "\{main_dir}/_rels/\{main_base}.rels"
-      }
+      plan.add_part(part_path.physical, @utf8.encode(part_text))
+      let rels_path = main_relationships_mutation_part_path(annotated, zip)
       let relationship_type = "http://schemas.microsoft.com/office/2011/relationships/commentsExtended"
-      guard zip.resolve_path(rels_part) is Some(actual_rels_part) else {
+      guard zip.resolve_path(rels_path.logical) is Some(actual_rels_part) else {
         raise Unsupported(
           message="the main part has no relationships part; refusing",
         )
@@ -1363,7 +1357,11 @@ fn queue_comments_extended_edits(
         xml_root_child_edit(
           types_bytes,
           types_span,
-          "<\{override_name} PartName=\"/\{part_name}\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml\"/>",
+          opc_content_type_override_fragment(
+            override_name,
+            part_path.logical,
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml",
+          ),
         ),
       )
     }
