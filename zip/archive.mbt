@@ -77,6 +77,18 @@ pub fn Entry::crc32(self : Entry) -> UInt {
 }
 
 ///|
+/// Size of this entry's OPC Central Directory File Header, excluding the
+/// four-byte ZIP signature as defined by ECMA-376 Part 2 §7.3.6. Source
+/// entries report their exact preserved name, Extra, and File Comment fields;
+/// newly constructed entries have no Extra or File Comment fields yet.
+pub fn Entry::central_directory_file_header_size(self : Entry) -> Int {
+  match self.source {
+    Some(source) => source.central_record.length() - 4
+    None => 42 + @encoding/utf8.encode(self.name).length()
+  }
+}
+
+///|
 struct Archive {
   entries : Array[Entry]
   comment : Bytes

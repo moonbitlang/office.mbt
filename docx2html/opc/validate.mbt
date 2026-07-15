@@ -93,6 +93,16 @@ const DEFAULT_MAX_ZIP_ENTRY_NAME_CHARS : Int = 65_535
 const DEFAULT_MAX_ZIP_TOTAL_ENTRY_NAME_CHARS : Int = 4 * 1024 * 1024
 
 ///|
+/// ECMA-376 Part 2 §7.3.6 caps the Central Directory File Header—not merely
+/// its File Name field. The four-byte ZIP signature is outside that size; the
+/// remaining fixed fields consume 42 bytes before File Name, Extra, and File
+/// Comment data.
+const MAX_OPC_CENTRAL_DIRECTORY_FILE_HEADER_BYTES : Int = 65_535
+
+///|
+const MAX_OPC_ZIP_ENTRY_NAME_BYTES_WITHOUT_METADATA : Int = 65_493
+
+///|
 /// The resource guard that stopped structural validation. This status is kept
 /// separate from rendered findings so attacker-controlled part names cannot
 /// forge or hide resource exhaustion by changing diagnostic text.
@@ -593,6 +603,12 @@ fn validate_docx_archive_into(
     let name = entry.name()
     if !findings.consume_zip_entry_name(name) {
       return
+    }
+    if entry.central_directory_file_header_size() >
+      MAX_OPC_CENTRAL_DIRECTORY_FILE_HEADER_BYTES {
+      findings.add(
+        "central-directory file header exceeds the OPC \{MAX_OPC_CENTRAL_DIRECTORY_FILE_HEADER_BYTES}-byte limit: \{findings.text(name)}",
+      )
     }
     if seen.contains(name) {
       findings.add("duplicate entry name: \{findings.text(name)}")

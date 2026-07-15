@@ -247,6 +247,22 @@ fn preservation_fixture() -> Bytes raise ZipError {
 }
 
 ///|
+test "central-directory header size includes preserved Extra and Comment fields" {
+  let archive = read(preservation_fixture())
+  guard archive.entries()[0].source is Some(source) else {
+    fail("expected preserved central-directory provenance")
+  }
+  assert_eq(
+    archive.entries()[0].central_directory_file_header_size(),
+    source.central_record.length() - 4,
+  )
+  assert_eq(
+    archive.entries()[0].central_directory_file_header_size(),
+    42 + "untouched.bin".length() + 6 + "entry-comment".length(),
+  )
+}
+
+///|
 fn write_central_heavy_preservation_fixture(
   output : FixedByteOutput,
   entry_count : Int,
