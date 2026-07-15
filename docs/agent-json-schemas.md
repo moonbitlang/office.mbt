@@ -1,18 +1,19 @@
-# Agent JSON Schemas (xlsx and docx CLIs)
+# Agent JSON schemas (office, xlsx, and docx CLIs)
 
 This is the normative specification of the versioned JSON payloads the
-`cmd/xlsx` and `docx2html/cmd/docx` CLIs exchange with agents. The executable
-examples live in `cmd/xlsx/cram/agent.t` and
-`docx2html/tests/cram/docx-agent.md`; the snapshot tests in
-`inspect/*_test.mbt` and `docx2html/inspect/*_test.mbt` pin the exact
-serialized shapes. If this document and those tests disagree, the tests are
-the source of truth and this document has a bug.
+unified `office` facade, `cmd/xlsx`, and `docx2html/cmd/docx` CLIs exchange
+with agents. The executable examples live in `office/cmd/office/cram/cli.t`,
+`cmd/xlsx/cram/agent.t`, and `docx2html/tests/cram/docx-agent.md`; snapshot
+tests pin the exact serialized shapes. If this document and those tests
+disagree, the tests are the source of truth and this document has a bug.
 
 ## Conventions (all schemas)
 
-- Every payload's first key is `"schema"`, holding an identifier of the form
-  `<domain>.<kind>/<major>` (e.g. `xlsx.outline/1`). Identifiers are declared
-  once per package: xlsx identifiers (including the consumed
+- Every standalone payload's first key is `"schema"`, holding an identifier
+  of the form `<domain>.<kind>/<major>` (e.g. `xlsx.outline/1`). The unified
+  facade instead puts the result inside an `office.output/1` envelope; its
+  `data.schema` identifies the result, but inner-object key order is not an
+  API. Identifiers are declared once per package: xlsx identifiers (including the consumed
   `xlsx.batch/1`) in `inspect/schema.mbt`, docx read-side identifiers in
   `docx2html/inspect/schema.mbt`, and the consumed `docx.batch/1` /
   `docx.batch/2` identifiers in `docx2html/batch` (`SCHEMA_BATCH`,
@@ -419,6 +420,79 @@ cell or `A1:B2` range a validation covers, also not cell-capped), `column`,
 the single source of truth an agent should read rather than hard-coding the
 op list. (Parsed ops are opaque in the library API too, so growing the op
 set is a source-compatible change.)
+
+## Unified `office` facade envelopes
+
+Every `office ... --json` invocation emits exactly one `office.output/1`
+document. Success is `{schema, success: true, data, warnings?}`; failure is
+`{schema, success: false, error}` and exits non-zero. `error` contains a stable
+`code`, bounded `message`, and optional bounded `details`. The optional warning
+array contains `{code, message}` records.
+
+The DOCX read commands below share canonical `office.selector/1` paths and one
+bounded projection. Full command, selector, limit, and error-code details are
+in [office-docx-read.md](office-docx-read.md).
+
+### `office.docx.outline/1` (`office outline FILE --json`)
+
+| key | type | notes |
+| --- | --- | --- |
+| `schema` | string | `"office.docx.outline/1"` |
+| `file`, `format` | string | input path and literal `"docx"` |
+| `scanned_elements` | number | total bounded projection nodes |
+| `counts` | object | body/header/footer story counts plus note, comment, paragraph, run, table, row, cell, hyperlink, and image counts |
+| `stories` | array | `{path, kind, children, stability, source}` roots in deterministic story order |
+| `headings` | array | `{path, level, text, text_truncated}` bounded previews |
+| `styles_in_use` | array | first-use-deduplicated `{kind, id?, name?}` |
+| `images` | array | `{path, content_type, bytes, alt_text?}`; never image data |
+| `sections` | array | effective header/footer references |
+| `diagnostics` | array | bounded reader `{severity, message}` records |
+
+### `office.docx.element/1` (`office get FILE SELECTOR --json`)
+
+Common keys are `schema`, `file`, `format`, canonical `path`, `kind`, `role`,
+`stability`, `source`, optional `parent` and stable `id`, `children`,
+`properties`, `metadata`, and bounded raw `text`. Child references are
+`{path, kind, stability, id?}`.
+
+`properties` is kind-specific: paragraph/run/table styles, paragraph
+alignment and numbering, run formatting, row header state, cell spans,
+hyperlink targets, or image metadata. Comment `metadata` can carry author,
+initials, lexical date, resolved/parent state, and canonical anchors; note
+metadata carries canonical references.
+
+### `office.docx.text/1` (`office text FILE ... --json`)
+
+| key | type | notes |
+| --- | --- | --- |
+| `schema` | string | `"office.docx.text/1"` |
+| `file`, `format` | string | input path and literal `"docx"` |
+| `under` | string? | resolved canonical subtree root |
+| `entries` | array | `{path, stability, text}` paragraphs in deterministic order |
+| `matched_total` | number | exact count after the completed bounded scan |
+| `offset`, `limit`, `returned` | number | explicit pagination |
+| `truncated` | boolean | later matches were omitted |
+| `scanned_elements` | number | total projection nodes |
+
+### `office.docx.query/1` (`office query FILE ... --json`)
+
+| key | type | notes |
+| --- | --- | --- |
+| `schema` | string | `"office.docx.query/1"` |
+| `file`, `format` | string | input path and literal `"docx"` |
+| `under` | string? | resolved canonical subtree root |
+| `filters` | object | normalized `kind?`, `text?`, `id?`, `under?`, `properties[]`, and `ignore_case` |
+| `matches` | array | `{path, kind, role, stability, id?, preview, preview_truncated, properties}` |
+| `matched_total` | number | exact count after the completed bounded scan |
+| `offset`, `limit`, `returned` | number | explicit pagination |
+| `truncated` | boolean | later matches were omitted |
+| `scanned_elements` | number | total projection nodes |
+
+Predicates are literal and ANDed. Query accepts only the declared element
+kinds and property names; no regular expression or arbitrary expression is
+evaluated.
+
+## Standalone `docx` CLI schemas
 
 ## `docx.outline/1` — document structure map (`docx outline <file>`)
 

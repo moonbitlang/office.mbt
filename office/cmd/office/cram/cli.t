@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:b3563de0
+    Fingerprint: crc32:7d1d7c2a
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -27,20 +27,20 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help word | sed -n '1,7p'
   Format: docx (aliases: word)
     WordprocessingML documents
-    Selector: office.selector/1 /docx (syntax-only)
-      bounded parse/render only; package resolution is not implemented
+    Selector: office.selector/1 /docx (read-resolved)
+      bounded canonical resolution for outline, get, text, and declared query predicates
       /docx/body/p[1]/r[2]
       /docx/comments/comment[id="7"]
     Implemented commands:
 
   $ office.exe help docx --json | jq -c '.data.records[0] | {kind,name,selector}'
-  {"kind":"format","name":"docx","selector":{"schema":"office.selector/1","root":"/docx","status":"syntax-only","examples":["/docx/body/p[1]/r[2]","/docx/comments/comment[id=\"7\"]"],"description":"bounded parse/render only; package resolution is not implemented"}}
+  {"kind":"format","name":"docx","selector":{"schema":"office.selector/1","root":"/docx","status":"read-resolved","examples":["/docx/body/p[1]/r[2]","/docx/comments/comment[id=\"7\"]"],"description":"bounded canonical resolution for outline, get, text, and declared query predicates"}}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:b3563de0","names":["docx","xlsx","help","identify","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:7d1d7c2a","names":["docx","xlsx","help","identify","outline","get","text","query","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:b3563de0","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:b3563de0","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:b3563de0","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:b3563de0","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:b3563de0","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:7d1d7c2a","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:7d1d7c2a","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:7d1d7c2a","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:7d1d7c2a","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:7d1d7c2a","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:7d1d7c2a","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:7d1d7c2a","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:7d1d7c2a","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:7d1d7c2a","kind":"command","name":"raw"}]
 
 The raw command publishes explicit subcommand schemas, including every edit
 input and its conditional constraints.
@@ -53,6 +53,74 @@ input and its conditional constraints.
 
   $ office.exe help raw --json | jq -c '[.data.records[0].variants[] | select(.name=="edit") | .actions[] | {name,requires,forbids,restrictions}]'
   [{"name":"append","requires":["exactly-one(xml,xml-file)"],"forbids":["attribute","value"],"restrictions":[]},{"name":"prepend","requires":["exactly-one(xml,xml-file)"],"forbids":["attribute","value"],"restrictions":[]},{"name":"insert-before","requires":["exactly-one(xml,xml-file)"],"forbids":["attribute","value"],"restrictions":["path-must-not-select-document-element"]},{"name":"insert-after","requires":["exactly-one(xml,xml-file)"],"forbids":["attribute","value"],"restrictions":["path-must-not-select-document-element"]},{"name":"replace","requires":["exactly-one(xml,xml-file)"],"forbids":["attribute","value"],"restrictions":[]},{"name":"remove","requires":[],"forbids":["xml","xml-file","attribute","value"],"restrictions":["path-must-not-select-document-element"]},{"name":"set-attribute","requires":["attribute","value"],"forbids":["xml","xml-file"],"restrictions":[]}]
+
+Structured DOCX reads share one bounded projection. Outline provides the map,
+get resolves a canonical path, text emits path-tagged paragraphs, and query
+uses deterministic document order and declared predicates.
+
+  $ office.exe outline "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --json | jq -c '{success,schema:.data.schema,counts:.data.counts,stories:[.data.stories[].path]}'
+  {"success":true,"schema":"office.docx.outline/1","counts":{"body_stories":1,"headers":0,"footers":0,"footnotes":0,"endnotes":0,"comments":0,"paragraphs":1,"runs":1,"tables":0,"rows":0,"cells":0,"hyperlinks":0,"images":0},"stories":["/docx/body","/docx/footnotes","/docx/endnotes","/docx/comments"]}
+
+  $ office.exe get "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" '/docx/body/p[1]'
+  Walking on imported air
+
+  $ office.exe get "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" '/docx/body/p[1]' --json | jq -c '{schema:.data.schema,path:.data.path,kind:.data.kind,stability:.data.stability,text:.data.text,children:[.data.children[].path]}'
+  {"schema":"office.docx.element/1","path":"/docx/body/p[1]","kind":"p","stability":"snapshot-relative","text":"Walking on imported air","children":["/docx/body/p[1]/r[1]"]}
+
+  $ office.exe text "$TESTDIR/../../../../docx2html/tests/cram/fixtures/header-footer.docx" --json | jq -c '{schema:.data.schema,paths:[.data.entries[].path],texts:[.data.entries[].text],matched_total:.data.matched_total,returned:.data.returned,truncated:.data.truncated}'
+  {"schema":"office.docx.text/1","paths":["/docx/body/p[1]","/docx/body/p[2]","/docx/header[1]/p[1]","/docx/header[2]/p[1]","/docx/footer[1]/p[1]"],"texts":["Body first paragraph","Body second paragraph","Default header text","First page header","Footer text"],"matched_total":5,"returned":5,"truncated":false}
+
+  $ office.exe query "$TESTDIR/../../../../docx2html/tests/cram/fixtures/tiny-picture.docx" --kind picture --json | jq -c '{schema:.data.schema,paths:[.data.matches[].path],kinds:[.data.matches[].kind],matched_total:.data.matched_total,returned:.data.returned,truncated:.data.truncated}'
+  {"schema":"office.docx.query/1","paths":["/docx/body/p[1]/r[1]/image[1]"],"kinds":["image"],"matched_total":1,"returned":1,"truncated":false}
+
+Annotation ids are stable when unique; descendants remain snapshot-relative.
+Comment metadata includes canonicalized anchors into the body story.
+
+  $ office.exe get "$TESTDIR/../../../../docx2html/tests/cram/fixtures/commented.docx" '/docx/comments/comment[id="0"]' --json | jq -c '{path:.data.path,stability:.data.stability,id:.data.id,author:.data.metadata.author,done:.data.metadata.done,anchor:.data.metadata.anchors[0].start,text:.data.text}'
+  {"path":"/docx/comments/comment[id=\"0\"]","stability":"stable","id":"0","author":"Ada Lovelace","done":false,"anchor":"/docx/body/p[2]","text":"Please cite a source here."}
+
+  $ office.exe text "$TESTDIR/../../../../docx2html/tests/cram/fixtures/commented.docx" --under '/docx/comments/comment[id="0"]' --json | jq -c '{under:.data.under,entries:[.data.entries[]|{path,text}],matched_total:.data.matched_total}'
+  {"under":"/docx/comments/comment[id=\"0\"]","entries":[{"path":"/docx/comments/comment[id=\"0\"]/p[1]","text":"Please cite a source here."}],"matched_total":1}
+
+The query kind aliases include hyperlinks. This uses the raw editor to make a
+valid internal-anchor hyperlink fixture without relying on an external file.
+
+  $ cp "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" hyperlink.docx
+  $ office.exe raw edit hyperlink.docx /document --path '/w:document/w:body/w:p[1]/w:r[1]' --action replace --xml '<w:hyperlink xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:anchor="target"><w:r><w:t>Jump</w:t></w:r></w:hyperlink>' --json | jq -c '{success,action:.data.change.action,matches:.data.change.match_count}'
+  {"success":true,"action":"replace","matches":1}
+  $ office.exe query hyperlink.docx --kind link --json | jq -c '{paths:[.data.matches[].path],matched_total:.data.matched_total}'
+  {"paths":["/docx/body/p[1]/hyperlink[1]"],"matched_total":1}
+
+Pagination and all user-controlled scan/output ceilings are explicit. Selector
+syntax, missing paths, and XLSX routing retain stable machine-readable codes.
+
+  $ office.exe text "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --limit 0 --json | jq -c '{matched_total:.data.matched_total,returned:.data.returned,truncated:.data.truncated}'
+  {"matched_total":1,"returned":0,"truncated":true}
+
+  $ office.exe get "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" '/docx/body/p[9]' --json > missing-selector.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code,selector:.error.details.selector}' missing-selector.json
+  {"success":false,"code":"office.docx.selector_not_found","selector":"/docx/body/p[9]"}
+
+  $ office.exe get "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" '/docx/body/p[@id=0]' --json > malformed-selector.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code}' malformed-selector.json
+  {"success":false,"code":"office.selector.unsupported_predicate"}
+
+  $ office.exe outline "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --max-elements 1 --json > element-limit.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code,resource:.error.details.resource,limit:.error.details.limit}' element-limit.json
+  {"success":false,"code":"office.docx.resource_limit","resource":"projection elements","limit":1}
+
+  $ office.exe outline "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --max-output-chars 40 --json > output-limit.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code,resource:.error.details.resource,limit:.error.details.limit}' output-limit.json
+  {"success":false,"code":"office.docx.resource_limit","resource":"serialized output characters","limit":40}
+
+  $ office.exe outline "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" --json > xlsx-structured.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code,format:.error.details.format}' xlsx-structured.json
+  {"success":false,"code":"office.unsupported_operation","format":"xlsx"}
 
 Extension/content mismatches and malformed input fail non-zero.
 

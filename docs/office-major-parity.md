@@ -30,7 +30,8 @@ Codex review at `xhigh` effort.
 | A3: bounded cross-format selectors and canonical paths | [#143](https://github.com/moonbitlang/office.mbt/issues/143) | Complete |
 | A4: atomic validated document transactions | [#144](https://github.com/moonbitlang/office.mbt/issues/144) | Complete |
 | A5: validated raw OOXML fallback | [#145](https://github.com/moonbitlang/office.mbt/issues/145) | Complete |
-| D1: preservation-safe DOCX edit sessions | [#146](https://github.com/moonbitlang/office.mbt/issues/146) | In progress |
+| D1: preservation-safe DOCX edit sessions | [#146](https://github.com/moonbitlang/office.mbt/issues/146) | Complete |
+| D2: bounded DOCX outline, get, text, and query | [#147](https://github.com/moonbitlang/office.mbt/issues/147) | Complete |
 
 ## D1 preservation contract
 
@@ -115,9 +116,33 @@ bounded A4 transaction boundary:
 D1 is an SDK foundation, not a newly advertised CLI command. No partial command
 record is added to the A2 registry: its existing raw mutation records already
 advertise `office.transaction/1`, whose `preservation` member is the
-authoritative changed/added/removed/untouched report used by D1. Later DOCX
-outline/get/text/query and concrete mutation slices will add typed command
-records only when they are implemented end to end.
+authoritative changed/added/removed/untouched report used by D1.
+
+## D2 DOCX read contract
+
+The unified CLI now advertises `outline`, `get`, `text`, and `query` only after
+their end-to-end implementations are present:
+
+- one async bounded file read and one limited ZIP snapshot feed a cumulative
+  XML budget and a single annotated DOCX projection;
+- body, headers, footers, footnotes, endnotes, comments, nested tables,
+  hyperlinks, and images share canonical `/docx/...` paths in deterministic
+  story/document order;
+- unique note/comment ids produce stable selector paths; all positional
+  descendants are explicitly snapshot-relative, and duplicate/missing ids
+  degrade with bounded diagnostics rather than false stability;
+- `text` and `query` expose exact bounded-scan totals plus deterministic
+  offset/limit pagination; query accepts only declared literal predicates and
+  never interprets regular expressions or arbitrary expressions;
+- package bytes, ZIP entries and expansion, XML source/tokens/materialization,
+  projection nodes, scanned text, result counts, and serialized output all
+  have explicit ceilings and stable resource-limit failures; and
+- every machine result is wrapped in `office.output/1` and carries one of
+  `office.docx.outline/1`, `office.docx.element/1`, `office.docx.text/1`, or
+  `office.docx.query/1`.
+
+See [office-docx-read.md](office-docx-read.md) for the command and schema
+contract.
 
 ## Deferred beyond major parity
 
