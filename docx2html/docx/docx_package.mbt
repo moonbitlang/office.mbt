@@ -327,13 +327,17 @@ fn HeaderFooterCollector::read_part_story(
     Some(path),
     kind,
   )
-  let root = read_xml_part(
+  let (root_namespace_uri, root) = read_xml_part_with_root_namespace_uri(
     self.parts.zip,
     path,
     xml_budget?=self.parts.xml_budget,
   )
   let expected_root = "w:" + annotation_story_root_local_name(kind)
-  if root.name != expected_root {
+  let wordprocessing_root = match root_namespace_uri {
+    Some(uri) => wordprocessing_dialect(uri) is Some(_)
+    None => false
+  }
+  if root.name != expected_root || !wordprocessing_root {
     raise InvalidXml(message=annotation_story_root_error_message(path, kind))
   }
   let part_relationships = read_relationships(

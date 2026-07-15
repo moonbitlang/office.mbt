@@ -172,6 +172,48 @@ test "tolerant XML expands entities in namespace declarations" {
 }
 
 ///|
+test "tolerant XML reports the document root namespace independently of its literal prefix" {
+  let namespace_map = { "urn:wordprocessing": "w" }
+  let (bound_uri, bound) = @xml.read_xml_string_with_root_namespace_uri(
+    "<alt:hdr xmlns:alt=\"urn:wordprocessing\"/>",
+    namespace_map~,
+  )
+  debug_inspect(
+    (bound_uri, bound.name),
+    content="(Some(\"urn:wordprocessing\"), \"w:hdr\")",
+  )
+  let (default_uri, default_root) = @xml.read_xml_string_with_root_namespace_uri(
+    "<hdr xmlns=\"urn:wordprocessing\"/>",
+    namespace_map~,
+  )
+  debug_inspect(
+    (default_uri, default_root.name),
+    content="(Some(\"urn:wordprocessing\"), \"w:hdr\")",
+  )
+  let budget = @xml.xml_read_budget(
+    max_source_units=1024,
+    max_tokens=64,
+    max_materialized_chars=1024,
+    max_token_chars=128,
+  )
+  let (unbound_uri, unbound) = @xml.read_xml_bytes_limited_with_root_namespace_uri(
+    @utf8.encode("<w:hdr/>"),
+    budget,
+    namespace_map~,
+  )
+  debug_inspect((unbound_uri, unbound.name), content="(None, \"w:hdr\")")
+  let (unqualified_uri, _) = @xml.read_xml_string_with_root_namespace_uri(
+    "<hdr/>",
+    namespace_map~,
+  )
+  let (empty_default_uri, _) = @xml.read_xml_string_with_root_namespace_uri(
+    "<hdr xmlns=\"\"/>",
+    namespace_map~,
+  )
+  debug_inspect((unqualified_uri, empty_default_uri), content="(None, None)")
+}
+
+///|
 test "byte XML parsers reject contradictory encoding declarations" {
   let source = @utf8.encode(
     "<?xml version=\"1.0\" encoding=\"UTF-16\"?><root/>",

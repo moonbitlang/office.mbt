@@ -297,28 +297,44 @@ fn unreferenced_story_fixture(
 }
 
 ///|
-fn referenced_header_fixture(
+fn referenced_story_fixture(
+  kind : String,
   content_type : String,
-  header_xml : String,
+  story_xml : String,
 ) -> Bytes raise {
+  let relationship_type = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/" +
+    kind
+  let target = kind + "1.xml"
+  let part_path = "word/" + target
   let source = unreferenced_story_fixture(
-    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header",
-    "header1.xml", "word/header1.xml", content_type, header_xml,
+    relationship_type, target, part_path, content_type, story_xml,
   )
   let archive = try! @mbtzip.read(source)
   assert_true(
     archive.replace(
       "word/document.xml",
       @utf8.encode(
-        (
-          #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-          #|<w:body><w:p/><w:sectPr><w:headerReference w:type="default" r:id="rIdHidden"/></w:sectPr></w:body>
-          #|</w:document>
-        ),
+        "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:body><w:p/><w:sectPr><w:\{kind}Reference w:type=\"default\" r:id=\"rIdHidden\"/></w:sectPr></w:body></w:document>",
       ),
     ),
   )
   try! @mbtzip.write(archive)
+}
+
+///|
+fn referenced_header_fixture(
+  content_type : String,
+  header_xml : String,
+) -> Bytes raise {
+  referenced_story_fixture("header", content_type, header_xml)
+}
+
+///|
+fn referenced_footer_fixture(
+  content_type : String,
+  footer_xml : String,
+) -> Bytes raise {
+  referenced_story_fixture("footer", content_type, footer_xml)
 }
 
 ///|
@@ -712,29 +728,62 @@ test "tolerant annotated reads warn on broken section references while mutation 
     _ => fail("expected mutation-safe read to fail closed")
   }
 
-  fn assert_tolerant_header_omission(source : Bytes) -> Unit raise {
+  fn assert_tolerant_story_omission(
+    source : Bytes,
+    kind : String,
+    path : String,
+  ) -> Unit raise {
     let archive = try! @mbtzip.read(source)
     let tolerant = @docx.read_docx_annotated_archive_tolerant_limited(
       archive,
       budget(),
     )
-    assert_eq(tolerant.result().headers.length(), 0)
-    assert_eq(tolerant.header_story_sources().length(), 0)
-    assert_eq(tolerant.result().sections[0].headers.length(), 0)
+    match kind {
+      "header" => {
+        assert_eq(tolerant.result().headers.length(), 0)
+        assert_eq(tolerant.header_story_sources().length(), 0)
+        assert_eq(tolerant.result().sections[0].headers.length(), 0)
+      }
+      "footer" => {
+        assert_eq(tolerant.result().footers.length(), 0)
+        assert_eq(tolerant.footer_story_sources().length(), 0)
+        assert_eq(tolerant.result().sections[0].footers.length(), 0)
+      }
+      _ => fail("unexpected annotation story kind: " + kind)
+    }
     assert_true(
       tolerant.result().messages.any(message => {
         message ==
         @core.warning(
-          "A header part could not be read and was ignored: word/header1.xml",
+          "A " + kind + " part could not be read and was ignored: " + path,
         )
       }),
     )
   }
 
+  fn assert_mutation_story_rejected(
+    source : Bytes,
+    kind : String,
+    expected_error : String,
+  ) -> Unit raise {
+    let archive = try! @mbtzip.read(source)
+    try @docx.read_docx_annotated_archive_limited(archive, budget()) catch {
+      InvalidXml(message~) =>
+        if !message.contains(expected_error) {
+          fail("unexpected " + kind + " story error: " + message)
+        }
+      _ => fail("expected mutation-safe read to reject the " + kind + " story")
+    } noraise {
+      _ => fail("expected mutation-safe read to fail on the " + kind + " story")
+    }
+  }
+
   let wrong_content_type = referenced_header_fixture(
     "application/xml", "<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>",
   )
-  assert_tolerant_header_omission(wrong_content_type)
+  assert_tolerant_story_omission(
+    wrong_content_type, "header", "word/header1.xml",
+  )
   let wrong_content_archive = try! @mbtzip.read(wrong_content_type)
   try
     @docx.read_docx_annotated_archive_limited(wrong_content_archive, budget())
@@ -750,17 +799,28 @@ test "tolerant annotated reads warn on broken section references while mutation 
     "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml",
     "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>",
   )
-  assert_tolerant_header_omission(wrong_root)
-  let wrong_root_archive = try! @mbtzip.read(wrong_root)
-  try
-    @docx.read_docx_annotated_archive_limited(wrong_root_archive, budget())
-  catch {
-    InvalidXml(message~) =>
-      assert_true(message.contains("must have a WordprocessingML 'hdr' root"))
-    _ => fail("expected mutation-safe read to reject the header root")
-  } noraise {
-    _ => fail("expected mutation-safe read to fail on the header root")
-  }
+  assert_tolerant_story_omission(wrong_root, "header", "word/header1.xml")
+  assert_mutation_story_rejected(
+    wrong_root, "header", "must have a WordprocessingML 'hdr' root",
+  )
+
+  let unbound_header = referenced_header_fixture(
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml",
+    "<w:hdr/>",
+  )
+  assert_tolerant_story_omission(unbound_header, "header", "word/header1.xml")
+  assert_mutation_story_rejected(
+    unbound_header, "header", "unbound XML namespace prefix: w",
+  )
+
+  let unbound_footer = referenced_footer_fixture(
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml",
+    "<w:ftr/>",
+  )
+  assert_tolerant_story_omission(unbound_footer, "footer", "word/footer1.xml")
+  assert_mutation_story_rejected(
+    unbound_footer, "footer", "unbound XML namespace prefix: w",
+  )
 }
 
 ///|

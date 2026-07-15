@@ -809,11 +809,23 @@ fn read_xml_part(
   path : String,
   xml_budget? : @xml.XmlReadBudget,
 ) -> XmlElement raise DocxError {
+  read_xml_part_with_root_namespace_uri(zip, path, xml_budget?).1
+}
+
+///|
+/// Reads one tolerant XML part while retaining the namespace identity of its
+/// document element. The DOM's canonical name alone cannot distinguish a
+/// bound QName from an identical literal name whose prefix is unbound.
+fn read_xml_part_with_root_namespace_uri(
+  zip : ZipArchive,
+  path : String,
+  xml_budget? : @xml.XmlReadBudget,
+) -> (String?, XmlElement) raise DocxError {
   match zip.read_bytes(path) {
     Some(bytes) =>
       match xml_budget {
         Some(budget) =>
-          @xml.read_xml_bytes_limited(
+          @xml.read_xml_bytes_limited_with_root_namespace_uri(
             bytes,
             budget,
             namespace_map=office_namespace_map(),
@@ -822,7 +834,10 @@ fn read_xml_part(
           let text = @utf8.decode(bytes, ignore_bom=true) catch {
             _ => raise InvalidXml(message="part is not valid UTF-8: " + path)
           }
-          read_xml_string(text, namespace_map=office_namespace_map())
+          @xml.read_xml_string_with_root_namespace_uri(
+            text,
+            namespace_map=office_namespace_map(),
+          )
         }
       }
     None => raise MissingPart(message="missing DOCX part: " + path)
