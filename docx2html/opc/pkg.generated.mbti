@@ -14,6 +14,8 @@ pub fn logical_part_name_from_zip_item_name(StringView) -> String?
 
 pub fn part_name_key(StringView) -> String
 
+pub fn read_opc_relationships_string_encoded_limited(String, @xml.XmlSourceEncoding, @xml.XmlReadBudget) -> @xml.XmlElement raise @core.DocxError
+
 pub fn read_opc_relationships_xml_limited(BytesView, @xml.XmlReadBudget) -> @xml.XmlElement raise @core.DocxError
 
 pub fn resolve_part_target(String, StringView) -> String?

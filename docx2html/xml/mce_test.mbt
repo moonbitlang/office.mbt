@@ -21,6 +21,26 @@ fn read_mce_test_xml(
 }
 
 ///|
+test "MCE parses decoded UTF-16 with an audited encoding declaration" {
+  let source =
+    #|<?xml version="1.0" encoding="UTF-16"?>
+    #|<mc:AlternateContent
+    #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    #| xmlns:a="urn:application">
+    #| <mc:Choice Requires="a"><a:Root selected="choice"/></mc:Choice>
+    #| <mc:Fallback><a:Root selected="fallback"/></mc:Fallback>
+    #|</mc:AlternateContent>
+  let root = @xml.read_xml_string_strict_mce_encoded_limited(
+    source,
+    Utf16BigEndianWithBom,
+    mce_test_budget(source),
+    ["urn:application"],
+  )
+  assert_eq(root.name, "{urn:application}Root")
+  assert_eq(root.attributes.get("selected"), Some("choice"))
+}
+
+///|
 fn mce_test_error(
   source : String,
   understood? : Array[String] = ["urn:application"],

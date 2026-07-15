@@ -26,6 +26,8 @@ pub fn read_xml_string_strict_encoded(String, XmlSourceEncoding, namespace_map? 
 
 pub fn read_xml_string_strict_limited(String, XmlReadBudget, namespace_map? : Map[String, String]) -> XmlElement raise @core.DocxError
 
+pub fn read_xml_string_strict_mce_encoded_limited(String, XmlSourceEncoding, XmlReadBudget, Array[String]) -> XmlElement raise @core.DocxError
+
 pub fn write_xml_fragment(XmlElement, namespaces? : Map[String, String]) -> String
 
 pub fn write_xml_fragment_limited(XmlElement, max_output_bytes~ : Int, namespaces? : Map[String, String]) -> String raise @core.DocxError

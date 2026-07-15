@@ -944,7 +944,7 @@ test "detect_format shares package-rooted OPC target normalization" {
 }
 
 ///|
-test "detect_format requires absolute relationship Type URIs" {
+test "detect_format requires absolute relationship Type IRIs" {
   let broken = add_root_relationship(
     @excel.write(@excel.new_file()),
     "<Relationship Id=\"rRelativeType\" Type=\"worksheet\" Target=\"xl/workbook.xml\"/>",
@@ -963,7 +963,7 @@ test "detect_format requires absolute relationship Type URIs" {
 }
 
 ///|
-test "detect_format rejects invalid characters in relationship Type URIs" {
+test "detect_format rejects invalid characters in relationship Type IRIs" {
   let broken = add_root_relationship(
     @excel.write(@excel.new_file()),
     "<Relationship Id=\"rInvalidType\" Type=\"https://example.com/{invalid}\" Target=\"xl/workbook.xml\"/>",
@@ -972,17 +972,17 @@ test "detect_format rejects invalid characters in relationship Type URIs" {
     err =>
       inspect(
         Show::to_string(err).contains(
-          "relationship in _rels/.rels has an invalid Type URI: https://example.com/{invalid}",
+          "relationship in _rels/.rels has an invalid Type IRI: https://example.com/{invalid}",
         ),
         content="true",
       )
   } noraise {
-    _ => fail("expected an invalid relationship Type URI")
+    _ => fail("expected an invalid relationship Type IRI")
   }
 }
 
 ///|
-test "detect_format rejects malformed relationship Type URI components" {
+test "detect_format rejects malformed relationship Type IRI components" {
   let source = @excel.write(@excel.new_file())
   for
     rel_type in [
@@ -997,11 +997,11 @@ test "detect_format rejects malformed relationship Type URI components" {
       err =>
         assert_true(
           Show::to_string(err).contains(
-            "relationship in _rels/.rels has an invalid Type URI: \{rel_type}",
+            "relationship in _rels/.rels has an invalid Type IRI: \{rel_type}",
           ),
         )
     } noraise {
-      _ => fail("expected a malformed relationship Type URI: \{rel_type}")
+      _ => fail("expected a malformed relationship Type IRI: \{rel_type}")
     }
   }
 }
@@ -1305,6 +1305,101 @@ test "detect_format ignores deterministic hash clustering in package names" {
 test "detect_format identifies DOCX with UTF-16 package XML" {
   let utf16 = reencode_identification_parts_as_utf16(@word.new_blank_docx())
   inspect(@office.detect_format("report.docx", utf16).name(), content="docx")
+}
+
+///|
+test "detect_format applies ProcessContent to UTF-16 root relationships" {
+  let wrapped = replace_archive_part(
+    @word.new_blank_docx(),
+    "_rels/.rels",
+    @utf8.encode(
+      (
+        #|<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
+        #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        #| xmlns:v="urn:mbtexcel:test:vendor"
+        #| mc:Ignorable="v" mc:ProcessContent="v:Wrapper">
+        #| <v:Wrapper><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></v:Wrapper>
+        #|</Relationships>
+      ),
+    ),
+  )
+  let utf16 = reencode_identification_parts_as_utf16(wrapped)
+  inspect(@office.detect_format("report.docx", utf16).name(), content="docx")
+}
+
+///|
+test "detect_format selects understood relationship AlternateContent" {
+  let selected = replace_archive_part(
+    @word.new_blank_docx(),
+    "_rels/.rels",
+    @utf8.encode(
+      (
+        #|<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
+        #| xmlns:r="http://schemas.openxmlformats.org/package/2006/relationships"
+        #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">
+        #| <mc:AlternateContent>
+        #|  <mc:Choice Requires="r"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></mc:Choice>
+        #|  <mc:Fallback><Relationship Id="decoy" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/missing.xml"/></mc:Fallback>
+        #| </mc:AlternateContent>
+        #|</Relationships>
+      ),
+    ),
+  )
+  inspect(@office.detect_format("report.docx", selected).name(), content="docx")
+}
+
+///|
+test "detect_format collapses relationship identity whitespace" {
+  let padded = replace_archive_part(
+    @word.new_blank_docx(),
+    "_rels/.rels",
+    @utf8.encode(
+      (
+        #|<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id=" &#x9; rId1 &#xA; " Type=" http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument " Target=" word/document.xml "/></Relationships>
+      ),
+    ),
+  )
+  inspect(@office.detect_format("report.docx", padded).name(), content="docx")
+}
+
+///|
+test "detect_format accepts Unicode relationship Type IRIs" {
+  let data = add_root_relationship(
+    @word.new_blank_docx(),
+    "<Relationship Id=\"unicodeType\" Type=\"https://例え.テスト/型\" Target=\"https://例え.テスト/文書\" TargetMode=\"External\"/>",
+  )
+  inspect(@office.detect_format("report.docx", data).name(), content="docx")
+}
+
+///|
+test "detect_format retains unknown MCE attributes for closed validation" {
+  let annotated = replace_archive_part(
+    @word.new_blank_docx(),
+    "_rels/.rels",
+    @utf8.encode(
+      (
+        #|<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
+        #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        #| mc:Bogus="retained"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>
+      ),
+    ),
+  )
+  try @office.detect_format("report.docx", annotated) catch {
+    err => {
+      let message = Show::to_string(err)
+      assert_true(
+        message.contains(
+          "_rels/.rels Relationships has an undeclared attribute: {http://schemas.openxmlformats.org/markup-compatibility/2006}Bogus",
+        ),
+      )
+    }
+  } noraise {
+    _ => fail("expected an unknown MCE attribute to remain schema-visible")
+  }
 }
 
 ///|

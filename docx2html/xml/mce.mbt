@@ -739,6 +739,44 @@ fn process_markup_compatibility(
 }
 
 ///|
+fn read_xml_string_strict_mce_encoded_with_mode(
+  source : String,
+  source_encoding : XmlSourceEncoding,
+  budget : XmlReadBudget,
+  application_namespaces : Array[String],
+  source_already_charged : Bool,
+) -> XmlElement raise DocxError {
+  let root = read_xml_string_with_mode(
+    source,
+    Map([]),
+    true,
+    Some(budget),
+    source_already_charged,
+    Some(source_encoding),
+    true,
+  )
+  process_markup_compatibility(root, budget, application_namespaces)
+}
+
+///|
+/// Strictly parses an already decoded XML string, enforces the declared byte
+/// encoding, preserves namespace scope long enough to apply ECMA-376 Part 3
+/// Markup Compatibility processing, and charges the caller-owned cumulative
+/// budget. String input is charged in UTF-16 storage units before parsing.
+/// The markup configuration is empty; callers provide the namespaces their
+/// application understands.
+pub fn read_xml_string_strict_mce_encoded_limited(
+  source : String,
+  source_encoding : XmlSourceEncoding,
+  budget : XmlReadBudget,
+  application_namespaces : Array[String],
+) -> XmlElement raise DocxError {
+  read_xml_string_strict_mce_encoded_with_mode(
+    source, source_encoding, budget, application_namespaces, false,
+  )
+}
+
+///|
 /// Strictly parses UTF-8 XML, preserves namespace scope long enough to apply
 /// ECMA-376 Part 3 Markup Compatibility processing, and returns the processed
 /// single-root tree. The markup configuration is empty; callers provide the
@@ -752,14 +790,11 @@ pub fn read_xml_bytes_strict_mce_limited(
   let text = @utf8.decode(source, ignore_bom=true) catch {
     _ => raise InvalidXml(message="XML source is not valid UTF-8")
   }
-  let root = read_xml_string_with_mode(
+  read_xml_string_strict_mce_encoded_with_mode(
     text,
-    Map([]),
-    true,
-    Some(budget),
-    true,
-    Some(Utf8),
+    Utf8,
+    budget,
+    application_namespaces,
     true,
   )
-  process_markup_compatibility(root, budget, application_namespaces)
 }

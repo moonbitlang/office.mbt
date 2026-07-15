@@ -7,7 +7,7 @@ test "URI references follow RFC 3986 component grammar" {
       "http://[::ffff:192.0.2.1]/", "http://[1:2:3:4:5:6:7:8]/", "http://[v1.fe80]/",
       "file:///C:/path",
     ] {
-    if !is_valid_uri_reference(value) {
+    if !is_valid_resource_identifier_reference(value, false) {
       fail("expected a valid URI reference: \{value}")
     }
   }
@@ -19,7 +19,7 @@ test "URI references follow RFC 3986 component grammar" {
       "https://example.com/a b", "https://example.com/{bad}", "https://example.com/#one#two",
       "https://例え.テスト/資料", "1bad:value",
     ] {
-    if is_valid_uri_reference(value) {
+    if is_valid_resource_identifier_reference(value, false) {
       fail("expected an invalid URI reference: \{value}")
     }
   }

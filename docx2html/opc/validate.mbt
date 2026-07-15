@@ -1902,3 +1902,21 @@ pub fn read_opc_relationships_xml_limited(
     PACKAGE_RELATIONSHIPS_NAMESPACE,
   ])
 }
+
+///|
+/// Strictly parses one already-decoded OPC Relationships part, verifies its
+/// XML encoding declaration, and applies Markup Compatibility with only the
+/// package Relationships namespace understood. Schema validation remains the
+/// caller's responsibility.
+pub fn read_opc_relationships_string_encoded_limited(
+  source : String,
+  source_encoding : @xml.XmlSourceEncoding,
+  budget : @xml.XmlReadBudget,
+) -> @xml.XmlElement raise @core.DocxError {
+  @xml.read_xml_string_strict_mce_encoded_limited(
+    source,
+    source_encoding,
+    budget,
+    [PACKAGE_RELATIONSHIPS_NAMESPACE],
+  )
+}
