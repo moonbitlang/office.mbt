@@ -251,7 +251,8 @@ jobs:
           out=$(moon run --target wasm cmd/xlsx -- batch ci.xlsx ci-batch.json 2>&1) && { echo "expected the bad script to fail"; exit 1; } || true
           echo "$out" | grep -q "error: op 2 (merge): missing param 'range'"
           cmp ci.xlsx ci-before.xlsx
-          sed -i 's/"cell_range"/"range"/' ci-batch.json
+          sed -i.bak 's/"cell_range"/"range"/' ci-batch.json
+          rm ci-batch.json.bak
           b=$(moon run --target wasm cmd/xlsx -- batch ci.xlsx ci-batch.json 2>/dev/null)
           echo "batch -> $b"; test "$b" = "applied 3 op(s) to ci.xlsx"
           c=$(moon run --target wasm cmd/xlsx -- calc ci.xlsx Data A3 2>/dev/null)
