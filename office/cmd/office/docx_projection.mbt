@@ -83,9 +83,9 @@ struct AnnotationStoryPlan {
 ///|
 struct AnnotationProjectionIndex {
   comments : Array[@docx.CommentInfo]
-  footnotes : @sorted_map.SortedMap[String, @docx.NoteInfo]
-  endnotes : @sorted_map.SortedMap[String, @docx.NoteInfo]
-  path_roots : @sorted_map.SortedMap[String, String]
+  comment_anchors : @sorted_map.SortedMap[String, Json]
+  footnote_references : @sorted_map.SortedMap[String, Json]
+  endnote_references : @sorted_map.SortedMap[String, Json]
 }
 
 ///|
@@ -234,6 +234,19 @@ fn selector_stability_text(stability : @lib.SelectorStability) -> String {
 }
 
 ///|
+fn DocxProjectionBuilder::require_entry_capacity(
+  self : DocxProjectionBuilder,
+) -> Unit raise CliFailure {
+  if self.entries.length() >= self.max_elements {
+    raise docx_resource_failure(
+      "projection elements",
+      self.max_elements,
+      actual=self.entries.length() + 1,
+    )
+  }
+}
+
+///|
 fn DocxProjectionBuilder::add_entry(
   self : DocxProjectionBuilder,
   path : String,
@@ -246,13 +259,7 @@ fn DocxProjectionBuilder::add_entry(
   metadata : Json,
   source : Json,
 ) -> DocxProjectionEntry raise CliFailure {
-  if self.entries.length() >= self.max_elements {
-    raise docx_resource_failure(
-      "projection elements",
-      self.max_elements,
-      actual=self.entries.length() + 1,
-    )
-  }
+  self.require_entry_capacity()
   let selector = @lib.parse_selector(path) catch {
     SelectorError(code~, message~, ..) =>
       raise docx_cli_failure(
@@ -409,8 +416,11 @@ fn comment_anchor_metadata(
   path_roots : @sorted_map.SortedMap[String, String],
 ) -> Json {
   let fields : Map[String, Json] = {
-    "story": Json::string(anchor.story()),
     "references": canonical_index_paths(anchor.references(), path_roots),
+  }
+  match canonical_index_path(anchor.story(), path_roots) {
+    Some(canonical) => fields["story"] = Json::string(canonical)
+    None => ()
   }
   match anchor.start() {
     Some(path) =>
@@ -443,7 +453,7 @@ fn comment_anchor_metadata(
 fn comment_details(
   comments : Array[@docx.CommentInfo],
   ordinal : Int,
-  path_roots : @sorted_map.SortedMap[String, String],
+  anchors_by_id : @sorted_map.SortedMap[String, Json],
 ) -> AnnotationDetails {
   let fields : Map[String, Json] = Map([])
   let properties : Map[String, String] = Map([])
@@ -477,28 +487,19 @@ fn comment_details(
       Some(value) => fields["parent_id"] = Json::string(value)
       None => ()
     }
-    let anchors : Array[Json] = []
-    for anchor in info.anchors() {
-      anchors.push(comment_anchor_metadata(anchor, path_roots))
-    }
-    fields["anchors"] = Json::array(anchors)
+    fields["anchors"] = anchors_by_id.get(info.id()).unwrap_or(Json::array([]))
   }
   { metadata: Json::object(fields), properties }
 }
 
 ///|
 fn note_details(
-  notes : @sorted_map.SortedMap[String, @docx.NoteInfo],
+  references_by_id : @sorted_map.SortedMap[String, Json],
   id : String,
-  path_roots : @sorted_map.SortedMap[String, String],
 ) -> AnnotationDetails {
   let fields : Map[String, Json] = Map([])
-  match notes.get(id) {
-    Some(note) =>
-      fields["references"] = canonical_index_paths(
-        note.references(),
-        path_roots,
-      )
+  match references_by_id.get(id) {
+    Some(references) => fields["references"] = references
     None => ()
   }
   { metadata: Json::object(fields), properties: Map([]) }
@@ -613,6 +614,38 @@ fn index_notes(
 }
 
 ///|
+fn index_comment_anchors(
+  comments : Array[@docx.CommentInfo],
+  path_roots : @sorted_map.SortedMap[String, String],
+) -> @sorted_map.SortedMap[String, Json] {
+  let output : @sorted_map.SortedMap[String, Json] = SortedMap([])
+  for info in comments {
+    let id = info.id()
+    if output.contains(id) {
+      continue
+    }
+    let anchors : Array[Json] = []
+    for anchor in info.anchors() {
+      anchors.push(comment_anchor_metadata(anchor, path_roots))
+    }
+    output[id] = Json::array(anchors)
+  }
+  output
+}
+
+///|
+fn index_note_references(
+  notes : @sorted_map.SortedMap[String, @docx.NoteInfo],
+  path_roots : @sorted_map.SortedMap[String, String],
+) -> @sorted_map.SortedMap[String, Json] {
+  let output : @sorted_map.SortedMap[String, Json] = SortedMap([])
+  for id, note in notes {
+    output[id] = canonical_index_paths(note.references(), path_roots)
+  }
+  output
+}
+
+///|
 fn annotation_projection_index(
   annotated : @docx.DocxAnnotatedResult,
   footnotes : AnnotationStoryPlan,
@@ -624,11 +657,14 @@ fn annotation_projection_index(
   add_annotation_path_roots(path_roots, endnotes)
   add_annotation_path_roots(path_roots, comments)
   let annotations = annotated.annotations()
+  let comment_infos = annotations.comments()
+  let footnote_infos = index_notes(annotations.footnotes())
+  let endnote_infos = index_notes(annotations.endnotes())
   {
-    comments: annotations.comments(),
-    footnotes: index_notes(annotations.footnotes()),
-    endnotes: index_notes(annotations.endnotes()),
-    path_roots,
+    comments: comment_infos,
+    comment_anchors: index_comment_anchors(comment_infos, path_roots),
+    footnote_references: index_note_references(footnote_infos, path_roots),
+    endnote_references: index_note_references(endnote_infos, path_roots),
   }
 }
 
@@ -688,10 +724,27 @@ fn DocxProjectionBuilder::add_story(
 }
 
 ///|
+fn docx_story_source_fields(
+  story : String,
+  source : @docx.DocxStoryPartSource?,
+) -> Map[String, Json] {
+  let fields : Map[String, Json] = { "story": Json::string(story) }
+  match source {
+    Some(value) => {
+      fields["part"] = Json::string(value.part())
+      fields["authority"] = Json::string(value.authority().name())
+    }
+    None => fields["authority"] = Json::string("absent")
+  }
+  fields
+}
+
+///|
 fn DocxProjectionBuilder::add_annotation_story(
   self : DocxProjectionBuilder,
   annotation_index : AnnotationProjectionIndex,
   plan : AnnotationStoryPlan,
+  source : @docx.DocxStoryPartSource?,
 ) -> Unit raise CliFailure {
   let story = plan.story
   let kind = plan.kind
@@ -702,6 +755,7 @@ fn DocxProjectionBuilder::add_annotation_story(
     let (_, body) = pair
     combined_body.append(body)
   }
+  let collection_source = docx_story_source_fields(story, source)
   let collection = self.add_entry(
     collection_path,
     None,
@@ -711,9 +765,10 @@ fn DocxProjectionBuilder::add_annotation_story(
     Some(@document.document(combined_body)),
     Map([]),
     Json::object({ "items": Json::number(pairs.length().to_double()) }),
-    Json::object({ "story": Json::string(story) }),
+    Json::object(collection_source),
   )
   for item_index, pair in pairs {
+    self.require_entry_capacity()
     let ordinal = item_index + 1
     let (id, body) = pair
     let path = plan.paths[item_index]
@@ -721,12 +776,12 @@ fn DocxProjectionBuilder::add_annotation_story(
       comment_details(
         annotation_index.comments,
         ordinal,
-        annotation_index.path_roots,
+        annotation_index.comment_anchors,
       )
     } else if story == "footnotes" {
-      note_details(annotation_index.footnotes, id, annotation_index.path_roots)
+      note_details(annotation_index.footnote_references, id)
     } else {
-      note_details(annotation_index.endnotes, id, annotation_index.path_roots)
+      note_details(annotation_index.endnote_references, id)
     }
     let metadata_fields : Map[String, Json] = {
       "id": Json::string(id),
@@ -739,6 +794,8 @@ fn DocxProjectionBuilder::add_annotation_story(
         }
       _ => ()
     }
+    let item_source = docx_story_source_fields(story, source)
+    item_source["ordinal"] = Json::number(ordinal.to_double())
     let item = self.add_entry(
       path,
       Some(collection_path),
@@ -752,10 +809,7 @@ fn DocxProjectionBuilder::add_annotation_story(
       Some(@document.document(body)),
       details.properties,
       Json::object(metadata_fields),
-      Json::object({
-        "story": Json::string(story),
-        "ordinal": Json::number(ordinal.to_double()),
-      }),
+      Json::object(item_source),
     )
     collection.children.push(path)
     self.walk_element_children(item, @document.document(body))
@@ -816,40 +870,51 @@ fn projection_from_annotated(
   let annotations = annotation_projection_index(
     annotated, footnotes, endnotes, comments,
   )
+  let header_sources = annotated.header_story_sources()
+  let footer_sources = annotated.footer_story_sources()
   builder.add_story(
     "/docx/body",
     "body",
     document_body_elements(result.document),
-    Json::object({
-      "story": Json::string("body"),
-      "part": Json::string(annotated.main_story_part()),
-    }),
+    Json::object(
+      docx_story_source_fields("body", Some(annotated.main_story_source())),
+    ),
   )
   for index, header in result.headers {
+    let source = docx_story_source_fields("header", header_sources.get(index))
+    source["part_index"] = Json::number((index + 1).to_double())
     builder.add_story(
       "/docx/header[\{index + 1}]",
       "header",
       header.body,
-      Json::object({
-        "story": Json::string("header"),
-        "part_index": Json::number((index + 1).to_double()),
-      }),
+      Json::object(source),
     )
   }
   for index, footer in result.footers {
+    let source = docx_story_source_fields("footer", footer_sources.get(index))
+    source["part_index"] = Json::number((index + 1).to_double())
     builder.add_story(
       "/docx/footer[\{index + 1}]",
       "footer",
       footer.body,
-      Json::object({
-        "story": Json::string("footer"),
-        "part_index": Json::number((index + 1).to_double()),
-      }),
+      Json::object(source),
     )
   }
-  builder.add_annotation_story(annotations, footnotes)
-  builder.add_annotation_story(annotations, endnotes)
-  builder.add_annotation_story(annotations, comments)
+  builder.add_annotation_story(
+    annotations,
+    footnotes,
+    annotated.footnotes_story_source(),
+  )
+  builder.add_annotation_story(
+    annotations,
+    endnotes,
+    annotated.endnotes_story_source(),
+  )
+  builder.add_annotation_story(
+    annotations,
+    comments,
+    annotated.comments_story_source(),
+  )
   for message in result.messages {
     match message {
       Warning(text) => builder.warn("office.docx.reader_warning", text)

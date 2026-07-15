@@ -19,6 +19,12 @@ type AnnotationProjectionIndex
 
 type AnnotationStoryPlan
 
+type DocxCollectedText
+
+type DocxHumanWriter
+
+type DocxOutputBudget
+
 type DocxProjection
 
 type DocxProjectionBuilder

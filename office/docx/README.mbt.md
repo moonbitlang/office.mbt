@@ -86,6 +86,12 @@ checkpoints are maintained during the scan, and fixed-width anchor merges avoid
 comparison sorting. Annotation indexing is therefore linear in scanned XML plus
 emitted annotations rather than repeatedly walking trees or resolving paths.
 
+`DocxAnnotatedResult` retains physical story provenance independently of the
+logical projection. Its story-source accessors expose the exact ZIP part and
+whether it was relationship-backed or selected by the legacy conventional
+filename fallback; header/footer source arrays stay aligned with package-result
+story order.
+
 Comment bodies receive a second preflight before any derived XML tree or reply
 paragraph-id array is allocated. It bounds depth, node count, and reachable
 UTF-8 input. The fragment writer then performs an escape-aware UTF-8 sizing pass
