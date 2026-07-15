@@ -350,6 +350,72 @@ test "builder enforces package-wide names and metadata grammars" {
     "relationship Id is not an XML NCName",
   )
   expect_build_error(
+    builder => {
+      builder.add_relationship("rRelative", "types/test", "word/document.xml")
+    },
+    "relationship Type must be an absolute URI without a fragment",
+  )
+  expect_build_error(
+    builder => {
+      builder.add_relationship(
+        "rFragment", "urn:test#kind", "word/document.xml",
+      )
+    },
+    "relationship Type must be an absolute URI without a fragment",
+  )
+  expect_build_error(
+    builder => {
+      builder.add_relationship(
+        "rPercent", "https://example.test/%GG", "word/document.xml",
+      )
+    },
+    "relationship Type must be an absolute URI without a fragment",
+  )
+  expect_build_error(
+    builder => {
+      builder.add_relationship(
+        "rSpace",
+        "urn:test",
+        "https://example.test/bad path",
+        external=true,
+      )
+    },
+    "external relationship Target is not a valid IRI reference",
+  )
+  expect_build_error(
+    builder => {
+      builder.add_relationship(
+        "rIpv6",
+        "urn:test",
+        "https://[2001:db8:::1]/",
+        external=true,
+      )
+    },
+    "external relationship Target is not a valid IRI reference",
+  )
+  expect_build_error(
+    builder => {
+      builder.add_relationship(
+        "rBadPercent",
+        "urn:test",
+        "../outside/%GG",
+        external=true,
+      )
+    },
+    "external relationship Target is not a valid IRI reference",
+  )
+  expect_build_error(
+    builder => {
+      builder.add_relationship(
+        "rNoncharacter",
+        "urn:test",
+        "https://example.test/\u{fdd0}",
+        external=true,
+      )
+    },
+    "external relationship Target is not a valid IRI reference",
+  )
+  expect_build_error(
     builder => builder.add_relationship("rBadTarget", "urn:test", "_rels/.rels"),
     "relationship rBadTarget of '' must not target a Relationships part",
   )
@@ -361,5 +427,26 @@ test "builder enforces package-wide names and metadata grammars" {
     "a!$&'()*+,:=@-_~%2Fz", "application/x-test; note=\"é\"",
   )
   parameterized.add_part("word/data.bin", b"data")
+  parameterized.add_relationship(
+    "rUnicodeIri",
+    "urn:test:unicode",
+    "https://例え.テスト/文書?q=値",
+    source="word/document.xml",
+    external=true,
+  )
+  parameterized.add_relationship(
+    "rRelativeIri",
+    "urn:test:relative",
+    "../outside/文書",
+    source="word/document.xml",
+    external=true,
+  )
+  parameterized.add_relationship(
+    "rOfficeFile",
+    "urn:test:file",
+    "file:///C:\\docs\\文書.docx",
+    source="word/document.xml",
+    external=true,
+  )
   assert_eq(@opc.validate_docx_package(parameterized.build()), [])
 }
