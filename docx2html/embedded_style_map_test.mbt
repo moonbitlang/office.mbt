@@ -183,13 +183,13 @@ test "re-embedding style map replaces original metadata" {
 }
 
 ///|
-test "embedding style map preserves physical ZIP entry spelling" {
+test "embedding style map preserves permitted physical ZIP entry spelling" {
   let relationships_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"/>"
   let content_types_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Override PartName=\"/MAMMOTH/STYLE-MAP\" ContentType=\"application/old\"/></Types>"
   let written = @docx2html.embed_style_map(
     style_map_embedding_zip([
       ("WORD/_RELS/DOCUMENT.XML.RELS", relationships_xml),
-      ("[CONTENT_TYPES].XML", content_types_xml),
+      ("[Content_Types].xml", content_types_xml),
       ("MAMMOTH/STYLE-MAP", "old"),
     ]),
     "p => h1",
@@ -202,8 +202,8 @@ test "embedding style map preserves physical ZIP entry spelling" {
     @utf8.decode(relationships),
     content="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rMammothStyleMap\" Type=\"http://schemas.zwobble.org/mammoth/style-map\" Target=\"/mammoth/style-map\"/></Relationships>",
   )
-  guard archive.get("[CONTENT_TYPES].XML") is Some(content_types) else {
-    fail("expected original content-types entry spelling")
+  guard archive.get("[Content_Types].xml") is Some(content_types) else {
+    fail("expected required content-types entry spelling")
   }
   inspect(
     @utf8.decode(content_types),
@@ -214,7 +214,6 @@ test "embedding style map preserves physical ZIP entry spelling" {
   }
   inspect(@utf8.decode(style_map), content="p => h1")
   assert_true(archive.get("word/_rels/document.xml.rels") is None)
-  assert_true(archive.get("[Content_Types].xml") is None)
   assert_true(archive.get("mammoth/style-map") is None)
 }
 
