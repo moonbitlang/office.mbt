@@ -13,7 +13,9 @@
 //   3. `_rels/.rels` exists, parses, and names an officeDocument
 //      relationship whose target exists (the main document part is found by
 //      FOLLOWING that relationship — never a hardcoded `word/document.xml`).
-//   4. The main part parses as strict XML with a `document` root.
+//   4. The selected part has the DOCX main content type and parses as strict
+//      XML with a WordprocessingML `document` root whose namespace matches the
+//      transitional or Strict officeDocument relationship dialect.
 //   5. Every part's own relationships (`dir/_rels/name.rels`), when
 //      present, parse and their internal targets resolve to existing parts.
 //
@@ -28,10 +30,34 @@ const CONTENT_TYPES_PART : String = "[Content_Types].xml"
 const ROOT_RELS_PART : String = "_rels/.rels"
 
 ///|
+const PACKAGE_RELATIONSHIPS_NAMESPACE : String = "http://schemas.openxmlformats.org/package/2006/relationships"
+
+///|
+const CONTENT_TYPES_ROOT : String = "{http://schemas.openxmlformats.org/package/2006/content-types}Types"
+
+///|
+const RELATIONSHIPS_CONTENT_TYPE : String = "application/vnd.openxmlformats-package.relationships+xml"
+
+///|
+const CONTENT_TYPES_DEFAULT : String = "{http://schemas.openxmlformats.org/package/2006/content-types}Default"
+
+///|
+const CONTENT_TYPES_OVERRIDE : String = "{http://schemas.openxmlformats.org/package/2006/content-types}Override"
+
+///|
 const TRANSITIONAL_OFFICE_DOCUMENT_RELATIONSHIP : String = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
 
 ///|
 const STRICT_OFFICE_DOCUMENT_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument"
+
+///|
+const TRANSITIONAL_DOCUMENT_ROOT : String = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}document"
+
+///|
+const STRICT_DOCUMENT_ROOT : String = "{http://purl.oclc.org/ooxml/wordprocessingml/main}document"
+
+///|
+const DOCX_MAIN_CONTENT_TYPE : String = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
 
 ///|
 const DEFAULT_MAX_FINDINGS : Int = 1024
@@ -52,27 +78,100 @@ const DEFAULT_MAX_XML_MATERIALIZED_CHARS : Int = 8 * 1024 * 1024
 const DEFAULT_MAX_XML_TOKEN_CHARS : Int = 4 * 1024 * 1024
 
 ///|
+const DEFAULT_MAX_ZIP_ENTRIES : Int = 4096
+
+///|
+const DEFAULT_MAX_ZIP_ENTRY_UNCOMPRESSED_BYTES : Int = 32 * 1024 * 1024
+
+///|
+const DEFAULT_MAX_ZIP_TOTAL_UNCOMPRESSED_BYTES : Int = 128 * 1024 * 1024
+
+///|
+/// The resource guard that stopped structural validation. This status is kept
+/// separate from rendered findings so attacker-controlled part names cannot
+/// forge or hide resource exhaustion by changing diagnostic text.
+pub(all) enum DocxValidationResourceLimit {
+  ZipEntries
+  ZipEntryUncompressedBytes
+  ZipTotalUncompressedBytes
+  XmlSourceUnits
+  XmlTokens
+  XmlTokenLength
+  XmlMaterializedCharacters
+  XmlNestingDepth
+}
+
+///|
+/// Returns the stable machine name for this resource guard.
+pub fn DocxValidationResourceLimit::name(
+  self : DocxValidationResourceLimit,
+) -> String {
+  match self {
+    ZipEntries => "zip-entry-count"
+    ZipEntryUncompressedBytes => "zip-entry-uncompressed-bytes"
+    ZipTotalUncompressedBytes => "zip-total-uncompressed-bytes"
+    XmlSourceUnits => "xml-source-units"
+    XmlTokens => "xml-tokens"
+    XmlTokenLength => "xml-token-length"
+    XmlMaterializedCharacters => "xml-materialized-characters"
+    XmlNestingDepth => "xml-nesting-depth"
+  }
+}
+
+///|
+/// A bounded structural-validation result. Findings remain suitable for
+/// humans; `resource_limit` is the authoritative machine classification.
+pub struct DocxValidationReport {
+  priv findings : Array[String]
+  priv findings_truncated : Bool
+  priv resource_limit : DocxValidationResourceLimit?
+  priv main_document_part : String?
+}
+
+///|
+/// Returns a defensive copy of the bounded human-readable findings.
+pub fn DocxValidationReport::findings(
+  self : DocxValidationReport,
+) -> Array[String] {
+  self.findings.copy()
+}
+
+///|
+/// Reports whether validation stopped at the caller's finding-count ceiling.
+pub fn DocxValidationReport::findings_truncated(
+  self : DocxValidationReport,
+) -> Bool {
+  self.findings_truncated
+}
+
+///|
+/// Returns the ZIP or XML resource guard that stopped validation, when present.
+pub fn DocxValidationReport::resource_limit(
+  self : DocxValidationReport,
+) -> DocxValidationResourceLimit? {
+  self.resource_limit
+}
+
+///|
+/// Returns the exact physical archive entry selected by the validated
+/// package-root officeDocument relationship. Callers that subsequently parse
+/// the package should pin their reader to this identity so validation and
+/// interpretation cannot diverge.
+pub fn DocxValidationReport::main_document_part(
+  self : DocxValidationReport,
+) -> String? {
+  self.main_document_part
+}
+
+///|
 priv struct FindingCollector {
   findings : Array[String]
   max_findings : Int
   max_message_chars : Int
   xml_budget : @xml.XmlReadBudget
   mut truncated : Bool
-}
-
-///|
-fn FindingCollector::new(
-  max_findings : Int,
-  max_message_chars : Int,
-) -> FindingCollector {
-  FindingCollector::new_with_xml_limits(
-    max_findings,
-    max_message_chars,
-    DEFAULT_MAX_XML_SOURCE_UNITS,
-    DEFAULT_MAX_XML_TOKENS,
-    DEFAULT_MAX_XML_MATERIALIZED_CHARS,
-    DEFAULT_MAX_XML_TOKEN_CHARS,
-  )
+  mut resource_limit : DocxValidationResourceLimit?
+  mut main_document_part : String?
 }
 
 ///|
@@ -115,6 +214,67 @@ fn FindingCollector::new_with_xml_limits(
       },
     ),
     truncated: false,
+    resource_limit: None,
+    main_document_part: None,
+  }
+}
+
+///|
+fn xml_validation_resource_limit(
+  error : @core.DocxError,
+) -> DocxValidationResourceLimit? {
+  match error {
+    InvalidXml(message~) =>
+      match message {
+        "XML source budget exceeded" => Some(XmlSourceUnits)
+        "XML token budget exceeded" => Some(XmlTokens)
+        "XML token length budget exceeded" => Some(XmlTokenLength)
+        "XML materialized character budget exceeded" =>
+          Some(XmlMaterializedCharacters)
+        "XML nesting too deep" => Some(XmlNestingDepth)
+        _ => None
+      }
+    _ => None
+  }
+}
+
+///|
+fn zip_validation_resource_limit(kind : String) -> DocxValidationResourceLimit? {
+  match kind {
+    "entry_count" => Some(ZipEntries)
+    "entry_uncompressed_bytes" => Some(ZipEntryUncompressedBytes)
+    "total_uncompressed_bytes" => Some(ZipTotalUncompressedBytes)
+    _ => None
+  }
+}
+
+///|
+fn FindingCollector::mark_zip_resource_limit(
+  self : FindingCollector,
+  kind : String,
+) -> Unit {
+  if self.resource_limit is None {
+    self.resource_limit = zip_validation_resource_limit(kind)
+  }
+}
+
+///|
+fn FindingCollector::mark_resource_limit(
+  self : FindingCollector,
+  error : @core.DocxError,
+) -> Unit {
+  if self.resource_limit is None {
+    self.resource_limit = xml_validation_resource_limit(error)
+  }
+}
+
+///|
+fn FindingCollector::report(self : FindingCollector) -> DocxValidationReport {
+  {
+    findings: self.findings,
+    findings_truncated: self.truncated,
+    resource_limit: self.resource_limit,
+    main_document_part: self.main_document_part,
   }
 }
 
@@ -223,23 +383,75 @@ pub fn validate_docx_package_limited(
   data : BytesView,
   max_findings~ : Int,
   max_message_chars~ : Int,
+  max_zip_entries? : Int = DEFAULT_MAX_ZIP_ENTRIES,
+  max_zip_entry_uncompressed_bytes? : Int = DEFAULT_MAX_ZIP_ENTRY_UNCOMPRESSED_BYTES,
+  max_zip_total_uncompressed_bytes? : Int = DEFAULT_MAX_ZIP_TOTAL_UNCOMPRESSED_BYTES,
   max_xml_source_units? : Int = DEFAULT_MAX_XML_SOURCE_UNITS,
   max_xml_tokens? : Int = DEFAULT_MAX_XML_TOKENS,
   max_xml_materialized_chars? : Int = DEFAULT_MAX_XML_MATERIALIZED_CHARS,
   max_xml_token_chars? : Int = DEFAULT_MAX_XML_TOKEN_CHARS,
 ) -> (Array[String], Bool) {
+  let report = validate_docx_package_report_limited(
+    data,
+    max_findings~,
+    max_message_chars~,
+    max_zip_entries~,
+    max_zip_entry_uncompressed_bytes~,
+    max_zip_total_uncompressed_bytes~,
+    max_xml_source_units~,
+    max_xml_tokens~,
+    max_xml_materialized_chars~,
+    max_xml_token_chars~,
+  )
+  (report.findings, report.findings_truncated)
+}
+
+///|
+/// The typed counterpart to `validate_docx_package_limited`. Resource status
+/// is captured from the ZIP/XML error before any attacker-controlled text is
+/// interpolated or truncated into a finding.
+pub fn validate_docx_package_report_limited(
+  data : BytesView,
+  max_findings~ : Int,
+  max_message_chars~ : Int,
+  max_zip_entries? : Int = DEFAULT_MAX_ZIP_ENTRIES,
+  max_zip_entry_uncompressed_bytes? : Int = DEFAULT_MAX_ZIP_ENTRY_UNCOMPRESSED_BYTES,
+  max_zip_total_uncompressed_bytes? : Int = DEFAULT_MAX_ZIP_TOTAL_UNCOMPRESSED_BYTES,
+  max_xml_source_units? : Int = DEFAULT_MAX_XML_SOURCE_UNITS,
+  max_xml_tokens? : Int = DEFAULT_MAX_XML_TOKENS,
+  max_xml_materialized_chars? : Int = DEFAULT_MAX_XML_MATERIALIZED_CHARS,
+  max_xml_token_chars? : Int = DEFAULT_MAX_XML_TOKEN_CHARS,
+) -> DocxValidationReport {
   let findings = FindingCollector::new_with_xml_limits(
     max_findings, max_message_chars, max_xml_source_units, max_xml_tokens, max_xml_materialized_chars,
     max_xml_token_chars,
   )
-  let archive = @mbtzip.read(data) catch {
+  let archive = @mbtzip.read_limited(
+    data,
+    max_entries=if max_zip_entries > 0 { max_zip_entries } else { 0 },
+    max_entry_uncompressed_bytes=if max_zip_entry_uncompressed_bytes > 0 {
+      max_zip_entry_uncompressed_bytes
+    } else {
+      0
+    },
+    max_total_uncompressed_bytes=if max_zip_total_uncompressed_bytes > 0 {
+      max_zip_total_uncompressed_bytes
+    } else {
+      0
+    },
+  ) catch {
+    ResourceLimitExceeded(kind~, limit=_, actual=_) as err => {
+      findings.mark_zip_resource_limit(kind)
+      findings.add("invalid ZIP archive: \{findings.text(repr(err))}")
+      return findings.report()
+    }
     err => {
       findings.add("invalid ZIP archive: \{findings.text(repr(err))}")
-      return (findings.findings, findings.truncated)
+      return findings.report()
     }
   }
   validate_docx_archive_into(archive, findings)
-  (findings.findings, findings.truncated)
+  findings.report()
 }
 
 ///|
@@ -268,12 +480,36 @@ pub fn validate_docx_archive_limited(
   max_xml_materialized_chars? : Int = DEFAULT_MAX_XML_MATERIALIZED_CHARS,
   max_xml_token_chars? : Int = DEFAULT_MAX_XML_TOKEN_CHARS,
 ) -> (Array[String], Bool) {
+  let report = validate_docx_archive_report_limited(
+    archive,
+    max_findings~,
+    max_message_chars~,
+    max_xml_source_units~,
+    max_xml_tokens~,
+    max_xml_materialized_chars~,
+    max_xml_token_chars~,
+  )
+  (report.findings, report.findings_truncated)
+}
+
+///|
+/// Archive-backed validation with typed resource-exhaustion status preserved
+/// independently of bounded human findings.
+pub fn validate_docx_archive_report_limited(
+  archive : @mbtzip.Archive,
+  max_findings~ : Int,
+  max_message_chars~ : Int,
+  max_xml_source_units? : Int = DEFAULT_MAX_XML_SOURCE_UNITS,
+  max_xml_tokens? : Int = DEFAULT_MAX_XML_TOKENS,
+  max_xml_materialized_chars? : Int = DEFAULT_MAX_XML_MATERIALIZED_CHARS,
+  max_xml_token_chars? : Int = DEFAULT_MAX_XML_TOKEN_CHARS,
+) -> DocxValidationReport {
   let findings = FindingCollector::new_with_xml_limits(
     max_findings, max_message_chars, max_xml_source_units, max_xml_tokens, max_xml_materialized_chars,
     max_xml_token_chars,
   )
   validate_docx_archive_into(archive, findings)
-  (findings.findings, findings.truncated)
+  findings.report()
 }
 
 ///|
@@ -284,6 +520,7 @@ fn validate_docx_archive_into(
   // Raw entry sweep: names + CRC integrity, before any part-level logic.
   let parts : StableStringMap[BytesView] = SortedMap([])
   let canonical_names : StableStringMap[String] = SortedMap([])
+  let logical_names : StableStringMap[String] = SortedMap([])
   let seen : StableStringSet = SortedSet([])
   for entry in archive.entries() {
     if findings.full() {
@@ -296,29 +533,38 @@ fn validate_docx_archive_into(
     } else {
       seen.add(name)
     }
-    check_entry_name(name, findings)
+    let logical_name = check_entry_name(name, findings)
     if entry.crc32() != @mbtzip.crc32(entry.data()) {
       findings.add(
         "entry data does not match its stored CRC-32: \{findings.text(name)}",
       )
     }
     if !name.has_suffix("/") {
-      let key = name.to_lower()
-      match canonical_names.get(key) {
-        Some(existing) if existing != name =>
-          findings.add(
-            "duplicate entry name: \{findings.text(name)} (case-equivalent to \{findings.text(existing)})",
-          )
-        Some(_) => ()
-        None => canonical_names[key] = name
+      match logical_name {
+        Some(logical) => {
+          let key = part_name_key(logical)
+          match canonical_names.get(key) {
+            Some(existing) if existing != name =>
+              findings.add(
+                "duplicate entry name: \{findings.text(name)} (logically equivalent to \{findings.text(existing)})",
+              )
+            Some(_) => ()
+            None => canonical_names[key] = name
+          }
+          logical_names[name] = logical
+          parts[name] = entry.data()
+        }
+        None => ()
       }
-      parts[name] = entry.data()
     }
   }
   let content_types = check_content_types(parts, canonical_names, findings)
-  check_relationships(parts, canonical_names, findings)
+  check_relationships(
+    parts, canonical_names, logical_names, content_types, findings,
+  )
   match content_types {
-    Some(types) => check_content_type_coverage(parts, types, findings)
+    Some(types) =>
+      check_content_type_coverage(parts, logical_names, types, findings)
     None => ()
   }
 }
@@ -328,7 +574,7 @@ fn actual_part_name(
   canonical_names : StableStringMap[String],
   requested : String,
 ) -> String? {
-  canonical_names.get(requested.to_lower())
+  canonical_names.get(part_name_key(requested))
 }
 
 ///|
@@ -355,29 +601,52 @@ fn contains_part(
 }
 
 ///|
-fn check_entry_name(name : String, findings : FindingCollector) -> Unit {
+fn check_entry_name(name : String, findings : FindingCollector) -> String? {
   if name == "" {
     findings.add("empty entry name")
-    return
+    return None
   }
   if name.has_prefix("/") {
     findings.add("entry name must not start with '/': \{findings.text(name)}")
   }
   if name.find("\\") is Some(_) {
     findings.add("entry name contains a backslash: \{findings.text(name)}")
+    return None
   }
-  for segment in name.split("/") {
-    if segment == "" {
+  // The package content-types stream is reserved package metadata rather than
+  // an OPC part name, so its bracketed spelling is the one deliberate Pack-URI
+  // exception.
+  if part_name_key(name) == part_name_key(CONTENT_TYPES_PART) {
+    return Some(CONTENT_TYPES_PART)
+  }
+  // Explicit ZIP directory records are not OPC parts, but they are valid and
+  // preservation-safe package metadata. Validate their path without treating
+  // the terminal directory slash as an empty interior segment.
+  let item_path = if name.has_suffix("/") && name.length() > 1 {
+    name[:name.length() - 1]
+  } else {
+    name
+  }
+  match logical_part_name_from_zip_item_name(item_path) {
+    Some(logical) => if name.has_suffix("/") { None } else { Some(logical) }
+    None => {
+      for segment in item_path.split("/") {
+        if segment == "" {
+          findings.add(
+            "entry name contains an empty segment: \{findings.text(name)}",
+          )
+          return None
+        } else if segment == "." || segment == ".." {
+          findings.add(
+            "entry name contains a '\{segment}' segment: \{findings.text(name)}",
+          )
+          return None
+        }
+      }
       findings.add(
-        "entry name contains an empty segment: \{findings.text(name)}",
+        "entry name is not a valid OPC URI path: \{findings.text(name)}",
       )
-      break
-    } else if segment == "." {
-      findings.add("entry name contains a '.' segment: \{findings.text(name)}")
-      break
-    } else if segment == ".." {
-      findings.add("entry name contains a '..' segment: \{findings.text(name)}")
-      break
+      None
     }
   }
 }
@@ -402,6 +671,12 @@ fn check_content_types(
   guard parse_xml_part(content_types_name, bytes, findings) is Some(root) else {
     return None
   }
+  if root.name != CONTENT_TYPES_ROOT {
+    findings.add(
+      "\{CONTENT_TYPES_PART}: root element is not in the OPC content-types namespace",
+    )
+    return None
+  }
   let defaults : StableStringMap[String] = SortedMap([])
   let overrides : StableStringMap[String] = SortedMap([])
   for node in root.children {
@@ -410,8 +685,8 @@ fn check_content_types(
       break
     }
     guard node is XmlElement(element) else { continue }
-    match local_name(element.name) {
-      "Default" =>
+    match element.name {
+      CONTENT_TYPES_DEFAULT =>
         match
           (
             element.attributes.get("Extension"),
@@ -432,7 +707,7 @@ fn check_content_types(
               "\{CONTENT_TYPES_PART}: Default missing Extension or ContentType",
             )
         }
-      "Override" =>
+      CONTENT_TYPES_OVERRIDE =>
         match
           (
             element.attributes.get("PartName"),
@@ -445,7 +720,7 @@ fn check_content_types(
             if part_name.has_prefix("/") {
               match normalize_override_part_name(part_name) {
                 Some(key) => {
-                  let collision_key = key.to_lower()
+                  let collision_key = part_name_key(key)
                   if overrides.contains(collision_key) {
                     findings.add(
                       "\{CONTENT_TYPES_PART}: duplicate Override PartName after path normalization: \{findings.text(key)}",
@@ -480,7 +755,13 @@ fn check_content_types(
               "\{CONTENT_TYPES_PART}: Override missing PartName or ContentType",
             )
         }
-      _ => ()
+      _ =>
+        if local_name(element.name) == "Default" ||
+          local_name(element.name) == "Override" {
+          findings.add(
+            "\{CONTENT_TYPES_PART}: \{findings.text(local_name(element.name))} element is outside the OPC content-types namespace",
+          )
+        }
     }
   }
   Some({ defaults, overrides })
@@ -491,7 +772,7 @@ fn normalize_override_part_name(part_name : String) -> String? {
   // Callers establish the leading slash. `resolve_target` removes redundant
   // dot segments, giving declarations one collision key while the separate
   // canonicality finding rejects noncanonical spellings.
-  match resolve_target("", part_name) {
+  match resolve_part_target("", part_name) {
     Some(target) => Some("/" + target)
     None => None
   }
@@ -500,6 +781,7 @@ fn normalize_override_part_name(part_name : String) -> String? {
 ///|
 fn check_content_type_coverage(
   parts : StableStringMap[BytesView],
+  logical_names : StableStringMap[String],
   types : ContentTypes,
   findings : FindingCollector,
 ) -> Unit {
@@ -508,13 +790,14 @@ fn check_content_type_coverage(
       findings.stop()
       return
     }
-    if name.to_lower() == CONTENT_TYPES_PART.to_lower() {
+    guard logical_names.get(name) is Some(logical_name) else { continue }
+    if part_name_key(logical_name) == part_name_key(CONTENT_TYPES_PART) {
       continue
     }
-    if types.overrides.contains(("/" + name).to_lower()) {
+    if types.overrides.contains(part_name_key("/" + logical_name)) {
       continue
     }
-    let extension = part_extension(name)
+    let extension = part_extension(logical_name)
     if extension is Some(ext) && types.defaults.contains(ext) {
       continue
     }
@@ -542,53 +825,109 @@ fn part_extension(name : String) -> String? {
 }
 
 ///|
+fn ContentTypes::for_part(self : ContentTypes, name : String) -> String? {
+  match self.overrides.get(part_name_key("/" + name)) {
+    Some(value) => Some(value)
+    None =>
+      match part_extension(name) {
+        Some(extension) => self.defaults.get(extension)
+        None => None
+      }
+  }
+}
+
+///|
+priv enum DocumentDialect {
+  Transitional
+  Strict
+}
+
+///|
+fn office_document_dialect(rel_type : String) -> DocumentDialect? {
+  match rel_type {
+    TRANSITIONAL_OFFICE_DOCUMENT_RELATIONSHIP => Some(Transitional)
+    STRICT_OFFICE_DOCUMENT_RELATIONSHIP => Some(Strict)
+    _ => None
+  }
+}
+
+///|
 fn check_relationships(
   parts : StableStringMap[BytesView],
   canonical_names : StableStringMap[String],
+  logical_names : StableStringMap[String],
+  content_types : ContentTypes?,
   findings : FindingCollector,
 ) -> Unit {
   if findings.full() {
     findings.stop()
     return
   }
-  // Root rels: required, and must carry the officeDocument relationship.
+  // Root rels: required, every internal target must resolve, and exactly one
+  // internal officeDocument relationship must select the main part.
   match find_part(parts, canonical_names, ROOT_RELS_PART) {
-    Some((root_rels_name, bytes)) =>
+    Some((root_rels_name, bytes)) => {
+      check_relationship_content_type(
+        root_rels_name,
+        ROOT_RELS_PART,
+        content_types,
+        findings,
+      )
       match parse_xml_part(root_rels_name, bytes, findings) {
         Some(root) => {
-          let main_parts : Array[String] = []
+          let main_parts : Array[(String, DocumentDialect)] = []
           for_each_relationship(ROOT_RELS_PART, root, findings, (
             _id,
             rel_type,
             target,
             external,
           ) => {
-            if rel_type == TRANSITIONAL_OFFICE_DOCUMENT_RELATIONSHIP ||
-              rel_type == STRICT_OFFICE_DOCUMENT_RELATIONSHIP {
-              if external {
+            let dialect = office_document_dialect(rel_type)
+            if external {
+              match dialect {
+                Some(_) =>
+                  findings.add(
+                    "\{ROOT_RELS_PART}: officeDocument relationship is not internal",
+                  )
+                None => ()
+              }
+              return
+            }
+            match resolve_part_target("", target) {
+              Some(resolved) => {
+                if !contains_part(canonical_names, resolved) {
+                  findings.add(
+                    "relationship target missing: \{ROOT_RELS_PART} -> \{findings.text(target)} (resolved \{findings.text(resolved)})",
+                  )
+                }
+                match dialect {
+                  Some(value) => main_parts.push((resolved, value))
+                  None => ()
+                }
+              }
+              None => {
                 findings.add(
-                  "\{ROOT_RELS_PART}: officeDocument relationship is not internal",
+                  "relationship target invalid: \{ROOT_RELS_PART} -> \{findings.text(target)}",
                 )
-              } else if target == "" {
-                findings.add(
-                  "\{ROOT_RELS_PART}: officeDocument relationship has no target",
-                )
-              } else {
-                match resolve_target("", target) {
-                  Some(resolved) => main_parts.push(resolved)
-                  None =>
+                match dialect {
+                  Some(_) =>
                     findings.add(
                       "\{ROOT_RELS_PART}: officeDocument relationship has an invalid target: \{findings.text(target)}",
                     )
+                  None => ()
                 }
               }
             }
           })
           match main_parts {
-            [part] =>
+            [(part, dialect)] =>
               match find_part(parts, canonical_names, part) {
                 Some((actual, bytes)) =>
-                  check_main_part(actual, bytes, findings)
+                  if check_main_part(
+                      actual, part, bytes, dialect, content_types, findings,
+                    ) {
+                    findings.main_document_part = Some(actual)
+                  }
                 None =>
                   findings.add(
                     "officeDocument relationship targets a missing part: \{findings.text(part)}",
@@ -604,6 +943,7 @@ fn check_relationships(
         }
         None => ()
       }
+    }
     None => findings.add("missing required part: \{ROOT_RELS_PART}")
   }
   // Every part's own rels, when present: parse + internal targets resolve.
@@ -612,13 +952,15 @@ fn check_relationships(
       findings.stop()
       return
     }
-    let canonical_name = name.to_lower()
+    guard logical_names.get(name) is Some(logical_name) else { continue }
+    let canonical_name = part_name_key(logical_name)
     if canonical_name == ROOT_RELS_PART || !is_rels_part(canonical_name) {
       continue
     }
+    check_relationship_content_type(name, logical_name, content_types, findings)
     match parse_xml_part(name, bytes, findings) {
       Some(root) => {
-        let base = rels_base_dir(canonical_name)
+        let base = rels_base_dir(logical_name)
         for_each_relationship(name, root, findings, (
           _id,
           _rel_type,
@@ -626,7 +968,7 @@ fn check_relationships(
           external,
         ) => {
           if !external {
-            match resolve_target(base, target) {
+            match resolve_part_target(base, target) {
               Some(resolved) =>
                 if !contains_part(canonical_names, resolved) {
                   findings.add(
@@ -647,20 +989,75 @@ fn check_relationships(
 }
 
 ///|
-fn check_main_part(
-  name : String,
-  bytes : BytesView,
+fn check_relationship_content_type(
+  physical_name : String,
+  logical_name : String,
+  content_types : ContentTypes?,
   findings : FindingCollector,
 ) -> Unit {
-  match parse_xml_part(name, bytes, findings) {
-    Some(root) =>
-      if local_name(root.name) != "document" {
-        findings.add(
-          "main part \{findings.text(name)} root element is '\{findings.text(local_name(root.name))}', expected a 'document' root",
-        )
+  match content_types {
+    Some(types) =>
+      match types.for_part(logical_name) {
+        Some(value) if value.trim().to_lower() == RELATIONSHIPS_CONTENT_TYPE =>
+          ()
+        Some(value) =>
+          findings.add(
+            "relationship part \{findings.text(physical_name)} has content type '\{findings.text(value)}', expected '\{RELATIONSHIPS_CONTENT_TYPE}'",
+          )
+        None =>
+          findings.add(
+            "relationship part \{findings.text(physical_name)} has no content type",
+          )
       }
     None => ()
   }
+}
+
+///|
+fn check_main_part(
+  physical_name : String,
+  logical_name : String,
+  bytes : BytesView,
+  dialect : DocumentDialect,
+  content_types : ContentTypes?,
+  findings : FindingCollector,
+) -> Bool {
+  let mut valid = true
+  match content_types {
+    Some(types) =>
+      match types.for_part(logical_name) {
+        Some(value) if value.trim().to_lower() == DOCX_MAIN_CONTENT_TYPE => ()
+        Some(value) => {
+          findings.add(
+            "main part \{findings.text(physical_name)} has content type '\{findings.text(value)}', expected '\{DOCX_MAIN_CONTENT_TYPE}'",
+          )
+          valid = false
+        }
+        None => {
+          findings.add(
+            "main part \{findings.text(physical_name)} has no content type",
+          )
+          valid = false
+        }
+      }
+    None => valid = false
+  }
+  match parse_xml_part(physical_name, bytes, findings) {
+    Some(root) => {
+      let expected = match dialect {
+        Transitional => TRANSITIONAL_DOCUMENT_ROOT
+        Strict => STRICT_DOCUMENT_ROOT
+      }
+      if root.name != expected {
+        findings.add(
+          "main part \{findings.text(physical_name)} root element does not match the officeDocument relationship dialect",
+        )
+        valid = false
+      }
+    }
+    None => valid = false
+  }
+  valid
 }
 
 ///|
@@ -670,6 +1067,14 @@ fn for_each_relationship(
   findings : FindingCollector,
   visit : (String, String, String, Bool) -> Unit,
 ) -> Unit {
+  let relationships_name = "{\{PACKAGE_RELATIONSHIPS_NAMESPACE}}Relationships"
+  let relationship_name = "{\{PACKAGE_RELATIONSHIPS_NAMESPACE}}Relationship"
+  if root.name != relationships_name {
+    findings.add(
+      "\{findings.text(part_name)}: root element is not in the OPC package relationships namespace",
+    )
+    return
+  }
   let ids : StableStringSet = SortedSet([])
   for node in root.children {
     if findings.full() {
@@ -677,7 +1082,12 @@ fn for_each_relationship(
       break
     }
     guard node is XmlElement(element) else { continue }
-    if local_name(element.name) != "Relationship" {
+    if element.name != relationship_name {
+      if local_name(element.name) == "Relationship" {
+        findings.add(
+          "\{findings.text(part_name)}: Relationship element is outside the OPC package relationships namespace",
+        )
+      }
       continue
     }
     let id = element.attributes.get("Id").unwrap_or("")
@@ -694,8 +1104,14 @@ fn for_each_relationship(
     }
     let rel_type = element.attributes.get("Type").unwrap_or("")
     let target = element.attributes.get("Target").unwrap_or("")
-    let external = element.attributes.get("TargetMode") is Some("External")
-    visit(id, rel_type, target, external)
+    match element.attributes.get("TargetMode") {
+      None | Some("Internal") => visit(id, rel_type, target, false)
+      Some("External") => visit(id, rel_type, target, true)
+      Some(mode) =>
+        findings.add(
+          "\{findings.text(part_name)}: Relationship has invalid TargetMode: \{findings.text(mode)}",
+        )
+    }
   }
 }
 
@@ -703,13 +1119,18 @@ fn for_each_relationship(
 /// `dir/_rels/name.rels` describes `dir/name`; its targets resolve against
 /// `dir`.
 fn is_rels_part(name : String) -> Bool {
-  name.has_suffix(".rels") &&
-  (name.has_prefix("_rels/") || name.find("/_rels/") is Some(_))
+  let canonical = part_name_key(name)
+  canonical.has_suffix(".rels") &&
+  (canonical.has_prefix("_rels/") || canonical.find("/_rels/") is Some(_))
 }
 
 ///|
 fn rels_base_dir(rels_name : String) -> String {
-  match rels_name.find("/_rels/") {
+  // OPC part-name equivalence folds ASCII case. Search the canonical key but
+  // slice the original logical name: ASCII folding preserves indices, while
+  // retaining the producer's spelling gives downstream diagnostics and edits
+  // the most precise identity available.
+  match part_name_key(rels_name).find("/_rels/") {
     Some(index) => rels_name[:index].to_owned()
     None => ""
   }
@@ -820,8 +1241,9 @@ pub fn resolve_target(base : String, target : String) -> String? {
 
 ///|
 /// The parser emits `prefix:Local` for mapped namespaces and Clark notation
-/// `{uri}Local` for unmapped ones; validation matches LOCAL names only (the
-/// SDK tier is the namespace-strict gate).
+/// `{uri}Local` for unmapped ones. Generic structural checks use local names;
+/// security-sensitive relationship parsing above requires the exact expanded
+/// package-relationships name.
 fn local_name(name : String) -> String {
   let after_ns = match name.rev_find("}") {
     Some(index) => name[index + 1:].to_owned()
@@ -845,6 +1267,7 @@ fn parse_xml_part(
       return None
     }
     err => {
+      findings.mark_resource_limit(err)
       findings.add(
         "malformed XML in \{findings.text(name)}: \{findings.text(repr(err))}",
       )

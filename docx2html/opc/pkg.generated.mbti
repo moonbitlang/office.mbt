@@ -6,15 +6,29 @@ import {
 }
 
 // Values
+pub fn is_valid_part_segment(StringView) -> Bool
+
+pub fn logical_part_name_from_zip_item_name(StringView) -> String?
+
+pub fn part_name_key(StringView) -> String
+
+pub fn resolve_part_target(String, StringView) -> String?
+
 pub fn resolve_target(String, String) -> String?
 
 pub fn validate_docx_archive(@zip.Archive) -> Array[String]
 
 pub fn validate_docx_archive_limited(@zip.Archive, max_findings~ : Int, max_message_chars~ : Int, max_xml_source_units? : Int, max_xml_tokens? : Int, max_xml_materialized_chars? : Int, max_xml_token_chars? : Int) -> (Array[String], Bool)
 
+pub fn validate_docx_archive_report_limited(@zip.Archive, max_findings~ : Int, max_message_chars~ : Int, max_xml_source_units? : Int, max_xml_tokens? : Int, max_xml_materialized_chars? : Int, max_xml_token_chars? : Int) -> DocxValidationReport
+
 pub fn validate_docx_package(BytesView) -> Array[String]
 
-pub fn validate_docx_package_limited(BytesView, max_findings~ : Int, max_message_chars~ : Int, max_xml_source_units? : Int, max_xml_tokens? : Int, max_xml_materialized_chars? : Int, max_xml_token_chars? : Int) -> (Array[String], Bool)
+pub fn validate_docx_package_limited(BytesView, max_findings~ : Int, max_message_chars~ : Int, max_zip_entries? : Int, max_zip_entry_uncompressed_bytes? : Int, max_zip_total_uncompressed_bytes? : Int, max_xml_source_units? : Int, max_xml_tokens? : Int, max_xml_materialized_chars? : Int, max_xml_token_chars? : Int) -> (Array[String], Bool)
+
+pub fn validate_docx_package_report_limited(BytesView, max_findings~ : Int, max_message_chars~ : Int, max_zip_entries? : Int, max_zip_entry_uncompressed_bytes? : Int, max_zip_total_uncompressed_bytes? : Int, max_xml_source_units? : Int, max_xml_tokens? : Int, max_xml_materialized_chars? : Int, max_xml_token_chars? : Int) -> DocxValidationReport
+
+pub fn zip_item_name_from_logical_part_name(StringView) -> String?
 
 // Errors
 pub(all) suberror PackageBuildError {
@@ -31,6 +45,26 @@ pub fn PackageBuildError::to_string(Self) -> String
 pub impl Show for PackageBuildError
 
 // Types and methods
+pub struct DocxValidationReport {
+  // private fields
+}
+pub fn DocxValidationReport::findings(Self) -> Array[String]
+pub fn DocxValidationReport::findings_truncated(Self) -> Bool
+pub fn DocxValidationReport::main_document_part(Self) -> String?
+pub fn DocxValidationReport::resource_limit(Self) -> DocxValidationResourceLimit?
+
+pub(all) enum DocxValidationResourceLimit {
+  ZipEntries
+  ZipEntryUncompressedBytes
+  ZipTotalUncompressedBytes
+  XmlSourceUnits
+  XmlTokens
+  XmlTokenLength
+  XmlMaterializedCharacters
+  XmlNestingDepth
+}
+pub fn DocxValidationResourceLimit::name(Self) -> String
+
 pub struct PackageBuilder {
   // private fields
 }

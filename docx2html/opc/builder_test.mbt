@@ -30,6 +30,46 @@ test "a built package satisfies the structural validator" {
 }
 
 ///|
+test "the builder maps logical Unicode part names to ASCII ZIP items" {
+  let builder = @opc.PackageBuilder::new()
+  builder.add_default(
+    "rels", "application/vnd.openxmlformats-package.relationships+xml",
+  )
+  builder.add_default("xml", "application/xml")
+  builder.add_override(
+    "/word/é.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+  )
+  builder.add_relationship(
+    "rId1", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "word/é.xml",
+  )
+  builder.add_part(
+    "word/é.xml",
+    @utf8.encode(
+      (
+        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/><w:sectPr/></w:body></w:document>
+      ),
+    ),
+  )
+  let bytes = builder.build()
+  let archive = @mbtzip.read(bytes)
+  assert_true(archive.get("word/%C3%A9.xml") is Some(_))
+  assert_eq(archive.get("word/é.xml"), None)
+  assert_eq(@opc.validate_docx_package(bytes), [])
+}
+
+///|
+test "the builder preserves legal opaque percent escapes" {
+  let builder = minimal_builder()
+  builder.add_default("bin", "application/octet-stream")
+  builder.add_part("word/%FF.bin", b"opaque")
+  let bytes = builder.build()
+  let archive = @mbtzip.read(bytes)
+  assert_true(archive.get("word/%FF.bin") is Some(_))
+  assert_eq(@opc.validate_docx_package(bytes), [])
+}
+
+///|
 fn expect_build_error(
   configure : (@opc.PackageBuilder) -> Unit raise,
   expected_prefix : String,

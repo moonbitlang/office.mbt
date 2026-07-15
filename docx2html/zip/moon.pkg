@@ -1,6 +1,7 @@
 import {
   "moonbitlang/core/debug",
   "bobzhang/docx2html/core",
+  "bobzhang/docx2html/opc",
   "bobzhang/mbtexcel/zip" @mbtzip,
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/sorted_map",
