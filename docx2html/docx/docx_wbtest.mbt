@@ -79,7 +79,6 @@ fn empty_body_reader(relationships : Relationships) -> BodyReader {
     numbering: NumberingMap::empty(),
     messages: [],
     diagnostics: None,
-    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: default_external_file_access(),
     read_images: true,
   }
@@ -115,7 +114,6 @@ fn body_reader_with_stable_numbering(
     numbering,
     messages: [],
     diagnostics: None,
-    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: default_external_file_access(),
     read_images: true,
   }
@@ -1920,7 +1918,6 @@ test "docx table properties include table style name" {
     numbering: NumberingMap::empty(),
     messages: [],
     diagnostics: None,
-    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: default_external_file_access(),
     read_images: true,
   }
@@ -3709,7 +3706,6 @@ fn drawing_image_reader_with_images(read_images : Bool) -> BodyReader {
     numbering: NumberingMap::empty(),
     messages: [],
     diagnostics: None,
-    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: default_external_file_access(),
     read_images,
   }
@@ -3813,7 +3809,6 @@ test "docx linked DrawingML images use the external loader" {
     numbering: NumberingMap::empty(),
     messages: [],
     diagnostics: None,
-    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: external_file_access_options(true, fn(path) {
       if path == "file:///media/hat.png" {
         Some(b"abc")
@@ -3851,7 +3846,6 @@ test "docx linked DrawingML image loader tries decoded file URI paths" {
     numbering: NumberingMap::empty(),
     messages: [],
     diagnostics: None,
-    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: external_file_access_options(true, fn(path) {
       if path == "/media/tiny picture.png" {
         Some(b"abc")
@@ -3892,7 +3886,6 @@ test "docx embedded DrawingML images ignore relationship target mode" {
     numbering: NumberingMap::empty(),
     messages: [],
     diagnostics: None,
-    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: default_external_file_access(),
     read_images: true,
   }
@@ -3927,7 +3920,6 @@ test "docx DrawingML image relationship ids follow Mammoth truthiness" {
     numbering: NumberingMap::empty(),
     messages: [],
     diagnostics: None,
-    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: external_file_access_options(true, fn(path) {
       if path == "file:///media/hat.png" {
         Some(b"abc")
@@ -3973,7 +3965,6 @@ test "docx DrawingML image relationship ids follow Mammoth truthiness" {
     numbering: NumberingMap::empty(),
     messages: [],
     diagnostics: None,
-    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: default_external_file_access(),
     read_images: true,
   }
@@ -4156,7 +4147,6 @@ test "docx image reader records Mammoth-compatible warnings" {
     numbering: NumberingMap::empty(),
     messages: [],
     diagnostics: None,
-    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: default_external_file_access(),
     read_images: true,
   }
@@ -4245,7 +4235,6 @@ test "docx image reader records Mammoth-compatible warnings" {
     numbering: NumberingMap::empty(),
     messages: [],
     diagnostics: None,
-    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: default_external_file_access(),
     read_images: true,
   }
@@ -4273,7 +4262,6 @@ test "docx image reader records Mammoth-compatible warnings" {
     numbering: NumberingMap::empty(),
     messages: [],
     diagnostics: Some(diagnostics),
-    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: default_external_file_access(),
     read_images: true,
   }
@@ -4306,7 +4294,6 @@ test "docx image reader records Mammoth-compatible warnings" {
     numbering: NumberingMap::empty(),
     messages: [],
     diagnostics: Some(repeated_diagnostics),
-    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: default_external_file_access(),
     read_images: true,
   }
@@ -4346,7 +4333,6 @@ test "docx image reader records Mammoth-compatible warnings" {
     numbering: NumberingMap::empty(),
     messages: [],
     diagnostics: None,
-    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: default_external_file_access(),
     read_images: true,
   }

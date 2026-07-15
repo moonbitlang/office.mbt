@@ -863,6 +863,13 @@ test "tolerant D2 ids distinguish missing attributes from literal undefined" {
   let tolerant = @docx.read_docx_annotated_archive_tolerant_limited(
     archive, budget,
   )
+  let package_read = @docx.read_docx_package(bytes)
+  // D2 uses lossless source identities for its path pairs, but its package
+  // half must retain the exact legacy AST projection.
+  assert_eq(tolerant.result().document, package_read.document)
+  assert_eq(tolerant.result().headers, package_read.headers)
+  assert_eq(tolerant.result().footers, package_read.footers)
+  assert_eq(tolerant.result().sections, package_read.sections)
   assert_eq(tolerant.comment_bodies().map(pair => pair.0), ["", "undefined"])
   assert_eq(tolerant.footnote_bodies().map(pair => pair.0), ["", "undefined"])
 }
@@ -873,9 +880,11 @@ test "tolerant D2 ids reject a present empty value instead of aliasing absence" 
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:document>
   let comments =
     #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id=""><w:p/></w:comment></w:comments>
-  let archive = try! @mbtzip.read(
-    fixture_docx(document, comments_xml=Some(comments)),
-  )
+  let bytes = fixture_docx(document, comments_xml=Some(comments))
+  // The package reader remains tolerant of the malformed source spelling;
+  // only D2 identity derivation rejects the ambiguous value.
+  @docx.read_docx_package(bytes) |> ignore
+  let archive = try! @mbtzip.read(bytes)
   let budget = @xml.xml_read_budget(
     max_source_units=1024 * 1024,
     max_tokens=4096,

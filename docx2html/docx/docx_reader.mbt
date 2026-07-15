@@ -325,12 +325,19 @@ fn external_file_access_options(
 ///|
 priv struct NotesReadResult {
   notes : Array[Note]
+  // Raw identity attributes stay aligned with `notes`. The package
+  // projection intentionally keeps Mammoth's legacy `"undefined"` spelling;
+  // D2 derives its missing-id spelling from this lossless source separately.
+  annotation_ids : Array[String?]
   messages : Array[Message]
 }
 
 ///|
 priv struct CommentsReadResult {
   comments : Array[Comment]
+  // Raw identity attributes stay aligned with `comments`; see
+  // `NotesReadResult::annotation_ids` above.
+  annotation_ids : Array[String?]
   messages : Array[Message]
 }
 
@@ -538,31 +545,13 @@ pub fn read_docx_with_messages(
 }
 
 ///|
-/// Controls only the spelling of an absent annotation id. Existing reader
-/// APIs retain Mammoth's JavaScript-derived `"undefined"` sentinel; the new
-/// D2 projection uses an empty value and rejects a literal empty id so the two
-/// states cannot alias.
-priv enum MissingAnnotationIdMode {
-  LegacyUndefinedAnnotationId
-  EmptyMissingAnnotationId
-}
-
-///|
-fn annotation_id_or_missing(
-  value : String?,
-  mode : MissingAnnotationIdMode,
-) -> String raise DocxError {
+/// The package projection retains Mammoth's JavaScript-derived `"undefined"`
+/// sentinel. D2 identity is derived separately from the raw optional
+/// attribute retained beside each parsed annotation definition.
+fn annotation_id_or_missing(value : String?) -> String {
   match value {
-    Some("") if mode is EmptyMissingAnnotationId =>
-      raise InvalidXml(
-        message="an annotation id is present but empty; refusing an ambiguous tolerant projection",
-      )
     Some(id) => id
-    None =>
-      match mode {
-        LegacyUndefinedAnnotationId => "undefined"
-        EmptyMissingAnnotationId => ""
-      }
+    None => "undefined"
   }
 }
 
@@ -575,7 +564,6 @@ priv struct DocumentParts {
   zip : ZipArchive
   xml_budget : @xml.XmlReadBudget?
   diagnostics : ReaderDiagnosticCollector?
-  missing_annotation_id_mode : MissingAnnotationIdMode
   main_document_path : String
   main_relationship_dialect : OoxmlDialect?
   root : XmlElement
@@ -606,7 +594,6 @@ fn DocumentParts::build(
   xml_budget? : @xml.XmlReadBudget,
   diagnostics? : ReaderDiagnosticCollector,
   expected_main_document_path? : String,
-  missing_annotation_id_mode? : MissingAnnotationIdMode = LegacyUndefinedAnnotationId,
   strict_main_document? : Bool = false,
 ) -> DocumentParts raise DocxError {
   let main_document = find_main_document(
@@ -718,7 +705,6 @@ fn DocumentParts::build(
     read_images~,
     xml_budget?,
     diagnostics?,
-    missing_annotation_id_mode~,
   )
   let comments_result = read_comments_for_document(
     zip,
@@ -732,7 +718,6 @@ fn DocumentParts::build(
     xml_budget?,
     comments_part_path?,
     diagnostics?,
-    missing_annotation_id_mode~,
   )
   // Every public package projection uses the tolerant reader semantics.
   // Mutation-safe annotated reads validate the same source again through the
@@ -746,7 +731,6 @@ fn DocumentParts::build(
     zip,
     xml_budget,
     diagnostics,
-    missing_annotation_id_mode,
     main_document_path,
     main_relationship_dialect: main_document.relationship_dialect,
     root,
@@ -784,7 +768,6 @@ fn DocumentParts::read_document(
     external_files=self.external_files,
     read_images=self.read_images,
     diagnostics?=self.diagnostics,
-    missing_annotation_id_mode=self.missing_annotation_id_mode,
   )
 }
 
@@ -1790,9 +1773,9 @@ fn read_notes_for_document(
   read_images? : Bool = true,
   xml_budget? : @xml.XmlReadBudget,
   diagnostics? : ReaderDiagnosticCollector,
-  missing_annotation_id_mode? : MissingAnnotationIdMode = LegacyUndefinedAnnotationId,
 ) -> NotesReadResult raise DocxError {
   let notes : Array[Note] = []
+  let annotation_ids : Array[String?] = []
   let messages : Array[Message] = []
   let footnotes = read_note_part_at_path(
     zip,
@@ -1805,9 +1788,9 @@ fn read_notes_for_document(
     read_images~,
     xml_budget?,
     diagnostics?,
-    missing_annotation_id_mode~,
   )
   notes.append(footnotes.notes)
+  annotation_ids.append(footnotes.annotation_ids)
   messages.append(footnotes.messages)
   let endnotes = read_note_part_at_path(
     zip,
@@ -1820,11 +1803,11 @@ fn read_notes_for_document(
     read_images~,
     xml_budget?,
     diagnostics?,
-    missing_annotation_id_mode~,
   )
   notes.append(endnotes.notes)
+  annotation_ids.append(endnotes.annotation_ids)
   messages.append(endnotes.messages)
-  { notes, messages: @core.dedupe_messages(messages) }
+  { notes, annotation_ids, messages: @core.dedupe_messages(messages) }
 }
 
 ///|
@@ -1839,10 +1822,9 @@ fn read_note_part_at_path(
   read_images? : Bool = true,
   xml_budget? : @xml.XmlReadBudget,
   diagnostics? : ReaderDiagnosticCollector,
-  missing_annotation_id_mode? : MissingAnnotationIdMode = LegacyUndefinedAnnotationId,
 ) -> NotesReadResult raise DocxError {
   if !zip.exists(path) {
-    return { notes: [], messages: [] }
+    return { notes: [], annotation_ids: [], messages: [] }
   }
   let part_relationships = read_relationships(
     zip,
@@ -1858,12 +1840,12 @@ fn read_note_part_at_path(
     numbering,
     messages: [],
     diagnostics,
-    missing_annotation_id_mode,
     external_files,
     read_images,
   }
   let root = read_xml_part(zip, path, xml_budget?)
   let notes : Array[Note] = []
+  let annotation_ids : Array[String?] = []
   for note_element in root.elements_by_tag_name("w:" + note_type) {
     let note_kind = note_element.attributes.get("w:type")
     // separator/continuationSeparator/continuationNotice are Word's
@@ -1872,17 +1854,16 @@ fn read_note_part_at_path(
     if note_kind != Some("separator") &&
       note_kind != Some("continuationSeparator") &&
       note_kind != Some("continuationNotice") {
+      let annotation_id = note_element.attributes.get("w:id")
       notes.push({
         note_type,
-        note_id: annotation_id_or_missing(
-          note_element.attributes.get("w:id"),
-          missing_annotation_id_mode,
-        ),
+        note_id: annotation_id_or_missing(annotation_id),
         body: reader.read_children(note_element.children),
       })
+      annotation_ids.push(annotation_id)
     }
   }
-  { notes, messages: reader.messages }
+  { notes, annotation_ids, messages: reader.messages }
 }
 
 ///|
@@ -1898,7 +1879,6 @@ fn read_comments_for_document(
   xml_budget? : @xml.XmlReadBudget,
   comments_part_path? : String,
   diagnostics? : ReaderDiagnosticCollector,
-  missing_annotation_id_mode? : MissingAnnotationIdMode = LegacyUndefinedAnnotationId,
 ) -> CommentsReadResult raise DocxError {
   let authoritative = match comments_part_path {
     Some(path) => Some(path)
@@ -1914,7 +1894,7 @@ fn read_comments_for_document(
   }
   let path = authoritative.unwrap_or("word/comments.xml")
   if !zip.exists(path) {
-    return { comments: [], messages: [] }
+    return { comments: [], annotation_ids: [], messages: [] }
   }
   let part_relationships = read_relationships(
     zip,
@@ -1930,24 +1910,23 @@ fn read_comments_for_document(
     numbering,
     messages: [],
     diagnostics,
-    missing_annotation_id_mode,
     external_files,
     read_images,
   }
   let root = read_xml_part(zip, path, xml_budget?)
   let comments : Array[Comment] = []
+  let annotation_ids : Array[String?] = []
   for comment_element in root.elements_by_tag_name("w:comment") {
+    let annotation_id = comment_element.attributes.get("w:id")
     comments.push({
-      comment_id: annotation_id_or_missing(
-        comment_element.attributes.get("w:id"),
-        missing_annotation_id_mode,
-      ),
+      comment_id: annotation_id_or_missing(annotation_id),
       body: reader.read_children(comment_element.children),
       author_name: read_optional_attribute(comment_element, "w:author"),
       author_initials: read_optional_attribute(comment_element, "w:initials"),
     })
+    annotation_ids.push(annotation_id)
   }
-  { comments, messages: reader.messages }
+  { comments, annotation_ids, messages: reader.messages }
 }
 
 ///|
@@ -2038,7 +2017,6 @@ fn read_document_xml_with_messages(
   external_files? : ExternalFileAccess = default_external_file_access(),
   read_images? : Bool = true,
   diagnostics? : ReaderDiagnosticCollector,
-  missing_annotation_id_mode? : MissingAnnotationIdMode = LegacyUndefinedAnnotationId,
 ) -> DocxReadResult raise DocxError {
   let body = match root.first("w:body") {
     Some(body) => body
@@ -2056,7 +2034,6 @@ fn read_document_xml_with_messages(
     numbering,
     messages: [],
     diagnostics,
-    missing_annotation_id_mode,
     external_files,
     read_images,
   }
@@ -2076,7 +2053,6 @@ priv struct BodyReader {
   numbering : NumberingMap
   messages : Array[Message]
   diagnostics : ReaderDiagnosticCollector?
-  missing_annotation_id_mode : MissingAnnotationIdMode
   external_files : ExternalFileAccess
   read_images : Bool
 }
@@ -2132,30 +2108,21 @@ fn BodyReader::read_element(
       [
         NoteReference(
           note_type="footnote",
-          note_id=annotation_id_or_missing(
-            element.attributes.get("w:id"),
-            self.missing_annotation_id_mode,
-          ),
+          note_id=annotation_id_or_missing(element.attributes.get("w:id")),
         ),
       ]
     "w:endnoteReference" =>
       [
         NoteReference(
           note_type="endnote",
-          note_id=annotation_id_or_missing(
-            element.attributes.get("w:id"),
-            self.missing_annotation_id_mode,
-          ),
+          note_id=annotation_id_or_missing(element.attributes.get("w:id")),
         ),
       ]
     "w:footnoteRef" | "w:endnoteRef" => []
     "w:commentReference" =>
       [
         CommentReference(
-          annotation_id_or_missing(
-            element.attributes.get("w:id"),
-            self.missing_annotation_id_mode,
-          ),
+          annotation_id_or_missing(element.attributes.get("w:id")),
         ),
       ]
     "w:br" => self.read_break(element)

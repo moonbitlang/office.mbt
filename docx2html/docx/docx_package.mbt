@@ -354,7 +354,6 @@ fn HeaderFooterCollector::read_part_story(
     numbering: self.parts.numbering,
     messages: [],
     diagnostics: self.parts.diagnostics,
-    missing_annotation_id_mode: self.parts.missing_annotation_id_mode,
     external_files: self.parts.external_files,
     read_images: true,
   }
