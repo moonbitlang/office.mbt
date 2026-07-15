@@ -90,6 +90,44 @@ pub fn SelectorSegment::key_value(
 }
 
 ///|
+/// Returns the canonical name of this path segment.
+pub fn SelectorSegment::name(self : SelectorSegment) -> String {
+  self.name
+}
+
+///|
+/// Returns this segment's validated selection, if present.
+pub fn SelectorSegment::selection(self : SelectorSegment) -> SegmentSelection? {
+  self.selection
+}
+
+///|
+/// Returns the document format named by this selector.
+pub fn OfficeSelector::document_format(self : OfficeSelector) -> DocumentFormat {
+  self.format
+}
+
+///|
+/// Returns the validated path segments in document order.
+pub fn OfficeSelector::segments(
+  self : OfficeSelector,
+) -> ReadOnlyArray[SelectorSegment] {
+  self.segments
+}
+
+///|
+/// Returns the optional XLSX coordinate leaf.
+pub fn OfficeSelector::coordinate(self : OfficeSelector) -> SelectorCoordinate? {
+  self.coordinate
+}
+
+///|
+/// Returns whether this selector is stable across ordinary positional edits.
+pub fn OfficeSelector::stability(self : OfficeSelector) -> SelectorStability {
+  self.stability
+}
+
+///|
 fn selector_column_name(column : Int) -> String {
   let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".to_array()
   let reversed : Array[Char] = []

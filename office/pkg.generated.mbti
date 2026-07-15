@@ -174,7 +174,11 @@ pub struct OfficeSelector {
   coordinate : SelectorCoordinate?
   stability : SelectorStability
 }
+pub fn OfficeSelector::coordinate(Self) -> SelectorCoordinate?
+pub fn OfficeSelector::document_format(Self) -> DocumentFormat
 pub fn OfficeSelector::render(Self) -> String
+pub fn OfficeSelector::segments(Self) -> ReadOnlyArray[SelectorSegment]
+pub fn OfficeSelector::stability(Self) -> SelectorStability
 
 pub(all) struct ProtocolError {
   code : String
@@ -202,7 +206,9 @@ pub struct SelectorSegment {
   selection : SegmentSelection?
 }
 pub fn SelectorSegment::key_value(Self, StringView) -> String?
+pub fn SelectorSegment::name(Self) -> String
 pub fn SelectorSegment::position(Self) -> Int?
+pub fn SelectorSegment::selection(Self) -> SegmentSelection?
 
 pub enum SelectorStability {
   Stable
