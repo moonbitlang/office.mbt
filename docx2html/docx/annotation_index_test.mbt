@@ -297,6 +297,31 @@ fn unreferenced_story_fixture(
 }
 
 ///|
+fn referenced_header_fixture(
+  content_type : String,
+  header_xml : String,
+) -> Bytes raise {
+  let source = unreferenced_story_fixture(
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header",
+    "header1.xml", "word/header1.xml", content_type, header_xml,
+  )
+  let archive = try! @mbtzip.read(source)
+  assert_true(
+    archive.replace(
+      "word/document.xml",
+      @utf8.encode(
+        (
+          #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+          #|<w:body><w:p/><w:sectPr><w:headerReference w:type="default" r:id="rIdHidden"/></w:sectPr></w:body>
+          #|</w:document>
+        ),
+      ),
+    ),
+  )
+  try! @mbtzip.write(archive)
+}
+
+///|
 fn with_main_relationship(
   bytes : BytesView,
   id : String,
@@ -685,6 +710,56 @@ test "tolerant annotated reads warn on broken section references while mutation 
     _ => fail("expected mutation-safe read to reject the external header")
   } noraise {
     _ => fail("expected mutation-safe read to fail closed")
+  }
+
+  fn assert_tolerant_header_omission(source : Bytes) -> Unit raise {
+    let archive = try! @mbtzip.read(source)
+    let tolerant = @docx.read_docx_annotated_archive_tolerant_limited(
+      archive,
+      budget(),
+    )
+    assert_eq(tolerant.result().headers.length(), 0)
+    assert_eq(tolerant.header_story_sources().length(), 0)
+    assert_eq(tolerant.result().sections[0].headers.length(), 0)
+    assert_true(
+      tolerant.result().messages.any(message => {
+        message ==
+        @core.warning(
+          "A header part could not be read and was ignored: word/header1.xml",
+        )
+      }),
+    )
+  }
+
+  let wrong_content_type = referenced_header_fixture(
+    "application/xml", "<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>",
+  )
+  assert_tolerant_header_omission(wrong_content_type)
+  let wrong_content_archive = try! @mbtzip.read(wrong_content_type)
+  try
+    @docx.read_docx_annotated_archive_limited(wrong_content_archive, budget())
+  catch {
+    Unsupported(message~) =>
+      assert_true(message.contains("has content type 'application/xml'"))
+    _ => fail("expected mutation-safe read to reject the header content type")
+  } noraise {
+    _ => fail("expected mutation-safe read to fail on the header content type")
+  }
+
+  let wrong_root = referenced_header_fixture(
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml",
+    "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>",
+  )
+  assert_tolerant_header_omission(wrong_root)
+  let wrong_root_archive = try! @mbtzip.read(wrong_root)
+  try
+    @docx.read_docx_annotated_archive_limited(wrong_root_archive, budget())
+  catch {
+    InvalidXml(message~) =>
+      assert_true(message.contains("must have a WordprocessingML 'hdr' root"))
+    _ => fail("expected mutation-safe read to reject the header root")
+  } noraise {
+    _ => fail("expected mutation-safe read to fail on the header root")
   }
 }
 

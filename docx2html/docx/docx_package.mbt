@@ -295,7 +295,7 @@ fn HeaderFooterCollector::resolve_part(
       // outline/text/get all flow through here, and the body-only surface
       // never raised for a broken header. Warn and skip instead, while
       // preserving hard resource ceilings as typed failures.
-      let body = self.read_part_story(path) catch {
+      let body = self.read_part_story(path, kind) catch {
         ResourceLimit(..) as error => raise error
         _ => {
           push_reader_warning_parts(self.messages, self.parts.diagnostics, [
@@ -320,7 +320,22 @@ fn HeaderFooterCollector::resolve_part(
 fn HeaderFooterCollector::read_part_story(
   self : HeaderFooterCollector,
   path : String,
+  kind : String,
 ) -> Array[DocumentElement] raise DocxError {
+  self.parts.content_types.require_annotation_part(
+    self.parts.zip,
+    Some(path),
+    kind,
+  )
+  let root = read_xml_part(
+    self.parts.zip,
+    path,
+    xml_budget?=self.parts.xml_budget,
+  )
+  let expected_root = "w:" + annotation_story_root_local_name(kind)
+  if root.name != expected_root {
+    raise InvalidXml(message=annotation_story_root_error_message(path, kind))
+  }
   let part_relationships = read_relationships(
     self.parts.zip,
     relationships_path_for_part(self.parts.zip, path),
@@ -339,11 +354,6 @@ fn HeaderFooterCollector::read_part_story(
     external_files: self.parts.external_files,
     read_images: true,
   }
-  let root = read_xml_part(
-    self.parts.zip,
-    path,
-    xml_budget?=self.parts.xml_budget,
-  )
   let body = reader.read_children(root.children)
   self.messages.append(reader.messages)
   body
