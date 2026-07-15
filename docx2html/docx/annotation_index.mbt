@@ -328,6 +328,12 @@ fn annotation_story_root_local_name(kind : String) -> String {
 }
 
 ///|
+fn annotation_story_root_error_message(path : String, kind : String) -> String {
+  let expected = annotation_story_root_local_name(kind)
+  "the \{kind} annotation story part '\{path}' must have a WordprocessingML '\{expected}' root"
+}
+
+///|
 /// Relationship types establish a semantic story kind; the target's expanded
 /// root QName must agree before markers or mutation spans are trusted.
 fn validate_annotation_story_root(
@@ -340,9 +346,7 @@ fn validate_annotation_story_root(
     scan.root_namespace_uri() is Some(uri) &&
     wordprocessing_dialect(uri) is Some(dialect) &&
     root.kind == expected else {
-    raise InvalidXml(
-      message="the \{kind} annotation story part '\{path}' must have a WordprocessingML '\{expected}' root",
-    )
+    raise InvalidXml(message=annotation_story_root_error_message(path, kind))
   }
   dialect
 }
