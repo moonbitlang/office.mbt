@@ -24,6 +24,12 @@ fn minimal_builder() -> @opc.PackageBuilder raise {
 }
 
 ///|
+fn maximum_deep_zip_name() -> String {
+  // 32,768 one-character segments: 32,767 slashes plus 32,768 letters.
+  "a/".repeat(32_767) + "a"
+}
+
+///|
 test "a built package satisfies the structural validator" {
   let bytes = minimal_builder().build()
   debug_inspect(@opc.validate_docx_package(bytes), content="[]")
@@ -67,6 +73,29 @@ test "the builder preserves legal opaque percent escapes" {
   let archive = @mbtzip.read(bytes)
   assert_true(archive.get("word/%FF.bin") is Some(_))
   assert_eq(@opc.validate_docx_package(bytes), [])
+}
+
+///|
+test "the builder handles the maximum deeply segmented ZIP entry name linearly" {
+  let name = maximum_deep_zip_name()
+  assert_eq(name.length(), 65_535)
+  let registry = @opc.PartNameRegistry::new()
+  assert_true(registry.register(name, name) is None)
+  match registry.register(name, name) {
+    Some(Equivalent(existing)) => assert_eq(existing.length(), 65_535)
+    _ => fail("expected exact PartName equivalence")
+  }
+  let builder = minimal_builder()
+  builder.add_part(name, b"")
+}
+
+///|
+test "the builder rejects a ZIP entry name beyond the format limit" {
+  let oversized = "a".repeat(65_536)
+  expect_build_error(
+    builder => builder.add_part(oversized, b""),
+    "part name exceeds the 65535-character ZIP entry-name limit",
+  )
 }
 
 ///|

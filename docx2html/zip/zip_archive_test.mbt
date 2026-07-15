@@ -98,3 +98,24 @@ test "DOCX view rejects derivable names and inexact content-types spelling" {
     _ => fail("expected InvalidZip")
   }
 }
+
+///|
+test "DOCX view bounds deeply segmented ZIP entry names without prefix expansion" {
+  let maximum = "a/".repeat(32_767) + "a"
+  assert_eq(maximum.length(), 65_535)
+  let entries : Map[String, BytesView] = Map([])
+  entries[maximum] = b"payload"
+  let archive = @zip.zip_archive(entries)
+  assert_eq(archive.read_bytes(maximum), Some(b"payload"))
+  let oversized = "a".repeat(65_536)
+  let oversized_entries : Map[String, BytesView] = Map([])
+  oversized_entries[oversized] = b"payload"
+  try {
+    let _ = @zip.zip_archive(oversized_entries)
+    fail("expected an oversized ZIP name to be rejected")
+  } catch {
+    @core.InvalidZip(message~) =>
+      assert_true(message.contains("ZIP entry name exceeds 65535 characters"))
+    _ => fail("expected InvalidZip")
+  }
+}

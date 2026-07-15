@@ -9,25 +9,33 @@ pub struct ZipArchive {
 } derive(Debug, Eq)
 
 ///|
+const MAX_ZIP_ENTRY_NAME_CHARS : Int = 65_535
+
+///|
+const MAX_ZIP_TOTAL_ENTRY_NAME_CHARS : Int = 4 * 1024 * 1024
+
+///|
 fn canonical_part_name(path : String) -> String {
   @opc.part_name_key(path)
 }
 
 ///|
-fn zip_part_name_ancestor_keys(name : String) -> Array[String] {
-  let key = canonical_part_name(name)
-  let segments = key.split("/").collect()
-  let ancestors : Array[String] = []
-  let mut prefix = ""
-  for index in 0..<(segments.length() - 1) {
-    prefix = if index == 0 {
-      segments[index].to_owned()
-    } else {
-      prefix + "/" + segments[index].to_owned()
-    }
-    ancestors.push(prefix)
+fn checked_zip_entry_name_total(
+  total : Int,
+  name : String,
+) -> Int raise DocxError {
+  let length = name.length()
+  if length > MAX_ZIP_ENTRY_NAME_CHARS {
+    raise InvalidZip(
+      message="ZIP entry name exceeds \{MAX_ZIP_ENTRY_NAME_CHARS} characters",
+    )
   }
-  ancestors
+  if length > MAX_ZIP_TOTAL_ENTRY_NAME_CHARS - total {
+    raise InvalidZip(
+      message="ZIP entry names exceed \{MAX_ZIP_TOTAL_ENTRY_NAME_CHARS} aggregate characters",
+    )
+  }
+  total + length
 }
 
 ///|
@@ -49,11 +57,13 @@ pub fn zip_archive_entries(
   let entries : StableStringMap[BytesView] = SortedMap([])
   let canonical_names : StableStringMap[String] = SortedMap([])
   let logical_names : StableStringMap[String] = SortedMap([])
-  let descendant_by_ancestor : StableStringMap[String] = SortedMap([])
+  let part_names = @opc.PartNameRegistry::new()
+  let mut name_chars = 0
   for pair in source {
     let (name, bytes) = pair
+    name_chars = checked_zip_entry_name_total(name_chars, name)
     insert_zip_entry(
-      entries, canonical_names, logical_names, descendant_by_ancestor, name, bytes,
+      entries, canonical_names, logical_names, part_names, name, bytes,
     )
   }
   { entries, canonical_names, logical_names }
@@ -64,7 +74,7 @@ fn insert_zip_entry(
   entries : StableStringMap[BytesView],
   canonical_names : StableStringMap[String],
   logical_names : StableStringMap[String],
-  descendant_by_ancestor : StableStringMap[String],
+  part_names : @opc.PartNameRegistry,
   name : String,
   bytes : BytesView,
 ) -> Unit raise DocxError {
@@ -94,32 +104,17 @@ fn insert_zip_entry(
     }
   }
   let key = canonical_part_name(logical_name)
-  match canonical_names.get(key) {
-    Some(existing) if existing != name =>
-      raise InvalidZip(
-        message="duplicate ZIP entry names after case normalization: \{existing}, \{name}",
-      )
-    _ => ()
-  }
   if logical_name != "[Content_Types].xml" {
-    match descendant_by_ancestor.get(key) {
-      Some(descendant) =>
+    match part_names.register(logical_name, name) {
+      Some(Equivalent(existing)) =>
         raise InvalidZip(
-          message="OPC part names must not be derivable from one another: \{name}, \{descendant}",
+          message="duplicate ZIP entry names after case normalization: \{existing}, \{name}",
+        )
+      Some(Derivable(existing)) =>
+        raise InvalidZip(
+          message="OPC part names must not be derivable from one another: \{existing}, \{name}",
         )
       None => ()
-    }
-    for ancestor in zip_part_name_ancestor_keys(logical_name) {
-      match canonical_names.get(ancestor) {
-        Some(existing) =>
-          raise InvalidZip(
-            message="OPC part names must not be derivable from one another: \{existing}, \{name}",
-          )
-        None => ()
-      }
-      if !descendant_by_ancestor.contains(ancestor) {
-        descendant_by_ancestor[ancestor] = name
-      }
     }
   }
   entries[name] = bytes
@@ -137,13 +132,15 @@ pub fn open_zip_archive(
   let entries : StableStringMap[BytesView] = SortedMap([])
   let canonical_names : StableStringMap[String] = SortedMap([])
   let logical_names : StableStringMap[String] = SortedMap([])
-  let descendant_by_ancestor : StableStringMap[String] = SortedMap([])
+  let part_names = @opc.PartNameRegistry::new()
+  let mut name_chars = 0
   for entry in archive.entries() {
+    name_chars = checked_zip_entry_name_total(name_chars, entry.name())
     insert_zip_entry(
       entries,
       canonical_names,
       logical_names,
-      descendant_by_ancestor,
+      part_names,
       entry.name(),
       entry.data(),
     )

@@ -124,6 +124,42 @@ test "byte-backed OPC validation bounds ZIP inflation before XML parsing" {
 }
 
 ///|
+test "archive-backed OPC validation reports typed ZIP-name resource limits" {
+  let data = try! @mbtzip.read(minimal_docx())
+  let entry_report = @opc.validate_docx_archive_report_limited(
+    data,
+    max_findings=8,
+    max_message_chars=64,
+    max_zip_entry_name_chars=4,
+  )
+  assert_true(entry_report.resource_limit() is Some(ZipEntryNameCharacters))
+  let aggregate_report = @opc.validate_docx_archive_report_limited(
+    data,
+    max_findings=8,
+    max_message_chars=64,
+    max_zip_entry_name_chars=65_535,
+    max_zip_total_entry_name_chars=20,
+  )
+  assert_true(
+    aggregate_report.resource_limit() is Some(ZipTotalEntryNameCharacters),
+  )
+}
+
+///|
+test "archive-backed OPC validation handles a maximum deep PartName" {
+  let deep = "a/".repeat(32_767) + "a"
+  assert_eq(deep.length(), 65_535)
+  let archive = try! @mbtzip.read(minimal_docx())
+  archive.add(deep, b"payload")
+  let report = @opc.validate_docx_archive_report_limited(
+    archive,
+    max_findings=8,
+    max_message_chars=64,
+  )
+  assert_true(report.resource_limit() is None)
+}
+
+///|
 test "relationship validation requires the OPC package namespace" {
   let foreign_child =
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:foreign="urn:foreign"><foreign:Relationship Id="main" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>

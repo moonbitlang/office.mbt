@@ -258,20 +258,24 @@ priv struct AbstractNumbering {
 }
 
 ///|
+priv enum NumberingLinkResolution {
+  ResolvedAbstractNumbering(String)
+  UnresolvableNumbering
+}
+
+///|
 priv struct NumberingMap {
-  nums : StableStringMap[String]
   abstract_nums : StableStringMap[AbstractNumbering]
   levels_by_paragraph_style_id : StableStringMap[NumberingLevel]
-  numbering_style_num_ids : StableStringMap[String]
+  resolved_abstract_num_ids : StableStringMap[NumberingLinkResolution]
 }
 
 ///|
 fn NumberingMap::empty() -> NumberingMap {
   {
-    nums: SortedMap([]),
     abstract_nums: SortedMap([]),
     levels_by_paragraph_style_id: SortedMap([]),
-    numbering_style_num_ids: SortedMap([]),
+    resolved_abstract_num_ids: SortedMap([]),
   }
 }
 
@@ -1474,13 +1478,16 @@ fn read_numbering_xml(
   styles : StableStringMap[StyleInfo],
 ) -> NumberingMap {
   let abstract_nums = read_abstract_numberings(root)
+  let nums = read_numbering_instances(root)
+  let numbering_style_num_ids = index_numbering_style_num_ids(styles)
   {
-    nums: read_numbering_instances(root),
     abstract_nums,
     levels_by_paragraph_style_id: index_levels_by_paragraph_style_id(
       abstract_nums,
     ),
-    numbering_style_num_ids: index_numbering_style_num_ids(styles),
+    resolved_abstract_num_ids: resolve_numbering_style_links(
+      nums, abstract_nums, numbering_style_num_ids,
+    ),
   }
 }
 
@@ -1588,41 +1595,101 @@ fn index_numbering_style_num_ids(
 }
 
 ///|
+fn resolve_numbering_style_links(
+  nums : StableStringMap[String],
+  abstract_nums : StableStringMap[AbstractNumbering],
+  numbering_style_num_ids : StableStringMap[String],
+) -> StableStringMap[NumberingLinkResolution] {
+  let resolved : StableStringMap[NumberingLinkResolution] = SortedMap([])
+  // Every successful loop iteration consumes one previously unresolved
+  // `<w:num>` node and resolves the entire path on exit. This explicit budget
+  // pins total graph work to O(number of numbering instances), including
+  // cycles and links to missing ids.
+  let mut remaining = nums.length()
+  for start, _ in nums {
+    if resolved.contains(start) {
+      continue
+    }
+    let path : Array[String] = []
+    let path_ids : StableStringSet = SortedSet([])
+    let mut current = start
+    let mut resolution = UnresolvableNumbering
+    let mut done = false
+    while !done {
+      match resolved.get(current) {
+        Some(cached) => {
+          resolution = cached
+          done = true
+        }
+        None =>
+          if path_ids.contains(current) {
+            resolution = UnresolvableNumbering
+            done = true
+          } else {
+            match nums.get(current) {
+              None => {
+                resolution = UnresolvableNumbering
+                done = true
+              }
+              Some(abstract_num_id) => {
+                if remaining <= 0 {
+                  resolution = UnresolvableNumbering
+                  done = true
+                  continue
+                }
+                remaining = remaining - 1
+                path.push(current)
+                path_ids.add(current)
+                match abstract_nums.get(abstract_num_id) {
+                  None => {
+                    resolution = UnresolvableNumbering
+                    done = true
+                  }
+                  Some(abstract_num) =>
+                    match abstract_num.num_style_link {
+                      None => {
+                        resolution = ResolvedAbstractNumbering(abstract_num_id)
+                        done = true
+                      }
+                      Some(style_id) =>
+                        match numbering_style_num_ids.get(style_id) {
+                          Some(linked_num_id) => current = linked_num_id
+                          None => {
+                            resolution = UnresolvableNumbering
+                            done = true
+                          }
+                        }
+                    }
+                }
+              }
+            }
+          }
+      }
+    }
+    for num_id in path {
+      resolved[num_id] = resolution
+    }
+  }
+  resolved
+}
+
+///|
 fn NumberingMap::find_level(
   self : NumberingMap,
   num_id : String,
   level : String,
 ) -> Numbering? {
-  let seen : StableStringSet = SortedSet([])
-  let mut current_num_id = num_id
-  while true {
-    // numStyleLink is an arbitrary package graph. Resolve it iteratively so a
-    // malformed self-link or longer cycle cannot consume the native/Wasm
-    // stack before caller-owned document limits are reached.
-    if seen.contains(current_num_id) {
-      return None
-    }
-    seen.add(current_num_id)
-    guard self.nums.get(current_num_id) is Some(abstract_num_id) else {
-      return None
-    }
-    guard self.abstract_nums.get(abstract_num_id) is Some(abstract_num) else {
-      return None
-    }
-    match abstract_num.num_style_link {
-      Some(style_id) =>
-        match self.numbering_style_num_ids.get(style_id) {
-          Some(linked_num_id) => current_num_id = linked_num_id
-          None => return None
-        }
-      None =>
-        return match abstract_num.levels.get(level) {
-          Some(numbering_level) => Some(numbering_level.to_numbering())
-          None => None
-        }
-    }
+  guard self.resolved_abstract_num_ids.get(num_id)
+    is Some(ResolvedAbstractNumbering(abstract_num_id)) else {
+    return None
   }
-  None
+  guard self.abstract_nums.get(abstract_num_id) is Some(abstract_num) else {
+    return None
+  }
+  match abstract_num.levels.get(level) {
+    Some(numbering_level) => Some(numbering_level.to_numbering())
+    None => None
+  }
 }
 
 ///|

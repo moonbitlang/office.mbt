@@ -87,6 +87,12 @@ const DEFAULT_MAX_ZIP_ENTRY_UNCOMPRESSED_BYTES : Int = 32 * 1024 * 1024
 const DEFAULT_MAX_ZIP_TOTAL_UNCOMPRESSED_BYTES : Int = 128 * 1024 * 1024
 
 ///|
+const DEFAULT_MAX_ZIP_ENTRY_NAME_CHARS : Int = 65_535
+
+///|
+const DEFAULT_MAX_ZIP_TOTAL_ENTRY_NAME_CHARS : Int = 4 * 1024 * 1024
+
+///|
 /// The resource guard that stopped structural validation. This status is kept
 /// separate from rendered findings so attacker-controlled part names cannot
 /// forge or hide resource exhaustion by changing diagnostic text.
@@ -94,6 +100,8 @@ pub(all) enum DocxValidationResourceLimit {
   ZipEntries
   ZipEntryUncompressedBytes
   ZipTotalUncompressedBytes
+  ZipEntryNameCharacters
+  ZipTotalEntryNameCharacters
   XmlSourceUnits
   XmlTokens
   XmlTokenLength
@@ -110,6 +118,8 @@ pub fn DocxValidationResourceLimit::name(
     ZipEntries => "zip-entry-count"
     ZipEntryUncompressedBytes => "zip-entry-uncompressed-bytes"
     ZipTotalUncompressedBytes => "zip-total-uncompressed-bytes"
+    ZipEntryNameCharacters => "zip-entry-name-characters"
+    ZipTotalEntryNameCharacters => "zip-total-entry-name-characters"
     XmlSourceUnits => "xml-source-units"
     XmlTokens => "xml-tokens"
     XmlTokenLength => "xml-token-length"
@@ -168,6 +178,9 @@ priv struct FindingCollector {
   findings : Array[String]
   max_findings : Int
   max_message_chars : Int
+  max_zip_entry_name_chars : Int
+  max_zip_total_entry_name_chars : Int
+  mut zip_entry_name_chars : Int
   xml_budget : @xml.XmlReadBudget
   mut truncated : Bool
   mut resource_limit : DocxValidationResourceLimit?
@@ -178,6 +191,8 @@ priv struct FindingCollector {
 fn FindingCollector::new_with_xml_limits(
   max_findings : Int,
   max_message_chars : Int,
+  max_zip_entry_name_chars : Int,
+  max_zip_total_entry_name_chars : Int,
   max_xml_source_units : Int,
   max_xml_tokens : Int,
   max_xml_materialized_chars : Int,
@@ -195,6 +210,17 @@ fn FindingCollector::new_with_xml_limits(
     } else {
       0
     },
+    max_zip_entry_name_chars: if max_zip_entry_name_chars > 0 {
+      max_zip_entry_name_chars
+    } else {
+      0
+    },
+    max_zip_total_entry_name_chars: if max_zip_total_entry_name_chars > 0 {
+      max_zip_total_entry_name_chars
+    } else {
+      0
+    },
+    zip_entry_name_chars: 0,
     xml_budget: @xml.xml_read_budget(
       max_source_units=if max_xml_source_units > 0 {
         max_xml_source_units
@@ -217,6 +243,32 @@ fn FindingCollector::new_with_xml_limits(
     resource_limit: None,
     main_document_part: None,
   }
+}
+
+///|
+fn FindingCollector::consume_zip_entry_name(
+  self : FindingCollector,
+  name : String,
+) -> Bool {
+  let length = name.length()
+  if length > self.max_zip_entry_name_chars {
+    if self.resource_limit is None {
+      self.resource_limit = Some(ZipEntryNameCharacters)
+    }
+    self.add("ZIP entry name exceeds the character budget: \{self.text(name)}")
+    self.stop()
+    return false
+  }
+  if length > self.max_zip_total_entry_name_chars - self.zip_entry_name_chars {
+    if self.resource_limit is None {
+      self.resource_limit = Some(ZipTotalEntryNameCharacters)
+    }
+    self.add("ZIP entry names exceed the aggregate character budget")
+    self.stop()
+    return false
+  }
+  self.zip_entry_name_chars = self.zip_entry_name_chars + length
+  true
 }
 
 ///|
@@ -386,6 +438,8 @@ pub fn validate_docx_package_limited(
   max_zip_entries? : Int = DEFAULT_MAX_ZIP_ENTRIES,
   max_zip_entry_uncompressed_bytes? : Int = DEFAULT_MAX_ZIP_ENTRY_UNCOMPRESSED_BYTES,
   max_zip_total_uncompressed_bytes? : Int = DEFAULT_MAX_ZIP_TOTAL_UNCOMPRESSED_BYTES,
+  max_zip_entry_name_chars? : Int = DEFAULT_MAX_ZIP_ENTRY_NAME_CHARS,
+  max_zip_total_entry_name_chars? : Int = DEFAULT_MAX_ZIP_TOTAL_ENTRY_NAME_CHARS,
   max_xml_source_units? : Int = DEFAULT_MAX_XML_SOURCE_UNITS,
   max_xml_tokens? : Int = DEFAULT_MAX_XML_TOKENS,
   max_xml_materialized_chars? : Int = DEFAULT_MAX_XML_MATERIALIZED_CHARS,
@@ -398,6 +452,8 @@ pub fn validate_docx_package_limited(
     max_zip_entries~,
     max_zip_entry_uncompressed_bytes~,
     max_zip_total_uncompressed_bytes~,
+    max_zip_entry_name_chars~,
+    max_zip_total_entry_name_chars~,
     max_xml_source_units~,
     max_xml_tokens~,
     max_xml_materialized_chars~,
@@ -417,14 +473,16 @@ pub fn validate_docx_package_report_limited(
   max_zip_entries? : Int = DEFAULT_MAX_ZIP_ENTRIES,
   max_zip_entry_uncompressed_bytes? : Int = DEFAULT_MAX_ZIP_ENTRY_UNCOMPRESSED_BYTES,
   max_zip_total_uncompressed_bytes? : Int = DEFAULT_MAX_ZIP_TOTAL_UNCOMPRESSED_BYTES,
+  max_zip_entry_name_chars? : Int = DEFAULT_MAX_ZIP_ENTRY_NAME_CHARS,
+  max_zip_total_entry_name_chars? : Int = DEFAULT_MAX_ZIP_TOTAL_ENTRY_NAME_CHARS,
   max_xml_source_units? : Int = DEFAULT_MAX_XML_SOURCE_UNITS,
   max_xml_tokens? : Int = DEFAULT_MAX_XML_TOKENS,
   max_xml_materialized_chars? : Int = DEFAULT_MAX_XML_MATERIALIZED_CHARS,
   max_xml_token_chars? : Int = DEFAULT_MAX_XML_TOKEN_CHARS,
 ) -> DocxValidationReport {
   let findings = FindingCollector::new_with_xml_limits(
-    max_findings, max_message_chars, max_xml_source_units, max_xml_tokens, max_xml_materialized_chars,
-    max_xml_token_chars,
+    max_findings, max_message_chars, max_zip_entry_name_chars, max_zip_total_entry_name_chars,
+    max_xml_source_units, max_xml_tokens, max_xml_materialized_chars, max_xml_token_chars,
   )
   let archive = @mbtzip.read_limited(
     data,
@@ -475,6 +533,8 @@ pub fn validate_docx_archive_limited(
   archive : @mbtzip.Archive,
   max_findings~ : Int,
   max_message_chars~ : Int,
+  max_zip_entry_name_chars? : Int = DEFAULT_MAX_ZIP_ENTRY_NAME_CHARS,
+  max_zip_total_entry_name_chars? : Int = DEFAULT_MAX_ZIP_TOTAL_ENTRY_NAME_CHARS,
   max_xml_source_units? : Int = DEFAULT_MAX_XML_SOURCE_UNITS,
   max_xml_tokens? : Int = DEFAULT_MAX_XML_TOKENS,
   max_xml_materialized_chars? : Int = DEFAULT_MAX_XML_MATERIALIZED_CHARS,
@@ -484,6 +544,8 @@ pub fn validate_docx_archive_limited(
     archive,
     max_findings~,
     max_message_chars~,
+    max_zip_entry_name_chars~,
+    max_zip_total_entry_name_chars~,
     max_xml_source_units~,
     max_xml_tokens~,
     max_xml_materialized_chars~,
@@ -499,14 +561,16 @@ pub fn validate_docx_archive_report_limited(
   archive : @mbtzip.Archive,
   max_findings~ : Int,
   max_message_chars~ : Int,
+  max_zip_entry_name_chars? : Int = DEFAULT_MAX_ZIP_ENTRY_NAME_CHARS,
+  max_zip_total_entry_name_chars? : Int = DEFAULT_MAX_ZIP_TOTAL_ENTRY_NAME_CHARS,
   max_xml_source_units? : Int = DEFAULT_MAX_XML_SOURCE_UNITS,
   max_xml_tokens? : Int = DEFAULT_MAX_XML_TOKENS,
   max_xml_materialized_chars? : Int = DEFAULT_MAX_XML_MATERIALIZED_CHARS,
   max_xml_token_chars? : Int = DEFAULT_MAX_XML_TOKEN_CHARS,
 ) -> DocxValidationReport {
   let findings = FindingCollector::new_with_xml_limits(
-    max_findings, max_message_chars, max_xml_source_units, max_xml_tokens, max_xml_materialized_chars,
-    max_xml_token_chars,
+    max_findings, max_message_chars, max_zip_entry_name_chars, max_zip_total_entry_name_chars,
+    max_xml_source_units, max_xml_tokens, max_xml_materialized_chars, max_xml_token_chars,
   )
   validate_docx_archive_into(archive, findings)
   findings.report()
@@ -521,10 +585,7 @@ fn validate_docx_archive_into(
   let parts : StableStringMap[BytesView] = SortedMap([])
   let canonical_names : StableStringMap[String] = SortedMap([])
   let logical_names : StableStringMap[String] = SortedMap([])
-  // Maps every proper ancestor key to the first descendant that claimed it.
-  // Together with `canonical_names`, this enforces OPC's non-derivability
-  // rule in input-linear path depth rather than an entry-count quadratic pass.
-  let descendant_by_ancestor : StableStringMap[String] = SortedMap([])
+  let part_names = PartNameRegistry::new()
   let seen : StableStringSet = SortedSet([])
   for entry in archive.entries() {
     if findings.full() {
@@ -532,6 +593,9 @@ fn validate_docx_archive_into(
       return
     }
     let name = entry.name()
+    if !findings.consume_zip_entry_name(name) {
+      return
+    }
     if seen.contains(name) {
       findings.add("duplicate entry name: \{findings.text(name)}")
     } else {
@@ -548,31 +612,19 @@ fn validate_docx_archive_into(
         Some(logical) => {
           let key = part_name_key(logical)
           if logical != CONTENT_TYPES_PART {
-            match descendant_by_ancestor.get(key) {
-              Some(descendant) =>
+            match part_names.register(logical, name) {
+              Some(Equivalent(existing)) if existing != name =>
                 findings.add(
-                  "part name is derivable from another part name: \{findings.text(name)} and \{findings.text(descendant)}",
+                  "duplicate entry name: \{findings.text(name)} (logically equivalent to \{findings.text(existing)})",
                 )
-              None => ()
-            }
-            for ancestor in part_name_ancestor_keys(logical) {
-              match canonical_names.get(ancestor) {
-                Some(existing) =>
-                  findings.add(
-                    "part name is derivable from another part name: \{findings.text(existing)} and \{findings.text(name)}",
-                  )
-                None => ()
-              }
-              if !descendant_by_ancestor.contains(ancestor) {
-                descendant_by_ancestor[ancestor] = name
-              }
+              Some(Derivable(existing)) =>
+                findings.add(
+                  "part name is derivable from another part name: \{findings.text(existing)} and \{findings.text(name)}",
+                )
+              _ => ()
             }
           }
           match canonical_names.get(key) {
-            Some(existing) if existing != name =>
-              findings.add(
-                "duplicate entry name: \{findings.text(name)} (logically equivalent to \{findings.text(existing)})",
-              )
             Some(_) => ()
             None => canonical_names[key] = name
           }
