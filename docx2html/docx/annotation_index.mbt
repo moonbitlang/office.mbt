@@ -800,6 +800,34 @@ priv enum AnnotationReadPolicy {
 }
 
 ///|
+/// Converts the raw optional identity retained beside a package-projected
+/// annotation. This is deliberately outside `DocumentParts`: the package AST
+/// always keeps its legacy `"undefined"` sentinel, while tolerant D2 paths use
+/// an empty spelling for an absent attribute and reject a literal empty value.
+fn d2_annotation_id(value : String?) -> String raise DocxError {
+  match value {
+    Some("") =>
+      raise InvalidXml(
+        message="an annotation id is present but empty; refusing an ambiguous tolerant projection",
+      )
+    Some(id) => id
+    None => ""
+  }
+}
+
+///|
+fn indexed_annotation_id(
+  package_id : String,
+  source_id : String?,
+  policy : AnnotationReadPolicy,
+) -> String raise DocxError {
+  match policy {
+    MutationSafe => package_id
+    TolerantProjection => d2_annotation_id(source_id)
+  }
+}
+
+///|
 fn validate_scanned_marker_ids(
   scan : StoryScan,
   policy : AnnotationReadPolicy,
@@ -859,11 +887,6 @@ fn read_docx_annotated_zip(
     xml_budget?,
     diagnostics?,
     expected_main_document_path?,
-    missing_annotation_id_mode=if policy is TolerantProjection {
-      EmptyMissingAnnotationId
-    } else {
-      LegacyUndefinedAnnotationId
-    },
     strict_main_document=policy is MutationSafe,
   )
   let document_result = parts.read_document()
@@ -885,20 +908,38 @@ fn read_docx_annotated_zip(
   let endnote_bodies : Array[Array[DocumentElement]] = []
   let footnote_pairs : Array[(String, Array[DocumentElement])] = []
   let endnote_pairs : Array[(String, Array[DocumentElement])] = []
-  for note in parts.notes_result.notes {
+  guard parts.notes_result.annotation_ids.length() ==
+    parts.notes_result.notes.length() else {
+    raise Unsupported(message="internal note identity projection mismatch")
+  }
+  for note_index, note in parts.notes_result.notes {
+    let id = indexed_annotation_id(
+      note.note_id,
+      parts.notes_result.annotation_ids[note_index],
+      policy,
+    )
     if note.note_type == "footnote" {
       footnote_bodies.push(note.body)
-      footnote_pairs.push((note.note_id, note.body))
+      footnote_pairs.push((id, note.body))
     } else {
       endnote_bodies.push(note.body)
-      endnote_pairs.push((note.note_id, note.body))
+      endnote_pairs.push((id, note.body))
     }
   }
   let comment_bodies : Array[Array[DocumentElement]] = []
   let comment_pairs : Array[(String, Array[DocumentElement])] = []
-  for comment in parts.comments_result.comments {
+  guard parts.comments_result.annotation_ids.length() ==
+    parts.comments_result.comments.length() else {
+    raise Unsupported(message="internal comment identity projection mismatch")
+  }
+  for comment_index, comment in parts.comments_result.comments {
+    let id = indexed_annotation_id(
+      comment.comment_id,
+      parts.comments_result.annotation_ids[comment_index],
+      policy,
+    )
     comment_bodies.push(comment.body)
-    comment_pairs.push((comment.comment_id, comment.body))
+    comment_pairs.push((id, comment.body))
   }
   let path_budget = AnnotationPathBudget::new(parts.xml_budget)
   let verify_ctx = build_verify_context(
@@ -1519,7 +1560,7 @@ fn build_annotation_index(
     path_budget,
   )
   let (footnotes, endnotes) = build_notes(
-    parts, scans, warnings, ctx, degraded, path_budget,
+    parts, scans, warnings, ctx, degraded, path_budget, policy,
   )
   // The legacy projection grammar has no escaping inside [@id=...]. Unique
   // ids that are empty or contain a path delimiter therefore fall back to a
@@ -2304,6 +2345,7 @@ fn build_notes(
   ctx : VerifyContext,
   degraded : StableStringSet,
   path_budget : AnnotationPathBudget,
+  policy : AnnotationReadPolicy,
 ) -> (Array[NoteInfo], Array[NoteInfo]) raise DocxError {
   let footnotes : Array[NoteInfo] = []
   let endnotes : Array[NoteInfo] = []
@@ -2337,29 +2379,38 @@ fn build_notes(
   }
   let seen_footnotes : StableStringSet = SortedSet([])
   let seen_endnotes : StableStringSet = SortedSet([])
-  for note in parts.notes_result.notes {
+  guard parts.notes_result.annotation_ids.length() ==
+    parts.notes_result.notes.length() else {
+    raise Unsupported(message="internal note identity projection mismatch")
+  }
+  for note_index, note in parts.notes_result.notes {
+    let note_id = indexed_annotation_id(
+      note.note_id,
+      parts.notes_result.annotation_ids[note_index],
+      policy,
+    )
     let refs = match note.note_type {
-      "footnote" => footnote_refs.get(note.note_id).unwrap_or([])
-      _ => endnote_refs.get(note.note_id).unwrap_or([])
+      "footnote" => footnote_refs.get(note_id).unwrap_or([])
+      _ => endnote_refs.get(note_id).unwrap_or([])
     }
-    let info : NoteInfo = { id: note.note_id, references: refs }
+    let info : NoteInfo = { id: note_id, references: refs }
     if note.note_type == "footnote" {
       // Duplicate ids make [@id=...] ambiguous — the plan-locked
       // diagnostic (comments get theirs at definition parse).
-      if seen_footnotes.contains(note.note_id) && !warnings.full() {
+      if seen_footnotes.contains(note_id) && !warnings.full() {
         warnings.add(
-          "annotation index: duplicate footnote id '\{warnings.text(note.note_id)}' (each is exposed; id addressing will be ambiguous)",
+          "annotation index: duplicate footnote id '\{warnings.text(note_id)}' (each is exposed; id addressing will be ambiguous)",
         )
       }
-      seen_footnotes.add(note.note_id)
+      seen_footnotes.add(note_id)
       footnotes.push(info)
     } else {
-      if seen_endnotes.contains(note.note_id) && !warnings.full() {
+      if seen_endnotes.contains(note_id) && !warnings.full() {
         warnings.add(
-          "annotation index: duplicate endnote id '\{warnings.text(note.note_id)}' (each is exposed; id addressing will be ambiguous)",
+          "annotation index: duplicate endnote id '\{warnings.text(note_id)}' (each is exposed; id addressing will be ambiguous)",
         )
       }
-      seen_endnotes.add(note.note_id)
+      seen_endnotes.add(note_id)
       endnotes.push(info)
     }
   }
