@@ -796,6 +796,22 @@ priv enum AnnotationReadPolicy {
 }
 
 ///|
+fn validate_scanned_marker_ids(
+  scan : StoryScan,
+  policy : AnnotationReadPolicy,
+) -> Unit raise DocxError {
+  if policy is TolerantProjection {
+    for marker in scan.markers {
+      if marker.id_was_present() && marker.id() == "" {
+        raise InvalidXml(
+          message="an annotation marker w:id is present but empty; refusing an ambiguous tolerant projection",
+        )
+      }
+    }
+  }
+}
+
+///|
 fn read_docx_annotated_archive_with_policy_limited(
   archive : @mbtzip.Archive,
   xml_budget : @xml.XmlReadBudget,
@@ -1387,6 +1403,7 @@ fn build_annotation_index(
             continue
           }
         }
+        validate_scanned_marker_ids(scan, policy)
         let root_dialect = validate_annotation_story_root(
           path,
           story.kind,
@@ -1463,6 +1480,7 @@ fn build_annotation_index(
         continue
       }
     }
+    validate_scanned_marker_ids(scan, policy)
     let root_dialect = validate_annotation_story_root(
       reachable.path,
       reachable.kind,
