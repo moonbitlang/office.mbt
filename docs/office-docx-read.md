@@ -73,6 +73,11 @@ duplicated id is an explicit `office.docx.selector_ambiguous_id` failure.
 Descendants such as `.../comment[id="7"]/p[1]` are snapshot-relative because
 they contain a positional segment.
 
+Anchor and reference paths inside annotation metadata are rewritten through
+the same ordinal-to-emitted-root index. A unique note/comment therefore uses
+its stable `id=` root everywhere, and every canonical-looking metadata path can
+be passed back to `get` in the same snapshot.
+
 ## `outline`
 
 ```text
@@ -169,8 +174,11 @@ The package reader additionally caps the input file at 64 MiB, ZIP entries at
 cumulative XML source, token, materialization, and token-size budgets during
 both structural OPC preflight and document projection. Reader diagnostics are
 deduplicated in first-seen order, capped at 128 retained entries, and bounded
-to 512 characters each. Query text scanning is capped cumulatively at 16 Mi
-characters, and one element's materialized text at 1 Mi characters. Limit
+to 512 characters each, including the final omission notice. Query text
+scanning is capped cumulatively at 16 Mi characters, and every element's
+materialized text independently at 1 Mi characters. OPC preflight preserves a
+typed parser-guard status before part names enter bounded human diagnostics, so
+document-controlled text cannot forge or hide resource exhaustion. Limit
 failures use `office.docx.resource_limit` and identify the exhausted resource.
 
 ## Correctable failures

@@ -70,6 +70,25 @@ struct AnnotationDetails {
 }
 
 ///|
+struct AnnotationStoryPlan {
+  story : String
+  kind : String
+  pairs : Array[(String, Array[@document.DocumentElement])]
+  paths : Array[String]
+  missing_ids : Int
+  duplicate_ids : Int
+  unrepresentable_ids : Int
+}
+
+///|
+struct AnnotationProjectionIndex {
+  comments : Array[@docx.CommentInfo]
+  footnotes : @sorted_map.SortedMap[String, @docx.NoteInfo]
+  endnotes : @sorted_map.SortedMap[String, @docx.NoteInfo]
+  path_roots : @sorted_map.SortedMap[String, String]
+}
+
+///|
 struct DocxProjectionBuilder {
   max_elements : Int
   entries : Array[DocxProjectionEntry]
@@ -165,7 +184,8 @@ fn docx_xml_resource_limit_message(message : String) -> Bool {
   message == "XML source budget exceeded" ||
   message == "XML token budget exceeded" ||
   message == "XML token length budget exceeded" ||
-  message == "XML materialized character budget exceeded"
+  message == "XML materialized character budget exceeded" ||
+  message == "XML nesting too deep"
 }
 
 ///|
@@ -323,19 +343,59 @@ fn element_query_properties(
 }
 
 ///|
-fn canonical_index_path(path : String) -> String? {
-  try @lib.selector_from_docx_projection_path(path) catch {
-    _ => None
-  } noraise {
-    selector => Some(selector.render())
+fn annotation_item_root(path : String) -> (String, String)? {
+  if !(path.has_prefix("/comments/comment[") ||
+    path.has_prefix("/footnotes/note[") ||
+    path.has_prefix("/endnotes/note[")) {
+    return None
+  }
+  let rest = path[1:]
+  guard rest.find("/") is Some(story_end) else { return None }
+  let item_start = story_end + 2
+  if item_start >= path.length() {
+    return None
+  }
+  match path[item_start:].find("/") {
+    Some(relative) => {
+      let suffix_start = item_start + relative
+      Some((path[:suffix_start].to_owned(), path[suffix_start:].to_owned()))
+    }
+    None => Some((path, ""))
   }
 }
 
 ///|
-fn canonical_index_paths(paths : Array[String]) -> Json {
+fn canonical_index_path(
+  path : String,
+  path_roots : @sorted_map.SortedMap[String, String],
+) -> String? {
+  match annotation_item_root(path) {
+    Some((root, suffix)) => {
+      guard path_roots.get(root) is Some(emitted_root) else { return None }
+      let candidate = emitted_root + suffix
+      try @lib.parse_selector(candidate) catch {
+        _ => None
+      } noraise {
+        selector => Some(selector.render())
+      }
+    }
+    None =>
+      try @lib.selector_from_docx_projection_path(path) catch {
+        _ => None
+      } noraise {
+        selector => Some(selector.render())
+      }
+  }
+}
+
+///|
+fn canonical_index_paths(
+  paths : Array[String],
+  path_roots : @sorted_map.SortedMap[String, String],
+) -> Json {
   let values : Array[Json] = []
   for path in paths {
-    match canonical_index_path(path) {
+    match canonical_index_path(path, path_roots) {
       Some(canonical) => values.push(Json::string(canonical))
       None => ()
     }
@@ -344,14 +404,17 @@ fn canonical_index_paths(paths : Array[String]) -> Json {
 }
 
 ///|
-fn comment_anchor_metadata(anchor : @docx.AnnotationAnchor) -> Json {
+fn comment_anchor_metadata(
+  anchor : @docx.AnnotationAnchor,
+  path_roots : @sorted_map.SortedMap[String, String],
+) -> Json {
   let fields : Map[String, Json] = {
     "story": Json::string(anchor.story()),
-    "references": canonical_index_paths(anchor.references()),
+    "references": canonical_index_paths(anchor.references(), path_roots),
   }
   match anchor.start() {
     Some(path) =>
-      match canonical_index_path(path) {
+      match canonical_index_path(path, path_roots) {
         Some(canonical) => fields["start"] = Json::string(canonical)
         None => ()
       }
@@ -359,7 +422,7 @@ fn comment_anchor_metadata(anchor : @docx.AnnotationAnchor) -> Json {
   }
   match anchor.end() {
     Some(path) =>
-      match canonical_index_path(path) {
+      match canonical_index_path(path, path_roots) {
         Some(canonical) => fields["end"] = Json::string(canonical)
         None => ()
       }
@@ -378,12 +441,12 @@ fn comment_anchor_metadata(anchor : @docx.AnnotationAnchor) -> Json {
 
 ///|
 fn comment_details(
-  annotated : @docx.DocxAnnotatedResult,
+  comments : Array[@docx.CommentInfo],
   ordinal : Int,
+  path_roots : @sorted_map.SortedMap[String, String],
 ) -> AnnotationDetails {
   let fields : Map[String, Json] = Map([])
   let properties : Map[String, String] = Map([])
-  let comments = annotated.annotations().comments()
   if ordinal > 0 && ordinal <= comments.length() {
     let info = comments[ordinal - 1]
     fields["defined"] = Json::boolean(info.defined())
@@ -416,7 +479,7 @@ fn comment_details(
     }
     let anchors : Array[Json] = []
     for anchor in info.anchors() {
-      anchors.push(comment_anchor_metadata(anchor))
+      anchors.push(comment_anchor_metadata(anchor, path_roots))
     }
     fields["anchors"] = Json::array(anchors)
   }
@@ -425,21 +488,18 @@ fn comment_details(
 
 ///|
 fn note_details(
-  annotated : @docx.DocxAnnotatedResult,
-  story : String,
+  notes : @sorted_map.SortedMap[String, @docx.NoteInfo],
   id : String,
+  path_roots : @sorted_map.SortedMap[String, String],
 ) -> AnnotationDetails {
-  let notes = if story == "footnotes" {
-    annotated.annotations().footnotes()
-  } else {
-    annotated.annotations().endnotes()
-  }
   let fields : Map[String, Json] = Map([])
-  for note in notes {
-    if note.id() == id {
-      fields["references"] = canonical_index_paths(note.references())
-      break
-    }
+  match notes.get(id) {
+    Some(note) =>
+      fields["references"] = canonical_index_paths(
+        note.references(),
+        path_roots,
+      )
+    None => ()
   }
   { metadata: Json::object(fields), properties: Map([]) }
 }
@@ -481,13 +541,95 @@ fn stable_annotation_path(
 ///|
 fn annotation_id_counts(
   pairs : Array[(String, Array[@document.DocumentElement])],
-) -> Map[String, Int] {
-  let counts : Map[String, Int] = Map([])
+) -> @sorted_map.SortedMap[String, Int] {
+  let counts : @sorted_map.SortedMap[String, Int] = SortedMap([])
   for pair in pairs {
     let (id, _) = pair
     counts[id] = counts.get(id).unwrap_or(0) + 1
   }
   counts
+}
+
+///|
+fn annotation_story_plan(
+  story : String,
+  kind : String,
+  pairs : Array[(String, Array[@document.DocumentElement])],
+) -> AnnotationStoryPlan {
+  let collection_path = "/docx/\{story}"
+  let counts = annotation_id_counts(pairs)
+  let paths : Array[String] = []
+  let mut duplicate_ids = 0
+  let mut missing_ids = 0
+  let mut unrepresentable_ids = 0
+  for index, pair in pairs {
+    let ordinal = index + 1
+    let (id, _) = pair
+    let occurrence_count = counts.get(id).unwrap_or(0)
+    let stable_path = if occurrence_count == 1 {
+      stable_annotation_path(story, kind, id)
+    } else {
+      None
+    }
+    paths.push(
+      match stable_path {
+        Some(value) => value
+        None => "\{collection_path}/\{kind}[\{ordinal}]"
+      },
+    )
+    if id == "" {
+      missing_ids += 1
+    } else if occurrence_count > 1 {
+      duplicate_ids += 1
+    } else if stable_path is None {
+      unrepresentable_ids += 1
+    }
+  }
+  { story, kind, pairs, paths, missing_ids, duplicate_ids, unrepresentable_ids }
+}
+
+///|
+fn add_annotation_path_roots(
+  output : @sorted_map.SortedMap[String, String],
+  plan : AnnotationStoryPlan,
+) -> Unit {
+  for index, path in plan.paths {
+    output["/\{plan.story}/\{plan.kind}[\{index + 1}]"] = path
+  }
+}
+
+///|
+fn index_notes(
+  notes : Array[@docx.NoteInfo],
+) -> @sorted_map.SortedMap[String, @docx.NoteInfo] {
+  let output : @sorted_map.SortedMap[String, @docx.NoteInfo] = SortedMap([])
+  for note in notes {
+    let id = note.id()
+    if !output.contains(id) {
+      output[id] = note
+    }
+  }
+  output
+}
+
+///|
+fn annotation_projection_index(
+  annotated : @docx.DocxAnnotatedResult,
+  footnotes : AnnotationStoryPlan,
+  endnotes : AnnotationStoryPlan,
+  comments : AnnotationStoryPlan,
+) -> AnnotationProjectionIndex {
+  let path_roots : @sorted_map.SortedMap[String, String] = SortedMap([])
+  add_annotation_path_roots(path_roots, footnotes)
+  add_annotation_path_roots(path_roots, endnotes)
+  add_annotation_path_roots(path_roots, comments)
+  let annotations = annotated.annotations()
+  {
+    comments: annotations.comments(),
+    footnotes: index_notes(annotations.footnotes()),
+    endnotes: index_notes(annotations.endnotes()),
+    path_roots,
+  }
 }
 
 ///|
@@ -548,11 +690,12 @@ fn DocxProjectionBuilder::add_story(
 ///|
 fn DocxProjectionBuilder::add_annotation_story(
   self : DocxProjectionBuilder,
-  annotated : @docx.DocxAnnotatedResult,
-  story : String,
-  kind : String,
-  pairs : Array[(String, Array[@document.DocumentElement])],
+  annotation_index : AnnotationProjectionIndex,
+  plan : AnnotationStoryPlan,
 ) -> Unit raise CliFailure {
+  let story = plan.story
+  let kind = plan.kind
+  let pairs = plan.pairs
   let collection_path = "/docx/\{story}"
   let combined_body : Array[@document.DocumentElement] = []
   for pair in pairs {
@@ -570,34 +713,20 @@ fn DocxProjectionBuilder::add_annotation_story(
     Json::object({ "items": Json::number(pairs.length().to_double()) }),
     Json::object({ "story": Json::string(story) }),
   )
-  let counts = annotation_id_counts(pairs)
-  let mut duplicate_count = 0
-  let mut missing_count = 0
-  let mut unrepresentable_count = 0
-  for index, pair in pairs {
-    let ordinal = index + 1
+  for item_index, pair in pairs {
+    let ordinal = item_index + 1
     let (id, body) = pair
-    let occurrence_count = counts.get(id).unwrap_or(0)
-    let stable_path = if occurrence_count == 1 {
-      stable_annotation_path(story, kind, id)
-    } else {
-      None
-    }
-    let path = match stable_path {
-      Some(value) => value
-      None => "\{collection_path}/\{kind}[\{ordinal}]"
-    }
-    if id == "" {
-      missing_count += 1
-    } else if occurrence_count > 1 {
-      duplicate_count += 1
-    } else if stable_path is None {
-      unrepresentable_count += 1
-    }
+    let path = plan.paths[item_index]
     let details = if story == "comments" {
-      comment_details(annotated, ordinal)
+      comment_details(
+        annotation_index.comments,
+        ordinal,
+        annotation_index.path_roots,
+      )
+    } else if story == "footnotes" {
+      note_details(annotation_index.footnotes, id, annotation_index.path_roots)
     } else {
-      note_details(annotated, story, id)
+      note_details(annotation_index.endnotes, id, annotation_index.path_roots)
     }
     let metadata_fields : Map[String, Json] = {
       "id": Json::string(id),
@@ -631,22 +760,22 @@ fn DocxProjectionBuilder::add_annotation_story(
     collection.children.push(path)
     self.walk_element_children(item, @document.document(body))
   }
-  if missing_count > 0 {
+  if plan.missing_ids > 0 {
     self.warn(
       "office.docx.missing_annotation_id",
-      "\{missing_count} \{story} item(s) have an empty id and therefore use snapshot-relative positional paths",
+      "\{plan.missing_ids} \{story} item(s) have an empty id and therefore use snapshot-relative positional paths",
     )
   }
-  if duplicate_count > 0 {
+  if plan.duplicate_ids > 0 {
     self.warn(
       "office.docx.duplicate_annotation_id",
-      "\{duplicate_count} \{story} item(s) share duplicate ids and therefore use snapshot-relative positional paths",
+      "\{plan.duplicate_ids} \{story} item(s) share duplicate ids and therefore use snapshot-relative positional paths",
     )
   }
-  if unrepresentable_count > 0 {
+  if plan.unrepresentable_ids > 0 {
     self.warn(
       "office.docx.unrepresentable_annotation_id",
-      "\{unrepresentable_count} \{story} item(s) have ids outside office.selector/1 limits and therefore use snapshot-relative positional paths",
+      "\{plan.unrepresentable_ids} \{story} item(s) have ids outside office.selector/1 limits and therefore use snapshot-relative positional paths",
     )
   }
 }
@@ -669,6 +798,24 @@ fn projection_from_annotated(
 ) -> DocxProjection raise CliFailure {
   let builder = DocxProjectionBuilder::new(max_elements)
   let result = annotated.result()
+  let footnotes = annotation_story_plan(
+    "footnotes",
+    "note",
+    annotated.footnote_bodies(),
+  )
+  let endnotes = annotation_story_plan(
+    "endnotes",
+    "note",
+    annotated.endnote_bodies(),
+  )
+  let comments = annotation_story_plan(
+    "comments",
+    "comment",
+    annotated.comment_bodies(),
+  )
+  let annotations = annotation_projection_index(
+    annotated, footnotes, endnotes, comments,
+  )
   builder.add_story(
     "/docx/body",
     "body",
@@ -700,24 +847,9 @@ fn projection_from_annotated(
       }),
     )
   }
-  builder.add_annotation_story(
-    annotated,
-    "footnotes",
-    "note",
-    annotated.footnote_bodies(),
-  )
-  builder.add_annotation_story(
-    annotated,
-    "endnotes",
-    "note",
-    annotated.endnote_bodies(),
-  )
-  builder.add_annotation_story(
-    annotated,
-    "comments",
-    "comment",
-    annotated.comment_bodies(),
-  )
+  builder.add_annotation_story(annotations, footnotes)
+  builder.add_annotation_story(annotations, endnotes)
+  builder.add_annotation_story(annotations, comments)
   for message in result.messages {
     match message {
       Warning(text) => builder.warn("office.docx.reader_warning", text)
@@ -731,14 +863,6 @@ fn projection_from_annotated(
     entry_index: builder.entry_index,
     warnings: builder.warnings,
   }
-}
-
-///|
-fn docx_opc_resource_finding(finding : String) -> Bool {
-  finding.contains("XML source budget exceeded") ||
-  finding.contains("XML token budget exceeded") ||
-  finding.contains("XML token length budget exceeded") ||
-  finding.contains("XML materialized character budget exceeded")
 }
 
 ///|
@@ -767,7 +891,7 @@ fn validate_docx_read_archive(
       }),
     )
   }
-  let (findings, truncated) = @opc.validate_docx_archive_limited(
+  let report = @opc.validate_docx_archive_report_limited(
     archive,
     max_findings=docx_cli_max_warnings,
     max_message_chars=512,
@@ -776,18 +900,20 @@ fn validate_docx_read_archive(
     max_xml_materialized_chars=docx_cli_max_xml_materialized_chars,
     max_xml_token_chars=docx_cli_max_xml_token_chars,
   )
-  match findings.search_by(docx_opc_resource_finding) {
-    Some(index) =>
+  match report.resource_limit() {
+    Some(limit) =>
       raise docx_cli_failure(
         "office.docx.resource_limit",
         "DOCX package validation exceeded configured XML parser limits",
         details=Json::object({
           "file": Json::string(bounded_text(file, 160)),
-          "finding": Json::string(findings[index]),
+          "resource": Json::string(limit.name()),
         }),
       )
     None => ()
   }
+  let findings = report.findings()
+  let truncated = report.findings_truncated()
   if truncated || findings.length() > 0 {
     let details : Map[String, Json] = {
       "file": Json::string(bounded_text(file, 160)),

@@ -109,6 +109,9 @@ fn DocxTextCollector::write_string(
   }
   for character in value {
     self.write_char(character)
+    if self.truncated && !self.fail_on_limit {
+      break
+    }
   }
 }
 
@@ -194,7 +197,13 @@ fn entry_text_with_budget(
       actual=budget.used,
     )
   }
-  let value = collect_docx_text(element, remaining, budget.resource)
+  let element_limit = remaining.min(docx_cli_max_element_text_chars)
+  let resource = if docx_cli_max_element_text_chars <= remaining {
+    "element text characters"
+  } else {
+    budget.resource
+  }
+  let value = collect_docx_text(element, element_limit, resource)
   let mut count = 0
   for _ in value {
     count += 1
