@@ -1099,19 +1099,10 @@ fn is_valid_relationship_id(id : String) -> Bool {
 }
 
 ///|
-fn has_relationships_segment(name : String) -> Bool {
-  for segment in name.split("/") {
-    if part_name_key(segment) == "_rels" {
-      return true
-    }
-  }
-  false
-}
-
-///|
 /// Derives the source described by a Relationships part. Only
-/// `dir/_rels/name.rels` (or the package-root `_rels/.rels`) is valid; a source
-/// may not itself live inside a relationships directory.
+/// `dir/_rels/name.rels` (or the package-root `_rels/.rels`) is reserved.
+/// Earlier `_rels` segments belong to the source PartName: for example,
+/// `word/_rels/_rels/data.bin.rels` describes `word/_rels/data.bin`.
 fn relationship_source_part(name : String) -> String? {
   let key = part_name_key(name)
   if key == ROOT_RELS_PART {
@@ -1121,11 +1112,6 @@ fn relationship_source_part(name : String) -> String? {
   if segments.length() < 2 ||
     part_name_key(segments[segments.length() - 2]) != "_rels" {
     return None
-  }
-  for index in 0..<(segments.length() - 2) {
-    if part_name_key(segments[index]) == "_rels" {
-      return None
-    }
   }
   let filename = segments[segments.length() - 1]
   let filename_key = part_name_key(filename)
@@ -1268,9 +1254,6 @@ fn check_relationships(
       continue
     }
     if !is_rels_part(logical_name) {
-      if has_relationships_segment(logical_name) {
-        findings.add("invalid Relationships part name: \{findings.text(name)}")
-      }
       continue
     }
     guard relationship_source_part(logical_name) is Some(source) else {

@@ -1041,7 +1041,7 @@ test "OPC part names are not derivable from one another" {
 }
 
 ///|
-test "Relationships parts require a real source and the canonical location" {
+test "Relationships parts require a source while ordinary _rels paths remain legal" {
   let empty_relationships =
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>
   let findings = @opc.validate_docx_package(
@@ -1056,9 +1056,7 @@ test "Relationships parts require a real source and the canonical location" {
     ),
   )
   assert_true(
-    findings.contains(
-      "invalid Relationships part name: word/_rels/nested/ghost.rels",
-    ),
+    findings.all(finding => !finding.contains("word/_rels/nested/ghost.rels")),
   )
 }
 

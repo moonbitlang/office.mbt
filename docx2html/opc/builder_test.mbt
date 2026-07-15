@@ -192,6 +192,24 @@ test "relationship targets resolve against their source part's directory" {
 }
 
 ///|
+test "ordinary parts inside _rels directories receive doubled relationship paths" {
+  let builder = minimal_builder()
+  builder.add_default("bin", "application/octet-stream")
+  builder.add_part("word/_rels/data.bin", b"payload")
+  builder.add_relationship(
+    "rNested",
+    "urn:test:related",
+    "../document.xml",
+    source="word/_rels/data.bin",
+  )
+  let bytes = builder.build()
+  let archive = @mbtzip.read(bytes)
+  assert_true(archive.get("word/_rels/data.bin") is Some(_))
+  assert_true(archive.get("word/_rels/_rels/data.bin.rels") is Some(_))
+  assert_eq(@opc.validate_docx_package(bytes), [])
+}
+
+///|
 test "builder round 1 hardening: reserved names, orphan sources, metadata, determinism" {
   // Reserved / builder-owned names.
   expect_build_error(
@@ -295,7 +313,7 @@ test "builder enforces package-wide names and metadata grammars" {
   )
   expect_build_error(
     builder => builder.add_part("_rels", b"generated ancestor"),
-    "reserved part name '_rels'",
+    "part names must not be derivable from one another",
   )
   expect_build_error(
     builder => builder.add_default("bin", "not a media type"),
