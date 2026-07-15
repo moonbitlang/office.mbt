@@ -47,7 +47,8 @@ fn[T] expect_splice_failure(
         Unsupported(message~)
         | InvalidZip(message~)
         | InvalidXml(message~)
-        | MissingPart(message~) => message
+        | MissingPart(message~)
+        | ResourceLimit(message~, ..) => message
       }
       if !message.has_prefix(expected_prefix) {
         fail("unexpected message: \{message}")
@@ -278,7 +279,8 @@ test "D1: splice XML parser budget is shared across edited parts" {
   two.edit_part("a.xml", @splice.span_edit(start=0, end=0, b""))
   two.edit_part("b.xml", @splice.span_edit(start=0, end=0, b""))
   try two.check_against(archive, limits~) catch {
-    Unsupported(message~) => {
+    ResourceLimit(limit~, message~) => {
+      debug_inspect(limit, content="DocxXmlTokens")
       assert_true(message.has_prefix("splicing '"))
       assert_true(
         message.contains(

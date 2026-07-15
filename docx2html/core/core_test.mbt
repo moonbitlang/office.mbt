@@ -47,3 +47,21 @@ test "message deduplication ignores deterministic string-hash clustering" {
     assert_eq(deduped[index], @core.warning(text))
   }
 }
+
+///|
+test "XML resource errors retain a machine discriminator through context" {
+  let direct = @core.docx_xml_resource_limit_error(DocxXmlTokens)
+  assert_eq(direct.description(), "XML token budget exceeded")
+  debug_inspect(direct.xml_resource_limit(), content="Some(DocxXmlTokens)")
+  let contextual = @core.contextual_docx_xml_resource_limit_error(
+    DocxXmlTokens,
+    "splicing document.xml exceeded XML resource limits",
+  )
+  assert_eq(
+    contextual.description(),
+    "splicing document.xml exceeded XML resource limits",
+  )
+  debug_inspect(contextual.xml_resource_limit(), content="Some(DocxXmlTokens)")
+  let forged = @core.Unsupported(message="XML token budget exceeded")
+  assert_true(forged.xml_resource_limit() is None)
+}

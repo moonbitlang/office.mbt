@@ -228,7 +228,7 @@ fn XmlReadBudget::charge_source(
   units : Int,
 ) -> Unit raise DocxError {
   if units < 0 || units > self.remaining_source_units {
-    raise InvalidXml(message="XML source budget exceeded")
+    raise @core.docx_xml_resource_limit_error(DocxXmlSourceUnits)
   }
   self.remaining_source_units -= units
 }
@@ -239,13 +239,13 @@ fn XmlReadBudget::charge_token(
   chars : Int,
 ) -> Unit raise DocxError {
   if chars < 0 || chars > self.max_token_chars {
-    raise InvalidXml(message="XML token length budget exceeded")
+    raise @core.docx_xml_resource_limit_error(DocxXmlTokenLength)
   }
   if self.remaining_tokens <= 0 {
-    raise InvalidXml(message="XML token budget exceeded")
+    raise @core.docx_xml_resource_limit_error(DocxXmlTokens)
   }
   if chars > self.remaining_materialized_chars {
-    raise InvalidXml(message="XML materialized character budget exceeded")
+    raise @core.docx_xml_resource_limit_error(DocxXmlMaterializedCharacters)
   }
   self.remaining_tokens -= 1
   self.remaining_materialized_chars -= chars
@@ -261,7 +261,7 @@ pub fn XmlReadBudget::charge_derived_chars(
   chars : Int,
 ) -> Unit raise DocxError {
   if chars < 0 || chars > self.remaining_materialized_chars {
-    raise InvalidXml(message="XML materialized character budget exceeded")
+    raise @core.docx_xml_resource_limit_error(DocxXmlMaterializedCharacters)
   }
   self.remaining_materialized_chars -= chars
 }
@@ -274,7 +274,7 @@ fn XmlReadBudget::charge_namespace_bindings(
   // Namespace declarations allocate one scope-delta record and later restore
   // one map binding. Charge both operations before recording the declaration.
   if operations < 0 || operations > self.remaining_tokens {
-    raise InvalidXml(message="XML token budget exceeded")
+    raise @core.docx_xml_resource_limit_error(DocxXmlTokens)
   }
   self.remaining_tokens -= operations
 }
@@ -1240,7 +1240,7 @@ priv struct NamespaceBindingChange {
 fn XmlParser::parse_element(self : XmlParser) -> XmlElement raise DocxError {
   let max_depth = if self.strict { strict_xml_max_depth } else { xml_max_depth }
   if self.depth >= max_depth {
-    raise InvalidXml(message="XML nesting too deep")
+    raise @core.docx_xml_resource_limit_error(DocxXmlNestingDepth)
   }
   self.charge_token(0)
   self.depth = self.depth + 1
@@ -1284,7 +1284,7 @@ fn xml_derived_name_length(
 ) -> Int raise DocxError {
   let total = first.to_int64() + second.to_int64() + punctuation.to_int64()
   if first < 0 || second < 0 || punctuation < 0 || total > 2147483647L {
-    raise InvalidXml(message="XML materialized character budget exceeded")
+    raise @core.docx_xml_resource_limit_error(DocxXmlMaterializedCharacters)
   }
   total.to_int()
 }

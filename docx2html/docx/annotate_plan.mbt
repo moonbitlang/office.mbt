@@ -573,15 +573,6 @@ fn canonical_comment_id(id : String) -> CommentIdClass {
 }
 
 ///|
-fn is_mutation_xml_resource_error(message : String) -> Bool {
-  message == "XML source budget exceeded" ||
-  message == "XML token budget exceeded" ||
-  message == "XML token length budget exceeded" ||
-  message == "XML materialized character budget exceeded" ||
-  message == "XML nesting too deep"
-}
-
-///|
 /// Strictly parses a relationship part under the one cumulative budget owned
 /// by the annotation operation. Resource failures retain their typed XML
 /// error so transaction callers can report `office.docx.resource_limit`;
@@ -614,10 +605,8 @@ fn read_mutation_xml_root(
     xml_budget,
     namespace_map=office_namespace_map(),
   ) catch {
+    ResourceLimit(..) as error => raise error
     InvalidXml(message~) => {
-      if is_mutation_xml_resource_error(message) {
-        raise InvalidXml(message~)
-      }
       if message == "XML source is not valid UTF-8" {
         raise Unsupported(message="'\{part}' is not UTF-8; refusing")
       }

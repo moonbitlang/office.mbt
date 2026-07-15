@@ -186,6 +186,7 @@ pub(all) suberror DocxError {
   InvalidXml(message~ : String)
   MissingPart(message~ : String)
   Unsupported(message~ : String)
+  ResourceLimit(limit~ : @core.DocxXmlResourceLimit, message~ : String)
 } derive(Eq, @debug.Debug)
 #deprecated
 pub fn DocxError::equal(Self, Self) -> Bool
@@ -211,6 +212,8 @@ pub using @style_map {type DocumentMatcher}
 pub using @docx {type DocxPackageResult}
 
 pub using @docx {type DocxReadResult}
+
+pub using @core {type DocxXmlResourceLimit}
 
 pub using @html {type HtmlNode}
 

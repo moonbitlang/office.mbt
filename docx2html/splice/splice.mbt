@@ -1033,15 +1033,6 @@ fn apply_prepared_span_edits(
 }
 
 ///|
-fn is_splice_xml_resource_error(message : String) -> Bool {
-  message == "XML source budget exceeded" ||
-  message == "XML token budget exceeded" ||
-  message == "XML token length budget exceeded" ||
-  message == "XML materialized character budget exceeded" ||
-  message == "XML nesting too deep"
-}
-
-///|
 /// Well-formedness belt for one edited part. Transaction-grade callers supply
 /// the single budget shared across the whole plan; lower-level callers receive
 /// an input-linear derived budget rather than an unlimited parser.
@@ -1055,12 +1046,12 @@ fn validate_spliced_xml(
   // a newly declared foreign encoding and different consumer semantics.
   check_part_encoding(name, result)
   try @xml.read_xml_bytes_strict_limited(result, xml_budget) catch {
+    ResourceLimit(limit~, message~) =>
+      raise @core.contextual_docx_xml_resource_limit_error(
+        limit,
+        "splicing '\{name}' exceeded XML resource limits: \{message}",
+      )
     InvalidXml(message~) => {
-      if is_splice_xml_resource_error(message) {
-        raise Unsupported(
-          message="splicing '\{name}' exceeded XML resource limits: \{message}",
-        )
-      }
       if message == "XML source is not valid UTF-8" {
         raise Unsupported(
           message="splicing '\{name}' produced bytes that are not valid UTF-8",

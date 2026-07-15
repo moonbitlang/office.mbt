@@ -158,13 +158,15 @@ fn docx_error_message(err : Error) -> String {
     @docx2html.Unsupported(message~)
     | @docx2html.InvalidZip(message~)
     | @docx2html.InvalidXml(message~)
-    | @docx2html.MissingPart(message~) => message
+    | @docx2html.MissingPart(message~)
+    | @docx2html.ResourceLimit(message~, ..) => message
     // The docx package's own error type (annotate planning is called
     // directly, not through the compat bridge).
     @core.Unsupported(message~)
     | @core.InvalidZip(message~)
     | @core.InvalidXml(message~)
-    | @core.MissingPart(message~) => message
+    | @core.MissingPart(message~)
+    | @core.ResourceLimit(message~, ..) => message
     other => repr(other)
   }
 }

@@ -224,7 +224,7 @@ fn AnnotationPathBudget::charge(
   chars : Int,
 ) -> Unit raise DocxError {
   if chars < 0 || chars > self.remaining_chars {
-    raise InvalidXml(message="XML materialized character budget exceeded")
+    raise @core.docx_xml_resource_limit_error(DocxXmlMaterializedCharacters)
   }
   match self.shared_xml_budget {
     Some(budget) => budget.charge_derived_chars(chars)
@@ -1323,7 +1323,7 @@ fn scan_tag(
     if relevant_attribute {
       if attr_end - attr_start > max_annotation_relevant_attribute_bytes ||
         at - value_start > max_annotation_relevant_attribute_bytes {
-        raise InvalidXml(message="XML token length budget exceeded")
+        raise @core.docx_xml_resource_limit_error(DocxXmlTokenLength)
       }
       let attr_name = utf8_slice(part, attr_start, attr_end)
       let raw_value = @utf8.decode(part[value_start:at]) catch {
@@ -1881,8 +1881,10 @@ test "scanner bounds relevant attributes before decoding" {
       ),
     )
   catch {
-    InvalidXml(message~) =>
+    ResourceLimit(limit~, message~) => {
+      debug_inspect(limit, content="DocxXmlTokenLength")
       inspect(message, content="XML token length budget exceeded")
+    }
     _ => fail("unexpected annotation scanner error")
   } noraise {
     _ => fail("expected the annotation attribute budget to reject the source")
