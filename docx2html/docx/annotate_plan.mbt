@@ -582,7 +582,9 @@ fn read_mutation_relationships(
   bytes : BytesView,
   xml_budget : @xml.XmlReadBudget,
 ) -> XmlElement raise DocxError {
-  let root = @opc.read_opc_relationships_xml_limited(bytes, xml_budget) catch {
+  let (source_root_name, root) = @opc.read_opc_relationships_xml_with_source_root_limited(
+    bytes, xml_budget,
+  ) catch {
     ResourceLimit(..) as error => raise error
     InvalidXml(message~) => {
       if message == "XML source is not valid UTF-8" {
@@ -595,6 +597,11 @@ fn read_mutation_relationships(
   if root.name != PACKAGE_RELATIONSHIPS_ROOT {
     raise Unsupported(
       message="'\{part}' has root '\{root.name}', expected '\{PACKAGE_RELATIONSHIPS_ROOT}'; refusing",
+    )
+  }
+  if source_root_name != PACKAGE_RELATIONSHIPS_ROOT {
+    raise Unsupported(
+      message="'\{part}' selects its Relationships root through Markup Compatibility; byte-preserving mutation is unsupported; refusing",
     )
   }
   root

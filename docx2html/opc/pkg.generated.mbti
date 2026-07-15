@@ -18,6 +18,8 @@ pub fn read_opc_relationships_string_encoded_limited(String, @xml.XmlSourceEncod
 
 pub fn read_opc_relationships_xml_limited(BytesView, @xml.XmlReadBudget) -> @xml.XmlElement raise @core.DocxError
 
+pub fn read_opc_relationships_xml_with_source_root_limited(BytesView, @xml.XmlReadBudget) -> (String, @xml.XmlElement) raise @core.DocxError
+
 pub fn resolve_part_target(String, StringView) -> String?
 
 pub fn resolve_target(String, String) -> String?
