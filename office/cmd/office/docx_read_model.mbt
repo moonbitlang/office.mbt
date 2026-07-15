@@ -18,8 +18,16 @@ struct DocxTextCollector {
   resource : String
   output : StringBuilder
   mut used : Int
+  mut scanned : Int
   mut pending_newlines : Int
   mut truncated : Bool
+}
+
+///|
+struct DocxCollectedText {
+  text : String
+  scanned : Int
+  truncated : Bool
 }
 
 ///|
@@ -39,6 +47,7 @@ fn DocxTextCollector::new(
     resource,
     output: StringBuilder::new(),
     used: 0,
+    scanned: 0,
     pending_newlines: 0,
     truncated: false,
   }
@@ -79,19 +88,26 @@ fn DocxTextCollector::flush_pending_newlines(
 }
 
 ///|
-fn DocxTextCollector::write_char(
+fn DocxTextCollector::write_literal_char(
   self : DocxTextCollector,
   value : Char,
 ) -> Unit raise CliFailure {
-  if value == '\n' {
-    // Paragraph separators are committed only if later visible content makes
-    // them internal. This keeps trailing separators, which the public result
-    // trims, from causing false truncation or resource-limit failures.
-    if self.pending_newlines <= self.maximum {
-      self.pending_newlines += 1
+  // Scan accounting is independent of retained output. In particular, a
+  // literal LF at the end of a w:t node may later be trimmed from presentation,
+  // but it still consumed parser/projection work and must count toward both
+  // per-element and aggregate query limits.
+  if self.scanned >= self.maximum {
+    self.truncated = true
+    if self.fail_on_limit {
+      raise docx_resource_failure(
+        self.resource,
+        self.maximum,
+        actual=self.scanned + 1,
+      )
     }
     return
   }
+  self.scanned += 1
   self.flush_pending_newlines()
   if self.truncated && !self.fail_on_limit {
     return
@@ -100,7 +116,7 @@ fn DocxTextCollector::write_char(
 }
 
 ///|
-fn DocxTextCollector::write_string(
+fn DocxTextCollector::write_literal_string(
   self : DocxTextCollector,
   value : String,
 ) -> Unit raise CliFailure {
@@ -108,10 +124,22 @@ fn DocxTextCollector::write_string(
     return
   }
   for character in value {
-    self.write_char(character)
+    self.write_literal_char(character)
     if self.truncated && !self.fail_on_limit {
       break
     }
+  }
+}
+
+///|
+fn DocxTextCollector::queue_paragraph_separator(
+  self : DocxTextCollector,
+) -> Unit {
+  // Synthetic paragraph separators are presentation only. Keep them pending so
+  // trailing separators remain trimmed, but cap the counter: one value beyond
+  // the output ceiling is sufficient to make a later flush fail deterministically.
+  if self.pending_newlines <= self.maximum {
+    self.pending_newlines += 1
   }
 }
 
@@ -124,11 +152,12 @@ fn DocxTextCollector::visit(
     return
   }
   match element {
-    Text(value) => self.write_string(value)
-    Tab => self.write_char('\t')
+    Text(value) => self.write_literal_string(value)
+    Tab => self.write_literal_char('\t')
     Paragraph(children~, ..) => {
       self.visit_all(children)
-      self.write_string("\n\n")
+      self.queue_paragraph_separator()
+      self.queue_paragraph_separator()
     }
     Document(children~, ..)
     | Run(children~, ..)
@@ -159,14 +188,19 @@ fn DocxTextCollector::visit_all(
 }
 
 ///|
-fn collect_docx_text(
+fn collect_docx_text_counted(
   element : @document.DocumentElement,
   maximum : Int,
   resource : String,
-) -> String raise CliFailure {
-  let collector = DocxTextCollector::new(resource, maximum, true)
+  fail_on_limit : Bool,
+) -> DocxCollectedText raise CliFailure {
+  let collector = DocxTextCollector::new(resource, maximum, fail_on_limit)
   collector.visit(element)
-  collector.output.to_string().trim_end(chars="\n").to_owned()
+  {
+    text: collector.output.to_string().trim_end(chars="\n").to_owned(),
+    scanned: collector.scanned,
+    truncated: collector.truncated,
+  }
 }
 
 ///|
@@ -174,13 +208,11 @@ fn collect_docx_text_prefix(
   element : @document.DocumentElement,
   maximum : Int,
 ) -> (String, Bool) {
-  let collector = DocxTextCollector::new("text preview", maximum, false)
   // Truncating collectors never raise.
-  try! collector.visit(element)
-  (
-    collector.output.to_string().trim_end(chars="\n").to_owned(),
-    collector.truncated,
+  let result = try! collect_docx_text_counted(
+    element, maximum, "text preview", false,
   )
+  (result.text, result.truncated)
 }
 
 ///|
@@ -203,13 +235,9 @@ fn entry_text_with_budget(
   } else {
     budget.resource
   }
-  let value = collect_docx_text(element, element_limit, resource)
-  let mut count = 0
-  for _ in value {
-    count += 1
-  }
-  budget.used += count
-  value
+  let result = collect_docx_text_counted(element, element_limit, resource, true)
+  budget.used += result.scanned
+  result.text
 }
 
 ///|

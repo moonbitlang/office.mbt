@@ -934,9 +934,7 @@ fn validate_docx_read_archive(
       raise docx_cli_failure(
         "office.invalid_package",
         "invalid DOCX package: validation did not identify a main document part",
-        details=Json::object({
-          "file": Json::string(bounded_text(file, 160)),
-        }),
+        details=Json::object({ "file": Json::string(bounded_text(file, 160)) }),
       )
   }
 }

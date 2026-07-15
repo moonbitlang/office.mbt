@@ -378,6 +378,57 @@ test "projection and serialized output limits fail explicitly" {
 }
 
 ///|
+test "compact JSON preflight matches serializer character accounting" {
+  let value = Json::object({
+    "escaped": Json::string("quote \" slash \\ controls \b\t\n\f\r \u{0001}"),
+    "unicode": Json::string("月🌙"),
+    "values": Json::array([
+      Json::boolean(true),
+      Json::boolean(false),
+      Json::number(123.5),
+    ]),
+  })
+  let serialized = value.stringify()
+  let mut characters = 0
+  for _ in serialized {
+    characters += 1
+  }
+  let budget = DocxOutputBudget::new(characters)
+  budget.reserve_json(value)
+  assert_eq(budget.used, characters)
+}
+
+///|
+test "DOCX output builders reject growth before returning oversized output" {
+  let projection = docx_read_test_projection()
+  let entry = resolve_projection_selector(projection, "/docx/body/p[1]")
+  try docx_get_human(entry, "x".repeat(1000), [], maximum=40) catch {
+    CliFailure(error) => assert_eq(error.code, "office.docx.resource_limit")
+  } noraise {
+    _ => fail("expected bounded human output construction to fail")
+  }
+  try docx_outline_payload(projection, max_output_chars=40) catch {
+    CliFailure(error) => assert_eq(error.code, "office.docx.resource_limit")
+  } noraise {
+    _ => fail("expected bounded outline retention to fail")
+  }
+}
+
+///|
+test "DOCX heading classification rejects oversized shared style names" {
+  let paragraph = @word.paragraph(
+    [@word.run([@word.text("not a heading")])],
+    properties=@word.paragraph_properties(
+      style_name=Some("Heading 1" + "x".repeat(1024 * 1024)),
+    ),
+  )
+  let style_ids : @sorted_map.SortedMap[String, Int] = SortedMap([])
+  let style_names : @sorted_map.SortedMap[String, Int] = SortedMap([])
+  assert_eq(cached_heading_level(paragraph, style_ids, style_names), None)
+  assert_eq(style_names.length(), 0)
+}
+
+///|
 test "DOCX projection lookup uses its canonical path index" {
   let projection = docx_read_test_projection()
   for index, entry in projection.entries {
@@ -425,9 +476,34 @@ test "DOCX preview truncation excludes discarded paragraph separators" {
   let (_, internal_truncated) = collect_docx_text_prefix(internal, 160)
   assert_true(internal_truncated)
   let collector = DocxTextCollector::new("preview", 160, false)
-  try! collector.write_string("z".repeat(2 * 1024 * 1024))
+  try! collector.write_literal_string("z".repeat(2 * 1024 * 1024))
   assert_eq(collector.used, 160)
   assert_true(collector.truncated)
+}
+
+///|
+test "literal newlines consume scan budgets even when presentation trims them" {
+  let newline_only = @word.paragraph([@word.run([@word.text("\n".repeat(161))])])
+  let (preview, truncated) = collect_docx_text_prefix(newline_only, 160)
+  assert_eq(preview, "")
+  assert_true(truncated)
+  let projection = docx_read_test_projection()
+  let entry = { ..projection.entries[0], element: Some(newline_only) }
+  let aggregate = DocxTextBudget::new("query text scan characters", 16)
+  try entry_text_with_budget(entry, aggregate) catch {
+    CliFailure(error) => {
+      assert_eq(error.code, "office.docx.resource_limit")
+      guard error.details is Some(Object(details)) else {
+        fail("expected newline scan resource details")
+      }
+      assert_eq(
+        details.get("resource"),
+        Some(Json::string("query text scan characters")),
+      )
+    }
+  } noraise {
+    _ => fail("expected literal newlines to exhaust the scan budget")
+  }
 }
 
 ///|
@@ -513,12 +589,8 @@ test "DOCX preflight rejects foreign-namespace officeDocument relationships" {
   let archive = try! @zip.read(docx_read_test_bytes())
   let root_relationships =
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:foreign="urn:foreign"><foreign:Relationship Id="main" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>
-  assert_true(
-    archive.replace("_rels/.rels", @utf8.encode(root_relationships)),
-  )
-  try
-    open_docx_projection("foreign.docx", @zip.write(archive), 1000)
-  catch {
+  assert_true(archive.replace("_rels/.rels", @utf8.encode(root_relationships)))
+  try open_docx_projection("foreign.docx", @zip.write(archive), 1000) catch {
     CliFailure(error) => assert_eq(error.code, "office.invalid_package")
     _ => fail("expected a structured CLI package failure")
   } noraise {
