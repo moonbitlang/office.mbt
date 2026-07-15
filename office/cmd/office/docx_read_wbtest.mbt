@@ -87,7 +87,7 @@ test "DOCX projection emits canonical round-tripping story paths" {
 
 ///|
 test "DOCX outline reports semantic annotation counts" {
-  let payload = docx_outline_payload(docx_read_test_projection())
+  let payload = docx_outline_payload(docx_read_test_projection()).data
   guard payload is Object(fields) &&
     fields.get("counts") is Some(Object(counts)) else {
     fail("expected outline counts")
@@ -163,19 +163,18 @@ test "DOCX capability declarations cover every payload field" {
   let projection = docx_read_test_projection()
   assert_docx_capability_payload_contract(
     "outline",
-    docx_outline_payload(projection),
+    docx_outline_payload(projection).data,
   )
   let comment = resolve_projection_selector(
     projection, "/docx/comments/comment[id=\"0\"]",
   )
   assert_docx_capability_payload_contract(
     "get",
-    get_docx_payload(projection, comment, 100_000),
+    get_docx_payload(projection, comment, 100_000).data,
   )
-  let text = build_docx_text_result(projection, None, 0, 2, 100_000)
   assert_docx_capability_payload_contract(
     "text",
-    docx_text_payload(projection, text, None),
+    docx_text_payload(projection, None, None, 0, 2, 100_000).data,
   )
   let spec : DocxQuerySpec = {
     under: None,
@@ -187,10 +186,9 @@ test "DOCX capability declarations cover every payload field" {
     offset: 0,
     limit: 2,
   }
-  let query = build_docx_query_result(projection, None, spec)
   assert_docx_capability_payload_contract(
     "query",
-    docx_query_payload(projection, query, spec),
+    docx_query_payload(projection, None, spec, 100_000).data,
   )
 }
 
@@ -206,7 +204,7 @@ test "DOCX get distinguishes stable items and positional descendants" {
     projection, "/docx/comments/comment[id=\"0\"]/p[1]",
   )
   assert_true(paragraph.stability is SnapshotRelative)
-  let payload = get_docx_payload(projection, comment, 100_000).stringify()
+  let payload = get_docx_payload(projection, comment, 100_000).data.stringify()
   assert_true(payload.contains("\"schema\":\"office.docx.element/1\""))
   assert_true(payload.contains("\"text\":\"Review this\""))
   assert_true(payload.contains("\"author\":\"Ada\""))
@@ -215,46 +213,81 @@ test "DOCX get distinguishes stable items and positional descendants" {
 ///|
 test "DOCX text and query paginate in deterministic document order" {
   let projection = docx_read_test_projection()
-  let text = build_docx_text_result(projection, None, 1, 3, 100_000)
-  assert_eq(text.matched_total, 6)
-  assert_eq(text.records.length(), 3)
+  let text = docx_text_payload(projection, None, None, 1, 3, 100_000).data
+  guard text is Object(text_fields) &&
+    text_fields.get("entries") is Some(Array(text_records)) else {
+    fail("expected bounded text records")
+  }
+  assert_eq(text_fields.get("matched_total"), Some(Json::number(6)))
+  assert_eq(text_records.length(), 3)
+  let text_paths : Array[String] = []
+  for record in text_records {
+    guard record is Object(fields) && fields.get("path") is Some(String(path)) else {
+      fail("expected text record path")
+    }
+    text_paths.push(path)
+  }
   inspect(
-    text.records.map(record => record.path).join("\n"),
+    text_paths.join("\n"),
     content=(
       #|/docx/body/tbl[1]/tr[1]/tc[1]/p[1]
       #|/docx/body/p[2]
       #|/docx/footnotes/note[id="1"]/p[1]
     ),
   )
-  let query = build_docx_query_result(projection, None, {
-    under: None,
-    kind: Some("p"),
-    text: Some("source"),
-    stable_id: None,
-    properties: [],
-    ignore_case: true,
-    offset: 0,
-    limit: 10,
-  })
-  assert_eq(query.matched_total, 1)
-  assert_eq(query.records[0].entry.path, "/docx/footnotes/note[id=\"1\"]/p[1]")
+  let query = docx_query_payload(
+      projection,
+      None,
+      {
+        under: None,
+        kind: Some("p"),
+        text: Some("source"),
+        stable_id: None,
+        properties: [],
+        ignore_case: true,
+        offset: 0,
+        limit: 10,
+      },
+      100_000,
+    ).data
+  guard query is Object(query_fields) &&
+    query_fields.get("matches") is Some(Array(query_records)) &&
+    query_records.get(0) is Some(Object(query_record)) else {
+    fail("expected bounded query record")
+  }
+  assert_eq(query_fields.get("matched_total"), Some(Json::number(1)))
+  assert_eq(
+    query_record.get("path"),
+    Some(Json::string("/docx/footnotes/note[id=\"1\"]/p[1]")),
+  )
 }
 
 ///|
 test "DOCX query uses only its declared property set" {
   let projection = docx_read_test_projection()
-  let links = build_docx_query_result(projection, None, {
-    under: None,
-    kind: Some("hyperlink"),
-    text: None,
-    stable_id: None,
-    properties: [{ name: "href", value: "https://www.moonbitlang.com/" }],
-    ignore_case: false,
-    offset: 0,
-    limit: 10,
-  })
-  assert_eq(links.matched_total, 1)
-  assert_true(links.records[0].entry.path.contains("/hyperlink[1]"))
+  let links = docx_query_payload(
+      projection,
+      None,
+      {
+        under: None,
+        kind: Some("hyperlink"),
+        text: None,
+        stable_id: None,
+        properties: [{ name: "href", value: "https://www.moonbitlang.com/" }],
+        ignore_case: false,
+        offset: 0,
+        limit: 10,
+      },
+      100_000,
+    ).data
+  guard links is Object(link_fields) &&
+    link_fields.get("matches") is Some(Array(link_records)) &&
+    link_records.get(0) is Some(Object(link)) &&
+    link.get("path") is Some(String(path)) else {
+    fail("expected bounded hyperlink query result")
+  }
+  assert_eq(link_fields.get("matched_total"), Some(Json::number(1)))
+  assert_true(path.contains("/hyperlink[1]"))
 }
 
 ///|
@@ -403,7 +436,7 @@ test "projection and serialized output limits fail explicitly" {
     _ => fail("expected projection resource limit")
   }
   try
-    checked_docx_json_output(
+    bounded_docx_payload(
       Json::object({ "payload": Json::string("x".repeat(200)) }),
       [],
       40,
@@ -466,6 +499,72 @@ test "compact JSON preflight matches serializer character accounting" {
 }
 
 ///|
+test "bounded DOCX payloads account for their exact serialized envelopes" {
+  let projection = docx_read_test_projection()
+  let paragraph = resolve_projection_selector(projection, "/docx/body/p[1]")
+  let query_spec : DocxQuerySpec = {
+    under: None,
+    kind: Some("p"),
+    text: None,
+    stable_id: None,
+    properties: [{ name: "style_id", value: "Heading1" }],
+    ignore_case: false,
+    offset: 0,
+    limit: 10,
+  }
+  let payloads = [
+    docx_outline_payload(projection, max_output_chars=100_000),
+    get_docx_payload(projection, paragraph, 100_000),
+    docx_text_payload(projection, None, None, 0, 10, 100_000),
+    docx_query_payload(projection, None, query_spec, 100_000),
+  ]
+  for payload in payloads {
+    let output = checked_docx_json_output(payload)
+    let mut characters = 0
+    for _ in output {
+      characters += 1
+    }
+    assert_eq(characters, payload.budget.used)
+  }
+  let warnings = [@lib.protocol_warning("escaped\"code", "line\n月")]
+  let warned = bounded_docx_payload(
+    Json::object({ "value": Json::string("ok") }),
+    warnings,
+    1000,
+  )
+  let warned_output = checked_docx_json_output(warned)
+  let mut warned_characters = 0
+  for _ in warned_output {
+    warned_characters += 1
+  }
+  assert_eq(warned_characters, warned.budget.used)
+  let sections : Array[Json] = []
+  let section_fields : Map[String, Json] = { "sections": Json::array(sections) }
+  let nested = bounded_docx_payload(Json::object(section_fields), [], 1000)
+  sections.push(
+    bounded_section_json(
+      {
+        ends_after_paragraph: Some(12),
+        headers: [
+          { variant: "default", part: 0 },
+          { variant: "first", part: 1 },
+        ],
+        footers: [{ variant: "even", part: 2 }],
+      },
+      nested.budget,
+      false,
+    ),
+  )
+  ignore(
+    checked_docx_json_output({
+      data: Json::object(section_fields),
+      budget: nested.budget,
+      warnings: nested.warnings,
+    }),
+  )
+}
+
+///|
 test "DOCX output builders reject growth before returning oversized output" {
   let projection = docx_read_test_projection()
   let entry = resolve_projection_selector(projection, "/docx/body/p[1]")
@@ -478,6 +577,35 @@ test "DOCX output builders reject growth before returning oversized output" {
     CliFailure(error) => assert_eq(error.code, "office.docx.resource_limit")
   } noraise {
     _ => fail("expected bounded outline retention to fail")
+  }
+  let wide = {
+    ..projection.entries[0],
+    children: Array::make(docx_cli_hard_max_elements, entry.path),
+  }
+  try get_docx_payload(projection, wide, 1) catch {
+    CliFailure(error) => assert_eq(error.code, "office.docx.resource_limit")
+  } noraise {
+    _ => fail("expected get skeleton to fail before retaining child records")
+  }
+  try docx_text_payload(projection, None, None, 0, 10_000, 1) catch {
+    CliFailure(error) => assert_eq(error.code, "office.docx.resource_limit")
+  } noraise {
+    _ => fail("expected text skeleton to fail before retaining records")
+  }
+  let query_spec : DocxQuerySpec = {
+    under: None,
+    kind: None,
+    text: None,
+    stable_id: None,
+    properties: [],
+    ignore_case: false,
+    offset: 0,
+    limit: 1000,
+  }
+  try docx_query_payload(projection, None, query_spec, 1) catch {
+    CliFailure(error) => assert_eq(error.code, "office.docx.resource_limit")
+  } noraise {
+    _ => fail("expected query skeleton to fail before retaining records")
   }
 }
 
@@ -725,37 +853,42 @@ test "DOCX human output escapes control sequences in paths, kinds, and text" {
     path: unsafe_path,
     kind: unsafe_kind,
   }
-  let text_result : DocxTextResult = {
-    records: [
-      {
-        path: unsafe_path,
-        stability: "snapshot-relative",
-        text: "text\u{009b}",
-      },
-    ],
-    matched_total: 1,
-    offset: 0,
-    limit: 1,
-    scanned_elements: 1,
+  let paragraph = resolve_projection_selector(projection, "/docx/body/p[1]")
+  let unsafe_text_entry = {
+    ..paragraph,
+    path: unsafe_path,
+    element: Some(@word.paragraph([@word.run([@word.text("text\u{009b}")])])),
   }
-  let query_result : DocxQueryResult = {
-    records: [
-      {
-        entry: unsafe_entry,
-        preview: "preview\u{009b}",
-        preview_truncated: false,
-      },
-    ],
-    matched_total: 1,
+  let unsafe_query_entry = {
+    ..unsafe_text_entry,
+    kind: unsafe_kind,
+    element: Some(@word.paragraph([@word.run([@word.text("preview\u{009b}")])])),
+  }
+  let query_spec : DocxQuerySpec = {
+    under: None,
+    kind: None,
+    text: None,
+    stable_id: None,
+    properties: [],
+    ignore_case: false,
     offset: 0,
     limit: 1,
-    scanned_elements: 1,
-    under: None,
   }
   let outputs = [
     docx_get_human(unsafe_entry, "value\u{009b}", []),
-    docx_text_human(text_result, []),
-    docx_query_human(query_result, []),
+    docx_text_human(
+      { ..projection, entries: [unsafe_text_entry] },
+      None,
+      0,
+      1,
+      [],
+    ),
+    docx_query_human(
+      { ..projection, entries: [unsafe_query_entry] },
+      None,
+      query_spec,
+      [],
+    ),
     docx_outline_human({ ..projection, entries: [unsafe_entry] }),
   ]
   for output in outputs {

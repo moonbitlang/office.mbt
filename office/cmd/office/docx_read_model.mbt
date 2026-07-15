@@ -523,8 +523,8 @@ fn child_reference_json(projection : DocxProjection, path : String) -> Json {
 
 ///|
 fn entry_base_json(
-  projection : DocxProjection,
   entry : DocxProjectionEntry,
+  children : Array[Json],
 ) -> Map[String, Json] {
   let fields : Map[String, Json] = {
     "path": Json::string(entry.path),
@@ -540,10 +540,6 @@ fn entry_base_json(
   match entry.stable_id {
     Some(id) => fields["id"] = Json::string(id)
     None => ()
-  }
-  let children : Array[Json] = []
-  for path in entry.children {
-    children.push(child_reference_json(projection, path))
   }
   fields["children"] = Json::array(children)
   fields["properties"] = entry_properties_json(entry)
