@@ -123,6 +123,26 @@ pub fn read_xml_string(
 }
 
 ///|
+/// Parses tolerant XML and also returns the namespace URI that expands the
+/// document element's QName. An unprefixed root without a default namespace,
+/// or a root whose prefix is unbound, reports `None` even when its literal name
+/// happens to match a caller's canonical prefix.
+pub fn read_xml_string_with_root_namespace_uri(
+  source : String,
+  namespace_map? : Map[String, String] = Map([]),
+) -> (String?, XmlElement) raise DocxError {
+  read_xml_string_with_mode_and_root_namespace_uri(
+    source,
+    namespace_map,
+    false,
+    None,
+    false,
+    None,
+    false,
+  )
+}
+
+///|
 /// Parses DTD-free XML 1.0 with Namespaces well-formedness checks enabled.
 ///
 /// The regular parser intentionally preserves historical xmldom-compatible
@@ -341,6 +361,31 @@ pub fn read_xml_bytes_limited(
 }
 
 ///|
+/// Decodes and parses tolerant UTF-8 XML under a cumulative budget, returning
+/// both the document element's namespace URI and the canonicalized tree. This
+/// preserves the distinction between a namespace-bound QName and an identical
+/// literal QName whose prefix is unbound.
+pub fn read_xml_bytes_limited_with_root_namespace_uri(
+  source : BytesView,
+  budget : XmlReadBudget,
+  namespace_map? : Map[String, String] = Map([]),
+) -> (String?, XmlElement) raise DocxError {
+  budget.charge_source(source.length())
+  let text = @utf8.decode(source, ignore_bom=true) catch {
+    _ => raise InvalidXml(message="XML source is not valid UTF-8")
+  }
+  read_xml_string_with_mode_and_root_namespace_uri(
+    text,
+    namespace_map,
+    false,
+    Some(budget),
+    true,
+    Some(Utf8),
+    false,
+  )
+}
+
+///|
 /// Decodes and parses strict DTD-free UTF-8 XML under a cumulative budget.
 pub fn read_xml_bytes_strict_limited(
   source : BytesView,
@@ -372,6 +417,22 @@ fn read_xml_string_with_mode(
   source_encoding : XmlSourceEncoding?,
   retain_namespace_declarations : Bool,
 ) -> XmlElement raise DocxError {
+  read_xml_string_with_mode_and_root_namespace_uri(
+    source, namespace_map, strict, budget, source_already_charged, source_encoding,
+    retain_namespace_declarations,
+  ).1
+}
+
+///|
+fn read_xml_string_with_mode_and_root_namespace_uri(
+  source : String,
+  namespace_map : Map[String, String],
+  strict : Bool,
+  budget : XmlReadBudget?,
+  source_already_charged : Bool,
+  source_encoding : XmlSourceEncoding?,
+  retain_namespace_declarations : Bool,
+) -> (String?, XmlElement) raise DocxError {
   match budget {
     Some(budget) =>
       if !source_already_charged {
@@ -391,6 +452,7 @@ fn read_xml_string_with_mode(
     source_encoding,
     retain_namespace_declarations,
     seen_xml_declaration: false,
+    root_namespace_uri: None,
     namespace_map: build_direct_namespace_lookup(namespace_map),
     namespaces: if strict {
       SortedMap([("xml", XML_NAMESPACE_URI)])
@@ -412,7 +474,7 @@ fn read_xml_string_with_mode(
   if parser.pos < parser.source.length() {
     raise InvalidXml(message="unexpected content after document element")
   }
-  root
+  (parser.root_namespace_uri, root)
 }
 
 ///|
@@ -1223,6 +1285,7 @@ priv struct XmlParser {
   source_encoding : XmlSourceEncoding?
   retain_namespace_declarations : Bool
   mut seen_xml_declaration : Bool
+  mut root_namespace_uri : String?
   namespace_map : NamespaceLookup
   namespaces : @sorted_map.SortedMap[String, String]
 }
@@ -1553,7 +1616,11 @@ fn XmlParser::map_name(
       self.charge_derived_name(index)
       let prefix = raw_name[:index].to_owned()
       let local_name = raw_name[index + 1:]
-      match self.namespaces.get(prefix) {
+      let namespace_uri = self.namespaces.get(prefix)
+      if !is_attribute && self.depth == 1 {
+        self.root_namespace_uri = nonempty_namespace_uri(namespace_uri)
+      }
+      match namespace_uri {
         Some(uri) => self.map_uri_name(uri, local_name)
         None =>
           if self.strict {
@@ -1566,16 +1633,33 @@ fn XmlParser::map_name(
           }
       }
     }
-    None =>
+    None => {
+      let namespace_uri = if is_attribute {
+        None
+      } else {
+        self.namespaces.get("")
+      }
+      if !is_attribute && self.depth == 1 {
+        self.root_namespace_uri = nonempty_namespace_uri(namespace_uri)
+      }
       if is_attribute {
         raw_name
       } else {
-        match self.namespaces.get("") {
+        match namespace_uri {
           Some("") if self.strict => raw_name
           Some(uri) => self.map_uri_name(uri, raw_name)
           None => raw_name
         }
       }
+    }
+  }
+}
+
+///|
+fn nonempty_namespace_uri(namespace_uri : String?) -> String? {
+  match namespace_uri {
+    Some("") | None => None
+    Some(uri) => Some(uri)
   }
 }
 
