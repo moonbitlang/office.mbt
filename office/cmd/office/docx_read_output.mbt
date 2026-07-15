@@ -513,78 +513,9 @@ fn docx_query_payload(
 }
 
 ///|
-fn heading_level_from_style_id(id : String) -> Int? {
-  // Reject impossible lengths before case folding: style values come from XML
-  // and may be as large as the per-token parser ceiling.
-  if id.length() != 8 {
-    return None
-  }
-  let lower = id.to_lower()
-  if lower.has_prefix("heading") {
-    let unit = lower[7]
-    if unit is ('1'..='6') {
-      return Some(unit.to_int() - '0'.to_int())
-    }
-  }
-  None
-}
-
-///|
-fn heading_level_from_style_name(name : String) -> Int? {
-  if name.length() != 9 {
-    return None
-  }
-  let lower = name.to_lower()
-  if lower.has_prefix("heading ") {
-    let unit = lower[8]
-    if unit is ('1'..='6') {
-      return Some(unit.to_int() - '0'.to_int())
-    }
-  }
-  None
-}
-
-///|
-fn cached_heading_level(
-  element : @document.DocumentElement,
-  style_ids : @sorted_map.SortedMap[String, Int],
-  style_names : @sorted_map.SortedMap[String, Int],
-) -> Int? {
+fn docx_heading_level(element : @document.DocumentElement) -> Int? {
   guard element is Paragraph(properties~, ..) else { return None }
-  match properties.style_id {
-    Some(id) if id.length() == 8 => {
-      let encoded = match style_ids.get(id) {
-        Some(value) => value
-        None => {
-          let value = heading_level_from_style_id(id).unwrap_or(0)
-          style_ids[id] = value
-          value
-        }
-      }
-      if encoded > 0 {
-        return Some(encoded)
-      }
-    }
-    _ => ()
-  }
-  match properties.style_name {
-    Some(name) if name.length() == 9 => {
-      let encoded = match style_names.get(name) {
-        Some(value) => value
-        None => {
-          let value = heading_level_from_style_name(name).unwrap_or(0)
-          style_names[name] = value
-          value
-        }
-      }
-      if encoded > 0 {
-        Some(encoded)
-      } else {
-        None
-      }
-    }
-    _ => None
-  }
+  @docx_inspect.heading_level(properties)
 }
 
 ///|
@@ -713,8 +644,6 @@ fn docx_outline_payload(
   let sections : Array[Json] = []
   let seen_style_ids : Map[String, Set[String]] = Map([])
   let seen_style_names : Map[String, Set[String]] = Map([])
-  let heading_style_ids : @sorted_map.SortedMap[String, Int] = SortedMap([])
-  let heading_style_names : @sorted_map.SortedMap[String, Int] = SortedMap([])
   let result = projection.annotated.result()
   let diagnostics : Array[Json] = []
   // Charge the exact compact envelope with empty variable-length arrays first.
@@ -750,8 +679,7 @@ fn docx_outline_payload(
     }
     match entry.element {
       Some(element) => {
-        match
-          cached_heading_level(element, heading_style_ids, heading_style_names) {
+        match docx_heading_level(element) {
           Some(level) => {
             let (text, truncated) = entry_text_prefix(
               entry, docx_cli_heading_preview_chars,
@@ -1005,13 +933,10 @@ fn docx_outline_human(
   output.write_plain(
     "paragraphs: \{counts.get("p").unwrap_or(0)}; tables: \{counts.get("tbl").unwrap_or(0)}; images: \{counts.get("image").unwrap_or(0)}; comments: \{counts.get("comment").unwrap_or(0)}; footnotes/endnotes: \{counts.get("note").unwrap_or(0)}",
   )
-  let heading_style_ids : @sorted_map.SortedMap[String, Int] = SortedMap([])
-  let heading_style_names : @sorted_map.SortedMap[String, Int] = SortedMap([])
   for entry in projection.entries {
     match entry.element {
       Some(element) =>
-        match
-          cached_heading_level(element, heading_style_ids, heading_style_names) {
+        match docx_heading_level(element) {
           Some(level) => {
             let (text, truncated) = entry_text_prefix(
               entry, docx_cli_heading_preview_chars,
