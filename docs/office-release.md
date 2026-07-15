@@ -9,24 +9,32 @@ evidence that `bobzhang/office` can be installed from published artifacts.
 
 ## Required order
 
-For the transaction release train introduced by A4:
+For the transaction and bounded-DOCX release train introduced by A4 and D2:
 
-1. merge and validate the source changes without publishing either module;
+1. merge and validate the source changes without publishing Office;
 2. publish `bobzhang/mbtexcel@0.1.9` from the repository root;
 3. wait until that exact immutable version resolves from Mooncakes;
-4. run `scripts/check_office_registry_release.sh` (or the manual
+4. run `scripts/check_docx2html_registry_release.sh` (or the manual
+   `docx2html-registry-release-check` GitHub workflow) outside `moon.work` and
+   require its native, Wasm, and publish-dry-run checks to pass;
+5. publish `bobzhang/docx2html@0.1.45` from `docx2html/`;
+6. wait until that exact immutable version resolves from Mooncakes;
+7. update Office to require `docx2html@0.1.45`, then run
+   `scripts/check_office_registry_release.sh` (or the manual
    `office-registry-release-check` GitHub workflow) and require every native,
    Wasm, transaction, and publish-dry-run check to pass;
-5. only then publish `bobzhang/office@0.1.0` from `office/`.
+8. only then publish `bobzhang/office@0.1.0` from `office/`.
 
 Never publish `office@0.1.0` first. Its manifest intentionally requires
 `mbtexcel@0.1.9`, which contains the strict bounded ZIP reader used by the
-transaction gate. Repointing it to `0.1.8` would make a workspace build green
-while producing a materially weaker registry artifact.
+transaction gate, and `docx2html@0.1.45`, which contains the bounded annotated
+reader used by DOCX commands. Repointing either dependency to its previous
+version would make a workspace build green while producing a broken or
+materially weaker registry artifact.
 
 Publishing changes external registry state and remains an explicit maintainer
-action. The release check copies `office/` outside the repository and outside
+action. The release checks copy each module outside the repository and outside
 `moon.work`, so dependency resolution cannot silently substitute workspace
-members. Some MoonBit versions return a nonzero process status after a
-successful publish dry run; the script accepts that status only when the tool
-also emits its exact success marker.
+members. MoonBit versions disagree about the process status of both successful
+and failed publish dry runs, so the scripts require the tool's exact success
+marker regardless of exit status.
