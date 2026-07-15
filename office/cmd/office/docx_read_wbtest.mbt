@@ -291,6 +291,65 @@ test "DOCX query uses only its declared property set" {
 }
 
 ///|
+test "DOCX exact queries cover the full supported XML token length" {
+  let long_id = "i".repeat(@lib.SELECTOR_MAX_VALUE_LENGTH + 1)
+  let long_property = "p".repeat(@lib.SELECTOR_MAX_VALUE_LENGTH + 1)
+  validate_query_value(long_id, "id", false)
+  validate_query_value(long_property, "property", true)
+  let annotated = @docx.read_docx_annotated(docx_read_test_bytes())
+  let builder = DocxProjectionBuilder::new(100)
+  let body = [@document.paragraph([@document.run([@document.text("x")])])]
+  let footnotes = annotation_story_plan("footnotes", "note", [])
+  let endnotes = annotation_story_plan("endnotes", "note", [])
+  let comments = annotation_story_plan("comments", "comment", [(long_id, body)])
+  let annotation_index = annotation_projection_index(
+    annotated, footnotes, endnotes, comments,
+  )
+  builder.add_annotation_story(annotation_index, comments, None)
+  let item = { ..builder.entries[1], properties: { "author": long_property } }
+  assert_eq(item.path, "/docx/comments/comment[1]")
+  assert_eq(item.stable_id, Some(long_id))
+  let spec : DocxQuerySpec = {
+    under: None,
+    kind: Some("comment"),
+    text: None,
+    stable_id: Some(long_id),
+    properties: [{ name: "author", value: long_property }],
+    ignore_case: false,
+    offset: 0,
+    limit: 1,
+  }
+  assert_true(
+    entry_matches_query(
+      item,
+      None,
+      spec,
+      DocxTextBudget::new("query text scan characters", 1),
+    ),
+  )
+  try
+    validate_query_value(
+      "x".repeat(docx_cli_max_xml_token_chars + 1),
+      "id",
+      false,
+    )
+  catch {
+    CliFailure(error) => {
+      assert_eq(error.code, "office.invalid_arguments")
+      guard error.details is Some(Object(details)) else {
+        fail("expected query length details")
+      }
+      assert_eq(
+        details.get("maximum_characters"),
+        Some(Json::number(docx_cli_max_xml_token_chars.to_double())),
+      )
+    }
+  } noraise {
+    _ => fail("expected query value above the XML token limit to fail")
+  }
+}
+
+///|
 test "DOCX resolver reports malformed, missing, and unsupported stable selectors" {
   let projection = docx_read_test_projection()
   for
@@ -428,7 +487,7 @@ test "annotation metadata paths rewrite to emitted stable roots" {
 }
 
 ///|
-test "projection and serialized output limits fail explicitly" {
+test "projection and successful command output limits fail explicitly" {
   let annotated = @docx.read_docx_annotated(docx_read_test_bytes())
   try projection_from_annotated("small.docx", annotated, 2) catch {
     CliFailure(error) => assert_eq(error.code, "office.docx.resource_limit")
@@ -445,6 +504,27 @@ test "projection and serialized output limits fail explicitly" {
     CliFailure(error) => assert_eq(error.code, "office.docx.resource_limit")
   } noraise {
     _ => fail("expected output resource limit")
+  }
+}
+
+///|
+test "successful command output accounting includes its trailing line feed" {
+  assert_eq(checked_docx_human_output("abc", 4), "abc")
+  try checked_docx_human_output("abc", 3) catch {
+    CliFailure(error) => {
+      assert_eq(error.code, "office.docx.resource_limit")
+      guard error.details is Some(Object(details)) else {
+        fail("expected output limit details")
+      }
+      assert_eq(
+        details.get("resource"),
+        Some(Json::string("successful command output characters")),
+      )
+      assert_eq(details.get("limit"), Some(Json::number(3)))
+      assert_eq(details.get("actual"), Some(Json::number(4)))
+    }
+  } noraise {
+    _ => fail("expected the trailing line feed to exceed the ceiling")
   }
 }
 
@@ -493,9 +573,9 @@ test "compact JSON preflight matches serializer character accounting" {
   for _ in serialized {
     characters += 1
   }
-  let budget = DocxOutputBudget::new(characters)
+  let budget = DocxOutputBudget::new(characters + docx_cli_output_framing_chars)
   budget.reserve_json(value)
-  assert_eq(budget.used, characters)
+  assert_eq(budget.used, characters + docx_cli_output_framing_chars)
 }
 
 ///|
@@ -524,7 +604,7 @@ test "bounded DOCX payloads account for their exact serialized envelopes" {
     for _ in output {
       characters += 1
     }
-    assert_eq(characters, payload.budget.used)
+    assert_eq(characters + docx_cli_output_framing_chars, payload.budget.used)
   }
   let warnings = [@lib.protocol_warning("escaped\"code", "line\n月")]
   let warned = bounded_docx_payload(
@@ -537,7 +617,10 @@ test "bounded DOCX payloads account for their exact serialized envelopes" {
   for _ in warned_output {
     warned_characters += 1
   }
-  assert_eq(warned_characters, warned.budget.used)
+  assert_eq(
+    warned_characters + docx_cli_output_framing_chars,
+    warned.budget.used,
+  )
   let sections : Array[Json] = []
   let section_fields : Map[String, Json] = { "sections": Json::array(sections) }
   let nested = bounded_docx_payload(Json::object(section_fields), [], 1000)
@@ -694,7 +777,7 @@ test "DOCX preview truncation excludes discarded paragraph separators" {
   ])
   let (_, internal_truncated) = collect_docx_text_prefix(internal, 160)
   assert_true(internal_truncated)
-  let collector = DocxTextCollector::new("preview", 160, false)
+  let collector = DocxTextCollector::new_reported("preview", 160, 160, 0, false)
   try! collector.write_literal_string("z".repeat(2 * 1024 * 1024))
   assert_eq(collector.used, 160)
   assert_true(collector.truncated)

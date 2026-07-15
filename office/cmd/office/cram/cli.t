@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:4b49155e
+    Fingerprint: crc32:3952991e
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -37,10 +37,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"kind":"format","name":"docx","selector":{"schema":"office.selector/1","root":"/docx","status":"read-resolved","examples":["/docx/body/p[1]/r[2]","/docx/comments/comment[id=\"7\"]"],"description":"bounded canonical resolution for outline, get, text, and declared query predicates"}}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:4b49155e","names":["docx","xlsx","help","identify","outline","get","text","query","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:3952991e","names":["docx","xlsx","help","identify","outline","get","text","query","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:4b49155e","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:4b49155e","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:4b49155e","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:4b49155e","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:4b49155e","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:4b49155e","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:4b49155e","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:4b49155e","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:4b49155e","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:3952991e","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:3952991e","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:3952991e","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:3952991e","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:3952991e","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:3952991e","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:3952991e","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:3952991e","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:3952991e","kind":"command","name":"raw"}]
 
 The raw command publishes explicit subcommand schemas, including every edit
 input and its conditional constraints.
@@ -115,7 +115,7 @@ syntax, missing paths, and XLSX routing retain stable machine-readable codes.
   $ office.exe outline "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --max-output-chars 40 --json > output-limit.json 2>&1; echo $?
   1
   $ jq -c '{success,code:.error.code,resource:.error.details.resource,limit:.error.details.limit}' output-limit.json
-  {"success":false,"code":"office.docx.resource_limit","resource":"serialized output characters","limit":40}
+  {"success":false,"code":"office.docx.resource_limit","resource":"successful command output characters","limit":40}
 
   $ office.exe outline "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" --json > xlsx-structured.json 2>&1; echo $?
   1

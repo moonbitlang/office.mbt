@@ -5,6 +5,9 @@ let docx_cli_default_max_output_chars : Int = 1024 * 1024
 let docx_cli_hard_max_output_chars : Int = 4 * 1024 * 1024
 
 ///|
+let docx_cli_output_framing_chars : Int = 1
+
+///|
 let docx_cli_default_text_limit : Int = 2000
 
 ///|
@@ -49,8 +52,8 @@ struct BoundedDocxPayload {
 
 ///|
 /// Counts compact JSON output before allocation and bounds retained records
-/// while they are produced. The counter measures Unicode scalar
-/// characters, matching the public `--max-output-chars` contract.
+/// while they are produced. The counter measures Unicode scalar characters,
+/// including the successful command's explicit trailing line feed.
 struct DocxOutputBudget {
   maximum : Int
   mut used : Int
@@ -58,7 +61,7 @@ struct DocxOutputBudget {
 
 ///|
 fn DocxOutputBudget::new(maximum : Int) -> DocxOutputBudget {
-  { maximum, used: 0 }
+  { maximum, used: docx_cli_output_framing_chars }
 }
 
 ///|
@@ -69,7 +72,7 @@ fn DocxOutputBudget::reserve_chars(
   if count < 0 || count > self.maximum - self.used {
     let actual = if count < 0 { self.used } else { self.used + count }
     raise docx_resource_failure(
-      "serialized output characters",
+      "successful command output characters",
       self.maximum,
       actual~,
     )
@@ -279,12 +282,12 @@ fn ensure_docx_output_limit(
   output : String,
   maximum : Int,
 ) -> Unit raise CliFailure {
-  let mut count = 0
+  let mut count = docx_cli_output_framing_chars
   for _ in output {
     count += 1
     if count > maximum {
       raise docx_resource_failure(
-        "serialized output characters",
+        "successful command output characters",
         maximum,
         actual=count,
       )
@@ -317,13 +320,15 @@ fn checked_docx_json_output(
   for _ in output {
     actual += 1
   }
-  if actual != payload.budget.used {
+  if actual + docx_cli_output_framing_chars != payload.budget.used {
     raise docx_cli_failure(
       "office.docx.output_accounting_mismatch",
       "internal DOCX output accounting did not match serialization",
       details=Json::object({
         "accounted": Json::number(payload.budget.used.to_double()),
-        "actual": Json::number(actual.to_double()),
+        "actual": Json::number(
+          (actual + docx_cli_output_framing_chars).to_double(),
+        ),
       }),
     )
   }
@@ -368,9 +373,11 @@ fn get_docx_payload(
   }
   match entry.element {
     Some(_) => {
-      let text_budget = DocxTextBudget::new(
-        "element text characters",
-        bounded.budget.remaining().min(docx_cli_max_element_text_chars),
+      let text_budget = DocxTextBudget::new_reported(
+        "successful command output characters",
+        bounded.budget.remaining(),
+        bounded.budget.maximum,
+        bounded.budget.used,
       )
       let text = entry_text_with_budget(entry, text_budget)
       bounded.budget.reserve_json_string_body(text)
@@ -435,9 +442,11 @@ fn docx_text_payload(
     }
     if in_scope && entry.kind == "p" {
       if matched >= offset && entries.length() < limit {
-        let text_budget = DocxTextBudget::new(
-          "text result characters",
+        let text_budget = DocxTextBudget::new_reported(
+          "successful command output characters",
           bounded.budget.remaining(),
+          bounded.budget.maximum,
+          bounded.budget.used,
         )
         let text = entry_text_with_budget(entry, text_budget)
         let json = text_record_json(entry, text)
@@ -921,7 +930,12 @@ struct DocxHumanWriter {
 ///|
 fn DocxHumanWriter::new(maximum : Int) -> DocxHumanWriter raise CliFailure {
   ignore(checked_output_limit(maximum))
-  { maximum, output: StringBuilder::new(), used: 0, lines: 0 }
+  {
+    maximum,
+    output: StringBuilder::new(),
+    used: docx_cli_output_framing_chars,
+    lines: 0,
+  }
 }
 
 ///|
@@ -936,7 +950,7 @@ fn DocxHumanWriter::write_char(
 ) -> Unit raise CliFailure {
   if self.used >= self.maximum {
     raise docx_resource_failure(
-      "serialized output characters",
+      "successful command output characters",
       self.maximum,
       actual=self.used + 1,
     )
@@ -1035,9 +1049,11 @@ fn docx_text_human(
         output.begin_line()
         output.write_terminal_safe(entry.path)
         output.write_char('\t')
-        let text_budget = DocxTextBudget::new(
-          "text result characters",
+        let text_budget = DocxTextBudget::new_reported(
+          "successful command output characters",
           output.remaining(),
+          output.maximum,
+          output.used,
         )
         let text = entry_text_with_budget(entry, text_budget)
         output.write_terminal_safe(text, single_line=true)

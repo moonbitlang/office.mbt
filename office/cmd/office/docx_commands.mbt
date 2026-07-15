@@ -87,7 +87,7 @@ fn docx_common_options() -> Array[@argparse.OptionArg] {
     OptionArg(
       "max-output-chars",
       long="max-output-chars",
-      about="maximum serialized output characters (default 1048576, hard limit 4194304)",
+      about="maximum successful stdout characters, including trailing LF (default 1048576, hard limit 4194304)",
     ),
   ]
 }
@@ -95,6 +95,11 @@ fn docx_common_options() -> Array[@argparse.OptionArg] {
 ///|
 fn docx_json_flag() -> @argparse.FlagArg {
   FlagArg("json", long="json", about="emit office.output/1 JSON")
+}
+
+///|
+fn emit_docx_success(output : String) -> Unit {
+  println(output)
 }
 
 ///|
@@ -118,13 +123,13 @@ async fn run_docx_outline(matches : @argparse.Matches) -> Unit {
   let max_output = cli_max_output_chars(matches)
   let projection = read_docx_projection(file, max_elements)
   if matches.flags.get_or_default("json", false) {
-    println(
+    emit_docx_success(
       checked_docx_json_output(
         docx_outline_payload(projection, max_output_chars=max_output),
       ),
     )
   } else {
-    println(
+    emit_docx_success(
       checked_docx_human_output(
         docx_outline_human(projection, maximum=max_output),
         max_output,
@@ -142,21 +147,21 @@ async fn run_docx_get(matches : @argparse.Matches) -> Unit {
   let projection = read_docx_projection(file, max_elements)
   let entry = resolve_projection_selector(projection, selector)
   if matches.flags.get_or_default("json", false) {
-    println(
+    emit_docx_success(
       checked_docx_json_output(get_docx_payload(projection, entry, max_output)),
     )
   } else {
     let text = match entry.element {
       Some(_) => {
-        let budget = DocxTextBudget::new(
-          "element text characters",
-          max_output.min(docx_cli_max_element_text_chars),
+        let available = (max_output - docx_cli_output_framing_chars).max(0)
+        let budget = DocxTextBudget::new_reported(
+          "successful command output characters", available, max_output, docx_cli_output_framing_chars,
         )
         entry_text_with_budget(entry, budget)
       }
       None => ""
     }
-    println(
+    emit_docx_success(
       checked_docx_human_output(
         docx_get_human(entry, text, projection.warnings, maximum=max_output),
         max_output,
@@ -179,7 +184,7 @@ async fn run_docx_text(matches : @argparse.Matches) -> Unit {
   let projection = read_docx_projection(file, max_elements)
   let (under, under_path) = resolve_optional_under(projection, matches)
   if matches.flags.get_or_default("json", false) {
-    println(
+    emit_docx_success(
       checked_docx_json_output(
         docx_text_payload(
           projection, under, under_path, offset, limit, max_output,
@@ -187,7 +192,7 @@ async fn run_docx_text(matches : @argparse.Matches) -> Unit {
       ),
     )
   } else {
-    println(
+    emit_docx_success(
       checked_docx_human_output(
         docx_text_human(
           projection,
@@ -284,16 +289,15 @@ fn validate_query_value(
   argument : String,
   allow_empty : Bool,
 ) -> Unit raise CliFailure {
-  if (!allow_empty && value == "") ||
-    !has_at_most_chars(value, @lib.SELECTOR_MAX_VALUE_LENGTH) {
+  let maximum = docx_cli_max_xml_token_chars
+  if (!allow_empty && value == "") || !has_at_most_chars(value, maximum) {
+    let requirement = if allow_empty { "a value" } else { "a non-empty value" }
     raise docx_cli_failure(
       "office.invalid_arguments",
-      "--\{argument} must be a non-empty value of at most \{@lib.SELECTOR_MAX_VALUE_LENGTH} characters",
+      "--\{argument} must be \{requirement} of at most \{maximum} characters",
       details=Json::object({
         "argument": Json::string(argument),
-        "maximum_characters": Json::number(
-          @lib.SELECTOR_MAX_VALUE_LENGTH.to_double(),
-        ),
+        "maximum_characters": Json::number(maximum.to_double()),
       }),
     )
   }
@@ -392,13 +396,13 @@ async fn run_docx_query(matches : @argparse.Matches) -> Unit {
     limit,
   }
   if matches.flags.get_or_default("json", false) {
-    println(
+    emit_docx_success(
       checked_docx_json_output(
         docx_query_payload(projection, under, spec, max_output),
       ),
     )
   } else {
-    println(
+    emit_docx_success(
       checked_docx_human_output(
         docx_query_human(
           projection,

@@ -137,7 +137,7 @@ their end-to-end implementations are present:
   offset/limit pagination; query accepts only declared literal predicates and
   never interprets regular expressions or arbitrary expressions;
 - package bytes, ZIP entries and expansion, XML source/tokens/materialization,
-  projection nodes, scanned text, result counts, and serialized output all
+  projection nodes, scanned text, result counts, and successful command output all
   have explicit ceilings and stable resource-limit failures; OPC parser guards
   retain typed status independently of attacker-controlled diagnostic text;
   and

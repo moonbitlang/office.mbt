@@ -8,12 +8,16 @@ let docx_cli_max_query_text_scan_chars : Int = 16 * 1024 * 1024
 struct DocxTextBudget {
   resource : String
   maximum : Int
+  reported_maximum : Int
+  reported_offset : Int
   mut used : Int
 }
 
 ///|
 struct DocxTextCollector {
   maximum : Int
+  reported_maximum : Int
+  reported_offset : Int
   fail_on_limit : Bool
   resource : String
   output : StringBuilder
@@ -32,17 +36,31 @@ struct DocxCollectedText {
 
 ///|
 fn DocxTextBudget::new(resource : String, maximum : Int) -> DocxTextBudget {
-  { resource, maximum, used: 0 }
+  { resource, maximum, reported_maximum: maximum, reported_offset: 0, used: 0 }
 }
 
 ///|
-fn DocxTextCollector::new(
+fn DocxTextBudget::new_reported(
   resource : String,
   maximum : Int,
+  reported_maximum : Int,
+  reported_offset : Int,
+) -> DocxTextBudget {
+  { resource, maximum, reported_maximum, reported_offset, used: 0 }
+}
+
+///|
+fn DocxTextCollector::new_reported(
+  resource : String,
+  maximum : Int,
+  reported_maximum : Int,
+  reported_offset : Int,
   fail_on_limit : Bool,
 ) -> DocxTextCollector {
   {
     maximum,
+    reported_maximum,
+    reported_offset,
     fail_on_limit,
     resource,
     output: StringBuilder::new(),
@@ -63,8 +81,8 @@ fn DocxTextCollector::write_output_char(
     if self.fail_on_limit {
       raise docx_resource_failure(
         self.resource,
-        self.maximum,
-        actual=self.used + 1,
+        self.reported_maximum,
+        actual=self.reported_offset + self.used + 1,
       )
     }
     return
@@ -101,8 +119,8 @@ fn DocxTextCollector::write_literal_char(
     if self.fail_on_limit {
       raise docx_resource_failure(
         self.resource,
-        self.maximum,
-        actual=self.scanned + 1,
+        self.reported_maximum,
+        actual=self.reported_offset + self.scanned + 1,
       )
     }
     return
@@ -192,9 +210,13 @@ fn collect_docx_text_counted(
   element : @document.DocumentElement,
   maximum : Int,
   resource : String,
+  reported_maximum : Int,
+  reported_offset : Int,
   fail_on_limit : Bool,
 ) -> DocxCollectedText raise CliFailure {
-  let collector = DocxTextCollector::new(resource, maximum, fail_on_limit)
+  let collector = DocxTextCollector::new_reported(
+    resource, maximum, reported_maximum, reported_offset, fail_on_limit,
+  )
   collector.visit(element)
   {
     text: collector.output.to_string().trim_end(chars="\n").to_owned(),
@@ -210,7 +232,7 @@ fn collect_docx_text_prefix(
 ) -> (String, Bool) {
   // Truncating collectors never raise.
   let result = try! collect_docx_text_counted(
-    element, maximum, "text preview", false,
+    element, maximum, "text preview", maximum, 0, false,
   )
   (result.text, result.truncated)
 }
@@ -225,17 +247,24 @@ fn entry_text_with_budget(
   if remaining < 0 {
     raise docx_resource_failure(
       budget.resource,
-      budget.maximum,
-      actual=budget.used,
+      budget.reported_maximum,
+      actual=budget.reported_offset + budget.used,
     )
   }
   let element_limit = remaining.min(docx_cli_max_element_text_chars)
-  let resource = if docx_cli_max_element_text_chars <= remaining {
-    "element text characters"
+  let (resource, reported_maximum, reported_offset) = if docx_cli_max_element_text_chars <=
+    remaining {
+    ("element text characters", docx_cli_max_element_text_chars, 0)
   } else {
-    budget.resource
+    (
+      budget.resource,
+      budget.reported_maximum,
+      budget.reported_offset + budget.used,
+    )
   }
-  let result = collect_docx_text_counted(element, element_limit, resource, true)
+  let result = collect_docx_text_counted(
+    element, element_limit, resource, reported_maximum, reported_offset, true,
+  )
   budget.used += result.scanned
   result.text
 }
