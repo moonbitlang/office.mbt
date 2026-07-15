@@ -262,7 +262,7 @@ fn Walk::record_heading(
 /// equal (ignoring case) to `heading 1`..`heading 6`; bare id `Heading` or
 /// bare name `heading` (level 1). Anything else — `Heading7`+, `Heading10`,
 /// names without the space — is not a heading.
-fn heading_level(properties : @document.ParagraphProperties) -> Int? {
+pub fn heading_level(properties : @document.ParagraphProperties) -> Int? {
   match digit_id_heading_level(properties.style_id) {
     Some(level) => Some(level)
     None =>
@@ -272,7 +272,7 @@ fn heading_level(properties : @document.ParagraphProperties) -> Int? {
           // The bare rules come last: a paragraph with id `Heading` but name
           // `Heading 3` is level 3, matching the default map's rule order.
           if properties.style_id is Some("Heading") ||
-            lowercased(properties.style_name) is Some("heading") {
+            bare_name_is_heading(properties.style_name) {
             Some(1)
           } else {
             None
@@ -296,22 +296,27 @@ fn digit_id_heading_level(style_id : String?) -> Int? {
 
 ///|
 fn digit_name_heading_level(style_name : String?) -> Int? {
-  match lowercased(style_name) {
-    Some(name) =>
-      if name.has_prefix("heading ") && name.length() == 9 {
-        digit_level(name[8])
+  match style_name {
+    // Check the bounded shape before case folding. Style values originate in
+    // XML and may otherwise be as large as the parser's per-token ceiling.
+    Some(name) if name.length() == 9 => {
+      let lower = name.to_lower()
+      if lower.has_prefix("heading ") {
+        digit_level(lower[8])
       } else {
         None
       }
+    }
     None => None
+    _ => None
   }
 }
 
 ///|
-fn lowercased(value : String?) -> String? {
+fn bare_name_is_heading(value : String?) -> Bool {
   match value {
-    Some(text) => Some(text.to_lower())
-    None => None
+    Some(text) if text.length() == 7 => text.to_lower() == "heading"
+    _ => false
   }
 }
 
