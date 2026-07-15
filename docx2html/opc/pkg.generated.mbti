@@ -10,6 +10,8 @@ import {
 // Values
 pub fn is_relationship_part_name(String) -> Bool
 
+pub fn is_valid_content_type_extension(String) -> Bool
+
 pub fn is_valid_part_segment(StringView) -> Bool
 
 pub fn logical_part_name_from_zip_item_name(StringView) -> String?
