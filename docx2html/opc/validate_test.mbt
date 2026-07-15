@@ -1125,3 +1125,87 @@ test "content types require exact metadata spelling and media-type syntax" {
     ),
   )
 }
+
+///|
+test "content types enforce the closed OPC XML schema" {
+  let schema_invalid =
+    #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types" extra="root">unexpected text<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml" extra="child"> </Default><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml" extra="child"><Bogus/></Override><Bogus/></Types>
+  let findings = @opc.validate_docx_package(
+    minimal_docx(content_types=Some(schema_invalid)),
+  )
+  for
+    expected in [
+      "Types has undeclared attribute", "Types contains unexpected text", "Default has undeclared attribute",
+      "Default element is not empty", "Override has undeclared attribute", "Override element is not empty",
+      "Types contains unexpected element",
+    ] {
+    if !findings.any(finding => finding.contains(expected)) {
+      fail("missing schema finding: \{expected}")
+    }
+  }
+}
+
+///|
+test "content types reject foreign MCE instead of projecting fallbacks" {
+  let with_mce =
+    #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:v="urn:vendor" mc:Ignorable="v"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><mc:AlternateContent><mc:Fallback><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></mc:Fallback></mc:AlternateContent></Types>
+  let report = @opc.validate_docx_archive_report_limited(
+    try! @mbtzip.read(minimal_docx(content_types=Some(with_mce))),
+    max_findings=16,
+    max_message_chars=512,
+  )
+  assert_true(
+    report
+    .findings()
+    .any(finding => {
+      finding.contains("Types has undeclared attribute") &&
+      finding.contains("markup-compatibility")
+    }),
+  )
+  assert_true(
+    report
+    .findings()
+    .any(finding => finding.contains("Types contains unexpected element")),
+  )
+  assert_eq(report.main_document_part(), None)
+}
+
+///|
+test "content types enforce ST_Extension and quoted media characters" {
+  for invalid in [".xml", "bad%GG", "two words", "é", "x/y"] {
+    let types = MINIMAL_CONTENT_TYPES_XML.replace(
+      old="Extension=\"xml\"",
+      new="Extension=\"\{invalid}\"",
+    )
+    let findings = @opc.validate_docx_package(
+      minimal_docx(content_types=Some(types)),
+    )
+    if !findings.any(finding => {
+        finding.contains("Default has invalid Extension")
+      }) {
+      fail("accepted invalid ST_Extension: \{invalid}")
+    }
+  }
+  let invalid_media = MINIMAL_CONTENT_TYPES_XML
+    .replace(
+      old="ContentType=\"application/xml\"",
+      new="ContentType=\"application/xml; charset =utf-8\"",
+    )
+    .replace(
+      old="ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"",
+      new="ContentType=\"application/x-test; note=&quot;Ā&quot;\"",
+    )
+  let media_findings = @opc.validate_docx_package(
+    minimal_docx(content_types=Some(invalid_media)),
+  )
+  assert_true(
+    media_findings.any(finding => {
+      finding.contains("Default has invalid ContentType")
+    }),
+  )
+  assert_true(
+    media_findings.any(finding => {
+      finding.contains("Override has invalid ContentType")
+    }),
+  )
+}
