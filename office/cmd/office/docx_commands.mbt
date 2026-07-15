@@ -514,7 +514,7 @@ fn query_command() -> @argparse.Command {
       FlagArg(
         "ignore-case",
         long="ignore-case",
-        about="compare the --text literal case-insensitively",
+        about="compare --text with locale-independent Unicode simple case mapping",
       ),
     ],
   )

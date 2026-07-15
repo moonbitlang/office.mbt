@@ -413,7 +413,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "property", "array(NAME=VALUE)", false, "up to 16 exact predicates with values capped at 1048576 characters",
         ),
         capability_field(
-          "ignore-case", "boolean", false, "case-insensitive --text matching",
+          "ignore-case", "boolean", false, "locale-independent Unicode simple-case --text matching",
         ),
         capability_field(
           "offset", "integer(0..200000)", false, "zero-based match offset; default 0",

@@ -496,7 +496,9 @@ metadata carries canonical references.
 
 Predicates are literal and ANDed. Query accepts only the declared element
 kinds and property names; no regular expression or arbitrary expression is
-evaluated.
+evaluated. `ignore_case` applies locale-independent Unicode simple lowercase
+mapping to the text predicate (one scalar to one scalar, without locale
+tailoring or multi-character expansion).
 
 ## Standalone `docx` CLI schemas
 

@@ -17,6 +17,7 @@ import {
   "bobzhang/docx2html@0.2.0",
   "moonbitlang/async@0.20.1",
   "moonbitlang/x@0.4.43",
+  "tonyfettes/unicode@0.3.3",
 }
 
 preferred_target = "native"

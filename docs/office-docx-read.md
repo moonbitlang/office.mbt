@@ -160,7 +160,9 @@ The declared property set is:
 
 Hyphenated aliases (`style-id`, `style-name`, `content-type`) plus `align`,
 `url`, and `resolved` normalize to those names. `--ignore-case` applies only
-to `--text`. Results carry a bounded text preview, declared properties,
+to `--text` and uses locale-independent Unicode simple lowercase mapping: one
+Unicode scalar maps to one scalar, without locale tailoring or multi-character
+expansion. Results carry a bounded text preview, declared properties,
 canonical identity, exact `matched_total`, and explicit pagination metadata.
 Exact text, id, and property values accept up to 1,048,576 Unicode scalar
 characters, matching the reader's maximum XML token size. An annotation id
@@ -180,6 +182,7 @@ stub. Default and hard user-facing limits are:
 | query matches per page | 100 | 1,000 |
 | exact query value characters | — | 1,048,576 |
 | property predicates | — | 16 |
+| query predicate work units | — | 134,217,728 |
 
 `--max-output-chars` covers every Unicode scalar written to stdout by a
 successful DOCX read, including its single trailing line feed. A failure
@@ -193,8 +196,10 @@ cumulative XML source, token, materialization, and token-size budgets during
 both structural OPC preflight and document projection. Reader diagnostics are
 deduplicated in first-seen order, capped at 128 retained entries, and bounded
 to 512 characters each, including the final omission notice. Query text
-scanning is capped cumulatively at 16 Mi characters, and every element's
-materialized text independently at 1 Mi characters. OPC preflight preserves a
+scanning is capped cumulatively at 16 Mi characters, every element's
+materialized text independently at 1 Mi characters, and all scope, exact-value,
+folding, and guaranteed-linear substring work at 128 Mi conservative work
+units. OPC preflight preserves a
 typed parser-guard status before part names enter bounded human diagnostics, so
 document-controlled text cannot forge or hide resource exhaustion. Limit
 failures use `office.docx.resource_limit` and identify the exhausted resource.
