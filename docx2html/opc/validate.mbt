@@ -1288,49 +1288,6 @@ fn is_valid_relationship_id(id : String) -> Bool {
 }
 
 ///|
-/// Returns whether a name has the reserved Relationships-part shape. The
-/// package-root `_rels/.rels` is valid, while a nested `dir/_rels/.rels`
-/// remains reserved but cannot identify a source part.
-fn is_rels_part(name : String) -> Bool {
-  let segments = name.split("/").collect()
-  segments.length() >= 2 &&
-  part_name_key(segments[segments.length() - 2]) == "_rels" &&
-  part_name_key(segments[segments.length() - 1]).has_suffix(".rels")
-}
-
-///|
-/// Derives the source described by a valid Relationships part. Earlier
-/// `_rels` segments belong to the source PartName: for example,
-/// `word/_rels/_rels/data.bin.rels` describes `word/_rels/data.bin`.
-fn relationship_source_part(name : String) -> String? {
-  let key = part_name_key(name)
-  if key == ROOT_RELS_PART {
-    return Some("")
-  }
-  if !is_rels_part(name) {
-    return None
-  }
-  let segments = name.split("/").collect()
-  let filename = segments[segments.length() - 1]
-  if filename.length() <= 5 {
-    return None
-  }
-  let source_name = filename[:filename.length() - 5].to_owned()
-  let output = StringBuilder::new(size_hint=name.length())
-  for index in 0..<(segments.length() - 2) {
-    if index > 0 {
-      output.write_char('/') |> ignore
-    }
-    output.write_string(segments[index].to_owned()) |> ignore
-  }
-  if segments.length() > 2 {
-    output.write_char('/') |> ignore
-  }
-  output.write_string(source_name) |> ignore
-  Some(output.to_string())
-}
-
-///|
 fn office_document_dialect(rel_type : String) -> DocumentDialect? {
   match rel_type {
     TRANSITIONAL_OFFICE_DOCUMENT_RELATIONSHIP => Some(Transitional)
@@ -1383,7 +1340,7 @@ fn check_relationships(
             }
             match resolve_part_target("", target) {
               Some(resolved) =>
-                if is_rels_part(resolved) {
+                if is_relationship_part_name(resolved) {
                   findings.add(
                     "relationship target must not be a Relationships part: \{ROOT_RELS_PART} -> \{findings.text(target)}",
                   )
@@ -1450,10 +1407,10 @@ fn check_relationships(
     if canonical_name == ROOT_RELS_PART {
       continue
     }
-    if !is_rels_part(logical_name) {
+    if !is_relationship_part_name(logical_name) {
       continue
     }
-    guard relationship_source_part(logical_name) is Some(source) else {
+    guard relationship_source_part_name(logical_name) is Some(source) else {
       findings.add("invalid Relationships part name: \{findings.text(name)}")
       continue
     }
@@ -1475,7 +1432,7 @@ fn check_relationships(
           if !external {
             match resolve_part_target(base, target) {
               Some(resolved) =>
-                if is_rels_part(resolved) {
+                if is_relationship_part_name(resolved) {
                   findings.add(
                     "relationship target must not be a Relationships part: \{findings.text(name)} -> \{findings.text(target)}",
                   )
@@ -1736,7 +1693,7 @@ fn for_each_relationship(
 
 ///|
 fn rels_base_dir(rels_name : String) -> String {
-  match relationship_source_part(rels_name) {
+  match relationship_source_part_name(rels_name) {
     Some(source) =>
       match source.rev_find("/") {
         Some(index) => source[:index].to_owned()

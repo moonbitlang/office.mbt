@@ -8,6 +8,8 @@ import {
 }
 
 // Values
+pub fn is_relationship_part_name(String) -> Bool
+
 pub fn is_valid_part_segment(StringView) -> Bool
 
 pub fn logical_part_name_from_zip_item_name(StringView) -> String?
@@ -19,6 +21,10 @@ pub fn read_opc_relationships_string_encoded_limited(String, @xml.XmlSourceEncod
 pub fn read_opc_relationships_xml_limited(BytesView, @xml.XmlReadBudget) -> @xml.XmlElement raise @core.DocxError
 
 pub fn read_opc_relationships_xml_with_source_root_limited(BytesView, @xml.XmlReadBudget) -> (String, @xml.XmlElement) raise @core.DocxError
+
+pub fn relationship_source_part_name(String) -> String?
+
+pub fn relationships_part_name_for_source(String) -> String
 
 pub fn resolve_part_target(String, StringView) -> String?
 

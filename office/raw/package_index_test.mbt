@@ -762,6 +762,51 @@ test "raw inventory resolves Unicode logical OPC identities without folding non-
 }
 
 ///|
+test "raw inventory classifies Relationships parts by their final path segments" {
+  let original = @word.new_blank_docx()
+  let ordinary = raw_test_transform_xml_entry(
+    raw_test_add_entry(
+      original,
+      "word/_rels/nested/ghost.rels",
+      @utf8.encode("<ordinary/>"),
+    ),
+    "[Content_Types].xml",
+    text => {
+      text.replace(
+        old="</Types>",
+        new="<Override PartName=\"/word/_rels/nested/ghost.rels\" ContentType=\"application/xml\"/></Types>",
+      )
+    },
+  )
+  inspect(
+    @raw.raw_inventory("ordinary.docx", ordinary).format.name(),
+    content="docx",
+  )
+
+  let nested_source = raw_test_transform_xml_entry(
+    raw_test_add_entry(original, "word/_rels/data.bin", b"payload"),
+    "[Content_Types].xml",
+    text => {
+      text.replace(
+        old="</Types>",
+        new="<Override PartName=\"/word/_rels/data.bin\" ContentType=\"application/octet-stream\"/></Types>",
+      )
+    },
+  )
+  let nested_relationships = raw_test_add_entry(
+    nested_source,
+    "word/_rels/_rels/data.bin.rels",
+    @utf8.encode(
+      "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"/>",
+    ),
+  )
+  inspect(
+    @raw.raw_inventory("nested.docx", nested_relationships).format.name(),
+    content="docx",
+  )
+}
+
+///|
 test "raw inventory ignores deterministic hash clustering in package names" {
   let data = raw_test_add_hash_clustered_parts(@word.new_blank_docx(), 512)
   let inventory = @raw.raw_inventory("clustered.docx", data)
