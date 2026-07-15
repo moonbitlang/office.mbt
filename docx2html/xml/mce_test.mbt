@@ -113,6 +113,26 @@ test "MCE does not confuse brace-bearing namespaces with xmlns" {
 }
 
 ///|
+test "MCE strips only processing attributes from application elements" {
+  let source =
+    #|<a:Root xmlns:a="urn:application"
+    #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    #| xmlns:v="urn:vendor" mc:Ignorable="v" mc:Bogus="retained"/>
+  let root = read_mce_test_xml(source, ["urn:application"])
+  assert_false(
+    root.attributes.contains(
+      "{http://schemas.openxmlformats.org/markup-compatibility/2006}Ignorable",
+    ),
+  )
+  assert_eq(
+    root.attributes.get(
+      "{http://schemas.openxmlformats.org/markup-compatibility/2006}Bogus",
+    ),
+    Some("retained"),
+  )
+}
+
+///|
 test "MCE validates directives and AlternateContent grammar" {
   let mc = "http://schemas.openxmlformats.org/markup-compatibility/2006"
   assert_true(
