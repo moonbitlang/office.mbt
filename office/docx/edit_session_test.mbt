@@ -18,7 +18,7 @@ async fn write_docx_session_file(path : String, bytes : Bytes) -> Unit {
 fn mixed_case_docx_session_fixture() -> Bytes raise {
   let archive = @zip.Archive::new()
   archive.add(
-    "[CONTENT_TYPES].XML",
+    "[Content_Types].xml",
     @utf8.encode(
       "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Override PartName=\"/CUSTOM/MAIN.XML\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/></Types>",
     ),
@@ -166,6 +166,27 @@ async test "D1 source indexing maps scanner attribute bounds to resource limits"
 }
 
 ///|
+async test "D1 package resource status cannot be forged by a part name" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/forged-resource-name.docx"
+    let archive = @zip.read(@word_fixture.new_blank_docx())
+    archive.add("word/XML source budget exceeded.bin", b"ordinary")
+    let original = @zip.write(archive)
+    write_docx_session_file(input, original)
+    let callback_called = Ref(false)
+    let code = docx_session_error_code(() => {
+      @docx.transact_docx(
+        @transaction.transaction_options(input, dry_run=true),
+        _ => callback_called.val = true,
+      )
+    })
+    assert_eq(code, "office.docx.invalid_package")
+    assert_false(callback_called.val)
+    assert_eq(@afs.read_file(input).binary(), original)
+  })
+}
+
+///|
 async test "D1 resolves case-equivalent OPC targets to exact part spelling" {
   with_docx_session_test_dir(directory => {
     let input = "\{directory}/mixed.docx"
@@ -245,7 +266,7 @@ async test "D1 semantic annotations preserve exact metadata part spelling" {
     assert_true(
       @utf8.decode(rels_bytes, ignore_bom=true).contains("commentsExtended.xml"),
     )
-    guard result.get("[CONTENT_TYPES].XML") is Some(types_bytes) else {
+    guard result.get("[Content_Types].xml") is Some(types_bytes) else {
       fail("semantic edits lost the exact content-types spelling")
     }
     assert_true(
@@ -254,7 +275,7 @@ async test "D1 semantic annotations preserve exact metadata part spelling" {
       ),
     )
     assert_true(result.get("CUSTOM/_rels/MAIN.XML.rels") is None)
-    assert_true(result.get("[Content_Types].xml") is None)
+    assert_true(result.get("[CONTENT_TYPES].XML") is None)
     let verified = @word_fixture.read_docx_annotated(
       @afs.read_file(resolved_path).binary(),
     )

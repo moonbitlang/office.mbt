@@ -181,7 +181,7 @@ fn open_edit_session(
   budget : @transaction.TransactionBudget,
 ) -> DocxEditSession raise @transaction.TransactionError {
   let archive = archive.fork()
-  let (findings, findings_truncated) = @opc.validate_docx_archive_limited(
+  let validation = @opc.validate_docx_archive_report_limited(
     archive,
     max_findings=budget.max_validation_findings(),
     max_message_chars=budget.max_validation_message_chars(),
@@ -190,14 +190,15 @@ fn open_edit_session(
     max_xml_materialized_chars=budget.max_splice_materialized_bytes(),
     max_xml_token_chars=budget.max_splice_materialized_bytes(),
   )
+  let findings = validation.findings()
+  let findings_truncated = validation.findings_truncated()
   if !findings.is_empty() {
     let duplicate = findings.search_by(fn(finding) {
       finding.has_prefix("duplicate entry name:")
     })
-    let resource_limited = findings.search_by(is_xml_resource_finding)
     let code = if duplicate is Some(_) {
       "office.docx.duplicate_part"
-    } else if resource_limited is Some(_) {
+    } else if validation.resource_limit() is Some(_) {
       "office.docx.resource_limit"
     } else {
       "office.docx.invalid_package"
@@ -218,7 +219,16 @@ fn open_edit_session(
     max_materialized_chars=budget.max_splice_materialized_bytes(),
     max_token_chars=budget.max_splice_materialized_bytes(),
   )
-  let annotated = @word.read_docx_annotated_archive_limited(archive, xml_budget) catch {
+  guard validation.main_document_part() is Some(main_document_part) else {
+    raise docx_failure(
+      "office.docx.invalid_package", "source DOCX validation did not establish a main document part",
+    )
+  }
+  let annotated = @word.read_docx_annotated_archive_limited(
+    archive,
+    xml_budget,
+    expected_main_document_path=main_document_part,
+  ) catch {
     error => {
       let message = docx_error_message(error)
       raise docx_failure(
@@ -509,7 +519,7 @@ fn package_identifier() -> @transaction.TransactionIdentifier raise @transaction
     _bytes,
     archive,
   ) => {
-    let (findings, truncated) = @opc.validate_docx_archive_limited(
+    let validation = @opc.validate_docx_archive_report_limited(
       archive,
       max_findings=64,
       max_message_chars=512,
@@ -518,14 +528,15 @@ fn package_identifier() -> @transaction.TransactionIdentifier raise @transaction
       max_xml_materialized_chars=candidate_xml_materialized_chars,
       max_xml_token_chars=candidate_xml_token_chars,
     )
+    let findings = validation.findings()
+    let truncated = validation.findings_truncated()
     if !findings.is_empty() {
       let duplicate = findings.search_by(fn(finding) {
         finding.has_prefix("duplicate entry name:")
       })
-      let resource_limited = findings.search_by(is_xml_resource_finding)
       let code = if duplicate is Some(_) {
         "office.docx.duplicate_part"
-      } else if resource_limited is Some(_) {
+      } else if validation.resource_limit() is Some(_) {
         "office.docx.resource_limit"
       } else {
         "office.docx.invalid_package"
@@ -562,7 +573,7 @@ pub fn package_validator() -> @transaction.TransactionValidator raise @transacti
         ),
       ]
     }
-    let (raw, truncated) = @opc.validate_docx_archive_limited(
+    let validation = @opc.validate_docx_archive_report_limited(
       archive,
       max_findings=64,
       max_message_chars=512,
@@ -571,12 +582,19 @@ pub fn package_validator() -> @transaction.TransactionValidator raise @transacti
       max_xml_materialized_chars=candidate_xml_materialized_chars,
       max_xml_token_chars=candidate_xml_token_chars,
     )
+    let raw = validation.findings()
+    let truncated = validation.findings_truncated()
+    let package_code = if validation.resource_limit() is Some(_) {
+      "docx.package.resource_limit"
+    } else {
+      "docx.package.invalid"
+    }
     let findings : Array[@transaction.ValidationFinding] = []
     let limit = if truncated && raw.length() == 64 { 63 } else { raw.length() }
     for index in 0..<limit {
       findings.push(
         @transaction.validation_finding(
-          "docx.package.invalid",
+          package_code,
           docx_validator_message(raw[index]),
         ),
       )
@@ -589,35 +607,45 @@ pub fn package_validator() -> @transaction.TransactionValidator raise @transacti
       )
     }
     if findings.is_empty() {
-      try {
-        let annotated = @word.read_docx_annotated_archive_limited(
-          archive,
-          candidate_xml_budget(),
-        )
-        @word.validate_annotation_identity_state(annotated)
-        @word.validate_global_para_id_state_archive_limited(
-          annotated,
-          archive,
-          candidate_xml_budget(),
-        )
-      } catch {
-        error => {
-          let message = docx_error_message(error)
+      match validation.main_document_part() {
+        Some(main_document_part) =>
+          try {
+            let annotated = @word.read_docx_annotated_archive_limited(
+              archive,
+              candidate_xml_budget(),
+              expected_main_document_path=main_document_part,
+            )
+            @word.validate_annotation_identity_state(annotated)
+            @word.validate_global_para_id_state_archive_limited(
+              annotated,
+              archive,
+              candidate_xml_budget(),
+            )
+          } catch {
+            error => {
+              let message = docx_error_message(error)
+              findings.push(
+                @transaction.validation_finding(
+                  if is_xml_resource_finding(message) {
+                    "docx.annotation.resource_limit"
+                  } else {
+                    "docx.annotation.invalid"
+                  },
+                  docx_validator_message(
+                    "candidate DOCX annotation state is unsafe: \{message}",
+                  ),
+                ),
+              )
+            }
+          } noraise {
+            _ => ()
+          }
+        None =>
           findings.push(
             @transaction.validation_finding(
-              if is_xml_resource_finding(message) {
-                "docx.annotation.resource_limit"
-              } else {
-                "docx.annotation.invalid"
-              },
-              docx_validator_message(
-                "candidate DOCX annotation state is unsafe: \{message}",
-              ),
+              "docx.package.invalid", "candidate DOCX validation did not establish a main document part",
             ),
           )
-        }
-      } noraise {
-        _ => ()
       }
     }
     findings
