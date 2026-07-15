@@ -270,9 +270,9 @@ jobs:
             and .success == true
             and .data.schema == "office.capabilities/2"
             and (.data.fingerprint | test("^crc32:[0-9a-f]{8}$"))
-            and ([.data.records[].name] == ["docx", "xlsx", "help", "identify", "raw"])'
+            and ([.data.records[].name] == ["docx", "xlsx", "help", "identify", "outline", "get", "text", "query", "raw"])'
           moon run --target wasm office/cmd/office -- help all --jsonl 2>office-wasm.err \
-            | jq -se 'length == 5 and all(.[]; .schema == "office.capability/2")'
+            | jq -se 'length == 9 and all(.[]; .schema == "office.capability/2")'
           if moon run --target wasm office/cmd/office -- help xlxs --json >office-wasm-error.json 2>office-wasm.err; then
             echo "expected unknown office help format to fail"
             exit 1
@@ -281,6 +281,27 @@ jobs:
             and .success == false
             and .error.code == "office.unknown_format"
             and .error.details.suggestions == ["xlsx"]' office-wasm-error.json
+          # DOCX structured reads share one canonical bounded projection.
+          # Drive every command through the wasm async filesystem path.
+          o=$(moon run --target wasm office/cmd/office -- outline docx2html/tests/cram/fixtures/single-paragraph.docx --json 2>office-wasm.err) || { echo "office DOCX outline failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "$o" | jq -e '.success == true
+            and .data.schema == "office.docx.outline/1"
+            and .data.counts.paragraphs == 1
+            and [.data.stories[].path] == ["/docx/body", "/docx/footnotes", "/docx/endnotes", "/docx/comments"]'
+          g=$(moon run --target wasm office/cmd/office -- get docx2html/tests/cram/fixtures/commented.docx '/docx/comments/comment[id="0"]' --json 2>office-wasm.err) || { echo "office DOCX get failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "$g" | jq -e '.success == true
+            and .data.schema == "office.docx.element/1"
+            and .data.stability == "stable"
+            and .data.metadata.author == "Ada Lovelace"'
+          t=$(moon run --target wasm office/cmd/office -- text docx2html/tests/cram/fixtures/header-footer.docx --json 2>office-wasm.err) || { echo "office DOCX text failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "$t" | jq -e '.success == true
+            and .data.schema == "office.docx.text/1"
+            and [.data.entries[].path] == ["/docx/body/p[1]", "/docx/body/p[2]", "/docx/header[1]/p[1]", "/docx/header[2]/p[1]", "/docx/footer[1]/p[1]"]'
+          q=$(moon run --target wasm office/cmd/office -- query docx2html/tests/cram/fixtures/tiny-picture.docx --kind picture --json 2>office-wasm.err) || { echo "office DOCX query failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "$q" | jq -e '.success == true
+            and .data.schema == "office.docx.query/1"
+            and .data.matched_total == 1
+            and .data.matches[0].path == "/docx/body/p[1]/r[1]/image[1]"'
           # Raw OOXML uses the same async filesystem and A4 transaction on
           # wasm. Exercise relationship-derived aliases, dry-run preservation,
           # atomic separate-output publication, and both Office formats.
