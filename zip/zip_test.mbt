@@ -3,8 +3,16 @@ test "zip store roundtrip" {
   let archive = @zip.Archive::new()
   archive.add("a.txt", b"hello")
   archive.add("dir/b.txt", b"world")
+  assert_eq(
+    archive.entries()[0].central_directory_file_header_size(),
+    42 + "a.txt".length(),
+  )
   let bytes = @zip.write(archive)
   let parsed = @zip.read(bytes)
+  assert_eq(
+    parsed.entries()[0].central_directory_file_header_size(),
+    42 + "a.txt".length(),
+  )
   debug_inspect(
     parsed.entries().map(entry => entry.name()),
     content=(

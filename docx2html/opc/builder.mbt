@@ -435,9 +435,9 @@ fn check_part_name(name : String) -> Int raise PackageBuildError {
       "invalid part name '\{name}': not a canonical OPC logical PartName",
     )
   }
-  if zip_name.length() > DEFAULT_MAX_ZIP_ENTRY_NAME_CHARS {
+  if zip_name.length() > MAX_OPC_ZIP_ENTRY_NAME_BYTES_WITHOUT_METADATA {
     raise PackageBuildError(
-      "part name exceeds the \{DEFAULT_MAX_ZIP_ENTRY_NAME_CHARS}-character ZIP entry-name limit: \{name}",
+      "part name makes the OPC central-directory file header exceed \{MAX_OPC_CENTRAL_DIRECTORY_FILE_HEADER_BYTES} bytes: \{name}",
     )
   }
   zip_name.length()

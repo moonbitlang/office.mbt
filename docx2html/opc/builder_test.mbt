@@ -25,8 +25,9 @@ fn minimal_builder() -> @opc.PackageBuilder raise {
 
 ///|
 fn maximum_deep_zip_name() -> String {
-  // 32,768 one-character segments: 32,767 slashes plus 32,768 letters.
-  "a/".repeat(32_767) + "a"
+  // With empty Extra and File Comment fields, the 42 fixed bytes leave
+  // 65,493 bytes for the name in an OPC Central Directory File Header.
+  "a/".repeat(32_746) + "a"
 }
 
 ///|
@@ -78,11 +79,11 @@ test "the builder preserves legal opaque percent escapes" {
 ///|
 test "the builder handles the maximum deeply segmented ZIP entry name linearly" {
   let name = maximum_deep_zip_name()
-  assert_eq(name.length(), 65_535)
+  assert_eq(name.length(), 65_493)
   let registry = @opc.PartNameRegistry::new()
   assert_true(registry.register(name, name) is None)
   match registry.register(name, name) {
-    Some(Equivalent(existing)) => assert_eq(existing.length(), 65_535)
+    Some(Equivalent(existing)) => assert_eq(existing.length(), 65_493)
     _ => fail("expected exact PartName equivalence")
   }
   let builder = minimal_builder()
@@ -90,11 +91,11 @@ test "the builder handles the maximum deeply segmented ZIP entry name linearly" 
 }
 
 ///|
-test "the builder rejects a ZIP entry name beyond the format limit" {
-  let oversized = "a".repeat(65_536)
+test "the builder rejects a name that exceeds the OPC central-header limit" {
+  let oversized = "a".repeat(65_494)
   expect_build_error(
     builder => builder.add_part(oversized, b""),
-    "part name exceeds the 65535-character ZIP entry-name limit",
+    "part name makes the OPC central-directory file header exceed 65535 bytes",
   )
 }
 

@@ -147,8 +147,8 @@ test "archive-backed OPC validation reports typed ZIP-name resource limits" {
 
 ///|
 test "archive-backed OPC validation handles a maximum deep PartName" {
-  let deep = "a/".repeat(32_767) + "a"
-  assert_eq(deep.length(), 65_535)
+  let deep = "a/".repeat(32_746) + "a"
+  assert_eq(deep.length(), 65_493)
   let archive = try! @mbtzip.read(minimal_docx())
   archive.add(deep, b"payload")
   let report = @opc.validate_docx_archive_report_limited(
@@ -157,6 +157,33 @@ test "archive-backed OPC validation handles a maximum deep PartName" {
     max_message_chars=64,
   )
   assert_true(report.resource_limit() is None)
+  assert_false(
+    report
+    .findings()
+    .any(finding => finding.contains("central-directory file header exceeds")),
+  )
+}
+
+///|
+test "OPC validation enforces the complete central-directory header limit" {
+  let oversized = "a/".repeat(32_746) + "aa"
+  assert_eq(oversized.length(), 65_494)
+  let archive = try! @mbtzip.read(minimal_docx())
+  archive.add(oversized, b"payload")
+  let report = @opc.validate_docx_archive_report_limited(
+    archive,
+    max_findings=8,
+    max_message_chars=128,
+  )
+  assert_true(
+    report
+    .findings()
+    .any(finding => {
+      finding.contains(
+        "central-directory file header exceeds the OPC 65535-byte limit",
+      )
+    }),
+  )
 }
 
 ///|

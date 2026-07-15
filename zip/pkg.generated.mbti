@@ -55,6 +55,7 @@ pub(all) enum Compression {
 pub fn Compression::to_repr(Self) -> @debug.Repr
 
 type Entry
+pub fn Entry::central_directory_file_header_size(Self) -> Int
 pub fn Entry::compression(Self) -> Compression
 pub fn Entry::crc32(Self) -> UInt
 pub fn Entry::data(Self) -> BytesView
