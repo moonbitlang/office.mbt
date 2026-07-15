@@ -377,7 +377,7 @@ fn check_part_name(name : String) -> Int raise PackageBuildError {
   let key = builder_part_identity(name)
   if key == builder_part_identity(CONTENT_TYPES_PART) ||
     key == builder_part_identity(ROOT_RELS_PART) ||
-    has_relationships_segment(key) {
+    is_rels_part(name) {
     raise PackageBuildError(
       "reserved part name '\{name}': the builder emits content types and relationships itself",
     )
