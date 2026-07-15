@@ -597,6 +597,24 @@ test "tolerant annotated reads warn on broken section references while mutation 
       @core.warning("A header/footer reference without r:id was ignored")
     }),
   )
+  let read_only_spec = @docx.comment_spec(author="read-only", from=0, to=0, [
+    @document.paragraph([@document.run([@document.text("blocked")])]),
+  ])
+  try
+    @docx.plan_comment_addition_archive(
+      tolerant,
+      archive,
+      at_relative="p[1]",
+      to_relative="p[1]",
+      read_only_spec,
+    )
+  catch {
+    Unsupported(message~) =>
+      assert_true(message.contains("tolerant DOCX projection is read-only"))
+    _ => fail("expected tolerant mutation provenance to be rejected")
+  } noraise {
+    _ => fail("expected a tolerant projection to reject mutation planning")
+  }
   try @docx.read_docx_annotated_archive_limited(archive, budget()) catch {
     Unsupported(message~) => assert_true(message.contains("has no r:id"))
     _ => fail("expected mutation-safe read to reject the missing r:id")
@@ -671,6 +689,50 @@ test "tolerant D2 ids distinguish missing attributes from literal undefined" {
   )
   assert_eq(tolerant.comment_bodies().map(pair => pair.0), ["", "undefined"])
   assert_eq(tolerant.footnote_bodies().map(pair => pair.0), ["", "undefined"])
+}
+
+///|
+test "tolerant D2 ids reject a present empty value instead of aliasing absence" {
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:document>
+  let comments =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id=""><w:p/></w:comment></w:comments>
+  let archive = try! @mbtzip.read(
+    fixture_docx(document, comments_xml=Some(comments)),
+  )
+  let budget = @xml.xml_read_budget(
+    max_source_units=1024 * 1024,
+    max_tokens=4096,
+    max_materialized_chars=1024 * 1024,
+    max_token_chars=4096,
+  )
+  try
+    @docx.read_docx_annotated_archive_tolerant_limited(archive, budget)
+  catch {
+    InvalidXml(message~) => assert_true(message.contains("present but empty"))
+    _ => fail("expected a present empty annotation id to be rejected")
+  } noraise {
+    _ => fail("expected a present empty annotation id to be rejected")
+  }
+}
+
+///|
+test "mutation-safe reads strictly parse visible story XML before deriving spans" {
+  let malformed =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p></w:tbl></w:body></w:document>
+  let archive = try! @mbtzip.read(fixture_docx(malformed))
+  let budget = @xml.xml_read_budget(
+    max_source_units=1024 * 1024,
+    max_tokens=4096,
+    max_materialized_chars=1024 * 1024,
+    max_token_chars=4096,
+  )
+  try @docx.read_docx_annotated_archive_limited(archive, budget) catch {
+    InvalidXml(_) => ()
+    _ => fail("expected malformed visible story XML to fail strict parsing")
+  } noraise {
+    _ => fail("expected malformed visible story XML to be rejected")
+  }
 }
 
 ///|

@@ -530,7 +530,8 @@ pub fn read_docx_with_messages(
 ///|
 /// Controls only the spelling of an absent annotation id. Existing reader
 /// APIs retain Mammoth's JavaScript-derived `"undefined"` sentinel; the new
-/// D2 projection uses an empty value so absence cannot alias a literal id.
+/// D2 projection uses an empty value and rejects a literal empty id so the two
+/// states cannot alias.
 priv enum MissingAnnotationIdMode {
   LegacyUndefinedAnnotationId
   EmptyMissingAnnotationId
@@ -540,8 +541,12 @@ priv enum MissingAnnotationIdMode {
 fn annotation_id_or_missing(
   value : String?,
   mode : MissingAnnotationIdMode,
-) -> String {
+) -> String raise DocxError {
   match value {
+    Some("") if mode is EmptyMissingAnnotationId =>
+      raise InvalidXml(
+        message="an annotation id is present but empty; refusing an ambiguous tolerant projection",
+      )
     Some(id) => id
     None =>
       match mode {
