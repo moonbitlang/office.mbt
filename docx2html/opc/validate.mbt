@@ -1272,23 +1272,31 @@ fn is_valid_relationship_id(id : String) -> Bool {
 }
 
 ///|
-/// Derives the source described by a Relationships part. Only
-/// `dir/_rels/name.rels` (or the package-root `_rels/.rels`) is reserved.
-/// Earlier `_rels` segments belong to the source PartName: for example,
+/// Returns whether a name has the reserved Relationships-part shape. The
+/// package-root `_rels/.rels` is valid, while a nested `dir/_rels/.rels`
+/// remains reserved but cannot identify a source part.
+fn is_rels_part(name : String) -> Bool {
+  let segments = name.split("/").collect()
+  segments.length() >= 2 &&
+  part_name_key(segments[segments.length() - 2]) == "_rels" &&
+  part_name_key(segments[segments.length() - 1]).has_suffix(".rels")
+}
+
+///|
+/// Derives the source described by a valid Relationships part. Earlier
+/// `_rels` segments belong to the source PartName: for example,
 /// `word/_rels/_rels/data.bin.rels` describes `word/_rels/data.bin`.
 fn relationship_source_part(name : String) -> String? {
   let key = part_name_key(name)
   if key == ROOT_RELS_PART {
     return Some("")
   }
-  let segments = name.split("/").collect()
-  if segments.length() < 2 ||
-    part_name_key(segments[segments.length() - 2]) != "_rels" {
+  if !is_rels_part(name) {
     return None
   }
+  let segments = name.split("/").collect()
   let filename = segments[segments.length() - 1]
-  let filename_key = part_name_key(filename)
-  if !filename_key.has_suffix(".rels") || filename.length() <= 5 {
+  if filename.length() <= 5 {
     return None
   }
   let source_name = filename[:filename.length() - 5].to_owned()
@@ -1618,7 +1626,9 @@ fn for_each_relationship(
         valid = false
       }
     }
-    let id = element.attributes.get("Id").unwrap_or("")
+    let id = collapse_xml_schema_whitespace(
+      element.attributes.get("Id").unwrap_or(""),
+    )
     if id == "" {
       findings.add(
         "\{findings.text(part_name)}: Relationship missing a non-empty Id",
@@ -1637,7 +1647,9 @@ fn for_each_relationship(
     } else {
       ids.add(id)
     }
-    let rel_type = element.attributes.get("Type").unwrap_or("")
+    let rel_type = collapse_xml_schema_whitespace(
+      element.attributes.get("Type").unwrap_or(""),
+    )
     if rel_type == "" {
       findings.add(
         "\{findings.text(part_name)}: Relationship missing a non-empty Type",
@@ -1645,11 +1657,13 @@ fn for_each_relationship(
       valid = false
     } else if !is_absolute_relationship_type(rel_type) {
       findings.add(
-        "\{findings.text(part_name)}: Relationship Type is not an absolute URI without a fragment: \{findings.text(rel_type)}",
+        "\{findings.text(part_name)}: Relationship Type is not an absolute IRI without a fragment: \{findings.text(rel_type)}",
       )
       valid = false
     }
-    let target = element.attributes.get("Target").unwrap_or("")
+    let target = collapse_xml_schema_whitespace(
+      element.attributes.get("Target").unwrap_or(""),
+    )
     if target == "" {
       findings.add(
         "\{findings.text(part_name)}: Relationship missing a non-empty Target",
@@ -1696,13 +1710,6 @@ fn for_each_relationship(
       visit(id, rel_type, target, external)
     }
   }
-}
-
-///|
-/// `dir/_rels/name.rels` describes `dir/name`; its targets resolve against
-/// `dir`.
-fn is_rels_part(name : String) -> Bool {
-  relationship_source_part(name) is Some(_)
 }
 
 ///|
