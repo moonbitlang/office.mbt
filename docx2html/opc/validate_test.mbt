@@ -341,12 +341,41 @@ test "Relationships close their post-MCE XML schema" {
 }
 
 ///|
-test "Relationship simple text remains schema-valid" {
+test "Relationship elements reject non-whitespace text in root and part relationships" {
   let root_rels =
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml">schema string content</Relationship></Relationships>
+  let root_findings = @opc.validate_docx_package(
+    minimal_docx(root_rels=Some(root_rels)),
+  )
+  assert_true(
+    root_findings.contains("_rels/.rels: Relationship contains unexpected text"),
+  )
+  assert_true(
+    root_findings.contains("_rels/.rels: no officeDocument relationship"),
+  )
+
+  let whitespace_root_rels = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\">\n \t</Relationship></Relationships>"
   assert_eq(
-    @opc.validate_docx_package(minimal_docx(root_rels=Some(root_rels))),
+    @opc.validate_docx_package(
+      minimal_docx(root_rels=Some(whitespace_root_rels)),
+    ),
     [],
+  )
+
+  let part_rels =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rImage" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/missing.png">schema string content</Relationship></Relationships>
+  let part_findings = @opc.validate_docx_package(
+    minimal_docx(extra=[("word/_rels/document.xml.rels", utf8_bytes(part_rels))]),
+  )
+  assert_true(
+    part_findings.contains(
+      "word/_rels/document.xml.rels: Relationship contains unexpected text",
+    ),
+  )
+  assert_true(
+    part_findings.all(finding => {
+      !finding.contains("relationship target missing")
+    }),
   )
 }
 

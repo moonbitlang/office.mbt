@@ -1635,11 +1635,20 @@ fn for_each_relationship(
       }
     }
     for child in element.children {
-      if child is XmlElement(_) {
-        findings.add(
-          "\{findings.text(part_name)}: Relationship contains a child element",
-        )
-        valid = false
+      match child {
+        XmlElement(_) => {
+          findings.add(
+            "\{findings.text(part_name)}: Relationship contains a child element",
+          )
+          valid = false
+        }
+        XmlText(text) =>
+          if text.trim() != "" {
+            findings.add(
+              "\{findings.text(part_name)}: Relationship contains unexpected text",
+            )
+            valid = false
+          }
       }
     }
     let id = @xml.collapse_xml_schema_whitespace(
