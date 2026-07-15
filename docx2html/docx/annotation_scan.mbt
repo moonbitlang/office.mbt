@@ -52,6 +52,7 @@ impl Show for ScanMarkerKind with fn output(self, logger) {
 priv struct ScannedMarker {
   kind : ScanMarkerKind
   id : String
+  id_was_present : Bool
   seq : Int
   container_path : String?
   after_child : String?
@@ -67,6 +68,14 @@ fn ScannedMarker::kind(self : ScannedMarker) -> ScanMarkerKind {
 /// The marker's w:id, as spelled.
 fn ScannedMarker::id(self : ScannedMarker) -> String {
   self.id
+}
+
+///|
+/// Whether the source marker spelled a `w:id` attribute. The tolerant
+/// projection intentionally maps an absent id to `""`, so presence must stay
+/// separate to prevent a literal empty value from aliasing that sentinel.
+fn ScannedMarker::id_was_present(self : ScannedMarker) -> Bool {
+  self.id_was_present
 }
 
 ///|
@@ -737,6 +746,7 @@ fn scan_story(
           markers.push({
             kind,
             id: id.unwrap_or(""),
+            id_was_present: id is Some(_),
             seq,
             container_path,
             after_child,

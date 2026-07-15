@@ -717,6 +717,55 @@ test "tolerant D2 ids reject a present empty value instead of aliasing absence" 
 }
 
 ///|
+test "tolerant range markers distinguish missing ids from present empty ids" {
+  let comments =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment><w:p/></w:comment></w:comments>
+  let missing_document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:commentRangeStart/><w:r><w:t>text</w:t></w:r><w:commentRangeEnd/></w:p></w:body></w:document>
+  let missing_archive = try! @mbtzip.read(
+    fixture_docx(missing_document, comments_xml=Some(comments)),
+  )
+  let missing_budget = @xml.xml_read_budget(
+    max_source_units=1024 * 1024,
+    max_tokens=4096,
+    max_materialized_chars=1024 * 1024,
+    max_token_chars=4096,
+  )
+  let missing = @docx.read_docx_annotated_archive_tolerant_limited(
+    missing_archive, missing_budget,
+  )
+  assert_eq(missing.annotations().comments()[0].id(), "")
+  assert_eq(missing.annotations().comments()[0].anchors().length(), 1)
+  let documents = [
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:commentRangeStart w:id=""/><w:r><w:t>text</w:t></w:r><w:commentRangeEnd/></w:p></w:body></w:document>
+    ),
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:commentRangeStart/><w:r><w:t>text</w:t></w:r><w:commentRangeEnd w:id=""/></w:p></w:body></w:document>
+    ),
+  ]
+  for document in documents {
+    let archive = try! @mbtzip.read(
+      fixture_docx(document, comments_xml=Some(comments)),
+    )
+    let budget = @xml.xml_read_budget(
+      max_source_units=1024 * 1024,
+      max_tokens=4096,
+      max_materialized_chars=1024 * 1024,
+      max_token_chars=4096,
+    )
+    try
+      @docx.read_docx_annotated_archive_tolerant_limited(archive, budget)
+    catch {
+      InvalidXml(message~) => assert_true(message.contains("present but empty"))
+      _ => fail("expected a present empty range-marker id to be rejected")
+    } noraise {
+      _ => fail("expected a present empty range-marker id to be rejected")
+    }
+  }
+}
+
+///|
 test "mutation-safe reads strictly parse visible story XML before deriving spans" {
   let malformed =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p></w:tbl></w:body></w:document>
