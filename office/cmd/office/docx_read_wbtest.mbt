@@ -496,6 +496,37 @@ test "DOCX OPC classification cannot be forged by an entry name" {
 }
 
 ///|
+test "DOCX structured reads accept explicit ZIP directory records" {
+  let archive = try! @zip.read(docx_read_test_bytes())
+  archive.add("word/", b"")
+  archive.add("word/media/", b"")
+  let projection = open_docx_projection(
+    "directories.docx",
+    @zip.write(archive),
+    1000,
+  )
+  assert_true(find_projection_entry(projection, "/docx/body") is Some(_))
+}
+
+///|
+test "DOCX preflight rejects foreign-namespace officeDocument relationships" {
+  let archive = try! @zip.read(docx_read_test_bytes())
+  let root_relationships =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:foreign="urn:foreign"><foreign:Relationship Id="main" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>
+  assert_true(
+    archive.replace("_rels/.rels", @utf8.encode(root_relationships)),
+  )
+  try
+    open_docx_projection("foreign.docx", @zip.write(archive), 1000)
+  catch {
+    CliFailure(error) => assert_eq(error.code, "office.invalid_package")
+    _ => fail("expected a structured CLI package failure")
+  } noraise {
+    _ => fail("expected foreign-namespace relationship rejection")
+  }
+}
+
+///|
 test "DOCX human output escapes control sequences in paths, kinds, and text" {
   let projection = docx_read_test_projection()
   let unsafe_path = "/docx/body/\u{009b}story"

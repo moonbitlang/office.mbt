@@ -869,7 +869,7 @@ fn projection_from_annotated(
 fn validate_docx_read_archive(
   file : String,
   archive : @zip.Archive,
-) -> Unit raise CliFailure {
+) -> String raise CliFailure {
   let lower = file.to_lower()
   if lower.has_suffix(".xlsx") {
     raise docx_cli_failure(
@@ -928,6 +928,17 @@ fn validate_docx_read_archive(
       details=Json::object(details),
     )
   }
+  match report.main_document_part() {
+    Some(part) => part
+    None =>
+      raise docx_cli_failure(
+        "office.invalid_package",
+        "invalid DOCX package: validation did not identify a main document part",
+        details=Json::object({
+          "file": Json::string(bounded_text(file, 160)),
+        }),
+      )
+  }
 }
 
 ///|
@@ -955,7 +966,7 @@ fn open_docx_projection(
   ) catch {
     error => raise docx_zip_failure(error, file)
   }
-  validate_docx_read_archive(file, archive)
+  let main_document_part = validate_docx_read_archive(file, archive)
   let xml_budget = @xml.xml_read_budget(
     max_source_units=docx_cli_max_xml_source_units,
     max_tokens=docx_cli_max_xml_tokens,
@@ -967,6 +978,7 @@ fn open_docx_projection(
     xml_budget,
     max_diagnostics=docx_cli_max_warnings,
     max_diagnostic_chars=512,
+    expected_main_document_path=main_document_part,
   ) catch {
     error => raise docx_reader_failure(error, file)
   }
