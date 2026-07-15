@@ -11,6 +11,14 @@ pub const SCHEMA_CAPABILITIES : String = "office.capabilities/2"
 
 pub const SCHEMA_CAPABILITY : String = "office.capability/2"
 
+pub const SCHEMA_DOCX_ELEMENT : String = "office.docx.element/1"
+
+pub const SCHEMA_DOCX_OUTLINE : String = "office.docx.outline/1"
+
+pub const SCHEMA_DOCX_QUERY : String = "office.docx.query/1"
+
+pub const SCHEMA_DOCX_TEXT : String = "office.docx.text/1"
+
 pub const SCHEMA_RAW_CHANGE : String = "office.raw.change/1"
 
 pub const SCHEMA_RAW_INVENTORY : String = "office.raw.inventory/1"

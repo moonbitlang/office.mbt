@@ -21,6 +21,18 @@ pub const SCHEMA_RAW_RESULT : String = "office.raw.result/1"
 pub const SCHEMA_TRANSACTION : String = "office.transaction/1"
 
 ///|
+pub const SCHEMA_DOCX_OUTLINE : String = "office.docx.outline/1"
+
+///|
+pub const SCHEMA_DOCX_ELEMENT : String = "office.docx.element/1"
+
+///|
+pub const SCHEMA_DOCX_TEXT : String = "office.docx.text/1"
+
+///|
+pub const SCHEMA_DOCX_QUERY : String = "office.docx.query/1"
+
+///|
 /// One declared input or output field in the Office capability registry.
 pub(all) struct CapabilityField {
   name : String
@@ -116,9 +128,9 @@ pub fn capability_formats() -> Array[CapabilityFormat] {
       selector: {
         schema: "office.selector/1",
         root: "/docx",
-        status: "syntax-only",
+        status: "read-resolved",
         examples: ["/docx/body/p[1]/r[2]", "/docx/comments/comment[id=\"7\"]"],
-        description: "bounded parse/render only; package resolution is not implemented",
+        description: "bounded canonical resolution for outline, get, text, and declared query predicates",
       },
     },
     {
@@ -191,6 +203,189 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         ),
         capability_field(
           "format", "enum(docx|xlsx)", true, "the structurally verified package format",
+        ),
+      ],
+      output_modes: ["human", "json"],
+      variants: [],
+    },
+    {
+      name: "outline",
+      summary: "Summarize bounded DOCX structure using canonical selectors",
+      usage: "office outline FILE [--max-elements N] [--max-output-chars N] [--json]",
+      formats: ["docx"],
+      aliases: [],
+      inputs: [
+        capability_field("file", "path", true, "existing DOCX package"),
+        capability_field(
+          "max-elements", "integer(1..200000)", false, "projection scan ceiling; default 50000",
+        ),
+        capability_field(
+          "max-output-chars", "integer(1..4194304)", false, "serialized output ceiling; default 1048576",
+        ),
+        capability_field("json", "boolean", false, "emit office.output/1 JSON"),
+      ],
+      outputs: [
+        capability_field(
+          "schema", "literal(office.docx.outline/1)", true, "versioned result schema",
+        ),
+        capability_field(
+          "counts", "object", true, "deterministic structural counts across every DOCX story",
+        ),
+        capability_field(
+          "stories", "array", true, "body, header, footer, note, endnote, and comment story roots",
+        ),
+        capability_field(
+          "headings", "array", true, "bounded heading previews with canonical paths",
+        ),
+        capability_field(
+          "diagnostics", "array", true, "reader and annotation source diagnostics",
+        ),
+      ],
+      output_modes: ["human", "json"],
+      variants: [],
+    },
+    {
+      name: "get",
+      summary: "Resolve one canonical DOCX selector",
+      usage: "office get FILE SELECTOR [--max-elements N] [--max-output-chars N] [--json]",
+      formats: ["docx"],
+      aliases: [],
+      inputs: [
+        capability_field("file", "path", true, "existing DOCX package"),
+        capability_field(
+          "selector", "office.selector/1", true, "canonical /docx selector",
+        ),
+        capability_field(
+          "max-elements", "integer(1..200000)", false, "projection scan ceiling; default 50000",
+        ),
+        capability_field(
+          "max-output-chars", "integer(1..4194304)", false, "serialized output ceiling; default 1048576",
+        ),
+        capability_field("json", "boolean", false, "emit office.output/1 JSON"),
+      ],
+      outputs: [
+        capability_field(
+          "schema", "literal(office.docx.element/1)", true, "versioned result schema",
+        ),
+        capability_field(
+          "path", "office.selector/1", true, "resolved canonical path",
+        ),
+        capability_field(
+          "stability", "enum(stable|snapshot-relative)", true, "selector stability classification",
+        ),
+        capability_field(
+          "kind", "string", true, "resolved story, annotation, or element kind",
+        ),
+        capability_field(
+          "children", "array", true, "addressable direct children with canonical paths",
+        ),
+        capability_field("text", "string", true, "bounded raw text projection"),
+        capability_field(
+          "properties", "object", true, "declared formatting and element summary",
+        ),
+      ],
+      output_modes: ["human", "json"],
+      variants: [],
+    },
+    {
+      name: "text",
+      summary: "Extract bounded path-tagged DOCX paragraph text",
+      usage: "office text FILE [--under SELECTOR] [--offset N] [--limit N] [--max-elements N] [--max-output-chars N] [--json]",
+      formats: ["docx"],
+      aliases: [],
+      inputs: [
+        capability_field("file", "path", true, "existing DOCX package"),
+        capability_field(
+          "under", "office.selector/1", false, "optional canonical subtree root",
+        ),
+        capability_field(
+          "offset", "integer(0..200000)", false, "zero-based paragraph offset; default 0",
+        ),
+        capability_field(
+          "limit", "integer(0..10000)", false, "maximum returned paragraphs; default 2000",
+        ),
+        capability_field(
+          "max-elements", "integer(1..200000)", false, "projection scan ceiling; default 50000",
+        ),
+        capability_field(
+          "max-output-chars", "integer(1..4194304)", false, "serialized output ceiling; default 1048576",
+        ),
+        capability_field("json", "boolean", false, "emit office.output/1 JSON"),
+      ],
+      outputs: [
+        capability_field(
+          "schema", "literal(office.docx.text/1)", true, "versioned result schema",
+        ),
+        capability_field(
+          "entries", "array(object{path,text,stability})", true, "paragraphs in deterministic document order",
+        ),
+        capability_field(
+          "matched_total", "integer", true, "complete bounded-scan paragraph count",
+        ),
+        capability_field(
+          "returned", "integer", true, "number of returned entries",
+        ),
+        capability_field(
+          "truncated", "boolean", true, "whether pagination omitted later matches",
+        ),
+      ],
+      output_modes: ["human", "json"],
+      variants: [],
+    },
+    {
+      name: "query",
+      summary: "Run bounded deterministic predicates over DOCX elements",
+      usage: "office query FILE [--under SELECTOR] [--kind KIND] [--text TEXT] [--id ID] [--property NAME=VALUE]... [--ignore-case] [--offset N] [--limit N] [--max-elements N] [--max-output-chars N] [--json]",
+      formats: ["docx"],
+      aliases: [],
+      inputs: [
+        capability_field("file", "path", true, "existing DOCX package"),
+        capability_field(
+          "under", "office.selector/1", false, "optional canonical subtree root",
+        ),
+        capability_field(
+          "kind", "enum(body|header|footer|footnotes|endnotes|comments|note|comment|p|r|tbl|tr|tc|hyperlink|image)",
+          false, "exact kind; documented long-name aliases normalize before matching",
+        ),
+        capability_field(
+          "text", "literal-string", false, "literal substring predicate; regular expressions are not accepted",
+        ),
+        capability_field("id", "string", false, "exact annotation id predicate"),
+        capability_field(
+          "property", "array(NAME=VALUE)", false, "up to 16 predicates from style_id, style_name, alignment, bold, italic, underline, content_type, href, author, done",
+        ),
+        capability_field(
+          "ignore-case", "boolean", false, "case-insensitive --text matching",
+        ),
+        capability_field(
+          "offset", "integer(0..200000)", false, "zero-based match offset; default 0",
+        ),
+        capability_field(
+          "limit", "integer(0..1000)", false, "maximum returned matches; default 100",
+        ),
+        capability_field(
+          "max-elements", "integer(1..200000)", false, "projection scan ceiling; default 50000",
+        ),
+        capability_field(
+          "max-output-chars", "integer(1..4194304)", false, "serialized output ceiling; default 1048576",
+        ),
+        capability_field("json", "boolean", false, "emit office.output/1 JSON"),
+      ],
+      outputs: [
+        capability_field(
+          "schema", "literal(office.docx.query/1)", true, "versioned result schema",
+        ),
+        capability_field(
+          "matches", "array", true, "deterministic document-order match records",
+        ),
+        capability_field(
+          "matched_total", "integer", true, "complete bounded-scan match count",
+        ),
+        capability_field(
+          "returned", "integer", true, "number of returned matches",
+        ),
+        capability_field(
+          "truncated", "boolean", true, "whether pagination omitted later matches",
         ),
       ],
       output_modes: ["human", "json"],
