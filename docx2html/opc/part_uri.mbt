@@ -193,32 +193,99 @@ pub fn part_name_key(name : StringView) -> String {
 }
 
 ///|
-/// Logical ancestor keys used by OPC's non-derivability rule. For `a/b/c.xml`
-/// this returns the case-normalized keys for `a` and `a/b`.
-fn part_name_ancestor_keys(name : StringView) -> Array[String] {
-  let key = part_name_key(name)
-  let segments = key.split("/").collect()
-  let ancestors : Array[String] = []
-  let mut prefix = ""
-  for index in 0..<(segments.length() - 1) {
-    prefix = if index == 0 {
-      segments[index].to_owned()
-    } else {
-      prefix + "/" + segments[index].to_owned()
-    }
-    ancestors.push(prefix)
-  }
-  ancestors
+priv struct PartNameTrieNode {
+  mut terminal : String?
+  mut first_part : String?
+  children : StableStringMap[Int]
 }
 
 ///|
-/// OPC PartNames may not be derivable from one another by appending path
-/// segments. Identity follows the same ASCII case folding as exact PartName
-/// comparison.
-fn part_names_are_derivable(left : StringView, right : StringView) -> Bool {
-  let left_key = part_name_key(left)
-  let right_key = part_name_key(right)
-  left_key.has_prefix(right_key + "/") || right_key.has_prefix(left_key + "/")
+fn new_part_name_trie_node() -> PartNameTrieNode {
+  { terminal: None, first_part: None, children: SortedMap([]) }
+}
+
+///|
+/// The collision reported while registering a logical OPC PartName.
+pub(all) enum PartNameConflict {
+  Equivalent(String)
+  Derivable(String)
+}
+
+///|
+/// A segment trie for OPC PartName identity and non-derivability checks.
+/// Storage and work are linear in aggregate PartName length; in particular,
+/// a deeply segmented ZIP name never materializes every growing prefix.
+pub struct PartNameRegistry {
+  priv nodes : Array[PartNameTrieNode]
+}
+
+///|
+/// Creates an empty PartName registry.
+pub fn PartNameRegistry::new() -> PartNameRegistry {
+  { nodes: [new_part_name_trie_node()] }
+}
+
+///|
+/// Registers `name`, using `display` in any returned conflict. Identity is
+/// ASCII-case-insensitive and a name conflicts when either side is derivable
+/// from the other by appending one or more path segments.
+pub fn PartNameRegistry::register(
+  self : PartNameRegistry,
+  name : StringView,
+  display : String,
+) -> PartNameConflict? {
+  let key = part_name_key(name)
+  let segments = key.split("/").collect()
+  let mut node_index = 0
+  let mut complete_path = true
+  for segment_view in segments {
+    match self.nodes[node_index].terminal {
+      Some(existing) => return Some(Derivable(existing))
+      None => ()
+    }
+    let segment = segment_view.to_owned()
+    match self.nodes[node_index].children.get(segment) {
+      Some(child) => node_index = child
+      None => {
+        complete_path = false
+        break
+      }
+    }
+  }
+  if complete_path {
+    match self.nodes[node_index].terminal {
+      Some(existing) => return Some(Equivalent(existing))
+      None => ()
+    }
+    match self.nodes[node_index].first_part {
+      Some(existing) => return Some(Derivable(existing))
+      None => ()
+    }
+  }
+  // The preflight above is mutation-free, so a conflict can never leave a
+  // partial path that poisons later validation findings.
+  node_index = 0
+  if self.nodes[node_index].first_part is None {
+    self.nodes[node_index].first_part = Some(display)
+  }
+  for segment_view in segments {
+    let segment = segment_view.to_owned()
+    let child = match self.nodes[node_index].children.get(segment) {
+      Some(existing) => existing
+      None => {
+        let fresh = self.nodes.length()
+        self.nodes.push(new_part_name_trie_node())
+        self.nodes[node_index].children[segment] = fresh
+        fresh
+      }
+    }
+    node_index = child
+    if self.nodes[node_index].first_part is None {
+      self.nodes[node_index].first_part = Some(display)
+    }
+  }
+  self.nodes[node_index].terminal = Some(display)
+  None
 }
 
 ///|

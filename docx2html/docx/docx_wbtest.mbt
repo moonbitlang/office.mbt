@@ -2620,6 +2620,48 @@ test "docx numbering xml terminates cyclic numbering style links" {
 }
 
 ///|
+test "docx numbering pre-resolves a deep style-link graph once" {
+  let depth = 1_024
+  let xml = StringBuilder::new()
+  let styles : Map[String, StyleInfo] = Map([])
+  xml.write_string(
+    (
+      #|<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    ),
+  )
+  for index in 0..<depth {
+    xml.write_string("<w:abstractNum w:abstractNumId=\"\{index}\">")
+    if index + 1 == depth {
+      xml.write_string(
+        "<w:lvl w:ilvl=\"0\"><w:numFmt w:val=\"decimal\"/></w:lvl>",
+      )
+    } else {
+      xml.write_string("<w:numStyleLink w:val=\"List\{index}\"/>")
+      styles["List\{index}"] = {
+        style_id: "List\{index}",
+        style_type: "numbering",
+        name: "\{index + 1}",
+      }
+    }
+    xml.write_string(
+      "</w:abstractNum><w:num w:numId=\"\{index}\"><w:abstractNumId w:val=\"\{index}\"/></w:num>",
+    )
+  }
+  xml.write_string("</w:numbering>")
+  let numbering = numbering_from_xml(xml.to_string(), styles)
+  assert_eq(numbering.resolved_abstract_num_ids.length(), depth)
+  for _ in 0..<4_096 {
+    match numbering.find_level("0", "0") {
+      Some(level) => {
+        assert_true(level.is_ordered)
+        assert_eq(level.level, 1)
+      }
+      None => fail("expected the terminal numbering level")
+    }
+  }
+}
+
+///|
 test "docx paragraph numbering uses numbering xml semantics" {
   let numbering = numbering_from_xml(
     (

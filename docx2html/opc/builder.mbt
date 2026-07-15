@@ -42,6 +42,8 @@ pub struct PackageBuilder {
   priv defaults : StableStringMap[String]
   priv overrides : StableStringMap[String]
   priv relationships : StableStringMap[Array[PackageRelationship]]
+  priv part_names : PartNameRegistry
+  priv mut zip_name_chars : Int
 }
 
 ///|
@@ -52,6 +54,8 @@ pub fn PackageBuilder::new() -> PackageBuilder {
     defaults: SortedMap([]),
     overrides: SortedMap([]),
     relationships: SortedMap([]),
+    part_names: PartNameRegistry::new(),
+    zip_name_chars: 0,
   }
 }
 
@@ -65,21 +69,27 @@ pub fn PackageBuilder::add_part(
   name : String,
   data : Bytes,
 ) -> Unit raise PackageBuildError {
-  check_part_name(name)
-  for entry in self.parts {
-    let (existing, _) = entry
-    if existing == name {
+  let zip_name_length = check_part_name(name)
+  if zip_name_length >
+    DEFAULT_MAX_ZIP_TOTAL_ENTRY_NAME_CHARS - self.zip_name_chars {
+    raise PackageBuildError(
+      "part names exceed \{DEFAULT_MAX_ZIP_TOTAL_ENTRY_NAME_CHARS} aggregate characters",
+    )
+  }
+  match self.part_names.register(name, name) {
+    Some(Equivalent(existing)) if existing == name =>
       raise PackageBuildError("duplicate part name: \{name}")
-    } else if builder_part_identity(existing) == builder_part_identity(name) {
+    Some(Equivalent(existing)) =>
       raise PackageBuildError(
         "duplicate part name after case normalization: \{existing} and \{name}",
       )
-    } else if part_names_are_derivable(existing, name) {
+    Some(Derivable(existing)) =>
       raise PackageBuildError(
         "part names must not be derivable from one another: \{existing} and \{name}",
       )
-    }
+    None => ()
   }
+  self.zip_name_chars = self.zip_name_chars + zip_name_length
   self.parts.push((name, data))
 }
 
@@ -187,25 +197,27 @@ pub fn PackageBuilder::build(
 ) -> Bytes raise PackageBuildError {
   // Authoritative name set, revalidated from scratch.
   let part_names : StableStringMap[String] = SortedMap([])
+  let package_names : StableStringMap[String] = SortedMap([])
+  let package_name_registry = PartNameRegistry::new()
+  let mut package_name_chars = CONTENT_TYPES_PART.length()
   for entry in self.parts {
     let (name, _) = entry
-    check_part_name(name)
-    let key = builder_part_identity(name)
-    match part_names.get(key) {
-      Some(existing) if existing == name =>
-        raise PackageBuildError("duplicate part name: \{name}")
-      Some(existing) =>
-        raise PackageBuildError(
-          "duplicate part name after case normalization: \{existing} and \{name}",
-        )
-      None => part_names[key] = name
+    let zip_name_length = check_part_name(name)
+    if zip_name_length >
+      DEFAULT_MAX_ZIP_TOTAL_ENTRY_NAME_CHARS - package_name_chars {
+      raise PackageBuildError(
+        "package entry names exceed \{DEFAULT_MAX_ZIP_TOTAL_ENTRY_NAME_CHARS} aggregate characters",
+      )
     }
+    package_name_chars = package_name_chars + zip_name_length
+    register_builder_package_name(name, package_names, package_name_registry)
+    let key = builder_part_identity(name)
+    part_names[key] = name
   }
   // Generated entries are builder-owned; a collision with an explicit part
   // would emit duplicate zip entries (Archive::add appends blindly), which
   // is exactly what validation rejects.
   let emitted_rels : Array[String] = []
-  let emitted_rels_by_key : StableStringMap[String] = SortedMap([])
   for source, rels in self.relationships {
     // Every non-root source must be an added part, or its rels part would
     // be an orphan describing nothing.
@@ -232,31 +244,25 @@ pub fn PackageBuilder::build(
       seen_ids.add(relationship.id)
     }
     let name = if source == "" { ROOT_RELS_PART } else { rels_part_for(source) }
-    let name_key = builder_part_identity(name)
-    if part_names.contains(name_key) {
+    guard zip_item_name_from_logical_part_name(name) is Some(zip_name) else {
       raise PackageBuildError(
-        "part name collides with the builder-emitted relationships part: \{name}",
+        "builder-emitted relationship part is not a canonical OPC PartName: \{name}",
       )
     }
-    match emitted_rels_by_key.get(name_key) {
-      Some(existing) =>
-        raise PackageBuildError(
-          "builder-emitted relationships parts are case-equivalent: \{existing} and \{name}",
-        )
-      None => emitted_rels_by_key[name_key] = name
+    if zip_name.length() > DEFAULT_MAX_ZIP_ENTRY_NAME_CHARS {
+      raise PackageBuildError(
+        "builder-emitted relationship part exceeds the ZIP entry-name limit: \{name}",
+      )
     }
+    if zip_name.length() >
+      DEFAULT_MAX_ZIP_TOTAL_ENTRY_NAME_CHARS - package_name_chars {
+      raise PackageBuildError(
+        "package entry names exceed \{DEFAULT_MAX_ZIP_TOTAL_ENTRY_NAME_CHARS} aggregate characters",
+      )
+    }
+    package_name_chars = package_name_chars + zip_name.length()
+    register_builder_package_name(name, package_names, package_name_registry)
     emitted_rels.push(name)
-  }
-  // Derivability is package-wide and therefore includes Relationships parts
-  // generated by the builder, not only caller-supplied parts.
-  let package_names : StableStringMap[String] = SortedMap([])
-  let descendant_by_ancestor : StableStringMap[String] = SortedMap([])
-  for entry in self.parts {
-    let (name, _) = entry
-    register_builder_package_name(name, package_names, descendant_by_ancestor)
-  }
-  for name in emitted_rels {
-    register_builder_package_name(name, package_names, descendant_by_ancestor)
   }
   let override_names : StableStringMap[String] = SortedMap([])
   for part_name, content_type in self.overrides {
@@ -362,7 +368,7 @@ pub fn PackageBuilder::build(
 /// — no trailing slash (a "directory" is not a part) and no
 /// builder-owned names (`[Content_Types].xml` and anything shaped like a
 /// relationships part: the builder emits all relationships itself).
-fn check_part_name(name : String) -> Unit raise PackageBuildError {
+fn check_part_name(name : String) -> Int raise PackageBuildError {
   if name == "" || name.has_prefix("/") || name.has_suffix("/") {
     raise PackageBuildError(
       "invalid part name '\{name}': expected a non-empty logical part name without a leading or trailing slash",
@@ -383,6 +389,17 @@ fn check_part_name(name : String) -> Unit raise PackageBuildError {
       )
     }
   }
+  guard zip_item_name_from_logical_part_name(name) is Some(zip_name) else {
+    raise PackageBuildError(
+      "invalid part name '\{name}': not a canonical OPC logical PartName",
+    )
+  }
+  if zip_name.length() > DEFAULT_MAX_ZIP_ENTRY_NAME_CHARS {
+    raise PackageBuildError(
+      "part name exceeds the \{DEFAULT_MAX_ZIP_ENTRY_NAME_CHARS}-character ZIP entry-name limit: \{name}",
+    )
+  }
+  zip_name.length()
 }
 
 ///|
@@ -394,36 +411,21 @@ fn builder_part_identity(name : String) -> String {
 fn register_builder_package_name(
   name : String,
   names : StableStringMap[String],
-  descendant_by_ancestor : StableStringMap[String],
+  registry : PartNameRegistry,
 ) -> Unit raise PackageBuildError {
   let key = builder_part_identity(name)
-  match names.get(key) {
-    Some(existing) if existing == name =>
+  match registry.register(name, name) {
+    Some(Equivalent(existing)) if existing == name =>
       raise PackageBuildError("duplicate part name: \{name}")
-    Some(existing) =>
+    Some(Equivalent(existing)) =>
       raise PackageBuildError(
         "duplicate part name after case normalization: \{existing} and \{name}",
       )
-    None => ()
-  }
-  match descendant_by_ancestor.get(key) {
-    Some(descendant) =>
+    Some(Derivable(existing)) =>
       raise PackageBuildError(
-        "part names must not be derivable from one another: \{name} and \{descendant}",
+        "part names must not be derivable from one another: \{existing} and \{name}",
       )
     None => ()
-  }
-  for ancestor in part_name_ancestor_keys(name) {
-    match names.get(ancestor) {
-      Some(existing) =>
-        raise PackageBuildError(
-          "part names must not be derivable from one another: \{existing} and \{name}",
-        )
-      None => ()
-    }
-    if !descendant_by_ancestor.contains(ancestor) {
-      descendant_by_ancestor[ancestor] = name
-    }
   }
   names[key] = name
 }
@@ -571,6 +573,8 @@ test "build revalidates duplicate relationship ids from raw state" {
         ],
       ),
     ]),
+    part_names: PartNameRegistry::new(),
+    zip_name_chars: 0,
   }
   try builder.build() catch {
     PackageBuildError(message) =>
@@ -590,6 +594,8 @@ test "build revalidates part names from raw state" {
     defaults: SortedMap([("xml", "application/xml")]),
     overrides: SortedMap([]),
     relationships: SortedMap([]),
+    part_names: PartNameRegistry::new(),
+    zip_name_chars: 0,
   }
   try builder.build() catch {
     PackageBuildError(message) =>

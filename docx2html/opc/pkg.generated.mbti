@@ -18,15 +18,15 @@ pub fn resolve_target(String, String) -> String?
 
 pub fn validate_docx_archive(@zip.Archive) -> Array[String]
 
-pub fn validate_docx_archive_limited(@zip.Archive, max_findings~ : Int, max_message_chars~ : Int, max_xml_source_units? : Int, max_xml_tokens? : Int, max_xml_materialized_chars? : Int, max_xml_token_chars? : Int) -> (Array[String], Bool)
+pub fn validate_docx_archive_limited(@zip.Archive, max_findings~ : Int, max_message_chars~ : Int, max_zip_entry_name_chars? : Int, max_zip_total_entry_name_chars? : Int, max_xml_source_units? : Int, max_xml_tokens? : Int, max_xml_materialized_chars? : Int, max_xml_token_chars? : Int) -> (Array[String], Bool)
 
-pub fn validate_docx_archive_report_limited(@zip.Archive, max_findings~ : Int, max_message_chars~ : Int, max_xml_source_units? : Int, max_xml_tokens? : Int, max_xml_materialized_chars? : Int, max_xml_token_chars? : Int) -> DocxValidationReport
+pub fn validate_docx_archive_report_limited(@zip.Archive, max_findings~ : Int, max_message_chars~ : Int, max_zip_entry_name_chars? : Int, max_zip_total_entry_name_chars? : Int, max_xml_source_units? : Int, max_xml_tokens? : Int, max_xml_materialized_chars? : Int, max_xml_token_chars? : Int) -> DocxValidationReport
 
 pub fn validate_docx_package(BytesView) -> Array[String]
 
-pub fn validate_docx_package_limited(BytesView, max_findings~ : Int, max_message_chars~ : Int, max_zip_entries? : Int, max_zip_entry_uncompressed_bytes? : Int, max_zip_total_uncompressed_bytes? : Int, max_xml_source_units? : Int, max_xml_tokens? : Int, max_xml_materialized_chars? : Int, max_xml_token_chars? : Int) -> (Array[String], Bool)
+pub fn validate_docx_package_limited(BytesView, max_findings~ : Int, max_message_chars~ : Int, max_zip_entries? : Int, max_zip_entry_uncompressed_bytes? : Int, max_zip_total_uncompressed_bytes? : Int, max_zip_entry_name_chars? : Int, max_zip_total_entry_name_chars? : Int, max_xml_source_units? : Int, max_xml_tokens? : Int, max_xml_materialized_chars? : Int, max_xml_token_chars? : Int) -> (Array[String], Bool)
 
-pub fn validate_docx_package_report_limited(BytesView, max_findings~ : Int, max_message_chars~ : Int, max_zip_entries? : Int, max_zip_entry_uncompressed_bytes? : Int, max_zip_total_uncompressed_bytes? : Int, max_xml_source_units? : Int, max_xml_tokens? : Int, max_xml_materialized_chars? : Int, max_xml_token_chars? : Int) -> DocxValidationReport
+pub fn validate_docx_package_report_limited(BytesView, max_findings~ : Int, max_message_chars~ : Int, max_zip_entries? : Int, max_zip_entry_uncompressed_bytes? : Int, max_zip_total_uncompressed_bytes? : Int, max_zip_entry_name_chars? : Int, max_zip_total_entry_name_chars? : Int, max_xml_source_units? : Int, max_xml_tokens? : Int, max_xml_materialized_chars? : Int, max_xml_token_chars? : Int) -> DocxValidationReport
 
 pub fn zip_item_name_from_logical_part_name(StringView) -> String?
 
@@ -57,6 +57,8 @@ pub(all) enum DocxValidationResourceLimit {
   ZipEntries
   ZipEntryUncompressedBytes
   ZipTotalUncompressedBytes
+  ZipEntryNameCharacters
+  ZipTotalEntryNameCharacters
   XmlSourceUnits
   XmlTokens
   XmlTokenLength
@@ -74,6 +76,17 @@ pub fn PackageBuilder::add_part(Self, String, Bytes) -> Unit raise PackageBuildE
 pub fn PackageBuilder::add_relationship(Self, String, String, String, source? : String, external? : Bool) -> Unit raise PackageBuildError
 pub fn PackageBuilder::build(Self) -> Bytes raise PackageBuildError
 pub fn PackageBuilder::new() -> Self
+
+pub(all) enum PartNameConflict {
+  Equivalent(String)
+  Derivable(String)
+}
+
+pub struct PartNameRegistry {
+  // private fields
+}
+pub fn PartNameRegistry::new() -> Self
+pub fn PartNameRegistry::register(Self, StringView, String) -> PartNameConflict?
 
 // Type aliases
 
