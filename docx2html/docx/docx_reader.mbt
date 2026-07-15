@@ -734,10 +734,13 @@ fn DocumentParts::build(
     diagnostics?,
     missing_annotation_id_mode~,
   )
-  let root = if strict_main_document {
-    read_xml_part_strict(zip, main_document_path, xml_budget?)
-  } else {
-    read_xml_part(zip, main_document_path, xml_budget?)
+  // Every public package projection uses the tolerant reader semantics.
+  // Mutation-safe annotated reads validate the same source again through the
+  // strict identity gate before exposing byte spans, without substituting the
+  // strict parser's normalized DOM into the returned document model.
+  let root = read_xml_part(zip, main_document_path, xml_budget?)
+  if strict_main_document {
+    validate_xml_part_strict_locally(zip, main_document_path)
   }
   {
     zip,
@@ -845,28 +848,23 @@ fn read_xml_part_with_root_namespace_uri(
 }
 
 ///|
-fn read_xml_part_strict(
+/// Strictly validates the mutation-safe main story without charging its source
+/// twice to the caller's cumulative retained-DOM budget. The tolerant DOM was
+/// already charged by `read_xml_part`; this discarded validation DOM receives
+/// an input-linear transient budget of its own.
+fn validate_xml_part_strict_locally(
   zip : ZipArchive,
   path : String,
-  xml_budget? : @xml.XmlReadBudget,
-) -> XmlElement raise DocxError {
+) -> Unit raise DocxError {
   guard zip.read_bytes(path) is Some(bytes) else {
     raise MissingPart(message="missing DOCX part: " + path)
   }
-  match xml_budget {
-    Some(budget) =>
-      @xml.read_xml_bytes_strict_limited(
-        bytes,
-        budget,
-        namespace_map=office_namespace_map(),
-      )
-    None => {
-      let text = @utf8.decode(bytes, ignore_bom=true) catch {
-        _ => raise InvalidXml(message="part is not valid UTF-8: " + path)
-      }
-      @xml.read_xml_string_strict(text, namespace_map=office_namespace_map())
-    }
-  }
+  @xml.read_xml_bytes_strict_limited(
+    bytes,
+    local_input_linear_xml_budget(bytes),
+    namespace_map=office_namespace_map(),
+  )
+  |> ignore
 }
 
 ///|
