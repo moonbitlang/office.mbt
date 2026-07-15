@@ -368,7 +368,10 @@ async test "D1 generic plans cannot publish mixed main OOXML dialects" {
         },
       )
     })
-    assert_eq(code, "office.transaction.validation_failed")
+    // Exact DOCX identification couples the officeDocument relationship
+    // dialect to the main WordprocessingML namespace, so the candidate is
+    // rejected before the format-neutral transaction validator phase.
+    assert_eq(code, "office.docx.invalid_package")
     assert_false(@afs.exists(output))
     assert_eq(@afs.read_file(input).binary(), original)
   })
