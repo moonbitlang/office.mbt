@@ -669,6 +669,32 @@ test "detect_format rejects malformed OPC entry paths" {
 }
 
 ///|
+test "detect_format rejects derivable OPC part names in either archive order" {
+  let source = @excel.write(@excel.new_file())
+  let orders : Array[(String, String)] = [
+    ("custom/a.xml", "custom/a.xml/b.xml"),
+    ("custom/a.xml/b.xml", "custom/a.xml"),
+  ]
+  for order in orders {
+    let broken = append_archive_part(
+      append_archive_part(source, order.0, @utf8.encode("<first/>")),
+      order.1,
+      @utf8.encode("<second/>"),
+    )
+    try @office.detect_format("book.xlsx", broken) catch {
+      err =>
+        assert_true(
+          Show::to_string(err).contains(
+            "part name is derivable from another part name",
+          ),
+        )
+    } noraise {
+      _ => fail("expected derivable OPC PartNames to be rejected")
+    }
+  }
+}
+
+///|
 test "detect_format rejects an override for the content-types manifest" {
   let broken = add_manifest_content_type_override(
     @excel.write(@excel.new_file()),

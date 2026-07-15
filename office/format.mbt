@@ -1153,6 +1153,7 @@ fn validate_package_structure(
   let part_names : StableStringMap[String] = SortedMap([])
   let package_parts : StableStringMap[Bool] = SortedMap([])
   let document_parts : StableStringMap[Bool] = SortedMap([])
+  let part_name_registry = @opc.PartNameRegistry::new()
   for entry in archive.entries() {
     let physical_name = entry.name()
     let is_directory = physical_name.has_suffix("/")
@@ -1169,6 +1170,15 @@ fn validate_package_structure(
     match logical_item {
       Some(logical_name) if !is_directory => {
         let key = opc_part_key(logical_name)
+        if key != opc_part_key("[Content_Types].xml") {
+          match part_name_registry.register(logical_name, physical_name) {
+            Some(Derivable(existing)) =>
+              findings.push(
+                "part name is derivable from another part name: \{existing} and \{physical_name}",
+              )
+            _ => ()
+          }
+        }
         parts[key] = parts.get(key).unwrap_or(0) + 1
         if !part_names.contains(key) {
           part_names[key] = physical_name
