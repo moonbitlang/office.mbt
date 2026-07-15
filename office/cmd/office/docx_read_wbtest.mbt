@@ -482,17 +482,41 @@ test "DOCX output builders reject growth before returning oversized output" {
 }
 
 ///|
-test "DOCX heading classification rejects oversized shared style names" {
+test "DOCX heading classification shares inspect semantics and bounds folding" {
   let paragraph = @word.paragraph(
     [@word.run([@word.text("not a heading")])],
     properties=@word.paragraph_properties(
       style_name=Some("Heading 1" + "x".repeat(1024 * 1024)),
     ),
   )
-  let style_ids : @sorted_map.SortedMap[String, Int] = SortedMap([])
-  let style_names : @sorted_map.SortedMap[String, Int] = SortedMap([])
-  assert_eq(cached_heading_level(paragraph, style_ids, style_names), None)
-  assert_eq(style_names.length(), 0)
+  assert_eq(docx_heading_level(paragraph), None)
+  assert_eq(
+    docx_heading_level(
+      @word.paragraph(
+        [@word.run([@word.text("exact id")])],
+        properties=@word.paragraph_properties(style_id=Some("Heading2")),
+      ),
+    ),
+    Some(2),
+  )
+  assert_eq(
+    docx_heading_level(
+      @word.paragraph(
+        [@word.run([@word.text("wrong id case")])],
+        properties=@word.paragraph_properties(style_id=Some("heading2")),
+      ),
+    ),
+    None,
+  )
+  assert_eq(
+    docx_heading_level(
+      @word.paragraph(
+        [@word.run([@word.text("bare name")])],
+        properties=@word.paragraph_properties(style_name=Some("HEADING")),
+      ),
+    ),
+    Some(1),
+  )
 }
 
 ///|

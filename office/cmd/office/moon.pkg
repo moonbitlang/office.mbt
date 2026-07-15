@@ -2,6 +2,7 @@ import {
   "bobzhang/docx2html/core" @docx_core,
   "bobzhang/docx2html/docx",
   "bobzhang/docx2html/document",
+  "bobzhang/docx2html/inspect" @docx_inspect,
   "bobzhang/docx2html/opc",
   "bobzhang/docx2html/paths" @docx_paths,
   "bobzhang/docx2html/xml",
