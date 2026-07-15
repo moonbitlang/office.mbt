@@ -5,6 +5,7 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 SANDBOX="$(mktemp -d "${TMPDIR:-/tmp}/docx2html-registry-check.XXXXXX")"
 MODULE="$SANDBOX/docx2html"
 trap 'rm -rf "$SANDBOX"' EXIT
+source "$ROOT/scripts/release_tree_guard.sh"
 
 mkdir -p "$MODULE" "$SANDBOX/scripts" "$SANDBOX/tools/openxml-validator"
 cp -R "$ROOT/docx2html/." "$MODULE/"
@@ -22,13 +23,16 @@ test -f "$SANDBOX/tools/openxml-validator/OpenXmlValidator.csproj"
 
 cd "$MODULE"
 moon update
-moon check --target native
-moon check --target wasm
-moon test --target native
-moon test --target wasm
+dependency_tree="$(moon tree)"
+printf '%s\n' "$dependency_tree"
+assert_selected_dependency "$dependency_tree" "bobzhang/mbtexcel" "0.1.9"
+moon check --frozen --target native
+moon check --frozen --target wasm
+moon test --frozen --target native
+moon test --frozen --target wasm
 
 set +e
-publish_output="$(moon publish --dry-run 2>&1)"
+publish_output="$(moon publish --frozen --dry-run 2>&1)"
 publish_status=$?
 set -e
 printf '%s\n' "$publish_output"

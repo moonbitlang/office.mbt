@@ -5,6 +5,7 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 SANDBOX="$(mktemp -d "${TMPDIR:-/tmp}/office-registry-check.XXXXXX")"
 MODULE="$SANDBOX/office"
 trap 'rm -rf "$SANDBOX"' EXIT
+source "$ROOT/scripts/release_tree_guard.sh"
 
 mkdir -p "$MODULE" "$SANDBOX/scripts" "$SANDBOX/tools/openxml-validator"
 cp -R "$ROOT/office/." "$MODULE/"
@@ -25,17 +26,24 @@ test -f "$SANDBOX/tools/openxml-validator/OpenXmlValidator.csproj"
 
 cd "$MODULE"
 moon update
-moon check --target native
-moon check --target wasm
-moon test --target native transaction
-moon test --target wasm transaction
-moon test --target native raw
-moon test --target wasm raw
-moon test --target native docx
-moon test --target wasm docx
+dependency_tree="$(moon tree)"
+printf '%s\n' "$dependency_tree"
+assert_selected_dependency "$dependency_tree" "bobzhang/mbtexcel" "0.1.9"
+assert_selected_dependency "$dependency_tree" "bobzhang/docx2html" "0.1.45"
+moon check --frozen --target native
+moon check --frozen --target wasm
+moon test --frozen --target native transaction
+moon test --frozen --target wasm transaction
+moon test --frozen --target native transaction/sdk_validity
+moon test --frozen --target native raw
+moon test --frozen --target wasm raw
+moon test --frozen --target native raw/sdk_validity
+moon test --frozen --target native docx
+moon test --frozen --target wasm docx
+moon test --frozen --target native docx/sdk_validity
 
 set +e
-publish_output="$(moon publish --dry-run 2>&1)"
+publish_output="$(moon publish --frozen --dry-run 2>&1)"
 publish_status=$?
 set -e
 printf '%s\n' "$publish_output"

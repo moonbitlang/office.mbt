@@ -36,6 +36,9 @@ materially weaker registry artifact.
 Publishing changes external registry state and remains an explicit maintainer
 action. The release checks copy each module outside the repository and outside
 `moon.work`, so dependency resolution cannot silently substitute workspace
-members. MoonBit versions disagree about the process status of both successful
-and failed publish dry runs, so the scripts require the tool's exact success
-marker regardless of exit status.
+members. After the one intentional `moon update`, each check prints `moon tree`,
+requires every selected occurrence of the pinned internal dependencies to have
+the exact release-train version, and runs all checks, tests, SDK-validity child
+packages, and publish dry runs with `--frozen`. MoonBit versions disagree about
+the process status of both successful and failed publish dry runs, so the
+scripts require the tool's exact success marker regardless of exit status.
