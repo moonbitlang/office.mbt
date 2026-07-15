@@ -2,12 +2,25 @@
 set -euo pipefail
 
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-ISOLATED="$(mktemp -d "${TMPDIR:-/tmp}/docx2html-registry-check.XXXXXX")"
-trap 'rm -rf "$ISOLATED"' EXIT
+SANDBOX="$(mktemp -d "${TMPDIR:-/tmp}/docx2html-registry-check.XXXXXX")"
+MODULE="$SANDBOX/docx2html"
+trap 'rm -rf "$SANDBOX"' EXIT
 
-cp -R "$ROOT/docx2html/." "$ISOLATED/"
+mkdir -p "$MODULE" "$SANDBOX/scripts" "$SANDBOX/tools/openxml-validator"
+cp -R "$ROOT/docx2html/." "$MODULE/"
+cp "$ROOT/scripts/ensure_dotnet.sh" "$ROOT/scripts/validate_docx.sh" \
+  "$SANDBOX/scripts/"
+cp "$ROOT/tools/openxml-validator/OpenXmlValidator.csproj" \
+  "$ROOT/tools/openxml-validator/Program.cs" \
+  "$SANDBOX/tools/openxml-validator/"
+chmod +x "$SANDBOX/scripts/ensure_dotnet.sh" \
+  "$SANDBOX/scripts/validate_docx.sh"
 
-cd "$ISOLATED"
+grep -Fq '"bobzhang/mbtexcel@0.1.9"' "$MODULE/moon.mod"
+test -x "$SANDBOX/scripts/validate_docx.sh"
+test -f "$SANDBOX/tools/openxml-validator/OpenXmlValidator.csproj"
+
+cd "$MODULE"
 moon update
 moon check --target native
 moon check --target wasm

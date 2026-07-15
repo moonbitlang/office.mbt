@@ -992,6 +992,50 @@ test "known main dialect rejects cross-family styles and numbering roles" {
 }
 
 ///|
+test "known main dialect rejects a cross-family numbering role" {
+  let transitional_namespace = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  let strict_namespace = "http://purl.oclc.org/ooxml/wordprocessingml/main"
+  let document_xml = "<w:document xmlns:w=\"" +
+    transitional_namespace +
+    "\"><w:body><w:p><w:pPr><w:numPr><w:ilvl w:val=\"0\"/><w:numId w:val=\"7\"/></w:numPr></w:pPr></w:p></w:body></w:document>"
+  let strict_numbering = "<w:numbering xmlns:w=\"" +
+    strict_namespace +
+    "\"><w:abstractNum w:abstractNumId=\"3\"><w:lvl w:ilvl=\"0\"><w:numFmt w:val=\"decimal\"/></w:lvl></w:abstractNum><w:num w:numId=\"7\"><w:abstractNumId w:val=\"3\"/></w:num></w:numbering>"
+  let document_relationships = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rNumbering\" Type=\"" +
+    STRICT_NUMBERING_RELATIONSHIP +
+    "\" Target=\"parts/numbering.xml\"/></Relationships>"
+  let zip = zip_with_text_entries([
+    (
+      "[Content_Types].xml",
+      wordprocessing_content_types([
+        ("/custom/parts/numbering.xml", NUMBERING_CONTENT_TYPE),
+      ]),
+    ),
+    (
+      "_rels/.rels",
+      relationship_part(
+        TRANSITIONAL_OFFICE_DOCUMENT_RELATIONSHIP,
+        "custom/document.xml",
+      ),
+    ),
+    ("custom/document.xml", document_xml),
+    ("custom/_rels/document.xml.rels", document_relationships),
+    ("custom/parts/numbering.xml", strict_numbering),
+  ])
+  try read_docx_zip_with_messages(zip) catch {
+    Unsupported(message~) =>
+      assert_true(
+        message.contains(
+          "numbering relationship dialect does not match the main document",
+        ),
+      )
+    _ => fail("expected cross-dialect numbering relationship rejection")
+  } noraise {
+    _ => fail("expected cross-dialect numbering relationship rejection")
+  }
+}
+
+///|
 test "styles and numbering relationship targets require role content types" {
   let strict_namespace = "http://purl.oclc.org/ooxml/wordprocessingml/main"
   for

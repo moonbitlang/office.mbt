@@ -19,10 +19,11 @@ For the transaction and bounded-DOCX release train introduced by A4 and D2:
    require its native, Wasm, and publish-dry-run checks to pass;
 5. publish `bobzhang/docx2html@0.1.45` from `docx2html/`;
 6. wait until that exact immutable version resolves from Mooncakes;
-7. update Office to require `docx2html@0.1.45`, then run
-   `scripts/check_office_registry_release.sh` (or the manual
+7. with Office's source manifest already staged to require
+   `docx2html@0.1.45`, run `scripts/check_office_registry_release.sh` (or the manual
    `office-registry-release-check` GitHub workflow) and require every native,
-   Wasm, transaction, and publish-dry-run check to pass;
+   Wasm, transaction, raw, DOCX, SDK-validation, and publish-dry-run check to
+   pass;
 8. only then publish `bobzhang/office@0.1.0` from `office/`.
 
 Never publish `office@0.1.0` first. Its manifest intentionally requires
