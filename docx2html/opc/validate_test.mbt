@@ -225,6 +225,25 @@ test "Relationships apply OPC Markup Compatibility processing" {
 }
 
 ///|
+test "Relationships retain unknown MCE attributes for schema validation" {
+  let root_rels =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
+    #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    #| mc:Bogus="value">
+    #| <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+    #|</Relationships>
+  let findings = @opc.validate_docx_package(
+    minimal_docx(root_rels=Some(root_rels)),
+  )
+  assert_true(
+    findings.any(finding => {
+      finding.contains("Relationships has undeclared attribute") &&
+      finding.contains("Bogus")
+    }),
+  )
+}
+
+///|
 test "Relationships reject invalid Markup Compatibility contracts" {
   let unbound_ignorable =
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
@@ -1170,6 +1189,7 @@ test "Relationships parts require a source while ordinary _rels paths remain leg
   let findings = @opc.validate_docx_package(
     minimal_docx(extra=[
       ("word/_rels/ghost.xml.rels", utf8_bytes(empty_relationships)),
+      ("word/_rels/.rels", utf8_bytes(empty_relationships)),
       ("word/_rels/nested/ghost.rels", utf8_bytes(empty_relationships)),
     ]),
   )
@@ -1177,6 +1197,9 @@ test "Relationships parts require a source while ordinary _rels paths remain leg
     findings.contains(
       "relationship part word/_rels/ghost.xml.rels describes missing source part: word/ghost.xml",
     ),
+  )
+  assert_true(
+    findings.contains("invalid Relationships part name: word/_rels/.rels"),
   )
   assert_true(
     findings.all(finding => !finding.contains("word/_rels/nested/ghost.rels")),
@@ -1209,7 +1232,33 @@ test "Relationships require NCName ids and non-empty required attributes" {
 }
 
 ///|
-test "Relationships enforce Type URI and External Target IRI grammar" {
+test "Relationships collapse schema whitespace and accept Unicode Type IRIs" {
+  let root_rels =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+    #|<Relationship Id=" rId1 " Type=" http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument " Target=" word/document.xml "/>
+    #|<Relationship Id=" unicode " Type=" https://例え.テスト/型 " Target=" https://例え.テスト/文書 " TargetMode="External"/>
+    #|</Relationships>
+  assert_eq(
+    @opc.validate_docx_package(minimal_docx(root_rels=Some(root_rels))),
+    [],
+  )
+}
+
+///|
+test "Relationships compare collapsed IDs for uniqueness" {
+  let root_rels =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+    #|<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+    #|<Relationship Id=" rId1 " Type="urn:test" Target="word/document.xml"/>
+    #|</Relationships>
+  let findings = @opc.validate_docx_package(
+    minimal_docx(root_rels=Some(root_rels)),
+  )
+  assert_true(findings.contains("_rels/.rels: duplicate Relationship Id: rId1"))
+}
+
+///|
+test "Relationships enforce Type IRI and External Target IRI grammar" {
   let root_rels =
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
     #|<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
@@ -1228,17 +1277,17 @@ test "Relationships enforce Type URI and External Target IRI grammar" {
   )
   assert_true(
     findings.contains(
-      "_rels/.rels: Relationship Type is not an absolute URI without a fragment: types/test",
+      "_rels/.rels: Relationship Type is not an absolute IRI without a fragment: types/test",
     ),
   )
   assert_true(
     findings.contains(
-      "_rels/.rels: Relationship Type is not an absolute URI without a fragment: urn:test#kind",
+      "_rels/.rels: Relationship Type is not an absolute IRI without a fragment: urn:test#kind",
     ),
   )
   assert_true(
     findings.contains(
-      "_rels/.rels: Relationship Type is not an absolute URI without a fragment: https://example.test/%GG",
+      "_rels/.rels: Relationship Type is not an absolute IRI without a fragment: https://example.test/%GG",
     ),
   )
   assert_true(

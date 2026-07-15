@@ -1,8 +1,37 @@
 // RFC 3986 URI and RFC 3987 IRI grammar shared by relationship validation
-// and package construction. Relationship Types are absolute URIs without a
+// and package construction. Relationship Types are absolute IRIs without a
 // fragment; External Targets are IRI references. Microsoft Office also emits
 // the documented legacy `file:///C:\\...` and UNC spellings, so those are
 // accepted as a narrow compatibility extension for External Targets only.
+
+///|
+/// XML Schema `whiteSpace=collapse`: replace XML whitespace runs with one
+/// ASCII space and remove leading/trailing runs. Relationship Id, Type, and
+/// Target values use datatypes whose value spaces apply this normalization.
+fn collapse_xml_schema_whitespace(value : StringView) -> String {
+  let output = StringBuilder::new(size_hint=value.length())
+  let mut wrote_value = false
+  let mut pending_space = false
+  for character in value {
+    let whitespace = character == ' ' ||
+      character == '\t' ||
+      character == '\n' ||
+      character == '\r'
+    if whitespace {
+      if wrote_value {
+        pending_space = true
+      }
+    } else {
+      if pending_space {
+        output.write_char(' ') |> ignore
+        pending_space = false
+      }
+      output.write_char(character) |> ignore
+      wrote_value = true
+    }
+  }
+  output.to_string()
+}
 
 ///|
 fn relationship_uri_pchar(character : Char) -> Bool {
@@ -565,7 +594,7 @@ fn office_windows_file_iri_valid(value : StringView) -> Bool {
 ///|
 fn is_absolute_relationship_type(value : StringView) -> Bool {
   relationship_has_uri_scheme(value) &&
-  relationship_identifier_reference_valid(value, false) &&
+  relationship_identifier_reference_valid(value, true) &&
   !value.contains("#")
 }
 

@@ -156,8 +156,8 @@ pub fn PackageBuilder::add_override(
 /// (`""` = the package root `_rels/.rels`); `target` is source-relative (or
 /// pack-absolute with a leading `/`). Ids must be unique per source.
 /// `external~` marks a `TargetMode="External"` relationship (e.g. a
-/// hyperlink URL); external targets are emitted verbatim and exempt from
-/// the internal-target resolution check.
+/// hyperlink URL). Id, Type, and Target are normalized to their XML Schema
+/// value spaces; external targets are exempt from internal-target resolution.
 pub fn PackageBuilder::add_relationship(
   self : PackageBuilder,
   id : String,
@@ -166,20 +166,25 @@ pub fn PackageBuilder::add_relationship(
   source? : String = "",
   external? : Bool = false,
 ) -> Unit raise PackageBuildError {
-  check_metadata("relationship Id", id)
-  if !is_valid_relationship_id(id) {
-    raise PackageBuildError("relationship Id is not an XML NCName: \{id}")
-  }
-  check_metadata("relationship Type", relationship_type)
-  if !is_absolute_relationship_type(relationship_type) {
+  let normalized_id = collapse_xml_schema_whitespace(id)
+  let normalized_type = collapse_xml_schema_whitespace(relationship_type)
+  let normalized_target = collapse_xml_schema_whitespace(target)
+  check_metadata("relationship Id", normalized_id)
+  if !is_valid_relationship_id(normalized_id) {
     raise PackageBuildError(
-      "relationship Type must be an absolute URI without a fragment: \{relationship_type}",
+      "relationship Id is not an XML NCName: \{normalized_id}",
     )
   }
-  check_metadata("relationship Target", target)
-  if external && !is_valid_external_relationship_target(target) {
+  check_metadata("relationship Type", normalized_type)
+  if !is_absolute_relationship_type(normalized_type) {
     raise PackageBuildError(
-      "external relationship Target is not a valid IRI reference: \{target}",
+      "relationship Type must be an absolute IRI without a fragment: \{normalized_type}",
+    )
+  }
+  check_metadata("relationship Target", normalized_target)
+  if external && !is_valid_external_relationship_target(normalized_target) {
+    raise PackageBuildError(
+      "external relationship Target is not a valid IRI reference: \{normalized_target}",
     )
   }
   let rels = match self.relationships.get(source) {
@@ -191,13 +196,18 @@ pub fn PackageBuilder::add_relationship(
     }
   }
   for existing in rels {
-    if existing.id == id {
+    if existing.id == normalized_id {
       raise PackageBuildError(
-        "duplicate relationship Id '\{id}' for source '\{source}'",
+        "duplicate relationship Id '\{normalized_id}' for source '\{source}'",
       )
     }
   }
-  rels.push({ id, relationship_type, target, external })
+  rels.push({
+    id: normalized_id,
+    relationship_type: normalized_type,
+    target: normalized_target,
+    external,
+  })
 }
 
 ///|
@@ -252,7 +262,7 @@ pub fn PackageBuilder::build(
       check_metadata("relationship Type", relationship.relationship_type)
       if !is_absolute_relationship_type(relationship.relationship_type) {
         raise PackageBuildError(
-          "relationship Type must be an absolute URI without a fragment: \{relationship.relationship_type}",
+          "relationship Type must be an absolute IRI without a fragment: \{relationship.relationship_type}",
         )
       }
       check_metadata("relationship Target", relationship.target)
@@ -607,7 +617,7 @@ test "build revalidates relationship metadata from raw state" {
     PackageBuildError(message) =>
       inspect(
         message.has_prefix(
-          "relationship Type must be an absolute URI without a fragment",
+          "relationship Type must be an absolute IRI without a fragment",
         ),
         content="true",
       )

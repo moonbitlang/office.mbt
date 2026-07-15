@@ -225,6 +225,10 @@ test "builder round 1 hardening: reserved names, orphan sources, metadata, deter
     "reserved part name '_rels/.rels'",
   )
   expect_build_error(
+    builder => builder.add_part("word/_rels/.rels", b"x"),
+    "reserved part name 'word/_rels/.rels'",
+  )
+  expect_build_error(
     builder => builder.add_part("word/_rels/document.xml.rels", b"x"),
     "reserved part name 'word/_rels/document.xml.rels'",
   )
@@ -353,7 +357,7 @@ test "builder enforces package-wide names and metadata grammars" {
     builder => {
       builder.add_relationship("rRelative", "types/test", "word/document.xml")
     },
-    "relationship Type must be an absolute URI without a fragment",
+    "relationship Type must be an absolute IRI without a fragment",
   )
   expect_build_error(
     builder => {
@@ -361,7 +365,7 @@ test "builder enforces package-wide names and metadata grammars" {
         "rFragment", "urn:test#kind", "word/document.xml",
       )
     },
-    "relationship Type must be an absolute URI without a fragment",
+    "relationship Type must be an absolute IRI without a fragment",
   )
   expect_build_error(
     builder => {
@@ -369,7 +373,7 @@ test "builder enforces package-wide names and metadata grammars" {
         "rPercent", "https://example.test/%GG", "word/document.xml",
       )
     },
-    "relationship Type must be an absolute URI without a fragment",
+    "relationship Type must be an absolute IRI without a fragment",
   )
   expect_build_error(
     builder => {
@@ -429,10 +433,16 @@ test "builder enforces package-wide names and metadata grammars" {
   parameterized.add_part("word/data.bin", b"data")
   parameterized.add_relationship(
     "rUnicodeIri",
-    "urn:test:unicode",
+    "https://例え.テスト/型",
     "https://例え.テスト/文書?q=値",
     source="word/document.xml",
     external=true,
+  )
+  parameterized.add_relationship(
+    " rWhitespace ",
+    " urn:test:whitespace ",
+    " data.bin ",
+    source="word/document.xml",
   )
   parameterized.add_relationship(
     "rRelativeIri",
