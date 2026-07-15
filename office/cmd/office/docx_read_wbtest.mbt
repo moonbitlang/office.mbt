@@ -623,6 +623,32 @@ test "DOCX structured reads accept explicit ZIP directory records" {
 }
 
 ///|
+test "DOCX structured reads warn and continue on broken section references" {
+  let archive = try! @zip.read(docx_read_test_bytes())
+  guard archive.get("word/document.xml") is Some(document_bytes) else {
+    fail("fixture has no main document part")
+  }
+  let document = try! @utf8.decode(document_bytes, ignore_bom=true)
+  let malformed = document.replace(
+    old="</w:body>",
+    new="<w:sectPr><w:headerReference w:type=\"default\"/></w:sectPr></w:body>",
+  )
+  assert_true(archive.replace("word/document.xml", @utf8.encode(malformed)))
+  let projection = open_docx_projection(
+    "missing-header-id.docx",
+    @zip.write(archive),
+    1000,
+  )
+  assert_true(find_projection_entry(projection, "/docx/body") is Some(_))
+  assert_true(
+    projection.warnings.any(warning => {
+      warning.code == "office.docx.reader_warning" &&
+      warning.message.contains("without r:id was ignored")
+    }),
+  )
+}
+
+///|
 test "DOCX preflight rejects foreign-namespace officeDocument relationships" {
   let archive = try! @zip.read(docx_read_test_bytes())
   let root_relationships =
