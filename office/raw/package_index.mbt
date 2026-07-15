@@ -164,56 +164,78 @@ fn xml_name_uri(value : String) -> String {
 }
 
 ///|
-fn decode_xml_bytes(name : String, bytes : BytesView) -> String raise RawError {
-  let decoded = if bytes.length() >= 2 && bytes[0] == 0xff && bytes[1] == 0xfe {
-    @utf16.decode(bytes, ignore_bom=true) catch {
-      _ =>
-        raise raw_error(
-          "office.raw.invalid_xml_encoding",
-          "part '/\{name}' is not valid UTF-8 or UTF-16 XML text",
-        )
-    }
+fn decode_xml_bytes_with_encoding(
+  name : String,
+  bytes : BytesView,
+) -> (String, @xml.XmlSourceEncoding) raise RawError {
+  if bytes.length() >= 2 && bytes[0] == 0xff && bytes[1] == 0xfe {
+    (
+      @utf16.decode(bytes, ignore_bom=true) catch {
+        _ =>
+          raise raw_error(
+            "office.raw.invalid_xml_encoding",
+            "part '/\{name}' is not valid UTF-8 or UTF-16 XML text",
+          )
+      },
+      Utf16LittleEndianWithBom,
+    )
   } else if bytes.length() >= 2 && bytes[0] == 0xfe && bytes[1] == 0xff {
-    @utf16.decode(bytes, ignore_bom=true, endianness=Big) catch {
-      _ =>
-        raise raw_error(
-          "office.raw.invalid_xml_encoding",
-          "part '/\{name}' is not valid UTF-8 or UTF-16 XML text",
-        )
-    }
+    (
+      @utf16.decode(bytes, ignore_bom=true, endianness=Big) catch {
+        _ =>
+          raise raw_error(
+            "office.raw.invalid_xml_encoding",
+            "part '/\{name}' is not valid UTF-8 or UTF-16 XML text",
+          )
+      },
+      Utf16BigEndianWithBom,
+    )
   } else if bytes.length() >= 2 && bytes[0] == b'<' && bytes[1] == 0x00 {
-    @utf16.decode(bytes) catch {
-      _ =>
-        raise raw_error(
-          "office.raw.invalid_xml_encoding",
-          "part '/\{name}' is not valid UTF-8 or UTF-16 XML text",
-        )
-    }
+    (
+      @utf16.decode(bytes) catch {
+        _ =>
+          raise raw_error(
+            "office.raw.invalid_xml_encoding",
+            "part '/\{name}' is not valid UTF-8 or UTF-16 XML text",
+          )
+      },
+      Utf16LittleEndian,
+    )
   } else if bytes.length() >= 2 && bytes[0] == 0x00 && bytes[1] == b'<' {
-    @utf16.decode(bytes, endianness=Big) catch {
-      _ =>
-        raise raw_error(
-          "office.raw.invalid_xml_encoding",
-          "part '/\{name}' is not valid UTF-8 or UTF-16 XML text",
-        )
-    }
+    (
+      @utf16.decode(bytes, endianness=Big) catch {
+        _ =>
+          raise raw_error(
+            "office.raw.invalid_xml_encoding",
+            "part '/\{name}' is not valid UTF-8 or UTF-16 XML text",
+          )
+      },
+      Utf16BigEndian,
+    )
   } else {
-    @utf8.decode(bytes, ignore_bom=true) catch {
-      _ =>
-        raise raw_error(
-          "office.raw.invalid_xml_encoding",
-          "part '/\{name}' is not valid UTF-8 or UTF-16 XML text",
-        )
-    }
+    (
+      @utf8.decode(bytes, ignore_bom=true) catch {
+        _ =>
+          raise raw_error(
+            "office.raw.invalid_xml_encoding",
+            "part '/\{name}' is not valid UTF-8 or UTF-16 XML text",
+          )
+      },
+      Utf8,
+    )
   }
-  decoded
 }
 
 ///|
-fn checked_metadata_xml_text(
+fn decode_xml_bytes(name : String, bytes : BytesView) -> String raise RawError {
+  decode_xml_bytes_with_encoding(name, bytes).0
+}
+
+///|
+fn checked_metadata_xml_source(
   name : String,
   bytes : BytesView,
-) -> String raise RawError {
+) -> (String, @xml.XmlSourceEncoding) raise RawError {
   if bytes.length() == 0 || bytes.length() > raw_metadata_max_bytes {
     raise raw_xml_resource_limit(
       name,
@@ -222,9 +244,31 @@ fn checked_metadata_xml_text(
       bytes.length(),
     )
   }
-  let text = decode_xml_bytes(name, bytes)
+  let decoded = decode_xml_bytes_with_encoding(name, bytes)
+  let text = decoded.0
   preflight_raw_metadata_xml(name, @utf8.encode(text))
-  text
+  decoded
+}
+
+///|
+fn checked_metadata_xml_text(
+  name : String,
+  bytes : BytesView,
+) -> String raise RawError {
+  checked_metadata_xml_source(name, bytes).0
+}
+
+///|
+fn raw_relationship_xml_budget(source : String) -> @xml.XmlReadBudget {
+  @xml.xml_read_budget(
+    max_source_units=source.length(),
+    max_tokens=raw_metadata_max_nodes * 4 +
+      raw_metadata_max_attributes * 2 +
+      raw_metadata_max_namespace_declarations * 2 +
+      1024,
+    max_materialized_chars=raw_metadata_max_bytes * 4,
+    max_token_chars=raw_metadata_max_bytes,
+  )
 }
 
 ///|
@@ -751,7 +795,29 @@ fn parse_relationships(
         "package index lost relationship part '/\{canonical}'",
       )
   }
-  let root = parse_xml_bytes(canonical, bytes)
+  let decoded = checked_metadata_xml_source(canonical, bytes)
+  let root = @opc.read_opc_relationships_string_encoded_limited(
+    decoded.0,
+    decoded.1,
+    raw_relationship_xml_budget(decoded.0),
+  ) catch {
+    error =>
+      if error.xml_resource_limit() is Some(_) {
+        raise raw_error(
+          "office.raw.resource_limit",
+          "relationship part '/\{canonical}' exceeds the bounded XML reader: \{error.description()}",
+          details=Json::object({
+            "kind": Json::string("relationship_xml"),
+            "part": Json::string(bounded_raw_text(canonical, 160)),
+          }),
+        )
+      } else {
+        raise raw_error(
+          "office.raw.invalid_relationship",
+          "relationship part '/\{canonical}' is not well-formed strict OPC XML: \{error.description()}",
+        )
+      }
+  }
   if root.name != relationships_root {
     raise raw_error(
       "office.raw.invalid_relationship",
@@ -810,12 +876,16 @@ fn parse_relationships(
             canonical, "relationship_records", raw_max_relationship_records, records,
           )
         }
-        match
-          (
-            element.attributes.get("Id"),
-            element.attributes.get("Type"),
-            element.attributes.get("Target"),
-          ) {
+        let normalized_id = element.attributes
+          .get("Id")
+          .map(value => @xml.collapse_xml_schema_whitespace(value))
+        let normalized_type = element.attributes
+          .get("Type")
+          .map(value => @xml.collapse_xml_schema_whitespace(value))
+        let normalized_target = element.attributes
+          .get("Target")
+          .map(value => @xml.collapse_xml_schema_whitespace(value))
+        match (normalized_id, normalized_type, normalized_target) {
           (Some(id), Some(kind), Some(target)) if id != "" &&
             kind != "" &&
             target != "" => {
