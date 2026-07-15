@@ -586,43 +586,18 @@ fn format_for_main_content_type(value : String) -> @office.DocumentFormat? {
 
 ///|
 fn relationships_part_for(source : String) -> String {
-  if source == "" {
-    return "_rels/.rels"
-  }
-  match source.rev_find("/") {
-    Some(slash) =>
-      source[:slash].to_owned() +
-      "/_rels/" +
-      source[slash + 1:].to_owned() +
-      ".rels"
-    None => "_rels/" + source + ".rels"
-  }
+  @opc.relationships_part_name_for_source(
+    if source == "" {
+      ""
+    } else {
+      logical_part_name_for_address(source)
+    },
+  )
 }
 
 ///|
 fn relationship_source_for_part(part : String) -> String? {
-  let lower = part.to_lower()
-  if lower == "_rels/.rels" {
-    return Some("")
-  }
-  if !lower.has_suffix(".rels") {
-    return None
-  }
-  if lower.has_prefix("_rels/") {
-    let basename = part[6:part.length() - 5].to_owned()
-    return if basename == "" { None } else { Some(basename) }
-  }
-  match lower.rev_find("/_rels/") {
-    Some(marker) => {
-      let basename = part[marker + 7:part.length() - 5].to_owned()
-      if basename == "" {
-        None
-      } else {
-        Some(part[:marker].to_owned() + "/" + basename)
-      }
-    }
-    None => None
-  }
+  @opc.relationship_source_part_name(logical_part_name_for_address(part))
 }
 
 ///|
@@ -1368,7 +1343,9 @@ fn validate_all_relationship_parts(pkg : RawPackage) -> Unit raise RawError {
   for entry in pkg.archive.entries() {
     let part = entry.name()
     let declared_type = pkg.content_types.for_part(part).trim().to_lower()
-    let relationship_name = canonical_part_key(part).has_suffix(".rels")
+    let relationship_name = @opc.is_relationship_part_name(
+      logical_part_name_for_address(part),
+    )
     if relationship_name {
       if declared_type != relationships_content_type {
         raise raw_error(

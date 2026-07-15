@@ -289,6 +289,61 @@ pub fn PartNameRegistry::register(
 }
 
 ///|
+/// Returns the logical Relationships-part name for a package-root or part
+/// source. Earlier `_rels` path segments remain ordinary source-name segments.
+pub fn relationships_part_name_for_source(source : String) -> String {
+  if source == "" {
+    "_rels/.rels"
+  } else {
+    match source.rev_find("/") {
+      Some(slash) => "\{source[:slash]}/_rels/\{source[slash + 1:]}.rels"
+      None => "_rels/\{source}.rels"
+    }
+  }
+}
+
+///|
+/// Returns whether the last two path segments have the reserved OPC
+/// Relationships-part shape. A `.rels` suffix elsewhere is an ordinary part.
+pub fn is_relationship_part_name(name : String) -> Bool {
+  let segments = name.split("/").collect()
+  segments.length() >= 2 &&
+  part_name_key(segments[segments.length() - 2]) == "_rels" &&
+  part_name_key(segments[segments.length() - 1]).has_suffix(".rels")
+}
+
+///|
+/// Derives the package-root or part source represented by a Relationships-part
+/// name. Only the final `_rels/<filename>.rels` pair is structural; earlier
+/// `_rels` segments belong to the source PartName.
+pub fn relationship_source_part_name(name : String) -> String? {
+  if part_name_key(name) == "_rels/.rels" {
+    return Some("")
+  }
+  if !is_relationship_part_name(name) {
+    return None
+  }
+  let segments = name.split("/").collect()
+  let filename = segments[segments.length() - 1]
+  if filename.length() <= ".rels".length() {
+    return None
+  }
+  let source_name = filename[:filename.length() - ".rels".length()].to_owned()
+  let output = StringBuilder::new(size_hint=name.length())
+  for index in 0..<(segments.length() - 2) {
+    if index > 0 {
+      output.write_char('/') |> ignore
+    }
+    output.write_string(segments[index].to_owned()) |> ignore
+  }
+  if segments.length() > 2 {
+    output.write_char('/') |> ignore
+  }
+  output.write_string(source_name) |> ignore
+  Some(output.to_string())
+}
+
+///|
 /// Maps an ASCII ZIP item name to its logical OPC part name (without the
 /// leading slash used by the abstract syntax). Physical ZIP names percent-
 /// encode non-ASCII scalars; logical part names contain those scalars

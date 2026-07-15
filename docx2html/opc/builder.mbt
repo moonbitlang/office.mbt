@@ -279,7 +279,7 @@ pub fn PackageBuilder::build(
       }
       seen_ids.add(relationship.id)
     }
-    let name = if source == "" { ROOT_RELS_PART } else { rels_part_for(source) }
+    let name = relationships_part_name_for_source(source)
     guard zip_item_name_from_logical_part_name(name) is Some(zip_name) else {
       raise PackageBuildError(
         "builder-emitted relationship part is not a canonical OPC PartName: \{name}",
@@ -366,7 +366,7 @@ pub fn PackageBuilder::build(
           "relationship \{relationship.id} of '\{source}' has an invalid internal target: \{relationship.target}",
         )
       }
-      if is_rels_part(resolved) {
+      if is_relationship_part_name(resolved) {
         raise PackageBuildError(
           "relationship \{relationship.id} of '\{source}' must not target a Relationships part: \{relationship.target}",
         )
@@ -385,7 +385,7 @@ pub fn PackageBuilder::build(
     compression=Deflate,
   )
   for source, rels in self.relationships {
-    let name = if source == "" { ROOT_RELS_PART } else { rels_part_for(source) }
+    let name = relationships_part_name_for_source(source)
     let zip_name = zip_item_name_from_logical_part_name(name).unwrap()
     archive.add(
       zip_name,
@@ -418,7 +418,7 @@ fn check_part_name(name : String) -> Int raise PackageBuildError {
   let key = builder_part_identity(name)
   if key == builder_part_identity(CONTENT_TYPES_PART) ||
     key == builder_part_identity(ROOT_RELS_PART) ||
-    is_rels_part(name) {
+    is_relationship_part_name(name) {
     raise PackageBuildError(
       "reserved part name '\{name}': the builder emits content types and relationships itself",
     )
@@ -489,19 +489,6 @@ fn check_metadata(
         "\{what} contains an XML-illegal control character (code \{code})",
       )
     }
-  }
-}
-
-///|
-fn rels_part_for(part : String) -> String {
-  let (dir, file) = match part.rev_find("/") {
-    Some(index) => (part[:index].to_owned(), part[index + 1:].to_owned())
-    None => ("", part)
-  }
-  if dir == "" {
-    "_rels/\{file}.rels"
-  } else {
-    "\{dir}/_rels/\{file}.rels"
   }
 }
 

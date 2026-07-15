@@ -1085,55 +1085,16 @@ fn part_extension(name : String) -> String? {
 }
 
 ///|
-fn relationships_part_for(part : String) -> String {
-  match part.rev_find("/") {
-    Some(slash) => "\{part[:slash]}/_rels/\{part[slash + 1:]}.rels"
-    None => "_rels/\{part}.rels"
-  }
-}
-
-///|
 fn relationships_base_dir(part : String) -> String? {
-  if part == "_rels/.rels" {
-    return Some("")
+  match @opc.relationship_source_part_name(part) {
+    Some("") => Some("")
+    Some(source) =>
+      match source.rev_find("/") {
+        Some(slash) => Some(source[:slash + 1].to_owned())
+        None => Some("")
+      }
+    None => None
   }
-  if part.has_prefix("_rels/") {
-    let relationship_name = part["_rels/".length():]
-    return if relationship_name == "" || relationship_name.contains("/") {
-      None
-    } else {
-      Some("")
-    }
-  }
-  guard part.find("/_rels/") is Some(marker) else { return None }
-  let relationship_name = part[marker + "/_rels/".length():]
-  if relationship_name == "" || relationship_name.contains("/") {
-    None
-  } else {
-    Some(part[:marker + 1].to_owned())
-  }
-}
-
-///|
-fn relationship_source_part(part : String) -> String? {
-  if part == "_rels/.rels" {
-    return Some("")
-  }
-  guard relationships_base_dir(part) is Some(base) else { return None }
-  let relationship_name = if part.has_prefix("_rels/") {
-    part["_rels/".length():]
-  } else {
-    guard part.find("/_rels/") is Some(marker) else { return None }
-    part[marker + "/_rels/".length():]
-  }
-  guard relationship_name.has_suffix(".rels") &&
-    relationship_name.length() > ".rels".length() else {
-    return None
-  }
-  Some(
-    base +
-    relationship_name[:relationship_name.length() - ".rels".length()].to_owned(),
-  )
 }
 
 ///|
@@ -1185,7 +1146,7 @@ fn validate_package_structure(
         }
         if key != opc_part_key("[Content_Types].xml") {
           package_parts[key] = true
-          if !key.has_suffix(".rels") {
+          if !@opc.is_relationship_part_name(logical_name) {
             document_parts[key] = true
           }
         }
@@ -1234,7 +1195,7 @@ fn validate_package_structure(
   if !document_parts.contains(opc_part_key(main_part)) {
     findings.push("missing required part: \{main_part}")
   }
-  let main_relationships = relationships_part_for(main_part)
+  let main_relationships = @opc.relationships_part_name_for_source(main_part)
   if require_main_relationships &&
     !parts.contains(opc_part_key(main_relationships)) {
     findings.push("missing required part: \{main_relationships}")
@@ -1363,7 +1324,7 @@ fn validate_package_structure(
     match content_type {
       None => findings.push("part has no declared content type: \{name}")
       Some(content_type) =>
-        if key.has_suffix(".rels") &&
+        if @opc.is_relationship_part_name(name) &&
           !media_type_equal(content_type, RELATIONSHIPS_CONTENT_TYPE) {
           findings.push(
             "relationship part has an invalid content type: \{name} -> \{content_type}",
@@ -1378,7 +1339,7 @@ fn validate_package_structure(
       continue
     }
     let relationship_key = opc_part_key(relationship_part)
-    if !relationship_key.has_suffix(".rels") {
+    if !@opc.is_relationship_part_name(relationship_part) {
       continue
     }
     let base = match relationships_base_dir(relationship_key) {
@@ -1390,7 +1351,7 @@ fn validate_package_structure(
         continue
       }
     }
-    match relationship_source_part(relationship_key) {
+    match @opc.relationship_source_part_name(relationship_part) {
       Some("") => ()
       Some(source) =>
         if !document_parts.contains(opc_part_key(source)) {

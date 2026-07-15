@@ -51,6 +51,27 @@ fn append_archive_part(
 }
 
 ///|
+fn append_content_type_override(
+  data : BytesView,
+  part_name : String,
+  content_type : String,
+) -> Bytes raise {
+  let archive = @zip.read(data)
+  guard archive.get("[Content_Types].xml") is Some(bytes) else {
+    fail("test archive did not contain [Content_Types].xml")
+  }
+  let text = @utf8.decode(bytes, ignore_bom=true)
+  let updated = text.replace(
+    old="</Types>",
+    new="<Override PartName=\"/\{part_name}\" ContentType=\"\{content_type}\"/></Types>",
+  )
+  if updated == text {
+    fail("test could not extend [Content_Types].xml")
+  }
+  replace_archive_part(data, "[Content_Types].xml", @utf8.encode(updated))
+}
+
+///|
 fn format_hash_clustered_relationship_names(
   count : Int,
   bucket_mask : Int,
@@ -719,6 +740,38 @@ test "detect_format accepts relationships for root-level source parts" {
   )
   inspect(
     @office.detect_format("book.xlsx", with_root_relationships).name(),
+    content="xlsx",
+  )
+}
+
+///|
+test "detect_format classifies Relationships parts by their final path segments" {
+  let source = @excel.write(@excel.new_file())
+  let ordinary = append_content_type_override(
+    append_archive_part(
+      source,
+      "word/_rels/nested/ghost.rels",
+      @utf8.encode("<ordinary/>"),
+    ),
+    "word/_rels/nested/ghost.rels",
+    "application/xml",
+  )
+  inspect(@office.detect_format("book.xlsx", ordinary).name(), content="xlsx")
+
+  let nested_source = append_content_type_override(
+    append_archive_part(source, "word/_rels/data.bin", b"payload"),
+    "word/_rels/data.bin",
+    "application/octet-stream",
+  )
+  let nested_relationships = append_archive_part(
+    nested_source,
+    "word/_rels/_rels/data.bin.rels",
+    @utf8.encode(
+      "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"/>",
+    ),
+  )
+  inspect(
+    @office.detect_format("book.xlsx", nested_relationships).name(),
     content="xlsx",
   )
 }
