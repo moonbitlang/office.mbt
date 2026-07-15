@@ -1272,6 +1272,37 @@ test "detect_format identifies generated docx" {
 }
 
 ///|
+test "detect_format follows Unicode logical OPC part names" {
+  let builder = @opc.PackageBuilder::new()
+  builder.add_default(
+    "rels", "application/vnd.openxmlformats-package.relationships+xml",
+  )
+  builder.add_override(
+    "/word/é.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+  )
+  builder.add_override("/word/É.xml", "application/xml")
+  builder.add_relationship(
+    "rMain", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "word/é.xml",
+  )
+  builder.add_part(
+    "word/é.xml",
+    @utf8.encode(
+      (
+        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/><w:sectPr/></w:body></w:document>
+      ),
+    ),
+  )
+  // OPC part-name identity folds ASCII only: these are two distinct parts.
+  builder.add_part("word/É.xml", @utf8.encode("<extra/>"))
+  let data = builder.build()
+  let archive = @zip.read(data)
+  assert_true(archive.get("word/%C3%A9.xml") is Some(_))
+  assert_true(archive.get("word/%C3%89.xml") is Some(_))
+  inspect(@office.detect_format("unicode.docx", data).name(), content="docx")
+}
+
+///|
 test "detect_format rejects mixed main relationship and OOXML dialects" {
   let source = @word.new_blank_docx()
   let archive = @zip.read(source)

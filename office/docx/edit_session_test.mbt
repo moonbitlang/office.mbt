@@ -45,6 +45,47 @@ fn mixed_case_docx_session_fixture() -> Bytes raise {
 }
 
 ///|
+fn unicode_main_docx_session_fixture() -> Bytes raise {
+  let builder = @opc.PackageBuilder::new()
+  builder.add_default(
+    "rels", "application/vnd.openxmlformats-package.relationships+xml",
+  )
+  builder.add_override(
+    "/word/é.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+  )
+  builder.add_override(
+    "/word/ßtyles.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml",
+  )
+  builder.add_relationship(
+    "rMain", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "word/é.xml",
+  )
+  builder.add_relationship(
+    "rStyles",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
+    "ßtyles.xml",
+    source="word/é.xml",
+  )
+  builder.add_part(
+    "word/é.xml",
+    @utf8.encode(
+      (
+        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/><w:sectPr/></w:body></w:document>
+      ),
+    ),
+  )
+  builder.add_part(
+    "word/ßtyles.xml",
+    @utf8.encode(
+      (
+        #|<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>
+      ),
+    ),
+  )
+  builder.build()
+}
+
+///|
 fn padded_entity_docx_session_fixture(token_units : Int) -> Bytes raise {
   if token_units <= 5 {
     fail("padded entity token must include at least one leading zero")
@@ -126,6 +167,29 @@ async test "D1 session no-op reuses the exact transaction source" {
     assert_eq(report.validations[0].name, "office-docx-bounded")
     assert_eq(report.validations[1].name, "office-portable-opc")
     assert_eq(report.validations[2].name, "office-docx-package")
+    assert_eq(@afs.read_file(input).binary(), original)
+  })
+}
+
+///|
+async test "D1 session accepts Unicode logical OPC main parts" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/unicode.docx"
+    let original = unicode_main_docx_session_fixture()
+    let archive = @zip.read(original)
+    assert_true(archive.get("word/%C3%A9.xml") is Some(_))
+    assert_true(archive.get("word/_rels/%C3%A9.xml.rels") is Some(_))
+    write_docx_session_file(input, original)
+    let callback_seen = Ref(false)
+    let report = @docx.transact_docx(@transaction.transaction_options(input), session => {
+      callback_seen.val = true
+      assert_eq(session.annotated().main_story_part(), "word/%C3%A9.xml")
+      assert_true(session.is_noop())
+    })
+    assert_true(callback_seen.val)
+    assert_false(report.changed)
+    assert_false(report.committed)
+    assert_true(report.preservation.whole_file_identical)
     assert_eq(@afs.read_file(input).binary(), original)
   })
 }

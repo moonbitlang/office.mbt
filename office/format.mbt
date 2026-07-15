@@ -246,7 +246,7 @@ fn format_from_extension(path : StringView) -> DocumentFormat raise OfficeError 
 
 ///|
 fn opc_part_key(name : StringView) -> String {
-  name.to_owned().to_lower()
+  @opc.part_name_key(name)
 }
 
 ///|
@@ -263,11 +263,22 @@ priv struct DecodedXmlPart {
 }
 
 ///|
+fn archive_entry_logical_part_name(name : StringView) -> String? {
+  if name == "[Content_Types].xml" {
+    Some("[Content_Types].xml")
+  } else {
+    @opc.logical_part_name_from_zip_item_name(name)
+  }
+}
+
+///|
 fn archive_part_index(archive : @zip.Archive) -> ArchivePartIndex {
   let exact : StableStringMap[BytesView] = SortedMap([])
   let canonical : StableStringMap[BytesView] = SortedMap([])
   for entry in archive.entries() {
-    let name = entry.name()
+    let physical_name = entry.name()
+    let logical_name = archive_entry_logical_part_name(physical_name)
+    guard logical_name is Some(name) else { continue }
     if !exact.contains(name) {
       exact[name] = entry.data()
     }
@@ -420,44 +431,10 @@ fn has_uri_scheme(target : StringView) -> Bool {
 }
 
 ///|
-fn has_ambiguous_first_segment_colon(target : StringView) -> Bool {
-  if target.has_prefix("/") {
-    return false
-  }
-  for char in target {
-    if char == '/' {
-      return false
-    }
-    if char == ':' {
-      return true
-    }
-  }
-  false
-}
-
-///|
-fn is_package_uri_reference(target : StringView) -> Bool {
-  !target.has_prefix("//") &&
-  !has_uri_scheme(target) &&
-  !has_ambiguous_first_segment_colon(target)
-}
-
-///|
 fn is_ascii_hex_digit(char : Char) -> Bool {
   (char >= '0' && char <= '9') ||
   (char >= 'A' && char <= 'F') ||
   (char >= 'a' && char <= 'f')
-}
-
-///|
-fn ascii_hex_value(char : Char) -> Int {
-  if char >= '0' && char <= '9' {
-    char.to_int() - '0'.to_int()
-  } else if char >= 'A' && char <= 'F' {
-    char.to_int() - 'A'.to_int() + 10
-  } else {
-    char.to_int() - 'a'.to_int() + 10
-  }
 }
 
 ///|
@@ -1021,36 +998,6 @@ fn is_valid_external_relationship_target(value : StringView) -> Bool {
 }
 
 ///|
-fn is_valid_opc_part_segment(segment : StringView) -> Bool {
-  if segment == "" || segment.has_suffix(".") {
-    return false
-  }
-  let chars = segment.to_array()
-  for index, char in chars {
-    if char == '%' {
-      if index + 2 >= chars.length() ||
-        !is_ascii_hex_digit(chars[index + 1]) ||
-        !is_ascii_hex_digit(chars[index + 2]) {
-        return false
-      }
-      let decoded = ascii_hex_value(chars[index + 1]) * 16 +
-        ascii_hex_value(chars[index + 2])
-      if decoded == 0x2f ||
-        decoded == 0x5c ||
-        is_uri_unreserved(Int::unsafe_to_char(decoded)) {
-        return false
-      }
-    } else if !is_uri_unreserved(char) &&
-      !is_uri_sub_delimiter(char) &&
-      char != ':' &&
-      char != '@' {
-      return false
-    }
-  }
-  true
-}
-
-///|
 fn is_absolute_relationship_type(value : StringView) -> Bool {
   has_uri_scheme(value) && is_valid_iri_reference(value) && !value.contains("#")
 }
@@ -1102,22 +1049,7 @@ fn is_xml_ncname(value : StringView) -> Bool {
 
 ///|
 fn normalize_internal_target(target : StringView) -> String? {
-  if target == "" ||
-    !is_package_uri_reference(target) ||
-    target.contains("\\") ||
-    target.contains("?") ||
-    target.contains("#") {
-    return None
-  }
-  guard @opc.resolve_target("", target.to_owned()) is Some(normalized) else {
-    return None
-  }
-  for segment in normalized.split("/") {
-    if !is_valid_opc_part_segment(segment) {
-      return None
-    }
-  }
-  Some(normalized)
+  @opc.resolve_part_target("", target)
 }
 
 ///|
@@ -1201,16 +1133,7 @@ fn relationship_source_part(part : String) -> String? {
 
 ///|
 fn resolve_relationship_target(base : String, target : StringView) -> String? {
-  guard is_package_uri_reference(target) &&
-    @opc.resolve_target(base, target.to_owned()) is Some(normalized) else {
-    return None
-  }
-  for segment in normalized.split("/") {
-    if !is_valid_opc_part_segment(segment) {
-      return None
-    }
-  }
-  Some(normalized)
+  @opc.resolve_part_target(base, target)
 }
 
 ///|
@@ -1226,43 +1149,64 @@ fn validate_package_structure(
   let package_parts : StableStringMap[Bool] = SortedMap([])
   let document_parts : StableStringMap[Bool] = SortedMap([])
   for entry in archive.entries() {
-    let name = entry.name()
-    let key = opc_part_key(name)
-    parts[key] = parts.get(key).unwrap_or(0) + 1
-    if !part_names.contains(key) {
-      part_names[key] = name
+    let physical_name = entry.name()
+    let is_directory = physical_name.has_suffix("/")
+    let item_path = if is_directory && physical_name.length() > 0 {
+      physical_name[:physical_name.length() - 1]
+    } else {
+      physical_name
     }
-    if key != opc_part_key("[Content_Types].xml") && !name.has_suffix("/") {
-      package_parts[key] = true
-      if !key.has_suffix(".rels") {
-        document_parts[key] = true
-      }
+    let logical_item = if !is_directory {
+      archive_entry_logical_part_name(physical_name)
+    } else {
+      @opc.logical_part_name_from_zip_item_name(item_path)
     }
-    if key != opc_part_key("[Content_Types].xml") {
-      if name == "" {
-        findings.push("empty entry name")
+    match logical_item {
+      Some(logical_name) if !is_directory => {
+        let key = opc_part_key(logical_name)
+        parts[key] = parts.get(key).unwrap_or(0) + 1
+        if !part_names.contains(key) {
+          part_names[key] = physical_name
+        }
+        if key != opc_part_key("[Content_Types].xml") {
+          package_parts[key] = true
+          if !key.has_suffix(".rels") {
+            document_parts[key] = true
+          }
+        }
       }
-      if name.has_prefix("/") {
-        findings.push("entry name must not start with '/': \{name}")
-      }
-      if name.contains("\\") {
-        findings.push("entry name contains a backslash: \{name}")
-      }
-      let item_path = if name.has_suffix("/") {
-        name[:name.length() - 1]
-      } else {
-        name
-      }
-      for segment in item_path.split("/") {
-        if segment == "" {
-          findings.push("entry name contains an empty segment: \{name}")
-          break
-        } else if segment == "." || segment == ".." {
-          findings.push("entry name contains a '\{segment}' segment: \{name}")
-          break
-        } else if !is_valid_opc_part_segment(segment) {
-          findings.push("entry name is not a valid OPC URI path: \{name}")
-          break
+      Some(_) => ()
+      None => {
+        if physical_name == "" {
+          findings.push("empty entry name")
+          continue
+        }
+        if physical_name.has_prefix("/") {
+          findings.push("entry name must not start with '/': \{physical_name}")
+        }
+        if physical_name.contains("\\") {
+          findings.push("entry name contains a backslash: \{physical_name}")
+        }
+        let mut structural_error = false
+        for segment in item_path.split("/") {
+          if segment == "" {
+            findings.push(
+              "entry name contains an empty segment: \{physical_name}",
+            )
+            structural_error = true
+            break
+          } else if segment == "." || segment == ".." {
+            findings.push(
+              "entry name contains a '\{segment}' segment: \{physical_name}",
+            )
+            structural_error = true
+            break
+          }
+        }
+        if !structural_error {
+          findings.push(
+            "entry name is not a valid OPC URI path: \{physical_name}",
+          )
         }
       }
     }
@@ -1385,9 +1329,11 @@ fn validate_package_structure(
     }
   }
   for entry in archive.entries() {
-    let name = entry.name()
-    if opc_part_key(name) == opc_part_key("[Content_Types].xml") ||
-      name.has_suffix("/") {
+    let physical_name = entry.name()
+    guard archive_entry_logical_part_name(physical_name) is Some(name) else {
+      continue
+    }
+    if opc_part_key(name) == opc_part_key("[Content_Types].xml") {
       continue
     }
     let key = opc_part_key(name)
@@ -1412,7 +1358,10 @@ fn validate_package_structure(
   }
 
   for entry in archive.entries() {
-    let relationship_part = entry.name()
+    guard archive_entry_logical_part_name(entry.name())
+      is Some(relationship_part) else {
+      continue
+    }
     let relationship_key = opc_part_key(relationship_part)
     if !relationship_key.has_suffix(".rels") {
       continue
