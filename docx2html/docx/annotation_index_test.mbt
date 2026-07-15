@@ -124,6 +124,16 @@ test "DOCX reader keeps logical Unicode identity separate from ZIP spelling" {
 }
 
 ///|
+test "mutation-safe annotated reads preserve the package projection" {
+  let document = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:t>a\r\nb</w:t></w:r></w:p><w:sectPr/></w:body></w:document>"
+  let bytes = fixture_docx(document)
+  assert_eq(
+    @docx.read_docx_annotated(bytes).result(),
+    @docx.read_docx_package(bytes),
+  )
+}
+
+///|
 fn diagnostic_hash_clustered_element_names(
   count : Int,
   bucket_mask : Int,
