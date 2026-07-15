@@ -90,5 +90,15 @@ names and validate A1 coordinates. These helpers adapt syntax only: they do not
 open a package or establish that an addressed object exists.
 
 Format records in `office help --json` expose the selector schema, root,
-examples, and a `syntax-only` status. No selector command is registered until
-resolution itself is implemented.
+examples, and the resolver status for that format. DOCX is `read-resolved`:
+`office outline`, `get`, `text`, and `query` all resolve the same bounded
+projection. XLSX remains `syntax-only` until its structured resolver lands.
+
+The DOCX resolver covers body, header, footer, footnote, endnote, and comment
+stories plus paragraphs, runs, tables, rows, cells, hyperlinks, and images.
+Unique non-empty note/comment ids within selector limits emit stable
+`note[id="..."]` / `comment[id="..."]` paths. Missing, duplicate, or
+unrepresentable ids emit positional paths and a bounded warning instead;
+asking for a duplicated stable id fails as ambiguous. Every descendant of an
+annotation item remains snapshot-relative because it contains positional
+segments.

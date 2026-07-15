@@ -307,7 +307,29 @@ test "validate output" {
 }
 ```
 
-## Command-Line Tool
+## Unified Office command
+
+`office/cmd/office` is the agent-oriented facade for DOCX and XLSX packages.
+Its registry-driven help, format detection, validated raw OOXML fallback, and
+DOCX structured reads use versioned JSON envelopes and explicit resource
+limits:
+
+```sh
+moon run office/cmd/office -- help docx
+moon run office/cmd/office -- identify report.docx --json
+moon run office/cmd/office -- outline report.docx --json
+moon run office/cmd/office -- get report.docx '/docx/body/p[1]' --json
+moon run office/cmd/office -- text report.docx --under '/docx/comments/comment[id="0"]'
+moon run office/cmd/office -- query report.docx --kind paragraph --text revenue --ignore-case --json
+```
+
+The four DOCX read schemas are `office.docx.outline/1`,
+`office.docx.element/1`, `office.docx.text/1`, and `office.docx.query/1`, all
+inside `office.output/1`. See
+[Unified Office DOCX reads](docs/office-docx-read.md) and
+[Canonical Office selectors](docs/office-selectors.md).
+
+## XLSX command-line tool
 
 The repo ships a small CLI (`cmd/xlsx`) for common operations without
 writing code:
