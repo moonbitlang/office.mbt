@@ -18,6 +18,12 @@ const MAX_ANNOTATION_WARNING_CHARS : Int = 512
 const MAX_STORY_SCAN_WARNINGS : Int = 64
 
 ///|
+const DEFAULT_MAX_READER_DIAGNOSTICS : Int = 256
+
+///|
+const DEFAULT_MAX_READER_DIAGNOSTIC_CHARS : Int = 512
+
+///|
 priv struct AnnotationWarningCollector {
   messages : Array[String]
   seen : StableStringSet
@@ -101,7 +107,9 @@ fn AnnotationWarningCollector::finish(
   self : AnnotationWarningCollector,
 ) -> Array[String] {
   if self.truncated && self.messages.length() < self.max_messages {
-    self.messages.push("annotation index: additional diagnostics were omitted")
+    self.messages.push(
+      self.text("annotation index: additional diagnostics were omitted"),
+    )
   }
   self.messages
 }
@@ -456,6 +464,71 @@ fn split_story_path(path : String) -> (String, String) {
 }
 
 ///|
+/// How the reader selected a physical story part.
+pub enum DocxStoryPartAuthority {
+  /// Selected by an OPC relationship.
+  RelationshipBacked
+  /// Selected by the conventional `word/*.xml` compatibility fallback.
+  LegacyFilenameFallback
+}
+
+///|
+/// Stable protocol spelling for story-part authority.
+pub fn DocxStoryPartAuthority::name(self : DocxStoryPartAuthority) -> String {
+  match self {
+    RelationshipBacked => "relationship"
+    LegacyFilenameFallback => "legacy-fallback"
+  }
+}
+
+///|
+/// The physical ZIP entry used for one logical DOCX story and how it was
+/// selected. The type is opaque so more provenance can be added later without
+/// exposing mutable reader internals.
+pub struct DocxStoryPartSource {
+  priv part : String
+  priv authority : DocxStoryPartAuthority
+}
+
+///|
+/// The exact physical ZIP entry read for this story.
+pub fn DocxStoryPartSource::part(self : DocxStoryPartSource) -> String {
+  self.part
+}
+
+///|
+/// Whether this part was relationship-backed or a legacy filename fallback.
+pub fn DocxStoryPartSource::authority(
+  self : DocxStoryPartSource,
+) -> DocxStoryPartAuthority {
+  self.authority
+}
+
+///|
+fn docx_story_part_source(
+  part : String,
+  authority : DocxStoryPartAuthority,
+) -> DocxStoryPartSource {
+  { part, authority }
+}
+
+///|
+fn optional_annotation_story_source(
+  zip : ZipArchive,
+  authoritative : String?,
+  fallback : String,
+) -> DocxStoryPartSource? {
+  match authoritative {
+    Some(part) => Some(docx_story_part_source(part, RelationshipBacked))
+    None =>
+      match zip.resolve_path(fallback) {
+        Some(part) => Some(docx_story_part_source(part, LegacyFilenameFallback))
+        None => None
+      }
+  }
+}
+
+///|
 /// The package read plus its annotation index. Opaque. Carries the
 /// annotation BODIES as (id, body) pairs in reader order — exactly the
 /// shape `@paths.resolve_annotation_path` consumes (J2's read surface).
@@ -468,6 +541,12 @@ pub struct DocxAnnotatedResult {
   // The zip entry the body-story spans index into (L0), resolved via
   // the officeDocument relationship.
   priv main_part : String
+  priv main_story_source : DocxStoryPartSource
+  priv header_story_sources : Array[DocxStoryPartSource]
+  priv footer_story_sources : Array[DocxStoryPartSource]
+  priv footnotes_story_source : DocxStoryPartSource?
+  priv endnotes_story_source : DocxStoryPartSource?
+  priv comments_story_source : DocxStoryPartSource?
   // The comments part's zip entry when the package has one (resolved
   // by relationship type), for L1's splice-into-existing path.
   priv comments_part_name : String?
@@ -531,6 +610,54 @@ pub fn DocxAnnotatedResult::annotations(
 }
 
 ///|
+/// Physical source and authority for the body story.
+pub fn DocxAnnotatedResult::main_story_source(
+  self : DocxAnnotatedResult,
+) -> DocxStoryPartSource {
+  self.main_story_source
+}
+
+///|
+/// Physical sources for rendered header stories in package-result order.
+pub fn DocxAnnotatedResult::header_story_sources(
+  self : DocxAnnotatedResult,
+) -> Array[DocxStoryPartSource] {
+  self.header_story_sources.copy()
+}
+
+///|
+/// Physical sources for rendered footer stories in package-result order.
+pub fn DocxAnnotatedResult::footer_story_sources(
+  self : DocxAnnotatedResult,
+) -> Array[DocxStoryPartSource] {
+  self.footer_story_sources.copy()
+}
+
+///|
+/// Physical source for the footnotes story, when one was read.
+pub fn DocxAnnotatedResult::footnotes_story_source(
+  self : DocxAnnotatedResult,
+) -> DocxStoryPartSource? {
+  self.footnotes_story_source
+}
+
+///|
+/// Physical source for the endnotes story, when one was read.
+pub fn DocxAnnotatedResult::endnotes_story_source(
+  self : DocxAnnotatedResult,
+) -> DocxStoryPartSource? {
+  self.endnotes_story_source
+}
+
+///|
+/// Physical source for the comments story, when one was read.
+pub fn DocxAnnotatedResult::comments_story_source(
+  self : DocxAnnotatedResult,
+) -> DocxStoryPartSource? {
+  self.comments_story_source
+}
+
+///|
 /// A comment definition as parsed from comments.xml.
 priv struct CommentDefinition {
   id : String
@@ -577,6 +704,9 @@ pub fn read_docx_annotated(
     external_file_access,
     read_external_file,
     None,
+    None,
+    None,
+    MutationSafe,
   )
 }
 
@@ -595,24 +725,94 @@ pub fn read_docx_annotated_archive(
     external_file_access,
     read_external_file,
     None,
+    None,
+    None,
+    MutationSafe,
   )
 }
 
 ///|
 /// Builds package and annotation indexes from an existing archive while every
 /// XML part shares one cumulative parser budget. Source bytes are charged
-/// before UTF-8 decoding and parser tokens before DOM allocation.
+/// before UTF-8 decoding and parser tokens before DOM allocation. Reader
+/// diagnostics are deduplicated in first-seen order and bounded during
+/// production by `max_diagnostics` and `max_diagnostic_chars`.
 pub fn read_docx_annotated_archive_limited(
   archive : @mbtzip.Archive,
   xml_budget : @xml.XmlReadBudget,
   external_file_access? : Bool = false,
   read_external_file? : (String) -> Bytes? = no_external_file_reader,
+  max_diagnostics? : Int = DEFAULT_MAX_READER_DIAGNOSTICS,
+  max_diagnostic_chars? : Int = DEFAULT_MAX_READER_DIAGNOSTIC_CHARS,
+  expected_main_document_path? : String,
 ) -> DocxAnnotatedResult raise DocxError {
+  read_docx_annotated_archive_with_policy_limited(
+    archive,
+    xml_budget,
+    external_file_access,
+    read_external_file,
+    max_diagnostics,
+    max_diagnostic_chars,
+    expected_main_document_path,
+    MutationSafe,
+  )
+}
+
+///|
+/// Builds the bounded annotation-aware projection used by tolerant read-only
+/// commands. Broken section header/footer references are already warned and
+/// omitted by `DocxPackageResult`; they do not activate mutation-only identity
+/// gates. Edit transactions continue to use
+/// `read_docx_annotated_archive_limited` and fail closed on the same input.
+pub fn read_docx_annotated_archive_tolerant_limited(
+  archive : @mbtzip.Archive,
+  xml_budget : @xml.XmlReadBudget,
+  external_file_access? : Bool = false,
+  read_external_file? : (String) -> Bytes? = no_external_file_reader,
+  max_diagnostics? : Int = DEFAULT_MAX_READER_DIAGNOSTICS,
+  max_diagnostic_chars? : Int = DEFAULT_MAX_READER_DIAGNOSTIC_CHARS,
+  expected_main_document_path? : String,
+) -> DocxAnnotatedResult raise DocxError {
+  read_docx_annotated_archive_with_policy_limited(
+    archive,
+    xml_budget,
+    external_file_access,
+    read_external_file,
+    max_diagnostics,
+    max_diagnostic_chars,
+    expected_main_document_path,
+    TolerantProjection,
+  )
+}
+
+///|
+priv enum AnnotationReadPolicy {
+  MutationSafe
+  TolerantProjection
+}
+
+///|
+fn read_docx_annotated_archive_with_policy_limited(
+  archive : @mbtzip.Archive,
+  xml_budget : @xml.XmlReadBudget,
+  external_file_access : Bool,
+  read_external_file : (String) -> Bytes?,
+  max_diagnostics : Int,
+  max_diagnostic_chars : Int,
+  expected_main_document_path : String?,
+  policy : AnnotationReadPolicy,
+) -> DocxAnnotatedResult raise DocxError {
+  let diagnostics = ReaderDiagnosticCollector::new(
+    max_diagnostics, max_diagnostic_chars,
+  )
   read_docx_annotated_zip(
     open_zip_archive(archive),
     external_file_access,
     read_external_file,
     Some(xml_budget),
+    Some(diagnostics),
+    expected_main_document_path,
+    policy,
   )
 }
 
@@ -622,11 +822,25 @@ fn read_docx_annotated_zip(
   external_file_access : Bool,
   read_external_file : (String) -> Bytes?,
   xml_budget : @xml.XmlReadBudget?,
+  diagnostics : ReaderDiagnosticCollector?,
+  expected_main_document_path : String?,
+  policy : AnnotationReadPolicy,
 ) -> DocxAnnotatedResult raise DocxError {
   let external_files = external_file_access_options(
     external_file_access, read_external_file,
   )
-  let parts = DocumentParts::build(zip, external_files~, xml_budget?)
+  let parts = DocumentParts::build(
+    zip,
+    external_files~,
+    xml_budget?,
+    diagnostics?,
+    expected_main_document_path?,
+    missing_annotation_id_mode=if policy is TolerantProjection {
+      EmptyMissingAnnotationId
+    } else {
+      LegacyUndefinedAnnotationId
+    },
+  )
   let document_result = parts.read_document()
   let collector = HeaderFooterCollector::new(parts)
   let sections = collect_sections(parts.root, collector)
@@ -671,8 +885,14 @@ fn read_docx_annotated_zip(
     comment_bodies,
     path_budget,
   )
+  let (annotation_max_warnings, annotation_max_warning_chars) = match
+    diagnostics {
+    Some(value) => (value.max_messages, value.max_chars)
+    None => (MAX_ANNOTATION_WARNINGS, MAX_ANNOTATION_WARNING_CHARS)
+  }
   let index = build_annotation_index(
-    zip, parts, collector, verify_ctx, path_budget,
+    zip, parts, collector, verify_ctx, path_budget, annotation_max_warnings, annotation_max_warning_chars,
+    policy,
   )
   let main_wordprocessing_dialect = annotation_story_dialect(index, "/body")
   let comments_wordprocessing_dialect = annotation_story_dialect(
@@ -684,9 +904,12 @@ fn read_docx_annotated_zip(
   // combining (three definitions sharing one id would otherwise emit
   // the duplicate-id warning three times), reader-first order kept.
   for warning in index.warnings() {
-    package_result.messages.push(Warning(warning))
+    push_reader_message(package_result.messages, diagnostics, Warning(warning))
   }
-  let combined = @core.dedupe_messages(package_result.messages)
+  let combined = match diagnostics {
+    Some(value) => value.finish()
+    None => @core.dedupe_messages(package_result.messages)
+  }
   package_result.messages.clear()
   package_result.messages.append(combined)
   // REAL relationship matches only — reader filename fallbacks must not make
@@ -754,10 +977,45 @@ fn read_docx_annotated_zip(
       }
     }
   }
+  let main_story_source = docx_story_part_source(
+    parts.main_document_path,
+    match parts.main_relationship_dialect {
+      Some(_) => RelationshipBacked
+      None => LegacyFilenameFallback
+    },
+  )
+  let header_story_sources : Array[DocxStoryPartSource] = []
+  for pair in inverted_part_paths(collector.header_index_by_path) {
+    let (_, path) = pair
+    header_story_sources.push(docx_story_part_source(path, RelationshipBacked))
+  }
+  let footer_story_sources : Array[DocxStoryPartSource] = []
+  for pair in inverted_part_paths(collector.footer_index_by_path) {
+    let (_, path) = pair
+    footer_story_sources.push(docx_story_part_source(path, RelationshipBacked))
+  }
   {
     package_result,
     index,
     main_part: parts.main_document_path,
+    main_story_source,
+    header_story_sources,
+    footer_story_sources,
+    footnotes_story_source: optional_annotation_story_source(
+      zip,
+      parts.footnotes_part_path,
+      "word/footnotes.xml",
+    ),
+    endnotes_story_source: optional_annotation_story_source(
+      zip,
+      parts.endnotes_part_path,
+      "word/endnotes.xml",
+    ),
+    comments_story_source: optional_annotation_story_source(
+      zip,
+      parts.comments_part_path,
+      "word/comments.xml",
+    ),
     comments_part_name: comments_part_resolved,
     orphan_annotation_parts,
     sidecar_types,
@@ -993,17 +1251,32 @@ fn build_annotation_index(
   collector : HeaderFooterCollector,
   ctx : VerifyContext,
   path_budget : AnnotationPathBudget,
+  max_warnings : Int,
+  max_warning_chars : Int,
+  policy : AnnotationReadPolicy,
 ) -> AnnotationIndex raise DocxError {
   let warnings = AnnotationWarningCollector::new(
-    MAX_ANNOTATION_WARNINGS,
-    MAX_ANNOTATION_WARNING_CHARS,
+    max_warnings.max(0),
+    max_warning_chars.max(0),
   )
-  validate_section_story_references(parts)
-  let reachable_story_parts = resolve_reachable_annotation_story_parts(
-    zip,
-    parts.relationships,
-    parts.base_path,
-  )
+  if policy is MutationSafe {
+    validate_section_story_references(parts)
+  }
+  // Relationship-reachable but unrendered stories exist only to prove that a
+  // mutation has a complete, unambiguous annotation identity graph. Read-only
+  // projection already walked every valid section-referenced story through the
+  // collector; rerunning the fail-closed identity traversal here would turn a
+  // tolerated external/dangling header into a whole-document read failure.
+  let reachable_story_parts : Array[ReachableAnnotationStoryPart] = if policy
+    is MutationSafe {
+    resolve_reachable_annotation_story_parts(
+      zip,
+      parts.relationships,
+      parts.base_path,
+    )
+  } else {
+    []
+  }
   // Story list in the plan's fixed rank order: body, header[1..],
   // footer[1..], footnotes, endnotes. Header/footer paths come from the
   // collector's dedup maps (index -> path).
@@ -1072,10 +1345,14 @@ fn build_annotation_index(
       None => ()
     }
     kind_by_scanned_path[path] = story.kind
-    parts.content_types.require_annotation_part(Some(path), story.kind)
+    parts.content_types.require_annotation_part(
+      parts.zip,
+      Some(path),
+      story.kind,
+    )
     match zip.read_bytes(path) {
       Some(bytes) => {
-        let scan = scan_story(bytes, path_budget~) catch {
+        let scan = scan_story(bytes, path_budget~, warning_collector=warnings) catch {
           InvalidXml(message~) => {
             if is_mutation_xml_resource_error(message) {
               raise InvalidXml(message~)
@@ -1103,9 +1380,6 @@ fn build_annotation_index(
           scan,
         )
         root_dialect_by_scanned_path[path] = root_dialect
-        for warning in scan.warnings() {
-          warnings.add(warning)
-        }
         scans.push((story_key, scan))
       }
       None => identity_source_complete = false
@@ -1138,6 +1412,7 @@ fn build_annotation_index(
     }
     kind_by_scanned_path[reachable.path] = reachable.kind
     parts.content_types.require_annotation_part(
+      parts.zip,
       Some(reachable.path),
       reachable.kind,
     )
@@ -1149,7 +1424,7 @@ fn build_annotation_index(
       )
     }
     read_identity_story_xml_strict(bytes, parts.xml_budget) |> ignore
-    let scan = scan_story(bytes, path_budget~) catch {
+    let scan = scan_story(bytes, path_budget~, warning_collector=warnings) catch {
       InvalidXml(message~) => {
         if is_mutation_xml_resource_error(message) {
           raise InvalidXml(message~)
@@ -1186,9 +1461,6 @@ fn build_annotation_index(
       relationship_dialect: reachable.relationship_dialect,
       root_dialect,
     })
-    for warning in scan.warnings() {
-      warnings.add(warning)
-    }
     identity_only_scans.push(scan)
   }
   let (definitions, definitions_complete) = read_comment_definitions(
@@ -1218,37 +1490,6 @@ fn build_annotation_index(
   let (footnotes, endnotes) = build_notes(
     parts, scans, warnings, ctx, degraded, path_budget,
   )
-  // Plan-locked ordinal-fallback diagnostic: ids that cannot take the
-  // [@id=...] form (empty, or containing ']'/'='/'/') are emitted as
-  // ordinal paths, and the agent is told why. Duplicate ids already
-  // warn at definition parse.
-  let warned_ids : StableStringSet = SortedSet([])
-  fn warn_unrepresentable(kind : String, id : String) -> Unit {
-    if (
-        id == "" ||
-        id.find("]") is Some(_) ||
-        id.find("=") is Some(_) ||
-        id.find("/") is Some(_)
-      ) &&
-      !warned_ids.contains("\{kind}:\{id}") &&
-      !warnings.full() {
-      warned_ids.add("\{kind}:\{id}")
-      warnings.add(
-        "annotation index: \{kind} id '\{warnings.text(id)}' cannot be addressed as [@id=...]; ordinal paths are emitted for it",
-      )
-    }
-  }
-  for comment in comments {
-    if comment.defined() {
-      warn_unrepresentable("comment", comment.id())
-    }
-  }
-  for note in footnotes {
-    warn_unrepresentable("footnote", note.id())
-  }
-  for note in endnotes {
-    warn_unrepresentable("endnote", note.id())
-  }
   {
     comments,
     footnotes,

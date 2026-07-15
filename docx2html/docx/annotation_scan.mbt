@@ -441,6 +441,7 @@ fn marker_kind(uri : String, local_name : String) -> ScanMarkerKind? {
 fn scan_story(
   part : BytesView,
   path_budget? : AnnotationPathBudget,
+  warning_collector? : AnnotationWarningCollector,
 ) -> StoryScan raise DocxError {
   // A UTF-16 BOM means byte-level markup scanning would be wrong.
   if part.length() >= 2 &&
@@ -454,10 +455,15 @@ fn scan_story(
   }
   let nodes : Array[ScannedNode] = []
   let markers : Array[ScannedMarker] = []
-  let warnings = AnnotationWarningCollector::new(
-    MAX_STORY_SCAN_WARNINGS,
-    MAX_ANNOTATION_WARNING_CHARS,
-  )
+  let owns_warning_collector = warning_collector is None
+  let warnings = match warning_collector {
+    Some(value) => value
+    None =>
+      AnnotationWarningCollector::new(
+        MAX_STORY_SCAN_WARNINGS,
+        MAX_ANNOTATION_WARNING_CHARS,
+      )
+  }
   let mut root : ScannedNode? = None
   let mut root_namespace_uri : String? = None
   let frames : Array[ScanFrame] = []
@@ -982,7 +988,11 @@ fn scan_story(
   {
     nodes,
     markers,
-    warnings: warnings.finish(),
+    warnings: if owns_warning_collector {
+      warnings.finish()
+    } else {
+      []
+    },
     story_level_positions: build_story_level_positions(
       nodes, nodes_by_open, markers, work,
     ),

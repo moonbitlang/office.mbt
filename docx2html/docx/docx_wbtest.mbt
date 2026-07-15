@@ -73,14 +73,21 @@ fn empty_body_reader(relationships : Relationships) -> BodyReader {
   {
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
-    relationships,
+    relationship_index: RelationshipIndex::build(relationships),
     content_types: { defaults: SortedMap([]), overrides: SortedMap([]) },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
+    diagnostics: None,
+    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: default_external_file_access(),
     read_images: true,
   }
+}
+
+///|
+fn relationship_index(relationships : Array[Relationship]) -> RelationshipIndex {
+  RelationshipIndex::build({ relationships, })
 }
 
 ///|
@@ -102,11 +109,13 @@ fn body_reader_with_stable_numbering(
   {
     styles,
     zip: try! @zip.zip_archive(Map([])),
-    relationships: { relationships: [] },
+    relationship_index: RelationshipIndex::build({ relationships: [] }),
     content_types: { defaults: SortedMap([]), overrides: SortedMap([]) },
     base_path: "word",
     numbering,
     messages: [],
+    diagnostics: None,
+    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: default_external_file_access(),
     read_images: true,
   }
@@ -147,8 +156,66 @@ fn zip_with_text_entries(entries : Array[(String, String)]) -> ZipArchive {
 }
 
 ///|
+fn wordprocessing_content_types(overrides : Array[(String, String)]) -> String {
+  let xml = StringBuilder()
+  xml.write_string(
+    "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">",
+  )
+  for entry in overrides {
+    let (part_name, content_type) = entry
+    xml.write_string(
+      "<Override PartName=\"" +
+      part_name +
+      "\" ContentType=\"" +
+      content_type +
+      "\"/>",
+    )
+  }
+  xml.write_string("</Types>")
+  xml.to_string()
+}
+
+///|
+fn strict_docx_with_wordprocessing_role(
+  kind : String,
+  content_type : String,
+  role_xml : String,
+) -> ZipArchive {
+  let relationship_type = match kind {
+    "styles" => STRICT_STYLES_RELATIONSHIP
+    "numbering" => STRICT_NUMBERING_RELATIONSHIP
+    _ => abort("unsupported test role")
+  }
+  let role_path = "word/" + kind + ".xml"
+  zip_with_text_entries([
+    (
+      "[Content_Types].xml",
+      wordprocessing_content_types([("/" + role_path, content_type)]),
+    ),
+    (
+      "_rels/.rels",
+      relationship_part(
+        STRICT_OFFICE_DOCUMENT_RELATIONSHIP,
+        "word/document.xml",
+      ),
+    ),
+    (
+      "word/document.xml",
+      (
+        #|<w:document xmlns:w="http://purl.oclc.org/ooxml/wordprocessingml/main"><w:body><w:p/></w:body></w:document>
+      ),
+    ),
+    (
+      "word/_rels/document.xml.rels",
+      relationship_part(relationship_type, kind + ".xml"),
+    ),
+    (role_path, role_xml),
+  ])
+}
+
+///|
 fn styles_from_xml(xml : String) -> StableStringMap[StyleInfo] raise DocxError {
-  read_styles(zip_with_text("word/styles.xml", xml), "word/styles.xml")
+  read_styles_xml(read_xml_string(xml, namespace_map=office_namespace_map()))
 }
 
 ///|
@@ -510,26 +577,22 @@ test "docx relationships reader finds targets by id and type" {
     ),
     "_rels/.rels",
   )
+  let index = RelationshipIndex::build(relationships)
   inspect(
-    relationships.find_target_by_id("rId1").unwrap(),
+    index.find_unique_target_by_id("rId1").unwrap(),
     content="word/document.xml",
   )
-  debug_inspect(
-    relationships.find_targets_by_type(
-      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
-    ),
-    content="[\"word/document.xml\", \"word/document2.xml\"]",
-  )
-  debug_inspect(
-    relationships.find_targets_by_type(
-      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
-    ),
-    content="[]",
-  )
   inspect(
-    relationships.find_by_id("rId3").unwrap().target_mode.unwrap(),
+    index.find_unique_by_id("rId3").unwrap().target_mode.unwrap(),
     content="External",
   )
+  let duplicate = RelationshipIndex::build({
+    relationships: [
+      relationships.relationships[0],
+      relationships.relationships[0],
+    ],
+  })
+  inspect(duplicate.find_unique_by_id("rId2") is None, content="true")
 }
 
 ///|
@@ -814,68 +877,249 @@ test "docx part targets use fallible OPC resolution" {
 }
 
 ///|
-test "docx related part paths use existing relationship targets before fallbacks" {
-  let relationship_types : ReadOnlyArray[String] = [
-    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
-    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes",
-    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
-    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering",
-    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
-  ]
-  let fallback_paths : ReadOnlyArray[String] = [
-    "word/comments.xml", "word/endnotes.xml", "word/footnotes.xml", "word/numbering.xml",
-    "word/styles.xml",
-  ]
-  let resolved : Array[String] = []
-  for index in 0..<relationship_types.length() {
-    let relationship_type = relationship_types[index]
-    let fallback_path = fallback_paths[index]
-    let relationships = Relationships::{
-      relationships: [
-        {
-          id: "rPart",
-          relationship_type,
-          target: "target-path.xml",
-          target_mode: None,
-        },
-      ],
-    }
-    resolved.push(
-      find_part_path(
-        zip_with_text("word/target-path.xml", " "),
-        relationships,
-        relationship_type~,
-        base_path="word",
-        fallback_path~,
-      ),
-    )
-    resolved.push(
-      find_part_path(
-        zip_with_text(fallback_path, " "),
-        relationships,
-        relationship_type~,
-        base_path="word",
-        fallback_path~,
-      ),
-    )
-  }
-  debug_inspect(
-    resolved,
-    content=(
-      #|[
-      #|  "word/target-path.xml",
-      #|  "word/comments.xml",
-      #|  "word/target-path.xml",
-      #|  "word/endnotes.xml",
-      #|  "word/target-path.xml",
-      #|  "word/footnotes.xml",
-      #|  "word/target-path.xml",
-      #|  "word/numbering.xml",
-      #|  "word/target-path.xml",
-      #|  "word/styles.xml",
-      #|]
+test "docx Strict styles and numbering relationships override conventional decoys" {
+  let strict_namespace = "http://purl.oclc.org/ooxml/wordprocessingml/main"
+  let document_xml = "<w:document xmlns:w=\"" +
+    strict_namespace +
+    "\"><w:body><w:p><w:pPr><w:pStyle w:val=\"Chosen\"/><w:numPr><w:ilvl w:val=\"0\"/><w:numId w:val=\"7\"/></w:numPr></w:pPr></w:p></w:body></w:document>"
+  let strict_styles = "<w:styles xmlns:w=\"" +
+    strict_namespace +
+    "\"><w:style w:type=\"paragraph\" w:styleId=\"Chosen\"><w:name w:val=\"Strict Heading\"/></w:style></w:styles>"
+  let decoy_styles =
+    #|<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:style w:type="paragraph" w:styleId="Chosen"><w:name w:val="Decoy Style"/></w:style></w:styles>
+  let strict_numbering = "<w:numbering xmlns:w=\"" +
+    strict_namespace +
+    "\"><w:abstractNum w:abstractNumId=\"3\"><w:lvl w:ilvl=\"0\"><w:numFmt w:val=\"decimal\"/></w:lvl></w:abstractNum><w:num w:numId=\"7\"><w:abstractNumId w:val=\"3\"/></w:num></w:numbering>"
+  let decoy_numbering =
+    #|<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:abstractNum w:abstractNumId="3"><w:lvl w:ilvl="0"><w:numFmt w:val="bullet"/></w:lvl></w:abstractNum><w:num w:numId="7"><w:abstractNumId w:val="3"/></w:num></w:numbering>
+  let document_relationships = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rStyles\" Type=\"" +
+    STRICT_STYLES_RELATIONSHIP +
+    "\" Target=\"parts/styles.xml\"/><Relationship Id=\"rNumbering\" Type=\"" +
+    STRICT_NUMBERING_RELATIONSHIP +
+    "\" Target=\"parts/numbering.xml\"/></Relationships>"
+  let zip = zip_with_text_entries([
+    (
+      "[Content_Types].xml",
+      wordprocessing_content_types([
+        ("/strict/parts/styles.xml", STYLES_CONTENT_TYPE),
+        ("/strict/parts/numbering.xml", NUMBERING_CONTENT_TYPE),
+      ]),
     ),
+    (
+      "_rels/.rels",
+      relationship_part(
+        STRICT_OFFICE_DOCUMENT_RELATIONSHIP,
+        "strict/document.xml",
+      ),
+    ),
+    ("strict/document.xml", document_xml),
+    ("strict/_rels/document.xml.rels", document_relationships),
+    ("strict/parts/styles.xml", strict_styles),
+    ("strict/parts/numbering.xml", strict_numbering),
+    ("word/styles.xml", decoy_styles),
+    ("word/numbering.xml", decoy_numbering),
+  ])
+  match read_docx_zip_with_messages(zip).document {
+    Document(children~, ..) =>
+      match children[0] {
+        Paragraph(properties~, ..) => {
+          debug_inspect(
+            properties.style_name,
+            content="Some(\"Strict Heading\")",
+          )
+          guard properties.numbering is Some(numbering) else {
+            fail("expected Strict numbering")
+          }
+          inspect(numbering.is_ordered, content="true")
+          inspect(numbering.level, content="1")
+        }
+        _ => fail("expected paragraph")
+      }
+    _ => fail("expected document")
+  }
+}
+
+///|
+test "known main dialect rejects cross-family styles and numbering roles" {
+  let transitional_namespace = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  let strict_namespace = "http://purl.oclc.org/ooxml/wordprocessingml/main"
+  let document_xml = "<w:document xmlns:w=\"" +
+    transitional_namespace +
+    "\"><w:body><w:p><w:pPr><w:pStyle w:val=\"Chosen\"/><w:numPr><w:ilvl w:val=\"0\"/><w:numId w:val=\"7\"/></w:numPr></w:pPr></w:p></w:body></w:document>"
+  let fallback_styles = "<w:styles xmlns:w=\"" +
+    transitional_namespace +
+    "\"><w:style w:type=\"paragraph\" w:styleId=\"Chosen\"><w:name w:val=\"Fallback Style\"/></w:style></w:styles>"
+  let strict_decoy_styles = "<w:styles xmlns:w=\"" +
+    strict_namespace +
+    "\"><w:style w:type=\"paragraph\" w:styleId=\"Chosen\"><w:name w:val=\"Strict Decoy\"/></w:style></w:styles>"
+  let fallback_numbering = "<w:numbering xmlns:w=\"" +
+    transitional_namespace +
+    "\"><w:abstractNum w:abstractNumId=\"3\"><w:lvl w:ilvl=\"0\"><w:numFmt w:val=\"bullet\"/></w:lvl></w:abstractNum><w:num w:numId=\"7\"><w:abstractNumId w:val=\"3\"/></w:num></w:numbering>"
+  let strict_decoy_numbering = "<w:numbering xmlns:w=\"" +
+    strict_namespace +
+    "\"><w:abstractNum w:abstractNumId=\"3\"><w:lvl w:ilvl=\"0\"><w:numFmt w:val=\"decimal\"/></w:lvl></w:abstractNum><w:num w:numId=\"7\"><w:abstractNumId w:val=\"3\"/></w:num></w:numbering>"
+  let document_relationships = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rStyles\" Type=\"" +
+    STRICT_STYLES_RELATIONSHIP +
+    "\" Target=\"parts/styles.xml\"/><Relationship Id=\"rNumbering\" Type=\"" +
+    STRICT_NUMBERING_RELATIONSHIP +
+    "\" Target=\"parts/numbering.xml\"/></Relationships>"
+  let zip = zip_with_text_entries([
+    (
+      "_rels/.rels",
+      relationship_part(
+        TRANSITIONAL_OFFICE_DOCUMENT_RELATIONSHIP,
+        "custom/document.xml",
+      ),
+    ),
+    ("custom/document.xml", document_xml),
+    ("custom/_rels/document.xml.rels", document_relationships),
+    ("custom/parts/styles.xml", strict_decoy_styles),
+    ("custom/parts/numbering.xml", strict_decoy_numbering),
+    ("word/styles.xml", fallback_styles),
+    ("word/numbering.xml", fallback_numbering),
+  ])
+  try read_docx_zip_with_messages(zip) catch {
+    Unsupported(message~) =>
+      assert_true(
+        message.contains(
+          "styles relationship dialect does not match the main document",
+        ),
+      )
+    _ => fail("expected cross-dialect styles relationship rejection")
+  } noraise {
+    _ => fail("expected cross-dialect styles relationship rejection")
+  }
+}
+
+///|
+test "styles and numbering relationship targets require role content types" {
+  let strict_namespace = "http://purl.oclc.org/ooxml/wordprocessingml/main"
+  for
+    role_case in [
+      (
+        "styles",
+        "<w:styles xmlns:w=\"" + strict_namespace + "\"/>",
+        STYLES_CONTENT_TYPE,
+      ),
+      (
+        "numbering",
+        "<w:numbering xmlns:w=\"" + strict_namespace + "\"/>",
+        NUMBERING_CONTENT_TYPE,
+      ),
+    ] {
+    let (kind, role_xml, expected_content_type) = role_case
+    let zip = strict_docx_with_wordprocessing_role(
+      kind, "application/xml", role_xml,
+    )
+    try read_docx_zip_with_messages(zip) catch {
+      Unsupported(message~) => {
+        assert_true(message.contains("has content type 'application/xml'"))
+        assert_true(
+          message.contains("expected '" + expected_content_type + "'"),
+        )
+      }
+      _ => fail("expected role content type rejection")
+    } noraise {
+      _ => fail("expected role content type rejection")
+    }
+  }
+}
+
+///|
+test "styles relationship target requires the role root in its dialect" {
+  let strict_namespace = "http://purl.oclc.org/ooxml/wordprocessingml/main"
+  let generic_root = "<w:root xmlns:w=\"" +
+    strict_namespace +
+    "\"><w:style w:type=\"paragraph\" w:styleId=\"Injected\"/></w:root>"
+  let generic = strict_docx_with_wordprocessing_role(
+    "styles",
+    STYLES_CONTENT_TYPE,
+    generic_root,
   )
+  try read_docx_zip_with_messages(generic) catch {
+    Unsupported(message~) =>
+      assert_true(message.contains("has root 'w:root', expected 'w:styles'"))
+    _ => fail("expected styles root rejection")
+  } noraise {
+    _ => fail("expected styles root rejection")
+  }
+  let transitional_styles =
+    #|<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:style w:type="paragraph" w:styleId="Injected"/></w:styles>
+  let cross_dialect = strict_docx_with_wordprocessing_role(
+    "styles",
+    STYLES_CONTENT_TYPE,
+    transitional_styles,
+  )
+  try read_docx_zip_with_messages(cross_dialect) catch {
+    Unsupported(message~) =>
+      assert_true(
+        message.contains(
+          "has root 'w-incompatible:styles', expected 'w:styles'",
+        ),
+      )
+    _ => fail("expected styles root dialect rejection")
+  } noraise {
+    _ => fail("expected styles root dialect rejection")
+  }
+}
+
+///|
+test "numbering relationship target requires the numbering root" {
+  let generic_numbering =
+    #|<w:root xmlns:w="http://purl.oclc.org/ooxml/wordprocessingml/main"><w:abstractNum w:abstractNumId="1"/><w:num w:numId="1"/></w:root>
+  let zip = strict_docx_with_wordprocessing_role(
+    "numbering",
+    NUMBERING_CONTENT_TYPE,
+    generic_numbering,
+  )
+  try read_docx_zip_with_messages(zip) catch {
+    Unsupported(message~) =>
+      assert_true(message.contains("has root 'w:root', expected 'w:numbering'"))
+    _ => fail("expected numbering root rejection")
+  } noraise {
+    _ => fail("expected numbering root rejection")
+  }
+}
+
+///|
+test "orphan conventional styles and numbering parts are ignored" {
+  let wml_namespace = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  let document_xml = "<w:document xmlns:w=\"" +
+    wml_namespace +
+    "\"><w:body><w:p><w:pPr><w:pStyle w:val=\"Orphan\"/><w:numPr><w:ilvl w:val=\"0\"/><w:numId w:val=\"1\"/></w:numPr></w:pPr></w:p></w:body></w:document>"
+  let zip = zip_with_text_entries([
+    (
+      "_rels/.rels",
+      relationship_part(
+        TRANSITIONAL_OFFICE_DOCUMENT_RELATIONSHIP,
+        "word/document.xml",
+      ),
+    ),
+    ("word/document.xml", document_xml),
+    (
+      "word/styles.xml",
+      "<w:styles xmlns:w=\"" +
+      wml_namespace +
+      "\"><w:style w:type=\"paragraph\" w:styleId=\"Orphan\"><w:name w:val=\"Unrelated\"/></w:style></w:styles>",
+    ),
+    (
+      "word/numbering.xml",
+      "<w:numbering xmlns:w=\"" +
+      wml_namespace +
+      "\"><w:abstractNum w:abstractNumId=\"1\"><w:lvl w:ilvl=\"0\"><w:numFmt w:val=\"decimal\"/></w:lvl></w:abstractNum><w:num w:numId=\"1\"><w:abstractNumId w:val=\"1\"/></w:num></w:numbering>",
+    ),
+  ])
+  match read_docx_zip_with_messages(zip).document {
+    Document(children~, ..) =>
+      match children[0] {
+        Paragraph(properties~, ..) => {
+          assert_eq(properties.style_name, None)
+          assert_eq(properties.numbering, None)
+        }
+        _ => fail("expected paragraph")
+      }
+    _ => fail("expected document")
+  }
 }
 
 ///|
@@ -1618,11 +1862,13 @@ test "docx table properties include table style name" {
       ),
     ]),
     zip: try! @zip.zip_archive(Map([])),
-    relationships: { relationships: [] },
+    relationship_index: RelationshipIndex::build({ relationships: [] }),
     content_types: { defaults: SortedMap([]), overrides: SortedMap([]) },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
+    diagnostics: None,
+    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: default_external_file_access(),
     read_images: true,
   }
@@ -1801,6 +2047,12 @@ test "docx reader resolves styles from document relationships" {
   let styles_xml =
     #|<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:style w:type="paragraph" w:styleId="Custom"><w:name w:val="Custom Style" /></w:style></w:styles>
   let zip = zip_with_text_entries([
+    (
+      "[Content_Types].xml",
+      wordprocessing_content_types([
+        ("/word/custom-styles.xml", STYLES_CONTENT_TYPE),
+      ]),
+    ),
     ("word/document.xml", document_xml),
     (
       "word/_rels/document.xml.rels",
@@ -2009,7 +2261,7 @@ test "docx document xml reader rejects missing body" {
       SortedMap([]),
       NumberingMap::empty(),
       try! @zip.zip_archive(Map([])),
-      { relationships: [] },
+      RelationshipIndex::build({ relationships: [] }),
       { defaults: SortedMap([]), overrides: SortedMap([]) },
       "word",
       [],
@@ -2292,6 +2544,35 @@ test "docx numbering xml follows numbering style links" {
     { "List1": { style_id: "List1", style_type: "numbering", name: "" } },
   )
   debug_inspect(missing_num_id_style.find_level("201", "0"), content="None")
+}
+
+///|
+test "docx numbering xml terminates cyclic numbering style links" {
+  let self_link = numbering_from_xml(
+    (
+      #|<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|  <w:abstractNum w:abstractNumId="101"><w:numStyleLink w:val="List1" /></w:abstractNum>
+      #|  <w:num w:numId="201"><w:abstractNumId w:val="101" /></w:num>
+      #|</w:numbering>
+    ),
+    { "List1": { style_id: "List1", style_type: "numbering", name: "201" } },
+  )
+  debug_inspect(self_link.find_level("201", "0"), content="None")
+  let two_node_cycle = numbering_from_xml(
+    (
+      #|<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|  <w:abstractNum w:abstractNumId="101"><w:numStyleLink w:val="List1" /></w:abstractNum>
+      #|  <w:abstractNum w:abstractNumId="102"><w:numStyleLink w:val="List2" /></w:abstractNum>
+      #|  <w:num w:numId="201"><w:abstractNumId w:val="101" /></w:num>
+      #|  <w:num w:numId="202"><w:abstractNumId w:val="102" /></w:num>
+      #|</w:numbering>
+    ),
+    {
+      "List1": { style_id: "List1", style_type: "numbering", name: "202" },
+      "List2": { style_id: "List2", style_type: "numbering", name: "201" },
+    },
+  )
+  debug_inspect(two_node_cycle.find_level("201", "0"), content="None")
 }
 
 ///|
@@ -3312,22 +3593,20 @@ fn drawing_image_reader_with_images(read_images : Bool) -> BodyReader {
   {
     styles: SortedMap([]),
     zip: try! @zip.zip_archive({ "word/media/tiny.png": b"abc" }),
-    relationships: {
-      relationships: [
-        {
-          id: "rImage",
-          relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
-          target: "media/tiny.png",
-          target_mode: None,
-        },
-        {
-          id: "rLink",
-          relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
-          target: "http://example.com",
-          target_mode: Some("External"),
-        },
-      ],
-    },
+    relationship_index: relationship_index([
+      {
+        id: "rImage",
+        relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+        target: "media/tiny.png",
+        target_mode: None,
+      },
+      {
+        id: "rLink",
+        relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+        target: "http://example.com",
+        target_mode: Some("External"),
+      },
+    ]),
     content_types: {
       defaults: SortedMap([("png", "image/png")]),
       overrides: SortedMap([]),
@@ -3335,6 +3614,8 @@ fn drawing_image_reader_with_images(read_images : Bool) -> BodyReader {
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
+    diagnostics: None,
+    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: default_external_file_access(),
     read_images,
   }
@@ -3425,20 +3706,20 @@ test "docx linked DrawingML images use the external loader" {
   let reader = BodyReader::{
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
-    relationships: {
-      relationships: [
-        {
-          id: "rLinkedImage",
-          relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
-          target: "file:///media/hat.png",
-          target_mode: None,
-        },
-      ],
-    },
+    relationship_index: relationship_index([
+      {
+        id: "rLinkedImage",
+        relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+        target: "file:///media/hat.png",
+        target_mode: None,
+      },
+    ]),
     content_types: { defaults: SortedMap([]), overrides: SortedMap([]) },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
+    diagnostics: None,
+    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: external_file_access_options(true, fn(path) {
       if path == "file:///media/hat.png" {
         Some(b"abc")
@@ -3463,20 +3744,20 @@ test "docx linked DrawingML image loader tries decoded file URI paths" {
   let reader = BodyReader::{
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
-    relationships: {
-      relationships: [
-        {
-          id: "rLinkedImage",
-          relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
-          target: "file:///media/tiny%20picture.png",
-          target_mode: None,
-        },
-      ],
-    },
+    relationship_index: relationship_index([
+      {
+        id: "rLinkedImage",
+        relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+        target: "file:///media/tiny%20picture.png",
+        target_mode: None,
+      },
+    ]),
     content_types: { defaults: SortedMap([]), overrides: SortedMap([]) },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
+    diagnostics: None,
+    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: external_file_access_options(true, fn(path) {
       if path == "/media/tiny picture.png" {
         Some(b"abc")
@@ -3501,16 +3782,14 @@ test "docx embedded DrawingML images ignore relationship target mode" {
   let reader = BodyReader::{
     styles: SortedMap([]),
     zip: try! @zip.zip_archive({ "word/media/hat.png": b"abc" }),
-    relationships: {
-      relationships: [
-        {
-          id: "rEmbeddedImage",
-          relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
-          target: "media/hat.png",
-          target_mode: Some("External"),
-        },
-      ],
-    },
+    relationship_index: relationship_index([
+      {
+        id: "rEmbeddedImage",
+        relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+        target: "media/hat.png",
+        target_mode: Some("External"),
+      },
+    ]),
     content_types: {
       defaults: SortedMap([("png", "image/png")]),
       overrides: SortedMap([]),
@@ -3518,6 +3797,8 @@ test "docx embedded DrawingML images ignore relationship target mode" {
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
+    diagnostics: None,
+    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: default_external_file_access(),
     read_images: true,
   }
@@ -3539,20 +3820,20 @@ test "docx DrawingML image relationship ids follow Mammoth truthiness" {
   let linked_reader = BodyReader::{
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
-    relationships: {
-      relationships: [
-        {
-          id: "rLinkedImage",
-          relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
-          target: "file:///media/hat.png",
-          target_mode: Some("External"),
-        },
-      ],
-    },
+    relationship_index: relationship_index([
+      {
+        id: "rLinkedImage",
+        relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+        target: "file:///media/hat.png",
+        target_mode: Some("External"),
+      },
+    ]),
     content_types: { defaults: SortedMap([]), overrides: SortedMap([]) },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
+    diagnostics: None,
+    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: external_file_access_options(true, fn(path) {
       if path == "file:///media/hat.png" {
         Some(b"abc")
@@ -3576,22 +3857,20 @@ test "docx DrawingML image relationship ids follow Mammoth truthiness" {
   let blank_link_reader = BodyReader::{
     styles: SortedMap([]),
     zip: try! @zip.zip_archive({ "word/media/tiny.png": b"abc" }),
-    relationships: {
-      relationships: [
-        {
-          id: "rImage",
-          relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
-          target: "media/tiny.png",
-          target_mode: None,
-        },
-        {
-          id: "",
-          relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
-          target: "http://example.com/blank",
-          target_mode: Some("External"),
-        },
-      ],
-    },
+    relationship_index: relationship_index([
+      {
+        id: "rImage",
+        relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+        target: "media/tiny.png",
+        target_mode: None,
+      },
+      {
+        id: "",
+        relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+        target: "http://example.com/blank",
+        target_mode: Some("External"),
+      },
+    ]),
     content_types: {
       defaults: SortedMap([("png", "image/png")]),
       overrides: SortedMap([]),
@@ -3599,6 +3878,8 @@ test "docx DrawingML image relationship ids follow Mammoth truthiness" {
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
+    diagnostics: None,
+    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: default_external_file_access(),
     read_images: true,
   }
@@ -3765,16 +4046,14 @@ test "docx image reader records Mammoth-compatible warnings" {
   let missing_entry_reader = BodyReader::{
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
-    relationships: {
-      relationships: [
-        {
-          id: "rMissingEntry",
-          relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
-          target: "media/missing.png",
-          target_mode: None,
-        },
-      ],
-    },
+    relationship_index: relationship_index([
+      {
+        id: "rMissingEntry",
+        relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+        target: "media/missing.png",
+        target_mode: None,
+      },
+    ]),
     content_types: {
       defaults: SortedMap([("png", "image/png")]),
       overrides: SortedMap([]),
@@ -3782,6 +4061,8 @@ test "docx image reader records Mammoth-compatible warnings" {
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
+    diagnostics: None,
+    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: default_external_file_access(),
     read_images: true,
   }
@@ -3857,20 +4138,20 @@ test "docx image reader records Mammoth-compatible warnings" {
   let external_reader = BodyReader::{
     styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
-    relationships: {
-      relationships: [
-        {
-          id: "rExternal",
-          relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
-          target: "tiny-picture.png",
-          target_mode: Some("External"),
-        },
-      ],
-    },
+    relationship_index: relationship_index([
+      {
+        id: "rExternal",
+        relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+        target: "tiny-picture.png",
+        target_mode: Some("External"),
+      },
+    ]),
     content_types: { defaults: SortedMap([]), overrides: SortedMap([]) },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
+    diagnostics: None,
+    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: default_external_file_access(),
     read_images: true,
   }
@@ -3881,6 +4162,71 @@ test "docx image reader records Mammoth-compatible warnings" {
       #|[Error("could not read external image 'tiny-picture.png', external file access is disabled")]
     ),
   )
+  let diagnostics = ReaderDiagnosticCollector::new(8, 512)
+  let bounded_external_reader = BodyReader::{
+    styles: SortedMap([]),
+    zip: try! @zip.zip_archive(Map([])),
+    relationship_index: relationship_index([
+      {
+        id: "rExternal",
+        relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+        target: "tiny-picture.png",
+        target_mode: Some("External"),
+      },
+    ]),
+    content_types: { defaults: SortedMap([]), overrides: SortedMap([]) },
+    base_path: "word",
+    numbering: NumberingMap::empty(),
+    messages: [],
+    diagnostics: Some(diagnostics),
+    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
+    external_files: default_external_file_access(),
+    read_images: true,
+  }
+  debug_inspect(
+    bounded_external_reader.read_element(external_image),
+    content="[]",
+  )
+  debug_inspect(bounded_external_reader.messages, content="[]")
+  debug_inspect(
+    diagnostics.finish(),
+    content=(
+      #|[Error("could not read external image 'tiny-picture.png', external file access is disabled")]
+    ),
+  )
+  let repeated_diagnostics = ReaderDiagnosticCollector::new(8, 64)
+  let large_target = "x".repeat(1024 * 1024)
+  let repeated_external_reader = BodyReader::{
+    styles: SortedMap([]),
+    zip: try! @zip.zip_archive(Map([])),
+    relationship_index: relationship_index([
+      {
+        id: "rExternal",
+        relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+        target: large_target,
+        target_mode: Some("External"),
+      },
+    ]),
+    content_types: { defaults: SortedMap([]), overrides: SortedMap([]) },
+    base_path: "word",
+    numbering: NumberingMap::empty(),
+    messages: [],
+    diagnostics: Some(repeated_diagnostics),
+    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
+    external_files: default_external_file_access(),
+    read_images: true,
+  }
+  for _ in 0..<2000 {
+    ignore(repeated_external_reader.read_element(external_image))
+  }
+  assert_eq(repeated_diagnostics.received(), 2000)
+  let repeated_messages = repeated_diagnostics.finish()
+  assert_eq(repeated_messages.length(), 1)
+  guard repeated_messages[0] is Error(repeated_message) else {
+    fail("expected a bounded external-image error")
+  }
+  assert_true(repeated_message.length() <= 64)
+  assert_true(repeated_message.has_suffix("…"))
   let unsupported_type_xml =
     #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
   let unsupported_type = read_xml_string(
@@ -3890,16 +4236,14 @@ test "docx image reader records Mammoth-compatible warnings" {
   let unsupported_reader = BodyReader::{
     styles: SortedMap([]),
     zip: try! @zip.zip_archive({ "word/media/hat.emf": b"abc" }),
-    relationships: {
-      relationships: [
-        {
-          id: "rImage",
-          relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
-          target: "media/hat.emf",
-          target_mode: None,
-        },
-      ],
-    },
+    relationship_index: relationship_index([
+      {
+        id: "rImage",
+        relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+        target: "media/hat.emf",
+        target_mode: None,
+      },
+    ]),
     content_types: {
       defaults: SortedMap([("emf", "image/x-emf")]),
       overrides: SortedMap([]),
@@ -3907,6 +4251,8 @@ test "docx image reader records Mammoth-compatible warnings" {
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
+    diagnostics: None,
+    missing_annotation_id_mode: LegacyUndefinedAnnotationId,
     external_files: default_external_file_access(),
     read_images: true,
   }
@@ -4029,4 +4375,77 @@ test "comment addition wires prefixed and self-closing OPC metadata" {
   )
   let reparsed = read_docx_annotated(@mbtzip.write(result))
   assert_eq(reparsed.annotations().comments().length(), 1)
+}
+
+///|
+test "annotation mutations separate Unicode logical paths from ZIP spelling" {
+  let builder = @opc.PackageBuilder::new()
+  builder.add_default(
+    "rels", "application/vnd.openxmlformats-package.relationships+xml",
+  )
+  builder.add_default("xml", "application/xml")
+  builder.add_override(
+    "/dïr/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+  )
+  builder.add_relationship(
+    "rId1", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "dïr/document.xml",
+  )
+  builder.add_part(
+    "dïr/document.xml",
+    @utf8.encode(
+      (
+        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Unicode directory</w:t></w:r></w:p><w:sectPr/></w:body></w:document>
+      ),
+    ),
+  )
+  let original = builder.build()
+  let annotated = read_docx_annotated(original)
+  let root_spec = comment_spec(author="Unicode", from=0, to=0, [
+    paragraph([run([text("root")])]),
+  ])
+  let (addition, root_id) = plan_comment_addition(
+    annotated,
+    original,
+    at_relative="p[1]",
+    to_relative="p[1]",
+    root_spec,
+  )
+  assert_eq(root_id, "0")
+  let commented = @splice.splice_docx(original, addition)
+  assert_eq(@opc.validate_docx_package(commented), [])
+  let commented_archive = @mbtzip.read(commented)
+  assert_true(commented_archive.get("d%C3%AFr/comments.xml") is Some(_))
+  assert_true(
+    commented_archive.get("d%C3%AFr/_rels/document.xml.rels") is Some(_),
+  )
+  guard commented_archive.get("[Content_Types].xml") is Some(types_bytes)
+  let types_text = @utf8.decode(types_bytes, ignore_bom=true)
+  assert_true(types_text.contains("PartName=\"/dïr/comments.xml\""))
+  assert_false(types_text.contains("PartName=\"/d%C3%AFr/comments.xml\""))
+
+  let reply_spec = comment_spec(author="Unicode", from=0, to=0, [
+    paragraph([run([text("reply")])]),
+  ])
+  let commented_model = read_docx_annotated(commented)
+  let (reply, reply_id) = plan_comment_reply(
+    commented_model,
+    commented,
+    parent_id=root_id,
+    reply_spec,
+  )
+  assert_eq(reply_id, "1")
+  let replied = @splice.splice_docx(commented, reply)
+  assert_eq(@opc.validate_docx_package(replied), [])
+  let replied_archive = @mbtzip.read(replied)
+  assert_true(replied_archive.get("d%C3%AFr/commentsExtended.xml") is Some(_))
+  guard replied_archive.get("[Content_Types].xml") is Some(replied_types)
+  let replied_types_text = @utf8.decode(replied_types, ignore_bom=true)
+  assert_true(
+    replied_types_text.contains("PartName=\"/dïr/commentsExtended.xml\""),
+  )
+  assert_false(
+    replied_types_text.contains("PartName=\"/d%C3%AFr/commentsExtended.xml\""),
+  )
+  assert_eq(read_docx_annotated(replied).annotations().comments().length(), 2)
 }

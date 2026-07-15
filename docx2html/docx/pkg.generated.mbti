@@ -52,7 +52,9 @@ pub fn read_docx_annotated(BytesView, external_file_access? : Bool, read_externa
 
 pub fn read_docx_annotated_archive(@zip.Archive, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocxAnnotatedResult raise @core.DocxError
 
-pub fn read_docx_annotated_archive_limited(@zip.Archive, @xml.XmlReadBudget, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocxAnnotatedResult raise @core.DocxError
+pub fn read_docx_annotated_archive_limited(@zip.Archive, @xml.XmlReadBudget, external_file_access? : Bool, read_external_file? : (String) -> Bytes?, max_diagnostics? : Int, max_diagnostic_chars? : Int, expected_main_document_path? : String) -> DocxAnnotatedResult raise @core.DocxError
+
+pub fn read_docx_annotated_archive_tolerant_limited(@zip.Archive, @xml.XmlReadBudget, external_file_access? : Bool, read_external_file? : (String) -> Bytes?, max_diagnostics? : Int, max_diagnostic_chars? : Int, expected_main_document_path? : String) -> DocxAnnotatedResult raise @core.DocxError
 
 pub fn read_docx_package(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocxPackageResult raise @core.DocxError
 
@@ -128,9 +130,15 @@ pub fn DocxAnnotatedResult::body_run_span(Self, String) -> NodeSpan?
 pub fn DocxAnnotatedResult::comment_bodies(Self) -> Array[(String, Array[@document.DocumentElement])]
 pub fn DocxAnnotatedResult::comments_extended_part(Self) -> String?
 pub fn DocxAnnotatedResult::comments_part(Self) -> String?
+pub fn DocxAnnotatedResult::comments_story_source(Self) -> DocxStoryPartSource?
 pub fn DocxAnnotatedResult::endnote_bodies(Self) -> Array[(String, Array[@document.DocumentElement])]
+pub fn DocxAnnotatedResult::endnotes_story_source(Self) -> DocxStoryPartSource?
+pub fn DocxAnnotatedResult::footer_story_sources(Self) -> Array[DocxStoryPartSource]
 pub fn DocxAnnotatedResult::footnote_bodies(Self) -> Array[(String, Array[@document.DocumentElement])]
+pub fn DocxAnnotatedResult::footnotes_story_source(Self) -> DocxStoryPartSource?
+pub fn DocxAnnotatedResult::header_story_sources(Self) -> Array[DocxStoryPartSource]
 pub fn DocxAnnotatedResult::main_story_part(Self) -> String
+pub fn DocxAnnotatedResult::main_story_source(Self) -> DocxStoryPartSource
 pub fn DocxAnnotatedResult::result(Self) -> DocxPackageResult
 pub fn DocxAnnotatedResult::story_paragraph_span(Self, String, String) -> NodeSpan?
 pub fn DocxAnnotatedResult::story_root_span(Self, String) -> NodeSpan?
@@ -161,6 +169,18 @@ pub fn DocxReadResult::not_equal(Self, Self) -> Bool
 #as_free_fn
 #deprecated
 pub fn DocxReadResult::to_repr(Self) -> @debug.Repr
+
+pub enum DocxStoryPartAuthority {
+  RelationshipBacked
+  LegacyFilenameFallback
+}
+pub fn DocxStoryPartAuthority::name(Self) -> String
+
+pub struct DocxStoryPartSource {
+  // private fields
+}
+pub fn DocxStoryPartSource::authority(Self) -> DocxStoryPartAuthority
+pub fn DocxStoryPartSource::part(Self) -> String
 
 pub struct NodeSpan {
   // private fields

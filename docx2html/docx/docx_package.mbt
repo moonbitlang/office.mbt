@@ -231,7 +231,9 @@ fn HeaderFooterCollector::section(
       declared_footers.push(variant)
     }
     guard element.attributes.get("r:id") is Some(rel_id) else {
-      self.messages.push(
+      push_reader_message(
+        self.messages,
+        self.parts.diagnostics,
         Warning("A header/footer reference without r:id was ignored"),
       )
       continue
@@ -274,11 +276,9 @@ fn HeaderFooterCollector::resolve_part(
     _ => {
       // The package projection remains tolerant. Annotation-aware mutation
       // runs the same resolver without this catch and therefore fails closed.
-      self.messages.push(
-        Warning(
-          "A \{kind} reference through invalid relationship \{rel_id} was ignored",
-        ),
-      )
+      push_reader_warning_parts(self.messages, self.parts.diagnostics, [
+        "A ", kind, " reference through invalid relationship ", rel_id, " was ignored",
+      ])
       return None
     }
   }
@@ -295,9 +295,9 @@ fn HeaderFooterCollector::resolve_part(
       // never raised for a broken header. Warn and skip instead.
       let body = self.read_part_story(path) catch {
         _ => {
-          self.messages.push(
-            Warning("A \{kind} part could not be read and was ignored: \{path}"),
-          )
+          push_reader_warning_parts(self.messages, self.parts.diagnostics, [
+            "A ", kind, " part could not be read and was ignored: ", path,
+          ])
           return None
         }
       }
@@ -320,17 +320,19 @@ fn HeaderFooterCollector::read_part_story(
 ) -> Array[DocumentElement] raise DocxError {
   let part_relationships = read_relationships(
     self.parts.zip,
-    relationships_path_for_part(path),
+    relationships_path_for_part(self.parts.zip, path),
     xml_budget?=self.parts.xml_budget,
   )
   let reader = BodyReader::{
     styles: self.parts.styles,
     zip: self.parts.zip,
-    relationships: part_relationships,
+    relationship_index: RelationshipIndex::build(part_relationships),
     content_types: self.parts.content_types,
-    base_path: split_zip_path(path).0,
+    base_path: split_zip_path(self.parts.zip.logical_path(path).unwrap_or(path)).0,
     numbering: self.parts.numbering,
     messages: [],
+    diagnostics: self.parts.diagnostics,
+    missing_annotation_id_mode: self.parts.missing_annotation_id_mode,
     external_files: self.parts.external_files,
     read_images: true,
   }

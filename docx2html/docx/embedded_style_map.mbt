@@ -259,8 +259,9 @@ fn is_embedded_style_map_part_name(part_name : String) -> Bool {
   if !part_name.has_prefix("/") {
     return false
   }
-  match @opc.resolve_target("", part_name) {
-    Some(path) => path.to_lower() == "mammoth/style-map"
+  match @opc.resolve_part_target("", part_name) {
+    Some(path) =>
+      @opc.part_name_key(path) == @opc.part_name_key("mammoth/style-map")
     None => false
   }
 }

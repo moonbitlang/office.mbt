@@ -199,35 +199,28 @@ fn plan_comment_addition_zip(
       }
     }
     None => {
-      // Create the part NEXT TO the main part (a main part at
-      // custom/main.xml gets custom/comments.xml, matching the
-      // relative Target below).
-      let (main_dir, main_base) = split_part_path(main_part)
-      let comments_part_name = if main_dir == "" {
-        "comments.xml"
-      } else {
-        "\{main_dir}/comments.xml"
-      }
+      // Create the part NEXT TO the main part. OPC relationship and
+      // [Content_Types] names are logical IRIs, while SplicePlan additions are
+      // physical ASCII ZIP item names; keep both identities explicit.
+      let comments_path = main_sibling_mutation_part_path(
+        annotated, zip, "comments.xml",
+      )
       // An entry with that name but NO comments relationship is an
       // ORPHAN part: splicing definitions into it would leave them
       // disconnected, and overwriting it would destroy data.
-      if zip.exists(comments_part_name) {
+      if zip.exists(comments_path.logical) {
         raise Unsupported(
-          message="'\{comments_part_name}' exists but is not wired as the comments part (an orphan); refusing to annotate",
+          message="'\{comments_path.logical}' exists but is not wired as the comments part (an orphan); refusing to annotate",
         )
       }
       let part_text = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
         "<w:comments xmlns:w=\"\{main_wordprocessing_namespace}\">" +
         definition +
         "</w:comments>"
-      plan.add_part(comments_part_name, @utf8.encode(part_text))
-      let rels_part = if main_dir == "" {
-        "_rels/\{main_base}.rels"
-      } else {
-        "\{main_dir}/_rels/\{main_base}.rels"
-      }
+      plan.add_part(comments_path.physical, @utf8.encode(part_text))
+      let rels_path = main_relationships_mutation_part_path(annotated, zip)
       let relationship_type = annotated.new_comments_relationship_type()
-      match zip.resolve_path(rels_part) {
+      match zip.resolve_path(rels_path.logical) {
         Some(actual_rels_part) => {
           guard zip.read_bytes(actual_rels_part) is Some(rels_bytes) else {
             raise Unsupported(
@@ -260,7 +253,7 @@ fn plan_comment_addition_zip(
         None =>
           // A main part with no relationships part is legal; create it.
           plan.add_part(
-            rels_part,
+            rels_path.physical,
             @utf8.encode(
               "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
               "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
@@ -289,7 +282,11 @@ fn plan_comment_addition_zip(
         xml_root_child_edit(
           types_bytes,
           types_span,
-          "<\{override_name} PartName=\"/\{comments_part_name}\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml\"/>",
+          opc_content_type_override_fragment(
+            override_name,
+            comments_path.logical,
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml",
+          ),
         ),
       )
     }
@@ -910,6 +907,88 @@ fn split_part_path(part : String) -> (String, String) {
       )
     None => ("", part)
   }
+}
+
+///|
+/// One OPC part's logical IRI identity and exact/canonical physical ZIP item
+/// spelling. Existing entries retain their exact producer spelling; new parts
+/// use the canonical ASCII projection of the logical name.
+priv struct MutationOpcPartPath {
+  logical : String
+  physical : String
+}
+
+///|
+fn mutation_part_path_from_logical(
+  zip : ZipArchive,
+  logical : String,
+  role : String,
+) -> MutationOpcPartPath raise DocxError {
+  guard @opc.zip_item_name_from_logical_part_name(logical) is Some(canonical) else {
+    raise Unsupported(
+      message="the logical \{role} part name '\{logical}' cannot be represented as a ZIP item",
+    )
+  }
+  { logical, physical: zip.resolve_path(logical).unwrap_or(canonical) }
+}
+
+///|
+fn main_story_logical_part(
+  annotated : DocxAnnotatedResult,
+  zip : ZipArchive,
+) -> String raise DocxError {
+  let physical = annotated.main_story_part()
+  guard zip.logical_path(physical) is Some(logical) else {
+    raise Unsupported(
+      message="the main story part '\{physical}' has no logical OPC identity",
+    )
+  }
+  logical
+}
+
+///|
+fn main_sibling_mutation_part_path(
+  annotated : DocxAnnotatedResult,
+  zip : ZipArchive,
+  basename : String,
+) -> MutationOpcPartPath raise DocxError {
+  let logical_main = main_story_logical_part(annotated, zip)
+  let (main_dir, _) = split_part_path(logical_main)
+  let logical = if main_dir == "" {
+    basename
+  } else {
+    "\{main_dir}/\{basename}"
+  }
+  mutation_part_path_from_logical(zip, logical, basename)
+}
+
+///|
+fn main_relationships_mutation_part_path(
+  annotated : DocxAnnotatedResult,
+  zip : ZipArchive,
+) -> MutationOpcPartPath raise DocxError {
+  let logical_main = main_story_logical_part(annotated, zip)
+  let (main_dir, main_base) = split_part_path(logical_main)
+  let logical = if main_dir == "" {
+    "_rels/\{main_base}.rels"
+  } else {
+    "\{main_dir}/_rels/\{main_base}.rels"
+  }
+  mutation_part_path_from_logical(zip, logical, "relationships")
+}
+
+///|
+fn opc_content_type_override_fragment(
+  element_name : String,
+  logical_part : String,
+  content_type : String,
+) -> String {
+  @xml.write_xml_fragment(
+    @xml.xml_element(element_name, attributes={
+      "PartName": "/" + logical_part,
+      "ContentType": content_type,
+    }),
+  )
 }
 
 ///|
