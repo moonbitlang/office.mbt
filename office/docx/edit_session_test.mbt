@@ -822,6 +822,55 @@ async test "D1 semantic planners bound unreferenced relationship stories" {
 }
 
 ///|
+async test "D1 session preserves paraId reread resource classification" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/para-budget-input.docx"
+    let output = "\{directory}/para-budget-output.docx"
+    let original = @word_fixture.write_docx_with_comments(
+      [
+        @word_fixture.paragraph([
+          @word_fixture.run([@word_fixture.text("Claim")]),
+        ]),
+      ],
+      [
+        @word_fixture.comment_spec(author="Ada", from=0, to=0, [
+          @word_fixture.paragraph([
+            @word_fixture.run([@word_fixture.text("Explain")]),
+          ]),
+        ]),
+      ],
+    )
+    let archive = @zip.read(original)
+    guard archive.get("word/document.xml") is Some(document_bytes) else {
+      fail("fixture is missing its main document")
+    }
+    let document = @utf8.decode(document_bytes, ignore_bom=true)
+    let expanded = document.replace(old="Claim", new="x".repeat(4_400_000))
+    assert_true(expanded != document)
+    assert_true(archive.replace("word/document.xml", @utf8.encode(expanded)))
+    let source = @zip.write(archive)
+    write_docx_session_file(input, source)
+    let reply = @word_fixture.comment_spec(author="Bob", from=0, to=0, [
+      @word_fixture.paragraph([@word_fixture.run([@word_fixture.text("Reply")])]),
+    ])
+    let callback_started = Ref(false)
+    let code = docx_session_error_code(() => {
+      @docx.transact_docx(
+        @transaction.transaction_options(input, output_path=output),
+        session => {
+          callback_started.val = true
+          session.queue_comment_reply(parent_id="0", reply) |> ignore
+        },
+      )
+    })
+    assert_true(callback_started.val)
+    assert_eq(code, "office.docx.resource_limit")
+    assert_false(@afs.exists(output))
+    assert_eq(@afs.read_file(input).binary(), source)
+  })
+}
+
+///|
 async test "D1 session bounds comment fragments before derived allocation" {
   with_docx_session_test_dir(directory => {
     let blank_path = "\{directory}/blank.docx"

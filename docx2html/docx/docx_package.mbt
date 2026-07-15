@@ -259,12 +259,13 @@ fn HeaderFooterCollector::section(
 
 ///|
 /// Returns the part index in `headers`/`footers`, reading the part on its
-/// first reference. A dangling id or unreadable part warns and yields None.
+/// first reference. A dangling id or malformed part warns and yields None;
+/// bounded resource exhaustion always propagates.
 fn HeaderFooterCollector::resolve_part(
   self : HeaderFooterCollector,
   rel_id : String,
   is_header~ : Bool,
-) -> Int? {
+) -> Int? raise DocxError {
   let kind = if is_header { "header" } else { "footer" }
   let path = resolve_header_footer_reference_part(
     self.parts.zip,
@@ -292,8 +293,10 @@ fn HeaderFooterCollector::resolve_part(
     None => {
       // A malformed part or malformed part-rels must not abort the read —
       // outline/text/get all flow through here, and the body-only surface
-      // never raised for a broken header. Warn and skip instead.
+      // never raised for a broken header. Warn and skip instead, while
+      // preserving hard resource ceilings as typed failures.
       let body = self.read_part_story(path) catch {
+        ResourceLimit(..) as error => raise error
         _ => {
           push_reader_warning_parts(self.messages, self.parts.diagnostics, [
             "A ", kind, " part could not be read and was ignored: ", path,

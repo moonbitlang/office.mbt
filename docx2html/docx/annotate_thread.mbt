@@ -486,6 +486,7 @@ fn collect_para_ids(
       xml_budget,
       namespace_map=office_namespace_map(),
     ) catch {
+      ResourceLimit(..) as error => raise error
       error =>
         raise InvalidXml(
           message="could not parse paraId-bearing story part '\{part}': \{repr(error)}",
