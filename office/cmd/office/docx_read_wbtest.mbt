@@ -416,6 +416,35 @@ test "projection and serialized output limits fail explicitly" {
 }
 
 ///|
+test "deep generated DOCX paths are classified as resource limits" {
+  let mut nested = @word.paragraph([@word.run([@word.text("deep")])])
+  for _ in 0..<40 {
+    nested = @word.table([@word.table_row([@word.table_cell([nested])])])
+  }
+  let builder = DocxProjectionBuilder::new(1000)
+  try
+    builder.add_story("/docx/body", "body", [nested], Json::empty_object())
+  catch {
+    CliFailure(error) => {
+      assert_eq(error.code, "office.docx.resource_limit")
+      guard error.details is Some(Object(details)) else {
+        fail("expected selector-depth resource details")
+      }
+      assert_eq(
+        details.get("resource"),
+        Some(Json::string("selector path segments")),
+      )
+      assert_eq(
+        details.get("limit"),
+        Some(Json::number(@lib.SELECTOR_MAX_DEPTH.to_double())),
+      )
+    }
+  } noraise {
+    _ => fail("expected deep generated selector paths to hit a resource limit")
+  }
+}
+
+///|
 test "compact JSON preflight matches serializer character accounting" {
   let value = Json::object({
     "escaped": Json::string("quote \" slash \\ controls \b\t\n\f\r \u{0001}"),
