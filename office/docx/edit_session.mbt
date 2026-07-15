@@ -103,7 +103,12 @@ fn mapped_plan_failure(
   error : @docxcore.DocxError,
 ) -> @transaction.TransactionError raise @transaction.TransactionError {
   let message = docx_error_message(error)
-  let code = if message.contains("duplicate zip entries") ||
+  // Typed resource identity outranks contextual text. Part names appear in
+  // splice diagnostics and may legally contain words such as `overlap`; those
+  // names must not impersonate an unrelated message-derived error class.
+  let code = if error.xml_resource_limit() is Some(_) {
+    "office.docx.resource_limit"
+  } else if message.contains("duplicate zip entries") ||
     message.contains("duplicate ZIP entry") {
     "office.docx.duplicate_part"
   } else if message.contains("splice plan is stale") ||
@@ -126,8 +131,6 @@ fn mapped_plan_failure(
     "office.docx.unsupported_encoding"
   } else if message.contains("without pinned source bytes") {
     "office.docx.unpinned_plan"
-  } else if error.xml_resource_limit() is Some(_) {
-    "office.docx.resource_limit"
   } else if message.contains("does not contain") ||
     message.contains("no longer present") ||
     message.contains("missing") {
