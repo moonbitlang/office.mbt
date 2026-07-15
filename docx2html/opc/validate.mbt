@@ -1626,7 +1626,7 @@ fn for_each_relationship(
         valid = false
       }
     }
-    let id = collapse_xml_schema_whitespace(
+    let id = @xml.collapse_xml_schema_whitespace(
       element.attributes.get("Id").unwrap_or(""),
     )
     if id == "" {
@@ -1647,7 +1647,7 @@ fn for_each_relationship(
     } else {
       ids.add(id)
     }
-    let rel_type = collapse_xml_schema_whitespace(
+    let rel_type = @xml.collapse_xml_schema_whitespace(
       element.attributes.get("Type").unwrap_or(""),
     )
     if rel_type == "" {
@@ -1661,7 +1661,7 @@ fn for_each_relationship(
       )
       valid = false
     }
-    let target = collapse_xml_schema_whitespace(
+    let target = @xml.collapse_xml_schema_whitespace(
       element.attributes.get("Target").unwrap_or(""),
     )
     if target == "" {
@@ -1874,11 +1874,7 @@ fn parse_relationships_part(
   bytes : BytesView,
   findings : FindingCollector,
 ) -> @xml.XmlElement? {
-  let root = @xml.read_xml_bytes_strict_mce_limited(
-    bytes,
-    findings.xml_budget,
-    [PACKAGE_RELATIONSHIPS_NAMESPACE],
-  ) catch {
+  let root = read_opc_relationships_xml_limited(bytes, findings.xml_budget) catch {
     InvalidXml(message="XML source is not valid UTF-8") => {
       findings.add("part is not valid UTF-8: \{findings.text(name)}")
       return None
@@ -1892,4 +1888,17 @@ fn parse_relationships_part(
     }
   }
   Some(root)
+}
+
+///|
+/// Strictly parses one OPC Relationships part and applies Markup
+/// Compatibility with only the package Relationships namespace understood.
+/// Schema validation remains the caller's responsibility.
+pub fn read_opc_relationships_xml_limited(
+  source : BytesView,
+  budget : @xml.XmlReadBudget,
+) -> @xml.XmlElement raise @core.DocxError {
+  @xml.read_xml_bytes_strict_mce_limited(source, budget, [
+    PACKAGE_RELATIONSHIPS_NAMESPACE,
+  ])
 }

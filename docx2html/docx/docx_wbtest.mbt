@@ -568,9 +568,15 @@ test "docx relationships reader finds targets by id and type" {
     zip_with_text(
       "_rels/.rels",
       (
-        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-        #|  <Relationship Id="rId2" Target="docProps/core.xml" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" />
-        #|  <Relationship Id="rId1" Target="word/document.xml" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" />
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
+        #| xmlns:r="http://schemas.openxmlformats.org/package/2006/relationships"
+        #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        #| xmlns:v="urn:vendor" mc:Ignorable="v" mc:ProcessContent="v:Wrapper">
+        #|  <v:Wrapper><Relationship Id=" rId2 " Target=" docProps/core.xml " Type=" http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties " /></v:Wrapper>
+        #|  <mc:AlternateContent>
+        #|    <mc:Choice Requires="r"><Relationship Id="rId1" Target="word/document.xml" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" /></mc:Choice>
+        #|    <mc:Fallback><Relationship Id="rDecoy" Target="word/decoy.xml" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" /></mc:Fallback>
+        #|  </mc:AlternateContent>
         #|  <Relationship Id="rId3" Target="word/document2.xml" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" TargetMode="External" />
         #|</Relationships>
       ),
@@ -586,6 +592,8 @@ test "docx relationships reader finds targets by id and type" {
     index.find_unique_by_id("rId3").unwrap().target_mode.unwrap(),
     content="External",
   )
+  assert_eq(index.find_unique_target_by_id("rId2"), Some("docProps/core.xml"))
+  assert_true(index.find_unique_by_id("rDecoy") is None)
   let duplicate = RelationshipIndex::build({
     relationships: [
       relationships.relationships[0],
@@ -4418,6 +4426,37 @@ test "mutation relationship parsing is strict and budgeted" {
 }
 
 ///|
+test "mutation relationship parsing uses the effective MCE branch" {
+  let relationships =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
+    #| xmlns:r="http://schemas.openxmlformats.org/package/2006/relationships"
+    #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    #| xmlns:v="urn:vendor" mc:Ignorable="v" mc:ProcessContent="v:Wrapper">
+    #| <v:Wrapper><Relationship Id=" rIdAnnotate1 " Type="urn:test" Target="one.xml"/></v:Wrapper>
+    #| <mc:AlternateContent>
+    #|  <mc:Choice Requires="r"><Relationship Id="rIdAnnotate2" Type="urn:test" Target="two.xml"/></mc:Choice>
+    #|  <mc:Fallback><Relationship Id="rIdFallback" Type="urn:test" Target="fallback.xml"/></mc:Fallback>
+    #| </mc:AlternateContent>
+    #|</Relationships>
+  let budget = @xml.xml_read_budget(
+    max_source_units=relationships.length(),
+    max_tokens=4096,
+    max_materialized_chars=16 * 1024,
+    max_token_chars=4096,
+  )
+  let root = read_mutation_relationships(
+    "word/_rels/document.xml.rels",
+    @utf8.encode(relationships),
+    budget,
+  )
+  let ids : StableStringSet = SortedSet([])
+  collect_relationship_ids(root, ids)
+  assert_true(ids.contains("rIdAnnotate1"))
+  assert_true(ids.contains("rIdAnnotate2"))
+  assert_false(ids.contains("rIdFallback"))
+}
+
+///|
 test "comment addition wires prefixed and self-closing OPC metadata" {
   let archive = @mbtzip.read(new_blank_docx())
   let relationships =
@@ -4463,6 +4502,100 @@ test "comment addition wires prefixed and self-closing OPC metadata" {
   )
   let reparsed = read_docx_annotated(@mbtzip.write(result))
   assert_eq(reparsed.annotations().comments().length(), 1)
+}
+
+///|
+test "comment addition honors MCE-selected relocated comments relationships" {
+  fn source_with_relationships(relationships : String) -> Bytes raise {
+    let builder = @opc.PackageBuilder::new()
+    builder.add_default(
+      "rels", "application/vnd.openxmlformats-package.relationships+xml",
+    )
+    builder.add_default("xml", "application/xml")
+    builder.add_override(
+      "/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+    )
+    builder.add_override(
+      "/word/annotations/comments.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml",
+    )
+    builder.add_relationship(
+      "rIdMain", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+      "word/document.xml",
+    )
+    builder.add_relationship(
+      "rComments",
+      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+      "annotations/comments.xml",
+      source="word/document.xml",
+    )
+    builder.add_part(
+      "word/document.xml",
+      @utf8.encode(
+        (
+          #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Body</w:t></w:r></w:p><w:sectPr/></w:body></w:document>
+        ),
+      ),
+    )
+    builder.add_part(
+      "word/annotations/comments.xml",
+      @utf8.encode(
+        (
+          #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>
+        ),
+      ),
+    )
+    let archive = @mbtzip.read(builder.build())
+    assert_true(
+      archive.replace(
+        "word/_rels/document.xml.rels",
+        @utf8.encode(relationships),
+      ),
+    )
+    @mbtzip.write(archive)
+  }
+
+  let process_content =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
+    #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    #| xmlns:v="urn:vendor" mc:Ignorable="v" mc:ProcessContent="v:Wrapper">
+    #| <v:Wrapper><Relationship Id="rComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="annotations/comments.xml"/></v:Wrapper>
+    #|</Relationships>
+  let understood_choice =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
+    #| xmlns:r="http://schemas.openxmlformats.org/package/2006/relationships"
+    #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">
+    #| <mc:AlternateContent>
+    #|  <mc:Choice Requires="r"><Relationship Id="rComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="annotations/comments.xml"/></mc:Choice>
+    #|  <mc:Fallback><Relationship Id="rDecoy" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="decoy-comments.xml"/></mc:Fallback>
+    #| </mc:AlternateContent>
+    #|</Relationships>
+  for relationships in [process_content, understood_choice] {
+    let source = source_with_relationships(relationships)
+    assert_eq(@opc.validate_docx_package(source), [])
+    let annotated = read_docx_annotated(source)
+    let spec = comment_spec(author="MCE", from=0, to=0, [
+      paragraph([run([text("relocated")])]),
+    ])
+    let (plan, id) = plan_comment_addition(
+      annotated,
+      source,
+      at_relative="p[1]",
+      to_relative="p[1]",
+      spec,
+    )
+    assert_eq(id, "0")
+    let updated = @splice.splice_docx(source, plan)
+    assert_eq(@opc.validate_docx_package(updated), [])
+    let archive = @mbtzip.read(updated)
+    guard archive.get("word/annotations/comments.xml") is Some(bytes)
+    let comments = @utf8.decode(bytes, ignore_bom=true)
+    assert_true(comments.contains("<w:comment "))
+    assert_true(archive.get("word/comments.xml") is None)
+    guard archive.get("word/_rels/document.xml.rels") is Some(rels_bytes)
+    let rels = @utf8.decode(rels_bytes, ignore_bom=true)
+    assert_false(rels.contains("rIdAnnotate"))
+    assert_eq(read_docx_annotated(updated).annotations().comments().length(), 1)
+  }
 }
 
 ///|

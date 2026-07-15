@@ -68,6 +68,12 @@ const TRANSITIONAL_OFFICE_DOCUMENT_RELATIONSHIP : String = "http://schemas.openx
 const STRICT_OFFICE_DOCUMENT_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument"
 
 ///|
+const PACKAGE_RELATIONSHIPS_ROOT : String = "{http://schemas.openxmlformats.org/package/2006/relationships}Relationships"
+
+///|
+const PACKAGE_RELATIONSHIP_ELEMENT : String = "{http://schemas.openxmlformats.org/package/2006/relationships}Relationship"
+
+///|
 const TRANSITIONAL_COMMENTS_RELATIONSHIP : String = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments"
 
 ///|
@@ -997,7 +1003,15 @@ fn read_relationships(
   xml_budget? : @xml.XmlReadBudget,
 ) -> Relationships raise DocxError {
   match zip.read_bytes(path) {
-    Some(_) => read_relationships_xml(read_xml_part(zip, path, xml_budget?))
+    Some(bytes) => {
+      let budget = match xml_budget {
+        Some(value) => value
+        None => local_input_linear_xml_budget(bytes)
+      }
+      read_relationships_xml(
+        @opc.read_opc_relationships_xml_limited(bytes, budget),
+      )
+    }
     None => { relationships: [] }
   }
 }
@@ -1014,11 +1028,7 @@ fn read_relationships_strict_limited(
   match zip.read_bytes(path) {
     Some(bytes) =>
       read_relationships_xml(
-        @xml.read_xml_bytes_strict_limited(
-          bytes,
-          xml_budget,
-          namespace_map=office_namespace_map(),
-        ),
+        @opc.read_opc_relationships_xml_limited(bytes, xml_budget),
       )
     None => { relationships: [] }
   }
@@ -1027,15 +1037,49 @@ fn read_relationships_strict_limited(
 ///|
 fn read_relationships_xml(root : XmlElement) -> Relationships {
   let relationships : Array[Relationship] = []
-  for rel in root.elements_by_tag_name("relationships:Relationship") {
+  for node in root.children {
+    guard node is XmlElement(rel) &&
+      (
+        rel.name == PACKAGE_RELATIONSHIP_ELEMENT ||
+        rel.name == "relationships:Relationship"
+      ) else {
+      continue
+    }
     relationships.push({
-      id: rel.attributes.get_or_default("Id", ""),
-      relationship_type: rel.attributes.get_or_default("Type", ""),
-      target: rel.attributes.get_or_default("Target", ""),
+      id: @xml.collapse_xml_schema_whitespace(
+        rel.attributes.get_or_default("Id", ""),
+      ),
+      relationship_type: @xml.collapse_xml_schema_whitespace(
+        rel.attributes.get_or_default("Type", ""),
+      ),
+      target: @xml.collapse_xml_schema_whitespace(
+        rel.attributes.get_or_default("Target", ""),
+      ),
       target_mode: rel.attributes.get("TargetMode"),
     })
   }
   { relationships, }
+}
+
+///|
+/// Gives otherwise-unbounded library reads an input-linear strict XML budget.
+/// Namespace expansion can materialize substantially more text than the
+/// compact source, so derived work receives a conservative constant factor.
+fn local_input_linear_xml_budget(bytes : BytesView) -> @xml.XmlReadBudget {
+  let scaled = bytes.length().to_int64() * 32L
+  let allowance = if scaled <= 0L {
+    1
+  } else if scaled > 2147483647L {
+    2147483647
+  } else {
+    scaled.to_int()
+  }
+  @xml.xml_read_budget(
+    max_source_units=bytes.length(),
+    max_tokens=allowance,
+    max_materialized_chars=allowance,
+    max_token_chars=if bytes.length() > 0 { bytes.length() } else { 1 },
+  )
 }
 
 ///|

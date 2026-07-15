@@ -8,6 +8,8 @@ import {
 }
 
 // Values
+pub fn collapse_xml_schema_whitespace(StringView) -> String
+
 pub fn read_xml_bytes_limited(BytesView, XmlReadBudget, namespace_map? : Map[String, String]) -> XmlElement raise @core.DocxError
 
 pub fn read_xml_bytes_strict_limited(BytesView, XmlReadBudget, namespace_map? : Map[String, String]) -> XmlElement raise @core.DocxError
