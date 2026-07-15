@@ -78,6 +78,13 @@ the same ordinal-to-emitted-root index. A unique note/comment therefore uses
 its stable `id=` root everywhere, and every canonical-looking metadata path can
 be passed back to `get` in the same snapshot.
 
+Every projection entry also carries a `source` object. `story` is the logical
+story name, `authority` is `relationship`, `legacy-fallback`, or `absent`, and
+`part` is the exact physical ZIP entry whenever a part was read. Header/footer
+sources also carry `part_index`; annotation items carry `ordinal`. Anchor
+`story`, `start`, `end`, and `references` values are canonical `/docx/...`
+selectors rather than reader-internal paths.
+
 ## `outline`
 
 ```text

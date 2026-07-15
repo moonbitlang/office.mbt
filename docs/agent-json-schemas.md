@@ -455,6 +455,12 @@ Common keys are `schema`, `file`, `format`, canonical `path`, `kind`, `role`,
 `properties`, `metadata`, and bounded raw `text`. Child references are
 `{path, kind, stability, id?}`.
 
+`source` contains logical `story`, an `authority` of `relationship`,
+`legacy-fallback`, or `absent`, and the exact physical ZIP `part` when present.
+Header/footer roots additionally report `part_index`; annotation items report
+their `ordinal`. All anchor story and location fields use canonical
+`/docx/...` selectors.
+
 `properties` is kind-specific: paragraph/run/table styles, paragraph
 alignment and numbering, run formatting, row header state, cell spans,
 hyperlink targets, or image metadata. Comment `metadata` can carry author,

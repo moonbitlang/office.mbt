@@ -98,6 +98,41 @@ test "DOCX outline reports semantic annotation counts" {
 }
 
 ///|
+test "DOCX projection reports physical story sources and authority" {
+  let projection = docx_read_test_projection()
+  for
+    expected in [
+      ("/docx/body", "word/document.xml"),
+      ("/docx/footnotes", "word/footnotes.xml"),
+      ("/docx/endnotes", "word/endnotes.xml"),
+      ("/docx/comments", "word/comments.xml"),
+      ("/docx/comments/comment[id=\"0\"]", "word/comments.xml"),
+    ] {
+    let (path, part) = expected
+    let entry = resolve_projection_selector(projection, path)
+    guard entry.source is Object(source) else {
+      fail("expected object source for \{path}")
+    }
+    assert_eq(source.get("part"), Some(Json::string(part)))
+    assert_eq(source.get("authority"), Some(Json::string("relationship")))
+  }
+}
+
+///|
+test "DOCX annotation anchors expose canonical story selectors" {
+  let projection = docx_read_test_projection()
+  let comment = resolve_projection_selector(
+    projection, "/docx/comments/comment[id=\"0\"]",
+  )
+  guard comment.metadata is Object(metadata) &&
+    metadata.get("anchors") is Some(Array(anchors)) &&
+    anchors.get(0) is Some(Object(anchor)) else {
+    fail("expected comment anchor metadata")
+  }
+  assert_eq(anchor.get("story"), Some(Json::string("/docx/body")))
+}
+
+///|
 fn assert_docx_capability_payload_contract(
   name : String,
   payload : Json,
@@ -262,7 +297,7 @@ test "duplicate annotation ids stay positional and stable lookup is ambiguous" {
   let annotation_index = annotation_projection_index(
     annotated, footnotes, endnotes, comments,
   )
-  builder.add_annotation_story(annotation_index, comments)
+  builder.add_annotation_story(annotation_index, comments, None)
   assert_eq(builder.entries[1].path, "/docx/comments/comment[1]")
   assert_eq(builder.entries[4].path, "/docx/comments/comment[2]")
   assert_true(
@@ -302,6 +337,17 @@ test "delimiter-rich unique annotation ids remain canonical and stable" {
 }
 
 ///|
+test "missing annotation ids remain empty and positional" {
+  let body = [@document.paragraph([@document.run([@document.text("x")])])]
+  let plan = annotation_story_plan("comments", "comment", [("", body)])
+  assert_eq(plan.paths, ["/docx/comments/comment[1]"])
+  assert_eq(plan.missing_ids, 1)
+  assert_eq(plan.duplicate_ids, 0)
+  assert_eq(plan.unrepresentable_ids, 0)
+  assert_false(plan.paths[0].contains("undefined"))
+}
+
+///|
 test "annotation metadata paths rewrite to emitted stable roots" {
   let annotated = @docx.read_docx_annotated(docx_read_test_bytes())
   let footnotes = annotation_story_plan(
@@ -319,32 +365,24 @@ test "annotation metadata paths rewrite to emitted stable roots" {
     "comment",
     annotated.comment_bodies(),
   )
-  let annotation_index = annotation_projection_index(
-    annotated, footnotes, endnotes, comments,
-  )
+  let path_roots : @sorted_map.SortedMap[String, String] = SortedMap([])
+  add_annotation_path_roots(path_roots, footnotes)
+  add_annotation_path_roots(path_roots, endnotes)
+  add_annotation_path_roots(path_roots, comments)
   assert_eq(
-    canonical_index_path(
-      "/comments/comment[1]/p[1]",
-      annotation_index.path_roots,
-    ),
+    canonical_index_path("/comments/comment[1]/p[1]", path_roots),
     Some("/docx/comments/comment[id=\"0\"]/p[1]"),
   )
   assert_eq(
-    canonical_index_path(
-      "/footnotes/note[1]/p[1]/r[1]",
-      annotation_index.path_roots,
-    ),
+    canonical_index_path("/footnotes/note[1]/p[1]/r[1]", path_roots),
     Some("/docx/footnotes/note[id=\"1\"]/p[1]/r[1]"),
   )
   assert_eq(
-    canonical_index_path("/body/p[1]/r[1]", annotation_index.path_roots),
+    canonical_index_path("/body/p[1]/r[1]", path_roots),
     Some("/docx/body/p[1]/r[1]"),
   )
   assert_eq(
-    canonical_index_path(
-      "/comments/comment[99]/p[1]",
-      annotation_index.path_roots,
-    ),
+    canonical_index_path("/comments/comment[99]/p[1]", path_roots),
     None,
   )
   let projection = projection_from_annotated("fixture.docx", annotated, 1000)
