@@ -78,3 +78,23 @@ test "DOCX view ignores explicit directory records and their aliases" {
   assert_false(view.exists("word/"))
   assert_true(view.exists("word/document.xml"))
 }
+
+///|
+test "DOCX view rejects derivable names and inexact content-types spelling" {
+  try {
+    let _ = @zip.zip_archive({ "a": b"ancestor", "a/b.xml": b"descendant" })
+    fail("expected derivable PartNames to be rejected")
+  } catch {
+    @core.InvalidZip(message~) =>
+      assert_true(message.contains("must not be derivable"))
+    _ => fail("expected InvalidZip")
+  }
+  try {
+    let _ = @zip.zip_archive({ "[CONTENT_TYPES].XML": b"types" })
+    fail("expected inexact reserved spelling to be rejected")
+  } catch {
+    @core.InvalidZip(message~) =>
+      assert_true(message.contains("must use exact spelling"))
+    _ => fail("expected InvalidZip")
+  }
+}

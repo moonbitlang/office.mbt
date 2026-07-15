@@ -193,6 +193,35 @@ pub fn part_name_key(name : StringView) -> String {
 }
 
 ///|
+/// Logical ancestor keys used by OPC's non-derivability rule. For `a/b/c.xml`
+/// this returns the case-normalized keys for `a` and `a/b`.
+fn part_name_ancestor_keys(name : StringView) -> Array[String] {
+  let key = part_name_key(name)
+  let segments = key.split("/").collect()
+  let ancestors : Array[String] = []
+  let mut prefix = ""
+  for index in 0..<(segments.length() - 1) {
+    prefix = if index == 0 {
+      segments[index].to_owned()
+    } else {
+      prefix + "/" + segments[index].to_owned()
+    }
+    ancestors.push(prefix)
+  }
+  ancestors
+}
+
+///|
+/// OPC PartNames may not be derivable from one another by appending path
+/// segments. Identity follows the same ASCII case folding as exact PartName
+/// comparison.
+fn part_names_are_derivable(left : StringView, right : StringView) -> Bool {
+  let left_key = part_name_key(left)
+  let right_key = part_name_key(right)
+  left_key.has_prefix(right_key + "/") || right_key.has_prefix(left_key + "/")
+}
+
+///|
 /// Maps an ASCII ZIP item name to its logical OPC part name (without the
 /// leading slash used by the abstract syntax). Physical ZIP names percent-
 /// encode non-ASCII scalars; logical part names contain those scalars

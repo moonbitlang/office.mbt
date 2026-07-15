@@ -980,3 +980,114 @@ test "an empty or slash-less Override PartName is a finding, not a crash" {
     ),
   )
 }
+
+///|
+test "OPC part names are not derivable from one another" {
+  let descendant_first = @opc.validate_docx_package(
+    minimal_docx(extra=[("word", b"ancestor")]),
+  )
+  assert_true(
+    descendant_first.any(finding => {
+      finding.contains("part name is derivable from another part name") &&
+      finding.contains("word/document.xml") &&
+      finding.contains("word")
+    }),
+  )
+  let ancestor_first = @opc.validate_docx_package(
+    minimal_docx(extra=[("a", b"ancestor"), ("a/b.xml", b"descendant")]),
+  )
+  assert_true(
+    ancestor_first.any(finding => {
+      finding.contains("part name is derivable from another part name") &&
+      finding.contains("a/b.xml")
+    }),
+  )
+}
+
+///|
+test "Relationships parts require a real source and the canonical location" {
+  let empty_relationships =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>
+  let findings = @opc.validate_docx_package(
+    minimal_docx(extra=[
+      ("word/_rels/ghost.xml.rels", utf8_bytes(empty_relationships)),
+      ("word/_rels/nested/ghost.rels", utf8_bytes(empty_relationships)),
+    ]),
+  )
+  assert_true(
+    findings.contains(
+      "relationship part word/_rels/ghost.xml.rels describes missing source part: word/ghost.xml",
+    ),
+  )
+  assert_true(
+    findings.contains(
+      "invalid Relationships part name: word/_rels/nested/ghost.rels",
+    ),
+  )
+}
+
+///|
+test "Relationships require NCName ids and non-empty required attributes" {
+  let root_rels =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+    #|<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+    #|<Relationship Id="bad id" Type="urn:test" Target="word/document.xml"/>
+    #|<Relationship Id="missingType" Target="word/document.xml"/>
+    #|<Relationship Id="missingTarget" Type="urn:test"/>
+    #|</Relationships>
+  let findings = @opc.validate_docx_package(
+    minimal_docx(root_rels=Some(root_rels)),
+  )
+  assert_true(
+    findings.contains(
+      "_rels/.rels: Relationship Id is not an XML NCName: bad id",
+    ),
+  )
+  assert_true(
+    findings.contains("_rels/.rels: Relationship missing a non-empty Type"),
+  )
+  assert_true(
+    findings.contains("_rels/.rels: Relationship missing a non-empty Target"),
+  )
+}
+
+///|
+test "internal relationships cannot target Relationships parts" {
+  let root_rels =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rMetadata" Type="urn:test" Target="_rels/.rels"/></Relationships>
+  let findings = @opc.validate_docx_package(
+    minimal_docx(root_rels=Some(root_rels)),
+  )
+  assert_true(
+    findings.contains(
+      "relationship target must not be a Relationships part: _rels/.rels -> _rels/.rels",
+    ),
+  )
+}
+
+///|
+test "content types require exact metadata spelling and media-type syntax" {
+  let wrong_reserved = @opc.validate_docx_package(
+    minimal_docx(skip=["[Content_Types].xml"], extra=[
+      ("[CONTENT_TYPES].XML", utf8_bytes(MINIMAL_CONTENT_TYPES_XML)),
+    ]),
+  )
+  assert_true(
+    wrong_reserved.contains(
+      "reserved content-types entry must use exact spelling '[Content_Types].xml': [CONTENT_TYPES].XML",
+    ),
+  )
+  let invalid_types =
+    #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType=""/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="not a media type"/></Types>
+  let findings = @opc.validate_docx_package(
+    minimal_docx(content_types=Some(invalid_types)),
+  )
+  assert_true(
+    findings.contains("[Content_Types].xml: Default has invalid ContentType: "),
+  )
+  assert_true(
+    findings.contains(
+      "[Content_Types].xml: Override has invalid ContentType: not a media type",
+    ),
+  )
+}
