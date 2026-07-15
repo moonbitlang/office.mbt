@@ -166,10 +166,12 @@ stub. Default and hard user-facing limits are:
 
 The package reader additionally caps the input file at 64 MiB, ZIP entries at
 4,096, one inflated entry at 32 MiB, total inflated bytes at 128 MiB, and uses
-cumulative XML source, token, materialization, and token-size budgets. Query
-text scanning is capped cumulatively at 16 Mi characters, and one element's
-materialized text at 1 Mi characters. Limit failures use
-`office.docx.resource_limit` and identify the exhausted resource.
+cumulative XML source, token, materialization, and token-size budgets during
+both structural OPC preflight and document projection. Reader diagnostics are
+deduplicated in first-seen order, capped at 128 retained entries, and bounded
+to 512 characters each. Query text scanning is capped cumulatively at 16 Mi
+characters, and one element's materialized text at 1 Mi characters. Limit
+failures use `office.docx.resource_limit` and identify the exhausted resource.
 
 ## Correctable failures
 

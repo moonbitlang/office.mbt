@@ -159,10 +159,12 @@ async fn run_docx_get(matches : @argparse.Matches) -> Unit {
       }
       None => ""
     }
-    let primary = if text == "" { "\{entry.path}\t\{entry.kind}" } else { text }
-    let lines = [primary]
-    lines.append(human_warning_lines(projection.warnings))
-    println(checked_docx_human_output(lines.join("\n"), max_output))
+    println(
+      checked_docx_human_output(
+        docx_get_human(entry, text, projection.warnings),
+        max_output,
+      ),
+    )
   }
 }
 

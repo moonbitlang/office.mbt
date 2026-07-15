@@ -59,6 +59,7 @@ struct DocxProjection {
   file : String
   annotated : @docx.DocxAnnotatedResult
   entries : Array[DocxProjectionEntry]
+  entry_index : @sorted_map.SortedMap[String, Int]
   warnings : Array[@lib.ProtocolWarning]
 }
 
@@ -72,6 +73,7 @@ struct AnnotationDetails {
 struct DocxProjectionBuilder {
   max_elements : Int
   entries : Array[DocxProjectionEntry]
+  entry_index : @sorted_map.SortedMap[String, Int]
   warnings : Array[@lib.ProtocolWarning]
   warning_keys : Set[String]
   mut warnings_truncated : Bool
@@ -143,7 +145,7 @@ fn docx_reader_failure(
     Unsupported(message~) => ("unsupported", message)
   }
   let normalized = bounded_text(message, 320)
-  let code = if normalized.to_lower().contains("limit") {
+  let code = if docx_xml_resource_limit_message(message) {
     "office.docx.resource_limit"
   } else {
     "office.docx.read_failed"
@@ -159,10 +161,19 @@ fn docx_reader_failure(
 }
 
 ///|
+fn docx_xml_resource_limit_message(message : String) -> Bool {
+  message == "XML source budget exceeded" ||
+  message == "XML token budget exceeded" ||
+  message == "XML token length budget exceeded" ||
+  message == "XML materialized character budget exceeded"
+}
+
+///|
 fn DocxProjectionBuilder::new(max_elements : Int) -> DocxProjectionBuilder {
   {
     max_elements,
     entries: [],
+    entry_index: SortedMap([]),
     warnings: [],
     warning_keys: Set([]),
     warnings_truncated: false,
@@ -180,8 +191,8 @@ fn DocxProjectionBuilder::warn(
   if self.warning_keys.contains(key) {
     return
   }
-  self.warning_keys.add(key)
   if self.warnings.length() < docx_cli_max_warnings - 1 {
+    self.warning_keys.add(key)
     self.warnings.push(@lib.protocol_warning(code, bounded))
   } else if !self.warnings_truncated {
     self.warnings_truncated = true
@@ -244,6 +255,13 @@ fn DocxProjectionBuilder::add_entry(
       }),
     )
   }
+  if self.entry_index.contains(path) {
+    raise docx_cli_failure(
+      "office.docx.invalid_projection",
+      "DOCX reader produced a duplicate canonical path",
+      details=Json::object({ "path": Json::string(bounded_text(path, 240)) }),
+    )
+  }
   let entry = {
     path,
     parent,
@@ -257,7 +275,9 @@ fn DocxProjectionBuilder::add_entry(
     metadata,
     source,
   }
+  let index = self.entries.length()
   self.entries.push(entry)
+  self.entry_index[path] = index
   entry
 }
 
@@ -704,10 +724,84 @@ fn projection_from_annotated(
       Error(text) => builder.warn("office.docx.reader_error", text)
     }
   }
-  for warning in annotated.annotations().warnings() {
-    builder.warn("office.docx.annotation_warning", warning)
+  {
+    file,
+    annotated,
+    entries: builder.entries,
+    entry_index: builder.entry_index,
+    warnings: builder.warnings,
   }
-  { file, annotated, entries: builder.entries, warnings: builder.warnings }
+}
+
+///|
+fn docx_opc_resource_finding(finding : String) -> Bool {
+  finding.contains("XML source budget exceeded") ||
+  finding.contains("XML token budget exceeded") ||
+  finding.contains("XML token length budget exceeded") ||
+  finding.contains("XML materialized character budget exceeded")
+}
+
+///|
+fn validate_docx_read_archive(
+  file : String,
+  archive : @zip.Archive,
+) -> Unit raise CliFailure {
+  let lower = file.to_lower()
+  if lower.has_suffix(".xlsx") {
+    raise docx_cli_failure(
+      "office.unsupported_operation",
+      "DOCX structured reads are not available for XLSX packages",
+      details=Json::object({
+        "format": Json::string("xlsx"),
+        "supported_format": Json::string("docx"),
+      }),
+    )
+  }
+  if !lower.has_suffix(".docx") {
+    raise docx_cli_failure(
+      "office.unsupported_extension",
+      "unsupported file extension for '\{bounded_text(file, 160)}' (expected .docx)",
+      details=Json::object({
+        "file": Json::string(bounded_text(file, 160)),
+        "expected_extensions": Json::array([Json::string("docx")]),
+      }),
+    )
+  }
+  let (findings, truncated) = @opc.validate_docx_archive_limited(
+    archive,
+    max_findings=docx_cli_max_warnings,
+    max_message_chars=512,
+    max_xml_source_units=docx_cli_max_xml_source_units,
+    max_xml_tokens=docx_cli_max_xml_tokens,
+    max_xml_materialized_chars=docx_cli_max_xml_materialized_chars,
+    max_xml_token_chars=docx_cli_max_xml_token_chars,
+  )
+  match findings.search_by(docx_opc_resource_finding) {
+    Some(index) =>
+      raise docx_cli_failure(
+        "office.docx.resource_limit",
+        "DOCX package validation exceeded configured XML parser limits",
+        details=Json::object({
+          "file": Json::string(bounded_text(file, 160)),
+          "finding": Json::string(findings[index]),
+        }),
+      )
+    None => ()
+  }
+  if truncated || findings.length() > 0 {
+    let details : Map[String, Json] = {
+      "file": Json::string(bounded_text(file, 160)),
+      "findings_truncated": Json::boolean(truncated),
+    }
+    if findings.length() > 0 {
+      details["finding"] = Json::string(findings[0])
+    }
+    raise docx_cli_failure(
+      "office.invalid_package",
+      "invalid DOCX package: structural validation failed",
+      details=Json::object(details),
+    )
+  }
 }
 
 ///|
@@ -735,26 +829,19 @@ fn open_docx_projection(
   ) catch {
     error => raise docx_zip_failure(error, file)
   }
-  let format = @lib.detect_archive_format(file, archive) catch {
-    error => raise CliFailure(identify_error(error, file))
-  }
-  if format is Xlsx {
-    raise docx_cli_failure(
-      "office.unsupported_operation",
-      "DOCX structured reads are not available for XLSX packages",
-      details=Json::object({
-        "format": Json::string("xlsx"),
-        "supported_format": Json::string("docx"),
-      }),
-    )
-  }
+  validate_docx_read_archive(file, archive)
   let xml_budget = @xml.xml_read_budget(
     max_source_units=docx_cli_max_xml_source_units,
     max_tokens=docx_cli_max_xml_tokens,
     max_materialized_chars=docx_cli_max_xml_materialized_chars,
     max_token_chars=docx_cli_max_xml_token_chars,
   )
-  let annotated = @docx.read_docx_annotated_archive_limited(archive, xml_budget) catch {
+  let annotated = @docx.read_docx_annotated_archive_limited(
+    archive,
+    xml_budget,
+    max_diagnostics=docx_cli_max_warnings,
+    max_diagnostic_chars=512,
+  ) catch {
     error => raise docx_reader_failure(error, file)
   }
   projection_from_annotated(file, annotated, max_elements)
@@ -766,7 +853,11 @@ async fn read_docx_projection(
   max_elements : Int,
 ) -> DocxProjection {
   let data = read_bounded_file(
-    file, docx_cli_max_package_bytes, "office.file_read_failed", "input package",
+    file,
+    docx_cli_max_package_bytes,
+    "office.file_read_failed",
+    "input package",
+    limit_code="office.docx.resource_limit",
   )
   open_docx_projection(file, data, max_elements)
 }

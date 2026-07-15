@@ -18,6 +18,7 @@ struct DocxTextCollector {
   resource : String
   output : StringBuilder
   mut used : Int
+  mut pending_newlines : Int
   mut truncated : Bool
 }
 
@@ -38,12 +39,13 @@ fn DocxTextCollector::new(
     resource,
     output: StringBuilder::new(),
     used: 0,
+    pending_newlines: 0,
     truncated: false,
   }
 }
 
 ///|
-fn DocxTextCollector::write_char(
+fn DocxTextCollector::write_output_char(
   self : DocxTextCollector,
   value : Char,
 ) -> Unit raise CliFailure {
@@ -60,6 +62,41 @@ fn DocxTextCollector::write_char(
   }
   self.output.write_char(value) |> ignore
   self.used += 1
+}
+
+///|
+fn DocxTextCollector::flush_pending_newlines(
+  self : DocxTextCollector,
+) -> Unit raise CliFailure {
+  let count = self.pending_newlines
+  self.pending_newlines = 0
+  for _ in 0..<count {
+    self.write_output_char('\n')
+    if self.truncated && !self.fail_on_limit {
+      break
+    }
+  }
+}
+
+///|
+fn DocxTextCollector::write_char(
+  self : DocxTextCollector,
+  value : Char,
+) -> Unit raise CliFailure {
+  if value == '\n' {
+    // Paragraph separators are committed only if later visible content makes
+    // them internal. This keeps trailing separators, which the public result
+    // trims, from causing false truncation or resource-limit failures.
+    if self.pending_newlines <= self.maximum {
+      self.pending_newlines += 1
+    }
+    return
+  }
+  self.flush_pending_newlines()
+  if self.truncated && !self.fail_on_limit {
+    return
+  }
+  self.write_output_char(value)
 }
 
 ///|
@@ -206,12 +243,10 @@ fn find_projection_entry(
   projection : DocxProjection,
   path : String,
 ) -> DocxProjectionEntry? {
-  for entry in projection.entries {
-    if entry.path == path {
-      return Some(entry)
-    }
+  match projection.entry_index.get(path) {
+    Some(index) => projection.entries.get(index)
+    None => None
   }
-  None
 }
 
 ///|

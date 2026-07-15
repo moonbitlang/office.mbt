@@ -87,6 +87,7 @@ async fn read_bounded_file(
   maximum : Int,
   code : String,
   description : String,
+  limit_code? : String = "office.raw.resource_limit",
 ) -> Bytes {
   let kind = @afs.kind(path) catch {
     error if @async.is_being_cancelled() => raise error
@@ -115,11 +116,12 @@ async fn read_bounded_file(
   if size < 0L || size > maximum.to_int64() {
     raise CliFailure(
       @lib.protocol_error(
-        "office.raw.resource_limit",
+        limit_code,
         "\{description} exceeds the \{maximum}-byte limit",
         details=Json::object({
           "file": Json::string(bounded_text(path, 160)),
           "limit": Json::number(maximum.to_double()),
+          "actual": Json::number(size.to_double()),
         }),
       ),
     )

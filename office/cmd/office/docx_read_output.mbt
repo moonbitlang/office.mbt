@@ -481,14 +481,6 @@ fn reader_diagnostics(projection : DocxProjection) -> Json {
       }),
     )
   }
-  for message in projection.annotated.annotations().warnings() {
-    values.push(
-      Json::object({
-        "severity": Json::string("warning"),
-        "message": Json::string(bounded_text(message, 512)),
-      }),
-    )
-  }
   Json::array(values)
 }
 
@@ -627,7 +619,7 @@ fn docx_text_human(
   let lines : Array[String] = []
   for record in result.records {
     lines.push(
-      "\{record.path}\t\{terminal_safe_text(single_line_text(record.text))}",
+      "\{terminal_safe_text(record.path)}\t\{terminal_safe_text(single_line_text(record.text))}",
     )
   }
   lines.append(human_warning_lines(warnings))
@@ -642,12 +634,28 @@ fn docx_query_human(
   let lines : Array[String] = []
   for record in result.records {
     lines.push(
-      "\{record.entry.path}\t\{record.entry.kind}\t\{terminal_safe_text(single_line_text(record.preview))}",
+      "\{terminal_safe_text(record.entry.path)}\t\{terminal_safe_text(record.entry.kind)}\t\{terminal_safe_text(single_line_text(record.preview))}",
     )
   }
   lines.push(
     "# matched \{result.matched_total}; returned \{result.records.length()}; offset \{result.offset}",
   )
+  lines.append(human_warning_lines(warnings))
+  lines.join("\n")
+}
+
+///|
+fn docx_get_human(
+  entry : DocxProjectionEntry,
+  text : String,
+  warnings : Array[@lib.ProtocolWarning],
+) -> String {
+  let primary = if text == "" {
+    "\{terminal_safe_text(entry.path)}\t\{terminal_safe_text(entry.kind)}"
+  } else {
+    terminal_safe_text(text)
+  }
+  let lines = [primary]
   lines.append(human_warning_lines(warnings))
   lines.join("\n")
 }
@@ -663,7 +671,7 @@ fn docx_outline_human(projection : DocxProjection) -> String {
     counts[entry.kind] = counts.get(entry.kind).unwrap_or(0) + 1
     if entry.role is (StoryRoot | AnnotationCollection) {
       lines.push(
-        "\{entry.path}\t\{entry.kind}\t\{entry.children.length()} children",
+        "\{terminal_safe_text(entry.path)}\t\{terminal_safe_text(entry.kind)}\t\{entry.children.length()} children",
       )
     }
   }
@@ -680,7 +688,7 @@ fn docx_outline_human(projection : DocxProjection) -> String {
             )
             let suffix = if truncated { "…" } else { "" }
             lines.push(
-              "heading \{level}\t\{entry.path}\t\{terminal_safe_text(single_line_text(text))}\{suffix}",
+              "heading \{level}\t\{terminal_safe_text(entry.path)}\t\{terminal_safe_text(single_line_text(text))}\{suffix}",
             )
           }
           None => ()
