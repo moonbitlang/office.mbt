@@ -256,6 +256,13 @@ priv struct ArchivePartIndex {
 }
 
 ///|
+priv struct DecodedXmlPart {
+  text : String
+  source_encoding : @xml.XmlSourceEncoding
+  source_units : Int
+}
+
+///|
 fn archive_part_index(archive : @zip.Archive) -> ArchivePartIndex {
   let exact : StableStringMap[BytesView] = SortedMap([])
   let canonical : StableStringMap[BytesView] = SortedMap([])
@@ -281,10 +288,10 @@ fn ArchivePartIndex::find(self : ArchivePartIndex, name : String) -> BytesView? 
 }
 
 ///|
-fn read_xml_part(
+fn decode_xml_part(
   parts : ArchivePartIndex,
   name : String,
-) -> @xml.XmlElement raise OfficeError {
+) -> DecodedXmlPart raise OfficeError {
   let bytes = match parts.find(name) {
     Some(bytes) => bytes
     None => raise InvalidPackage("missing required part: \{name}")
@@ -333,7 +340,54 @@ fn read_xml_part(
       Utf8,
     )
   }
-  @xml.read_xml_string_strict_encoded(text, source_encoding) catch {
+  { text, source_encoding, source_units: bytes.length() }
+}
+
+///|
+fn read_xml_part(
+  parts : ArchivePartIndex,
+  name : String,
+) -> @xml.XmlElement raise OfficeError {
+  let decoded = decode_xml_part(parts, name)
+  @xml.read_xml_string_strict_encoded(decoded.text, decoded.source_encoding) catch {
+    _ => raise InvalidPackage("\{name} is not well-formed XML")
+  }
+}
+
+///|
+fn input_linear_xml_budget(decoded : DecodedXmlPart) -> @xml.XmlReadBudget {
+  let source_units = if decoded.source_units > decoded.text.length() {
+    decoded.source_units
+  } else {
+    decoded.text.length()
+  }
+  let scaled = source_units.to_int64() * 32L
+  let allowance = if scaled <= 0L {
+    1
+  } else if scaled > 2147483647L {
+    2147483647
+  } else {
+    scaled.to_int()
+  }
+  @xml.xml_read_budget(
+    max_source_units=source_units,
+    max_tokens=allowance,
+    max_materialized_chars=allowance,
+    max_token_chars=if source_units > 0 { source_units } else { 1 },
+  )
+}
+
+///|
+fn read_relationships_part(
+  parts : ArchivePartIndex,
+  name : String,
+) -> @xml.XmlElement raise OfficeError {
+  let decoded = decode_xml_part(parts, name)
+  @opc.read_opc_relationships_string_encoded_limited(
+    decoded.text,
+    decoded.source_encoding,
+    input_linear_xml_budget(decoded),
+  ) catch {
     _ => raise InvalidPackage("\{name} is not well-formed XML")
   }
 }
@@ -902,11 +956,6 @@ fn is_valid_resource_identifier_reference(
 }
 
 ///|
-fn is_valid_uri_reference(value : StringView) -> Bool {
-  is_valid_resource_identifier_reference(value, false)
-}
-
-///|
 fn is_valid_iri_reference(value : StringView) -> Bool {
   is_valid_resource_identifier_reference(value, true)
 }
@@ -1003,7 +1052,7 @@ fn is_valid_opc_part_segment(segment : StringView) -> Bool {
 
 ///|
 fn is_absolute_relationship_type(value : StringView) -> Bool {
-  has_uri_scheme(value) && is_valid_uri_reference(value) && !value.contains("#")
+  has_uri_scheme(value) && is_valid_iri_reference(value) && !value.contains("#")
 }
 
 ///|
@@ -1392,10 +1441,15 @@ fn validate_package_structure(
         continue
       }
     }
-    let relationships = read_xml_part(part_index, relationship_part)
+    let relationships = read_relationships_part(part_index, relationship_part)
     if relationships.name != RELATIONSHIPS_ROOT {
       findings.push("\{relationship_part} root element is not Relationships")
       continue
+    }
+    for attribute, _ in relationships.attributes {
+      findings.push(
+        "\{relationship_part} Relationships has an undeclared attribute: \{attribute}",
+      )
     }
     for child in relationships.children {
       match child {
@@ -1415,44 +1469,61 @@ fn validate_package_structure(
         )
         continue
       }
+      for attribute, _ in element.attributes {
+        if attribute != "Id" &&
+          attribute != "Type" &&
+          attribute != "Target" &&
+          attribute != "TargetMode" {
+          findings.push(
+            "relationship in \{relationship_part} has an undeclared attribute: \{attribute}",
+          )
+        }
+      }
       if xml_element_has_content(element) {
         findings.push(
           "relationship in \{relationship_part} is not an empty element",
         )
       }
-      match element.attributes.get("Id") {
-        Some(id) if id != "" =>
-          if !is_xml_ncname(id) {
-            findings.push(
-              "relationship in \{relationship_part} has an invalid Id: \{id}",
-            )
-          } else if ids.contains(id) {
-            findings.push(
-              "duplicate relationship Id in \{relationship_part}: \{id}",
-            )
-          } else {
-            ids[id] = true
-          }
-        _ => findings.push("relationship in \{relationship_part} has no Id")
-      }
-      match element.attributes.get("Type") {
-        Some(rel_type) if is_absolute_relationship_type(rel_type) => ()
-        Some(rel_type) if rel_type != "" && has_uri_scheme(rel_type) =>
+      let id = @xml.collapse_xml_schema_whitespace(
+        element.attributes.get("Id").unwrap_or(""),
+      )
+      if id != "" {
+        if !is_xml_ncname(id) {
           findings.push(
-            "relationship in \{relationship_part} has an invalid Type URI: \{rel_type}",
+            "relationship in \{relationship_part} has an invalid Id: \{id}",
           )
-        Some(rel_type) if rel_type != "" =>
+        } else if ids.contains(id) {
           findings.push(
-            "relationship in \{relationship_part} has a non-absolute Type: \{rel_type}",
+            "duplicate relationship Id in \{relationship_part}: \{id}",
           )
-        _ => findings.push("relationship in \{relationship_part} has no Type")
-      }
-      let target = match element.attributes.get("Target") {
-        Some(target) if target != "" => target
-        _ => {
-          findings.push("relationship in \{relationship_part} has no Target")
-          continue
+        } else {
+          ids[id] = true
         }
+      } else {
+        findings.push("relationship in \{relationship_part} has no Id")
+      }
+      let rel_type = @xml.collapse_xml_schema_whitespace(
+        element.attributes.get("Type").unwrap_or(""),
+      )
+      if is_absolute_relationship_type(rel_type) {
+        ()
+      } else if rel_type != "" && has_uri_scheme(rel_type) {
+        findings.push(
+          "relationship in \{relationship_part} has an invalid Type IRI: \{rel_type}",
+        )
+      } else if rel_type != "" {
+        findings.push(
+          "relationship in \{relationship_part} has a non-absolute Type: \{rel_type}",
+        )
+      } else {
+        findings.push("relationship in \{relationship_part} has no Type")
+      }
+      let target = @xml.collapse_xml_schema_whitespace(
+        element.attributes.get("Target").unwrap_or(""),
+      )
+      if target == "" {
+        findings.push("relationship in \{relationship_part} has no Target")
+        continue
       }
       let internal = match element.attributes.get("TargetMode") {
         None | Some("Internal") => true
@@ -1508,7 +1579,7 @@ fn validate_main_identity(
   declared_main_part : String,
 ) -> Unit raise OfficeError {
   let label = if format is Xlsx { "XLSX" } else { "DOCX" }
-  let root_rels = read_xml_part(part_index, "_rels/.rels")
+  let root_rels = read_relationships_part(part_index, "_rels/.rels")
   if root_rels.name != RELATIONSHIPS_ROOT {
     raise InvalidPackage("_rels/.rels root element is not Relationships")
   }
@@ -1517,10 +1588,10 @@ fn validate_main_identity(
     guard child is XmlElement(element) && element.name == RELATIONSHIP_ELEMENT else {
       continue
     }
-    guard element.attributes.get("Type") is Some(rel_type) &&
-      is_office_document_relationship(rel_type) else {
-      continue
-    }
+    let rel_type = @xml.collapse_xml_schema_whitespace(
+      element.attributes.get("Type").unwrap_or(""),
+    )
+    guard is_office_document_relationship(rel_type) else { continue }
     match element.attributes.get("TargetMode") {
       None | Some("Internal") => ()
       Some(_) =>
@@ -1528,17 +1599,17 @@ fn validate_main_identity(
           "\{label} officeDocument relationship is not internal",
         )
     }
-    match element.attributes.get("Id") {
-      Some(id) if id != "" => ()
-      _ =>
-        raise InvalidPackage("\{label} officeDocument relationship has no Id")
+    let id = @xml.collapse_xml_schema_whitespace(
+      element.attributes.get("Id").unwrap_or(""),
+    )
+    if id == "" {
+      raise InvalidPackage("\{label} officeDocument relationship has no Id")
     }
-    let target = match element.attributes.get("Target") {
-      Some(target) => target
-      None =>
-        raise InvalidPackage(
-          "\{label} officeDocument relationship has no Target",
-        )
+    let target = @xml.collapse_xml_schema_whitespace(
+      element.attributes.get("Target").unwrap_or(""),
+    )
+    if target == "" {
+      raise InvalidPackage("\{label} officeDocument relationship has no Target")
     }
     let normalized = match normalize_internal_target(target) {
       Some(target) => target
@@ -1590,7 +1661,7 @@ fn validate_main_identity(
 fn default_main_target_from_root(
   part_index : ArchivePartIndex,
 ) -> String? raise OfficeError {
-  let root_rels = read_xml_part(part_index, "_rels/.rels")
+  let root_rels = read_relationships_part(part_index, "_rels/.rels")
   if root_rels.name != RELATIONSHIPS_ROOT {
     return None
   }
@@ -1599,16 +1670,19 @@ fn default_main_target_from_root(
     guard child is XmlElement(element) && element.name == RELATIONSHIP_ELEMENT else {
       continue
     }
-    guard element.attributes.get("Type") is Some(rel_type) &&
-      is_office_document_relationship(rel_type) else {
-      continue
-    }
+    let rel_type = @xml.collapse_xml_schema_whitespace(
+      element.attributes.get("Type").unwrap_or(""),
+    )
+    guard is_office_document_relationship(rel_type) else { continue }
     let internal = match element.attributes.get("TargetMode") {
       None | Some("Internal") => true
       _ => false
     }
     guard internal else { continue }
-    guard element.attributes.get("Target") is Some(target) else { continue }
+    let target = @xml.collapse_xml_schema_whitespace(
+      element.attributes.get("Target").unwrap_or(""),
+    )
+    guard target != "" else { continue }
     guard normalize_internal_target(target) is Some(normalized) else {
       continue
     }
