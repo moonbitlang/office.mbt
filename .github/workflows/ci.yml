@@ -163,19 +163,11 @@ jobs:
       - name: Type check (wasm)
         run: moon check --target wasm
 
-      # Exercise the Office root capability/selector/protocol and shared
-      # OPC/MCE integration suites under Wasm, plus each portable editing
-      # package. A path argument selects one package, so list the child gates
-      # explicitly after the root rather than assuming `office` is recursive.
-      - name: Test Office root and edit packages (wasm)
-        run: |
-          moon test --target wasm office
-          moon test --target wasm office/transaction
-          moon test --target wasm office/raw
-          moon test --target wasm office/docx
-
-      - name: Test docx2html (wasm)
-        run: moon test --target wasm docx2html
+      # An unfiltered invocation traverses every moon.work member and all of
+      # its packages. Keep this module-wide so new portable child packages are
+      # covered automatically instead of silently receiving root-only tests.
+      - name: Test complete workspace (wasm)
+        run: moon test --target wasm
 
       # Run all members' native test suites in one pass. Covers mbtexcel
       # (including OpenXML SDK schema validation via .NET), docx2html
