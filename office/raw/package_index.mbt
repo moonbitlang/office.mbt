@@ -121,7 +121,34 @@ priv struct RawPackage {
 
 ///|
 fn canonical_part_key(value : StringView) -> String {
-  value.to_owned().to_lower()
+  @opc.part_name_key(logical_part_name_for_address(value))
+}
+
+///|
+/// Converts either an exact physical ZIP item spelling or an already-logical
+/// OPC PartName into the logical spelling used for package identity. Raw APIs
+/// keep physical names at their public boundary, so internal lookups must
+/// accept both forms without conflating non-ASCII case variants.
+fn logical_part_name_for_address(value : StringView) -> String {
+  if value == "[Content_Types].xml" {
+    "[Content_Types].xml"
+  } else {
+    @opc.logical_part_name_from_zip_item_name(value).unwrap_or_else(() => {
+      value.to_owned()
+    })
+  }
+}
+
+///|
+fn logical_part_name_from_archive_entry(name : StringView) -> String? {
+  if name == "[Content_Types].xml" {
+    Some("[Content_Types].xml")
+  } else if @opc.part_name_key(name) ==
+    @opc.part_name_key("[Content_Types].xml") {
+    None
+  } else {
+    @opc.logical_part_name_from_zip_item_name(name)
+  }
 }
 
 ///|
@@ -222,6 +249,7 @@ fn raw_archive_index(
   let entry_names : StableStringMap[String] = SortedMap([])
   let names : StableStringMap[String] = SortedMap([])
   let parts : StableStringMap[BytesView] = SortedMap([])
+  let part_names = @opc.PartNameRegistry::new()
   for entry in archive.entries() {
     let name = entry.name()
     if name == "" ||
@@ -234,19 +262,49 @@ fn raw_archive_index(
         }),
       )
     }
-    let key = canonical_part_key(name)
-    match entry_names.get(key) {
+    let physical_key = @opc.part_name_key(name)
+    match entry_names.get(physical_key) {
       Some(existing) =>
         raise raw_error(
           "office.raw.invalid_package",
           "package contains colliding entry names '/\{bounded_raw_text(existing, 120)}' and '/\{bounded_raw_text(name, 120)}'",
         )
       None => {
-        entry_names[key] = name
+        entry_names[physical_key] = name
         // ZIP directory markers are physical archive records, not OPC parts.
         // Keep them in `archive` for byte-preserving rewrites, but do not make
         // them addressable through the raw part inventory.
         if !name.has_suffix("/") {
+          let logical = match logical_part_name_from_archive_entry(name) {
+            Some(value) => value
+            None =>
+              raise raw_error(
+                "office.raw.invalid_package",
+                "package entry '/\{bounded_raw_text(name, 160)}' is not a canonical physical OPC item name",
+              )
+          }
+          if logical != "[Content_Types].xml" {
+            match part_names.register(logical, name) {
+              Some(Equivalent(existing)) =>
+                raise raw_error(
+                  "office.raw.invalid_package",
+                  "package contains logically equivalent parts '/\{bounded_raw_text(existing, 120)}' and '/\{bounded_raw_text(name, 120)}'",
+                )
+              Some(Derivable(existing)) =>
+                raise raw_error(
+                  "office.raw.invalid_package",
+                  "package contains derivable parts '/\{bounded_raw_text(existing, 120)}' and '/\{bounded_raw_text(name, 120)}'",
+                )
+              None => ()
+            }
+          }
+          let key = @opc.part_name_key(logical)
+          if names.contains(key) {
+            raise raw_error(
+              "office.raw.invalid_package",
+              "package contains colliding logical part names at '/\{bounded_raw_text(name, 160)}'",
+            )
+          }
           names[key] = name
           parts[key] = entry.data()
         }
@@ -496,7 +554,7 @@ fn ContentTypeTable::for_part(self : ContentTypeTable, name : String) -> String 
   match self.overrides.get(canonical_part_key(name)) {
     Some(value) => value
     None =>
-      match extension_of_part(name) {
+      match extension_of_part(logical_part_name_for_address(name)) {
         Some(extension) => self.defaults.get(extension).unwrap_or("")
         None => ""
       }
@@ -700,7 +758,12 @@ fn parse_relationships(
   pkg : RawPackage,
   source : String,
 ) -> Array[RawRelationship] raise RawError {
-  let relationship_part = relationships_part_for(source)
+  let logical_source = if source == "" {
+    ""
+  } else {
+    logical_part_name_for_address(source)
+  }
+  let relationship_part = relationships_part_for(logical_source)
   let canonical = match pkg.names.get(canonical_part_key(relationship_part)) {
     Some(value) => value
     None => return []
@@ -842,7 +905,11 @@ fn parse_relationships(
               }
               output.push({ id, kind, target, external: true })
             } else {
-              match normalize_relationship_target(source_base(source), target) {
+              match
+                normalize_relationship_target(
+                  source_base(logical_source),
+                  target,
+                ) {
                 Some(resolved) =>
                   match pkg.names.get(canonical_part_key(resolved)) {
                     Some(actual) =>

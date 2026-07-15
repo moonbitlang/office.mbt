@@ -708,6 +708,60 @@ test "raw inventory accepts Relationship simple content" {
 }
 
 ///|
+test "raw inventory resolves Unicode logical OPC identities without folding non-ASCII case" {
+  let builder = @opc.PackageBuilder::new()
+  builder.add_default(
+    "rels", "application/vnd.openxmlformats-package.relationships+xml",
+  )
+  builder.add_override(
+    "/資料/é.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+  )
+  builder.add_override("/資料/É.xml", "application/xml")
+  builder.add_relationship(
+    "rMain", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "資料/é.xml",
+  )
+  builder.add_relationship(
+    "rExtra",
+    "urn:unicode-target",
+    "É.xml",
+    source="資料/é.xml",
+  )
+  builder.add_part(
+    "資料/é.xml",
+    @utf8.encode(
+      (
+        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:sectPr/></w:body></w:document>
+      ),
+    ),
+  )
+  builder.add_part("資料/É.xml", @utf8.encode("<extra/>"))
+  let data = builder.build()
+  let inventory = @raw.raw_inventory("unicode.docx", data)
+  inspect(inventory.format.name(), content="docx")
+  debug_inspect(
+    inventory_alias_target(inventory, "/document"),
+    content="Some(\"%E8%B3%87%E6%96%99/%C3%A9.xml\")",
+  )
+  let mut found_lower = false
+  let mut found_upper = false
+  for part in inventory.parts {
+    if part.name == "%E8%B3%87%E6%96%99/%C3%A9.xml" {
+      found_lower = true
+    } else if part.name == "%E8%B3%87%E6%96%99/%C3%89.xml" {
+      found_upper = true
+    }
+  }
+  assert_true(found_lower)
+  assert_true(found_upper)
+  assert_true(
+    @raw.raw_read("unicode.docx", data, "/document")
+    .xml_text()
+    .contains("<w:document"),
+  )
+}
+
+///|
 test "raw inventory ignores deterministic hash clustering in package names" {
   let data = raw_test_add_hash_clustered_parts(@word.new_blank_docx(), 512)
   let inventory = @raw.raw_inventory("clustered.docx", data)
@@ -1168,7 +1222,9 @@ test "raw resolver rejects collisions and namespace-spoofed OPC metadata before 
   )
   assert_eq(
     raw_inventory_error(wrong_unused_relationship_namespace).0,
-    "office.raw.invalid_relationship",
+    // The reserved content-types spelling is illegal inside any PartName, so
+    // logical indexing rejects this before inspecting its XML namespace.
+    "office.raw.invalid_package",
   )
 
   let duplicate_relationship_id = raw_test_transform_xml_entry(
