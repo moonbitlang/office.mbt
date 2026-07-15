@@ -1339,7 +1339,7 @@ fn check_relationships(
         content_types,
         findings,
       )
-      match parse_xml_part(root_rels_name, bytes, findings) {
+      match parse_relationships_part(root_rels_name, bytes, findings) {
         Some(root) => {
           let main_parts : Array[(String, DocumentDialect)] = []
           for_each_relationship(ROOT_RELS_PART, root, findings, (
@@ -1441,7 +1441,7 @@ fn check_relationships(
       )
     }
     check_relationship_content_type(name, logical_name, content_types, findings)
-    match parse_xml_part(name, bytes, findings) {
+    match parse_relationships_part(name, bytes, findings) {
       Some(root) => {
         let base = rels_base_dir(logical_name)
         for_each_relationship(name, root, findings, (
@@ -1562,22 +1562,64 @@ fn for_each_relationship(
     )
     return
   }
+  let mut valid_part = true
+  for attribute, _ in root.attributes {
+    findings.add(
+      "\{findings.text(part_name)}: Relationships has undeclared attribute: \{findings.text(attribute)}",
+    )
+    valid_part = false
+  }
   let ids : StableStringSet = SortedSet([])
+  let relationships : Array[(String, String, String, Bool)] = []
   for node in root.children {
     if findings.full() {
       findings.stop()
+      valid_part = false
       break
     }
-    guard node is XmlElement(element) else { continue }
+    guard node is XmlElement(element) else {
+      guard node is XmlText(text) else { continue }
+      if text.trim() != "" {
+        findings.add(
+          "\{findings.text(part_name)}: Relationships contains unexpected text",
+        )
+        valid_part = false
+      }
+      continue
+    }
     if element.name != relationship_name {
       if local_name(element.name) == "Relationship" {
         findings.add(
           "\{findings.text(part_name)}: Relationship element is outside the OPC package relationships namespace",
         )
+      } else {
+        findings.add(
+          "\{findings.text(part_name)}: Relationships contains unexpected element: \{findings.text(element.name)}",
+        )
       }
+      valid_part = false
       continue
     }
     let mut valid = true
+    for attribute, _ in element.attributes {
+      if attribute != "Id" &&
+        attribute != "Type" &&
+        attribute != "Target" &&
+        attribute != "TargetMode" {
+        findings.add(
+          "\{findings.text(part_name)}: Relationship has undeclared attribute: \{findings.text(attribute)}",
+        )
+        valid = false
+      }
+    }
+    for child in element.children {
+      if child is XmlElement(_) {
+        findings.add(
+          "\{findings.text(part_name)}: Relationship contains a child element",
+        )
+        valid = false
+      }
+    }
     let id = element.attributes.get("Id").unwrap_or("")
     if id == "" {
       findings.add(
@@ -1638,8 +1680,22 @@ fn for_each_relationship(
       _ => ()
     }
     match external {
-      Some(value) => if valid { visit(id, rel_type, target, value) }
+      Some(value) =>
+        if valid {
+          relationships.push((id, rel_type, target, value))
+        } else {
+          valid_part = false
+        }
       None => ()
+    }
+    if !valid {
+      valid_part = false
+    }
+  }
+  if valid_part {
+    for relationship in relationships {
+      let (id, rel_type, target, external) = relationship
+      visit(id, rel_type, target, external)
     }
   }
 }
@@ -1789,6 +1845,35 @@ fn parse_xml_part(
   findings : FindingCollector,
 ) -> @xml.XmlElement? {
   let root = @xml.read_xml_bytes_strict_limited(bytes, findings.xml_budget) catch {
+    InvalidXml(message="XML source is not valid UTF-8") => {
+      findings.add("part is not valid UTF-8: \{findings.text(name)}")
+      return None
+    }
+    err => {
+      findings.mark_resource_limit(err)
+      findings.add(
+        "malformed XML in \{findings.text(name)}: \{findings.text(repr(err))}",
+      )
+      return None
+    }
+  }
+  Some(root)
+}
+
+///|
+/// Relationships parts have a distinct OPC contract: before their schema is
+/// evaluated, ECMA-376 Part 3 processing runs with an empty markup
+/// configuration and only the package Relationships namespace understood.
+fn parse_relationships_part(
+  name : String,
+  bytes : BytesView,
+  findings : FindingCollector,
+) -> @xml.XmlElement? {
+  let root = @xml.read_xml_bytes_strict_mce_limited(
+    bytes,
+    findings.xml_budget,
+    [PACKAGE_RELATIONSHIPS_NAMESPACE],
+  ) catch {
     InvalidXml(message="XML source is not valid UTF-8") => {
       findings.add("part is not valid UTF-8: \{findings.text(name)}")
       return None

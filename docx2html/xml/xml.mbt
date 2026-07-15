@@ -111,7 +111,15 @@ pub fn read_xml_string(
   source : String,
   namespace_map? : Map[String, String] = Map([]),
 ) -> XmlElement raise DocxError {
-  read_xml_string_with_mode(source, namespace_map, false, None, false, None)
+  read_xml_string_with_mode(
+    source,
+    namespace_map,
+    false,
+    None,
+    false,
+    None,
+    false,
+  )
 }
 
 ///|
@@ -124,7 +132,15 @@ pub fn read_xml_string_strict(
   source : String,
   namespace_map? : Map[String, String] = Map([]),
 ) -> XmlElement raise DocxError {
-  read_xml_string_with_mode(source, namespace_map, true, None, false, None)
+  read_xml_string_with_mode(
+    source,
+    namespace_map,
+    true,
+    None,
+    false,
+    None,
+    false,
+  )
 }
 
 ///|
@@ -155,6 +171,7 @@ pub fn read_xml_string_strict_encoded(
     None,
     false,
     Some(source_encoding),
+    false,
   )
 }
 
@@ -277,6 +294,7 @@ pub fn read_xml_string_limited(
     Some(budget),
     false,
     None,
+    false,
   )
 }
 
@@ -295,6 +313,7 @@ pub fn read_xml_string_strict_limited(
     Some(budget),
     false,
     None,
+    false,
   )
 }
 
@@ -317,6 +336,7 @@ pub fn read_xml_bytes_limited(
     Some(budget),
     true,
     Some(Utf8),
+    false,
   )
 }
 
@@ -338,6 +358,7 @@ pub fn read_xml_bytes_strict_limited(
     Some(budget),
     true,
     Some(Utf8),
+    false,
   )
 }
 
@@ -349,6 +370,7 @@ fn read_xml_string_with_mode(
   budget : XmlReadBudget?,
   source_already_charged : Bool,
   source_encoding : XmlSourceEncoding?,
+  retain_namespace_declarations : Bool,
 ) -> XmlElement raise DocxError {
   match budget {
     Some(budget) =>
@@ -367,6 +389,7 @@ fn read_xml_string_with_mode(
     strict,
     budget,
     source_encoding,
+    retain_namespace_declarations,
     seen_xml_declaration: false,
     namespace_map: build_direct_namespace_lookup(namespace_map),
     namespaces: if strict {
@@ -1198,6 +1221,7 @@ priv struct XmlParser {
   strict : Bool
   budget : XmlReadBudget?
   source_encoding : XmlSourceEncoding?
+  retain_namespace_declarations : Bool
   mut seen_xml_declaration : Bool
   namespace_map : NamespaceLookup
   namespaces : @sorted_map.SortedMap[String, String]
@@ -1307,13 +1331,13 @@ fn XmlParser::parse_element_inner_tolerant(
     self.skip_whitespace()
     if self.starts_with("/>") {
       self.pos = self.pos + 2
-      let element = self.build_element(raw_name, raw_attributes, [])
+      let element = self.build_element(raw_name, raw_attributes, [], [])
       self.restore_namespace_bindings(namespace_changes)
       return element
     } else if self.starts_with(">") {
       self.pos = self.pos + 1
       let children = self.parse_children(raw_name)
-      let element = self.build_element(raw_name, raw_attributes, children)
+      let element = self.build_element(raw_name, raw_attributes, children, [])
       self.restore_namespace_bindings(namespace_changes)
       return element
     } else {
@@ -1350,17 +1374,25 @@ fn XmlParser::parse_element_inner_strict(
   let raw_attributes : Array[(String, String)] = []
   let raw_attribute_names : @sorted_map.SortedMap[String, Bool] = SortedMap([])
   let namespace_changes : Array[NamespaceBindingChange] = []
+  let namespace_declarations : Array[(String, String)] = []
   while true {
     let separated = self.skip_whitespace_and_report()
     if self.starts_with("/>") {
       self.pos = self.pos + 2
-      let element = self.build_element(raw_name, raw_attributes, [])
+      let element = self.build_element(
+        raw_name,
+        raw_attributes,
+        [],
+        namespace_declarations,
+      )
       self.restore_namespace_bindings(namespace_changes)
       return element
     } else if self.starts_with(">") {
       self.pos = self.pos + 1
       let children = self.parse_children(raw_name)
-      let element = self.build_element(raw_name, raw_attributes, children)
+      let element = self.build_element(
+        raw_name, raw_attributes, children, namespace_declarations,
+      )
       self.restore_namespace_bindings(namespace_changes)
       return element
     } else {
@@ -1387,11 +1419,17 @@ fn XmlParser::parse_element_inner_strict(
       if attr_name == "xmlns" {
         validate_namespace_declaration("", attr_value)
         self.record_namespace_binding("", attr_value, namespace_changes)
+        if self.retain_namespace_declarations {
+          namespace_declarations.push(("", attr_value))
+        }
       } else if attr_name.has_prefix("xmlns:") {
         self.charge_derived_name(attr_name.length() - 6)
         let prefix = attr_name[6:].to_owned()
         validate_namespace_declaration(prefix, attr_value)
         self.record_namespace_binding(prefix, attr_value, namespace_changes)
+        if self.retain_namespace_declarations {
+          namespace_declarations.push((prefix, attr_value))
+        }
       } else {
         raw_attributes.push((attr_name, attr_value))
       }
@@ -1478,6 +1516,7 @@ fn XmlParser::build_element(
   raw_name : String,
   raw_attributes : Array[(String, String)],
   children : Array[XmlNode],
+  namespace_declarations : Array[(String, String)],
 ) -> XmlElement raise DocxError {
   let attributes : @sorted_map.SortedMap[String, String] = SortedMap([])
   let expanded_attributes : @sorted_map.SortedMap[String, Bool] = SortedMap([])
@@ -1494,6 +1533,11 @@ fn XmlParser::build_element(
       expanded_attributes[expanded] = true
     }
     attributes[self.map_name(name, is_attribute=true)] = value
+  }
+  for declaration in namespace_declarations {
+    let (prefix, namespace_uri) = declaration
+    let local_name = if prefix == "" { "xmlns" } else { prefix }
+    attributes[self.materialize_braced_name(XMLNS_NAMESPACE_URI, local_name)] = namespace_uri
   }
   { name: self.map_name(raw_name, is_attribute=false), attributes, children }
 }

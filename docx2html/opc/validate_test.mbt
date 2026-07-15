@@ -182,6 +182,129 @@ test "relationship validation requires the OPC package namespace" {
 }
 
 ///|
+test "Relationships apply OPC Markup Compatibility processing" {
+  let ignorable =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
+    #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    #| xmlns:v="urn:vendor" mc:Ignorable="v" v:metadata="drop">
+    #| <v:Extension/>
+    #| <Relationship v:annotation="drop" Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+    #|</Relationships>
+  let process_content =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
+    #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    #| xmlns:v="urn:vendor" mc:Ignorable="v" mc:ProcessContent="v:Wrapper">
+    #| <v:Wrapper><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></v:Wrapper>
+    #|</Relationships>
+  let understood_choice =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
+    #| xmlns:r="http://schemas.openxmlformats.org/package/2006/relationships"
+    #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    #| xmlns:v="urn:vendor">
+    #| <mc:AlternateContent>
+    #|  <mc:Choice Requires="v"><v:Unsupported/></mc:Choice>
+    #|  <mc:Choice Requires="r"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></mc:Choice>
+    #|  <mc:Fallback><v:Fallback/></mc:Fallback>
+    #| </mc:AlternateContent>
+    #|</Relationships>
+  let fallback =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
+    #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    #| xmlns:v="urn:vendor">
+    #| <mc:AlternateContent>
+    #|  <mc:Choice Requires="v"><v:Unsupported/></mc:Choice>
+    #|  <mc:Fallback><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></mc:Fallback>
+    #| </mc:AlternateContent>
+    #|</Relationships>
+  for relationships in [ignorable, process_content, understood_choice, fallback] {
+    assert_eq(
+      @opc.validate_docx_package(minimal_docx(root_rels=Some(relationships))),
+      [],
+    )
+  }
+}
+
+///|
+test "Relationships reject invalid Markup Compatibility contracts" {
+  let unbound_ignorable =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
+    #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    #| mc:Ignorable="missing">
+    #| <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+    #|</Relationships>
+  let unsupported_must_understand =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
+    #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    #| xmlns:v="urn:vendor" mc:MustUnderstand="v">
+    #| <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+    #|</Relationships>
+  let malformed_alternate_content =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
+    #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    #| xmlns:r="http://schemas.openxmlformats.org/package/2006/relationships">
+    #| <mc:AlternateContent><mc:Choice><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></mc:Choice></mc:AlternateContent>
+    #|</Relationships>
+  for
+    relationships in [
+      unbound_ignorable, unsupported_must_understand, malformed_alternate_content,
+    ] {
+    let findings = @opc.validate_docx_package(
+      minimal_docx(root_rels=Some(relationships)),
+    )
+    assert_true(
+      findings.any(finding => finding.contains("markup compatibility mismatch")),
+    )
+  }
+}
+
+///|
+test "Relationships close their post-MCE XML schema" {
+  let root_rels =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
+    #| xmlns:v="urn:vendor" xml:base="https://example.test/" bad="value">
+    #| unexpected text
+    #| <Other/>
+    #| <v:Foreign/>
+    #| <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml" extra="value"><Nested/></Relationship>
+    #|</Relationships>
+  let findings = @opc.validate_docx_package(
+    minimal_docx(root_rels=Some(root_rels)),
+  )
+  assert_true(
+    findings.any(finding => {
+      finding.contains("Relationships has undeclared attribute")
+    }),
+  )
+  assert_true(
+    findings.contains("_rels/.rels: Relationships contains unexpected text"),
+  )
+  assert_true(
+    findings.any(finding => {
+      finding.contains("Relationships contains unexpected element")
+    }),
+  )
+  assert_true(
+    findings.contains(
+      "_rels/.rels: Relationship has undeclared attribute: extra",
+    ),
+  )
+  assert_true(
+    findings.contains("_rels/.rels: Relationship contains a child element"),
+  )
+  assert_true(findings.contains("_rels/.rels: no officeDocument relationship"))
+}
+
+///|
+test "Relationship simple text remains schema-valid" {
+  let root_rels =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml">schema string content</Relationship></Relationships>
+  assert_eq(
+    @opc.validate_docx_package(minimal_docx(root_rels=Some(root_rels))),
+    [],
+  )
+}
+
+///|
 test "OPC validation is independent of deterministic string-hash clustering" {
   let part_names = opc_hash_clustered_names(256, 0x3FF, ".bin")
   let relationship_ids = opc_hash_clustered_names(256, 0x3FF, "")
@@ -1133,7 +1256,8 @@ test "Relationships enforce Type URI and External Target IRI grammar" {
       "_rels/.rels: external Relationship Target is not a valid IRI reference: ../outside/%GG",
     ),
   )
-  assert_eq(findings.length(), 6)
+  assert_true(findings.contains("_rels/.rels: no officeDocument relationship"))
+  assert_eq(findings.length(), 7)
 }
 
 ///|
