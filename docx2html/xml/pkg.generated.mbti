@@ -63,7 +63,6 @@ pub fn XmlElement::first_or_empty(Self, String) -> Self
 #deprecated
 pub fn XmlElement::not_equal(Self, Self) -> Bool
 pub fn XmlElement::text(Self) -> String raise @core.DocxError
-#as_free_fn
 #deprecated
 pub fn XmlElement::to_repr(Self) -> @debug.Repr
 
@@ -75,7 +74,6 @@ pub(all) enum XmlNode {
 pub fn XmlNode::equal(Self, Self) -> Bool
 #deprecated
 pub fn XmlNode::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn XmlNode::to_repr(Self) -> @debug.Repr
 

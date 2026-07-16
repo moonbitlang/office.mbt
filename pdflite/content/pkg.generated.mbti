@@ -102,7 +102,6 @@ pub fn PdfContentOp::equal(Self, Self) -> Bool
 pub fn PdfContentOp::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfContentOp::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfContentOp::to_repr(Self) -> @debug.Repr
 

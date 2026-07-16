@@ -18,7 +18,6 @@ pub(all) struct ObjectStreamReference {
 pub fn ObjectStreamReference::equal(Self, Self) -> Bool
 #deprecated
 pub fn ObjectStreamReference::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn ObjectStreamReference::to_repr(Self) -> @debug.Repr
 

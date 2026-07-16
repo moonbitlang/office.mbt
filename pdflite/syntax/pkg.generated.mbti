@@ -125,7 +125,6 @@ pub fn PdfLexeme::equal(Self, Self) -> Bool
 pub fn PdfLexeme::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfLexeme::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfLexeme::to_repr(Self) -> @debug.Repr
 
@@ -156,7 +155,6 @@ pub fn PdfObject::replace_dict_entry(Self, @core.PdfName, Self) -> Self raise @c
 pub fn PdfObject::stream_bytes(Self) -> Bytes raise @core.PdfError
 #deprecated
 pub fn PdfObject::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfObject::to_repr(Self) -> @debug.Repr
 pub fn PdfObject::unique_key(Self, String) -> @core.PdfName raise @core.PdfError
@@ -172,7 +170,6 @@ pub fn PdfParsedIndirectObject::equal(Self, Self) -> Bool
 pub fn PdfParsedIndirectObject::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfParsedIndirectObject::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfParsedIndirectObject::to_repr(Self) -> @debug.Repr
 
@@ -186,7 +183,6 @@ pub fn PdfStream::equal(Self, Self) -> Bool
 pub fn PdfStream::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfStream::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfStream::to_repr(Self) -> @debug.Repr
 
@@ -201,7 +197,6 @@ pub fn PdfStreamData::equal(Self, Self) -> Bool
 pub fn PdfStreamData::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfStreamData::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfStreamData::to_repr(Self) -> @debug.Repr
 
@@ -220,7 +215,6 @@ pub fn PdfStreamDataCrypt::is_identity(Self) -> Bool
 pub fn PdfStreamDataCrypt::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfStreamDataCrypt::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfStreamDataCrypt::to_repr(Self) -> @debug.Repr
 
@@ -240,7 +234,6 @@ pub fn ToGet::not_equal(Self, Self) -> Bool
 pub fn ToGet::position(Self) -> Int
 #deprecated
 pub fn ToGet::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn ToGet::to_repr(Self) -> @debug.Repr
 

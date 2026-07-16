@@ -50,7 +50,6 @@ pub fn PdfDrawnPath::equal(Self, Self) -> Bool
 pub fn PdfDrawnPath::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfDrawnPath::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfDrawnPath::to_repr(Self) -> @debug.Repr
 
@@ -66,7 +65,6 @@ pub fn PdfPath::not_equal(Self, Self) -> Bool
 pub fn PdfPath::pdf_path_bounds_optional(Self) -> @geometry.PdfRectangle?
 #deprecated
 pub fn PdfPath::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfPath::to_repr(Self) -> @debug.Repr
 pub fn PdfPath::transform(Self, @geometry.TransformMatrix) -> Self
@@ -81,7 +79,6 @@ pub fn PdfPathClosure::equal(Self, Self) -> Bool
 pub fn PdfPathClosure::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfPathClosure::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfPathClosure::to_repr(Self) -> @debug.Repr
 
@@ -95,7 +92,6 @@ pub fn PdfPathHole::equal(Self, Self) -> Bool
 pub fn PdfPathHole::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfPathHole::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfPathHole::to_repr(Self) -> @debug.Repr
 
@@ -111,7 +107,6 @@ pub fn PdfPathSegment::equal(Self, Self) -> Bool
 pub fn PdfPathSegment::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfPathSegment::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfPathSegment::to_repr(Self) -> @debug.Repr
 pub fn PdfPathSegment::transform(Self, @geometry.TransformMatrix) -> Self
@@ -128,7 +123,6 @@ pub fn PdfPathSubpath::equal(Self, Self) -> Bool
 pub fn PdfPathSubpath::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfPathSubpath::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfPathSubpath::to_repr(Self) -> @debug.Repr
 
@@ -142,7 +136,6 @@ pub fn PdfPathWindingRule::equal(Self, Self) -> Bool
 pub fn PdfPathWindingRule::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfPathWindingRule::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfPathWindingRule::to_repr(Self) -> @debug.Repr
 

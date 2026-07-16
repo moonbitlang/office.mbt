@@ -111,7 +111,6 @@ pub fn PaperSize::landscape(Self) -> Self
 pub fn PaperSize::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PaperSize::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PaperSize::to_repr(Self) -> @debug.Repr
 pub fn PaperSize::unit(Self) -> PdfUnit
@@ -128,7 +127,6 @@ pub fn PdfCalculatedPosition::equal(Self, Self) -> Bool
 pub fn PdfCalculatedPosition::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfCalculatedPosition::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfCalculatedPosition::to_repr(Self) -> @debug.Repr
 
@@ -144,7 +142,6 @@ pub fn PdfCoordRectangle::equal(Self, Self) -> Bool
 pub fn PdfCoordRectangle::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfCoordRectangle::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfCoordRectangle::to_repr(Self) -> @debug.Repr
 
@@ -170,7 +167,6 @@ pub fn PdfPosition::equal(Self, Self) -> Bool
 pub fn PdfPosition::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfPosition::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfPosition::to_repr(Self) -> @debug.Repr
 
@@ -186,7 +182,6 @@ pub fn PdfRectangle::equal(Self, Self) -> Bool
 pub fn PdfRectangle::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfRectangle::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfRectangle::to_repr(Self) -> @debug.Repr
 
@@ -202,7 +197,6 @@ pub fn PdfUnit::equal(Self, Self) -> Bool
 pub fn PdfUnit::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfUnit::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfUnit::to_repr(Self) -> @debug.Repr
 
@@ -216,7 +210,6 @@ pub fn Point2::equal(Self, Self) -> Bool
 pub fn Point2::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn Point2::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn Point2::to_repr(Self) -> @debug.Repr
 
@@ -234,7 +227,6 @@ pub fn TransformDecomposition::equal(Self, Self) -> Bool
 pub fn TransformDecomposition::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn TransformDecomposition::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn TransformDecomposition::to_repr(Self) -> @debug.Repr
 
@@ -256,7 +248,6 @@ pub fn TransformMatrix::invert(Self) -> Self raise @core.PdfError
 pub fn TransformMatrix::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn TransformMatrix::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn TransformMatrix::to_repr(Self) -> @debug.Repr
 
@@ -274,7 +265,6 @@ pub fn TransformOp::equal(Self, Self) -> Bool
 pub fn TransformOp::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn TransformOp::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn TransformOp::to_repr(Self) -> @debug.Repr
 

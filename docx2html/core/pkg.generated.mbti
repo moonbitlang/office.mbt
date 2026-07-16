@@ -33,7 +33,6 @@ pub fn DocxError::description(Self) -> String
 pub fn DocxError::equal(Self, Self) -> Bool
 #deprecated
 pub fn DocxError::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn DocxError::to_repr(Self) -> @debug.Repr
 pub fn DocxError::xml_resource_limit(Self) -> DocxXmlResourceLimit?
@@ -50,7 +49,6 @@ pub fn ConversionResult::flat_map(Self, (String) -> Self raise?) -> Self raise?
 pub fn ConversionResult::map(Self, (String) -> String raise?) -> Self raise?
 #deprecated
 pub fn ConversionResult::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn ConversionResult::to_repr(Self) -> @debug.Repr
 
@@ -66,7 +64,6 @@ pub fn DocxXmlResourceLimit::equal(Self, Self) -> Bool
 pub fn DocxXmlResourceLimit::message(Self) -> String
 #deprecated
 pub fn DocxXmlResourceLimit::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn DocxXmlResourceLimit::to_repr(Self) -> @debug.Repr
 
@@ -78,7 +75,6 @@ pub(all) enum Message {
 pub fn Message::equal(Self, Self) -> Bool
 #deprecated
 pub fn Message::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn Message::to_repr(Self) -> @debug.Repr
 

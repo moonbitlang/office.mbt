@@ -31,7 +31,6 @@ pub suberror ZipError {
   OutputLimitExceeded(limit~ : Int)
   ResourceLimitExceeded(kind~ : String, limit~ : Int, actual~ : Int)
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn ZipError::to_repr(Self) -> @debug.Repr
 
@@ -50,7 +49,6 @@ pub(all) enum Compression {
   Store
   Deflate
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn Compression::to_repr(Self) -> @debug.Repr
 

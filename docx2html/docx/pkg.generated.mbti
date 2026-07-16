@@ -154,7 +154,6 @@ pub(all) struct DocxPackageResult {
 pub fn DocxPackageResult::equal(Self, Self) -> Bool
 #deprecated
 pub fn DocxPackageResult::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn DocxPackageResult::to_repr(Self) -> @debug.Repr
 
@@ -166,7 +165,6 @@ pub(all) struct DocxReadResult {
 pub fn DocxReadResult::equal(Self, Self) -> Bool
 #deprecated
 pub fn DocxReadResult::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn DocxReadResult::to_repr(Self) -> @debug.Repr
 

@@ -31,7 +31,6 @@ pub suberror BatchError {
 } derive(@debug.Debug)
 #deprecated
 pub fn BatchError::output(Self, &Logger) -> Unit
-#as_free_fn
 #deprecated
 pub fn BatchError::to_repr(Self) -> @debug.Repr
 #deprecated

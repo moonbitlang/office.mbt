@@ -31,7 +31,6 @@ pub fn PdfAnnotation::equal(Self, Self) -> Bool
 pub fn PdfAnnotation::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAnnotation::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfAnnotation::to_repr(Self) -> @debug.Repr
 
@@ -48,7 +47,6 @@ pub fn PdfAnnotationBorder::equal(Self, Self) -> Bool
 pub fn PdfAnnotationBorder::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAnnotationBorder::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfAnnotationBorder::to_repr(Self) -> @debug.Repr
 
@@ -63,7 +61,6 @@ pub fn PdfAnnotationColour::equal(Self, Self) -> Bool
 pub fn PdfAnnotationColour::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAnnotationColour::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfAnnotationColour::to_repr(Self) -> @debug.Repr
 
@@ -81,7 +78,6 @@ pub fn PdfAnnotationStyle::equal(Self, Self) -> Bool
 pub fn PdfAnnotationStyle::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAnnotationStyle::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfAnnotationStyle::to_repr(Self) -> @debug.Repr
 
@@ -119,7 +115,6 @@ pub fn PdfAnnotationSubtype::equal(Self, Self) -> Bool
 pub fn PdfAnnotationSubtype::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAnnotationSubtype::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfAnnotationSubtype::to_repr(Self) -> @debug.Repr
 

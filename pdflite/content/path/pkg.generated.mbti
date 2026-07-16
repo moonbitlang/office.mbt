@@ -28,7 +28,6 @@ pub fn PdfContentClippingOpResult::equal(Self, Self) -> Bool
 pub fn PdfContentClippingOpResult::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfContentClippingOpResult::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfContentClippingOpResult::to_repr(Self) -> @debug.Repr
 
@@ -44,7 +43,6 @@ pub fn PdfContentPartialPath::equal(Self, Self) -> Bool
 pub fn PdfContentPartialPath::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfContentPartialPath::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfContentPartialPath::to_repr(Self) -> @debug.Repr
 
@@ -60,7 +58,6 @@ pub fn PdfContentPartialPathState::equal(Self, Self) -> Bool
 pub fn PdfContentPartialPathState::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfContentPartialPathState::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfContentPartialPathState::to_repr(Self) -> @debug.Repr
 
@@ -74,7 +71,6 @@ pub fn PdfContentPathOpResult::equal(Self, Self) -> Bool
 pub fn PdfContentPathOpResult::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfContentPathOpResult::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfContentPathOpResult::to_repr(Self) -> @debug.Repr
 

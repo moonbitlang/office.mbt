@@ -37,7 +37,6 @@ pub fn PdfUnicodeDataEntry::equal(Self, Self) -> Bool
 pub fn PdfUnicodeDataEntry::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfUnicodeDataEntry::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfUnicodeDataEntry::to_repr(Self) -> @debug.Repr
 

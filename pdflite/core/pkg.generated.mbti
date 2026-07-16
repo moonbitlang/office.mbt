@@ -221,7 +221,6 @@ pub fn PdfError::equal(Self, Self) -> Bool
 pub fn PdfError::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfError::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfError::to_repr(Self) -> @debug.Repr
 
@@ -246,7 +245,6 @@ pub fn BitStream::position(Self) -> BitStreamPosition
 pub fn BitStream::seek(Self, BitStreamPosition) -> Unit
 #deprecated
 pub fn BitStream::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn BitStream::to_repr(Self) -> @debug.Repr
 
@@ -262,7 +260,6 @@ pub fn BitStreamPosition::equal(Self, Self) -> Bool
 pub fn BitStreamPosition::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn BitStreamPosition::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn BitStreamPosition::to_repr(Self) -> @debug.Repr
 
@@ -284,7 +281,6 @@ pub fn BitWriter::put_value_int64(Self, Int, Int64) -> Unit raise PdfError
 pub fn BitWriter::to_bytes(Self) -> Bytes
 #deprecated
 pub fn BitWriter::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn BitWriter::to_repr(Self) -> @debug.Repr
 
@@ -334,7 +330,6 @@ pub fn ByteCursor::source(Self) -> String
 pub fn ByteCursor::to_bytes(Self) -> Bytes
 #deprecated
 pub fn ByteCursor::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn ByteCursor::to_repr(Self) -> @debug.Repr
 pub fn ByteCursor::view(Self) -> BytesView
@@ -356,7 +351,6 @@ pub fn ByteOutput::seek(Self, Int) -> Unit raise PdfError
 pub fn ByteOutput::to_bytes(Self) -> Bytes
 #deprecated
 pub fn ByteOutput::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn ByteOutput::to_repr(Self) -> @debug.Repr
 pub fn ByteOutput::write_ascii(Self, String) -> Unit raise PdfError
@@ -378,7 +372,6 @@ pub fn PdfCryptType::equal(Self, Self) -> Bool
 pub fn PdfCryptType::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfCryptType::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfCryptType::to_repr(Self) -> @debug.Repr
 
@@ -391,7 +384,6 @@ pub fn PdfName::equal(Self, Self) -> Bool
 pub fn PdfName::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfName::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfName::to_repr(Self) -> @debug.Repr
 pub fn PdfName::view(Self) -> BytesView

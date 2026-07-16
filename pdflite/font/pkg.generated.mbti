@@ -25,7 +25,6 @@ pub fn PdfFontListEntry::equal(Self, Self) -> Bool
 pub fn PdfFontListEntry::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfFontListEntry::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfFontListEntry::to_repr(Self) -> @debug.Repr
 
@@ -42,7 +41,6 @@ pub fn PdfFontTableEntry::equal(Self, Self) -> Bool
 pub fn PdfFontTableEntry::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfFontTableEntry::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfFontTableEntry::to_repr(Self) -> @debug.Repr
 
@@ -59,7 +57,6 @@ pub fn PdfMissingFontEntry::equal(Self, Self) -> Bool
 pub fn PdfMissingFontEntry::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfMissingFontEntry::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfMissingFontEntry::to_repr(Self) -> @debug.Repr
 

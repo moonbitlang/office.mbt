@@ -36,7 +36,6 @@ pub(all) struct ImageConversion {
 pub fn ImageConversion::equal(Self, Self) -> Bool
 #deprecated
 pub fn ImageConversion::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn ImageConversion::to_repr(Self) -> @debug.Repr
 
@@ -48,7 +47,6 @@ pub(all) enum OutputFormat {
 pub fn OutputFormat::equal(Self, Self) -> Bool
 #deprecated
 pub fn OutputFormat::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn OutputFormat::to_repr(Self) -> @debug.Repr
 

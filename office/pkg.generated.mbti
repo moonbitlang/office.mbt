@@ -77,7 +77,6 @@ pub fn OfficeError::equal(Self, Self) -> Bool
 pub fn OfficeError::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn OfficeError::output(Self, &Logger) -> Unit
-#as_free_fn
 #deprecated
 pub fn OfficeError::to_repr(Self) -> @debug.Repr
 #deprecated
@@ -163,7 +162,6 @@ pub fn DocumentFormat::name(Self) -> String
 pub fn DocumentFormat::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn DocumentFormat::output(Self, &Logger) -> Unit
-#as_free_fn
 #deprecated
 pub fn DocumentFormat::to_repr(Self) -> @debug.Repr
 #deprecated

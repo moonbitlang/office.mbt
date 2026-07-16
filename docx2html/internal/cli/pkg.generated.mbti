@@ -37,7 +37,6 @@ pub(all) struct CliOptions {
 pub fn CliOptions::equal(Self, Self) -> Bool
 #deprecated
 pub fn CliOptions::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn CliOptions::to_repr(Self) -> @debug.Repr
 
@@ -49,7 +48,6 @@ pub(all) enum CliOutputFormat {
 pub fn CliOutputFormat::equal(Self, Self) -> Bool
 #deprecated
 pub fn CliOutputFormat::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn CliOutputFormat::to_repr(Self) -> @debug.Repr
 

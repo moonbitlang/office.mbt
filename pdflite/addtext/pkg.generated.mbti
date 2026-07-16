@@ -41,7 +41,6 @@ pub fn PdfAddTextJustification::equal(Self, Self) -> Bool
 pub fn PdfAddTextJustification::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAddTextJustification::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfAddTextJustification::to_repr(Self) -> @debug.Repr
 
@@ -60,7 +59,6 @@ pub fn PdfAddTextLinePlacement::equal(Self, Self) -> Bool
 pub fn PdfAddTextLinePlacement::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAddTextLinePlacement::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfAddTextLinePlacement::to_repr(Self) -> @debug.Repr
 
@@ -75,7 +73,6 @@ pub fn PdfAddTextLineWidths::equal(Self, Self) -> Bool
 pub fn PdfAddTextLineWidths::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAddTextLineWidths::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfAddTextLineWidths::to_repr(Self) -> @debug.Repr
 
@@ -94,7 +91,6 @@ pub fn PdfAddTextPreparedLine::equal(Self, Self) -> Bool
 pub fn PdfAddTextPreparedLine::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAddTextPreparedLine::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfAddTextPreparedLine::to_repr(Self) -> @debug.Repr
 
@@ -114,7 +110,6 @@ pub fn PdfAddTextReplacementValues::equal(Self, Self) -> Bool
 pub fn PdfAddTextReplacementValues::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAddTextReplacementValues::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfAddTextReplacementValues::to_repr(Self) -> @debug.Repr
 
@@ -131,7 +126,6 @@ pub fn PdfAddTextResourceSetup::equal(Self, Self) -> Bool
 pub fn PdfAddTextResourceSetup::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAddTextResourceSetup::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfAddTextResourceSetup::to_repr(Self) -> @debug.Repr
 
@@ -147,7 +141,6 @@ pub fn PdfAddTextRotation::equal(Self, Self) -> Bool
 pub fn PdfAddTextRotation::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAddTextRotation::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfAddTextRotation::to_repr(Self) -> @debug.Repr
 
@@ -162,7 +155,6 @@ pub fn PdfAddTextUrl::equal(Self, Self) -> Bool
 pub fn PdfAddTextUrl::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAddTextUrl::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfAddTextUrl::to_repr(Self) -> @debug.Repr
 
@@ -179,7 +171,6 @@ pub fn PdfAddTextUrlAnnotationGeometry::equal(Self, Self) -> Bool
 pub fn PdfAddTextUrlAnnotationGeometry::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAddTextUrlAnnotationGeometry::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfAddTextUrlAnnotationGeometry::to_repr(Self) -> @debug.Repr
 
@@ -193,7 +184,6 @@ pub fn PdfAddTextUrlLine::equal(Self, Self) -> Bool
 pub fn PdfAddTextUrlLine::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAddTextUrlLine::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfAddTextUrlLine::to_repr(Self) -> @debug.Repr
 

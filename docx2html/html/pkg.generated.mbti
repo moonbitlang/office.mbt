@@ -38,7 +38,6 @@ pub(all) enum HtmlNode {
 pub fn HtmlNode::equal(Self, Self) -> Bool
 #deprecated
 pub fn HtmlNode::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn HtmlNode::to_repr(Self) -> @debug.Repr
 

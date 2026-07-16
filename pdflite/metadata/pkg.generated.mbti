@@ -74,7 +74,6 @@ pub fn PdfMetadataEncoding::equal(Self, Self) -> Bool
 pub fn PdfMetadataEncoding::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfMetadataEncoding::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfMetadataEncoding::to_repr(Self) -> @debug.Repr
 
@@ -88,7 +87,6 @@ pub fn PdfMetadataXmlAttribute::equal(Self, Self) -> Bool
 pub fn PdfMetadataXmlAttribute::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfMetadataXmlAttribute::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfMetadataXmlAttribute::to_repr(Self) -> @debug.Repr
 
@@ -102,7 +100,6 @@ pub fn PdfMetadataXmlDocument::equal(Self, Self) -> Bool
 pub fn PdfMetadataXmlDocument::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfMetadataXmlDocument::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfMetadataXmlDocument::to_repr(Self) -> @debug.Repr
 
@@ -117,7 +114,6 @@ pub fn PdfMetadataXmlName::equal(Self, Self) -> Bool
 pub fn PdfMetadataXmlName::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfMetadataXmlName::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfMetadataXmlName::to_repr(Self) -> @debug.Repr
 
@@ -131,7 +127,6 @@ pub fn PdfMetadataXmlTag::equal(Self, Self) -> Bool
 pub fn PdfMetadataXmlTag::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfMetadataXmlTag::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfMetadataXmlTag::to_repr(Self) -> @debug.Repr
 
@@ -145,7 +140,6 @@ pub fn PdfMetadataXmlTree::equal(Self, Self) -> Bool
 pub fn PdfMetadataXmlTree::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfMetadataXmlTree::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfMetadataXmlTree::to_repr(Self) -> @debug.Repr
 
