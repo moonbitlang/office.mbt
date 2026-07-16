@@ -113,19 +113,7 @@ fn docx_resource_failure(
   limit : Int,
   actual? : Int,
 ) -> CliFailure {
-  let fields : Map[String, Json] = {
-    "resource": Json::string(resource),
-    "limit": Json::number(limit.to_double()),
-  }
-  match actual {
-    Some(value) => fields["actual"] = Json::number(value.to_double())
-    None => ()
-  }
-  docx_cli_failure(
-    "office.docx.resource_limit",
-    "DOCX \{resource} exceeds the configured limit of \{limit}",
-    details=Json::object(fields),
-  )
+  format_resource_failure("docx", resource, limit, actual?)
 }
 
 ///|

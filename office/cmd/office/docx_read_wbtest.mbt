@@ -616,7 +616,9 @@ test "compact JSON preflight matches serializer character accounting" {
   for _ in serialized {
     characters += 1
   }
-  let budget = DocxOutputBudget::new(characters + docx_cli_output_framing_chars)
+  let budget = OfficeOutputBudget::new(
+    characters + docx_cli_output_framing_chars,
+  )
   budget.reserve_json(value)
   assert_eq(budget.used, characters + docx_cli_output_framing_chars)
 }

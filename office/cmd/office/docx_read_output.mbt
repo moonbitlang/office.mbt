@@ -178,9 +178,9 @@ fn PreparedDocxQuery::build(
 }
 
 ///|
-struct BoundedDocxPayload {
+struct BoundedOfficePayload {
   data : Json
-  budget : DocxOutputBudget
+  budget : OfficeOutputBudget
   warnings : Array[@lib.ProtocolWarning]
 }
 
@@ -188,24 +188,29 @@ struct BoundedDocxPayload {
 /// Counts compact JSON output before allocation and bounds retained records
 /// while they are produced. The counter measures Unicode scalar characters,
 /// including the successful command's explicit trailing line feed.
-struct DocxOutputBudget {
+struct OfficeOutputBudget {
+  format : String
   maximum : Int
   mut used : Int
 }
 
 ///|
-fn DocxOutputBudget::new(maximum : Int) -> DocxOutputBudget {
-  { maximum, used: docx_cli_output_framing_chars }
+fn OfficeOutputBudget::new(
+  maximum : Int,
+  format? : String = "docx",
+) -> OfficeOutputBudget {
+  { format, maximum, used: docx_cli_output_framing_chars }
 }
 
 ///|
-fn DocxOutputBudget::reserve_chars(
-  self : DocxOutputBudget,
+fn OfficeOutputBudget::reserve_chars(
+  self : OfficeOutputBudget,
   count : Int,
 ) -> Unit raise CliFailure {
   if count < 0 || count > self.maximum - self.used {
     let actual = if count < 0 { self.used } else { self.used + count }
-    raise docx_resource_failure(
+    raise format_resource_failure(
+      self.format,
       "successful command output characters",
       self.maximum,
       actual~,
@@ -215,8 +220,8 @@ fn DocxOutputBudget::reserve_chars(
 }
 
 ///|
-fn DocxOutputBudget::reserve_plain_text(
-  self : DocxOutputBudget,
+fn OfficeOutputBudget::reserve_plain_text(
+  self : OfficeOutputBudget,
   value : String,
 ) -> Unit raise CliFailure {
   for _ in value {
@@ -225,8 +230,8 @@ fn DocxOutputBudget::reserve_plain_text(
 }
 
 ///|
-fn DocxOutputBudget::reserve_json_string(
-  self : DocxOutputBudget,
+fn OfficeOutputBudget::reserve_json_string(
+  self : OfficeOutputBudget,
   value : String,
 ) -> Unit raise CliFailure {
   self.reserve_chars(2)
@@ -243,8 +248,8 @@ fn DocxOutputBudget::reserve_json_string(
 }
 
 ///|
-fn DocxOutputBudget::reserve_json(
-  self : DocxOutputBudget,
+fn OfficeOutputBudget::reserve_json(
+  self : OfficeOutputBudget,
   value : Json,
 ) -> Unit raise CliFailure {
   match value {
@@ -283,8 +288,8 @@ fn DocxOutputBudget::reserve_json(
 }
 
 ///|
-fn DocxOutputBudget::reserve_array_item(
-  self : DocxOutputBudget,
+fn OfficeOutputBudget::reserve_array_item(
+  self : OfficeOutputBudget,
   value : Json,
   has_previous : Bool,
 ) -> Unit raise CliFailure {
@@ -297,13 +302,13 @@ fn DocxOutputBudget::reserve_array_item(
 }
 
 ///|
-fn DocxOutputBudget::remaining(self : DocxOutputBudget) -> Int {
+fn OfficeOutputBudget::remaining(self : OfficeOutputBudget) -> Int {
   self.maximum - self.used
 }
 
 ///|
-fn DocxOutputBudget::reserve_json_field(
-  self : DocxOutputBudget,
+fn OfficeOutputBudget::reserve_json_field(
+  self : OfficeOutputBudget,
   name : String,
   value : Json,
   has_previous : Bool,
@@ -317,8 +322,8 @@ fn DocxOutputBudget::reserve_json_field(
 }
 
 ///|
-fn DocxOutputBudget::reserve_warning(
-  self : DocxOutputBudget,
+fn OfficeOutputBudget::reserve_warning(
+  self : OfficeOutputBudget,
   warning : @lib.ProtocolWarning,
 ) -> Unit raise CliFailure {
   self.reserve_chars(1)
@@ -328,8 +333,8 @@ fn DocxOutputBudget::reserve_warning(
 }
 
 ///|
-fn DocxOutputBudget::reserve_success_envelope(
-  self : DocxOutputBudget,
+fn OfficeOutputBudget::reserve_success_envelope(
+  self : OfficeOutputBudget,
   data : Json,
   warnings : Array[@lib.ProtocolWarning],
 ) -> Unit raise CliFailure {
@@ -353,8 +358,8 @@ fn DocxOutputBudget::reserve_success_envelope(
 }
 
 ///|
-fn DocxOutputBudget::reserve_json_string_body(
-  self : DocxOutputBudget,
+fn OfficeOutputBudget::reserve_json_string_body(
+  self : OfficeOutputBudget,
   value : String,
 ) -> Unit raise CliFailure {
   for character in value {
@@ -370,8 +375,8 @@ fn DocxOutputBudget::reserve_json_string_body(
 }
 
 ///|
-fn DocxOutputBudget::reserve_nonnegative_integer_growth(
-  self : DocxOutputBudget,
+fn OfficeOutputBudget::reserve_nonnegative_integer_growth(
+  self : OfficeOutputBudget,
   value : Int,
 ) -> Unit raise CliFailure {
   let mut remaining = value
@@ -385,8 +390,8 @@ fn DocxOutputBudget::reserve_nonnegative_integer_growth(
 }
 
 ///|
-fn DocxOutputBudget::reserve_boolean_growth_from_true(
-  self : DocxOutputBudget,
+fn OfficeOutputBudget::reserve_boolean_growth_from_true(
+  self : OfficeOutputBudget,
   value : Bool,
 ) -> Unit raise CliFailure {
   // `true` is the four-character skeleton placeholder; `false` needs one more.
@@ -434,16 +439,16 @@ fn bounded_docx_payload(
   data : Json,
   warnings : Array[@lib.ProtocolWarning],
   maximum : Int,
-) -> BoundedDocxPayload raise CliFailure {
+) -> BoundedOfficePayload raise CliFailure {
   ignore(checked_output_limit(maximum))
-  let budget = DocxOutputBudget::new(maximum)
+  let budget = OfficeOutputBudget::new(maximum)
   budget.reserve_success_envelope(data, warnings)
   { data, budget, warnings }
 }
 
 ///|
 fn checked_docx_json_output(
-  payload : BoundedDocxPayload,
+  payload : BoundedOfficePayload,
 ) -> String raise CliFailure {
   let envelope = @lib.output_success(payload.data, warnings=payload.warnings)
   // Compact output makes the preflight count exact and avoids indentation
@@ -484,7 +489,7 @@ fn get_docx_payload(
   projection : DocxProjection,
   entry : DocxProjectionEntry,
   max_output_chars : Int,
-) -> BoundedDocxPayload raise CliFailure {
+) -> BoundedOfficePayload raise CliFailure {
   let children : Array[Json] = []
   let fields = entry_base_json(entry, children)
   fields["schema"] = Json::string(@lib.SCHEMA_DOCX_ELEMENT)
@@ -543,7 +548,7 @@ fn docx_text_payload(
   offset : Int,
   limit : Int,
   max_output_chars : Int,
-) -> BoundedDocxPayload raise CliFailure {
+) -> BoundedOfficePayload raise CliFailure {
   let entries : Array[Json] = []
   let fields : Map[String, Json] = {
     "schema": Json::string(@lib.SCHEMA_DOCX_TEXT),
@@ -741,7 +746,7 @@ fn docx_query_payload(
   under : DocxProjectionEntry?,
   spec : DocxQuerySpec,
   max_output_chars : Int,
-) -> BoundedDocxPayload raise CliFailure {
+) -> BoundedOfficePayload raise CliFailure {
   let filter_properties : Array[Json] = []
   let filters : Map[String, Json] = {
     "properties": Json::array(filter_properties),
@@ -888,7 +893,7 @@ fn section_ref_json(reference : @document.SectionRef) -> Json {
 ///|
 fn bounded_section_json(
   section : @document.DocumentSection,
-  budget : DocxOutputBudget,
+  budget : OfficeOutputBudget,
   has_previous : Bool,
 ) -> Json raise CliFailure {
   let headers : Array[Json] = []
@@ -919,7 +924,7 @@ fn bounded_section_json(
 ///|
 fn reader_diagnostics(
   projection : DocxProjection,
-  retention_budget? : DocxOutputBudget,
+  retention_budget? : OfficeOutputBudget,
 ) -> Array[Json] raise CliFailure {
   let values : Array[Json] = []
   for message in projection.annotated.result().messages {
@@ -944,7 +949,7 @@ fn reader_diagnostics(
 fn docx_outline_payload(
   projection : DocxProjection,
   max_output_chars? : Int = docx_cli_default_max_output_chars,
-) -> BoundedDocxPayload raise CliFailure {
+) -> BoundedOfficePayload raise CliFailure {
   ignore(checked_output_limit(max_output_chars))
   let counts : Map[String, Int] = Map([])
   let mut footnotes = 0
