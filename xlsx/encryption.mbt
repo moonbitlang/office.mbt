@@ -66,6 +66,12 @@ priv enum EncryptionMechanism {
 }
 
 ///|
+priv struct DecryptedPackage {
+  bytes : Bytes
+  password_verified : Bool
+}
+
+///|
 priv struct ByteWriter {
   buf : Array[Byte]
 }
@@ -373,17 +379,43 @@ fn validate_key_data(key_data : KeyData) -> Unit raise XlsxError {
   if hash.length() != key_data.hash_size {
     raise InvalidEncryptionInfo(msg="hash size mismatch")
   }
+  if key_data.key_bits != 128 &&
+    key_data.key_bits != 192 &&
+    key_data.key_bits != 256 {
+    raise InvalidEncryptionInfo(msg="invalid AES key size")
+  }
 }
 
 ///|
 fn validate_encryption_info(
   encryption : EncryptionInfo,
+  limits? : ReadLimits = ReadLimits::new(),
 ) -> Unit raise XlsxError {
   validate_key_data(encryption.key_data)
   validate_key_data(encryption.encrypted_key.key_data)
+  if encryption.encrypted_key.spin_count < 0 {
+    raise InvalidEncryptionInfo(msg="negative Agile KDF work factor")
+  }
+  if encryption.encrypted_key.spin_count > limits.max_kdf_iterations {
+    raise ResourceLimitExceeded(
+      kind="kdf_iterations",
+      limit=limits.max_kdf_iterations,
+      actual=encryption.encrypted_key.spin_count,
+    )
+  }
   if encryption.encrypted_key.encrypted_verifier_hash_input.length() == 0 ||
     encryption.encrypted_key.encrypted_verifier_hash_value.length() == 0 {
     raise InvalidEncryptionInfo(msg="verifier data missing")
+  }
+  let block_size = encryption.encrypted_key.key_data.block_size
+  if block_size <= 0 ||
+    encryption.encrypted_key.encrypted_verifier_hash_input.length() % block_size !=
+    0 ||
+    encryption.encrypted_key.encrypted_verifier_hash_value.length() % block_size !=
+    0 ||
+    encryption.encrypted_key.encrypted_key_value.length() == 0 ||
+    encryption.encrypted_key.encrypted_key_value.length() % block_size != 0 {
+    raise InvalidEncryptionInfo(msg="invalid encrypted verifier data")
   }
   match encryption.data_integrity {
     Some(value) =>
@@ -399,7 +431,12 @@ fn validate_encryption_info(
 fn is_aes_cipher(key_data : KeyData) -> Bool {
   key_data.cipher_algorithm.to_lower() == "aes" &&
   key_data.cipher_chaining.to_lower().contains("cbc") &&
-  key_data.block_size == 16
+  key_data.block_size == 16 &&
+  (
+    key_data.key_bits == 128 ||
+    key_data.key_bits == 192 ||
+    key_data.key_bits == 256
+  )
 }
 
 ///|
@@ -494,6 +531,9 @@ fn agile_verify_password(
   } else {
     expected_hash.length()
   }
+  if verifier_hash_value.length() < size {
+    return false
+  }
   expected_hash[:size].equal(verifier_hash_value[:size])
 }
 
@@ -532,11 +572,12 @@ fn decrypt_package(
   input : BytesView,
   encryption : EncryptionInfo,
 ) -> Bytes raise XlsxError {
-  let payload : BytesView = if input.length() > package_offset {
-    input[package_offset:]
-  } else {
-    Bytes::default()
+  let block_size = encryption.key_data.block_size
+  if input.length() <= package_offset ||
+    (input.length() - package_offset) % block_size != 0 {
+    raise InvalidEncryptedPackage(msg="invalid encrypted package length")
   }
+  let payload = input[package_offset:]
   let out : Array[Byte] = []
   let mut offset = 0
   let mut index = 0
@@ -547,19 +588,18 @@ fn decrypt_package(
       payload.length()
     }
     let chunk = payload[offset:end]
-    let padded = pad_zero(chunk, encryption.key_data.block_size)
+    let padded = pad_zero(chunk, block_size)
     let iv = create_iv(index, encryption)
     let decrypted = aes_cbc_decrypt(package_key, iv, padded)
     out.append(decrypted.to_array())
     offset = end
     index = index + 1
   }
-  if input.length() >= 8 {
-    let raw_size = @crypto.u64_from_le(input, 0).to_int()
-    if raw_size >= 0 && raw_size <= out.length() {
-      out.truncate(raw_size)
-    }
+  let raw_size_u64 = @crypto.u64_from_le(input, 0)
+  if raw_size_u64 > out.length().to_uint64() {
+    raise InvalidEncryptedPackage(msg="decrypted package size is invalid")
   }
+  out.truncate(raw_size_u64.to_int())
   Bytes::from_array(out)
 }
 
@@ -569,12 +609,19 @@ fn agile_decrypt(
   encrypted_package_buf : BytesView,
   password : String,
   limits : ReadLimits,
-) -> Bytes raise XlsxError {
+) -> DecryptedPackage raise XlsxError {
+  if encryption_info_buf.length() > limits.max_xml_part_bytes {
+    raise ResourceLimitExceeded(
+      kind="xml_part_bytes",
+      limit=limits.max_xml_part_bytes,
+      actual=encryption_info_buf.length(),
+    )
+  }
   let xml = @encoding/utf8.decode(encryption_info_buf) catch {
     _ => raise InvalidEncryptionInfo(msg="invalid encryption info xml")
   }
   let encryption = parse_encryption_info(xml)
-  validate_encryption_info(encryption)
+  validate_encryption_info(encryption, limits~)
   if !is_aes_cipher(encryption.key_data) ||
     !is_aes_cipher(encryption.encrypted_key.key_data) {
     raise UnsupportedEncryption(msg="unsupported cipher settings")
@@ -591,10 +638,7 @@ fn agile_decrypt(
   let decrypted = decrypt_package(
     package_key, encrypted_package_buf, encryption,
   )
-  if !password_ok && !is_valid_zip(decrypted, limits) {
-    raise InvalidPassword
-  }
-  decrypted
+  { bytes: decrypted, password_verified: password_ok }
 }
 
 ///|
@@ -633,15 +677,57 @@ fn standard_convert_password_to_key(
 }
 
 ///|
+fn standard_password_verified(
+  secret_key : BytesView,
+  verifier_block : BytesView,
+  algorithm : StringView,
+) -> Bool raise XlsxError {
+  if algorithm != "AES" {
+    // Legacy RC4-style headers do not use the AES verifier layout. Their
+    // password classification falls back to the single bounded ZIP parse.
+    return false
+  }
+  let hash_size_u64 = read_u32_le(verifier_block, 36).to_uint64()
+  if hash_size_u64 == 0UL || hash_size_u64 > 20UL {
+    raise InvalidEncryptionInfo(msg="invalid verifier hash size")
+  }
+  let hash_size = hash_size_u64.to_int()
+  let encrypted_hash_size = (hash_size + 15) / 16 * 16
+  if verifier_block.length() < 40 + encrypted_hash_size {
+    raise InvalidEncryptionInfo(msg="invalid verifier block")
+  }
+  let verifier = aes_ecb_decrypt(secret_key, verifier_block[20:36])
+  let verifier_hash = aes_ecb_decrypt(
+    secret_key,
+    verifier_block[40:40 + encrypted_hash_size],
+  )
+  let expected = hash_parts("sha1", [verifier])
+  expected[:hash_size].equal(verifier_hash[:hash_size])
+}
+
+///|
 fn standard_decrypt(
   encryption_info_buf : BytesView,
   encrypted_package_buf : BytesView,
   password : String,
-) -> Bytes raise XlsxError {
-  let header_size = read_u32_le(encryption_info_buf, 8).to_uint64().to_int()
+  limits? : ReadLimits = ReadLimits::new(),
+) -> DecryptedPackage raise XlsxError {
+  if encryption_info_buf.length() < 12 {
+    raise InvalidEncryptionInfo(msg="standard encryption header too short")
+  }
+  let header_size_u64 = read_u32_le(encryption_info_buf, 8).to_uint64()
+  if header_size_u64 < 32UL ||
+    header_size_u64 > (encryption_info_buf.length() - 12).to_uint64() {
+    raise InvalidEncryptionInfo(msg="invalid standard encryption header size")
+  }
+  let header_size = header_size_u64.to_int()
   let header_block = encryption_info_buf[12:12 + header_size]
   let alg_id = @crypto.u32_from_le(header_block, 8)
-  let key_bits = @crypto.u32_from_le(header_block, 16).to_uint64().to_int()
+  let key_bits_u64 = @crypto.u32_from_le(header_block, 16).to_uint64()
+  if key_bits_u64 != 128UL && key_bits_u64 != 192UL && key_bits_u64 != 256UL {
+    raise InvalidEncryptionInfo(msg="invalid AES key size")
+  }
+  let key_bits = key_bits_u64.to_int()
   let algorithm = match alg_id {
     0x0000_660e | 0x0000_660f | 0x0000_6610 => "AES"
     // Excelize treats any other AlgID as the RC4-style layout: the
@@ -657,16 +743,35 @@ fn standard_decrypt(
   if verifier_block.length() < min_verifier_len {
     raise InvalidEncryptionInfo(msg="invalid verifier block")
   }
+  if read_u32_le(verifier_block, 0) != 16U {
+    raise InvalidEncryptionInfo(msg="invalid verifier salt size")
+  }
+  if iter_count > limits.max_kdf_iterations {
+    raise ResourceLimitExceeded(
+      kind="kdf_iterations",
+      limit=limits.max_kdf_iterations,
+      actual=iter_count,
+    )
+  }
   let salt = verifier_block[4:4 + 16]
   let secret_key = standard_convert_password_to_key(key_bits, salt, password)
-  let decrypted = aes_ecb_decrypt(secret_key, encrypted_package_buf[8:])
-  if encrypted_package_buf.length() >= 8 {
-    let raw_size = @crypto.u64_from_le(encrypted_package_buf, 0).to_int()
-    if raw_size >= 0 && raw_size <= decrypted.length() {
-      return decrypted[:raw_size].to_owned()
-    }
+  let password_verified = standard_password_verified(
+    secret_key, verifier_block, algorithm,
+  )
+  if encrypted_package_buf.length() <= 8 ||
+    (encrypted_package_buf.length() - 8) % 16 != 0 {
+    raise InvalidEncryptedPackage(msg="invalid encrypted package length")
   }
-  decrypted
+  let decrypted = aes_ecb_decrypt(secret_key, encrypted_package_buf[8:])
+  let raw_size_u64 = @crypto.u64_from_le(encrypted_package_buf, 0)
+  if raw_size_u64 > decrypted.length().to_uint64() {
+    if password_verified {
+      raise InvalidEncryptedPackage(msg="decrypted package size is invalid")
+    }
+    return { bytes: Bytes::default(), password_verified: false }
+  }
+  let raw_size = raw_size_u64.to_int()
+  { bytes: decrypted[:raw_size].to_owned(), password_verified }
 }
 
 ///|
@@ -683,34 +788,15 @@ fn is_encrypted_package(bytes : BytesView) -> Bool {
 }
 
 ///|
-fn looks_like_zip(bytes : BytesView) -> Bool {
-  bytes.length() >= 4 &&
-  bytes[0] == b'P' &&
-  bytes[1] == b'K' &&
-  bytes[2] == 0x03 &&
-  bytes[3] == 0x04
-}
-
-///|
-fn is_valid_zip(bytes : BytesView, limits : ReadLimits) -> Bool {
-  if !looks_like_zip(bytes) {
-    return false
-  }
-  let result : Result[@zip.Archive, Error] = Ok(
-    read_limited_archive(bytes, limits),
-  ) catch {
-    e => Err(e)
-  }
-  result is Ok(_)
-}
-
-///|
-fn decrypt_encrypted_package(
+fn decrypt_encrypted_package_result(
   bytes : BytesView,
   password : String,
   limits? : ReadLimits = ReadLimits::new(),
-) -> Bytes raise XlsxError {
+) -> DecryptedPackage raise XlsxError {
   check_source_package_size(bytes, limits)
+  if password.length() > max_password_length {
+    raise InvalidPasswordLength(len=password.length())
+  }
   let reader = cfb_read(bytes) catch {
     _ => raise InvalidEncryptedPackage(msg="invalid cfb package")
   }
@@ -729,10 +815,56 @@ fn decrypt_encrypted_package(
   let decrypted = match encryption_mechanism(encryption_info) {
     Agile =>
       agile_decrypt(encryption_info[8:], encrypted_package, password, limits)
-    Standard => standard_decrypt(encryption_info, encrypted_package, password)
+    Standard =>
+      standard_decrypt(encryption_info, encrypted_package, password, limits~)
   }
-  check_source_package_size(decrypted, limits)
+  check_source_package_size(decrypted.bytes, limits)
   decrypted
+}
+
+///|
+fn decrypted_package_archive(
+  decrypted : DecryptedPackage,
+  limits : ReadLimits,
+) -> @zip.Archive raise XlsxError {
+  read_limited_archive(decrypted.bytes, limits) catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) =>
+      raise ResourceLimitExceeded(kind~, limit~, actual~)
+    InvalidPackage(msg~) =>
+      if decrypted.password_verified {
+        raise InvalidPackage(msg~)
+      } else {
+        raise InvalidPassword
+      }
+    error => raise error
+  }
+}
+
+///|
+fn decrypt_encrypted_archive(
+  bytes : BytesView,
+  password : String,
+  limits? : ReadLimits = ReadLimits::new(),
+) -> @zip.Archive raise XlsxError {
+  decrypted_package_archive(
+    decrypt_encrypted_package_result(bytes, password, limits~),
+    limits,
+  )
+}
+
+///|
+fn decrypt_encrypted_package(
+  bytes : BytesView,
+  password : String,
+  limits? : ReadLimits = ReadLimits::new(),
+) -> Bytes raise XlsxError {
+  let decrypted = decrypt_encrypted_package_result(bytes, password, limits~)
+  if !decrypted.password_verified {
+    // Parse at most once to distinguish a tampered/legacy verifier from a
+    // genuinely wrong password. Workbook reads reuse this archive directly.
+    ignore(decrypted_package_archive(decrypted, limits))
+  }
+  decrypted.bytes
 }
 
 ///|
@@ -1399,8 +1531,15 @@ let encrypt_aes_b64 =
 test "encryption info detection" {
   let bytes = decode_base64_multiline(encrypt_sha1_b64)
   inspect(bytes.length(), content="14336")
-  let reader = cfb_read(bytes)
-  let info = reader.read_stream("EncryptionInfo")
+  let reader = cfb_read(bytes) catch {
+    error =>
+      fail(
+        "Agile CFB parse failed: \{repr(error)}; FAT=\{read_u32_le(bytes, 0x2c)}, sectorShift=\{read_u16_le(bytes, 0x1e)}",
+      )
+  }
+  let info = reader.read_stream("EncryptionInfo") catch {
+    error => fail("Agile encryption-info read failed: \{repr(error)}")
+  }
   let is_agile = match encryption_mechanism(info) {
     Agile => true
     Standard => false
@@ -1426,6 +1565,90 @@ test "agile verify password" {
   inspect(agile_verify_password(password_hash, encryption), content="true")
   let wrong_hash = derive_password_hash("wrong", encryption)
   inspect(agile_verify_password(wrong_hash, encryption), content="false")
+}
+
+///|
+test "encryption KDF work and AES key sizes are validated before derivation" {
+  let bytes = decode_base64_multiline(encrypt_sha1_b64)
+  let limits = ReadLimits::with_values(max_kdf_iterations=1)
+  let bounded : Result[DecryptedPackage, Error] = Ok(
+    decrypt_encrypted_package_result(bytes, "password", limits~),
+  ) catch {
+    error => Err(error)
+  }
+  match bounded {
+    Err(ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="kdf_iterations")
+      inspect(limit, content="1")
+      inspect(actual, content="100000")
+    }
+    _ => fail("expected Agile KDF work limit")
+  }
+
+  let standard_bounded : Result[DecryptedPackage, Error] = Ok(
+    decrypt_encrypted_package_result(
+      decode_base64_multiline(encrypt_aes_b64),
+      "password",
+      limits~,
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  match standard_bounded {
+    Err(ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="kdf_iterations")
+      inspect(limit, content="1")
+      inspect(actual, content="50000")
+    }
+    _ => fail("expected Standard KDF work limit")
+  }
+
+  let invalid_key : KeyData = {
+    salt_size: 16,
+    block_size: 16,
+    key_bits: 2_147_483_640,
+    hash_size: 20,
+    cipher_algorithm: "AES",
+    cipher_chaining: "ChainingModeCBC",
+    hash_algorithm: "SHA1",
+    salt_value: Bytes::make(16, b's'),
+  }
+  let key_result : Result[Unit, Error] = Ok(validate_key_data(invalid_key)) catch {
+    error => Err(error)
+  }
+  inspect(
+    key_result is Err(InvalidEncryptionInfo(msg="invalid AES key size")),
+    content="true",
+  )
+}
+
+///|
+test "Agile verifier fallback reuses a single bounded archive" {
+  let bytes = decode_base64_multiline(encrypt_sha1_b64)
+  let reader = cfb_read(bytes)
+  let info = reader.read_stream("EncryptionInfo")
+  let encrypted_package = reader.read_stream("EncryptedPackage")
+  let xml = @encoding/utf8.decode(info[8:])
+  let verifier = match attr_value(xml, "encryptedVerifierHashValue") {
+    Some(value) => value
+    None => fail("missing encrypted verifier hash")
+  }
+  let changed_first = if verifier.has_prefix("A") { "B" } else { "A" }
+  let changed_verifier = changed_first + verifier[1:].to_owned()
+  let patched_xml = xml.replace_all(
+    old="encryptedVerifierHashValue=\"\{verifier}\"",
+    new="encryptedVerifierHashValue=\"\{changed_verifier}\"",
+  )
+  let patched_info : Array[Byte] = info[:8].to_array()
+  patched_info.append(@encoding/utf8.encode(patched_xml).to_array())
+  let builder = cfb_builder_new()
+  builder.put("EncryptionInfo", Bytes::from_array(patched_info))
+  builder.put("EncryptedPackage", encrypted_package)
+  let workbook = read_with_password(builder.write(), "password")
+  debug_inspect(
+    workbook.get_cell_value("Sheet1", "A1"),
+    content="Some(\"SECRET\")",
+  )
 }
 
 ///|
@@ -1580,6 +1803,12 @@ test "write encrypted invalid password length" {
     e => Err(e)
   }
   inspect(result is Err(InvalidPasswordLength(_)), content="true")
+  let read_result : Result[DecryptedPackage, Error] = Ok(
+    decrypt_encrypted_package_result(b"", long_password),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(read_result is Err(InvalidPasswordLength(_)), content="true")
 }
 
 ///|
@@ -1626,9 +1855,9 @@ test "standard decryption accepts RC4-style verifier layout" {
   package_writer.write_bytes(encrypted)
   let package_buf = package_writer.to_bytes()
   let decrypted = standard_decrypt(info_buf, package_buf, password)
-  inspect(decrypted.length(), content="24")
+  inspect(decrypted.bytes.length(), content="24")
   debug_inspect(
-    @encoding/utf8.decode(decrypted[:24]),
+    @encoding/utf8.decode(decrypted.bytes[:24]),
     content=(
       #|"legacy standard payload!"
     ),

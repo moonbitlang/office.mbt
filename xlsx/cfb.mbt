@@ -128,10 +128,10 @@ fn CfbBuilder::write_uint32(self : CfbBuilder, value : Int) -> Unit {
 
 ///|
 fn CfbBuilder::write_uint64(self : CfbBuilder, value : Int) -> Unit {
-  let lo = value & 0xffff_ffff
-  let hi = (value >> 32) & 0xffff_ffff
-  self.write_uint32(lo)
-  self.write_uint32(hi)
+  // Builder inputs are non-negative MoonBit Int values, so the high 32 bits
+  // are always zero. Shifting an Int by 32 is not a widening conversion.
+  self.write_uint32(value)
+  self.write_uint32(0)
 }
 
 ///|
@@ -590,24 +590,25 @@ fn sector_offset(sector_size : Int, index : Int) -> Int {
 fn read_sector_chain(
   fat : Array[Int],
   start : Int,
+  sector_count? : Int = fat.length(),
+  maximum_length? : Int = fat.length(),
 ) -> Array[Int] raise XlsxError {
   let chain : Array[Int] = []
+  let visited = Array::make(sector_count, false)
   let mut current = start
-  let mut guard_count = 0
   while current != end_of_chain && current != free_sector {
-    if current < 0 || current >= fat.length() {
+    if current < 0 || current >= sector_count || current >= fat.length() {
       raise InvalidEncryptionInfo(msg="cfb chain out of bounds")
     }
-    chain.push(current)
-    let next = fat[current]
-    if next == current {
+    if visited[current] {
       raise InvalidEncryptionInfo(msg="cfb chain cycle")
     }
-    current = next
-    guard_count = guard_count + 1
-    if guard_count > fat.length() {
+    if chain.length() >= maximum_length {
       raise InvalidEncryptionInfo(msg="cfb chain too long")
     }
+    visited[current] = true
+    chain.push(current)
+    current = fat[current]
   }
   chain
 }
@@ -624,40 +625,111 @@ fn cfb_read(bytes : BytesView) -> CfbReader raise XlsxError {
   }
   let sector_shift = read_u16_le(bytes, 0x1e)
   let mini_sector_shift = read_u16_le(bytes, 0x20)
+  if (sector_shift != 9 && sector_shift != 12) || mini_sector_shift != 6 {
+    raise InvalidEncryptionInfo(msg="unsupported cfb sector size")
+  }
   let sector_size = 1 << sector_shift
   let mini_sector_size = 1 << mini_sector_shift
+  if bytes.length() < sector_size || bytes.length() % sector_size != 0 {
+    raise InvalidEncryptionInfo(msg="invalid cfb package size")
+  }
+  let sector_count = bytes.length() / sector_size - 1
+  if sector_count <= 0 {
+    raise InvalidEncryptionInfo(msg="cfb package has no sectors")
+  }
+  let entries_per_fat_sector = sector_size / 4
+  let minimum_fat_sectors = (sector_count + entries_per_fat_sector - 1) /
+    entries_per_fat_sector
+  // Some producers reserve spare FAT sectors. Permit bounded proportional
+  // slack while keeping the materialized FAT table linear in package size.
+  let maximum_fat_sectors = if minimum_fat_sectors * 2 + 1 < sector_count {
+    minimum_fat_sectors * 2 + 1
+  } else {
+    sector_count
+  }
+  let num_fat_u64 = read_u32_le(bytes, 0x2c).to_uint64()
+  if num_fat_u64 > maximum_fat_sectors.to_uint64() {
+    raise InvalidEncryptionInfo(msg="cfb FAT sector count exceeds package")
+  }
+  let num_fat = num_fat_u64.to_int()
   let dir_start = read_i32_le(bytes, 0x30)
   let mini_fat_start = read_i32_le(bytes, 0x3c)
-  let num_mini_fat = read_u32_le(bytes, 0x40).to_uint64().to_int()
+  let num_mini_fat_u64 = read_u32_le(bytes, 0x40).to_uint64()
+  if num_mini_fat_u64 > sector_count.to_uint64() {
+    raise InvalidEncryptionInfo(msg="cfb mini FAT sector count exceeds package")
+  }
+  let num_mini_fat = num_mini_fat_u64.to_int()
   let difat_start = read_i32_le(bytes, 0x44)
-  let num_difat = read_u32_le(bytes, 0x48).to_uint64().to_int()
+  let num_difat_u64 = read_u32_le(bytes, 0x48).to_uint64()
+  if num_difat_u64 > sector_count.to_uint64() {
+    raise InvalidEncryptionInfo(msg="cfb DIFAT sector count exceeds package")
+  }
+  let num_difat = num_difat_u64.to_int()
   let fat_sectors : Array[Int] = []
+  let fat_sector_seen = Array::make(sector_count, false)
   let mut pos = 0x4c
   for _ in 0..<=108 {
     let entry = read_i32_le(bytes, pos)
     if entry != free_sector {
+      if entry < 0 || entry >= sector_count {
+        raise InvalidEncryptionInfo(msg="cfb FAT sector out of bounds")
+      }
+      if fat_sector_seen[entry] {
+        raise InvalidEncryptionInfo(msg="duplicate cfb FAT sector")
+      }
+      if fat_sectors.length() >= num_fat {
+        raise InvalidEncryptionInfo(msg="cfb FAT sector count mismatch")
+      }
+      fat_sector_seen[entry] = true
       fat_sectors.push(entry)
     }
     pos = pos + 4
   }
   let mut difat_chain_start = difat_start
   let mut difat_count = 0
+  let difat_seen = Array::make(sector_count, false)
   while difat_chain_start != end_of_chain && difat_chain_start != free_sector {
     if difat_count >= num_difat {
-      break
+      raise InvalidEncryptionInfo(msg="cfb DIFAT chain longer than declared")
     }
+    if difat_chain_start < 0 || difat_chain_start >= sector_count {
+      raise InvalidEncryptionInfo(msg="cfb DIFAT sector out of bounds")
+    }
+    if difat_seen[difat_chain_start] {
+      raise InvalidEncryptionInfo(msg="cfb DIFAT cycle")
+    }
+    difat_seen[difat_chain_start] = true
     let offset = sector_offset(sector_size, difat_chain_start)
     let difat_bytes = bytes[offset:offset + sector_size]
     let mut idx = 0
-    for _ in 0..<=126 {
+    for _ in 0..<(entries_per_fat_sector - 1) {
       let entry = read_i32_le(difat_bytes, idx)
       if entry != free_sector {
+        if entry < 0 || entry >= sector_count {
+          raise InvalidEncryptionInfo(msg="cfb FAT sector out of bounds")
+        }
+        if fat_sector_seen[entry] {
+          raise InvalidEncryptionInfo(msg="duplicate cfb FAT sector")
+        }
+        if fat_sectors.length() >= num_fat {
+          raise InvalidEncryptionInfo(msg="cfb FAT sector count mismatch")
+        }
+        fat_sector_seen[entry] = true
         fat_sectors.push(entry)
       }
       idx = idx + 4
     }
-    difat_chain_start = read_i32_le(difat_bytes, 127 * 4)
+    difat_chain_start = read_i32_le(
+      difat_bytes,
+      (entries_per_fat_sector - 1) * 4,
+    )
     difat_count = difat_count + 1
+  }
+  if difat_count != num_difat {
+    raise InvalidEncryptionInfo(msg="cfb DIFAT sector count mismatch")
+  }
+  if fat_sectors.length() != num_fat {
+    raise InvalidEncryptionInfo(msg="cfb FAT sector count mismatch")
   }
   let fat : Array[Int] = []
   for sector in fat_sectors {
@@ -669,7 +741,12 @@ fn cfb_read(bytes : BytesView) -> CfbReader raise XlsxError {
       idx = idx + 4
     }
   }
-  let dir_chain = read_sector_chain(fat, dir_start)
+  let dir_chain = read_sector_chain(
+    fat,
+    dir_start,
+    sector_count~,
+    maximum_length=sector_count,
+  )
   let dir_data : Array[Byte] = []
   for sector in dir_chain {
     let offset = sector_offset(sector_size, sector)
@@ -682,9 +759,16 @@ fn cfb_read(bytes : BytesView) -> CfbReader raise XlsxError {
   while offset + 128 <= dir_data.length() {
     let entry_bytes = Bytes::from_array(dir_data[offset:offset + 128])
     let name_len = read_u16_le(entry_bytes, 0x40)
+    if name_len > 64 || name_len % 2 != 0 {
+      raise InvalidEncryptionInfo(msg="invalid cfb name length")
+    }
     let type_id = entry_bytes[0x42].to_int()
     let start = read_i32_le(entry_bytes, 0x74)
-    let size = read_u64_le(entry_bytes, 0x78).to_int()
+    let size_u64 = read_u64_le(entry_bytes, 0x78)
+    if size_u64 > bytes.length().to_uint64() {
+      raise InvalidEncryptionInfo(msg="cfb stream size exceeds package")
+    }
+    let size = size_u64.to_int()
     let name = if name_len >= 2 {
       let name_bytes = entry_bytes[0:name_len - 2]
       @encoding/utf16.decode(name_bytes, ignore_bom=true, endianness=Little) catch {
@@ -702,7 +786,15 @@ fn cfb_read(bytes : BytesView) -> CfbReader raise XlsxError {
   }
   let mini_fat : Array[Int] = []
   if num_mini_fat > 0 && mini_fat_start != end_of_chain {
-    let mini_chain = read_sector_chain(fat, mini_fat_start)
+    let mini_chain = read_sector_chain(
+      fat,
+      mini_fat_start,
+      sector_count~,
+      maximum_length=num_mini_fat,
+    )
+    if mini_chain.length() != num_mini_fat {
+      raise InvalidEncryptionInfo(msg="cfb mini FAT sector count mismatch")
+    }
     for sector in mini_chain {
       let offset = sector_offset(sector_size, sector)
       let chunk = bytes[offset:offset + sector_size]
@@ -715,12 +807,21 @@ fn cfb_read(bytes : BytesView) -> CfbReader raise XlsxError {
   }
   let mut mini_stream : Bytes = Bytes::default()
   if root_entry.size > 0 && root_entry.start != end_of_chain {
-    let root_chain = read_sector_chain(fat, root_entry.start)
+    let root_sector_count = (root_entry.size + sector_size - 1) / sector_size
+    let root_chain = read_sector_chain(
+      fat,
+      root_entry.start,
+      sector_count~,
+      maximum_length=root_sector_count,
+    )
     let data : Array[Byte] = []
     for sector in root_chain {
       let offset = sector_offset(sector_size, sector)
       let chunk = bytes[offset:offset + sector_size]
       data.append(chunk.to_array())
+    }
+    if data.length() < root_entry.size {
+      raise InvalidEncryptionInfo(msg="cfb mini stream is truncated")
     }
     if data.length() > root_entry.size {
       data.truncate(root_entry.size)
@@ -769,10 +870,16 @@ fn CfbReader::read_stream(
         let mut remaining = item.size
         let mut guard_count = 0
         while current != end_of_chain && current != free_sector && remaining > 0 {
-          let offset = current * self.mini_sector_size
-          if offset + self.mini_sector_size > self.mini_stream.length() {
+          if current < 0 || current >= self.mini_fat.length() {
+            raise InvalidEncryptionInfo(msg="cfb mini chain out of bounds")
+          }
+          if self.mini_stream.length() < self.mini_sector_size ||
+            current >
+            (self.mini_stream.length() - self.mini_sector_size) /
+            self.mini_sector_size {
             raise InvalidEncryptionInfo(msg="cfb mini stream out of bounds")
           }
+          let offset = current * self.mini_sector_size
           let chunk = self.mini_stream[offset:offset + self.mini_sector_size]
           let take = if remaining < self.mini_sector_size {
             remaining
@@ -781,23 +888,34 @@ fn CfbReader::read_stream(
           }
           data.append(chunk[:take].to_array())
           remaining = remaining - take
-          if current < 0 || current >= self.mini_fat.length() {
-            raise InvalidEncryptionInfo(msg="cfb mini chain out of bounds")
-          }
           current = self.mini_fat[current]
           guard_count = guard_count + 1
           if guard_count > self.mini_fat.length() {
             raise InvalidEncryptionInfo(msg="cfb mini chain too long")
           }
         }
+        if remaining != 0 {
+          raise InvalidEncryptionInfo(msg="cfb mini stream is truncated")
+        }
         Bytes::from_array(data)
       } else {
-        let chain = read_sector_chain(self.fat, item.start)
+        let sector_count = self.bytes.length() / self.sector_size - 1
+        let stream_sector_count = (item.size + self.sector_size - 1) /
+          self.sector_size
+        let chain = read_sector_chain(
+          self.fat,
+          item.start,
+          sector_count~,
+          maximum_length=stream_sector_count,
+        )
         let data : Array[Byte] = []
         for sector in chain {
           let offset = sector_offset(self.sector_size, sector)
           let chunk = self.bytes[offset:offset + self.sector_size]
           data.append(chunk.to_array())
+        }
+        if data.length() < item.size {
+          raise InvalidEncryptionInfo(msg="cfb stream is truncated")
         }
         if data.length() > item.size {
           data.truncate(item.size)
@@ -887,13 +1005,55 @@ test "cfb wb: prepare and read-chain guard branches" {
   )
 
   let chain_long : Result[Array[Int], Error] = Ok(
-    read_sector_chain([1, 2, 1], 0),
+    read_sector_chain([1, 2, 1], 0, maximum_length=2),
   ) catch {
     e => Err(e)
   }
   inspect(
     chain_long
     is Err(XlsxError::InvalidEncryptionInfo(msg="cfb chain too long")),
+    content="true",
+  )
+}
+
+///|
+test "cfb wb: DIFAT declarations and cycles are bounded by package sectors" {
+  let builder = cfb_builder_new()
+  builder.put("EncryptionInfo", b"info")
+  builder.put("EncryptedPackage", Bytes::make(4096, b'x'))
+  let bytes = builder.write()
+
+  let excessive = bytes.to_array()
+  wb_write_i32_le(excessive, 0x48, -1)
+  let excessive_result : Result[CfbReader, Error] = Ok(
+    cfb_read(Bytes::from_array(excessive)),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(
+    excessive_result
+    is Err(
+      XlsxError::InvalidEncryptionInfo(
+        msg="cfb DIFAT sector count exceeds package"
+      )
+    ),
+    content="true",
+  )
+
+  let cycle = bytes.to_array()
+  let difat_sector = cycle.length() / 512 - 1
+  let difat_offset = cycle.length()
+  cycle.append(Array::make(512, (0xff).to_byte()))
+  wb_write_i32_le(cycle, 0x44, difat_sector)
+  wb_write_i32_le(cycle, 0x48, 2)
+  wb_write_i32_le(cycle, difat_offset + 508, difat_sector)
+  let cycle_result : Result[CfbReader, Error] = Ok(
+    cfb_read(Bytes::from_array(cycle)),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(
+    cycle_result is Err(XlsxError::InvalidEncryptionInfo(msg="cfb DIFAT cycle")),
     content="true",
   )
 }
@@ -1055,9 +1215,7 @@ test "cfb wb: read_stream guard branches" {
   }
   inspect(
     mini_oob_result
-    is Err(
-      XlsxError::InvalidEncryptionInfo(msg="cfb mini stream out of bounds")
-    ),
+    is Err(XlsxError::InvalidEncryptionInfo(msg="cfb mini chain out of bounds")),
     content="true",
   )
 
