@@ -1,47 +1,131 @@
 ///|
-fn cell_ref_to_rc(reference : StringView) -> (Int, Int) raise XlsxError {
+fn bounded_radix_step(
+  value : Int,
+  digit : Int,
+  radix : Int,
+  limit : Int,
+) -> Int? {
+  if value > (limit - digit) / radix {
+    None
+  } else {
+    Some(value * radix + digit)
+  }
+}
+
+///|
+fn try_parse_column_name(name : StringView) -> Int? {
+  if name == "" {
+    return None
+  }
+  let mut value = 0
+  for ch in name {
+    let code = ch.to_int()
+    let digit = if code is ('A'..='Z') {
+      code - 'A'.to_int() + 1
+    } else if code is ('a'..='z') {
+      code - 'a'.to_int() + 1
+    } else {
+      return None
+    }
+    match bounded_radix_step(value, digit, 26, cell_ref_max_cols) {
+      Some(next) => value = next
+      None => return None
+    }
+  }
+  Some(value)
+}
+
+///|
+fn try_parse_row_number(text : StringView) -> Int? {
+  if text == "" {
+    return None
+  }
+  let mut value = 0
+  for ch in text {
+    if !ch.is_ascii_digit() {
+      return None
+    }
+    let digit = ch.to_int() - '0'.to_int()
+    match bounded_radix_step(value, digit, 10, cell_ref_max_rows) {
+      Some(next) => value = next
+      None => return None
+    }
+  }
+  if value == 0 {
+    None
+  } else {
+    Some(value)
+  }
+}
+
+///|
+fn try_parse_cell_ref_parts(reference : StringView) -> (Int, Int, Bool, Bool)? {
   let len = reference.length()
   let mut idx = 0
+  let mut abs_col = false
   if idx < len && reference[idx] == '$' {
+    abs_col = true
     idx = idx + 1
   }
   let mut col = 0
   let mut has_col = false
   while idx < len {
-    let u0 = reference[idx]
-    if u0 is ('A'..='Z') || u0 is ('a'..='z') {
-      let upper = if u0 is ('a'..='z') { u0 - 32 } else { u0 }
-      col = col * 26 + (upper.to_int() - ('A' : UInt16).to_int() + 1)
+    let unit = reference[idx]
+    if unit is ('A'..='Z') || unit is ('a'..='z') {
+      let upper = if unit is ('a'..='z') { unit - 32 } else { unit }
+      let digit = upper.to_int() - ('A' : UInt16).to_int() + 1
+      match bounded_radix_step(col, digit, 26, cell_ref_max_cols) {
+        Some(next) => col = next
+        None => return None
+      }
       has_col = true
       idx = idx + 1
-      continue
+    } else {
+      break
     }
-    break
   }
   if !has_col {
-    raise InvalidCellRef(value=reference.to_owned())
+    return None
   }
+  let mut abs_row = false
   if idx < len && reference[idx] == '$' {
+    abs_row = true
     idx = idx + 1
   }
   let mut row = 0
   let mut has_row = false
   while idx < len {
-    let u0 = reference[idx]
-    if u0 is ('0'..='9') {
-      has_row = true
-      row = row * 10 + (u0.to_int() - ('0' : UInt16).to_int())
-      idx = idx + 1
-      continue
+    let unit = reference[idx]
+    if !(unit is ('0'..='9')) {
+      return None
     }
-    raise InvalidCellRef(value=reference.to_owned())
+    let digit = unit.to_int() - ('0' : UInt16).to_int()
+    match bounded_radix_step(row, digit, 10, cell_ref_max_rows) {
+      Some(next) => row = next
+      None => return None
+    }
+    has_row = true
+    idx = idx + 1
   }
-  if col == 0 || !has_row {
-    raise InvalidCellRef(value=reference.to_owned())
+  if !has_row || row == 0 {
+    return None
   }
-  if row <= 0 {
-    raise InvalidCellRef(value=reference.to_owned())
+  Some((row, col, abs_col, abs_row))
+}
+
+///|
+fn parse_cell_ref_parts(
+  reference : StringView,
+) -> (Int, Int, Bool, Bool) raise XlsxError {
+  match try_parse_cell_ref_parts(reference) {
+    Some(parts) => parts
+    None => raise InvalidCellRef(value=reference.to_owned())
   }
+}
+
+///|
+fn cell_ref_to_rc(reference : StringView) -> (Int, Int) raise XlsxError {
+  let (row, col, _abs_col, _abs_row) = parse_cell_ref_parts(reference)
   (row, col)
 }
 
@@ -66,37 +150,16 @@ fn cell_ref_from(row : Int, col : Int) -> String raise XlsxError {
 /// Inverse of `column_number_to_name`.
 ///
 /// Raises `InvalidCellRef` if `name` is empty, contains any non-letter
-/// character, or is long enough that the column number overflows.
+/// character, or names a column beyond XFD (16,384).
 pub fn column_name_to_number(name : StringView) -> Int raise XlsxError {
-  if name == "" {
-    raise InvalidCellRef(value=name.to_owned())
+  match try_parse_column_name(name) {
+    Some(value) => value
+    None => raise InvalidCellRef(value=name.to_owned())
   }
-  let mut value = 0
-  for c in name {
-    let u0 = c.to_int()
-    if u0 is ('A'..='Z') {
-      value = value * 26 + (u0 - 'A'.to_int() + 1)
-    } else if u0 is ('a'..='z') {
-      value = value * 26 + (u0 - 'a'.to_int() + 1)
-    } else {
-      raise InvalidCellRef(value=name.to_owned())
-    }
-  }
-  if value <= 0 {
-    raise InvalidCellRef(value=name.to_owned())
-  }
-  value
 }
 
 ///|
-/// Converts a 1-based column number to its letter reference, e.g. `1` -> `"A"`,
-/// `26` -> `"Z"`, `27` -> `"AA"`. Inverse of `column_name_to_number`.
-///
-/// Raises `InvalidCellRef` if `col` is less than 1.
-pub fn column_number_to_name(col : Int) -> String raise XlsxError {
-  if col <= 0 {
-    raise InvalidCellRef(value="\{col}")
-  }
+fn format_column_name_unchecked(col : Int) -> String {
   let mut n = col
   let mut len = 0
   while n > 0 {
@@ -116,10 +179,22 @@ pub fn column_number_to_name(col : Int) -> String raise XlsxError {
     idx = idx - 1
   }
   let sb = StringBuilder::new()
-  for c in out {
-    sb.write_char(c)
+  for ch in out {
+    sb.write_char(ch)
   }
   sb.to_string()
+}
+
+///|
+/// Converts a 1-based column number to its letter reference, e.g. `1` -> `"A"`,
+/// `26` -> `"Z"`, `27` -> `"AA"`. Inverse of `column_name_to_number`.
+///
+/// Raises `InvalidCellRef` if `col` is less than 1 or greater than 16,384.
+pub fn column_number_to_name(col : Int) -> String raise XlsxError {
+  if col <= 0 || col > cell_ref_max_cols {
+    raise InvalidCellRef(value="\{col}")
+  }
+  format_column_name_unchecked(col)
 }
 
 ///|
@@ -135,39 +210,10 @@ let cell_ref_max_cols = 16384
 ///
 /// Raises `InvalidCellRef` if `cell` is empty, is missing either the column or
 /// the row part, has letters following digits, contains an unexpected
-/// character, has a row of 0, or has a row number too large to parse.
+/// character, or lies outside A1:XFD1048576.
 pub fn split_cell_name(cell : StringView) -> (String, Int) raise XlsxError {
-  let text = cell.to_owned()
-  if text == "" {
-    raise InvalidCellRef(value=text)
-  }
-  let col_sb = StringBuilder::new()
-  let row_sb = StringBuilder::new()
-  let mut seen_digit = false
-  for c in text {
-    if !seen_digit && (c.is_ascii_alphabetic() || c == '$') {
-      if c.is_ascii_alphabetic() {
-        col_sb.write_char(c.to_ascii_uppercase())
-      }
-    } else if c.is_ascii_digit() {
-      seen_digit = true
-      row_sb.write_char(c)
-    } else {
-      raise InvalidCellRef(value=text)
-    }
-  }
-  let col = col_sb.to_string()
-  let row_text = row_sb.to_string()
-  if col == "" || row_text == "" {
-    raise InvalidCellRef(value=text)
-  }
-  let row = @string.parse_int(row_text, base=10) catch {
-    _ => raise InvalidCellRef(value=text)
-  }
-  if row <= 0 {
-    raise InvalidCellRef(value=text)
-  }
-  (col, row)
+  let (row, col, _abs_col, _abs_row) = parse_cell_ref_parts(cell)
+  (format_column_name_unchecked(col), row)
 }
 
 ///|
@@ -176,15 +222,11 @@ pub fn split_cell_name(cell : StringView) -> (String, Int) raise XlsxError {
 /// upper-cased), so `("a", 2)` also yields `"A2"`. Inverse of
 /// `split_cell_name`.
 ///
-/// Raises `InvalidCellRef` if `col` is not valid column letters or `row` is
-/// less than 1.
+/// Raises `InvalidCellRef` if `col` is outside A:XFD or `row` is outside
+/// 1:1048576.
 pub fn join_cell_name(col : StringView, row : Int) -> String raise XlsxError {
   let col_number = column_name_to_number(col)
-  if row <= 0 {
-    raise InvalidCellRef(value="\{col}:\{row}")
-  }
-  let col_name = column_number_to_name(col_number)
-  "\{col_name}\{row}"
+  cell_ref_from(row, col_number)
 }
 
 ///|
@@ -197,14 +239,7 @@ pub fn join_cell_name(col : StringView, row : Int) -> String raise XlsxError {
 pub fn cell_name_to_coordinates(
   cell : StringView,
 ) -> (Int, Int) raise XlsxError {
-  let (col_name, row) = split_cell_name(cell)
-  if row > cell_ref_max_rows {
-    raise InvalidCellRef(value=cell.to_owned())
-  }
-  let col = column_name_to_number(col_name)
-  if col > cell_ref_max_cols {
-    raise InvalidCellRef(value=cell.to_owned())
-  }
+  let (row, col, _abs_col, _abs_row) = parse_cell_ref_parts(cell)
   (col, row)
 }
 

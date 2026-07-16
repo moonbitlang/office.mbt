@@ -558,28 +558,11 @@ fn FormulaParser::parse_row_range(self : FormulaParser) -> Expr raise XlsxError 
 
 ///|
 fn parse_cell_ref_token(token : StringView) -> String? {
-  let col_sb = StringBuilder::new()
-  let row_sb = StringBuilder::new()
-  let mut seen_digit = false
-  for ch in token {
-    if ch == '$' {
-      continue
-    }
-    if !seen_digit && ch.is_ascii_alphabetic() {
-      col_sb.write_char(ch.to_ascii_uppercase())
-    } else if ch.is_ascii_digit() {
-      seen_digit = true
-      row_sb.write_char(ch)
-    } else {
-      return None
-    }
+  match try_parse_cell_ref_parts(token) {
+    Some((row, col, _abs_col, _abs_row)) =>
+      Some("\{format_column_name_unchecked(col)}\{row}")
+    None => None
   }
-  let col = col_sb.to_string()
-  let row = row_sb.to_string()
-  if col == "" || row == "" {
-    return None
-  }
-  Some("\{col}\{row}")
 }
 
 ///|

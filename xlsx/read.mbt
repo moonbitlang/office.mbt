@@ -1072,11 +1072,11 @@ fn parse_data_validations(xml : StringView) -> Array[String] raise XlsxError {
     }
     let text = chunk.to_owned()
     let close_tag = "</dataValidation>"
-    match text.find(close_tag) {
+    let full = match text.find(close_tag) {
       Some(pos) => {
         let end = pos + close_tag.length()
         let slice = text[:end]
-        validations.push("<dataValidation \{slice.to_owned()}")
+        "<dataValidation \{slice.to_owned()}"
       }
       None => {
         let end = match text.find("/>") {
@@ -1084,9 +1084,14 @@ fn parse_data_validations(xml : StringView) -> Array[String] raise XlsxError {
           None => raise InvalidXml(msg="dataValidation tag not closed")
         }
         let slice = text[:end]
-        validations.push("<dataValidation \{slice.to_owned()}")
+        "<dataValidation \{slice.to_owned()}"
       }
     }
+    validations.push(
+      normalize_xml_sqref_attr_for_read(
+        full, "dataValidation", "data validation",
+      ),
+    )
   }
   validations
 }
@@ -1128,7 +1133,11 @@ fn parse_data_validations_x14(
       None => ""
     }
     let sqref = match extract_tag_body_from(full, "xm:sqref") {
-      Some(value) => unescape_xml_text(value)
+      Some(value) =>
+        normalize_sqref_for_read(
+          unescape_xml_text(value),
+          "x14 data validation",
+        )
       None => raise InvalidXml(msg="x14:dataValidation sqref missing")
     }
     let mut formula1 = ""
@@ -1196,11 +1205,11 @@ fn parse_conditional_formats(xml : StringView) -> Array[String] raise XlsxError 
     }
     let text = chunk.to_owned()
     let close_tag = "</conditionalFormatting>"
-    match text.find(close_tag) {
+    let full = match text.find(close_tag) {
       Some(pos) => {
         let end = pos + close_tag.length()
         let slice = text[:end]
-        formats.push("<conditionalFormatting\{slice.to_owned()}")
+        "<conditionalFormatting\{slice.to_owned()}"
       }
       None => {
         let end = match text.find("/>") {
@@ -1208,9 +1217,14 @@ fn parse_conditional_formats(xml : StringView) -> Array[String] raise XlsxError 
           None => raise InvalidXml(msg="conditionalFormatting tag not closed")
         }
         let slice = text[:end]
-        formats.push("<conditionalFormatting\{slice.to_owned()}")
+        "<conditionalFormatting\{slice.to_owned()}"
       }
     }
+    formats.push(
+      normalize_xml_sqref_attr_for_read(
+        full, "conditionalFormatting", "conditional formatting",
+      ),
+    )
   }
   formats
 }
@@ -1424,10 +1438,18 @@ fn parse_x14_data_bars(
   }
   for full in blocks {
     let sqref = match extract_tag_body_from(full, "xm:sqref") {
-      Some(value) => unescape_xml_text(value)
+      Some(value) =>
+        normalize_sqref_for_read(
+          unescape_xml_text(value),
+          "x14 conditional formatting",
+        )
       None =>
         match extract_tag_body_from(full, "sqref") {
-          Some(value) => unescape_xml_text(value)
+          Some(value) =>
+            normalize_sqref_for_read(
+              unescape_xml_text(value),
+              "x14 conditional formatting",
+            )
           None => continue
         }
     }
@@ -1584,10 +1606,18 @@ fn parse_conditional_formats_x14(
   }
   for full in blocks {
     let sqref = match extract_tag_body_from(full, "xm:sqref") {
-      Some(value) => unescape_xml_text(value)
+      Some(value) =>
+        normalize_sqref_for_read(
+          unescape_xml_text(value),
+          "x14 conditional formatting",
+        )
       None =>
         match extract_tag_body_from(full, "sqref") {
-          Some(value) => unescape_xml_text(value)
+          Some(value) =>
+            normalize_sqref_for_read(
+              unescape_xml_text(value),
+              "x14 conditional formatting",
+            )
           None =>
             raise InvalidXml(msg="x14:conditionalFormatting sqref missing")
         }
@@ -1700,7 +1730,13 @@ fn parse_sheet_dimension(xml : StringView) -> String? raise XlsxError {
       }
       let tag = rest[:end]
       match attr_value(tag, "ref") {
-        Some(value) => Some(unescape_xml_text(value))
+        Some(value) =>
+          Some(
+            validate_cell_or_range_ref_for_read(
+              unescape_xml_text(value),
+              "dimension",
+            ),
+          )
         None => None
       }
     }
@@ -1735,7 +1771,11 @@ fn parse_sheet_view_pane(body : StringView) -> SheetPane? raise XlsxError {
       None => ()
     }
     match attr_value(tag, "topLeftCell") {
-      Some(value) => pane.top_left_cell = unescape_xml_text(value)
+      Some(value) =>
+        pane.top_left_cell = validate_cell_ref_for_read(
+          unescape_xml_text(value),
+          "pane topLeftCell",
+        )
       None => ()
     }
     match attr_value(tag, "xSplit") {
@@ -1780,11 +1820,19 @@ fn parse_sheet_view_selections(
     let tag = text[:end]
     let selection = { sqref: "", active_cell: "", pane: "" }
     match attr_value(tag, "sqref") {
-      Some(value) => selection.sqref = unescape_xml_text(value)
+      Some(value) =>
+        selection.sqref = normalize_sqref_for_read(
+          unescape_xml_text(value),
+          "selection",
+        )
       None => ()
     }
     match attr_value(tag, "activeCell") {
-      Some(value) => selection.active_cell = unescape_xml_text(value)
+      Some(value) =>
+        selection.active_cell = validate_cell_ref_for_read(
+          unescape_xml_text(value),
+          "selection activeCell",
+        )
       None => ()
     }
     match attr_value(tag, "pane") {
@@ -1845,7 +1893,13 @@ fn parse_sheet_views(xml : StringView) -> Array[SheetView] raise XlsxError {
       None => ()
     }
     match attr_value(tag, "topLeftCell") {
-      Some(value) => view.top_left_cell = Some(unescape_xml_text(value))
+      Some(value) =>
+        view.top_left_cell = Some(
+          validate_cell_ref_for_read(
+            unescape_xml_text(value),
+            "sheetView topLeftCell",
+          ),
+        )
       None => ()
     }
     match attr_value(tag, "view") {
@@ -2410,6 +2464,20 @@ fn parse_page_breaks(
         }
       None => 0
     }
+    let (id_limit, span_limit) = match tag_name.to_owned() {
+      "rowBreaks" => (max_page_break_rows, max_page_break_cols)
+      "colBreaks" => (max_page_break_cols, max_page_break_rows)
+      _ => raise InvalidXml(msg="page break axis invalid")
+    }
+    if id < 0 ||
+      id > id_limit ||
+      min < 0 ||
+      min > span_limit ||
+      max < 0 ||
+      max > span_limit ||
+      min > max {
+      raise InvalidXml(msg="brk coordinate invalid")
+    }
     let manual = match attr_value(tag, "man") {
       Some(value) => parse_bool_attr(value)
       None => false
@@ -2435,6 +2503,7 @@ fn parse_picture_rel_id(xml : StringView) -> String? raise XlsxError {
 fn parse_auto_filter_columns(
   body : StringView,
   min_col : Int,
+  max_col : Int,
 ) -> Array[AutoFilterColumn] raise XlsxError {
   let columns : Array[AutoFilterColumn] = []
   let mut first = true
@@ -2455,6 +2524,9 @@ fn parse_auto_filter_columns(
           _ => raise InvalidXml(msg="filterColumn colId invalid")
         }
       None => raise InvalidXml(msg="filterColumn colId missing")
+    }
+    if col_id < 0 || col_id > max_col - min_col {
+      raise InvalidXml(msg="filterColumn colId out of range")
     }
     let col = min_col + col_id
     let mut filters : Array[String]? = None
@@ -2553,13 +2625,13 @@ fn parse_auto_filter(xml : StringView) -> AutoFilter? raise XlsxError {
     None => raise InvalidXml(msg="autoFilter ref missing")
   }
   let range_ref = normalize_range_ref(ref_value)
-  let (_min_row, min_col, _max_row, _max_col) = parse_range_ref(range_ref)
+  let (_min_row, min_col, _max_row, max_col) = parse_range_ref(range_ref)
   let self_closing = tag.trim().has_suffix("/")
   let columns = if self_closing {
     []
   } else {
     match extract_tag_body(xml, "autoFilter") {
-      Some(body) => parse_auto_filter_columns(body, min_col)
+      Some(body) => parse_auto_filter_columns(body, min_col, max_col)
       None => []
     }
   }
@@ -2591,7 +2663,7 @@ fn parse_hyperlink_elements(
       continue
     }
     let text = chunk.to_owned()
-    let end = match text.find(">") {
+    let end = match xml_open_tag_end_from(text, 0) {
       Some(pos) => pos
       None => raise InvalidXml(msg="hyperlink tag not closed")
     }
@@ -2600,10 +2672,8 @@ fn parse_hyperlink_elements(
       Some(value) => value
       None => raise InvalidXml(msg="hyperlink ref missing")
     }
-    let reference = try normalize_cell_or_range_ref(raw_ref) catch {
-      _ => raw_ref.to_string()
-    } noraise {
-      value => value
+    let reference = normalize_cell_or_range_ref(unescape_xml_text(raw_ref)) catch {
+      _ => raise InvalidXml(msg="hyperlink reference invalid")
     }
     let location = match attr_value(tag, "location") {
       Some(value) => Some(unescape_xml_text(value))
@@ -2738,7 +2808,7 @@ fn parse_row_dimensions(
     let row = @string.parse_int(row_text, base=10) catch {
       _ => raise InvalidXml(msg="row index invalid")
     }
-    if row <= 0 {
+    if row <= 0 || row > cell_ref_max_rows {
       raise InvalidXml(msg="row index invalid")
     }
     let height = match attr_value(tag, "ht") {
@@ -2812,7 +2882,11 @@ fn parse_col_dimensions(
     let max_col = @string.parse_int(max_text, base=10) catch {
       _ => raise InvalidXml(msg="col max invalid")
     }
-    if min_col <= 0 || max_col <= 0 || max_col < min_col {
+    if min_col <= 0 ||
+      max_col <= 0 ||
+      max_col < min_col ||
+      min_col > cell_ref_max_cols ||
+      max_col > cell_ref_max_cols {
       raise InvalidXml(msg="col range invalid")
     }
     let width = match attr_value(tag, "width") {
@@ -3000,7 +3074,7 @@ fn first_existing_workbook_rel_target_path(
 }
 
 ///|
-fn read_zip_archive_core(
+fn read_zip_archive_core_unchecked(
   archive : @zip.Archive,
   options : Options,
   limits : ReadLimits,
@@ -3659,9 +3733,10 @@ fn read_zip_archive_core(
             None => raise MissingPart(path=drawing_path)
           }
           let drawing_xml = decode(drawing_bytes)
+          let drawing_metrics = drawing_metrics_for_sheet(sheet)
           if slicer_part_entries.length() > 0 {
             slicer_anchor_info = parse_drawing_slicer_anchors(
-              drawing_xml, sheet,
+              drawing_xml, drawing_metrics,
             )
           }
           let drawing_rels_xml = match
@@ -3670,11 +3745,11 @@ fn read_zip_archive_core(
             None => ""
           }
           let drawing_images = parse_drawing_images(
-            drawing_xml, drawing_rels_xml, sheet, archive,
+            drawing_xml, drawing_rels_xml, drawing_metrics, archive,
           )
           sheet.images.append(drawing_images)
           let drawing_charts = parse_drawing_charts(
-            drawing_xml, drawing_rels_xml, sheet, archive, decode,
+            drawing_xml, drawing_rels_xml, drawing_metrics, archive, decode,
           )
           sheet.charts.append(drawing_charts)
           let drawing_shapes = parse_drawing_shapes(drawing_xml)
@@ -3814,6 +3889,34 @@ fn read_zip_archive_core(
   }
   resolve_slicer_sources_after_read(workbook, slicer_cache_defs)
   workbook
+}
+
+///|
+fn read_zip_archive_core(
+  archive : @zip.Archive,
+  options : Options,
+  limits : ReadLimits,
+  transcoder? : (String, Bytes) -> String raise XlsxError,
+) -> Workbook raise XlsxError {
+  match transcoder {
+    Some(decode) =>
+      read_zip_archive_core_unchecked(
+        archive,
+        options,
+        limits,
+        transcoder=decode,
+      ) catch {
+        InvalidCellRef(value~) =>
+          raise InvalidXml(msg="coordinate reference invalid: \{value}")
+        other => raise other
+      }
+    None =>
+      read_zip_archive_core_unchecked(archive, options, limits) catch {
+        InvalidCellRef(value~) =>
+          raise InvalidXml(msg="coordinate reference invalid: \{value}")
+        other => raise other
+      }
+  }
 }
 
 ///|

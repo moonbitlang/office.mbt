@@ -1214,16 +1214,28 @@ fn convert_row_height_to_pixels(height : Double) -> Int {
 }
 
 ///|
-fn Worksheet::col_width_pixels(self : Worksheet, col : Int) -> Int {
-  fn default_col_width_from_props(props : SheetPropsOptions) -> Int {
-    match props.default_col_width {
-      Some(w) => convert_col_width_to_pixels(w)
-      None => {
-        let base = props.base_col_width.unwrap_or(default_sheet_base_col_width)
-        convert_col_width_to_pixels(Double::from_int(base))
-      }
+fn Worksheet::default_col_width_pixels(self : Worksheet) -> Int {
+  let props = sheet_props_with_defaults(self.sheet_props)
+  match props.default_col_width {
+    Some(w) => convert_col_width_to_pixels(w)
+    None => {
+      let base = props.base_col_width.unwrap_or(default_sheet_base_col_width)
+      convert_col_width_to_pixels(Double::from_int(base))
     }
   }
+}
+
+///|
+fn Worksheet::default_row_height_pixels(self : Worksheet) -> Int {
+  let props = sheet_props_with_defaults(self.sheet_props)
+  match props.default_row_height {
+    Some(h) => convert_row_height_to_pixels(h)
+    None => default_row_height_pixels
+  }
+}
+
+///|
+fn Worksheet::col_width_pixels(self : Worksheet, col : Int) -> Int {
   match self.col_dimensions.get(col) {
     Some(dim) =>
       if dim.hidden {
@@ -1231,16 +1243,10 @@ fn Worksheet::col_width_pixels(self : Worksheet, col : Int) -> Int {
       } else {
         match dim.width {
           Some(width) => convert_col_width_to_pixels(width)
-          None => {
-            let props = sheet_props_with_defaults(self.sheet_props)
-            default_col_width_from_props(props)
-          }
+          None => self.default_col_width_pixels()
         }
       }
-    None => {
-      let props = sheet_props_with_defaults(self.sheet_props)
-      default_col_width_from_props(props)
-    }
+    None => self.default_col_width_pixels()
   }
 }
 
@@ -1253,22 +1259,10 @@ fn Worksheet::row_height_pixels(self : Worksheet, row : Int) -> Int {
       } else {
         match dim.height {
           Some(height) => convert_row_height_to_pixels(height)
-          None => {
-            let props = sheet_props_with_defaults(self.sheet_props)
-            match props.default_row_height {
-              Some(h) => convert_row_height_to_pixels(h)
-              None => default_row_height_pixels
-            }
-          }
+          None => self.default_row_height_pixels()
         }
       }
-    None => {
-      let props = sheet_props_with_defaults(self.sheet_props)
-      match props.default_row_height {
-        Some(h) => convert_row_height_to_pixels(h)
-        None => default_row_height_pixels
-      }
-    }
+    None => self.default_row_height_pixels()
   }
 }
 
@@ -1641,16 +1635,15 @@ pub fn Worksheet::add_image(
       base_h_px = base_h_px * asp
     }
   }
-  let width_emu = (Double::from_int(picture_emu_per_pixel) *
-    base_w_px *
-    normalized_scale_x)
-    .round()
-    .to_int()
-  let height_emu = (Double::from_int(picture_emu_per_pixel) *
-    base_h_px *
-    normalized_scale_y)
-    .round()
-    .to_int()
+  // Validate the floating-point result before narrowing to Int. `Double::to_int`
+  // saturates non-finite/out-of-range values, which would otherwise turn an
+  // invalid public option into a plausible but corrupted drawing extent.
+  let width_emu = drawing_scaled_extent_for_write(
+    base_w_px, normalized_scale_x, "drawing image width",
+  )
+  let height_emu = drawing_scaled_extent_for_write(
+    base_h_px, normalized_scale_y, "drawing image height",
+  )
   let stored_reference = if auto_fit {
     cell_ref_from(anchor_row, anchor_col)
   } else {
@@ -1830,18 +1823,18 @@ pub fn Worksheet::add_chart_with_options(
     Some(value) => value
     None => TwoCell
   }
-  let width_emu = (Double::from_int(
-      picture_emu_per_pixel * opts.dimension.width,
-    ) *
-    scale_x)
-    .round()
-    .to_int()
-  let height_emu = (Double::from_int(
-      picture_emu_per_pixel * opts.dimension.height,
-    ) *
-    scale_y)
-    .round()
-    .to_int()
+  // Convert the pixel dimension before multiplying. Multiplying as Int first
+  // can wrap on both native and Wasm before any later range check sees it.
+  let width_emu = drawing_scaled_extent_for_write(
+    Double::from_int(opts.dimension.width),
+    scale_x,
+    "drawing chart width",
+  )
+  let height_emu = drawing_scaled_extent_for_write(
+    Double::from_int(opts.dimension.height),
+    scale_y,
+    "drawing chart height",
+  )
   let xml = chart_options_to_xml(opts)
   self.charts.push({
     reference,
@@ -3276,53 +3269,7 @@ fn Worksheet::remove_rows(
 fn parse_cell_ref_with_abs(
   reference : StringView,
 ) -> (Int, Int, Bool, Bool) raise XlsxError {
-  let len = reference.length()
-  let mut idx = 0
-  let mut abs_col = false
-  if idx < len && reference[idx] == '$' {
-    abs_col = true
-    idx = idx + 1
-  }
-  let mut col = 0
-  let mut has_col = false
-  while idx < len {
-    let u0 = reference[idx]
-    if u0 is ('A'..='Z') || u0 is ('a'..='z') {
-      let upper = if u0 is ('a'..='z') { u0 - 32 } else { u0 }
-      col = col * 26 + (upper.to_int() - ('A' : UInt16).to_int() + 1)
-      has_col = true
-      idx = idx + 1
-    } else {
-      break
-    }
-  }
-  if !has_col {
-    raise InvalidCellRef(value=reference.to_owned())
-  }
-  let mut abs_row = false
-  if idx < len && reference[idx] == '$' {
-    abs_row = true
-    idx = idx + 1
-  }
-  let mut row = 0
-  let mut has_row = false
-  while idx < len {
-    let u0 = reference[idx]
-    if u0 is ('0'..='9') {
-      has_row = true
-      row = row * 10 + (u0.to_int() - ('0' : UInt16).to_int())
-      idx = idx + 1
-    } else {
-      raise InvalidCellRef(value=reference.to_owned())
-    }
-  }
-  if !has_row {
-    raise InvalidCellRef(value=reference.to_owned())
-  }
-  if row <= 0 {
-    raise InvalidCellRef(value=reference.to_owned())
-  }
-  (row, col, abs_col, abs_row)
+  parse_cell_ref_parts(reference)
 }
 
 ///|
@@ -3333,7 +3280,7 @@ fn format_cell_ref_with_abs(
   abs_row : Bool,
 ) -> String raise XlsxError {
   let col_text = column_number_to_name(col)
-  if row <= 0 {
+  if row <= 0 || row > cell_ref_max_rows {
     raise InvalidCellRef(value="\{col}:\{row}")
   }
   let row_text = row.to_string()
@@ -3376,11 +3323,7 @@ fn duplicate_sqref_for_row(
     }
   }
   let refs : Array[String] = []
-  for part in sqref.split(" ") {
-    let text = part.trim()
-    if text == "" {
-      continue
-    }
+  for text in xml_whitespace_tokens(sqref) {
     let (start_ref, end_ref) = split_sqref_range(text)
     let (row1, col1, abs_col1, abs_row1) = parse_cell_ref_with_abs(start_ref)
     let (row2, col2, abs_col2, abs_row2) = parse_cell_ref_with_abs(end_ref)

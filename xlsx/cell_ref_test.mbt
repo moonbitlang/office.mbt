@@ -25,3 +25,38 @@ test "cell ref helpers" {
   }
   inspect(coord_name_err is Err(_), content="true")
 }
+
+///|
+test "cell ref helpers enforce exact XLSX grid and bounded syntax" {
+  inspect(@xlsx.column_name_to_number("XFD"), content="16384")
+  inspect(@xlsx.column_number_to_name(16384), content="XFD")
+  debug_inspect(
+    @xlsx.split_cell_name("$XFD$1048576"),
+    content="(\"XFD\", 1048576)",
+  )
+  inspect(@xlsx.join_cell_name("XFD", 1048576), content="XFD1048576")
+  let bad_columns = ["XFE", "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"]
+  for name in bad_columns {
+    let result : Result[Int, Error] = Ok(@xlsx.column_name_to_number(name)) catch {
+      e => Err(e)
+    }
+    inspect(result is Err(@xlsx.XlsxError::InvalidCellRef(_)), content="true")
+  }
+  let bad_numbers = [0, 16385]
+  for col in bad_numbers {
+    let result : Result[String, Error] = Ok(@xlsx.column_number_to_name(col)) catch {
+      e => Err(e)
+    }
+    inspect(result is Err(@xlsx.XlsxError::InvalidCellRef(_)), content="true")
+  }
+  let bad_cells = [
+    "XFE1", "A1048577", "A999999999999999999999999999999999999", "$$A1", "A$$1",
+    "$A1$",
+  ]
+  for cell in bad_cells {
+    let result : Result[(String, Int), Error] = Ok(@xlsx.split_cell_name(cell)) catch {
+      e => Err(e)
+    }
+    inspect(result is Err(@xlsx.XlsxError::InvalidCellRef(_)), content="true")
+  }
+}

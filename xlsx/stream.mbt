@@ -348,31 +348,13 @@ fn set_col_style_stream(
 }
 
 ///|
-fn set_panes_stream(sheet : Worksheet, panes : Panes) -> Unit {
+fn set_panes_stream(sheet : Worksheet, panes : Panes) -> Unit raise XlsxError {
   if sheet.sheet_views.length() == 0 {
     sheet.sheet_views.push(SheetView::new())
   }
   let view_index = sheet.sheet_views.length() - 1
   let view = sheet.sheet_views[view_index]
-  if !panes.freeze && !panes.split {
-    view.pane = None
-  } else {
-    let pane = SheetPane::new()
-    pane.active_pane = panes.active_pane
-    pane.top_left_cell = panes.top_left_cell
-    pane.x_split = Double::from_int(panes.x_split)
-    pane.y_split = Double::from_int(panes.y_split)
-    if panes.freeze {
-      pane.state = "frozen"
-    }
-    view.pane = Some(pane)
-  }
-  let selections : Array[Selection] = []
-  for item in panes.selection {
-    selections.push(item)
-  }
-  view.selection.clear()
-  view.selection.append(selections)
+  apply_panes_for_write(view, panes)
 }
 
 ///|

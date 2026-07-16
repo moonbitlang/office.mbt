@@ -31,6 +31,58 @@ fn Worksheet::get_sheet_view(
 }
 
 ///|
+fn normalize_selection_for_write(
+  selection : Selection,
+) -> Selection raise XlsxError {
+  let normalized = Selection::new()
+  normalized.pane = selection.pane
+  normalized.active_cell = if selection.active_cell == "" {
+    ""
+  } else {
+    normalize_cell_ref_for_write(selection.active_cell)
+  }
+  normalized.sqref = if selection.sqref == "" {
+    ""
+  } else {
+    normalize_sqref_for_write(selection.sqref)
+  }
+  normalized
+}
+
+///|
+/// Shared by the indexed and streaming APIs so both paths validate exactly the
+/// same persisted pane/selection coordinates before mutating worksheet state.
+fn apply_panes_for_write(
+  view : SheetView,
+  panes : Panes,
+) -> Unit raise XlsxError {
+  let normalized_top_left = if panes.top_left_cell == "" {
+    ""
+  } else {
+    normalize_cell_ref_for_write(panes.top_left_cell)
+  }
+  let selections : Array[Selection] = []
+  for item in panes.selection {
+    selections.push(normalize_selection_for_write(item))
+  }
+  if !panes.freeze && !panes.split {
+    view.pane = None
+  } else {
+    let pane = SheetPane::new()
+    pane.active_pane = panes.active_pane
+    pane.top_left_cell = normalized_top_left
+    pane.x_split = Double::from_int(panes.x_split)
+    pane.y_split = Double::from_int(panes.y_split)
+    if panes.freeze {
+      pane.state = "frozen"
+    }
+    view.pane = Some(pane)
+  }
+  view.selection.clear()
+  view.selection.append(selections)
+}
+
+///|
 pub fn Worksheet::set_panes(
   self : Worksheet,
   panes : Panes,
@@ -41,25 +93,7 @@ pub fn Worksheet::set_panes(
   }
   let view_index = self.sheet_views.length() - 1
   let view = self.sheet_views[view_index]
-  if !panes.freeze && !panes.split {
-    view.pane = None
-  } else {
-    let pane = SheetPane::new()
-    pane.active_pane = panes.active_pane
-    pane.top_left_cell = panes.top_left_cell
-    pane.x_split = Double::from_int(panes.x_split)
-    pane.y_split = Double::from_int(panes.y_split)
-    if panes.freeze {
-      pane.state = "frozen"
-    }
-    view.pane = Some(pane)
-  }
-  let selections : Array[Selection] = []
-  for item in panes.selection {
-    selections.push(item)
-  }
-  view.selection.clear()
-  view.selection.append(selections)
+  apply_panes_for_write(view, panes)
 }
 
 ///|

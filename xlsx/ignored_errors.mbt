@@ -137,7 +137,8 @@ fn parse_ignored_errors(
     }
     let tag = text[:end]
     let sqref = match attr_value(tag, "sqref") {
-      Some(value) => unescape_xml_text(value)
+      Some(value) =>
+        normalize_sqref_for_read(unescape_xml_text(value), "ignoredError")
       None => raise InvalidXml(msg="ignoredError sqref missing")
     }
     let error : IgnoredError = {

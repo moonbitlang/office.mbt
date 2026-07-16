@@ -282,40 +282,110 @@ priv enum ResolvedSlicerCacheSource {
 let emu_per_pixel = 9525
 
 ///|
+fn drawing_int64_to_int_for_write(
+  value : Int64,
+  field : StringView,
+) -> Int raise XlsxError {
+  let min_int = -0x7fff_ffffL - 1L
+  if value < min_int || value > 0x7fff_ffffL {
+    raise InvalidSheetOperation(msg=field.to_owned() + " out of range")
+  }
+  value.to_int()
+}
+
+///|
+fn drawing_pixel_offset_for_write(
+  value : Int,
+  field : StringView,
+) -> Int raise XlsxError {
+  drawing_int64_to_int_for_write(
+    Int64::from_int(value) * Int64::from_int(emu_per_pixel),
+    field,
+  )
+}
+
+///|
+fn drawing_extent_for_write(
+  value : Int,
+  field : StringView,
+) -> Int raise XlsxError {
+  if value < 0 {
+    raise InvalidSheetOperation(msg=field.to_owned() + " must be >= 0")
+  }
+  value
+}
+
+///|
+fn drawing_scaled_extent_for_write(
+  pixels : Double,
+  scale : Double,
+  field : StringView,
+) -> Int raise XlsxError {
+  let value = (pixels * scale * emu_per_pixel.to_double()).round()
+  if Double::is_nan(value) ||
+    Double::is_inf(value) ||
+    value < 0.0 ||
+    value > 2147483647.0 {
+    raise InvalidSheetOperation(msg=field.to_owned() + " out of range")
+  }
+  value.to_int()
+}
+
+///|
+fn drawing_axis_boundary_emu_for_write(
+  metrics : DrawingAxisMetrics,
+  idx0 : Int,
+) -> Int64 raise XlsxError {
+  let pixels = metrics.pixel_span(0, idx0)
+  let factor = Int64::from_int(emu_per_pixel)
+  let max_pixels = (0x7fff_ffff_ffff_ffffL - 0xffff_ffffL) / factor
+  if pixels > max_pixels {
+    raise InvalidSheetOperation(msg="drawing grid geometry out of range")
+  }
+  pixels * factor
+}
+
+///|
 fn two_cell_axis_to(
-  sheet : Worksheet,
-  axis : StringView,
+  metrics : DrawingAxisMetrics,
   start_idx0 : Int,
   start_off_emu : Int,
   size_emu : Int,
-) -> (Int, Int) {
-  let mut idx0 = start_idx0
-  let mut remaining = start_off_emu + size_emu
-  let mut steps = 0
-  while steps < 2000000 {
-    let idx1 = idx0 + 1
-    let cell_size_px = if axis == "col" {
-      sheet.col_width_pixels(idx1)
-    } else {
-      sheet.row_height_pixels(idx1)
-    }
-    let cell_size_emu = cell_size_px * emu_per_pixel
-    if cell_size_emu <= 0 {
-      idx0 = idx0 + 1
-      steps = steps + 1
-      continue
-    }
-    if remaining < cell_size_emu {
-      return (idx0, remaining)
-    }
-    if remaining == cell_size_emu {
-      return (idx0 + 1, 0)
-    }
-    remaining = remaining - cell_size_emu
-    idx0 = idx0 + 1
-    steps = steps + 1
+) -> (Int, Int) raise XlsxError {
+  if start_idx0 < 0 || start_idx0 >= metrics.limit {
+    raise InvalidSheetOperation(msg="drawing " + metrics.axis + " invalid")
   }
-  (start_idx0, start_off_emu + size_emu)
+  ignore(drawing_extent_for_write(size_emu, "drawing extent"))
+  let start = drawing_axis_boundary_emu_for_write(metrics, start_idx0) +
+    Int64::from_int(start_off_emu)
+  let target = start + Int64::from_int(size_emu)
+  let grid_end = drawing_axis_boundary_emu_for_write(metrics, metrics.limit)
+  if target > grid_end {
+    raise InvalidSheetOperation(msg="drawing extends beyond worksheet grid")
+  }
+  if target < 0L {
+    return (0, drawing_int64_to_int_for_write(target, "drawing marker offset"))
+  }
+  if target == grid_end {
+    return (metrics.limit, 0)
+  }
+  let mut low = 0
+  let mut high = metrics.limit + 1
+  while low < high {
+    let mid = low + (high - low) / 2
+    let boundary = drawing_axis_boundary_emu_for_write(metrics, mid)
+    if boundary <= target {
+      low = mid + 1
+    } else {
+      high = mid
+    }
+  }
+  let idx0 = low - 1
+  let boundary = drawing_axis_boundary_emu_for_write(metrics, idx0)
+  (
+    idx0,
+    drawing_int64_to_int_for_write(target - boundary, "drawing marker offset"),
+  )
 }
 
 ///|
@@ -326,6 +396,10 @@ fn write_drawing_xml(
   shapes : Array[Shape],
   slicers : Array[DrawingSlicer],
 ) -> String raise XlsxError {
+  let drawing_metrics = match sheet {
+    Some(value) => drawing_metrics_for_sheet(value)
+    None => drawing_metrics_for_sheet(Worksheet::new("Drawing"))
+  }
   let sb = StringBuilder::new()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
@@ -339,10 +413,16 @@ fn write_drawing_xml(
     let row_idx = row - 1
     let pic_id = obj_id
     obj_id = obj_id + 1
-    let col_off = image.offset_x * emu_per_pixel
-    let row_off = image.offset_y * emu_per_pixel
-    let cx = image.width_emu
-    let cy = image.height_emu
+    let col_off = drawing_pixel_offset_for_write(
+      image.offset_x,
+      "drawing image column offset",
+    )
+    let row_off = drawing_pixel_offset_for_write(
+      image.offset_y,
+      "drawing image row offset",
+    )
+    let cx = drawing_extent_for_write(image.width_emu, "drawing image width")
+    let cy = drawing_extent_for_write(image.height_emu, "drawing image height")
     let picture_name = if image.name == "" {
       "Image \{pic_id}"
     } else {
@@ -357,14 +437,18 @@ fn write_drawing_xml(
         sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
         sb.write_view("      <xdr:rowOff>\{row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:from>\n")
-        let (to_col_idx, to_col_off, to_row_idx, to_row_off) = match sheet {
-          Some(s) => {
-            let (tc, tco) = two_cell_axis_to(s, "col", col_idx, col_off, cx)
-            let (tr, tro) = two_cell_axis_to(s, "row", row_idx, row_off, cy)
-            (tc, tco, tr, tro)
-          }
-          None => (col_idx, col_off + cx, row_idx, row_off + cy)
-        }
+        let (to_col_idx, to_col_off) = two_cell_axis_to(
+          drawing_metrics.cols,
+          col_idx,
+          col_off,
+          cx,
+        )
+        let (to_row_idx, to_row_off) = two_cell_axis_to(
+          drawing_metrics.rows,
+          row_idx,
+          row_off,
+          cy,
+        )
         sb.write_view("    <xdr:to>\n")
         sb.write_view("      <xdr:col>\{to_col_idx}</xdr:col>\n")
         sb.write_view("      <xdr:colOff>\{to_col_off}</xdr:colOff>\n")
@@ -380,14 +464,18 @@ fn write_drawing_xml(
         sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
         sb.write_view("      <xdr:rowOff>\{row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:from>\n")
-        let (to_col_idx, to_col_off, to_row_idx, to_row_off) = match sheet {
-          Some(s) => {
-            let (tc, tco) = two_cell_axis_to(s, "col", col_idx, col_off, cx)
-            let (tr, tro) = two_cell_axis_to(s, "row", row_idx, row_off, cy)
-            (tc, tco, tr, tro)
-          }
-          None => (col_idx, col_off + cx, row_idx, row_off + cy)
-        }
+        let (to_col_idx, to_col_off) = two_cell_axis_to(
+          drawing_metrics.cols,
+          col_idx,
+          col_off,
+          cx,
+        )
+        let (to_row_idx, to_row_off) = two_cell_axis_to(
+          drawing_metrics.rows,
+          row_idx,
+          row_off,
+          cy,
+        )
         sb.write_view("    <xdr:to>\n")
         sb.write_view("      <xdr:col>\{to_col_idx}</xdr:col>\n")
         sb.write_view("      <xdr:colOff>\{to_col_off}</xdr:colOff>\n")
@@ -465,10 +553,16 @@ fn write_drawing_xml(
     let row_idx = row - 1
     let frame_id = obj_id
     obj_id = obj_id + 1
-    let col_off = chart.offset_x * emu_per_pixel
-    let row_off = chart.offset_y * emu_per_pixel
-    let cx = chart.width_emu
-    let cy = chart.height_emu
+    let col_off = drawing_pixel_offset_for_write(
+      chart.offset_x,
+      "drawing chart column offset",
+    )
+    let row_off = drawing_pixel_offset_for_write(
+      chart.offset_y,
+      "drawing chart row offset",
+    )
+    let cx = drawing_extent_for_write(chart.width_emu, "drawing chart width")
+    let cy = drawing_extent_for_write(chart.height_emu, "drawing chart height")
     match chart.positioning {
       TwoCell => {
         sb.write_view("  <xdr:twoCellAnchor>\n")
@@ -478,14 +572,18 @@ fn write_drawing_xml(
         sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
         sb.write_view("      <xdr:rowOff>\{row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:from>\n")
-        let (to_col_idx, to_col_off, to_row_idx, to_row_off) = match sheet {
-          Some(s) => {
-            let (tc, tco) = two_cell_axis_to(s, "col", col_idx, col_off, cx)
-            let (tr, tro) = two_cell_axis_to(s, "row", row_idx, row_off, cy)
-            (tc, tco, tr, tro)
-          }
-          None => (col_idx, col_off + cx, row_idx, row_off + cy)
-        }
+        let (to_col_idx, to_col_off) = two_cell_axis_to(
+          drawing_metrics.cols,
+          col_idx,
+          col_off,
+          cx,
+        )
+        let (to_row_idx, to_row_off) = two_cell_axis_to(
+          drawing_metrics.rows,
+          row_idx,
+          row_off,
+          cy,
+        )
         sb.write_view("    <xdr:to>\n")
         sb.write_view("      <xdr:col>\{to_col_idx}</xdr:col>\n")
         sb.write_view("      <xdr:colOff>\{to_col_off}</xdr:colOff>\n")
@@ -501,14 +599,18 @@ fn write_drawing_xml(
         sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
         sb.write_view("      <xdr:rowOff>\{row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:from>\n")
-        let (to_col_idx, to_col_off, to_row_idx, to_row_off) = match sheet {
-          Some(s) => {
-            let (tc, tco) = two_cell_axis_to(s, "col", col_idx, col_off, cx)
-            let (tr, tro) = two_cell_axis_to(s, "row", row_idx, row_off, cy)
-            (tc, tco, tr, tro)
-          }
-          None => (col_idx, col_off + cx, row_idx, row_off + cy)
-        }
+        let (to_col_idx, to_col_off) = two_cell_axis_to(
+          drawing_metrics.cols,
+          col_idx,
+          col_off,
+          cx,
+        )
+        let (to_row_idx, to_row_off) = two_cell_axis_to(
+          drawing_metrics.rows,
+          row_idx,
+          row_off,
+          cy,
+        )
         sb.write_view("    <xdr:to>\n")
         sb.write_view("      <xdr:col>\{to_col_idx}</xdr:col>\n")
         sb.write_view("      <xdr:colOff>\{to_col_off}</xdr:colOff>\n")
@@ -563,12 +665,16 @@ fn write_drawing_xml(
     let row_idx = row - 1
     let shape_id = obj_id
     obj_id = obj_id + 1
-    let cx = (Double::from_int(shape.width * emu_per_pixel) * shape.scale_x)
-      .round()
-      .to_int()
-    let cy = (Double::from_int(shape.height * emu_per_pixel) * shape.scale_y)
-      .round()
-      .to_int()
+    let cx = drawing_scaled_extent_for_write(
+      shape.width.to_double(),
+      shape.scale_x,
+      "drawing shape width",
+    )
+    let cy = drawing_scaled_extent_for_write(
+      shape.height.to_double(),
+      shape.scale_y,
+      "drawing shape height",
+    )
     match shape.positioning {
       TwoCell => {
         sb.write_view("  <xdr:twoCellAnchor>\n")
@@ -578,14 +684,18 @@ fn write_drawing_xml(
         sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
         sb.write_view("      <xdr:rowOff>0</xdr:rowOff>\n")
         sb.write_view("    </xdr:from>\n")
-        let (to_col_idx, to_col_off, to_row_idx, to_row_off) = match sheet {
-          Some(s) => {
-            let (tc, tco) = two_cell_axis_to(s, "col", col_idx, 0, cx)
-            let (tr, tro) = two_cell_axis_to(s, "row", row_idx, 0, cy)
-            (tc, tco, tr, tro)
-          }
-          None => (col_idx, cx, row_idx, cy)
-        }
+        let (to_col_idx, to_col_off) = two_cell_axis_to(
+          drawing_metrics.cols,
+          col_idx,
+          0,
+          cx,
+        )
+        let (to_row_idx, to_row_off) = two_cell_axis_to(
+          drawing_metrics.rows,
+          row_idx,
+          0,
+          cy,
+        )
         sb.write_view("    <xdr:to>\n")
         sb.write_view("      <xdr:col>\{to_col_idx}</xdr:col>\n")
         sb.write_view("      <xdr:colOff>\{to_col_off}</xdr:colOff>\n")
@@ -601,14 +711,18 @@ fn write_drawing_xml(
         sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
         sb.write_view("      <xdr:rowOff>0</xdr:rowOff>\n")
         sb.write_view("    </xdr:from>\n")
-        let (to_col_idx, to_col_off, to_row_idx, to_row_off) = match sheet {
-          Some(s) => {
-            let (tc, tco) = two_cell_axis_to(s, "col", col_idx, 0, cx)
-            let (tr, tro) = two_cell_axis_to(s, "row", row_idx, 0, cy)
-            (tc, tco, tr, tro)
-          }
-          None => (col_idx, cx, row_idx, cy)
-        }
+        let (to_col_idx, to_col_off) = two_cell_axis_to(
+          drawing_metrics.cols,
+          col_idx,
+          0,
+          cx,
+        )
+        let (to_row_idx, to_row_off) = two_cell_axis_to(
+          drawing_metrics.rows,
+          row_idx,
+          0,
+          cy,
+        )
         sb.write_view("    <xdr:to>\n")
         sb.write_view("      <xdr:col>\{to_col_idx}</xdr:col>\n")
         sb.write_view("      <xdr:colOff>\{to_col_off}</xdr:colOff>\n")
@@ -789,8 +903,12 @@ fn write_drawing_xml(
       Some(v) => v
       None => 0
     }
-    let col_off = offset_x * emu_per_pixel
-    let row_off = offset_y * emu_per_pixel
+    let col_off = drawing_pixel_offset_for_write(
+      offset_x, "drawing slicer column offset",
+    )
+    let row_off = drawing_pixel_offset_for_write(
+      offset_y, "drawing slicer row offset",
+    )
     let scale_x = match slicer.format.scale_x {
       Some(v) => if v <= 0.0 { 1.0 } else { v }
       None => 1.0
@@ -799,12 +917,16 @@ fn write_drawing_xml(
       Some(v) => if v <= 0.0 { 1.0 } else { v }
       None => 1.0
     }
-    let cx = (slicer.width.to_double() * scale_x * emu_per_pixel.to_double())
-      .round()
-      .to_int()
-    let cy = (slicer.height.to_double() * scale_y * emu_per_pixel.to_double())
-      .round()
-      .to_int()
+    let cx = drawing_scaled_extent_for_write(
+      slicer.width.to_double(),
+      scale_x,
+      "drawing slicer width",
+    )
+    let cy = drawing_scaled_extent_for_write(
+      slicer.height.to_double(),
+      scale_y,
+      "drawing slicer height",
+    )
     let positioning = match slicer.format.positioning {
       Some(v) => v
       None => TwoCell
@@ -818,14 +940,18 @@ fn write_drawing_xml(
         sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
         sb.write_view("      <xdr:rowOff>\{row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:from>\n")
-        let (to_col_idx, to_col_off, to_row_idx, to_row_off) = match sheet {
-          Some(s) => {
-            let (tc, tco) = two_cell_axis_to(s, "col", col_idx, col_off, cx)
-            let (tr, tro) = two_cell_axis_to(s, "row", row_idx, row_off, cy)
-            (tc, tco, tr, tro)
-          }
-          None => (col_idx, col_off + cx, row_idx, row_off + cy)
-        }
+        let (to_col_idx, to_col_off) = two_cell_axis_to(
+          drawing_metrics.cols,
+          col_idx,
+          col_off,
+          cx,
+        )
+        let (to_row_idx, to_row_off) = two_cell_axis_to(
+          drawing_metrics.rows,
+          row_idx,
+          row_off,
+          cy,
+        )
         sb.write_view("    <xdr:to>\n")
         sb.write_view("      <xdr:col>\{to_col_idx}</xdr:col>\n")
         sb.write_view("      <xdr:colOff>\{to_col_off}</xdr:colOff>\n")
@@ -841,14 +967,18 @@ fn write_drawing_xml(
         sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
         sb.write_view("      <xdr:rowOff>\{row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:from>\n")
-        let (to_col_idx, to_col_off, to_row_idx, to_row_off) = match sheet {
-          Some(s) => {
-            let (tc, tco) = two_cell_axis_to(s, "col", col_idx, col_off, cx)
-            let (tr, tro) = two_cell_axis_to(s, "row", row_idx, row_off, cy)
-            (tc, tco, tr, tro)
-          }
-          None => (col_idx, col_off + cx, row_idx, row_off + cy)
-        }
+        let (to_col_idx, to_col_off) = two_cell_axis_to(
+          drawing_metrics.cols,
+          col_idx,
+          col_off,
+          cx,
+        )
+        let (to_row_idx, to_row_off) = two_cell_axis_to(
+          drawing_metrics.rows,
+          row_idx,
+          row_off,
+          cy,
+        )
         sb.write_view("    <xdr:to>\n")
         sb.write_view("      <xdr:col>\{to_col_idx}</xdr:col>\n")
         sb.write_view("      <xdr:colOff>\{to_col_off}</xdr:colOff>\n")
@@ -1122,7 +1252,7 @@ fn write_sheet_format_pr_xml(options : SheetPropsOptions) -> String {
 }
 
 ///|
-fn write_sheet_views_xml(sheet : Worksheet) -> String? {
+fn write_sheet_views_xml(sheet : Worksheet) -> String? raise XlsxError {
   if sheet.sheet_views.length() == 0 {
     return None
   }
@@ -1161,7 +1291,7 @@ fn write_sheet_views_xml(sheet : Worksheet) -> String? {
     match view.top_left_cell {
       Some(value) => {
         sb.write_view(" topLeftCell=\"")
-        sb.write_view(escape_xml_attr(value))
+        sb.write_view(escape_xml_attr(normalize_cell_ref_for_write(value)))
         sb.write_view("\"")
       }
       None => ()
@@ -1202,7 +1332,9 @@ fn write_sheet_views_xml(sheet : Worksheet) -> String? {
         }
         if pane.top_left_cell != "" {
           sb.write_view(" topLeftCell=\"")
-          sb.write_view(escape_xml_attr(pane.top_left_cell))
+          sb.write_view(
+            escape_xml_attr(normalize_cell_ref_for_write(pane.top_left_cell)),
+          )
           sb.write_view("\"")
         }
         if pane.x_split != 0.0 {
@@ -1224,12 +1356,16 @@ fn write_sheet_views_xml(sheet : Worksheet) -> String? {
       }
       if selection.active_cell != "" {
         sb.write_view(" activeCell=\"")
-        sb.write_view(escape_xml_attr(selection.active_cell))
+        sb.write_view(
+          escape_xml_attr(normalize_cell_ref_for_write(selection.active_cell)),
+        )
         sb.write_view("\"")
       }
       if selection.sqref != "" {
         sb.write_view(" sqref=\"")
-        sb.write_view(escape_xml_attr(selection.sqref))
+        sb.write_view(
+          escape_xml_attr(normalize_sqref_for_write(selection.sqref)),
+        )
         sb.write_view("\"")
       }
       sb.write_view("/>\n")
@@ -3074,13 +3210,16 @@ fn wb_count_substr(text : StringView, needle : StringView) -> Int {
 }
 
 ///|
-fn wb_drawing_image(positioning : PicturePositioning) -> DrawingImage {
+fn wb_drawing_image_with_offset(
+  positioning : PicturePositioning,
+  offset_x : Int,
+) -> DrawingImage {
   let image : Image = {
     reference: "B3",
     data: @encoding/utf8.encode("img"),
     extension: "png",
     content_type: "image/png",
-    offset_x: 0,
+    offset_x,
     offset_y: 0,
     scale_x: 1.0,
     scale_y: 1.0,
@@ -3096,6 +3235,11 @@ fn wb_drawing_image(positioning : PicturePositioning) -> DrawingImage {
     positioning,
   }
   { image, rel_id: 1, hyperlink_rel_id: None }
+}
+
+///|
+fn wb_drawing_image(positioning : PicturePositioning) -> DrawingImage {
+  wb_drawing_image_with_offset(positioning, 0)
 }
 
 ///|
@@ -3357,6 +3501,85 @@ test "write hardening wb: two_cell_axis_to skips zero-size cells" {
   )
   inspect(xml.contains("<xdr:twoCellAnchor>"), content="true")
   inspect(xml.contains("<xdr:col>2</xdr:col>"), content="true")
+}
+
+///|
+test "write hardening wb: two-cell anchors enforce the worksheet boundary" {
+  let chart : DrawingChart = {
+    reference: "XFD1",
+    offset_x: 0,
+    offset_y: 0,
+    width_emu: emu_per_pixel * 480,
+    height_emu: emu_per_pixel * 260,
+    print_object: true,
+    locked: true,
+    positioning: TwoCell,
+    rel_id: 1,
+  }
+  let result : Result[String, Error] = Ok(
+    write_drawing_xml(Some(Worksheet::new("Sheet1")), [], [chart], [], []),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(XlsxError::InvalidSheetOperation(msg~)) =>
+      inspect(msg, content="drawing extends beyond worksheet grid")
+    _ => fail("expected drawing grid boundary error")
+  }
+}
+
+///|
+test "write hardening wb: signed offsets and exact end markers stay readable" {
+  let image = wb_drawing_image_with_offset(TwoCell, -1)
+  let signed_xml = write_drawing_xml(None, [image], [], [], [])
+  inspect(signed_xml.contains("<xdr:colOff>-9525</xdr:colOff>"), content="true")
+
+  let chart : DrawingChart = {
+    reference: "XFD1",
+    offset_x: 0,
+    offset_y: 0,
+    width_emu: 64 * emu_per_pixel,
+    height_emu: emu_per_pixel,
+    print_object: true,
+    locked: true,
+    positioning: TwoCell,
+    rel_id: 1,
+  }
+  let boundary_xml = write_drawing_xml(
+    Some(Worksheet::new("Sheet1")),
+    [],
+    [chart],
+    [],
+    [],
+  )
+  inspect(boundary_xml.contains("<xdr:col>16384</xdr:col>"), content="true")
+  inspect(boundary_xml.contains("<xdr:colOff>0</xdr:colOff>"), content="true")
+}
+
+///|
+test "write hardening wb: drawing arithmetic rejects overflow" {
+  let image = wb_drawing_image_with_offset(OneCell, 0x7fff_ffff)
+  let offset_result : Result[String, Error] = Ok(
+    write_drawing_xml(None, [image], [], [], []),
+  ) catch {
+    error => Err(error)
+  }
+  match offset_result {
+    Err(XlsxError::InvalidSheetOperation(msg~)) =>
+      inspect(msg, content="drawing image column offset out of range")
+    _ => fail("expected drawing offset overflow")
+  }
+
+  let extent_result : Result[Int, Error] = Ok(
+    drawing_scaled_extent_for_write(2147483647.0, 2.0, "drawing shape width"),
+  ) catch {
+    error => Err(error)
+  }
+  match extent_result {
+    Err(XlsxError::InvalidSheetOperation(msg~)) =>
+      inspect(msg, content="drawing shape width out of range")
+    _ => fail("expected drawing extent overflow")
+  }
 }
 
 ///|
