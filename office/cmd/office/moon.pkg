@@ -6,6 +6,8 @@ import {
   "bobzhang/docx2html/opc",
   "bobzhang/docx2html/paths" @docx_paths,
   "bobzhang/docx2html/xml",
+  "bobzhang/mbtexcel/inspect",
+  "bobzhang/mbtexcel/xlsx",
   "bobzhang/mbtexcel/zip",
   "bobzhang/office" @lib,
   "bobzhang/office/raw",
