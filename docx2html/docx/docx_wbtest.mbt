@@ -4384,6 +4384,65 @@ test "comment addition charges relationship XML to the caller budget" {
 }
 
 ///|
+test "comment addition covers a newly created Relationships part by Override" {
+  let relationships_content_type = "application/vnd.openxmlformats-package.relationships+xml"
+  let defaults : Array[String?] = [None, Some("application/xml")]
+  for relationships_default in defaults {
+    let builder = @opc.PackageBuilder::new()
+    builder.add_default("xml", "application/xml")
+    match relationships_default {
+      Some(content_type) => builder.add_default("rels", content_type)
+      None => ()
+    }
+    builder.add_override("/_rels/.rels", relationships_content_type)
+    builder.add_override(
+      "/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+    )
+    builder.add_relationship(
+      "rIdMain", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+      "word/document.xml",
+    )
+    builder.add_part(
+      "word/document.xml",
+      @utf8.encode(
+        (
+          #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Body</w:t></w:r></w:p><w:sectPr/></w:body></w:document>
+        ),
+      ),
+    )
+    let original = builder.build()
+    let original_archive = @mbtzip.read(original)
+    assert_true(original_archive.get("word/_rels/document.xml.rels") is None)
+    assert_eq(@opc.validate_docx_package(original), [])
+    let annotated = read_docx_annotated(original)
+    let spec = comment_spec(author="MIME", from=0, to=0, [
+      paragraph([run([text("covered")])]),
+    ])
+    let (plan, id) = plan_comment_addition(
+      annotated,
+      original,
+      at_relative="p[1]",
+      to_relative="p[1]",
+      spec,
+    )
+    assert_eq(id, "0")
+    let updated = @splice.splice_docx(original, plan)
+    assert_eq(@opc.validate_docx_package(updated), [])
+    let archive = @mbtzip.read(updated)
+    assert_true(archive.get("word/_rels/document.xml.rels") is Some(_))
+    guard archive.get("[Content_Types].xml") is Some(types_bytes)
+    let types = @utf8.decode(types_bytes, ignore_bom=true)
+    assert_true(
+      types.contains(
+        "PartName=\"/word/_rels/document.xml.rels\" ContentType=\"\{relationships_content_type}\"",
+      ),
+    )
+    assert_true(types.contains("PartName=\"/word/comments.xml\""))
+    assert_eq(read_docx_annotated(updated).annotations().comments().length(), 1)
+  }
+}
+
+///|
 test "mutation relationship parsing is strict and budgeted" {
   let budget = @xml.xml_read_budget(
     max_source_units=1024,

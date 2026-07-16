@@ -220,7 +220,8 @@ fn plan_comment_addition_zip(
       plan.add_part(comments_path.physical, @utf8.encode(part_text))
       let rels_path = main_relationships_mutation_part_path(annotated, zip)
       let relationship_type = annotated.new_comments_relationship_type()
-      match zip.resolve_path(rels_path.logical) {
+      let created_relationships_part = match
+        zip.resolve_path(rels_path.logical) {
         Some(actual_rels_part) => {
           guard zip.read_bytes(actual_rels_part) is Some(rels_bytes) else {
             raise Unsupported(
@@ -249,8 +250,9 @@ fn plan_comment_addition_zip(
             actual_rels_part,
             xml_root_child_edit(rels_bytes, rels_span, relationship),
           )
+          false
         }
-        None =>
+        None => {
           // A main part with no relationships part is legal; create it.
           plan.add_part(
             rels_path.physical,
@@ -261,6 +263,8 @@ fn plan_comment_addition_zip(
               "</Relationships>",
             ),
           )
+          true
+        }
       }
       guard zip.resolve_path("[Content_Types].xml") is Some(types_part) else {
         raise Unsupported(message="the package is missing [Content_Types].xml")
@@ -277,11 +281,21 @@ fn plan_comment_addition_zip(
       |> ignore
       let types_span = scan_xml_root_span(types_part, types_bytes)
       let override_name = qualified_child_name(types_span.name, "Override")
+      let relationships_override = if created_relationships_part {
+        opc_content_type_override_fragment(
+          override_name,
+          rels_path.logical,
+          "application/vnd.openxmlformats-package.relationships+xml",
+        )
+      } else {
+        ""
+      }
       plan.edit_part(
         types_part,
         xml_root_child_edit(
           types_bytes,
           types_span,
+          relationships_override +
           opc_content_type_override_fragment(
             override_name,
             comments_path.logical,
