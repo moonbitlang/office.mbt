@@ -568,6 +568,7 @@ fn agile_decrypt(
   encryption_info_buf : BytesView,
   encrypted_package_buf : BytesView,
   password : String,
+  limits : ReadLimits,
 ) -> Bytes raise XlsxError {
   let xml = @encoding/utf8.decode(encryption_info_buf) catch {
     _ => raise InvalidEncryptionInfo(msg="invalid encryption info xml")
@@ -590,7 +591,7 @@ fn agile_decrypt(
   let decrypted = decrypt_package(
     package_key, encrypted_package_buf, encryption,
   )
-  if !password_ok && !is_valid_zip(decrypted) {
+  if !password_ok && !is_valid_zip(decrypted, limits) {
     raise InvalidPassword
   }
   decrypted
@@ -691,11 +692,13 @@ fn looks_like_zip(bytes : BytesView) -> Bool {
 }
 
 ///|
-fn is_valid_zip(bytes : BytesView) -> Bool {
+fn is_valid_zip(bytes : BytesView, limits : ReadLimits) -> Bool {
   if !looks_like_zip(bytes) {
     return false
   }
-  let result : Result[@zip.Archive, Error] = Ok(@zip.read(bytes)) catch {
+  let result : Result[@zip.Archive, Error] = Ok(
+    read_limited_archive(bytes, limits),
+  ) catch {
     e => Err(e)
   }
   result is Ok(_)
@@ -705,7 +708,9 @@ fn is_valid_zip(bytes : BytesView) -> Bool {
 fn decrypt_encrypted_package(
   bytes : BytesView,
   password : String,
+  limits? : ReadLimits = ReadLimits::new(),
 ) -> Bytes raise XlsxError {
+  check_source_package_size(bytes, limits)
   let reader = cfb_read(bytes) catch {
     _ => raise InvalidEncryptedPackage(msg="invalid cfb package")
   }
@@ -721,10 +726,13 @@ fn decrypt_encrypted_package(
   if encrypted_package.length() <= 8 {
     raise InvalidEncryptedPackage(msg="encrypted streams empty")
   }
-  match encryption_mechanism(encryption_info) {
-    Agile => agile_decrypt(encryption_info[8:], encrypted_package, password)
+  let decrypted = match encryption_mechanism(encryption_info) {
+    Agile =>
+      agile_decrypt(encryption_info[8:], encrypted_package, password, limits)
     Standard => standard_decrypt(encryption_info, encrypted_package, password)
   }
+  check_source_package_size(decrypted, limits)
+  decrypted
 }
 
 ///|
@@ -797,8 +805,9 @@ pub fn encrypt(
 pub fn decrypt(
   raw : BytesView,
   options? : Options = Options::new(),
+  limits? : ReadLimits = ReadLimits::new(),
 ) -> Bytes raise XlsxError {
-  decrypt_encrypted_package(raw, options.password)
+  decrypt_encrypted_package(raw, options.password, limits~)
 }
 
 ///|

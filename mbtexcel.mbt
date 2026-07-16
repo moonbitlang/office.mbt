@@ -184,6 +184,7 @@ pub fn column_number_to_name(col : Int) -> String raise @xlsx.XlsxError {
 /// # Parameters
 /// - `bytes`: Raw XLSX file content
 /// - `options`: Optional read options
+/// - `limits`: Optional fail-closed package, ZIP, and XML resource policy
 /// - `transcoder`: Optional function for charset transcoding (for non-UTF8 files)
 ///
 /// # Returns
@@ -200,11 +201,29 @@ pub fn column_number_to_name(col : Int) -> String raise @xlsx.XlsxError {
 pub fn read(
   bytes : BytesView,
   options? : @xlsx.Options = @xlsx.Options::new(),
+  limits? : @xlsx.ReadLimits = @xlsx.ReadLimits::new(),
   transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError,
 ) -> @xlsx.Workbook raise @xlsx.XlsxError {
   match transcoder {
-    Some(value) => @xlsx.read(bytes, options~, transcoder=value)
-    None => @xlsx.read(bytes, options~)
+    Some(value) => @xlsx.read(bytes, options~, limits~, transcoder=value)
+    None => @xlsx.read(bytes, options~, limits~)
+  }
+}
+
+///|
+/// Reads an XLSX workbook from a pristine archive created by a sufficiently
+/// strict bounded ZIP read, without inflating the package again. Constructed,
+/// compatibility-read, mutated, or more loosely bounded archives are rejected.
+pub fn read_bounded_archive(
+  archive : @zip.Archive,
+  options? : @xlsx.Options = @xlsx.Options::new(),
+  limits? : @xlsx.ReadLimits = @xlsx.ReadLimits::new(),
+  transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError,
+) -> @xlsx.Workbook raise @xlsx.XlsxError {
+  match transcoder {
+    Some(value) =>
+      @xlsx.read_bounded_archive(archive, options~, limits~, transcoder=value)
+    None => @xlsx.read_bounded_archive(archive, options~, limits~)
   }
 }
 
@@ -215,6 +234,7 @@ pub fn read(
 /// - `bytes`: Raw encrypted XLSX file content
 /// - `password`: Password used to encrypt the file
 /// - `options`: Optional read options
+/// - `limits`: Optional fail-closed package, ZIP, and XML resource policy
 /// - `transcoder`: Optional charset transcoder
 ///
 /// # Returns
@@ -234,12 +254,19 @@ pub fn read_with_password(
   bytes : BytesView,
   password : String,
   options? : @xlsx.Options = @xlsx.Options::new(),
+  limits? : @xlsx.ReadLimits = @xlsx.ReadLimits::new(),
   transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError,
 ) -> @xlsx.Workbook raise @xlsx.XlsxError {
   match transcoder {
     Some(value) =>
-      @xlsx.read_with_password(bytes, password, options~, transcoder=value)
-    None => @xlsx.read_with_password(bytes, password, options~)
+      @xlsx.read_with_password(
+        bytes,
+        password,
+        options~,
+        limits~,
+        transcoder=value,
+      )
+    None => @xlsx.read_with_password(bytes, password, options~, limits~)
   }
 }
 
@@ -310,14 +337,16 @@ pub fn encrypt(
 /// # Parameters
 /// - `raw`: Encrypted XLSX file content
 /// - `options`: Options containing the password
+/// - `limits`: Optional encrypted and decrypted package resource policy
 ///
 /// # Returns
 /// Decrypted XLSX file content
 pub fn decrypt(
   raw : BytesView,
   options? : @xlsx.Options = @xlsx.Options::new(),
+  limits? : @xlsx.ReadLimits = @xlsx.ReadLimits::new(),
 ) -> Bytes raise @xlsx.XlsxError {
-  @xlsx.decrypt(raw, options~)
+  @xlsx.decrypt(raw, options~, limits~)
 }
 
 ///|
@@ -439,6 +468,7 @@ pub fn time_to_excel_date(
 /// - `path`: Path to the XLSX file
 /// - `password`: Password if the file is encrypted (default: empty)
 /// - `options`: Optional read options
+/// - `limits`: Optional fail-closed package, ZIP, and XML resource policy
 /// - `transcoder`: Optional charset transcoder
 ///
 /// # Returns
@@ -455,11 +485,13 @@ pub async fn open_file(
   path : String,
   password? : String = "",
   options? : @xlsx.Options = @xlsx.Options::new(),
+  limits? : @xlsx.ReadLimits = @xlsx.ReadLimits::new(),
   transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError,
-) -> @xlsx.Workbook raise @xlsx.XlsxError {
+) -> @xlsx.Workbook {
   match transcoder {
-    Some(value) => @xlsx.open_file(path, password~, options~, transcoder=value)
-    None => @xlsx.open_file(path, password~, options~)
+    Some(value) =>
+      @xlsx.open_file(path, password~, options~, limits~, transcoder=value)
+    None => @xlsx.open_file(path, password~, options~, limits~)
   }
 }
 
@@ -470,6 +502,7 @@ pub async fn open_file(
 /// - `reader`: Any type implementing the Reader trait
 /// - `password`: Password if the file is encrypted (default: empty)
 /// - `options`: Optional read options
+/// - `limits`: Optional fail-closed package, ZIP, and XML resource policy
 /// - `transcoder`: Optional charset transcoder
 ///
 /// # Returns
@@ -478,12 +511,13 @@ pub async fn[R : @async/io.Reader] open_reader(
   reader : R,
   password? : String = "",
   options? : @xlsx.Options = @xlsx.Options::new(),
+  limits? : @xlsx.ReadLimits = @xlsx.ReadLimits::new(),
   transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError,
-) -> @xlsx.Workbook raise @xlsx.XlsxError {
+) -> @xlsx.Workbook {
   match transcoder {
     Some(value) =>
-      @xlsx.open_reader(reader, password~, options~, transcoder=value)
-    None => @xlsx.open_reader(reader, password~, options~)
+      @xlsx.open_reader(reader, password~, options~, limits~, transcoder=value)
+    None => @xlsx.open_reader(reader, password~, options~, limits~)
   }
 }
 
@@ -497,6 +531,7 @@ pub async fn[R : @async/io.Reader] open_reader(
 /// - `reader`: Any type implementing the Reader trait
 /// - `password`: Password if the file is encrypted (default: empty)
 /// - `options`: Optional read options
+/// - `limits`: Optional fail-closed package, ZIP, and XML resource policy
 /// - `transcoder`: Optional charset transcoder
 ///
 /// # Returns
@@ -505,11 +540,18 @@ pub async fn[R : @async/io.Reader] read_zip_reader(
   reader : R,
   password? : String = "",
   options? : @xlsx.Options = @xlsx.Options::new(),
+  limits? : @xlsx.ReadLimits = @xlsx.ReadLimits::new(),
   transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError,
-) -> @xlsx.Workbook raise @xlsx.XlsxError {
+) -> @xlsx.Workbook {
   match transcoder {
     Some(value) =>
-      @xlsx.read_zip_reader(reader, password~, options~, transcoder=value)
-    None => @xlsx.read_zip_reader(reader, password~, options~)
+      @xlsx.read_zip_reader(
+        reader,
+        password~,
+        options~,
+        limits~,
+        transcoder=value,
+      )
+    None => @xlsx.read_zip_reader(reader, password~, options~, limits~)
   }
 }

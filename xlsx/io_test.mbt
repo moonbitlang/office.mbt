@@ -270,6 +270,63 @@ async test "read_zip_reader from pipe" {
 }
 
 ///|
+async test "open_reader stops at the package byte limit" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let bytes = workbook.write_to_buffer()
+  let limits = @xlsx.ReadLimits::with_values(max_package_bytes=1)
+  let (reader, writer) = @async/io.pipe()
+  let result : Result[@xlsx.Workbook, Error] = @async.with_task_group(group => {
+    group.spawn_bg(() => {
+      defer writer.close()
+      writer.write(bytes)
+    })
+    try @xlsx.open_reader(reader, limits~) |> Ok catch {
+      error => Err(error)
+    }
+  })
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="package_bytes")
+      assert_eq(limit, 1)
+      assert_eq(actual, 2)
+    }
+    _ => fail("expected reader package limit")
+  }
+}
+
+///|
+#cfg(target="native")
+async test "open_file checks size before reading" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let bytes = workbook.write_to_buffer()
+  let stamp = @env.now().to_string()
+  let path = "mbtexcel_bounded_open_\{stamp}.xlsx"
+  @async/fs.write_file(
+    path,
+    bytes,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
+  let limits = @xlsx.ReadLimits::with_values(max_package_bytes=1)
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.open_file(path, limits~),
+  ) catch {
+    error => Err(error)
+  }
+  @async/fs.remove(path)
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="package_bytes")
+      assert_eq(limit, 1)
+      assert_eq(actual, bytes.length())
+    }
+    _ => fail("expected file package limit")
+  }
+}
+
+///|
 test "write_to_buffer roundtrip" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

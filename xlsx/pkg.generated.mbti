@@ -17,7 +17,7 @@ pub fn column_number_to_name(Int) -> String raise XlsxError
 
 pub fn coordinates_to_cell_name(Int, Int, abs? : Bool) -> String raise XlsxError
 
-pub fn decrypt(BytesView, options? : Options) -> Bytes raise XlsxError
+pub fn decrypt(BytesView, options? : Options, limits? : ReadLimits) -> Bytes raise XlsxError
 
 pub fn encrypt(BytesView, options? : Options) -> Bytes raise XlsxError
 
@@ -27,15 +27,17 @@ pub fn hsl_to_rgb(Double, Double, Double) -> (Byte, Byte, Byte)
 
 pub fn join_cell_name(StringView, Int) -> String raise XlsxError
 
-pub async fn open_file(String, password? : String, options? : Options, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
+pub async fn open_file(String, password? : String, options? : Options, limits? : ReadLimits, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook
 
-pub async fn[R : @io.Reader] open_reader(R, password? : String, options? : Options, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
+pub async fn[R : @io.Reader] open_reader(R, password? : String, options? : Options, limits? : ReadLimits, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook
 
-pub fn read(BytesView, options? : Options, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
+pub fn read(BytesView, options? : Options, limits? : ReadLimits, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
 
-pub fn read_with_password(BytesView, String, options? : Options, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
+pub fn read_bounded_archive(@zip.Archive, options? : Options, limits? : ReadLimits, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
 
-pub async fn[R : @io.Reader] read_zip_reader(R, password? : String, options? : Options, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
+pub fn read_with_password(BytesView, String, options? : Options, limits? : ReadLimits, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
+
+pub async fn[R : @io.Reader] read_zip_reader(R, password? : String, options? : Options, limits? : ReadLimits, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook
 
 pub fn rgb_to_hsl(Byte, Byte, Byte) -> (Double, Double, Double)
 
@@ -47,7 +49,9 @@ pub fn theme_color(String, Double) -> String
 
 pub fn time_to_excel_date(@time.ZonedDateTime, use_1904_format? : Bool) -> Double
 
-pub fn validate_ooxml_package(BytesView) -> Array[String]
+pub fn validate_ooxml_bounded_archive(@zip.Archive, limits? : ReadLimits) -> Array[String] raise XlsxError
+
+pub fn validate_ooxml_package(BytesView, limits? : ReadLimits) -> Array[String] raise XlsxError
 
 pub fn write(Workbook) -> Bytes raise XlsxError
 
@@ -102,6 +106,9 @@ pub suberror XlsxError {
   InvalidPasswordLength(len~ : Int)
   UnsupportedEncryption(msg~ : String)
   UnsupportedFeature(msg~ : String)
+  InvalidPackage(msg~ : String)
+  UnboundedArchive
+  ResourceLimitExceeded(kind~ : String, limit~ : Int, actual~ : Int)
 } derive(@debug.Debug)
 #deprecated
 pub fn XlsxError::to_repr(Self) -> @debug.Repr
@@ -1059,8 +1066,6 @@ pub struct Options {
   max_calc_iterations : UInt
   password : String
   raw_cell_value : Bool
-  unzip_size_limit : Int
-  unzip_xml_size_limit : Int
   tmp_dir : String
   short_date_pattern : String
   long_date_pattern : String
@@ -1070,7 +1075,7 @@ pub struct Options {
 pub fn Options::new() -> Self
 #deprecated
 pub fn Options::to_repr(Self) -> @debug.Repr
-pub fn Options::with_values(max_calc_iterations? : UInt, password? : String, raw_cell_value? : Bool, unzip_size_limit? : Int, unzip_xml_size_limit? : Int, tmp_dir? : String, short_date_pattern? : String, long_date_pattern? : String, long_time_pattern? : String, culture_info? : String) -> Self
+pub fn Options::with_values(max_calc_iterations? : UInt, password? : String, raw_cell_value? : Bool, tmp_dir? : String, short_date_pattern? : String, long_date_pattern? : String, long_time_pattern? : String, culture_info? : String) -> Self
 
 pub struct PageBreak {
   id : Int
@@ -1196,6 +1201,18 @@ pub fn Protection::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn Protection::to_repr(Self) -> @debug.Repr
 pub fn Protection::with_values(hidden? : Bool, locked? : Bool) -> Self
+
+pub struct ReadLimits {
+  // private fields
+}
+pub fn ReadLimits::max_archive_entries(Self) -> Int
+pub fn ReadLimits::max_entry_uncompressed_bytes(Self) -> Int
+pub fn ReadLimits::max_package_bytes(Self) -> Int
+pub fn ReadLimits::max_total_preserved_source_bytes(Self) -> Int
+pub fn ReadLimits::max_total_uncompressed_bytes(Self) -> Int
+pub fn ReadLimits::max_xml_part_bytes(Self) -> Int
+pub fn ReadLimits::new() -> Self
+pub fn ReadLimits::with_values(max_package_bytes? : Int, max_archive_entries? : Int, max_entry_uncompressed_bytes? : Int, max_total_uncompressed_bytes? : Int, max_total_preserved_source_bytes? : Int, max_xml_part_bytes? : Int) -> Self raise XlsxError
 
 pub(all) struct RichTextFont {
   bold : Bool
@@ -1874,7 +1891,7 @@ pub fn Workbook::new_stream_writer(Self, StringView) -> StreamWriter raise XlsxE
 pub fn Workbook::new_style(Self, Style) -> Int
 pub fn Workbook::protect_sheet(Self, StringView, SheetProtectionOptions) -> Unit raise XlsxError
 pub fn Workbook::protect_workbook(Self, options? : WorkbookProtectionOptions) -> Unit raise XlsxError
-pub async fn[R : @io.Reader] Workbook::read_zip_reader(Self, R, password? : String, options? : Options, transcoder? : (String, Bytes) -> String raise XlsxError) -> Self raise XlsxError
+pub async fn[R : @io.Reader] Workbook::read_zip_reader(Self, R, password? : String, options? : Options, limits? : ReadLimits, transcoder? : (String, Bytes) -> String raise XlsxError) -> Self
 pub fn Workbook::remove_cell_hyperlink(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::remove_col(Self, StringView, Int) -> Unit raise XlsxError
 pub fn Workbook::remove_cols(Self, StringView, Int, Int) -> Unit raise XlsxError

@@ -2860,23 +2860,110 @@ fn parse_col_dimensions(
 }
 
 ///|
-fn enforce_unzip_limits(
+fn is_xml_package_part(name : StringView) -> Bool {
+  let lower = name.to_owned().to_lower()
+  lower.has_suffix(".xml") ||
+  lower.has_suffix(".rels") ||
+  lower.has_suffix(".vml")
+}
+
+///|
+fn enforce_archive_limits(
   archive : @zip.Archive,
-  options : Options,
+  limits : ReadLimits,
 ) -> Unit raise XlsxError {
   let mut total_size = 0
   for entry in archive.entries() {
     let size = entry.data().length()
+    if size > limits.max_entry_uncompressed_bytes {
+      raise ResourceLimitExceeded(
+        kind="entry_uncompressed_bytes",
+        limit=limits.max_entry_uncompressed_bytes,
+        actual=size,
+      )
+    }
     total_size = total_size + size
-    if options.unzip_size_limit > 0 && total_size > options.unzip_size_limit {
-      raise InvalidOptions(msg="unzip size limit exceeded")
+    if total_size > limits.max_total_uncompressed_bytes {
+      raise ResourceLimitExceeded(
+        kind="total_uncompressed_bytes",
+        limit=limits.max_total_uncompressed_bytes,
+        actual=total_size,
+      )
     }
-    if options.unzip_xml_size_limit > 0 {
-      let name = entry.name().to_lower()
-      if name.has_suffix(".xml") && size > options.unzip_xml_size_limit {
-        raise InvalidOptions(msg="unzip xml size limit exceeded")
+    if is_xml_package_part(entry.name()) && size > limits.max_xml_part_bytes {
+      raise ResourceLimitExceeded(
+        kind="xml_part_bytes",
+        limit=limits.max_xml_part_bytes,
+        actual=size,
+      )
+    }
+  }
+}
+
+///|
+fn require_bounded_archive(
+  archive : @zip.Archive,
+  limits : ReadLimits,
+) -> Unit raise XlsxError {
+  match
+    archive.bounded_source_package_size(
+      max_entries=limits.max_archive_entries,
+      max_entry_uncompressed_bytes=limits.max_entry_uncompressed_bytes,
+      max_total_uncompressed_bytes=limits.max_total_uncompressed_bytes,
+      max_total_preserved_source_bytes=limits.max_total_preserved_source_bytes,
+    ) {
+    Some(package_bytes) =>
+      if package_bytes > limits.max_package_bytes {
+        raise ResourceLimitExceeded(
+          kind="package_bytes",
+          limit=limits.max_package_bytes,
+          actual=package_bytes,
+        )
       }
-    }
+    None => raise UnboundedArchive
+  }
+  if archive.entries().length() > limits.max_archive_entries {
+    raise ResourceLimitExceeded(
+      kind="entry_count",
+      limit=limits.max_archive_entries,
+      actual=archive.entries().length(),
+    )
+  }
+  enforce_archive_limits(archive, limits)
+}
+
+///|
+fn read_limited_archive(
+  bytes : BytesView,
+  limits : ReadLimits,
+) -> @zip.Archive raise XlsxError {
+  @zip.read_limited(
+    bytes,
+    max_package_bytes=limits.max_package_bytes,
+    max_entries=limits.max_archive_entries,
+    max_entry_uncompressed_bytes=limits.max_entry_uncompressed_bytes,
+    max_total_uncompressed_bytes=limits.max_total_uncompressed_bytes,
+    // The ZIP package preserves exact source records for lossless rewrites.
+    // Bound that second compressed representation independently from inflation.
+    max_total_preserved_source_bytes=limits.max_total_preserved_source_bytes,
+  ) catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) =>
+      raise ResourceLimitExceeded(kind~, limit~, actual~)
+    _ => raise InvalidPackage(msg="unreadable ZIP package")
+  }
+}
+
+///|
+fn check_source_package_size(
+  bytes : BytesView,
+  limits : ReadLimits,
+) -> Unit raise XlsxError {
+  if bytes.length() > limits.max_package_bytes {
+    raise ResourceLimitExceeded(
+      kind="package_bytes",
+      limit=limits.max_package_bytes,
+      actual=bytes.length(),
+    )
   }
 }
 
@@ -2910,16 +2997,11 @@ fn first_existing_workbook_rel_target_path(
 }
 
 ///|
-fn read_zip_bytes(
-  bytes : BytesView,
-  options? : Options = Options::new(),
+fn read_zip_archive_core(
+  archive : @zip.Archive,
+  options : Options,
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
-  let resolved_options = normalize_unzip_limits(options)
-  let archive = @zip.read(bytes) catch {
-    err => raise UnsupportedFeature(msg=repr(err))
-  }
-  enforce_unzip_limits(archive, resolved_options)
   let decode = (value : BytesView) => decode_utf8(value, transcoder)
   let workbook_xml_part_path = resolve_workbook_xml_part_path(archive, decode)
   let workbook_bytes = match archive.get(workbook_xml_part_path) {
@@ -3068,7 +3150,7 @@ fn read_zip_bytes(
       empty_workbook_io_context(),
       transcoder,
     ),
-    options: resolved_options,
+    options,
     workbook_protection,
     active_sheet_index: safe_active_index,
     cell_images,
@@ -3722,11 +3804,51 @@ fn read_zip_bytes(
 }
 
 ///|
+fn read_zip_bytes(
+  bytes : BytesView,
+  options? : Options = Options::new(),
+  limits? : ReadLimits = ReadLimits::new(),
+  transcoder? : (String, Bytes) -> String raise XlsxError,
+) -> Workbook raise XlsxError {
+  let archive = read_limited_archive(bytes, limits)
+  require_bounded_archive(archive, limits)
+  match transcoder {
+    Some(value) => read_zip_archive_core(archive, options, transcoder=value)
+    None => read_zip_archive_core(archive, options)
+  }
+}
+
+///|
+/// Reads a workbook from an already-inflated ZIP archive without a second
+/// decompression pass. The archive must be pristine and carry non-forgeable
+/// `zip.read_limited` provenance at least as strict as `limits`; constructed,
+/// compatibility-read, or mutated archives fail with `UnboundedArchive`.
+pub fn read_bounded_archive(
+  archive : @zip.Archive,
+  options? : Options = Options::new(),
+  limits? : ReadLimits = ReadLimits::new(),
+  transcoder? : (String, Bytes) -> String raise XlsxError,
+) -> Workbook raise XlsxError {
+  require_bounded_archive(archive, limits)
+  match transcoder {
+    Some(value) => read_zip_archive_core(archive, options, transcoder=value)
+    None => read_zip_archive_core(archive, options)
+  }
+}
+
+///|
+/// Reads an XLSX package under a fail-closed resource policy.
+///
+/// `limits` applies to the compressed source, ZIP structure and expansion, and
+/// individual XML-like OOXML parts. Encrypted packages require
+/// `read_with_password` or an `Options` value containing a password.
 pub fn read(
   bytes : BytesView,
   options? : Options = Options::new(),
+  limits? : ReadLimits = ReadLimits::new(),
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
+  check_source_package_size(bytes, limits)
   if options.password != "" {
     match transcoder {
       Some(value) =>
@@ -3734,48 +3856,59 @@ pub fn read(
           bytes,
           options.password,
           options~,
+          limits~,
           transcoder=value,
         )
-      None => return read_with_password(bytes, options.password, options~)
+      None =>
+        return read_with_password(bytes, options.password, options~, limits~)
     }
   }
   if is_encrypted_package(bytes) {
     raise EncryptedPackage
   }
   match transcoder {
-    Some(value) => read_zip_bytes(bytes, options~, transcoder=value)
-    None => read_zip_bytes(bytes, options~)
+    Some(value) => read_zip_bytes(bytes, options~, limits~, transcoder=value)
+    None => read_zip_bytes(bytes, options~, limits~)
   }
 }
 
 ///|
+/// Reads an XLSX package with an explicit password under a fail-closed resource
+/// policy. Resource failures remain `ResourceLimitExceeded`; only a decrypted
+/// payload that is not a ZIP package is classified as `InvalidPassword`.
 pub fn read_with_password(
   bytes : BytesView,
   password : String,
   options? : Options = Options::new(),
+  limits? : ReadLimits = ReadLimits::new(),
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
+  check_source_package_size(bytes, limits)
   let resolved_options = options_with_password(options, password)
   if is_encrypted_package(bytes) {
-    let decrypted = decrypt_encrypted_package(bytes, password)
-    let result : Result[Workbook, Error] = Ok(
-      match transcoder {
-        Some(value) =>
-          read_zip_bytes(decrypted, options=resolved_options, transcoder=value)
-        None => read_zip_bytes(decrypted, options=resolved_options)
-      },
-    ) catch {
-      e => Err(e)
+    let decrypted = decrypt_encrypted_package(bytes, password, limits~)
+    let archive = read_limited_archive(decrypted, limits) catch {
+      ResourceLimitExceeded(kind~, limit~, actual~) =>
+        raise ResourceLimitExceeded(kind~, limit~, actual~)
+      InvalidPackage(_) => raise InvalidPassword
+      error => raise error
     }
-    match result {
-      Ok(workbook) => workbook
-      Err(_) => raise InvalidPassword
+    require_bounded_archive(archive, limits)
+    match transcoder {
+      Some(value) =>
+        read_zip_archive_core(archive, resolved_options, transcoder=value)
+      None => read_zip_archive_core(archive, resolved_options)
     }
   } else {
     match transcoder {
       Some(value) =>
-        read_zip_bytes(bytes, options=resolved_options, transcoder=value)
-      None => read_zip_bytes(bytes, options=resolved_options)
+        read_zip_bytes(
+          bytes,
+          options=resolved_options,
+          limits~,
+          transcoder=value,
+        )
+      None => read_zip_bytes(bytes, options=resolved_options, limits~)
     }
   }
 }

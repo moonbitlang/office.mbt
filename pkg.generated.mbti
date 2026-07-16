@@ -3,6 +3,7 @@ package "bobzhang/mbtexcel"
 
 import {
   "bobzhang/mbtexcel/xlsx",
+  "bobzhang/mbtexcel/zip",
   "moonbitlang/async/io",
   "moonbitlang/x/time",
 }
@@ -16,7 +17,7 @@ pub fn column_number_to_name(Int) -> String raise @xlsx.XlsxError
 
 pub fn coordinates_to_cell_name(Int, Int, abs? : Bool) -> String raise @xlsx.XlsxError
 
-pub fn decrypt(BytesView, options? : @xlsx.Options) -> Bytes raise @xlsx.XlsxError
+pub fn decrypt(BytesView, options? : @xlsx.Options, limits? : @xlsx.ReadLimits) -> Bytes raise @xlsx.XlsxError
 
 pub fn encrypt(BytesView, options? : @xlsx.Options) -> Bytes raise @xlsx.XlsxError
 
@@ -32,15 +33,17 @@ pub fn new_file(options? : @xlsx.Options) -> @xlsx.Workbook
 
 pub fn new_workbook(options? : @xlsx.Options) -> @xlsx.Workbook
 
-pub async fn open_file(String, password? : String, options? : @xlsx.Options, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook raise @xlsx.XlsxError
+pub async fn open_file(String, password? : String, options? : @xlsx.Options, limits? : @xlsx.ReadLimits, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook
 
-pub async fn[R : @io.Reader] open_reader(R, password? : String, options? : @xlsx.Options, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook raise @xlsx.XlsxError
+pub async fn[R : @io.Reader] open_reader(R, password? : String, options? : @xlsx.Options, limits? : @xlsx.ReadLimits, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook
 
-pub fn read(BytesView, options? : @xlsx.Options, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook raise @xlsx.XlsxError
+pub fn read(BytesView, options? : @xlsx.Options, limits? : @xlsx.ReadLimits, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook raise @xlsx.XlsxError
 
-pub fn read_with_password(BytesView, String, options? : @xlsx.Options, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook raise @xlsx.XlsxError
+pub fn read_bounded_archive(@zip.Archive, options? : @xlsx.Options, limits? : @xlsx.ReadLimits, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook raise @xlsx.XlsxError
 
-pub async fn[R : @io.Reader] read_zip_reader(R, password? : String, options? : @xlsx.Options, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook raise @xlsx.XlsxError
+pub fn read_with_password(BytesView, String, options? : @xlsx.Options, limits? : @xlsx.ReadLimits, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook raise @xlsx.XlsxError
+
+pub async fn[R : @io.Reader] read_zip_reader(R, password? : String, options? : @xlsx.Options, limits? : @xlsx.ReadLimits, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook
 
 pub fn rgb_to_hsl(Byte, Byte, Byte) -> (Double, Double, Double)
 

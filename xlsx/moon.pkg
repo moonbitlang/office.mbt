@@ -8,6 +8,7 @@ import {
   "moonbitlang/core/encoding/utf16" @encoding/utf16,
   "moonbitlang/async/io" @async/io,
   "moonbitlang/async/fs" @async/fs,
+  "moonbitlang/async",
   "moonbitlang/core/random",
   "moonbitlang/core/buffer",
   "moonbitlang/core/ref",

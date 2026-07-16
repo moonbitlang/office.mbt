@@ -55,3 +55,52 @@ async test "options password used for write_to_buffer and save_as" {
     err => fail("remove file failed: \{err}")
   }
 }
+
+///|
+test "encrypted reads preserve post-decryption resource failures" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell("Sheet1", "A1", "secret")
+  let bytes = @xlsx.write_with_password(workbook, "pass")
+  let limits = @xlsx.ReadLimits::with_values(max_xml_part_bytes=1)
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read_with_password(bytes, "pass", limits~),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="xml_part_bytes")
+      assert_eq(limit, 1)
+      assert_true(actual > limit)
+    }
+    _ => fail("expected post-decryption XML limit")
+  }
+}
+
+///|
+test "standard encryption distinguishes wrong passwords from malformed XLSX" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let encrypted = @xlsx.write_with_password(workbook, "correct")
+  let wrong : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read_with_password(encrypted, "wrong"),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(wrong is Err(@xlsx.InvalidPassword), content="true")
+
+  let archive = @zip.Archive::new()
+  archive.add("unrelated.txt", b"not a workbook")
+  let options = @xlsx.Options::with_values(password="correct")
+  let malformed_encrypted = @xlsx.encrypt(@zip.write(archive), options~)
+  let malformed : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read_with_password(malformed_encrypted, "correct"),
+  ) catch {
+    error => Err(error)
+  }
+  match malformed {
+    Err(@xlsx.MissingPart(path~)) => inspect(path, content="xl/workbook.xml")
+    _ => fail("expected a parsed-package failure, not InvalidPassword")
+  }
+}
