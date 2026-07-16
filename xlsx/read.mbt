@@ -2897,6 +2897,9 @@ fn enforce_archive_limits(
         actual=size,
       )
     }
+    if @zip.crc32(entry.data()) != entry.crc32() {
+      raise InvalidPackage(msg="ZIP entry CRC mismatch")
+    }
   }
 }
 
@@ -3000,9 +3003,19 @@ fn first_existing_workbook_rel_target_path(
 fn read_zip_archive_core(
   archive : @zip.Archive,
   options : Options,
+  limits : ReadLimits,
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
-  let decode = (value : BytesView) => decode_utf8(value, transcoder)
+  let decode = (value : BytesView) => {
+    if value.length() > limits.max_xml_part_bytes {
+      raise ResourceLimitExceeded(
+        kind="xml_part_bytes",
+        limit=limits.max_xml_part_bytes,
+        actual=value.length(),
+      )
+    }
+    decode_utf8(value, transcoder)
+  }
   let workbook_xml_part_path = resolve_workbook_xml_part_path(archive, decode)
   let workbook_bytes = match archive.get(workbook_xml_part_path) {
     Some(value) => value
@@ -3813,8 +3826,9 @@ fn read_zip_bytes(
   let archive = read_limited_archive(bytes, limits)
   require_bounded_archive(archive, limits)
   match transcoder {
-    Some(value) => read_zip_archive_core(archive, options, transcoder=value)
-    None => read_zip_archive_core(archive, options)
+    Some(value) =>
+      read_zip_archive_core(archive, options, limits, transcoder=value)
+    None => read_zip_archive_core(archive, options, limits)
   }
 }
 
@@ -3831,8 +3845,9 @@ pub fn read_bounded_archive(
 ) -> Workbook raise XlsxError {
   require_bounded_archive(archive, limits)
   match transcoder {
-    Some(value) => read_zip_archive_core(archive, options, transcoder=value)
-    None => read_zip_archive_core(archive, options)
+    Some(value) =>
+      read_zip_archive_core(archive, options, limits, transcoder=value)
+    None => read_zip_archive_core(archive, options, limits)
   }
 }
 
@@ -3874,8 +3889,9 @@ pub fn read(
 
 ///|
 /// Reads an XLSX package with an explicit password under a fail-closed resource
-/// policy. Resource failures remain `ResourceLimitExceeded`; only a decrypted
-/// payload that is not a ZIP package is classified as `InvalidPassword`.
+/// policy. Resource failures remain `ResourceLimitExceeded`; a verified
+/// password preserves malformed-package errors, while an unverified payload
+/// that is not a valid ZIP is classified as `InvalidPassword`.
 pub fn read_with_password(
   bytes : BytesView,
   password : String,
@@ -3886,18 +3902,17 @@ pub fn read_with_password(
   check_source_package_size(bytes, limits)
   let resolved_options = options_with_password(options, password)
   if is_encrypted_package(bytes) {
-    let decrypted = decrypt_encrypted_package(bytes, password, limits~)
-    let archive = read_limited_archive(decrypted, limits) catch {
-      ResourceLimitExceeded(kind~, limit~, actual~) =>
-        raise ResourceLimitExceeded(kind~, limit~, actual~)
-      InvalidPackage(_) => raise InvalidPassword
-      error => raise error
-    }
+    let archive = decrypt_encrypted_archive(bytes, password, limits~)
     require_bounded_archive(archive, limits)
     match transcoder {
       Some(value) =>
-        read_zip_archive_core(archive, resolved_options, transcoder=value)
-      None => read_zip_archive_core(archive, resolved_options)
+        read_zip_archive_core(
+          archive,
+          resolved_options,
+          limits,
+          transcoder=value,
+        )
+      None => read_zip_archive_core(archive, resolved_options, limits)
     }
   } else {
     match transcoder {
