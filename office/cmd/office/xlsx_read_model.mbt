@@ -8,6 +8,9 @@ let xlsx_cli_max_cell_string_chars : Int = 1024 * 1024
 let xlsx_cli_max_scanned_string_chars : Int = 16 * 1024 * 1024
 
 ///|
+let xlsx_cli_max_format_work_units : Int = 16 * 1024 * 1024
+
+///|
 let xlsx_cli_max_metadata_items : Int = 10_000
 
 ///|
@@ -25,6 +28,8 @@ struct XlsxSheetTarget {
   index : Int
   path : String
   content : XlsxSheetContent
+  shared_formula_masters : Map[Int, String]
+  mut shared_formulas_indexed : Bool
 }
 
 ///|
@@ -59,9 +64,11 @@ struct XlsxCellSnapshot {
   row : Int
   column : Int
   raw : @xlsx.CellValue?
-  formatted : String?
+  mut formatted : String?
+  mut formatted_ready : Bool
   formula : String?
   style_id : Int
+  worksheet : @xlsx.Worksheet
 }
 
 ///|
@@ -81,7 +88,14 @@ struct XlsxStringBudget {
 struct XlsxScanBudget {
   maximum : Int
   strings : XlsxStringBudget
+  formatting : XlsxFormatBudget
   mut scanned : Int
+}
+
+///|
+struct XlsxFormatBudget {
+  maximum : Int
+  mut used : Int
 }
 
 ///|
@@ -220,6 +234,8 @@ fn make_xlsx_projection(
       index,
       path: canonical_xlsx_sheet_path(name),
       content,
+      shared_formula_masters: Map([]),
+      shared_formulas_indexed: content is ChartSheet(_),
     }
     sheet_index[name] = index
     sheets.push(target)
@@ -373,6 +389,28 @@ fn XlsxSheetTarget::worksheet(
 }
 
 ///|
+/// Resolves shared-formula masters on demand. Most reads never encounter a
+/// shared follower, so they avoid a worksheet-wide formula pass; the first
+/// follower builds every master in one pass and later lookups are O(1).
+fn XlsxSheetTarget::shared_formula_master(
+  self : XlsxSheetTarget,
+  projection : XlsxProjection,
+  worksheet : @xlsx.Worksheet,
+  shared_index : Int,
+) -> String? raise CliFailure {
+  if !self.shared_formulas_indexed {
+    let masters = xlsx_call(projection.file, () => {
+      worksheet.shared_formula_masters()
+    })
+    for index, formula in masters {
+      self.shared_formula_masters[index] = formula
+    }
+    self.shared_formulas_indexed = true
+  }
+  self.shared_formula_masters.get(shared_index)
+}
+
+///|
 fn resolve_xlsx_selector(
   projection : XlsxProjection,
   input : String,
@@ -510,8 +548,49 @@ fn XlsxStringBudget::charge(
 }
 
 ///|
-fn XlsxScanBudget::new(maximum : Int) -> XlsxScanBudget {
-  { maximum, strings: XlsxStringBudget::new(), scanned: 0 }
+fn XlsxFormatBudget::new(
+  maximum? : Int = xlsx_cli_max_format_work_units,
+) -> XlsxFormatBudget {
+  { maximum, used: 0 }
+}
+
+///|
+/// Charges the linear parse cost of a custom number format before invoking
+/// the formatter. Built-in and absent formats have bounded constant work and
+/// are already bounded by the scanned-cell ceiling.
+fn XlsxFormatBudget::charge_style(
+  self : XlsxFormatBudget,
+  projection : XlsxProjection,
+  style_id : Int,
+) -> Unit raise CliFailure {
+  let style = xlsx_call(projection.file, () => {
+    projection.workbook.get_style(style_id)
+  })
+  let cost = match style.number_format {
+    Some(Custom(code)) => code.length().max(1)
+    _ => 0
+  }
+  if cost > self.maximum - self.used {
+    raise xlsx_resource_failure(
+      "cell formatting work units",
+      self.maximum,
+      actual=self.used + cost,
+    )
+  }
+  self.used += cost
+}
+
+///|
+fn XlsxScanBudget::new(
+  maximum : Int,
+  format_work_maximum? : Int = xlsx_cli_max_format_work_units,
+) -> XlsxScanBudget {
+  {
+    maximum,
+    strings: XlsxStringBudget::new(),
+    formatting: XlsxFormatBudget::new(maximum=format_work_maximum),
+    scanned: 0,
+  }
 }
 
 ///|
@@ -536,13 +615,39 @@ fn XlsxScanBudget::charge_snapshot_strings(
     Some(Error(value)) => self.strings.charge("cell error", value)
     _ => ()
   }
-  match snapshot.formatted {
-    Some(value) => self.strings.charge("formatted cell value", value)
-    None => ()
-  }
   match snapshot.formula {
     Some(value) => self.strings.charge("cell formula", value)
     None => ()
+  }
+}
+
+///|
+fn xlsx_cell_formula(
+  projection : XlsxProjection,
+  sheet : XlsxSheetTarget,
+  worksheet : @xlsx.Worksheet,
+  row : Int,
+  column : Int,
+) -> String? raise CliFailure {
+  match
+    xlsx_call(projection.file, () => {
+      worksheet.get_cell_formula_info_rc(row, column)
+    }) {
+    None => None
+    Some(info) if info.formula != "" => Some(info.formula)
+    Some(info) =>
+      match info.shared_index {
+        Some(shared_index) =>
+          // `Some("")` is intentional when a malformed package has a shared
+          // follower but no resolvable master: preserve formula presence even
+          // when no formula text can be supplied.
+          Some(
+            sheet
+            .shared_formula_master(projection, worksheet, shared_index)
+            .unwrap_or(""),
+          )
+        None => Some("")
+      }
   }
 }
 
@@ -566,37 +671,64 @@ fn xlsx_cell_snapshot(
     Some(String("")) => None
     value => value
   }
-  let formula = match
-    xlsx_call(projection.file, () => worksheet.get_cell_formula(reference)) {
-    Some("") => None
-    value => value
-  }
+  let formula = xlsx_cell_formula(projection, sheet, worksheet, row, column)
   let style_id = xlsx_call(projection.file, () => {
     worksheet.effective_style_id_rc(row, column)
   })
-  let formatted = match normalized_raw {
-    Some(_) =>
-      Some(
-        xlsx_call(projection.file, () => {
-          projection.workbook.get_cell_value_from_worksheet_rc(
-            worksheet, row, column,
-          )
-        }).unwrap_or(""),
-      )
-    None => None
-  }
   let snapshot : XlsxCellSnapshot = {
     path: canonical_xlsx_cell_path(sheet.name, reference),
     reference,
     row,
     column,
     raw: normalized_raw,
-    formatted,
+    formatted: None,
+    formatted_ready: false,
     formula,
     style_id,
+    worksheet,
   }
   budget.charge_snapshot_strings(snapshot)
   snapshot
+}
+
+///|
+/// Materializes display text at most once. Custom format parse work is charged
+/// before formatting and the produced string joins the aggregate scan-string
+/// budget, so neither CPU nor retained text can grow only as a side effect of
+/// a large scan.
+fn XlsxCellSnapshot::ensure_formatted(
+  self : XlsxCellSnapshot,
+  projection : XlsxProjection,
+  budget : XlsxScanBudget,
+) -> Unit raise CliFailure {
+  if self.formatted_ready {
+    return
+  }
+  match self.raw {
+    Some(String(_)) | Some(Numeric(_)) =>
+      budget.formatting.charge_style(projection, self.style_id)
+    _ => ()
+  }
+  let formatted = match self.raw {
+    Some(_) =>
+      Some(
+        xlsx_call(projection.file, () => {
+          projection.workbook.get_cell_value_styled_from_worksheet_rc(
+            self.worksheet,
+            self.row,
+            self.column,
+            self.style_id,
+          )
+        }).unwrap_or(""),
+      )
+    None => None
+  }
+  match formatted {
+    Some(value) => budget.strings.charge("formatted cell value", value)
+    None => ()
+  }
+  self.formatted = formatted
+  self.formatted_ready = true
 }
 
 ///|

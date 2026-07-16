@@ -379,6 +379,29 @@ pub fn Worksheet::formula_refs(self : Worksheet) -> Array[String] {
 }
 
 ///|
+/// Returns non-empty shared-formula masters keyed by OOXML shared index.
+/// Followers are deliberately omitted, so master formula text is retained
+/// only once even for large shared ranges. Conflicting masters are rejected
+/// rather than resolved by iteration order.
+pub fn Worksheet::shared_formula_masters(
+  self : Worksheet,
+) -> Map[Int, String] raise XlsxError {
+  let masters : Map[Int, String] = Map([])
+  for cell in self.cells {
+    match (cell.formula_type, cell.formula, cell.formula_shared_index) {
+      (Some(Shared), Some(formula), Some(shared_index)) if formula != "" =>
+        match masters.get(shared_index) {
+          Some(existing) if existing != formula =>
+            raise InvalidXml(msg="shared formula index has conflicting masters")
+          _ => masters[shared_index] = formula
+        }
+      _ => ()
+    }
+  }
+  masters
+}
+
+///|
 pub fn Worksheet::set_cell_formula(
   self : Worksheet,
   reference : String,
@@ -435,6 +458,36 @@ pub fn Worksheet::get_cell_formula(
     Some(i) =>
       match self.cells[i].formula {
         Some(value) => if value == "" { None } else { Some(value) }
+        None => None
+      }
+    None => None
+  }
+}
+
+///|
+/// Returns the stored formula metadata for a 1-based coordinate without
+/// collapsing an empty shared-formula follower to `None`.
+///
+/// This complements `get_cell_formula`, whose compatibility contract returns
+/// only independently stored, non-empty formula text. The returned formula is
+/// not translated from a shared master; `shared_index` identifies that master
+/// when a consumer needs its text.
+pub fn Worksheet::get_cell_formula_info_rc(
+  self : Worksheet,
+  row : Int,
+  col : Int,
+) -> CellFormulaInfo? raise XlsxError {
+  ignore(cell_ref_from(row, col))
+  match self.cell_index_of(row, col) {
+    Some(i) =>
+      match self.cells[i].formula {
+        Some(formula) =>
+          Some({
+            formula,
+            formula_type: self.cells[i].formula_type,
+            range_ref: self.cells[i].formula_ref,
+            shared_index: self.cells[i].formula_shared_index,
+          })
         None => None
       }
     None => None

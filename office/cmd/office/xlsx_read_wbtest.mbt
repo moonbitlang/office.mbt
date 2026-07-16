@@ -99,6 +99,8 @@ test "XLSX cell snapshots preserve typed values, formulas, and canonical paths" 
   assert_eq(snapshot.row, 2)
   assert_eq(snapshot.column, 2)
   assert_eq(snapshot.formula, Some("SUM(1,2)"))
+  assert_eq(snapshot.formatted, None)
+  snapshot.ensure_formatted(projection, budget)
   assert_eq(snapshot.formatted, Some("3"))
   assert_true(snapshot.raw is Some(String("3")))
   assert_eq(budget.scanned, 1)
@@ -123,6 +125,7 @@ test "XLSX cell scans keep the resolved worksheet handle" {
     fail("expected resolved raw string")
   }
   assert_eq(raw, "alpha")
+  snapshot.ensure_formatted(projection, XlsxScanBudget::new(1))
   assert_eq(snapshot.formatted, Some("alpha"))
 }
 
@@ -207,6 +210,95 @@ test "XLSX query selectors are bounded, deterministic predicate conjunctions" {
   assert_eq(
     fields.get("resource"),
     Some(Json::string("query predicate work units")),
+  )
+}
+
+///|
+test "XLSX snapshots preserve and resolve shared-formula followers" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  workbook.set_cell_formula_opts(
+    "Data",
+    "A1",
+    "D1+1",
+    opts=@xlsx.FormulaOpts::shared("A1:C1"),
+  )
+  let projection = make_xlsx_projection("shared.xlsx", workbook, 10)
+  assert_false(projection.sheets[0].shared_formulas_indexed)
+  let under = Some(
+    resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]"),
+  )
+  let spec : XlsxQuerySpec = {
+    selector: "cell[type=formula][formula~=D1]",
+    predicates: parse_xlsx_query_selector("cell[type=formula][formula~=D1]"),
+    offset: 0,
+    limit: 10,
+  }
+  guard xlsx_query_data(projection, under, spec) is Object(fields) &&
+    fields.get("matches") is Some(Array(matches)) else {
+    fail("expected shared-formula matches")
+  }
+  assert_eq(fields.get("matched_total"), Some(Json::number(3)))
+  assert_eq(matches.length(), 3)
+  assert_true(projection.sheets[0].shared_formulas_indexed)
+  for match_record in matches {
+    assert_true(match_record.stringify().contains("\"formula\":\"D1+1\""))
+  }
+}
+
+///|
+test "XLSX formatting is deferred and custom-format work is charged" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  let style_id = workbook.new_style(@xlsx.Style::number_format("[Red]0.00"))
+  for column in 1..<=2 {
+    workbook.set_cell_int(
+      "Data",
+      @xlsx.coordinates_to_cell_name(column, 1),
+      column,
+    )
+    workbook.set_cell_style(
+      "Data",
+      @xlsx.coordinates_to_cell_name(column, 1),
+      style_id,
+    )
+  }
+  let projection = make_xlsx_projection("format-work.xlsx", workbook, 10)
+  let regions = xlsx_scan_regions(
+    projection,
+    Some(resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]")),
+  )
+  // A raw predicate with an empty page never formats matching cells.
+  let page = collect_xlsx_cell_page(
+    projection,
+    regions,
+    xlsx_query_filter(parse_xlsx_query_selector("cell[type=number]")),
+    0,
+    0,
+    format_work_maximum=1,
+  )
+  assert_eq(page.matched_total, 2)
+  assert_eq(page.cells.length(), 0)
+  assert_false(projection.sheets[0].shared_formulas_indexed)
+  let limited = xlsx_cli_error(() => {
+    ignore(
+      collect_xlsx_cell_page(
+        projection,
+        regions,
+        TextCells,
+        0,
+        10,
+        format_work_maximum=1,
+      ),
+    )
+  })
+  assert_eq(limited.code, "office.xlsx.resource_limit")
+  guard limited.details is Some(Object(details)) else {
+    fail("expected format-work limit details")
+  }
+  assert_eq(
+    details.get("resource"),
+    Some(Json::string("cell formatting work units")),
   )
 }
 
@@ -306,6 +398,82 @@ test "XLSX structured reads reject non-finite package numbers" {
   }
   let error = xlsx_cli_error(() => ignore(open_xlsx_projection(source, 10)))
   assert_eq(error.code, "office.invalid_package")
+}
+
+///|
+test "XLSX style parsing rejects non-finite JSON-facing numbers" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  workbook.set_cell_int("Data", "A1", 1)
+  let style_id = workbook.new_style(
+    @xlsx.Style::font(@xlsx.Font::with_values(size=12.0)),
+  )
+  workbook.set_cell_style("Data", "A1", style_id)
+  let archive = try! @zip.read(@xlsx.write(workbook))
+  guard archive.get("xl/styles.xml") is Some(style_bytes) else {
+    fail("missing styles part")
+  }
+  let styles_xml = try! @utf8.decode(style_bytes, ignore_bom=true)
+  assert_true(styles_xml.contains("<sz val=\"12\"/>"))
+  assert_true(
+    archive.replace(
+      "xl/styles.xml",
+      @utf8.encode(
+        styles_xml.replace(old="<sz val=\"12\"/>", new="<sz val=\"NaN\"/>"),
+      ),
+    ),
+  )
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(@zip.write(archive)),
+  ) catch {
+    error => Err(error)
+  }
+  assert_true(result is Err(@xlsx.XlsxError::InvalidXml(_)))
+}
+
+///|
+test "XLSX displayed text preserves formula results formatted to blank" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  let style_id = workbook.new_style(@xlsx.Style::number_format(";;;"))
+  workbook.set_cell_formula("Data", "A1", "1+0", value="1")
+  workbook.set_cell_style("Data", "A1", style_id)
+  let archive = try! @zip.read(@xlsx.write(workbook))
+  guard archive.get("xl/worksheets/sheet1.xml") is Some(sheet_bytes) else {
+    fail("missing worksheet part")
+  }
+  let sheet_xml = try! @utf8.decode(sheet_bytes, ignore_bom=true)
+  assert_true(sheet_xml.contains(" t=\"str\""))
+  // Formula setters retain string compatibility. Remove t="str" to model a
+  // normal OOXML cached numeric formula result.
+  assert_true(
+    archive.replace(
+      "xl/worksheets/sheet1.xml",
+      @utf8.encode(sheet_xml.replace(old=" t=\"str\"", new="")),
+    ),
+  )
+  let projection = make_xlsx_projection(
+    "blank-display.xlsx",
+    try! @xlsx.read(@zip.write(archive)),
+    10,
+  )
+  let under = Some(
+    resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]"),
+  )
+  guard xlsx_text_data(projection, under, 0, 10) is Object(text) else {
+    fail("expected text result")
+  }
+  assert_eq(text.get("matched_total"), Some(Json::number(0)))
+  guard xlsx_get_data(
+      projection,
+      resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]/cell[A1]"),
+    )
+    is Object(get) &&
+    get.get("cell") is Some(Object(cell)) else {
+    fail("expected formula cell")
+  }
+  assert_eq(cell.get("value"), Some(Json::string("")))
+  assert_eq(cell.get("formula"), Some(Json::string("1+0")))
 }
 
 ///|

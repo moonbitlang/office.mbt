@@ -98,6 +98,24 @@ test "formula opts shared writes typed formula" {
     content="Some(\"A1+B1\")",
   )
   debug_inspect(parsed.get_cell_formula("Sheet1", "C2"), content="None")
+  guard parsed.sheet("Sheet1") is Some(parsed_sheet) else {
+    fail("missing parsed worksheet")
+  }
+  guard parsed_sheet.get_cell_formula_info_rc(1, 3) is Some(master) else {
+    fail("missing shared-formula master metadata")
+  }
+  assert_eq(master.formula, "A1+B1")
+  assert_true(master.formula_type is Some(Shared))
+  assert_eq(master.range_ref, Some("C1:C3"))
+  assert_eq(master.shared_index, Some(0))
+  guard parsed_sheet.get_cell_formula_info_rc(2, 3) is Some(follower) else {
+    fail("missing shared-formula follower metadata")
+  }
+  assert_eq(follower.formula, "")
+  assert_true(follower.formula_type is Some(Shared))
+  assert_eq(follower.range_ref, None)
+  assert_eq(follower.shared_index, Some(0))
+  assert_eq(parsed_sheet.shared_formula_masters().get(0), Some("A1+B1"))
 }
 
 ///|

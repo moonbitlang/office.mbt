@@ -30,8 +30,13 @@ fn set_int(out : Map[String, Json], key : String, value : Int?) -> Unit {
 ///|
 fn set_double(out : Map[String, Json], key : String, value : Double?) -> Unit {
   match value {
-    Some(value) => out[key] = Json::number(value)
+    // JSON numbers are finite. Persisted XLSX input is rejected earlier, but
+    // this public converter also accepts programmatically constructed styles;
+    // omit an invalid optional value instead of emitting bare NaN/Infinity.
+    Some(value) if !value.is_nan() && !value.is_inf() =>
+      out[key] = Json::number(value)
     None => ()
+    _ => ()
   }
 }
 

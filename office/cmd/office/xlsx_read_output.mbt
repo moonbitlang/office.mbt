@@ -257,11 +257,25 @@ fn xlsx_styles_json(
 fn xlsx_cell_text(cell : XlsxCellSnapshot) -> String? {
   match cell.formatted {
     Some(value) if value != "" => Some(value)
+    // A cached result was present and intentionally formatted to blank (for
+    // example with `;;;`). Do not replace Excel's blank display with formula
+    // source text. `None` can also mean lazy formatting has not run yet, so
+    // raw presence remains the authoritative distinction.
+    _ if cell.raw is Some(_) => None
     _ =>
       match cell.formula {
-        Some(formula) => Some("=" + formula)
+        Some(formula) if formula != "" => Some("=" + formula)
         None => None
+        _ => None
       }
+  }
+}
+
+///|
+fn XlsxCellFilter::needs_formatted(self : XlsxCellFilter) -> Bool {
+  match self {
+    TextCells => true
+    PresentCells | QueryCells(_, _) => false
   }
 }
 
@@ -295,8 +309,12 @@ fn collect_xlsx_cell_page(
   filter : XlsxCellFilter,
   offset : Int,
   limit : Int,
+  format_work_maximum? : Int = xlsx_cli_max_format_work_units,
 ) -> XlsxCellPage raise CliFailure {
-  let scan = XlsxScanBudget::new(projection.max_scan_cells)
+  let scan = XlsxScanBudget::new(
+    projection.max_scan_cells,
+    format_work_maximum~,
+  )
   let cells : Array[XlsxCellSnapshot] = []
   let mut matched = 0
   for region in regions {
@@ -309,8 +327,12 @@ fn collect_xlsx_cell_page(
           column,
           scan,
         )
+        if filter.needs_formatted() {
+          cell.ensure_formatted(projection, scan)
+        }
         if filter.matches(cell) {
           if matched >= offset && cells.length() < limit {
+            cell.ensure_formatted(projection, scan)
             cells.push(cell)
           }
           matched += 1

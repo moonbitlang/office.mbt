@@ -67,6 +67,8 @@ type XlsxCellPredicate
 
 type XlsxCellSnapshot
 
+type XlsxFormatBudget
+
 type XlsxMetadataBudget
 
 type XlsxNumberOperator

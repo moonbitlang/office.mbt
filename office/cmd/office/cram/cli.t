@@ -142,7 +142,7 @@ round-trips through the public selector grammar.
   {"schema":"office.xlsx.text/1","under":"/xlsx/sheet[name=\"Sheet1\"]","paths":["/xlsx/sheet[name=\"Sheet1\"]/cell[B19]","/xlsx/sheet[name=\"Sheet1\"]/cell[C21]"],"texts":["237","Column1"],"matched_total":5,"returned":2,"truncated":true,"scanned":88}
 
   $ office.exe query "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" 'cell[type=formula][formula~=IF]' --under '/xlsx/sheet[name="Sheet2"]' --json | jq -c '{schema:.data.schema,selector:.data.selector,under:.data.under,paths:[.data.matches[].path],matched_total:.data.matched_total,returned:.data.returned,truncated:.data.truncated,scanned:.data.scanned_cells}'
-  {"schema":"office.xlsx.query/1","selector":"cell[type=formula][formula~=IF]","under":"/xlsx/sheet[name=\"Sheet2\"]","paths":["/xlsx/sheet[name=\"Sheet2\"]/cell[F11]","/xlsx/sheet[name=\"Sheet2\"]/cell[G11]"],"matched_total":2,"returned":2,"truncated":false,"scanned":99}
+  {"schema":"office.xlsx.query/1","selector":"cell[type=formula][formula~=IF]","under":"/xlsx/sheet[name=\"Sheet2\"]","paths":["/xlsx/sheet[name=\"Sheet2\"]/cell[F11]","/xlsx/sheet[name=\"Sheet2\"]/cell[G11]","/xlsx/sheet[name=\"Sheet2\"]/cell[H11]","/xlsx/sheet[name=\"Sheet2\"]/cell[I11]"],"matched_total":4,"returned":4,"truncated":false,"scanned":99}
 
 Cross-format selectors and DOCX-only XLSX query flags fail with XLSX-specific,
 machine-correctable codes.

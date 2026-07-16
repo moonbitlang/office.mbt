@@ -97,6 +97,24 @@ fn decode_utf8(
 }
 
 ///|
+/// OOXML numeric attributes must be finite before they enter the workbook
+/// model. MoonBit's parser accepts IEEE NaN and infinities, but those values
+/// cannot be represented by JSON and make comparisons in layout/style logic
+/// non-deterministic.
+fn parse_finite_double_for_read(
+  value : StringView,
+  message : String,
+) -> Double raise XlsxError {
+  let parsed = @string.parse_double(value) catch {
+    _ => raise InvalidXml(msg=message)
+  }
+  if parsed.is_nan() || parsed.is_inf() {
+    raise InvalidXml(msg=message)
+  }
+  parsed
+}
+
+///|
 fn parse_default_font(xml : StringView) -> String {
   let xml_str = xml.to_owned()
   let marker = "<fonts"
@@ -205,9 +223,7 @@ fn parse_font_entry(xml : StringView) -> Font raise XlsxError {
       match attr_value(tag, "val") {
         Some(value) =>
           font.size = Some(
-            @string.parse_double(value) catch {
-              _ => raise InvalidXml(msg="font sz invalid")
-            },
+            parse_finite_double_for_read(value, "font sz invalid"),
           )
         None => ()
       }
@@ -292,11 +308,9 @@ fn parse_font_entry(xml : StringView) -> Font raise XlsxError {
       }
       match attr_value(tag, "tint") {
         Some(value) =>
-          try @string.parse_double(value) catch {
-            _ => raise InvalidXml(msg="font color tint invalid")
-          } noraise {
-            val => font.color_tint = Some(val)
-          }
+          font.color_tint = Some(
+            parse_finite_double_for_read(value, "font color tint invalid"),
+          )
         None => ()
       }
     }
@@ -378,47 +392,27 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
       fill.typ = Some("gradient")
       let bottom = match attr_value(tag, "bottom") {
         Some(value) =>
-          try @string.parse_double(value) catch {
-            _ => raise InvalidXml(msg="gradientFill bottom invalid")
-          } noraise {
-            v => v
-          }
+          parse_finite_double_for_read(value, "gradientFill bottom invalid")
         None => 0.0
       }
       let degree = match attr_value(tag, "degree") {
         Some(value) =>
-          try @string.parse_double(value) catch {
-            _ => raise InvalidXml(msg="gradientFill degree invalid")
-          } noraise {
-            v => v
-          }
+          parse_finite_double_for_read(value, "gradientFill degree invalid")
         None => 0.0
       }
       let left = match attr_value(tag, "left") {
         Some(value) =>
-          try @string.parse_double(value) catch {
-            _ => raise InvalidXml(msg="gradientFill left invalid")
-          } noraise {
-            v => v
-          }
+          parse_finite_double_for_read(value, "gradientFill left invalid")
         None => 0.0
       }
       let right = match attr_value(tag, "right") {
         Some(value) =>
-          try @string.parse_double(value) catch {
-            _ => raise InvalidXml(msg="gradientFill right invalid")
-          } noraise {
-            v => v
-          }
+          parse_finite_double_for_read(value, "gradientFill right invalid")
         None => 0.0
       }
       let top = match attr_value(tag, "top") {
         Some(value) =>
-          try @string.parse_double(value) catch {
-            _ => raise InvalidXml(msg="gradientFill top invalid")
-          } noraise {
-            v => v
-          }
+          parse_finite_double_for_read(value, "gradientFill top invalid")
         None => 0.0
       }
       let typ = match attr_value(tag, "type") {
@@ -444,12 +438,11 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
             let open_tag = text[:open_end]
             match attr_value(open_tag, "position") {
               Some(value) =>
-                try @string.parse_double(value) catch {
-                  _ =>
-                    raise InvalidXml(msg="gradientFill stop position invalid")
-                } noraise {
-                  v => stop_positions.push(v)
-                }
+                stop_positions.push(
+                  parse_finite_double_for_read(
+                    value, "gradientFill stop position invalid",
+                  ),
+                )
               None => stop_positions.push(0.0)
             }
             let rest = text[open_end + 1:]
@@ -549,11 +542,9 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
           }
           match attr_value(color_tag, "tint") {
             Some(value) =>
-              try @string.parse_double(value) catch {
-                _ => raise InvalidXml(msg="fill fgColor tint invalid")
-              } noraise {
-                val => fill.fg_tint = Some(val)
-              }
+              fill.fg_tint = Some(
+                parse_finite_double_for_read(value, "fill fgColor tint invalid"),
+              )
             None => ()
           }
           match attr_value(color_tag, "rgb") {
@@ -593,11 +584,9 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
           }
           match attr_value(color_tag, "tint") {
             Some(value) =>
-              try @string.parse_double(value) catch {
-                _ => raise InvalidXml(msg="fill bgColor tint invalid")
-              } noraise {
-                val => fill.bg_tint = Some(val)
-              }
+              fill.bg_tint = Some(
+                parse_finite_double_for_read(value, "fill bgColor tint invalid"),
+              )
             None => ()
           }
           match attr_value(color_tag, "rgb") {

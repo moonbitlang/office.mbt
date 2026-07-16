@@ -1854,6 +1854,47 @@ pub fn Workbook::get_cell_value_from_worksheet_rc(
 }
 
 ///|
+/// Formats one cell from an already-resolved worksheet using an explicit
+/// style id. This is the bulk-read counterpart to `get_cell_value_styled` and
+/// lets callers apply row/column-inherited styles without repeating a sheet
+/// name lookup for every coordinate. Returns `None` for an absent cell.
+///
+/// `worksheet` must be an entry from this workbook's `sheets()` view. The row
+/// and column are 1-based and `style_id` must belong to this workbook.
+pub fn Workbook::get_cell_value_styled_from_worksheet_rc(
+  self : Workbook,
+  worksheet : Worksheet,
+  row : Int,
+  col : Int,
+  style_id : Int,
+  options? : Options,
+) -> String? raise XlsxError {
+  ignore(cell_ref_from(row, col))
+  self.check_style_id(style_id)
+  let resolved_options = match options {
+    Some(value) => value
+    None => self.options
+  }
+  match worksheet.cell_index_of(row, col) {
+    Some(index) => {
+      let cell = worksheet.cells[index]
+      if resolved_options.raw_cell_value {
+        return Some(cell.value)
+      }
+      Some(
+        format_cell_value(
+          cell.value_type,
+          cell.value,
+          Some(self.styles[style_id]),
+          resolved_options,
+        ),
+      )
+    }
+    None => None
+  }
+}
+
+///|
 pub fn Workbook::calc_cell_value(
   self : Workbook,
   sheet_name : StringView,
