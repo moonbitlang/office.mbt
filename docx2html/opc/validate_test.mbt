@@ -270,6 +270,45 @@ test "Relationships apply OPC Markup Compatibility processing" {
 }
 
 ///|
+test "Relationships accept scoped legacy MCE preservation hints" {
+  let preserved =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
+    #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    #| xmlns:v="urn:vendor" mc:Ignorable="v"
+    #| mc:PreserveElements="v:Future"
+    #| mc:PreserveAttributes="v:metadata" v:metadata="raw-only">
+    #| <v:Future v:metadata="raw-only"/>
+    #| <Relationship v:metadata="raw-only" Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+    #|</Relationships>
+  assert_eq(
+    @opc.validate_docx_package(minimal_docx(root_rels=Some(preserved))),
+    [],
+  )
+
+  let bad_elements =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
+    #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    #| xmlns:v="urn:vendor" mc:Ignorable="v"
+    #| mc:PreserveElements="v:bad:name">
+    #| <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+    #|</Relationships>
+  let bad_attributes =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
+    #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    #| xmlns:v="urn:vendor">
+    #| <Relationship mc:PreserveAttributes="v:metadata" Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+    #|</Relationships>
+  for relationships in [bad_elements, bad_attributes] {
+    let findings = @opc.validate_docx_package(
+      minimal_docx(root_rels=Some(relationships)),
+    )
+    assert_true(
+      findings.any(finding => finding.contains("markup compatibility mismatch")),
+    )
+  }
+}
+
+///|
 test "Relationships retain unknown MCE attributes for schema validation" {
   let root_rels =
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"

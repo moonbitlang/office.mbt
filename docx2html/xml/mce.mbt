@@ -22,6 +22,15 @@ const MCE_IGNORABLE : String = "{http://schemas.openxmlformats.org/markup-compat
 const MCE_PROCESS_CONTENT : String = "{http://schemas.openxmlformats.org/markup-compatibility/2006}ProcessContent"
 
 ///|
+// PreserveElements and PreserveAttributes were compatibility-rule attributes
+// in the first edition of ECMA-376. Later editions removed them, but existing
+// Office packages can still contain the preservation hints.
+const MCE_PRESERVE_ELEMENTS : String = "{http://schemas.openxmlformats.org/markup-compatibility/2006}PreserveElements"
+
+///|
+const MCE_PRESERVE_ATTRIBUTES : String = "{http://schemas.openxmlformats.org/markup-compatibility/2006}PreserveAttributes"
+
+///|
 const MCE_MUST_UNDERSTAND : String = "{http://schemas.openxmlformats.org/markup-compatibility/2006}MustUnderstand"
 
 ///|
@@ -291,19 +300,9 @@ fn MceProcessor::add_process_content_names(
 ) -> Array[MceProcessAddition] raise DocxError {
   let additions : Array[MceProcessAddition] = []
   for token in mce_split_tokens(value, self.budget) {
-    guard token.find(":") is Some(colon) &&
-      colon > 0 &&
-      colon + 1 < token.length() &&
-      !token[colon + 1:].contains(":") else {
-      mce_mismatch("ProcessContent contains an invalid name pair")
-    }
-    self.budget.charge_derived_chars(token.length() - 1)
-    let prefix = token[:colon].to_owned()
-    let local_name = token[colon + 1:].to_owned()
-    if local_name != "*" && !is_xml_ncname(local_name) {
-      mce_mismatch("ProcessContent contains an invalid local name")
-    }
-    let namespace_uri = self.resolve_prefix(prefix, "ProcessContent")
+    let (namespace_uri, local_name) = self.resolve_mce_name_pair(
+      token, "ProcessContent",
+    )
     if !self.namespace_is_ignorable(namespace_uri) {
       mce_mismatch("ProcessContent names a namespace that is not ignorable")
     }
@@ -318,6 +317,51 @@ fn MceProcessor::add_process_content_names(
     }
   }
   additions
+}
+
+///|
+fn MceProcessor::resolve_mce_name_pair(
+  self : MceProcessor,
+  token : String,
+  directive : String,
+) -> (String, String) raise DocxError {
+  guard token.find(":") is Some(colon) &&
+    colon > 0 &&
+    colon + 1 < token.length() &&
+    !token[colon + 1:].contains(":") else {
+    mce_mismatch(directive + " contains an invalid name pair")
+    ("", "")
+  }
+  self.budget.charge_derived_chars(token.length() - 1)
+  let prefix = token[:colon].to_owned()
+  let local_name = token[colon + 1:].to_owned()
+  if local_name != "*" && !is_xml_ncname(local_name) {
+    mce_mismatch(directive + " contains an invalid local name")
+  }
+  (self.resolve_prefix(prefix, directive), local_name)
+}
+
+///|
+fn MceProcessor::validate_legacy_preservation_names(
+  self : MceProcessor,
+  value : String,
+  directive : String,
+  same_element_ignorable_namespaces : ArrayView[String],
+) -> Unit raise DocxError {
+  for token in mce_split_tokens(value, self.budget) {
+    let (namespace_uri, _local_name) = self.resolve_mce_name_pair(
+      token, directive,
+    )
+    if !same_element_ignorable_namespaces.any(candidate => {
+        candidate == namespace_uri
+      }) {
+      mce_mismatch(
+        directive +
+        " names a namespace that is not declared ignorable on the same element",
+      )
+    }
+    self.budget.charge_namespace_bindings(1)
+  }
 }
 
 ///|
@@ -349,6 +393,24 @@ fn MceProcessor::enter_element(
   let process_additions = match element.attributes.get(MCE_PROCESS_CONTENT) {
     Some(value) => self.add_process_content_names(value)
     None => []
+  }
+  // These legacy attributes are preservation hints for markup editors, not
+  // semantic application content. Validate their scoped contracts here; the
+  // raw tree returned by the paired-root API remains the preservation view,
+  // while filter_attributes removes the hints from the effective view.
+  match element.attributes.get(MCE_PRESERVE_ELEMENTS) {
+    Some(value) =>
+      self.validate_legacy_preservation_names(
+        value, "PreserveElements", ignorable_additions,
+      )
+    None => ()
+  }
+  match element.attributes.get(MCE_PRESERVE_ATTRIBUTES) {
+    Some(value) =>
+      self.validate_legacy_preservation_names(
+        value, "PreserveAttributes", ignorable_additions,
+      )
+    None => ()
   }
   let must_understand_satisfied = match
     element.attributes.get(MCE_MUST_UNDERSTAND) {
@@ -508,6 +570,8 @@ fn MceProcessor::filter_attributes(
         (
           name == MCE_IGNORABLE ||
           name == MCE_PROCESS_CONTENT ||
+          name == MCE_PRESERVE_ELEMENTS ||
+          name == MCE_PRESERVE_ATTRIBUTES ||
           name == MCE_MUST_UNDERSTAND
         ) => continue
       Some(namespace_uri) if self.namespace_is_ignorable(namespace_uri) &&
