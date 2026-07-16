@@ -14,7 +14,7 @@ pub fn gzip(BytesView) -> Bytes raise ZipError
 
 pub fn read(BytesView) -> Archive raise ZipError
 
-pub fn read_limited(BytesView, max_entries~ : Int, max_entry_uncompressed_bytes~ : Int, max_total_uncompressed_bytes~ : Int) -> Archive raise ZipError
+pub fn read_limited(BytesView, max_package_bytes~ : Int, max_entries~ : Int, max_entry_uncompressed_bytes~ : Int, max_total_uncompressed_bytes~ : Int, max_total_preserved_source_bytes~ : Int) -> Archive raise ZipError
 
 pub fn write(Archive) -> Bytes raise ZipError
 
@@ -38,7 +38,7 @@ pub fn ZipError::to_repr(Self) -> @debug.Repr
 // Types and methods
 type Archive
 pub fn Archive::add(Self, String, BytesView, compression? : Compression, data_descriptor? : Bool) -> Unit
-pub fn Archive::bounded_source_package_size(Self, max_entries~ : Int, max_entry_uncompressed_bytes~ : Int, max_total_uncompressed_bytes~ : Int) -> Int?
+pub fn Archive::bounded_source_package_size(Self, max_entries~ : Int, max_entry_uncompressed_bytes~ : Int, max_total_uncompressed_bytes~ : Int, max_total_preserved_source_bytes~ : Int) -> Int?
 pub fn Archive::entries(Self) -> ArrayView[Entry]
 pub fn Archive::fork(Self) -> Self
 pub fn Archive::get(Self, StringView) -> BytesView?
@@ -65,4 +65,3 @@ pub fn Entry::name(Self) -> String
 // Type aliases
 
 // Traits
-

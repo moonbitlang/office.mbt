@@ -205,9 +205,11 @@ test "archive-backed raw APIs match byte-backed mutation without reinflation" {
   let from_bytes = @raw.raw_edit(Docx, original, request)
   let archive = @zip.read_limited(
     original,
+    max_package_bytes=original.length(),
     max_entries=8192,
     max_entry_uncompressed_bytes=64 * 1024 * 1024,
     max_total_uncompressed_bytes=256 * 1024 * 1024,
+    max_total_preserved_source_bytes=original.length(),
   )
   assert_eq(@raw.raw_identify_archive("input.docx", archive.fork()), Docx)
   let from_archive = @raw.raw_edit_archive(
@@ -231,9 +233,11 @@ test "archive-backed raw serialization applies caller budget before output" {
   let original = @word.new_blank_docx()
   let archive = @zip.read_limited(
     original,
+    max_package_bytes=original.length(),
     max_entries=8192,
     max_entry_uncompressed_bytes=64 * 1024 * 1024,
     max_total_uncompressed_bytes=256 * 1024 * 1024,
+    max_total_preserved_source_bytes=original.length(),
   )
   let request = @raw.raw_edit_request(
     "/document",
@@ -260,9 +264,11 @@ test "archive-backed identical replacement reuses source before ZIP planning" {
   let original = @word.new_blank_docx()
   let archive = @zip.read_limited(
     original,
+    max_package_bytes=original.length(),
     max_entries=8192,
     max_entry_uncompressed_bytes=64 * 1024 * 1024,
     max_total_uncompressed_bytes=256 * 1024 * 1024,
+    max_total_preserved_source_bytes=original.length(),
   )
   let document = @raw.raw_read("input.docx", original, "/document").xml_text()
   let mutation = @raw.raw_replace_part_archive(

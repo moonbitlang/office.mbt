@@ -31,6 +31,7 @@ priv struct BoundedSource {
   max_entries : Int
   max_entry_uncompressed_bytes : Int
   max_total_uncompressed_bytes : Int
+  max_total_preserved_source_bytes : Int
 }
 
 ///|
@@ -125,12 +126,14 @@ pub fn Archive::bounded_source_package_size(
   max_entries~ : Int,
   max_entry_uncompressed_bytes~ : Int,
   max_total_uncompressed_bytes~ : Int,
+  max_total_preserved_source_bytes~ : Int,
 ) -> Int? {
   match self.bounded_source {
     Some(source) if source.max_entries <= max_entries &&
       source.max_entry_uncompressed_bytes <= max_entry_uncompressed_bytes &&
-      source.max_total_uncompressed_bytes <= max_total_uncompressed_bytes =>
-      Some(source.package_bytes)
+      source.max_total_uncompressed_bytes <= max_total_uncompressed_bytes &&
+      source.max_total_preserved_source_bytes <=
+      max_total_preserved_source_bytes => Some(source.package_bytes)
     _ => None
   }
 }

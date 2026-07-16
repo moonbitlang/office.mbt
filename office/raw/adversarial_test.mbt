@@ -45,9 +45,11 @@ test "archive-backed raw boundary requires provenance and rechecks limits" {
   )
   let bounded = @zip.read_limited(
     original,
+    max_package_bytes=original.length(),
     max_entries=8192,
     max_entry_uncompressed_bytes=64 * 1024 * 1024,
     max_total_uncompressed_bytes=256 * 1024 * 1024,
+    max_total_preserved_source_bytes=original.length(),
   )
   assert_eq(@raw.raw_identify_archive("bounded.docx", bounded.fork()), Docx)
   let changed = bounded.fork()
