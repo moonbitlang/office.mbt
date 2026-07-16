@@ -4384,7 +4384,10 @@ fn eval_function(
           Ok(num) => num
           Err(err) => return err
         }
-        if row_num <= 0 || col_num <= 0 {
+        if row_num <= 0 ||
+          row_num > cell_ref_max_rows ||
+          col_num <= 0 ||
+          col_num > cell_ref_max_cols {
           return Error(formula_error_value)
         }
         let abs_num = if values.length() >= 3 {

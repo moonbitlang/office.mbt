@@ -14405,7 +14405,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
     content="true",
   )
   inspect(
-    is_formula_string_any(
+    is_formula_error(
       eval_function(
         workbook,
         "Sheet1",
@@ -14413,6 +14413,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         [Number(1.0), Number(20000.0), Number(1.0), Bool(true)],
         ctx,
       ),
+      formula_error_value,
     ),
     content="true",
   )

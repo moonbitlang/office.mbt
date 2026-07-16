@@ -5,111 +5,38 @@ fn column_name_from_number(col : Int) -> String raise XlsxError {
 
 ///|
 fn parse_column_ref(text : StringView) -> (Int, Bool)? {
-  let chars = text.to_array()
   let mut idx = 0
   let mut abs_col = false
-  if idx < chars.length() && chars[idx] == '$' {
+  if idx < text.length() && text[idx] == '$' {
     abs_col = true
     idx = idx + 1
   }
-  let mut col = 0
-  let mut has_col = false
-  while idx < chars.length() {
-    let ch = chars[idx]
-    if ch.is_ascii_alphabetic() {
-      let upper = ch.to_ascii_uppercase()
-      col = col * 26 + (upper.to_int() - 'A'.to_int() + 1)
-      has_col = true
-      idx = idx + 1
-    } else {
-      break
-    }
+  match try_parse_column_name(text[idx:]) {
+    Some(col) => Some((col, abs_col))
+    None => None
   }
-  if !has_col || idx != chars.length() {
-    return None
-  }
-  Some((col, abs_col))
 }
 
 ///|
 fn parse_row_ref(text : StringView) -> (Int, Bool)? {
-  let chars = text.to_array()
   let mut idx = 0
   let mut abs_row = false
-  if idx < chars.length() && chars[idx] == '$' {
+  if idx < text.length() && text[idx] == '$' {
     abs_row = true
     idx = idx + 1
   }
-  let row_sb = StringBuilder::new()
-  while idx < chars.length() {
-    let ch = chars[idx]
-    if ch.is_ascii_digit() {
-      row_sb.write_char(ch)
-      idx = idx + 1
-    } else {
-      return None
-    }
+  match try_parse_row_number(text[idx:]) {
+    Some(row) => Some((row, abs_row))
+    None => None
   }
-  let text_value = row_sb.to_string()
-  if text_value == "" {
-    return None
-  }
-  let row = @string.parse_int(text_value, base=10) catch { _ => return None }
-  if row <= 0 {
-    return None
-  }
-  Some((row, abs_row))
 }
 
 ///|
 fn parse_cell_ref(text : StringView) -> (Int, Int, Bool, Bool)? {
-  let chars = text.to_array()
-  let mut idx = 0
-  let mut abs_col = false
-  if idx < chars.length() && chars[idx] == '$' {
-    abs_col = true
-    idx = idx + 1
+  match try_parse_cell_ref_parts(text) {
+    Some((row, col, abs_col, abs_row)) => Some((row, col, abs_row, abs_col))
+    None => None
   }
-  let mut col = 0
-  let mut has_col = false
-  while idx < chars.length() {
-    let ch = chars[idx]
-    if ch.is_ascii_alphabetic() {
-      let upper = ch.to_ascii_uppercase()
-      col = col * 26 + (upper.to_int() - 'A'.to_int() + 1)
-      has_col = true
-      idx = idx + 1
-    } else {
-      break
-    }
-  }
-  if !has_col {
-    return None
-  }
-  let mut abs_row = false
-  if idx < chars.length() && chars[idx] == '$' {
-    abs_row = true
-    idx = idx + 1
-  }
-  let row_sb = StringBuilder::new()
-  while idx < chars.length() {
-    let ch = chars[idx]
-    if ch.is_ascii_digit() {
-      row_sb.write_char(ch)
-      idx = idx + 1
-    } else {
-      return None
-    }
-  }
-  let row_text = row_sb.to_string()
-  if row_text == "" {
-    return None
-  }
-  let row = @string.parse_int(row_text, base=10) catch { _ => return None }
-  if row <= 0 {
-    return None
-  }
-  Some((row, col, abs_row, abs_col))
 }
 
 ///|

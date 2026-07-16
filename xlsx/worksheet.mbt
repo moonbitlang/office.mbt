@@ -3276,53 +3276,7 @@ fn Worksheet::remove_rows(
 fn parse_cell_ref_with_abs(
   reference : StringView,
 ) -> (Int, Int, Bool, Bool) raise XlsxError {
-  let len = reference.length()
-  let mut idx = 0
-  let mut abs_col = false
-  if idx < len && reference[idx] == '$' {
-    abs_col = true
-    idx = idx + 1
-  }
-  let mut col = 0
-  let mut has_col = false
-  while idx < len {
-    let u0 = reference[idx]
-    if u0 is ('A'..='Z') || u0 is ('a'..='z') {
-      let upper = if u0 is ('a'..='z') { u0 - 32 } else { u0 }
-      col = col * 26 + (upper.to_int() - ('A' : UInt16).to_int() + 1)
-      has_col = true
-      idx = idx + 1
-    } else {
-      break
-    }
-  }
-  if !has_col {
-    raise InvalidCellRef(value=reference.to_owned())
-  }
-  let mut abs_row = false
-  if idx < len && reference[idx] == '$' {
-    abs_row = true
-    idx = idx + 1
-  }
-  let mut row = 0
-  let mut has_row = false
-  while idx < len {
-    let u0 = reference[idx]
-    if u0 is ('0'..='9') {
-      has_row = true
-      row = row * 10 + (u0.to_int() - ('0' : UInt16).to_int())
-      idx = idx + 1
-    } else {
-      raise InvalidCellRef(value=reference.to_owned())
-    }
-  }
-  if !has_row {
-    raise InvalidCellRef(value=reference.to_owned())
-  }
-  if row <= 0 {
-    raise InvalidCellRef(value=reference.to_owned())
-  }
-  (row, col, abs_col, abs_row)
+  parse_cell_ref_parts(reference)
 }
 
 ///|
@@ -3333,7 +3287,7 @@ fn format_cell_ref_with_abs(
   abs_row : Bool,
 ) -> String raise XlsxError {
   let col_text = column_number_to_name(col)
-  if row <= 0 {
+  if row <= 0 || row > cell_ref_max_rows {
     raise InvalidCellRef(value="\{col}:\{row}")
   }
   let row_text = row.to_string()
@@ -3376,11 +3330,7 @@ fn duplicate_sqref_for_row(
     }
   }
   let refs : Array[String] = []
-  for part in sqref.split(" ") {
-    let text = part.trim()
-    if text == "" {
-      continue
-    }
+  for text in xml_whitespace_tokens(sqref) {
     let (start_ref, end_ref) = split_sqref_range(text)
     let (row1, col1, abs_col1, abs_row1) = parse_cell_ref_with_abs(start_ref)
     let (row2, col2, abs_col2, abs_row2) = parse_cell_ref_with_abs(end_ref)

@@ -115,3 +115,30 @@ test "defined name adjust: invalid row refs are preserved" {
     ),
   )
 }
+
+///|
+test "defined name adjust: out-of-grid and overflowing refs are preserved" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_defined_name(@xlsx.DefinedName::new("BadCol", "Sheet1!XFE1"))
+  workbook.set_defined_name(
+    @xlsx.DefinedName::new(
+      "HugeCol", "Sheet1!ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ1",
+    ),
+  )
+  workbook.set_defined_name(
+    @xlsx.DefinedName::new(
+      "HugeRow", "Sheet1!A999999999999999999999999999999999999",
+    ),
+  )
+  workbook.insert_rows("Sheet1", 1, 1)
+  inspect(defined_name_refers_to(workbook, "BadCol"), content="Sheet1!XFE1")
+  inspect(
+    defined_name_refers_to(workbook, "HugeCol"),
+    content="Sheet1!ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ1",
+  )
+  inspect(
+    defined_name_refers_to(workbook, "HugeRow"),
+    content="Sheet1!A999999999999999999999999999999999999",
+  )
+}

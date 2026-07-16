@@ -1,13 +1,32 @@
 ///|
+fn xml_whitespace_tokens(value : StringView) -> Array[String] {
+  let tokens : Array[String] = []
+  let mut current = StringBuilder::new()
+  let mut has_chars = false
+  for ch in value {
+    if is_attr_space(ch) {
+      if has_chars {
+        tokens.push(current.to_string())
+        current = StringBuilder::new()
+        has_chars = false
+      }
+    } else {
+      current.write_char(ch)
+      has_chars = true
+    }
+  }
+  if has_chars {
+    tokens.push(current.to_string())
+  }
+  tokens
+}
+
+///|
 fn flat_sqref(
   sqref : StringView,
 ) -> Map[Int, Array[(Int, Int)]] raise XlsxError {
   let cells : Map[Int, Array[(Int, Int)]] = Map([])
-  for part in sqref.split(" ") {
-    let text = part.trim()
-    if text == "" {
-      continue
-    }
+  for text in xml_whitespace_tokens(sqref) {
     if text.contains(":") {
       let (min_row, min_col, max_row, max_col) = parse_range_ref(text)
       for col in min_col..<=max_col {
@@ -129,6 +148,6 @@ fn delete_cells_from_sqref(
 
 ///|
 test "sqref wb: flat_sqref trims empty tokens and merges repeated single-column refs" {
-  let normalized = delete_cells_from_sqref("A1  A2", Map([]))
+  let normalized = delete_cells_from_sqref("A1\t\r\n A2", Map([]))
   inspect(normalized, content="A1:A2")
 }

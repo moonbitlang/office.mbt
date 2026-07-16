@@ -1269,26 +1269,15 @@ fn parse_cf_rule(
 
 ///|
 fn master_cell_from_sqref(sqref : StringView) -> String raise XlsxError {
-  let text = sqref.to_owned().trim().to_owned()
-  if text == "" {
+  let tokens = xml_whitespace_tokens(sqref)
+  if tokens.length() == 0 {
     raise InvalidXml(msg="sqref empty")
   }
-  let mut first = ""
-  for part in text.split(" ") {
-    let trimmed = part.to_owned().trim().to_owned()
-    if trimmed != "" {
-      first = trimmed
-      break
-    }
-  }
-  if first == "" {
-    raise InvalidXml(msg="sqref invalid")
-  }
   let parts : Array[String] = []
-  for item in first.split(":") {
+  for item in tokens[0].split(":") {
     parts.push(item.to_owned())
   }
-  if parts.length() == 0 {
+  if parts.length() == 0 || parts.length() > 2 {
     raise InvalidXml(msg="sqref invalid")
   }
   let (start_ref, _end_ref) = parse_range_ref_token(parts[0])
