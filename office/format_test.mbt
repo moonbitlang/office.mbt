@@ -519,6 +519,67 @@ fn misdeclare_relationship_content_type(data : BytesView) -> Bytes raise {
 }
 
 ///|
+fn replace_relationship_override_content_type(
+  data : BytesView,
+  part_name : String,
+  replacement : String,
+) -> Bytes raise {
+  let archive = @zip.read(data)
+  let content_types = archive.get("[Content_Types].xml").unwrap()
+  let text = @utf8.decode(content_types, ignore_bom=true)
+  let relationships_content_type = "application/vnd.openxmlformats-package.relationships+xml"
+  let updated = text.replace(
+    old="PartName=\"/\{part_name}\" ContentType=\"\{relationships_content_type}\"",
+    new="PartName=\"/\{part_name}\" ContentType=\"\{replacement}\"",
+  )
+  if updated == text {
+    fail("test could not replace the relationship override for /\{part_name}")
+  }
+  replace_archive_part(data, "[Content_Types].xml", @utf8.encode(updated))
+}
+
+///|
+fn relationship_override_docx(with_part_relationships : Bool) -> Bytes raise {
+  let relationships_content_type = "application/vnd.openxmlformats-package.relationships+xml"
+  let builder = @opc.PackageBuilder::new()
+  // The deliberately wrong Default must be ignored for relationship parts
+  // that have a matching Override (ECMA-376 Part 2, Override-first lookup).
+  builder.add_default("rels", "application/xml")
+  builder.add_default("xml", "application/xml")
+  builder.add_override("/_rels/.rels", relationships_content_type)
+  if with_part_relationships {
+    builder.add_override(
+      "/word/_rels/document.xml.rels", relationships_content_type,
+    )
+  }
+  builder.add_override(
+    "/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+  )
+  builder.add_relationship(
+    "rId1", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "word/document.xml",
+  )
+  if with_part_relationships {
+    builder.add_relationship(
+      "rExternal",
+      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+      "https://example.test/resource",
+      source="word/document.xml",
+      external=true,
+    )
+  }
+  builder.add_part(
+    "word/document.xml",
+    @utf8.encode(
+      (
+        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/><w:sectPr/></w:body></w:document>
+      ),
+    ),
+  )
+  builder.build()
+}
+
+///|
 fn replace_xml_default_content_type(
   data : BytesView,
   replacement : String,
@@ -1232,13 +1293,40 @@ test "detect_format rejects an invalid relationship content type" {
     err =>
       inspect(
         Show::to_string(err).contains(
-          "relationship parts have an invalid default content type: application/octet-stream",
+          "relationship part has an invalid content type: _rels/.rels -> application/octet-stream",
         ),
         content="true",
       )
   } noraise {
     _ => fail("expected an invalid relationship content type")
   }
+}
+
+///|
+test "detect_format applies relationship content-type Overrides before Defaults" {
+  let root_only = relationship_override_docx(false)
+  assert_eq(@office.detect_format("root-override.docx", root_only), Docx)
+
+  let part_owned = relationship_override_docx(true)
+  assert_eq(@office.detect_format("part-override.docx", part_owned), Docx)
+
+  let wrong_root_override = replace_relationship_override_content_type(
+    root_only, "_rels/.rels", "application/xml",
+  )
+  assert_true(
+    detect_format_error("wrong-root-override.docx", wrong_root_override).contains(
+      "relationship part has an invalid content type: _rels/.rels -> application/xml",
+    ),
+  )
+
+  let wrong_part_override = replace_relationship_override_content_type(
+    part_owned, "word/_rels/document.xml.rels", "application/xml",
+  )
+  assert_true(
+    detect_format_error("wrong-part-override.docx", wrong_part_override).contains(
+      "relationship part has an invalid content type: word/_rels/document.xml.rels -> application/xml",
+    ),
+  )
 }
 
 ///|
