@@ -96,40 +96,42 @@ fn normalize_xml_sqref_attr_for_read(
 }
 
 ///|
-fn merge_sqref_row_intervals(entries : Array[(Int, Int)]) -> Array[(Int, Int)] {
-  entries.sort_by((left, right) => {
-    let (left_start, left_end) = left
-    let (right_start, right_end) = right
-    if left_start < right_start {
-      -1
-    } else if left_start > right_start {
-      1
-    } else if left_end < right_end {
-      -1
-    } else if left_end > right_end {
-      1
+fn insert_sqref_row_interval(
+  entries : Array[(Int, Int)],
+  start_row : Int,
+  end_row : Int,
+) -> Unit {
+  let mut index = 0
+  while index < entries.length() {
+    let (_, existing_end) = entries[index]
+    if existing_end + 1 < start_row {
+      index = index + 1
     } else {
-      0
-    }
-  })
-  let merged : Array[(Int, Int)] = []
-  for entry in entries {
-    let (start_row, end_row) = entry
-    if merged.length() == 0 {
-      merged.push(entry)
-      continue
-    }
-    let last_index = merged.length() - 1
-    let (last_start, last_end) = merged[last_index]
-    if start_row <= last_end + 1 {
-      if end_row > last_end {
-        merged[last_index] = (last_start, end_row)
-      }
-    } else {
-      merged.push(entry)
+      break
     }
   }
-  merged
+  if index < entries.length() {
+    let (existing_start, existing_end) = entries[index]
+    if existing_start <= start_row && existing_end >= end_row {
+      return
+    }
+  }
+  let mut merged_start = start_row
+  let mut merged_end = end_row
+  while index < entries.length() {
+    let (existing_start, existing_end) = entries[index]
+    if existing_start > merged_end + 1 {
+      break
+    }
+    if existing_start < merged_start {
+      merged_start = existing_start
+    }
+    if existing_end > merged_end {
+      merged_end = existing_end
+    }
+    ignore(entries.remove(index))
+  }
+  entries.insert(index, (merged_start, merged_end))
 }
 
 ///|
@@ -140,6 +142,7 @@ fn flat_sqref(
   sqref : StringView,
 ) -> Map[Int, Array[(Int, Int)]] raise XlsxError {
   let intervals : Map[Int, Array[(Int, Int)]] = Map([])
+  let seen_rectangles : Map[String, Bool] = Map([])
   for text in xml_whitespace_tokens(sqref) {
     let (min_row, min_col, max_row, max_col) = if text.contains(":") {
       let (min_row, min_col, max_row, max_col) = parse_range_ref(text)
@@ -148,17 +151,19 @@ fn flat_sqref(
       let (row, col) = cell_ref_to_rc(text)
       (row, col, row, col)
     }
+    let rectangle_key = "\{min_row}:\{min_col}:\{max_row}:\{max_col}"
+    if seen_rectangles.contains(rectangle_key) {
+      continue
+    }
+    seen_rectangles[rectangle_key] = true
     for col in min_col..<=max_col {
       let entries = match intervals.get(col) {
         Some(value) => value
         None => []
       }
-      entries.push((min_row, max_row))
+      insert_sqref_row_interval(entries, min_row, max_row)
       intervals[col] = entries
     }
-  }
-  for col, entries in intervals {
-    intervals[col] = merge_sqref_row_intervals(entries)
   }
   intervals
 }
@@ -169,15 +174,22 @@ fn subtract_sqref_row_intervals(
   deletions : Array[(Int, Int)],
 ) -> Array[(Int, Int)] {
   let updated : Array[(Int, Int)] = []
+  let mut delete_index = 0
   for source in existing {
     let (source_start, source_end) = source
+    while delete_index < deletions.length() {
+      let (_, delete_end) = deletions[delete_index]
+      if delete_end < source_start {
+        delete_index = delete_index + 1
+      } else {
+        break
+      }
+    }
     let mut cursor = source_start
     let mut exhausted = false
-    for deletion in deletions {
-      let (delete_start, delete_end) = deletion
-      if delete_end < cursor {
-        continue
-      }
+    let mut scan = delete_index
+    while scan < deletions.length() {
+      let (delete_start, delete_end) = deletions[scan]
       if delete_start > source_end {
         break
       }
@@ -189,7 +201,9 @@ fn subtract_sqref_row_intervals(
         break
       }
       cursor = delete_end + 1
+      scan = scan + 1
     }
+    delete_index = scan
     if !exhausted && cursor <= source_end {
       updated.push((cursor, source_end))
     }
@@ -262,4 +276,22 @@ test "sqref wb: full-grid subtraction stays bounded" {
   let deletions = flat_sqref("A1:XFD1048576")
   let updated = delete_cells_from_sqref("A1:XFD1048576", deletions)
   inspect(updated, content="")
+}
+
+///|
+test "sqref wb: repeated full-grid rectangles are coalesced incrementally" {
+  let refs : Array[String] = []
+  for _ in 0..<1000 {
+    refs.push("A1:XFD1048576")
+  }
+  let intervals = flat_sqref(refs.join(" "))
+  inspect(intervals.length(), content="16384")
+  match intervals.get(1) {
+    Some(entries) => debug_inspect(entries, content="[(1, 1048576)]")
+    None => fail("missing first column interval")
+  }
+  match intervals.get(16384) {
+    Some(entries) => debug_inspect(entries, content="[(1, 1048576)]")
+    None => fail("missing last column interval")
+  }
 }

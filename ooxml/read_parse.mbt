@@ -48,12 +48,13 @@ pub fn attr_value(
     while i < tag_len && is_attr_space(tag[i]) {
       i = i + 1
     }
-    if i >= tag_len || tag[i] != ('"' : UInt16) {
+    if i >= tag_len || (tag[i] != ('"' : UInt16) && tag[i] != ('\'' : UInt16)) {
       continue
     }
+    let quote = tag[i]
     i = i + 1
     let value_start = i
-    while i < tag_len && tag[i] != ('"' : UInt16) {
+    while i < tag_len && tag[i] != quote {
       i = i + 1
     }
     if i >= tag_len {
@@ -80,18 +81,22 @@ pub fn attr_value(
 ///|
 fn first_tag_end(text : StringView) -> Int? {
   let mut i = 0
-  let mut in_quote = false
+  let mut quote : UInt16? = None
   while i < text.length() {
     let ch = text[i]
-    if ch == ('"' : UInt16) {
-      in_quote = !in_quote
-    } else if !in_quote {
-      if ch == ('<' : UInt16) {
-        return None
-      }
-      if ch == ('>' : UInt16) {
-        return Some(i)
-      }
+    match quote {
+      Some(value) => if ch == value { quote = None }
+      None =>
+        if ch == ('"' : UInt16) || ch == ('\'' : UInt16) {
+          quote = Some(ch)
+        } else {
+          if ch == ('<' : UInt16) {
+            return None
+          }
+          if ch == ('>' : UInt16) {
+            return Some(i)
+          }
+        }
     }
     i = i + 1
   }
@@ -191,6 +196,10 @@ test "ooxml read_parse wb: attr_value parser branches" {
   )
   debug_inspect(attr_value("foo=bar", "foo"), content="None")
   debug_inspect(attr_value("bar=\"ok\"", "baz"), content="None")
+  debug_inspect(
+    attr_value("type='whole' sqref = ' A1 '", "sqref"),
+    content="Some(\" A1 \")",
+  )
 
   try attr_value("foo=\"unterminated", "foo") catch {
     e => inspect(e is InvalidXml(_), content="true")

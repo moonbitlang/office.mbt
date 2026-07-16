@@ -128,12 +128,13 @@ fn replace_attr_value_in_open_tag(
     while pos < text.length() && is_xml_attr_space_unit(text[pos]) {
       pos = pos + 1
     }
-    if pos >= text.length() || text[pos] != '"' {
+    if pos >= text.length() || (text[pos] != '"' && text[pos] != '\'') {
       return None
     }
+    let quote = text[pos]
     pos = pos + 1
     let current_value_start = pos
-    while pos < text.length() && text[pos] != '"' {
+    while pos < text.length() && text[pos] != quote {
       pos = pos + 1
     }
     if pos >= text.length() {
@@ -214,5 +215,14 @@ test "ooxml_utils: replace_attr_value_in_open_tag ignores prefixed names" {
   debug_inspect(
     replace_attr_value_in_open_tag(xml, "sqref", "B2"),
     content="Some(\"<a x:sqref=\\\"keep\\\" sqref = \\\"B2\\\">x</a>\")",
+  )
+}
+
+///|
+test "ooxml_utils: replace_attr_value_in_open_tag supports mixed quotes" {
+  let xml = "<a type='whole' x:sqref='keep' sqref = ' A1'>x</a>"
+  debug_inspect(
+    replace_attr_value_in_open_tag(xml, "sqref", "B2"),
+    content="Some(\"<a type='whole' x:sqref='keep' sqref = 'B2'>x</a>\")",
   )
 }
