@@ -22,6 +22,80 @@ fn xml_whitespace_tokens(value : StringView) -> Array[String] {
 }
 
 ///|
+fn invalid_coordinate_xml(field : StringView) -> Unit raise XlsxError {
+  raise InvalidXml(msg="\{field.to_owned()} reference invalid")
+}
+
+///|
+fn validate_cell_ref_for_read(
+  value : StringView,
+  field : StringView,
+) -> String raise XlsxError {
+  if try_parse_cell_ref_parts(value) is None {
+    invalid_coordinate_xml(field)
+  }
+  value.to_owned()
+}
+
+///|
+fn validate_cell_or_range_ref_for_read(
+  value : StringView,
+  field : StringView,
+) -> String raise XlsxError {
+  let mut part_count = 0
+  for part in value.split(":") {
+    part_count = part_count + 1
+    if part_count > 2 {
+      invalid_coordinate_xml(field)
+    }
+    ignore(validate_cell_ref_for_read(part, field))
+  }
+  if part_count == 0 {
+    invalid_coordinate_xml(field)
+  }
+  value.to_owned()
+}
+
+///|
+fn normalize_sqref_for_read(
+  value : StringView,
+  field : StringView,
+) -> String raise XlsxError {
+  let tokens = xml_whitespace_tokens(value)
+  if tokens.length() == 0 {
+    invalid_coordinate_xml(field)
+  }
+  for token in tokens {
+    ignore(validate_cell_or_range_ref_for_read(token, field))
+  }
+  tokens.join(" ")
+}
+
+///|
+fn normalize_xml_sqref_attr_for_read(
+  xml : StringView,
+  tag_name : StringView,
+  field : StringView,
+) -> String raise XlsxError {
+  let tag = match tag_attributes_in(xml, tag_name) {
+    Some(value) => value
+    None => raise InvalidXml(msg="\{field.to_owned()} tag missing")
+  }
+  let raw = match attr_value(tag, "sqref") {
+    Some(value) => unescape_xml_text(value)
+    None => raise InvalidXml(msg="\{field.to_owned()} sqref missing")
+  }
+  let normalized = normalize_sqref_for_read(raw, field)
+  if normalized == raw {
+    return xml.to_owned()
+  }
+  match replace_attr_value_in_open_tag(xml, "sqref", normalized) {
+    Some(value) => value
+    None => raise InvalidXml(msg="\{field.to_owned()} sqref invalid")
+  }
+}
+
+///|
 fn flat_sqref(
   sqref : StringView,
 ) -> Map[Int, Array[(Int, Int)]] raise XlsxError {

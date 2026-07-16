@@ -349,7 +349,7 @@ test "hyperlink remove clears range reference" {
 }
 
 ///|
-test "hyperlink invalid ref tolerated on read" {
+test "hyperlink invalid ref rejected on read" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell_hyperlink(
@@ -391,22 +391,10 @@ test "hyperlink invalid ref tolerated on read" {
   let updated_bytes = @zip.write(updated_archive) catch {
     err => fail("zip write failed: \{repr(err)}")
   }
-  let parsed = @xlsx.read(updated_bytes)
-  let get_result : Result[@xlsx.Hyperlink?, Error] = Ok(
-    parsed.get_cell_hyperlink("Sheet1", "A1"),
-  ) catch {
-    e => Err(e)
+  let result : Result[@xlsx.Workbook, Error] = Ok(@xlsx.read(updated_bytes)) catch {
+    error => Err(error)
   }
-  inspect(get_result is Err(@xlsx.XlsxError::InvalidCellRef(_)), content="true")
-  let remove_result : Result[Unit, Error] = Ok(
-    parsed.set_cell_hyperlink("Sheet1", "B2", "", Unset),
-  ) catch {
-    e => Err(e)
-  }
-  inspect(
-    remove_result is Err(@xlsx.XlsxError::InvalidCellRef(_)),
-    content="true",
-  )
+  inspect(result is Err(@xlsx.XlsxError::InvalidXml(_)), content="true")
 }
 
 ///|

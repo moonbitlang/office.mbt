@@ -85,7 +85,13 @@ fn parse_worksheet(
           None => None
         }
         let ref_value = match attr_value(open_tag, "ref") {
-          Some(value) => Some(unescape_xml_text(value))
+          Some(value) =>
+            Some(
+              validate_cell_or_range_ref_for_read(
+                unescape_xml_text(value),
+                "formula",
+              ),
+            )
           None => None
         }
         let si_value = match attr_value(open_tag, "si") {
@@ -201,7 +207,8 @@ fn parse_worksheet(
         }
       }
     }
-    let (row, col) = cell_ref_to_rc(ref_value)
+    let valid_ref = validate_cell_ref_for_read(ref_value, "cell")
+    let (row, col) = cell_ref_to_rc(valid_ref)
     let canonical = cell_ref_from(row, col)
     cells.push({
       reference: canonical,
