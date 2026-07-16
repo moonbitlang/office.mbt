@@ -57,16 +57,32 @@ pub fn zip_archive_entries(
   let entries : StableStringMap[BytesView] = SortedMap([])
   let canonical_names : StableStringMap[String] = SortedMap([])
   let logical_names : StableStringMap[String] = SortedMap([])
+  let physical_names : StableStringMap[Bool] = SortedMap([])
   let part_names = @opc.PartNameRegistry::new()
   let mut name_chars = 0
   for pair in source {
     let (name, bytes) = pair
     name_chars = checked_zip_entry_name_total(name_chars, name)
+    register_physical_zip_name(physical_names, name)
     insert_zip_entry(
       entries, canonical_names, logical_names, part_names, name, bytes,
     )
   }
   { entries, canonical_names, logical_names }
+}
+
+///|
+/// Registers every physical ZIP record before directory metadata is removed
+/// from the OPC part projection. Directory identity is exact and
+/// case-sensitive; file aliases are checked separately as OPC PartNames.
+fn register_physical_zip_name(
+  physical_names : StableStringMap[Bool],
+  name : String,
+) -> Unit raise DocxError {
+  if physical_names.contains(name) {
+    raise InvalidZip(message="duplicate ZIP entry name: \{name}")
+  }
+  physical_names[name] = true
 }
 
 ///|
@@ -132,10 +148,12 @@ pub fn open_zip_archive(
   let entries : StableStringMap[BytesView] = SortedMap([])
   let canonical_names : StableStringMap[String] = SortedMap([])
   let logical_names : StableStringMap[String] = SortedMap([])
+  let physical_names : StableStringMap[Bool] = SortedMap([])
   let part_names = @opc.PartNameRegistry::new()
   let mut name_chars = 0
   for entry in archive.entries() {
     name_chars = checked_zip_entry_name_total(name_chars, entry.name())
+    register_physical_zip_name(physical_names, entry.name())
     insert_zip_entry(
       entries,
       canonical_names,

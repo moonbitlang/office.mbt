@@ -56,23 +56,11 @@ fn unzip_write_entries(
 fn zip_archive_from_write_entries(
   entries : Array[ZipWriteEntry],
 ) -> ZipArchive raise DocxError {
-  let map : StableStringMap[BytesView] = SortedMap([])
-  let physical_names : StableStringMap[String] = SortedMap([])
+  let source : Array[(String, BytesView)] = []
   for entry in entries {
-    let canonical_name = entry.path.to_lower()
-    match physical_names.get(canonical_name) {
-      Some(existing) if existing == entry.path =>
-        raise InvalidZip(message="duplicate ZIP entry name: \{entry.path}")
-      Some(existing) =>
-        raise InvalidZip(
-          message="duplicate ZIP entry names after case normalization: \{existing}, \{entry.path}",
-        )
-      None => ()
-    }
-    physical_names[canonical_name] = entry.path
-    map[entry.path] = entry.content
+    source.push((entry.path, entry.content))
   }
-  @zip.zip_archive_entries(map.iter())
+  @zip.zip_archive_entries(source.iter())
 }
 
 ///|
