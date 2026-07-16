@@ -1443,6 +1443,12 @@ fn check_relationships(
       findings.add("invalid Relationships part name: \{findings.text(name)}")
       continue
     }
+    if is_relationship_part_name(source) {
+      findings.add(
+        "relationship part \{findings.text(name)} must not describe another Relationships part: \{findings.text(source)}",
+      )
+      continue
+    }
     if !contains_part(canonical_names, source) {
       findings.add(
         "relationship part \{findings.text(name)} describes missing source part: \{findings.text(source)}",

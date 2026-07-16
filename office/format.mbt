@@ -1360,7 +1360,12 @@ fn validate_package_structure(
     match @opc.relationship_source_part_name(relationship_part) {
       Some("") => ()
       Some(source) =>
-        if !document_parts.contains(opc_part_key(source)) {
+        if @opc.is_relationship_part_name(source) {
+          findings.push(
+            "relationship part must not describe another relationship part: \{relationship_part} -> \{source}",
+          )
+          continue
+        } else if !document_parts.contains(opc_part_key(source)) {
           findings.push(
             "relationship part has no source part: \{relationship_part} -> \{source}",
           )

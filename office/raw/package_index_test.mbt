@@ -1384,6 +1384,27 @@ test "raw resolver rejects collisions and namespace-spoofed OPC metadata before 
 }
 
 ///|
+test "raw resolver rejects relationships of Relationships parts" {
+  let nested = raw_test_add_entry(
+    @word.new_blank_docx(),
+    "_rels/_rels/.rels.rels",
+    @utf8.encode(
+      "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"/>",
+    ),
+  )
+  try @raw.raw_inventory("nested.docx", nested) catch {
+    RawError(code~, message~, ..) => {
+      assert_eq(code, "office.raw.invalid_relationship")
+      assert_true(
+        message.contains("must not describe another relationship part"),
+      )
+    }
+  } noraise {
+    _ => fail("expected a relationships-of-Relationships part to be rejected")
+  }
+}
+
+///|
 test "raw inventory enforces ST_Extension on unused defaults" {
   let original = @word.new_blank_docx()
   for extension in ["é", "bad%GG"] {
