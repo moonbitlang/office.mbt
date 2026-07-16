@@ -61,32 +61,45 @@ test "options long time pattern" {
 }
 
 ///|
-test "options enforce unzip size limit" {
+test "read limits enforce aggregate expansion" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let bytes = @xlsx.write(workbook)
-  let opts = @xlsx.Options::with_values(unzip_size_limit=1)
-  let result : Result[@xlsx.Workbook, Error] = Ok(
-    @xlsx.read(bytes, options=opts),
-  ) catch {
+  let limits = @xlsx.ReadLimits::with_values(
+    max_entry_uncompressed_bytes=1,
+    max_total_uncompressed_bytes=1,
+    max_xml_part_bytes=1,
+  )
+  let result : Result[@xlsx.Workbook, Error] = Ok(@xlsx.read(bytes, limits~)) catch {
     e => Err(e)
   }
-  guard result is Err(_) else { fail("expected unzip size limit error") }
+  inspect(result is Err(@xlsx.ResourceLimitExceeded(..)), content="true")
 }
 
 ///|
-test "options invalid unzip xml size limit" {
-  let workbook = @xlsx.Workbook::new()
-  ignore(workbook.add_sheet("Sheet1"))
-  let bytes = @xlsx.write(workbook)
-  let opts = @xlsx.Options::with_values(
-    unzip_size_limit=2,
-    unzip_xml_size_limit=3,
-  )
-  let result : Result[@xlsx.Workbook, Error] = Ok(
-    @xlsx.read(bytes, options=opts),
+test "read limits reject XML ceiling above entry ceiling" {
+  let result : Result[@xlsx.ReadLimits, Error] = Ok(
+    @xlsx.ReadLimits::with_values(
+      max_entry_uncompressed_bytes=2,
+      max_total_uncompressed_bytes=4,
+      max_xml_part_bytes=3,
+    ),
   ) catch {
     e => Err(e)
   }
-  inspect(result is Err(@xlsx.XlsxError::InvalidOptions(_)), content="true")
+  inspect(result is Err(@xlsx.InvalidOptions(_)), content="true")
+}
+
+///|
+test "default read limits expose the complete ZIP policy" {
+  let limits = @xlsx.ReadLimits::new()
+  assert_eq(limits.max_package_bytes(), 128 * 1024 * 1024)
+  assert_eq(limits.max_archive_entries(), 8192)
+  assert_eq(limits.max_entry_uncompressed_bytes(), 64 * 1024 * 1024)
+  assert_eq(limits.max_total_uncompressed_bytes(), 256 * 1024 * 1024)
+  assert_eq(
+    limits.max_total_preserved_source_bytes(),
+    128 * 1024 * 1024 + 65_535,
+  )
+  assert_eq(limits.max_xml_part_bytes(), 16 * 1024 * 1024)
 }

@@ -152,14 +152,18 @@ test "mbtexcel read options unzip limits" {
   let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   let bytes = @mbtexcel.write(workbook)
-  let opts = @xlsx.Options::with_values(unzip_size_limit=1)
+  let limits = @xlsx.ReadLimits::with_values(
+    max_entry_uncompressed_bytes=1,
+    max_total_uncompressed_bytes=1,
+    max_xml_part_bytes=1,
+  )
   let result : Result[@xlsx.Workbook, Error] = Ok(
-    @mbtexcel.read(bytes, options=opts),
+    @mbtexcel.read(bytes, limits~),
   ) catch {
     e => Err(e)
   }
-  guard result is Err(@xlsx.InvalidOptions(_)) else {
-    fail("expected unzip size limit error")
+  guard result is Err(@xlsx.ResourceLimitExceeded(..)) else {
+    fail("expected XLSX read resource limit error")
   }
 }
 

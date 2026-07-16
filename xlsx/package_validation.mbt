@@ -17,15 +17,34 @@
 ///
 /// This is a fast, dependency-free complement to the Microsoft OpenXML
 /// SDK validator: it runs entirely in MoonBit, so it can be asserted on
-/// every workbook a test generates.
-pub fn validate_ooxml_package(bytes : BytesView) -> Array[String] {
-  let problems : Array[String] = []
-  let archive = @zip.read(bytes) catch {
-    err => {
-      problems.push("archive is not a readable zip: \{repr(err)}")
-      return problems
-    }
+/// every workbook a test generates. An unreadable ZIP is returned as a stable
+/// finding; resource-policy violations raise `ResourceLimitExceeded`.
+pub fn validate_ooxml_package(
+  bytes : BytesView,
+  limits? : ReadLimits = ReadLimits::new(),
+) -> Array[String] raise XlsxError {
+  let archive = read_limited_archive(bytes, limits) catch {
+    InvalidPackage(_) => return ["archive is not a readable zip"]
+    error => raise error
   }
+  validate_ooxml_bounded_archive(archive, limits~)
+}
+
+///|
+/// Validates an already-inflated OOXML package without decompressing it again.
+/// The same pristine bounded-provenance contract as `read_bounded_archive`
+/// applies.
+pub fn validate_ooxml_bounded_archive(
+  archive : @zip.Archive,
+  limits? : ReadLimits = ReadLimits::new(),
+) -> Array[String] raise XlsxError {
+  require_bounded_archive(archive, limits)
+  validate_ooxml_archive(archive)
+}
+
+///|
+fn validate_ooxml_archive(archive : @zip.Archive) -> Array[String] {
+  let problems : Array[String] = []
   let parts : Map[String, Int] = Map([])
   for entry in archive.entries() {
     let name = entry.name()

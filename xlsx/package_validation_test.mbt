@@ -66,3 +66,51 @@ test "validate_ooxml_package flags a corrupt archive" {
     content="true",
   )
 }
+
+///|
+test "OOXML validation reuses bounded archives and rejects unbounded ones" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let bytes = @xlsx.write(workbook)
+  let limits = @xlsx.ReadLimits::new()
+  let bounded = @zip.read_limited(
+    bytes,
+    max_package_bytes=limits.max_package_bytes(),
+    max_entries=limits.max_archive_entries(),
+    max_entry_uncompressed_bytes=limits.max_entry_uncompressed_bytes(),
+    max_total_uncompressed_bytes=limits.max_total_uncompressed_bytes(),
+    max_total_preserved_source_bytes=limits.max_total_preserved_source_bytes(),
+  )
+  debug_inspect(
+    @xlsx.validate_ooxml_bounded_archive(bounded, limits~),
+    content=(
+      #|[]
+    ),
+  )
+  let unbounded : Result[Array[String], Error] = Ok(
+    @xlsx.validate_ooxml_bounded_archive(@zip.read(bytes)),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(unbounded is Err(@xlsx.UnboundedArchive), content="true")
+}
+
+///|
+test "OOXML validation applies XML limits before scanning relationships" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let limits = @xlsx.ReadLimits::with_values(max_xml_part_bytes=1)
+  let result : Result[Array[String], Error] = Ok(
+    @xlsx.validate_ooxml_package(@xlsx.write(workbook), limits~),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="xml_part_bytes")
+      assert_eq(limit, 1)
+      assert_true(actual > limit)
+    }
+    _ => fail("expected validation XML limit")
+  }
+}

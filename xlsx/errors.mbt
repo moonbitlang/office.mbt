@@ -47,4 +47,7 @@ pub suberror XlsxError {
   InvalidPasswordLength(len~ : Int)
   UnsupportedEncryption(msg~ : String)
   UnsupportedFeature(msg~ : String)
+  InvalidPackage(msg~ : String)
+  UnboundedArchive
+  ResourceLimitExceeded(kind~ : String, limit~ : Int, actual~ : Int)
 } derive(Debug)

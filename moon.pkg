@@ -1,5 +1,6 @@
 import {
   "bobzhang/mbtexcel/xlsx",
+  "bobzhang/mbtexcel/zip",
   "moonbitlang/x/time",
   "moonbitlang/async/io" @async/io,
 }
