@@ -424,17 +424,21 @@ test "zip write_limited streams preserved central-heavy records" {
   let source = central_heavy_preservation_fixture(256, 4096)
   let archive = read_limited(
     source,
+    max_package_bytes=source.length(),
     max_entries=256,
     max_entry_uncompressed_bytes=0,
     max_total_uncompressed_bytes=0,
+    max_total_preserved_source_bytes=source.length(),
   )
   assert_true(archive.replace("entry-0.xml", b"replacement"))
   let exact = write(archive)
   let parsed = read_limited(
     exact,
+    max_package_bytes=exact.length(),
     max_entries=256,
     max_entry_uncompressed_bytes=16,
     max_total_uncompressed_bytes=16,
+    max_total_preserved_source_bytes=exact.length(),
   )
   assert_eq(parsed.entries().length(), 256)
   assert_eq(parsed.get("entry-0.xml"), Some(b"replacement"))
@@ -455,14 +459,40 @@ test "zip write_limited streams preserved central-heavy records" {
 }
 
 ///|
+test "zip read_limited bounds preserved records before copying" {
+  let source = central_heavy_preservation_fixture(4, 4096)
+  try
+    read_limited(
+      source,
+      max_package_bytes=source.length(),
+      max_entries=4,
+      max_entry_uncompressed_bytes=0,
+      max_total_uncompressed_bytes=0,
+      max_total_preserved_source_bytes=1024,
+    )
+  catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) => {
+      assert_eq(kind, "total_preserved_source_bytes")
+      assert_eq(limit, 1024)
+      assert_true(actual > limit)
+    }
+    error => fail("expected preserved-source limit, got \{repr(error)}")
+  } noraise {
+    _ => fail("expected central metadata to exceed its preserved-source limit")
+  }
+}
+
+///|
 #cfg(target="native")
 test "zip sizing rejects near-envelope preserved records before allocation" {
   let source = central_heavy_preservation_fixture(1536, 65_500)
   let archive = read_limited(
     source,
+    max_package_bytes=source.length(),
     max_entries=1536,
     max_entry_uncompressed_bytes=0,
     max_total_uncompressed_bytes=0,
+    max_total_preserved_source_bytes=source.length(),
   )
   assert_true(archive.replace("entry-0.xml", b"replacement"))
   let expected_limit = 96 * 1024 * 1024

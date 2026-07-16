@@ -54,9 +54,11 @@ test "zip deflate roundtrip (data descriptor)" {
   assert_true(entry.data_descriptor())
   let limited = @zip.read_limited(
     bytes,
+    max_package_bytes=bytes.length(),
     max_entries=1,
     max_entry_uncompressed_bytes=5,
     max_total_uncompressed_bytes=5,
+    max_total_preserved_source_bytes=bytes.length(),
   )
   assert_true(limited.entries()[0].compression() is Deflate)
   assert_true(limited.entries()[0].data_descriptor())
@@ -114,9 +116,11 @@ test "zip read_limited rejects entry count and aggregate expansion" {
   try
     @zip.read_limited(
       bytes,
+      max_package_bytes=bytes.length(),
       max_entries=1,
       max_entry_uncompressed_bytes=8,
       max_total_uncompressed_bytes=8,
+      max_total_preserved_source_bytes=bytes.length(),
     )
   catch {
     ResourceLimitExceeded(kind~, limit~, actual~) => {
@@ -131,9 +135,11 @@ test "zip read_limited rejects entry count and aggregate expansion" {
   try
     @zip.read_limited(
       bytes,
+      max_package_bytes=bytes.length(),
       max_entries=2,
       max_entry_uncompressed_bytes=8,
       max_total_uncompressed_bytes=7,
+      max_total_preserved_source_bytes=bytes.length(),
     )
   catch {
     ResourceLimitExceeded(kind~, limit~, actual~) => {
@@ -148,21 +154,50 @@ test "zip read_limited rejects entry count and aggregate expansion" {
 }
 
 ///|
+test "zip read_limited rejects package bytes before parsing" {
+  let archive = @zip.Archive::new()
+  archive.add("a.txt", b"payload")
+  let bytes = @zip.write(archive)
+  try
+    @zip.read_limited(
+      bytes,
+      max_package_bytes=bytes.length() - 1,
+      max_entries=1,
+      max_entry_uncompressed_bytes=7,
+      max_total_uncompressed_bytes=7,
+      max_total_preserved_source_bytes=bytes.length(),
+    )
+  catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) => {
+      assert_eq(kind, "package_bytes")
+      assert_eq(limit, bytes.length() - 1)
+      assert_eq(actual, bytes.length())
+    }
+    error => fail("expected package-byte limit, got \{repr(error)}")
+  } noraise {
+    _ => fail("expected the package-byte limit to reject the source")
+  }
+}
+
+///|
 test "bounded ZIP provenance survives forks and invalidates on mutation" {
   let source_archive = @zip.Archive::new()
   source_archive.add("a.txt", b"bounded")
   let source = @zip.write(source_archive)
   let bounded = @zip.read_limited(
     source,
+    max_package_bytes=source.length(),
     max_entries=4,
     max_entry_uncompressed_bytes=16,
     max_total_uncompressed_bytes=32,
+    max_total_preserved_source_bytes=source.length(),
   )
   assert_eq(
     bounded.bounded_source_package_size(
       max_entries=4,
       max_entry_uncompressed_bytes=16,
       max_total_uncompressed_bytes=32,
+      max_total_preserved_source_bytes=source.length(),
     ),
     Some(source.length()),
   )
@@ -171,6 +206,16 @@ test "bounded ZIP provenance survives forks and invalidates on mutation" {
       max_entries=3,
       max_entry_uncompressed_bytes=16,
       max_total_uncompressed_bytes=32,
+      max_total_preserved_source_bytes=source.length(),
+    ),
+    None,
+  )
+  assert_eq(
+    bounded.bounded_source_package_size(
+      max_entries=4,
+      max_entry_uncompressed_bytes=16,
+      max_total_uncompressed_bytes=32,
+      max_total_preserved_source_bytes=source.length() - 1,
     ),
     None,
   )
@@ -181,6 +226,7 @@ test "bounded ZIP provenance survives forks and invalidates on mutation" {
       max_entries=4,
       max_entry_uncompressed_bytes=16,
       max_total_uncompressed_bytes=32,
+      max_total_preserved_source_bytes=source.length(),
     ),
     Some(source.length()),
   )
@@ -190,6 +236,7 @@ test "bounded ZIP provenance survives forks and invalidates on mutation" {
       max_entries=4,
       max_entry_uncompressed_bytes=16,
       max_total_uncompressed_bytes=32,
+      max_total_preserved_source_bytes=source.length(),
     ),
     None,
   )
@@ -198,6 +245,7 @@ test "bounded ZIP provenance survives forks and invalidates on mutation" {
       max_entries=4,
       max_entry_uncompressed_bytes=16,
       max_total_uncompressed_bytes=32,
+      max_total_preserved_source_bytes=source.length(),
     ),
     None,
   )
@@ -228,9 +276,11 @@ test "zip write_limited fails before output growth crosses the ceiling" {
 
   let preserved = @zip.read_limited(
     exact,
+    max_package_bytes=exact.length(),
     max_entries=1,
     max_entry_uncompressed_bytes=10,
     max_total_uncompressed_bytes=10,
+    max_total_preserved_source_bytes=exact.length(),
   )
   try @zip.write_limited(preserved, max_output_bytes=8) catch {
     OutputLimitExceeded(limit~) => assert_eq(limit, 8)
@@ -247,11 +297,14 @@ test "zip local-record overlap validation scales to large valid archives" {
   for index in 0..<entry_count {
     archive.add("entry-\{index}.txt", b"")
   }
+  let serialized = @zip.write(archive)
   let parsed = @zip.read_limited(
-    @zip.write(archive),
+    serialized,
+    max_package_bytes=serialized.length(),
     max_entries=entry_count,
     max_entry_uncompressed_bytes=0,
     max_total_uncompressed_bytes=0,
+    max_total_preserved_source_bytes=serialized.length(),
   )
   assert_eq(parsed.entries().length(), entry_count)
 }
@@ -293,9 +346,11 @@ test "zip read_limited rejects deflate output beyond a lying declaration" {
   try
     @zip.read_limited(
       Bytes::from_array(raw),
+      max_package_bytes=raw.length(),
       max_entries=1,
       max_entry_uncompressed_bytes=32,
       max_total_uncompressed_bytes=32,
+      max_total_preserved_source_bytes=raw.length(),
     )
   catch {
     ResourceLimitExceeded(kind~, limit~, actual~) => {
@@ -334,9 +389,11 @@ test "zip read_limited rejects forged compressed sizes without panicking" {
   try
     @zip.read_limited(
       Bytes::from_array(raw),
+      max_package_bytes=raw.length(),
       max_entries=1,
       max_entry_uncompressed_bytes=64,
       max_total_uncompressed_bytes=64,
+      max_total_preserved_source_bytes=raw.length(),
     )
   catch {
     OutOfBounds(..) => ()

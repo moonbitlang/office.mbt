@@ -88,13 +88,22 @@ test "archive boundary checks serialized, entry, and aggregate limits" {
   let source = @zip.write(source_archive)
   let bounded = @zip.read_limited(
     source,
+    max_package_bytes=source.length(),
     max_entries=1,
     max_entry_uncompressed_bytes=1,
     max_total_uncompressed_bytes=1,
+    max_total_preserved_source_bytes=source.length(),
   )
   assert_eq(
     wb_raw_archive_limit_kind(() => {
-      check_bounded_raw_archive_limits(bounded, source.length() - 1, 1, 1, 1)
+      check_bounded_raw_archive_limits(
+        bounded,
+        source.length() - 1,
+        1,
+        1,
+        1,
+        source.length(),
+      )
     }),
     "package_bytes",
   )
@@ -102,14 +111,28 @@ test "archive boundary checks serialized, entry, and aggregate limits" {
   assert_true(changed.replace("bounded", b"y"))
   assert_eq(
     wb_raw_archive_limit_kind(() => {
-      check_bounded_raw_archive_limits(changed, source.length(), 1, 1, 1)
+      check_bounded_raw_archive_limits(
+        changed,
+        source.length(),
+        1,
+        1,
+        1,
+        source.length(),
+      )
     }),
     "bounded_archive_source",
   )
   let unbounded = @zip.read(source)
   assert_eq(
     wb_raw_archive_limit_kind(() => {
-      check_bounded_raw_archive_limits(unbounded, source.length(), 1, 1, 1)
+      check_bounded_raw_archive_limits(
+        unbounded,
+        source.length(),
+        1,
+        1,
+        1,
+        source.length(),
+      )
     }),
     "bounded_archive_source",
   )

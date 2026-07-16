@@ -81,10 +81,17 @@ const DEFAULT_MAX_XML_TOKEN_CHARS : Int = 4 * 1024 * 1024
 const DEFAULT_MAX_ZIP_ENTRIES : Int = 4096
 
 ///|
+const DEFAULT_MAX_ZIP_PACKAGE_BYTES : Int = 64 * 1024 * 1024
+
+///|
 const DEFAULT_MAX_ZIP_ENTRY_UNCOMPRESSED_BYTES : Int = 32 * 1024 * 1024
 
 ///|
 const DEFAULT_MAX_ZIP_TOTAL_UNCOMPRESSED_BYTES : Int = 128 * 1024 * 1024
+
+///|
+const DEFAULT_MAX_ZIP_TOTAL_PRESERVED_SOURCE_BYTES : Int = 64 * 1024 * 1024 +
+  65_535
 
 ///|
 const DEFAULT_MAX_ZIP_ENTRY_NAME_CHARS : Int = 65_535
@@ -107,9 +114,11 @@ const MAX_OPC_ZIP_ENTRY_NAME_BYTES_WITHOUT_METADATA : Int = 65_493
 /// separate from rendered findings so attacker-controlled part names cannot
 /// forge or hide resource exhaustion by changing diagnostic text.
 pub(all) enum DocxValidationResourceLimit {
+  ZipPackageBytes
   ZipEntries
   ZipEntryUncompressedBytes
   ZipTotalUncompressedBytes
+  ZipTotalPreservedSourceBytes
   ZipEntryNameCharacters
   ZipTotalEntryNameCharacters
   XmlSourceUnits
@@ -125,9 +134,11 @@ pub fn DocxValidationResourceLimit::name(
   self : DocxValidationResourceLimit,
 ) -> String {
   match self {
+    ZipPackageBytes => "zip-package-bytes"
     ZipEntries => "zip-entry-count"
     ZipEntryUncompressedBytes => "zip-entry-uncompressed-bytes"
     ZipTotalUncompressedBytes => "zip-total-uncompressed-bytes"
+    ZipTotalPreservedSourceBytes => "zip-total-preserved-source-bytes"
     ZipEntryNameCharacters => "zip-entry-name-characters"
     ZipTotalEntryNameCharacters => "zip-total-entry-name-characters"
     XmlSourceUnits => "xml-source-units"
@@ -301,9 +312,11 @@ fn xml_validation_resource_limit(
 ///|
 fn zip_validation_resource_limit(kind : String) -> DocxValidationResourceLimit? {
   match kind {
+    "package_bytes" => Some(ZipPackageBytes)
     "entry_count" => Some(ZipEntries)
     "entry_uncompressed_bytes" => Some(ZipEntryUncompressedBytes)
     "total_uncompressed_bytes" => Some(ZipTotalUncompressedBytes)
+    "total_preserved_source_bytes" => Some(ZipTotalPreservedSourceBytes)
     _ => None
   }
 }
@@ -443,9 +456,11 @@ pub fn validate_docx_package_limited(
   data : BytesView,
   max_findings~ : Int,
   max_message_chars~ : Int,
+  max_zip_package_bytes? : Int = DEFAULT_MAX_ZIP_PACKAGE_BYTES,
   max_zip_entries? : Int = DEFAULT_MAX_ZIP_ENTRIES,
   max_zip_entry_uncompressed_bytes? : Int = DEFAULT_MAX_ZIP_ENTRY_UNCOMPRESSED_BYTES,
   max_zip_total_uncompressed_bytes? : Int = DEFAULT_MAX_ZIP_TOTAL_UNCOMPRESSED_BYTES,
+  max_zip_total_preserved_source_bytes? : Int = DEFAULT_MAX_ZIP_TOTAL_PRESERVED_SOURCE_BYTES,
   max_zip_entry_name_chars? : Int = DEFAULT_MAX_ZIP_ENTRY_NAME_CHARS,
   max_zip_total_entry_name_chars? : Int = DEFAULT_MAX_ZIP_TOTAL_ENTRY_NAME_CHARS,
   max_xml_source_units? : Int = DEFAULT_MAX_XML_SOURCE_UNITS,
@@ -457,9 +472,11 @@ pub fn validate_docx_package_limited(
     data,
     max_findings~,
     max_message_chars~,
+    max_zip_package_bytes~,
     max_zip_entries~,
     max_zip_entry_uncompressed_bytes~,
     max_zip_total_uncompressed_bytes~,
+    max_zip_total_preserved_source_bytes~,
     max_zip_entry_name_chars~,
     max_zip_total_entry_name_chars~,
     max_xml_source_units~,
@@ -478,9 +495,11 @@ pub fn validate_docx_package_report_limited(
   data : BytesView,
   max_findings~ : Int,
   max_message_chars~ : Int,
+  max_zip_package_bytes? : Int = DEFAULT_MAX_ZIP_PACKAGE_BYTES,
   max_zip_entries? : Int = DEFAULT_MAX_ZIP_ENTRIES,
   max_zip_entry_uncompressed_bytes? : Int = DEFAULT_MAX_ZIP_ENTRY_UNCOMPRESSED_BYTES,
   max_zip_total_uncompressed_bytes? : Int = DEFAULT_MAX_ZIP_TOTAL_UNCOMPRESSED_BYTES,
+  max_zip_total_preserved_source_bytes? : Int = DEFAULT_MAX_ZIP_TOTAL_PRESERVED_SOURCE_BYTES,
   max_zip_entry_name_chars? : Int = DEFAULT_MAX_ZIP_ENTRY_NAME_CHARS,
   max_zip_total_entry_name_chars? : Int = DEFAULT_MAX_ZIP_TOTAL_ENTRY_NAME_CHARS,
   max_xml_source_units? : Int = DEFAULT_MAX_XML_SOURCE_UNITS,
@@ -494,6 +513,11 @@ pub fn validate_docx_package_report_limited(
   )
   let archive = @mbtzip.read_limited(
     data,
+    max_package_bytes=if max_zip_package_bytes > 0 {
+      max_zip_package_bytes
+    } else {
+      0
+    },
     max_entries=if max_zip_entries > 0 { max_zip_entries } else { 0 },
     max_entry_uncompressed_bytes=if max_zip_entry_uncompressed_bytes > 0 {
       max_zip_entry_uncompressed_bytes
@@ -502,6 +526,11 @@ pub fn validate_docx_package_report_limited(
     },
     max_total_uncompressed_bytes=if max_zip_total_uncompressed_bytes > 0 {
       max_zip_total_uncompressed_bytes
+    } else {
+      0
+    },
+    max_total_preserved_source_bytes=if max_zip_total_preserved_source_bytes > 0 {
+      max_zip_total_preserved_source_bytes
     } else {
       0
     },

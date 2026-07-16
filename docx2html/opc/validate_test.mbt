@@ -94,6 +94,24 @@ test "explicit ZIP directory records are valid package metadata" {
 ///|
 test "byte-backed OPC validation bounds ZIP inflation before XML parsing" {
   let data = minimal_docx()
+  let package_report = @opc.validate_docx_package_report_limited(
+    data,
+    max_findings=8,
+    max_message_chars=1,
+    max_zip_package_bytes=data.length() - 1,
+  )
+  assert_true(package_report.resource_limit() is Some(ZipPackageBytes))
+  assert_eq(package_report.main_document_part(), None)
+  let preserved_report = @opc.validate_docx_package_report_limited(
+    data,
+    max_findings=8,
+    max_message_chars=1,
+    max_zip_total_preserved_source_bytes=1,
+  )
+  assert_true(
+    preserved_report.resource_limit() is Some(ZipTotalPreservedSourceBytes),
+  )
+  assert_eq(preserved_report.main_document_part(), None)
   let entry_report = @opc.validate_docx_package_report_limited(
     data,
     max_findings=8,

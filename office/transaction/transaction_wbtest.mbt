@@ -46,9 +46,11 @@ fn wb_large_candidate(data : BytesView) -> Bytes raise {
 fn wb_archive_retained_cost(bytes : BytesView) -> Int64 raise {
   let archive = @zip.read_limited(
     bytes,
+    max_package_bytes=transaction_max_package_bytes,
     max_entries=transaction_max_archive_entries,
     max_entry_uncompressed_bytes=transaction_max_entry_uncompressed_bytes,
     max_total_uncompressed_bytes=transaction_max_total_uncompressed_bytes,
+    max_total_preserved_source_bytes=transaction_max_total_preserved_source_bytes,
   )
   bytes.length().to_int64() +
   archive.retained_size_estimate() +
@@ -109,9 +111,11 @@ test "archive name projections are bounded and charged before indexing" {
   let many_bytes = @zip.write(many)
   let parsed = @zip.read_limited(
     many_bytes,
+    max_package_bytes=transaction_max_package_bytes,
     max_entries=transaction_max_archive_entries,
     max_entry_uncompressed_bytes=transaction_max_entry_uncompressed_bytes,
     max_total_uncompressed_bytes=transaction_max_total_uncompressed_bytes,
+    max_total_preserved_source_bytes=transaction_max_total_preserved_source_bytes,
   )
   let base_cost = many_bytes.length().to_int64() +
     parsed.retained_size_estimate()
@@ -261,9 +265,11 @@ fn wb_read_transaction_archive_with_limits(
 ) -> @zip.Archive raise TransactionError {
   @zip.read_limited(
     bytes,
+    max_package_bytes=transaction_max_package_bytes,
     max_entries~,
     max_entry_uncompressed_bytes~,
     max_total_uncompressed_bytes~,
+    max_total_preserved_source_bytes=transaction_max_total_preserved_source_bytes,
   ) catch {
     ResourceLimitExceeded(kind~, limit~, actual~) =>
       raise resource_limit_error(phase, kind, limit, actual)

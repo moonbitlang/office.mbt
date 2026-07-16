@@ -188,7 +188,7 @@ fn find_end_of_central(bytes : BytesView) -> Int? raise ZipError {
 ///|
 priv struct EntryMeta {
   name : String
-  name_bytes : Bytes
+  name_bytes : BytesView
   flags : Int
   compression_method : Int
   local_header_offset : Int
@@ -369,6 +369,7 @@ fn zip64_value_positions(
 fn read_zip64_eocd(
   bytes : BytesView,
   eocd_offset : Int,
+  preserved_source_budget : PreservedSourceBudget,
 ) -> (UInt64, UInt64, UInt64, Int, Zip64TrailerTemplate) raise ZipError {
   let locator_offset = eocd_offset - 20
   if locator_offset < 0 {
@@ -413,6 +414,12 @@ fn read_zip64_eocd(
   if disk_no != 0 || disk_start != 0 || entries_on_disk != total_entries {
     raise UnsupportedFeature(msg="multi-disk zip not supported")
   }
+  let end_record_length = locator_offset - zip64_offset
+  let locator_length = eocd_offset - locator_offset
+  let classic_end_record_length = bytes.length() - eocd_offset
+  preserved_source_budget.charge(end_record_length)
+  preserved_source_budget.charge(locator_length)
+  preserved_source_budget.charge(classic_end_record_length)
   (
     total_entries,
     central_size,
@@ -441,6 +448,40 @@ fn resource_limit_actual(limit : Int) -> Int {
     limit + 1
   } else {
     limit
+  }
+}
+
+///|
+/// Bounds exact source-record copies retained for byte-preserving rewrites.
+/// Charging happens before each allocation; the source input and inflated
+/// payloads have independent limits.
+priv struct PreservedSourceBudget {
+  limit : Int?
+  mut used : Int
+}
+
+///|
+fn PreservedSourceBudget::new(limit : Int?) -> PreservedSourceBudget {
+  { limit, used: 0 }
+}
+
+///|
+fn PreservedSourceBudget::charge(
+  self : PreservedSourceBudget,
+  amount : Int,
+) -> Unit raise ZipError {
+  if amount < 0 {
+    raise UnsupportedFeature(msg="invalid preserved ZIP source-record size")
+  }
+  match self.limit {
+    Some(limit) if amount > limit - self.used =>
+      raise ResourceLimitExceeded(
+        kind="total_preserved_source_bytes",
+        limit~,
+        actual=resource_actual_with_base(self.used, amount),
+      )
+    Some(_) => self.used = self.used + amount
+    None => ()
   }
 }
 
@@ -735,10 +776,24 @@ fn materialize_entry_data(
 ///|
 fn read_impl(
   bytes : BytesView,
+  max_package_bytes : Int?,
   max_entries : Int?,
   max_entry_uncompressed_bytes : Int?,
   max_total_uncompressed_bytes : Int?,
+  max_total_preserved_source_bytes : Int?,
 ) -> Archive raise ZipError {
+  match max_package_bytes {
+    Some(limit) if bytes.length() > limit =>
+      raise ResourceLimitExceeded(
+        kind="package_bytes",
+        limit~,
+        actual=bytes.length(),
+      )
+    _ => ()
+  }
+  let preserved_source_budget = PreservedSourceBudget::new(
+    max_total_preserved_source_bytes,
+  )
   let eocd_offset = match find_end_of_central(bytes) {
     Some(offset) => offset
     None => raise MissingEndOfCentral
@@ -752,6 +807,7 @@ fn read_impl(
   let central_size_raw = reader.read_u32_raw()
   let central_offset_raw = reader.read_u32_raw()
   let comment_len = reader.read_u16()
+  preserved_source_budget.charge(comment_len)
   let archive_comment = reader.read_bytes(comment_len).to_owned()
   if disk_no != 0 || disk_start != 0 {
     raise UnsupportedFeature(msg="multi-disk zip not supported")
@@ -769,7 +825,7 @@ fn read_impl(
     zip64_trailer,
   ) = if needs_zip64 {
     let (zip_entries, zip_size, zip_offset, zip64_offset, zip64_trailer) = read_zip64_eocd(
-      bytes, eocd_offset,
+      bytes, eocd_offset, preserved_source_budget,
     )
     if disk_entries != 0xFFFF && disk_entries.to_uint64() != zip_entries {
       raise UnsupportedFeature(msg="classic and zip64 entry count mismatch")
@@ -884,6 +940,7 @@ fn read_impl(
       central_offset + central_reader.pos - extra_len - name_len,
     )
     central_reader.skip(comment_len)
+    preserved_source_budget.charge(central_reader.pos - central_record_start)
     let central_record = central_bytes[central_record_start:central_reader.pos].to_owned()
     if disk != 0 {
       raise UnsupportedFeature(msg="multi-disk zip not supported")
@@ -986,7 +1043,7 @@ fn read_impl(
     }
     metas.push({
       name,
-      name_bytes: name_bytes.to_owned(),
+      name_bytes,
       flags,
       compression_method: method_id,
       local_header_offset: local_offset,
@@ -1014,6 +1071,7 @@ fn read_impl(
   let local_intervals : Array[(Int, Int)] = Array::new(capacity=metas.length())
   for meta in metas {
     let record = read_entry_record(bytes, meta, central_offset)
+    preserved_source_budget.charge(record.end - meta.local_header_offset)
     records.push(record)
     local_intervals.push((meta.local_header_offset, record.end))
   }
@@ -1043,13 +1101,23 @@ fn read_impl(
     )
   }
   let bounded_source = match
-    (max_entries, max_entry_uncompressed_bytes, max_total_uncompressed_bytes) {
-    (Some(max_entries), Some(max_entry), Some(max_total)) =>
+    (
+      max_package_bytes, max_entries, max_entry_uncompressed_bytes, max_total_uncompressed_bytes,
+      max_total_preserved_source_bytes,
+    ) {
+    (
+      Some(_),
+      Some(max_entries),
+      Some(max_entry),
+      Some(max_total),
+      Some(max_preserved),
+    ) =>
       Some({
         package_bytes: bytes.length(),
         max_entries,
         max_entry_uncompressed_bytes: max_entry,
         max_total_uncompressed_bytes: max_total,
+        max_total_preserved_source_bytes: max_preserved,
       })
     _ => None
   }
@@ -1126,28 +1194,35 @@ fn read_impl(
 ///|
 /// Reads a ZIP archive using the library's compatibility defaults.
 pub fn read(bytes : BytesView) -> Archive raise ZipError {
-  read_impl(bytes, None, None, None)
+  read_impl(bytes, None, None, None, None, None)
 }
 
 ///|
-/// Reads a ZIP archive while enforcing caller-provided materialization limits
-/// before and during decompression.
+/// Reads a ZIP archive while enforcing caller-provided limits on source-package
+/// bytes, entries, inflated payloads, and retained byte-preservation records.
+/// Every bounded allocation is rejected before it is materialized.
 pub fn read_limited(
   bytes : BytesView,
+  max_package_bytes~ : Int,
   max_entries~ : Int,
   max_entry_uncompressed_bytes~ : Int,
   max_total_uncompressed_bytes~ : Int,
+  max_total_preserved_source_bytes~ : Int,
 ) -> Archive raise ZipError {
-  if max_entries < 0 ||
+  if max_package_bytes < 0 ||
+    max_entries < 0 ||
     max_entry_uncompressed_bytes < 0 ||
-    max_total_uncompressed_bytes < 0 {
+    max_total_uncompressed_bytes < 0 ||
+    max_total_preserved_source_bytes < 0 {
     raise UnsupportedFeature(msg="ZIP resource limits must be non-negative")
   }
   read_impl(
     bytes,
+    Some(max_package_bytes),
     Some(max_entries),
     Some(max_entry_uncompressed_bytes),
     Some(max_total_uncompressed_bytes),
+    Some(max_total_preserved_source_bytes),
   )
 }
 
@@ -1397,9 +1472,11 @@ test "zip read zip64 extra sizes" {
   try
     read_limited(
       Bytes::from_array(oversized),
+      max_package_bytes=oversized.length(),
       max_entries=1,
       max_entry_uncompressed_bytes=64,
       max_total_uncompressed_bytes=64,
+      max_total_preserved_source_bytes=oversized.length(),
     )
   catch {
     ResourceLimitExceeded(kind~, limit~, actual~) => {

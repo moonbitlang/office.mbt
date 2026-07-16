@@ -2,6 +2,9 @@
 let raw_max_package_bytes : Int = 128 * 1024 * 1024
 
 ///|
+let raw_max_total_preserved_source_bytes : Int = raw_max_package_bytes + 65_535
+
+///|
 let raw_max_archive_entries : Int = 8192
 
 ///|
@@ -1523,9 +1526,11 @@ fn read_bounded_archive(data : BytesView) -> @zip.Archive raise RawError {
   }
   @zip.read_limited(
     data,
+    max_package_bytes=raw_max_package_bytes,
     max_entries=raw_max_archive_entries,
     max_entry_uncompressed_bytes=raw_max_entry_bytes,
     max_total_uncompressed_bytes=raw_max_total_uncompressed_bytes,
+    max_total_preserved_source_bytes=raw_max_total_preserved_source_bytes,
   ) catch {
     ResourceLimitExceeded(kind~, limit~, actual~) =>
       raise raw_error(
@@ -1608,6 +1613,7 @@ fn check_bounded_raw_archive_limits(
   max_entries : Int,
   max_entry_bytes : Int,
   max_total_bytes : Int,
+  max_total_preserved_source_bytes : Int,
 ) -> Unit raise RawError {
   check_raw_archive_materialization_limits(
     archive, max_entries, max_entry_bytes, max_total_bytes,
@@ -1617,6 +1623,7 @@ fn check_bounded_raw_archive_limits(
       max_entries~,
       max_entry_uncompressed_bytes=max_entry_bytes,
       max_total_uncompressed_bytes=max_total_bytes,
+      max_total_preserved_source_bytes~,
     ) {
     Some(size) if size <= max_package_bytes => ()
     Some(size) =>
@@ -1646,7 +1653,7 @@ fn check_bounded_raw_archive_limits(
 fn check_bounded_raw_archive(archive : @zip.Archive) -> Unit raise RawError {
   check_bounded_raw_archive_limits(
     archive, raw_max_package_bytes, raw_max_archive_entries, raw_max_entry_bytes,
-    raw_max_total_uncompressed_bytes,
+    raw_max_total_uncompressed_bytes, raw_max_total_preserved_source_bytes,
   )
 }
 

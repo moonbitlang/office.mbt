@@ -11,6 +11,10 @@ let transaction_temp_attempts = 32
 let transaction_max_package_bytes : Int = 128 * 1024 * 1024
 
 ///|
+let transaction_max_total_preserved_source_bytes : Int = transaction_max_package_bytes +
+  65_535
+
+///|
 let transaction_max_archive_entries : Int = 8192
 
 ///|
@@ -677,9 +681,11 @@ fn read_transaction_archive(
   }
   let archive = @zip.read_limited(
     bytes,
+    max_package_bytes=transaction_max_package_bytes,
     max_entries=transaction_max_archive_entries,
     max_entry_uncompressed_bytes=transaction_max_entry_uncompressed_bytes,
     max_total_uncompressed_bytes=aggregate_limit,
+    max_total_preserved_source_bytes=transaction_max_total_preserved_source_bytes,
   ) catch {
     ResourceLimitExceeded(kind~, limit=_, actual~) if kind ==
       "total_uncompressed_bytes" &&

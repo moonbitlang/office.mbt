@@ -638,9 +638,11 @@ test "zip read_limited caps inflation by the remaining aggregate budget" {
   try
     @zip.read_limited(
       Bytes::from_array(raw),
+      max_package_bytes=raw.length(),
       max_entries=2,
       max_entry_uncompressed_bytes=64,
       max_total_uncompressed_bytes=32,
+      max_total_preserved_source_bytes=raw.length(),
     )
   catch {
     ResourceLimitExceeded(kind~, limit~, actual~) => {
@@ -668,9 +670,11 @@ test "zip read_limited reports large ZIP32 declarations as resource limits" {
   try
     @zip.read_limited(
       Bytes::from_array(raw),
+      max_package_bytes=raw.length(),
       max_entries=1,
       max_entry_uncompressed_bytes=64,
       max_total_uncompressed_bytes=64,
+      max_total_preserved_source_bytes=raw.length(),
     )
   catch {
     ResourceLimitExceeded(kind~, limit~, actual~) => {
