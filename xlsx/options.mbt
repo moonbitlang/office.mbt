@@ -18,11 +18,15 @@ let default_max_total_preserved_source_bytes : Int = default_max_package_bytes +
 let default_max_xml_part_bytes : Int = 16 * 1024 * 1024
 
 ///|
+let default_max_kdf_iterations : Int = 1_000_000
+
+///|
 /// A complete fail-closed resource policy for reading an XLSX package.
 ///
 /// The type is opaque so every public read path receives a validated,
 /// internally consistent policy. ZIP limits are enforced while inflating;
-/// `max_xml_part_bytes` is enforced before any individual XML part is decoded.
+/// `max_xml_part_bytes` is enforced before any individual XML part is decoded,
+/// and `max_kdf_iterations` bounds encrypted-package password derivation.
 pub struct ReadLimits {
   priv max_package_bytes : Int
   priv max_archive_entries : Int
@@ -30,12 +34,13 @@ pub struct ReadLimits {
   priv max_total_uncompressed_bytes : Int
   priv max_total_preserved_source_bytes : Int
   priv max_xml_part_bytes : Int
+  priv max_kdf_iterations : Int
 }
 
 ///|
 /// Returns the production XLSX read policy: 128 MiB source packages, 8,192
-/// entries, 64 MiB per entry, 256 MiB aggregate expansion, and 16 MiB per XML
-/// part. Call `with_values` when a stricter boundary is required.
+/// entries, 64 MiB per entry, 256 MiB aggregate expansion, 16 MiB per XML part,
+/// and one million Agile KDF iterations. Call `with_values` for stricter limits.
 pub fn ReadLimits::new() -> ReadLimits {
   {
     max_package_bytes: default_max_package_bytes,
@@ -44,6 +49,7 @@ pub fn ReadLimits::new() -> ReadLimits {
     max_total_uncompressed_bytes: default_max_total_uncompressed_bytes,
     max_total_preserved_source_bytes: default_max_total_preserved_source_bytes,
     max_xml_part_bytes: default_max_xml_part_bytes,
+    max_kdf_iterations: default_max_kdf_iterations,
   }
 }
 
@@ -57,13 +63,15 @@ pub fn ReadLimits::with_values(
   max_total_uncompressed_bytes? : Int = default_max_total_uncompressed_bytes,
   max_total_preserved_source_bytes? : Int = default_max_total_preserved_source_bytes,
   max_xml_part_bytes? : Int = default_max_xml_part_bytes,
+  max_kdf_iterations? : Int = default_max_kdf_iterations,
 ) -> ReadLimits raise XlsxError {
   if max_package_bytes <= 0 ||
     max_archive_entries <= 0 ||
     max_entry_uncompressed_bytes <= 0 ||
     max_total_uncompressed_bytes <= 0 ||
     max_total_preserved_source_bytes <= 0 ||
-    max_xml_part_bytes <= 0 {
+    max_xml_part_bytes <= 0 ||
+    max_kdf_iterations <= 0 {
     raise InvalidOptions(msg="XLSX read limits must be positive")
   }
   if max_entry_uncompressed_bytes > max_total_uncompressed_bytes {
@@ -81,6 +89,7 @@ pub fn ReadLimits::with_values(
     max_total_uncompressed_bytes,
     max_total_preserved_source_bytes,
     max_xml_part_bytes,
+    max_kdf_iterations,
   }
 }
 
@@ -119,6 +128,12 @@ pub fn ReadLimits::max_total_preserved_source_bytes(self : ReadLimits) -> Int {
 /// Returns the maximum size of one XML-like OOXML part in bytes.
 pub fn ReadLimits::max_xml_part_bytes(self : ReadLimits) -> Int {
   self.max_xml_part_bytes
+}
+
+///|
+/// Returns the maximum accepted Agile password-KDF work factor.
+pub fn ReadLimits::max_kdf_iterations(self : ReadLimits) -> Int {
+  self.max_kdf_iterations
 }
 
 ///|

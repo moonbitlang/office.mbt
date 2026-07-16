@@ -91,6 +91,16 @@ test "read limits reject XML ceiling above entry ceiling" {
 }
 
 ///|
+test "read limits reject a non-positive Agile KDF ceiling" {
+  let result : Result[@xlsx.ReadLimits, Error] = Ok(
+    @xlsx.ReadLimits::with_values(max_kdf_iterations=0),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(result is Err(@xlsx.InvalidOptions(_)), content="true")
+}
+
+///|
 test "default read limits expose the complete ZIP policy" {
   let limits = @xlsx.ReadLimits::new()
   assert_eq(limits.max_package_bytes(), 128 * 1024 * 1024)
@@ -102,4 +112,5 @@ test "default read limits expose the complete ZIP policy" {
     128 * 1024 * 1024 + 65_535,
   )
   assert_eq(limits.max_xml_part_bytes(), 16 * 1024 * 1024)
+  assert_eq(limits.max_kdf_iterations(), 1_000_000)
 }

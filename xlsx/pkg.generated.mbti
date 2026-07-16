@@ -1207,12 +1207,13 @@ pub struct ReadLimits {
 }
 pub fn ReadLimits::max_archive_entries(Self) -> Int
 pub fn ReadLimits::max_entry_uncompressed_bytes(Self) -> Int
+pub fn ReadLimits::max_kdf_iterations(Self) -> Int
 pub fn ReadLimits::max_package_bytes(Self) -> Int
 pub fn ReadLimits::max_total_preserved_source_bytes(Self) -> Int
 pub fn ReadLimits::max_total_uncompressed_bytes(Self) -> Int
 pub fn ReadLimits::max_xml_part_bytes(Self) -> Int
 pub fn ReadLimits::new() -> Self
-pub fn ReadLimits::with_values(max_package_bytes? : Int, max_archive_entries? : Int, max_entry_uncompressed_bytes? : Int, max_total_uncompressed_bytes? : Int, max_total_preserved_source_bytes? : Int, max_xml_part_bytes? : Int) -> Self raise XlsxError
+pub fn ReadLimits::with_values(max_package_bytes? : Int, max_archive_entries? : Int, max_entry_uncompressed_bytes? : Int, max_total_uncompressed_bytes? : Int, max_total_preserved_source_bytes? : Int, max_xml_part_bytes? : Int, max_kdf_iterations? : Int) -> Self raise XlsxError
 
 pub(all) struct RichTextFont {
   bold : Bool
