@@ -714,7 +714,7 @@ pub fn DataValidation::set_drop_list(Self, ArrayView[String]) -> Unit raise Xlsx
 pub fn DataValidation::set_error(Self, DataValidationErrorStyle, String, String) -> Unit
 pub fn DataValidation::set_input(Self, String, String) -> Unit
 pub fn DataValidation::set_range(Self, DataValidationFormula, DataValidationFormula, DataValidationType, DataValidationOperator) -> Unit raise XlsxError
-pub fn DataValidation::set_sqref(Self, String) -> Unit
+pub fn DataValidation::set_sqref(Self, String) -> Unit raise XlsxError
 pub fn DataValidation::set_sqref_drop_list(Self, String) -> Unit
 #deprecated
 pub fn DataValidation::to_repr(Self) -> @debug.Repr
