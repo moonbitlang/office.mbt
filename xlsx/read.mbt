@@ -2503,6 +2503,7 @@ fn parse_picture_rel_id(xml : StringView) -> String? raise XlsxError {
 fn parse_auto_filter_columns(
   body : StringView,
   min_col : Int,
+  max_col : Int,
 ) -> Array[AutoFilterColumn] raise XlsxError {
   let columns : Array[AutoFilterColumn] = []
   let mut first = true
@@ -2523,6 +2524,9 @@ fn parse_auto_filter_columns(
           _ => raise InvalidXml(msg="filterColumn colId invalid")
         }
       None => raise InvalidXml(msg="filterColumn colId missing")
+    }
+    if col_id < 0 || col_id > max_col - min_col {
+      raise InvalidXml(msg="filterColumn colId out of range")
     }
     let col = min_col + col_id
     let mut filters : Array[String]? = None
@@ -2621,13 +2625,13 @@ fn parse_auto_filter(xml : StringView) -> AutoFilter? raise XlsxError {
     None => raise InvalidXml(msg="autoFilter ref missing")
   }
   let range_ref = normalize_range_ref(ref_value)
-  let (_min_row, min_col, _max_row, _max_col) = parse_range_ref(range_ref)
+  let (_min_row, min_col, _max_row, max_col) = parse_range_ref(range_ref)
   let self_closing = tag.trim().has_suffix("/")
   let columns = if self_closing {
     []
   } else {
     match extract_tag_body(xml, "autoFilter") {
-      Some(body) => parse_auto_filter_columns(body, min_col)
+      Some(body) => parse_auto_filter_columns(body, min_col, max_col)
       None => []
     }
   }

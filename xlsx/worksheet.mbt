@@ -1214,16 +1214,28 @@ fn convert_row_height_to_pixels(height : Double) -> Int {
 }
 
 ///|
-fn Worksheet::col_width_pixels(self : Worksheet, col : Int) -> Int {
-  fn default_col_width_from_props(props : SheetPropsOptions) -> Int {
-    match props.default_col_width {
-      Some(w) => convert_col_width_to_pixels(w)
-      None => {
-        let base = props.base_col_width.unwrap_or(default_sheet_base_col_width)
-        convert_col_width_to_pixels(Double::from_int(base))
-      }
+fn Worksheet::default_col_width_pixels(self : Worksheet) -> Int {
+  let props = sheet_props_with_defaults(self.sheet_props)
+  match props.default_col_width {
+    Some(w) => convert_col_width_to_pixels(w)
+    None => {
+      let base = props.base_col_width.unwrap_or(default_sheet_base_col_width)
+      convert_col_width_to_pixels(Double::from_int(base))
     }
   }
+}
+
+///|
+fn Worksheet::default_row_height_pixels(self : Worksheet) -> Int {
+  let props = sheet_props_with_defaults(self.sheet_props)
+  match props.default_row_height {
+    Some(h) => convert_row_height_to_pixels(h)
+    None => default_row_height_pixels
+  }
+}
+
+///|
+fn Worksheet::col_width_pixels(self : Worksheet, col : Int) -> Int {
   match self.col_dimensions.get(col) {
     Some(dim) =>
       if dim.hidden {
@@ -1231,16 +1243,10 @@ fn Worksheet::col_width_pixels(self : Worksheet, col : Int) -> Int {
       } else {
         match dim.width {
           Some(width) => convert_col_width_to_pixels(width)
-          None => {
-            let props = sheet_props_with_defaults(self.sheet_props)
-            default_col_width_from_props(props)
-          }
+          None => self.default_col_width_pixels()
         }
       }
-    None => {
-      let props = sheet_props_with_defaults(self.sheet_props)
-      default_col_width_from_props(props)
-    }
+    None => self.default_col_width_pixels()
   }
 }
 
@@ -1253,22 +1259,10 @@ fn Worksheet::row_height_pixels(self : Worksheet, row : Int) -> Int {
       } else {
         match dim.height {
           Some(height) => convert_row_height_to_pixels(height)
-          None => {
-            let props = sheet_props_with_defaults(self.sheet_props)
-            match props.default_row_height {
-              Some(h) => convert_row_height_to_pixels(h)
-              None => default_row_height_pixels
-            }
-          }
+          None => self.default_row_height_pixels()
         }
       }
-    None => {
-      let props = sheet_props_with_defaults(self.sheet_props)
-      match props.default_row_height {
-        Some(h) => convert_row_height_to_pixels(h)
-        None => default_row_height_pixels
-      }
-    }
+    None => self.default_row_height_pixels()
   }
 }
 

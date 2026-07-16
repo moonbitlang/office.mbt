@@ -199,6 +199,17 @@ test "read rejects every out-of-grid worksheet coordinate ingress" {
     (
       "filter ref through shared parser", at_worksheet_end, "<autoFilter ref=\"A1:A1048577\"/>",
     ),
+    (
+      "filter column negative", at_worksheet_end, "<autoFilter ref=\"A1:B2\"><filterColumn colId=\"-1\"/></autoFilter>",
+    ),
+    (
+      "filter column outside filter range", at_worksheet_end, "<autoFilter ref=\"A1:B2\"><filterColumn colId=\"2\"/></autoFilter>",
+    ),
+    (
+      "filter column huge",
+      at_worksheet_end,
+      "<autoFilter ref=\"A1:B2\"><filterColumn colId=\"\{huge_row}\"/></autoFilter>",
+    ),
     ("sparkline ref through shared parser", at_worksheet_end, sparkline),
   ]
   for case in cases {

@@ -14,6 +14,100 @@ fn parse_xml_int_tag(
 }
 
 ///|
+fn validate_drawing_axis_marker_for_read(
+  axis : StringView,
+  idx0 : Int,
+  off_emu : Int,
+  allow_end_boundary : Bool,
+) -> Unit raise XlsxError {
+  let limit = if axis == "col" {
+    cell_ref_max_cols
+  } else if axis == "row" {
+    cell_ref_max_rows
+  } else {
+    raise InvalidXml(msg="drawing axis invalid")
+  }
+  let at_end_boundary = idx0 == limit && off_emu == 0
+  if idx0 < 0 ||
+    idx0 > limit ||
+    (idx0 == limit && (!allow_end_boundary || !at_end_boundary)) {
+    raise InvalidXml(msg="drawing " + axis.to_owned() + " invalid")
+  }
+  if off_emu < 0 {
+    raise InvalidXml(msg="drawing " + axis.to_owned() + "Off invalid")
+  }
+}
+
+///|
+fn drawing_reference_for_read(
+  row_idx0 : Int,
+  col_idx0 : Int,
+  row_off_emu : Int,
+  col_off_emu : Int,
+) -> String raise XlsxError {
+  validate_drawing_axis_marker_for_read("row", row_idx0, row_off_emu, false)
+  validate_drawing_axis_marker_for_read("col", col_idx0, col_off_emu, false)
+  cell_ref_from(row_idx0 + 1, col_idx0 + 1)
+}
+
+///|
+fn validate_drawing_extent_for_read(
+  value : Int,
+  field : StringView,
+) -> Int raise XlsxError {
+  if value < 0 {
+    raise InvalidXml(msg=field.to_owned() + " invalid")
+  }
+  value
+}
+
+///|
+fn drawing_axis_pixel_span(
+  sheet : Worksheet,
+  axis : StringView,
+  start_idx0 : Int,
+  end_idx0 : Int,
+) -> Int64 raise XlsxError {
+  let default_px = if axis == "col" {
+    sheet.default_col_width_pixels()
+  } else {
+    sheet.default_row_height_pixels()
+  }
+  if default_px < 0 {
+    raise InvalidXml(msg="drawing cell dimension invalid")
+  }
+  let count = end_idx0 - start_idx0
+  let mut total = Int64::from_int(default_px) * Int64::from_int(count)
+  if axis == "col" {
+    for idx1, _ in sheet.col_dimensions {
+      let idx0 = idx1 - 1
+      if idx0 >= start_idx0 && idx0 < end_idx0 {
+        let actual_px = sheet.col_width_pixels(idx1)
+        if actual_px < 0 {
+          raise InvalidXml(msg="drawing cell dimension invalid")
+        }
+        total = total - Int64::from_int(default_px) + Int64::from_int(actual_px)
+      }
+    }
+  } else {
+    for idx1, _ in sheet.row_dimensions {
+      let idx0 = idx1 - 1
+      if idx0 >= start_idx0 && idx0 < end_idx0 {
+        let actual_px = sheet.row_height_pixels(idx1)
+        if actual_px < 0 {
+          raise InvalidXml(msg="drawing cell dimension invalid")
+        }
+        total = total - Int64::from_int(default_px) + Int64::from_int(actual_px)
+      }
+    }
+  }
+  if total < 0L {
+    raise InvalidXml(msg="drawing span invalid")
+  }
+  total
+}
+
+///|
 fn drawing_axis_span_emu(
   sheet : Worksheet,
   axis : StringView,
@@ -21,7 +115,9 @@ fn drawing_axis_span_emu(
   from_off_emu : Int,
   to_idx0 : Int,
   to_off_emu : Int,
-) -> Int {
+) -> Int raise XlsxError {
+  validate_drawing_axis_marker_for_read(axis, from_idx0, from_off_emu, false)
+  validate_drawing_axis_marker_for_read(axis, to_idx0, to_off_emu, true)
   let mut start_idx0 = from_idx0
   let mut start_off = from_off_emu
   let mut end_idx0 = to_idx0
@@ -35,26 +131,23 @@ fn drawing_axis_span_emu(
   if start_idx0 == end_idx0 {
     return end_off - start_off
   }
-  let mut total = 0
-  let start_idx1 = start_idx0 + 1
-  let start_cell_px = if axis == "col" {
-    sheet.col_width_pixels(start_idx1)
-  } else {
-    sheet.row_height_pixels(start_idx1)
+  let pixel_span = drawing_axis_pixel_span(sheet, axis, start_idx0, end_idx0)
+  let emu_per_pixel = Int64::from_int(picture_emu_per_pixel)
+  let max_int64 = 0x7fff_ffff_ffff_ffffL
+  if pixel_span > max_int64 / emu_per_pixel {
+    raise InvalidXml(msg="drawing span out of range")
   }
-  total = total + (start_cell_px * picture_emu_per_pixel - start_off)
-  let mut idx0 = start_idx0 + 1
-  while idx0 < end_idx0 {
-    let idx1 = idx0 + 1
-    let cell_px = if axis == "col" {
-      sheet.col_width_pixels(idx1)
-    } else {
-      sheet.row_height_pixels(idx1)
-    }
-    total = total + cell_px * picture_emu_per_pixel
-    idx0 = idx0 + 1
+  let cell_span_emu = pixel_span * emu_per_pixel
+  let without_start = cell_span_emu - Int64::from_int(start_off)
+  let end_off64 = Int64::from_int(end_off)
+  if without_start > max_int64 - end_off64 {
+    raise InvalidXml(msg="drawing span out of range")
   }
-  total + end_off
+  let span = without_start + end_off64
+  if span < 0L || span > 0x7fff_ffffL {
+    raise InvalidXml(msg="drawing span out of range")
+  }
+  span.to_int()
 }
 
 ///|
@@ -151,7 +244,9 @@ fn parse_drawing_images(
     let row_off_emu = parse_xml_int_tag(
       from_body, "xdr:rowOff", "drawing rowOff invalid",
     )
-    let reference = cell_ref_from(row_idx0 + 1, col_idx0 + 1)
+    let reference = drawing_reference_for_read(
+      row_idx0, col_idx0, row_off_emu, col_off_emu,
+    )
     let offset_x = col_off_emu / picture_emu_per_pixel
     let offset_y = row_off_emu / picture_emu_per_pixel
     let (width_emu, height_emu) = match positioning {
@@ -174,6 +269,8 @@ fn parse_drawing_images(
             }
           None => raise InvalidXml(msg="drawing cy missing")
         }
+        ignore(validate_drawing_extent_for_read(cx, "drawing cx"))
+        ignore(validate_drawing_extent_for_read(cy, "drawing cy"))
         (cx, cy)
       }
       _ => {
@@ -354,7 +451,9 @@ fn parse_drawing_charts(
     let row_off_emu = parse_xml_int_tag(
       from_body, "xdr:rowOff", "drawing rowOff invalid",
     )
-    let reference = cell_ref_from(row_idx0 + 1, col_idx0 + 1)
+    let reference = drawing_reference_for_read(
+      row_idx0, col_idx0, row_off_emu, col_off_emu,
+    )
     let offset_x = col_off_emu / picture_emu_per_pixel
     let offset_y = row_off_emu / picture_emu_per_pixel
     let (width_emu, height_emu) = match positioning {
@@ -377,6 +476,8 @@ fn parse_drawing_charts(
             }
           None => raise InvalidXml(msg="drawing cy missing")
         }
+        ignore(validate_drawing_extent_for_read(cx, "drawing cx"))
+        ignore(validate_drawing_extent_for_read(cy, "drawing cy"))
         (cx, cy)
       }
       _ => {
@@ -460,7 +561,42 @@ fn parse_drawing_shapes(
     let row_idx0 = parse_xml_int_tag(
       from_body, "xdr:row", "drawing row invalid",
     )
-    let reference = cell_ref_from(row_idx0 + 1, col_idx0 + 1)
+    let col_off_emu = parse_xml_int_tag(
+      from_body, "xdr:colOff", "drawing colOff invalid",
+    )
+    let row_off_emu = parse_xml_int_tag(
+      from_body, "xdr:rowOff", "drawing rowOff invalid",
+    )
+    let reference = drawing_reference_for_read(
+      row_idx0, col_idx0, row_off_emu, col_off_emu,
+    )
+    match positioning {
+      OneCell => ()
+      _ => {
+        let to_body = match extract_tag_body_from(anchor_xml, "xdr:to") {
+          Some(value) => value
+          None => raise InvalidXml(msg="drawing shape to missing")
+        }
+        let to_col_idx0 = parse_xml_int_tag(
+          to_body, "xdr:col", "drawing shape to col invalid",
+        )
+        let to_row_idx0 = parse_xml_int_tag(
+          to_body, "xdr:row", "drawing shape to row invalid",
+        )
+        let to_col_off = parse_xml_int_tag(
+          to_body, "xdr:colOff", "drawing shape to colOff invalid",
+        )
+        let to_row_off = parse_xml_int_tag(
+          to_body, "xdr:rowOff", "drawing shape to rowOff invalid",
+        )
+        validate_drawing_axis_marker_for_read(
+          "col", to_col_idx0, to_col_off, true,
+        )
+        validate_drawing_axis_marker_for_read(
+          "row", to_row_idx0, to_row_off, true,
+        )
+      }
+    }
     let c_nv_pr_tag = match tag_attributes_in(sp_body, "xdr:cNvPr") {
       Some(value) => value
       None => raise InvalidXml(msg="drawing shape cNvPr missing")
@@ -515,6 +651,8 @@ fn parse_drawing_shapes(
         }
       None => raise InvalidXml(msg="drawing shape cy missing")
     }
+    ignore(validate_drawing_extent_for_read(cx, "drawing shape cx"))
+    ignore(validate_drawing_extent_for_read(cy, "drawing shape cy"))
     let width = (cx.to_double() / picture_emu_per_pixel.to_double())
       .round()
       .to_int()
@@ -695,7 +833,9 @@ fn parse_drawing_slicer_anchors(
     let row_off_emu = parse_xml_int_tag(
       from_body, "xdr:rowOff", "drawing slicer rowOff invalid",
     )
-    let cell = cell_ref_from(row_idx0 + 1, col_idx0 + 1)
+    let cell = drawing_reference_for_read(
+      row_idx0, col_idx0, row_off_emu, col_off_emu,
+    )
     let offset_x = col_off_emu / picture_emu_per_pixel
     let offset_y = row_off_emu / picture_emu_per_pixel
     let (width_emu, height_emu) = match positioning {
@@ -718,6 +858,8 @@ fn parse_drawing_slicer_anchors(
             }
           None => raise InvalidXml(msg="drawing slicer cy missing")
         }
+        ignore(validate_drawing_extent_for_read(cx, "drawing slicer cx"))
+        ignore(validate_drawing_extent_for_read(cy, "drawing slicer cy"))
         (cx, cy)
       }
       _ => {
@@ -814,6 +956,12 @@ fn wb_one_cell_anchor(xml_from : String, xml_ext : String) -> String {
 }
 
 ///|
+fn wb_two_cell_anchor(xml_from : String, xml_to : String) -> String {
+  let pic = wb_pic_xml("rId1")
+  "<xdr:wsDr><xdr:twoCellAnchor>\{xml_from}\{xml_to}\{pic}</xdr:twoCellAnchor></xdr:wsDr>"
+}
+
+///|
 fn wb_rels_image_target(target : String) -> String {
   "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
   "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"\{target}\"/>" +
@@ -852,6 +1000,45 @@ test "read_drawing_xml wb: drawing_axis_span_emu handles reverse and same-index 
   let sheet = Worksheet::new("Sheet1")
   inspect(drawing_axis_span_emu(sheet, "col", 1, 200, 1, 800), content="600")
   inspect(drawing_axis_span_emu(sheet, "col", 1, 800, 1, 200), content="600")
+}
+
+///|
+test "read_drawing_xml wb: drawing spans use sparse dimensions and grid boundary" {
+  let sheet = Worksheet::new("Sheet1")
+  sheet.set_col_width(501, 10.0)
+  inspect(
+    drawing_axis_span_emu(sheet, "col", 0, 0, 1000, 0),
+    content="609752400",
+  )
+  inspect(
+    drawing_axis_span_emu(sheet, "col", 16383, 0, 16384, 0),
+    content="609600",
+  )
+}
+
+///|
+test "read_drawing_xml wb: drawing spans reject invalid markers and overflow" {
+  let sheet = Worksheet::new("Sheet1")
+  let invalid_marker : Result[Int, Error] = Ok(
+    drawing_axis_span_emu(sheet, "col", 0, 0, 0x7fff_ffff, 0),
+  ) catch {
+    error => Err(error)
+  }
+  match invalid_marker {
+    Err(XlsxError::InvalidXml(msg~)) =>
+      inspect(msg, content="drawing col invalid")
+    _ => fail("expected invalid drawing column")
+  }
+  let overflow : Result[Int, Error] = Ok(
+    drawing_axis_span_emu(sheet, "row", 0, 0, cell_ref_max_rows, 0),
+  ) catch {
+    error => Err(error)
+  }
+  match overflow {
+    Err(XlsxError::InvalidXml(msg~)) =>
+      inspect(msg, content="drawing span out of range")
+    _ => fail("expected drawing span overflow")
+  }
 }
 
 ///|
@@ -968,5 +1155,20 @@ test "read_drawing_xml wb: parse_drawing_images anchor/ext validation errors" {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="drawing cy missing")
     _ => fail("expected InvalidXml drawing cy missing")
+  }
+
+  let invalid_to = wb_two_cell_anchor(
+    wb_from_xml(),
+    "<xdr:to><xdr:col>2147483647</xdr:col><xdr:row>0</xdr:row><xdr:colOff>0</xdr:colOff><xdr:rowOff>0</xdr:rowOff></xdr:to>",
+  )
+  let invalid_to_result : Result[Array[Image], Error] = Ok(
+    parse_drawing_images(invalid_to, rels_xml, sheet, archive),
+  ) catch {
+    error => Err(error)
+  }
+  match invalid_to_result {
+    Err(XlsxError::InvalidXml(msg~)) =>
+      inspect(msg, content="drawing col invalid")
+    _ => fail("expected InvalidXml drawing to column invalid")
   }
 }
