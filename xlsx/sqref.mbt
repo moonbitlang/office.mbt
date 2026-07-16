@@ -96,52 +96,105 @@ fn normalize_xml_sqref_attr_for_read(
 }
 
 ///|
-fn flat_sqref(
-  sqref : StringView,
-) -> Map[Int, Array[(Int, Int)]] raise XlsxError {
-  let cells : Map[Int, Array[(Int, Int)]] = Map([])
-  for text in xml_whitespace_tokens(sqref) {
-    if text.contains(":") {
-      let (min_row, min_col, max_row, max_col) = parse_range_ref(text)
-      for col in min_col..<=max_col {
-        for row in min_row..<=max_row {
-          let entries = match cells.get(col) {
-            Some(value) => value
-            None => []
-          }
-          entries.push((col, row))
-          cells[col] = entries
-        }
+fn merge_sqref_row_intervals(entries : Array[(Int, Int)]) -> Array[(Int, Int)] {
+  entries.sort_by((left, right) => {
+    let (left_start, left_end) = left
+    let (right_start, right_end) = right
+    if left_start < right_start {
+      -1
+    } else if left_start > right_start {
+      1
+    } else if left_end < right_end {
+      -1
+    } else if left_end > right_end {
+      1
+    } else {
+      0
+    }
+  })
+  let merged : Array[(Int, Int)] = []
+  for entry in entries {
+    let (start_row, end_row) = entry
+    if merged.length() == 0 {
+      merged.push(entry)
+      continue
+    }
+    let last_index = merged.length() - 1
+    let (last_start, last_end) = merged[last_index]
+    if start_row <= last_end + 1 {
+      if end_row > last_end {
+        merged[last_index] = (last_start, end_row)
       }
     } else {
-      let (row, col) = cell_ref_to_rc(text)
-      let entries = match cells.get(col) {
-        Some(value) => value
-        None => []
-      }
-      entries.push((col, row))
-      cells[col] = entries
+      merged.push(entry)
     }
   }
-  for col, entries in cells {
-    entries.sort_by((left, right) => {
-      let (_, row_left) = left
-      let (_, row_right) = right
-      row_left - row_right
-    })
-    cells[col] = entries
-  }
-  cells
+  merged
 }
 
 ///|
-fn in_coordinates(cells : Array[(Int, Int)], target : (Int, Int)) -> Int {
-  for i, cell in cells {
-    if cell == target {
-      return i
+/// Parse an sqref into row intervals keyed by column. Expanding across columns
+/// is bounded by Excel's 16,384-column grid; rows are never materialized one by
+/// one, so full-column and full-grid references stay bounded.
+fn flat_sqref(
+  sqref : StringView,
+) -> Map[Int, Array[(Int, Int)]] raise XlsxError {
+  let intervals : Map[Int, Array[(Int, Int)]] = Map([])
+  for text in xml_whitespace_tokens(sqref) {
+    let (min_row, min_col, max_row, max_col) = if text.contains(":") {
+      let (min_row, min_col, max_row, max_col) = parse_range_ref(text)
+      (min_row, min_col, max_row, max_col)
+    } else {
+      let (row, col) = cell_ref_to_rc(text)
+      (row, col, row, col)
+    }
+    for col in min_col..<=max_col {
+      let entries = match intervals.get(col) {
+        Some(value) => value
+        None => []
+      }
+      entries.push((min_row, max_row))
+      intervals[col] = entries
     }
   }
-  -1
+  for col, entries in intervals {
+    intervals[col] = merge_sqref_row_intervals(entries)
+  }
+  intervals
+}
+
+///|
+fn subtract_sqref_row_intervals(
+  existing : Array[(Int, Int)],
+  deletions : Array[(Int, Int)],
+) -> Array[(Int, Int)] {
+  let updated : Array[(Int, Int)] = []
+  for source in existing {
+    let (source_start, source_end) = source
+    let mut cursor = source_start
+    let mut exhausted = false
+    for deletion in deletions {
+      let (delete_start, delete_end) = deletion
+      if delete_end < cursor {
+        continue
+      }
+      if delete_start > source_end {
+        break
+      }
+      if delete_start > cursor {
+        updated.push((cursor, delete_start - 1))
+      }
+      if delete_end >= source_end {
+        exhausted = true
+        break
+      }
+      cursor = delete_end + 1
+    }
+    if !exhausted && cursor <= source_end {
+      updated.push((cursor, source_end))
+    }
+  }
+  updated
 }
 
 ///|
@@ -160,60 +213,31 @@ fn range_ref_from_coords(
 }
 
 ///|
-fn squash_sqref(cells : Array[(Int, Int)]) -> Array[String] raise XlsxError {
-  if cells.length() == 0 {
-    return []
-  }
-  if cells.length() == 1 {
-    return [range_ref_from_coords(cells[0], cells[0])]
-  }
-  let refs : Array[String] = []
-  let mut start = 0
-  let mut end = 0
-  for i in 1..<cells.length() {
-    let (_, prev_row) = cells[end]
-    let (_, row) = cells[i]
-    if row - prev_row > 1 {
-      refs.push(range_ref_from_coords(cells[start], cells[end]))
-      start = i
-      end = i
-    } else {
-      end = i
-    }
-  }
-  refs.push(range_ref_from_coords(cells[start], cells[end]))
-  refs
-}
-
-///|
 fn delete_cells_from_sqref(
   sqref : StringView,
-  del_cells : Map[Int, Array[(Int, Int)]],
+  del_intervals : Map[Int, Array[(Int, Int)]],
 ) -> String raise XlsxError {
-  let col_cells = flat_sqref(sqref)
-  for col, cells in del_cells {
-    match col_cells.get(col) {
-      Some(existing) => {
-        let updated : Array[(Int, Int)] = []
-        for cell in existing {
-          if in_coordinates(cells, cell) == -1 {
-            updated.push(cell)
-          }
-        }
-        col_cells[col] = updated
-      }
+  let col_intervals = flat_sqref(sqref)
+  for col, deletions in del_intervals {
+    match col_intervals.get(col) {
+      Some(existing) =>
+        col_intervals[col] = subtract_sqref_row_intervals(existing, deletions)
       None => ()
     }
   }
   let refs : Array[String] = []
   let cols : Array[Int] = []
-  for col, _ in col_cells {
+  for col, _ in col_intervals {
     cols.push(col)
   }
   cols.sort_by((a, b) => a - b)
   for col in cols {
-    match col_cells.get(col) {
-      Some(entries) => refs.append(squash_sqref(entries))
+    match col_intervals.get(col) {
+      Some(entries) =>
+        for entry in entries {
+          let (start_row, end_row) = entry
+          refs.push(range_ref_from_coords((col, start_row), (col, end_row)))
+        }
       None => ()
     }
   }
@@ -224,4 +248,18 @@ fn delete_cells_from_sqref(
 test "sqref wb: flat_sqref trims empty tokens and merges repeated single-column refs" {
   let normalized = delete_cells_from_sqref("A1\t\r\n A2", Map([]))
   inspect(normalized, content="A1:A2")
+}
+
+///|
+test "sqref wb: full-column subtraction does not expand rows" {
+  let deletions = flat_sqref("A1")
+  let updated = delete_cells_from_sqref("A1:A1048576", deletions)
+  inspect(updated, content="A2:A1048576")
+}
+
+///|
+test "sqref wb: full-grid subtraction stays bounded" {
+  let deletions = flat_sqref("A1:XFD1048576")
+  let updated = delete_cells_from_sqref("A1:XFD1048576", deletions)
+  inspect(updated, content="")
 }

@@ -356,7 +356,7 @@ test "read normalizes only XML whitespace in sqref fields" {
       @xlsx.Selection::with_values(sqref="A1 B1", active_cell="A1"),
     ]),
   )
-  let whitespace = "sqref=\" \tA1\r\nB1 \""
+  let whitespace = "xmlns:x=\"urn:coordinate-hardening\" x:sqref=\"keep\" sqref = \" \tA1\r\nB1 \""
   let patched = coordinate_hardening_replace_part(
     @xlsx.write(workbook),
     "xl/worksheets/sheet1.xml",
@@ -368,8 +368,9 @@ test "read normalizes only XML whitespace in sqref fields" {
     Some(value) => value
     None => fail("missing Sheet1")
   }
-  assert_true(parsed_sheet.data_validations()[0].contains("sqref=\"A1 B1\""))
-  assert_true(parsed_sheet.conditional_formats()[0].contains("sqref=\"A1 B1\""))
+  let normalized_attr = "x:sqref=\"keep\" sqref = \"A1 B1\""
+  assert_true(parsed_sheet.data_validations()[0].contains(normalized_attr))
+  assert_true(parsed_sheet.conditional_formats()[0].contains(normalized_attr))
   assert_eq(parsed.get_panes("Sheet1").selection[0].sqref, "A1 B1")
   assert_true(parsed.get_conditional_formats("Sheet1").contains("A1 B1"))
   parsed.duplicate_row_to("Sheet1", 1, 2)

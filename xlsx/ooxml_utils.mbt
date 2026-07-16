@@ -75,6 +75,14 @@ fn extract_tag_body(
 }
 
 ///|
+fn is_xml_attr_space_unit(ch : UInt16) -> Bool {
+  ch == (' ' : UInt16) ||
+  ch == ('\t' : UInt16) ||
+  ch == ('\n' : UInt16) ||
+  ch == ('\r' : UInt16)
+}
+
+///|
 /// Replace `attr_name="..."` inside the first open tag in `xml`.
 fn replace_attr_value_in_open_tag(
   xml : StringView,
@@ -86,23 +94,61 @@ fn replace_attr_value_in_open_tag(
     Some(pos) => pos
     None => return None
   }
-  let tag_end = match text.find(">") {
-    Some(pos) => pos
-    None => return None
+  let mut pos = tag_start + 1
+  while pos < text.length() &&
+        !is_xml_attr_space_unit(text[pos]) &&
+        text[pos] != '>' {
+    pos = pos + 1
   }
-  let open_tag = text[tag_start:tag_end]
-  let needle = "\{attr_name.to_owned()}=\""
-  let attr_pos = match open_tag.find(needle) {
-    Some(pos) => pos
-    None => return None
+  let mut value_start = -1
+  let mut value_end = -1
+  while pos < text.length() {
+    while pos < text.length() && is_xml_attr_space_unit(text[pos]) {
+      pos = pos + 1
+    }
+    if pos >= text.length() || text[pos] == '>' || text[pos] == '/' {
+      break
+    }
+    let name_start = pos
+    while pos < text.length() &&
+          !is_xml_attr_space_unit(text[pos]) &&
+          text[pos] != '=' &&
+          text[pos] != '>' &&
+          text[pos] != '/' {
+      pos = pos + 1
+    }
+    let name_end = pos
+    while pos < text.length() && is_xml_attr_space_unit(text[pos]) {
+      pos = pos + 1
+    }
+    if pos >= text.length() || text[pos] != '=' {
+      return None
+    }
+    pos = pos + 1
+    while pos < text.length() && is_xml_attr_space_unit(text[pos]) {
+      pos = pos + 1
+    }
+    if pos >= text.length() || text[pos] != '"' {
+      return None
+    }
+    pos = pos + 1
+    let current_value_start = pos
+    while pos < text.length() && text[pos] != '"' {
+      pos = pos + 1
+    }
+    if pos >= text.length() {
+      return None
+    }
+    if text[name_start:name_end] == attr_name {
+      value_start = current_value_start
+      value_end = pos
+      break
+    }
+    pos = pos + 1
   }
-  let value_start = tag_start + attr_pos + needle.length()
-  let rest = text[value_start:]
-  let value_end_rel = match rest.find("\"") {
-    Some(pos) => pos
-    None => return None
+  if value_start < 0 {
+    return None
   }
-  let value_end = value_start + value_end_rel
   let sb = StringBuilder::new()
   sb.write_view(text[:value_start])
   sb.write_view(escape_xml_attr(value))
@@ -150,5 +196,23 @@ test "ooxml_utils: replace_attr_value_in_open_tag returns None when attribute mi
   debug_inspect(
     replace_attr_value_in_open_tag(xml, "sqref", "B2"),
     content="None",
+  )
+}
+
+///|
+test "ooxml_utils: replace_attr_value_in_open_tag accepts spaces around equals" {
+  let xml = "<a sqref = \" A1\">x</a>"
+  debug_inspect(
+    replace_attr_value_in_open_tag(xml, "sqref", "B2"),
+    content="Some(\"<a sqref = \\\"B2\\\">x</a>\")",
+  )
+}
+
+///|
+test "ooxml_utils: replace_attr_value_in_open_tag ignores prefixed names" {
+  let xml = "<a x:sqref=\"keep\" sqref = \" A1\">x</a>"
+  debug_inspect(
+    replace_attr_value_in_open_tag(xml, "sqref", "B2"),
+    content="Some(\"<a x:sqref=\\\"keep\\\" sqref = \\\"B2\\\">x</a>\")",
   )
 }
