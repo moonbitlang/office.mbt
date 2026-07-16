@@ -1,16 +1,4 @@
 ///|
-let docx_cli_max_package_bytes : Int = 64 * 1024 * 1024
-
-///|
-let docx_cli_max_zip_entries : Int = 4096
-
-///|
-let docx_cli_max_zip_entry_bytes : Int = 32 * 1024 * 1024
-
-///|
-let docx_cli_max_zip_total_bytes : Int = 128 * 1024 * 1024
-
-///|
 let docx_cli_max_xml_source_units : Int = 64 * 1024 * 1024
 
 ///|
@@ -114,30 +102,6 @@ fn docx_resource_failure(
   actual? : Int,
 ) -> CliFailure {
   format_resource_failure("docx", resource, limit, actual?)
-}
-
-///|
-fn docx_zip_failure(error : @zip.ZipError, file : String) -> CliFailure {
-  match error {
-    ResourceLimitExceeded(kind~, limit~, actual~) =>
-      docx_cli_failure(
-        "office.docx.resource_limit",
-        "DOCX ZIP \{bounded_text(kind, 80)} exceeds the configured limit",
-        details=Json::object({
-          "file": Json::string(bounded_text(file, 160)),
-          "resource": Json::string(bounded_text(kind, 80)),
-          "limit": Json::number(limit.to_double()),
-          "actual": Json::number(actual.to_double()),
-        }),
-      )
-    OutputLimitExceeded(limit~) => docx_resource_failure("ZIP output", limit)
-    _ =>
-      docx_cli_failure(
-        "office.invalid_package",
-        "invalid DOCX package: archive is not a readable bounded ZIP",
-        details=Json::object({ "file": Json::string(bounded_text(file, 160)) }),
-      )
-  }
 }
 
 ///|

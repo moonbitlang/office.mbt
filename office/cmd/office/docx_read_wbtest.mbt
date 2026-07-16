@@ -59,13 +59,13 @@ fn open_docx_projection(
 ) -> DocxProjection raise CliFailure {
   let archive = @zip.read_limited(
     data,
-    max_package_bytes=docx_cli_max_package_bytes,
-    max_entries=docx_cli_max_zip_entries,
-    max_entry_uncompressed_bytes=docx_cli_max_zip_entry_bytes,
-    max_total_uncompressed_bytes=docx_cli_max_zip_total_bytes,
-    max_total_preserved_source_bytes=docx_cli_max_package_bytes,
+    max_package_bytes=office_read_max_package_bytes,
+    max_entries=office_read_max_zip_entries,
+    max_entry_uncompressed_bytes=office_read_max_zip_entry_bytes,
+    max_total_uncompressed_bytes=office_read_max_zip_total_bytes,
+    max_total_preserved_source_bytes=office_read_max_preserved_source_bytes,
   ) catch {
-    error => raise docx_zip_failure(error, file)
+    error => raise office_zip_read_failure(error, file, Docx)
   }
   open_docx_projection_archive(file, archive, max_elements)
 }
