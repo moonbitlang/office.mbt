@@ -69,7 +69,7 @@ test "DOCX view rejects case-equivalent aliases at construction" {
 }
 
 ///|
-test "DOCX view ignores explicit directory records and their aliases" {
+test "DOCX view treats directory records as exact physical identities" {
   let archive = @mbtzip.Archive::new()
   archive.add("word/", b"")
   archive.add("WORD/", b"")
@@ -77,6 +77,38 @@ test "DOCX view ignores explicit directory records and their aliases" {
   let view = @zip.open_zip_archive(archive)
   assert_false(view.exists("word/"))
   assert_true(view.exists("word/document.xml"))
+
+  let duplicate = @mbtzip.Archive::new()
+  duplicate.add("word/", b"")
+  duplicate.add("word/", b"")
+  try @zip.open_zip_archive(duplicate) catch {
+    InvalidZip(message~) =>
+      inspect(message, content="duplicate ZIP entry name: word/")
+    _ => fail("expected InvalidZip")
+  } noraise {
+    _ => fail("expected an exact duplicate directory to be rejected")
+  }
+
+  let duplicate_bytes = @mbtzip.write(duplicate)
+  try @zip.open_zip(duplicate_bytes) catch {
+    InvalidZip(message~) =>
+      inspect(message, content="duplicate ZIP entry name: word/")
+    _ => fail("expected InvalidZip")
+  } noraise {
+    _ => fail("expected the byte-backed reader to reject duplicate dirs")
+  }
+
+  let duplicate_directories : Array[(String, BytesView)] = [
+    ("word/", b"first"),
+    ("word/", b"second"),
+  ]
+  try @zip.zip_archive_entries(duplicate_directories.iter()) catch {
+    InvalidZip(message~) =>
+      inspect(message, content="duplicate ZIP entry name: word/")
+    _ => fail("expected InvalidZip")
+  } noraise {
+    _ => fail("expected the iterator constructor to reject duplicate dirs")
+  }
 }
 
 ///|

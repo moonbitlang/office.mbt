@@ -228,6 +228,8 @@ test "embedding style map preserves permitted physical ZIP entry spelling" {
   let content_types_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Override PartName=\"/MAMMOTH/STYLE-MAP\" ContentType=\"application/old\"/></Types>"
   let written = @docx2html.embed_style_map(
     style_map_embedding_zip([
+      ("word/", ""),
+      ("WORD/", ""),
       ("WORD/_RELS/DOCUMENT.XML.RELS", relationships_xml),
       ("[Content_Types].xml", content_types_xml),
       ("MAMMOTH/STYLE-MAP", "old"),
@@ -235,6 +237,8 @@ test "embedding style map preserves permitted physical ZIP entry spelling" {
     "p => h1",
   )
   let archive = @mbtzip.read(written)
+  assert_true(archive.get("word/") is Some(_))
+  assert_true(archive.get("WORD/") is Some(_))
   guard archive.get("WORD/_RELS/DOCUMENT.XML.RELS") is Some(relationships) else {
     fail("expected original relationships entry spelling")
   }
@@ -290,6 +294,19 @@ test "embedding style map rejects duplicate ZIP identities without panicking" {
     _ => fail("expected InvalidZip")
   } noraise {
     _ => fail("expected duplicate-name failure")
+  }
+  let duplicated_directory = style_map_embedding_zip([
+    ("word/", "first"),
+    ("word/", "second"),
+    ("word/_rels/document.xml.rels", relationships_xml),
+    ("[Content_Types].xml", content_types_xml),
+  ])
+  try @docx2html.embed_style_map(duplicated_directory, "p => h1") catch {
+    InvalidZip(message~) =>
+      inspect(message, content="duplicate ZIP entry name: word/")
+    _ => fail("expected InvalidZip")
+  } noraise {
+    _ => fail("expected duplicate-directory failure")
   }
 }
 
