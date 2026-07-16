@@ -127,6 +127,14 @@ tab/row/column order with exact totals.
   $ office.exe outline "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" --json | jq -c '{success,schema:.data.schema,path:.data.path,sheet_count:.data.sheet_count,active:.data.active_sheet.path,sheets:[.data.sheets[]|{path,kind,state,used:.used_range.reference}]}'
   {"success":true,"schema":"office.xlsx.outline/1","path":"/xlsx/workbook","sheet_count":2,"active":"/xlsx/sheet[name=\"Sheet1\"]","sheets":[{"path":"/xlsx/sheet[name=\"Sheet1\"]","kind":"worksheet","state":"visible","used":"A1:D22"},{"path":"/xlsx/sheet[name=\"Sheet2\"]","kind":"worksheet","state":"visible","used":"A1:I11"}]}
 
+Singleton extents retain two endpoints, so every emitted range path parses and
+round-trips through the public selector grammar.
+
+  $ office.exe outline "$TESTDIR/../../../../fixtures/excelize/test/OverflowNumericCell.xlsx" --json | jq -c '{reference:.data.sheets[0].used_range.reference,path:.data.sheets[0].used_range.path}'
+  {"reference":"A1:A1","path":"/xlsx/sheet[name=\"Sheet1\"]/range[A1:A1]"}
+  $ office.exe get "$TESTDIR/../../../../fixtures/excelize/test/OverflowNumericCell.xlsx" '/xlsx/sheet[1]/range[A1:A1]' --json | jq -c '{path:.data.path,reference:.data.reference,refs:[.data.cells[].reference]}'
+  {"path":"/xlsx/sheet[name=\"Sheet1\"]/range[A1:A1]","reference":"A1:A1","refs":["A1"]}
+
   $ office.exe get "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" '/xlsx/sheet[1]/range[A19:B19]' --json | jq -c '{schema:.data.schema,path:.data.path,kind:.data.kind,refs:[.data.cells[].reference],raw:[.data.cells[].raw],formulas:[.data.cells[]|(.formula // null)],returned:.data.returned}'
   {"schema":"office.xlsx.element/1","path":"/xlsx/sheet[name=\"Sheet1\"]/range[A19:B19]","kind":"range","refs":["A19","B19"],"raw":[{"type":"string","value":"Total:"},{"type":"number","value":237}],"formulas":[null,"SUM(Sheet2!D2,Sheet2!D11)"],"returned":2}
 

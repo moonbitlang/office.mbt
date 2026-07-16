@@ -79,3 +79,25 @@ test "duplicate coordinates resolve to the first stored cell" {
     other => fail("unexpected raw value: \{to_repr(other)}")
   }
 }
+
+///|
+test "resolved worksheet reads avoid repeated names and preserve style precedence" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Original")
+  let cell_style = workbook.add_style(Style::builtin_number_format(2))
+  let row_style = workbook.add_style(Style::new())
+  let column_style = workbook.add_style(Style::new())
+  sheet.set_cell_value_rc(1, 1, Numeric(1.5))
+  sheet.set_cell_style_rc(1, 1, cell_style)
+  workbook.set_row_style("Original", 2, row_style)
+  workbook.set_col_style("Original", 1, column_style)
+  workbook.set_sheet_name("Original", "Renamed")
+  assert_eq(
+    workbook.get_cell_value_from_worksheet_rc(sheet, 1, 1),
+    Some("1.50"),
+  )
+  assert_eq(sheet.effective_style_id_rc(1, 1), cell_style)
+  assert_eq(sheet.effective_style_id_rc(2, 2), row_style)
+  assert_eq(sheet.effective_style_id_rc(3, 1), column_style)
+  assert_eq(sheet.effective_style_id_rc(3, 2), 0)
+}

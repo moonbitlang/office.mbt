@@ -31,7 +31,8 @@ struct XlsxSheetTarget {
 struct XlsxProjection {
   file : String
   workbook : @xlsx.Workbook
-  sheet_names : Array[String]
+  sheets : Array[XlsxSheetTarget]
+  sheet_index : Map[String, Int]
   max_scan_cells : Int
 }
 
@@ -181,10 +182,53 @@ fn make_xlsx_projection(
       }),
     )
   }
+  let worksheets : Map[String, @xlsx.Worksheet] = Map([])
+  for worksheet in workbook.sheets() {
+    worksheets[worksheet.name()] = worksheet
+  }
+  let chart_sheets : Map[String, @xlsx.ChartSheet] = Map([])
+  for chart_sheet in workbook.chart_sheets() {
+    chart_sheets[chart_sheet.name()] = chart_sheet
+  }
+  let sheets : Array[XlsxSheetTarget] = []
+  let sheet_index : Map[String, Int] = Map([])
+  for index, name in workbook.get_sheet_list() {
+    if sheet_index.contains(name) {
+      raise xlsx_cli_failure(
+        "office.xlsx.read_failed",
+        "workbook tab order contains a duplicate sheet name",
+        details=Json::object({ "sheet": Json::string(bounded_text(name, 160)) }),
+      )
+    }
+    let content = match worksheets.get(name) {
+      Some(worksheet) => Worksheet(worksheet)
+      None =>
+        match chart_sheets.get(name) {
+          Some(chart_sheet) => ChartSheet(chart_sheet)
+          None =>
+            raise xlsx_cli_failure(
+              "office.xlsx.read_failed",
+              "workbook tab order contains an unresolved sheet",
+              details=Json::object({
+                "sheet": Json::string(bounded_text(name, 160)),
+              }),
+            )
+        }
+    }
+    let target : XlsxSheetTarget = {
+      name,
+      index,
+      path: canonical_xlsx_sheet_path(name),
+      content,
+    }
+    sheet_index[name] = index
+    sheets.push(target)
+  }
   {
     file,
     workbook,
-    sheet_names: workbook.get_sheet_list(),
+    sheets,
+    sheet_index,
     max_scan_cells: max_elements.min(xlsx_cli_hard_max_scan_cells),
   }
 }
@@ -205,21 +249,23 @@ fn XlsxRect::cell_count(self : XlsxRect) -> Int64 {
 }
 
 ///|
-fn XlsxRect::reference(
+fn XlsxRect::cell_reference(
   self : XlsxRect,
   file : String,
 ) -> String raise CliFailure {
-  let first = xlsx_call(file, () => {
-    @xlsx.coordinates_to_cell_name(self.col_lo, self.row_lo)
+  xlsx_call(file, () => @xlsx.coordinates_to_cell_name(self.col_lo, self.row_lo))
+}
+
+///|
+fn XlsxRect::range_reference(
+  self : XlsxRect,
+  file : String,
+) -> String raise CliFailure {
+  let first = self.cell_reference(file)
+  let last = xlsx_call(file, () => {
+    @xlsx.coordinates_to_cell_name(self.col_hi, self.row_hi)
   })
-  if self.col_lo == self.col_hi && self.row_lo == self.row_hi {
-    first
-  } else {
-    let last = xlsx_call(file, () => {
-      @xlsx.coordinates_to_cell_name(self.col_hi, self.row_hi)
-    })
-    first + ":" + last
-  }
+  first + ":" + last
 }
 
 ///|
@@ -272,43 +318,10 @@ fn XlsxProjection::check_scan_rect(
 fn XlsxProjection::find_sheet_by_name(
   self : XlsxProjection,
   name : String,
-) -> XlsxSheetTarget? raise CliFailure {
-  let mut found_index = -1
-  for index, candidate in self.sheet_names {
-    if candidate == name {
-      found_index = index
-      break
-    }
-  }
-  if found_index < 0 {
-    return None
-  }
-  let path = canonical_xlsx_sheet_path(name)
-  match self.workbook.sheet(name) {
-    Some(sheet) =>
-      Some({ name, index: found_index, path, content: Worksheet(sheet) })
-    None =>
-      match self.workbook.chart_sheet(name) {
-        Some(sheet) =>
-          Some({ name, index: found_index, path, content: ChartSheet(sheet) })
-        None => None
-      }
-  }
-}
-
-///|
-fn XlsxProjection::require_sheet_by_name(
-  self : XlsxProjection,
-  name : String,
-) -> XlsxSheetTarget raise CliFailure {
-  match self.find_sheet_by_name(name) {
-    Some(sheet) => sheet
-    None =>
-      raise xlsx_cli_failure(
-        "office.xlsx.read_failed",
-        "workbook tab order contains an unresolved sheet",
-        details=Json::object({ "sheet": Json::string(bounded_text(name, 160)) }),
-      )
+) -> XlsxSheetTarget? {
+  match self.sheet_index.get(name) {
+    Some(index) => self.sheets.get(index)
+    None => None
   }
 }
 
@@ -322,11 +335,7 @@ fn XlsxProjection::resolve_sheet_segment(
     Some(name) => self.find_sheet_by_name(name)
     None =>
       match segment.position() {
-        Some(position) =>
-          match self.sheet_names.get(position - 1) {
-            Some(name) => self.find_sheet_by_name(name)
-            None => None
-          }
+        Some(position) => self.sheets.get(position - 1)
         None => None
       }
   }
@@ -393,20 +402,23 @@ fn resolve_xlsx_selector(
       ignore(sheet.worksheet(selector.render()))
       let rect = xlsx_rect_from_coordinate(coordinate)
       projection.check_scan_rect(rect)
-      let reference = rect.reference(projection.file)
       match coordinate {
-        Cell(_) =>
+        Cell(_) => {
+          let reference = rect.cell_reference(projection.file)
           Cell(
             sheet,
             rect,
             path=canonical_xlsx_cell_path(sheet.name, reference),
           )
-        Range(_, _) =>
+        }
+        Range(_, _) => {
+          let reference = rect.range_reference(projection.file)
           Range(
             sheet,
             rect,
             path=canonical_xlsx_range_path(sheet.name, reference),
           )
+        }
       }
     }
   }
@@ -440,8 +452,7 @@ fn xlsx_scan_regions(
         ChartSheet(_) => ()
       }
     Some(Workbook(..)) | None =>
-      for name in projection.sheet_names {
-        let sheet = projection.require_sheet_by_name(name)
+      for sheet in projection.sheets {
         match sheet.content {
           Worksheet(worksheet) =>
             match xlsx_used_rect(worksheet) {
@@ -544,37 +555,32 @@ fn xlsx_cell_snapshot(
   budget : XlsxScanBudget,
 ) -> XlsxCellSnapshot raise CliFailure {
   budget.charge_cell()
+  let worksheet = sheet.worksheet(sheet.path)
   let reference = xlsx_call(projection.file, () => {
     @xlsx.coordinates_to_cell_name(column, row)
   })
   let raw = xlsx_call(projection.file, () => {
-    projection.workbook.get_cell_value_raw(sheet.name, reference)
+    worksheet.get_cell_value_raw(reference)
   })
   let normalized_raw = match raw {
     Some(String("")) => None
     value => value
   }
   let formula = match
-    xlsx_call(projection.file, () => {
-      projection.workbook.get_cell_formula(sheet.name, reference)
-    }) {
+    xlsx_call(projection.file, () => worksheet.get_cell_formula(reference)) {
     Some("") => None
     value => value
   }
   let style_id = xlsx_call(projection.file, () => {
-    @inspect.effective_style_id(
-      projection.workbook,
-      sheet.name,
-      reference,
-      row~,
-      col=column,
-    )
+    worksheet.effective_style_id_rc(row, column)
   })
   let formatted = match normalized_raw {
     Some(_) =>
       Some(
         xlsx_call(projection.file, () => {
-          projection.workbook.get_cell_value(sheet.name, reference)
+          projection.workbook.get_cell_value_from_worksheet_rc(
+            worksheet, row, column,
+          )
         }).unwrap_or(""),
       )
     None => None

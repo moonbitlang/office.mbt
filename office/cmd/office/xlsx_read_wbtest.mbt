@@ -40,6 +40,15 @@ test "XLSX selectors resolve to stable named canonical paths" {
   assert_eq(rect.cell_count(), 4L)
   assert_eq(path, "/xlsx/sheet[name=\"Data\"]/range[A1:B2]")
   assert_eq(@lib.parse_selector(path).render(), path)
+  guard resolve_xlsx_selector(
+      projection, "/xlsx/sheet[name=\"Data\"]/range[B2:B2]",
+    )
+    is Range(_, singleton, path~) else {
+    fail("expected singleton range selector")
+  }
+  assert_eq(singleton.range_reference(projection.file), "B2:B2")
+  assert_eq(path, "/xlsx/sheet[name=\"Data\"]/range[B2:B2]")
+  assert_eq(@lib.parse_selector(path).render(), path)
 }
 
 ///|
@@ -93,6 +102,28 @@ test "XLSX cell snapshots preserve typed values, formulas, and canonical paths" 
   assert_eq(snapshot.formatted, Some("3"))
   assert_true(snapshot.raw is Some(String("3")))
   assert_eq(budget.scanned, 1)
+}
+
+///|
+test "XLSX cell scans keep the resolved worksheet handle" {
+  let projection = xlsx_read_test_projection()
+  guard resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]/cell[A1]")
+    is Cell(sheet, rect, ..) else {
+    fail("expected cell selector")
+  }
+  projection.workbook.set_sheet_name("Data", "Renamed")
+  let snapshot = xlsx_cell_snapshot(
+    projection,
+    sheet,
+    rect.row_lo,
+    rect.col_lo,
+    XlsxScanBudget::new(1),
+  )
+  guard snapshot.raw is Some(String(raw)) else {
+    fail("expected resolved raw string")
+  }
+  assert_eq(raw, "alpha")
+  assert_eq(snapshot.formatted, Some("alpha"))
 }
 
 ///|
@@ -214,6 +245,67 @@ test "XLSX outline and get use office schemas with canonical cell records" {
     ignore(xlsx_get_data(projection, missing))
   })
   assert_eq(missing_error.code, "office.xlsx.selector_not_found")
+}
+
+///|
+test "XLSX singleton used ranges remain canonical two-endpoint ranges" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Only"))
+  workbook.set_cell_str("Only", "A1", "one")
+  let projection = make_xlsx_projection("one.xlsx", workbook, 10)
+  let outline = xlsx_outline_data(projection)
+  guard outline is Object(fields) &&
+    fields.get("sheets") is Some(Array([Object(sheet), ..])) &&
+    sheet.get("used_range") is Some(Object(used)) else {
+    fail("expected singleton used range")
+  }
+  assert_eq(used.get("reference"), Some(Json::string("A1:A1")))
+  assert_eq(
+    used.get("path"),
+    Some(Json::string("/xlsx/sheet[name=\"Only\"]/range[A1:A1]")),
+  )
+  let resolved = resolve_xlsx_selector(
+    projection, "/xlsx/sheet[name=\"Only\"]/range[A1:A1]",
+  )
+  guard xlsx_get_data(projection, resolved) is Object(get) else {
+    fail("expected singleton range get")
+  }
+  assert_eq(get.get("reference"), Some(Json::string("A1:A1")))
+}
+
+///|
+test "XLSX structured reads reject non-finite package numbers" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  workbook.set_cell_int("Data", "A1", 1)
+  let archive = try! @zip.read(@xlsx.write(workbook))
+  guard archive.get("xl/worksheets/sheet1.xml") is Some(sheet_bytes) else {
+    fail("missing worksheet part")
+  }
+  let sheet_xml = try! @utf8.decode(sheet_bytes, ignore_bom=true)
+  assert_true(sheet_xml.contains("<v>1</v>"))
+  assert_true(
+    archive.replace(
+      "xl/worksheets/sheet1.xml",
+      @utf8.encode(sheet_xml.replace(old="<v>1</v>", new="<v>NaN</v>")),
+    ),
+  )
+  let bytes = @zip.write(archive)
+  let bounded = try! @zip.read_limited(
+    bytes,
+    max_package_bytes=office_read_max_package_bytes,
+    max_entries=office_read_max_zip_entries,
+    max_entry_uncompressed_bytes=office_read_max_zip_entry_bytes,
+    max_total_uncompressed_bytes=office_read_max_zip_total_bytes,
+    max_total_preserved_source_bytes=office_read_max_preserved_source_bytes,
+  )
+  let source : OfficeReadPackage = {
+    file: "non-finite.xlsx",
+    format: Xlsx,
+    archive: bounded,
+  }
+  let error = xlsx_cli_error(() => ignore(open_xlsx_projection(source, 10)))
+  assert_eq(error.code, "office.invalid_package")
 }
 
 ///|

@@ -289,6 +289,15 @@ jobs:
             and .data.schema == "office.xlsx.outline/1"
             and .data.path == "/xlsx/workbook"
             and [.data.sheets[].path] == ["/xlsx/sheet[name=\"Sheet1\"]", "/xlsx/sheet[name=\"Sheet2\"]"]'
+          singleton_fixture=fixtures/excelize/test/OverflowNumericCell.xlsx
+          xs=$(moon run --target wasm office/cmd/office -- outline "$singleton_fixture" --json 2>office-wasm.err) || { echo "office XLSX singleton outline failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "$xs" | jq -e '.success == true
+            and .data.sheets[0].used_range.reference == "A1:A1"
+            and .data.sheets[0].used_range.path == "/xlsx/sheet[name=\"Sheet1\"]/range[A1:A1]"'
+          xsg=$(moon run --target wasm office/cmd/office -- get "$singleton_fixture" '/xlsx/sheet[1]/range[A1:A1]' --json 2>office-wasm.err) || { echo "office XLSX singleton get failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "$xsg" | jq -e '.success == true
+            and .data.reference == "A1:A1"
+            and [.data.cells[].reference] == ["A1"]'
           xg=$(moon run --target wasm office/cmd/office -- get "$xlsx_fixture" '/xlsx/sheet[1]/range[A19:B19]' --json 2>office-wasm.err) || { echo "office XLSX get failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$xg" | jq -e '.success == true
             and .data.schema == "office.xlsx.element/1"

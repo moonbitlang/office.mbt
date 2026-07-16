@@ -227,7 +227,8 @@ fn Worksheet::form_controls(self : Worksheet) -> ArrayView[FormControl] {
 }
 
 ///|
-fn Worksheet::slicers(self : Worksheet) -> ArrayView[Slicer] {
+/// Returns the slicers attached to this worksheet in stored order.
+pub fn Worksheet::slicers(self : Worksheet) -> ArrayView[Slicer] {
   self.slicers
 }
 

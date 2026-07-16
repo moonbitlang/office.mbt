@@ -25,12 +25,10 @@ fn xlsx_sheet_state_name(state : @xlsx.SheetState) -> String {
 
 ///|
 fn xlsx_conditional_format_range_count(
-  projection : XlsxProjection,
-  sheet : String,
+  file : String,
+  worksheet : @xlsx.Worksheet,
 ) -> Int raise CliFailure {
-  let formats = xlsx_call(projection.file, () => {
-    projection.workbook.get_conditional_formats(sheet)
-  })
+  let formats = xlsx_call(file, () => worksheet.get_conditional_formats())
   let mut count = 0
   for ranges, _ in formats {
     for part in ranges.split(" ") {
@@ -69,7 +67,7 @@ fn xlsx_sheet_summary_json(
       fields["max_column"] = Json::number(max_col.to_double())
       match xlsx_used_rect(worksheet) {
         Some(rect) => {
-          let reference = rect.reference(projection.file)
+          let reference = rect.range_reference(projection.file)
           let path = canonical_xlsx_range_path(sheet.name, reference)
           metadata.charge_item([reference, path])
           fields["used_range"] = Json::object({
@@ -80,27 +78,13 @@ fn xlsx_sheet_summary_json(
         }
         None => ()
       }
-      let merges = xlsx_call(projection.file, () => {
-        projection.workbook.get_merge_cells(sheet.name)
-      })
-      let tables = xlsx_call(projection.file, () => {
-        projection.workbook.get_tables(sheet.name)
-      })
-      let comments = xlsx_call(projection.file, () => {
-        projection.workbook.get_comments(sheet.name)
-      })
-      let hyperlinks = xlsx_call(projection.file, () => {
-        projection.workbook.get_hyperlink_cells(sheet.name)
-      })
-      let validations = xlsx_call(projection.file, () => {
-        projection.workbook.get_data_validations(sheet.name)
-      })
-      let pivots = xlsx_call(projection.file, () => {
-        projection.workbook.get_pivot_tables(sheet.name)
-      })
-      let slicers = xlsx_call(projection.file, () => {
-        projection.workbook.get_slicers(sheet.name)
-      })
+      let merges = worksheet.merged_cells()
+      let tables = worksheet.tables()
+      let comments = worksheet.comments()
+      let hyperlinks = worksheet.get_hyperlink_cells()
+      let validations = worksheet.data_validations()
+      let pivots = worksheet.pivot_tables()
+      let slicers = worksheet.slicers()
       fields["counts"] = Json::object({
         "merges": Json::number(merges.length().to_double()),
         "tables": Json::number(tables.length().to_double()),
@@ -111,7 +95,7 @@ fn xlsx_sheet_summary_json(
         "hyperlinks": Json::number(hyperlinks.length().to_double()),
         "data_validations": Json::number(validations.length().to_double()),
         "conditional_format_ranges": Json::number(
-          xlsx_conditional_format_range_count(projection, sheet.name).to_double(),
+          xlsx_conditional_format_range_count(projection.file, worksheet).to_double(),
         ),
         "slicers": Json::number(slicers.length().to_double()),
       })
@@ -124,8 +108,7 @@ fn xlsx_sheet_summary_json(
 fn xlsx_outline_data(projection : XlsxProjection) -> Json raise CliFailure {
   let metadata = XlsxMetadataBudget::new()
   let sheets : Array[Json] = []
-  for name in projection.sheet_names {
-    let sheet = projection.require_sheet_by_name(name)
+  for sheet in projection.sheets {
     sheets.push(xlsx_sheet_summary_json(projection, sheet, metadata))
   }
   let defined_names : Array[Json] = []
@@ -164,21 +147,18 @@ fn xlsx_outline_data(projection : XlsxProjection) -> Json raise CliFailure {
       ),
     }),
   }
-  if !projection.sheet_names.is_empty() {
+  if !projection.sheets.is_empty() {
     let active_index = projection.workbook.get_active_sheet_index()
-    guard projection.sheet_names.get(active_index) is Some(name) else {
+    guard projection.sheets.get(active_index) is Some(sheet) else {
       raise xlsx_cli_failure(
         "office.xlsx.read_failed",
         "workbook active-sheet index is outside the tab order",
         details=Json::object({
           "active_sheet_index": Json::number(active_index.to_double()),
-          "sheet_count": Json::number(
-            projection.sheet_names.length().to_double(),
-          ),
+          "sheet_count": Json::number(projection.sheets.length().to_double()),
         }),
       )
     }
-    let sheet = projection.require_sheet_by_name(name)
     fields["active_sheet"] = Json::object({
       "path": Json::string(sheet.path),
       "name": Json::string(sheet.name),
@@ -444,7 +424,7 @@ fn xlsx_get_data(
         "kind": Json::string("range"),
         "stability": Json::string("snapshot-relative"),
         "parent": Json::string(sheet.path),
-        "reference": Json::string(rect.reference(projection.file)),
+        "reference": Json::string(rect.range_reference(projection.file)),
         "cells": Json::array(page.cells.map(xlsx_cell_json)),
         "styles": xlsx_styles_json(projection, page.cells),
         "scanned_cells": Json::number(page.scanned_cells.to_double()),
@@ -574,9 +554,8 @@ fn xlsx_outline_human(
   output.write_terminal_safe(projection.file)
   output.begin_line()
   output.write_plain("workbook\t/xlsx/workbook\t")
-  output.write_plain("\{projection.sheet_names.length()} sheets")
-  for name in projection.sheet_names {
-    let sheet = projection.require_sheet_by_name(name)
+  output.write_plain("\{projection.sheets.length()} sheets")
+  for sheet in projection.sheets {
     output.begin_line()
     output.write_terminal_safe(sheet.path)
     output.write_char('\t')
@@ -588,7 +567,7 @@ fn xlsx_outline_human(
         match xlsx_used_rect(worksheet) {
           Some(rect) => {
             output.write_char('\t')
-            output.write_terminal_safe(rect.reference(projection.file))
+            output.write_terminal_safe(rect.range_reference(projection.file))
           }
           None => output.write_plain("\tempty")
         }

@@ -936,6 +936,31 @@ pub fn Worksheet::get_cell_style_rc(
 }
 
 ///|
+/// Returns the style that formats a resolved coordinate without performing a
+/// workbook sheet-name lookup. Precedence matches the write path: a non-zero
+/// cell style wins, then the row style, then the column style, then style 0.
+/// The row and column are 1-based and must fit the XLSX grid.
+pub fn Worksheet::effective_style_id_rc(
+  self : Worksheet,
+  row : Int,
+  col : Int,
+) -> Int raise XlsxError {
+  ignore(cell_ref_from(row, col))
+  match self.get_cell_style_rc(row, col) {
+    Some(style_id) if style_id != 0 => style_id
+    _ =>
+      match self.get_row_style(row) {
+        Some(style_id) if style_id != 0 => style_id
+        _ =>
+          match self.get_col_style(col) {
+            Some(style_id) if style_id != 0 => style_id
+            _ => 0
+          }
+      }
+  }
+}
+
+///|
 /// Merges the rectangular range `range_ref` (e.g. `"A1:C3"`) into a single
 /// region; the top-left cell's value is displayed across the whole range. The
 /// range is normalized, so `"C3:A1"` and `"A1:C3"` are equivalent.

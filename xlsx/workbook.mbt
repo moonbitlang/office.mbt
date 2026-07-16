@@ -1817,6 +1817,43 @@ pub fn Workbook::get_cell_value(
 }
 
 ///|
+/// Formats one cell from a worksheet that has already been resolved from this
+/// workbook. This is the bulk-read counterpart to `get_cell_value`: callers
+/// can resolve a worksheet once, then read many coordinates without repeating
+/// the workbook's name lookup for every cell. The cell's own style and the
+/// workbook's formatting options have the same semantics as
+/// `get_cell_value`.
+///
+/// `worksheet` must be an entry from this workbook's `sheets()` view. The row
+/// and column are 1-based and must fit the XLSX grid.
+pub fn Workbook::get_cell_value_from_worksheet_rc(
+  self : Workbook,
+  worksheet : Worksheet,
+  row : Int,
+  col : Int,
+  raw? : Bool = false,
+  options? : Options,
+) -> String? raise XlsxError {
+  ignore(cell_ref_from(row, col))
+  let resolved_options = match options {
+    Some(value) => value
+    None => self.options
+  }
+  match worksheet.cell_index_of(row, col) {
+    Some(index) =>
+      Some(
+        format_cell_value_for_workbook(
+          self.styles,
+          worksheet.cells[index],
+          raw,
+          resolved_options,
+        ),
+      )
+    None => None
+  }
+}
+
+///|
 pub fn Workbook::calc_cell_value(
   self : Workbook,
   sheet_name : StringView,

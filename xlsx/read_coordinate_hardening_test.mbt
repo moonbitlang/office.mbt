@@ -106,6 +106,19 @@ fn coordinate_hardening_bounded_archive(
 }
 
 ///|
+test "read rejects non-finite numeric cell values before typed projection" {
+  let base = coordinate_hardening_base_bytes()
+  for value in ["NaN", "Infinity", "1e999999999"] {
+    let bytes = coordinate_hardening_insert_sheet_xml(
+      base,
+      "  </sheetData>",
+      "<row r=\"1\"><c r=\"A1\"><v>\{value}</v></c></row>",
+    )
+    coordinate_hardening_assert_invalid_xml("non-finite number \{value}", bytes)
+  }
+}
+
+///|
 test "read rejects every out-of-grid worksheet coordinate ingress" {
   let base = coordinate_hardening_base_bytes()
   let huge_row = "99999999999999999999999999999999999999999999999999"

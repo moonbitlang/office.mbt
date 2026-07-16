@@ -1827,6 +1827,7 @@ pub fn Workbook::get_cell_style(Self, StringView, StringView) -> Int? raise Xlsx
 pub fn Workbook::get_cell_style_rc(Self, StringView, Int, Int) -> Int? raise XlsxError
 pub fn Workbook::get_cell_type(Self, StringView, StringView) -> CellValueType? raise XlsxError
 pub fn Workbook::get_cell_value(Self, StringView, StringView, raw? : Bool, options? : Options) -> String? raise XlsxError
+pub fn Workbook::get_cell_value_from_worksheet_rc(Self, Worksheet, Int, Int, raw? : Bool, options? : Options) -> String? raise XlsxError
 pub fn Workbook::get_cell_value_raw(Self, StringView, StringView) -> CellValue? raise XlsxError
 pub fn Workbook::get_cell_value_raw_rc(Self, StringView, Int, Int) -> CellValue? raise XlsxError
 pub fn Workbook::get_cell_value_rc(Self, StringView, Int, Int, raw? : Bool, options? : Options) -> String? raise XlsxError
@@ -2092,6 +2093,7 @@ pub fn Worksheet::delete_comment(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::delete_data_validation(Self, sqrefs? : Array[String]) -> Unit raise XlsxError
 pub fn Worksheet::delete_pivot_table(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::delete_table(Self, StringView) -> Unit raise XlsxError
+pub fn Worksheet::effective_style_id_rc(Self, Int, Int) -> Int raise XlsxError
 pub fn Worksheet::formula_refs(Self) -> Array[String]
 pub fn Worksheet::get_cell(Self, StringView) -> String? raise XlsxError
 pub fn Worksheet::get_cell_formula(Self, StringView) -> String? raise XlsxError
@@ -2159,6 +2161,7 @@ pub fn Worksheet::set_sheet_background(Self, Bytes, String) -> Unit raise XlsxEr
 pub fn Worksheet::shapes(Self) -> ArrayView[Shape]
 pub fn Worksheet::sheet_background(Self) -> SheetBackground?
 pub fn Worksheet::sheet_protection(Self) -> SheetProtection?
+pub fn Worksheet::slicers(Self) -> ArrayView[Slicer]
 pub fn Worksheet::sparkline_groups(Self) -> ArrayView[SparklineGroup]
 pub fn Worksheet::state(Self) -> SheetState
 pub fn Worksheet::tables(Self) -> ArrayView[Table]

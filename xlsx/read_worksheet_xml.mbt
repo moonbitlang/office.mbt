@@ -193,11 +193,12 @@ fn parse_worksheet(
             value = ""
             value_type = String
           } else {
-            ignore(
-              @string.parse_double(raw_value) catch {
-                _ => raise InvalidXml(msg="cell number invalid")
-              },
-            )
+            let number = @string.parse_double(raw_value) catch {
+              _ => raise InvalidXml(msg="cell number invalid")
+            }
+            if number.is_nan() || number.is_inf() {
+              raise InvalidXml(msg="cell number must be finite")
+            }
             value = raw_value
             value_type = Number
           }
