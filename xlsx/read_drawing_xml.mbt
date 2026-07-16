@@ -309,6 +309,7 @@ fn parse_drawing_charts(
   drawing_rels_xml : StringView,
   sheet : Worksheet,
   archive : @zip.Archive,
+  decode : (BytesView) -> String raise XlsxError,
 ) -> Array[Chart] raise XlsxError {
   let charts : Array[Chart] = []
   let chart_targets = if drawing_rels_xml.to_owned() == "" {
@@ -336,9 +337,7 @@ fn parse_drawing_charts(
       Some(value) => value
       None => raise MissingPart(path=chart_path)
     }
-    let xml = @encoding/utf8.decode(chart_bytes) catch {
-      _ => raise InvalidXml(msg="drawing chart xml decode failed")
-    }
+    let xml = decode(chart_bytes)
     let from_body = match extract_tag_body_from(anchor_xml, "xdr:from") {
       Some(value) => value
       None => raise InvalidXml(msg="drawing anchor from missing")

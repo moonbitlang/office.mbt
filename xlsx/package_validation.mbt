@@ -27,7 +27,10 @@ pub fn validate_ooxml_package(
     InvalidPackage(_) => return ["archive is not a readable zip"]
     error => raise error
   }
-  validate_ooxml_bounded_archive(archive, limits~)
+  validate_ooxml_bounded_archive(archive, limits~) catch {
+    InvalidPackage(_) => ["archive is not a readable zip"]
+    error => raise error
+  }
 }
 
 ///|
