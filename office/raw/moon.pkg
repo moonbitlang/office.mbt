@@ -13,6 +13,7 @@ import {
 
 import {
   "bobzhang/mbtexcel" @excel,
+  "bobzhang/mbtexcel/testutil/zip_fixture",
   "bobzhang/docx2html" @word,
   "moonbitlang/core/encoding/utf8",
 } for "test"

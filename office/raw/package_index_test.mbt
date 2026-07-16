@@ -192,6 +192,18 @@ fn raw_inventory_error_for(
 }
 
 ///|
+fn raw_inventory_message_for(
+  path : String,
+  bytes : Bytes,
+) -> (String, String) raise {
+  try @raw.raw_inventory(path, bytes) catch {
+    RawError(code~, message~, ..) => (code, message)
+  } noraise {
+    _ => fail("expected raw inventory to fail")
+  }
+}
+
+///|
 fn raw_inventory_error(bytes : Bytes) -> (String, String) raise {
   raw_inventory_error_for("limits.docx", bytes)
 }
@@ -891,7 +903,22 @@ test "raw inventory ignores deterministic hash clustering in package names" {
 ///|
 test "raw inventory excludes ZIP directory markers and mutations preserve them" {
   let original = @word.new_blank_docx()
-  let with_directory = raw_test_add_entry(original, "word/", b"")
+  let source = @zip.read(original)
+  let archive = @zip.Archive::new()
+  // Keep both directory records first so a later Part edit cannot change their
+  // local offsets. That lets this test pin their local and central records
+  // byte-for-byte, including the otherwise-valid case distinction.
+  archive.add("word/", b"", compression=Store, data_descriptor=false)
+  archive.add("WORD/", b"", compression=Store, data_descriptor=false)
+  for entry in source.entries() {
+    archive.add(
+      entry.name(),
+      entry.data(),
+      compression=entry.compression(),
+      data_descriptor=entry.data_descriptor(),
+    )
+  }
+  let with_directory = @zip.write(archive)
   let baseline = @raw.raw_inventory("baseline.docx", original)
   let inventory = @raw.raw_inventory("directory.docx", with_directory)
   assert_eq(inventory.parts.length(), baseline.parts.length())
@@ -910,9 +937,58 @@ test "raw inventory excludes ZIP directory markers and mutations preserve them" 
       value="true",
     ),
   )
+  let output = edited.result_bytes(with_directory)
+  let output_archive = @zip.read(output)
+  assert_eq(output_archive.get("word/"), Some(b""))
+  assert_eq(output_archive.get("WORD/"), Some(b""))
+  // Two empty five-byte directory names occupy 35-byte local records and
+  // 51-byte central records in this controlled writer-generated fixture.
+  assert_eq(with_directory[0:70], output[0:70])
+  let before_central = @zip_fixture.classic_central_directory_offset(
+    with_directory,
+  )
+  let after_central = @zip_fixture.classic_central_directory_offset(output)
   assert_eq(
-    @zip.read(edited.result_bytes(with_directory)).get("word/"),
-    Some(b""),
+    with_directory[before_central:before_central + 102],
+    output[after_central:after_central + 102],
+  )
+
+  let duplicate = @zip.Archive::new()
+  duplicate.add("word/", b"", compression=Store, data_descriptor=false)
+  duplicate.add("word/", b"", compression=Store, data_descriptor=false)
+  for entry in source.entries() {
+    duplicate.add(
+      entry.name(),
+      entry.data(),
+      compression=entry.compression(),
+      data_descriptor=entry.data_descriptor(),
+    )
+  }
+  let (code, message) = raw_inventory_message_for(
+    "duplicate-directory.docx",
+    @zip.write(duplicate),
+  )
+  assert_eq(code, "office.raw.invalid_package")
+  assert_true(message.contains("duplicate directory entry '/word/'"))
+}
+
+///|
+test "raw inventory enforces the complete OPC central-header boundary" {
+  let source = @excel.write(@excel.new_file())
+  let exact = @zip_fixture.with_central_header_size(
+    source, "[Content_Types].xml", 65_535,
+  )
+  inspect(@raw.raw_inventory("book.xlsx", exact).format.name(), content="xlsx")
+
+  let oversized = @zip_fixture.with_central_header_size(
+    source, "[Content_Types].xml", 65_536,
+  )
+  let (code, message) = raw_inventory_message_for("book.xlsx", oversized)
+  assert_eq(code, "office.raw.invalid_package")
+  assert_true(
+    message.contains(
+      "central-directory file header exceeds the OPC 65535-byte limit",
+    ),
   )
 }
 

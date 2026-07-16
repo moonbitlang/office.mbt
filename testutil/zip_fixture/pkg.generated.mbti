@@ -1,0 +1,16 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/mbtexcel/testutil/zip_fixture"
+
+// Values
+pub fn classic_central_directory_offset(BytesView) -> Int raise
+
+pub fn with_central_header_size(BytesView, String, Int) -> Bytes raise
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+

@@ -114,6 +114,27 @@ fn transaction_zip_with_descriptors(data : BytesView) -> Bytes raise {
 }
 
 ///|
+fn transaction_zip_with_directories(
+  data : BytesView,
+  names : Array[String],
+) -> Bytes raise {
+  let source = @zip.read(data)
+  let result = @zip.Archive::new()
+  for name in names {
+    result.add(name, b"")
+  }
+  for entry in source.entries() {
+    result.add(
+      entry.name(),
+      entry.data(),
+      compression=entry.compression(),
+      data_descriptor=entry.data_descriptor(),
+    )
+  }
+  @zip.write(result)
+}
+
+///|
 suberror MutationProbeError {
   MutationProbeError
 }
@@ -418,6 +439,115 @@ async test "custom identifier cannot replace portable candidate validation" {
     assert_eq(identifier_calls.val, 2)
     assert_false(@afs.exists(output))
     assert_eq(@afs.read_file(input).binary(), original)
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
+async test "portable transaction enforces the complete central-header boundary" {
+  with_transaction_test_dir(directory => {
+    let source = @excel.write(@excel.new_file())
+    let exact = @zip_fixture.with_central_header_size(
+      source, "[Content_Types].xml", 65_535,
+    )
+    let oversized = @zip_fixture.with_central_header_size(
+      source, "[Content_Types].xml", 65_536,
+    )
+
+    let exact_input = "\{directory}/exact.xlsx"
+    write_test_file(exact_input, exact)
+    let exact_callback = Ref(false)
+    let report = @transaction.transact(
+      @transaction.transaction_options(exact_input, dry_run=true),
+      (_format, bytes, _archive, _budget) => {
+        exact_callback.val = true
+        @transaction.transaction_mutation(bytes)
+      },
+    )
+    assert_true(exact_callback.val)
+    assert_false(report.changed)
+    assert_false(report.committed)
+    assert_true(
+      report.validations.any(summary => {
+        summary.name == "office-portable-opc" && summary.passed
+      }),
+    )
+
+    let oversized_input = "\{directory}/oversized.xlsx"
+    write_test_file(oversized_input, oversized)
+    let oversized_callback = Ref(false)
+    let input_code = transaction_error_code(() => {
+      @transaction.transact(
+        @transaction.transaction_options(oversized_input, dry_run=true),
+        (_format, bytes, _archive, _budget) => {
+          oversized_callback.val = true
+          @transaction.transaction_mutation(bytes)
+        },
+      )
+    })
+    assert_eq(input_code, "office.transaction.invalid_input")
+    assert_false(oversized_callback.val)
+
+    let candidate_input = "\{directory}/candidate.xlsx"
+    write_test_file(candidate_input, source)
+    let candidate_code = transaction_error_code(() => {
+      @transaction.transact(
+        @transaction.transaction_options(candidate_input, dry_run=true),
+        (_format, _bytes, _archive, _budget) => {
+          @transaction.transaction_mutation(oversized)
+        },
+      )
+    })
+    assert_eq(candidate_code, "office.transaction.validation_failed")
+    assert_eq(@afs.read_file(candidate_input).binary(), source)
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
+async test "portable transaction treats directory names as exact physical records" {
+  with_transaction_test_dir(directory => {
+    let source = @excel.write(@excel.new_file())
+    let distinct = transaction_zip_with_directories(source, ["word/", "WORD/"])
+    let distinct_input = "\{directory}/distinct.xlsx"
+    write_test_file(distinct_input, distinct)
+    let report = @transaction.transact(
+      @transaction.transaction_options(distinct_input, dry_run=true),
+      (_format, bytes, _archive, _budget) => {
+        @transaction.transaction_mutation(bytes)
+      },
+    )
+    assert_false(report.changed)
+    assert_false(report.committed)
+
+    let duplicate = transaction_zip_with_directories(source, ["word/", "word/"])
+    let duplicate_input = "\{directory}/duplicate.xlsx"
+    write_test_file(duplicate_input, duplicate)
+    let input_callback = Ref(false)
+    let input_code = transaction_error_code(() => {
+      @transaction.transact(
+        @transaction.transaction_options(duplicate_input, dry_run=true),
+        (_format, bytes, _archive, _budget) => {
+          input_callback.val = true
+          @transaction.transaction_mutation(bytes)
+        },
+      )
+    })
+    assert_eq(input_code, "office.transaction.invalid_input")
+    assert_false(input_callback.val)
+
+    let candidate_input = "\{directory}/candidate.xlsx"
+    write_test_file(candidate_input, source)
+    let candidate_code = transaction_error_code(() => {
+      @transaction.transact(
+        @transaction.transaction_options(candidate_input, dry_run=true),
+        (_format, _bytes, _archive, _budget) => {
+          @transaction.transaction_mutation(duplicate)
+        },
+      )
+    })
+    assert_eq(candidate_code, "office.transaction.validation_failed")
+    assert_eq(@afs.read_file(candidate_input).binary(), source)
     assert_no_transaction_temp(directory)
   })
 }

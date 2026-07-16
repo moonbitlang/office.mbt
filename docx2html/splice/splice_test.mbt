@@ -489,6 +489,53 @@ test "L0: duplicate zip entries and foreign encodings fail closed" {
     () => planned_aliases.add_part("NEW.XML", @utf8.encode("<n2/>")),
     "the splice plan already adds case-equivalent part 'new.xml'",
   )
+  // Directory records have physical ZIP identity, not case-insensitive OPC
+  // Part identity. Distinct spellings must survive edits exactly.
+  let directories = @mbtzip.Archive::new()
+  directories.add("word/", b"", compression=Store, data_descriptor=false)
+  directories.add("WORD/", b"", compression=Store, data_descriptor=false)
+  directories.add(
+    "a.xml",
+    @utf8.encode("<r/>"),
+    compression=Store,
+    data_descriptor=false,
+  )
+  let directory_bytes = @mbtzip.write(directories)
+  let directory_plan = @splice.SplicePlan::new()
+  directory_plan.edit_part(
+    "a.xml",
+    @splice.span_edit(start=1, end=2, @utf8.encode("s")),
+  )
+  let directory_output = @splice.splice_docx(directory_bytes, directory_plan)
+  let directory_result = @mbtzip.read(directory_output)
+  assert_eq(directory_result.get("word/"), Some(b""))
+  assert_eq(directory_result.get("WORD/"), Some(b""))
+  assert_eq(directory_result.get("a.xml"), Some(@utf8.encode("<s/>")))
+  // In this controlled Store fixture, the two empty five-byte directory
+  // names occupy 35-byte local records and 51-byte central records.
+  assert_eq(directory_bytes[0:70], directory_output[0:70])
+  let directory_central = @zip_fixture.classic_central_directory_offset(
+    directory_bytes,
+  )
+  let output_central = @zip_fixture.classic_central_directory_offset(
+    directory_output,
+  )
+  assert_eq(
+    directory_bytes[directory_central:directory_central + 102],
+    directory_output[output_central:output_central + 102],
+  )
+
+  let duplicate_directories = @mbtzip.Archive::new()
+  duplicate_directories.add("word/", b"")
+  duplicate_directories.add("word/", b"")
+  duplicate_directories.add("a.xml", @utf8.encode("<r/>"))
+  let duplicate_directory_bytes = @mbtzip.write(duplicate_directories)
+  expect_splice_failure(
+    () => {
+      @splice.splice_docx(duplicate_directory_bytes, @splice.SplicePlan::new())
+    },
+    "the package holds duplicate zip entries named 'word/'",
+  )
   // A UTF-16 part (BOM) cannot be spliced.
   let utf16 = @mbtzip.Archive::new()
   utf16.add("w.xml", b"\xFF\xFE<\x00r\x00/\x00>\x00")

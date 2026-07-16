@@ -294,6 +294,7 @@ fn raw_archive_index(
   archive : @zip.Archive,
 ) -> (StableStringMap[String], StableStringMap[BytesView]) raise RawError {
   let entry_names : StableStringMap[String] = SortedMap([])
+  let directory_names : StableStringSet = SortedSet([])
   let names : StableStringMap[String] = SortedMap([])
   let parts : StableStringMap[BytesView] = SortedMap([])
   let part_names = @opc.PartNameRegistry::new()
@@ -309,6 +310,19 @@ fn raw_archive_index(
         }),
       )
     }
+    // ZIP directory records are preservation metadata, not addressable OPC
+    // Parts. Their physical names are case-sensitive, but exact duplicates are
+    // still forbidden by the ZIP package uniqueness rule.
+    if name.has_suffix("/") {
+      if directory_names.contains(name) {
+        raise raw_error(
+          "office.raw.invalid_package",
+          "package contains duplicate directory entry '/\{bounded_raw_text(name, 160)}'",
+        )
+      }
+      directory_names.add(name)
+      continue
+    }
     let physical_key = @opc.part_name_key(name)
     match entry_names.get(physical_key) {
       Some(existing) =>
@@ -318,43 +332,38 @@ fn raw_archive_index(
         )
       None => {
         entry_names[physical_key] = name
-        // ZIP directory markers are physical archive records, not OPC parts.
-        // Keep them in `archive` for byte-preserving rewrites, but do not make
-        // them addressable through the raw part inventory.
-        if !name.has_suffix("/") {
-          let logical = match logical_part_name_from_archive_entry(name) {
-            Some(value) => value
-            None =>
-              raise raw_error(
-                "office.raw.invalid_package",
-                "package entry '/\{bounded_raw_text(name, 160)}' is not a canonical physical OPC item name",
-              )
-          }
-          if logical != "[Content_Types].xml" {
-            match part_names.register(logical, name) {
-              Some(Equivalent(existing)) =>
-                raise raw_error(
-                  "office.raw.invalid_package",
-                  "package contains logically equivalent parts '/\{bounded_raw_text(existing, 120)}' and '/\{bounded_raw_text(name, 120)}'",
-                )
-              Some(Derivable(existing)) =>
-                raise raw_error(
-                  "office.raw.invalid_package",
-                  "package contains derivable parts '/\{bounded_raw_text(existing, 120)}' and '/\{bounded_raw_text(name, 120)}'",
-                )
-              None => ()
-            }
-          }
-          let key = @opc.part_name_key(logical)
-          if names.contains(key) {
+        let logical = match logical_part_name_from_archive_entry(name) {
+          Some(value) => value
+          None =>
             raise raw_error(
               "office.raw.invalid_package",
-              "package contains colliding logical part names at '/\{bounded_raw_text(name, 160)}'",
+              "package entry '/\{bounded_raw_text(name, 160)}' is not a canonical physical OPC item name",
             )
-          }
-          names[key] = name
-          parts[key] = entry.data()
         }
+        if logical != "[Content_Types].xml" {
+          match part_names.register(logical, name) {
+            Some(Equivalent(existing)) =>
+              raise raw_error(
+                "office.raw.invalid_package",
+                "package contains logically equivalent parts '/\{bounded_raw_text(existing, 120)}' and '/\{bounded_raw_text(name, 120)}'",
+              )
+            Some(Derivable(existing)) =>
+              raise raw_error(
+                "office.raw.invalid_package",
+                "package contains derivable parts '/\{bounded_raw_text(existing, 120)}' and '/\{bounded_raw_text(name, 120)}'",
+              )
+            None => ()
+          }
+        }
+        let key = @opc.part_name_key(logical)
+        if names.contains(key) {
+          raise raw_error(
+            "office.raw.invalid_package",
+            "package contains colliding logical part names at '/\{bounded_raw_text(name, 160)}'",
+          )
+        }
+        names[key] = name
+        parts[key] = entry.data()
       }
     }
   }
