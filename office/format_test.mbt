@@ -820,6 +820,28 @@ test "detect_format rejects orphan relationship parts" {
 }
 
 ///|
+test "detect_format rejects relationships of Relationships parts" {
+  let broken = append_archive_part(
+    @excel.write(@excel.new_file()),
+    "xl/_rels/_rels/workbook.xml.rels.rels",
+    @utf8.encode(
+      "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"/>",
+    ),
+  )
+  try @office.detect_format("book.xlsx", broken) catch {
+    err =>
+      inspect(
+        Show::to_string(err).contains(
+          "relationship part must not describe another relationship part: xl/_rels/_rels/workbook.xml.rels.rels -> xl/_rels/workbook.xml.rels",
+        ),
+        content="true",
+      )
+  } noraise {
+    _ => fail("expected a relationships-of-Relationships part to be rejected")
+  }
+}
+
+///|
 test "detect_format decodes UTF-16 package XML in either byte order" {
   let utf16 = reencode_identification_parts_as_utf16(
     @excel.write(@excel.new_file()),

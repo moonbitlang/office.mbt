@@ -1433,6 +1433,11 @@ fn validate_all_relationship_parts(pkg : RawPackage) -> Unit raise RawError {
         )
       }
       match relationship_source_for_part(part) {
+        Some(source) if @opc.is_relationship_part_name(source) =>
+          raise raw_error(
+            "office.raw.invalid_relationship",
+            "relationship part '/\{bounded_raw_text(part, 160)}' must not describe another relationship part '/\{bounded_raw_text(source, 160)}'",
+          )
         Some(source) => ignore(parse_relationships(pkg, source))
         None =>
           raise raw_error(

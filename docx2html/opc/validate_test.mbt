@@ -1255,6 +1255,11 @@ test "Relationships parts require a source while ordinary _rels paths remain leg
       ("word/_rels/ghost.xml.rels", utf8_bytes(empty_relationships)),
       ("word/_rels/.rels", utf8_bytes(empty_relationships)),
       ("word/_rels/nested/ghost.rels", utf8_bytes(empty_relationships)),
+      ("word/_rels/document.xml.rels", utf8_bytes(empty_relationships)),
+      (
+        "word/_rels/_rels/document.xml.rels.rels",
+        utf8_bytes(empty_relationships),
+      ),
     ]),
   )
   assert_true(
@@ -1267,6 +1272,11 @@ test "Relationships parts require a source while ordinary _rels paths remain leg
   )
   assert_true(
     findings.all(finding => !finding.contains("word/_rels/nested/ghost.rels")),
+  )
+  assert_true(
+    findings.contains(
+      "relationship part word/_rels/_rels/document.xml.rels.rels must not describe another Relationships part: word/_rels/document.xml.rels",
+    ),
   )
 }
 
