@@ -38,7 +38,6 @@ pub fn PdfContentColour::not_equal(Self, Self) -> Bool
 pub fn PdfContentColour::to_draw_colour(Self) -> PdfDrawColour
 #deprecated
 pub fn PdfContentColour::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfContentColour::to_repr(Self) -> @debug.Repr
 
@@ -54,7 +53,6 @@ pub fn PdfDrawColour::equal(Self, Self) -> Bool
 pub fn PdfDrawColour::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfDrawColour::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfDrawColour::to_repr(Self) -> @debug.Repr
 

@@ -26,7 +26,6 @@ pub fn PdfBookmark::equal(Self, Self) -> Bool
 pub fn PdfBookmark::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfBookmark::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfBookmark::to_repr(Self) -> @debug.Repr
 
@@ -41,7 +40,6 @@ pub fn PdfBookmarkColour::equal(Self, Self) -> Bool
 pub fn PdfBookmarkColour::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfBookmarkColour::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfBookmarkColour::to_repr(Self) -> @debug.Repr
 

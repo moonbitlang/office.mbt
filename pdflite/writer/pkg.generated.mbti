@@ -24,7 +24,6 @@ pub fn PdfWriteEncryption::equal(Self, Self) -> Bool
 pub fn PdfWriteEncryption::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfWriteEncryption::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfWriteEncryption::to_repr(Self) -> @debug.Repr
 
@@ -39,7 +38,6 @@ pub fn PdfWriteMode::equal(Self, Self) -> Bool
 pub fn PdfWriteMode::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfWriteMode::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfWriteMode::to_repr(Self) -> @debug.Repr
 

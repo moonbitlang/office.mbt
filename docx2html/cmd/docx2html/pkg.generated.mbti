@@ -15,7 +15,6 @@ type CliCommand derive(Eq, @debug.Debug)
 pub fn CliCommand::equal(Self, Self) -> Bool
 #deprecated
 pub fn CliCommand::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn CliCommand::to_repr(Self) -> @debug.Repr
 

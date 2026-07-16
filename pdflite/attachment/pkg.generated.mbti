@@ -23,7 +23,6 @@ pub fn PdfAttachment::equal(Self, Self) -> Bool
 pub fn PdfAttachment::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAttachment::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfAttachment::to_repr(Self) -> @debug.Repr
 

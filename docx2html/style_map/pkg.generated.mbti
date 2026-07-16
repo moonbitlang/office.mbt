@@ -41,7 +41,6 @@ pub fn DocumentMatcher::equal(Self, Self) -> Bool
 pub fn DocumentMatcher::matches(Self, @document.DocumentElement) -> Bool
 #deprecated
 pub fn DocumentMatcher::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn DocumentMatcher::to_repr(Self) -> @debug.Repr
 
@@ -55,7 +54,6 @@ pub(all) struct HtmlPathElement {
 pub fn HtmlPathElement::equal(Self, Self) -> Bool
 #deprecated
 pub fn HtmlPathElement::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn HtmlPathElement::to_repr(Self) -> @debug.Repr
 
@@ -67,7 +65,6 @@ pub(all) struct StyleMapParseResult {
 pub fn StyleMapParseResult::equal(Self, Self) -> Bool
 #deprecated
 pub fn StyleMapParseResult::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn StyleMapParseResult::to_repr(Self) -> @debug.Repr
 
@@ -79,7 +76,6 @@ pub(all) struct StyleMapping {
 pub fn StyleMapping::equal(Self, Self) -> Bool
 #deprecated
 pub fn StyleMapping::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn StyleMapping::to_repr(Self) -> @debug.Repr
 
@@ -91,7 +87,6 @@ pub(all) enum StyleNameMatcher {
 pub fn StyleNameMatcher::equal(Self, Self) -> Bool
 #deprecated
 pub fn StyleNameMatcher::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn StyleNameMatcher::to_repr(Self) -> @debug.Repr
 

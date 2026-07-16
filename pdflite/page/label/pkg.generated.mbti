@@ -44,7 +44,6 @@ pub fn PdfPageLabel::equal(Self, Self) -> Bool
 pub fn PdfPageLabel::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfPageLabel::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfPageLabel::to_repr(Self) -> @debug.Repr
 
@@ -63,7 +62,6 @@ pub fn PdfPageLabelStyle::equal(Self, Self) -> Bool
 pub fn PdfPageLabelStyle::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfPageLabelStyle::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfPageLabelStyle::to_repr(Self) -> @debug.Repr
 

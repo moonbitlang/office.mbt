@@ -32,7 +32,6 @@ pub fn PdfDestination::equal(Self, Self) -> Bool
 pub fn PdfDestination::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfDestination::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfDestination::to_repr(Self) -> @debug.Repr
 
@@ -46,7 +45,6 @@ pub fn PdfTargetPage::equal(Self, Self) -> Bool
 pub fn PdfTargetPage::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfTargetPage::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfTargetPage::to_repr(Self) -> @debug.Repr
 

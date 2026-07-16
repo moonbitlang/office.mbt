@@ -81,7 +81,6 @@ pub(all) enum BreakType {
 pub fn BreakType::equal(Self, Self) -> Bool
 #deprecated
 pub fn BreakType::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn BreakType::to_repr(Self) -> @debug.Repr
 
@@ -95,7 +94,6 @@ pub(all) struct Comment {
 pub fn Comment::equal(Self, Self) -> Bool
 #deprecated
 pub fn Comment::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn Comment::to_repr(Self) -> @debug.Repr
 
@@ -121,7 +119,6 @@ pub fn DocumentElement::equal(Self, Self) -> Bool
 #deprecated
 pub fn DocumentElement::not_equal(Self, Self) -> Bool
 pub fn DocumentElement::to_raw_text(Self) -> String
-#as_free_fn
 #deprecated
 pub fn DocumentElement::to_repr(Self) -> @debug.Repr
 
@@ -134,7 +131,6 @@ pub(all) struct DocumentSection {
 pub fn DocumentSection::equal(Self, Self) -> Bool
 #deprecated
 pub fn DocumentSection::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn DocumentSection::to_repr(Self) -> @debug.Repr
 
@@ -145,7 +141,6 @@ pub(all) struct HeaderFooterPart {
 pub fn HeaderFooterPart::equal(Self, Self) -> Bool
 #deprecated
 pub fn HeaderFooterPart::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn HeaderFooterPart::to_repr(Self) -> @debug.Repr
 
@@ -158,7 +153,6 @@ pub(all) struct Image {
 pub fn Image::equal(Self, Self) -> Bool
 #deprecated
 pub fn Image::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn Image::to_repr(Self) -> @debug.Repr
 
@@ -173,7 +167,6 @@ pub fn Indent::default() -> Self
 pub fn Indent::equal(Self, Self) -> Bool
 #deprecated
 pub fn Indent::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn Indent::to_repr(Self) -> @debug.Repr
 
@@ -186,7 +179,6 @@ pub(all) struct Note {
 pub fn Note::equal(Self, Self) -> Bool
 #deprecated
 pub fn Note::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn Note::to_repr(Self) -> @debug.Repr
 
@@ -198,7 +190,6 @@ pub(all) struct Numbering {
 pub fn Numbering::equal(Self, Self) -> Bool
 #deprecated
 pub fn Numbering::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn Numbering::to_repr(Self) -> @debug.Repr
 
@@ -214,7 +205,6 @@ pub fn ParagraphProperties::default() -> Self
 pub fn ParagraphProperties::equal(Self, Self) -> Bool
 #deprecated
 pub fn ParagraphProperties::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn ParagraphProperties::to_repr(Self) -> @debug.Repr
 
@@ -237,7 +227,6 @@ pub fn RunProperties::default() -> Self
 pub fn RunProperties::equal(Self, Self) -> Bool
 #deprecated
 pub fn RunProperties::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn RunProperties::to_repr(Self) -> @debug.Repr
 
@@ -249,7 +238,6 @@ pub(all) struct SectionRef {
 pub fn SectionRef::equal(Self, Self) -> Bool
 #deprecated
 pub fn SectionRef::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn SectionRef::to_repr(Self) -> @debug.Repr
 
@@ -262,7 +250,6 @@ pub fn TableProperties::default() -> Self
 pub fn TableProperties::equal(Self, Self) -> Bool
 #deprecated
 pub fn TableProperties::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn TableProperties::to_repr(Self) -> @debug.Repr
 
@@ -275,7 +262,6 @@ pub(all) enum VerticalAlignment {
 pub fn VerticalAlignment::equal(Self, Self) -> Bool
 #deprecated
 pub fn VerticalAlignment::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn VerticalAlignment::to_repr(Self) -> @debug.Repr
 

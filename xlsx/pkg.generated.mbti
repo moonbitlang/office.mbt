@@ -103,7 +103,6 @@ pub suberror XlsxError {
   UnsupportedEncryption(msg~ : String)
   UnsupportedFeature(msg~ : String)
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn XlsxError::to_repr(Self) -> @debug.Repr
 
@@ -123,7 +122,6 @@ pub struct Alignment {
 pub fn Alignment::equal(Self, Self) -> Bool
 #deprecated
 pub fn Alignment::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn Alignment::to_repr(Self) -> @debug.Repr
 pub fn Alignment::with_values(horizontal? : String, vertical? : String, wrap_text? : Bool, text_rotation? : Int, indent? : Int, shrink_to_fit? : Bool, justify_last_line? : Bool, reading_order? : Int, relative_indent? : Int) -> Self
@@ -143,7 +141,6 @@ pub struct AutoFilter {
   range_ref : String
   columns : Array[AutoFilterColumn]
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn AutoFilter::to_repr(Self) -> @debug.Repr
 
@@ -152,7 +149,6 @@ pub struct AutoFilterColumn {
   filters : Array[String]?
   custom_filters : AutoFilterCustomFilters?
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn AutoFilterColumn::to_repr(Self) -> @debug.Repr
 
@@ -160,7 +156,6 @@ pub struct AutoFilterCustomFilter {
   operator : String
   value : String
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn AutoFilterCustomFilter::to_repr(Self) -> @debug.Repr
 
@@ -168,7 +163,6 @@ pub struct AutoFilterCustomFilters {
   and_filter : Bool
   filters : Array[AutoFilterCustomFilter]
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn AutoFilterCustomFilters::to_repr(Self) -> @debug.Repr
 
@@ -177,7 +171,6 @@ pub(all) struct AutoFilterOption {
   column : String
   expression : String
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn AutoFilterOption::to_repr(Self) -> @debug.Repr
 
@@ -190,7 +183,6 @@ pub struct Border {
 pub fn Border::equal(Self, Self) -> Bool
 #deprecated
 pub fn Border::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn Border::to_repr(Self) -> @debug.Repr
 pub fn Border::with_values(String, color? : String, style? : Int) -> Self
@@ -215,7 +207,6 @@ pub fn CalcPropsOptions::equal(Self, Self) -> Bool
 pub fn CalcPropsOptions::new() -> Self
 #deprecated
 pub fn CalcPropsOptions::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn CalcPropsOptions::to_repr(Self) -> @debug.Repr
 pub fn CalcPropsOptions::with_values(calc_id? : UInt, calc_mode? : String, full_calc_on_load? : Bool, ref_mode? : String, iterate? : Bool, iterate_count? : UInt, iterate_delta? : Double, full_precision? : Bool, calc_completed? : Bool, calc_on_save? : Bool, concurrent_calc? : Bool, concurrent_manual_count? : UInt, force_full_calc? : Bool) -> Self
@@ -242,7 +233,6 @@ pub(all) enum CellValue {
   Bool(Bool)
   Error(String)
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn CellValue::to_repr(Self) -> @debug.Repr
 
@@ -252,7 +242,6 @@ type CellValueType derive(Eq, @debug.Debug)
 pub fn CellValueType::equal(Self, Self) -> Bool
 #deprecated
 pub fn CellValueType::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn CellValueType::to_repr(Self) -> @debug.Repr
 
@@ -289,12 +278,10 @@ pub(all) struct ChartAxis {
   mut title_rich : Array[RichTextRun]?
   mut ax_id : Int
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn ChartAxis::to_repr(Self) -> @debug.Repr
 
 type ChartComboOptions derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn ChartComboOptions::to_repr(Self) -> @debug.Repr
 
@@ -316,7 +303,6 @@ pub(all) enum ChartDashType {
 pub fn ChartDashType::equal(Self, Self) -> Bool
 #deprecated
 pub fn ChartDashType::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn ChartDashType::to_repr(Self) -> @debug.Repr
 
@@ -327,7 +313,6 @@ pub(all) struct ChartDataLabel {
   mut fill_transparency : Int
   mut fill : ChartFill?
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn ChartDataLabel::to_repr(Self) -> @debug.Repr
 
@@ -345,18 +330,15 @@ pub(all) enum ChartDataLabelPositionType {
 pub fn ChartDataLabelPositionType::equal(Self, Self) -> Bool
 #deprecated
 pub fn ChartDataLabelPositionType::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn ChartDataLabelPositionType::to_repr(Self) -> @debug.Repr
 
 type ChartDataPoint derive(@debug.Debug)
 pub fn ChartDataPoint::new(Int, fill_color? : String, fill? : ChartFill) -> Self
-#as_free_fn
 #deprecated
 pub fn ChartDataPoint::to_repr(Self) -> @debug.Repr
 
 type ChartDimension derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn ChartDimension::to_repr(Self) -> @debug.Repr
 pub fn ChartDimension::with_values(Int, Int) -> Self raise XlsxError
@@ -369,7 +351,6 @@ pub(all) struct ChartFill {
   mut transparency : Int
 } derive(@debug.Debug)
 pub fn ChartFill::new(typ? : String, pattern? : Int, color? : Array[String], shading? : Int, transparency? : Int) -> Self
-#as_free_fn
 #deprecated
 pub fn ChartFill::to_repr(Self) -> @debug.Repr
 
@@ -378,7 +359,6 @@ pub(all) struct ChartLegend {
   mut show_legend_key : Bool
   mut font : Font?
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn ChartLegend::to_repr(Self) -> @debug.Repr
 
@@ -390,7 +370,6 @@ pub(all) struct ChartLine {
   mut smooth : Bool
   mut width : Double
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn ChartLine::to_repr(Self) -> @debug.Repr
 
@@ -404,7 +383,6 @@ pub(all) enum ChartLineType {
 pub fn ChartLineType::equal(Self, Self) -> Bool
 #deprecated
 pub fn ChartLineType::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn ChartLineType::to_repr(Self) -> @debug.Repr
 
@@ -416,13 +394,11 @@ pub(all) struct ChartMarker {
   mut fill : ChartFill?
   mut border : ChartLine
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn ChartMarker::to_repr(Self) -> @debug.Repr
 
 type ChartNumFmt derive(@debug.Debug)
 pub fn ChartNumFmt::new(custom_num_fmt? : String, source_linked? : Bool) -> Self
-#as_free_fn
 #deprecated
 pub fn ChartNumFmt::to_repr(Self) -> @debug.Repr
 
@@ -451,7 +427,6 @@ pub(all) struct ChartOptions {
 } derive(@debug.Debug)
 pub fn ChartOptions::add_combo_chart(Self, Self) -> Unit
 pub fn ChartOptions::new(ChartType) -> Self
-#as_free_fn
 #deprecated
 pub fn ChartOptions::to_repr(Self) -> @debug.Repr
 
@@ -472,7 +447,6 @@ pub(all) struct ChartPlotArea {
   mut fill_transparency : Int
   mut fill : ChartFill?
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn ChartPlotArea::to_repr(Self) -> @debug.Repr
 
@@ -494,7 +468,6 @@ pub(all) struct ChartSeries {
 } derive(@debug.Debug)
 pub fn ChartSeries::new(String, String, name? : String) -> Self raise XlsxError
 pub fn ChartSeries::set_bubble_size(Self, String) -> Unit raise XlsxError
-#as_free_fn
 #deprecated
 pub fn ChartSeries::to_repr(Self) -> @debug.Repr
 
@@ -514,7 +487,6 @@ pub(all) enum ChartTickLabelPositionType {
   Low
   NoTickLabels
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn ChartTickLabelPositionType::to_repr(Self) -> @debug.Repr
 
@@ -581,7 +553,6 @@ pub(all) enum ChartType {
 pub fn ChartType::equal(Self, Self) -> Bool
 #deprecated
 pub fn ChartType::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn ChartType::to_repr(Self) -> @debug.Repr
 
@@ -590,7 +561,6 @@ pub(all) struct ChartUpDownBar {
   mut border : ChartLine
   mut fill : ChartFill?
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn ChartUpDownBar::to_repr(Self) -> @debug.Repr
 
@@ -624,7 +594,6 @@ pub(all) struct Comment {
   width : Int?
   height : Int?
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn Comment::to_repr(Self) -> @debug.Repr
 
@@ -678,7 +647,6 @@ pub fn ConditionalFormatOptions::set_percent(Self, Bool) -> Unit
 pub fn ConditionalFormatOptions::set_reverse_icons(Self, Bool) -> Unit
 pub fn ConditionalFormatOptions::set_stop_if_true(Self, Bool) -> Unit
 pub fn ConditionalFormatOptions::set_value(Self, String) -> Unit
-#as_free_fn
 #deprecated
 pub fn ConditionalFormatOptions::to_repr(Self) -> @debug.Repr
 
@@ -705,7 +673,6 @@ pub struct CustomProperty {
   value : CustomPropertyValue?
 } derive(@debug.Debug)
 pub fn CustomProperty::new(String, CustomPropertyValue?) -> Self
-#as_free_fn
 #deprecated
 pub fn CustomProperty::to_repr(Self) -> @debug.Repr
 
@@ -716,7 +683,6 @@ pub(all) enum CustomPropertyValue {
   Text(String)
   DateTime(String)
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn CustomPropertyValue::to_repr(Self) -> @debug.Repr
 
@@ -743,7 +709,6 @@ pub fn DataValidation::set_input(Self, String, String) -> Unit
 pub fn DataValidation::set_range(Self, DataValidationFormula, DataValidationFormula, DataValidationType, DataValidationOperator) -> Unit raise XlsxError
 pub fn DataValidation::set_sqref(Self, String) -> Unit
 pub fn DataValidation::set_sqref_drop_list(Self, String) -> Unit
-#as_free_fn
 #deprecated
 pub fn DataValidation::to_repr(Self) -> @debug.Repr
 
@@ -752,7 +717,6 @@ pub(all) enum DataValidationErrorStyle {
   Warning
   Information
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn DataValidationErrorStyle::to_repr(Self) -> @debug.Repr
 
@@ -761,7 +725,6 @@ pub(all) enum DataValidationFormula {
   DoubleValue(Double)
   TextValue(String)
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn DataValidationFormula::to_repr(Self) -> @debug.Repr
 
@@ -775,7 +738,6 @@ pub(all) enum DataValidationOperator {
   NotBetween
   NotEqual
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn DataValidationOperator::to_repr(Self) -> @debug.Repr
 
@@ -789,7 +751,6 @@ pub(all) enum DataValidationType {
   Time
   Whole
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn DataValidationType::to_repr(Self) -> @debug.Repr
 
@@ -800,7 +761,6 @@ pub struct DefinedName {
   comment : String
 } derive(@debug.Debug)
 pub fn DefinedName::new(String, String, scope? : String, comment? : String) -> Self
-#as_free_fn
 #deprecated
 pub fn DefinedName::to_repr(Self) -> @debug.Repr
 
@@ -828,7 +788,6 @@ pub fn Fill::solid_bg_indexed(Int, tint? : Double) -> Self
 pub fn Fill::solid_bg_theme(Int, tint? : Double) -> Self
 pub fn Fill::solid_indexed(Int, tint? : Double) -> Self
 pub fn Fill::solid_theme(Int, tint? : Double) -> Self
-#as_free_fn
 #deprecated
 pub fn Fill::to_repr(Self) -> @debug.Repr
 
@@ -856,7 +815,6 @@ pub struct Font {
 pub fn Font::equal(Self, Self) -> Bool
 #deprecated
 pub fn Font::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn Font::to_repr(Self) -> @debug.Repr
 pub fn Font::with_values(bold? : Bool, italic? : Bool, strike? : Bool, outline? : Bool, shadow? : Bool, condense? : Bool, extended? : Bool, underline? : String, size? : Double, color? : String, color_theme? : Int, color_indexed? : Int, color_tint? : Double, charset? : Int, family_number? : Int, scheme? : String, vert_align? : String, family? : String) -> Self
@@ -893,12 +851,10 @@ pub fn FormControl::set_min_val(Self, Int) -> Unit raise XlsxError
 pub fn FormControl::set_page_change(Self, Int) -> Unit raise XlsxError
 pub fn FormControl::set_paragraph(Self, Array[RichTextRun]) -> Unit
 pub fn FormControl::set_width(Self, Int) -> Unit raise XlsxError
-#as_free_fn
 #deprecated
 pub fn FormControl::to_repr(Self) -> @debug.Repr
 
 type FormControlVmlPreset derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn FormControlVmlPreset::to_repr(Self) -> @debug.Repr
 
@@ -908,7 +864,6 @@ pub struct FormulaOpts {
 } derive(@debug.Debug)
 pub fn FormulaOpts::array(String) -> Self
 pub fn FormulaOpts::shared(String) -> Self
-#as_free_fn
 #deprecated
 pub fn FormulaOpts::to_repr(Self) -> @debug.Repr
 pub fn FormulaOpts::with_values(formula_type? : FormulaType, range_ref? : String) -> Self
@@ -919,7 +874,6 @@ pub(all) enum FormulaType {
   Shared
   DataTable
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn FormulaType::to_repr(Self) -> @debug.Repr
 
@@ -940,7 +894,6 @@ pub struct GraphicOptions {
   mut positioning : PicturePositioning?
 } derive(@debug.Debug)
 pub fn GraphicOptions::new() -> Self
-#as_free_fn
 #deprecated
 pub fn GraphicOptions::to_repr(Self) -> @debug.Repr
 pub fn GraphicOptions::with_values(offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String, lock_aspect_ratio? : Bool, auto_fit? : Bool, auto_fit_ignore_aspect? : Bool, print_object? : Bool, locked? : Bool, positioning? : PicturePositioning) -> Self
@@ -959,7 +912,6 @@ pub struct HeaderFooterImageOptions {
 } derive(@debug.Debug)
 pub fn HeaderFooterImageOptions::from_file(HeaderFooterImagePosition, String, is_footer? : Bool, first_page? : Bool, width? : String, height? : String) -> Self raise XlsxError
 pub fn HeaderFooterImageOptions::new(HeaderFooterImagePosition, Bytes, String, is_footer? : Bool, first_page? : Bool, width? : String, height? : String) -> Self
-#as_free_fn
 #deprecated
 pub fn HeaderFooterImageOptions::to_repr(Self) -> @debug.Repr
 
@@ -972,7 +924,6 @@ pub(all) enum HeaderFooterImagePosition {
 pub fn HeaderFooterImagePosition::equal(Self, Self) -> Bool
 #deprecated
 pub fn HeaderFooterImagePosition::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn HeaderFooterImagePosition::to_repr(Self) -> @debug.Repr
 
@@ -988,7 +939,6 @@ pub struct HeaderFooterOptions {
   mut first_header : String
   mut first_footer : String
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn HeaderFooterOptions::to_repr(Self) -> @debug.Repr
 pub fn HeaderFooterOptions::with_values(align_with_margins? : Bool, different_first? : Bool, different_odd_even? : Bool, scale_with_doc? : Bool, odd_header? : String, odd_footer? : String, even_header? : String, even_footer? : String, first_header? : String, first_footer? : String) -> Self
@@ -1001,7 +951,6 @@ pub struct Hyperlink {
   display : String?
   tooltip : String?
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn Hyperlink::to_repr(Self) -> @debug.Repr
 
@@ -1010,7 +959,6 @@ pub struct HyperlinkOpts {
   mut tooltip : String?
 } derive(@debug.Debug)
 pub fn HyperlinkOpts::new() -> Self
-#as_free_fn
 #deprecated
 pub fn HyperlinkOpts::to_repr(Self) -> @debug.Repr
 pub fn HyperlinkOpts::with_values(display? : String, tooltip? : String) -> Self
@@ -1024,7 +972,6 @@ pub(all) enum HyperlinkType {
 pub fn HyperlinkType::equal(Self, Self) -> Bool
 #deprecated
 pub fn HyperlinkType::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn HyperlinkType::to_repr(Self) -> @debug.Repr
 
@@ -1044,7 +991,6 @@ pub struct IgnoredError {
 pub fn IgnoredError::equal(Self, Self) -> Bool
 #deprecated
 pub fn IgnoredError::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn IgnoredError::to_repr(Self) -> @debug.Repr
 
@@ -1063,7 +1009,6 @@ pub(all) enum IgnoredErrorType {
 pub fn IgnoredErrorType::equal(Self, Self) -> Bool
 #deprecated
 pub fn IgnoredErrorType::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn IgnoredErrorType::to_repr(Self) -> @debug.Repr
 
@@ -1096,7 +1041,6 @@ pub struct MergeCell {
 pub fn MergeCell::get_cell_value(Self) -> String
 pub fn MergeCell::get_end_axis(Self) -> String
 pub fn MergeCell::get_start_axis(Self) -> String
-#as_free_fn
 #deprecated
 pub fn MergeCell::to_repr(Self) -> @debug.Repr
 
@@ -1108,7 +1052,6 @@ pub enum NumberFormat {
 pub fn NumberFormat::equal(Self, Self) -> Bool
 #deprecated
 pub fn NumberFormat::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn NumberFormat::to_repr(Self) -> @debug.Repr
 
@@ -1125,7 +1068,6 @@ pub struct Options {
   culture_info : String
 } derive(@debug.Debug)
 pub fn Options::new() -> Self
-#as_free_fn
 #deprecated
 pub fn Options::to_repr(Self) -> @debug.Repr
 pub fn Options::with_values(max_calc_iterations? : UInt, password? : String, raw_cell_value? : Bool, unzip_size_limit? : Int, unzip_xml_size_limit? : Int, tmp_dir? : String, short_date_pattern? : String, long_date_pattern? : String, long_time_pattern? : String, culture_info? : String) -> Self
@@ -1136,7 +1078,6 @@ pub struct PageBreak {
   max : Int
   manual : Bool
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn PageBreak::to_repr(Self) -> @debug.Repr
 
@@ -1150,7 +1091,6 @@ pub struct PageLayoutMarginsOptions {
   mut horizontally : Bool?
   mut vertically : Bool?
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn PageLayoutMarginsOptions::to_repr(Self) -> @debug.Repr
 pub fn PageLayoutMarginsOptions::with_values(top? : Double, bottom? : Double, left? : Double, right? : Double, header? : Double, footer? : Double, horizontally? : Bool, vertically? : Bool) -> Self
@@ -1165,7 +1105,6 @@ pub struct PageLayoutOptions {
   mut black_and_white : Bool?
   mut page_order : String?
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn PageLayoutOptions::to_repr(Self) -> @debug.Repr
 pub fn PageLayoutOptions::with_values(size? : Int, orientation? : String, first_page_number? : Int, adjust_to? : Int, fit_to_height? : Int, fit_to_width? : Int, black_and_white? : Bool, page_order? : String) -> Self
@@ -1180,7 +1119,6 @@ pub struct Panes {
   mut selection : Array[Selection]
 } derive(@debug.Debug)
 pub fn Panes::new() -> Self
-#as_free_fn
 #deprecated
 pub fn Panes::to_repr(Self) -> @debug.Repr
 pub fn Panes::with_values(freeze? : Bool, split? : Bool, x_split? : Int, y_split? : Int, top_left_cell? : String, active_pane? : String, selection? : Array[Selection]) -> Self
@@ -1190,7 +1128,6 @@ pub(all) enum PicturePositioning {
   TwoCell
   Absolute
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn PicturePositioning::to_repr(Self) -> @debug.Repr
 
@@ -1215,7 +1152,6 @@ pub struct PivotTableField {
   default_subtotal : Bool
 } derive(@debug.Debug)
 pub fn PivotTableField::new(String, name? : String, subtotal? : String, num_fmt? : Int, compact? : Bool, outline? : Bool, show_all? : Bool, insert_blank_row? : Bool, default_subtotal? : Bool) -> Self raise XlsxError
-#as_free_fn
 #deprecated
 pub fn PivotTableField::to_repr(Self) -> @debug.Repr
 
@@ -1246,7 +1182,6 @@ pub(all) struct PivotTableOptions {
   mut pivot_table_style_name : String
 } derive(@debug.Debug)
 pub fn PivotTableOptions::new(String, String) -> Self raise XlsxError
-#as_free_fn
 #deprecated
 pub fn PivotTableOptions::to_repr(Self) -> @debug.Repr
 
@@ -1258,7 +1193,6 @@ pub struct Protection {
 pub fn Protection::equal(Self, Self) -> Bool
 #deprecated
 pub fn Protection::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn Protection::to_repr(Self) -> @debug.Repr
 pub fn Protection::with_values(hidden? : Bool, locked? : Bool) -> Self
@@ -1283,7 +1217,6 @@ pub(all) struct RichTextFont {
   vert_align : String?
   family : String?
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn RichTextFont::to_repr(Self) -> @debug.Repr
 
@@ -1291,7 +1224,6 @@ pub(all) struct RichTextRun {
   text : String
   font : RichTextFont?
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn RichTextRun::to_repr(Self) -> @debug.Repr
 
@@ -1312,7 +1244,6 @@ pub struct RowOpts {
   style_id : Int
   outline_level : Int
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn RowOpts::to_repr(Self) -> @debug.Repr
 pub fn RowOpts::with_values(height? : Double, hidden? : Bool, style_id? : Int, outline_level? : Int) -> Self
@@ -1342,7 +1273,6 @@ pub struct Selection {
   mut active_cell : String
   mut pane : String
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn Selection::to_repr(Self) -> @debug.Repr
 pub fn Selection::with_values(sqref? : String, active_cell? : String, pane? : String) -> Self
@@ -1373,7 +1303,6 @@ pub struct Shape {
   positioning : PicturePositioning
 } derive(@debug.Debug)
 pub fn Shape::new(String, String, macro_name? : String, text? : String, paragraph? : Array[RichTextRun], width? : Int, height? : Int, scale_x? : Double, scale_y? : Double, fill_color? : String, fill_transparency? : Int, line_color? : String, line_width? : Double, name? : String, alt_text? : String, print_object? : Bool, locked? : Bool, positioning? : PicturePositioning) -> Self raise XlsxError
-#as_free_fn
 #deprecated
 pub fn Shape::to_repr(Self) -> @debug.Repr
 
@@ -1381,7 +1310,6 @@ pub struct ShapeFill {
   mut color : String?
   mut transparency : Int?
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn ShapeFill::to_repr(Self) -> @debug.Repr
 pub fn ShapeFill::with_values(color? : String, transparency? : Int) -> Self raise XlsxError
@@ -1390,7 +1318,6 @@ pub struct ShapeLine {
   mut color : String?
   mut width : Double?
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn ShapeLine::to_repr(Self) -> @debug.Repr
 pub fn ShapeLine::with_values(color? : String, width? : Double) -> Self
@@ -1400,17 +1327,14 @@ pub struct SheetBackground {
   extension : String
   content_type : String
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn SheetBackground::to_repr(Self) -> @debug.Repr
 
 type SheetEntry derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn SheetEntry::to_repr(Self) -> @debug.Repr
 
 type SheetPane derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn SheetPane::to_repr(Self) -> @debug.Repr
 
@@ -1434,7 +1358,6 @@ pub struct SheetPropsOptions {
   mut thick_top : Bool?
   mut thick_bottom : Bool?
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn SheetPropsOptions::to_repr(Self) -> @debug.Repr
 pub fn SheetPropsOptions::with_values(code_name? : String, enable_format_conditions_calculation? : Bool, published? : Bool, auto_page_breaks? : Bool, fit_to_page? : Bool, tab_color_indexed? : Int, tab_color_rgb? : String, tab_color_theme? : Int, tab_color_tint? : Double, outline_summary_below? : Bool, outline_summary_right? : Bool, base_col_width? : Int, default_col_width? : Double, default_row_height? : Double, custom_height? : Bool, zero_height? : Bool, thick_top? : Bool, thick_bottom? : Bool) -> Self
@@ -1462,7 +1385,6 @@ pub struct SheetProtection {
   pivot_tables : Bool
   select_unlocked_cells : Bool
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn SheetProtection::to_repr(Self) -> @debug.Repr
 
@@ -1486,7 +1408,6 @@ pub struct SheetProtectionOptions {
   mut sort : Bool
 } derive(@debug.Debug)
 pub fn SheetProtectionOptions::new() -> Self
-#as_free_fn
 #deprecated
 pub fn SheetProtectionOptions::to_repr(Self) -> @debug.Repr
 pub fn SheetProtectionOptions::with_values(algorithm_name? : String, password? : String, auto_filter? : Bool, delete_columns? : Bool, delete_rows? : Bool, edit_objects? : Bool, edit_scenarios? : Bool, format_cells? : Bool, format_columns? : Bool, format_rows? : Bool, insert_columns? : Bool, insert_hyperlinks? : Bool, insert_rows? : Bool, pivot_tables? : Bool, select_locked_cells? : Bool, select_unlocked_cells? : Bool, sort? : Bool) -> Self
@@ -1500,12 +1421,10 @@ pub enum SheetState {
 pub fn SheetState::equal(Self, Self) -> Bool
 #deprecated
 pub fn SheetState::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn SheetState::to_repr(Self) -> @debug.Repr
 
 type SheetView derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn SheetView::to_repr(Self) -> @debug.Repr
 
@@ -1523,7 +1442,6 @@ pub struct SheetViewOptions {
   mut zoom_scale : Double?
 } derive(@debug.Debug)
 pub fn SheetViewOptions::new() -> Self
-#as_free_fn
 #deprecated
 pub fn SheetViewOptions::to_repr(Self) -> @debug.Repr
 pub fn SheetViewOptions::with_values(default_grid_color? : Bool, right_to_left? : Bool, show_formulas? : Bool, show_grid_lines? : Bool, show_row_col_headers? : Bool, show_ruler? : Bool, show_zeros? : Bool, top_left_cell? : String, view? : String, zoom_scale? : Double) -> Self
@@ -1544,7 +1462,6 @@ pub struct Slicer {
   format : GraphicOptions
 } derive(@debug.Debug)
 pub fn Slicer::new(String) -> Self raise XlsxError
-#as_free_fn
 #deprecated
 pub fn Slicer::to_repr(Self) -> @debug.Repr
 
@@ -1556,7 +1473,6 @@ pub fn SlicerOptions::set_format(Self, GraphicOptions) -> Unit
 pub fn SlicerOptions::set_item_desc(Self, Bool) -> Unit
 pub fn SlicerOptions::set_macro_name(Self, String) -> Unit
 pub fn SlicerOptions::set_size(Self, Int, Int) -> Unit raise XlsxError
-#as_free_fn
 #deprecated
 pub fn SlicerOptions::to_repr(Self) -> @debug.Repr
 
@@ -1570,7 +1486,6 @@ pub struct SparklineColor {
   theme : Int?
   tint : Double?
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn SparklineColor::to_repr(Self) -> @debug.Repr
 
@@ -1604,7 +1519,6 @@ pub struct SparklineGroupOptions {
   mut color_high : SparklineColor?
   mut color_low : SparklineColor?
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn SparklineGroupOptions::to_repr(Self) -> @debug.Repr
 
@@ -1664,7 +1578,6 @@ pub fn SparklineOptions::set_series_color(Self, String) -> Unit
 pub fn SparklineOptions::set_style(Self, Int) -> Unit
 pub fn SparklineOptions::set_type(Self, SparklineType) -> Unit
 pub fn SparklineOptions::set_weight(Self, Double) -> Unit raise XlsxError
-#as_free_fn
 #deprecated
 pub fn SparklineOptions::to_repr(Self) -> @debug.Repr
 
@@ -1677,7 +1590,6 @@ pub(all) enum SparklineType {
 pub fn SparklineType::equal(Self, Self) -> Bool
 #deprecated
 pub fn SparklineType::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn SparklineType::to_repr(Self) -> @debug.Repr
 
@@ -1749,7 +1661,6 @@ pub fn Style::new() -> Self
 pub fn Style::not_equal(Self, Self) -> Bool
 pub fn Style::number_format(String) -> Self
 pub fn Style::protection(Protection) -> Self
-#as_free_fn
 #deprecated
 pub fn Style::to_repr(Self) -> @debug.Repr
 pub fn Style::with_alignment(Self, Alignment) -> Self
@@ -1781,7 +1692,6 @@ pub fn TableOptions::set_show_header_row(Self, Bool?) -> Unit
 pub fn TableOptions::set_show_last_column(Self, Bool) -> Unit
 pub fn TableOptions::set_show_row_stripes(Self, Bool?) -> Unit
 pub fn TableOptions::set_style_name(Self, String) -> Unit
-#as_free_fn
 #deprecated
 pub fn TableOptions::to_repr(Self) -> @debug.Repr
 
@@ -2070,13 +1980,11 @@ pub struct WorkbookPropsOptions {
   mut filter_privacy : Bool?
   mut code_name : String?
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn WorkbookPropsOptions::to_repr(Self) -> @debug.Repr
 pub fn WorkbookPropsOptions::with_values(date_1904? : Bool, filter_privacy? : Bool, code_name? : String) -> Self
 
 type WorkbookProtection derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn WorkbookProtection::to_repr(Self) -> @debug.Repr
 
@@ -2086,7 +1994,6 @@ pub struct WorkbookProtectionOptions {
   lock_structure : Bool
   lock_windows : Bool
 } derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn WorkbookProtectionOptions::to_repr(Self) -> @debug.Repr
 pub fn WorkbookProtectionOptions::with_values(algorithm_name? : String, password? : String, lock_structure? : Bool, lock_windows? : Bool) -> Self
@@ -2244,7 +2151,6 @@ pub fn Worksheet::vml_drawing_hf_xml(Self) -> String?
 pub fn Worksheet::vml_drawing_xml(Self) -> String?
 
 type X14DataBarProps derive(@debug.Debug)
-#as_free_fn
 #deprecated
 pub fn X14DataBarProps::to_repr(Self) -> @debug.Repr
 

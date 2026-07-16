@@ -140,7 +140,6 @@ pub(all) struct PdfClassicXRefEntry {
 pub fn PdfClassicXRefEntry::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfClassicXRefEntry::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn PdfClassicXRefEntry::to_repr(Self) -> @debug.Repr
 
@@ -187,7 +186,6 @@ pub fn PdfVersion::equal(Self, Self) -> Bool
 pub fn PdfVersion::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfVersion::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfVersion::to_repr(Self) -> @debug.Repr
 

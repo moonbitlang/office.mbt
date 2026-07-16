@@ -20,7 +20,6 @@ pub fn PdfTrueTypeCMapGlyph::equal(Self, Self) -> Bool
 pub fn PdfTrueTypeCMapGlyph::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfTrueTypeCMapGlyph::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfTrueTypeCMapGlyph::to_repr(Self) -> @debug.Repr
 
@@ -40,7 +39,6 @@ pub fn PdfTrueTypeDescriptorMetrics::equal(Self, Self) -> Bool
 pub fn PdfTrueTypeDescriptorMetrics::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfTrueTypeDescriptorMetrics::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfTrueTypeDescriptorMetrics::to_repr(Self) -> @debug.Repr
 
@@ -55,7 +53,6 @@ pub fn PdfTrueTypeGlyphByteRange::equal(Self, Self) -> Bool
 pub fn PdfTrueTypeGlyphByteRange::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfTrueTypeGlyphByteRange::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfTrueTypeGlyphByteRange::to_repr(Self) -> @debug.Repr
 
@@ -77,7 +74,6 @@ pub fn PdfTrueTypeMetrics::equal(Self, Self) -> Bool
 pub fn PdfTrueTypeMetrics::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfTrueTypeMetrics::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfTrueTypeMetrics::to_repr(Self) -> @debug.Repr
 
@@ -106,7 +102,6 @@ pub(all) struct PdfTrueTypeParsedSubset {
 pub fn PdfTrueTypeParsedSubset::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfTrueTypeParsedSubset::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn PdfTrueTypeParsedSubset::to_repr(Self) -> @debug.Repr
 
@@ -120,7 +115,6 @@ pub fn PdfTrueTypeSubsetPartition::equal(Self, Self) -> Bool
 pub fn PdfTrueTypeSubsetPartition::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfTrueTypeSubsetPartition::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfTrueTypeSubsetPartition::to_repr(Self) -> @debug.Repr
 
@@ -132,7 +126,6 @@ pub(all) struct PdfTrueTypeSubsetTable {
 pub fn PdfTrueTypeSubsetTable::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfTrueTypeSubsetTable::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn PdfTrueTypeSubsetTable::to_repr(Self) -> @debug.Repr
 
@@ -148,7 +141,6 @@ pub fn PdfTrueTypeTableRecord::equal(Self, Self) -> Bool
 pub fn PdfTrueTypeTableRecord::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfTrueTypeTableRecord::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfTrueTypeTableRecord::to_repr(Self) -> @debug.Repr
 

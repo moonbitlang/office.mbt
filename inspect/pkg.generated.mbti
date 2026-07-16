@@ -49,7 +49,6 @@ pub suberror QueryError {
 } derive(@debug.Debug)
 #deprecated
 pub fn QueryError::output(Self, &Logger) -> Unit
-#as_free_fn
 #deprecated
 pub fn QueryError::to_repr(Self) -> @debug.Repr
 #deprecated
@@ -62,7 +61,6 @@ pub suberror RangeError {
 } derive(@debug.Debug)
 #deprecated
 pub fn RangeError::output(Self, &Logger) -> Unit
-#as_free_fn
 #deprecated
 pub fn RangeError::to_repr(Self) -> @debug.Repr
 #deprecated
@@ -83,7 +81,6 @@ pub fn CellRange::equal(Self, Self) -> Bool
 #deprecated
 pub fn CellRange::not_equal(Self, Self) -> Bool
 pub fn CellRange::range_ref(Self) -> String raise @xlsx.XlsxError
-#as_free_fn
 #deprecated
 pub fn CellRange::to_repr(Self) -> @debug.Repr
 
@@ -96,7 +93,6 @@ pub struct ChartSeriesMeta {
 pub fn ChartSeriesMeta::equal(Self, Self) -> Bool
 #deprecated
 pub fn ChartSeriesMeta::not_equal(Self, Self) -> Bool
-#as_free_fn
 #deprecated
 pub fn ChartSeriesMeta::to_repr(Self) -> @debug.Repr
 

@@ -23,7 +23,6 @@ pub fn PdfOcg::equal(Self, Self) -> Bool
 pub fn PdfOcg::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfOcg::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfOcg::to_repr(Self) -> @debug.Repr
 
@@ -38,7 +37,6 @@ pub fn PdfOcgAppDict::equal(Self, Self) -> Bool
 pub fn PdfOcgAppDict::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfOcgAppDict::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfOcgAppDict::to_repr(Self) -> @debug.Repr
 
@@ -61,7 +59,6 @@ pub fn PdfOcgConfig::equal(Self, Self) -> Bool
 pub fn PdfOcgConfig::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfOcgConfig::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfOcgConfig::to_repr(Self) -> @debug.Repr
 
@@ -76,7 +73,6 @@ pub fn PdfOcgEvent::equal(Self, Self) -> Bool
 pub fn PdfOcgEvent::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfOcgEvent::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfOcgEvent::to_repr(Self) -> @debug.Repr
 
@@ -90,7 +86,6 @@ pub fn PdfOcgListMode::equal(Self, Self) -> Bool
 pub fn PdfOcgListMode::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfOcgListMode::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfOcgListMode::to_repr(Self) -> @debug.Repr
 
@@ -105,7 +100,6 @@ pub fn PdfOcgState::equal(Self, Self) -> Bool
 pub fn PdfOcgState::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfOcgState::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfOcgState::to_repr(Self) -> @debug.Repr
 
@@ -127,7 +121,6 @@ pub fn PdfOcgUsage::equal(Self, Self) -> Bool
 pub fn PdfOcgUsage::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfOcgUsage::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfOcgUsage::to_repr(Self) -> @debug.Repr
 
@@ -142,7 +135,6 @@ pub fn PdfOptionalContent::equal(Self, Self) -> Bool
 pub fn PdfOptionalContent::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfOptionalContent::to_json(Self) -> Json
-#as_free_fn
 #deprecated
 pub fn PdfOptionalContent::to_repr(Self) -> @debug.Repr
 
