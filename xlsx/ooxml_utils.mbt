@@ -3,19 +3,64 @@
 /// tag text without the leading `<` and without the closing `>`.
 ///
 /// Example: `<a b="c">` -> `a b="c"`.
+fn xml_open_tag_end_from(xml : StringView, start : Int) -> Int? {
+  let mut index = start
+  let mut quote : UInt16? = None
+  while index < xml.length() {
+    let unit = xml[index]
+    match quote {
+      Some(delimiter) => if unit == delimiter { quote = None }
+      None =>
+        if unit == ('"' : UInt16) || unit == ('\'' : UInt16) {
+          quote = Some(unit)
+        } else if unit == ('>' : UInt16) {
+          return Some(index)
+        }
+    }
+    index = index + 1
+  }
+  None
+}
+
+///|
+fn is_xml_open_tag_boundary(unit : UInt16) -> Bool {
+  is_xml_attr_space_unit(unit) ||
+  unit == ('/' : UInt16) ||
+  unit == ('>' : UInt16)
+}
+
+///|
+fn find_xml_open_tag_start(xml : StringView, tag_name : StringView) -> Int? {
+  let text = xml.to_owned()
+  let needle = "<\{tag_name.to_owned()}"
+  let mut offset = 0
+  while offset < text.length() {
+    let relative = match text[offset:].find(needle) {
+      Some(value) => value
+      None => return None
+    }
+    let start = offset + relative
+    let boundary = start + needle.length()
+    if boundary == text.length() || is_xml_open_tag_boundary(text[boundary]) {
+      return Some(start)
+    }
+    offset = start + 1
+  }
+  None
+}
+
+///|
 fn tag_attributes_in(xml : StringView, tag_name : StringView) -> String? {
   let xml_str = xml.to_owned()
-  let needle = "<\{tag_name.to_owned()}"
-  let start = match xml_str.find(needle) {
+  let start = match find_xml_open_tag_start(xml_str, tag_name) {
     Some(pos) => pos
     None => return None
   }
-  let rest = xml_str[start + 1:]
-  let end = match rest.find(">") {
+  let end = match xml_open_tag_end_from(xml_str, start + 1) {
     Some(pos) => pos
     None => return None
   }
-  let slice = rest[:end]
+  let slice = xml_str[start + 1:end]
   Some(slice.to_owned())
 }
 
@@ -23,18 +68,16 @@ fn tag_attributes_in(xml : StringView, tag_name : StringView) -> String? {
 /// Extract the body text from the first `<tag_name ...>...</tag_name>` pair.
 fn extract_tag_body_from(xml : StringView, tag_name : StringView) -> String? {
   let xml_str = xml.to_owned()
-  let open_tag = "<\{tag_name.to_owned()}"
   let close_tag = "</\{tag_name.to_owned()}>"
-  let start = match xml_str.find(open_tag) {
+  let start = match find_xml_open_tag_start(xml_str, tag_name) {
     Some(pos) => pos
     None => return None
   }
-  let after_start = xml_str[start:]
-  let open_end_rel = match after_start.find(">") {
+  let open_end = match xml_open_tag_end_from(xml_str, start + 1) {
     Some(pos) => pos
     None => return None
   }
-  let body_start = start + open_end_rel + 1
+  let body_start = open_end + 1
   let end = match xml_str.find(close_tag) {
     Some(pos) => pos
     None => return None
@@ -54,18 +97,16 @@ fn extract_tag_body(
   tag_name : StringView,
 ) -> String? raise XlsxError {
   let xml_str = xml.to_owned()
-  let open_tag = "<\{tag_name.to_owned()}"
   let close_tag = "</\{tag_name.to_owned()}>"
-  let start = match xml_str.find(open_tag) {
+  let start = match find_xml_open_tag_start(xml_str, tag_name) {
     Some(pos) => pos
     None => return None
   }
-  let after_start = xml_str[start:]
-  let open_end_rel = match after_start.find(">") {
+  let open_end = match xml_open_tag_end_from(xml_str, start + 1) {
     Some(pos) => pos
     None => raise InvalidXml(msg="tag open not closed")
   }
-  let body_start = start + open_end_rel + 1
+  let body_start = open_end + 1
   let end = match xml_str.find(close_tag) {
     Some(pos) => pos
     None => raise InvalidXml(msg="tag close missing")
@@ -164,9 +205,26 @@ test "ooxml_utils: tag_attributes_in finds first open tag" {
 }
 
 ///|
+test "ooxml_utils: opening-tag scanners ignore delimiters inside either quote" {
+  let xml = "<root><a prompt='1 > 0' title=\"x > y\" sqref='A1'>ok</a></root>"
+  debug_inspect(
+    tag_attributes_in(xml, "a"),
+    content="Some(\"a prompt='1 > 0' title=\\\"x > y\\\" sqref='A1'\")",
+  )
+  debug_inspect(extract_tag_body_from(xml, "a"), content="Some(\"ok\")")
+  debug_inspect(extract_tag_body(xml, "a"), content="Some(\"ok\")")
+}
+
+///|
 test "ooxml_utils: tag_attributes_in returns None when missing" {
   let xml = "<root/>"
   debug_inspect(tag_attributes_in(xml, "a"), content="None")
+}
+
+///|
+test "ooxml_utils: opening-tag lookup requires an exact name boundary" {
+  let xml = "<root><abbr sqref='wrong'/><a sqref='A1'/></root>"
+  debug_inspect(tag_attributes_in(xml, "a"), content="Some(\"a sqref='A1'/\")")
 }
 
 ///|

@@ -1635,16 +1635,15 @@ pub fn Worksheet::add_image(
       base_h_px = base_h_px * asp
     }
   }
-  let width_emu = (Double::from_int(picture_emu_per_pixel) *
-    base_w_px *
-    normalized_scale_x)
-    .round()
-    .to_int()
-  let height_emu = (Double::from_int(picture_emu_per_pixel) *
-    base_h_px *
-    normalized_scale_y)
-    .round()
-    .to_int()
+  // Validate the floating-point result before narrowing to Int. `Double::to_int`
+  // saturates non-finite/out-of-range values, which would otherwise turn an
+  // invalid public option into a plausible but corrupted drawing extent.
+  let width_emu = drawing_scaled_extent_for_write(
+    base_w_px, normalized_scale_x, "drawing image width",
+  )
+  let height_emu = drawing_scaled_extent_for_write(
+    base_h_px, normalized_scale_y, "drawing image height",
+  )
   let stored_reference = if auto_fit {
     cell_ref_from(anchor_row, anchor_col)
   } else {
@@ -1824,18 +1823,18 @@ pub fn Worksheet::add_chart_with_options(
     Some(value) => value
     None => TwoCell
   }
-  let width_emu = (Double::from_int(
-      picture_emu_per_pixel * opts.dimension.width,
-    ) *
-    scale_x)
-    .round()
-    .to_int()
-  let height_emu = (Double::from_int(
-      picture_emu_per_pixel * opts.dimension.height,
-    ) *
-    scale_y)
-    .round()
-    .to_int()
+  // Convert the pixel dimension before multiplying. Multiplying as Int first
+  // can wrap on both native and Wasm before any later range check sees it.
+  let width_emu = drawing_scaled_extent_for_write(
+    Double::from_int(opts.dimension.width),
+    scale_x,
+    "drawing chart width",
+  )
+  let height_emu = drawing_scaled_extent_for_write(
+    Double::from_int(opts.dimension.height),
+    scale_y,
+    "drawing chart height",
+  )
   let xml = chart_options_to_xml(opts)
   self.charts.push({
     reference,

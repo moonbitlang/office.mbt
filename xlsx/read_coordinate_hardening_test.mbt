@@ -401,3 +401,17 @@ test "read normalizes only XML whitespace in sqref fields" {
   assert_true(preserved_sheet.data_validations()[0].contains(expected))
   assert_true(preserved_sheet.conditional_formats()[0].contains(expected))
 }
+
+///|
+test "coordinate attributes accept quoted delimiters and numeric XML spaces" {
+  let fragment = "<dataValidations count=\"1\"><dataValidation type='whole' prompt='1 > 0' sqref='A1&#x20;B1&#32;C1'/></dataValidations>"
+  let workbook = @xlsx.read(
+    coordinate_hardening_append_sheet_xml(
+      coordinate_hardening_base_bytes(),
+      fragment,
+    ),
+  )
+  let validations = workbook.get_data_validations("Sheet1")
+  inspect(validations.length(), content="1")
+  inspect(validations[0].sqref, content="A1 B1 C1")
+}

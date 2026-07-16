@@ -72,6 +72,28 @@ fn normalize_sqref_for_read(
 }
 
 ///|
+/// Validate and canonicalize a writer-provided sqref. Unlike the read helper,
+/// this intentionally removes absolute markers and normalizes reversed ranges;
+/// writer-owned state has one stable representation before it reaches XML.
+fn normalize_sqref_for_write(value : StringView) -> String raise XlsxError {
+  let tokens = xml_whitespace_tokens(value)
+  if tokens.length() == 0 {
+    raise InvalidCellRef(value=value.to_owned())
+  }
+  let normalized : Array[String] = []
+  for token in tokens {
+    normalized.push(normalize_cell_or_range_ref(token))
+  }
+  normalized.join(" ")
+}
+
+///|
+fn normalize_cell_ref_for_write(value : StringView) -> String raise XlsxError {
+  let (row, col) = cell_ref_to_rc(value)
+  cell_ref_from(row, col)
+}
+
+///|
 fn normalize_xml_sqref_attr_for_read(
   xml : StringView,
   tag_name : StringView,
@@ -96,53 +118,61 @@ fn normalize_xml_sqref_attr_for_read(
 }
 
 ///|
-fn insert_sqref_row_interval(
-  entries : Array[(Int, Int)],
-  start_row : Int,
-  end_row : Int,
-) -> Unit {
-  let mut index = 0
-  while index < entries.length() {
-    let (_, existing_end) = entries[index]
-    if existing_end + 1 < start_row {
-      index = index + 1
+fn sort_and_merge_sqref_row_intervals(entries : Array[(Int, Int)]) -> Unit {
+  if entries.length() < 2 {
+    return
+  }
+  entries.sort_by((left, right) => {
+    let (left_start, left_end) = left
+    let (right_start, right_end) = right
+    if left_start < right_start {
+      -1
+    } else if left_start > right_start {
+      1
+    } else if left_end < right_end {
+      -1
+    } else if left_end > right_end {
+      1
     } else {
-      break
+      0
+    }
+  })
+  let merged : Array[(Int, Int)] = []
+  let mut current_start = entries[0].0
+  let mut current_end = entries[0].1
+  for index in 1..<entries.length() {
+    let (start_row, end_row) = entries[index]
+    if start_row <= current_end + 1 {
+      if end_row > current_end {
+        current_end = end_row
+      }
+    } else {
+      merged.push((current_start, current_end))
+      current_start = start_row
+      current_end = end_row
     }
   }
-  if index < entries.length() {
-    let (existing_start, existing_end) = entries[index]
-    if existing_start <= start_row && existing_end >= end_row {
-      return
-    }
-  }
-  let mut merged_start = start_row
-  let mut merged_end = end_row
-  while index < entries.length() {
-    let (existing_start, existing_end) = entries[index]
-    if existing_start > merged_end + 1 {
-      break
-    }
-    if existing_start < merged_start {
-      merged_start = existing_start
-    }
-    if existing_end > merged_end {
-      merged_end = existing_end
-    }
-    ignore(entries.remove(index))
-  }
-  entries.insert(index, (merged_start, merged_end))
+  merged.push((current_start, current_end))
+  entries.clear()
+  entries.append(merged)
 }
 
 ///|
-/// Parse an sqref into row intervals keyed by column. Expanding across columns
-/// is bounded by Excel's 16,384-column grid; rows are never materialized one by
-/// one, so full-column and full-grid references stay bounded.
+/// SQREF edits expand rectangles by column, never by row. Keep the aggregate
+/// expansion explicitly bounded as well: otherwise a short list of sparse
+/// full-width rectangles can materialize millions of intervals.
+let max_sqref_interval_entries = 65_536
+
+///|
+/// Parse an sqref into row intervals keyed by column. Raw intervals are appended
+/// in O(1), then sorted and merged once per column. Rows are never materialized
+/// one by one, and aggregate column expansion is capped.
 fn flat_sqref(
   sqref : StringView,
 ) -> Map[Int, Array[(Int, Int)]] raise XlsxError {
   let intervals : Map[Int, Array[(Int, Int)]] = Map([])
   let seen_rectangles : Map[String, Bool] = Map([])
+  let mut interval_entries = 0
   for text in xml_whitespace_tokens(sqref) {
     let (min_row, min_col, max_row, max_col) = if text.contains(":") {
       let (min_row, min_col, max_row, max_col) = parse_range_ref(text)
@@ -156,14 +186,26 @@ fn flat_sqref(
       continue
     }
     seen_rectangles[rectangle_key] = true
+    let width = max_col - min_col + 1
+    if interval_entries > max_sqref_interval_entries - width {
+      raise ResourceLimitExceeded(
+        kind="sqref_interval_entries",
+        limit=max_sqref_interval_entries,
+        actual=interval_entries + width,
+      )
+    }
+    interval_entries = interval_entries + width
     for col in min_col..<=max_col {
       let entries = match intervals.get(col) {
         Some(value) => value
         None => []
       }
-      insert_sqref_row_interval(entries, min_row, max_row)
+      entries.push((min_row, max_row))
       intervals[col] = entries
     }
+  }
+  for _, entries in intervals {
+    sort_and_merge_sqref_row_intervals(entries)
   }
   intervals
 }
@@ -276,6 +318,46 @@ test "sqref wb: full-grid subtraction stays bounded" {
   let deletions = flat_sqref("A1:XFD1048576")
   let updated = delete_cells_from_sqref("A1:XFD1048576", deletions)
   inspect(updated, content="")
+}
+
+///|
+test "sqref wb: sparse reverse-ordered intervals sort and merge in bulk" {
+  let refs : Array[String] = []
+  for index in 0..<2000 {
+    refs.push("A\{(2000 - index) * 2 - 1}")
+  }
+  let intervals = flat_sqref(refs.join(" "))
+  let entries = match intervals.get(1) {
+    Some(value) => value
+    None => fail("missing column A intervals")
+  }
+  inspect(entries.length(), content="2000")
+  debug_inspect(entries[0], content="(1, 1)")
+  debug_inspect(entries[1999], content="(3999, 3999)")
+}
+
+///|
+test "sqref wb: aggregate full-width expansion has an explicit work bound" {
+  let refs : Array[String] = []
+  // Four full-width intervals exactly reach the 65,536-entry budget; the fifth
+  // must fail before allocating another 16,384 entries.
+  for index in 0..<5 {
+    let row = index * 2 + 1
+    refs.push("A\{row}:XFD\{row}")
+  }
+  let result : Result[Map[Int, Array[(Int, Int)]], Error] = Ok(
+    flat_sqref(refs.join(" ")),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="sqref_interval_entries")
+      inspect(limit, content="65536")
+      inspect(actual, content="81920")
+    }
+    _ => fail("expected sqref expansion limit")
+  }
 }
 
 ///|

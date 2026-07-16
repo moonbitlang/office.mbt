@@ -228,11 +228,15 @@ pub fn DataValidation::set_sqref_drop_list(
 }
 
 ///|
-pub fn DataValidation::set_sqref(self : DataValidation, sqref : String) -> Unit {
+pub fn DataValidation::set_sqref(
+  self : DataValidation,
+  sqref : String,
+) -> Unit raise XlsxError {
+  let normalized = normalize_sqref_for_write(sqref)
   if self.sqref == "" {
-    self.sqref = sqref
+    self.sqref = normalized
   } else {
-    self.sqref = "\{self.sqref} \{sqref}"
+    self.sqref = "\{self.sqref} \{normalized}"
   }
 }
 
@@ -268,6 +272,9 @@ fn data_validation_xml(dv : DataValidation) -> String raise XlsxError {
   if dv.sqref == "" {
     raise InvalidDataValidation(msg="data validation sqref empty")
   }
+  // Keep the serializer as a defense-in-depth boundary for values reconstructed
+  // from raw XML or older in-memory state, even though typed setters normalize.
+  let sqref = normalize_sqref_for_write(dv.sqref)
   let sb = StringBuilder::new()
   sb.write_view("<dataValidation")
   sb.write_view(" allowBlank=\"\{data_validation_bool_attr(dv.allow_blank)}\"")
@@ -291,7 +298,7 @@ fn data_validation_xml(dv : DataValidation) -> String raise XlsxError {
     sb.write_view(" showInputMessage=\"1\"")
   }
   sb.write_view(" sqref=\"")
-  sb.write_view(escape_xml_attr(dv.sqref))
+  sb.write_view(escape_xml_attr(sqref))
   sb.write_view("\"")
   if dv.validation_type != "" {
     sb.write_view(" type=\"")

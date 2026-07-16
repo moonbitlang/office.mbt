@@ -276,7 +276,7 @@ fn normalize_sheet_view_mode(mode : StringView) -> String? {
 fn apply_sheet_view_options(
   view : SheetView,
   options : SheetViewOptions,
-) -> Unit {
+) -> Unit raise XlsxError {
   match options.default_grid_color {
     Some(value) => view.default_grid_color = Some(value)
     None => ()
@@ -306,7 +306,8 @@ fn apply_sheet_view_options(
     None => ()
   }
   match options.top_left_cell {
-    Some(value) => view.top_left_cell = Some(value)
+    Some(value) =>
+      view.top_left_cell = Some(normalize_cell_ref_for_write(value))
     None => ()
   }
   match options.view {

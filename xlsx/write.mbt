@@ -1252,7 +1252,7 @@ fn write_sheet_format_pr_xml(options : SheetPropsOptions) -> String {
 }
 
 ///|
-fn write_sheet_views_xml(sheet : Worksheet) -> String? {
+fn write_sheet_views_xml(sheet : Worksheet) -> String? raise XlsxError {
   if sheet.sheet_views.length() == 0 {
     return None
   }
@@ -1291,7 +1291,7 @@ fn write_sheet_views_xml(sheet : Worksheet) -> String? {
     match view.top_left_cell {
       Some(value) => {
         sb.write_view(" topLeftCell=\"")
-        sb.write_view(escape_xml_attr(value))
+        sb.write_view(escape_xml_attr(normalize_cell_ref_for_write(value)))
         sb.write_view("\"")
       }
       None => ()
@@ -1332,7 +1332,9 @@ fn write_sheet_views_xml(sheet : Worksheet) -> String? {
         }
         if pane.top_left_cell != "" {
           sb.write_view(" topLeftCell=\"")
-          sb.write_view(escape_xml_attr(pane.top_left_cell))
+          sb.write_view(
+            escape_xml_attr(normalize_cell_ref_for_write(pane.top_left_cell)),
+          )
           sb.write_view("\"")
         }
         if pane.x_split != 0.0 {
@@ -1354,12 +1356,16 @@ fn write_sheet_views_xml(sheet : Worksheet) -> String? {
       }
       if selection.active_cell != "" {
         sb.write_view(" activeCell=\"")
-        sb.write_view(escape_xml_attr(selection.active_cell))
+        sb.write_view(
+          escape_xml_attr(normalize_cell_ref_for_write(selection.active_cell)),
+        )
         sb.write_view("\"")
       }
       if selection.sqref != "" {
         sb.write_view(" sqref=\"")
-        sb.write_view(escape_xml_attr(selection.sqref))
+        sb.write_view(
+          escape_xml_attr(normalize_sqref_for_write(selection.sqref)),
+        )
         sb.write_view("\"")
       }
       sb.write_view("/>\n")
