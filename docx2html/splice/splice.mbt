@@ -509,24 +509,35 @@ fn build_spliced_archive(
   require_pins : Bool,
   limits : SpliceLimits?,
 ) -> @mbtzip.Archive raise @core.DocxError {
-  // OPC part identity is case-insensitive. Exact duplicates and case aliases
-  // are equally ambiguous, including on the true no-op fast path.
+  // OPC Part identity is case-insensitive. ZIP directory records are not
+  // addressable Parts, so their physical identity remains case-sensitive while
+  // exact duplicates are still forbidden, including on the true no-op path.
   let seen : StableStringMap[String] = SortedMap([])
+  let directory_names : StableStringSet = SortedSet([])
   let mut source_entry_count = 0
   let mut source_uncompressed_bytes = 0L
   for entry in archive.entries() {
     let name = entry.name()
-    let key = package_part_identity(name)
-    match seen.get(key) {
-      Some(existing) if existing == name =>
+    if name.has_suffix("/") {
+      if directory_names.contains(name) {
         raise InvalidZip(
           message="the package holds duplicate zip entries named '\{name}'; refusing to splice",
         )
-      Some(existing) =>
-        raise InvalidZip(
-          message="the package holds case-equivalent zip entries '\{existing}' and '\{name}'; refusing to splice",
-        )
-      None => seen[key] = name
+      }
+      directory_names.add(name)
+    } else {
+      let key = package_part_identity(name)
+      match seen.get(key) {
+        Some(existing) if existing == name =>
+          raise InvalidZip(
+            message="the package holds duplicate zip entries named '\{name}'; refusing to splice",
+          )
+        Some(existing) =>
+          raise InvalidZip(
+            message="the package holds case-equivalent zip entries '\{existing}' and '\{name}'; refusing to splice",
+          )
+        None => seen[key] = name
+      }
     }
     source_entry_count = source_entry_count + 1
     let entry_length = entry.data().length()

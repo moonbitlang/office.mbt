@@ -724,6 +724,78 @@ test "detect_format identifies generated xlsx" {
 }
 
 ///|
+test "detect_format enforces the complete OPC central-header boundary" {
+  let source = @excel.write(@excel.new_file())
+  let exact = @zip_fixture.with_central_header_size(
+    source, "[Content_Types].xml", 65_535,
+  )
+  let exact_archive = @zip.read(exact)
+  let mut content_types_header_size = -1
+  for entry in exact_archive.entries() {
+    if entry.name() == "[Content_Types].xml" {
+      content_types_header_size = entry.central_directory_file_header_size()
+    }
+  }
+  if content_types_header_size < 0 {
+    fail("fixture lost [Content_Types].xml")
+  }
+  assert_eq(content_types_header_size, 65_535)
+  inspect(@office.detect_format("book.xlsx", exact).name(), content="xlsx")
+
+  let oversized = @zip_fixture.with_central_header_size(
+    source, "[Content_Types].xml", 65_536,
+  )
+  try @office.detect_format("book.xlsx", oversized) catch {
+    err =>
+      assert_true(
+        Show::to_string(err).contains(
+          "central-directory file header exceeds the OPC 65535-byte limit",
+        ),
+      )
+  } noraise {
+    _ => fail("expected the oversized central header to be rejected")
+  }
+}
+
+///|
+test "detect_format treats ZIP directory names as exact physical records" {
+  let source = @zip.read(@excel.write(@excel.new_file()))
+  let distinct = @zip.Archive::new()
+  for entry in source.entries() {
+    distinct.add(
+      entry.name(),
+      entry.data(),
+      compression=entry.compression(),
+      data_descriptor=entry.data_descriptor(),
+    )
+  }
+  distinct.add("word/", b"")
+  distinct.add("WORD/", b"")
+  inspect(
+    @office.detect_format("book.xlsx", @zip.write(distinct)).name(),
+    content="xlsx",
+  )
+
+  let duplicate = @zip.Archive::new()
+  for entry in source.entries() {
+    duplicate.add(
+      entry.name(),
+      entry.data(),
+      compression=entry.compression(),
+      data_descriptor=entry.data_descriptor(),
+    )
+  }
+  duplicate.add("word/", b"")
+  duplicate.add("word/", b"")
+  try @office.detect_format("book.xlsx", @zip.write(duplicate)) catch {
+    err =>
+      assert_true(Show::to_string(err).contains("duplicate entry name: word/"))
+  } noraise {
+    _ => fail("expected an exact duplicate directory record to be rejected")
+  }
+}
+
+///|
 test "detect_format accepts a default XLSX main content type" {
   let data = declare_xlsx_main_as_default(@excel.write(@excel.new_file()))
   inspect(@office.detect_format("book.xlsx", data).name(), content="xlsx")

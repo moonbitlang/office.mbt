@@ -68,6 +68,11 @@ const RELATIONSHIP_ELEMENT : String = "{http://schemas.openxmlformats.org/packag
 const RELATIONSHIPS_CONTENT_TYPE : String = "application/vnd.openxmlformats-package.relationships+xml"
 
 ///|
+/// ECMA-376 Part 2 §7.3.6 limits a Central Directory File Header, excluding
+/// its four-byte ZIP signature, to 65,535 bytes.
+const MAX_OPC_CENTRAL_DIRECTORY_FILE_HEADER_BYTES : Int = 65_535
+
+///|
 const TRANSITIONAL_OFFICE_DOCUMENT_REL : String = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
 
 ///|
@@ -1654,10 +1659,22 @@ fn format_from_archive(
   archive : @zip.Archive,
   part_index : ArchivePartIndex,
 ) -> (DocumentFormat, String) raise OfficeError {
+  let physical_names : StableStringMap[Bool] = SortedMap([])
   for entry in archive.entries() {
+    let name = entry.name()
+    if physical_names.contains(name) {
+      raise InvalidPackage("duplicate entry name: \{name}")
+    }
+    physical_names[name] = true
+    if entry.central_directory_file_header_size() >
+      MAX_OPC_CENTRAL_DIRECTORY_FILE_HEADER_BYTES {
+      raise InvalidPackage(
+        "central-directory file header exceeds the OPC \{MAX_OPC_CENTRAL_DIRECTORY_FILE_HEADER_BYTES}-byte limit: \{name}",
+      )
+    }
     if entry.crc32() != @zip.crc32(entry.data()) {
       raise InvalidPackage(
-        "entry data does not match its stored CRC-32: \{entry.name()}",
+        "entry data does not match its stored CRC-32: \{name}",
       )
     }
   }

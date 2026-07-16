@@ -12,6 +12,7 @@ import {
 
 import {
   "bobzhang/mbtexcel" @excel,
+  "bobzhang/mbtexcel/testutil/zip_fixture",
   "bobzhang/docx2html" @word,
 } for "test"
 
