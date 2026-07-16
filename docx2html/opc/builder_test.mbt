@@ -50,6 +50,54 @@ test "builder-generated relationships require the exact OPC content type" {
 }
 
 ///|
+test "generated relationships honor Override-before-Default precedence" {
+  let relationships_content_type = "application/vnd.openxmlformats-package.relationships+xml"
+  let main_content_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
+
+  // Overrides alone cover both the root and a part-owned generated
+  // Relationships part; no `.rels` Default is required by OPC.
+  let override_only = @opc.PackageBuilder::new()
+  override_only.add_default("xml", "application/xml")
+  override_only.add_override("/_rels/.rels", relationships_content_type)
+  override_only.add_override(
+    "/word/_rels/document.xml.rels", relationships_content_type,
+  )
+  override_only.add_override("/word/document.xml", main_content_type)
+  override_only.add_relationship(
+    "rId1", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "word/document.xml",
+  )
+  override_only.add_relationship(
+    "rExternal",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+    "https://example.test/resource",
+    source="word/document.xml",
+    external=true,
+  )
+  override_only.add_part(
+    "word/document.xml",
+    @utf8.encode(
+      (
+        #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/><w:sectPr/></w:body></w:document>
+      ),
+    ),
+  )
+  assert_eq(@opc.validate_docx_package(override_only.build()), [])
+
+  // A correct Override shadows a wrong Default for the generated root part.
+  let correct_override = minimal_builder()
+  correct_override.add_default("rels", "application/xml")
+  correct_override.add_override("/_rels/.rels", relationships_content_type)
+  assert_eq(@opc.validate_docx_package(correct_override.build()), [])
+
+  // Conversely, a wrong Override shadows the otherwise-correct Default.
+  expect_build_error(
+    builder => builder.add_override("/_rels/.rels", "application/xml"),
+    "builder-generated relationship part '_rels/.rels' has content type 'application/xml', expected 'application/vnd.openxmlformats-package.relationships+xml'",
+  )
+}
+
+///|
 test "the builder maps logical Unicode part names to ASCII ZIP items" {
   let builder = @opc.PackageBuilder::new()
   builder.add_default(
@@ -201,7 +249,7 @@ test "the builder fails closed" {
   )
   expect_build_error(
     builder => builder.add_override("/word/ghost.xml", "application/xml"),
-    "override names a part that was not added: /word/ghost.xml",
+    "override names a part that will not be emitted: /word/ghost.xml",
   )
   expect_build_error(
     builder => {
