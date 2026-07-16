@@ -1005,18 +1005,6 @@ fn read_relationships(
 }
 
 ///|
-fn read_required_relationships(
-  zip : ZipArchive,
-  path : String,
-  xml_budget? : @xml.XmlReadBudget,
-) -> Relationships raise DocxError {
-  match zip.read_bytes(path) {
-    Some(bytes) => decode_relationships_bytes(bytes, xml_budget?)
-    None => raise MissingPart(message="missing DOCX part: " + path)
-  }
-}
-
-///|
 fn decode_relationships_bytes(
   bytes : BytesView,
   xml_budget? : @xml.XmlReadBudget,
