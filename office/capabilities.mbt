@@ -130,6 +130,25 @@ fn capability_action(
 }
 
 ///|
+fn capability_variant(
+  name : String,
+  usage : String,
+  result_schema : String,
+  constraints : Array[String],
+) -> CapabilityVariant {
+  {
+    name,
+    usage,
+    result_schema,
+    inputs: [],
+    outputs: [],
+    constraints,
+    actions: [],
+    output_modes: ["human", "json"],
+  }
+}
+
+///|
 /// Returns the canonical document-format declarations in stable order.
 pub fn capability_formats() -> Array[CapabilityFormat] {
   [
@@ -152,11 +171,11 @@ pub fn capability_formats() -> Array[CapabilityFormat] {
       selector: {
         schema: "office.selector/1",
         root: "/xlsx",
-        status: "syntax-only",
+        status: "read-resolved",
         examples: [
           "/xlsx/sheet[name=\"Data\"]/cell[A1]", "/xlsx/sheet[name=\"Data\"]/range[A1:C12]",
         ],
-        description: "bounded parse/render only; workbook resolution is not implemented",
+        description: "bounded canonical resolution for workbook, sheet, cell, and range selectors across outline, get, text, and cell queries",
       },
     },
   ]
@@ -222,14 +241,14 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
     },
     {
       name: "outline",
-      summary: "Summarize bounded DOCX structure using canonical selectors",
+      summary: "Summarize bounded XLSX or DOCX structure using canonical selectors",
       usage: "office outline FILE [--max-elements N] [--max-output-chars N] [--json]",
-      formats: ["docx"],
+      formats: ["docx", "xlsx"],
       aliases: [],
       inputs: [
-        capability_field("file", "path", true, "existing DOCX package"),
+        capability_field("file", "path", true, "existing XLSX or DOCX package"),
         capability_field(
-          "max-elements", "integer(1..200000)", false, "projection scan ceiling; default 50000",
+          "max-elements", "integer(1..200000)", false, "DOCX projection-node or XLSX cell scan ceiling; default 50000; XLSX effective hard ceiling 100000",
         ),
         capability_field(
           "max-output-chars", "integer(1..4194304)", false, "successful stdout ceiling including trailing LF; failure envelopes are separate; default 1048576",
@@ -238,55 +257,76 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
       ],
       outputs: [
         capability_field(
-          "schema", "literal(office.docx.outline/1)", true, "versioned result schema",
+          "schema", "enum(office.docx.outline/1|office.xlsx.outline/1)", true, "format-specific versioned result schema",
         ),
         capability_field(
           "file", "path", true, "the input path exactly as supplied",
         ),
         capability_field(
-          "format", "literal(docx)", true, "resolved document format",
+          "format", "enum(docx|xlsx)", true, "resolved document format",
         ),
         capability_field(
-          "scanned_elements", "integer", true, "number of elements in the bounded projection",
+          "scanned_elements", "integer", false, "DOCX only: number of elements in the bounded projection",
         ),
         capability_field(
-          "counts", "object", true, "deterministic structural counts across every DOCX story",
+          "counts", "object", false, "DOCX only: deterministic structural counts across every story",
+        ),
+        capability_field("stories", "array", false, "DOCX only: story roots"),
+        capability_field(
+          "headings", "array", false, "DOCX only: bounded heading previews",
         ),
         capability_field(
-          "stories", "array", true, "body, header, footer, note, endnote, and comment story roots",
+          "styles_in_use", "array", false, "DOCX only: deduplicated referenced styles",
+        ),
+        capability_field("images", "array", false, "DOCX only: image metadata"),
+        capability_field(
+          "sections", "array", false, "DOCX only: section boundaries and header/footer references",
         ),
         capability_field(
-          "headings", "array", true, "bounded heading previews with canonical paths",
+          "diagnostics", "array", false, "DOCX only: reader and source diagnostics",
         ),
         capability_field(
-          "styles_in_use", "array", true, "deduplicated styles referenced by projected elements",
+          "path", "literal(/xlsx/workbook)", false, "XLSX only: canonical workbook selector",
         ),
         capability_field(
-          "images", "array", true, "image metadata with canonical paths and byte counts",
+          "sheet_count", "integer", false, "XLSX only: workbook tab count",
         ),
         capability_field(
-          "sections", "array", true, "section boundaries and effective header/footer references",
+          "active_sheet", "object", false, "XLSX only: canonical active-sheet summary when the workbook has tabs",
         ),
         capability_field(
-          "diagnostics", "array", true, "reader and annotation source diagnostics",
+          "sheets", "array", false, "XLSX only: bounded tab-order sheet summaries with canonical paths and used ranges",
+        ),
+        capability_field(
+          "defined_names", "array", false, "XLSX only: bounded workbook defined-name inventory",
+        ),
+        capability_field(
+          "limits", "object", false, "XLSX only: effective scan and metadata limits",
         ),
       ],
       output_modes: ["human", "json"],
-      variants: [],
+      variants: [
+        capability_variant("docx", "office outline FILE", SCHEMA_DOCX_OUTLINE, [
+          "format=docx",
+        ]),
+        capability_variant("xlsx", "office outline FILE", SCHEMA_XLSX_OUTLINE, [
+          "format=xlsx",
+        ]),
+      ],
     },
     {
       name: "get",
-      summary: "Resolve one canonical DOCX selector",
+      summary: "Resolve one canonical XLSX or DOCX selector",
       usage: "office get FILE SELECTOR [--max-elements N] [--max-output-chars N] [--json]",
-      formats: ["docx"],
+      formats: ["docx", "xlsx"],
       aliases: [],
       inputs: [
-        capability_field("file", "path", true, "existing DOCX package"),
+        capability_field("file", "path", true, "existing XLSX or DOCX package"),
         capability_field(
-          "selector", "office.selector/1", true, "canonical /docx selector",
+          "selector", "office.selector/1", true, "canonical selector matching the validated package format",
         ),
         capability_field(
-          "max-elements", "integer(1..200000)", false, "projection scan ceiling; default 50000",
+          "max-elements", "integer(1..200000)", false, "DOCX projection-node or XLSX cell scan ceiling; default 50000; XLSX effective hard ceiling 100000",
         ),
         capability_field(
           "max-output-chars", "integer(1..4194304)", false, "successful stdout ceiling including trailing LF; failure envelopes are separate; default 1048576",
@@ -295,29 +335,29 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
       ],
       outputs: [
         capability_field(
-          "schema", "literal(office.docx.element/1)", true, "versioned result schema",
+          "schema", "enum(office.docx.element/1|office.xlsx.element/1)", true, "format-specific versioned result schema",
         ),
         capability_field(
           "file", "path", true, "the input path exactly as supplied",
         ),
         capability_field(
-          "format", "literal(docx)", true, "resolved document format",
+          "format", "enum(docx|xlsx)", true, "resolved document format",
         ),
         capability_field(
           "path", "office.selector/1", true, "resolved canonical path",
         ),
         capability_field(
-          "kind", "string", true, "resolved story, annotation, or element kind",
+          "kind", "string", true, "resolved workbook, sheet, coordinate, story, annotation, or element kind",
         ),
         capability_field(
           "role", "enum(story-root|annotation-collection|annotation-item|element)",
-          true, "projection role",
+          false, "DOCX only: projection role",
         ),
         capability_field(
           "stability", "enum(stable|snapshot-relative)", true, "selector stability classification",
         ),
         capability_field(
-          "source", "object", true, "physical story source metadata",
+          "source", "object", false, "DOCX only: physical story source metadata",
         ),
         capability_field(
           "parent", "office.selector/1", false, "canonical parent path; absent for projection roots",
@@ -326,38 +366,83 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "id", "string", false, "annotation id when the resolved item carries one",
         ),
         capability_field(
-          "children", "array", true, "addressable direct children with canonical paths",
+          "children", "array", false, "DOCX only: addressable direct children",
         ),
         capability_field(
-          "properties", "object", true, "declared formatting and element summary",
+          "properties", "object", false, "DOCX only: declared formatting and element summary",
         ),
         capability_field(
-          "metadata", "object", true, "role-specific annotation or collection metadata",
+          "metadata", "object", false, "DOCX only: role-specific metadata",
         ),
-        capability_field("text", "string", true, "bounded raw text projection"),
+        capability_field(
+          "text", "string", false, "DOCX only: bounded raw text projection",
+        ),
+        capability_field(
+          "sheet_count", "integer", false, "XLSX workbook selectors only: workbook tab count",
+        ),
+        capability_field(
+          "sheets", "array", false, "XLSX workbook selectors only: bounded tab-order sheet summaries",
+        ),
+        capability_field(
+          "defined_names", "array", false, "XLSX workbook selectors only: bounded defined-name inventory",
+        ),
+        capability_field(
+          "sheet", "object", false, "XLSX sheet selectors only: bounded sheet summary",
+        ),
+        capability_field(
+          "cell", "object", false, "XLSX cell selectors only: typed value, formula, style, and canonical path",
+        ),
+        capability_field(
+          "cells", "array", false, "XLSX range selectors only: populated cells in row-major order",
+        ),
+        capability_field(
+          "reference", "a1-range", false, "XLSX range selectors only: normalized A1 rectangle",
+        ),
+        capability_field(
+          "styles", "object", false, "XLSX coordinate selectors only: deduplicated referenced style definitions",
+        ),
+        capability_field(
+          "scanned_cells", "integer", false, "XLSX coordinate selectors only: exact rectangle scan count",
+        ),
+        capability_field(
+          "returned", "integer", false, "XLSX range selectors only: populated cell count",
+        ),
       ],
       output_modes: ["human", "json"],
-      variants: [],
+      variants: [
+        capability_variant(
+          "docx",
+          "office get FILE /docx/...",
+          SCHEMA_DOCX_ELEMENT,
+          ["format=docx"],
+        ),
+        capability_variant(
+          "xlsx",
+          "office get FILE /xlsx/...",
+          SCHEMA_XLSX_ELEMENT,
+          ["format=xlsx"],
+        ),
+      ],
     },
     {
       name: "text",
-      summary: "Extract bounded path-tagged DOCX paragraph text",
+      summary: "Extract bounded path-tagged XLSX cell or DOCX paragraph text",
       usage: "office text FILE [--under SELECTOR] [--offset N] [--limit N] [--max-elements N] [--max-output-chars N] [--json]",
-      formats: ["docx"],
+      formats: ["docx", "xlsx"],
       aliases: [],
       inputs: [
-        capability_field("file", "path", true, "existing DOCX package"),
+        capability_field("file", "path", true, "existing XLSX or DOCX package"),
         capability_field(
-          "under", "office.selector/1", false, "optional canonical subtree root",
+          "under", "office.selector/1", false, "optional canonical DOCX subtree or XLSX workbook/sheet/range/cell scope",
         ),
         capability_field(
-          "offset", "integer(0..200000)", false, "zero-based paragraph offset; default 0",
+          "offset", "integer(0..200000)", false, "zero-based matching paragraph or cell offset; default 0",
         ),
         capability_field(
-          "limit", "integer(0..10000)", false, "maximum returned paragraphs; default 2000",
+          "limit", "integer(0..10000)", false, "maximum returned paragraphs or cells; default 2000",
         ),
         capability_field(
-          "max-elements", "integer(1..200000)", false, "projection scan ceiling; default 50000",
+          "max-elements", "integer(1..200000)", false, "DOCX projection-node or XLSX cell scan ceiling; default 50000; XLSX effective hard ceiling 100000",
         ),
         capability_field(
           "max-output-chars", "integer(1..4194304)", false, "successful stdout ceiling including trailing LF; failure envelopes are separate; default 1048576",
@@ -366,19 +451,19 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
       ],
       outputs: [
         capability_field(
-          "schema", "literal(office.docx.text/1)", true, "versioned result schema",
+          "schema", "enum(office.docx.text/1|office.xlsx.text/1)", true, "format-specific versioned result schema",
         ),
         capability_field(
           "file", "path", true, "the input path exactly as supplied",
         ),
         capability_field(
-          "format", "literal(docx)", true, "resolved document format",
+          "format", "enum(docx|xlsx)", true, "resolved document format",
         ),
         capability_field(
-          "entries", "array(object{path,text,stability})", true, "paragraphs in deterministic document order",
+          "entries", "array(object{path,text,stability})", true, "paragraphs in document order or cells in sheet/row-major order",
         ),
         capability_field(
-          "matched_total", "integer", true, "complete bounded-scan paragraph count",
+          "matched_total", "integer", true, "complete bounded-scan matching paragraph or cell count",
         ),
         capability_field(
           "returned", "integer", true, "number of returned entries",
@@ -391,41 +476,60 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         ),
         capability_field("limit", "integer", true, "applied page-size ceiling"),
         capability_field(
-          "scanned_elements", "integer", true, "number of elements in the bounded projection",
+          "scanned_elements", "integer", false, "DOCX only: projected element count",
         ),
         capability_field(
-          "under", "office.selector/1", false, "resolved subtree root when one was requested",
+          "scanned_cells", "integer", false, "XLSX only: exact bounded cell scan count",
+        ),
+        capability_field(
+          "under", "office.selector/1", false, "resolved canonical scope when one was requested",
         ),
       ],
       output_modes: ["human", "json"],
-      variants: [],
+      variants: [
+        capability_variant(
+          "docx",
+          "office text FILE [--under /docx/...]",
+          SCHEMA_DOCX_TEXT,
+          ["format=docx"],
+        ),
+        capability_variant(
+          "xlsx",
+          "office text FILE [--under /xlsx/...]",
+          SCHEMA_XLSX_TEXT,
+          ["format=xlsx"],
+        ),
+      ],
     },
     {
       name: "query",
-      summary: "Run bounded deterministic predicates over DOCX elements",
-      usage: "office query FILE [--under SELECTOR] [--kind KIND] [--text TEXT] [--id ID] [--property NAME=VALUE]... [--ignore-case] [--offset N] [--limit N] [--max-elements N] [--max-output-chars N] [--json]",
-      formats: ["docx"],
+      summary: "Run bounded deterministic predicates over XLSX cells or DOCX elements",
+      usage: "office query FILE [CELL_SELECTOR] [--under SELECTOR] [--kind KIND] [--text TEXT] [--id ID] [--property NAME=VALUE]... [--ignore-case] [--offset N] [--limit N] [--max-elements N] [--max-output-chars N] [--json]",
+      formats: ["docx", "xlsx"],
       aliases: [],
       inputs: [
-        capability_field("file", "path", true, "existing DOCX package"),
+        capability_field("file", "path", true, "existing XLSX or DOCX package"),
         capability_field(
-          "under", "office.selector/1", false, "optional canonical subtree root",
+          "selector", "xlsx-cell-selector", false, "XLSX only: cell followed by up to 16 bounded type, value, formula, or text predicates; default cell",
+        ),
+        capability_field(
+          "under", "office.selector/1", false, "optional canonical DOCX subtree or XLSX workbook/sheet/range/cell scope",
         ),
         capability_field(
           "kind", "enum(body|header|footer|footnotes|endnotes|comments|note|comment|p|r|tbl|tr|tc|hyperlink|image)",
-          false, "exact kind; documented long-name aliases normalize before matching",
+          false, "DOCX only: exact kind; documented aliases normalize before matching",
         ),
         capability_field(
-          "text", "literal-string(1..1048576 chars)", false, "literal substring predicate; regular expressions are not accepted",
+          "text", "literal-string(1..1048576 chars)", false, "DOCX only: literal substring predicate; regular expressions are not accepted",
         ),
         capability_field(
-          "id", "string(1..1048576 chars)", false, "exact annotation id predicate, including ids outside selector path limits",
+          "id", "string(1..1048576 chars)", false, "DOCX only: exact annotation id predicate",
         ),
         capability_field(
-          "property", "array(NAME=VALUE)", false, "up to 16 exact predicates with values capped at 1048576 characters",
+          "property", "array(NAME=VALUE)", false, "DOCX only: up to 16 exact declared-property predicates",
         ),
         capability_field(
-          "ignore-case", "boolean", false, "locale-independent Unicode simple-case --text matching",
+          "ignore-case", "boolean", false, "DOCX only: locale-independent Unicode simple-case --text matching",
         ),
         capability_field(
           "offset", "integer(0..200000)", false, "zero-based match offset; default 0",
@@ -434,7 +538,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "limit", "integer(0..1000)", false, "maximum returned matches; default 100",
         ),
         capability_field(
-          "max-elements", "integer(1..200000)", false, "projection scan ceiling; default 50000",
+          "max-elements", "integer(1..200000)", false, "DOCX projection-node or XLSX cell scan ceiling; default 50000; XLSX effective hard ceiling 100000",
         ),
         capability_field(
           "max-output-chars", "integer(1..4194304)", false, "successful stdout ceiling including trailing LF; failure envelopes are separate; default 1048576",
@@ -443,19 +547,19 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
       ],
       outputs: [
         capability_field(
-          "schema", "literal(office.docx.query/1)", true, "versioned result schema",
+          "schema", "enum(office.docx.query/1|office.xlsx.query/1)", true, "format-specific versioned result schema",
         ),
         capability_field(
           "file", "path", true, "the input path exactly as supplied",
         ),
         capability_field(
-          "format", "literal(docx)", true, "resolved document format",
+          "format", "enum(docx|xlsx)", true, "resolved document format",
         ),
         capability_field(
-          "filters", "object", true, "normalized predicates applied by this query",
+          "filters", "object", false, "DOCX only: normalized predicates applied by this query",
         ),
         capability_field(
-          "matches", "array", true, "deterministic document-order match records",
+          "matches", "array", true, "deterministic document-order or sheet/row-major match records",
         ),
         capability_field(
           "matched_total", "integer", true, "complete bounded-scan match count",
@@ -471,14 +575,36 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         ),
         capability_field("limit", "integer", true, "applied page-size ceiling"),
         capability_field(
-          "scanned_elements", "integer", true, "number of elements in the bounded projection",
+          "scanned_elements", "integer", false, "DOCX only: projected element count",
         ),
         capability_field(
-          "under", "office.selector/1", false, "resolved subtree root when one was requested",
+          "selector", "xlsx-cell-selector", false, "XLSX only: supplied bounded cell selector",
+        ),
+        capability_field(
+          "styles", "object", false, "XLSX only: deduplicated styles referenced by returned matches",
+        ),
+        capability_field(
+          "scanned_cells", "integer", false, "XLSX only: exact bounded cell scan count",
+        ),
+        capability_field(
+          "under", "office.selector/1", false, "resolved canonical scope when one was requested",
         ),
       ],
       output_modes: ["human", "json"],
-      variants: [],
+      variants: [
+        capability_variant(
+          "docx",
+          "office query FILE [DOCX predicates]",
+          SCHEMA_DOCX_QUERY,
+          ["format=docx"],
+        ),
+        capability_variant(
+          "xlsx",
+          "office query FILE [cell[predicate]...]",
+          SCHEMA_XLSX_QUERY,
+          ["format=xlsx"],
+        ),
+      ],
     },
     {
       name: "raw",

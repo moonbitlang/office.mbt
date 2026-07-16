@@ -33,7 +33,7 @@ fn office_read_format_hint(
   } else if lower.has_suffix(".docx") {
     Docx
   } else {
-    raise CliFailure(identify_error(@lib.UnsupportedFileExtension(file), file))
+    raise CliFailure(identify_error(UnsupportedFileExtension(file), file))
   }
 }
 
@@ -44,7 +44,7 @@ fn office_zip_read_failure(
   expected : @lib.DocumentFormat,
 ) -> CliFailure {
   match error {
-    @zip.ResourceLimitExceeded(kind~, limit~, actual~) =>
+    ResourceLimitExceeded(kind~, limit~, actual~) =>
       CliFailure(
         @lib.protocol_error(
           "office.\{expected.name()}.resource_limit",
@@ -57,7 +57,7 @@ fn office_zip_read_failure(
           }),
         ),
       )
-    @zip.OutputLimitExceeded(limit~) =>
+    OutputLimitExceeded(limit~) =>
       format_resource_failure(expected.name(), "ZIP output", limit)
     _ =>
       CliFailure(
@@ -111,7 +111,7 @@ async fn read_office_package(file : String) -> OfficeReadPackage {
 ///|
 fn xlsx_read_failure(error : @xlsx.XlsxError, file : String) -> CliFailure {
   match error {
-    @xlsx.ResourceLimitExceeded(kind~, limit~, actual~) =>
+    ResourceLimitExceeded(kind~, limit~, actual~) =>
       CliFailure(
         @lib.protocol_error(
           "office.xlsx.resource_limit",
@@ -124,7 +124,7 @@ fn xlsx_read_failure(error : @xlsx.XlsxError, file : String) -> CliFailure {
           }),
         ),
       )
-    @xlsx.InvalidPackage(msg~) | @xlsx.InvalidXml(msg~) =>
+    InvalidPackage(msg~) | InvalidXml(msg~) =>
       CliFailure(
         @lib.protocol_error(
           "office.invalid_package",

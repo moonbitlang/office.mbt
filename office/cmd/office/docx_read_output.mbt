@@ -26,12 +26,6 @@ let docx_cli_query_preview_chars : Int = 160
 let docx_cli_heading_preview_chars : Int = 512
 
 ///|
-/// A linear-work ceiling independent of retained output. UTF-16 length is used
-/// as a conservative upper bound for Unicode-scalar iteration, so the limit
-/// also covers supplementary characters without under-counting.
-let docx_cli_max_query_predicate_work_units : Int = 128 * 1024 * 1024
-
-///|
 struct DocxPropertyPredicate {
   name : String
   value : String
@@ -50,120 +44,18 @@ struct DocxQuerySpec {
 }
 
 ///|
-struct DocxQueryWorkBudget {
-  maximum : Int
-  mut used : Int
-}
-
-///|
-fn DocxQueryWorkBudget::new(maximum : Int) -> DocxQueryWorkBudget {
-  { maximum, used: 0 }
-}
-
-///|
-fn DocxQueryWorkBudget::charge(
-  self : DocxQueryWorkBudget,
-  count : Int,
-) -> Unit raise CliFailure {
-  if count < 0 || count > self.maximum - self.used {
-    let actual = if count < 0 { self.used } else { self.used + count }
-    raise docx_resource_failure(
-      "query predicate work units",
-      self.maximum,
-      actual~,
-    )
-  }
-  self.used += count
-}
-
-///|
-/// A Knuth-Morris-Pratt literal pattern. The failure table is compiled once
-/// per command, making every document-text match linear in the scanned text.
-struct DocxLinearPattern {
-  characters : Array[Char]
-  failure : Array[Int]
-  ignore_case : Bool
-}
-
-///|
-fn query_fold_character(character : Char, ignore_case : Bool) -> Char {
-  if ignore_case {
-    // Locale-independent Unicode simple lowercase mapping is one-to-one, so
-    // it preserves substring boundaries and has a fixed bound per scalar.
-    @unicode.to_simple_lowercase(character)
-  } else {
-    character
-  }
-}
-
-///|
-fn DocxLinearPattern::compile(
-  needle : String,
-  ignore_case : Bool,
-  work : DocxQueryWorkBudget,
-) -> DocxLinearPattern raise CliFailure {
-  // Four code-unit work units conservatively cover scalar iteration, simple
-  // folding, and the amortized failure-table comparisons.
-  work.charge(needle.length() * 4 + 1)
-  let characters : Array[Char] = []
-  for character in needle {
-    characters.push(query_fold_character(character, ignore_case))
-  }
-  let failure = Array::make(characters.length(), 0)
-  let mut matched = 0
-  for at in 1..<characters.length() {
-    while matched > 0 && characters[at] != characters[matched] {
-      matched = failure[matched - 1]
-    }
-    if characters[at] == characters[matched] {
-      matched += 1
-    }
-    failure[at] = matched
-  }
-  { characters, failure, ignore_case }
-}
-
-///|
-fn DocxLinearPattern::is_in(
-  self : DocxLinearPattern,
-  value : String,
-  work : DocxQueryWorkBudget,
-) -> Bool raise CliFailure {
-  if self.characters.is_empty() {
-    return true
-  }
-  // KMP performs at most two pattern comparisons per scalar. The third unit
-  // covers iteration/folding; UTF-16 length safely over-counts scalars.
-  work.charge(value.length() * 3 + 1)
-  let mut matched = 0
-  for raw_character in value {
-    let character = query_fold_character(raw_character, self.ignore_case)
-    while matched > 0 && character != self.characters[matched] {
-      matched = self.failure[matched - 1]
-    }
-    if character == self.characters[matched] {
-      matched += 1
-      if matched == self.characters.length() {
-        return true
-      }
-    }
-  }
-  false
-}
-
-///|
 struct PreparedDocxQuery {
   spec : DocxQuerySpec
   scope_path : String?
   scope_prefix : String?
-  text_pattern : DocxLinearPattern?
+  text_pattern : OfficeLinearPattern?
 }
 
 ///|
 fn PreparedDocxQuery::build(
   spec : DocxQuerySpec,
   under : DocxProjectionEntry?,
-  work : DocxQueryWorkBudget,
+  work : OfficeQueryWorkBudget,
 ) -> PreparedDocxQuery raise CliFailure {
   let (scope_path, scope_prefix) = match under {
     Some(root) => (Some(root.path), Some(root.path + "/"))
@@ -171,7 +63,7 @@ fn PreparedDocxQuery::build(
   }
   let text_pattern = match spec.text {
     Some(needle) =>
-      Some(DocxLinearPattern::compile(needle, spec.ignore_case, work))
+      Some(OfficeLinearPattern::compile(needle, spec.ignore_case, work))
     None => None
   }
   { spec, scope_path, scope_prefix, text_pattern }
@@ -686,7 +578,7 @@ fn query_record_json(
 fn entry_matches_properties(
   entry : DocxProjectionEntry,
   predicates : Array[DocxPropertyPredicate],
-  work : DocxQueryWorkBudget,
+  work : OfficeQueryWorkBudget,
 ) -> Bool raise CliFailure {
   for predicate in predicates {
     match entry.properties.get(predicate.name) {
@@ -707,7 +599,7 @@ fn entry_matches_properties(
 fn query_strings_equal(
   value : String,
   expected : String,
-  work : DocxQueryWorkBudget,
+  work : OfficeQueryWorkBudget,
 ) -> Bool raise CliFailure {
   work.charge(value.length().min(expected.length()) + 1)
   value == expected
@@ -717,7 +609,7 @@ fn query_strings_equal(
 fn query_entry_is_in_scope(
   entry : DocxProjectionEntry,
   query : PreparedDocxQuery,
-  work : DocxQueryWorkBudget,
+  work : OfficeQueryWorkBudget,
 ) -> Bool raise CliFailure {
   match (query.scope_path, query.scope_prefix) {
     (Some(root), Some(prefix)) =>
@@ -736,7 +628,7 @@ fn entry_matches_query(
   entry : DocxProjectionEntry,
   query : PreparedDocxQuery,
   scan_budget : DocxTextBudget,
-  work : DocxQueryWorkBudget,
+  work : OfficeQueryWorkBudget,
 ) -> Bool raise CliFailure {
   if !query_entry_is_in_scope(entry, query, work) {
     return false
@@ -837,7 +729,9 @@ fn docx_query_payload(
   let scan_budget = DocxTextBudget::new(
     "query text scan characters", docx_cli_max_query_text_scan_chars,
   )
-  let work = DocxQueryWorkBudget::new(docx_cli_max_query_predicate_work_units)
+  let work = OfficeQueryWorkBudget::new(
+    office_cli_max_query_predicate_work_units,
+  )
   let query = PreparedDocxQuery::build(spec, under, work)
   let mut matched = 0
   for entry in projection.entries {
@@ -1295,7 +1189,9 @@ fn docx_query_human(
   let scan_budget = DocxTextBudget::new(
     "query text scan characters", docx_cli_max_query_text_scan_chars,
   )
-  let work = DocxQueryWorkBudget::new(docx_cli_max_query_predicate_work_units)
+  let work = OfficeQueryWorkBudget::new(
+    office_cli_max_query_predicate_work_units,
+  )
   let query = PreparedDocxQuery::build(spec, under, work)
   let mut matched = 0
   let mut returned = 0

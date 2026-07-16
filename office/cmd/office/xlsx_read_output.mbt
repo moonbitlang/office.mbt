@@ -2,7 +2,7 @@
 enum XlsxCellFilter {
   PresentCells
   TextCells
-  QueryCells(Array[XlsxCellPredicate])
+  QueryCells(Array[PreparedXlsxCellPredicate], OfficeQueryWorkBudget)
 }
 
 ///|
@@ -19,7 +19,7 @@ fn xlsx_sheet_state_name(state : @xlsx.SheetState) -> String {
   match state {
     Visible => "visible"
     Hidden => "hidden"
-    VeryHidden => "very-hidden"
+    VeryHidden => "very_hidden"
   }
 }
 
@@ -125,18 +125,8 @@ fn xlsx_outline_data(projection : XlsxProjection) -> Json raise CliFailure {
   let metadata = XlsxMetadataBudget::new()
   let sheets : Array[Json] = []
   for name in projection.sheet_names {
-    match projection.find_sheet_by_name(name) {
-      Some(sheet) =>
-        sheets.push(xlsx_sheet_summary_json(projection, sheet, metadata))
-      None =>
-        raise xlsx_cli_failure(
-          "office.xlsx.read_failed",
-          "workbook tab order contains an unresolved sheet",
-          details=Json::object({
-            "sheet": Json::string(bounded_text(name, 160)),
-          }),
-        )
-    }
+    let sheet = projection.require_sheet_by_name(name)
+    sheets.push(xlsx_sheet_summary_json(projection, sheet, metadata))
   }
   let defined_names : Array[Json] = []
   for defined in projection.workbook.get_defined_names() {
@@ -176,19 +166,24 @@ fn xlsx_outline_data(projection : XlsxProjection) -> Json raise CliFailure {
   }
   if !projection.sheet_names.is_empty() {
     let active_index = projection.workbook.get_active_sheet_index()
-    match projection.sheet_names.get(active_index) {
-      Some(name) =>
-        match projection.find_sheet_by_name(name) {
-          Some(sheet) =>
-            fields["active_sheet"] = Json::object({
-              "path": Json::string(sheet.path),
-              "name": Json::string(sheet.name),
-              "index": Json::number((sheet.index + 1).to_double()),
-            })
-          None => ()
-        }
-      None => ()
+    guard projection.sheet_names.get(active_index) is Some(name) else {
+      raise xlsx_cli_failure(
+        "office.xlsx.read_failed",
+        "workbook active-sheet index is outside the tab order",
+        details=Json::object({
+          "active_sheet_index": Json::number(active_index.to_double()),
+          "sheet_count": Json::number(
+            projection.sheet_names.length().to_double(),
+          ),
+        }),
+      )
     }
+    let sheet = projection.require_sheet_by_name(name)
+    fields["active_sheet"] = Json::object({
+      "path": Json::string(sheet.path),
+      "name": Json::string(sheet.name),
+      "index": Json::number((sheet.index + 1).to_double()),
+    })
   }
   Json::object(fields)
 }
@@ -294,12 +289,23 @@ fn xlsx_cell_text(cell : XlsxCellSnapshot) -> String? {
 fn XlsxCellFilter::matches(
   self : XlsxCellFilter,
   cell : XlsxCellSnapshot,
-) -> Bool {
+) -> Bool raise CliFailure {
   match self {
     PresentCells => cell.is_present()
     TextCells => xlsx_cell_text(cell) is Some(_)
-    QueryCells(predicates) => xlsx_cell_matches(cell, predicates)
+    QueryCells(predicates, work) => xlsx_cell_matches(cell, predicates, work)
   }
+}
+
+///|
+fn xlsx_query_filter(
+  predicates : Array[XlsxCellPredicate],
+) -> XlsxCellFilter raise CliFailure {
+  let work = OfficeQueryWorkBudget::new(
+    office_cli_max_query_predicate_work_units,
+    format="xlsx",
+  )
+  QueryCells(prepare_xlsx_query_predicates(predicates, work), work)
 }
 
 ///|
@@ -357,7 +363,13 @@ fn xlsx_get_data(
   match resolved {
     Workbook(path~) => {
       let outline = xlsx_outline_data(projection)
-      guard outline is Object(outline_fields) else { abort("outline object") }
+      let outline_fields = match outline {
+        Object(fields) => fields
+        _ =>
+          raise xlsx_cli_failure(
+            "office.xlsx.read_failed", "workbook outline projection did not produce an object",
+          )
+      }
       Json::object({
         "schema": Json::string(@lib.SCHEMA_XLSX_ELEMENT),
         "file": Json::string(projection.file),
@@ -518,7 +530,7 @@ fn xlsx_query_data(
   let page = collect_xlsx_cell_page(
     projection,
     xlsx_scan_regions(projection, under),
-    QueryCells(spec.predicates),
+    xlsx_query_filter(spec.predicates),
     spec.offset,
     spec.limit,
   )
@@ -564,7 +576,7 @@ fn xlsx_outline_human(
   output.write_plain("workbook\t/xlsx/workbook\t")
   output.write_plain("\{projection.sheet_names.length()} sheets")
   for name in projection.sheet_names {
-    guard projection.find_sheet_by_name(name) is Some(sheet) else { continue }
+    let sheet = projection.require_sheet_by_name(name)
     output.begin_line()
     output.write_terminal_safe(sheet.path)
     output.write_char('\t')
@@ -694,7 +706,7 @@ fn xlsx_query_human(
     collect_xlsx_cell_page(
       projection,
       xlsx_scan_regions(projection, under),
-      QueryCells(spec.predicates),
+      xlsx_query_filter(spec.predicates),
       spec.offset,
       spec.limit,
     ),

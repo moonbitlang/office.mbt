@@ -37,6 +37,16 @@ enum XlsxCellPredicate {
 }
 
 ///|
+enum PreparedXlsxCellPredicate {
+  PreparedHasType(XlsxCellKind)
+  PreparedValueCompare(XlsxNumberOperator, Double)
+  PreparedHasFormula
+  PreparedFormulaContains(OfficeLinearPattern)
+  PreparedTextEquals(String)
+  PreparedTextContains(OfficeLinearPattern)
+}
+
+///|
 struct XlsxQuerySpec {
   selector : String
   predicates : Array[XlsxCellPredicate]
@@ -213,12 +223,39 @@ fn XlsxNumberOperator::matches(
 }
 
 ///|
-fn XlsxCellPredicate::matches(
+fn XlsxCellPredicate::prepare(
   self : XlsxCellPredicate,
-  cell : XlsxCellSnapshot,
-) -> Bool {
+  work : OfficeQueryWorkBudget,
+) -> PreparedXlsxCellPredicate raise CliFailure {
   match self {
-    HasType(kind) =>
+    HasType(kind) => PreparedHasType(kind)
+    ValueCompare(operator, bound) => PreparedValueCompare(operator, bound)
+    HasFormula => PreparedHasFormula
+    FormulaContains(needle) =>
+      PreparedFormulaContains(OfficeLinearPattern::compile(needle, false, work))
+    TextEquals(expected) => PreparedTextEquals(expected)
+    TextContains(needle) =>
+      PreparedTextContains(OfficeLinearPattern::compile(needle, false, work))
+  }
+}
+
+///|
+fn prepare_xlsx_query_predicates(
+  predicates : Array[XlsxCellPredicate],
+  work : OfficeQueryWorkBudget,
+) -> Array[PreparedXlsxCellPredicate] raise CliFailure {
+  predicates.map(predicate => predicate.prepare(work))
+}
+
+///|
+fn PreparedXlsxCellPredicate::matches(
+  self : PreparedXlsxCellPredicate,
+  cell : XlsxCellSnapshot,
+  work : OfficeQueryWorkBudget,
+) -> Bool raise CliFailure {
+  match self {
+    PreparedHasType(kind) => {
+      work.charge(1)
       match kind {
         Formula => cell.formula is Some(_)
         Number => cell.raw is Some(Numeric(_))
@@ -226,26 +263,44 @@ fn XlsxCellPredicate::matches(
         Boolean => cell.raw is Some(Bool(_))
         ErrorValue => cell.raw is Some(Error(_))
       }
-    ValueCompare(operator, bound) =>
+    }
+    PreparedValueCompare(operator, bound) => {
+      work.charge(1)
       match cell.raw {
         Some(Numeric(value)) => operator.matches(value, bound)
         _ => false
       }
-    HasFormula => cell.formula is Some(_)
-    FormulaContains(needle) =>
+    }
+    PreparedHasFormula => {
+      work.charge(1)
+      cell.formula is Some(_)
+    }
+    PreparedFormulaContains(pattern) =>
       match cell.formula {
-        Some(formula) => formula.contains(needle)
-        None => false
+        Some(formula) => pattern.is_in(formula, work)
+        None => {
+          work.charge(1)
+          false
+        }
       }
-    TextEquals(expected) =>
+    PreparedTextEquals(expected) =>
       match cell.raw {
-        Some(String(value)) => value == expected
-        _ => false
+        Some(String(value)) => {
+          work.charge(value.length().min(expected.length()) + 1)
+          value == expected
+        }
+        _ => {
+          work.charge(1)
+          false
+        }
       }
-    TextContains(needle) =>
+    PreparedTextContains(pattern) =>
       match cell.raw {
-        Some(String(value)) => value.contains(needle)
-        _ => false
+        Some(String(value)) => pattern.is_in(value, work)
+        _ => {
+          work.charge(1)
+          false
+        }
       }
   }
 }
@@ -253,13 +308,15 @@ fn XlsxCellPredicate::matches(
 ///|
 fn xlsx_cell_matches(
   cell : XlsxCellSnapshot,
-  predicates : Array[XlsxCellPredicate],
-) -> Bool {
+  predicates : Array[PreparedXlsxCellPredicate],
+  work : OfficeQueryWorkBudget,
+) -> Bool raise CliFailure {
+  work.charge(1)
   if !cell.is_present() {
     return false
   }
   for predicate in predicates {
-    if !predicate.matches(cell) {
+    if !predicate.matches(cell, work) {
       return false
     }
   }

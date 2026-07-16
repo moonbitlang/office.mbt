@@ -297,6 +297,22 @@ fn XlsxProjection::find_sheet_by_name(
 }
 
 ///|
+fn XlsxProjection::require_sheet_by_name(
+  self : XlsxProjection,
+  name : String,
+) -> XlsxSheetTarget raise CliFailure {
+  match self.find_sheet_by_name(name) {
+    Some(sheet) => sheet
+    None =>
+      raise xlsx_cli_failure(
+        "office.xlsx.read_failed",
+        "workbook tab order contains an unresolved sheet",
+        details=Json::object({ "sheet": Json::string(bounded_text(name, 160)) }),
+      )
+  }
+}
+
+///|
 fn XlsxProjection::resolve_sheet_segment(
   self : XlsxProjection,
   segment : @lib.SelectorSegment,
@@ -425,17 +441,14 @@ fn xlsx_scan_regions(
       }
     Some(Workbook(..)) | None =>
       for name in projection.sheet_names {
-        match projection.find_sheet_by_name(name) {
-          Some(sheet) =>
-            match sheet.content {
-              Worksheet(worksheet) =>
-                match xlsx_used_rect(worksheet) {
-                  Some(rect) => regions.push({ sheet, rect })
-                  None => ()
-                }
-              ChartSheet(_) => ()
+        let sheet = projection.require_sheet_by_name(name)
+        match sheet.content {
+          Worksheet(worksheet) =>
+            match xlsx_used_rect(worksheet) {
+              Some(rect) => regions.push({ sheet, rect })
+              None => ()
             }
-          None => ()
+          ChartSheet(_) => ()
         }
       }
   }

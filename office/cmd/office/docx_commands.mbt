@@ -82,7 +82,7 @@ fn docx_common_options() -> Array[@argparse.OptionArg] {
     OptionArg(
       "max-elements",
       long="max-elements",
-      about="maximum canonical projection nodes to scan (default 50000, hard limit 200000)",
+      about="maximum DOCX projection nodes or XLSX cells to scan (default 50000; XLSX hard ceiling 100000)",
     ),
     OptionArg(
       "max-output-chars",
@@ -117,24 +117,62 @@ fn resolve_optional_under(
 }
 
 ///|
+fn resolve_optional_xlsx_under(
+  projection : XlsxProjection,
+  matches : @argparse.Matches,
+) -> XlsxResolvedSelector? raise CliFailure {
+  match optional_value(matches, "under") {
+    Some(path) => Some(resolve_xlsx_selector(projection, path))
+    None => None
+  }
+}
+
+///|
 async fn run_docx_outline(matches : @argparse.Matches) -> Unit {
   let file = required_value(matches, "file")
   let max_elements = cli_max_elements(matches)
   let max_output = cli_max_output_chars(matches)
-  let projection = read_docx_projection(file, max_elements)
-  if matches.flags.get_or_default("json", false) {
-    emit_docx_success(
-      checked_docx_json_output(
-        docx_outline_payload(projection, max_output_chars=max_output),
-      ),
-    )
-  } else {
-    emit_docx_success(
-      checked_docx_human_output(
-        docx_outline_human(projection, maximum=max_output),
-        max_output,
-      ),
-    )
+  let source = read_office_package(file)
+  match source.format {
+    Docx => {
+      let projection = open_docx_projection_archive(
+        file,
+        source.archive,
+        max_elements,
+      )
+      if matches.flags.get_or_default("json", false) {
+        emit_docx_success(
+          checked_docx_json_output(
+            docx_outline_payload(projection, max_output_chars=max_output),
+          ),
+        )
+      } else {
+        emit_docx_success(
+          checked_docx_human_output(
+            docx_outline_human(projection, maximum=max_output),
+            max_output,
+          ),
+        )
+      }
+    }
+    Xlsx => {
+      let projection = open_xlsx_projection(source, max_elements)
+      if matches.flags.get_or_default("json", false) {
+        emit_docx_success(
+          checked_office_json_output(
+            xlsx_outline_payload(projection, max_output),
+          ),
+        )
+      } else {
+        emit_docx_success(
+          checked_office_human_output(
+            xlsx_outline_human(projection, max_output),
+            max_output,
+            "xlsx",
+          ),
+        )
+      }
+    }
   }
 }
 
@@ -144,29 +182,59 @@ async fn run_docx_get(matches : @argparse.Matches) -> Unit {
   let selector = required_value(matches, "selector")
   let max_elements = cli_max_elements(matches)
   let max_output = cli_max_output_chars(matches)
-  let projection = read_docx_projection(file, max_elements)
-  let entry = resolve_projection_selector(projection, selector)
-  if matches.flags.get_or_default("json", false) {
-    emit_docx_success(
-      checked_docx_json_output(get_docx_payload(projection, entry, max_output)),
-    )
-  } else {
-    let text = match entry.element {
-      Some(_) => {
-        let available = (max_output - docx_cli_output_framing_chars).max(0)
-        let budget = DocxTextBudget::new_reported(
-          "successful command output characters", available, max_output, docx_cli_output_framing_chars,
+  let source = read_office_package(file)
+  match source.format {
+    Docx => {
+      let projection = open_docx_projection_archive(
+        file,
+        source.archive,
+        max_elements,
+      )
+      let entry = resolve_projection_selector(projection, selector)
+      if matches.flags.get_or_default("json", false) {
+        emit_docx_success(
+          checked_docx_json_output(
+            get_docx_payload(projection, entry, max_output),
+          ),
         )
-        entry_text_with_budget(entry, budget)
+      } else {
+        let text = match entry.element {
+          Some(_) => {
+            let available = (max_output - docx_cli_output_framing_chars).max(0)
+            let budget = DocxTextBudget::new_reported(
+              "successful command output characters", available, max_output, docx_cli_output_framing_chars,
+            )
+            entry_text_with_budget(entry, budget)
+          }
+          None => ""
+        }
+        emit_docx_success(
+          checked_docx_human_output(
+            docx_get_human(entry, text, projection.warnings, maximum=max_output),
+            max_output,
+          ),
+        )
       }
-      None => ""
     }
-    emit_docx_success(
-      checked_docx_human_output(
-        docx_get_human(entry, text, projection.warnings, maximum=max_output),
-        max_output,
-      ),
-    )
+    Xlsx => {
+      let projection = open_xlsx_projection(source, max_elements)
+      let resolved = resolve_xlsx_selector(projection, selector)
+      if matches.flags.get_or_default("json", false) {
+        emit_docx_success(
+          checked_office_json_output(
+            xlsx_get_payload(projection, resolved, max_output),
+          ),
+        )
+      } else {
+        emit_docx_success(
+          checked_office_human_output(
+            xlsx_get_human(projection, resolved, max_output),
+            max_output,
+            "xlsx",
+          ),
+        )
+      }
+    }
   }
 }
 
@@ -181,30 +249,58 @@ async fn run_docx_text(matches : @argparse.Matches) -> Unit {
   let limit = bounded_decimal_argument(
     matches, "limit", docx_cli_default_text_limit, 0, docx_cli_hard_text_limit,
   )
-  let projection = read_docx_projection(file, max_elements)
-  let (under, under_path) = resolve_optional_under(projection, matches)
-  if matches.flags.get_or_default("json", false) {
-    emit_docx_success(
-      checked_docx_json_output(
-        docx_text_payload(
-          projection, under, under_path, offset, limit, max_output,
-        ),
-      ),
-    )
-  } else {
-    emit_docx_success(
-      checked_docx_human_output(
-        docx_text_human(
-          projection,
-          under,
-          offset,
-          limit,
-          projection.warnings,
-          maximum=max_output,
-        ),
-        max_output,
-      ),
-    )
+  let source = read_office_package(file)
+  match source.format {
+    Docx => {
+      let projection = open_docx_projection_archive(
+        file,
+        source.archive,
+        max_elements,
+      )
+      let (under, under_path) = resolve_optional_under(projection, matches)
+      if matches.flags.get_or_default("json", false) {
+        emit_docx_success(
+          checked_docx_json_output(
+            docx_text_payload(
+              projection, under, under_path, offset, limit, max_output,
+            ),
+          ),
+        )
+      } else {
+        emit_docx_success(
+          checked_docx_human_output(
+            docx_text_human(
+              projection,
+              under,
+              offset,
+              limit,
+              projection.warnings,
+              maximum=max_output,
+            ),
+            max_output,
+          ),
+        )
+      }
+    }
+    Xlsx => {
+      let projection = open_xlsx_projection(source, max_elements)
+      let under = resolve_optional_xlsx_under(projection, matches)
+      if matches.flags.get_or_default("json", false) {
+        emit_docx_success(
+          checked_office_json_output(
+            xlsx_text_payload(projection, under, offset, limit, max_output),
+          ),
+        )
+      } else {
+        emit_docx_success(
+          checked_office_human_output(
+            xlsx_text_human(projection, under, offset, limit, max_output),
+            max_output,
+            "xlsx",
+          ),
+        )
+      }
+    }
   }
 }
 
@@ -363,6 +459,50 @@ fn query_properties(
 }
 
 ///|
+fn reject_xlsx_query_options(
+  matches : @argparse.Matches,
+) -> Unit raise CliFailure {
+  let incompatible : Array[String] = []
+  for name in ["kind", "text", "id"] {
+    if optional_value(matches, name) is Some(_) {
+      incompatible.push("--" + name)
+    }
+  }
+  if !repeated_values(matches, "property").is_empty() {
+    incompatible.push("--property")
+  }
+  if matches.flags.get_or_default("ignore-case", false) {
+    incompatible.push("--ignore-case")
+  }
+  if !incompatible.is_empty() {
+    raise xlsx_cli_failure(
+      "office.xlsx.unsupported_query_options",
+      "DOCX query options cannot be used with an XLSX workbook; use the cell selector predicates",
+      details=Json::object({
+        "options": Json::array(incompatible.map(Json::string)),
+      }),
+    )
+  }
+}
+
+///|
+fn reject_docx_content_selector(
+  matches : @argparse.Matches,
+) -> Unit raise CliFailure {
+  match optional_value(matches, "selector") {
+    Some(value) =>
+      raise docx_cli_failure(
+        "office.docx.unsupported_query_selector",
+        "the positional cell selector is available only for XLSX queries",
+        details=Json::object({
+          "selector": Json::string(bounded_text(value, 240)),
+        }),
+      )
+    None => ()
+  }
+}
+
+///|
 async fn run_docx_query(matches : @argparse.Matches) -> Unit {
   let file = required_value(matches, "file")
   let max_elements = cli_max_elements(matches)
@@ -373,47 +513,84 @@ async fn run_docx_query(matches : @argparse.Matches) -> Unit {
   let limit = bounded_decimal_argument(
     matches, "limit", docx_cli_default_query_limit, 0, docx_cli_hard_query_limit,
   )
-  let text = optional_value(matches, "text")
-  match text {
-    Some(value) => validate_query_value(value, "text", false)
-    None => ()
-  }
-  let stable_id = optional_value(matches, "id")
-  match stable_id {
-    Some(value) => validate_query_value(value, "id", false)
-    None => ()
-  }
-  let projection = read_docx_projection(file, max_elements)
-  let (under, under_path) = resolve_optional_under(projection, matches)
-  let spec : DocxQuerySpec = {
-    under: under_path,
-    kind: query_kind(matches),
-    text,
-    stable_id,
-    properties: query_properties(matches),
-    ignore_case: matches.flags.get_or_default("ignore-case", false),
-    offset,
-    limit,
-  }
-  if matches.flags.get_or_default("json", false) {
-    emit_docx_success(
-      checked_docx_json_output(
-        docx_query_payload(projection, under, spec, max_output),
-      ),
-    )
-  } else {
-    emit_docx_success(
-      checked_docx_human_output(
-        docx_query_human(
-          projection,
-          under,
-          spec,
-          projection.warnings,
-          maximum=max_output,
-        ),
-        max_output,
-      ),
-    )
+  let source = read_office_package(file)
+  match source.format {
+    Docx => {
+      reject_docx_content_selector(matches)
+      let text = optional_value(matches, "text")
+      match text {
+        Some(value) => validate_query_value(value, "text", false)
+        None => ()
+      }
+      let stable_id = optional_value(matches, "id")
+      match stable_id {
+        Some(value) => validate_query_value(value, "id", false)
+        None => ()
+      }
+      let projection = open_docx_projection_archive(
+        file,
+        source.archive,
+        max_elements,
+      )
+      let (under, under_path) = resolve_optional_under(projection, matches)
+      let spec : DocxQuerySpec = {
+        under: under_path,
+        kind: query_kind(matches),
+        text,
+        stable_id,
+        properties: query_properties(matches),
+        ignore_case: matches.flags.get_or_default("ignore-case", false),
+        offset,
+        limit,
+      }
+      if matches.flags.get_or_default("json", false) {
+        emit_docx_success(
+          checked_docx_json_output(
+            docx_query_payload(projection, under, spec, max_output),
+          ),
+        )
+      } else {
+        emit_docx_success(
+          checked_docx_human_output(
+            docx_query_human(
+              projection,
+              under,
+              spec,
+              projection.warnings,
+              maximum=max_output,
+            ),
+            max_output,
+          ),
+        )
+      }
+    }
+    Xlsx => {
+      reject_xlsx_query_options(matches)
+      let selector = optional_value(matches, "selector").unwrap_or("cell")
+      let projection = open_xlsx_projection(source, max_elements)
+      let under = resolve_optional_xlsx_under(projection, matches)
+      let spec : XlsxQuerySpec = {
+        selector,
+        predicates: parse_xlsx_query_selector(selector),
+        offset,
+        limit,
+      }
+      if matches.flags.get_or_default("json", false) {
+        emit_docx_success(
+          checked_office_json_output(
+            xlsx_query_payload(projection, under, spec, max_output),
+          ),
+        )
+      } else {
+        emit_docx_success(
+          checked_office_human_output(
+            xlsx_query_human(projection, under, spec, max_output),
+            max_output,
+            "xlsx",
+          ),
+        )
+      }
+    }
   }
 }
 
@@ -421,7 +598,7 @@ async fn run_docx_query(matches : @argparse.Matches) -> Unit {
 fn outline_command() -> @argparse.Command {
   Command(
     "outline",
-    about="Summarize bounded DOCX structure using canonical selectors",
+    about="Summarize bounded XLSX or DOCX structure using canonical selectors",
     positionals=[PositionArg("file", num_args=@argparse.ValueRange::single())],
     options=docx_common_options(),
     flags=[docx_json_flag()],
@@ -432,12 +609,12 @@ fn outline_command() -> @argparse.Command {
 fn get_command() -> @argparse.Command {
   Command(
     "get",
-    about="Resolve one canonical DOCX selector",
+    about="Resolve one canonical XLSX or DOCX selector",
     positionals=[
       PositionArg("file", num_args=@argparse.ValueRange::single()),
       PositionArg(
         "selector",
-        about="canonical path such as /docx/body/p[1]",
+        about="canonical path such as /docx/body/p[1] or /xlsx/sheet[name=\"Data\"]/cell[A1]",
         num_args=@argparse.ValueRange::single(),
       ),
     ],
@@ -453,18 +630,18 @@ fn text_command() -> @argparse.Command {
     OptionArg(
       "under",
       long="under",
-      about="restrict paragraphs to a canonical DOCX selector subtree",
+      about="restrict results to a canonical DOCX subtree or XLSX sheet/range/cell",
     ),
     OptionArg("offset", long="offset", about="zero-based result offset"),
     OptionArg(
       "limit",
       long="limit",
-      about="maximum returned paragraphs (default 2000, hard limit 10000)",
+      about="maximum returned paragraphs or cells (default 2000, hard limit 10000)",
     ),
   ])
   Command(
     "text",
-    about="Extract bounded path-tagged DOCX paragraph text",
+    about="Extract bounded path-tagged XLSX cell or DOCX paragraph text",
     positionals=[PositionArg("file", num_args=@argparse.ValueRange::single())],
     options~,
     flags=[docx_json_flag()],
@@ -478,24 +655,24 @@ fn query_command() -> @argparse.Command {
     OptionArg(
       "under",
       long="under",
-      about="restrict matches to a canonical DOCX selector subtree",
+      about="restrict matches to a canonical DOCX subtree or XLSX sheet/range/cell",
     ),
     OptionArg(
       "kind",
       long="kind",
-      about="exact element kind (aliases: paragraph, run, table, row, cell, link, picture)",
+      about="DOCX only: exact element kind (aliases: paragraph, run, table, row, cell, link, picture)",
     ),
     OptionArg(
       "text",
       long="text",
-      about="literal text substring (no regular expressions)",
+      about="DOCX only: literal text substring (no regular expressions)",
     ),
-    OptionArg("id", long="id", about="exact annotation id"),
+    OptionArg("id", long="id", about="DOCX only: exact annotation id"),
     OptionArg(
       "property",
       long="property",
       action=Append,
-      about="repeatable declared property predicate NAME=VALUE",
+      about="DOCX only: repeatable declared property predicate NAME=VALUE",
     ),
     OptionArg("offset", long="offset", about="zero-based match offset"),
     OptionArg(
@@ -506,8 +683,15 @@ fn query_command() -> @argparse.Command {
   ])
   Command(
     "query",
-    about="Run bounded deterministic predicates over DOCX elements",
-    positionals=[PositionArg("file", num_args=@argparse.ValueRange::single())],
+    about="Run bounded deterministic predicates over XLSX cells or DOCX elements",
+    positionals=[
+      PositionArg("file", num_args=@argparse.ValueRange::single()),
+      PositionArg(
+        "selector",
+        about="XLSX only: cell[predicate] selector (default cell)",
+        num_args=ValueRange(lower=0, upper=1),
+      ),
+    ],
     options~,
     flags=[
       docx_json_flag(),

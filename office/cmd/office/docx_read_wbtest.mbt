@@ -319,7 +319,7 @@ test "DOCX exact queries cover the full supported XML token length" {
     offset: 0,
     limit: 1,
   }
-  let work = DocxQueryWorkBudget::new(4 * 1024 * 1024)
+  let work = OfficeQueryWorkBudget::new(4 * 1024 * 1024)
   assert_true(
     entry_matches_query(
       item,
@@ -352,23 +352,23 @@ test "DOCX exact queries cover the full supported XML token length" {
 
 ///|
 test "DOCX query matching is linear-work and Unicode simple-case aware" {
-  let work = DocxQueryWorkBudget::new(100_000)
-  let adversarial = DocxLinearPattern::compile(
+  let work = OfficeQueryWorkBudget::new(100_000)
+  let adversarial = OfficeLinearPattern::compile(
     "a".repeat(127) + "b",
     false,
     work,
   )
   assert_false(adversarial.is_in("a".repeat(4096), work))
   assert_true(adversarial.is_in("a".repeat(127) + "b", work))
-  let unicode = DocxLinearPattern::compile("école", true, work)
+  let unicode = OfficeLinearPattern::compile("école", true, work)
   assert_true(unicode.is_in("L'ÉCOLE MoonBit", work))
-  let supplementary = DocxLinearPattern::compile("𐐨", true, work)
+  let supplementary = OfficeLinearPattern::compile("𐐨", true, work)
   assert_true(supplementary.is_in("𐐀", work))
 }
 
 ///|
 test "DOCX query predicate work has an independent hard budget" {
-  let equality_work = DocxQueryWorkBudget::new(16)
+  let equality_work = OfficeQueryWorkBudget::new(16)
   try query_strings_equal("x".repeat(32), "x".repeat(32), equality_work) catch {
     CliFailure(error) => {
       assert_eq(error.code, "office.docx.resource_limit")
@@ -383,8 +383,8 @@ test "DOCX query predicate work has an independent hard budget" {
   } noraise {
     _ => fail("expected exact comparison work to be bounded")
   }
-  let pattern_work = DocxQueryWorkBudget::new(32)
-  let pattern = DocxLinearPattern::compile("a", false, pattern_work)
+  let pattern_work = OfficeQueryWorkBudget::new(32)
+  let pattern = OfficeLinearPattern::compile("a", false, pattern_work)
   try pattern.is_in("a".repeat(32), pattern_work) catch {
     CliFailure(error) => assert_eq(error.code, "office.docx.resource_limit")
   } noraise {

@@ -133,9 +133,24 @@ test "XLSX query selectors are bounded, deterministic predicate conjunctions" {
     "cell[type=formula][formula~=SUM][text=3]",
   )
   assert_eq(predicates.length(), 3)
-  assert_true(xlsx_cell_matches(snapshot, predicates))
+  let work = OfficeQueryWorkBudget::new(1024, format="xlsx")
+  assert_true(
+    xlsx_cell_matches(
+      snapshot,
+      prepare_xlsx_query_predicates(predicates, work),
+      work,
+    ),
+  )
+  let comparison_work = OfficeQueryWorkBudget::new(1024, format="xlsx")
   assert_false(
-    xlsx_cell_matches(snapshot, parse_xlsx_query_selector("cell[value>3]")),
+    xlsx_cell_matches(
+      snapshot,
+      prepare_xlsx_query_predicates(
+        parse_xlsx_query_selector("cell[value>3]"),
+        comparison_work,
+      ),
+      comparison_work,
+    ),
   )
   let malformed = xlsx_cli_error(() => {
     ignore(parse_xlsx_query_selector("row[type=number]"))
@@ -146,6 +161,22 @@ test "XLSX query selectors are bounded, deterministic predicate conjunctions" {
     ignore(parse_xlsx_query_selector(too_many))
   })
   assert_eq(predicate_limit.code, "office.xlsx.query_predicate_limit")
+  let work_limit = xlsx_cli_error(() => {
+    let limited = OfficeQueryWorkBudget::new(24, format="xlsx")
+    let prepared = prepare_xlsx_query_predicates(
+      parse_xlsx_query_selector("cell[text~=alpha]"),
+      limited,
+    )
+    ignore(xlsx_cell_matches(snapshot, prepared, limited))
+  })
+  assert_eq(work_limit.code, "office.xlsx.resource_limit")
+  guard work_limit.details is Some(Object(fields)) else {
+    fail("expected query-work details")
+  }
+  assert_eq(
+    fields.get("resource"),
+    Some(Json::string("query predicate work units")),
+  )
 }
 
 ///|

@@ -1012,6 +1012,25 @@ fn open_docx_projection(
   data : BytesView,
   max_elements : Int,
 ) -> DocxProjection raise CliFailure {
+  let archive = @zip.read_limited(
+    data,
+    max_package_bytes=docx_cli_max_package_bytes,
+    max_entries=docx_cli_max_zip_entries,
+    max_entry_uncompressed_bytes=docx_cli_max_zip_entry_bytes,
+    max_total_uncompressed_bytes=docx_cli_max_zip_total_bytes,
+    max_total_preserved_source_bytes=docx_cli_max_package_bytes,
+  ) catch {
+    error => raise docx_zip_failure(error, file)
+  }
+  open_docx_projection_archive(file, archive, max_elements)
+}
+
+///|
+fn open_docx_projection_archive(
+  file : String,
+  archive : @zip.Archive,
+  max_elements : Int,
+) -> DocxProjection raise CliFailure {
   if max_elements < 1 || max_elements > docx_cli_hard_max_elements {
     raise docx_cli_failure(
       "office.invalid_arguments",
@@ -1022,16 +1041,6 @@ fn open_docx_projection(
         "maximum": Json::number(docx_cli_hard_max_elements.to_double()),
       }),
     )
-  }
-  let archive = @zip.read_limited(
-    data,
-    max_package_bytes=docx_cli_max_package_bytes,
-    max_entries=docx_cli_max_zip_entries,
-    max_entry_uncompressed_bytes=docx_cli_max_zip_entry_bytes,
-    max_total_uncompressed_bytes=docx_cli_max_zip_total_bytes,
-    max_total_preserved_source_bytes=docx_cli_max_package_bytes,
-  ) catch {
-    error => raise docx_zip_failure(error, file)
   }
   let main_document_part = validate_docx_read_archive(file, archive)
   let xml_budget = @xml.xml_read_budget(
@@ -1050,19 +1059,4 @@ fn open_docx_projection(
     error => raise docx_reader_failure(error, file)
   }
   projection_from_annotated(file, annotated, max_elements)
-}
-
-///|
-async fn read_docx_projection(
-  file : String,
-  max_elements : Int,
-) -> DocxProjection {
-  let data = read_bounded_file(
-    file,
-    docx_cli_max_package_bytes,
-    "office.file_read_failed",
-    "input package",
-    limit_code="office.docx.resource_limit",
-  )
-  open_docx_projection(file, data, max_elements)
 }
