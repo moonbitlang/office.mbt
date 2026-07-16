@@ -1239,12 +1239,6 @@ fn validate_package_structure(
             continue
           }
           let extension = extension.to_lower()
-          if extension == "rels" &&
-            !media_type_equal(content_type, RELATIONSHIPS_CONTENT_TYPE) {
-            findings.push(
-              "relationship parts have an invalid default content type: \{content_type}",
-            )
-          }
           if defaults.contains(extension) {
             findings.push("duplicate content-type default: \{extension}")
           } else {
