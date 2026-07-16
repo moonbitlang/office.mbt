@@ -429,9 +429,10 @@ document. Success is `{schema, success: true, data, warnings?}`; failure is
 `code`, bounded `message`, and optional bounded `details`. The optional warning
 array contains `{code, message}` records.
 
-The DOCX read commands below share canonical `office.selector/1` paths and one
-bounded projection. Full command, selector, limit, and error-code details are
-in [office-docx-read.md](office-docx-read.md).
+The structured read commands dispatch by validated package content and share
+canonical `office.selector/1` paths. Full command, selector, limit, and
+error-code details are in [office-docx-read.md](office-docx-read.md) and
+[office-xlsx-read.md](office-xlsx-read.md).
 
 ### `office.docx.outline/1` (`office outline FILE --json`)
 
@@ -499,6 +500,82 @@ kinds and property names; no regular expression or arbitrary expression is
 evaluated. `ignore_case` applies locale-independent Unicode simple lowercase
 mapping to the text predicate (one scalar to one scalar, without locale
 tailoring or multi-character expansion).
+
+### `office.xlsx.outline/1` (`office outline FILE --json`)
+
+| key | type | notes |
+| --- | --- | --- |
+| `schema` | string | `"office.xlsx.outline/1"` |
+| `file`, `format` | string | input path and literal `"xlsx"` |
+| `path` | string | stable `/xlsx/workbook` |
+| `sheet_count` | number | exact tab-order sheet count |
+| `active_sheet` | object? | `{path, name, index}` when the workbook has sheets |
+| `sheets` | array | tab-order worksheet/chart-sheet summaries |
+| `defined_names` | array | `{name, refers_to, scope?, comment?}` |
+| `limits` | object | effective cell-scan and metadata ceilings |
+
+Every sheet summary has canonical `path`, `name`, 1-based `index`, `kind`,
+`state`, and `counts`. Worksheets additionally expose `max_row`, `max_column`,
+and optional `used_range: {path, reference, cell_count}`. Worksheet counts
+cover merges, tables, charts, images, pivots, comments, hyperlinks, data
+validations, conditional-format ranges, and slicers. Chart sheets report their
+chart count. State is `visible`, `hidden`, or `very_hidden`.
+
+### `office.xlsx.element/1` (`office get FILE SELECTOR --json`)
+
+Common keys are `schema`, `file`, literal `format: "xlsx"`, canonical `path`,
+`kind`, and `stability`. Kind-specific members are:
+
+| kind | members |
+| --- | --- |
+| `workbook` | `sheet_count`, `sheets`, and `defined_names` |
+| `sheet` | one `sheet` summary |
+| `cell` | stable sheet `parent`, `cell`, `styles`, and `scanned_cells` |
+| `range` | sheet `parent`, normalized `reference`, populated `cells`, `styles`, `scanned_cells`, and `returned` |
+
+Cell records contain canonical `path`, A1 `reference`, 1-based `row` and
+`column`, optional displayed `value`, optional typed `raw: {type, value}`,
+optional formula text without `=`, and optional nonzero `style_id`. Raw types
+are `string`, `number`, `bool`, and `error`. `styles` is an object keyed by
+referenced style ids. Range cells are row-major and omit completely blank,
+unstyled coordinates.
+
+### `office.xlsx.text/1` (`office text FILE ... --json`)
+
+| key | type | notes |
+| --- | --- | --- |
+| `schema` | string | `"office.xlsx.text/1"` |
+| `file`, `format` | string | input path and literal `"xlsx"` |
+| `under` | string? | resolved canonical workbook/sheet/cell/range scope |
+| `entries` | array | `{path, stability, text}` in tab/row/column order |
+| `matched_total` | number | exact count after the completed bounded scan |
+| `offset`, `limit`, `returned` | number | explicit pagination |
+| `truncated` | boolean | later matches were omitted |
+| `scanned_cells` | number | coordinates inspected |
+
+`text` is the displayed value. A formula without a cached display value falls
+back to its formula text prefixed with `=`.
+
+### `office.xlsx.query/1` (`office query FILE [CELL_SELECTOR] ... --json`)
+
+| key | type | notes |
+| --- | --- | --- |
+| `schema` | string | `"office.xlsx.query/1"` |
+| `file`, `format` | string | input path and literal `"xlsx"` |
+| `under` | string? | resolved canonical workbook/sheet/cell/range scope |
+| `selector` | string | the supplied `cell[predicate]...` selector, or default `cell` |
+| `matches` | array | row-major cell records in the same shape as `get` |
+| `styles` | object | effective styles referenced by returned matches |
+| `matched_total` | number | exact count after the completed bounded scan |
+| `offset`, `limit`, `returned` | number | explicit pagination |
+| `truncated` | boolean | later matches were omitted |
+| `scanned_cells` | number | coordinates inspected |
+
+Predicates are literal and ANDed: `type=formula|number|string|bool|error`,
+`formula`, `formula~=TEXT`, `text=TEXT`, `text~=TEXT`, and numeric
+`value>NUMBER` comparisons (`>=`, `<`, `<=`, `=`, and `!=` are also
+supported). Substring predicates are guaranteed-linear and command-work
+bounded. No regular expression or arbitrary expression is evaluated.
 
 ## Standalone `docx` CLI schemas
 

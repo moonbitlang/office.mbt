@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:31aeb371
+    Fingerprint: crc32:e9c5b34f
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -36,11 +36,14 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help docx --json | jq -c '.data.records[0] | {kind,name,selector}'
   {"kind":"format","name":"docx","selector":{"schema":"office.selector/1","root":"/docx","status":"read-resolved","examples":["/docx/body/p[1]/r[2]","/docx/comments/comment[id=\"7\"]"],"description":"bounded canonical resolution for outline, get, text, and declared query predicates"}}
 
+  $ office.exe help xlsx query --json | jq -c '.data.records[0] | {formats,variants:[.variants[]|{name,result_schema,constraints}]}'
+  {"formats":["docx","xlsx"],"variants":[{"name":"docx","result_schema":"office.docx.query/1","constraints":["format=docx"]},{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
+
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:31aeb371","names":["docx","xlsx","help","identify","outline","get","text","query","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:e9c5b34f","names":["docx","xlsx","help","identify","outline","get","text","query","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:31aeb371","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:31aeb371","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:31aeb371","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:31aeb371","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:31aeb371","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:31aeb371","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:31aeb371","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:31aeb371","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:31aeb371","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:e9c5b34f","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:e9c5b34f","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:e9c5b34f","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:e9c5b34f","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:e9c5b34f","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:e9c5b34f","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:e9c5b34f","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:e9c5b34f","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:e9c5b34f","kind":"command","name":"raw"}]
 
 The raw command publishes explicit subcommand schemas, including every edit
 input and its conditional constraints.
@@ -92,7 +95,7 @@ valid internal-anchor hyperlink fixture without relying on an external file.
   {"paths":["/docx/body/p[1]/hyperlink[1]"],"matched_total":1}
 
 Pagination and all user-controlled scan/output ceilings are explicit. Selector
-syntax, missing paths, and XLSX routing retain stable machine-readable codes.
+syntax and missing paths retain stable machine-readable codes.
 
   $ office.exe text "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --limit 0 --json | jq -c '{matched_total:.data.matched_total,returned:.data.returned,truncated:.data.truncated}'
   {"matched_total":1,"returned":0,"truncated":true}
@@ -117,10 +120,34 @@ syntax, missing paths, and XLSX routing retain stable machine-readable codes.
   $ jq -c '{success,code:.error.code,resource:.error.details.resource,limit:.error.details.limit}' output-limit.json
   {"success":false,"code":"office.docx.resource_limit","resource":"successful command output characters","limit":40}
 
-  $ office.exe outline "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" --json > xlsx-structured.json 2>&1; echo $?
+Structured XLSX reads use the same commands and envelope. Positional sheet
+input canonicalizes to stable name paths; ranges, text, and query scan in
+tab/row/column order with exact totals.
+
+  $ office.exe outline "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" --json | jq -c '{success,schema:.data.schema,path:.data.path,sheet_count:.data.sheet_count,active:.data.active_sheet.path,sheets:[.data.sheets[]|{path,kind,state,used:.used_range.reference}]}'
+  {"success":true,"schema":"office.xlsx.outline/1","path":"/xlsx/workbook","sheet_count":2,"active":"/xlsx/sheet[name=\"Sheet1\"]","sheets":[{"path":"/xlsx/sheet[name=\"Sheet1\"]","kind":"worksheet","state":"visible","used":"A1:D22"},{"path":"/xlsx/sheet[name=\"Sheet2\"]","kind":"worksheet","state":"visible","used":"A1:I11"}]}
+
+  $ office.exe get "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" '/xlsx/sheet[1]/range[A19:B19]' --json | jq -c '{schema:.data.schema,path:.data.path,kind:.data.kind,refs:[.data.cells[].reference],raw:[.data.cells[].raw],formulas:[.data.cells[]|(.formula // null)],returned:.data.returned}'
+  {"schema":"office.xlsx.element/1","path":"/xlsx/sheet[name=\"Sheet1\"]/range[A19:B19]","kind":"range","refs":["A19","B19"],"raw":[{"type":"string","value":"Total:"},{"type":"number","value":237}],"formulas":[null,"SUM(Sheet2!D2,Sheet2!D11)"],"returned":2}
+
+  $ office.exe text "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" --under '/xlsx/sheet[name="Sheet1"]' --offset 1 --limit 2 --json | jq -c '{schema:.data.schema,under:.data.under,paths:[.data.entries[].path],texts:[.data.entries[].text],matched_total:.data.matched_total,returned:.data.returned,truncated:.data.truncated,scanned:.data.scanned_cells}'
+  {"schema":"office.xlsx.text/1","under":"/xlsx/sheet[name=\"Sheet1\"]","paths":["/xlsx/sheet[name=\"Sheet1\"]/cell[B19]","/xlsx/sheet[name=\"Sheet1\"]/cell[C21]"],"texts":["237","Column1"],"matched_total":5,"returned":2,"truncated":true,"scanned":88}
+
+  $ office.exe query "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" 'cell[type=formula][formula~=IF]' --under '/xlsx/sheet[name="Sheet2"]' --json | jq -c '{schema:.data.schema,selector:.data.selector,under:.data.under,paths:[.data.matches[].path],matched_total:.data.matched_total,returned:.data.returned,truncated:.data.truncated,scanned:.data.scanned_cells}'
+  {"schema":"office.xlsx.query/1","selector":"cell[type=formula][formula~=IF]","under":"/xlsx/sheet[name=\"Sheet2\"]","paths":["/xlsx/sheet[name=\"Sheet2\"]/cell[F11]","/xlsx/sheet[name=\"Sheet2\"]/cell[G11]"],"matched_total":2,"returned":2,"truncated":false,"scanned":99}
+
+Cross-format selectors and DOCX-only XLSX query flags fail with XLSX-specific,
+machine-correctable codes.
+
+  $ office.exe get "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" '/docx/body' --json > xlsx-selector-mismatch.json 2>&1; echo $?
   1
-  $ jq -c '{success,code:.error.code,format:.error.details.format}' xlsx-structured.json
-  {"success":false,"code":"office.unsupported_operation","format":"xlsx"}
+  $ jq -c '{success,code:.error.code,expected:.error.details.expected_format,actual:.error.details.actual_format}' xlsx-selector-mismatch.json
+  {"success":false,"code":"office.xlsx.selector_format_mismatch","expected":"xlsx","actual":"docx"}
+
+  $ office.exe query "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" --kind cell --json > xlsx-query-options.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code,options:.error.details.options}' xlsx-query-options.json
+  {"success":false,"code":"office.xlsx.unsupported_query_options","options":["--kind"]}
 
 Extension/content mismatches and malformed input fail non-zero.
 

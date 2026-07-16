@@ -281,6 +281,30 @@ jobs:
             and .success == false
             and .error.code == "office.unknown_format"
             and .error.details.suggestions == ["xlsx"]' office-wasm-error.json
+          # XLSX structured reads share the validated bounded archive and use
+          # canonical name-keyed paths even when the input selector is positional.
+          xlsx_fixture=fixtures/excelize/test/Book1.xlsx
+          xo=$(moon run --target wasm office/cmd/office -- outline "$xlsx_fixture" --json 2>office-wasm.err) || { echo "office XLSX outline failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "$xo" | jq -e '.success == true
+            and .data.schema == "office.xlsx.outline/1"
+            and .data.path == "/xlsx/workbook"
+            and [.data.sheets[].path] == ["/xlsx/sheet[name=\"Sheet1\"]", "/xlsx/sheet[name=\"Sheet2\"]"]'
+          xg=$(moon run --target wasm office/cmd/office -- get "$xlsx_fixture" '/xlsx/sheet[1]/range[A19:B19]' --json 2>office-wasm.err) || { echo "office XLSX get failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "$xg" | jq -e '.success == true
+            and .data.schema == "office.xlsx.element/1"
+            and .data.path == "/xlsx/sheet[name=\"Sheet1\"]/range[A19:B19]"
+            and [.data.cells[].reference] == ["A19", "B19"]
+            and .data.cells[1].formula == "SUM(Sheet2!D2,Sheet2!D11)"'
+          xt=$(moon run --target wasm office/cmd/office -- text "$xlsx_fixture" --under '/xlsx/sheet[name="Sheet1"]' --offset 1 --limit 2 --json 2>office-wasm.err) || { echo "office XLSX text failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "$xt" | jq -e '.success == true
+            and .data.schema == "office.xlsx.text/1"
+            and .data.matched_total == 5
+            and [.data.entries[].text] == ["237", "Column1"]'
+          xq=$(moon run --target wasm office/cmd/office -- query "$xlsx_fixture" 'cell[type=formula][formula~=IF]' --under '/xlsx/sheet[name="Sheet2"]' --json 2>office-wasm.err) || { echo "office XLSX query failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "$xq" | jq -e '.success == true
+            and .data.schema == "office.xlsx.query/1"
+            and .data.matched_total == 2
+            and [.data.matches[].reference] == ["F11", "G11"]'
           # DOCX structured reads share one canonical bounded projection.
           # Drive every command through the wasm async filesystem path.
           o=$(moon run --target wasm office/cmd/office -- outline docx2html/tests/cram/fixtures/single-paragraph.docx --json 2>office-wasm.err) || { echo "office DOCX outline failed; stderr:"; cat office-wasm.err; exit 1; }
