@@ -222,19 +222,21 @@ fn main_format_from_content_type(content_type : StringView) -> DocumentFormat? {
 }
 
 ///|
-fn xml_element_has_content(element : @xml.XmlElement) -> Bool {
-  for child in element.children {
-    match child {
-      XmlElement(_) => return true
-      XmlText(text) => if !text.trim().is_empty() { return true }
-    }
-  }
-  false
+fn xml_element_has_child_element(element : @xml.XmlElement) -> Bool {
+  element.children.any(child => child is XmlElement(_))
 }
 
 ///|
-fn xml_element_has_child_element(element : @xml.XmlElement) -> Bool {
-  element.children.any(child => child is XmlElement(_))
+fn unexpected_xml_attribute(
+  element : @xml.XmlElement,
+  allowed : ArrayView[String],
+) -> String? {
+  for name, _ in element.attributes {
+    if !allowed.any(expected => expected == name) {
+      return Some(name)
+    }
+  }
+  None
 }
 
 ///|
@@ -1204,6 +1206,13 @@ fn validate_package_structure(
   let defaults : StableStringMap[String] = SortedMap([])
   let overrides : StableStringMap[String] = SortedMap([])
   let content_types = read_xml_part(part_index, "[Content_Types].xml")
+  match unexpected_xml_attribute(content_types, []) {
+    Some(attribute) =>
+      findings.push(
+        "[Content_Types].xml: Types has undeclared attribute: \{attribute}",
+      )
+    None => ()
+  }
   for child in content_types.children {
     match child {
       XmlText(text) =>
@@ -1216,7 +1225,14 @@ fn validate_package_structure(
   for child in content_types.children {
     guard child is XmlElement(element) else { continue }
     if element.name == CONTENT_TYPES_DEFAULT {
-      if xml_element_has_content(element) {
+      match unexpected_xml_attribute(element, ["Extension", "ContentType"]) {
+        Some(attribute) =>
+          findings.push(
+            "[Content_Types].xml: Default has undeclared attribute: \{attribute}",
+          )
+        None => ()
+      }
+      if !element.children.is_empty() {
         findings.push("[Content_Types].xml: Default element is not empty")
       }
       match
@@ -1251,7 +1267,14 @@ fn validate_package_structure(
           )
       }
     } else if element.name == CONTENT_TYPES_OVERRIDE {
-      if xml_element_has_content(element) {
+      match unexpected_xml_attribute(element, ["PartName", "ContentType"]) {
+        Some(attribute) =>
+          findings.push(
+            "[Content_Types].xml: Override has undeclared attribute: \{attribute}",
+          )
+        None => ()
+      }
+      if !element.children.is_empty() {
         findings.push("[Content_Types].xml: Override element is not empty")
       }
       match

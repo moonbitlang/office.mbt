@@ -1,14 +1,18 @@
 ///|
-fn rewrite_content_types(data : BytesView, marker : String) -> Bytes raise {
+fn rewrite_content_types_fragment(
+  data : BytesView,
+  old : String,
+  replacement : String,
+) -> Bytes raise {
   let source = @zip.read(data)
   let result = @zip.Archive::new()
   let mut replaced = false
   for entry in source.entries() {
     let payload = if entry.name() == "[Content_Types].xml" {
       let text = @utf8.decode(entry.data(), ignore_bom=true)
-      let updated = text.replace(old="</Types>", new="<!--\{marker}--></Types>")
+      let updated = text.replace(old~, new=replacement)
       if updated == text {
-        fail("fixture content types did not contain a closing Types element")
+        fail("fixture content types did not contain the requested fragment")
       }
       replaced = true
       @utf8.encode(updated)
@@ -26,6 +30,11 @@ fn rewrite_content_types(data : BytesView, marker : String) -> Bytes raise {
     fail("fixture did not contain [Content_Types].xml")
   }
   @zip.write(result)
+}
+
+///|
+fn rewrite_content_types(data : BytesView, marker : String) -> Bytes raise {
+  rewrite_content_types_fragment(data, "</Types>", "<!--\{marker}--></Types>")
 }
 
 ///|
@@ -1284,6 +1293,32 @@ async test "invalid candidate format and extension fail closed" {
     assert_eq(extension_code, "office.transaction.validation_failed")
     assert_false(@afs.exists(output))
     assert_false(@afs.exists(wrong_extension))
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
+async test "portable validation rejects undeclared content-types attributes before publication" {
+  with_transaction_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let original = @word.new_blank_docx()
+    write_test_file(input, original)
+    let code = transaction_error_code(() => {
+      @transaction.transact(
+        @transaction.transaction_options(input, output_path=output),
+        (_format, bytes, _archive, _budget) => {
+          @transaction.transaction_mutation(
+            rewrite_content_types_fragment(
+              bytes, "<Types ", "<Types Vendor=\"candidate\" ",
+            ),
+          )
+        },
+      )
+    })
+    assert_eq(code, "office.transaction.validation_failed")
+    assert_false(@afs.exists(output))
     assert_eq(@afs.read_file(input).binary(), original)
     assert_no_transaction_temp(directory)
   })

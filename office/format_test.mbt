@@ -93,6 +93,24 @@ fn append_content_type_default(
 }
 
 ///|
+fn replace_content_types_fragment(
+  data : BytesView,
+  old : String,
+  replacement : String,
+) -> Bytes raise {
+  let archive = @zip.read(data)
+  guard archive.get("[Content_Types].xml") is Some(bytes) else {
+    fail("test archive did not contain [Content_Types].xml")
+  }
+  let text = @utf8.decode(bytes, ignore_bom=true)
+  let updated = text.replace(old~, new=replacement)
+  if updated == text {
+    fail("test could not replace content-types fragment: \{old}")
+  }
+  replace_archive_part(data, "[Content_Types].xml", @utf8.encode(updated))
+}
+
+///|
 fn format_hash_clustered_relationship_names(
   count : Int,
   bucket_mask : Int,
@@ -1348,6 +1366,35 @@ test "detect_format rejects malformed auxiliary content types" {
 }
 
 ///|
+test "detect_format closes the content-types element schemas" {
+  let source = @excel.write(@excel.new_file())
+  for
+    case in [
+      (
+        replace_content_types_fragment(
+          source, "<Types ", "<Types Vendor=\"root\" ",
+        ),
+        "[Content_Types].xml: Types has undeclared attribute: Vendor",
+      ),
+      (
+        replace_content_types_fragment(
+          source, "<Default Extension=\"xml\"", "<Default Vendor=\"default\" Extension=\"xml\"",
+        ),
+        "[Content_Types].xml: Default has undeclared attribute: Vendor",
+      ),
+      (
+        replace_content_types_fragment(
+          source, "<Override PartName=\"/xl/workbook.xml\"", "<Override Vendor=\"override\" PartName=\"/xl/workbook.xml\"",
+        ),
+        "[Content_Types].xml: Override has undeclared attribute: Vendor",
+      ),
+    ] {
+    let (broken, expected) = case
+    assert_true(detect_format_error("book.xlsx", broken).contains(expected))
+  }
+}
+
+///|
 test "detect_format enforces ST_Extension on unused defaults" {
   let source = @excel.write(@excel.new_file())
   for extension in ["é", "bad%GG"] {
@@ -1711,6 +1758,20 @@ test "detect_format rejects content inside OPC metadata declarations" {
       ),
       (
         add_content_type_override_text(source),
+        "[Content_Types].xml: Override element is not empty",
+      ),
+      (
+        replace_content_types_fragment(
+          source, "<Default Extension=\"xml\" ContentType=\"application/xml\"/>",
+          "<Default Extension=\"xml\" ContentType=\"application/xml\"> </Default>",
+        ),
+        "[Content_Types].xml: Default element is not empty",
+      ),
+      (
+        replace_content_types_fragment(
+          source, "<Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>",
+          "<Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\">\n</Override>",
+        ),
         "[Content_Types].xml: Override element is not empty",
       ),
       (
