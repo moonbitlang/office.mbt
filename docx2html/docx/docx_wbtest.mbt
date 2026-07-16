@@ -4412,7 +4412,7 @@ test "mutation relationship parsing is strict and budgeted" {
 }
 
 ///|
-test "mutation relationship parsing uses the effective MCE branch" {
+test "relationship mutation refuses consumer-dependent MCE branches" {
   let relationships =
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
     #| xmlns:r="http://schemas.openxmlformats.org/package/2006/relationships"
@@ -4430,16 +4430,23 @@ test "mutation relationship parsing uses the effective MCE branch" {
     max_materialized_chars=16 * 1024,
     max_token_chars=4096,
   )
-  let root = read_mutation_relationships(
-    "word/_rels/document.xml.rels",
-    @utf8.encode(relationships),
-    budget,
-  )
-  let ids : StableStringSet = SortedSet([])
-  collect_relationship_ids(root, ids)
-  assert_true(ids.contains("rIdAnnotate1"))
-  assert_true(ids.contains("rIdAnnotate2"))
-  assert_false(ids.contains("rIdFallback"))
+  try
+    read_mutation_relationships(
+      "word/_rels/document.xml.rels",
+      @utf8.encode(relationships),
+      budget,
+    )
+  catch {
+    Unsupported(message~) =>
+      inspect(
+        message,
+        content="'word/_rels/document.xml.rels' contains Markup Compatibility branches or directives; byte-preserving relationship mutation is unsupported; refusing",
+      )
+    error =>
+      fail("expected a fail-closed MCE mutation error, got \{repr(error)}")
+  } noraise {
+    _ => fail("expected relationship mutation to reject preserved MCE branches")
+  }
 }
 
 ///|

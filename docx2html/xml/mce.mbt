@@ -745,7 +745,7 @@ fn read_xml_string_strict_mce_encoded_roots_with_mode(
   budget : XmlReadBudget,
   application_namespaces : Array[String],
   source_already_charged : Bool,
-) -> (String, XmlElement) raise DocxError {
+) -> (XmlElement, XmlElement) raise DocxError {
   let root = read_xml_string_with_mode(
     source,
     Map([]),
@@ -755,11 +755,10 @@ fn read_xml_string_strict_mce_encoded_roots_with_mode(
     Some(source_encoding),
     true,
   )
-  let source_root_name = root.name
   let effective_root = process_markup_compatibility(
     root, budget, application_namespaces,
   )
-  (source_root_name, effective_root)
+  (root, effective_root)
 }
 
 ///|
@@ -818,16 +817,15 @@ pub fn read_xml_bytes_strict_mce_limited(
 }
 
 ///|
-/// Strictly parses UTF-8 XML and returns both the expanded QName of the raw
-/// document element and the single root selected by Markup Compatibility.
-/// Mutation callers use the source identity to distinguish a byte-addressable
-/// application root from one synthesized by unwrapping `AlternateContent` or
-/// `ProcessContent`, without parsing or charging the source twice.
-pub fn read_xml_bytes_strict_mce_with_source_root_limited(
+/// Strictly parses UTF-8 XML and returns both the raw document tree and the
+/// single root selected by Markup Compatibility. Mutation callers inspect the
+/// raw tree before changing preserved bytes, while semantic readers consume
+/// the effective tree. Both projections come from one bounded parse.
+pub fn read_xml_bytes_strict_mce_with_roots_limited(
   source : BytesView,
   budget : XmlReadBudget,
   application_namespaces : Array[String],
-) -> (String, XmlElement) raise DocxError {
+) -> (XmlElement, XmlElement) raise DocxError {
   budget.charge_source(source.length())
   let text = @utf8.decode(source, ignore_bom=true) catch {
     _ => raise InvalidXml(message="XML source is not valid UTF-8")

@@ -1883,15 +1883,14 @@ pub fn read_opc_relationships_xml_limited(
 }
 
 ///|
-/// Parses one OPC Relationships part and also reports the expanded QName of
-/// its raw document element. The effective root may have been selected through
-/// MCE; byte-preserving mutation must only splice it when both identities are
-/// the package Relationships root.
-pub fn read_opc_relationships_xml_with_source_root_limited(
+/// Parses one OPC Relationships part and returns both its raw XML tree and its
+/// MCE-effective tree from one bounded parse. Byte-preserving mutation uses the
+/// raw projection to reject compatibility-dependent edits before splicing.
+pub fn read_opc_relationships_xml_with_roots_limited(
   source : BytesView,
   budget : @xml.XmlReadBudget,
-) -> (String, @xml.XmlElement) raise @core.DocxError {
-  @xml.read_xml_bytes_strict_mce_with_source_root_limited(source, budget, [
+) -> (@xml.XmlElement, @xml.XmlElement) raise @core.DocxError {
+  @xml.read_xml_bytes_strict_mce_with_roots_limited(source, budget, [
     PACKAGE_RELATIONSHIPS_NAMESPACE,
   ])
 }
