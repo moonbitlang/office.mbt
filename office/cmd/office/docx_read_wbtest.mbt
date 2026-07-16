@@ -887,19 +887,28 @@ test "DOCX text budgets retain an independent per-element ceiling" {
 }
 
 ///|
-test "DOCX reader classifies only exact parser guard failures as resources" {
+test "DOCX reader classifies only typed parser guard failures as resources" {
   let CliFailure(resource) = docx_reader_failure(
-    InvalidXml(message="XML token budget exceeded"),
+    @docx_core.docx_xml_resource_limit_error(DocxXmlTokens),
     "fixture.docx",
   )
   assert_eq(resource.code, "office.docx.resource_limit")
+  guard resource.details is Some(Object(resource_details)) else {
+    fail("expected typed resource details")
+  }
+  assert_eq(resource_details.get("resource"), Some(Json::string("xml-tokens")))
+  let CliFailure(forged) = docx_reader_failure(
+    InvalidXml(message="XML token budget exceeded"),
+    "fixture.docx",
+  )
+  assert_eq(forged.code, "office.docx.read_failed")
   let CliFailure(ordinary) = docx_reader_failure(
     InvalidXml(message="invalid limit element"),
     "fixture.docx",
   )
   assert_eq(ordinary.code, "office.docx.read_failed")
   let CliFailure(depth) = docx_reader_failure(
-    InvalidXml(message="XML nesting too deep"),
+    @docx_core.docx_xml_resource_limit_error(DocxXmlNestingDepth),
     "fixture.docx",
   )
   assert_eq(depth.code, "office.docx.resource_limit")

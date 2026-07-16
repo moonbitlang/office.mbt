@@ -157,35 +157,44 @@ fn docx_reader_failure(
   error : @docx_core.DocxError,
   file : String,
 ) -> CliFailure {
-  let (category, message) = match error {
-    InvalidZip(message~) => ("zip", message)
-    InvalidXml(message~) => ("xml", message)
-    MissingPart(message~) => ("missing-part", message)
-    Unsupported(message~) => ("unsupported", message)
+  let (category, message, resource_limit) = match error {
+    InvalidZip(message~) => ("zip", message, None)
+    InvalidXml(message~) => ("xml", message, None)
+    MissingPart(message~) => ("missing-part", message, None)
+    Unsupported(message~) => ("unsupported", message, None)
+    ResourceLimit(limit~, message~) => ("xml", message, Some(limit))
   }
   let normalized = bounded_text(message, 320)
-  let code = if docx_xml_resource_limit_message(message) {
+  let code = if resource_limit is Some(_) {
     "office.docx.resource_limit"
   } else {
     "office.docx.read_failed"
   }
+  let details : Map[String, Json] = {
+    "file": Json::string(bounded_text(file, 160)),
+    "category": Json::string(category),
+  }
+  match resource_limit {
+    Some(limit) =>
+      details["resource"] = Json::string(docx_xml_resource_name(limit))
+    None => ()
+  }
   docx_cli_failure(
     code,
     "could not read DOCX \{category}: \{normalized}",
-    details=Json::object({
-      "file": Json::string(bounded_text(file, 160)),
-      "category": Json::string(category),
-    }),
+    details=Json::object(details),
   )
 }
 
 ///|
-fn docx_xml_resource_limit_message(message : String) -> Bool {
-  message == "XML source budget exceeded" ||
-  message == "XML token budget exceeded" ||
-  message == "XML token length budget exceeded" ||
-  message == "XML materialized character budget exceeded" ||
-  message == "XML nesting too deep"
+fn docx_xml_resource_name(limit : @docx_core.DocxXmlResourceLimit) -> String {
+  match limit {
+    DocxXmlSourceUnits => "xml-source-units"
+    DocxXmlTokens => "xml-tokens"
+    DocxXmlTokenLength => "xml-token-length"
+    DocxXmlMaterializedCharacters => "xml-materialized-characters"
+    DocxXmlNestingDepth => "xml-nesting-depth"
+  }
 }
 
 ///|
@@ -1028,9 +1037,11 @@ fn open_docx_projection(
   }
   let archive = @zip.read_limited(
     data,
+    max_package_bytes=docx_cli_max_package_bytes,
     max_entries=docx_cli_max_zip_entries,
     max_entry_uncompressed_bytes=docx_cli_max_zip_entry_bytes,
     max_total_uncompressed_bytes=docx_cli_max_zip_total_bytes,
+    max_total_preserved_source_bytes=docx_cli_max_package_bytes,
   ) catch {
     error => raise docx_zip_failure(error, file)
   }
