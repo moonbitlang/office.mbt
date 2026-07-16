@@ -153,6 +153,18 @@ pub fn CellAddress::render(self : CellAddress) -> String {
 }
 
 ///|
+/// Returns the validated 1-based column index (`A` = 1, `XFD` = 16384).
+pub fn CellAddress::column(self : CellAddress) -> Int {
+  self.column
+}
+
+///|
+/// Returns the validated 1-based row index (`1` through `1048576`).
+pub fn CellAddress::row(self : CellAddress) -> Int {
+  self.row
+}
+
+///|
 fn render_segment_selection(selection : SegmentSelection) -> String {
   match selection {
     Position(index) => "[\{index}]"

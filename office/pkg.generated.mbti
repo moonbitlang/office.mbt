@@ -71,6 +71,10 @@ pub fn selector_for_xlsx_cell(String, String) -> OfficeSelector raise SelectorEr
 
 pub fn selector_for_xlsx_range(String, String) -> OfficeSelector raise SelectorError
 
+pub fn selector_for_xlsx_sheet(String) -> OfficeSelector raise SelectorError
+
+pub fn selector_for_xlsx_workbook() -> OfficeSelector raise SelectorError
+
 pub fn selector_from_docx_projection_path(String) -> OfficeSelector raise SelectorError
 
 // Errors
@@ -157,7 +161,9 @@ pub struct CellAddress {
   column : Int
   row : Int
 }
+pub fn CellAddress::column(Self) -> Int
 pub fn CellAddress::render(Self) -> String
+pub fn CellAddress::row(Self) -> Int
 
 pub(all) enum DocumentFormat {
   Xlsx

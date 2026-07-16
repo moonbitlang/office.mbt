@@ -21,8 +21,9 @@ test "canonical selectors parse, normalize, render, and classify" {
   let inputs = [
     "/docx/body", "/docx/body/p[1]/r[2]", "/docx/header[1]/p[1]", "/docx/footer[1]/tbl[1]/tr[2]/tc[1]/p[1]",
     "/docx/footnotes/note[id=\"7\"]/p[1]", "/docx/comments/comment[id=\"review/one]=\\\"ready\\\"\"]",
-    "/xlsx/sheet[name=\"Data\"]", "/xlsx/sheet[name=\"Data\"]/cell[A1]", "/xlsx/sheet[name=\"O'Brien / Q1\"]/range[c12:a1]",
-    "/xlsx/sheet[name=\"财务/一季度\"]/cell[xfd1048576]", "/xlsx/sheet[2]",
+    "/xlsx/workbook", "/xlsx/sheet[name=\"Data\"]", "/xlsx/sheet[name=\"Data\"]/cell[A1]",
+    "/xlsx/sheet[name=\"O'Brien / Q1\"]/range[c12:a1]", "/xlsx/sheet[name=\"财务/一季度\"]/cell[xfd1048576]",
+    "/xlsx/sheet[2]",
   ]
   let rendered : Array[String] = []
   for input in inputs {
@@ -44,6 +45,7 @@ test "canonical selectors parse, normalize, render, and classify" {
       #|/docx/footer[1]/tbl[1]/tr[2]/tc[1]/p[1] | snapshot-relative
       #|/docx/footnotes/note[id="7"]/p[1] | snapshot-relative
       #|/docx/comments/comment[id="review/one]=\"ready\""] | stable
+      #|/xlsx/workbook | stable
       #|/xlsx/sheet[name="Data"] | stable
       #|/xlsx/sheet[name="Data"]/cell[A1] | snapshot-relative
       #|/xlsx/sheet[name="O'Brien / Q1"]/range[A1:C12] | snapshot-relative
@@ -72,6 +74,10 @@ test "selector AST exposes adapter-ready segments, keys, and coordinates" {
   }
   assert_eq(start.render(), "A1")
   assert_eq(finish.render(), "C12")
+  assert_eq(start.column(), 1)
+  assert_eq(start.row(), 1)
+  assert_eq(finish.column(), 3)
+  assert_eq(finish.row(), 12)
 }
 
 ///|
@@ -80,8 +86,9 @@ test "invalid selector forms have deterministic structured errors" {
     "", "docx/body", "/ppt/body", "/docx", "/docx/", "/docx//p[1]", "/docx/body/p[0]",
     "/docx/body/p[1234567890]", "/docx/body/p", "/docx/header/p[1]", "/docx/comments/comment[@id=7]",
     "/docx/comments/comment[class=\"x\"]", "/docx/body/p[1", "/docx/comments/comment[id=\"unterminated]",
-    "/docx/sheet[name=\"Data\"]/cell[A1]", "/xlsx/body/p[1]", "/xlsx/sheet", "/xlsx/sheet[id=\"Data\"]",
-    "/xlsx/sheet[name=\"\"]/cell[A1]", "/xlsx/sheet[name=\"Data\"]/cell[A0]", "/xlsx/sheet[name=\"Data\"]/cell[A01]",
+    "/docx/sheet[name=\"Data\"]/cell[A1]", "/xlsx/body/p[1]", "/xlsx/workbook[1]",
+    "/xlsx/workbook/cell[A1]", "/xlsx/sheet", "/xlsx/sheet[id=\"Data\"]", "/xlsx/sheet[name=\"\"]/cell[A1]",
+    "/xlsx/sheet[name=\"Data\"]/cell[A0]", "/xlsx/sheet[name=\"Data\"]/cell[A01]",
     "/xlsx/sheet[name=\"Data\"]/cell[XFE1]", "/xlsx/sheet[name=\"Data\"]/cell[A1048577]",
     "/xlsx/sheet[name=\"Data\"]/cell[$A$1]", "/xlsx/sheet[name=\"Data\"]/range[A1]",
     "/xlsx/sheet[name=\"Data\"]/range[A1:B2:C3]", "/xlsx/sheet[name=\"Data\"]/cell[A1]/range[A1:B2]",
@@ -106,7 +113,9 @@ test "invalid selector forms have deterministic structured errors" {
       #|office.selector.unclosed_selection@14:/docx/body/p[1:expected ']' after segment selection
       #|office.selector.unclosed_string@26:/docx/comments/comment[id="unterminated]:unterminated JSON string in named selector
       #|office.selector.unsupported_predicate@30:/docx/sheet[name="Data"]/cell[A1]:expected a positive index or key="value" selection
-      #|office.selector.invalid_shape@15:/xlsx/body/p[1]:XLSX selectors require exactly one sheet segment before an optional cell/range leaf
+      #|office.selector.invalid_shape@15:/xlsx/body/p[1]:XLSX selectors require workbook or exactly one sheet segment before an optional cell/range leaf
+      #|office.selector.invalid_shape@17:/xlsx/workbook[1]:XLSX workbook is a singleton and cannot take a selection or coordinate leaf
+      #|office.selector.invalid_shape@23:/xlsx/workbook/cell[A1]:XLSX workbook is a singleton and cannot take a selection or coordinate leaf
       #|office.selector.invalid_shape@11:/xlsx/sheet:XLSX sheet requires [index] or [name="value"]
       #|office.selector.unsupported_predicate@22:/xlsx/sheet[id="Data"]:XLSX sheet selectors use the 'name' key, not 'id'
       #|office.selector.empty_value@17:/xlsx/sheet[name=""]/cell[A1]:named selector values cannot be empty

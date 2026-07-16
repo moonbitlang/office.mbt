@@ -558,9 +558,17 @@ fn validate_xlsx_selector(
   segments : Array[SelectorSegment],
   coordinate : SelectorCoordinate?,
 ) -> SelectorStability raise SelectorError {
+  if segments.length() == 1 && segments[0].name == "workbook" {
+    if segments[0].selection is Some(_) || coordinate is Some(_) {
+      raise parser.fail(
+        "office.selector.invalid_shape", "XLSX workbook is a singleton and cannot take a selection or coordinate leaf",
+      )
+    }
+    return Stable
+  }
   if segments.length() != 1 || segments[0].name != "sheet" {
     raise parser.fail(
-      "office.selector.invalid_shape", "XLSX selectors require exactly one sheet segment before an optional cell/range leaf",
+      "office.selector.invalid_shape", "XLSX selectors require workbook or exactly one sheet segment before an optional cell/range leaf",
     )
   }
   match segments[0].selection {

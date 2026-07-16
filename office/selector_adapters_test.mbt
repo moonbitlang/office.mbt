@@ -56,6 +56,10 @@ test "DOCX projection adapter bounds legacy diagnostics" {
 
 ///|
 test "XLSX adapters quote sheet names and normalize coordinates" {
+  let workbook = @office.selector_for_xlsx_workbook()
+  assert_eq(workbook.render(), "/xlsx/workbook")
+  let sheet = @office.selector_for_xlsx_sheet("财务 / \"Q1\"")
+  assert_eq(sheet.render(), "/xlsx/sheet[name=\"财务 / \\\"Q1\\\"\"]")
   let cell = @office.selector_for_xlsx_cell("财务 / \"Q1\"", "xfd1048576")
   assert_eq(
     cell.render(),
@@ -71,6 +75,7 @@ test "XLSX adapters reject oversized raw arguments before rendering" {
   let oversized_reference = "A".repeat(22)
   for
     run in [
+      () => @office.selector_for_xlsx_sheet(oversized_name),
       () => @office.selector_for_xlsx_cell(oversized_name, "A1"),
       () => @office.selector_for_xlsx_range("Data", oversized_reference),
     ] {

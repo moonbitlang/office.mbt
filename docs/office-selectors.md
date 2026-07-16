@@ -38,10 +38,11 @@ child kinds without parsing the path again. DOCX named selectors use the `id`
 key; arbitrary XPath predicates, regexes, and expressions are not part of this
 grammar.
 
-XLSX selectors address a sheet by stable name or snapshot-relative position,
-then optionally end in a typed A1 coordinate:
+XLSX selectors address the workbook singleton or a sheet by stable name or
+snapshot-relative position. Sheet selectors may end in a typed A1 coordinate:
 
 ```text
+/xlsx/workbook
 /xlsx/sheet[name="Data"]/cell[A1]
 /xlsx/sheet[name="O'Brien / Q1"]/range[A1:C12]
 /xlsx/sheet[2]
@@ -56,7 +57,7 @@ cross-sheet formula syntax are intentionally outside selector syntax.
 
 Every parsed selector reports one of two address classes:
 
-- `Stable`: it contains only format roots and named keys. For example,
+- `Stable`: it contains only singleton roots and named keys. For example,
   `/docx/comments/comment[id="7"]` and `/xlsx/sheet[name="Data"]`.
 - `SnapshotRelative`: it contains any positional selector or A1 coordinate.
   Inserts, deletes, reordering, or sheet edits can move the addressed content.
@@ -85,9 +86,11 @@ surrogates fail before an AST is created or UTF-8 encoding is attempted.
 
 `selector_from_docx_projection_path` converts the existing `/body/...`,
 `/header[n]/...`, and annotation paths emitted by the DOCX tools. The
-`selector_for_xlsx_cell` and `selector_for_xlsx_range` helpers quote worksheet
-names and validate A1 coordinates. These helpers adapt syntax only: they do not
-open a package or establish that an addressed object exists.
+`selector_for_xlsx_workbook`, `selector_for_xlsx_sheet`,
+`selector_for_xlsx_cell`, and `selector_for_xlsx_range` construct the canonical
+XLSX shapes, quote worksheet names, and validate A1 coordinates. These helpers
+adapt syntax only: they do not open a package or establish that an addressed
+object exists.
 
 Format records in `office help --json` expose the selector schema, root,
 examples, and the resolver status for that format. DOCX is `read-resolved`:
