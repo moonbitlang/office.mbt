@@ -582,7 +582,7 @@ fn read_mutation_relationships(
   bytes : BytesView,
   xml_budget : @xml.XmlReadBudget,
 ) -> XmlElement raise DocxError {
-  let (source_root_name, root) = @opc.read_opc_relationships_xml_with_source_root_limited(
+  let (raw_root, root) = @opc.read_opc_relationships_xml_with_roots_limited(
     bytes, xml_budget,
   ) catch {
     ResourceLimit(..) as error => raise error
@@ -599,12 +599,44 @@ fn read_mutation_relationships(
       message="'\{part}' has root '\{root.name}', expected '\{PACKAGE_RELATIONSHIPS_ROOT}'; refusing",
     )
   }
-  if source_root_name != PACKAGE_RELATIONSHIPS_ROOT {
+  if raw_root.name != PACKAGE_RELATIONSHIPS_ROOT {
     raise Unsupported(
       message="'\{part}' selects its Relationships root through Markup Compatibility; byte-preserving mutation is unsupported; refusing",
     )
   }
+  if relationship_tree_contains_mce_markup(raw_root) {
+    raise Unsupported(
+      message="'\{part}' contains Markup Compatibility branches or directives; byte-preserving relationship mutation is unsupported; refusing",
+    )
+  }
   root
+}
+
+///|
+/// A direct insertion into the raw Relationships root becomes visible beside
+/// a different set of preserved children for each MCE-aware consumer. Refuse
+/// that edit whenever the source tree contains active MCE markup; an unused
+/// namespace declaration alone is harmless and remains supported.
+fn relationship_tree_contains_mce_markup(element : XmlElement) -> Bool {
+  let mce_prefix = "{\{MC_NAMESPACE}}"
+  if element.name.has_prefix(mce_prefix) {
+    return true
+  }
+  for name, _ in element.attributes {
+    if name.has_prefix(mce_prefix) {
+      return true
+    }
+  }
+  for child in element.children {
+    match child {
+      XmlElement(inner) =>
+        if relationship_tree_contains_mce_markup(inner) {
+          return true
+        }
+      XmlText(_) => ()
+    }
+  }
+  false
 }
 
 ///|

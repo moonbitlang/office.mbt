@@ -18,7 +18,7 @@ pub fn read_xml_bytes_strict_limited(BytesView, XmlReadBudget, namespace_map? : 
 
 pub fn read_xml_bytes_strict_mce_limited(BytesView, XmlReadBudget, Array[String]) -> XmlElement raise @core.DocxError
 
-pub fn read_xml_bytes_strict_mce_with_source_root_limited(BytesView, XmlReadBudget, Array[String]) -> (String, XmlElement) raise @core.DocxError
+pub fn read_xml_bytes_strict_mce_with_roots_limited(BytesView, XmlReadBudget, Array[String]) -> (XmlElement, XmlElement) raise @core.DocxError
 
 pub fn read_xml_string(String, namespace_map? : Map[String, String]) -> XmlElement raise @core.DocxError
 
@@ -95,4 +95,3 @@ pub(all) enum XmlSourceEncoding {
 // Type aliases
 
 // Traits
-
