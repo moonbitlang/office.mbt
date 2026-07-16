@@ -64,6 +64,12 @@ struct XlsxCellSnapshot {
 }
 
 ///|
+struct XlsxScanRegion {
+  sheet : XlsxSheetTarget
+  rect : XlsxRect
+}
+
+///|
 struct XlsxStringBudget {
   maximum : Int
   per_value_maximum : Int
@@ -388,6 +394,63 @@ fn resolve_xlsx_selector(
       }
     }
   }
+}
+
+///|
+fn XlsxResolvedSelector::path(self : XlsxResolvedSelector) -> String {
+  match self {
+    Workbook(path~) => path
+    Sheet(sheet) => sheet.path
+    Cell(_, _, path~) | Range(_, _, path~) => path
+  }
+}
+
+///|
+fn xlsx_scan_regions(
+  projection : XlsxProjection,
+  under : XlsxResolvedSelector?,
+) -> Array[XlsxScanRegion] raise CliFailure {
+  let regions : Array[XlsxScanRegion] = []
+  match under {
+    Some(Cell(sheet, rect, ..)) | Some(Range(sheet, rect, ..)) =>
+      regions.push({ sheet, rect })
+    Some(Sheet(sheet)) =>
+      match sheet.content {
+        Worksheet(worksheet) =>
+          match xlsx_used_rect(worksheet) {
+            Some(rect) => regions.push({ sheet, rect })
+            None => ()
+          }
+        ChartSheet(_) => ()
+      }
+    Some(Workbook(..)) | None =>
+      for name in projection.sheet_names {
+        match projection.find_sheet_by_name(name) {
+          Some(sheet) =>
+            match sheet.content {
+              Worksheet(worksheet) =>
+                match xlsx_used_rect(worksheet) {
+                  Some(rect) => regions.push({ sheet, rect })
+                  None => ()
+                }
+              ChartSheet(_) => ()
+            }
+          None => ()
+        }
+      }
+  }
+  let mut total = 0L
+  for region in regions {
+    total += region.rect.cell_count()
+    if total > projection.max_scan_cells.to_int64() {
+      raise xlsx_scan_resource_failure(
+        "scanned cells",
+        projection.max_scan_cells,
+        total,
+      )
+    }
+  }
+  regions
 }
 
 ///|

@@ -19,15 +19,13 @@ type AnnotationProjectionIndex
 
 type AnnotationStoryPlan
 
-type BoundedDocxPayload
+type BoundedOfficePayload
 
 type DocxCollectedText
 
 type DocxHumanWriter
 
 type DocxLinearPattern
-
-type DocxOutputBudget
 
 type DocxProjection
 
@@ -49,9 +47,45 @@ type DocxTextCollector
 
 type HelpQuery
 
+type OfficeOutputBudget
+
+type OfficeReadPackage
+
 type OutputMode
 
 type PreparedDocxQuery
+
+type XlsxCellFilter
+
+type XlsxCellKind
+
+type XlsxCellPage
+
+type XlsxCellPredicate
+
+type XlsxCellSnapshot
+
+type XlsxMetadataBudget
+
+type XlsxNumberOperator
+
+type XlsxProjection
+
+type XlsxQuerySpec
+
+type XlsxRect
+
+type XlsxResolvedSelector
+
+type XlsxScanBudget
+
+type XlsxScanRegion
+
+type XlsxSheetContent
+
+type XlsxSheetTarget
+
+type XlsxStringBudget
 
 // Type aliases
 

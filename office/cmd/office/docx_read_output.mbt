@@ -417,15 +417,17 @@ fn checked_output_limit(maximum : Int) -> Int raise CliFailure {
 }
 
 ///|
-fn ensure_docx_output_limit(
+fn ensure_office_output_limit(
   output : String,
   maximum : Int,
+  format : String,
 ) -> Unit raise CliFailure {
   let mut count = docx_cli_output_framing_chars
   for _ in output {
     count += 1
     if count > maximum {
-      raise docx_resource_failure(
+      raise format_resource_failure(
+        format,
         "successful command output characters",
         maximum,
         actual=count,
@@ -435,42 +437,76 @@ fn ensure_docx_output_limit(
 }
 
 ///|
-fn bounded_docx_payload(
+fn bounded_office_payload(
   data : Json,
   warnings : Array[@lib.ProtocolWarning],
   maximum : Int,
+  format : String,
 ) -> BoundedOfficePayload raise CliFailure {
   ignore(checked_output_limit(maximum))
-  let budget = OfficeOutputBudget::new(maximum)
+  let budget = OfficeOutputBudget::new(maximum, format~)
   budget.reserve_success_envelope(data, warnings)
   { data, budget, warnings }
 }
 
 ///|
-fn checked_docx_json_output(
+fn bounded_docx_payload(
+  data : Json,
+  warnings : Array[@lib.ProtocolWarning],
+  maximum : Int,
+) -> BoundedOfficePayload raise CliFailure {
+  bounded_office_payload(data, warnings, maximum, "docx")
+}
+
+///|
+fn checked_office_json_output(
   payload : BoundedOfficePayload,
 ) -> String raise CliFailure {
   let envelope = @lib.output_success(payload.data, warnings=payload.warnings)
   // Compact output makes the preflight count exact and avoids indentation
   // overhead that would otherwise need a second allocation-sized pass.
   let output = envelope.stringify()
-  ensure_docx_output_limit(output, payload.budget.maximum)
+  ensure_office_output_limit(
+    output,
+    payload.budget.maximum,
+    payload.budget.format,
+  )
   let mut actual = 0
   for _ in output {
     actual += 1
   }
   if actual + docx_cli_output_framing_chars != payload.budget.used {
-    raise docx_cli_failure(
-      "office.docx.output_accounting_mismatch",
-      "internal DOCX output accounting did not match serialization",
-      details=Json::object({
-        "accounted": Json::number(payload.budget.used.to_double()),
-        "actual": Json::number(
-          (actual + docx_cli_output_framing_chars).to_double(),
-        ),
-      }),
+    raise CliFailure(
+      @lib.protocol_error(
+        "office.\{payload.budget.format}.output_accounting_mismatch",
+        "internal \{payload.budget.format.to_upper()} output accounting did not match serialization",
+        details=Json::object({
+          "accounted": Json::number(payload.budget.used.to_double()),
+          "actual": Json::number(
+            (actual + docx_cli_output_framing_chars).to_double(),
+          ),
+        }),
+      ),
     )
   }
+  output
+}
+
+///|
+fn checked_docx_json_output(
+  payload : BoundedOfficePayload,
+) -> String raise CliFailure {
+  checked_office_json_output(payload)
+}
+
+///|
+fn checked_office_human_output(
+  output : String,
+  maximum : Int,
+  format : String,
+) -> String raise CliFailure {
+  ignore(checked_output_limit(maximum))
+  ensure_office_output_limit(output, maximum, format)
   output
 }
 
@@ -479,9 +515,7 @@ fn checked_docx_human_output(
   output : String,
   maximum : Int,
 ) -> String raise CliFailure {
-  ignore(checked_output_limit(maximum))
-  ensure_docx_output_limit(output, maximum)
-  output
+  checked_office_human_output(output, maximum, "docx")
 }
 
 ///|
@@ -1098,6 +1132,7 @@ fn docx_outline_payload(
 
 ///|
 struct DocxHumanWriter {
+  format : String
   maximum : Int
   output : StringBuilder
   mut used : Int
@@ -1105,9 +1140,13 @@ struct DocxHumanWriter {
 }
 
 ///|
-fn DocxHumanWriter::new(maximum : Int) -> DocxHumanWriter raise CliFailure {
+fn DocxHumanWriter::new(
+  maximum : Int,
+  format? : String = "docx",
+) -> DocxHumanWriter raise CliFailure {
   ignore(checked_output_limit(maximum))
   {
+    format,
     maximum,
     output: StringBuilder::new(),
     used: docx_cli_output_framing_chars,
@@ -1126,7 +1165,8 @@ fn DocxHumanWriter::write_char(
   value : Char,
 ) -> Unit raise CliFailure {
   if self.used >= self.maximum {
-    raise docx_resource_failure(
+    raise format_resource_failure(
+      self.format,
       "successful command output characters",
       self.maximum,
       actual=self.used + 1,

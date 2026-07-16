@@ -33,6 +33,18 @@ pub const SCHEMA_DOCX_TEXT : String = "office.docx.text/1"
 pub const SCHEMA_DOCX_QUERY : String = "office.docx.query/1"
 
 ///|
+pub const SCHEMA_XLSX_OUTLINE : String = "office.xlsx.outline/1"
+
+///|
+pub const SCHEMA_XLSX_ELEMENT : String = "office.xlsx.element/1"
+
+///|
+pub const SCHEMA_XLSX_TEXT : String = "office.xlsx.text/1"
+
+///|
+pub const SCHEMA_XLSX_QUERY : String = "office.xlsx.query/1"
+
+///|
 /// One declared input or output field in the Office capability registry.
 pub(all) struct CapabilityField {
   name : String

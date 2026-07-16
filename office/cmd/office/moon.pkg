@@ -20,6 +20,7 @@ import {
   "moonbitlang/core/env",
   "moonbitlang/core/json",
   "moonbitlang/core/sorted_map",
+  "moonbitlang/core/string",
   "tonyfettes/unicode",
 }
 

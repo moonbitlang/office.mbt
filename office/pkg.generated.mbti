@@ -29,6 +29,14 @@ pub const SCHEMA_RAW_RESULT : String = "office.raw.result/1"
 
 pub const SCHEMA_TRANSACTION : String = "office.transaction/1"
 
+pub const SCHEMA_XLSX_ELEMENT : String = "office.xlsx.element/1"
+
+pub const SCHEMA_XLSX_OUTLINE : String = "office.xlsx.outline/1"
+
+pub const SCHEMA_XLSX_QUERY : String = "office.xlsx.query/1"
+
+pub const SCHEMA_XLSX_TEXT : String = "office.xlsx.text/1"
+
 pub const SELECTOR_MAX_DEPTH : Int = 32
 
 pub const SELECTOR_MAX_LENGTH : Int = 2048
