@@ -28,13 +28,13 @@ fn parse_worksheet(
       continue
     }
     let text = chunk.to_owned()
-    let end = match text.find(">") {
+    let end = match xml_open_tag_end_from(text, 0) {
       Some(pos) => pos
       None => raise InvalidXml(msg="cell tag not closed")
     }
     let tag = text[:end]
     let ref_value = match attr_value(tag, "r") {
-      Some(value) => value
+      Some(value) => unescape_xml_text(value)
       None => raise InvalidXml(msg="cell reference missing")
     }
     let style_id = match attr_value(tag, "s") {
@@ -65,7 +65,7 @@ fn parse_worksheet(
       formula_start {
       Some(pos) => {
         let f_rest = rest[pos:]
-        let open_end = match f_rest.find(">") {
+        let open_end = match xml_open_tag_end_from(f_rest, 0) {
           Some(value) => value
           None => raise InvalidXml(msg="formula tag not closed")
         }

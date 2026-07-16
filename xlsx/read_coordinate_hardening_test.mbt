@@ -415,3 +415,31 @@ test "coordinate attributes accept quoted delimiters and numeric XML spaces" {
   inspect(validations.length(), content="1")
   inspect(validations[0].sqref, content="A1 B1 C1")
 }
+
+///|
+test "coordinate start tags honor quotes and decode numeric references" {
+  let with_cell = coordinate_hardening_insert_sheet_xml(
+    coordinate_hardening_base_bytes(),
+    "  </sheetData>",
+    "<row r=\"1\"><c custom='1 > 0' r='A&#49;' t='str'><f custom='2 > 1' t='array' ref='A&#49;:A&#x31;'>1</f><v>cell</v></c></row>",
+  )
+  let patched = coordinate_hardening_append_sheet_xml(
+    with_cell, "<hyperlinks><hyperlink display='1 > 0' ref='A&#x31;' location='Sheet1!A1'/></hyperlinks>",
+  )
+  let workbook = @xlsx.read(patched)
+  debug_inspect(
+    workbook.get_cell_value("Sheet1", "A1"),
+    content="Some(\"cell\")",
+  )
+  debug_inspect(
+    workbook.get_cell_formula("Sheet1", "A1"),
+    content="Some(\"1\")",
+  )
+  let link = match workbook.get_cell_hyperlink("Sheet1", "A1") {
+    Some(value) => value
+    None => fail("missing hyperlink")
+  }
+  inspect(link.reference, content="A1")
+  debug_inspect(link.display, content="Some(\"1 > 0\")")
+  debug_inspect(link.location, content="Some(\"Sheet1!A1\")")
+}

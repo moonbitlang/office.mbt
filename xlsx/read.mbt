@@ -2663,7 +2663,7 @@ fn parse_hyperlink_elements(
       continue
     }
     let text = chunk.to_owned()
-    let end = match text.find(">") {
+    let end = match xml_open_tag_end_from(text, 0) {
       Some(pos) => pos
       None => raise InvalidXml(msg="hyperlink tag not closed")
     }
@@ -2672,7 +2672,7 @@ fn parse_hyperlink_elements(
       Some(value) => value
       None => raise InvalidXml(msg="hyperlink ref missing")
     }
-    let reference = normalize_cell_or_range_ref(raw_ref) catch {
+    let reference = normalize_cell_or_range_ref(unescape_xml_text(raw_ref)) catch {
       _ => raise InvalidXml(msg="hyperlink reference invalid")
     }
     let location = match attr_value(tag, "location") {
