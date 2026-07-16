@@ -137,19 +137,48 @@ test "MCE strips only processing attributes from application elements" {
   let source =
     #|<a:Root xmlns:a="urn:application"
     #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    #| xmlns:v="urn:vendor" mc:Ignorable="v" mc:Bogus="retained"/>
+    #| xmlns:v="urn:vendor" mc:Ignorable="v"
+    #| mc:PreserveElements="v:Future"
+    #| mc:PreserveAttributes="v:metadata" mc:Bogus="retained"/>
   let root = read_mce_test_xml(source, ["urn:application"])
-  assert_false(
-    root.attributes.contains(
-      "{http://schemas.openxmlformats.org/markup-compatibility/2006}Ignorable",
-    ),
+  let mc = "{http://schemas.openxmlformats.org/markup-compatibility/2006}"
+  for directive in ["Ignorable", "PreserveElements", "PreserveAttributes"] {
+    assert_false(root.attributes.contains(mc + directive))
+  }
+  assert_eq(root.attributes.get(mc + "Bogus"), Some("retained"))
+}
+
+///|
+test "MCE keeps legacy preservation hints in the raw tree only" {
+  let source =
+    #|<a:Root xmlns:a="urn:application"
+    #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    #| xmlns:v="urn:vendor" mc:Ignorable="v"
+    #| mc:PreserveElements="v:Future"
+    #| mc:PreserveAttributes="v:metadata" v:metadata="raw">
+    #| <v:Future v:metadata="raw"/>
+    #| <a:Container xmlns:n="urn:nested" mc:Ignorable="n"
+    #|  mc:PreserveElements="n:*" mc:PreserveAttributes="n:*"
+    #|  n:metadata="raw"><n:Future/></a:Container>
+    #|</a:Root>
+  let (raw, effective) = @xml.read_xml_bytes_strict_mce_with_roots_limited(
+    @utf8.encode(source),
+    mce_test_budget(source),
+    ["urn:application"],
   )
-  assert_eq(
-    root.attributes.get(
-      "{http://schemas.openxmlformats.org/markup-compatibility/2006}Bogus",
-    ),
-    Some("retained"),
-  )
+  let mc = "{http://schemas.openxmlformats.org/markup-compatibility/2006}"
+  assert_eq(raw.attributes.get(mc + "PreserveElements"), Some("v:Future"))
+  assert_eq(raw.attributes.get(mc + "PreserveAttributes"), Some("v:metadata"))
+  assert_true(raw.first("{urn:vendor}Future") is Some(_))
+  assert_false(effective.attributes.contains(mc + "PreserveElements"))
+  assert_false(effective.attributes.contains(mc + "PreserveAttributes"))
+  assert_false(effective.attributes.contains("{urn:vendor}metadata"))
+  assert_true(effective.first("{urn:vendor}Future") is None)
+  guard effective.first("{urn:application}Container") is Some(container) else {
+    fail("expected the application container")
+  }
+  assert_false(container.attributes.contains("{urn:nested}metadata"))
+  assert_true(container.first("{urn:nested}Future") is None)
 }
 
 ///|
@@ -164,6 +193,30 @@ test "MCE validates directives and AlternateContent grammar" {
     mce_test_error(
       "<a:Root xmlns:a=\"urn:application\" xmlns:mc=\"\{mc}\" xmlns:v=\"urn:vendor\" mc:ProcessContent=\"v:*\"/>",
     ).contains("ProcessContent names a namespace that is not ignorable"),
+  )
+  assert_true(
+    mce_test_error(
+      "<a:Root xmlns:a=\"urn:application\" xmlns:mc=\"\{mc}\" xmlns:v=\"urn:vendor\" mc:PreserveElements=\"v:Future\"/>",
+    ).contains(
+      "PreserveElements names a namespace that is not declared ignorable on the same element",
+    ),
+  )
+  assert_true(
+    mce_test_error(
+      "<a:Root xmlns:a=\"urn:application\" xmlns:mc=\"\{mc}\" xmlns:v=\"urn:vendor\" mc:Ignorable=\"v\"><a:Child mc:PreserveAttributes=\"v:metadata\"/></a:Root>",
+    ).contains(
+      "PreserveAttributes names a namespace that is not declared ignorable on the same element",
+    ),
+  )
+  assert_true(
+    mce_test_error(
+      "<a:Root xmlns:a=\"urn:application\" xmlns:mc=\"\{mc}\" xmlns:v=\"urn:vendor\" mc:Ignorable=\"v\" mc:PreserveElements=\"v:bad:name\"/>",
+    ).contains("PreserveElements contains an invalid name pair"),
+  )
+  assert_true(
+    mce_test_error(
+      "<a:Root xmlns:a=\"urn:application\" xmlns:mc=\"\{mc}\" xmlns:v=\"urn:vendor\" mc:Ignorable=\"v\" mc:PreserveAttributes=\"v:1bad\"/>",
+    ).contains("PreserveAttributes contains an invalid local name"),
   )
   assert_true(
     mce_test_error(

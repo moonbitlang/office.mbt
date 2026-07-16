@@ -4509,6 +4509,39 @@ test "relationship mutation refuses consumer-dependent MCE branches" {
 }
 
 ///|
+test "relationship mutation refuses raw legacy preservation directives" {
+  let relationships =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
+    #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    #| mc:PreserveElements="" mc:PreserveAttributes="">
+    #| <Relationship Id="rId1" Type="urn:test" Target="one.xml"/>
+    #|</Relationships>
+  let budget = @xml.xml_read_budget(
+    max_source_units=relationships.length(),
+    max_tokens=4096,
+    max_materialized_chars=16 * 1024,
+    max_token_chars=4096,
+  )
+  try
+    read_mutation_relationships(
+      "word/_rels/document.xml.rels",
+      @utf8.encode(relationships),
+      budget,
+    )
+  catch {
+    Unsupported(message~) =>
+      inspect(
+        message,
+        content="'word/_rels/document.xml.rels' contains Markup Compatibility branches or directives; byte-preserving relationship mutation is unsupported; refusing",
+      )
+    error =>
+      fail("expected a fail-closed MCE mutation error, got \{repr(error)}")
+  } noraise {
+    _ => fail("expected relationship mutation to reject preservation hints")
+  }
+}
+
+///|
 fn wrap_relationships_document_root_for_test(
   relationships : String,
 ) -> String raise {
