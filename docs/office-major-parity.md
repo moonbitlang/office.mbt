@@ -11,7 +11,7 @@ common XLSX and DOCX content.
 Quality, preservation, and review evidence take precedence over delivery
 speed. Each implementation issue maps to a scoped PR with logical buildable
 commits, native and wasm gates, OpenXML validation, and a fresh ephemeral
-Codex review at `xhigh` effort.
+Codex review at least at `xhigh` effort.
 
 ## Delivery order
 
@@ -32,7 +32,7 @@ Codex review at `xhigh` effort.
 | A5: validated raw OOXML fallback | [#145](https://github.com/moonbitlang/office.mbt/issues/145) | Complete |
 | D1: preservation-safe DOCX edit sessions | [#146](https://github.com/moonbitlang/office.mbt/issues/146) | Complete |
 | D2: bounded DOCX outline, get, text, and query | [#147](https://github.com/moonbitlang/office.mbt/issues/147) | Complete |
-| X1: provenance-checked bounded XLSX archive reads | [#160](https://github.com/moonbitlang/office.mbt/issues/160) | In progress |
+| X1: provenance-checked bounded XLSX archive reads | [#160](https://github.com/moonbitlang/office.mbt/issues/160) | Complete |
 | Coordinate validation hardening | [#138](https://github.com/moonbitlang/office.mbt/issues/138) | Planned |
 | X2: unified bounded XLSX outline, get, text, and query | [#161](https://github.com/moonbitlang/office.mbt/issues/161) | Planned |
 | X3: transactional XLSX create and batch | [#162](https://github.com/moonbitlang/office.mbt/issues/162) | Planned |
@@ -166,25 +166,31 @@ The XLSX SDK now has one fail-closed policy for every package ingestion path:
 
 - opaque `ReadLimits` values jointly bound compressed package bytes, entry
   count, each inflated entry, aggregate inflation, preserved source records,
-  and each XML-like OOXML part;
+  each logically decoded OOXML XML part regardless of its filename suffix, and
+  encrypted-package password-KDF iterations;
 - byte reads inflate only through `zip.read_limited`, while the public
   archive-backed path accepts only pristine non-forgeable bounded provenance
   at least as strict as its declared policy; compatibility reads, constructed
   archives, mutations, and more loosely bounded archives fail before parsing;
 - parser logic consumes the already-inflated archive directly, so callers that
   hold a qualified bounded archive do not pay for a second decompression pass;
+  every entry's inflated bytes must also match its declared ZIP CRC before
+  parsing;
 - async readers stop at the compressed package ceiling, file reads verify a
   regular file and size before allocation and reject size changes, and
   cancellation remains observable rather than being rewritten as an XLSX
   parse failure;
 - encrypted packages apply the same ceiling before CFB processing and again to
-  the decrypted ZIP, then perform exactly one bounded ZIP read; resource
-  exhaustion remains distinct from wrong passwords and malformed workbook
-  structure;
+  the decrypted ZIP; physical-sector-derived limits, cycle detection, and
+  validated AES/KDF parameters bound CFB and password work, and the verified
+  password result lets the read path perform exactly one bounded ZIP inflation;
+  resource exhaustion remains distinct from wrong passwords and malformed
+  workbook structure;
 - OOXML package validation reuses the same archive boundary, returning a stable
   finding for an unreadable ZIP while retaining typed resource failures; and
 - native and Wasm adversarial coverage includes package, entry-count,
   per-entry, aggregate, preserved-source, XML-part, forged-declaration,
+  relationship-relocated XML, CRC corruption, CFB cycles, KDF work,
   provenance, mutation, async-reader, and encrypted-package cases.
 
 X1 changes the SDK boundary only. Unified XLSX command exposure remains scoped

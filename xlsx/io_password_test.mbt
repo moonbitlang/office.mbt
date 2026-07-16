@@ -103,4 +103,15 @@ test "standard encryption distinguishes wrong passwords from malformed XLSX" {
     Err(@xlsx.MissingPart(path~)) => inspect(path, content="xl/workbook.xml")
     _ => fail("expected a parsed-package failure, not InvalidPassword")
   }
+
+  let non_zip = @xlsx.encrypt(b"not a ZIP package", options~)
+  let non_zip_result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read_with_password(non_zip, "correct"),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(
+    non_zip_result is Err(@xlsx.InvalidPackage(msg="unreadable ZIP package")),
+    content="true",
+  )
 }

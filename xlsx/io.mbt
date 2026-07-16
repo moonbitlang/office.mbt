@@ -1,4 +1,33 @@
 ///|
+fn bounded_actual_above_limit(limit : Int) -> Int {
+  if limit < 0x7fff_ffff {
+    limit + 1
+  } else {
+    limit
+  }
+}
+
+///|
+fn bounded_int64_actual(value : Int64, limit : Int) -> Int {
+  if value < 0L {
+    bounded_actual_above_limit(limit)
+  } else if value > 0x7fff_ffffL {
+    0x7fff_ffff
+  } else {
+    value.to_int()
+  }
+}
+
+///|
+test "bounded file-size telemetry saturates instead of truncating" {
+  inspect(
+    bounded_int64_actual(2_147_483_648L, 128 * 1024 * 1024),
+    content="2147483647",
+  )
+  inspect(bounded_actual_above_limit(0x7fff_ffff), content="2147483647")
+}
+
+///|
 async fn[R : @async/io.Reader] read_all_bytes(
   reader : R,
   maximum? : Int = default_max_package_bytes,
@@ -6,6 +35,8 @@ async fn[R : @async/io.Reader] read_all_bytes(
 ) -> Bytes {
   let output : Array[Byte] = []
   while true {
+    // Keep one fixed bounded read window so a pipe producer can complete its
+    // current write before a limit error tears down the surrounding task group.
     let chunk = reader.read_some(max_len=64 * 1024) catch {
       error if @async.is_being_cancelled() => raise error
       error =>
@@ -24,7 +55,7 @@ async fn[R : @async/io.Reader] read_all_bytes(
           raise ResourceLimitExceeded(
             kind=resource,
             limit=maximum,
-            actual=maximum + 1,
+            actual=bounded_actual_above_limit(maximum),
           )
         }
         for byte in bytes {
@@ -81,7 +112,7 @@ async fn read_bounded_package_file(
     raise ResourceLimitExceeded(
       kind=resource,
       limit=maximum,
-      actual=if size < 0L { maximum + 1 } else { size.to_int() },
+      actual=bounded_int64_actual(size, maximum),
     )
   }
   let length = size.to_int()

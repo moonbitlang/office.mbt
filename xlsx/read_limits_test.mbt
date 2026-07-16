@@ -276,6 +276,130 @@ test "archive read enforces XML limits after provenance verification" {
 }
 
 ///|
+test "logical XML limit follows a worksheet relationship with a non-XML suffix" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "logical XML")
+  let source = @zip.read(@xlsx.write(workbook))
+  let sheet_path = "xl/worksheets/sheet1.xml"
+  let moved_sheet_path = "xl/worksheets/sheet1.dat"
+  let sheet_bytes = match source.get(sheet_path) {
+    Some(value) => value
+    None => fail("missing source worksheet")
+  }
+  let sheet_xml = @encoding/utf8.decode(sheet_bytes) catch {
+    _ => fail("worksheet is not UTF-8")
+  }
+  let mut xml_limit = 0
+  for entry in source.entries() {
+    if entry.name() != sheet_path && entry.data().length() > xml_limit {
+      xml_limit = entry.data().length()
+    }
+  }
+  xml_limit += 1
+  let padded_sheet_xml = sheet_xml.replace_all(
+    old="</worksheet>",
+    new=" ".repeat(xml_limit + 1024) + "</worksheet>",
+  )
+  let padded_sheet = @encoding/utf8.encode(padded_sheet_xml)
+  assert_true(padded_sheet.length() > xml_limit)
+  let updated = @zip.Archive::new()
+  for entry in source.entries() {
+    if entry.name() == sheet_path ||
+      entry.name() == "xl/_rels/workbook.xml.rels" ||
+      entry.name() == "[Content_Types].xml" {
+      continue
+    }
+    updated.add(entry.name(), entry.data())
+  }
+  let workbook_rels = match source.get("xl/_rels/workbook.xml.rels") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("workbook relationships are not UTF-8")
+      }
+    None => fail("missing workbook relationships")
+  }
+  let content_types = match source.get("[Content_Types].xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("content types are not UTF-8")
+      }
+    None => fail("missing content types")
+  }
+  updated.add(moved_sheet_path, padded_sheet)
+  updated.add(
+    "xl/_rels/workbook.xml.rels",
+    @encoding/utf8.encode(
+      workbook_rels.replace_all(
+        old="worksheets/sheet1.xml",
+        new="worksheets/sheet1.dat",
+      ),
+    ),
+  )
+  updated.add(
+    "[Content_Types].xml",
+    @encoding/utf8.encode(
+      content_types.replace_all(
+        old="/xl/worksheets/sheet1.xml",
+        new="/xl/worksheets/sheet1.dat",
+      ),
+    ),
+  )
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(
+      @zip.write(updated),
+      limits=@xlsx.ReadLimits::with_values(max_xml_part_bytes=xml_limit),
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="xml_part_bytes")
+      assert_eq(limit, xml_limit)
+      assert_eq(actual, padded_sheet.length())
+    }
+    _ => fail("expected logical XML part limit")
+  }
+}
+
+///|
+test "bounded XLSX reads reject a stored entry with a mismatched CRC" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "alpha")
+  let source = @zip.read(@xlsx.write(workbook))
+  let stored = @zip.Archive::new()
+  for entry in source.entries() {
+    stored.add(entry.name(), entry.data())
+  }
+  let stored_bytes = @zip.write(stored)
+  let bytes = stored_bytes.to_array()
+  let original : Bytes = b"alpha"
+  let replacement : Bytes = b"bravo"
+  let mut payload_at = -1
+  for index in 0..<(bytes.length() - original.length()) {
+    if Bytes::from_array(bytes[index:index + original.length()]) == original {
+      payload_at = index
+      break
+    }
+  }
+  assert_true(payload_at >= 0)
+  for index in 0..<replacement.length() {
+    bytes[payload_at + index] = replacement[index]
+  }
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(Bytes::from_array(bytes)),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(
+    result is Err(@xlsx.InvalidPackage(msg="ZIP entry CRC mismatch")),
+    content="true",
+  )
+}
+
+///|
 test "malformed ZIPs have a stable package classification" {
   let result : Result[@xlsx.Workbook, Error] = Ok(
     @xlsx.read(b"not a ZIP package"),
