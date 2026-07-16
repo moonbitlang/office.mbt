@@ -37,6 +37,19 @@ test "a built package satisfies the structural validator" {
 }
 
 ///|
+test "builder-generated relationships require the exact OPC content type" {
+  expect_build_error(
+    builder => builder.add_default("rels", "application/xml"),
+    "builder-generated relationship part '_rels/.rels' has content type 'application/xml', expected 'application/vnd.openxmlformats-package.relationships+xml'",
+  )
+  let case_insensitive = minimal_builder()
+  case_insensitive.add_default(
+    "rels", "APPLICATION/VND.OPENXMLFORMATS-PACKAGE.RELATIONSHIPS+XML",
+  )
+  assert_eq(@opc.validate_docx_package(case_insensitive.build()), [])
+}
+
+///|
 test "the builder maps logical Unicode part names to ASCII ZIP items" {
   let builder = @opc.PackageBuilder::new()
   builder.add_default(

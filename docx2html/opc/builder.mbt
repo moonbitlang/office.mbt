@@ -354,6 +354,7 @@ pub fn PackageBuilder::build(
   }
   for name in emitted_rels {
     self.check_coverage(name)
+    self.check_relationship_content_type(name)
   }
   for source, rels in self.relationships {
     let base = split_part_dir(source)
@@ -508,18 +509,47 @@ fn PackageBuilder::check_coverage(
   if name == CONTENT_TYPES_PART {
     return
   }
-  let override_key = builder_part_identity("/" + name)
-  for part_name, _ in self.overrides {
-    if builder_part_identity(part_name) == override_key {
-      return
-    }
-  }
-  if part_extension(name) is Some(ext) && self.defaults.contains(ext) {
+  if self.content_type_for_part(name) is Some(_) {
     return
   }
   raise PackageBuildError(
     "no content type for part '\{name}': add a Default for its extension or an Override",
   )
+}
+
+///|
+/// Resolves the authoritative content type with OPC Override-before-Default
+/// precedence. Builder validation calls this only after both declaration maps
+/// have been revalidated from their private state.
+fn PackageBuilder::content_type_for_part(
+  self : PackageBuilder,
+  name : String,
+) -> String? {
+  let override_key = builder_part_identity("/" + name)
+  for part_name, content_type in self.overrides {
+    if builder_part_identity(part_name) == override_key {
+      return Some(content_type)
+    }
+  }
+  match part_extension(name) {
+    Some(extension) => self.defaults.get(extension)
+    None => None
+  }
+}
+
+///|
+fn PackageBuilder::check_relationship_content_type(
+  self : PackageBuilder,
+  name : String,
+) -> Unit raise PackageBuildError {
+  match self.content_type_for_part(name) {
+    Some(value) if value.trim().to_lower() == RELATIONSHIPS_CONTENT_TYPE => ()
+    Some(value) =>
+      raise PackageBuildError(
+        "builder-generated relationship part '\{name}' has content type '\{value}', expected '\{RELATIONSHIPS_CONTENT_TYPE}'",
+      )
+    None => () // `check_coverage` reports the more actionable missing mapping.
+  }
 }
 
 ///|
