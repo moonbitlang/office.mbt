@@ -364,6 +364,97 @@ test "logical XML limit follows a worksheet relationship with a non-XML suffix" 
 }
 
 ///|
+test "logical XML limit follows a drawing chart relationship" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Data")
+  let chart_xml =
+    #|<?xml version="1.0" encoding="UTF-8"?>
+    #|<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+    #|  <c:chart/>
+    #|</c:chartSpace>
+  sheet.add_chart("C3", chart_xml)
+  let source = @zip.read(@xlsx.write(workbook))
+  let chart_path = "xl/charts/chart1.xml"
+  let moved_chart_path = "xl/charts/chart1.dat"
+  let chart_bytes = match source.get(chart_path) {
+    Some(value) => value
+    None => fail("missing source chart")
+  }
+  let mut xml_limit = 0
+  for entry in source.entries() {
+    if entry.name() != chart_path && entry.data().length() > xml_limit {
+      xml_limit = entry.data().length()
+    }
+  }
+  xml_limit += 1
+  let padded_chart : Array[Byte] = chart_bytes.to_array()
+  padded_chart.append(
+    @encoding/utf8.encode(" ".repeat(xml_limit + 1024)).to_array(),
+  )
+  let padded_chart = Bytes::from_array(padded_chart)
+  assert_true(padded_chart.length() > xml_limit)
+  let drawing_rels_path = "xl/drawings/_rels/drawing1.xml.rels"
+  let drawing_rels = match source.get(drawing_rels_path) {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("drawing relationships are not UTF-8")
+      }
+    None => fail("missing drawing relationships")
+  }
+  let content_types = match source.get("[Content_Types].xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("content types are not UTF-8")
+      }
+    None => fail("missing content types")
+  }
+  let updated = @zip.Archive::new()
+  for entry in source.entries() {
+    if entry.name() == chart_path ||
+      entry.name() == drawing_rels_path ||
+      entry.name() == "[Content_Types].xml" {
+      continue
+    }
+    updated.add(entry.name(), entry.data())
+  }
+  updated.add(moved_chart_path, padded_chart)
+  updated.add(
+    drawing_rels_path,
+    @encoding/utf8.encode(
+      drawing_rels.replace_all(
+        old="../charts/chart1.xml",
+        new="../charts/chart1.dat",
+      ),
+    ),
+  )
+  updated.add(
+    "[Content_Types].xml",
+    @encoding/utf8.encode(
+      content_types.replace_all(
+        old="/xl/charts/chart1.xml",
+        new="/xl/charts/chart1.dat",
+      ),
+    ),
+  )
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(
+      @zip.write(updated),
+      limits=@xlsx.ReadLimits::with_values(max_xml_part_bytes=xml_limit),
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="xml_part_bytes")
+      assert_eq(limit, xml_limit)
+      assert_eq(actual, padded_chart.length())
+    }
+    _ => fail("expected drawing chart XML part limit")
+  }
+}
+
+///|
 test "bounded XLSX reads reject a stored entry with a mismatched CRC" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Data"))

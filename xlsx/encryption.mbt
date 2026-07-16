@@ -688,7 +688,9 @@ fn standard_password_verified(
     return false
   }
   let hash_size_u64 = read_u32_le(verifier_block, 36).to_uint64()
-  if hash_size_u64 == 0UL || hash_size_u64 > 20UL {
+  // Standard AES always verifies the complete SHA-1 digest. Accepting a
+  // caller-declared prefix would make password verification probabilistic.
+  if hash_size_u64 != 20UL {
     raise InvalidEncryptionInfo(msg="invalid verifier hash size")
   }
   let hash_size = hash_size_u64.to_int()
@@ -1618,6 +1620,27 @@ test "encryption KDF work and AES key sizes are validated before derivation" {
   }
   inspect(
     key_result is Err(InvalidEncryptionInfo(msg="invalid AES key size")),
+    content="true",
+  )
+}
+
+///|
+test "standard AES verifier requires the complete SHA-1 digest" {
+  let verifier = Array::make(72, (0x00).to_byte())
+  // VerifierHashSize is a little-endian u32 at offset 36. A one-byte prefix
+  // must not be accepted as password proof.
+  verifier[36] = (0x01).to_byte()
+  let result : Result[Bool, Error] = Ok(
+    standard_password_verified(
+      Bytes::make(16, (0x00).to_byte()),
+      Bytes::from_array(verifier),
+      "AES",
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(
+    result is Err(InvalidEncryptionInfo(msg="invalid verifier hash size")),
     content="true",
   )
 }

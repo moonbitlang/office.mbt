@@ -68,6 +68,32 @@ test "validate_ooxml_package flags a corrupt archive" {
 }
 
 ///|
+test "validate_ooxml_package classifies CRC corruption as unreadable" {
+  let archive = @zip.Archive::new()
+  archive.add("payload.bin", b"alpha")
+  let bytes = @zip.write(archive).to_array()
+  let original : Bytes = b"alpha"
+  let replacement : Bytes = b"bravo"
+  let mut payload_at = -1
+  for index in 0..<(bytes.length() - original.length()) {
+    if Bytes::from_array(bytes[index:index + original.length()]) == original {
+      payload_at = index
+      break
+    }
+  }
+  assert_true(payload_at >= 0)
+  for index in 0..<replacement.length() {
+    bytes[payload_at + index] = replacement[index]
+  }
+  debug_inspect(
+    @xlsx.validate_ooxml_package(Bytes::from_array(bytes)),
+    content=(
+      #|["archive is not a readable zip"]
+    ),
+  )
+}
+
+///|
 test "OOXML validation reuses bounded archives and rejects unbounded ones" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
