@@ -183,6 +183,46 @@ test "re-embedding style map replaces original metadata" {
 }
 
 ///|
+test "embedding style map refuses active relationship MCE" {
+  let relationships_xml =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
+    #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    #| xmlns:v="urn:vendor">
+    #| <mc:AlternateContent>
+    #|  <mc:Choice Requires="v"><Relationship Id="rVendor" Type="urn:vendor:relationship" Target="vendor.xml"/></mc:Choice>
+    #|  <mc:Fallback><Relationship Id="rFallback" Type="urn:fallback:relationship" Target="fallback.xml"/></mc:Fallback>
+    #| </mc:AlternateContent>
+    #|</Relationships>
+  let content_types_xml = "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"/>"
+  let input = style_map_embedding_docx_from_parts(
+    relationships_xml, content_types_xml,
+  )
+  try @docx2html.embed_style_map(input, "p => h1") catch {
+    Unsupported(message~) =>
+      inspect(
+        message,
+        content="'word/_rels/document.xml.rels' contains Markup Compatibility branches or directives; byte-preserving relationship mutation is unsupported; refusing",
+      )
+    error => fail("expected active MCE refusal, got \{repr(error)}")
+  } noraise {
+    _ => fail("expected active MCE relationships to be refused")
+  }
+
+  // A declaration alone does not select or suppress content and remains safe.
+  let unused_declaration =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"
+    #| xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"/>
+  let written = @docx2html.embed_style_map(
+    style_map_embedding_docx_from_parts(unused_declaration, content_types_xml),
+    "p => h2",
+  )
+  debug_inspect(
+    @docx2html.read_embedded_style_map(written),
+    content="Some(\"p => h2\")",
+  )
+}
+
+///|
 test "embedding style map preserves permitted physical ZIP entry spelling" {
   let relationships_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"/>"
   let content_types_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Override PartName=\"/MAMMOTH/STYLE-MAP\" ContentType=\"application/old\"/></Types>"
