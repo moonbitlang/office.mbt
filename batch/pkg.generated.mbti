@@ -13,7 +13,11 @@ pub const MAX_BATCH_OPS : Int = 10_000
 
 pub const MAX_BATCH_SCRIPT_BYTES : Int = 8388608
 
+pub const MAX_ROW_COLUMN_BAND : Int = 10_000
+
 pub const MAX_TOTAL_NEW_STYLES : Int = 4_096
+
+pub const MAX_TOTAL_ROW_COLUMN_LINES : Int64 = 1_000_000
 
 pub const MAX_TOTAL_STYLE_CELLS : Int64 = 1_000_000
 

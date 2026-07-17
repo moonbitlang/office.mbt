@@ -168,6 +168,43 @@ test "capabilities payload is field-exact" {
 }
 
 ///|
+test "capabilities expose every command-wide batch resource ceiling" {
+  guard capabilities() is Object(root) &&
+    root.get("limits") is Some(Object(limits)) else {
+    fail("capabilities limits must be an object")
+  }
+  assert_eq(limits.length(), 7)
+  assert_eq(
+    limits.get("max_script_bytes"),
+    Some(Json::number(MAX_BATCH_SCRIPT_BYTES.to_double())),
+  )
+  assert_eq(
+    limits.get("max_ops"),
+    Some(Json::number(MAX_BATCH_OPS.to_double())),
+  )
+  assert_eq(
+    limits.get("max_touched_cells"),
+    Some(Json::number(MAX_TOTAL_TOUCHED_CELLS.to_double())),
+  )
+  assert_eq(
+    limits.get("max_style_cells"),
+    Some(Json::number(MAX_TOTAL_STYLE_CELLS.to_double())),
+  )
+  assert_eq(
+    limits.get("max_new_styles"),
+    Some(Json::number(MAX_TOTAL_NEW_STYLES.to_double())),
+  )
+  assert_eq(
+    limits.get("max_row_column_band"),
+    Some(Json::number(MAX_ROW_COLUMN_BAND.to_double())),
+  )
+  assert_eq(
+    limits.get("max_row_column_lines"),
+    Some(Json::number(MAX_TOTAL_ROW_COLUMN_LINES.to_double())),
+  )
+}
+
+///|
 /// Bidirectional catalog ↔ parser agreement, behaviorally:
 /// - **parser → catalog**: `required_samples` is the independent list of
 ///   ops we support; every one must be advertised by the catalog. A parser

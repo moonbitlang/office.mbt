@@ -13,12 +13,8 @@
 async fn run_batch(m : @argparse.Matches) -> Unit {
   let file = arg(m, "file")
   let script_path = arg(m, "script")
-  let text = @encoding/utf8.decode(@async/fs.read_file(script_path).binary())
-  check_number_token_lengths(script_path, text)
-  let document = @json.parse(text) catch {
-    err => raise CliError("error: \{script_path}: \{err}")
-  }
-  let ops = @batch.parse_script(document) catch {
+  let script = read_batch_script(script_path)
+  let plan = @batch.parse_script_bytes(script) catch {
     BatchError(message) => raise CliError("error: " + message)
   }
   // Resolve a symlinked workbook to its target up front: the same resolved
@@ -26,61 +22,82 @@ async fn run_batch(m : @argparse.Matches) -> Unit {
   // save clobber a different file than the one that was read.
   let target = resolve_save_target(file)
   let workbook = @lib.open_file(target)
-  for index, op in ops {
-    @batch.apply_op(workbook, op) catch {
-      err =>
-        raise CliError(
-          "error: op \{index} (\{op.name()}): \{strip_error_prefix(err)}; \{file} not modified",
-        )
-    }
+  plan.apply(workbook) catch {
+    BatchError(message) =>
+      raise CliError("error: \{message}; \{file} not modified")
   }
   if flag(m, "dry-run") {
-    println("dry-run ok: \{ops.length()} op(s); \{file} not modified")
-  } else if ops.length() == 0 {
+    println("dry-run ok: \{plan.operation_count()} op(s); \{file} not modified")
+  } else if plan.operation_count() == 0 {
     // A zero-op script is a valid no-op: nothing to save, file untouched.
     println("applied 0 op(s) to \{file}")
   } else {
     write_file_replacing(target, @lib.write(workbook))
-    println("applied \{ops.length()} op(s) to \{file}")
+    println("applied \{plan.operation_count()} op(s) to \{file}")
   }
 }
 
 ///|
-/// Rejects absurdly long numeric literals (outside strings) before the
-/// JSON parser sees them: pathological forms such as an 800-digit
-/// mantissa can lose their spelling in parsing and round incorrectly (a
-/// known upstream gap), and no real script needs a 40+ character number.
-fn check_number_token_lengths(
-  script_path : String,
-  text : String,
-) -> Unit raise CliError {
-  let mut in_string = false
-  let mut escaped = false
-  let mut run = 0
-  for i in 0..<text.length() {
-    let c = text[i]
-    if in_string {
-      if escaped {
-        escaped = false
-      } else if c == '\\' {
-        escaped = true
-      } else if c == '"' {
-        in_string = false
-      }
-    } else if c == '"' {
-      in_string = true
-      run = 0
-    } else if c is ('0'..='9' | '.' | 'e' | 'E' | '+' | '-') {
-      run += 1
-      if run > 40 {
-        raise CliError(
-          "error: \{script_path}: numeric literal longer than 40 characters",
-        )
-      }
-    } else {
-      run = 0
-    }
+/// Reads a regular script file through one pinned handle and rejects its size
+/// before allocation. A size change during the read fails instead of silently
+/// applying a stale prefix.
+async fn read_batch_script(path : String) -> Bytes {
+  let kind = @async/fs.kind(path) catch {
+    error if @async.is_being_cancelled() => raise error
+    _ => raise CliError("error: could not inspect batch script \{path}")
   }
+  if !(kind is Regular) {
+    raise CliError("error: batch script is not a regular file: \{path}")
+  }
+  let file = @async/fs.open(
+    path,
+    mode=ReadOnly,
+    create_mode=OpenExisting,
+    sync=NoSync,
+  ) catch {
+    error if @async.is_being_cancelled() => raise error
+    _ => raise CliError("error: could not open batch script \{path}")
+  }
+  defer file.close()
+  if !(file.kind() is Regular) {
+    raise CliError("error: batch script is not a regular file: \{path}")
+  }
+  let size = file.size() catch {
+    error if @async.is_being_cancelled() => raise error
+    _ => raise CliError("error: could not size batch script \{path}")
+  }
+  if size < 0L || size > @batch.MAX_BATCH_SCRIPT_BYTES.to_int64() {
+    raise CliError(
+      "error: batch script exceeds the \{@batch.MAX_BATCH_SCRIPT_BYTES}-byte limit",
+    )
+  }
+  let length = size.to_int()
+  let buffer = FixedArray::make(length, b'\x00')
+  let mut offset = 0
+  while offset < length {
+    let count = file.read_at(
+      buffer,
+      position=offset.to_int64(),
+      offset~,
+      len=length - offset,
+    ) catch {
+      error if @async.is_being_cancelled() => raise error
+      _ => raise CliError("error: could not read batch script \{path}")
+    }
+    if count <= 0 || count > length - offset {
+      raise CliError("error: could not read batch script \{path}")
+    }
+    offset = offset + count
+  }
+  let final_size = file.size() catch {
+    error if @async.is_being_cancelled() => raise error
+    _ => raise CliError("error: could not recheck batch script \{path}")
+  }
+  if final_size != size {
+    raise CliError("error: batch script changed while it was read: \{path}")
+  }
+  @async.pause()
+  buffer.unsafe_reinterpret_as_bytes()
 }
 
 ///|
@@ -179,16 +196,4 @@ async fn resolve_save_target(path : String) -> String {
 #cfg(target="wasm")
 async fn resolve_save_target(path : String) -> String noraise {
   path
-}
-
-///|
-/// Handler errors that are already CLI-formatted start with "error: ";
-/// inside an op-indexed message that prefix would read twice.
-fn strip_error_prefix(err : Error) -> String {
-  let message = "\{err}"
-  if message.has_prefix("error: ") {
-    message["error: ".length():].to_owned()
-  } else {
-    message
-  }
 }

@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:9e349fa4
+    Fingerprint: crc32:d51b3cc0
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:9e349fa4","names":["docx","xlsx","help","identify","outline","get","text","query","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:d51b3cc0","names":["docx","xlsx","help","identify","outline","get","text","query","create","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:9e349fa4","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:9e349fa4","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:9e349fa4","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:9e349fa4","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:9e349fa4","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:9e349fa4","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:9e349fa4","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:9e349fa4","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:9e349fa4","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:d51b3cc0","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:d51b3cc0","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:d51b3cc0","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:d51b3cc0","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:d51b3cc0","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:d51b3cc0","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:d51b3cc0","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:d51b3cc0","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:d51b3cc0","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:d51b3cc0","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:d51b3cc0","kind":"command","name":"raw"}]
 
 The raw command publishes explicit subcommand schemas, including every edit
 input and its conditional constraints.
@@ -56,6 +56,79 @@ input and its conditional constraints.
 
   $ office.exe help raw --json | jq -c '[.data.records[0].variants[] | select(.name=="edit") | .actions[] | {name,requires,forbids,restrictions}]'
   [{"name":"append","requires":["exactly-one(xml,xml-file)"],"forbids":["attribute","value"],"restrictions":[]},{"name":"prepend","requires":["exactly-one(xml,xml-file)"],"forbids":["attribute","value"],"restrictions":[]},{"name":"insert-before","requires":["exactly-one(xml,xml-file)"],"forbids":["attribute","value"],"restrictions":["path-must-not-select-document-element"]},{"name":"insert-after","requires":["exactly-one(xml,xml-file)"],"forbids":["attribute","value"],"restrictions":["path-must-not-select-document-element"]},{"name":"replace","requires":["exactly-one(xml,xml-file)"],"forbids":["attribute","value"],"restrictions":[]},{"name":"remove","requires":[],"forbids":["xml","xml-file","attribute","value"],"restrictions":["path-must-not-select-document-element"]},{"name":"set-attribute","requires":["attribute","value"],"forbids":["xml","xml-file"],"restrictions":[]}]
+
+Fresh XLSX creation and strict batch mutation share the validated transaction
+boundary. Creation is no-replace by default; batch updates preserve the input
+until parsing, application, serialization, and complete candidate validation
+all pass.
+
+  $ office.exe help create --json | jq -c '.data.records[0] | {name,formats,variants:[.variants[]|{name,result_schema,inputs:[.inputs[].name],constraints}]}'
+  {"name":"create","formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.create/1","inputs":["output","sheet","dry-run","overwrite","json"],"constraints":["output-extension=.xlsx","create-new-by-default","transactional-publication","bounded-candidate-package"]}]}
+
+  $ office.exe help batch --json | jq -c '.data.records[0] | {name,formats,variants:[.variants[]|{name,result_schema,outputs:[.outputs[].name],constraints}]}'
+  {"name":"batch","formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.batch/1","outputs":["stats","transaction"],"constraints":["schema=xlsx.batch/1","overwrite-requires(out)","out-extension-must-match-input-format","transactional-publication","full-workbook-rewrite-on-change","zero-op-reuses-original"]}]}
+
+  $ office.exe create xlsx x3-created.xlsx --sheet Data --json | jq -c '{success,schema:.data.schema,sheet:.data.sheet,committed:.data.transaction.committed,validations:[.data.transaction.validations[].name],added:(.data.transaction.preservation.added|length>0)}'
+  {"success":true,"schema":"office.xlsx.create/1","sheet":"Data","committed":true,"validations":["office-portable-opc","office-xlsx-bounded"],"added":true}
+
+  $ office.exe identify x3-created.xlsx
+  xlsx
+
+  $ printf '%s\n' '{"schema":"xlsx.batch/1","ops":[{"op":"set","params":{"sheet":"Data","cell":"A1","value":"one"}},{"op":"formula","params":{"sheet":"Data","cell":"B1","formula":"=LEN(A1)"}},{"op":"style","params":{"sheet":"Data","range":"A1:B1","bold":true}}]}' > x3-batch.json
+  $ office.exe batch x3-created.xlsx x3-batch.json --out x3-batched.xlsx --json | jq -c '{success,schema:.data.schema,stats:.data.stats,committed:.data.transaction.committed,changed:.data.transaction.changed,full_rewrite:any(.warnings[];.code=="office.xlsx.full_rewrite")}'
+  {"success":true,"schema":"office.xlsx.batch/1","stats":{"operation_count":3,"touched_cells":4,"style_cells":2,"row_column_lines":0,"new_style_records":1},"committed":true,"changed":true,"full_rewrite":true}
+
+  $ office.exe get x3-batched.xlsx '/xlsx/sheet[name="Data"]/range[A1:B1]' --json | jq -c '{refs:[.data.cells[].reference],raw:[.data.cells[].raw],formulas:[.data.cells[]|(.formula // null)]}'
+  {"refs":["A1","B1"],"raw":[{"type":"string","value":"one"},null],"formulas":[null,"LEN(A1)"]}
+
+  $ office.exe text x3-created.xlsx --json | jq -c '{matched_total:.data.matched_total,returned:.data.returned}'
+  {"matched_total":0,"returned":0}
+
+Dry-run validates the exact candidate without publishing, while malformed
+scripts and application failures leave both source and requested destination
+untouched.
+
+  $ office.exe batch x3-created.xlsx x3-batch.json --out x3-dry.xlsx --dry-run --json | jq -c '{dry_run:.data.transaction.dry_run,committed:.data.transaction.committed,changed:.data.transaction.changed}'
+  {"dry_run":true,"committed":false,"changed":true}
+  $ test ! -e x3-dry.xlsx; echo $?
+  0
+
+  $ printf '%s\n' '{"schema":"xlsx.batch/1","ops":[],"typo":true}' > x3-invalid.json
+  $ office.exe batch x3-created.xlsx x3-invalid.json --out x3-invalid.xlsx --json > x3-invalid-result.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code,script:.error.details.script}' x3-invalid-result.json
+  {"success":false,"code":"office.xlsx.invalid_batch_script","script":"x3-invalid.json"}
+  $ test ! -e x3-invalid.xlsx; echo $?
+  0
+
+  $ cp x3-created.xlsx x3-before.xlsx
+  $ printf '%s\n' '{"schema":"xlsx.batch/1","ops":[{"op":"set","params":{"sheet":"Missing","cell":"A1","value":"no"}}]}' > x3-operation-error.json
+  $ office.exe batch x3-created.xlsx x3-operation-error.json --out x3-operation-error.xlsx --json > x3-operation-result.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code}' x3-operation-result.json
+  {"success":false,"code":"office.xlsx.batch_operation_failed"}
+  $ cmp x3-created.xlsx x3-before.xlsx; echo $?
+  0
+  $ test ! -e x3-operation-error.xlsx; echo $?
+  0
+
+Creation rejects invalid sheet names and existing destinations without an
+explicit overwrite opt-in.
+
+  $ office.exe create xlsx x3-invalid-sheet.xlsx --sheet bad/name --json > x3-invalid-sheet.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code}' x3-invalid-sheet.json
+  {"success":false,"code":"office.xlsx.invalid_sheet_name"}
+  $ test ! -e x3-invalid-sheet.xlsx; echo $?
+  0
+
+  $ office.exe create xlsx x3-created.xlsx --json > x3-exists.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code}' x3-exists.json
+  {"success":false,"code":"office.transaction.output_exists"}
+
+  $ office.exe create xlsx x3-created.xlsx --sheet Replaced --overwrite
+  committed: created XLSX sheet "Replaced" -> x3-created.xlsx
 
 Structured DOCX reads share one bounded projection. Outline provides the map,
 get resolves a canonical path, text emits path-tagged paragraphs, and query

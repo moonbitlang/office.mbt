@@ -56,13 +56,13 @@ const MAX_SHEET_COLS : Int = 16_384
 /// agent-supplied `count` is bounded to keep one op's latency in check.
 /// insert/delete are engine-bounded (they pass `count` straight through) and
 /// are not subject to this cap.
-const MAX_ROWCOL_BAND : Int = 10_000
+pub const MAX_ROW_COLUMN_BAND : Int = 10_000
 
 ///|
 /// Aggregate cap on lines touched by `row`/`col` hide/show/height across one
 /// script — the row/col analogue of `MAX_TOTAL_STYLE_CELLS`, bounding total
-/// setter calls even when each op stays under `MAX_ROWCOL_BAND`.
-const MAX_TOTAL_ROWCOL_CELLS : Int64 = 1_000_000
+/// setter calls even when each op stays under `MAX_ROW_COLUMN_BAND`.
+pub const MAX_TOTAL_ROW_COLUMN_LINES : Int64 = 1_000_000
 
 ///|
 /// A batch script or op that failed validation or application. The
@@ -304,8 +304,10 @@ fn is_looping_action(action : String) -> Bool {
 /// Validate a `row`/`col` band `[at, at+count-1]` at parse time:
 /// - it must fit within `[1, axis_max]` (checked overflow-safe: never forms
 ///   `at + count`, which could exceed `Int`);
-/// - for a looping action, `count` must stay under `MAX_ROWCOL_BAND`, and the
-///   running total across the script must stay under `MAX_TOTAL_ROWCOL_CELLS`.
+/// - for a looping action, `count` must stay under `MAX_ROW_COLUMN_BAND`, and
+///   the
+///   running total across the script must stay under
+///   `MAX_TOTAL_ROW_COLUMN_LINES`.
 /// `at`/`count` are already validated `>= 1` by the readers. The `action` is
 /// still the raw string (its validity is an apply-time concern), so an
 /// unknown action is only band-checked here — the apply arm rejects it.
@@ -328,19 +330,19 @@ fn validate_rowcol_band(
     )
   }
   if is_looping_action(action) {
-    if count > MAX_ROWCOL_BAND {
+    if count > MAX_ROW_COLUMN_BAND {
       raise op_error(
         reader.index,
         reader.op,
-        "'count' of \{count} exceeds the per-op \{action} limit of \{MAX_ROWCOL_BAND} \{axis}s",
+        "'count' of \{count} exceeds the per-op \{action} limit of \{MAX_ROW_COLUMN_BAND} \{axis}s",
       )
     }
     rowcol_cells.val = rowcol_cells.val + count.to_int64()
-    if rowcol_cells.val > MAX_TOTAL_ROWCOL_CELLS {
+    if rowcol_cells.val > MAX_TOTAL_ROW_COLUMN_LINES {
       raise op_error(
         reader.index,
         reader.op,
-        "row/col hide/show/height touch past \{MAX_TOTAL_ROWCOL_CELLS} total lines",
+        "row/col hide/show/height touch past \{MAX_TOTAL_ROW_COLUMN_LINES} total lines",
       )
     }
   }

@@ -66,6 +66,27 @@ async test "fresh XLSX creation uses complete validation and atomic publication"
 }
 
 ///|
+async test "fresh XLSX creation normalizes invalid worksheet names" {
+  with_xlsx_transaction_dir(directory => {
+    let output = "\{directory}/invalid.xlsx"
+    let code = try {
+      ignore(
+        @xlsx.create_workbook(
+          @transaction.create_transaction_options(output),
+          "bad/name",
+        ),
+      )
+      ""
+    } catch {
+      @transaction.TransactionError(code~, ..) => code
+      error => fail("expected TransactionError, received \{error}")
+    }
+    assert_eq(code, "office.xlsx.invalid_sheet_name")
+    assert_false(@afs.exists(output))
+  })
+}
+
+///|
 async test "XLSX batch applies once and reports full rewrite preservation" {
   with_xlsx_transaction_dir(directory => {
     let input = "\{directory}/input.xlsx"

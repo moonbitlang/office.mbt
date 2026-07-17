@@ -259,6 +259,10 @@ pub fn capabilities() -> Json {
       "max_touched_cells": Json::number(MAX_TOTAL_TOUCHED_CELLS.to_double()),
       "max_style_cells": Json::number(MAX_TOTAL_STYLE_CELLS.to_double()),
       "max_new_styles": Json::number(MAX_TOTAL_NEW_STYLES.to_double()),
+      "max_row_column_band": Json::number(MAX_ROW_COLUMN_BAND.to_double()),
+      "max_row_column_lines": Json::number(
+        MAX_TOTAL_ROW_COLUMN_LINES.to_double(),
+      ),
     }),
     "ops": Json::array(ops),
   })

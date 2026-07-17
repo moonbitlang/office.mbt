@@ -1291,7 +1291,7 @@ async fn docx_outline_human(
   let output = DocxHumanWriter::new(maximum)
   output.begin_line()
   output.write_plain("docx: ")
-  output.write_plain(raw_human_text(projection.file, 160))
+  output.write_plain(human_text(projection.file, 160))
   output.begin_line()
   output.write_plain("scanned elements: \{projection.entries.length()}")
   projection.cooperate(work=docx_cli_projection_yield_elements)

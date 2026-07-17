@@ -228,7 +228,19 @@ pub async fn create_workbook(
     Xlsx,
     budget => {
       let workbook = @excel.new_workbook()
-      ignore(workbook.add_sheet(sheet))
+      ignore(
+        workbook.add_sheet(sheet) catch {
+          error =>
+            raise xlsx_transaction_failure(
+              "office.xlsx.invalid_sheet_name",
+              "could not create the first worksheet: " +
+              bounded_xlsx_message(
+                repr(error),
+                xlsx_transaction_max_message_chars,
+              ),
+            )
+        },
+      )
       @transaction.transaction_mutation(
         serialize_transaction_workbook(
           workbook,

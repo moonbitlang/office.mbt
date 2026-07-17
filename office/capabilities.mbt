@@ -45,6 +45,12 @@ pub const SCHEMA_XLSX_TEXT : String = "office.xlsx.text/1"
 pub const SCHEMA_XLSX_QUERY : String = "office.xlsx.query/1"
 
 ///|
+pub const SCHEMA_XLSX_CREATE_RESULT : String = "office.xlsx.create/1"
+
+///|
+pub const SCHEMA_XLSX_BATCH_RESULT : String = "office.xlsx.batch/1"
+
+///|
 /// One declared input or output field in the Office capability registry.
 pub(all) struct CapabilityField {
   name : String
@@ -604,6 +610,112 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           SCHEMA_XLSX_QUERY,
           ["format=xlsx"],
         ),
+      ],
+    },
+    {
+      name: "create",
+      summary: "Create a validated Office document atomically",
+      usage: "office create xlsx OUTPUT [--sheet NAME] [--dry-run] [--overwrite] [--json]",
+      formats: ["xlsx"],
+      aliases: [],
+      inputs: [
+        capability_field(
+          "format", "literal(xlsx)", true, "document format subcommand",
+        ),
+      ],
+      outputs: [],
+      output_modes: ["human", "json"],
+      variants: [
+        {
+          name: "xlsx",
+          usage: "office create xlsx OUTPUT [--sheet NAME] [--dry-run] [--overwrite] [--json]",
+          result_schema: SCHEMA_XLSX_CREATE_RESULT,
+          inputs: [
+            capability_field("output", "path", true, "new .xlsx destination"),
+            capability_field(
+              "sheet", "xlsx-sheet-name", false, "first worksheet name; default Sheet1",
+            ),
+            capability_field(
+              "dry-run", "boolean", false, "validate without publishing",
+            ),
+            capability_field(
+              "overwrite", "boolean", false, "atomically replace an existing regular-file destination",
+            ),
+            capability_field(
+              "json", "boolean", false, "emit office.output/1 JSON",
+            ),
+          ],
+          outputs: [
+            capability_field(
+              "sheet", "xlsx-sheet-name", true, "created worksheet name",
+            ),
+            capability_field(
+              "transaction",
+              SCHEMA_TRANSACTION,
+              true,
+              "validation, preservation, and publication report",
+            ),
+          ],
+          constraints: [
+            "output-extension=.xlsx", "create-new-by-default", "transactional-publication",
+            "bounded-candidate-package",
+          ],
+          actions: [],
+          output_modes: ["human", "json"],
+        },
+      ],
+    },
+    {
+      name: "batch",
+      summary: "Apply one strict XLSX operation script transactionally",
+      usage: "office batch FILE SCRIPT [--out FILE] [--dry-run] [--overwrite] [--json]",
+      formats: ["xlsx"],
+      aliases: [],
+      inputs: [],
+      outputs: [],
+      output_modes: ["human", "json"],
+      variants: [
+        {
+          name: "xlsx",
+          usage: "office batch FILE SCRIPT [--out FILE] [--dry-run] [--overwrite] [--json]",
+          result_schema: SCHEMA_XLSX_BATCH_RESULT,
+          inputs: [
+            capability_field("file", "path", true, "existing .xlsx package"),
+            capability_field(
+              "script", "xlsx.batch/1-file", true, "strict bounded UTF-8 JSON operation script",
+            ),
+            capability_field(
+              "out", "path", false, "separate .xlsx publication destination",
+            ),
+            capability_field(
+              "dry-run", "boolean", false, "validate without publishing",
+            ),
+            capability_field(
+              "overwrite", "boolean", false, "replace an existing separate destination",
+            ),
+            capability_field(
+              "json", "boolean", false, "emit office.output/1 JSON",
+            ),
+          ],
+          outputs: [
+            capability_field(
+              "stats", "object{operation_count,touched_cells,style_cells,row_column_lines,new_style_records}",
+              true, "bounded parsed-plan resource accounting",
+            ),
+            capability_field(
+              "transaction",
+              SCHEMA_TRANSACTION,
+              true,
+              "validation, preservation, and publication report",
+            ),
+          ],
+          constraints: [
+            "schema=xlsx.batch/1", "overwrite-requires(out)", "out-extension-must-match-input-format",
+            "transactional-publication", "full-workbook-rewrite-on-change", "zero-op-reuses-original",
+          ],
+          actions: [],
+          output_modes: ["human", "json"],
+        },
       ],
     },
     {

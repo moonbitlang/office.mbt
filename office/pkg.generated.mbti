@@ -29,6 +29,10 @@ pub const SCHEMA_RAW_RESULT : String = "office.raw.result/1"
 
 pub const SCHEMA_TRANSACTION : String = "office.transaction/1"
 
+pub const SCHEMA_XLSX_BATCH_RESULT : String = "office.xlsx.batch/1"
+
+pub const SCHEMA_XLSX_CREATE_RESULT : String = "office.xlsx.create/1"
+
 pub const SCHEMA_XLSX_ELEMENT : String = "office.xlsx.element/1"
 
 pub const SCHEMA_XLSX_OUTLINE : String = "office.xlsx.outline/1"

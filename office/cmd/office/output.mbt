@@ -6,6 +6,25 @@ enum OutputMode {
 }
 
 ///|
+fn transaction_failure(error : @transaction.TransactionError) -> CliFailure {
+  CliFailure(error.to_protocol_error())
+}
+
+///|
+fn unexpected_cli_failure(
+  code : String,
+  operation : String,
+  error : Error,
+) -> CliFailure {
+  CliFailure(
+    @lib.protocol_error(
+      code,
+      "\{operation} failed: \{bounded_text(error.to_string(), 240)}",
+    ),
+  )
+}
+
+///|
 fn format_resource_failure(
   format : String,
   resource : String,
@@ -121,6 +140,24 @@ fn terminal_safe_text(value : String) -> String {
     }
   }
   output.to_string()
+}
+
+///|
+fn human_text(value : String, maximum : Int) -> String {
+  terminal_safe_text(bounded_text(value, maximum))
+}
+
+///|
+fn human_transaction_status(report : @transaction.TransactionReport) -> String {
+  if report.dry_run {
+    "validated dry run"
+  } else if report.committed {
+    "committed"
+  } else if !report.changed {
+    "validated no-op"
+  } else {
+    "validated without publication"
+  }
 }
 
 ///|
