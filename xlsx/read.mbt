@@ -2870,8 +2870,12 @@ fn parse_col_dimensions(
   style_count : Int,
 ) -> Map[Int, ColDimension] raise XlsxError {
   let dims : Map[Int, ColDimension] = Map([])
+  let body = match extract_tag_body(xml, "cols") {
+    Some(value) => value
+    None => return dims
+  }
   let mut first = true
-  for chunk in xml.split("<col ") {
+  for chunk in body.split("<col ") {
     if first {
       first = false
       continue
@@ -3497,7 +3501,21 @@ fn read_zip_archive_core_unchecked(
         Some(value) => value
         None => raise MissingPart(path=sheet_path)
       }
-      let sheet_xml = decode(sheet_bytes)
+      let sheet_source_xml = decode_source(sheet_bytes)
+      read_budget.charge_work(sheet_source_xml.length())
+      let sheet_xml = canonicalize_xlsx_xml(
+        sheet_source_xml,
+        max_output_chars=limits.max_xml_part_bytes,
+      )
+      read_budget.charge_work(sheet_xml.length())
+      let sheet_core_xml = canonicalize_xlsx_worksheet_core(
+        sheet_source_xml,
+        sheet_xml,
+        limits.max_xml_part_bytes,
+      )
+      if sheet_core_xml != sheet_xml {
+        read_budget.charge_work(sheet_core_xml.length())
+      }
       let (
         cells,
         merged_cells,
@@ -3515,31 +3533,36 @@ fn read_zip_archive_core_unchecked(
         dimension_ref,
         picture_rel_id,
       ) = parse_worksheet(
-        sheet_xml,
+        sheet_core_xml,
         shared_strings,
         style_count,
         budget=read_budget,
       )
-      let hyperlink_elements = parse_hyperlink_elements(sheet_xml)
-      let table_part_ids = parse_table_part_ids(sheet_xml)
-      let pivot_part_ids = parse_pivot_table_part_ids(sheet_xml)
+      let hyperlink_elements = parse_hyperlink_elements(sheet_core_xml)
+      let table_part_ids = parse_table_part_ids(sheet_core_xml)
+      let pivot_part_ids = parse_pivot_table_part_ids(sheet_core_xml)
       let slicer_rel_ids = parse_sheet_slicer_rel_ids(sheet_xml)
-      let drawing_rel_id = parse_legacy_drawing_rel_id(sheet_xml, "drawing")
+      let drawing_rel_id = parse_legacy_drawing_rel_id(
+        sheet_core_xml, "drawing",
+      )
       let legacy_drawing_rel_id = parse_legacy_drawing_rel_id(
-        sheet_xml, "legacyDrawing",
+        sheet_core_xml, "legacyDrawing",
       )
       let legacy_drawing_hf_rel_id = parse_legacy_drawing_rel_id(
-        sheet_xml, "legacyDrawingHF",
+        sheet_core_xml, "legacyDrawingHF",
       )
       let sparkline_groups = parse_sparkline_groups(sheet_xml)
       let data_validations = parse_data_validations(
-        sheet_xml,
+        sheet_core_xml,
         budget=read_budget,
       )
       for dv in parse_data_validations_x14(sheet_xml, budget=read_budget) {
         data_validations.push(dv)
       }
       let conditional_formats = parse_conditional_formats(
+        // Base data-bar rules carry their x14 correlation id in a nested
+        // extLst, so this parser needs the preserved extension view. Cell and
+        // row parsing above still uses the extension-free structural view.
         sheet_xml,
         budget=read_budget,
       )
@@ -3548,7 +3571,10 @@ fn read_zip_archive_core_unchecked(
       }
       let x14_data_bars = parse_x14_data_bars(sheet_xml, budget=read_budget)
       let unknown_ext_blocks = parse_unknown_worksheet_ext_blocks(sheet_xml)
-      let ignored_errors = parse_ignored_errors(sheet_xml, budget=read_budget)
+      let ignored_errors = parse_ignored_errors(
+        sheet_core_xml,
+        budget=read_budget,
+      )
       let mut needs_hyperlink_rels = false
       for link in hyperlink_elements {
         if link.r_id is Some(_) {

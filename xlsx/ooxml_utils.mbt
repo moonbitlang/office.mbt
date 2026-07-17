@@ -106,6 +106,9 @@ fn extract_tag_body(
     Some(pos) => pos
     None => raise InvalidXml(msg="tag open not closed")
   }
+  if xml_str[start + 1:open_end].trim().has_suffix("/") {
+    return Some("")
+  }
   let body_start = open_end + 1
   let end = match xml_str.find(close_tag) {
     Some(pos) => pos
@@ -231,6 +234,14 @@ test "ooxml_utils: opening-tag lookup requires an exact name boundary" {
 test "ooxml_utils: extract_tag_body_from extracts body" {
   let xml = "<root><a>hello</a><a>world</a></root>"
   debug_inspect(extract_tag_body_from(xml, "a"), content="Some(\"hello\")")
+}
+
+///|
+test "ooxml_utils: extract_tag_body accepts an empty self-closing container" {
+  debug_inspect(
+    extract_tag_body("<root><items/></root>", "items"),
+    content="Some(\"\")",
+  )
 }
 
 ///|

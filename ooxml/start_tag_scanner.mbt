@@ -53,6 +53,9 @@ pub struct XmlStartTagScanner {
   priv open_name_starts : Array[Int]
   priv open_name_ends : Array[Int]
   priv open_name_rewrites : Array[Bool]
+  priv open_local_name_starts : Array[Int]
+  priv open_local_name_ends : Array[Int]
+  priv open_namespace_uris : Array[String]
   priv rewrite_element_namespaces : Array[String]
   priv rewrite_attribute_prefixes : Map[String, String]
   priv rewrite_output : StringBuilder
@@ -69,6 +72,10 @@ pub struct XmlStartTagScanner {
   priv mut current_tag_end : Int
   priv mut current_depth : Int
   priv mut current_namespace_uri : String
+  priv capture_element_namespaces : Array[String]
+  priv capture_element_local_name : String
+  priv mut capture_start : Int?
+  priv mut capture_depth : Int
 }
 
 ///|
@@ -789,6 +796,8 @@ fn xml_start_tag_scanner_with_rewrites(
   attribute_prefixes : Map[String, String],
   canonicalize_markup : Bool,
   rewrite_output_limit : Int,
+  capture_element_namespaces? : Array[String] = [],
+  capture_element_local_name? : String = "",
 ) -> XmlStartTagScanner {
   {
     xml,
@@ -802,6 +811,9 @@ fn xml_start_tag_scanner_with_rewrites(
     open_name_starts: [],
     open_name_ends: [],
     open_name_rewrites: [],
+    open_local_name_starts: [],
+    open_local_name_ends: [],
+    open_namespace_uris: [],
     rewrite_element_namespaces: element_namespaces,
     rewrite_attribute_prefixes: attribute_prefixes,
     rewrite_output: StringBuilder::new(),
@@ -818,6 +830,10 @@ fn xml_start_tag_scanner_with_rewrites(
     current_tag_end: 0,
     current_depth: 0,
     current_namespace_uri: "",
+    capture_element_namespaces,
+    capture_element_local_name,
+    capture_start: None,
+    capture_depth: 0,
   }
 }
 
@@ -868,9 +884,21 @@ fn XmlStartTagScanner::consume_end_tag(
       None => ()
     }
   }
+  match self.capture_start {
+    Some(capture_start) =>
+      if self.capture_depth == self.depth {
+        self.record_rewrite(capture_start, tag_end + 1, "")
+        self.capture_start = None
+        self.capture_depth = 0
+      }
+    None => ()
+  }
   ignore(self.open_name_starts.pop())
   ignore(self.open_name_ends.pop())
   ignore(self.open_name_rewrites.pop())
+  ignore(self.open_local_name_starts.pop())
+  ignore(self.open_local_name_ends.pop())
+  ignore(self.open_namespace_uris.pop())
   self.pop_namespace_depth(self.depth)
   self.depth = self.depth - 1
   if self.depth == 0 {
@@ -1008,8 +1036,28 @@ pub fn XmlStartTagScanner::next(
     self.current_name_end = name_end
     self.current_tag_end = tag_end
     self.current_depth = scope_depth
+    if self.capture_start is None &&
+      self.capture_element_local_name != "" &&
+      self.local_name() == self.capture_element_local_name {
+      for wanted in self.capture_element_namespaces {
+        if xml_string_equals_view(wanted, self.current_namespace_uri) {
+          self.capture_start = Some(start)
+          self.capture_depth = scope_depth
+          break
+        }
+      }
+    }
     self.index = tag_end + 1
     if self_closing {
+      match self.capture_start {
+        Some(capture_start) =>
+          if self.capture_depth == scope_depth {
+            self.record_rewrite(capture_start, tag_end + 1, "")
+            self.capture_start = None
+            self.capture_depth = 0
+          }
+        None => ()
+      }
       self.pending_namespace_pop = Some(scope_depth)
       if self.depth == 0 {
         self.root_closed = true
@@ -1019,6 +1067,9 @@ pub fn XmlStartTagScanner::next(
       self.open_name_starts.push(name_start)
       self.open_name_ends.push(name_end)
       self.open_name_rewrites.push(rewrite_name)
+      self.open_local_name_starts.push(self.current_name_start)
+      self.open_local_name_ends.push(self.current_name_end)
+      self.open_namespace_uris.push(self.current_namespace_uri)
     }
     return true
   }
@@ -1050,6 +1101,71 @@ pub fn XmlStartTagScanner::namespace_uri(
 /// Returns the one-based nesting depth of the current start tag.
 pub fn XmlStartTagScanner::depth(self : XmlStartTagScanner) -> Int {
   self.current_depth
+}
+
+///|
+/// Returns the local name of the current element's parent, or `None` for the
+/// document element.
+pub fn XmlStartTagScanner::parent_local_name(
+  self : XmlStartTagScanner,
+) -> StringView? {
+  let index = self.current_depth - 2
+  if index < 0 || index >= self.open_local_name_starts.length() {
+    None
+  } else {
+    Some(
+      self.xml[self.open_local_name_starts[index]:self.open_local_name_ends[index]],
+    )
+  }
+}
+
+///|
+/// Returns the namespace URI of the current element's parent, or `None` for
+/// the document element.
+pub fn XmlStartTagScanner::parent_namespace_uri(
+  self : XmlStartTagScanner,
+) -> String? {
+  let index = self.current_depth - 2
+  if index < 0 || index >= self.open_namespace_uris.length() {
+    None
+  } else {
+    Some(self.open_namespace_uris[index])
+  }
+}
+
+///|
+/// Removes every outermost subtree selected by expanded element name. `None`
+/// means the document was valid but contained no matching subtree. Namespace
+/// resolution and nesting are handled by the same bounded scanner used for
+/// canonicalization, so markup-looking text cannot create a removal span.
+pub fn remove_xml_expanded_name_subtrees(
+  xml : StringView,
+  element_namespaces : ArrayView[String],
+  local_name : String,
+) -> String? raise ParseXmlError {
+  if local_name == "" {
+    raise InvalidXml(msg="XML removal local name is empty")
+  }
+  let namespaces : Array[String] = []
+  namespaces.append(element_namespaces)
+  let scanner = xml_start_tag_scanner_with_rewrites(
+    xml,
+    [],
+    Map([]),
+    false,
+    xml.length(),
+    capture_element_namespaces=namespaces,
+    capture_element_local_name=local_name,
+  )
+  while scanner.next() {
+
+  }
+  if scanner.rewrite_count == 0 {
+    return None
+  }
+  scanner.charge_rewrite_output(xml.length() - scanner.rewrite_cursor)
+  scanner.rewrite_output.write_view(xml[scanner.rewrite_cursor:])
+  Some(scanner.rewrite_output.to_string())
 }
 
 ///|
@@ -1159,6 +1275,48 @@ test "start tag scanner resolves namespaces and decodes attributes once" {
   debug_inspect(scanner.attribute("urn:rel", "id"), content="Some(\"a&b\")")
   debug_inspect(scanner.attribute("", "plain"), content="Some(\"x y\")")
   assert_false(scanner.next())
+}
+
+///|
+test "start tag scanner exposes expanded parent names" {
+  let scanner = XmlStartTagScanner::new(
+    (
+      #|<s:root xmlns:s="urn:sheet"><s:items><s:item/><s:item><s:value/></s:item></s:items></s:root>
+    ),
+  )
+  assert_true(scanner.next())
+  assert_true(scanner.parent_local_name() is None)
+  assert_true(scanner.next())
+  assert_true(scanner.parent_local_name() is Some("root"))
+  debug_inspect(scanner.parent_namespace_uri(), content="Some(\"urn:sheet\")")
+  assert_true(scanner.next())
+  assert_true(scanner.parent_local_name() is Some("items"))
+  assert_true(scanner.next())
+  assert_true(scanner.parent_local_name() is Some("items"))
+  assert_true(scanner.next())
+  assert_true(scanner.parent_local_name() is Some("item"))
+}
+
+///|
+test "expanded-name subtree removal preserves text and other namespaces" {
+  let xml =
+    #|<s:root xmlns:s="urn:sheet" xmlns:x="urn:extension"><![CDATA[<s:extLst/>]]><x:extLst><s:value/></x:extLst><s:extLst><s:extLst><s:ignored/></s:extLst></s:extLst><s:value/></s:root>
+  debug_inspect(
+    remove_xml_expanded_name_subtrees(xml, ["urn:sheet"], "extLst"),
+    content=(
+      #|Some("<s:root xmlns:s=\"urn:sheet\" xmlns:x=\"urn:extension\"><![CDATA[<s:extLst/>]]><x:extLst><s:value/></x:extLst><s:value/></s:root>")
+    ),
+  )
+  let without_extension =
+    #|<s:root xmlns:s="urn:sheet"><s:value/></s:root>
+  debug_inspect(
+    remove_xml_expanded_name_subtrees(
+      without_extension,
+      ["urn:sheet"],
+      "extLst",
+    ),
+    content="None",
+  )
 }
 
 ///|

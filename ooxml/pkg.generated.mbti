@@ -28,6 +28,8 @@ pub fn parse_internal_relationship_targets(StringView, StringView) -> Map[String
 
 pub fn parse_internal_relationship_targets_by_types(StringView, ArrayView[String]) -> Map[String, String] raise ParseXmlError
 
+pub fn remove_xml_expanded_name_subtrees(StringView, ArrayView[String], String) -> String? raise ParseXmlError
+
 pub fn xml_needs_escape(StringView, attr~ : Bool) -> Bool
 
 // Errors
@@ -60,6 +62,8 @@ pub fn XmlStartTagScanner::local_name(Self) -> StringView
 pub fn XmlStartTagScanner::namespace_uri(Self) -> StringView
 pub fn XmlStartTagScanner::new(StringView) -> Self
 pub fn XmlStartTagScanner::next(Self) -> Bool raise ParseXmlError
+pub fn XmlStartTagScanner::parent_local_name(Self) -> StringView?
+pub fn XmlStartTagScanner::parent_namespace_uri(Self) -> String?
 
 // Type aliases
 

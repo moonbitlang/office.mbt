@@ -44,13 +44,34 @@ fn parse_workbook_sheets(
 ) -> Array[WorkbookSheetInfo] raise XlsxError {
   let sheets : Array[WorkbookSheetInfo] = []
   let scanner = @ooxml.XmlStartTagScanner::new(xml)
+  let mut workbook_namespace : String? = None
   while workbook_scanner_next(scanner) {
     let namespace_uri = scanner.namespace_uri()
+    if scanner.depth() == 1 {
+      if scanner.local_name() != "workbook" ||
+        (
+          namespace_uri != transitional_spreadsheet_namespace &&
+          namespace_uri != strict_spreadsheet_namespace
+        ) {
+        raise InvalidXml(msg="workbook document element is invalid")
+      }
+      workbook_namespace = Some(namespace_uri.to_owned())
+      continue
+    }
     if (
         namespace_uri != transitional_spreadsheet_namespace &&
         namespace_uri != strict_spreadsheet_namespace
       ) ||
       scanner.local_name() != "sheet" {
+      continue
+    }
+    let correct_parent = scanner.parent_local_name() is Some("sheets") &&
+      scanner.parent_namespace_uri() == workbook_namespace
+    if scanner.depth() != 3 ||
+      namespace_uri.to_owned() != workbook_namespace.unwrap_or("") ||
+      !correct_parent {
+      // SpreadsheetML elements outside the schema-defined sheet collection
+      // are extension payload, not logical workbook tabs.
       continue
     }
     if sheets.length() >= max_sheets {

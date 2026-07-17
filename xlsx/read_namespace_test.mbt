@@ -126,3 +126,49 @@ test "main-part names, relationship targets, and ids decode XML entities" {
     content="Some(\"qualified-value\")",
   )
 }
+
+///|
+test "SpreadsheetML-looking extension payload cannot create sheets or cells" {
+  for strict in [false, true] {
+    let bytes = namespace_qualified_xlsx_fixture(strict, false)
+    let archive = @zip.read(bytes)
+    guard archive.get("xl/workbook.xml") is Some(workbook_bytes) else {
+      fail("missing workbook fixture part")
+    }
+    let workbook_xml = @encoding/utf8.decode(workbook_bytes) catch {
+      _ => fail("workbook fixture is not UTF-8")
+    }
+    let workbook_with_decoy = workbook_xml.replace(
+      old="  <s:sheets>",
+      new="  <s:extLst><s:ext uri=\"urn:mbtexcel:decoy\"><s:sheet name=\"Decoy\" sheetId=\"99\" q:id=\"sheet\"/></s:ext></s:extLst>\n  <s:sheets>",
+    )
+    if workbook_with_decoy == workbook_xml {
+      fail("workbook injection marker was not found")
+    }
+    archive.add("xl/workbook.xml", @encoding/utf8.encode(workbook_with_decoy))
+    guard archive.get("xl/worksheets/sheet.xml") is Some(worksheet_bytes) else {
+      fail("missing worksheet fixture part")
+    }
+    let worksheet_xml = @encoding/utf8.decode(worksheet_bytes) catch {
+      _ => fail("worksheet fixture is not UTF-8")
+    }
+    let worksheet_with_decoy = worksheet_xml.replace(
+      old="<s:sheetData>",
+      new="<s:extLst><s:ext uri=\"urn:mbtexcel:decoy\"><s:row r=\"99\"><s:c r=\"Z99\" t=\"str\"><s:v>phantom</s:v></s:c></s:row></s:ext></s:extLst><s:sheetData>",
+    )
+    if worksheet_with_decoy == worksheet_xml {
+      fail("worksheet injection marker was not found")
+    }
+    archive.add(
+      "xl/worksheets/sheet.xml",
+      @encoding/utf8.encode(worksheet_with_decoy),
+    )
+    let parsed = @xlsx.read(@zip.write(archive))
+    debug_inspect(parsed.get_sheet_list(), content="[\"Qualified\"]")
+    debug_inspect(parsed.get_cell_value("Qualified", "Z99"), content="None")
+    debug_inspect(
+      parsed.get_cell_value("Qualified", "A1"),
+      content="Some(\"qualified-value\")",
+    )
+  }
+}

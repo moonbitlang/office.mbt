@@ -1,4 +1,12 @@
 ///|
+fn worksheet_sheet_data_body(xml : StringView) -> String raise XlsxError {
+  match extract_tag_body(xml, "sheetData") {
+    Some(value) => value
+    None => ""
+  }
+}
+
+///|
 fn parse_worksheet(
   xml : StringView,
   shared_strings : Array[SharedStringEntry],
@@ -22,8 +30,9 @@ fn parse_worksheet(
   String?,
 ) raise XlsxError {
   let cells : Array[Cell] = []
+  let sheet_data = worksheet_sheet_data_body(xml)
   let mut first = true
-  for chunk in xml.split("<c ") {
+  for chunk in sheet_data.split("<c ") {
     if first {
       first = false
       continue
@@ -249,7 +258,7 @@ fn parse_worksheet(
   ignore(validated_shared_formula_masters(cells))
   let merged_cells = parse_merge_cells(xml)
   let auto_filter = parse_auto_filter(xml)
-  let row_dimensions = parse_row_dimensions(xml, style_count)
+  let row_dimensions = parse_row_dimensions(sheet_data, style_count)
   let col_dimensions = parse_col_dimensions(xml, style_count)
   let page_margins = parse_page_margins(xml)
   let page_layout = parse_page_layout(xml)
