@@ -15,10 +15,32 @@
 pub const MAX_BATCH_OPS : Int = 10_000
 
 ///|
+/// Maximum encoded size of one strict batch script. This is enforced before
+/// UTF-8 decode or JSON parsing by `parse_script_bytes`.
+pub const MAX_BATCH_SCRIPT_BYTES : Int = 8 * 1024 * 1024
+
+///|
 /// Aggregate cap on cells touched by `style` range expansions across one
 /// script: the per-range parser caps each range at 100k cells, but 10k
 /// such ops would still be a billion mutations — an OOM, not a workload.
 pub const MAX_TOTAL_STYLE_CELLS : Int64 = 1_000_000
+
+///|
+/// Aggregate cap on direct cell writes plus expanded style-range writes. Some
+/// range-bearing metadata operations (tables, validation and conditional
+/// formatting) do not enumerate their ranges and therefore do not consume this
+/// counter.
+pub const MAX_TOTAL_TOUCHED_CELLS : Int64 = 1_000_000
+
+///|
+/// Aggregate cap on new workbook style/differential-style records requested by
+/// `style` and `cf` operations.
+pub const MAX_TOTAL_NEW_STYLES : Int = 4_096
+
+///|
+/// Maximum lexical length of a JSON number outside strings. Longer spellings
+/// hit known upstream rounding edge cases and are never useful workbook input.
+pub const MAX_BATCH_NUMBER_TOKEN_CHARS : Int = 40
 
 ///|
 /// The sheet grid limits (Excel's maximums), for the `row`/`col` ops' band
@@ -213,6 +235,35 @@ priv enum OpKind {
 struct BatchOp(OpKind)
 
 ///|
+/// Resource accounting retained with one parsed batch plan.
+pub struct BatchPlanStats {
+  operation_count : Int
+  touched_cells : Int64
+  style_cells : Int64
+  row_column_lines : Int64
+  new_style_records : Int
+}
+
+///|
+/// An opaque, strictly parsed `xlsx.batch/1` plan. Keeping operations and
+/// accounting together prevents callers from validating one array and applying
+/// another.
+struct BatchPlan {
+  ops : Array[BatchOp]
+  stats : BatchPlanStats
+}
+
+///|
+pub fn BatchPlan::stats(self : BatchPlan) -> BatchPlanStats {
+  self.stats
+}
+
+///|
+pub fn BatchPlan::operation_count(self : BatchPlan) -> Int {
+  self.stats.operation_count
+}
+
+///|
 /// The op's script name (also its CLI subcommand name), for error text.
 pub fn BatchOp::name(self : BatchOp) -> String {
   match self.0 {
@@ -296,11 +347,61 @@ fn validate_rowcol_band(
 }
 
 ///|
-/// Parses a full `xlsx.batch/1` script document into ops. Strict: the
-/// envelope must be an object holding exactly `schema` and `ops`, the
-/// schema string must match, and every op must validate. Zero ops is a
-/// valid no-op.
-pub fn parse_script(document : Json) -> Array[BatchOp] raise BatchError {
+fn check_number_token_lengths(text : String) -> Unit raise BatchError {
+  let mut in_string = false
+  let mut escaped = false
+  let mut run = 0
+  for index in 0..<text.length() {
+    let character = text[index]
+    if in_string {
+      if escaped {
+        escaped = false
+      } else if character == '\\' {
+        escaped = true
+      } else if character == '"' {
+        in_string = false
+      }
+    } else if character == '"' {
+      in_string = true
+      run = 0
+    } else if character is ('0'..='9' | '.' | 'e' | 'E' | '+' | '-') {
+      run = run + 1
+      if run > MAX_BATCH_NUMBER_TOKEN_CHARS {
+        raise BatchError(
+          "numeric literal longer than \{MAX_BATCH_NUMBER_TOKEN_CHARS} characters",
+        )
+      }
+    } else {
+      run = 0
+    }
+  }
+}
+
+///|
+/// Parses encoded `xlsx.batch/1` bytes under the script-size, UTF-8, numeric
+/// token, JSON and operation-resource boundaries in that order.
+pub fn parse_script_bytes(data : BytesView) -> BatchPlan raise BatchError {
+  if data.length() > MAX_BATCH_SCRIPT_BYTES {
+    raise BatchError(
+      "batch script has \{data.length()} bytes; max is \{MAX_BATCH_SCRIPT_BYTES}",
+    )
+  }
+  let text = @utf8.decode(data, ignore_bom=true) catch {
+    _ => raise BatchError("batch script is not valid UTF-8")
+  }
+  check_number_token_lengths(text)
+  let document = @json.parse(text) catch {
+    error => raise BatchError("invalid batch JSON: \{error}")
+  }
+  parse_plan(document)
+}
+
+///|
+/// Parses a full `xlsx.batch/1` JSON document into one opaque plan. Strict:
+/// the envelope must be an object holding exactly `schema` and `ops`, the
+/// schema string must match, and every op must validate. Zero ops is a valid
+/// no-op.
+pub fn parse_plan(document : Json) -> BatchPlan raise BatchError {
   let root = match document {
     Object(map) => map
     _ => raise BatchError("batch script must be a JSON object")
@@ -333,11 +434,33 @@ pub fn parse_script(document : Json) -> Array[BatchOp] raise BatchError {
   }
   let ops = []
   let style_cells : Ref[Int64] = Ref(0)
+  let touched_cells : Ref[Int64] = Ref(0)
   let rowcol_cells : Ref[Int64] = Ref(0)
+  let new_styles : Ref[Int] = Ref(0)
   for index, item in items {
-    ops.push(parse_op(index, item, style_cells, rowcol_cells))
+    ops.push(
+      parse_op(
+        index, item, style_cells, touched_cells, rowcol_cells, new_styles,
+      ),
+    )
   }
-  ops
+  {
+    ops,
+    stats: {
+      operation_count: ops.length(),
+      touched_cells: touched_cells.val,
+      style_cells: style_cells.val,
+      row_column_lines: rowcol_cells.val,
+      new_style_records: new_styles.val,
+    },
+  }
+}
+
+///|
+/// Compatibility projection for callers that still apply individual opaque
+/// operations. New transactional callers should retain and apply `BatchPlan`.
+pub fn parse_script(document : Json) -> Array[BatchOp] raise BatchError {
+  parse_plan(document).ops.copy()
 }
 
 ///|
@@ -345,7 +468,9 @@ fn parse_op(
   index : Int,
   item : Json,
   style_cells : Ref[Int64],
+  touched_cells : Ref[Int64],
   rowcol_cells : Ref[Int64],
+  new_styles : Ref[Int],
 ) -> BatchOp raise BatchError {
   let entry = match item {
     Object(map) => map
@@ -407,6 +532,14 @@ fn parse_op(
           index,
           name,
           "style ranges expand past \{MAX_TOTAL_STYLE_CELLS} total cells",
+        )
+      }
+      touched_cells.val = touched_cells.val + cells
+      if touched_cells.val > MAX_TOTAL_TOUCHED_CELLS {
+        raise op_error(
+          index,
+          name,
+          "cell mutations expand past \{MAX_TOTAL_TOUCHED_CELLS} total cells",
         )
       }
       OpStyle(
@@ -553,6 +686,29 @@ fn parse_op(
       )
   }
   reader.finish()
+  match op {
+    OpSet(..) | OpFormula(..) => {
+      touched_cells.val = touched_cells.val + 1L
+      if touched_cells.val > MAX_TOTAL_TOUCHED_CELLS {
+        raise op_error(
+          index,
+          name,
+          "cell mutations expand past \{MAX_TOTAL_TOUCHED_CELLS} total cells",
+        )
+      }
+    }
+    OpStyle(..) | OpCf(..) => {
+      new_styles.val = new_styles.val + 1
+      if new_styles.val > MAX_TOTAL_NEW_STYLES {
+        raise op_error(
+          index,
+          name,
+          "new style records exceed \{MAX_TOTAL_NEW_STYLES} per script",
+        )
+      }
+    }
+    _ => ()
+  }
   BatchOp(op)
 }
 
@@ -1706,5 +1862,22 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
             "col: unknown action '\{other}' (expected one of: hide, show)",
           )
       }
+  }
+}
+
+///|
+/// Applies every operation in order to an in-memory workbook. An application
+/// failure is normalized to `BatchError` with the 0-based operation index and
+/// operation name. Callers retain all-or-nothing semantics by discarding this
+/// workbook unless subsequent serialization, validation and publication pass.
+pub fn BatchPlan::apply(
+  self : BatchPlan,
+  workbook : @xlsx.Workbook,
+) -> Unit raise BatchError {
+  for index, op in self.ops {
+    apply_op(workbook, op) catch {
+      BatchError(message) => raise op_error(index, op.name(), message)
+      error => raise op_error(index, op.name(), error.to_string())
+    }
   }
 }

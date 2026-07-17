@@ -1,0 +1,32 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/office/xlsx"
+
+import {
+  "bobzhang/mbtexcel/batch",
+  "bobzhang/office/transaction",
+}
+
+// Values
+pub async fn create_workbook(@transaction.CreateTransactionOptions, String) -> XlsxCreateResult
+
+pub fn parse_batch(BytesView) -> @batch.BatchPlan raise @batch.BatchError
+
+pub async fn transact_batch(@transaction.TransactionOptions, @batch.BatchPlan) -> XlsxBatchResult
+
+// Errors
+
+// Types and methods
+pub struct XlsxBatchResult {
+  stats : @batch.BatchPlanStats
+  transaction : @transaction.TransactionReport
+}
+
+pub struct XlsxCreateResult {
+  sheet : String
+  transaction : @transaction.TransactionReport
+}
+
+// Type aliases
+
+// Traits
+

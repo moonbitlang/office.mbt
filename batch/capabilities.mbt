@@ -254,8 +254,11 @@ pub fn capabilities() -> Json {
     "schema": Json::string(SCHEMA_CAPABILITIES),
     "batch_schema": Json::string(@inspect.SCHEMA_BATCH),
     "limits": Json::object({
+      "max_script_bytes": Json::number(MAX_BATCH_SCRIPT_BYTES.to_double()),
       "max_ops": Json::number(MAX_BATCH_OPS.to_double()),
+      "max_touched_cells": Json::number(MAX_TOTAL_TOUCHED_CELLS.to_double()),
       "max_style_cells": Json::number(MAX_TOTAL_STYLE_CELLS.to_double()),
+      "max_new_styles": Json::number(MAX_TOTAL_NEW_STYLES.to_double()),
     }),
     "ops": Json::array(ops),
   })

@@ -17,6 +17,159 @@ fn apply_script(workbook : @xlsx.Workbook, script : String) -> Int raise {
 }
 
 ///|
+test "opaque batch plans retain deterministic resource accounting" {
+  let script =
+    #|{
+    #|  "schema": "xlsx.batch/1",
+    #|  "ops": [
+    #|    {"op":"set","params":{"sheet":"Data","cell":"A1","value":1}},
+    #|    {"op":"formula","params":{"sheet":"Data","cell":"A2","formula":"=A1"}},
+    #|    {"op":"style","params":{"sheet":"Data","range":"A1:B2","bold":true}},
+    #|    {"op":"row","params":{"sheet":"Data","action":"hide","at":2,"count":3}},
+    #|    {"op":"cf","params":{"sheet":"Data","range":"A1","type":"formula","formula":"=A1>0","fill":"FF0000"}}
+    #|  ]
+    #|}
+  let plan = @batch.parse_script_bytes(@utf8.encode(script))
+  let stats = plan.stats()
+  assert_eq(plan.operation_count(), 5)
+  assert_eq(stats.operation_count, 5)
+  assert_eq(stats.touched_cells, 6L)
+  assert_eq(stats.style_cells, 4L)
+  assert_eq(stats.row_column_lines, 3L)
+  assert_eq(stats.new_style_records, 2)
+}
+
+///|
+test "encoded batch boundary rejects oversized, invalid UTF-8 and long numbers" {
+  try
+    @batch.parse_script_bytes(
+      Bytes::make(@batch.MAX_BATCH_SCRIPT_BYTES + 1, b' '),
+    )
+  catch {
+    BatchError(message) =>
+      assert_true(message.contains("max is \{@batch.MAX_BATCH_SCRIPT_BYTES}"))
+  } noraise {
+    _ => fail("expected oversized script rejection")
+  }
+  try @batch.parse_script_bytes(Bytes::from_array([b'\xFF'])) catch {
+    BatchError(message) => assert_eq(message, "batch script is not valid UTF-8")
+  } noraise {
+    _ => fail("expected invalid UTF-8 rejection")
+  }
+  let long_number = "1".repeat(@batch.MAX_BATCH_NUMBER_TOKEN_CHARS + 1)
+  try
+    @batch.parse_script_bytes(
+      @utf8.encode(
+        "{\"schema\":\"xlsx.batch/1\",\"ops\":[{\"op\":\"set\",\"params\":{\"sheet\":\"S\",\"cell\":\"A1\",\"value\":\{long_number}}}]}",
+      ),
+    )
+  catch {
+    BatchError(message) => assert_true(message.contains("numeric literal"))
+  } noraise {
+    _ => fail("expected long numeric token rejection")
+  }
+  // The lexical limit deliberately ignores number-like text inside strings.
+  let quoted = "1".repeat(@batch.MAX_BATCH_NUMBER_TOKEN_CHARS + 1)
+  let accepted = @batch.parse_script_bytes(
+    @utf8.encode(
+      "{\"schema\":\"xlsx.batch/1\",\"ops\":[{\"op\":\"set\",\"params\":{\"sheet\":\"S\",\"cell\":\"A1\",\"value\":\"\{quoted}\"}}]}",
+    ),
+  )
+  assert_eq(accepted.operation_count(), 1)
+}
+
+///|
+test "batch plan apply normalizes operation index and name" {
+  let plan = @batch.parse_script_bytes(
+    @utf8.encode(
+      "{\"schema\":\"xlsx.batch/1\",\"ops\":[{\"op\":\"set\",\"params\":{\"sheet\":\"Missing\",\"cell\":\"A1\",\"value\":1}}]}",
+    ),
+  )
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  try plan.apply(workbook) catch {
+    BatchError(message) => {
+      assert_true(message.has_prefix("op 0 (set):"))
+      assert_true(message.length() > "op 0 (set):".length())
+    }
+  } noraise {
+    _ => fail("expected missing-sheet application failure")
+  }
+}
+
+///|
+test "batch plans cap aggregate direct and expanded cell writes" {
+  let ops = []
+  for _ in 0..<10 {
+    ops.push(
+      Json::object({
+        "op": Json::string("style"),
+        "params": Json::object({
+          "sheet": Json::string("S"),
+          "range": Json::string("A1:A100000"),
+        }),
+      }),
+    )
+  }
+  ops.push(
+    Json::object({
+      "op": Json::string("set"),
+      "params": Json::object({
+        "sheet": Json::string("S"),
+        "cell": Json::string("B1"),
+        "value": Json::number(1),
+      }),
+    }),
+  )
+  try
+    @batch.parse_plan(
+      Json::object({
+        "schema": Json::string("xlsx.batch/1"),
+        "ops": Json::array(ops),
+      }),
+    )
+  catch {
+    BatchError(message) => {
+      assert_true(message.contains("op 10 (set)"))
+      assert_true(message.contains("total cells"))
+    }
+  } noraise {
+    _ => fail("expected aggregate touched-cell rejection")
+  }
+}
+
+///|
+test "batch plans cap aggregate style records" {
+  let ops = []
+  for _ in 0..<=@batch.MAX_TOTAL_NEW_STYLES {
+    ops.push(
+      Json::object({
+        "op": Json::string("style"),
+        "params": Json::object({
+          "sheet": Json::string("S"),
+          "range": Json::string("A1"),
+        }),
+      }),
+    )
+  }
+  try
+    @batch.parse_plan(
+      Json::object({
+        "schema": Json::string("xlsx.batch/1"),
+        "ops": Json::array(ops),
+      }),
+    )
+  catch {
+    BatchError(message) => {
+      assert_true(message.contains("op \{@batch.MAX_TOTAL_NEW_STYLES} (style)"))
+      assert_true(message.contains("new style records"))
+    }
+  } noraise {
+    _ => fail("expected aggregate style-record rejection")
+  }
+}
+
+///|
 test "a script covering every op kind applies like its CLI twins" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Data"))

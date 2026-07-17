@@ -7,9 +7,17 @@ import {
 }
 
 // Values
+pub const MAX_BATCH_NUMBER_TOKEN_CHARS : Int = 40
+
 pub const MAX_BATCH_OPS : Int = 10_000
 
+pub const MAX_BATCH_SCRIPT_BYTES : Int = 8388608
+
+pub const MAX_TOTAL_NEW_STYLES : Int = 4_096
+
 pub const MAX_TOTAL_STYLE_CELLS : Int64 = 1_000_000
+
+pub const MAX_TOTAL_TOUCHED_CELLS : Int64 = 1_000_000
 
 pub const SCHEMA_CAPABILITIES : String = "xlsx.capabilities/1"
 
@@ -21,7 +29,11 @@ pub fn capabilities() -> Json
 
 pub fn chart_type_of(String) -> @xlsx.ChartType raise BatchError
 
+pub fn parse_plan(Json) -> BatchPlan raise BatchError
+
 pub fn parse_script(Json) -> Array[BatchOp] raise BatchError
+
+pub fn parse_script_bytes(BytesView) -> BatchPlan raise BatchError
 
 pub fn qualify_range(String, String) -> String
 
@@ -40,6 +52,19 @@ pub impl Show for BatchError
 // Types and methods
 type BatchOp
 pub fn BatchOp::name(Self) -> String
+
+type BatchPlan
+pub fn BatchPlan::apply(Self, @xlsx.Workbook) -> Unit raise BatchError
+pub fn BatchPlan::operation_count(Self) -> Int
+pub fn BatchPlan::stats(Self) -> BatchPlanStats
+
+pub struct BatchPlanStats {
+  operation_count : Int
+  touched_cells : Int64
+  style_cells : Int64
+  row_column_lines : Int64
+  new_style_records : Int
+}
 
 // Type aliases
 
