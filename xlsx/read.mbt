@@ -3158,7 +3158,7 @@ fn read_zip_archive_core_unchecked(
 ) -> Workbook raise XlsxError {
   let part_names = archive_part_name_index(archive)
   let read_budget = ReadBudget::new(limits, cancelled~)
-  let decode = (value : BytesView) => {
+  let decode_source = (value : BytesView) => {
     if value.length() > limits.max_xml_part_bytes {
       raise ResourceLimitExceeded(
         kind="xml_part_bytes",
@@ -3170,6 +3170,11 @@ fn read_zip_archive_core_unchecked(
     read_budget.scan_xml(decoded)
     decoded
   }
+  let decode = (value : BytesView) => {
+    let decoded = decode_source(value)
+    read_budget.charge_work(decoded.length())
+    canonicalize_xlsx_xml(decoded)
+  }
   let workbook_xml_part_path = actual_archive_part_path(
     part_names,
     resolve_workbook_xml_part_path(archive, part_names, decode),
@@ -3178,7 +3183,9 @@ fn read_zip_archive_core_unchecked(
     Some(value) => value
     None => raise MissingPart(path=workbook_xml_part_path)
   }
-  let workbook_xml = decode(workbook_bytes)
+  let workbook_source_xml = decode_source(workbook_bytes)
+  read_budget.charge_work(workbook_source_xml.length())
+  let workbook_xml = canonicalize_xlsx_xml(workbook_source_xml)
   let workbook_rels_path = actual_archive_part_path(
     part_names,
     rels_path_for_part(workbook_xml_part_path),
@@ -3187,7 +3194,10 @@ fn read_zip_archive_core_unchecked(
     Some(value) => decode(value)
     None => raise MissingPart(path=workbook_rels_path)
   }
-  let sheets = parse_workbook_sheets(workbook_xml, limits.max_workbook_sheets)
+  let sheets = parse_workbook_sheets(
+    workbook_source_xml,
+    limits.max_workbook_sheets,
+  )
   let sheet_names : Array[String] = []
   for entry in sheets {
     sheet_names.push(entry.name)

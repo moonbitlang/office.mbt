@@ -50,6 +50,12 @@ pub struct XmlStartTagScanner {
   priv mut next_namespace_id : Int
   priv open_name_starts : Array[Int]
   priv open_name_ends : Array[Int]
+  priv open_name_rewrites : Array[Bool]
+  priv rewrite_element_namespaces : Array[String]
+  priv rewrite_attribute_prefixes : Map[String, String]
+  priv rewrite_output : StringBuilder
+  priv mut rewrite_cursor : Int
+  priv mut rewrite_count : Int
   priv mut pending_namespace_pop : Int?
   priv mut root_seen : Bool
   priv mut root_closed : Bool
@@ -639,7 +645,7 @@ fn XmlStartTagScanner::validate_attributes(
           self.xml[attribute.name_start:attribute.name_end],
         )
     }
-    let (_, namespace_id) = self.resolve_prefix_identity(prefix, true)
+    let (uri, namespace_id) = self.resolve_prefix_identity(prefix, true)
     let local_names = match expanded_names.get(namespace_id) {
       Some(values) => values
       None => {
@@ -653,13 +659,66 @@ fn XmlStartTagScanner::validate_attributes(
       raise InvalidXml(msg="XML attribute is duplicated")
     }
     local_names.add(local_name)
+    match self.rewrite_attribute_prefixes.get(uri) {
+      Some(canonical_prefix) => {
+        let replacement = if canonical_prefix == "" {
+          local_name
+        } else {
+          canonical_prefix + ":" + local_name
+        }
+        if !xml_span_equals(
+            self.xml,
+            attribute.name_start,
+            attribute.name_end,
+            replacement,
+          ) {
+          self.record_name_rewrite(
+            attribute.name_start,
+            attribute.name_end,
+            replacement,
+          )
+        }
+      }
+      None => ()
+    }
   }
 }
 
 ///|
-/// Creates a namespace-aware cursor over `xml`. The source is borrowed; no
-/// copy of the full XML part is made.
-pub fn XmlStartTagScanner::new(xml : StringView) -> XmlStartTagScanner {
+fn XmlStartTagScanner::record_name_rewrite(
+  self : XmlStartTagScanner,
+  start : Int,
+  end : Int,
+  replacement : String,
+) -> Unit raise ParseXmlError {
+  if start < self.rewrite_cursor || end < start {
+    raise InvalidXml(msg="XML name rewrites overlap")
+  }
+  self.rewrite_output.write_view(self.xml[self.rewrite_cursor:start])
+  self.rewrite_output.write_string(replacement)
+  self.rewrite_cursor = end
+  self.rewrite_count = self.rewrite_count + 1
+}
+
+///|
+fn XmlStartTagScanner::should_unprefix_element(
+  self : XmlStartTagScanner,
+  namespace_uri : StringView,
+) -> Bool {
+  for wanted in self.rewrite_element_namespaces {
+    if xml_string_equals_view(wanted, namespace_uri) {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn xml_start_tag_scanner_with_rewrites(
+  xml : StringView,
+  element_namespaces : Array[String],
+  attribute_prefixes : Map[String, String],
+) -> XmlStartTagScanner {
   {
     xml,
     index: 0,
@@ -670,6 +729,12 @@ pub fn XmlStartTagScanner::new(xml : StringView) -> XmlStartTagScanner {
     next_namespace_id: 2,
     open_name_starts: [],
     open_name_ends: [],
+    open_name_rewrites: [],
+    rewrite_element_namespaces: element_namespaces,
+    rewrite_attribute_prefixes: attribute_prefixes,
+    rewrite_output: StringBuilder::new(),
+    rewrite_cursor: 0,
+    rewrite_count: 0,
     pending_namespace_pop: None,
     root_seen: false,
     root_closed: false,
@@ -679,6 +744,13 @@ pub fn XmlStartTagScanner::new(xml : StringView) -> XmlStartTagScanner {
     current_depth: 0,
     current_namespace_uri: "",
   }
+}
+
+///|
+/// Creates a namespace-aware cursor over `xml`. The source is borrowed; no
+/// copy of the full XML part is made.
+pub fn XmlStartTagScanner::new(xml : StringView) -> XmlStartTagScanner {
+  xml_start_tag_scanner_with_rewrites(xml, [], Map([]))
 }
 
 ///|
@@ -696,7 +768,7 @@ fn XmlStartTagScanner::consume_end_tag(
         self.xml[name_end] != ('>' : UInt16) {
     name_end = name_end + 1
   }
-  ignore(validate_xml_qname(self.xml, name_start, name_end))
+  let colon = validate_xml_qname(self.xml, name_start, name_end)
   let tag_end = find_xml_tag_end(self.xml, name_end, start)
   for index in name_end..<tag_end {
     if !is_attr_space(self.xml[index]) {
@@ -708,8 +780,22 @@ fn XmlStartTagScanner::consume_end_tag(
   if !xml_spans_equal(self.xml, name_start, name_end, open_start, open_end) {
     raise InvalidXml(msg="XML start and end tags do not match")
   }
+  let rewrite_name = self.open_name_rewrites[self.open_name_rewrites.length() -
+    1]
+  if rewrite_name {
+    match colon {
+      Some(value) =>
+        self.record_name_rewrite(
+          name_start,
+          name_end,
+          self.xml[value + 1:name_end].to_owned(),
+        )
+      None => ()
+    }
+  }
   ignore(self.open_name_starts.pop())
   ignore(self.open_name_ends.pop())
+  ignore(self.open_name_rewrites.pop())
   self.pop_namespace_depth(self.depth)
   self.depth = self.depth - 1
   if self.depth == 0 {
@@ -809,12 +895,24 @@ pub fn XmlStartTagScanner::next(
       raise InvalidXml(msg="XML element nesting is too deep")
     }
     self.add_namespace_declarations(name_end, tag_end, scope_depth)
-    self.validate_attributes(name_end, tag_end)
     let prefix = match colon {
       Some(value) => self.xml[name_start:value]
       None => self.xml[name_start:name_start]
     }
     self.current_namespace_uri = self.resolve_prefix(prefix, false)
+    let rewrite_name = colon is Some(_) &&
+      self.should_unprefix_element(self.current_namespace_uri)
+    if rewrite_name {
+      self.record_name_rewrite(
+        name_start,
+        name_end,
+        match colon {
+          Some(value) => self.xml[value + 1:name_end].to_owned()
+          None => self.xml[name_start:name_end].to_owned()
+        },
+      )
+    }
+    self.validate_attributes(name_end, tag_end)
     self.current_name_start = match colon {
       Some(value) => value + 1
       None => name_start
@@ -832,6 +930,7 @@ pub fn XmlStartTagScanner::next(
       self.depth = scope_depth
       self.open_name_starts.push(name_start)
       self.open_name_ends.push(name_end)
+      self.open_name_rewrites.push(rewrite_name)
     }
     return true
   }
@@ -863,6 +962,34 @@ pub fn XmlStartTagScanner::namespace_uri(
 /// Returns the one-based nesting depth of the current start tag.
 pub fn XmlStartTagScanner::depth(self : XmlStartTagScanner) -> Int {
   self.current_depth
+}
+
+///|
+/// Validates `xml` and rewrites selected expanded names into lexical forms
+/// expected by a namespace-oblivious parser. Elements in `element_namespaces`
+/// lose their prefix; attributes in `attribute_prefixes` receive the mapped
+/// prefix. Text, comments, CDATA, values, and unselected names are unchanged.
+pub fn canonicalize_xml_expanded_names(
+  xml : StringView,
+  element_namespaces : ArrayView[String],
+  attribute_prefixes : ArrayView[(String, String)],
+) -> String raise ParseXmlError {
+  let elements : Array[String] = []
+  elements.append(element_namespaces)
+  let attributes : Map[String, String] = Map([])
+  for pair in attribute_prefixes {
+    let (namespace_uri, prefix) = pair
+    attributes[namespace_uri] = prefix
+  }
+  let scanner = xml_start_tag_scanner_with_rewrites(xml, elements, attributes)
+  while scanner.next() {
+
+  }
+  if scanner.rewrite_count == 0 {
+    return xml.to_owned()
+  }
+  scanner.rewrite_output.write_view(xml[scanner.rewrite_cursor:])
+  scanner.rewrite_output.to_string()
 }
 
 ///|
@@ -1022,6 +1149,21 @@ test "namespace duplicate checks retain namespace identities once" {
   assert_true(scanner.next())
   assert_eq(scanner.depth(), 1)
   assert_false(scanner.next())
+}
+
+///|
+test "expanded-name canonicalization preserves data and rewrites both tag ends" {
+  let xml =
+    #|<s:root xmlns:s="urn:sheet" xmlns:q="urn:rel"><!-- <s:item/> --><s:item q:id="r1"><![CDATA[<s:literal/>]]></s:item></s:root>
+  let canonical = canonicalize_xml_expanded_names(xml, ["urn:sheet"], [
+    ("urn:rel", "r"),
+  ])
+  inspect(
+    canonical,
+    content=(
+      #|<root xmlns:s="urn:sheet" xmlns:q="urn:rel"><!-- <s:item/> --><item r:id="r1"><![CDATA[<s:literal/>]]></item></root>
+    ),
+  )
 }
 
 ///|
