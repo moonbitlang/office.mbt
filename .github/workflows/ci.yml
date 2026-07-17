@@ -312,8 +312,8 @@ jobs:
           xq=$(moon run --target wasm office/cmd/office -- query "$xlsx_fixture" 'cell[type=formula][formula~=IF]' --under '/xlsx/sheet[name="Sheet2"]' --json 2>office-wasm.err) || { echo "office XLSX query failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$xq" | jq -e '.success == true
             and .data.schema == "office.xlsx.query/1"
-            and .data.matched_total == 2
-            and [.data.matches[].reference] == ["F11", "G11"]'
+            and .data.matched_total == 4
+            and [.data.matches[].reference] == ["F11", "G11", "H11", "I11"]'
           # DOCX structured reads share one canonical bounded projection.
           # Drive every command through the wasm async filesystem path.
           o=$(moon run --target wasm office/cmd/office -- outline docx2html/tests/cram/fixtures/single-paragraph.docx --json 2>office-wasm.err) || { echo "office DOCX outline failed; stderr:"; cat office-wasm.err; exit 1; }

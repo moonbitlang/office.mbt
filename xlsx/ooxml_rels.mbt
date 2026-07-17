@@ -107,6 +107,31 @@ fn normalize_rel_part_path(path : StringView) -> String raise XlsxError {
 }
 
 ///|
+fn resolve_part_rel_target(
+  source_part : StringView,
+  target : StringView,
+) -> String raise XlsxError {
+  let source = source_part.to_owned()
+  let target_str = target.to_owned()
+  if source == "" || source.has_prefix("/") || target_str == "" {
+    raise InvalidXml(msg="relationship target invalid")
+  }
+  let normalized_source = normalize_rel_part_path(source)
+  if normalized_source != source {
+    raise InvalidXml(msg="relationship target invalid")
+  }
+  let raw = if target_str.has_prefix("/") {
+    drop_first_path_segment(target_str)
+  } else {
+    match source.rev_find("/") {
+      Some(pos) => source[:pos + 1].to_owned() + target_str
+      None => target_str
+    }
+  }
+  normalize_rel_part_path(raw)
+}
+
+///|
 fn resolve_rel_target(
   target : StringView,
   base_folder : StringView,
@@ -135,21 +160,7 @@ fn resolve_rel_target(
 
 ///|
 fn resolve_workbook_rel_target(target : StringView) -> String raise XlsxError {
-  let target_str = target.to_owned()
-  let raw = if target_str.has_prefix("/") {
-    drop_first_path_segment(target_str)
-  } else if target_str.has_prefix("../") {
-    "xl/" + drop_first_path_segment(target_str)
-  } else if target_str.has_prefix("xl/") {
-    target_str
-  } else {
-    "xl/" + target_str
-  }
-  let normalized = normalize_rel_part_path(raw)
-  if !normalized.has_prefix("xl/") {
-    raise InvalidXml(msg="relationship target invalid")
-  }
-  normalized
+  resolve_part_rel_target(workbook_part_path, target)
 }
 
 ///|
@@ -262,6 +273,22 @@ test "ooxml_rels: resolve_workbook_rel_target treats relative as under xl/" {
 }
 
 ///|
+test "ooxml_rels: part relationships resolve from the actual source part" {
+  inspect(
+    resolve_part_rel_target("custom/book.xml", "../data/first.xml"),
+    content="data/first.xml",
+  )
+  inspect(
+    resolve_part_rel_target("custom/book.xml", "/data/first.xml"),
+    content="data/first.xml",
+  )
+  inspect(
+    resolve_part_rel_target("book.xml", "data/first.xml"),
+    content="data/first.xml",
+  )
+}
+
+///|
 test "ooxml_rels: resolve target normalizes dot segments" {
   inspect(
     resolve_rel_target(".././drawings/../drawings/d1.xml", "worksheets"),
@@ -299,6 +326,16 @@ test "ooxml_rels: resolve target rejects escaping root via dot segments" {
       fail(
         "expected InvalidXml for relative escape in resolve_workbook_rel_target",
       )
+  }
+
+  let relocated_result = Ok(
+    resolve_part_rel_target("custom/book.xml", "../../sheet1.xml"),
+  ) catch {
+    e => Err(e)
+  }
+  match relocated_result {
+    Err(InvalidXml(msg~)) => inspect(msg, content="relationship target invalid")
+    _ => fail("expected relocated relationship target to reject a root escape")
   }
 }
 

@@ -61,6 +61,35 @@ fn xlsx_strict_test_bytes() -> Bytes raise {
 }
 
 ///|
+fn xlsx_relocated_test_bytes() -> Bytes raise {
+  let archive = @zip.Archive::new()
+  let content_types =
+    #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Override PartName="/custom/book.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/data/first.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/data/Strings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/></Types>
+  let root_relationships =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="main" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="custom/book.xml"/></Relationships>
+  let workbook =
+    #|<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Moved" sheetId="1" r:id="sheet"/></sheets></workbook>
+  let workbook_relationships =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="sheet" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="../data/first.xml"/><Relationship Id="strings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="../data/strings.xml"/></Relationships>
+  let worksheet =
+    #|<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c></row></sheetData></worksheet>
+  let shared_strings =
+    #|<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="1" uniqueCount="1"><si><t>relocated-value</t></si></sst>
+  archive.add("[Content_Types].xml", @utf8.encode(content_types))
+  archive.add("_rels/.rels", @utf8.encode(root_relationships))
+  archive.add("custom/book.xml", @utf8.encode(workbook))
+  archive.add(
+    "custom/_rels/book.xml.rels",
+    @utf8.encode(workbook_relationships),
+  )
+  archive.add("data/first.xml", @utf8.encode(worksheet))
+  // OPC part lookup is case-insensitive. Keep the relationship spelling lower
+  // case and the actual ZIP entry mixed case to cover canonical resolution.
+  archive.add("data/Strings.xml", @utf8.encode(shared_strings))
+  @zip.write(archive)
+}
+
+///|
 test "XLSX selectors resolve to stable named canonical paths" {
   let projection = xlsx_read_test_projection()
   guard resolve_xlsx_selector(projection, "/xlsx/sheet[2]") is Sheet(second) else {
@@ -89,6 +118,12 @@ test "XLSX selectors resolve to stable named canonical paths" {
   assert_eq(singleton.range_reference(projection.file), "B2:B2")
   assert_eq(path, "/xlsx/sheet[name=\"Data\"]/range[B2:B2]")
   assert_eq(@lib.parse_selector(path).render(), path)
+  guard resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"data\"]/cell[A1]")
+    is Cell(case_insensitive_sheet, _, path~) else {
+    fail("expected case-insensitive sheet selector")
+  }
+  assert_eq(case_insensitive_sheet.name, "Data")
+  assert_eq(path, "/xlsx/sheet[name=\"Data\"]/cell[A1]")
 }
 
 ///|
@@ -105,6 +140,29 @@ test "XLSX structured reads accept detector-valid Strict OOXML relationships" {
     fail("expected Strict XLSX cell")
   }
   assert_eq(cell.get("value"), Some(Json::string("strict-value")))
+}
+
+///|
+test "XLSX structured reads resolve relationships from relocated workbooks" {
+  let source = xlsx_bounded_test_source(
+    "relocated.xlsx",
+    xlsx_relocated_test_bytes(),
+  )
+  assert_true(@lib.detect_archive_format(source.file, source.archive) is Xlsx)
+  let projection = open_xlsx_projection(source, 10)
+  guard xlsx_get_data(
+      projection,
+      resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"moved\"]/cell[A1]"),
+    )
+    is Object(get) &&
+    get.get("cell") is Some(Object(cell)) else {
+    fail("expected relocated XLSX cell")
+  }
+  assert_eq(
+    get.get("path"),
+    Some(Json::string("/xlsx/sheet[name=\"Moved\"]/cell[A1]")),
+  )
+  assert_eq(cell.get("value"), Some(Json::string("relocated-value")))
 }
 
 ///|
@@ -606,7 +664,7 @@ test "XLSX cached empty formula results remain distinct from a missing cache" {
   assert_true(sheet_xml.contains("<f>1+0</f></c>"))
   let cached_xml = sheet_xml
     .replace(old="<c r=\"A1\"", new="<c r=\"A1\" t=\"str\"")
-    .replace(old="<f>1+0</f></c>", new="<f>1+0</f><v></v></c>")
+    .replace(old="<f>1+0</f></c>", new="<f>1+0</f><v /></c>")
   assert_true(
     archive.replace("xl/worksheets/sheet1.xml", @utf8.encode(cached_xml)),
   )
@@ -629,6 +687,24 @@ test "XLSX cached empty formula results remain distinct from a missing cache" {
   }
   let roundtrip_xml = @utf8.decode(roundtrip_bytes, ignore_bom=true)
   assert_true(roundtrip_xml.contains("<f>1+0</f><v></v>"))
+
+  let compact_archive = @zip.read(@xlsx.write(workbook))
+  assert_true(
+    compact_archive.replace(
+      "xl/worksheets/sheet1.xml",
+      @utf8.encode(
+        sheet_xml
+        .replace(old="<c r=\"A1\"", new="<c r=\"A1\" t=\"str\"")
+        .replace(old="<f>1+0</f></c>", new="<f>1+0</f><v/></c>"),
+      ),
+    ),
+  )
+  let compact = @xlsx.read(@zip.write(compact_archive))
+  guard compact.sheet("Data") is Some(compact_sheet) &&
+    compact_sheet.get_cell_formula_info_rc(1, 1) is Some(compact_info) else {
+    fail("expected compact cached formula metadata")
+  }
+  assert_true(compact_info.cached_value_present)
 
   let projection = make_xlsx_projection("cached-empty.xlsx", parsed, 10)
   guard xlsx_get_data(

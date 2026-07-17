@@ -207,7 +207,8 @@ fn make_xlsx_projection(
   let sheets : Array[XlsxSheetTarget] = []
   let sheet_index : Map[String, Int] = Map([])
   for index, name in workbook.get_sheet_list() {
-    if sheet_index.contains(name) {
+    let normalized_name = name.to_lower()
+    if sheet_index.contains(normalized_name) {
       raise xlsx_cli_failure(
         "office.xlsx.read_failed",
         "workbook tab order contains a duplicate sheet name",
@@ -237,7 +238,7 @@ fn make_xlsx_projection(
       shared_formula_masters: Map([]),
       shared_formulas_indexed: content is ChartSheet(_),
     }
-    sheet_index[name] = index
+    sheet_index[normalized_name] = index
     sheets.push(target)
   }
   {
@@ -335,7 +336,7 @@ fn XlsxProjection::find_sheet_by_name(
   self : XlsxProjection,
   name : String,
 ) -> XlsxSheetTarget? {
-  match self.sheet_index.get(name) {
+  match self.sheet_index.get(name.to_lower()) {
     Some(index) => self.sheets.get(index)
     None => None
   }

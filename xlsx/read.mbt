@@ -3051,15 +3051,69 @@ fn first_existing_rel_target_path(
 ///|
 fn first_existing_workbook_rel_target_path(
   targets : Map[String, String],
-  archive : @zip.Archive,
+  workbook_part : StringView,
+  part_names : Map[String, String],
 ) -> String? raise XlsxError {
   for _, target in targets {
-    let path = resolve_workbook_rel_target(target)
-    if archive.get(path) is Some(_) {
-      return Some(path)
+    let path = resolve_part_rel_target(workbook_part, target)
+    match part_names.get(path.to_lower()) {
+      Some(actual) => return Some(actual)
+      None => ()
     }
   }
   None
+}
+
+///|
+fn archive_part_name_index(
+  archive : @zip.Archive,
+) -> Map[String, String] raise XlsxError {
+  let names : Map[String, String] = Map([])
+  for entry in archive.entries() {
+    let name = entry.name()
+    let key = name.to_lower()
+    match names.get(key) {
+      Some(existing) if existing != name =>
+        raise InvalidPackage(msg="case-insensitive ZIP part name collision")
+      Some(_) => ()
+      None => names[key] = name
+    }
+  }
+  names
+}
+
+///|
+fn actual_archive_part_path(
+  part_names : Map[String, String],
+  requested : String,
+) -> String {
+  part_names.get(requested.to_lower()).unwrap_or(requested)
+}
+
+///|
+fn workbook_related_part_path(
+  workbook_rels : StringView,
+  relationship_type : StringView,
+  workbook_part : StringView,
+  fallback : StringView,
+  part_names : Map[String, String],
+) -> String? raise XlsxError {
+  let targets = parse_relationship_targets(workbook_rels, relationship_type)
+  match
+    first_existing_workbook_rel_target_path(targets, workbook_part, part_names) {
+    Some(path) => Some(path)
+    None =>
+      match first_relationship_target(targets) {
+        Some(target) =>
+          Some(
+            actual_archive_part_path(
+              part_names,
+              resolve_part_rel_target(workbook_part, target),
+            ),
+          )
+        None => part_names.get(fallback.to_owned().to_lower())
+      }
+  }
 }
 
 ///|
@@ -3069,6 +3123,7 @@ fn read_zip_archive_core_unchecked(
   limits : ReadLimits,
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
+  let part_names = archive_part_name_index(archive)
   let decode = (value : BytesView) => {
     if value.length() > limits.max_xml_part_bytes {
       raise ResourceLimitExceeded(
@@ -3079,12 +3134,23 @@ fn read_zip_archive_core_unchecked(
     }
     decode_utf8(value, transcoder)
   }
-  let workbook_xml_part_path = resolve_workbook_xml_part_path(archive, decode)
+  let workbook_xml_part_path = actual_archive_part_path(
+    part_names,
+    resolve_workbook_xml_part_path(archive, decode),
+  )
   let workbook_bytes = match archive.get(workbook_xml_part_path) {
     Some(value) => value
     None => raise MissingPart(path=workbook_xml_part_path)
   }
   let workbook_xml = decode(workbook_bytes)
+  let workbook_rels_path = actual_archive_part_path(
+    part_names,
+    rels_path_for_part(workbook_xml_part_path),
+  )
+  let workbook_rels = match archive.get(workbook_rels_path) {
+    Some(value) => decode(value)
+    None => raise MissingPart(path=workbook_rels_path)
+  }
   let sheets = parse_workbook_sheets(workbook_xml)
   let sheet_names : Array[String] = []
   for entry in sheets {
@@ -3100,10 +3166,21 @@ fn read_zip_archive_core_unchecked(
   } else {
     active_index
   }
-  let shared_strings = match archive.get("xl/sharedStrings.xml") {
-    Some(value) => parse_shared_strings(decode(value))
+  let shared_strings_path = workbook_related_part_path(
+    workbook_rels, rel_shared_strings, workbook_xml_part_path, shared_strings_part_path,
+    part_names,
+  )
+  let shared_strings = match shared_strings_path {
+    Some(path) =>
+      match archive.get(path) {
+        Some(value) => parse_shared_strings(decode(value))
+        None => raise MissingPart(path~)
+      }
     None => []
   }
+  let styles_path = workbook_related_part_path(
+    workbook_rels, rel_styles, workbook_xml_part_path, styles_part_path, part_names,
+  )
   let (
     styles,
     conditional_styles,
@@ -3113,8 +3190,12 @@ fn read_zip_archive_core_unchecked(
     indexed_colors,
     mru_colors_xml,
     styles_ext_lst_xml,
-  ) = match archive.get("xl/styles.xml") {
-    Some(value) => {
+  ) = match styles_path {
+    Some(path) => {
+      let value = match archive.get(path) {
+        Some(value) => value
+        None => raise MissingPart(path~)
+      }
       let styles_xml = decode(value)
       let (styles, conditional_styles) = parse_styles(styles_xml)
       let (default_table_style, default_pivot_style) = parse_table_styles_defaults(
@@ -3146,8 +3227,15 @@ fn read_zip_archive_core_unchecked(
         None,
       )
   }
-  let theme_xml = match archive.get("xl/theme/theme1.xml") {
-    Some(value) => Some(decode(value))
+  let theme_path = workbook_related_part_path(
+    workbook_rels, rel_theme, workbook_xml_part_path, theme_part_path, part_names,
+  )
+  let theme_xml = match theme_path {
+    Some(path) =>
+      match archive.get(path) {
+        Some(value) => Some(decode(value))
+        None => raise MissingPart(path~)
+      }
     None => None
   }
   let theme_colors = match theme_xml {
@@ -3233,21 +3321,24 @@ fn read_zip_archive_core_unchecked(
     rich_value_images,
     rich_value_media,
   }
-  let workbook_rels_path = rels_path_for_part(workbook_xml_part_path)
-  let workbook_rels = match archive.get(workbook_rels_path) {
-    Some(value) => decode(value)
-    None => raise MissingPart(path=workbook_rels_path)
-  }
   let slicer_cache_defs = parse_slicer_cache_definitions(
-    workbook_rels, archive, decode,
+    workbook_rels, workbook_xml_part_path, part_names, archive, decode,
   )
   let vba_targets = parse_relationship_targets(workbook_rels, rel_vba_project)
   let vba_path = match
-    first_existing_workbook_rel_target_path(vba_targets, archive) {
+    first_existing_workbook_rel_target_path(
+      vba_targets, workbook_xml_part_path, part_names,
+    ) {
     Some(path) => Some(path)
     None =>
       match first_relationship_target(vba_targets) {
-        Some(target) => Some(resolve_workbook_rel_target(target))
+        Some(target) =>
+          Some(
+            actual_archive_part_path(
+              part_names,
+              resolve_part_rel_target(workbook_xml_part_path, target),
+            ),
+          )
         None => None
       }
   }
@@ -3281,7 +3372,10 @@ fn read_zip_archive_core_unchecked(
         Some(value) => value
         None => raise InvalidXml(msg="worksheet target missing")
       }
-      let sheet_path = resolve_workbook_rel_target(target)
+      let sheet_path = actual_archive_part_path(
+        part_names,
+        resolve_part_rel_target(workbook_xml_part_path, target),
+      )
       let sheet_bytes = match archive.get(sheet_path) {
         Some(value) => value
         None => raise MissingPart(path=sheet_path)
@@ -3818,7 +3912,10 @@ fn read_zip_archive_core_unchecked(
         Some(value) => value
         None => raise InvalidXml(msg="chartsheet target missing")
       }
-      let chartsheet_path = resolve_workbook_rel_target(target)
+      let chartsheet_path = actual_archive_part_path(
+        part_names,
+        resolve_part_rel_target(workbook_xml_part_path, target),
+      )
       let chartsheet_bytes = match archive.get(chartsheet_path) {
         Some(value) => value
         None => raise MissingPart(path=chartsheet_path)

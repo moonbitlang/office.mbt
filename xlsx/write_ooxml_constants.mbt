@@ -14,6 +14,15 @@ let rel_chart = "http://schemas.openxmlformats.org/officeDocument/2006/relations
 let rel_chartsheet = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chartsheet"
 
 ///|
+let rel_shared_strings = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings"
+
+///|
+let rel_styles = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles"
+
+///|
+let rel_theme = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme"
+
+///|
 let rel_table = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/table"
 
 ///|

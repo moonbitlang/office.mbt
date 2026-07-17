@@ -340,13 +340,18 @@ fn parse_slicer_cache_definition(
 ///|
 fn parse_slicer_cache_definitions(
   workbook_rels_xml : StringView,
+  workbook_part : StringView,
+  part_names : Map[String, String],
   archive : @zip.Archive,
   decode : (BytesView) -> String raise XlsxError,
 ) -> Map[String, SlicerCacheDef] raise XlsxError {
   let defs : Map[String, SlicerCacheDef] = Map([])
   let targets = parse_relationship_targets(workbook_rels_xml, rel_slicer_cache)
   for _rel_id, target in targets {
-    let cache_path = resolve_workbook_rel_target(target)
+    let cache_path = actual_archive_part_path(
+      part_names,
+      resolve_part_rel_target(workbook_part, target),
+    )
     let cache_bytes = match archive.get(cache_path) {
       Some(value) => value
       None => raise MissingPart(path=cache_path)

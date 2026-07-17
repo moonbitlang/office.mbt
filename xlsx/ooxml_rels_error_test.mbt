@@ -156,7 +156,7 @@ test "ooxml rels: expanded Relationship tags still read" {
 }
 
 ///|
-test "ooxml rels: workbook targets with ../ prefix" {
+test "ooxml rels: workbook targets resolve parent segments from their source" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let bytes = @xlsx.write(workbook)
@@ -176,12 +176,12 @@ test "ooxml rels: workbook targets with ../ prefix" {
     "xl/_rels/workbook.xml.rels",
     @encoding/utf8.encode(patched),
   )
-  let parsed = @xlsx.read(updated)
-  debug_inspect(parsed.get_sheet_list(), content="[\"Sheet1\"]")
+  let result = Ok(@xlsx.read(updated)) catch { error => Err(error) }
+  assert_true(result is Err(MissingPart(_)))
 }
 
 ///|
-test "ooxml rels: workbook targets with xl/ prefix" {
+test "ooxml rels: workbook targets treat xl prefix as source relative" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let bytes = @xlsx.write(workbook)
@@ -201,8 +201,22 @@ test "ooxml rels: workbook targets with xl/ prefix" {
     "xl/_rels/workbook.xml.rels",
     @encoding/utf8.encode(patched),
   )
-  let parsed = @xlsx.read(updated)
-  debug_inspect(parsed.get_sheet_list(), content="[\"Sheet1\"]")
+  let result = Ok(@xlsx.read(updated)) catch { error => Err(error) }
+  assert_true(result is Err(MissingPart(_)))
+}
+
+///|
+test "ooxml rels: reader rejects case-equivalent part collisions" {
+  let archive = @zip.read(@xlsx.write(@xlsx.Workbook::new()))
+  guard archive.get("xl/workbook.xml") is Some(workbook_xml) else {
+    fail("missing workbook part")
+  }
+  archive.add("xl/Workbook.xml", workbook_xml)
+  let bytes = @zip.write(archive)
+  let result : Result[@xlsx.Workbook, @xlsx.XlsxError] = Ok(@xlsx.read(bytes)) catch {
+    error => Err(error)
+  }
+  assert_true(result is Err(InvalidPackage(_)))
 }
 
 ///|

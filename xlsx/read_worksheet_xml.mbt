@@ -117,14 +117,24 @@ fn parse_worksheet(
       }
       None => (None, None, None, None)
     }
-    let raw_value_opt = match rest.find("<v>") {
+    let raw_value_opt = match find_xml_open_tag_start(rest, "v") {
       Some(pos) => {
-        let v_rest = rest[pos + 3:]
-        let v_end = match v_rest.find("</v>") {
+        let v_rest = rest[pos:]
+        let open_end = match xml_open_tag_end_from(v_rest, 0) {
           Some(end) => end
-          None => raise InvalidXml(msg="cell value not closed")
+          None => raise InvalidXml(msg="cell value tag not closed")
         }
-        Some(v_rest[:v_end].to_owned())
+        let open_tag = v_rest[:open_end].to_owned()
+        if open_tag.trim().has_suffix("/") {
+          Some("")
+        } else {
+          let value_rest = v_rest[open_end + 1:]
+          let v_end = match value_rest.find("</v>") {
+            Some(end) => end
+            None => raise InvalidXml(msg="cell value not closed")
+          }
+          Some(value_rest[:v_end].to_owned())
+        }
       }
       None => None
     }

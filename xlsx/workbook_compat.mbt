@@ -259,7 +259,7 @@ pub fn Workbook::update_linked_value(self : Workbook) -> Unit raise XlsxError {
     for i, cell in sheet.cells {
       match cell.formula {
         Some(_) =>
-          if cell.value != "" {
+          if cell.value != "" || cell.formula_value_present {
             sheet.cells[i] = {
               reference: cell.reference,
               row: cell.row,
@@ -271,7 +271,7 @@ pub fn Workbook::update_linked_value(self : Workbook) -> Unit raise XlsxError {
               formula_type: cell.formula_type,
               formula_ref: cell.formula_ref,
               formula_shared_index: cell.formula_shared_index,
-              formula_value_present: cell.formula_value_present,
+              formula_value_present: false,
               style_id: cell.style_id,
             }
           }
