@@ -49,7 +49,7 @@ fn parse_rich_value_images(
   }
   let rel_targets = match
     archive.get("xl/richData/_rels/richValueRel.xml.rels") {
-    Some(value) => parse_relationship_targets(decode(value), rel_image)
+    Some(value) => parse_internal_relationship_targets(decode(value), rel_image)
     None => Map([])
   }
   let web_blip_ids = match archive.get("xl/richData/rdRichValueWebImage.xml") {
@@ -58,7 +58,7 @@ fn parse_rich_value_images(
   }
   let web_rel_targets = match
     archive.get("xl/richData/_rels/rdRichValueWebImage.xml.rels") {
-    Some(value) => parse_relationship_targets(decode(value), rel_image)
+    Some(value) => parse_internal_relationship_targets(decode(value), rel_image)
     None => Map([])
   }
   Some({

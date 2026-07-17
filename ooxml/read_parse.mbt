@@ -138,12 +138,40 @@ fn relationship_attribute(
 }
 
 ///|
+priv enum ParsedRelationshipTargetMode {
+  InternalTarget
+  ExternalTarget
+}
+
+///|
+fn relationship_target_mode(
+  scanner : XmlStartTagScanner,
+) -> ParsedRelationshipTargetMode raise ParseXmlError {
+  match scanner.attribute("", "TargetMode") {
+    None => InternalTarget
+    Some(value) =>
+      match collapse_schema_whitespace(value) {
+        "Internal" => InternalTarget
+        "External" => ExternalTarget
+        _ => raise InvalidXml(msg="relationship target mode invalid")
+      }
+  }
+}
+
+///|
+priv enum RelationshipTargetSelection {
+  InternalTargets
+  ExternalTargets
+}
+
+///|
 /// Reads relationship targets whose decoded `Type` is in `rel_types`. Element
 /// names are matched by expanded namespace name, so the package namespace may
 /// use either a default namespace or any declared prefix.
-pub fn parse_relationship_targets_by_types(
+fn parse_relationship_targets_by_types_selected(
   xml : StringView,
   rel_types : ArrayView[String],
+  selection : RelationshipTargetSelection,
 ) -> Map[String, String] raise ParseXmlError {
   let targets : Map[String, String] = Map([])
   let ids : Set[String] = Set([])
@@ -171,6 +199,7 @@ pub fn parse_relationship_targets_by_types(
     let rel = relationship_attribute(scanner, "Type")
     let id = relationship_attribute(scanner, "Id")
     let target = relationship_attribute(scanner, "Target")
+    let target_mode = relationship_target_mode(scanner)
     if rel.length() > max_relationship_type_chars {
       raise InvalidXml(msg="relationship type is too long")
     }
@@ -199,17 +228,53 @@ pub fn parse_relationship_targets_by_types(
     if !wanted {
       continue
     }
+    let selected = match (selection, target_mode) {
+      (InternalTargets, InternalTarget) | (ExternalTargets, ExternalTarget) =>
+        true
+      _ => false
+    }
+    if !selected {
+      continue
+    }
     targets[id] = target
   }
   targets
 }
 
 ///|
-pub fn parse_relationship_targets(
+/// Reads internal relationship targets whose decoded `Type` is in
+/// `rel_types`. Explicitly external records are validated but excluded.
+pub fn parse_internal_relationship_targets_by_types(
+  xml : StringView,
+  rel_types : ArrayView[String],
+) -> Map[String, String] raise ParseXmlError {
+  parse_relationship_targets_by_types_selected(xml, rel_types, InternalTargets)
+}
+
+///|
+pub fn parse_internal_relationship_targets(
   xml : StringView,
   rel_type : StringView,
 ) -> Map[String, String] raise ParseXmlError {
-  parse_relationship_targets_by_types(xml, [rel_type.to_owned()])
+  parse_internal_relationship_targets_by_types(xml, [rel_type.to_owned()])
+}
+
+///|
+/// Reads explicitly external relationship targets whose decoded `Type` is in
+/// `rel_types`. Internal records are validated but excluded.
+pub fn parse_external_relationship_targets_by_types(
+  xml : StringView,
+  rel_types : ArrayView[String],
+) -> Map[String, String] raise ParseXmlError {
+  parse_relationship_targets_by_types_selected(xml, rel_types, ExternalTargets)
+}
+
+///|
+pub fn parse_external_relationship_targets(
+  xml : StringView,
+  rel_type : StringView,
+) -> Map[String, String] raise ParseXmlError {
+  parse_external_relationship_targets_by_types(xml, [rel_type.to_owned()])
 }
 
 ///|
@@ -357,7 +422,7 @@ test "ooxml read_parse wb: every relationship record is validated" {
     #|  <Relationship Id="rId1" Target="a.xml"/>
     #|</Relationships>
     #|
-  try parse_relationship_targets(xml, "t1") catch {
+  try parse_internal_relationship_targets(xml, "t1") catch {
     InvalidXml(msg~) => inspect(msg, content="relationship type missing")
   } noraise {
     _ => fail("expected relationship type missing")

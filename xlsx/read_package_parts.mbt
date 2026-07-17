@@ -19,7 +19,9 @@ fn workbook_part_from_root_relationships(
   }
   let office_document_type = transitional_office_relationship_prefix +
     "officeDocument"
-  let targets = parse_relationship_targets(root_rels_xml, office_document_type)
+  let targets = parse_internal_relationship_targets(
+    root_rels_xml, office_document_type,
+  )
   if targets.length() > 1 {
     raise InvalidXml(msg="root relationships contain multiple workbook targets")
   }
@@ -118,6 +120,28 @@ test "read package parts: workbook path follows the root relationship" {
     resolve_workbook_xml_part_path_for_test(archive),
     content="xl/workbook2.xml",
   )
+}
+
+///|
+test "read package parts: external workbook relationship is never resolved as a part" {
+  let archive = @zip.Archive::new()
+  let content_types =
+    #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+    #|  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+    #|</Types>
+  let root_relationships =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+    #|  <Relationship Id="main" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml" TargetMode="External"/>
+    #|</Relationships>
+  archive.add(content_types_part_path, @encoding/utf8.encode(content_types))
+  archive.add(root_rels_part_path, @encoding/utf8.encode(root_relationships))
+  try resolve_workbook_xml_part_path_for_test(archive) catch {
+    InvalidXml(msg~) =>
+      inspect(msg, content="root workbook relationship missing")
+    _ => fail("unexpected external-root error")
+  } noraise {
+    _ => fail("expected external root relationship rejection")
+  }
 }
 
 ///|

@@ -171,12 +171,12 @@ fn parse_drawing_images(
   let image_targets = if drawing_rels_xml.to_owned() == "" {
     Map([])
   } else {
-    parse_relationship_targets(drawing_rels_xml, rel_image)
+    parse_internal_relationship_targets(drawing_rels_xml, rel_image)
   }
   let hyperlink_targets = if drawing_rels_xml.to_owned() == "" {
     Map([])
   } else {
-    parse_relationship_targets(drawing_rels_xml, rel_hyperlink)
+    parse_external_relationship_targets(drawing_rels_xml, rel_hyperlink)
   }
   let anchors = parse_drawing_anchors(drawing_xml)
   for entry in anchors {
@@ -331,11 +331,7 @@ fn parse_drawing_images(
             match hyperlink_targets.get(rel_id.to_string()) {
               Some(value) => {
                 hyperlink = value
-                if hyperlink.contains("://") {
-                  hyperlink_type = External
-                } else {
-                  hyperlink_type = Location
-                }
+                hyperlink_type = External
               }
               None => ()
             }
@@ -381,7 +377,7 @@ fn parse_drawing_charts(
   let chart_targets = if drawing_rels_xml.to_owned() == "" {
     Map([])
   } else {
-    parse_relationship_targets(drawing_rels_xml, rel_chart)
+    parse_internal_relationship_targets(drawing_rels_xml, rel_chart)
   }
   let anchors = parse_drawing_anchors(drawing_xml)
   for entry in anchors {

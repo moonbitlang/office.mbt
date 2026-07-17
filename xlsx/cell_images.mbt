@@ -27,7 +27,7 @@ fn parse_cell_images(
     Map([])
   } else {
     // cellimages relationships are always image relationships
-    parse_relationship_targets(rels_xml, rel_image)
+    parse_internal_relationship_targets(rels_xml, rel_image)
   }
   let xml_str = cell_images_xml.to_owned()
   // Each embedded image is one <...pic> element; cellimages.xml contains

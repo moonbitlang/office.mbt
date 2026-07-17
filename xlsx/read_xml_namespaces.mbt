@@ -2,7 +2,10 @@
 /// Converts namespace-qualified OOXML element names into the lexical form used
 /// by the existing bounded feature parsers. The source is fully namespace- and
 /// structure-validated before rewriting; only names change, never values.
-fn canonicalize_xlsx_xml(xml : StringView) -> String raise XlsxError {
+fn canonicalize_xlsx_xml(
+  xml : StringView,
+  max_output_chars? : Int = default_max_xml_part_bytes,
+) -> String raise XlsxError {
   @ooxml.canonicalize_xml_expanded_names(
     xml,
     [transitional_spreadsheet_namespace, strict_spreadsheet_namespace],
@@ -10,6 +13,7 @@ fn canonicalize_xlsx_xml(xml : StringView) -> String raise XlsxError {
       (transitional_relationship_attribute_namespace, "r"),
       (strict_relationship_attribute_namespace, "r"),
     ],
+    max_output_chars~,
   ) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
   }

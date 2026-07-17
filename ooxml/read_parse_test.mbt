@@ -1,5 +1,5 @@
 ///|
-test "ooxml read_parse: parse_relationship_targets supports self-closing and expanded tags" {
+test "ooxml read_parse: internal relationships support self-closing and expanded tags" {
   let xml =
     #|<?xml version="1.0" encoding="UTF-8"?>
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -8,7 +8,7 @@ test "ooxml read_parse: parse_relationship_targets supports self-closing and exp
     #|  <Relationship Id="rId3" Type="t1" Target="c.xml"/>
     #|</Relationships>
     #|
-  let targets = @ooxml.parse_relationship_targets(xml, "t1")
+  let targets = @ooxml.parse_internal_relationship_targets(xml, "t1")
   debug_inspect(
     targets,
     content=(
@@ -18,14 +18,14 @@ test "ooxml read_parse: parse_relationship_targets supports self-closing and exp
 }
 
 ///|
-test "ooxml read_parse: parse_relationship_targets reports missing id/target and malformed tag" {
+test "ooxml read_parse: internal relationships report missing id/target and malformed tag" {
   let missing_id =
     #|<?xml version="1.0" encoding="UTF-8"?>
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
     #|  <Relationship Type="t1" Target="a.xml"/>
     #|</Relationships>
     #|
-  try @ooxml.parse_relationship_targets(missing_id, "t1") catch {
+  try @ooxml.parse_internal_relationship_targets(missing_id, "t1") catch {
     InvalidXml(msg~) => inspect(msg, content="relationship id missing")
   } noraise {
     _ => fail("expected relationship id missing")
@@ -37,7 +37,7 @@ test "ooxml read_parse: parse_relationship_targets reports missing id/target and
     #|  <Relationship Id="rId1" Type="t1"/>
     #|</Relationships>
     #|
-  try @ooxml.parse_relationship_targets(missing_target, "t1") catch {
+  try @ooxml.parse_internal_relationship_targets(missing_target, "t1") catch {
     InvalidXml(msg~) => inspect(msg, content="relationship target missing")
   } noraise {
     _ => fail("expected relationship target missing")
@@ -49,7 +49,7 @@ test "ooxml read_parse: parse_relationship_targets reports missing id/target and
     #|  <Relationship 
     #|</Relationships>
     #|
-  try @ooxml.parse_relationship_targets(malformed, "t1") catch {
+  try @ooxml.parse_internal_relationship_targets(malformed, "t1") catch {
     InvalidXml(msg~) => inspect(msg, content="XML start tag is not closed")
   } noraise {
     _ => fail("expected relationship tag not closed")
@@ -62,7 +62,7 @@ test "ooxml read_parse: prefixed relationships decode entities exactly once" {
     #|<pkg:Relationships xmlns:pkg="http://schemas.openxmlformats.org/package/2006/relationships">
     #|  <pkg:Relationship Id="r&amp;1" Type="urn:type&#x31;" Target="custom/a&amp;#x20;b.xml"/>
     #|</pkg:Relationships>
-  let targets = @ooxml.parse_relationship_targets(xml, "urn:type1")
+  let targets = @ooxml.parse_internal_relationship_targets(xml, "urn:type1")
   debug_inspect(
     targets,
     content=(
@@ -77,8 +77,50 @@ test "ooxml read_parse: relationship schema whitespace is collapsed" {
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
     #|  <Relationship Id="  r&#x9;1  " Type="  urn:type&#xD;&#xA;one  " Target="  custom/a&#x9;&#x9;b.xml  "/>
     #|</Relationships>
-  let targets = @ooxml.parse_relationship_targets(xml, "urn:type one")
+  let targets = @ooxml.parse_internal_relationship_targets(xml, "urn:type one")
   debug_inspect(targets, content="{ \"r 1\": \"custom/a b.xml\" }")
+}
+
+///|
+test "ooxml read_parse: relationship target modes are explicit and filtered" {
+  let xml =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+    #|  <Relationship Id="default" Type="wanted" Target="inside.xml"/>
+    #|  <Relationship Id="internal" Type="wanted" Target="also-inside.xml" TargetMode=" Internal "/>
+    #|  <Relationship Id="external" Type="wanted" Target="https://example.invalid" TargetMode="External"/>
+    #|</Relationships>
+  debug_inspect(
+    @ooxml.parse_internal_relationship_targets(xml, "wanted"),
+    content=(
+      #|{ "default": "inside.xml", "internal": "also-inside.xml" }
+    ),
+  )
+  debug_inspect(
+    @ooxml.parse_external_relationship_targets(xml, "wanted"),
+    content=(
+      #|{ "external": "https://example.invalid" }
+    ),
+  )
+}
+
+///|
+test "ooxml read_parse: invalid target modes fail closed" {
+  let xml =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="bad" Type="wanted" Target="inside.xml" TargetMode="Remote"/></Relationships>
+  for external in [false, true] {
+    try {
+      if external {
+        ignore(@ooxml.parse_external_relationship_targets(xml, "wanted"))
+      } else {
+        ignore(@ooxml.parse_internal_relationship_targets(xml, "wanted"))
+      }
+    } catch {
+      InvalidXml(msg~) =>
+        inspect(msg, content="relationship target mode invalid")
+    } noraise {
+      _ => fail("expected invalid relationship target mode")
+    }
+  }
 }
 
 ///|
@@ -92,7 +134,7 @@ test "ooxml read_parse: unwanted relationships remain schema-valid and ids stay 
         #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="same" Type="other" Target="a"/><Relationship Id="same" Type="wanted" Target="b"/></Relationships>
       ),
     ] {
-    try @ooxml.parse_relationship_targets(xml, "wanted") catch {
+    try @ooxml.parse_internal_relationship_targets(xml, "wanted") catch {
       InvalidXml(_) => ()
     } noraise {
       _ => fail("expected invalid relationship document")
@@ -116,7 +158,10 @@ test "ooxml read_parse: relationship limits accept writer boundaries" {
     "<Relationship Id=\"wanted\" Type=\"wanted\" Target=\"\{long_target}\"/>",
   )
   xml.write_string("</Relationships>")
-  let targets = @ooxml.parse_relationship_targets(xml.to_string(), "wanted")
+  let targets = @ooxml.parse_internal_relationship_targets(
+    xml.to_string(),
+    "wanted",
+  )
   assert_eq(targets.get("wanted"), Some(long_target))
 }
 

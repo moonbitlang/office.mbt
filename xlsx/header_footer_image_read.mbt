@@ -86,7 +86,7 @@ fn parse_header_footer_images_from_vml(
 ) -> Array[HeaderFooterImage] raise XlsxError {
   let shapes = extract_vml_shapes(vml_xml)
   let rel_targets = match vml_rels_xml {
-    Some(xml) => parse_relationship_targets(xml, rel_image)
+    Some(xml) => parse_internal_relationship_targets(xml, rel_image)
     None => Map([])
   }
   let images : Array[HeaderFooterImage] = []

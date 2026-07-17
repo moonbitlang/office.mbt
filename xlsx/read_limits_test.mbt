@@ -318,6 +318,39 @@ test "semantic read limits reject XML items and derived column expansion" {
 }
 
 ///|
+test "comments and CDATA cannot inject worksheet cells or column expansion" {
+  let bytes = bounded_workbook_fixture()
+  let fake_columns = "<col min=\"1\" max=\"16384\" width=\"12\"/>".repeat(8)
+  let fake_cell =
+    #|<row r="99"><c r="Z99" t="str"><v>phantom</v></c></row>
+  let worksheet = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+    "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">\n" +
+    "  <!-- " +
+    fake_columns +
+    " " +
+    fake_cell +
+    " -->\n" +
+    "  <![CDATA[" +
+    fake_columns +
+    " " +
+    fake_cell +
+    "]]>\n" +
+    "  <sheetData><row r=\"1\"><c r=\"A1\" t=\"str\"><v>real</v></c>" +
+    "<c r=\"B1\" t=\"str\"><v><![CDATA[<literal>&value]]></v></c></row></sheetData>\n" +
+    "</worksheet>\n"
+  let parsed = @xlsx.read(
+    replace_xlsx_part(bytes, "xl/worksheets/sheet1.xml", worksheet),
+    limits=@xlsx.ReadLimits::with_values(max_parser_items=1000),
+  )
+  debug_inspect(parsed.get_cell_value("Data", "A1"), content="Some(\"real\")")
+  debug_inspect(
+    parsed.get_cell_value("Data", "B1"),
+    content="Some(\"<literal>&value\")",
+  )
+  debug_inspect(parsed.get_cell_value("Data", "Z99"), content="None")
+}
+
+///|
 test "semantic read limits charge sqref token materialization" {
   let bytes = bounded_workbook_fixture()
   let refs : Array[String] = []

@@ -25,6 +25,7 @@ priv struct XmlNamespaceBinding {
   uri : String
   namespace_id : Int
   depth : Int
+  previous_index : Int?
 }
 
 ///|
@@ -45,6 +46,7 @@ pub struct XmlStartTagScanner {
   priv mut index : Int
   priv mut depth : Int
   priv namespace_bindings : Array[XmlNamespaceBinding]
+  priv namespace_prefix_indices : Map[String, Int]
   priv namespace_ids : Map[String, Int]
   priv namespace_ref_counts : Map[Int, Int]
   priv mut next_namespace_id : Int
@@ -54,6 +56,9 @@ pub struct XmlStartTagScanner {
   priv rewrite_element_namespaces : Array[String]
   priv rewrite_attribute_prefixes : Map[String, String]
   priv rewrite_output : StringBuilder
+  priv canonicalize_markup : Bool
+  priv rewrite_output_limit : Int
+  priv mut rewrite_output_chars : Int
   priv mut rewrite_cursor : Int
   priv mut rewrite_count : Int
   priv mut pending_namespace_pop : Int?
@@ -497,6 +502,10 @@ fn XmlStartTagScanner::pop_namespace_depth(
     }
     let binding = self.namespace_bindings[last]
     ignore(self.namespace_bindings.pop())
+    match binding.previous_index {
+      Some(index) => self.namespace_prefix_indices[binding.prefix] = index
+      None => ignore(self.namespace_prefix_indices.remove(binding.prefix))
+    }
     self.release_namespace_identity(binding)
   }
 }
@@ -513,12 +522,12 @@ fn XmlStartTagScanner::resolve_prefix_identity(
   if prefix.length() == 0 && attribute {
     return ("", 0)
   }
-  for offset in 0..<self.namespace_bindings.length() {
-    let index = self.namespace_bindings.length() - 1 - offset
-    let binding = self.namespace_bindings[index]
-    if xml_string_equals_view(binding.prefix, prefix) {
+  match self.namespace_prefix_indices.get(prefix.to_owned()) {
+    Some(index) => {
+      let binding = self.namespace_bindings[index]
       return (binding.uri, binding.namespace_id)
     }
+    None => ()
   }
   if prefix.length() == 0 {
     ("", 0)
@@ -598,12 +607,16 @@ fn XmlStartTagScanner::add_namespace_declarations(
       raise InvalidXml(msg="XML has too many active namespace bindings")
     }
     let namespace_id = self.namespace_identity(uri)
+    let previous_index = self.namespace_prefix_indices.get(prefix)
+    let binding_index = self.namespace_bindings.length()
     self.namespace_bindings.push({
       prefix,
       uri,
       namespace_id,
       depth: scope_depth,
+      previous_index,
     })
+    self.namespace_prefix_indices[prefix] = binding_index
   }
 }
 
@@ -614,6 +627,7 @@ fn XmlStartTagScanner::validate_attributes(
   tag_end : Int,
 ) -> Unit raise ParseXmlError {
   let expanded_names : Map[Int, Set[String]] = Map([])
+  let canonical_names : Set[String] = Set([])
   let mut next = attributes_start
   let mut count = 0
   while next_xml_attribute(self.xml, next, tag_end) is Some(attribute) {
@@ -659,45 +673,100 @@ fn XmlStartTagScanner::validate_attributes(
       raise InvalidXml(msg="XML attribute is duplicated")
     }
     local_names.add(local_name)
-    match self.rewrite_attribute_prefixes.get(uri) {
-      Some(canonical_prefix) => {
-        let replacement = if canonical_prefix == "" {
+    let replacement = match self.rewrite_attribute_prefixes.get(uri) {
+      Some(canonical_prefix) =>
+        if canonical_prefix == "" {
           local_name
         } else {
           canonical_prefix + ":" + local_name
         }
+      None => self.xml[attribute.name_start:attribute.name_end].to_owned()
+    }
+    if canonical_names.contains(replacement) {
+      raise InvalidXml(msg="XML canonical attribute name collision")
+    }
+    canonical_names.add(replacement)
+    match self.rewrite_attribute_prefixes.get(uri) {
+      Some(_) =>
         if !xml_span_equals(
             self.xml,
             attribute.name_start,
             attribute.name_end,
             replacement,
           ) {
-          self.record_name_rewrite(
+          self.record_rewrite(
             attribute.name_start,
             attribute.name_end,
             replacement,
           )
         }
-      }
       None => ()
     }
   }
 }
 
 ///|
-fn XmlStartTagScanner::record_name_rewrite(
+fn XmlStartTagScanner::record_rewrite(
   self : XmlStartTagScanner,
   start : Int,
   end : Int,
   replacement : String,
 ) -> Unit raise ParseXmlError {
   if start < self.rewrite_cursor || end < start {
-    raise InvalidXml(msg="XML name rewrites overlap")
+    raise InvalidXml(msg="XML canonical rewrites overlap")
   }
+  self.charge_rewrite_output(start - self.rewrite_cursor)
+  self.charge_rewrite_output(replacement.length())
   self.rewrite_output.write_view(self.xml[self.rewrite_cursor:start])
   self.rewrite_output.write_string(replacement)
   self.rewrite_cursor = end
   self.rewrite_count = self.rewrite_count + 1
+}
+
+///|
+fn XmlStartTagScanner::charge_rewrite_output(
+  self : XmlStartTagScanner,
+  count : Int,
+) -> Unit raise ParseXmlError {
+  if count < 0 || count > self.rewrite_output_limit - self.rewrite_output_chars {
+    raise InvalidXml(msg="XML canonical output limit exceeded")
+  }
+  self.rewrite_output_chars += count
+}
+
+///|
+fn XmlStartTagScanner::escaped_character_data(
+  self : XmlStartTagScanner,
+  rewrite_start : Int,
+  value_start : Int,
+  end : Int,
+) -> String raise ParseXmlError {
+  let unchanged = rewrite_start - self.rewrite_cursor
+  if unchanged < 0 ||
+    unchanged > self.rewrite_output_limit - self.rewrite_output_chars {
+    raise InvalidXml(msg="XML canonical output limit exceeded")
+  }
+  let available = self.rewrite_output_limit -
+    self.rewrite_output_chars -
+    unchanged
+  let value = self.xml[value_start:end]
+  let output = StringBuilder::new(size_hint=value.length().min(available))
+  let mut used = 0
+  for unit in value {
+    let needed = if unit == '&' { 5 } else if unit == '<' { 4 } else { 1 }
+    if needed > available - used {
+      raise InvalidXml(msg="XML canonical output limit exceeded")
+    }
+    used += needed
+    if unit == '&' {
+      output.write_string("&amp;")
+    } else if unit == '<' {
+      output.write_string("&lt;")
+    } else {
+      output.write_char(unit)
+    }
+  }
+  output.to_string()
 }
 
 ///|
@@ -718,12 +787,15 @@ fn xml_start_tag_scanner_with_rewrites(
   xml : StringView,
   element_namespaces : Array[String],
   attribute_prefixes : Map[String, String],
+  canonicalize_markup : Bool,
+  rewrite_output_limit : Int,
 ) -> XmlStartTagScanner {
   {
     xml,
     index: 0,
     depth: 0,
     namespace_bindings: [],
+    namespace_prefix_indices: Map([]),
     namespace_ids: Map([]),
     namespace_ref_counts: Map([]),
     next_namespace_id: 2,
@@ -733,6 +805,9 @@ fn xml_start_tag_scanner_with_rewrites(
     rewrite_element_namespaces: element_namespaces,
     rewrite_attribute_prefixes: attribute_prefixes,
     rewrite_output: StringBuilder::new(),
+    canonicalize_markup,
+    rewrite_output_limit,
+    rewrite_output_chars: 0,
     rewrite_cursor: 0,
     rewrite_count: 0,
     pending_namespace_pop: None,
@@ -750,7 +825,7 @@ fn xml_start_tag_scanner_with_rewrites(
 /// Creates a namespace-aware cursor over `xml`. The source is borrowed; no
 /// copy of the full XML part is made.
 pub fn XmlStartTagScanner::new(xml : StringView) -> XmlStartTagScanner {
-  xml_start_tag_scanner_with_rewrites(xml, [], Map([]))
+  xml_start_tag_scanner_with_rewrites(xml, [], Map([]), false, 0)
 }
 
 ///|
@@ -785,7 +860,7 @@ fn XmlStartTagScanner::consume_end_tag(
   if rewrite_name {
     match colon {
       Some(value) =>
-        self.record_name_rewrite(
+        self.record_rewrite(
           name_start,
           name_end,
           self.xml[value + 1:name_end].to_owned(),
@@ -837,6 +912,9 @@ pub fn XmlStartTagScanner::next(
         Some(value) => value
         None => raise InvalidXml(msg="XML processing instruction is not closed")
       }
+      if self.canonicalize_markup {
+        self.record_rewrite(start, end + 2, "")
+      }
       self.index = end + 2
       continue
     }
@@ -846,6 +924,9 @@ pub fn XmlStartTagScanner::next(
         let end = match find_xml_sequence(self.xml, start + 4, "-->") {
           Some(value) => value
           None => raise InvalidXml(msg="XML comment is not closed")
+        }
+        if self.canonicalize_markup {
+          self.record_rewrite(start, end + 3, "")
         }
         self.index = end + 3
         continue
@@ -858,6 +939,13 @@ pub fn XmlStartTagScanner::next(
         let end = match find_xml_sequence(self.xml, start + 9, "]]>") {
           Some(value) => value
           None => raise InvalidXml(msg="XML CDATA section is not closed")
+        }
+        if self.canonicalize_markup {
+          self.record_rewrite(
+            start,
+            end + 3,
+            self.escaped_character_data(start, start + 9, end),
+          )
         }
         self.index = end + 3
         continue
@@ -903,7 +991,7 @@ pub fn XmlStartTagScanner::next(
     let rewrite_name = colon is Some(_) &&
       self.should_unprefix_element(self.current_namespace_uri)
     if rewrite_name {
-      self.record_name_rewrite(
+      self.record_rewrite(
         name_start,
         name_end,
         match colon {
@@ -968,12 +1056,19 @@ pub fn XmlStartTagScanner::depth(self : XmlStartTagScanner) -> Int {
 /// Validates `xml` and rewrites selected expanded names into lexical forms
 /// expected by a namespace-oblivious parser. Elements in `element_namespaces`
 /// lose their prefix; attributes in `attribute_prefixes` receive the mapped
-/// prefix. Text, comments, CDATA, values, and unselected names are unchanged.
+/// prefix. Comments and processing instructions are removed, while CDATA is
+/// converted to escaped character data so namespace-oblivious parsers cannot
+/// interpret markup-looking content as elements. Values and unselected names
+/// are unchanged.
 pub fn canonicalize_xml_expanded_names(
   xml : StringView,
   element_namespaces : ArrayView[String],
   attribute_prefixes : ArrayView[(String, String)],
+  max_output_chars? : Int = max_xml_start_tag_chars,
 ) -> String raise ParseXmlError {
+  if max_output_chars < 0 {
+    raise InvalidXml(msg="XML canonical output limit is invalid")
+  }
   let elements : Array[String] = []
   elements.append(element_namespaces)
   let attributes : Map[String, String] = Map([])
@@ -981,13 +1076,19 @@ pub fn canonicalize_xml_expanded_names(
     let (namespace_uri, prefix) = pair
     attributes[namespace_uri] = prefix
   }
-  let scanner = xml_start_tag_scanner_with_rewrites(xml, elements, attributes)
+  let scanner = xml_start_tag_scanner_with_rewrites(
+    xml, elements, attributes, true, max_output_chars,
+  )
   while scanner.next() {
 
   }
   if scanner.rewrite_count == 0 {
+    if xml.length() > max_output_chars {
+      raise InvalidXml(msg="XML canonical output limit exceeded")
+    }
     return xml.to_owned()
   }
+  scanner.charge_rewrite_output(xml.length() - scanner.rewrite_cursor)
   scanner.rewrite_output.write_view(xml[scanner.rewrite_cursor:])
   scanner.rewrite_output.to_string()
 }
@@ -1152,18 +1253,69 @@ test "namespace duplicate checks retain namespace identities once" {
 }
 
 ///|
-test "expanded-name canonicalization preserves data and rewrites both tag ends" {
+test "namespace lookup stays bounded with many bindings and prefixed elements" {
+  let xml = StringBuilder::new()
+  xml.write_string("<root xmlns:p0='urn:sheet'")
+  for index in 1..<4095 {
+    xml.write_string(" xmlns:p\{index}='urn:unused:\{index}'")
+  }
+  xml.write_char('>')
+  for _ in 0..<20_000 {
+    xml.write_string("<p0:item/>")
+  }
+  xml.write_string("</root>")
+  let scanner = XmlStartTagScanner::new(xml.to_string())
+  let mut elements = 0
+  while scanner.next() {
+    elements += 1
+  }
+  assert_eq(elements, 20_001)
+}
+
+///|
+test "expanded-name canonicalization neutralizes non-element markup" {
   let xml =
-    #|<s:root xmlns:s="urn:sheet" xmlns:q="urn:rel"><!-- <s:item/> --><s:item q:id="r1"><![CDATA[<s:literal/>]]></s:item></s:root>
+    #|<?probe fake="<s:item/>"?><s:root xmlns:s="urn:sheet" xmlns:q="urn:rel"><!-- <s:item/> --><s:item q:id="r1"><![CDATA[<s:literal/>&value]]></s:item></s:root>
   let canonical = canonicalize_xml_expanded_names(xml, ["urn:sheet"], [
     ("urn:rel", "r"),
   ])
   inspect(
     canonical,
     content=(
-      #|<root xmlns:s="urn:sheet" xmlns:q="urn:rel"><!-- <s:item/> --><item r:id="r1"><![CDATA[<s:literal/>]]></item></root>
+      #|<root xmlns:s="urn:sheet" xmlns:q="urn:rel"><item r:id="r1">&lt;s:literal/>&amp;value</item></root>
     ),
   )
+}
+
+///|
+test "expanded-name canonicalization rejects lexical attribute collisions" {
+  let xml =
+    #|<s:root xmlns:s="urn:sheet" xmlns:r="urn:foreign" xmlns:q="urn:rel" r:id="foreign" q:id="office"/>
+  try
+    canonicalize_xml_expanded_names(xml, ["urn:sheet"], [("urn:rel", "r")])
+  catch {
+    InvalidXml(msg~) =>
+      inspect(msg, content="XML canonical attribute name collision")
+  } noraise {
+    _ => fail("expected canonical attribute collision")
+  }
+}
+
+///|
+test "expanded-name canonicalization bounds escaped CDATA output" {
+  try
+    canonicalize_xml_expanded_names(
+      "<root><![CDATA[&&&&]]></root>",
+      [],
+      [],
+      max_output_chars=20,
+    )
+  catch {
+    InvalidXml(msg~) =>
+      inspect(msg, content="XML canonical output limit exceeded")
+  } noraise {
+    _ => fail("expected canonical output limit")
+  }
 }
 
 ///|

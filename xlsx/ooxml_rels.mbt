@@ -5,21 +5,41 @@ let transitional_office_relationship_prefix = "http://schemas.openxmlformats.org
 let strict_office_relationship_prefix = "http://purl.oclc.org/ooxml/officeDocument/relationships/"
 
 ///|
-fn parse_relationship_targets_exact(
+fn parse_internal_relationship_targets_exact(
   xml : StringView,
   rel_type : StringView,
 ) -> Map[String, String] raise XlsxError {
-  @ooxml.parse_relationship_targets(xml, rel_type) catch {
+  @ooxml.parse_internal_relationship_targets(xml, rel_type) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
   }
 }
 
 ///|
-fn parse_relationship_targets_exact_types(
+fn parse_internal_relationship_targets_exact_types(
   xml : StringView,
   rel_types : ArrayView[String],
 ) -> Map[String, String] raise XlsxError {
-  @ooxml.parse_relationship_targets_by_types(xml, rel_types) catch {
+  @ooxml.parse_internal_relationship_targets_by_types(xml, rel_types) catch {
+    InvalidXml(msg~) => raise InvalidXml(msg~)
+  }
+}
+
+///|
+fn parse_external_relationship_targets_exact(
+  xml : StringView,
+  rel_type : StringView,
+) -> Map[String, String] raise XlsxError {
+  @ooxml.parse_external_relationship_targets(xml, rel_type) catch {
+    InvalidXml(msg~) => raise InvalidXml(msg~)
+  }
+}
+
+///|
+fn parse_external_relationship_targets_exact_types(
+  xml : StringView,
+  rel_types : ArrayView[String],
+) -> Map[String, String] raise XlsxError {
+  @ooxml.parse_external_relationship_targets_by_types(xml, rel_types) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
   }
 }
@@ -28,7 +48,7 @@ fn parse_relationship_targets_exact_types(
 /// Reads both ISO Strict and ECMA Transitional aliases for relationship types
 /// from the Office relationship family. Microsoft extension relationships use
 /// their own namespaces and therefore remain exact matches.
-fn parse_relationship_targets(
+fn parse_internal_relationship_targets(
   xml : StringView,
   rel_type : StringView,
 ) -> Map[String, String] raise XlsxError {
@@ -36,9 +56,30 @@ fn parse_relationship_targets(
   match requested.strip_prefix(transitional_office_relationship_prefix) {
     Some(suffix) => {
       let strict_type = strict_office_relationship_prefix + suffix.to_owned()
-      parse_relationship_targets_exact_types(xml, [requested, strict_type])
+      parse_internal_relationship_targets_exact_types(xml, [
+        requested, strict_type,
+      ])
     }
-    None => parse_relationship_targets_exact(xml, requested)
+    None => parse_internal_relationship_targets_exact(xml, requested)
+  }
+}
+
+///|
+/// Reads only explicitly external targets, accepting the same Strict aliases
+/// as internal Office relationships.
+fn parse_external_relationship_targets(
+  xml : StringView,
+  rel_type : StringView,
+) -> Map[String, String] raise XlsxError {
+  let requested = rel_type.to_owned()
+  match requested.strip_prefix(transitional_office_relationship_prefix) {
+    Some(suffix) => {
+      let strict_type = strict_office_relationship_prefix + suffix.to_owned()
+      parse_external_relationship_targets_exact_types(xml, [
+        requested, strict_type,
+      ])
+    }
+    None => parse_external_relationship_targets_exact(xml, requested)
   }
 }
 
@@ -167,7 +208,7 @@ fn resolve_workbook_rel_target(target : StringView) -> String raise XlsxError {
 }
 
 ///|
-test "ooxml_rels: parse_relationship_targets filters by Type and maps Id->Target" {
+test "ooxml_rels: internal targets filter by Type and map Id->Target" {
   let xml =
     #|<?xml version="1.0" encoding="UTF-8"?>
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -176,11 +217,32 @@ test "ooxml_rels: parse_relationship_targets filters by Type and maps Id->Target
     #|  <Relationship Id="rId3" Type="t1" Target="c.xml"/>
     #|</Relationships>
     #|
-  let targets = parse_relationship_targets(xml, "t1")
+  let targets = parse_internal_relationship_targets(xml, "t1")
   debug_inspect(
     targets,
     content=(
       #|{ "rId1": "a.xml", "rId3": "c.xml" }
+    ),
+  )
+}
+
+///|
+test "ooxml_rels: target modes separate package parts from external resources" {
+  let xml =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+    #|  <Relationship Id="inside" Type="t1" Target="worksheets/sheet1.xml"/>
+    #|  <Relationship Id="outside" Type="t1" Target="https://example.invalid/sheet.xml" TargetMode="External"/>
+    #|</Relationships>
+  debug_inspect(
+    parse_internal_relationship_targets(xml, "t1"),
+    content=(
+      #|{ "inside": "worksheets/sheet1.xml" }
+    ),
+  )
+  debug_inspect(
+    parse_external_relationship_targets(xml, "t1"),
+    content=(
+      #|{ "outside": "https://example.invalid/sheet.xml" }
     ),
   )
 }
@@ -194,12 +256,12 @@ test "ooxml_rels: Office relationship types accept Strict aliases" {
     #|  <Relationship Id="strict" Type="http://purl.oclc.org/ooxml/officeDocument/relationships/worksheet" Target="worksheets/strict.xml"/>
     #|  <Relationship Id="transitional" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/transitional.xml"/>
     #|</Relationships>
-  let targets = parse_relationship_targets(xml, transitional)
+  let targets = parse_internal_relationship_targets(xml, transitional)
   assert_eq(targets.get("strict"), Some("worksheets/strict.xml"))
   assert_eq(targets.get("transitional"), Some("worksheets/transitional.xml"))
   // Asking for an already-Strict URI remains exact and does not broaden to
   // the Transitional family in the opposite direction.
-  let strict_only = parse_relationship_targets(xml, strict)
+  let strict_only = parse_internal_relationship_targets(xml, strict)
   assert_eq(strict_only.length(), 1)
   assert_eq(strict_only.get("strict"), Some("worksheets/strict.xml"))
 }

@@ -346,7 +346,9 @@ fn parse_slicer_cache_definitions(
   decode : (BytesView) -> String raise XlsxError,
 ) -> Map[String, SlicerCacheDef] raise XlsxError {
   let defs : Map[String, SlicerCacheDef] = Map([])
-  let targets = parse_relationship_targets(workbook_rels_xml, rel_slicer_cache)
+  let targets = parse_internal_relationship_targets(
+    workbook_rels_xml, rel_slicer_cache,
+  )
   for _rel_id, target in targets {
     let cache_path = actual_archive_part_path(
       part_names,
