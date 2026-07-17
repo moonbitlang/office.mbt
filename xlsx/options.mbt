@@ -24,6 +24,21 @@ let default_max_total_xml_bytes : Int = 128 * 1024 * 1024
 let default_max_xml_markup_tokens : Int = 2_000_000
 
 ///|
+let default_max_relationship_records : Int = 16_384
+
+///|
+let default_max_relationship_id_chars : Int = 256
+
+///|
+let default_max_relationship_type_chars : Int = 2_048
+
+///|
+let default_max_relationship_target_chars : Int = 4_096
+
+///|
+let default_max_total_relationship_chars : Int = 8 * 1024 * 1024
+
+///|
 let default_max_materialized_cells : Int = 1_000_000
 
 ///|
@@ -66,6 +81,11 @@ pub struct ReadLimits {
   priv max_xml_part_bytes : Int
   priv max_total_xml_bytes : Int
   priv max_xml_markup_tokens : Int
+  priv max_relationship_records : Int
+  priv max_relationship_id_chars : Int
+  priv max_relationship_type_chars : Int
+  priv max_relationship_target_chars : Int
+  priv max_total_relationship_chars : Int
   priv max_materialized_cells : Int
   priv max_materialized_row_column_dimensions : Int
   priv max_row_column_dimension_work : Int
@@ -93,6 +113,11 @@ pub fn ReadLimits::new() -> ReadLimits {
     max_xml_part_bytes: default_max_xml_part_bytes,
     max_total_xml_bytes: default_max_total_xml_bytes,
     max_xml_markup_tokens: default_max_xml_markup_tokens,
+    max_relationship_records: default_max_relationship_records,
+    max_relationship_id_chars: default_max_relationship_id_chars,
+    max_relationship_type_chars: default_max_relationship_type_chars,
+    max_relationship_target_chars: default_max_relationship_target_chars,
+    max_total_relationship_chars: default_max_total_relationship_chars,
     max_materialized_cells: default_max_materialized_cells,
     max_materialized_row_column_dimensions: default_max_materialized_row_column_dimensions,
     max_row_column_dimension_work: default_max_row_column_dimension_work,
@@ -115,6 +140,11 @@ pub fn ReadLimits::with_values(
   max_xml_part_bytes? : Int = default_max_xml_part_bytes,
   max_total_xml_bytes? : Int = default_max_total_xml_bytes,
   max_xml_markup_tokens? : Int = default_max_xml_markup_tokens,
+  max_relationship_records? : Int = default_max_relationship_records,
+  max_relationship_id_chars? : Int = default_max_relationship_id_chars,
+  max_relationship_type_chars? : Int = default_max_relationship_type_chars,
+  max_relationship_target_chars? : Int = default_max_relationship_target_chars,
+  max_total_relationship_chars? : Int = default_max_total_relationship_chars,
   max_materialized_cells? : Int = default_max_materialized_cells,
   max_materialized_row_column_dimensions? : Int = default_max_materialized_row_column_dimensions,
   max_row_column_dimension_work? : Int = default_max_row_column_dimension_work,
@@ -131,6 +161,11 @@ pub fn ReadLimits::with_values(
     max_xml_part_bytes <= 0 ||
     max_total_xml_bytes <= 0 ||
     max_xml_markup_tokens <= 0 ||
+    max_relationship_records <= 0 ||
+    max_relationship_id_chars <= 0 ||
+    max_relationship_type_chars <= 0 ||
+    max_relationship_target_chars <= 0 ||
+    max_total_relationship_chars <= 0 ||
     max_materialized_cells <= 0 ||
     max_materialized_row_column_dimensions <= 0 ||
     max_row_column_dimension_work <= 0 ||
@@ -157,6 +192,11 @@ pub fn ReadLimits::with_values(
     max_xml_part_bytes,
     max_total_xml_bytes,
     max_xml_markup_tokens,
+    max_relationship_records,
+    max_relationship_id_chars,
+    max_relationship_type_chars,
+    max_relationship_target_chars,
+    max_total_relationship_chars,
     max_materialized_cells,
     max_materialized_row_column_dimensions,
     max_row_column_dimension_work,
@@ -214,6 +254,36 @@ pub fn ReadLimits::max_total_xml_bytes(self : ReadLimits) -> Int {
 /// Returns the maximum aggregate markup-token starts scanned while decoding.
 pub fn ReadLimits::max_xml_markup_tokens(self : ReadLimits) -> Int {
   self.max_xml_markup_tokens
+}
+
+///|
+/// Returns the maximum aggregate relationship records scanned in one package.
+pub fn ReadLimits::max_relationship_records(self : ReadLimits) -> Int {
+  self.max_relationship_records
+}
+
+///|
+/// Returns the maximum retained relationship id length in characters.
+pub fn ReadLimits::max_relationship_id_chars(self : ReadLimits) -> Int {
+  self.max_relationship_id_chars
+}
+
+///|
+/// Returns the maximum relationship type URI length in characters.
+pub fn ReadLimits::max_relationship_type_chars(self : ReadLimits) -> Int {
+  self.max_relationship_type_chars
+}
+
+///|
+/// Returns the maximum internal/external relationship target length.
+pub fn ReadLimits::max_relationship_target_chars(self : ReadLimits) -> Int {
+  self.max_relationship_target_chars
+}
+
+///|
+/// Returns the maximum aggregate relationship attribute characters scanned.
+pub fn ReadLimits::max_total_relationship_chars(self : ReadLimits) -> Int {
+  self.max_total_relationship_chars
 }
 
 ///|

@@ -126,6 +126,16 @@ test "read limits reject non-positive row and column dimension work" {
 }
 
 ///|
+test "read limits reject non-positive relationship ceilings" {
+  let result : Result[@xlsx.ReadLimits, Error] = Ok(
+    @xlsx.ReadLimits::with_values(max_relationship_records=0),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(result is Err(@xlsx.InvalidOptions(_)), content="true")
+}
+
+///|
 test "default read limits expose the complete ZIP policy" {
   let limits = @xlsx.ReadLimits::new()
   assert_eq(limits.max_package_bytes(), 128 * 1024 * 1024)
@@ -139,6 +149,11 @@ test "default read limits expose the complete ZIP policy" {
   assert_eq(limits.max_xml_part_bytes(), 16 * 1024 * 1024)
   assert_eq(limits.max_total_xml_bytes(), 128 * 1024 * 1024)
   assert_eq(limits.max_xml_markup_tokens(), 2_000_000)
+  assert_eq(limits.max_relationship_records(), 16_384)
+  assert_eq(limits.max_relationship_id_chars(), 256)
+  assert_eq(limits.max_relationship_type_chars(), 2_048)
+  assert_eq(limits.max_relationship_target_chars(), 4_096)
+  assert_eq(limits.max_total_relationship_chars(), 8 * 1024 * 1024)
   assert_eq(limits.max_materialized_cells(), 1_000_000)
   assert_eq(limits.max_materialized_row_column_dimensions(), 1_000_000)
   assert_eq(limits.max_row_column_dimension_work(), 1_000_000)

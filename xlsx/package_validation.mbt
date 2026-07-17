@@ -104,6 +104,7 @@ pub fn validate_ooxml_bounded_archive(
 ) -> Array[String] raise XlsxError {
   require_bounded_archive(archive, limits)
   enforce_package_validation_xml_limits(archive, limits)
+  preflight_archive_relationship_limits(archive, limits)
   validate_ooxml_archive(archive)
 }
 
@@ -196,17 +197,21 @@ fn validate_ooxml_archive(archive : @zip.Archive) -> Array[String] {
         first = false
         continue
       }
-      let end = match chunk.find(">") {
+      let end = match relationship_start_tag_end(chunk) {
         Some(pos) => pos
         None => continue
       }
       let tag = chunk[:end]
-      let target_opt = attr_value(tag, "Target") catch { _ => None }
+      let target_opt = relationship_attribute_view(tag, "Target") catch {
+        _ => None
+      }
       let target = match target_opt {
         Some(value) => value
         None => continue
       }
-      let mode_opt = attr_value(tag, "TargetMode") catch { _ => None }
+      let mode_opt = relationship_attribute_view(tag, "TargetMode") catch {
+        _ => None
+      }
       let external = match mode_opt {
         Some(mode) => mode == "External"
         None => false
@@ -216,9 +221,12 @@ fn validate_ooxml_archive(archive : @zip.Archive) -> Array[String] {
       }
       let resolved = resolve_part_path(base, target)
       if resolved != "" && !parts.contains(resolved) {
+        let source_text = package_diagnostic_excerpt(name, 160)
+        let target_text = package_diagnostic_excerpt(target, 160)
+        let resolved_text = package_diagnostic_excerpt(resolved, 160)
         if !push_package_problem(
             problems,
-            "relationship in \{name} points to a missing part: \{target} -> \{resolved}",
+            "relationship in \{source_text} points to a missing part: \{target_text} -> \{resolved_text}",
           ) {
           return problems
         }
@@ -312,28 +320,48 @@ fn rels_base_dir(rels_part : String) -> String {
 /// leading-slash absolute form and `.`/`..` segments. Returns "" when
 /// the path escapes the package root (which the caller treats as
 /// unresolvable rather than a definite error).
-fn resolve_part_path(base : String, target : String) -> String {
-  let combined = if target.has_prefix("/") {
-    target[1:].to_owned()
+fn package_diagnostic_excerpt(value : StringView, maximum : Int) -> String {
+  if value.length() <= maximum {
+    value.to_owned()
   } else {
-    base + target
+    value[:maximum].to_owned() + "…"
   }
-  let segments : Array[String] = []
-  for segment in combined.split("/") {
-    let seg = segment.to_owned()
-    if seg == "" || seg == "." {
-      continue
-    }
-    if seg == ".." {
-      if segments.length() == 0 {
-        return ""
+}
+
+///|
+fn resolve_part_path(base : StringView, target : StringView) -> String {
+  let segments : Array[StringView] = []
+  fn consume(value : StringView) -> Bool {
+    for segment in value.split("/") {
+      if segment == "" || segment == "." {
+        continue
       }
-      segments.remove(segments.length() - 1) |> ignore
-      continue
+      if segment == ".." {
+        if segments.length() == 0 {
+          return false
+        }
+        ignore(segments.pop())
+      } else {
+        segments.push(segment)
+      }
     }
-    segments.push(seg)
+    true
   }
-  segments.join("/")
+  if target.has_prefix("/") {
+    if !consume(target[1:]) {
+      return ""
+    }
+  } else if !consume(base) || !consume(target) {
+    return ""
+  }
+  let result = StringBuilder::new()
+  for index, segment in segments {
+    if index > 0 {
+      result.write_char('/')
+    }
+    result.write_view(segment)
+  }
+  result.to_string()
 }
 
 ///|

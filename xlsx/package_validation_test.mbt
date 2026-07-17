@@ -209,3 +209,43 @@ test "OOXML validation bounds relationship findings and scan retention" {
     content="additional package findings were omitted after the bounded validator limit",
   )
 }
+
+///|
+test "OOXML validation rejects oversized relationship attributes before maps" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let limits = @xlsx.ReadLimits::with_values(max_relationship_target_chars=4)
+  let result : Result[Array[String], Error] = Ok(
+    @xlsx.validate_ooxml_package(@xlsx.write(workbook), limits~),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="relationship_target_chars")
+      assert_eq(limit, 4)
+      assert_true(actual > limit)
+    }
+    _ => fail("expected relationship target limit")
+  }
+}
+
+///|
+test "OOXML validation charges relationship records package-wide" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let limits = @xlsx.ReadLimits::with_values(max_relationship_records=1)
+  let result : Result[Array[String], Error] = Ok(
+    @xlsx.validate_ooxml_package(@xlsx.write(workbook), limits~),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="relationship_records")
+      assert_eq(limit, 1)
+      assert_eq(actual, 2)
+    }
+    _ => fail("expected aggregate relationship-record limit")
+  }
+}

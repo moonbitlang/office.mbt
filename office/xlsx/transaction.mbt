@@ -2,6 +2,9 @@
 let xlsx_transaction_validator_name = "office-xlsx-bounded"
 
 ///|
+let xlsx_transaction_identifier_name = "office-xlsx-bounded-source"
+
+///|
 let xlsx_transaction_max_findings = 64
 
 ///|
@@ -242,6 +245,22 @@ fn xlsx_transaction_validator() -> @transaction.TransactionValidator raise @tran
 }
 
 ///|
+/// Runs the XLSX-specific bounded parser before the mandatory portable OPC
+/// detector. The portable detector still independently verifies the format,
+/// but it never sees relationship metadata that exceeded the XLSX package
+/// materialization policy.
+fn xlsx_transaction_identifier() -> @transaction.TransactionIdentifier raise @transaction.TransactionError {
+  @transaction.transaction_identifier(xlsx_transaction_identifier_name, (
+    _path,
+    _bytes,
+    archive,
+  ) => {
+    ignore(read_transaction_workbook(archive))
+    Xlsx
+  })
+}
+
+///|
 fn full_rewrite_warning() -> @office.ProtocolWarning {
   @office.protocol_warning(
     "office.xlsx.full_rewrite", "XLSX batch mutation performs a full workbook serialization; the transaction preservation report is authoritative for changed, added, removed, and unchanged part payloads",
@@ -280,6 +299,7 @@ pub async fn transact_batch(
 ) -> XlsxBatchResult {
   let stats = plan.stats()
   let validator = xlsx_transaction_validator()
+  let identifier = xlsx_transaction_identifier()
   let report = @transaction.transact(
     options,
     (format, _bytes, archive, budget) => {
@@ -308,6 +328,7 @@ pub async fn transact_batch(
       }
     },
     validators=[validator],
+    identifier~,
   )
   { stats, transaction: report }
 }
@@ -320,6 +341,7 @@ pub async fn create_workbook(
   sheet : String,
 ) -> XlsxCreateResult {
   let validator = xlsx_transaction_validator()
+  let identifier = xlsx_transaction_identifier()
   let report = @transaction.transact_create(
     options,
     Xlsx,
@@ -343,6 +365,7 @@ pub async fn create_workbook(
       )
     },
     validators=[validator],
+    identifier~,
   )
   { sheet, transaction: report }
 }

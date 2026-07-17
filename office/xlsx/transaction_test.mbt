@@ -56,9 +56,13 @@ async test "fresh XLSX creation uses complete validation and atomic publication"
     assert_eq(result.sheet, "Data")
     assert_true(result.transaction.committed)
     assert_true(result.transaction.changed)
-    assert_eq(result.transaction.validations.length(), 2)
-    assert_eq(result.transaction.validations[0].name, "office-portable-opc")
-    assert_eq(result.transaction.validations[1].name, "office-xlsx-bounded")
+    assert_eq(result.transaction.validations.length(), 3)
+    assert_eq(
+      result.transaction.validations[0].name,
+      "office-xlsx-bounded-source",
+    )
+    assert_eq(result.transaction.validations[1].name, "office-portable-opc")
+    assert_eq(result.transaction.validations[2].name, "office-xlsx-bounded")
     let reopened = @excel.read(@afs.read_file(output).binary())
     assert_eq(reopened.get_sheet_list(), ["Data"])
     assert_true(result.transaction.preservation.added.length() > 0)
@@ -213,6 +217,38 @@ async test "XLSX batch rejects projected cell growth before application" {
     })
     assert_eq(code, "office.transaction.resource_limit_exceeded")
     assert_eq(@afs.read_file(input).binary(), original)
+    assert_false(@afs.exists(output))
+  })
+}
+
+///|
+async test "oversized relationship metadata fails closed before publication" {
+  with_xlsx_transaction_dir(directory => {
+    let input = "\{directory}/input.xlsx"
+    let output = "\{directory}/output.xlsx"
+    let original = xlsx_transaction_fixture()
+    let archive = @zip.read(original)
+    let target = "x".repeat(4_097)
+    archive.add(
+      "xl/custom/_rels/item.xml.rels",
+      @utf8.encode(
+        "<Relationships><Relationship Id=\"rId1\" Type=\"urn:test\" Target=\"\{target}\"/></Relationships>",
+      ),
+    )
+    let hostile = @zip.write(archive)
+    write_xlsx_transaction_file(input, hostile)
+    let plan = @xlsx.parse_batch(
+      @utf8.encode("{\"schema\":\"xlsx.batch/1\",\"ops\":[]}"),
+    )
+    let code = xlsx_transaction_error_code(() => {
+      let result = @xlsx.transact_batch(
+        @transaction.transaction_options(input, output_path=output),
+        plan,
+      )
+      result.transaction
+    })
+    assert_eq(code, "office.transaction.resource_limit_exceeded")
+    assert_eq(@afs.read_file(input).binary(), hostile)
     assert_false(@afs.exists(output))
   })
 }
