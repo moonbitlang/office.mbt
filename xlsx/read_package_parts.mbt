@@ -36,12 +36,27 @@ fn workbook_part_from_root_relationships(
 
 ///|
 fn workbook_content_type_is_supported(value : StringView) -> Bool {
+  let normalized = value.to_owned().to_lower()
   for candidate in workbook_content_type_candidates() {
-    if value == candidate {
+    if normalized == candidate.to_lower() {
       return true
     }
   }
   false
+}
+
+///|
+test "read package parts: workbook media types are case-insensitive" {
+  assert_true(
+    workbook_content_type_is_supported(
+      "Application/Vnd.Openxmlformats-Officedocument.Spreadsheetml.Sheet.Main+Xml",
+    ),
+  )
+  assert_true(
+    workbook_content_type_is_supported(
+      "APPLICATION/VND.MS-EXCEL.SHEET.MACROENABLED.MAIN+XML",
+    ),
+  )
 }
 
 ///|

@@ -128,6 +128,30 @@ test "main-part names, relationship targets, and ids decode XML entities" {
 }
 
 ///|
+test "mixed-case workbook media type reads end to end" {
+  let archive = @zip.read(namespace_qualified_xlsx_fixture(false, false))
+  guard archive.get("[Content_Types].xml") is Some(content_type_bytes) else {
+    fail("missing content types fixture part")
+  }
+  let content_types = @encoding/utf8.decode(content_type_bytes) catch {
+    _ => fail("content types fixture is not UTF-8")
+  }
+  let original = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"
+  let mixed = "Application/Vnd.Openxmlformats-Officedocument.Spreadsheetml.Sheet.Main+Xml"
+  let updated = content_types.replace(old=original, new=mixed)
+  if updated == content_types {
+    fail("workbook media type marker was not found")
+  }
+  archive.add("[Content_Types].xml", @encoding/utf8.encode(updated))
+  let parsed = @xlsx.read(@zip.write(archive))
+  debug_inspect(parsed.get_sheet_list(), content="[\"Qualified\"]")
+  debug_inspect(
+    parsed.get_cell_value("Qualified", "A1"),
+    content="Some(\"qualified-value\")",
+  )
+}
+
+///|
 test "SpreadsheetML-looking extension payload cannot create sheets or cells" {
   for strict in [false, true] {
     let bytes = namespace_qualified_xlsx_fixture(strict, false)
