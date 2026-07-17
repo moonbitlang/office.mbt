@@ -144,6 +144,35 @@ async fn read_bounded_file(
     }
     offset = offset + count
   }
+  let final_size = file.size() catch {
+    error if @async.is_being_cancelled() => raise error
+    _ =>
+      raise cli_file_error(
+        code,
+        "could not recheck \{description} size: ",
+        path,
+      )
+  }
+  if final_size != size {
+    if final_size < 0L || final_size > maximum.to_int64() {
+      raise CliFailure(
+        @lib.protocol_error(
+          limit_code,
+          "\{description} exceeds the \{maximum}-byte limit",
+          details=Json::object({
+            "file": Json::string(bounded_text(path, 160)),
+            "limit": Json::number(maximum.to_double()),
+            "actual": Json::number(final_size.to_double()),
+          }),
+        ),
+      )
+    }
+    raise cli_file_error(
+      code,
+      "\{description} changed while being read: ",
+      path,
+    )
+  }
   complete_bounded_file_read(buffer)
 }
 
