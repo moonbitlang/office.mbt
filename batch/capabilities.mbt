@@ -14,6 +14,7 @@ priv struct ParamSpec {
   name : String
   kind : String
   required : Bool
+  allowed_values : Array[String]
 }
 
 ///|
@@ -28,12 +29,22 @@ priv struct OpSpec {
 
 ///|
 fn req(name : String, kind : String) -> ParamSpec {
-  { name, kind, required: true }
+  { name, kind, required: true, allowed_values: [] }
 }
 
 ///|
 fn opt(name : String, kind : String) -> ParamSpec {
-  { name, kind, required: false }
+  { name, kind, required: false, allowed_values: [] }
+}
+
+///|
+fn req_choice(name : String, allowed_values : Array[String]) -> ParamSpec {
+  { name, kind: "string", required: true, allowed_values }
+}
+
+///|
+fn opt_choice(name : String, allowed_values : Array[String]) -> ParamSpec {
+  { name, kind: "string", required: false, allowed_values }
 }
 
 ///|
@@ -63,11 +74,11 @@ let op_specs : Array[OpSpec] = [
       opt("fill", "string"),
       opt("font_color", "string"),
       opt("align", "string"),
-      opt("border", "string"),
-      opt("border_top", "string"),
-      opt("border_bottom", "string"),
-      opt("border_left", "string"),
-      opt("border_right", "string"),
+      opt_choice("border", border_style_values),
+      opt_choice("border_top", border_style_values),
+      opt_choice("border_bottom", border_style_values),
+      opt_choice("border_left", border_style_values),
+      opt_choice("border_right", border_style_values),
       opt("border_color", "string"),
     ],
   },
@@ -93,7 +104,7 @@ let op_specs : Array[OpSpec] = [
       req("anchor", "cell"),
       req("categories", "series_range"),
       req("values", "series_range"),
-      opt("type", "string"),
+      opt_choice("type", chart_type_values),
       opt("name", "string"),
       opt("title", "string"),
     ],
@@ -117,8 +128,8 @@ let op_specs : Array[OpSpec] = [
     params: [
       req("sheet", "string"),
       req("range", "sqref"),
-      req("type", "string"),
-      opt("operator", "string"),
+      req_choice("type", validation_type_values),
+      opt_choice("operator", validation_operator_values),
       opt("formula1", "string"),
       opt("formula2", "string"),
       opt("values", "string_array"),
@@ -128,13 +139,13 @@ let op_specs : Array[OpSpec] = [
       opt("input_message", "string"),
       opt("error_title", "string"),
       opt("error_message", "string"),
-      opt("error_style", "string"),
+      opt_choice("error_style", validation_error_style_values),
     ],
   },
   {
     op: "sheet",
     params: [
-      req("action", "string"),
+      req_choice("action", sheet_action_values),
       req("name", "string"),
       opt("to", "string"),
     ],
@@ -143,7 +154,7 @@ let op_specs : Array[OpSpec] = [
     op: "row",
     params: [
       req("sheet", "string"),
-      req("action", "string"),
+      req_choice("action", row_action_values),
       req("at", "number"),
       opt("count", "number"),
       opt("height", "number"),
@@ -153,7 +164,7 @@ let op_specs : Array[OpSpec] = [
     op: "col",
     params: [
       req("sheet", "string"),
-      req("action", "string"),
+      req_choice("action", column_action_values),
       req("at", "column"),
       opt("count", "number"),
     ],
@@ -163,7 +174,7 @@ let op_specs : Array[OpSpec] = [
     params: [
       req("sheet", "string"),
       req("range", "sqref"),
-      req("type", "string"),
+      req_choice("type", cf_supported_types),
       opt("criteria", "string"),
       opt("value", "string"),
       opt("min_value", "string"),
@@ -173,18 +184,18 @@ let op_specs : Array[OpSpec] = [
       opt("font_color", "string"),
       opt("bold", "bool"),
       opt("italic", "bool"),
-      opt("min_type", "string"),
-      opt("mid_type", "string"),
-      opt("max_type", "string"),
+      opt_choice("min_type", cf_stop_type_values),
+      opt_choice("mid_type", cf_stop_type_values),
+      opt_choice("max_type", cf_stop_type_values),
       opt("mid_value", "string"),
       opt("min_color", "string"),
       opt("mid_color", "string"),
       opt("max_color", "string"),
       opt("bar_color", "string"),
       opt("bar_solid", "bool"),
-      opt("bar_direction", "string"),
+      opt_choice("bar_direction", cf_bar_direction_values),
       opt("bar_border_color", "string"),
-      opt("icon_style", "string"),
+      opt_choice("icon_style", cf_classic_icon_styles),
       opt("reverse_icons", "bool"),
       opt("stop_if_true", "bool"),
     ],
@@ -239,6 +250,9 @@ pub fn capabilities() -> Json {
           "name": Json::string(p.name),
           "type": Json::string(p.kind),
           "required": Json::boolean(p.required),
+          "allowed_values": Json::array(
+            p.allowed_values.map(value => Json::string(value)),
+          ),
         }),
       )
     }

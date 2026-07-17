@@ -33,8 +33,6 @@ pub fn capabilities() -> Json
 
 pub fn chart_type_of(String) -> @xlsx.ChartType raise BatchError
 
-pub fn parse_plan(Json) -> BatchPlan raise BatchError
-
 pub fn parse_script(Json) -> Array[BatchOp] raise BatchError
 
 pub fn parse_script_bytes(BytesView) -> BatchPlan raise BatchError

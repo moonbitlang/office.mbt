@@ -285,6 +285,119 @@ fn op_error(index : Int, op : String, message : String) -> BatchError {
 }
 
 ///|
+/// Reject every enum and action-dependent parameter while the encoded plan is
+/// parsed. This keeps malformed scripts outside workbook I/O and ensures the
+/// transaction never materializes a source package merely to discover a script
+/// grammar error.
+fn validate_parsed_op_contract(op : BatchOp) -> Unit raise BatchError {
+  match op.0 {
+    OpChart(chart_type~, ..) => ignore(chart_type_of(chart_type))
+    OpValidate(
+      validation_type~,
+      operator~,
+      formula1~,
+      formula2~,
+      values~,
+      source~,
+      error_style~,
+      ..
+    ) =>
+      validate_data_validation_contract(
+        validation_type, operator, formula1, formula2, values, source, error_style,
+      )
+    OpCf(
+      cf_type~,
+      criteria~,
+      value~,
+      min_value~,
+      max_value~,
+      formula~,
+      fill~,
+      font_color~,
+      bold~,
+      italic~,
+      min_type~,
+      mid_type~,
+      max_type~,
+      mid_value~,
+      min_color~,
+      mid_color~,
+      max_color~,
+      bar_color~,
+      bar_solid~,
+      bar_direction~,
+      bar_border_color~,
+      icon_style~,
+      reverse_icons~,
+      stop_if_true~,
+      ..
+    ) =>
+      validate_conditional_format_contract(
+        cf_type, criteria, value, min_value, max_value, formula, fill, font_color,
+        bold, italic, min_type, mid_type, max_type, mid_value, min_color, mid_color,
+        max_color, bar_color, bar_solid, bar_direction, bar_border_color, icon_style,
+        reverse_icons, stop_if_true,
+      )
+    OpSheet(action~, to~, ..) =>
+      match action {
+        "rename" =>
+          if to == "" {
+            raise BatchError("sheet: action 'rename' requires 'to'")
+          }
+        "delete" | "hide" | "show" | "very-hide" =>
+          if to != "" {
+            raise BatchError("sheet: action '\{action}' does not take 'to'")
+          }
+        other =>
+          raise BatchError(
+            "sheet: unknown action '\{other}' (expected one of: \{sheet_action_values.join(", ")})",
+          )
+      }
+    OpRow(action~, height~, ..) =>
+      match action {
+        "hide" | "show" =>
+          if height is Some(_) {
+            raise BatchError("row: action '\{action}' does not take 'height'")
+          }
+        "height" =>
+          if height is None {
+            raise BatchError("row: action 'height' requires 'height'")
+          }
+        other =>
+          raise BatchError(
+            "row: unknown action '\{other}' (expected one of: \{row_action_values.join(", ")})",
+          )
+      }
+    OpCol(action~, ..) =>
+      if !column_action_values.contains(action) {
+        raise BatchError(
+          "col: unknown action '\{action}' (expected one of: \{column_action_values.join(", ")})",
+        )
+      }
+    OpStyle(
+      border~,
+      border_top~,
+      border_bottom~,
+      border_left~,
+      border_right~,
+      border_color~,
+      ..
+    ) =>
+      ignore(
+        build_cell_borders(
+          all=border,
+          top=border_top,
+          bottom=border_bottom,
+          left=border_left,
+          right=border_right,
+          color=border_color,
+        ),
+      )
+    _ => ()
+  }
+}
+
+///|
 /// The `row`/`col` actions that apply a per-line setter in a loop (rows have
 /// no range API), and so consume the per-op / script-wide line budgets.
 /// insert/delete (a later op) pass `count` straight to the engine and are not
@@ -397,7 +510,7 @@ pub fn parse_script_bytes(data : BytesView) -> BatchPlan raise BatchError {
 /// the envelope must be an object holding exactly `schema` and `ops`, the
 /// schema string must match, and every op must validate. Zero ops is a valid
 /// no-op.
-pub fn parse_plan(document : Json) -> BatchPlan raise BatchError {
+fn parse_plan(document : Json) -> BatchPlan raise BatchError {
   let root = match document {
     Object(map) => map
     _ => raise BatchError("batch script must be a JSON object")
@@ -702,6 +815,9 @@ fn parse_op(
       )
   }
   reader.finish()
+  validate_parsed_op_contract(op) catch {
+    BatchError(message) => raise op_error(index, name, message)
+  }
   match op {
     OpSet(..) | OpFormula(..) => {
       touched_cells.val = touched_cells.val + 1L

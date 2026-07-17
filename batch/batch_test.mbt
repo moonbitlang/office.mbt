@@ -8,6 +8,11 @@ fn parse_ops(script : String) -> Array[@batch.BatchOp] raise {
 }
 
 ///|
+fn parse_plan_json(document : Json) -> @batch.BatchPlan raise @batch.BatchError {
+  @batch.parse_script_bytes(@utf8.encode(document.stringify()))
+}
+
+///|
 fn apply_script(workbook : @xlsx.Workbook, script : String) -> Int raise {
   let ops = parse_ops(script)
   for op in ops {
@@ -41,7 +46,7 @@ test "opaque batch plans retain deterministic resource accounting" {
 
 ///|
 test "width ranges consume the aggregate row/column materialization budget" {
-  let accepted = @batch.parse_plan(
+  let accepted = parse_plan_json(
     Json::object({
       "schema": Json::string("xlsx.batch/1"),
       "ops": Json::array([
@@ -72,7 +77,7 @@ test "width ranges consume the aggregate row/column materialization budget" {
     )
   }
   try
-    @batch.parse_plan(
+    parse_plan_json(
       Json::object({
         "schema": Json::string("xlsx.batch/1"),
         "ops": Json::array(ops),
@@ -169,7 +174,7 @@ test "batch plans cap aggregate direct and expanded cell writes" {
     }),
   )
   try
-    @batch.parse_plan(
+    parse_plan_json(
       Json::object({
         "schema": Json::string("xlsx.batch/1"),
         "ops": Json::array(ops),
@@ -200,7 +205,7 @@ test "batch plans cap aggregate style records" {
     )
   }
   try
-    @batch.parse_plan(
+    parse_plan_json(
       Json::object({
         "schema": Json::string("xlsx.batch/1"),
         "ops": Json::array(ops),
@@ -232,7 +237,7 @@ test "style-free conditional formats do not consume differential-style budget" {
       }),
     )
   }
-  let plan = @batch.parse_plan(
+  let plan = parse_plan_json(
     Json::object({
       "schema": Json::string("xlsx.batch/1"),
       "ops": Json::array(ops),
@@ -413,7 +418,7 @@ test "a style op can border a single side (a header underline)" {
 }
 
 ///|
-test "a style op rejects an unknown border style or a bad border color" {
+test "a style op rejects invalid border input while parsing" {
   let cases = [
     (
       (
@@ -436,7 +441,10 @@ test "a style op rejects an unknown border style or a bad border color" {
       ignore(apply_script(workbook, script))
       fail("expected apply to reject: \{want}")
     } catch {
-      @batch.BatchError(message) => assert_eq(message, want)
+      @batch.BatchError(message) => {
+        assert_true(message.has_prefix("op 0 (style): "))
+        assert_true(message.has_suffix(want))
+      }
       err => fail("expected a BatchError, got \{err}")
     }
   }
@@ -493,7 +501,7 @@ test "a table op auto-names and keeps engine defaults when options are omitted" 
     #|{"schema":"xlsx.batch/1","ops":[
     #|  {"op":"table","params":{"sheet":"S","range":"A1:C3"}}
     #|]}
-  let plan = @batch.parse_plan(@json.parse(script))
+  let plan = @batch.parse_script_bytes(@utf8.encode(script))
   assert_eq(plan.stats().touched_cells, 3L)
   inspect(apply_script(workbook, script), content="1")
   let table = first_table(workbook)
@@ -517,7 +525,7 @@ test "table header synthesis is included in aggregate materialization stats" {
     #|  {"op":"table","params":{"sheet":"S","range":"A4:XFD5"}},
     #|  {"op":"table","params":{"sheet":"S","range":"A7:XFD8"}}
     #|]}
-  let plan = @batch.parse_plan(@json.parse(script))
+  let plan = @batch.parse_script_bytes(@utf8.encode(script))
   assert_eq(plan.stats().touched_cells, 49_152L)
 }
 
@@ -687,7 +695,7 @@ test "a validate op reports the workbook stays valid OOXML" {
 }
 
 ///|
-test "validate op apply-time errors are typed and specific" {
+test "validate op parse-time errors are typed and specific" {
   let cases = [
     (
       (
@@ -779,7 +787,10 @@ test "validate op apply-time errors are typed and specific" {
       ignore(apply_script(workbook, script))
       fail("expected apply to reject: \{want}")
     } catch {
-      @batch.BatchError(message) => assert_eq(message, want)
+      @batch.BatchError(message) => {
+        assert_true(message.has_prefix("op 0 (validate): "))
+        assert_true(message.has_suffix(want))
+      }
       err => fail("expected a BatchError, got \{err}")
     }
     // The rejected op left no validation behind.
@@ -913,7 +924,7 @@ test "stacked cf ops on one range get increasing priorities and stay valid" {
 }
 
 ///|
-test "cf op apply-time errors are typed and specific" {
+test "cf op parse-time errors are typed and specific" {
   let cases = [
     (
       (
@@ -1047,7 +1058,10 @@ test "cf op apply-time errors are typed and specific" {
       ignore(apply_script(workbook, script))
       fail("expected apply to reject: \{want}")
     } catch {
-      @batch.BatchError(message) => assert_eq(message, want)
+      @batch.BatchError(message) => {
+        assert_true(message.has_prefix("op 0 (cf): "))
+        assert_true(message.has_suffix(want))
+      }
       err => fail("expected a BatchError, got \{err}")
     }
     assert_eq(workbook.sheets()[0].conditional_formats().length(), 0)
@@ -1095,7 +1109,7 @@ test "a sheet op renames, deletes, hides, very-hides, and shows sheets" {
 }
 
 ///|
-test "sheet op validation errors are typed and specific" {
+test "sheet op grammar errors are rejected while parsing" {
   let cases = [
     (
       (
@@ -1125,7 +1139,10 @@ test "sheet op validation errors are typed and specific" {
       ignore(apply_script(workbook, script))
       fail("expected apply to reject: \{want}")
     } catch {
-      @batch.BatchError(message) => assert_eq(message, want)
+      @batch.BatchError(message) => {
+        assert_true(message.has_prefix("op 0 (sheet): "))
+        assert_true(message.has_suffix(want))
+      }
       err => fail("expected a BatchError, got \{err}")
     }
     // The two sheets are untouched by a rejected op.
@@ -1372,7 +1389,7 @@ test "row and col band ops touch exactly the band" {
 ///|
 test "row and col op validation errors are typed and specific" {
   let cases = [
-    // Apply-time action/param rules (bare "row:"/"col:" messages).
+    // Action/param rules are normalized at the parse boundary.
     (
       (
         #|{"schema":"xlsx.batch/1","ops":[{"op":"row","params":{"sheet":"Grid","action":"freeze","at":1}}]}
@@ -1437,7 +1454,10 @@ test "row and col op validation errors are typed and specific" {
       ignore(apply_script(workbook, script))
       fail("expected apply to reject: \{want}")
     } catch {
-      @batch.BatchError(message) => assert_eq(message, want)
+      @batch.BatchError(message) => {
+        assert_true(message.has_prefix("op 0 ("))
+        assert_true(message.has_suffix(want))
+      }
       err => fail("expected a BatchError, got \{err}")
     }
   }
