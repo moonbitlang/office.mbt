@@ -64,17 +64,37 @@ fn xlsx_strict_test_bytes() -> Bytes raise {
 fn xlsx_relocated_test_bytes() -> Bytes raise {
   let archive = @zip.Archive::new()
   let content_types =
-    #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Override PartName="/custom/book.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/data/first.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/data/Strings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/></Types>
+    #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/custom/book.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/data/first.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/data/Strings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/><Override PartName="/objects/Table.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml"/><Override PartName="/pages/Chart.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.chartsheet+xml"/><Override PartName="/art/Drawing.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/><Override PartName="/art/SheetDrawing.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/><Override PartName="/charts/Chart.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/><Override PartName="/charts/SheetChart.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/></Types>
   let root_relationships =
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="main" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="custom/book.xml"/></Relationships>
   let workbook =
-    #|<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Moved" sheetId="1" r:id="sheet"/></sheets></workbook>
+    #|<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Moved" sheetId="1" r:id="sheet"/><sheet name="MovedChart" sheetId="2" r:id="chartSheet"/></sheets></workbook>
   let workbook_relationships =
-    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="sheet" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="../data/first.xml"/><Relationship Id="strings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="../data/strings.xml"/></Relationships>
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="sheet" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="../data/first.xml"/><Relationship Id="chartSheet" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chartsheet" Target="../pages/chart.xml"/><Relationship Id="strings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="../data/strings.xml"/></Relationships>
   let worksheet =
-    #|<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c></row></sheetData></worksheet>
+    #|<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c></row></sheetData><hyperlinks><hyperlink ref="A1" r:id="link"/></hyperlinks><drawing r:id="drawing"/><tableParts count="1"><tablePart r:id="table"/></tableParts></worksheet>
+  let worksheet_relationships =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="table" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/table" Target="../objects/table.xml"/><Relationship Id="link" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.test/moved" TargetMode="External"/><Relationship Id="drawing" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../art/sheetdrawing.xml"/></Relationships>
   let shared_strings =
     #|<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="1" uniqueCount="1"><si><t>relocated-value</t></si></sst>
+  let table =
+    #|<table xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" id="1" name="MovedTable" displayName="MovedTable" ref="A1:A1"><tableColumns count="1"><tableColumn id="1" name="Header"/></tableColumns></table>
+  let sheet_drawing =
+    #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="9525" cy="9525"/><c:chart r:id="chart"/><xdr:clientData/></xdr:oneCellAnchor><xdr:oneCellAnchor><xdr:from><xdr:col>1</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="9525" cy="9525"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="1" name="Moved image"/></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="image"/></xdr:blipFill></xdr:pic><xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>
+  let sheet_drawing_relationships =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="chart" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/sheetchart.xml"/><Relationship Id="image" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/photo.png"/></Relationships>
+  let sheet_chart =
+    #|<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart/></c:chartSpace>
+  let chart_sheet =
+    #|<chartsheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><drawing r:id="draw"/></chartsheet>
+  let chart_sheet_relationships =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="draw" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../art/drawing.xml"/></Relationships>
+  let drawing =
+    #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"/>
+  let drawing_relationships =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="chart" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart.xml"/></Relationships>
+  let chart =
+    #|<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart/></c:chartSpace>
   archive.add("[Content_Types].xml", @utf8.encode(content_types))
   archive.add("_rels/.rels", @utf8.encode(root_relationships))
   archive.add("custom/book.xml", @utf8.encode(workbook))
@@ -83,9 +103,31 @@ fn xlsx_relocated_test_bytes() -> Bytes raise {
     @utf8.encode(workbook_relationships),
   )
   archive.add("data/first.xml", @utf8.encode(worksheet))
+  // Relationship parts and their targets are also allowed outside xl/*.
+  // Mixed-case entry names verify lookup through the canonical part index.
+  archive.add(
+    "data/_rels/First.xml.rels",
+    @utf8.encode(worksheet_relationships),
+  )
   // OPC part lookup is case-insensitive. Keep the relationship spelling lower
   // case and the actual ZIP entry mixed case to cover canonical resolution.
   archive.add("data/Strings.xml", @utf8.encode(shared_strings))
+  archive.add("objects/Table.xml", @utf8.encode(table))
+  archive.add("art/SheetDrawing.xml", @utf8.encode(sheet_drawing))
+  archive.add(
+    "art/_rels/SheetDrawing.xml.rels",
+    @utf8.encode(sheet_drawing_relationships),
+  )
+  archive.add("charts/SheetChart.xml", @utf8.encode(sheet_chart))
+  archive.add("media/Photo.png", b"png")
+  archive.add("pages/Chart.xml", @utf8.encode(chart_sheet))
+  archive.add(
+    "pages/_rels/Chart.xml.rels",
+    @utf8.encode(chart_sheet_relationships),
+  )
+  archive.add("art/Drawing.xml", @utf8.encode(drawing))
+  archive.add("art/_rels/Drawing.xml.rels", @utf8.encode(drawing_relationships))
+  archive.add("charts/Chart.xml", @utf8.encode(chart))
   @zip.write(archive)
 }
 
@@ -163,6 +205,18 @@ test "XLSX structured reads resolve relationships from relocated workbooks" {
     Some(Json::string("/xlsx/sheet[name=\"Moved\"]/cell[A1]")),
   )
   assert_eq(cell.get("value"), Some(Json::string("relocated-value")))
+  guard xlsx_outline_data(projection) is Object(outline) &&
+    outline.get("sheets") is Some(Array([Object(moved), Object(chart)])) &&
+    moved.get("counts") is Some(Object(moved_counts)) &&
+    chart.get("counts") is Some(Object(chart_counts)) else {
+    fail("expected relocated worksheet and chart-sheet outline")
+  }
+  assert_eq(moved_counts.get("tables"), Some(Json::number(1)))
+  assert_eq(moved_counts.get("hyperlinks"), Some(Json::number(1)))
+  assert_eq(moved_counts.get("charts"), Some(Json::number(1)))
+  assert_eq(moved_counts.get("images"), Some(Json::number(1)))
+  assert_eq(chart.get("kind"), Some(Json::string("chart-sheet")))
+  assert_eq(chart_counts.get("charts"), Some(Json::number(1)))
 }
 
 ///|
@@ -351,8 +405,8 @@ test "XLSX snapshots preserve and resolve shared-formula followers" {
     resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]"),
   )
   let spec : XlsxQuerySpec = {
-    selector: "cell[type=formula][formula~=D1]",
-    predicates: parse_xlsx_query_selector("cell[type=formula][formula~=D1]"),
+    selector: "cell[type=formula]",
+    predicates: parse_xlsx_query_selector("cell[type=formula]"),
     offset: 0,
     limit: 10,
   }
@@ -363,9 +417,19 @@ test "XLSX snapshots preserve and resolve shared-formula followers" {
   assert_eq(fields.get("matched_total"), Some(Json::number(3)))
   assert_eq(matches.length(), 3)
   assert_true(projection.sheets[0].shared_formulas_indexed)
-  for match_record in matches {
-    assert_true(match_record.stringify().contains("\"formula\":\"D1+1\""))
+  assert_true(matches[0].stringify().contains("\"formula\":\"D1+1\""))
+  assert_true(matches[1].stringify().contains("\"formula\":\"E1+1\""))
+  assert_true(matches[2].stringify().contains("\"formula\":\"F1+1\""))
+  let master_only : XlsxQuerySpec = {
+    selector: "cell[formula~=D1]",
+    predicates: parse_xlsx_query_selector("cell[formula~=D1]"),
+    offset: 0,
+    limit: 10,
   }
+  guard xlsx_query_data(projection, under, master_only) is Object(master_fields) else {
+    fail("expected translated shared-formula query")
+  }
+  assert_eq(master_fields.get("matched_total"), Some(Json::number(1)))
 }
 
 ///|

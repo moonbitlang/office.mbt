@@ -80,6 +80,8 @@ fn extension_from_path(path : StringView) -> String? {
 fn parse_header_footer_images_from_vml(
   vml_xml : StringView,
   vml_rels_xml : String?,
+  vml_part : StringView,
+  part_names : Map[String, String],
   archive : @zip.Archive,
 ) -> Array[HeaderFooterImage] raise XlsxError {
   let shapes = extract_vml_shapes(vml_xml)
@@ -131,7 +133,9 @@ fn parse_header_footer_images_from_vml(
       Some(value) => value
       None => raise InvalidXml(msg="header/footer image relationship missing")
     }
-    let image_path = resolve_rel_target(target, "drawings")
+    let image_path = actual_relationship_target_path(
+      vml_part, target, part_names,
+    )
     let image_bytes = match archive.get(image_path) {
       Some(value) => value
       None => raise MissingPart(path=image_path)
@@ -238,6 +242,8 @@ test "header/footer image read wb: parse images with r:id fallback and duplicate
   let images = parse_header_footer_images_from_vml(
     vml_xml,
     Some(rels_xml),
+    "xl/drawings/vmlDrawing1.vml",
+    Map([]),
     archive,
   )
   inspect(images.length(), content="1")
@@ -263,7 +269,13 @@ test "header/footer image read wb: missing target part raises MissingPart" {
     #|  </v:shape>
     #|</xml>
   let result : Result[Array[HeaderFooterImage], Error] = Ok(
-    parse_header_footer_images_from_vml(vml_xml, Some(rels_xml), archive),
+    parse_header_footer_images_from_vml(
+      vml_xml,
+      Some(rels_xml),
+      "xl/drawings/vmlDrawing1.vml",
+      Map([]),
+      archive,
+    ),
   ) catch {
     e => Err(e)
   }

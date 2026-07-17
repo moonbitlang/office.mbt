@@ -3036,12 +3036,12 @@ fn check_source_package_size(
 ///|
 fn first_existing_rel_target_path(
   targets : Map[String, String],
-  base_folder : StringView,
-  archive : @zip.Archive,
+  source_part : StringView,
+  part_names : Map[String, String],
 ) -> String? raise XlsxError {
   for _, target in targets {
-    let path = resolve_rel_target(target, base_folder)
-    if archive.get(path) is Some(_) {
+    let path = actual_relationship_target_path(source_part, target, part_names)
+    if part_names.contains(path.to_lower()) {
       return Some(path)
     }
   }
@@ -3088,6 +3088,38 @@ fn actual_archive_part_path(
   requested : String,
 ) -> String {
   part_names.get(requested.to_lower()).unwrap_or(requested)
+}
+
+///|
+fn actual_relationship_part_path(
+  source_part : StringView,
+  part_names : Map[String, String],
+) -> String raise XlsxError {
+  actual_archive_part_path(part_names, rels_path_for_part(source_part))
+}
+
+///|
+fn actual_relationship_target_path(
+  source_part : StringView,
+  target : StringView,
+  part_names : Map[String, String],
+) -> String raise XlsxError {
+  let source_relative = resolve_part_rel_target(source_part, target)
+  match part_names.get(source_relative.to_lower()) {
+    Some(actual) => actual
+    None => {
+      // Some producers emit package-root paths without the leading slash.
+      // Standards-compliant source-relative lookup wins when both exist; this
+      // fallback retains tolerant reads only when the root spelling names an
+      // actual archive part.
+      let package_root = try normalize_rel_part_path(target) catch {
+        _ => None
+      } noraise {
+        path => part_names.get(path.to_lower())
+      }
+      package_root.unwrap_or(source_relative)
+    }
+  }
 }
 
 ///|
@@ -3436,7 +3468,7 @@ fn read_zip_archive_core_unchecked(
         legacy_drawing_rel_id is Some(_) ||
         legacy_drawing_hf_rel_id is Some(_) ||
         picture_rel_id is Some(_)
-      let rels_path = rels_path_for(sheet_path, "worksheets")
+      let rels_path = actual_relationship_part_path(sheet_path, part_names)
       let rels_xml = match archive.get(rels_path) {
         Some(rels_bytes) => decode(rels_bytes)
         None => if needs_rels { raise MissingPart(path=rels_path) } else { "" }
@@ -3455,7 +3487,9 @@ fn read_zip_archive_core_unchecked(
             Some(value) => value
             None => raise InvalidXml(msg="slicer relationship missing")
           }
-          let slicer_path = resolve_rel_target(target, "worksheets")
+          let slicer_path = actual_relationship_target_path(
+            sheet_path, target, part_names,
+          )
           if seen_paths.contains(slicer_path) {
             continue
           }
@@ -3479,7 +3513,9 @@ fn read_zip_archive_core_unchecked(
             Some(value) => value
             None => raise InvalidXml(msg="picture target missing")
           }
-          let image_path = resolve_rel_target(target, "worksheets")
+          let image_path = actual_relationship_target_path(
+            sheet_path, target, part_names,
+          )
           let image_bytes = match archive.get(image_path) {
             Some(value) => value
             None => raise MissingPart(path=image_path)
@@ -3556,7 +3592,9 @@ fn read_zip_archive_core_unchecked(
             Some(value) => value
             None => raise InvalidXml(msg="table relationship missing")
           }
-          let table_path = resolve_rel_target(target, "worksheets")
+          let table_path = actual_relationship_target_path(
+            sheet_path, target, part_names,
+          )
           let table_bytes = match archive.get(table_path) {
             Some(value) => value
             None => raise MissingPart(path=table_path)
@@ -3591,13 +3629,17 @@ fn read_zip_archive_core_unchecked(
               Some(value) => value
               None => raise InvalidXml(msg="pivot table relationship missing")
             }
-            let pivot_path = resolve_rel_target(target, "worksheets")
+            let pivot_path = actual_relationship_target_path(
+              sheet_path, target, part_names,
+            )
             let pivot_bytes = match archive.get(pivot_path) {
               Some(value) => value
               None => raise MissingPart(path=pivot_path)
             }
             let pivot_xml = decode(pivot_bytes)
-            let pivot_rels_path = rels_path_for(pivot_path, "pivotTables")
+            let pivot_rels_path = actual_relationship_part_path(
+              pivot_path, part_names,
+            )
             let pivot_rels_bytes = match archive.get(pivot_rels_path) {
               Some(value) => value
               None => raise MissingPart(path=pivot_rels_path)
@@ -3608,7 +3650,7 @@ fn read_zip_archive_core_unchecked(
             )
             let cache_path = match
               first_existing_rel_target_path(
-                cache_targets, "pivotTables", archive,
+                cache_targets, pivot_path, part_names,
               ) {
               Some(path) => path
               None => {
@@ -3618,7 +3660,9 @@ fn read_zip_archive_core_unchecked(
                   None =>
                     raise InvalidXml(msg="pivot cache relationship missing")
                 }
-                resolve_rel_target(cache_target, "pivotTables")
+                actual_relationship_target_path(
+                  pivot_path, cache_target, part_names,
+                )
               }
             }
             let cache_bytes = match archive.get(cache_path) {
@@ -3633,7 +3677,7 @@ fn read_zip_archive_core_unchecked(
               pivot_path, "xl/pivotTables/pivotTable",
             )
             let cache_records_xml = match
-              archive.get(rels_path_for(cache_path, "pivotCache")) {
+              archive.get(actual_relationship_part_path(cache_path, part_names)) {
               Some(value) => {
                 let cache_rels_xml = decode(value)
                 let record_targets = parse_relationship_targets(
@@ -3641,13 +3685,17 @@ fn read_zip_archive_core_unchecked(
                 )
                 let record_path = match
                   first_existing_rel_target_path(
-                    record_targets, "pivotCache", archive,
+                    record_targets, cache_path, part_names,
                   ) {
                   Some(path) => Some(path)
                   None =>
                     match first_relationship_target(record_targets) {
                       Some(record_target) =>
-                        Some(resolve_rel_target(record_target, "pivotCache"))
+                        Some(
+                          actual_relationship_target_path(
+                            cache_path, record_target, part_names,
+                          ),
+                        )
                       None => None
                     }
                 }
@@ -3688,7 +3736,9 @@ fn read_zip_archive_core_unchecked(
             Some(value) => value
             None => raise InvalidXml(msg="vml drawing relationship missing")
           }
-          let vml_path = resolve_rel_target(target, "worksheets")
+          let vml_path = actual_relationship_target_path(
+            sheet_path, target, part_names,
+          )
           let vml_bytes = match archive.get(vml_path) {
             Some(value) => value
             None => raise MissingPart(path=vml_path)
@@ -3703,7 +3753,9 @@ fn read_zip_archive_core_unchecked(
             Some(value) => value
             None => raise InvalidXml(msg="vml drawing hf relationship missing")
           }
-          let vml_path = resolve_rel_target(target, "worksheets")
+          let vml_path = actual_relationship_target_path(
+            sheet_path, target, part_names,
+          )
           let vml_bytes = match archive.get(vml_path) {
             Some(value) => value
             None => raise MissingPart(path=vml_path)
@@ -3716,19 +3768,19 @@ fn read_zip_archive_core_unchecked(
         Some((xml, path)) => (Some(xml), Some(path))
         None => (None, None)
       }
-      let header_footer_images = match vml_drawing_hf_xml {
-        Some(xml) => {
-          let vml_rels_xml = match vml_drawing_hf_path {
-            Some(path) =>
-              match archive.get(rels_path_for(path, "drawings")) {
-                Some(value) => Some(decode(value))
-                None => None
-              }
+      let header_footer_images = match
+        (vml_drawing_hf_xml, vml_drawing_hf_path) {
+        (Some(xml), Some(path)) => {
+          let vml_rels_xml = match
+            archive.get(actual_relationship_part_path(path, part_names)) {
+            Some(value) => Some(decode(value))
             None => None
           }
-          parse_header_footer_images_from_vml(xml, vml_rels_xml, archive)
+          parse_header_footer_images_from_vml(
+            xml, vml_rels_xml, path, part_names, archive,
+          )
         }
-        None => []
+        _ => []
       }
       let comments = if rels_xml == "" {
         []
@@ -3736,7 +3788,9 @@ fn read_zip_archive_core_unchecked(
         let comment_targets = parse_relationship_targets(rels_xml, rel_comments)
         let parsed_comments : Array[Comment] = []
         for _rel_id, target in comment_targets {
-          let comment_path = resolve_rel_target(target, "worksheets")
+          let comment_path = actual_relationship_target_path(
+            sheet_path, target, part_names,
+          )
           let comment_bytes = match archive.get(comment_path) {
             Some(value) => value
             None => raise MissingPart(path=comment_path)
@@ -3810,7 +3864,9 @@ fn read_zip_archive_core_unchecked(
             Some(value) => value
             None => raise InvalidXml(msg="drawing target missing")
           }
-          let drawing_path = resolve_rel_target(drawing_target, "worksheets")
+          let drawing_path = actual_relationship_target_path(
+            sheet_path, drawing_target, part_names,
+          )
           let drawing_bytes = match archive.get(drawing_path) {
             Some(value) => value
             None => raise MissingPart(path=drawing_path)
@@ -3823,16 +3879,18 @@ fn read_zip_archive_core_unchecked(
             )
           }
           let drawing_rels_xml = match
-            archive.get(rels_path_for(drawing_path, "drawings")) {
+            archive.get(actual_relationship_part_path(drawing_path, part_names)) {
             Some(value) => decode(value)
             None => ""
           }
           let drawing_images = parse_drawing_images(
-            drawing_xml, drawing_rels_xml, drawing_metrics, archive,
+            drawing_xml, drawing_rels_xml, drawing_path, part_names, drawing_metrics,
+            archive,
           )
           sheet.images.append(drawing_images)
           let drawing_charts = parse_drawing_charts(
-            drawing_xml, drawing_rels_xml, drawing_metrics, archive, decode,
+            drawing_xml, drawing_rels_xml, drawing_path, part_names, drawing_metrics,
+            archive, decode,
           )
           sheet.charts.append(drawing_charts)
           let drawing_shapes = parse_drawing_shapes(drawing_xml)
@@ -3928,7 +3986,9 @@ fn read_zip_archive_core_unchecked(
         Some(value) => value
         None => raise InvalidXml(msg="chartsheet drawing missing")
       }
-      let chartsheet_rels_path = rels_path_for(chartsheet_path, "chartsheets")
+      let chartsheet_rels_path = actual_relationship_part_path(
+        chartsheet_path, part_names,
+      )
       let chartsheet_rels_bytes = match archive.get(chartsheet_rels_path) {
         Some(value) => value
         None => raise MissingPart(path=chartsheet_rels_path)
@@ -3941,8 +4001,12 @@ fn read_zip_archive_core_unchecked(
         Some(value) => value
         None => raise InvalidXml(msg="drawing target missing")
       }
-      let drawing_path = resolve_rel_target(drawing_target, "chartsheets")
-      let drawing_rels_path = rels_path_for(drawing_path, "drawings")
+      let drawing_path = actual_relationship_target_path(
+        chartsheet_path, drawing_target, part_names,
+      )
+      let drawing_rels_path = actual_relationship_part_path(
+        drawing_path, part_names,
+      )
       let drawing_rels_bytes = match archive.get(drawing_rels_path) {
         Some(value) => value
         None => raise MissingPart(path=drawing_rels_path)
@@ -3952,14 +4016,16 @@ fn read_zip_archive_core_unchecked(
         drawing_rels_xml, rel_chart,
       )
       let chart_path = match
-        first_existing_rel_target_path(chart_targets, "drawings", archive) {
+        first_existing_rel_target_path(chart_targets, drawing_path, part_names) {
         Some(path) => path
         None => {
           let chart_target = match first_relationship_target(chart_targets) {
             Some(value) => value
             None => raise InvalidXml(msg="chart target missing")
           }
-          resolve_rel_target(chart_target, "drawings")
+          actual_relationship_target_path(
+            drawing_path, chart_target, part_names,
+          )
         }
       }
       let chart_bytes = match archive.get(chart_path) {

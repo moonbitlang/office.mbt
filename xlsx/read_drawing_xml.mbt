@@ -162,6 +162,8 @@ fn parse_drawing_anchors(
 fn parse_drawing_images(
   drawing_xml : StringView,
   drawing_rels_xml : StringView,
+  drawing_part : StringView,
+  part_names : Map[String, String],
   metrics : DrawingMetrics,
   archive : @zip.Archive,
 ) -> Array[Image] raise XlsxError {
@@ -299,7 +301,9 @@ fn parse_drawing_images(
       Some(value) => value
       None => raise InvalidXml(msg="drawing image target missing")
     }
-    let media_path = resolve_rel_target(target, "drawings")
+    let media_path = actual_relationship_target_path(
+      drawing_part, target, part_names,
+    )
     let data = match archive.get(media_path) {
       Some(value) => value
       None => raise MissingPart(path=media_path)
@@ -367,6 +371,8 @@ fn parse_drawing_images(
 fn parse_drawing_charts(
   drawing_xml : StringView,
   drawing_rels_xml : StringView,
+  drawing_part : StringView,
+  part_names : Map[String, String],
   metrics : DrawingMetrics,
   archive : @zip.Archive,
   decode : (BytesView) -> String raise XlsxError,
@@ -392,7 +398,9 @@ fn parse_drawing_charts(
       Some(value) => value
       None => raise InvalidXml(msg="drawing chart target missing")
     }
-    let chart_path = resolve_rel_target(target, "drawings")
+    let chart_path = actual_relationship_target_path(
+      drawing_part, target, part_names,
+    )
     let chart_bytes = match archive.get(chart_path) {
       Some(value) => value
       None => raise MissingPart(path=chart_path)
@@ -1073,7 +1081,14 @@ test "read_drawing_xml wb: parse_drawing_images empty rel map branch" {
   let archive = @zip.Archive::new()
   let metrics = drawing_metrics_for_sheet(Worksheet::new("Sheet1"))
   let result : Result[Array[Image], Error] = Ok(
-    parse_drawing_images(drawing_xml, "", metrics, archive),
+    parse_drawing_images(
+      drawing_xml,
+      "",
+      "xl/drawings/drawing1.xml",
+      Map([]),
+      metrics,
+      archive,
+    ),
   ) catch {
     e => Err(e)
   }
@@ -1094,7 +1109,14 @@ test "read_drawing_xml wb: signed marker offsets are retained" {
     "<xdr:ext cx=\"9525\" cy=\"9525\"/>",
   )
   let metrics = drawing_metrics_for_sheet(Worksheet::new("Sheet1"))
-  let images = parse_drawing_images(drawing_xml, rels_xml, metrics, archive)
+  let images = parse_drawing_images(
+    drawing_xml,
+    rels_xml,
+    "xl/drawings/drawing1.xml",
+    Map([]),
+    metrics,
+    archive,
+  )
   inspect(images.length(), content="1")
   inspect(images[0].reference, content="A1")
   inspect(images[0].offset_x, content="-2")
@@ -1113,7 +1135,14 @@ test "read_drawing_xml wb: parse_drawing_images anchor/ext validation errors" {
     "", "<xdr:ext cx=\"9525\" cy=\"9525\"/>",
   )
   let missing_from_result : Result[Array[Image], Error] = Ok(
-    parse_drawing_images(missing_from, rels_xml, metrics, archive),
+    parse_drawing_images(
+      missing_from,
+      rels_xml,
+      "xl/drawings/drawing1.xml",
+      Map([]),
+      metrics,
+      archive,
+    ),
   ) catch {
     e => Err(e)
   }
@@ -1125,7 +1154,14 @@ test "read_drawing_xml wb: parse_drawing_images anchor/ext validation errors" {
 
   let missing_ext = wb_one_cell_anchor(wb_from_xml(), "")
   let missing_ext_result : Result[Array[Image], Error] = Ok(
-    parse_drawing_images(missing_ext, rels_xml, metrics, archive),
+    parse_drawing_images(
+      missing_ext,
+      rels_xml,
+      "xl/drawings/drawing1.xml",
+      Map([]),
+      metrics,
+      archive,
+    ),
   ) catch {
     e => Err(e)
   }
@@ -1140,7 +1176,14 @@ test "read_drawing_xml wb: parse_drawing_images anchor/ext validation errors" {
     "<xdr:ext cx=\"x\" cy=\"9525\"/>",
   )
   let cx_invalid_result : Result[Array[Image], Error] = Ok(
-    parse_drawing_images(cx_invalid, rels_xml, metrics, archive),
+    parse_drawing_images(
+      cx_invalid,
+      rels_xml,
+      "xl/drawings/drawing1.xml",
+      Map([]),
+      metrics,
+      archive,
+    ),
   ) catch {
     e => Err(e)
   }
@@ -1152,7 +1195,14 @@ test "read_drawing_xml wb: parse_drawing_images anchor/ext validation errors" {
 
   let cy_missing = wb_one_cell_anchor(wb_from_xml(), "<xdr:ext cx=\"9525\"/>")
   let cy_missing_result : Result[Array[Image], Error] = Ok(
-    parse_drawing_images(cy_missing, rels_xml, metrics, archive),
+    parse_drawing_images(
+      cy_missing,
+      rels_xml,
+      "xl/drawings/drawing1.xml",
+      Map([]),
+      metrics,
+      archive,
+    ),
   ) catch {
     e => Err(e)
   }
@@ -1167,7 +1217,14 @@ test "read_drawing_xml wb: parse_drawing_images anchor/ext validation errors" {
     "<xdr:to><xdr:col>2147483647</xdr:col><xdr:row>0</xdr:row><xdr:colOff>0</xdr:colOff><xdr:rowOff>0</xdr:rowOff></xdr:to>",
   )
   let invalid_to_result : Result[Array[Image], Error] = Ok(
-    parse_drawing_images(invalid_to, rels_xml, metrics, archive),
+    parse_drawing_images(
+      invalid_to,
+      rels_xml,
+      "xl/drawings/drawing1.xml",
+      Map([]),
+      metrics,
+      archive,
+    ),
   ) catch {
     error => Err(error)
   }

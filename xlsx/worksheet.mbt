@@ -386,21 +386,51 @@ pub fn Worksheet::formula_refs(self : Worksheet) -> Array[String] {
 
 ///|
 /// Returns non-empty shared-formula masters keyed by OOXML shared index.
-/// Followers are deliberately omitted, so master formula text is retained
-/// only once even for large shared ranges. Conflicting masters are rejected
-/// rather than resolved by iteration order.
+/// Followers are deliberately omitted, so master formula text and its copy
+/// anchor are retained only once even for large shared ranges. Conflicting
+/// masters are rejected rather than resolved by iteration order.
 pub fn Worksheet::shared_formula_masters(
   self : Worksheet,
-) -> Map[Int, String] raise XlsxError {
-  let masters : Map[Int, String] = Map([])
+) -> Map[Int, SharedFormulaMaster] raise XlsxError {
+  let masters : Map[Int, SharedFormulaMaster] = Map([])
   for cell in self.cells {
-    match (cell.formula_type, cell.formula, cell.formula_shared_index) {
-      (Some(Shared), Some(formula), Some(shared_index)) if formula != "" =>
-        match masters.get(shared_index) {
-          Some(existing) if existing != formula =>
-            raise InvalidXml(msg="shared formula index has conflicting masters")
-          _ => masters[shared_index] = formula
+    match
+      (
+        cell.formula_type,
+        cell.formula,
+        cell.formula_shared_index,
+        cell.formula_ref,
+      ) {
+      (Some(Shared), Some(formula), Some(shared_index), Some(range_ref)) =>
+        if formula != "" {
+          let (row_lo, column_lo, row_hi, column_hi) = parse_range_ref(
+            range_ref,
+          )
+          if cell.row < row_lo ||
+            cell.row > row_hi ||
+            cell.col < column_lo ||
+            cell.col > column_hi {
+            raise InvalidXml(msg="shared formula master is outside its range")
+          }
+          let master : SharedFormulaMaster = {
+            formula,
+            row: cell.row,
+            column: cell.col,
+            row_lo,
+            column_lo,
+            row_hi,
+            column_hi,
+          }
+          match masters.get(shared_index) {
+            Some(_) =>
+              raise InvalidXml(
+                msg="shared formula index has conflicting masters",
+              )
+            None => masters[shared_index] = master
+          }
         }
+      (Some(Shared), Some(formula), Some(_), None) if formula != "" =>
+        raise InvalidXml(msg="shared formula master range missing")
       _ => ()
     }
   }

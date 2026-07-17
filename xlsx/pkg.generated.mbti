@@ -1349,6 +1349,11 @@ pub struct ShapeLine {
 pub fn ShapeLine::to_repr(Self) -> @debug.Repr
 pub fn ShapeLine::with_values(color? : String, width? : Double) -> Self
 
+pub struct SharedFormulaMaster {
+  // private fields
+}
+pub fn SharedFormulaMaster::translate_to(Self, Int, Int) -> String raise XlsxError
+
 pub struct SheetBackground {
   data : Bytes
   extension : String
@@ -2170,7 +2175,7 @@ pub fn Worksheet::set_row_style(Self, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_row_visible(Self, Int, Bool) -> Unit raise XlsxError
 pub fn Worksheet::set_sheet_background(Self, Bytes, String) -> Unit raise XlsxError
 pub fn Worksheet::shapes(Self) -> ArrayView[Shape]
-pub fn Worksheet::shared_formula_masters(Self) -> Map[Int, String] raise XlsxError
+pub fn Worksheet::shared_formula_masters(Self) -> Map[Int, SharedFormulaMaster] raise XlsxError
 pub fn Worksheet::sheet_background(Self) -> SheetBackground?
 pub fn Worksheet::sheet_protection(Self) -> SheetProtection?
 pub fn Worksheet::slicers(Self) -> ArrayView[Slicer]

@@ -115,7 +115,11 @@ test "formula opts shared writes typed formula" {
   assert_true(follower.formula_type is Some(Shared))
   assert_eq(follower.range_ref, None)
   assert_eq(follower.shared_index, Some(0))
-  assert_eq(parsed_sheet.shared_formula_masters().get(0), Some("A1+B1"))
+  guard parsed_sheet.shared_formula_masters().get(0) is Some(shared_master) else {
+    fail("missing indexed shared-formula master")
+  }
+  assert_eq(shared_master.translate_to(1, 3), "A1+B1")
+  assert_eq(shared_master.translate_to(2, 3), "A2+B2")
 }
 
 ///|

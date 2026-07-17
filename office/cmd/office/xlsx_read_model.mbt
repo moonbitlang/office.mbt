@@ -28,7 +28,7 @@ struct XlsxSheetTarget {
   index : Int
   path : String
   content : XlsxSheetContent
-  shared_formula_masters : Map[Int, String]
+  shared_formula_masters : Map[Int, @xlsx.SharedFormulaMaster]
   mut shared_formulas_indexed : Bool
 }
 
@@ -398,7 +398,7 @@ fn XlsxSheetTarget::shared_formula_master(
   projection : XlsxProjection,
   worksheet : @xlsx.Worksheet,
   shared_index : Int,
-) -> String? raise CliFailure {
+) -> @xlsx.SharedFormulaMaster? raise CliFailure {
   if !self.shared_formulas_indexed {
     let masters = xlsx_call(projection.file, () => {
       worksheet.shared_formula_masters()
@@ -644,11 +644,16 @@ fn xlsx_cell_formula(
             // `Some("")` is intentional when a malformed package has a shared
             // follower but no resolvable master: preserve formula presence even
             // when no formula text can be supplied.
-            Some(
-              sheet
-              .shared_formula_master(projection, worksheet, shared_index)
-              .unwrap_or(""),
-            )
+            match
+              sheet.shared_formula_master(projection, worksheet, shared_index) {
+              Some(master) =>
+                Some(
+                  xlsx_call(projection.file, () => {
+                    master.translate_to(row, column)
+                  }),
+                )
+              None => Some("")
+            }
           None => Some("")
         },
         info.cached_value_present,
