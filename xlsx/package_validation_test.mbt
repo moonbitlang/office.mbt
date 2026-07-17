@@ -140,3 +140,72 @@ test "OOXML validation applies XML limits before scanning relationships" {
     _ => fail("expected validation XML limit")
   }
 }
+
+///|
+test "OOXML validation enforces aggregate XML bytes" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let limits = @xlsx.ReadLimits::with_values(max_total_xml_bytes=1)
+  let result : Result[Array[String], Error] = Ok(
+    @xlsx.validate_ooxml_package(@xlsx.write(workbook), limits~),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="total_xml_bytes")
+      assert_eq(limit, 1)
+      assert_true(actual > limit)
+    }
+    _ => fail("expected aggregate validation XML limit")
+  }
+}
+
+///|
+test "OOXML validation enforces aggregate markup tokens" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let limits = @xlsx.ReadLimits::with_values(max_xml_markup_tokens=1)
+  let result : Result[Array[String], Error] = Ok(
+    @xlsx.validate_ooxml_package(@xlsx.write(workbook), limits~),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="xml_markup_tokens")
+      assert_eq(limit, 1)
+      assert_true(actual > limit)
+    }
+    _ => fail("expected aggregate validation markup-token limit")
+  }
+}
+
+///|
+test "OOXML validation bounds relationship findings and scan retention" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let archive = @zip.read(@xlsx.write(workbook))
+  let rels = StringBuilder::new()
+  rels.write_string(
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
+  )
+  |> ignore
+  for index in 0..<400 {
+    rels.write_string(
+      "<Relationship Id=\"rId\{index}\" Type=\"urn:test\" Target=\"missing-\{index}.xml\"/>",
+    )
+    |> ignore
+  }
+  rels.write_string("</Relationships>") |> ignore
+  assert_true(
+    archive.replace("_rels/.rels", @encoding/utf8.encode(rels.to_string())),
+  )
+  let problems = @xlsx.validate_ooxml_package(@zip.write(archive))
+  assert_eq(problems.length(), 256)
+  inspect(
+    problems[problems.length() - 1],
+    content="additional package findings were omitted after the bounded validator limit",
+  )
+}

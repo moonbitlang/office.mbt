@@ -168,6 +168,31 @@ async test "XLSX operation failure leaves source and destination untouched" {
 }
 
 ///|
+async test "XML-forbidden batch text cannot publish a candidate" {
+  with_xlsx_transaction_dir(directory => {
+    let input = "\{directory}/input.xlsx"
+    let output = "\{directory}/output.xlsx"
+    let original = xlsx_transaction_fixture()
+    write_xlsx_transaction_file(input, original)
+    let plan = @xlsx.parse_batch(
+      @utf8.encode(
+        "{\"schema\":\"xlsx.batch/1\",\"ops\":[{\"op\":\"set\",\"params\":{\"sheet\":\"Data\",\"cell\":\"A1\",\"value\":\"before\\u0001after\"}}]}",
+      ),
+    )
+    let code = xlsx_transaction_error_code(() => {
+      let result = @xlsx.transact_batch(
+        @transaction.transaction_options(input, output_path=output),
+        plan,
+      )
+      result.transaction
+    })
+    assert_eq(code, "office.xlsx.serialization_failed")
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_false(@afs.exists(output))
+  })
+}
+
+///|
 async test "XLSX batch rejects projected cell growth before application" {
   with_xlsx_transaction_dir(directory => {
     let input = "\{directory}/input.xlsx"

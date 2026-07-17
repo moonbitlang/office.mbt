@@ -1360,37 +1360,6 @@ fn parse_x14_conditional_formatting_blocks(
     !xml.contains("</x14:conditionalFormattings>") {
     raise InvalidXml(msg="x14:conditionalFormattings tag not closed")
   }
-  let mut open_pos : Int? = None
-  let mut open_search_from = 0
-  let open_needle = "<x14:conditionalFormatting"
-  while open_search_from < xml.length() {
-    let rest = xml[open_search_from:]
-    let rel_start = match rest.find(open_needle) {
-      Some(pos) => pos
-      None => break
-    }
-    let start = open_search_from + rel_start
-    let after_needle = start + open_needle.length()
-    let next_char = xml[after_needle:after_needle + 1]
-    if next_char == "s" {
-      open_search_from = after_needle
-      continue
-    }
-    open_pos = Some(start)
-    break
-  }
-  match xml.find("</x14:conditionalFormatting>") {
-    Some(close_pos) =>
-      match open_pos {
-        Some(pos) =>
-          if pos > close_pos {
-            raise InvalidXml(msg="x14:conditionalFormatting close before open")
-          }
-        None =>
-          raise InvalidXml(msg="x14:conditionalFormatting close without open")
-      }
-    None => ()
-  }
   let needle = "<x14:conditionalFormatting"
   if !xml.contains(needle) {
     return blocks
@@ -1399,34 +1368,48 @@ fn parse_x14_conditional_formatting_blocks(
   let mut search_from = 0
   while search_from < xml.length() {
     let rest = xml[search_from:]
-    let rel_start = match rest.find(needle) {
+    let rel_start = rest.find(needle)
+    match (rest.find(close_tag), rel_start) {
+      (Some(close), Some(open)) if close < open =>
+        raise InvalidXml(msg="x14:conditionalFormatting close before open")
+      (Some(_), None) =>
+        raise InvalidXml(msg="x14:conditionalFormatting close without open")
+      _ => ()
+    }
+    let rel_start = match rel_start {
       Some(pos) => pos
       None => break
     }
     let start = search_from + rel_start
     let after_needle = start + needle.length()
-    let next_char = xml[after_needle:after_needle + 1]
-    if next_char == "s" {
+    if after_needle >= xml.length() {
+      raise InvalidXml(msg="x14:conditionalFormatting tag not closed")
+    }
+    if xml[after_needle] == ('s' : UInt16) {
       search_from = after_needle
       continue
     }
-    let after_start = xml[start:]
-    let (full, consumed) = match after_start.find(close_tag) {
-      Some(pos) => {
-        let end = pos + close_tag.length()
-        (after_start[:end].to_owned(), end)
-      }
-      None => {
-        let end = match after_start.find("/>") {
-          Some(pos) => pos + 2
-          None =>
-            raise InvalidXml(msg="x14:conditionalFormatting tag not closed")
-        }
-        (after_start[:end].to_owned(), end)
-      }
+    if !is_xml_open_tag_boundary(xml[after_needle]) {
+      search_from = after_needle
+      continue
     }
-    blocks.push(full)
-    search_from = start + consumed
+    let open_end = match xml_open_tag_end_from(xml, after_needle) {
+      Some(pos) => pos
+      None => raise InvalidXml(msg="x14:conditionalFormatting tag not closed")
+    }
+    let self_closing = open_end > start && xml[open_end - 1] == ('/' : UInt16)
+    let end = if self_closing {
+      open_end + 1
+    } else {
+      let body_start = open_end + 1
+      let relative_close = match xml[body_start:].find(close_tag) {
+        Some(pos) => pos
+        None => raise InvalidXml(msg="x14:conditionalFormatting tag not closed")
+      }
+      body_start + relative_close + close_tag.length()
+    }
+    blocks.push(xml[start:end].to_owned())
+    search_from = end
   }
   blocks
 }

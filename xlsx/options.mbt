@@ -264,8 +264,10 @@ pub fn ReadLimits::max_parser_work_units(self : ReadLimits) -> Int {
 
 ///|
 /// A fail-closed resource policy for XLSX serialization. The archive ceilings
-/// are enforced before each generated part is retained; `max_output_bytes` is
-/// then enforced by ZIP's storage-free sizing pass before package allocation.
+/// are enforced before each generated part is retained; multi-stage VML
+/// composition also debits every simultaneously retained intermediate from the
+/// remaining aggregate allowance. `max_output_bytes` is then enforced by ZIP's
+/// storage-free sizing pass before package allocation.
 pub struct WriteLimits {
   priv max_output_bytes : Int
   priv max_archive_entries : Int

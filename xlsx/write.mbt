@@ -47,10 +47,33 @@ fn xml_utf8_length_within(value : StringView, maximum : Int) -> Int? {
 }
 
 ///|
+fn is_valid_xml_output_character(character : Char) -> Bool {
+  let scalar = character.to_int()
+  scalar == 0x09 ||
+  scalar == 0x0A ||
+  scalar == 0x0D ||
+  (scalar >= 0x20 && scalar <= 0xD7FF) ||
+  (scalar >= 0xE000 && scalar <= 0xFFFD) ||
+  (scalar >= 0x10000 && scalar <= 0x10FFFF)
+}
+
+///|
+fn validate_xml_output(value : StringView) -> Unit raise XlsxError {
+  for character in value {
+    if !is_valid_xml_output_character(character) {
+      raise InvalidXml(
+        msg="generated XML contains forbidden code point \{character.to_int()}",
+      )
+    }
+  }
+}
+
+///|
 fn LimitedXmlBuilder::write_view(
   self : LimitedXmlBuilder,
   value : StringView,
 ) -> Unit raise XlsxError {
+  validate_xml_output(value)
   match self.budget {
     Some(budget) => {
       let remaining = budget.maximum - self.encoded_bytes
@@ -75,6 +98,11 @@ fn LimitedXmlBuilder::write_char(
   self : LimitedXmlBuilder,
   value : Char,
 ) -> Unit raise XlsxError {
+  if !is_valid_xml_output_character(value) {
+    raise InvalidXml(
+      msg="generated XML contains forbidden code point \{value.to_int()}",
+    )
+  }
   let scalar = value.to_int()
   let width = if scalar <= 0x7F {
     1
@@ -103,14 +131,24 @@ fn LimitedXmlBuilder::write_xml_text(
   self : LimitedXmlBuilder,
   value : StringView,
 ) -> Unit raise XlsxError {
-  for character in value {
-    match character {
-      '&' => self.write_view("&amp;")
-      '<' => self.write_view("&lt;")
-      '>' => self.write_view("&gt;")
-      _ => self.write_char(character)
+  let mut literal_start = 0
+  for index in 0..<value.length() {
+    let escaped = match value[index] {
+      unit if unit == ('&' : UInt16) => Some("&amp;")
+      unit if unit == ('<' : UInt16) => Some("&lt;")
+      unit if unit == ('>' : UInt16) => Some("&gt;")
+      _ => None
+    }
+    match escaped {
+      Some(entity) => {
+        self.write_view(value[literal_start:index])
+        self.write_view(entity)
+        literal_start = index + 1
+      }
+      None => ()
     }
   }
+  self.write_view(value[literal_start:])
 }
 
 ///|
@@ -118,16 +156,26 @@ fn LimitedXmlBuilder::write_xml_attr(
   self : LimitedXmlBuilder,
   value : StringView,
 ) -> Unit raise XlsxError {
-  for character in value {
-    match character {
-      '&' => self.write_view("&amp;")
-      '<' => self.write_view("&lt;")
-      '>' => self.write_view("&gt;")
-      '"' => self.write_view("&quot;")
-      '\'' => self.write_view("&apos;")
-      _ => self.write_char(character)
+  let mut literal_start = 0
+  for index in 0..<value.length() {
+    let escaped = match value[index] {
+      unit if unit == ('&' : UInt16) => Some("&amp;")
+      unit if unit == ('<' : UInt16) => Some("&lt;")
+      unit if unit == ('>' : UInt16) => Some("&gt;")
+      unit if unit == ('"' : UInt16) => Some("&quot;")
+      unit if unit == ('\'' : UInt16) => Some("&apos;")
+      _ => None
+    }
+    match escaped {
+      Some(entity) => {
+        self.write_view(value[literal_start:index])
+        self.write_view(entity)
+        literal_start = index + 1
+      }
+      None => ()
     }
   }
+  self.write_view(value[literal_start:])
 }
 
 ///|
@@ -203,6 +251,66 @@ fn WritePartBudgetTracker::consume(
           )
       }
       self.encoded_bytes = self.encoded_bytes + fragment_bytes
+    }
+    None => ()
+  }
+}
+
+///|
+/// Parent allowance for a generated archive part that is assembled through
+/// multiple simultaneously-retained strings. Every individual intermediate
+/// remains subject to the per-entry ceiling, while their combined retained
+/// bytes debit the aggregate space left after already-archived parts.
+priv struct WriteCompositionBudgetTracker {
+  limits : WriteLimits?
+  archived_bytes : Int
+  mut retained_bytes : Int
+}
+
+///|
+fn WriteCompositionBudgetTracker::remaining_budget(
+  self : WriteCompositionBudgetTracker,
+) -> WritePartBudget? {
+  match self.limits {
+    Some(limits) => {
+      let aggregate_remaining = limits.max_total_uncompressed_bytes -
+        self.archived_bytes -
+        self.retained_bytes
+      if limits.max_entry_uncompressed_bytes <= aggregate_remaining {
+        Some({
+          maximum: limits.max_entry_uncompressed_bytes,
+          resource_kind: "entry_uncompressed_bytes",
+          resource_limit: limits.max_entry_uncompressed_bytes,
+        })
+      } else {
+        Some({
+          maximum: aggregate_remaining,
+          resource_kind: "total_uncompressed_bytes",
+          resource_limit: limits.max_total_uncompressed_bytes,
+        })
+      }
+    }
+    None => None
+  }
+}
+
+///|
+fn WriteCompositionBudgetTracker::consume(
+  self : WriteCompositionBudgetTracker,
+  value : StringView,
+) -> Unit raise XlsxError {
+  match self.remaining_budget() {
+    Some(budget) => {
+      let fragment_bytes = match xml_utf8_length_within(value, budget.maximum) {
+        Some(length) => length
+        None =>
+          raise ResourceLimitExceeded(
+            kind=budget.resource_kind,
+            limit=budget.resource_limit,
+            actual=bounded_actual_above_limit(budget.resource_limit),
+          )
+      }
+      self.retained_bytes = self.retained_bytes + fragment_bytes
     }
     None => ()
   }
@@ -2793,6 +2901,26 @@ fn WriteArchiveBuilder::new(limits : WriteLimits?) -> WriteArchiveBuilder {
 }
 
 ///|
+fn WriteArchiveBuilder::next_composition_budget(
+  self : WriteArchiveBuilder,
+) -> WriteCompositionBudgetTracker raise XlsxError {
+  match self.limits {
+    Some(limits) if self.entry_count >= limits.max_archive_entries =>
+      raise ResourceLimitExceeded(
+        kind="entry_count",
+        limit=limits.max_archive_entries,
+        actual=bounded_actual_above_limit(limits.max_archive_entries),
+      )
+    _ => ()
+  }
+  {
+    limits: self.limits,
+    archived_bytes: self.total_uncompressed_bytes,
+    retained_bytes: 0,
+  }
+}
+
+///|
 fn WriteArchiveBuilder::next_part_budget(
   self : WriteArchiveBuilder,
 ) -> WritePartBudget? raise XlsxError {
@@ -3289,50 +3417,54 @@ fn write_with_io(
       }
       None => ()
     }
-    let comment_vml_xml = if sheet.comments().length() > 0 {
-      Some(
-        write_comments_vml(
-          sheet_id,
-          sheet.comments(),
-          budget?=archive.next_part_budget(),
-        ),
-      )
-    } else {
-      None
-    }
-    let form_control_vml_xml = if sheet.form_controls().length() > 0 {
-      Some(
-        write_form_controls_vml(
-          sheet_id,
-          sheet,
-          sheet.form_controls(),
-          budget?=archive.next_part_budget(),
-        ),
-      )
-    } else {
-      None
-    }
     if comment_targets.length() > 0 {
       rel_id = rel_id + comment_targets.length()
     }
     let vml_targets : Array[String] = []
-    let vml_parts : Array[(Int, String)] = []
-    let vml_image_rels : Array[(Int, Array[String])] = []
     let base_vml = match sheet.vml_drawing_xml() {
       Some(xml) => Some(xml)
       None => None
     }
+    // Comment/control VML can require several retained intermediates before
+    // the final part is known. Give the whole composition one parent budget,
+    // debit each generated intermediate immediately, and archive the final
+    // part below before beginning any other generated VML.
+    let legacy_vml_budget = archive.next_composition_budget()
+    let comment_vml_xml = if sheet.comments().length() > 0 {
+      let xml = write_comments_vml(
+        sheet_id,
+        sheet.comments(),
+        budget?=legacy_vml_budget.remaining_budget(),
+      )
+      legacy_vml_budget.consume(xml)
+      Some(xml)
+    } else {
+      None
+    }
+    let form_control_vml_xml = if sheet.form_controls().length() > 0 {
+      let xml = write_form_controls_vml(
+        sheet_id,
+        sheet,
+        sheet.form_controls(),
+        budget?=legacy_vml_budget.remaining_budget(),
+      )
+      legacy_vml_budget.consume(xml)
+      Some(xml)
+    } else {
+      None
+    }
     let merged_vml = match base_vml {
       Some(xml) =>
         match form_control_vml_xml {
-          Some(control_xml) =>
-            Some(
-              merge_vml_drawings(
-                xml,
-                control_xml,
-                budget?=archive.next_part_budget(),
-              ),
+          Some(control_xml) => {
+            let merged = merge_vml_drawings(
+              xml,
+              control_xml,
+              budget?=legacy_vml_budget.remaining_budget(),
             )
+            legacy_vml_budget.consume(merged)
+            Some(merged)
+          }
           None => Some(xml)
         }
       None => form_control_vml_xml
@@ -3340,14 +3472,15 @@ fn write_with_io(
     let legacy_drawing_xml = match merged_vml {
       Some(xml) =>
         match comment_vml_xml {
-          Some(comment_xml) =>
-            Some(
-              merge_vml_drawings(
-                xml,
-                comment_xml,
-                budget?=archive.next_part_budget(),
-              ),
+          Some(comment_xml) => {
+            let merged = merge_vml_drawings(
+              xml,
+              comment_xml,
+              budget?=legacy_vml_budget.remaining_budget(),
             )
+            legacy_vml_budget.consume(merged)
+            Some(merged)
+          }
           None => Some(xml)
         }
       None => comment_vml_xml
@@ -3359,20 +3492,25 @@ fn write_with_io(
         let vml_id = vml_index
         vml_index = vml_index + 1
         vml_targets.push(vml_rel_target(vml_id))
-        vml_parts.push((vml_id, xml))
+        archive.add_text(vml_part_path(vml_id), xml)
+        manifest.add_content_override(
+          content_override_path(vml_part_path(vml_id)),
+          ct_vml,
+        )
         Some(id)
       }
       None => None
     }
     let header_footer_images = sheet.header_footer_images
+    let header_footer_vml_budget = archive.next_composition_budget()
     let header_footer_vml = if header_footer_images.length() > 0 {
-      Some(
-        write_header_footer_vml(
-          sheet_id,
-          header_footer_images,
-          budget?=archive.next_part_budget(),
-        ),
+      let xml = write_header_footer_vml(
+        sheet_id,
+        header_footer_images,
+        budget?=header_footer_vml_budget.remaining_budget(),
       )
+      header_footer_vml_budget.consume(xml)
+      Some(xml)
     } else {
       None
     }
@@ -3395,20 +3533,37 @@ fn write_with_io(
             let filtered = filter_vml_shapes_by_id(
               xml,
               header_footer_shape_ids,
-              budget?=archive.next_part_budget(),
+              budget?=header_footer_vml_budget.remaining_budget(),
             )
-            Some(
-              merge_vml_drawings_with_shapetype(
-                filtered,
-                extra_xml,
-                "_x0000_t75",
-                budget?=archive.next_part_budget(),
-              ),
+            header_footer_vml_budget.consume(filtered)
+            let merged = merge_vml_drawings_with_shapetype(
+              filtered,
+              extra_xml,
+              "_x0000_t75",
+              budget?=header_footer_vml_budget.remaining_budget(),
             )
+            header_footer_vml_budget.consume(merged)
+            Some(merged)
           }
           None => Some(xml)
         }
       None => header_footer_vml
+    }
+    let legacy_drawing_hf_ids : (Int, Int)? = match legacy_drawing_hf_xml {
+      Some(xml) => {
+        let id = rel_id
+        rel_id = rel_id + 1
+        let vml_id = vml_index
+        vml_index = vml_index + 1
+        vml_targets.push(vml_rel_target(vml_id))
+        archive.add_text(vml_part_path(vml_id), xml)
+        manifest.add_content_override(
+          content_override_path(vml_part_path(vml_id)),
+          ct_vml,
+        )
+        Some((id, vml_id))
+      }
+      None => None
     }
     let header_footer_image_targets : Array[String] = []
     if header_footer_images.length() > 0 {
@@ -3423,19 +3578,18 @@ fn write_with_io(
         }
       }
     }
-    let legacy_drawing_hf_rel_id = match legacy_drawing_hf_xml {
-      Some(xml) => {
-        let id = rel_id
-        rel_id = rel_id + 1
-        let vml_id = vml_index
-        vml_index = vml_index + 1
-        vml_targets.push(vml_rel_target(vml_id))
-        vml_parts.push((vml_id, xml))
-        if header_footer_image_targets.length() > 0 {
-          vml_image_rels.push((vml_id, header_footer_image_targets))
-        }
-        Some(id)
+    match legacy_drawing_hf_ids {
+      Some((_id, vml_id)) if header_footer_image_targets.length() > 0 => {
+        let vml_rels_xml = write_vml_rels_xml(
+          header_footer_image_targets,
+          budget?=archive.next_part_budget(),
+        )
+        archive.add_text(vml_rels_part_path(vml_id), vml_rels_xml)
       }
+      _ => ()
+    }
+    let legacy_drawing_hf_rel_id = match legacy_drawing_hf_ids {
+      Some((id, _vml_id)) => Some(id)
       None => None
     }
     let picture_targets : Array[String] = []
@@ -3589,22 +3743,6 @@ fn write_with_io(
         )
       }
       None => ()
-    }
-    for part in vml_parts {
-      let (vml_id, xml) = part
-      archive.add_text(vml_part_path(vml_id), xml)
-      manifest.add_content_override(
-        content_override_path(vml_part_path(vml_id)),
-        ct_vml,
-      )
-    }
-    for part in vml_image_rels {
-      let (vml_id, targets) = part
-      let vml_rels_xml = write_vml_rels_xml(
-        targets,
-        budget?=archive.next_part_budget(),
-      )
-      archive.add_text(vml_rels_part_path(vml_id), vml_rels_xml)
     }
     if !has_drawing {
       continue

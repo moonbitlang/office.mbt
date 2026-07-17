@@ -76,49 +76,33 @@ fn XmlOutputBuilder::write_view(
 }
 
 ///|
-fn XmlOutputBuilder::write_char(self : XmlOutputBuilder, value : Char) -> Unit {
-  if self.exceeded {
-    return
-  }
-  let scalar = value.to_int()
-  let width = if scalar <= 0x7F {
-    1
-  } else if scalar <= 0x7FF {
-    2
-  } else if scalar <= 0xFFFF {
-    3
-  } else {
-    4
-  }
-  match self.maximum {
-    Some(maximum) if width > maximum - self.encoded_bytes => {
-      self.exceeded = true
-      return
-    }
-    _ => ()
-  }
-  self.builder.write_char(value)
-  self.encoded_bytes = self.encoded_bytes + width
-}
-
-///|
 fn XmlOutputBuilder::write_attr(
   self : XmlOutputBuilder,
   value : StringView,
 ) -> Unit {
-  for character in value {
+  let mut literal_start = 0
+  for index in 0..<value.length() {
+    let escaped = match value[index] {
+      unit if unit == ('&' : UInt16) => Some("&amp;")
+      unit if unit == ('<' : UInt16) => Some("&lt;")
+      unit if unit == ('>' : UInt16) => Some("&gt;")
+      unit if unit == ('"' : UInt16) => Some("&quot;")
+      unit if unit == ('\'' : UInt16) => Some("&apos;")
+      _ => None
+    }
+    match escaped {
+      Some(entity) => {
+        self.write_view(value[literal_start:index])
+        self.write_view(entity)
+        literal_start = index + 1
+      }
+      None => ()
+    }
     if self.exceeded {
       return
     }
-    match character {
-      '&' => self.write_view("&amp;")
-      '<' => self.write_view("&lt;")
-      '>' => self.write_view("&gt;")
-      '"' => self.write_view("&quot;")
-      '\'' => self.write_view("&apos;")
-      _ => self.write_char(character)
-    }
   }
+  self.write_view(value[literal_start:])
 }
 
 ///|
@@ -139,14 +123,24 @@ pub fn escape_xml_text(value : StringView) -> String {
     return value.to_owned()
   }
   let sb = StringBuilder::new()
-  for c in value {
-    match c {
-      '&' => sb.write_view("&amp;")
-      '<' => sb.write_view("&lt;")
-      '>' => sb.write_view("&gt;")
-      _ => sb.write_char(c)
+  let mut literal_start = 0
+  for index in 0..<value.length() {
+    let escaped = match value[index] {
+      unit if unit == ('&' : UInt16) => Some("&amp;")
+      unit if unit == ('<' : UInt16) => Some("&lt;")
+      unit if unit == ('>' : UInt16) => Some("&gt;")
+      _ => None
+    }
+    match escaped {
+      Some(entity) => {
+        sb.write_view(value[literal_start:index])
+        sb.write_view(entity)
+        literal_start = index + 1
+      }
+      None => ()
     }
   }
+  sb.write_view(value[literal_start:])
   sb.to_string()
 }
 
@@ -158,15 +152,25 @@ pub fn escape_xml_attr(value : StringView) -> String {
     return value.to_owned()
   }
   let sb = StringBuilder::new()
-  for c in value {
-    match c {
-      '&' => sb.write_view("&amp;")
-      '<' => sb.write_view("&lt;")
-      '>' => sb.write_view("&gt;")
-      '"' => sb.write_view("&quot;")
-      '\'' => sb.write_view("&apos;")
-      _ => sb.write_char(c)
+  let mut literal_start = 0
+  for index in 0..<value.length() {
+    let escaped = match value[index] {
+      unit if unit == ('&' : UInt16) => Some("&amp;")
+      unit if unit == ('<' : UInt16) => Some("&lt;")
+      unit if unit == ('>' : UInt16) => Some("&gt;")
+      unit if unit == ('"' : UInt16) => Some("&quot;")
+      unit if unit == ('\'' : UInt16) => Some("&apos;")
+      _ => None
+    }
+    match escaped {
+      Some(entity) => {
+        sb.write_view(value[literal_start:index])
+        sb.write_view(entity)
+        literal_start = index + 1
+      }
+      None => ()
     }
   }
+  sb.write_view(value[literal_start:])
   sb.to_string()
 }

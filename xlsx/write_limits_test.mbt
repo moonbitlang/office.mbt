@@ -145,3 +145,50 @@ test "bounded writes preflight retained raw chart XML before UTF-8 encoding" {
     _ => fail("expected raw chart XML to honor the entry budget")
   }
 }
+
+///|
+test "writes reject XML-forbidden cell text before package publication" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "before\u{1}after")
+  let result : Result[Bytes, Error] = Ok(@xlsx.write(workbook)) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.InvalidXml(msg~)) => assert_true(msg.contains("code point 1"))
+    _ => fail("expected forbidden XML character rejection")
+  }
+}
+
+///|
+test "bounded writes parent-budget and immediately archive composed VML" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.add_comment("Data", {
+    cell: "A1",
+    author: "Reviewer",
+    author_id: None,
+    text: "bounded comment VML",
+    paragraph: [],
+    width: None,
+    height: None,
+  })
+  workbook.add_form_control(
+    "Data",
+    @xlsx.FormControl::new("B2", "Button", text="bounded control VML"),
+  )
+  let ordinary = @xlsx.write(workbook)
+  let (entry_count, largest, total) = archive_uncompressed_stats(ordinary)
+  let bounded = @xlsx.write_limited(
+    workbook,
+    @xlsx.WriteLimits::with_values(
+      max_output_bytes=ordinary.length(),
+      max_archive_entries=entry_count,
+      max_entry_uncompressed_bytes=largest,
+      max_total_uncompressed_bytes=total,
+    ),
+  )
+  let archive = @zip.read(bounded)
+  assert_true(archive.get("xl/drawings/vmlDrawing1.vml") is Some(_))
+  assert_eq(archive.entries().length(), entry_count)
+}

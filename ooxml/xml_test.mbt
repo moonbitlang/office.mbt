@@ -54,3 +54,14 @@ test "xml_needs_escape distinguishes text and attribute contexts" {
   assert_false(@ooxml.xml_needs_escape("clean", attr=true))
   assert_false(@ooxml.xml_needs_escape("", attr=true))
 }
+
+///|
+test "escaping handles megabyte-safe spans without per-character output" {
+  let span = "a".repeat(1024 * 1024)
+  let text = @ooxml.escape_xml_text(span + "&tail")
+  assert_eq(text.length(), span.length() + "&amp;tail".length())
+  assert_true(text.has_suffix("&amp;tail"))
+  let attr = @ooxml.escape_xml_attr(span + "\"tail")
+  assert_eq(attr.length(), span.length() + "&quot;tail".length())
+  assert_true(attr.has_suffix("&quot;tail"))
+}

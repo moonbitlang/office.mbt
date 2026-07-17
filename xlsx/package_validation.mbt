@@ -1,4 +1,63 @@
 ///|
+let max_package_validation_findings = 256
+
+///|
+let package_validation_omission_message = "additional package findings were omitted after the bounded validator limit"
+
+///|
+fn push_package_problem(problems : Array[String], problem : String) -> Bool {
+  if problems.length() < max_package_validation_findings - 1 {
+    problems.push(problem)
+    true
+  } else {
+    if problems.length() == max_package_validation_findings - 1 {
+      problems.push(package_validation_omission_message)
+    }
+    false
+  }
+}
+
+///|
+/// Applies the same aggregate XML-byte and markup-token policy as the complete
+/// workbook reader before package validation starts decoding or scanning
+/// package plumbing. Counting every XML-like package part makes the validation
+/// boundary deterministic and prevents many individually-small relationship
+/// parts from bypassing the aggregate read policy.
+fn enforce_package_validation_xml_limits(
+  archive : @zip.Archive,
+  limits : ReadLimits,
+) -> Unit raise XlsxError {
+  let mut total_xml_bytes = 0
+  let mut markup_tokens = 0
+  for entry in archive.entries() {
+    if !is_xml_package_part(entry.name()) {
+      continue
+    }
+    let data = entry.data()
+    if data.length() > limits.max_total_xml_bytes - total_xml_bytes {
+      raise ResourceLimitExceeded(
+        kind="total_xml_bytes",
+        limit=limits.max_total_xml_bytes,
+        actual=bounded_actual_above_limit(limits.max_total_xml_bytes),
+      )
+    }
+    total_xml_bytes = total_xml_bytes + data.length()
+    for byte in data {
+      if byte == b'<' {
+        if markup_tokens >= limits.max_xml_markup_tokens {
+          raise ResourceLimitExceeded(
+            kind="xml_markup_tokens",
+            limit=limits.max_xml_markup_tokens,
+            actual=bounded_actual_above_limit(limits.max_xml_markup_tokens),
+          )
+        }
+        markup_tokens = markup_tokens + 1
+      }
+    }
+  }
+}
+
+///|
 /// Checks the structural invariants an OOXML (xlsx) package must satisfy
 /// for Microsoft Excel to open it without a repair prompt, returning the
 /// list of problems found (empty when the package is well-formed). These
@@ -18,7 +77,9 @@
 /// This is a fast, dependency-free complement to the Microsoft OpenXML
 /// SDK validator: it runs entirely in MoonBit, so it can be asserted on
 /// every workbook a test generates. An unreadable ZIP is returned as a stable
-/// finding; resource-policy violations raise `ResourceLimitExceeded`.
+/// finding; resource-policy violations raise `ResourceLimitExceeded`. Findings
+/// are capped at 256 while scanning, with a final omission marker when more
+/// defects exist, so diagnostics cannot become an attacker-sized second tree.
 pub fn validate_ooxml_package(
   bytes : BytesView,
   limits? : ReadLimits = ReadLimits::new(),
@@ -42,6 +103,7 @@ pub fn validate_ooxml_bounded_archive(
   limits? : ReadLimits = ReadLimits::new(),
 ) -> Array[String] raise XlsxError {
   require_bounded_archive(archive, limits)
+  enforce_package_validation_xml_limits(archive, limits)
   validate_ooxml_archive(archive)
 }
 
@@ -53,15 +115,27 @@ fn validate_ooxml_archive(archive : @zip.Archive) -> Array[String] {
     let name = entry.name()
     parts[name] = parts.get(name).unwrap_or(0) + 1
     if name.contains("\\") {
-      problems.push("part name uses a backslash: \{name}")
+      if !push_package_problem(problems, "part name uses a backslash: \{name}") {
+        return problems
+      }
     }
     if name.has_prefix("/") {
-      problems.push("part name has a leading slash: \{name}")
+      if !push_package_problem(
+          problems,
+          "part name has a leading slash: \{name}",
+        ) {
+        return problems
+      }
     }
   }
   for name, count in parts {
     if count > 1 {
-      problems.push("duplicate part: \{name} (\{count} entries)")
+      if !push_package_problem(
+          problems,
+          "duplicate part: \{name} (\{count} entries)",
+        ) {
+        return problems
+      }
     }
   }
 
@@ -71,7 +145,9 @@ fn validate_ooxml_archive(archive : @zip.Archive) -> Array[String] {
       "[Content_Types].xml", "_rels/.rels", "xl/workbook.xml", "xl/_rels/workbook.xml.rels",
     ] {
     if !parts.contains(required) {
-      problems.push("missing required part: \{required}")
+      if !push_package_problem(problems, "missing required part: \{required}") {
+        return problems
+      }
     }
   }
 
@@ -91,7 +167,12 @@ fn validate_ooxml_archive(archive : @zip.Archive) -> Array[String] {
           None => false
         }
         if !has_override && !has_default {
-          problems.push("part has no declared content type: \{name}")
+          if !push_package_problem(
+              problems,
+              "part has no declared content type: \{name}",
+            ) {
+            return problems
+          }
         }
       }
     }
@@ -106,16 +187,41 @@ fn validate_ooxml_archive(archive : @zip.Archive) -> Array[String] {
     }
     let base = rels_base_dir(name)
     let rels_xml = decode_package_part(entry.data())
-    for rel in parse_rel_targets(rels_xml) {
-      let (target, external) = rel
+    let mut first = true
+    // Process one relationship at a time. The aggregate token preflight above
+    // bounds scan work, while avoiding a second target array proportional to
+    // attacker-controlled relationship count.
+    for chunk in rels_xml.split("<Relationship ") {
+      if first {
+        first = false
+        continue
+      }
+      let end = match chunk.find(">") {
+        Some(pos) => pos
+        None => continue
+      }
+      let tag = chunk[:end]
+      let target_opt = attr_value(tag, "Target") catch { _ => None }
+      let target = match target_opt {
+        Some(value) => value
+        None => continue
+      }
+      let mode_opt = attr_value(tag, "TargetMode") catch { _ => None }
+      let external = match mode_opt {
+        Some(mode) => mode == "External"
+        None => false
+      }
       if external {
         continue
       }
       let resolved = resolve_part_path(base, target)
       if resolved != "" && !parts.contains(resolved) {
-        problems.push(
-          "relationship in \{name} points to a missing part: \{target} -> \{resolved}",
-        )
+        if !push_package_problem(
+            problems,
+            "relationship in \{name} points to a missing part: \{target} -> \{resolved}",
+          ) {
+          return problems
+        }
       }
     }
   }
@@ -161,12 +267,11 @@ fn parse_content_types(xml : String) -> (Map[String, Bool], Map[String, Bool]) {
       first = false
       continue
     }
-    let text = chunk.to_owned()
-    let end = match text.find(">") {
+    let end = match chunk.find(">") {
       Some(pos) => pos
       None => continue
     }
-    let ext = attr_value(text[:end], "Extension") catch { _ => None }
+    let ext = attr_value(chunk[:end], "Extension") catch { _ => None }
     match ext {
       Some(ext) => defaults[ext.to_lower()] = true
       None => ()
@@ -178,50 +283,17 @@ fn parse_content_types(xml : String) -> (Map[String, Bool], Map[String, Bool]) {
       first = false
       continue
     }
-    let text = chunk.to_owned()
-    let end = match text.find(">") {
+    let end = match chunk.find(">") {
       Some(pos) => pos
       None => continue
     }
-    let part = attr_value(text[:end], "PartName") catch { _ => None }
+    let part = attr_value(chunk[:end], "PartName") catch { _ => None }
     match part {
       Some(part) => overrides[part] = true
       None => ()
     }
   }
   (defaults, overrides)
-}
-
-///|
-/// Parses the relationship targets of a `.rels` part, returning each
-/// (target, is_external) pair.
-fn parse_rel_targets(xml : String) -> Array[(String, Bool)] {
-  let result : Array[(String, Bool)] = []
-  let mut first = true
-  for chunk in xml.split("<Relationship ") {
-    if first {
-      first = false
-      continue
-    }
-    let text = chunk.to_owned()
-    let end = match text.find(">") {
-      Some(pos) => pos
-      None => continue
-    }
-    let tag = text[:end]
-    let target_opt = attr_value(tag, "Target") catch { _ => None }
-    let target = match target_opt {
-      Some(value) => value
-      None => continue
-    }
-    let mode_opt = attr_value(tag, "TargetMode") catch { _ => None }
-    let external = match mode_opt {
-      Some(mode) => mode == "External"
-      None => false
-    }
-    result.push((target, external))
-  }
-  result
 }
 
 ///|
