@@ -163,6 +163,35 @@ fn parse_xlsx_predicate(
 }
 
 ///|
+/// Finds the terminator for one outer predicate group while permitting
+/// balanced brackets inside its literal value. This is required for normal
+/// Excel structured references such as `Table1[Amount]` and
+/// `Table1[[#Headers],[Amount]]`.
+fn xlsx_query_predicate_close(
+  rest : String,
+  selector : String,
+) -> Int raise CliFailure {
+  let mut depth = 0
+  let mut index = 0
+  while index < rest.length() {
+    let character = rest[index]
+    if character == ('[' : UInt16) {
+      depth += 1
+    } else if character == (']' : UInt16) {
+      depth -= 1
+      if depth == 0 {
+        return index
+      }
+      if depth < 0 {
+        break
+      }
+    }
+    index += 1
+  }
+  raise xlsx_query_failure("query selector is missing a closing ']'", selector)
+}
+
+///|
 fn parse_xlsx_query_selector(
   source : String,
 ) -> Array[XlsxCellPredicate] raise CliFailure {
@@ -193,13 +222,7 @@ fn parse_xlsx_query_selector(
     if !rest.has_prefix("[") {
       raise xlsx_query_failure("expected '[' in query selector", selector)
     }
-    let close = match rest.find("]") {
-      Some(index) => index
-      None =>
-        raise xlsx_query_failure(
-          "query selector is missing a closing ']'", selector,
-        )
-    }
+    let close = xlsx_query_predicate_close(rest, selector)
     predicates.push(parse_xlsx_predicate(rest[1:close].to_owned(), selector))
     rest = rest[close + 1:].to_owned()
   }

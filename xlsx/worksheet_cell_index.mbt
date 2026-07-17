@@ -59,6 +59,7 @@ fn raw_cell(reference : String, row : Int, col : Int, value : String) -> Cell {
     formula_type: None,
     formula_ref: None,
     formula_shared_index: None,
+    formula_value_present: false,
     style_id: 0,
   }
 }

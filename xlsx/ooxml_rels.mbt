@@ -1,11 +1,42 @@
 ///|
-fn parse_relationship_targets(
+let transitional_office_relationship_prefix = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/"
+
+///|
+let strict_office_relationship_prefix = "http://purl.oclc.org/ooxml/officeDocument/relationships/"
+
+///|
+fn parse_relationship_targets_exact(
   xml : StringView,
   rel_type : StringView,
 ) -> Map[String, String] raise XlsxError {
   @ooxml.parse_relationship_targets(xml, rel_type) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
   }
+}
+
+///|
+/// Reads both ISO Strict and ECMA Transitional aliases for relationship types
+/// from the Office relationship family. Microsoft extension relationships use
+/// their own namespaces and therefore remain exact matches.
+fn parse_relationship_targets(
+  xml : StringView,
+  rel_type : StringView,
+) -> Map[String, String] raise XlsxError {
+  let requested = rel_type.to_owned()
+  let targets = parse_relationship_targets_exact(xml, requested)
+  guard requested.strip_prefix(transitional_office_relationship_prefix)
+    is Some(suffix) else {
+    return targets
+  }
+  let strict_type = strict_office_relationship_prefix + suffix.to_owned()
+  let strict_targets = parse_relationship_targets_exact(xml, strict_type)
+  for id, target in strict_targets {
+    if targets.contains(id) {
+      raise InvalidXml(msg="relationship id has conflicting dialect aliases")
+    }
+    targets[id] = target
+  }
+  targets
 }
 
 ///|
@@ -138,6 +169,25 @@ test "ooxml_rels: parse_relationship_targets filters by Type and maps Id->Target
       #|{ "rId1": "a.xml", "rId3": "c.xml" }
     ),
   )
+}
+
+///|
+test "ooxml_rels: Office relationship types accept Strict aliases" {
+  let transitional = transitional_office_relationship_prefix + "worksheet"
+  let strict = strict_office_relationship_prefix + "worksheet"
+  let xml =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+    #|  <Relationship Id="strict" Type="http://purl.oclc.org/ooxml/officeDocument/relationships/worksheet" Target="worksheets/strict.xml"/>
+    #|  <Relationship Id="transitional" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/transitional.xml"/>
+    #|</Relationships>
+  let targets = parse_relationship_targets(xml, transitional)
+  assert_eq(targets.get("strict"), Some("worksheets/strict.xml"))
+  assert_eq(targets.get("transitional"), Some("worksheets/transitional.xml"))
+  // Asking for an already-Strict URI remains exact and does not broaden to
+  // the Transitional family in the opposite direction.
+  let strict_only = parse_relationship_targets(xml, strict)
+  assert_eq(strict_only.length(), 1)
+  assert_eq(strict_only.get("strict"), Some("worksheets/strict.xml"))
 }
 
 ///|

@@ -628,26 +628,30 @@ fn xlsx_cell_formula(
   worksheet : @xlsx.Worksheet,
   row : Int,
   column : Int,
-) -> String? raise CliFailure {
+) -> (String?, Bool) raise CliFailure {
   match
     xlsx_call(projection.file, () => {
       worksheet.get_cell_formula_info_rc(row, column)
     }) {
-    None => None
-    Some(info) if info.formula != "" => Some(info.formula)
+    None => (None, false)
+    Some(info) if info.formula != "" =>
+      (Some(info.formula), info.cached_value_present)
     Some(info) =>
-      match info.shared_index {
-        Some(shared_index) =>
-          // `Some("")` is intentional when a malformed package has a shared
-          // follower but no resolvable master: preserve formula presence even
-          // when no formula text can be supplied.
-          Some(
-            sheet
-            .shared_formula_master(projection, worksheet, shared_index)
-            .unwrap_or(""),
-          )
-        None => Some("")
-      }
+      (
+        match info.shared_index {
+          Some(shared_index) =>
+            // `Some("")` is intentional when a malformed package has a shared
+            // follower but no resolvable master: preserve formula presence even
+            // when no formula text can be supplied.
+            Some(
+              sheet
+              .shared_formula_master(projection, worksheet, shared_index)
+              .unwrap_or(""),
+            )
+          None => Some("")
+        },
+        info.cached_value_present,
+      )
   }
 }
 
@@ -667,11 +671,14 @@ fn xlsx_cell_snapshot(
   let raw = xlsx_call(projection.file, () => {
     worksheet.get_cell_value_raw(reference)
   })
+  let (formula, cached_value_present) = xlsx_cell_formula(
+    projection, sheet, worksheet, row, column,
+  )
   let normalized_raw = match raw {
+    Some(String("")) if formula is Some(_) && cached_value_present => raw
     Some(String("")) => None
     value => value
   }
-  let formula = xlsx_cell_formula(projection, sheet, worksheet, row, column)
   let style_id = xlsx_call(projection.file, () => {
     worksheet.effective_style_id_rc(row, column)
   })

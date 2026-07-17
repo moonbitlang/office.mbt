@@ -21,6 +21,46 @@ fn xlsx_cli_error(
 }
 
 ///|
+fn xlsx_bounded_test_source(
+  file : String,
+  bytes : BytesView,
+) -> OfficeReadPackage raise {
+  let archive = @zip.read_limited(
+    bytes,
+    max_package_bytes=office_read_max_package_bytes,
+    max_entries=office_read_max_zip_entries,
+    max_entry_uncompressed_bytes=office_read_max_zip_entry_bytes,
+    max_total_uncompressed_bytes=office_read_max_zip_total_bytes,
+    max_total_preserved_source_bytes=office_read_max_preserved_source_bytes,
+  )
+  { file, format: Xlsx, archive }
+}
+
+///|
+fn xlsx_strict_test_bytes() -> Bytes raise {
+  let archive = @zip.Archive::new()
+  let content_types =
+    #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>
+  let root_relationships =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="main" Type="http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>
+  let workbook =
+    #|<workbook xmlns="http://purl.oclc.org/ooxml/spreadsheetml/main" xmlns:r="http://purl.oclc.org/ooxml/officeDocument/relationships"><sheets><sheet name="Strict" sheetId="1" r:id="sheet"/></sheets></workbook>
+  let workbook_relationships =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="sheet" Type="http://purl.oclc.org/ooxml/officeDocument/relationships/worksheet" Target="worksheets/sheet.xml"/></Relationships>
+  let worksheet =
+    #|<worksheet xmlns="http://purl.oclc.org/ooxml/spreadsheetml/main"><sheetData><row r="1"><c r="A1" t="str"><v>strict-value</v></c></row></sheetData></worksheet>
+  archive.add("[Content_Types].xml", @utf8.encode(content_types))
+  archive.add("_rels/.rels", @utf8.encode(root_relationships))
+  archive.add("xl/workbook.xml", @utf8.encode(workbook))
+  archive.add(
+    "xl/_rels/workbook.xml.rels",
+    @utf8.encode(workbook_relationships),
+  )
+  archive.add("xl/worksheets/sheet.xml", @utf8.encode(worksheet))
+  @zip.write(archive)
+}
+
+///|
 test "XLSX selectors resolve to stable named canonical paths" {
   let projection = xlsx_read_test_projection()
   guard resolve_xlsx_selector(projection, "/xlsx/sheet[2]") is Sheet(second) else {
@@ -49,6 +89,22 @@ test "XLSX selectors resolve to stable named canonical paths" {
   assert_eq(singleton.range_reference(projection.file), "B2:B2")
   assert_eq(path, "/xlsx/sheet[name=\"Data\"]/range[B2:B2]")
   assert_eq(@lib.parse_selector(path).render(), path)
+}
+
+///|
+test "XLSX structured reads accept detector-valid Strict OOXML relationships" {
+  let source = xlsx_bounded_test_source("strict.xlsx", xlsx_strict_test_bytes())
+  assert_true(@lib.detect_archive_format(source.file, source.archive) is Xlsx)
+  let projection = open_xlsx_projection(source, 10)
+  guard xlsx_get_data(
+      projection,
+      resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Strict\"]/cell[A1]"),
+    )
+    is Object(get) &&
+    get.get("cell") is Some(Object(cell)) else {
+    fail("expected Strict XLSX cell")
+  }
+  assert_eq(cell.get("value"), Some(Json::string("strict-value")))
 }
 
 ///|
@@ -167,6 +223,14 @@ test "XLSX query selectors are bounded, deterministic predicate conjunctions" {
     "cell[type=formula][formula~=SUM][text=3]",
   )
   assert_eq(predicates.length(), 3)
+  let structured = parse_xlsx_query_selector(
+    "cell[formula~=SUM(Table1[[#Headers],[Amount]])][text~=total]",
+  )
+  assert_eq(structured.length(), 2)
+  guard structured[0] is FormulaContains(literal) else {
+    fail("expected structured-reference formula predicate")
+  }
+  assert_eq(literal, "SUM(Table1[[#Headers],[Amount]])")
   let work = OfficeQueryWorkBudget::new(1024, format="xlsx")
   assert_true(
     xlsx_cell_matches(
@@ -401,6 +465,59 @@ test "XLSX structured reads reject non-finite package numbers" {
 }
 
 ///|
+test "XLSX parse-time index corruption is classified as an invalid package" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  workbook.set_cell_str("Data", "A1", "alpha")
+  let shared_archive = @zip.read(@xlsx.write(workbook))
+  guard shared_archive.get("xl/worksheets/sheet1.xml") is Some(shared_bytes) else {
+    fail("missing shared-string worksheet")
+  }
+  let shared_xml = @utf8.decode(shared_bytes, ignore_bom=true)
+  assert_true(shared_xml.contains("<v>0</v>"))
+  assert_true(
+    shared_archive.replace(
+      "xl/worksheets/sheet1.xml",
+      @utf8.encode(shared_xml.replace(old="<v>0</v>", new="<v>7</v>")),
+    ),
+  )
+  let shared_source = xlsx_bounded_test_source(
+    "broken-shared.xlsx",
+    @zip.write(shared_archive),
+  )
+  let shared = xlsx_cli_error(() => {
+    ignore(open_xlsx_projection(shared_source, 10))
+  })
+  assert_eq(shared.code, "office.invalid_package")
+
+  let styled_workbook = @xlsx.Workbook::new()
+  ignore(styled_workbook.new_sheet("Data"))
+  styled_workbook.set_cell_int("Data", "A1", 1)
+  let style_archive = @zip.read(@xlsx.write(styled_workbook))
+  guard style_archive.get("xl/worksheets/sheet1.xml") is Some(style_bytes) else {
+    fail("missing styled worksheet")
+  }
+  let style_xml = @utf8.decode(style_bytes, ignore_bom=true)
+  assert_true(style_xml.contains("<c r=\"A1\""))
+  assert_true(
+    style_archive.replace(
+      "xl/worksheets/sheet1.xml",
+      @utf8.encode(
+        style_xml.replace(old="<c r=\"A1\"", new="<c r=\"A1\" s=\"9\""),
+      ),
+    ),
+  )
+  let style_source = xlsx_bounded_test_source(
+    "broken-style.xlsx",
+    @zip.write(style_archive),
+  )
+  let style = xlsx_cli_error(() => {
+    ignore(open_xlsx_projection(style_source, 10))
+  })
+  assert_eq(style.code, "office.invalid_package")
+}
+
+///|
 test "XLSX style parsing rejects non-finite JSON-facing numbers" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.new_sheet("Data"))
@@ -474,6 +591,71 @@ test "XLSX displayed text preserves formula results formatted to blank" {
   }
   assert_eq(cell.get("value"), Some(Json::string("")))
   assert_eq(cell.get("formula"), Some(Json::string("1+0")))
+}
+
+///|
+test "XLSX cached empty formula results remain distinct from a missing cache" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  workbook.set_cell_formula("Data", "A1", "1+0")
+  let archive = @zip.read(@xlsx.write(workbook))
+  guard archive.get("xl/worksheets/sheet1.xml") is Some(sheet_bytes) else {
+    fail("missing formula worksheet")
+  }
+  let sheet_xml = @utf8.decode(sheet_bytes, ignore_bom=true)
+  assert_true(sheet_xml.contains("<f>1+0</f></c>"))
+  let cached_xml = sheet_xml
+    .replace(old="<c r=\"A1\"", new="<c r=\"A1\" t=\"str\"")
+    .replace(old="<f>1+0</f></c>", new="<f>1+0</f><v></v></c>")
+  assert_true(
+    archive.replace("xl/worksheets/sheet1.xml", @utf8.encode(cached_xml)),
+  )
+  let parsed = @xlsx.read(@zip.write(archive))
+  guard parsed.sheet("Data") is Some(parsed_sheet) &&
+    parsed_sheet.get_cell_formula_info_rc(1, 1) is Some(info) else {
+    fail("expected cached formula metadata")
+  }
+  assert_true(info.cached_value_present)
+  guard parsed_sheet.get_cell_value_raw("A1") is Some(String(raw)) else {
+    fail("expected cached empty raw string")
+  }
+  assert_eq(raw, "")
+
+  // Cached-presence is part of the reader model, so a write/read cycle must
+  // retain the explicit empty cache rather than collapsing it to no `<v>`.
+  let roundtrip = @zip.read(@xlsx.write(parsed))
+  guard roundtrip.get("xl/worksheets/sheet1.xml") is Some(roundtrip_bytes) else {
+    fail("missing round-trip formula worksheet")
+  }
+  let roundtrip_xml = @utf8.decode(roundtrip_bytes, ignore_bom=true)
+  assert_true(roundtrip_xml.contains("<f>1+0</f><v></v>"))
+
+  let projection = make_xlsx_projection("cached-empty.xlsx", parsed, 10)
+  guard xlsx_get_data(
+      projection,
+      resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]/cell[A1]"),
+    )
+    is Object(get) &&
+    get.get("cell") is Some(Object(cell)) else {
+    fail("expected cached-empty formula cell")
+  }
+  assert_eq(cell.get("value"), Some(Json::string("")))
+  assert_eq(
+    cell.get("raw"),
+    Some(
+      Json::object({ "type": Json::string("string"), "value": Json::string("") }),
+    ),
+  )
+  guard xlsx_text_data(
+      projection,
+      Some(resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]")),
+      0,
+      10,
+    )
+    is Object(text) else {
+    fail("expected cached-empty text result")
+  }
+  assert_eq(text.get("matched_total"), Some(Json::number(0)))
 }
 
 ///|

@@ -229,6 +229,7 @@ pub struct Cell {
   formula_type : FormulaType?
   formula_ref : String?
   formula_shared_index : Int?
+  formula_value_present : Bool
   style_id : Int
 }
 
@@ -237,6 +238,7 @@ pub struct CellFormulaInfo {
   formula_type : FormulaType?
   range_ref : String?
   shared_index : Int?
+  cached_value_present : Bool
 }
 
 type CellImage

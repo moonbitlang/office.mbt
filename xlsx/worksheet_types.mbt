@@ -10,6 +10,9 @@ pub struct Cell {
   formula_type : FormulaType?
   formula_ref : String?
   formula_shared_index : Int?
+  /// Whether this formula cell contained an OOXML `<v>` cached-result node.
+  /// Empty cached strings are semantically distinct from a missing cache.
+  formula_value_present : Bool
   style_id : Int
 }
 
@@ -24,6 +27,8 @@ pub struct CellFormulaInfo {
   formula_type : FormulaType?
   range_ref : String?
   shared_index : Int?
+  /// True when the formula has a cached `<v>` result, including `<v></v>`.
+  cached_value_present : Bool
 }
 
 ///|

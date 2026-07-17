@@ -16,6 +16,10 @@ bounded archive to the XLSX parser. It does not use C stubs. A `.docx` package
 selects the DOCX result contract instead; an extension/content mismatch fails
 before either projection is opened.
 
+Both Transitional and ISO Strict Office relationship families are accepted.
+The detector and the structured XLSX parser therefore agree on every package
+dialect they admit.
+
 Run `office help xlsx` for the installed command catalog and
 `office help <command> --json` for the declared format variants, inputs,
 outputs, and limits.
@@ -89,6 +93,8 @@ Cell and range results include a `styles` object keyed by the referenced style
 ids. Range reads omit completely blank, unstyled cells while preserving
 row-major order. Selecting one blank, unstyled coordinate fails with
 `office.xlsx.selector_not_found`; it does not fabricate a cell record.
+For formulas, an explicit empty cached `<v>` remains an empty `raw`/displayed
+value and stays distinct from a formula whose cache is absent.
 
 ## `text`
 
@@ -100,6 +106,7 @@ office text FILE [--under SELECTOR] [--offset N] [--limit N]
 Each entry contains `{path, stability, text}`. Text is the workbook's displayed
 cell value. If a formula has no cached displayed value, text falls back to the
 formula prefixed with `=` so an uncached formula is not silently omitted.
+An explicitly cached blank result remains blank and does not use that fallback.
 `matched_total`, `returned`, `offset`, `limit`, `truncated`, and
 `scanned_cells` describe the completed bounded scan exactly.
 
@@ -128,9 +135,13 @@ Examples:
 
 ```text
 cell[type=formula][formula~=SUM]
+cell[formula~=SUM(Table1[[#Headers],[Amount]])]
 cell[type=number][value>=0]
 cell[text~=revenue]
 ```
+
+Balanced brackets inside literal predicate values are part of the surrounding
+predicate, which permits Excel structured references without quoting.
 
 Regular expressions, arbitrary expressions, locale-sensitive matching, and
 the DOCX-only `--kind`, `--text`, `--id`, `--property`, and `--ignore-case`

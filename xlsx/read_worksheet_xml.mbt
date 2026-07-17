@@ -222,6 +222,7 @@ fn parse_worksheet(
       formula_type,
       formula_ref,
       formula_shared_index,
+      formula_value_present: formula is Some(_) && raw_value_opt is Some(_),
       style_id,
     })
   }

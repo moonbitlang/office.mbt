@@ -1799,7 +1799,10 @@ fn write_worksheet_xml(
       match cell.formula {
         Some(formula) => {
           match cell.value_type {
-            String => if cell.value != "" { sb.write_view(" t=\"str\"") }
+            String =>
+              if cell.formula_value_present {
+                sb.write_view(" t=\"str\"")
+              }
             Bool => sb.write_view(" t=\"b\"")
             Error => sb.write_view(" t=\"e\"")
             Number => ()
@@ -1829,7 +1832,7 @@ fn write_worksheet_xml(
           sb.write_view(">")
           sb.write_view(escape_xml_text(formula))
           sb.write_view("</f>")
-          if cell.value != "" {
+          if cell.formula_value_present {
             sb.write_view("<v>")
             match cell.value_type {
               String => sb.write_view(escape_xml_text(cell.value))
@@ -3780,6 +3783,7 @@ test "write hardening wb: write_worksheet_xml covers formula bool and error bran
     formula_type: None,
     formula_ref: None,
     formula_shared_index: None,
+    formula_value_present: true,
     style_id: 0,
   })
   sheet.cells.push({
@@ -3793,6 +3797,7 @@ test "write hardening wb: write_worksheet_xml covers formula bool and error bran
     formula_type: None,
     formula_ref: None,
     formula_shared_index: None,
+    formula_value_present: true,
     style_id: 0,
   })
   let xml = write_worksheet_xml(
@@ -3832,6 +3837,7 @@ test "write hardening wb: write_worksheet_xml covers shared-string and hyperlink
     formula_type: None,
     formula_ref: None,
     formula_shared_index: None,
+    formula_value_present: false,
     style_id: 0,
   })
   let missing_rich : Result[String, Error] = Ok(
@@ -3870,6 +3876,7 @@ test "write hardening wb: write_worksheet_xml covers shared-string and hyperlink
     formula_type: None,
     formula_ref: None,
     formula_shared_index: None,
+    formula_value_present: false,
     style_id: 0,
   })
   let missing_plain : Result[String, Error] = Ok(

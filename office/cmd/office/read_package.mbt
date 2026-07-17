@@ -110,6 +110,15 @@ async fn read_office_package(file : String) -> OfficeReadPackage {
 
 ///|
 fn xlsx_read_failure(error : @xlsx.XlsxError, file : String) -> CliFailure {
+  fn invalid_package(message : String) -> CliFailure {
+    CliFailure(
+      @lib.protocol_error(
+        "office.invalid_package",
+        "invalid XLSX package: " + bounded_text(message, 320),
+        details=Json::object({ "file": Json::string(bounded_text(file, 160)) }),
+      ),
+    )
+  }
   match error {
     ResourceLimitExceeded(kind~, limit~, actual~) =>
       CliFailure(
@@ -124,14 +133,12 @@ fn xlsx_read_failure(error : @xlsx.XlsxError, file : String) -> CliFailure {
           }),
         ),
       )
-    InvalidPackage(msg~) | InvalidXml(msg~) =>
-      CliFailure(
-        @lib.protocol_error(
-          "office.invalid_package",
-          "invalid XLSX package: " + bounded_text(msg, 320),
-          details=Json::object({ "file": Json::string(bounded_text(file, 160)) }),
-        ),
-      )
+    InvalidPackage(msg~) | InvalidXml(msg~) => invalid_package(msg)
+    MissingPart(path~) => invalid_package("missing required part: \{path}")
+    InvalidSharedString(index~) =>
+      invalid_package("shared string index is out of range: \{index}")
+    InvalidStyleId(index~) =>
+      invalid_package("cell style index is out of range: \{index}")
     _ =>
       CliFailure(
         @lib.protocol_error(
