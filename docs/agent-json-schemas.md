@@ -384,10 +384,12 @@ Envelope:
   rules when this one matches. As with `validate`, the `type` is checked at
   apply time and a param the chosen type does not use is rejected rather than
   silently ignored.
-- Zero ops is a valid no-op and writes nothing. Scripts are capped at
-  10,000 ops, style ranges at 1,000,000 expanded cells per script in
-  aggregate, and numeric literals at 40 characters (pathologically long
-  literals can round incorrectly upstream).
+- Zero ops is a valid no-op and writes nothing. Encoded scripts are capped at
+  8 MiB before UTF-8 decoding, 10,000 ops, 1,000,000 direct or expanded cell
+  mutations, 1,000,000 expanded style cells, 4,096 requested style or
+  differential-style records, and 1,000,000 row/column lines across bounded
+  hide/show/height operations. Numeric literals are capped at 40 characters
+  (pathologically long literals can round incorrectly upstream).
 - `--dry-run` parses and applies in memory but never writes.
 - The save resolves a symlinked workbook to its target first (native),
   writes a uniquely-named temp through its exclusive handle, and renames
@@ -396,18 +398,25 @@ Envelope:
   the original (Windows follows directory ACLs); chmod afterwards for
   group access.
 
-### Forward-compatibility & `xlsx.capabilities/1` (`xlsx capabilities`)
+### Capability negotiation & `xlsx.capabilities/1` (`xlsx capabilities`)
 
-The `xlsx.batch/1` *script* contract is backward-compatible: a script that
-was valid stays valid on newer builds. It is **not** forward-compatible —
-a stricter older CLI rejects an op or param it doesn't know. So an agent
-targeting an unknown build should first query what that build supports:
+Before a stable release, `xlsx.batch/1` does not promise backward or forward
+compatibility. An agent targeting an unknown build must query the executable
+capability catalog instead of assuming an operation, parameter, or limit:
 
 ```json
 {
   "schema": "xlsx.capabilities/1",
   "batch_schema": "xlsx.batch/1",
-  "limits": { "max_ops": 10000, "max_style_cells": 1000000 },
+  "limits": {
+    "max_script_bytes": 8388608,
+    "max_ops": 10000,
+    "max_touched_cells": 1000000,
+    "max_style_cells": 1000000,
+    "max_new_styles": 4096,
+    "max_row_column_band": 10000,
+    "max_row_column_lines": 1000000
+  },
   "ops": [
     { "op": "set", "params": [
         { "name": "sheet", "type": "string", "required": true },
@@ -440,7 +449,29 @@ array contains `{code, message}` records.
 The structured read commands dispatch by validated package content and share
 canonical `office.selector/1` paths. Full command, selector, limit, and
 error-code details are in [office-docx-read.md](office-docx-read.md) and
-[office-xlsx-read.md](office-xlsx-read.md).
+[office-xlsx-read.md](office-xlsx-read.md). Transactional XLSX creation and
+batch semantics are specified in
+[office-xlsx-mutations.md](office-xlsx-mutations.md).
+
+### `office.xlsx.create/1` (`office create xlsx OUTPUT --json`)
+
+| key | type | notes |
+| --- | --- | --- |
+| `schema` | string | `"office.xlsx.create/1"` |
+| `sheet` | string | validated first worksheet name |
+| `transaction` | object | `office.transaction/1` validation, preservation, and publication report |
+
+### `office.xlsx.batch/1` (`office batch FILE SCRIPT --json`)
+
+| key | type | notes |
+| --- | --- | --- |
+| `schema` | string | `"office.xlsx.batch/1"` |
+| `stats` | object | exact parsed-plan `operation_count`, `touched_cells`, `style_cells`, `row_column_lines`, and `new_style_records` |
+| `transaction` | object | `office.transaction/1` validation, preservation, and publication report |
+
+A changed plan emits `office.xlsx.full_rewrite`; consumers must use the
+transaction preservation report rather than infer retained parts from the
+operation list. Zero-op in-place execution reuses the source bytes exactly.
 
 ### `office.docx.outline/1` (`office outline FILE --json`)
 
