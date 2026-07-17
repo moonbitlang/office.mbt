@@ -283,7 +283,16 @@ jobs:
             and .error.details.suggestions == ["xlsx"]' office-wasm-error.json
           # XLSX structured reads share the validated bounded archive and use
           # canonical name-keyed paths even when the input selector is positional.
-          xlsx_fixture=fixtures/excelize/test/Book1.xlsx
+          # The third-party Book1 fixture has intersecting shared-formula ranges;
+          # normalize that unrelated invalid metadata through the raw transaction
+          # surface before exercising the fixture's original contents.
+          xlsx_source=fixtures/excelize/test/Book1.xlsx
+          xlsx_sheet="$RUNNER_TEMP/office-book1-sheet2.xml"
+          xlsx_sheet_valid="$RUNNER_TEMP/office-book1-sheet2-valid.xml"
+          xlsx_fixture="$RUNNER_TEMP/office-Book1-valid.xlsx"
+          moon run --target wasm office/cmd/office -- raw read "$xlsx_source" /Sheet2 --output "$xlsx_sheet" >/dev/null
+          sed -e 's/ref="F11:H11"/ref="F11:F11"/' -e 's/<f t="shared" si="0"><\/f>/<f t="shared" si="1"><\/f>/' "$xlsx_sheet" >"$xlsx_sheet_valid"
+          moon run --target wasm office/cmd/office -- raw replace "$xlsx_source" /Sheet2 --xml-file "$xlsx_sheet_valid" --out "$xlsx_fixture" --json >/dev/null
           xo=$(moon run --target wasm office/cmd/office -- outline "$xlsx_fixture" --json 2>office-wasm.err) || { echo "office XLSX outline failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$xo" | jq -e '.success == true
             and .data.schema == "office.xlsx.outline/1"
