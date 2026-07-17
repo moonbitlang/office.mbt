@@ -9,7 +9,7 @@ pub struct Cell {
   formula : String?
   formula_type : FormulaType?
   formula_ref : String?
-  formula_shared_index : Int?
+  formula_shared_index : UInt?
   /// Whether this formula cell contained an OOXML `<v>` cached-result node.
   /// Empty cached strings are semantically distinct from a missing cache.
   formula_value_present : Bool
@@ -18,15 +18,16 @@ pub struct Cell {
 
 ///|
 /// Read-only formula metadata for one worksheet coordinate. `formula` is the
-/// exact text stored in that cell; OOXML shared-formula followers therefore
-/// carry an empty string while `formula_type` and `shared_index` preserve
-/// their formula-bearing state. Callers that need display/query text can use
-/// the shared index to resolve the corresponding non-empty master formula.
+/// cell's semantic formula text; OOXML says shared-formula follower text is
+/// ignored, so followers are canonicalized to an empty string while
+/// `formula_type` and `shared_index` preserve their formula-bearing state.
+/// Callers that need display/query text can use the shared index to resolve
+/// the corresponding non-empty master formula.
 pub struct CellFormulaInfo {
   formula : String
   formula_type : FormulaType?
   range_ref : String?
-  shared_index : Int?
+  shared_index : UInt?
   /// True when the formula has a cached `<v>` result, including `<v></v>`.
   cached_value_present : Bool
 }

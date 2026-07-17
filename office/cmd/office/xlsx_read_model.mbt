@@ -28,7 +28,7 @@ struct XlsxSheetTarget {
   index : Int
   path : String
   content : XlsxSheetContent
-  shared_formula_masters : Map[Int, @xlsx.SharedFormulaMaster]
+  shared_formula_masters : Map[UInt, @xlsx.SharedFormulaMaster]
   mut shared_formulas_indexed : Bool
 }
 
@@ -414,7 +414,7 @@ fn XlsxSheetTarget::shared_formula_master(
   self : XlsxSheetTarget,
   projection : XlsxProjection,
   worksheet : @xlsx.Worksheet,
-  shared_index : Int,
+  shared_index : UInt,
 ) -> @xlsx.SharedFormulaMaster raise CliFailure {
   if !self.shared_formulas_indexed {
     if (projection.cancelled)() {

@@ -98,7 +98,7 @@ fn parse_worksheet(
         let si_value = match attr_value(open_tag, "si") {
           Some(value) =>
             Some(
-              @string.parse_int(value, base=10) catch {
+              @string.parse_uint(value, base=10) catch {
                 _ => raise InvalidXml(msg="formula si invalid")
               },
             )
@@ -117,6 +117,13 @@ fn parse_worksheet(
         }
       }
       None => (None, None, None, None)
+    }
+    // ECMA-376 defines the expression on non-master shared formulas as
+    // ignored. Canonicalize followers immediately so downstream consumers do
+    // not accidentally evaluate producer-specific garbage from that node.
+    let formula = match (formula_type, formula_ref, formula) {
+      (Some(Shared), None, Some(_)) => Some("")
+      _ => formula
     }
     let raw_value_opt = match find_xml_open_tag_start(rest, "v") {
       Some(pos) => {

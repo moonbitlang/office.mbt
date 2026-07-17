@@ -88,7 +88,26 @@ test "rows/cols/get_rows/get_cols validate sheet name" {
 #cfg(target="native")
 async test "excelize Book1 iterators match get_rows/get_cols" {
   let path = "fixtures/excelize/test/Book1.xlsx"
-  let workbook = @xlsx.open_file(path)
+  let archive = @zip.read(@async/fs.read_file(path).binary())
+  let sheet_path = "xl/worksheets/sheet2.xml"
+  let sheet_xml = match archive.get(sheet_path) {
+    Some(bytes) => @encoding/utf8.decode(bytes)
+    None => fail("missing Book1 worksheet")
+  }
+  // Book1 predates strict shared-formula validation and contains intersecting
+  // si=0/si=1 ranges. Normalize that unrelated defect in memory so this test
+  // continues to exercise the original third-party iterator fixture.
+  let normalized_sheet_xml = sheet_xml
+    .replace(old="ref=\"F11:H11\"", new="ref=\"F11:F11\"")
+    .replace(
+      old="<f t=\"shared\" si=\"0\"></f>",
+      new="<f t=\"shared\" si=\"1\"></f>",
+    )
+  assert_true(normalized_sheet_xml != sheet_xml)
+  assert_true(
+    archive.replace(sheet_path, @encoding/utf8.encode(normalized_sheet_xml)),
+  )
+  let workbook = @xlsx.read(@zip.write(archive))
   let total = workbook.get_cell_value("Sheet1", "A19") catch {
     err => fail("get_cell_value failed: \{repr(err)}")
   }

@@ -390,14 +390,9 @@ pub fn Worksheet::formula_refs(self : Worksheet) -> Array[String] {
 /// are retained only once even for large shared ranges.
 fn validated_shared_formula_masters(
   cells : ArrayView[Cell],
-) -> Map[Int, SharedFormulaMaster] raise XlsxError {
-  let masters : Map[Int, SharedFormulaMaster] = Map([])
+) -> Map[UInt, SharedFormulaMaster] raise XlsxError {
+  let masters : Map[UInt, SharedFormulaMaster] = Map([])
   for cell in cells {
-    match (cell.formula_type, cell.formula_shared_index) {
-      (Some(Shared), Some(shared_index)) if shared_index < 0 =>
-        raise InvalidXml(msg="shared formula index is negative")
-      _ => ()
-    }
     match
       (
         cell.formula_type,
@@ -405,36 +400,32 @@ fn validated_shared_formula_masters(
         cell.formula_shared_index,
         cell.formula_ref,
       ) {
-      (Some(Shared), Some(formula), Some(shared_index), Some(range_ref)) =>
-        if formula != "" {
-          let (row_lo, column_lo, row_hi, column_hi) = parse_range_ref(
-            range_ref,
-          )
-          if cell.row < row_lo ||
-            cell.row > row_hi ||
-            cell.col < column_lo ||
-            cell.col > column_hi {
-            raise InvalidXml(msg="shared formula master is outside its range")
-          }
-          let master : SharedFormulaMaster = {
-            formula,
-            row: cell.row,
-            column: cell.col,
-            row_lo,
-            column_lo,
-            row_hi,
-            column_hi,
-          }
-          match masters.get(shared_index) {
-            Some(_) =>
-              raise InvalidXml(
-                msg="shared formula index has conflicting masters",
-              )
-            None => masters[shared_index] = master
-          }
+      (Some(Shared), Some(formula), Some(shared_index), Some(range_ref)) => {
+        if formula == "" {
+          raise InvalidXml(msg="shared formula master text missing")
         }
-      (Some(Shared), Some(formula), Some(_), None) if formula != "" =>
-        raise InvalidXml(msg="shared formula master range missing")
+        let (row_lo, column_lo, row_hi, column_hi) = parse_range_ref(range_ref)
+        if cell.row < row_lo ||
+          cell.row > row_hi ||
+          cell.col < column_lo ||
+          cell.col > column_hi {
+          raise InvalidXml(msg="shared formula master is outside its range")
+        }
+        let master : SharedFormulaMaster = {
+          formula,
+          row: cell.row,
+          column: cell.col,
+          row_lo,
+          column_lo,
+          row_hi,
+          column_hi,
+        }
+        match masters.get(shared_index) {
+          Some(_) =>
+            raise InvalidXml(msg="shared formula index has conflicting masters")
+          None => masters[shared_index] = master
+        }
+      }
       (Some(Shared), Some(_), None, _) =>
         raise InvalidXml(msg="shared formula index missing")
       (Some(Shared), None, _, _) =>
@@ -442,9 +433,10 @@ fn validated_shared_formula_masters(
       _ => ()
     }
   }
+  validate_shared_formula_master_ranges(masters)
   for cell in cells {
-    match (cell.formula_type, cell.formula, cell.formula_shared_index) {
-      (Some(Shared), Some(""), Some(shared_index)) =>
+    match (cell.formula_type, cell.formula_shared_index, cell.formula_ref) {
+      (Some(Shared), Some(shared_index), None) =>
         match masters.get(shared_index) {
           Some(master) =>
             if !master.contains_coordinate(cell.row, cell.col) {
@@ -466,7 +458,7 @@ fn validated_shared_formula_masters(
 /// master's declared range. Conflicting or incomplete groups are rejected.
 pub fn Worksheet::shared_formula_masters(
   self : Worksheet,
-) -> Map[Int, SharedFormulaMaster] raise XlsxError {
+) -> Map[UInt, SharedFormulaMaster] raise XlsxError {
   validated_shared_formula_masters(self.cells)
 }
 
@@ -663,21 +655,30 @@ pub fn Worksheet::set_cell_formula_opts(
           msg="shared formula master must be top-left of ref",
         )
       }
-      let mut max_si = -1
+      let mut max_si : UInt? = None
       for cell in self.cells {
         match cell.formula_shared_index {
-          Some(si) => if si > max_si { max_si = si }
+          Some(si) =>
+            match max_si {
+              Some(current) => if si > current { max_si = Some(si) }
+              None => max_si = Some(si)
+            }
           None => ()
         }
       }
-      let shared_index = max_si + 1
+      let shared_index = match max_si {
+        Some(0xFFFFFFFF) =>
+          raise InvalidSheetOperation(msg="shared formula index exhausted")
+        Some(value) => value + 1
+        None => 0
+      }
       fn set_shared_cell(
         sheet : Worksheet,
         row : Int,
         col : Int,
         formula : String,
         formula_ref : String?,
-        shared_index : Int,
+        shared_index : UInt,
         value : String,
       ) -> Unit raise XlsxError {
         let canonical = cell_ref_from(row, col)
