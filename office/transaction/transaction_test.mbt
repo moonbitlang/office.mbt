@@ -207,6 +207,105 @@ async fn transaction_error_value(
 }
 
 ///|
+fn fresh_xlsx_candidate(sheet : String) -> Bytes raise {
+  let workbook = @excel.new_workbook()
+  ignore(workbook.add_sheet(sheet))
+  @excel.write(workbook)
+}
+
+///|
+async test "fresh package transaction validates and atomically creates XLSX" {
+  with_transaction_test_dir(directory => {
+    let output = "\{directory}/fresh.xlsx"
+    let candidate = fresh_xlsx_candidate("Data")
+    let report = @transaction.transact_create(
+      @transaction.create_transaction_options(output),
+      Xlsx,
+      budget => {
+        assert_true(candidate.length() <= budget.max_candidate_package_bytes())
+        @transaction.transaction_mutation(candidate)
+      },
+    )
+    assert_true(report.changed)
+    assert_true(report.committed)
+    assert_false(report.dry_run)
+    assert_eq(report.original_size, 0)
+    assert_eq(report.result_size, candidate.length())
+    assert_eq(@afs.read_file(output).binary(), candidate)
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
+async test "fresh package dry-run validates without creating destination" {
+  with_transaction_test_dir(directory => {
+    let output = "\{directory}/dry-run.xlsx"
+    let candidate = fresh_xlsx_candidate("Sheet1")
+    let report = @transaction.transact_create(
+      @transaction.create_transaction_options(output, dry_run=true),
+      Xlsx,
+      _budget => @transaction.transaction_mutation(candidate),
+    )
+    assert_true(report.changed)
+    assert_false(report.committed)
+    assert_true(report.dry_run)
+    assert_false(@afs.exists(output))
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
+async test "fresh package create is no-replace unless overwrite is explicit" {
+  with_transaction_test_dir(directory => {
+    let output = "\{directory}/existing.xlsx"
+    let original = b"existing non-package bytes"
+    let candidate = fresh_xlsx_candidate("Replacement")
+    write_test_file(output, original)
+    let invoked = Ref(false)
+    let code = transaction_error_code(() => {
+      @transaction.transact_create(
+        @transaction.create_transaction_options(output),
+        Xlsx,
+        _budget => {
+          invoked.val = true
+          @transaction.transaction_mutation(candidate)
+        },
+      )
+    })
+    assert_eq(code, "office.transaction.output_exists")
+    assert_false(invoked.val)
+    assert_eq(@afs.read_file(output).binary(), original)
+    let report = @transaction.transact_create(
+      @transaction.create_transaction_options(output, overwrite=true),
+      Xlsx,
+      _budget => @transaction.transaction_mutation(candidate),
+    )
+    assert_true(report.committed)
+    assert_eq(@afs.read_file(output).binary(), candidate)
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
+async test "fresh package validation failure preserves existing destination" {
+  with_transaction_test_dir(directory => {
+    let output = "\{directory}/invalid.xlsx"
+    let original = b"keep me"
+    write_test_file(output, original)
+    let code = transaction_error_code(() => {
+      @transaction.transact_create(
+        @transaction.create_transaction_options(output, overwrite=true),
+        Xlsx,
+        _budget => @transaction.transaction_mutation(b"not an Office package"),
+      )
+    })
+    assert_eq(code, "office.transaction.validation_failed")
+    assert_eq(@afs.read_file(output).binary(), original)
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
 fn assert_identifier_format_error(
   error : @transaction.TransactionError,
   code : String,
