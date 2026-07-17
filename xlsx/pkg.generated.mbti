@@ -31,11 +31,11 @@ pub async fn open_file(String, password? : String, options? : Options, limits? :
 
 pub async fn[R : @io.Reader] open_reader(R, password? : String, options? : Options, limits? : ReadLimits, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook
 
-pub fn read(BytesView, options? : Options, limits? : ReadLimits, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
+pub fn read(BytesView, options? : Options, limits? : ReadLimits, cancelled? : () -> Bool, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
 
-pub fn read_bounded_archive(@zip.Archive, options? : Options, limits? : ReadLimits, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
+pub fn read_bounded_archive(@zip.Archive, options? : Options, limits? : ReadLimits, cancelled? : () -> Bool, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
 
-pub fn read_with_password(BytesView, String, options? : Options, limits? : ReadLimits, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
+pub fn read_with_password(BytesView, String, options? : Options, limits? : ReadLimits, cancelled? : () -> Bool, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
 
 pub async fn[R : @io.Reader] read_zip_reader(R, password? : String, options? : Options, limits? : ReadLimits, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook
 
@@ -108,6 +108,7 @@ pub suberror XlsxError {
   UnsupportedFeature(msg~ : String)
   InvalidPackage(msg~ : String)
   UnboundedArchive
+  ReadCancelled
   ResourceLimitExceeded(kind~ : String, limit~ : Int, actual~ : Int)
 } derive(@debug.Debug)
 #deprecated
@@ -1218,11 +1219,14 @@ pub fn ReadLimits::max_archive_entries(Self) -> Int
 pub fn ReadLimits::max_entry_uncompressed_bytes(Self) -> Int
 pub fn ReadLimits::max_kdf_iterations(Self) -> Int
 pub fn ReadLimits::max_package_bytes(Self) -> Int
+pub fn ReadLimits::max_parser_items(Self) -> Int
+pub fn ReadLimits::max_parser_work_units(Self) -> Int
 pub fn ReadLimits::max_total_preserved_source_bytes(Self) -> Int
 pub fn ReadLimits::max_total_uncompressed_bytes(Self) -> Int
+pub fn ReadLimits::max_workbook_sheets(Self) -> Int
 pub fn ReadLimits::max_xml_part_bytes(Self) -> Int
 pub fn ReadLimits::new() -> Self
-pub fn ReadLimits::with_values(max_package_bytes? : Int, max_archive_entries? : Int, max_entry_uncompressed_bytes? : Int, max_total_uncompressed_bytes? : Int, max_total_preserved_source_bytes? : Int, max_xml_part_bytes? : Int, max_kdf_iterations? : Int) -> Self raise XlsxError
+pub fn ReadLimits::with_values(max_package_bytes? : Int, max_archive_entries? : Int, max_entry_uncompressed_bytes? : Int, max_total_uncompressed_bytes? : Int, max_total_preserved_source_bytes? : Int, max_xml_part_bytes? : Int, max_kdf_iterations? : Int, max_workbook_sheets? : Int, max_parser_items? : Int, max_parser_work_units? : Int) -> Self raise XlsxError
 
 pub(all) struct RichTextFont {
   bold : Bool

@@ -156,7 +156,9 @@ async fn run_docx_outline(matches : @argparse.Matches) -> Unit {
       }
     }
     Xlsx => {
-      let projection = open_xlsx_projection(source, max_elements)
+      let projection = open_xlsx_projection(source, max_elements, cancelled=() => {
+        @async.is_being_cancelled()
+      })
       if matches.flags.get_or_default("json", false) {
         emit_docx_success(
           checked_office_json_output(
@@ -217,7 +219,9 @@ async fn run_docx_get(matches : @argparse.Matches) -> Unit {
       }
     }
     Xlsx => {
-      let projection = open_xlsx_projection(source, max_elements)
+      let projection = open_xlsx_projection(source, max_elements, cancelled=() => {
+        @async.is_being_cancelled()
+      })
       let resolved = resolve_xlsx_selector(projection, selector)
       if matches.flags.get_or_default("json", false) {
         emit_docx_success(
@@ -283,7 +287,9 @@ async fn run_docx_text(matches : @argparse.Matches) -> Unit {
       }
     }
     Xlsx => {
-      let projection = open_xlsx_projection(source, max_elements)
+      let projection = open_xlsx_projection(source, max_elements, cancelled=() => {
+        @async.is_being_cancelled()
+      })
       let under = resolve_optional_xlsx_under(projection, matches)
       if matches.flags.get_or_default("json", false) {
         emit_docx_success(
@@ -567,7 +573,9 @@ async fn run_docx_query(matches : @argparse.Matches) -> Unit {
     Xlsx => {
       reject_xlsx_query_options(matches)
       let selector = optional_value(matches, "selector").unwrap_or("cell")
-      let projection = open_xlsx_projection(source, max_elements)
+      let projection = open_xlsx_projection(source, max_elements, cancelled=() => {
+        @async.is_being_cancelled()
+      })
       let under = resolve_optional_xlsx_under(projection, matches)
       let spec : XlsxQuerySpec = {
         selector,

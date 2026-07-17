@@ -254,8 +254,9 @@ fn make_xlsx_projection(
 fn open_xlsx_projection(
   source : OfficeReadPackage,
   max_elements : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> XlsxProjection raise CliFailure {
-  let workbook = open_xlsx_read_package(source)
+  let workbook = open_xlsx_read_package(source, cancelled~)
   make_xlsx_projection(source.file, workbook, max_elements)
 }
 

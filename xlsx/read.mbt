@@ -3153,9 +3153,11 @@ fn read_zip_archive_core_unchecked(
   archive : @zip.Archive,
   options : Options,
   limits : ReadLimits,
+  cancelled : () -> Bool,
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
   let part_names = archive_part_name_index(archive)
+  let read_budget = ReadBudget::new(limits, cancelled~)
   let decode = (value : BytesView) => {
     if value.length() > limits.max_xml_part_bytes {
       raise ResourceLimitExceeded(
@@ -3164,7 +3166,9 @@ fn read_zip_archive_core_unchecked(
         actual=value.length(),
       )
     }
-    decode_utf8(value, transcoder)
+    let decoded = decode_utf8(value, transcoder)
+    read_budget.scan_xml(decoded)
+    decoded
   }
   let workbook_xml_part_path = actual_archive_part_path(
     part_names,
@@ -3183,7 +3187,7 @@ fn read_zip_archive_core_unchecked(
     Some(value) => decode(value)
     None => raise MissingPart(path=workbook_rels_path)
   }
-  let sheets = parse_workbook_sheets(workbook_xml)
+  let sheets = parse_workbook_sheets(workbook_xml, limits.max_workbook_sheets)
   let sheet_names : Array[String] = []
   for entry in sheets {
     sheet_names.push(entry.name)
@@ -3390,24 +3394,47 @@ fn read_zip_archive_core_unchecked(
   let chartsheet_targets = parse_relationship_targets(
     workbook_rels, rel_chartsheet,
   )
+  let seen_sheet_parts : Set[String] = Set([])
+  let resolved_sheet_parts : Map[String, String] = Map([])
+  for entry in sheets {
+    let rel_id = entry.rel_id
+    let is_worksheet = worksheet_targets.contains(rel_id)
+    let is_chartsheet = chartsheet_targets.contains(rel_id)
+    if is_worksheet == is_chartsheet {
+      raise InvalidXml(msg="sheet relationship missing or ambiguous")
+    }
+    let target = if is_worksheet {
+      match worksheet_targets.get(rel_id) {
+        Some(value) => value
+        None => raise InvalidXml(msg="worksheet target missing")
+      }
+    } else {
+      match chartsheet_targets.get(rel_id) {
+        Some(value) => value
+        None => raise InvalidXml(msg="chartsheet target missing")
+      }
+    }
+    let path = actual_archive_part_path(
+      part_names,
+      resolve_part_rel_target(workbook_xml_part_path, target),
+    )
+    let part_key = path.to_lower()
+    if seen_sheet_parts.contains(part_key) {
+      raise InvalidXml(msg="sheet part referenced more than once")
+    }
+    seen_sheet_parts.add(part_key)
+    resolved_sheet_parts[rel_id] = path
+  }
   for entry in sheets {
     let name = entry.name
     let state = entry.state
     let rel_id = entry.rel_id
     let is_worksheet = worksheet_targets.contains(rel_id)
-    let is_chartsheet = chartsheet_targets.contains(rel_id)
-    if !is_worksheet && !is_chartsheet {
-      raise InvalidXml(msg="sheet relationship missing")
-    }
     if is_worksheet {
-      let target = match worksheet_targets.get(rel_id) {
+      let sheet_path = match resolved_sheet_parts.get(rel_id) {
         Some(value) => value
         None => raise InvalidXml(msg="worksheet target missing")
       }
-      let sheet_path = actual_archive_part_path(
-        part_names,
-        resolve_part_rel_target(workbook_xml_part_path, target),
-      )
       let sheet_bytes = match archive.get(sheet_path) {
         Some(value) => value
         None => raise MissingPart(path=sheet_path)
@@ -3966,14 +3993,10 @@ fn read_zip_archive_core_unchecked(
       workbook.sheets.push(sheet)
       workbook.sheet_order.push(Worksheet(workbook.sheets.length() - 1))
     } else {
-      let target = match chartsheet_targets.get(rel_id) {
+      let chartsheet_path = match resolved_sheet_parts.get(rel_id) {
         Some(value) => value
         None => raise InvalidXml(msg="chartsheet target missing")
       }
-      let chartsheet_path = actual_archive_part_path(
-        part_names,
-        resolve_part_rel_target(workbook_xml_part_path, target),
-      )
       let chartsheet_bytes = match archive.get(chartsheet_path) {
         Some(value) => value
         None => raise MissingPart(path=chartsheet_path)
@@ -4048,6 +4071,7 @@ fn read_zip_archive_core(
   archive : @zip.Archive,
   options : Options,
   limits : ReadLimits,
+  cancelled : () -> Bool,
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
   match transcoder {
@@ -4056,6 +4080,7 @@ fn read_zip_archive_core(
         archive,
         options,
         limits,
+        cancelled,
         transcoder=decode,
       ) catch {
         InvalidCellRef(value~) =>
@@ -4063,7 +4088,7 @@ fn read_zip_archive_core(
         other => raise other
       }
     None =>
-      read_zip_archive_core_unchecked(archive, options, limits) catch {
+      read_zip_archive_core_unchecked(archive, options, limits, cancelled) catch {
         InvalidCellRef(value~) =>
           raise InvalidXml(msg="coordinate reference invalid: \{value}")
         other => raise other
@@ -4076,14 +4101,21 @@ fn read_zip_bytes(
   bytes : BytesView,
   options? : Options = Options::new(),
   limits? : ReadLimits = ReadLimits::new(),
+  cancelled? : () -> Bool = () => false,
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
   let archive = read_limited_archive(bytes, limits)
   require_bounded_archive(archive, limits)
   match transcoder {
     Some(value) =>
-      read_zip_archive_core(archive, options, limits, transcoder=value)
-    None => read_zip_archive_core(archive, options, limits)
+      read_zip_archive_core(
+        archive,
+        options,
+        limits,
+        cancelled,
+        transcoder=value,
+      )
+    None => read_zip_archive_core(archive, options, limits, cancelled)
   }
 }
 
@@ -4096,13 +4128,20 @@ pub fn read_bounded_archive(
   archive : @zip.Archive,
   options? : Options = Options::new(),
   limits? : ReadLimits = ReadLimits::new(),
+  cancelled? : () -> Bool = () => false,
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
   require_bounded_archive(archive, limits)
   match transcoder {
     Some(value) =>
-      read_zip_archive_core(archive, options, limits, transcoder=value)
-    None => read_zip_archive_core(archive, options, limits)
+      read_zip_archive_core(
+        archive,
+        options,
+        limits,
+        cancelled,
+        transcoder=value,
+      )
+    None => read_zip_archive_core(archive, options, limits, cancelled)
   }
 }
 
@@ -4116,6 +4155,7 @@ pub fn read(
   bytes : BytesView,
   options? : Options = Options::new(),
   limits? : ReadLimits = ReadLimits::new(),
+  cancelled? : () -> Bool = () => false,
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
   check_source_package_size(bytes, limits)
@@ -4127,18 +4167,26 @@ pub fn read(
           options.password,
           options~,
           limits~,
+          cancelled~,
           transcoder=value,
         )
       None =>
-        return read_with_password(bytes, options.password, options~, limits~)
+        return read_with_password(
+          bytes,
+          options.password,
+          options~,
+          limits~,
+          cancelled~,
+        )
     }
   }
   if is_encrypted_package(bytes) {
     raise EncryptedPackage
   }
   match transcoder {
-    Some(value) => read_zip_bytes(bytes, options~, limits~, transcoder=value)
-    None => read_zip_bytes(bytes, options~, limits~)
+    Some(value) =>
+      read_zip_bytes(bytes, options~, limits~, cancelled~, transcoder=value)
+    None => read_zip_bytes(bytes, options~, limits~, cancelled~)
   }
 }
 
@@ -4152,6 +4200,7 @@ pub fn read_with_password(
   password : String,
   options? : Options = Options::new(),
   limits? : ReadLimits = ReadLimits::new(),
+  cancelled? : () -> Bool = () => false,
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
   check_source_package_size(bytes, limits)
@@ -4165,9 +4214,11 @@ pub fn read_with_password(
           archive,
           resolved_options,
           limits,
+          cancelled,
           transcoder=value,
         )
-      None => read_zip_archive_core(archive, resolved_options, limits)
+      None =>
+        read_zip_archive_core(archive, resolved_options, limits, cancelled)
     }
   } else {
     match transcoder {
@@ -4176,9 +4227,11 @@ pub fn read_with_password(
           bytes,
           options=resolved_options,
           limits~,
+          cancelled~,
           transcoder=value,
         )
-      None => read_zip_bytes(bytes, options=resolved_options, limits~)
+      None =>
+        read_zip_bytes(bytes, options=resolved_options, limits~, cancelled~)
     }
   }
 }

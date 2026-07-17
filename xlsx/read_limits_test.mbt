@@ -26,6 +26,19 @@ fn bounded_fixture_archive(
 }
 
 ///|
+fn replace_xlsx_part(
+  source : BytesView,
+  path : String,
+  content : String,
+) -> Bytes raise {
+  let archive = @zip.read(source)
+  if !archive.replace(path, @encoding/utf8.encode(content)) {
+    fail("missing XLSX fixture part: \{path}")
+  }
+  @zip.write(archive)
+}
+
+///|
 fn lying_deflate_package() -> Bytes raise {
   let archive = @zip.Archive::new()
   let data = Array::make(4096, b'A')
@@ -273,6 +286,116 @@ test "archive read enforces XML limits after provenance verification" {
     }
     _ => fail("expected XML part limit")
   }
+}
+
+///|
+test "semantic read limits reject XML items and derived column expansion" {
+  let bytes = bounded_workbook_fixture()
+  let worksheet =
+    #|<?xml version="1.0" encoding="UTF-8"?>
+    #|<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+    #|  <cols><col min="1" max="16384" width="12"/></cols>
+    #|  <sheetData/>
+    #|</worksheet>
+    #|
+  let expanded = replace_xlsx_part(bytes, "xl/worksheets/sheet1.xml", worksheet)
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(
+      expanded,
+      limits=@xlsx.ReadLimits::with_values(max_parser_items=1000),
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="parser_items")
+      assert_eq(limit, 1000)
+      assert_true(actual > limit)
+    }
+    _ => fail("expected parser item limit")
+  }
+}
+
+///|
+test "semantic read limits bound cumulative parser work" {
+  let bytes = bounded_workbook_fixture()
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(
+      bytes,
+      limits=@xlsx.ReadLimits::with_values(max_parser_work_units=1),
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="parser_work_units")
+      assert_eq(limit, 1)
+      assert_true(actual > limit)
+    }
+    _ => fail("expected parser work limit")
+  }
+}
+
+///|
+test "semantic read limits bound sheet fan-out before worksheet parsing" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("One"))
+  ignore(workbook.add_sheet("Two"))
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(
+      @xlsx.write(workbook),
+      limits=@xlsx.ReadLimits::with_values(max_workbook_sheets=1),
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="workbook_sheets")
+      assert_eq(limit, 1)
+      assert_eq(actual, 2)
+    }
+    _ => fail("expected workbook sheet limit")
+  }
+}
+
+///|
+test "duplicate logical sheets cannot reparse one worksheet part" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("One"))
+  ignore(workbook.add_sheet("Two"))
+  let bytes = @xlsx.write(workbook)
+  let archive = @zip.read(bytes)
+  let rels_path = "xl/_rels/workbook.xml.rels"
+  let rels = match archive.get(rels_path) {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing workbook relationships")
+  }
+  let duplicated = rels.replace_all(
+    old="worksheets/sheet2.xml",
+    new="worksheets/sheet1.xml",
+  )
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(replace_xlsx_part(bytes, rels_path, duplicated)),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(
+    result is Err(@xlsx.InvalidXml(msg="sheet part referenced more than once")),
+    content="true",
+  )
+}
+
+///|
+test "read cancellation callback stops semantic preflight" {
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(bounded_workbook_fixture(), cancelled=() => true),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(result is Err(@xlsx.ReadCancelled), content="true")
 }
 
 ///|

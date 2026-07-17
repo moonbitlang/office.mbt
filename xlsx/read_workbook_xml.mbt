@@ -8,6 +8,7 @@ priv struct WorkbookSheetInfo {
 ///|
 fn parse_workbook_sheets(
   xml : StringView,
+  max_sheets : Int,
 ) -> Array[WorkbookSheetInfo] raise XlsxError {
   let sheets : Array[WorkbookSheetInfo] = []
   let mut first = true
@@ -38,6 +39,13 @@ fn parse_workbook_sheets(
           _ => Visible
         }
       None => Visible
+    }
+    if sheets.length() >= max_sheets {
+      raise ResourceLimitExceeded(
+        kind="workbook_sheets",
+        limit=max_sheets,
+        actual=max_sheets + 1,
+      )
     }
     sheets.push({ name, state, rel_id })
   }
