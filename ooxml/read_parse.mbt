@@ -252,6 +252,7 @@ pub fn parse_internal_relationship_targets_by_types(
 }
 
 ///|
+/// Reads internal relationship targets whose decoded `Type` is `rel_type`.
 pub fn parse_internal_relationship_targets(
   xml : StringView,
   rel_type : StringView,
@@ -270,6 +271,8 @@ pub fn parse_external_relationship_targets_by_types(
 }
 
 ///|
+/// Reads explicitly external relationship targets whose decoded `Type` is
+/// `rel_type`.
 pub fn parse_external_relationship_targets(
   xml : StringView,
   rel_type : StringView,

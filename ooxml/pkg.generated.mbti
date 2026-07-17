@@ -8,7 +8,7 @@ import {
 // Values
 pub fn attr_value(StringView, StringView) -> String? raise ParseXmlError
 
-pub fn canonicalize_xml_expanded_names(StringView, ArrayView[String], ArrayView[(String, String)]) -> String raise ParseXmlError
+pub fn canonicalize_xml_expanded_names(StringView, ArrayView[String], ArrayView[(String, String)], max_output_chars? : Int) -> String raise ParseXmlError
 
 pub fn decode_xml_attribute(StringView) -> String raise ParseXmlError
 
@@ -20,9 +20,13 @@ pub fn find_override_part_by_content_types(StringView, ArrayView[String]) -> Str
 
 pub fn find_part_content_type(StringView, StringView) -> String? raise ParseXmlError
 
-pub fn parse_relationship_targets(StringView, StringView) -> Map[String, String] raise ParseXmlError
+pub fn parse_external_relationship_targets(StringView, StringView) -> Map[String, String] raise ParseXmlError
 
-pub fn parse_relationship_targets_by_types(StringView, ArrayView[String]) -> Map[String, String] raise ParseXmlError
+pub fn parse_external_relationship_targets_by_types(StringView, ArrayView[String]) -> Map[String, String] raise ParseXmlError
+
+pub fn parse_internal_relationship_targets(StringView, StringView) -> Map[String, String] raise ParseXmlError
+
+pub fn parse_internal_relationship_targets_by_types(StringView, ArrayView[String]) -> Map[String, String] raise ParseXmlError
 
 pub fn xml_needs_escape(StringView, attr~ : Bool) -> Bool
 
