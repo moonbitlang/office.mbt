@@ -18,6 +18,4 @@ import {
 
 supported_targets = "native+wasm"
 
-options(
-  "is-main": true,
-)
+pkgtype(kind: "executable")
