@@ -781,6 +781,7 @@ pub fn transaction_reuse_original_with_manifest(
 pub(all) enum TransactionMode {
   InPlace
   Output
+  Create
 } derive(Debug, Eq)
 
 ///|
@@ -788,6 +789,7 @@ pub fn TransactionMode::name(self : TransactionMode) -> String {
   match self {
     InPlace => "in-place"
     Output => "output"
+    Create => "create"
   }
 }
 
@@ -815,14 +817,16 @@ pub struct PreservationReport {
 /// Deterministic result of a validated Office transaction.
 pub struct TransactionReport {
   format : @office.DocumentFormat
-  input_path : String
+  input_path : String?
   output_path : String
   mode : TransactionMode
   dry_run : Bool
   changed : Bool
   committed : Bool
-  original_size : Int
+  original_size : Int?
   result_size : Int
+  replaced_existing : Bool
+  overwritten_size : Int64?
   validations : ReadOnlyArray[ValidationSummary]
   preservation : PreservationReport
   warnings : ReadOnlyArray[@office.ProtocolWarning]
@@ -869,7 +873,9 @@ fn preservation_json(report : PreservationReport) -> Json {
 }
 
 ///|
-/// Serializes the report as the `office.transaction/1` data object.
+/// Serializes the report as the `office.transaction/2` data object. Fresh
+/// creation has no input or original size; committed overwrites explicitly
+/// report the observed pre-validation destination size.
 pub fn TransactionReport::to_json(self : TransactionReport) -> Json {
   let validations = []
   for validation in self.validations {
@@ -878,14 +884,25 @@ pub fn TransactionReport::to_json(self : TransactionReport) -> Json {
   Json::object({
     "schema": Json::string(@office.SCHEMA_TRANSACTION),
     "format": Json::string(self.format.name()),
-    "input": Json::string(self.input_path),
+    "input": match self.input_path {
+      Some(path) => Json::string(path)
+      None => Json::null()
+    },
     "output": Json::string(self.output_path),
     "mode": Json::string(self.mode.name()),
     "dry_run": Json::boolean(self.dry_run),
     "changed": Json::boolean(self.changed),
     "committed": Json::boolean(self.committed),
-    "original_size": Json::number(self.original_size.to_double()),
+    "original_size": match self.original_size {
+      Some(size) => Json::number(size.to_double())
+      None => Json::null()
+    },
     "result_size": Json::number(self.result_size.to_double()),
+    "replaced_existing": Json::boolean(self.replaced_existing),
+    "overwritten_size": match self.overwritten_size {
+      Some(size) => Json::number(size.to_double())
+      None => Json::null()
+    },
     "validations": Json::array(validations),
     "preservation": preservation_json(self.preservation),
   })

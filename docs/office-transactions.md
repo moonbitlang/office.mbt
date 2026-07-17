@@ -208,7 +208,7 @@ cannot be called with an oversized, unbounded, or caller-modified snapshot.
 ## Validation hooks
 
 The portable archive-format gate is mandatory and recorded as
-`office-portable-opc` in `office.transaction/1`. A custom bounded identifier is
+`office-portable-opc` in `office.transaction/2`. A custom bounded identifier is
 additive: it runs first so format-specific limits can fail before generic Office
 parsing, then portable OPC validation runs independently, both formats must
 agree, and both successful gates are recorded. Callers may also register named,
@@ -265,12 +265,15 @@ that even container bytes were retained.
 
 ## Agent output
 
-Successful reports use schema `office.transaction/1` inside the shared
+Successful reports use schema `office.transaction/2` inside the shared
 `office.output/1` envelope. They include:
 
-- format, input, output, and destination mode;
+- format, nullable input, output, and destination mode (`in-place`, `output`,
+  or source-free `create`);
 - dry-run, changed, and committed flags;
-- original and candidate sizes;
+- nullable original size and the candidate size;
+- whether a commit replaced a separately observed destination and that
+  overwrite baseline's pre-validation size;
 - validation summaries;
 - preservation changes and counts;
 - structured portability or durability warnings.

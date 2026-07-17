@@ -18,7 +18,7 @@ pub const SCHEMA_RAW_CHANGE : String = "office.raw.change/1"
 pub const SCHEMA_RAW_RESULT : String = "office.raw.result/1"
 
 ///|
-pub const SCHEMA_TRANSACTION : String = "office.transaction/1"
+pub const SCHEMA_TRANSACTION : String = "office.transaction/2"
 
 ///|
 pub const SCHEMA_DOCX_OUTLINE : String = "office.docx.outline/1"

@@ -27,7 +27,7 @@ pub const SCHEMA_RAW_PART : String = "office.raw.part/1"
 
 pub const SCHEMA_RAW_RESULT : String = "office.raw.result/1"
 
-pub const SCHEMA_TRANSACTION : String = "office.transaction/1"
+pub const SCHEMA_TRANSACTION : String = "office.transaction/2"
 
 pub const SCHEMA_XLSX_BATCH_RESULT : String = "office.xlsx.batch/1"
 

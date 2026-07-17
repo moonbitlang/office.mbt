@@ -56,14 +56,25 @@ fn xlsx_read_limits() -> @engine.ReadLimits raise @engine.XlsxError {
 ///|
 fn read_transaction_workbook(
   archive : @zip.Archive,
+  candidate_validation? : Bool = false,
 ) -> @engine.Workbook raise @transaction.TransactionError {
+  let phase = if candidate_validation {
+    "candidate validation"
+  } else {
+    "source parsing"
+  }
+  let invalid_code = if candidate_validation {
+    "office.xlsx.candidate_invalid_package"
+  } else {
+    "office.xlsx.invalid_package"
+  }
   @engine.read_bounded_archive(archive, limits=xlsx_read_limits()) catch {
     ResourceLimitExceeded(kind~, limit~, actual~) =>
       raise xlsx_transaction_failure(
         "office.transaction.resource_limit_exceeded",
-        "XLSX source parsing exceeded its bounded materialization policy",
+        "XLSX \{phase} exceeded its bounded materialization policy",
         details=Json::object({
-          "phase": Json::string("source parsing"),
+          "phase": Json::string(phase),
           "kind": Json::string(kind),
           "limit": Json::number(limit.to_double()),
           "actual": Json::number(actual.to_double()),
@@ -71,8 +82,8 @@ fn read_transaction_workbook(
       )
     error =>
       raise xlsx_transaction_failure(
-        "office.xlsx.invalid_package",
-        "could not read the bounded XLSX package: " +
+        invalid_code,
+        "could not read the bounded XLSX package during \{phase}: " +
         bounded_xlsx_message(repr(error), xlsx_transaction_max_message_chars),
       )
   }
@@ -197,7 +208,7 @@ fn xlsx_transaction_validator() -> @transaction.TransactionValidator raise @tran
     }
     // A complete bounded parse catches semantic/package-graph defects the
     // format-neutral portable detector intentionally does not interpret.
-    ignore(read_transaction_workbook(archive.fork()))
+    ignore(read_transaction_workbook(archive.fork(), candidate_validation=true))
     let problems = @engine.validate_ooxml_bounded_archive(
       archive,
       limits=xlsx_read_limits(),

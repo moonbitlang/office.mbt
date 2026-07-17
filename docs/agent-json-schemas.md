@@ -459,7 +459,7 @@ batch semantics are specified in
 | --- | --- | --- |
 | `schema` | string | `"office.xlsx.create/1"` |
 | `sheet` | string | validated first worksheet name |
-| `transaction` | object | `office.transaction/1` validation, preservation, and publication report |
+| `transaction` | object | `office.transaction/2` validation, preservation, and publication report; creation has null `input`/`original_size` and explicit overwrite-baseline fields |
 
 ### `office.xlsx.batch/1` (`office batch FILE SCRIPT --json`)
 
@@ -467,7 +467,7 @@ batch semantics are specified in
 | --- | --- | --- |
 | `schema` | string | `"office.xlsx.batch/1"` |
 | `stats` | object | exact parsed-plan `operation_count`, `touched_cells`, `style_cells`, `row_column_lines`, and `new_style_records` |
-| `transaction` | object | `office.transaction/1` validation, preservation, and publication report |
+| `transaction` | object | `office.transaction/2` validation, preservation, and publication report |
 
 A changed plan emits `office.xlsx.full_rewrite`; consumers must use the
 transaction preservation report rather than infer retained parts from the

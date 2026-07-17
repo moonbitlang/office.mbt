@@ -126,7 +126,7 @@ bounded A4 transaction boundary:
 
 D1 is an SDK foundation, not a newly advertised CLI command. No partial command
 record is added to the A2 registry: its existing raw mutation records already
-advertise `office.transaction/1`, whose `preservation` member is the
+advertise `office.transaction/2`, whose `preservation` member is the
 authoritative changed/added/removed/untouched report used by D1.
 
 ## D2 DOCX read contract
@@ -239,7 +239,8 @@ strict spreadsheet mutation engine:
   candidate-package and live-materialization ceilings, pass portable OPC plus
   bounded XLSX validation, and publish atomically through async filesystem I/O;
 - creation is no-replace by default, supports explicit overwrite and dry-run,
-  and reports a source-free preservation baseline in `office.transaction/1`;
+  and reports a null source plus explicit overwrite-baseline evidence in
+  `office.transaction/2`;
 - encoded `xlsx.batch/1` scripts are bounded before UTF-8 and JSON parsing,
   retain one opaque plan with operation/resource statistics, and normalize
   application failures with the exact zero-based operation index and name;

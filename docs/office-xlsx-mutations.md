@@ -25,7 +25,7 @@ JSON success data uses `office.xlsx.create/1`:
 {
   "schema": "office.xlsx.create/1",
   "sheet": "Data",
-  "transaction": { "schema": "office.transaction/1" }
+  "transaction": { "schema": "office.transaction/2" }
 }
 ```
 
@@ -40,7 +40,10 @@ keys, operations, parameters, types, and enum values. It retains an opaque plan
 with resource accounting, and the transaction applies that exact plan in order
 to one bounded workbook snapshot. A failed parse, operation, serialization,
 validation, cancellation, or publication leaves the input and requested
-destination untouched and removes transaction-owned temporary files.
+destination untouched and attempts cancellation-protected cleanup of every
+transaction-owned temporary file. A cleanup failure is surfaced as
+`office.transaction.cleanup_failed` because an owned temporary artifact may
+require operator attention.
 
 Without `--out`, a successful changed workbook replaces the resolved input
 atomically. With `--out`, publication is create-new unless `--overwrite` is
@@ -62,7 +65,7 @@ JSON success data uses `office.xlsx.batch/1`:
     "row_column_lines": 0,
     "new_style_records": 1
   },
-  "transaction": { "schema": "office.transaction/1" }
+  "transaction": { "schema": "office.transaction/2" }
 }
 ```
 
@@ -106,7 +109,9 @@ those records are the executable sources of truth.
 - `transact_batch(TransactionOptions, BatchPlan)` applies and publishes it; and
 - `create_workbook(CreateTransactionOptions, String)` creates one-sheet XLSX.
 
-All results carry `office.transaction/1` validation, publication, warning, and
-preservation evidence. Native and Wasm tests exercise the same async code;
+All results carry `office.transaction/2` validation, publication, warning, and
+preservation evidence. Creation reports `mode=create`, a null input and
+original size, and the observed size of a committed overwrite baseline when
+one existed. Native and Wasm tests exercise the same async code;
 native acceptance additionally validates created and batch-mutated fixtures
 with Microsoft's DocumentFormat.OpenXml SDK.

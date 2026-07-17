@@ -85,6 +85,7 @@ pub struct TransactionIdentifier {
 pub(all) enum TransactionMode {
   InPlace
   Output
+  Create
 } derive(Eq, @debug.Debug)
 #deprecated
 pub fn TransactionMode::equal(Self, Self) -> Bool
@@ -108,14 +109,16 @@ pub struct TransactionOptions {
 
 pub struct TransactionReport {
   format : @office.DocumentFormat
-  input_path : String
+  input_path : String?
   output_path : String
   mode : TransactionMode
   dry_run : Bool
   changed : Bool
   committed : Bool
-  original_size : Int
+  original_size : Int?
   result_size : Int
+  replaced_existing : Bool
+  overwritten_size : Int64?
   validations : ReadOnlyArray[ValidationSummary]
   preservation : PreservationReport
   warnings : ReadOnlyArray[@office.ProtocolWarning]

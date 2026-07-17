@@ -108,6 +108,17 @@ async fn resolve_create_policy(
         }),
       )
     }
+    let overwrite_baseline_size = if pinned_kind == 1 {
+      Some(
+        publication_entry_size(
+          destination_directory,
+          destination_leaf,
+          options.output_path,
+        ),
+      )
+    } else {
+      None
+    }
     {
       source_target: destination_target,
       source_directory: publication_directory_duplicate(
@@ -119,8 +130,9 @@ async fn resolve_create_policy(
       destination_directory,
       destination_leaf,
       output_path: options.output_path,
-      mode: Output,
+      mode: Create,
       replace: options.overwrite,
+      overwrite_baseline_size,
     }
   } catch {
     error => {
@@ -242,17 +254,21 @@ async fn transact_create_with_faults(
   append_platform_warnings(warnings, should_commit, parent_synced, temp_clean)
   {
     format,
-    // `office.transaction/1` predates source-free creation and requires an
-    // input path. Repeating the destination plus `original_size=0` keeps the
-    // report deterministic; the enclosing create result names the operation.
-    input_path: options.output_path,
+    input_path: None,
     output_path: options.output_path,
-    mode: Output,
+    mode: Create,
     dry_run: options.dry_run,
     changed: true,
     committed: should_commit,
-    original_size: 0,
+    original_size: None,
     result_size: mutation.bytes.length(),
+    replaced_existing: should_commit &&
+    policy.overwrite_baseline_size is Some(_),
+    overwritten_size: if should_commit {
+      policy.overwrite_baseline_size
+    } else {
+      None
+    },
     validations: ReadOnlyArray::from_array(validations),
     preservation,
     warnings: ReadOnlyArray::from_array(warnings),

@@ -79,6 +79,7 @@ priv struct ResolvedPolicy {
   output_path : String
   mode : TransactionMode
   replace : Bool
+  overwrite_baseline_size : Int64?
 }
 
 ///|
@@ -362,6 +363,7 @@ async fn resolve_policy(options : TransactionOptions) -> ResolvedPolicy {
           output_path: options.input_path,
           mode: InPlace,
           replace: true,
+          overwrite_baseline_size: None,
         }
       }
       Some(output_path) => {
@@ -452,6 +454,15 @@ async fn resolve_policy(options : TransactionOptions) -> ResolvedPolicy {
               }),
             )
           }
+          let overwrite_baseline_size = if pinned_kind == 1 {
+            Some(
+              publication_entry_size(
+                destination_directory, destination_leaf, output_path,
+              ),
+            )
+          } else {
+            None
+          }
           {
             source_target,
             source_directory,
@@ -462,6 +473,7 @@ async fn resolve_policy(options : TransactionOptions) -> ResolvedPolicy {
             output_path,
             mode: Output,
             replace: options.overwrite,
+            overwrite_baseline_size,
           }
         } catch {
           error => {
@@ -1098,7 +1110,7 @@ async fn publish_candidate(
         error => raise error
       }
     }
-    if policy.mode is Output {
+    if policy.mode is Output || policy.mode is Create {
       match faults.concurrent_destination {
         Some(replacement) =>
           @afs.write_file(
@@ -1331,14 +1343,21 @@ async fn transact_with_identifier_and_faults(
   append_platform_warnings(warnings, should_commit, parent_synced, temp_clean)
   {
     format,
-    input_path: options.input_path,
+    input_path: Some(options.input_path),
     output_path: policy.output_path,
     mode: policy.mode,
     dry_run: options.dry_run,
     changed,
     committed: should_commit,
-    original_size: original.length(),
+    original_size: Some(original.length()),
     result_size: mutation.bytes.length(),
+    replaced_existing: should_commit &&
+    policy.overwrite_baseline_size is Some(_),
+    overwritten_size: if should_commit {
+      policy.overwrite_baseline_size
+    } else {
+      None
+    },
     validations: ReadOnlyArray::from_array(validations),
     preservation,
     warnings: ReadOnlyArray::from_array(warnings),
