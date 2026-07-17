@@ -466,6 +466,30 @@ test "read cancellation callback stops semantic preflight" {
 }
 
 ///|
+test "read completion observes cancellation at its final checkpoint" {
+  let bytes = bounded_workbook_fixture()
+  let baseline_checks = [0]
+  ignore(
+    @xlsx.read(bytes, cancelled=() => {
+      baseline_checks[0] += 1
+      false
+    }),
+  )
+  let checks = [0]
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(bytes, cancelled=() => {
+      checks[0] += 1
+      checks[0] >= baseline_checks[0]
+    }),
+  ) catch {
+    error => Err(error)
+  }
+  assert_true(baseline_checks[0] > 1)
+  assert_eq(checks[0], baseline_checks[0])
+  assert_true(result is Err(@xlsx.ReadCancelled))
+}
+
+///|
 test "logical XML limit follows a worksheet relationship with a non-XML suffix" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Data"))

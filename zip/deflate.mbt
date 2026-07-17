@@ -4,11 +4,31 @@ priv struct BitReader {
   mut byte_pos : Int
   mut bit_buf : UInt
   mut bit_count : Int
+  cancelled : () -> Bool
+  mut next_cancel_byte : Int
 }
 
 ///|
-fn BitReader::new(bytes : BytesView) -> BitReader {
-  { bytes, byte_pos: 0, bit_buf: 0, bit_count: 0 }
+fn BitReader::new(
+  bytes : BytesView,
+  cancelled? : () -> Bool = () => false,
+) -> BitReader {
+  {
+    bytes,
+    byte_pos: 0,
+    bit_buf: 0,
+    bit_count: 0,
+    cancelled,
+    next_cancel_byte: 4096,
+  }
+}
+
+///|
+fn BitReader::checkpoint_input(self : BitReader) -> Unit raise ZipError {
+  if self.byte_pos >= self.next_cancel_byte {
+    check_zip_cancelled(self.cancelled)
+    self.next_cancel_byte = self.byte_pos + 4096
+  }
 }
 
 ///|
@@ -24,6 +44,7 @@ fn BitReader::ensure_bits(self : BitReader, count : Int) -> Unit raise ZipError 
     self.bit_buf = self.bit_buf | (byte << self.bit_count)
     self.bit_count = self.bit_count + 8
     self.byte_pos = self.byte_pos + 1
+    self.checkpoint_input()
   }
 }
 
@@ -49,12 +70,13 @@ fn BitReader::drop_bits(self : BitReader, count : Int) -> Unit raise ZipError {
 /// consuming any. Near the end of input fewer bits may remain; missing high
 /// bits are zero-padded, and `self.bit_count` reflects how many bits are
 /// actually available. `count` must be in `0..=15`.
-fn BitReader::peek_bits(self : BitReader, count : Int) -> UInt {
+fn BitReader::peek_bits(self : BitReader, count : Int) -> UInt raise ZipError {
   while self.bit_count < count && self.byte_pos < self.bytes.length() {
     let byte = self.bytes[self.byte_pos].to_uint()
     self.bit_buf = self.bit_buf | (byte << self.bit_count)
     self.bit_count = self.bit_count + 8
     self.byte_pos = self.byte_pos + 1
+    self.checkpoint_input()
   }
   self.bit_buf & bit_mask(count)
 }
@@ -603,7 +625,7 @@ fn deflate_decode_to_output(
   cancelled : () -> Bool,
 ) -> Unit raise ZipError {
   check_zip_cancelled(cancelled)
-  let reader = BitReader::new(bytes)
+  let reader = BitReader::new(bytes, cancelled~)
   for state = false {
     if state {
       break
@@ -641,6 +663,7 @@ fn deflate_decode_to_output(
   if reader.consumed_bytes() != bytes.length() {
     raise UnsupportedFeature(msg="trailing bytes after deflate stream")
   }
+  check_zip_cancelled(cancelled)
 }
 
 ///|
@@ -658,7 +681,9 @@ fn deflate_decode(
   let exact_size = sizing.length()
   let out = FixedByteOutput::allocated(exact_size)
   deflate_decode_to_output(bytes, out, cancelled)
-  out.finish()
+  let decoded = out.finish()
+  check_zip_cancelled(cancelled)
+  decoded
 }
 
 ///|
@@ -771,6 +796,32 @@ fn wb_deflate_bit_stream(
   emit(writer)
   writer.finish()
   output.finish()
+}
+
+///|
+test "deflate cancellation follows compressed input through empty blocks" {
+  let block_count = 5000
+  let stream = wb_deflate_bit_stream(writer => {
+    for index in 0..<block_count {
+      writer.write_bits(if index + 1 == block_count { 1 } else { 0 }, 1)
+      writer.write_bits(0, 2)
+      writer.write_bits(0, 5)
+      writer.write_bits(0, 16)
+      writer.write_bits(0xffff, 16)
+    }
+  })
+  let checks = [0]
+  try
+    deflate_decode(stream, cancelled=() => {
+      checks[0] += 1
+      checks[0] >= 3
+    })
+  catch {
+    ReadCancelled => assert_true(checks[0] >= 3)
+    _ => fail("expected compressed-input cancellation")
+  } noraise {
+    _ => fail("expected compressed-input cancellation")
+  }
 }
 
 ///|

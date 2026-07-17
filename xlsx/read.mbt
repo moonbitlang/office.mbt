@@ -3218,6 +3218,7 @@ fn read_zip_archive_core_unchecked(
       decoded,
       max_output_chars=limits.max_xml_part_bytes,
     )
+    read_budget.checkpoint()
     read_budget.charge_work(canonical.length())
     canonical
   }
@@ -3235,6 +3236,7 @@ fn read_zip_archive_core_unchecked(
     workbook_source_xml,
     max_output_chars=limits.max_xml_part_bytes,
   )
+  read_budget.checkpoint()
   read_budget.charge_work(workbook_xml.length())
   let workbook_rels_path = actual_archive_part_path(
     part_names,
@@ -3507,12 +3509,14 @@ fn read_zip_archive_core_unchecked(
         sheet_source_xml,
         max_output_chars=limits.max_xml_part_bytes,
       )
+      read_budget.checkpoint()
       read_budget.charge_work(sheet_xml.length())
       let sheet_core_xml = canonicalize_xlsx_worksheet_core(
         sheet_source_xml,
         sheet_xml,
         limits.max_xml_part_bytes,
       )
+      read_budget.checkpoint()
       if sheet_core_xml != sheet_xml {
         read_budget.charge_work(sheet_core_xml.length())
       }
@@ -4166,6 +4170,7 @@ fn read_zip_archive_core_unchecked(
     }
   }
   resolve_slicer_sources_after_read(workbook, slicer_cache_defs)
+  read_budget.checkpoint()
   workbook
 }
 
@@ -4177,7 +4182,7 @@ fn read_zip_archive_core(
   cancelled : () -> Bool,
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
-  match transcoder {
+  let workbook = match transcoder {
     Some(decode) =>
       read_zip_archive_core_unchecked(
         archive,
@@ -4197,6 +4202,17 @@ fn read_zip_archive_core(
         other => raise other
       }
   }
+  check_read_cancelled(cancelled)
+  workbook
+}
+
+///|
+fn checked_read_workbook(
+  workbook : Workbook,
+  cancelled : () -> Bool,
+) -> Workbook raise XlsxError {
+  check_read_cancelled(cancelled)
+  workbook
 }
 
 ///|
@@ -4210,7 +4226,7 @@ fn read_zip_bytes(
   check_read_cancelled(cancelled)
   let archive = read_limited_archive(bytes, limits, cancelled~)
   require_bounded_archive(archive, limits, cancelled~)
-  match transcoder {
+  let workbook = match transcoder {
     Some(value) =>
       read_zip_archive_core(
         archive,
@@ -4221,6 +4237,7 @@ fn read_zip_bytes(
       )
     None => read_zip_archive_core(archive, options, limits, cancelled)
   }
+  checked_read_workbook(workbook, cancelled)
 }
 
 ///|
@@ -4237,7 +4254,7 @@ pub fn read_bounded_archive(
 ) -> Workbook raise XlsxError {
   check_read_cancelled(cancelled)
   require_bounded_archive(archive, limits, cancelled~)
-  match transcoder {
+  let workbook = match transcoder {
     Some(value) =>
       read_zip_archive_core(
         archive,
@@ -4248,6 +4265,7 @@ pub fn read_bounded_archive(
       )
     None => read_zip_archive_core(archive, options, limits, cancelled)
   }
+  checked_read_workbook(workbook, cancelled)
 }
 
 ///|
@@ -4268,32 +4286,39 @@ pub fn read(
   if options.password != "" {
     match transcoder {
       Some(value) =>
-        return read_with_password(
-          bytes,
-          options.password,
-          options~,
-          limits~,
-          cancelled~,
-          transcoder=value,
+        return checked_read_workbook(
+          read_with_password(
+            bytes,
+            options.password,
+            options~,
+            limits~,
+            cancelled~,
+            transcoder=value,
+          ),
+          cancelled,
         )
       None =>
-        return read_with_password(
-          bytes,
-          options.password,
-          options~,
-          limits~,
-          cancelled~,
+        return checked_read_workbook(
+          read_with_password(
+            bytes,
+            options.password,
+            options~,
+            limits~,
+            cancelled~,
+          ),
+          cancelled,
         )
     }
   }
   if is_encrypted_package(bytes) {
     raise EncryptedPackage
   }
-  match transcoder {
+  let workbook = match transcoder {
     Some(value) =>
       read_zip_bytes(bytes, options~, limits~, cancelled~, transcoder=value)
     None => read_zip_bytes(bytes, options~, limits~, cancelled~)
   }
+  checked_read_workbook(workbook, cancelled)
 }
 
 ///|
@@ -4312,7 +4337,7 @@ pub fn read_with_password(
   check_read_cancelled(cancelled)
   check_source_package_size(bytes, limits)
   let resolved_options = options_with_password(options, password)
-  if is_encrypted_package(bytes) {
+  let workbook = if is_encrypted_package(bytes) {
     let archive = decrypt_encrypted_archive(
       bytes,
       password,
@@ -4346,6 +4371,7 @@ pub fn read_with_password(
         read_zip_bytes(bytes, options=resolved_options, limits~, cancelled~)
     }
   }
+  checked_read_workbook(workbook, cancelled)
 }
 
 ///|

@@ -115,6 +115,27 @@ fn Reader::skip(self : Reader, len : Int) -> Unit raise ZipError {
 }
 
 ///|
+/// Copies a borrowed ZIP slice into owned storage with bounded cancellation
+/// latency. Large stored entries and preservation records must not hide one
+/// monolithic runtime copy behind a single preflight check.
+fn copy_zip_bytes_cancellable(
+  bytes : BytesView,
+  cancelled : () -> Bool,
+) -> Bytes raise ZipError {
+  check_zip_cancelled(cancelled)
+  let output = FixedArray::make(bytes.length(), b'\x00')
+  let mut offset = 0
+  while offset < bytes.length() {
+    let end = (offset + 64 * 1024).min(bytes.length())
+    output.blit_from_bytesview(offset, bytes[offset:end])
+    offset = end
+    check_zip_cancelled(cancelled)
+  }
+  check_zip_cancelled(cancelled)
+  output.unsafe_reinterpret_as_bytes()
+}
+
+///|
 fn u32_to_int(value : UInt) -> Int raise ZipError {
   let max_u32_int : UInt = 0x7FFFFFFF
   if value > max_u32_int {
@@ -370,6 +391,7 @@ fn read_zip64_eocd(
   bytes : BytesView,
   eocd_offset : Int,
   preserved_source_budget : PreservedSourceBudget,
+  cancelled : () -> Bool,
 ) -> (UInt64, UInt64, UInt64, Int, Zip64TrailerTemplate) raise ZipError {
   let locator_offset = eocd_offset - 20
   if locator_offset < 0 {
@@ -426,9 +448,18 @@ fn read_zip64_eocd(
     central_offset,
     zip64_offset,
     {
-      end_record: bytes[zip64_offset:locator_offset].to_owned(),
-      locator: bytes[locator_offset:eocd_offset].to_owned(),
-      classic_end_record: bytes[eocd_offset:].to_owned(),
+      end_record: copy_zip_bytes_cancellable(
+        bytes[zip64_offset:locator_offset],
+        cancelled,
+      ),
+      locator: copy_zip_bytes_cancellable(
+        bytes[locator_offset:eocd_offset],
+        cancelled,
+      ),
+      classic_end_record: copy_zip_bytes_cancellable(
+        bytes[eocd_offset:],
+        cancelled,
+      ),
     },
   )
 }
@@ -735,7 +766,7 @@ fn materialize_entry_data(
           )
         _ => ()
       }
-      record.compressed.to_owned()
+      copy_zip_bytes_cancellable(record.compressed, cancelled)
     }
     Deflate => {
       // Allow legitimately large declared entries, but keep a hard ceiling so a
@@ -772,6 +803,7 @@ fn materialize_entry_data(
       msg="decoded data length does not match central size",
     )
   }
+  check_zip_cancelled(cancelled)
   data
 }
 
@@ -812,7 +844,10 @@ fn read_impl(
   let central_offset_raw = reader.read_u32_raw()
   let comment_len = reader.read_u16()
   preserved_source_budget.charge(comment_len)
-  let archive_comment = reader.read_bytes(comment_len).to_owned()
+  let archive_comment = copy_zip_bytes_cancellable(
+    reader.read_bytes(comment_len),
+    cancelled,
+  )
   if disk_no != 0 || disk_start != 0 {
     raise UnsupportedFeature(msg="multi-disk zip not supported")
   }
@@ -829,7 +864,7 @@ fn read_impl(
     zip64_trailer,
   ) = if needs_zip64 {
     let (zip_entries, zip_size, zip_offset, zip64_offset, zip64_trailer) = read_zip64_eocd(
-      bytes, eocd_offset, preserved_source_budget,
+      bytes, eocd_offset, preserved_source_budget, cancelled,
     )
     if disk_entries != 0xFFFF && disk_entries.to_uint64() != zip_entries {
       raise UnsupportedFeature(msg="classic and zip64 entry count mismatch")
@@ -948,7 +983,10 @@ fn read_impl(
     )
     central_reader.skip(comment_len)
     preserved_source_budget.charge(central_reader.pos - central_record_start)
-    let central_record = central_bytes[central_record_start:central_reader.pos].to_owned()
+    let central_record = copy_zip_bytes_cancellable(
+      central_bytes[central_record_start:central_reader.pos],
+      cancelled,
+    )
     if disk != 0 {
       raise UnsupportedFeature(msg="multi-disk zip not supported")
     }
@@ -1184,7 +1222,10 @@ fn read_impl(
       crc32: meta.crc32,
       source_local_offset: Some(meta.local_header_offset),
       source: Some({
-        local_record: bytes[meta.local_header_offset:record.end].to_owned(),
+        local_record: copy_zip_bytes_cancellable(
+          bytes[meta.local_header_offset:record.end],
+          cancelled,
+        ),
         local_header_length: record.data_start - meta.local_header_offset,
         central_record: meta.central_record,
         local_zip64_uncompressed_position: record.local_zip64_uncompressed_position,
@@ -1198,6 +1239,7 @@ fn read_impl(
       source_unchanged: true,
     })
   }
+  check_zip_cancelled(cancelled)
   archive
 }
 
@@ -1264,6 +1306,23 @@ fn push_u64_le(buf : Array[Byte], value : UInt64) -> Unit {
 fn push_bytes(buf : Array[Byte], bytes : BytesView) -> Unit {
   for b in bytes {
     buf.push(b)
+  }
+}
+
+///|
+test "ZIP owned copies observe cancellation between chunks" {
+  let source = Bytes::make(256 * 1024, b'x')
+  let checks = [0]
+  try
+    copy_zip_bytes_cancellable(source, () => {
+      checks[0] += 1
+      checks[0] >= 3
+    })
+  catch {
+    ReadCancelled => assert_true(checks[0] >= 3)
+    _ => fail("expected ZIP copy cancellation")
+  } noraise {
+    _ => fail("expected ZIP copy cancellation")
   }
 }
 

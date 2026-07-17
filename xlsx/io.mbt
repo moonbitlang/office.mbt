@@ -250,7 +250,7 @@ fn read_workbook_from_bytes(
     password
   }
   let resolved_options = options_with_password(options, resolved_password)
-  if resolved_password == "" {
+  let workbook = if resolved_password == "" {
     match io_context.charset_transcoder {
       Some(value) =>
         read_zip_bytes(
@@ -284,6 +284,7 @@ fn read_workbook_from_bytes(
         )
     }
   }
+  checked_read_workbook(workbook, cancelled)
 }
 
 ///|
@@ -311,6 +312,7 @@ pub async fn[R : @async/io.Reader] open_reader(
     () => @async.is_being_cancelled(),
   )
   workbook.set_io_context(io_context)
+  @async.pause()
   workbook
 }
 
@@ -323,11 +325,13 @@ pub async fn[R : @async/io.Reader] read_zip_reader(
   limits? : ReadLimits = ReadLimits::new(),
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook {
-  match transcoder {
+  let workbook = match transcoder {
     Some(value) =>
       open_reader(reader, password~, options~, limits~, transcoder=value)
     None => open_reader(reader, password~, options~, limits~)
   }
+  @async.pause()
+  workbook
 }
 
 ///|
@@ -365,6 +369,7 @@ pub async fn[R : @async/io.Reader] Workbook::read_zip_reader(
     () => @async.is_being_cancelled(),
   )
   workbook.set_io_context(io_context)
+  @async.pause()
   workbook
 }
 
@@ -398,6 +403,7 @@ pub async fn open_file(
     () => @async.is_being_cancelled(),
   )
   workbook.set_io_context(io_context)
+  @async.pause()
   workbook
 }
 
