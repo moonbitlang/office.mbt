@@ -509,6 +509,69 @@ test "XLSX query selectors are bounded, deterministic predicate conjunctions" {
 }
 
 ///|
+test "XLSX query literals preserve whitespace and support JSON quoting" {
+  let unquoted = parse_xlsx_query_selector("cell[text= leading and trailing ]")
+  guard unquoted[0] is TextEquals(unquoted_text) else {
+    fail("expected exact-text predicate")
+  }
+  assert_eq(unquoted_text, " leading and trailing ")
+
+  let whitespace = parse_xlsx_query_selector("cell[text=\" \"]")
+  guard whitespace[0] is TextEquals(whitespace_text) else {
+    fail("expected quoted exact-text predicate")
+  }
+  assert_eq(whitespace_text, " ")
+
+  let escaped = parse_xlsx_query_selector(
+    "cell[text=\"bracket]quote\\\"slash\\\\\"]",
+  )
+  guard escaped[0] is TextEquals(escaped_text) else {
+    fail("expected escaped exact-text predicate")
+  }
+  assert_eq(escaped_text, "bracket]quote\"slash\\")
+
+  for
+    malformed in [
+      "cell[text=\"unterminated]", "cell[text=\"value\"suffix]", "cell[text=\"bad\\q\"]",
+      "cell[text=\"\"]", "cell[text=\"\\ud800\"]",
+    ] {
+    let error = xlsx_cli_error(() => {
+      ignore(parse_xlsx_query_selector(malformed))
+    })
+    assert_eq(error.code, "office.xlsx.invalid_query")
+  }
+
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  workbook.set_cell_str("Data", "A1", " leading and trailing ")
+  let projection = make_xlsx_projection("whitespace.xlsx", workbook, 10)
+  guard resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]/cell[A1]")
+    is Cell(sheet, rect, ..) else {
+    fail("expected whitespace fixture cell")
+  }
+  let snapshot = xlsx_cell_snapshot(
+    projection,
+    sheet,
+    rect.row_lo,
+    rect.col_lo,
+    XlsxScanBudget::new(1),
+  )
+  for
+    selector in [
+      "cell[text= leading and trailing ]", "cell[text=\" leading and trailing \"]",
+    ] {
+    let work = OfficeQueryWorkBudget::new(1024, format="xlsx")
+    assert_true(
+      xlsx_cell_matches(
+        snapshot,
+        prepare_xlsx_query_predicates(parse_xlsx_query_selector(selector), work),
+        work,
+      ),
+    )
+  }
+}
+
+///|
 test "XLSX snapshots preserve and resolve shared-formula followers" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.new_sheet("Data"))

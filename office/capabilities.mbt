@@ -510,7 +510,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
       inputs: [
         capability_field("file", "path", true, "existing XLSX or DOCX package"),
         capability_field(
-          "selector", "xlsx-cell-selector", false, "XLSX only: cell followed by up to 16 bounded type, value, formula, or text predicates; default cell",
+          "selector", "xlsx-cell-selector", false, "XLSX only: cell followed by up to 16 bounded type, value, formula, or exact-whitespace text predicates with optional JSON-string escaping; default cell",
         ),
         capability_field(
           "under", "office.selector/1", false, "optional canonical DOCX subtree or XLSX workbook/sheet/range/cell scope",

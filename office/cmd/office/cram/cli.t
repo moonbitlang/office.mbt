@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:3f8b2b34
+    Fingerprint: crc32:9e349fa4
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:3f8b2b34","names":["docx","xlsx","help","identify","outline","get","text","query","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:9e349fa4","names":["docx","xlsx","help","identify","outline","get","text","query","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:3f8b2b34","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:3f8b2b34","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:3f8b2b34","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:3f8b2b34","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:3f8b2b34","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:3f8b2b34","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:3f8b2b34","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:3f8b2b34","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:3f8b2b34","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:9e349fa4","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:9e349fa4","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:9e349fa4","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:9e349fa4","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:9e349fa4","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:9e349fa4","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:9e349fa4","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:9e349fa4","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:9e349fa4","kind":"command","name":"raw"}]
 
 The raw command publishes explicit subcommand schemas, including every edit
 input and its conditional constraints.
@@ -151,6 +151,16 @@ round-trips through the public selector grammar.
 
   $ office.exe query Book1-valid.xlsx 'cell[type=formula][formula~=IF]' --under '/xlsx/sheet[name="Sheet2"]' --json | jq -c '{schema:.data.schema,selector:.data.selector,under:.data.under,paths:[.data.matches[].path],matched_total:.data.matched_total,returned:.data.returned,truncated:.data.truncated,scanned:.data.scanned_cells}'
   {"schema":"office.xlsx.query/1","selector":"cell[type=formula][formula~=IF]","under":"/xlsx/sheet[name=\"Sheet2\"]","paths":["/xlsx/sheet[name=\"Sheet2\"]/cell[F11]","/xlsx/sheet[name=\"Sheet2\"]/cell[G11]","/xlsx/sheet[name=\"Sheet2\"]/cell[H11]","/xlsx/sheet[name=\"Sheet2\"]/cell[I11]"],"matched_total":4,"returned":4,"truncated":false,"scanned":99}
+
+Exact text predicates preserve whitespace through the real command-line path;
+JSON quoting also keeps selector delimiters unambiguous.
+
+  $ xlsx.exe create whitespace.xlsx --sheet Data >/dev/null
+  $ xlsx.exe set whitespace.xlsx Data A1 ' leading and trailing ' >/dev/null
+  $ office.exe query whitespace.xlsx 'cell[text= leading and trailing ]' --json | jq -c '{selector:.data.selector,values:[.data.matches[].raw.value],matched_total:.data.matched_total}'
+  {"selector":"cell[text= leading and trailing ]","values":[" leading and trailing "],"matched_total":1}
+  $ office.exe query whitespace.xlsx 'cell[text=" leading and trailing "]' --json | jq -c '{selector:.data.selector,values:[.data.matches[].raw.value],matched_total:.data.matched_total}'
+  {"selector":"cell[text=\" leading and trailing \"]","values":[" leading and trailing "],"matched_total":1}
 
 Cross-format selectors and DOCX-only XLSX query flags fail with XLSX-specific,
 machine-correctable codes.

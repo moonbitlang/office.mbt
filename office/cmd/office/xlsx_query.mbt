@@ -66,7 +66,7 @@ fn xlsx_query_failure(message : String, selector : String) -> CliFailure {
 }
 
 ///|
-fn require_xlsx_query_value(
+fn require_xlsx_query_number_value(
   label : String,
   value : String,
   selector : String,
@@ -82,6 +82,93 @@ fn require_xlsx_query_value(
     )
   }
   trimmed
+}
+
+///|
+fn xlsx_query_quoted_literal_end(value : String) -> Int? {
+  let mut escaped = false
+  let mut index = 1
+  while index < value.length() {
+    let character = value[index]
+    if escaped {
+      escaped = false
+    } else if character == ('\\' : UInt16) {
+      escaped = true
+    } else if character == ('"' : UInt16) {
+      return Some(index)
+    }
+    index += 1
+  }
+  None
+}
+
+///|
+fn xlsx_query_literal_has_valid_unicode(value : String) -> Bool {
+  let mut offset = 0
+  while offset < value.length() {
+    let unit = value[offset]
+    if unit.is_leading_surrogate() {
+      if offset + 1 >= value.length() ||
+        !value[offset + 1].is_trailing_surrogate() {
+        return false
+      }
+      offset += 2
+    } else if unit.is_trailing_surrogate() {
+      return false
+    } else {
+      offset += 1
+    }
+  }
+  true
+}
+
+///|
+fn require_xlsx_query_literal(
+  label : String,
+  value : String,
+  selector : String,
+) -> String raise CliFailure {
+  let decoded = if value.has_prefix("\"") {
+    guard xlsx_query_quoted_literal_end(value) is Some(close) &&
+      close == value.length() - 1 else {
+      raise xlsx_query_failure(
+        "\{label} quoted value must be one complete JSON string",
+        selector,
+      )
+    }
+    let parsed = @json.parse(value) catch {
+      _ =>
+        raise xlsx_query_failure(
+          "\{label} quoted value contains an invalid JSON string escape",
+          selector,
+        )
+    }
+    guard parsed is String(text) else {
+      raise xlsx_query_failure(
+        "\{label} quoted value must be a JSON string",
+        selector,
+      )
+    }
+    text
+  } else {
+    value
+  }
+  if decoded == "" {
+    raise xlsx_query_failure("\{label} needs a non-empty value", selector)
+  }
+  if !xlsx_query_literal_has_valid_unicode(decoded) {
+    raise xlsx_query_failure(
+      "\{label} value contains an isolated UTF-16 surrogate",
+      selector,
+    )
+  }
+  if !has_at_most_chars(decoded, xlsx_cli_max_query_value_chars) {
+    raise xlsx_query_failure(
+      "\{label} value exceeds \{xlsx_cli_max_query_value_chars} characters",
+      selector,
+    )
+  }
+  decoded
 }
 
 ///|
@@ -106,7 +193,7 @@ fn parse_xlsx_number_predicate(
       "a value predicate requires one of >, >=, <, <=, =, or !=", selector,
     )
   }
-  let bounded = require_xlsx_query_value(
+  let bounded = require_xlsx_query_number_value(
     "value comparison", number_text, selector,
   )
   let number = @string.parse_double(bounded) catch {
@@ -128,7 +215,7 @@ fn parse_xlsx_predicate(
   body : String,
   selector : String,
 ) -> XlsxCellPredicate raise CliFailure {
-  let predicate = body.trim().to_owned()
+  let predicate = body
   if predicate.has_prefix("type=") {
     match predicate[5:].to_owned() {
       "formula" => HasType(Formula)
@@ -145,17 +232,21 @@ fn parse_xlsx_predicate(
     parse_xlsx_number_predicate(predicate[5:].to_owned(), selector)
   } else if predicate.has_prefix("formula~=") {
     FormulaContains(
-      require_xlsx_query_value("formula~=", predicate[9:].to_owned(), selector),
+      require_xlsx_query_literal(
+        "formula~=",
+        predicate[9:].to_owned(),
+        selector,
+      ),
     )
   } else if predicate == "formula" {
     HasFormula
   } else if predicate.has_prefix("text~=") {
     TextContains(
-      require_xlsx_query_value("text~=", predicate[6:].to_owned(), selector),
+      require_xlsx_query_literal("text~=", predicate[6:].to_owned(), selector),
     )
   } else if predicate.has_prefix("text=") {
     TextEquals(
-      require_xlsx_query_value("text=", predicate[5:].to_owned(), selector),
+      require_xlsx_query_literal("text=", predicate[5:].to_owned(), selector),
     )
   } else {
     raise xlsx_query_failure("unknown XLSX cell predicate", selector)
@@ -164,18 +255,31 @@ fn parse_xlsx_predicate(
 
 ///|
 /// Finds the terminator for one outer predicate group while permitting
-/// balanced brackets inside its literal value. This is required for normal
-/// Excel structured references such as `Table1[Amount]` and
-/// `Table1[[#Headers],[Amount]]`.
+/// balanced brackets in unquoted values and arbitrary brackets in JSON-string
+/// values. The former supports normal Excel structured references such as
+/// `Table1[[#Headers],[Amount]]`; the latter makes every exact string
+/// representable without confusing it with selector structure.
 fn xlsx_query_predicate_close(
   rest : String,
   selector : String,
 ) -> Int raise CliFailure {
   let mut depth = 0
   let mut index = 0
+  let mut in_string = false
+  let mut escaped = false
   while index < rest.length() {
     let character = rest[index]
-    if character == ('[' : UInt16) {
+    if in_string {
+      if escaped {
+        escaped = false
+      } else if character == ('\\' : UInt16) {
+        escaped = true
+      } else if character == ('"' : UInt16) {
+        in_string = false
+      }
+    } else if character == ('"' : UInt16) {
+      in_string = true
+    } else if character == ('[' : UInt16) {
       depth += 1
     } else if character == (']' : UInt16) {
       depth -= 1

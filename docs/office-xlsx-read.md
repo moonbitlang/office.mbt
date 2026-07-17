@@ -138,10 +138,17 @@ cell[type=formula][formula~=SUM]
 cell[formula~=SUM(Table1[[#Headers],[Amount]])]
 cell[type=number][value>=0]
 cell[text~=revenue]
+cell[text= leading and trailing ]
+cell[text=" "]
+cell[text="bracket] and quote\""]
 ```
 
-Balanced brackets inside literal predicate values are part of the surrounding
-predicate, which permits Excel structured references without quoting.
+Unquoted `TEXT` is preserved exactly, including leading and trailing
+whitespace. Balanced brackets inside an unquoted value are part of the
+surrounding predicate, which permits Excel structured references without
+quoting. A value that starts with `"` is one complete JSON string: use that
+form for whitespace-only text, `]`, quotes, backslashes, control characters,
+or other values that need escaping. Empty literals remain invalid.
 
 Regular expressions, arbitrary expressions, locale-sensitive matching, and
 the DOCX-only `--kind`, `--text`, `--id`, `--property`, and `--ignore-case`

@@ -170,10 +170,12 @@ scanning it itself. Scans the sheet's used range by default, or the
   - `text=TEXT` — the string cell equals `TEXT`; `text~=TEXT` — contains it.
     A blank cell (an empty stored string) never matches a `text`/`string`
     predicate.
-- A predicate argument (the `TEXT` after `=`/`~=`, the `N` after an operator)
-  is trimmed of surrounding whitespace and cannot contain `]` (which closes
-  the predicate). `text=`/`text~=`/`formula~=` require a non-empty value, and a
-  `value` bound must be a finite number (`NaN`/`Infinity` are rejected).
+- A `TEXT` predicate argument is preserved exactly, including surrounding
+  whitespace. Balanced brackets are allowed unquoted. A value beginning with
+  `"` must be one complete JSON string, which represents whitespace-only text,
+  `]`, quotes, backslashes, or control characters without selector ambiguity.
+  `text=`/`text~=`/`formula~=` require a non-empty value. Numeric `value`
+  bounds are trimmed and must be finite (`NaN`/`Infinity` are rejected).
 - `query` is read-only. A malformed selector, an oversized scan, or a missing
   sheet fails with a non-zero exit and a one-line `error:` message; nothing is
   written.
@@ -577,7 +579,9 @@ Predicates are literal and ANDed: `type=formula|number|string|bool|error`,
 `formula`, `formula~=TEXT`, `text=TEXT`, `text~=TEXT`, and numeric
 `value>NUMBER` comparisons (`>=`, `<`, `<=`, `=`, and `!=` are also
 supported). Substring predicates are guaranteed-linear and command-work
-bounded. No regular expression or arbitrary expression is evaluated.
+bounded. Text literals preserve whitespace exactly; a JSON-string literal can
+represent closing brackets and escaped characters. No regular expression or
+arbitrary expression is evaluated.
 
 ## Standalone `docx` CLI schemas
 
