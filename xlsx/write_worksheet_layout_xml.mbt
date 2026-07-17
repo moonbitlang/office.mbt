@@ -1,5 +1,8 @@
 ///|
-fn write_row_attributes(sb : StringBuilder, dim : RowDimension) -> Unit {
+fn write_row_attributes(
+  sb : LimitedXmlBuilder,
+  dim : RowDimension,
+) -> Unit raise XlsxError {
   match dim.height {
     Some(height) => {
       sb.write_view(" ht=\"")
@@ -22,10 +25,10 @@ fn write_row_attributes(sb : StringBuilder, dim : RowDimension) -> Unit {
 
 ///|
 fn write_col_attributes(
-  sb : StringBuilder,
+  sb : LimitedXmlBuilder,
   col : Int,
   dim : ColDimension,
-) -> Unit {
+) -> Unit raise XlsxError {
   sb.write_view("    <col min=\"\{col}\" max=\"\{col}\"")
   match dim.width {
     Some(width) => {

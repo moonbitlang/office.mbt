@@ -166,8 +166,9 @@ The XLSX SDK now has one fail-closed policy for every package ingestion path:
 
 - opaque `ReadLimits` values jointly bound compressed package bytes, entry
   count, each inflated entry, aggregate inflation, preserved source records,
-  each logically decoded OOXML XML part regardless of its filename suffix, and
-  encrypted-package password-KDF iterations;
+  each logically decoded OOXML XML part regardless of its filename suffix,
+  aggregate decoded XML, markup tokens, concrete worksheet cells, retained
+  row/column dimensions, and encrypted-package password-KDF iterations;
 - byte reads inflate only through `zip.read_limited`, while the public
   archive-backed path accepts only pristine non-forgeable bounded provenance
   at least as strict as its declared policy; compatibility reads, constructed
@@ -242,8 +243,9 @@ strict spreadsheet mutation engine:
 - encoded `xlsx.batch/1` scripts are bounded before UTF-8 and JSON parsing,
   retain one opaque plan with operation/resource statistics, and normalize
   application failures with the exact zero-based operation index and name;
-- operation count, touched cells, expanded style cells, new style records,
-  row/column work, package bytes, and output bytes all have explicit ceilings;
+- operation count, touched cells, expanded style cells, materialized style
+  records, row/column work, decoded XML, parser objects, generated archive
+  bytes, package bytes, and output bytes all have explicit ceilings;
 - a zero-op in-place plan reuses the exact input bytes, while a changed plan
   declares its full-rewrite behavior and exposes authoritative part-level
   preservation evidence; and

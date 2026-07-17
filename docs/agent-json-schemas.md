@@ -386,9 +386,9 @@ Envelope:
   silently ignored.
 - Zero ops is a valid no-op and writes nothing. Encoded scripts are capped at
   8 MiB before UTF-8 decoding, 10,000 ops, 1,000,000 direct or expanded cell
-  mutations, 1,000,000 expanded style cells, 4,096 requested style or
+  mutations, 1,000,000 expanded style cells, 4,096 materialized style or
   differential-style records, and 1,000,000 row/column lines across bounded
-  hide/show/height operations. Numeric literals are capped at 40 characters
+  width/hide/show/height operations. Numeric literals are capped at 40 characters
   (pathologically long literals can round incorrectly upstream).
 - `--dry-run` parses and applies in memory but never writes.
 - The save resolves a symlinked workbook to its target first (native),
@@ -472,6 +472,10 @@ batch semantics are specified in
 A changed plan emits `office.xlsx.full_rewrite`; consumers must use the
 transaction preservation report rather than infer retained parts from the
 operation list. Zero-op in-place execution reuses the source bytes exactly.
+The parsed-plan maxima are upper grammar limits; `office help batch --json`
+also advertises the lower transaction materialization ceilings applied to
+existing-plus-projected cells, row/column records, decoded XML, markup tokens,
+and generated uncompressed archive parts.
 
 ### `office.docx.outline/1` (`office outline FILE --json`)
 

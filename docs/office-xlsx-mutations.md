@@ -76,14 +76,27 @@ current `xlsx.batch/1` ceilings are:
 - 40 characters per JSON numeric token outside strings;
 - 1,000,000 direct or expanded cell mutations;
 - 1,000,000 expanded style cells;
-- 4,096 requested style or differential-style records; and
-- 1,000,000 row/column lines across bounded hide, show, and height operations.
+- 4,096 style or differential-style records that the plan will materialize;
+  style-free color-scale, data-bar, and icon-set rules do not consume this
+  counter; and
+- 1,000,000 row/column lines across bounded width, hide, show, and height
+  operations.
 
-Individual coordinates, ranges, row/column bands, ZIP package bytes, entries,
-inflation, decoded XML, working memory, candidate package bytes, validation
-findings, paths, and diagnostic strings have additional lower-level ceilings.
-Agents should inspect `xlsx capabilities`; its `limits` object and operation
-catalog are the executable source of truth.
+Those parser ceilings describe scripts accepted by `xlsx.batch/1`. The Office
+transaction applies a stricter live-materialization policy before mutation: at
+most 32,768 existing-plus-projected concrete cells, 32,768
+existing-plus-projected row/column records, 16 MiB of decoded source XML, and
+262,144 XML markup tokens. Candidate
+construction retains at most 12 MiB for one generated part and 24 MiB across
+the uncompressed archive before ZIP's storage-free package sizing pass. These
+limits partition the transaction's fixed working reserve; exceeding one returns
+`office.transaction.resource_limit_exceeded` before publication.
+
+Individual coordinates, ranges, row/column bands, package bytes, entries,
+inflation, validation findings, paths, and diagnostics have additional
+lower-level ceilings. Agents should inspect both `xlsx capabilities` for the
+script grammar and `office help batch --json` for the transaction constraints;
+those records are the executable sources of truth.
 
 ## SDK API
 

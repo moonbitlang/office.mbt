@@ -134,6 +134,16 @@ length immediately as a fail-closed contract backstop when a custom callback
 ignores the supplied allowance. This contract is explicit and does not depend
 on backend- or optimization-specific object identity.
 
+The XLSX full-rewrite adapter additionally partitions the format-specific
+working reserve before it builds a candidate: bounded reads cap decoded XML,
+markup tokens, concrete cell records, and retained row/column dimensions; batch
+application charges projected cell and row/column growth against those retained
+objects; and the generated archive checks every part plus the
+aggregate uncompressed payload before retaining it. Only then does
+`zip.write_limited` perform its allocation-free final package sizing pass. This
+prevents a highly compressible workbook from bypassing the live boundary merely
+because its final ZIP is small.
+
 Preservation splices receive a second opaque allowance carved out of the
 already charged 64 MiB working reserve. At most one eighth of that reserve,
 capped at 8 MiB, may be retained across caller replacements, newly added part

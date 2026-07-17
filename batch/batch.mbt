@@ -59,9 +59,10 @@ const MAX_SHEET_COLS : Int = 16_384
 pub const MAX_ROW_COLUMN_BAND : Int = 10_000
 
 ///|
-/// Aggregate cap on lines touched by `row`/`col` hide/show/height across one
-/// script — the row/col analogue of `MAX_TOTAL_STYLE_CELLS`, bounding total
-/// setter calls even when each op stays under `MAX_ROW_COLUMN_BAND`.
+/// Aggregate cap on dimensions touched by width and `row`/`col`
+/// hide/show/height operations across one script — the row/col analogue of
+/// `MAX_TOTAL_STYLE_CELLS`, bounding total setter calls even when each op stays
+/// locally bounded.
 pub const MAX_TOTAL_ROW_COLUMN_LINES : Int64 = 1_000_000
 
 ///|
@@ -221,17 +222,10 @@ priv enum OpKind {
 }
 
 ///|
-/// A parsed batch operation, **opaque by design**. Callers get these from
-/// `parse_script` and hand them to `apply_op`; they cannot construct or
-/// pattern-match them. This is deliberate: the op vocabulary grows over
-/// time (new `xlsx.batch/1` ops), and hiding the representation keeps
-/// adding a variant or a field a source-compatible change instead of a
-/// breaking one for every downstream `match`. Discover the current op set
-/// programmatically via `capabilities()`.
-///
-/// A plain (package-private) single-field struct: it appears in the public
-/// `parse_script`/`apply_op`/`name` signatures, so it exports as an
-/// abstract type — external code holds it but cannot construct or match it.
+/// A parsed batch operation, opaque by design. Callers may retain the complete
+/// `BatchPlan` or use the lower-level operation API; neither exposes the
+/// representation. Discover the exact vocabulary of this build through
+/// `capabilities()` instead of assuming compatibility between pre-stable builds.
 struct BatchOp(OpKind)
 
 ///|
@@ -459,8 +453,8 @@ pub fn parse_plan(document : Json) -> BatchPlan raise BatchError {
 }
 
 ///|
-/// Compatibility projection for callers that still apply individual opaque
-/// operations. New transactional callers should retain and apply `BatchPlan`.
+/// Lower-level JSON parser for callers that require per-operation control.
+/// Transactional callers should retain and apply the complete `BatchPlan`.
 pub fn parse_script(document : Json) -> Array[BatchOp] raise BatchError {
   parse_plan(document).ops.copy()
 }
@@ -563,12 +557,22 @@ fn parse_op(
     }
     "merge" =>
       OpMerge(sheet=reader.string("sheet"), range=reader.colon_range("range"))
-    "width" =>
+    "width" => {
+      let (column, lines) = reader.column("column")
+      rowcol_cells.val = rowcol_cells.val + lines.to_int64()
+      if rowcol_cells.val > MAX_TOTAL_ROW_COLUMN_LINES {
+        raise op_error(
+          index,
+          name,
+          "row/column mutations touch past \{MAX_TOTAL_ROW_COLUMN_LINES} total lines",
+        )
+      }
       OpWidth(
         sheet=reader.string("sheet"),
-        column=reader.column("column"),
+        column~,
         width=reader.number("width"),
       )
+    }
     "freeze" => OpFreeze(sheet=reader.string("sheet"), cell=reader.cell("cell"))
     "filter" =>
       OpFilter(sheet=reader.string("sheet"), range=reader.colon_range("range"))
@@ -699,7 +703,20 @@ fn parse_op(
         )
       }
     }
-    OpStyle(..) | OpCf(..) => {
+    OpStyle(..) => {
+      new_styles.val = new_styles.val + 1
+      if new_styles.val > MAX_TOTAL_NEW_STYLES {
+        raise op_error(
+          index,
+          name,
+          "new style records exceed \{MAX_TOTAL_NEW_STYLES} per script",
+        )
+      }
+    }
+    OpCf(fill~, font_color~, bold~, italic~, ..) if fill != "" ||
+      font_color != "" ||
+      bold is Some(true) ||
+      italic is Some(true) => {
       new_styles.val = new_styles.val + 1
       if new_styles.val > MAX_TOTAL_NEW_STYLES {
         raise op_error(
@@ -1032,10 +1049,13 @@ fn ParamReader::range(
 fn ParamReader::column(
   self : ParamReader,
   key : String,
-) -> String raise BatchError {
+) -> (String, Int) raise BatchError {
   let text = self.string(key)
-  match text.find(":") {
-    None => ignore(self.column_number(key, text, text))
+  let count = match text.find(":") {
+    None => {
+      ignore(self.column_number(key, text, text))
+      1
+    }
     Some(index) => {
       let lo = self.column_number(key, text[:index].to_owned(), text)
       let hi = self.column_number(key, text[index + 1:].to_owned(), text)
@@ -1046,9 +1066,10 @@ fn ParamReader::column(
           "'\{key}' is not a valid column or column range: '\{text}'",
         )
       }
+      hi - lo + 1
     }
   }
-  text
+  (text, count)
 }
 
 ///|

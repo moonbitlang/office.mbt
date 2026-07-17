@@ -2916,6 +2916,8 @@ fn parse_inline_string(rest : StringView) -> InlineStringEntry raise XlsxError {
 fn parse_row_dimensions(
   xml : StringView,
   style_count : Int,
+  materialized_dimensions : Ref[Int],
+  max_materialized_dimensions : Int,
 ) -> Map[Int, RowDimension] raise XlsxError {
   let dims : Map[Int, RowDimension] = Map([])
   let mut first = true
@@ -2982,6 +2984,17 @@ fn parse_row_dimensions(
     if height is None && !hidden && outline_level == 0 && style is None {
       continue
     }
+    if !dims.contains(row) {
+      if materialized_dimensions.val >= max_materialized_dimensions {
+        raise ResourceLimitExceeded(
+          kind="materialized_row_column_dimensions",
+          limit=max_materialized_dimensions,
+          actual=bounded_actual_above_limit(max_materialized_dimensions),
+        )
+      }
+      let next = materialized_dimensions.val + 1
+      materialized_dimensions.val = next
+    }
     dims[row] = { height, hidden, outline_level, style_id: style }
   }
   dims
@@ -2991,6 +3004,8 @@ fn parse_row_dimensions(
 fn parse_col_dimensions(
   xml : StringView,
   style_count : Int,
+  materialized_dimensions : Ref[Int],
+  max_materialized_dimensions : Int,
 ) -> Map[Int, ColDimension] raise XlsxError {
   let dims : Map[Int, ColDimension] = Map([])
   let body = match extract_tag_body(xml, "cols") {
@@ -3073,6 +3088,17 @@ fn parse_col_dimensions(
     let dim = { width, hidden, outline_level, style_id: style }
     let mut col = min_col
     while col <= max_col {
+      if !dims.contains(col) {
+        if materialized_dimensions.val >= max_materialized_dimensions {
+          raise ResourceLimitExceeded(
+            kind="materialized_row_column_dimensions",
+            limit=max_materialized_dimensions,
+            actual=bounded_actual_above_limit(max_materialized_dimensions),
+          )
+        }
+        let next = materialized_dimensions.val + 1
+        materialized_dimensions.val = next
+      }
       dims[col] = dim
       col = col + 1
     }
@@ -3625,6 +3651,10 @@ fn read_zip_archive_core_unchecked(
 ) -> Workbook raise XlsxError {
   let read_budget = ReadBudget::new(limits, cancelled~)
   let part_names = archive_part_name_index(archive, budget=read_budget)
+  let decoded_xml_bytes = Ref(0)
+  let xml_markup_tokens = Ref(0)
+  let materialized_cells = Ref(0)
+  let materialized_dimensions = Ref(0)
   let decode_source = (value : BytesView) => {
     if value.length() > limits.max_xml_part_bytes {
       raise ResourceLimitExceeded(
@@ -3632,6 +3662,28 @@ fn read_zip_archive_core_unchecked(
         limit=limits.max_xml_part_bytes,
         actual=value.length(),
       )
+    }
+    if value.length() > limits.max_total_xml_bytes - decoded_xml_bytes.val {
+      raise ResourceLimitExceeded(
+        kind="total_xml_bytes",
+        limit=limits.max_total_xml_bytes,
+        actual=bounded_actual_above_limit(limits.max_total_xml_bytes),
+      )
+    }
+    let next_xml_bytes = decoded_xml_bytes.val + value.length()
+    decoded_xml_bytes.val = next_xml_bytes
+    for byte in value {
+      if byte == b'<' {
+        if xml_markup_tokens.val >= limits.max_xml_markup_tokens {
+          raise ResourceLimitExceeded(
+            kind="xml_markup_tokens",
+            limit=limits.max_xml_markup_tokens,
+            actual=bounded_actual_above_limit(limits.max_xml_markup_tokens),
+          )
+        }
+        let next_token_count = xml_markup_tokens.val + 1
+        xml_markup_tokens.val = next_token_count
+      }
     }
     let decoded = decode_utf8(value, transcoder)
     read_budget.scan_xml(decoded)
@@ -4200,6 +4252,10 @@ fn read_zip_archive_core_unchecked(
         sheet_core_xml,
         shared_strings,
         style_count,
+        materialized_cells,
+        limits.max_materialized_cells,
+        materialized_dimensions,
+        limits.max_materialized_row_column_dimensions,
         budget=read_budget,
       )
       let hyperlink_elements = parse_hyperlink_elements(sheet_core_xml)

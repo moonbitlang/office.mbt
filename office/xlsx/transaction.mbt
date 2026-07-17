@@ -8,9 +8,10 @@ let xlsx_transaction_max_findings = 64
 let xlsx_transaction_max_message_chars = 480
 
 ///|
-priv suberror LimitedXlsxWrite {
-  LimitedXlsxWrite
-}
+/// The A4 transaction reserves 64 MiB for format-specific parser and serializer
+/// state. The public Office policy constants divide that reserve between
+/// bounded decoded XML/cell objects, the generated uncompressed archive, and
+/// transient serializer indexes.
 
 ///|
 fn bounded_xlsx_message(text : String, limit : Int) -> String {
@@ -41,8 +42,14 @@ fn xlsx_transaction_failure(
 }
 
 ///|
-fn xlsx_read_limits() -> @engine.ReadLimits {
-  @engine.ReadLimits::new()
+fn xlsx_read_limits() -> @engine.ReadLimits raise @engine.XlsxError {
+  @engine.ReadLimits::with_values(
+    max_xml_part_bytes=@office.XLSX_TRANSACTION_MAX_CANDIDATE_ENTRY_BYTES,
+    max_total_xml_bytes=@office.XLSX_TRANSACTION_MAX_DECODED_XML_BYTES,
+    max_xml_markup_tokens=@office.XLSX_TRANSACTION_MAX_XML_MARKUP_TOKENS,
+    max_materialized_cells=@office.XLSX_TRANSACTION_MAX_MATERIALIZED_CELLS,
+    max_materialized_row_column_dimensions=@office.XLSX_TRANSACTION_MAX_ROW_COLUMN_LINES,
+  )
 }
 
 ///|
@@ -50,6 +57,17 @@ fn read_transaction_workbook(
   archive : @zip.Archive,
 ) -> @engine.Workbook raise @transaction.TransactionError {
   @engine.read_bounded_archive(archive, limits=xlsx_read_limits()) catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) =>
+      raise xlsx_transaction_failure(
+        "office.transaction.resource_limit_exceeded",
+        "XLSX source parsing exceeded its bounded materialization policy",
+        details=Json::object({
+          "phase": Json::string("source parsing"),
+          "kind": Json::string(kind),
+          "limit": Json::number(limit.to_double()),
+          "actual": Json::number(actual.to_double()),
+        }),
+      )
     error =>
       raise xlsx_transaction_failure(
         "office.xlsx.invalid_package",
@@ -62,27 +80,56 @@ fn read_transaction_workbook(
 ///|
 fn serialize_transaction_workbook(
   workbook : @engine.Workbook,
-  maximum : Int,
+  budget : @transaction.TransactionBudget,
 ) -> Bytes raise @transaction.TransactionError {
-  let limit_hit = Ref(false)
-  workbook.set_zip_writer(archive => {
-    @zip.write_limited(archive, max_output_bytes=maximum) catch {
-      OutputLimitExceeded(_) => {
-        limit_hit.val = true
-        raise LimitedXlsxWrite
-      }
-      error => raise error
-    }
-  })
-  @excel.write(workbook) catch {
-    _ if limit_hit.val =>
+  let maximum = budget.max_candidate_package_bytes()
+  if maximum <= 0 {
+    raise xlsx_transaction_failure(
+      "office.transaction.resource_limit_exceeded",
+      "no live-memory allowance remains for an XLSX candidate package",
+      details=Json::object({
+        "phase": Json::string("candidate package"),
+        "kind": Json::string("package_bytes"),
+        "limit": Json::number(0.0),
+        "actual": Json::number(1.0),
+      }),
+    )
+  }
+  let entry_limit = if budget.max_entry_uncompressed_bytes() <
+    @office.XLSX_TRANSACTION_MAX_CANDIDATE_ENTRY_BYTES {
+    budget.max_entry_uncompressed_bytes()
+  } else {
+    @office.XLSX_TRANSACTION_MAX_CANDIDATE_ENTRY_BYTES
+  }
+  let archive_limit = if budget.max_total_uncompressed_bytes() <
+    @office.XLSX_TRANSACTION_MAX_CANDIDATE_ARCHIVE_BYTES {
+    budget.max_total_uncompressed_bytes()
+  } else {
+    @office.XLSX_TRANSACTION_MAX_CANDIDATE_ARCHIVE_BYTES
+  }
+  let limits = @engine.WriteLimits::with_values(
+    max_output_bytes=maximum,
+    max_archive_entries=budget.max_archive_entries(),
+    max_entry_uncompressed_bytes=entry_limit,
+    max_total_uncompressed_bytes=archive_limit,
+  ) catch {
+    error =>
+      raise xlsx_transaction_failure(
+        "office.transaction.invalid_contract",
+        "could not construct the bounded XLSX write policy: " +
+        bounded_xlsx_message(repr(error), xlsx_transaction_max_message_chars),
+      )
+  }
+  @engine.write_limited(workbook, limits) catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) =>
       raise xlsx_transaction_failure(
         "office.transaction.resource_limit_exceeded",
-        "serialized XLSX candidate exceeds the transaction package allowance",
+        "XLSX candidate serialization exceeded its bounded construction policy",
         details=Json::object({
-          "phase": Json::string("candidate package"),
-          "kind": Json::string("package_bytes"),
-          "limit": Json::number(maximum.to_double()),
+          "phase": Json::string("candidate serialization"),
+          "kind": Json::string(kind),
+          "limit": Json::number(limit.to_double()),
+          "actual": Json::number(actual.to_double()),
         }),
       )
     error =>
@@ -91,6 +138,46 @@ fn serialize_transaction_workbook(
         "could not serialize XLSX candidate: " +
         bounded_xlsx_message(repr(error), xlsx_transaction_max_message_chars),
       )
+  }
+}
+
+///|
+fn enforce_batch_materialization_budget(
+  workbook : @engine.Workbook,
+  stats : @batch.BatchPlanStats,
+) -> Unit raise @transaction.TransactionError {
+  let existing = workbook.materialized_cell_count().to_int64()
+  let maximum = @office.XLSX_TRANSACTION_MAX_MATERIALIZED_CELLS.to_int64()
+  let requested = existing + stats.touched_cells
+  if requested > maximum {
+    raise xlsx_transaction_failure(
+      "office.transaction.resource_limit_exceeded",
+      "XLSX batch could exceed the bounded workbook cell materialization allowance",
+      details=Json::object({
+        "phase": Json::string("batch application"),
+        "kind": Json::string("materialized_cells"),
+        "limit": Json::number(maximum.to_double()),
+        "actual": Json::number(requested.to_double()),
+      }),
+    )
+  }
+  let existing_lines = workbook
+    .materialized_row_column_dimension_count()
+    .to_int64()
+  let requested_lines = existing_lines + stats.row_column_lines
+  if requested_lines > @office.XLSX_TRANSACTION_MAX_ROW_COLUMN_LINES.to_int64() {
+    raise xlsx_transaction_failure(
+      "office.transaction.resource_limit_exceeded",
+      "XLSX batch could exceed the bounded row/column materialization allowance",
+      details=Json::object({
+        "phase": Json::string("batch application"),
+        "kind": Json::string("row_column_lines"),
+        "limit": Json::number(
+          @office.XLSX_TRANSACTION_MAX_ROW_COLUMN_LINES.to_double(),
+        ),
+        "actual": Json::number(requested_lines.to_double()),
+      }),
+    )
   }
 }
 
@@ -191,6 +278,7 @@ pub async fn transact_batch(
         )
       }
       let workbook = read_transaction_workbook(archive)
+      enforce_batch_materialization_budget(workbook, stats)
       plan.apply(workbook) catch {
         BatchError(message) =>
           raise xlsx_transaction_failure(
@@ -201,10 +289,7 @@ pub async fn transact_batch(
       if plan.operation_count() == 0 {
         @transaction.transaction_reuse_original()
       } else {
-        let candidate = serialize_transaction_workbook(
-          workbook,
-          budget.max_candidate_package_bytes(),
-        )
+        let candidate = serialize_transaction_workbook(workbook, budget)
         @transaction.transaction_mutation(candidate, warnings=[
           full_rewrite_warning(),
         ])
@@ -242,10 +327,7 @@ pub async fn create_workbook(
         },
       )
       @transaction.transaction_mutation(
-        serialize_transaction_workbook(
-          workbook,
-          budget.max_candidate_package_bytes(),
-        ),
+        serialize_transaction_workbook(workbook, budget),
       )
     },
     validators=[validator],

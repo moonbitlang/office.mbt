@@ -51,6 +51,18 @@ pub const SELECTOR_MAX_SELECTIONS : Int = 32
 
 pub const SELECTOR_MAX_VALUE_LENGTH : Int = 256
 
+pub const XLSX_TRANSACTION_MAX_CANDIDATE_ARCHIVE_BYTES : Int = 25165824
+
+pub const XLSX_TRANSACTION_MAX_CANDIDATE_ENTRY_BYTES : Int = 12582912
+
+pub const XLSX_TRANSACTION_MAX_DECODED_XML_BYTES : Int = 16777216
+
+pub const XLSX_TRANSACTION_MAX_MATERIALIZED_CELLS : Int = 32_768
+
+pub const XLSX_TRANSACTION_MAX_ROW_COLUMN_LINES : Int = 32_768
+
+pub const XLSX_TRANSACTION_MAX_XML_MARKUP_TOKENS : Int = 262_144
+
 pub fn capabilities_data(format? : DocumentFormat, operation? : String) -> Json
 
 pub fn capability_commands() -> Array[CapabilityCommand]

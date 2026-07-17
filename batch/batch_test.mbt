@@ -40,6 +40,53 @@ test "opaque batch plans retain deterministic resource accounting" {
 }
 
 ///|
+test "width ranges consume the aggregate row/column materialization budget" {
+  let accepted = @batch.parse_plan(
+    Json::object({
+      "schema": Json::string("xlsx.batch/1"),
+      "ops": Json::array([
+        Json::object({
+          "op": Json::string("width"),
+          "params": Json::object({
+            "sheet": Json::string("S"),
+            "column": Json::string("A:C"),
+            "width": Json::number(12.0),
+          }),
+        }),
+      ]),
+    }),
+  )
+  assert_eq(accepted.stats().row_column_lines, 3L)
+
+  let ops = []
+  for _ in 0..<62 {
+    ops.push(
+      Json::object({
+        "op": Json::string("width"),
+        "params": Json::object({
+          "sheet": Json::string("S"),
+          "column": Json::string("A:XFD"),
+          "width": Json::number(12.0),
+        }),
+      }),
+    )
+  }
+  try
+    @batch.parse_plan(
+      Json::object({
+        "schema": Json::string("xlsx.batch/1"),
+        "ops": Json::array(ops),
+      }),
+    )
+  catch {
+    BatchError(message) =>
+      assert_true(message.contains("row/column mutations touch past"))
+  } noraise {
+    _ => fail("expected width ranges to consume the row/column budget")
+  }
+}
+
+///|
 test "encoded batch boundary rejects oversized, invalid UTF-8 and long numbers" {
   try
     @batch.parse_script_bytes(
@@ -167,6 +214,32 @@ test "batch plans cap aggregate style records" {
   } noraise {
     _ => fail("expected aggregate style-record rejection")
   }
+}
+
+///|
+test "style-free conditional formats do not consume differential-style budget" {
+  let ops = []
+  for index in 0..<=@batch.MAX_TOTAL_NEW_STYLES {
+    ops.push(
+      Json::object({
+        "op": Json::string("cf"),
+        "params": Json::object({
+          "sheet": Json::string("S"),
+          "range": Json::string("A\{index + 1}"),
+          "type": Json::string("data_bar"),
+          "bar_color": Json::string("638EC6"),
+        }),
+      }),
+    )
+  }
+  let plan = @batch.parse_plan(
+    Json::object({
+      "schema": Json::string("xlsx.batch/1"),
+      "ops": Json::array(ops),
+    }),
+  )
+  assert_eq(plan.operation_count(), @batch.MAX_TOTAL_NEW_STYLES + 1)
+  assert_eq(plan.stats().new_style_records, 0)
 }
 
 ///|

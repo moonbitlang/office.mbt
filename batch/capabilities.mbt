@@ -1,9 +1,8 @@
-// The machine-readable capability descriptor for `xlsx.batch/1`: the ops
-// this build accepts and their params. An agent generating a script can
-// query it (`xlsx capabilities`) and adapt, instead of guessing whether a
-// given CLI supports a given op. This is the forward-compatibility escape
-// hatch — new ops appear here on newer builds; the JSON script contract
-// itself stays backward-compatible.
+// The machine-readable capability descriptor for `xlsx.batch/1`: the ops and
+// parameters accepted by this exact build. Agents query it (`xlsx
+// capabilities`) instead of assuming a vocabulary or limit set. Before the
+// schema is declared stable, newer builds may intentionally revise the
+// contract without compatibility aliases.
 
 ///|
 /// Schema id of the `capabilities` payload (see docs/agent-json-schemas.md).

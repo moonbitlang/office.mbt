@@ -110,6 +110,59 @@ test "direct XLSX reads reject OPC-derivable part names" {
 }
 
 ///|
+test "bounded reads cap materialized cells across worksheets" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("One"))
+  ignore(workbook.add_sheet("Two"))
+  workbook.set_cell("One", "A1", "first")
+  workbook.set_cell("Two", "A1", "second")
+  let bytes = @xlsx.write(workbook)
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(
+      bytes,
+      limits=@xlsx.ReadLimits::with_values(max_materialized_cells=1),
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="materialized_cells")
+      assert_eq(limit, 1)
+      assert_eq(actual, 2)
+    }
+    _ => fail("expected aggregate materialized-cell limit")
+  }
+}
+
+///|
+test "bounded reads cap retained row and column dimensions across worksheets" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("One"))
+  ignore(workbook.add_sheet("Two"))
+  workbook.set_row_height("One", 1, 20.0)
+  workbook.set_col_width("Two", 1, 12.0)
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(
+      @xlsx.write(workbook),
+      limits=@xlsx.ReadLimits::with_values(
+        max_materialized_row_column_dimensions=1,
+      ),
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="materialized_row_column_dimensions")
+      assert_eq(limit, 1)
+      assert_eq(actual, 2)
+    }
+    _ => fail("expected aggregate row/column-dimension limit")
+  }
+}
+
+///|
 test "archive read rejects compatibility and constructed archives" {
   let bytes = bounded_workbook_fixture()
   for archive in [@zip.read(bytes), @zip.Archive::new()] {

@@ -134,10 +134,10 @@ fn checked_xlsx_create_options(
 async fn run_create_xlsx(matches : @argparse.Matches) -> Unit {
   let output = required_value(matches, "output")
   let sheet = optional_value(matches, "sheet").unwrap_or("Sheet1")
-  let result = @office_xlsx.create_workbook(
-    checked_xlsx_create_options(matches),
-    sheet,
-  ) catch {
+  // Keep normalized option failures outside the operation catch so its generic
+  // arm cannot rewrite an intentional `CliFailure` as a create failure.
+  let options = checked_xlsx_create_options(matches)
+  let result = @office_xlsx.create_workbook(options, sheet) catch {
     @transaction.TransactionError(..) as error =>
       raise transaction_failure(error)
     error if @async.is_being_cancelled() => raise error
@@ -163,10 +163,10 @@ async fn run_xlsx_batch(matches : @argparse.Matches) -> Unit {
   let plan = @office_xlsx.parse_batch(encoded) catch {
     BatchError(message) => raise xlsx_batch_failure(message, script)
   }
-  let result = @office_xlsx.transact_batch(
-    checked_transaction_options(matches),
-    plan,
-  ) catch {
+  // `checked_transaction_options` already maps stable argument failures into
+  // `CliFailure`; evaluate it before the catch that normalizes operation bugs.
+  let options = checked_transaction_options(matches)
+  let result = @office_xlsx.transact_batch(options, plan) catch {
     @transaction.TransactionError(..) as error =>
       raise transaction_failure(error)
     error if @async.is_being_cancelled() => raise error

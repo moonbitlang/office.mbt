@@ -1,4 +1,70 @@
 ///|
+/// A UTF-8-byte-counted XML builder for the potentially large worksheet and
+/// shared-string parts. The ceiling is checked before appending each fragment,
+/// so these parts cannot first grow past a bounded-write entry allowance.
+priv struct LimitedXmlBuilder {
+  builder : StringBuilder
+  maximum : Int?
+  mut encoded_bytes : Int
+}
+
+///|
+fn LimitedXmlBuilder::new(maximum : Int?) -> LimitedXmlBuilder {
+  { builder: StringBuilder::new(), maximum, encoded_bytes: 0 }
+}
+
+///|
+fn xml_utf8_length_within(value : StringView, maximum : Int) -> Int? {
+  let mut length = 0
+  for character in value {
+    let scalar = character.to_int()
+    let width = if scalar <= 0x7F {
+      1
+    } else if scalar <= 0x7FF {
+      2
+    } else if scalar <= 0xFFFF {
+      3
+    } else {
+      4
+    }
+    if width > maximum - length {
+      return None
+    }
+    length = length + width
+  }
+  Some(length)
+}
+
+///|
+fn LimitedXmlBuilder::write_view(
+  self : LimitedXmlBuilder,
+  value : StringView,
+) -> Unit raise XlsxError {
+  match self.maximum {
+    Some(maximum) => {
+      let remaining = maximum - self.encoded_bytes
+      let fragment_bytes = match xml_utf8_length_within(value, remaining) {
+        Some(length) => length
+        None =>
+          raise ResourceLimitExceeded(
+            kind="entry_uncompressed_bytes",
+            limit=maximum,
+            actual=bounded_actual_above_limit(maximum),
+          )
+      }
+      self.builder.write_view(value)
+      self.encoded_bytes = self.encoded_bytes + fragment_bytes
+    }
+    None => self.builder.write_view(value)
+  }
+}
+
+///|
+fn LimitedXmlBuilder::to_string(self : LimitedXmlBuilder) -> String {
+  self.builder.to_string()
+}
+
+///|
 fn write_workbook_protection_xml(protection : WorkbookProtection) -> String {
   let sb = StringBuilder::new()
   sb.write_view("  <workbookProtection")
@@ -34,8 +100,12 @@ fn write_workbook_protection_xml(protection : WorkbookProtection) -> String {
 fn write_shared_strings_xml(
   values : Array[SharedStringEntry],
   total_count : Int,
-) -> String {
-  fn write_rich_text_color(sb : StringBuilder, font : RichTextFont) -> Unit {
+  max_bytes? : Int,
+) -> String raise XlsxError {
+  fn write_rich_text_color(
+    sb : LimitedXmlBuilder,
+    font : RichTextFont,
+  ) -> Unit raise XlsxError {
     let tint = match font.color_tint {
       Some(v) => if v == 0.0 { None } else { Some(v) }
       None => None
@@ -83,7 +153,7 @@ fn write_shared_strings_xml(
     }
   }
 
-  let sb = StringBuilder::new()
+  let sb = LimitedXmlBuilder::new(max_bytes)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" count=\"\{total_count}\" uniqueCount=\"\{values.length()}\">\n",
@@ -1751,6 +1821,7 @@ fn write_worksheet_xml(
   slicer_rel_ids_x15 : ArrayView[Int],
   legacy_drawing_rel_id : Int?,
   legacy_drawing_hf_rel_id : Int?,
+  max_bytes? : Int,
 ) -> String raise XlsxError {
   fn write_worksheet_ext_lst_xml(
     slicer_rel_ids_x14 : ArrayView[Int],
@@ -1758,10 +1829,10 @@ fn write_worksheet_xml(
     sparkline_groups : ArrayView[SparklineGroup],
     x14_data_bars : Map[String, X14DataBarProps],
     unknown_ext_blocks : ArrayView[String],
-  ) -> String? {
+  ) -> String? raise XlsxError {
     fn write_x14_conditional_formattings_ext_block_xml(
       x14_data_bars : Map[String, X14DataBarProps],
-    ) -> String? {
+    ) -> String? raise XlsxError {
       let by_sqref : Map[String, Array[(String, X14DataBarProps)]] = Map([])
       for id, props in x14_data_bars {
         if props.bar_direction == "" &&
@@ -1780,7 +1851,7 @@ fn write_worksheet_xml(
       if by_sqref.length() == 0 {
         return None
       }
-      let sb = StringBuilder::new()
+      let sb = LimitedXmlBuilder::new(max_bytes)
       sb.write_view(
         "    <ext uri=\"{78C0D931-6437-407d-A8EE-F0AAD7539E65}\">\n",
       )
@@ -1845,7 +1916,7 @@ fn write_worksheet_xml(
     if has_sparklines && !has_slicers && !has_conditional && !has_unknown {
       return Some(write_sparkline_ext_xml(sheet.name(), sparkline_groups))
     }
-    let sb = StringBuilder::new()
+    let sb = LimitedXmlBuilder::new(max_bytes)
     sb.write_view("  <extLst>\n")
     match cond_fmt_ext {
       Some(block) => sb.write_view(block)
@@ -1900,7 +1971,7 @@ fn write_worksheet_xml(
     Some(sb.to_string())
   }
 
-  let sb = StringBuilder::new()
+  let sb = LimitedXmlBuilder::new(max_bytes)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   let needs_rels = drawing_rel_id is Some(_) ||
     table_rel_ids.length() > 0 ||
@@ -2493,10 +2564,79 @@ fn write_theme_xml(theme_colors : Array[String]?) -> String {
 }
 
 ///|
+/// Archive builder used by bounded writes. Limits are checked before
+/// `Archive::add` takes its defensive payload copy, so aggregate growth cannot
+/// first materialize an oversized retained archive and only fail at ZIP output.
+priv struct WriteArchiveBuilder {
+  archive : @zip.Archive
+  limits : WriteLimits?
+  mut entry_count : Int
+  mut total_uncompressed_bytes : Int
+}
+
+///|
+fn WriteArchiveBuilder::new(limits : WriteLimits?) -> WriteArchiveBuilder {
+  {
+    archive: @zip.Archive::new(),
+    limits,
+    entry_count: 0,
+    total_uncompressed_bytes: 0,
+  }
+}
+
+///|
+fn WriteArchiveBuilder::add(
+  self : WriteArchiveBuilder,
+  name : String,
+  data : BytesView,
+) -> Unit raise XlsxError {
+  match self.limits {
+    Some(limits) => {
+      if self.entry_count >= limits.max_archive_entries {
+        raise ResourceLimitExceeded(
+          kind="entry_count",
+          limit=limits.max_archive_entries,
+          actual=bounded_actual_above_limit(limits.max_archive_entries),
+        )
+      }
+      let next_entry_count = self.entry_count + 1
+      let size = data.length()
+      if size > limits.max_entry_uncompressed_bytes {
+        raise ResourceLimitExceeded(
+          kind="entry_uncompressed_bytes",
+          limit=limits.max_entry_uncompressed_bytes,
+          actual=size,
+        )
+      }
+      if size >
+        limits.max_total_uncompressed_bytes - self.total_uncompressed_bytes {
+        raise ResourceLimitExceeded(
+          kind="total_uncompressed_bytes",
+          limit=limits.max_total_uncompressed_bytes,
+          actual=bounded_actual_above_limit(limits.max_total_uncompressed_bytes),
+        )
+      }
+      let next_total = self.total_uncompressed_bytes + size
+      self.entry_count = next_entry_count
+      self.total_uncompressed_bytes = next_total
+    }
+    None => ()
+  }
+  self.archive.add(name, data)
+}
+
+///|
+fn WriteArchiveBuilder::finish(self : WriteArchiveBuilder) -> @zip.Archive {
+  self.archive
+}
+
+///|
 fn write_with_io(
   workbook : Workbook,
   io_context : WorkbookIOContext,
+  limits? : WriteLimits,
 ) -> Bytes raise XlsxError {
+  let max_bytes = limits.map(policy => policy.max_entry_uncompressed_bytes)
   let (shared_strings, string_map, rich_text_map, total_count) = collect_shared_strings(
     workbook,
   )
@@ -2553,7 +2693,7 @@ fn write_with_io(
     }
     None => ()
   }
-  let archive = @zip.Archive::new()
+  let archive = WriteArchiveBuilder::new(limits)
   archive.add(
     root_rels_part_path,
     @encoding/utf8.encode(manifest.root_rels_xml()),
@@ -3010,6 +3150,7 @@ fn write_with_io(
       slicer_rel_ids_x15,
       legacy_drawing_rel_id,
       legacy_drawing_hf_rel_id,
+      max_bytes?,
     )
     archive.add(worksheet_part_path(sheet_id), @encoding/utf8.encode(sheet_xml))
     if drawing_rel_id is Some(_) ||
@@ -3366,7 +3507,7 @@ fn write_with_io(
     archive.add(
       shared_strings_part_path,
       @encoding/utf8.encode(
-        write_shared_strings_xml(shared_strings, total_count),
+        write_shared_strings_xml(shared_strings, total_count, max_bytes?),
       ),
     )
   }
@@ -3432,14 +3573,28 @@ fn write_with_io(
     content_types_part_path,
     @encoding/utf8.encode(manifest.content_types_xml()),
   )
-  match io_context.zip_writer {
-    Some(writer) =>
-      writer(archive) catch {
+  let archive = archive.finish()
+  match limits {
+    Some(policy) =>
+      @zip.write_limited(archive, max_output_bytes=policy.max_output_bytes) catch {
+        OutputLimitExceeded(limit~) =>
+          raise ResourceLimitExceeded(
+            kind="output_bytes",
+            limit~,
+            actual=bounded_actual_above_limit(limit),
+          )
         err => raise UnsupportedFeature(msg=repr(err))
       }
     None =>
-      @zip.write(archive) catch {
-        err => raise UnsupportedFeature(msg=repr(err))
+      match io_context.zip_writer {
+        Some(writer) =>
+          writer(archive) catch {
+            err => raise UnsupportedFeature(msg=repr(err))
+          }
+        None =>
+          @zip.write(archive) catch {
+            err => raise UnsupportedFeature(msg=repr(err))
+          }
       }
   }
 }
@@ -3447,6 +3602,19 @@ fn write_with_io(
 ///|
 pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
   write_with_io(workbook, workbook_io_context(workbook))
+}
+
+///|
+/// Serializes a workbook under a fail-closed construction and output policy.
+/// Generated parts are bounded before archive retention, then the ZIP writer
+/// proves the final package size before allocating its output buffer. A custom
+/// zip writer installed on the workbook is intentionally bypassed so it cannot
+/// weaken this policy.
+pub fn write_limited(
+  workbook : Workbook,
+  limits : WriteLimits,
+) -> Bytes raise XlsxError {
+  write_with_io(workbook, workbook_io_context(workbook), limits~)
 }
 
 ///|
