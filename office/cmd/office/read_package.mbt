@@ -33,6 +33,29 @@ struct OfficeReadPackage {
 }
 
 ///|
+fn check_office_read_cancelled(cancelled : () -> Bool) -> Unit raise CliFailure {
+  if cancelled() {
+    raise CliFailure(
+      @lib.protocol_error("office.cancelled", "Office read was cancelled"),
+    )
+  }
+}
+
+///|
+fn detect_office_archive_format(
+  file : String,
+  archive : @zip.Archive,
+  cancelled : () -> Bool,
+) -> @lib.DocumentFormat raise CliFailure {
+  check_office_read_cancelled(cancelled)
+  let format = @lib.detect_archive_format(file, archive) catch {
+    error => raise CliFailure(identify_error(error, file))
+  }
+  check_office_read_cancelled(cancelled)
+  format
+}
+
+///|
 fn office_read_format_hint(
   file : String,
 ) -> @lib.DocumentFormat raise CliFailure {
@@ -99,6 +122,7 @@ async fn read_office_package(
   file : String,
   cancelled? : () -> Bool = () => false,
 ) -> OfficeReadPackage {
+  check_office_read_cancelled(cancelled)
   let expected = office_read_format_hint(file)
   let data = read_bounded_file(
     file,
@@ -119,9 +143,7 @@ async fn read_office_package(
     error if cancelled() => raise error
     error => raise office_zip_read_failure(error, file, expected)
   }
-  let format = @lib.detect_archive_format(file, archive) catch {
-    error => raise CliFailure(identify_error(error, file))
-  }
+  let format = detect_office_archive_format(file, archive, cancelled)
   { file, format, archive }
 }
 

@@ -85,9 +85,11 @@ async fn run_identify(matches : @argparse.Matches) -> Unit {
         ),
       )
   }
+  check_office_read_cancelled(() => @async.is_being_cancelled())
   let format = @lib.detect_format(file, data) catch {
     error => raise CliFailure(identify_error(error, file))
   }
+  check_office_read_cancelled(() => @async.is_being_cancelled())
   if matches.flags.get_or_default("json", false) {
     println(
       @lib.output_success(

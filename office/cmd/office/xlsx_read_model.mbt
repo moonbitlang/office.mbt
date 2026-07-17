@@ -127,6 +127,15 @@ fn xlsx_resource_failure(
 }
 
 ///|
+/// Checks the retained command cancellation callback at synchronous
+/// projection boundaries and reports the stable protocol error.
+fn XlsxProjection::checkpoint(self : XlsxProjection) -> Unit raise CliFailure {
+  if (self.cancelled)() {
+    raise xlsx_cli_failure("office.cancelled", "XLSX read was cancelled")
+  }
+}
+
+///|
 fn xlsx_scan_resource_failure(
   resource : String,
   limit : Int,
@@ -338,6 +347,7 @@ fn XlsxProjection::check_scan_rect(
   self : XlsxProjection,
   rect : XlsxRect,
 ) -> Unit raise CliFailure {
+  self.checkpoint()
   let actual = rect.cell_count()
   if actual > self.max_scan_cells.to_int64() {
     raise xlsx_scan_resource_failure(
@@ -416,17 +426,13 @@ fn XlsxSheetTarget::shared_formula_master(
   worksheet : @xlsx.Worksheet,
   shared_index : UInt,
 ) -> @xlsx.SharedFormulaMaster raise CliFailure {
+  projection.checkpoint()
   if !self.shared_formulas_indexed {
-    if (projection.cancelled)() {
-      raise xlsx_cli_failure("office.cancelled", "XLSX read was cancelled")
-    }
     let masters = xlsx_call(projection.file, () => {
       worksheet.shared_formula_masters()
     })
     for index, formula in masters {
-      if (projection.cancelled)() {
-        raise xlsx_cli_failure("office.cancelled", "XLSX read was cancelled")
-      }
+      projection.checkpoint()
       self.shared_formula_masters[index] = formula
     }
     self.shared_formulas_indexed = true
@@ -450,6 +456,7 @@ fn resolve_xlsx_selector(
   projection : XlsxProjection,
   input : String,
 ) -> XlsxResolvedSelector raise CliFailure {
+  projection.checkpoint()
   let selector = @lib.parse_selector(input) catch {
     error => raise selector_failure(error)
   }
@@ -511,6 +518,7 @@ fn xlsx_scan_regions(
   projection : XlsxProjection,
   under : XlsxResolvedSelector?,
 ) -> Array[XlsxScanRegion] raise CliFailure {
+  projection.checkpoint()
   let regions : Array[XlsxScanRegion] = []
   match under {
     Some(Cell(sheet, rect, ..)) | Some(Range(sheet, rect, ..)) =>
@@ -526,6 +534,7 @@ fn xlsx_scan_regions(
       }
     Some(Workbook(..)) | None =>
       for sheet in projection.sheets {
+        projection.checkpoint()
         match sheet.content {
           Worksheet(worksheet) =>
             match xlsx_used_rect(worksheet) {
@@ -538,6 +547,7 @@ fn xlsx_scan_regions(
   }
   let mut total = 0L
   for region in regions {
+    projection.checkpoint()
     total += region.rect.cell_count()
     if total > projection.max_scan_cells.to_int64() {
       raise xlsx_scan_resource_failure(
@@ -598,6 +608,7 @@ fn XlsxFormatBudget::charge_style(
   projection : XlsxProjection,
   style_id : Int,
 ) -> Unit raise CliFailure {
+  projection.checkpoint()
   let style = xlsx_call(projection.file, () => {
     projection.workbook.get_style(style_id)
   })
@@ -613,6 +624,7 @@ fn XlsxFormatBudget::charge_style(
     )
   }
   self.used += cost
+  projection.checkpoint()
 }
 
 ///|
@@ -669,7 +681,8 @@ fn xlsx_cell_formula(
   row : Int,
   column : Int,
 ) -> (String?, Bool) raise CliFailure {
-  match
+  projection.checkpoint()
+  let result = match
     xlsx_call(projection.file, () => {
       worksheet.get_cell_formula_info_rc(row, column)
     }) {
@@ -701,6 +714,8 @@ fn xlsx_cell_formula(
         info.cached_value_present,
       )
   }
+  projection.checkpoint()
+  result
 }
 
 ///|
@@ -730,6 +745,7 @@ fn xlsx_cell_snapshot(
   let style_id = xlsx_call(projection.file, () => {
     worksheet.effective_style_id_rc(row, column)
   })
+  projection.checkpoint()
   let snapshot : XlsxCellSnapshot = {
     path: canonical_xlsx_cell_path(sheet.name, reference),
     reference,
@@ -756,6 +772,7 @@ fn XlsxCellSnapshot::ensure_formatted(
   projection : XlsxProjection,
   budget : XlsxScanBudget,
 ) -> Unit raise CliFailure {
+  projection.checkpoint()
   if self.formatted_ready {
     return
   }
@@ -784,6 +801,7 @@ fn XlsxCellSnapshot::ensure_formatted(
   }
   self.formatted = formatted
   self.formatted_ready = true
+  projection.checkpoint()
 }
 
 ///|

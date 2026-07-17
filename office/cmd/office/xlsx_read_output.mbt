@@ -25,18 +25,24 @@ fn xlsx_sheet_state_name(state : @xlsx.SheetState) -> String {
 
 ///|
 fn xlsx_conditional_format_range_count(
-  file : String,
+  projection : XlsxProjection,
   worksheet : @xlsx.Worksheet,
 ) -> Int raise CliFailure {
-  let formats = xlsx_call(file, () => worksheet.get_conditional_formats())
+  projection.checkpoint()
+  let formats = xlsx_call(projection.file, () => {
+    worksheet.get_conditional_formats()
+  })
   let mut count = 0
   for ranges, _ in formats {
+    projection.checkpoint()
     for part in ranges.split(" ") {
+      projection.checkpoint()
       if part.length() > 0 {
         count += 1
       }
     }
   }
+  projection.checkpoint()
   count
 }
 
@@ -46,6 +52,7 @@ fn xlsx_sheet_summary_json(
   sheet : XlsxSheetTarget,
   metadata : XlsxMetadataBudget,
 ) -> Json raise CliFailure {
+  projection.checkpoint()
   metadata.charge_item([sheet.name, sheet.path])
   let fields : Map[String, Json] = {
     "path": Json::string(sheet.path),
@@ -79,12 +86,19 @@ fn xlsx_sheet_summary_json(
         None => ()
       }
       let merges = worksheet.merged_cells()
+      projection.checkpoint()
       let tables = worksheet.tables()
+      projection.checkpoint()
       let comments = worksheet.comments()
+      projection.checkpoint()
       let hyperlinks = worksheet.get_hyperlink_cells()
+      projection.checkpoint()
       let validations = worksheet.data_validations()
+      projection.checkpoint()
       let pivots = worksheet.pivot_tables()
+      projection.checkpoint()
       let slicers = worksheet.slicers()
+      projection.checkpoint()
       fields["counts"] = Json::object({
         "merges": Json::number(merges.length().to_double()),
         "tables": Json::number(tables.length().to_double()),
@@ -95,24 +109,28 @@ fn xlsx_sheet_summary_json(
         "hyperlinks": Json::number(hyperlinks.length().to_double()),
         "data_validations": Json::number(validations.length().to_double()),
         "conditional_format_ranges": Json::number(
-          xlsx_conditional_format_range_count(projection.file, worksheet).to_double(),
+          xlsx_conditional_format_range_count(projection, worksheet).to_double(),
         ),
         "slicers": Json::number(slicers.length().to_double()),
       })
     }
   }
+  projection.checkpoint()
   Json::object(fields)
 }
 
 ///|
 fn xlsx_outline_data(projection : XlsxProjection) -> Json raise CliFailure {
+  projection.checkpoint()
   let metadata = XlsxMetadataBudget::new()
   let sheets : Array[Json] = []
   for sheet in projection.sheets {
+    projection.checkpoint()
     sheets.push(xlsx_sheet_summary_json(projection, sheet, metadata))
   }
   let defined_names : Array[Json] = []
   for defined in projection.workbook.get_defined_names() {
+    projection.checkpoint()
     metadata.charge_item([
       defined.name,
       defined.refers_to,
@@ -148,6 +166,7 @@ fn xlsx_outline_data(projection : XlsxProjection) -> Json raise CliFailure {
     }),
   }
   if !projection.sheets.is_empty() {
+    projection.checkpoint()
     let active_index = projection.workbook.get_active_sheet_index()
     guard projection.sheets.get(active_index) is Some(sheet) else {
       raise xlsx_cli_failure(
@@ -165,6 +184,7 @@ fn xlsx_outline_data(projection : XlsxProjection) -> Json raise CliFailure {
       "index": Json::number((sheet.index + 1).to_double()),
     })
   }
+  projection.checkpoint()
   Json::object(fields)
 }
 
@@ -173,12 +193,15 @@ fn xlsx_outline_payload(
   projection : XlsxProjection,
   max_output_chars : Int,
 ) -> BoundedOfficePayload raise CliFailure {
-  bounded_office_payload(
+  projection.checkpoint()
+  let payload = bounded_office_payload(
     xlsx_outline_data(projection),
     [],
     max_output_chars,
     "xlsx",
   )
+  projection.checkpoint()
+  payload
 }
 
 ///|
@@ -238,8 +261,10 @@ fn xlsx_styles_json(
   projection : XlsxProjection,
   cells : Array[XlsxCellSnapshot],
 ) -> Json raise CliFailure {
+  projection.checkpoint()
   let fields : Map[String, Json] = Map([])
   for cell in cells {
+    projection.checkpoint()
     if cell.style_id != 0 {
       let key = cell.style_id.to_string()
       if !fields.contains(key) {
@@ -250,7 +275,22 @@ fn xlsx_styles_json(
       }
     }
   }
+  projection.checkpoint()
   Json::object(fields)
+}
+
+///|
+fn xlsx_cells_json(
+  projection : XlsxProjection,
+  cells : Array[XlsxCellSnapshot],
+) -> Array[Json] raise CliFailure {
+  let values : Array[Json] = []
+  for cell in cells {
+    projection.checkpoint()
+    values.push(xlsx_cell_json(cell))
+  }
+  projection.checkpoint()
+  values
 }
 
 ///|
@@ -311,6 +351,7 @@ fn collect_xlsx_cell_page(
   limit : Int,
   format_work_maximum? : Int = xlsx_cli_max_format_work_units,
 ) -> XlsxCellPage raise CliFailure {
+  projection.checkpoint()
   let scan = XlsxScanBudget::new(
     projection.max_scan_cells,
     format_work_maximum~,
@@ -319,6 +360,7 @@ fn collect_xlsx_cell_page(
   let cells : Array[XlsxCellSnapshot] = []
   let mut matched = 0
   for region in regions {
+    projection.checkpoint()
     for row in region.rect.row_lo..<=region.rect.row_hi {
       for column in region.rect.col_lo..<=region.rect.col_hi {
         let cell = xlsx_cell_snapshot(
@@ -341,6 +383,7 @@ fn collect_xlsx_cell_page(
       }
     }
   }
+  projection.checkpoint()
   { cells, matched_total: matched, scanned_cells: scan.scanned, offset, limit }
 }
 
@@ -363,6 +406,7 @@ fn xlsx_get_data(
   projection : XlsxProjection,
   resolved : XlsxResolvedSelector,
 ) -> Json raise CliFailure {
+  projection.checkpoint()
   match resolved {
     Workbook(path~) => {
       let outline = xlsx_outline_data(projection)
@@ -448,7 +492,7 @@ fn xlsx_get_data(
         "stability": Json::string("snapshot-relative"),
         "parent": Json::string(sheet.path),
         "reference": Json::string(rect.range_reference(projection.file)),
-        "cells": Json::array(page.cells.map(xlsx_cell_json)),
+        "cells": Json::array(xlsx_cells_json(projection, page.cells)),
         "styles": xlsx_styles_json(projection, page.cells),
         "scanned_cells": Json::number(page.scanned_cells.to_double()),
         "returned": Json::number(page.cells.length().to_double()),
@@ -463,12 +507,15 @@ fn xlsx_get_payload(
   resolved : XlsxResolvedSelector,
   max_output_chars : Int,
 ) -> BoundedOfficePayload raise CliFailure {
-  bounded_office_payload(
+  projection.checkpoint()
+  let payload = bounded_office_payload(
     xlsx_get_data(projection, resolved),
     [],
     max_output_chars,
     "xlsx",
   )
+  projection.checkpoint()
+  payload
 }
 
 ///|
@@ -478,6 +525,7 @@ fn xlsx_text_data(
   offset : Int,
   limit : Int,
 ) -> Json raise CliFailure {
+  projection.checkpoint()
   let page = collect_xlsx_cell_page(
     projection,
     xlsx_scan_regions(projection, under),
@@ -487,6 +535,7 @@ fn xlsx_text_data(
   )
   let entries : Array[Json] = []
   for cell in page.cells {
+    projection.checkpoint()
     guard xlsx_cell_text(cell) is Some(text) else { continue }
     entries.push(
       Json::object({
@@ -496,6 +545,7 @@ fn xlsx_text_data(
       }),
     )
   }
+  projection.checkpoint()
   let fields = xlsx_page_fields(page)
   fields["schema"] = Json::string(@lib.SCHEMA_XLSX_TEXT)
   fields["file"] = Json::string(projection.file)
@@ -516,12 +566,15 @@ fn xlsx_text_payload(
   limit : Int,
   max_output_chars : Int,
 ) -> BoundedOfficePayload raise CliFailure {
-  bounded_office_payload(
+  projection.checkpoint()
+  let payload = bounded_office_payload(
     xlsx_text_data(projection, under, offset, limit),
     [],
     max_output_chars,
     "xlsx",
   )
+  projection.checkpoint()
+  payload
 }
 
 ///|
@@ -530,6 +583,7 @@ fn xlsx_query_data(
   under : XlsxResolvedSelector?,
   spec : XlsxQuerySpec,
 ) -> Json raise CliFailure {
+  projection.checkpoint()
   let page = collect_xlsx_cell_page(
     projection,
     xlsx_scan_regions(projection, under),
@@ -542,7 +596,7 @@ fn xlsx_query_data(
   fields["file"] = Json::string(projection.file)
   fields["format"] = Json::string("xlsx")
   fields["selector"] = Json::string(spec.selector)
-  fields["matches"] = Json::array(page.cells.map(xlsx_cell_json))
+  fields["matches"] = Json::array(xlsx_cells_json(projection, page.cells))
   fields["styles"] = xlsx_styles_json(projection, page.cells)
   match under {
     Some(value) => fields["under"] = Json::string(value.path())
@@ -558,12 +612,15 @@ fn xlsx_query_payload(
   spec : XlsxQuerySpec,
   max_output_chars : Int,
 ) -> BoundedOfficePayload raise CliFailure {
-  bounded_office_payload(
+  projection.checkpoint()
+  let payload = bounded_office_payload(
     xlsx_query_data(projection, under, spec),
     [],
     max_output_chars,
     "xlsx",
   )
+  projection.checkpoint()
+  payload
 }
 
 ///|
@@ -571,6 +628,7 @@ fn xlsx_outline_human(
   projection : XlsxProjection,
   maximum : Int,
 ) -> String raise CliFailure {
+  projection.checkpoint()
   let output = DocxHumanWriter::new(maximum, format="xlsx")
   output.begin_line()
   output.write_plain("xlsx: ")
@@ -579,6 +637,7 @@ fn xlsx_outline_human(
   output.write_plain("workbook\t/xlsx/workbook\t")
   output.write_plain("\{projection.sheets.length()} sheets")
   for sheet in projection.sheets {
+    projection.checkpoint()
     output.begin_line()
     output.write_terminal_safe(sheet.path)
     output.write_char('\t')
@@ -597,17 +656,21 @@ fn xlsx_outline_human(
       }
     }
   }
+  projection.checkpoint()
   output.finish()
 }
 
 ///|
 fn xlsx_page_human(
+  projection : XlsxProjection,
   page : XlsxCellPage,
   include_kind : Bool,
   maximum : Int,
 ) -> String raise CliFailure {
+  projection.checkpoint()
   let output = DocxHumanWriter::new(maximum, format="xlsx")
   for cell in page.cells {
+    projection.checkpoint()
     output.begin_line()
     output.write_terminal_safe(cell.path)
     if include_kind {
@@ -625,6 +688,7 @@ fn xlsx_page_human(
   output.write_plain(
     "# matched \{page.matched_total}; returned \{page.cells.length()}; scanned \{page.scanned_cells}; offset \{page.offset}",
   )
+  projection.checkpoint()
   output.finish()
 }
 
@@ -634,14 +698,17 @@ fn xlsx_get_human(
   resolved : XlsxResolvedSelector,
   maximum : Int,
 ) -> String raise CliFailure {
+  projection.checkpoint()
   match resolved {
     Workbook(..) => xlsx_outline_human(projection, maximum)
     Sheet(sheet) => {
+      projection.checkpoint()
       let output = DocxHumanWriter::new(maximum, format="xlsx")
       output.begin_line()
       output.write_terminal_safe(sheet.path)
       output.write_char('\t')
       output.write_terminal_safe(sheet.name, single_line=true)
+      projection.checkpoint()
       output.finish()
     }
     Cell(sheet, rect, path~) => {
@@ -659,10 +726,11 @@ fn xlsx_get_human(
           details=Json::object({ "selector": Json::string(path) }),
         )
       }
-      xlsx_page_human(page, false, maximum)
+      xlsx_page_human(projection, page, false, maximum)
     }
     Range(sheet, rect, ..) =>
       xlsx_page_human(
+        projection,
         collect_xlsx_cell_page(
           projection,
           [{ sheet, rect }],
@@ -685,6 +753,7 @@ fn xlsx_text_human(
   maximum : Int,
 ) -> String raise CliFailure {
   xlsx_page_human(
+    projection,
     collect_xlsx_cell_page(
       projection,
       xlsx_scan_regions(projection, under),
@@ -705,6 +774,7 @@ fn xlsx_query_human(
   maximum : Int,
 ) -> String raise CliFailure {
   xlsx_page_human(
+    projection,
     collect_xlsx_cell_page(
       projection,
       xlsx_scan_regions(projection, under),

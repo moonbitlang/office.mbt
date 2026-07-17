@@ -53,6 +53,58 @@ test "XLSX CLI preserves parser cancellation and checkpoints cell scans" {
 }
 
 ///|
+test "XLSX post-projection metadata, styles, and human output observe cancellation" {
+  let projection = { ..xlsx_read_test_projection(), cancelled: () => true }
+  guard projection.sheets[0].content is Worksheet(worksheet) else {
+    fail("expected worksheet fixture")
+  }
+  for
+    action in [
+      () => ignore(xlsx_outline_data(projection)),
+      () => ignore(xlsx_conditional_format_range_count(projection, worksheet)),
+      () => ignore(xlsx_styles_json(projection, [])),
+      () => ignore(xlsx_outline_human(projection, 10_000)),
+      () => {
+        ignore(
+          xlsx_page_human(
+            projection,
+            {
+              cells: [],
+              matched_total: 0,
+              scanned_cells: 0,
+              offset: 0,
+              limit: 0,
+            },
+            false,
+            10_000,
+          ),
+        )
+      },
+    ] {
+    let error = xlsx_cli_error(() => action())
+    assert_eq(error.code, "office.cancelled")
+  }
+}
+
+///|
+test "Office format detection probes cancellation before and after validation" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let source = xlsx_bounded_test_source("cancel.xlsx", @xlsx.write(workbook))
+  let mut checks = 0
+  let error = xlsx_cli_error(() => {
+    ignore(
+      detect_office_archive_format(source.file, source.archive, () => {
+        checks += 1
+        checks > 1
+      }),
+    )
+  })
+  assert_eq(error.code, "office.cancelled")
+  assert_eq(checks, 2)
+}
+
+///|
 fn xlsx_strict_test_bytes() -> Bytes raise {
   let archive = @zip.Archive::new()
   let content_types =
