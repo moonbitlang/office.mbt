@@ -484,6 +484,35 @@ test "XLSX snapshots preserve and resolve shared-formula followers" {
 }
 
 ///|
+test "XLSX structured reads reject shared-formula followers without a master" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Data")
+  sheet.set_cell_formula_opts(
+    "A1",
+    "D1+1",
+    opts=@xlsx.FormulaOpts::shared("A1:C1"),
+  )
+  let archive = @zip.read(@xlsx.write(workbook))
+  let path = "xl/worksheets/sheet1.xml"
+  let xml = match archive.get(path) {
+    Some(value) => @utf8.decode(value, ignore_bom=true)
+    None => fail("missing shared-formula worksheet")
+  }
+  let master = "<f t=\"shared\" ref=\"A1:C1\" si=\"0\">D1+1</f>"
+  let follower = "<f t=\"shared\" si=\"0\"></f>"
+  let malformed = xml.replace(old=master, new=follower)
+  assert_true(malformed != xml)
+  assert_true(archive.replace(path, @utf8.encode(malformed)))
+  let source = xlsx_bounded_test_source(
+    "missing-shared-master.xlsx",
+    @zip.write(archive),
+  )
+  let error = xlsx_cli_error(() => ignore(open_xlsx_projection(source, 10)))
+  assert_eq(error.code, "office.invalid_package")
+  assert_true(error.message.contains("shared formula follower has no master"))
+}
+
+///|
 test "XLSX formatting is deferred and custom-format work is charged" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.new_sheet("Data"))

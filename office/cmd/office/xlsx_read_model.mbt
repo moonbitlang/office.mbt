@@ -399,7 +399,7 @@ fn XlsxSheetTarget::shared_formula_master(
   projection : XlsxProjection,
   worksheet : @xlsx.Worksheet,
   shared_index : Int,
-) -> @xlsx.SharedFormulaMaster? raise CliFailure {
+) -> @xlsx.SharedFormulaMaster raise CliFailure {
   if !self.shared_formulas_indexed {
     let masters = xlsx_call(projection.file, () => {
       worksheet.shared_formula_masters()
@@ -409,7 +409,18 @@ fn XlsxSheetTarget::shared_formula_master(
     }
     self.shared_formulas_indexed = true
   }
-  self.shared_formula_masters.get(shared_index)
+  match self.shared_formula_masters.get(shared_index) {
+    Some(master) => master
+    None =>
+      raise xlsx_cli_failure(
+        "office.invalid_package",
+        "invalid XLSX package: shared formula follower has no master",
+        details=Json::object({
+          "file": Json::string(bounded_text(projection.file, 160)),
+          "sheet": Json::string(bounded_text(self.name, 160)),
+        }),
+      )
+  }
 }
 
 ///|
@@ -640,22 +651,25 @@ fn xlsx_cell_formula(
       (Some(info.formula), info.cached_value_present)
     Some(info) =>
       (
-        match info.shared_index {
-          Some(shared_index) =>
-            // `Some("")` is intentional when a malformed package has a shared
-            // follower but no resolvable master: preserve formula presence even
-            // when no formula text can be supplied.
-            match
-              sheet.shared_formula_master(projection, worksheet, shared_index) {
-              Some(master) =>
-                Some(
-                  xlsx_call(projection.file, () => {
-                    master.translate_to(row, column)
-                  }),
-                )
-              None => Some("")
-            }
-          None => Some("")
+        match (info.formula_type, info.shared_index) {
+          (Some(Shared), Some(shared_index)) => {
+            let master = sheet.shared_formula_master(
+              projection, worksheet, shared_index,
+            )
+            Some(
+              xlsx_call(projection.file, () => master.translate_to(row, column)),
+            )
+          }
+          (Some(Shared), None) =>
+            raise xlsx_cli_failure(
+              "office.invalid_package",
+              "invalid XLSX package: shared formula index missing",
+              details=Json::object({
+                "file": Json::string(bounded_text(projection.file, 160)),
+                "sheet": Json::string(bounded_text(sheet.name, 160)),
+              }),
+            )
+          _ => Some("")
         },
         info.cached_value_present,
       )

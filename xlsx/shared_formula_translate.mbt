@@ -585,6 +585,18 @@ fn translate_shared_formula(
 }
 
 ///|
+fn SharedFormulaMaster::contains_coordinate(
+  self : SharedFormulaMaster,
+  row : Int,
+  column : Int,
+) -> Bool {
+  row >= self.row_lo &&
+  row <= self.row_hi &&
+  column >= self.column_lo &&
+  column <= self.column_hi
+}
+
+///|
 /// Resolves the formula text represented by this shared master at a follower
 /// coordinate. Coordinates outside the master's declared shared range are
 /// rejected as malformed OOXML.
@@ -594,10 +606,7 @@ pub fn SharedFormulaMaster::translate_to(
   column : Int,
 ) -> String raise XlsxError {
   ignore(cell_ref_from(row, column))
-  if row < self.row_lo ||
-    row > self.row_hi ||
-    column < self.column_lo ||
-    column > self.column_hi {
+  if !self.contains_coordinate(row, column) {
     raise InvalidXml(msg="shared formula follower is outside the master range")
   }
   translate_shared_formula(self.formula, column - self.column, row - self.row)

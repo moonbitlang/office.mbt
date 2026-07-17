@@ -385,15 +385,19 @@ pub fn Worksheet::formula_refs(self : Worksheet) -> Array[String] {
 }
 
 ///|
-/// Returns non-empty shared-formula masters keyed by OOXML shared index.
-/// Followers are deliberately omitted, so master formula text and its copy
-/// anchor are retained only once even for large shared ranges. Conflicting
-/// masters are rejected rather than resolved by iteration order.
-pub fn Worksheet::shared_formula_masters(
-  self : Worksheet,
+/// Indexes and validates one worksheet's shared-formula groups. Followers are
+/// omitted from the returned map, so master formula text and its copy anchor
+/// are retained only once even for large shared ranges.
+fn validated_shared_formula_masters(
+  cells : ArrayView[Cell],
 ) -> Map[Int, SharedFormulaMaster] raise XlsxError {
   let masters : Map[Int, SharedFormulaMaster] = Map([])
-  for cell in self.cells {
+  for cell in cells {
+    match (cell.formula_type, cell.formula_shared_index) {
+      (Some(Shared), Some(shared_index)) if shared_index < 0 =>
+        raise InvalidXml(msg="shared formula index is negative")
+      _ => ()
+    }
     match
       (
         cell.formula_type,
@@ -431,10 +435,39 @@ pub fn Worksheet::shared_formula_masters(
         }
       (Some(Shared), Some(formula), Some(_), None) if formula != "" =>
         raise InvalidXml(msg="shared formula master range missing")
+      (Some(Shared), Some(_), None, _) =>
+        raise InvalidXml(msg="shared formula index missing")
+      (Some(Shared), None, _, _) =>
+        raise InvalidXml(msg="shared formula text missing")
+      _ => ()
+    }
+  }
+  for cell in cells {
+    match (cell.formula_type, cell.formula, cell.formula_shared_index) {
+      (Some(Shared), Some(""), Some(shared_index)) =>
+        match masters.get(shared_index) {
+          Some(master) =>
+            if !master.contains_coordinate(cell.row, cell.col) {
+              raise InvalidXml(
+                msg="shared formula follower is outside the master range",
+              )
+            }
+          None => raise InvalidXml(msg="shared formula follower has no master")
+        }
       _ => ()
     }
   }
   masters
+}
+
+///|
+/// Returns non-empty shared-formula masters keyed by OOXML shared index after
+/// validating that every follower has exactly one master and lies within the
+/// master's declared range. Conflicting or incomplete groups are rejected.
+pub fn Worksheet::shared_formula_masters(
+  self : Worksheet,
+) -> Map[Int, SharedFormulaMaster] raise XlsxError {
+  validated_shared_formula_masters(self.cells)
 }
 
 ///|

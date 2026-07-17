@@ -236,6 +236,9 @@ fn parse_worksheet(
       style_id,
     })
   }
+  // Shared formulas are a worksheet-wide construct: followers carry only an
+  // index, so validate the complete group before exposing a partial model.
+  ignore(validated_shared_formula_masters(cells))
   let merged_cells = parse_merge_cells(xml)
   let auto_filter = parse_auto_filter(xml)
   let row_dimensions = parse_row_dimensions(xml, style_count)
