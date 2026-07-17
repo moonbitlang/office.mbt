@@ -132,6 +132,38 @@ fn xlsx_relocated_test_bytes() -> Bytes raise {
 }
 
 ///|
+fn xlsx_default_declared_relocated_test_bytes() -> Bytes raise {
+  let source = @zip.read(xlsx_relocated_test_bytes())
+  let archive = @zip.Archive::new()
+  let workbook_override =
+    #|<Override PartName="/custom/book.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  let workbook_default =
+    #|<Default Extension="xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  for entry in source.entries() {
+    let data = if entry.name() == "[Content_Types].xml" {
+      let content_types = @utf8.decode(entry.data(), ignore_bom=true)
+      let updated = content_types.replace(
+        old=workbook_override,
+        new=workbook_default,
+      )
+      if updated == content_types {
+        fail("relocated fixture did not contain its workbook override")
+      }
+      @utf8.encode(updated)
+    } else {
+      entry.data().to_owned()
+    }
+    archive.add(
+      entry.name(),
+      data,
+      compression=entry.compression(),
+      data_descriptor=entry.data_descriptor(),
+    )
+  }
+  @zip.write(archive)
+}
+
+///|
 test "XLSX selectors resolve to stable named canonical paths" {
   let projection = xlsx_read_test_projection()
   guard resolve_xlsx_selector(projection, "/xlsx/sheet[2]") is Sheet(second) else {
@@ -217,6 +249,25 @@ test "XLSX structured reads resolve relationships from relocated workbooks" {
   assert_eq(moved_counts.get("images"), Some(Json::number(1)))
   assert_eq(chart.get("kind"), Some(Json::string("chart-sheet")))
   assert_eq(chart_counts.get("charts"), Some(Json::number(1)))
+}
+
+///|
+test "XLSX structured reads retain a default-declared relocated workbook path" {
+  let source = xlsx_bounded_test_source(
+    "relocated-default.xlsx",
+    xlsx_default_declared_relocated_test_bytes(),
+  )
+  assert_true(@lib.detect_archive_format(source.file, source.archive) is Xlsx)
+  let projection = open_xlsx_projection(source, 10)
+  guard xlsx_get_data(
+      projection,
+      resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Moved\"]/cell[A1]"),
+    )
+    is Object(get) &&
+    get.get("cell") is Some(Object(cell)) else {
+    fail("expected default-declared relocated XLSX cell")
+  }
+  assert_eq(cell.get("value"), Some(Json::string("relocated-value")))
 }
 
 ///|

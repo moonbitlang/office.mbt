@@ -3168,7 +3168,7 @@ fn read_zip_archive_core_unchecked(
   }
   let workbook_xml_part_path = actual_archive_part_path(
     part_names,
-    resolve_workbook_xml_part_path(archive, decode),
+    resolve_workbook_xml_part_path(archive, part_names, decode),
   )
   let workbook_bytes = match archive.get(workbook_xml_part_path) {
     Some(value) => value

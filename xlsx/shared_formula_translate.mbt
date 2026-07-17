@@ -482,11 +482,54 @@ fn copy_formula_bracket_token(
 }
 
 ///|
+fn formula_unquoted_sheet_name_char(character : Char) -> Bool {
+  character.is_ascii_alphabetic() ||
+  character.is_ascii_digit() ||
+  character == '_' ||
+  character == '.' ||
+  character == '$' ||
+  character.to_int() > 0x7f
+}
+
+///|
+/// Returns the end of an unquoted 3-D sheet qualifier such as
+/// `Sheet1:Sheet3!`. Sheet names that happen to look like A1 coordinates must
+/// remain opaque; only the cell/range after `!` participates in copy
+/// translation.
+fn formula_unquoted_3d_qualifier_end(
+  chars : ArrayView[Char],
+  start : Int,
+) -> Int? {
+  if start < 0 ||
+    start >= chars.length() ||
+    !formula_reference_start_boundary(chars, start) {
+    return None
+  }
+  let mut index = start
+  while index < chars.length() && formula_unquoted_sheet_name_char(chars[index]) {
+    index += 1
+  }
+  if index == start || index >= chars.length() || chars[index] != ':' {
+    return None
+  }
+  index += 1
+  let second_start = index
+  while index < chars.length() && formula_unquoted_sheet_name_char(chars[index]) {
+    index += 1
+  }
+  if index == second_start || index >= chars.length() || chars[index] != '!' {
+    return None
+  }
+  Some(index + 1)
+}
+
+///|
 /// Applies Excel copy semantics to A1 references while preserving formula
 /// text outside reference tokens. Double-quoted literals, quoted sheet names,
-/// structured-reference brackets, and external-workbook brackets are copied
-/// verbatim. Cell/range, whole-column, and whole-row references honor `$`
-/// anchors; translations outside the XLSX grid become `#REF!`.
+/// unquoted 3-D sheet ranges, structured-reference brackets, and
+/// external-workbook brackets are copied verbatim. Cell/range, whole-column,
+/// and whole-row references honor `$` anchors; translations outside the XLSX
+/// grid become `#REF!`.
 fn translate_shared_formula(
   formula : String,
   column_delta : Int,
@@ -507,6 +550,16 @@ fn translate_shared_formula(
     if character == '[' {
       index = copy_formula_bracket_token(chars, index, out)
       continue
+    }
+    match formula_unquoted_3d_qualifier_end(chars, index) {
+      Some(end) => {
+        for position in index..<end {
+          out.write_char(chars[position])
+        }
+        index = end
+        continue
+      }
+      None => ()
     }
     let translated = match
       translate_formula_cell_reference_at(chars, index, column_delta, row_delta) {
@@ -570,4 +623,16 @@ test "shared formulas emit REF for translated coordinates outside the grid" {
   )
   inspect(translate_shared_formula("A1:B2", -1, 0), content="#REF!:A2")
   inspect(translate_shared_formula("XFD1", 1, 0), content="#REF!")
+}
+
+///|
+test "shared formulas preserve unquoted 3-D sheet qualifiers" {
+  let formula =
+    #|SUM(Q1:Q4!A1)+SUM(Sheet_1:Sheet_4!B2:C3)+SUM([Book.xlsx]Q1:Q4!$D4)
+  inspect(
+    translate_shared_formula(formula, 2, 1),
+    content=(
+      #|SUM(Q1:Q4!C2)+SUM(Sheet_1:Sheet_4!D3:E4)+SUM([Book.xlsx]Q1:Q4!$D5)
+    ),
+  )
 }
