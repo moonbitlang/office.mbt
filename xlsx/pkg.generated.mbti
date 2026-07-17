@@ -1231,6 +1231,9 @@ pub fn ReadLimits::max_materialized_row_column_dimensions(Self) -> Int
 pub fn ReadLimits::max_package_bytes(Self) -> Int
 pub fn ReadLimits::max_parser_items(Self) -> Int
 pub fn ReadLimits::max_parser_work_units(Self) -> Int
+/*
+pub fn ReadLimits::max_row_column_dimension_work(Self) -> Int
+*/
 pub fn ReadLimits::max_total_preserved_source_bytes(Self) -> Int
 pub fn ReadLimits::max_total_uncompressed_bytes(Self) -> Int
 pub fn ReadLimits::max_workbook_sheets(Self) -> Int
@@ -1243,6 +1246,9 @@ pub fn ReadLimits::max_xml_markup_tokens(Self) -> Int
 pub fn ReadLimits::max_xml_part_bytes(Self) -> Int
 pub fn ReadLimits::new() -> Self
 pub fn ReadLimits::with_values(max_package_bytes? : Int, max_archive_entries? : Int, max_entry_uncompressed_bytes? : Int, max_total_uncompressed_bytes? : Int, max_total_preserved_source_bytes? : Int, max_xml_part_bytes? : Int, max_total_xml_bytes? : Int, max_xml_markup_tokens? : Int, max_materialized_cells? : Int, max_materialized_row_column_dimensions? : Int, max_kdf_iterations? : Int) -> Self raise XlsxError
+*/
+/*
+pub fn ReadLimits::with_values(max_package_bytes? : Int, max_archive_entries? : Int, max_entry_uncompressed_bytes? : Int, max_total_uncompressed_bytes? : Int, max_total_preserved_source_bytes? : Int, max_xml_part_bytes? : Int, max_total_xml_bytes? : Int, max_xml_markup_tokens? : Int, max_materialized_cells? : Int, max_materialized_row_column_dimensions? : Int, max_row_column_dimension_work? : Int, max_kdf_iterations? : Int) -> Self raise XlsxError
 */
 
 pub(all) struct RichTextFont {

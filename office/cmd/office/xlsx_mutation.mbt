@@ -68,6 +68,15 @@ fn xlsx_cell_count_text(count : Int64) -> String {
 }
 
 ///|
+fn print_transaction_warnings(report : @transaction.TransactionReport) -> Unit {
+  for warning in report.warning_records() {
+    println(
+      "warning [\{human_text(warning.code, 160)}]: \{human_text(warning.message, 320)}",
+    )
+  }
+}
+
+///|
 fn print_xlsx_create_result(
   matches : @argparse.Matches,
   output : String,
@@ -89,6 +98,7 @@ fn print_xlsx_create_result(
     println(
       "\{human_transaction_status(result.transaction)}: \{subject} \"\{human_text(result.sheet, 80)}\" -> \{human_text(output, 160)}",
     )
+    print_transaction_warnings(result.transaction)
   }
 }
 
@@ -109,6 +119,7 @@ fn print_xlsx_batch_result(
     println(
       "\{human_transaction_status(result.transaction)}: \{xlsx_operation_count_text(result.stats.operation_count)}, \{xlsx_cell_count_text(result.stats.touched_cells)} -> \{human_text(destination, 160)}",
     )
+    print_transaction_warnings(result.transaction)
   }
 }
 
@@ -153,6 +164,9 @@ async fn run_create_xlsx(matches : @argparse.Matches) -> Unit {
 async fn run_xlsx_batch(matches : @argparse.Matches) -> Unit {
   let file = required_value(matches, "file")
   let script = required_value(matches, "script")
+  // Reject structurally invalid CLI combinations before any script I/O so
+  // argument failures are deterministic and independent of the script path.
+  let options = checked_transaction_options(matches)
   let encoded = read_bounded_file(
     script,
     @batch.MAX_BATCH_SCRIPT_BYTES,
@@ -163,9 +177,6 @@ async fn run_xlsx_batch(matches : @argparse.Matches) -> Unit {
   let plan = @office_xlsx.parse_batch(encoded) catch {
     BatchError(message) => raise xlsx_batch_failure(message, script)
   }
-  // `checked_transaction_options` already maps stable argument failures into
-  // `CliFailure`; evaluate it before the catch that normalizes operation bugs.
-  let options = checked_transaction_options(matches)
   let result = @office_xlsx.transact_batch(options, plan) catch {
     @transaction.TransactionError(..) as error =>
       raise transaction_failure(error)

@@ -32,6 +32,8 @@ fn parse_worksheet(
   max_materialized_cells : Int,
   materialized_dimensions : Ref[Int],
   max_materialized_dimensions : Int,
+  dimension_work : Ref[Int],
+  max_dimension_work : Int,
   budget? : ReadBudget,
 ) -> (
   Array[Cell],
@@ -313,10 +315,13 @@ fn parse_worksheet(
     style_count,
     materialized_dimensions,
     max_materialized_dimensions,
+    dimension_work,
+    max_dimension_work,
   )
   worksheet_parse_pass(xml, budget)
   let col_dimensions = parse_col_dimensions(
-    xml, style_count, materialized_dimensions, max_materialized_dimensions,
+    xml, style_count, materialized_dimensions, max_materialized_dimensions, dimension_work,
+    max_dimension_work,
   )
   worksheet_parse_pass(xml, budget)
   let page_margins = parse_page_margins(xml)

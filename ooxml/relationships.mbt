@@ -32,22 +32,30 @@ fn Relationships::add_auto(
 
 ///|
 fn Relationships::to_xml(self : Relationships) -> String {
-  let sb = StringBuilder::new()
+  self.to_xml_with_limit(None).unwrap()
+}
+
+///|
+fn Relationships::to_xml_with_limit(
+  self : Relationships,
+  maximum : Int?,
+) -> String? {
+  let sb = XmlOutputBuilder::new(maximum)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n",
   )
   for item in self.items {
     sb.write_view("  <Relationship Id=\"")
-    sb.write_view(escape_xml_attr(item.id))
+    sb.write_attr(item.id)
     sb.write_view("\" Type=\"")
-    sb.write_view(escape_xml_attr(item.rel_type))
+    sb.write_attr(item.rel_type)
     sb.write_view("\" Target=\"")
-    sb.write_view(escape_xml_attr(item.target))
+    sb.write_attr(item.target)
     match item.target_mode {
       Some(mode) => {
         sb.write_view("\" TargetMode=\"")
-        sb.write_view(escape_xml_attr(mode))
+        sb.write_attr(mode)
         sb.write_view("\"/>")
       }
       None => sb.write_view("\"/>")
@@ -55,7 +63,7 @@ fn Relationships::to_xml(self : Relationships) -> String {
     sb.write_view("\n")
   }
   sb.write_view("</Relationships>")
-  sb.to_string()
+  sb.finish()
 }
 
 ///|

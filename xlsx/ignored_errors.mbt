@@ -54,13 +54,15 @@ fn ignored_error_from_type(
 }
 
 ///|
-fn ignored_error_xml(error : IgnoredError) -> String raise XlsxError {
+fn write_ignored_error_xml(
+  sb : LimitedXmlBuilder,
+  error : IgnoredError,
+) -> Unit raise XlsxError {
   if error.sqref == "" {
     raise InvalidSheetOperation(msg="ignored errors sqref empty")
   }
-  let sb = StringBuilder::new()
   sb.write_view("<ignoredError sqref=\"")
-  sb.write_view(escape_xml_attr(error.sqref))
+  sb.write_xml_attr(error.sqref)
   sb.write_view("\"")
   if error.eval_error {
     sb.write_view(" evalError=\"\{bool_attr(true)}\"")
@@ -90,21 +92,28 @@ fn ignored_error_xml(error : IgnoredError) -> String raise XlsxError {
     sb.write_view(" calculatedColumn=\"\{bool_attr(true)}\"")
   }
   sb.write_view("/>")
+}
+
+///|
+fn ignored_error_xml(error : IgnoredError) -> String raise XlsxError {
+  let sb = LimitedXmlBuilder::new(None)
+  write_ignored_error_xml(sb, error)
   sb.to_string()
 }
 
 ///|
 fn write_ignored_errors_xml(
   errors : ArrayView[IgnoredError],
+  budget? : WritePartBudget,
 ) -> String? raise XlsxError {
   if errors.length() == 0 {
     return None
   }
-  let sb = StringBuilder::new()
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("  <ignoredErrors>\n")
   for error in errors {
     sb.write_view("    ")
-    sb.write_view(ignored_error_xml(error))
+    write_ignored_error_xml(sb, error)
     sb.write_view("\n")
   }
   sb.write_view("  </ignoredErrors>\n")

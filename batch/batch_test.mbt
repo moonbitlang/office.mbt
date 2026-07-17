@@ -493,6 +493,8 @@ test "a table op auto-names and keeps engine defaults when options are omitted" 
     #|{"schema":"xlsx.batch/1","ops":[
     #|  {"op":"table","params":{"sheet":"S","range":"A1:C3"}}
     #|]}
+  let plan = @batch.parse_plan(@json.parse(script))
+  assert_eq(plan.stats().touched_cells, 3L)
   inspect(apply_script(workbook, script), content="1")
   let table = first_table(workbook)
   inspect(table.name, content="Table1")
@@ -505,6 +507,18 @@ test "a table op auto-names and keeps engine defaults when options are omitted" 
   assert_true(table.show_header_row) // Bool? None -> true
   assert_true(table.show_row_stripes) // Bool? None -> true
   assert_false(table.show_first_column) // Bool default -> false
+}
+
+///|
+test "table header synthesis is included in aggregate materialization stats" {
+  let script =
+    #|{"schema":"xlsx.batch/1","ops":[
+    #|  {"op":"table","params":{"sheet":"S","range":"A1:XFD2"}},
+    #|  {"op":"table","params":{"sheet":"S","range":"A4:XFD5"}},
+    #|  {"op":"table","params":{"sheet":"S","range":"A7:XFD8"}}
+    #|]}
+  let plan = @batch.parse_plan(@json.parse(script))
+  assert_eq(plan.stats().touched_cells, 49_152L)
 }
 
 ///|

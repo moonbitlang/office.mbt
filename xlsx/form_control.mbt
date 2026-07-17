@@ -332,8 +332,9 @@ fn write_form_controls_vml(
   sheet_id : Int,
   sheet : Worksheet,
   controls : ArrayView[FormControl],
+  budget? : WritePartBudget,
 ) -> String raise XlsxError {
-  let sb = StringBuilder::new()
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\">\n",
@@ -393,23 +394,43 @@ fn write_form_controls_vml(
     match preset {
       Some(p) => {
         match p.button {
-          Some(v) => sb.write_view(" o:button=\"\{escape_xml_attr(v)}\"")
+          Some(v) => {
+            sb.write_view(" o:button=\"")
+            sb.write_xml_attr(v)
+            sb.write_view("\"")
+          }
           None => ()
         }
         match p.filled {
-          Some(v) => sb.write_view(" filled=\"\{escape_xml_attr(v)}\"")
+          Some(v) => {
+            sb.write_view(" filled=\"")
+            sb.write_xml_attr(v)
+            sb.write_view("\"")
+          }
           None => ()
         }
         match p.fill_color {
-          Some(v) => sb.write_view(" fillcolor=\"\{escape_xml_attr(v)}\"")
+          Some(v) => {
+            sb.write_view(" fillcolor=\"")
+            sb.write_xml_attr(v)
+            sb.write_view("\"")
+          }
           None => ()
         }
         match p.stroked {
-          Some(v) => sb.write_view(" stroked=\"\{escape_xml_attr(v)}\"")
+          Some(v) => {
+            sb.write_view(" stroked=\"")
+            sb.write_xml_attr(v)
+            sb.write_view("\"")
+          }
           None => ()
         }
         match p.stroke_color {
-          Some(v) => sb.write_view(" strokecolor=\"\{escape_xml_attr(v)}\"")
+          Some(v) => {
+            sb.write_view(" strokecolor=\"")
+            sb.write_xml_attr(v)
+            sb.write_view("\"")
+          }
           None => ()
         }
       }
@@ -432,7 +453,7 @@ fn write_form_controls_vml(
       sb.write_view("      <div style=\"text-align:left\">")
       if control.text != "" {
         sb.write_view("<font>")
-        sb.write_view(escape_xml_text(control.text))
+        sb.write_xml_text(control.text)
         sb.write_view("</font>")
       }
       for run in control.paragraph {
@@ -442,7 +463,7 @@ fn write_form_controls_vml(
             match font.family {
               Some(face) => {
                 sb.write_view(" face=\"")
-                sb.write_view(escape_xml_attr(face))
+                sb.write_xml_attr(face)
                 sb.write_view("\"")
               }
               None => ()
@@ -464,7 +485,7 @@ fn write_form_controls_vml(
                   "#\{color}"
                 }
                 sb.write_view(" color=\"")
-                sb.write_view(escape_xml_attr(normalized))
+                sb.write_xml_attr(normalized)
                 sb.write_view("\"")
               }
               None => ()
@@ -473,55 +494,73 @@ fn write_form_controls_vml(
           None => ()
         }
         sb.write_view(">")
-        let mut content = escape_xml_text(run.text) + "<br></br>\r\n"
-        match run.font {
-          Some(font) => {
-            match font.underline {
-              Some("double") => content = "<u class=\"font1\">\{content}</u>"
-              Some("single") => content = "<u>\{content}</u>"
-              Some(_) => ()
-              None => ()
+        let font = run.font
+        match font {
+          Some(value) => {
+            if value.bold {
+              sb.write_view("<b>")
             }
-            if font.italic {
-              content = "<i>\{content}</i>"
+            if value.italic {
+              sb.write_view("<i>")
             }
-            if font.bold {
-              content = "<b>\{content}</b>"
+            match value.underline {
+              Some("double") => sb.write_view("<u class=\"font1\">")
+              Some("single") => sb.write_view("<u>")
+              _ => ()
             }
           }
           None => ()
         }
-        sb.write_view(content)
+        sb.write_xml_text(run.text)
+        sb.write_view("<br></br>\r\n")
+        match font {
+          Some(value) => {
+            match value.underline {
+              Some("double") | Some("single") => sb.write_view("</u>")
+              _ => ()
+            }
+            if value.italic {
+              sb.write_view("</i>")
+            }
+            if value.bold {
+              sb.write_view("</b>")
+            }
+          }
+          None => ()
+        }
         sb.write_view("</font>")
       }
       sb.write_view("</div>\n")
       sb.write_view("    </v:textbox>\n")
     }
     sb.write_view("    <x:ClientData ObjectType=\"")
-    sb.write_view(escape_xml_attr(object_type))
+    sb.write_xml_attr(object_type)
     sb.write_view("\">\n")
     sb.write_view("      <x:Anchor>\{anchor}</x:Anchor>\n")
     match preset {
       Some(p) => {
         match p.auto_fill {
-          Some(v) =>
-            sb.write_view(
-              "      <x:AutoFill>\{escape_xml_text(v)}</x:AutoFill>\n",
-            )
+          Some(v) => {
+            sb.write_view("      <x:AutoFill>")
+            sb.write_xml_text(v)
+            sb.write_view("</x:AutoFill>\n")
+          }
           None => ()
         }
         match p.text_h_align {
-          Some(v) =>
-            sb.write_view(
-              "      <x:TextHAlign>\{escape_xml_text(v)}</x:TextHAlign>\n",
-            )
+          Some(v) => {
+            sb.write_view("      <x:TextHAlign>")
+            sb.write_xml_text(v)
+            sb.write_view("</x:TextHAlign>\n")
+          }
           None => ()
         }
         match p.text_v_align {
-          Some(v) =>
-            sb.write_view(
-              "      <x:TextVAlign>\{escape_xml_text(v)}</x:TextVAlign>\n",
-            )
+          Some(v) => {
+            sb.write_view("      <x:TextVAlign>")
+            sb.write_xml_text(v)
+            sb.write_view("</x:TextVAlign>\n")
+          }
           None => ()
         }
         if p.no_three_d {
@@ -550,20 +589,20 @@ fn write_form_controls_vml(
     match control.macro_name {
       Some(name) => {
         sb.write_view("      <x:FmlaMacro>")
-        sb.write_view(escape_xml_text(name))
+        sb.write_xml_text(name)
         sb.write_view("</x:FmlaMacro>\n")
       }
       None => ()
     }
     if control.text != "" {
       sb.write_view("      <x:Text>")
-      sb.write_view(escape_xml_text(control.text))
+      sb.write_xml_text(control.text)
       sb.write_view("</x:Text>\n")
     }
     match control.cell_link {
       Some(link) => {
         sb.write_view("      <x:FmlaLink>")
-        sb.write_view(escape_xml_text(link))
+        sb.write_xml_text(link)
         sb.write_view("</x:FmlaLink>\n")
       }
       None => ()

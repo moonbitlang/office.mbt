@@ -725,6 +725,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
             "read-max-decoded-xml-bytes=\{XLSX_TRANSACTION_MAX_DECODED_XML_BYTES}",
             "read-max-markup-tokens=\{XLSX_TRANSACTION_MAX_XML_MARKUP_TOKENS}",
             "read-max-materialized-row-column-dimensions=\{XLSX_TRANSACTION_MAX_ROW_COLUMN_LINES}",
+            "read-max-row-column-dimension-work=\{XLSX_TRANSACTION_MAX_ROW_COLUMN_LINES}",
             "candidate-max-entry-bytes=\{XLSX_TRANSACTION_MAX_CANDIDATE_ENTRY_BYTES}",
             "candidate-max-uncompressed-bytes=\{XLSX_TRANSACTION_MAX_CANDIDATE_ARCHIVE_BYTES}",
           ],

@@ -921,6 +921,10 @@ fn validate_candidate(
   }
   for validator in validators {
     let findings = validator.run(format, mutation.bytes, archive.fork()) catch {
+      TransactionError(..) as error =>
+        raise normalize_transaction_error(
+          error, "office.transaction.validation_failed", "validator raised an invalid transaction error",
+        )
       error =>
         raise transaction_error(
           "office.transaction.validation_failed",

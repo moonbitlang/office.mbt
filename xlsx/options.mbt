@@ -30,6 +30,9 @@ let default_max_materialized_cells : Int = 1_000_000
 let default_max_materialized_row_column_dimensions : Int = 1_000_000
 
 ///|
+let default_max_row_column_dimension_work : Int = 1_000_000
+
+///|
 let default_max_kdf_iterations : Int = 1_000_000
 
 ///|
@@ -50,7 +53,9 @@ let default_max_parser_work_units : Int = 512 * 1024 * 1024
 /// aggregate decoded XML, markup tokens, materialized worksheet cells, and
 /// retained row/column dimensions are bounded across the complete workbook
 /// parse. Semantic ceilings also bound workbook fan-out, XML-backed parser
-/// items, derived materialization, and cumulative parser work;
+/// items, derived materialization, and cumulative parser work. Row/column
+/// dimension expansion work has a separate ceiling so overlapping declarations
+/// cannot hide excessive map-update work behind the retained-item limit;
 /// `max_kdf_iterations` bounds encrypted-package password derivation.
 pub struct ReadLimits {
   priv max_package_bytes : Int
@@ -63,6 +68,7 @@ pub struct ReadLimits {
   priv max_xml_markup_tokens : Int
   priv max_materialized_cells : Int
   priv max_materialized_row_column_dimensions : Int
+  priv max_row_column_dimension_work : Int
   priv max_kdf_iterations : Int
   priv max_workbook_sheets : Int
   priv max_parser_items : Int
@@ -73,9 +79,10 @@ pub struct ReadLimits {
 /// Returns the production XLSX read policy: 128 MiB source packages, 8,192
 /// entries, 64 MiB per entry, 256 MiB aggregate expansion, 16 MiB per XML part,
 /// 128 MiB decoded XML, two million markup tokens, one million materialized
-/// cells, one million retained row/column dimensions, 1,024 sheets, two million
-/// parser items, 512 Mi parser work units, and one million Agile KDF iterations.
-/// Call `with_values` for stricter limits.
+/// cells, one million retained row/column dimensions, one million row/column
+/// dimension expansion steps, 1,024 sheets, two million parser items, 512 Mi
+/// parser work units, and one million Agile KDF iterations. Call `with_values`
+/// for stricter limits.
 pub fn ReadLimits::new() -> ReadLimits {
   {
     max_package_bytes: default_max_package_bytes,
@@ -88,6 +95,7 @@ pub fn ReadLimits::new() -> ReadLimits {
     max_xml_markup_tokens: default_max_xml_markup_tokens,
     max_materialized_cells: default_max_materialized_cells,
     max_materialized_row_column_dimensions: default_max_materialized_row_column_dimensions,
+    max_row_column_dimension_work: default_max_row_column_dimension_work,
     max_kdf_iterations: default_max_kdf_iterations,
     max_workbook_sheets: default_max_workbook_sheets,
     max_parser_items: default_max_parser_items,
@@ -109,6 +117,7 @@ pub fn ReadLimits::with_values(
   max_xml_markup_tokens? : Int = default_max_xml_markup_tokens,
   max_materialized_cells? : Int = default_max_materialized_cells,
   max_materialized_row_column_dimensions? : Int = default_max_materialized_row_column_dimensions,
+  max_row_column_dimension_work? : Int = default_max_row_column_dimension_work,
   max_kdf_iterations? : Int = default_max_kdf_iterations,
   max_workbook_sheets? : Int = default_max_workbook_sheets,
   max_parser_items? : Int = default_max_parser_items,
@@ -124,6 +133,7 @@ pub fn ReadLimits::with_values(
     max_xml_markup_tokens <= 0 ||
     max_materialized_cells <= 0 ||
     max_materialized_row_column_dimensions <= 0 ||
+    max_row_column_dimension_work <= 0 ||
     max_kdf_iterations <= 0 ||
     max_workbook_sheets <= 0 ||
     max_parser_items <= 0 ||
@@ -149,6 +159,7 @@ pub fn ReadLimits::with_values(
     max_xml_markup_tokens,
     max_materialized_cells,
     max_materialized_row_column_dimensions,
+    max_row_column_dimension_work,
     max_kdf_iterations,
     max_workbook_sheets,
     max_parser_items,
@@ -217,6 +228,12 @@ pub fn ReadLimits::max_materialized_row_column_dimensions(
   self : ReadLimits,
 ) -> Int {
   self.max_materialized_row_column_dimensions
+}
+
+///|
+/// Returns the maximum row/column dimension expansion work across the workbook.
+pub fn ReadLimits::max_row_column_dimension_work(self : ReadLimits) -> Int {
+  self.max_row_column_dimension_work
 }
 
 ///|

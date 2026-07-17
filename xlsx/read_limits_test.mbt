@@ -163,6 +163,44 @@ test "bounded reads cap retained row and column dimensions across worksheets" {
 }
 
 ///|
+test "bounded reads cap overlapping row and column dimension expansion work" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let archive = @zip.read(@xlsx.write(workbook))
+  let path = "xl/worksheets/sheet1.xml"
+  let sheet_xml = match archive.get(path) {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing worksheet XML")
+  }
+  let dimensions =
+    #|<cols><col min="1" max="3" width="10" customWidth="1"/><col min="1" max="3" width="11" customWidth="1"/></cols><sheetData>
+  assert_true(
+    archive.replace(
+      path,
+      @encoding/utf8.encode(
+        sheet_xml.replace(old="<sheetData>", new=dimensions),
+      ),
+    ),
+  )
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(
+      @zip.write(archive),
+      limits=@xlsx.ReadLimits::with_values(max_row_column_dimension_work=5),
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="row_column_dimension_work")
+      assert_eq(limit, 5)
+      assert_true(actual > limit)
+    }
+    _ => fail("expected row/column dimension work limit")
+  }
+}
+
+///|
 test "archive read rejects compatibility and constructed archives" {
   let bytes = bounded_workbook_fixture()
   for archive in [@zip.read(bytes), @zip.Archive::new()] {

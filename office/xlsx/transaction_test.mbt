@@ -193,6 +193,34 @@ async test "XLSX batch rejects projected cell growth before application" {
 }
 
 ///|
+async test "XLSX batch preflights table header synthesis before application" {
+  with_xlsx_transaction_dir(directory => {
+    let input = "\{directory}/input.xlsx"
+    let output = "\{directory}/output.xlsx"
+    let original = xlsx_transaction_fixture()
+    write_xlsx_transaction_file(input, original)
+    let script =
+      #|{"schema":"xlsx.batch/1","ops":[
+      #|  {"op":"table","params":{"sheet":"Data","range":"A1:XFD2"}},
+      #|  {"op":"table","params":{"sheet":"Data","range":"A4:XFD5"}},
+      #|  {"op":"table","params":{"sheet":"Data","range":"A7:XFD8"}}
+      #|]}
+    let plan = @xlsx.parse_batch(@utf8.encode(script))
+    assert_eq(plan.stats().touched_cells, 49_152L)
+    let code = xlsx_transaction_error_code(() => {
+      let result = @xlsx.transact_batch(
+        @transaction.transaction_options(input, output_path=output),
+        plan,
+      )
+      result.transaction
+    })
+    assert_eq(code, "office.transaction.resource_limit_exceeded")
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_false(@afs.exists(output))
+  })
+}
+
+///|
 async test "zero-op in-place XLSX batch reuses exact source bytes" {
   with_xlsx_transaction_dir(directory => {
     let input = "\{directory}/input.xlsx"

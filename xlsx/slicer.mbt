@@ -85,21 +85,24 @@ let slicer_ns_xr10 = "http://schemas.microsoft.com/office/spreadsheetml/2016/rev
 let slicer_ext_uri_pivot_cache_definition = "{725AE2AE-9491-48be-B2B4-4EB974FC3084}"
 
 ///|
-fn write_slicers_part_xml(slicers : ArrayView[Slicer]) -> String {
-  let sb = StringBuilder::new()
+fn write_slicers_part_xml(
+  slicers : ArrayView[Slicer],
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<slicers xmlns=\"\{slicer_ns_main}\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"\{slicer_ns_x}\" xmlns:xr10=\"\{slicer_ns_xr10}\">\n",
   )
   for slicer in slicers {
     sb.write_view("  <slicer name=\"")
-    sb.write_view(escape_xml_attr(slicer.name))
+    sb.write_xml_attr(slicer.name)
     sb.write_view("\" cache=\"")
-    sb.write_view(escape_xml_attr(slicer.cache))
+    sb.write_xml_attr(slicer.cache)
     sb.write_view("\"")
     if slicer.caption != "" {
       sb.write_view(" caption=\"")
-      sb.write_view(escape_xml_attr(slicer.caption))
+      sb.write_xml_attr(slicer.caption)
       sb.write_view("\"")
     }
     match slicer.display_header {
@@ -129,19 +132,20 @@ fn write_slicer_cache_xml_pivot(
   pivot_table_name : StringView,
   pivot_cache_id : Int,
   item_desc : Bool,
-) -> String {
-  let sb = StringBuilder::new()
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<slicerCacheDefinition xmlns=\"\{slicer_ns_main}\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"\{slicer_ns_x}\" xmlns:x15=\"\{slicer_ns_x15}\" xmlns:xr10=\"\{slicer_ns_xr10}\" name=\"",
   )
-  sb.write_view(escape_xml_attr(cache_name))
+  sb.write_xml_attr(cache_name)
   sb.write_view("\" sourceName=\"")
-  sb.write_view(escape_xml_attr(source_name))
+  sb.write_xml_attr(source_name)
   sb.write_view("\">\n")
   sb.write_view("  <pivotTables>\n")
   sb.write_view("    <pivotTable tabId=\"\{table_sheet_id}\" name=\"")
-  sb.write_view(escape_xml_attr(pivot_table_name))
+  sb.write_xml_attr(pivot_table_name)
   sb.write_view("\"/>\n")
   sb.write_view("  </pivotTables>\n")
   sb.write_view("  <data>\n")
@@ -162,15 +166,16 @@ fn write_slicer_cache_xml_table(
   table_id : Int,
   column : Int,
   item_desc : Bool,
-) -> String {
-  let sb = StringBuilder::new()
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<slicerCacheDefinition xmlns=\"\{slicer_ns_main}\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"\{slicer_ns_x}\" xmlns:x15=\"\{slicer_ns_x15}\" xmlns:xr10=\"\{slicer_ns_xr10}\" name=\"",
   )
-  sb.write_view(escape_xml_attr(cache_name))
+  sb.write_xml_attr(cache_name)
   sb.write_view("\" sourceName=\"")
-  sb.write_view(escape_xml_attr(source_name))
+  sb.write_xml_attr(source_name)
   sb.write_view("\">\n")
   sb.write_view("  <extLst>\n")
   sb.write_view("    <ext uri=\"{2F2917AC-EB37-4324-AD4E-5DD8C200BD13}\">\n")
@@ -204,49 +209,64 @@ fn parse_pivot_cache_slicer_id(cache_xml : StringView) -> Int? raise XlsxError {
 
 ///|
 fn ensure_pivot_cache_slicer_id(
-  cache_xml : StringView,
+  cache_xml : String,
   pivot_cache_id : Int,
+  budget? : WritePartBudget,
 ) -> String raise XlsxError {
-  let mut xml = cache_xml.to_owned()
-  if parse_pivot_cache_slicer_id(xml) is Some(_) {
-    return xml
+  if parse_pivot_cache_slicer_id(cache_xml) is Some(_) {
+    return cache_xml
   }
-  if !xml.contains("xmlns:x14=\"\{slicer_ns_x14}\"") {
+  let namespace_at = if !cache_xml.contains("xmlns:x14=\"\{slicer_ns_x14}\"") {
     let needle = "<pivotCacheDefinition"
-    match xml.find(needle) {
+    match cache_xml.find(needle) {
       Some(start) => {
-        let rest = xml[start:]
+        let rest = cache_xml[start:]
         match rest.find(">") {
-          Some(end_rel) => {
-            let end = start + end_rel
-            let before = xml[:end]
-            let after = xml[end:]
-            xml = "\{before} xmlns:x14=\"\{slicer_ns_x14}\"\{after}"
-          }
-          None => ()
+          Some(end_rel) => Some(start + end_rel)
+          None => None
         }
       }
-      None => ()
+      None => None
+    }
+  } else {
+    None
+  }
+  let extension_insertion : (Int, String)? = if cache_xml.contains(
+      "uri=\"\{slicer_ext_uri_pivot_cache_definition}\"",
+    ) {
+    None
+  } else {
+    let ext_entry = "    <ext uri=\"\{slicer_ext_uri_pivot_cache_definition}\">\n      <x14:pivotCacheDefinition pivotCacheId=\"\{pivot_cache_id}\"/>\n    </ext>\n"
+    match cache_xml.find("</extLst>") {
+      Some(pos) => Some((pos, ext_entry))
+      None =>
+        match cache_xml.find("</pivotCacheDefinition>") {
+          Some(pos) => Some((pos, "  <extLst>\n\{ext_entry}  </extLst>\n"))
+          None => None
+        }
     }
   }
-  if xml.contains("uri=\"\{slicer_ext_uri_pivot_cache_definition}\"") {
-    return xml
+  if namespace_at is None && extension_insertion is None {
+    return cache_xml
   }
-  let ext_entry = "    <ext uri=\"\{slicer_ext_uri_pivot_cache_definition}\">\n      <x14:pivotCacheDefinition pivotCacheId=\"\{pivot_cache_id}\"/>\n    </ext>\n"
-  match xml.find("</extLst>") {
+  let sb = LimitedXmlBuilder::new(budget)
+  let mut cursor = 0
+  match namespace_at {
     Some(pos) => {
-      let head = xml[:pos]
-      let tail = xml[pos:]
-      return "\{head}\{ext_entry}\{tail}"
+      sb.write_view(cache_xml[cursor:pos])
+      sb.write_view(" xmlns:x14=\"\{slicer_ns_x14}\"")
+      cursor = pos
     }
     None => ()
   }
-  match xml.find("</pivotCacheDefinition>") {
-    Some(pos) => {
-      let head = xml[:pos]
-      let tail = xml[pos:]
-      "\{head}  <extLst>\n\{ext_entry}  </extLst>\n\{tail}"
+  match extension_insertion {
+    Some((pos, fragment)) => {
+      sb.write_view(cache_xml[cursor:pos])
+      sb.write_view(fragment)
+      cursor = pos
     }
-    None => xml
+    None => ()
   }
+  sb.write_view(cache_xml[cursor:])
+  sb.to_string()
 }

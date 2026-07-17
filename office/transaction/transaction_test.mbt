@@ -1280,6 +1280,29 @@ async test "successful and throwing validators run before publication" {
       )
     })
     assert_eq(code, "office.transaction.validation_failed")
+    let resource_validator = @transaction.transaction_validator(
+      "docx-resource",
+      (_format, _bytes, _archive) => {
+        raise @transaction.transaction_failure(
+          "office.transaction.resource_limit_exceeded",
+          "validator exhausted its bounded resource allowance",
+          details=Json::object({
+            "phase": Json::string("validator"),
+            "kind": Json::string("test_budget"),
+          }),
+        )
+      },
+    )
+    let resource_code = transaction_error_code(() => {
+      @transaction.transact(
+        @transaction.transaction_options(input, output_path=output),
+        (_format, bytes, _archive, _budget) => {
+          @transaction.transaction_mutation(bytes)
+        },
+        validators=[resource_validator],
+      )
+    })
+    assert_eq(resource_code, "office.transaction.resource_limit_exceeded")
     assert_false(@afs.exists(output))
     assert_eq(@afs.read_file(input).binary(), original)
     assert_no_transaction_temp(directory)

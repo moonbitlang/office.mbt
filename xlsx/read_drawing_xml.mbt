@@ -641,10 +641,12 @@ fn parse_drawing_images(
   content_types : @ooxml.PackageContentTypes,
   metrics : DrawingMetrics,
   archive : @zip.Archive,
+  media_cache? : Map[String, Bytes],
   budget? : ReadBudget,
   cancelled? : () -> Bool = () => false,
 ) -> Array[Image] raise XlsxError {
   let images : Array[Image] = []
+  let retained_media = media_cache.unwrap_or(Map([]))
   let image_targets = if drawing_rels_xml.to_owned() == "" {
     Map([])
   } else {
@@ -744,13 +746,21 @@ fn parse_drawing_images(
       part_names,
       cancelled~,
     )
-    let (data, identity) = load_image_part(
+    let (source_data, identity) = load_image_part(
       archive,
       content_types,
       media_path,
       "drawing image",
       cancelled~,
     )
+    let data = match retained_media.get(media_path) {
+      Some(value) => value
+      None => {
+        let value = source_data.to_owned()
+        retained_media[media_path] = value
+        value
+      }
+    }
     let mut hyperlink = ""
     let mut hyperlink_type = HyperlinkType::Unset
     match tag_attributes_in(pic_body, "a:hlinkClick") {
@@ -777,7 +787,7 @@ fn parse_drawing_images(
     }
     images.push({
       reference,
-      data: data.to_owned(),
+      data,
       extension: identity.extension,
       content_type: identity.content_type,
       offset_x,
@@ -1811,6 +1821,29 @@ test "read_drawing_xml wb: signed marker offsets are retained" {
   inspect(images[0].reference, content="A1")
   inspect(images[0].offset_x, content="-2")
   inspect(images[0].offset_y, content="-1")
+}
+
+///|
+test "read_drawing_xml wb: repeated anchors share one retained media payload" {
+  let archive = @zip.Archive::new()
+  archive.add("xl/media/image1.png", @encoding/utf8.encode("shared-image"))
+  let rels_xml = wb_rels_image_target("../media/image1.png")
+  let anchor = "<xdr:oneCellAnchor>\{wb_from_xml()}<xdr:ext cx=\"9525\" cy=\"9525\"/>\{wb_pic_xml("rId1")}</xdr:oneCellAnchor>"
+  let drawing_xml = "<xdr:wsDr>\{anchor}\{anchor}</xdr:wsDr>"
+  let retained : Map[String, Bytes] = Map([])
+  let images = parse_drawing_images(
+    parse_drawing_anchors(drawing_xml),
+    rels_xml,
+    "xl/drawings/drawing1.xml",
+    Map([]),
+    image_reader_test_content_types(),
+    drawing_metrics_for_sheet(Worksheet::new("Sheet1")),
+    archive,
+    media_cache=retained,
+  )
+  assert_eq(images.length(), 2)
+  assert_eq(retained.length(), 1)
+  assert_eq(images[0].data, images[1].data)
 }
 
 ///|

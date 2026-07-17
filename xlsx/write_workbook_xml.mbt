@@ -5,19 +5,21 @@ fn write_workbook_xml(
   pivot_cache_rel_entries : ArrayView[(Int, String)],
   slicer_cache_rel_ids_x14 : ArrayView[String],
   slicer_cache_rel_ids_x15 : ArrayView[String],
-) -> String {
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
   fn write_pivot_caches_xml(
     pivot_cache_rel_entries : ArrayView[(Int, String)],
-  ) -> String? {
+    budget : WritePartBudget?,
+  ) -> String? raise XlsxError {
     if pivot_cache_rel_entries.length() == 0 {
       return None
     }
-    let sb = StringBuilder::new()
+    let sb = LimitedXmlBuilder::new(budget)
     sb.write_view("  <pivotCaches>\n")
     for entry in pivot_cache_rel_entries {
       let (cache_id, rel_id) = entry
       sb.write_view("    <pivotCache cacheId=\"\{cache_id}\" r:id=\"")
-      sb.write_view(escape_xml_attr(rel_id))
+      sb.write_xml_attr(rel_id)
       sb.write_view("\"/>\n")
     }
     sb.write_view("  </pivotCaches>\n")
@@ -27,12 +29,13 @@ fn write_workbook_xml(
   fn write_workbook_ext_lst_xml(
     slicer_cache_rel_ids_x14 : ArrayView[String],
     slicer_cache_rel_ids_x15 : ArrayView[String],
-  ) -> String? {
+    budget : WritePartBudget?,
+  ) -> String? raise XlsxError {
     if slicer_cache_rel_ids_x14.length() == 0 &&
       slicer_cache_rel_ids_x15.length() == 0 {
       return None
     }
-    let sb = StringBuilder::new()
+    let sb = LimitedXmlBuilder::new(budget)
     sb.write_view("  <extLst>\n")
     if slicer_cache_rel_ids_x14.length() > 0 {
       sb.write_view(
@@ -43,7 +46,7 @@ fn write_workbook_xml(
       )
       for id in slicer_cache_rel_ids_x14 {
         sb.write_view("        <x14:slicerCache r:id=\"")
-        sb.write_view(escape_xml_attr(id))
+        sb.write_xml_attr(id)
         sb.write_view("\"/>\n")
       }
       sb.write_view("      </x14:slicerCaches>\n")
@@ -58,7 +61,7 @@ fn write_workbook_xml(
       )
       for id in slicer_cache_rel_ids_x15 {
         sb.write_view("        <x14:slicerCache r:id=\"")
-        sb.write_view(escape_xml_attr(id))
+        sb.write_xml_attr(id)
         sb.write_view("\"/>\n")
       }
       sb.write_view("      </x15:slicerCaches>\n")
@@ -70,7 +73,7 @@ fn write_workbook_xml(
 
   let sheets = workbook.sheet_order
   let worksheet_count = workbook.sheets().length()
-  let sb = StringBuilder::new()
+  let sb = LimitedXmlBuilder::new(budget)
   let sheet_index : Map[String, Int] = Map([])
   for i, entry in sheets {
     sheet_index.set(normalize_sheet_name(workbook.sheet_entry_name(entry)), i)
@@ -79,7 +82,11 @@ fn write_workbook_xml(
   sb.write_view(
     "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">\n",
   )
-  match write_workbook_pr_xml(workbook.workbook_props()) {
+  match
+    write_workbook_pr_xml(
+      workbook.workbook_props(),
+      budget?=sb.remaining_budget(),
+    ) {
     Some(value) => sb.write_view(value)
     None => ()
   }
@@ -105,7 +112,7 @@ fn write_workbook_xml(
       ChartSheet(idx) => chartsheet_rel_start + idx
     }
     sb.write_view("    <sheet name=\"")
-    sb.write_view(escape_xml_attr(workbook.sheet_entry_name(entry)))
+    sb.write_xml_attr(workbook.sheet_entry_name(entry))
     sb.write_view("\" sheetId=\"")
     sb.write_view("\{sheet_id}\"")
     sb.write_view(" r:id=\"rId\{rel_id}\"")
@@ -128,11 +135,11 @@ fn write_workbook_xml(
         wrote = true
       }
       sb.write_view("    <definedName name=\"")
-      sb.write_view(escape_xml_attr(defined.name))
+      sb.write_xml_attr(defined.name)
       sb.write_view("\"")
       if defined.comment != "" {
         sb.write_view(" comment=\"")
-        sb.write_view(escape_xml_attr(defined.comment))
+        sb.write_xml_attr(defined.comment)
         sb.write_view("\"")
       }
       let scope = normalize_defined_name_scope(defined.scope)
@@ -144,7 +151,7 @@ fn write_workbook_xml(
         }
       }
       sb.write_view(">")
-      sb.write_view(escape_xml_text(defined.refers_to))
+      sb.write_xml_text(defined.refers_to)
       sb.write_view("</definedName>\n")
     }
     if wrote {
@@ -152,20 +159,26 @@ fn write_workbook_xml(
     }
   }
   match workbook.workbook_protection {
-    Some(value) => sb.write_view(write_workbook_protection_xml(value))
+    Some(value) =>
+      sb.write_view(
+        write_workbook_protection_xml(value, budget?=sb.remaining_budget()),
+      )
     None => ()
   }
-  match write_calc_pr_xml(workbook.calc_props()) {
+  match
+    write_calc_pr_xml(workbook.calc_props(), budget?=sb.remaining_budget()) {
     Some(value) => sb.write_view(value)
     None => ()
   }
-  match write_pivot_caches_xml(pivot_cache_rel_entries) {
+  match write_pivot_caches_xml(pivot_cache_rel_entries, sb.remaining_budget()) {
     Some(value) => sb.write_view(value)
     None => ()
   }
   match
     write_workbook_ext_lst_xml(
-      slicer_cache_rel_ids_x14, slicer_cache_rel_ids_x15,
+      slicer_cache_rel_ids_x14,
+      slicer_cache_rel_ids_x15,
+      sb.remaining_budget(),
     ) {
     Some(xml) => sb.write_view(xml)
     None => ()
@@ -175,11 +188,14 @@ fn write_workbook_xml(
 }
 
 ///|
-fn write_workbook_pr_xml(options : WorkbookPropsOptions) -> String? {
+fn write_workbook_pr_xml(
+  options : WorkbookPropsOptions,
+  budget? : WritePartBudget,
+) -> String? raise XlsxError {
   if workbook_props_is_empty(options) {
     return None
   }
-  let sb = StringBuilder::new()
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("  <workbookPr")
   match options.date_1904 {
     Some(value) => sb.write_view(" date1904=\"\{bool_attr(value)}\"")
@@ -192,7 +208,7 @@ fn write_workbook_pr_xml(options : WorkbookPropsOptions) -> String? {
   match options.code_name {
     Some(value) => {
       sb.write_view(" codeName=\"")
-      sb.write_view(escape_xml_attr(value))
+      sb.write_xml_attr(value)
       sb.write_view("\"")
     }
     None => ()
@@ -202,11 +218,14 @@ fn write_workbook_pr_xml(options : WorkbookPropsOptions) -> String? {
 }
 
 ///|
-fn write_calc_pr_xml(options : CalcPropsOptions) -> String? {
+fn write_calc_pr_xml(
+  options : CalcPropsOptions,
+  budget? : WritePartBudget,
+) -> String? raise XlsxError {
   if calc_props_is_empty(options) {
     return None
   }
-  let sb = StringBuilder::new()
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("  <calcPr")
   match options.calc_id {
     Some(value) => sb.write_view(" calcId=\"\{value}\"")

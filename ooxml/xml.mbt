@@ -15,6 +15,122 @@ pub fn xml_needs_escape(value : StringView, attr~ : Bool) -> Bool {
 }
 
 ///|
+/// Package-local UTF-8-counted XML output used by OOXML manifests. A limited
+/// writer stops before appending the fragment that would cross its ceiling, so
+/// callers can reject oversized generated metadata without first retaining it.
+priv struct XmlOutputBuilder {
+  builder : StringBuilder
+  maximum : Int?
+  mut encoded_bytes : Int
+  mut exceeded : Bool
+}
+
+///|
+fn XmlOutputBuilder::new(maximum : Int?) -> XmlOutputBuilder {
+  { builder: StringBuilder::new(), maximum, encoded_bytes: 0, exceeded: false }
+}
+
+///|
+fn xml_output_utf8_length_within(value : StringView, maximum : Int) -> Int? {
+  let mut length = 0
+  for character in value {
+    let scalar = character.to_int()
+    let width = if scalar <= 0x7F {
+      1
+    } else if scalar <= 0x7FF {
+      2
+    } else if scalar <= 0xFFFF {
+      3
+    } else {
+      4
+    }
+    if width > maximum - length {
+      return None
+    }
+    length = length + width
+  }
+  Some(length)
+}
+
+///|
+fn XmlOutputBuilder::write_view(
+  self : XmlOutputBuilder,
+  value : StringView,
+) -> Unit {
+  if self.exceeded {
+    return
+  }
+  match self.maximum {
+    Some(maximum) => {
+      let remaining = maximum - self.encoded_bytes
+      match xml_output_utf8_length_within(value, remaining) {
+        Some(length) => {
+          self.builder.write_view(value)
+          self.encoded_bytes = self.encoded_bytes + length
+        }
+        None => self.exceeded = true
+      }
+    }
+    None => self.builder.write_view(value)
+  }
+}
+
+///|
+fn XmlOutputBuilder::write_char(self : XmlOutputBuilder, value : Char) -> Unit {
+  if self.exceeded {
+    return
+  }
+  let scalar = value.to_int()
+  let width = if scalar <= 0x7F {
+    1
+  } else if scalar <= 0x7FF {
+    2
+  } else if scalar <= 0xFFFF {
+    3
+  } else {
+    4
+  }
+  match self.maximum {
+    Some(maximum) if width > maximum - self.encoded_bytes => {
+      self.exceeded = true
+      return
+    }
+    _ => ()
+  }
+  self.builder.write_char(value)
+  self.encoded_bytes = self.encoded_bytes + width
+}
+
+///|
+fn XmlOutputBuilder::write_attr(
+  self : XmlOutputBuilder,
+  value : StringView,
+) -> Unit {
+  for character in value {
+    if self.exceeded {
+      return
+    }
+    match character {
+      '&' => self.write_view("&amp;")
+      '<' => self.write_view("&lt;")
+      '>' => self.write_view("&gt;")
+      '"' => self.write_view("&quot;")
+      '\'' => self.write_view("&apos;")
+      _ => self.write_char(character)
+    }
+  }
+}
+
+///|
+fn XmlOutputBuilder::finish(self : XmlOutputBuilder) -> String? {
+  if self.exceeded {
+    None
+  } else {
+    Some(self.builder.to_string())
+  }
+}
+
+///|
 /// Escape XML text content (`&`, `<`, `>`). Returns the input unchanged when no
 /// escaping is needed (a view over a whole string converts back without
 /// copying).

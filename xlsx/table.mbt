@@ -159,7 +159,11 @@ fn Table::new(
 }
 
 ///|
-fn write_table_xml(table_id : Int, table : Table) -> String {
+fn write_table_xml(
+  table_id : Int,
+  table : Table,
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
   fn bool_attr(value : Bool) -> String {
     if value {
       "1"
@@ -168,34 +172,34 @@ fn write_table_xml(table_id : Int, table : Table) -> String {
     }
   }
 
-  let sb = StringBuilder::new()
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<table xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" id=\"\{table_id}\" name=\"",
   )
-  sb.write_view(escape_xml_attr(table.name))
+  sb.write_xml_attr(table.name)
   sb.write_view("\" displayName=\"")
-  sb.write_view(escape_xml_attr(table.display_name))
+  sb.write_xml_attr(table.display_name)
   sb.write_view("\" ref=\"")
-  sb.write_view(escape_xml_attr(table.range_ref))
+  sb.write_xml_attr(table.range_ref)
   if !table.show_header_row {
     sb.write_view("\" headerRowCount=\"0\" totalsRowShown=\"0\">\n")
   } else {
     sb.write_view("\" totalsRowShown=\"0\">\n")
     sb.write_view("  <autoFilter ref=\"")
-    sb.write_view(escape_xml_attr(table.range_ref))
+    sb.write_xml_attr(table.range_ref)
     sb.write_view("\"/>\n")
   }
   sb.write_view("  <tableColumns count=\"\{table.columns.length()}\">\n")
   for i, name in table.columns {
     let id = i + 1
     sb.write_view("    <tableColumn id=\"\{id}\" name=\"")
-    sb.write_view(escape_xml_attr(name))
+    sb.write_xml_attr(name)
     sb.write_view("\"/>\n")
   }
   sb.write_view("  </tableColumns>\n")
   sb.write_view("  <tableStyleInfo name=\"")
-  sb.write_view(escape_xml_attr(table.style_name))
+  sb.write_xml_attr(table.style_name)
   sb.write_view(
     "\" showFirstColumn=\"\{bool_attr(table.show_first_column)}\" showLastColumn=\"\{bool_attr(table.show_last_column)}\" showRowStripes=\"\{bool_attr(table.show_row_stripes)}\" showColumnStripes=\"\{bool_attr(table.show_column_stripes)}\"/>\n",
   )

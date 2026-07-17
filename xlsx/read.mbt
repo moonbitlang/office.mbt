@@ -1356,23 +1356,22 @@ fn parse_x14_conditional_formatting_blocks(
   xml : StringView,
 ) -> Array[String] raise XlsxError {
   let blocks : Array[String] = []
-  let xml_str = xml.to_owned()
-  if xml_str.contains("<x14:conditionalFormattings") &&
-    !xml_str.contains("</x14:conditionalFormattings>") {
+  if xml.contains("<x14:conditionalFormattings") &&
+    !xml.contains("</x14:conditionalFormattings>") {
     raise InvalidXml(msg="x14:conditionalFormattings tag not closed")
   }
   let mut open_pos : Int? = None
   let mut open_search_from = 0
   let open_needle = "<x14:conditionalFormatting"
-  while open_search_from < xml_str.length() {
-    let rest = xml_str[open_search_from:]
+  while open_search_from < xml.length() {
+    let rest = xml[open_search_from:]
     let rel_start = match rest.find(open_needle) {
       Some(pos) => pos
       None => break
     }
     let start = open_search_from + rel_start
     let after_needle = start + open_needle.length()
-    let next_char = xml_str[after_needle:after_needle + 1]
+    let next_char = xml[after_needle:after_needle + 1]
     if next_char == "s" {
       open_search_from = after_needle
       continue
@@ -1380,7 +1379,7 @@ fn parse_x14_conditional_formatting_blocks(
     open_pos = Some(start)
     break
   }
-  match xml_str.find("</x14:conditionalFormatting>") {
+  match xml.find("</x14:conditionalFormatting>") {
     Some(close_pos) =>
       match open_pos {
         Some(pos) =>
@@ -1393,40 +1392,37 @@ fn parse_x14_conditional_formatting_blocks(
     None => ()
   }
   let needle = "<x14:conditionalFormatting"
-  if !xml_str.contains(needle) {
+  if !xml.contains(needle) {
     return blocks
   }
   let close_tag = "</x14:conditionalFormatting>"
   let mut search_from = 0
-  while search_from < xml_str.length() {
-    let rest = xml_str[search_from:]
+  while search_from < xml.length() {
+    let rest = xml[search_from:]
     let rel_start = match rest.find(needle) {
       Some(pos) => pos
       None => break
     }
     let start = search_from + rel_start
     let after_needle = start + needle.length()
-    let next_char = xml_str[after_needle:after_needle + 1]
+    let next_char = xml[after_needle:after_needle + 1]
     if next_char == "s" {
       search_from = after_needle
       continue
     }
-    let after_start = xml_str[start:]
-    let after_text = after_start.to_owned()
-    let (full, consumed) = match after_text.find(close_tag) {
+    let after_start = xml[start:]
+    let (full, consumed) = match after_start.find(close_tag) {
       Some(pos) => {
         let end = pos + close_tag.length()
-        let slice = after_text[:end]
-        (slice.to_owned(), end)
+        (after_start[:end].to_owned(), end)
       }
       None => {
-        let end = match after_text.find("/>") {
+        let end = match after_start.find("/>") {
           Some(pos) => pos + 2
           None =>
             raise InvalidXml(msg="x14:conditionalFormatting tag not closed")
         }
-        let slice = after_text[:end]
-        (slice.to_owned(), end)
+        (after_start[:end].to_owned(), end)
       }
     }
     blocks.push(full)
@@ -2918,6 +2914,8 @@ fn parse_row_dimensions(
   style_count : Int,
   materialized_dimensions : Ref[Int],
   max_materialized_dimensions : Int,
+  dimension_work : Ref[Int],
+  max_dimension_work : Int,
 ) -> Map[Int, RowDimension] raise XlsxError {
   let dims : Map[Int, RowDimension] = Map([])
   let mut first = true
@@ -2984,6 +2982,14 @@ fn parse_row_dimensions(
     if height is None && !hidden && outline_level == 0 && style is None {
       continue
     }
+    if dimension_work.val >= max_dimension_work {
+      raise ResourceLimitExceeded(
+        kind="row_column_dimension_work",
+        limit=max_dimension_work,
+        actual=bounded_actual_above_limit(max_dimension_work),
+      )
+    }
+    dimension_work.val = dimension_work.val + 1
     if !dims.contains(row) {
       if materialized_dimensions.val >= max_materialized_dimensions {
         raise ResourceLimitExceeded(
@@ -3006,6 +3012,8 @@ fn parse_col_dimensions(
   style_count : Int,
   materialized_dimensions : Ref[Int],
   max_materialized_dimensions : Int,
+  dimension_work : Ref[Int],
+  max_dimension_work : Int,
 ) -> Map[Int, ColDimension] raise XlsxError {
   let dims : Map[Int, ColDimension] = Map([])
   let body = match extract_tag_body(xml, "cols") {
@@ -3085,6 +3093,15 @@ fn parse_col_dimensions(
     if width is None && !hidden && outline_level == 0 && style is None {
       continue
     }
+    let span = max_col - min_col + 1
+    if span > max_dimension_work - dimension_work.val {
+      raise ResourceLimitExceeded(
+        kind="row_column_dimension_work",
+        limit=max_dimension_work,
+        actual=bounded_actual_above_limit(max_dimension_work),
+      )
+    }
+    dimension_work.val = dimension_work.val + span
     let dim = { width, hidden, outline_level, style_id: style }
     let mut col = min_col
     while col <= max_col {
@@ -3655,6 +3672,8 @@ fn read_zip_archive_core_unchecked(
   let xml_markup_tokens = Ref(0)
   let materialized_cells = Ref(0)
   let materialized_dimensions = Ref(0)
+  let dimension_work = Ref(0)
+  let drawing_media_cache : Map[String, Bytes] = Map([])
   let decode_source = (value : BytesView) => {
     if value.length() > limits.max_xml_part_bytes {
       raise ResourceLimitExceeded(
@@ -4256,6 +4275,8 @@ fn read_zip_archive_core_unchecked(
         limits.max_materialized_cells,
         materialized_dimensions,
         limits.max_materialized_row_column_dimensions,
+        dimension_work,
+        limits.max_row_column_dimension_work,
         budget=read_budget,
       )
       let hyperlink_elements = parse_hyperlink_elements(sheet_core_xml)
@@ -4945,6 +4966,7 @@ fn read_zip_archive_core_unchecked(
             content_types,
             drawing_metrics,
             archive,
+            media_cache=drawing_media_cache,
             budget=read_budget,
             cancelled~,
           )

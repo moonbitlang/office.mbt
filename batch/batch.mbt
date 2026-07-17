@@ -26,10 +26,10 @@ pub const MAX_BATCH_SCRIPT_BYTES : Int = 8 * 1024 * 1024
 pub const MAX_TOTAL_STYLE_CELLS : Int64 = 1_000_000
 
 ///|
-/// Aggregate cap on direct cell writes plus expanded style-range writes. Some
-/// range-bearing metadata operations (tables, validation and conditional
-/// formatting) do not enumerate their ranges and therefore do not consume this
-/// counter.
+/// Aggregate cap on direct cell writes, expanded style-range writes, and table
+/// header cells that may be synthesized while applying a table operation.
+/// Validation and conditional formatting never materialize their ranges and
+/// therefore do not consume this counter.
 pub const MAX_TOTAL_TOUCHED_CELLS : Int64 = 1_000_000
 
 ///|
@@ -587,10 +587,19 @@ fn parse_op(
         series_name=reader.optional_string("name"),
         title=reader.optional_string("title"),
       )
-    "table" =>
+    "table" => {
+      let (range, header_cells) = reader.table_range("range")
+      touched_cells.val = touched_cells.val + header_cells
+      if touched_cells.val > MAX_TOTAL_TOUCHED_CELLS {
+        raise op_error(
+          index,
+          name,
+          "cell mutations expand past \{MAX_TOTAL_TOUCHED_CELLS} total cells",
+        )
+      }
       OpTable(
         sheet=reader.string("sheet"),
-        range=reader.table_range("range"),
+        range~,
         name=reader.optional_string("name"),
         style=reader.optional_string("style"),
         header_row=reader.tristate_bool("header_row"),
@@ -599,6 +608,7 @@ fn parse_op(
         last_column=reader.optional_bool("last_column"),
         column_stripes=reader.optional_bool("column_stripes"),
       )
+    }
     "validate" =>
       OpValidate(
         sheet=reader.string("sheet"),
@@ -929,14 +939,15 @@ fn ParamReader::colon_range(
 /// syntax but WITHOUT the 100k-cell expansion cap that `range`/`colon_range`
 /// apply. A table never enumerates its cells (the engine derives columns
 /// from the header row only), so an ordinary large table range must be
-/// accepted rather than rejected as an expansion. Also rejects a single-row
-/// range on the last grid row, which the engine expands downward by one row
-/// and would push off the grid — caught here with a clear message instead of
-/// failing deep in apply.
+/// accepted rather than rejected as an expansion. The returned width charges
+/// the aggregate materialization budget because missing header cells may be
+/// synthesized. Also rejects a single-row range on the last grid row, which
+/// the engine expands downward by one row and would push off the grid — caught
+/// here with a clear message instead of failing deep in apply.
 fn ParamReader::table_range(
   self : ParamReader,
   key : String,
-) -> String raise BatchError {
+) -> (String, Int64) raise BatchError {
   let text = self.string(key)
   let range = @inspect.parse_range_unbounded(text) catch {
     _ =>
@@ -962,7 +973,7 @@ fn ParamReader::table_range(
       "'\{key}' is a single-row range on the last grid row, leaving no room for a data row: '\{text}'",
     )
   }
-  text
+  (text, (range.col_hi - range.col_lo + 1).to_int64())
 }
 
 ///|

@@ -49,6 +49,7 @@ fn xlsx_read_limits() -> @engine.ReadLimits raise @engine.XlsxError {
     max_xml_markup_tokens=@office.XLSX_TRANSACTION_MAX_XML_MARKUP_TOKENS,
     max_materialized_cells=@office.XLSX_TRANSACTION_MAX_MATERIALIZED_CELLS,
     max_materialized_row_column_dimensions=@office.XLSX_TRANSACTION_MAX_ROW_COLUMN_LINES,
+    max_row_column_dimension_work=@office.XLSX_TRANSACTION_MAX_ROW_COLUMN_LINES,
   )
 }
 
