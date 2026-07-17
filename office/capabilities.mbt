@@ -185,7 +185,7 @@ pub fn capability_formats() -> Array[CapabilityFormat] {
 /// Returns implemented command declarations in stable order. An empty
 /// `formats` array marks a format-neutral command.
 pub fn capability_commands() -> Array[CapabilityCommand] {
-  [
+  let commands : Array[CapabilityCommand] = [
     {
       name: "help",
       summary: "Show the implemented Office capability registry",
@@ -854,6 +854,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
       ],
     },
   ]
+  commands.map(hydrate_capability_command_variants)
 }
 
 ///|
@@ -1157,6 +1158,245 @@ fn command_supports_format(
 }
 
 ///|
+fn capability_variant_document_format(
+  variant : CapabilityVariant,
+) -> DocumentFormat? {
+  for constraint in variant.constraints {
+    match constraint {
+      "format=docx" => return Some(Docx)
+      "format=xlsx" => return Some(Xlsx)
+      _ => ()
+    }
+  }
+  None
+}
+
+///|
+fn capability_field_applies_to_format(
+  command_name : String,
+  field_name : String,
+  output : Bool,
+  format : DocumentFormat,
+) -> Bool {
+  let docx_only : Array[String] = if output {
+    match command_name {
+      "outline" =>
+        [
+          "scanned_elements", "counts", "stories", "headings", "styles_in_use", "images",
+          "sections", "diagnostics",
+        ]
+      "get" =>
+        ["role", "source", "id", "children", "properties", "metadata", "text"]
+      "text" => ["scanned_elements"]
+      "query" => ["filters", "scanned_elements"]
+      _ => []
+    }
+  } else {
+    match command_name {
+      "query" => ["kind", "text", "id", "property", "ignore-case"]
+      _ => []
+    }
+  }
+  let xlsx_only : Array[String] = if output {
+    match command_name {
+      "outline" =>
+        [
+          "path", "sheet_count", "active_sheet", "sheets", "defined_names", "limits",
+        ]
+      "get" =>
+        [
+          "sheet_count", "sheets", "defined_names", "sheet", "cell", "cells", "reference",
+          "styles", "scanned_cells", "returned",
+        ]
+      "text" => ["scanned_cells"]
+      "query" => ["selector", "styles", "scanned_cells"]
+      _ => []
+    }
+  } else {
+    match command_name {
+      "query" => ["selector"]
+      _ => []
+    }
+  }
+  if docx_only.contains(field_name) {
+    return format is Docx
+  }
+  if xlsx_only.contains(field_name) {
+    return format is Xlsx
+  }
+  true
+}
+
+///|
+fn exact_capability_field(
+  field : CapabilityField,
+  format : DocumentFormat,
+  result_schema : String?,
+) -> CapabilityField {
+  let type_name = if field.name == "schema" {
+    match result_schema {
+      Some(schema) => "literal(\{schema})"
+      None => field.type_name
+    }
+  } else if field.name == "format" {
+    "literal(\{format.name()})"
+  } else {
+    field.type_name
+  }
+  {
+    name: field.name,
+    type_name,
+    required: field.required,
+    description: field.description,
+  }
+}
+
+///|
+fn exact_capability_fields(
+  command_name : String,
+  fields : Array[CapabilityField],
+  output : Bool,
+  format : DocumentFormat,
+  result_schema : String?,
+) -> Array[CapabilityField] {
+  let exact : Array[CapabilityField] = []
+  for field in fields {
+    if capability_field_applies_to_format(
+        command_name,
+        field.name,
+        output,
+        format,
+      ) {
+      exact.push(exact_capability_field(field, format, result_schema))
+    }
+  }
+  exact
+}
+
+///|
+fn hydrate_capability_command_variants(
+  command : CapabilityCommand,
+) -> CapabilityCommand {
+  let variants : Array[CapabilityVariant] = []
+  for variant in command.variants {
+    match capability_variant_document_format(variant) {
+      Some(format) =>
+        variants.push({
+          name: variant.name,
+          usage: variant.usage,
+          result_schema: variant.result_schema,
+          inputs: if variant.inputs.is_empty() {
+            exact_capability_fields(
+              command.name,
+              command.inputs,
+              false,
+              format,
+              Some(variant.result_schema),
+            )
+          } else {
+            variant.inputs
+          },
+          outputs: if variant.outputs.is_empty() {
+            exact_capability_fields(
+              command.name,
+              command.outputs,
+              true,
+              format,
+              Some(variant.result_schema),
+            )
+          } else {
+            variant.outputs
+          },
+          constraints: variant.constraints,
+          actions: variant.actions,
+          output_modes: variant.output_modes,
+        })
+      None => variants.push(variant)
+    }
+  }
+  {
+    name: command.name,
+    summary: command.summary,
+    usage: command.usage,
+    formats: command.formats,
+    aliases: command.aliases,
+    inputs: command.inputs,
+    outputs: command.outputs,
+    output_modes: command.output_modes,
+    variants,
+  }
+}
+
+///|
+fn capability_command_for_format(
+  command : CapabilityCommand,
+  format : DocumentFormat,
+) -> CapabilityCommand {
+  let mut result_schema : String? = None
+  for variant in command.variants {
+    match capability_variant_document_format(variant) {
+      Some(candidate) if candidate.name() == format.name() =>
+        result_schema = Some(variant.result_schema)
+      _ => ()
+    }
+  }
+  let variants : Array[CapabilityVariant] = []
+  for variant in command.variants {
+    let should_include = match capability_variant_document_format(variant) {
+      Some(candidate) => candidate.name() == format.name()
+      None => true
+    }
+    if should_include {
+      variants.push({
+        name: variant.name,
+        usage: variant.usage,
+        result_schema: variant.result_schema,
+        inputs: exact_capability_fields(
+          command.name,
+          variant.inputs,
+          false,
+          format,
+          Some(variant.result_schema),
+        ),
+        outputs: exact_capability_fields(
+          command.name,
+          variant.outputs,
+          true,
+          format,
+          Some(variant.result_schema),
+        ),
+        constraints: variant.constraints,
+        actions: variant.actions,
+        output_modes: variant.output_modes,
+      })
+    }
+  }
+  {
+    name: command.name,
+    summary: command.summary,
+    usage: command.usage,
+    formats: [format.name()],
+    aliases: command.aliases,
+    inputs: exact_capability_fields(
+      command.name,
+      command.inputs,
+      false,
+      format,
+      result_schema,
+    ),
+    outputs: exact_capability_fields(
+      command.name,
+      command.outputs,
+      true,
+      format,
+      result_schema,
+    ),
+    output_modes: command.output_modes,
+    variants,
+  }
+}
+
+///|
 /// Returns self-contained registry records in stable order. With a format
 /// filter, format-neutral commands are omitted and only commands that operate
 /// on that document format remain.
@@ -1176,7 +1416,11 @@ pub fn capability_records(
         }
         if format_matches &&
           (command.name == normalized || command.aliases.contains(normalized)) {
-          records.push(capability_command_json(command, fingerprint))
+          let exact_command = match format {
+            Some(selected) => capability_command_for_format(command, selected)
+            None => command
+          }
+          records.push(capability_command_json(exact_command, fingerprint))
         }
       }
       return records
@@ -1192,7 +1436,12 @@ pub fn capability_records(
       }
       for command in capability_commands() {
         if command_supports_format(command, selected) {
-          records.push(capability_command_json(command, fingerprint))
+          records.push(
+            capability_command_json(
+              capability_command_for_format(command, selected),
+              fingerprint,
+            ),
+          )
         }
       }
     }

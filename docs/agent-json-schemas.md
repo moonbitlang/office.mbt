@@ -33,8 +33,10 @@ disagree, the tests are the source of truth and this document has a bug.
   `images`, `pivot_tables`, `defined_names`, `cells`) are always present
   (possibly `[]`); optional sub-object fields — including list-valued ones
   like `fill.colors` or a style's `border` — may be omitted entirely.
-- **Index bases**: sheet `index` is 0-based tab order. Rows and columns are
-  never sent as bare numbers; cell and range references are A1-style strings.
+- **Index bases**: standalone `xlsx.*` payloads use 0-based sheet `index`
+  values; unified `office.xlsx.*` payloads use 1-based sheet `index` values.
+  Rows and columns are never sent as bare numbers; cell and range references
+  are A1-style strings.
 - Output is pretty-printed (2-space indent) UTF-8 with a trailing newline,
   deterministic for a given workbook.
 
