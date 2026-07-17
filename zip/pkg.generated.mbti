@@ -14,7 +14,7 @@ pub fn gzip(BytesView) -> Bytes raise ZipError
 
 pub fn read(BytesView) -> Archive raise ZipError
 
-pub fn read_limited(BytesView, max_package_bytes~ : Int, max_entries~ : Int, max_entry_uncompressed_bytes~ : Int, max_total_uncompressed_bytes~ : Int, max_total_preserved_source_bytes~ : Int) -> Archive raise ZipError
+pub fn read_limited(BytesView, max_package_bytes~ : Int, max_entries~ : Int, max_entry_uncompressed_bytes~ : Int, max_total_uncompressed_bytes~ : Int, max_total_preserved_source_bytes~ : Int, cancelled? : () -> Bool) -> Archive raise ZipError
 
 pub fn write(Archive) -> Bytes raise ZipError
 
@@ -30,6 +30,7 @@ pub suberror ZipError {
   InvalidUtf8(offset~ : Int)
   OutputLimitExceeded(limit~ : Int)
   ResourceLimitExceeded(kind~ : String, limit~ : Int, actual~ : Int)
+  ReadCancelled
 } derive(@debug.Debug)
 #deprecated
 pub fn ZipError::to_repr(Self) -> @debug.Repr

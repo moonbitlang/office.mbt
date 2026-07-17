@@ -198,8 +198,8 @@ async fn main {
     }
     run_cli(args)
   } catch {
-    CliFailure(error) => raise CliError(render_failure(error, mode))
     error if @async.is_being_cancelled() => raise error
+    CliFailure(error) => raise CliError(render_failure(error, mode))
     error => {
       let message = normalize_argument_error(error.to_string())
       raise CliError(

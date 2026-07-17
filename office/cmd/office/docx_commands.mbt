@@ -132,7 +132,9 @@ async fn run_docx_outline(matches : @argparse.Matches) -> Unit {
   let file = required_value(matches, "file")
   let max_elements = cli_max_elements(matches)
   let max_output = cli_max_output_chars(matches)
-  let source = read_office_package(file)
+  let source = read_office_package(file, cancelled=() => {
+    @async.is_being_cancelled()
+  })
   match source.format {
     Docx => {
       let projection = open_docx_projection_archive(
@@ -184,7 +186,9 @@ async fn run_docx_get(matches : @argparse.Matches) -> Unit {
   let selector = required_value(matches, "selector")
   let max_elements = cli_max_elements(matches)
   let max_output = cli_max_output_chars(matches)
-  let source = read_office_package(file)
+  let source = read_office_package(file, cancelled=() => {
+    @async.is_being_cancelled()
+  })
   match source.format {
     Docx => {
       let projection = open_docx_projection_archive(
@@ -253,7 +257,9 @@ async fn run_docx_text(matches : @argparse.Matches) -> Unit {
   let limit = bounded_decimal_argument(
     matches, "limit", docx_cli_default_text_limit, 0, docx_cli_hard_text_limit,
   )
-  let source = read_office_package(file)
+  let source = read_office_package(file, cancelled=() => {
+    @async.is_being_cancelled()
+  })
   match source.format {
     Docx => {
       let projection = open_docx_projection_archive(
@@ -519,7 +525,9 @@ async fn run_docx_query(matches : @argparse.Matches) -> Unit {
   let limit = bounded_decimal_argument(
     matches, "limit", docx_cli_default_query_limit, 0, docx_cli_hard_query_limit,
   )
-  let source = read_office_package(file)
+  let source = read_office_package(file, cancelled=() => {
+    @async.is_being_cancelled()
+  })
   match source.format {
     Docx => {
       reject_docx_content_selector(matches)

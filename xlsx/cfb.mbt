@@ -592,11 +592,14 @@ fn read_sector_chain(
   start : Int,
   sector_count? : Int = fat.length(),
   maximum_length? : Int = fat.length(),
+  cancelled? : () -> Bool = () => false,
 ) -> Array[Int] raise XlsxError {
+  check_read_cancelled(cancelled)
   let chain : Array[Int] = []
   let visited = Array::make(sector_count, false)
   let mut current = start
   while current != end_of_chain && current != free_sector {
+    check_read_cancelled(cancelled)
     if current < 0 || current >= sector_count || current >= fat.length() {
       raise InvalidEncryptionInfo(msg="cfb chain out of bounds")
     }
@@ -614,7 +617,11 @@ fn read_sector_chain(
 }
 
 ///|
-fn cfb_read(bytes : BytesView) -> CfbReader raise XlsxError {
+fn cfb_read(
+  bytes : BytesView,
+  cancelled? : () -> Bool = () => false,
+) -> CfbReader raise XlsxError {
+  check_read_cancelled(cancelled)
   if bytes.length() < 512 {
     raise InvalidEncryptionInfo(msg="cfb header too short")
   }
@@ -689,6 +696,7 @@ fn cfb_read(bytes : BytesView) -> CfbReader raise XlsxError {
   let mut difat_count = 0
   let difat_seen = Array::make(sector_count, false)
   while difat_chain_start != end_of_chain && difat_chain_start != free_sector {
+    check_read_cancelled(cancelled)
     if difat_count >= num_difat {
       raise InvalidEncryptionInfo(msg="cfb DIFAT chain longer than declared")
     }
@@ -733,6 +741,7 @@ fn cfb_read(bytes : BytesView) -> CfbReader raise XlsxError {
   }
   let fat : Array[Int] = []
   for sector in fat_sectors {
+    check_read_cancelled(cancelled)
     let offset = sector_offset(sector_size, sector)
     let fat_bytes = bytes[offset:offset + sector_size]
     let mut idx = 0
@@ -746,9 +755,11 @@ fn cfb_read(bytes : BytesView) -> CfbReader raise XlsxError {
     dir_start,
     sector_count~,
     maximum_length=sector_count,
+    cancelled~,
   )
   let dir_data : Array[Byte] = []
   for sector in dir_chain {
+    check_read_cancelled(cancelled)
     let offset = sector_offset(sector_size, sector)
     let chunk = bytes[offset:offset + sector_size]
     dir_data.append(chunk.to_array())
@@ -757,6 +768,9 @@ fn cfb_read(bytes : BytesView) -> CfbReader raise XlsxError {
   let mut root_entry : CfbEntry = { name: "", type_id: 0, start: 0, size: 0 }
   let mut offset = 0
   while offset + 128 <= dir_data.length() {
+    if offset % 4096 == 0 {
+      check_read_cancelled(cancelled)
+    }
     let entry_bytes = Bytes::from_array(dir_data[offset:offset + 128])
     let name_len = read_u16_le(entry_bytes, 0x40)
     if name_len > 64 || name_len % 2 != 0 {
@@ -791,11 +805,13 @@ fn cfb_read(bytes : BytesView) -> CfbReader raise XlsxError {
       mini_fat_start,
       sector_count~,
       maximum_length=num_mini_fat,
+      cancelled~,
     )
     if mini_chain.length() != num_mini_fat {
       raise InvalidEncryptionInfo(msg="cfb mini FAT sector count mismatch")
     }
     for sector in mini_chain {
+      check_read_cancelled(cancelled)
       let offset = sector_offset(sector_size, sector)
       let chunk = bytes[offset:offset + sector_size]
       let mut idx = 0
@@ -813,9 +829,11 @@ fn cfb_read(bytes : BytesView) -> CfbReader raise XlsxError {
       root_entry.start,
       sector_count~,
       maximum_length=root_sector_count,
+      cancelled~,
     )
     let data : Array[Byte] = []
     for sector in root_chain {
+      check_read_cancelled(cancelled)
       let offset = sector_offset(sector_size, sector)
       let chunk = bytes[offset:offset + sector_size]
       data.append(chunk.to_array())
@@ -843,7 +861,9 @@ fn cfb_read(bytes : BytesView) -> CfbReader raise XlsxError {
 fn CfbReader::read_stream(
   self : CfbReader,
   name : StringView,
+  cancelled? : () -> Bool = () => false,
 ) -> Bytes raise XlsxError {
+  check_read_cancelled(cancelled)
   let mut entry : CfbEntry? = None
   let target = name.to_owned()
   for item in self.entries {
@@ -870,6 +890,7 @@ fn CfbReader::read_stream(
         let mut remaining = item.size
         let mut guard_count = 0
         while current != end_of_chain && current != free_sector && remaining > 0 {
+          check_read_cancelled(cancelled)
           if current < 0 || current >= self.mini_fat.length() {
             raise InvalidEncryptionInfo(msg="cfb mini chain out of bounds")
           }
@@ -907,9 +928,11 @@ fn CfbReader::read_stream(
           item.start,
           sector_count~,
           maximum_length=stream_sector_count,
+          cancelled~,
         )
         let data : Array[Byte] = []
         for sector in chain {
+          check_read_cancelled(cancelled)
           let offset = sector_offset(self.sector_size, sector)
           let chunk = self.bytes[offset:offset + self.sector_size]
           data.append(chunk.to_array())

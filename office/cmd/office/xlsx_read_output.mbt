@@ -314,6 +314,7 @@ fn collect_xlsx_cell_page(
   let scan = XlsxScanBudget::new(
     projection.max_scan_cells,
     format_work_maximum~,
+    cancelled=projection.cancelled,
   )
   let cells : Array[XlsxCellSnapshot] = []
   let mut matched = 0

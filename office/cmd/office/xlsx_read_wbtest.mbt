@@ -10,11 +10,10 @@ fn xlsx_read_test_projection() -> XlsxProjection raise {
 }
 
 ///|
-fn xlsx_cli_error(
-  run : () -> Unit raise CliFailure,
-) -> @lib.ProtocolError raise {
+fn xlsx_cli_error(run : () -> Unit raise) -> @lib.ProtocolError raise {
   try run() catch {
     CliFailure(error) => error
+    _ => fail("expected XLSX CLI failure")
   } noraise {
     _ => fail("expected XLSX CLI failure")
   }
@@ -34,6 +33,23 @@ fn xlsx_bounded_test_source(
     max_total_preserved_source_bytes=office_read_max_preserved_source_bytes,
   )
   { file, format: Xlsx, archive }
+}
+
+///|
+test "XLSX CLI preserves parser cancellation and checkpoints cell scans" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let source = xlsx_bounded_test_source("cancel.xlsx", @xlsx.write(workbook))
+  let parse_result : Result[@xlsx.Workbook, Error] = Ok(
+    open_xlsx_read_package(source, cancelled=() => true),
+  ) catch {
+    error => Err(error)
+  }
+  assert_true(parse_result is Err(@xlsx.ReadCancelled))
+
+  let scan = XlsxScanBudget::new(10, cancelled=() => true)
+  let scan_error = xlsx_cli_error(() => scan.charge_cell())
+  assert_eq(scan_error.code, "office.cancelled")
 }
 
 ///|

@@ -17,7 +17,7 @@ pub fn column_number_to_name(Int) -> String raise XlsxError
 
 pub fn coordinates_to_cell_name(Int, Int, abs? : Bool) -> String raise XlsxError
 
-pub fn decrypt(BytesView, options? : Options, limits? : ReadLimits) -> Bytes raise XlsxError
+pub fn decrypt(BytesView, options? : Options, limits? : ReadLimits, cancelled? : () -> Bool) -> Bytes raise XlsxError
 
 pub fn encrypt(BytesView, options? : Options) -> Bytes raise XlsxError
 

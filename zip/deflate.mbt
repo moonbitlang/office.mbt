@@ -411,10 +411,16 @@ fn decode_huffman_block(
   lit_table : HuffmanTable,
   dist_table : HuffmanTable,
   out : FixedByteOutput,
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise ZipError {
+  let mut next_checkpoint = out.length()
   for state = true {
     if !state {
       break
+    }
+    if out.length() >= next_checkpoint {
+      check_zip_cancelled(cancelled)
+      next_checkpoint = out.length() + 4096
     }
     let symbol = decode_symbol(reader, lit_table)
     if symbol < 256 {
@@ -594,7 +600,9 @@ fn deflate_encode(bytes : BytesView) -> Bytes raise ZipError {
 fn deflate_decode_to_output(
   bytes : BytesView,
   out : FixedByteOutput,
+  cancelled : () -> Bool,
 ) -> Unit raise ZipError {
+  check_zip_cancelled(cancelled)
   let reader = BitReader::new(bytes)
   for state = false {
     if state {
@@ -610,18 +618,21 @@ fn deflate_decode_to_output(
         if (len.reinterpret_as_uint() ^ nlen) != 0xFFFF {
           raise UnsupportedFeature(msg="invalid stored block length")
         }
-        for _ in 0..<len {
+        for index in 0..<len {
+          if index % 4096 == 0 {
+            check_zip_cancelled(cancelled)
+          }
           out.write_byte(reader.read_byte())
         }
       }
       1 => {
         let lit = fixed_literal_table()
         let dist = fixed_distance_table()
-        decode_huffman_block(reader, lit, dist, out)
+        decode_huffman_block(reader, lit, dist, out, cancelled~)
       }
       2 => {
         let (lit, dist) = read_dynamic_tables(reader)
-        decode_huffman_block(reader, lit, dist, out)
+        decode_huffman_block(reader, lit, dist, out, cancelled~)
       }
       _ => raise UnsupportedFeature(msg="invalid deflate block type")
     }
@@ -640,12 +651,13 @@ fn deflate_decode_to_output(
 fn deflate_decode(
   bytes : BytesView,
   max_output? : Int = deflate_max_output_default,
+  cancelled? : () -> Bool = () => false,
 ) -> Bytes raise ZipError {
   let sizing = FixedByteOutput::counting(limit=max_output)
-  deflate_decode_to_output(bytes, sizing)
+  deflate_decode_to_output(bytes, sizing, cancelled)
   let exact_size = sizing.length()
   let out = FixedByteOutput::allocated(exact_size)
-  deflate_decode_to_output(bytes, out)
+  deflate_decode_to_output(bytes, out, cancelled)
   out.finish()
 }
 
@@ -703,6 +715,23 @@ test "deflate dynamic huffman" {
   }
   let expected = Bytes::from_array(expected_array)
   inspect(deflate_decode(stream) == expected, content="true")
+}
+
+///|
+test "deflate decoding observes cancellation while producing output" {
+  let input = Bytes::from_array(Array::make(32 * 1024, b'x'))
+  let compressed = deflate_encode(input)
+  let checks = [0]
+  let result : Result[Bytes, Error] = Ok(
+    deflate_decode(compressed, cancelled=() => {
+      checks[0] += 1
+      checks[0] >= 3
+    }),
+  ) catch {
+    error => Err(error)
+  }
+  assert_true(result is Err(ReadCancelled))
+  assert_true(checks[0] >= 3)
 }
 
 ///|

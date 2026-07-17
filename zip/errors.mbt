@@ -14,4 +14,12 @@ pub suberror ZipError {
   InvalidUtf8(offset~ : Int)
   OutputLimitExceeded(limit~ : Int)
   ResourceLimitExceeded(kind~ : String, limit~ : Int, actual~ : Int)
+  ReadCancelled
 } derive(Debug)
+
+///|
+fn check_zip_cancelled(cancelled : () -> Bool) -> Unit raise ZipError {
+  if cancelled() {
+    raise ReadCancelled
+  }
+}

@@ -718,7 +718,9 @@ fn materialize_entry_data(
   limit_kind : String,
   reported_limit : Int,
   actual_base : Int,
+  cancelled : () -> Bool,
 ) -> Bytes raise ZipError {
+  check_zip_cancelled(cancelled)
   let data = match record.compression {
     Store => {
       match max_uncompressed_bytes {
@@ -747,7 +749,7 @@ fn materialize_entry_data(
             deflate_max_output_default
           }
       }
-      deflate_decode(record.compressed, max_output~) catch {
+      deflate_decode(record.compressed, max_output~, cancelled~) catch {
         OutputLimitExceeded(limit~) =>
           match max_uncompressed_bytes {
             Some(_) =>
@@ -781,7 +783,9 @@ fn read_impl(
   max_entry_uncompressed_bytes : Int?,
   max_total_uncompressed_bytes : Int?,
   max_total_preserved_source_bytes : Int?,
+  cancelled : () -> Bool,
 ) -> Archive raise ZipError {
+  check_zip_cancelled(cancelled)
   match max_package_bytes {
     Some(limit) if bytes.length() > limit =>
       raise ResourceLimitExceeded(
@@ -905,7 +909,10 @@ fn read_impl(
   let central_bytes = bytes[central_offset:central_boundary]
   let central_reader = Reader::new(central_bytes, 0)
   let mut declared_total = 0
-  for _ in 0..<entry_count {
+  for entry_index in 0..<entry_count {
+    if entry_index % 64 == 0 {
+      check_zip_cancelled(cancelled)
+    }
     let central_record_start = central_reader.pos
     let header_offset = central_offset + central_record_start
     let cd_sig = central_reader.read_u32()
@@ -1070,6 +1077,7 @@ fn read_impl(
   let records : Array[LocalRecord] = Array::new(capacity=metas.length())
   let local_intervals : Array[(Int, Int)] = Array::new(capacity=metas.length())
   for meta in metas {
+    check_zip_cancelled(cancelled)
     let record = read_entry_record(bytes, meta, central_offset)
     preserved_source_budget.charge(record.end - meta.local_header_offset)
     records.push(record)
@@ -1085,6 +1093,7 @@ fn read_impl(
   })
   let mut covered_until = 0
   for interval in local_intervals {
+    check_zip_cancelled(cancelled)
     if interval.0 < covered_until {
       raise UnsupportedFeature(msg="overlapping zip local records")
     }
@@ -1126,6 +1135,7 @@ fn read_impl(
   )
   let mut actual_total = 0
   for index in 0..<metas.length() {
+    check_zip_cancelled(cancelled)
     let meta = metas[index]
     let record = records[index]
     ignore(compression_from_method(meta.compression_method))
@@ -1152,7 +1162,7 @@ fn read_impl(
       None => ()
     }
     let data = materialize_entry_data(
-      record, meta, materialize_limit, limit_kind, reported_limit, actual_base,
+      record, meta, materialize_limit, limit_kind, reported_limit, actual_base, cancelled,
     )
     match max_total_uncompressed_bytes {
       Some(limit) if data.length() > limit - actual_total =>
@@ -1194,7 +1204,7 @@ fn read_impl(
 ///|
 /// Reads a ZIP archive using the library's compatibility defaults.
 pub fn read(bytes : BytesView) -> Archive raise ZipError {
-  read_impl(bytes, None, None, None, None, None)
+  read_impl(bytes, None, None, None, None, None, () => false)
 }
 
 ///|
@@ -1208,6 +1218,7 @@ pub fn read_limited(
   max_entry_uncompressed_bytes~ : Int,
   max_total_uncompressed_bytes~ : Int,
   max_total_preserved_source_bytes~ : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> Archive raise ZipError {
   if max_package_bytes < 0 ||
     max_entries < 0 ||
@@ -1223,6 +1234,7 @@ pub fn read_limited(
     Some(max_entry_uncompressed_bytes),
     Some(max_total_uncompressed_bytes),
     Some(max_total_preserved_source_bytes),
+    cancelled,
   )
 }
 

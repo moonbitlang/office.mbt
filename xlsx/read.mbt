@@ -2959,9 +2959,12 @@ fn is_xml_package_part(name : StringView) -> Bool {
 fn enforce_archive_limits(
   archive : @zip.Archive,
   limits : ReadLimits,
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
+  check_read_cancelled(cancelled)
   let mut total_size = 0
   for entry in archive.entries() {
+    check_read_cancelled(cancelled)
     let size = entry.data().length()
     if size > limits.max_entry_uncompressed_bytes {
       raise ResourceLimitExceeded(
@@ -2988,6 +2991,7 @@ fn enforce_archive_limits(
     if @zip.crc32(entry.data()) != entry.crc32() {
       raise InvalidPackage(msg="ZIP entry CRC mismatch")
     }
+    check_read_cancelled(cancelled)
   }
 }
 
@@ -2995,7 +2999,9 @@ fn enforce_archive_limits(
 fn require_bounded_archive(
   archive : @zip.Archive,
   limits : ReadLimits,
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
+  check_read_cancelled(cancelled)
   match
     archive.bounded_source_package_size(
       max_entries=limits.max_archive_entries,
@@ -3020,14 +3026,16 @@ fn require_bounded_archive(
       actual=archive.entries().length(),
     )
   }
-  enforce_archive_limits(archive, limits)
+  enforce_archive_limits(archive, limits, cancelled~)
 }
 
 ///|
 fn read_limited_archive(
   bytes : BytesView,
   limits : ReadLimits,
+  cancelled? : () -> Bool = () => false,
 ) -> @zip.Archive raise XlsxError {
+  check_read_cancelled(cancelled)
   @zip.read_limited(
     bytes,
     max_package_bytes=limits.max_package_bytes,
@@ -3037,9 +3045,11 @@ fn read_limited_archive(
     // The ZIP package preserves exact source records for lossless rewrites.
     // Bound that second compressed representation independently from inflation.
     max_total_preserved_source_bytes=limits.max_total_preserved_source_bytes,
+    cancelled~,
   ) catch {
     ResourceLimitExceeded(kind~, limit~, actual~) =>
       raise ResourceLimitExceeded(kind~, limit~, actual~)
+    ReadCancelled => raise ReadCancelled
     _ => raise InvalidPackage(msg="unreadable ZIP package")
   }
 }
@@ -4150,8 +4160,9 @@ fn read_zip_bytes(
   cancelled? : () -> Bool = () => false,
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
-  let archive = read_limited_archive(bytes, limits)
-  require_bounded_archive(archive, limits)
+  check_read_cancelled(cancelled)
+  let archive = read_limited_archive(bytes, limits, cancelled~)
+  require_bounded_archive(archive, limits, cancelled~)
   match transcoder {
     Some(value) =>
       read_zip_archive_core(
@@ -4177,7 +4188,8 @@ pub fn read_bounded_archive(
   cancelled? : () -> Bool = () => false,
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
-  require_bounded_archive(archive, limits)
+  check_read_cancelled(cancelled)
+  require_bounded_archive(archive, limits, cancelled~)
   match transcoder {
     Some(value) =>
       read_zip_archive_core(
@@ -4204,6 +4216,7 @@ pub fn read(
   cancelled? : () -> Bool = () => false,
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
+  check_read_cancelled(cancelled)
   check_source_package_size(bytes, limits)
   if options.password != "" {
     match transcoder {
@@ -4249,11 +4262,17 @@ pub fn read_with_password(
   cancelled? : () -> Bool = () => false,
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
+  check_read_cancelled(cancelled)
   check_source_package_size(bytes, limits)
   let resolved_options = options_with_password(options, password)
   if is_encrypted_package(bytes) {
-    let archive = decrypt_encrypted_archive(bytes, password, limits~)
-    require_bounded_archive(archive, limits)
+    let archive = decrypt_encrypted_archive(
+      bytes,
+      password,
+      limits~,
+      cancelled~,
+    )
+    require_bounded_archive(archive, limits, cancelled~)
     match transcoder {
       Some(value) =>
         read_zip_archive_core(

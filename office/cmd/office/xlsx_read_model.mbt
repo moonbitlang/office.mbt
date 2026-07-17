@@ -39,6 +39,7 @@ struct XlsxProjection {
   sheets : Array[XlsxSheetTarget]
   sheet_index : Map[String, Int]
   max_scan_cells : Int
+  cancelled : () -> Bool
 }
 
 ///|
@@ -90,6 +91,7 @@ struct XlsxScanBudget {
   strings : XlsxStringBudget
   formatting : XlsxFormatBudget
   mut scanned : Int
+  cancelled : () -> Bool
 }
 
 ///|
@@ -184,7 +186,11 @@ fn make_xlsx_projection(
   file : String,
   workbook : @xlsx.Workbook,
   max_elements : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> XlsxProjection raise CliFailure {
+  if cancelled() {
+    raise xlsx_cli_failure("office.cancelled", "XLSX read was cancelled")
+  }
   if max_elements < 1 || max_elements > docx_cli_hard_max_elements {
     raise xlsx_cli_failure(
       "office.invalid_arguments",
@@ -198,15 +204,24 @@ fn make_xlsx_projection(
   }
   let worksheets : Map[String, @xlsx.Worksheet] = Map([])
   for worksheet in workbook.sheets() {
+    if cancelled() {
+      raise xlsx_cli_failure("office.cancelled", "XLSX read was cancelled")
+    }
     worksheets[worksheet.name()] = worksheet
   }
   let chart_sheets : Map[String, @xlsx.ChartSheet] = Map([])
   for chart_sheet in workbook.chart_sheets() {
+    if cancelled() {
+      raise xlsx_cli_failure("office.cancelled", "XLSX read was cancelled")
+    }
     chart_sheets[chart_sheet.name()] = chart_sheet
   }
   let sheets : Array[XlsxSheetTarget] = []
   let sheet_index : Map[String, Int] = Map([])
   for index, name in workbook.get_sheet_list() {
+    if cancelled() {
+      raise xlsx_cli_failure("office.cancelled", "XLSX read was cancelled")
+    }
     let normalized_name = name.to_lower()
     if sheet_index.contains(normalized_name) {
       raise xlsx_cli_failure(
@@ -247,6 +262,7 @@ fn make_xlsx_projection(
     sheets,
     sheet_index,
     max_scan_cells: max_elements.min(xlsx_cli_hard_max_scan_cells),
+    cancelled,
   }
 }
 
@@ -255,9 +271,9 @@ fn open_xlsx_projection(
   source : OfficeReadPackage,
   max_elements : Int,
   cancelled? : () -> Bool = () => false,
-) -> XlsxProjection raise CliFailure {
+) -> XlsxProjection raise {
   let workbook = open_xlsx_read_package(source, cancelled~)
-  make_xlsx_projection(source.file, workbook, max_elements)
+  make_xlsx_projection(source.file, workbook, max_elements, cancelled~)
 }
 
 ///|
@@ -401,10 +417,16 @@ fn XlsxSheetTarget::shared_formula_master(
   shared_index : Int,
 ) -> @xlsx.SharedFormulaMaster raise CliFailure {
   if !self.shared_formulas_indexed {
+    if (projection.cancelled)() {
+      raise xlsx_cli_failure("office.cancelled", "XLSX read was cancelled")
+    }
     let masters = xlsx_call(projection.file, () => {
       worksheet.shared_formula_masters()
     })
     for index, formula in masters {
+      if (projection.cancelled)() {
+        raise xlsx_cli_failure("office.cancelled", "XLSX read was cancelled")
+      }
       self.shared_formula_masters[index] = formula
     }
     self.shared_formulas_indexed = true
@@ -597,17 +619,22 @@ fn XlsxFormatBudget::charge_style(
 fn XlsxScanBudget::new(
   maximum : Int,
   format_work_maximum? : Int = xlsx_cli_max_format_work_units,
+  cancelled? : () -> Bool = () => false,
 ) -> XlsxScanBudget {
   {
     maximum,
     strings: XlsxStringBudget::new(),
     formatting: XlsxFormatBudget::new(maximum=format_work_maximum),
     scanned: 0,
+    cancelled,
   }
 }
 
 ///|
 fn XlsxScanBudget::charge_cell(self : XlsxScanBudget) -> Unit raise CliFailure {
+  if (self.cancelled)() {
+    raise xlsx_cli_failure("office.cancelled", "XLSX read was cancelled")
+  }
   if self.scanned >= self.maximum {
     raise xlsx_resource_failure(
       "scanned cells",

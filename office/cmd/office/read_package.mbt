@@ -95,7 +95,10 @@ fn office_xlsx_read_limits() -> @xlsx.ReadLimits raise @xlsx.XlsxError {
 }
 
 ///|
-async fn read_office_package(file : String) -> OfficeReadPackage {
+async fn read_office_package(
+  file : String,
+  cancelled? : () -> Bool = () => false,
+) -> OfficeReadPackage {
   let expected = office_read_format_hint(file)
   let data = read_bounded_file(
     file,
@@ -111,7 +114,9 @@ async fn read_office_package(file : String) -> OfficeReadPackage {
     max_entry_uncompressed_bytes=office_read_max_zip_entry_bytes,
     max_total_uncompressed_bytes=office_read_max_zip_total_bytes,
     max_total_preserved_source_bytes=office_read_max_preserved_source_bytes,
+    cancelled~,
   ) catch {
+    error if cancelled() => raise error
     error => raise office_zip_read_failure(error, file, expected)
   }
   let format = @lib.detect_archive_format(file, archive) catch {
@@ -166,7 +171,7 @@ fn xlsx_read_failure(error : @xlsx.XlsxError, file : String) -> CliFailure {
 fn open_xlsx_read_package(
   source : OfficeReadPackage,
   cancelled? : () -> Bool = () => false,
-) -> @xlsx.Workbook raise CliFailure {
+) -> @xlsx.Workbook raise {
   if source.format is Docx {
     raise CliFailure(
       @lib.protocol_error(
@@ -178,6 +183,7 @@ fn open_xlsx_read_package(
     error => raise xlsx_read_failure(error, source.file)
   }
   @xlsx.read_bounded_archive(source.archive, limits~, cancelled~) catch {
+    ReadCancelled as error => raise error
     error => raise xlsx_read_failure(error, source.file)
   }
 }
