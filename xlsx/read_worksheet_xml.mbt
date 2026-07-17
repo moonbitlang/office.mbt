@@ -3,6 +3,7 @@ fn parse_worksheet(
   xml : StringView,
   shared_strings : Array[SharedStringEntry],
   style_count : Int,
+  budget? : ReadBudget,
 ) -> (
   Array[Cell],
   Array[String],
@@ -249,7 +250,7 @@ fn parse_worksheet(
   let sheet_protection = parse_sheet_protection(xml)
   let row_breaks = parse_page_breaks(xml, "rowBreaks")
   let col_breaks = parse_page_breaks(xml, "colBreaks")
-  let sheet_views = parse_sheet_views(xml)
+  let sheet_views = parse_sheet_views(xml, budget?)
   let sheet_props = parse_sheet_props(xml)
   let dimension_ref = parse_sheet_dimension(xml)
   let picture_rel_id = parse_picture_rel_id(xml)

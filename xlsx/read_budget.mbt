@@ -110,6 +110,45 @@ fn ReadBudget::tag_end(
 }
 
 ///|
+fn xml_sequence_at(
+  xml : StringView,
+  start : Int,
+  sequence : StringView,
+) -> Bool {
+  if start < 0 || start > xml.length() - sequence.length() {
+    return false
+  }
+  for offset in 0..<sequence.length() {
+    if xml[start + offset] != sequence[offset] {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn ReadBudget::sequence_end(
+  self : ReadBudget,
+  xml : StringView,
+  start : Int,
+  sequence : StringView,
+) -> Int? raise XlsxError {
+  let mut index = start
+  let mut next_checkpoint = start
+  while index <= xml.length() - sequence.length() {
+    if index >= next_checkpoint {
+      self.checkpoint()
+      next_checkpoint = index + 4096
+    }
+    if xml_sequence_at(xml, index, sequence) {
+      return Some(index + sequence.length())
+    }
+    index = index + 1
+  }
+  None
+}
+
+///|
 fn xml_name_local_start(xml : StringView, start : Int, end : Int) -> Int {
   let mut local_start = start
   for index in start..<end {
@@ -182,10 +221,34 @@ fn ReadBudget::scan_xml(
       continue
     }
     let first = xml[index + 1]
-    if first == ('/' : UInt16) ||
-      first == ('?' : UInt16) ||
-      first == ('!' : UInt16) {
+    if first == ('/' : UInt16) {
       index = index + 2
+      continue
+    }
+    if first == ('?' : UInt16) {
+      index = match self.sequence_end(xml, index + 2, "?>") {
+        Some(value) => value
+        None => xml.length()
+      }
+      continue
+    }
+    if first == ('!' : UInt16) {
+      index = if xml_sequence_at(xml, index, "<!--") {
+        match self.sequence_end(xml, index + 4, "-->") {
+          Some(value) => value
+          None => xml.length()
+        }
+      } else if xml_sequence_at(xml, index, "<![CDATA[") {
+        match self.sequence_end(xml, index + 9, "]]>") {
+          Some(value) => value
+          None => xml.length()
+        }
+      } else {
+        match self.tag_end(xml, index + 2) {
+          Some(value) => value + 1
+          None => xml.length()
+        }
+      }
       continue
     }
     let name_start = index + 1
@@ -237,4 +300,13 @@ test "read budget checks cancellation inside a long start tag" {
   } noraise {
     _ => fail("expected read cancellation")
   }
+}
+
+///|
+test "read budget ignores element-like text in comments and CDATA" {
+  let budget = ReadBudget::new(ReadLimits::with_values(max_parser_items=2))
+  budget.scan_xml(
+    "<root><!-- <fake/><fake/> --><![CDATA[<fake/><fake/>]]><real/></root>",
+  )
+  assert_eq(budget.parser_items, 2)
 }

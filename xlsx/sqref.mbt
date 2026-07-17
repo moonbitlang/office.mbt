@@ -60,15 +60,39 @@ fn validate_cell_or_range_ref_for_read(
 fn normalize_sqref_for_read(
   value : StringView,
   field : StringView,
+  budget? : ReadBudget,
 ) -> String raise XlsxError {
-  let tokens = xml_whitespace_tokens(value)
-  if tokens.length() == 0 {
+  let normalized = StringBuilder::new()
+  let mut token_start = -1
+  let mut token_count = 0
+  for index in 0..<=value.length() {
+    let at_end = index == value.length()
+    let separator = at_end || is_xml_attr_space_unit(value[index])
+    if !separator && token_start < 0 {
+      token_start = index
+    } else if separator && token_start >= 0 {
+      let token = value[token_start:index]
+      match budget {
+        Some(value) => {
+          value.checkpoint()
+          value.charge_items(1)
+          value.charge_work(token.length())
+        }
+        None => ()
+      }
+      ignore(validate_cell_or_range_ref_for_read(token, field))
+      if token_count > 0 {
+        normalized.write_char(' ')
+      }
+      normalized.write_view(token)
+      token_count = token_count + 1
+      token_start = -1
+    }
+  }
+  if token_count == 0 {
     invalid_coordinate_xml(field)
   }
-  for token in tokens {
-    ignore(validate_cell_or_range_ref_for_read(token, field))
-  }
-  tokens.join(" ")
+  normalized.to_string()
 }
 
 ///|
@@ -98,6 +122,7 @@ fn normalize_xml_sqref_attr_for_read(
   xml : StringView,
   tag_name : StringView,
   field : StringView,
+  budget? : ReadBudget,
 ) -> String raise XlsxError {
   let tag = match tag_attributes_in(xml, tag_name) {
     Some(value) => value
@@ -107,13 +132,31 @@ fn normalize_xml_sqref_attr_for_read(
     Some(value) => unescape_xml_text(value)
     None => raise InvalidXml(msg="\{field.to_owned()} sqref missing")
   }
-  let normalized = normalize_sqref_for_read(raw, field)
+  let normalized = normalize_sqref_for_read(raw, field, budget?)
   if normalized == raw {
     return xml.to_owned()
   }
   match replace_attr_value_in_open_tag(xml, "sqref", normalized) {
     Some(value) => value
     None => raise InvalidXml(msg="\{field.to_owned()} sqref invalid")
+  }
+}
+
+///|
+test "sqref read normalization charges tokens before materializing them" {
+  let budget = ReadBudget::new(ReadLimits::with_values(max_parser_items=2))
+  let result : Result[String, Error] = Ok(
+    normalize_sqref_for_read("A1 B2 C3", "selection", budget~),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="parser_items")
+      assert_eq(limit, 2)
+      assert_eq(actual, 3)
+    }
+    _ => fail("expected sqref parser-item limit")
   }
 }
 

@@ -318,6 +318,40 @@ test "semantic read limits reject XML items and derived column expansion" {
 }
 
 ///|
+test "semantic read limits charge sqref token materialization" {
+  let bytes = bounded_workbook_fixture()
+  let refs : Array[String] = []
+  for _ in 0..<1200 {
+    refs.push("A1")
+  }
+  let joined_refs = refs.join(" ")
+  let worksheet = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+    "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">\n" +
+    "  <sheetViews><sheetView workbookViewId=\"0\"><selection sqref=\"" +
+    joined_refs +
+    "\"/></sheetView></sheetViews>\n" +
+    "  <sheetData/>\n" +
+    "</worksheet>\n"
+  let expanded = replace_xlsx_part(bytes, "xl/worksheets/sheet1.xml", worksheet)
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(
+      expanded,
+      limits=@xlsx.ReadLimits::with_values(max_parser_items=1000),
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="parser_items")
+      assert_eq(limit, 1000)
+      assert_true(actual > limit)
+    }
+    _ => fail("expected sqref parser item limit")
+  }
+}
+
+///|
 test "semantic read limits bound cumulative parser work" {
   let bytes = bounded_workbook_fixture()
   let result : Result[@xlsx.Workbook, Error] = Ok(

@@ -1047,7 +1047,10 @@ fn parse_merge_cells(xml : StringView) -> Array[String] raise XlsxError {
 }
 
 ///|
-fn parse_data_validations(xml : StringView) -> Array[String] raise XlsxError {
+fn parse_data_validations(
+  xml : StringView,
+  budget? : ReadBudget,
+) -> Array[String] raise XlsxError {
   let validations : Array[String] = []
   let body = match extract_tag_body(xml, "dataValidations") {
     Some(value) => value
@@ -1078,7 +1081,10 @@ fn parse_data_validations(xml : StringView) -> Array[String] raise XlsxError {
     }
     validations.push(
       normalize_xml_sqref_attr_for_read(
-        full, "dataValidation", "data validation",
+        full,
+        "dataValidation",
+        "data validation",
+        budget?,
       ),
     )
   }
@@ -1088,6 +1094,7 @@ fn parse_data_validations(xml : StringView) -> Array[String] raise XlsxError {
 ///|
 fn parse_data_validations_x14(
   xml : StringView,
+  budget? : ReadBudget,
 ) -> Array[String] raise XlsxError {
   let validations : Array[String] = []
   let xml_str = xml.to_owned()
@@ -1126,6 +1133,7 @@ fn parse_data_validations_x14(
         normalize_sqref_for_read(
           unescape_xml_text(value),
           "x14 data validation",
+          budget?,
         )
       None => raise InvalidXml(msg="x14:dataValidation sqref missing")
     }
@@ -1180,7 +1188,10 @@ fn parse_data_validations_x14(
 }
 
 ///|
-fn parse_conditional_formats(xml : StringView) -> Array[String] raise XlsxError {
+fn parse_conditional_formats(
+  xml : StringView,
+  budget? : ReadBudget,
+) -> Array[String] raise XlsxError {
   let formats : Array[String] = []
   let xml_str = xml.to_owned()
   if !xml_str.contains("<conditionalFormatting") {
@@ -1211,7 +1222,10 @@ fn parse_conditional_formats(xml : StringView) -> Array[String] raise XlsxError 
     }
     formats.push(
       normalize_xml_sqref_attr_for_read(
-        full, "conditionalFormatting", "conditional formatting",
+        full,
+        "conditionalFormatting",
+        "conditional formatting",
+        budget?,
       ),
     )
   }
@@ -1419,6 +1433,7 @@ fn parse_x14_conditional_formatting_blocks(
 ///|
 fn parse_x14_data_bars(
   xml : StringView,
+  budget? : ReadBudget,
 ) -> Map[String, X14DataBarProps] raise XlsxError {
   let bars : Map[String, X14DataBarProps] = Map([])
   let blocks = parse_x14_conditional_formatting_blocks(xml)
@@ -1431,6 +1446,7 @@ fn parse_x14_data_bars(
         normalize_sqref_for_read(
           unescape_xml_text(value),
           "x14 conditional formatting",
+          budget?,
         )
       None =>
         match extract_tag_body_from(full, "sqref") {
@@ -1438,6 +1454,7 @@ fn parse_x14_data_bars(
             normalize_sqref_for_read(
               unescape_xml_text(value),
               "x14 conditional formatting",
+              budget?,
             )
           None => continue
         }
@@ -1587,6 +1604,7 @@ fn parse_unknown_worksheet_ext_blocks(
 ///|
 fn parse_conditional_formats_x14(
   xml : StringView,
+  budget? : ReadBudget,
 ) -> Array[String] raise XlsxError {
   let formats : Array[String] = []
   let blocks = parse_x14_conditional_formatting_blocks(xml)
@@ -1599,6 +1617,7 @@ fn parse_conditional_formats_x14(
         normalize_sqref_for_read(
           unescape_xml_text(value),
           "x14 conditional formatting",
+          budget?,
         )
       None =>
         match extract_tag_body_from(full, "sqref") {
@@ -1606,6 +1625,7 @@ fn parse_conditional_formats_x14(
             normalize_sqref_for_read(
               unescape_xml_text(value),
               "x14 conditional formatting",
+              budget?,
             )
           None =>
             raise InvalidXml(msg="x14:conditionalFormatting sqref missing")
@@ -1789,6 +1809,7 @@ fn parse_sheet_view_pane(body : StringView) -> SheetPane? raise XlsxError {
 ///|
 fn parse_sheet_view_selections(
   body : StringView,
+  budget? : ReadBudget,
 ) -> Array[Selection] raise XlsxError {
   let selections : Array[Selection] = []
   let mut first = true
@@ -1813,6 +1834,7 @@ fn parse_sheet_view_selections(
         selection.sqref = normalize_sqref_for_read(
           unescape_xml_text(value),
           "selection",
+          budget?,
         )
       None => ()
     }
@@ -1834,7 +1856,10 @@ fn parse_sheet_view_selections(
 }
 
 ///|
-fn parse_sheet_views(xml : StringView) -> Array[SheetView] raise XlsxError {
+fn parse_sheet_views(
+  xml : StringView,
+  budget? : ReadBudget,
+) -> Array[SheetView] raise XlsxError {
   let views : Array[SheetView] = []
   let body = match extract_tag_body(xml, "sheetViews") {
     Some(value) => value
@@ -1925,7 +1950,7 @@ fn parse_sheet_views(xml : StringView) -> Array[SheetView] raise XlsxError {
       if close > body_start {
         let inner = text[body_start:close]
         view.pane = parse_sheet_view_pane(inner)
-        let selections = parse_sheet_view_selections(inner)
+        let selections = parse_sheet_view_selections(inner, budget?)
         view.selection.clear()
         view.selection.append(selections)
       }
@@ -3466,7 +3491,12 @@ fn read_zip_archive_core_unchecked(
         sheet_props,
         dimension_ref,
         picture_rel_id,
-      ) = parse_worksheet(sheet_xml, shared_strings, style_count)
+      ) = parse_worksheet(
+        sheet_xml,
+        shared_strings,
+        style_count,
+        budget=read_budget,
+      )
       let hyperlink_elements = parse_hyperlink_elements(sheet_xml)
       let table_part_ids = parse_table_part_ids(sheet_xml)
       let pivot_part_ids = parse_pivot_table_part_ids(sheet_xml)
@@ -3479,17 +3509,23 @@ fn read_zip_archive_core_unchecked(
         sheet_xml, "legacyDrawingHF",
       )
       let sparkline_groups = parse_sparkline_groups(sheet_xml)
-      let data_validations = parse_data_validations(sheet_xml)
-      for dv in parse_data_validations_x14(sheet_xml) {
+      let data_validations = parse_data_validations(
+        sheet_xml,
+        budget=read_budget,
+      )
+      for dv in parse_data_validations_x14(sheet_xml, budget=read_budget) {
         data_validations.push(dv)
       }
-      let conditional_formats = parse_conditional_formats(sheet_xml)
-      for cf in parse_conditional_formats_x14(sheet_xml) {
+      let conditional_formats = parse_conditional_formats(
+        sheet_xml,
+        budget=read_budget,
+      )
+      for cf in parse_conditional_formats_x14(sheet_xml, budget=read_budget) {
         conditional_formats.push(cf)
       }
-      let x14_data_bars = parse_x14_data_bars(sheet_xml)
+      let x14_data_bars = parse_x14_data_bars(sheet_xml, budget=read_budget)
       let unknown_ext_blocks = parse_unknown_worksheet_ext_blocks(sheet_xml)
-      let ignored_errors = parse_ignored_errors(sheet_xml)
+      let ignored_errors = parse_ignored_errors(sheet_xml, budget=read_budget)
       let mut needs_hyperlink_rels = false
       for link in hyperlink_elements {
         if link.r_id is Some(_) {
