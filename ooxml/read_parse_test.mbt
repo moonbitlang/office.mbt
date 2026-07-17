@@ -72,6 +72,55 @@ test "ooxml read_parse: prefixed relationships decode entities exactly once" {
 }
 
 ///|
+test "ooxml read_parse: relationship schema whitespace is collapsed" {
+  let xml =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+    #|  <Relationship Id="  r&#x9;1  " Type="  urn:type&#xD;&#xA;one  " Target="  custom/a&#x9;&#x9;b.xml  "/>
+    #|</Relationships>
+  let targets = @ooxml.parse_relationship_targets(xml, "urn:type one")
+  debug_inspect(targets, content="{ \"r 1\": \"custom/a b.xml\" }")
+}
+
+///|
+test "ooxml read_parse: unwanted relationships remain schema-valid and ids stay unique" {
+  for
+    xml in [
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="bad" Type="other"/></Relationships>
+      ),
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="same" Type="other" Target="a"/><Relationship Id="same" Type="wanted" Target="b"/></Relationships>
+      ),
+    ] {
+    try @ooxml.parse_relationship_targets(xml, "wanted") catch {
+      InvalidXml(_) => ()
+    } noraise {
+      _ => fail("expected invalid relationship document")
+    }
+  }
+}
+
+///|
+test "ooxml read_parse: relationship limits accept writer boundaries" {
+  let xml = StringBuilder::new()
+  xml.write_string(
+    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
+  )
+  for index in 0..<16_385 {
+    xml.write_string(
+      "<Relationship Id=\"r\{index}\" Type=\"other\" Target=\"x\"/>",
+    )
+  }
+  let long_target = "x".repeat(4097)
+  xml.write_string(
+    "<Relationship Id=\"wanted\" Type=\"wanted\" Target=\"\{long_target}\"/>",
+  )
+  xml.write_string("</Relationships>")
+  let targets = @ooxml.parse_relationship_targets(xml.to_string(), "wanted")
+  assert_eq(targets.get("wanted"), Some(long_target))
+}
+
+///|
 test "ooxml read_parse: parse_content_type_overrides and find workbook part" {
   let xml =
     #|<?xml version="1.0" encoding="UTF-8"?>
@@ -121,5 +170,22 @@ test "ooxml read_parse: prefixed content types decode names and media types" {
       "application/vnd.example+xml",
     ]),
     content="Some(\"/xl/a&b.xml\")",
+  )
+}
+
+///|
+test "ooxml read_parse: content type lookup honors exact override then default" {
+  let xml =
+    #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+    #|  <Default Extension="XML" ContentType="application/default+xml"/>
+    #|  <Override PartName="/custom/book.xml" ContentType="application/workbook+xml"/>
+    #|</Types>
+  assert_eq(
+    @ooxml.find_part_content_type(xml, "custom/book.xml"),
+    Some("application/workbook+xml"),
+  )
+  assert_eq(
+    @ooxml.find_part_content_type(xml, "custom/other.Xml"),
+    Some("application/default+xml"),
   )
 }

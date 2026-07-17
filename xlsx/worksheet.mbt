@@ -760,6 +760,9 @@ pub fn Worksheet::set_cell_hyperlink(
     self.remove_cell_hyperlink(resolved)
     return
   }
+  if target.length() > max_hyperlink_target_chars {
+    raise InvalidHyperlink(msg="hyperlink target is too long")
+  }
   let display_value = if display == "" { None } else { Some(display) }
   let tooltip_value = if tooltip == "" { None } else { Some(tooltip) }
   let normalized_ref = normalize_cell_or_range_ref(resolved)

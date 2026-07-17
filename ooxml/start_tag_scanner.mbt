@@ -5,7 +5,7 @@ let xml_namespace_uri = "http://www.w3.org/XML/1998/namespace"
 let xmlns_namespace_uri = "http://www.w3.org/2000/xmlns/"
 
 ///|
-let max_xml_start_tag_chars : Int = 1024 * 1024
+let max_xml_start_tag_chars : Int = 16 * 1024 * 1024
 
 ///|
 let max_xml_qname_chars : Int = 1024
@@ -23,6 +23,7 @@ let max_xml_element_depth : Int = 256
 priv struct XmlNamespaceBinding {
   prefix : String
   uri : String
+  namespace_id : Int
   depth : Int
 }
 
@@ -44,12 +45,18 @@ pub struct XmlStartTagScanner {
   priv mut index : Int
   priv mut depth : Int
   priv namespace_bindings : Array[XmlNamespaceBinding]
+  priv namespace_ids : Map[String, Int]
+  priv namespace_ref_counts : Map[Int, Int]
+  priv mut next_namespace_id : Int
   priv open_name_starts : Array[Int]
   priv open_name_ends : Array[Int]
   priv mut pending_namespace_pop : Int?
+  priv mut root_seen : Bool
+  priv mut root_closed : Bool
   priv mut current_name_start : Int
   priv mut current_name_end : Int
   priv mut current_tag_end : Int
+  priv mut current_depth : Int
   priv mut current_namespace_uri : String
 }
 
@@ -226,7 +233,13 @@ fn next_xml_attribute(
   while index < tag_end && is_attr_space(xml[index]) {
     index = index + 1
   }
-  if index >= tag_end || xml[index] == ('/' : UInt16) {
+  if index >= tag_end {
+    return None
+  }
+  if xml[index] == ('/' : UInt16) {
+    if index + 1 != tag_end {
+      raise InvalidXml(msg="XML self-closing slash is misplaced")
+    }
     return None
   }
   let name_start = index
@@ -365,7 +378,13 @@ pub fn decode_xml_attribute(value : StringView) -> String raise ParseXmlError {
       unit == ('\r' : UInt16) {
       output.write_view(value[literal_start:index])
       output.write_char(' ')
-      index = index + 1
+      if unit == ('\r' : UInt16) &&
+        index + 1 < value.length() &&
+        value[index + 1] == ('\n' : UInt16) {
+        index = index + 2
+      } else {
+        index = index + 1
+      }
       literal_start = index
       continue
     }
@@ -379,6 +398,88 @@ pub fn decode_xml_attribute(value : StringView) -> String raise ParseXmlError {
 }
 
 ///|
+/// Checks an attribute value without retaining a decoded copy. This is used
+/// for attributes a caller does not select: malformed entities must never be
+/// hidden merely because an attribute is semantically irrelevant.
+fn validate_xml_attribute_value(value : StringView) -> Unit raise ParseXmlError {
+  let mut index = 0
+  while index < value.length() {
+    let unit = value[index]
+    if unit == ('&' : UInt16) {
+      let entity_end = match find_xml_sequence(value, index + 1, ";") {
+        Some(found) => found
+        None => raise InvalidXml(msg="XML entity is not closed")
+      }
+      if xml_entity_value(value[index + 1:entity_end]) is None {
+        raise InvalidXml(msg="XML entity is invalid")
+      }
+      index = entity_end + 1
+      continue
+    }
+    if unit == ('<' : UInt16) {
+      raise InvalidXml(msg="XML attribute contains '<'")
+    }
+    if unit < 0x20 &&
+      unit != ('\t' : UInt16) &&
+      unit != ('\n' : UInt16) &&
+      unit != ('\r' : UInt16) {
+      raise InvalidXml(msg="XML attribute contains an invalid character")
+    }
+    index = index + 1
+  }
+}
+
+///|
+fn XmlStartTagScanner::namespace_identity(
+  self : XmlStartTagScanner,
+  uri : String,
+) -> Int {
+  if uri == "" {
+    return 0
+  }
+  if uri == xml_namespace_uri {
+    return 1
+  }
+  match self.namespace_ids.get(uri) {
+    Some(namespace_id) => {
+      self.namespace_ref_counts[namespace_id] = self.namespace_ref_counts.get_or_default(
+          namespace_id, 0,
+        ) +
+        1
+      namespace_id
+    }
+    None => {
+      let namespace_id = self.next_namespace_id
+      self.next_namespace_id = self.next_namespace_id + 1
+      self.namespace_ids[uri] = namespace_id
+      self.namespace_ref_counts[namespace_id] = 1
+      namespace_id
+    }
+  }
+}
+
+///|
+fn XmlStartTagScanner::release_namespace_identity(
+  self : XmlStartTagScanner,
+  binding : XmlNamespaceBinding,
+) -> Unit {
+  if binding.namespace_id < 2 {
+    return
+  }
+  let remaining = self.namespace_ref_counts.get_or_default(
+      binding.namespace_id,
+      0,
+    ) -
+    1
+  if remaining <= 0 {
+    ignore(self.namespace_ref_counts.remove(binding.namespace_id))
+    ignore(self.namespace_ids.remove(binding.uri))
+  } else {
+    self.namespace_ref_counts[binding.namespace_id] = remaining
+  }
+}
+
+///|
 fn XmlStartTagScanner::pop_namespace_depth(
   self : XmlStartTagScanner,
   depth : Int,
@@ -388,7 +489,35 @@ fn XmlStartTagScanner::pop_namespace_depth(
     if self.namespace_bindings[last].depth != depth {
       break
     }
+    let binding = self.namespace_bindings[last]
     ignore(self.namespace_bindings.pop())
+    self.release_namespace_identity(binding)
+  }
+}
+
+///|
+fn XmlStartTagScanner::resolve_prefix_identity(
+  self : XmlStartTagScanner,
+  prefix : StringView,
+  attribute : Bool,
+) -> (String, Int) raise ParseXmlError {
+  if prefix == "xml" {
+    return (xml_namespace_uri, 1)
+  }
+  if prefix.length() == 0 && attribute {
+    return ("", 0)
+  }
+  for offset in 0..<self.namespace_bindings.length() {
+    let index = self.namespace_bindings.length() - 1 - offset
+    let binding = self.namespace_bindings[index]
+    if xml_string_equals_view(binding.prefix, prefix) {
+      return (binding.uri, binding.namespace_id)
+    }
+  }
+  if prefix.length() == 0 {
+    ("", 0)
+  } else {
+    raise InvalidXml(msg="XML namespace prefix is not declared")
   }
 }
 
@@ -398,24 +527,8 @@ fn XmlStartTagScanner::resolve_prefix(
   prefix : StringView,
   attribute : Bool,
 ) -> String raise ParseXmlError {
-  if prefix == "xml" {
-    return xml_namespace_uri
-  }
-  if prefix.length() == 0 && attribute {
-    return ""
-  }
-  for offset in 0..<self.namespace_bindings.length() {
-    let index = self.namespace_bindings.length() - 1 - offset
-    let binding = self.namespace_bindings[index]
-    if xml_string_equals_view(binding.prefix, prefix) {
-      return binding.uri
-    }
-  }
-  if prefix.length() == 0 {
-    ""
-  } else {
-    raise InvalidXml(msg="XML namespace prefix is not declared")
-  }
+  let (uri, _) = self.resolve_prefix_identity(prefix, attribute)
+  uri
 }
 
 ///|
@@ -478,7 +591,13 @@ fn XmlStartTagScanner::add_namespace_declarations(
     if self.namespace_bindings.length() >= max_xml_namespace_bindings {
       raise InvalidXml(msg="XML has too many active namespace bindings")
     }
-    self.namespace_bindings.push({ prefix, uri, depth: scope_depth })
+    let namespace_id = self.namespace_identity(uri)
+    self.namespace_bindings.push({
+      prefix,
+      uri,
+      namespace_id,
+      depth: scope_depth,
+    })
   }
 }
 
@@ -488,7 +607,7 @@ fn XmlStartTagScanner::validate_attributes(
   attributes_start : Int,
   tag_end : Int,
 ) -> Unit raise ParseXmlError {
-  let expanded_names : Set[String] = Set([])
+  let expanded_names : Map[Int, Set[String]] = Map([])
   let mut next = attributes_start
   let mut count = 0
   while next_xml_attribute(self.xml, next, tag_end) is Some(attribute) {
@@ -497,6 +616,9 @@ fn XmlStartTagScanner::validate_attributes(
       raise InvalidXml(msg="XML start tag has too many attributes")
     }
     next = attribute.next
+    validate_xml_attribute_value(
+      self.xml[attribute.value_start:attribute.value_end],
+    )
     if xml_namespace_declaration_prefix(self.xml, attribute) is Some(_) {
       continue
     }
@@ -517,12 +639,20 @@ fn XmlStartTagScanner::validate_attributes(
           self.xml[attribute.name_start:attribute.name_end],
         )
     }
-    let uri = self.resolve_prefix(prefix, true)
-    let expanded = "\{uri.length()}:\{uri}\{local_name_view.to_owned()}"
-    if expanded_names.contains(expanded) {
+    let (_, namespace_id) = self.resolve_prefix_identity(prefix, true)
+    let local_names = match expanded_names.get(namespace_id) {
+      Some(values) => values
+      None => {
+        let values : Set[String] = Set([])
+        expanded_names[namespace_id] = values
+        values
+      }
+    }
+    let local_name = local_name_view.to_owned()
+    if local_names.contains(local_name) {
       raise InvalidXml(msg="XML attribute is duplicated")
     }
-    expanded_names.add(expanded)
+    local_names.add(local_name)
   }
 }
 
@@ -535,12 +665,18 @@ pub fn XmlStartTagScanner::new(xml : StringView) -> XmlStartTagScanner {
     index: 0,
     depth: 0,
     namespace_bindings: [],
+    namespace_ids: Map([]),
+    namespace_ref_counts: Map([]),
+    next_namespace_id: 2,
     open_name_starts: [],
     open_name_ends: [],
     pending_namespace_pop: None,
+    root_seen: false,
+    root_closed: false,
     current_name_start: 0,
     current_name_end: 0,
     current_tag_end: 0,
+    current_depth: 0,
     current_namespace_uri: "",
   }
 }
@@ -576,6 +712,9 @@ fn XmlStartTagScanner::consume_end_tag(
   ignore(self.open_name_ends.pop())
   self.pop_namespace_depth(self.depth)
   self.depth = self.depth - 1
+  if self.depth == 0 {
+    self.root_closed = true
+  }
   self.index = tag_end + 1
 }
 
@@ -595,6 +734,9 @@ pub fn XmlStartTagScanner::next(
   while self.index < self.xml.length() {
     while self.index < self.xml.length() &&
           self.xml[self.index] != ('<' : UInt16) {
+      if self.depth == 0 && !is_attr_space(self.xml[self.index]) {
+        raise InvalidXml(msg="XML text is outside the document element")
+      }
       self.index = self.index + 1
     }
     if self.index >= self.xml.length() {
@@ -624,6 +766,9 @@ pub fn XmlStartTagScanner::next(
       }
       if start + 9 <= self.xml.length() &&
         xml_span_equals(self.xml, start, start + 9, "<![CDATA[") {
+        if self.depth == 0 {
+          raise InvalidXml(msg="XML CDATA is outside the document element")
+        }
         let end = match find_xml_sequence(self.xml, start + 9, "]]>") {
           Some(value) => value
           None => raise InvalidXml(msg="XML CDATA section is not closed")
@@ -636,6 +781,12 @@ pub fn XmlStartTagScanner::next(
     if self.xml[start + 1] == ('/' : UInt16) {
       self.consume_end_tag(start)
       continue
+    }
+    if self.depth == 0 {
+      if self.root_seen || self.root_closed {
+        raise InvalidXml(msg="XML has multiple document elements")
+      }
+      self.root_seen = true
     }
     let name_start = start + 1
     let mut name_end = name_start
@@ -670,9 +821,13 @@ pub fn XmlStartTagScanner::next(
     }
     self.current_name_end = name_end
     self.current_tag_end = tag_end
+    self.current_depth = scope_depth
     self.index = tag_end + 1
     if self_closing {
       self.pending_namespace_pop = Some(scope_depth)
+      if self.depth == 0 {
+        self.root_closed = true
+      }
     } else {
       self.depth = scope_depth
       self.open_name_starts.push(name_start)
@@ -682,6 +837,9 @@ pub fn XmlStartTagScanner::next(
   }
   if self.depth != 0 {
     raise InvalidXml(msg="XML start tag has no matching end tag")
+  }
+  if !self.root_seen {
+    raise InvalidXml(msg="XML document element is missing")
   }
   false
 }
@@ -699,6 +857,12 @@ pub fn XmlStartTagScanner::namespace_uri(
   self : XmlStartTagScanner,
 ) -> StringView {
   self.current_namespace_uri
+}
+
+///|
+/// Returns the one-based nesting depth of the current start tag.
+pub fn XmlStartTagScanner::depth(self : XmlStartTagScanner) -> Int {
+  self.current_depth
 }
 
 ///|
@@ -801,6 +965,7 @@ test "start tag scanner restores namespace scopes after self-closing tags" {
 ///|
 test "XML attributes decode once and reject invalid entities" {
   inspect(decode_xml_attribute("a&amp;#x20;b"), content="a&#x20;b")
+  inspect(decode_xml_attribute("a\r\nb"), content="a b")
   for value in ["&unknown;", "&#0;", "&#xD800;", "&amp"] {
     try decode_xml_attribute(value) catch {
       InvalidXml(_) => ()
@@ -808,6 +973,55 @@ test "XML attributes decode once and reject invalid entities" {
       _ => fail("expected invalid XML entity")
     }
   }
+}
+
+///|
+test "start tag scanner validates unused attributes and document structure" {
+  for
+    xml in [
+      "<root unused='&bogus;'/>", "<root/ garbage>", "<root/><second/>", "text<root/>",
+      "<![CDATA[text]]><root/>",
+    ] {
+    let scanner = XmlStartTagScanner::new(xml)
+    try {
+      while scanner.next() {
+
+      }
+    } catch {
+      InvalidXml(_) => ()
+    } noraise {
+      _ => fail("expected malformed XML document")
+    }
+  }
+}
+
+///|
+test "start tag scanner rejects a misplaced self-closing slash" {
+  let scanner = XmlStartTagScanner::new("<root / bad='1'>x</root>")
+  try scanner.next() catch {
+    InvalidXml(msg~) =>
+      inspect(msg, content="XML self-closing slash is misplaced")
+  } noraise {
+    _ => fail("expected misplaced self-closing slash")
+  }
+}
+
+///|
+test "namespace duplicate checks retain namespace identities once" {
+  let attributes = StringBuilder::new()
+  for index in 0..<4095 {
+    attributes.write_string(" p:a\{index}='v'")
+  }
+  let scanner = XmlStartTagScanner::new(
+    "<root xmlns:p='" +
+    "u".repeat(100_000) +
+    "'" +
+    attributes.to_string() +
+    "/>",
+  )
+  assert_true(scanner.next())
+  assert_eq(scanner.depth(), 1)
+  assert_false(scanner.next())
 }
 
 ///|

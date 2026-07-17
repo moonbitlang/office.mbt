@@ -85,6 +85,59 @@ let package_relationships_namespace = "http://schemas.openxmlformats.org/package
 let package_content_types_namespace = "http://schemas.openxmlformats.org/package/2006/content-types"
 
 ///|
+let max_relationship_records = 1_000_000
+
+///|
+let max_relationship_id_chars = 1024
+
+///|
+let max_relationship_type_chars : Int = 16 * 1024
+
+///|
+let max_relationship_target_chars : Int = 16 * 1024 * 1024
+
+///|
+let max_relationship_retained_chars : Int = 16 * 1024 * 1024
+
+///|
+fn collapse_schema_whitespace(value : StringView) -> String {
+  let output = StringBuilder::new()
+  let mut pending_space = false
+  let mut wrote = false
+  for unit in value {
+    if unit == ' ' || unit == '\t' || unit == '\n' || unit == '\r' {
+      if wrote {
+        pending_space = true
+      }
+    } else {
+      if pending_space {
+        output.write_char(' ')
+        pending_space = false
+      }
+      output.write_char(unit)
+      wrote = true
+    }
+  }
+  output.to_string()
+}
+
+///|
+fn relationship_attribute(
+  scanner : XmlStartTagScanner,
+  name : StringView,
+) -> String raise ParseXmlError {
+  let value = match scanner.attribute("", name) {
+    Some(value) => collapse_schema_whitespace(value)
+    None =>
+      raise InvalidXml(msg="relationship \{name.to_owned().to_lower()} missing")
+  }
+  if value == "" {
+    raise InvalidXml(msg="relationship \{name.to_owned().to_lower()} is empty")
+  }
+  value
+}
+
+///|
 /// Reads relationship targets whose decoded `Type` is in `rel_types`. Element
 /// names are matched by expanded namespace name, so the package namespace may
 /// use either a default namespace or any declared prefix.
@@ -92,13 +145,15 @@ pub fn parse_relationship_targets_by_types(
   xml : StringView,
   rel_types : ArrayView[String],
 ) -> Map[String, String] raise ParseXmlError {
-  let max_records = 16_384
-  let max_id_chars = 256
-  let max_type_chars = 2_048
-  let max_target_chars = 4_096
-  let max_retained_chars = 8 * 1024 * 1024
   let targets : Map[String, String] = Map([])
+  let ids : Set[String] = Set([])
   let scanner = XmlStartTagScanner::new(xml)
+  if !scanner.next() ||
+    scanner.depth() != 1 ||
+    scanner.namespace_uri() != package_relationships_namespace ||
+    scanner.local_name() != "Relationships" {
+    raise InvalidXml(msg="relationships document element invalid")
+  }
   let mut records = 0
   let mut retained_chars = 0
   while scanner.next() {
@@ -106,18 +161,34 @@ pub fn parse_relationship_targets_by_types(
       scanner.local_name() != "Relationship" {
       continue
     }
+    if scanner.depth() != 2 {
+      raise InvalidXml(msg="relationship element is not a direct child")
+    }
     records = records + 1
-    if records > max_records {
+    if records > max_relationship_records {
       raise InvalidXml(msg="relationship record limit exceeded")
     }
-    let rel_view = match scanner.attribute_view("", "Type") {
-      Some(value) => value
-      None => continue
-    }
-    if rel_view.length() > max_type_chars {
+    let rel = relationship_attribute(scanner, "Type")
+    let id = relationship_attribute(scanner, "Id")
+    let target = relationship_attribute(scanner, "Target")
+    if rel.length() > max_relationship_type_chars {
       raise InvalidXml(msg="relationship type is too long")
     }
-    let rel = decode_xml_attribute(rel_view)
+    if id.length() > max_relationship_id_chars {
+      raise InvalidXml(msg="relationship id is too long")
+    }
+    if target.length() > max_relationship_target_chars {
+      raise InvalidXml(msg="relationship target is too long")
+    }
+    if ids.contains(id) {
+      raise InvalidXml(msg="duplicate relationship id")
+    }
+    ids.add(id)
+    let retained = id.length() + target.length()
+    if retained > max_relationship_retained_chars - retained_chars {
+      raise InvalidXml(msg="relationship retained text limit exceeded")
+    }
+    retained_chars = retained_chars + retained
     let mut wanted = false
     for rel_type in rel_types {
       if rel == rel_type {
@@ -127,30 +198,6 @@ pub fn parse_relationship_targets_by_types(
     }
     if !wanted {
       continue
-    }
-    let id_view = match scanner.attribute_view("", "Id") {
-      Some(value) => value
-      None => raise InvalidXml(msg="relationship id missing")
-    }
-    if id_view.length() > max_id_chars {
-      raise InvalidXml(msg="relationship id is too long")
-    }
-    let target_view = match scanner.attribute_view("", "Target") {
-      Some(value) => value
-      None => raise InvalidXml(msg="relationship target missing")
-    }
-    if target_view.length() > max_target_chars {
-      raise InvalidXml(msg="relationship target is too long")
-    }
-    let id = decode_xml_attribute(id_view)
-    let target = decode_xml_attribute(target_view)
-    let retained = id.length() + target.length()
-    if retained > max_retained_chars - retained_chars {
-      raise InvalidXml(msg="relationship retained text limit exceeded")
-    }
-    retained_chars = retained_chars + retained
-    if targets.contains(id) {
-      raise InvalidXml(msg="duplicate relationship id")
     }
     targets[id] = target
   }
@@ -166,30 +213,73 @@ pub fn parse_relationship_targets(
 }
 
 ///|
-fn parse_content_type_overrides(
+priv struct PackageContentTypes {
+  overrides : Map[String, String]
+  defaults : Map[String, String]
+}
+
+///|
+fn parse_content_types(
   xml : StringView,
-) -> Map[String, String] raise ParseXmlError {
+) -> PackageContentTypes raise ParseXmlError {
   let overrides : Map[String, String] = Map([])
+  let defaults : Map[String, String] = Map([])
   let scanner = XmlStartTagScanner::new(xml)
+  if !scanner.next() ||
+    scanner.depth() != 1 ||
+    scanner.namespace_uri() != package_content_types_namespace ||
+    scanner.local_name() != "Types" {
+    raise InvalidXml(msg="content types document element invalid")
+  }
   while scanner.next() {
-    if scanner.namespace_uri() != package_content_types_namespace ||
-      scanner.local_name() != "Override" {
+    if scanner.namespace_uri() != package_content_types_namespace {
       continue
     }
-    let part_name = match scanner.attribute("", "PartName") {
-      Some(value) => value
-      None => raise InvalidXml(msg="content type override part name missing")
+    if scanner.depth() != 2 {
+      raise InvalidXml(msg="content type record is not a direct child")
     }
-    let content_type = match scanner.attribute("", "ContentType") {
-      Some(value) => value
-      None => raise InvalidXml(msg="content type override content type missing")
+    match scanner.local_name() {
+      "Override" => {
+        let part_name = match scanner.attribute("", "PartName") {
+          Some(value) => collapse_schema_whitespace(value)
+          None =>
+            raise InvalidXml(msg="content type override part name missing")
+        }
+        let content_type = match scanner.attribute("", "ContentType") {
+          Some(value) => collapse_schema_whitespace(value)
+          None =>
+            raise InvalidXml(msg="content type override content type missing")
+        }
+        if part_name == "" || content_type == "" {
+          raise InvalidXml(msg="content type override value is empty")
+        }
+        if overrides.contains(part_name) {
+          raise InvalidXml(msg="duplicate content type override")
+        }
+        overrides[part_name] = content_type
+      }
+      "Default" => {
+        let extension = match scanner.attribute("", "Extension") {
+          Some(value) => collapse_schema_whitespace(value).to_lower()
+          None => raise InvalidXml(msg="content type default extension missing")
+        }
+        let content_type = match scanner.attribute("", "ContentType") {
+          Some(value) => collapse_schema_whitespace(value)
+          None =>
+            raise InvalidXml(msg="content type default content type missing")
+        }
+        if extension == "" || content_type == "" {
+          raise InvalidXml(msg="content type default value is empty")
+        }
+        if defaults.contains(extension) {
+          raise InvalidXml(msg="duplicate content type default")
+        }
+        defaults[extension] = content_type
+      }
+      _ => raise InvalidXml(msg="content types element is invalid")
     }
-    if overrides.contains(part_name) {
-      raise InvalidXml(msg="duplicate content type override")
-    }
-    overrides[part_name] = content_type
   }
-  overrides
+  { overrides, defaults }
 }
 
 ///|
@@ -197,15 +287,45 @@ pub fn find_override_part_by_content_types(
   xml : StringView,
   content_types : ArrayView[String],
 ) -> String? raise ParseXmlError {
-  let overrides = parse_content_type_overrides(xml)
+  let content_types_value = parse_content_types(xml)
   for wanted in content_types {
-    for part_name, content_type in overrides {
+    for part_name, content_type in content_types_value.overrides {
       if content_type == wanted {
         return Some(part_name)
       }
     }
   }
   None
+}
+
+///|
+/// Returns the declared content type for `part_name`. An exact override wins;
+/// otherwise the case-insensitive extension default is used.
+pub fn find_part_content_type(
+  xml : StringView,
+  part_name : StringView,
+) -> String? raise ParseXmlError {
+  let content_types_value = parse_content_types(xml)
+  let normalized = if part_name.has_prefix("/") {
+    part_name.to_owned()
+  } else {
+    "/" + part_name.to_owned()
+  }
+  match content_types_value.overrides.get(normalized) {
+    Some(value) => Some(value)
+    None => {
+      let filename = match normalized.rev_find("/") {
+        Some(index) => normalized[index + 1:]
+        None => normalized[:]
+      }
+      let extension = match filename.rev_find(".") {
+        Some(index) if index + 1 < filename.length() =>
+          filename[index + 1:].to_owned().to_lower()
+        _ => return None
+      }
+      content_types_value.defaults.get(extension)
+    }
+  }
 }
 
 ///|
@@ -230,15 +350,18 @@ test "ooxml read_parse wb: attr_value parser branches" {
 }
 
 ///|
-test "ooxml read_parse wb: relationship type-missing branch continues" {
+test "ooxml read_parse wb: every relationship record is validated" {
   let xml =
     #|<?xml version="1.0" encoding="UTF-8"?>
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
     #|  <Relationship Id="rId1" Target="a.xml"/>
     #|</Relationships>
     #|
-  let targets = parse_relationship_targets(xml, "t1")
-  debug_inspect(targets, content="{}")
+  try parse_relationship_targets(xml, "t1") catch {
+    InvalidXml(msg~) => inspect(msg, content="relationship type missing")
+  } noraise {
+    _ => fail("expected relationship type missing")
+  }
 }
 
 ///|
@@ -249,7 +372,7 @@ test "ooxml read_parse wb: content-type override required attrs" {
     #|  <Override ContentType="application/xml"/>
     #|</Types>
     #|
-  try parse_content_type_overrides(missing_part) catch {
+  try parse_content_types(missing_part) catch {
     InvalidXml(msg~) =>
       inspect(msg, content="content type override part name missing")
   } noraise {
@@ -262,7 +385,7 @@ test "ooxml read_parse wb: content-type override required attrs" {
     #|  <Override PartName="/xl/workbook.xml"/>
     #|</Types>
     #|
-  try parse_content_type_overrides(missing_content_type) catch {
+  try parse_content_types(missing_content_type) catch {
     InvalidXml(msg~) =>
       inspect(msg, content="content type override content type missing")
   } noraise {

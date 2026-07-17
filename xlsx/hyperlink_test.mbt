@@ -285,6 +285,51 @@ test "hyperlink validates cell reference" {
 }
 
 ///|
+test "hyperlink relationship reader matches writer record and target boundaries" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  for index in 0..<16_385 {
+    workbook.set_cell_hyperlink(
+      "Sheet1",
+      "A\{index + 1}",
+      "https://example.test/\{index}",
+      External,
+    )
+  }
+  let long_target = "x".repeat(4097)
+  workbook.set_cell_hyperlink("Sheet1", "B1", long_target, External)
+  let parsed = @xlsx.read(@xlsx.write(workbook))
+  assert_eq(
+    parsed.get_cell_hyperlink("Sheet1", "A16385").map(link => link.target),
+    Some("https://example.test/16384"),
+  )
+  assert_eq(
+    parsed.get_cell_hyperlink("Sheet1", "B1").map(link => link.target),
+    Some(long_target),
+  )
+}
+
+///|
+test "hyperlink writer rejects targets that cannot fit the read policy" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  try
+    workbook.set_cell_hyperlink(
+      "Sheet1",
+      "A1",
+      "x".repeat(1024 * 1024 + 1),
+      External,
+    )
+  catch {
+    InvalidHyperlink(msg~) =>
+      inspect(msg, content="hyperlink target is too long")
+    _ => fail("unexpected hyperlink target error")
+  } noraise {
+    _ => fail("expected hyperlink target limit")
+  }
+}
+
+///|
 test "hyperlink remove clears range reference" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

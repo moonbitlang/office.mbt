@@ -16,6 +16,8 @@ pub fn escape_xml_text(StringView) -> String
 
 pub fn find_override_part_by_content_types(StringView, ArrayView[String]) -> String? raise ParseXmlError
 
+pub fn find_part_content_type(StringView, StringView) -> String? raise ParseXmlError
+
 pub fn parse_relationship_targets(StringView, StringView) -> Map[String, String] raise ParseXmlError
 
 pub fn parse_relationship_targets_by_types(StringView, ArrayView[String]) -> Map[String, String] raise ParseXmlError
@@ -47,6 +49,7 @@ pub struct XmlStartTagScanner {
 }
 pub fn XmlStartTagScanner::attribute(Self, StringView, StringView) -> String? raise ParseXmlError
 pub fn XmlStartTagScanner::attribute_view(Self, StringView, StringView) -> StringView? raise ParseXmlError
+pub fn XmlStartTagScanner::depth(Self) -> Int
 pub fn XmlStartTagScanner::local_name(Self) -> StringView
 pub fn XmlStartTagScanner::namespace_uri(Self) -> StringView
 pub fn XmlStartTagScanner::new(StringView) -> Self
