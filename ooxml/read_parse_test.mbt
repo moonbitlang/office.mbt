@@ -50,10 +50,25 @@ test "ooxml read_parse: parse_relationship_targets reports missing id/target and
     #|</Relationships>
     #|
   try @ooxml.parse_relationship_targets(malformed, "t1") catch {
-    InvalidXml(msg~) => inspect(msg, content="relationship tag not closed")
+    InvalidXml(msg~) => inspect(msg, content="XML start tag is not closed")
   } noraise {
     _ => fail("expected relationship tag not closed")
   }
+}
+
+///|
+test "ooxml read_parse: prefixed relationships decode entities exactly once" {
+  let xml =
+    #|<pkg:Relationships xmlns:pkg="http://schemas.openxmlformats.org/package/2006/relationships">
+    #|  <pkg:Relationship Id="r&amp;1" Type="urn:type&#x31;" Target="custom/a&amp;#x20;b.xml"/>
+    #|</pkg:Relationships>
+  let targets = @ooxml.parse_relationship_targets(xml, "urn:type1")
+  debug_inspect(
+    targets,
+    content=(
+      #|{ "r&1": "custom/a&#x20;b.xml" }
+    ),
+  )
 }
 
 ///|
@@ -89,9 +104,22 @@ test "ooxml read_parse: parse_content_type_overrides reports malformed override 
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
     ])
   catch {
-    InvalidXml(msg~) =>
-      inspect(msg, content="content type override tag not closed")
+    InvalidXml(msg~) => inspect(msg, content="XML start tag is not closed")
   } noraise {
     _ => fail("expected content type override tag not closed")
   }
+}
+
+///|
+test "ooxml read_parse: prefixed content types decode names and media types" {
+  let xml =
+    #|<ct:Types xmlns:ct="http://schemas.openxmlformats.org/package/2006/content-types">
+    #|  <ct:Override PartName="/xl/a&amp;b.xml" ContentType="application/vnd.example&#43;xml"/>
+    #|</ct:Types>
+  debug_inspect(
+    @ooxml.find_override_part_by_content_types(xml, [
+      "application/vnd.example+xml",
+    ]),
+    content="Some(\"/xl/a&b.xml\")",
+  )
 }

@@ -8,6 +8,8 @@ import {
 // Values
 pub fn attr_value(StringView, StringView) -> String? raise ParseXmlError
 
+pub fn decode_xml_attribute(StringView) -> String raise ParseXmlError
+
 pub fn escape_xml_attr(StringView) -> String
 
 pub fn escape_xml_text(StringView) -> String
@@ -15,6 +17,8 @@ pub fn escape_xml_text(StringView) -> String
 pub fn find_override_part_by_content_types(StringView, ArrayView[String]) -> String? raise ParseXmlError
 
 pub fn parse_relationship_targets(StringView, StringView) -> Map[String, String] raise ParseXmlError
+
+pub fn parse_relationship_targets_by_types(StringView, ArrayView[String]) -> Map[String, String] raise ParseXmlError
 
 pub fn xml_needs_escape(StringView, attr~ : Bool) -> Bool
 
@@ -37,6 +41,16 @@ pub fn WorkbookManifest::new(Int, include_shared_strings? : Bool, include_calc_c
 pub fn WorkbookManifest::root_rels_xml(Self) -> String
 pub fn WorkbookManifest::set_workbook_content_type(Self, String) -> Unit
 pub fn WorkbookManifest::workbook_rels_xml(Self) -> String
+
+pub struct XmlStartTagScanner {
+  // private fields
+}
+pub fn XmlStartTagScanner::attribute(Self, StringView, StringView) -> String? raise ParseXmlError
+pub fn XmlStartTagScanner::attribute_view(Self, StringView, StringView) -> StringView? raise ParseXmlError
+pub fn XmlStartTagScanner::local_name(Self) -> StringView
+pub fn XmlStartTagScanner::namespace_uri(Self) -> StringView
+pub fn XmlStartTagScanner::new(StringView) -> Self
+pub fn XmlStartTagScanner::next(Self) -> Bool raise ParseXmlError
 
 // Type aliases
 

@@ -15,6 +15,16 @@ fn parse_relationship_targets_exact(
 }
 
 ///|
+fn parse_relationship_targets_exact_types(
+  xml : StringView,
+  rel_types : ArrayView[String],
+) -> Map[String, String] raise XlsxError {
+  @ooxml.parse_relationship_targets_by_types(xml, rel_types) catch {
+    InvalidXml(msg~) => raise InvalidXml(msg~)
+  }
+}
+
+///|
 /// Reads both ISO Strict and ECMA Transitional aliases for relationship types
 /// from the Office relationship family. Microsoft extension relationships use
 /// their own namespaces and therefore remain exact matches.
@@ -23,20 +33,13 @@ fn parse_relationship_targets(
   rel_type : StringView,
 ) -> Map[String, String] raise XlsxError {
   let requested = rel_type.to_owned()
-  let targets = parse_relationship_targets_exact(xml, requested)
-  guard requested.strip_prefix(transitional_office_relationship_prefix)
-    is Some(suffix) else {
-    return targets
-  }
-  let strict_type = strict_office_relationship_prefix + suffix.to_owned()
-  let strict_targets = parse_relationship_targets_exact(xml, strict_type)
-  for id, target in strict_targets {
-    if targets.contains(id) {
-      raise InvalidXml(msg="relationship id has conflicting dialect aliases")
+  match requested.strip_prefix(transitional_office_relationship_prefix) {
+    Some(suffix) => {
+      let strict_type = strict_office_relationship_prefix + suffix.to_owned()
+      parse_relationship_targets_exact_types(xml, [requested, strict_type])
     }
-    targets[id] = target
+    None => parse_relationship_targets_exact(xml, requested)
   }
-  targets
 }
 
 ///|

@@ -79,62 +79,78 @@ pub fn attr_value(
 }
 
 ///|
-fn first_tag_end(text : StringView) -> Int? {
-  let mut i = 0
-  let mut quote : UInt16? = None
-  while i < text.length() {
-    let ch = text[i]
-    match quote {
-      Some(value) => if ch == value { quote = None }
-      None =>
-        if ch == ('"' : UInt16) || ch == ('\'' : UInt16) {
-          quote = Some(ch)
-        } else {
-          if ch == ('<' : UInt16) {
-            return None
-          }
-          if ch == ('>' : UInt16) {
-            return Some(i)
-          }
-        }
-    }
-    i = i + 1
-  }
-  None
-}
+let package_relationships_namespace = "http://schemas.openxmlformats.org/package/2006/relationships"
 
 ///|
-pub fn parse_relationship_targets(
+let package_content_types_namespace = "http://schemas.openxmlformats.org/package/2006/content-types"
+
+///|
+/// Reads relationship targets whose decoded `Type` is in `rel_types`. Element
+/// names are matched by expanded namespace name, so the package namespace may
+/// use either a default namespace or any declared prefix.
+pub fn parse_relationship_targets_by_types(
   xml : StringView,
-  rel_type : StringView,
+  rel_types : ArrayView[String],
 ) -> Map[String, String] raise ParseXmlError {
+  let max_records = 16_384
+  let max_id_chars = 256
+  let max_type_chars = 2_048
+  let max_target_chars = 4_096
+  let max_retained_chars = 8 * 1024 * 1024
   let targets : Map[String, String] = Map([])
-  let mut first = true
-  for chunk in xml.split("<Relationship ") {
-    if first {
-      first = false
+  let scanner = XmlStartTagScanner::new(xml)
+  let mut records = 0
+  let mut retained_chars = 0
+  while scanner.next() {
+    if scanner.namespace_uri() != package_relationships_namespace ||
+      scanner.local_name() != "Relationship" {
       continue
     }
-    let text = chunk.to_owned()
-    let end = match first_tag_end(text) {
-      Some(pos) => pos
-      None => raise InvalidXml(msg="relationship tag not closed")
+    records = records + 1
+    if records > max_records {
+      raise InvalidXml(msg="relationship record limit exceeded")
     }
-    let tag = text.unsafe_substring(start=0, end~)
-    let rel = match attr_value(tag, "Type") {
+    let rel_view = match scanner.attribute_view("", "Type") {
       Some(value) => value
       None => continue
     }
-    if rel != rel_type.to_owned() {
+    if rel_view.length() > max_type_chars {
+      raise InvalidXml(msg="relationship type is too long")
+    }
+    let rel = decode_xml_attribute(rel_view)
+    let mut wanted = false
+    for rel_type in rel_types {
+      if rel == rel_type {
+        wanted = true
+        break
+      }
+    }
+    if !wanted {
       continue
     }
-    let id = match attr_value(tag, "Id") {
+    let id_view = match scanner.attribute_view("", "Id") {
       Some(value) => value
       None => raise InvalidXml(msg="relationship id missing")
     }
-    let target = match attr_value(tag, "Target") {
+    if id_view.length() > max_id_chars {
+      raise InvalidXml(msg="relationship id is too long")
+    }
+    let target_view = match scanner.attribute_view("", "Target") {
       Some(value) => value
       None => raise InvalidXml(msg="relationship target missing")
+    }
+    if target_view.length() > max_target_chars {
+      raise InvalidXml(msg="relationship target is too long")
+    }
+    let id = decode_xml_attribute(id_view)
+    let target = decode_xml_attribute(target_view)
+    let retained = id.length() + target.length()
+    if retained > max_retained_chars - retained_chars {
+      raise InvalidXml(msg="relationship retained text limit exceeded")
+    }
+    retained_chars = retained_chars + retained
+    if targets.contains(id) {
+      raise InvalidXml(msg="duplicate relationship id")
     }
     targets[id] = target
   }
@@ -142,29 +158,34 @@ pub fn parse_relationship_targets(
 }
 
 ///|
+pub fn parse_relationship_targets(
+  xml : StringView,
+  rel_type : StringView,
+) -> Map[String, String] raise ParseXmlError {
+  parse_relationship_targets_by_types(xml, [rel_type.to_owned()])
+}
+
+///|
 fn parse_content_type_overrides(
   xml : StringView,
 ) -> Map[String, String] raise ParseXmlError {
   let overrides : Map[String, String] = Map([])
-  let mut first = true
-  for chunk in xml.split("<Override ") {
-    if first {
-      first = false
+  let scanner = XmlStartTagScanner::new(xml)
+  while scanner.next() {
+    if scanner.namespace_uri() != package_content_types_namespace ||
+      scanner.local_name() != "Override" {
       continue
     }
-    let text = chunk.to_owned()
-    let end = match first_tag_end(text) {
-      Some(pos) => pos
-      None => raise InvalidXml(msg="content type override tag not closed")
-    }
-    let tag = text.unsafe_substring(start=0, end~)
-    let part_name = match attr_value(tag, "PartName") {
+    let part_name = match scanner.attribute("", "PartName") {
       Some(value) => value
       None => raise InvalidXml(msg="content type override part name missing")
     }
-    let content_type = match attr_value(tag, "ContentType") {
+    let content_type = match scanner.attribute("", "ContentType") {
       Some(value) => value
       None => raise InvalidXml(msg="content type override content type missing")
+    }
+    if overrides.contains(part_name) {
+      raise InvalidXml(msg="duplicate content type override")
     }
     overrides[part_name] = content_type
   }

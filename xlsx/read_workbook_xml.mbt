@@ -6,39 +6,52 @@ priv struct WorkbookSheetInfo {
 }
 
 ///|
+let transitional_spreadsheet_namespace = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+
+///|
+let strict_spreadsheet_namespace = "http://purl.oclc.org/ooxml/spreadsheetml/main"
+
+///|
+let transitional_relationship_attribute_namespace = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+
+///|
+let strict_relationship_attribute_namespace = "http://purl.oclc.org/ooxml/officeDocument/relationships"
+
+///|
+fn workbook_scanner_next(
+  scanner : @ooxml.XmlStartTagScanner,
+) -> Bool raise XlsxError {
+  scanner.next() catch {
+    InvalidXml(msg~) => raise InvalidXml(msg~)
+  }
+}
+
+///|
+fn workbook_scanner_attribute(
+  scanner : @ooxml.XmlStartTagScanner,
+  namespace_uri : StringView,
+  local_name : StringView,
+) -> String? raise XlsxError {
+  scanner.attribute(namespace_uri, local_name) catch {
+    InvalidXml(msg~) => raise InvalidXml(msg~)
+  }
+}
+
+///|
 fn parse_workbook_sheets(
   xml : StringView,
   max_sheets : Int,
 ) -> Array[WorkbookSheetInfo] raise XlsxError {
   let sheets : Array[WorkbookSheetInfo] = []
-  let mut first = true
-  for chunk in xml.split("<sheet ") {
-    if first {
-      first = false
+  let scanner = @ooxml.XmlStartTagScanner::new(xml)
+  while workbook_scanner_next(scanner) {
+    let namespace_uri = scanner.namespace_uri()
+    if (
+        namespace_uri != transitional_spreadsheet_namespace &&
+        namespace_uri != strict_spreadsheet_namespace
+      ) ||
+      scanner.local_name() != "sheet" {
       continue
-    }
-    let text = chunk.to_owned()
-    let end = match text.find(">") {
-      Some(pos) => pos
-      None => raise InvalidXml(msg="sheet tag not closed")
-    }
-    let tag = text[:end]
-    let name = match attr_value(tag, "name") {
-      Some(value) => unescape_xml_text(value)
-      None => raise InvalidXml(msg="sheet name missing")
-    }
-    let rel_id = match attr_value(tag, "r:id") {
-      Some(value) => value
-      None => raise InvalidXml(msg="sheet relationship missing")
-    }
-    let state = match attr_value(tag, "state") {
-      Some(value) =>
-        match value.to_lower() {
-          "hidden" => Hidden
-          "veryhidden" => VeryHidden
-          _ => Visible
-        }
-      None => Visible
     }
     if sheets.length() >= max_sheets {
       raise ResourceLimitExceeded(
@@ -46,6 +59,30 @@ fn parse_workbook_sheets(
         limit=max_sheets,
         actual=max_sheets + 1,
       )
+    }
+    let name = match workbook_scanner_attribute(scanner, "", "name") {
+      Some(value) => value
+      None => raise InvalidXml(msg="sheet name missing")
+    }
+    let relationship_namespace = if namespace_uri ==
+      strict_spreadsheet_namespace {
+      strict_relationship_attribute_namespace
+    } else {
+      transitional_relationship_attribute_namespace
+    }
+    let rel_id = match
+      workbook_scanner_attribute(scanner, relationship_namespace, "id") {
+      Some(value) => value
+      None => raise InvalidXml(msg="sheet relationship missing")
+    }
+    let state = match workbook_scanner_attribute(scanner, "", "state") {
+      Some(value) =>
+        match value.to_lower() {
+          "hidden" => Hidden
+          "veryhidden" => VeryHidden
+          _ => Visible
+        }
+      None => Visible
     }
     sheets.push({ name, state, rel_id })
   }

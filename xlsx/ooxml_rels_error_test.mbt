@@ -77,7 +77,7 @@ test "ooxml rels: relationship tag not closed" {
   )
   let result = Ok(@xlsx.read(updated)) catch { e => Err(e) }
   match result {
-    Err(InvalidXml(msg~)) => inspect(msg, content="relationship tag not closed")
+    Err(InvalidXml(msg~)) => inspect(msg, content="XML start tag is not closed")
     _ => fail("expected InvalidXml for relationship tag not closed")
   }
 }

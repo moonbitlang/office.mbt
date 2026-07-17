@@ -25,7 +25,7 @@ fn workbook_part_from_root_relationships(
   }
   match first_relationship_target(targets) {
     Some(target) => {
-      let part_name = archive_path_from_part_name(unescape_xml_text(target))
+      let part_name = archive_path_from_part_name(target)
       Some(normalize_rel_part_path(part_name))
     }
     None => None
@@ -138,8 +138,7 @@ test "read package parts: malformed [Content_Types] raises InvalidXml" {
     e => Err(e)
   }
   match result {
-    Err(InvalidXml(msg~)) =>
-      inspect(msg, content="content type override tag not closed")
+    Err(InvalidXml(msg~)) => inspect(msg, content="XML start tag is not closed")
     _ => fail("expected content type override tag not closed")
   }
 }
