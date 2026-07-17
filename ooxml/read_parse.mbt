@@ -316,7 +316,7 @@ pub fn find_part_content_type(
     None => {
       let filename = match normalized.rev_find("/") {
         Some(index) => normalized[index + 1:]
-        None => normalized[:]
+        None => normalized
       }
       let extension = match filename.rev_find(".") {
         Some(index) if index + 1 < filename.length() =>
