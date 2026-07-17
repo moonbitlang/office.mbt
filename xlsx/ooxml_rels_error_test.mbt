@@ -220,7 +220,7 @@ test "ooxml rels: reader rejects case-equivalent part collisions" {
 }
 
 ///|
-test "ooxml rels: workbook part path discovered from [Content_Types]" {
+test "ooxml rels: relocated workbook path requires root relationship and content type" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let bytes = @xlsx.write(workbook)
@@ -235,6 +235,13 @@ test "ooxml rels: workbook part path discovered from [Content_Types]" {
     Some(value) => value
     None => fail("missing workbook.xml.rels")
   }
+  let root_rels_xml = match archive.get("_rels/.rels") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("root relationships utf8 decode failed")
+      }
+    None => fail("missing _rels/.rels")
+  }
   let content_types_xml = match archive.get("[Content_Types].xml") {
     Some(value) =>
       @encoding/utf8.decode(value) catch {
@@ -246,10 +253,15 @@ test "ooxml rels: workbook part path discovered from [Content_Types]" {
     old="PartName=\"/xl/workbook.xml\"",
     new="PartName=\"/xl/workbook2.xml\"",
   )
+  let patched_root_rels = root_rels_xml.replace_all(
+    old="Target=\"xl/workbook.xml\"",
+    new="Target=\"xl/workbook2.xml\"",
+  )
   let updated = @zip.Archive::new()
   for entry in archive.entries() {
     if entry.name() == "xl/workbook.xml" ||
       entry.name() == "xl/_rels/workbook.xml.rels" ||
+      entry.name() == "_rels/.rels" ||
       entry.name() == "[Content_Types].xml" {
       continue
     }
@@ -262,6 +274,7 @@ test "ooxml rels: workbook part path discovered from [Content_Types]" {
   }
   updated.add("xl/workbook2.xml", workbook_xml)
   updated.add("xl/_rels/workbook2.xml.rels", workbook_rels)
+  updated.add("_rels/.rels", @encoding/utf8.encode(patched_root_rels))
   updated.add(
     "[Content_Types].xml",
     @encoding/utf8.encode(patched_content_types),
