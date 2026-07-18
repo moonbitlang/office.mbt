@@ -329,7 +329,7 @@ test "ooxml rels: pivot cache rels tolerate stale first entries and mixed target
     "pivotCacheGhostRecords.xml",
   ).replace_all(
     old="Target=\"pivotCacheRecords1.xml\"",
-    new="Target=\"xl/pivotCache/pivotCacheRecords1.xml\"",
+    new="Target=\"/xl/pivotCache/pivotCacheRecords1.xml\"",
   )
   let updated = rewrite_zip_entry(
     archive_after_pivot_rels,
