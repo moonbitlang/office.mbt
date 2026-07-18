@@ -3098,7 +3098,10 @@ fn first_existing_workbook_rel_target_path(
   part_names : Map[String, String],
 ) -> String? raise XlsxError {
   for _, target in targets {
-    let path = resolve_part_rel_target(workbook_part, target)
+    let path = resolve_part_rel_target(
+      logical_archive_part_path(workbook_part),
+      target,
+    )
     match part_names.get(@ooxml.package_part_name_key(path)) {
       Some(actual) => return Some(actual)
       None => ()
@@ -3113,16 +3116,71 @@ fn archive_part_name_index(
 ) -> Map[String, String] raise XlsxError {
   let names : Map[String, String] = Map([])
   for entry in archive.entries() {
-    let name = entry.name()
-    let key = @ooxml.package_part_name_key(name)
-    match names.get(key) {
-      Some(existing) if existing != name =>
-        raise InvalidPackage(msg="case-insensitive ZIP part name collision")
-      Some(_) => ()
-      None => names[key] = name
+    let physical_name = entry.name()
+    if physical_name.has_suffix("/") {
+      continue
     }
+    let logical_name = if physical_name == content_types_part_path {
+      physical_name
+    } else if @ooxml.package_part_name_key(physical_name) ==
+      @ooxml.package_part_name_key(content_types_part_path) {
+      raise InvalidPackage(
+        msg="reserved content-types part name has invalid spelling",
+      )
+    } else {
+      match @ooxml.logical_opc_part_name_from_zip_item_name(physical_name) {
+        Some(value) => value
+        None => raise InvalidPackage(msg="invalid OPC ZIP item name")
+      }
+    }
+    let key = @ooxml.package_part_name_key(logical_name)
+    match names.get(key) {
+      Some(_) =>
+        raise InvalidPackage(msg="duplicate or equivalent OPC part name")
+      None => ()
+    }
+    names[key] = physical_name
   }
   names
+}
+
+///|
+test "read archive index maps physical Unicode OPC names to logical identity" {
+  let archive = @zip.Archive::new()
+  archive.add(content_types_part_path, b"manifest")
+  archive.add("custom/%E6%96%87.xml", b"workbook")
+  let names = archive_part_name_index(archive)
+  debug_inspect(
+    names.get(@ooxml.package_part_name_key("custom/文.xml")),
+    content="Some(\"custom/%E6%96%87.xml\")",
+  )
+}
+
+///|
+test "read archive index rejects ambiguous and misspelled reserved entries" {
+  let duplicate = @zip.Archive::new()
+  duplicate.add(content_types_part_path, b"first")
+  duplicate.add(content_types_part_path, b"second")
+  try archive_part_name_index(duplicate) catch {
+    InvalidPackage(msg~) =>
+      inspect(msg, content="duplicate or equivalent OPC part name")
+    _ => fail("unexpected duplicate OPC part error")
+  } noraise {
+    _ => fail("expected duplicate OPC part rejection")
+  }
+
+  let misspelled = @zip.Archive::new()
+  misspelled.add("[content_types].xml", b"manifest")
+  try archive_part_name_index(misspelled) catch {
+    InvalidPackage(msg~) =>
+      inspect(
+        msg,
+        content="reserved content-types part name has invalid spelling",
+      )
+    _ => fail("unexpected reserved OPC part error")
+  } noraise {
+    _ => fail("expected reserved OPC part spelling rejection")
+  }
 }
 
 ///|
@@ -3134,11 +3192,29 @@ fn actual_archive_part_path(
 }
 
 ///|
+/// Returns the logical OPC name for either a logical PartName or its physical
+/// ASCII ZIP projection. Relationship resolution must never use the physical
+/// `%HH` spelling because relationships and content types live in the logical
+/// PartName space.
+fn logical_archive_part_path(path : StringView) -> String {
+  if path == content_types_part_path {
+    content_types_part_path
+  } else {
+    @ooxml.logical_opc_part_name_from_zip_item_name(path).unwrap_or(
+      path.to_owned(),
+    )
+  }
+}
+
+///|
 fn actual_relationship_part_path(
   source_part : StringView,
   part_names : Map[String, String],
 ) -> String raise XlsxError {
-  actual_archive_part_path(part_names, rels_path_for_part(source_part))
+  actual_archive_part_path(
+    part_names,
+    rels_path_for_part(logical_archive_part_path(source_part)),
+  )
 }
 
 ///|
@@ -3147,7 +3223,10 @@ fn actual_relationship_target_path(
   target : StringView,
   part_names : Map[String, String],
 ) -> String raise XlsxError {
-  let source_relative = resolve_part_rel_target(source_part, target)
+  let source_relative = resolve_part_rel_target(
+    logical_archive_part_path(source_part),
+    target,
+  )
   match part_names.get(@ooxml.package_part_name_key(source_relative)) {
     Some(actual) => actual
     None => {
@@ -3185,7 +3264,10 @@ fn workbook_related_part_path(
           Some(
             actual_archive_part_path(
               part_names,
-              resolve_part_rel_target(workbook_part, target),
+              resolve_part_rel_target(
+                logical_archive_part_path(workbook_part),
+                target,
+              ),
             ),
           )
         None => part_names.get(@ooxml.package_part_name_key(fallback))
@@ -3244,9 +3326,8 @@ fn read_zip_archive_core_unchecked(
   )
   read_budget.checkpoint()
   read_budget.charge_work(workbook_xml.length())
-  let workbook_rels_path = actual_archive_part_path(
-    part_names,
-    rels_path_for_part(workbook_xml_part_path),
+  let workbook_rels_path = actual_relationship_part_path(
+    workbook_xml_part_path, part_names,
   )
   let workbook_rels = match archive.get(workbook_rels_path) {
     Some(value) => decode(value)
@@ -3443,7 +3524,10 @@ fn read_zip_archive_core_unchecked(
           Some(
             actual_archive_part_path(
               part_names,
-              resolve_part_rel_target(workbook_xml_part_path, target),
+              resolve_part_rel_target(
+                logical_archive_part_path(workbook_xml_part_path),
+                target,
+              ),
             ),
           )
         None => None
@@ -3487,7 +3571,10 @@ fn read_zip_archive_core_unchecked(
     }
     let path = actual_archive_part_path(
       part_names,
-      resolve_part_rel_target(workbook_xml_part_path, target),
+      resolve_part_rel_target(
+        logical_archive_part_path(workbook_xml_part_path),
+        target,
+      ),
     )
     let part_key = @ooxml.package_part_name_key(path)
     if seen_sheet_parts.contains(part_key) {

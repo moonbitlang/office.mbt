@@ -34,17 +34,17 @@ fn namespace_qualified_xlsx_fixture(
     "xl/_rels/workbook.xml.rels"
   }
   let worksheet_path = if entity_paths {
-    "data/a b.xml"
+    "data/a%20b.xml"
   } else {
     "xl/worksheets/sheet.xml"
   }
   let worksheet_part_name = if entity_paths {
-    "/data/a&#x20;b.xml"
+    "/data/a&#x25;20b.xml"
   } else {
     "/xl/worksheets/sheet.xml"
   }
   let worksheet_target = if entity_paths {
-    "../data/a&#x20;b.xml"
+    "../data/a&#x25;20b.xml"
   } else {
     "worksheets/sheet.xml"
   }
@@ -89,6 +89,49 @@ fn namespace_qualified_xlsx_fixture(
   archive.add(worksheet_path, @encoding/utf8.encode(worksheet))
   archive.add("xl/sharedStrings.xml", @encoding/utf8.encode(shared_strings))
   @zip.write(archive)
+}
+
+///|
+fn unicode_part_name_xlsx_fixture() -> Bytes raise {
+  let spreadsheet_namespace = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+  let relationship_namespace = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+  let relationship_prefix = relationship_namespace + "/"
+  let content_types =
+    #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+    #|  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+    #|  <Override PartName="/custom/文.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+    #|  <Override PartName="/xl/worksheets/sheet.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+    #|  <Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
+    #|</Types>
+  let root_relationships =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+    #|  <Relationship Id="main" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="custom/文.xml"/>
+    #|</Relationships>
+  let workbook = "<workbook xmlns=\"\{spreadsheet_namespace}\" xmlns:r=\"\{relationship_namespace}\"><sheets><sheet name=\"Unicode\" sheetId=\"1\" r:id=\"sheet\"/></sheets></workbook>"
+  let workbook_relationships = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"sheet\" Type=\"\{relationship_prefix}worksheet\" Target=\"../xl/worksheets/sheet.xml\"/><Relationship Id=\"strings\" Type=\"\{relationship_prefix}sharedStrings\" Target=\"../xl/sharedStrings.xml\"/></Relationships>"
+  let worksheet = "<worksheet xmlns=\"\{spreadsheet_namespace}\"><sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c></row></sheetData></worksheet>"
+  let shared_strings = "<sst xmlns=\"\{spreadsheet_namespace}\" count=\"1\" uniqueCount=\"1\"><si><t>unicode-part</t></si></sst>"
+  let archive = @zip.Archive::new()
+  archive.add("[Content_Types].xml", @encoding/utf8.encode(content_types))
+  archive.add("_rels/.rels", @encoding/utf8.encode(root_relationships))
+  archive.add("custom/%E6%96%87.xml", @encoding/utf8.encode(workbook))
+  archive.add(
+    "custom/_rels/%E6%96%87.xml.rels",
+    @encoding/utf8.encode(workbook_relationships),
+  )
+  archive.add("xl/worksheets/sheet.xml", @encoding/utf8.encode(worksheet))
+  archive.add("xl/sharedStrings.xml", @encoding/utf8.encode(shared_strings))
+  @zip.write(archive)
+}
+
+///|
+test "physical ZIP names follow Unicode logical OPC part names end to end" {
+  let workbook = @xlsx.read(unicode_part_name_xlsx_fixture())
+  debug_inspect(workbook.get_sheet_list(), content="[\"Unicode\"]")
+  debug_inspect(
+    workbook.get_cell_value("Unicode", "A1"),
+    content="Some(\"unicode-part\")",
+  )
 }
 
 ///|

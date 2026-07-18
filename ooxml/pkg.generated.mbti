@@ -20,6 +20,10 @@ pub fn find_override_part_by_content_types(StringView, ArrayView[String]) -> Str
 
 pub fn find_part_content_type(StringView, StringView) -> String? raise ParseXmlError
 
+pub fn is_valid_opc_part_segment(StringView) -> Bool
+
+pub fn logical_opc_part_name_from_zip_item_name(StringView) -> String?
+
 pub fn package_part_name_key(StringView) -> String
 
 pub fn parse_external_relationship_targets(StringView, StringView) -> Map[String, String] raise ParseXmlError
