@@ -30,21 +30,68 @@ fn is_xml_open_tag_boundary(unit : UInt16) -> Bool {
 }
 
 ///|
+fn find_xml_open_tag_start_from(
+  xml : StringView,
+  tag_name : StringView,
+  start_at : Int,
+) -> Int? {
+  let mut start = start_at.max(0)
+  let name_length = tag_name.length()
+  while start + 1 + name_length <= xml.length() {
+    if xml[start] == ('<' : UInt16) {
+      let mut matches = true
+      for offset in 0..<name_length {
+        if xml[start + 1 + offset] != tag_name[offset] {
+          matches = false
+          break
+        }
+      }
+      let boundary = start + 1 + name_length
+      if matches &&
+        (boundary == xml.length() || is_xml_open_tag_boundary(xml[boundary])) {
+        return Some(start)
+      }
+    }
+    start = start + 1
+  }
+  None
+}
+
+///|
 fn find_xml_open_tag_start(xml : StringView, tag_name : StringView) -> Int? {
-  let text = xml.to_owned()
-  let needle = "<\{tag_name.to_owned()}"
-  let mut offset = 0
-  while offset < text.length() {
-    let relative = match text[offset:].find(needle) {
-      Some(value) => value
-      None => return None
+  find_xml_open_tag_start_from(xml, tag_name, 0)
+}
+
+///|
+/// Finds an XML end tag and accepts the XML-permitted whitespace between its
+/// QName and `>`, for example `</c >` and `</c\n>`.
+fn find_xml_close_tag_from(
+  xml : StringView,
+  tag_name : StringView,
+  start_at : Int,
+) -> (Int, Int)? {
+  let mut start = start_at.max(0)
+  let name_length = tag_name.length()
+  while start + 2 + name_length <= xml.length() {
+    if xml[start] == ('<' : UInt16) && xml[start + 1] == ('/' : UInt16) {
+      let mut matches = true
+      for offset in 0..<name_length {
+        if xml[start + 2 + offset] != tag_name[offset] {
+          matches = false
+          break
+        }
+      }
+      if matches {
+        let mut end = start + 2 + name_length
+        while end < xml.length() && is_xml_attr_space_unit(xml[end]) {
+          end = end + 1
+        }
+        if end < xml.length() && xml[end] == ('>' : UInt16) {
+          return Some((start, end))
+        }
+      }
     }
-    let start = offset + relative
-    let boundary = start + needle.length()
-    if boundary == text.length() || is_xml_open_tag_boundary(text[boundary]) {
-      return Some(start)
-    }
-    offset = start + 1
+    start = start + 1
   }
   None
 }
@@ -68,7 +115,6 @@ fn tag_attributes_in(xml : StringView, tag_name : StringView) -> String? {
 /// Extract the body text from the first `<tag_name ...>...</tag_name>` pair.
 fn extract_tag_body_from(xml : StringView, tag_name : StringView) -> String? {
   let xml_str = xml.to_owned()
-  let close_tag = "</\{tag_name.to_owned()}>"
   let start = match find_xml_open_tag_start(xml_str, tag_name) {
     Some(pos) => pos
     None => return None
@@ -78,8 +124,8 @@ fn extract_tag_body_from(xml : StringView, tag_name : StringView) -> String? {
     None => return None
   }
   let body_start = open_end + 1
-  let end = match xml_str.find(close_tag) {
-    Some(pos) => pos
+  let end = match find_xml_close_tag_from(xml_str, tag_name, body_start) {
+    Some((pos, _)) => pos
     None => return None
   }
   let body = xml_str[body_start:end]
@@ -97,7 +143,6 @@ fn extract_tag_body(
   tag_name : StringView,
 ) -> String? raise XlsxError {
   let xml_str = xml.to_owned()
-  let close_tag = "</\{tag_name.to_owned()}>"
   let start = match find_xml_open_tag_start(xml_str, tag_name) {
     Some(pos) => pos
     None => return None
@@ -110,8 +155,8 @@ fn extract_tag_body(
     return Some("")
   }
   let body_start = open_end + 1
-  let end = match xml_str.find(close_tag) {
-    Some(pos) => pos
+  let end = match find_xml_close_tag_from(xml_str, tag_name, body_start) {
+    Some((pos, _)) => pos
     None => raise InvalidXml(msg="tag close missing")
   }
   let body = xml_str[body_start:end]

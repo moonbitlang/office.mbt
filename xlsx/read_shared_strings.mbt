@@ -11,24 +11,65 @@ priv struct InlineStringEntry {
 }
 
 ///|
-fn parse_text_nodes(xml : StringView) -> String {
+fn remove_lexical_element_subtrees(
+  xml : StringView,
+  tag_name : StringView,
+) -> String raise XlsxError {
+  let first = match find_xml_open_tag_start(xml, tag_name) {
+    Some(value) => value
+    None => return xml.to_owned()
+  }
+  let output = StringBuilder::new(size_hint=xml.length())
+  let mut cursor = 0
+  let mut start = first
+  for ;; {
+    output.write_view(xml[cursor:start])
+    let open_end = match xml_open_tag_end_from(xml, start + 1) {
+      Some(value) => value
+      None => raise InvalidXml(msg="\{tag_name.to_owned()} tag not closed")
+    }
+    if xml[start + 1:open_end].trim().has_suffix("/") {
+      cursor = open_end + 1
+    } else {
+      let (close_start, close_end) = match
+        find_xml_close_tag_from(xml, tag_name, open_end + 1) {
+        Some(value) => value
+        None => raise InvalidXml(msg="\{tag_name.to_owned()} close missing")
+      }
+      ignore(close_start)
+      cursor = close_end + 1
+    }
+    match find_xml_open_tag_start_from(xml, tag_name, cursor) {
+      Some(next) => start = next
+      None => break
+    }
+  }
+  output.write_view(xml[cursor:])
+  output.to_string()
+}
+
+///|
+fn parse_text_nodes(xml : StringView) -> String raise XlsxError {
+  // Phonetic guides (`rPh`) are annotations, not displayed cell text.
+  let semantic = remove_lexical_element_subtrees(xml, "rPh")
   let sb = StringBuilder::new()
-  let mut first = true
-  for chunk in xml.split("<t") {
-    if first {
-      first = false
+  let mut cursor = 0
+  while find_xml_open_tag_start_from(semantic, "t", cursor) is Some(start) {
+    let open_end = match xml_open_tag_end_from(semantic, start + 1) {
+      Some(value) => value
+      None => raise InvalidXml(msg="shared string text tag not closed")
+    }
+    if semantic[start + 1:open_end].trim().has_suffix("/") {
+      cursor = open_end + 1
       continue
     }
-    let text = chunk.to_owned()
-    let start = match text.find(">") {
-      Some(pos) => pos + 1
-      None => continue
+    let (close_start, close_end) = match
+      find_xml_close_tag_from(semantic, "t", open_end + 1) {
+      Some(value) => value
+      None => raise InvalidXml(msg="shared string text close missing")
     }
-    let rest = text[start:]
-    match rest.find("</t>") {
-      Some(end) => sb.write_view(unescape_xml_text(rest[:end]))
-      None => ()
-    }
+    sb.write_view(unescape_xml_text(semantic[open_end + 1:close_start]))
+    cursor = close_end + 1
   }
   sb.to_string()
 }
@@ -307,8 +348,9 @@ fn parse_rich_text_runs(xml : StringView) -> Array[RichTextRun] raise XlsxError 
     }
     let body_start = after + open_end_rel + 1
     let body_rest = xml_str[body_start:]
-    let close_rel = match body_rest.find("</r>") {
-      Some(pos) => pos
+    let (close_rel, close_end_rel) = match
+      find_xml_close_tag_from(body_rest, "r", 0) {
+      Some((pos, end)) => (pos, end)
       None => break
     }
     let body_end = body_start + close_rel
@@ -316,31 +358,28 @@ fn parse_rich_text_runs(xml : StringView) -> Array[RichTextRun] raise XlsxError 
     let run_text = parse_text_nodes(body)
     let font = parse_rich_text_font(body)
     runs.push({ text: run_text, font })
-    index = body_end + "</r>".length()
+    index = body_start + close_end_rel + 1
   }
   runs
 }
 
 ///|
-fn parse_shared_strings(xml : StringView) -> Array[SharedStringEntry] {
+fn parse_shared_strings(
+  xml : StringView,
+) -> Array[SharedStringEntry] raise XlsxError {
   let values : Array[SharedStringEntry] = []
-  let mut first = true
-  for chunk in xml.split("<si") {
-    if first {
-      first = false
-      continue
+  let mut cursor = 0
+  while find_xml_open_tag_start_from(xml, "si", cursor) is Some(start) {
+    let open_end = match xml_open_tag_end_from(xml, start + 1) {
+      Some(value) => value
+      None => raise InvalidXml(msg="shared string item tag not closed")
     }
-    let text = chunk.to_owned()
-    let start = match text.find(">") {
-      Some(pos) => pos + 1
-      None => continue
+    let (close_start, close_end) = match
+      find_xml_close_tag_from(xml, "si", open_end + 1) {
+      Some(value) => value
+      None => raise InvalidXml(msg="shared string item close missing")
     }
-    let rest = text[start:]
-    let end = match rest.find("</si>") {
-      Some(pos) => pos
-      None => continue
-    }
-    let body = rest[:end]
+    let body = xml[open_end + 1:close_start]
     let runs = if body.contains("<r") {
       let parsed = parse_rich_text_runs(body) catch { _ => [] }
       if parsed.length() > 0 {
@@ -352,6 +391,7 @@ fn parse_shared_strings(xml : StringView) -> Array[SharedStringEntry] {
       None
     }
     values.push({ text: parse_text_nodes(body), runs })
+    cursor = close_end + 1
   }
   values
 }

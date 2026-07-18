@@ -75,6 +75,7 @@ pub struct XmlStartTagScanner {
   priv mut current_namespace_uri : String
   priv capture_element_namespaces : Array[String]
   priv capture_element_local_name : String
+  priv retain_element_namespaces : Array[String]
   priv mut capture_start : Int?
   priv mut capture_depth : Int
 }
@@ -891,6 +892,7 @@ fn xml_start_tag_scanner_with_rewrites(
   rewrite_output_limit : Int,
   capture_element_namespaces? : Array[String] = [],
   capture_element_local_name? : String = "",
+  retain_element_namespaces? : Array[String] = [],
   cancelled? : () -> Bool = () => false,
 ) -> XmlStartTagScanner {
   {
@@ -927,6 +929,7 @@ fn xml_start_tag_scanner_with_rewrites(
     current_namespace_uri: "",
     capture_element_namespaces,
     capture_element_local_name,
+    retain_element_namespaces,
     capture_start: None,
     capture_depth: 0,
   }
@@ -1040,6 +1043,49 @@ pub fn XmlStartTagScanner::next(
       }
       if self.depth == 0 && !is_attr_space(self.xml[self.index]) {
         raise InvalidXml(msg="XML text is outside the document element")
+      }
+      let unit = self.xml[self.index]
+      if unit == ('&' : UInt16) {
+        let entity_end = match
+          find_xml_sequence(
+            self.xml,
+            self.index + 1,
+            ";",
+            cancelled=self.cancelled,
+          ) {
+          Some(found) => found
+          None => raise InvalidXml(msg="XML entity is not closed")
+        }
+        if xml_entity_value(self.xml[self.index + 1:entity_end]) is None {
+          raise InvalidXml(msg="XML entity is invalid")
+        }
+        self.index = entity_end + 1
+        continue
+      }
+      if unit == (']' : UInt16) &&
+        self.index + 2 < self.xml.length() &&
+        self.xml[self.index + 1] == (']' : UInt16) &&
+        self.xml[self.index + 2] == ('>' : UInt16) {
+        raise InvalidXml(msg="XML character data contains ']]>'")
+      }
+      if unit < 0x20 &&
+        unit != ('\t' : UInt16) &&
+        unit != ('\n' : UInt16) &&
+        unit != ('\r' : UInt16) {
+        raise InvalidXml(msg="XML character data contains an invalid character")
+      }
+      if unit == 0xfffe || unit == 0xffff || unit.is_trailing_surrogate() {
+        raise InvalidXml(msg="XML character data contains an invalid character")
+      }
+      if unit.is_leading_surrogate() {
+        if self.index + 1 >= self.xml.length() ||
+          !self.xml[self.index + 1].is_trailing_surrogate() {
+          raise InvalidXml(
+            msg="XML character data contains an invalid character",
+          )
+        }
+        self.index = self.index + 2
+        continue
       }
       self.index = self.index + 1
     }
@@ -1180,6 +1226,21 @@ pub fn XmlStartTagScanner::next(
         }
       }
     }
+    if self.capture_start is None &&
+      self.retain_element_namespaces.length() > 0 &&
+      scope_depth > 1 {
+      let mut retained = false
+      for wanted in self.retain_element_namespaces {
+        if xml_string_equals_view(wanted, self.current_namespace_uri) {
+          retained = true
+          break
+        }
+      }
+      if !retained {
+        self.capture_start = Some(start)
+        self.capture_depth = scope_depth
+      }
+    }
     self.index = tag_end + 1
     if self_closing {
       match self.capture_start {
@@ -1293,6 +1354,55 @@ pub fn remove_xml_expanded_name_subtrees(
     capture_element_local_name=local_name,
     cancelled~,
   )
+  while scanner.next() {
+
+  }
+  if scanner.rewrite_count == 0 {
+    return None
+  }
+  scanner.charge_rewrite_output(xml.length() - scanner.rewrite_cursor)
+  scanner.write_rewrite_source(scanner.rewrite_cursor, xml.length())
+  Some(scanner.rewrite_output.to_string())
+}
+
+///|
+/// Removes outermost descendant subtrees whose expanded element namespace is
+/// not in `element_namespaces`. The document element itself must be in the
+/// retained set. This creates a safe namespace-oblivious core view while the
+/// caller may retain the original XML separately for extension round-tripping.
+pub fn remove_xml_foreign_namespace_subtrees(
+  xml : StringView,
+  element_namespaces : ArrayView[String],
+  cancelled? : () -> Bool = () => false,
+) -> String? raise ParseXmlError {
+  check_xml_cancelled(cancelled)
+  if element_namespaces.length() == 0 {
+    raise InvalidXml(msg="XML retained namespace set is empty")
+  }
+  let namespaces : Array[String] = []
+  namespaces.append(element_namespaces)
+  let scanner = xml_start_tag_scanner_with_rewrites(
+    xml,
+    [],
+    Map([]),
+    false,
+    xml.length(),
+    retain_element_namespaces=namespaces,
+    cancelled~,
+  )
+  if !scanner.next() {
+    raise InvalidXml(msg="XML document element is missing")
+  }
+  let mut root_retained = false
+  for wanted in namespaces {
+    if xml_string_equals_view(wanted, scanner.namespace_uri()) {
+      root_retained = true
+      break
+    }
+  }
+  if !root_retained {
+    raise InvalidXml(msg="XML document element namespace is invalid")
+  }
   while scanner.next() {
 
   }
@@ -1470,6 +1580,18 @@ test "expanded-name subtree removal preserves text and other namespaces" {
 }
 
 ///|
+test "foreign namespace subtree removal preserves only the core dialect" {
+  let xml =
+    #|<s:root xmlns:s="urn:sheet" xmlns:x="urn:extension"><s:value>core</s:value><x:value><s:value>nested</s:value></x:value><value xmlns="urn:other">foreign</value></s:root>
+  debug_inspect(
+    remove_xml_foreign_namespace_subtrees(xml, ["urn:sheet"]),
+    content=(
+      #|Some("<s:root xmlns:s=\"urn:sheet\" xmlns:x=\"urn:extension\"><s:value>core</s:value></s:root>")
+    ),
+  )
+}
+
+///|
 test "start tag scanner rejects undeclared and duplicate expanded attributes" {
   for
     xml in [
@@ -1481,6 +1603,23 @@ test "start tag scanner rejects undeclared and duplicate expanded attributes" {
       _ => fail("unexpected scanner cancellation")
     } noraise {
       _ => fail("expected invalid namespace-qualified XML")
+    }
+  }
+}
+
+///|
+test "start tag scanner rejects malformed character data" {
+  for xml in ["<root>&bogus;</root>", "<root>bad]]></root>"] {
+    let scanner = XmlStartTagScanner::new(xml)
+    try {
+      while scanner.next() {
+
+      }
+    } catch {
+      InvalidXml(_) => ()
+      _ => fail("unexpected character-data cancellation")
+    } noraise {
+      _ => fail("expected malformed character data rejection")
     }
   }
 }

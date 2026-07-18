@@ -36,6 +36,8 @@ pub fn parse_internal_relationship_targets_by_types(StringView, ArrayView[String
 
 pub fn remove_xml_expanded_name_subtrees(StringView, ArrayView[String], String, cancelled? : () -> Bool) -> String? raise ParseXmlError
 
+pub fn remove_xml_foreign_namespace_subtrees(StringView, ArrayView[String], cancelled? : () -> Bool) -> String? raise ParseXmlError
+
 pub fn xml_needs_escape(StringView, attr~ : Bool) -> Bool
 
 // Errors

@@ -32,9 +32,12 @@ fn parse_worksheet(
   let cells : Array[Cell] = []
   let sheet_data = worksheet_sheet_data_body(xml)
   let mut first = true
-  for chunk in sheet_data.split("<c ") {
+  for chunk in sheet_data.split("<c") {
     if first {
       first = false
+      continue
+    }
+    if chunk.length() == 0 || !is_xml_open_tag_boundary(chunk[0]) {
       continue
     }
     let text = chunk.to_owned()
@@ -67,23 +70,12 @@ fn parse_worksheet(
     let cell_body = if self_closing {
       after_open[:0]
     } else {
-      match after_open.find("</c>") {
-        Some(pos) => after_open[:pos]
+      match find_xml_close_tag_from(after_open, "c", 0) {
+        Some((pos, _)) => after_open[:pos]
         None => raise InvalidXml(msg="cell not closed")
       }
     }
-    let formula_start = match cell_body.find("<f>") {
-      Some(pos) => Some(pos)
-      None =>
-        match cell_body.find("<f ") {
-          Some(pos) => Some(pos)
-          None =>
-            match cell_body.find("<f/") {
-              Some(pos) => Some(pos)
-              None => None
-            }
-        }
-    }
+    let formula_start = find_xml_open_tag_start(cell_body, "f")
     let (formula, formula_type, formula_ref, formula_shared_index) = match
       formula_start {
       Some(pos) => {
@@ -130,8 +122,8 @@ fn parse_worksheet(
           (Some(""), kind, ref_value, si_value)
         } else {
           let after_open = f_rest[open_end + 1:]
-          let close_end = match after_open.find("</f>") {
-            Some(value) => value
+          let close_end = match find_xml_close_tag_from(after_open, "f", 0) {
+            Some((value, _)) => value
             None => raise InvalidXml(msg="formula not closed")
           }
           let content = unescape_xml_text(after_open[:close_end])
@@ -159,8 +151,8 @@ fn parse_worksheet(
           Some("")
         } else {
           let value_rest = v_rest[open_end + 1:]
-          let v_end = match value_rest.find("</v>") {
-            Some(end) => end
+          let v_end = match find_xml_close_tag_from(value_rest, "v", 0) {
+            Some((end, _)) => end
             None => raise InvalidXml(msg="cell value not closed")
           }
           Some(value_rest[:v_end].to_owned())

@@ -23,6 +23,34 @@ fn canonicalize_xlsx_xml(
 }
 
 ///|
+/// Validates the SpreadsheetML document element and removes foreign-namespace
+/// descendant subtrees from the namespace-oblivious core view. The original
+/// canonical view remains available to extension-specific readers.
+fn xlsx_core_source_without_foreign(
+  source : StringView,
+  root_local_name : StringView,
+  cancelled? : () -> Bool = () => false,
+) -> String? raise XlsxError {
+  let scanner = @ooxml.XmlStartTagScanner::new(source, cancelled~)
+  if !workbook_scanner_next(scanner) ||
+    scanner.depth() != 1 ||
+    scanner.local_name() != root_local_name ||
+    (
+      scanner.namespace_uri() != transitional_spreadsheet_namespace &&
+      scanner.namespace_uri() != strict_spreadsheet_namespace
+    ) {
+    raise InvalidXml(
+      msg="\{root_local_name.to_owned()} document element is invalid",
+    )
+  }
+  let dialect = scanner.namespace_uri().to_owned()
+  @ooxml.remove_xml_foreign_namespace_subtrees(source, [dialect], cancelled~) catch {
+    InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+}
+
+///|
 fn validate_xlsx_worksheet_core(
   xml : StringView,
   cancelled? : () -> Bool = () => false,
@@ -156,14 +184,29 @@ fn canonicalize_xlsx_worksheet_core(
     ReadCancelled => raise ReadCancelled
   }
   match without_extensions {
-    Some(core_source) => {
-      validate_xlsx_worksheet_core(core_source, cancelled~)
-      canonicalize_xlsx_xml(core_source, max_output_chars~, cancelled~)
-    }
-    None => {
-      validate_xlsx_worksheet_core(source, cancelled~)
-      full_canonical
-    }
+    Some(core_source) =>
+      match
+        xlsx_core_source_without_foreign(core_source, "worksheet", cancelled~) {
+        Some(filtered) => {
+          validate_xlsx_worksheet_core(filtered, cancelled~)
+          canonicalize_xlsx_xml(filtered, max_output_chars~, cancelled~)
+        }
+        None => {
+          validate_xlsx_worksheet_core(core_source, cancelled~)
+          canonicalize_xlsx_xml(core_source, max_output_chars~, cancelled~)
+        }
+      }
+    None =>
+      match xlsx_core_source_without_foreign(source, "worksheet", cancelled~) {
+        Some(filtered) => {
+          validate_xlsx_worksheet_core(filtered, cancelled~)
+          canonicalize_xlsx_xml(filtered, max_output_chars~, cancelled~)
+        }
+        None => {
+          validate_xlsx_worksheet_core(source, cancelled~)
+          full_canonical
+        }
+      }
   }
 }
 

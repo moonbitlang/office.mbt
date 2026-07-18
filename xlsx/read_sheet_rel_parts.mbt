@@ -69,7 +69,7 @@ fn parse_comments_xml(xml : StringView) -> Array[Comment] raise XlsxError {
     } else {
       []
     }
-    let text_value = parse_text_nodes(text_body)
+    let text_value = parse_text_nodes(text_body) catch { _ => "" }
     comments.push({
       cell,
       author,

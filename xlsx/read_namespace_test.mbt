@@ -317,11 +317,146 @@ test "cell payload cannot escape its element or cross a namespace boundary" {
       @encoding/utf8.encode(foreign_value),
     ),
   )
-  try @xlsx.read(@zip.write(archive)) catch {
-    @xlsx.InvalidXml(msg~) =>
-      inspect(msg, content="worksheet cell payload element is misplaced")
-    _ => fail("unexpected foreign cell payload error")
-  } noraise {
-    _ => fail("expected foreign cell payload rejection")
+  let foreign_parsed = @xlsx.read(@zip.write(archive))
+  debug_inspect(
+    foreign_parsed.get_cell_value("Qualified", "A1"),
+    content="Some(\"\")",
+  )
+  debug_inspect(
+    foreign_parsed.get_cell_value("Qualified", "B1"),
+    content="Some(\"second\")",
+  )
+}
+
+///|
+test "foreign core-looking elements cannot supply XLSX data" {
+  let archive = @zip.read(namespace_qualified_xlsx_fixture(false, false))
+  guard archive.get("xl/worksheets/sheet.xml") is Some(worksheet_bytes) else {
+    fail("missing worksheet fixture part")
   }
+  let worksheet_xml = @encoding/utf8.decode(worksheet_bytes) catch {
+    _ => fail("worksheet fixture is not UTF-8")
+  }
+  let with_foreign_merge = worksheet_xml.replace(
+    old="<s:mergeCells count=\"1\">",
+    new="<mergeCells xmlns=\"urn:foreign\"><mergeCell ref=\"C1:D1\"/></mergeCells><s:mergeCells count=\"1\">",
+  )
+  assert_true(
+    archive.replace(
+      "xl/worksheets/sheet.xml",
+      @encoding/utf8.encode(with_foreign_merge),
+    ),
+  )
+  let parsed = @xlsx.read(@zip.write(archive))
+  assert_eq(parsed.get_merge_cells("Qualified"), ["A1:B1"])
+
+  let foreign_strings = @zip.read(
+    namespace_qualified_xlsx_fixture(false, false),
+  )
+  assert_true(
+    foreign_strings.replace(
+      "xl/sharedStrings.xml",
+      @encoding/utf8.encode(
+        "<sst xmlns=\"urn:foreign\"><si><t>spoof</t></si></sst>",
+      ),
+    ),
+  )
+  try @xlsx.read(@zip.write(foreign_strings)) catch {
+    @xlsx.InvalidXml(msg~) =>
+      inspect(msg, content="sst document element is invalid")
+    _ => fail("unexpected foreign shared-string error")
+  } noraise {
+    _ => fail("expected foreign shared-string root rejection")
+  }
+}
+
+///|
+test "XML whitespace spellings preserve cells values and formulas" {
+  let archive = @zip.read(namespace_qualified_xlsx_fixture(false, false))
+  guard archive.get("xl/worksheets/sheet.xml") is Some(worksheet_bytes) else {
+    fail("missing worksheet fixture part")
+  }
+  let worksheet_xml = @encoding/utf8.decode(worksheet_bytes) catch {
+    _ => fail("worksheet fixture is not UTF-8")
+  }
+  let spaced = worksheet_xml.replace(
+    old="<s:c r=\"A1\" t=\"s\"><s:v>0</s:v></s:c>",
+    new="<s:c\nr=\"A1\" t=\"str\"><s:f\nt=\"normal\">1+1</s:f ><s:v>two</s:v ></s:c >",
+  )
+  assert_true(
+    archive.replace("xl/worksheets/sheet.xml", @encoding/utf8.encode(spaced)),
+  )
+  let parsed = @xlsx.read(@zip.write(archive))
+  debug_inspect(
+    parsed.get_cell_value("Qualified", "A1"),
+    content="Some(\"two\")",
+  )
+  debug_inspect(
+    parsed.get_cell_formula("Qualified", "A1"),
+    content="Some(\"1+1\")",
+  )
+}
+
+///|
+test "malformed entities fail and phonetic annotations stay out of cell text" {
+  let malformed = @zip.read(namespace_qualified_xlsx_fixture(false, false))
+  guard malformed.get("xl/worksheets/sheet.xml") is Some(worksheet_bytes) else {
+    fail("missing worksheet fixture part")
+  }
+  let worksheet_xml = @encoding/utf8.decode(worksheet_bytes) catch {
+    _ => fail("worksheet fixture is not UTF-8")
+  }
+  assert_true(
+    malformed.replace(
+      "xl/worksheets/sheet.xml",
+      @encoding/utf8.encode(
+        worksheet_xml.replace(old="<s:v>0</s:v>", new="<s:v>&bogus;</s:v>"),
+      ),
+    ),
+  )
+  try @xlsx.read(@zip.write(malformed)) catch {
+    @xlsx.InvalidXml(_) => ()
+    _ => fail("unexpected malformed entity error")
+  } noraise {
+    _ => fail("expected malformed entity rejection")
+  }
+
+  let phonetic = @zip.read(namespace_qualified_xlsx_fixture(false, false))
+  guard phonetic.get("xl/sharedStrings.xml") is Some(shared_bytes) else {
+    fail("missing shared-string fixture part")
+  }
+  let shared_xml = @encoding/utf8.decode(shared_bytes) catch {
+    _ => fail("shared-string fixture is not UTF-8")
+  }
+  assert_true(
+    phonetic.replace(
+      "xl/sharedStrings.xml",
+      @encoding/utf8.encode(
+        shared_xml.replace(
+          old="<s:t>qualified-value</s:t>",
+          new="<s:t>漢字</s:t><s:rPh sb=\"0\" eb=\"2\"><s:t>かんじ</s:t></s:rPh>",
+        ),
+      ),
+    ),
+  )
+  assert_true(
+    phonetic.replace(
+      "xl/worksheets/sheet.xml",
+      @encoding/utf8.encode(
+        worksheet_xml.replace(
+          old="</s:row>",
+          new="<s:c r=\"B1\" t=\"inlineStr\"><s:is><s:t>東京</s:t><s:rPh sb=\"0\" eb=\"2\"><s:t>とうきょう</s:t></s:rPh></s:is></s:c></s:row>",
+        ),
+      ),
+    ),
+  )
+  let parsed = @xlsx.read(@zip.write(phonetic))
+  debug_inspect(
+    parsed.get_cell_value("Qualified", "A1"),
+    content="Some(\"漢字\")",
+  )
+  debug_inspect(
+    parsed.get_cell_value("Qualified", "B1"),
+    content="Some(\"東京\")",
+  )
 }

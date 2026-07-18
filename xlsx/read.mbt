@@ -2779,8 +2779,8 @@ fn parse_inline_string(rest : StringView) -> InlineStringEntry raise XlsxError {
     None => raise InvalidXml(msg="inline string not closed")
   }
   let body_start = start + open_end + 1
-  let end = match text.find("</is>") {
-    Some(pos) => pos
+  let end = match find_xml_close_tag_from(text, "is", body_start) {
+    Some((pos, _)) => pos
     None => raise InvalidXml(msg="inline string end missing")
   }
   let body = text[body_start:end]
@@ -3326,6 +3326,25 @@ fn read_zip_archive_core_unchecked(
   )
   read_budget.checkpoint()
   read_budget.charge_work(workbook_xml.length())
+  let workbook_core_xml = match
+    xlsx_core_source_without_foreign(
+      workbook_source_xml,
+      "workbook",
+      cancelled~,
+    ) {
+    Some(filtered) => {
+      read_budget.charge_work(filtered.length())
+      let canonical = canonicalize_xlsx_xml(
+        filtered,
+        max_output_chars=limits.max_xml_part_bytes,
+        cancelled~,
+      )
+      read_budget.checkpoint()
+      read_budget.charge_work(canonical.length())
+      canonical
+    }
+    None => workbook_xml
+  }
   let workbook_rels_path = actual_relationship_part_path(
     workbook_xml_part_path, part_names,
   )
@@ -3342,8 +3361,8 @@ fn read_zip_archive_core_unchecked(
   for entry in sheets {
     sheet_names.push(entry.name)
   }
-  let defined_names = parse_defined_names(workbook_xml, sheet_names)
-  let active_index = match parse_active_sheet_index(workbook_xml) {
+  let defined_names = parse_defined_names(workbook_core_xml, sheet_names)
+  let active_index = match parse_active_sheet_index(workbook_core_xml) {
     Some(value) => value
     None => 0
   }
@@ -3359,7 +3378,26 @@ fn read_zip_archive_core_unchecked(
   let shared_strings = match shared_strings_path {
     Some(path) =>
       match archive.get(path) {
-        Some(value) => parse_shared_strings(decode(value))
+        Some(value) => {
+          let source = decode_source(value)
+          read_budget.charge_work(source.length())
+          let core_source = match
+            xlsx_core_source_without_foreign(source, "sst", cancelled~) {
+            Some(filtered) => filtered
+            None => source
+          }
+          if core_source != source {
+            read_budget.charge_work(core_source.length())
+          }
+          let canonical = canonicalize_xlsx_xml(
+            core_source,
+            max_output_chars=limits.max_xml_part_bytes,
+            cancelled~,
+          )
+          read_budget.checkpoint()
+          read_budget.charge_work(canonical.length())
+          parse_shared_strings(canonical)
+        }
         None => raise MissingPart(path~)
       }
     None => []
@@ -3440,9 +3478,9 @@ fn read_zip_archive_core_unchecked(
     Some(value) => parse_custom_properties(decode(value))
     None => []
   }
-  let workbook_props = parse_workbook_props(workbook_xml)
-  let calc_props = parse_calc_props(workbook_xml)
-  let workbook_protection = parse_workbook_protection(workbook_xml)
+  let workbook_props = parse_workbook_props(workbook_core_xml)
+  let calc_props = parse_calc_props(workbook_core_xml)
+  let workbook_protection = parse_workbook_protection(workbook_core_xml)
   let style_count = styles.length()
   let cell_images = match archive.get("xl/cellimages.xml") {
     Some(value) => {
