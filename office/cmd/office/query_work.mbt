@@ -113,7 +113,12 @@ async fn OfficeLinearPattern::compile_cooperative(
       @async.pause()
     }
     while matched > 0 && characters[at] != characters[matched] {
+      if visited >= office_cli_query_yield_work_units {
+        visited = 0
+        @async.pause()
+      }
       matched = failure[matched - 1]
+      visited += 1
     }
     if characters[at] == characters[matched] {
       matched += 1
@@ -192,6 +197,7 @@ async fn OfficeLinearPattern::is_in_cooperative(
   }
   let mut matched = 0
   let mut pending_work = 1
+  let mut scheduling_work = 0
   for raw_character in value {
     // Supplementary scalars occupy two UTF-16 units. This preserves the
     // conservative accounting while charging and yielding in small quanta.
@@ -202,9 +208,15 @@ async fn OfficeLinearPattern::is_in_cooperative(
       @async.pause()
     }
     pending_work += scalar_work
+    scheduling_work += 1
     let character = query_fold_character(raw_character, self.ignore_case)
     while matched > 0 && character != self.characters[matched] {
+      if scheduling_work >= office_cli_query_yield_work_units {
+        scheduling_work = 0
+        @async.pause()
+      }
       matched = self.failure[matched - 1]
+      scheduling_work += 1
     }
     if character == self.characters[matched] {
       matched += 1

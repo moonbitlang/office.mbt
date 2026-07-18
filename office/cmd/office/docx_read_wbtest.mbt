@@ -350,6 +350,7 @@ async test "DOCX exact queries cover the full supported XML token length" {
       PreparedDocxQuery::build(spec, None, work),
       DocxTextBudget::new("query text scan characters", 1),
       work,
+      () => false,
     ),
   )
   try
@@ -937,18 +938,24 @@ async test "DOCX warning retention and deduplication sets share one hard cap" {
 ///|
 async test "DOCX preview truncation excludes discarded paragraph separators" {
   let exact = @word.paragraph([@word.run([@word.text("x".repeat(159))])])
-  let (exact_text, exact_truncated) = collect_docx_text_prefix(exact, 160)
+  let (exact_text, exact_truncated) = collect_docx_text_prefix_cooperative(
+    exact, 160,
+  )
   assert_eq(exact_text, "x".repeat(159))
   assert_false(exact_truncated)
   let over = @word.paragraph([@word.run([@word.text("x".repeat(161))])])
-  let (over_text, over_truncated) = collect_docx_text_prefix(over, 160)
+  let (over_text, over_truncated) = collect_docx_text_prefix_cooperative(
+    over, 160,
+  )
   assert_eq(over_text, "x".repeat(160))
   assert_true(over_truncated)
   let internal = @word.document([
     exact,
     @word.paragraph([@word.run([@word.text("y")])]),
   ])
-  let (_, internal_truncated) = collect_docx_text_prefix(internal, 160)
+  let (_, internal_truncated) = collect_docx_text_prefix_cooperative(
+    internal, 160,
+  )
   assert_true(internal_truncated)
   let collector = DocxTextCollector::new_reported("preview", 160, 160, 0, false)
   try! collector.write_literal_string("z".repeat(2 * 1024 * 1024))
@@ -957,15 +964,65 @@ async test "DOCX preview truncation excludes discarded paragraph separators" {
 }
 
 ///|
+async test "DOCX text extraction yields within one large text node" {
+  let element = @word.paragraph([
+    @word.run([@word.text("x".repeat(1024 * 1024))]),
+  ])
+  @async.with_task_group() <| group => {
+    let task = group.spawn(() => {
+      collect_docx_text_prefix_cooperative(element, 1024 * 1024)
+    })
+    @async.pause()
+    assert_true(task.try_wait() is None)
+    task.cancel()
+    let cancelled = try {
+      ignore(task.wait())
+      false
+    } catch {
+      error => @async.is_cancellation_error(error)
+    }
+    assert_true(cancelled)
+  }
+}
+
+///|
+async test "DOCX cooperative text extraction forwards cancellation" {
+  let checks = [0]
+  let element = @word.paragraph([@word.run([@word.text("x".repeat(64 * 1024))])])
+  try
+    collect_docx_text_prefix_cooperative(element, 64 * 1024, cancelled=() => {
+      checks[0] += 1
+      checks[0] >= 128
+    })
+  catch {
+    CliFailure(error) => {
+      assert_eq(error.code, "office.cancelled")
+      assert_true(checks[0] >= 128)
+    }
+    _ => fail("unexpected cooperative text cancellation")
+  } noraise {
+    _ => fail("expected cooperative text cancellation")
+  }
+}
+
+///|
 async test "literal newlines consume scan budgets even when presentation trims them" {
   let newline_only = @word.paragraph([@word.run([@word.text("\n".repeat(161))])])
-  let (preview, truncated) = collect_docx_text_prefix(newline_only, 160)
+  let (preview, truncated) = collect_docx_text_prefix_cooperative(
+    newline_only, 160,
+  )
   assert_eq(preview, "")
   assert_true(truncated)
   let projection = docx_read_test_projection()
   let entry = { ..projection.entries[0], element: Some(newline_only) }
   let aggregate = DocxTextBudget::new("query text scan characters", 16)
-  try entry_text_with_budget(entry, aggregate) catch {
+  try
+    entry_text_with_budget_cooperative(
+      entry,
+      aggregate,
+      cancelled=projection.cancelled,
+    )
+  catch {
     CliFailure(error) => {
       assert_eq(error.code, "office.docx.resource_limit")
       guard error.details is Some(Object(details)) else {
@@ -976,6 +1033,7 @@ async test "literal newlines consume scan budgets even when presentation trims t
         Some(Json::string("query text scan characters")),
       )
     }
+    _ => fail("unexpected newline scan failure")
   } noraise {
     _ => fail("expected literal newlines to exhaust the scan budget")
   }
@@ -996,7 +1054,13 @@ async test "DOCX text budgets retain an independent per-element ceiling" {
     "query text scan characters",
     docx_cli_max_element_text_chars * 2,
   )
-  try entry_text_with_budget(oversized, aggregate) catch {
+  try
+    entry_text_with_budget_cooperative(
+      oversized,
+      aggregate,
+      cancelled=projection.cancelled,
+    )
+  catch {
     CliFailure(error) => {
       assert_eq(error.code, "office.docx.resource_limit")
       guard error.details is Some(Object(details)) else {
@@ -1011,6 +1075,7 @@ async test "DOCX text budgets retain an independent per-element ceiling" {
         Some(Json::number(docx_cli_max_element_text_chars.to_double())),
       )
     }
+    _ => fail("unexpected per-element text failure")
   } noraise {
     _ => fail("expected the independent per-element ceiling")
   }

@@ -212,7 +212,11 @@ async fn run_docx_get(matches : @argparse.Matches) -> Unit {
             let budget = DocxTextBudget::new_reported(
               "successful command output characters", available, max_output, docx_cli_output_framing_chars,
             )
-            entry_text_with_budget(entry, budget)
+            entry_text_with_budget_cooperative(
+              entry,
+              budget,
+              cancelled=projection.cancelled,
+            )
           }
           None => ""
         }

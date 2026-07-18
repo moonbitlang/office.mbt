@@ -448,7 +448,11 @@ async fn get_docx_payload(
         bounded.budget.maximum,
         bounded.budget.used,
       )
-      let text = entry_text_with_budget(entry, text_budget)
+      let text = entry_text_with_budget_cooperative(
+        entry,
+        text_budget,
+        cancelled=projection.cancelled,
+      )
       bounded.budget.reserve_json_string_body(text)
       fields["text"] = Json::string(text)
     }
@@ -519,7 +523,11 @@ async fn docx_text_payload(
           bounded.budget.maximum,
           bounded.budget.used,
         )
-        let text = entry_text_with_budget(entry, text_budget)
+        let text = entry_text_with_budget_cooperative(
+          entry,
+          text_budget,
+          cancelled=projection.cancelled,
+        )
         let json = text_record_json(entry, text)
         bounded.budget.reserve_array_item(json, !entries.is_empty())
         entries.push(json)
@@ -624,6 +632,7 @@ async fn entry_matches_query(
   query : PreparedDocxQuery,
   scan_budget : DocxTextBudget,
   work : OfficeQueryWorkBudget,
+  cancelled : () -> Bool,
 ) -> Bool {
   if !query_entry_is_in_scope(entry, query, work) {
     return false
@@ -654,7 +663,11 @@ async fn entry_matches_query(
   }
   match query.text_pattern {
     Some(pattern) => {
-      let value = entry_text_with_budget(entry, scan_budget)
+      let value = entry_text_with_budget_cooperative(
+        entry,
+        scan_budget,
+        cancelled~,
+      )
       pattern.is_in_cooperative(value, work)
     }
     None => true
@@ -732,12 +745,20 @@ async fn docx_query_payload(
   projection.cooperate(work=docx_cli_projection_yield_elements)
   for entry in projection.entries {
     projection.cooperate()
-    if !entry_matches_query(entry, query, scan_budget, work) {
+    if !entry_matches_query(
+        entry,
+        query,
+        scan_budget,
+        work,
+        projection.cancelled,
+      ) {
       continue
     }
     if matched >= spec.offset && matches.length() < spec.limit {
-      let (preview, preview_truncated) = entry_text_prefix(
-        entry, docx_cli_query_preview_chars,
+      let (preview, preview_truncated) = entry_text_prefix_cooperative(
+        entry,
+        docx_cli_query_preview_chars,
+        cancelled=projection.cancelled,
       )
       let record = query_record_json(entry, preview, preview_truncated)
       bounded.budget.reserve_array_item(record, !matches.is_empty())
@@ -951,8 +972,10 @@ async fn docx_outline_payload(
       Some(element) => {
         match docx_heading_level(element) {
           Some(level) => {
-            let (text, truncated) = entry_text_prefix(
-              entry, docx_cli_heading_preview_chars,
+            let (text, truncated) = entry_text_prefix_cooperative(
+              entry,
+              docx_cli_heading_preview_chars,
+              cancelled=projection.cancelled,
             )
             let record = Json::object({
               "path": Json::string(entry.path),
@@ -1170,7 +1193,11 @@ async fn docx_text_human(
           output.maximum,
           output.used,
         )
-        let text = entry_text_with_budget(entry, text_budget)
+        let text = entry_text_with_budget_cooperative(
+          entry,
+          text_budget,
+          cancelled=projection.cancelled,
+        )
         output.write_terminal_safe(text, single_line=true)
         returned += 1
       }
@@ -1202,11 +1229,21 @@ async fn docx_query_human(
   projection.cooperate(work=docx_cli_projection_yield_elements)
   for entry in projection.entries {
     projection.cooperate()
-    if !entry_matches_query(entry, query, scan_budget, work) {
+    if !entry_matches_query(
+        entry,
+        query,
+        scan_budget,
+        work,
+        projection.cancelled,
+      ) {
       continue
     }
     if matched >= spec.offset && returned < spec.limit {
-      let (preview, _) = entry_text_prefix(entry, docx_cli_query_preview_chars)
+      let (preview, _) = entry_text_prefix_cooperative(
+        entry,
+        docx_cli_query_preview_chars,
+        cancelled=projection.cancelled,
+      )
       output.begin_line()
       output.write_terminal_safe(entry.path)
       output.write_char('\t')
@@ -1280,8 +1317,10 @@ async fn docx_outline_human(
       Some(element) =>
         match docx_heading_level(element) {
           Some(level) => {
-            let (text, truncated) = entry_text_prefix(
-              entry, docx_cli_heading_preview_chars,
+            let (text, truncated) = entry_text_prefix_cooperative(
+              entry,
+              docx_cli_heading_preview_chars,
+              cancelled=projection.cancelled,
             )
             output.begin_line()
             output.write_plain("heading \{level}\t")
