@@ -8,9 +8,9 @@ import {
 // Values
 pub fn attr_value(StringView, StringView) -> String? raise ParseXmlError
 
-pub fn canonicalize_xml_expanded_names(StringView, ArrayView[String], ArrayView[(String, String)], max_output_chars? : Int) -> String raise ParseXmlError
+pub fn canonicalize_xml_expanded_names(StringView, ArrayView[String], ArrayView[(String, String)], max_output_chars? : Int, cancelled? : () -> Bool) -> String raise ParseXmlError
 
-pub fn decode_xml_attribute(StringView) -> String raise ParseXmlError
+pub fn decode_xml_attribute(StringView, cancelled? : () -> Bool) -> String raise ParseXmlError
 
 pub fn escape_xml_attr(StringView) -> String
 
@@ -20,6 +20,8 @@ pub fn find_override_part_by_content_types(StringView, ArrayView[String]) -> Str
 
 pub fn find_part_content_type(StringView, StringView) -> String? raise ParseXmlError
 
+pub fn package_part_name_key(StringView) -> String
+
 pub fn parse_external_relationship_targets(StringView, StringView) -> Map[String, String] raise ParseXmlError
 
 pub fn parse_external_relationship_targets_by_types(StringView, ArrayView[String]) -> Map[String, String] raise ParseXmlError
@@ -28,13 +30,14 @@ pub fn parse_internal_relationship_targets(StringView, StringView) -> Map[String
 
 pub fn parse_internal_relationship_targets_by_types(StringView, ArrayView[String]) -> Map[String, String] raise ParseXmlError
 
-pub fn remove_xml_expanded_name_subtrees(StringView, ArrayView[String], String) -> String? raise ParseXmlError
+pub fn remove_xml_expanded_name_subtrees(StringView, ArrayView[String], String, cancelled? : () -> Bool) -> String? raise ParseXmlError
 
 pub fn xml_needs_escape(StringView, attr~ : Bool) -> Bool
 
 // Errors
 pub suberror ParseXmlError {
   InvalidXml(msg~ : String)
+  ReadCancelled
 } derive(@debug.Debug)
 #deprecated
 pub fn ParseXmlError::to_repr(Self) -> @debug.Repr
@@ -60,7 +63,7 @@ pub fn XmlStartTagScanner::attribute_view(Self, StringView, StringView) -> Strin
 pub fn XmlStartTagScanner::depth(Self) -> Int
 pub fn XmlStartTagScanner::local_name(Self) -> StringView
 pub fn XmlStartTagScanner::namespace_uri(Self) -> StringView
-pub fn XmlStartTagScanner::new(StringView) -> Self
+pub fn XmlStartTagScanner::new(StringView, cancelled? : () -> Bool) -> Self
 pub fn XmlStartTagScanner::next(Self) -> Bool raise ParseXmlError
 pub fn XmlStartTagScanner::parent_local_name(Self) -> StringView?
 pub fn XmlStartTagScanner::parent_namespace_uri(Self) -> String?

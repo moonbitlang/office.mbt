@@ -8,6 +8,8 @@ import {
 // Values
 pub fn crc32(BytesView) -> UInt
 
+pub fn crc32_cancellable(BytesView, cancelled? : () -> Bool) -> UInt raise ZipError
+
 pub fn gunzip(BytesView) -> Bytes raise ZipError
 
 pub fn gzip(BytesView) -> Bytes raise ZipError
