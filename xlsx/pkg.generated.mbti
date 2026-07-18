@@ -2203,6 +2203,7 @@ pub fn Worksheet::sheet_protection(Self) -> SheetProtection?
 pub fn Worksheet::slicers(Self) -> ArrayView[Slicer]
 pub fn Worksheet::sparkline_groups(Self) -> ArrayView[SparklineGroup]
 pub fn Worksheet::state(Self) -> SheetState
+pub fn Worksheet::stored_cell_count(Self) -> Int
 pub fn Worksheet::tables(Self) -> ArrayView[Table]
 pub fn Worksheet::unmerge_cells(Self, String) -> Unit raise XlsxError
 pub fn Worksheet::unprotect_sheet(Self, password? : String) -> Unit raise XlsxError

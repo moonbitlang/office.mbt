@@ -117,6 +117,15 @@ struct XlsxMetadataBudget {
 }
 
 ///|
+/// Command-local budget for the stored-cell records inspected while deriving
+/// worksheet used ranges. One instance must be shared across every worksheet
+/// participating in a single command result.
+struct XlsxStoredCellBudget {
+  maximum : Int
+  mut used : Int
+}
+
+///|
 fn xlsx_cli_failure(
   code : String,
   message : String,
@@ -341,10 +350,12 @@ fn xlsx_rect_from_coordinate(coordinate : @lib.SelectorCoordinate) -> XlsxRect {
 fn xlsx_used_rect(
   projection : XlsxProjection,
   worksheet : @xlsx.Worksheet,
+  stored_cells : XlsxStoredCellBudget,
 ) -> XlsxRect? raise CliFailure {
   projection.checkpoint()
+  stored_cells.charge(worksheet.stored_cell_count())
   let (max_row, max_col) = worksheet.used_bounds_limited(
-    maximum_stored_cells=projection.max_scan_cells,
+    maximum_stored_cells=stored_cells.maximum,
     cancelled=projection.cancelled,
   ) catch {
     ReadCancelled =>
@@ -357,6 +368,23 @@ fn xlsx_used_rect(
   } else {
     Some({ col_lo: 1, row_lo: 1, col_hi: max_col, row_hi: max_row })
   }
+}
+
+///|
+fn XlsxStoredCellBudget::new(maximum : Int) -> XlsxStoredCellBudget {
+  { maximum, used: 0 }
+}
+
+///|
+fn XlsxStoredCellBudget::charge(
+  self : XlsxStoredCellBudget,
+  count : Int,
+) -> Unit raise CliFailure {
+  let actual = self.used.to_int64() + count.to_int64()
+  if actual > self.maximum.to_int64() {
+    raise xlsx_scan_resource_failure("stored_cells", self.maximum, actual)
+  }
+  self.used = actual.to_int()
 }
 
 ///|
@@ -529,13 +557,14 @@ fn xlsx_scan_regions(
 ) -> Array[XlsxScanRegion] raise CliFailure {
   projection.checkpoint()
   let regions : Array[XlsxScanRegion] = []
+  let stored_cells = XlsxStoredCellBudget::new(projection.max_scan_cells)
   match under {
     Some(Cell(sheet, rect, ..)) | Some(Range(sheet, rect, ..)) =>
       regions.push({ sheet, rect })
     Some(Sheet(sheet)) =>
       match sheet.content {
         Worksheet(worksheet) =>
-          match xlsx_used_rect(projection, worksheet) {
+          match xlsx_used_rect(projection, worksheet, stored_cells) {
             Some(rect) => regions.push({ sheet, rect })
             None => ()
           }
@@ -546,7 +575,7 @@ fn xlsx_scan_regions(
         projection.checkpoint()
         match sheet.content {
           Worksheet(worksheet) =>
-            match xlsx_used_rect(projection, worksheet) {
+            match xlsx_used_rect(projection, worksheet, stored_cells) {
               Some(rect) => regions.push({ sheet, rect })
               None => ()
             }

@@ -2988,6 +2988,14 @@ pub fn Worksheet::max_col(self : Worksheet) -> Int {
 }
 
 ///|
+/// Returns the number of stored cell records in this worksheet in O(1) time.
+/// This is a representation count, not the area of the logical used range;
+/// callers can use it to preflight aggregate scan work before iteration.
+pub fn Worksheet::stored_cell_count(self : Worksheet) -> Int {
+  self.cells.length()
+}
+
+///|
 /// Returns the used `(max_row, max_column)` bounds after rejecting a worksheet
 /// whose stored-cell representation exceeds `maximum_stored_cells`. The O(1)
 /// length preflight happens before the scan, so duplicate coordinates cannot
@@ -3000,7 +3008,7 @@ pub fn Worksheet::used_bounds_limited(
   if maximum_stored_cells < 1 {
     raise InvalidOptions(msg="maximum stored cells must be positive")
   }
-  let stored = self.cells.length()
+  let stored = self.stored_cell_count()
   if stored > maximum_stored_cells {
     raise ResourceLimitExceeded(
       kind="stored_cells",

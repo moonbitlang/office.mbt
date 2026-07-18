@@ -97,6 +97,7 @@ fn xlsx_sheet_summary_json(
   projection : XlsxProjection,
   sheet : XlsxSheetTarget,
   metadata : XlsxMetadataBudget,
+  stored_cells : XlsxStoredCellBudget,
 ) -> Json raise CliFailure {
   projection.checkpoint()
   metadata.charge_item([sheet.name, sheet.path])
@@ -114,7 +115,7 @@ fn xlsx_sheet_summary_json(
     Worksheet(worksheet) => {
       fields["kind"] = Json::string("worksheet")
       fields["state"] = Json::string(xlsx_sheet_state_name(worksheet.state()))
-      match xlsx_used_rect(projection, worksheet) {
+      match xlsx_used_rect(projection, worksheet, stored_cells) {
         Some(rect) => {
           fields["max_row"] = Json::number(rect.row_hi.to_double())
           fields["max_column"] = Json::number(rect.col_hi.to_double())
@@ -170,10 +171,13 @@ fn xlsx_sheet_summary_json(
 fn xlsx_outline_data(projection : XlsxProjection) -> Json raise CliFailure {
   projection.checkpoint()
   let metadata = XlsxMetadataBudget::new()
+  let stored_cells = XlsxStoredCellBudget::new(projection.max_scan_cells)
   let sheets : Array[Json] = []
   for sheet in projection.sheets {
     projection.checkpoint()
-    sheets.push(xlsx_sheet_summary_json(projection, sheet, metadata))
+    sheets.push(
+      xlsx_sheet_summary_json(projection, sheet, metadata, stored_cells),
+    )
   }
   let defined_names : Array[Json] = []
   for defined in projection.workbook.defined_names() {
@@ -524,9 +528,12 @@ fn retain_xlsx_outline_records(
   budget : OfficeOutputBudget,
 ) -> Unit raise CliFailure {
   let metadata = XlsxMetadataBudget::new()
+  let stored_cells = XlsxStoredCellBudget::new(projection.max_scan_cells)
   for sheet in projection.sheets {
     projection.checkpoint()
-    let record = xlsx_sheet_summary_json(projection, sheet, metadata)
+    let record = xlsx_sheet_summary_json(
+      projection, sheet, metadata, stored_cells,
+    )
     budget.reserve_array_item(record, !sheets.is_empty())
     sheets.push(record)
   }
@@ -617,6 +624,7 @@ async fn xlsx_get_data(
           projection,
           sheet,
           XlsxMetadataBudget::new(),
+          XlsxStoredCellBudget::new(projection.max_scan_cells),
         ),
       })
     Cell(sheet, rect, path~) => {
@@ -890,6 +898,7 @@ fn xlsx_outline_human(
   output.begin_line()
   output.write_plain("workbook\t/xlsx/workbook\t")
   output.write_plain("\{projection.sheets.length()} sheets")
+  let stored_cells = XlsxStoredCellBudget::new(projection.max_scan_cells)
   for sheet in projection.sheets {
     projection.checkpoint()
     output.begin_line()
@@ -900,7 +909,7 @@ fn xlsx_outline_human(
       ChartSheet(_) => output.write_plain("\tchart-sheet")
       Worksheet(worksheet) => {
         output.write_plain("\tworksheet")
-        match xlsx_used_rect(projection, worksheet) {
+        match xlsx_used_rect(projection, worksheet, stored_cells) {
           Some(rect) => {
             output.write_char('\t')
             output.write_terminal_safe(rect.range_reference(projection.file))
