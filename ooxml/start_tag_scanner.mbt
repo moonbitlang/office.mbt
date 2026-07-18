@@ -143,6 +143,31 @@ fn is_xml_name_scalar(code : Int) -> Bool {
 }
 
 ///|
+/// Validates an XML NCName using the same Unicode scalar rules as the scanner's
+/// QName validation. MCE directive tokens are attribute *values*, so they do
+/// not pass through `validate_xml_qname` automatically.
+fn is_xml_ncname(value : StringView) -> Bool {
+  if value.length() == 0 {
+    return false
+  }
+  let mut index = 0
+  while index < value.length() {
+    guard xml_name_scalar_at(value, index, value.length()) is Some((code, next)) else {
+      return false
+    }
+    if index == 0 {
+      if !is_xml_name_start_scalar(code) {
+        return false
+      }
+    } else if !is_xml_name_scalar(code) {
+      return false
+    }
+    index = next
+  }
+  true
+}
+
+///|
 fn validate_xml_qname(
   xml : StringView,
   start : Int,
@@ -1866,6 +1891,58 @@ pub fn XmlStartTagScanner::attribute(
     Some(value) => Some(decode_xml_attribute(value, cancelled=self.cancelled))
     None => None
   }
+}
+
+///|
+priv struct XmlExpandedAttributeName {
+  namespace_uri : String
+  namespace_id : Int
+  local_name : String
+}
+
+///|
+/// Enumerates non-namespace-declaration attributes by expanded name. Scanner
+/// validation has already bounded the start-tag attribute count and rejected
+/// duplicate expanded names before this helper is called.
+fn XmlStartTagScanner::expanded_attribute_names(
+  self : XmlStartTagScanner,
+) -> Array[XmlExpandedAttributeName] raise ParseXmlError {
+  let output : Array[XmlExpandedAttributeName] = []
+  let mut next = self.current_name_end
+  while next_xml_attribute(
+          self.xml,
+          next,
+          self.current_tag_end,
+          cancelled=self.cancelled,
+        )
+        is Some(attribute) {
+    next = attribute.next
+    if xml_namespace_declaration_prefix(self.xml, attribute) is Some(_) {
+      continue
+    }
+    let colon = validate_xml_qname(
+      self.xml,
+      attribute.name_start,
+      attribute.name_end,
+    )
+    let (prefix, local_start) = match colon {
+      Some(value) => (self.xml[attribute.name_start:value], value + 1)
+      None =>
+        (
+          self.xml[attribute.name_start:attribute.name_start],
+          attribute.name_start,
+        )
+    }
+    let (namespace_uri, namespace_id) = self.resolve_prefix_identity(
+      prefix, true,
+    )
+    output.push({
+      namespace_uri,
+      namespace_id,
+      local_name: self.xml[local_start:attribute.name_end].to_owned(),
+    })
+  }
+  output
 }
 
 ///|

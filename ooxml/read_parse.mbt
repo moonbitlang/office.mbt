@@ -187,6 +187,12 @@ priv struct RelationshipMceScopeDelta {
 }
 
 ///|
+priv struct RelationshipMceScopeEntry {
+  delta : RelationshipMceScopeDelta?
+  must_understand_supported : Bool
+}
+
+///|
 /// Active MCE directives are reference-counted and unwound with XML depth.
 /// This keeps scope entry O(number of new directives), without cloning every
 /// inherited set at each nested element.
@@ -368,7 +374,7 @@ fn relationship_mce_resolve_prefix(
   prefix : StringView,
   label : StringView,
 ) -> (String, Int) raise ParseXmlError {
-  if prefix == "" || prefix.contains(":") {
+  if !is_xml_ncname(prefix) {
     raise InvalidXml(msg="MCE \{label.to_owned()} prefix is invalid")
   }
   scanner.resolve_prefix_identity(prefix, false)
@@ -381,7 +387,9 @@ fn relationship_mce_expanded_name_key(
   label : StringView,
 ) -> (String, RelationshipMceName) raise ParseXmlError {
   let parts = token.split(":").collect()
-  if parts.length() != 2 || parts[0] == "" || parts[1] == "" {
+  if parts.length() != 2 ||
+    !is_xml_ncname(parts[0]) ||
+    (parts[1] != "*" && !is_xml_ncname(parts[1])) {
     raise InvalidXml(msg="MCE \{label.to_owned()} name is invalid")
   }
   let (namespace_uri, namespace_id) = relationship_mce_resolve_prefix(
@@ -396,8 +404,9 @@ fn relationship_mce_expanded_name_key(
 fn relationship_mce_enter_scope(
   scanner : XmlStartTagScanner,
   context : RelationshipMceContext,
-) -> RelationshipMceScopeDelta? raise ParseXmlError {
+) -> RelationshipMceScopeEntry raise ParseXmlError {
   let mut delta : RelationshipMceScopeDelta? = None
+  let mut must_understand_supported = true
   let ignorable_attribute = scanner.attribute(
     markup_compatibility_namespace, "Ignorable",
   )
@@ -459,7 +468,7 @@ fn relationship_mce_enter_scope(
           scanner, prefix, "MustUnderstand",
         )
         if namespace_uri != package_relationships_namespace {
-          raise InvalidXml(msg="MCE MustUnderstand namespace is unsupported")
+          must_understand_supported = false
         }
       }
     }
@@ -481,7 +490,42 @@ fn relationship_mce_enter_scope(
       None => ()
     }
   }
-  delta
+  { delta, must_understand_supported }
+}
+
+///|
+fn relationship_mce_require_must_understand(
+  entry : RelationshipMceScopeEntry,
+) -> Unit raise ParseXmlError {
+  if !entry.must_understand_supported {
+    raise InvalidXml(msg="MCE MustUnderstand namespace is unsupported")
+  }
+}
+
+///|
+fn relationship_mce_validate_container_attributes(
+  scanner : XmlStartTagScanner,
+  context : RelationshipMceContext,
+  element_label : StringView,
+  allow_requires : Bool,
+) -> Unit raise ParseXmlError {
+  for attribute in scanner.expanded_attribute_names() {
+    if allow_requires &&
+      attribute.namespace_uri == "" &&
+      attribute.local_name == "Requires" {
+      continue
+    }
+    if attribute.namespace_uri != xml_namespace_uri &&
+      (
+        attribute.namespace_uri == markup_compatibility_namespace ||
+        context.is_ignorable(attribute.namespace_id)
+      ) {
+      continue
+    }
+    raise InvalidXml(
+      msg="MCE \{element_label.to_owned()} has a disallowed attribute",
+    )
+  }
 }
 
 ///|
@@ -560,12 +604,14 @@ fn relationship_mce_state_for_current_element(
       }
     _ => ()
   }
-  let scope_delta = relationship_mce_enter_scope(scanner, context)
+  let scope_entry = relationship_mce_enter_scope(scanner, context)
+  let scope_delta = scope_entry.delta
   if depth == 1 {
     if scanner.namespace_uri() != package_relationships_namespace ||
       scanner.local_name() != "Relationships" {
       raise InvalidXml(msg="relationships document element invalid")
     }
+    relationship_mce_require_must_understand(scope_entry)
     return {
       active: true,
       included_in_effective_tree: true,
@@ -591,6 +637,9 @@ fn relationship_mce_state_for_current_element(
 
   if parent_state.is_alternate_content {
     if namespace_uri == markup_compatibility_namespace && local_name == "Choice" {
+      relationship_mce_validate_container_attributes(
+        scanner, context, "Choice", true,
+      )
       if parent_state.alternate_fallback_seen {
         raise InvalidXml(msg="MCE Choice follows Fallback")
       }
@@ -601,9 +650,13 @@ fn relationship_mce_state_for_current_element(
         supported
       if active {
         parent_state.alternate_selected = true
+        relationship_mce_require_must_understand(scope_entry)
       }
     } else if namespace_uri == markup_compatibility_namespace &&
       local_name == "Fallback" {
+      relationship_mce_validate_container_attributes(
+        scanner, context, "Fallback", false,
+      )
       if parent_state.alternate_fallback_seen {
         raise InvalidXml(
           msg="MCE AlternateContent has multiple Fallback elements",
@@ -613,8 +666,13 @@ fn relationship_mce_state_for_current_element(
       active = parent_state.active && !parent_state.alternate_selected
       if active {
         parent_state.alternate_selected = true
+        relationship_mce_require_must_understand(scope_entry)
       }
     } else if context.is_effectively_ignorable(namespace_id, namespace_uri) {
+      let key : RelationshipMceName = { namespace_id, local_name }
+      if context.processes(key) {
+        raise InvalidXml(msg="MCE AlternateContent child is invalid")
+      }
       active = false
     } else {
       raise InvalidXml(msg="MCE AlternateContent child is invalid")
@@ -623,8 +681,14 @@ fn relationship_mce_state_for_current_element(
     if local_name != "AlternateContent" {
       raise InvalidXml(msg="MCE element is misplaced")
     }
+    relationship_mce_validate_container_attributes(
+      scanner, context, "AlternateContent", false,
+    )
     active = parent_state.active
     is_alternate_content = true
+    if active {
+      relationship_mce_require_must_understand(scope_entry)
+    }
   } else if context.is_effectively_ignorable(namespace_id, namespace_uri) {
     let key : RelationshipMceName = { namespace_id, local_name }
     if context.processes(key) {
@@ -636,6 +700,9 @@ fn relationship_mce_state_for_current_element(
         )
       }
       active = parent_state.active
+      if active {
+        relationship_mce_require_must_understand(scope_entry)
+      }
     } else {
       active = false
     }
@@ -644,6 +711,9 @@ fn relationship_mce_state_for_current_element(
     included_in_effective_tree = true
     element_effective_depth = parent_effective_depth + 1
     children_effective_parent_depth = element_effective_depth
+    if active {
+      relationship_mce_require_must_understand(scope_entry)
+    }
   }
   {
     active,
