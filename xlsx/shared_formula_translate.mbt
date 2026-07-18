@@ -628,7 +628,13 @@ fn copy_formula_bracket_token(
     let character = formula_character(chars, index, out.budget)
     out.write_char(character)
     index += 1
-    if character == '[' {
+    if character == '\'' && index < chars.length() {
+      // Structured-reference column names use apostrophe to escape syntax
+      // characters (notably `[` and `]`). The escaped character is data, so it
+      // must not affect bracket nesting or become eligible for A1 translation.
+      out.write_char(formula_character(chars, index, out.budget))
+      index += 1
+    } else if character == '[' {
       depth += 1
     } else if character == ']' {
       depth -= 1
@@ -887,6 +893,18 @@ test "shared formulas translate relative A1 references without touching literals
     content=(
       #|F3+$D3+F$1+$D$1+SUM(F3:G4)+'Q1'!F3+"D1"+Table1[D1]+C:C+$A:D+3:3+$1:4+LOG10(100)+A1!D4+[Book.xlsx]Sheet1!E5
     ),
+  )
+}
+
+///|
+test "shared formulas preserve apostrophe-escaped structured-reference brackets" {
+  inspect(
+    translate_shared_formula("Table1[']A1]+B1", 1, 0),
+    content="Table1[']A1]+C1",
+  )
+  inspect(
+    translate_shared_formula("Table1['[A1]+B1", 1, 0),
+    content="Table1['[A1]+C1",
   )
 }
 

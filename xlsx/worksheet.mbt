@@ -23,6 +23,10 @@ fn parse_range_ref(
   for part in range_ref.split(":") {
     parts.push(part.to_owned())
   }
+  if parts.length() == 1 {
+    let (row, col) = cell_ref_to_rc(parts[0])
+    return (row, col, row, col)
+  }
   if parts.length() != 2 {
     raise InvalidCellRef(value=range_ref.to_owned())
   }
@@ -499,6 +503,42 @@ fn clone_shared_formula_masters_index(
     cloned[shared_index] = master
   }
   cloned
+}
+
+///|
+/// Converts one shared-formula cell to an independent normal formula before a
+/// structural edit moves or duplicates it. Shared ranges are metadata over
+/// fixed coordinates; retaining that metadata while coordinates change makes
+/// the group internally inconsistent. Materializing each cell preserves the
+/// formula represented at its original coordinate and makes subsequent cell
+/// movement follow the same rules as every other normal formula.
+fn normal_formula_cell_for_structural_edit(
+  cell : Cell,
+  masters : Map[UInt, SharedFormulaMaster],
+) -> Cell raise XlsxError {
+  match (cell.formula_type, cell.formula_shared_index) {
+    (Some(Shared), Some(shared_index)) => {
+      let master = match masters.get(shared_index) {
+        Some(value) => value
+        None => raise InvalidXml(msg="shared formula cell has no master")
+      }
+      {
+        reference: cell.reference,
+        row: cell.row,
+        col: cell.col,
+        value: cell.value,
+        value_type: cell.value_type,
+        rich_text: cell.rich_text,
+        formula: Some(master.translate_to(cell.row, cell.col)),
+        formula_type: None,
+        formula_ref: None,
+        formula_shared_index: None,
+        formula_value_present: cell.formula_value_present,
+        style_id: cell.style_id,
+      }
+    }
+    _ => cell
+  }
 }
 
 ///|
@@ -3441,6 +3481,7 @@ fn Worksheet::insert_rows(
       msg="row count \{count} exceeds the sheet's \{cell_ref_max_rows} rows",
     )
   }
+  let shared_formula_masters = validated_shared_formula_masters(self.cells)
   // Transactional: stage every shifted collection into locals first — cell,
   // merge, hyperlink, filter, table, sparkline, image, and chart references
   // shift through `cell_ref_from`/range adjusters that raise once a coordinate
@@ -3449,7 +3490,10 @@ fn Worksheet::insert_rows(
   // `self` is mutated until every stage succeeds, so an overflowing insert
   // raises and leaves the worksheet unchanged instead of half-shifted.
   let updated_cells : Array[Cell] = []
-  for cell in self.cells {
+  for stored_cell in self.cells {
+    let cell = normal_formula_cell_for_structural_edit(
+      stored_cell, shared_formula_masters,
+    )
     if cell.row >= row {
       let new_row = cell.row + count
       let reference = cell_ref_from(new_row, cell.col)
@@ -3596,9 +3640,13 @@ fn Worksheet::remove_rows(
       msg="row count \{count} exceeds the sheet's \{cell_ref_max_rows} rows",
     )
   }
+  let shared_formula_masters = validated_shared_formula_masters(self.cells)
   let end_row = row + count - 1
   let updated_cells : Array[Cell] = []
-  for cell in self.cells {
+  for stored_cell in self.cells {
+    let cell = normal_formula_cell_for_structural_edit(
+      stored_cell, shared_formula_masters,
+    )
     if cell.row < row {
       updated_cells.push(cell)
       continue
@@ -3904,8 +3952,12 @@ fn Worksheet::duplicate_row_to(
   if target_row > cell_ref_max_rows {
     raise InvalidCellRef(value="\{0}:\{target_row}")
   }
+  let shared_formula_masters = validated_shared_formula_masters(self.cells)
   let row_cells : Array[Cell] = []
-  for cell in self.cells {
+  for stored_cell in self.cells {
+    let cell = normal_formula_cell_for_structural_edit(
+      stored_cell, shared_formula_masters,
+    )
     if cell.row == row {
       row_cells.push(cell)
     }
@@ -3958,12 +4010,16 @@ fn Worksheet::insert_cols(
       msg="column count \{count} exceeds the sheet's \{cell_ref_max_cols} columns",
     )
   }
+  let shared_formula_masters = validated_shared_formula_masters(self.cells)
   // Transactional (see insert_rows): stage everything into locals — reference
   // shifts raise once a coordinate leaves the grid, column dimensions and page
   // breaks are bound-checked explicitly — and commit only once every stage has
   // succeeded, so an overflowing insert leaves the worksheet unchanged.
   let updated_cells : Array[Cell] = []
-  for cell in self.cells {
+  for stored_cell in self.cells {
+    let cell = normal_formula_cell_for_structural_edit(
+      stored_cell, shared_formula_masters,
+    )
     if cell.col >= col {
       let new_col = cell.col + count
       let reference = cell_ref_from(cell.row, new_col)
@@ -4106,9 +4162,13 @@ fn Worksheet::remove_cols(
       msg="column count \{count} exceeds the sheet's \{cell_ref_max_cols} columns",
     )
   }
+  let shared_formula_masters = validated_shared_formula_masters(self.cells)
   let end_col = col + count - 1
   let updated_cells : Array[Cell] = []
-  for cell in self.cells {
+  for stored_cell in self.cells {
+    let cell = normal_formula_cell_for_structural_edit(
+      stored_cell, shared_formula_masters,
+    )
     if cell.col < col {
       updated_cells.push(cell)
       continue

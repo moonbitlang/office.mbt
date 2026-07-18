@@ -1922,6 +1922,18 @@ fn calc_cell_value_internal(
     if cell.row == row && cell.col == col {
       match cell.formula {
         Some(formula) => {
+          let formula = match
+            (formula, cell.formula_type, cell.formula_shared_index) {
+            ("", Some(Shared), Some(shared_index)) =>
+              match sheet.shared_formula_master(shared_index) {
+                Some(master) => master.translate_to(row, col)
+                None =>
+                  raise InvalidXml(msg="shared formula follower has no master")
+              }
+            ("", Some(Shared), None) =>
+              raise InvalidXml(msg="shared formula index missing")
+            _ => formula
+          }
           let expr = parse_formula_expr(formula)
           let prev_sheet = ctx.current_sheet
           let prev_ref = ctx.current_ref

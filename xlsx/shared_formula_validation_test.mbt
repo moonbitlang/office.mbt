@@ -118,6 +118,112 @@ test "XLSX read ignores expressions stored on shared-formula followers" {
 }
 
 ///|
+test "XLSX calculation resolves shared-formula followers through their master" {
+  let source = @xlsx.Workbook::new()
+  let sheet = source.add_sheet("Data")
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(2.0))
+  sheet.set_cell_value("A2", Numeric(3.0))
+  sheet.set_cell_value("B2", Numeric(4.0))
+  sheet.set_cell_formula_opts(
+    "C1",
+    "A1+B1",
+    opts=@xlsx.FormulaOpts::shared("C1:C2"),
+  )
+  let parsed = @xlsx.read(@xlsx.write(source))
+  inspect(parsed.calc_cell_value("Data", "C1"), content="3")
+  inspect(parsed.calc_cell_value("Data", "C2"), content="7")
+}
+
+///|
+test "XLSX read accepts a singleton shared-formula ST_Ref" {
+  let source = @xlsx.Workbook::new()
+  let sheet = source.add_sheet("Data")
+  sheet.set_cell_formula_opts(
+    "A1",
+    "1+1",
+    opts=@xlsx.FormulaOpts::shared("A1:A1"),
+  )
+  let archive = @zip.read(@xlsx.write(source))
+  let path = "xl/worksheets/sheet1.xml"
+  let xml = match archive.get(path) {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("shared-formula worksheet is not UTF-8")
+      }
+    None => fail("missing shared-formula worksheet")
+  }
+  let updated = xml.replace(old="ref=\"A1:A1\"", new="ref=\"A1\"")
+  assert_true(updated != xml)
+  assert_true(archive.replace(path, @encoding/utf8.encode(updated)))
+  let parsed = @xlsx.read(@zip.write(archive))
+  guard parsed.sheet("Data") is Some(parsed_sheet) else {
+    fail("missing singleton shared-formula worksheet")
+  }
+  guard parsed_sheet.shared_formula_masters().get(0) is Some(master) else {
+    fail("missing singleton shared-formula master")
+  }
+  assert_eq(master.translate_to(1, 1), "1+1")
+}
+
+///|
+fn shared_formula_edit_fixture() -> @xlsx.Workbook raise {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Data")
+  sheet.set_cell_formula_opts(
+    "C1",
+    "A1+B1",
+    opts=@xlsx.FormulaOpts::shared("C1:C3"),
+  )
+  workbook
+}
+
+///|
+fn assert_structural_edit_deshared(
+  workbook : @xlsx.Workbook,
+  references : ArrayView[String],
+) -> Unit raise {
+  guard workbook.sheet("Data") is Some(sheet) else {
+    fail("missing structurally edited worksheet")
+  }
+  assert_eq(sheet.shared_formula_masters().length(), 0)
+  for reference in references {
+    assert_true(sheet.get_cell_formula(reference) is Some(_))
+  }
+  let roundtripped = @xlsx.read(@xlsx.write(workbook))
+  guard roundtripped.sheet("Data") is Some(roundtripped_sheet) else {
+    fail("missing roundtripped structurally edited worksheet")
+  }
+  assert_eq(roundtripped_sheet.shared_formula_masters().length(), 0)
+  for reference in references {
+    assert_true(roundtripped_sheet.get_cell_formula(reference) is Some(_))
+  }
+}
+
+///|
+test "row and column edits materialize shared formulas before moving cells" {
+  let insert_rows = shared_formula_edit_fixture()
+  insert_rows.insert_rows("Data", 1, 1)
+  assert_structural_edit_deshared(insert_rows, ["C2", "C3", "C4"])
+
+  let remove_rows = shared_formula_edit_fixture()
+  remove_rows.remove_rows("Data", 2, 1)
+  assert_structural_edit_deshared(remove_rows, ["C1", "C2"])
+
+  let insert_cols = shared_formula_edit_fixture()
+  insert_cols.insert_cols("Data", 3, 1)
+  assert_structural_edit_deshared(insert_cols, ["D1", "D2", "D3"])
+
+  let remove_cols = shared_formula_edit_fixture()
+  remove_cols.remove_cols("Data", 2, 1)
+  assert_structural_edit_deshared(remove_cols, ["B1", "B2", "B3"])
+
+  let duplicate_row = shared_formula_edit_fixture()
+  duplicate_row.duplicate_row_to("Data", 1, 4)
+  assert_structural_edit_deshared(duplicate_row, ["C1", "C2", "C3", "C4"])
+}
+
+///|
 test "XLSX read rejects overlapping shared-formula master ranges" {
   let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Data")
