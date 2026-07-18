@@ -891,7 +891,7 @@ async test "XLSX formatting rejects text amplification before materialization" {
 }
 
 ///|
-async test "XLSX structured formatting rejects non-finite percent scaling" {
+async test "XLSX structured formatting contains percent scaling overflow" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.new_sheet("Data"))
   workbook.set_cell_value("Data", "A1", Numeric(0.0))
@@ -911,8 +911,23 @@ async test "XLSX structured formatting rejects non-finite percent scaling" {
   let resolved = resolve_xlsx_selector(
     projection, "/xlsx/sheet[name=\"Data\"]/cell[A1]",
   )
+  assert_true(xlsx_get_data(projection, resolved).stringify().contains("%"))
+
+  workbook.set_cell_value("Data", "A1", Numeric(1.0))
+  let nonzero_source = xlsx_bounded_test_source(
+    "non-finite-nonzero-format.xlsx",
+    @xlsx.write(workbook),
+  )
+  let nonzero_projection = make_xlsx_projection(
+    nonzero_source.file,
+    open_xlsx_read_package(nonzero_source),
+    10,
+  )
+  let nonzero_resolved = resolve_xlsx_selector(
+    nonzero_projection, "/xlsx/sheet[name=\"Data\"]/cell[A1]",
+  )
   let error = xlsx_cli_error_async(() => {
-    ignore(xlsx_get_data(projection, resolved))
+    ignore(xlsx_get_data(nonzero_projection, nonzero_resolved))
   })
   assert_eq(error.code, "office.invalid_package")
 }
