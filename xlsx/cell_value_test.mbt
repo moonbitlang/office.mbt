@@ -83,6 +83,37 @@ test "formatted percent and date" {
 }
 
 ///|
+test "formatted dates honor the workbook 1904 date system" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_workbook_props(
+    Some(@xlsx.WorkbookPropsOptions::with_values(date_1904=true)),
+  )
+  workbook.set_cell_value("Sheet1", "A1", Numeric(0.0))
+  let date_style = workbook.add_style(@xlsx.Style::number_format("yyyy-mm-dd"))
+  workbook.set_cell_style("Sheet1", "A1", date_style)
+  debug_inspect(
+    workbook.get_cell_value("Sheet1", "A1"),
+    content="Some(\"1904-01-01\")",
+  )
+  guard workbook.sheet("Sheet1") is Some(sheet) else {
+    fail("expected date-system worksheet")
+  }
+  debug_inspect(
+    workbook.get_cell_value_styled_from_worksheet_rc(sheet, 1, 1, date_style),
+    content="Some(\"1904-01-01\")",
+  )
+  let rows = workbook.rows("Sheet1")
+  assert_true(rows.next())
+  debug_inspect(rows.columns(), content="[\"1904-01-01\"]")
+  let columns = workbook.cols("Sheet1")
+  assert_true(columns.next())
+  debug_inspect(columns.rows(), content="[\"1904-01-01\"]")
+  debug_inspect(workbook.get_rows("Sheet1"), content="[[\"1904-01-01\"]]")
+  debug_inspect(workbook.get_cols("Sheet1"), content="[[\"1904-01-01\"]]")
+}
+
+///|
 test "typed setters and cell type" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

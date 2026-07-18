@@ -979,6 +979,48 @@ async test "XLSX displayed text preserves formula results formatted to blank" {
 }
 
 ///|
+async test "XLSX get text and query honor the 1904 date system" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Dates"))
+  workbook.set_workbook_props(
+    Some(@xlsx.WorkbookPropsOptions::with_values(date_1904=true)),
+  )
+  workbook.set_cell_value("Dates", "A1", Numeric(0.0))
+  let style_id = workbook.new_style(@xlsx.Style::number_format("yyyy-mm-dd"))
+  workbook.set_cell_style("Dates", "A1", style_id)
+  let projection = make_xlsx_projection("dates-1904.xlsx", workbook, 10)
+  let cell_selector = resolve_xlsx_selector(
+    projection, "/xlsx/sheet[name=\"Dates\"]/cell[A1]",
+  )
+  guard xlsx_get_data(projection, cell_selector) is Object(get) &&
+    get.get("cell") is Some(Object(cell)) else {
+    fail("expected 1904 get result")
+  }
+  assert_eq(cell.get("value"), Some(Json::string("1904-01-01")))
+
+  let under = Some(
+    resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Dates\"]"),
+  )
+  guard xlsx_text_data(projection, under, 0, 10) is Object(text) &&
+    text.get("entries") is Some(Array([Object(text_entry), ..])) else {
+    fail("expected 1904 text result")
+  }
+  assert_eq(text_entry.get("text"), Some(Json::string("1904-01-01")))
+
+  let spec : XlsxQuerySpec = {
+    selector: "cell[type=number]",
+    predicates: parse_xlsx_query_selector("cell[type=number]"),
+    offset: 0,
+    limit: 10,
+  }
+  guard xlsx_query_data(projection, under, spec) is Object(query) &&
+    query.get("matches") is Some(Array([Object(query_cell), ..])) else {
+    fail("expected 1904 query result")
+  }
+  assert_eq(query_cell.get("value"), Some(Json::string("1904-01-01")))
+}
+
+///|
 async test "XLSX cached empty formula results remain distinct from a missing cache" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.new_sheet("Data"))

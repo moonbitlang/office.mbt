@@ -4,6 +4,7 @@ fn format_cell_value(
   raw : String,
   style : Style?,
   options : Options,
+  use_1904_format? : Bool = false,
 ) -> String {
   match value_type {
     String =>
@@ -21,7 +22,8 @@ fn format_cell_value(
       match style {
         Some(style) =>
           match style.number_format {
-            Some(format) => format_number_with_format(raw, format, options)
+            Some(format) =>
+              format_number_with_format(raw, format, options, use_1904_format)
             None => raw
           }
         None => raw
@@ -47,15 +49,21 @@ fn format_number_with_format(
   raw : String,
   format : NumberFormat,
   options : Options,
+  use_1904_format : Bool,
 ) -> String {
   match format {
-    Builtin(id) => format_number_builtin(raw, id, options)
-    Custom(code) => format_number_code(raw, code, options)
+    Builtin(id) => format_number_builtin(raw, id, options, use_1904_format)
+    Custom(code) => format_number_code(raw, code, options, use_1904_format~)
   }
 }
 
 ///|
-fn format_number_builtin(raw : String, id : Int, options : Options) -> String {
+fn format_number_builtin(
+  raw : String,
+  id : Int,
+  options : Options,
+  use_1904_format : Bool,
+) -> String {
   let short_date = options.short_date_pattern
   let long_date = options.long_date_pattern
   let long_time = options.long_time_pattern
@@ -69,37 +77,37 @@ fn format_number_builtin(raw : String, id : Int, options : Options) -> String {
     10 => format_number_simple(raw, 2, false, true)
     14 =>
       if short_date != "" {
-        format_excel_date(raw, short_date)
+        format_excel_date(raw, short_date, use_1904_format~)
       } else {
-        format_excel_date(raw, "mm-dd-yy")
+        format_excel_date(raw, "mm-dd-yy", use_1904_format~)
       }
     15 =>
       if long_date != "" {
-        format_excel_date(raw, long_date)
+        format_excel_date(raw, long_date, use_1904_format~)
       } else {
-        format_excel_date(raw, "d-mmm-yy")
+        format_excel_date(raw, "d-mmm-yy", use_1904_format~)
       }
-    16 => format_excel_date(raw, "d-mmm")
-    17 => format_excel_date(raw, "mmm-yy")
-    18 => format_excel_date(raw, "h:mm AM/PM")
-    19 => format_excel_date(raw, "h:mm:ss AM/PM")
+    16 => format_excel_date(raw, "d-mmm", use_1904_format~)
+    17 => format_excel_date(raw, "mmm-yy", use_1904_format~)
+    18 => format_excel_date(raw, "h:mm AM/PM", use_1904_format~)
+    19 => format_excel_date(raw, "h:mm:ss AM/PM", use_1904_format~)
     20 =>
       if long_time != "" {
-        format_excel_date(raw, long_time)
+        format_excel_date(raw, long_time, use_1904_format~)
       } else {
-        format_excel_date(raw, "hh:mm")
+        format_excel_date(raw, "hh:mm", use_1904_format~)
       }
     21 =>
       if long_time != "" {
-        format_excel_date(raw, long_time)
+        format_excel_date(raw, long_time, use_1904_format~)
       } else {
-        format_excel_date(raw, "hh:mm:ss")
+        format_excel_date(raw, "hh:mm:ss", use_1904_format~)
       }
     22 =>
       if short_date != "" {
-        format_excel_date(raw, "\{short_date} hh:mm")
+        format_excel_date(raw, "\{short_date} hh:mm", use_1904_format~)
       } else {
-        format_excel_date(raw, "m/d/yy hh:mm")
+        format_excel_date(raw, "m/d/yy hh:mm", use_1904_format~)
       }
     // language-glyph builtin IDs resolve through the workbook culture
     27..=36 | 50..=62 | 67..=81 =>
@@ -108,7 +116,7 @@ fn format_number_builtin(raw : String, id : Int, options : Options) -> String {
           if code == "" {
             raw
           } else {
-            format_number_code(raw, code, options)
+            format_number_code(raw, code, options, use_1904_format~)
           }
         None => raw
       }
@@ -117,7 +125,12 @@ fn format_number_builtin(raw : String, id : Int, options : Options) -> String {
 }
 
 ///|
-fn format_number_code(raw : String, code : String, options : Options) -> String {
+fn format_number_code(
+  raw : String,
+  code : String,
+  options : Options,
+  use_1904_format? : Bool = false,
+) -> String {
   let _ = options
   let sections = split_format_sections(code)
   if sections.length() == 0 {
@@ -143,7 +156,7 @@ fn format_number_code(raw : String, code : String, options : Options) -> String 
           Some(tag) => if !is_supported_locale(tag) { return raw }
           None => ()
         }
-        let formatted = format_excel_date(raw, pattern)
+        let formatted = format_excel_date(raw, pattern, use_1904_format~)
         let output = currency_prefix + formatted
         return if add_minus { "-" + output } else { output }
       }
@@ -1030,9 +1043,17 @@ fn format_int_grouped_string(text : String) -> String {
 }
 
 ///|
-fn format_excel_date(raw : String, pattern : String) -> String {
+fn format_excel_date(
+  raw : String,
+  pattern : String,
+  use_1904_format? : Bool = false,
+) -> String {
   let value = @string.parse_double(raw) catch { _ => return raw }
-  let parts = excel_serial_to_parts(value)
+  let parts = if use_1904_format {
+    excel_serial_to_parts_1904(value)
+  } else {
+    excel_serial_to_parts(value)
+  }
   match parts {
     None => raw
     Some((year, month, day, hour, minute, second)) =>

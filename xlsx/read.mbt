@@ -3084,7 +3084,11 @@ fn first_existing_rel_target_path(
 ) -> String? raise XlsxError {
   for _, target in targets {
     let path = actual_relationship_target_path(source_part, target, part_names)
-    if part_names.contains(@ooxml.package_part_name_key(path)) {
+    // `path` is the physical ZIP spelling when the target exists. The archive
+    // index is keyed in logical OPC PartName space, so restore percent-encoded
+    // Unicode before testing identity.
+    let logical_path = logical_archive_part_path(path)
+    if part_names.contains(@ooxml.package_part_name_key(logical_path)) {
       return Some(path)
     }
   }
@@ -3153,6 +3157,25 @@ test "read archive index maps physical Unicode OPC names to logical identity" {
   debug_inspect(
     names.get(@ooxml.package_part_name_key("custom/文.xml")),
     content="Some(\"custom/%E6%96%87.xml\")",
+  )
+}
+
+///|
+test "relationship selection recognizes physical Unicode chart parts" {
+  let archive = @zip.Archive::new()
+  archive.add(content_types_part_path, b"manifest")
+  archive.add("xl/charts/%E6%96%87.xml", b"unicode chart")
+  archive.add("xl/charts/chart2.xml", b"other chart")
+  let part_names = archive_part_name_index(archive)
+  let targets : Map[String, String] = Map([
+    ("unicode", "../charts/文.xml"),
+    ("other", "../charts/chart2.xml"),
+  ])
+  debug_inspect(
+    first_existing_rel_target_path(
+      targets, "xl/drawings/drawing1.xml", part_names,
+    ),
+    content="Some(\"xl/charts/%E6%96%87.xml\")",
   )
 }
 

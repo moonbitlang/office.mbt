@@ -1478,6 +1478,7 @@ pub fn Workbook::get_cell_value_styled(
           cell.value,
           Some(self.styles[style_id]),
           resolved_options,
+          use_1904_format=self.uses_1904_date_system(),
         ),
       )
     }
@@ -1491,6 +1492,7 @@ fn format_cell_value_for_workbook(
   cell : Cell,
   raw : Bool,
   options : Options,
+  use_1904_format? : Bool = false,
 ) -> String raise XlsxError {
   if raw || options.raw_cell_value {
     return cell.value
@@ -1503,7 +1505,13 @@ fn format_cell_value_for_workbook(
     cell.value,
     Some(styles[cell.style_id]),
     options,
+    use_1904_format~,
   )
+}
+
+///|
+fn Workbook::uses_1904_date_system(self : Workbook) -> Bool {
+  self.workbook_props.date_1904.unwrap_or(false)
 }
 
 ///|
@@ -1810,6 +1818,7 @@ pub fn Workbook::get_cell_value(
           sheet.cells[index],
           raw,
           resolved_options,
+          use_1904_format=self.uses_1904_date_system(),
         ),
       )
     None => None
@@ -1847,6 +1856,7 @@ pub fn Workbook::get_cell_value_from_worksheet_rc(
           worksheet.cells[index],
           raw,
           resolved_options,
+          use_1904_format=self.uses_1904_date_system(),
         ),
       )
     None => None
@@ -1887,6 +1897,7 @@ pub fn Workbook::get_cell_value_styled_from_worksheet_rc(
           cell.value,
           Some(self.styles[style_id]),
           resolved_options,
+          use_1904_format=self.uses_1904_date_system(),
         ),
       )
     }
@@ -1934,6 +1945,7 @@ pub fn Workbook::calc_cell_value(
     raw_value,
     Some(self.styles[style_id]),
     resolved_options,
+    use_1904_format=self.uses_1904_date_system(),
   )
 }
 
@@ -3447,7 +3459,13 @@ pub fn Workbook::get_cell_value_rc(
   for cell in sheet.cells() {
     if cell.row == row && cell.col == col {
       return Some(
-        format_cell_value_for_workbook(self.styles, cell, raw, resolved_options),
+        format_cell_value_for_workbook(
+          self.styles,
+          cell,
+          raw,
+          resolved_options,
+          use_1904_format=self.uses_1904_date_system(),
+        ),
       )
     }
   }

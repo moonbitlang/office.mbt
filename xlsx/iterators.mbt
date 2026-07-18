@@ -36,6 +36,7 @@ pub struct Rows {
   mut index : Int
   styles : Array[Style]?
   options : Options
+  use_1904_format : Bool
 }
 
 ///|
@@ -87,8 +88,16 @@ fn Rows::new_with_options(
   sheet : Worksheet,
   styles : Array[Style]?,
   options : Options,
+  use_1904_format? : Bool = false,
 ) -> Rows {
-  { sheet, entries: collect_row_cells(sheet), index: 0, styles, options }
+  {
+    sheet,
+    entries: collect_row_cells(sheet),
+    index: 0,
+    styles,
+    options,
+    use_1904_format,
+  }
 }
 
 ///|
@@ -119,7 +128,11 @@ pub fn Rows::columns(
     Some(styles) =>
       for cell in entry.cells {
         let formatted = format_cell_value_for_workbook(
-          styles, cell, false, resolved_options,
+          styles,
+          cell,
+          false,
+          resolved_options,
+          use_1904_format=self.use_1904_format,
         )
         values[cell.col - 1] = formatted
       }
@@ -182,6 +195,7 @@ pub struct Cols {
   mut index : Int
   styles : Array[Style]?
   options : Options
+  use_1904_format : Bool
   mut err : XlsxError?
 }
 
@@ -215,6 +229,7 @@ fn collect_row_entries_with_options(
   sheet : Worksheet,
   styles : ArrayView[Style],
   options : Options,
+  use_1904_format : Bool,
 ) -> Array[RowValues] raise XlsxError {
   let cells = sheet.sorted_cells()
   let row_cells : Map[Int, Array[Cell]] = Map([])
@@ -251,7 +266,11 @@ fn collect_row_entries_with_options(
     let values : Array[String] = Array::make(max_col, "")
     for cell in row_entries {
       let formatted = format_cell_value_for_workbook(
-        styles, cell, false, options,
+        styles,
+        cell,
+        false,
+        options,
+        use_1904_format~,
       )
       values[cell.col - 1] = formatted
     }
@@ -265,6 +284,7 @@ fn collect_columns_with_options(
   sheet : Worksheet,
   styles : ArrayView[Style],
   options : Options,
+  use_1904_format : Bool,
 ) -> Array[Array[String]] raise XlsxError {
   let max_col = sheet.max_col()
   if max_col <= 0 {
@@ -273,7 +293,13 @@ fn collect_columns_with_options(
   let max_row = max_row_for_columns(sheet)
   let col_cells : Map[Int, Array[(Int, String)]] = Map([])
   for cell in sheet.cells {
-    let formatted = format_cell_value_for_workbook(styles, cell, false, options)
+    let formatted = format_cell_value_for_workbook(
+      styles,
+      cell,
+      false,
+      options,
+      use_1904_format~,
+    )
     let entries = col_cells.get(cell.col).unwrap_or([])
     entries.push((cell.row, formatted))
     col_cells[cell.col] = entries
@@ -302,6 +328,7 @@ fn Cols::new_with_options(
   sheet : Worksheet,
   styles : Array[Style]?,
   options : Options,
+  use_1904_format? : Bool = false,
 ) -> Cols {
   let max_col = sheet.max_col()
   let columns = if max_col <= 0 {
@@ -310,7 +337,16 @@ fn Cols::new_with_options(
     collect_column_cells(sheet, max_col)
   }
   let max_row = if max_col <= 0 { 0 } else { max_row_for_columns(sheet) }
-  { sheet, columns, max_row, index: 0, styles, options, err: None }
+  {
+    sheet,
+    columns,
+    max_row,
+    index: 0,
+    styles,
+    options,
+    use_1904_format,
+    err: None,
+  }
 }
 
 ///|
@@ -341,7 +377,11 @@ pub fn Cols::rows(self : Cols, options? : Options) -> Array[String] {
           continue
         }
         let formatted = format_cell_value_for_workbook(
-          styles, cell, false, resolved_options,
+          styles,
+          cell,
+          false,
+          resolved_options,
+          use_1904_format=self.use_1904_format,
         ) catch {
           err => {
             if self.err is None {
@@ -443,7 +483,12 @@ pub fn Workbook::rows(
     Some(value) => value
     None => raise SheetNotFound(name=sheet_name.to_owned())
   }
-  Rows::new_with_options(sheet, Some(self.styles), self.options)
+  Rows::new_with_options(
+    sheet,
+    Some(self.styles),
+    self.options,
+    use_1904_format=self.uses_1904_date_system(),
+  )
 }
 
 ///|
@@ -456,7 +501,12 @@ pub fn Workbook::cols(
     Some(value) => value
     None => raise SheetNotFound(name=sheet_name.to_owned())
   }
-  Cols::new_with_options(sheet, Some(self.styles), self.options)
+  Cols::new_with_options(
+    sheet,
+    Some(self.styles),
+    self.options,
+    use_1904_format=self.uses_1904_date_system(),
+  )
 }
 
 ///|
@@ -475,6 +525,7 @@ pub fn Workbook::get_rows(
     sheet,
     self.styles,
     resolved_options,
+    self.uses_1904_date_system(),
   )
   let results : Array[Array[String]] = []
   let mut max_with_values = 0
@@ -509,5 +560,10 @@ pub fn Workbook::get_cols(
     Some(value) => value
     None => raise SheetNotFound(name=sheet_name.to_owned())
   }
-  collect_columns_with_options(sheet, self.styles, resolved_options)
+  collect_columns_with_options(
+    sheet,
+    self.styles,
+    resolved_options,
+    self.uses_1904_date_system(),
+  )
 }

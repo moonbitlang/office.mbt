@@ -19,11 +19,15 @@ fn ReadBudget::new(
 }
 
 ///|
-fn read_budget_actual(current : Int, amount : Int, limit : Int) -> Int {
+fn read_budget_actual(current : Int, amount : Int, limit : Int) -> (Int, Bool) {
   if amount > limit - current {
-    limit + 1
+    // `ReadLimits` accepts every positive Int. Keep the reported value
+    // representable when the ceiling is Int::max while carrying overflow as a
+    // separate bit; wrapping `limit + 1` would otherwise turn the rejection
+    // into a negative, apparently in-budget value.
+    (if limit < 0x7fffffff { limit + 1 } else { limit }, true)
   } else {
-    current + amount
+    (current + amount, false)
   }
 }
 
@@ -35,12 +39,12 @@ fn ReadBudget::charge_items(
   if amount <= 0 {
     return
   }
-  let actual = read_budget_actual(
+  let (actual, exceeded) = read_budget_actual(
     self.parser_items,
     amount,
     self.limits.max_parser_items,
   )
-  if actual > self.limits.max_parser_items {
+  if exceeded {
     raise ResourceLimitExceeded(
       kind="parser_items",
       limit=self.limits.max_parser_items,
@@ -58,12 +62,12 @@ fn ReadBudget::charge_work(
   if amount <= 0 {
     return
   }
-  let actual = read_budget_actual(
+  let (actual, exceeded) = read_budget_actual(
     self.parser_work_units,
     amount,
     self.limits.max_parser_work_units,
   )
-  if actual > self.limits.max_parser_work_units {
+  if exceeded {
     raise ResourceLimitExceeded(
       kind="parser_work_units",
       limit=self.limits.max_parser_work_units,
@@ -309,4 +313,39 @@ test "read budget ignores element-like text in comments and CDATA" {
     "<root><!-- <fake/><fake/> --><![CDATA[<fake/><fake/>]]><real/></root>",
   )
   assert_eq(budget.parser_items, 2)
+}
+
+///|
+test "read budget rejects overflow at maximum Int limits" {
+  let limits = ReadLimits::with_values(
+    max_parser_items=0x7fffffff,
+    max_parser_work_units=0x7fffffff,
+  )
+  let item_budget = ReadBudget::new(limits)
+  item_budget.parser_items = 0x7ffffffe
+  try item_budget.charge_items(2) catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) => {
+      assert_eq(kind, "parser_items")
+      assert_eq(limit, 0x7fffffff)
+      assert_eq(actual, 0x7fffffff)
+      assert_eq(item_budget.parser_items, 0x7ffffffe)
+    }
+    _ => fail("unexpected parser item overflow error")
+  } noraise {
+    _ => fail("expected parser item overflow rejection")
+  }
+
+  let work_budget = ReadBudget::new(limits)
+  work_budget.parser_work_units = 0x7ffffffe
+  try work_budget.charge_work(2) catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) => {
+      assert_eq(kind, "parser_work_units")
+      assert_eq(limit, 0x7fffffff)
+      assert_eq(actual, 0x7fffffff)
+      assert_eq(work_budget.parser_work_units, 0x7ffffffe)
+    }
+    _ => fail("unexpected parser work overflow error")
+  } noraise {
+    _ => fail("expected parser work overflow rejection")
+  }
 }
