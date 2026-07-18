@@ -86,6 +86,30 @@ test "bounded archive and byte reads produce equivalent workbooks" {
 }
 
 ///|
+test "direct XLSX reads reject OPC-derivable part names" {
+  for
+    entries in [
+      ["custom/a.xml", "custom/a.xml/child.xml"],
+      ["custom/a.xml/child.xml", "custom/a.xml"],
+    ] {
+    let archive = @zip.read(bounded_workbook_fixture())
+    for name in entries {
+      archive.add(name, b"part")
+    }
+    let result : Result[@xlsx.Workbook, Error] = Ok(
+      @xlsx.read(@zip.write(archive)),
+    ) catch {
+      error => Err(error)
+    }
+    match result {
+      Err(@xlsx.InvalidPackage(msg~)) =>
+        assert_true(msg.contains("OPC part names are derivable"))
+      _ => fail("expected direct XLSX derivable-part rejection")
+    }
+  }
+}
+
+///|
 test "archive read rejects compatibility and constructed archives" {
   let bytes = bounded_workbook_fixture()
   for archive in [@zip.read(bytes), @zip.Archive::new()] {

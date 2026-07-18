@@ -3124,6 +3124,7 @@ fn archive_part_name_index(
   archive : @zip.Archive,
 ) -> Map[String, String] raise XlsxError {
   let names : Map[String, String] = Map([])
+  let registry = @ooxml.OpcPartNameRegistry::new()
   for entry in archive.entries() {
     let physical_name = entry.name()
     if physical_name.has_suffix("/") {
@@ -3143,6 +3144,17 @@ fn archive_part_name_index(
       }
     }
     let key = @ooxml.package_part_name_key(logical_name)
+    if logical_name != content_types_part_path {
+      match registry.register(logical_name, physical_name) {
+        Some(Equivalent(_)) =>
+          raise InvalidPackage(msg="duplicate or equivalent OPC part name")
+        Some(Derivable(existing)) =>
+          raise InvalidPackage(
+            msg="OPC part names are derivable: \{existing} and \{physical_name}",
+          )
+        None => ()
+      }
+    }
     match names.get(key) {
       Some(_) =>
         raise InvalidPackage(msg="duplicate or equivalent OPC part name")
@@ -3208,6 +3220,28 @@ test "read archive index rejects ambiguous and misspelled reserved entries" {
     _ => fail("unexpected reserved OPC part error")
   } noraise {
     _ => fail("expected reserved OPC part spelling rejection")
+  }
+}
+
+///|
+test "read archive index rejects OPC-derivable parts in either order" {
+  for
+    entries in [
+      ["custom/a.xml", "custom/a.xml/child.xml"],
+      ["custom/a.xml/child.xml", "custom/a.xml"],
+    ] {
+    let archive = @zip.Archive::new()
+    archive.add(content_types_part_path, b"manifest")
+    for name in entries {
+      archive.add(name, b"part")
+    }
+    try archive_part_name_index(archive) catch {
+      InvalidPackage(msg~) =>
+        assert_true(msg.contains("OPC part names are derivable"))
+      _ => fail("unexpected derivable OPC part error")
+    } noraise {
+      _ => fail("expected derivable OPC part rejection")
+    }
   }
 }
 

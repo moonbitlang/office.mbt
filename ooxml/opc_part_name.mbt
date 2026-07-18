@@ -225,6 +225,105 @@ pub fn logical_opc_part_name_from_zip_item_name(name : StringView) -> String? {
 }
 
 ///|
+type OpcPartNameChildren = @sorted_map.SortedMap[String, Int]
+
+///|
+priv struct OpcPartNameTrieNode {
+  mut terminal : String?
+  mut first_part : String?
+  children : OpcPartNameChildren
+}
+
+///|
+fn new_opc_part_name_trie_node() -> OpcPartNameTrieNode {
+  { terminal: None, first_part: None, children: SortedMap([]) }
+}
+
+///|
+/// The collision reported while registering a logical OPC PartName.
+pub(all) enum OpcPartNameConflict {
+  Equivalent(String)
+  Derivable(String)
+}
+
+///|
+/// A segment trie for OPC PartName identity and non-derivability checks.
+/// Work and storage are linear in aggregate PartName length, while ordered
+/// child indexes keep hostile names independent of string-hash behavior.
+pub struct OpcPartNameRegistry {
+  priv nodes : Array[OpcPartNameTrieNode]
+}
+
+///|
+/// Creates an empty OPC PartName registry.
+pub fn OpcPartNameRegistry::new() -> OpcPartNameRegistry {
+  { nodes: [new_opc_part_name_trie_node()] }
+}
+
+///|
+/// Registers `name`, using `display` in any returned conflict. Identity is
+/// ASCII-case-insensitive and a name conflicts when either side is derivable
+/// from the other by appending one or more path segments.
+pub fn OpcPartNameRegistry::register(
+  self : OpcPartNameRegistry,
+  name : StringView,
+  display : String,
+) -> OpcPartNameConflict? {
+  let key = package_part_name_key(name)
+  let segments = key.split("/").collect()
+  let mut node_index = 0
+  let mut complete_path = true
+  for segment_view in segments {
+    match self.nodes[node_index].terminal {
+      Some(existing) => return Some(Derivable(existing))
+      None => ()
+    }
+    let segment = segment_view.to_owned()
+    match self.nodes[node_index].children.get(segment) {
+      Some(child) => node_index = child
+      None => {
+        complete_path = false
+        break
+      }
+    }
+  }
+  if complete_path {
+    match self.nodes[node_index].terminal {
+      Some(existing) => return Some(Equivalent(existing))
+      None => ()
+    }
+    match self.nodes[node_index].first_part {
+      Some(existing) => return Some(Derivable(existing))
+      None => ()
+    }
+  }
+  // The preflight is mutation-free, so a rejected name cannot leave a partial
+  // trie path that changes a later conflict result.
+  node_index = 0
+  if self.nodes[node_index].first_part is None {
+    self.nodes[node_index].first_part = Some(display)
+  }
+  for segment_view in segments {
+    let segment = segment_view.to_owned()
+    let child = match self.nodes[node_index].children.get(segment) {
+      Some(existing) => existing
+      None => {
+        let fresh = self.nodes.length()
+        self.nodes.push(new_opc_part_name_trie_node())
+        self.nodes[node_index].children[segment] = fresh
+        fresh
+      }
+    }
+    node_index = child
+    if self.nodes[node_index].first_part is None {
+      self.nodes[node_index].first_part = Some(display)
+    }
+  }
+  self.nodes[node_index].terminal = Some(display)
+  None
+}
+
+///|
 test "OPC physical names restore Unicode logical identity" {
   debug_inspect(
     logical_opc_part_name_from_zip_item_name("custom/%E6%96%87.xml"),
@@ -234,4 +333,31 @@ test "OPC physical names restore Unicode logical identity" {
     logical_opc_part_name_from_zip_item_name("custom/文.xml"),
     content="None",
   )
+}
+
+///|
+test "OPC PartName registry rejects equivalent and derivable identities" {
+  let registry = OpcPartNameRegistry::new()
+  assert_true(registry.register("custom/a.xml", "custom/a.xml") is None)
+  match registry.register("CUSTOM/A.XML", "CUSTOM/A.XML") {
+    Some(Equivalent(existing)) => inspect(existing, content="custom/a.xml")
+    _ => fail("expected equivalent OPC PartName")
+  }
+  match registry.register("custom/a.xml/child.xml", "custom/a.xml/child.xml") {
+    Some(Derivable(existing)) => inspect(existing, content="custom/a.xml")
+    _ => fail("expected descendant OPC PartName conflict")
+  }
+
+  let descendant_first = OpcPartNameRegistry::new()
+  assert_true(
+    descendant_first.register(
+      "custom/a.xml/child.xml", "custom/a.xml/child.xml",
+    )
+    is None,
+  )
+  match descendant_first.register("custom/a.xml", "custom/a.xml") {
+    Some(Derivable(existing)) =>
+      inspect(existing, content="custom/a.xml/child.xml")
+    _ => fail("expected ancestor OPC PartName conflict")
+  }
 }
