@@ -49,6 +49,17 @@ pub suberror ParseXmlError {
 pub fn ParseXmlError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
+pub(all) enum OpcPartNameConflict {
+  Equivalent(String)
+  Derivable(String)
+}
+
+pub struct OpcPartNameRegistry {
+  // private fields
+}
+pub fn OpcPartNameRegistry::new() -> Self
+pub fn OpcPartNameRegistry::register(Self, StringView, String) -> OpcPartNameConflict?
+
 type WorkbookManifest
 pub fn WorkbookManifest::add_content_default(Self, String, String) -> Unit
 pub fn WorkbookManifest::add_content_override(Self, String, String) -> Unit
