@@ -5916,14 +5916,33 @@ fn date_parts_from_serial(
   serial : Double,
   use_1904_dates? : Bool = false,
 ) -> (Int, Int, Int)? {
+  // Calendar-only formulas use the serial's containing day. Clock rounding is
+  // intentionally confined to time-bearing conversions: 23:59:59.99 must not
+  // make YEAR, DAY, WEEKNUM, or ISOWEEKNUM observe the following date.
+  let date_serial = Double::floor(serial)
   let parts = if use_1904_dates {
-    excel_serial_to_parts_1904(serial)
+    excel_serial_to_parts_1904(date_serial)
   } else {
-    excel_serial_to_parts(serial)
+    excel_serial_to_parts(date_serial)
   }
   match parts {
     Some((year, month, day, _, _, _)) => Some((year, month, day))
     None => None
+  }
+}
+
+///|
+fn excel_serial_date_parts(
+  value : FormulaValue,
+  use_1904_dates? : Bool = false,
+) -> Result[(Int, Int, Int), FormulaValue] {
+  match value_as_number(value) {
+    Ok(serial) =>
+      match date_parts_from_serial(serial, use_1904_dates~) {
+        Some(parts) => Ok(parts)
+        None => Err(Error(formula_error_num))
+      }
+    Err(err) => Err(err)
   }
 }
 

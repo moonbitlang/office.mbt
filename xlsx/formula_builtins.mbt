@@ -4183,8 +4183,9 @@ fn eval_function(
       }
     "YEAR" =>
       if values.length() == 1 {
-        match excel_serial_parts(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok((year, _, _, _, _, _)) => Number(Double::from_int(year))
+        match
+          excel_serial_date_parts(values[0], use_1904_dates=ctx.use_1904_dates) {
+          Ok((year, _, _)) => Number(Double::from_int(year))
           Err(err) => err
         }
       } else {
@@ -4192,8 +4193,9 @@ fn eval_function(
       }
     "MONTH" =>
       if values.length() == 1 {
-        match excel_serial_parts(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok((_, month, _, _, _, _)) => Number(Double::from_int(month))
+        match
+          excel_serial_date_parts(values[0], use_1904_dates=ctx.use_1904_dates) {
+          Ok((_, month, _)) => Number(Double::from_int(month))
           Err(err) => err
         }
       } else {
@@ -4201,8 +4203,9 @@ fn eval_function(
       }
     "DAY" =>
       if values.length() == 1 {
-        match excel_serial_parts(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok((_, _, day, _, _, _)) => Number(Double::from_int(day))
+        match
+          excel_serial_date_parts(values[0], use_1904_dates=ctx.use_1904_dates) {
+          Ok((_, _, day)) => Number(Double::from_int(day))
           Err(err) => err
         }
       } else {
