@@ -22,6 +22,62 @@ fn xml_whitespace_tokens(value : StringView) -> Array[String] {
 }
 
 ///|
+let max_structural_sqref_tokens = 65_536
+
+///|
+let max_structural_sqref_token_chars = 128
+
+///|
+fn xml_whitespace_tokens_cancellable(
+  value : StringView,
+  cancelled? : () -> Bool = () => false,
+) -> Array[String] raise XlsxError {
+  let tokens : Array[String] = []
+  let mut current = StringBuilder::new()
+  let mut has_chars = false
+  let mut current_chars = 0
+  for index, ch in value {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
+    if is_attr_space(ch) {
+      if has_chars {
+        if tokens.length() >= max_structural_sqref_tokens {
+          raise ResourceLimitExceeded(
+            kind="sqref_tokens",
+            limit=max_structural_sqref_tokens,
+            actual=tokens.length() + 1,
+          )
+        }
+        tokens.push(current.to_string())
+        current = StringBuilder::new()
+        has_chars = false
+        current_chars = 0
+      }
+    } else {
+      current_chars += if ch.to_int() > 0xffff { 2 } else { 1 }
+      if current_chars > max_structural_sqref_token_chars {
+        raise InvalidXml(msg="sqref reference invalid")
+      }
+      current.write_char(ch)
+      has_chars = true
+    }
+  }
+  if has_chars {
+    if tokens.length() >= max_structural_sqref_tokens {
+      raise ResourceLimitExceeded(
+        kind="sqref_tokens",
+        limit=max_structural_sqref_tokens,
+        actual=tokens.length() + 1,
+      )
+    }
+    tokens.push(current.to_string())
+  }
+  check_read_cancelled(cancelled)
+  tokens
+}
+
+///|
 fn invalid_coordinate_xml(field : StringView) -> Unit raise XlsxError {
   raise InvalidXml(msg="\{field.to_owned()} reference invalid")
 }

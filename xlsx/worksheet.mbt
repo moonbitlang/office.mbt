@@ -2494,6 +2494,23 @@ fn Worksheet::next_x14_cf_rule_id(self : Worksheet) -> String {
 }
 
 ///|
+fn next_available_x14_cf_rule_id(
+  start : Int,
+  used : Map[String, X14DataBarProps],
+) -> (String, Int) {
+  let mut counter = start
+  while true {
+    let suffix = pad_left_dec(counter, 12)
+    let id = "{00000000-0000-0000-0000-\{suffix}}"
+    counter += 1
+    if used.get(id) is None {
+      return (id, counter)
+    }
+  }
+  ("{00000000-0000-0000-0000-000000000000}", counter)
+}
+
+///|
 fn inject_x14_id_ext_lst_into_cf_rule(
   rule_xml : String,
   id : StringView,
@@ -3610,12 +3627,13 @@ fn Worksheet::insert_rows(
   )
   translation_budget.checkpoint()
   // Transactional: stage every shifted collection into locals first — cell,
-  // merge, hyperlink, filter, table, sparkline, image, and chart references
-  // shift through `cell_ref_from`/range adjusters that raise once a coordinate
-  // leaves the grid, and the two numerically-shifted collections (row
-  // dimensions, page breaks) are bound-checked explicitly below. Nothing on
-  // `self` is mutated until every stage succeeds, so an overflowing insert
-  // raises and leaves the worksheet unchanged instead of half-shifted.
+  // merge, conditional-format, validation, hyperlink, filter, table,
+  // sparkline, image, and chart references shift through
+  // `cell_ref_from`/range adjusters that raise once a coordinate leaves the
+  // grid, and the two numerically-shifted collections (row dimensions, page
+  // breaks) are bound-checked explicitly below. Nothing on `self` is mutated
+  // until every stage succeeds, so an overflowing insert raises and leaves the
+  // worksheet unchanged instead of half-shifted.
   let updated_cells : Array[Cell] = []
   for index, stored_cell in self.cells {
     if (index & 4095) == 0 {
@@ -3652,6 +3670,27 @@ fn Worksheet::insert_rows(
     }
     updated_merges.push(adjust_range_after_row_insert(range_ref, row, count))
   }
+  let updated_conditional_formats = adjust_xml_sqrefs_after_insert(
+    self.conditional_formats,
+    row,
+    count,
+    SqrefRows,
+    cancelled=translation_budget.cancelled,
+  )
+  let updated_x14_data_bars = adjust_x14_data_bars_after_insert(
+    self.x14_data_bars,
+    row,
+    count,
+    SqrefRows,
+    cancelled=translation_budget.cancelled,
+  )
+  let updated_data_validations = adjust_xml_sqrefs_after_insert(
+    self.data_validations,
+    row,
+    count,
+    SqrefRows,
+    cancelled=translation_budget.cancelled,
+  )
   let updated_links : Array[Hyperlink] = []
   for index, link in self.hyperlinks {
     if (index & 4095) == 0 {
@@ -3768,6 +3807,14 @@ fn Worksheet::insert_rows(
   self.cells.append(updated_cells)
   self.merged_cells.clear()
   self.merged_cells.append(updated_merges)
+  self.conditional_formats.clear()
+  self.conditional_formats.append(updated_conditional_formats)
+  self.x14_data_bars.clear()
+  for id, props in updated_x14_data_bars {
+    self.x14_data_bars[id] = props
+  }
+  self.data_validations.clear()
+  self.data_validations.append(updated_data_validations)
   self.hyperlinks.clear()
   self.hyperlinks.append(updated_links)
   self.auto_filter = updated_filter
@@ -4030,33 +4077,194 @@ fn format_cell_ref_with_abs(
 }
 
 ///|
+fn split_sqref_range(text : StringView) -> (String, String) {
+  let left = StringBuilder::new()
+  let right = StringBuilder::new()
+  let mut seen_sep = false
+  for ch in text {
+    if !seen_sep && ch == ':' {
+      seen_sep = true
+    } else if seen_sep {
+      right.write_char(ch)
+    } else {
+      left.write_char(ch)
+    }
+  }
+  if seen_sep {
+    (left.to_string(), right.to_string())
+  } else {
+    let cell = text.to_owned()
+    (cell, cell)
+  }
+}
+
+///|
+fn decode_structural_sqref(
+  encoded : StringView,
+  cancelled? : () -> Bool = () => false,
+) -> String raise XlsxError {
+  @ooxml.decode_xml_attribute(encoded, cancelled~) catch {
+    InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+}
+
+///|
+priv enum SqrefInsertAxis {
+  SqrefRows
+  SqrefColumns
+}
+
+///|
+fn adjust_sqref_after_insert(
+  sqref : StringView,
+  start : Int,
+  count : Int,
+  axis : SqrefInsertAxis,
+  cancelled? : () -> Bool = () => false,
+) -> String raise XlsxError {
+  let adjusted : Array[String] = []
+  let tokens = xml_whitespace_tokens_cancellable(sqref, cancelled~)
+  if tokens.length() == 0 {
+    raise InvalidXml(msg="sqref reference invalid")
+  }
+  for index, token in tokens {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
+    if token.length() > 128 {
+      raise InvalidXml(msg="sqref reference invalid")
+    }
+    let had_range = token.contains(":")
+    let range_ref = if had_range { token } else { token + ":" + token }
+    let (min_row, min_col, max_row, max_col) = parse_range_ref(range_ref)
+    let (new_min_row, new_min_col, new_max_row, new_max_col) = match axis {
+      SqrefRows => {
+        let (next_min, next_max) = adjust_bounds_for_insert(
+          min_row, max_row, start, count,
+        )
+        (next_min, min_col, next_max, max_col)
+      }
+      SqrefColumns => {
+        let (next_min, next_max) = adjust_bounds_for_insert(
+          min_col, max_col, start, count,
+        )
+        (min_row, next_min, max_row, next_max)
+      }
+    }
+    let first = cell_ref_from(new_min_row, new_min_col)
+    if had_range {
+      adjusted.push("\{first}:\{cell_ref_from(new_max_row, new_max_col)}")
+    } else {
+      adjusted.push(first)
+    }
+  }
+  check_read_cancelled(cancelled)
+  adjusted.join(" ")
+}
+
+///|
+fn adjust_xml_sqref_after_insert(
+  xml : StringView,
+  start : Int,
+  count : Int,
+  axis : SqrefInsertAxis,
+  cancelled? : () -> Bool = () => false,
+) -> String raise XlsxError {
+  let tag_text = match tag_attributes_in(xml, "conditionalFormatting") {
+    Some(value) => value
+    None =>
+      match tag_attributes_in(xml, "dataValidation") {
+        Some(value) => value
+        None => return xml.to_owned()
+      }
+  }
+  let encoded = match attr_value(tag_text, "sqref") {
+    Some(value) => value
+    None => return xml.to_owned()
+  }
+  let decoded = decode_structural_sqref(encoded, cancelled~)
+  let shifted = adjust_sqref_after_insert(
+    decoded,
+    start,
+    count,
+    axis,
+    cancelled~,
+  )
+  match replace_attr_value_in_open_tag(xml, "sqref", shifted) {
+    Some(value) => value
+    None => raise InvalidXml(msg="sqref update failed")
+  }
+}
+
+///|
+fn adjust_xml_sqrefs_after_insert(
+  entries : ArrayView[String],
+  start : Int,
+  count : Int,
+  axis : SqrefInsertAxis,
+  cancelled? : () -> Bool = () => false,
+) -> Array[String] raise XlsxError {
+  let shifted : Array[String] = []
+  for index, xml in entries {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
+    shifted.push(
+      adjust_xml_sqref_after_insert(xml, start, count, axis, cancelled~),
+    )
+  }
+  check_read_cancelled(cancelled)
+  shifted
+}
+
+///|
+fn adjust_x14_data_bars_after_insert(
+  entries : Map[String, X14DataBarProps],
+  start : Int,
+  count : Int,
+  axis : SqrefInsertAxis,
+  cancelled? : () -> Bool = () => false,
+) -> Map[String, X14DataBarProps] raise XlsxError {
+  let shifted : Map[String, X14DataBarProps] = Map([])
+  let mut index = 0
+  for id, props in entries {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
+    shifted[id] = {
+      sqref: adjust_sqref_after_insert(
+        props.sqref,
+        start,
+        count,
+        axis,
+        cancelled~,
+      ),
+      bar_direction: props.bar_direction,
+      bar_solid: props.bar_solid,
+      bar_border_color: props.bar_border_color,
+    }
+    index += 1
+  }
+  check_read_cancelled(cancelled)
+  shifted
+}
+
+///|
 fn duplicate_sqref_for_row(
   row : Int,
   target_row : Int,
   sqref : StringView,
+  cancelled? : () -> Bool = () => false,
 ) -> Array[String] raise XlsxError {
-  fn split_sqref_range(text : StringView) -> (String, String) {
-    let left = StringBuilder::new()
-    let right = StringBuilder::new()
-    let mut seen_sep = false
-    for ch in text {
-      if !seen_sep && ch == ':' {
-        seen_sep = true
-      } else if seen_sep {
-        right.write_char(ch)
-      } else {
-        left.write_char(ch)
-      }
-    }
-    if seen_sep {
-      (left.to_string(), right.to_string())
-    } else {
-      let cell = text.to_owned()
-      (cell, cell)
-    }
-  }
   let refs : Array[String] = []
-  for text in xml_whitespace_tokens(sqref) {
+  for index, text in xml_whitespace_tokens_cancellable(sqref, cancelled~) {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
+    if text.length() > 128 {
+      raise InvalidXml(msg="sqref reference invalid")
+    }
     let (start_ref, end_ref) = split_sqref_range(text)
     let (row1, col1, abs_col1, abs_row1) = parse_cell_ref_with_abs(start_ref)
     let (row2, col2, abs_col2, abs_row2) = parse_cell_ref_with_abs(end_ref)
@@ -4070,6 +4278,7 @@ fn duplicate_sqref_for_row(
       refs.push("\{from_ref}:\{to_ref}")
     }
   }
+  check_read_cancelled(cancelled)
   refs
 }
 
@@ -4080,6 +4289,7 @@ fn duplicate_xml_sqref(
   xml : StringView,
   row : Int,
   target_row : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> String? raise XlsxError {
   let tag_text = match tag_attributes_in(xml, "conditionalFormatting") {
     Some(value) => value
@@ -4089,16 +4299,135 @@ fn duplicate_xml_sqref(
         None => return None
       }
   }
-  let sqref = match attr_value(tag_text, "sqref") {
+  let encoded_sqref = match attr_value(tag_text, "sqref") {
     Some(value) => value
     None => return None
   }
-  let refs = duplicate_sqref_for_row(row, target_row, sqref)
+  let sqref = decode_structural_sqref(encoded_sqref, cancelled~)
+  let refs = duplicate_sqref_for_row(row, target_row, sqref, cancelled~)
   if refs.length() == 0 {
     return None
   }
   let joined = refs.join(" ")
   replace_attr_value_in_open_tag(xml, "sqref", joined)
+}
+
+///|
+priv struct ConditionalFormatCopies {
+  xml : Array[String]
+  x14_data_bars : Map[String, X14DataBarProps]
+  next_x14_cf_rule_id_counter : Int
+}
+
+///|
+fn remap_duplicated_x14_ids(
+  xml : StringView,
+  sqref : String,
+  source : Map[String, X14DataBarProps],
+  used : Map[String, X14DataBarProps],
+  start_counter : Int,
+) -> (String, Map[String, X14DataBarProps], Int) raise XlsxError {
+  let chunks = Array::from_iter(xml.split("<x14:id>"))
+  if chunks.length() <= 1 {
+    return (xml.to_owned(), Map([]), start_counter)
+  }
+  let additions : Map[String, X14DataBarProps] = Map([])
+  let builder = StringBuilder::new()
+  builder.write_view(chunks[0])
+  let mut counter = start_counter
+  for index = 1; index < chunks.length(); index = index + 1 {
+    let chunk = chunks[index]
+    let end = match chunk.find("</x14:id>") {
+      Some(value) => value
+      None => {
+        builder.write_view("<x14:id>")
+        builder.write_view(chunk)
+        continue
+      }
+    }
+    let encoded_id = chunk[:end]
+    let id = @ooxml.decode_xml_attribute(encoded_id) catch {
+      InvalidXml(msg~) => raise InvalidXml(msg~)
+      ReadCancelled => raise ReadCancelled
+    }
+    match source.get(id) {
+      Some(props) => {
+        let (new_id, next_counter) = next_available_x14_cf_rule_id(
+          counter, used,
+        )
+        counter = next_counter
+        let duplicated = {
+          sqref,
+          bar_direction: props.bar_direction,
+          bar_solid: props.bar_solid,
+          bar_border_color: props.bar_border_color,
+        }
+        used[new_id] = duplicated
+        additions[new_id] = duplicated
+        builder.write_view("<x14:id>")
+        builder.write_view(escape_xml_text(new_id))
+        builder.write_view("</x14:id>")
+      }
+      None => {
+        builder.write_view("<x14:id>")
+        builder.write_view(encoded_id)
+        builder.write_view("</x14:id>")
+      }
+    }
+    builder.write_view(chunk[end + "</x14:id>".length():])
+  }
+  (builder.to_string(), additions, counter)
+}
+
+///|
+fn duplicate_conditional_format_copies(
+  entries : ArrayView[String],
+  x14_data_bars : Map[String, X14DataBarProps],
+  next_x14_cf_rule_id_counter : Int,
+  row : Int,
+  target_row : Int,
+  cancelled? : () -> Bool = () => false,
+) -> ConditionalFormatCopies raise XlsxError {
+  let copies : Array[String] = []
+  let additions : Map[String, X14DataBarProps] = Map([])
+  let used : Map[String, X14DataBarProps] = Map([])
+  for id, props in x14_data_bars {
+    used[id] = props
+  }
+  let mut counter = next_x14_cf_rule_id_counter
+  for index, xml in entries {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
+    match duplicate_xml_sqref(xml, row, target_row, cancelled~) {
+      Some(copy) => {
+        let tag = match tag_attributes_in(copy, "conditionalFormatting") {
+          Some(value) => value
+          None => raise InvalidXml(msg="conditionalFormatting tag missing")
+        }
+        let encoded_sqref = match attr_value(tag, "sqref") {
+          Some(value) => value
+          None => raise InvalidXml(msg="conditionalFormatting sqref missing")
+        }
+        let sqref = decode_structural_sqref(encoded_sqref, cancelled~)
+        let (remapped, new_bars, next_counter) = remap_duplicated_x14_ids(
+          copy, sqref, x14_data_bars, used, counter,
+        )
+        counter = next_counter
+        for id, props in new_bars {
+          additions[id] = props
+        }
+        copies.push(remapped)
+      }
+      None => ()
+    }
+  }
+  check_read_cancelled(cancelled)
+  {
+    xml: copies,
+    x14_data_bars: additions,
+    next_x14_cf_rule_id_counter: counter,
+  }
 }
 
 ///|
@@ -4113,7 +4442,7 @@ fn duplicate_xml_sqref_copies(
     if (index & 4095) == 0 {
       check_read_cancelled(cancelled)
     }
-    match duplicate_xml_sqref(xml, row, target_row) {
+    match duplicate_xml_sqref(xml, row, target_row, cancelled~) {
       Some(value) => copies.push(value)
       None => ()
     }
@@ -4252,8 +4581,10 @@ fn Worksheet::duplicate_row_to(
     })
   }
   let row_dim = self.row_dimensions.get(row)
-  let conditional_format_copies = duplicate_xml_sqref_copies(
+  let conditional_format_copies = duplicate_conditional_format_copies(
     self.conditional_formats,
+    self.x14_data_bars,
+    self.x14_cf_rule_id_counter,
     row,
     target_row,
     cancelled=translation_budget.cancelled,
@@ -4295,7 +4626,11 @@ fn Worksheet::duplicate_row_to(
       }
     None => self.row_dimensions.remove(target_row)
   }
-  self.conditional_formats.append(conditional_format_copies)
+  self.conditional_formats.append(conditional_format_copies.xml)
+  for id, props in conditional_format_copies.x14_data_bars {
+    self.x14_data_bars[id] = props
+  }
+  self.x14_cf_rule_id_counter = conditional_format_copies.next_x14_cf_rule_id_counter
   self.data_validations.append(data_validation_copies)
   self.merged_cells.append(merge_copies)
 }
@@ -4336,10 +4671,11 @@ fn Worksheet::insert_cols(
     fn(_cell : Cell) -> Bool { true },
   )
   translation_budget.checkpoint()
-  // Transactional (see insert_rows): stage everything into locals — reference
-  // shifts raise once a coordinate leaves the grid, column dimensions and page
-  // breaks are bound-checked explicitly — and commit only once every stage has
-  // succeeded, so an overflowing insert leaves the worksheet unchanged.
+  // Transactional (see insert_rows): stage everything into locals — including
+  // conditional-format and validation sqrefs. Reference shifts raise once a
+  // coordinate leaves the grid, column dimensions and page breaks are
+  // bound-checked explicitly, and the state commits only after every stage has
+  // succeeded.
   let updated_cells : Array[Cell] = []
   for index, stored_cell in self.cells {
     if (index & 4095) == 0 {
@@ -4376,6 +4712,27 @@ fn Worksheet::insert_cols(
     }
     updated_merges.push(adjust_range_after_col_insert(range_ref, col, count))
   }
+  let updated_conditional_formats = adjust_xml_sqrefs_after_insert(
+    self.conditional_formats,
+    col,
+    count,
+    SqrefColumns,
+    cancelled=translation_budget.cancelled,
+  )
+  let updated_x14_data_bars = adjust_x14_data_bars_after_insert(
+    self.x14_data_bars,
+    col,
+    count,
+    SqrefColumns,
+    cancelled=translation_budget.cancelled,
+  )
+  let updated_data_validations = adjust_xml_sqrefs_after_insert(
+    self.data_validations,
+    col,
+    count,
+    SqrefColumns,
+    cancelled=translation_budget.cancelled,
+  )
   let updated_links : Array[Hyperlink] = []
   for index, link in self.hyperlinks {
     if (index & 4095) == 0 {
@@ -4489,6 +4846,14 @@ fn Worksheet::insert_cols(
   self.cells.append(updated_cells)
   self.merged_cells.clear()
   self.merged_cells.append(updated_merges)
+  self.conditional_formats.clear()
+  self.conditional_formats.append(updated_conditional_formats)
+  self.x14_data_bars.clear()
+  for id, props in updated_x14_data_bars {
+    self.x14_data_bars[id] = props
+  }
+  self.data_validations.clear()
+  self.data_validations.append(updated_data_validations)
   self.hyperlinks.clear()
   self.hyperlinks.append(updated_links)
   self.auto_filter = updated_filter
@@ -6270,12 +6635,90 @@ test "worksheet wb: duplicate-row helper edge branches" {
 }
 
 ///|
-test "worksheet wb: duplicate row stages malformed sqref before mutation" {
+test "worksheet wb: upward duplicate decodes and shifts existing sqrefs" {
+  let sheet = Worksheet::new("EntitySqref")
+  sheet.set_cell("A2", "tail")
+  sheet.set_cell("A5", "source")
+  sheet.add_data_validation_xml(
+    "<dataValidation type=\"whole\" sqref=\"A5&#x20;B5\"/>",
+  )
+  sheet.add_conditional_format_xml(
+    "<conditionalFormatting sqref=\"A5&#x20;B5\"><cfRule type=\"expression\" priority=\"1\"><formula>1=1</formula></cfRule></conditionalFormatting>",
+  )
+  sheet.duplicate_row_to(5, 2)
+  debug_inspect(sheet.get_cell("A2"), content="Some(\"source\")")
+  debug_inspect(sheet.get_cell("A3"), content="Some(\"tail\")")
+  debug_inspect(sheet.get_cell("A6"), content="Some(\"source\")")
+  inspect(sheet.data_validations().length(), content="2")
+  assert_true(sheet.data_validations()[0].contains("sqref=\"A6 B6\""))
+  assert_true(sheet.data_validations()[1].contains("sqref=\"A2:A2 B2:B2\""))
+  inspect(sheet.conditional_formats().length(), content="2")
+  assert_true(sheet.conditional_formats()[0].contains("sqref=\"A6 B6\""))
+  assert_true(sheet.conditional_formats()[1].contains("sqref=\"A2:A2 B2:B2\""))
+}
+
+///|
+test "worksheet wb: duplicate row remaps x14 conditional-format ids" {
+  let sheet = Worksheet::new("X14Duplicate")
+  let data_bar = ConditionalFormatOptions::new("data_bar")
+  data_bar.set_bar_solid(true)
+  data_bar.set_bar_border_color("#0000FF")
+  sheet.set_conditional_format("B5:C5", [data_bar])
+  let source_xml = sheet.conditional_formats()[0]
+  sheet.duplicate_row_to(5, 2)
+  inspect(sheet.conditional_formats().length(), content="2")
+  assert_true(sheet.conditional_formats()[0].contains("sqref=\"B6:C6\""))
+  assert_true(sheet.conditional_formats()[1].contains("sqref=\"B2:C2\""))
+  assert_true(sheet.conditional_formats()[1] != source_xml)
+  assert_eq(sheet.x14_data_bars.length(), 2)
+  let mut shifted = 0
+  let mut duplicated = 0
+  for _, props in sheet.x14_data_bars {
+    if props.sqref == "B6:C6" {
+      shifted += 1
+    } else if props.sqref == "B2:C2" {
+      duplicated += 1
+    }
+  }
+  assert_eq(shifted, 1)
+  assert_eq(duplicated, 1)
+}
+
+///|
+test "worksheet wb: row and column inserts shift sqref ranges" {
+  let rows = Worksheet::new("Rows")
+  rows.add_conditional_format_xml(
+    "<conditionalFormatting sqref=\"A2:B4 C5\"><cfRule type=\"expression\" priority=\"1\"><formula>1=1</formula></cfRule></conditionalFormatting>",
+  )
+  rows.insert_rows(3, 2)
+  assert_true(rows.conditional_formats()[0].contains("sqref=\"A2:B6 C7\""))
+
+  let cols = Worksheet::new("Columns")
+  cols.add_data_validation_xml(
+    "<dataValidation type=\"whole\" sqref=\"B2 C3:D4\"/>",
+  )
+  cols.insert_cols(2, 1)
+  assert_true(cols.data_validations()[0].contains("sqref=\"C2 D3:E4\""))
+
+  let x14 = Worksheet::new("X14")
+  let data_bar = ConditionalFormatOptions::new("data_bar")
+  data_bar.set_bar_solid(true)
+  data_bar.set_bar_border_color("#0000FF")
+  x14.set_conditional_format("B2:C4", [data_bar])
+  x14.insert_rows(3, 2)
+  assert_eq(x14.x14_data_bars.length(), 1)
+  for _, props in x14.x14_data_bars {
+    assert_eq(props.sqref, "B2:C6")
+  }
+}
+
+///|
+test "worksheet wb: malformed sqref insertion remains atomic" {
   let sheet = Worksheet::new("Atomic")
   sheet.set_cell("A1", "source")
   sheet.set_cell("A2", "tail")
   sheet.add_data_validation_xml(
-    "<dataValidation type=\"whole\" sqref=\"A1&#x20;B1\"/>",
+    "<dataValidation type=\"whole\" sqref=\"A1&#xZZ;B1\"/>",
   )
   let result : Result[Unit, Error] = Ok(sheet.duplicate_row_to(1, 2)) catch {
     error => Err(error)
