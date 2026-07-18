@@ -654,7 +654,7 @@ fn xml_entity_value(entity : StringView) -> Char? {
     _ => {
       let (digits, base) = if entity.length() >= 2 &&
         entity[0] == ('#' : UInt16) &&
-        (entity[1] == ('x' : UInt16) || entity[1] == ('X' : UInt16)) {
+        entity[1] == ('x' : UInt16) {
         (entity[2:], 16)
       } else if entity.length() >= 1 && entity[0] == ('#' : UInt16) {
         (entity[1:], 10)
@@ -1989,7 +1989,7 @@ test "start tag scanner restores namespace scopes after self-closing tags" {
 test "XML attributes decode once and reject invalid entities" {
   inspect(decode_xml_attribute("a&amp;#x20;b"), content="a&#x20;b")
   inspect(decode_xml_attribute("a\r\nb"), content="a b")
-  for value in ["&unknown;", "&#0;", "&#xD800;", "&amp"] {
+  for value in ["&unknown;", "&#0;", "&#xD800;", "&#X31;", "&amp"] {
     try decode_xml_attribute(value) catch {
       InvalidXml(_) => ()
       _ => fail("unexpected attribute cancellation")

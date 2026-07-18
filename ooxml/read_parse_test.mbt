@@ -75,6 +75,26 @@ test "ooxml read_parse: prefixed relationships decode entities exactly once" {
 }
 
 ///|
+test "ooxml read_parse: uppercase-X character references never change relationship identity" {
+  for
+    xml in [
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="r&#X31;" Type="wanted" Target="a.xml"/></Relationships>
+      ),
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="r1" Type="wanted" Target="a&#X2f;b.xml"/></Relationships>
+      ),
+    ] {
+    try @ooxml.parse_internal_relationship_targets(xml, "wanted") catch {
+      InvalidXml(msg~) => inspect(msg, content="XML entity is invalid")
+      _ => fail("unexpected uppercase-X entity error")
+    } noraise {
+      _ => fail("expected uppercase-X entity rejection")
+    }
+  }
+}
+
+///|
 test "ooxml read_parse: relationship schema whitespace is collapsed" {
   let xml =
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
