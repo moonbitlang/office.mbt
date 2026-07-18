@@ -145,91 +145,6 @@ fn relationship_attribute(
 }
 
 ///|
-fn relationship_uri_ascii_character(character : UInt16) -> Bool {
-  (character >= 'A' && character <= 'Z') ||
-  (character >= 'a' && character <= 'z') ||
-  (character >= '0' && character <= '9') ||
-  character == '-' ||
-  character == '.' ||
-  character == '_' ||
-  character == '~' ||
-  character == ':' ||
-  character == '/' ||
-  character == '?' ||
-  character == '#' ||
-  character == '[' ||
-  character == ']' ||
-  character == '@' ||
-  character == '!' ||
-  character == '$' ||
-  character == '&' ||
-  character == ('\'' : UInt16) ||
-  character == '(' ||
-  character == ')' ||
-  character == '*' ||
-  character == '+' ||
-  character == ',' ||
-  character == ';' ||
-  character == '=' ||
-  character == '%'
-}
-
-///|
-fn relationship_uri_hex_digit(character : UInt16) -> Bool {
-  (character >= '0' && character <= '9') ||
-  (character >= 'A' && character <= 'F') ||
-  (character >= 'a' && character <= 'f')
-}
-
-///|
-fn relationship_uri_is_valid(value : StringView, absolute : Bool) -> Bool {
-  if value == "" {
-    return false
-  }
-  let mut index = 0
-  while index < value.length() {
-    let character = value[index]
-    if character == ('%' : UInt16) {
-      if index + 2 >= value.length() ||
-        !relationship_uri_hex_digit(value[index + 1]) ||
-        !relationship_uri_hex_digit(value[index + 2]) {
-        return false
-      }
-      index = index + 3
-      continue
-    }
-    if character < 0x80 && !relationship_uri_ascii_character(character) {
-      return false
-    }
-    index = index + 1
-  }
-  if !absolute {
-    return true
-  }
-  let mut scheme_end = 0
-  while scheme_end < value.length() && value[scheme_end] != (':' : UInt16) {
-    scheme_end = scheme_end + 1
-  }
-  if scheme_end == 0 ||
-    scheme_end >= value.length() ||
-    !value[0].to_char().unwrap().is_ascii_alphabetic() {
-    return false
-  }
-  for index in 1..<scheme_end {
-    let character = value[index]
-    if !((character >= 'A' && character <= 'Z') ||
-      (character >= 'a' && character <= 'z') ||
-      (character >= '0' && character <= '9') ||
-      character == '+' ||
-      character == '-' ||
-      character == '.') {
-      return false
-    }
-  }
-  true
-}
-
-///|
 priv enum ParsedRelationshipTargetMode {
   InternalTarget
   ExternalTarget
@@ -908,7 +823,7 @@ fn parse_relationship_targets_by_types_selected(
     if rel.length() > max_relationship_type_chars {
       raise InvalidXml(msg="relationship type is too long")
     }
-    if !relationship_uri_is_valid(rel, true) {
+    if !relationship_type_iri_valid(rel) {
       raise InvalidXml(msg="relationship type is invalid")
     }
     if id.length() > max_relationship_id_chars {
@@ -920,7 +835,8 @@ fn parse_relationship_targets_by_types_selected(
     if target.length() > max_relationship_target_chars {
       raise InvalidXml(msg="relationship target is too long")
     }
-    if !relationship_uri_is_valid(target, false) {
+    let external_target = target_mode is ExternalTarget
+    if !relationship_target_iri_valid(target, external_target) {
       raise InvalidXml(msg="relationship target is invalid")
     }
     if ids.contains(id) {
@@ -1071,6 +987,24 @@ fn content_type_skip_optional_whitespace(
 }
 
 ///|
+fn content_type_quoted_character(character : UInt16) -> Bool {
+  character == ('\t' : UInt16) ||
+  character == (' ' : UInt16) ||
+  character == 0x21 ||
+  (character >= 0x23 && character <= 0x5b) ||
+  (character >= 0x5d && character <= 0x7e) ||
+  (character >= 0x80 && character <= 0xff)
+}
+
+///|
+fn content_type_quoted_pair_character(character : UInt16) -> Bool {
+  character == ('\t' : UInt16) ||
+  character == (' ' : UInt16) ||
+  (character >= 0x21 && character <= 0x7e) ||
+  (character >= 0x80 && character <= 0xff)
+}
+
+///|
 fn content_type_media_type_is_valid(value : StringView) -> Bool {
   let mut index = 0
   let type_start = index
@@ -1091,9 +1025,12 @@ fn content_type_media_type_is_valid(value : StringView) -> Bool {
     return false
   }
   while true {
-    index = content_type_skip_optional_whitespace(value, index)
     if index == value.length() {
       return true
+    }
+    index = content_type_skip_optional_whitespace(value, index)
+    if index == value.length() {
+      return false
     }
     if value[index] != (';' : UInt16) {
       return false
@@ -1103,14 +1040,12 @@ fn content_type_media_type_is_valid(value : StringView) -> Bool {
     while index < value.length() && content_type_token_character(value[index]) {
       index = index + 1
     }
-    if index == name_start {
+    if index == name_start ||
+      index >= value.length() ||
+      value[index] != ('=' : UInt16) {
       return false
     }
-    index = content_type_skip_optional_whitespace(value, index)
-    if index >= value.length() || value[index] != ('=' : UInt16) {
-      return false
-    }
-    index = content_type_skip_optional_whitespace(value, index + 1)
+    index = index + 1
     if index >= value.length() {
       return false
     }
@@ -1127,11 +1062,10 @@ fn content_type_media_type_is_valid(value : StringView) -> Bool {
         if character == ('\\' : UInt16) {
           index = index + 1
           if index >= value.length() ||
-            value[index] < 0x20 ||
-            value[index] >= 0x7f {
+            !content_type_quoted_pair_character(value[index]) {
             return false
           }
-        } else if character < 0x20 || character >= 0x7f {
+        } else if !content_type_quoted_character(character) {
           return false
         }
         index = index + 1
@@ -1173,12 +1107,41 @@ fn content_type_part_name_is_valid(
 
 ///|
 fn content_type_extension_is_valid(value : StringView) -> Bool {
-  value != "" &&
-  value.length() <= 1024 &&
-  !value.contains(".") &&
-  !value.contains("/") &&
-  !value.contains("\\") &&
-  is_valid_opc_part_segment(value)
+  if value == "" || value.length() > 1024 {
+    return false
+  }
+  let mut index = 0
+  while index < value.length() {
+    let character = value[index]
+    if (character >= 'A' && character <= 'Z') ||
+      (character >= 'a' && character <= 'z') ||
+      (character >= '0' && character <= '9') ||
+      character == '!' ||
+      character == '$' ||
+      character == '&' ||
+      character == ('\'' : UInt16) ||
+      character == '(' ||
+      character == ')' ||
+      character == '*' ||
+      character == '+' ||
+      character == ',' ||
+      character == ':' ||
+      character == '=' ||
+      character == '@' ||
+      character == '-' ||
+      character == '_' ||
+      character == '~' {
+      index += 1
+    } else if character == '%' &&
+      index + 2 < value.length() &&
+      opc_ascii_hex_digit(value[index + 1]) &&
+      opc_ascii_hex_digit(value[index + 2]) {
+      index += 3
+    } else {
+      return false
+    }
+  }
+  true
 }
 
 ///|
@@ -1283,7 +1246,7 @@ pub fn parse_package_content_types(
             raise InvalidXml(msg="content type override part name missing")
         }
         let content_type = match scanner.attribute("", "ContentType") {
-          Some(value) => collapse_schema_whitespace(value)
+          Some(value) => value
           None =>
             raise InvalidXml(msg="content type override content type missing")
         }
@@ -1322,11 +1285,11 @@ pub fn parse_package_content_types(
           "default",
         )
         let extension = match scanner.attribute("", "Extension") {
-          Some(value) => collapse_schema_whitespace(value).to_lower()
+          Some(value) => value
           None => raise InvalidXml(msg="content type default extension missing")
         }
         let content_type = match scanner.attribute("", "ContentType") {
-          Some(value) => collapse_schema_whitespace(value)
+          Some(value) => value
           None =>
             raise InvalidXml(msg="content type default content type missing")
         }
@@ -1336,6 +1299,7 @@ pub fn parse_package_content_types(
         if !content_type_extension_is_valid(extension) {
           raise InvalidXml(msg="content type default extension is invalid")
         }
+        let extension_key = extension.to_lower()
         if content_type.length() > max_content_type_attribute_chars ||
           !content_type_media_type_is_valid(content_type) {
           raise InvalidXml(msg="content type default media type is invalid")
@@ -1345,10 +1309,10 @@ pub fn parse_package_content_types(
           raise InvalidXml(msg="content type retained text limit exceeded")
         }
         retained_chars = retained_chars + retained
-        if defaults.contains(extension) {
+        if defaults.contains(extension_key) {
           raise InvalidXml(msg="duplicate content type default")
         }
-        defaults[extension] = content_type
+        defaults[extension_key] = content_type
       }
       _ => raise InvalidXml(msg="content types element is invalid")
     }

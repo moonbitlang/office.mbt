@@ -471,6 +471,92 @@ test "ooxml read_parse: unwanted relationships remain schema-valid and ids stay 
 }
 
 ///|
+test "ooxml read_parse: relationship IRIs follow OPC component grammar" {
+  let unicode_xml =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="unicode" Type="https://example.com/类型" Target="路径/文件.xml?键=值"/></Relationships>
+  let unicode_targets = @ooxml.parse_internal_relationship_targets(
+    unicode_xml, "https://example.com/类型",
+  )
+  assert_eq(unicode_targets.get("unicode"), Some("路径/文件.xml?键=值"))
+  let external_xml =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="ipv6" Type="https://[2001:db8::1]/type" Target="https://[::1]:443/book.xlsx" TargetMode="External"/><Relationship Id="windows" Type="urn:windows-file" Target="file:///C:\Temp\book.xlsx" TargetMode="External"/></Relationships>
+  let ipv6_targets = @ooxml.parse_external_relationship_targets(
+    external_xml, "https://[2001:db8::1]/type",
+  )
+  assert_eq(ipv6_targets.get("ipv6"), Some("https://[::1]:443/book.xlsx"))
+  let windows_targets = @ooxml.parse_external_relationship_targets(
+    external_xml, "urn:windows-file",
+  )
+  assert_eq(windows_targets.get("windows"), Some("file:///C:\\Temp\\book.xlsx"))
+}
+
+///|
+test "ooxml read_parse: malformed relationship IRIs fail closed" {
+  let cases : Array[(String, String)] = [
+    (
+      (
+        #|<Relationship Id="bad" Type="relative-type" Target="ok.xml"/>
+      ),
+      "relationship type is invalid",
+    ),
+    (
+      (
+        #|<Relationship Id="bad" Type="urn:type#fragment" Target="ok.xml"/>
+      ),
+      "relationship type is invalid",
+    ),
+    (
+      (
+        #|<Relationship Id="bad" Type="http://[broken/type" Target="ok.xml"/>
+      ),
+      "relationship type is invalid",
+    ),
+    (
+      (
+        #|<Relationship Id="bad" Type="http://host]/type" Target="ok.xml"/>
+      ),
+      "relationship type is invalid",
+    ),
+    (
+      (
+        #|<Relationship Id="bad" Type="urn:other" Target="http://[broken/path" TargetMode="External"/>
+      ),
+      "relationship target is invalid",
+    ),
+    (
+      (
+        #|<Relationship Id="bad" Type="urn:other" Target="http://[::1]:port/path" TargetMode="External"/>
+      ),
+      "relationship target is invalid",
+    ),
+    (
+      (
+        #|<Relationship Id="bad" Type="urn:other" Target="path#one#two"/>
+      ),
+      "relationship target is invalid",
+    ),
+    (
+      (
+        #|<Relationship Id="bad" Type="urn:other" Target="bad%escape"/>
+      ),
+      "relationship target is invalid",
+    ),
+  ]
+  for case in cases {
+    let (record, expected) = case
+    let xml = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
+      record +
+      "</Relationships>"
+    try @ooxml.parse_internal_relationship_targets(xml, "urn:wanted") catch {
+      InvalidXml(msg~) => assert_eq(msg, expected)
+      _ => fail("unexpected malformed relationship IRI error")
+    } noraise {
+      _ => fail("expected malformed relationship IRI rejection")
+    }
+  }
+}
+
+///|
 test "ooxml read_parse: relationship limits accept writer boundaries" {
   let xml = StringBuilder::new()
   xml.write_string(
@@ -591,6 +677,23 @@ test "ooxml read_parse: content type lookup honors part identity then default" {
 }
 
 ///|
+test "ooxml read_parse: content type lexical grammar is preserved" {
+  let xml =
+    #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+    #|  <Default Extension="x%2F" ContentType="application/example ; charset=&quot;café&quot;"/>
+    #|  <Default Extension="a(b)" ContentType="application/parenthesized"/>
+    #|</Types>
+  assert_eq(
+    @ooxml.find_part_content_type(xml, "custom/file.x%2f"),
+    Some("application/example ; charset=\"café\""),
+  )
+  assert_eq(
+    @ooxml.find_part_content_type(xml, "custom/file.A(B)"),
+    Some("application/parenthesized"),
+  )
+}
+
+///|
 test "ooxml read_parse: content type scans poll cancellation internally" {
   let xml = StringBuilder::new()
   xml.write_string(
@@ -660,6 +763,48 @@ test "ooxml read_parse: content type grammar fails closed" {
     ),
     (
       (
+        #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="xml" ContentType="application/xml; charset =utf-8"/></Types>
+      ),
+      "content type default media type is invalid",
+    ),
+    (
+      (
+        #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="xml" ContentType="application/xml; charset= utf-8"/></Types>
+      ),
+      "content type default media type is invalid",
+    ),
+    (
+      (
+        #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="xml" ContentType="application/xml "/></Types>
+      ),
+      "content type default media type is invalid",
+    ),
+    (
+      (
+        #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Override PartName="/xl/workbook.xml" ContentType=" application/xml"/></Types>
+      ),
+      "content type override media type is invalid",
+    ),
+    (
+      (
+        #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension=" xml" ContentType="application/xml"/></Types>
+      ),
+      "content type default extension is invalid",
+    ),
+    (
+      (
+        #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="é" ContentType="application/xml"/></Types>
+      ),
+      "content type default extension is invalid",
+    ),
+    (
+      (
+        #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="x%GG" ContentType="application/xml"/></Types>
+      ),
+      "content type default extension is invalid",
+    ),
+    (
+      (
         #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Override PartName="xl/workbook.xml" ContentType="application/xml"/></Types>
       ),
       "content type override part name is invalid",
@@ -677,13 +822,13 @@ test "ooxml read_parse: content type grammar fails closed" {
       "content types document has no declarations",
     ),
   ]
-  for case in cases {
+  for index, case in cases {
     let (xml, expected) = case
     try @ooxml.find_part_content_type(xml, "xl/workbook.xml") catch {
       InvalidXml(msg~) => assert_eq(msg, expected)
       _ => fail("unexpected content type grammar error")
     } noraise {
-      _ => fail("expected content type grammar rejection")
+      _ => fail("expected content type grammar rejection for case \{index}")
     }
   }
 }
