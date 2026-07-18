@@ -8,9 +8,6 @@ let xlsx_cli_max_query_predicates : Int = 16
 let xlsx_cli_max_query_value_chars : Int = 1024
 
 ///|
-let xlsx_cli_query_yield_work_units : Int = 4096
-
-///|
 enum XlsxCellKind {
   Formula
   Number
@@ -378,74 +375,6 @@ fn prepare_xlsx_query_predicates(
 }
 
 ///|
-async fn xlsx_query_strings_equal_cooperative(
-  value : String,
-  expected : String,
-  work : OfficeQueryWorkBudget,
-) -> Bool {
-  if value.length() != expected.length() {
-    // String lengths are already known, so unequal-length values require no
-    // linear comparison even though the conservative work budget retains the
-    // previous upper-bound accounting.
-    work.charge(value.length().min(expected.length()) + 1)
-    return false
-  }
-  let mut pending_work = 1
-  for index in 0..<value.length() {
-    if pending_work >= xlsx_cli_query_yield_work_units {
-      work.charge(pending_work)
-      pending_work = 0
-      @async.pause()
-    }
-    pending_work += 1
-    if value[index] != expected[index] {
-      work.charge(pending_work)
-      return false
-    }
-  }
-  work.charge(pending_work)
-  true
-}
-
-///|
-async fn OfficeLinearPattern::is_in_cooperative(
-  self : OfficeLinearPattern,
-  value : String,
-  work : OfficeQueryWorkBudget,
-) -> Bool {
-  if self.characters.is_empty() {
-    return true
-  }
-  let mut matched = 0
-  let mut pending_work = 1
-  for raw_character in value {
-    // Supplementary scalars occupy two UTF-16 units. This preserves the
-    // original conservative accounting while charging and yielding in small
-    // quanta rather than monopolizing one scheduler turn for a large cell.
-    let scalar_work = if raw_character.to_int() > 0xffff { 6 } else { 3 }
-    if pending_work > xlsx_cli_query_yield_work_units - scalar_work {
-      work.charge(pending_work)
-      pending_work = 0
-      @async.pause()
-    }
-    pending_work += scalar_work
-    let character = query_fold_character(raw_character, self.ignore_case)
-    while matched > 0 && character != self.characters[matched] {
-      matched = self.failure[matched - 1]
-    }
-    if character == self.characters[matched] {
-      matched += 1
-      if matched == self.characters.length() {
-        work.charge(pending_work)
-        return true
-      }
-    }
-  }
-  work.charge(pending_work)
-  false
-}
-
-///|
 async fn PreparedXlsxCellPredicate::matches(
   self : PreparedXlsxCellPredicate,
   cell : XlsxCellSnapshot,
@@ -484,7 +413,7 @@ async fn PreparedXlsxCellPredicate::matches(
     PreparedTextEquals(expected) =>
       match cell.raw {
         Some(String(value)) =>
-          xlsx_query_strings_equal_cooperative(value, expected, work)
+          query_strings_equal_cooperative(value, expected, work)
         _ => {
           work.charge(1)
           false

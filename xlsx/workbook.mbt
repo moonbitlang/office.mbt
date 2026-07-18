@@ -1314,6 +1314,10 @@ fn clone_worksheet(
     cells,
     cell_index: build_worksheet_cell_index(cells),
     cell_index_valid: true,
+    shared_formula_masters_index: clone_shared_formula_masters_index(
+      sheet.shared_formula_masters_index,
+    ),
+    shared_formula_masters_index_valid: sheet.shared_formula_masters_index_valid,
     merged_cells: clone_strings(sheet.merged_cells),
     hyperlinks: clone_hyperlinks(sheet.hyperlinks),
     tables: clone_tables(sheet.tables),

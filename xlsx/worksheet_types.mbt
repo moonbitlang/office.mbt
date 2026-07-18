@@ -98,6 +98,8 @@ pub struct Worksheet {
   cells : Array[Cell]
   cell_index : Map[String, Int]
   mut cell_index_valid : Bool
+  shared_formula_masters_index : Map[UInt, SharedFormulaMaster]
+  mut shared_formula_masters_index_valid : Bool
   merged_cells : Array[String]
   hyperlinks : Array[Hyperlink]
   tables : Array[Table]
@@ -148,6 +150,8 @@ pub fn Worksheet::new(name : String) -> Worksheet {
     // Empty worksheets begin with a valid index. Normal mutators update it as
     // cells are added, avoiding a deferred whole-sheet rebuild on first read.
     cell_index_valid: true,
+    shared_formula_masters_index: Map([]),
+    shared_formula_masters_index_valid: true,
     merged_cells: [],
     hyperlinks: [],
     tables: [],

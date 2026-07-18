@@ -455,6 +455,7 @@ pub fn StreamWriter::set_row_cells(
   // index (e.g. from a read on the then-empty sheet) would go stale and
   // make indexed getters miss every streamed cell.
   self.sheet.invalidate_cell_index()
+  self.sheet.invalidate_shared_formula_masters_index()
   self.last_row = row
 }
 

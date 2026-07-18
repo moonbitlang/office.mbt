@@ -320,6 +320,13 @@ fn validate_xml_declaration(
   if attributes_start >= end || !is_attr_space(xml[attributes_start]) {
     raise InvalidXml(msg="XML declaration version is missing")
   }
+  let mut content_end = end
+  while content_end > attributes_start && is_attr_space(xml[content_end - 1]) {
+    content_end = content_end - 1
+  }
+  if content_end > attributes_start && xml[content_end - 1] == ('/' : UInt16) {
+    raise InvalidXml(msg="XML declaration cannot be self-closing")
+  }
   let mut next = attributes_start
   let mut position = 0
   let mut saw_encoding = false
@@ -504,7 +511,9 @@ fn next_xml_attribute(
   check_xml_cancelled(cancelled)
   let mut index = start
   let mut next_checkpoint = start + 4096
+  let mut separated = false
   while index < tag_end && is_attr_space(xml[index]) {
+    separated = true
     if index >= next_checkpoint {
       check_xml_cancelled(cancelled)
       next_checkpoint = index + 4096
@@ -519,6 +528,9 @@ fn next_xml_attribute(
       raise InvalidXml(msg="XML self-closing slash is misplaced")
     }
     return None
+  }
+  if !separated {
+    raise InvalidXml(msg="XML attribute is not separated by whitespace")
   }
   let name_start = index
   while index < tag_end &&
@@ -637,6 +649,7 @@ pub fn decode_xml_attribute(
   cancelled? : () -> Bool = () => false,
 ) -> String raise ParseXmlError {
   check_xml_cancelled(cancelled)
+  validate_xml_character_span(value, 0, value.length(), cancelled)
   let mut needs_decode = false
   for index, unit in value {
     if (index & 4095) == 0 {
@@ -713,6 +726,7 @@ fn validate_xml_attribute_value(
   cancelled : () -> Bool,
 ) -> Unit raise ParseXmlError {
   check_xml_cancelled(cancelled)
+  validate_xml_character_span(value, 0, value.length(), cancelled)
   let mut index = 0
   let mut next_checkpoint = 0
   while index < value.length() {
@@ -1889,7 +1903,7 @@ test "start tag scanner validates unused attributes and document structure" {
   for
     xml in [
       "<root unused='&bogus;'/>", "<root/ garbage>", "<root/><second/>", "text<root/>",
-      "<![CDATA[text]]><root/>",
+      "<![CDATA[text]]><root/>", "<root first='1'second='2'/>",
     ] {
     let scanner = XmlStartTagScanner::new(xml)
     try {
@@ -1916,7 +1930,8 @@ test "start tag scanner validates declarations, PI targets, and comments" {
   for
     xml in [
       "<root><?xml version='1.0'?></root>", "<?XML version='1.0'?><root/>", "<?xml encoding='UTF-8'?><root/>",
-      "<?1probe?><root/>", "<root><!--a--b--></root>", "<root><!--a---></root>",
+      "<?xml version='1.0'encoding='UTF-8'?><root/>", "<?1probe?><root/>", "<?xml version=\"1.0\"/?><root/>",
+      "<root><!--a--b--></root>", "<root><!--a---></root>",
     ] {
     let scanner = XmlStartTagScanner::new(xml)
     try {

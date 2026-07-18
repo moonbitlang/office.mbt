@@ -5,6 +5,9 @@
 let office_cli_max_query_predicate_work_units : Int = 128 * 1024 * 1024
 
 ///|
+let office_cli_query_yield_work_units : Int = 4096
+
+///|
 struct OfficeQueryWorkBudget {
   format : String
   maximum : Int
@@ -84,19 +87,121 @@ fn OfficeLinearPattern::compile(
 }
 
 ///|
-fn OfficeLinearPattern::is_in(
+async fn OfficeLinearPattern::compile_cooperative(
+  needle : String,
+  ignore_case : Bool,
+  work : OfficeQueryWorkBudget,
+) -> OfficeLinearPattern {
+  // Reserve the complete conservative cost before retaining either index.
+  work.charge(needle.length() * 4 + 1)
+  let characters : Array[Char] = []
+  let mut visited = 0
+  for character in needle {
+    if visited >= office_cli_query_yield_work_units {
+      visited = 0
+      @async.pause()
+    }
+    characters.push(query_fold_character(character, ignore_case))
+    visited += 1
+  }
+  let failure = Array::make(characters.length(), 0)
+  let mut matched = 0
+  visited = 0
+  for at in 1..<characters.length() {
+    if visited >= office_cli_query_yield_work_units {
+      visited = 0
+      @async.pause()
+    }
+    while matched > 0 && characters[at] != characters[matched] {
+      matched = failure[matched - 1]
+    }
+    if characters[at] == characters[matched] {
+      matched += 1
+    }
+    failure[at] = matched
+    visited += 1
+  }
+  { characters, failure, ignore_case }
+}
+
+///|
+async fn query_strings_equal_cooperative(
+  value : String,
+  expected : String,
+  work : OfficeQueryWorkBudget,
+) -> Bool {
+  if value.length() != expected.length() {
+    // String lengths are already known, so unequal-length values require no
+    // linear comparison even though the conservative work budget retains the
+    // same upper-bound accounting as an equal-length comparison.
+    work.charge(value.length().min(expected.length()) + 1)
+    return false
+  }
+  let mut pending_work = 1
+  for index in 0..<value.length() {
+    if pending_work >= office_cli_query_yield_work_units {
+      work.charge(pending_work)
+      pending_work = 0
+      @async.pause()
+    }
+    pending_work += 1
+    if value[index] != expected[index] {
+      work.charge(pending_work)
+      return false
+    }
+  }
+  work.charge(pending_work)
+  true
+}
+
+///|
+async fn query_string_has_prefix_cooperative(
+  value : String,
+  prefix : String,
+  work : OfficeQueryWorkBudget,
+) -> Bool {
+  if value.length() < prefix.length() {
+    work.charge(value.length() + 1)
+    return false
+  }
+  let mut pending_work = 1
+  for index in 0..<prefix.length() {
+    if pending_work >= office_cli_query_yield_work_units {
+      work.charge(pending_work)
+      pending_work = 0
+      @async.pause()
+    }
+    pending_work += 1
+    if value[index] != prefix[index] {
+      work.charge(pending_work)
+      return false
+    }
+  }
+  work.charge(pending_work)
+  true
+}
+
+///|
+async fn OfficeLinearPattern::is_in_cooperative(
   self : OfficeLinearPattern,
   value : String,
   work : OfficeQueryWorkBudget,
-) -> Bool raise CliFailure {
+) -> Bool {
   if self.characters.is_empty() {
     return true
   }
-  // KMP performs at most two pattern comparisons per scalar. The third unit
-  // covers iteration/folding; UTF-16 length safely over-counts scalars.
-  work.charge(value.length() * 3 + 1)
   let mut matched = 0
+  let mut pending_work = 1
   for raw_character in value {
+    // Supplementary scalars occupy two UTF-16 units. This preserves the
+    // conservative accounting while charging and yielding in small quanta.
+    let scalar_work = if raw_character.to_int() > 0xffff { 6 } else { 3 }
+    if pending_work > office_cli_query_yield_work_units - scalar_work {
+      work.charge(pending_work)
+      pending_work = 0
+      @async.pause()
+    }
+    pending_work += scalar_work
     let character = query_fold_character(raw_character, self.ignore_case)
     while matched > 0 && character != self.characters[matched] {
       matched = self.failure[matched - 1]
@@ -104,9 +209,11 @@ fn OfficeLinearPattern::is_in(
     if character == self.characters[matched] {
       matched += 1
       if matched == self.characters.length() {
+        work.charge(pending_work)
         return true
       }
     }
   }
+  work.charge(pending_work)
   false
 }

@@ -417,9 +417,9 @@ fn XlsxSheetTarget::worksheet(
 }
 
 ///|
-/// Resolves shared-formula masters on demand. Most reads never encounter a
-/// shared follower, so they avoid a worksheet-wide formula pass; the first
-/// follower builds every master in one pass and later lookups are O(1).
+/// Resolves shared-formula masters on demand. Parsed worksheets retain the
+/// validated master index built under the XLSX read-work budget, so the first
+/// follower copies only the usually-small master map and later lookups are O(1).
 fn XlsxSheetTarget::shared_formula_master(
   self : XlsxSheetTarget,
   projection : XlsxProjection,

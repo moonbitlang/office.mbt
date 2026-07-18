@@ -3727,6 +3727,7 @@ fn read_zip_archive_core_unchecked(
       }
       let (
         cells,
+        shared_formula_masters_index,
         merged_cells,
         auto_filter,
         row_dimensions,
@@ -4191,6 +4192,8 @@ fn read_zip_archive_core_unchecked(
         cells,
         cell_index,
         cell_index_valid: true,
+        shared_formula_masters_index,
+        shared_formula_masters_index_valid: true,
         merged_cells,
         auto_filter,
         page_margins,

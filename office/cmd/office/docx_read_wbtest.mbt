@@ -178,7 +178,7 @@ fn assert_docx_capability_payload_contract(
 }
 
 ///|
-test "DOCX capability declarations cover every payload field" {
+async test "DOCX capability declarations cover every payload field" {
   let projection = docx_read_test_projection()
   assert_docx_capability_payload_contract(
     "outline",
@@ -230,7 +230,7 @@ test "DOCX get distinguishes stable items and positional descendants" {
 }
 
 ///|
-test "DOCX text and query paginate in deterministic document order" {
+async test "DOCX text and query paginate in deterministic document order" {
   let projection = docx_read_test_projection()
   let text = docx_text_payload(projection, None, None, 1, 3, 100_000).data
   guard text is Object(text_fields) &&
@@ -282,7 +282,7 @@ test "DOCX text and query paginate in deterministic document order" {
 }
 
 ///|
-test "DOCX query uses only its declared property set" {
+async test "DOCX query uses only its declared property set" {
   let projection = docx_read_test_projection()
   let links = docx_query_payload(
       projection,
@@ -310,7 +310,7 @@ test "DOCX query uses only its declared property set" {
 }
 
 ///|
-test "DOCX exact queries cover the full supported XML token length" {
+async test "DOCX exact queries cover the full supported XML token length" {
   let long_id = "i".repeat(@lib.SELECTOR_MAX_VALUE_LENGTH + 1)
   let long_property = "p".repeat(@lib.SELECTOR_MAX_VALUE_LENGTH + 1)
   validate_query_value(long_id, "id", false)
@@ -370,25 +370,31 @@ test "DOCX exact queries cover the full supported XML token length" {
 }
 
 ///|
-test "DOCX query matching is linear-work and Unicode simple-case aware" {
+async test "DOCX query matching is linear-work and Unicode simple-case aware" {
   let work = OfficeQueryWorkBudget::new(100_000)
   let adversarial = OfficeLinearPattern::compile(
     "a".repeat(127) + "b",
     false,
     work,
   )
-  assert_false(adversarial.is_in("a".repeat(4096), work))
-  assert_true(adversarial.is_in("a".repeat(127) + "b", work))
+  assert_false(adversarial.is_in_cooperative("a".repeat(4096), work))
+  assert_true(adversarial.is_in_cooperative("a".repeat(127) + "b", work))
   let unicode = OfficeLinearPattern::compile("école", true, work)
-  assert_true(unicode.is_in("L'ÉCOLE MoonBit", work))
+  assert_true(unicode.is_in_cooperative("L'ÉCOLE MoonBit", work))
   let supplementary = OfficeLinearPattern::compile("𐐨", true, work)
-  assert_true(supplementary.is_in("𐐀", work))
+  assert_true(supplementary.is_in_cooperative("𐐀", work))
 }
 
 ///|
-test "DOCX query predicate work has an independent hard budget" {
+async test "DOCX query predicate work has an independent hard budget" {
   let equality_work = OfficeQueryWorkBudget::new(16)
-  try query_strings_equal("x".repeat(32), "x".repeat(32), equality_work) catch {
+  try
+    query_strings_equal_cooperative(
+      "x".repeat(32),
+      "x".repeat(32),
+      equality_work,
+    )
+  catch {
     CliFailure(error) => {
       assert_eq(error.code, "office.docx.resource_limit")
       guard error.details is Some(Object(details)) else {
@@ -399,15 +405,43 @@ test "DOCX query predicate work has an independent hard budget" {
         Some(Json::string("query predicate work units")),
       )
     }
+    _ => fail("unexpected predicate work failure")
   } noraise {
     _ => fail("expected exact comparison work to be bounded")
   }
   let pattern_work = OfficeQueryWorkBudget::new(32)
-  let pattern = OfficeLinearPattern::compile("a", false, pattern_work)
-  try pattern.is_in("a".repeat(32), pattern_work) catch {
+  let pattern = OfficeLinearPattern::compile("b", false, pattern_work)
+  try pattern.is_in_cooperative("a".repeat(32), pattern_work) catch {
     CliFailure(error) => assert_eq(error.code, "office.docx.resource_limit")
+    _ => fail("unexpected pattern work failure")
   } noraise {
     _ => fail("expected substring work to be bounded")
+  }
+}
+
+///|
+async test "DOCX large exact predicates yield within one comparison" {
+  let work = OfficeQueryWorkBudget::new(
+    office_cli_max_query_predicate_work_units,
+  )
+  @async.with_task_group() <| group => {
+    let task = group.spawn(() => {
+      query_strings_equal_cooperative(
+        "x".repeat(1024 * 1024),
+        "x".repeat(1024 * 1024),
+        work,
+      )
+    })
+    @async.pause()
+    assert_true(task.try_wait() is None)
+    task.cancel()
+    let cancelled = try {
+      ignore(task.wait())
+      false
+    } catch {
+      error => @async.is_cancellation_error(error)
+    }
+    assert_true(cancelled)
   }
 }
 
@@ -643,7 +677,7 @@ test "compact JSON preflight matches serializer character accounting" {
 }
 
 ///|
-test "bounded DOCX payloads account for their exact serialized envelopes" {
+async test "bounded DOCX payloads account for their exact serialized envelopes" {
   let projection = docx_read_test_projection()
   let paragraph = resolve_projection_selector(projection, "/docx/body/p[1]")
   let query_spec : DocxQuerySpec = {
@@ -712,7 +746,7 @@ test "bounded DOCX payloads account for their exact serialized envelopes" {
 }
 
 ///|
-test "DOCX output builders reject growth before returning oversized output" {
+async test "DOCX output builders reject growth before returning oversized output" {
   let projection = docx_read_test_projection()
   let entry = resolve_projection_selector(projection, "/docx/body/p[1]")
   try docx_get_human(entry, "x".repeat(1000), [], maximum=40) catch {
@@ -751,6 +785,7 @@ test "DOCX output builders reject growth before returning oversized output" {
   }
   try docx_query_payload(projection, None, query_spec, 1) catch {
     CliFailure(error) => assert_eq(error.code, "office.docx.resource_limit")
+    _ => fail("unexpected query output failure")
   } noraise {
     _ => fail("expected query skeleton to fail before retaining records")
   }
@@ -1000,7 +1035,7 @@ test "DOCX preflight rejects foreign-namespace officeDocument relationships" {
 }
 
 ///|
-test "DOCX human output escapes control sequences in paths, kinds, and text" {
+async test "DOCX human output escapes control sequences in paths, kinds, and text" {
   let projection = docx_read_test_projection()
   let unsafe_path = "/docx/body/\u{009b}story"
   let unsafe_kind = "body\u{009b}"

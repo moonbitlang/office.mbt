@@ -31,6 +31,7 @@ fn parse_worksheet(
   budget? : ReadBudget,
 ) -> (
   Array[Cell],
+  Map[UInt, SharedFormulaMaster],
   Array[String],
   AutoFilter?,
   Map[Int, RowDimension],
@@ -290,7 +291,7 @@ fn parse_worksheet(
     }
     None => ()
   }
-  ignore(validated_shared_formula_masters(cells))
+  let shared_formula_masters_index = validated_shared_formula_masters(cells)
   worksheet_parse_pass(xml, budget)
   let merged_cells = parse_merge_cells(xml)
   worksheet_parse_pass(xml, budget)
@@ -320,8 +321,8 @@ fn parse_worksheet(
   worksheet_parse_pass(xml, budget)
   let picture_rel_id = parse_picture_rel_id(xml)
   (
-    cells, merged_cells, auto_filter, row_dimensions, col_dimensions, page_margins,
-    page_layout, header_footer, sheet_protection, row_breaks, col_breaks, sheet_views,
-    sheet_props, dimension_ref, picture_rel_id,
+    cells, shared_formula_masters_index, merged_cells, auto_filter, row_dimensions,
+    col_dimensions, page_margins, page_layout, header_footer, sheet_protection, row_breaks,
+    col_breaks, sheet_views, sheet_props, dimension_ref, picture_rel_id,
   )
 }

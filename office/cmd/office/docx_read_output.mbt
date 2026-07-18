@@ -52,18 +52,20 @@ struct PreparedDocxQuery {
 }
 
 ///|
-fn PreparedDocxQuery::build(
+async fn PreparedDocxQuery::build(
   spec : DocxQuerySpec,
   under : DocxProjectionEntry?,
   work : OfficeQueryWorkBudget,
-) -> PreparedDocxQuery raise CliFailure {
+) -> PreparedDocxQuery {
   let (scope_path, scope_prefix) = match under {
     Some(root) => (Some(root.path), Some(root.path + "/"))
     None => (None, None)
   }
   let text_pattern = match spec.text {
     Some(needle) =>
-      Some(OfficeLinearPattern::compile(needle, spec.ignore_case, work))
+      Some(
+        OfficeLinearPattern::compile_cooperative(needle, spec.ignore_case, work),
+      )
     None => None
   }
   { spec, scope_path, scope_prefix, text_pattern }
@@ -575,15 +577,15 @@ fn query_record_json(
 }
 
 ///|
-fn entry_matches_properties(
+async fn entry_matches_properties(
   entry : DocxProjectionEntry,
   predicates : Array[DocxPropertyPredicate],
   work : OfficeQueryWorkBudget,
-) -> Bool raise CliFailure {
+) -> Bool {
   for predicate in predicates {
     match entry.properties.get(predicate.name) {
       Some(value) =>
-        if !query_strings_equal(value, predicate.value, work) {
+        if !query_strings_equal_cooperative(value, predicate.value, work) {
           return false
         }
       None => {
@@ -596,46 +598,35 @@ fn entry_matches_properties(
 }
 
 ///|
-fn query_strings_equal(
-  value : String,
-  expected : String,
-  work : OfficeQueryWorkBudget,
-) -> Bool raise CliFailure {
-  work.charge(value.length().min(expected.length()) + 1)
-  value == expected
-}
-
-///|
-fn query_entry_is_in_scope(
+async fn query_entry_is_in_scope(
   entry : DocxProjectionEntry,
   query : PreparedDocxQuery,
   work : OfficeQueryWorkBudget,
-) -> Bool raise CliFailure {
+) -> Bool {
   match (query.scope_path, query.scope_prefix) {
     (Some(root), Some(prefix)) =>
       if entry.path.length() == root.length() {
-        query_strings_equal(entry.path, root, work)
+        query_strings_equal_cooperative(entry.path, root, work)
       } else {
-        work.charge(entry.path.length().min(prefix.length()) + 1)
-        entry.path.has_prefix(prefix)
+        query_string_has_prefix_cooperative(entry.path, prefix, work)
       }
     _ => true
   }
 }
 
 ///|
-fn entry_matches_query(
+async fn entry_matches_query(
   entry : DocxProjectionEntry,
   query : PreparedDocxQuery,
   scan_budget : DocxTextBudget,
   work : OfficeQueryWorkBudget,
-) -> Bool raise CliFailure {
+) -> Bool {
   if !query_entry_is_in_scope(entry, query, work) {
     return false
   }
   match query.spec.kind {
     Some(kind) =>
-      if !query_strings_equal(entry.kind, kind, work) {
+      if !query_strings_equal_cooperative(entry.kind, kind, work) {
         return false
       }
     None => ()
@@ -644,7 +635,7 @@ fn entry_matches_query(
     Some(id) =>
       match entry.stable_id {
         Some(actual) =>
-          if !query_strings_equal(actual, id, work) {
+          if !query_strings_equal_cooperative(actual, id, work) {
             return false
           }
         None => {
@@ -660,19 +651,19 @@ fn entry_matches_query(
   match query.text_pattern {
     Some(pattern) => {
       let value = entry_text_with_budget(entry, scan_budget)
-      pattern.is_in(value, work)
+      pattern.is_in_cooperative(value, work)
     }
     None => true
   }
 }
 
 ///|
-fn docx_query_payload(
+async fn docx_query_payload(
   projection : DocxProjection,
   under : DocxProjectionEntry?,
   spec : DocxQuerySpec,
   max_output_chars : Int,
-) -> BoundedOfficePayload raise CliFailure {
+) -> BoundedOfficePayload {
   let filter_properties : Array[Json] = []
   let filters : Map[String, Json] = {
     "properties": Json::array(filter_properties),
@@ -734,7 +725,12 @@ fn docx_query_payload(
   )
   let query = PreparedDocxQuery::build(spec, under, work)
   let mut matched = 0
+  let mut visited = 0
   for entry in projection.entries {
+    if (visited & 255) == 0 {
+      @async.pause()
+    }
+    visited += 1
     if !entry_matches_query(entry, query, scan_budget, work) {
       continue
     }
@@ -1178,13 +1174,13 @@ fn docx_text_human(
 }
 
 ///|
-fn docx_query_human(
+async fn docx_query_human(
   projection : DocxProjection,
   under : DocxProjectionEntry?,
   spec : DocxQuerySpec,
   warnings : Array[@lib.ProtocolWarning],
   maximum? : Int = docx_cli_hard_max_output_chars,
-) -> String raise CliFailure {
+) -> String {
   let output = DocxHumanWriter::new(maximum)
   let scan_budget = DocxTextBudget::new(
     "query text scan characters", docx_cli_max_query_text_scan_chars,
@@ -1195,7 +1191,12 @@ fn docx_query_human(
   let query = PreparedDocxQuery::build(spec, under, work)
   let mut matched = 0
   let mut returned = 0
+  let mut visited = 0
   for entry in projection.entries {
+    if (visited & 255) == 0 {
+      @async.pause()
+    }
+    visited += 1
     if !entry_matches_query(entry, query, scan_budget, work) {
       continue
     }

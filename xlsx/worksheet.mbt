@@ -112,6 +112,7 @@ pub fn Worksheet::set_cell(
   value : String,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_shared_formula_masters_index()
   let (row, col) = cell_ref_to_rc(reference)
   let canonical = cell_ref_from(row, col)
   match self.cell_index_of(row, col) {
@@ -186,6 +187,7 @@ pub fn Worksheet::set_cell_value(
   value : CellValue,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_shared_formula_masters_index()
   let (row, col) = cell_ref_to_rc(reference)
   let canonical = cell_ref_from(row, col)
   let value_type = cell_value_type(value)
@@ -282,6 +284,7 @@ pub fn Worksheet::set_cell_rich_text(
   runs : ArrayView[RichTextRun],
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_shared_formula_masters_index()
   let total = rich_text_total_units(runs)
   if total > max_cell_chars {
     raise CellTextTooLong(len=total)
@@ -453,13 +456,78 @@ fn validated_shared_formula_masters(
 }
 
 ///|
+fn clone_shared_formula_masters_index(
+  source : Map[UInt, SharedFormulaMaster],
+) -> Map[UInt, SharedFormulaMaster] {
+  let cloned : Map[UInt, SharedFormulaMaster] = Map([])
+  for shared_index, master in source {
+    cloned[shared_index] = master
+  }
+  cloned
+}
+
+///|
+fn Worksheet::invalidate_shared_formula_masters_index(self : Worksheet) -> Unit {
+  self.shared_formula_masters_index.clear()
+  self.shared_formula_masters_index_valid = false
+}
+
+///|
+fn Worksheet::ensure_shared_formula_masters_index(
+  self : Worksheet,
+) -> Unit raise XlsxError {
+  if self.shared_formula_masters_index_valid {
+    return
+  }
+  let rebuilt = validated_shared_formula_masters(self.cells)
+  self.shared_formula_masters_index.clear()
+  for shared_index, master in rebuilt {
+    self.shared_formula_masters_index[shared_index] = master
+  }
+  self.shared_formula_masters_index_valid = true
+}
+
+///|
 /// Returns non-empty shared-formula masters keyed by OOXML shared index after
 /// validating that every follower has exactly one master and lies within the
 /// master's declared range. Conflicting or incomplete groups are rejected.
 pub fn Worksheet::shared_formula_masters(
   self : Worksheet,
 ) -> Map[UInt, SharedFormulaMaster] raise XlsxError {
-  validated_shared_formula_masters(self.cells)
+  self.ensure_shared_formula_masters_index()
+  clone_shared_formula_masters_index(self.shared_formula_masters_index)
+}
+
+///|
+test "shared formula masters stay eagerly indexed after bounded read" {
+  let source = Workbook::new()
+  let source_sheet = source.add_sheet("Data")
+  source_sheet.set_cell_formula_opts(
+    "A1",
+    "C1+1",
+    opts=FormulaOpts::shared("A1:A2"),
+  )
+  let parsed = read(write(source))
+  guard parsed.sheet("Data") is Some(sheet) else {
+    fail("expected parsed shared-formula worksheet")
+  }
+  assert_true(sheet.shared_formula_masters_index_valid)
+  assert_eq(sheet.shared_formula_masters_index.length(), 1)
+  let exported = sheet.shared_formula_masters()
+  exported.clear()
+  assert_eq(sheet.shared_formula_masters_index.length(), 1)
+}
+
+///|
+test "cell mutation invalidates and safely rebuilds shared formula index" {
+  let sheet = Worksheet::new("Data")
+  sheet.set_cell_formula_opts("A1", "C1+1", opts=FormulaOpts::shared("A1:A2"))
+  assert_false(sheet.shared_formula_masters_index_valid)
+  assert_eq(sheet.shared_formula_masters().length(), 1)
+  assert_true(sheet.shared_formula_masters_index_valid)
+  sheet.set_cell("D1", "value")
+  assert_false(sheet.shared_formula_masters_index_valid)
+  assert_eq(sheet.shared_formula_masters().length(), 1)
 }
 
 ///|
@@ -470,6 +538,7 @@ pub fn Worksheet::set_cell_formula(
   value? : String = "",
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_shared_formula_masters_index()
   let (row, col) = cell_ref_to_rc(reference)
   let canonical = cell_ref_from(row, col)
   match self.cell_index_of(row, col) {
@@ -567,6 +636,7 @@ pub fn Worksheet::set_cell_formula_opts(
   value? : String = "",
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_shared_formula_masters_index()
   let formula_kind = opts.formula_type
   match formula_kind {
     None => self.set_cell_formula(reference, formula, value~)
@@ -2457,6 +2527,7 @@ pub fn Worksheet::set_cell_rc(
   value : String,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_shared_formula_masters_index()
   let reference = cell_ref_from(row, col)
   match self.cell_index_of(row, col) {
     Some(i) => {
@@ -2505,6 +2576,7 @@ pub fn Worksheet::set_cell_value_rc(
   value : CellValue,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_shared_formula_masters_index()
   let reference = cell_ref_from(row, col)
   let value_type = cell_value_type(value)
   let raw_value = cell_value_raw_string(value)
@@ -2556,6 +2628,7 @@ pub fn Worksheet::set_cell_formula_rc(
   value? : String = "",
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_shared_formula_masters_index()
   let reference = cell_ref_from(row, col)
   match self.cell_index_of(row, col) {
     Some(i) => {
@@ -3145,6 +3218,7 @@ fn Worksheet::insert_rows(
   count : Int,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_shared_formula_masters_index()
   if row <= 0 || row > cell_ref_max_rows {
     raise InvalidCellRef(value="\{0}:\{row}")
   }
@@ -3295,6 +3369,7 @@ fn Worksheet::remove_rows(
   count : Int,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_shared_formula_masters_index()
   self.invalidate_cell_index()
   if row <= 0 {
     raise InvalidCellRef(value="\{0}:\{row}")
@@ -3607,6 +3682,7 @@ fn Worksheet::duplicate_row_to(
   target_row : Int,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_shared_formula_masters_index()
   self.invalidate_cell_index()
   if row <= 0 || row > cell_ref_max_rows {
     raise InvalidCellRef(value="\{0}:\{row}")
@@ -3660,6 +3736,7 @@ fn Worksheet::insert_cols(
   count : Int,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_shared_formula_masters_index()
   if col <= 0 || col > cell_ref_max_cols {
     raise InvalidCellRef(value="\{col}:\{0}")
   }
@@ -3803,6 +3880,7 @@ fn Worksheet::remove_cols(
   count : Int,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_shared_formula_masters_index()
   self.invalidate_cell_index()
   if col <= 0 {
     raise InvalidCellRef(value="\{col}:\{0}")
