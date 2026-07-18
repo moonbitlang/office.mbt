@@ -1257,14 +1257,62 @@ fn resolve_relationship_target(base : String, target : StringView) -> String? {
 }
 
 ///|
+priv struct StructuralFindings {
+  mut first : String?
+  mut count : Int
+}
+
+///|
+fn StructuralFindings::new() -> StructuralFindings {
+  { first: None, count: 0 }
+}
+
+///|
+fn bounded_structural_finding(value : String, maximum? : Int = 512) -> String {
+  let output = StringBuilder::new()
+  let mut count = 0
+  for character in value {
+    if count >= maximum {
+      output.write_char('…') |> ignore
+      break
+    }
+    output.write_char(character) |> ignore
+    count += 1
+  }
+  output.to_string()
+}
+
+///|
+fn StructuralFindings::push(
+  self : StructuralFindings,
+  finding : String,
+) -> Unit {
+  self.count += 1
+  if self.first is None {
+    self.first = Some(bounded_structural_finding(finding))
+  }
+}
+
+///|
+test "structural findings retain only one bounded diagnostic" {
+  let findings = StructuralFindings::new()
+  findings.push("x".repeat(1024))
+  for _ in 0..<100_000 {
+    findings.push("discarded")
+  }
+  assert_eq(findings.count, 100_001)
+  assert_eq(findings.first.unwrap().length(), 513)
+}
+
+///|
 fn validate_package_structure(
   archive : @zip.Archive,
   part_index : ArchivePartIndex,
   main_part : String,
   require_main_relationships : Bool,
   context : OfficeFormatContext,
-) -> Array[String] raise OfficeError {
-  let findings : Array[String] = []
+) -> StructuralFindings raise OfficeError {
+  let findings = StructuralFindings::new()
   let parts : StableStringMap[Int] = SortedMap([])
   let part_names : StableStringMap[String] = SortedMap([])
   let package_parts : StableStringMap[Bool] = SortedMap([])
@@ -1944,7 +1992,7 @@ fn structural_findings(
   part_index : ArchivePartIndex,
   main_part : String,
   context : OfficeFormatContext,
-) -> Array[String] raise OfficeError {
+) -> StructuralFindings raise OfficeError {
   validate_package_structure(
     archive,
     part_index,
@@ -2033,14 +2081,16 @@ pub fn detect_archive_format(
   let findings = structural_findings(
     actual, archive, part_index, main_part, context,
   )
-  if findings.length() > 0 {
-    let first = findings[0]
-    let suffix = if findings.length() == 1 {
-      ""
-    } else {
-      " (and \{findings.length() - 1} more finding(s))"
+  match findings.first {
+    Some(first) => {
+      let suffix = if findings.count == 1 {
+        ""
+      } else {
+        " (and \{findings.count - 1} more finding(s))"
+      }
+      raise InvalidPackage(first + suffix)
     }
-    raise InvalidPackage(first + suffix)
+    None => ()
   }
   context.checkpoint()
   actual
