@@ -230,6 +230,36 @@ test "ooxml read_parse: invalid relationship MCE fails closed" {
     ),
     (
       (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="mc"/>
+      ),
+      "MCE Ignorable namespace is invalid",
+    ),
+    (
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="mc" mc:ProcessContent="mc:AlternateContent"/>
+      ),
+      "MCE Ignorable namespace is invalid",
+    ),
+    (
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="mc" mc:PreserveElements="mc:AlternateContent"/>
+      ),
+      "MCE Ignorable namespace is invalid",
+    ),
+    (
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="mc" mc:PreserveAttributes="mc:Ignorable"/>
+      ),
+      "MCE Ignorable namespace is invalid",
+    ),
+    (
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:AlternateContent><mc:Choice Requires="mc"/></mc:AlternateContent></Relationships>
+      ),
+      "MCE Choice Requires namespace is invalid",
+    ),
+    (
+      (
         #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:v="urn:vendor" mc:Ignorable="v" mc:ProcessContent="v:Wrapper"><v:Wrapper xml:base="elsewhere"><Relationship Id="bad" Type="wanted" Target="bad.xml"/></v:Wrapper></Relationships>
       ),
       "MCE ProcessContent element has an unsafe xml attribute",

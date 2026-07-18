@@ -408,7 +408,8 @@ fn relationship_mce_enter_scope(
         let (namespace_uri, namespace_id) = relationship_mce_resolve_prefix(
           scanner, prefix, "Ignorable",
         )
-        if namespace_uri == "" {
+        if namespace_uri == "" ||
+          namespace_uri == markup_compatibility_namespace {
           raise InvalidXml(msg="MCE Ignorable namespace is invalid")
         }
         context.add_ignorable(namespace_id)
@@ -503,6 +504,9 @@ fn relationship_mce_choice_supported(
     let (namespace_uri, _) = relationship_mce_resolve_prefix(
       scanner, prefix, "Choice Requires",
     )
+    if namespace_uri == markup_compatibility_namespace {
+      raise InvalidXml(msg="MCE Choice Requires namespace is invalid")
+    }
     if namespace_uri != package_relationships_namespace {
       supported = false
     }
