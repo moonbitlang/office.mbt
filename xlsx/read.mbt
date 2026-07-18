@@ -3383,21 +3383,29 @@ fn actual_relationship_target_path(
     logical_archive_part_path(source_part),
     target,
   )
-  match part_names.get(@ooxml.package_part_name_key(source_relative)) {
-    Some(actual) => actual
-    None => {
-      // Some producers emit package-root paths without the leading slash.
-      // Standards-compliant source-relative lookup wins when both exist; this
-      // fallback retains tolerant reads only when the root spelling names an
-      // actual archive part.
-      let package_root = try normalize_rel_part_path(target) catch {
-        _ => None
-      } noraise {
-        path => part_names.get(@ooxml.package_part_name_key(path))
-      }
-      package_root.unwrap_or(source_relative)
-    }
-  }
+  part_names
+  .get(@ooxml.package_part_name_key(source_relative))
+  .unwrap_or(source_relative)
+}
+
+///|
+test "relationship targets never fall back from source-relative to package root" {
+  let root_media = "xl/media/image1.png"
+  let part_names : Map[String, String] = Map([
+    (@ooxml.package_part_name_key(root_media), root_media),
+  ])
+  inspect(
+    actual_relationship_target_path(
+      "xl/drawings/drawing1.xml", root_media, part_names,
+    ),
+    content="xl/drawings/xl/media/image1.png",
+  )
+  inspect(
+    actual_relationship_target_path(
+      "xl/drawings/drawing1.xml", "../media/image1.png", part_names,
+    ),
+    content="xl/media/image1.png",
+  )
 }
 
 ///|
