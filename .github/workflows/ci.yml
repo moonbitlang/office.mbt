@@ -163,11 +163,20 @@ jobs:
       - name: Type check (wasm)
         run: moon check --target wasm
 
+      # Keep the JavaScript runtime honest as well. Floating-point formatting
+      # and target-specific package declarations have both regressed here
+      # without affecting native or Wasm builds.
+      - name: Type check (js)
+        run: moon check --target js
+
       # An unfiltered invocation traverses every moon.work member and all of
       # its packages. Keep this module-wide so new portable child packages are
       # covered automatically instead of silently receiving root-only tests.
       - name: Test complete workspace (wasm)
         run: moon test --target wasm
+
+      - name: Test complete workspace (js)
+        run: moon test --target js
 
       # Run all members' native test suites in one pass. Covers mbtexcel
       # (including OpenXML SDK schema validation via .NET), docx2html
