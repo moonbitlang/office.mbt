@@ -1903,6 +1903,84 @@ test "detect_format rejects an invalid zip" {
 }
 
 ///|
+test "detect_archive_format enforces the XML part ceiling before DOM parsing" {
+  let archive = @zip.read(@excel.write(@excel.new_file()))
+  try
+    @office.detect_archive_format("book.xlsx", archive, max_xml_part_bytes=1)
+  catch {
+    ResourceLimit(kind~, limit~, actual~) => {
+      inspect(kind, content="xml_part_bytes")
+      assert_eq(limit, 1)
+      assert_true(actual > limit)
+    }
+    _ => fail("expected XML part resource limit")
+  } noraise {
+    _ => fail("expected XML part resource limit")
+  }
+}
+
+///|
+test "detect_archive_format shares one cumulative XML allocation budget" {
+  let archive = @zip.read(@excel.write(@excel.new_file()))
+  try
+    @office.detect_archive_format("book.xlsx", archive, max_xml_total_units=1)
+  catch {
+    ResourceLimit(kind~, limit~, actual~) => {
+      inspect(kind, content="xml_preflight_work_units")
+      assert_eq(limit, 4)
+      assert_true(actual > limit)
+    }
+    _ => fail("expected cumulative XML resource limit")
+  } noraise {
+    _ => fail("expected cumulative XML resource limit")
+  }
+}
+
+///|
+test "detect_archive_format cancels within CRC verification" {
+  let source = @zip.read(@excel.write(@excel.new_file()))
+  let archive = @zip.Archive::new()
+  archive.add("bulk.bin", Bytes::make(1024 * 1024, b'x'))
+  for entry in source.entries() {
+    archive.add(
+      entry.name(),
+      entry.data(),
+      compression=entry.compression(),
+      data_descriptor=entry.data_descriptor(),
+    )
+  }
+  let checks = [0]
+  let cancel_at = archive.entries().length() + 4
+  try
+    @office.detect_archive_format("book.xlsx", archive, cancelled=() => {
+      checks[0] += 1
+      checks[0] >= cancel_at
+    })
+  catch {
+    Cancelled => assert_true(checks[0] >= cancel_at)
+    _ => fail("expected format detection cancellation")
+  } noraise {
+    _ => fail("expected format detection cancellation")
+  }
+}
+
+///|
+test "detect_format requires exact reserved manifest spelling" {
+  let broken = rename_archive_part(
+    @excel.write(@excel.new_file()),
+    "[Content_Types].xml",
+    "[content_types].xml",
+  )
+  try @office.detect_format("book.xlsx", broken) catch {
+    InvalidPackage(message) =>
+      assert_true(message.contains("invalid physical spelling"))
+    _ => fail("expected reserved manifest spelling error")
+  } noraise {
+    _ => fail("expected reserved manifest spelling error")
+  }
+}
+
+///|
 test "detect_format does not accept a content-type marker in an XML comment" {
   let archive = @zip.Archive::new()
   archive.add(

@@ -68,28 +68,27 @@ fn identify_error(
           "actual": Json::string(actual.name()),
         }),
       )
+    ResourceLimit(kind~, limit~, actual~) =>
+      @lib.protocol_error(
+        "office.resource_limit",
+        "Office \{bounded_text(kind, 80)} exceeds the configured limit",
+        details=Json::object({
+          "file": Json::string(bounded_file),
+          "resource": Json::string(bounded_text(kind, 80)),
+          "limit": Json::number(limit.to_double()),
+          "actual": Json::number(actual.to_double()),
+        }),
+      )
+    Cancelled =>
+      @lib.protocol_error("office.cancelled", "Office read was cancelled")
   }
 }
 
 ///|
 async fn run_identify(matches : @argparse.Matches) -> Unit {
   let file = required_value(matches, "file")
-  let data = @afs.read_file(file).binary() catch {
-    error if @async.is_being_cancelled() => raise error
-    _ =>
-      raise CliFailure(
-        @lib.protocol_error(
-          "office.file_read_failed",
-          "could not read input file: " + bounded_text(file, 160),
-          details=Json::object({ "file": Json::string(bounded_text(file, 160)) }),
-        ),
-      )
-  }
-  check_office_read_cancelled(() => @async.is_being_cancelled())
-  let format = @lib.detect_format(file, data) catch {
-    error => raise CliFailure(identify_error(error, file))
-  }
-  check_office_read_cancelled(() => @async.is_being_cancelled())
+  let source = read_office_package(file, cancelled=office_async_cancelled)
+  let format = source.format
   if matches.flags.get_or_default("json", false) {
     println(
       @lib.output_success(

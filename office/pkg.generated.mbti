@@ -57,9 +57,9 @@ pub fn capability_formats() -> Array[CapabilityFormat]
 
 pub fn capability_records(format? : DocumentFormat, operation? : String) -> Array[Json]
 
-pub fn detect_archive_format(StringView, @zip.Archive) -> DocumentFormat raise OfficeError
+pub fn detect_archive_format(StringView, @zip.Archive, max_xml_part_bytes? : Int, max_xml_total_units? : Int, cancelled? : () -> Bool) -> DocumentFormat raise OfficeError
 
-pub fn detect_format(StringView, BytesView) -> DocumentFormat raise OfficeError
+pub fn detect_format(StringView, BytesView, max_package_bytes? : Int, max_archive_entries? : Int, max_entry_uncompressed_bytes? : Int, max_total_uncompressed_bytes? : Int, max_xml_part_bytes? : Int, max_xml_total_units? : Int, cancelled? : () -> Bool) -> DocumentFormat raise OfficeError
 
 pub fn find_capability_command(StringView) -> CapabilityCommand?
 
@@ -90,6 +90,8 @@ pub(all) suberror OfficeError {
   UnsupportedFileExtension(String)
   InvalidPackage(String)
   FormatMismatch(expected~ : DocumentFormat, actual~ : DocumentFormat)
+  ResourceLimit(kind~ : String, limit~ : Int, actual~ : Int)
+  Cancelled
 } derive(Eq, @debug.Debug)
 #deprecated
 pub fn OfficeError::equal(Self, Self) -> Bool

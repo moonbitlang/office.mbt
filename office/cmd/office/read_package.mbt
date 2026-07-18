@@ -17,6 +17,9 @@ let office_read_max_preserved_source_bytes : Int = 64 * 1024 * 1024 + 65_535
 let office_read_max_xml_part_bytes : Int = 16 * 1024 * 1024
 
 ///|
+let office_read_max_xml_total_units : Int = 64 * 1024 * 1024
+
+///|
 let office_read_max_workbook_sheets : Int = 256
 
 ///|
@@ -30,6 +33,13 @@ struct OfficeReadPackage {
   file : String
   format : @lib.DocumentFormat
   archive : @zip.Archive
+}
+
+///|
+/// Centralizes cancellation observation for asynchronous Office commands.
+/// CPU-heavy command paths add explicit async yield points around bounded work.
+fn office_async_cancelled() -> Bool {
+  @async.is_being_cancelled()
 }
 
 ///|
@@ -48,7 +58,32 @@ fn detect_office_archive_format(
   cancelled : () -> Bool,
 ) -> @lib.DocumentFormat raise CliFailure {
   check_office_read_cancelled(cancelled)
-  let format = @lib.detect_archive_format(file, archive) catch {
+  let format = @lib.detect_archive_format(
+    file,
+    archive,
+    max_xml_part_bytes=office_read_max_xml_part_bytes,
+    max_xml_total_units=office_read_max_xml_total_units,
+    cancelled~,
+  ) catch {
+    ResourceLimit(kind~, limit~, actual~) =>
+      raise CliFailure(
+        @lib.protocol_error(
+          "office.\{office_read_format_hint(file).name()}.resource_limit",
+          "Office \{bounded_text(kind, 80)} exceeds the configured limit",
+          details=Json::object({
+            "file": Json::string(bounded_text(file, 160)),
+            "resource": Json::string(bounded_text(kind, 80)),
+            "limit": Json::number(limit.to_double()),
+            "actual": Json::number(actual.to_double()),
+          }),
+        ),
+      )
+    Cancelled => {
+      check_office_read_cancelled(cancelled)
+      raise CliFailure(
+        @lib.protocol_error("office.cancelled", "Office read was cancelled"),
+      )
+    }
     error => raise CliFailure(identify_error(error, file))
   }
   check_office_read_cancelled(cancelled)
