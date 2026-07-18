@@ -3608,6 +3608,7 @@ fn Worksheet::insert_rows(
     translation_budget,
     fn(_cell : Cell) -> Bool { true },
   )
+  translation_budget.checkpoint()
   // Transactional: stage every shifted collection into locals first — cell,
   // merge, hyperlink, filter, table, sparkline, image, and chart references
   // shift through `cell_ref_from`/range adjusters that raise once a coordinate
@@ -3616,7 +3617,10 @@ fn Worksheet::insert_rows(
   // `self` is mutated until every stage succeeds, so an overflowing insert
   // raises and leaves the worksheet unchanged instead of half-shifted.
   let updated_cells : Array[Cell] = []
-  for stored_cell in self.cells {
+  for index, stored_cell in self.cells {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     let cell = normal_formula_cell_for_structural_edit(
       stored_cell, shared_formula_masters, translation_budget,
     )
@@ -3642,11 +3646,17 @@ fn Worksheet::insert_rows(
     }
   }
   let updated_merges : Array[String] = []
-  for range_ref in self.merged_cells {
+  for index, range_ref in self.merged_cells {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     updated_merges.push(adjust_range_after_row_insert(range_ref, row, count))
   }
   let updated_links : Array[Hyperlink] = []
-  for link in self.hyperlinks {
+  for index, link in self.hyperlinks {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     let reference = adjust_hyperlink_ref_after_row_insert(
       link.reference,
       row,
@@ -3661,34 +3671,63 @@ fn Worksheet::insert_rows(
       tooltip: link.tooltip,
     })
   }
+  translation_budget.checkpoint()
   let updated_filter = match self.auto_filter {
     Some(filter) =>
       Some(adjust_auto_filter_after_row_insert(filter, row, count))
     None => None
   }
   let updated_tables : Array[Table] = []
-  for table in self.tables {
-    updated_tables.push(adjust_table_after_row_insert(table, row, count))
+  for index, table in self.tables {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
+    updated_tables.push(
+      adjust_table_after_row_insert(
+        table,
+        row,
+        count,
+        cancelled=translation_budget.cancelled,
+      ),
+    )
   }
   let updated_sparklines : Array[SparklineGroup] = []
-  for group in self.sparkline_groups {
-    let adjusted = adjust_sparkline_group_after_row_insert(group, row, count)
+  for index, group in self.sparkline_groups {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
+    let adjusted = adjust_sparkline_group_after_row_insert(
+      group,
+      row,
+      count,
+      cancelled=translation_budget.cancelled,
+    )
     if adjusted.sparklines.length() > 0 {
       updated_sparklines.push(adjusted)
     }
   }
   let updated_images : Array[Image] = []
-  for image in self.images {
+  for index, image in self.images {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     let reference = adjust_cell_after_row_insert(image.reference, row, count)
     updated_images.push(image_with_reference(image, reference))
   }
   let updated_charts : Array[Chart] = []
-  for chart in self.charts {
+  for index, chart in self.charts {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     let reference = adjust_cell_after_row_insert(chart.reference, row, count)
     updated_charts.push(chart_with_reference(chart, reference))
   }
   let updated_rows : Map[Int, RowDimension] = Map([])
+  let mut dimension_index = 0
   for row_index, dim in self.row_dimensions {
+    if (dimension_index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     let new_row = if row_index >= row {
       // Overflow-safe: a stored dimension key can be arbitrarily large (the
       // dimension setters do not bound it), so validate BEFORE the addition.
@@ -3700,12 +3739,16 @@ fn Worksheet::insert_rows(
       row_index
     }
     updated_rows[new_row] = dim
+    dimension_index += 1
   }
   let break_start = row - 1
   // Break ids are 0-based (id = row - 1), so a shifted id must stay strictly
   // below the row maximum. Check the original ids overflow-safely, before
   // adjust_page_breaks_after_insert performs `id + count`.
-  for brk in self.row_breaks {
+  for index, brk in self.row_breaks {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     if brk.id >= break_start && brk.id > cell_ref_max_rows - 1 - count {
       raise InvalidCellRef(value="\{0}:\{brk.id}")
     }
@@ -3714,9 +3757,11 @@ fn Worksheet::insert_rows(
     self.row_breaks,
     break_start,
     count,
+    cancelled=translation_budget.cancelled,
   )
   // Commit: every stage above succeeded, so applying the staged state cannot
   // fail partway.
+  translation_budget.checkpoint()
   self.invalidate_shared_formula_masters_index()
   self.invalidate_cell_index()
   self.cells.clear()
@@ -3782,8 +3827,12 @@ fn Worksheet::remove_rows(
     translation_budget,
     fn(cell : Cell) -> Bool { cell.row < row || cell.row > end_row },
   )
+  translation_budget.checkpoint()
   let updated_cells : Array[Cell] = []
-  for stored_cell in self.cells {
+  for index, stored_cell in self.cells {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     if stored_cell.row >= row && stored_cell.row <= end_row {
       continue
     }
@@ -3811,21 +3860,21 @@ fn Worksheet::remove_rows(
       style_id: cell.style_id,
     })
   }
-  self.invalidate_shared_formula_masters_index()
-  self.invalidate_cell_index()
-  self.cells.clear()
-  self.cells.append(updated_cells)
   let updated_merges : Array[String] = []
-  for range_ref in self.merged_cells {
+  for index, range_ref in self.merged_cells {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     match adjust_range_after_row_remove(range_ref, row, count) {
       Some(value) => updated_merges.push(value)
       None => ()
     }
   }
-  self.merged_cells.clear()
-  self.merged_cells.append(updated_merges)
   let updated_links : Array[Hyperlink] = []
-  for link in self.hyperlinks {
+  for index, link in self.hyperlinks {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     match adjust_hyperlink_ref_after_row_remove(link.reference, row, count) {
       Some(reference) =>
         updated_links.push({
@@ -3839,72 +3888,112 @@ fn Worksheet::remove_rows(
       None => ()
     }
   }
-  self.hyperlinks.clear()
-  self.hyperlinks.append(updated_links)
-  match self.auto_filter {
+  translation_budget.checkpoint()
+  let updated_filter = match self.auto_filter {
     Some(filter) =>
       match adjust_auto_filter_after_row_remove(filter, row, count) {
-        Some(updated) => self.auto_filter = Some(updated)
-        None => self.auto_filter = None
+        Some(updated) => Some(updated)
+        None => None
       }
-    None => ()
+    None => None
   }
   let updated_tables : Array[Table] = []
-  for table in self.tables {
-    match adjust_table_after_row_remove(table, row, count) {
+  for index, table in self.tables {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
+    match
+      adjust_table_after_row_remove(
+        table,
+        row,
+        count,
+        cancelled=translation_budget.cancelled,
+      ) {
       Some(value) => updated_tables.push(value)
       None => ()
     }
   }
-  self.tables.clear()
-  self.tables.append(updated_tables)
   let updated_sparklines : Array[SparklineGroup] = []
-  for group in self.sparkline_groups {
-    let adjusted = adjust_sparkline_group_after_row_remove(group, row, count)
+  for index, group in self.sparkline_groups {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
+    let adjusted = adjust_sparkline_group_after_row_remove(
+      group,
+      row,
+      count,
+      cancelled=translation_budget.cancelled,
+    )
     if adjusted.sparklines.length() > 0 {
       updated_sparklines.push(adjusted)
     }
   }
-  self.sparkline_groups.clear()
-  self.sparkline_groups.append(updated_sparklines)
   let updated_images : Array[Image] = []
-  for image in self.images {
+  for index, image in self.images {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     match adjust_cell_after_row_remove(image.reference, row, count) {
       Some(reference) =>
         updated_images.push(image_with_reference(image, reference))
       None => ()
     }
   }
-  self.images.clear()
-  self.images.append(updated_images)
   let updated_charts : Array[Chart] = []
-  for chart in self.charts {
+  for index, chart in self.charts {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     match adjust_cell_after_row_remove(chart.reference, row, count) {
       Some(reference) =>
         updated_charts.push(chart_with_reference(chart, reference))
       None => ()
     }
   }
-  self.charts.clear()
-  self.charts.append(updated_charts)
   let updated_rows : Map[Int, RowDimension] = Map([])
+  let mut dimension_index = 0
   for row_index, dim in self.row_dimensions {
+    if (dimension_index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     if row_index < row {
       updated_rows[row_index] = dim
     } else if row_index > end_row {
       updated_rows[row_index - count] = dim
     }
-  }
-  self.row_dimensions.clear()
-  for row_index, dim in updated_rows {
-    self.row_dimensions[row_index] = dim
+    dimension_index += 1
   }
   let break_start = row - 1
   let updated_breaks = adjust_page_breaks_after_remove(
     self.row_breaks,
     break_start,
     count,
+    cancelled=translation_budget.cancelled,
   )
+  // One final cancellation point precedes the only mutation phase. No
+  // cancellation callback runs after this point, so cancellation is atomic.
+  translation_budget.checkpoint()
+  self.invalidate_shared_formula_masters_index()
+  self.invalidate_cell_index()
+  self.cells.clear()
+  self.cells.append(updated_cells)
+  self.merged_cells.clear()
+  self.merged_cells.append(updated_merges)
+  self.hyperlinks.clear()
+  self.hyperlinks.append(updated_links)
+  self.auto_filter = updated_filter
+  self.tables.clear()
+  self.tables.append(updated_tables)
+  self.sparkline_groups.clear()
+  self.sparkline_groups.append(updated_sparklines)
+  self.images.clear()
+  self.images.append(updated_images)
+  self.charts.clear()
+  self.charts.append(updated_charts)
+  self.row_dimensions.clear()
+  for row_index, dim in updated_rows {
+    self.row_dimensions[row_index] = dim
+  }
   self.row_breaks.clear()
   self.row_breaks.append(updated_breaks)
 }
@@ -4017,14 +4106,19 @@ fn duplicate_xml_sqref_copies(
   entries : ArrayView[String],
   row : Int,
   target_row : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> Array[String] raise XlsxError {
   let copies : Array[String] = []
-  for xml in entries {
+  for index, xml in entries {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
     match duplicate_xml_sqref(xml, row, target_row) {
       Some(value) => copies.push(value)
       None => ()
     }
   }
+  check_read_cancelled(cancelled)
   copies
 }
 
@@ -4049,19 +4143,26 @@ fn duplicate_merge_cell_copies(
   merged_cells : ArrayView[String],
   row : Int,
   target_row : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> Array[String] raise XlsxError {
   let copies : Array[String] = []
   let mut source_row = row
   if row > target_row {
     source_row = row + 1
   }
-  for range_ref in merged_cells {
+  for index, range_ref in merged_cells {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
     let (min_row, _min_col, max_row, _max_col) = parse_range_ref(range_ref)
     if min_row < target_row && target_row < max_row {
       return copies
     }
   }
-  for range_ref in merged_cells {
+  for index, range_ref in merged_cells {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
     let (min_row, min_col, max_row, max_col) = parse_range_ref(range_ref)
     if min_row == max_row && min_row == source_row {
       let from_ref = cell_ref_from(target_row, min_col)
@@ -4072,6 +4173,7 @@ fn duplicate_merge_cell_copies(
       }
     }
   }
+  check_read_cancelled(cancelled)
   copies
 }
 
@@ -4123,7 +4225,10 @@ fn Worksheet::duplicate_row_to(
   // transactional shift. Once that insert succeeds, the remaining appends and
   // map assignments below are infallible state installation.
   let duplicated_cells : Array[Cell] = []
-  for stored_cell in self.cells {
+  for index, stored_cell in self.cells {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     if stored_cell.row != row {
       continue
     }
@@ -4151,19 +4256,28 @@ fn Worksheet::duplicate_row_to(
     self.conditional_formats,
     row,
     target_row,
+    cancelled=translation_budget.cancelled,
   )
   let data_validation_copies = duplicate_xml_sqref_copies(
     self.data_validations,
     row,
     target_row,
+    cancelled=translation_budget.cancelled,
   )
   let shifted_merges : Array[String] = []
-  for range_ref in self.merged_cells {
+  for index, range_ref in self.merged_cells {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     shifted_merges.push(adjust_range_after_row_insert(range_ref, target_row, 1))
   }
   let merge_copies = duplicate_merge_cell_copies(
-    shifted_merges, row, target_row,
+    shifted_merges,
+    row,
+    target_row,
+    cancelled=translation_budget.cancelled,
   )
+  translation_budget.checkpoint()
   self.insert_rows(
     target_row,
     1,
@@ -4221,12 +4335,16 @@ fn Worksheet::insert_cols(
     translation_budget,
     fn(_cell : Cell) -> Bool { true },
   )
+  translation_budget.checkpoint()
   // Transactional (see insert_rows): stage everything into locals — reference
   // shifts raise once a coordinate leaves the grid, column dimensions and page
   // breaks are bound-checked explicitly — and commit only once every stage has
   // succeeded, so an overflowing insert leaves the worksheet unchanged.
   let updated_cells : Array[Cell] = []
-  for stored_cell in self.cells {
+  for index, stored_cell in self.cells {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     let cell = normal_formula_cell_for_structural_edit(
       stored_cell, shared_formula_masters, translation_budget,
     )
@@ -4252,11 +4370,17 @@ fn Worksheet::insert_cols(
     }
   }
   let updated_merges : Array[String] = []
-  for range_ref in self.merged_cells {
+  for index, range_ref in self.merged_cells {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     updated_merges.push(adjust_range_after_col_insert(range_ref, col, count))
   }
   let updated_links : Array[Hyperlink] = []
-  for link in self.hyperlinks {
+  for index, link in self.hyperlinks {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     let reference = adjust_hyperlink_ref_after_col_insert(
       link.reference,
       col,
@@ -4271,34 +4395,63 @@ fn Worksheet::insert_cols(
       tooltip: link.tooltip,
     })
   }
+  translation_budget.checkpoint()
   let updated_filter = match self.auto_filter {
     Some(filter) =>
       Some(adjust_auto_filter_after_col_insert(filter, col, count))
     None => None
   }
   let updated_tables : Array[Table] = []
-  for table in self.tables {
-    updated_tables.push(adjust_table_after_col_insert(table, col, count))
+  for index, table in self.tables {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
+    updated_tables.push(
+      adjust_table_after_col_insert(
+        table,
+        col,
+        count,
+        cancelled=translation_budget.cancelled,
+      ),
+    )
   }
   let updated_sparklines : Array[SparklineGroup] = []
-  for group in self.sparkline_groups {
-    let adjusted = adjust_sparkline_group_after_col_insert(group, col, count)
+  for index, group in self.sparkline_groups {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
+    let adjusted = adjust_sparkline_group_after_col_insert(
+      group,
+      col,
+      count,
+      cancelled=translation_budget.cancelled,
+    )
     if adjusted.sparklines.length() > 0 {
       updated_sparklines.push(adjusted)
     }
   }
   let updated_images : Array[Image] = []
-  for image in self.images {
+  for index, image in self.images {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     let reference = adjust_cell_after_col_insert(image.reference, col, count)
     updated_images.push(image_with_reference(image, reference))
   }
   let updated_charts : Array[Chart] = []
-  for chart in self.charts {
+  for index, chart in self.charts {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     let reference = adjust_cell_after_col_insert(chart.reference, col, count)
     updated_charts.push(chart_with_reference(chart, reference))
   }
   let updated_cols : Map[Int, ColDimension] = Map([])
+  let mut dimension_index = 0
   for col_index, dim in self.col_dimensions {
+    if (dimension_index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     let new_col = if col_index >= col {
       // Overflow-safe (see insert_rows): stored keys are not bounded by their
       // setters, so validate before the addition.
@@ -4310,10 +4463,14 @@ fn Worksheet::insert_cols(
       col_index
     }
     updated_cols[new_col] = dim
+    dimension_index += 1
   }
   let break_start = col - 1
   // 0-based ids (see insert_rows): validate overflow-safely before the shift.
-  for brk in self.col_breaks {
+  for index, brk in self.col_breaks {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     if brk.id >= break_start && brk.id > cell_ref_max_cols - 1 - count {
       raise InvalidCellRef(value="\{brk.id}:\{0}")
     }
@@ -4322,8 +4479,10 @@ fn Worksheet::insert_cols(
     self.col_breaks,
     break_start,
     count,
+    cancelled=translation_budget.cancelled,
   )
   // Commit.
+  translation_budget.checkpoint()
   self.invalidate_shared_formula_masters_index()
   self.invalidate_cell_index()
   self.cells.clear()
@@ -4388,8 +4547,12 @@ fn Worksheet::remove_cols(
     translation_budget,
     fn(cell : Cell) -> Bool { cell.col < col || cell.col > end_col },
   )
+  translation_budget.checkpoint()
   let updated_cells : Array[Cell] = []
-  for stored_cell in self.cells {
+  for index, stored_cell in self.cells {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     if stored_cell.col >= col && stored_cell.col <= end_col {
       continue
     }
@@ -4417,21 +4580,21 @@ fn Worksheet::remove_cols(
       style_id: cell.style_id,
     })
   }
-  self.invalidate_shared_formula_masters_index()
-  self.invalidate_cell_index()
-  self.cells.clear()
-  self.cells.append(updated_cells)
   let updated_merges : Array[String] = []
-  for range_ref in self.merged_cells {
+  for index, range_ref in self.merged_cells {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     match adjust_range_after_col_remove(range_ref, col, count) {
       Some(value) => updated_merges.push(value)
       None => ()
     }
   }
-  self.merged_cells.clear()
-  self.merged_cells.append(updated_merges)
   let updated_links : Array[Hyperlink] = []
-  for link in self.hyperlinks {
+  for index, link in self.hyperlinks {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     match adjust_hyperlink_ref_after_col_remove(link.reference, col, count) {
       Some(reference) =>
         updated_links.push({
@@ -4445,72 +4608,110 @@ fn Worksheet::remove_cols(
       None => ()
     }
   }
-  self.hyperlinks.clear()
-  self.hyperlinks.append(updated_links)
-  match self.auto_filter {
+  translation_budget.checkpoint()
+  let updated_filter = match self.auto_filter {
     Some(filter) =>
       match adjust_auto_filter_after_col_remove(filter, col, count) {
-        Some(updated) => self.auto_filter = Some(updated)
-        None => self.auto_filter = None
+        Some(updated) => Some(updated)
+        None => None
       }
-    None => ()
+    None => None
   }
   let updated_tables : Array[Table] = []
-  for table in self.tables {
-    match adjust_table_after_col_remove(table, col, count) {
+  for index, table in self.tables {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
+    match
+      adjust_table_after_col_remove(
+        table,
+        col,
+        count,
+        cancelled=translation_budget.cancelled,
+      ) {
       Some(value) => updated_tables.push(value)
       None => ()
     }
   }
-  self.tables.clear()
-  self.tables.append(updated_tables)
   let updated_sparklines : Array[SparklineGroup] = []
-  for group in self.sparkline_groups {
-    let adjusted = adjust_sparkline_group_after_col_remove(group, col, count)
+  for index, group in self.sparkline_groups {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
+    let adjusted = adjust_sparkline_group_after_col_remove(
+      group,
+      col,
+      count,
+      cancelled=translation_budget.cancelled,
+    )
     if adjusted.sparklines.length() > 0 {
       updated_sparklines.push(adjusted)
     }
   }
-  self.sparkline_groups.clear()
-  self.sparkline_groups.append(updated_sparklines)
   let updated_images : Array[Image] = []
-  for image in self.images {
+  for index, image in self.images {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     match adjust_cell_after_col_remove(image.reference, col, count) {
       Some(reference) =>
         updated_images.push(image_with_reference(image, reference))
       None => ()
     }
   }
-  self.images.clear()
-  self.images.append(updated_images)
   let updated_charts : Array[Chart] = []
-  for chart in self.charts {
+  for index, chart in self.charts {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     match adjust_cell_after_col_remove(chart.reference, col, count) {
       Some(reference) =>
         updated_charts.push(chart_with_reference(chart, reference))
       None => ()
     }
   }
-  self.charts.clear()
-  self.charts.append(updated_charts)
   let updated_cols : Map[Int, ColDimension] = Map([])
+  let mut dimension_index = 0
   for col_index, dim in self.col_dimensions {
+    if (dimension_index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     if col_index < col {
       updated_cols[col_index] = dim
     } else if col_index > end_col {
       updated_cols[col_index - count] = dim
     }
-  }
-  self.col_dimensions.clear()
-  for col_index, dim in updated_cols {
-    self.col_dimensions[col_index] = dim
+    dimension_index += 1
   }
   let break_start = col - 1
   let updated_breaks = adjust_page_breaks_after_remove(
     self.col_breaks,
     break_start,
     count,
+    cancelled=translation_budget.cancelled,
   )
+  translation_budget.checkpoint()
+  self.invalidate_shared_formula_masters_index()
+  self.invalidate_cell_index()
+  self.cells.clear()
+  self.cells.append(updated_cells)
+  self.merged_cells.clear()
+  self.merged_cells.append(updated_merges)
+  self.hyperlinks.clear()
+  self.hyperlinks.append(updated_links)
+  self.auto_filter = updated_filter
+  self.tables.clear()
+  self.tables.append(updated_tables)
+  self.sparkline_groups.clear()
+  self.sparkline_groups.append(updated_sparklines)
+  self.images.clear()
+  self.images.append(updated_images)
+  self.charts.clear()
+  self.charts.append(updated_charts)
+  self.col_dimensions.clear()
+  for col_index, dim in updated_cols {
+    self.col_dimensions[col_index] = dim
+  }
   self.col_breaks.clear()
   self.col_breaks.append(updated_breaks)
 }
@@ -4572,12 +4773,17 @@ fn adjust_page_breaks_after_insert(
   breaks : Array[PageBreak],
   start : Int,
   count : Int,
-) -> Array[PageBreak] {
+  cancelled? : () -> Bool = () => false,
+) -> Array[PageBreak] raise XlsxError {
   let updated : Array[PageBreak] = []
-  for brk in breaks {
+  for index, brk in breaks {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
     let new_id = if brk.id >= start { brk.id + count } else { brk.id }
     updated.push({ id: new_id, min: brk.min, max: brk.max, manual: brk.manual })
   }
+  check_read_cancelled(cancelled)
   updated
 }
 
@@ -4586,10 +4792,14 @@ fn adjust_page_breaks_after_remove(
   breaks : Array[PageBreak],
   start : Int,
   count : Int,
-) -> Array[PageBreak] {
+  cancelled? : () -> Bool = () => false,
+) -> Array[PageBreak] raise XlsxError {
   let updated : Array[PageBreak] = []
   let end = start + count - 1
-  for brk in breaks {
+  for index, brk in breaks {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
     if brk.id < start {
       updated.push(brk)
       continue
@@ -4603,6 +4813,7 @@ fn adjust_page_breaks_after_remove(
       })
     }
   }
+  check_read_cancelled(cancelled)
   updated
 }
 
@@ -4859,11 +5070,18 @@ fn adjust_cell_after_col_remove(
 }
 
 ///|
-fn clone_table_columns(columns : ArrayView[String]) -> Array[String] {
+fn clone_table_columns(
+  columns : ArrayView[String],
+  cancelled? : () -> Bool = () => false,
+) -> Array[String] raise XlsxError {
   let out : Array[String] = []
-  for column in columns {
+  for index, column in columns {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
     out.push(column)
   }
+  check_read_cancelled(cancelled)
   out
 }
 
@@ -4877,6 +5095,7 @@ fn adjust_table_after_row_insert(
   table : Table,
   row : Int,
   count : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> Table raise XlsxError {
   let range_ref = adjust_range_after_row_insert(table.range_ref, row, count)
   {
@@ -4885,7 +5104,7 @@ fn adjust_table_after_row_insert(
     display_name: table.display_name,
     range: range_ref,
     range_ref,
-    columns: clone_table_columns(table.columns),
+    columns: clone_table_columns(table.columns, cancelled~),
     style_name: table.style_name,
     show_first_column: table.show_first_column,
     show_last_column: table.show_last_column,
@@ -4900,6 +5119,7 @@ fn adjust_table_after_row_remove(
   table : Table,
   row : Int,
   count : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> Table? raise XlsxError {
   match adjust_range_after_row_remove(table.range_ref, row, count) {
     Some(range_ref) =>
@@ -4909,7 +5129,7 @@ fn adjust_table_after_row_remove(
         display_name: table.display_name,
         range: range_ref,
         range_ref,
-        columns: clone_table_columns(table.columns),
+        columns: clone_table_columns(table.columns, cancelled~),
         style_name: table.style_name,
         show_first_column: table.show_first_column,
         show_last_column: table.show_last_column,
@@ -4926,17 +5146,21 @@ fn adjust_table_after_col_insert(
   table : Table,
   col : Int,
   count : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> Table raise XlsxError {
   let (min_row, min_col, max_row, max_col) = parse_range_ref(table.range_ref)
   let (new_min_col, new_max_col) = adjust_bounds_for_insert(
     min_col, max_col, col, count,
   )
-  let columns = clone_table_columns(table.columns)
+  let columns = clone_table_columns(table.columns, cancelled~)
   if col > min_col && col <= max_col {
     let insert_index = col - min_col
     let base = columns.length() + 1
     let mut i = 0
     while i < count {
+      if (i & 4095) == 0 {
+        check_read_cancelled(cancelled)
+      }
       columns.insert(insert_index + i, table_default_column_name(base + i))
       i = i + 1
     }
@@ -4964,11 +5188,12 @@ fn adjust_table_after_col_remove(
   table : Table,
   col : Int,
   count : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> Table? raise XlsxError {
   let (min_row, min_col, max_row, max_col) = parse_range_ref(table.range_ref)
   match adjust_bounds_for_remove(min_col, max_col, col, count) {
     Some((new_min_col, new_max_col)) => {
-      let columns = clone_table_columns(table.columns)
+      let columns = clone_table_columns(table.columns, cancelled~)
       let end_col = col + count - 1
       if !(end_col < min_col || col > max_col) {
         let overlap_start = if col > min_col { col } else { min_col }
@@ -4977,6 +5202,9 @@ fn adjust_table_after_col_remove(
         let remove_index = overlap_start - min_col
         let mut i = 0
         while i < remove_count {
+          if (i & 4095) == 0 {
+            check_read_cancelled(cancelled)
+          }
           ignore(columns.remove(remove_index))
           i = i + 1
         }
@@ -5007,9 +5235,13 @@ fn adjust_sparkline_group_after_row_insert(
   group : SparklineGroup,
   row : Int,
   count : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> SparklineGroup raise XlsxError {
   let updated : Array[Sparkline] = []
-  for sparkline in group.sparklines {
+  for index, sparkline in group.sparklines {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
     let range_ref = adjust_range_after_row_insert(
       sparkline.range_ref,
       row,
@@ -5030,9 +5262,13 @@ fn adjust_sparkline_group_after_row_remove(
   group : SparklineGroup,
   row : Int,
   count : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> SparklineGroup raise XlsxError {
   let updated : Array[Sparkline] = []
-  for sparkline in group.sparklines {
+  for index, sparkline in group.sparklines {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
     let range_ref = adjust_range_after_row_remove(
       sparkline.range_ref,
       row,
@@ -5056,9 +5292,13 @@ fn adjust_sparkline_group_after_col_insert(
   group : SparklineGroup,
   col : Int,
   count : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> SparklineGroup raise XlsxError {
   let updated : Array[Sparkline] = []
-  for sparkline in group.sparklines {
+  for index, sparkline in group.sparklines {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
     let range_ref = adjust_range_after_col_insert(
       sparkline.range_ref,
       col,
@@ -5079,9 +5319,13 @@ fn adjust_sparkline_group_after_col_remove(
   group : SparklineGroup,
   col : Int,
   count : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> SparklineGroup raise XlsxError {
   let updated : Array[Sparkline] = []
-  for sparkline in group.sparklines {
+  for index, sparkline in group.sparklines {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
     let range_ref = adjust_range_after_col_remove(
       sparkline.range_ref,
       col,
