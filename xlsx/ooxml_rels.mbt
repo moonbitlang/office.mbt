@@ -246,10 +246,15 @@ fn normalize_rel_part_path(
         raise InvalidXml(msg="relationship target invalid")
       }
     } else if segment == ".." {
-      if segments.length() == 0 || terminal {
+      if terminal {
         raise InvalidXml(msg="relationship target invalid")
       }
-      ignore(segments.pop())
+      // Relationship references are merged against an absolute package-root
+      // base. RFC 3986 remove-dot-segments therefore clamps excess parents at
+      // that root instead of treating them as an invalid escape.
+      if segments.length() > 0 {
+        ignore(segments.pop())
+      }
     } else {
       let valid = @ooxml.is_valid_opc_part_segment_cancellable(
         segment,
@@ -503,34 +508,31 @@ test "ooxml_rels: resolve target normalizes dot segments" {
 }
 
 ///|
-test "ooxml_rels: resolve target rejects escaping root via dot segments" {
+test "ooxml_rels: resolve target clamps excess parents at the package root" {
   let rel_result = Ok(resolve_rel_target("../../../sheet1.xml", "worksheets")) catch {
     e => Err(e)
   }
   match rel_result {
     Err(InvalidXml(msg~)) => inspect(msg, content="relationship target invalid")
-    _ => fail("expected InvalidXml for relative escape in resolve_rel_target")
+    _ => fail("expected xl-only resolver to reject a root-level package part")
   }
-  let workbook_result = Ok(resolve_workbook_rel_target("../../sheet1.xml")) catch {
-    e => Err(e)
-  }
-  match workbook_result {
-    Err(InvalidXml(msg~)) => inspect(msg, content="relationship target invalid")
-    _ =>
-      fail(
-        "expected InvalidXml for relative escape in resolve_workbook_rel_target",
-      )
-  }
-
-  let relocated_result = Ok(
+  inspect(resolve_workbook_rel_target("../../sheet1.xml"), content="sheet1.xml")
+  inspect(
     resolve_part_rel_target("custom/book.xml", "../../sheet1.xml"),
-  ) catch {
-    e => Err(e)
-  }
-  match relocated_result {
-    Err(InvalidXml(msg~)) => inspect(msg, content="relationship target invalid")
-    _ => fail("expected relocated relationship target to reject a root escape")
-  }
+    content="sheet1.xml",
+  )
+  inspect(
+    resolve_part_rel_target("custom/book.xml", "../../../../sheet1.xml"),
+    content="sheet1.xml",
+  )
+  inspect(
+    resolve_part_rel_target("custom/book.xml", "/../sheet1.xml"),
+    content="sheet1.xml",
+  )
+  inspect(
+    resolve_rel_target("../../../xl/worksheets/sheet1.xml", "worksheets"),
+    content="xl/worksheets/sheet1.xml",
+  )
 }
 
 ///|
@@ -547,6 +549,15 @@ test "ooxml_rels: normalize and resolve invalid-path guards" {
   match rel_result {
     Err(InvalidXml(msg~)) => inspect(msg, content="relationship target invalid")
     _ => fail("expected InvalidXml for non-xl absolute resolve_rel_target")
+  }
+
+  for target in ["../..", "../../.", "../../../"] {
+    try resolve_part_rel_target("custom/book.xml", target) catch {
+      InvalidXml(msg~) => assert_eq(msg, "relationship target invalid")
+      _ => fail("unexpected final relationship path error")
+    } noraise {
+      _ => fail("directory-valued relationship target was accepted: \{target}")
+    }
   }
 }
 
