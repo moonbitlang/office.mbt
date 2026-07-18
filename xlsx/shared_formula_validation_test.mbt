@@ -401,6 +401,48 @@ test "calculation shares formula output and cancellation budgets" {
 }
 
 ///|
+fn shared_formula_spill_probe_fixture() -> @xlsx.Workbook raise {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Data")
+  sheet.set_cell_formula_opts(
+    "B1",
+    "2",
+    opts=@xlsx.FormulaOpts::shared("B1:B2"),
+  )
+  sheet.set_cell_formula("D1", "SEQUENCE(B2)")
+  workbook
+}
+
+///|
+test "spill probing propagates shared formula cancellation and limits" {
+  let cancelled = shared_formula_spill_probe_fixture()
+  try cancelled.calc_cell_value("Data", "D2", cancelled=() => true) catch {
+    ReadCancelled => ()
+    _ => fail("unexpected spill cancellation error")
+  } noraise {
+    value => fail("expected spill cancellation, got \{value}")
+  }
+
+  let limited = shared_formula_spill_probe_fixture()
+  let limits = @xlsx.SharedFormulaLimits::with_values(
+    max_input_chars=16,
+    max_output_chars=16,
+    max_total_output_chars=16,
+    max_work_units=1,
+  )
+  try limited.calc_cell_value("Data", "D2", formula_limits=limits) catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) => {
+      assert_eq(kind, "shared_formula_work_units")
+      assert_eq(limit, 1)
+      assert_true(actual > limit)
+    }
+    _ => fail("unexpected spill resource error")
+  } noraise {
+    value => fail("expected spill resource rejection, got \{value}")
+  }
+}
+
+///|
 test "XLSX read rejects overlapping shared-formula master ranges" {
   let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Data")

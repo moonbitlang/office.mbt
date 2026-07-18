@@ -1399,6 +1399,53 @@ test "formula eval wb: array shape dispatcher guards part 3" {
 }
 
 ///|
+test "formula eval wb: raised spill probes restore calculation state" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Data")
+  sheet.set_cell_formula_opts("B1", "2", opts=FormulaOpts::shared("B1:B2"))
+  sheet.set_cell_formula("D1", "SEQUENCE(B2)")
+  let ctx = CalcContext::new(cancelled=() => true)
+  try resolve_cell_value(workbook, "Data", "D2", ctx) catch {
+    ReadCancelled => ()
+    _ => fail("unexpected spill cleanup error")
+  } noraise {
+    _ => fail("expected spill cancellation")
+  }
+  inspect(ctx.depth, content="0")
+  inspect(ctx.visiting.length(), content="0")
+  inspect(ctx.current_sheet, content="")
+  inspect(ctx.current_ref, content="")
+}
+
+///|
+test "formula eval wb: failed translations consume aggregate work" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Data")
+  sheet.set_cell_formula_opts("B1", "A1+1", opts=FormulaOpts::shared("B1:B2"))
+  guard sheet.shared_formula_masters().get(0) is Some(master) else {
+    fail("missing shared formula master")
+  }
+  let checks = [0]
+  let limits = SharedFormulaLimits::with_values(
+    max_input_chars=16,
+    max_output_chars=16,
+    max_total_output_chars=16,
+    max_work_units=32,
+  )
+  let budget = SharedFormulaMaterializationBudget::new(limits, cancelled=() => {
+    checks[0] += 1
+    checks[0] >= 3
+  })
+  try budget.translate(master, 2, 2) catch {
+    ReadCancelled => ()
+    _ => fail("unexpected failed-translation error")
+  } noraise {
+    value => fail("expected translation cancellation, got \{value}")
+  }
+  inspect(budget.work_units, content="4")
+}
+
+///|
 test "formula eval wb: array shape advanced function branches part 3" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

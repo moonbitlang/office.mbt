@@ -245,8 +245,13 @@ fn SharedFormulaMaterializationBudget::translate(
       actual=projected_work,
     )
   }
+  // Reserve the minimum translation work before entering the scanner. If a
+  // caller catches a cancellation or resource failure and reuses this budget,
+  // the failed attempt still consumes aggregate work instead of becoming free.
+  let previous_work = self.work_units
+  self.work_units = projected_work
   let remaining_output = self.limits.max_total_output_chars - self.output_chars
-  let remaining_work = self.limits.max_work_units - self.work_units
+  let remaining_work = self.limits.max_work_units - previous_work
   let (translated, work) = master.translate_to_limited(
     row,
     column,
@@ -268,7 +273,7 @@ fn SharedFormulaMaterializationBudget::translate(
     )
   }
   let (work_units, work_exceeded) = read_budget_actual(
-    self.work_units,
+    previous_work,
     work,
     self.limits.max_work_units,
   )

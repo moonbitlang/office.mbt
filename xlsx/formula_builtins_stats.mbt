@@ -1843,7 +1843,13 @@ fn resolve_cell_value(
   }
   ctx.visiting[key] = true
   ctx.depth = ctx.depth + 1
-  let value = calc_cell_value_internal(workbook, sheet_name, reference, ctx)
+  let value = calc_cell_value_internal(workbook, sheet_name, reference, ctx) catch {
+    error => {
+      ignore(ctx.visiting.remove(key))
+      ctx.depth = ctx.depth - 1
+      raise error
+    }
+  }
   ignore(ctx.visiting.remove(key))
   ctx.depth = ctx.depth - 1
   value
@@ -1868,9 +1874,10 @@ fn spill_value_for_cell(
       None => continue
     }
     let expr = parse_formula_expr(formula) catch { _ => continue }
-    let shape = array_shape_from_expr(workbook, sheet_name, expr, ctx) catch {
-      _ => continue
-    }
+    // Shape evaluation returns ordinary formula failures as values. Raised
+    // errors are structural, resource, or cancellation failures and must not
+    // be downgraded to "not a spill" while probing an otherwise empty cell.
+    let shape = array_shape_from_expr(workbook, sheet_name, expr, ctx)
     let (rows, cols) = match shape {
       Some(value) => value
       None => continue
@@ -1944,7 +1951,13 @@ fn calc_cell_value_internal(
           let prev_ref = ctx.current_ref
           ctx.current_sheet = sheet_name
           ctx.current_ref = reference
-          let result = eval_expr(workbook, sheet_name, expr, ctx)
+          let result = eval_expr(workbook, sheet_name, expr, ctx) catch {
+            error => {
+              ctx.current_sheet = prev_sheet
+              ctx.current_ref = prev_ref
+              raise error
+            }
+          }
           ctx.current_sheet = prev_sheet
           ctx.current_ref = prev_ref
           return result
