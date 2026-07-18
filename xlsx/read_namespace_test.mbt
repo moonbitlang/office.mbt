@@ -154,6 +154,33 @@ test "mixed-case workbook media type reads end to end" {
 }
 
 ///|
+test "mixed-case content-type PartName matches the workbook part" {
+  let archive = @zip.read(namespace_qualified_xlsx_fixture(false, false))
+  guard archive.get("[Content_Types].xml") is Some(content_type_bytes) else {
+    fail("missing content types fixture part")
+  }
+  let content_types = @encoding/utf8.decode(content_type_bytes) catch {
+    _ => fail("content types fixture is not UTF-8")
+  }
+  let updated = content_types.replace(
+    old="PartName=\"/xl/workbook.xml\"",
+    new="PartName=\"/XL/WORKBOOK.XML\"",
+  )
+  if updated == content_types {
+    fail("workbook PartName marker was not found")
+  }
+  assert_true(
+    archive.replace("[Content_Types].xml", @encoding/utf8.encode(updated)),
+  )
+  let parsed = @xlsx.read(@zip.write(archive))
+  debug_inspect(parsed.get_sheet_list(), content="[\"Qualified\"]")
+  debug_inspect(
+    parsed.get_cell_value("Qualified", "A1"),
+    content="Some(\"qualified-value\")",
+  )
+}
+
+///|
 test "SpreadsheetML-looking extension payload cannot create sheets or cells" {
   for strict in [false, true] {
     let bytes = namespace_qualified_xlsx_fixture(strict, false)

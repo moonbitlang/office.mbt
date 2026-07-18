@@ -3084,7 +3084,7 @@ fn first_existing_rel_target_path(
 ) -> String? raise XlsxError {
   for _, target in targets {
     let path = actual_relationship_target_path(source_part, target, part_names)
-    if part_names.contains(path.to_lower()) {
+    if part_names.contains(@ooxml.package_part_name_key(path)) {
       return Some(path)
     }
   }
@@ -3099,7 +3099,7 @@ fn first_existing_workbook_rel_target_path(
 ) -> String? raise XlsxError {
   for _, target in targets {
     let path = resolve_part_rel_target(workbook_part, target)
-    match part_names.get(path.to_lower()) {
+    match part_names.get(@ooxml.package_part_name_key(path)) {
       Some(actual) => return Some(actual)
       None => ()
     }
@@ -3114,7 +3114,7 @@ fn archive_part_name_index(
   let names : Map[String, String] = Map([])
   for entry in archive.entries() {
     let name = entry.name()
-    let key = name.to_lower()
+    let key = @ooxml.package_part_name_key(name)
     match names.get(key) {
       Some(existing) if existing != name =>
         raise InvalidPackage(msg="case-insensitive ZIP part name collision")
@@ -3130,7 +3130,7 @@ fn actual_archive_part_path(
   part_names : Map[String, String],
   requested : String,
 ) -> String {
-  part_names.get(requested.to_lower()).unwrap_or(requested)
+  part_names.get(@ooxml.package_part_name_key(requested)).unwrap_or(requested)
 }
 
 ///|
@@ -3148,7 +3148,7 @@ fn actual_relationship_target_path(
   part_names : Map[String, String],
 ) -> String raise XlsxError {
   let source_relative = resolve_part_rel_target(source_part, target)
-  match part_names.get(source_relative.to_lower()) {
+  match part_names.get(@ooxml.package_part_name_key(source_relative)) {
     Some(actual) => actual
     None => {
       // Some producers emit package-root paths without the leading slash.
@@ -3158,7 +3158,7 @@ fn actual_relationship_target_path(
       let package_root = try normalize_rel_part_path(target) catch {
         _ => None
       } noraise {
-        path => part_names.get(path.to_lower())
+        path => part_names.get(@ooxml.package_part_name_key(path))
       }
       package_root.unwrap_or(source_relative)
     }
@@ -3188,7 +3188,7 @@ fn workbook_related_part_path(
               resolve_part_rel_target(workbook_part, target),
             ),
           )
-        None => part_names.get(fallback.to_owned().to_lower())
+        None => part_names.get(@ooxml.package_part_name_key(fallback))
       }
   }
 }
@@ -3489,7 +3489,7 @@ fn read_zip_archive_core_unchecked(
       part_names,
       resolve_part_rel_target(workbook_xml_part_path, target),
     )
-    let part_key = path.to_lower()
+    let part_key = @ooxml.package_part_name_key(path)
     if seen_sheet_parts.contains(part_key) {
       raise InvalidXml(msg="sheet part referenced more than once")
     }

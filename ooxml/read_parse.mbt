@@ -284,7 +284,19 @@ pub fn parse_external_relationship_targets(
 ///|
 priv struct PackageContentTypes {
   overrides : Map[String, String]
+  override_part_names : Map[String, String]
   defaults : Map[String, String]
+}
+
+///|
+/// Returns the ASCII-case-insensitive identity key used for OPC part names.
+/// The leading slash, when present, remains part of the key.
+pub fn package_part_name_key(name : StringView) -> String {
+  let output = StringBuilder::new(size_hint=name.length())
+  for character in name {
+    output.write_char(character.to_ascii_lowercase())
+  }
+  output.to_string()
 }
 
 ///|
@@ -292,6 +304,7 @@ fn parse_content_types(
   xml : StringView,
 ) -> PackageContentTypes raise ParseXmlError {
   let overrides : Map[String, String] = Map([])
+  let override_part_names : Map[String, String] = Map([])
   let defaults : Map[String, String] = Map([])
   let scanner = XmlStartTagScanner::new(xml)
   if !scanner.next() ||
@@ -322,10 +335,12 @@ fn parse_content_types(
         if part_name == "" || content_type == "" {
           raise InvalidXml(msg="content type override value is empty")
         }
-        if overrides.contains(part_name) {
+        let part_name_key = package_part_name_key(part_name)
+        if overrides.contains(part_name_key) {
           raise InvalidXml(msg="duplicate content type override")
         }
-        overrides[part_name] = content_type
+        overrides[part_name_key] = content_type
+        override_part_names[part_name_key] = part_name
       }
       "Default" => {
         let extension = match scanner.attribute("", "Extension") {
@@ -348,7 +363,7 @@ fn parse_content_types(
       _ => raise InvalidXml(msg="content types element is invalid")
     }
   }
-  { overrides, defaults }
+  { overrides, override_part_names, defaults }
 }
 
 ///|
@@ -358,9 +373,9 @@ pub fn find_override_part_by_content_types(
 ) -> String? raise ParseXmlError {
   let content_types_value = parse_content_types(xml)
   for wanted in content_types {
-    for part_name, content_type in content_types_value.overrides {
+    for part_name_key, content_type in content_types_value.overrides {
       if content_type == wanted {
-        return Some(part_name)
+        return content_types_value.override_part_names.get(part_name_key)
       }
     }
   }
@@ -368,8 +383,9 @@ pub fn find_override_part_by_content_types(
 }
 
 ///|
-/// Returns the declared content type for `part_name`. An exact override wins;
-/// otherwise the case-insensitive extension default is used.
+/// Returns the declared content type for `part_name`. An ASCII-case-insensitive
+/// OPC part-name override wins; otherwise the case-insensitive extension
+/// default is used.
 pub fn find_part_content_type(
   xml : StringView,
   part_name : StringView,
@@ -380,7 +396,7 @@ pub fn find_part_content_type(
   } else {
     "/" + part_name.to_owned()
   }
-  match content_types_value.overrides.get(normalized) {
+  match content_types_value.overrides.get(package_part_name_key(normalized)) {
     Some(value) => Some(value)
     None => {
       let filename = match normalized.rev_find("/") {

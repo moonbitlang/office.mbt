@@ -225,18 +225,33 @@ test "ooxml read_parse: prefixed content types decode names and media types" {
 }
 
 ///|
-test "ooxml read_parse: content type lookup honors exact override then default" {
+test "ooxml read_parse: content type lookup honors part identity then default" {
   let xml =
     #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
     #|  <Default Extension="XML" ContentType="application/default+xml"/>
     #|  <Override PartName="/custom/book.xml" ContentType="application/workbook+xml"/>
     #|</Types>
   assert_eq(
-    @ooxml.find_part_content_type(xml, "custom/book.xml"),
+    @ooxml.find_part_content_type(xml, "CUSTOM/BOOK.XML"),
     Some("application/workbook+xml"),
   )
   assert_eq(
     @ooxml.find_part_content_type(xml, "custom/other.Xml"),
     Some("application/default+xml"),
   )
+}
+
+///|
+test "ooxml read_parse: content type overrides reject case-variant duplicates" {
+  let xml =
+    #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+    #|  <Override PartName="/custom/book.xml" ContentType="application/first+xml"/>
+    #|  <Override PartName="/CUSTOM/BOOK.XML" ContentType="application/second+xml"/>
+    #|</Types>
+  try @ooxml.find_part_content_type(xml, "custom/book.xml") catch {
+    InvalidXml(msg~) => inspect(msg, content="duplicate content type override")
+    _ => fail("unexpected content type parse cancellation")
+  } noraise {
+    _ => fail("expected case-variant duplicate override rejection")
+  }
 }
