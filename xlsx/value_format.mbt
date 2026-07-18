@@ -582,13 +582,19 @@ fn format_number_pattern(
   pattern : String,
   add_minus : Bool,
   currency_prefix : String,
-) -> String {
+) -> String raise XlsxError {
   let value = @string.parse_double(raw) catch { _ => return raw }
+  if value.is_nan() || value.is_inf() {
+    raise InvalidXml(msg="cell number must be finite")
+  }
   let negative = value < 0.0
   let abs_value = if negative { -value } else { value }
   let (prefix, suffix, info) = parse_number_pattern(pattern)
   let scaled = abs_value *
     @math.pow(100.0, Double::from_int(info.percent_count))
+  if scaled.is_nan() || scaled.is_inf() {
+    raise InvalidXml(msg="number format scale must remain finite")
+  }
   let formatted = if info.has_fraction {
     format_fraction_number(scaled, info)
   } else if info.has_scientific {
@@ -911,6 +917,10 @@ fn float_to_frac_use_continued_fraction(
   value : Double,
   denominator_limit : Int64,
 ) -> (Int64, Int64) {
+  if value.is_nan() || value.is_inf() || value <= 0.0 || denominator_limit <= 1L {
+    return (0L, 1L)
+  }
+  let maximum_int64 = 9_223_372_036_854_775_807L
   let mut p1 : Int64 = 1L
   let mut q1 : Int64 = 0L
   let mut p2 : Int64 = 0L
@@ -918,18 +928,34 @@ fn float_to_frac_use_continued_fraction(
   let mut lasta : Int64 = 0L
   let mut lastb : Int64 = 0L
   let mut r = value
-  while true {
-    let a = Double::to_int64(Double::floor(r))
+  // A finite Double has at most 53 significant binary digits, so 128
+  // continued-fraction steps are more than enough to reach its exact rational
+  // representation. The hard bound also makes this helper total if a future
+  // backend changes floating-point corner-case behavior.
+  for _ in 0..<128 {
+    if r.is_nan() || r.is_inf() || r < 0.0 {
+      return if lastb > 0L { (lasta, lastb) } else { (0L, 1L) }
+    }
+    let floored = Double::floor(r)
+    if floored > maximum_int64.to_double() {
+      return if lastb > 0L { (lasta, lastb) } else { (0L, 1L) }
+    }
+    let a = Double::to_int64(floored)
+    if a < 0L ||
+      (p1 > 0L && a > (maximum_int64 - p2) / p1) ||
+      (q1 > 0L && a > (maximum_int64 - q2) / q1) {
+      return if lastb > 0L { (lasta, lastb) } else { (0L, 1L) }
+    }
     let curra = a * p1 + p2
     let currb = a * q1 + q2
+    if currb <= 0L || currb >= denominator_limit {
+      return if lastb > 0L { (lasta, lastb) } else { (0L, 1L) }
+    }
     p2 = p1
     q2 = q1
     p1 = curra
     q1 = currb
     let frac = r - a.to_double()
-    if currb >= denominator_limit {
-      return (lasta, lastb)
-    }
     if frac.abs() < 0.000000000001 {
       return (curra, currb)
     }
@@ -937,7 +963,11 @@ fn float_to_frac_use_continued_fraction(
     lastb = currb
     r = 1.0 / frac
   }
-  (0L, 1L)
+  if lastb > 0L {
+    (lasta, lastb)
+  } else {
+    (0L, 1L)
+  }
 }
 
 ///|
@@ -958,9 +988,15 @@ fn format_number_simple(
   decimals : Int,
   use_group : Bool,
   percent : Bool,
-) -> String {
+) -> String raise XlsxError {
   let value = @string.parse_double(raw) catch { _ => return raw }
+  if value.is_nan() || value.is_inf() {
+    raise InvalidXml(msg="cell number must be finite")
+  }
   let scaled = if percent { value * 100.0 } else { value }
+  if scaled.is_nan() || scaled.is_inf() {
+    raise InvalidXml(msg="number format scale must remain finite")
+  }
   let info = {
     min_int_digits: 1,
     required_decimals: decimals,

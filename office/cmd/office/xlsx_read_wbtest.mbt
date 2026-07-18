@@ -891,6 +891,33 @@ async test "XLSX formatting rejects text amplification before materialization" {
 }
 
 ///|
+async test "XLSX structured formatting rejects non-finite percent scaling" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  workbook.set_cell_value("Data", "A1", Numeric(0.0))
+  let style_id = workbook.new_style(
+    @xlsx.Style::number_format("# ?/?" + "%".repeat(155)),
+  )
+  workbook.set_cell_style("Data", "A1", style_id)
+  let source = xlsx_bounded_test_source(
+    "non-finite-format.xlsx",
+    @xlsx.write(workbook),
+  )
+  let projection = make_xlsx_projection(
+    source.file,
+    open_xlsx_read_package(source),
+    10,
+  )
+  let resolved = resolve_xlsx_selector(
+    projection, "/xlsx/sheet[name=\"Data\"]/cell[A1]",
+  )
+  let error = xlsx_cli_error_async(() => {
+    ignore(xlsx_get_data(projection, resolved))
+  })
+  assert_eq(error.code, "office.invalid_package")
+}
+
+///|
 async test "XLSX outline and get use office schemas with canonical cell records" {
   let projection = xlsx_read_test_projection()
   let outline = xlsx_outline_data(projection)

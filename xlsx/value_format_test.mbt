@@ -25,6 +25,27 @@ fn format_text(value : String, fmt : String) -> String {
 }
 
 ///|
+test "fraction formatting rejects non-finite percent scaling" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Sheet1"))
+  workbook.set_cell_value("Sheet1", "A1", Numeric(0.0))
+  let style_id = workbook.new_style(
+    @xlsx.Style::number_format("# ?/?" + "%".repeat(155)),
+  )
+  workbook.set_cell_style("Sheet1", "A1", style_id)
+  let result : Result[String?, Error] = Ok(
+    workbook.get_cell_value("Sheet1", "A1"),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.XlsxError::InvalidXml(msg~)) =>
+      inspect(msg, content="number format scale must remain finite")
+    _ => fail("expected non-finite number-format scaling rejection")
+  }
+}
+
+///|
 test "general and literal formats" {
   inspect(format_numeric(43543.5448726851, "General"), content="43543.54487")
   inspect(format_numeric(1234567890.12345, "General"), content="1234567890")
