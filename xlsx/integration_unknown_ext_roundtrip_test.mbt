@@ -62,7 +62,7 @@ test "integration unknown worksheet ext roundtrip with mixed known ext" {
     Some(value) => @encoding/utf8.decode(value)
     None => fail("missing sheet2.xml")
   }
-  let unknown_ext = "    <ext uri=\"{11111111-2222-3333-4444-555555555555}\"><mbt:payload xmlns:mbt=\"urn:mbtexcel:unknown\"><mbt:value>keep-me</mbt:value></mbt:payload></ext>\n"
+  let unknown_ext = "    <ext uri=\"{11111111-2222-3333-4444-555555555555}\"><mbt:payload xmlns:mbt=\"urn:mbtexcel:unknown\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"mbt\"><mc:AlternateContent><mc:Choice Requires=\"mbt\"><mbt:value>keep-me</mbt:value></mc:Choice><mc:Fallback><fallback/></mc:Fallback></mc:AlternateContent></mbt:payload></ext>\n"
   let updated_sheet = if sheet_xml.contains("  </extLst>\n</worksheet>") {
     sheet_xml.replace_all(
       old="  </extLst>\n</worksheet>",
@@ -125,6 +125,7 @@ test "integration unknown worksheet ext roundtrip with mixed known ext" {
     roundtrip_sheet_xml.contains("<mbt:value>keep-me</mbt:value>"),
     content="true",
   )
+  inspect(roundtrip_sheet_xml.contains("<mc:AlternateContent>"), content="true")
   inspect(roundtrip_sheet_xml.contains("x14:sparklineGroups"), content="true")
   inspect(
     roundtrip_sheet_xml.contains("x14:conditionalFormattings"),

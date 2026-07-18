@@ -11,6 +11,12 @@ priv struct XmlMceName {
 } derive(Eq, Hash)
 
 ///|
+priv struct XmlMceExtensionName {
+  namespace_uri : String
+  local_name : String
+} derive(Eq, Hash)
+
+///|
 priv struct XmlMceScopeDelta {
   ignorable_namespace_ids : Array[Int]
   process_content_names : Array[XmlMceName]
@@ -25,6 +31,7 @@ priv struct XmlMceScopeEntry {
 ///|
 priv struct XmlMceContext {
   understood_namespaces : Set[String]
+  extension_elements : Set[XmlMceExtensionName]
   ignorable_namespace_counts : Map[Int, Int]
   process_content_name_counts : Map[XmlMceName, Int]
   max_work_chars : Int
@@ -34,19 +41,35 @@ priv struct XmlMceContext {
 ///|
 fn XmlMceContext::new(
   understood_namespaces : ArrayView[String],
+  extension_elements : ArrayView[(String, String)],
   max_work_chars : Int,
 ) -> XmlMceContext {
   let understood : Set[String] = Set([])
   for namespace_uri in understood_namespaces {
     understood.add(namespace_uri)
   }
+  let extensions : Set[XmlMceExtensionName] = Set([])
+  for extension in extension_elements {
+    let (namespace_uri, local_name) = extension
+    extensions.add({ namespace_uri, local_name })
+  }
   {
     understood_namespaces: understood,
+    extension_elements: extensions,
     ignorable_namespace_counts: Map([]),
     process_content_name_counts: Map([]),
     max_work_chars,
     work_chars: 0,
   }
+}
+
+///|
+fn XmlMceContext::is_extension_element(
+  self : XmlMceContext,
+  namespace_uri : String,
+  local_name : String,
+) -> Bool {
+  self.extension_elements.contains({ namespace_uri, local_name })
 }
 
 ///|
@@ -170,6 +193,7 @@ priv struct XmlMceProjectionState {
   mut alternate_choice_seen : Bool
   mut alternate_fallback_seen : Bool
   mut alternate_selected : Bool
+  opaque_descendants : Bool
 }
 
 ///|
@@ -447,6 +471,21 @@ fn xml_mce_state_for_current_element(
         alternate_choice_seen: false,
         alternate_fallback_seen: false,
         alternate_selected: false,
+        opaque_descendants: false,
+      }
+    _ => ()
+  }
+  match parent {
+    Some(parent_state) if parent_state.opaque_descendants =>
+      return {
+        active: true,
+        scope_delta: None,
+        pending_bindings: None,
+        is_alternate_content: false,
+        alternate_choice_seen: false,
+        alternate_fallback_seen: false,
+        alternate_selected: false,
+        opaque_descendants: true,
       }
     _ => ()
   }
@@ -465,6 +504,7 @@ fn xml_mce_state_for_current_element(
       alternate_choice_seen: false,
       alternate_fallback_seen: false,
       alternate_selected: false,
+      opaque_descendants: false,
     }
   }
   let parent_state = parent.unwrap()
@@ -572,6 +612,7 @@ fn xml_mce_state_for_current_element(
     alternate_choice_seen: false,
     alternate_fallback_seen: false,
     alternate_selected: false,
+    opaque_descendants: context.is_extension_element(namespace_uri, local_name),
   }
 }
 
@@ -581,12 +622,15 @@ fn xml_mce_state_for_current_element(
 /// subtrees are removed, selected `Choice`/`Fallback` and `ProcessContent`
 /// wrappers are unwrapped, and namespace declarations from removed wrappers
 /// are retained on promoted children. Processing is streaming, cancellable,
-/// and bounded by `max_output_chars`.
+/// and bounded by `max_output_chars`. Descendants of application-defined
+/// `extension_elements` remain opaque: they are namespace-validated as XML but
+/// MCE directives inside their payload are preserved rather than interpreted.
 pub fn project_xml_markup_compatibility(
   xml : StringView,
   understood_namespaces : ArrayView[String],
   max_output_chars? : Int = 16 * 1024 * 1024,
   cancelled? : () -> Bool = () => false,
+  extension_elements? : ArrayView[(String, String)] = [],
 ) -> String raise ParseXmlError {
   check_xml_cancelled(cancelled)
   if max_output_chars < 0 {
@@ -602,7 +646,9 @@ pub fn project_xml_markup_compatibility(
     max_output_chars,
     cancelled~,
   )
-  let context = XmlMceContext::new(understood_namespaces, max_output_chars)
+  let context = XmlMceContext::new(
+    understood_namespaces, extension_elements, max_output_chars,
+  )
   let states : Array[XmlMceProjectionState] = []
   while scanner.next() {
     states.push(xml_mce_state_for_current_element(scanner, states, context))

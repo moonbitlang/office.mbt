@@ -34,8 +34,13 @@ let markup_compatibility_namespace = "http://schemas.openxmlformats.org/markup-c
 ///|
 let xlsx_mce_understood_namespaces : Array[String] = [
   transitional_spreadsheet_namespace, strict_spreadsheet_namespace, transitional_relationship_attribute_namespace,
-  strict_relationship_attribute_namespace, xlsx_extension_namespace_x14, xlsx_extension_namespace_x15,
-  xlsx_extension_namespace_xm,
+  strict_relationship_attribute_namespace,
+]
+
+///|
+let xlsx_mce_extension_elements : Array[(String, String)] = [
+  (transitional_spreadsheet_namespace, "ext"),
+  (strict_spreadsheet_namespace, "ext"),
 ]
 
 ///|
@@ -52,6 +57,7 @@ fn project_xlsx_markup_compatibility(
     xlsx_mce_understood_namespaces,
     max_output_chars~,
     cancelled~,
+    extension_elements=xlsx_mce_extension_elements,
   ) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
     ReadCancelled => raise ReadCancelled

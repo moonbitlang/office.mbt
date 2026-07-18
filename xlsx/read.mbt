@@ -4641,7 +4641,23 @@ fn read_zip_archive_core_unchecked(
         Some(value) => value
         None => raise MissingPart(path=chartsheet_path)
       }
-      let chartsheet_xml = decode(chartsheet_bytes)
+      let chartsheet_raw_xml = decode_source(chartsheet_bytes)
+      read_budget.charge_work(chartsheet_raw_xml.length())
+      let chartsheet_source_xml = project_xlsx_markup_compatibility(
+        chartsheet_raw_xml,
+        limits.max_xml_part_bytes,
+        cancelled~,
+      )
+      if chartsheet_source_xml != chartsheet_raw_xml {
+        read_budget.charge_work(chartsheet_source_xml.length())
+      }
+      let chartsheet_xml = canonicalize_xlsx_xml(
+        chartsheet_source_xml,
+        max_output_chars=limits.max_xml_part_bytes,
+        cancelled~,
+      )
+      read_budget.checkpoint()
+      read_budget.charge_work(chartsheet_xml.length())
       let drawing_rel_id = parse_legacy_drawing_rel_id(
         chartsheet_xml, "drawing",
       )

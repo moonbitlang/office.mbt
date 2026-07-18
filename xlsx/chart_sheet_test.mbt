@@ -50,6 +50,61 @@ test "chart sheet write and read" {
 }
 
 ///|
+test "chart sheet MCE selects the supported drawing fallback" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  ignore(
+    workbook.add_chart_sheet(
+      "Good", "<c:chartSpace xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\"><c:chart><c:title><c:tx><c:rich><a:p xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:r><a:t>GOOD</a:t></a:r></a:p></c:rich></c:tx></c:title></c:chart></c:chartSpace>",
+    ),
+  )
+  ignore(
+    workbook.add_chart_sheet(
+      "Bad", "<c:chartSpace xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\"><c:chart><c:title><c:tx><c:rich><a:p xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:r><a:t>BAD</a:t></a:r></a:p></c:rich></c:tx></c:title></c:chart></c:chartSpace>",
+    ),
+  )
+  let archive = @zip.read(@xlsx.write(workbook))
+  guard archive.get("xl/chartsheets/sheet1.xml") is Some(sheet_bytes) else {
+    fail("missing first chart sheet")
+  }
+  let sheet_xml = @encoding/utf8.decode(sheet_bytes) catch {
+    _ => fail("chart sheet is not UTF-8")
+  }
+  let with_namespaces = sheet_xml.replace(
+    old="<chartsheet ",
+    new="<chartsheet xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"urn:unsupported\" mc:Ignorable=\"x\" ",
+  )
+  let projected = with_namespaces.replace(
+    old="<drawing r:id=\"rId1\"/>",
+    new="<mc:AlternateContent><mc:Choice Requires=\"x\"><drawing r:id=\"rIdBad\"/></mc:Choice><mc:Fallback><drawing r:id=\"rId1\"/></mc:Fallback></mc:AlternateContent>",
+  )
+  assert_true(projected != sheet_xml)
+  assert_true(
+    archive.replace(
+      "xl/chartsheets/sheet1.xml",
+      @encoding/utf8.encode(projected),
+    ),
+  )
+  let rels_path = "xl/chartsheets/_rels/sheet1.xml.rels"
+  guard archive.get(rels_path) is Some(rels_bytes) else {
+    fail("missing first chart-sheet relationships")
+  }
+  let rels = @encoding/utf8.decode(rels_bytes) catch {
+    _ => fail("chart-sheet relationships are not UTF-8")
+  }
+  let with_bad = rels.replace(
+    old="</Relationships>",
+    new="<Relationship Id=\"rIdBad\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing\" Target=\"../drawings/drawing3.xml\"/></Relationships>",
+  )
+  assert_true(with_bad != rels)
+  assert_true(archive.replace(rels_path, @encoding/utf8.encode(with_bad)))
+  let parsed = @xlsx.read(@zip.write(archive))
+  assert_eq(parsed.chart_sheets().length(), 2)
+  assert_true(parsed.chart_sheets()[0].chart_xml().contains("GOOD"))
+  assert_false(parsed.chart_sheets()[0].chart_xml().contains(">BAD<"))
+}
+
+///|
 test "chart sheet with options (excelize-like)" {
   let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

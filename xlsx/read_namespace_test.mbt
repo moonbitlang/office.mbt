@@ -159,6 +159,41 @@ test "workbook and worksheet MCE fallbacks read end to end" {
 }
 
 ///|
+test "x14 Choice uses core auto-filter fallback" {
+  let archive = @zip.read(mce_fallback_xlsx_fixture())
+  guard archive.get("xl/worksheets/sheet1.xml") is Some(sheet_bytes) else {
+    fail("missing MCE worksheet fixture")
+  }
+  let source = @encoding/utf8.decode(sheet_bytes) catch {
+    _ => fail("MCE worksheet fixture is not UTF-8")
+  }
+  let with_namespace = source.replace(
+    old="xmlns:x=\"urn:vendor\" mc:Ignorable=\"x\"",
+    new="xmlns:x=\"urn:vendor\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\" mc:Ignorable=\"x x14\"",
+  )
+  let updated = with_namespace.replace(
+    old="</worksheet>",
+    new=(
+      #|<autoFilter ref="A1:A1"><filterColumn colId="0"><mc:AlternateContent><mc:Choice Requires="x14"><x14:iconFilter iconSet="3Arrows" iconId="0"/></mc:Choice><mc:Fallback><customFilters><customFilter operator="equal" val="fallback"/></customFilters></mc:Fallback></mc:AlternateContent></filterColumn></autoFilter></worksheet>
+    ),
+  )
+  assert_true(updated != source)
+  assert_true(
+    archive.replace("xl/worksheets/sheet1.xml", @encoding/utf8.encode(updated)),
+  )
+  let parsed = @xlsx.read(@zip.write(archive))
+  guard parsed.get_auto_filter("Data") is Some(filter) else {
+    fail("missing fallback auto filter")
+  }
+  assert_eq(filter.columns.length(), 1)
+  guard filter.columns[0].custom_filters is Some(custom) else {
+    fail("missing fallback custom filter")
+  }
+  assert_eq(custom.filters.length(), 1)
+  assert_eq(custom.filters[0].value, "fallback")
+}
+
+///|
 test "physical ZIP names follow Unicode logical OPC part names end to end" {
   let workbook = @xlsx.read(unicode_part_name_xlsx_fixture())
   debug_inspect(workbook.get_sheet_list(), content="[\"Unicode\"]")

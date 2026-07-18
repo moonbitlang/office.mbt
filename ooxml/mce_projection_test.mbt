@@ -35,6 +35,16 @@ test "MCE projection unwraps ProcessContent and ignores opaque extensions" {
 }
 
 ///|
+test "MCE projection preserves configured extension payloads verbatim" {
+  let source =
+    #|<a:Root xmlns:a="urn:app" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:v="urn:vendor" mc:Ignorable="v"><a:ext><v:Payload mc:Ignorable="v"><mc:AlternateContent><mc:Choice Requires="v"><v:Keep/></mc:Choice><mc:Fallback><a:Fallback/></mc:Fallback></mc:AlternateContent></v:Payload></a:ext></a:Root>
+  let projected = @ooxml.project_xml_markup_compatibility(source, ["urn:app"], extension_elements=[
+    ("urn:app", "ext"),
+  ])
+  inspect(projected, content=source)
+}
+
+///|
 test "MCE projection does not enforce MustUnderstand on an unselected Choice" {
   let xml =
     #|<a:Root xmlns:a="urn:app" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:v="urn:vendor"><mc:AlternateContent><mc:Choice Requires="v" mc:MustUnderstand="v"/><mc:Fallback><a:Kept/></mc:Fallback></mc:AlternateContent></a:Root>
