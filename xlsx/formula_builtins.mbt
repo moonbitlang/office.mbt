@@ -3858,8 +3858,7 @@ fn eval_function(
           Ok(parts) => parts
           Err(err) => return err
         }
-        match
-          iso_week_number(year, month, day, use_1904_dates=ctx.use_1904_dates) {
+        match iso_week_number(year, month, day) {
           Some(week) => Number(Double::from_int(week))
           None => Error(formula_error_num)
         }

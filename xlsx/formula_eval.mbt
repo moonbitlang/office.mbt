@@ -5850,35 +5850,6 @@ fn normalize_date_parts(year : Int, month : Int, day : Int) -> (Int, Int, Int) {
 }
 
 ///|
-fn days_before_year(year : Int) -> Int {
-  let mut days = 0
-  let mut y = 1900
-  if year >= 1900 {
-    while y < year {
-      let inc = if is_leap_year(y) { 366 } else { 365 }
-      days = days + inc
-      y = y + 1
-    }
-  } else {
-    while y > year {
-      y = y - 1
-      let dec = if is_leap_year(y) { 366 } else { 365 }
-      days = days - dec
-    }
-  }
-  days
-}
-
-///|
-fn days_before_month(year : Int, month : Int) -> Int {
-  let mut days = 0
-  for m in 1..<month {
-    days = days + days_in_month(year, m)
-  }
-  days
-}
-
-///|
 fn excel_serial_from_date(
   year : Int,
   month : Int,
@@ -5895,11 +5866,9 @@ fn excel_serial_from_date(
   let serial = if use_1904_dates {
     days_from_civil(y, m, d) - days_from_civil(1904, 1, 1)
   } else {
-    let mut days = days_before_year(y)
-    days = days + days_before_month(y, m)
-    days = days + (d - 1)
-    let mut value = days + 1
-    if value >= 60 {
+    let civil_day = days_from_civil(y, m, d)
+    let mut value = civil_day - days_from_civil(1899, 12, 31)
+    if civil_day >= days_from_civil(1900, 3, 1) {
       value = value + 1
     }
     value
@@ -6025,15 +5994,13 @@ fn days_in_year(year : Int) -> Int {
 
 ///|
 fn day_of_year(year : Int, month : Int, day : Int) -> Int {
-  days_before_month(year, month) + day
+  days_from_civil(year, month, day) - days_from_civil(year, 1, 1) + 1
 }
 
 ///|
 fn weekday_monday1(year : Int, month : Int, day : Int) -> Int {
-  let mut days = days_before_year(year)
-  days = days + days_before_month(year, month)
-  days = days + (day - 1)
-  let mut idx = days % 7
+  // 1970-01-01 was Thursday, or weekday 4 when Monday is 1.
+  let mut idx = (days_from_civil(year, month, day) + 3) % 7
   if idx < 0 {
     idx = idx + 7
   }
@@ -6051,32 +6018,36 @@ fn weekday_sun1(year : Int, month : Int, day : Int) -> Int {
 }
 
 ///|
-fn iso_week_number(
-  year : Int,
-  month : Int,
-  day : Int,
-  use_1904_dates? : Bool = false,
-) -> Int? {
-  let serial = match excel_serial_from_date(year, month, day, use_1904_dates~) {
-    Some(value) => value
-    None => return None
+fn iso_weeks_in_year(year : Int) -> Int {
+  let january_first = weekday_monday1(year, 1, 1)
+  if january_first == 4 || (january_first == 3 && is_leap_year(year)) {
+    53
+  } else {
+    52
+  }
+}
+
+///|
+fn iso_week_number(year : Int, month : Int, day : Int) -> Int? {
+  if year < 1 ||
+    year > 9999 ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > days_in_month(year, month) {
+    return None
   }
   let weekday = weekday_monday1(year, month, day)
-  let thursday_serial = serial + Double::from_int(4 - weekday)
-  let (iso_year, _, _) = match
-    date_parts_from_serial(thursday_serial, use_1904_dates~) {
-    Some(parts) => parts
-    None => return None
+  let mut week = (day_of_year(year, month, day) - weekday + 10) / 7
+  if week < 1 {
+    if year == 1 {
+      return None
+    }
+    week = iso_weeks_in_year(year - 1)
+  } else if week > iso_weeks_in_year(year) {
+    week = 1
   }
-  let week1_serial = match
-    excel_serial_from_date(iso_year, 1, 4, use_1904_dates~) {
-    Some(value) => value
-    None => return None
-  }
-  let week1_weekday = weekday_monday1(iso_year, 1, 4)
-  let week1_thursday = week1_serial + Double::from_int(4 - week1_weekday)
-  let offset = (thursday_serial - week1_thursday) / 7.0
-  Some(Double::to_int(Double::floor(offset)) + 1)
+  Some(week)
 }
 
 ///|
