@@ -25,10 +25,26 @@ fn format_text(value : String, fmt : String) -> String {
 }
 
 ///|
-test "fraction formatting rejects non-finite percent scaling" {
+test "fraction formatting keeps zero finite across percent scaling" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.new_sheet("Sheet1"))
   workbook.set_cell_value("Sheet1", "A1", Numeric(0.0))
+  let style_id = workbook.new_style(
+    @xlsx.Style::number_format("# ?/?" + "%".repeat(155)),
+  )
+  workbook.set_cell_style("Sheet1", "A1", style_id)
+  guard workbook.get_cell_value("Sheet1", "A1") is Some(formatted) else {
+    fail("expected formatted numeric zero")
+  }
+  assert_true(formatted.has_prefix("0"))
+  assert_true(formatted.has_suffix("%".repeat(155)))
+}
+
+///|
+test "fraction formatting rejects non-finite nonzero percent scaling" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Sheet1"))
+  workbook.set_cell_value("Sheet1", "A1", Numeric(1.0))
   let style_id = workbook.new_style(
     @xlsx.Style::number_format("# ?/?" + "%".repeat(155)),
   )
