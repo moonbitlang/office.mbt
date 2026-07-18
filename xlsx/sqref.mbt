@@ -128,12 +128,13 @@ fn normalize_xml_sqref_attr_for_read(
     Some(value) => value
     None => raise InvalidXml(msg="\{field.to_owned()} tag missing")
   }
-  let raw = match attr_value(tag, "sqref") {
-    Some(value) => unescape_xml_text(value)
+  let encoded = match attr_value(tag, "sqref") {
+    Some(value) => value
     None => raise InvalidXml(msg="\{field.to_owned()} sqref missing")
   }
+  let raw = unescape_xml_text(encoded)
   let normalized = normalize_sqref_for_read(raw, field, budget?)
-  if normalized == raw {
+  if normalized == encoded {
     return xml.to_owned()
   }
   match replace_attr_value_in_open_tag(xml, "sqref", normalized) {

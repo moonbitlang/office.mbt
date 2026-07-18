@@ -3966,21 +3966,19 @@ fn duplicate_xml_sqref(
 }
 
 ///|
-fn Worksheet::duplicate_conditional_formats(
-  self : Worksheet,
+fn duplicate_xml_sqref_copies(
+  entries : ArrayView[String],
   row : Int,
   target_row : Int,
-) -> Unit raise XlsxError {
+) -> Array[String] raise XlsxError {
   let copies : Array[String] = []
-  for xml in self.conditional_formats {
+  for xml in entries {
     match duplicate_xml_sqref(xml, row, target_row) {
       Some(value) => copies.push(value)
       None => ()
     }
   }
-  if copies.length() > 0 {
-    self.conditional_formats.append(copies)
-  }
+  copies
 }
 
 ///|
@@ -3989,16 +3987,45 @@ fn Worksheet::duplicate_data_validations(
   row : Int,
   target_row : Int,
 ) -> Unit raise XlsxError {
-  let copies : Array[String] = []
-  for xml in self.data_validations {
-    match duplicate_xml_sqref(xml, row, target_row) {
-      Some(value) => copies.push(value)
-      None => ()
-    }
-  }
+  let copies = duplicate_xml_sqref_copies(
+    self.data_validations,
+    row,
+    target_row,
+  )
   if copies.length() > 0 {
     self.data_validations.append(copies)
   }
+}
+
+///|
+fn duplicate_merge_cell_copies(
+  merged_cells : ArrayView[String],
+  row : Int,
+  target_row : Int,
+) -> Array[String] raise XlsxError {
+  let copies : Array[String] = []
+  let mut source_row = row
+  if row > target_row {
+    source_row = row + 1
+  }
+  for range_ref in merged_cells {
+    let (min_row, _min_col, max_row, _max_col) = parse_range_ref(range_ref)
+    if min_row < target_row && target_row < max_row {
+      return copies
+    }
+  }
+  for range_ref in merged_cells {
+    let (min_row, min_col, max_row, max_col) = parse_range_ref(range_ref)
+    if min_row == max_row && min_row == source_row {
+      let from_ref = cell_ref_from(target_row, min_col)
+      let to_ref = cell_ref_from(target_row, max_col)
+      let duplicate = normalize_range_ref("\{from_ref}:\{to_ref}")
+      if !merged_cells.contains(duplicate) && !copies.contains(duplicate) {
+        copies.push(duplicate)
+      }
+    }
+  }
+  copies
 }
 
 ///|
@@ -4007,24 +4034,8 @@ fn Worksheet::duplicate_merge_cells(
   row : Int,
   target_row : Int,
 ) -> Unit raise XlsxError {
-  let mut source_row = row
-  if row > target_row {
-    source_row = row + 1
-  }
-  for range_ref in self.merged_cells {
-    let (min_row, _min_col, max_row, _max_col) = parse_range_ref(range_ref)
-    if min_row < target_row && target_row < max_row {
-      return
-    }
-  }
-  for range_ref in self.merged_cells {
-    let (min_row, min_col, max_row, max_col) = parse_range_ref(range_ref)
-    if min_row == max_row && min_row == source_row {
-      let from_ref = cell_ref_from(target_row, min_col)
-      let to_ref = cell_ref_from(target_row, max_col)
-      self.merge_cells("\{from_ref}:\{to_ref}")
-    }
-  }
+  let copies = duplicate_merge_cell_copies(self.merged_cells, row, target_row)
+  self.merged_cells.append(copies)
 }
 
 ///|
@@ -4061,7 +4072,10 @@ fn Worksheet::duplicate_row_to(
     translation_budget,
     fn(cell : Cell) -> Bool { cell.row == row },
   )
-  let row_cells : Array[Cell] = []
+  // Stage every fallible derivative before `insert_rows` commits its own
+  // transactional shift. Once that insert succeeds, the remaining appends and
+  // map assignments below are infallible state installation.
+  let duplicated_cells : Array[Cell] = []
   for stored_cell in self.cells {
     if stored_cell.row != row {
       continue
@@ -4069,19 +4083,8 @@ fn Worksheet::duplicate_row_to(
     let cell = normal_formula_cell_for_structural_edit(
       stored_cell, shared_formula_masters, translation_budget,
     )
-    row_cells.push(cell)
-  }
-  let row_dim = self.row_dimensions.get(row)
-  self.insert_rows(
-    target_row,
-    1,
-    formula_limits~,
-    cancelled~,
-    formula_budget=translation_budget,
-  )
-  for cell in row_cells {
     let reference = cell_ref_from(target_row, cell.col)
-    self.cells.push({
+    duplicated_cells.push({
       reference,
       row: target_row,
       col: cell.col,
@@ -4096,13 +4099,44 @@ fn Worksheet::duplicate_row_to(
       style_id: cell.style_id,
     })
   }
+  let row_dim = self.row_dimensions.get(row)
+  let conditional_format_copies = duplicate_xml_sqref_copies(
+    self.conditional_formats,
+    row,
+    target_row,
+  )
+  let data_validation_copies = duplicate_xml_sqref_copies(
+    self.data_validations,
+    row,
+    target_row,
+  )
+  let shifted_merges : Array[String] = []
+  for range_ref in self.merged_cells {
+    shifted_merges.push(adjust_range_after_row_insert(range_ref, target_row, 1))
+  }
+  let merge_copies = duplicate_merge_cell_copies(
+    shifted_merges, row, target_row,
+  )
+  self.insert_rows(
+    target_row,
+    1,
+    formula_limits~,
+    cancelled~,
+    formula_budget=translation_budget,
+  )
+  self.cells.append(duplicated_cells)
   match row_dim {
-    Some(dim) => self.set_row_dimension(target_row, dim)
+    Some(dim) =>
+      if row_dimension_is_default(dim) {
+        self.row_dimensions.remove(target_row)
+      } else {
+        self.row_dimensions[target_row] = dim
+      }
     None => self.row_dimensions.remove(target_row)
   }
-  self.duplicate_conditional_formats(row, target_row)
-  self.duplicate_data_validations(row, target_row)
-  self.duplicate_merge_cells(row, target_row)
+  self.conditional_formats.append(conditional_format_copies)
+  self.data_validations.append(data_validation_copies)
+  self.merged_cells.append(merge_copies)
 }
 
 ///|
@@ -5942,6 +5976,24 @@ test "worksheet wb: duplicate-row helper edge branches" {
     bad_target is Err(XlsxError::InvalidSheetOperation(_)),
     content="true",
   )
+}
+
+///|
+test "worksheet wb: duplicate row stages malformed sqref before mutation" {
+  let sheet = Worksheet::new("Atomic")
+  sheet.set_cell("A1", "source")
+  sheet.set_cell("A2", "tail")
+  sheet.add_data_validation_xml(
+    "<dataValidation type=\"whole\" sqref=\"A1&#x20;B1\"/>",
+  )
+  let result : Result[Unit, Error] = Ok(sheet.duplicate_row_to(1, 2)) catch {
+    error => Err(error)
+  }
+  assert_true(result is Err(_))
+  debug_inspect(sheet.get_cell("A1"), content="Some(\"source\")")
+  debug_inspect(sheet.get_cell("A2"), content="Some(\"tail\")")
+  debug_inspect(sheet.get_cell("A3"), content="None")
+  inspect(sheet.data_validations().length(), content="1")
 }
 
 ///|

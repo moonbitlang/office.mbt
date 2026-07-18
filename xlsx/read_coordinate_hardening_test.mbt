@@ -427,6 +427,12 @@ test "coordinate attributes accept quoted delimiters and numeric XML spaces" {
   let validations = workbook.get_data_validations("Sheet1")
   inspect(validations.length(), content="1")
   inspect(validations[0].sqref, content="A1 B1 C1")
+  guard workbook.sheet("Sheet1") is Some(sheet) else {
+    fail("missing entity-sqref worksheet")
+  }
+  assert_false(sheet.data_validations()[0].contains("&#"))
+  workbook.duplicate_row_to("Sheet1", 1, 2)
+  ignore(@xlsx.read(@xlsx.write(workbook)))
 }
 
 ///|
