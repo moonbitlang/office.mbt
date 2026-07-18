@@ -8,7 +8,7 @@ import {
 // Values
 pub fn attr_value(StringView, StringView) -> String? raise ParseXmlError
 
-pub fn canonicalize_xml_expanded_names(StringView, ArrayView[String], ArrayView[(String, String)], max_output_chars? : Int, cancelled? : () -> Bool) -> String raise ParseXmlError
+pub fn canonicalize_xml_expanded_names(StringView, ArrayView[String], ArrayView[(String, String)], max_output_chars? : Int, cancelled? : () -> Bool, element_prefixes? : ArrayView[(String, String)]) -> String raise ParseXmlError
 
 pub fn decode_xml_attribute(StringView, cancelled? : () -> Bool) -> String raise ParseXmlError
 
