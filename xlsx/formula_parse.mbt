@@ -1,11 +1,12 @@
 ///|
-fn CalcContext::new() -> CalcContext {
+fn CalcContext::new(use_1904_dates? : Bool = false) -> CalcContext {
   {
     visiting: Map([]),
     depth: 0,
     max_depth: 128,
     current_sheet: "",
     current_ref: "",
+    use_1904_dates,
   }
 }
 

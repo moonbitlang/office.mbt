@@ -1929,7 +1929,7 @@ pub fn Workbook::calc_cell_value(
   }
   let (row, col) = cell_ref_to_rc(reference)
   let canonical = cell_ref_from(row, col)
-  let ctx = CalcContext::new()
+  let ctx = CalcContext::new(use_1904_dates=self.uses_1904_date_system())
   let value = resolve_cell_value(self, sheet.name(), canonical, ctx)
   let (value_type, raw_value) = formula_value_to_cell(value)
   if raw || resolved_options.raw_cell_value {
@@ -1992,7 +1992,7 @@ pub fn Workbook::calc_cell_typed(
   }
   let (row, col) = cell_ref_to_rc(reference)
   let canonical = cell_ref_from(row, col)
-  let ctx = CalcContext::new()
+  let ctx = CalcContext::new(use_1904_dates=self.uses_1904_date_system())
   formula_value_to_cell_value(
     resolve_cell_value(self, sheet.name(), canonical, ctx),
   )
