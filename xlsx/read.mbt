@@ -91,9 +91,14 @@ fn decode_utf8(
       }
     None => ()
   }
-  @encoding/utf8.decode(bytes) catch {
+  @encoding/utf8.decode(bytes, ignore_bom=true) catch {
     _ => raise InvalidXml(msg="invalid utf8")
   }
+}
+
+///|
+test "XLSX XML decoding strips a legal UTF-8 BOM" {
+  inspect(decode_utf8(b"\xEF\xBB\xBF<root/>", None), content="<root/>")
 }
 
 ///|

@@ -88,19 +88,55 @@ fn check_xml_cancelled(cancelled : () -> Bool) -> Unit raise ParseXmlError {
 }
 
 ///|
-fn is_xml_name_start(unit : UInt16) -> Bool {
-  (unit >= ('A' : UInt16) && unit <= ('Z' : UInt16)) ||
-  (unit >= ('a' : UInt16) && unit <= ('z' : UInt16)) ||
-  unit == ('_' : UInt16) ||
-  unit >= 0x80
+fn xml_name_scalar_at(xml : StringView, index : Int, end : Int) -> (Int, Int)? {
+  if index >= end {
+    return None
+  }
+  let first = xml[index].to_int()
+  if first >= 0xd800 && first <= 0xdbff {
+    if index + 1 >= end {
+      return None
+    }
+    let second = xml[index + 1].to_int()
+    if second < 0xdc00 || second > 0xdfff {
+      return None
+    }
+    Some((0x10000 + ((first - 0xd800) << 10) + second - 0xdc00, index + 2))
+  } else if first >= 0xdc00 && first <= 0xdfff {
+    None
+  } else {
+    Some((first, index + 1))
+  }
 }
 
 ///|
-fn is_xml_name_unit(unit : UInt16) -> Bool {
-  is_xml_name_start(unit) ||
-  (unit >= ('0' : UInt16) && unit <= ('9' : UInt16)) ||
-  unit == ('-' : UInt16) ||
-  unit == ('.' : UInt16)
+fn is_xml_name_start_scalar(code : Int) -> Bool {
+  (code >= 'A'.to_int() && code <= 'Z'.to_int()) ||
+  (code >= 'a'.to_int() && code <= 'z'.to_int()) ||
+  code == '_'.to_int() ||
+  (code >= 0xc0 && code <= 0xd6) ||
+  (code >= 0xd8 && code <= 0xf6) ||
+  (code >= 0xf8 && code <= 0x2ff) ||
+  (code >= 0x370 && code <= 0x37d) ||
+  (code >= 0x37f && code <= 0x1fff) ||
+  (code >= 0x200c && code <= 0x200d) ||
+  (code >= 0x2070 && code <= 0x218f) ||
+  (code >= 0x2c00 && code <= 0x2fef) ||
+  (code >= 0x3001 && code <= 0xd7ff) ||
+  (code >= 0xf900 && code <= 0xfdcf) ||
+  (code >= 0xfdf0 && code <= 0xfffd) ||
+  (code >= 0x10000 && code <= 0xeffff)
+}
+
+///|
+fn is_xml_name_scalar(code : Int) -> Bool {
+  is_xml_name_start_scalar(code) ||
+  (code >= '0'.to_int() && code <= '9'.to_int()) ||
+  code == '-'.to_int() ||
+  code == '.'.to_int() ||
+  code == 0xb7 ||
+  (code >= 0x300 && code <= 0x36f) ||
+  (code >= 0x203f && code <= 0x2040)
 }
 
 ///|
@@ -116,13 +152,15 @@ fn validate_xml_qname(
     raise InvalidXml(msg="XML qualified name is too long")
   }
   let mut colon : Int? = None
-  for index in start..<end {
+  let mut index = start
+  while index < end {
     let unit = xml[index]
     if unit == (':' : UInt16) {
       if colon is Some(_) || index == start || index + 1 == end {
         raise InvalidXml(msg="XML qualified name is invalid")
       }
       colon = Some(index)
+      index += 1
     } else {
       let local_start = if index == start {
         true
@@ -132,13 +170,17 @@ fn validate_xml_qname(
           None => false
         }
       }
-      if local_start {
-        if !is_xml_name_start(unit) {
-          raise InvalidXml(msg="XML qualified name is invalid")
-        }
-      } else if !is_xml_name_unit(unit) {
+      guard xml_name_scalar_at(xml, index, end) is Some((code, next)) else {
         raise InvalidXml(msg="XML qualified name is invalid")
       }
+      if local_start {
+        if !is_xml_name_start_scalar(code) {
+          raise InvalidXml(msg="XML qualified name is invalid")
+        }
+      } else if !is_xml_name_scalar(code) {
+        raise InvalidXml(msg="XML qualified name is invalid")
+      }
+      index = next
     }
   }
   colon
@@ -2053,6 +2095,24 @@ test "start tag scanner bounds qualified names" {
     _ => fail("unexpected scanner cancellation")
   } noraise {
     _ => fail("expected qualified-name limit")
+  }
+}
+
+///|
+test "start tag scanner enforces XML Unicode name ranges" {
+  for xml in ["<·bad/>", "<‿bad/>"] {
+    let scanner = XmlStartTagScanner::new(xml)
+    try scanner.next() catch {
+      InvalidXml(msg~) => inspect(msg, content="XML qualified name is invalid")
+      _ => fail("unexpected scanner cancellation")
+    } noraise {
+      _ => fail("expected invalid XML qualified name")
+    }
+  }
+  for xml in ["<é/>", "<𐀀/>", "<a·b/>"] {
+    let scanner = XmlStartTagScanner::new(xml)
+    assert_true(scanner.next())
+    assert_false(scanner.next())
   }
 }
 

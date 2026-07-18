@@ -126,7 +126,7 @@ fn validate_ooxml_archive(archive : @zip.Archive) -> Array[String] {
 /// Decodes a package part as UTF-8, tolerating a leading BOM. Used only
 /// for the ASCII-structured package plumbing (content types, rels).
 fn decode_package_part(data : BytesView) -> String {
-  @encoding/utf8.decode(data) catch {
+  @encoding/utf8.decode(data, ignore_bom=true) catch {
     _ => ""
   }
 }
