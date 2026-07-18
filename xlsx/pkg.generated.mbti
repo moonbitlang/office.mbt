@@ -595,6 +595,7 @@ pub struct Cols {
   mut index : Int
   styles : Array[Style]?
   options : Options
+  use_1904_format : Bool
   mut err : XlsxError?
 }
 pub fn Cols::col_index(Self) -> Int?
@@ -1291,6 +1292,7 @@ pub struct Rows {
   mut index : Int
   styles : Array[Style]?
   options : Options
+  use_1904_format : Bool
 }
 pub fn Rows::close(Self) -> Unit
 pub fn Rows::columns(Self, options? : Options) -> Array[String] raise XlsxError

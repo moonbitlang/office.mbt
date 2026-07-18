@@ -69,6 +69,8 @@ type XlsxCellSnapshot
 
 type XlsxFormatBudget
 
+type XlsxJsonRetention
+
 type XlsxMetadataBudget
 
 type XlsxNumberOperator
@@ -80,6 +82,8 @@ type XlsxQuerySpec
 type XlsxRect
 
 type XlsxResolvedSelector
+
+type XlsxRetainedJsonKind
 
 type XlsxScanBudget
 
