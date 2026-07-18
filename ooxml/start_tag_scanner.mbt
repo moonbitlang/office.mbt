@@ -222,6 +222,236 @@ fn find_xml_sequence(
 }
 
 ///|
+fn xml_span_equals_ascii_case_insensitive(
+  xml : StringView,
+  start : Int,
+  end : Int,
+  expected : StringView,
+) -> Bool {
+  if end - start != expected.length() {
+    return false
+  }
+  for offset in 0..<expected.length() {
+    let actual = xml[start + offset].to_int()
+    let wanted = expected[offset].to_int()
+    let actual_lower = if actual >= ('A' : UInt16).to_int() &&
+      actual <= ('Z' : UInt16).to_int() {
+      actual + 32
+    } else {
+      actual
+    }
+    let wanted_lower = if wanted >= ('A' : UInt16).to_int() &&
+      wanted <= ('Z' : UInt16).to_int() {
+      wanted + 32
+    } else {
+      wanted
+    }
+    if actual_lower != wanted_lower {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn validate_xml_character_span(
+  xml : StringView,
+  start : Int,
+  end : Int,
+  cancelled : () -> Bool,
+) -> Unit raise ParseXmlError {
+  let mut index = start
+  let mut next_checkpoint = start
+  while index < end {
+    if index >= next_checkpoint {
+      check_xml_cancelled(cancelled)
+      next_checkpoint = index + 4096
+    }
+    let unit = xml[index]
+    if unit < 0x20 &&
+      unit != ('\t' : UInt16) &&
+      unit != ('\n' : UInt16) &&
+      unit != ('\r' : UInt16) {
+      raise InvalidXml(msg="XML markup contains an invalid character")
+    }
+    if unit == 0xfffe || unit == 0xffff || unit.is_trailing_surrogate() {
+      raise InvalidXml(msg="XML markup contains an invalid character")
+    }
+    if unit.is_leading_surrogate() {
+      if index + 1 >= end || !xml[index + 1].is_trailing_surrogate() {
+        raise InvalidXml(msg="XML markup contains an invalid character")
+      }
+      index = index + 2
+    } else {
+      index = index + 1
+    }
+  }
+  check_xml_cancelled(cancelled)
+}
+
+///|
+fn validate_xml_encoding_name(value : StringView) -> Bool {
+  if value.length() == 0 ||
+    !((value[0] >= ('A' : UInt16) && value[0] <= ('Z' : UInt16)) ||
+    (value[0] >= ('a' : UInt16) && value[0] <= ('z' : UInt16))) {
+    return false
+  }
+  for unit in value[1:] {
+    let valid = (unit >= 'A' && unit <= 'Z') ||
+      (unit >= 'a' && unit <= 'z') ||
+      (unit >= '0' && unit <= '9') ||
+      unit == '.' ||
+      unit == '_' ||
+      unit == '-'
+    if !valid {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn validate_xml_declaration(
+  xml : StringView,
+  attributes_start : Int,
+  end : Int,
+  cancelled : () -> Bool,
+) -> Unit raise ParseXmlError {
+  if attributes_start >= end || !is_attr_space(xml[attributes_start]) {
+    raise InvalidXml(msg="XML declaration version is missing")
+  }
+  let mut next = attributes_start
+  let mut position = 0
+  let mut saw_encoding = false
+  let mut saw_standalone = false
+  while next_xml_attribute(xml, next, end, cancelled~) is Some(attribute) {
+    validate_xml_character_span(
+      xml,
+      attribute.value_start,
+      attribute.value_end,
+      cancelled,
+    )
+    if position == 0 {
+      if !xml_span_equals(
+          xml,
+          attribute.name_start,
+          attribute.name_end,
+          "version",
+        ) ||
+        (
+          !xml_span_equals(
+            xml,
+            attribute.value_start,
+            attribute.value_end,
+            "1.0",
+          ) &&
+          !xml_span_equals(
+            xml,
+            attribute.value_start,
+            attribute.value_end,
+            "1.1",
+          )
+        ) {
+        raise InvalidXml(msg="XML declaration version is invalid")
+      }
+    } else if xml_span_equals(
+        xml,
+        attribute.name_start,
+        attribute.name_end,
+        "encoding",
+      ) {
+      if saw_encoding ||
+        saw_standalone ||
+        !validate_xml_encoding_name(
+          xml[attribute.value_start:attribute.value_end],
+        ) {
+        raise InvalidXml(msg="XML declaration encoding is invalid")
+      }
+      saw_encoding = true
+    } else if xml_span_equals(
+        xml,
+        attribute.name_start,
+        attribute.name_end,
+        "standalone",
+      ) {
+      if saw_standalone ||
+        (
+          !xml_span_equals(
+            xml,
+            attribute.value_start,
+            attribute.value_end,
+            "yes",
+          ) &&
+          !xml_span_equals(
+            xml,
+            attribute.value_start,
+            attribute.value_end,
+            "no",
+          )
+        ) {
+        raise InvalidXml(msg="XML declaration standalone value is invalid")
+      }
+      saw_standalone = true
+    } else {
+      raise InvalidXml(msg="XML declaration attribute is invalid")
+    }
+    position = position + 1
+    next = attribute.next
+  }
+  if position == 0 {
+    raise InvalidXml(msg="XML declaration version is missing")
+  }
+}
+
+///|
+fn XmlStartTagScanner::validate_processing_instruction(
+  self : XmlStartTagScanner,
+  start : Int,
+  end : Int,
+) -> Unit raise ParseXmlError {
+  let target_start = start + 2
+  let mut target_end = target_start
+  while target_end < end && !is_attr_space(self.xml[target_end]) {
+    target_end = target_end + 1
+  }
+  ignore(validate_xml_qname(self.xml, target_start, target_end))
+  let reserved = xml_span_equals_ascii_case_insensitive(
+    self.xml,
+    target_start,
+    target_end,
+    "xml",
+  )
+  if reserved {
+    if start != 0 ||
+      !xml_span_equals(self.xml, target_start, target_end, "xml") ||
+      self.depth != 0 ||
+      self.root_seen ||
+      self.root_closed {
+      raise InvalidXml(msg="XML declaration is misplaced")
+    }
+    validate_xml_declaration(self.xml, target_end, end, self.cancelled)
+  } else {
+    validate_xml_character_span(self.xml, target_end, end, self.cancelled)
+  }
+}
+
+///|
+fn XmlStartTagScanner::validate_comment(
+  self : XmlStartTagScanner,
+  start : Int,
+  end : Int,
+) -> Unit raise ParseXmlError {
+  let content_start = start + 4
+  validate_xml_character_span(self.xml, content_start, end, self.cancelled)
+  for index in content_start..<end {
+    if self.xml[index] == ('-' : UInt16) &&
+      (index + 1 == end || self.xml[index + 1] == ('-' : UInt16)) {
+      raise InvalidXml(msg="XML comment contains an invalid hyphen sequence")
+    }
+  }
+}
+
+///|
 fn find_xml_tag_end(
   xml : StringView,
   search_start : Int,
@@ -1102,6 +1332,7 @@ pub fn XmlStartTagScanner::next(
         Some(value) => value
         None => raise InvalidXml(msg="XML processing instruction is not closed")
       }
+      self.validate_processing_instruction(start, end)
       if self.canonicalize_markup {
         self.record_rewrite(start, end + 2, "")
       }
@@ -1121,6 +1352,7 @@ pub fn XmlStartTagScanner::next(
           Some(value) => value
           None => raise InvalidXml(msg="XML comment is not closed")
         }
+        self.validate_comment(start, end)
         if self.canonicalize_markup {
           self.record_rewrite(start, end + 3, "")
         }
@@ -1669,6 +1901,33 @@ test "start tag scanner validates unused attributes and document structure" {
       _ => fail("unexpected scanner cancellation")
     } noraise {
       _ => fail("expected malformed XML document")
+    }
+  }
+}
+
+///|
+test "start tag scanner validates declarations, PI targets, and comments" {
+  let valid = XmlStartTagScanner::new(
+    "<?xml version='1.0' encoding='UTF-8' standalone='yes'?><root><?probe ok?></root>",
+  )
+  assert_true(valid.next())
+  assert_false(valid.next())
+
+  for
+    xml in [
+      "<root><?xml version='1.0'?></root>", "<?XML version='1.0'?><root/>", "<?xml encoding='UTF-8'?><root/>",
+      "<?1probe?><root/>", "<root><!--a--b--></root>", "<root><!--a---></root>",
+    ] {
+    let scanner = XmlStartTagScanner::new(xml)
+    try {
+      while scanner.next() {
+
+      }
+    } catch {
+      InvalidXml(_) => ()
+      _ => fail("unexpected markup validation cancellation")
+    } noraise {
+      _ => fail("expected invalid XML markup")
     }
   }
 }
