@@ -107,6 +107,97 @@ test "ooxml read_parse: relationship target modes are explicit and filtered" {
 }
 
 ///|
+test "ooxml read_parse: relationships apply OPC Markup Compatibility" {
+  let process_content =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:v="urn:vendor" mc:Ignorable="v" mc:ProcessContent="v:Wrapper"><v:Ignored/><v:Wrapper><Relationship Id="processed" Type="wanted" Target="processed.xml"/></v:Wrapper></Relationships>
+  let selected_choice =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:r="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:v="urn:vendor"><mc:AlternateContent><mc:Choice Requires="v"><v:Unsupported/></mc:Choice><mc:Choice Requires="r"><Relationship Id="choice" Type="wanted" Target="choice.xml"/></mc:Choice><mc:Fallback><Relationship Id="fallback" Type="wanted" Target="fallback.xml"/></mc:Fallback></mc:AlternateContent></Relationships>
+  let selected_fallback =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:v="urn:vendor"><mc:AlternateContent><mc:Choice Requires="v"><v:Unsupported/></mc:Choice><mc:Fallback><Relationship Id="fallback" Type="wanted" Target="fallback.xml"/></mc:Fallback></mc:AlternateContent></Relationships>
+  let processed = @ooxml.parse_internal_relationship_targets(
+    process_content, "wanted",
+  )
+  assert_eq(processed.get("processed"), Some("processed.xml"))
+  assert_eq(processed.length(), 1)
+  let choice = @ooxml.parse_internal_relationship_targets(
+    selected_choice, "wanted",
+  )
+  assert_eq(choice.get("choice"), Some("choice.xml"))
+  assert_eq(choice.length(), 1)
+  let fallback = @ooxml.parse_internal_relationship_targets(
+    selected_fallback, "wanted",
+  )
+  assert_eq(fallback.get("fallback"), Some("fallback.xml"))
+  assert_eq(fallback.length(), 1)
+}
+
+///|
+test "ooxml read_parse: invalid relationship MCE fails closed" {
+  let cases : Array[(String, String)] = [
+    (
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:AlternateContent><mc:Fallback/></mc:AlternateContent></Relationships>
+      ),
+      "MCE AlternateContent has no Choice element",
+    ),
+    (
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:v="urn:vendor"><mc:AlternateContent><mc:Choice Requires="v"/><mc:Fallback/><mc:Choice Requires="v"/></mc:AlternateContent></Relationships>
+      ),
+      "MCE Choice follows Fallback",
+    ),
+    (
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:v="urn:vendor"><mc:AlternateContent><mc:Choice Requires="v"/><mc:Fallback/><mc:Fallback/></mc:AlternateContent></Relationships>
+      ),
+      "MCE AlternateContent has multiple Fallback elements",
+    ),
+    (
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:v="urn:vendor" mc:MustUnderstand="v"/>
+      ),
+      "MCE MustUnderstand namespace is unsupported",
+    ),
+    (
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:v="urn:vendor" mc:Ignorable="v" mc:ProcessContent="v:*"/>
+      ),
+      "MCE ProcessContent wildcard is invalid",
+    ),
+    (
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:v="urn:vendor" mc:Ignorable="v" mc:ProcessContent="v:Wrapper"><v:Wrapper xml:base="elsewhere"><Relationship Id="bad" Type="wanted" Target="bad.xml"/></v:Wrapper></Relationships>
+      ),
+      "MCE ProcessContent element has an unsafe xml attribute",
+    ),
+    (
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Unknown/></Relationships>
+      ),
+      "relationships effective content is invalid",
+    ),
+  ]
+  for case in cases {
+    let (xml, expected) = case
+    try @ooxml.parse_internal_relationship_targets(xml, "wanted") catch {
+      InvalidXml(msg~) => assert_eq(msg, expected)
+      _ => fail("unexpected relationship parse cancellation")
+    } noraise {
+      _ => fail("expected invalid relationship MCE")
+    }
+  }
+}
+
+///|
+test "ooxml read_parse: unselected MCE choices remain opaque" {
+  let xml =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:r="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:v="urn:vendor"><mc:AlternateContent><mc:Choice Requires="v"><v:Unsupported mc:MustUnderstand="missing"><Relationship/></v:Unsupported></mc:Choice><mc:Choice Requires="r"><Relationship Id="selected" Type="wanted" Target="selected.xml"/></mc:Choice></mc:AlternateContent></Relationships>
+  let targets = @ooxml.parse_internal_relationship_targets(xml, "wanted")
+  assert_eq(targets.get("selected"), Some("selected.xml"))
+  assert_eq(targets.length(), 1)
+}
+
+///|
 test "ooxml read_parse: invalid target modes fail closed" {
   let xml =
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="bad" Type="wanted" Target="inside.xml" TargetMode="Remote"/></Relationships>

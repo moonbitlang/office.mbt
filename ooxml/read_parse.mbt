@@ -86,6 +86,9 @@ let package_relationships_namespace = "http://schemas.openxmlformats.org/package
 let package_content_types_namespace = "http://schemas.openxmlformats.org/package/2006/content-types"
 
 ///|
+let markup_compatibility_namespace = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+
+///|
 let max_relationship_records = 1_000_000
 
 ///|
@@ -166,6 +169,325 @@ priv enum RelationshipTargetSelection {
 }
 
 ///|
+/// Streaming state for the MCE-effective projection of an OPC Relationships
+/// part. Each raw XML depth owns one state; wrapper elements selected by
+/// `ProcessContent`, `Choice`, or `Fallback` retain their parent's effective
+/// depth so their application children are promoted without materializing a
+/// second XML tree.
+priv struct RelationshipMceState {
+  active : Bool
+  included_in_effective_tree : Bool
+  element_effective_depth : Int
+  children_effective_parent_depth : Int
+  ignorable_namespaces : Set[String]
+  process_content_names : Set[String]
+  is_alternate_content : Bool
+  mut alternate_choice_seen : Bool
+  mut alternate_fallback_seen : Bool
+  mut alternate_selected : Bool
+}
+
+///|
+fn clone_relationship_mce_set(source : Set[String]) -> Set[String] {
+  let cloned : Set[String] = Set([])
+  for value in source {
+    cloned.add(value)
+  }
+  cloned
+}
+
+///|
+fn relationship_mce_tokens(
+  value : StringView,
+  label : StringView,
+) -> Array[String] raise ParseXmlError {
+  let normalized = collapse_schema_whitespace(value)
+  if normalized == "" {
+    raise InvalidXml(msg="MCE \{label.to_owned()} is empty")
+  }
+  let tokens : Array[String] = []
+  for token in normalized.split(" ") {
+    if token == "" || token.length() > max_relationship_id_chars {
+      raise InvalidXml(msg="MCE \{label.to_owned()} is invalid")
+    }
+    if tokens.length() >= 4096 {
+      raise InvalidXml(msg="MCE \{label.to_owned()} token limit exceeded")
+    }
+    tokens.push(token.to_owned())
+  }
+  tokens
+}
+
+///|
+fn relationship_mce_resolve_prefix(
+  scanner : XmlStartTagScanner,
+  prefix : StringView,
+  label : StringView,
+) -> String raise ParseXmlError {
+  if prefix == "" || prefix.contains(":") {
+    raise InvalidXml(msg="MCE \{label.to_owned()} prefix is invalid")
+  }
+  scanner.resolve_prefix(prefix, false)
+}
+
+///|
+fn relationship_mce_expanded_name_key(
+  scanner : XmlStartTagScanner,
+  token : StringView,
+  label : StringView,
+) -> (String, String) raise ParseXmlError {
+  let parts = token.split(":").collect()
+  if parts.length() != 2 || parts[0] == "" || parts[1] == "" {
+    raise InvalidXml(msg="MCE \{label.to_owned()} name is invalid")
+  }
+  let namespace_uri = relationship_mce_resolve_prefix(scanner, parts[0], label)
+  (namespace_uri, namespace_uri + "\u{0}" + parts[1].to_owned())
+}
+
+///|
+fn relationship_mce_scope(
+  scanner : XmlStartTagScanner,
+  parent : RelationshipMceState?,
+) -> (Set[String], Set[String]) raise ParseXmlError {
+  let ignorable_attribute = scanner.attribute(
+    markup_compatibility_namespace, "Ignorable",
+  )
+  let ignorable = match (parent, ignorable_attribute) {
+    (Some(value), None) => value.ignorable_namespaces
+    (Some(value), Some(_)) =>
+      clone_relationship_mce_set(value.ignorable_namespaces)
+    (None, _) => Set([])
+  }
+  match ignorable_attribute {
+    Some(value) =>
+      for prefix in relationship_mce_tokens(value, "Ignorable") {
+        let namespace_uri = relationship_mce_resolve_prefix(
+          scanner, prefix, "Ignorable",
+        )
+        if namespace_uri == "" ||
+          namespace_uri == markup_compatibility_namespace ||
+          namespace_uri == package_relationships_namespace {
+          raise InvalidXml(msg="MCE Ignorable namespace is invalid")
+        }
+        ignorable.add(namespace_uri)
+      }
+    None => ()
+  }
+  let process_content_attribute = scanner.attribute(
+    markup_compatibility_namespace, "ProcessContent",
+  )
+  let process_content = match (parent, process_content_attribute) {
+    (Some(value), None) => value.process_content_names
+    (Some(value), Some(_)) =>
+      clone_relationship_mce_set(value.process_content_names)
+    (None, _) => Set([])
+  }
+  match process_content_attribute {
+    Some(value) =>
+      for token in relationship_mce_tokens(value, "ProcessContent") {
+        let (namespace_uri, key) = relationship_mce_expanded_name_key(
+          scanner, token, "ProcessContent",
+        )
+        if !ignorable.contains(namespace_uri) {
+          raise InvalidXml(msg="MCE ProcessContent namespace is not ignorable")
+        }
+        if token.has_suffix(":*") {
+          raise InvalidXml(msg="MCE ProcessContent wildcard is invalid")
+        }
+        process_content.add(key)
+      }
+    None => ()
+  }
+  match scanner.attribute(markup_compatibility_namespace, "MustUnderstand") {
+    Some(value) =>
+      for prefix in relationship_mce_tokens(value, "MustUnderstand") {
+        if relationship_mce_resolve_prefix(scanner, prefix, "MustUnderstand") !=
+          package_relationships_namespace {
+          raise InvalidXml(msg="MCE MustUnderstand namespace is unsupported")
+        }
+      }
+    None => ()
+  }
+  for directive in ["PreserveElements", "PreserveAttributes"] {
+    match scanner.attribute(markup_compatibility_namespace, directive) {
+      Some(value) =>
+        for token in relationship_mce_tokens(value, directive) {
+          let (namespace_uri, _) = relationship_mce_expanded_name_key(
+            scanner, token, directive,
+          )
+          if !ignorable.contains(namespace_uri) {
+            raise InvalidXml(msg="MCE \{directive} namespace is not ignorable")
+          }
+        }
+      None => ()
+    }
+  }
+  (ignorable, process_content)
+}
+
+///|
+fn relationship_mce_choice_supported(
+  scanner : XmlStartTagScanner,
+) -> Bool raise ParseXmlError {
+  let requires = match scanner.attribute("", "Requires") {
+    Some(value) => value
+    None => raise InvalidXml(msg="MCE Choice is missing Requires")
+  }
+  let mut supported = true
+  for prefix in relationship_mce_tokens(requires, "Choice Requires") {
+    if relationship_mce_resolve_prefix(scanner, prefix, "Choice Requires") !=
+      package_relationships_namespace {
+      supported = false
+    }
+  }
+  supported
+}
+
+///|
+fn trim_relationship_mce_states(
+  states : Array[RelationshipMceState],
+  next_depth : Int,
+) -> Unit raise ParseXmlError {
+  while states.length() >= next_depth {
+    let state = states.pop().unwrap()
+    if state.is_alternate_content && !state.alternate_choice_seen {
+      raise InvalidXml(msg="MCE AlternateContent has no Choice element")
+    }
+  }
+}
+
+///|
+fn relationship_mce_state_for_current_element(
+  scanner : XmlStartTagScanner,
+  states : Array[RelationshipMceState],
+) -> RelationshipMceState raise ParseXmlError {
+  let depth = scanner.depth()
+  trim_relationship_mce_states(states, depth)
+  let parent = if depth > 1 {
+    if states.length() != depth - 1 {
+      raise InvalidXml(msg="relationships document nesting is invalid")
+    }
+    Some(states[depth - 2])
+  } else {
+    None
+  }
+  match parent {
+    Some(parent_state) if !parent_state.active =>
+      return {
+        active: false,
+        included_in_effective_tree: false,
+        element_effective_depth: parent_state.children_effective_parent_depth,
+        children_effective_parent_depth: parent_state.children_effective_parent_depth,
+        ignorable_namespaces: parent_state.ignorable_namespaces,
+        process_content_names: parent_state.process_content_names,
+        is_alternate_content: false,
+        alternate_choice_seen: false,
+        alternate_fallback_seen: false,
+        alternate_selected: false,
+      }
+    _ => ()
+  }
+  let (ignorable, process_content) = relationship_mce_scope(scanner, parent)
+  if depth == 1 {
+    if scanner.namespace_uri() != package_relationships_namespace ||
+      scanner.local_name() != "Relationships" {
+      raise InvalidXml(msg="relationships document element invalid")
+    }
+    return {
+      active: true,
+      included_in_effective_tree: true,
+      element_effective_depth: 1,
+      children_effective_parent_depth: 1,
+      ignorable_namespaces: ignorable,
+      process_content_names: process_content,
+      is_alternate_content: false,
+      alternate_choice_seen: false,
+      alternate_fallback_seen: false,
+      alternate_selected: false,
+    }
+  }
+  let parent_state = parent.unwrap()
+  let namespace_uri = scanner.namespace_uri().to_owned()
+  let local_name = scanner.local_name().to_owned()
+  let parent_effective_depth = parent_state.children_effective_parent_depth
+  let mut active = parent_state.active
+  let mut included_in_effective_tree = false
+  let mut element_effective_depth = parent_effective_depth
+  let mut children_effective_parent_depth = parent_effective_depth
+  let mut is_alternate_content = false
+
+  if parent_state.is_alternate_content {
+    if namespace_uri == markup_compatibility_namespace && local_name == "Choice" {
+      if parent_state.alternate_fallback_seen {
+        raise InvalidXml(msg="MCE Choice follows Fallback")
+      }
+      parent_state.alternate_choice_seen = true
+      let supported = relationship_mce_choice_supported(scanner)
+      active = parent_state.active &&
+        !parent_state.alternate_selected &&
+        supported
+      if active {
+        parent_state.alternate_selected = true
+      }
+    } else if namespace_uri == markup_compatibility_namespace &&
+      local_name == "Fallback" {
+      if parent_state.alternate_fallback_seen {
+        raise InvalidXml(
+          msg="MCE AlternateContent has multiple Fallback elements",
+        )
+      }
+      parent_state.alternate_fallback_seen = true
+      active = parent_state.active && !parent_state.alternate_selected
+      if active {
+        parent_state.alternate_selected = true
+      }
+    } else if ignorable.contains(namespace_uri) {
+      active = false
+    } else {
+      raise InvalidXml(msg="MCE AlternateContent child is invalid")
+    }
+  } else if namespace_uri == markup_compatibility_namespace {
+    if local_name != "AlternateContent" {
+      raise InvalidXml(msg="MCE element is misplaced")
+    }
+    active = parent_state.active
+    is_alternate_content = true
+  } else if ignorable.contains(namespace_uri) &&
+    namespace_uri != package_relationships_namespace {
+    let key = namespace_uri + "\u{0}" + local_name
+    if process_content.contains(key) {
+      if scanner.attribute(xml_namespace_uri, "base") is Some(_) ||
+        scanner.attribute(xml_namespace_uri, "lang") is Some(_) ||
+        scanner.attribute(xml_namespace_uri, "space") is Some(_) {
+        raise InvalidXml(
+          msg="MCE ProcessContent element has an unsafe xml attribute",
+        )
+      }
+      active = parent_state.active
+    } else {
+      active = false
+    }
+  } else {
+    active = parent_state.active
+    included_in_effective_tree = true
+    element_effective_depth = parent_effective_depth + 1
+    children_effective_parent_depth = element_effective_depth
+  }
+  {
+    active,
+    included_in_effective_tree,
+    element_effective_depth,
+    children_effective_parent_depth,
+    ignorable_namespaces: ignorable,
+    process_content_names: process_content,
+    is_alternate_content,
+    alternate_choice_seen: false,
+    alternate_fallback_seen: false,
+    alternate_selected: false,
+  }
+}
+
+///|
 /// Reads relationship targets whose decoded `Type` is in `rel_types`. Element
 /// names are matched by expanded namespace name, so the package namespace may
 /// use either a default namespace or any declared prefix.
@@ -178,21 +500,24 @@ fn parse_relationship_targets_by_types_selected(
   let targets : Map[String, String] = Map([])
   let ids : Set[String] = Set([])
   let scanner = XmlStartTagScanner::new(xml, cancelled~)
-  if !scanner.next() ||
-    scanner.depth() != 1 ||
-    scanner.namespace_uri() != package_relationships_namespace ||
-    scanner.local_name() != "Relationships" {
-    raise InvalidXml(msg="relationships document element invalid")
-  }
+  let mce_states : Array[RelationshipMceState] = []
   let mut records = 0
   let mut retained_chars = 0
   while scanner.next() {
-    if scanner.namespace_uri() != package_relationships_namespace ||
-      scanner.local_name() != "Relationship" {
+    let mce_state = relationship_mce_state_for_current_element(
+      scanner, mce_states,
+    )
+    mce_states.push(mce_state)
+    if mce_state.element_effective_depth == 1 {
       continue
     }
-    if scanner.depth() != 2 {
-      raise InvalidXml(msg="relationship element is not a direct child")
+    if !mce_state.active || !mce_state.included_in_effective_tree {
+      continue
+    }
+    if scanner.namespace_uri() != package_relationships_namespace ||
+      scanner.local_name() != "Relationship" ||
+      mce_state.element_effective_depth != 2 {
+      raise InvalidXml(msg="relationships effective content is invalid")
     }
     records = records + 1
     if records > max_relationship_records {
@@ -240,6 +565,7 @@ fn parse_relationship_targets_by_types_selected(
     }
     targets[id] = target
   }
+  trim_relationship_mce_states(mce_states, 1)
   targets
 }
 
