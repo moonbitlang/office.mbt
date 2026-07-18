@@ -24,6 +24,9 @@ fn validate_xlsx_worksheet_core(xml : StringView) -> Unit raise XlsxError {
   let scanner = @ooxml.XmlStartTagScanner::new(xml)
   let mut worksheet_namespace : String? = None
   let mut sheet_data_seen = false
+  let mut cell_formula_seen = false
+  let mut cell_value_seen = false
+  let mut cell_inline_string_seen = false
   while workbook_scanner_next(scanner) {
     let local_name = scanner.local_name()
     let namespace_uri = scanner.namespace_uri()
@@ -63,6 +66,51 @@ fn validate_xlsx_worksheet_core(xml : StringView) -> Unit raise XlsxError {
         scanner.parent_local_name() != Some("row") ||
         scanner.parent_namespace_uri() != worksheet_namespace {
         raise InvalidXml(msg="worksheet cell element is misplaced")
+      }
+      cell_formula_seen = false
+      cell_value_seen = false
+      cell_inline_string_seen = false
+    } else if local_name == "f" || local_name == "v" || local_name == "is" {
+      if namespace_uri != dialect ||
+        scanner.depth() != 5 ||
+        scanner.parent_local_name() != Some("c") ||
+        scanner.parent_namespace_uri() != worksheet_namespace {
+        raise InvalidXml(msg="worksheet cell payload element is misplaced")
+      }
+      if local_name == "f" {
+        if cell_formula_seen {
+          raise InvalidXml(msg="worksheet cell has multiple formula elements")
+        }
+        cell_formula_seen = true
+      } else if local_name == "v" {
+        if cell_value_seen {
+          raise InvalidXml(msg="worksheet cell has multiple value elements")
+        }
+        cell_value_seen = true
+      } else {
+        if cell_inline_string_seen {
+          raise InvalidXml(
+            msg="worksheet cell has multiple inline string elements",
+          )
+        }
+        cell_inline_string_seen = true
+      }
+    } else if local_name == "r" {
+      if namespace_uri != dialect ||
+        scanner.depth() != 6 ||
+        scanner.parent_local_name() != Some("is") ||
+        scanner.parent_namespace_uri() != worksheet_namespace {
+        raise InvalidXml(msg="worksheet inline string run is misplaced")
+      }
+    } else if local_name == "t" {
+      let valid_parent = scanner.parent_local_name() == Some("is") ||
+        scanner.parent_local_name() == Some("r") ||
+        scanner.parent_local_name() == Some("rPh")
+      if namespace_uri != dialect ||
+        !valid_parent ||
+        scanner.parent_namespace_uri() != worksheet_namespace ||
+        (scanner.depth() != 6 && scanner.depth() != 7) {
+        raise InvalidXml(msg="worksheet inline string text is misplaced")
       }
     } else if local_name == "cols" {
       if namespace_uri != dialect ||

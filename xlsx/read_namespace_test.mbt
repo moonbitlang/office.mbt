@@ -142,7 +142,9 @@ test "mixed-case workbook media type reads end to end" {
   if updated == content_types {
     fail("workbook media type marker was not found")
   }
-  archive.add("[Content_Types].xml", @encoding/utf8.encode(updated))
+  assert_true(
+    archive.replace("[Content_Types].xml", @encoding/utf8.encode(updated)),
+  )
   let parsed = @xlsx.read(@zip.write(archive))
   debug_inspect(parsed.get_sheet_list(), content="[\"Qualified\"]")
   debug_inspect(
@@ -169,7 +171,12 @@ test "SpreadsheetML-looking extension payload cannot create sheets or cells" {
     if workbook_with_decoy == workbook_xml {
       fail("workbook injection marker was not found")
     }
-    archive.add("xl/workbook.xml", @encoding/utf8.encode(workbook_with_decoy))
+    assert_true(
+      archive.replace(
+        "xl/workbook.xml",
+        @encoding/utf8.encode(workbook_with_decoy),
+      ),
+    )
     guard archive.get("xl/worksheets/sheet.xml") is Some(worksheet_bytes) else {
       fail("missing worksheet fixture part")
     }
@@ -183,9 +190,11 @@ test "SpreadsheetML-looking extension payload cannot create sheets or cells" {
     if worksheet_with_decoy == worksheet_xml {
       fail("worksheet injection marker was not found")
     }
-    archive.add(
-      "xl/worksheets/sheet.xml",
-      @encoding/utf8.encode(worksheet_with_decoy),
+    assert_true(
+      archive.replace(
+        "xl/worksheets/sheet.xml",
+        @encoding/utf8.encode(worksheet_with_decoy),
+      ),
     )
     let parsed = @xlsx.read(@zip.write(archive))
     debug_inspect(parsed.get_sheet_list(), content="[\"Qualified\"]")
@@ -194,5 +203,55 @@ test "SpreadsheetML-looking extension payload cannot create sheets or cells" {
       parsed.get_cell_value("Qualified", "A1"),
       content="Some(\"qualified-value\")",
     )
+  }
+}
+
+///|
+test "cell payload cannot escape its element or cross a namespace boundary" {
+  let archive = @zip.read(namespace_qualified_xlsx_fixture(false, false))
+  guard archive.get("xl/worksheets/sheet.xml") is Some(worksheet_bytes) else {
+    fail("missing worksheet fixture part")
+  }
+  let worksheet_xml = @encoding/utf8.decode(worksheet_bytes) catch {
+    _ => fail("worksheet fixture is not UTF-8")
+  }
+  let two_cells = worksheet_xml.replace(
+    old="<s:c r=\"A1\" t=\"s\"><s:v>0</s:v></s:c>",
+    new="<s:c r=\"A1\"/><s:c r=\"B1\" t=\"str\"><s:f>1+1</s:f><s:v>second</s:v></s:c>",
+  )
+  if two_cells == worksheet_xml {
+    fail("worksheet cell marker was not found")
+  }
+  assert_true(
+    archive.replace("xl/worksheets/sheet.xml", @encoding/utf8.encode(two_cells)),
+  )
+  let parsed = @xlsx.read(@zip.write(archive))
+  debug_inspect(parsed.get_cell_value("Qualified", "A1"), content="Some(\"\")")
+  debug_inspect(parsed.get_cell_formula("Qualified", "A1"), content="None")
+  debug_inspect(
+    parsed.get_cell_value("Qualified", "B1"),
+    content="Some(\"second\")",
+  )
+  debug_inspect(
+    parsed.get_cell_formula("Qualified", "B1"),
+    content="Some(\"1+1\")",
+  )
+
+  let foreign_value = two_cells.replace(
+    old="<s:c r=\"A1\"/>",
+    new="<s:c r=\"A1\" t=\"str\"><v xmlns=\"urn:foreign\">injected</v></s:c>",
+  )
+  assert_true(
+    archive.replace(
+      "xl/worksheets/sheet.xml",
+      @encoding/utf8.encode(foreign_value),
+    ),
+  )
+  try @xlsx.read(@zip.write(archive)) catch {
+    @xlsx.InvalidXml(msg~) =>
+      inspect(msg, content="worksheet cell payload element is misplaced")
+    _ => fail("unexpected foreign cell payload error")
+  } noraise {
+    _ => fail("expected foreign cell payload rejection")
   }
 }

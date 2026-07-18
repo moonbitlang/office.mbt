@@ -58,14 +58,27 @@ fn parse_worksheet(
       raise InvalidStyleId(index=style_id)
     }
     let cell_type = attr_value(tag, "t")
-    let rest = text[end + 1:]
-    let formula_start = match rest.find("<f>") {
+    let mut tag_last = tag.length() - 1
+    while tag_last >= 0 && is_xml_attr_space_unit(tag[tag_last]) {
+      tag_last = tag_last - 1
+    }
+    let self_closing = tag_last >= 0 && tag[tag_last] == '/'
+    let after_open = text[end + 1:]
+    let cell_body = if self_closing {
+      after_open[:0]
+    } else {
+      match after_open.find("</c>") {
+        Some(pos) => after_open[:pos]
+        None => raise InvalidXml(msg="cell not closed")
+      }
+    }
+    let formula_start = match cell_body.find("<f>") {
       Some(pos) => Some(pos)
       None =>
-        match rest.find("<f ") {
+        match cell_body.find("<f ") {
           Some(pos) => Some(pos)
           None =>
-            match rest.find("<f/") {
+            match cell_body.find("<f/") {
               Some(pos) => Some(pos)
               None => None
             }
@@ -74,7 +87,7 @@ fn parse_worksheet(
     let (formula, formula_type, formula_ref, formula_shared_index) = match
       formula_start {
       Some(pos) => {
-        let f_rest = rest[pos:]
+        let f_rest = cell_body[pos:]
         let open_end = match xml_open_tag_end_from(f_rest, 0) {
           Some(value) => value
           None => raise InvalidXml(msg="formula tag not closed")
@@ -134,9 +147,9 @@ fn parse_worksheet(
       (Some(Shared), None, Some(_)) => Some("")
       _ => formula
     }
-    let raw_value_opt = match find_xml_open_tag_start(rest, "v") {
+    let raw_value_opt = match find_xml_open_tag_start(cell_body, "v") {
       Some(pos) => {
-        let v_rest = rest[pos:]
+        let v_rest = cell_body[pos:]
         let open_end = match xml_open_tag_end_from(v_rest, 0) {
           Some(end) => end
           None => raise InvalidXml(msg="cell value tag not closed")
@@ -157,7 +170,7 @@ fn parse_worksheet(
     }
     let raw_value = raw_value_opt.unwrap_or("")
     let inline_entry = match cell_type {
-      Some("inlineStr") => Some(parse_inline_string(rest))
+      Some("inlineStr") => Some(parse_inline_string(cell_body))
       _ => None
     }
     let force_string = raw_value_opt is None &&
