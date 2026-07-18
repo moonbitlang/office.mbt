@@ -40,6 +40,8 @@ pub fn parse_internal_relationship_targets(StringView, StringView, cancelled? : 
 
 pub fn parse_internal_relationship_targets_by_types(StringView, ArrayView[String], cancelled? : () -> Bool) -> Map[String, String] raise ParseXmlError
 
+pub fn project_xml_markup_compatibility(StringView, ArrayView[String], max_output_chars? : Int, cancelled? : () -> Bool) -> String raise ParseXmlError
+
 pub fn remove_xml_expanded_name_subtrees(StringView, ArrayView[String], String, cancelled? : () -> Bool) -> String? raise ParseXmlError
 
 pub fn remove_xml_foreign_namespace_subtrees(StringView, ArrayView[String], cancelled? : () -> Bool) -> String? raise ParseXmlError

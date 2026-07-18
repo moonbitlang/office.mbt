@@ -32,6 +32,33 @@ let drawing_slicer_namespace = "http://schemas.microsoft.com/office/drawing/2010
 let markup_compatibility_namespace = "http://schemas.openxmlformats.org/markup-compatibility/2006"
 
 ///|
+let xlsx_mce_understood_namespaces : Array[String] = [
+  transitional_spreadsheet_namespace, strict_spreadsheet_namespace, transitional_relationship_attribute_namespace,
+  strict_relationship_attribute_namespace, xlsx_extension_namespace_x14, xlsx_extension_namespace_x15,
+  xlsx_extension_namespace_xm,
+]
+
+///|
+/// Produces the effective SpreadsheetML view before namespace filtering or
+/// lexical feature parsing. In particular, core content promoted from an MCE
+/// Fallback must be selected while its namespace context is still available.
+fn project_xlsx_markup_compatibility(
+  source : StringView,
+  max_output_chars : Int,
+  cancelled? : () -> Bool = () => false,
+) -> String raise XlsxError {
+  @ooxml.project_xml_markup_compatibility(
+    source,
+    xlsx_mce_understood_namespaces,
+    max_output_chars~,
+    cancelled~,
+  ) catch {
+    InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+}
+
+///|
 /// Converts namespace-qualified OOXML element names into the lexical form used
 /// by the existing bounded feature parsers. The source is fully namespace- and
 /// structure-validated before rewriting; only names change, never values.
@@ -359,6 +386,31 @@ test "XLSX XML canonicalization handles Strict elements and relationship attribu
       #|<worksheet xmlns:s="http://purl.oclc.org/ooxml/spreadsheetml/main" xmlns:q="http://purl.oclc.org/ooxml/officeDocument/relationships"><drawing r:id="d1"/><sheetData><row r="1"><c r="A1" t="str"><v>ok</v></c></row></sheetData></worksheet>
     ),
   )
+}
+
+///|
+test "SpreadsheetML MCE fallback is projected before core filtering" {
+  let workbook_source =
+    #|<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:x="urn:vendor" mc:Ignorable="x"><mc:AlternateContent><mc:Choice Requires="x"><x:futureSheets/></mc:Choice><mc:Fallback><sheets><sheet name="Data" sheetId="1" r:id="rId1"/></sheets></mc:Fallback></mc:AlternateContent></workbook>
+  let workbook_projected = project_xlsx_markup_compatibility(
+    workbook_source, default_max_xml_part_bytes,
+  )
+  let sheets = parse_workbook_sheets(workbook_projected, 10)
+  assert_eq(sheets.length(), 1)
+  assert_eq(sheets[0].name, "Data")
+  assert_eq(sheets[0].rel_id, "rId1")
+  let worksheet_source =
+    #|<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:x="urn:vendor" mc:Ignorable="x"><mc:AlternateContent><mc:Choice Requires="x"><x:futureData/></mc:Choice><mc:Fallback><sheetData><row r="1"><c r="A1" t="str"><v>kept</v></c></row></sheetData></mc:Fallback></mc:AlternateContent></worksheet>
+  let worksheet_projected = project_xlsx_markup_compatibility(
+    worksheet_source, default_max_xml_part_bytes,
+  )
+  let worksheet_full = canonicalize_xlsx_xml(worksheet_projected)
+  let worksheet_core = canonicalize_xlsx_worksheet_core(
+    worksheet_projected, worksheet_full, default_max_xml_part_bytes,
+  )
+  assert_true(worksheet_core.contains("<sheetData>"))
+  assert_true(worksheet_core.contains("<v>kept</v>"))
+  assert_false(worksheet_core.contains("futureData"))
 }
 
 ///|

@@ -3523,8 +3523,16 @@ fn read_zip_archive_core_unchecked(
     Some(value) => value
     None => raise MissingPart(path=workbook_xml_part_path)
   }
-  let workbook_source_xml = decode_source(workbook_bytes)
-  read_budget.charge_work(workbook_source_xml.length())
+  let workbook_raw_xml = decode_source(workbook_bytes)
+  read_budget.charge_work(workbook_raw_xml.length())
+  let workbook_source_xml = project_xlsx_markup_compatibility(
+    workbook_raw_xml,
+    limits.max_xml_part_bytes,
+    cancelled~,
+  )
+  if workbook_source_xml != workbook_raw_xml {
+    read_budget.charge_work(workbook_source_xml.length())
+  }
   let workbook_xml = canonicalize_xlsx_xml(
     workbook_source_xml,
     max_output_chars=limits.max_xml_part_bytes,
@@ -3590,8 +3598,16 @@ fn read_zip_archive_core_unchecked(
     Some(path) =>
       match archive.get(path) {
         Some(value) => {
-          let source = decode_source(value)
-          read_budget.charge_work(source.length())
+          let raw_source = decode_source(value)
+          read_budget.charge_work(raw_source.length())
+          let source = project_xlsx_markup_compatibility(
+            raw_source,
+            limits.max_xml_part_bytes,
+            cancelled~,
+          )
+          if source != raw_source {
+            read_budget.charge_work(source.length())
+          }
           let core_source = match
             xlsx_core_source_without_foreign(source, "sst", cancelled~) {
             Some(filtered) => filtered
@@ -3637,8 +3653,16 @@ fn read_zip_archive_core_unchecked(
         Some(value) => value
         None => raise MissingPart(path~)
       }
-      let styles_source_xml = decode_source(value)
-      read_budget.charge_work(styles_source_xml.length())
+      let styles_raw_xml = decode_source(value)
+      read_budget.charge_work(styles_raw_xml.length())
+      let styles_source_xml = project_xlsx_markup_compatibility(
+        styles_raw_xml,
+        limits.max_xml_part_bytes,
+        cancelled~,
+      )
+      if styles_source_xml != styles_raw_xml {
+        read_budget.charge_work(styles_source_xml.length())
+      }
       let styles_xml = canonicalize_xlsx_xml(
         styles_source_xml,
         max_output_chars=limits.max_xml_part_bytes,
@@ -3911,8 +3935,16 @@ fn read_zip_archive_core_unchecked(
         Some(value) => value
         None => raise MissingPart(path=sheet_path)
       }
-      let sheet_source_xml = decode_source(sheet_bytes)
-      read_budget.charge_work(sheet_source_xml.length())
+      let sheet_raw_xml = decode_source(sheet_bytes)
+      read_budget.charge_work(sheet_raw_xml.length())
+      let sheet_source_xml = project_xlsx_markup_compatibility(
+        sheet_raw_xml,
+        limits.max_xml_part_bytes,
+        cancelled~,
+      )
+      if sheet_source_xml != sheet_raw_xml {
+        read_budget.charge_work(sheet_source_xml.length())
+      }
       let sheet_xml = canonicalize_xlsx_xml(
         sheet_source_xml,
         max_output_chars=limits.max_xml_part_bytes,

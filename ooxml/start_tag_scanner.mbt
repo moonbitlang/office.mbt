@@ -57,6 +57,7 @@ pub struct XmlStartTagScanner {
   priv open_local_name_starts : Array[Int]
   priv open_local_name_ends : Array[Int]
   priv open_namespace_uris : Array[String]
+  priv open_remove_end_tags : Array[Bool]
   priv rewrite_element_prefixes : Map[String, String]
   priv reserved_element_prefixes : Map[String, String]
   priv rewrite_attribute_prefixes : Map[String, String]
@@ -72,7 +73,10 @@ pub struct XmlStartTagScanner {
   priv mut root_closed : Bool
   priv mut current_name_start : Int
   priv mut current_name_end : Int
+  priv mut current_tag_start : Int
   priv mut current_tag_end : Int
+  priv mut current_attribute_insert : Int
+  priv mut current_self_closing : Bool
   priv mut current_depth : Int
   priv mut current_namespace_uri : String
   priv mut current_namespace_id : Int
@@ -1234,6 +1238,7 @@ fn xml_start_tag_scanner_with_rewrites(
     open_local_name_starts: [],
     open_local_name_ends: [],
     open_namespace_uris: [],
+    open_remove_end_tags: [],
     rewrite_element_prefixes: element_prefixes,
     reserved_element_prefixes,
     rewrite_attribute_prefixes: attribute_prefixes,
@@ -1249,7 +1254,10 @@ fn xml_start_tag_scanner_with_rewrites(
     root_closed: false,
     current_name_start: 0,
     current_name_end: 0,
+    current_tag_start: 0,
     current_tag_end: 0,
+    current_attribute_insert: 0,
+    current_self_closing: false,
     current_depth: 0,
     current_namespace_uri: "",
     current_namespace_id: 0,
@@ -1318,20 +1326,24 @@ fn XmlStartTagScanner::consume_end_tag(
   if !xml_spans_equal(self.xml, name_start, name_end, open_start, open_end) {
     raise InvalidXml(msg="XML start and end tags do not match")
   }
-  let replacement = self.open_name_replacements[self.open_name_replacements.length() -
-    1]
-  match replacement {
-    Some(value) => self.record_rewrite(name_start, name_end, value)
-    None => ()
-  }
+  let stack_index = self.open_name_replacements.length() - 1
+  let replacement = self.open_name_replacements[stack_index]
+  let remove_end_tag = self.open_remove_end_tags[stack_index]
   match self.capture_start {
-    Some(capture_start) =>
-      if self.capture_depth == self.depth {
-        self.record_rewrite(capture_start, tag_end + 1, "")
-        self.capture_start = None
-        self.capture_depth = 0
+    Some(capture_start) if self.capture_depth == self.depth => {
+      self.record_rewrite(capture_start, tag_end + 1, "")
+      self.capture_start = None
+      self.capture_depth = 0
+    }
+    _ =>
+      if remove_end_tag {
+        self.record_rewrite(start, tag_end + 1, "")
+      } else {
+        match replacement {
+          Some(value) => self.record_rewrite(name_start, name_end, value)
+          None => ()
+        }
       }
-    None => ()
   }
   ignore(self.open_name_starts.pop())
   ignore(self.open_name_ends.pop())
@@ -1339,6 +1351,7 @@ fn XmlStartTagScanner::consume_end_tag(
   ignore(self.open_local_name_starts.pop())
   ignore(self.open_local_name_ends.pop())
   ignore(self.open_namespace_uris.pop())
+  ignore(self.open_remove_end_tags.pop())
   self.pop_namespace_depth(self.depth)
   self.depth = self.depth - 1
   if self.depth == 0 {
@@ -1551,7 +1564,14 @@ pub fn XmlStartTagScanner::next(
     self.validate_attributes(name_end, tag_end)
     self.current_name_start = local_name_start
     self.current_name_end = name_end
+    self.current_tag_start = start
     self.current_tag_end = tag_end
+    self.current_attribute_insert = if self_closing {
+      before_end - 1
+    } else {
+      before_end
+    }
+    self.current_self_closing = self_closing
     self.current_depth = scope_depth
     if self.capture_start is None &&
       self.capture_element_local_name != "" &&
@@ -1602,6 +1622,7 @@ pub fn XmlStartTagScanner::next(
       self.open_local_name_starts.push(self.current_name_start)
       self.open_local_name_ends.push(self.current_name_end)
       self.open_namespace_uris.push(self.current_namespace_uri)
+      self.open_remove_end_tags.push(false)
     }
     return true
   }
@@ -1943,6 +1964,77 @@ fn XmlStartTagScanner::expanded_attribute_names(
     })
   }
   output
+}
+
+///|
+fn XmlStartTagScanner::current_namespace_declarations(
+  self : XmlStartTagScanner,
+) -> Array[(String, String)] {
+  let output : Array[(String, String)] = []
+  for binding in self.namespace_bindings {
+    if binding.depth == self.current_depth {
+      output.push((binding.prefix, binding.uri))
+    }
+  }
+  output
+}
+
+///|
+fn XmlStartTagScanner::remove_current_subtree(
+  self : XmlStartTagScanner,
+) -> Unit raise ParseXmlError {
+  if self.capture_start is Some(_) {
+    return
+  }
+  if self.current_self_closing {
+    self.record_rewrite(self.current_tag_start, self.current_tag_end + 1, "")
+  } else {
+    self.capture_start = Some(self.current_tag_start)
+    self.capture_depth = self.current_depth
+  }
+}
+
+///|
+fn XmlStartTagScanner::unwrap_current_element(
+  self : XmlStartTagScanner,
+) -> Unit raise ParseXmlError {
+  self.record_rewrite(self.current_tag_start, self.current_tag_end + 1, "")
+  if !self.current_self_closing {
+    let index = self.open_remove_end_tags.length() - 1
+    if index < 0 {
+      raise InvalidXml(msg="XML unwrap state is invalid")
+    }
+    self.open_remove_end_tags[index] = true
+  }
+}
+
+///|
+fn XmlStartTagScanner::insert_current_attributes(
+  self : XmlStartTagScanner,
+  attributes : String,
+) -> Unit raise ParseXmlError {
+  if attributes != "" {
+    self.record_rewrite(
+      self.current_attribute_insert,
+      self.current_attribute_insert,
+      attributes,
+    )
+  }
+}
+
+///|
+fn XmlStartTagScanner::finish_rewritten_xml(
+  self : XmlStartTagScanner,
+) -> String raise ParseXmlError {
+  if self.rewrite_count == 0 {
+    if self.xml.length() > self.rewrite_output_limit {
+      raise InvalidXml(msg="XML canonical output limit exceeded")
+    }
+    return self.xml.to_owned()
+  }
+  self.charge_rewrite_output(self.xml.length() - self.rewrite_cursor)
+  self.write_rewrite_source(self.rewrite_cursor, self.xml.length())
+  self.rewrite_output.to_string()
 }
 
 ///|

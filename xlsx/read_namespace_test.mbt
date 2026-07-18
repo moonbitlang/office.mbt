@@ -125,6 +125,40 @@ fn unicode_part_name_xlsx_fixture() -> Bytes raise {
 }
 
 ///|
+fn mce_fallback_xlsx_fixture() -> Bytes raise {
+  let content_types =
+    #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>
+  let root_relationships =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="main" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>
+  let workbook =
+    #|<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:x="urn:vendor" mc:Ignorable="x"><mc:AlternateContent><mc:Choice Requires="x"><x:futureSheets/></mc:Choice><mc:Fallback><sheets><sheet name="Data" sheetId="1" r:id="rId1"/></sheets></mc:Fallback></mc:AlternateContent></workbook>
+  let workbook_relationships =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>
+  let worksheet =
+    #|<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:x="urn:vendor" mc:Ignorable="x"><mc:AlternateContent><mc:Choice Requires="x"><x:futureData/></mc:Choice><mc:Fallback><sheetData><row r="1"><c r="A1" t="str"><v>fallback-value</v></c></row></sheetData></mc:Fallback></mc:AlternateContent></worksheet>
+  let archive = @zip.Archive::new()
+  archive.add("[Content_Types].xml", @encoding/utf8.encode(content_types))
+  archive.add("_rels/.rels", @encoding/utf8.encode(root_relationships))
+  archive.add("xl/workbook.xml", @encoding/utf8.encode(workbook))
+  archive.add(
+    "xl/_rels/workbook.xml.rels",
+    @encoding/utf8.encode(workbook_relationships),
+  )
+  archive.add("xl/worksheets/sheet1.xml", @encoding/utf8.encode(worksheet))
+  @zip.write(archive)
+}
+
+///|
+test "workbook and worksheet MCE fallbacks read end to end" {
+  let workbook = @xlsx.read(mce_fallback_xlsx_fixture())
+  debug_inspect(workbook.get_sheet_list(), content="[\"Data\"]")
+  debug_inspect(
+    workbook.get_cell_value("Data", "A1"),
+    content="Some(\"fallback-value\")",
+  )
+}
+
+///|
 test "physical ZIP names follow Unicode logical OPC part names end to end" {
   let workbook = @xlsx.read(unicode_part_name_xlsx_fixture())
   debug_inspect(workbook.get_sheet_list(), content="[\"Unicode\"]")
