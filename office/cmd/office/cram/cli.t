@@ -193,7 +193,7 @@ Extension/content mismatches and malformed input fail non-zero.
   [1]
 
   $ printf 'not zip' > broken.docx; office.exe identify broken.docx
-  office: invalid Office package: archive is not a readable ZIP
+  office: invalid Office package: archive is not a readable bounded ZIP
   [1]
 
 JSON business and operational failures are one parseable envelope and retain a
