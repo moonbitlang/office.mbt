@@ -25,11 +25,27 @@ fn FixedByteOutput::allocated(size : Int) -> FixedByteOutput raise ZipError {
     raise UnsupportedFeature(msg="negative ZIP output size")
   }
   {
-    storage: Some(FixedArray::make(size, b'\x00')),
+    // Every position is initialized by the exact-size emission pass before
+    // `finish`. Avoid an eager zero-fill proportional to attacker-bounded ZIP
+    // output; DEFLATE back-references only read positions below `position`.
+    storage: Some(uninitialized_fixed_byte_storage(size)),
     position: 0,
     limit: Some(size),
   }
 }
+
+///|
+/// Reinterprets primitive uninitialized storage for incremental initialization.
+/// The sink must initialize every element before handing it to immutable Bytes.
+fn uninitialized_fixed_byte_storage(size : Int) -> FixedArray[Byte] {
+  let storage : UninitializedArray[Byte] = UninitializedArray::make(size)
+  unsafe_uninitialized_byte_storage_to_fixed(storage)
+}
+
+///|
+fn unsafe_uninitialized_byte_storage_to_fixed(
+  storage : UninitializedArray[Byte],
+) -> FixedArray[Byte] = "%identity"
 
 ///|
 fn FixedByteOutput::length(self : FixedByteOutput) -> Int {

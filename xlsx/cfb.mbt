@@ -572,7 +572,7 @@ priv struct CfbEntry {
 
 ///|
 priv struct CfbReader {
-  bytes : Bytes
+  bytes : BytesView
   sector_size : Int
   mini_sector_size : Int
   fat : Array[Int]
@@ -847,7 +847,10 @@ fn cfb_read(
     mini_stream = Bytes::from_array(data)
   }
   {
-    bytes: Bytes::from_array(bytes.to_array()),
+    // A BytesView retains its immutable backing allocation. Keep the package
+    // borrowed instead of duplicating the complete encrypted input after it
+    // has already passed all structural checks.
+    bytes,
     sector_size,
     mini_sector_size,
     fat,
