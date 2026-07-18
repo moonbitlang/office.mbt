@@ -32,6 +32,7 @@ fn workbook_part_from_root_relationships(
   }
   match first_relationship_target(targets) {
     Some(target) => {
+      validate_relationship_target_uri(target)
       let part_name = archive_path_from_part_name(target)
       normalize_rel_part_path(part_name)
     }
@@ -156,6 +157,45 @@ test "read package parts: workbook path follows the root relationship" {
     resolve_workbook_xml_part_path_for_test(archive),
     content="xl/workbook2.xml",
   )
+}
+
+///|
+fn workbook_part_from_root_target_for_test(
+  target : StringView,
+) -> String raise XlsxError {
+  let archive = @zip.Archive::new()
+  let root_relationships = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
+    "<Relationship Id=\"main\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"" +
+    target.to_owned() +
+    "\"/></Relationships>"
+  archive.add(root_rels_part_path, @encoding/utf8.encode(root_relationships))
+  workbook_part_from_root_relationships(
+    archive,
+    archive_part_name_index(archive),
+    decode_utf8_or_invalid_xml,
+  )
+}
+
+///|
+test "read package parts: root target rejects absolute URI syntax" {
+  for target in ["urn:book.xml", "a:b/c"] {
+    try workbook_part_from_root_target_for_test(target) catch {
+      InvalidXml(msg~) => inspect(msg, content="relationship target invalid")
+      _ => fail("unexpected absolute root-target error")
+    } noraise {
+      _ => fail("expected absolute root-target rejection")
+    }
+  }
+}
+
+///|
+test "read package parts: explicit relative and package-absolute root targets remain valid" {
+  for target in ["./urn:book.xml", "/urn:book.xml"] {
+    inspect(
+      workbook_part_from_root_target_for_test(target),
+      content="urn:book.xml",
+    )
+  }
 }
 
 ///|
