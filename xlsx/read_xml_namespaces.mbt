@@ -29,6 +29,12 @@ let strict_drawing_chart_namespace = "http://purl.oclc.org/ooxml/drawingml/chart
 let drawing_slicer_namespace = "http://schemas.microsoft.com/office/drawing/2010/slicer"
 
 ///|
+let drawing_main_2010_namespace = "http://schemas.microsoft.com/office/drawing/2010/main"
+
+///|
+let drawing_slicer_2012_namespace = "http://schemas.microsoft.com/office/drawing/2012/slicer"
+
+///|
 let markup_compatibility_namespace = "http://schemas.openxmlformats.org/markup-compatibility/2006"
 
 ///|
@@ -41,6 +47,23 @@ let xlsx_mce_understood_namespaces : Array[String] = [
 let xlsx_mce_extension_elements : Array[(String, String)] = [
   (transitional_spreadsheet_namespace, "ext"),
   (strict_spreadsheet_namespace, "ext"),
+]
+
+///|
+let xlsx_drawing_mce_understood_namespaces : Array[String] = [
+  transitional_spreadsheet_drawing_namespace, strict_spreadsheet_drawing_namespace,
+  transitional_drawing_main_namespace, strict_drawing_main_namespace, transitional_drawing_chart_namespace,
+  strict_drawing_chart_namespace, drawing_slicer_namespace, transitional_relationship_attribute_namespace,
+  strict_relationship_attribute_namespace, drawing_main_2010_namespace, drawing_slicer_2012_namespace,
+]
+
+///|
+let xlsx_drawing_mce_extension_elements : Array[(String, String)] = [
+  (transitional_drawing_main_namespace, "ext"),
+  (strict_drawing_main_namespace, "ext"),
+  (transitional_drawing_chart_namespace, "ext"),
+  (strict_drawing_chart_namespace, "ext"),
+  (drawing_slicer_namespace, "ext"),
 ]
 
 ///|
@@ -178,9 +201,12 @@ fn canonicalize_xlsx_worksheet_features(
 }
 
 ///|
-/// Canonicalizes DrawingML by expanded namespace identity. Prefix aliases and
-/// default namespaces are normalized to the lexical names used by the existing
-/// drawing feature readers, while a foreign namespace borrowing `xdr`, `a`,
+/// Produces the effective DrawingML view and canonicalizes it by expanded
+/// namespace identity. MCE selection must run first, while `Choice.Requires`
+/// prefixes still have their original namespace bindings; otherwise a lexical
+/// feature reader could consume an unsupported branch ahead of its fallback.
+/// Prefix aliases and default namespaces are then normalized to the names used
+/// by the drawing readers, while a foreign namespace borrowing `xdr`, `a`,
 /// `c`, `sle`, or `mc` is defanged by the bounded XML canonicalizer.
 fn canonicalize_xlsx_drawing_xml(
   source : StringView,
@@ -197,8 +223,18 @@ fn canonicalize_xlsx_drawing_xml(
     ) {
     raise InvalidXml(msg="drawing document element is invalid")
   }
-  @ooxml.canonicalize_xml_expanded_names(
+  let projected = @ooxml.project_xml_markup_compatibility(
     source,
+    xlsx_drawing_mce_understood_namespaces,
+    max_output_chars~,
+    cancelled~,
+    extension_elements=xlsx_drawing_mce_extension_elements,
+  ) catch {
+    InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+  @ooxml.canonicalize_xml_expanded_names(
+    projected,
     [],
     [
       (transitional_relationship_attribute_namespace, "r"),
@@ -440,8 +476,8 @@ test "DrawingML canonicalization follows aliases and defangs borrowed prefixes" 
   assert_true(canonical.contains("<xdr:oneCellAnchor>"))
   assert_true(canonical.contains("<a:graphic>"))
   assert_true(canonical.contains("<c:chart r:id=\"chart\"/>"))
-  assert_true(canonical.contains("<mc:AlternateContent>"))
-  assert_true(canonical.contains("<mc:Choice Requires=\"q\">"))
+  assert_false(canonical.contains("<mc:AlternateContent"))
+  assert_false(canonical.contains("<mc:Choice"))
   let spoofed =
     #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:mc="urn:foreign"><xdr:oneCellAnchor xmlns:xdr="urn:foreign"><mc:AlternateContent/></xdr:oneCellAnchor></xdr:wsDr>
   let spoofed_canonical = canonicalize_xlsx_drawing_xml(

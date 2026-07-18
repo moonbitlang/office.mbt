@@ -581,9 +581,6 @@ fn parse_drawing_shapes(
   for entry in anchors {
     let (anchor_xml, positioning) = entry
     charge_drawing_anchor_pass(budget, anchor_xml)
-    if anchor_xml.contains("<mc:AlternateContent") {
-      continue
-    }
     let sp_body = match extract_tag_body_from(anchor_xml, "xdr:sp") {
       Some(value) => value
       None => continue
@@ -1015,6 +1012,78 @@ fn wb_rels_image_target(target : String) -> String {
   "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
   "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"\{target}\"/>" +
   "</Relationships>"
+}
+
+///|
+test "DrawingML MCE fallback feeds image chart shape and slicer readers" {
+  let source =
+    #|<wsDr xmlns="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:d="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:q="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:rel="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:compat="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:sl="http://schemas.microsoft.com/office/drawing/2010/slicer" xmlns:future="urn:future-drawing">
+    #|  <oneCellAnchor><from><col>0</col><row>0</row><colOff>0</colOff><rowOff>0</rowOff></from><ext cx="9525" cy="9525"/><compat:AlternateContent><compat:Choice Requires="future"><pic><nvPicPr><cNvPr id="1" name="bad-image"/></nvPicPr><blipFill><d:blip rel:embed="image-bad"/></blipFill></pic></compat:Choice><compat:Fallback><pic><nvPicPr><cNvPr id="2" name="good-image"/></nvPicPr><blipFill><d:blip rel:embed="image-good"/></blipFill></pic></compat:Fallback></compat:AlternateContent></oneCellAnchor>
+    #|  <oneCellAnchor><from><col>1</col><row>0</row><colOff>0</colOff><rowOff>0</rowOff></from><ext cx="9525" cy="9525"/><compat:AlternateContent><compat:Choice Requires="future"><graphicFrame><d:graphic><d:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><q:chart rel:id="chart-bad"/></d:graphicData></d:graphic></graphicFrame></compat:Choice><compat:Fallback><graphicFrame><d:graphic><d:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><q:chart rel:id="chart-good"/></d:graphicData></d:graphic></graphicFrame></compat:Fallback></compat:AlternateContent></oneCellAnchor>
+    #|  <oneCellAnchor><from><col>2</col><row>0</row><colOff>0</colOff><rowOff>0</rowOff></from><compat:AlternateContent><compat:Choice Requires="future"><sp><nvSpPr><cNvPr id="3" name="bad-shape"/></nvSpPr><spPr><d:xfrm><d:ext cx="9525" cy="9525"/></d:xfrm><d:prstGeom prst="bad"/></spPr></sp></compat:Choice><compat:Fallback><sp><nvSpPr><cNvPr id="4" name="good-shape"/></nvSpPr><spPr><d:xfrm><d:ext cx="9525" cy="9525"/></d:xfrm><d:prstGeom prst="rect"/></spPr></sp></compat:Fallback></compat:AlternateContent></oneCellAnchor>
+    #|  <oneCellAnchor><from><col>3</col><row>0</row><colOff>0</colOff><rowOff>0</rowOff></from><ext cx="9525" cy="9525"/><compat:AlternateContent><compat:Choice Requires="future"><graphicFrame macro="bad-macro"><nvGraphicFramePr><cNvPr id="5" descr="bad-slicer"/></nvGraphicFramePr><d:graphic><d:graphicData uri="http://schemas.microsoft.com/office/drawing/2010/slicer"><sl:slicer name="slicer-bad"/></d:graphicData></d:graphic></graphicFrame></compat:Choice><compat:Fallback><graphicFrame macro="good-macro"><nvGraphicFramePr><cNvPr id="6" descr="good-slicer"/></nvGraphicFramePr><d:graphic><d:graphicData uri="http://schemas.microsoft.com/office/drawing/2010/slicer"><sl:slicer name="slicer-good"/></d:graphicData></d:graphic></graphicFrame></compat:Fallback></compat:AlternateContent></oneCellAnchor>
+    #|</wsDr>
+  let drawing = canonicalize_xlsx_drawing_xml(
+    source, default_max_xml_part_bytes,
+  )
+  assert_false(drawing.contains("bad-image"))
+  assert_false(drawing.contains("chart-bad"))
+  assert_false(drawing.contains("bad-shape"))
+  assert_false(drawing.contains("slicer-bad"))
+  assert_false(drawing.contains("<mc:AlternateContent"))
+  let anchors = parse_drawing_anchors(drawing)
+  inspect(anchors.length(), content="4")
+  let rels =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+    #|  <Relationship Id="image-good" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/good.png"/>
+    #|  <Relationship Id="chart-good" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/good.xml"/>
+    #|</Relationships>
+  let content_types = try! @ooxml.parse_package_content_types(
+    (
+      #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+      #|  <Default Extension="png" ContentType="image/png"/>
+      #|  <Override PartName="/xl/charts/good.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
+      #|</Types>
+    ),
+  )
+  let archive = @zip.Archive::new()
+  archive.add("xl/media/good.png", @encoding/utf8.encode("good-image"))
+  archive.add("xl/charts/good.xml", @encoding/utf8.encode("good-chart"))
+  let metrics = drawing_metrics_for_sheet(Worksheet::new("Sheet1"))
+  let images = parse_drawing_images(
+    anchors,
+    rels,
+    "xl/drawings/drawing1.xml",
+    Map([]),
+    content_types,
+    metrics,
+    archive,
+  )
+  inspect(images.length(), content="1")
+  inspect(images[0].name, content="good-image")
+  let charts = parse_drawing_charts(
+    anchors,
+    rels,
+    "xl/drawings/drawing1.xml",
+    Map([]),
+    content_types,
+    metrics,
+    archive,
+    decode_utf8_or_invalid_xml,
+  )
+  inspect(charts.length(), content="1")
+  inspect(charts[0].xml, content="good-chart")
+  let shapes = parse_drawing_shapes(anchors)
+  inspect(shapes.length(), content="1")
+  inspect(shapes[0].name, content="good-shape")
+  inspect(shapes[0].shape_type, content="rect")
+  let slicers = parse_drawing_slicer_anchors(anchors, metrics)
+  guard slicers.get("slicer-good") is Some(slicer) else {
+    fail("expected projected slicer fallback")
+  }
+  inspect(slicers.length(), content="1")
+  inspect(slicer.macro_name, content="good-macro")
+  inspect(slicer.alt_text, content="good-slicer")
 }
 
 ///|
