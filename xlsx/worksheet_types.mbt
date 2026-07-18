@@ -278,6 +278,12 @@ pub fn Worksheet::comments(self : Worksheet) -> ArrayView[Comment] {
 }
 
 ///|
+/// Returns the retained hyperlink count without copying cell references.
+pub fn Worksheet::hyperlink_count(self : Worksheet) -> Int {
+  self.hyperlinks.length()
+}
+
+///|
 pub fn Worksheet::auto_filter(self : Worksheet) -> AutoFilter? {
   match self.auto_filter {
     Some(filter) => Some(clone_auto_filter(filter))

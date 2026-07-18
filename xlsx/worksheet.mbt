@@ -2496,6 +2496,127 @@ pub fn Worksheet::get_conditional_formats(
 }
 
 ///|
+/// Counts normalized `sqref` ranges directly from retained conditional-format
+/// fragments. Unlike `get_conditional_formats`, this does not materialize rule
+/// objects, maps, or copied range strings. Both retained-source work and the
+/// result are bounded, and long scans poll `cancelled`.
+pub fn Worksheet::conditional_format_range_count_limited(
+  self : Worksheet,
+  maximum_ranges : Int,
+  maximum_work_units : Int,
+  cancelled? : () -> Bool = () => false,
+) -> Int raise XlsxError {
+  if maximum_ranges < 0 || maximum_work_units < 0 {
+    raise InvalidOptions(
+      msg="conditional-format count limits must be non-negative",
+    )
+  }
+  let mut count = 0
+  let mut work = 0
+  for xml in self.conditional_formats {
+    check_read_cancelled(cancelled)
+    let (next_work, work_exceeded) = read_budget_actual(
+      work,
+      xml.length(),
+      maximum_work_units,
+    )
+    if work_exceeded {
+      raise ResourceLimitExceeded(
+        kind="conditional_format_count_work_units",
+        limit=maximum_work_units,
+        actual=next_work,
+      )
+    }
+    work = next_work
+    let scanner = @ooxml.XmlStartTagScanner::new(xml, cancelled~)
+    if !workbook_scanner_next(scanner) ||
+      scanner.depth() != 1 ||
+      scanner.local_name() != "conditionalFormatting" {
+      raise InvalidXml(msg="conditionalFormatting tag missing")
+    }
+    let sqref = scanner.attribute_view("", "sqref") catch {
+      InvalidXml(msg~) => raise InvalidXml(msg~)
+      ReadCancelled => raise ReadCancelled
+    }
+    guard sqref is Some(sqref) else {
+      raise InvalidXml(msg="conditional formatting sqref missing")
+    }
+    let mut in_token = false
+    for index in 0..<sqref.length() {
+      if (index & 4095) == 0 {
+        check_read_cancelled(cancelled)
+      }
+      if is_xml_attr_space_unit(sqref[index]) {
+        in_token = false
+      } else if !in_token {
+        let (next_count, count_exceeded) = read_budget_actual(
+          count, 1, maximum_ranges,
+        )
+        if count_exceeded {
+          raise ResourceLimitExceeded(
+            kind="conditional_format_ranges",
+            limit=maximum_ranges,
+            actual=next_count,
+          )
+        }
+        count = next_count
+        in_token = true
+      }
+    }
+  }
+  check_read_cancelled(cancelled)
+  count
+}
+
+///|
+test "conditional-format range count stays allocation-free and bounded" {
+  let sheet = Worksheet::new("Sheet1")
+  sheet.conditional_formats.push(
+    (
+      #|<conditionalFormatting sqref="A1 B2"><cfRule type="expression"/></conditionalFormatting>
+    ),
+  )
+  sheet.conditional_formats.push(
+    (
+      #|<conditionalFormatting sqref="C3:D4"><cfRule type="expression"/></conditionalFormatting>
+    ),
+  )
+  inspect(sheet.conditional_format_range_count_limited(3, 4096), content="3")
+  try sheet.conditional_format_range_count_limited(2, 4096) catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) => {
+      inspect(kind, content="conditional_format_ranges")
+      assert_eq(limit, 2)
+      assert_eq(actual, 3)
+    }
+    _ => fail("expected conditional-format range limit")
+  } noraise {
+    _ => fail("expected conditional-format range limit")
+  }
+}
+
+///|
+test "conditional-format range count polls cancellation" {
+  let sheet = Worksheet::new("Sheet1")
+  sheet.conditional_formats.push(
+    "<conditionalFormatting sqref=\"" +
+    "A1 ".repeat(4096) +
+    "\"><cfRule type=\"expression\"/></conditionalFormatting>",
+  )
+  let checks = [0]
+  try
+    sheet.conditional_format_range_count_limited(5000, 64 * 1024, cancelled=() => {
+      checks[0] += 1
+      checks[0] >= 3
+    })
+  catch {
+    ReadCancelled => assert_true(checks[0] >= 3)
+    _ => fail("expected conditional-format count cancellation")
+  } noraise {
+    _ => fail("expected conditional-format count cancellation")
+  }
+}
+
+///|
 pub fn Worksheet::unset_conditional_format(
   self : Worksheet,
   range_ref : String,

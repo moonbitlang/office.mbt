@@ -2109,6 +2109,7 @@ pub fn Worksheet::col_outline_level(Self, Int) -> Int raise XlsxError
 pub fn Worksheet::col_visible(Self, Int) -> Bool raise XlsxError
 pub fn Worksheet::cols(Self) -> Cols
 pub fn Worksheet::comments(Self) -> ArrayView[Comment]
+pub fn Worksheet::conditional_format_range_count_limited(Self, Int, Int, cancelled? : () -> Bool) -> Int raise XlsxError
 pub fn Worksheet::conditional_formats(Self) -> ArrayView[String]
 pub fn Worksheet::data_validations(Self) -> ArrayView[String]
 pub fn Worksheet::delete_chart(Self, StringView) -> Unit raise XlsxError
@@ -2140,6 +2141,7 @@ pub fn Worksheet::get_row(Self, Int) -> Array[String] raise XlsxError
 pub fn Worksheet::get_row_height(Self, Int) -> Double? raise XlsxError
 pub fn Worksheet::get_rows(Self) -> Array[Array[String]]
 pub fn Worksheet::get_sheet_protection(Self) -> SheetProtectionOptions
+pub fn Worksheet::hyperlink_count(Self) -> Int
 pub fn Worksheet::ignored_errors(Self) -> ArrayView[IgnoredError]
 pub fn Worksheet::images(Self) -> ArrayView[Image]
 pub fn Worksheet::max_col(Self) -> Int

@@ -79,18 +79,14 @@ fn xlsx_conditional_format_range_count(
   worksheet : @xlsx.Worksheet,
 ) -> Int raise CliFailure {
   projection.checkpoint()
-  let formats = xlsx_call(projection.file, () => {
-    worksheet.get_conditional_formats()
-  })
-  let mut count = 0
-  for ranges, _ in formats {
-    projection.checkpoint()
-    for part in ranges.split(" ") {
-      projection.checkpoint()
-      if part.length() > 0 {
-        count += 1
-      }
-    }
+  let count = worksheet.conditional_format_range_count_limited(
+    office_read_max_parser_items,
+    office_read_max_xml_part_bytes,
+    cancelled=projection.cancelled,
+  ) catch {
+    ReadCancelled =>
+      raise xlsx_cli_failure("office.cancelled", "XLSX read was cancelled")
+    error => raise xlsx_read_failure(error, projection.file)
   }
   projection.checkpoint()
   count
@@ -142,7 +138,7 @@ fn xlsx_sheet_summary_json(
       projection.checkpoint()
       let comments = worksheet.comments()
       projection.checkpoint()
-      let hyperlinks = worksheet.get_hyperlink_cells()
+      let hyperlink_count = worksheet.hyperlink_count()
       projection.checkpoint()
       let validations = worksheet.data_validations()
       projection.checkpoint()
@@ -157,7 +153,7 @@ fn xlsx_sheet_summary_json(
         "images": Json::number(worksheet.images().length().to_double()),
         "pivot_tables": Json::number(pivots.length().to_double()),
         "comments": Json::number(comments.length().to_double()),
-        "hyperlinks": Json::number(hyperlinks.length().to_double()),
+        "hyperlinks": Json::number(hyperlink_count.to_double()),
         "data_validations": Json::number(validations.length().to_double()),
         "conditional_format_ranges": Json::number(
           xlsx_conditional_format_range_count(projection, worksheet).to_double(),
