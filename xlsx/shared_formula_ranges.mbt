@@ -36,6 +36,15 @@ fn sort_shared_formula_range_events(
   if events.length() < 2 {
     return
   }
+  match budget {
+    Some(value) => {
+      // Account for and observe cancellation before allocating/copying the
+      // O(events) merge scratch buffer.
+      value.checkpoint()
+      value.charge_work(events.length())
+    }
+    None => ()
+  }
   let scratch = events.copy()
   let mut width = 1
   while width < events.length() {
@@ -344,4 +353,23 @@ test "shared formula event sorting polls cancellation inside long passes" {
   }
   assert_eq(checks[0], 4)
   assert_true(result is Err(ReadCancelled))
+}
+
+///|
+test "shared formula sorting checks cancellation before scratch allocation" {
+  let events : Array[SharedFormulaRangeEvent] = []
+  for index in 0..<(16 * 1024) {
+    events.push({ row: index, column_lo: 1, column_hi: 1, delta: 1 })
+  }
+  let checks = [0]
+  let budget = ReadBudget::new(ReadLimits::new(), cancelled=() => {
+    checks[0] += 1
+    true
+  })
+  try sort_shared_formula_range_events(events, budget~) catch {
+    ReadCancelled => assert_eq(checks[0], 1)
+    _ => fail("expected cancellation before shared-formula scratch allocation")
+  } noraise {
+    _ => fail("expected shared-formula sort cancellation")
+  }
 }

@@ -28,8 +28,6 @@ struct XlsxSheetTarget {
   index : Int
   path : String
   content : XlsxSheetContent
-  shared_formula_masters : Map[UInt, @xlsx.SharedFormulaMaster]
-  mut shared_formulas_indexed : Bool
 }
 
 ///|
@@ -259,8 +257,6 @@ fn make_xlsx_projection(
       index,
       path: canonical_xlsx_sheet_path(name),
       content,
-      shared_formula_masters: Map([]),
-      shared_formulas_indexed: content is ChartSheet(_),
     }
     sheet_index[normalized_name] = index
     sheets.push(target)
@@ -417,9 +413,8 @@ fn XlsxSheetTarget::worksheet(
 }
 
 ///|
-/// Resolves shared-formula masters on demand. Parsed worksheets retain the
-/// validated master index built under the XLSX read-work budget, so the first
-/// follower copies only the usually-small master map and later lookups are O(1).
+/// Resolves one shared-formula master through the worksheet's validated index
+/// without cloning that index into command-owned storage.
 fn XlsxSheetTarget::shared_formula_master(
   self : XlsxSheetTarget,
   projection : XlsxProjection,
@@ -427,17 +422,10 @@ fn XlsxSheetTarget::shared_formula_master(
   shared_index : UInt,
 ) -> @xlsx.SharedFormulaMaster raise CliFailure {
   projection.checkpoint()
-  if !self.shared_formulas_indexed {
-    let masters = xlsx_call(projection.file, () => {
-      worksheet.shared_formula_masters()
-    })
-    for index, formula in masters {
-      projection.checkpoint()
-      self.shared_formula_masters[index] = formula
-    }
-    self.shared_formulas_indexed = true
-  }
-  match self.shared_formula_masters.get(shared_index) {
+  match
+    xlsx_call(projection.file, () => {
+      worksheet.shared_formula_master(shared_index)
+    }) {
     Some(master) => master
     None =>
       raise xlsx_cli_failure(

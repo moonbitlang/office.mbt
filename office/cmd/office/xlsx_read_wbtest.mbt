@@ -673,7 +673,6 @@ async test "XLSX snapshots preserve and resolve shared-formula followers" {
     opts=@xlsx.FormulaOpts::shared("A1:C1"),
   )
   let projection = make_xlsx_projection("shared.xlsx", workbook, 10)
-  assert_false(projection.sheets[0].shared_formulas_indexed)
   let under = Some(
     resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]"),
   )
@@ -689,7 +688,6 @@ async test "XLSX snapshots preserve and resolve shared-formula followers" {
   }
   assert_eq(fields.get("matched_total"), Some(Json::number(3)))
   assert_eq(matches.length(), 3)
-  assert_true(projection.sheets[0].shared_formulas_indexed)
   assert_true(matches[0].stringify().contains("\"formula\":\"D1+1\""))
   assert_true(matches[1].stringify().contains("\"formula\":\"E1+1\""))
   assert_true(matches[2].stringify().contains("\"formula\":\"F1+1\""))
@@ -768,7 +766,6 @@ async test "XLSX formatting is deferred and custom-format work is charged" {
   )
   assert_eq(page.matched_total, 2)
   assert_eq(page.cells.length(), 0)
-  assert_false(projection.sheets[0].shared_formulas_indexed)
   let limited = xlsx_cli_error_async(() => {
     ignore(
       collect_xlsx_cell_page(

@@ -534,6 +534,18 @@ pub fn Worksheet::shared_formula_masters(
 }
 
 ///|
+/// Looks up one validated shared-formula master without cloning the complete
+/// master index. Parsed worksheets already carry an eagerly validated index;
+/// programmatically edited worksheets rebuild it lazily before this lookup.
+pub fn Worksheet::shared_formula_master(
+  self : Worksheet,
+  shared_index : UInt,
+) -> SharedFormulaMaster? raise XlsxError {
+  self.ensure_shared_formula_masters_index()
+  self.shared_formula_masters_index.get(shared_index)
+}
+
+///|
 test "shared formula masters stay eagerly indexed after bounded read" {
   let source = Workbook::new()
   let source_sheet = source.add_sheet("Data")
@@ -551,6 +563,7 @@ test "shared formula masters stay eagerly indexed after bounded read" {
   let exported = sheet.shared_formula_masters()
   exported.clear()
   assert_eq(sheet.shared_formula_masters_index.length(), 1)
+  assert_true(sheet.shared_formula_master(0) is Some(_))
 }
 
 ///|
