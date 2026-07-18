@@ -3470,18 +3470,45 @@ fn read_zip_archive_core_unchecked(
         Some(value) => value
         None => raise MissingPart(path~)
       }
-      let styles_xml = decode(value)
-      let (styles, conditional_styles) = parse_styles(styles_xml)
-      let (default_table_style, default_pivot_style) = parse_table_styles_defaults(
-        styles_xml,
+      let styles_source_xml = decode_source(value)
+      read_budget.charge_work(styles_source_xml.length())
+      let styles_xml = canonicalize_xlsx_xml(
+        styles_source_xml,
+        max_output_chars=limits.max_xml_part_bytes,
+        cancelled~,
       )
-      let indexed_colors = parse_indexed_colors(styles_xml)
-      let mru_colors_xml = parse_mru_colors_xml(styles_xml)
+      read_budget.checkpoint()
+      read_budget.charge_work(styles_xml.length())
+      let styles_core_xml = match
+        xlsx_core_source_without_foreign(
+          styles_source_xml,
+          "styleSheet",
+          cancelled~,
+        ) {
+        Some(filtered) => {
+          read_budget.charge_work(filtered.length())
+          let canonical = canonicalize_xlsx_xml(
+            filtered,
+            max_output_chars=limits.max_xml_part_bytes,
+            cancelled~,
+          )
+          read_budget.checkpoint()
+          read_budget.charge_work(canonical.length())
+          canonical
+        }
+        None => styles_xml
+      }
+      let (styles, conditional_styles) = parse_styles(styles_core_xml)
+      let (default_table_style, default_pivot_style) = parse_table_styles_defaults(
+        styles_core_xml,
+      )
+      let indexed_colors = parse_indexed_colors(styles_core_xml)
+      let mru_colors_xml = parse_mru_colors_xml(styles_core_xml)
       let styles_ext_lst_xml = parse_styles_ext_lst_xml(styles_xml)
       (
         styles,
         conditional_styles,
-        parse_default_font(styles_xml),
+        parse_default_font(styles_core_xml),
         default_table_style,
         default_pivot_style,
         indexed_colors,

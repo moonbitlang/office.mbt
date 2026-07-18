@@ -182,6 +182,35 @@ test "default font roundtrip" {
 }
 
 ///|
+test "foreign style elements cannot spoof core fonts or cell formats" {
+  let workbook = @xlsx.Workbook::new()
+  workbook.set_default_font("Arial")
+  let sheet = workbook.add_sheet("Sheet1")
+  let style_id = workbook.add_style(@xlsx.Style::number_format("0.00"))
+  sheet.set_cell("A1", "1.5")
+  sheet.set_cell_style("A1", style_id)
+  let archive = @zip.read(@xlsx.write(workbook))
+  guard archive.get("xl/styles.xml") is Some(styles_bytes) else {
+    fail("missing styles.xml")
+  }
+  let styles_xml = @encoding/utf8.decode(styles_bytes)
+  let foreign =
+    #|<fonts xmlns="urn:foreign" count="1"><font><name val="Spoof"/></font></fonts><cellXfs xmlns="urn:foreign" count="1"><xf numFmtId="49" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs>
+  let modified = styles_xml.replace(
+    old=">\n  <numFmts",
+    new=">\n  \{foreign}  <numFmts",
+  )
+  if modified == styles_xml {
+    fail("styles injection marker was not found")
+  }
+  assert_true(archive.replace("xl/styles.xml", @encoding/utf8.encode(modified)))
+  let parsed = @xlsx.read(@zip.write(archive))
+  inspect(parsed.get_default_font(), content="Arial")
+  inspect(parsed.styles().length(), content="2")
+  debug_inspect(parsed.get_cell_style("Sheet1", "A1"), content="Some(1)")
+}
+
+///|
 test "styles extLst roundtrip" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

@@ -1,4 +1,13 @@
 ///|
+let xlsx_extension_namespace_x14 = "http://schemas.microsoft.com/office/spreadsheetml/2009/9/main"
+
+///|
+let xlsx_extension_namespace_x15 = "http://schemas.microsoft.com/office/spreadsheetml/2010/11/main"
+
+///|
+let xlsx_extension_namespace_xm = "http://schemas.microsoft.com/office/excel/2006/main"
+
+///|
 /// Converts namespace-qualified OOXML element names into the lexical form used
 /// by the existing bounded feature parsers. The source is fully namespace- and
 /// structure-validated before rewriting; only names change, never values.
@@ -7,15 +16,38 @@ fn canonicalize_xlsx_xml(
   max_output_chars? : Int = default_max_xml_part_bytes,
   cancelled? : () -> Bool = () => false,
 ) -> String raise XlsxError {
+  let root_scanner = @ooxml.XmlStartTagScanner::new(xml, cancelled~)
+  if !workbook_scanner_next(root_scanner) || root_scanner.depth() != 1 {
+    raise InvalidXml(msg="XLSX XML document element is missing")
+  }
+  let root_namespace = root_scanner.namespace_uri().to_owned()
+  let unprefixed_namespaces = [
+    transitional_spreadsheet_namespace, strict_spreadsheet_namespace,
+  ]
+  let extension_prefixes : Array[(String, String)] = []
+  for
+    namespace_and_prefix in [
+      (xlsx_extension_namespace_x14, "x14"),
+      (xlsx_extension_namespace_x15, "x15"),
+      (xlsx_extension_namespace_xm, "xm"),
+    ] {
+    let (namespace_uri, prefix) = namespace_and_prefix
+    if namespace_uri == root_namespace {
+      unprefixed_namespaces.push(namespace_uri)
+    } else {
+      extension_prefixes.push((namespace_uri, prefix))
+    }
+  }
   @ooxml.canonicalize_xml_expanded_names(
     xml,
-    [transitional_spreadsheet_namespace, strict_spreadsheet_namespace],
+    unprefixed_namespaces,
     [
       (transitional_relationship_attribute_namespace, "r"),
       (strict_relationship_attribute_namespace, "r"),
     ],
     max_output_chars~,
     cancelled~,
+    element_prefixes=extension_prefixes,
   ) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
     ReadCancelled => raise ReadCancelled
@@ -220,6 +252,16 @@ test "XLSX XML canonicalization handles Strict elements and relationship attribu
       #|<worksheet xmlns:s="http://purl.oclc.org/ooxml/spreadsheetml/main" xmlns:q="http://purl.oclc.org/ooxml/officeDocument/relationships"><drawing r:id="d1"/><sheetData><row r="1"><c r="A1" t="str"><v>ok</v></c></row></sheetData></worksheet>
     ),
   )
+}
+
+///|
+test "XLSX XML canonicalization follows extension namespace identity" {
+  let source =
+    #|<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:validation="http://schemas.microsoft.com/office/spreadsheetml/2009/9/main" xmlns:formula="http://schemas.microsoft.com/office/excel/2006/main" xmlns:x14="urn:foreign"><extLst><ext><validation:dataValidations><validation:dataValidation><formula:sqref>A1</formula:sqref></validation:dataValidation></validation:dataValidations><x14:dataValidations/></ext></extLst></worksheet>
+  let canonical = canonicalize_xlsx_xml(source)
+  assert_true(canonical.contains("<x14:dataValidations>"))
+  assert_true(canonical.contains("<xm:sqref>A1</xm:sqref>"))
+  assert_true(canonical.contains("<_foreign_x14_dataValidations/>"))
 }
 
 ///|

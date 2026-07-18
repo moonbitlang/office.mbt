@@ -53,12 +53,14 @@ pub struct XmlStartTagScanner {
   priv mut next_namespace_id : Int
   priv open_name_starts : Array[Int]
   priv open_name_ends : Array[Int]
-  priv open_name_rewrites : Array[Bool]
+  priv open_name_replacements : Array[String?]
   priv open_local_name_starts : Array[Int]
   priv open_local_name_ends : Array[Int]
   priv open_namespace_uris : Array[String]
-  priv rewrite_element_namespaces : Array[String]
+  priv rewrite_element_prefixes : Map[String, String]
+  priv reserved_element_prefixes : Map[String, String]
   priv rewrite_attribute_prefixes : Map[String, String]
+  priv reserved_attribute_prefixes : Map[String, String]
   priv rewrite_output : StringBuilder
   priv canonicalize_markup : Bool
   priv rewrite_output_limit : Int
@@ -1046,27 +1048,24 @@ fn XmlStartTagScanner::validate_attributes(
         } else {
           canonical_prefix + ":" + local_name
         }
-      None => self.xml[attribute.name_start:attribute.name_end].to_owned()
+      None =>
+        match self.reserved_attribute_prefixes.get(prefix.to_owned()) {
+          Some(expected_uri) if expected_uri != uri =>
+            "_foreign_" + prefix.to_owned() + "_" + local_name
+          _ => self.xml[attribute.name_start:attribute.name_end].to_owned()
+        }
     }
     if canonical_names.contains(replacement) {
       raise InvalidXml(msg="XML canonical attribute name collision")
     }
     canonical_names.add(replacement)
-    match self.rewrite_attribute_prefixes.get(uri) {
-      Some(_) =>
-        if !xml_span_equals(
-            self.xml,
-            attribute.name_start,
-            attribute.name_end,
-            replacement,
-          ) {
-          self.record_rewrite(
-            attribute.name_start,
-            attribute.name_end,
-            replacement,
-          )
-        }
-      None => ()
+    if !xml_span_equals(
+        self.xml,
+        attribute.name_start,
+        attribute.name_end,
+        replacement,
+      ) {
+      self.record_rewrite(attribute.name_start, attribute.name_end, replacement)
     }
   }
 }
@@ -1157,23 +1156,35 @@ fn XmlStartTagScanner::escaped_character_data(
 }
 
 ///|
-fn XmlStartTagScanner::should_unprefix_element(
+fn XmlStartTagScanner::canonical_element_replacement(
   self : XmlStartTagScanner,
   namespace_uri : StringView,
-) -> Bool {
-  for wanted in self.rewrite_element_namespaces {
-    if xml_string_equals_view(wanted, namespace_uri) {
-      return true
-    }
+  prefix : StringView,
+  local_name : StringView,
+) -> String? {
+  match self.rewrite_element_prefixes.get(namespace_uri.to_owned()) {
+    Some(canonical_prefix) =>
+      if canonical_prefix == "" {
+        Some(local_name.to_owned())
+      } else {
+        Some(canonical_prefix + ":" + local_name.to_owned())
+      }
+    None =>
+      match self.reserved_element_prefixes.get(prefix.to_owned()) {
+        Some(expected_uri) if expected_uri != namespace_uri.to_owned() =>
+          Some("_foreign_" + prefix.to_owned() + "_" + local_name.to_owned())
+        _ => None
+      }
   }
-  false
 }
 
 ///|
 fn xml_start_tag_scanner_with_rewrites(
   xml : StringView,
-  element_namespaces : Array[String],
+  element_prefixes : Map[String, String],
+  reserved_element_prefixes : Map[String, String],
   attribute_prefixes : Map[String, String],
+  reserved_attribute_prefixes : Map[String, String],
   canonicalize_markup : Bool,
   rewrite_output_limit : Int,
   capture_element_namespaces? : Array[String] = [],
@@ -1193,12 +1204,14 @@ fn xml_start_tag_scanner_with_rewrites(
     next_namespace_id: 2,
     open_name_starts: [],
     open_name_ends: [],
-    open_name_rewrites: [],
+    open_name_replacements: [],
     open_local_name_starts: [],
     open_local_name_ends: [],
     open_namespace_uris: [],
-    rewrite_element_namespaces: element_namespaces,
+    rewrite_element_prefixes: element_prefixes,
+    reserved_element_prefixes,
     rewrite_attribute_prefixes: attribute_prefixes,
+    reserved_attribute_prefixes,
     rewrite_output: StringBuilder::new(),
     canonicalize_markup,
     rewrite_output_limit,
@@ -1228,7 +1241,16 @@ pub fn XmlStartTagScanner::new(
   xml : StringView,
   cancelled? : () -> Bool = () => false,
 ) -> XmlStartTagScanner {
-  xml_start_tag_scanner_with_rewrites(xml, [], Map([]), false, 0, cancelled~)
+  xml_start_tag_scanner_with_rewrites(
+    xml,
+    Map([]),
+    Map([]),
+    Map([]),
+    Map([]),
+    false,
+    0,
+    cancelled~,
+  )
 }
 
 ///|
@@ -1247,7 +1269,7 @@ fn XmlStartTagScanner::consume_end_tag(
         self.xml[name_end] != ('>' : UInt16) {
     name_end = name_end + 1
   }
-  let colon = validate_xml_qname(self.xml, name_start, name_end)
+  ignore(validate_xml_qname(self.xml, name_start, name_end))
   let tag_end = find_xml_tag_end(
     self.xml,
     name_end,
@@ -1269,18 +1291,11 @@ fn XmlStartTagScanner::consume_end_tag(
   if !xml_spans_equal(self.xml, name_start, name_end, open_start, open_end) {
     raise InvalidXml(msg="XML start and end tags do not match")
   }
-  let rewrite_name = self.open_name_rewrites[self.open_name_rewrites.length() -
+  let replacement = self.open_name_replacements[self.open_name_replacements.length() -
     1]
-  if rewrite_name {
-    match colon {
-      Some(value) =>
-        self.record_rewrite(
-          name_start,
-          name_end,
-          self.xml[value + 1:name_end].to_owned(),
-        )
-      None => ()
-    }
+  match replacement {
+    Some(value) => self.record_rewrite(name_start, name_end, value)
+    None => ()
   }
   match self.capture_start {
     Some(capture_start) =>
@@ -1293,7 +1308,7 @@ fn XmlStartTagScanner::consume_end_tag(
   }
   ignore(self.open_name_starts.pop())
   ignore(self.open_name_ends.pop())
-  ignore(self.open_name_rewrites.pop())
+  ignore(self.open_name_replacements.pop())
   ignore(self.open_local_name_starts.pop())
   ignore(self.open_local_name_ends.pop())
   ignore(self.open_namespace_uris.pop())
@@ -1483,23 +1498,26 @@ pub fn XmlStartTagScanner::next(
       None => self.xml[name_start:name_start]
     }
     self.current_namespace_uri = self.resolve_prefix(prefix, false)
-    let rewrite_name = colon is Some(_) &&
-      self.should_unprefix_element(self.current_namespace_uri)
-    if rewrite_name {
-      self.record_rewrite(
-        name_start,
-        name_end,
-        match colon {
-          Some(value) => self.xml[value + 1:name_end].to_owned()
-          None => self.xml[name_start:name_end].to_owned()
-        },
-      )
-    }
-    self.validate_attributes(name_end, tag_end)
-    self.current_name_start = match colon {
+    let local_name_start = match colon {
       Some(value) => value + 1
       None => name_start
     }
+    let replacement = match
+      self.canonical_element_replacement(
+        self.current_namespace_uri,
+        prefix,
+        self.xml[local_name_start:name_end],
+      ) {
+      Some(value) if !xml_span_equals(self.xml, name_start, name_end, value) =>
+        Some(value)
+      _ => None
+    }
+    match replacement {
+      Some(value) => self.record_rewrite(name_start, name_end, value)
+      None => ()
+    }
+    self.validate_attributes(name_end, tag_end)
+    self.current_name_start = local_name_start
     self.current_name_end = name_end
     self.current_tag_end = tag_end
     self.current_depth = scope_depth
@@ -1548,7 +1566,7 @@ pub fn XmlStartTagScanner::next(
       self.depth = scope_depth
       self.open_name_starts.push(name_start)
       self.open_name_ends.push(name_end)
-      self.open_name_rewrites.push(rewrite_name)
+      self.open_name_replacements.push(replacement)
       self.open_local_name_starts.push(self.current_name_start)
       self.open_local_name_ends.push(self.current_name_end)
       self.open_namespace_uris.push(self.current_namespace_uri)
@@ -1634,7 +1652,9 @@ pub fn remove_xml_expanded_name_subtrees(
   namespaces.append(element_namespaces)
   let scanner = xml_start_tag_scanner_with_rewrites(
     xml,
-    [],
+    Map([]),
+    Map([]),
+    Map([]),
     Map([]),
     false,
     xml.length(),
@@ -1671,7 +1691,9 @@ pub fn remove_xml_foreign_namespace_subtrees(
   namespaces.append(element_namespaces)
   let scanner = xml_start_tag_scanner_with_rewrites(
     xml,
-    [],
+    Map([]),
+    Map([]),
+    Map([]),
     Map([]),
     false,
     xml.length(),
@@ -1705,33 +1727,53 @@ pub fn remove_xml_foreign_namespace_subtrees(
 ///|
 /// Validates `xml` and rewrites selected expanded names into lexical forms
 /// expected by a namespace-oblivious parser. Elements in `element_namespaces`
-/// lose their prefix; attributes in `attribute_prefixes` receive the mapped
-/// prefix. Comments and processing instructions are removed, while CDATA is
-/// converted to escaped character data so namespace-oblivious parsers cannot
-/// interpret markup-looking content as elements. Values and unselected names
-/// are unchanged.
+/// lose their prefix. Additional element namespaces in `element_prefixes` and
+/// attributes in `attribute_prefixes` receive their mapped canonical prefix.
+/// A source name that uses one of those reserved prefixes for another namespace
+/// is defanged so a lexical parser cannot mistake it for a supported extension.
+/// Comments and processing instructions are removed, while CDATA is converted
+/// to escaped character data so namespace-oblivious parsers cannot interpret
+/// markup-looking content as elements. Values and unselected names are
+/// unchanged.
 pub fn canonicalize_xml_expanded_names(
   xml : StringView,
   element_namespaces : ArrayView[String],
   attribute_prefixes : ArrayView[(String, String)],
   max_output_chars? : Int = max_xml_start_tag_chars,
   cancelled? : () -> Bool = () => false,
+  element_prefixes? : ArrayView[(String, String)] = [],
 ) -> String raise ParseXmlError {
   check_xml_cancelled(cancelled)
   if max_output_chars < 0 {
     raise InvalidXml(msg="XML canonical output limit is invalid")
   }
-  let elements : Array[String] = []
-  elements.append(element_namespaces)
+  let elements : Map[String, String] = Map([])
+  for namespace_uri in element_namespaces {
+    elements[namespace_uri] = ""
+  }
+  let reserved_elements : Map[String, String] = Map([])
+  for pair in element_prefixes {
+    let (namespace_uri, prefix) = pair
+    elements[namespace_uri] = prefix
+    if prefix != "" {
+      reserved_elements[prefix] = namespace_uri
+    }
+  }
   let attributes : Map[String, String] = Map([])
+  let reserved_attributes : Map[String, String] = Map([])
   for pair in attribute_prefixes {
     let (namespace_uri, prefix) = pair
     attributes[namespace_uri] = prefix
+    if prefix != "" {
+      reserved_attributes[prefix] = namespace_uri
+    }
   }
   let scanner = xml_start_tag_scanner_with_rewrites(
     xml,
     elements,
+    reserved_elements,
     attributes,
+    reserved_attributes,
     true,
     max_output_chars,
     cancelled~,
@@ -2057,9 +2099,12 @@ test "expanded-name canonicalization neutralizes non-element markup" {
 ///|
 test "expanded-name canonicalization rejects lexical attribute collisions" {
   let xml =
-    #|<s:root xmlns:s="urn:sheet" xmlns:r="urn:foreign" xmlns:q="urn:rel" r:id="foreign" q:id="office"/>
+    #|<s:root xmlns:s="urn:sheet" xmlns:p="urn:rel:one" xmlns:q="urn:rel:two" p:id="one" q:id="two"/>
   try
-    canonicalize_xml_expanded_names(xml, ["urn:sheet"], [("urn:rel", "r")])
+    canonicalize_xml_expanded_names(xml, ["urn:sheet"], [
+      ("urn:rel:one", "r"),
+      ("urn:rel:two", "r"),
+    ])
   catch {
     InvalidXml(msg~) =>
       inspect(msg, content="XML canonical attribute name collision")
@@ -2067,6 +2112,21 @@ test "expanded-name canonicalization rejects lexical attribute collisions" {
   } noraise {
     _ => fail("expected canonical attribute collision")
   }
+}
+
+///|
+test "expanded-name canonicalization maps extensions and defangs reserved prefix aliases" {
+  let xml =
+    #|<s:root xmlns:s="urn:sheet" xmlns:e="urn:extension" xmlns:m="urn:math" xmlns:x14="urn:foreign" xmlns:q="urn:rel" xmlns:r="urn:foreign-rel"><e:item q:id="office" r:id="foreign"><m:f>1</m:f></e:item><x14:item/></s:root>
+  inspect(
+    canonicalize_xml_expanded_names(xml, ["urn:sheet"], [("urn:rel", "r")], element_prefixes=[
+      ("urn:extension", "x14"),
+      ("urn:math", "xm"),
+    ]),
+    content=(
+      #|<root xmlns:s="urn:sheet" xmlns:e="urn:extension" xmlns:m="urn:math" xmlns:x14="urn:foreign" xmlns:q="urn:rel" xmlns:r="urn:foreign-rel"><x14:item r:id="office" _foreign_r_id="foreign"><xm:f>1</xm:f></x14:item><_foreign_x14_item/></root>
+    ),
+  )
 }
 
 ///|

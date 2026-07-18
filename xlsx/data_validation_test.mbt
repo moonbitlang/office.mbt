@@ -90,7 +90,7 @@ test "data validation workbook invalid sheet name" {
 }
 
 ///|
-test "data validation read x14 extLst" {
+test "data validation extension read follows namespace identity" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let bytes = @xlsx.write(workbook)
@@ -101,13 +101,14 @@ test "data validation read x14 extLst" {
       let xml = @encoding/utf8.decode(entry.data())
       let ext =
         #|<extLst>
-        #|  <ext uri="{2F02F2B1-0A8B-4F0A-8C2A-25A9A1B30E6B}" xmlns:x14="http://schemas.microsoft.com/office/spreadsheetml/2009/9/main" xmlns:xm="http://schemas.microsoft.com/office/excel/2006/main">
-        #|    <x14:dataValidations>
-        #|      <x14:dataValidation type="list" allowBlank="1">
-        #|        <x14:formula1><xm:f>Sheet1!$B$1:$B$5</xm:f></x14:formula1>
-        #|        <xm:sqref>A7:B8</xm:sqref>
-        #|      </x14:dataValidation>
-        #|    </x14:dataValidations>
+        #|  <ext uri="{2F02F2B1-0A8B-4F0A-8C2A-25A9A1B30E6B}" xmlns:validation="http://schemas.microsoft.com/office/spreadsheetml/2009/9/main" xmlns:formula="http://schemas.microsoft.com/office/excel/2006/main" xmlns:x14="urn:foreign">
+        #|    <x14:dataValidations><x14:dataValidation type="whole"><x14:sqref>Z99</x14:sqref></x14:dataValidation></x14:dataValidations>
+        #|    <validation:dataValidations>
+        #|      <validation:dataValidation type="list" allowBlank="1">
+        #|        <validation:formula1><formula:f>Sheet1!$B$1:$B$5</formula:f></validation:formula1>
+        #|        <formula:sqref>A7:B8</formula:sqref>
+        #|      </validation:dataValidation>
+        #|    </validation:dataValidations>
         #|  </ext>
         #|</extLst>
       let modified = xml.replace_all(
