@@ -8,6 +8,27 @@ let xlsx_extension_namespace_x15 = "http://schemas.microsoft.com/office/spreadsh
 let xlsx_extension_namespace_xm = "http://schemas.microsoft.com/office/excel/2006/main"
 
 ///|
+let transitional_spreadsheet_drawing_namespace = "http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"
+
+///|
+let strict_spreadsheet_drawing_namespace = "http://purl.oclc.org/ooxml/drawingml/spreadsheetDrawing"
+
+///|
+let transitional_drawing_main_namespace = "http://schemas.openxmlformats.org/drawingml/2006/main"
+
+///|
+let strict_drawing_main_namespace = "http://purl.oclc.org/ooxml/drawingml/main"
+
+///|
+let transitional_drawing_chart_namespace = "http://schemas.openxmlformats.org/drawingml/2006/chart"
+
+///|
+let strict_drawing_chart_namespace = "http://purl.oclc.org/ooxml/drawingml/chart"
+
+///|
+let drawing_slicer_namespace = "http://schemas.microsoft.com/office/drawing/2010/slicer"
+
+///|
 /// Converts namespace-qualified OOXML element names into the lexical form used
 /// by the existing bounded feature parsers. The source is fully namespace- and
 /// structure-validated before rewriting; only names change, never values.
@@ -77,6 +98,88 @@ fn xlsx_core_source_without_foreign(
   }
   let dialect = scanner.namespace_uri().to_owned()
   @ooxml.remove_xml_foreign_namespace_subtrees(source, [dialect], cancelled~) catch {
+    InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+}
+
+///|
+/// Produces the extension-aware worksheet view used by known feature parsers.
+/// Core SpreadsheetML plus the explicitly supported x14/x15/xm namespaces are
+/// retained; every other namespace subtree is removed before lexical parsing,
+/// including a foreign default namespace that reuses a core local name.
+fn canonicalize_xlsx_worksheet_features(
+  source : StringView,
+  max_output_chars : Int,
+  cancelled? : () -> Bool = () => false,
+) -> String raise XlsxError {
+  let scanner = @ooxml.XmlStartTagScanner::new(source, cancelled~)
+  if !workbook_scanner_next(scanner) ||
+    scanner.depth() != 1 ||
+    scanner.local_name() != "worksheet" ||
+    (
+      scanner.namespace_uri() != transitional_spreadsheet_namespace &&
+      scanner.namespace_uri() != strict_spreadsheet_namespace
+    ) {
+    raise InvalidXml(msg="worksheet document element is invalid")
+  }
+  let dialect = scanner.namespace_uri().to_owned()
+  let filtered = @ooxml.remove_xml_foreign_namespace_subtrees(
+    source,
+    [
+      dialect, xlsx_extension_namespace_x14, xlsx_extension_namespace_x15, xlsx_extension_namespace_xm,
+    ],
+    cancelled~,
+  ) catch {
+    InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+  canonicalize_xlsx_xml(
+    filtered.unwrap_or(source.to_owned()),
+    max_output_chars~,
+    cancelled~,
+  )
+}
+
+///|
+/// Canonicalizes DrawingML by expanded namespace identity. Prefix aliases and
+/// default namespaces are normalized to the lexical names used by the existing
+/// drawing feature readers, while a foreign namespace borrowing `xdr`, `a`,
+/// `c`, or `sle` is defanged by the bounded XML canonicalizer.
+fn canonicalize_xlsx_drawing_xml(
+  source : StringView,
+  max_output_chars : Int,
+  cancelled? : () -> Bool = () => false,
+) -> String raise XlsxError {
+  let scanner = @ooxml.XmlStartTagScanner::new(source, cancelled~)
+  if !workbook_scanner_next(scanner) ||
+    scanner.depth() != 1 ||
+    scanner.local_name() != "wsDr" ||
+    (
+      scanner.namespace_uri() != transitional_spreadsheet_drawing_namespace &&
+      scanner.namespace_uri() != strict_spreadsheet_drawing_namespace
+    ) {
+    raise InvalidXml(msg="drawing document element is invalid")
+  }
+  @ooxml.canonicalize_xml_expanded_names(
+    source,
+    [],
+    [
+      (transitional_relationship_attribute_namespace, "r"),
+      (strict_relationship_attribute_namespace, "r"),
+    ],
+    max_output_chars~,
+    cancelled~,
+    element_prefixes=[
+      (transitional_spreadsheet_drawing_namespace, "xdr"),
+      (strict_spreadsheet_drawing_namespace, "xdr"),
+      (transitional_drawing_main_namespace, "a"),
+      (strict_drawing_main_namespace, "a"),
+      (transitional_drawing_chart_namespace, "c"),
+      (strict_drawing_chart_namespace, "c"),
+      (drawing_slicer_namespace, "sle"),
+    ],
+  ) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
     ReadCancelled => raise ReadCancelled
   }
@@ -262,6 +365,26 @@ test "XLSX XML canonicalization follows extension namespace identity" {
   assert_true(canonical.contains("<x14:dataValidations>"))
   assert_true(canonical.contains("<xm:sqref>A1</xm:sqref>"))
   assert_true(canonical.contains("<_foreign_x14_dataValidations/>"))
+}
+
+///|
+test "DrawingML canonicalization follows aliases and defangs borrowed prefixes" {
+  let valid =
+    #|<wsDr xmlns="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:d="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:q="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:rel="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><oneCellAnchor><d:graphic><q:chart rel:id="chart"/></d:graphic></oneCellAnchor></wsDr>
+  let canonical = canonicalize_xlsx_drawing_xml(
+    valid, default_max_xml_part_bytes,
+  )
+  assert_true(canonical.contains("<xdr:wsDr"))
+  assert_true(canonical.contains("<xdr:oneCellAnchor>"))
+  assert_true(canonical.contains("<a:graphic>"))
+  assert_true(canonical.contains("<c:chart r:id=\"chart\"/>"))
+  let spoofed =
+    #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"><xdr:oneCellAnchor xmlns:xdr="urn:foreign"/></xdr:wsDr>
+  assert_true(
+    canonicalize_xlsx_drawing_xml(spoofed, default_max_xml_part_bytes).contains(
+      "<_foreign_xdr_oneCellAnchor ",
+    ),
+  )
 }
 
 ///|

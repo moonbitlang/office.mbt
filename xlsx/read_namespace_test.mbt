@@ -350,6 +350,33 @@ test "foreign core-looking elements cannot supply XLSX data" {
   let parsed = @xlsx.read(@zip.write(archive))
   assert_eq(parsed.get_merge_cells("Qualified"), ["A1:B1"])
 
+  let foreign_conditional = @zip.read(
+    namespace_qualified_xlsx_fixture(false, false),
+  )
+  guard foreign_conditional.get("xl/worksheets/sheet.xml")
+    is Some(conditional_bytes) else {
+    fail("missing conditional-format fixture part")
+  }
+  let conditional_xml = @encoding/utf8.decode(conditional_bytes) catch {
+    _ => fail("conditional-format fixture is not UTF-8")
+  }
+  assert_true(
+    foreign_conditional.replace(
+      "xl/worksheets/sheet.xml",
+      @encoding/utf8.encode(
+        conditional_xml.replace(
+          old="</s:worksheet>",
+          new="<conditionalFormatting xmlns=\"urn:foreign\" sqref=\"A1\"><cfRule type=\"expression\" priority=\"1\"><formula>1</formula></cfRule></conditionalFormatting></s:worksheet>",
+        ),
+      ),
+    ),
+  )
+  let conditional_parsed = @xlsx.read(@zip.write(foreign_conditional))
+  guard conditional_parsed.sheet("Qualified") is Some(conditional_sheet) else {
+    fail("missing parsed conditional-format sheet")
+  }
+  assert_true(conditional_sheet.get_conditional_formats().is_empty())
+
   let foreign_strings = @zip.read(
     namespace_qualified_xlsx_fixture(false, false),
   )
