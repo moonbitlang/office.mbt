@@ -123,14 +123,15 @@ fn copy_zip_bytes_cancellable(
   cancelled : () -> Bool,
 ) -> Bytes raise ZipError {
   check_zip_cancelled(cancelled)
-  let output = FixedArray::make(bytes.length(), b'\x00')
-  let mut offset = 0
-  while offset < bytes.length() {
-    let end = (offset + 64 * 1024).min(bytes.length())
-    output.blit_from_bytesview(offset, bytes[offset:end])
-    offset = end
-    check_zip_cancelled(cancelled)
-  }
+  // Initialize directly from the source. `FixedArray::make` would zero-fill
+  // the complete destination before the first chunk checkpoint, defeating the
+  // cancellation guarantee for a permitted 32-MiB stored entry.
+  let output = FixedArray::makei(bytes.length(), index => {
+    if (index & 0xffff) == 0 {
+      check_zip_cancelled(cancelled)
+    }
+    bytes[index]
+  })
   check_zip_cancelled(cancelled)
   output.unsafe_reinterpret_as_bytes()
 }
