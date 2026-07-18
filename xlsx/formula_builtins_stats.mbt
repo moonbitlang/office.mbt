@@ -1925,8 +1925,13 @@ fn calc_cell_value_internal(
           let formula = match
             (formula, cell.formula_type, cell.formula_shared_index) {
             ("", Some(Shared), Some(shared_index)) =>
-              match sheet.shared_formula_master(shared_index) {
-                Some(master) => master.translate_to(row, col)
+              match
+                sheet.shared_formula_master(
+                  shared_index,
+                  cancelled=ctx.shared_formula_budget.cancelled,
+                ) {
+                Some(master) =>
+                  ctx.shared_formula_budget.translate(master, row, col)
                 None =>
                   raise InvalidXml(msg="shared formula follower has no master")
               }

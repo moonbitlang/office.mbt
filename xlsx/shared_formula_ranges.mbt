@@ -7,6 +7,17 @@ priv struct SharedFormulaRangeEvent {
 }
 
 ///|
+fn shared_formula_range_checkpoint(
+  budget : ReadBudget?,
+  cancelled : () -> Bool,
+) -> Unit raise XlsxError {
+  match budget {
+    Some(value) => value.checkpoint()
+    None => if cancelled() { raise ReadCancelled }
+  }
+}
+
+///|
 fn compare_shared_formula_range_events(
   left : SharedFormulaRangeEvent,
   right : SharedFormulaRangeEvent,
@@ -32,27 +43,24 @@ fn compare_shared_formula_range_events(
 fn sort_shared_formula_range_events(
   events : Array[SharedFormulaRangeEvent],
   budget? : ReadBudget,
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
   if events.length() < 2 {
     return
   }
+  shared_formula_range_checkpoint(budget, cancelled)
   match budget {
-    Some(value) => {
-      // Account for and observe cancellation before allocating/copying the
-      // O(events) merge scratch buffer.
-      value.checkpoint()
+    Some(value) =>
+      // Account before allocating/copying the O(events) merge scratch buffer.
       value.charge_work(events.length())
-    }
     None => ()
   }
   let scratch = events.copy()
   let mut width = 1
   while width < events.length() {
+    shared_formula_range_checkpoint(budget, cancelled)
     match budget {
-      Some(value) => {
-        value.checkpoint()
-        value.charge_work(events.length())
-      }
+      Some(value) => value.charge_work(events.length())
       None => ()
     }
     let mut run = 0
@@ -72,10 +80,7 @@ fn sort_shared_formula_range_events(
       let mut right = middle
       while left < middle || right < end {
         if (output & 4095) == 0 {
-          match budget {
-            Some(value) => value.checkpoint()
-            None => ()
-          }
+          shared_formula_range_checkpoint(budget, cancelled)
         }
         if right >= end ||
           (
@@ -93,19 +98,14 @@ fn sort_shared_formula_range_events(
       }
       run = end
     }
+    shared_formula_range_checkpoint(budget, cancelled)
     match budget {
-      Some(value) => {
-        value.checkpoint()
-        value.charge_work(events.length())
-      }
+      Some(value) => value.charge_work(events.length())
       None => ()
     }
     for index in 0..<events.length() {
       if (index & 4095) == 0 {
-        match budget {
-          Some(value) => value.checkpoint()
-          None => ()
-        }
+        shared_formula_range_checkpoint(budget, cancelled)
       }
       events[index] = scratch[index]
     }
@@ -115,10 +115,7 @@ fn sort_shared_formula_range_events(
       width * 2
     }
   }
-  match budget {
-    Some(value) => value.checkpoint()
-    None => ()
-  }
+  shared_formula_range_checkpoint(budget, cancelled)
 }
 
 ///|
@@ -242,18 +239,16 @@ fn shared_formula_range_tree_maximum(
 fn validate_shared_formula_master_ranges(
   masters : Map[UInt, SharedFormulaMaster],
   budget? : ReadBudget,
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
   if masters.length() < 2 {
-    match budget {
-      Some(value) => value.checkpoint()
-      None => ()
-    }
+    shared_formula_range_checkpoint(budget, cancelled)
     return
   }
   let events : Array[SharedFormulaRangeEvent] = []
+  shared_formula_range_checkpoint(budget, cancelled)
   match budget {
     Some(value) => {
-      value.checkpoint()
       value.charge_work(masters.length())
       value.charge_work(masters.length())
     }
@@ -262,10 +257,7 @@ fn validate_shared_formula_master_ranges(
   let mut master_index = 0
   for _, master in masters {
     if (master_index & 4095) == 0 {
-      match budget {
-        Some(value) => value.checkpoint()
-        None => ()
-      }
+      shared_formula_range_checkpoint(budget, cancelled)
     }
     events.push({
       row: master.row_lo,
@@ -281,7 +273,7 @@ fn validate_shared_formula_master_ranges(
     })
     master_index += 1
   }
-  sort_shared_formula_range_events(events, budget?)
+  sort_shared_formula_range_events(events, budget?, cancelled~)
   let tree_size = cell_ref_max_cols * 4 + 8
   let maximums = Array::make(tree_size, 0)
   let pending_additions = Array::make(tree_size, 0)
@@ -299,10 +291,7 @@ fn validate_shared_formula_master_ranges(
   let mut event_index = 0
   for event in events {
     if (event_index & 4095) == 0 {
-      match budget {
-        Some(value) => value.checkpoint()
-        None => ()
-      }
+      shared_formula_range_checkpoint(budget, cancelled)
     }
     if event.delta > 0 &&
       shared_formula_range_tree_maximum(
@@ -329,10 +318,7 @@ fn validate_shared_formula_master_ranges(
     )
     event_index += 1
   }
-  match budget {
-    Some(value) => value.checkpoint()
-    None => ()
-  }
+  shared_formula_range_checkpoint(budget, cancelled)
 }
 
 ///|

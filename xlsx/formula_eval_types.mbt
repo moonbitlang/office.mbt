@@ -169,6 +169,7 @@ priv struct CalcContext {
   mut current_sheet : String
   mut current_ref : String
   use_1904_dates : Bool
+  shared_formula_budget : SharedFormulaMaterializationBudget
 }
 
 ///|

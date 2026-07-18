@@ -395,25 +395,32 @@ pub fn Worksheet::formula_refs(self : Worksheet) -> Array[String] {
 /// Indexes and validates one worksheet's shared-formula groups. Followers are
 /// omitted from the returned map, so master formula text and its copy anchor
 /// are retained only once even for large shared ranges.
+fn shared_formula_validation_checkpoint(
+  budget : ReadBudget?,
+  cancelled : () -> Bool,
+) -> Unit raise XlsxError {
+  match budget {
+    Some(value) => value.checkpoint()
+    None => if cancelled() { raise ReadCancelled }
+  }
+}
+
+///|
 fn validated_shared_formula_masters(
   cells : ArrayView[Cell],
   budget? : ReadBudget,
+  cancelled? : () -> Bool = () => false,
 ) -> Map[UInt, SharedFormulaMaster] raise XlsxError {
   let masters : Map[UInt, SharedFormulaMaster] = Map([])
+  shared_formula_validation_checkpoint(budget, cancelled)
   match budget {
-    Some(value) => {
-      value.checkpoint()
-      value.charge_work(cells.length())
-    }
+    Some(value) => value.charge_work(cells.length())
     None => ()
   }
   let mut cell_index = 0
   for cell in cells {
     if (cell_index & 4095) == 0 {
-      match budget {
-        Some(value) => value.checkpoint()
-        None => ()
-      }
+      shared_formula_validation_checkpoint(budget, cancelled)
     }
     match
       (
@@ -456,21 +463,16 @@ fn validated_shared_formula_masters(
     }
     cell_index += 1
   }
-  validate_shared_formula_master_ranges(masters, budget?)
+  validate_shared_formula_master_ranges(masters, budget?, cancelled~)
+  shared_formula_validation_checkpoint(budget, cancelled)
   match budget {
-    Some(value) => {
-      value.checkpoint()
-      value.charge_work(cells.length())
-    }
+    Some(value) => value.charge_work(cells.length())
     None => ()
   }
   cell_index = 0
   for cell in cells {
     if (cell_index & 4095) == 0 {
-      match budget {
-        Some(value) => value.checkpoint()
-        None => ()
-      }
+      shared_formula_validation_checkpoint(budget, cancelled)
     }
     match (cell.formula_type, cell.formula_shared_index, cell.formula_ref) {
       (Some(Shared), Some(shared_index), None) =>
@@ -487,10 +489,7 @@ fn validated_shared_formula_masters(
     }
     cell_index += 1
   }
-  match budget {
-    Some(value) => value.checkpoint()
-    None => ()
-  }
+  shared_formula_validation_checkpoint(budget, cancelled)
   masters
 }
 
@@ -506,6 +505,46 @@ fn clone_shared_formula_masters_index(
 }
 
 ///|
+/// Counts only the shared cells an edit will retain or copy, then performs one
+/// aggregate fan-out check before the first translated string is allocated.
+fn preflight_shared_formula_materialization(
+  cells : ArrayView[Cell],
+  masters : Map[UInt, SharedFormulaMaster],
+  budget : SharedFormulaMaterializationBudget,
+  retain : (Cell) -> Bool,
+) -> Unit raise XlsxError {
+  let formula_counts : Map[UInt, Int] = Map([])
+  budget.checkpoint()
+  let mut cell_index = 0
+  for cell in cells {
+    if (cell_index & 4095) == 0 {
+      budget.checkpoint()
+    }
+    if retain(cell) {
+      match (cell.formula_type, cell.formula_shared_index) {
+        (Some(Shared), Some(shared_index)) => {
+          let current = formula_counts.get(shared_index).unwrap_or(0)
+          let (next, exceeded) = read_budget_actual(current, 1, 0x7fffffff)
+          if exceeded {
+            raise ResourceLimitExceeded(
+              kind="shared_formula_followers",
+              limit=0x7fffffff,
+              actual=next,
+            )
+          }
+          formula_counts[shared_index] = next
+        }
+        (Some(Shared), None) =>
+          raise InvalidXml(msg="shared formula index missing")
+        _ => ()
+      }
+    }
+    cell_index += 1
+  }
+  budget.preflight(formula_counts, masters)
+}
+
+///|
 /// Converts one shared-formula cell to an independent normal formula before a
 /// structural edit moves or duplicates it. Shared ranges are metadata over
 /// fixed coordinates; retaining that metadata while coordinates change makes
@@ -515,6 +554,7 @@ fn clone_shared_formula_masters_index(
 fn normal_formula_cell_for_structural_edit(
   cell : Cell,
   masters : Map[UInt, SharedFormulaMaster],
+  budget : SharedFormulaMaterializationBudget,
 ) -> Cell raise XlsxError {
   match (cell.formula_type, cell.formula_shared_index) {
     (Some(Shared), Some(shared_index)) => {
@@ -529,7 +569,7 @@ fn normal_formula_cell_for_structural_edit(
         value: cell.value,
         value_type: cell.value_type,
         rich_text: cell.rich_text,
-        formula: Some(master.translate_to(cell.row, cell.col)),
+        formula: Some(budget.translate(master, cell.row, cell.col)),
         formula_type: None,
         formula_ref: None,
         formula_shared_index: None,
@@ -550,14 +590,28 @@ fn Worksheet::invalidate_shared_formula_masters_index(self : Worksheet) -> Unit 
 ///|
 fn Worksheet::ensure_shared_formula_masters_index(
   self : Worksheet,
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
+  if cancelled() {
+    raise ReadCancelled
+  }
   if self.shared_formula_masters_index_valid {
     return
   }
-  let rebuilt = validated_shared_formula_masters(self.cells)
+  let rebuilt = validated_shared_formula_masters(self.cells, cancelled~)
   self.shared_formula_masters_index.clear()
+  let mut master_index = 0
   for shared_index, master in rebuilt {
+    if (master_index & 4095) == 0 && cancelled() {
+      self.shared_formula_masters_index.clear()
+      raise ReadCancelled
+    }
     self.shared_formula_masters_index[shared_index] = master
+    master_index += 1
+  }
+  if cancelled() {
+    self.shared_formula_masters_index.clear()
+    raise ReadCancelled
   }
   self.shared_formula_masters_index_valid = true
 }
@@ -577,11 +631,13 @@ pub fn Worksheet::shared_formula_masters(
 /// Looks up one validated shared-formula master without cloning the complete
 /// master index. Parsed worksheets already carry an eagerly validated index;
 /// programmatically edited worksheets rebuild it lazily before this lookup.
+/// `cancelled` is polled while rebuilding a stale index.
 pub fn Worksheet::shared_formula_master(
   self : Worksheet,
   shared_index : UInt,
+  cancelled? : () -> Bool = () => false,
 ) -> SharedFormulaMaster? raise XlsxError {
-  self.ensure_shared_formula_masters_index()
+  self.ensure_shared_formula_masters_index(cancelled~)
   self.shared_formula_masters_index.get(shared_index)
 }
 
@@ -3465,9 +3521,11 @@ fn Worksheet::insert_rows(
   self : Worksheet,
   row : Int,
   count : Int,
+  formula_limits? : SharedFormulaLimits = SharedFormulaLimits::new(),
+  cancelled? : () -> Bool = () => false,
+  formula_budget? : SharedFormulaMaterializationBudget,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
-  self.invalidate_shared_formula_masters_index()
   if row <= 0 || row > cell_ref_max_rows {
     raise InvalidCellRef(value="\{0}:\{row}")
   }
@@ -3481,7 +3539,20 @@ fn Worksheet::insert_rows(
       msg="row count \{count} exceeds the sheet's \{cell_ref_max_rows} rows",
     )
   }
-  let shared_formula_masters = validated_shared_formula_masters(self.cells)
+  let translation_budget = match formula_budget {
+    Some(value) => value
+    None => SharedFormulaMaterializationBudget::new(formula_limits, cancelled~)
+  }
+  let shared_formula_masters = validated_shared_formula_masters(
+    self.cells,
+    cancelled=translation_budget.cancelled,
+  )
+  preflight_shared_formula_materialization(
+    self.cells,
+    shared_formula_masters,
+    translation_budget,
+    fn(_cell : Cell) -> Bool { true },
+  )
   // Transactional: stage every shifted collection into locals first — cell,
   // merge, hyperlink, filter, table, sparkline, image, and chart references
   // shift through `cell_ref_from`/range adjusters that raise once a coordinate
@@ -3492,7 +3563,7 @@ fn Worksheet::insert_rows(
   let updated_cells : Array[Cell] = []
   for stored_cell in self.cells {
     let cell = normal_formula_cell_for_structural_edit(
-      stored_cell, shared_formula_masters,
+      stored_cell, shared_formula_masters, translation_budget,
     )
     if cell.row >= row {
       let new_row = cell.row + count
@@ -3591,6 +3662,7 @@ fn Worksheet::insert_rows(
   )
   // Commit: every stage above succeeded, so applying the staged state cannot
   // fail partway.
+  self.invalidate_shared_formula_masters_index()
   self.invalidate_cell_index()
   self.cells.clear()
   self.cells.append(updated_cells)
@@ -3620,10 +3692,10 @@ fn Worksheet::remove_rows(
   self : Worksheet,
   row : Int,
   count : Int,
+  formula_limits? : SharedFormulaLimits = SharedFormulaLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
-  self.invalidate_shared_formula_masters_index()
-  self.invalidate_cell_index()
   if row <= 0 {
     raise InvalidCellRef(value="\{0}:\{row}")
   }
@@ -3640,18 +3712,31 @@ fn Worksheet::remove_rows(
       msg="row count \{count} exceeds the sheet's \{cell_ref_max_rows} rows",
     )
   }
-  let shared_formula_masters = validated_shared_formula_masters(self.cells)
+  let translation_budget = SharedFormulaMaterializationBudget::new(
+    formula_limits,
+    cancelled~,
+  )
+  let shared_formula_masters = validated_shared_formula_masters(
+    self.cells,
+    cancelled=translation_budget.cancelled,
+  )
   let end_row = row + count - 1
+  preflight_shared_formula_materialization(
+    self.cells,
+    shared_formula_masters,
+    translation_budget,
+    fn(cell : Cell) -> Bool { cell.row < row || cell.row > end_row },
+  )
   let updated_cells : Array[Cell] = []
   for stored_cell in self.cells {
+    if stored_cell.row >= row && stored_cell.row <= end_row {
+      continue
+    }
     let cell = normal_formula_cell_for_structural_edit(
-      stored_cell, shared_formula_masters,
+      stored_cell, shared_formula_masters, translation_budget,
     )
     if cell.row < row {
       updated_cells.push(cell)
-      continue
-    }
-    if cell.row <= end_row {
       continue
     }
     let new_row = cell.row - count
@@ -3671,6 +3756,8 @@ fn Worksheet::remove_rows(
       style_id: cell.style_id,
     })
   }
+  self.invalidate_shared_formula_masters_index()
+  self.invalidate_cell_index()
   self.cells.clear()
   self.cells.append(updated_cells)
   let updated_merges : Array[String] = []
@@ -3937,10 +4024,10 @@ fn Worksheet::duplicate_row_to(
   self : Worksheet,
   row : Int,
   target_row : Int,
+  formula_limits? : SharedFormulaLimits = SharedFormulaLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
-  self.invalidate_shared_formula_masters_index()
-  self.invalidate_cell_index()
   if row <= 0 || row > cell_ref_max_rows {
     raise InvalidCellRef(value="\{0}:\{row}")
   }
@@ -3952,18 +4039,38 @@ fn Worksheet::duplicate_row_to(
   if target_row > cell_ref_max_rows {
     raise InvalidCellRef(value="\{0}:\{target_row}")
   }
-  let shared_formula_masters = validated_shared_formula_masters(self.cells)
+  let translation_budget = SharedFormulaMaterializationBudget::new(
+    formula_limits,
+    cancelled~,
+  )
+  let shared_formula_masters = validated_shared_formula_masters(
+    self.cells,
+    cancelled=translation_budget.cancelled,
+  )
+  preflight_shared_formula_materialization(
+    self.cells,
+    shared_formula_masters,
+    translation_budget,
+    fn(cell : Cell) -> Bool { cell.row == row },
+  )
   let row_cells : Array[Cell] = []
   for stored_cell in self.cells {
-    let cell = normal_formula_cell_for_structural_edit(
-      stored_cell, shared_formula_masters,
-    )
-    if cell.row == row {
-      row_cells.push(cell)
+    if stored_cell.row != row {
+      continue
     }
+    let cell = normal_formula_cell_for_structural_edit(
+      stored_cell, shared_formula_masters, translation_budget,
+    )
+    row_cells.push(cell)
   }
   let row_dim = self.row_dimensions.get(row)
-  self.insert_rows(target_row, 1)
+  self.insert_rows(
+    target_row,
+    1,
+    formula_limits~,
+    cancelled~,
+    formula_budget=translation_budget,
+  )
   for cell in row_cells {
     let reference = cell_ref_from(target_row, cell.col)
     self.cells.push({
@@ -3995,9 +4102,10 @@ fn Worksheet::insert_cols(
   self : Worksheet,
   col : Int,
   count : Int,
+  formula_limits? : SharedFormulaLimits = SharedFormulaLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
-  self.invalidate_shared_formula_masters_index()
   if col <= 0 || col > cell_ref_max_cols {
     raise InvalidCellRef(value="\{col}:\{0}")
   }
@@ -4010,7 +4118,20 @@ fn Worksheet::insert_cols(
       msg="column count \{count} exceeds the sheet's \{cell_ref_max_cols} columns",
     )
   }
-  let shared_formula_masters = validated_shared_formula_masters(self.cells)
+  let translation_budget = SharedFormulaMaterializationBudget::new(
+    formula_limits,
+    cancelled~,
+  )
+  let shared_formula_masters = validated_shared_formula_masters(
+    self.cells,
+    cancelled=translation_budget.cancelled,
+  )
+  preflight_shared_formula_materialization(
+    self.cells,
+    shared_formula_masters,
+    translation_budget,
+    fn(_cell : Cell) -> Bool { true },
+  )
   // Transactional (see insert_rows): stage everything into locals — reference
   // shifts raise once a coordinate leaves the grid, column dimensions and page
   // breaks are bound-checked explicitly — and commit only once every stage has
@@ -4018,7 +4139,7 @@ fn Worksheet::insert_cols(
   let updated_cells : Array[Cell] = []
   for stored_cell in self.cells {
     let cell = normal_formula_cell_for_structural_edit(
-      stored_cell, shared_formula_masters,
+      stored_cell, shared_formula_masters, translation_budget,
     )
     if cell.col >= col {
       let new_col = cell.col + count
@@ -4114,6 +4235,7 @@ fn Worksheet::insert_cols(
     count,
   )
   // Commit.
+  self.invalidate_shared_formula_masters_index()
   self.invalidate_cell_index()
   self.cells.clear()
   self.cells.append(updated_cells)
@@ -4143,10 +4265,10 @@ fn Worksheet::remove_cols(
   self : Worksheet,
   col : Int,
   count : Int,
+  formula_limits? : SharedFormulaLimits = SharedFormulaLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
-  self.invalidate_shared_formula_masters_index()
-  self.invalidate_cell_index()
   if col <= 0 {
     raise InvalidCellRef(value="\{col}:\{0}")
   }
@@ -4162,18 +4284,31 @@ fn Worksheet::remove_cols(
       msg="column count \{count} exceeds the sheet's \{cell_ref_max_cols} columns",
     )
   }
-  let shared_formula_masters = validated_shared_formula_masters(self.cells)
+  let translation_budget = SharedFormulaMaterializationBudget::new(
+    formula_limits,
+    cancelled~,
+  )
+  let shared_formula_masters = validated_shared_formula_masters(
+    self.cells,
+    cancelled=translation_budget.cancelled,
+  )
   let end_col = col + count - 1
+  preflight_shared_formula_materialization(
+    self.cells,
+    shared_formula_masters,
+    translation_budget,
+    fn(cell : Cell) -> Bool { cell.col < col || cell.col > end_col },
+  )
   let updated_cells : Array[Cell] = []
   for stored_cell in self.cells {
+    if stored_cell.col >= col && stored_cell.col <= end_col {
+      continue
+    }
     let cell = normal_formula_cell_for_structural_edit(
-      stored_cell, shared_formula_masters,
+      stored_cell, shared_formula_masters, translation_budget,
     )
     if cell.col < col {
       updated_cells.push(cell)
-      continue
-    }
-    if cell.col <= end_col {
       continue
     }
     let new_col = cell.col - count
@@ -4193,6 +4328,8 @@ fn Worksheet::remove_cols(
       style_id: cell.style_id,
     })
   }
+  self.invalidate_shared_formula_masters_index()
+  self.invalidate_cell_index()
   self.cells.clear()
   self.cells.append(updated_cells)
   let updated_merges : Array[String] = []

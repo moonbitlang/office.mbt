@@ -13,6 +13,279 @@ pub struct SharedFormulaMaster {
 }
 
 ///|
+let default_max_shared_formula_input_chars : Int = 64 * 1024
+
+///|
+let default_max_shared_formula_output_chars : Int = 256 * 1024
+
+///|
+let default_max_shared_formula_total_output_chars : Int = 64 * 1024 * 1024
+
+///|
+let default_max_shared_formula_work_units : Int = 256 * 1024 * 1024
+
+///|
+/// Resource policy for resolving shared-formula followers.
+///
+/// `max_input_chars` and `max_output_chars` apply to one translated formula.
+/// `max_total_output_chars` and `max_work_units` are cumulative across one
+/// structural edit or one top-level calculation, so a compact shared master
+/// cannot fan out into an unbounded amount of text or translation work.
+pub struct SharedFormulaLimits {
+  priv max_input_chars : Int
+  priv max_output_chars : Int
+  priv max_total_output_chars : Int
+  priv max_work_units : Int
+}
+
+///|
+/// Returns the production shared-formula policy: 64 Ki characters per master,
+/// 256 Ki characters per translated follower, 64 Mi characters of cumulative
+/// output, and 256 Mi cumulative translation work units per operation.
+pub fn SharedFormulaLimits::new() -> SharedFormulaLimits {
+  {
+    max_input_chars: default_max_shared_formula_input_chars,
+    max_output_chars: default_max_shared_formula_output_chars,
+    max_total_output_chars: default_max_shared_formula_total_output_chars,
+    max_work_units: default_max_shared_formula_work_units,
+  }
+}
+
+///|
+/// Builds a validated shared-formula policy. Every limit must be positive and
+/// the per-formula output ceiling cannot exceed the cumulative output ceiling.
+pub fn SharedFormulaLimits::with_values(
+  max_input_chars? : Int = default_max_shared_formula_input_chars,
+  max_output_chars? : Int = default_max_shared_formula_output_chars,
+  max_total_output_chars? : Int = default_max_shared_formula_total_output_chars,
+  max_work_units? : Int = default_max_shared_formula_work_units,
+) -> SharedFormulaLimits raise XlsxError {
+  if max_input_chars <= 0 ||
+    max_output_chars <= 0 ||
+    max_total_output_chars <= 0 ||
+    max_work_units <= 0 {
+    raise InvalidOptions(msg="shared formula limits must be positive")
+  }
+  if max_output_chars > max_total_output_chars {
+    raise InvalidOptions(
+      msg="shared formula output limit exceeds cumulative output limit",
+    )
+  }
+  { max_input_chars, max_output_chars, max_total_output_chars, max_work_units }
+}
+
+///|
+/// Returns the maximum accepted character count for one shared master.
+pub fn SharedFormulaLimits::max_input_chars(self : SharedFormulaLimits) -> Int {
+  self.max_input_chars
+}
+
+///|
+/// Returns the maximum output character count for one translated follower.
+pub fn SharedFormulaLimits::max_output_chars(self : SharedFormulaLimits) -> Int {
+  self.max_output_chars
+}
+
+///|
+/// Returns the cumulative translated-output ceiling for one operation.
+pub fn SharedFormulaLimits::max_total_output_chars(
+  self : SharedFormulaLimits,
+) -> Int {
+  self.max_total_output_chars
+}
+
+///|
+/// Returns the cumulative translation-work ceiling for one operation.
+pub fn SharedFormulaLimits::max_work_units(self : SharedFormulaLimits) -> Int {
+  self.max_work_units
+}
+
+///|
+/// One cumulative budget is shared by every follower resolved during a
+/// structural edit or top-level calculation.
+priv struct SharedFormulaMaterializationBudget {
+  limits : SharedFormulaLimits
+  cancelled : () -> Bool
+  mut output_chars : Int
+  mut work_units : Int
+}
+
+///|
+fn SharedFormulaMaterializationBudget::new(
+  limits : SharedFormulaLimits,
+  cancelled? : () -> Bool = () => false,
+) -> SharedFormulaMaterializationBudget {
+  { limits, cancelled, output_chars: 0, work_units: 0 }
+}
+
+///|
+fn SharedFormulaMaterializationBudget::checkpoint(
+  self : SharedFormulaMaterializationBudget,
+) -> Unit raise XlsxError {
+  if (self.cancelled)() {
+    raise ReadCancelled
+  }
+}
+
+///|
+fn shared_formula_projected_total(
+  current : Int,
+  chars_per_formula : Int,
+  formula_count : Int,
+  limit : Int,
+) -> (Int, Bool) {
+  if chars_per_formula <= 0 || formula_count <= 0 {
+    return (current, false)
+  }
+  let remaining = limit - current
+  if formula_count > remaining / chars_per_formula {
+    return (if limit < 0x7fffffff { limit + 1 } else { limit }, true)
+  }
+  (current + chars_per_formula * formula_count, false)
+}
+
+///|
+/// Rejects an oversized fan-out before allocating any translated formula.
+/// Counting by master makes the check explicitly overflow-safe for
+/// `follower_count * formula_size`, while actual translation still accounts
+/// for reference expansion and scanner work precisely.
+fn SharedFormulaMaterializationBudget::preflight(
+  self : SharedFormulaMaterializationBudget,
+  formula_counts : Map[UInt, Int],
+  masters : Map[UInt, SharedFormulaMaster],
+) -> Unit raise XlsxError {
+  self.checkpoint()
+  let mut projected_output = self.output_chars
+  let mut projected_work = self.work_units
+  for shared_index, formula_count in formula_counts {
+    self.checkpoint()
+    let master = match masters.get(shared_index) {
+      Some(value) => value
+      None => raise InvalidXml(msg="shared formula cell has no master")
+    }
+    let input_chars = master.formula.length()
+    if input_chars > self.limits.max_input_chars {
+      raise ResourceLimitExceeded(
+        kind="shared_formula_input_chars",
+        limit=self.limits.max_input_chars,
+        actual=input_chars,
+      )
+    }
+    let (next_output, output_exceeded) = shared_formula_projected_total(
+      projected_output,
+      input_chars,
+      formula_count,
+      self.limits.max_total_output_chars,
+    )
+    if output_exceeded {
+      raise ResourceLimitExceeded(
+        kind="shared_formula_total_output_chars",
+        limit=self.limits.max_total_output_chars,
+        actual=next_output,
+      )
+    }
+    projected_output = next_output
+    let (next_work, work_exceeded) = shared_formula_projected_total(
+      projected_work,
+      input_chars,
+      formula_count,
+      self.limits.max_work_units,
+    )
+    if work_exceeded {
+      raise ResourceLimitExceeded(
+        kind="shared_formula_work_units",
+        limit=self.limits.max_work_units,
+        actual=next_work,
+      )
+    }
+    projected_work = next_work
+  }
+  self.checkpoint()
+}
+
+///|
+fn SharedFormulaMaterializationBudget::translate(
+  self : SharedFormulaMaterializationBudget,
+  master : SharedFormulaMaster,
+  row : Int,
+  column : Int,
+) -> String raise XlsxError {
+  self.checkpoint()
+  let input_chars = master.formula.length()
+  if input_chars > self.limits.max_input_chars {
+    raise ResourceLimitExceeded(
+      kind="shared_formula_input_chars",
+      limit=self.limits.max_input_chars,
+      actual=input_chars,
+    )
+  }
+  let (projected_output, projected_output_exceeded) = shared_formula_projected_total(
+    self.output_chars,
+    input_chars,
+    1,
+    self.limits.max_total_output_chars,
+  )
+  if projected_output_exceeded {
+    raise ResourceLimitExceeded(
+      kind="shared_formula_total_output_chars",
+      limit=self.limits.max_total_output_chars,
+      actual=projected_output,
+    )
+  }
+  let (projected_work, projected_work_exceeded) = shared_formula_projected_total(
+    self.work_units,
+    input_chars,
+    1,
+    self.limits.max_work_units,
+  )
+  if projected_work_exceeded {
+    raise ResourceLimitExceeded(
+      kind="shared_formula_work_units",
+      limit=self.limits.max_work_units,
+      actual=projected_work,
+    )
+  }
+  let remaining_output = self.limits.max_total_output_chars - self.output_chars
+  let remaining_work = self.limits.max_work_units - self.work_units
+  let (translated, work) = master.translate_to_limited(
+    row,
+    column,
+    maximum_input_chars=self.limits.max_input_chars,
+    maximum_output_chars=self.limits.max_output_chars.min(remaining_output),
+    maximum_work_units=remaining_work,
+    cancelled=self.cancelled,
+  )
+  let (output_chars, output_exceeded) = read_budget_actual(
+    self.output_chars,
+    translated.length(),
+    self.limits.max_total_output_chars,
+  )
+  if output_exceeded {
+    raise ResourceLimitExceeded(
+      kind="shared_formula_total_output_chars",
+      limit=self.limits.max_total_output_chars,
+      actual=output_chars,
+    )
+  }
+  let (work_units, work_exceeded) = read_budget_actual(
+    self.work_units,
+    work,
+    self.limits.max_work_units,
+  )
+  if work_exceeded {
+    raise ResourceLimitExceeded(
+      kind="shared_formula_work_units",
+      limit=self.limits.max_work_units,
+      actual=work_units,
+    )
+  }
+  self.output_chars = output_chars
+  self.work_units = work_units
+  self.checkpoint()
+  translated
+}
+
+///|
 priv struct FormulaCellToken {
   end : Int
   column_start : Int
@@ -813,13 +1086,14 @@ fn translate_shared_formula(
   column_delta : Int,
   row_delta : Int,
 ) -> String {
+  let limits = SharedFormulaLimits::new()
   let (translated, _) = try! translate_shared_formula_limited(
     formula,
     column_delta,
     row_delta,
-    0x7fffffff,
-    0x7fffffff,
-    0x7fffffff,
+    limits.max_input_chars,
+    limits.max_output_chars,
+    limits.max_work_units,
     () => false,
   )
   translated
@@ -868,18 +1142,20 @@ pub fn SharedFormulaMaster::translate_to_limited(
 ///|
 /// Resolves the formula text represented by this shared master at a follower
 /// coordinate. Coordinates outside the master's declared shared range are
-/// rejected as malformed OOXML.
+/// rejected as malformed OOXML. Production per-formula limits are applied;
+/// use `translate_to_limited` when a stricter policy or cancellation is needed.
 pub fn SharedFormulaMaster::translate_to(
   self : SharedFormulaMaster,
   row : Int,
   column : Int,
 ) -> String raise XlsxError {
+  let limits = SharedFormulaLimits::new()
   let (translated, _) = self.translate_to_limited(
     row,
     column,
-    maximum_input_chars=0x7fffffff,
-    maximum_output_chars=0x7fffffff,
-    maximum_work_units=0x7fffffff,
+    maximum_input_chars=limits.max_input_chars,
+    maximum_output_chars=limits.max_output_chars,
+    maximum_work_units=limits.max_work_units,
   )
   translated
 }

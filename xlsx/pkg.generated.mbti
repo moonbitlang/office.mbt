@@ -1355,6 +1355,16 @@ pub struct ShapeLine {
 pub fn ShapeLine::to_repr(Self) -> @debug.Repr
 pub fn ShapeLine::with_values(color? : String, width? : Double) -> Self
 
+pub struct SharedFormulaLimits {
+  // private fields
+}
+pub fn SharedFormulaLimits::max_input_chars(Self) -> Int
+pub fn SharedFormulaLimits::max_output_chars(Self) -> Int
+pub fn SharedFormulaLimits::max_total_output_chars(Self) -> Int
+pub fn SharedFormulaLimits::max_work_units(Self) -> Int
+pub fn SharedFormulaLimits::new() -> Self
+pub fn SharedFormulaLimits::with_values(max_input_chars? : Int, max_output_chars? : Int, max_total_output_chars? : Int, max_work_units? : Int) -> Self raise XlsxError
+
 pub struct SharedFormulaMaster {
   // private fields
 }
@@ -1804,10 +1814,10 @@ pub fn Workbook::add_vml_drawing_xml(Self, StringView, String) -> Unit raise Xls
 pub fn Workbook::app_properties(Self) -> AppProperties
 pub fn Workbook::app_props(Self) -> AppProperties
 pub fn Workbook::auto_filter(Self, StringView, String, ArrayView[AutoFilterOption]) -> Unit raise XlsxError
-pub fn Workbook::calc_cell_typed(Self, StringView, StringView) -> CellValue? raise XlsxError
-pub fn Workbook::calc_cell_typed_rc(Self, StringView, Int, Int) -> CellValue? raise XlsxError
-pub fn Workbook::calc_cell_value(Self, StringView, StringView, raw? : Bool, options? : Options) -> String raise XlsxError
-pub fn Workbook::calc_cell_value_rc(Self, StringView, Int, Int, raw? : Bool, options? : Options) -> String raise XlsxError
+pub fn Workbook::calc_cell_typed(Self, StringView, StringView, formula_limits? : SharedFormulaLimits, cancelled? : () -> Bool) -> CellValue? raise XlsxError
+pub fn Workbook::calc_cell_typed_rc(Self, StringView, Int, Int, formula_limits? : SharedFormulaLimits, cancelled? : () -> Bool) -> CellValue? raise XlsxError
+pub fn Workbook::calc_cell_value(Self, StringView, StringView, raw? : Bool, options? : Options, formula_limits? : SharedFormulaLimits, cancelled? : () -> Bool) -> String raise XlsxError
+pub fn Workbook::calc_cell_value_rc(Self, StringView, Int, Int, raw? : Bool, options? : Options, formula_limits? : SharedFormulaLimits, cancelled? : () -> Bool) -> String raise XlsxError
 pub fn Workbook::charset_transcoder(Self, (String, Bytes) -> String raise XlsxError) -> Self
 pub fn Workbook::chart_sheet(Self, StringView) -> ChartSheet?
 pub fn Workbook::chart_sheets(Self) -> ArrayView[ChartSheet]
@@ -1831,8 +1841,8 @@ pub fn Workbook::delete_sheet(Self, StringView) -> Unit raise XlsxError
 pub fn Workbook::delete_slicer(Self, StringView) -> Unit raise XlsxError
 pub fn Workbook::delete_table(Self, StringView) -> Unit raise XlsxError
 pub fn Workbook::doc_properties(Self) -> CoreProperties
-pub fn Workbook::duplicate_row(Self, StringView, Int) -> Unit raise XlsxError
-pub fn Workbook::duplicate_row_to(Self, StringView, Int, Int) -> Unit raise XlsxError
+pub fn Workbook::duplicate_row(Self, StringView, Int, formula_limits? : SharedFormulaLimits, cancelled? : () -> Bool) -> Unit raise XlsxError
+pub fn Workbook::duplicate_row_to(Self, StringView, Int, Int, formula_limits? : SharedFormulaLimits, cancelled? : () -> Bool) -> Unit raise XlsxError
 pub fn Workbook::get_active_sheet_index(Self) -> Int
 pub fn Workbook::get_app_props(Self) -> AppProperties
 pub fn Workbook::get_auto_filter(Self, StringView) -> AutoFilter? raise XlsxError
@@ -1902,9 +1912,9 @@ pub fn Workbook::get_style(Self, Int) -> Style raise XlsxError
 pub fn Workbook::get_tables(Self, StringView) -> Array[Table] raise XlsxError
 pub fn Workbook::get_workbook_props(Self) -> WorkbookPropsOptions
 pub fn Workbook::group_sheets(Self, Array[String]) -> Unit raise XlsxError
-pub fn Workbook::insert_cols(Self, StringView, Int, Int) -> Unit raise XlsxError
+pub fn Workbook::insert_cols(Self, StringView, Int, Int, formula_limits? : SharedFormulaLimits, cancelled? : () -> Bool) -> Unit raise XlsxError
 pub fn Workbook::insert_page_break(Self, StringView, StringView) -> Unit raise XlsxError
-pub fn Workbook::insert_rows(Self, StringView, Int, Int) -> Unit raise XlsxError
+pub fn Workbook::insert_rows(Self, StringView, Int, Int, formula_limits? : SharedFormulaLimits, cancelled? : () -> Bool) -> Unit raise XlsxError
 pub fn Workbook::merge_cell(Self, StringView, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::merge_cells(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::move_sheet(Self, StringView, StringView) -> Unit raise XlsxError
@@ -1917,11 +1927,11 @@ pub fn Workbook::protect_sheet(Self, StringView, SheetProtectionOptions) -> Unit
 pub fn Workbook::protect_workbook(Self, options? : WorkbookProtectionOptions) -> Unit raise XlsxError
 pub async fn[R : @io.Reader] Workbook::read_zip_reader(Self, R, password? : String, options? : Options, limits? : ReadLimits, transcoder? : (String, Bytes) -> String raise XlsxError) -> Self
 pub fn Workbook::remove_cell_hyperlink(Self, StringView, StringView) -> Unit raise XlsxError
-pub fn Workbook::remove_col(Self, StringView, Int) -> Unit raise XlsxError
-pub fn Workbook::remove_cols(Self, StringView, Int, Int) -> Unit raise XlsxError
+pub fn Workbook::remove_col(Self, StringView, Int, formula_limits? : SharedFormulaLimits, cancelled? : () -> Bool) -> Unit raise XlsxError
+pub fn Workbook::remove_cols(Self, StringView, Int, Int, formula_limits? : SharedFormulaLimits, cancelled? : () -> Bool) -> Unit raise XlsxError
 pub fn Workbook::remove_page_break(Self, StringView, StringView) -> Unit raise XlsxError
-pub fn Workbook::remove_row(Self, StringView, Int) -> Unit raise XlsxError
-pub fn Workbook::remove_rows(Self, StringView, Int, Int) -> Unit raise XlsxError
+pub fn Workbook::remove_row(Self, StringView, Int, formula_limits? : SharedFormulaLimits, cancelled? : () -> Bool) -> Unit raise XlsxError
+pub fn Workbook::remove_rows(Self, StringView, Int, Int, formula_limits? : SharedFormulaLimits, cancelled? : () -> Bool) -> Unit raise XlsxError
 pub fn Workbook::row_outline_level(Self, StringView, Int) -> Int raise XlsxError
 pub fn Workbook::row_stream(Self, StringView) -> RowStream raise XlsxError
 pub fn Workbook::row_visible(Self, StringView, Int) -> Bool raise XlsxError
@@ -2186,7 +2196,7 @@ pub fn Worksheet::set_row_style(Self, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_row_visible(Self, Int, Bool) -> Unit raise XlsxError
 pub fn Worksheet::set_sheet_background(Self, Bytes, String) -> Unit raise XlsxError
 pub fn Worksheet::shapes(Self) -> ArrayView[Shape]
-pub fn Worksheet::shared_formula_master(Self, UInt) -> SharedFormulaMaster? raise XlsxError
+pub fn Worksheet::shared_formula_master(Self, UInt, cancelled? : () -> Bool) -> SharedFormulaMaster? raise XlsxError
 pub fn Worksheet::shared_formula_masters(Self) -> Map[UInt, SharedFormulaMaster] raise XlsxError
 pub fn Worksheet::sheet_background(Self) -> SheetBackground?
 pub fn Worksheet::sheet_protection(Self) -> SheetProtection?

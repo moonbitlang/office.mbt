@@ -224,6 +224,183 @@ test "row and column edits materialize shared formulas before moving cells" {
 }
 
 ///|
+test "shared formula limits reject aggregate structural fan-out before mutation" {
+  let workbook = shared_formula_edit_fixture()
+  let limits = @xlsx.SharedFormulaLimits::with_values(
+    max_input_chars=64,
+    max_output_chars=14,
+    max_total_output_chars=14,
+    max_work_units=1024,
+  )
+  let result : Result[Unit, Error] = Ok(
+    workbook.insert_rows("Data", 1, 1, formula_limits=limits),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      assert_eq(kind, "shared_formula_total_output_chars")
+      assert_eq(limit, 14)
+      assert_eq(actual, 15)
+    }
+    Err(error) => fail("unexpected shared-formula fan-out error: \{error}")
+    Ok(_) => fail("expected aggregate shared-formula fan-out rejection")
+  }
+  guard workbook.sheet("Data") is Some(sheet) else {
+    fail("missing unchanged shared-formula worksheet")
+  }
+  assert_eq(sheet.shared_formula_masters().length(), 1)
+  assert_true(sheet.get_cell_formula_info_rc(1, 3) is Some(_))
+  assert_true(sheet.get_cell_formula_info_rc(3, 3) is Some(_))
+  assert_true(sheet.get_cell_formula_info_rc(4, 3) is None)
+
+  let work_limited = shared_formula_edit_fixture()
+  let work_limits = @xlsx.SharedFormulaLimits::with_values(
+    max_input_chars=64,
+    max_output_chars=64,
+    max_total_output_chars=64,
+    max_work_units=14,
+  )
+  try work_limited.insert_cols("Data", 1, 1, formula_limits=work_limits) catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) => {
+      assert_eq(kind, "shared_formula_work_units")
+      assert_eq(limit, 14)
+      assert_eq(actual, 15)
+    }
+    _ => fail("unexpected aggregate shared-formula work error")
+  } noraise {
+    _ => fail("expected aggregate shared-formula work rejection")
+  }
+}
+
+///|
+test "default shared formula limits stop the reported large fan-out" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Data")
+  let formula = "1+".repeat(4094) + "A1"
+  sheet.set_cell_formula_opts(
+    "A1",
+    formula,
+    opts=@xlsx.FormulaOpts::shared("A1:A8200"),
+  )
+  let result : Result[Unit, Error] = Ok(workbook.insert_rows("Data", 1, 1)) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      assert_eq(kind, "shared_formula_total_output_chars")
+      assert_eq(
+        limit,
+        @xlsx.SharedFormulaLimits::new().max_total_output_chars(),
+      )
+      assert_true(actual > limit)
+    }
+    Err(error) => fail("unexpected default fan-out error: \{error}")
+    Ok(_) => fail("expected default shared-formula fan-out rejection")
+  }
+  assert_eq(sheet.shared_formula_masters().length(), 1)
+  assert_true(sheet.get_cell_formula_info_rc(1, 1) is Some(_))
+  assert_true(sheet.get_cell_formula_info_rc(8200, 1) is Some(_))
+  assert_true(sheet.get_cell_formula_info_rc(8201, 1) is None)
+}
+
+///|
+test "shared formula structural edits are cancellable and atomic" {
+  let workbook = shared_formula_edit_fixture()
+  let checks = [0]
+  let result : Result[Unit, Error] = Ok(
+    workbook.insert_rows("Data", 1, 1, cancelled=() => {
+      checks[0] += 1
+      true
+    }),
+  ) catch {
+    error => Err(error)
+  }
+  assert_eq(checks[0], 1)
+  assert_true(result is Err(@xlsx.ReadCancelled))
+  guard workbook.sheet("Data") is Some(sheet) else {
+    fail("missing cancelled shared-formula worksheet")
+  }
+  assert_eq(sheet.shared_formula_masters().length(), 1)
+  assert_true(sheet.get_cell_formula_info_rc(1, 3) is Some(_))
+  assert_true(sheet.get_cell_formula_info_rc(4, 3) is None)
+}
+
+///|
+test "row removal does not translate shared formulas it discards" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Data")
+  sheet.set_cell_formula_opts(
+    "A1",
+    "B1+AN_OVERSIZED_LITERAL",
+    opts=@xlsx.FormulaOpts::shared("A1:A3"),
+  )
+  let tiny = @xlsx.SharedFormulaLimits::with_values(
+    max_input_chars=1,
+    max_output_chars=1,
+    max_total_output_chars=1,
+    max_work_units=1,
+  )
+  workbook.remove_rows("Data", 1, 3, formula_limits=tiny)
+  let (max_row, max_col) = sheet.used_bounds_limited(maximum_stored_cells=1)
+  assert_eq(max_row, 0)
+  assert_eq(max_col, 0)
+  assert_eq(sheet.shared_formula_masters().length(), 0)
+
+  let column_workbook = @xlsx.Workbook::new()
+  let column_sheet = column_workbook.add_sheet("Data")
+  column_sheet.set_cell_formula_opts(
+    "A1",
+    "A2+AN_OVERSIZED_LITERAL",
+    opts=@xlsx.FormulaOpts::shared("A1:C1"),
+  )
+  column_workbook.remove_cols("Data", 1, 3, formula_limits=tiny)
+  let (column_max_row, column_max_col) = column_sheet.used_bounds_limited(
+    maximum_stored_cells=1,
+  )
+  assert_eq(column_max_row, 0)
+  assert_eq(column_max_col, 0)
+  assert_eq(column_sheet.shared_formula_masters().length(), 0)
+}
+
+///|
+test "calculation shares formula output and cancellation budgets" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Data")
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("A3", Numeric(3.0))
+  sheet.set_cell_formula_opts(
+    "B1",
+    "A1",
+    opts=@xlsx.FormulaOpts::shared("B1:B3"),
+  )
+  sheet.set_cell_formula("C1", "SUM(B1:B3)")
+  let tiny = @xlsx.SharedFormulaLimits::with_values(
+    max_input_chars=16,
+    max_output_chars=3,
+    max_total_output_chars=3,
+    max_work_units=1024,
+  )
+  try workbook.calc_cell_value("Data", "C1", formula_limits=tiny) catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) => {
+      assert_eq(kind, "shared_formula_total_output_chars")
+      assert_eq(limit, 3)
+      assert_eq(actual, 4)
+    }
+    _ => fail("unexpected calculated fan-out error")
+  } noraise {
+    _ => fail("expected aggregate calculation fan-out rejection")
+  }
+  try workbook.calc_cell_value("Data", "B2", cancelled=() => true) catch {
+    ReadCancelled => ()
+    _ => fail("unexpected calculated cancellation error")
+  } noraise {
+    _ => fail("expected calculated shared-formula cancellation")
+  }
+}
+
+///|
 test "XLSX read rejects overlapping shared-formula master ranges" {
   let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Data")
