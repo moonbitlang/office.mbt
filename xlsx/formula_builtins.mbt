@@ -3351,15 +3351,17 @@ fn eval_function(
           Err(err) => return err
         }
         match value_as_number_text(values[0]) {
-          Ok(num) =>
-            String(
-              format_number_code(
-                format_number(num),
-                format_text,
-                Options::new(),
-                use_1904_format=ctx.use_1904_dates,
-              ),
-            )
+          Ok(num) => {
+            let formatted = format_number_code(
+              format_number(num),
+              format_text,
+              Options::new(),
+              use_1904_format=ctx.use_1904_dates,
+            ) catch {
+              _ => return Error(formula_error_value)
+            }
+            String(formatted)
+          }
           Err(err) => err
         }
       } else {

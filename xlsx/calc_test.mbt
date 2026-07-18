@@ -7819,3 +7819,22 @@ test "calc text b functions use DBCS semantics without mojibake" {
   sheet.set_cell_formula("A10", "REPLACEB(C1,5,5,\"!\")")
   inspect(workbook.calc_cell_value("Sheet1", "A10"), content="你好!")
 }
+
+///|
+test "TEXT contains formatter failures at the formula boundary" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let format = "# ?/?" + "%".repeat(155)
+  sheet.set_cell_formula("A1", "TEXT(0,\"" + format + "\")")
+  match workbook.calc_cell_typed("Sheet1", "A1") {
+    Some(String(text)) => assert_true(text.contains("%"))
+    other => fail("zero TEXT scaling should stay finite, got \{to_repr(other)}")
+  }
+  sheet.set_cell_formula("A2", "TEXT(1,\"" + format + "\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="#VALUE!")
+  match workbook.calc_cell_typed("Sheet1", "A2") {
+    Some(Error(code)) => inspect(code, content="#VALUE!")
+    other =>
+      fail("TEXT formatter failure should be an error, got \{to_repr(other)}")
+  }
+}

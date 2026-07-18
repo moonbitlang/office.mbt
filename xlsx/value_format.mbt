@@ -590,8 +590,14 @@ fn format_number_pattern(
   let negative = value < 0.0
   let abs_value = if negative { -value } else { value }
   let (prefix, suffix, info) = parse_number_pattern(pattern)
-  let scaled = abs_value *
-    @math.pow(100.0, Double::from_int(info.percent_count))
+  // IEEE-754 defines 0 * infinity as NaN. A long but syntactically valid run
+  // of percent markers can overflow the scale factor, yet formatting numeric
+  // zero must remain exactly zero rather than manufacturing a formatter error.
+  let scaled = if abs_value == 0.0 {
+    0.0
+  } else {
+    abs_value * @math.pow(100.0, Double::from_int(info.percent_count))
+  }
   if scaled.is_nan() || scaled.is_inf() {
     raise InvalidXml(msg="number format scale must remain finite")
   }
