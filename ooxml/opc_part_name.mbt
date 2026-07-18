@@ -341,6 +341,51 @@ fn opc_part_name_identity_tokens(
 }
 
 ///|
+/// Returns the number of bounded trie nodes needed to represent `name` in an
+/// OPC PartName registry. The scan does not allocate identity tokens, allowing
+/// callers to reserve cumulative parser capacity before registration starts.
+pub fn opc_part_name_identity_node_count_cancellable(
+  name : StringView,
+  cancelled? : () -> Bool = () => false,
+) -> Int raise ParseXmlError {
+  let mut count = 0
+  let mut segment_start = 0
+  let mut index = 0
+  while index <= name.length() {
+    if index % 4096 == 0 && cancelled() {
+      raise ReadCancelled
+    }
+    if index == name.length() || name[index] == ('/' : UInt16) {
+      if segment_start == index {
+        count = count + 1
+      } else {
+        let mut chunk_start = segment_start
+        while chunk_start < index {
+          let tentative_end = chunk_start + opc_part_name_identity_chunk_units
+          let mut chunk_end = if tentative_end < index {
+            tentative_end
+          } else {
+            index
+          }
+          if chunk_end < index &&
+            name[chunk_end - 1] >= 0xd800 &&
+            name[chunk_end - 1] <= 0xdbff &&
+            name[chunk_end] >= 0xdc00 &&
+            name[chunk_end] <= 0xdfff {
+            chunk_end = chunk_end - 1
+          }
+          count = count + 1
+          chunk_start = chunk_end
+        }
+      }
+      segment_start = index + 1
+    }
+    index = index + 1
+  }
+  count
+}
+
+///|
 type OpcPartNameChildren = @sorted_map.SortedMap[String, Int]
 
 ///|
@@ -372,24 +417,36 @@ pub(all) enum OpcPartNameConflict {
 /// string-hash behavior.
 pub struct OpcPartNameRegistry {
   priv nodes : Array[OpcPartNameTrieNode]
+  priv maximum_identity_nodes : Int
 }
 
 ///|
-/// Creates an empty OPC PartName registry.
-pub fn OpcPartNameRegistry::new() -> OpcPartNameRegistry {
-  { nodes: [new_opc_part_name_trie_node()] }
+/// Creates an empty OPC PartName registry with a cumulative identity-node
+/// ceiling. The root bookkeeping node is not counted against the ceiling.
+pub fn OpcPartNameRegistry::new(
+  maximum_identity_nodes? : Int = 2_000_000,
+) -> OpcPartNameRegistry {
+  {
+    nodes: [new_opc_part_name_trie_node()],
+    maximum_identity_nodes: if maximum_identity_nodes < 0 {
+      0
+    } else {
+      maximum_identity_nodes
+    },
+  }
 }
 
 ///|
 /// Registers `name`, using `display` in any returned conflict. Identity is
 /// ASCII-case-insensitive and a name conflicts when either side is derivable
-/// from the other by appending one or more path segments.
+/// from the other by appending one or more path segments. Raises `InvalidXml`
+/// before mutation if registration would exceed the registry's node ceiling.
 pub fn OpcPartNameRegistry::register(
   self : OpcPartNameRegistry,
   name : StringView,
   display : String,
-) -> OpcPartNameConflict? {
-  try! self.register_cancellable(name, display)
+) -> OpcPartNameConflict? raise ParseXmlError {
+  self.register_cancellable(name, display)
 }
 
 ///|
@@ -446,6 +503,11 @@ pub fn OpcPartNameRegistry::register_cancellable(
       self.nodes[node_index].terminal = Some(display)
     }
     Some(start) => {
+      let missing_nodes = tokens.length() - start
+      let existing_nodes = self.nodes.length() - 1
+      if missing_nodes > self.maximum_identity_nodes - existing_nodes {
+        raise InvalidXml(msg="OPC PartName registry node limit exceeded")
+      }
       // Construct the missing suffix off-registry. Only after every allocation
       // and cancellation point succeeds do we append and link it once.
       let base = self.nodes.length()
@@ -554,6 +616,29 @@ test "OPC PartName registry allocates per bounded chunk, not per code unit" {
 }
 
 ///|
+test "OPC PartName registry enforces its cumulative node ceiling atomically" {
+  let registry = OpcPartNameRegistry::new(maximum_identity_nodes=2)
+  try registry.register_cancellable("a/b/c", "too-large") catch {
+    InvalidXml(msg~) =>
+      inspect(msg, content="OPC PartName registry node limit exceeded")
+    _ => fail("unexpected OPC PartName registry limit error")
+  } noraise {
+    _ => fail("expected OPC PartName registry node limit")
+  }
+  assert_eq(registry.nodes.length(), 1)
+  assert_true(registry.register("a/b", "a/b") is None)
+  assert_eq(registry.nodes.length(), 3)
+  try registry.register_cancellable("a/c", "still-too-large") catch {
+    InvalidXml(msg~) =>
+      inspect(msg, content="OPC PartName registry node limit exceeded")
+    _ => fail("unexpected OPC PartName registry limit error")
+  } noraise {
+    _ => fail("expected cumulative OPC PartName registry node limit")
+  }
+  assert_eq(registry.nodes.length(), 3)
+}
+
+///|
 test "OPC PartName chunk boundaries preserve segment semantics" {
   let registry = OpcPartNameRegistry::new()
   let exact_chunk = "custom/" + "a".repeat(4096)
@@ -564,4 +649,14 @@ test "OPC PartName chunk boundaries preserve segment semantics" {
     Some(Derivable(existing)) => assert_eq(existing, exact_chunk)
     _ => fail("expected derivable long OPC PartName")
   }
+
+  let scalar_boundary = "custom/" + "a".repeat(4095) + "😀" + "a".repeat(4095)
+  let identity_nodes = opc_part_name_identity_node_count_cancellable(
+    scalar_boundary,
+  )
+  let scalar_registry = OpcPartNameRegistry::new()
+  assert_true(
+    scalar_registry.register(scalar_boundary, scalar_boundary) is None,
+  )
+  assert_eq(scalar_registry.nodes.length() - 1, identity_nodes)
 }

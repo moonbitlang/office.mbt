@@ -3156,9 +3156,20 @@ fn budgeted_register_opc_part_name(
   budget : ReadBudget,
 ) -> @ooxml.OpcPartNameConflict? raise XlsxError {
   budget.checkpoint()
-  // Registration performs a mutation-free lookup pass and, for a new branch,
-  // constructs a detached suffix before linking it. Charge both linear passes
-  // before either can run.
+  // Count bounded identity nodes without allocating them, then reserve their
+  // cumulative parser capacity before registration can materialize either its
+  // token array or a detached trie suffix.
+  budget.charge_work(name.length())
+  let identity_nodes = @ooxml.opc_part_name_identity_node_count_cancellable(
+    name,
+    cancelled=budget.cancelled,
+  ) catch {
+    InvalidXml(msg~) => raise InvalidPackage(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+  budget.charge_items(identity_nodes)
+  // Registration performs a tokenization pass followed by a mutation-free
+  // lookup/allocation pass. Charge both before either can run.
   budget.charge_work(name.length())
   budget.charge_work(name.length())
   registry.register_cancellable(name, display, cancelled=budget.cancelled) catch {
@@ -3174,7 +3185,9 @@ fn archive_part_name_index(
 ) -> Map[String, String] raise XlsxError {
   let budget = budget.unwrap_or(ReadBudget::new(ReadLimits::new()))
   let names : Map[String, String] = Map([])
-  let registry = @ooxml.OpcPartNameRegistry::new()
+  let registry = @ooxml.OpcPartNameRegistry::new(
+    maximum_identity_nodes=budget.limits.max_parser_items,
+  )
   let content_types_key = @ooxml.package_part_name_key(content_types_part_path)
   for entry in archive.entries() {
     budget.checkpoint()
@@ -3320,6 +3333,24 @@ test "read archive index charges physical OPC name work before decoding" {
   } noraise {
     _ => fail("expected archive name work limit")
   }
+}
+
+///|
+test "read archive index charges OPC identity nodes as parser items" {
+  let archive = @zip.Archive::new()
+  archive.add("a/b/c.xml", b"part")
+  let budget = ReadBudget::new(ReadLimits::with_values(max_parser_items=2))
+  try archive_part_name_index(archive, budget~) catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) => {
+      inspect(kind, content="parser_items")
+      assert_eq(limit, 2)
+      assert_true(actual > limit)
+    }
+    _ => fail("unexpected archive identity-node budget error")
+  } noraise {
+    _ => fail("expected archive identity-node parser limit")
+  }
+  assert_eq(budget.parser_items, 0)
 }
 
 ///|

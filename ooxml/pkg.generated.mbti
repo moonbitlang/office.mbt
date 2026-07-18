@@ -26,6 +26,8 @@ pub fn logical_opc_part_name_from_zip_item_name(StringView) -> String?
 
 pub fn logical_opc_part_name_from_zip_item_name_cancellable(StringView, cancelled? : () -> Bool) -> String? raise ParseXmlError
 
+pub fn opc_part_name_identity_node_count_cancellable(StringView, cancelled? : () -> Bool) -> Int raise ParseXmlError
+
 pub fn package_part_name_key(StringView) -> String
 
 pub fn package_part_name_key_cancellable(StringView, cancelled? : () -> Bool) -> String raise ParseXmlError
@@ -61,8 +63,8 @@ pub(all) enum OpcPartNameConflict {
 pub struct OpcPartNameRegistry {
   // private fields
 }
-pub fn OpcPartNameRegistry::new() -> Self
-pub fn OpcPartNameRegistry::register(Self, StringView, String) -> OpcPartNameConflict?
+pub fn OpcPartNameRegistry::new(maximum_identity_nodes? : Int) -> Self
+pub fn OpcPartNameRegistry::register(Self, StringView, String) -> OpcPartNameConflict? raise ParseXmlError
 pub fn OpcPartNameRegistry::register_cancellable(Self, StringView, String, cancelled? : () -> Bool) -> OpcPartNameConflict? raise ParseXmlError
 
 type WorkbookManifest
