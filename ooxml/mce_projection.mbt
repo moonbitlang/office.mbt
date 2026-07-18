@@ -8,7 +8,7 @@ let max_xml_mce_token_chars = 1024
 priv struct XmlMceName {
   namespace_id : Int
   local_name : String
-} derive(Eq, Hash)
+}
 
 ///|
 priv struct XmlMceExtensionName {
@@ -19,7 +19,8 @@ priv struct XmlMceExtensionName {
 ///|
 priv struct XmlMceScopeDelta {
   ignorable_namespace_ids : Array[Int]
-  process_content_names : Array[XmlMceName]
+  process_content_keys : Array[MceProcessKey]
+  process_generation_resets : Array[MceProcessGenerationReset]
 }
 
 ///|
@@ -33,7 +34,7 @@ priv struct XmlMceContext {
   understood_namespaces : Set[String]
   extension_elements : Set[XmlMceExtensionName]
   ignorable_namespace_counts : Map[Int, Int]
-  process_content_name_counts : Map[XmlMceName, Int]
+  process_content : MceProcessTracker
   max_work_chars : Int
   mut work_chars : Int
 }
@@ -57,7 +58,7 @@ fn XmlMceContext::new(
     understood_namespaces: understood,
     extension_elements: extensions,
     ignorable_namespace_counts: Map([]),
-    process_content_name_counts: Map([]),
+    process_content: MceProcessTracker::new(),
     max_work_chars,
     work_chars: 0,
   }
@@ -103,17 +104,6 @@ fn XmlMceContext::add_ignorable(
 }
 
 ///|
-fn XmlMceContext::add_process_content(
-  self : XmlMceContext,
-  name : XmlMceName,
-) -> Unit {
-  self.process_content_name_counts[name] = self.process_content_name_counts.get_or_default(
-      name, 0,
-    ) +
-    1
-}
-
-///|
 fn XmlMceContext::is_ignorable(
   self : XmlMceContext,
   namespace_id : Int,
@@ -132,12 +122,7 @@ fn XmlMceContext::is_effectively_ignorable(
 
 ///|
 fn XmlMceContext::processes(self : XmlMceContext, name : XmlMceName) -> Bool {
-  self.process_content_name_counts.get_or_default(name, 0) > 0 ||
-  self.process_content_name_counts.get_or_default(
-    { namespace_id: name.namespace_id, local_name: "*" },
-    0,
-  ) >
-  0
+  self.process_content.processes(name.namespace_id, name.local_name)
 }
 
 ///|
@@ -146,6 +131,10 @@ fn XmlMceContext::leave_scope(
   delta : XmlMceScopeDelta?,
 ) -> Unit {
   guard delta is Some(delta) else { return }
+  self.process_content.leave(
+    delta.process_content_keys,
+    delta.process_generation_resets,
+  )
   for namespace_id in delta.ignorable_namespace_ids {
     let remaining = self.ignorable_namespace_counts.get_or_default(
         namespace_id, 0,
@@ -155,14 +144,6 @@ fn XmlMceContext::leave_scope(
       ignore(self.ignorable_namespace_counts.remove(namespace_id))
     } else {
       self.ignorable_namespace_counts[namespace_id] = remaining
-    }
-  }
-  for name in delta.process_content_names {
-    let remaining = self.process_content_name_counts.get_or_default(name, 0) - 1
-    if remaining <= 0 {
-      ignore(self.process_content_name_counts.remove(name))
-    } else {
-      self.process_content_name_counts[name] = remaining
     }
   }
 }
@@ -264,6 +245,7 @@ fn xml_mce_enter_scope(
   match scanner.attribute(markup_compatibility_namespace, "Ignorable") {
     Some(value) => {
       context.charge(value)
+      let reset_namespaces : Set[Int] = Set([])
       for prefix in xml_mce_tokens(value, "Ignorable") {
         let (namespace_uri, namespace_id) = xml_mce_resolve_prefix(
           scanner, prefix, "Ignorable",
@@ -278,8 +260,17 @@ fn xml_mce_enter_scope(
           None =>
             delta = Some({
               ignorable_namespace_ids: [namespace_id],
-              process_content_names: [],
+              process_content_keys: [],
+              process_generation_resets: [],
             })
+        }
+        if !reset_namespaces.contains(namespace_id) {
+          reset_namespaces.add(namespace_id)
+          let reset = context.process_content.reset(namespace_id)
+          match delta {
+            Some(value) => value.process_generation_resets.push(reset)
+            None => ()
+          }
         }
       }
     }
@@ -293,13 +284,17 @@ fn xml_mce_enter_scope(
         if !context.is_ignorable(name.namespace_id) {
           raise InvalidXml(msg="MCE ProcessContent namespace is not ignorable")
         }
-        context.add_process_content(name)
+        let key = context.process_content.add(
+          name.namespace_id,
+          name.local_name,
+        )
         match delta {
-          Some(value) => value.process_content_names.push(name)
+          Some(value) => value.process_content_keys.push(key)
           None =>
             delta = Some({
               ignorable_namespace_ids: [],
-              process_content_names: [name],
+              process_content_keys: [key],
+              process_generation_resets: [],
             })
         }
       }
@@ -489,12 +484,27 @@ fn xml_mce_state_for_current_element(
       }
     _ => ()
   }
-  let scope_entry = xml_mce_enter_scope(scanner, context)
   let declarations = scanner.current_namespace_declarations()
+  let namespace_uri = scanner.namespace_uri().to_owned()
+  let namespace_id = scanner.current_namespace_identity()
+  let local_name = scanner.local_name().to_owned()
   if depth == 1 {
-    if scanner.namespace_uri() == markup_compatibility_namespace {
+    if namespace_uri == markup_compatibility_namespace {
       raise InvalidXml(msg="MCE document element is invalid")
     }
+    if context.is_extension_element(namespace_uri, local_name) {
+      return {
+        active: true,
+        scope_delta: None,
+        pending_bindings: None,
+        is_alternate_content: false,
+        alternate_choice_seen: false,
+        alternate_fallback_seen: false,
+        alternate_selected: false,
+        opaque_descendants: true,
+      }
+    }
+    let scope_entry = xml_mce_enter_scope(scanner, context)
     xml_mce_require_must_understand(scope_entry)
     return {
       active: true,
@@ -508,9 +518,24 @@ fn xml_mce_state_for_current_element(
     }
   }
   let parent_state = parent.unwrap()
-  let namespace_uri = scanner.namespace_uri().to_owned()
-  let namespace_id = scanner.current_namespace_identity()
-  let local_name = scanner.local_name().to_owned()
+  if !parent_state.is_alternate_content &&
+    namespace_uri != markup_compatibility_namespace &&
+    context.is_extension_element(namespace_uri, local_name) {
+    scanner.insert_current_attributes(
+      xml_mce_namespace_attributes(scanner, parent_state.pending_bindings),
+    )
+    return {
+      active: true,
+      scope_delta: None,
+      pending_bindings: None,
+      is_alternate_content: false,
+      alternate_choice_seen: false,
+      alternate_fallback_seen: false,
+      alternate_selected: false,
+      opaque_descendants: true,
+    }
+  }
+  let scope_entry = xml_mce_enter_scope(scanner, context)
   let mut active = parent_state.active
   let mut pending_bindings : XmlMceBindingScope? = None
   let mut is_alternate_content = false
@@ -622,9 +647,10 @@ fn xml_mce_state_for_current_element(
 /// subtrees are removed, selected `Choice`/`Fallback` and `ProcessContent`
 /// wrappers are unwrapped, and namespace declarations from removed wrappers
 /// are retained on promoted children. Processing is streaming, cancellable,
-/// and bounded by `max_output_chars`. Descendants of application-defined
-/// `extension_elements` remain opaque: they are namespace-validated as XML but
-/// MCE directives inside their payload are preserved rather than interpreted.
+/// and bounded by `max_output_chars`. Application-defined `extension_elements`
+/// and their descendants remain opaque: they are namespace-validated as XML,
+/// but MCE directives on or inside their payload are preserved rather than
+/// interpreted.
 pub fn project_xml_markup_compatibility(
   xml : StringView,
   understood_namespaces : ArrayView[String],

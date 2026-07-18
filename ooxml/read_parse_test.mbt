@@ -206,6 +206,18 @@ test "ooxml read_parse: relationships apply OPC Markup Compatibility" {
 }
 
 ///|
+test "ooxml read_parse: nested Ignorable resets and restores ProcessContent" {
+  let xml =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:v="urn:vendor" mc:Ignorable="v" mc:ProcessContent="v:Outer v:Scope"><v:Outer><Relationship Id="before" Type="urn:wanted" Target="before.xml"/></v:Outer><v:Scope mc:Ignorable="v" mc:ProcessContent="v:Scope v:Inner"><v:Outer><Relationship Id="blocked" Type="urn:wanted" Target="blocked.xml"/></v:Outer><v:Inner><Relationship Id="inside" Type="urn:wanted" Target="inside.xml"/></v:Inner></v:Scope><v:Outer><Relationship Id="after" Type="urn:wanted" Target="after.xml"/></v:Outer></Relationships>
+  let targets = @ooxml.parse_internal_relationship_targets(xml, "urn:wanted")
+  assert_eq(targets.get("before"), Some("before.xml"))
+  assert_eq(targets.get("inside"), Some("inside.xml"))
+  assert_eq(targets.get("after"), Some("after.xml"))
+  assert_eq(targets.get("blocked"), None)
+  assert_eq(targets.length(), 3)
+}
+
+///|
 test "ooxml read_parse: MCE names retain one copy of a long namespace URI" {
   let names = StringBuilder::new()
   for index in 0..<4096 {

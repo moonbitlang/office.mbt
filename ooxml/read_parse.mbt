@@ -263,12 +263,13 @@ priv enum RelationshipTargetSelection {
 priv struct RelationshipMceName {
   namespace_id : Int
   local_name : String
-} derive(Eq, Hash)
+}
 
 ///|
 priv struct RelationshipMceScopeDelta {
   ignorable_namespace_ids : Array[Int]
-  process_content_names : Array[RelationshipMceName]
+  process_content_keys : Array[MceProcessKey]
+  process_generation_resets : Array[MceProcessGenerationReset]
 }
 
 ///|
@@ -283,7 +284,7 @@ priv struct RelationshipMceScopeEntry {
 /// inherited set at each nested element.
 priv struct RelationshipMceContext {
   ignorable_namespace_counts : Map[Int, Int]
-  process_content_name_counts : Map[RelationshipMceName, Int]
+  process_content : MceProcessTracker
   mut work_chars : Int
 }
 
@@ -291,7 +292,7 @@ priv struct RelationshipMceContext {
 fn RelationshipMceContext::new() -> RelationshipMceContext {
   {
     ignorable_namespace_counts: Map([]),
-    process_content_name_counts: Map([]),
+    process_content: MceProcessTracker::new(),
     work_chars: 0,
   }
 }
@@ -333,17 +334,6 @@ fn RelationshipMceContext::add_ignorable(
 }
 
 ///|
-fn RelationshipMceContext::add_process_content(
-  self : RelationshipMceContext,
-  name : RelationshipMceName,
-) -> Unit {
-  self.process_content_name_counts[name] = self.process_content_name_counts.get_or_default(
-      name, 0,
-    ) +
-    1
-}
-
-///|
 fn RelationshipMceContext::is_ignorable(
   self : RelationshipMceContext,
   namespace_id : Int,
@@ -372,14 +362,7 @@ fn RelationshipMceContext::processes(
   self : RelationshipMceContext,
   name : RelationshipMceName,
 ) -> Bool {
-  if self.process_content_name_counts.get_or_default(name, 0) > 0 {
-    return true
-  }
-  self.process_content_name_counts.get_or_default(
-    { namespace_id: name.namespace_id, local_name: "*" },
-    0,
-  ) >
-  0
+  self.process_content.processes(name.namespace_id, name.local_name)
 }
 
 ///|
@@ -388,6 +371,10 @@ fn RelationshipMceContext::leave_scope(
   delta : RelationshipMceScopeDelta?,
 ) -> Unit {
   guard delta is Some(delta) else { return }
+  self.process_content.leave(
+    delta.process_content_keys,
+    delta.process_generation_resets,
+  )
   for namespace_id in delta.ignorable_namespace_ids {
     let remaining = self.ignorable_namespace_counts.get_or_default(
         namespace_id, 0,
@@ -397,14 +384,6 @@ fn RelationshipMceContext::leave_scope(
       ignore(self.ignorable_namespace_counts.remove(namespace_id))
     } else {
       self.ignorable_namespace_counts[namespace_id] = remaining
-    }
-  }
-  for name in delta.process_content_names {
-    let remaining = self.process_content_name_counts.get_or_default(name, 0) - 1
-    if remaining <= 0 {
-      ignore(self.process_content_name_counts.remove(name))
-    } else {
-      self.process_content_name_counts[name] = remaining
     }
   }
 }
@@ -498,6 +477,7 @@ fn relationship_mce_enter_scope(
   match ignorable_attribute {
     Some(value) => {
       context.charge(value)
+      let reset_namespaces : Set[Int] = Set([])
       for prefix in relationship_mce_tokens(value, "Ignorable") {
         let (namespace_uri, namespace_id) = relationship_mce_resolve_prefix(
           scanner, prefix, "Ignorable",
@@ -512,8 +492,17 @@ fn relationship_mce_enter_scope(
           None =>
             delta = Some({
               ignorable_namespace_ids: [namespace_id],
-              process_content_names: [],
+              process_content_keys: [],
+              process_generation_resets: [],
             })
+        }
+        if !reset_namespaces.contains(namespace_id) {
+          reset_namespaces.add(namespace_id)
+          let reset = context.process_content.reset(namespace_id)
+          match delta {
+            Some(value) => value.process_generation_resets.push(reset)
+            None => ()
+          }
         }
       }
     }
@@ -532,13 +521,17 @@ fn relationship_mce_enter_scope(
         if !context.is_ignorable(key.namespace_id) {
           raise InvalidXml(msg="MCE ProcessContent namespace is not ignorable")
         }
-        context.add_process_content(key)
+        let process_key = context.process_content.add(
+          key.namespace_id,
+          key.local_name,
+        )
         match delta {
-          Some(value) => value.process_content_names.push(key)
+          Some(value) => value.process_content_keys.push(process_key)
           None =>
             delta = Some({
               ignorable_namespace_ids: [],
-              process_content_names: [key],
+              process_content_keys: [process_key],
+              process_generation_resets: [],
             })
         }
       }

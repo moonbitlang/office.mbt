@@ -37,11 +37,42 @@ test "MCE projection unwraps ProcessContent and ignores opaque extensions" {
 ///|
 test "MCE projection preserves configured extension payloads verbatim" {
   let source =
-    #|<a:Root xmlns:a="urn:app" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:v="urn:vendor" mc:Ignorable="v"><a:ext><v:Payload mc:Ignorable="v"><mc:AlternateContent><mc:Choice Requires="v"><v:Keep/></mc:Choice><mc:Fallback><a:Fallback/></mc:Fallback></mc:AlternateContent></v:Payload></a:ext></a:Root>
+    #|<a:Root xmlns:a="urn:app" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:v="urn:vendor" mc:Ignorable="v"><a:ext mc:MustUnderstand="v"><v:Payload mc:Ignorable="v"><mc:AlternateContent><mc:Choice Requires="v"><v:Keep/></mc:Choice><mc:Fallback><a:Fallback/></mc:Fallback></mc:AlternateContent></v:Payload></a:ext></a:Root>
   let projected = @ooxml.project_xml_markup_compatibility(source, ["urn:app"], extension_elements=[
     ("urn:app", "ext"),
   ])
   inspect(projected, content=source)
+}
+
+///|
+test "MCE projection promotes wrapper namespaces onto opaque extensions" {
+  let source =
+    #|<a:Root xmlns:a="urn:app" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:v="urn:vendor" mc:Ignorable="v" mc:ProcessContent="v:Wrap"><v:Wrap xmlns:q="urn:payload"><a:ext mc:MustUnderstand="v"><q:Payload/></a:ext></v:Wrap></a:Root>
+  let projected = @ooxml.project_xml_markup_compatibility(source, ["urn:app"], extension_elements=[
+    ("urn:app", "ext"),
+  ])
+  assert_false(projected.contains("<v:Wrap"))
+  assert_true(projected.contains("xmlns:q=\"urn:payload\""))
+  let scanner = @ooxml.XmlStartTagScanner::new(projected)
+  assert_true(scanner.next())
+  assert_true(scanner.next())
+  inspect(scanner.local_name(), content="ext")
+  assert_true(scanner.next())
+  inspect(scanner.namespace_uri(), content="urn:payload")
+  inspect(scanner.local_name(), content="Payload")
+}
+
+///|
+test "MCE projection resets ProcessContent for redeclared Ignorable namespaces" {
+  let source =
+    #|<a:Root xmlns:a="urn:app" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:v="urn:vendor" mc:Ignorable="v" mc:ProcessContent="v:Outer"><v:Outer><a:Before/></v:Outer><a:Scope mc:Ignorable="v" mc:ProcessContent="v:Inner"><v:Outer><a:Blocked/></v:Outer><v:Inner><a:Inside/></v:Inner></a:Scope><v:Outer><a:After/></v:Outer></a:Root>
+  let projected = @ooxml.project_xml_markup_compatibility(source, ["urn:app"])
+  assert_true(projected.contains("a:Before"))
+  assert_true(projected.contains("a:Inside"))
+  assert_true(projected.contains("a:After"))
+  assert_false(projected.contains("a:Blocked"))
+  assert_false(projected.contains("<v:Outer"))
+  assert_false(projected.contains("<v:Inner"))
 }
 
 ///|
