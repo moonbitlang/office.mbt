@@ -1967,6 +1967,96 @@ fn XmlStartTagScanner::expanded_attribute_names(
 }
 
 ///|
+/// Reports whether the current element has no element or non-whitespace text
+/// content. The scanner still performs the authoritative closing-tag and XML
+/// validation as iteration continues; this helper only enforces schema
+/// declarations whose content model is empty.
+fn XmlStartTagScanner::current_element_content_is_empty(
+  self : XmlStartTagScanner,
+) -> Bool raise ParseXmlError {
+  if self.current_self_closing {
+    return true
+  }
+  let mut index = self.current_tag_end + 1
+  let mut next_checkpoint = index
+  while index < self.xml.length() {
+    if index >= next_checkpoint {
+      check_xml_cancelled(self.cancelled)
+      next_checkpoint = index + 4096
+    }
+    let unit = self.xml[index]
+    if is_attr_space(unit) {
+      index = index + 1
+      continue
+    }
+    if unit == ('&' : UInt16) {
+      let entity_end = match
+        find_xml_sequence(self.xml, index + 1, ";", cancelled=self.cancelled) {
+        Some(value) => value
+        None => raise InvalidXml(msg="XML entity is not closed")
+      }
+      let character = match xml_entity_value(self.xml[index + 1:entity_end]) {
+        Some(value) => value
+        None => raise InvalidXml(msg="XML entity is invalid")
+      }
+      if character != ' ' &&
+        character != '\t' &&
+        character != '\n' &&
+        character != '\r' {
+        return false
+      }
+      index = entity_end + 1
+      continue
+    }
+    if unit != ('<' : UInt16) || index + 1 >= self.xml.length() {
+      return false
+    }
+    if self.xml[index + 1] == ('/' : UInt16) {
+      return true
+    }
+    if index + 4 <= self.xml.length() &&
+      xml_span_equals(self.xml, index, index + 4, "<!--") {
+      let comment_end = match
+        find_xml_sequence(self.xml, index + 4, "-->", cancelled=self.cancelled) {
+        Some(value) => value
+        None => raise InvalidXml(msg="XML comment is not closed")
+      }
+      index = comment_end + 3
+      continue
+    }
+    if self.xml[index + 1] == ('?' : UInt16) {
+      let instruction_end = match
+        find_xml_sequence(self.xml, index + 2, "?>", cancelled=self.cancelled) {
+        Some(value) => value
+        None => raise InvalidXml(msg="XML processing instruction is not closed")
+      }
+      index = instruction_end + 2
+      continue
+    }
+    if index + 9 <= self.xml.length() &&
+      xml_span_equals(self.xml, index, index + 9, "<![CDATA[") {
+      let cdata_end = match
+        find_xml_sequence(self.xml, index + 9, "]]>", cancelled=self.cancelled) {
+        Some(value) => value
+        None => raise InvalidXml(msg="XML CDATA section is not closed")
+      }
+      for character in self.xml[index + 9:cdata_end] {
+        if character != ' ' &&
+          character != '\t' &&
+          character != '\n' &&
+          character != '\r' {
+          return false
+        }
+      }
+      index = cdata_end + 3
+      continue
+    }
+    return false
+  }
+  false
+}
+
+///|
 fn XmlStartTagScanner::current_namespace_declarations(
   self : XmlStartTagScanner,
 ) -> Array[(String, String)] {

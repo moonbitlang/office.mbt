@@ -299,12 +299,12 @@ test "ooxml_rels: internal targets filter by Type and map Id->Target" {
   let xml =
     #|<?xml version="1.0" encoding="UTF-8"?>
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-    #|  <Relationship Id="rId1" Type="t1" Target="a.xml"/>
-    #|  <Relationship Id="rId2" Type="t2" Target="b.xml"/>
-    #|  <Relationship Id="rId3" Type="t1" Target="c.xml"/>
+    #|  <Relationship Id="rId1" Type="urn:t1" Target="a.xml"/>
+    #|  <Relationship Id="rId2" Type="urn:t2" Target="b.xml"/>
+    #|  <Relationship Id="rId3" Type="urn:t1" Target="c.xml"/>
     #|</Relationships>
     #|
-  let targets = parse_internal_relationship_targets(xml, "t1")
+  let targets = parse_internal_relationship_targets(xml, "urn:t1")
   debug_inspect(
     targets,
     content=(
@@ -317,17 +317,17 @@ test "ooxml_rels: internal targets filter by Type and map Id->Target" {
 test "ooxml_rels: target modes separate package parts from external resources" {
   let xml =
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-    #|  <Relationship Id="inside" Type="t1" Target="worksheets/sheet1.xml"/>
-    #|  <Relationship Id="outside" Type="t1" Target="https://example.invalid/sheet.xml" TargetMode="External"/>
+    #|  <Relationship Id="inside" Type="urn:t1" Target="worksheets/sheet1.xml"/>
+    #|  <Relationship Id="outside" Type="urn:t1" Target="https://example.invalid/sheet.xml" TargetMode="External"/>
     #|</Relationships>
   debug_inspect(
-    parse_internal_relationship_targets(xml, "t1"),
+    parse_internal_relationship_targets(xml, "urn:t1"),
     content=(
       #|{ "inside": "worksheets/sheet1.xml" }
     ),
   )
   debug_inspect(
-    parse_external_relationship_targets(xml, "t1"),
+    parse_external_relationship_targets(xml, "urn:t1"),
     content=(
       #|{ "outside": "https://example.invalid/sheet.xml" }
     ),

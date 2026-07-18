@@ -98,7 +98,7 @@ let max_relationship_id_chars = 1024
 let max_relationship_type_chars : Int = 16 * 1024
 
 ///|
-let max_relationship_target_chars : Int = 16 * 1024 * 1024
+let max_relationship_target_chars : Int = 64 * 1024
 
 ///|
 let max_relationship_retained_chars : Int = 16 * 1024 * 1024
@@ -145,6 +145,91 @@ fn relationship_attribute(
 }
 
 ///|
+fn relationship_uri_ascii_character(character : UInt16) -> Bool {
+  (character >= 'A' && character <= 'Z') ||
+  (character >= 'a' && character <= 'z') ||
+  (character >= '0' && character <= '9') ||
+  character == '-' ||
+  character == '.' ||
+  character == '_' ||
+  character == '~' ||
+  character == ':' ||
+  character == '/' ||
+  character == '?' ||
+  character == '#' ||
+  character == '[' ||
+  character == ']' ||
+  character == '@' ||
+  character == '!' ||
+  character == '$' ||
+  character == '&' ||
+  character == ('\'' : UInt16) ||
+  character == '(' ||
+  character == ')' ||
+  character == '*' ||
+  character == '+' ||
+  character == ',' ||
+  character == ';' ||
+  character == '=' ||
+  character == '%'
+}
+
+///|
+fn relationship_uri_hex_digit(character : UInt16) -> Bool {
+  (character >= '0' && character <= '9') ||
+  (character >= 'A' && character <= 'F') ||
+  (character >= 'a' && character <= 'f')
+}
+
+///|
+fn relationship_uri_is_valid(value : StringView, absolute : Bool) -> Bool {
+  if value == "" {
+    return false
+  }
+  let mut index = 0
+  while index < value.length() {
+    let character = value[index]
+    if character == ('%' : UInt16) {
+      if index + 2 >= value.length() ||
+        !relationship_uri_hex_digit(value[index + 1]) ||
+        !relationship_uri_hex_digit(value[index + 2]) {
+        return false
+      }
+      index = index + 3
+      continue
+    }
+    if character < 0x80 && !relationship_uri_ascii_character(character) {
+      return false
+    }
+    index = index + 1
+  }
+  if !absolute {
+    return true
+  }
+  let mut scheme_end = 0
+  while scheme_end < value.length() && value[scheme_end] != (':' : UInt16) {
+    scheme_end = scheme_end + 1
+  }
+  if scheme_end == 0 ||
+    scheme_end >= value.length() ||
+    !value[0].to_char().unwrap().is_ascii_alphabetic() {
+    return false
+  }
+  for index in 1..<scheme_end {
+    let character = value[index]
+    if !((character >= 'A' && character <= 'Z') ||
+      (character >= 'a' && character <= 'z') ||
+      (character >= '0' && character <= '9') ||
+      character == '+' ||
+      character == '-' ||
+      character == '.') {
+      return false
+    }
+  }
+  true
+}
+
+///|
 priv enum ParsedRelationshipTargetMode {
   InternalTarget
   ExternalTarget
@@ -157,7 +242,7 @@ fn relationship_target_mode(
   match scanner.attribute("", "TargetMode") {
     None => InternalTarget
     Some(value) =>
-      match collapse_schema_whitespace(value) {
+      match value {
         "Internal" => InternalTarget
         "External" => ExternalTarget
         _ => raise InvalidXml(msg="relationship target mode invalid")
@@ -503,6 +588,49 @@ fn relationship_mce_require_must_understand(
 }
 
 ///|
+fn relationship_mce_directive_attribute(local_name : StringView) -> Bool {
+  local_name == "Ignorable" ||
+  local_name == "ProcessContent" ||
+  local_name == "MustUnderstand" ||
+  local_name == "PreserveElements" ||
+  local_name == "PreserveAttributes"
+}
+
+///|
+fn relationship_schema_attribute_allowed(
+  scanner : XmlStartTagScanner,
+  context : RelationshipMceContext,
+  allowed_unqualified : ArrayView[String],
+  element_label : StringView,
+) -> Unit raise ParseXmlError {
+  for attribute in scanner.expanded_attribute_names() {
+    if attribute.namespace_uri == "" {
+      let mut allowed = false
+      for name in allowed_unqualified {
+        if attribute.local_name == name {
+          allowed = true
+          break
+        }
+      }
+      if allowed {
+        continue
+      }
+    } else if attribute.namespace_uri == markup_compatibility_namespace &&
+      relationship_mce_directive_attribute(attribute.local_name) {
+      continue
+    } else if context.is_effectively_ignorable(
+        attribute.namespace_id,
+        attribute.namespace_uri,
+      ) {
+      continue
+    }
+    raise InvalidXml(
+      msg="relationships \{element_label.to_owned()} has a disallowed attribute",
+    )
+  }
+}
+
+///|
 fn relationship_mce_validate_container_attributes(
   scanner : XmlStartTagScanner,
   context : RelationshipMceContext,
@@ -515,10 +643,13 @@ fn relationship_mce_validate_container_attributes(
       attribute.local_name == "Requires" {
       continue
     }
-    if attribute.namespace_uri != xml_namespace_uri &&
-      (
-        attribute.namespace_uri == markup_compatibility_namespace ||
-        context.is_ignorable(attribute.namespace_id)
+    if attribute.namespace_uri == markup_compatibility_namespace &&
+      relationship_mce_directive_attribute(attribute.local_name) {
+      continue
+    }
+    if context.is_effectively_ignorable(
+        attribute.namespace_id,
+        attribute.namespace_uri,
       ) {
       continue
     }
@@ -612,6 +743,12 @@ fn relationship_mce_state_for_current_element(
       raise InvalidXml(msg="relationships document element invalid")
     }
     relationship_mce_require_must_understand(scope_entry)
+    relationship_schema_attribute_allowed(
+      scanner,
+      context,
+      [],
+      "document element",
+    )
     return {
       active: true,
       included_in_effective_tree: true,
@@ -761,6 +898,12 @@ fn parse_relationship_targets_by_types_selected(
       mce_state.element_effective_depth != 2 {
       raise InvalidXml(msg="relationships effective content is invalid")
     }
+    relationship_schema_attribute_allowed(
+      scanner,
+      mce_context,
+      ["Id", "Type", "Target", "TargetMode"],
+      "record",
+    )
     records = records + 1
     if records > max_relationship_records {
       raise InvalidXml(msg="relationship record limit exceeded")
@@ -772,11 +915,20 @@ fn parse_relationship_targets_by_types_selected(
     if rel.length() > max_relationship_type_chars {
       raise InvalidXml(msg="relationship type is too long")
     }
+    if !relationship_uri_is_valid(rel, true) {
+      raise InvalidXml(msg="relationship type is invalid")
+    }
     if id.length() > max_relationship_id_chars {
       raise InvalidXml(msg="relationship id is too long")
     }
+    if !is_xml_ncname(id) {
+      raise InvalidXml(msg="relationship id is invalid")
+    }
     if target.length() > max_relationship_target_chars {
       raise InvalidXml(msg="relationship target is too long")
+    }
+    if !relationship_uri_is_valid(target, false) {
+      raise InvalidXml(msg="relationship target is invalid")
     }
     if ids.contains(id) {
       raise InvalidXml(msg="duplicate relationship id")
@@ -880,6 +1032,187 @@ priv struct PackageContentTypes {
 }
 
 ///|
+let max_content_type_records = 1_000_000
+
+///|
+let max_content_type_attribute_chars : Int = 16 * 1024
+
+///|
+let max_content_type_retained_chars : Int = 16 * 1024 * 1024
+
+///|
+fn content_type_token_character(character : UInt16) -> Bool {
+  character > 0x20 &&
+  character < 0x7f &&
+  character != '(' &&
+  character != ')' &&
+  character != '<' &&
+  character != '>' &&
+  character != '@' &&
+  character != ',' &&
+  character != ';' &&
+  character != ':' &&
+  character != ('\\' : UInt16) &&
+  character != '"' &&
+  character != '/' &&
+  character != '[' &&
+  character != ']' &&
+  character != '?' &&
+  character != '=' &&
+  character != '{' &&
+  character != '}'
+}
+
+///|
+fn content_type_skip_optional_whitespace(
+  value : StringView,
+  start : Int,
+) -> Int {
+  let mut index = start
+  while index < value.length() &&
+        (value[index] == (' ' : UInt16) || value[index] == ('\t' : UInt16)) {
+    index = index + 1
+  }
+  index
+}
+
+///|
+fn content_type_media_type_is_valid(value : StringView) -> Bool {
+  let mut index = 0
+  let type_start = index
+  while index < value.length() && content_type_token_character(value[index]) {
+    index = index + 1
+  }
+  if index == type_start ||
+    index >= value.length() ||
+    value[index] != ('/' : UInt16) {
+    return false
+  }
+  index = index + 1
+  let subtype_start = index
+  while index < value.length() && content_type_token_character(value[index]) {
+    index = index + 1
+  }
+  if index == subtype_start {
+    return false
+  }
+  while true {
+    index = content_type_skip_optional_whitespace(value, index)
+    if index == value.length() {
+      return true
+    }
+    if value[index] != (';' : UInt16) {
+      return false
+    }
+    index = content_type_skip_optional_whitespace(value, index + 1)
+    let name_start = index
+    while index < value.length() && content_type_token_character(value[index]) {
+      index = index + 1
+    }
+    if index == name_start {
+      return false
+    }
+    index = content_type_skip_optional_whitespace(value, index)
+    if index >= value.length() || value[index] != ('=' : UInt16) {
+      return false
+    }
+    index = content_type_skip_optional_whitespace(value, index + 1)
+    if index >= value.length() {
+      return false
+    }
+    if value[index] == ('"' : UInt16) {
+      index = index + 1
+      let mut closed = false
+      while index < value.length() {
+        let character = value[index]
+        if character == ('"' : UInt16) {
+          index = index + 1
+          closed = true
+          break
+        }
+        if character == ('\\' : UInt16) {
+          index = index + 1
+          if index >= value.length() ||
+            value[index] < 0x20 ||
+            value[index] >= 0x7f {
+            return false
+          }
+        } else if character < 0x20 || character >= 0x7f {
+          return false
+        }
+        index = index + 1
+      }
+      if !closed {
+        return false
+      }
+    } else {
+      let value_start = index
+      while index < value.length() && content_type_token_character(value[index]) {
+        index = index + 1
+      }
+      if index == value_start {
+        return false
+      }
+    }
+  }
+  false
+}
+
+///|
+fn content_type_part_name_is_valid(
+  value : StringView,
+  cancelled : () -> Bool,
+) -> Bool raise ParseXmlError {
+  if value.length() <= 1 ||
+    !value.has_prefix("/") ||
+    value.has_prefix("//") ||
+    value.has_suffix("/") {
+    return false
+  }
+  for segment in value[1:].split("/") {
+    if !is_valid_opc_part_segment_cancellable_impl(segment, cancelled) {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn content_type_extension_is_valid(value : StringView) -> Bool {
+  value != "" &&
+  value.length() <= 1024 &&
+  !value.contains(".") &&
+  !value.contains("/") &&
+  !value.contains("\\") &&
+  is_valid_opc_part_segment(value)
+}
+
+///|
+fn content_type_validate_attributes(
+  scanner : XmlStartTagScanner,
+  allowed : ArrayView[String],
+  label : StringView,
+) -> Unit raise ParseXmlError {
+  for attribute in scanner.expanded_attribute_names() {
+    if attribute.namespace_uri == "" {
+      let mut matched = false
+      for name in allowed {
+        if attribute.local_name == name {
+          matched = true
+          break
+        }
+      }
+      if matched {
+        continue
+      }
+    }
+    raise InvalidXml(
+      msg="content types \{label.to_owned()} has a disallowed attribute",
+    )
+  }
+}
+
+///|
 /// Returns the ASCII-case-insensitive identity key used for OPC part names.
 /// The leading slash, when present, remains part of the key.
 pub fn package_part_name_key(name : StringView) -> String {
@@ -924,15 +1257,30 @@ fn parse_content_types(
     scanner.local_name() != "Types" {
     raise InvalidXml(msg="content types document element invalid")
   }
+  content_type_validate_attributes(scanner, [], "document element")
+  let mut records = 0
+  let mut retained_chars = 0
   while scanner.next() {
     if scanner.namespace_uri() != package_content_types_namespace {
-      continue
+      raise InvalidXml(msg="content types element is invalid")
     }
     if scanner.depth() != 2 {
       raise InvalidXml(msg="content type record is not a direct child")
     }
+    records = records + 1
+    if records > max_content_type_records {
+      raise InvalidXml(msg="content type record limit exceeded")
+    }
+    if !scanner.current_element_content_is_empty() {
+      raise InvalidXml(msg="content type declaration is not empty")
+    }
     match scanner.local_name() {
       "Override" => {
+        content_type_validate_attributes(
+          scanner,
+          ["PartName", "ContentType"],
+          "override",
+        )
         let part_name = match scanner.attribute("", "PartName") {
           Some(value) => collapse_schema_whitespace(value)
           None =>
@@ -946,7 +1294,25 @@ fn parse_content_types(
         if part_name == "" || content_type == "" {
           raise InvalidXml(msg="content type override value is empty")
         }
-        let part_name_key = package_part_name_key(part_name)
+        if part_name.length() > max_content_type_attribute_chars ||
+          content_type.length() > max_content_type_attribute_chars {
+          raise InvalidXml(msg="content type override value is too long")
+        }
+        if !content_type_part_name_is_valid(part_name, cancelled) {
+          raise InvalidXml(msg="content type override part name is invalid")
+        }
+        if !content_type_media_type_is_valid(content_type) {
+          raise InvalidXml(msg="content type override media type is invalid")
+        }
+        let retained = part_name.length() + content_type.length()
+        if retained > max_content_type_retained_chars - retained_chars {
+          raise InvalidXml(msg="content type retained text limit exceeded")
+        }
+        retained_chars = retained_chars + retained
+        let part_name_key = package_part_name_key_cancellable(
+          part_name,
+          cancelled~,
+        )
         if overrides.contains(part_name_key) {
           raise InvalidXml(msg="duplicate content type override")
         }
@@ -954,6 +1320,11 @@ fn parse_content_types(
         override_part_names[part_name_key] = part_name
       }
       "Default" => {
+        content_type_validate_attributes(
+          scanner,
+          ["Extension", "ContentType"],
+          "default",
+        )
         let extension = match scanner.attribute("", "Extension") {
           Some(value) => collapse_schema_whitespace(value).to_lower()
           None => raise InvalidXml(msg="content type default extension missing")
@@ -966,6 +1337,18 @@ fn parse_content_types(
         if extension == "" || content_type == "" {
           raise InvalidXml(msg="content type default value is empty")
         }
+        if !content_type_extension_is_valid(extension) {
+          raise InvalidXml(msg="content type default extension is invalid")
+        }
+        if content_type.length() > max_content_type_attribute_chars ||
+          !content_type_media_type_is_valid(content_type) {
+          raise InvalidXml(msg="content type default media type is invalid")
+        }
+        let retained = extension.length() + content_type.length()
+        if retained > max_content_type_retained_chars - retained_chars {
+          raise InvalidXml(msg="content type retained text limit exceeded")
+        }
+        retained_chars = retained_chars + retained
         if defaults.contains(extension) {
           raise InvalidXml(msg="duplicate content type default")
         }
@@ -973,6 +1356,9 @@ fn parse_content_types(
       }
       _ => raise InvalidXml(msg="content types element is invalid")
     }
+  }
+  if records == 0 {
+    raise InvalidXml(msg="content types document has no declarations")
   }
   { overrides, override_part_names, defaults }
 }
@@ -1055,7 +1441,7 @@ test "ooxml read_parse wb: every relationship record is validated" {
     #|  <Relationship Id="rId1" Target="a.xml"/>
     #|</Relationships>
     #|
-  try parse_internal_relationship_targets(xml, "t1") catch {
+  try parse_internal_relationship_targets(xml, "urn:t1") catch {
     InvalidXml(msg~) => inspect(msg, content="relationship type missing")
     _ => fail("unexpected relationship parse cancellation")
   } noraise {
