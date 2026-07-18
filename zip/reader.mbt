@@ -123,18 +123,30 @@ fn copy_zip_bytes_cancellable(
   cancelled : () -> Bool,
 ) -> Bytes raise ZipError {
   check_zip_cancelled(cancelled)
-  // Initialize directly from the source. `FixedArray::make` would zero-fill
-  // the complete destination before the first chunk checkpoint, defeating the
-  // cancellation guarantee for a permitted 32-MiB stored entry.
-  let output = FixedArray::makei(bytes.length(), index => {
+  // An initialized FixedArray constructor performs a complete zero-fill before
+  // user code can poll cancellation. Allocate uninitialized primitive storage
+  // instead, then initialize every byte under explicit checkpoints.
+  let output : UninitializedArray[Byte] = UninitializedArray::make(
+    bytes.length(),
+  )
+  for index in 0..<bytes.length() {
     if (index & 0xffff) == 0 {
       check_zip_cancelled(cancelled)
     }
-    bytes[index]
-  })
+    output[index] = bytes[index]
+  }
   check_zip_cancelled(cancelled)
-  output.unsafe_reinterpret_as_bytes()
+  initialized_zip_byte_buffer_to_bytes(output)
 }
+
+///|
+/// Hands a completely initialized primitive backing store to immutable Bytes
+/// without another allocation or copy. This is the same representation-only
+/// conversion used by MoonBit core's byte constructors; callers must initialize
+/// every element before crossing this private boundary.
+fn initialized_zip_byte_buffer_to_bytes(
+  buffer : UninitializedArray[Byte],
+) -> Bytes = "%identity"
 
 ///|
 fn u32_to_int(value : UInt) -> Int raise ZipError {
