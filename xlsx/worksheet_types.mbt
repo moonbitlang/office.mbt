@@ -145,7 +145,9 @@ pub fn Worksheet::new(name : String) -> Worksheet {
     dimension_ref: None,
     cells: [],
     cell_index: Map([]),
-    cell_index_valid: false,
+    // Empty worksheets begin with a valid index. Normal mutators update it as
+    // cells are added, avoiding a deferred whole-sheet rebuild on first read.
+    cell_index_valid: true,
     merged_cells: [],
     hyperlinks: [],
     tables: [],

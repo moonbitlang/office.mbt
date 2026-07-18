@@ -1306,13 +1306,14 @@ fn clone_worksheet(
   name : String,
   state : SheetState,
 ) -> Worksheet {
+  let cells = clone_cells(sheet.cells)
   {
     name,
     sheet_views: clone_sheet_views(sheet.sheet_views),
     dimension_ref: sheet.dimension_ref,
-    cells: clone_cells(sheet.cells),
-    cell_index: Map([]),
-    cell_index_valid: false,
+    cells,
+    cell_index: build_worksheet_cell_index(cells),
+    cell_index_valid: true,
     merged_cells: clone_strings(sheet.merged_cells),
     hyperlinks: clone_hyperlinks(sheet.hyperlinks),
     tables: clone_tables(sheet.tables),

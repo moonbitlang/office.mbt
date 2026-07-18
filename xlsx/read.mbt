@@ -4183,13 +4183,14 @@ fn read_zip_archive_core_unchecked(
         Some(xml) => parse_form_controls_vml(xml)
         None => []
       }
+      let cell_index = build_bounded_worksheet_cell_index(cells, read_budget)
       let sheet = {
         name,
         sheet_views,
         dimension_ref,
         cells,
-        cell_index: Map([]),
-        cell_index_valid: false,
+        cell_index,
+        cell_index_valid: true,
         merged_cells,
         auto_filter,
         page_margins,

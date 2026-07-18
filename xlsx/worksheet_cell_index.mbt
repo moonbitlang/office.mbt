@@ -9,20 +9,58 @@ fn Worksheet::invalidate_cell_index(self : Worksheet) -> Unit {
 }
 
 ///|
+fn populate_worksheet_cell_index(
+  index : Map[String, Int],
+  cells : Array[Cell],
+) -> Unit {
+  for i, cell in cells {
+    let key = cell_index_key(cell.row, cell.col)
+    // First occurrence wins: a noncanonical file can carry duplicate
+    // coordinates, and the historical (pre-index) getters returned the
+    // first stored cell.
+    if !index.contains(key) {
+      index[key] = i
+    }
+  }
+}
+
+///|
+fn build_worksheet_cell_index(cells : Array[Cell]) -> Map[String, Int] {
+  let index : Map[String, Int] = Map([])
+  populate_worksheet_cell_index(index, cells)
+  index
+}
+
+///|
+fn build_bounded_worksheet_cell_index(
+  cells : Array[Cell],
+  budget : ReadBudget,
+) -> Map[String, Int] raise XlsxError {
+  // Index construction is part of workbook parsing, not deferred command
+  // work. Charge it before allocating and retain cancellation checkpoints for
+  // large but valid sheets.
+  budget.charge_work(cells.length())
+  let index : Map[String, Int] = Map([])
+  for i, cell in cells {
+    if i % 4096 == 0 {
+      budget.checkpoint()
+    }
+    let key = cell_index_key(cell.row, cell.col)
+    if !index.contains(key) {
+      index[key] = i
+    }
+  }
+  budget.checkpoint()
+  index
+}
+
+///|
 fn Worksheet::ensure_cell_index(self : Worksheet) -> Unit {
   if self.cell_index_valid {
     return
   }
   self.cell_index.clear()
-  for i, cell in self.cells {
-    let key = cell_index_key(cell.row, cell.col)
-    // First occurrence wins: a noncanonical file can carry duplicate
-    // coordinates, and the historical (pre-index) getters returned the
-    // first stored cell — keep that semantic for every indexed getter.
-    if !self.cell_index.contains(key) {
-      self.cell_index[key] = i
-    }
-  }
+  populate_worksheet_cell_index(self.cell_index, self.cells)
   self.cell_index_valid = true
 }
 
@@ -101,4 +139,19 @@ test "resolved worksheet reads avoid repeated names and preserve style precedenc
   assert_eq(sheet.effective_style_id_rc(2, 2), row_style)
   assert_eq(sheet.effective_style_id_rc(3, 1), column_style)
   assert_eq(sheet.effective_style_id_rc(3, 2), 0)
+}
+
+///|
+test "parsed worksheets leave coordinate indexes ready for bounded reads" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Parsed")
+  sheet.set_cell_value_rc(1, 1, String("first"))
+  sheet.set_cell_value_rc(2, 2, Numeric(2.0))
+  let parsed = read(write(workbook))
+  guard parsed.sheet("Parsed") is Some(parsed_sheet) else {
+    fail("expected parsed sheet")
+  }
+  assert_true(parsed_sheet.cell_index_valid)
+  assert_eq(parsed_sheet.cell_index.length(), 2)
+  assert_eq(parsed.get_cell_value("Parsed", "B2"), Some("2"))
 }
