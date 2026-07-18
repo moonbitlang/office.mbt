@@ -36,8 +36,8 @@ struct OfficeReadPackage {
 }
 
 ///|
-/// Centralizes cancellation observation for asynchronous Office commands.
-/// CPU-heavy command paths add explicit async yield points around bounded work.
+/// Reports cancellation that was delivered at an async suspension boundary.
+/// The bounded synchronous package phases do not themselves run the scheduler.
 fn office_async_cancelled() -> Bool {
   @async.is_being_cancelled()
 }

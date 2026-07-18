@@ -20,6 +20,16 @@ fn xlsx_cli_error(run : () -> Unit raise) -> @lib.ProtocolError raise {
 }
 
 ///|
+async fn xlsx_cli_error_async(run : async () -> Unit) -> @lib.ProtocolError {
+  try run() catch {
+    CliFailure(error) => error
+    _ => fail("expected XLSX CLI failure")
+  } noraise {
+    _ => fail("expected XLSX CLI failure")
+  }
+}
+
+///|
 fn xlsx_bounded_test_source(
   file : String,
   bytes : BytesView,
@@ -50,6 +60,46 @@ test "XLSX CLI preserves parser cancellation and checkpoints cell scans" {
   let scan = XlsxScanBudget::new(10, cancelled=() => true)
   let scan_error = xlsx_cli_error(() => scan.charge_cell())
   assert_eq(scan_error.code, "office.cancelled")
+}
+
+///|
+async test "XLSX command cell scans yield before their bounded maximum" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let mut checks = 0
+  let projection = {
+    ..make_xlsx_projection("cooperative.xlsx", workbook, 100_000),
+    cancelled: () => {
+      checks += 1
+      false
+    },
+  }
+  guard projection.sheets[0] is sheet && sheet.content is Worksheet(_) else {
+    fail("expected worksheet fixture")
+  }
+  let region : XlsxScanRegion = {
+    sheet,
+    rect: { col_lo: 1, row_lo: 1, col_hi: 1_000, row_hi: 100 },
+  }
+  @async.with_task_group() <| group => {
+    let task = group.spawn(() => {
+      collect_xlsx_cell_page(projection, [region], PresentCells, 0, 0)
+    })
+    // The child first yields before scanning, then again after its first
+    // quantum. Waiting for many checkpoints proves it made partial progress.
+    while checks <= 100 {
+      @async.pause()
+    }
+    assert_true(task.try_wait() is None)
+    task.cancel()
+    let cancelled = try {
+      ignore(task.wait())
+      false
+    } catch {
+      error => @async.is_cancellation_error(error)
+    }
+    assert_true(cancelled)
+  }
 }
 
 ///|
@@ -101,7 +151,9 @@ test "Office format detection probes cancellation before and after validation" {
     )
   })
   assert_eq(error.code, "office.cancelled")
-  assert_eq(checks, 2)
+  // The detector observes cancellation internally, and the CLI boundary
+  // rechecks before translating it to a stable protocol error.
+  assert_eq(checks, 3)
 }
 
 ///|
@@ -269,7 +321,7 @@ test "XLSX selectors resolve to stable named canonical paths" {
 }
 
 ///|
-test "XLSX structured reads accept detector-valid Strict OOXML relationships" {
+async test "XLSX structured reads accept detector-valid Strict OOXML relationships" {
   let source = xlsx_bounded_test_source("strict.xlsx", xlsx_strict_test_bytes())
   assert_true(@lib.detect_archive_format(source.file, source.archive) is Xlsx)
   let projection = open_xlsx_projection(source, 10)
@@ -285,7 +337,7 @@ test "XLSX structured reads accept detector-valid Strict OOXML relationships" {
 }
 
 ///|
-test "XLSX structured reads resolve relationships from relocated workbooks" {
+async test "XLSX structured reads resolve relationships from relocated workbooks" {
   let source = xlsx_bounded_test_source(
     "relocated.xlsx",
     xlsx_relocated_test_bytes(),
@@ -320,7 +372,7 @@ test "XLSX structured reads resolve relationships from relocated workbooks" {
 }
 
 ///|
-test "XLSX structured reads retain a default-declared relocated workbook path" {
+async test "XLSX structured reads retain a default-declared relocated workbook path" {
   let source = xlsx_bounded_test_source(
     "relocated-default.xlsx",
     xlsx_default_declared_relocated_test_bytes(),
@@ -572,7 +624,7 @@ test "XLSX query literals preserve whitespace and support JSON quoting" {
 }
 
 ///|
-test "XLSX snapshots preserve and resolve shared-formula followers" {
+async test "XLSX snapshots preserve and resolve shared-formula followers" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.new_sheet("Data"))
   workbook.set_cell_formula_opts(
@@ -644,7 +696,7 @@ test "XLSX structured reads reject shared-formula followers without a master" {
 }
 
 ///|
-test "XLSX formatting is deferred and custom-format work is charged" {
+async test "XLSX formatting is deferred and custom-format work is charged" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.new_sheet("Data"))
   let style_id = workbook.new_style(@xlsx.Style::number_format("[Red]0.00"))
@@ -677,7 +729,7 @@ test "XLSX formatting is deferred and custom-format work is charged" {
   assert_eq(page.matched_total, 2)
   assert_eq(page.cells.length(), 0)
   assert_false(projection.sheets[0].shared_formulas_indexed)
-  let limited = xlsx_cli_error(() => {
+  let limited = xlsx_cli_error_async(() => {
     ignore(
       collect_xlsx_cell_page(
         projection,
@@ -700,7 +752,7 @@ test "XLSX formatting is deferred and custom-format work is charged" {
 }
 
 ///|
-test "XLSX outline and get use office schemas with canonical cell records" {
+async test "XLSX outline and get use office schemas with canonical cell records" {
   let projection = xlsx_read_test_projection()
   let outline = xlsx_outline_data(projection)
   guard outline is Object(outline_fields) else {
@@ -730,14 +782,14 @@ test "XLSX outline and get use office schemas with canonical cell records" {
   let missing = resolve_xlsx_selector(
     projection, "/xlsx/sheet[name=\"Data\"]/cell[D4]",
   )
-  let missing_error = xlsx_cli_error(() => {
+  let missing_error = xlsx_cli_error_async(() => {
     ignore(xlsx_get_data(projection, missing))
   })
   assert_eq(missing_error.code, "office.xlsx.selector_not_found")
 }
 
 ///|
-test "XLSX singleton used ranges remain canonical two-endpoint ranges" {
+async test "XLSX singleton used ranges remain canonical two-endpoint ranges" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.new_sheet("Only"))
   workbook.set_cell_str("Only", "A1", "one")
@@ -882,7 +934,7 @@ test "XLSX style parsing rejects non-finite JSON-facing numbers" {
 }
 
 ///|
-test "XLSX displayed text preserves formula results formatted to blank" {
+async test "XLSX displayed text preserves formula results formatted to blank" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.new_sheet("Data"))
   let style_id = workbook.new_style(@xlsx.Style::number_format(";;;"))
@@ -927,7 +979,7 @@ test "XLSX displayed text preserves formula results formatted to blank" {
 }
 
 ///|
-test "XLSX cached empty formula results remain distinct from a missing cache" {
+async test "XLSX cached empty formula results remain distinct from a missing cache" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.new_sheet("Data"))
   workbook.set_cell_formula("Data", "A1", "1+0")
@@ -1010,7 +1062,7 @@ test "XLSX cached empty formula results remain distinct from a missing cache" {
 }
 
 ///|
-test "XLSX text and query scan fully while retaining only the requested page" {
+async test "XLSX text and query scan fully while retaining only the requested page" {
   let projection = xlsx_read_test_projection()
   let under = Some(
     resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]"),
@@ -1043,7 +1095,7 @@ test "XLSX text and query scan fully while retaining only the requested page" {
 }
 
 ///|
-test "XLSX JSON and human output enforce format-specific stdout ceilings" {
+async test "XLSX JSON and human output enforce format-specific stdout ceilings" {
   let projection = xlsx_read_test_projection()
   let payload = xlsx_outline_payload(projection, 100_000)
   let json = checked_office_json_output(payload)
@@ -1062,12 +1114,12 @@ test "XLSX JSON and human output enforce format-specific stdout ceilings" {
 }
 
 ///|
-test "XLSX all-sheet scans reject sparse far extents before visiting cells" {
+async test "XLSX all-sheet scans reject sparse far extents before visiting cells" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.new_sheet("Sparse"))
   workbook.set_cell_str("Sparse", "K10", "far")
   let projection = make_xlsx_projection("sparse.xlsx", workbook, 100)
-  let error = xlsx_cli_error(() => {
+  let error = xlsx_cli_error_async(() => {
     ignore(xlsx_text_data(projection, None, 0, 10))
   })
   assert_eq(error.code, "office.xlsx.resource_limit")

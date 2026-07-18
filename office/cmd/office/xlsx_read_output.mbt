@@ -6,6 +6,15 @@ enum XlsxCellFilter {
 }
 
 ///|
+/// Cell scans are command-owned CPU work, so they yield independently of I/O.
+/// The work threshold prevents a small number of large strings or predicates
+/// from delaying a scheduler turn until the cell-count threshold is reached.
+let xlsx_cli_scan_yield_cells : Int = 256
+
+///|
+let xlsx_cli_scan_yield_work_units : Int = 64 * 1024
+
+///|
 struct XlsxCellPage {
   cells : Array[XlsxCellSnapshot]
   matched_total : Int
@@ -332,6 +341,14 @@ fn XlsxCellFilter::matches(
 }
 
 ///|
+fn XlsxCellFilter::work_used(self : XlsxCellFilter) -> Int {
+  match self {
+    QueryCells(_, work) => work.used
+    PresentCells | TextCells => 0
+  }
+}
+
+///|
 fn xlsx_query_filter(
   predicates : Array[XlsxCellPredicate],
 ) -> XlsxCellFilter raise CliFailure {
@@ -343,15 +360,16 @@ fn xlsx_query_filter(
 }
 
 ///|
-fn collect_xlsx_cell_page(
+async fn collect_xlsx_cell_page(
   projection : XlsxProjection,
   regions : Array[XlsxScanRegion],
   filter : XlsxCellFilter,
   offset : Int,
   limit : Int,
   format_work_maximum? : Int = xlsx_cli_max_format_work_units,
-) -> XlsxCellPage raise CliFailure {
+) -> XlsxCellPage {
   projection.checkpoint()
+  @async.pause()
   let scan = XlsxScanBudget::new(
     projection.max_scan_cells,
     format_work_maximum~,
@@ -359,6 +377,8 @@ fn collect_xlsx_cell_page(
   )
   let cells : Array[XlsxCellSnapshot] = []
   let mut matched = 0
+  let mut yielded_cells = 0
+  let mut yielded_work = filter.work_used()
   for region in regions {
     projection.checkpoint()
     for row in region.rect.row_lo..<=region.rect.row_hi {
@@ -380,10 +400,18 @@ fn collect_xlsx_cell_page(
           }
           matched += 1
         }
+        let work = scan.strings.used + scan.formatting.used + filter.work_used()
+        if scan.scanned - yielded_cells >= xlsx_cli_scan_yield_cells ||
+          work - yielded_work >= xlsx_cli_scan_yield_work_units {
+          @async.pause()
+          yielded_cells = scan.scanned
+          yielded_work = work
+        }
       }
     }
   }
   projection.checkpoint()
+  @async.pause()
   { cells, matched_total: matched, scanned_cells: scan.scanned, offset, limit }
 }
 
@@ -402,10 +430,10 @@ fn xlsx_page_fields(page : XlsxCellPage) -> Map[String, Json] {
 }
 
 ///|
-fn xlsx_get_data(
+async fn xlsx_get_data(
   projection : XlsxProjection,
   resolved : XlsxResolvedSelector,
-) -> Json raise CliFailure {
+) -> Json {
   projection.checkpoint()
   match resolved {
     Workbook(path~) => {
@@ -502,11 +530,11 @@ fn xlsx_get_data(
 }
 
 ///|
-fn xlsx_get_payload(
+async fn xlsx_get_payload(
   projection : XlsxProjection,
   resolved : XlsxResolvedSelector,
   max_output_chars : Int,
-) -> BoundedOfficePayload raise CliFailure {
+) -> BoundedOfficePayload {
   projection.checkpoint()
   let payload = bounded_office_payload(
     xlsx_get_data(projection, resolved),
@@ -519,12 +547,12 @@ fn xlsx_get_payload(
 }
 
 ///|
-fn xlsx_text_data(
+async fn xlsx_text_data(
   projection : XlsxProjection,
   under : XlsxResolvedSelector?,
   offset : Int,
   limit : Int,
-) -> Json raise CliFailure {
+) -> Json {
   projection.checkpoint()
   let page = collect_xlsx_cell_page(
     projection,
@@ -559,13 +587,13 @@ fn xlsx_text_data(
 }
 
 ///|
-fn xlsx_text_payload(
+async fn xlsx_text_payload(
   projection : XlsxProjection,
   under : XlsxResolvedSelector?,
   offset : Int,
   limit : Int,
   max_output_chars : Int,
-) -> BoundedOfficePayload raise CliFailure {
+) -> BoundedOfficePayload {
   projection.checkpoint()
   let payload = bounded_office_payload(
     xlsx_text_data(projection, under, offset, limit),
@@ -578,11 +606,11 @@ fn xlsx_text_payload(
 }
 
 ///|
-fn xlsx_query_data(
+async fn xlsx_query_data(
   projection : XlsxProjection,
   under : XlsxResolvedSelector?,
   spec : XlsxQuerySpec,
-) -> Json raise CliFailure {
+) -> Json {
   projection.checkpoint()
   let page = collect_xlsx_cell_page(
     projection,
@@ -606,12 +634,12 @@ fn xlsx_query_data(
 }
 
 ///|
-fn xlsx_query_payload(
+async fn xlsx_query_payload(
   projection : XlsxProjection,
   under : XlsxResolvedSelector?,
   spec : XlsxQuerySpec,
   max_output_chars : Int,
-) -> BoundedOfficePayload raise CliFailure {
+) -> BoundedOfficePayload {
   projection.checkpoint()
   let payload = bounded_office_payload(
     xlsx_query_data(projection, under, spec),
@@ -693,11 +721,11 @@ fn xlsx_page_human(
 }
 
 ///|
-fn xlsx_get_human(
+async fn xlsx_get_human(
   projection : XlsxProjection,
   resolved : XlsxResolvedSelector,
   maximum : Int,
-) -> String raise CliFailure {
+) -> String {
   projection.checkpoint()
   match resolved {
     Workbook(..) => xlsx_outline_human(projection, maximum)
@@ -745,13 +773,13 @@ fn xlsx_get_human(
 }
 
 ///|
-fn xlsx_text_human(
+async fn xlsx_text_human(
   projection : XlsxProjection,
   under : XlsxResolvedSelector?,
   offset : Int,
   limit : Int,
   maximum : Int,
-) -> String raise CliFailure {
+) -> String {
   xlsx_page_human(
     projection,
     collect_xlsx_cell_page(
@@ -767,12 +795,12 @@ fn xlsx_text_human(
 }
 
 ///|
-fn xlsx_query_human(
+async fn xlsx_query_human(
   projection : XlsxProjection,
   under : XlsxResolvedSelector?,
   spec : XlsxQuerySpec,
   maximum : Int,
-) -> String raise CliFailure {
+) -> String {
   xlsx_page_human(
     projection,
     collect_xlsx_cell_page(

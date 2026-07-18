@@ -242,7 +242,6 @@ fn read_workbook_from_bytes(
   options : Options,
   limits : ReadLimits,
   io_context : WorkbookIOContext,
-  cancelled : () -> Bool,
 ) -> Workbook raise XlsxError {
   let resolved_password = if password == "" {
     options.password
@@ -250,18 +249,16 @@ fn read_workbook_from_bytes(
     password
   }
   let resolved_options = options_with_password(options, resolved_password)
-  let workbook = if resolved_password == "" {
+  if resolved_password == "" {
     match io_context.charset_transcoder {
       Some(value) =>
         read_zip_bytes(
           bytes,
           options=resolved_options,
           limits~,
-          cancelled~,
           transcoder=value,
         )
-      None =>
-        read_zip_bytes(bytes, options=resolved_options, limits~, cancelled~)
+      None => read_zip_bytes(bytes, options=resolved_options, limits~)
     }
   } else {
     match io_context.charset_transcoder {
@@ -271,7 +268,6 @@ fn read_workbook_from_bytes(
           resolved_password,
           options=resolved_options,
           limits~,
-          cancelled~,
           transcoder=value,
         )
       None =>
@@ -280,11 +276,9 @@ fn read_workbook_from_bytes(
           resolved_password,
           options=resolved_options,
           limits~,
-          cancelled~,
         )
     }
   }
-  checked_read_workbook(workbook, cancelled)
 }
 
 ///|
@@ -304,15 +298,9 @@ pub async fn[R : @async/io.Reader] open_reader(
   )
   let io_context = read_io_context(transcoder)
   let workbook = read_workbook_from_bytes(
-    bytes,
-    password,
-    options,
-    limits,
-    io_context,
-    () => @async.is_being_cancelled(),
+    bytes, password, options, limits, io_context,
   )
   workbook.set_io_context(io_context)
-  @async.pause()
   workbook
 }
 
@@ -325,13 +313,11 @@ pub async fn[R : @async/io.Reader] read_zip_reader(
   limits? : ReadLimits = ReadLimits::new(),
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook {
-  let workbook = match transcoder {
+  match transcoder {
     Some(value) =>
       open_reader(reader, password~, options~, limits~, transcoder=value)
     None => open_reader(reader, password~, options~, limits~)
   }
-  @async.pause()
-  workbook
 }
 
 ///|
@@ -361,15 +347,9 @@ pub async fn[R : @async/io.Reader] Workbook::read_zip_reader(
     resource="package_bytes",
   )
   let workbook = read_workbook_from_bytes(
-    bytes,
-    password,
-    resolved_options,
-    limits,
-    io_context,
-    () => @async.is_being_cancelled(),
+    bytes, password, resolved_options, limits, io_context,
   )
   workbook.set_io_context(io_context)
-  @async.pause()
   workbook
 }
 
@@ -395,15 +375,9 @@ pub async fn open_file(
     Some(path),
   )
   let workbook = read_workbook_from_bytes(
-    bytes,
-    password,
-    options,
-    limits,
-    io_context,
-    () => @async.is_being_cancelled(),
+    bytes, password, options, limits, io_context,
   )
   workbook.set_io_context(io_context)
-  @async.pause()
   workbook
 }
 
