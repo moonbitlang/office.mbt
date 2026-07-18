@@ -37,8 +37,11 @@ disagree, the tests are the source of truth and this document has a bug.
   values; unified `office.xlsx.*` payloads use 1-based sheet `index` values.
   Rows and columns are never sent as bare numbers; cell and range references
   are A1-style strings.
-- Output is pretty-printed (2-space indent) UTF-8 with a trailing newline,
-  deterministic for a given workbook.
+- Output is deterministic UTF-8 with a trailing newline. Standalone xlsx and
+  docx inspection commands use a 2-space indent; the unified `office`
+  `outline`, `get`, `text`, and `query` commands emit compact JSON so their
+  output ceiling can be accounted exactly. JSON Lines output is also compact,
+  one value per line. Consumers must not depend on insignificant whitespace.
 
 ## `xlsx.outline/1` — workbook structure map (`xlsx outline <file>`)
 
