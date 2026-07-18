@@ -88,6 +88,33 @@ test "XLSX read ignores expressions stored on shared-formula followers" {
     fail("missing shared-formula master")
   }
   assert_eq(master.translate_to(1, 2), "E1+1")
+  let (bounded, work) = master.translate_to_limited(
+    1,
+    2,
+    maximum_input_chars=4,
+    maximum_output_chars=4,
+    maximum_work_units=256,
+  )
+  assert_eq(bounded, "E1+1")
+  assert_true(work > 0)
+  try
+    master.translate_to_limited(
+      1,
+      2,
+      maximum_input_chars=3,
+      maximum_output_chars=4,
+      maximum_work_units=256,
+    )
+  catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) => {
+      assert_eq(kind, "shared_formula_input_chars")
+      assert_eq(limit, 3)
+      assert_eq(actual, 4)
+    }
+    _ => fail("unexpected bounded shared-formula error")
+  } noraise {
+    _ => fail("expected bounded shared-formula rejection")
+  }
 }
 
 ///|

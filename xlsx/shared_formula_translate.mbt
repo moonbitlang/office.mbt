@@ -14,7 +14,6 @@ pub struct SharedFormulaMaster {
 
 ///|
 priv struct FormulaCellToken {
-  start : Int
   end : Int
   column_start : Int
   column_end : Int
@@ -43,16 +42,141 @@ priv struct FormulaRowToken {
 }
 
 ///|
-fn formula_chars_text(
+priv struct FormulaTranslationBudget {
+  maximum_work_units : Int
+  cancelled : () -> Bool
+  mut work_units : Int
+  mut next_checkpoint : Int
+}
+
+///|
+fn FormulaTranslationBudget::new(
+  maximum_work_units : Int,
+  cancelled : () -> Bool,
+) -> FormulaTranslationBudget {
+  { maximum_work_units, cancelled, work_units: 0, next_checkpoint: 0 }
+}
+
+///|
+fn FormulaTranslationBudget::checkpoint(
+  self : FormulaTranslationBudget,
+) -> Unit raise XlsxError {
+  if (self.cancelled)() {
+    raise ReadCancelled
+  }
+}
+
+///|
+fn FormulaTranslationBudget::charge_work(
+  self : FormulaTranslationBudget,
+  amount : Int,
+) -> Unit raise XlsxError {
+  if amount <= 0 {
+    return
+  }
+  let (actual, exceeded) = read_budget_actual(
+    self.work_units,
+    amount,
+    self.maximum_work_units,
+  )
+  if exceeded {
+    raise ResourceLimitExceeded(
+      kind="shared_formula_work_units",
+      limit=self.maximum_work_units,
+      actual~,
+    )
+  }
+  self.work_units = actual
+  if self.work_units >= self.next_checkpoint {
+    self.checkpoint()
+    self.next_checkpoint = if self.work_units > 0x7fffffff - 4096 {
+      0x7fffffff
+    } else {
+      self.work_units + 4096
+    }
+  }
+}
+
+///|
+priv struct FormulaTranslationOutput {
+  builder : StringBuilder
+  budget : FormulaTranslationBudget
+  maximum_chars : Int
+  mut chars : Int
+}
+
+///|
+fn FormulaTranslationOutput::new(
+  size_hint : Int,
+  maximum_chars : Int,
+  budget : FormulaTranslationBudget,
+) -> FormulaTranslationOutput {
+  { builder: StringBuilder::new(size_hint~), budget, maximum_chars, chars: 0 }
+}
+
+///|
+fn FormulaTranslationOutput::charge_chars(
+  self : FormulaTranslationOutput,
+  amount : Int,
+) -> Unit raise XlsxError {
+  let (actual, exceeded) = read_budget_actual(
+    self.chars,
+    amount,
+    self.maximum_chars,
+  )
+  if exceeded {
+    raise ResourceLimitExceeded(
+      kind="shared_formula_output_chars",
+      limit=self.maximum_chars,
+      actual~,
+    )
+  }
+  self.chars = actual
+}
+
+///|
+fn FormulaTranslationOutput::write_char(
+  self : FormulaTranslationOutput,
+  character : Char,
+) -> Unit raise XlsxError {
+  let width = if character.to_int() > 0xffff { 2 } else { 1 }
+  self.budget.charge_work(width)
+  self.charge_chars(width)
+  self.builder.write_char(character)
+}
+
+///|
+fn FormulaTranslationOutput::write_string(
+  self : FormulaTranslationOutput,
+  value : String,
+) -> Unit raise XlsxError {
+  let width = value.length()
+  self.budget.charge_work(width)
+  self.charge_chars(width)
+  self.builder.write_string(value)
+}
+
+///|
+fn formula_character(
+  chars : ArrayView[Char],
+  index : Int,
+  budget : FormulaTranslationBudget,
+) -> Char raise XlsxError {
+  let character = chars[index]
+  budget.charge_work(if character.to_int() > 0xffff { 2 } else { 1 })
+  character
+}
+
+///|
+fn FormulaTranslationOutput::write_formula_chars(
+  self : FormulaTranslationOutput,
   chars : ArrayView[Char],
   start : Int,
   end : Int,
-) -> String {
-  let out = StringBuilder::new()
+) -> Unit raise XlsxError {
   for index in start..<end {
-    out.write_char(chars[index])
+    self.write_char(formula_character(chars, index, self.budget))
   }
-  out.to_string()
 }
 
 ///|
@@ -71,16 +195,22 @@ fn formula_reference_word_char(character : Char) -> Bool {
 fn formula_reference_start_boundary(
   chars : ArrayView[Char],
   start : Int,
-) -> Bool {
-  start == 0 || !formula_reference_word_char(chars[start - 1])
+  budget : FormulaTranslationBudget,
+) -> Bool raise XlsxError {
+  start == 0 ||
+  !formula_reference_word_char(formula_character(chars, start - 1, budget))
 }
 
 ///|
-fn formula_reference_end_boundary(chars : ArrayView[Char], end : Int) -> Bool {
+fn formula_reference_end_boundary(
+  chars : ArrayView[Char],
+  end : Int,
+  budget : FormulaTranslationBudget,
+) -> Bool raise XlsxError {
   if end >= chars.length() {
     return true
   }
-  let character = chars[end]
+  let character = formula_character(chars, end, budget)
   !formula_reference_word_char(character) &&
   character != '(' &&
   character != '[' &&
@@ -92,10 +222,11 @@ fn formula_column_number(
   chars : ArrayView[Char],
   start : Int,
   end : Int,
-) -> Int? {
+  budget : FormulaTranslationBudget,
+) -> Int? raise XlsxError {
   let mut column = 0
   for index in start..<end {
-    let character = chars[index].to_ascii_uppercase()
+    let character = formula_character(chars, index, budget).to_ascii_uppercase()
     if !character.is_ascii_alphabetic() {
       return None
     }
@@ -117,13 +248,14 @@ fn formula_bounded_decimal(
   start : Int,
   end : Int,
   maximum : Int,
-) -> Int? {
+  budget : FormulaTranslationBudget,
+) -> Int? raise XlsxError {
   if start >= end {
     return None
   }
   let mut value = 0
   for index in start..<end {
-    let character = chars[index]
+    let character = formula_character(chars, index, budget)
     if !character.is_ascii_digit() {
       return None
     }
@@ -144,39 +276,50 @@ fn formula_bounded_decimal(
 fn parse_formula_cell_token(
   chars : ArrayView[Char],
   start : Int,
-) -> FormulaCellToken? {
+  budget : FormulaTranslationBudget,
+) -> FormulaCellToken? raise XlsxError {
   if start < 0 || start >= chars.length() {
     return None
   }
   let mut index = start
-  let absolute_column = chars[index] == '$'
+  let absolute_column = formula_character(chars, index, budget) == '$'
   if absolute_column {
     index += 1
   }
   let column_start = index
-  while index < chars.length() && chars[index].is_ascii_alphabetic() {
+  while index < chars.length() {
+    if !formula_character(chars, index, budget).is_ascii_alphabetic() {
+      break
+    }
     index += 1
   }
   let column_end = index
   if column_end == column_start || column_end - column_start > 3 {
     return None
   }
-  let absolute_row = index < chars.length() && chars[index] == '$'
+  let absolute_row = if index < chars.length() {
+    formula_character(chars, index, budget) == '$'
+  } else {
+    false
+  }
   if absolute_row {
     index += 1
   }
   let row_start = index
-  while index < chars.length() && chars[index].is_ascii_digit() {
+  while index < chars.length() {
+    if !formula_character(chars, index, budget).is_ascii_digit() {
+      break
+    }
     index += 1
   }
   let row_end = index
-  guard formula_column_number(chars, column_start, column_end) is Some(column) &&
-    formula_bounded_decimal(chars, row_start, row_end, excel_max_rows)
+  guard formula_column_number(chars, column_start, column_end, budget)
+    is Some(column) &&
+    formula_bounded_decimal(chars, row_start, row_end, excel_max_rows, budget)
     is Some(row) else {
     return None
   }
   Some({
-    start,
     end: index,
     column_start,
     column_end,
@@ -193,24 +336,29 @@ fn parse_formula_cell_token(
 fn parse_formula_column_token(
   chars : ArrayView[Char],
   start : Int,
-) -> FormulaColumnToken? {
+  budget : FormulaTranslationBudget,
+) -> FormulaColumnToken? raise XlsxError {
   if start < 0 || start >= chars.length() {
     return None
   }
   let mut index = start
-  let absolute = chars[index] == '$'
+  let absolute = formula_character(chars, index, budget) == '$'
   if absolute {
     index += 1
   }
   let letters_start = index
-  while index < chars.length() && chars[index].is_ascii_alphabetic() {
+  while index < chars.length() {
+    if !formula_character(chars, index, budget).is_ascii_alphabetic() {
+      break
+    }
     index += 1
   }
   let letters_end = index
   if letters_end == letters_start || letters_end - letters_start > 3 {
     return None
   }
-  guard formula_column_number(chars, letters_start, letters_end) is Some(column) else {
+  guard formula_column_number(chars, letters_start, letters_end, budget)
+    is Some(column) else {
     return None
   }
   Some({ start, end: index, absolute, column })
@@ -220,21 +368,27 @@ fn parse_formula_column_token(
 fn parse_formula_row_token(
   chars : ArrayView[Char],
   start : Int,
-) -> FormulaRowToken? {
+  budget : FormulaTranslationBudget,
+) -> FormulaRowToken? raise XlsxError {
   if start < 0 || start >= chars.length() {
     return None
   }
   let mut index = start
-  let absolute = chars[index] == '$'
+  let absolute = formula_character(chars, index, budget) == '$'
   if absolute {
     index += 1
   }
   let digits_start = index
-  while index < chars.length() && chars[index].is_ascii_digit() {
+  while index < chars.length() {
+    if !formula_character(chars, index, budget).is_ascii_digit() {
+      break
+    }
     index += 1
   }
   let digits_end = index
-  guard formula_bounded_decimal(chars, digits_start, digits_end, excel_max_rows)
+  guard formula_bounded_decimal(
+      chars, digits_start, digits_end, excel_max_rows, budget,
+    )
     is Some(row) else {
     return None
   }
@@ -262,73 +416,93 @@ fn formula_shifted_row(row : Int, delta : Int) -> String? {
 }
 
 ///|
-fn shifted_formula_cell_text(
+fn write_shifted_formula_cell(
   chars : ArrayView[Char],
   token : FormulaCellToken,
   column_delta : Int,
   row_delta : Int,
-) -> String? {
-  let out = StringBuilder::new()
+  out : FormulaTranslationOutput,
+) -> Unit raise XlsxError {
+  let shifted_column = if token.absolute_column {
+    None
+  } else {
+    formula_shifted_column(token.column, column_delta)
+  }
+  let shifted_row = if token.absolute_row {
+    None
+  } else {
+    formula_shifted_row(token.row, row_delta)
+  }
+  if (!token.absolute_column && shifted_column is None) ||
+    (!token.absolute_row && shifted_row is None) {
+    out.write_string("#REF!")
+    return
+  }
   if token.absolute_column {
     out.write_char('$')
-    for index in token.column_start..<token.column_end {
-      out.write_char(chars[index])
-    }
+    out.write_formula_chars(chars, token.column_start, token.column_end)
   } else {
-    guard formula_shifted_column(token.column, column_delta) is Some(column) else {
-      return None
-    }
-    out.write_string(column)
+    out.write_string(shifted_column.unwrap())
   }
   if token.absolute_row {
     out.write_char('$')
-    for index in token.row_start..<token.row_end {
-      out.write_char(chars[index])
-    }
+    out.write_formula_chars(chars, token.row_start, token.row_end)
   } else {
-    guard formula_shifted_row(token.row, row_delta) is Some(row) else {
-      return None
-    }
-    out.write_string(row)
+    out.write_string(shifted_row.unwrap())
   }
-  Some(out.to_string())
 }
 
 ///|
-fn shifted_formula_column_text(
+fn write_shifted_formula_column(
   chars : ArrayView[Char],
   token : FormulaColumnToken,
   delta : Int,
-) -> String? {
+  out : FormulaTranslationOutput,
+) -> Unit raise XlsxError {
   if token.absolute {
-    return Some(formula_chars_text(chars, token.start, token.end))
+    out.write_formula_chars(chars, token.start, token.end)
+  } else {
+    out.write_string(
+      formula_shifted_column(token.column, delta).unwrap_or("#REF!"),
+    )
   }
-  formula_shifted_column(token.column, delta)
 }
 
 ///|
-fn shifted_formula_row_text(
+fn write_shifted_formula_row(
   chars : ArrayView[Char],
   token : FormulaRowToken,
   delta : Int,
-) -> String? {
+  out : FormulaTranslationOutput,
+) -> Unit raise XlsxError {
   if token.absolute {
-    return Some(formula_chars_text(chars, token.start, token.end))
+    out.write_formula_chars(chars, token.start, token.end)
+  } else {
+    out.write_string(formula_shifted_row(token.row, delta).unwrap_or("#REF!"))
   }
-  formula_shifted_row(token.row, delta)
 }
 
 ///|
-fn formula_range_separator_end(chars : ArrayView[Char], start : Int) -> Int? {
+fn formula_range_separator_end(
+  chars : ArrayView[Char],
+  start : Int,
+  budget : FormulaTranslationBudget,
+) -> Int? raise XlsxError {
   let mut index = start
-  while index < chars.length() && chars[index].is_ascii_whitespace() {
+  while index < chars.length() {
+    if !formula_character(chars, index, budget).is_ascii_whitespace() {
+      break
+    }
     index += 1
   }
-  if index >= chars.length() || chars[index] != ':' {
+  if index >= chars.length() || formula_character(chars, index, budget) != ':' {
     return None
   }
   index += 1
-  while index < chars.length() && chars[index].is_ascii_whitespace() {
+  while index < chars.length() {
+    if !formula_character(chars, index, budget).is_ascii_whitespace() {
+      break
+    }
     index += 1
   }
   Some(index)
@@ -340,45 +514,37 @@ fn translate_formula_cell_reference_at(
   start : Int,
   column_delta : Int,
   row_delta : Int,
-) -> (String, Int)? {
-  guard formula_reference_start_boundary(chars, start) &&
-    parse_formula_cell_token(chars, start) is Some(first) else {
+  out : FormulaTranslationOutput,
+) -> Int? raise XlsxError {
+  let budget = out.budget
+  guard formula_reference_start_boundary(chars, start, budget) &&
+    parse_formula_cell_token(chars, start, budget) is Some(first) else {
     return None
   }
-  match formula_range_separator_end(chars, first.end) {
+  match formula_range_separator_end(chars, first.end, budget) {
     Some(second_start) =>
-      match parse_formula_cell_token(chars, second_start) {
-        Some(second) if formula_reference_end_boundary(chars, second.end) => {
-          let first_text = shifted_formula_cell_text(
-            chars, first, column_delta, row_delta,
+      match parse_formula_cell_token(chars, second_start, budget) {
+        Some(second) if formula_reference_end_boundary(
+            chars,
+            second.end,
+            budget,
+          ) => {
+          write_shifted_formula_cell(chars, first, column_delta, row_delta, out)
+          out.write_formula_chars(chars, first.end, second_start)
+          write_shifted_formula_cell(
+            chars, second, column_delta, row_delta, out,
           )
-          let second_text = shifted_formula_cell_text(
-            chars, second, column_delta, row_delta,
-          )
-          return Some(
-            (
-              first_text.unwrap_or("#REF!") +
-              formula_chars_text(chars, first.end, second.start) +
-              second_text.unwrap_or("#REF!"),
-              second.end,
-            ),
-          )
+          return Some(second.end)
         }
         _ => ()
       }
     None => ()
   }
-  if !formula_reference_end_boundary(chars, first.end) {
+  if !formula_reference_end_boundary(chars, first.end, budget) {
     return None
   }
-  Some(
-    (
-      shifted_formula_cell_text(chars, first, column_delta, row_delta).unwrap_or(
-        "#REF!",
-      ),
-      first.end,
-    ),
-  )
+  write_shifted_formula_cell(chars, first, column_delta, row_delta, out)
+  Some(first.end)
 }
 
 ///|
@@ -386,24 +552,20 @@ fn translate_formula_column_range_at(
   chars : ArrayView[Char],
   start : Int,
   column_delta : Int,
-) -> (String, Int)? {
-  guard formula_reference_start_boundary(chars, start) &&
-    parse_formula_column_token(chars, start) is Some(first) &&
-    formula_range_separator_end(chars, first.end) is Some(second_start) &&
-    parse_formula_column_token(chars, second_start) is Some(second) &&
-    formula_reference_end_boundary(chars, second.end) else {
+  out : FormulaTranslationOutput,
+) -> Int? raise XlsxError {
+  let budget = out.budget
+  guard formula_reference_start_boundary(chars, start, budget) &&
+    parse_formula_column_token(chars, start, budget) is Some(first) &&
+    formula_range_separator_end(chars, first.end, budget) is Some(second_start) &&
+    parse_formula_column_token(chars, second_start, budget) is Some(second) &&
+    formula_reference_end_boundary(chars, second.end, budget) else {
     return None
   }
-  let first_text = shifted_formula_column_text(chars, first, column_delta)
-  let second_text = shifted_formula_column_text(chars, second, column_delta)
-  Some(
-    (
-      first_text.unwrap_or("#REF!") +
-      formula_chars_text(chars, first.end, second.start) +
-      second_text.unwrap_or("#REF!"),
-      second.end,
-    ),
-  )
+  write_shifted_formula_column(chars, first, column_delta, out)
+  out.write_formula_chars(chars, first.end, second.start)
+  write_shifted_formula_column(chars, second, column_delta, out)
+  Some(second.end)
 }
 
 ///|
@@ -411,24 +573,20 @@ fn translate_formula_row_range_at(
   chars : ArrayView[Char],
   start : Int,
   row_delta : Int,
-) -> (String, Int)? {
-  guard formula_reference_start_boundary(chars, start) &&
-    parse_formula_row_token(chars, start) is Some(first) &&
-    formula_range_separator_end(chars, first.end) is Some(second_start) &&
-    parse_formula_row_token(chars, second_start) is Some(second) &&
-    formula_reference_end_boundary(chars, second.end) else {
+  out : FormulaTranslationOutput,
+) -> Int? raise XlsxError {
+  let budget = out.budget
+  guard formula_reference_start_boundary(chars, start, budget) &&
+    parse_formula_row_token(chars, start, budget) is Some(first) &&
+    formula_range_separator_end(chars, first.end, budget) is Some(second_start) &&
+    parse_formula_row_token(chars, second_start, budget) is Some(second) &&
+    formula_reference_end_boundary(chars, second.end, budget) else {
     return None
   }
-  let first_text = shifted_formula_row_text(chars, first, row_delta)
-  let second_text = shifted_formula_row_text(chars, second, row_delta)
-  Some(
-    (
-      first_text.unwrap_or("#REF!") +
-      formula_chars_text(chars, first.end, second.start) +
-      second_text.unwrap_or("#REF!"),
-      second.end,
-    ),
-  )
+  write_shifted_formula_row(chars, first, row_delta, out)
+  out.write_formula_chars(chars, first.end, second.start)
+  write_shifted_formula_row(chars, second, row_delta, out)
+  Some(second.end)
 }
 
 ///|
@@ -436,18 +594,19 @@ fn copy_formula_quoted_token(
   chars : ArrayView[Char],
   start : Int,
   quote : Char,
-  out : StringBuilder,
-) -> Int {
+  out : FormulaTranslationOutput,
+) -> Int raise XlsxError {
   let mut index = start
-  out.write_char(chars[index])
+  out.write_char(formula_character(chars, index, out.budget))
   index += 1
   while index < chars.length() {
-    let character = chars[index]
+    let character = formula_character(chars, index, out.budget)
     out.write_char(character)
     index += 1
     if character == quote {
-      if index < chars.length() && chars[index] == quote {
-        out.write_char(chars[index])
+      if index < chars.length() &&
+        formula_character(chars, index, out.budget) == quote {
+        out.write_char(formula_character(chars, index, out.budget))
         index += 1
       } else {
         break
@@ -461,12 +620,12 @@ fn copy_formula_quoted_token(
 fn copy_formula_bracket_token(
   chars : ArrayView[Char],
   start : Int,
-  out : StringBuilder,
-) -> Int {
+  out : FormulaTranslationOutput,
+) -> Int raise XlsxError {
   let mut depth = 0
   let mut index = start
   while index < chars.length() {
-    let character = chars[index]
+    let character = formula_character(chars, index, out.budget)
     out.write_char(character)
     index += 1
     if character == '[' {
@@ -499,50 +658,110 @@ fn formula_unquoted_sheet_name_char(character : Char) -> Bool {
 fn formula_unquoted_3d_qualifier_end(
   chars : ArrayView[Char],
   start : Int,
-) -> Int? {
+  budget : FormulaTranslationBudget,
+) -> Int? raise XlsxError {
   if start < 0 ||
     start >= chars.length() ||
-    !formula_reference_start_boundary(chars, start) {
+    !formula_reference_start_boundary(chars, start, budget) {
     return None
   }
   let mut index = start
-  while index < chars.length() && formula_unquoted_sheet_name_char(chars[index]) {
+  while index < chars.length() {
+    if !formula_unquoted_sheet_name_char(
+        formula_character(chars, index, budget),
+      ) {
+      break
+    }
     index += 1
   }
-  if index == start || index >= chars.length() || chars[index] != ':' {
+  if index == start ||
+    index >= chars.length() ||
+    formula_character(chars, index, budget) != ':' {
     return None
   }
   index += 1
   let second_start = index
-  while index < chars.length() && formula_unquoted_sheet_name_char(chars[index]) {
+  while index < chars.length() {
+    if !formula_unquoted_sheet_name_char(
+        formula_character(chars, index, budget),
+      ) {
+      break
+    }
     index += 1
   }
-  if index == second_start || index >= chars.length() || chars[index] != '!' {
+  if index == second_start ||
+    index >= chars.length() ||
+    formula_character(chars, index, budget) != '!' {
     return None
   }
   Some(index + 1)
 }
 
 ///|
+fn validate_shared_formula_limits(
+  maximum_input_chars : Int,
+  maximum_output_chars : Int,
+  maximum_work_units : Int,
+) -> Unit raise XlsxError {
+  if maximum_input_chars < 0 ||
+    maximum_output_chars < 0 ||
+    maximum_work_units < 0 {
+    raise InvalidOptions(
+      msg="shared formula translation limits cannot be negative",
+    )
+  }
+}
+
+///|
 /// Applies Excel copy semantics to A1 references while preserving formula
-/// text outside reference tokens. Double-quoted literals, quoted sheet names,
-/// unquoted 3-D sheet ranges, structured-reference brackets, and
-/// external-workbook brackets are copied verbatim. Cell/range, whole-column,
-/// and whole-row references honor `$` anchors; translations outside the XLSX
-/// grid become `#REF!`.
-fn translate_shared_formula(
+/// text outside reference tokens. The input ceiling is checked before the
+/// bounded character copy is allocated; every scan and write charges work,
+/// every write charges output, and long tokens poll cancellation.
+fn translate_shared_formula_limited(
   formula : String,
   column_delta : Int,
   row_delta : Int,
-) -> String {
+  maximum_input_chars : Int,
+  maximum_output_chars : Int,
+  maximum_work_units : Int,
+  cancelled : () -> Bool,
+) -> (String, Int) raise XlsxError {
+  validate_shared_formula_limits(
+    maximum_input_chars, maximum_output_chars, maximum_work_units,
+  )
+  let input_chars = formula.length()
+  if input_chars > maximum_input_chars {
+    raise ResourceLimitExceeded(
+      kind="shared_formula_input_chars",
+      limit=maximum_input_chars,
+      actual=input_chars,
+    )
+  }
+  let budget = FormulaTranslationBudget::new(maximum_work_units, cancelled)
+  budget.checkpoint()
+  // Charge the scalar materialization before allocating it. Subsequent reads
+  // and writes are charged separately so adversarial rescans remain bounded.
+  budget.charge_work(input_chars)
   if formula == "" || (column_delta == 0 && row_delta == 0) {
-    return formula
+    if input_chars > maximum_output_chars {
+      raise ResourceLimitExceeded(
+        kind="shared_formula_output_chars",
+        limit=maximum_output_chars,
+        actual=input_chars,
+      )
+    }
+    return (formula, budget.work_units)
   }
   let chars = formula.to_array()
-  let out = StringBuilder::new()
+  budget.checkpoint()
+  let out = FormulaTranslationOutput::new(
+    input_chars.min(maximum_output_chars),
+    maximum_output_chars,
+    budget,
+  )
   let mut index = 0
   while index < chars.length() {
-    let character = chars[index]
+    let character = formula_character(chars, index, budget)
     if character == '"' || character == '\'' {
       index = copy_formula_quoted_token(chars, index, character, out)
       continue
@@ -551,37 +770,53 @@ fn translate_shared_formula(
       index = copy_formula_bracket_token(chars, index, out)
       continue
     }
-    match formula_unquoted_3d_qualifier_end(chars, index) {
+    match formula_unquoted_3d_qualifier_end(chars, index, budget) {
       Some(end) => {
-        for position in index..<end {
-          out.write_char(chars[position])
-        }
+        out.write_formula_chars(chars, index, end)
         index = end
         continue
       }
       None => ()
     }
     let translated = match
-      translate_formula_cell_reference_at(chars, index, column_delta, row_delta) {
-      Some(value) => Some(value)
+      translate_formula_cell_reference_at(
+        chars, index, column_delta, row_delta, out,
+      ) {
+      Some(next) => Some(next)
       None =>
-        match translate_formula_column_range_at(chars, index, column_delta) {
-          Some(value) => Some(value)
-          None => translate_formula_row_range_at(chars, index, row_delta)
+        match
+          translate_formula_column_range_at(chars, index, column_delta, out) {
+          Some(next) => Some(next)
+          None => translate_formula_row_range_at(chars, index, row_delta, out)
         }
     }
     match translated {
-      Some((text, next)) => {
-        out.write_string(text)
-        index = next
-      }
+      Some(next) => index = next
       None => {
         out.write_char(character)
         index += 1
       }
     }
   }
-  out.to_string()
+  (out.builder.to_string(), budget.work_units)
+}
+
+///|
+fn translate_shared_formula(
+  formula : String,
+  column_delta : Int,
+  row_delta : Int,
+) -> String {
+  let (translated, _) = try! translate_shared_formula_limited(
+    formula,
+    column_delta,
+    row_delta,
+    0x7fffffff,
+    0x7fffffff,
+    0x7fffffff,
+    () => false,
+  )
+  translated
 }
 
 ///|
@@ -597,6 +832,34 @@ fn SharedFormulaMaster::contains_coordinate(
 }
 
 ///|
+/// Resolves formula text at a follower coordinate with explicit input,
+/// output, work, and cancellation limits. The returned work count lets a
+/// caller maintain one aggregate translation budget across many cells.
+pub fn SharedFormulaMaster::translate_to_limited(
+  self : SharedFormulaMaster,
+  row : Int,
+  column : Int,
+  maximum_input_chars~ : Int,
+  maximum_output_chars~ : Int,
+  maximum_work_units~ : Int,
+  cancelled? : () -> Bool = () => false,
+) -> (String, Int) raise XlsxError {
+  ignore(cell_ref_from(row, column))
+  if !self.contains_coordinate(row, column) {
+    raise InvalidXml(msg="shared formula follower is outside the master range")
+  }
+  translate_shared_formula_limited(
+    self.formula,
+    column - self.column,
+    row - self.row,
+    maximum_input_chars,
+    maximum_output_chars,
+    maximum_work_units,
+    cancelled,
+  )
+}
+
+///|
 /// Resolves the formula text represented by this shared master at a follower
 /// coordinate. Coordinates outside the master's declared shared range are
 /// rejected as malformed OOXML.
@@ -605,11 +868,14 @@ pub fn SharedFormulaMaster::translate_to(
   row : Int,
   column : Int,
 ) -> String raise XlsxError {
-  ignore(cell_ref_from(row, column))
-  if !self.contains_coordinate(row, column) {
-    raise InvalidXml(msg="shared formula follower is outside the master range")
-  }
-  translate_shared_formula(self.formula, column - self.column, row - self.row)
+  let (translated, _) = self.translate_to_limited(
+    row,
+    column,
+    maximum_input_chars=0x7fffffff,
+    maximum_output_chars=0x7fffffff,
+    maximum_work_units=0x7fffffff,
+  )
+  translated
 }
 
 ///|
@@ -644,4 +910,61 @@ test "shared formulas preserve unquoted 3-D sheet qualifiers" {
       #|SUM(Q1:Q4!C2)+SUM(Sheet_1:Sheet_4!D3:E4)+SUM([Book.xlsx]Q1:Q4!$D5)
     ),
   )
+}
+
+///|
+test "shared formula limits reject input output and work independently" {
+  try
+    translate_shared_formula_limited("A1", 1, 0, 1, 10, 100, () => false)
+  catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) => {
+      inspect(kind, content="shared_formula_input_chars")
+      assert_eq(limit, 1)
+      assert_eq(actual, 2)
+    }
+    _ => fail("unexpected shared formula input limit error")
+  } noraise {
+    _ => fail("expected shared formula input limit")
+  }
+  try
+    translate_shared_formula_limited("A1", 1, 0, 10, 1, 100, () => false)
+  catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) => {
+      inspect(kind, content="shared_formula_output_chars")
+      assert_eq(limit, 1)
+      assert_true(actual > limit)
+    }
+    _ => fail("unexpected shared formula output limit error")
+  } noraise {
+    _ => fail("expected shared formula output limit")
+  }
+  try
+    translate_shared_formula_limited("A1", 1, 0, 10, 10, 2, () => false)
+  catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) => {
+      inspect(kind, content="shared_formula_work_units")
+      assert_eq(limit, 2)
+      assert_true(actual > limit)
+    }
+    _ => fail("unexpected shared formula work limit error")
+  } noraise {
+    _ => fail("expected shared formula work limit")
+  }
+}
+
+///|
+test "shared formula translation polls inside long quoted tokens" {
+  let checks = [0]
+  let formula = "\"" + "a".repeat(9000) + "\"+A1"
+  try
+    translate_shared_formula_limited(formula, 1, 0, 10000, 10000, 100000, () => {
+      checks[0] = checks[0] + 1
+      checks[0] >= 4
+    })
+  catch {
+    ReadCancelled => assert_true(checks[0] >= 4)
+    _ => fail("unexpected shared formula cancellation error")
+  } noraise {
+    _ => fail("expected shared formula cancellation")
+  }
 }

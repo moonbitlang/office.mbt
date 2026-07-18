@@ -11,6 +11,9 @@ let xlsx_cli_max_scanned_string_chars : Int = 16 * 1024 * 1024
 let xlsx_cli_max_format_work_units : Int = 16 * 1024 * 1024
 
 ///|
+let xlsx_cli_max_formula_work_units : Int = 64 * 1024 * 1024
+
+///|
 let xlsx_cli_max_metadata_items : Int = 10_000
 
 ///|
@@ -88,12 +91,19 @@ struct XlsxScanBudget {
   maximum : Int
   strings : XlsxStringBudget
   formatting : XlsxFormatBudget
+  formulas : XlsxFormulaBudget
   mut scanned : Int
   cancelled : () -> Bool
 }
 
 ///|
 struct XlsxFormatBudget {
+  maximum : Int
+  mut used : Int
+}
+
+///|
+struct XlsxFormulaBudget {
   maximum : Int
   mut used : Int
 }
@@ -634,15 +644,49 @@ fn XlsxFormatBudget::charge_style(
 }
 
 ///|
+fn XlsxFormulaBudget::new(
+  maximum? : Int = xlsx_cli_max_formula_work_units,
+) -> XlsxFormulaBudget {
+  { maximum, used: 0 }
+}
+
+///|
+fn XlsxFormulaBudget::remaining(self : XlsxFormulaBudget) -> Int {
+  self.maximum - self.used
+}
+
+///|
+fn XlsxFormulaBudget::charge(
+  self : XlsxFormulaBudget,
+  amount : Int,
+) -> Unit raise CliFailure {
+  if amount < 0 || amount > self.maximum - self.used {
+    let actual = if amount < 0 || amount > 0x7fffffff - self.used {
+      0x7fffffff
+    } else {
+      self.used + amount
+    }
+    raise xlsx_resource_failure(
+      "shared formula translation work units",
+      self.maximum,
+      actual~,
+    )
+  }
+  self.used += amount
+}
+
+///|
 fn XlsxScanBudget::new(
   maximum : Int,
   format_work_maximum? : Int = xlsx_cli_max_format_work_units,
+  formula_work_maximum? : Int = xlsx_cli_max_formula_work_units,
   cancelled? : () -> Bool = () => false,
 ) -> XlsxScanBudget {
   {
     maximum,
     strings: XlsxStringBudget::new(),
     formatting: XlsxFormatBudget::new(maximum=format_work_maximum),
+    formulas: XlsxFormulaBudget::new(maximum=formula_work_maximum),
     scanned: 0,
     cancelled,
   }
@@ -686,6 +730,7 @@ fn xlsx_cell_formula(
   worksheet : @xlsx.Worksheet,
   row : Int,
   column : Int,
+  budget : XlsxScanBudget,
 ) -> (String?, Bool) raise CliFailure {
   projection.checkpoint()
   let result = match
@@ -702,9 +747,18 @@ fn xlsx_cell_formula(
             let master = sheet.shared_formula_master(
               projection, worksheet, shared_index,
             )
-            Some(
-              xlsx_call(projection.file, () => master.translate_to(row, column)),
-            )
+            let (translated, work) = xlsx_call(projection.file, () => {
+              master.translate_to_limited(
+                row,
+                column,
+                maximum_input_chars=xlsx_cli_max_cell_string_chars,
+                maximum_output_chars=budget.strings.remaining_for_value(),
+                maximum_work_units=budget.formulas.remaining(),
+                cancelled=budget.cancelled,
+              )
+            })
+            budget.formulas.charge(work)
+            Some(translated)
           }
           (Some(Shared), None) =>
             raise xlsx_cli_failure(
@@ -741,7 +795,7 @@ fn xlsx_cell_snapshot(
     worksheet.get_cell_value_raw(reference)
   })
   let (formula, cached_value_present) = xlsx_cell_formula(
-    projection, sheet, worksheet, row, column,
+    projection, sheet, worksheet, row, column, budget,
   )
   let normalized_raw = match raw {
     Some(String("")) if formula is Some(_) && cached_value_present => raw

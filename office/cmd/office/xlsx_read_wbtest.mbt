@@ -507,6 +507,10 @@ test "XLSX string and metadata accounting fail before unbounded retention" {
   aggregate.charge("cell value", "abc")
   let too_many = xlsx_cli_error(() => aggregate.charge("cell formula", "def"))
   assert_eq(too_many.code, "office.xlsx.resource_limit")
+  let formulas = XlsxFormulaBudget::new(maximum=3)
+  formulas.charge(2)
+  let formula_work = xlsx_cli_error(() => formulas.charge(2))
+  assert_eq(formula_work.code, "office.xlsx.resource_limit")
   let metadata : XlsxMetadataBudget = {
     maximum_items: 1,
     maximum_string_chars: 4,
@@ -719,6 +723,60 @@ async test "XLSX snapshots preserve and resolve shared-formula followers" {
     fail("expected translated shared-formula query")
   }
   assert_eq(master_fields.get("matched_total"), Some(Json::number(1)))
+}
+
+///|
+test "XLSX followers reject oversized shared masters before translation" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Data")
+  sheet.set_cell_formula_opts(
+    "A1",
+    "D1+1",
+    opts=@xlsx.FormulaOpts::shared("A1:B1"),
+  )
+  let archive = @zip.read(@xlsx.write(workbook))
+  let path = "xl/worksheets/sheet1.xml"
+  let xml = match archive.get(path) {
+    Some(value) => @utf8.decode(value, ignore_bom=true)
+    None => fail("missing shared-formula worksheet")
+  }
+  let oversized = "A1+" + "1+".repeat(512 * 1024) + "1"
+  assert_true(oversized.length() > xlsx_cli_max_cell_string_chars)
+  let updated = xml.replace(old="D1+1", new=oversized)
+  assert_true(updated != xml)
+  assert_true(archive.replace(path, @utf8.encode(updated)))
+  let source = xlsx_bounded_test_source(
+    "oversized-shared-formula.xlsx",
+    @zip.write(archive),
+  )
+  let projection = open_xlsx_projection(source, 10)
+  guard resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]/cell[B1]")
+    is Cell(target, rect, ..) else {
+    fail("expected shared-formula follower selector")
+  }
+  let error = xlsx_cli_error(() => {
+    ignore(
+      xlsx_cell_snapshot(
+        projection,
+        target,
+        rect.row_lo,
+        rect.col_lo,
+        XlsxScanBudget::new(1),
+      ),
+    )
+  })
+  assert_eq(error.code, "office.xlsx.resource_limit")
+  guard error.details is Some(Object(details)) else {
+    fail("expected shared-formula limit details")
+  }
+  assert_eq(
+    details.get("resource"),
+    Some(Json::string("shared_formula_input_chars")),
+  )
+  assert_eq(
+    details.get("limit"),
+    Some(Json::number(xlsx_cli_max_cell_string_chars.to_double())),
+  )
 }
 
 ///|

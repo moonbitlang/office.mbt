@@ -69,6 +69,8 @@ type XlsxCellSnapshot
 
 type XlsxFormatBudget
 
+type XlsxFormulaBudget
+
 type XlsxJsonRetention
 
 type XlsxMetadataBudget

@@ -213,6 +213,10 @@ fn xlsx_read_failure(error : @xlsx.XlsxError, file : String) -> CliFailure {
       invalid_package("shared string index is out of range: \{index}")
     InvalidStyleId(index~) =>
       invalid_package("cell style index is out of range: \{index}")
+    ReadCancelled =>
+      CliFailure(
+        @lib.protocol_error("office.cancelled", "XLSX read was cancelled"),
+      )
     _ =>
       CliFailure(
         @lib.protocol_error(

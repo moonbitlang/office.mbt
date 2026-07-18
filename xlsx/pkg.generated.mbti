@@ -1359,6 +1359,7 @@ pub struct SharedFormulaMaster {
   // private fields
 }
 pub fn SharedFormulaMaster::translate_to(Self, Int, Int) -> String raise XlsxError
+pub fn SharedFormulaMaster::translate_to_limited(Self, Int, Int, maximum_input_chars~ : Int, maximum_output_chars~ : Int, maximum_work_units~ : Int, cancelled? : () -> Bool) -> (String, Int) raise XlsxError
 
 pub struct SheetBackground {
   data : Bytes
