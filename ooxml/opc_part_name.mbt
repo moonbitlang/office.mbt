@@ -187,6 +187,15 @@ pub fn is_valid_opc_part_segment(segment : StringView) -> Bool {
 }
 
 ///|
+/// Cancellation-aware form of `is_valid_opc_part_segment`.
+pub fn is_valid_opc_part_segment_cancellable(
+  segment : StringView,
+  cancelled? : () -> Bool = () => false,
+) -> Bool raise ParseXmlError {
+  is_valid_opc_part_segment_cancellable_impl(segment, cancelled)
+}
+
+///|
 /// Maps an ASCII physical ZIP item name to its logical OPC PartName. Literal
 /// non-ASCII IRI scalars are restored from their canonical UTF-8 `%HH`
 /// projection; opaque legal percent escapes remain unchanged.

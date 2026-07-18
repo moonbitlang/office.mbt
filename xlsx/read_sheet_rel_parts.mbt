@@ -357,7 +357,11 @@ fn parse_slicer_cache_definitions(
   for _rel_id, target in targets {
     let cache_path = actual_archive_part_path(
       part_names,
-      resolve_part_rel_target(logical_archive_part_path(workbook_part), target),
+      resolve_part_rel_target(
+        logical_archive_part_path(workbook_part),
+        target,
+        cancelled~,
+      ),
     )
     let cache_bytes = match archive.get(cache_path) {
       Some(value) => value

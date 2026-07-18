@@ -137,7 +137,10 @@ fn parse_header_footer_images_from_vml(
       None => raise InvalidXml(msg="header/footer image relationship missing")
     }
     let image_path = actual_relationship_target_path(
-      vml_part, target, part_names,
+      vml_part,
+      target,
+      part_names,
+      cancelled~,
     )
     let image_bytes = match archive.get(image_path) {
       Some(value) => value

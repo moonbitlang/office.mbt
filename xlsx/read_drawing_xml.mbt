@@ -355,7 +355,10 @@ fn parse_drawing_images(
       None => raise InvalidXml(msg="drawing image target missing")
     }
     let media_path = actual_relationship_target_path(
-      drawing_part, target, part_names,
+      drawing_part,
+      target,
+      part_names,
+      cancelled~,
     )
     let data = match archive.get(media_path) {
       Some(value) => value
@@ -455,7 +458,10 @@ fn parse_drawing_charts(
       None => raise InvalidXml(msg="drawing chart target missing")
     }
     let chart_path = actual_relationship_target_path(
-      drawing_part, target, part_names,
+      drawing_part,
+      target,
+      part_names,
+      cancelled~,
     )
     let chart_bytes = match archive.get(chart_path) {
       Some(value) => value

@@ -70,7 +70,7 @@ fn inject_rich_value_image(base : Bytes, media : Bytes) -> Bytes raise {
       (
         #|<?xml version="1.0" encoding="UTF-8"?>
         #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-        #|  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/rv1.png"/>
+        #|  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/rv1.png"/>
         #|</Relationships>
       ),
     ),
@@ -168,7 +168,7 @@ fn inject_mismatched_rich_value(base : Bytes) -> Bytes raise {
     "xl/richData/_rels/richValueRel.xml.rels",
     @encoding/utf8.encode(
       (
-        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/rv1.png"/></Relationships>
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/rv1.png"/></Relationships>
       ),
     ),
   )
@@ -243,7 +243,7 @@ fn inject_web_image(base : Bytes, media : Bytes) -> Bytes raise {
     "xl/richData/_rels/rdRichValueWebImage.xml.rels",
     @encoding/utf8.encode(
       (
-        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/web1.png"/></Relationships>
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/web1.png"/></Relationships>
       ),
     ),
   )
@@ -325,7 +325,7 @@ fn inject_local_key_wins(base : Bytes, media : Bytes) -> Bytes raise {
     "xl/richData/_rels/richValueRel.xml.rels",
     @encoding/utf8.encode(
       (
-        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/rv1.png"/></Relationships>
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/rv1.png"/></Relationships>
       ),
     ),
   )
@@ -341,7 +341,7 @@ fn inject_local_key_wins(base : Bytes, media : Bytes) -> Bytes raise {
     "xl/richData/_rels/rdRichValueWebImage.xml.rels",
     @encoding/utf8.encode(
       (
-        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/web1.png"/></Relationships>
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/web1.png"/></Relationships>
       ),
     ),
   )

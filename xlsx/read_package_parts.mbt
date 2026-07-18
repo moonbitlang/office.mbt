@@ -32,9 +32,9 @@ fn workbook_part_from_root_relationships(
   }
   match first_relationship_target(targets) {
     Some(target) => {
-      validate_relationship_target_uri(target)
+      validate_relationship_target_uri(target, cancelled~)
       let part_name = archive_path_from_part_name(target)
-      normalize_rel_part_path(part_name)
+      normalize_rel_part_path(part_name, cancelled~)
     }
     None => raise InvalidXml(msg="root workbook relationship missing")
   }

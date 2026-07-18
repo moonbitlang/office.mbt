@@ -20,6 +20,8 @@ struct CellImage {
 fn parse_cell_images(
   cell_images_xml : StringView,
   rels_xml : StringView,
+  source_part : StringView,
+  part_names : Map[String, String],
   archive : @zip.Archive,
   budget? : ReadBudget,
   cancelled? : () -> Bool = () => false,
@@ -103,7 +105,12 @@ fn parse_cell_images(
       Some(value) => value
       None => continue
     }
-    let media_path = normalize_cell_image_target(target)
+    let media_path = actual_relationship_target_path(
+      source_part,
+      target,
+      part_names,
+      cancelled~,
+    )
     match archive.get(media_path) {
       Some(data) => {
         let extension = cell_image_extension(media_path)
@@ -123,21 +130,6 @@ fn parse_cell_images(
     }
   }
   images
-}
-
-///|
-/// Resolves a cellimages relationship target to an archive path. WPS
-/// targets are workbook-relative (e.g. "media/image1.png"); a leading
-/// "/" is absolute and a "../" prefix is rewritten to "xl", matching
-/// Excelize's `"xl/" + r.Target` / package path handling.
-fn normalize_cell_image_target(target : String) -> String {
-  if target.has_prefix("/") {
-    target[1:].to_owned()
-  } else if target.has_prefix("../") {
-    "xl/" + target[3:].to_owned()
-  } else {
-    "xl/" + target
-  }
 }
 
 ///|
@@ -244,8 +236,34 @@ test "parse_cell_images handles unprefixed blip without matching blipFill" {
     #|</Relationships>
   let archive = @zip.Archive::new()
   archive.add("xl/media/u.png", b"\x89PNGunprefixed")
-  let images = parse_cell_images(cellimages_xml, rels_xml, archive)
+  let images = parse_cell_images(
+    cellimages_xml,
+    rels_xml,
+    "xl/cellimages.xml",
+    archive_part_name_index(archive),
+    archive,
+  )
   inspect(images.length(), content="1")
   inspect(images[0].name, content="ID_U")
   inspect(images[0].extension, content=".png")
+}
+
+///|
+test "parse_cell_images resolves targets relative to its source part" {
+  let cellimages_xml =
+    #|<cellImages><cellImage><pic><nvPicPr><cNvPr id="1" name="ID_ROOT"/></nvPicPr><blipFill><blip embed="rId1"/></blipFill></pic></cellImage></cellImages>
+  let rels_xml =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../decoy.png"/></Relationships>
+  let archive = @zip.Archive::new()
+  archive.add("decoy.png", b"root image")
+  archive.add("xl/decoy.png", b"wrong image")
+  let images = parse_cell_images(
+    cellimages_xml,
+    rels_xml,
+    "xl/cellimages.xml",
+    archive_part_name_index(archive),
+    archive,
+  )
+  assert_eq(images.length(), 1)
+  assert_eq(images[0].data, b"root image")
 }

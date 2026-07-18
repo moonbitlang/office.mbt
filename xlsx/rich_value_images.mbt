@@ -30,6 +30,7 @@ struct RichValueImages {
 /// when the workbook has no rich value metadata.
 fn parse_rich_value_images(
   archive : @zip.Archive,
+  part_names : Map[String, String],
   decode : (BytesView) -> String raise XlsxError,
   budget? : ReadBudget,
   cancelled? : () -> Bool = () => false,
@@ -49,7 +50,7 @@ fn parse_rich_value_images(
     Some(value) => parse_rich_value_rel_ids(decode(value))
     None => []
   }
-  let rel_targets = match
+  let raw_rel_targets = match
     archive.get("xl/richData/_rels/richValueRel.xml.rels") {
     Some(value) =>
       parse_internal_relationship_targets(
@@ -60,11 +61,20 @@ fn parse_rich_value_images(
       )
     None => Map([])
   }
+  let rel_targets : Map[String, String] = Map([])
+  for rel_id, target in raw_rel_targets {
+    rel_targets[rel_id] = actual_relationship_target_path(
+      "xl/richData/richValueRel.xml",
+      target,
+      part_names,
+      cancelled~,
+    )
+  }
   let web_blip_ids = match archive.get("xl/richData/rdRichValueWebImage.xml") {
     Some(value) => parse_web_image_blip_ids(decode(value))
     None => []
   }
-  let web_rel_targets = match
+  let raw_web_rel_targets = match
     archive.get("xl/richData/_rels/rdRichValueWebImage.xml.rels") {
     Some(value) =>
       parse_internal_relationship_targets(
@@ -75,6 +85,15 @@ fn parse_rich_value_images(
       )
     None => Map([])
   }
+  let web_rel_targets : Map[String, String] = Map([])
+  for rel_id, target in raw_web_rel_targets {
+    web_rel_targets[rel_id] = actual_relationship_target_path(
+      "xl/richData/rdRichValueWebImage.xml",
+      target,
+      part_names,
+      cancelled~,
+    )
+  }
   Some({
     value_metadata,
     rich_values,
@@ -84,6 +103,34 @@ fn parse_rich_value_images(
     web_blip_ids,
     web_rel_targets,
   })
+}
+
+///|
+test "rich value image relationships use source-relative OPC resolution" {
+  let archive = @zip.Archive::new()
+  archive.add("xl/metadata.xml", b"<metadata/>")
+  archive.add("xl/richData/rdrichvalue.xml", b"<rvData/>")
+  archive.add(
+    "xl/richData/_rels/richValueRel.xml.rels",
+    @encoding/utf8.encode(
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../../decoy.png"/></Relationships>
+      ),
+    ),
+  )
+  archive.add("decoy.png", b"root image")
+  archive.add("xl/decoy.png", b"wrong image")
+  let parsed = parse_rich_value_images(
+    archive,
+    archive_part_name_index(archive),
+    value => {
+      @encoding/utf8.decode(value) catch {
+        _ => raise InvalidXml(msg="invalid utf8")
+      }
+    },
+  )
+  guard parsed is Some(data) else { fail("expected rich value image data") }
+  assert_eq(data.rel_targets.get("rId1"), Some("decoy.png"))
 }
 
 ///|
@@ -431,7 +478,7 @@ fn Workbook::rich_value_image_for_cell(
     rich_value_web_target(data, keys, values)
   }
   let media_path = match target {
-    Some(value) => normalize_cell_image_target(value)
+    Some(value) => value
     None => return None
   }
   match self.rich_value_media.get(media_path) {

@@ -5,6 +5,12 @@ let transitional_office_relationship_prefix = "http://schemas.openxmlformats.org
 let strict_office_relationship_prefix = "http://purl.oclc.org/ooxml/officeDocument/relationships/"
 
 ///|
+let max_relationship_part_path_chars : Int = 64 * 1024
+
+///|
+let max_relationship_part_path_segments = 4096
+
+///|
 fn parse_internal_relationship_targets_exact(
   xml : StringView,
   rel_type : StringView,
@@ -188,8 +194,11 @@ fn relationship_target_has_ambiguous_first_segment_colon(
 ///|
 fn validate_relationship_target_uri(
   target : StringView,
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
+  check_read_cancelled(cancelled)
   if target == "" ||
+    target.length() > max_relationship_part_path_chars ||
     target.has_prefix("//") ||
     target.contains("\\") ||
     target.contains("?") ||
@@ -200,11 +209,32 @@ fn validate_relationship_target_uri(
 }
 
 ///|
-fn normalize_rel_part_path(path : StringView) -> String raise XlsxError {
+fn normalize_rel_part_path(
+  path : StringView,
+  cancelled? : () -> Bool = () => false,
+) -> String raise XlsxError {
+  check_read_cancelled(cancelled)
+  if path == "" || path.length() > max_relationship_part_path_chars {
+    raise InvalidXml(msg="relationship target invalid")
+  }
   let segments : Array[String] = []
-  let chunks = path.split("/").collect()
-  for index, chunk in chunks {
-    let segment = chunk.to_owned()
+  let mut segment_start = 0
+  let mut segment_count = 0
+  let mut index = 0
+  while index <= path.length() {
+    if index < path.length() && path[index] != ('/' : UInt16) {
+      index = index + 1
+      continue
+    }
+    segment_count = segment_count + 1
+    if segment_count > max_relationship_part_path_segments {
+      raise InvalidXml(msg="relationship target segment limit exceeded")
+    }
+    if (segment_count & 127) == 1 {
+      check_read_cancelled(cancelled)
+    }
+    let segment = path[segment_start:index]
+    let terminal = index == path.length()
     if segment == "" {
       // Empty URI path segments are significant. Silently removing them lets
       // malformed targets such as `xl//workbook.xml` alias valid package parts.
@@ -212,22 +242,29 @@ fn normalize_rel_part_path(path : StringView) -> String raise XlsxError {
     }
     if segment == "." {
       // A terminal dot segment resolves to a directory URI, not an OPC part.
-      if index + 1 == chunks.length() {
+      if terminal {
         raise InvalidXml(msg="relationship target invalid")
       }
-      continue
-    }
-    if segment == ".." {
-      if segments.length() == 0 || index + 1 == chunks.length() {
+    } else if segment == ".." {
+      if segments.length() == 0 || terminal {
         raise InvalidXml(msg="relationship target invalid")
       }
       ignore(segments.pop())
-      continue
+    } else {
+      let valid = @ooxml.is_valid_opc_part_segment_cancellable(
+        segment,
+        cancelled~,
+      ) catch {
+        ReadCancelled => raise ReadCancelled
+        InvalidXml(msg~) => raise InvalidXml(msg~)
+      }
+      if !valid {
+        raise InvalidXml(msg="relationship target invalid")
+      }
+      segments.push(segment.to_owned())
     }
-    if !@ooxml.is_valid_opc_part_segment(segment) {
-      raise InvalidXml(msg="relationship target invalid")
-    }
-    segments.push(segment)
+    segment_start = index + 1
+    index = index + 1
   }
   if segments.length() == 0 {
     raise InvalidXml(msg="relationship target invalid")
@@ -239,14 +276,15 @@ fn normalize_rel_part_path(path : StringView) -> String raise XlsxError {
 fn resolve_part_rel_target(
   source_part : StringView,
   target : StringView,
+  cancelled? : () -> Bool = () => false,
 ) -> String raise XlsxError {
   let source = source_part.to_owned()
   let target_str = target.to_owned()
   if source == "" || source.has_prefix("/") || target_str == "" {
     raise InvalidXml(msg="relationship target invalid")
   }
-  validate_relationship_target_uri(target_str)
-  let normalized_source = normalize_rel_part_path(source)
+  validate_relationship_target_uri(target_str, cancelled~)
+  let normalized_source = normalize_rel_part_path(source, cancelled~)
   if normalized_source != source {
     raise InvalidXml(msg="relationship target invalid")
   }
@@ -258,16 +296,17 @@ fn resolve_part_rel_target(
       None => target_str
     }
   }
-  normalize_rel_part_path(raw)
+  normalize_rel_part_path(raw, cancelled~)
 }
 
 ///|
 fn resolve_rel_target(
   target : StringView,
   base_folder : StringView,
+  cancelled? : () -> Bool = () => false,
 ) -> String raise XlsxError {
   let target_str = target.to_owned()
-  validate_relationship_target_uri(target_str)
+  validate_relationship_target_uri(target_str, cancelled~)
   let raw = if target_str.has_prefix("/") {
     drop_first_path_segment(target_str)
   } else if target_str.has_prefix("../") {
@@ -282,7 +321,7 @@ fn resolve_rel_target(
       "xl/" + base + "/" + target_str
     }
   }
-  let normalized = normalize_rel_part_path(raw)
+  let normalized = normalize_rel_part_path(raw, cancelled~)
   if !normalized.has_prefix("xl/") {
     raise InvalidXml(msg="relationship target invalid")
   }
@@ -290,8 +329,11 @@ fn resolve_rel_target(
 }
 
 ///|
-fn resolve_workbook_rel_target(target : StringView) -> String raise XlsxError {
-  resolve_part_rel_target(workbook_part_path, target)
+fn resolve_workbook_rel_target(
+  target : StringView,
+  cancelled? : () -> Bool = () => false,
+) -> String raise XlsxError {
+  resolve_part_rel_target(workbook_part_path, target, cancelled~)
 }
 
 ///|
@@ -522,5 +564,30 @@ test "ooxml_rels: invalid empty and terminal path segments never alias parts" {
     } noraise {
       _ => fail("malformed relationship target was accepted: \{target}")
     }
+  }
+}
+
+///|
+test "ooxml_rels: normalization bounds segments and polls cancellation" {
+  let many_segments = "a/".repeat(max_relationship_part_path_segments) + "z"
+  try normalize_rel_part_path(many_segments) catch {
+    InvalidXml(msg~) =>
+      inspect(msg, content="relationship target segment limit exceeded")
+    _ => fail("unexpected relationship segment-limit error")
+  } noraise {
+    _ => fail("expected relationship segment-limit rejection")
+  }
+
+  let checks = [0]
+  try
+    normalize_rel_part_path("a".repeat(60 * 1024), cancelled=() => {
+      checks[0] = checks[0] + 1
+      checks[0] >= 4
+    })
+  catch {
+    ReadCancelled => assert_true(checks[0] >= 4)
+    _ => fail("unexpected relationship normalization cancellation error")
+  } noraise {
+    _ => fail("expected relationship normalization cancellation")
   }
 }
