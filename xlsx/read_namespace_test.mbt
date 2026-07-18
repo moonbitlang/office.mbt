@@ -48,7 +48,8 @@ fn namespace_qualified_xlsx_fixture(
   } else {
     "worksheets/sheet.xml"
   }
-  let relationship_id = if entity_paths { "sheet&amp;1" } else { "sheet" }
+  // Exercise entity decoding without producing an invalid XML Schema `ID`.
+  let relationship_id = if entity_paths { "sheet&#x31;" } else { "sheet" }
   let root_target = if entity_paths {
     "custom/a&amp;b.xml"
   } else {

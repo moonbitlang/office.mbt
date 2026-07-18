@@ -52,6 +52,58 @@ fn workbook_content_type_is_supported(value : StringView) -> Bool {
 }
 
 ///|
+fn require_part_content_type(
+  content_types : @ooxml.PackageContentTypes,
+  part_name : StringView,
+  expected : ArrayView[String],
+  role : StringView,
+  cancelled? : () -> Bool = () => false,
+) -> Unit raise XlsxError {
+  let declared = content_types.content_type_for(part_name, cancelled~) catch {
+    InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+  match declared {
+    Some(value) => {
+      let normalized = value.to_lower()
+      for candidate in expected {
+        if normalized == candidate.to_lower() {
+          return
+        }
+      }
+      raise InvalidXml(msg="\{role.to_owned()} content type is invalid")
+    }
+    None => raise InvalidXml(msg="\{role.to_owned()} content type is missing")
+  }
+}
+
+///|
+/// Loads a relationship-selected package part before validating its semantic
+/// media type. Missing targets remain `MissingPart`; an existing part whose
+/// manifest identity does not match `expected` is rejected as invalid XML.
+fn load_typed_part(
+  archive : @zip.Archive,
+  content_types : @ooxml.PackageContentTypes,
+  path : StringView,
+  expected : ArrayView[String],
+  role : StringView,
+  cancelled? : () -> Bool = () => false,
+) -> BytesView raise XlsxError {
+  let bytes = match archive.get(path) {
+    Some(value) => value
+    None => raise MissingPart(path=path.to_owned())
+  }
+  require_part_content_type(
+    content_types,
+    logical_archive_part_path(path),
+    expected,
+    role,
+    cancelled~,
+  )
+  bytes
+}
+
+///|
 test "read package parts: workbook media types are case-insensitive" {
   assert_true(
     workbook_content_type_is_supported(
@@ -72,7 +124,7 @@ fn resolve_workbook_xml_part_path(
   decode : (BytesView) -> String raise XlsxError,
   budget? : ReadBudget,
   cancelled? : () -> Bool = () => false,
-) -> String raise XlsxError {
+) -> (String, @ooxml.PackageContentTypes) raise XlsxError {
   let workbook_part = workbook_part_from_root_relationships(
     archive,
     part_names,
@@ -94,19 +146,21 @@ fn resolve_workbook_xml_part_path(
     }
     None => check_read_cancelled(cancelled)
   }
-  let content_type = @ooxml.find_part_content_type(
+  let content_types = @ooxml.parse_package_content_types(
     content_types_xml,
-    workbook_part,
     cancelled~,
   ) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
     ReadCancelled => raise ReadCancelled
   }
-  match content_type {
-    Some(value) if workbook_content_type_is_supported(value) => workbook_part
-    Some(_) => raise InvalidXml(msg="root workbook content type is invalid")
-    None => raise InvalidXml(msg="root workbook content type is missing")
-  }
+  require_part_content_type(
+    content_types,
+    workbook_part,
+    workbook_content_type_candidates(),
+    "root workbook",
+    cancelled~,
+  )
+  (workbook_part, content_types)
 }
 
 ///|
@@ -120,11 +174,12 @@ fn decode_utf8_or_invalid_xml(bytes : BytesView) -> String raise XlsxError {
 fn resolve_workbook_xml_part_path_for_test(
   archive : @zip.Archive,
 ) -> String raise XlsxError {
-  resolve_workbook_xml_part_path(
+  let (path, _) = resolve_workbook_xml_part_path(
     archive,
     archive_part_name_index(archive),
     decode_utf8_or_invalid_xml,
   )
+  path
 }
 
 ///|

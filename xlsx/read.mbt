@@ -3525,15 +3525,15 @@ fn read_zip_archive_core_unchecked(
     read_budget.charge_work(canonical.length())
     canonical
   }
-  let workbook_xml_part_path = actual_archive_part_path(
+  let (workbook_logical_part_path, content_types) = resolve_workbook_xml_part_path(
+    archive,
     part_names,
-    resolve_workbook_xml_part_path(
-      archive,
-      part_names,
-      decode,
-      budget=read_budget,
-      cancelled~,
-    ),
+    decode,
+    budget=read_budget,
+    cancelled~,
+  )
+  let workbook_xml_part_path = actual_archive_part_path(
+    part_names, workbook_logical_part_path,
   )
   let workbook_bytes = match archive.get(workbook_xml_part_path) {
     Some(value) => value
@@ -3611,38 +3611,42 @@ fn read_zip_archive_core_unchecked(
     cancelled~,
   )
   let shared_strings = match shared_strings_path {
-    Some(path) =>
-      match archive.get(path) {
-        Some(value) => {
-          let raw_source = decode_source(value)
-          read_budget.charge_work(raw_source.length())
-          let source = project_xlsx_markup_compatibility(
-            raw_source,
-            limits.max_xml_part_bytes,
-            cancelled~,
-          )
-          if source != raw_source {
-            read_budget.charge_work(source.length())
-          }
-          let core_source = match
-            xlsx_core_source_without_foreign(source, "sst", cancelled~) {
-            Some(filtered) => filtered
-            None => source
-          }
-          if core_source != source {
-            read_budget.charge_work(core_source.length())
-          }
-          let canonical = canonicalize_xlsx_xml(
-            core_source,
-            max_output_chars=limits.max_xml_part_bytes,
-            cancelled~,
-          )
-          read_budget.checkpoint()
-          read_budget.charge_work(canonical.length())
-          parse_shared_strings(canonical, budget=read_budget)
-        }
-        None => raise MissingPart(path~)
+    Some(path) => {
+      let value = load_typed_part(
+        archive,
+        content_types,
+        path,
+        [ct_shared_strings],
+        "shared strings",
+        cancelled~,
+      )
+      let raw_source = decode_source(value)
+      read_budget.charge_work(raw_source.length())
+      let source = project_xlsx_markup_compatibility(
+        raw_source,
+        limits.max_xml_part_bytes,
+        cancelled~,
+      )
+      if source != raw_source {
+        read_budget.charge_work(source.length())
       }
+      let core_source = match
+        xlsx_core_source_without_foreign(source, "sst", cancelled~) {
+        Some(filtered) => filtered
+        None => source
+      }
+      if core_source != source {
+        read_budget.charge_work(core_source.length())
+      }
+      let canonical = canonicalize_xlsx_xml(
+        core_source,
+        max_output_chars=limits.max_xml_part_bytes,
+        cancelled~,
+      )
+      read_budget.checkpoint()
+      read_budget.charge_work(canonical.length())
+      parse_shared_strings(canonical, budget=read_budget)
+    }
     None => []
   }
   let styles_path = workbook_related_part_path(
@@ -3665,10 +3669,14 @@ fn read_zip_archive_core_unchecked(
     styles_ext_lst_xml,
   ) = match styles_path {
     Some(path) => {
-      let value = match archive.get(path) {
-        Some(value) => value
-        None => raise MissingPart(path~)
-      }
+      let value = load_typed_part(
+        archive,
+        content_types,
+        path,
+        [ct_styles],
+        "styles",
+        cancelled~,
+      )
       let styles_raw_xml = decode_source(value)
       read_budget.charge_work(styles_raw_xml.length())
       let styles_source_xml = project_xlsx_markup_compatibility(
@@ -3745,11 +3753,17 @@ fn read_zip_archive_core_unchecked(
     cancelled~,
   )
   let theme_xml = match theme_path {
-    Some(path) =>
-      match archive.get(path) {
-        Some(value) => Some(decode(value))
-        None => raise MissingPart(path~)
-      }
+    Some(path) => {
+      let value = load_typed_part(
+        archive,
+        content_types,
+        path,
+        [ct_theme],
+        "theme",
+        cancelled~,
+      )
+      Some(decode(value))
+    }
     None => None
   }
   let theme_colors = match theme_xml {
@@ -3855,6 +3869,7 @@ fn read_zip_archive_core_unchecked(
     workbook_rels,
     workbook_xml_part_path,
     part_names,
+    content_types,
     archive,
     decode,
     budget=read_budget,
@@ -3892,10 +3907,14 @@ fn read_zip_archive_core_unchecked(
   }
   match vba_path {
     Some(path) => {
-      let vba_bytes = match archive.get(path) {
-        Some(value) => value
-        None => raise MissingPart(path~)
-      }
+      let vba_bytes = load_typed_part(
+        archive,
+        content_types,
+        path,
+        [ct_vba_project],
+        "VBA project",
+        cancelled~,
+      )
       workbook.vba_project = Some(vba_bytes.to_owned())
     }
     None => ()
@@ -3957,10 +3976,14 @@ fn read_zip_archive_core_unchecked(
         Some(value) => value
         None => raise InvalidXml(msg="worksheet target missing")
       }
-      let sheet_bytes = match archive.get(sheet_path) {
-        Some(value) => value
-        None => raise MissingPart(path=sheet_path)
-      }
+      let sheet_bytes = load_typed_part(
+        archive,
+        content_types,
+        sheet_path,
+        [ct_worksheet],
+        "worksheet",
+        cancelled~,
+      )
       let sheet_raw_xml = decode_source(sheet_bytes)
       read_budget.charge_work(sheet_raw_xml.length())
       let sheet_source_xml = project_xlsx_markup_compatibility(
@@ -4108,6 +4131,13 @@ fn read_zip_archive_core_unchecked(
             part_names,
             cancelled~,
           )
+          require_part_content_type(
+            content_types,
+            logical_archive_part_path(slicer_path),
+            [ct_slicer],
+            "slicer",
+            cancelled~,
+          )
           if seen_paths.contains(slicer_path) {
             continue
           }
@@ -4234,6 +4264,13 @@ fn read_zip_archive_core_unchecked(
             part_names,
             cancelled~,
           )
+          require_part_content_type(
+            content_types,
+            logical_archive_part_path(table_path),
+            [ct_table],
+            "table",
+            cancelled~,
+          )
           let table_bytes = match archive.get(table_path) {
             Some(value) => value
             None => raise MissingPart(path=table_path)
@@ -4279,6 +4316,13 @@ fn read_zip_archive_core_unchecked(
               part_names,
               cancelled~,
             )
+            require_part_content_type(
+              content_types,
+              logical_archive_part_path(pivot_path),
+              [ct_pivot_table],
+              "pivot table",
+              cancelled~,
+            )
             let pivot_bytes = match archive.get(pivot_path) {
               Some(value) => value
               None => raise MissingPart(path=pivot_path)
@@ -4321,6 +4365,13 @@ fn read_zip_archive_core_unchecked(
                 )
               }
             }
+            require_part_content_type(
+              content_types,
+              logical_archive_part_path(cache_path),
+              [ct_pivot_cache_def],
+              "pivot cache definition",
+              cancelled~,
+            )
             let cache_bytes = match archive.get(cache_path) {
               Some(value) => value
               None => raise MissingPart(path=cache_path)
@@ -4366,6 +4417,13 @@ fn read_zip_archive_core_unchecked(
                 }
                 match record_path {
                   Some(path) => {
+                    require_part_content_type(
+                      content_types,
+                      logical_archive_part_path(path),
+                      [ct_pivot_cache_records],
+                      "pivot cache records",
+                      cancelled~,
+                    )
                     let record_bytes = match archive.get(path) {
                       Some(value) => value
                       None => raise MissingPart(path~)
@@ -4412,6 +4470,13 @@ fn read_zip_archive_core_unchecked(
             part_names,
             cancelled~,
           )
+          require_part_content_type(
+            content_types,
+            logical_archive_part_path(vml_path),
+            [ct_vml],
+            "VML drawing",
+            cancelled~,
+          )
           let vml_bytes = match archive.get(vml_path) {
             Some(value) => value
             None => raise MissingPart(path=vml_path)
@@ -4430,6 +4495,13 @@ fn read_zip_archive_core_unchecked(
             sheet_path,
             target,
             part_names,
+            cancelled~,
+          )
+          require_part_content_type(
+            content_types,
+            logical_archive_part_path(vml_path),
+            [ct_vml],
+            "VML drawing",
             cancelled~,
           )
           let vml_bytes = match archive.get(vml_path) {
@@ -4479,6 +4551,13 @@ fn read_zip_archive_core_unchecked(
             sheet_path,
             target,
             part_names,
+            cancelled~,
+          )
+          require_part_content_type(
+            content_types,
+            logical_archive_part_path(comment_path),
+            [ct_comments],
+            "comments",
             cancelled~,
           )
           let comment_bytes = match archive.get(comment_path) {
@@ -4566,6 +4645,13 @@ fn read_zip_archive_core_unchecked(
             part_names,
             cancelled~,
           )
+          require_part_content_type(
+            content_types,
+            logical_archive_part_path(drawing_path),
+            [ct_drawing],
+            "drawing",
+            cancelled~,
+          )
           let drawing_bytes = match archive.get(drawing_path) {
             Some(value) => value
             None => raise MissingPart(path=drawing_path)
@@ -4612,6 +4698,7 @@ fn read_zip_archive_core_unchecked(
             drawing_rels_xml,
             drawing_path,
             part_names,
+            content_types,
             drawing_metrics,
             archive,
             decode,
@@ -4699,10 +4786,14 @@ fn read_zip_archive_core_unchecked(
         Some(value) => value
         None => raise InvalidXml(msg="chartsheet target missing")
       }
-      let chartsheet_bytes = match archive.get(chartsheet_path) {
-        Some(value) => value
-        None => raise MissingPart(path=chartsheet_path)
-      }
+      let chartsheet_bytes = load_typed_part(
+        archive,
+        content_types,
+        chartsheet_path,
+        [ct_chartsheet],
+        "chartsheet",
+        cancelled~,
+      )
       let chartsheet_raw_xml = decode_source(chartsheet_bytes)
       read_budget.charge_work(chartsheet_raw_xml.length())
       let chartsheet_source_xml = project_xlsx_markup_compatibility(
@@ -4751,6 +4842,13 @@ fn read_zip_archive_core_unchecked(
         part_names,
         cancelled~,
       )
+      require_part_content_type(
+        content_types,
+        logical_archive_part_path(drawing_path),
+        [ct_drawing],
+        "drawing",
+        cancelled~,
+      )
       let drawing_rels_path = actual_relationship_part_path(
         drawing_path, part_names,
       )
@@ -4786,6 +4884,13 @@ fn read_zip_archive_core_unchecked(
           )
         }
       }
+      require_part_content_type(
+        content_types,
+        logical_archive_part_path(chart_path),
+        [ct_chart],
+        "chart",
+        cancelled~,
+      )
       let chart_bytes = match archive.get(chart_path) {
         Some(value) => value
         None => raise MissingPart(path=chart_path)

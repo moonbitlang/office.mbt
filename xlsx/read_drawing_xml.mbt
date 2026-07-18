@@ -425,6 +425,7 @@ fn parse_drawing_charts(
   drawing_rels_xml : StringView,
   drawing_part : StringView,
   part_names : Map[String, String],
+  content_types : @ooxml.PackageContentTypes,
   metrics : DrawingMetrics,
   archive : @zip.Archive,
   decode : (BytesView) -> String raise XlsxError,
@@ -461,6 +462,13 @@ fn parse_drawing_charts(
       drawing_part,
       target,
       part_names,
+      cancelled~,
+    )
+    require_part_content_type(
+      content_types,
+      logical_archive_part_path(chart_path),
+      [ct_chart],
+      "chart",
       cancelled~,
     )
     let chart_bytes = match archive.get(chart_path) {

@@ -42,6 +42,8 @@ pub fn parse_internal_relationship_targets(StringView, StringView, cancelled? : 
 
 pub fn parse_internal_relationship_targets_by_types(StringView, ArrayView[String], cancelled? : () -> Bool) -> Map[String, String] raise ParseXmlError
 
+pub fn parse_package_content_types(StringView, cancelled? : () -> Bool) -> PackageContentTypes raise ParseXmlError
+
 pub fn project_xml_markup_compatibility(StringView, ArrayView[String], max_output_chars? : Int, cancelled? : () -> Bool, extension_elements? : ArrayView[(String, String)]) -> String raise ParseXmlError
 
 pub fn remove_xml_expanded_name_subtrees(StringView, ArrayView[String], String, cancelled? : () -> Bool) -> String? raise ParseXmlError
@@ -70,6 +72,11 @@ pub struct OpcPartNameRegistry {
 pub fn OpcPartNameRegistry::new(maximum_identity_nodes? : Int) -> Self
 pub fn OpcPartNameRegistry::register(Self, StringView, String) -> OpcPartNameConflict? raise ParseXmlError
 pub fn OpcPartNameRegistry::register_cancellable(Self, StringView, String, cancelled? : () -> Bool) -> OpcPartNameConflict? raise ParseXmlError
+
+pub struct PackageContentTypes {
+  // private fields
+}
+pub fn PackageContentTypes::content_type_for(Self, StringView, cancelled? : () -> Bool) -> String? raise ParseXmlError
 
 type WorkbookManifest
 pub fn WorkbookManifest::add_content_default(Self, String, String) -> Unit

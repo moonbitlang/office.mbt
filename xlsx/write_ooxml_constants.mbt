@@ -102,3 +102,15 @@ let ct_vml = "application/vnd.openxmlformats-officedocument.vmlDrawing"
 
 ///|
 let ct_comments = "application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml"
+
+///|
+let ct_worksheet = "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"
+
+///|
+let ct_styles = "application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"
+
+///|
+let ct_shared_strings = "application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"
+
+///|
+let ct_theme = "application/vnd.openxmlformats-officedocument.theme+xml"

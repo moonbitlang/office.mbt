@@ -342,6 +342,7 @@ fn parse_slicer_cache_definitions(
   workbook_rels_xml : StringView,
   workbook_part : StringView,
   part_names : Map[String, String],
+  content_types : @ooxml.PackageContentTypes,
   archive : @zip.Archive,
   decode : (BytesView) -> String raise XlsxError,
   budget? : ReadBudget,
@@ -362,6 +363,13 @@ fn parse_slicer_cache_definitions(
         target,
         cancelled~,
       ),
+    )
+    require_part_content_type(
+      content_types,
+      logical_archive_part_path(cache_path),
+      [ct_slicer_cache],
+      "slicer cache",
+      cancelled~,
     )
     let cache_bytes = match archive.get(cache_path) {
       Some(value) => value

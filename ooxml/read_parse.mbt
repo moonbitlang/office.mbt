@@ -1025,10 +1025,11 @@ pub fn parse_external_relationship_targets(
 }
 
 ///|
-priv struct PackageContentTypes {
-  overrides : Map[String, String]
-  override_part_names : Map[String, String]
-  defaults : Map[String, String]
+/// Parsed, reusable OPC content-type manifest index.
+pub struct PackageContentTypes {
+  priv overrides : Map[String, String]
+  priv override_part_names : Map[String, String]
+  priv defaults : Map[String, String]
 }
 
 ///|
@@ -1243,7 +1244,9 @@ pub fn package_part_name_key_cancellable(
 }
 
 ///|
-fn parse_content_types(
+/// Parses and validates an OPC `[Content_Types].xml` manifest once so callers
+/// can perform multiple role checks without rescanning the XML document.
+pub fn parse_package_content_types(
   xml : StringView,
   cancelled? : () -> Bool = () => false,
 ) -> PackageContentTypes raise ParseXmlError {
@@ -1364,12 +1367,46 @@ fn parse_content_types(
 }
 
 ///|
+/// Returns the declared content type for `part_name`. An ASCII-case-insensitive
+/// OPC part-name override wins; otherwise the case-insensitive extension
+/// default is used.
+pub fn PackageContentTypes::content_type_for(
+  self : PackageContentTypes,
+  part_name : StringView,
+  cancelled? : () -> Bool = () => false,
+) -> String? raise ParseXmlError {
+  let normalized = if part_name.has_prefix("/") {
+    part_name.to_owned()
+  } else {
+    "/" + part_name.to_owned()
+  }
+  match
+    self.overrides.get(
+      package_part_name_key_cancellable(normalized, cancelled~),
+    ) {
+    Some(value) => Some(value)
+    None => {
+      let filename = match normalized.rev_find("/") {
+        Some(index) => normalized[index + 1:]
+        None => normalized
+      }
+      let extension = match filename.rev_find(".") {
+        Some(index) if index + 1 < filename.length() =>
+          filename[index + 1:].to_owned().to_lower()
+        _ => return None
+      }
+      self.defaults.get(extension)
+    }
+  }
+}
+
+///|
 pub fn find_override_part_by_content_types(
   xml : StringView,
   content_types : ArrayView[String],
   cancelled? : () -> Bool = () => false,
 ) -> String? raise ParseXmlError {
-  let content_types_value = parse_content_types(xml, cancelled~)
+  let content_types_value = parse_package_content_types(xml, cancelled~)
   for wanted in content_types {
     for part_name_key, content_type in content_types_value.overrides {
       if content_type == wanted {
@@ -1389,27 +1426,10 @@ pub fn find_part_content_type(
   part_name : StringView,
   cancelled? : () -> Bool = () => false,
 ) -> String? raise ParseXmlError {
-  let content_types_value = parse_content_types(xml, cancelled~)
-  let normalized = if part_name.has_prefix("/") {
-    part_name.to_owned()
-  } else {
-    "/" + part_name.to_owned()
-  }
-  match content_types_value.overrides.get(package_part_name_key(normalized)) {
-    Some(value) => Some(value)
-    None => {
-      let filename = match normalized.rev_find("/") {
-        Some(index) => normalized[index + 1:]
-        None => normalized
-      }
-      let extension = match filename.rev_find(".") {
-        Some(index) if index + 1 < filename.length() =>
-          filename[index + 1:].to_owned().to_lower()
-        _ => return None
-      }
-      content_types_value.defaults.get(extension)
-    }
-  }
+  parse_package_content_types(xml, cancelled~).content_type_for(
+    part_name,
+    cancelled~,
+  )
 }
 
 ///|
@@ -1457,7 +1477,7 @@ test "ooxml read_parse wb: content-type override required attrs" {
     #|  <Override ContentType="application/xml"/>
     #|</Types>
     #|
-  try parse_content_types(missing_part) catch {
+  try parse_package_content_types(missing_part) catch {
     InvalidXml(msg~) =>
       inspect(msg, content="content type override part name missing")
     _ => fail("unexpected content type parse cancellation")
@@ -1471,7 +1491,7 @@ test "ooxml read_parse wb: content-type override required attrs" {
     #|  <Override PartName="/xl/workbook.xml"/>
     #|</Types>
     #|
-  try parse_content_types(missing_content_type) catch {
+  try parse_package_content_types(missing_content_type) catch {
     InvalidXml(msg~) =>
       inspect(msg, content="content type override content type missing")
     _ => fail("unexpected content type parse cancellation")

@@ -287,6 +287,37 @@ test "ooxml rels: relocated workbook path requires root relationship and content
 }
 
 ///|
+test "ooxml rels: worksheet relationship target requires worksheet content type" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let archive = @zip.read(@xlsx.write(workbook)) catch {
+    err => fail("zip read failed: \{repr(err)}")
+  }
+  let content_types = decode_zip_entry_utf8(archive, "[Content_Types].xml")
+  let worksheet_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"
+  let patched_content_types = content_types.replace(
+    old=worksheet_type,
+    new="application/xml",
+  )
+  if patched_content_types == content_types {
+    fail("worksheet content type marker missing")
+  }
+  let updated = rewrite_zip_entry(
+    archive,
+    "[Content_Types].xml",
+    @encoding/utf8.encode(patched_content_types),
+  ) catch {
+    err => fail("zip rewrite failed: \{repr(err)}")
+  }
+  let result = Ok(@xlsx.read(updated)) catch { error => Err(error) }
+  match result {
+    Err(InvalidXml(msg~)) =>
+      inspect(msg, content="worksheet content type is invalid")
+    _ => fail("expected InvalidXml for worksheet content type mismatch")
+  }
+}
+
+///|
 test "ooxml rels: pivot cache rels tolerate stale first entries and mixed targets" {
   let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
