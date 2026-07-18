@@ -3657,7 +3657,13 @@ fn read_zip_archive_core_unchecked(
       )
   }
   let theme_path = workbook_related_part_path(
-    workbook_rels, rel_theme, workbook_xml_part_path, theme_part_path, part_names,
+    workbook_rels,
+    rel_theme,
+    workbook_xml_part_path,
+    theme_part_path,
+    part_names,
+    budget=read_budget,
+    cancelled~,
   )
   let theme_xml = match theme_path {
     Some(path) =>

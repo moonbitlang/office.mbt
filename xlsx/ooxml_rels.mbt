@@ -168,19 +168,64 @@ fn drop_first_path_segment(path : StringView) -> String {
 }
 
 ///|
+fn relationship_target_has_ambiguous_first_segment_colon(
+  target : StringView,
+) -> Bool {
+  if target.has_prefix("/") {
+    return false
+  }
+  for character in target {
+    if character == '/' {
+      return false
+    }
+    if character == ':' {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn validate_relationship_target_uri(
+  target : StringView,
+) -> Unit raise XlsxError {
+  if target == "" ||
+    target.has_prefix("//") ||
+    target.contains("\\") ||
+    target.contains("?") ||
+    target.contains("#") ||
+    relationship_target_has_ambiguous_first_segment_colon(target) {
+    raise InvalidXml(msg="relationship target invalid")
+  }
+}
+
+///|
 fn normalize_rel_part_path(path : StringView) -> String raise XlsxError {
   let segments : Array[String] = []
-  for chunk in path.split("/") {
+  let chunks = path.split("/").collect()
+  for index, chunk in chunks {
     let segment = chunk.to_owned()
-    if segment == "" || segment == "." {
+    if segment == "" {
+      // Empty URI path segments are significant. Silently removing them lets
+      // malformed targets such as `xl//workbook.xml` alias valid package parts.
+      raise InvalidXml(msg="relationship target invalid")
+    }
+    if segment == "." {
+      // A terminal dot segment resolves to a directory URI, not an OPC part.
+      if index + 1 == chunks.length() {
+        raise InvalidXml(msg="relationship target invalid")
+      }
       continue
     }
     if segment == ".." {
-      if segments.length() == 0 {
+      if segments.length() == 0 || index + 1 == chunks.length() {
         raise InvalidXml(msg="relationship target invalid")
       }
       ignore(segments.pop())
       continue
+    }
+    if !@ooxml.is_valid_opc_part_segment(segment) {
+      raise InvalidXml(msg="relationship target invalid")
     }
     segments.push(segment)
   }
@@ -200,6 +245,7 @@ fn resolve_part_rel_target(
   if source == "" || source.has_prefix("/") || target_str == "" {
     raise InvalidXml(msg="relationship target invalid")
   }
+  validate_relationship_target_uri(target_str)
   let normalized_source = normalize_rel_part_path(source)
   if normalized_source != source {
     raise InvalidXml(msg="relationship target invalid")
@@ -221,6 +267,7 @@ fn resolve_rel_target(
   base_folder : StringView,
 ) -> String raise XlsxError {
   let target_str = target.to_owned()
+  validate_relationship_target_uri(target_str)
   let raw = if target_str.has_prefix("/") {
     drop_first_path_segment(target_str)
   } else if target_str.has_prefix("../") {
@@ -458,5 +505,22 @@ test "ooxml_rels: normalize and resolve invalid-path guards" {
   match rel_result {
     Err(InvalidXml(msg~)) => inspect(msg, content="relationship target invalid")
     _ => fail("expected InvalidXml for non-xl absolute resolve_rel_target")
+  }
+}
+
+///|
+test "ooxml_rels: invalid empty and terminal path segments never alias parts" {
+  for
+    target in [
+      "worksheets//sheet1.xml", "worksheets/sheet1.xml/.", "worksheets/sheet1.xml/",
+      "https://example.invalid/sheet1.xml", "worksheets\\sheet1.xml", "worksheets/sheet1.xml?query",
+      "worksheets/sheet1.xml#fragment",
+    ] {
+    try resolve_workbook_rel_target(target) catch {
+      InvalidXml(msg~) => assert_eq(msg, "relationship target invalid")
+      _ => fail("unexpected relationship target error")
+    } noraise {
+      _ => fail("malformed relationship target was accepted: \{target}")
+    }
   }
 }

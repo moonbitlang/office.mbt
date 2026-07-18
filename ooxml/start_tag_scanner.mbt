@@ -1445,6 +1445,7 @@ pub fn XmlStartTagScanner::next(
           Some(value) => value
           None => raise InvalidXml(msg="XML CDATA section is not closed")
         }
+        validate_xml_character_span(self.xml, start + 9, end, self.cancelled)
         if self.canonicalize_markup {
           self.record_rewrite(
             start,
@@ -2144,6 +2145,23 @@ test "expanded-name canonicalization bounds escaped CDATA output" {
     _ => fail("unexpected canonicalization cancellation")
   } noraise {
     _ => fail("expected canonical output limit")
+  }
+}
+
+///|
+test "strict start-tag scanning rejects XML-invalid controls in CDATA" {
+  let xml = "<root><![CDATA[ok\u{1}bad]]></root>"
+  let scanner = XmlStartTagScanner::new(xml)
+  try {
+    while scanner.next() {
+
+    }
+  } catch {
+    InvalidXml(msg~) =>
+      assert_eq(msg, "XML markup contains an invalid character")
+    _ => fail("unexpected CDATA validation error")
+  } noraise {
+    _ => fail("XML-invalid CDATA control was accepted")
   }
 }
 

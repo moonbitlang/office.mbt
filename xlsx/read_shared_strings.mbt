@@ -375,6 +375,38 @@ fn parse_shared_strings(
     }
     None => ()
   }
+  let scanner = @ooxml.XmlStartTagScanner::new(
+    xml,
+    cancelled=match budget {
+      Some(value) => value.cancelled
+      None => () => false
+    },
+  )
+  if !workbook_scanner_next(scanner) ||
+    scanner.depth() != 1 ||
+    scanner.local_name() != "sst" ||
+    (
+      scanner.namespace_uri() != "" &&
+      scanner.namespace_uri() != transitional_spreadsheet_namespace &&
+      scanner.namespace_uri() != strict_spreadsheet_namespace
+    ) {
+    raise InvalidXml(msg="shared strings document element is invalid")
+  }
+  let shared_strings_namespace = scanner.namespace_uri().to_owned()
+  while workbook_scanner_next(scanner) {
+    if scanner.namespace_uri() == shared_strings_namespace &&
+      scanner.local_name() == "si" &&
+      scanner.depth() != 2 {
+      raise InvalidXml(msg="shared string item is not a direct child")
+    }
+  }
+  match budget {
+    Some(value) => {
+      value.checkpoint()
+      value.charge_work(xml.length())
+    }
+    None => ()
+  }
   let values : Array[SharedStringEntry] = []
   let mut cursor = 0
   while find_xml_open_tag_start_from(xml, "si", cursor) is Some(start) {
@@ -406,4 +438,23 @@ fn parse_shared_strings(
     cursor = close_end + 1
   }
   values
+}
+
+///|
+test "shared strings reject nested same-namespace index decoys" {
+  let valid =
+    #|<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><si><t>real</t></si></sst>
+  let values = parse_shared_strings(valid)
+  assert_eq(values.length(), 1)
+  assert_eq(values[0].text, "real")
+
+  let nested =
+    #|<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><extLst><si><t>decoy</t></si></extLst><si><t>real</t></si></sst>
+  try parse_shared_strings(nested) catch {
+    InvalidXml(msg~) =>
+      assert_eq(msg, "shared string item is not a direct child")
+    _ => fail("unexpected nested shared-string error")
+  } noraise {
+    _ => fail("nested shared-string decoy was accepted")
+  }
 }
