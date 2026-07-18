@@ -354,10 +354,10 @@ fn reject_unsupported_stable_ids(
 }
 
 ///|
-fn resolve_projection_selector(
+async fn resolve_projection_selector(
   projection : DocxProjection,
   input : String,
-) -> DocxProjectionEntry raise CliFailure {
+) -> DocxProjectionEntry {
   let selector = @lib.parse_selector(input) catch {
     error => raise selector_failure(error)
   }
@@ -383,7 +383,9 @@ fn resolve_projection_selector(
     Some((story, kind, id)) => {
       let parent = "/docx/\{story}"
       let mut matches = 0
+      projection.cooperate(work=docx_cli_projection_yield_elements)
       for entry in projection.entries {
+        projection.cooperate()
         if entry.parent == Some(parent) &&
           entry.kind == kind &&
           entry.stable_id == Some(id) {

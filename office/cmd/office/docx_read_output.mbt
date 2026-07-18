@@ -413,11 +413,11 @@ fn checked_docx_human_output(
 }
 
 ///|
-fn get_docx_payload(
+async fn get_docx_payload(
   projection : DocxProjection,
   entry : DocxProjectionEntry,
   max_output_chars : Int,
-) -> BoundedOfficePayload raise CliFailure {
+) -> BoundedOfficePayload {
   let children : Array[Json] = []
   let fields = entry_base_json(entry, children)
   fields["schema"] = Json::string(@lib.SCHEMA_DOCX_ELEMENT)
@@ -433,7 +433,9 @@ fn get_docx_payload(
     projection.warnings,
     max_output_chars,
   )
+  projection.cooperate(work=docx_cli_projection_yield_elements)
   for path in entry.children {
+    projection.cooperate()
     let child = child_reference_json(projection, path)
     bounded.budget.reserve_array_item(child, !children.is_empty())
     children.push(child)
@@ -469,14 +471,14 @@ fn text_record_json(entry : DocxProjectionEntry, text : String) -> Json {
 }
 
 ///|
-fn docx_text_payload(
+async fn docx_text_payload(
   projection : DocxProjection,
   under : DocxProjectionEntry?,
   under_path : String?,
   offset : Int,
   limit : Int,
   max_output_chars : Int,
-) -> BoundedOfficePayload raise CliFailure {
+) -> BoundedOfficePayload {
   let entries : Array[Json] = []
   let fields : Map[String, Json] = {
     "schema": Json::string(@lib.SCHEMA_DOCX_TEXT),
@@ -502,7 +504,9 @@ fn docx_text_payload(
     max_output_chars,
   )
   let mut matched = 0
+  projection.cooperate(work=docx_cli_projection_yield_elements)
   for entry in projection.entries {
+    projection.cooperate()
     let in_scope = match under {
       Some(root) => path_is_within(entry.path, root.path)
       None => true
@@ -725,12 +729,9 @@ async fn docx_query_payload(
   )
   let query = PreparedDocxQuery::build(spec, under, work)
   let mut matched = 0
-  let mut visited = 0
+  projection.cooperate(work=docx_cli_projection_yield_elements)
   for entry in projection.entries {
-    if (visited & 255) == 0 {
-      @async.pause()
-    }
-    visited += 1
+    projection.cooperate()
     if !entry_matches_query(entry, query, scan_budget, work) {
       continue
     }
@@ -870,15 +871,17 @@ fn reader_diagnostics(
 }
 
 ///|
-fn docx_outline_payload(
+async fn docx_outline_payload(
   projection : DocxProjection,
   max_output_chars? : Int = docx_cli_default_max_output_chars,
-) -> BoundedOfficePayload raise CliFailure {
+) -> BoundedOfficePayload {
   ignore(checked_output_limit(max_output_chars))
   let counts : Map[String, Int] = Map([])
   let mut footnotes = 0
   let mut endnotes = 0
+  projection.cooperate(work=docx_cli_projection_yield_elements)
   for entry in projection.entries {
+    projection.cooperate()
     counts[entry.kind] = counts.get(entry.kind).unwrap_or(0) + 1
     if entry.kind == "note" && entry.parent == Some("/docx/footnotes") {
       footnotes += 1
@@ -930,7 +933,9 @@ fn docx_outline_payload(
     projection.warnings,
     max_output_chars,
   )
+  projection.cooperate(work=docx_cli_projection_yield_elements)
   for entry in projection.entries {
+    projection.cooperate()
     if entry.role is (StoryRoot | AnnotationCollection) {
       let record = Json::object({
         "path": Json::string(entry.path),
@@ -994,6 +999,7 @@ fn docx_outline_payload(
     }
   }
   for section in result.sections {
+    projection.cooperate()
     sections.push(
       bounded_section_json(section, bounded.budget, !sections.is_empty()),
     )
@@ -1135,18 +1141,20 @@ fn DocxHumanWriter::write_warnings(
 }
 
 ///|
-fn docx_text_human(
+async fn docx_text_human(
   projection : DocxProjection,
   under : DocxProjectionEntry?,
   offset : Int,
   limit : Int,
   warnings : Array[@lib.ProtocolWarning],
   maximum? : Int = docx_cli_hard_max_output_chars,
-) -> String raise CliFailure {
+) -> String {
   let output = DocxHumanWriter::new(maximum)
   let mut matched = 0
   let mut returned = 0
+  projection.cooperate(work=docx_cli_projection_yield_elements)
   for entry in projection.entries {
+    projection.cooperate()
     let in_scope = match under {
       Some(root) => path_is_within(entry.path, root.path)
       None => true
@@ -1191,12 +1199,9 @@ async fn docx_query_human(
   let query = PreparedDocxQuery::build(spec, under, work)
   let mut matched = 0
   let mut returned = 0
-  let mut visited = 0
+  projection.cooperate(work=docx_cli_projection_yield_elements)
   for entry in projection.entries {
-    if (visited & 255) == 0 {
-      @async.pause()
-    }
-    visited += 1
+    projection.cooperate()
     if !entry_matches_query(entry, query, scan_budget, work) {
       continue
     }
@@ -1241,10 +1246,10 @@ fn docx_get_human(
 }
 
 ///|
-fn docx_outline_human(
+async fn docx_outline_human(
   projection : DocxProjection,
   maximum? : Int = docx_cli_hard_max_output_chars,
-) -> String raise CliFailure {
+) -> String {
   let counts : Map[String, Int] = Map([])
   let output = DocxHumanWriter::new(maximum)
   output.begin_line()
@@ -1252,7 +1257,9 @@ fn docx_outline_human(
   output.write_plain(raw_human_text(projection.file, 160))
   output.begin_line()
   output.write_plain("scanned elements: \{projection.entries.length()}")
+  projection.cooperate(work=docx_cli_projection_yield_elements)
   for entry in projection.entries {
+    projection.cooperate()
     counts[entry.kind] = counts.get(entry.kind).unwrap_or(0) + 1
     if entry.role is (StoryRoot | AnnotationCollection) {
       output.begin_line()
@@ -1266,7 +1273,9 @@ fn docx_outline_human(
   output.write_plain(
     "paragraphs: \{counts.get("p").unwrap_or(0)}; tables: \{counts.get("tbl").unwrap_or(0)}; images: \{counts.get("image").unwrap_or(0)}; comments: \{counts.get("comment").unwrap_or(0)}; footnotes/endnotes: \{counts.get("note").unwrap_or(0)}",
   )
+  projection.cooperate(work=docx_cli_projection_yield_elements)
   for entry in projection.entries {
+    projection.cooperate()
     match entry.element {
       Some(element) =>
         match docx_heading_level(element) {

@@ -218,6 +218,7 @@ fn FindingCollector::new_with_xml_limits(
   max_xml_tokens : Int,
   max_xml_materialized_chars : Int,
   max_xml_token_chars : Int,
+  cancelled : () -> Bool,
 ) -> FindingCollector {
   {
     findings: [],
@@ -259,6 +260,7 @@ fn FindingCollector::new_with_xml_limits(
       } else {
         0
       },
+      cancelled~,
     ),
     truncated: false,
     resource_limit: None,
@@ -508,8 +510,15 @@ pub fn validate_docx_package_report_limited(
   max_xml_token_chars? : Int = DEFAULT_MAX_XML_TOKEN_CHARS,
 ) -> DocxValidationReport {
   let findings = FindingCollector::new_with_xml_limits(
-    max_findings, max_message_chars, max_zip_entry_name_chars, max_zip_total_entry_name_chars,
-    max_xml_source_units, max_xml_tokens, max_xml_materialized_chars, max_xml_token_chars,
+    max_findings,
+    max_message_chars,
+    max_zip_entry_name_chars,
+    max_zip_total_entry_name_chars,
+    max_xml_source_units,
+    max_xml_tokens,
+    max_xml_materialized_chars,
+    max_xml_token_chars,
+    () => false,
   )
   let archive = @mbtzip.read_limited(
     data,
@@ -576,6 +585,7 @@ pub fn validate_docx_archive_limited(
   max_xml_tokens? : Int = DEFAULT_MAX_XML_TOKENS,
   max_xml_materialized_chars? : Int = DEFAULT_MAX_XML_MATERIALIZED_CHARS,
   max_xml_token_chars? : Int = DEFAULT_MAX_XML_TOKEN_CHARS,
+  cancelled? : () -> Bool = () => false,
 ) -> (Array[String], Bool) {
   let report = validate_docx_archive_report_limited(
     archive,
@@ -587,6 +597,7 @@ pub fn validate_docx_archive_limited(
     max_xml_tokens~,
     max_xml_materialized_chars~,
     max_xml_token_chars~,
+    cancelled~,
   )
   (report.findings, report.findings_truncated)
 }
@@ -604,10 +615,12 @@ pub fn validate_docx_archive_report_limited(
   max_xml_tokens? : Int = DEFAULT_MAX_XML_TOKENS,
   max_xml_materialized_chars? : Int = DEFAULT_MAX_XML_MATERIALIZED_CHARS,
   max_xml_token_chars? : Int = DEFAULT_MAX_XML_TOKEN_CHARS,
+  cancelled? : () -> Bool = () => false,
 ) -> DocxValidationReport {
   let findings = FindingCollector::new_with_xml_limits(
     max_findings, max_message_chars, max_zip_entry_name_chars, max_zip_total_entry_name_chars,
     max_xml_source_units, max_xml_tokens, max_xml_materialized_chars, max_xml_token_chars,
+    cancelled,
   )
   validate_docx_archive_into(archive, findings)
   findings.report()

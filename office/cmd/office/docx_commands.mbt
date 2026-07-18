@@ -103,10 +103,10 @@ fn emit_docx_success(output : String) -> Unit {
 }
 
 ///|
-fn resolve_optional_under(
+async fn resolve_optional_under(
   projection : DocxProjection,
   matches : @argparse.Matches,
-) -> (DocxProjectionEntry?, String?) raise CliFailure {
+) -> (DocxProjectionEntry?, String?) {
   match optional_value(matches, "under") {
     Some(path) => {
       let entry = resolve_projection_selector(projection, path)
@@ -141,6 +141,7 @@ async fn run_docx_outline(matches : @argparse.Matches) -> Unit {
         file,
         source.archive,
         max_elements,
+        cancelled=office_async_cancelled,
       )
       if matches.flags.get_or_default("json", false) {
         emit_docx_success(
@@ -195,6 +196,7 @@ async fn run_docx_get(matches : @argparse.Matches) -> Unit {
         file,
         source.archive,
         max_elements,
+        cancelled=office_async_cancelled,
       )
       let entry = resolve_projection_selector(projection, selector)
       if matches.flags.get_or_default("json", false) {
@@ -266,6 +268,7 @@ async fn run_docx_text(matches : @argparse.Matches) -> Unit {
         file,
         source.archive,
         max_elements,
+        cancelled=office_async_cancelled,
       )
       let (under, under_path) = resolve_optional_under(projection, matches)
       if matches.flags.get_or_default("json", false) {
@@ -545,6 +548,7 @@ async fn run_docx_query(matches : @argparse.Matches) -> Unit {
         file,
         source.archive,
         max_elements,
+        cancelled=office_async_cancelled,
       )
       let (under, under_path) = resolve_optional_under(projection, matches)
       let spec : DocxQuerySpec = {
