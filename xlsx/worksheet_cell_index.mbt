@@ -142,6 +142,65 @@ test "resolved worksheet reads avoid repeated names and preserve style precedenc
 }
 
 ///|
+fn expect_unowned_worksheet_error(
+  action : () -> Unit raise XlsxError,
+) -> Unit raise {
+  try action() catch {
+    InvalidSheetOperation(msg~) =>
+      inspect(msg, content="worksheet does not belong to this workbook")
+    error => fail("unexpected worksheet ownership error: \{repr(error)}")
+  } noraise {
+    _ => fail("expected worksheet ownership error")
+  }
+}
+
+///|
+test "resolved worksheet reads reject foreign detached and stale handles" {
+  let owner = Workbook::new()
+  let owned = owner.add_sheet("Same")
+  owned.set_cell_value_rc(1, 1, Numeric(1.5))
+  let style = owner.add_style(Style::builtin_number_format(2))
+  owned.set_cell_style_rc(1, 1, style)
+
+  let foreign_workbook = Workbook::new()
+  let foreign = foreign_workbook.add_sheet("Same")
+  foreign.set_cell_value_rc(1, 1, Numeric(9.5))
+  expect_unowned_worksheet_error(() => {
+    ignore(owner.get_cell_value_from_worksheet_rc(foreign, 1, 1))
+  })
+  expect_unowned_worksheet_error(() => {
+    ignore(owner.get_cell_value_styled_from_worksheet_rc(foreign, 1, 1, style))
+  })
+
+  let detached = Worksheet::new("Same")
+  expect_unowned_worksheet_error(() => {
+    ignore(owner.get_cell_value_from_worksheet_rc(detached, 1, 1))
+  })
+
+  ignore(owner.add_sheet("Keep"))
+  let stale_deleted = owner.add_sheet("Deleted")
+  owner.delete_sheet("Deleted")
+  expect_unowned_worksheet_error(() => {
+    ignore(owner.get_cell_value_from_worksheet_rc(stale_deleted, 1, 1))
+  })
+
+  let stale_replaced = owner.add_sheet("Destination")
+  let source_index = owner.sheet_index("Same")
+  let destination_index = owner.sheet_index("Destination")
+  owner.copy_sheet(source_index, destination_index)
+  expect_unowned_worksheet_error(() => {
+    ignore(owner.get_cell_value_from_worksheet_rc(stale_replaced, 1, 1))
+  })
+  guard owner.sheet("Destination") is Some(replacement) else {
+    fail("expected copied destination worksheet")
+  }
+  assert_eq(
+    owner.get_cell_value_from_worksheet_rc(replacement, 1, 1),
+    Some("1.50"),
+  )
+}
+
+///|
 test "parsed worksheets leave coordinate indexes ready for bounded reads" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Parsed")

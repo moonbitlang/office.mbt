@@ -1747,6 +1747,7 @@ pub fn TableOptions::set_style_name(Self, String) -> Unit
 pub fn TableOptions::to_repr(Self) -> @debug.Repr
 
 pub struct Workbook {
+  worksheet_owner_token : Array[Unit]
   sheets : Array[Worksheet]
   chart_sheets : Array[ChartSheet]
   sheet_order : Array[SheetEntry]
@@ -2052,6 +2053,7 @@ pub fn WorkbookProtectionOptions::to_repr(Self) -> @debug.Repr
 pub fn WorkbookProtectionOptions::with_values(algorithm_name? : String, password? : String, lock_structure? : Bool, lock_windows? : Bool) -> Self
 
 pub struct Worksheet {
+  mut workbook_owner_token : Array[Unit]?
   mut name : String
   sheet_views : Array[SheetView]
   mut dimension_ref : String?

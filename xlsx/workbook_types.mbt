@@ -1,5 +1,8 @@
 ///|
 pub struct Workbook {
+  /// Opaque identity shared with worksheets currently owned by this workbook.
+  /// A non-empty array is used solely to provide stable reference identity.
+  worksheet_owner_token : Array[Unit]
   sheets : Array[Worksheet]
   chart_sheets : Array[ChartSheet]
   sheet_order : Array[SheetEntry]
@@ -159,6 +162,7 @@ fn defined_name_scope_key(scope : StringView) -> String {
 ///|
 pub fn Workbook::new(options? : Options = Options::new()) -> Workbook {
   {
+    worksheet_owner_token: [()],
     sheets: [],
     chart_sheets: [],
     sheet_order: [],

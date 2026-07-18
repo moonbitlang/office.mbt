@@ -92,6 +92,9 @@ pub struct ColDimension {
 
 ///|
 pub struct Worksheet {
+  /// Present only while this worksheet is a live member of a workbook. The
+  /// token supports constant-time ownership checks for bulk workbook reads.
+  mut workbook_owner_token : Array[Unit]?
   mut name : String
   sheet_views : Array[SheetView]
   mut dimension_ref : String?
@@ -142,6 +145,7 @@ pub struct Worksheet {
 ///|
 pub fn Worksheet::new(name : String) -> Worksheet {
   {
+    workbook_owner_token: None,
     name,
     sheet_views: [],
     dimension_ref: None,

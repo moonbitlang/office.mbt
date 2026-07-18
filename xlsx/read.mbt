@@ -3870,6 +3870,7 @@ fn read_zip_archive_core_unchecked(
     None => ()
   }
   let workbook : Workbook = {
+    worksheet_owner_token: [()],
     sheets: [],
     chart_sheets: [],
     sheet_order: [],
@@ -4629,6 +4630,7 @@ fn read_zip_archive_core_unchecked(
       }
       let cell_index = build_bounded_worksheet_cell_index(cells, read_budget)
       let sheet = {
+        workbook_owner_token: Some(workbook.worksheet_owner_token),
         name,
         sheet_views,
         dimension_ref,

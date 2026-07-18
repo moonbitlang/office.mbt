@@ -16,6 +16,7 @@ pub fn Workbook::add_sheet(
     None => ()
   }
   let sheet = Worksheet::new(name)
+  sheet.workbook_owner_token = Some(self.worksheet_owner_token)
   self.sheets.push(sheet)
   self.sheet_order.push(Worksheet(self.sheets.length() - 1))
   if self.sheet_order.length() == 1 {
@@ -105,6 +106,22 @@ fn Workbook::require_sheet(
   match self.sheet(sheet_name) {
     Some(value) => value
     None => raise SheetNotFound(name=sheet_name.to_owned())
+  }
+}
+
+///|
+/// Rejects detached or foreign worksheet handles before workbook-owned styles,
+/// options, or date-system settings are applied to their cells.
+fn Workbook::require_owned_worksheet(
+  self : Workbook,
+  worksheet : Worksheet,
+) -> Unit raise XlsxError {
+  match worksheet.workbook_owner_token {
+    Some(owner) if physical_equal(owner, self.worksheet_owner_token) => ()
+    _ =>
+      raise InvalidSheetOperation(
+        msg="worksheet does not belong to this workbook",
+      )
   }
 }
 
@@ -492,6 +509,7 @@ pub fn Workbook::delete_sheet(
   ignore(self.sheet_order.remove(order_index))
   match entry {
     Worksheet(idx) => {
+      self.sheets[idx].workbook_owner_token = None
       ignore(self.sheets.remove(idx))
       let updated : Array[SheetEntry] = []
       for item in self.sheet_order {
@@ -605,6 +623,8 @@ pub fn Workbook::copy_sheet(
         to_sheet.name(),
         to_sheet.state(),
       )
+      to_sheet.workbook_owner_token = None
+      cloned.workbook_owner_token = Some(self.worksheet_owner_token)
       self.sheets[to_sheet_idx] = cloned
     }
     _ => raise InvalidSheetIndex(index=to_index)
@@ -1315,6 +1335,7 @@ fn clone_worksheet(
 ) -> Worksheet {
   let cells = clone_cells(sheet.cells)
   {
+    workbook_owner_token: None,
     name,
     sheet_views: clone_sheet_views(sheet.sheet_views),
     dimension_ref: sheet.dimension_ref,
@@ -1845,8 +1866,10 @@ pub fn Workbook::get_cell_value(
 /// workbook's formatting options have the same semantics as
 /// `get_cell_value`.
 ///
-/// `worksheet` must be an entry from this workbook's `sheets()` view. The row
-/// and column are 1-based and must fit the XLSX grid.
+/// `worksheet` must be a live entry from this workbook's `sheets()` view;
+/// detached, deleted, replaced, or foreign handles raise
+/// `InvalidSheetOperation`. The row and column are 1-based and must fit the
+/// XLSX grid.
 pub fn Workbook::get_cell_value_from_worksheet_rc(
   self : Workbook,
   worksheet : Worksheet,
@@ -1855,6 +1878,7 @@ pub fn Workbook::get_cell_value_from_worksheet_rc(
   raw? : Bool = false,
   options? : Options,
 ) -> String? raise XlsxError {
+  self.require_owned_worksheet(worksheet)
   ignore(cell_ref_from(row, col))
   let resolved_options = match options {
     Some(value) => value
@@ -1881,8 +1905,10 @@ pub fn Workbook::get_cell_value_from_worksheet_rc(
 /// lets callers apply row/column-inherited styles without repeating a sheet
 /// name lookup for every coordinate. Returns `None` for an absent cell.
 ///
-/// `worksheet` must be an entry from this workbook's `sheets()` view. The row
-/// and column are 1-based and `style_id` must belong to this workbook.
+/// `worksheet` must be a live entry from this workbook's `sheets()` view;
+/// detached, deleted, replaced, or foreign handles raise
+/// `InvalidSheetOperation`. The row and column are 1-based and `style_id` must
+/// belong to this workbook.
 pub fn Workbook::get_cell_value_styled_from_worksheet_rc(
   self : Workbook,
   worksheet : Worksheet,
@@ -1892,6 +1918,7 @@ pub fn Workbook::get_cell_value_styled_from_worksheet_rc(
   options? : Options,
   max_output_chars? : Int,
 ) -> String? raise XlsxError {
+  self.require_owned_worksheet(worksheet)
   ignore(cell_ref_from(row, col))
   self.check_style_id(style_id)
   let resolved_options = match options {
