@@ -118,12 +118,10 @@ fn xlsx_sheet_summary_json(
     Worksheet(worksheet) => {
       fields["kind"] = Json::string("worksheet")
       fields["state"] = Json::string(xlsx_sheet_state_name(worksheet.state()))
-      let max_row = worksheet.max_row()
-      let max_col = worksheet.max_col()
-      fields["max_row"] = Json::number(max_row.to_double())
-      fields["max_column"] = Json::number(max_col.to_double())
-      match xlsx_used_rect(worksheet) {
+      match xlsx_used_rect(projection, worksheet) {
         Some(rect) => {
+          fields["max_row"] = Json::number(rect.row_hi.to_double())
+          fields["max_column"] = Json::number(rect.col_hi.to_double())
           let reference = rect.range_reference(projection.file)
           let path = canonical_xlsx_range_path(sheet.name, reference)
           metadata.charge_item([reference, path])
@@ -133,7 +131,10 @@ fn xlsx_sheet_summary_json(
             "cell_count": Json::number(rect.cell_count().to_double()),
           })
         }
-        None => ()
+        None => {
+          fields["max_row"] = Json::number(0)
+          fields["max_column"] = Json::number(0)
+        }
       }
       let merges = worksheet.merged_cells()
       projection.checkpoint()
@@ -179,7 +180,7 @@ fn xlsx_outline_data(projection : XlsxProjection) -> Json raise CliFailure {
     sheets.push(xlsx_sheet_summary_json(projection, sheet, metadata))
   }
   let defined_names : Array[Json] = []
-  for defined in projection.workbook.get_defined_names() {
+  for defined in projection.workbook.defined_names() {
     projection.checkpoint()
     metadata.charge_item([
       defined.name,
@@ -533,7 +534,7 @@ fn retain_xlsx_outline_records(
     budget.reserve_array_item(record, !sheets.is_empty())
     sheets.push(record)
   }
-  for defined in projection.workbook.get_defined_names() {
+  for defined in projection.workbook.defined_names() {
     projection.checkpoint()
     metadata.charge_item([
       defined.name,
@@ -903,7 +904,7 @@ fn xlsx_outline_human(
       ChartSheet(_) => output.write_plain("\tchart-sheet")
       Worksheet(worksheet) => {
         output.write_plain("\tworksheet")
-        match xlsx_used_rect(worksheet) {
+        match xlsx_used_rect(projection, worksheet) {
           Some(rect) => {
             output.write_char('\t')
             output.write_terminal_safe(rect.range_reference(projection.file))

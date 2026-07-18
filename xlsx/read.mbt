@@ -4313,9 +4313,15 @@ fn read_zip_archive_core_unchecked(
           read_budget.checkpoint()
           read_budget.charge_work(drawing_xml.length())
           let drawing_metrics = drawing_metrics_for_sheet(sheet)
+          let drawing_anchors = parse_drawing_anchors(
+            drawing_xml,
+            budget=read_budget,
+          )
           if slicer_part_entries.length() > 0 {
             slicer_anchor_info = parse_drawing_slicer_anchors(
-              drawing_xml, drawing_metrics,
+              drawing_anchors,
+              drawing_metrics,
+              budget=read_budget,
             )
           }
           let drawing_rels_xml = match
@@ -4324,7 +4330,7 @@ fn read_zip_archive_core_unchecked(
             None => ""
           }
           let drawing_images = parse_drawing_images(
-            drawing_xml,
+            drawing_anchors,
             drawing_rels_xml,
             drawing_path,
             part_names,
@@ -4335,7 +4341,7 @@ fn read_zip_archive_core_unchecked(
           )
           sheet.images.append(drawing_images)
           let drawing_charts = parse_drawing_charts(
-            drawing_xml,
+            drawing_anchors,
             drawing_rels_xml,
             drawing_path,
             part_names,
@@ -4346,7 +4352,10 @@ fn read_zip_archive_core_unchecked(
             cancelled~,
           )
           sheet.charts.append(drawing_charts)
-          let drawing_shapes = parse_drawing_shapes(drawing_xml)
+          let drawing_shapes = parse_drawing_shapes(
+            drawing_anchors,
+            budget=read_budget,
+          )
           sheet.shapes.append(drawing_shapes)
         }
         None => ()

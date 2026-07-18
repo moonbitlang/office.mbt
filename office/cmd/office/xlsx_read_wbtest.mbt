@@ -431,6 +431,23 @@ test "XLSX selector failures distinguish format, absence, and scan limits" {
 }
 
 ///|
+test "XLSX used-range preprocessing rejects excess stored cells before scanning" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  workbook.set_cell_str("Data", "A1", "first")
+  workbook.set_cell_str("Data", "B1", "second")
+  let projection = make_xlsx_projection("stored-cells.xlsx", workbook, 1)
+  let limited = xlsx_cli_error(() => ignore(xlsx_scan_regions(projection, None)))
+  assert_eq(limited.code, "office.xlsx.resource_limit")
+  guard limited.details is Some(Object(details)) else {
+    fail("expected stored-cell limit details")
+  }
+  assert_eq(details.get("resource"), Some(Json::string("stored_cells")))
+  assert_eq(details.get("limit"), Some(Json::number(1)))
+  assert_eq(details.get("actual"), Some(Json::number(2)))
+}
+
+///|
 test "XLSX cell snapshots preserve typed values, formulas, and canonical paths" {
   let projection = xlsx_read_test_projection()
   guard resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]/cell[B2]")

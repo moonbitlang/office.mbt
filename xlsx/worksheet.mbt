@@ -2771,6 +2771,46 @@ pub fn Worksheet::max_col(self : Worksheet) -> Int {
 }
 
 ///|
+/// Returns the used `(max_row, max_column)` bounds after rejecting a worksheet
+/// whose stored-cell representation exceeds `maximum_stored_cells`. The O(1)
+/// length preflight happens before the scan, so duplicate coordinates cannot
+/// hide unbounded preprocessing behind a tiny logical used range.
+pub fn Worksheet::used_bounds_limited(
+  self : Worksheet,
+  maximum_stored_cells~ : Int,
+  cancelled? : () -> Bool = () => false,
+) -> (Int, Int) raise XlsxError {
+  if maximum_stored_cells < 1 {
+    raise InvalidOptions(msg="maximum stored cells must be positive")
+  }
+  let stored = self.cells.length()
+  if stored > maximum_stored_cells {
+    raise ResourceLimitExceeded(
+      kind="stored_cells",
+      limit=maximum_stored_cells,
+      actual=stored,
+    )
+  }
+  let mut max_row = 0
+  let mut max_col = 0
+  for index, cell in self.cells {
+    if (index & 4095) == 0 && cancelled() {
+      raise ReadCancelled
+    }
+    if cell.row > max_row {
+      max_row = cell.row
+    }
+    if cell.col > max_col {
+      max_col = cell.col
+    }
+  }
+  if cancelled() {
+    raise ReadCancelled
+  }
+  (max_row, max_col)
+}
+
+///|
 /// Writes `values` across row `row` (1-based) starting at column A, one raw
 /// string per cell. Cells beyond `values` are left unchanged. For a single
 /// typed cell use `set_cell_value`; to build very large sheets efficiently use

@@ -108,14 +108,29 @@ fn drawing_axis_span_emu(
 ///|
 fn parse_drawing_anchors(
   drawing_xml : StringView,
+  budget? : ReadBudget,
 ) -> Array[(String, PicturePositioning)] raise XlsxError {
+  match budget {
+    Some(value) => {
+      value.checkpoint()
+      value.charge_work(drawing_xml.length())
+    }
+    None => ()
+  }
   let xml_str = drawing_xml.to_owned()
   let anchors : Array[(String, PicturePositioning)] = []
+  let mut parsed = 0
   let mut first_one = true
   for chunk in xml_str.split("<xdr:oneCellAnchor") {
     if first_one {
       first_one = false
       continue
+    }
+    if (parsed & 255) == 0 {
+      match budget {
+        Some(value) => value.checkpoint()
+        None => ()
+      }
     }
     let text = chunk.to_owned()
     let close_tag = "</xdr:oneCellAnchor>"
@@ -125,12 +140,19 @@ fn parse_drawing_anchors(
     }
     let slice = text[:end]
     anchors.push(("<xdr:oneCellAnchor\{slice.to_owned()}", OneCell))
+    parsed += 1
   }
   let mut first_two = true
   for chunk in xml_str.split("<xdr:twoCellAnchor") {
     if first_two {
       first_two = false
       continue
+    }
+    if (parsed & 255) == 0 {
+      match budget {
+        Some(value) => value.checkpoint()
+        None => ()
+      }
     }
     let text = chunk.to_owned()
     let close_tag = "</xdr:twoCellAnchor>"
@@ -154,13 +176,32 @@ fn parse_drawing_anchors(
       None => TwoCell
     }
     anchors.push((full, positioning))
+    parsed += 1
+  }
+  match budget {
+    Some(value) => value.checkpoint()
+    None => ()
   }
   anchors
 }
 
 ///|
+fn charge_drawing_anchor_pass(
+  budget : ReadBudget?,
+  anchor_xml : String,
+) -> Unit raise XlsxError {
+  match budget {
+    Some(value) => {
+      value.checkpoint()
+      value.charge_work(anchor_xml.length())
+    }
+    None => ()
+  }
+}
+
+///|
 fn parse_drawing_images(
-  drawing_xml : StringView,
+  anchors : ArrayView[(String, PicturePositioning)],
   drawing_rels_xml : StringView,
   drawing_part : StringView,
   part_names : Map[String, String],
@@ -190,9 +231,9 @@ fn parse_drawing_images(
       cancelled~,
     )
   }
-  let anchors = parse_drawing_anchors(drawing_xml)
   for entry in anchors {
     let (anchor_xml, positioning) = entry
+    charge_drawing_anchor_pass(budget, anchor_xml)
     let pic_body = match extract_tag_body_from(anchor_xml, "xdr:pic") {
       Some(value) => value
       None => continue
@@ -377,7 +418,7 @@ fn parse_drawing_images(
 
 ///|
 fn parse_drawing_charts(
-  drawing_xml : StringView,
+  anchors : ArrayView[(String, PicturePositioning)],
   drawing_rels_xml : StringView,
   drawing_part : StringView,
   part_names : Map[String, String],
@@ -398,9 +439,9 @@ fn parse_drawing_charts(
       cancelled~,
     )
   }
-  let anchors = parse_drawing_anchors(drawing_xml)
   for entry in anchors {
     let (anchor_xml, positioning) = entry
+    charge_drawing_anchor_pass(budget, anchor_xml)
     let chart_tag = match tag_attributes_in(anchor_xml, "c:chart") {
       Some(value) => value
       None => continue
@@ -529,12 +570,13 @@ fn parse_drawing_charts(
 
 ///|
 fn parse_drawing_shapes(
-  drawing_xml : StringView,
+  anchors : ArrayView[(String, PicturePositioning)],
+  budget? : ReadBudget,
 ) -> Array[Shape] raise XlsxError {
   let shapes : Array[Shape] = []
-  let anchors = parse_drawing_anchors(drawing_xml)
   for entry in anchors {
     let (anchor_xml, positioning) = entry
+    charge_drawing_anchor_pass(budget, anchor_xml)
     if anchor_xml.contains("<mc:AlternateContent") {
       continue
     }
@@ -796,13 +838,14 @@ priv struct SlicerAnchorInfo {
 
 ///|
 fn parse_drawing_slicer_anchors(
-  drawing_xml : StringView,
+  anchors : ArrayView[(String, PicturePositioning)],
   metrics : DrawingMetrics,
+  budget? : ReadBudget,
 ) -> Map[String, SlicerAnchorInfo] raise XlsxError {
   let out : Map[String, SlicerAnchorInfo] = Map([])
-  let anchors = parse_drawing_anchors(drawing_xml)
   for entry in anchors {
     let (anchor_xml, positioning) = entry
+    charge_drawing_anchor_pass(budget, anchor_xml)
     let slicer_tag = match tag_attributes_in(anchor_xml, "sle:slicer") {
       Some(value) => value
       None => continue
@@ -1088,6 +1131,40 @@ test "read_drawing_xml wb: parse_drawing_anchors validation and positioning" {
 }
 
 ///|
+test "read_drawing_xml wb: anchor parsing checks limits before copying source" {
+  let drawing_xml = "<xdr:wsDr><xdr:oneCellAnchor></xdr:oneCellAnchor></xdr:wsDr>"
+  let limited = ReadBudget::new(
+    ReadLimits::with_values(max_parser_work_units=1),
+  )
+  let limit_result : Result[Array[(String, PicturePositioning)], Error] = Ok(
+    parse_drawing_anchors(drawing_xml, budget=limited),
+  ) catch {
+    error => Err(error)
+  }
+  match limit_result {
+    Err(ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="parser_work_units")
+      inspect(limit, content="1")
+      inspect(actual, content="2")
+    }
+    _ => fail("expected drawing work limit")
+  }
+
+  let mut checks = 0
+  let cancelled = ReadBudget::new(ReadLimits::new(), cancelled=() => {
+    checks += 1
+    true
+  })
+  let cancel_result : Result[Array[(String, PicturePositioning)], Error] = Ok(
+    parse_drawing_anchors(drawing_xml, budget=cancelled),
+  ) catch {
+    error => Err(error)
+  }
+  assert_true(cancel_result is Err(ReadCancelled))
+  inspect(checks, content="1")
+}
+
+///|
 test "read_drawing_xml wb: parse_drawing_images empty rel map branch" {
   let drawing_xml = wb_one_cell_anchor(
     wb_from_xml(),
@@ -1097,7 +1174,7 @@ test "read_drawing_xml wb: parse_drawing_images empty rel map branch" {
   let metrics = drawing_metrics_for_sheet(Worksheet::new("Sheet1"))
   let result : Result[Array[Image], Error] = Ok(
     parse_drawing_images(
-      drawing_xml,
+      parse_drawing_anchors(drawing_xml),
       "",
       "xl/drawings/drawing1.xml",
       Map([]),
@@ -1125,7 +1202,7 @@ test "read_drawing_xml wb: signed marker offsets are retained" {
   )
   let metrics = drawing_metrics_for_sheet(Worksheet::new("Sheet1"))
   let images = parse_drawing_images(
-    drawing_xml,
+    parse_drawing_anchors(drawing_xml),
     rels_xml,
     "xl/drawings/drawing1.xml",
     Map([]),
@@ -1151,7 +1228,7 @@ test "read_drawing_xml wb: parse_drawing_images anchor/ext validation errors" {
   )
   let missing_from_result : Result[Array[Image], Error] = Ok(
     parse_drawing_images(
-      missing_from,
+      parse_drawing_anchors(missing_from),
       rels_xml,
       "xl/drawings/drawing1.xml",
       Map([]),
@@ -1170,7 +1247,7 @@ test "read_drawing_xml wb: parse_drawing_images anchor/ext validation errors" {
   let missing_ext = wb_one_cell_anchor(wb_from_xml(), "")
   let missing_ext_result : Result[Array[Image], Error] = Ok(
     parse_drawing_images(
-      missing_ext,
+      parse_drawing_anchors(missing_ext),
       rels_xml,
       "xl/drawings/drawing1.xml",
       Map([]),
@@ -1192,7 +1269,7 @@ test "read_drawing_xml wb: parse_drawing_images anchor/ext validation errors" {
   )
   let cx_invalid_result : Result[Array[Image], Error] = Ok(
     parse_drawing_images(
-      cx_invalid,
+      parse_drawing_anchors(cx_invalid),
       rels_xml,
       "xl/drawings/drawing1.xml",
       Map([]),
@@ -1211,7 +1288,7 @@ test "read_drawing_xml wb: parse_drawing_images anchor/ext validation errors" {
   let cy_missing = wb_one_cell_anchor(wb_from_xml(), "<xdr:ext cx=\"9525\"/>")
   let cy_missing_result : Result[Array[Image], Error] = Ok(
     parse_drawing_images(
-      cy_missing,
+      parse_drawing_anchors(cy_missing),
       rels_xml,
       "xl/drawings/drawing1.xml",
       Map([]),
@@ -1233,7 +1310,7 @@ test "read_drawing_xml wb: parse_drawing_images anchor/ext validation errors" {
   )
   let invalid_to_result : Result[Array[Image], Error] = Ok(
     parse_drawing_images(
-      invalid_to,
+      parse_drawing_anchors(invalid_to),
       rels_xml,
       "xl/drawings/drawing1.xml",
       Map([]),

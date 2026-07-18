@@ -328,9 +328,20 @@ fn xlsx_rect_from_coordinate(coordinate : @lib.SelectorCoordinate) -> XlsxRect {
 }
 
 ///|
-fn xlsx_used_rect(worksheet : @xlsx.Worksheet) -> XlsxRect? {
-  let max_col = worksheet.max_col()
-  let max_row = worksheet.max_row()
+fn xlsx_used_rect(
+  projection : XlsxProjection,
+  worksheet : @xlsx.Worksheet,
+) -> XlsxRect? raise CliFailure {
+  projection.checkpoint()
+  let (max_row, max_col) = worksheet.used_bounds_limited(
+    maximum_stored_cells=projection.max_scan_cells,
+    cancelled=projection.cancelled,
+  ) catch {
+    ReadCancelled =>
+      raise xlsx_cli_failure("office.cancelled", "XLSX read was cancelled")
+    error => raise xlsx_read_failure(error, projection.file)
+  }
+  projection.checkpoint()
   if max_col < 1 || max_row < 1 {
     None
   } else {
@@ -514,7 +525,7 @@ fn xlsx_scan_regions(
     Some(Sheet(sheet)) =>
       match sheet.content {
         Worksheet(worksheet) =>
-          match xlsx_used_rect(worksheet) {
+          match xlsx_used_rect(projection, worksheet) {
             Some(rect) => regions.push({ sheet, rect })
             None => ()
           }
@@ -525,7 +536,7 @@ fn xlsx_scan_regions(
         projection.checkpoint()
         match sheet.content {
           Worksheet(worksheet) =>
-            match xlsx_used_rect(worksheet) {
+            match xlsx_used_rect(projection, worksheet) {
               Some(rect) => regions.push({ sheet, rect })
               None => ()
             }
