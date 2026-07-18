@@ -114,6 +114,12 @@ test "ooxml read_parse: relationships apply OPC Markup Compatibility" {
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:r="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:v="urn:vendor"><mc:AlternateContent><mc:Choice Requires="v"><v:Unsupported/></mc:Choice><mc:Choice Requires="r"><Relationship Id="choice" Type="wanted" Target="choice.xml"/></mc:Choice><mc:Fallback><Relationship Id="fallback" Type="wanted" Target="fallback.xml"/></mc:Fallback></mc:AlternateContent></Relationships>
   let selected_fallback =
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:v="urn:vendor"><mc:AlternateContent><mc:Choice Requires="v"><v:Unsupported/></mc:Choice><mc:Fallback><Relationship Id="fallback" Type="wanted" Target="fallback.xml"/></mc:Fallback></mc:AlternateContent></Relationships>
+  let wildcard_process_content =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:v="urn:vendor" mc:Ignorable="v" mc:ProcessContent="v:*"><v:Wrapper><Relationship Id="wildcard" Type="wanted" Target="wildcard.xml"/></v:Wrapper></Relationships>
+  let empty_directives =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="" mc:MustUnderstand="" mc:ProcessContent="" mc:PreserveElements="" mc:PreserveAttributes=""><Relationship Id="empty" Type="wanted" Target="empty.xml"/></Relationships>
+  let understood_ignorable =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:r="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="r"><r:Relationship Id="understood" Type="wanted" Target="understood.xml"/></Relationships>
   let processed = @ooxml.parse_internal_relationship_targets(
     process_content, "wanted",
   )
@@ -129,6 +135,21 @@ test "ooxml read_parse: relationships apply OPC Markup Compatibility" {
   )
   assert_eq(fallback.get("fallback"), Some("fallback.xml"))
   assert_eq(fallback.length(), 1)
+  let wildcard = @ooxml.parse_internal_relationship_targets(
+    wildcard_process_content, "wanted",
+  )
+  assert_eq(wildcard.get("wildcard"), Some("wildcard.xml"))
+  assert_eq(wildcard.length(), 1)
+  let empty = @ooxml.parse_internal_relationship_targets(
+    empty_directives, "wanted",
+  )
+  assert_eq(empty.get("empty"), Some("empty.xml"))
+  assert_eq(empty.length(), 1)
+  let understood = @ooxml.parse_internal_relationship_targets(
+    understood_ignorable, "wanted",
+  )
+  assert_eq(understood.get("understood"), Some("understood.xml"))
+  assert_eq(understood.length(), 1)
 }
 
 ///|
@@ -183,9 +204,9 @@ test "ooxml read_parse: invalid relationship MCE fails closed" {
     ),
     (
       (
-        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:v="urn:vendor" mc:Ignorable="v" mc:ProcessContent="v:*"/>
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:AlternateContent><mc:Choice Requires=""/></mc:AlternateContent></Relationships>
       ),
-      "MCE ProcessContent wildcard is invalid",
+      "MCE Choice Requires is empty",
     ),
     (
       (

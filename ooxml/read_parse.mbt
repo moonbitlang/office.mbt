@@ -261,11 +261,34 @@ fn RelationshipMceContext::is_ignorable(
 }
 
 ///|
+fn relationship_mce_namespace_is_understood(namespace_uri : StringView) -> Bool {
+  namespace_uri == package_relationships_namespace ||
+  namespace_uri == markup_compatibility_namespace
+}
+
+///|
+fn RelationshipMceContext::is_effectively_ignorable(
+  self : RelationshipMceContext,
+  namespace_id : Int,
+  namespace_uri : StringView,
+) -> Bool {
+  self.is_ignorable(namespace_id) &&
+  !relationship_mce_namespace_is_understood(namespace_uri)
+}
+
+///|
 fn RelationshipMceContext::processes(
   self : RelationshipMceContext,
   name : RelationshipMceName,
 ) -> Bool {
-  self.process_content_name_counts.get_or_default(name, 0) > 0
+  if self.process_content_name_counts.get_or_default(name, 0) > 0 {
+    return true
+  }
+  self.process_content_name_counts.get_or_default(
+    { namespace_id: name.namespace_id, local_name: "*" },
+    0,
+  ) >
+  0
 }
 
 ///|
@@ -317,9 +340,13 @@ priv struct RelationshipMceState {
 fn relationship_mce_tokens(
   value : StringView,
   label : StringView,
+  allow_empty? : Bool = true,
 ) -> Array[String] raise ParseXmlError {
   let normalized = collapse_schema_whitespace(value)
   if normalized == "" {
+    if allow_empty {
+      return []
+    }
     raise InvalidXml(msg="MCE \{label.to_owned()} is empty")
   }
   let tokens : Array[String] = []
@@ -381,9 +408,7 @@ fn relationship_mce_enter_scope(
         let (namespace_uri, namespace_id) = relationship_mce_resolve_prefix(
           scanner, prefix, "Ignorable",
         )
-        if namespace_uri == "" ||
-          namespace_uri == markup_compatibility_namespace ||
-          namespace_uri == package_relationships_namespace {
+        if namespace_uri == "" {
           raise InvalidXml(msg="MCE Ignorable namespace is invalid")
         }
         context.add_ignorable(namespace_id)
@@ -411,9 +436,6 @@ fn relationship_mce_enter_scope(
         )
         if !context.is_ignorable(key.namespace_id) {
           raise InvalidXml(msg="MCE ProcessContent namespace is not ignorable")
-        }
-        if token.has_suffix(":*") {
-          raise InvalidXml(msg="MCE ProcessContent wildcard is invalid")
         }
         context.add_process_content(key)
         match delta {
@@ -472,7 +494,12 @@ fn relationship_mce_choice_supported(
   }
   context.charge(requires)
   let mut supported = true
-  for prefix in relationship_mce_tokens(requires, "Choice Requires") {
+  for
+    prefix in relationship_mce_tokens(
+      requires,
+      "Choice Requires",
+      allow_empty=false,
+    ) {
     let (namespace_uri, _) = relationship_mce_resolve_prefix(
       scanner, prefix, "Choice Requires",
     )
@@ -583,7 +610,7 @@ fn relationship_mce_state_for_current_element(
       if active {
         parent_state.alternate_selected = true
       }
-    } else if context.is_ignorable(namespace_id) {
+    } else if context.is_effectively_ignorable(namespace_id, namespace_uri) {
       active = false
     } else {
       raise InvalidXml(msg="MCE AlternateContent child is invalid")
@@ -594,8 +621,7 @@ fn relationship_mce_state_for_current_element(
     }
     active = parent_state.active
     is_alternate_content = true
-  } else if context.is_ignorable(namespace_id) &&
-    namespace_uri != package_relationships_namespace {
+  } else if context.is_effectively_ignorable(namespace_id, namespace_uri) {
     let key : RelationshipMceName = { namespace_id, local_name }
     if context.processes(key) {
       if scanner.attribute(xml_namespace_uri, "base") is Some(_) ||
