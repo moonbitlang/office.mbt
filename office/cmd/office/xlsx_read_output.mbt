@@ -20,7 +20,48 @@ struct XlsxCellPage {
   matched_total : Int
   scanned_cells : Int
   offset : Int
-  limit : Int
+}
+
+///|
+enum XlsxRetainedJsonKind {
+  RetainedCellJson
+  RetainedTextJson
+}
+
+///|
+struct XlsxJsonRetention {
+  budget : OfficeOutputBudget
+  records : Array[Json]
+  kind : XlsxRetainedJsonKind
+}
+
+///|
+fn xlsx_text_entry_json(cell : XlsxCellSnapshot) -> Json raise CliFailure {
+  guard xlsx_cell_text(cell) is Some(text) else {
+    raise xlsx_cli_failure(
+      "office.xlsx.read_failed", "internal XLSX text retention received a cell without displayed text",
+    )
+  }
+  Json::object({
+    "path": Json::string(cell.path),
+    "stability": Json::string("snapshot-relative"),
+    "text": Json::string(text),
+  })
+}
+
+///|
+fn XlsxJsonRetention::retain(
+  self : XlsxJsonRetention,
+  cell : XlsxCellSnapshot,
+) -> Unit raise CliFailure {
+  let record = match self.kind {
+    RetainedCellJson => xlsx_cell_json(cell)
+    RetainedTextJson => xlsx_text_entry_json(cell)
+  }
+  // Charge before insertion so the live retained result is always bounded by
+  // the successful-output ceiling, including on Wasm targets.
+  self.budget.reserve_array_item(record, !self.records.is_empty())
+  self.records.push(record)
 }
 
 ///|
@@ -203,12 +244,54 @@ fn xlsx_outline_payload(
   max_output_chars : Int,
 ) -> BoundedOfficePayload raise CliFailure {
   projection.checkpoint()
+  let sheets : Array[Json] = []
+  let defined_names : Array[Json] = []
+  let fields : Map[String, Json] = {
+    "schema": Json::string(@lib.SCHEMA_XLSX_OUTLINE),
+    "file": Json::string(projection.file),
+    "format": Json::string("xlsx"),
+    "path": Json::string("/xlsx/workbook"),
+    "sheet_count": Json::number(projection.sheets.length().to_double()),
+    "sheets": Json::array(sheets),
+    "defined_names": Json::array(defined_names),
+    "limits": Json::object({
+      "max_scan_cells": Json::number(projection.max_scan_cells.to_double()),
+      "max_metadata_items": Json::number(
+        xlsx_cli_max_metadata_items.to_double(),
+      ),
+      "max_metadata_string_chars": Json::number(
+        xlsx_cli_max_metadata_string_chars.to_double(),
+      ),
+    }),
+  }
   let payload = bounded_office_payload(
-    xlsx_outline_data(projection),
+    Json::object(fields),
     [],
     max_output_chars,
     "xlsx",
   )
+  retain_xlsx_outline_records(projection, sheets, defined_names, payload.budget)
+  if !projection.sheets.is_empty() {
+    projection.checkpoint()
+    let active_index = projection.workbook.get_active_sheet_index()
+    guard projection.sheets.get(active_index) is Some(sheet) else {
+      raise xlsx_cli_failure(
+        "office.xlsx.read_failed",
+        "workbook active-sheet index is outside the tab order",
+        details=Json::object({
+          "active_sheet_index": Json::number(active_index.to_double()),
+          "sheet_count": Json::number(projection.sheets.length().to_double()),
+        }),
+      )
+    }
+    let active = Json::object({
+      "path": Json::string(sheet.path),
+      "name": Json::string(sheet.name),
+      "index": Json::number((sheet.index + 1).to_double()),
+    })
+    payload.budget.reserve_json_field("active_sheet", active, true)
+    fields["active_sheet"] = active
+  }
   projection.checkpoint()
   payload
 }
@@ -270,8 +353,19 @@ fn xlsx_styles_json(
   projection : XlsxProjection,
   cells : Array[XlsxCellSnapshot],
 ) -> Json raise CliFailure {
-  projection.checkpoint()
   let fields : Map[String, Json] = Map([])
+  retain_xlsx_styles(projection, cells, fields)
+  Json::object(fields)
+}
+
+///|
+fn retain_xlsx_styles(
+  projection : XlsxProjection,
+  cells : Array[XlsxCellSnapshot],
+  fields : Map[String, Json],
+  retention_budget? : OfficeOutputBudget,
+) -> Unit raise CliFailure {
+  projection.checkpoint()
   for cell in cells {
     projection.checkpoint()
     if cell.style_id != 0 {
@@ -280,12 +374,17 @@ fn xlsx_styles_json(
         let style = xlsx_call(projection.file, () => {
           projection.workbook.get_style(cell.style_id)
         })
-        fields[key] = @inspect.style_to_json(style)
+        let value = @inspect.style_to_json(style)
+        match retention_budget {
+          Some(budget) =>
+            budget.reserve_json_field(key, value, !fields.is_empty())
+          None => ()
+        }
+        fields[key] = value
       }
     }
   }
   projection.checkpoint()
-  Json::object(fields)
 }
 
 ///|
@@ -329,10 +428,10 @@ fn XlsxCellFilter::needs_formatted(self : XlsxCellFilter) -> Bool {
 }
 
 ///|
-fn XlsxCellFilter::matches(
+async fn XlsxCellFilter::matches(
   self : XlsxCellFilter,
   cell : XlsxCellSnapshot,
-) -> Bool raise CliFailure {
+) -> Bool {
   match self {
     PresentCells => cell.is_present()
     TextCells => xlsx_cell_text(cell) is Some(_)
@@ -367,6 +466,7 @@ async fn collect_xlsx_cell_page(
   offset : Int,
   limit : Int,
   format_work_maximum? : Int = xlsx_cli_max_format_work_units,
+  retention? : XlsxJsonRetention,
 ) -> XlsxCellPage {
   projection.checkpoint()
   @async.pause()
@@ -396,6 +496,10 @@ async fn collect_xlsx_cell_page(
         if filter.matches(cell) {
           if matched >= offset && cells.length() < limit {
             cell.ensure_formatted(projection, scan)
+            match retention {
+              Some(value) => value.retain(cell)
+              None => ()
+            }
             cells.push(cell)
           }
           matched += 1
@@ -412,21 +516,64 @@ async fn collect_xlsx_cell_page(
   }
   projection.checkpoint()
   @async.pause()
-  { cells, matched_total: matched, scanned_cells: scan.scanned, offset, limit }
+  { cells, matched_total: matched, scanned_cells: scan.scanned, offset }
 }
 
 ///|
-fn xlsx_page_fields(page : XlsxCellPage) -> Map[String, Json] {
-  {
-    "matched_total": Json::number(page.matched_total.to_double()),
-    "offset": Json::number(page.offset.to_double()),
-    "limit": Json::number(page.limit.to_double()),
-    "returned": Json::number(page.cells.length().to_double()),
-    "truncated": Json::boolean(
-      page.offset + page.cells.length() < page.matched_total,
-    ),
-    "scanned_cells": Json::number(page.scanned_cells.to_double()),
+fn retain_xlsx_outline_records(
+  projection : XlsxProjection,
+  sheets : Array[Json],
+  defined_names : Array[Json],
+  budget : OfficeOutputBudget,
+) -> Unit raise CliFailure {
+  let metadata = XlsxMetadataBudget::new()
+  for sheet in projection.sheets {
+    projection.checkpoint()
+    let record = xlsx_sheet_summary_json(projection, sheet, metadata)
+    budget.reserve_array_item(record, !sheets.is_empty())
+    sheets.push(record)
   }
+  for defined in projection.workbook.get_defined_names() {
+    projection.checkpoint()
+    metadata.charge_item([
+      defined.name,
+      defined.refers_to,
+      defined.scope,
+      defined.comment,
+    ])
+    let record_fields : Map[String, Json] = {
+      "name": Json::string(defined.name),
+      "refers_to": Json::string(defined.refers_to),
+    }
+    if defined.scope != "" {
+      record_fields["scope"] = Json::string(defined.scope)
+    }
+    if defined.comment != "" {
+      record_fields["comment"] = Json::string(defined.comment)
+    }
+    let record = Json::object(record_fields)
+    budget.reserve_array_item(record, !defined_names.is_empty())
+    defined_names.push(record)
+  }
+  projection.checkpoint()
+}
+
+///|
+fn update_bounded_xlsx_page_fields(
+  fields : Map[String, Json],
+  page : XlsxCellPage,
+  budget : OfficeOutputBudget,
+) -> Unit raise CliFailure {
+  let returned = page.cells.length()
+  let truncated = page.offset + returned < page.matched_total
+  budget.reserve_nonnegative_integer_growth(page.matched_total)
+  budget.reserve_nonnegative_integer_growth(returned)
+  budget.reserve_nonnegative_integer_growth(page.scanned_cells)
+  budget.reserve_boolean_growth_from_true(truncated)
+  fields["matched_total"] = Json::number(page.matched_total.to_double())
+  fields["returned"] = Json::number(returned.to_double())
+  fields["scanned_cells"] = Json::number(page.scanned_cells.to_double())
+  fields["truncated"] = Json::boolean(truncated)
 }
 
 ///|
@@ -536,54 +683,95 @@ async fn xlsx_get_payload(
   max_output_chars : Int,
 ) -> BoundedOfficePayload {
   projection.checkpoint()
-  let payload = bounded_office_payload(
-    xlsx_get_data(projection, resolved),
-    [],
-    max_output_chars,
-    "xlsx",
-  )
-  projection.checkpoint()
-  payload
-}
-
-///|
-async fn xlsx_text_data(
-  projection : XlsxProjection,
-  under : XlsxResolvedSelector?,
-  offset : Int,
-  limit : Int,
-) -> Json {
-  projection.checkpoint()
-  let page = collect_xlsx_cell_page(
-    projection,
-    xlsx_scan_regions(projection, under),
-    TextCells,
-    offset,
-    limit,
-  )
-  let entries : Array[Json] = []
-  for cell in page.cells {
-    projection.checkpoint()
-    guard xlsx_cell_text(cell) is Some(text) else { continue }
-    entries.push(
-      Json::object({
-        "path": Json::string(cell.path),
+  match resolved {
+    Workbook(path~) => {
+      let sheets : Array[Json] = []
+      let defined_names : Array[Json] = []
+      let fields : Map[String, Json] = {
+        "schema": Json::string(@lib.SCHEMA_XLSX_ELEMENT),
+        "file": Json::string(projection.file),
+        "format": Json::string("xlsx"),
+        "path": Json::string(path),
+        "kind": Json::string("workbook"),
+        "stability": Json::string("stable"),
+        "sheet_count": Json::number(projection.sheets.length().to_double()),
+        "sheets": Json::array(sheets),
+        "defined_names": Json::array(defined_names),
+      }
+      let bounded = bounded_office_payload(
+        Json::object(fields),
+        [],
+        max_output_chars,
+        "xlsx",
+      )
+      retain_xlsx_outline_records(
+        projection,
+        sheets,
+        defined_names,
+        bounded.budget,
+      )
+      bounded
+    }
+    Sheet(_) | Cell(_) => {
+      let bounded = bounded_office_payload(
+        xlsx_get_data(projection, resolved),
+        [],
+        max_output_chars,
+        "xlsx",
+      )
+      projection.checkpoint()
+      bounded
+    }
+    Range(sheet, rect, path~) => {
+      let records : Array[Json] = []
+      let styles : Map[String, Json] = Map([])
+      let fields : Map[String, Json] = {
+        "schema": Json::string(@lib.SCHEMA_XLSX_ELEMENT),
+        "file": Json::string(projection.file),
+        "format": Json::string("xlsx"),
+        "path": Json::string(path),
+        "kind": Json::string("range"),
         "stability": Json::string("snapshot-relative"),
-        "text": Json::string(text),
-      }),
-    )
+        "parent": Json::string(sheet.path),
+        "reference": Json::string(rect.range_reference(projection.file)),
+        "cells": Json::array(records),
+        "styles": Json::object(styles),
+        "scanned_cells": Json::number(0),
+        "returned": Json::number(0),
+      }
+      let bounded = bounded_office_payload(
+        Json::object(fields),
+        [],
+        max_output_chars,
+        "xlsx",
+      )
+      let retention : XlsxJsonRetention = {
+        budget: bounded.budget,
+        records,
+        kind: RetainedCellJson,
+      }
+      let page = collect_xlsx_cell_page(
+        projection,
+        [{ sheet, rect }],
+        PresentCells,
+        0,
+        projection.max_scan_cells,
+        retention~,
+      )
+      retain_xlsx_styles(
+        projection,
+        page.cells,
+        styles,
+        retention_budget=bounded.budget,
+      )
+      bounded.budget.reserve_nonnegative_integer_growth(page.scanned_cells)
+      bounded.budget.reserve_nonnegative_integer_growth(page.cells.length())
+      fields["scanned_cells"] = Json::number(page.scanned_cells.to_double())
+      fields["returned"] = Json::number(page.cells.length().to_double())
+      projection.checkpoint()
+      bounded
+    }
   }
-  projection.checkpoint()
-  let fields = xlsx_page_fields(page)
-  fields["schema"] = Json::string(@lib.SCHEMA_XLSX_TEXT)
-  fields["file"] = Json::string(projection.file)
-  fields["format"] = Json::string("xlsx")
-  fields["entries"] = Json::array(entries)
-  match under {
-    Some(value) => fields["under"] = Json::string(value.path())
-    None => ()
-  }
-  Json::object(fields)
 }
 
 ///|
@@ -595,42 +783,44 @@ async fn xlsx_text_payload(
   max_output_chars : Int,
 ) -> BoundedOfficePayload {
   projection.checkpoint()
-  let payload = bounded_office_payload(
-    xlsx_text_data(projection, under, offset, limit),
-    [],
-    max_output_chars,
-    "xlsx",
-  )
-  projection.checkpoint()
-  payload
-}
-
-///|
-async fn xlsx_query_data(
-  projection : XlsxProjection,
-  under : XlsxResolvedSelector?,
-  spec : XlsxQuerySpec,
-) -> Json {
-  projection.checkpoint()
-  let page = collect_xlsx_cell_page(
-    projection,
-    xlsx_scan_regions(projection, under),
-    xlsx_query_filter(spec.predicates),
-    spec.offset,
-    spec.limit,
-  )
-  let fields = xlsx_page_fields(page)
-  fields["schema"] = Json::string(@lib.SCHEMA_XLSX_QUERY)
-  fields["file"] = Json::string(projection.file)
-  fields["format"] = Json::string("xlsx")
-  fields["selector"] = Json::string(spec.selector)
-  fields["matches"] = Json::array(xlsx_cells_json(projection, page.cells))
-  fields["styles"] = xlsx_styles_json(projection, page.cells)
+  let entries : Array[Json] = []
+  let fields : Map[String, Json] = {
+    "schema": Json::string(@lib.SCHEMA_XLSX_TEXT),
+    "file": Json::string(projection.file),
+    "format": Json::string("xlsx"),
+    "matched_total": Json::number(0),
+    "offset": Json::number(offset.to_double()),
+    "limit": Json::number(limit.to_double()),
+    "returned": Json::number(0),
+    "truncated": Json::boolean(true),
+    "scanned_cells": Json::number(0),
+    "entries": Json::array(entries),
+  }
   match under {
     Some(value) => fields["under"] = Json::string(value.path())
     None => ()
   }
-  Json::object(fields)
+  let bounded = bounded_office_payload(
+    Json::object(fields),
+    [],
+    max_output_chars,
+    "xlsx",
+  )
+  let page = collect_xlsx_cell_page(
+    projection,
+    xlsx_scan_regions(projection, under),
+    TextCells,
+    offset,
+    limit,
+    retention={
+      budget: bounded.budget,
+      records: entries,
+      kind: RetainedTextJson,
+    },
+  )
+  update_bounded_xlsx_page_fields(fields, page, bounded.budget)
+  projection.checkpoint()
+  bounded
 }
 
 ///|
@@ -641,14 +831,53 @@ async fn xlsx_query_payload(
   max_output_chars : Int,
 ) -> BoundedOfficePayload {
   projection.checkpoint()
-  let payload = bounded_office_payload(
-    xlsx_query_data(projection, under, spec),
+  let matches : Array[Json] = []
+  let styles : Map[String, Json] = Map([])
+  let fields : Map[String, Json] = {
+    "schema": Json::string(@lib.SCHEMA_XLSX_QUERY),
+    "file": Json::string(projection.file),
+    "format": Json::string("xlsx"),
+    "selector": Json::string(spec.selector),
+    "matched_total": Json::number(0),
+    "offset": Json::number(spec.offset.to_double()),
+    "limit": Json::number(spec.limit.to_double()),
+    "returned": Json::number(0),
+    "truncated": Json::boolean(true),
+    "scanned_cells": Json::number(0),
+    "matches": Json::array(matches),
+    "styles": Json::object(styles),
+  }
+  match under {
+    Some(value) => fields["under"] = Json::string(value.path())
+    None => ()
+  }
+  let bounded = bounded_office_payload(
+    Json::object(fields),
     [],
     max_output_chars,
     "xlsx",
   )
+  let page = collect_xlsx_cell_page(
+    projection,
+    xlsx_scan_regions(projection, under),
+    xlsx_query_filter(spec.predicates),
+    spec.offset,
+    spec.limit,
+    retention={
+      budget: bounded.budget,
+      records: matches,
+      kind: RetainedCellJson,
+    },
+  )
+  retain_xlsx_styles(
+    projection,
+    page.cells,
+    styles,
+    retention_budget=bounded.budget,
+  )
+  update_bounded_xlsx_page_fields(fields, page, bounded.budget)
   projection.checkpoint()
-  payload
+  bounded
 }
 
 ///|

@@ -30,6 +30,25 @@ async fn xlsx_cli_error_async(run : async () -> Unit) -> @lib.ProtocolError {
 }
 
 ///|
+async fn xlsx_text_test_data(
+  projection : XlsxProjection,
+  under : XlsxResolvedSelector?,
+  offset : Int,
+  limit : Int,
+) -> Json {
+  xlsx_text_payload(projection, under, offset, limit, 100_000).data
+}
+
+///|
+async fn xlsx_query_test_data(
+  projection : XlsxProjection,
+  under : XlsxResolvedSelector?,
+  spec : XlsxQuerySpec,
+) -> Json {
+  xlsx_query_payload(projection, under, spec, 100_000).data
+}
+
+///|
 fn xlsx_bounded_test_source(
   file : String,
   bytes : BytesView,
@@ -118,13 +137,7 @@ test "XLSX post-projection metadata, styles, and human output observe cancellati
         ignore(
           xlsx_page_human(
             projection,
-            {
-              cells: [],
-              matched_total: 0,
-              scanned_cells: 0,
-              offset: 0,
-              limit: 0,
-            },
+            { cells: [], matched_total: 0, scanned_cells: 0, offset: 0 },
             false,
             10_000,
           ),
@@ -489,7 +502,7 @@ test "XLSX string and metadata accounting fail before unbounded retention" {
 }
 
 ///|
-test "XLSX query selectors are bounded, deterministic predicate conjunctions" {
+async test "XLSX query selectors are bounded, deterministic predicate conjunctions" {
   let projection = xlsx_read_test_projection()
   guard resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]/cell[B2]")
     is Cell(sheet, rect, ..) else {
@@ -542,7 +555,7 @@ test "XLSX query selectors are bounded, deterministic predicate conjunctions" {
     ignore(parse_xlsx_query_selector(too_many))
   })
   assert_eq(predicate_limit.code, "office.xlsx.query_predicate_limit")
-  let work_limit = xlsx_cli_error(() => {
+  let work_limit = xlsx_cli_error_async(() => {
     let limited = OfficeQueryWorkBudget::new(24, format="xlsx")
     let prepared = prepare_xlsx_query_predicates(
       parse_xlsx_query_selector("cell[text~=alpha]"),
@@ -561,7 +574,7 @@ test "XLSX query selectors are bounded, deterministic predicate conjunctions" {
 }
 
 ///|
-test "XLSX query literals preserve whitespace and support JSON quoting" {
+async test "XLSX query literals preserve whitespace and support JSON quoting" {
   let unquoted = parse_xlsx_query_selector("cell[text= leading and trailing ]")
   guard unquoted[0] is TextEquals(unquoted_text) else {
     fail("expected exact-text predicate")
@@ -624,6 +637,32 @@ test "XLSX query literals preserve whitespace and support JSON quoting" {
 }
 
 ///|
+async test "XLSX large single-cell predicates yield within the comparison" {
+  let work = OfficeQueryWorkBudget::new(
+    office_cli_max_query_predicate_work_units,
+    format="xlsx",
+  )
+  let pattern = OfficeLinearPattern::compile("missing", false, work)
+  @async.with_task_group() <| group => {
+    let task = group.spawn(() => {
+      pattern.is_in_cooperative("a".repeat(1024 * 1024), work)
+    })
+    // A single cell is larger than one comparison quantum. The child must
+    // yield from inside KMP rather than waiting for the outer cell counter.
+    @async.pause()
+    assert_true(task.try_wait() is None)
+    task.cancel()
+    let cancelled = try {
+      ignore(task.wait())
+      false
+    } catch {
+      error => @async.is_cancellation_error(error)
+    }
+    assert_true(cancelled)
+  }
+}
+
+///|
 async test "XLSX snapshots preserve and resolve shared-formula followers" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.new_sheet("Data"))
@@ -644,7 +683,7 @@ async test "XLSX snapshots preserve and resolve shared-formula followers" {
     offset: 0,
     limit: 10,
   }
-  guard xlsx_query_data(projection, under, spec) is Object(fields) &&
+  guard xlsx_query_test_data(projection, under, spec) is Object(fields) &&
     fields.get("matches") is Some(Array(matches)) else {
     fail("expected shared-formula matches")
   }
@@ -660,7 +699,8 @@ async test "XLSX snapshots preserve and resolve shared-formula followers" {
     offset: 0,
     limit: 10,
   }
-  guard xlsx_query_data(projection, under, master_only) is Object(master_fields) else {
+  guard xlsx_query_test_data(projection, under, master_only)
+    is Object(master_fields) else {
     fail("expected translated shared-formula query")
   }
   assert_eq(master_fields.get("matched_total"), Some(Json::number(1)))
@@ -962,7 +1002,7 @@ async test "XLSX displayed text preserves formula results formatted to blank" {
   let under = Some(
     resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]"),
   )
-  guard xlsx_text_data(projection, under, 0, 10) is Object(text) else {
+  guard xlsx_text_test_data(projection, under, 0, 10) is Object(text) else {
     fail("expected text result")
   }
   assert_eq(text.get("matched_total"), Some(Json::number(0)))
@@ -1001,7 +1041,7 @@ async test "XLSX get text and query honor the 1904 date system" {
   let under = Some(
     resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Dates\"]"),
   )
-  guard xlsx_text_data(projection, under, 0, 10) is Object(text) &&
+  guard xlsx_text_test_data(projection, under, 0, 10) is Object(text) &&
     text.get("entries") is Some(Array([Object(text_entry), ..])) else {
     fail("expected 1904 text result")
   }
@@ -1013,7 +1053,7 @@ async test "XLSX get text and query honor the 1904 date system" {
     offset: 0,
     limit: 10,
   }
-  guard xlsx_query_data(projection, under, spec) is Object(query) &&
+  guard xlsx_query_test_data(projection, under, spec) is Object(query) &&
     query.get("matches") is Some(Array([Object(query_cell), ..])) else {
     fail("expected 1904 query result")
   }
@@ -1091,7 +1131,7 @@ async test "XLSX cached empty formula results remain distinct from a missing cac
       Json::object({ "type": Json::string("string"), "value": Json::string("") }),
     ),
   )
-  guard xlsx_text_data(
+  guard xlsx_text_test_data(
       projection,
       Some(resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]")),
       0,
@@ -1109,7 +1149,7 @@ async test "XLSX text and query scan fully while retaining only the requested pa
   let under = Some(
     resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]"),
   )
-  let text = xlsx_text_data(projection, under, 1, 1)
+  let text = xlsx_text_test_data(projection, under, 1, 1)
   guard text is Object(text_fields) &&
     text_fields.get("entries") is Some(Array(entries)) else {
     fail("expected text entries")
@@ -1126,7 +1166,7 @@ async test "XLSX text and query scan fully while retaining only the requested pa
     offset: 0,
     limit: 10,
   }
-  let query = xlsx_query_data(projection, under, formula_query)
+  let query = xlsx_query_test_data(projection, under, formula_query)
   guard query is Object(query_fields) &&
     query_fields.get("matches") is Some(Array(matches)) else {
     fail("expected query matches")
@@ -1139,17 +1179,56 @@ async test "XLSX text and query scan fully while retaining only the requested pa
 ///|
 async test "XLSX JSON and human output enforce format-specific stdout ceilings" {
   let projection = xlsx_read_test_projection()
-  let payload = xlsx_outline_payload(projection, 100_000)
-  let json = checked_office_json_output(payload)
-  assert_true(json.contains("office.output/1"))
-  assert_true(json.contains("office.xlsx.outline/1"))
+  let style_id = projection.workbook.new_style(
+    @xlsx.Style::number_format("0.00"),
+  )
+  projection.workbook.set_cell_style("Data", "B2", style_id)
+  let under = Some(
+    resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]"),
+  )
+  let range = resolve_xlsx_selector(
+    projection, "/xlsx/sheet[name=\"Data\"]/range[A1:C3]",
+  )
+  let query_spec : XlsxQuerySpec = {
+    selector: "cell[formula]",
+    predicates: parse_xlsx_query_selector("cell[formula]"),
+    offset: 0,
+    limit: 10,
+  }
+  let payloads = [
+    xlsx_outline_payload(projection, 100_000),
+    xlsx_get_payload(projection, range, 100_000),
+    xlsx_text_payload(projection, under, 0, 10, 100_000),
+    xlsx_query_payload(projection, under, query_spec, 100_000),
+  ]
+  for payload in payloads {
+    let json = checked_office_json_output(payload)
+    assert_true(json.contains("office.output/1"))
+    let mut characters = 0
+    for _ in json {
+      characters += 1
+    }
+    assert_eq(characters + docx_cli_output_framing_chars, payload.budget.used)
+  }
   let too_small = xlsx_cli_error(() => {
     ignore(xlsx_outline_payload(projection, 8))
   })
   assert_eq(too_small.code, "office.xlsx.resource_limit")
-  let under = Some(
-    resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]"),
-  )
+  let mut checks = 0
+  let limited_projection = {
+    ..projection,
+    cancelled: () => {
+      checks += 1
+      false
+    },
+  }
+  let range_too_small = xlsx_cli_error_async(() => {
+    ignore(xlsx_get_payload(limited_projection, range, 1))
+  })
+  assert_eq(range_too_small.code, "office.xlsx.resource_limit")
+  // Only the command-entry checkpoint runs: the bounded skeleton rejects the
+  // request before any cell is scanned or retained.
+  assert_eq(checks, 1)
   let human = xlsx_text_human(projection, under, 0, 10, 10_000)
   assert_true(human.contains("/cell[A1]\talpha"))
   assert_true(human.contains("/cell[C3]\t=NOW()"))
@@ -1162,7 +1241,7 @@ async test "XLSX all-sheet scans reject sparse far extents before visiting cells
   workbook.set_cell_str("Sparse", "K10", "far")
   let projection = make_xlsx_projection("sparse.xlsx", workbook, 100)
   let error = xlsx_cli_error_async(() => {
-    ignore(xlsx_text_data(projection, None, 0, 10))
+    ignore(xlsx_text_test_data(projection, None, 0, 10))
   })
   assert_eq(error.code, "office.xlsx.resource_limit")
   guard error.details is Some(Object(fields)) else {
