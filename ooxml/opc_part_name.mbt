@@ -258,16 +258,90 @@ pub fn logical_opc_part_name_from_zip_item_name_cancellable(
 }
 
 ///|
-fn opc_part_name_identity_unit(unit : UInt16) -> UInt16 {
-  if unit >= ('A' : UInt16) && unit <= ('Z' : UInt16) {
-    (unit.to_int() + 32).to_uint16()
-  } else {
-    unit
-  }
+let opc_part_name_identity_chunk_units = 4096
+
+///|
+priv struct OpcPartNameIdentityToken {
+  key : String
+  starts_segment : Bool
 }
 
 ///|
-type OpcPartNameChildren = @sorted_map.SortedMap[UInt16, Int]
+fn opc_part_name_identity_chunk(
+  chunk : StringView,
+  final_chunk : Bool,
+  cancelled : () -> Bool,
+) -> String raise ParseXmlError {
+  let output = StringBuilder::new(size_hint=chunk.length() + 1)
+  output.write_char(if final_chunk { '1' } else { '0' })
+  let mut offset = 0
+  for character in chunk {
+    if offset % 4096 == 0 && cancelled() {
+      raise ReadCancelled
+    }
+    output.write_char(character.to_ascii_lowercase())
+    offset = offset + (if character.to_int() > 0xffff { 2 } else { 1 })
+  }
+  output.to_string()
+}
+
+///|
+fn opc_part_name_identity_tokens(
+  name : StringView,
+  cancelled : () -> Bool,
+) -> Array[OpcPartNameIdentityToken] raise ParseXmlError {
+  let tokens : Array[OpcPartNameIdentityToken] = []
+  let mut segment_start = 0
+  let mut index = 0
+  while index <= name.length() {
+    if index % 4096 == 0 && cancelled() {
+      raise ReadCancelled
+    }
+    if index == name.length() || name[index] == ('/' : UInt16) {
+      if segment_start == index {
+        tokens.push({
+          key: opc_part_name_identity_chunk("", true, cancelled),
+          starts_segment: true,
+        })
+      } else {
+        let mut chunk_start = segment_start
+        while chunk_start < index {
+          let tentative_end = chunk_start + opc_part_name_identity_chunk_units
+          let mut chunk_end = if tentative_end < index {
+            tentative_end
+          } else {
+            index
+          }
+          // Keep a supplementary scalar in one bounded key rather than
+          // slicing between its UTF-16 surrogate code units.
+          if chunk_end < index &&
+            name[chunk_end - 1] >= 0xd800 &&
+            name[chunk_end - 1] <= 0xdbff &&
+            name[chunk_end] >= 0xdc00 &&
+            name[chunk_end] <= 0xdfff {
+            chunk_end = chunk_end - 1
+          }
+          let final_chunk = chunk_end == index
+          tokens.push({
+            key: opc_part_name_identity_chunk(
+              name[chunk_start:chunk_end],
+              final_chunk,
+              cancelled,
+            ),
+            starts_segment: chunk_start == segment_start,
+          })
+          chunk_start = chunk_end
+        }
+      }
+      segment_start = index + 1
+    }
+    index = index + 1
+  }
+  tokens
+}
+
+///|
+type OpcPartNameChildren = @sorted_map.SortedMap[String, Int]
 
 ///|
 priv struct OpcPartNameTrieNode {
@@ -289,10 +363,13 @@ pub(all) enum OpcPartNameConflict {
 }
 
 ///|
-/// A UTF-16 code-unit trie for OPC PartName identity and non-derivability checks.
-/// Work and storage are linear in aggregate PartName length, while ordered
-/// scalar child indexes avoid repeated comparisons of attacker-controlled
-/// string prefixes and keep hostile names independent of string-hash behavior.
+/// A chunked path-segment trie for OPC PartName identity and non-derivability
+/// checks. Each node represents at most 4,096 UTF-16 units, so a very long
+/// segment cannot amplify bounded package text into millions of heap objects,
+/// while individual ordered-key comparisons remain bounded. Chunk keys encode
+/// segment boundaries so character prefixes are never confused with derivable
+/// path prefixes. Ordered child indexes also keep hostile names independent of
+/// string-hash behavior.
 pub struct OpcPartNameRegistry {
   priv nodes : Array[OpcPartNameTrieNode]
 }
@@ -327,44 +404,41 @@ pub fn OpcPartNameRegistry::register_cancellable(
   if cancelled() {
     raise ReadCancelled
   }
+  let tokens = opc_part_name_identity_tokens(name, cancelled)
   let mut node_index = 0
-  let mut index = 0
-  let mut missing_index : Int? = None
-  while index < name.length() {
-    if index % 4096 == 0 && cancelled() {
+  let mut token_index = 0
+  let mut missing_token : Int? = None
+  while token_index < tokens.length() {
+    if token_index % 4096 == 0 && cancelled() {
       raise ReadCancelled
     }
-    let unit = opc_part_name_identity_unit(name[index])
-    if unit == ('/' : UInt16) {
+    if token_index > 0 && tokens[token_index].starts_segment {
       match self.nodes[node_index].terminal {
         Some(existing) => return Some(Derivable(existing))
         None => ()
       }
     }
-    match self.nodes[node_index].children.get(unit) {
+    match self.nodes[node_index].children.get(tokens[token_index].key) {
       Some(child) => node_index = child
       None => {
-        missing_index = Some(index)
+        missing_token = Some(token_index)
         break
       }
     }
-    index = index + 1
+    token_index = token_index + 1
   }
-  if missing_index is None {
+  if missing_token is None {
     match self.nodes[node_index].terminal {
       Some(existing) => return Some(Equivalent(existing))
       None => ()
     }
-    match
-      self.nodes[node_index].children
-      .get('/')
-      .map(child => self.nodes[child].first_part) {
-      Some(Some(existing)) => return Some(Derivable(existing))
-      _ => ()
+    match self.nodes[node_index].first_part {
+      Some(existing) => return Some(Derivable(existing))
+      None => ()
     }
   }
 
-  match missing_index {
+  match missing_token {
     None => {
       if cancelled() {
         raise ReadCancelled
@@ -376,17 +450,14 @@ pub fn OpcPartNameRegistry::register_cancellable(
       // and cancellation point succeeds do we append and link it once.
       let base = self.nodes.length()
       let detached : Array[OpcPartNameTrieNode] = []
-      for offset in start..<name.length() {
+      for offset in start..<tokens.length() {
         if offset % 4096 == 0 && cancelled() {
           raise ReadCancelled
         }
         let fresh = new_opc_part_name_trie_node()
         fresh.first_part = Some(display)
-        if offset + 1 < name.length() {
-          fresh.children[opc_part_name_identity_unit(name[offset + 1])] = base +
-            offset -
-            start +
-            1
+        if offset + 1 < tokens.length() {
+          fresh.children[tokens[offset + 1].key] = base + offset - start + 1
         } else {
           fresh.terminal = Some(display)
         }
@@ -398,7 +469,7 @@ pub fn OpcPartNameRegistry::register_cancellable(
       for node in detached {
         self.nodes.push(node)
       }
-      self.nodes[node_index].children[opc_part_name_identity_unit(name[start])] = base
+      self.nodes[node_index].children[tokens[start].key] = base
     }
   }
   if self.nodes[0].first_part is None {
@@ -467,4 +538,30 @@ test "cancelled OPC PartName registration does not link a partial path" {
     _ => fail("expected OPC PartName registration cancellation")
   }
   assert_true(registry.register("custom/a.xml", "custom/a.xml") is None)
+}
+
+///|
+test "OPC PartName registry allocates per bounded chunk, not per code unit" {
+  let registry = OpcPartNameRegistry::new()
+  let long_name = "custom/" + "a".repeat(100_000) + ".xml"
+  assert_true(registry.register(long_name, long_name) is None)
+  assert_true(registry.nodes.length() < 32)
+  match registry.register(long_name.to_upper(), "uppercase") {
+    Some(Equivalent(existing)) => assert_eq(existing, long_name)
+    _ => fail("expected equivalent long OPC PartName")
+  }
+  assert_true(registry.nodes.length() < 32)
+}
+
+///|
+test "OPC PartName chunk boundaries preserve segment semantics" {
+  let registry = OpcPartNameRegistry::new()
+  let exact_chunk = "custom/" + "a".repeat(4096)
+  let longer_segment = exact_chunk + "b"
+  assert_true(registry.register(exact_chunk, exact_chunk) is None)
+  assert_true(registry.register(longer_segment, longer_segment) is None)
+  match registry.register(exact_chunk + "/child", "descendant") {
+    Some(Derivable(existing)) => assert_eq(existing, exact_chunk)
+    _ => fail("expected derivable long OPC PartName")
+  }
 }
