@@ -593,6 +593,13 @@ fn XlsxStringBudget::charge(
 }
 
 ///|
+/// Returns the largest formatted value that can still satisfy both the
+/// per-value and aggregate retained-string ceilings.
+fn XlsxStringBudget::remaining_for_value(self : XlsxStringBudget) -> Int {
+  self.per_value_maximum.min(self.maximum - self.used)
+}
+
+///|
 fn XlsxFormatBudget::new(
   maximum? : Int = xlsx_cli_max_format_work_units,
 ) -> XlsxFormatBudget {
@@ -790,6 +797,7 @@ fn XlsxCellSnapshot::ensure_formatted(
             self.row,
             self.column,
             self.style_id,
+            max_output_chars=budget.strings.remaining_for_value(),
           )
         }).unwrap_or(""),
       )

@@ -5,13 +5,29 @@ fn format_cell_value(
   style : Style?,
   options : Options,
   use_1904_format? : Bool = false,
-) -> String {
-  match value_type {
+) -> String raise XlsxError {
+  format_cell_value_limited(value_type, raw, style, options, use_1904_format~)
+}
+
+///|
+/// Formats a cell while optionally bounding the materialized UTF-16 output.
+/// The text-pattern path checks each append before it reaches `StringBuilder`,
+/// so repeated `@` placeholders cannot amplify a small cell into an unbounded
+/// intermediate string.
+fn format_cell_value_limited(
+  value_type : CellValueType,
+  raw : String,
+  style : Style?,
+  options : Options,
+  use_1904_format? : Bool = false,
+  max_output_chars? : Int,
+) -> String raise XlsxError {
+  let output = match value_type {
     String =>
       match style {
         Some(style) =>
           match style.number_format {
-            Some(format) => format_text_value(raw, format)
+            Some(format) => format_text_value(raw, format, max_output_chars?)
             None => raw
           }
         None => raw
@@ -29,19 +45,57 @@ fn format_cell_value(
         None => raw
       }
   }
+  check_formatted_output_length(output, max_output_chars)
+  output
 }
 
 ///|
-fn format_text_value(raw : String, format : NumberFormat) -> String {
+fn format_text_value(
+  raw : String,
+  format : NumberFormat,
+  max_output_chars? : Int,
+) -> String raise XlsxError {
   match format {
     Builtin(_id) => raw
     Custom(code) =>
       if code.to_lower().trim().to_owned() == "general" {
         raw
       } else {
-        format_text_pattern(raw, code)
+        format_text_pattern(raw, code, max_output_chars?)
       }
   }
+}
+
+///|
+fn checked_formatted_output_growth(
+  current : Int,
+  amount : Int,
+  maximum : Int?,
+) -> Int raise XlsxError {
+  match maximum {
+    None => current + amount
+    Some(limit) => {
+      if limit < 0 {
+        raise InvalidOptions(msg="formatted output limit must be non-negative")
+      }
+      if amount < 0 || current < 0 || amount > limit - current {
+        raise ResourceLimitExceeded(
+          kind="formatted_cell_value_chars",
+          limit~,
+          actual=if limit < 0x7fffffff { limit + 1 } else { limit },
+        )
+      }
+      current + amount
+    }
+  }
+}
+
+///|
+fn check_formatted_output_length(
+  output : String,
+  maximum : Int?,
+) -> Unit raise XlsxError {
+  ignore(checked_formatted_output_growth(0, output.length(), maximum))
 }
 
 ///|
@@ -50,7 +104,7 @@ fn format_number_with_format(
   format : NumberFormat,
   options : Options,
   use_1904_format : Bool,
-) -> String {
+) -> String raise XlsxError {
   match format {
     Builtin(id) => format_number_builtin(raw, id, options, use_1904_format)
     Custom(code) => format_number_code(raw, code, options, use_1904_format~)
@@ -63,7 +117,7 @@ fn format_number_builtin(
   id : Int,
   options : Options,
   use_1904_format : Bool,
-) -> String {
+) -> String raise XlsxError {
   let short_date = options.short_date_pattern
   let long_date = options.long_date_pattern
   let long_time = options.long_time_pattern
@@ -130,7 +184,7 @@ fn format_number_code(
   code : String,
   options : Options,
   use_1904_format? : Bool = false,
-) -> String {
+) -> String raise XlsxError {
   let _ = options
   let sections = split_format_sections(code)
   if sections.length() == 0 {
@@ -354,7 +408,11 @@ fn render_literal_segment(segment : String) -> String {
 }
 
 ///|
-fn format_text_pattern(raw : String, code : String) -> String {
+fn format_text_pattern(
+  raw : String,
+  code : String,
+  max_output_chars? : Int,
+) -> String raise XlsxError {
   let sections = split_format_sections(code)
   if sections.length() == 0 {
     return raw
@@ -362,12 +420,26 @@ fn format_text_pattern(raw : String, code : String) -> String {
   let section = if sections.length() >= 4 { sections[3] } else { sections[0] }
   let (pattern, _locale, currency_prefix) = parse_section_metadata(section)
   let sb = StringBuilder::new()
+  let mut output_chars = checked_formatted_output_growth(
+    0,
+    currency_prefix.length(),
+    max_output_chars,
+  )
   sb.write_view(currency_prefix)
   let mut in_quote = false
   let mut escape_next = false
   let mut skip_next = false
   for c in pattern {
     if escape_next {
+      output_chars = checked_formatted_output_growth(
+        output_chars,
+        if c.to_int() > 0xffff {
+          2
+        } else {
+          1
+        },
+        max_output_chars,
+      )
       sb.write_char(c)
       escape_next = false
       continue
@@ -379,10 +451,50 @@ fn format_text_pattern(raw : String, code : String) -> String {
     match c {
       '\\' => escape_next = true
       '"' => in_quote = !in_quote
-      '_' => if !in_quote { skip_next = true } else { sb.write_char('_') }
-      '*' => if !in_quote { skip_next = true } else { sb.write_char('*') }
-      '@' => if !in_quote { sb.write_view(raw) } else { sb.write_char('@') }
-      _ => sb.write_char(c)
+      '_' =>
+        if !in_quote {
+          skip_next = true
+        } else {
+          output_chars = checked_formatted_output_growth(
+            output_chars, 1, max_output_chars,
+          )
+          sb.write_char('_')
+        }
+      '*' =>
+        if !in_quote {
+          skip_next = true
+        } else {
+          output_chars = checked_formatted_output_growth(
+            output_chars, 1, max_output_chars,
+          )
+          sb.write_char('*')
+        }
+      '@' =>
+        if !in_quote {
+          output_chars = checked_formatted_output_growth(
+            output_chars,
+            raw.length(),
+            max_output_chars,
+          )
+          sb.write_view(raw)
+        } else {
+          output_chars = checked_formatted_output_growth(
+            output_chars, 1, max_output_chars,
+          )
+          sb.write_char('@')
+        }
+      _ => {
+        output_chars = checked_formatted_output_growth(
+          output_chars,
+          if c.to_int() > 0xffff {
+            2
+          } else {
+            1
+          },
+          max_output_chars,
+        )
+        sb.write_char(c)
+      }
     }
   }
   sb.to_string()

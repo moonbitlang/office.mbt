@@ -792,6 +792,33 @@ async test "XLSX formatting is deferred and custom-format work is charged" {
 }
 
 ///|
+async test "XLSX formatting rejects text amplification before materialization" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  workbook.set_cell_str("Data", "A1", "x".repeat(64 * 1024))
+  let style_id = workbook.new_style(
+    @xlsx.Style::number_format("@".repeat(64 * 1024)),
+  )
+  workbook.set_cell_style("Data", "A1", style_id)
+  let projection = make_xlsx_projection("amplified-format.xlsx", workbook, 10)
+  let regions = xlsx_scan_regions(
+    projection,
+    Some(resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]")),
+  )
+  let limited = xlsx_cli_error_async(() => {
+    ignore(collect_xlsx_cell_page(projection, regions, TextCells, 0, 1))
+  })
+  assert_eq(limited.code, "office.xlsx.resource_limit")
+  guard limited.details is Some(Object(details)) else {
+    fail("expected formatted-output limit details")
+  }
+  assert_eq(
+    details.get("resource"),
+    Some(Json::string("formatted_cell_value_chars")),
+  )
+}
+
+///|
 async test "XLSX outline and get use office schemas with canonical cell records" {
   let projection = xlsx_read_test_projection()
   let outline = xlsx_outline_data(projection)

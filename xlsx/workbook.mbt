@@ -1883,6 +1883,7 @@ pub fn Workbook::get_cell_value_styled_from_worksheet_rc(
   col : Int,
   style_id : Int,
   options? : Options,
+  max_output_chars? : Int,
 ) -> String? raise XlsxError {
   ignore(cell_ref_from(row, col))
   self.check_style_id(style_id)
@@ -1897,12 +1898,13 @@ pub fn Workbook::get_cell_value_styled_from_worksheet_rc(
         return Some(cell.value)
       }
       Some(
-        format_cell_value(
+        format_cell_value_limited(
           cell.value_type,
           cell.value,
           Some(self.styles[style_id]),
           resolved_options,
           use_1904_format=self.uses_1904_date_system(),
+          max_output_chars?,
         ),
       )
     }
