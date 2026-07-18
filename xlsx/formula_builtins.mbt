@@ -3853,10 +3853,20 @@ fn eval_function(
       }
     "ISOWEEKNUM" =>
       if values.length() == 1 {
-        let (year, month, day) = match
-          date_parts_from_value(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(parts) => parts
+        let serial = match
+          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
+          Ok(value) => value
           Err(err) => return err
+        }
+        // Serial zero is the 1900 system's artificial day before its epoch,
+        // but is the real 1904-01-01 epoch in a date-1904 workbook.
+        if !ctx.use_1904_dates && serial < 1.0 {
+          return Error(formula_error_num)
+        }
+        let (year, month, day) = match
+          date_parts_from_serial(serial, use_1904_dates=ctx.use_1904_dates) {
+          Some(parts) => parts
+          None => return Error(formula_error_num)
         }
         match iso_week_number(year, month, day) {
           Some(week) => Number(Double::from_int(week))
