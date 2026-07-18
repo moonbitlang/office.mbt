@@ -27,6 +27,7 @@ test "ooxml read_parse: internal relationships report missing id/target and malf
     #|
   try @ooxml.parse_internal_relationship_targets(missing_id, "t1") catch {
     InvalidXml(msg~) => inspect(msg, content="relationship id missing")
+    _ => fail("unexpected relationship parse cancellation")
   } noraise {
     _ => fail("expected relationship id missing")
   }
@@ -39,6 +40,7 @@ test "ooxml read_parse: internal relationships report missing id/target and malf
     #|
   try @ooxml.parse_internal_relationship_targets(missing_target, "t1") catch {
     InvalidXml(msg~) => inspect(msg, content="relationship target missing")
+    _ => fail("unexpected relationship parse cancellation")
   } noraise {
     _ => fail("expected relationship target missing")
   }
@@ -51,6 +53,7 @@ test "ooxml read_parse: internal relationships report missing id/target and malf
     #|
   try @ooxml.parse_internal_relationship_targets(malformed, "t1") catch {
     InvalidXml(msg~) => inspect(msg, content="XML start tag is not closed")
+    _ => fail("unexpected relationship parse cancellation")
   } noraise {
     _ => fail("expected relationship tag not closed")
   }
@@ -117,6 +120,7 @@ test "ooxml read_parse: invalid target modes fail closed" {
     } catch {
       InvalidXml(msg~) =>
         inspect(msg, content="relationship target mode invalid")
+      _ => fail("unexpected relationship parse cancellation")
     } noraise {
       _ => fail("expected invalid relationship target mode")
     }
@@ -136,6 +140,7 @@ test "ooxml read_parse: unwanted relationships remain schema-valid and ids stay 
     ] {
     try @ooxml.parse_internal_relationship_targets(xml, "wanted") catch {
       InvalidXml(_) => ()
+      _ => fail("unexpected relationship parse cancellation")
     } noraise {
       _ => fail("expected invalid relationship document")
     }
@@ -199,6 +204,7 @@ test "ooxml read_parse: parse_content_type_overrides reports malformed override 
     ])
   catch {
     InvalidXml(msg~) => inspect(msg, content="XML start tag is not closed")
+    _ => fail("unexpected content type parse cancellation")
   } noraise {
     _ => fail("expected content type override tag not closed")
   }

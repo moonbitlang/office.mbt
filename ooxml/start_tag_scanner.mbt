@@ -43,6 +43,7 @@ priv struct XmlAttributeSpan {
 /// remain borrowed from the caller's XML string.
 pub struct XmlStartTagScanner {
   priv xml : StringView
+  priv cancelled : () -> Bool
   priv mut index : Int
   priv mut depth : Int
   priv namespace_bindings : Array[XmlNamespaceBinding]
@@ -76,6 +77,13 @@ pub struct XmlStartTagScanner {
   priv capture_element_local_name : String
   priv mut capture_start : Int?
   priv mut capture_depth : Int
+}
+
+///|
+fn check_xml_cancelled(cancelled : () -> Bool) -> Unit raise ParseXmlError {
+  if cancelled() {
+    raise ReadCancelled
+  }
 }
 
 ///|
@@ -190,13 +198,20 @@ fn find_xml_sequence(
   xml : StringView,
   start : Int,
   sequence : StringView,
-) -> Int? {
+  cancelled? : () -> Bool = () => false,
+) -> Int? raise ParseXmlError {
+  check_xml_cancelled(cancelled)
   if sequence.length() == 0 {
     return Some(start)
   }
   let last = xml.length() - sequence.length()
   let mut index = start
+  let mut next_checkpoint = start
   while index <= last {
+    if index >= next_checkpoint {
+      check_xml_cancelled(cancelled)
+      next_checkpoint = index + 4096
+    }
     if xml_span_equals(xml, index, index + sequence.length(), sequence) {
       return Some(index)
     }
@@ -210,10 +225,17 @@ fn find_xml_tag_end(
   xml : StringView,
   search_start : Int,
   markup_start : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> Int raise ParseXmlError {
+  check_xml_cancelled(cancelled)
   let mut index = search_start
+  let mut next_checkpoint = search_start
   let mut quote : UInt16? = None
   while index < xml.length() {
+    if index >= next_checkpoint {
+      check_xml_cancelled(cancelled)
+      next_checkpoint = index + 4096
+    }
     if index - markup_start > max_xml_start_tag_chars {
       raise InvalidXml(msg="XML start tag is too long")
     }
@@ -246,9 +268,16 @@ fn next_xml_attribute(
   xml : StringView,
   start : Int,
   tag_end : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> XmlAttributeSpan? raise ParseXmlError {
+  check_xml_cancelled(cancelled)
   let mut index = start
+  let mut next_checkpoint = start + 4096
   while index < tag_end && is_attr_space(xml[index]) {
+    if index >= next_checkpoint {
+      check_xml_cancelled(cancelled)
+      next_checkpoint = index + 4096
+    }
     index = index + 1
   }
   if index >= tag_end {
@@ -265,11 +294,19 @@ fn next_xml_attribute(
         !is_attr_space(xml[index]) &&
         xml[index] != ('=' : UInt16) &&
         xml[index] != ('/' : UInt16) {
+    if index >= next_checkpoint {
+      check_xml_cancelled(cancelled)
+      next_checkpoint = index + 4096
+    }
     index = index + 1
   }
   let name_end = index
   ignore(validate_xml_qname(xml, name_start, name_end))
   while index < tag_end && is_attr_space(xml[index]) {
+    if index >= next_checkpoint {
+      check_xml_cancelled(cancelled)
+      next_checkpoint = index + 4096
+    }
     index = index + 1
   }
   if index >= tag_end || xml[index] != ('=' : UInt16) {
@@ -277,6 +314,10 @@ fn next_xml_attribute(
   }
   index = index + 1
   while index < tag_end && is_attr_space(xml[index]) {
+    if index >= next_checkpoint {
+      check_xml_cancelled(cancelled)
+      next_checkpoint = index + 4096
+    }
     index = index + 1
   }
   if index >= tag_end ||
@@ -287,6 +328,10 @@ fn next_xml_attribute(
   index = index + 1
   let value_start = index
   while index < tag_end && xml[index] != quote {
+    if index >= next_checkpoint {
+      check_xml_cancelled(cancelled)
+      next_checkpoint = index + 4096
+    }
     if xml[index] == ('<' : UInt16) {
       raise InvalidXml(msg="XML attribute contains '<'")
     }
@@ -356,9 +401,16 @@ fn xml_entity_value(entity : StringView) -> Char? {
 /// Decodes one XML attribute value in a single pass. Unknown, malformed, or
 /// XML-forbidden entity references are rejected instead of being decoded a
 /// second time by a downstream path resolver.
-pub fn decode_xml_attribute(value : StringView) -> String raise ParseXmlError {
+pub fn decode_xml_attribute(
+  value : StringView,
+  cancelled? : () -> Bool = () => false,
+) -> String raise ParseXmlError {
+  check_xml_cancelled(cancelled)
   let mut needs_decode = false
-  for unit in value {
+  for index, unit in value {
+    if (index & 4095) == 0 {
+      check_xml_cancelled(cancelled)
+    }
     if unit == '&' || unit == '\t' || unit == '\n' || unit == '\r' {
       needs_decode = true
       break
@@ -373,11 +425,17 @@ pub fn decode_xml_attribute(value : StringView) -> String raise ParseXmlError {
   let output = StringBuilder::new()
   let mut index = 0
   let mut literal_start = 0
+  let mut next_checkpoint = 0
   while index < value.length() {
+    if index >= next_checkpoint {
+      check_xml_cancelled(cancelled)
+      next_checkpoint = index + 4096
+    }
     let unit = value[index]
     if unit == ('&' : UInt16) {
       output.write_view(value[literal_start:index])
-      let entity_end = match find_xml_sequence(value, index + 1, ";") {
+      let entity_end = match
+        find_xml_sequence(value, index + 1, ";", cancelled~) {
         Some(found) => found
         None => raise InvalidXml(msg="XML entity is not closed")
       }
@@ -419,12 +477,22 @@ pub fn decode_xml_attribute(value : StringView) -> String raise ParseXmlError {
 /// Checks an attribute value without retaining a decoded copy. This is used
 /// for attributes a caller does not select: malformed entities must never be
 /// hidden merely because an attribute is semantically irrelevant.
-fn validate_xml_attribute_value(value : StringView) -> Unit raise ParseXmlError {
+fn validate_xml_attribute_value(
+  value : StringView,
+  cancelled : () -> Bool,
+) -> Unit raise ParseXmlError {
+  check_xml_cancelled(cancelled)
   let mut index = 0
+  let mut next_checkpoint = 0
   while index < value.length() {
+    if index >= next_checkpoint {
+      check_xml_cancelled(cancelled)
+      next_checkpoint = index + 4096
+    }
     let unit = value[index]
     if unit == ('&' : UInt16) {
-      let entity_end = match find_xml_sequence(value, index + 1, ";") {
+      let entity_end = match
+        find_xml_sequence(value, index + 1, ";", cancelled~) {
         Some(found) => found
         None => raise InvalidXml(msg="XML entity is not closed")
       }
@@ -582,7 +650,8 @@ fn XmlStartTagScanner::add_namespace_declarations(
   let declared : Set[String] = Set([])
   let mut next = attributes_start
   let mut count = 0
-  while next_xml_attribute(self.xml, next, tag_end) is Some(attribute) {
+  while next_xml_attribute(self.xml, next, tag_end, cancelled=self.cancelled)
+        is Some(attribute) {
     count = count + 1
     if count > max_xml_start_tag_attributes {
       raise InvalidXml(msg="XML start tag has too many attributes")
@@ -597,6 +666,7 @@ fn XmlStartTagScanner::add_namespace_declarations(
     declared.add(prefix)
     let uri = decode_xml_attribute(
       self.xml[attribute.value_start:attribute.value_end],
+      cancelled=self.cancelled,
     )
     if prefix == "xmlns" || uri == xmlns_namespace_uri {
       raise InvalidXml(msg="XML namespace declaration is reserved")
@@ -637,7 +707,8 @@ fn XmlStartTagScanner::validate_attributes(
   let canonical_names : Set[String] = Set([])
   let mut next = attributes_start
   let mut count = 0
-  while next_xml_attribute(self.xml, next, tag_end) is Some(attribute) {
+  while next_xml_attribute(self.xml, next, tag_end, cancelled=self.cancelled)
+        is Some(attribute) {
     count = count + 1
     if count > max_xml_start_tag_attributes {
       raise InvalidXml(msg="XML start tag has too many attributes")
@@ -645,6 +716,7 @@ fn XmlStartTagScanner::validate_attributes(
     next = attribute.next
     validate_xml_attribute_value(
       self.xml[attribute.value_start:attribute.value_end],
+      self.cancelled,
     )
     if xml_namespace_declaration_prefix(self.xml, attribute) is Some(_) {
       continue
@@ -724,10 +796,27 @@ fn XmlStartTagScanner::record_rewrite(
   }
   self.charge_rewrite_output(start - self.rewrite_cursor)
   self.charge_rewrite_output(replacement.length())
-  self.rewrite_output.write_view(self.xml[self.rewrite_cursor:start])
+  self.write_rewrite_source(self.rewrite_cursor, start)
   self.rewrite_output.write_string(replacement)
+  check_xml_cancelled(self.cancelled)
   self.rewrite_cursor = end
   self.rewrite_count = self.rewrite_count + 1
+}
+
+///|
+fn XmlStartTagScanner::write_rewrite_source(
+  self : XmlStartTagScanner,
+  start : Int,
+  end : Int,
+) -> Unit raise ParseXmlError {
+  let mut index = start
+  while index < end {
+    check_xml_cancelled(self.cancelled)
+    let next = (index + 4096).min(end)
+    self.rewrite_output.write_view(self.xml[index:next])
+    index = next
+  }
+  check_xml_cancelled(self.cancelled)
 }
 
 ///|
@@ -759,7 +848,10 @@ fn XmlStartTagScanner::escaped_character_data(
   let value = self.xml[value_start:end]
   let output = StringBuilder::new(size_hint=value.length().min(available))
   let mut used = 0
-  for unit in value {
+  for index, unit in value {
+    if (index & 4095) == 0 {
+      check_xml_cancelled(self.cancelled)
+    }
     let needed = if unit == '&' { 5 } else if unit == '<' { 4 } else { 1 }
     if needed > available - used {
       raise InvalidXml(msg="XML canonical output limit exceeded")
@@ -773,6 +865,7 @@ fn XmlStartTagScanner::escaped_character_data(
       output.write_char(unit)
     }
   }
+  check_xml_cancelled(self.cancelled)
   output.to_string()
 }
 
@@ -798,9 +891,11 @@ fn xml_start_tag_scanner_with_rewrites(
   rewrite_output_limit : Int,
   capture_element_namespaces? : Array[String] = [],
   capture_element_local_name? : String = "",
+  cancelled? : () -> Bool = () => false,
 ) -> XmlStartTagScanner {
   {
     xml,
+    cancelled,
     index: 0,
     depth: 0,
     namespace_bindings: [],
@@ -840,8 +935,11 @@ fn xml_start_tag_scanner_with_rewrites(
 ///|
 /// Creates a namespace-aware cursor over `xml`. The source is borrowed; no
 /// copy of the full XML part is made.
-pub fn XmlStartTagScanner::new(xml : StringView) -> XmlStartTagScanner {
-  xml_start_tag_scanner_with_rewrites(xml, [], Map([]), false, 0)
+pub fn XmlStartTagScanner::new(
+  xml : StringView,
+  cancelled? : () -> Bool = () => false,
+) -> XmlStartTagScanner {
+  xml_start_tag_scanner_with_rewrites(xml, [], Map([]), false, 0, cancelled~)
 }
 
 ///|
@@ -849,6 +947,7 @@ fn XmlStartTagScanner::consume_end_tag(
   self : XmlStartTagScanner,
   start : Int,
 ) -> Unit raise ParseXmlError {
+  check_xml_cancelled(self.cancelled)
   if self.depth <= 0 || self.open_name_starts.length() == 0 {
     raise InvalidXml(msg="XML end tag has no matching start tag")
   }
@@ -860,8 +959,18 @@ fn XmlStartTagScanner::consume_end_tag(
     name_end = name_end + 1
   }
   let colon = validate_xml_qname(self.xml, name_start, name_end)
-  let tag_end = find_xml_tag_end(self.xml, name_end, start)
+  let tag_end = find_xml_tag_end(
+    self.xml,
+    name_end,
+    start,
+    cancelled=self.cancelled,
+  )
+  let mut next_checkpoint = name_end
   for index in name_end..<tag_end {
+    if index >= next_checkpoint {
+      check_xml_cancelled(self.cancelled)
+      next_checkpoint = index + 4096
+    }
     if !is_attr_space(self.xml[index]) {
       raise InvalidXml(msg="XML end tag is invalid")
     }
@@ -913,6 +1022,7 @@ fn XmlStartTagScanner::consume_end_tag(
 pub fn XmlStartTagScanner::next(
   self : XmlStartTagScanner,
 ) -> Bool raise ParseXmlError {
+  check_xml_cancelled(self.cancelled)
   match self.pending_namespace_pop {
     Some(depth) => {
       self.pop_namespace_depth(depth)
@@ -920,9 +1030,14 @@ pub fn XmlStartTagScanner::next(
     }
     None => ()
   }
+  let mut next_checkpoint = self.index
   while self.index < self.xml.length() {
     while self.index < self.xml.length() &&
           self.xml[self.index] != ('<' : UInt16) {
+      if self.index >= next_checkpoint {
+        check_xml_cancelled(self.cancelled)
+        next_checkpoint = self.index + 4096
+      }
       if self.depth == 0 && !is_attr_space(self.xml[self.index]) {
         raise InvalidXml(msg="XML text is outside the document element")
       }
@@ -936,7 +1051,8 @@ pub fn XmlStartTagScanner::next(
       raise InvalidXml(msg="XML markup is not closed")
     }
     if self.xml[start + 1] == ('?' : UInt16) {
-      let end = match find_xml_sequence(self.xml, start + 2, "?>") {
+      let end = match
+        find_xml_sequence(self.xml, start + 2, "?>", cancelled=self.cancelled) {
         Some(value) => value
         None => raise InvalidXml(msg="XML processing instruction is not closed")
       }
@@ -949,7 +1065,13 @@ pub fn XmlStartTagScanner::next(
     if self.xml[start + 1] == ('!' : UInt16) {
       if start + 4 <= self.xml.length() &&
         xml_span_equals(self.xml, start, start + 4, "<!--") {
-        let end = match find_xml_sequence(self.xml, start + 4, "-->") {
+        let end = match
+          find_xml_sequence(
+            self.xml,
+            start + 4,
+            "-->",
+            cancelled=self.cancelled,
+          ) {
           Some(value) => value
           None => raise InvalidXml(msg="XML comment is not closed")
         }
@@ -964,7 +1086,13 @@ pub fn XmlStartTagScanner::next(
         if self.depth == 0 {
           raise InvalidXml(msg="XML CDATA is outside the document element")
         }
-        let end = match find_xml_sequence(self.xml, start + 9, "]]>") {
+        let end = match
+          find_xml_sequence(
+            self.xml,
+            start + 9,
+            "]]>",
+            cancelled=self.cancelled,
+          ) {
           Some(value) => value
           None => raise InvalidXml(msg="XML CDATA section is not closed")
         }
@@ -999,7 +1127,12 @@ pub fn XmlStartTagScanner::next(
       name_end = name_end + 1
     }
     let colon = validate_xml_qname(self.xml, name_start, name_end)
-    let tag_end = find_xml_tag_end(self.xml, name_end, start)
+    let tag_end = find_xml_tag_end(
+      self.xml,
+      name_end,
+      start,
+      cancelled=self.cancelled,
+    )
     let mut before_end = tag_end
     while before_end > name_end && is_attr_space(self.xml[before_end - 1]) {
       before_end = before_end - 1
@@ -1142,7 +1275,9 @@ pub fn remove_xml_expanded_name_subtrees(
   xml : StringView,
   element_namespaces : ArrayView[String],
   local_name : String,
+  cancelled? : () -> Bool = () => false,
 ) -> String? raise ParseXmlError {
+  check_xml_cancelled(cancelled)
   if local_name == "" {
     raise InvalidXml(msg="XML removal local name is empty")
   }
@@ -1156,6 +1291,7 @@ pub fn remove_xml_expanded_name_subtrees(
     xml.length(),
     capture_element_namespaces=namespaces,
     capture_element_local_name=local_name,
+    cancelled~,
   )
   while scanner.next() {
 
@@ -1164,7 +1300,7 @@ pub fn remove_xml_expanded_name_subtrees(
     return None
   }
   scanner.charge_rewrite_output(xml.length() - scanner.rewrite_cursor)
-  scanner.rewrite_output.write_view(xml[scanner.rewrite_cursor:])
+  scanner.write_rewrite_source(scanner.rewrite_cursor, xml.length())
   Some(scanner.rewrite_output.to_string())
 }
 
@@ -1181,7 +1317,9 @@ pub fn canonicalize_xml_expanded_names(
   element_namespaces : ArrayView[String],
   attribute_prefixes : ArrayView[(String, String)],
   max_output_chars? : Int = max_xml_start_tag_chars,
+  cancelled? : () -> Bool = () => false,
 ) -> String raise ParseXmlError {
+  check_xml_cancelled(cancelled)
   if max_output_chars < 0 {
     raise InvalidXml(msg="XML canonical output limit is invalid")
   }
@@ -1193,7 +1331,12 @@ pub fn canonicalize_xml_expanded_names(
     attributes[namespace_uri] = prefix
   }
   let scanner = xml_start_tag_scanner_with_rewrites(
-    xml, elements, attributes, true, max_output_chars,
+    xml,
+    elements,
+    attributes,
+    true,
+    max_output_chars,
+    cancelled~,
   )
   while scanner.next() {
 
@@ -1202,10 +1345,12 @@ pub fn canonicalize_xml_expanded_names(
     if xml.length() > max_output_chars {
       raise InvalidXml(msg="XML canonical output limit exceeded")
     }
-    return xml.to_owned()
+    scanner.charge_rewrite_output(xml.length())
+    scanner.write_rewrite_source(0, xml.length())
+    return scanner.rewrite_output.to_string()
   }
   scanner.charge_rewrite_output(xml.length() - scanner.rewrite_cursor)
-  scanner.rewrite_output.write_view(xml[scanner.rewrite_cursor:])
+  scanner.write_rewrite_source(scanner.rewrite_cursor, xml.length())
   scanner.rewrite_output.to_string()
 }
 
@@ -1218,7 +1363,12 @@ pub fn XmlStartTagScanner::attribute_view(
   local_name : StringView,
 ) -> StringView? raise ParseXmlError {
   let mut next = self.current_name_end
-  while next_xml_attribute(self.xml, next, self.current_tag_end)
+  while next_xml_attribute(
+          self.xml,
+          next,
+          self.current_tag_end,
+          cancelled=self.cancelled,
+        )
         is Some(attribute) {
     next = attribute.next
     if xml_namespace_declaration_prefix(self.xml, attribute) is Some(_) {
@@ -1256,7 +1406,7 @@ pub fn XmlStartTagScanner::attribute(
   local_name : StringView,
 ) -> String? raise ParseXmlError {
   match self.attribute_view(namespace_uri, local_name) {
-    Some(value) => Some(decode_xml_attribute(value))
+    Some(value) => Some(decode_xml_attribute(value, cancelled=self.cancelled))
     None => None
   }
 }
@@ -1328,6 +1478,7 @@ test "start tag scanner rejects undeclared and duplicate expanded attributes" {
     let scanner = XmlStartTagScanner::new(xml)
     try scanner.next() catch {
       InvalidXml(_) => ()
+      _ => fail("unexpected scanner cancellation")
     } noraise {
       _ => fail("expected invalid namespace-qualified XML")
     }
@@ -1355,6 +1506,7 @@ test "XML attributes decode once and reject invalid entities" {
   for value in ["&unknown;", "&#0;", "&#xD800;", "&amp"] {
     try decode_xml_attribute(value) catch {
       InvalidXml(_) => ()
+      _ => fail("unexpected attribute cancellation")
     } noraise {
       _ => fail("expected invalid XML entity")
     }
@@ -1375,6 +1527,7 @@ test "start tag scanner validates unused attributes and document structure" {
       }
     } catch {
       InvalidXml(_) => ()
+      _ => fail("unexpected scanner cancellation")
     } noraise {
       _ => fail("expected malformed XML document")
     }
@@ -1387,6 +1540,7 @@ test "start tag scanner rejects a misplaced self-closing slash" {
   try scanner.next() catch {
     InvalidXml(msg~) =>
       inspect(msg, content="XML self-closing slash is misplaced")
+    _ => fail("unexpected scanner cancellation")
   } noraise {
     _ => fail("expected misplaced self-closing slash")
   }
@@ -1454,6 +1608,7 @@ test "expanded-name canonicalization rejects lexical attribute collisions" {
   catch {
     InvalidXml(msg~) =>
       inspect(msg, content="XML canonical attribute name collision")
+    _ => fail("unexpected canonicalization cancellation")
   } noraise {
     _ => fail("expected canonical attribute collision")
   }
@@ -1471,6 +1626,7 @@ test "expanded-name canonicalization bounds escaped CDATA output" {
   catch {
     InvalidXml(msg~) =>
       inspect(msg, content="XML canonical output limit exceeded")
+    _ => fail("unexpected canonicalization cancellation")
   } noraise {
     _ => fail("expected canonical output limit")
   }
@@ -1481,7 +1637,25 @@ test "start tag scanner bounds qualified names" {
   let scanner = XmlStartTagScanner::new("<" + "a".repeat(1025) + "/>")
   try scanner.next() catch {
     InvalidXml(msg~) => inspect(msg, content="XML qualified name is too long")
+    _ => fail("unexpected scanner cancellation")
   } noraise {
     _ => fail("expected qualified-name limit")
+  }
+}
+
+///|
+test "expanded-name canonicalization polls cancellation inside long XML" {
+  let checks = [0]
+  let xml = "<root>" + "x".repeat(32 * 1024) + "</root>"
+  try
+    canonicalize_xml_expanded_names(xml, [], [], cancelled=() => {
+      checks[0] += 1
+      checks[0] >= 12
+    })
+  catch {
+    ReadCancelled => assert_true(checks[0] >= 12)
+    _ => fail("expected canonicalization cancellation")
+  } noraise {
+    _ => fail("expected canonicalization cancellation")
   }
 }

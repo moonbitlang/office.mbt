@@ -79,6 +79,7 @@ fn resolve_workbook_xml_part_path(
     content_types_xml, workbook_part,
   ) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
   }
   match content_type {
     Some(value) if workbook_content_type_is_supported(value) => workbook_part

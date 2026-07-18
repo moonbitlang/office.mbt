@@ -5,6 +5,7 @@
 fn canonicalize_xlsx_xml(
   xml : StringView,
   max_output_chars? : Int = default_max_xml_part_bytes,
+  cancelled? : () -> Bool = () => false,
 ) -> String raise XlsxError {
   @ooxml.canonicalize_xml_expanded_names(
     xml,
@@ -14,14 +15,19 @@ fn canonicalize_xlsx_xml(
       (strict_relationship_attribute_namespace, "r"),
     ],
     max_output_chars~,
+    cancelled~,
   ) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
   }
 }
 
 ///|
-fn validate_xlsx_worksheet_core(xml : StringView) -> Unit raise XlsxError {
-  let scanner = @ooxml.XmlStartTagScanner::new(xml)
+fn validate_xlsx_worksheet_core(
+  xml : StringView,
+  cancelled? : () -> Bool = () => false,
+) -> Unit raise XlsxError {
+  let scanner = @ooxml.XmlStartTagScanner::new(xml, cancelled~)
   let mut worksheet_namespace : String? = None
   let mut sheet_data_seen = false
   let mut cell_formula_seen = false
@@ -138,21 +144,24 @@ fn canonicalize_xlsx_worksheet_core(
   source : StringView,
   full_canonical : String,
   max_output_chars : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> String raise XlsxError {
   let without_extensions = @ooxml.remove_xml_expanded_name_subtrees(
     source,
     [transitional_spreadsheet_namespace, strict_spreadsheet_namespace],
     "extLst",
+    cancelled~,
   ) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
   }
   match without_extensions {
     Some(core_source) => {
-      validate_xlsx_worksheet_core(core_source)
-      canonicalize_xlsx_xml(core_source, max_output_chars~)
+      validate_xlsx_worksheet_core(core_source, cancelled~)
+      canonicalize_xlsx_xml(core_source, max_output_chars~, cancelled~)
     }
     None => {
-      validate_xlsx_worksheet_core(source)
+      validate_xlsx_worksheet_core(source, cancelled~)
       full_canonical
     }
   }
@@ -168,4 +177,25 @@ test "XLSX XML canonicalization handles Strict elements and relationship attribu
       #|<worksheet xmlns:s="http://purl.oclc.org/ooxml/spreadsheetml/main" xmlns:q="http://purl.oclc.org/ooxml/officeDocument/relationships"><drawing r:id="d1"/><sheetData><row r="1"><c r="A1" t="str"><v>ok</v></c></row></sheetData></worksheet>
     ),
   )
+}
+
+///|
+test "XLSX XML canonicalization propagates cancellation from a long pass" {
+  let checks = [0]
+  let source = "<worksheet xmlns=\"" +
+    transitional_spreadsheet_namespace +
+    "\"><sheetData>" +
+    "x".repeat(32 * 1024) +
+    "</sheetData></worksheet>"
+  try
+    canonicalize_xlsx_xml(source, cancelled=() => {
+      checks[0] += 1
+      checks[0] >= 12
+    })
+  catch {
+    ReadCancelled => assert_true(checks[0] >= 12)
+    _ => fail("expected XLSX canonicalization cancellation")
+  } noraise {
+    _ => fail("expected XLSX canonicalization cancellation")
+  }
 }

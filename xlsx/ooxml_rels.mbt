@@ -11,6 +11,7 @@ fn parse_internal_relationship_targets_exact(
 ) -> Map[String, String] raise XlsxError {
   @ooxml.parse_internal_relationship_targets(xml, rel_type) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
   }
 }
 
@@ -21,6 +22,7 @@ fn parse_internal_relationship_targets_exact_types(
 ) -> Map[String, String] raise XlsxError {
   @ooxml.parse_internal_relationship_targets_by_types(xml, rel_types) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
   }
 }
 
@@ -31,6 +33,7 @@ fn parse_external_relationship_targets_exact(
 ) -> Map[String, String] raise XlsxError {
   @ooxml.parse_external_relationship_targets(xml, rel_type) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
   }
 }
 
@@ -41,6 +44,7 @@ fn parse_external_relationship_targets_exact_types(
 ) -> Map[String, String] raise XlsxError {
   @ooxml.parse_external_relationship_targets_by_types(xml, rel_types) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
   }
 }
 

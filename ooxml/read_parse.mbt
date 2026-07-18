@@ -1,6 +1,7 @@
 ///|
 pub suberror ParseXmlError {
   InvalidXml(msg~ : String)
+  ReadCancelled
 } derive(Debug)
 
 ///|
@@ -427,6 +428,7 @@ test "ooxml read_parse wb: every relationship record is validated" {
     #|
   try parse_internal_relationship_targets(xml, "t1") catch {
     InvalidXml(msg~) => inspect(msg, content="relationship type missing")
+    _ => fail("unexpected relationship parse cancellation")
   } noraise {
     _ => fail("expected relationship type missing")
   }
@@ -443,6 +445,7 @@ test "ooxml read_parse wb: content-type override required attrs" {
   try parse_content_types(missing_part) catch {
     InvalidXml(msg~) =>
       inspect(msg, content="content type override part name missing")
+    _ => fail("unexpected content type parse cancellation")
   } noraise {
     _ => fail("expected content type override part name missing")
   }
@@ -456,6 +459,7 @@ test "ooxml read_parse wb: content-type override required attrs" {
   try parse_content_types(missing_content_type) catch {
     InvalidXml(msg~) =>
       inspect(msg, content="content type override content type missing")
+    _ => fail("unexpected content type parse cancellation")
   } noraise {
     _ => fail("expected content type override content type missing")
   }

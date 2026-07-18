@@ -23,6 +23,7 @@ fn workbook_scanner_next(
 ) -> Bool raise XlsxError {
   scanner.next() catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
   }
 }
 
@@ -34,6 +35,7 @@ fn workbook_scanner_attribute(
 ) -> String? raise XlsxError {
   scanner.attribute(namespace_uri, local_name) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
   }
 }
 
@@ -41,9 +43,10 @@ fn workbook_scanner_attribute(
 fn parse_workbook_sheets(
   xml : StringView,
   max_sheets : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> Array[WorkbookSheetInfo] raise XlsxError {
   let sheets : Array[WorkbookSheetInfo] = []
-  let scanner = @ooxml.XmlStartTagScanner::new(xml)
+  let scanner = @ooxml.XmlStartTagScanner::new(xml, cancelled~)
   let mut workbook_namespace : String? = None
   while workbook_scanner_next(scanner) {
     let namespace_uri = scanner.namespace_uri()

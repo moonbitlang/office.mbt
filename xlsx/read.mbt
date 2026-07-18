@@ -3221,6 +3221,7 @@ fn read_zip_archive_core_unchecked(
     let canonical = canonicalize_xlsx_xml(
       decoded,
       max_output_chars=limits.max_xml_part_bytes,
+      cancelled~,
     )
     read_budget.checkpoint()
     read_budget.charge_work(canonical.length())
@@ -3239,6 +3240,7 @@ fn read_zip_archive_core_unchecked(
   let workbook_xml = canonicalize_xlsx_xml(
     workbook_source_xml,
     max_output_chars=limits.max_xml_part_bytes,
+    cancelled~,
   )
   read_budget.checkpoint()
   read_budget.charge_work(workbook_xml.length())
@@ -3253,6 +3255,7 @@ fn read_zip_archive_core_unchecked(
   let sheets = parse_workbook_sheets(
     workbook_source_xml,
     limits.max_workbook_sheets,
+    cancelled~,
   )
   let sheet_names : Array[String] = []
   for entry in sheets {
@@ -3512,6 +3515,7 @@ fn read_zip_archive_core_unchecked(
       let sheet_xml = canonicalize_xlsx_xml(
         sheet_source_xml,
         max_output_chars=limits.max_xml_part_bytes,
+        cancelled~,
       )
       read_budget.checkpoint()
       read_budget.charge_work(sheet_xml.length())
@@ -3519,6 +3523,7 @@ fn read_zip_archive_core_unchecked(
         sheet_source_xml,
         sheet_xml,
         limits.max_xml_part_bytes,
+        cancelled~,
       )
       read_budget.checkpoint()
       if sheet_core_xml != sheet_xml {
