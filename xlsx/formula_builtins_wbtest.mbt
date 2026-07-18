@@ -55,6 +55,73 @@ fn is_formula_list(value : FormulaValue) -> Bool {
 }
 
 ///|
+test "formula builtins wb: workday functions normalize fractional dates" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let ctx = CalcContext::new()
+  let cases : Array[(String, Array[Expr], Double)] = [
+    ("NETWORKDAYS", [Number(1.9), Number(2.1)], 2.0),
+    ("NETWORKDAYS.INTL", [Number(1.9), Number(2.1), Number(1.0)], 2.0),
+    ("NETWORKDAYS", [Number(1.0), Number(1.0), List([Number(1.9)])], 0.0),
+    (
+      "NETWORKDAYS.INTL",
+      [Number(1.0), Number(1.0), Number(1.0), List([Number(1.9)])],
+      0.0,
+    ),
+    ("WORKDAY", [Number(1.9), Number(0.9)], 1.0),
+    ("WORKDAY.INTL", [Number(1.9), Number(0.9), Number(1.0)], 1.0),
+    ("WORKDAY", [Number(1.0), Number(1.0), List([Number(2.9)])], 3.0),
+    (
+      "WORKDAY.INTL",
+      [Number(1.0), Number(1.0), Number(1.0), List([Number(2.9)])],
+      3.0,
+    ),
+    (
+      "WORKDAY",
+      [Number(1.0), Number(1.0), List([Number(2.1), Number(2.9)])],
+      3.0,
+    ),
+  ]
+  for entry in cases {
+    let (name, args, expected) = entry
+    assert_true(
+      is_formula_number(
+        eval_function(workbook, "Sheet1", name, args, ctx),
+        expected,
+      ),
+    )
+  }
+
+  let maximum_1900 = maximum_supported_formula_date_serial(false)
+  assert_true(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WORKDAY",
+        [Number(Double::from_int(maximum_1900) + 0.5), Number(0.0)],
+        ctx,
+      ),
+      Double::from_int(maximum_1900),
+    ),
+  )
+  let maximum_1904 = maximum_supported_formula_date_serial(true)
+  let ctx_1904 = CalcContext::new(use_1904_dates=true)
+  assert_true(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WORKDAY.INTL",
+        [Number(Double::from_int(maximum_1904) + 0.5), Number(0.0), Number(1.0)],
+        ctx_1904,
+      ),
+      Double::from_int(maximum_1904),
+    ),
+  )
+}
+
+///|
 test "formula builtins wb: row column and formulatxt guards" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

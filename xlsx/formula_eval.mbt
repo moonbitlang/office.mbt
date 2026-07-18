@@ -6180,14 +6180,40 @@ fn formula_date_serial_is_supported(
 }
 
 ///|
+fn normalized_formula_date_serial(
+  serial : Double,
+  use_1904_dates : Bool,
+) -> Int? {
+  if serial.is_nan() || serial.is_inf() {
+    return None
+  }
+  let normalized = Double::floor(serial)
+  if normalized < 0.0 ||
+    normalized >
+    Double::from_int(maximum_supported_formula_date_serial(use_1904_dates)) {
+    return None
+  }
+  Some(Double::to_int(normalized))
+}
+
+///|
 fn collect_holidays(
   value : FormulaValue,
   use_1904_dates? : Bool = false,
 ) -> Array[Int] {
   let holidays : Array[Int] = []
+  let seen : Map[Int, Bool] = Map([])
   for item in flatten_values([value]) {
     match value_as_date_serial(item, use_1904_dates~) {
-      Ok(serial) => holidays.push(Double::to_int(Double::ceil(serial)))
+      Ok(serial) =>
+        match normalized_formula_date_serial(serial, use_1904_dates) {
+          Some(day) =>
+            if !seen.contains(day) {
+              seen[day] = true
+              holidays.push(day)
+            }
+          None => ()
+        }
       Err(_) => ()
     }
   }
@@ -6200,7 +6226,7 @@ fn workday_intl_adjust(
   sign : Int,
   holidays : Array[Int],
   weekend_mask : Array[Int],
-  start_serial : Double,
+  start_date : Int,
   use_1904_dates? : Bool = false,
 ) -> Int? {
   let mut adjusted = end_date
@@ -6209,7 +6235,7 @@ fn workday_intl_adjust(
       if holiday > adjusted {
         break
       }
-      if holiday > Double::to_int(Double::ceil(start_serial)) {
+      if holiday > start_date {
         if is_workday_mask(
             weekend_mask,
             Double::from_int(holiday),
@@ -6235,7 +6261,7 @@ fn workday_intl_adjust(
       if holiday < adjusted {
         continue
       }
-      if holiday < Double::to_int(Double::ceil(start_serial)) {
+      if holiday < start_date {
         if is_workday_mask(
             weekend_mask,
             Double::from_int(holiday),
@@ -6270,6 +6296,16 @@ fn networkdays_intl_value(
   holidays : Array[Int],
   use_1904_dates? : Bool = false,
 ) -> FormulaValue {
+  let start_date = match
+    normalized_formula_date_serial(start_serial, use_1904_dates) {
+    Some(value) => value
+    None => return Error(formula_error_num)
+  }
+  let end_date = match
+    normalized_formula_date_serial(end_serial, use_1904_dates) {
+    Some(value) => value
+    None => return Error(formula_error_num)
+  }
   holidays.sort()
   let (weekend_mask, workdays) = match weekend_mask_from_value(weekend_value) {
     Ok(value) => value
@@ -6278,8 +6314,8 @@ fn networkdays_intl_value(
   if workdays == 0 {
     return Error(formula_error_value)
   }
-  let mut start = start_serial
-  let mut end = end_serial
+  let mut start = start_date
+  let mut end = end_date
   let mut sign = 1
   if start > end {
     sign = -1
@@ -6288,13 +6324,13 @@ fn networkdays_intl_value(
     end = temp
   }
   let offset = end - start
-  let weeks = Double::to_int(Double::floor(offset / 7.0))
+  let weeks = offset / 7
   let mut count = weeks * workdays
-  let mut days_mod = Double::to_int(Double::floor(offset)) % 7
+  let mut days_mod = offset % 7
   while days_mod >= 0 {
     if is_workday_mask(
         weekend_mask,
-        end - Double::from_int(days_mod),
+        Double::from_int(end - days_mod),
         use_1904_dates~,
       ) {
       count = count + 1
@@ -6302,10 +6338,9 @@ fn networkdays_intl_value(
     days_mod = days_mod - 1
   }
   for holiday in holidays {
-    let holiday_serial = Double::from_int(holiday)
-    if is_workday_mask(weekend_mask, holiday_serial, use_1904_dates~) &&
-      holiday_serial >= start &&
-      holiday_serial <= end {
+    if is_workday_mask(weekend_mask, Double::from_int(holiday), use_1904_dates~) &&
+      holiday >= start &&
+      holiday <= end {
       count = count - 1
     }
   }
@@ -6320,9 +6355,18 @@ fn workday_intl_value(
   holidays : Array[Int],
   use_1904_dates? : Bool = false,
 ) -> FormulaValue {
+  let start_date = match
+    normalized_formula_date_serial(start_serial, use_1904_dates) {
+    Some(value) => value
+    None => return Error(formula_error_num)
+  }
+  if days.is_nan() || days.is_inf() {
+    return Error(formula_error_num)
+  }
   holidays.sort()
-  if days == 0.0 {
-    return Number(Double::ceil(start_serial))
+  let days_int = Double::to_int(trunc_double(days))
+  if days_int == 0 {
+    return Number(Double::from_int(start_date))
   }
   let (weekend_mask, workdays) = match weekend_mask_from_value(weekend_value) {
     Ok(value) => value
@@ -6331,14 +6375,7 @@ fn workday_intl_value(
   if workdays == 0 {
     return Error(formula_error_value)
   }
-  let mut sign = 1
-  if days < 0.0 {
-    sign = -1
-  }
-  let days_int = Double::to_int(trunc_double(days))
-  if days_int == 0 {
-    return Number(Double::ceil(start_serial))
-  }
+  let sign = if days_int < 0 { -1 } else { 1 }
   let maximum_serial = maximum_supported_formula_date_serial(use_1904_dates)
   // Bound the arithmetic before multiplying the week offset by seven. Any
   // larger workday count must leave the supported 0000..9999 date domain,
@@ -6348,7 +6385,7 @@ fn workday_intl_value(
   }
   let offset = days_int / workdays
   let mut days_mod = days_int % workdays
-  let mut end_date = Double::to_int(Double::ceil(start_serial)) + offset * 7
+  let mut end_date = start_date + offset * 7
   if !formula_date_serial_is_supported(end_date, use_1904_dates) {
     return Error(formula_error_num)
   }
@@ -6388,7 +6425,7 @@ fn workday_intl_value(
       sign,
       holidays,
       weekend_mask,
-      start_serial,
+      start_date,
       use_1904_dates~,
     ) {
     Some(adjusted) => Number(Double::from_int(adjusted))
