@@ -75,6 +75,7 @@ pub struct XmlStartTagScanner {
   priv mut current_tag_end : Int
   priv mut current_depth : Int
   priv mut current_namespace_uri : String
+  priv mut current_namespace_id : Int
   priv capture_element_namespaces : Array[String]
   priv capture_element_local_name : String
   priv retain_element_namespaces : Array[String]
@@ -1226,6 +1227,7 @@ fn xml_start_tag_scanner_with_rewrites(
     current_tag_end: 0,
     current_depth: 0,
     current_namespace_uri: "",
+    current_namespace_id: 0,
     capture_element_namespaces,
     capture_element_local_name,
     retain_element_namespaces,
@@ -1498,7 +1500,11 @@ pub fn XmlStartTagScanner::next(
       Some(value) => self.xml[name_start:value]
       None => self.xml[name_start:name_start]
     }
-    self.current_namespace_uri = self.resolve_prefix(prefix, false)
+    let (current_namespace_uri, current_namespace_id) = self.resolve_prefix_identity(
+      prefix, false,
+    )
+    self.current_namespace_uri = current_namespace_uri
+    self.current_namespace_id = current_namespace_id
     let local_name_start = match colon {
       Some(value) => value + 1
       None => name_start
@@ -1596,6 +1602,16 @@ pub fn XmlStartTagScanner::namespace_uri(
   self : XmlStartTagScanner,
 ) -> StringView {
   self.current_namespace_uri
+}
+
+///|
+/// Returns the scanner-local structural identity of the current element's
+/// namespace. The identity is stable for the lifetime of the in-scope
+/// namespace binding and avoids copying long namespace URIs into parser keys.
+fn XmlStartTagScanner::current_namespace_identity(
+  self : XmlStartTagScanner,
+) -> Int {
+  self.current_namespace_id
 }
 
 ///|

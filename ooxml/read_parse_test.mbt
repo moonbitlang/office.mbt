@@ -132,6 +132,29 @@ test "ooxml read_parse: relationships apply OPC Markup Compatibility" {
 }
 
 ///|
+test "ooxml read_parse: MCE names retain one copy of a long namespace URI" {
+  let names = StringBuilder::new()
+  for index in 0..<4096 {
+    if index > 0 {
+      names.write_char(' ')
+    }
+    names.write_string("v:n\{index}")
+  }
+  let namespace_uri = "urn:" + "v".repeat(100_000)
+  let xml = "<Relationships xmlns=\"" +
+    "http://schemas.openxmlformats.org/package/2006/relationships" +
+    "\" xmlns:mc=\"" +
+    "http://schemas.openxmlformats.org/markup-compatibility/2006" +
+    "\" xmlns:v=\"" +
+    namespace_uri +
+    "\" mc:Ignorable=\"v\" mc:ProcessContent=\"" +
+    names.to_string() +
+    "\"/>"
+  let targets = @ooxml.parse_internal_relationship_targets(xml, "wanted")
+  assert_eq(targets.length(), 0)
+}
+
+///|
 test "ooxml read_parse: invalid relationship MCE fails closed" {
   let cases : Array[(String, String)] = [
     (

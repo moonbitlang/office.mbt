@@ -104,6 +104,9 @@ let max_relationship_target_chars : Int = 16 * 1024 * 1024
 let max_relationship_retained_chars : Int = 16 * 1024 * 1024
 
 ///|
+let max_relationship_mce_work_chars : Int = 16 * 1024 * 1024
+
+///|
 fn collapse_schema_whitespace(value : StringView) -> String {
   let output = StringBuilder::new()
   let mut pending_space = false
@@ -169,6 +172,130 @@ priv enum RelationshipTargetSelection {
 }
 
 ///|
+/// A structural MCE expanded name. Namespace identities are allocated by the
+/// streaming XML scanner, so a long namespace URI is retained once rather than
+/// copied into every `ProcessContent` key.
+priv struct RelationshipMceName {
+  namespace_id : Int
+  local_name : String
+} derive(Eq, Hash)
+
+///|
+priv struct RelationshipMceScopeDelta {
+  ignorable_namespace_ids : Array[Int]
+  process_content_names : Array[RelationshipMceName]
+}
+
+///|
+/// Active MCE directives are reference-counted and unwound with XML depth.
+/// This keeps scope entry O(number of new directives), without cloning every
+/// inherited set at each nested element.
+priv struct RelationshipMceContext {
+  ignorable_namespace_counts : Map[Int, Int]
+  process_content_name_counts : Map[RelationshipMceName, Int]
+  mut work_chars : Int
+}
+
+///|
+fn RelationshipMceContext::new() -> RelationshipMceContext {
+  {
+    ignorable_namespace_counts: Map([]),
+    process_content_name_counts: Map([]),
+    work_chars: 0,
+  }
+}
+
+///|
+fn RelationshipMceContext::charge(
+  self : RelationshipMceContext,
+  value : StringView,
+) -> Unit raise ParseXmlError {
+  if value.length() > max_relationship_mce_work_chars - self.work_chars {
+    raise InvalidXml(msg="MCE directive work limit exceeded")
+  }
+  self.work_chars = self.work_chars + value.length()
+}
+
+///|
+test "relationship MCE directive work is cumulative and bounded" {
+  let context = RelationshipMceContext::new()
+  context.work_chars = max_relationship_mce_work_chars - 1
+  context.charge("a")
+  try context.charge("b") catch {
+    InvalidXml(msg~) =>
+      inspect(msg, content="MCE directive work limit exceeded")
+    _ => fail("unexpected MCE directive work error")
+  } noraise {
+    _ => fail("expected cumulative MCE directive work limit")
+  }
+}
+
+///|
+fn RelationshipMceContext::add_ignorable(
+  self : RelationshipMceContext,
+  namespace_id : Int,
+) -> Unit {
+  self.ignorable_namespace_counts[namespace_id] = self.ignorable_namespace_counts.get_or_default(
+      namespace_id, 0,
+    ) +
+    1
+}
+
+///|
+fn RelationshipMceContext::add_process_content(
+  self : RelationshipMceContext,
+  name : RelationshipMceName,
+) -> Unit {
+  self.process_content_name_counts[name] = self.process_content_name_counts.get_or_default(
+      name, 0,
+    ) +
+    1
+}
+
+///|
+fn RelationshipMceContext::is_ignorable(
+  self : RelationshipMceContext,
+  namespace_id : Int,
+) -> Bool {
+  self.ignorable_namespace_counts.get_or_default(namespace_id, 0) > 0
+}
+
+///|
+fn RelationshipMceContext::processes(
+  self : RelationshipMceContext,
+  name : RelationshipMceName,
+) -> Bool {
+  self.process_content_name_counts.get_or_default(name, 0) > 0
+}
+
+///|
+fn RelationshipMceContext::leave_scope(
+  self : RelationshipMceContext,
+  delta : RelationshipMceScopeDelta?,
+) -> Unit {
+  guard delta is Some(delta) else { return }
+  for namespace_id in delta.ignorable_namespace_ids {
+    let remaining = self.ignorable_namespace_counts.get_or_default(
+        namespace_id, 0,
+      ) -
+      1
+    if remaining <= 0 {
+      ignore(self.ignorable_namespace_counts.remove(namespace_id))
+    } else {
+      self.ignorable_namespace_counts[namespace_id] = remaining
+    }
+  }
+  for name in delta.process_content_names {
+    let remaining = self.process_content_name_counts.get_or_default(name, 0) - 1
+    if remaining <= 0 {
+      ignore(self.process_content_name_counts.remove(name))
+    } else {
+      self.process_content_name_counts[name] = remaining
+    }
+  }
+}
+
+///|
 /// Streaming state for the MCE-effective projection of an OPC Relationships
 /// part. Each raw XML depth owns one state; wrapper elements selected by
 /// `ProcessContent`, `Choice`, or `Fallback` retain their parent's effective
@@ -179,21 +306,11 @@ priv struct RelationshipMceState {
   included_in_effective_tree : Bool
   element_effective_depth : Int
   children_effective_parent_depth : Int
-  ignorable_namespaces : Set[String]
-  process_content_names : Set[String]
+  scope_delta : RelationshipMceScopeDelta?
   is_alternate_content : Bool
   mut alternate_choice_seen : Bool
   mut alternate_fallback_seen : Bool
   mut alternate_selected : Bool
-}
-
-///|
-fn clone_relationship_mce_set(source : Set[String]) -> Set[String] {
-  let cloned : Set[String] = Set([])
-  for value in source {
-    cloned.add(value)
-  }
-  cloned
 }
 
 ///|
@@ -223,11 +340,11 @@ fn relationship_mce_resolve_prefix(
   scanner : XmlStartTagScanner,
   prefix : StringView,
   label : StringView,
-) -> String raise ParseXmlError {
+) -> (String, Int) raise ParseXmlError {
   if prefix == "" || prefix.contains(":") {
     raise InvalidXml(msg="MCE \{label.to_owned()} prefix is invalid")
   }
-  scanner.resolve_prefix(prefix, false)
+  scanner.resolve_prefix_identity(prefix, false)
 }
 
 ///|
@@ -235,33 +352,33 @@ fn relationship_mce_expanded_name_key(
   scanner : XmlStartTagScanner,
   token : StringView,
   label : StringView,
-) -> (String, String) raise ParseXmlError {
+) -> (String, RelationshipMceName) raise ParseXmlError {
   let parts = token.split(":").collect()
   if parts.length() != 2 || parts[0] == "" || parts[1] == "" {
     raise InvalidXml(msg="MCE \{label.to_owned()} name is invalid")
   }
-  let namespace_uri = relationship_mce_resolve_prefix(scanner, parts[0], label)
-  (namespace_uri, namespace_uri + "\u{0}" + parts[1].to_owned())
+  let (namespace_uri, namespace_id) = relationship_mce_resolve_prefix(
+    scanner,
+    parts[0],
+    label,
+  )
+  (namespace_uri, { namespace_id, local_name: parts[1].to_owned() })
 }
 
 ///|
-fn relationship_mce_scope(
+fn relationship_mce_enter_scope(
   scanner : XmlStartTagScanner,
-  parent : RelationshipMceState?,
-) -> (Set[String], Set[String]) raise ParseXmlError {
+  context : RelationshipMceContext,
+) -> RelationshipMceScopeDelta? raise ParseXmlError {
+  let mut delta : RelationshipMceScopeDelta? = None
   let ignorable_attribute = scanner.attribute(
     markup_compatibility_namespace, "Ignorable",
   )
-  let ignorable = match (parent, ignorable_attribute) {
-    (Some(value), None) => value.ignorable_namespaces
-    (Some(value), Some(_)) =>
-      clone_relationship_mce_set(value.ignorable_namespaces)
-    (None, _) => Set([])
-  }
   match ignorable_attribute {
-    Some(value) =>
+    Some(value) => {
+      context.charge(value)
       for prefix in relationship_mce_tokens(value, "Ignorable") {
-        let namespace_uri = relationship_mce_resolve_prefix(
+        let (namespace_uri, namespace_id) = relationship_mce_resolve_prefix(
           scanner, prefix, "Ignorable",
         )
         if namespace_uri == "" ||
@@ -269,74 +386,97 @@ fn relationship_mce_scope(
           namespace_uri == package_relationships_namespace {
           raise InvalidXml(msg="MCE Ignorable namespace is invalid")
         }
-        ignorable.add(namespace_uri)
+        context.add_ignorable(namespace_id)
+        match delta {
+          Some(value) => value.ignorable_namespace_ids.push(namespace_id)
+          None =>
+            delta = Some({
+              ignorable_namespace_ids: [namespace_id],
+              process_content_names: [],
+            })
+        }
       }
+    }
     None => ()
   }
   let process_content_attribute = scanner.attribute(
     markup_compatibility_namespace, "ProcessContent",
   )
-  let process_content = match (parent, process_content_attribute) {
-    (Some(value), None) => value.process_content_names
-    (Some(value), Some(_)) =>
-      clone_relationship_mce_set(value.process_content_names)
-    (None, _) => Set([])
-  }
   match process_content_attribute {
-    Some(value) =>
+    Some(value) => {
+      context.charge(value)
       for token in relationship_mce_tokens(value, "ProcessContent") {
-        let (namespace_uri, key) = relationship_mce_expanded_name_key(
+        let (_, key) = relationship_mce_expanded_name_key(
           scanner, token, "ProcessContent",
         )
-        if !ignorable.contains(namespace_uri) {
+        if !context.is_ignorable(key.namespace_id) {
           raise InvalidXml(msg="MCE ProcessContent namespace is not ignorable")
         }
         if token.has_suffix(":*") {
           raise InvalidXml(msg="MCE ProcessContent wildcard is invalid")
         }
-        process_content.add(key)
+        context.add_process_content(key)
+        match delta {
+          Some(value) => value.process_content_names.push(key)
+          None =>
+            delta = Some({
+              ignorable_namespace_ids: [],
+              process_content_names: [key],
+            })
+        }
       }
+    }
     None => ()
   }
   match scanner.attribute(markup_compatibility_namespace, "MustUnderstand") {
-    Some(value) =>
+    Some(value) => {
+      context.charge(value)
       for prefix in relationship_mce_tokens(value, "MustUnderstand") {
-        if relationship_mce_resolve_prefix(scanner, prefix, "MustUnderstand") !=
-          package_relationships_namespace {
+        let (namespace_uri, _) = relationship_mce_resolve_prefix(
+          scanner, prefix, "MustUnderstand",
+        )
+        if namespace_uri != package_relationships_namespace {
           raise InvalidXml(msg="MCE MustUnderstand namespace is unsupported")
         }
       }
+    }
     None => ()
   }
   for directive in ["PreserveElements", "PreserveAttributes"] {
     match scanner.attribute(markup_compatibility_namespace, directive) {
-      Some(value) =>
+      Some(value) => {
+        context.charge(value)
         for token in relationship_mce_tokens(value, directive) {
-          let (namespace_uri, _) = relationship_mce_expanded_name_key(
+          let (_, name) = relationship_mce_expanded_name_key(
             scanner, token, directive,
           )
-          if !ignorable.contains(namespace_uri) {
+          if !context.is_ignorable(name.namespace_id) {
             raise InvalidXml(msg="MCE \{directive} namespace is not ignorable")
           }
         }
+      }
       None => ()
     }
   }
-  (ignorable, process_content)
+  delta
 }
 
 ///|
 fn relationship_mce_choice_supported(
   scanner : XmlStartTagScanner,
+  context : RelationshipMceContext,
 ) -> Bool raise ParseXmlError {
   let requires = match scanner.attribute("", "Requires") {
     Some(value) => value
     None => raise InvalidXml(msg="MCE Choice is missing Requires")
   }
+  context.charge(requires)
   let mut supported = true
   for prefix in relationship_mce_tokens(requires, "Choice Requires") {
-    if relationship_mce_resolve_prefix(scanner, prefix, "Choice Requires") !=
-      package_relationships_namespace {
+    let (namespace_uri, _) = relationship_mce_resolve_prefix(
+      scanner, prefix, "Choice Requires",
+    )
+    if namespace_uri != package_relationships_namespace {
       supported = false
     }
   }
@@ -347,9 +487,11 @@ fn relationship_mce_choice_supported(
 fn trim_relationship_mce_states(
   states : Array[RelationshipMceState],
   next_depth : Int,
+  context : RelationshipMceContext,
 ) -> Unit raise ParseXmlError {
   while states.length() >= next_depth {
     let state = states.pop().unwrap()
+    context.leave_scope(state.scope_delta)
     if state.is_alternate_content && !state.alternate_choice_seen {
       raise InvalidXml(msg="MCE AlternateContent has no Choice element")
     }
@@ -360,9 +502,10 @@ fn trim_relationship_mce_states(
 fn relationship_mce_state_for_current_element(
   scanner : XmlStartTagScanner,
   states : Array[RelationshipMceState],
+  context : RelationshipMceContext,
 ) -> RelationshipMceState raise ParseXmlError {
   let depth = scanner.depth()
-  trim_relationship_mce_states(states, depth)
+  trim_relationship_mce_states(states, depth, context)
   let parent = if depth > 1 {
     if states.length() != depth - 1 {
       raise InvalidXml(msg="relationships document nesting is invalid")
@@ -378,8 +521,7 @@ fn relationship_mce_state_for_current_element(
         included_in_effective_tree: false,
         element_effective_depth: parent_state.children_effective_parent_depth,
         children_effective_parent_depth: parent_state.children_effective_parent_depth,
-        ignorable_namespaces: parent_state.ignorable_namespaces,
-        process_content_names: parent_state.process_content_names,
+        scope_delta: None,
         is_alternate_content: false,
         alternate_choice_seen: false,
         alternate_fallback_seen: false,
@@ -387,7 +529,7 @@ fn relationship_mce_state_for_current_element(
       }
     _ => ()
   }
-  let (ignorable, process_content) = relationship_mce_scope(scanner, parent)
+  let scope_delta = relationship_mce_enter_scope(scanner, context)
   if depth == 1 {
     if scanner.namespace_uri() != package_relationships_namespace ||
       scanner.local_name() != "Relationships" {
@@ -398,8 +540,7 @@ fn relationship_mce_state_for_current_element(
       included_in_effective_tree: true,
       element_effective_depth: 1,
       children_effective_parent_depth: 1,
-      ignorable_namespaces: ignorable,
-      process_content_names: process_content,
+      scope_delta,
       is_alternate_content: false,
       alternate_choice_seen: false,
       alternate_fallback_seen: false,
@@ -408,6 +549,7 @@ fn relationship_mce_state_for_current_element(
   }
   let parent_state = parent.unwrap()
   let namespace_uri = scanner.namespace_uri().to_owned()
+  let namespace_id = scanner.current_namespace_identity()
   let local_name = scanner.local_name().to_owned()
   let parent_effective_depth = parent_state.children_effective_parent_depth
   let mut active = parent_state.active
@@ -422,7 +564,7 @@ fn relationship_mce_state_for_current_element(
         raise InvalidXml(msg="MCE Choice follows Fallback")
       }
       parent_state.alternate_choice_seen = true
-      let supported = relationship_mce_choice_supported(scanner)
+      let supported = relationship_mce_choice_supported(scanner, context)
       active = parent_state.active &&
         !parent_state.alternate_selected &&
         supported
@@ -441,7 +583,7 @@ fn relationship_mce_state_for_current_element(
       if active {
         parent_state.alternate_selected = true
       }
-    } else if ignorable.contains(namespace_uri) {
+    } else if context.is_ignorable(namespace_id) {
       active = false
     } else {
       raise InvalidXml(msg="MCE AlternateContent child is invalid")
@@ -452,10 +594,10 @@ fn relationship_mce_state_for_current_element(
     }
     active = parent_state.active
     is_alternate_content = true
-  } else if ignorable.contains(namespace_uri) &&
+  } else if context.is_ignorable(namespace_id) &&
     namespace_uri != package_relationships_namespace {
-    let key = namespace_uri + "\u{0}" + local_name
-    if process_content.contains(key) {
+    let key : RelationshipMceName = { namespace_id, local_name }
+    if context.processes(key) {
       if scanner.attribute(xml_namespace_uri, "base") is Some(_) ||
         scanner.attribute(xml_namespace_uri, "lang") is Some(_) ||
         scanner.attribute(xml_namespace_uri, "space") is Some(_) {
@@ -478,8 +620,7 @@ fn relationship_mce_state_for_current_element(
     included_in_effective_tree,
     element_effective_depth,
     children_effective_parent_depth,
-    ignorable_namespaces: ignorable,
-    process_content_names: process_content,
+    scope_delta,
     is_alternate_content,
     alternate_choice_seen: false,
     alternate_fallback_seen: false,
@@ -501,11 +642,12 @@ fn parse_relationship_targets_by_types_selected(
   let ids : Set[String] = Set([])
   let scanner = XmlStartTagScanner::new(xml, cancelled~)
   let mce_states : Array[RelationshipMceState] = []
+  let mce_context = RelationshipMceContext::new()
   let mut records = 0
   let mut retained_chars = 0
   while scanner.next() {
     let mce_state = relationship_mce_state_for_current_element(
-      scanner, mce_states,
+      scanner, mce_states, mce_context,
     )
     mce_states.push(mce_state)
     if mce_state.element_effective_depth == 1 {
@@ -565,7 +707,7 @@ fn parse_relationship_targets_by_types_selected(
     }
     targets[id] = target
   }
-  trim_relationship_mce_states(mce_states, 1)
+  trim_relationship_mce_states(mce_states, 1, mce_context)
   targets
 }
 
