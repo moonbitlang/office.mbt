@@ -21,13 +21,20 @@ fn parse_cell_images(
   cell_images_xml : StringView,
   rels_xml : StringView,
   archive : @zip.Archive,
+  budget? : ReadBudget,
+  cancelled? : () -> Bool = () => false,
 ) -> Array[CellImage] raise XlsxError {
   let images : Array[CellImage] = []
   let targets = if rels_xml.to_owned() == "" {
     Map([])
   } else {
     // cellimages relationships are always image relationships
-    parse_internal_relationship_targets(rels_xml, rel_image)
+    parse_internal_relationship_targets(
+      rels_xml,
+      rel_image,
+      budget?,
+      cancelled~,
+    )
   }
   let xml_str = cell_images_xml.to_owned()
   // Each embedded image is one <...pic> element; cellimages.xml contains

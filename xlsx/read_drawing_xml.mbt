@@ -166,17 +166,29 @@ fn parse_drawing_images(
   part_names : Map[String, String],
   metrics : DrawingMetrics,
   archive : @zip.Archive,
+  budget? : ReadBudget,
+  cancelled? : () -> Bool = () => false,
 ) -> Array[Image] raise XlsxError {
   let images : Array[Image] = []
   let image_targets = if drawing_rels_xml.to_owned() == "" {
     Map([])
   } else {
-    parse_internal_relationship_targets(drawing_rels_xml, rel_image)
+    parse_internal_relationship_targets(
+      drawing_rels_xml,
+      rel_image,
+      budget?,
+      cancelled~,
+    )
   }
   let hyperlink_targets = if drawing_rels_xml.to_owned() == "" {
     Map([])
   } else {
-    parse_external_relationship_targets(drawing_rels_xml, rel_hyperlink)
+    parse_external_relationship_targets(
+      drawing_rels_xml,
+      rel_hyperlink,
+      budget?,
+      cancelled~,
+    )
   }
   let anchors = parse_drawing_anchors(drawing_xml)
   for entry in anchors {
@@ -372,12 +384,19 @@ fn parse_drawing_charts(
   metrics : DrawingMetrics,
   archive : @zip.Archive,
   decode : (BytesView) -> String raise XlsxError,
+  budget? : ReadBudget,
+  cancelled? : () -> Bool = () => false,
 ) -> Array[Chart] raise XlsxError {
   let charts : Array[Chart] = []
   let chart_targets = if drawing_rels_xml.to_owned() == "" {
     Map([])
   } else {
-    parse_internal_relationship_targets(drawing_rels_xml, rel_chart)
+    parse_internal_relationship_targets(
+      drawing_rels_xml,
+      rel_chart,
+      budget?,
+      cancelled~,
+    )
   }
   let anchors = parse_drawing_anchors(drawing_xml)
   for entry in anchors {

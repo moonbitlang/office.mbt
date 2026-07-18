@@ -173,10 +173,11 @@ fn parse_relationship_targets_by_types_selected(
   xml : StringView,
   rel_types : ArrayView[String],
   selection : RelationshipTargetSelection,
+  cancelled? : () -> Bool = () => false,
 ) -> Map[String, String] raise ParseXmlError {
   let targets : Map[String, String] = Map([])
   let ids : Set[String] = Set([])
-  let scanner = XmlStartTagScanner::new(xml)
+  let scanner = XmlStartTagScanner::new(xml, cancelled~)
   if !scanner.next() ||
     scanner.depth() != 1 ||
     scanner.namespace_uri() != package_relationships_namespace ||
@@ -248,8 +249,14 @@ fn parse_relationship_targets_by_types_selected(
 pub fn parse_internal_relationship_targets_by_types(
   xml : StringView,
   rel_types : ArrayView[String],
+  cancelled? : () -> Bool = () => false,
 ) -> Map[String, String] raise ParseXmlError {
-  parse_relationship_targets_by_types_selected(xml, rel_types, InternalTargets)
+  parse_relationship_targets_by_types_selected(
+    xml,
+    rel_types,
+    InternalTargets,
+    cancelled~,
+  )
 }
 
 ///|
@@ -257,8 +264,13 @@ pub fn parse_internal_relationship_targets_by_types(
 pub fn parse_internal_relationship_targets(
   xml : StringView,
   rel_type : StringView,
+  cancelled? : () -> Bool = () => false,
 ) -> Map[String, String] raise ParseXmlError {
-  parse_internal_relationship_targets_by_types(xml, [rel_type.to_owned()])
+  parse_internal_relationship_targets_by_types(
+    xml,
+    [rel_type.to_owned()],
+    cancelled~,
+  )
 }
 
 ///|
@@ -267,8 +279,14 @@ pub fn parse_internal_relationship_targets(
 pub fn parse_external_relationship_targets_by_types(
   xml : StringView,
   rel_types : ArrayView[String],
+  cancelled? : () -> Bool = () => false,
 ) -> Map[String, String] raise ParseXmlError {
-  parse_relationship_targets_by_types_selected(xml, rel_types, ExternalTargets)
+  parse_relationship_targets_by_types_selected(
+    xml,
+    rel_types,
+    ExternalTargets,
+    cancelled~,
+  )
 }
 
 ///|
@@ -277,8 +295,13 @@ pub fn parse_external_relationship_targets_by_types(
 pub fn parse_external_relationship_targets(
   xml : StringView,
   rel_type : StringView,
+  cancelled? : () -> Bool = () => false,
 ) -> Map[String, String] raise ParseXmlError {
-  parse_external_relationship_targets_by_types(xml, [rel_type.to_owned()])
+  parse_external_relationship_targets_by_types(
+    xml,
+    [rel_type.to_owned()],
+    cancelled~,
+  )
 }
 
 ///|
@@ -302,11 +325,12 @@ pub fn package_part_name_key(name : StringView) -> String {
 ///|
 fn parse_content_types(
   xml : StringView,
+  cancelled? : () -> Bool = () => false,
 ) -> PackageContentTypes raise ParseXmlError {
   let overrides : Map[String, String] = Map([])
   let override_part_names : Map[String, String] = Map([])
   let defaults : Map[String, String] = Map([])
-  let scanner = XmlStartTagScanner::new(xml)
+  let scanner = XmlStartTagScanner::new(xml, cancelled~)
   if !scanner.next() ||
     scanner.depth() != 1 ||
     scanner.namespace_uri() != package_content_types_namespace ||
@@ -370,8 +394,9 @@ fn parse_content_types(
 pub fn find_override_part_by_content_types(
   xml : StringView,
   content_types : ArrayView[String],
+  cancelled? : () -> Bool = () => false,
 ) -> String? raise ParseXmlError {
-  let content_types_value = parse_content_types(xml)
+  let content_types_value = parse_content_types(xml, cancelled~)
   for wanted in content_types {
     for part_name_key, content_type in content_types_value.overrides {
       if content_type == wanted {
@@ -389,8 +414,9 @@ pub fn find_override_part_by_content_types(
 pub fn find_part_content_type(
   xml : StringView,
   part_name : StringView,
+  cancelled? : () -> Bool = () => false,
 ) -> String? raise ParseXmlError {
-  let content_types_value = parse_content_types(xml)
+  let content_types_value = parse_content_types(xml, cancelled~)
   let normalized = if part_name.has_prefix("/") {
     part_name.to_owned()
   } else {

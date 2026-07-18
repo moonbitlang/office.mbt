@@ -31,6 +31,8 @@ struct RichValueImages {
 fn parse_rich_value_images(
   archive : @zip.Archive,
   decode : (BytesView) -> String raise XlsxError,
+  budget? : ReadBudget,
+  cancelled? : () -> Bool = () => false,
 ) -> RichValueImages? raise XlsxError {
   let metadata_bytes = archive.get("xl/metadata.xml")
   let rich_value_bytes = archive.get("xl/richData/rdrichvalue.xml")
@@ -49,7 +51,13 @@ fn parse_rich_value_images(
   }
   let rel_targets = match
     archive.get("xl/richData/_rels/richValueRel.xml.rels") {
-    Some(value) => parse_internal_relationship_targets(decode(value), rel_image)
+    Some(value) =>
+      parse_internal_relationship_targets(
+        decode(value),
+        rel_image,
+        budget?,
+        cancelled~,
+      )
     None => Map([])
   }
   let web_blip_ids = match archive.get("xl/richData/rdRichValueWebImage.xml") {
@@ -58,7 +66,13 @@ fn parse_rich_value_images(
   }
   let web_rel_targets = match
     archive.get("xl/richData/_rels/rdRichValueWebImage.xml.rels") {
-    Some(value) => parse_internal_relationship_targets(decode(value), rel_image)
+    Some(value) =>
+      parse_internal_relationship_targets(
+        decode(value),
+        rel_image,
+        budget?,
+        cancelled~,
+      )
     None => Map([])
   }
   Some({

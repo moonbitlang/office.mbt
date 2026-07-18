@@ -366,10 +366,22 @@ fn parse_rich_text_runs(xml : StringView) -> Array[RichTextRun] raise XlsxError 
 ///|
 fn parse_shared_strings(
   xml : StringView,
+  budget? : ReadBudget,
 ) -> Array[SharedStringEntry] raise XlsxError {
+  match budget {
+    Some(value) => {
+      value.checkpoint()
+      value.charge_work(xml.length())
+    }
+    None => ()
+  }
   let values : Array[SharedStringEntry] = []
   let mut cursor = 0
   while find_xml_open_tag_start_from(xml, "si", cursor) is Some(start) {
+    match budget {
+      Some(value) => value.checkpoint()
+      None => ()
+    }
     let open_end = match xml_open_tag_end_from(xml, start + 1) {
       Some(value) => value
       None => raise InvalidXml(msg="shared string item tag not closed")

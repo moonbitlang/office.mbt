@@ -3251,9 +3251,14 @@ fn workbook_related_part_path(
   workbook_part : StringView,
   fallback : StringView,
   part_names : Map[String, String],
+  budget? : ReadBudget,
+  cancelled? : () -> Bool = () => false,
 ) -> String? raise XlsxError {
   let targets = parse_internal_relationship_targets(
-    workbook_rels, relationship_type,
+    workbook_rels,
+    relationship_type,
+    budget?,
+    cancelled~,
   )
   match
     first_existing_workbook_rel_target_path(targets, workbook_part, part_names) {
@@ -3311,7 +3316,13 @@ fn read_zip_archive_core_unchecked(
   }
   let workbook_xml_part_path = actual_archive_part_path(
     part_names,
-    resolve_workbook_xml_part_path(archive, part_names, decode),
+    resolve_workbook_xml_part_path(
+      archive,
+      part_names,
+      decode,
+      budget=read_budget,
+      cancelled~,
+    ),
   )
   let workbook_bytes = match archive.get(workbook_xml_part_path) {
     Some(value) => value
@@ -3372,8 +3383,13 @@ fn read_zip_archive_core_unchecked(
     active_index
   }
   let shared_strings_path = workbook_related_part_path(
-    workbook_rels, rel_shared_strings, workbook_xml_part_path, shared_strings_part_path,
+    workbook_rels,
+    rel_shared_strings,
+    workbook_xml_part_path,
+    shared_strings_part_path,
     part_names,
+    budget=read_budget,
+    cancelled~,
   )
   let shared_strings = match shared_strings_path {
     Some(path) =>
@@ -3396,14 +3412,20 @@ fn read_zip_archive_core_unchecked(
           )
           read_budget.checkpoint()
           read_budget.charge_work(canonical.length())
-          parse_shared_strings(canonical)
+          parse_shared_strings(canonical, budget=read_budget)
         }
         None => raise MissingPart(path~)
       }
     None => []
   }
   let styles_path = workbook_related_part_path(
-    workbook_rels, rel_styles, workbook_xml_part_path, styles_part_path, part_names,
+    workbook_rels,
+    rel_styles,
+    workbook_xml_part_path,
+    styles_part_path,
+    part_names,
+    budget=read_budget,
+    cancelled~,
   )
   let (
     styles,
@@ -3488,11 +3510,22 @@ fn read_zip_archive_core_unchecked(
         Some(rels) => decode(rels)
         None => ""
       }
-      parse_cell_images(decode(value), rels_xml, archive)
+      parse_cell_images(
+        decode(value),
+        rels_xml,
+        archive,
+        budget=read_budget,
+        cancelled~,
+      )
     }
     None => []
   }
-  let rich_value_images = parse_rich_value_images(archive, decode)
+  let rich_value_images = parse_rich_value_images(
+    archive,
+    decode,
+    budget=read_budget,
+    cancelled~,
+  )
   let rich_value_media : Map[String, Bytes] = Map([])
   match rich_value_images {
     Some(data) => {
@@ -3546,10 +3579,19 @@ fn read_zip_archive_core_unchecked(
     rich_value_media,
   }
   let slicer_cache_defs = parse_slicer_cache_definitions(
-    workbook_rels, workbook_xml_part_path, part_names, archive, decode,
+    workbook_rels,
+    workbook_xml_part_path,
+    part_names,
+    archive,
+    decode,
+    budget=read_budget,
+    cancelled~,
   )
   let vba_targets = parse_internal_relationship_targets(
-    workbook_rels, rel_vba_project,
+    workbook_rels,
+    rel_vba_project,
+    budget=read_budget,
+    cancelled~,
   )
   let vba_path = match
     first_existing_workbook_rel_target_path(
@@ -3582,10 +3624,16 @@ fn read_zip_archive_core_unchecked(
     None => ()
   }
   let worksheet_targets = parse_internal_relationship_targets(
-    workbook_rels, rel_worksheet,
+    workbook_rels,
+    rel_worksheet,
+    budget=read_budget,
+    cancelled~,
   )
   let chartsheet_targets = parse_internal_relationship_targets(
-    workbook_rels, rel_chartsheet,
+    workbook_rels,
+    rel_chartsheet,
+    budget=read_budget,
+    cancelled~,
   )
   let seen_sheet_parts : Set[String] = Set([])
   let resolved_sheet_parts : Map[String, String] = Map([])
@@ -3740,7 +3788,10 @@ fn read_zip_archive_core_unchecked(
           raise InvalidXml(msg="slicer relationship missing")
         }
         let rel_targets = parse_internal_relationship_targets(
-          rels_xml, rel_slicer,
+          rels_xml,
+          rel_slicer,
+          budget=read_budget,
+          cancelled~,
         )
         let parsed : Array[ParsedSlicerPartEntry] = []
         let seen_paths : Map[String, Bool] = Map([])
@@ -3771,7 +3822,10 @@ fn read_zip_archive_core_unchecked(
             raise InvalidXml(msg="picture relationship missing")
           }
           let image_targets = parse_internal_relationship_targets(
-            rels_xml, rel_image,
+            rels_xml,
+            rel_image,
+            budget=read_budget,
+            cancelled~,
           )
           let target = match image_targets.get(rel_id) {
             Some(value) => value
@@ -3808,7 +3862,12 @@ fn read_zip_archive_core_unchecked(
         []
       } else {
         let rel_targets = if needs_hyperlink_rels {
-          parse_external_relationship_targets(rels_xml, rel_hyperlink)
+          parse_external_relationship_targets(
+            rels_xml,
+            rel_hyperlink,
+            budget=read_budget,
+            cancelled~,
+          )
         } else {
           Map([])
         }
@@ -3850,7 +3909,10 @@ fn read_zip_archive_core_unchecked(
         []
       } else {
         let rel_targets = parse_internal_relationship_targets(
-          rels_xml, rel_table,
+          rels_xml,
+          rel_table,
+          budget=read_budget,
+          cancelled~,
         )
         let parsed_tables : Array[Table] = []
         for rel_id in table_part_ids {
@@ -3874,7 +3936,12 @@ fn read_zip_archive_core_unchecked(
         let rel_targets = if rels_xml == "" {
           Map([])
         } else {
-          parse_internal_relationship_targets(rels_xml, rel_pivot_table)
+          parse_internal_relationship_targets(
+            rels_xml,
+            rel_pivot_table,
+            budget=read_budget,
+            cancelled~,
+          )
         }
         let pivot_rel_ids : Array[String] = []
         if pivot_part_ids.length() > 0 {
@@ -3912,7 +3979,10 @@ fn read_zip_archive_core_unchecked(
             }
             let pivot_rels_xml = decode(pivot_rels_bytes)
             let cache_targets = parse_internal_relationship_targets(
-              pivot_rels_xml, rel_pivot_cache,
+              pivot_rels_xml,
+              rel_pivot_cache,
+              budget=read_budget,
+              cancelled~,
             )
             let cache_path = match
               first_existing_rel_target_path(
@@ -3947,7 +4017,10 @@ fn read_zip_archive_core_unchecked(
               Some(value) => {
                 let cache_rels_xml = decode(value)
                 let record_targets = parse_internal_relationship_targets(
-                  cache_rels_xml, rel_pivot_cache_records,
+                  cache_rels_xml,
+                  rel_pivot_cache_records,
+                  budget=read_budget,
+                  cancelled~,
                 )
                 let record_path = match
                   first_existing_rel_target_path(
@@ -3992,7 +4065,12 @@ fn read_zip_archive_core_unchecked(
       }
       let vml_targets = if legacy_drawing_rel_id is Some(_) ||
         legacy_drawing_hf_rel_id is Some(_) {
-        parse_internal_relationship_targets(rels_xml, rel_vml)
+        parse_internal_relationship_targets(
+          rels_xml,
+          rel_vml,
+          budget=read_budget,
+          cancelled~,
+        )
       } else {
         Map([])
       }
@@ -4043,7 +4121,13 @@ fn read_zip_archive_core_unchecked(
             None => None
           }
           parse_header_footer_images_from_vml(
-            xml, vml_rels_xml, path, part_names, archive,
+            xml,
+            vml_rels_xml,
+            path,
+            part_names,
+            archive,
+            budget=read_budget,
+            cancelled~,
           )
         }
         _ => []
@@ -4052,7 +4136,10 @@ fn read_zip_archive_core_unchecked(
         []
       } else {
         let comment_targets = parse_internal_relationship_targets(
-          rels_xml, rel_comments,
+          rels_xml,
+          rel_comments,
+          budget=read_budget,
+          cancelled~,
         )
         let parsed_comments : Array[Comment] = []
         for _rel_id, target in comment_targets {
@@ -4126,7 +4213,10 @@ fn read_zip_archive_core_unchecked(
             raise InvalidXml(msg="drawing relationship missing")
           }
           let drawing_targets = parse_internal_relationship_targets(
-            rels_xml, rel_drawing,
+            rels_xml,
+            rel_drawing,
+            budget=read_budget,
+            cancelled~,
           )
           let drawing_target = match drawing_targets.get(rel_id) {
             Some(value) => value
@@ -4152,13 +4242,26 @@ fn read_zip_archive_core_unchecked(
             None => ""
           }
           let drawing_images = parse_drawing_images(
-            drawing_xml, drawing_rels_xml, drawing_path, part_names, drawing_metrics,
+            drawing_xml,
+            drawing_rels_xml,
+            drawing_path,
+            part_names,
+            drawing_metrics,
             archive,
+            budget=read_budget,
+            cancelled~,
           )
           sheet.images.append(drawing_images)
           let drawing_charts = parse_drawing_charts(
-            drawing_xml, drawing_rels_xml, drawing_path, part_names, drawing_metrics,
-            archive, decode,
+            drawing_xml,
+            drawing_rels_xml,
+            drawing_path,
+            part_names,
+            drawing_metrics,
+            archive,
+            decode,
+            budget=read_budget,
+            cancelled~,
           )
           sheet.charts.append(drawing_charts)
           let drawing_shapes = parse_drawing_shapes(drawing_xml)
@@ -4259,7 +4362,10 @@ fn read_zip_archive_core_unchecked(
       }
       let chartsheet_rels_xml = decode(chartsheet_rels_bytes)
       let drawing_targets = parse_internal_relationship_targets(
-        chartsheet_rels_xml, rel_drawing,
+        chartsheet_rels_xml,
+        rel_drawing,
+        budget=read_budget,
+        cancelled~,
       )
       let drawing_target = match drawing_targets.get(drawing_rel) {
         Some(value) => value
@@ -4277,7 +4383,10 @@ fn read_zip_archive_core_unchecked(
       }
       let drawing_rels_xml = decode(drawing_rels_bytes)
       let chart_targets = parse_internal_relationship_targets(
-        drawing_rels_xml, rel_chart,
+        drawing_rels_xml,
+        rel_chart,
+        budget=read_budget,
+        cancelled~,
       )
       let chart_path = match
         first_existing_rel_target_path(chart_targets, drawing_path, part_names) {

@@ -8,8 +8,9 @@ let strict_office_relationship_prefix = "http://purl.oclc.org/ooxml/officeDocume
 fn parse_internal_relationship_targets_exact(
   xml : StringView,
   rel_type : StringView,
+  cancelled? : () -> Bool = () => false,
 ) -> Map[String, String] raise XlsxError {
-  @ooxml.parse_internal_relationship_targets(xml, rel_type) catch {
+  @ooxml.parse_internal_relationship_targets(xml, rel_type, cancelled~) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
     ReadCancelled => raise ReadCancelled
   }
@@ -19,8 +20,13 @@ fn parse_internal_relationship_targets_exact(
 fn parse_internal_relationship_targets_exact_types(
   xml : StringView,
   rel_types : ArrayView[String],
+  cancelled? : () -> Bool = () => false,
 ) -> Map[String, String] raise XlsxError {
-  @ooxml.parse_internal_relationship_targets_by_types(xml, rel_types) catch {
+  @ooxml.parse_internal_relationship_targets_by_types(
+    xml,
+    rel_types,
+    cancelled~,
+  ) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
     ReadCancelled => raise ReadCancelled
   }
@@ -30,8 +36,9 @@ fn parse_internal_relationship_targets_exact_types(
 fn parse_external_relationship_targets_exact(
   xml : StringView,
   rel_type : StringView,
+  cancelled? : () -> Bool = () => false,
 ) -> Map[String, String] raise XlsxError {
-  @ooxml.parse_external_relationship_targets(xml, rel_type) catch {
+  @ooxml.parse_external_relationship_targets(xml, rel_type, cancelled~) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
     ReadCancelled => raise ReadCancelled
   }
@@ -41,8 +48,13 @@ fn parse_external_relationship_targets_exact(
 fn parse_external_relationship_targets_exact_types(
   xml : StringView,
   rel_types : ArrayView[String],
+  cancelled? : () -> Bool = () => false,
 ) -> Map[String, String] raise XlsxError {
-  @ooxml.parse_external_relationship_targets_by_types(xml, rel_types) catch {
+  @ooxml.parse_external_relationship_targets_by_types(
+    xml,
+    rel_types,
+    cancelled~,
+  ) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
     ReadCancelled => raise ReadCancelled
   }
@@ -55,16 +67,28 @@ fn parse_external_relationship_targets_exact_types(
 fn parse_internal_relationship_targets(
   xml : StringView,
   rel_type : StringView,
+  budget? : ReadBudget,
+  cancelled? : () -> Bool = () => false,
 ) -> Map[String, String] raise XlsxError {
+  match budget {
+    Some(value) => {
+      value.checkpoint()
+      value.charge_work(xml.length())
+    }
+    None => check_read_cancelled(cancelled)
+  }
   let requested = rel_type.to_owned()
   match requested.strip_prefix(transitional_office_relationship_prefix) {
     Some(suffix) => {
       let strict_type = strict_office_relationship_prefix + suffix.to_owned()
-      parse_internal_relationship_targets_exact_types(xml, [
-        requested, strict_type,
-      ])
+      parse_internal_relationship_targets_exact_types(
+        xml,
+        [requested, strict_type],
+        cancelled~,
+      )
     }
-    None => parse_internal_relationship_targets_exact(xml, requested)
+    None =>
+      parse_internal_relationship_targets_exact(xml, requested, cancelled~)
   }
 }
 
@@ -74,16 +98,28 @@ fn parse_internal_relationship_targets(
 fn parse_external_relationship_targets(
   xml : StringView,
   rel_type : StringView,
+  budget? : ReadBudget,
+  cancelled? : () -> Bool = () => false,
 ) -> Map[String, String] raise XlsxError {
+  match budget {
+    Some(value) => {
+      value.checkpoint()
+      value.charge_work(xml.length())
+    }
+    None => check_read_cancelled(cancelled)
+  }
   let requested = rel_type.to_owned()
   match requested.strip_prefix(transitional_office_relationship_prefix) {
     Some(suffix) => {
       let strict_type = strict_office_relationship_prefix + suffix.to_owned()
-      parse_external_relationship_targets_exact_types(xml, [
-        requested, strict_type,
-      ])
+      parse_external_relationship_targets_exact_types(
+        xml,
+        [requested, strict_type],
+        cancelled~,
+      )
     }
-    None => parse_external_relationship_targets_exact(xml, requested)
+    None =>
+      parse_external_relationship_targets_exact(xml, requested, cancelled~)
   }
 }
 

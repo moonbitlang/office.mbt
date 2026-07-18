@@ -171,6 +171,32 @@ test "ooxml read_parse: relationship limits accept writer boundaries" {
 }
 
 ///|
+test "ooxml read_parse: relationship scans poll cancellation internally" {
+  let xml = StringBuilder::new()
+  xml.write_string(
+    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
+  )
+  for index in 0..<2048 {
+    xml.write_string(
+      "<Relationship Id=\"r\{index}\" Type=\"other\" Target=\"x\"/>",
+    )
+  }
+  xml.write_string("</Relationships>")
+  let checks = [0]
+  try
+    @ooxml.parse_internal_relationship_targets(xml.to_string(), "wanted", cancelled=() => {
+      checks[0] += 1
+      checks[0] >= 4
+    })
+  catch {
+    ReadCancelled => assert_true(checks[0] >= 4)
+    _ => fail("expected relationship scan cancellation")
+  } noraise {
+    _ => fail("expected relationship scan cancellation")
+  }
+}
+
+///|
 test "ooxml read_parse: parse_content_type_overrides and find workbook part" {
   let xml =
     #|<?xml version="1.0" encoding="UTF-8"?>
@@ -239,6 +265,32 @@ test "ooxml read_parse: content type lookup honors part identity then default" {
     @ooxml.find_part_content_type(xml, "custom/other.Xml"),
     Some("application/default+xml"),
   )
+}
+
+///|
+test "ooxml read_parse: content type scans poll cancellation internally" {
+  let xml = StringBuilder::new()
+  xml.write_string(
+    "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">",
+  )
+  for index in 0..<2048 {
+    xml.write_string(
+      "<Override PartName=\"/custom/p\{index}.xml\" ContentType=\"application/xml\"/>",
+    )
+  }
+  xml.write_string("</Types>")
+  let checks = [0]
+  try
+    @ooxml.find_part_content_type(xml.to_string(), "custom/missing.xml", cancelled=() => {
+      checks[0] += 1
+      checks[0] >= 4
+    })
+  catch {
+    ReadCancelled => assert_true(checks[0] >= 4)
+    _ => fail("expected content type scan cancellation")
+  } noraise {
+    _ => fail("expected content type scan cancellation")
+  }
 }
 
 ///|

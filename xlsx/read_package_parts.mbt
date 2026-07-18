@@ -11,6 +11,8 @@ fn workbook_part_from_root_relationships(
   archive : @zip.Archive,
   part_names : Map[String, String],
   decode : (BytesView) -> String raise XlsxError,
+  budget? : ReadBudget,
+  cancelled? : () -> Bool = () => false,
 ) -> String raise XlsxError {
   let root_rels_path = actual_archive_part_path(part_names, root_rels_part_path)
   let root_rels_xml = match archive.get(root_rels_path) {
@@ -20,7 +22,10 @@ fn workbook_part_from_root_relationships(
   let office_document_type = transitional_office_relationship_prefix +
     "officeDocument"
   let targets = parse_internal_relationship_targets(
-    root_rels_xml, office_document_type,
+    root_rels_xml,
+    office_document_type,
+    budget?,
+    cancelled~,
   )
   if targets.length() > 1 {
     raise InvalidXml(msg="root relationships contain multiple workbook targets")
@@ -64,9 +69,15 @@ fn resolve_workbook_xml_part_path(
   archive : @zip.Archive,
   part_names : Map[String, String],
   decode : (BytesView) -> String raise XlsxError,
+  budget? : ReadBudget,
+  cancelled? : () -> Bool = () => false,
 ) -> String raise XlsxError {
   let workbook_part = workbook_part_from_root_relationships(
-    archive, part_names, decode,
+    archive,
+    part_names,
+    decode,
+    budget?,
+    cancelled~,
   )
   let content_types_path = actual_archive_part_path(
     part_names, content_types_part_path,
@@ -75,8 +86,17 @@ fn resolve_workbook_xml_part_path(
     Some(content_types_bytes) => decode(content_types_bytes)
     None => raise MissingPart(path=content_types_path)
   }
+  match budget {
+    Some(value) => {
+      value.checkpoint()
+      value.charge_work(content_types_xml.length())
+    }
+    None => check_read_cancelled(cancelled)
+  }
   let content_type = @ooxml.find_part_content_type(
-    content_types_xml, workbook_part,
+    content_types_xml,
+    workbook_part,
+    cancelled~,
   ) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
     ReadCancelled => raise ReadCancelled

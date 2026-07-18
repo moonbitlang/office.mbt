@@ -344,10 +344,15 @@ fn parse_slicer_cache_definitions(
   part_names : Map[String, String],
   archive : @zip.Archive,
   decode : (BytesView) -> String raise XlsxError,
+  budget? : ReadBudget,
+  cancelled? : () -> Bool = () => false,
 ) -> Map[String, SlicerCacheDef] raise XlsxError {
   let defs : Map[String, SlicerCacheDef] = Map([])
   let targets = parse_internal_relationship_targets(
-    workbook_rels_xml, rel_slicer_cache,
+    workbook_rels_xml,
+    rel_slicer_cache,
+    budget?,
+    cancelled~,
   )
   for _rel_id, target in targets {
     let cache_path = actual_archive_part_path(

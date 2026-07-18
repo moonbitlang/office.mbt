@@ -7,6 +7,23 @@ fn worksheet_sheet_data_body(xml : StringView) -> String raise XlsxError {
 }
 
 ///|
+/// Accounts for one lexical worksheet pass before it begins. The worksheet
+/// reader intentionally composes several focused parsers; charging every pass
+/// keeps that convenience inside the same cumulative work policy.
+fn worksheet_parse_pass(
+  source : StringView,
+  budget : ReadBudget?,
+) -> Unit raise XlsxError {
+  match budget {
+    Some(value) => {
+      value.checkpoint()
+      value.charge_work(source.length())
+    }
+    None => ()
+  }
+}
+
+///|
 fn parse_worksheet(
   xml : StringView,
   shared_strings : Array[SharedStringEntry],
@@ -30,9 +47,15 @@ fn parse_worksheet(
   String?,
 ) raise XlsxError {
   let cells : Array[Cell] = []
+  worksheet_parse_pass(xml, budget)
   let sheet_data = worksheet_sheet_data_body(xml)
+  worksheet_parse_pass(sheet_data, budget)
   let mut first = true
   for chunk in sheet_data.split("<c") {
+    match budget {
+      Some(value) => value.checkpoint()
+      None => ()
+    }
     if first {
       first = false
       continue
@@ -260,20 +283,41 @@ fn parse_worksheet(
   }
   // Shared formulas are a worksheet-wide construct: followers carry only an
   // index, so validate the complete group before exposing a partial model.
+  match budget {
+    Some(value) => {
+      value.checkpoint()
+      value.charge_work(cells.length())
+    }
+    None => ()
+  }
   ignore(validated_shared_formula_masters(cells))
+  worksheet_parse_pass(xml, budget)
   let merged_cells = parse_merge_cells(xml)
+  worksheet_parse_pass(xml, budget)
   let auto_filter = parse_auto_filter(xml)
+  worksheet_parse_pass(sheet_data, budget)
   let row_dimensions = parse_row_dimensions(sheet_data, style_count)
+  worksheet_parse_pass(xml, budget)
   let col_dimensions = parse_col_dimensions(xml, style_count)
+  worksheet_parse_pass(xml, budget)
   let page_margins = parse_page_margins(xml)
+  worksheet_parse_pass(xml, budget)
   let page_layout = parse_page_layout(xml)
+  worksheet_parse_pass(xml, budget)
   let header_footer = parse_header_footer(xml)
+  worksheet_parse_pass(xml, budget)
   let sheet_protection = parse_sheet_protection(xml)
+  worksheet_parse_pass(xml, budget)
   let row_breaks = parse_page_breaks(xml, "rowBreaks")
+  worksheet_parse_pass(xml, budget)
   let col_breaks = parse_page_breaks(xml, "colBreaks")
+  worksheet_parse_pass(xml, budget)
   let sheet_views = parse_sheet_views(xml, budget?)
+  worksheet_parse_pass(xml, budget)
   let sheet_props = parse_sheet_props(xml)
+  worksheet_parse_pass(xml, budget)
   let dimension_ref = parse_sheet_dimension(xml)
+  worksheet_parse_pass(xml, budget)
   let picture_rel_id = parse_picture_rel_id(xml)
   (
     cells, merged_cells, auto_filter, row_dimensions, col_dimensions, page_margins,
