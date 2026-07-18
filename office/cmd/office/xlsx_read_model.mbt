@@ -126,6 +126,16 @@ struct XlsxStoredCellBudget {
 }
 
 ///|
+/// Command-wide budget for conditional-format metadata inspected while
+/// producing workbook and sheet summaries.
+struct XlsxConditionalFormatBudget {
+  maximum_ranges : Int
+  maximum_work_units : Int
+  mut ranges : Int
+  mut work_units : Int
+}
+
+///|
 fn xlsx_cli_failure(
   code : String,
   message : String,

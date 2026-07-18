@@ -67,6 +67,8 @@ type XlsxCellPredicate
 
 type XlsxCellSnapshot
 
+type XlsxConditionalFormatBudget
+
 type XlsxFormatBudget
 
 type XlsxFormulaBudget

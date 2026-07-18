@@ -122,17 +122,14 @@ async test "XLSX command cell scans yield before their bounded maximum" {
 }
 
 ///|
-test "XLSX post-projection metadata, styles, and human output observe cancellation" {
+async test "XLSX post-projection metadata, styles, and human output observe cancellation" {
   let projection = { ..xlsx_read_test_projection(), cancelled: () => true }
   guard projection.sheets[0].content is Worksheet(worksheet) else {
     fail("expected worksheet fixture")
   }
   for
     action in [
-      () => ignore(xlsx_outline_data(projection)),
-      () => ignore(xlsx_conditional_format_range_count(projection, worksheet)),
       () => ignore(xlsx_styles_json(projection, [])),
-      () => ignore(xlsx_outline_human(projection, 10_000)),
       () => {
         ignore(
           xlsx_page_human(
@@ -145,6 +142,22 @@ test "XLSX post-projection metadata, styles, and human output observe cancellati
       },
     ] {
     let error = xlsx_cli_error(() => action())
+    assert_eq(error.code, "office.cancelled")
+  }
+  for
+    error in [
+      xlsx_cli_error_async(() => ignore(xlsx_outline_data(projection))),
+      xlsx_cli_error_async(() => {
+        ignore(
+          xlsx_conditional_format_range_count_with_budget(
+            projection,
+            worksheet,
+            XlsxConditionalFormatBudget::new(),
+          ),
+        )
+      }),
+      xlsx_cli_error_async(() => ignore(xlsx_outline_human(projection, 10_000))),
+    ] {
     assert_eq(error.code, "office.cancelled")
   }
 }
@@ -448,7 +461,7 @@ test "XLSX used-range preprocessing rejects excess stored cells before scanning"
 }
 
 ///|
-test "XLSX used-range preprocessing shares one stored-cell budget across sheets" {
+async test "XLSX used-range preprocessing shares one stored-cell budget across sheets" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.new_sheet("First"))
   ignore(workbook.new_sheet("Second"))
@@ -457,13 +470,16 @@ test "XLSX used-range preprocessing shares one stored-cell budget across sheets"
   let projection = make_xlsx_projection(
     "aggregate-stored-cells.xlsx", workbook, 1,
   )
-  for
-    action in [
-      () => ignore(xlsx_scan_regions(projection, None)),
-      () => ignore(xlsx_outline_data(projection)),
-      () => ignore(xlsx_outline_human(projection, 10_000)),
-    ] {
-    let limited = xlsx_cli_error(() => action())
+  let limited_scan = xlsx_cli_error(() => {
+    ignore(xlsx_scan_regions(projection, None))
+  })
+  let limited_outline = xlsx_cli_error_async(() => {
+    ignore(xlsx_outline_data(projection))
+  })
+  let limited_human = xlsx_cli_error_async(() => {
+    ignore(xlsx_outline_human(projection, 10_000))
+  })
+  for limited in [limited_scan, limited_outline, limited_human] {
     assert_eq(limited.code, "office.xlsx.resource_limit")
     guard limited.details is Some(Object(details)) else {
       fail("expected aggregate stored-cell limit details")
@@ -471,6 +487,96 @@ test "XLSX used-range preprocessing shares one stored-cell budget across sheets"
     assert_eq(details.get("resource"), Some(Json::string("stored_cells")))
     assert_eq(details.get("limit"), Some(Json::number(1)))
     assert_eq(details.get("actual"), Some(Json::number(2)))
+  }
+}
+
+///|
+async test "XLSX outline shares conditional-format budgets across sheets" {
+  let workbook = @xlsx.Workbook::new()
+  let first = workbook.new_sheet("First")
+  let second = workbook.new_sheet("Second")
+  let fragment = "<conditionalFormatting sqref=\"A1\"><cfRule type=\"expression\"/></conditionalFormatting>"
+  first.add_conditional_format_xml(fragment)
+  second.add_conditional_format_xml(fragment)
+  let projection = make_xlsx_projection(
+    "aggregate-conditional-formats.xlsx", workbook, 10,
+  )
+  let range_budget = XlsxConditionalFormatBudget::new(
+    maximum_ranges=1,
+    maximum_work_units=4096,
+  )
+  assert_eq(
+    xlsx_conditional_format_range_count_with_budget(
+      projection, first, range_budget,
+    ),
+    1,
+  )
+  let range_error = xlsx_cli_error_async(() => {
+    ignore(
+      xlsx_conditional_format_range_count_with_budget(
+        projection, second, range_budget,
+      ),
+    )
+  })
+  assert_eq(range_error.code, "office.xlsx.resource_limit")
+  guard range_error.details is Some(Object(range_details)) else {
+    fail("expected aggregate conditional-format range details")
+  }
+  assert_eq(
+    range_details.get("resource"),
+    Some(Json::string("conditional-format ranges")),
+  )
+
+  let work_budget = XlsxConditionalFormatBudget::new(
+    maximum_ranges=10,
+    maximum_work_units=fragment.length() * 2 - 1,
+  )
+  assert_eq(
+    xlsx_conditional_format_range_count_with_budget(
+      projection, first, work_budget,
+    ),
+    1,
+  )
+  let work_error = xlsx_cli_error_async(() => {
+    ignore(
+      xlsx_conditional_format_range_count_with_budget(
+        projection, second, work_budget,
+      ),
+    )
+  })
+  assert_eq(work_error.code, "office.xlsx.resource_limit")
+  guard work_error.details is Some(Object(work_details)) else {
+    fail("expected aggregate conditional-format work details")
+  }
+  assert_eq(
+    work_details.get("resource"),
+    Some(Json::string("conditional-format count work units")),
+  )
+}
+
+///|
+async test "XLSX outline yields between worksheet summaries" {
+  let workbook = @xlsx.Workbook::new()
+  for index in 0..<8 {
+    ignore(workbook.new_sheet("Sheet\{index}"))
+  }
+  let projection = make_xlsx_projection(
+    "cooperative-outline.xlsx",
+    workbook,
+    10,
+    cancelled=() => @async.is_being_cancelled(),
+  )
+  @async.with_task_group() <| group => {
+    let task = group.spawn(() => ignore(xlsx_outline_data(projection)))
+    @async.pause()
+    task.cancel()
+    let cancelled = try {
+      ignore(task.wait())
+      false
+    } catch {
+      error => @async.is_cancellation_error(error)
+    }
+    assert_true(cancelled)
   }
 }
 
@@ -896,7 +1002,7 @@ async test "XLSX formatting rejects text amplification before materialization" {
   ignore(workbook.new_sheet("Data"))
   workbook.set_cell_str("Data", "A1", "x".repeat(64 * 1024))
   let style_id = workbook.new_style(
-    @xlsx.Style::number_format("@".repeat(64 * 1024)),
+    @xlsx.Style::number_format("@".repeat(16 * 1024)),
   )
   workbook.set_cell_style("Data", "A1", style_id)
   let projection = make_xlsx_projection("amplified-format.xlsx", workbook, 10)
@@ -914,6 +1020,33 @@ async test "XLSX formatting rejects text amplification before materialization" {
   assert_eq(
     details.get("resource"),
     Some(Json::string("formatted_cell_value_chars")),
+  )
+}
+
+///|
+async test "XLSX formatting rejects scheduler-sized format programs" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  workbook.set_cell_value("Data", "A1", Numeric(1.0))
+  let style_id = workbook.new_style(
+    @xlsx.Style::number_format("0".repeat(32 * 1024 + 1)),
+  )
+  workbook.set_cell_style("Data", "A1", style_id)
+  let projection = make_xlsx_projection("format-program.xlsx", workbook, 10)
+  let regions = xlsx_scan_regions(
+    projection,
+    Some(resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]")),
+  )
+  let limited = xlsx_cli_error_async(() => {
+    ignore(collect_xlsx_cell_page(projection, regions, TextCells, 0, 1))
+  })
+  assert_eq(limited.code, "office.xlsx.resource_limit")
+  guard limited.details is Some(Object(details)) else {
+    fail("expected format-program limit details")
+  }
+  assert_eq(
+    details.get("resource"),
+    Some(Json::string("formatted_number_format_work_units")),
   )
 }
 
@@ -1378,7 +1511,7 @@ async test "XLSX JSON and human output enforce format-specific stdout ceilings" 
     }
     assert_eq(characters + docx_cli_output_framing_chars, payload.budget.used)
   }
-  let too_small = xlsx_cli_error(() => {
+  let too_small = xlsx_cli_error_async(() => {
     ignore(xlsx_outline_payload(projection, 8))
   })
   assert_eq(too_small.code, "office.xlsx.resource_limit")

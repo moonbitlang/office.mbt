@@ -39,7 +39,13 @@ fn format_cell_value_limited(
         Some(style) =>
           match style.number_format {
             Some(format) =>
-              format_number_with_format(raw, format, options, use_1904_format)
+              format_number_with_format(
+                raw,
+                format,
+                options,
+                use_1904_format,
+                max_output_chars?,
+              )
             None => raw
           }
         None => raw
@@ -47,6 +53,66 @@ fn format_cell_value_limited(
   }
   check_formatted_output_length(output, max_output_chars)
   output
+}
+
+///|
+// Bounded formatting is used from cooperative async commands. Keeping every
+// synchronous format program below half of the command's 64-KiB work quantum
+// ensures one cell cannot monopolize the scheduler before the caller reaches
+// its next suspension point.
+let max_bounded_format_program_chars : Int = 32 * 1024
+
+///|
+fn check_bounded_format_program(
+  program : StringView,
+  maximum : Int?,
+) -> Unit raise XlsxError {
+  match maximum {
+    None => ()
+    Some(_) =>
+      if program.length() > max_bounded_format_program_chars {
+        raise ResourceLimitExceeded(
+          kind="formatted_number_format_work_units",
+          limit=max_bounded_format_program_chars,
+          actual=program.length(),
+        )
+      }
+  }
+}
+
+///|
+// Proves a conservative upper bound before any formatted result is allocated.
+// `program_multiplier` covers literal prefixes/suffixes, grouping separators,
+// fraction placeholders, and date-token expansion. Callers select a tighter
+// multiplier for the format family they are about to execute.
+fn check_bounded_numeric_output(
+  fallback_chars : Int,
+  program_chars : Int,
+  program_multiplier : Int,
+  fixed_overhead : Int,
+  maximum : Int?,
+) -> Unit raise XlsxError {
+  match maximum {
+    None => ()
+    Some(limit) => {
+      if limit < 0 {
+        raise InvalidOptions(msg="formatted output limit must be non-negative")
+      }
+      if fallback_chars > limit ||
+        program_chars < 0 ||
+        program_multiplier < 0 ||
+        fixed_overhead < 0 ||
+        fixed_overhead > limit ||
+        program_multiplier == 0 ||
+        program_chars > (limit - fixed_overhead) / program_multiplier {
+        raise ResourceLimitExceeded(
+          kind="formatted_cell_value_chars",
+          limit~,
+          actual=if limit < 0x7fffffff { limit + 1 } else { limit },
+        )
+      }
+    }
+  }
 }
 
 ///|
@@ -61,6 +127,7 @@ fn format_text_value(
       if code.to_lower().trim().to_owned() == "general" {
         raw
       } else {
+        check_bounded_format_program(code, max_output_chars)
         format_text_pattern(raw, code, max_output_chars?)
       }
   }
@@ -104,10 +171,25 @@ fn format_number_with_format(
   format : NumberFormat,
   options : Options,
   use_1904_format : Bool,
+  max_output_chars? : Int,
 ) -> String raise XlsxError {
   match format {
-    Builtin(id) => format_number_builtin(raw, id, options, use_1904_format)
-    Custom(code) => format_number_code(raw, code, options, use_1904_format~)
+    Builtin(id) =>
+      format_number_builtin(
+        raw,
+        id,
+        options,
+        use_1904_format,
+        max_output_chars?,
+      )
+    Custom(code) =>
+      format_number_code(
+        raw,
+        code,
+        options,
+        use_1904_format~,
+        max_output_chars?,
+      )
   }
 }
 
@@ -117,51 +199,87 @@ fn format_number_builtin(
   id : Int,
   options : Options,
   use_1904_format : Bool,
+  max_output_chars? : Int,
 ) -> String raise XlsxError {
   let short_date = options.short_date_pattern
   let long_date = options.long_date_pattern
   let long_time = options.long_time_pattern
   match id {
     0 => raw
-    1 => format_number_simple(raw, 0, false, false)
-    2 => format_number_simple(raw, 2, false, false)
-    3 => format_number_simple(raw, 0, true, false)
-    4 => format_number_simple(raw, 2, true, false)
-    9 => format_number_simple(raw, 0, false, true)
-    10 => format_number_simple(raw, 2, false, true)
+    1 => {
+      check_bounded_numeric_output(raw.length(), 0, 1, 64, max_output_chars)
+      format_number_simple(raw, 0, false, false)
+    }
+    2 => {
+      check_bounded_numeric_output(raw.length(), 0, 1, 64, max_output_chars)
+      format_number_simple(raw, 2, false, false)
+    }
+    3 => {
+      check_bounded_numeric_output(raw.length(), 0, 1, 64, max_output_chars)
+      format_number_simple(raw, 0, true, false)
+    }
+    4 => {
+      check_bounded_numeric_output(raw.length(), 0, 1, 64, max_output_chars)
+      format_number_simple(raw, 2, true, false)
+    }
+    9 => {
+      check_bounded_numeric_output(raw.length(), 0, 1, 65, max_output_chars)
+      format_number_simple(raw, 0, false, true)
+    }
+    10 => {
+      check_bounded_numeric_output(raw.length(), 0, 1, 65, max_output_chars)
+      format_number_simple(raw, 2, false, true)
+    }
     14 =>
       if short_date != "" {
-        format_excel_date(raw, short_date, use_1904_format~)
+        format_excel_date(raw, short_date, use_1904_format~, max_output_chars?)
       } else {
-        format_excel_date(raw, "mm-dd-yy", use_1904_format~)
+        format_excel_date(raw, "mm-dd-yy", use_1904_format~, max_output_chars?)
       }
     15 =>
       if long_date != "" {
-        format_excel_date(raw, long_date, use_1904_format~)
+        format_excel_date(raw, long_date, use_1904_format~, max_output_chars?)
       } else {
-        format_excel_date(raw, "d-mmm-yy", use_1904_format~)
+        format_excel_date(raw, "d-mmm-yy", use_1904_format~, max_output_chars?)
       }
-    16 => format_excel_date(raw, "d-mmm", use_1904_format~)
-    17 => format_excel_date(raw, "mmm-yy", use_1904_format~)
-    18 => format_excel_date(raw, "h:mm AM/PM", use_1904_format~)
-    19 => format_excel_date(raw, "h:mm:ss AM/PM", use_1904_format~)
+    16 => format_excel_date(raw, "d-mmm", use_1904_format~, max_output_chars?)
+    17 => format_excel_date(raw, "mmm-yy", use_1904_format~, max_output_chars?)
+    18 =>
+      format_excel_date(raw, "h:mm AM/PM", use_1904_format~, max_output_chars?)
+    19 =>
+      format_excel_date(
+        raw,
+        "h:mm:ss AM/PM",
+        use_1904_format~,
+        max_output_chars?,
+      )
     20 =>
       if long_time != "" {
-        format_excel_date(raw, long_time, use_1904_format~)
+        format_excel_date(raw, long_time, use_1904_format~, max_output_chars?)
       } else {
-        format_excel_date(raw, "hh:mm", use_1904_format~)
+        format_excel_date(raw, "hh:mm", use_1904_format~, max_output_chars?)
       }
     21 =>
       if long_time != "" {
-        format_excel_date(raw, long_time, use_1904_format~)
+        format_excel_date(raw, long_time, use_1904_format~, max_output_chars?)
       } else {
-        format_excel_date(raw, "hh:mm:ss", use_1904_format~)
+        format_excel_date(raw, "hh:mm:ss", use_1904_format~, max_output_chars?)
       }
     22 =>
       if short_date != "" {
-        format_excel_date(raw, "\{short_date} hh:mm", use_1904_format~)
+        format_excel_date(
+          raw,
+          "\{short_date} hh:mm",
+          use_1904_format~,
+          max_output_chars?,
+        )
       } else {
-        format_excel_date(raw, "m/d/yy hh:mm", use_1904_format~)
+        format_excel_date(
+          raw,
+          "m/d/yy hh:mm",
+          use_1904_format~,
+          max_output_chars?,
+        )
       }
     // language-glyph builtin IDs resolve through the workbook culture
     27..=36 | 50..=62 | 67..=81 =>
@@ -170,7 +288,13 @@ fn format_number_builtin(
           if code == "" {
             raw
           } else {
-            format_number_code(raw, code, options, use_1904_format~)
+            format_number_code(
+              raw,
+              code,
+              options,
+              use_1904_format~,
+              max_output_chars?,
+            )
           }
         None => raw
       }
@@ -184,8 +308,10 @@ fn format_number_code(
   code : String,
   options : Options,
   use_1904_format? : Bool = false,
+  max_output_chars? : Int,
 ) -> String raise XlsxError {
   let _ = options
+  check_bounded_format_program(code, max_output_chars)
   let sections = split_format_sections(code)
   if sections.length() == 0 {
     return raw
@@ -194,7 +320,7 @@ fn format_number_code(
     e => Err(e)
   }
   match parsed {
-    Err(_) => format_text_pattern(raw, code)
+    Err(_) => format_text_pattern(raw, code, max_output_chars?)
     Ok(value) => {
       let (section, add_minus) = select_format_section(sections, value)
       let (pattern, locale, currency_prefix) = parse_section_metadata(section)
@@ -203,6 +329,7 @@ fn format_number_code(
       }
       let normalized = pattern.to_lower()
       if normalized == "general" {
+        check_bounded_numeric_output(raw.length(), 0, 1, 0, max_output_chars)
         return format_general_number(raw)
       }
       if has_date_tokens(pattern) {
@@ -210,15 +337,24 @@ fn format_number_code(
           Some(tag) => if !is_supported_locale(tag) { return raw }
           None => ()
         }
+        check_bounded_numeric_output(
+          raw.length(),
+          code.length(),
+          3,
+          32,
+          max_output_chars,
+        )
         let formatted = format_excel_date(raw, pattern, use_1904_format~)
         let output = currency_prefix + formatted
         return if add_minus { "-" + output } else { output }
       }
       if !pattern_has_number_placeholders(pattern) {
+        check_bounded_numeric_output(0, code.length(), 2, 2, max_output_chars)
         let literal = render_literal_segment(pattern)
         let output = currency_prefix + literal
         return if add_minus { "-" + output } else { output }
       }
+      check_bounded_numeric_output(0, code.length(), 4, 64, max_output_chars)
       format_number_pattern(raw, pattern, add_minus, currency_prefix)
     }
   }
@@ -877,6 +1013,12 @@ fn format_scientific_number(value : Double, info : NumberPatternInfo) -> String 
 
 ///|
 fn format_fraction_number(value : Double, info : NumberPatternInfo) -> String {
+  // `Double::to_int64` saturates rather than reporting overflow. Fraction
+  // formats cannot faithfully render an integer part outside Int64, so retain
+  // the finite numeric value instead of manufacturing the saturation bound.
+  if value > 0x7fff_ffff_ffff_ffffL.to_double() {
+    return value.to_string()
+  }
   let int_part = Double::to_int64(Double::floor(value))
   let frac = value - int_part.to_double()
   let integer_text = format_int64_padded(
@@ -1110,6 +1252,9 @@ fn format_fixed_number(
   }
   let scale = pow10_int(places)
   let scale64 = Int64::from_int(scale)
+  if abs_value > 0x7fff_ffff_ffff_ffffL.to_double() / Double::from_int(scale) {
+    return abs_value.to_string()
+  }
   let scaled = Double::round(abs_value * Double::from_int(scale))
   let scaled_int = Double::to_int64(scaled)
   let int_part = if scale == 0 { scaled_int } else { scaled_int / scale64 }
@@ -1214,7 +1359,16 @@ fn format_excel_date(
   raw : String,
   pattern : String,
   use_1904_format? : Bool = false,
-) -> String {
+  max_output_chars? : Int,
+) -> String raise XlsxError {
+  check_bounded_format_program(pattern, max_output_chars)
+  check_bounded_numeric_output(
+    raw.length(),
+    pattern.length(),
+    2,
+    32,
+    max_output_chars,
+  )
   let value = @string.parse_double(raw) catch { _ => return raw }
   let parts = if use_1904_format {
     excel_serial_to_parts_1904(value)

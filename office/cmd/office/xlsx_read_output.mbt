@@ -74,31 +74,132 @@ fn xlsx_sheet_state_name(state : @xlsx.SheetState) -> String {
 }
 
 ///|
-fn xlsx_conditional_format_range_count(
+let xlsx_cli_max_conditional_format_open_tag_chars : Int = 32 * 1024
+
+///|
+fn XlsxConditionalFormatBudget::new(
+  maximum_ranges? : Int = office_read_max_parser_items,
+  maximum_work_units? : Int = office_read_max_xml_part_bytes,
+) -> XlsxConditionalFormatBudget {
+  { maximum_ranges, maximum_work_units, ranges: 0, work_units: 0 }
+}
+
+///|
+fn XlsxConditionalFormatBudget::reserve_work(
+  self : XlsxConditionalFormatBudget,
+  amount : Int,
+) -> Unit raise CliFailure {
+  if amount < 0 || amount > self.maximum_work_units - self.work_units {
+    let actual = if amount < 0 || amount > 0x7fffffff - self.work_units {
+      0x7fffffff
+    } else {
+      self.work_units + amount
+    }
+    raise xlsx_resource_failure(
+      "conditional-format count work units",
+      self.maximum_work_units,
+      actual~,
+    )
+  }
+  self.work_units += amount
+}
+
+///|
+fn XlsxConditionalFormatBudget::reserve_ranges(
+  self : XlsxConditionalFormatBudget,
+  amount : Int,
+) -> Unit raise CliFailure {
+  if amount < 0 || amount > self.maximum_ranges - self.ranges {
+    let actual = if amount < 0 || amount > 0x7fffffff - self.ranges {
+      0x7fffffff
+    } else {
+      self.ranges + amount
+    }
+    raise xlsx_resource_failure(
+      "conditional-format ranges",
+      self.maximum_ranges,
+      actual~,
+    )
+  }
+  self.ranges += amount
+}
+
+///|
+// Returns only the opening tag. Conditional-format bodies can be large, but
+// range counting needs just `sqref`; bounding this tag keeps the subsequent
+// synchronous XML scanner below one cooperative scheduling quantum.
+fn bounded_conditional_format_open_tag(
+  xml : StringView,
+) -> StringView raise CliFailure {
+  let mut quote : UInt16? = None
+  let mut index = 0
+  while index < xml.length() {
+    if index >= xlsx_cli_max_conditional_format_open_tag_chars {
+      raise xlsx_resource_failure(
+        "conditional-format opening-tag work units",
+        xlsx_cli_max_conditional_format_open_tag_chars,
+        actual=index + 1,
+      )
+    }
+    let unit = xml[index]
+    match quote {
+      Some(expected) => if unit == expected { quote = None }
+      None =>
+        if unit == ('"' : UInt16) || unit == ('\'' : UInt16) {
+          quote = Some(unit)
+        } else if unit == ('>' : UInt16) {
+          return xml[:index + 1]
+        }
+    }
+    index += 1
+  }
+  xml
+}
+
+///|
+async fn xlsx_conditional_format_range_count_with_budget(
   projection : XlsxProjection,
   worksheet : @xlsx.Worksheet,
-) -> Int raise CliFailure {
+  budget : XlsxConditionalFormatBudget,
+) -> Int {
   projection.checkpoint()
-  let count = worksheet.conditional_format_range_count_limited(
-    office_read_max_parser_items,
-    office_read_max_xml_part_bytes,
-    cancelled=projection.cancelled,
-  ) catch {
-    ReadCancelled =>
-      raise xlsx_cli_failure("office.cancelled", "XLSX read was cancelled")
-    error => raise xlsx_read_failure(error, projection.file)
+  let mut count = 0
+  let mut work_since_yield = 0
+  for xml in worksheet.conditional_formats() {
+    projection.checkpoint()
+    budget.reserve_work(xml.length())
+    let opening_tag = bounded_conditional_format_open_tag(xml)
+    let fragment_count = @xlsx.conditional_format_xml_range_count_limited(
+      opening_tag,
+      budget.maximum_ranges,
+      opening_tag.length(),
+      cancelled=projection.cancelled,
+    ) catch {
+      ReadCancelled =>
+        raise xlsx_cli_failure("office.cancelled", "XLSX read was cancelled")
+      error => raise xlsx_read_failure(error, projection.file)
+    }
+    budget.reserve_ranges(fragment_count)
+    count += fragment_count
+    work_since_yield += xml.length()
+    if work_since_yield >= xlsx_cli_scan_yield_work_units {
+      @async.pause()
+      projection.checkpoint()
+      work_since_yield = 0
+    }
   }
   projection.checkpoint()
   count
 }
 
 ///|
-fn xlsx_sheet_summary_json(
+async fn xlsx_sheet_summary_json(
   projection : XlsxProjection,
   sheet : XlsxSheetTarget,
   metadata : XlsxMetadataBudget,
   stored_cells : XlsxStoredCellBudget,
-) -> Json raise CliFailure {
+  conditional_formats : XlsxConditionalFormatBudget,
+) -> Json {
   projection.checkpoint()
   metadata.charge_item([sheet.name, sheet.path])
   let fields : Map[String, Json] = {
@@ -157,7 +258,9 @@ fn xlsx_sheet_summary_json(
         "hyperlinks": Json::number(hyperlink_count.to_double()),
         "data_validations": Json::number(validations.length().to_double()),
         "conditional_format_ranges": Json::number(
-          xlsx_conditional_format_range_count(projection, worksheet).to_double(),
+          xlsx_conditional_format_range_count_with_budget(
+            projection, worksheet, conditional_formats,
+          ).to_double(),
         ),
         "slicers": Json::number(slicers.length().to_double()),
       })
@@ -168,16 +271,20 @@ fn xlsx_sheet_summary_json(
 }
 
 ///|
-fn xlsx_outline_data(projection : XlsxProjection) -> Json raise CliFailure {
+async fn xlsx_outline_data(projection : XlsxProjection) -> Json {
   projection.checkpoint()
   let metadata = XlsxMetadataBudget::new()
   let stored_cells = XlsxStoredCellBudget::new(projection.max_scan_cells)
+  let conditional_formats = XlsxConditionalFormatBudget::new()
   let sheets : Array[Json] = []
   for sheet in projection.sheets {
     projection.checkpoint()
     sheets.push(
-      xlsx_sheet_summary_json(projection, sheet, metadata, stored_cells),
+      xlsx_sheet_summary_json(
+        projection, sheet, metadata, stored_cells, conditional_formats,
+      ),
     )
+    @async.pause()
   }
   let defined_names : Array[Json] = []
   for defined in projection.workbook.defined_names() {
@@ -240,10 +347,10 @@ fn xlsx_outline_data(projection : XlsxProjection) -> Json raise CliFailure {
 }
 
 ///|
-fn xlsx_outline_payload(
+async fn xlsx_outline_payload(
   projection : XlsxProjection,
   max_output_chars : Int,
-) -> BoundedOfficePayload raise CliFailure {
+) -> BoundedOfficePayload {
   projection.checkpoint()
   let sheets : Array[Json] = []
   let defined_names : Array[Json] = []
@@ -521,21 +628,24 @@ async fn collect_xlsx_cell_page(
 }
 
 ///|
-fn retain_xlsx_outline_records(
+async fn retain_xlsx_outline_records(
   projection : XlsxProjection,
   sheets : Array[Json],
   defined_names : Array[Json],
   budget : OfficeOutputBudget,
-) -> Unit raise CliFailure {
+) -> Unit {
   let metadata = XlsxMetadataBudget::new()
   let stored_cells = XlsxStoredCellBudget::new(projection.max_scan_cells)
+  let conditional_formats = XlsxConditionalFormatBudget::new()
   for sheet in projection.sheets {
     projection.checkpoint()
     let record = xlsx_sheet_summary_json(
-      projection, sheet, metadata, stored_cells,
+      projection, sheet, metadata, stored_cells, conditional_formats,
     )
     budget.reserve_array_item(record, !sheets.is_empty())
     sheets.push(record)
+    @async.pause()
+    projection.checkpoint()
   }
   for defined in projection.workbook.defined_names() {
     projection.checkpoint()
@@ -625,6 +735,7 @@ async fn xlsx_get_data(
           sheet,
           XlsxMetadataBudget::new(),
           XlsxStoredCellBudget::new(projection.max_scan_cells),
+          XlsxConditionalFormatBudget::new(),
         ),
       })
     Cell(sheet, rect, path~) => {
@@ -886,10 +997,10 @@ async fn xlsx_query_payload(
 }
 
 ///|
-fn xlsx_outline_human(
+async fn xlsx_outline_human(
   projection : XlsxProjection,
   maximum : Int,
-) -> String raise CliFailure {
+) -> String {
   projection.checkpoint()
   let output = DocxHumanWriter::new(maximum, format="xlsx")
   output.begin_line()
@@ -918,6 +1029,8 @@ fn xlsx_outline_human(
         }
       }
     }
+    @async.pause()
+    projection.checkpoint()
   }
   projection.checkpoint()
   output.finish()

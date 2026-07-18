@@ -15,6 +15,8 @@ pub fn column_name_to_number(StringView) -> Int raise XlsxError
 
 pub fn column_number_to_name(Int) -> String raise XlsxError
 
+pub fn conditional_format_xml_range_count_limited(StringView, Int, Int, cancelled? : () -> Bool) -> Int raise XlsxError
+
 pub fn coordinates_to_cell_name(Int, Int, abs? : Bool) -> String raise XlsxError
 
 pub fn decrypt(BytesView, options? : Options, limits? : ReadLimits, cancelled? : () -> Bool) -> Bytes raise XlsxError

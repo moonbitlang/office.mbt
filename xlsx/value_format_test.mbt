@@ -131,4 +131,35 @@ test "fraction, scientific, percent" {
   inspect(format_numeric(0.0, "# ?/?"), content="0    ")
   inspect(format_numeric(123.456, "0.00E+00"), content="1.23E+02")
   inspect(format_numeric(0.256, "0.00%"), content="25.60%")
+  let large_fraction = format_numeric(1.0e20, "# ?/?")
+  assert_false(large_fraction.contains("9223372036854775807"))
+}
+
+///|
+test "bounded numeric formatting rejects amplification before allocation" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.new_sheet("Sheet1")
+  workbook.set_cell_value("Sheet1", "A1", Numeric(1.0))
+  let style_id = workbook.new_style(
+    @xlsx.Style::number_format("0".repeat(1024)),
+  )
+  workbook.set_cell_style("Sheet1", "A1", style_id)
+  try
+    workbook.get_cell_value_styled_from_worksheet_rc(
+      sheet,
+      1,
+      1,
+      style_id,
+      max_output_chars=64,
+    )
+  catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) => {
+      assert_eq(kind, "formatted_cell_value_chars")
+      assert_eq(limit, 64)
+      assert_true(actual > limit)
+    }
+    _ => fail("expected bounded numeric formatting failure")
+  } noraise {
+    _ => fail("expected bounded numeric formatting failure")
+  }
 }

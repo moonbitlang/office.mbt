@@ -2596,6 +2596,71 @@ pub fn Worksheet::get_conditional_formats(
 /// fragments. Unlike `get_conditional_formats`, this does not materialize rule
 /// objects, maps, or copied range strings. Both retained-source work and the
 /// result are bounded, and long scans poll `cancelled`.
+pub fn conditional_format_xml_range_count_limited(
+  xml : StringView,
+  maximum_ranges : Int,
+  maximum_work_units : Int,
+  cancelled? : () -> Bool = () => false,
+) -> Int raise XlsxError {
+  if maximum_ranges < 0 || maximum_work_units < 0 {
+    raise InvalidOptions(
+      msg="conditional-format count limits must be non-negative",
+    )
+  }
+  let (work, work_exceeded) = read_budget_actual(
+    0,
+    xml.length(),
+    maximum_work_units,
+  )
+  if work_exceeded {
+    raise ResourceLimitExceeded(
+      kind="conditional_format_count_work_units",
+      limit=maximum_work_units,
+      actual=work,
+    )
+  }
+  check_read_cancelled(cancelled)
+  let scanner = @ooxml.XmlStartTagScanner::new(xml, cancelled~)
+  if !workbook_scanner_next(scanner) ||
+    scanner.depth() != 1 ||
+    scanner.local_name() != "conditionalFormatting" {
+    raise InvalidXml(msg="conditionalFormatting tag missing")
+  }
+  let sqref = scanner.attribute_view("", "sqref") catch {
+    InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+  guard sqref is Some(sqref) else {
+    raise InvalidXml(msg="conditional formatting sqref missing")
+  }
+  let mut count = 0
+  let mut in_token = false
+  for index in 0..<sqref.length() {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
+    if is_xml_attr_space_unit(sqref[index]) {
+      in_token = false
+    } else if !in_token {
+      let (next_count, count_exceeded) = read_budget_actual(
+        count, 1, maximum_ranges,
+      )
+      if count_exceeded {
+        raise ResourceLimitExceeded(
+          kind="conditional_format_ranges",
+          limit=maximum_ranges,
+          actual=next_count,
+        )
+      }
+      count = next_count
+      in_token = true
+    }
+  }
+  check_read_cancelled(cancelled)
+  count
+}
+
+///|
 pub fn Worksheet::conditional_format_range_count_limited(
   self : Worksheet,
   maximum_ranges : Int,
@@ -2624,41 +2689,23 @@ pub fn Worksheet::conditional_format_range_count_limited(
       )
     }
     work = next_work
-    let scanner = @ooxml.XmlStartTagScanner::new(xml, cancelled~)
-    if !workbook_scanner_next(scanner) ||
-      scanner.depth() != 1 ||
-      scanner.local_name() != "conditionalFormatting" {
-      raise InvalidXml(msg="conditionalFormatting tag missing")
+    let fragment_count = conditional_format_xml_range_count_limited(
+      xml,
+      maximum_ranges,
+      xml.length(),
+      cancelled~,
+    )
+    let (next_count, count_exceeded) = read_budget_actual(
+      count, fragment_count, maximum_ranges,
+    )
+    if count_exceeded {
+      raise ResourceLimitExceeded(
+        kind="conditional_format_ranges",
+        limit=maximum_ranges,
+        actual=next_count,
+      )
     }
-    let sqref = scanner.attribute_view("", "sqref") catch {
-      InvalidXml(msg~) => raise InvalidXml(msg~)
-      ReadCancelled => raise ReadCancelled
-    }
-    guard sqref is Some(sqref) else {
-      raise InvalidXml(msg="conditional formatting sqref missing")
-    }
-    let mut in_token = false
-    for index in 0..<sqref.length() {
-      if (index & 4095) == 0 {
-        check_read_cancelled(cancelled)
-      }
-      if is_xml_attr_space_unit(sqref[index]) {
-        in_token = false
-      } else if !in_token {
-        let (next_count, count_exceeded) = read_budget_actual(
-          count, 1, maximum_ranges,
-        )
-        if count_exceeded {
-          raise ResourceLimitExceeded(
-            kind="conditional_format_ranges",
-            limit=maximum_ranges,
-            actual=next_count,
-          )
-        }
-        count = next_count
-        in_token = true
-      }
-    }
+    count = next_count
   }
   check_read_cancelled(cancelled)
   count
