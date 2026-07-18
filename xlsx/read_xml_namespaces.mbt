@@ -29,6 +29,9 @@ let strict_drawing_chart_namespace = "http://purl.oclc.org/ooxml/drawingml/chart
 let drawing_slicer_namespace = "http://schemas.microsoft.com/office/drawing/2010/slicer"
 
 ///|
+let markup_compatibility_namespace = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+
+///|
 /// Converts namespace-qualified OOXML element names into the lexical form used
 /// by the existing bounded feature parsers. The source is fully namespace- and
 /// structure-validated before rewriting; only names change, never values.
@@ -145,7 +148,7 @@ fn canonicalize_xlsx_worksheet_features(
 /// Canonicalizes DrawingML by expanded namespace identity. Prefix aliases and
 /// default namespaces are normalized to the lexical names used by the existing
 /// drawing feature readers, while a foreign namespace borrowing `xdr`, `a`,
-/// `c`, or `sle` is defanged by the bounded XML canonicalizer.
+/// `c`, `sle`, or `mc` is defanged by the bounded XML canonicalizer.
 fn canonicalize_xlsx_drawing_xml(
   source : StringView,
   max_output_chars : Int,
@@ -178,6 +181,7 @@ fn canonicalize_xlsx_drawing_xml(
       (transitional_drawing_chart_namespace, "c"),
       (strict_drawing_chart_namespace, "c"),
       (drawing_slicer_namespace, "sle"),
+      (markup_compatibility_namespace, "mc"),
     ],
   ) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
@@ -370,7 +374,7 @@ test "XLSX XML canonicalization follows extension namespace identity" {
 ///|
 test "DrawingML canonicalization follows aliases and defangs borrowed prefixes" {
   let valid =
-    #|<wsDr xmlns="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:d="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:q="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:rel="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><oneCellAnchor><d:graphic><q:chart rel:id="chart"/></d:graphic></oneCellAnchor></wsDr>
+    #|<wsDr xmlns="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:d="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:q="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:rel="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:compat="http://schemas.openxmlformats.org/markup-compatibility/2006"><oneCellAnchor><compat:AlternateContent><compat:Choice Requires="q"><d:graphic><q:chart rel:id="chart"/></d:graphic></compat:Choice></compat:AlternateContent></oneCellAnchor></wsDr>
   let canonical = canonicalize_xlsx_drawing_xml(
     valid, default_max_xml_part_bytes,
   )
@@ -378,13 +382,16 @@ test "DrawingML canonicalization follows aliases and defangs borrowed prefixes" 
   assert_true(canonical.contains("<xdr:oneCellAnchor>"))
   assert_true(canonical.contains("<a:graphic>"))
   assert_true(canonical.contains("<c:chart r:id=\"chart\"/>"))
+  assert_true(canonical.contains("<mc:AlternateContent>"))
+  assert_true(canonical.contains("<mc:Choice Requires=\"q\">"))
   let spoofed =
-    #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"><xdr:oneCellAnchor xmlns:xdr="urn:foreign"/></xdr:wsDr>
-  assert_true(
-    canonicalize_xlsx_drawing_xml(spoofed, default_max_xml_part_bytes).contains(
-      "<_foreign_xdr_oneCellAnchor ",
-    ),
+    #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:mc="urn:foreign"><xdr:oneCellAnchor xmlns:xdr="urn:foreign"><mc:AlternateContent/></xdr:oneCellAnchor></xdr:wsDr>
+  let spoofed_canonical = canonicalize_xlsx_drawing_xml(
+    spoofed, default_max_xml_part_bytes,
   )
+  assert_true(spoofed_canonical.contains("<_foreign_xdr_oneCellAnchor "))
+  assert_true(spoofed_canonical.contains("<_foreign_mc_AlternateContent/>"))
+  assert_false(spoofed_canonical.contains("<mc:AlternateContent"))
 }
 
 ///|
