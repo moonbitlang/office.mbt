@@ -590,17 +590,7 @@ fn format_number_pattern(
   let negative = value < 0.0
   let abs_value = if negative { -value } else { value }
   let (prefix, suffix, info) = parse_number_pattern(pattern)
-  // IEEE-754 defines 0 * infinity as NaN. A long but syntactically valid run
-  // of percent markers can overflow the scale factor, yet formatting numeric
-  // zero must remain exactly zero rather than manufacturing a formatter error.
-  let scaled = if abs_value == 0.0 {
-    0.0
-  } else {
-    abs_value * @math.pow(100.0, Double::from_int(info.percent_count))
-  }
-  if scaled.is_nan() || scaled.is_inf() {
-    raise InvalidXml(msg="number format scale must remain finite")
-  }
+  let scaled = scale_number_for_percent_format(abs_value, info.percent_count)
   let formatted = if info.has_fraction {
     format_fraction_number(scaled, info)
   } else if info.has_scientific {
@@ -617,6 +607,29 @@ fn format_number_pattern(
   output.write_view(formatted)
   output.write_view(suffix)
   output.to_string()
+}
+
+///|
+fn scale_number_for_percent_format(
+  value : Double,
+  percent_count : Int,
+) -> Double raise XlsxError {
+  // Applying the entire power first can overflow even when the final product
+  // is representable (for example, 1e-300 * 100^155). Scaling one marker at a
+  // time preserves that finite result and lets us fail at the first genuinely
+  // non-finite intermediate. Keeping zero on an explicit fast path also avoids
+  // manufacturing NaN from IEEE-754's 0 * infinity rule.
+  if value == 0.0 || percent_count == 0 {
+    return value
+  }
+  let mut scaled = value
+  for _ in 0..<percent_count {
+    scaled = scaled * 100.0
+    if scaled.is_nan() || scaled.is_inf() {
+      raise InvalidXml(msg="number format scale must remain finite")
+    }
+  }
+  scaled
 }
 
 ///|

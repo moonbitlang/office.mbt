@@ -62,6 +62,21 @@ test "fraction formatting rejects non-finite nonzero percent scaling" {
 }
 
 ///|
+test "TEXT percent scaling keeps finite tiny values and zero total" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let format = "# ?/?" + "%".repeat(155)
+  sheet.set_cell_formula("A1", "TEXT(1E-300,\"" + format + "\")")
+  sheet.set_cell_formula("A2", "TEXT(0,\"" + format + "\")")
+  let finite = workbook.calc_cell_value("Sheet1", "A1")
+  let zero = workbook.calc_cell_value("Sheet1", "A2")
+  assert_true(finite.has_prefix("10000000000"))
+  assert_true(finite.has_suffix("%".repeat(155)))
+  assert_true(zero.has_prefix("0"))
+  assert_true(zero.has_suffix("%".repeat(155)))
+}
+
+///|
 test "general and literal formats" {
   inspect(format_numeric(43543.5448726851, "General"), content="43543.54487")
   inspect(format_numeric(1234567890.12345, "General"), content="1234567890")
