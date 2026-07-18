@@ -46,6 +46,7 @@ fn parse_workbook_sheets(
   cancelled? : () -> Bool = () => false,
 ) -> Array[WorkbookSheetInfo] raise XlsxError {
   let sheets : Array[WorkbookSheetInfo] = []
+  let sheet_names : Map[String, Bool] = Map([])
   let scanner = @ooxml.XmlStartTagScanner::new(xml, cancelled~)
   let mut workbook_namespace : String? = None
   while workbook_scanner_next(scanner) {
@@ -88,6 +89,15 @@ fn parse_workbook_sheets(
       Some(value) => value
       None => raise InvalidXml(msg="sheet name missing")
     }
+    check_sheet_name(name) catch {
+      InvalidSheetName(msg~) => raise InvalidXml(msg~)
+      error => raise error
+    }
+    let normalized_name = normalize_sheet_name(name)
+    if sheet_names.contains(normalized_name) {
+      raise InvalidXml(msg="duplicate sheet name")
+    }
+    sheet_names[normalized_name] = true
     let relationship_namespace = if namespace_uri ==
       strict_spreadsheet_namespace {
       strict_relationship_attribute_namespace
@@ -111,6 +121,33 @@ fn parse_workbook_sheets(
     sheets.push({ name, state, rel_id })
   }
   sheets
+}
+
+///|
+test "read workbook sheets rejects invalid and case-duplicate names" {
+  let prefix = "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets>"
+  let suffix = "</sheets></workbook>"
+  let invalid = prefix +
+    "<sheet name=\"Bad:Name\" sheetId=\"1\" r:id=\"rId1\"/>" +
+    suffix
+  try parse_workbook_sheets(invalid, 10) catch {
+    InvalidXml(msg~) =>
+      inspect(msg, content="sheet name contains invalid characters")
+    _ => fail("unexpected invalid sheet-name error")
+  } noraise {
+    _ => fail("expected invalid sheet-name rejection")
+  }
+
+  let duplicate = prefix +
+    "<sheet name=\"Data\" sheetId=\"1\" r:id=\"rId1\"/>" +
+    "<sheet name=\"data\" sheetId=\"2\" r:id=\"rId2\"/>" +
+    suffix
+  try parse_workbook_sheets(duplicate, 10) catch {
+    InvalidXml(msg~) => inspect(msg, content="duplicate sheet name")
+    _ => fail("unexpected duplicate sheet-name error")
+  } noraise {
+    _ => fail("expected duplicate sheet-name rejection")
+  }
 }
 
 ///|
