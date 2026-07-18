@@ -203,6 +203,7 @@ priv struct FindingCollector {
   max_zip_total_entry_name_chars : Int
   mut zip_entry_name_chars : Int
   xml_budget : @xml.XmlReadBudget
+  cancelled : () -> Bool
   mut truncated : Bool
   mut resource_limit : DocxValidationResourceLimit?
   mut main_document_part : String?
@@ -262,6 +263,7 @@ fn FindingCollector::new_with_xml_limits(
       },
       cancelled~,
     ),
+    cancelled,
     truncated: false,
     resource_limit: None,
     main_document_part: None,
@@ -658,7 +660,21 @@ fn validate_docx_archive_into(
       seen.add(name)
     }
     let logical_name = check_entry_name(name, findings)
-    if entry.crc32() != @mbtzip.crc32(entry.data()) {
+    let actual_crc = @mbtzip.crc32_cancellable(
+      entry.data(),
+      cancelled=findings.cancelled,
+    ) catch {
+      ReadCancelled => {
+        findings.stop()
+        return
+      }
+      _ => {
+        findings.add("entry CRC-32 verification failed: \{findings.text(name)}")
+        findings.stop()
+        return
+      }
+    }
+    if entry.crc32() != actual_crc {
       findings.add(
         "entry data does not match its stored CRC-32: \{findings.text(name)}",
       )

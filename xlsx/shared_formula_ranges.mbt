@@ -7,6 +7,112 @@ priv struct SharedFormulaRangeEvent {
 }
 
 ///|
+fn compare_shared_formula_range_events(
+  left : SharedFormulaRangeEvent,
+  right : SharedFormulaRangeEvent,
+) -> Int {
+  if left.row != right.row {
+    left.row.compare(right.row)
+  } else if left.delta != right.delta {
+    // Remove rectangles that ended on the preceding row before inserting
+    // rectangles that begin on this row.
+    left.delta.compare(right.delta)
+  } else if left.column_lo != right.column_lo {
+    left.column_lo.compare(right.column_lo)
+  } else {
+    left.column_hi.compare(right.column_hi)
+  }
+}
+
+///|
+/// Bottom-up merge sort used instead of `Array::sort_by` so hostile workloads
+/// cannot hide an uninterruptible O(m log m) comparison pass inside the
+/// runtime. Each pass is charged before it runs and polls at 4 Ki-event
+/// boundaries while merging and copying back.
+fn sort_shared_formula_range_events(
+  events : Array[SharedFormulaRangeEvent],
+  budget? : ReadBudget,
+) -> Unit raise XlsxError {
+  if events.length() < 2 {
+    return
+  }
+  let scratch = events.copy()
+  let mut width = 1
+  while width < events.length() {
+    match budget {
+      Some(value) => {
+        value.checkpoint()
+        value.charge_work(events.length())
+      }
+      None => ()
+    }
+    let mut run = 0
+    let mut output = 0
+    while run < events.length() {
+      let middle = if run > events.length() - width {
+        events.length()
+      } else {
+        run + width
+      }
+      let end = if middle > events.length() - width {
+        events.length()
+      } else {
+        middle + width
+      }
+      let mut left = run
+      let mut right = middle
+      while left < middle || right < end {
+        if (output & 4095) == 0 {
+          match budget {
+            Some(value) => value.checkpoint()
+            None => ()
+          }
+        }
+        if right >= end ||
+          (
+            left < middle &&
+            compare_shared_formula_range_events(events[left], events[right]) <=
+            0
+          ) {
+          scratch[output] = events[left]
+          left += 1
+        } else {
+          scratch[output] = events[right]
+          right += 1
+        }
+        output += 1
+      }
+      run = end
+    }
+    match budget {
+      Some(value) => {
+        value.checkpoint()
+        value.charge_work(events.length())
+      }
+      None => ()
+    }
+    for index in 0..<events.length() {
+      if (index & 4095) == 0 {
+        match budget {
+          Some(value) => value.checkpoint()
+          None => ()
+        }
+      }
+      events[index] = scratch[index]
+    }
+    width = if width > events.length() / 2 {
+      events.length()
+    } else {
+      width * 2
+    }
+  }
+  match budget {
+    Some(value) => value.checkpoint()
+    None => ()
+  }
+}
+
+///|
 fn shared_formula_range_tree_push(
   maximums : Array[Int],
   pending_additions : Array[Int],
@@ -126,12 +232,32 @@ fn shared_formula_range_tree_maximum(
 /// ranges remain valid. The column tree has a fixed 16,384-column footprint.
 fn validate_shared_formula_master_ranges(
   masters : Map[UInt, SharedFormulaMaster],
+  budget? : ReadBudget,
 ) -> Unit raise XlsxError {
   if masters.length() < 2 {
+    match budget {
+      Some(value) => value.checkpoint()
+      None => ()
+    }
     return
   }
   let events : Array[SharedFormulaRangeEvent] = []
+  match budget {
+    Some(value) => {
+      value.checkpoint()
+      value.charge_work(masters.length())
+      value.charge_work(masters.length())
+    }
+    None => ()
+  }
+  let mut master_index = 0
   for _, master in masters {
+    if (master_index & 4095) == 0 {
+      match budget {
+        Some(value) => value.checkpoint()
+        None => ()
+      }
+    }
     events.push({
       row: master.row_lo,
       column_lo: master.column_lo,
@@ -144,24 +270,31 @@ fn validate_shared_formula_master_ranges(
       column_hi: master.column_hi,
       delta: -1,
     })
+    master_index += 1
   }
-  events.sort_by((left, right) => {
-    if left.row != right.row {
-      left.row.compare(right.row)
-    } else if left.delta != right.delta {
-      // Remove rectangles that ended on the preceding row before inserting
-      // rectangles that begin on this row.
-      left.delta.compare(right.delta)
-    } else if left.column_lo != right.column_lo {
-      left.column_lo.compare(right.column_lo)
-    } else {
-      left.column_hi.compare(right.column_hi)
-    }
-  })
+  sort_shared_formula_range_events(events, budget?)
   let tree_size = cell_ref_max_cols * 4 + 8
   let maximums = Array::make(tree_size, 0)
   let pending_additions = Array::make(tree_size, 0)
+  match budget {
+    Some(value) =>
+      // Each event performs at most one range maximum and one range update on
+      // a fixed-depth 16,384-column tree. Charging 32 event-width passes is a
+      // conservative bound for both traversals without risking multiplication
+      // overflow in attacker-controlled accounting.
+      for _ in 0..<32 {
+        value.charge_work(events.length())
+      }
+    None => ()
+  }
+  let mut event_index = 0
   for event in events {
+    if (event_index & 4095) == 0 {
+      match budget {
+        Some(value) => value.checkpoint()
+        None => ()
+      }
+    }
     if event.delta > 0 &&
       shared_formula_range_tree_maximum(
         maximums,
@@ -185,5 +318,30 @@ fn validate_shared_formula_master_ranges(
       event.column_hi,
       event.delta,
     )
+    event_index += 1
   }
+  match budget {
+    Some(value) => value.checkpoint()
+    None => ()
+  }
+}
+
+///|
+test "shared formula event sorting polls cancellation inside long passes" {
+  let events : Array[SharedFormulaRangeEvent] = []
+  for index in 0..<(16 * 1024) {
+    events.push({ row: 16 * 1024 - index, column_lo: 1, column_hi: 1, delta: 1 })
+  }
+  let checks = [0]
+  let budget = ReadBudget::new(ReadLimits::new(), cancelled=() => {
+    checks[0] += 1
+    checks[0] >= 4
+  })
+  let result : Result[Unit, Error] = Ok(
+    sort_shared_formula_range_events(events, budget~),
+  ) catch {
+    error => Err(error)
+  }
+  assert_eq(checks[0], 4)
+  assert_true(result is Err(ReadCancelled))
 }

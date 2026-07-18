@@ -393,9 +393,24 @@ pub fn Worksheet::formula_refs(self : Worksheet) -> Array[String] {
 /// are retained only once even for large shared ranges.
 fn validated_shared_formula_masters(
   cells : ArrayView[Cell],
+  budget? : ReadBudget,
 ) -> Map[UInt, SharedFormulaMaster] raise XlsxError {
   let masters : Map[UInt, SharedFormulaMaster] = Map([])
+  match budget {
+    Some(value) => {
+      value.checkpoint()
+      value.charge_work(cells.length())
+    }
+    None => ()
+  }
+  let mut cell_index = 0
   for cell in cells {
+    if (cell_index & 4095) == 0 {
+      match budget {
+        Some(value) => value.checkpoint()
+        None => ()
+      }
+    }
     match
       (
         cell.formula_type,
@@ -435,9 +450,24 @@ fn validated_shared_formula_masters(
         raise InvalidXml(msg="shared formula text missing")
       _ => ()
     }
+    cell_index += 1
   }
-  validate_shared_formula_master_ranges(masters)
+  validate_shared_formula_master_ranges(masters, budget?)
+  match budget {
+    Some(value) => {
+      value.checkpoint()
+      value.charge_work(cells.length())
+    }
+    None => ()
+  }
+  cell_index = 0
   for cell in cells {
+    if (cell_index & 4095) == 0 {
+      match budget {
+        Some(value) => value.checkpoint()
+        None => ()
+      }
+    }
     match (cell.formula_type, cell.formula_shared_index, cell.formula_ref) {
       (Some(Shared), Some(shared_index), None) =>
         match masters.get(shared_index) {
@@ -451,6 +481,11 @@ fn validated_shared_formula_masters(
         }
       _ => ()
     }
+    cell_index += 1
+  }
+  match budget {
+    Some(value) => value.checkpoint()
+    None => ()
   }
   masters
 }

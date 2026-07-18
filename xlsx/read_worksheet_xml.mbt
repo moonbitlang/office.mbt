@@ -284,14 +284,10 @@ fn parse_worksheet(
   }
   // Shared formulas are a worksheet-wide construct: followers carry only an
   // index, so validate the complete group before exposing a partial model.
-  match budget {
-    Some(value) => {
-      value.checkpoint()
-      value.charge_work(cells.length())
-    }
-    None => ()
-  }
-  let shared_formula_masters_index = validated_shared_formula_masters(cells)
+  let shared_formula_masters_index = validated_shared_formula_masters(
+    cells,
+    budget?,
+  )
   worksheet_parse_pass(xml, budget)
   let merged_cells = parse_merge_cells(xml)
   worksheet_parse_pass(xml, budget)
