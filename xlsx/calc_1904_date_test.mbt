@@ -63,3 +63,32 @@ test "date-aware financial formulas are invariant across date systems" {
     )
   }
 }
+
+///|
+test "workday formulas terminate at supported date-system boundaries" {
+  let workbook_1904 = @xlsx.Workbook::new()
+  let sheet_1904 = workbook_1904.add_sheet("Sheet1")
+  workbook_1904.set_workbook_props(
+    Some(@xlsx.WorkbookPropsOptions::with_values(date_1904=true)),
+  )
+  let cases_1904 : Array[String] = [
+    "WORKDAY(DATE(1904,1,1),-1)", "WORKDAY.INTL(DATE(1904,1,1),-1)", "WORKDAY.INTL(DATE(1904,1,4),-1,1,DATE(1904,1,1))",
+    "WORKDAY(DATE(9999,12,31),1)",
+  ]
+  for index, formula in cases_1904 {
+    let cell = "A\{index + 1}"
+    sheet_1904.set_cell_formula(cell, formula)
+    inspect(workbook_1904.calc_cell_value("Sheet1", cell), content="#NUM!")
+  }
+
+  let workbook_1900 = @xlsx.Workbook::new()
+  let sheet_1900 = workbook_1900.add_sheet("Sheet1")
+  let cases_1900 : Array[String] = [
+    "WORKDAY(DATE(1900,1,1),-2)", "WORKDAY(DATE(9999,12,31),1)",
+  ]
+  for index, formula in cases_1900 {
+    let cell = "A\{index + 1}"
+    sheet_1900.set_cell_formula(cell, formula)
+    inspect(workbook_1900.calc_cell_value("Sheet1", cell), content="#NUM!")
+  }
+}

@@ -6170,6 +6170,19 @@ fn is_workday_mask(
 }
 
 ///|
+fn maximum_supported_formula_date_serial(use_1904_dates : Bool) -> Int {
+  Double::to_int(excel_serial_from_date(9999, 12, 31, use_1904_dates~).unwrap())
+}
+
+///|
+fn formula_date_serial_is_supported(
+  serial : Int,
+  use_1904_dates : Bool,
+) -> Bool {
+  serial >= 0 && serial <= maximum_supported_formula_date_serial(use_1904_dates)
+}
+
+///|
 fn collect_holidays(
   value : FormulaValue,
   use_1904_dates? : Bool = false,
@@ -6192,7 +6205,7 @@ fn workday_intl_adjust(
   weekend_mask : Array[Int],
   start_serial : Double,
   use_1904_dates? : Bool = false,
-) -> Int {
+) -> Int? {
   let mut adjusted = end_date
   for holiday in holidays {
     if sign > 0 {
@@ -6206,12 +6219,18 @@ fn workday_intl_adjust(
             use_1904_dates~,
           ) {
           adjusted = adjusted + sign
+          if !formula_date_serial_is_supported(adjusted, use_1904_dates) {
+            return None
+          }
           while !is_workday_mask(
                   weekend_mask,
                   Double::from_int(adjusted),
                   use_1904_dates~,
                 ) {
             adjusted = adjusted + sign
+            if !formula_date_serial_is_supported(adjusted, use_1904_dates) {
+              return None
+            }
           }
         }
       }
@@ -6226,18 +6245,24 @@ fn workday_intl_adjust(
             use_1904_dates~,
           ) {
           adjusted = adjusted + sign
+          if !formula_date_serial_is_supported(adjusted, use_1904_dates) {
+            return None
+          }
           while !is_workday_mask(
                   weekend_mask,
                   Double::from_int(adjusted),
                   use_1904_dates~,
                 ) {
             adjusted = adjusted + sign
+            if !formula_date_serial_is_supported(adjusted, use_1904_dates) {
+              return None
+            }
           }
         }
       }
     }
   }
-  adjusted
+  Some(adjusted)
 }
 
 ///|
@@ -6314,9 +6339,22 @@ fn workday_intl_value(
     sign = -1
   }
   let days_int = Double::to_int(trunc_double(days))
+  if days_int == 0 {
+    return Number(Double::ceil(start_serial))
+  }
+  let maximum_serial = maximum_supported_formula_date_serial(use_1904_dates)
+  // Bound the arithmetic before multiplying the week offset by seven. Any
+  // larger workday count must leave the supported 0000..9999 date domain,
+  // regardless of weekend or holiday configuration.
+  if days_int > maximum_serial || days_int < -maximum_serial {
+    return Error(formula_error_num)
+  }
   let offset = days_int / workdays
   let mut days_mod = days_int % workdays
   let mut end_date = Double::to_int(Double::ceil(start_serial)) + offset * 7
+  if !formula_date_serial_is_supported(end_date, use_1904_dates) {
+    return Error(formula_error_num)
+  }
   if days_mod == 0 {
     while !is_workday_mask(
             weekend_mask,
@@ -6324,10 +6362,16 @@ fn workday_intl_value(
             use_1904_dates~,
           ) {
       end_date = end_date - sign
+      if !formula_date_serial_is_supported(end_date, use_1904_dates) {
+        return Error(formula_error_num)
+      }
     }
   } else {
     while days_mod != 0 {
       end_date = end_date + sign
+      if !formula_date_serial_is_supported(end_date, use_1904_dates) {
+        return Error(formula_error_num)
+      }
       if is_workday_mask(
           weekend_mask,
           Double::from_int(end_date),
@@ -6341,15 +6385,18 @@ fn workday_intl_value(
       }
     }
   }
-  let adjusted = workday_intl_adjust(
-    end_date,
-    sign,
-    holidays,
-    weekend_mask,
-    start_serial,
-    use_1904_dates~,
-  )
-  Number(Double::from_int(adjusted))
+  match
+    workday_intl_adjust(
+      end_date,
+      sign,
+      holidays,
+      weekend_mask,
+      start_serial,
+      use_1904_dates~,
+    ) {
+    Some(adjusted) => Number(Double::from_int(adjusted))
+    None => Error(formula_error_num)
+  }
 }
 
 ///|
