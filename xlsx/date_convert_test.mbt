@@ -49,12 +49,45 @@ test "excel date to time 1904" {
 
 ///|
 test "excel date to time invalid" {
-  let result : Result[@time.ZonedDateTime, Error] = Ok(
-    @xlsx.excel_date_to_time(-1.0),
-  ) catch {
-    e => Err(e)
+  for
+    value in [
+      -1.0,
+      2_958_465.9999999,
+      2_958_466.0,
+      2_000_000_000.0,
+      2_147_483_647.0,
+      1.0 / 0.0,
+      0.0 / 0.0,
+    ] {
+    let result : Result[@time.ZonedDateTime, Error] = Ok(
+      @xlsx.excel_date_to_time(value),
+    ) catch {
+      e => Err(e)
+    }
+    inspect(result is Err(_), content="true")
   }
-  inspect(result is Err(_), content="true")
+  let latest = @xlsx.excel_date_to_time(2_958_465.0)
+  debug_inspect(
+    (latest.year(), latest.month(), latest.day()),
+    content="(9999, 12, 31)",
+  )
+  let latest_1904 = @xlsx.excel_date_to_time(2_957_003.0, use_1904_format=true)
+  debug_inspect(
+    (latest_1904.year(), latest_1904.month(), latest_1904.day()),
+    content="(9999, 12, 31)",
+  )
+  let after_1904 : Result[@time.ZonedDateTime, Error] = Ok(
+    @xlsx.excel_date_to_time(2_957_004.0, use_1904_format=true),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(after_1904 is Err(_), content="true")
+  let spill_1904 : Result[@time.ZonedDateTime, Error] = Ok(
+    @xlsx.excel_date_to_time(2_957_003.9999999, use_1904_format=true),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(spill_1904 is Err(_), content="true")
 }
 
 ///|

@@ -1176,63 +1176,6 @@ fn format_excel_date(
 }
 
 ///|
-fn excel_serial_to_parts(value : Double) -> (Int, Int, Int, Int, Int, Int)? {
-  if value < 0.0 {
-    return None
-  }
-  let whole = Double::to_int(Double::floor(value))
-  let mut fraction = value - Double::from_int(whole)
-  if fraction < 0.0 {
-    fraction = 0.0
-  }
-  let mut total_seconds = Double::to_int(Double::round(fraction * 86400.0))
-  let mut add_day = 0
-  if total_seconds >= 86400 {
-    total_seconds = total_seconds - 86400
-    add_day = 1
-  }
-  if whole == 60 {
-    let hour = total_seconds / 3600
-    let minute = total_seconds % 3600 / 60
-    let second = total_seconds % 60
-    return Some((1900, 2, 29, hour, minute, second))
-  }
-  let mut days = whole
-  if days > 59 {
-    days = days - 1
-  }
-  let (year, month, day) = add_days_to_base(days + add_day)
-  let hour = total_seconds / 3600
-  let minute = total_seconds % 3600 / 60
-  let second = total_seconds % 60
-  Some((year, month, day, hour, minute, second))
-}
-
-///|
-fn add_days_to_base(days : Int) -> (Int, Int, Int) {
-  let mut year = 1899
-  let mut month = 12
-  let mut day = 31
-  let mut remaining = days
-  while remaining > 0 {
-    let dim = days_in_month(year, month)
-    if day + remaining <= dim {
-      day = day + remaining
-      remaining = 0
-    } else {
-      remaining = remaining - (dim - day + 1)
-      day = 1
-      month = month + 1
-      if month > 12 {
-        month = 1
-        year = year + 1
-      }
-    }
-  }
-  (year, month, day)
-}
-
-///|
 fn is_leap_year(year : Int) -> Bool {
   if year % 400 == 0 {
     true

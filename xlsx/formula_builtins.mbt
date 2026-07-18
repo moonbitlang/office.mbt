@@ -3693,15 +3693,22 @@ fn eval_function(
             Ok(text) => text.to_lower()
             Err(err) => return err
           }
-          // value_as_date_serial rejects negatives; serial-to-date conversion is total on non-negative serials.
-          let (sy, sm, sd) = date_parts_from_serial(
-            start_serial,
-            use_1904_dates=ctx.use_1904_dates,
-          ).unwrap()
-          let (ey, em, ed) = date_parts_from_serial(
-            end_serial,
-            use_1904_dates=ctx.use_1904_dates,
-          ).unwrap()
+          let (sy, sm, sd) = match
+            date_parts_from_serial(
+              start_serial,
+              use_1904_dates=ctx.use_1904_dates,
+            ) {
+            Some(parts) => parts
+            None => return Error(formula_error_num)
+          }
+          let (ey, em, ed) = match
+            date_parts_from_serial(
+              end_serial,
+              use_1904_dates=ctx.use_1904_dates,
+            ) {
+            Some(parts) => parts
+            None => return Error(formula_error_num)
+          }
           match unit {
             "y" => {
               let mut diff = ey - sy
@@ -3791,14 +3798,19 @@ fn eval_function(
           Ok(value) => value
           Err(err) => return err
         }
-        let (sy, sm, sd) = date_parts_from_serial(
-          start_serial,
-          use_1904_dates=ctx.use_1904_dates,
-        ).unwrap()
-        let (ey, em, ed) = date_parts_from_serial(
-          end_serial,
-          use_1904_dates=ctx.use_1904_dates,
-        ).unwrap()
+        let (sy, sm, sd) = match
+          date_parts_from_serial(
+            start_serial,
+            use_1904_dates=ctx.use_1904_dates,
+          ) {
+          Some(parts) => parts
+          None => return Error(formula_error_num)
+        }
+        let (ey, em, ed) = match
+          date_parts_from_serial(end_serial, use_1904_dates=ctx.use_1904_dates) {
+          Some(parts) => parts
+          None => return Error(formula_error_num)
+        }
         let mut start_day = sd
         let mut end_day = ed
         let end_year = ey

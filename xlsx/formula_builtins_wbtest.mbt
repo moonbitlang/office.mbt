@@ -2404,31 +2404,29 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
     content="true",
   )
   inspect(
-    match
+    is_formula_error(
       eval_function(
         workbook,
         "Sheet1",
         "DATEDIF",
         [Number(1.0e20), Number(1.0e20 + 1.0), String("D")],
         ctx,
-      ) {
-      Number(_) => true
-      _ => false
-    },
+      ),
+      formula_error_num,
+    ),
     content="true",
   )
   inspect(
-    match
+    is_formula_error(
       eval_function(
         workbook,
         "Sheet1",
         "DATEDIF",
         [Number(1.0), Number(1.0e20), String("D")],
         ctx,
-      ) {
-      Number(_) => true
-      _ => false
-    },
+      ),
+      formula_error_num,
+    ),
     content="true",
   )
   inspect(
@@ -2578,31 +2576,29 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
     content="true",
   )
   inspect(
-    match
+    is_formula_error(
       eval_function(
         workbook,
         "Sheet1",
         "DAYS360",
         [Number(1.0e20), String("2024-01-31"), Bool(true)],
         ctx,
-      ) {
-      Number(_) => true
-      _ => false
-    },
+      ),
+      formula_error_num,
+    ),
     content="true",
   )
   inspect(
-    match
+    is_formula_error(
       eval_function(
         workbook,
         "Sheet1",
         "DAYS360",
         [String("2024-01-31"), Number(1.0e20), Bool(true)],
         ctx,
-      ) {
-      Number(_) => true
-      _ => false
-    },
+      ),
+      formula_error_num,
+    ),
     content="true",
   )
   inspect(

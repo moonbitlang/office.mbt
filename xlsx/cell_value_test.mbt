@@ -83,6 +83,25 @@ test "formatted percent and date" {
 }
 
 ///|
+test "built-in date formatting is constant-time at numeric boundaries" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let date_style = workbook.add_style(@xlsx.Style::builtin_number_format(14))
+  let cases : Array[(String, Double, String)] = [
+    ("A1", 2_958_465.0, "12-31-99"),
+    ("A2", 2_958_466.0, "2958466"),
+    ("A3", 2_000_000_000.0, "2000000000"),
+    ("A4", 2_147_483_647.0, "2147483647"),
+  ]
+  for case in cases {
+    let (cell, value, expected) = case
+    workbook.set_cell_value("Sheet1", cell, Numeric(value))
+    workbook.set_cell_style("Sheet1", cell, date_style)
+    assert_eq(workbook.get_cell_value("Sheet1", cell), Some(expected))
+  }
+}
+
+///|
 test "formatted dates honor the workbook 1904 date system" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

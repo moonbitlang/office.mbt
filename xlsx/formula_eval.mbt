@@ -5959,19 +5959,26 @@ fn date_parts_from_serial(
 }
 
 ///|
+fn validated_date_serial(
+  serial : Double,
+  use_1904_dates : Bool,
+) -> Result[Double, FormulaValue] {
+  match date_parts_from_serial(serial, use_1904_dates~) {
+    Some(_) => Ok(serial)
+    None => Err(Error(formula_error_num))
+  }
+}
+
+///|
 fn value_as_date_serial(
   value : FormulaValue,
   use_1904_dates? : Bool = false,
 ) -> Result[Double, FormulaValue] {
   match normalize_scalar(value) {
-    Number(num) =>
-      if num < 0.0 {
-        Err(Error(formula_error_num))
-      } else {
-        Ok(num)
-      }
-    Bool(flag) => Ok(if flag { 1.0 } else { 0.0 })
-    Empty => Ok(0.0)
+    Number(num) => validated_date_serial(num, use_1904_dates)
+    Bool(flag) =>
+      validated_date_serial(if flag { 1.0 } else { 0.0 }, use_1904_dates)
+    Empty => validated_date_serial(0.0, use_1904_dates)
     String(text) => {
       let trimmed = text.trim().to_owned()
       match parse_date_parts(trimmed) {
@@ -5982,12 +5989,7 @@ fn value_as_date_serial(
           }
         None =>
           match parse_value_number(trimmed) {
-            Some(num) =>
-              if num < 0.0 {
-                Err(Error(formula_error_num))
-              } else {
-                Ok(num)
-              }
+            Some(num) => validated_date_serial(num, use_1904_dates)
             None => Err(Error(formula_error_value))
           }
       }

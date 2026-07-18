@@ -12,6 +12,37 @@ fn days_from_civil(year : Int, month : Int, day : Int) -> Int {
 }
 
 ///|
+/// Converts days since 1970-01-01 to a proleptic-Gregorian calendar date in
+/// constant time (the inverse of `days_from_civil`).
+fn civil_from_days(days : Int) -> (Int, Int, Int) {
+  let shifted = days + 719468
+  let era = (if shifted >= 0 { shifted } else { shifted - 146096 }) / 146097
+  let day_of_era = shifted - era * 146097
+  let year_of_era = (
+      day_of_era - day_of_era / 1460 + day_of_era / 36524 - day_of_era / 146096
+    ) /
+    365
+  let mut year = year_of_era + era * 400
+  let day_of_year = day_of_era -
+    (365 * year_of_era + year_of_era / 4 - year_of_era / 100)
+  let month_prime = (5 * day_of_year + 2) / 153
+  let day = day_of_year - (153 * month_prime + 2) / 5 + 1
+  let month = month_prime + (if month_prime < 10 { 3 } else { -9 })
+  if month <= 2 {
+    year = year + 1
+  }
+  (year, month, day)
+}
+
+///|
+test "civil day conversion round-trips supported Excel boundaries" {
+  for date in [(1899, 12, 31), (1904, 1, 1), (1970, 1, 1), (9999, 12, 31)] {
+    let (year, month, day) = date
+    assert_eq(civil_from_days(days_from_civil(year, month, day)), date)
+  }
+}
+
+///|
 let nanos_per_day : Double = 86_400_000_000_000.0
 
 ///|
