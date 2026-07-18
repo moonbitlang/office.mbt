@@ -3863,6 +3863,12 @@ fn eval_function(
         if !ctx.use_1904_dates && serial < 1.0 {
           return Error(formula_error_num)
         }
+        // Excel assigns the fictitious 1900-02-29 (including its time
+        // fraction) to ISO week 9. It cannot pass through the Gregorian helper
+        // below because 1900 was not actually a leap year.
+        if is_1900_phantom_date_serial(serial, ctx.use_1904_dates) {
+          return Number(9.0)
+        }
         let (year, month, day) = match
           date_parts_from_serial(serial, use_1904_dates=ctx.use_1904_dates) {
           Some(parts) => parts

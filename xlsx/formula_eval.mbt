@@ -5928,6 +5928,11 @@ fn date_parts_from_serial(
 }
 
 ///|
+fn is_1900_phantom_date_serial(serial : Double, use_1904_dates : Bool) -> Bool {
+  !use_1904_dates && serial >= 60.0 && serial < 61.0
+}
+
+///|
 fn validated_date_serial(
   serial : Double,
   use_1904_dates : Bool,

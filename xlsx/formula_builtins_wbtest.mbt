@@ -18548,6 +18548,15 @@ test "formula builtins wb: residual hotspot probes part 75" {
     ),
     content="true",
   )
+  for serial in [60.0, 60.5] {
+    inspect(
+      is_formula_number(
+        eval_function(workbook, "Sheet1", "ISOWEEKNUM", [Number(serial)], ctx),
+        9.0,
+      ),
+      content="true",
+    )
+  }
   inspect(
     match
       eval_function(

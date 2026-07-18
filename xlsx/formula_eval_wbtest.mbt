@@ -2069,6 +2069,16 @@ test "formula eval wb: date serial and weekend helper branches part 4" {
   )
 
   inspect(date_parts_from_serial(-1.0) is None, content="true")
+  debug_inspect(
+    (
+      is_1900_phantom_date_serial(60.0, false),
+      is_1900_phantom_date_serial(60.5, false),
+      is_1900_phantom_date_serial(59.999, false),
+      is_1900_phantom_date_serial(61.0, false),
+      is_1900_phantom_date_serial(60.0, true),
+    ),
+    content="(true, true, false, false, false)",
+  )
   inspect(
     match date_parts_from_value(Error(formula_error_ref)) {
       Err(Error(err)) => err == formula_error_ref
