@@ -82,6 +82,7 @@ fn parse_header_footer_images_from_vml(
   vml_rels_xml : String?,
   vml_part : StringView,
   part_names : Map[String, String],
+  content_types : @ooxml.PackageContentTypes,
   archive : @zip.Archive,
   budget? : ReadBudget,
   cancelled? : () -> Bool = () => false,
@@ -142,23 +143,18 @@ fn parse_header_footer_images_from_vml(
       part_names,
       cancelled~,
     )
-    let image_bytes = match archive.get(image_path) {
-      Some(value) => value
-      None => raise MissingPart(path=image_path)
-    }
-    let extension = match extension_from_path(image_path) {
-      Some(value) => value
-      None => continue
-    }
-    let content_type = match image_content_type(extension) {
-      Some(value) => value
-      None => continue
-    }
+    let (image_bytes, identity) = load_image_part(
+      archive,
+      content_types,
+      image_path,
+      "header/footer image",
+      cancelled~,
+    )
     let image : HeaderFooterImage = {
       position,
       data: image_bytes.to_owned(),
-      extension,
-      content_type,
+      extension: identity.extension,
+      content_type: identity.content_type,
       is_footer,
       first_page,
       width,
@@ -212,19 +208,13 @@ test "header/footer image read wb: parse images with r:id fallback and duplicate
   let archive = @zip.Archive::new()
   let image1 = @encoding/utf8.encode("img1")
   let image2 = @encoding/utf8.encode("img2")
-  let image3 = @encoding/utf8.encode("img3")
-  let image4 = @encoding/utf8.encode("img4")
   archive.add("xl/media/image1.png", image1)
   archive.add("xl/media/image2.png", image2)
-  archive.add("xl/media/image3.bin", image3)
-  archive.add("xl/media/image4", image4)
 
   let rels_xml =
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
     #|  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/>
     #|  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image2.png"/>
-    #|  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image3.bin"/>
-    #|  <Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image4"/>
     #|</Relationships>
   let vml_xml =
     #|<xml xmlns:v="urn:schemas-microsoft-com:vml" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -237,12 +227,6 @@ test "header/footer image read wb: parse images with r:id fallback and duplicate
     #|  <v:shape id="CH" style="height:20pt">
     #|    <v:imagedata r:id="rId1"/>
     #|  </v:shape>
-    #|  <v:shape id="RH" style="width:12pt;height:12pt">
-    #|    <v:imagedata r:id="rId3"/>
-    #|  </v:shape>
-    #|  <v:shape id="CF" style="width:11pt;height:11pt">
-    #|    <v:imagedata r:id="rId4"/>
-    #|  </v:shape>
     #|</xml>
 
   let images = parse_header_footer_images_from_vml(
@@ -250,6 +234,7 @@ test "header/footer image read wb: parse images with r:id fallback and duplicate
     Some(rels_xml),
     "xl/drawings/vmlDrawing1.vml",
     Map([]),
+    image_reader_test_content_types(),
     archive,
   )
   inspect(images.length(), content="1")
@@ -280,6 +265,7 @@ test "header/footer image read wb: missing target part raises MissingPart" {
       Some(rels_xml),
       "xl/drawings/vmlDrawing1.vml",
       Map([]),
+      image_reader_test_content_types(),
       archive,
     ),
   ) catch {

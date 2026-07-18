@@ -23,6 +23,8 @@ struct RichValueImages {
   /// blip relationship id -> media target (from
   /// rdRichValueWebImage.xml.rels)
   web_rel_targets : Map[String, String]
+  /// media target -> manifest-authenticated image identity
+  media_identities : Map[String, ImagePartIdentity]
 }
 
 ///|
@@ -31,6 +33,7 @@ struct RichValueImages {
 fn parse_rich_value_images(
   archive : @zip.Archive,
   part_names : Map[String, String],
+  content_types : @ooxml.PackageContentTypes,
   decode : (BytesView) -> String raise XlsxError,
   budget? : ReadBudget,
   cancelled? : () -> Bool = () => false,
@@ -50,8 +53,17 @@ fn parse_rich_value_images(
     Some(value) => parse_rich_value_rel_ids(decode(value))
     None => []
   }
+  let rich_value_rels_path = actual_archive_part_path(
+    part_names, "xl/richData/_rels/richValueRel.xml.rels",
+  )
   let raw_rel_targets = match
-    archive.get("xl/richData/_rels/richValueRel.xml.rels") {
+    load_optional_relationship_part(
+      archive,
+      content_types,
+      rich_value_rels_path,
+      "rich value relationships",
+      cancelled~,
+    ) {
     Some(value) =>
       parse_internal_relationship_targets(
         decode(value),
@@ -74,8 +86,17 @@ fn parse_rich_value_images(
     Some(value) => parse_web_image_blip_ids(decode(value))
     None => []
   }
+  let rich_value_web_rels_path = actual_archive_part_path(
+    part_names, "xl/richData/_rels/rdRichValueWebImage.xml.rels",
+  )
   let raw_web_rel_targets = match
-    archive.get("xl/richData/_rels/rdRichValueWebImage.xml.rels") {
+    load_optional_relationship_part(
+      archive,
+      content_types,
+      rich_value_web_rels_path,
+      "rich value web image relationships",
+      cancelled~,
+    ) {
     Some(value) =>
       parse_internal_relationship_targets(
         decode(value),
@@ -102,6 +123,7 @@ fn parse_rich_value_images(
     rel_targets,
     web_blip_ids,
     web_rel_targets,
+    media_identities: Map([]),
   })
 }
 
@@ -123,6 +145,7 @@ test "rich value image relationships use source-relative OPC resolution" {
   let parsed = parse_rich_value_images(
     archive,
     archive_part_name_index(archive),
+    image_reader_test_content_types(),
     value => {
       @encoding/utf8.decode(value) catch {
         _ => raise InvalidXml(msg="invalid utf8")
@@ -483,16 +506,15 @@ fn Workbook::rich_value_image_for_cell(
   }
   match self.rich_value_media.get(media_path) {
     Some(bytes) => {
-      let extension = cell_image_extension(media_path)
-      let content_type = match image_content_type(extension_no_dot(extension)) {
+      let identity = match data.media_identities.get(media_path) {
         Some(value) => value
-        None => ""
+        None => return None
       }
       Some({
         reference: canonical,
         data: bytes,
-        extension,
-        content_type,
+        extension: "." + identity.extension,
+        content_type: identity.content_type,
         offset_x: 0,
         offset_y: 0,
         scale_x: 1.0,
@@ -510,16 +532,6 @@ fn Workbook::rich_value_image_for_cell(
       })
     }
     None => None
-  }
-}
-
-///|
-/// Returns a file extension without its leading dot.
-fn extension_no_dot(extension : String) -> String {
-  if extension.has_prefix(".") {
-    extension[1:].to_owned()
-  } else {
-    extension
   }
 }
 

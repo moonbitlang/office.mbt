@@ -205,6 +205,7 @@ fn parse_drawing_images(
   drawing_rels_xml : StringView,
   drawing_part : StringView,
   part_names : Map[String, String],
+  content_types : @ooxml.PackageContentTypes,
   metrics : DrawingMetrics,
   archive : @zip.Archive,
   budget? : ReadBudget,
@@ -360,24 +361,13 @@ fn parse_drawing_images(
       part_names,
       cancelled~,
     )
-    let data = match archive.get(media_path) {
-      Some(value) => value
-      None => raise MissingPart(path=media_path)
-    }
-    let ext = match media_path.to_string().rev_find(".") {
-      Some(pos) =>
-        if pos + 1 < media_path.length() {
-          media_path[pos + 1:]
-        } else {
-          ""
-        }
-      None => ""
-    }
-    let extension = ext.to_owned().to_lower()
-    let content_type = match image_content_type(extension) {
-      Some(value) => value
-      None => "application/octet-stream"
-    }
+    let (data, identity) = load_image_part(
+      archive,
+      content_types,
+      media_path,
+      "drawing image",
+      cancelled~,
+    )
     let mut hyperlink = ""
     let mut hyperlink_type = HyperlinkType::Unset
     match tag_attributes_in(pic_body, "a:hlinkClick") {
@@ -398,8 +388,8 @@ fn parse_drawing_images(
     images.push({
       reference,
       data: data.to_owned(),
-      extension,
-      content_type,
+      extension: identity.extension,
+      content_type: identity.content_type,
       offset_x,
       offset_y,
       scale_x: 1.0,
@@ -1192,6 +1182,7 @@ test "read_drawing_xml wb: parse_drawing_images empty rel map branch" {
       "",
       "xl/drawings/drawing1.xml",
       Map([]),
+      image_reader_test_content_types(),
       metrics,
       archive,
     ),
@@ -1220,6 +1211,7 @@ test "read_drawing_xml wb: signed marker offsets are retained" {
     rels_xml,
     "xl/drawings/drawing1.xml",
     Map([]),
+    image_reader_test_content_types(),
     metrics,
     archive,
   )
@@ -1246,6 +1238,7 @@ test "read_drawing_xml wb: parse_drawing_images anchor/ext validation errors" {
       rels_xml,
       "xl/drawings/drawing1.xml",
       Map([]),
+      image_reader_test_content_types(),
       metrics,
       archive,
     ),
@@ -1265,6 +1258,7 @@ test "read_drawing_xml wb: parse_drawing_images anchor/ext validation errors" {
       rels_xml,
       "xl/drawings/drawing1.xml",
       Map([]),
+      image_reader_test_content_types(),
       metrics,
       archive,
     ),
@@ -1287,6 +1281,7 @@ test "read_drawing_xml wb: parse_drawing_images anchor/ext validation errors" {
       rels_xml,
       "xl/drawings/drawing1.xml",
       Map([]),
+      image_reader_test_content_types(),
       metrics,
       archive,
     ),
@@ -1306,6 +1301,7 @@ test "read_drawing_xml wb: parse_drawing_images anchor/ext validation errors" {
       rels_xml,
       "xl/drawings/drawing1.xml",
       Map([]),
+      image_reader_test_content_types(),
       metrics,
       archive,
     ),
@@ -1328,6 +1324,7 @@ test "read_drawing_xml wb: parse_drawing_images anchor/ext validation errors" {
       rels_xml,
       "xl/drawings/drawing1.xml",
       Map([]),
+      image_reader_test_content_types(),
       metrics,
       archive,
     ),

@@ -3578,10 +3578,15 @@ fn read_zip_archive_core_unchecked(
   let workbook_rels_path = actual_relationship_part_path(
     workbook_xml_part_path, part_names,
   )
-  let workbook_rels = match archive.get(workbook_rels_path) {
-    Some(value) => decode(value)
-    None => raise MissingPart(path=workbook_rels_path)
-  }
+  let workbook_rels = decode(
+    load_relationship_part(
+      archive,
+      content_types,
+      workbook_rels_path,
+      "workbook relationships",
+      cancelled~,
+    ),
+  )
   let sheets = parse_workbook_sheets(
     workbook_source_xml,
     limits.max_workbook_sheets,
@@ -3791,8 +3796,17 @@ fn read_zip_archive_core_unchecked(
   )
   let cell_images = match archive.get(cell_images_part) {
     Some(value) => {
+      let cell_images_rels_path = actual_relationship_part_path(
+        cell_images_part, part_names,
+      )
       let rels_xml = match
-        archive.get(actual_relationship_part_path(cell_images_part, part_names)) {
+        load_optional_relationship_part(
+          archive,
+          content_types,
+          cell_images_rels_path,
+          "cell image relationships",
+          cancelled~,
+        ) {
         Some(rels) => decode(rels)
         None => ""
       }
@@ -3801,6 +3815,7 @@ fn read_zip_archive_core_unchecked(
         rels_xml,
         cell_images_part,
         part_names,
+        content_types,
         archive,
         budget=read_budget,
         cancelled~,
@@ -3811,6 +3826,7 @@ fn read_zip_archive_core_unchecked(
   let rich_value_images = parse_rich_value_images(
     archive,
     part_names,
+    content_types,
     decode,
     budget=read_budget,
     cancelled~,
@@ -3820,13 +3836,33 @@ fn read_zip_archive_core_unchecked(
     Some(data) => {
       for _, target in data.rel_targets {
         match archive.get(target) {
-          Some(bytes) => rich_value_media[target] = bytes.to_owned()
+          Some(_) => {
+            let (bytes, identity) = load_image_part(
+              archive,
+              content_types,
+              target,
+              "rich value image",
+              cancelled~,
+            )
+            rich_value_media[target] = bytes.to_owned()
+            data.media_identities[target] = identity
+          }
           None => ()
         }
       }
       for _, target in data.web_rel_targets {
         match archive.get(target) {
-          Some(bytes) => rich_value_media[target] = bytes.to_owned()
+          Some(_) => {
+            let (bytes, identity) = load_image_part(
+              archive,
+              content_types,
+              target,
+              "rich value web image",
+              cancelled~,
+            )
+            rich_value_media[target] = bytes.to_owned()
+            data.media_identities[target] = identity
+          }
           None => ()
         }
       }
@@ -4102,7 +4138,14 @@ fn read_zip_archive_core_unchecked(
         legacy_drawing_hf_rel_id is Some(_) ||
         picture_rel_id is Some(_)
       let rels_path = actual_relationship_part_path(sheet_path, part_names)
-      let rels_xml = match archive.get(rels_path) {
+      let rels_xml = match
+        load_optional_relationship_part(
+          archive,
+          content_types,
+          rels_path,
+          "worksheet relationships",
+          cancelled~,
+        ) {
         Some(rels_bytes) => decode(rels_bytes)
         None => if needs_rels { raise MissingPart(path=rels_path) } else { "" }
       }
@@ -4172,27 +4215,18 @@ fn read_zip_archive_core_unchecked(
             part_names,
             cancelled~,
           )
-          let image_bytes = match archive.get(image_path) {
-            Some(value) => value
-            None => raise MissingPart(path=image_path)
-          }
-          let path_text = target.to_string()
-          let extension = match path_text.rev_find(".") {
-            Some(pos) =>
-              if pos + 1 < path_text.length() {
-                let view = path_text[pos + 1:]
-                view.to_owned().to_lower()
-              } else {
-                raise InvalidSheetBackground(msg="image extension missing")
-              }
-            None => raise InvalidSheetBackground(msg="image extension missing")
-          }
-          let content_type = match image_content_type(extension) {
-            Some(value) => value
-            None =>
-              raise InvalidSheetBackground(msg="unsupported image extension")
-          }
-          Some({ data: image_bytes.to_owned(), extension, content_type })
+          let (image_bytes, identity) = load_image_part(
+            archive,
+            content_types,
+            image_path,
+            "sheet background image",
+            cancelled~,
+          )
+          Some({
+            data: image_bytes.to_owned(),
+            extension: identity.extension,
+            content_type: identity.content_type,
+          })
         }
         None => None
       }
@@ -4331,10 +4365,13 @@ fn read_zip_archive_core_unchecked(
             let pivot_rels_path = actual_relationship_part_path(
               pivot_path, part_names,
             )
-            let pivot_rels_bytes = match archive.get(pivot_rels_path) {
-              Some(value) => value
-              None => raise MissingPart(path=pivot_rels_path)
-            }
+            let pivot_rels_bytes = load_relationship_part(
+              archive,
+              content_types,
+              pivot_rels_path,
+              "pivot table relationships",
+              cancelled~,
+            )
             let pivot_rels_xml = decode(pivot_rels_bytes)
             let cache_targets = parse_internal_relationship_targets(
               pivot_rels_xml,
@@ -4383,8 +4420,17 @@ fn read_zip_archive_core_unchecked(
             let pivot_id = parse_id_from_path(
               pivot_path, "xl/pivotTables/pivotTable",
             )
+            let cache_rels_path = actual_relationship_part_path(
+              cache_path, part_names,
+            )
             let cache_records_xml = match
-              archive.get(actual_relationship_part_path(cache_path, part_names)) {
+              load_optional_relationship_part(
+                archive,
+                content_types,
+                cache_rels_path,
+                "pivot cache relationships",
+                cancelled~,
+              ) {
               Some(value) => {
                 let cache_rels_xml = decode(value)
                 let record_targets = parse_internal_relationship_targets(
@@ -4520,7 +4566,13 @@ fn read_zip_archive_core_unchecked(
         (vml_drawing_hf_xml, vml_drawing_hf_path) {
         (Some(xml), Some(path)) => {
           let vml_rels_xml = match
-            archive.get(actual_relationship_part_path(path, part_names)) {
+            load_optional_relationship_part(
+              archive,
+              content_types,
+              actual_relationship_part_path(path, part_names),
+              "VML relationships",
+              cancelled~,
+            ) {
             Some(value) => Some(decode(value))
             None => None
           }
@@ -4529,6 +4581,7 @@ fn read_zip_archive_core_unchecked(
             vml_rels_xml,
             path,
             part_names,
+            content_types,
             archive,
             budget=read_budget,
             cancelled~,
@@ -4678,7 +4731,13 @@ fn read_zip_archive_core_unchecked(
             )
           }
           let drawing_rels_xml = match
-            archive.get(actual_relationship_part_path(drawing_path, part_names)) {
+            load_optional_relationship_part(
+              archive,
+              content_types,
+              actual_relationship_part_path(drawing_path, part_names),
+              "drawing relationships",
+              cancelled~,
+            ) {
             Some(value) => decode(value)
             None => ""
           }
@@ -4687,6 +4746,7 @@ fn read_zip_archive_core_unchecked(
             drawing_rels_xml,
             drawing_path,
             part_names,
+            content_types,
             drawing_metrics,
             archive,
             budget=read_budget,
@@ -4821,10 +4881,13 @@ fn read_zip_archive_core_unchecked(
       let chartsheet_rels_path = actual_relationship_part_path(
         chartsheet_path, part_names,
       )
-      let chartsheet_rels_bytes = match archive.get(chartsheet_rels_path) {
-        Some(value) => value
-        None => raise MissingPart(path=chartsheet_rels_path)
-      }
+      let chartsheet_rels_bytes = load_relationship_part(
+        archive,
+        content_types,
+        chartsheet_rels_path,
+        "chartsheet relationships",
+        cancelled~,
+      )
       let chartsheet_rels_xml = decode(chartsheet_rels_bytes)
       let drawing_targets = parse_internal_relationship_targets(
         chartsheet_rels_xml,
@@ -4852,10 +4915,13 @@ fn read_zip_archive_core_unchecked(
       let drawing_rels_path = actual_relationship_part_path(
         drawing_path, part_names,
       )
-      let drawing_rels_bytes = match archive.get(drawing_rels_path) {
-        Some(value) => value
-        None => raise MissingPart(path=drawing_rels_path)
-      }
+      let drawing_rels_bytes = load_relationship_part(
+        archive,
+        content_types,
+        drawing_rels_path,
+        "drawing relationships",
+        cancelled~,
+      )
       let drawing_rels_xml = decode(drawing_rels_bytes)
       let chart_targets = parse_internal_relationship_targets(
         drawing_rels_xml,

@@ -53,6 +53,9 @@ let rel_hyperlink = "http://schemas.openxmlformats.org/officeDocument/2006/relat
 let rel_comments = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments"
 
 ///|
+let ct_relationships = "application/vnd.openxmlformats-package.relationships+xml"
+
+///|
 let ct_drawing = "application/vnd.openxmlformats-officedocument.drawing+xml"
 
 ///|

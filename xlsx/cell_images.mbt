@@ -22,6 +22,7 @@ fn parse_cell_images(
   rels_xml : StringView,
   source_part : StringView,
   part_names : Map[String, String],
+  content_types : @ooxml.PackageContentTypes,
   archive : @zip.Archive,
   budget? : ReadBudget,
   cancelled? : () -> Bool = () => false,
@@ -112,17 +113,19 @@ fn parse_cell_images(
       cancelled~,
     )
     match archive.get(media_path) {
-      Some(data) => {
-        let extension = cell_image_extension(media_path)
-        let content_type = match image_content_type(extension[1:]) {
-          Some(value) => value
-          None => ""
-        }
+      Some(_) => {
+        let (data, identity) = load_image_part(
+          archive,
+          content_types,
+          media_path,
+          "cell image",
+          cancelled~,
+        )
         images.push({
           name: unescape_xml_text(name),
           data: data.to_owned(),
-          extension,
-          content_type,
+          extension: "." + identity.extension,
+          content_type: identity.content_type,
           alt_text: unescape_xml_text(alt_text),
         })
       }
@@ -130,16 +133,6 @@ fn parse_cell_images(
     }
   }
   images
-}
-
-///|
-/// Returns the file extension (with leading dot) of a media path, or the
-/// empty string when there is none.
-fn cell_image_extension(path : String) -> String {
-  match path.rev_find(".") {
-    Some(pos) => path[pos:].to_owned()
-    None => ""
-  }
 }
 
 ///|
@@ -241,6 +234,7 @@ test "parse_cell_images handles unprefixed blip without matching blipFill" {
     rels_xml,
     "xl/cellimages.xml",
     archive_part_name_index(archive),
+    image_reader_test_content_types(),
     archive,
   )
   inspect(images.length(), content="1")
@@ -262,6 +256,7 @@ test "parse_cell_images resolves targets relative to its source part" {
     rels_xml,
     "xl/cellimages.xml",
     archive_part_name_index(archive),
+    image_reader_test_content_types(),
     archive,
   )
   assert_eq(images.length(), 1)

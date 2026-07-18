@@ -100,7 +100,8 @@ test "standard encryption distinguishes wrong passwords from malformed XLSX" {
     error => Err(error)
   }
   match malformed {
-    Err(@xlsx.MissingPart(path~)) => inspect(path, content="_rels/.rels")
+    Err(@xlsx.MissingPart(path~)) =>
+      inspect(path, content="[Content_Types].xml")
     _ => fail("expected a parsed-package failure, not InvalidPassword")
   }
 

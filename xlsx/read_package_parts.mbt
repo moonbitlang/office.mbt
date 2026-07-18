@@ -10,15 +10,21 @@ fn workbook_content_type_candidates() -> Array[String] {
 fn workbook_part_from_root_relationships(
   archive : @zip.Archive,
   part_names : Map[String, String],
+  content_types : @ooxml.PackageContentTypes,
   decode : (BytesView) -> String raise XlsxError,
   budget? : ReadBudget,
   cancelled? : () -> Bool = () => false,
 ) -> String raise XlsxError {
   let root_rels_path = actual_archive_part_path(part_names, root_rels_part_path)
-  let root_rels_xml = match archive.get(root_rels_path) {
-    Some(bytes) => decode(bytes)
-    None => raise MissingPart(path=root_rels_path)
-  }
+  let root_rels_xml = decode(
+    load_relationship_part(
+      archive,
+      content_types,
+      root_rels_path,
+      "root relationships",
+      cancelled~,
+    ),
+  )
   let office_document_type = transitional_office_relationship_prefix +
     "officeDocument"
   let targets = parse_internal_relationship_targets(
@@ -59,20 +65,36 @@ fn require_part_content_type(
   role : StringView,
   cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
+  let declared = declared_part_content_type(
+    content_types,
+    part_name,
+    role,
+    cancelled~,
+  )
+  let normalized = declared.to_lower()
+  for candidate in expected {
+    if normalized == candidate.to_lower() {
+      return
+    }
+  }
+  raise InvalidXml(msg="\{role.to_owned()} content type is invalid")
+}
+
+///|
+/// Returns the manifest identity for a package part. This is the single place
+/// where missing content declarations become XLSX package errors.
+fn declared_part_content_type(
+  content_types : @ooxml.PackageContentTypes,
+  part_name : StringView,
+  role : StringView,
+  cancelled? : () -> Bool = () => false,
+) -> String raise XlsxError {
   let declared = content_types.content_type_for(part_name, cancelled~) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
     ReadCancelled => raise ReadCancelled
   }
   match declared {
-    Some(value) => {
-      let normalized = value.to_lower()
-      for candidate in expected {
-        if normalized == candidate.to_lower() {
-          return
-        }
-      }
-      raise InvalidXml(msg="\{role.to_owned()} content type is invalid")
-    }
+    Some(value) => value
     None => raise InvalidXml(msg="\{role.to_owned()} content type is missing")
   }
 }
@@ -104,6 +126,83 @@ fn load_typed_part(
 }
 
 ///|
+/// Loads and authenticates an OPC relationship part. Relationship XML has one
+/// fixed media type regardless of the source part that owns it.
+fn load_relationship_part(
+  archive : @zip.Archive,
+  content_types : @ooxml.PackageContentTypes,
+  path : StringView,
+  role : StringView,
+  cancelled? : () -> Bool = () => false,
+) -> BytesView raise XlsxError {
+  load_typed_part(
+    archive,
+    content_types,
+    path,
+    [ct_relationships],
+    role,
+    cancelled~,
+  )
+}
+
+///|
+/// Optional relationship parts remain optional, but an existing part is never
+/// consumed unless its manifest identity is the fixed OPC relationships type.
+fn load_optional_relationship_part(
+  archive : @zip.Archive,
+  content_types : @ooxml.PackageContentTypes,
+  path : StringView,
+  role : StringView,
+  cancelled? : () -> Bool = () => false,
+) -> BytesView? raise XlsxError {
+  match archive.get(path) {
+    Some(_) =>
+      Some(
+        load_relationship_part(archive, content_types, path, role, cancelled~),
+      )
+    None => None
+  }
+}
+
+///|
+test "read package parts: relationship parts require their fixed manifest identity" {
+  let archive = @zip.Archive::new()
+  archive.add("custom/_rels/source.xml.rels", b"<Relationships/>")
+  let missing = try! @ooxml.parse_package_content_types(
+    "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"xml\" ContentType=\"application/xml\"/></Types>",
+  )
+  let wrong = try! @ooxml.parse_package_content_types(
+    "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/xml\"/></Types>",
+  )
+  let valid = try! @ooxml.parse_package_content_types(
+    "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/></Types>",
+  )
+  for
+    entry in [
+      (missing, "test relationships content type is missing"),
+      (wrong, "test relationships content type is invalid"),
+    ] {
+    let (content_types, expected) = entry
+    try
+      load_relationship_part(
+        archive, content_types, "custom/_rels/source.xml.rels", "test relationships",
+      )
+    catch {
+      InvalidXml(msg~) => assert_eq(msg, expected)
+      _ => fail("unexpected relationship content-type error")
+    } noraise {
+      _ => fail("expected relationship content-type rejection")
+    }
+  }
+  assert_eq(
+    load_relationship_part(
+      archive, valid, "custom/_rels/source.xml.rels", "test relationships",
+    ),
+    b"<Relationships/>",
+  )
+}
+
+///|
 test "read package parts: workbook media types are case-insensitive" {
   assert_true(
     workbook_content_type_is_supported(
@@ -125,13 +224,8 @@ fn resolve_workbook_xml_part_path(
   budget? : ReadBudget,
   cancelled? : () -> Bool = () => false,
 ) -> (String, @ooxml.PackageContentTypes) raise XlsxError {
-  let workbook_part = workbook_part_from_root_relationships(
-    archive,
-    part_names,
-    decode,
-    budget?,
-    cancelled~,
-  )
+  // The content-type manifest authenticates every consumed package part,
+  // including the root relationship part, so it must be parsed first.
   let content_types_path = actual_archive_part_path(
     part_names, content_types_part_path,
   )
@@ -153,6 +247,14 @@ fn resolve_workbook_xml_part_path(
     InvalidXml(msg~) => raise InvalidXml(msg~)
     ReadCancelled => raise ReadCancelled
   }
+  let workbook_part = workbook_part_from_root_relationships(
+    archive,
+    part_names,
+    content_types,
+    decode,
+    budget?,
+    cancelled~,
+  )
   require_part_content_type(
     content_types,
     workbook_part,
@@ -185,6 +287,12 @@ fn resolve_workbook_xml_part_path_for_test(
 ///|
 test "read package parts: root relationship is required" {
   let archive = @zip.Archive::new()
+  archive.add(
+    content_types_part_path,
+    @encoding/utf8.encode(
+      "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/></Types>",
+    ),
+  )
   try resolve_workbook_xml_part_path_for_test(archive) catch {
     MissingPart(path~) => inspect(path, content="_rels/.rels")
     _ => fail("unexpected missing-root error")
@@ -199,6 +307,7 @@ test "read package parts: workbook path follows the root relationship" {
   let content_types =
     #|<?xml version="1.0" encoding="UTF-8"?>
     #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+    #|  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
     #|  <Override PartName="/xl/workbook2.xml" ContentType="application/vnd.ms-excel.sheet.macroEnabled.main+xml"/>
     #|</Types>
     #|
@@ -224,9 +333,16 @@ fn workbook_part_from_root_target_for_test(
     target.to_owned() +
     "\"/></Relationships>"
   archive.add(root_rels_part_path, @encoding/utf8.encode(root_relationships))
+  let content_types = @ooxml.parse_package_content_types(
+    "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/></Types>",
+  ) catch {
+    InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
   workbook_part_from_root_relationships(
     archive,
     archive_part_name_index(archive),
+    content_types,
     decode_utf8_or_invalid_xml,
   )
 }
@@ -258,6 +374,7 @@ test "read package parts: external workbook relationship is never resolved as a 
   let archive = @zip.Archive::new()
   let content_types =
     #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+    #|  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
     #|  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
     #|</Types>
   let root_relationships =
@@ -281,6 +398,7 @@ test "read package parts: root target must have a workbook content type" {
   let content_types =
     #|<?xml version="1.0" encoding="UTF-8"?>
     #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+    #|  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
     #|  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
     #|</Types>
     #|
@@ -343,7 +461,7 @@ test "read package parts: invalid root workbook target raises InvalidXml" {
   }
   match result {
     Err(InvalidXml(msg~)) =>
-      inspect(msg, content="content type part name empty")
+      inspect(msg, content="content type override part name is invalid")
     _ => fail("expected content type part name empty")
   }
 }
@@ -353,6 +471,7 @@ test "read package parts: stale workbook override cannot redirect the root relat
   let archive = @zip.Archive::new()
   let content_types =
     #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+    #|  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
     #|  <Override PartName="/decoy/book.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
     #|  <Override PartName="/actual/book.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
     #|</Types>
@@ -373,6 +492,7 @@ test "read package parts: default-declared workbook follows the root relationshi
   let archive = @zip.Archive::new()
   let content_types =
     #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+    #|  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
     #|  <Default Extension="xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
     #|</Types>
   let root_relationships =
