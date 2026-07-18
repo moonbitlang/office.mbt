@@ -3120,32 +3120,88 @@ fn first_existing_workbook_rel_target_path(
 }
 
 ///|
+fn budgeted_package_part_name_key(
+  name : StringView,
+  budget : ReadBudget,
+) -> String raise XlsxError {
+  budget.checkpoint()
+  budget.charge_work(name.length())
+  @ooxml.package_part_name_key_cancellable(name, cancelled=budget.cancelled) catch {
+    InvalidXml(msg~) => raise InvalidPackage(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+}
+
+///|
+fn budgeted_logical_opc_part_name(
+  name : StringView,
+  budget : ReadBudget,
+) -> String? raise XlsxError {
+  budget.checkpoint()
+  budget.charge_work(name.length())
+  @ooxml.logical_opc_part_name_from_zip_item_name_cancellable(
+    name,
+    cancelled=budget.cancelled,
+  ) catch {
+    InvalidXml(msg~) => raise InvalidPackage(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+}
+
+///|
+fn budgeted_register_opc_part_name(
+  registry : @ooxml.OpcPartNameRegistry,
+  name : StringView,
+  display : String,
+  budget : ReadBudget,
+) -> @ooxml.OpcPartNameConflict? raise XlsxError {
+  budget.checkpoint()
+  // Registration performs a mutation-free lookup pass and, for a new branch,
+  // constructs a detached suffix before linking it. Charge both linear passes
+  // before either can run.
+  budget.charge_work(name.length())
+  budget.charge_work(name.length())
+  registry.register_cancellable(name, display, cancelled=budget.cancelled) catch {
+    InvalidXml(msg~) => raise InvalidPackage(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+}
+
+///|
 fn archive_part_name_index(
   archive : @zip.Archive,
+  budget? : ReadBudget,
 ) -> Map[String, String] raise XlsxError {
+  let budget = budget.unwrap_or(ReadBudget::new(ReadLimits::new()))
   let names : Map[String, String] = Map([])
   let registry = @ooxml.OpcPartNameRegistry::new()
+  let content_types_key = @ooxml.package_part_name_key(content_types_part_path)
   for entry in archive.entries() {
+    budget.checkpoint()
     let physical_name = entry.name()
     if physical_name.has_suffix("/") {
       continue
     }
+    budget.charge_work(physical_name.length())
     let logical_name = if physical_name == content_types_part_path {
       physical_name
-    } else if @ooxml.package_part_name_key(physical_name) ==
-      @ooxml.package_part_name_key(content_types_part_path) {
+    } else if budgeted_package_part_name_key(physical_name, budget) ==
+      content_types_key {
       raise InvalidPackage(
         msg="reserved content-types part name has invalid spelling",
       )
     } else {
-      match @ooxml.logical_opc_part_name_from_zip_item_name(physical_name) {
+      match budgeted_logical_opc_part_name(physical_name, budget) {
         Some(value) => value
         None => raise InvalidPackage(msg="invalid OPC ZIP item name")
       }
     }
-    let key = @ooxml.package_part_name_key(logical_name)
+    let key = budgeted_package_part_name_key(logical_name, budget)
     if logical_name != content_types_part_path {
-      match registry.register(logical_name, physical_name) {
+      match
+        budgeted_register_opc_part_name(
+          registry, logical_name, physical_name, budget,
+        ) {
         Some(Equivalent(_)) =>
           raise InvalidPackage(msg="duplicate or equivalent OPC part name")
         Some(Derivable(existing)) =>
@@ -3155,11 +3211,13 @@ fn archive_part_name_index(
         None => ()
       }
     }
+    budget.charge_work(key.length())
     match names.get(key) {
       Some(_) =>
         raise InvalidPackage(msg="duplicate or equivalent OPC part name")
       None => ()
     }
+    budget.charge_work(key.length())
     names[key] = physical_name
   }
   names
@@ -3242,6 +3300,42 @@ test "read archive index rejects OPC-derivable parts in either order" {
     } noraise {
       _ => fail("expected derivable OPC part rejection")
     }
+  }
+}
+
+///|
+test "read archive index charges physical OPC name work before decoding" {
+  let archive = @zip.Archive::new()
+  archive.add("custom/" + "a".repeat(64) + ".xml", b"part")
+  let budget = ReadBudget::new(
+    ReadLimits::with_values(max_parser_work_units=32),
+  )
+  try archive_part_name_index(archive, budget~) catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) => {
+      inspect(kind, content="parser_work_units")
+      assert_eq(limit, 32)
+      assert_true(actual > limit)
+    }
+    _ => fail("unexpected archive name budget error")
+  } noraise {
+    _ => fail("expected archive name work limit")
+  }
+}
+
+///|
+test "read archive index polls cancellation inside long OPC names" {
+  let archive = @zip.Archive::new()
+  archive.add("custom/" + "a".repeat(9000) + ".xml", b"part")
+  let checks = [0]
+  let budget = ReadBudget::new(ReadLimits::new(), cancelled=() => {
+    checks[0] = checks[0] + 1
+    checks[0] >= 4
+  })
+  try archive_part_name_index(archive, budget~) catch {
+    ReadCancelled => assert_true(checks[0] >= 4)
+    _ => fail("unexpected archive name cancellation error")
+  } noraise {
+    _ => fail("expected archive name cancellation")
   }
 }
 
@@ -3350,8 +3444,8 @@ fn read_zip_archive_core_unchecked(
   cancelled : () -> Bool,
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
-  let part_names = archive_part_name_index(archive)
   let read_budget = ReadBudget::new(limits, cancelled~)
+  let part_names = archive_part_name_index(archive, budget=read_budget)
   let decode_source = (value : BytesView) => {
     if value.length() > limits.max_xml_part_bytes {
       raise ResourceLimitExceeded(

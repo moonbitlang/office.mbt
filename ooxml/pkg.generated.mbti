@@ -24,7 +24,11 @@ pub fn is_valid_opc_part_segment(StringView) -> Bool
 
 pub fn logical_opc_part_name_from_zip_item_name(StringView) -> String?
 
+pub fn logical_opc_part_name_from_zip_item_name_cancellable(StringView, cancelled? : () -> Bool) -> String? raise ParseXmlError
+
 pub fn package_part_name_key(StringView) -> String
+
+pub fn package_part_name_key_cancellable(StringView, cancelled? : () -> Bool) -> String raise ParseXmlError
 
 pub fn parse_external_relationship_targets(StringView, StringView, cancelled? : () -> Bool) -> Map[String, String] raise ParseXmlError
 
@@ -59,6 +63,7 @@ pub struct OpcPartNameRegistry {
 }
 pub fn OpcPartNameRegistry::new() -> Self
 pub fn OpcPartNameRegistry::register(Self, StringView, String) -> OpcPartNameConflict?
+pub fn OpcPartNameRegistry::register_cancellable(Self, StringView, String, cancelled? : () -> Bool) -> OpcPartNameConflict? raise ParseXmlError
 
 type WorkbookManifest
 pub fn WorkbookManifest::add_content_default(Self, String, String) -> Unit

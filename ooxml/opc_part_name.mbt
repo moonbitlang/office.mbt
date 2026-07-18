@@ -1,32 +1,32 @@
 ///|
-fn opc_ascii_hex_digit(character : Char) -> Bool {
+fn opc_ascii_hex_digit(character : UInt16) -> Bool {
   (character >= '0' && character <= '9') ||
   (character >= 'A' && character <= 'F') ||
   (character >= 'a' && character <= 'f')
 }
 
 ///|
-fn opc_ascii_hex_value(character : Char) -> Int {
+fn opc_ascii_hex_value(character : UInt16) -> Int {
   if character >= '0' && character <= '9' {
-    character.to_int() - '0'.to_int()
+    character.to_int() - ('0' : UInt16).to_int()
   } else if character >= 'A' && character <= 'F' {
-    character.to_int() - 'A'.to_int() + 10
+    character.to_int() - ('A' : UInt16).to_int() + 10
   } else {
-    character.to_int() - 'a'.to_int() + 10
+    character.to_int() - ('a' : UInt16).to_int() + 10
   }
 }
 
 ///|
-fn opc_percent_byte(characters : ArrayView[Char], index : Int) -> Int? {
-  if index + 2 >= characters.length() ||
-    characters[index] != '%' ||
-    !opc_ascii_hex_digit(characters[index + 1]) ||
-    !opc_ascii_hex_digit(characters[index + 2]) {
+fn opc_percent_byte(text : StringView, index : Int) -> Int? {
+  if index + 2 >= text.length() ||
+    text[index] != ('%' : UInt16) ||
+    !opc_ascii_hex_digit(text[index + 1]) ||
+    !opc_ascii_hex_digit(text[index + 2]) {
     None
   } else {
     Some(
-      opc_ascii_hex_value(characters[index + 1]) * 16 +
-      opc_ascii_hex_value(characters[index + 2]),
+      opc_ascii_hex_value(text[index + 1]) * 16 +
+      opc_ascii_hex_value(text[index + 2]),
     )
   }
 }
@@ -104,16 +104,16 @@ fn opc_utf8_percent_length(first : Int) -> Int? {
 
 ///|
 fn opc_decode_percent_scalar(
-  characters : ArrayView[Char],
+  text : StringView,
   index : Int,
 ) -> (String, Char, Int)? {
-  guard opc_percent_byte(characters, index) is Some(first) && first >= 0x80 else {
+  guard opc_percent_byte(text, index) is Some(first) && first >= 0x80 else {
     return None
   }
   guard opc_utf8_percent_length(first) is Some(length) else { return None }
   let bytes : Array[Byte] = []
   for ordinal in 0..<length {
-    guard opc_percent_byte(characters, index + ordinal * 3) is Some(value) else {
+    guard opc_percent_byte(text, index + ordinal * 3) is Some(value) else {
       return None
     }
     bytes.push(value.to_byte())
@@ -121,31 +121,39 @@ fn opc_decode_percent_scalar(
   let decoded = @utf8.decode(Bytes::from_array(bytes)) catch {
     _ => return None
   }
-  let decoded_characters = decoded.to_array()
-  guard decoded_characters.length() == 1 else { return None }
-  Some((decoded, decoded_characters[0], index + length * 3))
+  guard decoded.get_char(0) is Some(decoded_character) else { return None }
+  let decoded_width = if decoded_character.to_int() > 0xffff { 2 } else { 1 }
+  guard decoded_width == decoded.length() else { return None }
+  Some((decoded, decoded_character, index + length * 3))
 }
 
 ///|
-/// Reports whether one logical OPC PartName segment is canonical under the
-/// RFC 3987 mapping required by ECMA-376 Part 2.
-pub fn is_valid_opc_part_segment(segment : StringView) -> Bool {
+fn is_valid_opc_part_segment_cancellable_impl(
+  segment : StringView,
+  cancelled : () -> Bool,
+) -> Bool raise ParseXmlError {
   if segment == "" || segment.has_suffix(".") {
     return false
   }
-  let characters = segment.to_array()
   let mut index = 0
-  while index < characters.length() {
-    let character = characters[index]
+  let mut next_checkpoint = 0
+  while index < segment.length() {
+    if index >= next_checkpoint {
+      if cancelled() {
+        raise ReadCancelled
+      }
+      next_checkpoint = index + 4096
+    }
+    guard segment.get_char(index) is Some(character) else { return false }
     if character == '%' {
-      guard opc_percent_byte(characters, index) is Some(decoded) else {
+      guard opc_percent_byte(segment, index) is Some(decoded) else {
         return false
       }
       if decoded == 0x2f || decoded == 0x5c || opc_uri_unreserved_byte(decoded) {
         return false
       }
       if decoded >= 0x80 {
-        match opc_decode_percent_scalar(characters, index) {
+        match opc_decode_percent_scalar(segment, index) {
           Some((_, scalar, next)) => {
             if opc_iri_ucschar(scalar) {
               return false
@@ -165,10 +173,17 @@ pub fn is_valid_opc_part_segment(segment : StringView) -> Bool {
         character != '@' {
         return false
       }
-      index = index + 1
+      index = index + (if character.to_int() > 0xffff { 2 } else { 1 })
     }
   }
   true
+}
+
+///|
+/// Reports whether one logical OPC PartName segment is canonical under the
+/// RFC 3987 mapping required by ECMA-376 Part 2.
+pub fn is_valid_opc_part_segment(segment : StringView) -> Bool {
+  try! is_valid_opc_part_segment_cancellable_impl(segment, () => false)
 }
 
 ///|
@@ -176,38 +191,56 @@ pub fn is_valid_opc_part_segment(segment : StringView) -> Bool {
 /// non-ASCII IRI scalars are restored from their canonical UTF-8 `%HH`
 /// projection; opaque legal percent escapes remain unchanged.
 pub fn logical_opc_part_name_from_zip_item_name(name : StringView) -> String? {
+  try! logical_opc_part_name_from_zip_item_name_cancellable(name)
+}
+
+///|
+/// Cancellation-aware form of `logical_opc_part_name_from_zip_item_name`.
+/// It scans directly over the input view and does not copy the whole physical
+/// name into an intermediate character array.
+pub fn logical_opc_part_name_from_zip_item_name_cancellable(
+  name : StringView,
+  cancelled? : () -> Bool = () => false,
+) -> String? raise ParseXmlError {
   if name == "" || name.has_prefix("/") || name.has_suffix("/") {
     return None
   }
-  let characters = name.to_array()
+  if cancelled() {
+    raise ReadCancelled
+  }
   let output = StringBuilder::new(size_hint=name.length())
   let mut index = 0
-  while index < characters.length() {
-    let character = characters[index]
-    if !character.is_ascii() {
+  let mut next_checkpoint = 0
+  while index < name.length() {
+    if index >= next_checkpoint {
+      if cancelled() {
+        raise ReadCancelled
+      }
+      next_checkpoint = index + 4096
+    }
+    let unit = name[index]
+    guard unit.to_char() is Some(character) && character.is_ascii() else {
       return None
     }
     if character == '%' {
-      guard opc_percent_byte(characters, index) is Some(decoded) else {
-        return None
-      }
+      guard opc_percent_byte(name, index) is Some(decoded) else { return None }
       if decoded >= 0x80 {
-        match opc_decode_percent_scalar(characters, index) {
+        match opc_decode_percent_scalar(name, index) {
           Some((scalar_text, scalar, next)) if opc_iri_ucschar(scalar) => {
             output.write_string(scalar_text)
             index = next
           }
           _ => {
-            output.write_char(characters[index])
-            output.write_char(characters[index + 1])
-            output.write_char(characters[index + 2])
+            output.write_char(character)
+            output.write_char(name[index + 1].to_char().unwrap())
+            output.write_char(name[index + 2].to_char().unwrap())
             index = index + 3
           }
         }
       } else {
-        output.write_char(characters[index])
-        output.write_char(characters[index + 1])
-        output.write_char(characters[index + 2])
+        output.write_char(character)
+        output.write_char(name[index + 1].to_char().unwrap())
+        output.write_char(name[index + 2].to_char().unwrap())
         index = index + 3
       }
     } else {
@@ -217,7 +250,7 @@ pub fn logical_opc_part_name_from_zip_item_name(name : StringView) -> String? {
   }
   let logical = output.to_string()
   for segment in logical.split("/") {
-    if !is_valid_opc_part_segment(segment) {
+    if !is_valid_opc_part_segment_cancellable_impl(segment, cancelled) {
       return None
     }
   }
@@ -225,7 +258,16 @@ pub fn logical_opc_part_name_from_zip_item_name(name : StringView) -> String? {
 }
 
 ///|
-type OpcPartNameChildren = @sorted_map.SortedMap[String, Int]
+fn opc_part_name_identity_unit(unit : UInt16) -> UInt16 {
+  if unit >= ('A' : UInt16) && unit <= ('Z' : UInt16) {
+    (unit.to_int() + 32).to_uint16()
+  } else {
+    unit
+  }
+}
+
+///|
+type OpcPartNameChildren = @sorted_map.SortedMap[UInt16, Int]
 
 ///|
 priv struct OpcPartNameTrieNode {
@@ -247,9 +289,10 @@ pub(all) enum OpcPartNameConflict {
 }
 
 ///|
-/// A segment trie for OPC PartName identity and non-derivability checks.
+/// A UTF-16 code-unit trie for OPC PartName identity and non-derivability checks.
 /// Work and storage are linear in aggregate PartName length, while ordered
-/// child indexes keep hostile names independent of string-hash behavior.
+/// scalar child indexes avoid repeated comparisons of attacker-controlled
+/// string prefixes and keep hostile names independent of string-hash behavior.
 pub struct OpcPartNameRegistry {
   priv nodes : Array[OpcPartNameTrieNode]
 }
@@ -269,57 +312,98 @@ pub fn OpcPartNameRegistry::register(
   name : StringView,
   display : String,
 ) -> OpcPartNameConflict? {
-  let key = package_part_name_key(name)
-  let segments = key.split("/").collect()
+  try! self.register_cancellable(name, display)
+}
+
+///|
+/// Cancellation-aware form of `register`. Rejected or cancelled registrations
+/// never link a partial path into the registry.
+pub fn OpcPartNameRegistry::register_cancellable(
+  self : OpcPartNameRegistry,
+  name : StringView,
+  display : String,
+  cancelled? : () -> Bool = () => false,
+) -> OpcPartNameConflict? raise ParseXmlError {
+  if cancelled() {
+    raise ReadCancelled
+  }
   let mut node_index = 0
-  let mut complete_path = true
-  for segment_view in segments {
-    match self.nodes[node_index].terminal {
-      Some(existing) => return Some(Derivable(existing))
-      None => ()
+  let mut index = 0
+  let mut missing_index : Int? = None
+  while index < name.length() {
+    if index % 4096 == 0 && cancelled() {
+      raise ReadCancelled
     }
-    let segment = segment_view.to_owned()
-    match self.nodes[node_index].children.get(segment) {
+    let unit = opc_part_name_identity_unit(name[index])
+    if unit == ('/' : UInt16) {
+      match self.nodes[node_index].terminal {
+        Some(existing) => return Some(Derivable(existing))
+        None => ()
+      }
+    }
+    match self.nodes[node_index].children.get(unit) {
       Some(child) => node_index = child
       None => {
-        complete_path = false
+        missing_index = Some(index)
         break
       }
     }
+    index = index + 1
   }
-  if complete_path {
+  if missing_index is None {
     match self.nodes[node_index].terminal {
       Some(existing) => return Some(Equivalent(existing))
       None => ()
     }
-    match self.nodes[node_index].first_part {
-      Some(existing) => return Some(Derivable(existing))
-      None => ()
+    match
+      self.nodes[node_index].children
+      .get('/')
+      .map(child => self.nodes[child].first_part) {
+      Some(Some(existing)) => return Some(Derivable(existing))
+      _ => ()
     }
   }
-  // The preflight is mutation-free, so a rejected name cannot leave a partial
-  // trie path that changes a later conflict result.
-  node_index = 0
-  if self.nodes[node_index].first_part is None {
-    self.nodes[node_index].first_part = Some(display)
-  }
-  for segment_view in segments {
-    let segment = segment_view.to_owned()
-    let child = match self.nodes[node_index].children.get(segment) {
-      Some(existing) => existing
-      None => {
-        let fresh = self.nodes.length()
-        self.nodes.push(new_opc_part_name_trie_node())
-        self.nodes[node_index].children[segment] = fresh
-        fresh
+
+  match missing_index {
+    None => {
+      if cancelled() {
+        raise ReadCancelled
       }
+      self.nodes[node_index].terminal = Some(display)
     }
-    node_index = child
-    if self.nodes[node_index].first_part is None {
-      self.nodes[node_index].first_part = Some(display)
+    Some(start) => {
+      // Construct the missing suffix off-registry. Only after every allocation
+      // and cancellation point succeeds do we append and link it once.
+      let base = self.nodes.length()
+      let detached : Array[OpcPartNameTrieNode] = []
+      for offset in start..<name.length() {
+        if offset % 4096 == 0 && cancelled() {
+          raise ReadCancelled
+        }
+        let fresh = new_opc_part_name_trie_node()
+        fresh.first_part = Some(display)
+        if offset + 1 < name.length() {
+          fresh.children[opc_part_name_identity_unit(name[offset + 1])] = base +
+            offset -
+            start +
+            1
+        } else {
+          fresh.terminal = Some(display)
+        }
+        detached.push(fresh)
+      }
+      if cancelled() {
+        raise ReadCancelled
+      }
+      for node in detached {
+        self.nodes.push(node)
+      }
+      self.nodes[node_index].children[opc_part_name_identity_unit(name[start])] = base
     }
   }
-  self.nodes[node_index].terminal = Some(display)
+  if self.nodes[0].first_part is None {
+    self.nodes[0].first_part = Some(display)
+  }
   None
 }
 
@@ -360,4 +444,27 @@ test "OPC PartName registry rejects equivalent and derivable identities" {
       inspect(existing, content="custom/a.xml/child.xml")
     _ => fail("expected ancestor OPC PartName conflict")
   }
+
+  let sibling = OpcPartNameRegistry::new()
+  assert_true(sibling.register("custom/a.xmlx", "custom/a.xmlx") is None)
+  assert_true(sibling.register("custom/a.xml", "custom/a.xml") is None)
+}
+
+///|
+test "cancelled OPC PartName registration does not link a partial path" {
+  let registry = OpcPartNameRegistry::new()
+  let checks = [0]
+  let long_name = "custom/a.xml/" + "child/".repeat(2000) + "part.xml"
+  try
+    registry.register_cancellable(long_name, long_name, cancelled=() => {
+      checks[0] = checks[0] + 1
+      checks[0] >= 3
+    })
+  catch {
+    ReadCancelled => assert_true(checks[0] >= 3)
+    _ => fail("unexpected OPC PartName registration error")
+  } noraise {
+    _ => fail("expected OPC PartName registration cancellation")
+  }
+  assert_true(registry.register("custom/a.xml", "custom/a.xml") is None)
 }

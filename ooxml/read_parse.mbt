@@ -315,9 +315,28 @@ priv struct PackageContentTypes {
 /// Returns the ASCII-case-insensitive identity key used for OPC part names.
 /// The leading slash, when present, remains part of the key.
 pub fn package_part_name_key(name : StringView) -> String {
+  try! package_part_name_key_cancellable(name)
+}
+
+///|
+/// Cancellation-aware form of `package_part_name_key`. It performs the same
+/// ASCII-only case fold while polling at least once per 4,096 UTF-16 code
+/// units.
+pub fn package_part_name_key_cancellable(
+  name : StringView,
+  cancelled? : () -> Bool = () => false,
+) -> String raise ParseXmlError {
+  if cancelled() {
+    raise ReadCancelled
+  }
   let output = StringBuilder::new(size_hint=name.length())
+  let mut offset = 0
   for character in name {
+    if offset % 4096 == 0 && cancelled() {
+      raise ReadCancelled
+    }
     output.write_char(character.to_ascii_lowercase())
+    offset = offset + (if character.to_int() > 0xffff { 2 } else { 1 })
   }
   output.to_string()
 }
