@@ -466,6 +466,30 @@ test "read cancellation callback stops semantic preflight" {
 }
 
 ///|
+test "bounded archive CRC verification polls cancellation inside an entry" {
+  let source = @zip.read(bounded_workbook_fixture())
+  let padded = @zip.Archive::new()
+  // Keep this first so the sixth callback is the 4 KiB checkpoint inside its
+  // CRC loop, after the archive and entry boundary checks.
+  padded.add("padding.bin", Bytes::make(16 * 1024, b'x'))
+  for entry in source.entries() {
+    padded.add(entry.name(), entry.data())
+  }
+  let bounded = bounded_fixture_archive(@zip.write(padded))
+  let checks = [0]
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read_bounded_archive(bounded, cancelled=() => {
+      checks[0] += 1
+      checks[0] >= 6
+    }),
+  ) catch {
+    error => Err(error)
+  }
+  assert_eq(checks[0], 6)
+  assert_true(result is Err(@xlsx.ReadCancelled))
+}
+
+///|
 test "read completion observes cancellation at its final checkpoint" {
   let bytes = bounded_workbook_fixture()
   let baseline_checks = [0]

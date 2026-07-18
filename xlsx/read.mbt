@@ -2992,7 +2992,11 @@ fn enforce_archive_limits(
         actual=size,
       )
     }
-    if @zip.crc32(entry.data()) != entry.crc32() {
+    let actual_crc = @zip.crc32_cancellable(entry.data(), cancelled~) catch {
+      ReadCancelled => raise ReadCancelled
+      _ => raise InvalidPackage(msg="ZIP entry CRC verification failed")
+    }
+    if actual_crc != entry.crc32() {
       raise InvalidPackage(msg="ZIP entry CRC mismatch")
     }
     check_read_cancelled(cancelled)
