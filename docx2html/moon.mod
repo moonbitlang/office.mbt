@@ -26,7 +26,7 @@ description = "Native MoonBit DOCX to HTML/Markdown converter ported from Mammot
 import {
   "bobzhang/mbtexcel@0.1.9",
   "moonbitlang/x@0.4.43",
-  "moonbitlang/async@0.20.1",
+  "moonbitlang/async@0.20.2",
 }
 
 preferred_target = "native"

@@ -15,7 +15,7 @@ description = "Agent-oriented XLSX and DOCX tooling for MoonBit"
 import {
   "bobzhang/mbtexcel@0.1.9",
   "bobzhang/docx2html@0.2.0",
-  "moonbitlang/async@0.20.1",
+  "moonbitlang/async@0.20.2",
   "moonbitlang/x@0.4.43",
   "tonyfettes/unicode@0.3.3",
 }

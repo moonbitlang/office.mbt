@@ -110,7 +110,7 @@ jobs:
       # The nightly toolchain is required: mbtexcel depends on
       # moonbitlang/async >= 0.20 (wasm filesystem support) and its xlsx CLI
       # targets the wasm backend, both of which need nightly. `moon work sync`
-      # has aligned the workspace members on async@0.20.1 + x@0.4.43.
+      # has aligned the workspace members on async@0.20.2 + x@0.4.43.
       - name: Set up MoonBit (nightly)
         run: |
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s nightly

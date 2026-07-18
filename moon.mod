@@ -3,7 +3,7 @@ name = "bobzhang/mbtexcel"
 version = "0.1.9"
 
 import {
-  "moonbitlang/async@0.20.1",
+  "moonbitlang/async@0.20.2",
   "moonbitlang/x@0.4.43",
 }
 
