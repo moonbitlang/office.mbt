@@ -102,6 +102,16 @@ test "shape size and rich text paragraphs" {
   inspect(drawing_xml.contains("sz=\"1800\""), content="true")
   inspect(drawing_xml.contains("typeface=\"Times New Roman\""), content="true")
   inspect(drawing_xml.contains("val=\"2980B9\""), content="true")
+  let parsed = @xlsx.read(bytes)
+  let parsed_sheet = match parsed.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("missing parsed sheet")
+  }
+  inspect(parsed_sheet.shapes().length(), content="1")
+  let parsed_shape = parsed_sheet.shapes()[0]
+  inspect(parsed_shape.paragraph.length(), content="2")
+  inspect(parsed_shape.paragraph[0].text, content="Rectangle")
+  inspect(parsed_shape.paragraph[1].text, content="Shape")
 }
 
 ///|

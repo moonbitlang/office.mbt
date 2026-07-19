@@ -258,6 +258,18 @@ fn validate_xlsx_drawing_reader_structure(
     if inside_unsupported_reader_object {
       continue
     }
+    // Rich-text run properties use the same DrawingML element names as shape
+    // styling (for example a:rPr/a:solidFill/a:srgbClr), but they are not
+    // inputs to the shape-style reader. Keep dialect checks above active and
+    // ignore only same-dialect DrawingML descendants of the validated txBody;
+    // xdr/c/sle descendants must still be rejected as reader decoys.
+    let inside_shape_text_body = match text_body_depth {
+      Some(start) => depth > start
+      None => false
+    }
+    if inside_shape_text_body && namespace_uri == main_namespace {
+      continue
+    }
     if local_name == "ext" &&
       xlsx_drawing_extension_list_namespaces.any(candidate => {
         candidate == namespace_uri

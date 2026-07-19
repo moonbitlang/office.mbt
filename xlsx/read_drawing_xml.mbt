@@ -144,9 +144,8 @@ fn parse_drawing_anchors(
       }
     }
     let text = chunk.to_owned()
-    let close_tag = "</xdr:oneCellAnchor>"
-    let end = match text.find(close_tag) {
-      Some(pos) => pos + close_tag.length()
+    let end = match find_xml_close_tag_from(text, "xdr:oneCellAnchor", 0) {
+      Some((_, close_end)) => close_end + 1
       None => raise InvalidXml(msg="oneCellAnchor close missing")
     }
     let slice = text[:end]
@@ -169,9 +168,8 @@ fn parse_drawing_anchors(
       }
     }
     let text = chunk.to_owned()
-    let close_tag = "</xdr:twoCellAnchor>"
-    let end = match text.find(close_tag) {
-      Some(pos) => pos + close_tag.length()
+    let end = match find_xml_close_tag_from(text, "xdr:twoCellAnchor", 0) {
+      Some((_, close_end)) => close_end + 1
       None => raise InvalidXml(msg="twoCellAnchor close missing")
     }
     let slice = text[:end]
@@ -212,9 +210,8 @@ fn parse_drawing_anchors(
         }
       }
       let text = chunk.to_owned()
-      let close_tag = "</xdr:absoluteAnchor>"
-      let end = match text.find(close_tag) {
-        Some(pos) => pos + close_tag.length()
+      let end = match find_xml_close_tag_from(text, "xdr:absoluteAnchor", 0) {
+        Some((_, close_end)) => close_end + 1
         None => raise InvalidXml(msg="absoluteAnchor close missing")
       }
       let slice = text[:end]
@@ -1531,9 +1528,9 @@ test "read_drawing_xml wb: parse_drawing_anchors validation and positioning" {
 
   let xml =
     #|<xdr:wsDr>
-    #|  <xdr:twoCellAnchor editAs="absolute"></xdr:twoCellAnchor>
+    #|  <xdr:twoCellAnchor editAs="absolute"></xdr:twoCellAnchor >
     #|  <xdr:twoCellAnchor editAs="free"></xdr:twoCellAnchor>
-    #|  <xdr:absoluteAnchor></xdr:absoluteAnchor>
+    #|  <xdr:absoluteAnchor></xdr:absoluteAnchor >
     #|</xdr:wsDr>
   let worksheet_anchors = parse_drawing_anchors(xml)
   inspect(worksheet_anchors.length(), content="2")
