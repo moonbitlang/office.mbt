@@ -15,20 +15,16 @@ aliases.
   `text`, and `query`) while retaining authenticated OOXML relationship
   discovery, Markup Compatibility processing, cancellation checks, preserved
   drawing state, and fail-closed resource accounting.
-- [PR #173](https://github.com/moonbitlang/office.mbt/pull/173) is the final
-  in-flight PR from this work session. It is based on `main` and delivers
-  transactional XLSX creation and strict batch mutation. If this file is read
-  on `main`, #173 has landed and [#162](https://github.com/moonbitlang/office.mbt/issues/162)
-  should be closed. If it is read on the feature branch, finish only #173's
-  exact-head review and CI; do not add another capability to it.
-- No additional implementation PR was opened during the #172/#173 landing
-  session. The isolated shared-formula compatibility follow-up is tracked by
-  [#176](https://github.com/moonbitlang/office.mbt/issues/176).
+- [PR #173](https://github.com/moonbitlang/office.mbt/pull/173) is merged into
+  `main` and closed [#162](https://github.com/moonbitlang/office.mbt/issues/162).
+  It delivered transactional XLSX creation and strict batch mutation.
+- [PR #182](https://github.com/moonbitlang/office.mbt/pull/182) is merged into
+  `main` and closed [#176](https://github.com/moonbitlang/office.mbt/issues/176).
+  It isolated the post-#173 compatibility fix for Excel-produced overlaps
+  between distinct shared-formula indexes.
 
-The current #173 branch is `agent/office-x3-xlsx-batch`; the working tree used
-to finish it was `/private/tmp/mbtexcel-office-xlsx-batch`. The reference
-OfficeCLI checkout remains `.repos/officecli` in the primary repository
-working tree.
+The reference OfficeCLI checkout remains `.repos/officecli` in the primary
+repository working tree.
 
 ## What is complete after #173
 
