@@ -104,6 +104,8 @@ fn drawing_preservation_test_fixture(
     #|<xdr:oneCellAnchor><xdr:from><xdr:col>3</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="9525" cy="9525"/><xdr:contentPart r:id="rId1"/><xdr:clientData/></xdr:oneCellAnchor>
   let opaque_group =
     #|<xdr:oneCellAnchor><xdr:from><xdr:col>4</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="9525" cy="9525"/><xdr:grpSp><xdr:nvGrpSpPr><xdr:cNvPr id="1" name="Opaque Group"/></xdr:nvGrpSpPr><xdr:grpSpPr/></xdr:grpSp><xdr:clientData/></xdr:oneCellAnchor>
+  let opaque_custom_shape =
+    #|<xdr:oneCellAnchor><xdr:from><xdr:col>5</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="9525" cy="9525"/><xdr:sp><xdr:nvSpPr><xdr:cNvPr id="7" name="Opaque Custom Geometry"/><xdr:cNvSpPr/></xdr:nvSpPr><xdr:spPr><a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="l" t="t" r="r" b="b"/><a:pathLst><a:path w="1" h="1"><a:moveTo><a:pt x="0" y="0"/></a:moveTo><a:lnTo><a:pt x="1" y="1"/></a:lnTo></a:path></a:pathLst></a:custGeom></xdr:spPr></xdr:sp><xdr:clientData/></xdr:oneCellAnchor>
   let patched_drawing = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
     "<xdr:wsDr xmlns:xdr=\"http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">\n" +
     shape +
@@ -112,6 +114,7 @@ fn drawing_preservation_test_fixture(
     image +
     "\n" +
     opaque_group +
+    opaque_custom_shape +
     chart +
     "\n</xdr:wsDr>"
   assert_true(
@@ -179,11 +182,16 @@ fn assert_drawing_preservation_test_output(
   )
   let image_pos = drawing_preservation_test_position(drawing, "<xdr:pic>")
   let group_pos = drawing_preservation_test_position(drawing, "Opaque Group")
+  let custom_shape_pos = drawing_preservation_test_position(
+    drawing, "Opaque Custom Geometry",
+  )
   let chart_pos = drawing_preservation_test_position(drawing, "<c:chart")
   assert_true(shape_pos < content_pos)
   assert_true(content_pos < image_pos)
   assert_true(image_pos < group_pos)
-  assert_true(group_pos < chart_pos)
+  assert_true(group_pos < custom_shape_pos)
+  assert_true(custom_shape_pos < chart_pos)
+  assert_true(drawing.contains("<a:custGeom>"))
   assert_eq(drawing_preservation_test_count(drawing, "<xdr:cNvPr id=\"1\""), 1)
   let drawing_rels = drawing_preservation_test_utf8(
     archive, "xl/drawings/_rels/drawing1.xml.rels",

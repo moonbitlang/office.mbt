@@ -112,7 +112,15 @@ fn drawing_anchor_has_unsupported_reader_object(xml : StringView) -> Bool {
   // descendant of its group subtree), so lexical filtering is safe here.
   xml.contains("<xdr:grpSp") ||
   xml.contains("<xdr:cxnSp") ||
-  xml.contains("<xdr:contentPart")
+  xml.contains("<xdr:contentPart") ||
+  // The semantic shape reader can faithfully reconstruct preset geometry.
+  // Treat every other shape geometry as opaque; otherwise a valid custom
+  // geometry is skipped by `parse_drawing_shapes` and silently disappears on
+  // the next workbook write.
+  (
+    find_xml_open_tag_start(xml, "xdr:sp") is Some(_) &&
+    find_xml_open_tag_start(xml, "a:prstGeom") is None
+  )
 }
 
 ///|
