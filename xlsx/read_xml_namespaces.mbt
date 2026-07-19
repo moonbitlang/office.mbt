@@ -67,6 +67,21 @@ let xlsx_drawing_mce_extension_elements : Array[(String, String)] = [
 ]
 
 ///|
+let xlsx_drawing_extension_list_namespaces : Array[String] = [
+  transitional_spreadsheet_drawing_namespace, strict_spreadsheet_drawing_namespace,
+  transitional_drawing_main_namespace, strict_drawing_main_namespace, transitional_drawing_chart_namespace,
+  strict_drawing_chart_namespace, drawing_slicer_namespace, drawing_main_2010_namespace,
+  drawing_slicer_2012_namespace,
+]
+
+///|
+let xlsx_drawing_core_element_namespaces : Array[String] = [
+  transitional_spreadsheet_drawing_namespace, strict_spreadsheet_drawing_namespace,
+  transitional_drawing_main_namespace, strict_drawing_main_namespace, transitional_drawing_chart_namespace,
+  strict_drawing_chart_namespace, drawing_slicer_namespace,
+]
+
+///|
 /// Produces the effective SpreadsheetML view before namespace filtering or
 /// lexical feature parsing. In particular, core content promoted from an MCE
 /// Fallback must be selected while its namespace context is still available.
@@ -223,8 +238,20 @@ fn canonicalize_xlsx_drawing_xml(
     ) {
     raise InvalidXml(msg="drawing document element is invalid")
   }
-  let projected = @ooxml.project_xml_markup_compatibility(
+  // Application extension payload is deliberately absent from the lexical
+  // reader view. Removing its structural container before MCE projection also
+  // prevents directives inside opaque payload from affecting core selection.
+  let without_extension_lists = @ooxml.remove_xml_expanded_name_subtrees(
     source,
+    xlsx_drawing_extension_list_namespaces,
+    "extLst",
+    cancelled~,
+  ) catch {
+    InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+  let projected = @ooxml.project_xml_markup_compatibility(
+    without_extension_lists.unwrap_or(source.to_owned()),
     xlsx_drawing_mce_understood_namespaces,
     max_output_chars~,
     cancelled~,
@@ -233,8 +260,40 @@ fn canonicalize_xlsx_drawing_xml(
     InvalidXml(msg~) => raise InvalidXml(msg~)
     ReadCancelled => raise ReadCancelled
   }
-  @ooxml.canonicalize_xml_expanded_names(
+  // A schema-invalid extension entry outside an extLst must not become an
+  // alternate route into the first-match drawing readers. Geometry extents
+  // are empty elements too, so accepting explicit empty start/end spellings
+  // remains interoperable while descendant markup is rejected.
+  let projected_scanner = @ooxml.XmlStartTagScanner::new(projected, cancelled~)
+  let mut extension_depth : Int? = None
+  while workbook_scanner_next(projected_scanner) {
+    match extension_depth {
+      Some(depth) if projected_scanner.depth() > depth =>
+        raise InvalidXml(msg="drawing extension payload is misplaced")
+      Some(_) => extension_depth = None
+      None => ()
+    }
+    if projected_scanner.local_name() == "ext" {
+      let namespace_uri = projected_scanner.namespace_uri().to_owned()
+      if xlsx_drawing_extension_list_namespaces.any(candidate => {
+          candidate == namespace_uri
+        }) {
+        extension_depth = Some(projected_scanner.depth())
+      }
+    }
+  }
+  // Foreign wrappers are removed with their descendants. Merely renaming a
+  // wrapper would leave nested core-looking tags visible to lexical readers.
+  let core_projected = @ooxml.remove_xml_foreign_namespace_subtrees(
     projected,
+    xlsx_drawing_core_element_namespaces,
+    cancelled~,
+  ) catch {
+    InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+  @ooxml.canonicalize_xml_expanded_names(
+    core_projected.unwrap_or(projected),
     [],
     [
       (transitional_relationship_attribute_namespace, "r"),
@@ -466,7 +525,7 @@ test "XLSX XML canonicalization follows extension namespace identity" {
 }
 
 ///|
-test "DrawingML canonicalization follows aliases and defangs borrowed prefixes" {
+test "DrawingML canonicalization follows aliases and removes foreign subtrees" {
   let valid =
     #|<wsDr xmlns="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:d="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:q="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:rel="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:compat="http://schemas.openxmlformats.org/markup-compatibility/2006"><oneCellAnchor><compat:AlternateContent><compat:Choice Requires="q"><d:graphic><q:chart rel:id="chart"/></d:graphic></compat:Choice></compat:AlternateContent></oneCellAnchor></wsDr>
   let canonical = canonicalize_xlsx_drawing_xml(
@@ -483,8 +542,8 @@ test "DrawingML canonicalization follows aliases and defangs borrowed prefixes" 
   let spoofed_canonical = canonicalize_xlsx_drawing_xml(
     spoofed, default_max_xml_part_bytes,
   )
-  assert_true(spoofed_canonical.contains("<_foreign_xdr_oneCellAnchor "))
-  assert_true(spoofed_canonical.contains("<_foreign_mc_AlternateContent/>"))
+  assert_false(spoofed_canonical.contains("oneCellAnchor"))
+  assert_false(spoofed_canonical.contains("AlternateContent"))
   assert_false(spoofed_canonical.contains("<mc:AlternateContent"))
 }
 

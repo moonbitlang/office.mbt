@@ -1087,6 +1087,50 @@ test "DrawingML MCE fallback feeds image chart shape and slicer readers" {
 }
 
 ///|
+test "DrawingML extension payload cannot spoof anchors or drawing features" {
+  let source =
+    #|<wsDr xmlns="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:d="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:q="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:rel="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:sl="http://schemas.microsoft.com/office/drawing/2010/slicer">
+    #|  <d:extLst><d:ext uri="urn:decoy-anchor"><oneCellAnchor><from><col>99</col><row>99</row><colOff>0</colOff><rowOff>0</rowOff></from><ext cx="1" cy="1"/><pic><nvPicPr><cNvPr id="99" name="bad-anchor"/></nvPicPr><blipFill><d:blip rel:embed="image-bad-anchor"/></blipFill></pic></oneCellAnchor></d:ext></d:extLst>
+    #|  <oneCellAnchor><from><col>0</col><row>0</row><colOff>0</colOff><rowOff>0</rowOff></from><ext cx="9525" cy="9525"/><d:extLst><d:ext uri="urn:decoy-image"><pic><nvPicPr><cNvPr id="91" name="bad-image"/></nvPicPr><blipFill><d:blip rel:embed="image-bad"/></blipFill></pic></d:ext></d:extLst><pic><nvPicPr><cNvPr id="1" name="good-image"/></nvPicPr><blipFill><d:blip rel:embed="image-good"/></blipFill></pic></oneCellAnchor>
+    #|  <oneCellAnchor><from><col>1</col><row>0</row><colOff>0</colOff><rowOff>0</rowOff></from><ext cx="9525" cy="9525"/><q:extLst><q:ext uri="urn:decoy-chart"><q:chart rel:id="chart-bad"/></q:ext></q:extLst><graphicFrame><d:graphic><d:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><q:chart rel:id="chart-good"/></d:graphicData></d:graphic></graphicFrame></oneCellAnchor>
+    #|  <oneCellAnchor><from><col>2</col><row>0</row><colOff>0</colOff><rowOff>0</rowOff></from><ext cx="9525" cy="9525"/><d:extLst><d:ext uri="urn:decoy-shape"><sp><nvSpPr><cNvPr id="92" name="bad-shape"/></nvSpPr><spPr><d:xfrm><d:ext cx="1" cy="1"/></d:xfrm><d:prstGeom prst="bad"/></spPr></sp></d:ext></d:extLst><sp><nvSpPr><cNvPr id="2" name="good-shape"/></nvSpPr><spPr><d:xfrm><d:ext cx="9525" cy="9525"/></d:xfrm><d:prstGeom prst="rect"/></spPr></sp></oneCellAnchor>
+    #|  <oneCellAnchor><from><col>3</col><row>0</row><colOff>0</colOff><rowOff>0</rowOff></from><ext cx="9525" cy="9525"/><sl:extLst><sl:ext uri="urn:decoy-slicer"><sl:slicer name="slicer-bad"/></sl:ext></sl:extLst><graphicFrame macro="good-macro"><nvGraphicFramePr><cNvPr id="3" descr="good-slicer"/></nvGraphicFramePr><d:graphic><d:graphicData uri="http://schemas.microsoft.com/office/drawing/2010/slicer"><sl:slicer name="slicer-good"/></d:graphicData></d:graphic></graphicFrame></oneCellAnchor>
+    #|</wsDr>
+  let drawing = canonicalize_xlsx_drawing_xml(
+    source, default_max_xml_part_bytes,
+  )
+  assert_false(drawing.contains("bad-anchor"))
+  assert_false(drawing.contains("bad-image"))
+  assert_false(drawing.contains("chart-bad"))
+  assert_false(drawing.contains("bad-shape"))
+  assert_false(drawing.contains("slicer-bad"))
+  assert_false(drawing.contains("extLst"))
+  let anchors = parse_drawing_anchors(drawing)
+  inspect(anchors.length(), content="4")
+  let (image_anchor, _) = anchors[0]
+  let (chart_anchor, _) = anchors[1]
+  let (shape_anchor, _) = anchors[2]
+  let (slicer_anchor, _) = anchors[3]
+  assert_true(image_anchor.contains("image-good"))
+  assert_true(chart_anchor.contains("chart-good"))
+  assert_true(shape_anchor.contains("good-shape"))
+  assert_true(slicer_anchor.contains("slicer-good"))
+}
+
+///|
+test "DrawingML rejects extension entries outside extension lists" {
+  let source =
+    #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:ext uri="urn:misplaced"><xdr:oneCellAnchor/></a:ext></xdr:wsDr>
+  try canonicalize_xlsx_drawing_xml(source, default_max_xml_part_bytes) catch {
+    InvalidXml(msg~) =>
+      inspect(msg, content="drawing extension payload is misplaced")
+    _ => fail("unexpected misplaced extension error")
+  } noraise {
+    _ => fail("expected a misplaced extension payload error")
+  }
+}
+
+///|
 test "read_drawing_xml wb: parse_xml_int_tag missing/invalid errors" {
   let missing_tag = "<xdr:from><xdr:row>1</xdr:row></xdr:from>"
   let missing_result : Result[Int, Error] = Ok(
