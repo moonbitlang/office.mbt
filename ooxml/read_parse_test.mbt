@@ -860,4 +860,5 @@ test "ooxml read_parse: content type grammar fails closed" {
     } noraise {
       _ => fail("expected content type grammar rejection for case \{index}")
     }
+  }
 }
