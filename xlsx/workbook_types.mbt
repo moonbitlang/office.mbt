@@ -2,7 +2,7 @@
 pub struct Workbook {
   /// Opaque identity shared with worksheets currently owned by this workbook.
   /// A non-empty array is used solely to provide stable reference identity.
-  worksheet_owner_token : Array[Unit]
+  priv worksheet_owner_token : Array[Unit]
   sheets : Array[Worksheet]
   chart_sheets : Array[ChartSheet]
   sheet_order : Array[SheetEntry]

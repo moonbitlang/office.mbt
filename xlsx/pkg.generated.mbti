@@ -1747,7 +1747,6 @@ pub fn TableOptions::set_style_name(Self, String) -> Unit
 pub fn TableOptions::to_repr(Self) -> @debug.Repr
 
 pub struct Workbook {
-  worksheet_owner_token : Array[Unit]
   sheets : Array[Worksheet]
   chart_sheets : Array[ChartSheet]
   sheet_order : Array[SheetEntry]
@@ -1775,6 +1774,7 @@ pub struct Workbook {
   cell_images : Array[CellImage]
   rich_value_images : RichValueImages?
   rich_value_media : Map[String, Bytes]
+  // private fields
 }
 pub fn Workbook::active_sheet_index(Self) -> Int
 pub fn Workbook::add_chart(Self, StringView, String, String) -> Unit raise XlsxError
@@ -2053,7 +2053,6 @@ pub fn WorkbookProtectionOptions::to_repr(Self) -> @debug.Repr
 pub fn WorkbookProtectionOptions::with_values(algorithm_name? : String, password? : String, lock_structure? : Bool, lock_windows? : Bool) -> Self
 
 pub struct Worksheet {
-  mut workbook_owner_token : Array[Unit]?
   mut name : String
   sheet_views : Array[SheetView]
   mut dimension_ref : String?
@@ -2096,6 +2095,7 @@ pub struct Worksheet {
   mut vml_drawing_xml : String?
   mut vml_drawing_hf_xml : String?
   cell_vm : Map[String, Int]
+  // private fields
 }
 pub fn Worksheet::add_chart(Self, String, String) -> Unit raise XlsxError
 pub fn Worksheet::add_chart_with_options(Self, String, ChartOptions) -> Unit raise XlsxError
