@@ -1,78 +1,29 @@
 ///|
-fn pdf_addtext_bytes_match_at(
-  bytes : BytesView,
-  index : Int,
-  pattern : BytesView,
-) -> Bool {
-  if pattern.length() == 0 || index + pattern.length() > bytes.length() {
-    false
-  } else {
-    for offset in 0..<pattern.length() {
-      if bytes[index + offset].to_int() != pattern[offset].to_int() {
-        return false
-      }
-    }
-    true
-  }
-}
-
-///|
-fn pdf_addtext_copy_view(
-  output : Array[Byte],
-  position : Int,
-  view : BytesView,
-) -> Int {
-  let mut position = position
-  for byte in view {
-    output[position] = byte
-    position += 1
-  }
-  position
-}
-
-///|
 fn pdf_addtext_replace_all_lazy(
   text : String,
   search : String,
   replacement : () -> String,
 ) -> String {
   let search_bytes = @utf8.encode(search)
-  if search_bytes.length() == 0 {
-    text
-  } else {
-    let text_bytes = @utf8.encode(text)
-    let replacements : Array[(Int, Int, @core.PdfBytes)] = Array::new(
-      capacity=text_bytes.length() / search_bytes.length(),
-    )
-    let mut index = 0
-    let mut length = text_bytes.length()
-    while index < text_bytes.length() {
-      if pdf_addtext_bytes_match_at(text_bytes, index, search_bytes) {
-        let replacement_bytes = @utf8.encode(replacement())
-        replacements.push(
-          (index, index + search_bytes.length(), replacement_bytes),
-        )
-        length = length - search_bytes.length() + replacement_bytes.length()
-        index += search_bytes.length()
-      } else {
-        index += 1
+  guard search_bytes.length() > 0 else { return text }
+  let text_bytes = @utf8.encode(text)
+  let output : Array[Byte] = Array::new(capacity=text_bytes.length())
+  let mut replaced = false
+  for index = 0; index < text_bytes.length(); {
+    if text_bytes[index:].has_prefix(search_bytes) {
+      for byte in @utf8.encode(replacement()) {
+        output.push(byte)
       }
+      replaced = true
+      continue index + search_bytes.length()
     }
-    guard replacements.length() > 0 else { return text }
-    let output = Array::make(length, b'\x00')
-    let mut source_index = 0
-    let mut position = 0
-    for entry in replacements {
-      position = pdf_addtext_copy_view(
-        output,
-        position,
-        text_bytes[source_index:entry.0],
-      )
-      position = pdf_addtext_copy_view(output, position, entry.2)
-      source_index = entry.1
-    }
-    let _ = pdf_addtext_copy_view(output, position, text_bytes[source_index:])
+    output.push(text_bytes[index])
+    continue index + 1
+  }
+  if replaced {
     @utf8.decode_lossy(Bytes::from_array(output))
+  } else {
+    text
   }
 }
 
@@ -104,15 +55,6 @@ pub fn pdf_process_text(
 }
 
 ///|
-fn pdf_addtext_decode_lossy_view(bytes : BytesView) -> String {
-  let output = Array::make(bytes.length(), b'\x00')
-  for index, byte in bytes {
-    output[index] = byte
-  }
-  @utf8.decode_lossy(Bytes::from_array(output))
-}
-
-///|
 /// Split add-text input at cpdf's literal `\n` line marker.
 ///
 /// A doubled backslash before `n` is preserved as text, matching cpdf's
@@ -121,74 +63,24 @@ pub fn pdf_addtext_split_at_newline(text : String) -> Array[String] {
   let bytes = @utf8.encode(text)
   let lines : Array[String] = Array::new(capacity=bytes.length())
   let mut line_start = 0
-  let mut index = 0
-  while index < bytes.length() {
-    if index + 2 < bytes.length() &&
-      bytes[index].to_int() == 92 &&
-      bytes[index + 1].to_int() == 92 &&
-      bytes[index + 2].to_int() == 110 {
-      index += 3
-    } else if index + 1 < bytes.length() &&
-      bytes[index].to_int() == 92 &&
-      bytes[index + 1].to_int() == 110 {
-      lines.push(pdf_addtext_decode_lossy_view(bytes[line_start:index]))
-      index += 2
-      line_start = index
-    } else {
-      index += 1
+  for index = 0; index < bytes.length(); {
+    match bytes[index:] {
+      [b'\\', b'\\', b'n', ..] => continue index + 3
+      [b'\\', b'n', ..] => {
+        lines.push(@utf8.decode_lossy(bytes[line_start:index].to_owned()))
+        line_start = index + 2
+        continue index + 2
+      }
+      _ => continue index + 1
     }
   }
-  lines.push(pdf_addtext_decode_lossy_view(bytes[line_start:]))
+  lines.push(@utf8.decode_lossy(bytes[line_start:].to_owned()))
   lines
 }
 
 ///|
-fn pdf_addtext_is_octal_digit(byte : Byte) -> Bool {
-  let value = byte.to_int()
-  value >= 48 && value <= 55
-}
-
-///|
 fn pdf_addtext_octal_value(a : Byte, b : Byte, c : Byte) -> Int {
-  (a.to_int() - 48) * 64 + (b.to_int() - 48) * 8 + c.to_int() - 48
-}
-
-///|
-fn pdf_addtext_unescaped_length(bytes : BytesView) -> Int raise @core.PdfError {
-  let mut index = 0
-  let mut length = 0
-  while index < bytes.length() {
-    if bytes[index].to_int() == 92 {
-      if index + 3 < bytes.length() &&
-        pdf_addtext_is_octal_digit(bytes[index + 1]) &&
-        pdf_addtext_is_octal_digit(bytes[index + 2]) &&
-        pdf_addtext_is_octal_digit(bytes[index + 3]) {
-        let value = pdf_addtext_octal_value(
-          bytes[index + 1],
-          bytes[index + 2],
-          bytes[index + 3],
-        )
-        if value > 255 {
-          raise SoftError("bad add-text octal escape")
-        }
-        length += 1
-        index += 4
-      } else if index + 1 < bytes.length() && bytes[index + 1].to_int() == 92 {
-        length += 1
-        index += 2
-      } else if index + 1 < bytes.length() && bytes[index + 1].to_int() != 110 {
-        length += 1
-        index += 2
-      } else {
-        length += 1
-        index += 1
-      }
-    } else {
-      length += 1
-      index += 1
-    }
-  }
-  length
+  (a.to_int() - '0') * 64 + (b.to_int() - '0') * 8 + c.to_int() - '0'
 }
 
 ///|
@@ -200,43 +92,30 @@ pub fn pdf_addtext_unescape_string(
   text : String,
 ) -> String raise @core.PdfError {
   let bytes = @utf8.encode(text)
-  let output = Array::make(pdf_addtext_unescaped_length(bytes), b'\x00')
-  let mut index = 0
-  let mut position = 0
-  while index < bytes.length() {
-    if bytes[index].to_int() == 92 {
-      if index + 3 < bytes.length() &&
-        pdf_addtext_is_octal_digit(bytes[index + 1]) &&
-        pdf_addtext_is_octal_digit(bytes[index + 2]) &&
-        pdf_addtext_is_octal_digit(bytes[index + 3]) {
-        let value = pdf_addtext_octal_value(
-          bytes[index + 1],
-          bytes[index + 2],
-          bytes[index + 3],
-        )
+  let output : Array[Byte] = Array::new(capacity=bytes.length())
+  for index = 0; index < bytes.length(); {
+    match bytes[index:] {
+      [b'\\', b'0'..=b'7' as a, b'0'..=b'7' as b, b'0'..=b'7' as c, ..] => {
+        let value = pdf_addtext_octal_value(a, b, c)
         if value > 255 {
           raise SoftError("bad add-text octal escape")
         }
-        output[position] = value.to_byte()
-        position += 1
-        index += 4
-      } else if index + 1 < bytes.length() && bytes[index + 1].to_int() == 92 {
-        output[position] = (92).to_byte()
-        position += 1
-        index += 2
-      } else if index + 1 < bytes.length() && bytes[index + 1].to_int() != 110 {
-        output[position] = bytes[index + 1]
-        position += 1
-        index += 2
-      } else {
-        output[position] = bytes[index]
-        position += 1
-        index += 1
+        output.push(value.to_byte())
+        continue index + 4
       }
-    } else {
-      output[position] = bytes[index]
-      position += 1
-      index += 1
+      [b'\\', b'\\', ..] => {
+        output.push(b'\\')
+        continue index + 2
+      }
+      [b'\\', next, ..] if next != b'n' => {
+        output.push(next)
+        continue index + 2
+      }
+      [byte, ..] => {
+        output.push(byte)
+        continue index + 1
+      }
+      [] => break
     }
   }
   @utf8.decode_lossy(Bytes::from_array(output))
