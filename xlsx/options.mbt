@@ -24,19 +24,19 @@ let default_max_total_xml_bytes : Int = 128 * 1024 * 1024
 let default_max_xml_markup_tokens : Int = 2_000_000
 
 ///|
-let default_max_relationship_records : Int = 16_384
+let default_max_relationship_records : Int = 1_000_000
 
 ///|
-let default_max_relationship_id_chars : Int = 256
+let default_max_relationship_id_chars : Int = 1_024
 
 ///|
-let default_max_relationship_type_chars : Int = 2_048
+let default_max_relationship_type_chars : Int = 16 * 1_024
 
 ///|
-let default_max_relationship_target_chars : Int = 4_096
+let default_max_relationship_target_chars : Int = 64 * 1_024
 
 ///|
-let default_max_total_relationship_chars : Int = 8 * 1024 * 1024
+let default_max_total_relationship_chars : Int = 16 * 1_024 * 1_024
 
 ///|
 let default_max_materialized_cells : Int = 1_000_000
@@ -98,7 +98,8 @@ pub struct ReadLimits {
 ///|
 /// Returns the production XLSX read policy: 128 MiB source packages, 8,192
 /// entries, 64 MiB per entry, 256 MiB aggregate expansion, 16 MiB per XML part,
-/// 128 MiB decoded XML, two million markup tokens, one million materialized
+/// 128 MiB decoded XML, two million markup tokens, one million relationship
+/// records with 16 MiB retained relationship text, one million materialized
 /// cells, one million retained row/column dimensions, one million row/column
 /// dimension expansion steps, 1,024 sheets, two million parser items, 512 Mi
 /// parser work units, and one million Agile KDF iterations. Call `with_values`

@@ -256,11 +256,7 @@ test "explicit column style zero remains distinct from an omitted style" {
   let dimension_work = Ref(0)
   let dimensions = parse_col_dimensions(
     "<worksheet><cols><col min=\"1\" max=\"1\" style=\"0\"/><col min=\"2\" max=\"2\"/></cols></worksheet>",
-    1,
-    materialized_dimensions,
-    10,
-    dimension_work,
-    10,
+    1, materialized_dimensions, 10, dimension_work, 10,
   )
   assert_eq(dimensions.get(1).map(dim => dim.style_id), Some(Some(0)))
   assert_true(dimensions.get(2) is None)

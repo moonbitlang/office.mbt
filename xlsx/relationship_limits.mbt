@@ -85,7 +85,7 @@ fn preflight_archive_relationship_limits(
       }
       let end = match relationship_start_tag_end(chunk) {
         Some(value) => value
-        None => raise InvalidXml(msg="relationship tag not closed")
+        None => raise InvalidXml(msg="XML start tag is not closed")
       }
       let tag = chunk[:end]
       match relationship_attribute_view(tag, "Id") {

@@ -311,12 +311,8 @@ fn parse_worksheet(
   let auto_filter = parse_auto_filter(xml)
   worksheet_parse_pass(sheet_data, budget)
   let row_dimensions = parse_row_dimensions(
-    sheet_data,
-    style_count,
-    materialized_dimensions,
-    max_materialized_dimensions,
-    dimension_work,
-    max_dimension_work,
+    sheet_data, style_count, materialized_dimensions, max_materialized_dimensions,
+    dimension_work, max_dimension_work,
   )
   worksheet_parse_pass(xml, budget)
   let col_dimensions = parse_col_dimensions(
