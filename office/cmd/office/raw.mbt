@@ -18,25 +18,6 @@ fn raw_failure(error : @raw.RawError) -> CliFailure {
 }
 
 ///|
-fn transaction_failure(error : @transaction.TransactionError) -> CliFailure {
-  CliFailure(error.to_protocol_error())
-}
-
-///|
-fn unexpected_cli_failure(
-  code : String,
-  operation : String,
-  error : Error,
-) -> CliFailure {
-  CliFailure(
-    @lib.protocol_error(
-      code,
-      "\{operation} failed: \{bounded_text(error.to_string(), 240)}",
-    ),
-  )
-}
-
-///|
 fn raw_mutation_failure(
   error : @raw.RawError,
 ) -> @transaction.TransactionError raise @transaction.TransactionError {
@@ -70,15 +51,10 @@ fn cli_file_error(code : String, message : String, path : String) -> CliFailure 
   CliFailure(
     @lib.protocol_error(
       code,
-      message + raw_human_text(path, 160),
+      message + human_text(path, 160),
       details=Json::object({ "file": Json::string(bounded_text(path, 160)) }),
     ),
   )
-}
-
-///|
-fn raw_human_text(value : String, maximum : Int) -> String {
-  terminal_safe_text(bounded_text(value, maximum))
 }
 
 ///|
@@ -242,12 +218,12 @@ fn raw_inventory_human(inventory : @raw.RawInventory) -> String {
     } else {
       let values = []
       for alternate in aliases {
-        values.push(raw_human_text(alternate, 160))
+        values.push(human_text(alternate, 160))
       }
       "  aliases=" + values.join(",")
     }
     lines.push(
-      "/\{raw_human_text(part.part_name(), 160)}  \{kind}  \{part.byte_size()} bytes  \{raw_human_text(part.media_type(), 160)}" +
+      "/\{human_text(part.part_name(), 160)}  \{kind}  \{part.byte_size()} bytes  \{human_text(part.media_type(), 160)}" +
       alias_text,
     )
   }
@@ -329,7 +305,7 @@ async fn run_raw_read(matches : @argparse.Matches) -> Unit {
         )
       } else {
         println(
-          "wrote \{bytes.length()} bytes from /\{part.part_info().part_name()} to \{raw_human_text(path, 160)}",
+          "wrote \{bytes.length()} bytes from /\{part.part_info().part_name()} to \{human_text(path, 160)}",
         )
       }
     }
@@ -400,21 +376,6 @@ fn raw_result_json(
 }
 
 ///|
-fn raw_human_transaction_status(
-  report : @transaction.TransactionReport,
-) -> String {
-  if report.dry_run {
-    "validated dry run"
-  } else if report.committed {
-    "committed"
-  } else if !report.changed {
-    "validated no-op"
-  } else {
-    "validated without publication"
-  }
-}
-
-///|
 fn raw_human_mutation_subject(mutation : @raw.RawMutation) -> String {
   if mutation.action_name() == "replace-part" {
     "whole-part replacement for /\{mutation.part_name()}"
@@ -446,7 +407,7 @@ fn print_raw_result(
       },
     )
     println(
-      "\{raw_human_transaction_status(report)}: \{raw_human_mutation_subject(mutation)} -> \{raw_human_text(destination, 160)}",
+      "\{human_transaction_status(report)}: \{raw_human_mutation_subject(mutation)} -> \{human_text(destination, 160)}",
     )
   }
 }

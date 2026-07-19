@@ -15,10 +15,10 @@ fn is_attr_space(ch : UInt16) -> Bool {
 ///|
 /// Extract the value of attribute `name` from an XML start-tag body, or `None`
 /// if absent. Raises `InvalidXml` on a malformed (unterminated) attribute.
-pub fn attr_value(
+pub fn attr_value_view(
   tag : StringView,
   name : StringView,
-) -> String? raise ParseXmlError {
+) -> StringView? raise ParseXmlError {
   let tag_len = tag.length()
   let name_len = name.length()
   let mut i = 0
@@ -70,13 +70,26 @@ pub fn attr_value(
         }
       }
       if matched {
-        let value = tag.to_owned().unsafe_substring(start=value_start, end=i)
-        return Some(value.to_string())
+        return Some(tag[value_start:i])
       }
     }
     i = i + 1
   }
   None
+}
+
+///|
+/// Extracts and owns an XML attribute value. Parsers that only compare or
+/// validate an attribute should prefer `attr_value_view` so a large start tag
+/// is not copied before its limits are checked.
+pub fn attr_value(
+  tag : StringView,
+  name : StringView,
+) -> String? raise ParseXmlError {
+  match attr_value_view(tag, name) {
+    Some(value) => Some(value.to_owned())
+    None => None
+  }
 }
 
 ///|

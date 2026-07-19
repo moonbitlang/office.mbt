@@ -35,7 +35,7 @@ Codex review at least at `xhigh` effort.
 | X1: provenance-checked bounded XLSX archive reads | [#160](https://github.com/moonbitlang/office.mbt/issues/160) | Complete |
 | Coordinate validation hardening | [#138](https://github.com/moonbitlang/office.mbt/issues/138) | Complete |
 | X2: unified bounded XLSX outline, get, text, and query | [#161](https://github.com/moonbitlang/office.mbt/issues/161) | Complete |
-| X3: transactional XLSX create and batch | [#162](https://github.com/moonbitlang/office.mbt/issues/162) | Planned |
+| X3: transactional XLSX create and batch | [#162](https://github.com/moonbitlang/office.mbt/issues/162) | Complete |
 | D3: fresh DOCX create and batch | [#163](https://github.com/moonbitlang/office.mbt/issues/163) | Planned |
 | D4: preservation-safe DOCX annotation mutations | [#164](https://github.com/moonbitlang/office.mbt/issues/164) | Planned |
 | V1: cross-format validate and issues | [#165](https://github.com/moonbitlang/office.mbt/issues/165) | Planned |
@@ -126,7 +126,7 @@ bounded A4 transaction boundary:
 
 D1 is an SDK foundation, not a newly advertised CLI command. No partial command
 record is added to the A2 registry: its existing raw mutation records already
-advertise `office.transaction/1`, whose `preservation` member is the
+advertise `office.transaction/2`, whose `preservation` member is the
 authoritative changed/added/removed/untouched report used by D1.
 
 ## D2 DOCX read contract
@@ -166,8 +166,9 @@ The XLSX SDK now has one fail-closed policy for every package ingestion path:
 
 - opaque `ReadLimits` values jointly bound compressed package bytes, entry
   count, each inflated entry, aggregate inflation, preserved source records,
-  each logically decoded OOXML XML part regardless of its filename suffix, and
-  encrypted-package password-KDF iterations;
+  each logically decoded OOXML XML part regardless of its filename suffix,
+  aggregate decoded XML, markup tokens, concrete worksheet cells, retained
+  row/column dimensions, and encrypted-package password-KDF iterations;
 - byte reads inflate only through `zip.read_limited`, while the public
   archive-backed path accepts only pristine non-forgeable bounded provenance
   at least as strict as its declared policy; compatibility reads, constructed
@@ -228,6 +229,35 @@ Native and Wasm tests exercise the same async filesystem and package dispatch
 paths, with Cram coverage for the public schema, canonical selectors,
 pagination, query predicates, and cross-format mismatch failures. See
 [office-xlsx-read.md](office-xlsx-read.md) for the complete contract.
+
+## X3 XLSX creation and batch contract
+
+The unified CLI now exposes `office create xlsx` and `office batch` on one
+strict spreadsheet mutation engine:
+
+- fresh workbooks and updates both serialize under the Office transaction's
+  candidate-package and live-materialization ceilings, pass portable OPC plus
+  bounded XLSX validation, and publish atomically through async filesystem I/O;
+- creation is no-replace by default, supports explicit overwrite and dry-run,
+  and reports a null source plus explicit overwrite-baseline evidence in
+  `office.transaction/2`;
+- encoded `xlsx.batch/1` scripts are bounded before UTF-8 and JSON parsing,
+  retain one opaque plan with operation/resource statistics, and normalize
+  application failures with the exact zero-based operation index and name;
+- operation count, touched cells, expanded style cells, materialized style
+  records, row/column work, decoded XML, parser objects, generated archive
+  bytes, package bytes, and output bytes all have explicit ceilings;
+- a zero-op in-place plan reuses the exact input bytes, while a changed plan
+  declares its full-rewrite behavior and exposes authoritative part-level
+  preservation evidence; and
+- native, Wasm, Cram, cancellation/fault, and Microsoft OpenXML SDK tests cover
+  creation, mutation, dry-run, no-replace/overwrite, and failure cleanup.
+
+The legacy `xlsx batch` command now delegates parsing and ordered application
+to the same `BatchPlan`; its older command-owned atomic publisher remains at
+the standalone module boundary, avoiding a dependency cycle with the unified
+Office module. See [office-xlsx-mutations.md](office-xlsx-mutations.md) for the
+complete command, schema, resource, and SDK contract.
 
 ## Deferred beyond major parity
 

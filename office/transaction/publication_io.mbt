@@ -97,6 +97,47 @@ async fn publication_entry_kind(
 }
 
 ///|
+/// Observes the size of an existing regular-file destination without reading
+/// its payload. The report records this as the pre-validation overwrite
+/// baseline; path-based hosts cannot promise identity across hostile concurrent
+/// directory-entry replacement, which is surfaced separately as a platform
+/// warning on committed transactions.
+async fn publication_entry_size(
+  directory : PublicationDirectory,
+  leaf : String,
+  output_path : String,
+) -> Int64 {
+  let path = join_path(directory.path, leaf)
+  let file = @afs.open(
+    path,
+    mode=ReadOnly,
+    create_mode=OpenExisting,
+    sync=NoSync,
+  ) catch {
+    error if @async.is_being_cancelled() => raise error
+    error =>
+      raise transaction_error(
+        "office.transaction.destination_check_failed",
+        "could not inspect overwrite baseline '\{bounded_text(output_path, 160)}': \{bounded_text(error.to_string(), 240)}",
+      )
+  }
+  defer file.close()
+  if !(file.kind() is Regular) {
+    raise transaction_error(
+      "office.transaction.destination_check_failed", "overwrite baseline is no longer a regular file",
+    )
+  }
+  file.size() catch {
+    error if @async.is_being_cancelled() => raise error
+    error =>
+      raise transaction_error(
+        "office.transaction.destination_check_failed",
+        "could not size overwrite baseline '\{bounded_text(output_path, 160)}': \{bounded_text(error.to_string(), 240)}",
+      )
+  }
+}
+
+///|
 fn publication_entries_same(
   left : PublicationDirectory,
   left_leaf : String,

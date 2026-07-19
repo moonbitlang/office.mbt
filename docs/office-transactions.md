@@ -134,6 +134,16 @@ length immediately as a fail-closed contract backstop when a custom callback
 ignores the supplied allowance. This contract is explicit and does not depend
 on backend- or optimization-specific object identity.
 
+The XLSX full-rewrite adapter additionally partitions the format-specific
+working reserve before it builds a candidate: bounded reads cap decoded XML,
+markup tokens, concrete cell records, and retained row/column dimensions; batch
+application charges projected cell and row/column growth against those retained
+objects; and the generated archive checks every part plus the
+aggregate uncompressed payload before retaining it. Only then does
+`zip.write_limited` perform its allocation-free final package sizing pass. This
+prevents a highly compressible workbook from bypassing the live boundary merely
+because its final ZIP is small.
+
 Preservation splices receive a second opaque allowance carved out of the
 already charged 64 MiB working reserve. At most one eighth of that reserve,
 capped at 8 MiB, may be retained across caller replacements, newly added part
@@ -198,7 +208,7 @@ cannot be called with an oversized, unbounded, or caller-modified snapshot.
 ## Validation hooks
 
 The portable archive-format gate is mandatory and recorded as
-`office-portable-opc` in `office.transaction/1`. A custom bounded identifier is
+`office-portable-opc` in `office.transaction/2`. A custom bounded identifier is
 additive: it runs first so format-specific limits can fail before generic Office
 parsing, then portable OPC validation runs independently, both formats must
 agree, and both successful gates are recorded. Callers may also register named,
@@ -255,12 +265,15 @@ that even container bytes were retained.
 
 ## Agent output
 
-Successful reports use schema `office.transaction/1` inside the shared
+Successful reports use schema `office.transaction/2` inside the shared
 `office.output/1` envelope. They include:
 
-- format, input, output, and destination mode;
+- format, nullable input, output, and destination mode (`in-place`, `output`,
+  or source-free `create`);
 - dry-run, changed, and committed flags;
-- original and candidate sizes;
+- nullable original size and the candidate size;
+- whether a commit replaced a separately observed destination and that
+  overwrite baseline's pre-validation size;
 - validation summaries;
 - preservation changes and counts;
 - structured portability or durability warnings.

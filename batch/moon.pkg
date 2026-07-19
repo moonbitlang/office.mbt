@@ -3,15 +3,15 @@ import {
   "bobzhang/mbtexcel/inspect",
   "bobzhang/mbtexcel/xlsx",
   "moonbitlang/core/debug",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
 }
 
 import {
   "bobzhang/mbtexcel/xlsx",
-  "moonbitlang/core/json",
 } for "test"
 
 import {
-  "moonbitlang/core/json",
   "moonbitlang/core/random",
 } for "wbtest"
 

@@ -1,4 +1,138 @@
 ///|
+let max_package_validation_findings = 256
+
+///|
+let package_validation_omission_message = "additional package findings were omitted after the bounded validator limit"
+
+///|
+fn push_package_problem(problems : Array[String], problem : String) -> Bool {
+  if problems.length() < max_package_validation_findings - 1 {
+    problems.push(problem)
+    true
+  } else {
+    if problems.length() == max_package_validation_findings - 1 {
+      problems.push(package_validation_omission_message)
+    }
+    false
+  }
+}
+
+///|
+fn package_content_type_is_xml(value : StringView) -> Bool {
+  let lower = value.to_owned().to_lower()
+  let media_type = match lower.find(";") {
+    Some(index) => lower[:index].trim()
+    None => lower.trim()
+  }
+  media_type == "application/xml" ||
+  media_type == "text/xml" ||
+  media_type.has_suffix("+xml")
+}
+
+///|
+fn package_validation_content_types(
+  archive : @zip.Archive,
+) -> @ooxml.PackageContentTypes? {
+  match archive.get("[Content_Types].xml") {
+    Some(data) =>
+      Some(@ooxml.parse_package_content_types(decode_package_part(data))) catch {
+        _ => None
+      }
+    None => None
+  }
+}
+
+///|
+fn charge_package_validation_xml_part(
+  data : BytesView,
+  limits : ReadLimits,
+  total_xml_bytes : Ref[Int],
+  markup_tokens : Ref[Int],
+) -> Unit raise XlsxError {
+  if data.length() > limits.max_xml_part_bytes {
+    raise ResourceLimitExceeded(
+      kind="xml_part_bytes",
+      limit=limits.max_xml_part_bytes,
+      actual=data.length(),
+    )
+  }
+  if data.length() > limits.max_total_xml_bytes - total_xml_bytes.val {
+    raise ResourceLimitExceeded(
+      kind="total_xml_bytes",
+      limit=limits.max_total_xml_bytes,
+      actual=bounded_actual_above_limit(limits.max_total_xml_bytes),
+    )
+  }
+  total_xml_bytes.val = total_xml_bytes.val + data.length()
+  for byte in data {
+    if byte == b'<' {
+      if markup_tokens.val >= limits.max_xml_markup_tokens {
+        raise ResourceLimitExceeded(
+          kind="xml_markup_tokens",
+          limit=limits.max_xml_markup_tokens,
+          actual=bounded_actual_above_limit(limits.max_xml_markup_tokens),
+        )
+      }
+      markup_tokens.val = markup_tokens.val + 1
+    }
+  }
+}
+
+///|
+/// Applies the same aggregate XML-byte and markup-token policy as the complete
+/// workbook reader before package validation starts decoding or scanning
+/// package plumbing. XML identity follows the package content-type manifest,
+/// with conventional XML-like suffixes retained as a fail-closed fallback.
+/// Counting every XML package part makes the validation boundary deterministic
+/// and prevents many individually-small parts from bypassing the aggregate read
+/// policy.
+fn enforce_package_validation_xml_limits(
+  archive : @zip.Archive,
+  limits : ReadLimits,
+) -> Unit raise XlsxError {
+  let total_xml_bytes = Ref(0)
+  let markup_tokens = Ref(0)
+  // Enforce suffix-identifiable XML first. This includes the content-types
+  // manifest itself, so its byte and scan-work ceilings are charged before the
+  // manifest parser is allowed to inspect it.
+  for entry in archive.entries() {
+    if is_xml_package_part(entry.name()) {
+      charge_package_validation_xml_part(
+        entry.data(),
+        limits,
+        total_xml_bytes,
+        markup_tokens,
+      )
+    }
+  }
+  let content_types = package_validation_content_types(archive)
+  for entry in archive.entries() {
+    if is_xml_package_part(entry.name()) {
+      continue
+    }
+    let declared_xml = match content_types {
+      Some(index) => {
+        let logical_name = logical_archive_part_path(entry.name())
+        let declared = index.content_type_for(logical_name) catch { _ => None }
+        match declared {
+          Some(value) => package_content_type_is_xml(value)
+          None => false
+        }
+      }
+      None => false
+    }
+    if declared_xml {
+      charge_package_validation_xml_part(
+        entry.data(),
+        limits,
+        total_xml_bytes,
+        markup_tokens,
+      )
+    }
+  }
+}
+
+///|
 /// Checks the structural invariants an OOXML (xlsx) package must satisfy
 /// for Microsoft Excel to open it without a repair prompt, returning the
 /// list of problems found (empty when the package is well-formed). These
@@ -18,7 +152,9 @@
 /// This is a fast, dependency-free complement to the Microsoft OpenXML
 /// SDK validator: it runs entirely in MoonBit, so it can be asserted on
 /// every workbook a test generates. An unreadable ZIP is returned as a stable
-/// finding; resource-policy violations raise `ResourceLimitExceeded`.
+/// finding; resource-policy violations raise `ResourceLimitExceeded`. Findings
+/// are capped at 256 while scanning, with a final omission marker when more
+/// defects exist, so diagnostics cannot become an attacker-sized second tree.
 pub fn validate_ooxml_package(
   bytes : BytesView,
   limits? : ReadLimits = ReadLimits::new(),
@@ -42,26 +178,42 @@ pub fn validate_ooxml_bounded_archive(
   limits? : ReadLimits = ReadLimits::new(),
 ) -> Array[String] raise XlsxError {
   require_bounded_archive(archive, limits)
+  enforce_package_validation_xml_limits(archive, limits)
+  preflight_archive_relationship_limits(archive, limits)
   validate_ooxml_archive(archive)
 }
 
 ///|
-fn validate_ooxml_archive(archive : @zip.Archive) -> Array[String] {
+fn validate_ooxml_archive(
+  archive : @zip.Archive,
+) -> Array[String] raise XlsxError {
   let problems : Array[String] = []
   let parts : Map[String, Int] = Map([])
   for entry in archive.entries() {
     let name = entry.name()
     parts[name] = parts.get(name).unwrap_or(0) + 1
     if name.contains("\\") {
-      problems.push("part name uses a backslash: \{name}")
+      if !push_package_problem(problems, "part name uses a backslash: \{name}") {
+        return problems
+      }
     }
     if name.has_prefix("/") {
-      problems.push("part name has a leading slash: \{name}")
+      if !push_package_problem(
+          problems,
+          "part name has a leading slash: \{name}",
+        ) {
+        return problems
+      }
     }
   }
   for name, count in parts {
     if count > 1 {
-      problems.push("duplicate part: \{name} (\{count} entries)")
+      if !push_package_problem(
+          problems,
+          "duplicate part: \{name} (\{count} entries)",
+        ) {
+        return problems
+      }
     }
   }
 
@@ -71,7 +223,9 @@ fn validate_ooxml_archive(archive : @zip.Archive) -> Array[String] {
       "[Content_Types].xml", "_rels/.rels", "xl/workbook.xml", "xl/_rels/workbook.xml.rels",
     ] {
     if !parts.contains(required) {
-      problems.push("missing required part: \{required}")
+      if !push_package_problem(problems, "missing required part: \{required}") {
+        return problems
+      }
     }
   }
 
@@ -91,7 +245,12 @@ fn validate_ooxml_archive(archive : @zip.Archive) -> Array[String] {
           None => false
         }
         if !has_override && !has_default {
-          problems.push("part has no declared content type: \{name}")
+          if !push_package_problem(
+              problems,
+              "part has no declared content type: \{name}",
+            ) {
+            return problems
+          }
         }
       }
     }
@@ -101,22 +260,48 @@ fn validate_ooxml_archive(archive : @zip.Archive) -> Array[String] {
   // relationship target integrity
   for entry in archive.entries() {
     let name = entry.name()
-    if !name.has_suffix(".rels") {
+    if !is_relationship_package_part(name) {
       continue
     }
     let base = rels_base_dir(name)
     let rels_xml = decode_package_part(entry.data())
-    for rel in parse_rel_targets(rels_xml) {
-      let (target, external) = rel
-      if external {
-        continue
+    // Process one relationship at a time. The aggregate token preflight above
+    // bounds scan work, while avoiding a second target array proportional to
+    // attacker-controlled relationship count.
+    for_each_relationship_start_tag(rels_xml, scanner => {
+      let target_opt = relationship_scanner_attribute(scanner, "Target") catch {
+        _ => None
       }
-      let resolved = resolve_part_path(base, target)
-      if resolved != "" && !parts.contains(resolved) {
-        problems.push(
-          "relationship in \{name} points to a missing part: \{target} -> \{resolved}",
-        )
+      match target_opt {
+        Some(target) => {
+          let mode_opt = relationship_scanner_attribute(scanner, "TargetMode") catch {
+            _ => None
+          }
+          let external = match mode_opt {
+            Some(mode) => mode == "External"
+            None => false
+          }
+          if !external {
+            let resolved = resolve_part_path(base, target)
+            if resolved != "" && !parts.contains(resolved) {
+              let source_text = package_diagnostic_excerpt(name, 160)
+              let target_text = package_diagnostic_excerpt(target, 160)
+              let resolved_text = package_diagnostic_excerpt(resolved, 160)
+              if !push_package_problem(
+                  problems,
+                  "relationship in \{source_text} points to a missing part: \{target_text} -> \{resolved_text}",
+                ) {
+                return false
+              }
+            }
+          }
+        }
+        None => ()
       }
+      true
+    })
+    if problems.length() == max_package_validation_findings {
+      return problems
     }
   }
   problems
@@ -161,12 +346,11 @@ fn parse_content_types(xml : String) -> (Map[String, Bool], Map[String, Bool]) {
       first = false
       continue
     }
-    let text = chunk.to_owned()
-    let end = match text.find(">") {
+    let end = match chunk.find(">") {
       Some(pos) => pos
       None => continue
     }
-    let ext = attr_value(text[:end], "Extension") catch { _ => None }
+    let ext = attr_value(chunk[:end], "Extension") catch { _ => None }
     match ext {
       Some(ext) => defaults[ext.to_lower()] = true
       None => ()
@@ -178,50 +362,17 @@ fn parse_content_types(xml : String) -> (Map[String, Bool], Map[String, Bool]) {
       first = false
       continue
     }
-    let text = chunk.to_owned()
-    let end = match text.find(">") {
+    let end = match chunk.find(">") {
       Some(pos) => pos
       None => continue
     }
-    let part = attr_value(text[:end], "PartName") catch { _ => None }
+    let part = attr_value(chunk[:end], "PartName") catch { _ => None }
     match part {
       Some(part) => overrides[part] = true
       None => ()
     }
   }
   (defaults, overrides)
-}
-
-///|
-/// Parses the relationship targets of a `.rels` part, returning each
-/// (target, is_external) pair.
-fn parse_rel_targets(xml : String) -> Array[(String, Bool)] {
-  let result : Array[(String, Bool)] = []
-  let mut first = true
-  for chunk in xml.split("<Relationship ") {
-    if first {
-      first = false
-      continue
-    }
-    let text = chunk.to_owned()
-    let end = match text.find(">") {
-      Some(pos) => pos
-      None => continue
-    }
-    let tag = text[:end]
-    let target_opt = attr_value(tag, "Target") catch { _ => None }
-    let target = match target_opt {
-      Some(value) => value
-      None => continue
-    }
-    let mode_opt = attr_value(tag, "TargetMode") catch { _ => None }
-    let external = match mode_opt {
-      Some(mode) => mode == "External"
-      None => false
-    }
-    result.push((target, external))
-  }
-  result
 }
 
 ///|
@@ -240,28 +391,48 @@ fn rels_base_dir(rels_part : String) -> String {
 /// leading-slash absolute form and `.`/`..` segments. Returns "" when
 /// the path escapes the package root (which the caller treats as
 /// unresolvable rather than a definite error).
-fn resolve_part_path(base : String, target : String) -> String {
-  let combined = if target.has_prefix("/") {
-    target[1:].to_owned()
+fn package_diagnostic_excerpt(value : StringView, maximum : Int) -> String {
+  if value.length() <= maximum {
+    value.to_owned()
   } else {
-    base + target
+    value[:maximum].to_owned() + "…"
   }
-  let segments : Array[String] = []
-  for segment in combined.split("/") {
-    let seg = segment.to_owned()
-    if seg == "" || seg == "." {
-      continue
-    }
-    if seg == ".." {
-      if segments.length() == 0 {
-        return ""
+}
+
+///|
+fn resolve_part_path(base : StringView, target : StringView) -> String {
+  let segments : Array[StringView] = []
+  fn consume(value : StringView) -> Bool {
+    for segment in value.split("/") {
+      if segment == "" || segment == "." {
+        continue
       }
-      segments.remove(segments.length() - 1) |> ignore
-      continue
+      if segment == ".." {
+        if segments.length() == 0 {
+          return false
+        }
+        ignore(segments.pop())
+      } else {
+        segments.push(segment)
+      }
     }
-    segments.push(seg)
+    true
   }
-  segments.join("/")
+  if target.has_prefix("/") {
+    if !consume(target[1:]) {
+      return ""
+    }
+  } else if !consume(base) || !consume(target) {
+    return ""
+  }
+  let result = StringBuilder::new()
+  for index, segment in segments {
+    if index > 0 {
+      result.write_char('/')
+    }
+    result.write_view(segment)
+  }
+  result.to_string()
 }
 
 ///|

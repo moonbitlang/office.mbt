@@ -138,6 +138,8 @@ fn build_command() -> @argparse.Command {
       get_command(),
       text_command(),
       query_command(),
+      create_command(),
+      batch_command(),
       raw_command(),
     ],
   )
@@ -146,7 +148,15 @@ fn build_command() -> @argparse.Command {
 ///|
 fn is_implemented_command(name : StringView) -> Bool {
   match name {
-    "help" | "identify" | "outline" | "get" | "text" | "query" | "raw" => true
+    "help"
+    | "identify"
+    | "outline"
+    | "get"
+    | "text"
+    | "query"
+    | "create"
+    | "batch"
+    | "raw" => true
     _ => false
   }
 }
@@ -164,6 +174,8 @@ async fn run_cli(args : Array[String]) -> Unit {
         "get" => run_docx_get(values)
         "text" => run_docx_text(values)
         "query" => run_docx_query(values)
+        "create" => run_create(values)
+        "batch" => run_xlsx_batch(values)
         "raw" => run_raw(values)
         _ => ()
       }

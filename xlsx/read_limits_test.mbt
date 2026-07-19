@@ -39,6 +39,16 @@ fn replace_xlsx_part(
 }
 
 ///|
+fn add_unused_relationship_part(
+  source : BytesView,
+  content : String,
+) -> Bytes raise {
+  let archive = @zip.read(source)
+  archive.add("custom/_rels/unused.rels", @encoding/utf8.encode(content))
+  @zip.write(archive)
+}
+
+///|
 fn lying_deflate_package() -> Bytes raise {
   let archive = @zip.Archive::new()
   let data = Array::make(4096, b'A')
@@ -106,6 +116,97 @@ test "direct XLSX reads reject OPC-derivable part names" {
         assert_true(msg.contains("OPC part names are derivable"))
       _ => fail("expected direct XLSX derivable-part rejection")
     }
+  }
+}
+
+///|
+test "bounded reads cap materialized cells across worksheets" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("One"))
+  ignore(workbook.add_sheet("Two"))
+  workbook.set_cell("One", "A1", "first")
+  workbook.set_cell("Two", "A1", "second")
+  let bytes = @xlsx.write(workbook)
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(
+      bytes,
+      limits=@xlsx.ReadLimits::with_values(max_materialized_cells=1),
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="materialized_cells")
+      assert_eq(limit, 1)
+      assert_eq(actual, 2)
+    }
+    _ => fail("expected aggregate materialized-cell limit")
+  }
+}
+
+///|
+test "bounded reads cap retained row and column dimensions across worksheets" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("One"))
+  ignore(workbook.add_sheet("Two"))
+  workbook.set_row_height("One", 1, 20.0)
+  workbook.set_col_width("Two", 1, 12.0)
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(
+      @xlsx.write(workbook),
+      limits=@xlsx.ReadLimits::with_values(
+        max_materialized_row_column_dimensions=1,
+      ),
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="materialized_row_column_dimensions")
+      assert_eq(limit, 1)
+      assert_eq(actual, 2)
+    }
+    _ => fail("expected aggregate row/column-dimension limit")
+  }
+}
+
+///|
+test "bounded reads cap overlapping row and column dimension expansion work" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let archive = @zip.read(@xlsx.write(workbook))
+  let path = "xl/worksheets/sheet1.xml"
+  let sheet_xml = match archive.get(path) {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing worksheet XML")
+  }
+  let dimensions =
+    #|<cols><col min="1" max="3" width="10" customWidth="1"/><col min="1" max="3" width="11" customWidth="1"/></cols><sheetData>
+  assert_true(
+    archive.replace(
+      path,
+      @encoding/utf8.encode(
+        sheet_xml.replace(old="<sheetData>", new=dimensions),
+      ),
+    ),
+  )
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(
+      @zip.write(archive),
+      limits=@xlsx.ReadLimits::with_values(max_row_column_dimension_work=5),
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="row_column_dimension_work")
+      assert_eq(limit, 5)
+      assert_true(actual > limit)
+    }
+    _ => fail("expected row/column dimension work limit")
   }
 }
 
@@ -426,6 +527,60 @@ test "semantic read limits bound cumulative parser work" {
       assert_true(actual > limit)
     }
     _ => fail("expected parser work limit")
+  }
+}
+
+///|
+test "semantic read preflight charges unused relationship XML" {
+  let source = bounded_workbook_fixture()
+  let large_relationships = add_unused_relationship_part(
+    source,
+    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
+    " ".repeat(2 * 1024 * 1024) +
+    "</Relationships>",
+  )
+  let markup_relationships = add_unused_relationship_part(
+    source,
+    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
+    "<x/>".repeat(8192) +
+    "</Relationships>",
+  )
+  let aggregate_limit = 1024 * 1024
+  let markup_limit = 4096
+  let aggregate_limits = @xlsx.ReadLimits::with_values(
+    max_total_xml_bytes=aggregate_limit,
+  )
+  let work_limits = @xlsx.ReadLimits::with_values(
+    max_parser_work_units=aggregate_limit,
+  )
+  let markup_limits = @xlsx.ReadLimits::with_values(
+    max_xml_markup_tokens=markup_limit,
+  )
+  // Each policy accepts the ordinary workbook; only the unused relationship
+  // part pushes the corresponding shared budget over its ceiling.
+  for limits in [aggregate_limits, work_limits, markup_limits] {
+    ignore(@xlsx.read(source, limits~))
+  }
+  for
+    entry in [
+      (
+        large_relationships, aggregate_limits, "total_xml_bytes", aggregate_limit,
+      ),
+      (large_relationships, work_limits, "parser_work_units", aggregate_limit),
+      (markup_relationships, markup_limits, "xml_markup_tokens", markup_limit),
+    ] {
+    let (bytes, limits, expected_kind, expected_limit) = entry
+    let result : Result[@xlsx.Workbook, Error] = Ok(@xlsx.read(bytes, limits~)) catch {
+      error => Err(error)
+    }
+    match result {
+      Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+        assert_eq(kind, expected_kind)
+        assert_eq(limit, expected_limit)
+        assert_true(actual > limit)
+      }
+      _ => fail("expected unused relationship XML limit")
+    }
   }
 }
 

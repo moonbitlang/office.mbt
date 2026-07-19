@@ -1,6 +1,327 @@
 ///|
-fn write_workbook_protection_xml(protection : WorkbookProtection) -> String {
-  let sb = StringBuilder::new()
+/// The remaining allowance for the next archive part. `maximum` is the tighter
+/// of the per-entry ceiling and the aggregate archive space still available;
+/// the other fields retain the policy-level error reported when it is crossed.
+priv struct WritePartBudget {
+  maximum : Int
+  resource_kind : String
+  resource_limit : Int
+}
+
+///|
+/// A UTF-8-byte-counted XML builder. The ceiling is checked before appending
+/// each fragment, so generated XML cannot first grow past the remaining archive
+/// allowance. Escaped text and attributes are streamed directly into this
+/// builder instead of allocating an expanded intermediate string.
+priv struct LimitedXmlBuilder {
+  builder : StringBuilder
+  budget : WritePartBudget?
+  mut encoded_bytes : Int
+}
+
+///|
+fn LimitedXmlBuilder::new(budget : WritePartBudget?) -> LimitedXmlBuilder {
+  { builder: StringBuilder::new(), budget, encoded_bytes: 0 }
+}
+
+///|
+fn xml_utf8_length_within(value : StringView, maximum : Int) -> Int? {
+  let mut length = 0
+  for character in value {
+    let scalar = character.to_int()
+    let width = if scalar <= 0x7F {
+      1
+    } else if scalar <= 0x7FF {
+      2
+    } else if scalar <= 0xFFFF {
+      3
+    } else {
+      4
+    }
+    if width > maximum - length {
+      return None
+    }
+    length = length + width
+  }
+  Some(length)
+}
+
+///|
+fn is_valid_xml_output_character(character : Char) -> Bool {
+  let scalar = character.to_int()
+  scalar == 0x09 ||
+  scalar == 0x0A ||
+  scalar == 0x0D ||
+  (scalar >= 0x20 && scalar <= 0xD7FF) ||
+  (scalar >= 0xE000 && scalar <= 0xFFFD) ||
+  (scalar >= 0x10000 && scalar <= 0x10FFFF)
+}
+
+///|
+fn validate_xml_output(value : StringView) -> Unit raise XlsxError {
+  for character in value {
+    if !is_valid_xml_output_character(character) {
+      raise InvalidXml(
+        msg="generated XML contains forbidden code point \{character.to_int()}",
+      )
+    }
+  }
+}
+
+///|
+fn LimitedXmlBuilder::write_view(
+  self : LimitedXmlBuilder,
+  value : StringView,
+) -> Unit raise XlsxError {
+  validate_xml_output(value)
+  match self.budget {
+    Some(budget) => {
+      let remaining = budget.maximum - self.encoded_bytes
+      let fragment_bytes = match xml_utf8_length_within(value, remaining) {
+        Some(length) => length
+        None =>
+          raise ResourceLimitExceeded(
+            kind=budget.resource_kind,
+            limit=budget.resource_limit,
+            actual=bounded_actual_above_limit(budget.resource_limit),
+          )
+      }
+      self.builder.write_view(value)
+      self.encoded_bytes = self.encoded_bytes + fragment_bytes
+    }
+    None => self.builder.write_view(value)
+  }
+}
+
+///|
+fn LimitedXmlBuilder::write_char(
+  self : LimitedXmlBuilder,
+  value : Char,
+) -> Unit raise XlsxError {
+  if !is_valid_xml_output_character(value) {
+    raise InvalidXml(
+      msg="generated XML contains forbidden code point \{value.to_int()}",
+    )
+  }
+  let scalar = value.to_int()
+  let width = if scalar <= 0x7F {
+    1
+  } else if scalar <= 0x7FF {
+    2
+  } else if scalar <= 0xFFFF {
+    3
+  } else {
+    4
+  }
+  match self.budget {
+    Some(budget) if width > budget.maximum - self.encoded_bytes =>
+      raise ResourceLimitExceeded(
+        kind=budget.resource_kind,
+        limit=budget.resource_limit,
+        actual=bounded_actual_above_limit(budget.resource_limit),
+      )
+    _ => ()
+  }
+  self.builder.write_char(value)
+  self.encoded_bytes = self.encoded_bytes + width
+}
+
+///|
+fn LimitedXmlBuilder::write_xml_text(
+  self : LimitedXmlBuilder,
+  value : StringView,
+) -> Unit raise XlsxError {
+  let mut literal_start = 0
+  for index in 0..<value.length() {
+    let escaped = match value[index] {
+      unit if unit == ('&' : UInt16) => Some("&amp;")
+      unit if unit == ('<' : UInt16) => Some("&lt;")
+      unit if unit == ('>' : UInt16) => Some("&gt;")
+      _ => None
+    }
+    match escaped {
+      Some(entity) => {
+        self.write_view(value[literal_start:index])
+        self.write_view(entity)
+        literal_start = index + 1
+      }
+      None => ()
+    }
+  }
+  self.write_view(value[literal_start:])
+}
+
+///|
+fn LimitedXmlBuilder::write_xml_attr(
+  self : LimitedXmlBuilder,
+  value : StringView,
+) -> Unit raise XlsxError {
+  let mut literal_start = 0
+  for index in 0..<value.length() {
+    let escaped = match value[index] {
+      unit if unit == ('&' : UInt16) => Some("&amp;")
+      unit if unit == ('<' : UInt16) => Some("&lt;")
+      unit if unit == ('>' : UInt16) => Some("&gt;")
+      unit if unit == ('"' : UInt16) => Some("&quot;")
+      unit if unit == ('\'' : UInt16) => Some("&apos;")
+      _ => None
+    }
+    match escaped {
+      Some(entity) => {
+        self.write_view(value[literal_start:index])
+        self.write_view(entity)
+        literal_start = index + 1
+      }
+      None => ()
+    }
+  }
+  self.write_view(value[literal_start:])
+}
+
+///|
+fn LimitedXmlBuilder::to_string(self : LimitedXmlBuilder) -> String {
+  self.builder.to_string()
+}
+
+///|
+/// Returns the unused portion of this builder's policy for a nested generator.
+/// Passing this budget downstream prevents a child fragment from allocating up
+/// to the whole part ceiling after its parent has already emitted content.
+fn LimitedXmlBuilder::remaining_budget(
+  self : LimitedXmlBuilder,
+) -> WritePartBudget? {
+  match self.budget {
+    Some(budget) =>
+      Some({
+        maximum: budget.maximum - self.encoded_bytes,
+        resource_kind: budget.resource_kind,
+        resource_limit: budget.resource_limit,
+      })
+    None => None
+  }
+}
+
+///|
+/// Tracks XML fragments that must be retained before their parent can append
+/// them. Each fragment receives only the allowance left after earlier retained
+/// fragments, preventing an array of individually valid fragments from growing
+/// beyond the parent part's remaining budget.
+priv struct WritePartBudgetTracker {
+  budget : WritePartBudget?
+  mut encoded_bytes : Int
+}
+
+///|
+fn WritePartBudgetTracker::new(
+  budget : WritePartBudget?,
+) -> WritePartBudgetTracker {
+  { budget, encoded_bytes: 0 }
+}
+
+///|
+fn WritePartBudgetTracker::remaining_budget(
+  self : WritePartBudgetTracker,
+) -> WritePartBudget? {
+  match self.budget {
+    Some(budget) =>
+      Some({
+        maximum: budget.maximum - self.encoded_bytes,
+        resource_kind: budget.resource_kind,
+        resource_limit: budget.resource_limit,
+      })
+    None => None
+  }
+}
+
+///|
+fn WritePartBudgetTracker::consume(
+  self : WritePartBudgetTracker,
+  value : StringView,
+) -> Unit raise XlsxError {
+  match self.budget {
+    Some(budget) => {
+      let remaining = budget.maximum - self.encoded_bytes
+      let fragment_bytes = match xml_utf8_length_within(value, remaining) {
+        Some(length) => length
+        None =>
+          raise ResourceLimitExceeded(
+            kind=budget.resource_kind,
+            limit=budget.resource_limit,
+            actual=bounded_actual_above_limit(budget.resource_limit),
+          )
+      }
+      self.encoded_bytes = self.encoded_bytes + fragment_bytes
+    }
+    None => ()
+  }
+}
+
+///|
+/// Parent allowance for a generated archive part that is assembled through
+/// multiple simultaneously-retained strings. Every individual intermediate
+/// remains subject to the per-entry ceiling, while their combined retained
+/// bytes debit the aggregate space left after already-archived parts.
+priv struct WriteCompositionBudgetTracker {
+  limits : WriteLimits?
+  archived_bytes : Int
+  mut retained_bytes : Int
+}
+
+///|
+fn WriteCompositionBudgetTracker::remaining_budget(
+  self : WriteCompositionBudgetTracker,
+) -> WritePartBudget? {
+  match self.limits {
+    Some(limits) => {
+      let aggregate_remaining = limits.max_total_uncompressed_bytes -
+        self.archived_bytes -
+        self.retained_bytes
+      if limits.max_entry_uncompressed_bytes <= aggregate_remaining {
+        Some({
+          maximum: limits.max_entry_uncompressed_bytes,
+          resource_kind: "entry_uncompressed_bytes",
+          resource_limit: limits.max_entry_uncompressed_bytes,
+        })
+      } else {
+        Some({
+          maximum: aggregate_remaining,
+          resource_kind: "total_uncompressed_bytes",
+          resource_limit: limits.max_total_uncompressed_bytes,
+        })
+      }
+    }
+    None => None
+  }
+}
+
+///|
+fn WriteCompositionBudgetTracker::consume(
+  self : WriteCompositionBudgetTracker,
+  value : StringView,
+) -> Unit raise XlsxError {
+  match self.remaining_budget() {
+    Some(budget) => {
+      let fragment_bytes = match xml_utf8_length_within(value, budget.maximum) {
+        Some(length) => length
+        None =>
+          raise ResourceLimitExceeded(
+            kind=budget.resource_kind,
+            limit=budget.resource_limit,
+            actual=bounded_actual_above_limit(budget.resource_limit),
+          )
+      }
+      self.retained_bytes = self.retained_bytes + fragment_bytes
+    }
+    None => ()
+  }
+}
+
+///|
+fn write_workbook_protection_xml(
+  protection : WorkbookProtection,
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("  <workbookProtection")
   if protection.lock_structure {
     sb.write_view(" lockStructure=\"1\"")
@@ -10,17 +331,17 @@ fn write_workbook_protection_xml(protection : WorkbookProtection) -> String {
   }
   if protection.algorithm_name != "" {
     sb.write_view(" workbookAlgorithmName=\"")
-    sb.write_view(escape_xml_attr(protection.algorithm_name))
+    sb.write_xml_attr(protection.algorithm_name)
     sb.write_view("\"")
   }
   if protection.hash_value != "" {
     sb.write_view(" workbookHashValue=\"")
-    sb.write_view(escape_xml_attr(protection.hash_value))
+    sb.write_xml_attr(protection.hash_value)
     sb.write_view("\"")
   }
   if protection.salt_value != "" {
     sb.write_view(" workbookSaltValue=\"")
-    sb.write_view(escape_xml_attr(protection.salt_value))
+    sb.write_xml_attr(protection.salt_value)
     sb.write_view("\"")
   }
   if protection.spin_count > 0 {
@@ -34,8 +355,12 @@ fn write_workbook_protection_xml(protection : WorkbookProtection) -> String {
 fn write_shared_strings_xml(
   values : Array[SharedStringEntry],
   total_count : Int,
-) -> String {
-  fn write_rich_text_color(sb : StringBuilder, font : RichTextFont) -> Unit {
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  fn write_rich_text_color(
+    sb : LimitedXmlBuilder,
+    font : RichTextFont,
+  ) -> Unit raise XlsxError {
     let tint = match font.color_tint {
       Some(v) => if v == 0.0 { None } else { Some(v) }
       None => None
@@ -72,7 +397,9 @@ fn write_shared_strings_xml(
         } else {
           normalized
         }
-        sb.write_view("<color rgb=\"\{escape_xml_attr(rgb)}\"")
+        sb.write_view("<color rgb=\"")
+        sb.write_xml_attr(rgb)
+        sb.write_view("\"")
         match tint {
           Some(v) => sb.write_view(" tint=\"\{v}\"")
           None => ()
@@ -83,7 +410,7 @@ fn write_shared_strings_xml(
     }
   }
 
-  let sb = StringBuilder::new()
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" count=\"\{total_count}\" uniqueCount=\"\{values.length()}\">\n",
@@ -119,8 +446,11 @@ fn write_shared_strings_xml(
                 sb.write_view("<extend/>")
               }
               match font.underline {
-                Some(value) =>
-                  sb.write_view("<u val=\"\{escape_xml_attr(value)}\"/>")
+                Some(value) => {
+                  sb.write_view("<u val=\"")
+                  sb.write_xml_attr(value)
+                  sb.write_view("\"/>")
+                }
                 None => ()
               }
               match font.size {
@@ -136,8 +466,11 @@ fn write_shared_strings_xml(
                 None => ()
               }
               match font.family {
-                Some(family) =>
-                  sb.write_view("<rFont val=\"\{escape_xml_attr(family)}\"/>")
+                Some(family) => {
+                  sb.write_view("<rFont val=\"")
+                  sb.write_xml_attr(family)
+                  sb.write_view("\"/>")
+                }
                 None => ()
               }
               match font.color {
@@ -150,15 +483,19 @@ fn write_shared_strings_xml(
                   }
               }
               match font.vert_align {
-                Some(value) =>
-                  sb.write_view(
-                    "<vertAlign val=\"\{escape_xml_attr(value)}\"/>",
-                  )
+                Some(value) => {
+                  sb.write_view("<vertAlign val=\"")
+                  sb.write_xml_attr(value)
+                  sb.write_view("\"/>")
+                }
                 None => ()
               }
               match font.scheme {
-                Some(value) =>
-                  sb.write_view("<scheme val=\"\{escape_xml_attr(value)}\"/>")
+                Some(value) => {
+                  sb.write_view("<scheme val=\"")
+                  sb.write_xml_attr(value)
+                  sb.write_view("\"/>")
+                }
                 None => ()
               }
               sb.write_view("</rPr>")
@@ -172,7 +509,7 @@ fn write_shared_strings_xml(
           } else {
             sb.write_view("<t>")
           }
-          sb.write_view(escape_xml_text(run.text))
+          sb.write_xml_text(run.text)
           sb.write_view("</t></r>\n")
         }
         sb.write_view("  </si>\n")
@@ -186,7 +523,7 @@ fn write_shared_strings_xml(
         } else {
           sb.write_view("<t>")
         }
-        sb.write_view(escape_xml_text(entry.text))
+        sb.write_xml_text(entry.text)
         sb.write_view("</t></si>\n")
       }
     }
@@ -214,8 +551,11 @@ fn collect_formula_cells(workbook : Workbook) -> Array[(Int, String)] {
 }
 
 ///|
-fn write_calc_chain_xml(cells : Array[(Int, String)]) -> String {
-  let sb = StringBuilder::new()
+fn write_calc_chain_xml(
+  cells : Array[(Int, String)],
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<calcChain xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">\n",
@@ -223,7 +563,7 @@ fn write_calc_chain_xml(cells : Array[(Int, String)]) -> String {
   for cell in cells {
     let (sheet_id, reference) = cell
     sb.write_view("  <c r=\"")
-    sb.write_view(escape_xml_attr(reference))
+    sb.write_xml_attr(reference)
     sb.write_view("\" i=\"\{sheet_id}\"/>\n")
   }
   sb.write_view("</calcChain>")
@@ -401,7 +741,7 @@ fn two_cell_axis_to(
 }
 
 ///|
-fn write_drawing_open(sb : StringBuilder) -> Unit {
+fn write_drawing_open(sb : LimitedXmlBuilder) -> Unit raise XlsxError {
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<xdr:wsDr xmlns:xdr=\"http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\" xmlns:sle=\"http://schemas.microsoft.com/office/drawing/2010/slicer\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">\n",
@@ -484,12 +824,13 @@ fn write_drawing_xml(
   slicers : Array[DrawingSlicer],
   preserved_anchors? : ArrayView[PreservedDrawingAnchor] = [],
   reserved_object_ids? : ArrayView[String] = [],
+  budget? : WritePartBudget,
 ) -> String raise XlsxError {
   let drawing_metrics = match sheet {
     Some(value) => drawing_metrics_for_sheet(value)
     None => drawing_metrics_for_sheet(Worksheet::new("Drawing"))
   }
-  let sb = StringBuilder::new()
+  let sb = LimitedXmlBuilder::new(budget)
   write_drawing_open(sb)
   let reserved_object_id_set : Set[String] = Set([])
   for id in reserved_object_ids {
@@ -611,11 +952,11 @@ fn write_drawing_xml(
     match item.hyperlink_rel_id {
       Some(link_id) => {
         sb.write_view("        <xdr:cNvPr id=\"\{pic_id}\" name=\"")
-        sb.write_view(escape_xml_attr(picture_name))
+        sb.write_xml_attr(picture_name)
         sb.write_view("\"")
         if image.alt_text != "" {
           sb.write_view(" descr=\"")
-          sb.write_view(escape_xml_attr(image.alt_text))
+          sb.write_xml_attr(image.alt_text)
           sb.write_view("\"")
         }
         sb.write_view(">\n")
@@ -624,11 +965,11 @@ fn write_drawing_xml(
       }
       None => {
         sb.write_view("        <xdr:cNvPr id=\"\{pic_id}\" name=\"")
-        sb.write_view(escape_xml_attr(picture_name))
+        sb.write_xml_attr(picture_name)
         sb.write_view("\"")
         if image.alt_text != "" {
           sb.write_view(" descr=\"")
-          sb.write_view(escape_xml_attr(image.alt_text))
+          sb.write_xml_attr(image.alt_text)
           sb.write_view("\"")
         }
         sb.write_view("/>\n")
@@ -905,16 +1246,16 @@ fn write_drawing_xml(
       shape.name
     }
     sb.write_view("        <xdr:cNvPr id=\"\{shape_id}\" name=\"")
-    sb.write_view(escape_xml_attr(shape_name))
+    sb.write_xml_attr(shape_name)
     sb.write_view("\"")
     if shape.macro_name != "" {
       sb.write_view(" macro=\"")
-      sb.write_view(escape_xml_attr(shape.macro_name))
+      sb.write_xml_attr(shape.macro_name)
       sb.write_view("\"")
     }
     if shape.alt_text != "" {
       sb.write_view(" descr=\"")
-      sb.write_view(escape_xml_attr(shape.alt_text))
+      sb.write_xml_attr(shape.alt_text)
       sb.write_view("\"")
     }
     sb.write_view("/>\n")
@@ -926,12 +1267,12 @@ fn write_drawing_xml(
     sb.write_view("          <a:ext cx=\"\{cx}\" cy=\"\{cy}\"/>\n")
     sb.write_view("        </a:xfrm>\n")
     sb.write_view("        <a:prstGeom prst=\"")
-    sb.write_view(escape_xml_attr(shape.shape_type.to_lower()))
+    sb.write_xml_attr(shape.shape_type.to_lower())
     sb.write_view("\"><a:avLst/></a:prstGeom>\n")
     if shape.fill_color != "" {
       let fill = shape.fill_color.replace_all(old="#", new="").to_upper()
       sb.write_view("        <a:solidFill><a:srgbClr val=\"")
-      sb.write_view(escape_xml_attr(fill))
+      sb.write_xml_attr(fill)
       if shape.fill_transparency > 0 {
         let alpha = (100 - shape.fill_transparency) * 1000
         sb.write_view(
@@ -952,7 +1293,7 @@ fn write_drawing_xml(
       } else {
         let line = shape.line_color.replace_all(old="#", new="").to_upper()
         sb.write_view("><a:solidFill><a:srgbClr val=\"")
-        sb.write_view(escape_xml_attr(line))
+        sb.write_xml_attr(line)
         sb.write_view("\"/></a:solidFill></a:ln>\n")
       }
     }
@@ -983,7 +1324,11 @@ fn write_drawing_xml(
               sb.write_view(" strike=\"sngStrike\"")
             }
             match font.underline {
-              Some(value) => sb.write_view(" u=\"\{escape_xml_attr(value)}\"")
+              Some(value) => {
+                sb.write_view(" u=\"")
+                sb.write_xml_attr(value)
+                sb.write_view("\"")
+              }
               None => ()
             }
             match font.size {
@@ -995,13 +1340,13 @@ fn write_drawing_xml(
             match font.family {
               Some(family) => {
                 sb.write_view("<a:latin typeface=\"")
-                sb.write_view(escape_xml_attr(family))
+                sb.write_xml_attr(family)
                 sb.write_view("\"/>")
                 sb.write_view("<a:ea typeface=\"")
-                sb.write_view(escape_xml_attr(family))
+                sb.write_xml_attr(family)
                 sb.write_view("\"/>")
                 sb.write_view("<a:cs typeface=\"")
-                sb.write_view(escape_xml_attr(family))
+                sb.write_xml_attr(family)
                 sb.write_view("\"/>")
               }
               None => ()
@@ -1010,7 +1355,7 @@ fn write_drawing_xml(
               Some(color) => {
                 let normalized = color.replace_all(old="#", new="").to_upper()
                 sb.write_view("<a:solidFill><a:srgbClr val=\"")
-                sb.write_view(escape_xml_attr(normalized))
+                sb.write_xml_attr(normalized)
                 sb.write_view("\"/></a:solidFill>")
               }
               None => ()
@@ -1027,7 +1372,7 @@ fn write_drawing_xml(
         } else {
           sb.write_view("            <a:t>")
         }
-        sb.write_view(escape_xml_text(text_value))
+        sb.write_xml_text(text_value)
         sb.write_view("</a:t>\n")
         sb.write_view("          </a:r>\n")
         sb.write_view("        </a:p>\n")
@@ -1186,17 +1531,17 @@ fn write_drawing_xml(
     sb.write_view("        <xdr:graphicFrame")
     if slicer.macro_name != "" {
       sb.write_view(" macro=\"")
-      sb.write_view(escape_xml_attr(slicer.macro_name))
+      sb.write_xml_attr(slicer.macro_name)
       sb.write_view("\"")
     }
     sb.write_view(">\n")
     sb.write_view("          <xdr:nvGraphicFramePr>\n")
     sb.write_view("            <xdr:cNvPr id=\"\{frame_id}\" name=\"")
-    sb.write_view(escape_xml_attr(slicer.name))
+    sb.write_xml_attr(slicer.name)
     sb.write_view("\"")
     if alt_text != "" {
       sb.write_view(" descr=\"")
-      sb.write_view(escape_xml_attr(alt_text))
+      sb.write_xml_attr(alt_text)
       sb.write_view("\"")
     }
     sb.write_view("/>\n")
@@ -1213,7 +1558,7 @@ fn write_drawing_xml(
     sb.write_view(
       "              <sle:slicer xmlns:sle=\"http://schemas.microsoft.com/office/drawing/2010/slicer\" name=\"",
     )
-    sb.write_view(escape_xml_attr(slicer.name))
+    sb.write_xml_attr(slicer.name)
     sb.write_view("\"/>\n")
     sb.write_view("            </a:graphicData>\n")
     sb.write_view("          </a:graphic>\n")
@@ -1223,17 +1568,17 @@ fn write_drawing_xml(
     sb.write_view("        <xdr:sp")
     if slicer.macro_name != "" {
       sb.write_view(" macro=\"")
-      sb.write_view(escape_xml_attr(slicer.macro_name))
+      sb.write_xml_attr(slicer.macro_name)
       sb.write_view("\"")
     }
     sb.write_view(">\n")
     sb.write_view("          <xdr:nvSpPr>\n")
     sb.write_view("            <xdr:cNvPr id=\"\{frame_id}\" name=\"")
-    sb.write_view(escape_xml_attr(slicer.name))
+    sb.write_xml_attr(slicer.name)
     sb.write_view("\"")
     if alt_text != "" {
       sb.write_view(" descr=\"")
-      sb.write_view(escape_xml_attr(alt_text))
+      sb.write_xml_attr(alt_text)
       sb.write_view("\"")
     }
     sb.write_view("/>\n")
@@ -1259,17 +1604,13 @@ fn write_drawing_xml(
       "            <a:bodyPr vertOverflow=\"clip\" horzOverflow=\"clip\"/>\n",
     )
     sb.write_view("            <a:p><a:r><a:t>")
-    sb.write_view(
-      escape_xml_text(
-        "This shape represents a table slicer. Table slicers are not supported in this version of Excel.",
-      ),
+    sb.write_xml_text(
+      "This shape represents a table slicer. Table slicers are not supported in this version of Excel.",
     )
     sb.write_view("</a:t></a:r></a:p>\n")
     sb.write_view("            <a:p><a:r><a:t>")
-    sb.write_view(
-      escape_xml_text(
-        "If the shape was modified in an earlier version of Excel, or if the workbook was saved in Excel 2007 or earlier, the slicer can't be used.",
-      ),
+    sb.write_xml_text(
+      "If the shape was modified in an earlier version of Excel, or if the workbook was saved in Excel 2007 or earlier, the slicer can't be used.",
     )
     sb.write_view("</a:t></a:r></a:p>\n")
     sb.write_view("          </xdr:txBody>\n")
@@ -1344,7 +1685,7 @@ fn write_drawing_xml(
     })
   }
   ordered.sort_by(compare_ordered_drawing_anchor)
-  let output = StringBuilder::new()
+  let output = LimitedXmlBuilder::new(budget)
   write_drawing_open(output)
   for anchor in ordered {
     output.write_view("  ")
@@ -1356,13 +1697,16 @@ fn write_drawing_xml(
 }
 
 ///|
-fn write_sheet_pr_xml(options : SheetPropsOptions) -> String {
-  let sb = StringBuilder::new()
+fn write_sheet_pr_xml(
+  options : SheetPropsOptions,
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("  <sheetPr")
   match options.code_name {
     Some(value) => {
       sb.write_view(" codeName=\"")
-      sb.write_view(escape_xml_attr(value))
+      sb.write_xml_attr(value)
       sb.write_view("\"")
     }
     None => ()
@@ -1400,7 +1744,7 @@ fn write_sheet_pr_xml(options : SheetPropsOptions) -> String {
     match options.tab_color_rgb {
       Some(value) => {
         sb.write_view(" rgb=\"")
-        sb.write_view(escape_xml_attr(value))
+        sb.write_xml_attr(value)
         sb.write_view("\"")
       }
       None => ()
@@ -1444,8 +1788,11 @@ fn write_sheet_pr_xml(options : SheetPropsOptions) -> String {
 }
 
 ///|
-fn write_sheet_format_pr_xml(options : SheetPropsOptions) -> String {
-  let sb = StringBuilder::new()
+fn write_sheet_format_pr_xml(
+  options : SheetPropsOptions,
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("  <sheetFormatPr")
   match options.base_col_width {
     Some(value) => sb.write_view(" baseColWidth=\"\{value}\"")
@@ -1480,11 +1827,14 @@ fn write_sheet_format_pr_xml(options : SheetPropsOptions) -> String {
 }
 
 ///|
-fn write_sheet_views_xml(sheet : Worksheet) -> String? raise XlsxError {
+fn write_sheet_views_xml(
+  sheet : Worksheet,
+  budget? : WritePartBudget,
+) -> String? raise XlsxError {
   if sheet.sheet_views.length() == 0 {
     return None
   }
-  let sb = StringBuilder::new()
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("  <sheetViews>\n")
   for view in sheet.sheet_views {
     sb.write_view("    <sheetView")
@@ -1519,7 +1869,7 @@ fn write_sheet_views_xml(sheet : Worksheet) -> String? raise XlsxError {
     match view.top_left_cell {
       Some(value) => {
         sb.write_view(" topLeftCell=\"")
-        sb.write_view(escape_xml_attr(normalize_cell_ref_for_write(value)))
+        sb.write_xml_attr(normalize_cell_ref_for_write(value))
         sb.write_view("\"")
       }
       None => ()
@@ -1527,7 +1877,7 @@ fn write_sheet_views_xml(sheet : Worksheet) -> String? raise XlsxError {
     match view.view {
       Some(value) => {
         sb.write_view(" view=\"")
-        sb.write_view(escape_xml_attr(value))
+        sb.write_xml_attr(value)
         sb.write_view("\"")
       }
       None => ()
@@ -1550,19 +1900,17 @@ fn write_sheet_views_xml(sheet : Worksheet) -> String? raise XlsxError {
         sb.write_view("      <pane")
         if pane.active_pane != "" {
           sb.write_view(" activePane=\"")
-          sb.write_view(escape_xml_attr(pane.active_pane))
+          sb.write_xml_attr(pane.active_pane)
           sb.write_view("\"")
         }
         if pane.state != "" {
           sb.write_view(" state=\"")
-          sb.write_view(escape_xml_attr(pane.state))
+          sb.write_xml_attr(pane.state)
           sb.write_view("\"")
         }
         if pane.top_left_cell != "" {
           sb.write_view(" topLeftCell=\"")
-          sb.write_view(
-            escape_xml_attr(normalize_cell_ref_for_write(pane.top_left_cell)),
-          )
+          sb.write_xml_attr(normalize_cell_ref_for_write(pane.top_left_cell))
           sb.write_view("\"")
         }
         if pane.x_split != 0.0 {
@@ -1579,21 +1927,17 @@ fn write_sheet_views_xml(sheet : Worksheet) -> String? raise XlsxError {
       sb.write_view("      <selection")
       if selection.pane != "" {
         sb.write_view(" pane=\"")
-        sb.write_view(escape_xml_attr(selection.pane))
+        sb.write_xml_attr(selection.pane)
         sb.write_view("\"")
       }
       if selection.active_cell != "" {
         sb.write_view(" activeCell=\"")
-        sb.write_view(
-          escape_xml_attr(normalize_cell_ref_for_write(selection.active_cell)),
-        )
+        sb.write_xml_attr(normalize_cell_ref_for_write(selection.active_cell))
         sb.write_view("\"")
       }
       if selection.sqref != "" {
         sb.write_view(" sqref=\"")
-        sb.write_view(
-          escape_xml_attr(normalize_sqref_for_write(selection.sqref)),
-        )
+        sb.write_xml_attr(normalize_sqref_for_write(selection.sqref))
         sb.write_view("\"")
       }
       sb.write_view("/>\n")
@@ -1605,8 +1949,11 @@ fn write_sheet_views_xml(sheet : Worksheet) -> String? raise XlsxError {
 }
 
 ///|
-fn write_chartsheet_xml(drawing_rel_id : Int) -> String {
-  let sb = StringBuilder::new()
+fn write_chartsheet_xml(
+  drawing_rel_id : Int,
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<chartsheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">\n",
@@ -1751,6 +2098,7 @@ fn write_worksheet_xml(
   slicer_rel_ids_x15 : ArrayView[Int],
   legacy_drawing_rel_id : Int?,
   legacy_drawing_hf_rel_id : Int?,
+  budget? : WritePartBudget,
 ) -> String raise XlsxError {
   fn write_worksheet_ext_lst_xml(
     slicer_rel_ids_x14 : ArrayView[Int],
@@ -1758,10 +2106,12 @@ fn write_worksheet_xml(
     sparkline_groups : ArrayView[SparklineGroup],
     x14_data_bars : Map[String, X14DataBarProps],
     unknown_ext_blocks : ArrayView[String],
-  ) -> String? {
+    budget : WritePartBudget?,
+  ) -> String? raise XlsxError {
     fn write_x14_conditional_formattings_ext_block_xml(
       x14_data_bars : Map[String, X14DataBarProps],
-    ) -> String? {
+      budget : WritePartBudget?,
+    ) -> String? raise XlsxError {
       let by_sqref : Map[String, Array[(String, X14DataBarProps)]] = Map([])
       for id, props in x14_data_bars {
         if props.bar_direction == "" &&
@@ -1780,7 +2130,7 @@ fn write_worksheet_xml(
       if by_sqref.length() == 0 {
         return None
       }
-      let sb = StringBuilder::new()
+      let sb = LimitedXmlBuilder::new(budget)
       sb.write_view(
         "    <ext uri=\"{78C0D931-6437-407d-A8EE-F0AAD7539E65}\">\n",
       )
@@ -1792,12 +2142,12 @@ fn write_worksheet_xml(
         for entry in entries {
           let (id, props) = entry
           sb.write_view("          <x14:cfRule type=\"dataBar\" id=\"")
-          sb.write_view(escape_xml_attr(id))
+          sb.write_xml_attr(id)
           sb.write_view("\">\n")
           sb.write_view("            <x14:dataBar maxLength=\"100\"")
           if props.bar_direction != "" {
             sb.write_view(" direction=\"")
-            sb.write_view(escape_xml_attr(props.bar_direction))
+            sb.write_xml_attr(props.bar_direction)
             sb.write_view("\"")
           }
           sb.write_view(" gradient=\"")
@@ -1822,7 +2172,7 @@ fn write_worksheet_xml(
           sb.write_view("          </x14:cfRule>\n")
         }
         sb.write_view("          <xm:sqref>")
-        sb.write_view(escape_xml_text(sqref))
+        sb.write_xml_text(sqref)
         sb.write_view("</xm:sqref>\n")
         sb.write_view("        </x14:conditionalFormatting>\n")
       }
@@ -1831,10 +2181,15 @@ fn write_worksheet_xml(
       Some(sb.to_string())
     }
 
-    let cond_fmt_ext = write_x14_conditional_formattings_ext_block_xml(
-      x14_data_bars,
-    )
-    let has_conditional = cond_fmt_ext is Some(_)
+    let mut has_conditional = false
+    for _, props in x14_data_bars {
+      if props.bar_direction != "" ||
+        props.bar_solid ||
+        props.bar_border_color != "" {
+        has_conditional = true
+        break
+      }
+    }
     let has_slicers = slicer_rel_ids_x14.length() > 0 ||
       slicer_rel_ids_x15.length() > 0
     let has_sparklines = sparkline_groups.length() > 0
@@ -1843,17 +2198,29 @@ fn write_worksheet_xml(
       return None
     }
     if has_sparklines && !has_slicers && !has_conditional && !has_unknown {
-      return Some(write_sparkline_ext_xml(sheet.name(), sparkline_groups))
+      return Some(
+        write_sparkline_ext_xml(sheet.name(), sparkline_groups, budget?),
+      )
     }
-    let sb = StringBuilder::new()
+    let sb = LimitedXmlBuilder::new(budget)
     sb.write_view("  <extLst>\n")
-    match cond_fmt_ext {
-      Some(block) => sb.write_view(block)
-      None => ()
+    if has_conditional {
+      match
+        write_x14_conditional_formattings_ext_block_xml(
+          x14_data_bars,
+          sb.remaining_budget(),
+        ) {
+        Some(block) => sb.write_view(block)
+        None => ()
+      }
     }
     if has_sparklines {
       sb.write_view(
-        write_sparkline_ext_block_xml(sheet.name(), sparkline_groups),
+        write_sparkline_ext_block_xml(
+          sheet.name(),
+          sparkline_groups,
+          budget?=sb.remaining_budget(),
+        ),
       )
     }
     if slicer_rel_ids_x14.length() > 0 {
@@ -1900,7 +2267,7 @@ fn write_worksheet_xml(
     Some(sb.to_string())
   }
 
-  let sb = StringBuilder::new()
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   let needs_rels = drawing_rel_id is Some(_) ||
     table_rel_ids.length() > 0 ||
@@ -1936,26 +2303,30 @@ fn write_worksheet_xml(
   match sheet.sheet_props {
     Some(options) =>
       if sheet_props_has_sheet_pr(options) {
-        sb.write_view(write_sheet_pr_xml(options))
+        sb.write_view(
+          write_sheet_pr_xml(options, budget?=sb.remaining_budget()),
+        )
       }
     None => ()
   }
   match worksheet_dimension(sheet) {
     Some(value) => {
       sb.write_view("  <dimension ref=\"")
-      sb.write_view(escape_xml_attr(value))
+      sb.write_xml_attr(value)
       sb.write_view("\"/>\n")
     }
     None => ()
   }
-  match write_sheet_views_xml(sheet) {
+  match write_sheet_views_xml(sheet, budget?=sb.remaining_budget()) {
     Some(value) => sb.write_view(value)
     None => ()
   }
   match sheet.sheet_props {
     Some(options) =>
       if sheet_props_has_sheet_format(options) {
-        sb.write_view(write_sheet_format_pr_xml(options))
+        sb.write_view(
+          write_sheet_format_pr_xml(options, budget?=sb.remaining_budget()),
+        )
       }
     None => ()
   }
@@ -2019,7 +2390,7 @@ fn write_worksheet_xml(
     sb.write_view(">\n")
     for cell in row_entries {
       sb.write_view("      <c r=\"")
-      sb.write_view(escape_xml_attr(cell.reference))
+      sb.write_xml_attr(cell.reference)
       sb.write_view("\"")
       if cell.style_explicit || cell.style_id != 0 {
         sb.write_view(" s=\"\{cell.style_id}\"")
@@ -2048,7 +2419,7 @@ fn write_worksheet_xml(
           match cell.formula_ref {
             Some(value) => {
               sb.write_view(" ref=\"")
-              sb.write_view(escape_xml_attr(value))
+              sb.write_xml_attr(value)
               sb.write_view("\"")
             }
             None => ()
@@ -2058,13 +2429,13 @@ fn write_worksheet_xml(
             None => ()
           }
           sb.write_view(">")
-          sb.write_view(escape_xml_text(formula))
+          sb.write_xml_text(formula)
           sb.write_view("</f>")
           if cell.formula_value_present {
             sb.write_view("<v>")
             match cell.value_type {
-              String => sb.write_view(escape_xml_text(cell.value))
-              Error => sb.write_view(escape_xml_text(cell.value))
+              String => sb.write_xml_text(cell.value)
+              Error => sb.write_xml_text(cell.value)
               _ => sb.write_view(cell.value)
             }
             sb.write_view("</v>")
@@ -2095,7 +2466,7 @@ fn write_worksheet_xml(
             }
             Error => {
               sb.write_view(" t=\"e\"><v>")
-              sb.write_view(escape_xml_text(cell.value))
+              sb.write_xml_text(cell.value)
               sb.write_view("</v></c>\n")
             }
             Number => {
@@ -2110,18 +2481,24 @@ fn write_worksheet_xml(
   }
   sb.write_view("  </sheetData>\n")
   match sheet.sheet_protection() {
-    Some(protection) => sb.write_view(write_sheet_protection_xml(protection))
+    Some(protection) =>
+      sb.write_view(
+        write_sheet_protection_xml(protection, budget?=sb.remaining_budget()),
+      )
     None => ()
   }
   match sheet.auto_filter() {
-    Some(filter) => sb.write_view(write_auto_filter_xml(filter))
+    Some(filter) =>
+      sb.write_view(
+        write_auto_filter_xml(filter, budget?=sb.remaining_budget()),
+      )
     None => ()
   }
   if sheet.merged_cells().length() > 0 {
     sb.write_view("  <mergeCells count=\"\{sheet.merged_cells().length()}\">\n")
     for range_ref in sheet.merged_cells() {
       sb.write_view("    <mergeCell ref=\"")
-      sb.write_view(escape_xml_attr(range_ref))
+      sb.write_xml_attr(range_ref)
       sb.write_view("\"/>\n")
     }
     sb.write_view("  </mergeCells>\n")
@@ -2153,7 +2530,7 @@ fn write_worksheet_xml(
         wrote = true
       }
       sb.write_view("    <hyperlink ref=\"")
-      sb.write_view(escape_xml_attr(link.reference))
+      sb.write_xml_attr(link.reference)
       sb.write_view("\"")
       if link.link_type == External {
         match hyperlink_rel_ids.get(link.reference) {
@@ -2163,20 +2540,20 @@ fn write_worksheet_xml(
         match link.location {
           Some(value) => {
             sb.write_view(" location=\"")
-            sb.write_view(escape_xml_attr(value))
+            sb.write_xml_attr(value)
             sb.write_view("\"")
           }
           None => ()
         }
       } else {
         sb.write_view(" location=\"")
-        sb.write_view(escape_xml_attr(link.target))
+        sb.write_xml_attr(link.target)
         sb.write_view("\"")
       }
       match link.display {
         Some(value) => {
           sb.write_view(" display=\"")
-          sb.write_view(escape_xml_attr(value))
+          sb.write_xml_attr(value)
           sb.write_view("\"")
         }
         None => ()
@@ -2184,7 +2561,7 @@ fn write_worksheet_xml(
       match link.tooltip {
         Some(value) => {
           sb.write_view(" tooltip=\"")
-          sb.write_view(escape_xml_attr(value))
+          sb.write_xml_attr(value)
           sb.write_view("\"")
         }
         None => ()
@@ -2197,32 +2574,52 @@ fn write_worksheet_xml(
   }
   match sheet.page_margins {
     Some(margins) => {
-      match write_print_options_xml(margins) {
+      match write_print_options_xml(margins, budget?=sb.remaining_budget()) {
         Some(xml) => sb.write_view(xml)
         None => ()
       }
       let merged = page_margins_with_defaults(Some(margins))
-      sb.write_view(write_page_margins_xml(merged))
+      sb.write_view(
+        write_page_margins_xml(merged, budget?=sb.remaining_budget()),
+      )
     }
     None => ()
   }
   match sheet.page_layout {
-    Some(layout) => sb.write_view(write_page_setup_xml(layout))
+    Some(layout) =>
+      sb.write_view(write_page_setup_xml(layout, budget?=sb.remaining_budget()))
     None => ()
   }
   match sheet.header_footer() {
-    Some(options) => sb.write_view(write_header_footer_xml(options))
+    Some(options) =>
+      sb.write_view(
+        write_header_footer_xml(options, budget?=sb.remaining_budget()),
+      )
     None => ()
   }
-  match write_page_breaks_xml("rowBreaks", sheet.row_breaks()) {
+  match
+    write_page_breaks_xml(
+      "rowBreaks",
+      sheet.row_breaks(),
+      budget?=sb.remaining_budget(),
+    ) {
     Some(xml) => sb.write_view(xml)
     None => ()
   }
-  match write_page_breaks_xml("colBreaks", sheet.col_breaks()) {
+  match
+    write_page_breaks_xml(
+      "colBreaks",
+      sheet.col_breaks(),
+      budget?=sb.remaining_budget(),
+    ) {
     Some(xml) => sb.write_view(xml)
     None => ()
   }
-  match write_ignored_errors_xml(sheet.ignored_errors()) {
+  match
+    write_ignored_errors_xml(
+      sheet.ignored_errors(),
+      budget?=sb.remaining_budget(),
+    ) {
     Some(value) => sb.write_view(value)
     None => ()
   }
@@ -2257,6 +2654,7 @@ fn write_worksheet_xml(
       sheet.sparkline_groups(),
       sheet.x14_data_bars,
       sheet.unknown_ext_blocks,
+      sb.remaining_budget(),
     ) {
     Some(xml) => sb.write_view(xml)
     None => ()
@@ -2345,42 +2743,31 @@ let default_theme_xml =
   #|</a:theme>
 
 ///|
-fn write_theme_xml(theme_colors : Array[String]?) -> String {
+fn write_theme_xml(
+  theme_colors : Array[String]?,
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  fn write_theme_color(
+    sb : LimitedXmlBuilder,
+    value : StringView,
+  ) -> Unit raise XlsxError {
+    let normalized = if value.length() == 8 && value.has_prefix("FF") {
+      value[2:]
+    } else {
+      value
+    }
+    for character in normalized {
+      if character != '#' {
+        sb.write_char(character.to_ascii_uppercase())
+      }
+    }
+  }
+
   match theme_colors {
     Some(colors) =>
       if colors.length() >= 10 {
         // Order matches parse_theme_colors: lt1, dk1, lt2, dk2, accent1..accent6.
-        let lt1 = normalize_rgb_hex(colors[0])
-          .replace_all(old="#", new="")
-          .to_upper()
-        let dk1 = normalize_rgb_hex(colors[1])
-          .replace_all(old="#", new="")
-          .to_upper()
-        let lt2 = normalize_rgb_hex(colors[2])
-          .replace_all(old="#", new="")
-          .to_upper()
-        let dk2 = normalize_rgb_hex(colors[3])
-          .replace_all(old="#", new="")
-          .to_upper()
-        let a1 = normalize_rgb_hex(colors[4])
-          .replace_all(old="#", new="")
-          .to_upper()
-        let a2 = normalize_rgb_hex(colors[5])
-          .replace_all(old="#", new="")
-          .to_upper()
-        let a3 = normalize_rgb_hex(colors[6])
-          .replace_all(old="#", new="")
-          .to_upper()
-        let a4 = normalize_rgb_hex(colors[7])
-          .replace_all(old="#", new="")
-          .to_upper()
-        let a5 = normalize_rgb_hex(colors[8])
-          .replace_all(old="#", new="")
-          .to_upper()
-        let a6 = normalize_rgb_hex(colors[9])
-          .replace_all(old="#", new="")
-          .to_upper()
-        let sb = StringBuilder::new()
+        let sb = LimitedXmlBuilder::new(budget)
         sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
         sb.write_view(
           "<a:theme xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" name=\"Office Theme\">\n",
@@ -2388,34 +2775,34 @@ fn write_theme_xml(theme_colors : Array[String]?) -> String {
         sb.write_view("  <a:themeElements>\n")
         sb.write_view("    <a:clrScheme name=\"Office\">\n")
         sb.write_view("      <a:dk1><a:srgbClr val=\"")
-        sb.write_view(dk1)
+        write_theme_color(sb, colors[1])
         sb.write_view("\"/></a:dk1>\n")
         sb.write_view("      <a:lt1><a:srgbClr val=\"")
-        sb.write_view(lt1)
+        write_theme_color(sb, colors[0])
         sb.write_view("\"/></a:lt1>\n")
         sb.write_view("      <a:dk2><a:srgbClr val=\"")
-        sb.write_view(dk2)
+        write_theme_color(sb, colors[3])
         sb.write_view("\"/></a:dk2>\n")
         sb.write_view("      <a:lt2><a:srgbClr val=\"")
-        sb.write_view(lt2)
+        write_theme_color(sb, colors[2])
         sb.write_view("\"/></a:lt2>\n")
         sb.write_view("      <a:accent1><a:srgbClr val=\"")
-        sb.write_view(a1)
+        write_theme_color(sb, colors[4])
         sb.write_view("\"/></a:accent1>\n")
         sb.write_view("      <a:accent2><a:srgbClr val=\"")
-        sb.write_view(a2)
+        write_theme_color(sb, colors[5])
         sb.write_view("\"/></a:accent2>\n")
         sb.write_view("      <a:accent3><a:srgbClr val=\"")
-        sb.write_view(a3)
+        write_theme_color(sb, colors[6])
         sb.write_view("\"/></a:accent3>\n")
         sb.write_view("      <a:accent4><a:srgbClr val=\"")
-        sb.write_view(a4)
+        write_theme_color(sb, colors[7])
         sb.write_view("\"/></a:accent4>\n")
         sb.write_view("      <a:accent5><a:srgbClr val=\"")
-        sb.write_view(a5)
+        write_theme_color(sb, colors[8])
         sb.write_view("\"/></a:accent5>\n")
         sb.write_view("      <a:accent6><a:srgbClr val=\"")
-        sb.write_view(a6)
+        write_theme_color(sb, colors[9])
         sb.write_view("\"/></a:accent6>\n")
         sb.write_view("      <a:hlink><a:srgbClr val=\"0000FF\"/></a:hlink>\n")
         sb.write_view(
@@ -2493,9 +2880,154 @@ fn write_theme_xml(theme_colors : Array[String]?) -> String {
 }
 
 ///|
+/// Archive builder used by bounded writes. Limits are checked before
+/// `Archive::add` takes its defensive payload copy, so aggregate growth cannot
+/// first materialize an oversized retained archive and only fail at ZIP output.
+priv struct WriteArchiveBuilder {
+  archive : @zip.Archive
+  limits : WriteLimits?
+  mut entry_count : Int
+  mut total_uncompressed_bytes : Int
+}
+
+///|
+fn WriteArchiveBuilder::new(limits : WriteLimits?) -> WriteArchiveBuilder {
+  {
+    archive: @zip.Archive::new(),
+    limits,
+    entry_count: 0,
+    total_uncompressed_bytes: 0,
+  }
+}
+
+///|
+fn WriteArchiveBuilder::next_composition_budget(
+  self : WriteArchiveBuilder,
+) -> WriteCompositionBudgetTracker raise XlsxError {
+  match self.limits {
+    Some(limits) if self.entry_count >= limits.max_archive_entries =>
+      raise ResourceLimitExceeded(
+        kind="entry_count",
+        limit=limits.max_archive_entries,
+        actual=bounded_actual_above_limit(limits.max_archive_entries),
+      )
+    _ => ()
+  }
+  {
+    limits: self.limits,
+    archived_bytes: self.total_uncompressed_bytes,
+    retained_bytes: 0,
+  }
+}
+
+///|
+fn WriteArchiveBuilder::next_part_budget(
+  self : WriteArchiveBuilder,
+) -> WritePartBudget? raise XlsxError {
+  match self.limits {
+    Some(limits) => {
+      if self.entry_count >= limits.max_archive_entries {
+        raise ResourceLimitExceeded(
+          kind="entry_count",
+          limit=limits.max_archive_entries,
+          actual=bounded_actual_above_limit(limits.max_archive_entries),
+        )
+      }
+      let aggregate_remaining = limits.max_total_uncompressed_bytes -
+        self.total_uncompressed_bytes
+      if limits.max_entry_uncompressed_bytes <= aggregate_remaining {
+        Some({
+          maximum: limits.max_entry_uncompressed_bytes,
+          resource_kind: "entry_uncompressed_bytes",
+          resource_limit: limits.max_entry_uncompressed_bytes,
+        })
+      } else {
+        Some({
+          maximum: aggregate_remaining,
+          resource_kind: "total_uncompressed_bytes",
+          resource_limit: limits.max_total_uncompressed_bytes,
+        })
+      }
+    }
+    None => None
+  }
+}
+
+///|
+/// Adds an already-retained text part after checking its exact UTF-8 length and
+/// before allocating the encoded byte buffer.
+fn WriteArchiveBuilder::add_text(
+  self : WriteArchiveBuilder,
+  name : String,
+  text : StringView,
+) -> Unit raise XlsxError {
+  match self.next_part_budget() {
+    Some(budget) =>
+      match xml_utf8_length_within(text, budget.maximum) {
+        Some(_) => ()
+        None =>
+          raise ResourceLimitExceeded(
+            kind=budget.resource_kind,
+            limit=budget.resource_limit,
+            actual=bounded_actual_above_limit(budget.resource_limit),
+          )
+      }
+    None => ()
+  }
+  self.add(name, @encoding/utf8.encode(text))
+}
+
+///|
+fn WriteArchiveBuilder::add(
+  self : WriteArchiveBuilder,
+  name : String,
+  data : BytesView,
+) -> Unit raise XlsxError {
+  match self.limits {
+    Some(limits) => {
+      if self.entry_count >= limits.max_archive_entries {
+        raise ResourceLimitExceeded(
+          kind="entry_count",
+          limit=limits.max_archive_entries,
+          actual=bounded_actual_above_limit(limits.max_archive_entries),
+        )
+      }
+      let next_entry_count = self.entry_count + 1
+      let size = data.length()
+      if size > limits.max_entry_uncompressed_bytes {
+        raise ResourceLimitExceeded(
+          kind="entry_uncompressed_bytes",
+          limit=limits.max_entry_uncompressed_bytes,
+          actual=size,
+        )
+      }
+      if size >
+        limits.max_total_uncompressed_bytes - self.total_uncompressed_bytes {
+        raise ResourceLimitExceeded(
+          kind="total_uncompressed_bytes",
+          limit=limits.max_total_uncompressed_bytes,
+          actual=bounded_actual_above_limit(limits.max_total_uncompressed_bytes),
+        )
+      }
+      let next_total = self.total_uncompressed_bytes + size
+      self.entry_count = next_entry_count
+      self.total_uncompressed_bytes = next_total
+    }
+    None => ()
+  }
+  self.archive.add(name, data)
+}
+
+///|
+fn WriteArchiveBuilder::finish(self : WriteArchiveBuilder) -> @zip.Archive {
+  self.archive
+}
+
+///|
 fn write_with_io(
   workbook : Workbook,
   io_context : WorkbookIOContext,
+  limits? : WriteLimits,
 ) -> Bytes raise XlsxError {
   let (shared_strings, string_map, rich_text_map, total_count) = collect_shared_strings(
     workbook,
@@ -2553,11 +3085,21 @@ fn write_with_io(
     }
     None => ()
   }
-  let archive = @zip.Archive::new()
-  archive.add(
-    root_rels_part_path,
-    @encoding/utf8.encode(manifest.root_rels_xml()),
-  )
+  let archive = WriteArchiveBuilder::new(limits)
+  let root_rels_xml = match archive.next_part_budget() {
+    Some(budget) =>
+      match manifest.root_rels_xml_limited(budget.maximum) {
+        Some(xml) => xml
+        None =>
+          raise ResourceLimitExceeded(
+            kind=budget.resource_kind,
+            limit=budget.resource_limit,
+            actual=bounded_actual_above_limit(budget.resource_limit),
+          )
+      }
+    None => manifest.root_rels_xml()
+  }
+  archive.add_text(root_rels_part_path, root_rels_xml)
   let tables_by_sheet : Array[Array[(Int, Table)]] = []
   let mut next_table_id = 1
   for sheet in workbook.sheets() {
@@ -2745,13 +3287,15 @@ fn write_with_io(
       workbook_pivot_cache_rel_entries.push((cache_id, rel_id))
     }
   }
-  archive.add(
+  archive.add_text(
     workbook_part_path,
-    @encoding/utf8.encode(
-      write_workbook_xml(
-        workbook, chartsheet_rel_start, workbook_pivot_cache_rel_entries, workbook_slicer_cache_rel_ids_x14,
-        workbook_slicer_cache_rel_ids_x15,
-      ),
+    write_workbook_xml(
+      workbook,
+      chartsheet_rel_start,
+      workbook_pivot_cache_rel_entries,
+      workbook_slicer_cache_rel_ids_x14,
+      workbook_slicer_cache_rel_ids_x15,
+      budget?=archive.next_part_budget(),
     ),
   )
   let added_extensions : Map[String, Bool] = Map([])
@@ -2771,10 +3315,11 @@ fn write_with_io(
         part.content_type,
       )
       if part.relationships.length() > 0 {
-        archive.add(
+        archive.add_text(
           rels_path_for_part(part.path),
-          @encoding/utf8.encode(
-            write_preserved_drawing_rels_xml(part.relationships),
+          write_preserved_drawing_rels_xml(
+            part.relationships,
+            budget?=archive.next_part_budget(),
           ),
         )
       }
@@ -2852,19 +3397,10 @@ fn write_with_io(
       }
     }
     let comment_targets : Array[String] = []
-    let comment_parts : Array[(Int, String)] = []
     let comment_xml = if sheet.comments().length() > 0 {
-      Some(write_comments_xml(sheet.comments()))
-    } else {
-      None
-    }
-    let comment_vml_xml = if sheet.comments().length() > 0 {
-      Some(write_comments_vml(sheet_id, sheet.comments()))
-    } else {
-      None
-    }
-    let form_control_vml_xml = if sheet.form_controls().length() > 0 {
-      Some(write_form_controls_vml(sheet_id, sheet, sheet.form_controls()))
+      Some(
+        write_comments_xml(sheet.comments(), budget?=archive.next_part_budget()),
+      )
     } else {
       None
     }
@@ -2873,7 +3409,11 @@ fn write_with_io(
         let comment_id = comment_index
         comment_index = comment_index + 1
         comment_targets.push(comment_rel_target(comment_id))
-        comment_parts.push((comment_id, xml))
+        archive.add_text(comment_part_path(comment_id), xml)
+        manifest.add_content_override(
+          content_override_path(comment_part_path(comment_id)),
+          ct_comments,
+        )
       }
       None => ()
     }
@@ -2881,16 +3421,50 @@ fn write_with_io(
       rel_id = rel_id + comment_targets.length()
     }
     let vml_targets : Array[String] = []
-    let vml_parts : Array[(Int, String)] = []
-    let vml_image_rels : Array[(Int, Array[String])] = []
     let base_vml = match sheet.vml_drawing_xml() {
       Some(xml) => Some(xml)
       None => None
     }
+    // Comment/control VML can require several retained intermediates before
+    // the final part is known. Give the whole composition one parent budget,
+    // debit each generated intermediate immediately, and archive the final
+    // part below before beginning any other generated VML.
+    let legacy_vml_budget = archive.next_composition_budget()
+    let comment_vml_xml = if sheet.comments().length() > 0 {
+      let xml = write_comments_vml(
+        sheet_id,
+        sheet.comments(),
+        budget?=legacy_vml_budget.remaining_budget(),
+      )
+      legacy_vml_budget.consume(xml)
+      Some(xml)
+    } else {
+      None
+    }
+    let form_control_vml_xml = if sheet.form_controls().length() > 0 {
+      let xml = write_form_controls_vml(
+        sheet_id,
+        sheet,
+        sheet.form_controls(),
+        budget?=legacy_vml_budget.remaining_budget(),
+      )
+      legacy_vml_budget.consume(xml)
+      Some(xml)
+    } else {
+      None
+    }
     let merged_vml = match base_vml {
       Some(xml) =>
         match form_control_vml_xml {
-          Some(control_xml) => Some(merge_vml_drawings(xml, control_xml))
+          Some(control_xml) => {
+            let merged = merge_vml_drawings(
+              xml,
+              control_xml,
+              budget?=legacy_vml_budget.remaining_budget(),
+            )
+            legacy_vml_budget.consume(merged)
+            Some(merged)
+          }
           None => Some(xml)
         }
       None => form_control_vml_xml
@@ -2898,7 +3472,15 @@ fn write_with_io(
     let legacy_drawing_xml = match merged_vml {
       Some(xml) =>
         match comment_vml_xml {
-          Some(comment_xml) => Some(merge_vml_drawings(xml, comment_xml))
+          Some(comment_xml) => {
+            let merged = merge_vml_drawings(
+              xml,
+              comment_xml,
+              budget?=legacy_vml_budget.remaining_budget(),
+            )
+            legacy_vml_budget.consume(merged)
+            Some(merged)
+          }
           None => Some(xml)
         }
       None => comment_vml_xml
@@ -2910,14 +3492,25 @@ fn write_with_io(
         let vml_id = vml_index
         vml_index = vml_index + 1
         vml_targets.push(vml_rel_target(vml_id))
-        vml_parts.push((vml_id, xml))
+        archive.add_text(vml_part_path(vml_id), xml)
+        manifest.add_content_override(
+          content_override_path(vml_part_path(vml_id)),
+          ct_vml,
+        )
         Some(id)
       }
       None => None
     }
     let header_footer_images = sheet.header_footer_images
+    let header_footer_vml_budget = archive.next_composition_budget()
     let header_footer_vml = if header_footer_images.length() > 0 {
-      Some(write_header_footer_vml(sheet_id, header_footer_images))
+      let xml = write_header_footer_vml(
+        sheet_id,
+        header_footer_images,
+        budget?=header_footer_vml_budget.remaining_budget(),
+      )
+      header_footer_vml_budget.consume(xml)
+      Some(xml)
     } else {
       None
     }
@@ -2937,16 +3530,40 @@ fn write_with_io(
       Some(xml) =>
         match header_footer_vml {
           Some(extra_xml) => {
-            let filtered = filter_vml_shapes_by_id(xml, header_footer_shape_ids)
-            Some(
-              merge_vml_drawings_with_shapetype(
-                filtered, extra_xml, "_x0000_t75",
-              ),
+            let filtered = filter_vml_shapes_by_id(
+              xml,
+              header_footer_shape_ids,
+              budget?=header_footer_vml_budget.remaining_budget(),
             )
+            header_footer_vml_budget.consume(filtered)
+            let merged = merge_vml_drawings_with_shapetype(
+              filtered,
+              extra_xml,
+              "_x0000_t75",
+              budget?=header_footer_vml_budget.remaining_budget(),
+            )
+            header_footer_vml_budget.consume(merged)
+            Some(merged)
           }
           None => Some(xml)
         }
       None => header_footer_vml
+    }
+    let legacy_drawing_hf_ids : (Int, Int)? = match legacy_drawing_hf_xml {
+      Some(xml) => {
+        let id = rel_id
+        rel_id = rel_id + 1
+        let vml_id = vml_index
+        vml_index = vml_index + 1
+        vml_targets.push(vml_rel_target(vml_id))
+        archive.add_text(vml_part_path(vml_id), xml)
+        manifest.add_content_override(
+          content_override_path(vml_part_path(vml_id)),
+          ct_vml,
+        )
+        Some((id, vml_id))
+      }
+      None => None
     }
     let header_footer_image_targets : Array[String] = []
     if header_footer_images.length() > 0 {
@@ -2961,19 +3578,18 @@ fn write_with_io(
         }
       }
     }
-    let legacy_drawing_hf_rel_id = match legacy_drawing_hf_xml {
-      Some(xml) => {
-        let id = rel_id
-        rel_id = rel_id + 1
-        let vml_id = vml_index
-        vml_index = vml_index + 1
-        vml_targets.push(vml_rel_target(vml_id))
-        vml_parts.push((vml_id, xml))
-        if header_footer_image_targets.length() > 0 {
-          vml_image_rels.push((vml_id, header_footer_image_targets))
-        }
-        Some(id)
+    match legacy_drawing_hf_ids {
+      Some((_id, vml_id)) if header_footer_image_targets.length() > 0 => {
+        let vml_rels_xml = write_vml_rels_xml(
+          header_footer_image_targets,
+          budget?=archive.next_part_budget(),
+        )
+        archive.add_text(vml_rels_part_path(vml_id), vml_rels_xml)
       }
+      _ => ()
+    }
+    let legacy_drawing_hf_rel_id = match legacy_drawing_hf_ids {
+      Some((id, _vml_id)) => Some(id)
       None => None
     }
     let picture_targets : Array[String] = []
@@ -3010,8 +3626,9 @@ fn write_with_io(
       slicer_rel_ids_x15,
       legacy_drawing_rel_id,
       legacy_drawing_hf_rel_id,
+      budget?=archive.next_part_budget(),
     )
-    archive.add(worksheet_part_path(sheet_id), @encoding/utf8.encode(sheet_xml))
+    archive.add_text(worksheet_part_path(sheet_id), sheet_xml)
     if drawing_rel_id is Some(_) ||
       table_targets.length() > 0 ||
       pivot_targets.length() > 0 ||
@@ -3025,18 +3642,26 @@ fn write_with_io(
         None => None
       }
       let sheet_rels_xml = write_sheet_rels_xml(
-        drawing_target, table_targets, pivot_targets, slicer_targets, hyperlink_targets,
-        comment_targets, vml_targets, picture_targets,
+        drawing_target,
+        table_targets,
+        pivot_targets,
+        slicer_targets,
+        hyperlink_targets,
+        comment_targets,
+        vml_targets,
+        picture_targets,
+        budget?=archive.next_part_budget(),
       )
-      archive.add(
-        worksheet_rels_part_path(sheet_id),
-        @encoding/utf8.encode(sheet_rels_xml),
-      )
+      archive.add_text(worksheet_rels_part_path(sheet_id), sheet_rels_xml)
     }
     for entry in sheet_tables {
       let (table_id, table) = entry
-      let table_xml = write_table_xml(table_id, table)
-      archive.add(table_part_path(table_id), @encoding/utf8.encode(table_xml))
+      let table_xml = write_table_xml(
+        table_id,
+        table,
+        budget?=archive.next_part_budget(),
+      )
+      archive.add_text(table_part_path(table_id), table_xml)
       manifest.add_content_override(
         content_override_path(table_part_path(table_id)),
         ct_table,
@@ -3044,31 +3669,29 @@ fn write_with_io(
     }
     for entry in sheet_pivots {
       let (pivot_id, cache_id, pivot) = entry
-      archive.add(
-        pivot_table_part_path(pivot_id),
-        @encoding/utf8.encode(pivot.table_xml),
-      )
+      archive.add_text(pivot_table_part_path(pivot_id), pivot.table_xml)
       manifest.add_content_override(
         content_override_path(pivot_table_part_path(pivot_id)),
         ct_pivot_table,
       )
-      let pivot_rels_xml = write_pivot_table_rels_xml(cache_id)
-      archive.add(
-        pivot_table_rels_part_path(pivot_id),
-        @encoding/utf8.encode(pivot_rels_xml),
+      let pivot_rels_xml = write_pivot_table_rels_xml(
+        cache_id,
+        budget?=archive.next_part_budget(),
       )
+      archive.add_text(pivot_table_rels_part_path(pivot_id), pivot_rels_xml)
       let cache_definition_xml = match
         pivot_cache_slicer_id_by_cache_id.get(cache_id) {
         Some(slicer_pivot_cache_id) =>
           ensure_pivot_cache_slicer_id(
             pivot.cache_definition_xml,
             slicer_pivot_cache_id,
+            budget?=archive.next_part_budget(),
           )
         None => pivot.cache_definition_xml
       }
-      archive.add(
+      archive.add_text(
         pivot_cache_definition_part_path(cache_id),
-        @encoding/utf8.encode(cache_definition_xml),
+        cache_definition_xml,
       )
       manifest.add_content_override(
         content_override_path(pivot_cache_definition_part_path(cache_id)),
@@ -3076,18 +3699,18 @@ fn write_with_io(
       )
       match pivot.cache_records_xml {
         Some(records) => {
-          archive.add(
-            pivot_cache_records_part_path(cache_id),
-            @encoding/utf8.encode(records),
-          )
+          archive.add_text(pivot_cache_records_part_path(cache_id), records)
           manifest.add_content_override(
             content_override_path(pivot_cache_records_part_path(cache_id)),
             ct_pivot_cache_records,
           )
-          let cache_rels_xml = write_pivot_cache_rels_xml(cache_id)
-          archive.add(
+          let cache_rels_xml = write_pivot_cache_rels_xml(
+            cache_id,
+            budget?=archive.next_part_budget(),
+          )
+          archive.add_text(
             pivot_cache_definition_rels_part_path(cache_id),
-            @encoding/utf8.encode(cache_rels_xml),
+            cache_rels_xml,
           )
         }
         None => ()
@@ -3095,11 +3718,11 @@ fn write_with_io(
     }
     match pivot_slicer_part_id {
       Some(part_id) => {
-        let slicers_xml = write_slicers_part_xml(pivot_slicers)
-        archive.add(
-          slicer_part_path(part_id),
-          @encoding/utf8.encode(slicers_xml),
+        let slicers_xml = write_slicers_part_xml(
+          pivot_slicers,
+          budget?=archive.next_part_budget(),
         )
+        archive.add_text(slicer_part_path(part_id), slicers_xml)
         manifest.add_content_override(
           content_override_path(slicer_part_path(part_id)),
           ct_slicer,
@@ -3109,41 +3732,17 @@ fn write_with_io(
     }
     match table_slicer_part_id {
       Some(part_id) => {
-        let slicers_xml = write_slicers_part_xml(table_slicers)
-        archive.add(
-          slicer_part_path(part_id),
-          @encoding/utf8.encode(slicers_xml),
+        let slicers_xml = write_slicers_part_xml(
+          table_slicers,
+          budget?=archive.next_part_budget(),
         )
+        archive.add_text(slicer_part_path(part_id), slicers_xml)
         manifest.add_content_override(
           content_override_path(slicer_part_path(part_id)),
           ct_slicer,
         )
       }
       None => ()
-    }
-    for part in comment_parts {
-      let (comment_id, xml) = part
-      archive.add(comment_part_path(comment_id), @encoding/utf8.encode(xml))
-      manifest.add_content_override(
-        content_override_path(comment_part_path(comment_id)),
-        ct_comments,
-      )
-    }
-    for part in vml_parts {
-      let (vml_id, xml) = part
-      archive.add(vml_part_path(vml_id), @encoding/utf8.encode(xml))
-      manifest.add_content_override(
-        content_override_path(vml_part_path(vml_id)),
-        ct_vml,
-      )
-    }
-    for part in vml_image_rels {
-      let (vml_id, targets) = part
-      let vml_rels_xml = write_vml_rels_xml(targets)
-      archive.add(
-        vml_rels_part_path(vml_id),
-        @encoding/utf8.encode(vml_rels_xml),
-      )
     }
     if !has_drawing {
       continue
@@ -3191,7 +3790,7 @@ fn write_with_io(
     for chart in sheet.charts() {
       let file_name = "chart\{chart_index}.xml"
       chart_index = chart_index + 1
-      archive.add(chart_part_path(file_name), @encoding/utf8.encode(chart.xml))
+      archive.add_text(chart_part_path(file_name), chart.xml)
       let (chart_rel_id, next_rel_id) = allocate_drawing_relationship_id(
         rel_id, reserved_relationship_ids,
       )
@@ -3239,18 +3838,17 @@ fn write_with_io(
       drawing_slicers,
       preserved_anchors=preserved_drawing.anchors,
       reserved_object_ids=preserved_drawing.object_ids,
+      budget?=archive.next_part_budget(),
     )
-    archive.add(drawing_part_path(sheet_id), @encoding/utf8.encode(drawing_xml))
+    archive.add_text(drawing_part_path(sheet_id), drawing_xml)
     let drawing_rels_xml = write_drawing_rels_xml(
       image_targets,
       chart_targets,
       drawing_hyperlinks,
       preserved_relationships=preserved_drawing.drawing_relationships,
+      budget?=archive.next_part_budget(),
     )
-    archive.add(
-      drawing_rels_part_path(sheet_id),
-      @encoding/utf8.encode(drawing_rels_xml),
-    )
+    archive.add_text(drawing_rels_part_path(sheet_id), drawing_rels_xml)
   }
   for entry in resolved_slicer_caches {
     let cache_id = entry.cache_id
@@ -3262,6 +3860,7 @@ fn write_with_io(
           table_id,
           column,
           entry.item_desc,
+          budget?=archive.next_part_budget(),
         )
       Pivot(pivot_cache_id, pivot_sheet_id, pivot_name) =>
         write_slicer_cache_xml_pivot(
@@ -3271,12 +3870,10 @@ fn write_with_io(
           pivot_name,
           pivot_cache_id,
           entry.item_desc,
+          budget?=archive.next_part_budget(),
         )
     }
-    archive.add(
-      slicer_cache_part_path(cache_id),
-      @encoding/utf8.encode(cache_xml),
-    )
+    archive.add_text(slicer_cache_part_path(cache_id), cache_xml)
     manifest.add_content_override(
       content_override_path(slicer_cache_part_path(cache_id)),
       ct_slicer_cache,
@@ -3286,10 +3883,7 @@ fn write_with_io(
     let sheet_id = i + 1
     let chart_name = "chart\{chart_index}.xml"
     chart_index = chart_index + 1
-    archive.add(
-      chart_part_path(chart_name),
-      @encoding/utf8.encode(sheet.chart_xml()),
-    )
+    archive.add_text(chart_part_path(chart_name), sheet.chart_xml())
     manifest.add_content_override(
       content_override_path(chart_part_path(chart_name)),
       ct_chart,
@@ -3325,24 +3919,24 @@ fn write_with_io(
       drawing_charts,
       [],
       [],
+      budget?=archive.next_part_budget(),
     )
-    archive.add(
-      drawing_part_path(drawing_id),
-      @encoding/utf8.encode(drawing_xml),
-    )
+    archive.add_text(drawing_part_path(drawing_id), drawing_xml)
     let chart_targets : Array[(Int, String)] = [
       (1, chart_rel_target(chart_name)),
     ]
-    let drawing_rels_xml = write_drawing_rels_xml([], chart_targets, [])
-    archive.add(
-      drawing_rels_part_path(drawing_id),
-      @encoding/utf8.encode(drawing_rels_xml),
+    let drawing_rels_xml = write_drawing_rels_xml(
+      [],
+      chart_targets,
+      [],
+      budget?=archive.next_part_budget(),
     )
-    let chartsheet_xml = write_chartsheet_xml(1)
-    archive.add(
-      chartsheet_part_path(sheet_id),
-      @encoding/utf8.encode(chartsheet_xml),
+    archive.add_text(drawing_rels_part_path(drawing_id), drawing_rels_xml)
+    let chartsheet_xml = write_chartsheet_xml(
+      1,
+      budget?=archive.next_part_budget(),
     )
+    archive.add_text(chartsheet_part_path(sheet_id), chartsheet_xml)
     let chartsheet_rels_xml = write_sheet_rels_xml(
       Some(drawing_rel_target(drawing_id)),
       [],
@@ -3352,61 +3946,68 @@ fn write_with_io(
       [],
       [],
       [],
+      budget?=archive.next_part_budget(),
     )
-    archive.add(
-      chartsheet_rels_part_path(sheet_id),
-      @encoding/utf8.encode(chartsheet_rels_xml),
-    )
+    archive.add_text(chartsheet_rels_part_path(sheet_id), chartsheet_rels_xml)
   }
   match workbook.vba_project {
     Some(value) => archive.add(vba_project_part_path, value)
     None => ()
   }
   if include_shared {
-    archive.add(
+    archive.add_text(
       shared_strings_part_path,
-      @encoding/utf8.encode(
-        write_shared_strings_xml(shared_strings, total_count),
+      write_shared_strings_xml(
+        shared_strings,
+        total_count,
+        budget?=archive.next_part_budget(),
       ),
     )
   }
   if include_calc_chain {
-    archive.add(
+    archive.add_text(
       calc_chain_part_path,
-      @encoding/utf8.encode(write_calc_chain_xml(formula_cells)),
+      write_calc_chain_xml(formula_cells, budget?=archive.next_part_budget()),
     )
   }
-  archive.add(
+  archive.add_text(
     styles_part_path,
-    @encoding/utf8.encode(
-      write_styles_xml(
-        workbook.styles(),
-        workbook.conditional_styles(),
-        workbook.default_font(),
-        workbook.default_table_style,
-        workbook.default_pivot_style,
-        workbook.indexed_colors,
-        workbook.mru_colors_xml,
-        workbook.styles_ext_lst_xml,
-      ),
+    write_styles_xml(
+      workbook.styles(),
+      workbook.conditional_styles(),
+      workbook.default_font(),
+      workbook.default_table_style,
+      workbook.default_pivot_style,
+      workbook.indexed_colors,
+      workbook.mru_colors_xml,
+      workbook.styles_ext_lst_xml,
+      budget?=archive.next_part_budget(),
     ),
   )
-  archive.add(
+  archive.add_text(
     theme_part_path,
-    @encoding/utf8.encode(
-      match workbook.theme_xml {
-        Some(xml) => xml
-        None => write_theme_xml(workbook.theme_colors)
-      },
+    match workbook.theme_xml {
+      Some(xml) => xml
+      None =>
+        write_theme_xml(
+          workbook.theme_colors,
+          budget?=archive.next_part_budget(),
+        )
+    },
+  )
+  archive.add_text(
+    core_props_part_path,
+    write_core_properties_xml(
+      workbook.core_properties(),
+      budget?=archive.next_part_budget(),
     ),
   )
-  archive.add(
-    core_props_part_path,
-    @encoding/utf8.encode(write_core_properties_xml(workbook.core_properties())),
-  )
-  archive.add(
+  archive.add_text(
     app_props_part_path,
-    @encoding/utf8.encode(write_app_properties_xml(workbook.app_properties())),
+    write_app_properties_xml(
+      workbook.app_properties(),
+      budget?=archive.next_part_budget(),
+    ),
   )
   let mut has_custom_props = false
   for prop in workbook.custom_properties() {
@@ -3417,29 +4018,64 @@ fn write_with_io(
   }
   if has_custom_props {
     manifest.add_custom_properties()
-    archive.add(
+    archive.add_text(
       custom_props_part_path,
-      @encoding/utf8.encode(
-        write_custom_properties_xml(workbook.custom_properties()),
+      write_custom_properties_xml(
+        workbook.custom_properties(),
+        budget?=archive.next_part_budget(),
       ),
     )
   }
-  archive.add(
-    workbook_rels_part_path,
-    @encoding/utf8.encode(manifest.workbook_rels_xml()),
-  )
-  archive.add(
-    content_types_part_path,
-    @encoding/utf8.encode(manifest.content_types_xml()),
-  )
-  match io_context.zip_writer {
-    Some(writer) =>
-      writer(archive) catch {
+  let workbook_rels_xml = match archive.next_part_budget() {
+    Some(budget) =>
+      match manifest.workbook_rels_xml_limited(budget.maximum) {
+        Some(xml) => xml
+        None =>
+          raise ResourceLimitExceeded(
+            kind=budget.resource_kind,
+            limit=budget.resource_limit,
+            actual=bounded_actual_above_limit(budget.resource_limit),
+          )
+      }
+    None => manifest.workbook_rels_xml()
+  }
+  archive.add_text(workbook_rels_part_path, workbook_rels_xml)
+  let content_types_xml = match archive.next_part_budget() {
+    Some(budget) =>
+      match manifest.content_types_xml_limited(budget.maximum) {
+        Some(xml) => xml
+        None =>
+          raise ResourceLimitExceeded(
+            kind=budget.resource_kind,
+            limit=budget.resource_limit,
+            actual=bounded_actual_above_limit(budget.resource_limit),
+          )
+      }
+    None => manifest.content_types_xml()
+  }
+  archive.add_text(content_types_part_path, content_types_xml)
+  let archive = archive.finish()
+  match limits {
+    Some(policy) =>
+      @zip.write_limited(archive, max_output_bytes=policy.max_output_bytes) catch {
+        OutputLimitExceeded(limit~) =>
+          raise ResourceLimitExceeded(
+            kind="output_bytes",
+            limit~,
+            actual=bounded_actual_above_limit(limit),
+          )
         err => raise UnsupportedFeature(msg=repr(err))
       }
     None =>
-      @zip.write(archive) catch {
-        err => raise UnsupportedFeature(msg=repr(err))
+      match io_context.zip_writer {
+        Some(writer) =>
+          writer(archive) catch {
+            err => raise UnsupportedFeature(msg=repr(err))
+          }
+        None =>
+          @zip.write(archive) catch {
+            err => raise UnsupportedFeature(msg=repr(err))
+          }
       }
   }
 }
@@ -3447,6 +4083,19 @@ fn write_with_io(
 ///|
 pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
   write_with_io(workbook, workbook_io_context(workbook))
+}
+
+///|
+/// Serializes a workbook under a fail-closed construction and output policy.
+/// Generated parts are bounded before archive retention, then the ZIP writer
+/// proves the final package size before allocating its output buffer. A custom
+/// zip writer installed on the workbook is intentionally bypassed so it cannot
+/// weaken this policy.
+pub fn write_limited(
+  workbook : Workbook,
+  limits : WriteLimits,
+) -> Bytes raise XlsxError {
+  write_with_io(workbook, workbook_io_context(workbook), limits~)
 }
 
 ///|

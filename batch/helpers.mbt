@@ -40,6 +40,28 @@ pub fn build_style(
 /// Maps a friendly chart-type name to a `ChartType`. Covers the common
 /// 2-D chart kinds; an unknown name raises a `BatchError` listing the
 /// choices.
+let chart_type_values : Array[String] = [
+  "col", "column", "bar", "line", "pie", "area", "scatter", "doughnut", "donut",
+  "radar",
+]
+
+///|
+let sheet_action_values : Array[String] = [
+  "rename", "delete", "hide", "show", "very-hide",
+]
+
+///|
+let row_action_values : Array[String] = ["hide", "show", "height"]
+
+///|
+let column_action_values : Array[String] = ["hide", "show"]
+
+///|
+let border_style_values : Array[String] = [
+  "thin", "medium", "thick", "dashed", "dotted", "double", "hair",
+]
+
+///|
 pub fn chart_type_of(name : String) -> @xlsx.ChartType raise BatchError {
   match name {
     "col" | "column" => Col
@@ -56,6 +78,22 @@ pub fn chart_type_of(name : String) -> @xlsx.ChartType raise BatchError {
       )
   }
 }
+
+///|
+let validation_type_values : Array[String] = [
+  "list", "whole", "decimal", "date", "time", "textLength", "custom",
+]
+
+///|
+let validation_operator_values : Array[String] = [
+  "between", "notBetween", "equal", "notEqual", "greaterThan", "greaterThanOrEqual",
+  "lessThan", "lessThanOrEqual",
+]
+
+///|
+let validation_error_style_values : Array[String] = [
+  "stop", "warning", "information",
+]
 
 ///|
 /// Qualifies a cell range with its sheet for a chart series reference. A
@@ -202,11 +240,91 @@ fn check_inline_list_values(values : Array[String]) -> Unit raise BatchError {
 }
 
 ///|
+/// Validates every data-validation enum and action-dependent parameter without
+/// touching a workbook. Batch parsing calls this before source package I/O;
+/// application repeats the checks defensively while constructing the engine
+/// object.
+fn validate_data_validation_contract(
+  validation_type : String,
+  operator : String,
+  formula1 : String,
+  formula2 : String,
+  values : Array[String],
+  source : String,
+  error_style : String,
+) -> Unit raise BatchError {
+  ignore(validation_error_style_of(error_style))
+  match validation_type {
+    "list" => {
+      reject_unused_validate_params(
+        validation_type,
+        operator~,
+        formula1~,
+        formula2~,
+      )
+      if !values.is_empty() {
+        check_inline_list_values(values)
+      } else if source == "" {
+        raise BatchError("validate: type 'list' requires 'values' or 'source'")
+      }
+    }
+    "custom" => {
+      reject_unused_validate_params(
+        validation_type,
+        operator~,
+        formula1="",
+        formula2~,
+      )
+      reject_list_only_validate_params(validation_type, values~, source~)
+      if formula1 == "" {
+        raise BatchError("validate: type 'custom' requires 'formula1'")
+      }
+    }
+    "whole" | "decimal" | "date" | "time" | "textLength" => {
+      reject_list_only_validate_params(validation_type, values~, source~)
+      if operator == "" {
+        raise BatchError(
+          "validate: type '\{validation_type}' requires 'operator'",
+        )
+      }
+      if formula1 == "" {
+        raise BatchError(
+          "validate: type '\{validation_type}' requires 'formula1'",
+        )
+      }
+      ignore(validation_operator_of(operator))
+      let two_bound = operator == "between" || operator == "notBetween"
+      if two_bound && formula2 == "" {
+        raise BatchError("validate: operator '\{operator}' requires 'formula2'")
+      }
+      if !two_bound && formula2 != "" {
+        raise BatchError(
+          "validate: operator '\{operator}' does not take 'formula2'",
+        )
+      }
+      ignore(validation_type_of(validation_type))
+    }
+    other =>
+      raise BatchError(
+        "validate: unknown type '\{other}' (expected one of: \{validation_type_values.join(", ")})",
+      )
+  }
+}
+
+///|
 /// The conditional-formatting `type` values the `cf` op supports — a focused
 /// dashboard subset of the engine's full CF vocabulary.
 let cf_supported_types : Array[String] = [
   "cell", "formula", "2_color_scale", "3_color_scale", "data_bar", "icon_set",
 ]
+
+///|
+let cf_stop_type_values : Array[String] = [
+  "num", "min", "max", "percent", "percentile", "formula",
+]
+
+///|
+let cf_bar_direction_values : Array[String] = ["leftToRight", "rightToLeft"]
 
 ///|
 fn is_supported_cf_type(cf_type : String) -> Bool {
@@ -393,5 +511,175 @@ fn cf_allowed_params(cf_type : String) -> Array[String] {
       ]
     "icon_set" => ["icon_style", "reverse_icons"]
     _ => []
+  }
+}
+
+///|
+fn validate_conditional_format_contract(
+  cf_type : String,
+  criteria : String,
+  value : String,
+  min_value : String,
+  max_value : String,
+  formula : String,
+  fill : String,
+  font_color : String,
+  bold : Bool?,
+  italic : Bool?,
+  min_type : String,
+  mid_type : String,
+  max_type : String,
+  mid_value : String,
+  min_color : String,
+  mid_color : String,
+  max_color : String,
+  bar_color : String,
+  bar_solid : Bool?,
+  bar_direction : String,
+  bar_border_color : String,
+  icon_style : String,
+  reverse_icons : Bool?,
+  stop_if_true : Bool?,
+) -> Unit raise BatchError {
+  if !is_supported_cf_type(cf_type) {
+    raise BatchError(
+      "cf: unknown type '\{cf_type}' (expected one of: \{cf_supported_types.join(", ")})",
+    )
+  }
+  let present : Array[(String, Bool)] = [
+    ("criteria", criteria != ""),
+    ("value", value != ""),
+    ("min_value", min_value != ""),
+    ("max_value", max_value != ""),
+    ("formula", formula != ""),
+    ("fill", fill != ""),
+    ("font_color", font_color != ""),
+    ("bold", bold is Some(_)),
+    ("italic", italic is Some(_)),
+    ("min_type", min_type != ""),
+    ("mid_type", mid_type != ""),
+    ("max_type", max_type != ""),
+    ("mid_value", mid_value != ""),
+    ("min_color", min_color != ""),
+    ("mid_color", mid_color != ""),
+    ("max_color", max_color != ""),
+    ("bar_color", bar_color != ""),
+    ("bar_solid", bar_solid is Some(_)),
+    ("bar_direction", bar_direction != ""),
+    ("bar_border_color", bar_border_color != ""),
+    ("icon_style", icon_style != ""),
+    ("reverse_icons", reverse_icons is Some(_)),
+    ("stop_if_true", stop_if_true is Some(_)),
+  ]
+  let allowed = cf_allowed_params(cf_type)
+  for entry in present {
+    let (name, supplied) = entry
+    if supplied && !allowed.contains(name) {
+      raise BatchError("cf: type '\{cf_type}' does not take '\{name}'")
+    }
+  }
+  let style_set = fill != "" ||
+    font_color != "" ||
+    bold is Some(true) ||
+    italic is Some(true)
+  match cf_type {
+    "cell" => {
+      if criteria == "" {
+        raise BatchError("cf: type 'cell' requires 'criteria'")
+      }
+      check_cf_cell_criteria(criteria)
+      if !style_set {
+        raise BatchError(
+          "cf: type 'cell' requires a highlight (fill, font_color, bold, or italic)",
+        )
+      }
+      let normalized = criteria.to_lower()
+      let between = normalized == "between" ||
+        normalized == "not between" ||
+        normalized == "notbetween"
+      if between {
+        if min_value == "" || max_value == "" {
+          raise BatchError(
+            "cf: a '\{criteria}' rule requires 'min_value' and 'max_value'",
+          )
+        }
+        if value != "" {
+          raise BatchError(
+            "cf: a '\{criteria}' rule takes 'min_value'/'max_value', not 'value'",
+          )
+        }
+      } else {
+        if value == "" {
+          raise BatchError("cf: type 'cell' requires 'value'")
+        }
+        if min_value != "" || max_value != "" {
+          raise BatchError(
+            "cf: only a between/notBetween rule takes 'min_value'/'max_value'",
+          )
+        }
+      }
+    }
+    "formula" => {
+      if formula == "" {
+        raise BatchError("cf: type 'formula' requires 'formula'")
+      }
+      if !style_set {
+        raise BatchError(
+          "cf: type 'formula' requires a highlight (fill, font_color, bold, or italic)",
+        )
+      }
+    }
+    "2_color_scale" => {
+      if min_color == "" || max_color == "" {
+        raise BatchError(
+          "cf: type '2_color_scale' requires 'min_color' and 'max_color'",
+        )
+      }
+      check_cf_color("min_color", min_color)
+      check_cf_color("max_color", max_color)
+      check_cfvo_type("min_type", min_type)
+      check_cfvo_type("max_type", max_type)
+    }
+    "3_color_scale" => {
+      if min_color == "" || mid_color == "" || max_color == "" {
+        raise BatchError(
+          "cf: type '3_color_scale' requires 'min_color', 'mid_color', and 'max_color'",
+        )
+      }
+      check_cf_color("min_color", min_color)
+      check_cf_color("mid_color", mid_color)
+      check_cf_color("max_color", max_color)
+      check_cfvo_type("min_type", min_type)
+      check_cfvo_type("mid_type", mid_type)
+      check_cfvo_type("max_type", max_type)
+    }
+    "data_bar" => {
+      check_cfvo_type("min_type", min_type)
+      check_cfvo_type("max_type", max_type)
+      if bar_color != "" {
+        check_cf_color("bar_color", bar_color)
+      }
+      if bar_direction != "" && !cf_bar_direction_values.contains(bar_direction) {
+        raise BatchError(
+          "cf: bar_direction '\{bar_direction}' is not valid (expected leftToRight or rightToLeft)",
+        )
+      }
+      if bar_border_color != "" {
+        check_cf_color("bar_border_color", bar_border_color)
+      }
+    }
+    "icon_set" => {
+      if icon_style == "" {
+        raise BatchError("cf: type 'icon_set' requires 'icon_style'")
+      }
+      check_cf_icon_style(icon_style)
+    }
+    _ => ()
+  }
+  if fill != "" {
+    check_cf_color("fill", fill)
+  }
+  if font_color != "" {
+    check_cf_color("font_color", font_color)
   }
 }

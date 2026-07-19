@@ -41,27 +41,35 @@ fn ContentTypes::add_override(
 
 ///|
 fn ContentTypes::to_xml(self : ContentTypes) -> String {
-  let sb = StringBuilder::new()
+  self.to_xml_with_limit(None).unwrap()
+}
+
+///|
+fn ContentTypes::to_xml_with_limit(
+  self : ContentTypes,
+  maximum : Int?,
+) -> String? {
+  let sb = XmlOutputBuilder::new(maximum)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">\n",
   )
   for item in self.defaults {
     sb.write_view("  <Default Extension=\"")
-    sb.write_view(escape_xml_attr(item.extension))
+    sb.write_attr(item.extension)
     sb.write_view("\" ContentType=\"")
-    sb.write_view(escape_xml_attr(item.content_type))
+    sb.write_attr(item.content_type)
     sb.write_view("\"/>\n")
   }
   for item in self.overrides {
     sb.write_view("  <Override PartName=\"")
-    sb.write_view(escape_xml_attr(item.part_name))
+    sb.write_attr(item.part_name)
     sb.write_view("\" ContentType=\"")
-    sb.write_view(escape_xml_attr(item.content_type))
+    sb.write_attr(item.content_type)
     sb.write_view("\"/>\n")
   }
   sb.write_view("</Types>")
-  sb.to_string()
+  sb.finish()
 }
 
 ///|

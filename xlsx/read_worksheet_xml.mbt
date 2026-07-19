@@ -28,6 +28,12 @@ fn parse_worksheet(
   xml : StringView,
   shared_strings : Array[SharedStringEntry],
   style_count : Int,
+  materialized_cells : Ref[Int],
+  max_materialized_cells : Int,
+  materialized_dimensions : Ref[Int],
+  max_materialized_dimensions : Int,
+  dimension_work : Ref[Int],
+  max_dimension_work : Int,
   budget? : ReadBudget,
 ) -> (
   Array[Cell],
@@ -64,6 +70,15 @@ fn parse_worksheet(
     if chunk.length() == 0 || !is_xml_open_tag_boundary(chunk[0]) {
       continue
     }
+    if materialized_cells.val >= max_materialized_cells {
+      raise ResourceLimitExceeded(
+        kind="materialized_cells",
+        limit=max_materialized_cells,
+        actual=bounded_actual_above_limit(max_materialized_cells),
+      )
+    }
+    let next_cell_count = materialized_cells.val + 1
+    materialized_cells.val = next_cell_count
     let text = chunk.to_owned()
     let end = match xml_open_tag_end_from(text, 0) {
       Some(pos) => pos
@@ -295,9 +310,15 @@ fn parse_worksheet(
   worksheet_parse_pass(xml, budget)
   let auto_filter = parse_auto_filter(xml)
   worksheet_parse_pass(sheet_data, budget)
-  let row_dimensions = parse_row_dimensions(sheet_data, style_count)
+  let row_dimensions = parse_row_dimensions(
+    sheet_data, style_count, materialized_dimensions, max_materialized_dimensions,
+    dimension_work, max_dimension_work,
+  )
   worksheet_parse_pass(xml, budget)
-  let col_dimensions = parse_col_dimensions(xml, style_count)
+  let col_dimensions = parse_col_dimensions(
+    xml, style_count, materialized_dimensions, max_materialized_dimensions, dimension_work,
+    max_dimension_work,
+  )
   worksheet_parse_pass(xml, budget)
   let page_margins = parse_page_margins(xml)
   worksheet_parse_pass(xml, budget)

@@ -16,8 +16,14 @@ fn truncate_comment_content(comment : Comment) -> (String, Array[RichTextRun]) {
 }
 
 ///|
-fn write_comments_xml(comments : ArrayView[Comment]) -> String {
-  fn write_rich_text_color(sb : StringBuilder, font : RichTextFont) -> Unit {
+fn write_comments_xml(
+  comments : ArrayView[Comment],
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  fn write_rich_text_color(
+    sb : LimitedXmlBuilder,
+    font : RichTextFont,
+  ) -> Unit raise XlsxError {
     let tint = match font.color_tint {
       Some(v) => if v == 0.0 { None } else { Some(v) }
       None => None
@@ -54,7 +60,9 @@ fn write_comments_xml(comments : ArrayView[Comment]) -> String {
         } else {
           normalized
         }
-        sb.write_view("<color rgb=\"\{escape_xml_attr(rgb)}\"")
+        sb.write_view("<color rgb=\"")
+        sb.write_xml_attr(rgb)
+        sb.write_view("\"")
         match tint {
           Some(v) => sb.write_view(" tint=\"\{v}\"")
           None => ()
@@ -83,7 +91,7 @@ fn write_comments_xml(comments : ArrayView[Comment]) -> String {
       authors.push(author)
     }
   }
-  let sb = StringBuilder::new()
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<comments xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">\n",
@@ -91,7 +99,7 @@ fn write_comments_xml(comments : ArrayView[Comment]) -> String {
   sb.write_view("  <authors>\n")
   for author in authors {
     sb.write_view("    <author>")
-    sb.write_view(escape_xml_text(author))
+    sb.write_xml_text(author)
     sb.write_view("</author>\n")
   }
   sb.write_view("  </authors>\n")
@@ -110,7 +118,7 @@ fn write_comments_xml(comments : ArrayView[Comment]) -> String {
     let author_id = author_ids.get(author).unwrap_or(0)
     let (text_value, runs) = truncate_comment_content(comment)
     sb.write_view("    <comment ref=\"")
-    sb.write_view(escape_xml_attr(comment.cell))
+    sb.write_xml_attr(comment.cell)
     sb.write_view("\" authorId=\"\{author_id}\">\n")
     sb.write_view("      <text>")
     if text_value != "" {
@@ -121,7 +129,7 @@ fn write_comments_xml(comments : ArrayView[Comment]) -> String {
       } else {
         sb.write_view("<t>")
       }
-      sb.write_view(escape_xml_text(text_value))
+      sb.write_xml_text(text_value)
       sb.write_view("</t>")
     }
     for run in runs {
@@ -151,8 +159,11 @@ fn write_comments_xml(comments : ArrayView[Comment]) -> String {
             sb.write_view("<extend/>")
           }
           match font.underline {
-            Some(value) =>
-              sb.write_view("<u val=\"\{escape_xml_attr(value)}\"/>")
+            Some(value) => {
+              sb.write_view("<u val=\"")
+              sb.write_xml_attr(value)
+              sb.write_view("\"/>")
+            }
             None => ()
           }
           match font.size {
@@ -168,8 +179,11 @@ fn write_comments_xml(comments : ArrayView[Comment]) -> String {
             None => ()
           }
           match font.family {
-            Some(family) =>
-              sb.write_view("<rFont val=\"\{escape_xml_attr(family)}\"/>")
+            Some(family) => {
+              sb.write_view("<rFont val=\"")
+              sb.write_xml_attr(family)
+              sb.write_view("\"/>")
+            }
             None => ()
           }
           match font.color {
@@ -182,13 +196,19 @@ fn write_comments_xml(comments : ArrayView[Comment]) -> String {
               }
           }
           match font.vert_align {
-            Some(value) =>
-              sb.write_view("<vertAlign val=\"\{escape_xml_attr(value)}\"/>")
+            Some(value) => {
+              sb.write_view("<vertAlign val=\"")
+              sb.write_xml_attr(value)
+              sb.write_view("\"/>")
+            }
             None => ()
           }
           match font.scheme {
-            Some(value) =>
-              sb.write_view("<scheme val=\"\{escape_xml_attr(value)}\"/>")
+            Some(value) => {
+              sb.write_view("<scheme val=\"")
+              sb.write_xml_attr(value)
+              sb.write_view("\"/>")
+            }
             None => ()
           }
           sb.write_view("</rPr>")
@@ -202,7 +222,7 @@ fn write_comments_xml(comments : ArrayView[Comment]) -> String {
       } else {
         sb.write_view("<t>")
       }
-      sb.write_view(escape_xml_text(run.text))
+      sb.write_xml_text(run.text)
       sb.write_view("</t></r>")
     }
     sb.write_view("</text>\n")
@@ -217,8 +237,9 @@ fn write_comments_xml(comments : ArrayView[Comment]) -> String {
 fn write_comments_vml(
   sheet_id : Int,
   comments : ArrayView[Comment],
+  budget? : WritePartBudget,
 ) -> String raise XlsxError {
-  let sb = StringBuilder::new()
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\">\n",
@@ -263,36 +284,34 @@ fn write_comments_vml(
 }
 
 ///|
-fn extract_vml_shapetype(xml : StringView) -> String? {
-  let xml_str = xml.to_owned()
-  let start = match xml_str.find("<v:shapetype") {
+fn extract_vml_shapetype(xml : StringView) -> StringView? {
+  let start = match xml.find("<v:shapetype") {
     Some(pos) => pos
     None => return None
   }
-  let end = match xml_str.find("</v:shapetype>") {
-    Some(pos) => pos + "</v:shapetype>".length()
+  let tail = xml[start:]
+  let end = match tail.find("</v:shapetype>") {
+    Some(pos) => start + pos + "</v:shapetype>".length()
     None => return None
   }
-  let slice = xml_str.unsafe_substring(start~, end~)
-  Some(slice.to_string())
+  Some(xml[start:end])
 }
 
 ///|
-fn extract_vml_shapes(xml : StringView) -> Array[String] {
-  let shapes : Array[String] = []
-  let xml_str = xml.to_owned()
+fn extract_vml_shapes(xml : StringView) -> Array[StringView] {
+  let shapes : Array[StringView] = []
   let needle = "<v:shape"
   let mut start_pos = 0
-  while start_pos < xml_str.length() {
-    let rest = xml_str.unsafe_substring(start=start_pos, end=xml_str.length())
+  while start_pos < xml.length() {
+    let rest = xml[start_pos:]
     let rel = match rest.find(needle) {
       Some(pos) => pos
       None => break
     }
     let start = start_pos + rel
     let after = start + needle.length()
-    let next_char = if after < xml_str.length() {
-      xml_str.get_char(after)
+    let next_char = if after < xml.length() {
+      xml.get_char(after)
     } else {
       None
     }
@@ -304,42 +323,40 @@ fn extract_vml_shapes(xml : StringView) -> Array[String] {
       start_pos = start + 1
       continue
     }
-    let shape_rest = xml_str.unsafe_substring(start~, end=xml_str.length())
+    let shape_rest = xml[start:]
     let end_rel = match shape_rest.find("</v:shape>") {
       Some(pos) => pos
       None => break
     }
     let end = start + end_rel + "</v:shape>".length()
-    let slice = xml_str.unsafe_substring(start~, end~)
-    shapes.push(slice.to_string())
+    shapes.push(xml[start:end])
     start_pos = end
   }
   shapes
 }
 
 ///|
-fn vml_shape_id(shape_xml : StringView) -> String? {
-  let xml_str = shape_xml.to_owned()
+fn vml_shape_id(shape_xml : StringView) -> StringView? {
   let id_key = "id=\""
-  let start = match xml_str.find(id_key) {
+  let start = match shape_xml.find(id_key) {
     Some(pos) => pos + id_key.length()
     None => return None
   }
-  let rest = xml_str.unsafe_substring(start~, end=xml_str.length())
+  let rest = shape_xml[start:]
   let end_rel = match rest.find("\"") {
     Some(pos) => pos
     None => return None
   }
   let end = start + end_rel
-  let slice = xml_str.unsafe_substring(start~, end~)
-  Some(slice.to_string())
+  Some(shape_xml[start:end])
 }
 
 ///|
 fn filter_vml_shapes_by_id(
   base_xml : String,
   remove_ids : Array[String],
-) -> String {
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
   if remove_ids.length() == 0 {
     return base_xml
   }
@@ -351,11 +368,11 @@ fn filter_vml_shapes_by_id(
     remove_map[id] = true
   }
   let shapes = extract_vml_shapes(base_xml)
-  let kept : Array[String] = []
+  let kept : Array[StringView] = []
   for shape in shapes {
     match vml_shape_id(shape) {
       Some(id) =>
-        if remove_map.contains(id) {
+        if remove_map.contains(id.to_owned()) {
           continue
         } else {
           kept.push(shape)
@@ -367,7 +384,7 @@ fn filter_vml_shapes_by_id(
   let end = base_xml.find("</xml>").unwrap_or(base_xml.length())
   let prefix = base_xml.unsafe_substring(start=0, end=insert_at)
   let suffix = base_xml.unsafe_substring(start=end, end=base_xml.length())
-  let sb = StringBuilder::new()
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view(prefix)
   for shape in kept {
     sb.write_view(shape)
@@ -377,44 +394,42 @@ fn filter_vml_shapes_by_id(
 }
 
 ///|
-fn merge_vml_drawings(base_xml : String, comment_xml : String) -> String {
+fn merge_vml_drawings(
+  base_xml : String,
+  comment_xml : String,
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
   if !base_xml.contains("</xml>") {
     return comment_xml
   }
-  let mut merged = base_xml
-  if !merged.contains("_x0000_t202") {
+  let shape_type = if !base_xml.contains("_x0000_t202") {
     match extract_vml_shapetype(comment_xml) {
-      Some(shape_type) => {
-        let insert_at = merged
-          .find("<v:shape")
-          .unwrap_or(merged.find("</xml>").unwrap_or(merged.length()))
-        let prefix = merged.unsafe_substring(start=0, end=insert_at)
-        let suffix = merged.unsafe_substring(
-          start=insert_at,
-          end=merged.length(),
-        )
-        let sb = StringBuilder::new()
-        sb.write_view(prefix)
-        sb.write_view(shape_type)
-        sb.write_view(suffix)
-        merged = sb.to_string()
-      }
-      None => ()
+      Some(value) => Some(value)
+      None => None
     }
+  } else {
+    None
   }
   let shapes = extract_vml_shapes(comment_xml)
-  if shapes.length() == 0 {
-    return merged
+  if shape_type is None && shapes.length() == 0 {
+    return base_xml
   }
-  let insert_at = merged.find("</xml>").unwrap_or(merged.length())
-  let prefix = merged.unsafe_substring(start=0, end=insert_at)
-  let suffix = merged.unsafe_substring(start=insert_at, end=merged.length())
-  let sb = StringBuilder::new()
-  sb.write_view(prefix)
+  let end = base_xml.find("</xml>").unwrap_or(base_xml.length())
+  let shape_type_at = match shape_type {
+    Some(_) => base_xml.find("<v:shape").unwrap_or(end)
+    None => end
+  }
+  let sb = LimitedXmlBuilder::new(budget)
+  sb.write_view(base_xml[:shape_type_at])
+  match shape_type {
+    Some(value) => sb.write_view(value)
+    None => ()
+  }
+  sb.write_view(base_xml[shape_type_at:end])
   for shape in shapes {
     sb.write_view(shape)
   }
-  sb.write_view(suffix)
+  sb.write_view(base_xml[end:])
   sb.to_string()
 }
 
@@ -423,45 +438,40 @@ fn merge_vml_drawings_with_shapetype(
   base_xml : String,
   extra_xml : String,
   shape_type_id : StringView,
-) -> String {
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
   if !base_xml.contains("</xml>") {
     return extra_xml
   }
-  let mut merged = base_xml
   let shape_token = "id=\"\{shape_type_id.to_owned()}\""
-  if !merged.contains(shape_token) {
+  let shape_type = if !base_xml.contains(shape_token) {
     match extract_vml_shapetype(extra_xml) {
-      Some(shape_type) => {
-        let insert_at = merged
-          .find("<v:shape")
-          .unwrap_or(merged.find("</xml>").unwrap_or(merged.length()))
-        let prefix = merged.unsafe_substring(start=0, end=insert_at)
-        let suffix = merged.unsafe_substring(
-          start=insert_at,
-          end=merged.length(),
-        )
-        let sb = StringBuilder::new()
-        sb.write_view(prefix)
-        sb.write_view(shape_type)
-        sb.write_view(suffix)
-        merged = sb.to_string()
-      }
-      None => ()
+      Some(value) => Some(value)
+      None => None
     }
+  } else {
+    None
   }
   let shapes = extract_vml_shapes(extra_xml)
-  if shapes.length() == 0 {
-    return merged
+  if shape_type is None && shapes.length() == 0 {
+    return base_xml
   }
-  let insert_at = merged.find("</xml>").unwrap_or(merged.length())
-  let prefix = merged.unsafe_substring(start=0, end=insert_at)
-  let suffix = merged.unsafe_substring(start=insert_at, end=merged.length())
-  let sb = StringBuilder::new()
-  sb.write_view(prefix)
+  let end = base_xml.find("</xml>").unwrap_or(base_xml.length())
+  let shape_type_at = match shape_type {
+    Some(_) => base_xml.find("<v:shape").unwrap_or(end)
+    None => end
+  }
+  let sb = LimitedXmlBuilder::new(budget)
+  sb.write_view(base_xml[:shape_type_at])
+  match shape_type {
+    Some(value) => sb.write_view(value)
+    None => ()
+  }
+  sb.write_view(base_xml[shape_type_at:end])
   for shape in shapes {
     sb.write_view(shape)
   }
-  sb.write_view(suffix)
+  sb.write_view(base_xml[end:])
   sb.to_string()
 }
 
@@ -469,8 +479,9 @@ fn merge_vml_drawings_with_shapetype(
 fn write_header_footer_vml(
   sheet_id : Int,
   images : ArrayView[HeaderFooterImage],
-) -> String {
-  let sb = StringBuilder::new()
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\">\n",
@@ -511,11 +522,11 @@ fn write_header_footer_vml(
     )
     let style = "position:absolute;margin-left:0;margin-top:0;width:\{image.width};height:\{image.height};z-index:1"
     sb.write_view("  <v:shape id=\"")
-    sb.write_view(escape_xml_attr(shape_name))
+    sb.write_xml_attr(shape_name)
     sb.write_view(
       "\" o:spid=\"_x0000_s\{shape_id}\" type=\"#_x0000_t75\" style=\"",
     )
-    sb.write_view(escape_xml_attr(style))
+    sb.write_xml_attr(style)
     sb.write_view("\">\n")
     sb.write_view("    <v:imagedata o:relid=\"rId\{rel_id}\" o:title=\"\"/>\n")
     sb.write_view("    <o:lock v:ext=\"edit\" rotation=\"t\"/>\n")
@@ -714,7 +725,10 @@ test "write comments vml wb: vml writer and extraction branches" {
 
   let shapes = extract_vml_shapes(vml)
   inspect(shapes.length(), content="1")
-  debug_inspect(vml_shape_id(shapes[0]), content="Some(\"_x0000_s1025\")")
+  match vml_shape_id(shapes[0]) {
+    Some(id) => inspect(id.to_owned(), content="_x0000_s1025")
+    None => fail("expected VML shape id")
+  }
   inspect(extract_vml_shapes("<xml><v:shape").length(), content="0")
   inspect(extract_vml_shapes("<xml><v:shape id=\"x\">").length(), content="0")
   debug_inspect(vml_shape_id("<v:shape id=\"x></v:shape>"), content="None")

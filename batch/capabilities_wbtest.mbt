@@ -21,13 +21,15 @@ fn required_samples() -> Map[String, String] {
       "chart", "{\"sheet\":\"S\",\"anchor\":\"E2\",\"categories\":\"A1:A3\",\"values\":\"B1:B3\"}",
     ),
     ("table", "{\"sheet\":\"S\",\"range\":\"A1:B2\"}"),
-    ("validate", "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"list\"}"),
+    (
+      "validate", "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"list\",\"source\":\"Sheet2!A1:A2\"}",
+    ),
     ("sheet", "{\"action\":\"delete\",\"name\":\"S\"}"),
     // `hide` needs no `height`, so this required sample stays applicable; the
     // catalog-built full sample (all params, action="S") only has to PARSE.
     ("row", "{\"sheet\":\"S\",\"action\":\"hide\",\"at\":2}"),
     ("col", "{\"sheet\":\"S\",\"action\":\"hide\",\"at\":\"B\"}"),
-    ("cf", "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"cell\"}"),
+    ("cf", "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"data_bar\"}"),
   ])
 }
 
@@ -37,68 +39,11 @@ fn one_op_script(name : String, params : String) -> String {
 }
 
 ///|
-/// A valid JSON value for a catalog param `type` label.
-fn value_for_type(kind : String) -> Json {
-  match kind {
-    "cell" => Json::string("A1")
-    "range" => Json::string("A1")
-    "colon_range" => Json::string("A1:B2")
-    "table_range" => Json::string("A1:B2")
-    "sqref" => Json::string("A1")
-    "column" => Json::string("A")
-    "series_range" => Json::string("A1:A3")
-    "number" => Json::number(10)
-    "bool" => Json::boolean(true)
-    "value" => Json::number(1)
-    "string_array" => Json::array([Json::string("a")])
-    _ => Json::string("S") // "string" and any future scalar label
-  }
-}
 
 ///|
-/// A params object providing EVERY catalog param of `op` (required and
-/// optional) with a type-valid value, read from the emitted catalog so it
-/// cannot drift from what `capabilities` advertises.
-fn full_sample(op : String) -> String {
-  let ops = match capabilities() {
-    Object(m) =>
-      match m.get("ops") {
-        Some(Array(items)) => items
-        _ => abort("no ops")
-      }
-    _ => abort("bad payload")
-  }
-  let params : Map[String, Json] = Map([])
-  for entry in ops {
-    match entry {
-      Object(o) =>
-        if o.get("op") is Some(String(n)) && n == op {
-          match o.get("params") {
-            Some(Array(ps)) =>
-              for p in ps {
-                match p {
-                  Object(pm) =>
-                    match (pm.get("name"), pm.get("type")) {
-                      (Some(String(pn)), Some(String(pt))) =>
-                        params[pn] = value_for_type(pt)
-                      _ => ()
-                    }
-                  _ => ()
-                }
-              }
-            _ => ()
-          }
-        }
-      _ => ()
-    }
-  }
-  Json::object(params).stringify()
-}
-
-///|
-/// Field-exact snapshot of the emitted catalog: `op: pname:ptype[!] …` per
-/// op (`!` = required). Any param name, type, requiredness, or op change
-/// surfaces here — not just count changes.
+/// Field-exact snapshot of the emitted catalog: `op: pname:ptype[!][=values]`
+/// per op (`!` = required). Any param name, type, requiredness, allowed-value
+/// grammar, or op change surfaces here — not just count changes.
 test "capabilities payload is field-exact" {
   let obj = match capabilities() {
     Object(map) => map
@@ -141,7 +86,25 @@ test "capabilities payload is field-exact" {
         _ => fail("param type")
       }
       let req = pm.get("required") is Some(True)
-      parts.push("\{pn}:\{pt}\{if req { "!" } else { "" }}")
+      let choices = match pm.get("allowed_values") {
+        Some(Array(values)) => {
+          let names = []
+          for value in values {
+            match value {
+              String(name) => names.push(name)
+              _ => fail("allowed value")
+            }
+          }
+          names
+        }
+        _ => fail("allowed_values")
+      }
+      let choice_text = if choices.is_empty() {
+        ""
+      } else {
+        "=\{choices.join("|")}"
+      }
+      parts.push("\{pn}:\{pt}\{if req { "!" } else { "" }}\{choice_text}")
     }
     lines.push("\{name}: \{parts.join(" ")}")
   }
@@ -150,20 +113,57 @@ test "capabilities payload is field-exact" {
     content=(
       #|set: sheet:string! cell:cell! value:value!
       #|formula: sheet:string! cell:cell! formula:string!
-      #|style: sheet:string! range:range! bold:bool italic:bool number_format:string fill:string font_color:string align:string border:string border_top:string border_bottom:string border_left:string border_right:string border_color:string
+      #|style: sheet:string! range:range! bold:bool italic:bool number_format:string fill:string font_color:string align:string border:string=thin|medium|thick|dashed|dotted|double|hair border_top:string=thin|medium|thick|dashed|dotted|double|hair border_bottom:string=thin|medium|thick|dashed|dotted|double|hair border_left:string=thin|medium|thick|dashed|dotted|double|hair border_right:string=thin|medium|thick|dashed|dotted|double|hair border_color:string
       #|merge: sheet:string! range:colon_range!
       #|width: sheet:string! column:column! width:number!
       #|freeze: sheet:string! cell:cell!
       #|filter: sheet:string! range:colon_range!
       #|add-sheet: name:string!
-      #|chart: sheet:string! anchor:cell! categories:series_range! values:series_range! type:string name:string title:string
+      #|chart: sheet:string! anchor:cell! categories:series_range! values:series_range! type:string=col|column|bar|line|pie|area|scatter|doughnut|donut|radar name:string title:string
       #|table: sheet:string! range:table_range! name:string style:string header_row:bool row_stripes:bool first_column:bool last_column:bool column_stripes:bool
-      #|validate: sheet:string! range:sqref! type:string! operator:string formula1:string formula2:string values:string_array source:string allow_blank:bool input_title:string input_message:string error_title:string error_message:string error_style:string
-      #|sheet: action:string! name:string! to:string
-      #|row: sheet:string! action:string! at:number! count:number height:number
-      #|col: sheet:string! action:string! at:column! count:number
-      #|cf: sheet:string! range:sqref! type:string! criteria:string value:string min_value:string max_value:string formula:string fill:string font_color:string bold:bool italic:bool min_type:string mid_type:string max_type:string mid_value:string min_color:string mid_color:string max_color:string bar_color:string bar_solid:bool bar_direction:string bar_border_color:string icon_style:string reverse_icons:bool stop_if_true:bool
+      #|validate: sheet:string! range:sqref! type:string!=list|whole|decimal|date|time|textLength|custom operator:string=between|notBetween|equal|notEqual|greaterThan|greaterThanOrEqual|lessThan|lessThanOrEqual formula1:string formula2:string values:string_array source:string allow_blank:bool input_title:string input_message:string error_title:string error_message:string error_style:string=stop|warning|information
+      #|sheet: action:string!=rename|delete|hide|show|very-hide name:string! to:string
+      #|row: sheet:string! action:string!=hide|show|height at:number! count:number height:number
+      #|col: sheet:string! action:string!=hide|show at:column! count:number
+      #|cf: sheet:string! range:sqref! type:string!=cell|formula|2_color_scale|3_color_scale|data_bar|icon_set criteria:string value:string min_value:string max_value:string formula:string fill:string font_color:string bold:bool italic:bool min_type:string=num|min|max|percent|percentile|formula mid_type:string=num|min|max|percent|percentile|formula max_type:string=num|min|max|percent|percentile|formula mid_value:string min_color:string mid_color:string max_color:string bar_color:string bar_solid:bool bar_direction:string=leftToRight|rightToLeft bar_border_color:string icon_style:string=3Arrows|3ArrowsGray|3Flags|3Signs|3Symbols|3Symbols2|3TrafficLights1|3TrafficLights2|4Arrows|4ArrowsGray|4Rating|4RedToBlack|4TrafficLights|5Arrows|5ArrowsGray|5Quarters|5Rating reverse_icons:bool stop_if_true:bool
     ),
+  )
+}
+
+///|
+test "capabilities expose every command-wide batch resource ceiling" {
+  guard capabilities() is Object(root) &&
+    root.get("limits") is Some(Object(limits)) else {
+    fail("capabilities limits must be an object")
+  }
+  assert_eq(limits.length(), 7)
+  assert_eq(
+    limits.get("max_script_bytes"),
+    Some(Json::number(MAX_BATCH_SCRIPT_BYTES.to_double())),
+  )
+  assert_eq(
+    limits.get("max_ops"),
+    Some(Json::number(MAX_BATCH_OPS.to_double())),
+  )
+  assert_eq(
+    limits.get("max_touched_cells"),
+    Some(Json::number(MAX_TOTAL_TOUCHED_CELLS.to_double())),
+  )
+  assert_eq(
+    limits.get("max_style_cells"),
+    Some(Json::number(MAX_TOTAL_STYLE_CELLS.to_double())),
+  )
+  assert_eq(
+    limits.get("max_new_styles"),
+    Some(Json::number(MAX_TOTAL_NEW_STYLES.to_double())),
+  )
+  assert_eq(
+    limits.get("max_row_column_band"),
+    Some(Json::number(MAX_ROW_COLUMN_BAND.to_double())),
+  )
+  assert_eq(
+    limits.get("max_row_column_lines"),
+    Some(Json::number(MAX_TOTAL_ROW_COLUMN_LINES.to_double())),
   )
 }
 
@@ -175,11 +175,10 @@ test "capabilities payload is field-exact" {
 ///   `accepted_op_names`, failing the membership check.
 /// - **catalog → parser**: every advertised op parses with its required
 ///   params, and its parsed `name()` round-trips.
-/// - **param set exactness**: every catalog param is accepted by the
-///   parser (full-param sample parses), and a param NOT in the catalog is
-///   rejected — together with the `ParamReader` `declared` guard (which
-///   aborts if a parser arm reads an undeclared param), the catalog's param
-///   set is exactly the parser's.
+/// - **param set exactness**: a param NOT in the catalog is rejected; together
+///   with the `ParamReader` `declared` guard (which aborts if a parser arm reads
+///   an undeclared param), the catalog cannot omit a parameter consumed by the
+///   parser. Mode-specific tests cover conditionally accepted optional params.
 test "catalog and parser agree in both directions" {
   let samples = required_samples()
   let catalog = accepted_op_names()
@@ -201,13 +200,6 @@ test "catalog and parser agree in both directions" {
     let ops = parse_script(@json.parse(one_op_script(name, params)))
     assert_eq(ops.length(), 1)
     assert_eq(ops[0].name(), name)
-    // Every catalog param (required AND optional) is accepted — a full
-    // sample built from the catalog itself must parse. This exercises the
-    // `declared` guard for the optional params too (it aborts if the
-    // parser reads a param the catalog omits).
-    let full = full_sample(name)
-    let full_ops = parse_script(@json.parse(one_op_script(name, full)))
-    assert_eq(full_ops.length(), 1)
     // Same op with one param outside the catalog must fail unknown-param.
     // Parse the (valid) JSON outside the `try` so the catch handles only
     // parse_script's BatchError, not @json.parse's ParseError.

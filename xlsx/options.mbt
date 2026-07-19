@@ -18,6 +18,36 @@ let default_max_total_preserved_source_bytes : Int = default_max_package_bytes +
 let default_max_xml_part_bytes : Int = 16 * 1024 * 1024
 
 ///|
+let default_max_total_xml_bytes : Int = 128 * 1024 * 1024
+
+///|
+let default_max_xml_markup_tokens : Int = 2_000_000
+
+///|
+let default_max_relationship_records : Int = 1_000_000
+
+///|
+let default_max_relationship_id_chars : Int = 1_024
+
+///|
+let default_max_relationship_type_chars : Int = 16 * 1_024
+
+///|
+let default_max_relationship_target_chars : Int = 64 * 1_024
+
+///|
+let default_max_total_relationship_chars : Int = 16 * 1_024 * 1_024
+
+///|
+let default_max_materialized_cells : Int = 1_000_000
+
+///|
+let default_max_materialized_row_column_dimensions : Int = 1_000_000
+
+///|
+let default_max_row_column_dimension_work : Int = 1_000_000
+
+///|
 let default_max_kdf_iterations : Int = 1_000_000
 
 ///|
@@ -34,9 +64,13 @@ let default_max_parser_work_units : Int = 512 * 1024 * 1024
 ///
 /// The type is opaque so every public read path receives a validated,
 /// internally consistent policy. ZIP limits are enforced while inflating;
-/// `max_xml_part_bytes` is enforced before any individual XML part is decoded.
-/// Semantic ceilings independently bound workbook fan-out, XML-backed parser
-/// items, derived materialization, and cumulative parser work.
+/// `max_xml_part_bytes` is enforced before any individual XML part is decoded,
+/// aggregate decoded XML, markup tokens, materialized worksheet cells, and
+/// retained row/column dimensions are bounded across the complete workbook
+/// parse. Semantic ceilings also bound workbook fan-out, XML-backed parser
+/// items, derived materialization, and cumulative parser work. Row/column
+/// dimension expansion work has a separate ceiling so overlapping declarations
+/// cannot hide excessive map-update work behind the retained-item limit;
 /// `max_kdf_iterations` bounds encrypted-package password derivation.
 pub struct ReadLimits {
   priv max_package_bytes : Int
@@ -45,6 +79,16 @@ pub struct ReadLimits {
   priv max_total_uncompressed_bytes : Int
   priv max_total_preserved_source_bytes : Int
   priv max_xml_part_bytes : Int
+  priv max_total_xml_bytes : Int
+  priv max_xml_markup_tokens : Int
+  priv max_relationship_records : Int
+  priv max_relationship_id_chars : Int
+  priv max_relationship_type_chars : Int
+  priv max_relationship_target_chars : Int
+  priv max_total_relationship_chars : Int
+  priv max_materialized_cells : Int
+  priv max_materialized_row_column_dimensions : Int
+  priv max_row_column_dimension_work : Int
   priv max_kdf_iterations : Int
   priv max_workbook_sheets : Int
   priv max_parser_items : Int
@@ -54,8 +98,12 @@ pub struct ReadLimits {
 ///|
 /// Returns the production XLSX read policy: 128 MiB source packages, 8,192
 /// entries, 64 MiB per entry, 256 MiB aggregate expansion, 16 MiB per XML part,
-/// 1,024 sheets, two million parser items, 512 Mi parser work units, and one
-/// million Agile KDF iterations. Call `with_values` for stricter limits.
+/// 128 MiB decoded XML, two million markup tokens, one million relationship
+/// records with 16 MiB retained relationship text, one million materialized
+/// cells, one million retained row/column dimensions, one million row/column
+/// dimension expansion steps, 1,024 sheets, two million parser items, 512 Mi
+/// parser work units, and one million Agile KDF iterations. Call `with_values`
+/// for stricter limits.
 pub fn ReadLimits::new() -> ReadLimits {
   {
     max_package_bytes: default_max_package_bytes,
@@ -64,6 +112,16 @@ pub fn ReadLimits::new() -> ReadLimits {
     max_total_uncompressed_bytes: default_max_total_uncompressed_bytes,
     max_total_preserved_source_bytes: default_max_total_preserved_source_bytes,
     max_xml_part_bytes: default_max_xml_part_bytes,
+    max_total_xml_bytes: default_max_total_xml_bytes,
+    max_xml_markup_tokens: default_max_xml_markup_tokens,
+    max_relationship_records: default_max_relationship_records,
+    max_relationship_id_chars: default_max_relationship_id_chars,
+    max_relationship_type_chars: default_max_relationship_type_chars,
+    max_relationship_target_chars: default_max_relationship_target_chars,
+    max_total_relationship_chars: default_max_total_relationship_chars,
+    max_materialized_cells: default_max_materialized_cells,
+    max_materialized_row_column_dimensions: default_max_materialized_row_column_dimensions,
+    max_row_column_dimension_work: default_max_row_column_dimension_work,
     max_kdf_iterations: default_max_kdf_iterations,
     max_workbook_sheets: default_max_workbook_sheets,
     max_parser_items: default_max_parser_items,
@@ -81,6 +139,16 @@ pub fn ReadLimits::with_values(
   max_total_uncompressed_bytes? : Int = default_max_total_uncompressed_bytes,
   max_total_preserved_source_bytes? : Int = default_max_total_preserved_source_bytes,
   max_xml_part_bytes? : Int = default_max_xml_part_bytes,
+  max_total_xml_bytes? : Int = default_max_total_xml_bytes,
+  max_xml_markup_tokens? : Int = default_max_xml_markup_tokens,
+  max_relationship_records? : Int = default_max_relationship_records,
+  max_relationship_id_chars? : Int = default_max_relationship_id_chars,
+  max_relationship_type_chars? : Int = default_max_relationship_type_chars,
+  max_relationship_target_chars? : Int = default_max_relationship_target_chars,
+  max_total_relationship_chars? : Int = default_max_total_relationship_chars,
+  max_materialized_cells? : Int = default_max_materialized_cells,
+  max_materialized_row_column_dimensions? : Int = default_max_materialized_row_column_dimensions,
+  max_row_column_dimension_work? : Int = default_max_row_column_dimension_work,
   max_kdf_iterations? : Int = default_max_kdf_iterations,
   max_workbook_sheets? : Int = default_max_workbook_sheets,
   max_parser_items? : Int = default_max_parser_items,
@@ -92,6 +160,16 @@ pub fn ReadLimits::with_values(
     max_total_uncompressed_bytes <= 0 ||
     max_total_preserved_source_bytes <= 0 ||
     max_xml_part_bytes <= 0 ||
+    max_total_xml_bytes <= 0 ||
+    max_xml_markup_tokens <= 0 ||
+    max_relationship_records <= 0 ||
+    max_relationship_id_chars <= 0 ||
+    max_relationship_type_chars <= 0 ||
+    max_relationship_target_chars <= 0 ||
+    max_total_relationship_chars <= 0 ||
+    max_materialized_cells <= 0 ||
+    max_materialized_row_column_dimensions <= 0 ||
+    max_row_column_dimension_work <= 0 ||
     max_kdf_iterations <= 0 ||
     max_workbook_sheets <= 0 ||
     max_parser_items <= 0 ||
@@ -113,6 +191,16 @@ pub fn ReadLimits::with_values(
     max_total_uncompressed_bytes,
     max_total_preserved_source_bytes,
     max_xml_part_bytes,
+    max_total_xml_bytes,
+    max_xml_markup_tokens,
+    max_relationship_records,
+    max_relationship_id_chars,
+    max_relationship_type_chars,
+    max_relationship_target_chars,
+    max_total_relationship_chars,
+    max_materialized_cells,
+    max_materialized_row_column_dimensions,
+    max_row_column_dimension_work,
     max_kdf_iterations,
     max_workbook_sheets,
     max_parser_items,
@@ -158,6 +246,68 @@ pub fn ReadLimits::max_xml_part_bytes(self : ReadLimits) -> Int {
 }
 
 ///|
+/// Returns the maximum aggregate XML-like bytes decoded during one read.
+pub fn ReadLimits::max_total_xml_bytes(self : ReadLimits) -> Int {
+  self.max_total_xml_bytes
+}
+
+///|
+/// Returns the maximum aggregate markup-token starts scanned while decoding.
+pub fn ReadLimits::max_xml_markup_tokens(self : ReadLimits) -> Int {
+  self.max_xml_markup_tokens
+}
+
+///|
+/// Returns the maximum aggregate relationship records scanned in one package.
+pub fn ReadLimits::max_relationship_records(self : ReadLimits) -> Int {
+  self.max_relationship_records
+}
+
+///|
+/// Returns the maximum retained relationship id length in characters.
+pub fn ReadLimits::max_relationship_id_chars(self : ReadLimits) -> Int {
+  self.max_relationship_id_chars
+}
+
+///|
+/// Returns the maximum relationship type URI length in characters.
+pub fn ReadLimits::max_relationship_type_chars(self : ReadLimits) -> Int {
+  self.max_relationship_type_chars
+}
+
+///|
+/// Returns the maximum internal/external relationship target length.
+pub fn ReadLimits::max_relationship_target_chars(self : ReadLimits) -> Int {
+  self.max_relationship_target_chars
+}
+
+///|
+/// Returns the maximum aggregate relationship attribute characters scanned.
+pub fn ReadLimits::max_total_relationship_chars(self : ReadLimits) -> Int {
+  self.max_total_relationship_chars
+}
+
+///|
+/// Returns the maximum worksheet cells materialized across the workbook.
+pub fn ReadLimits::max_materialized_cells(self : ReadLimits) -> Int {
+  self.max_materialized_cells
+}
+
+///|
+/// Returns the maximum retained row/column dimensions across the workbook.
+pub fn ReadLimits::max_materialized_row_column_dimensions(
+  self : ReadLimits,
+) -> Int {
+  self.max_materialized_row_column_dimensions
+}
+
+///|
+/// Returns the maximum row/column dimension expansion work across the workbook.
+pub fn ReadLimits::max_row_column_dimension_work(self : ReadLimits) -> Int {
+  self.max_row_column_dimension_work
+}
+
+///|
 /// Returns the maximum accepted Agile password-KDF work factor.
 pub fn ReadLimits::max_kdf_iterations(self : ReadLimits) -> Int {
   self.max_kdf_iterations
@@ -181,6 +331,67 @@ pub fn ReadLimits::max_parser_items(self : ReadLimits) -> Int {
 /// accepted by the parser.
 pub fn ReadLimits::max_parser_work_units(self : ReadLimits) -> Int {
   self.max_parser_work_units
+}
+
+///|
+/// A fail-closed resource policy for XLSX serialization. The archive ceilings
+/// are enforced before each generated part is retained; multi-stage VML
+/// composition also debits every simultaneously retained intermediate from the
+/// remaining aggregate allowance. `max_output_bytes` is then enforced by ZIP's
+/// storage-free sizing pass before package allocation.
+pub struct WriteLimits {
+  priv max_output_bytes : Int
+  priv max_archive_entries : Int
+  priv max_entry_uncompressed_bytes : Int
+  priv max_total_uncompressed_bytes : Int
+}
+
+///|
+/// Builds a validated XLSX write policy. All ceilings must be positive and the
+/// per-entry expansion ceiling cannot exceed the aggregate archive ceiling.
+pub fn WriteLimits::with_values(
+  max_output_bytes~ : Int,
+  max_archive_entries~ : Int,
+  max_entry_uncompressed_bytes~ : Int,
+  max_total_uncompressed_bytes~ : Int,
+) -> WriteLimits raise XlsxError {
+  if max_output_bytes <= 0 ||
+    max_archive_entries <= 0 ||
+    max_entry_uncompressed_bytes <= 0 ||
+    max_total_uncompressed_bytes <= 0 {
+    raise InvalidOptions(msg="XLSX write limits must be positive")
+  }
+  if max_entry_uncompressed_bytes > max_total_uncompressed_bytes {
+    raise InvalidOptions(
+      msg="XLSX write entry limit exceeds aggregate uncompressed limit",
+    )
+  }
+  {
+    max_output_bytes,
+    max_archive_entries,
+    max_entry_uncompressed_bytes,
+    max_total_uncompressed_bytes,
+  }
+}
+
+///|
+pub fn WriteLimits::max_output_bytes(self : WriteLimits) -> Int {
+  self.max_output_bytes
+}
+
+///|
+pub fn WriteLimits::max_archive_entries(self : WriteLimits) -> Int {
+  self.max_archive_entries
+}
+
+///|
+pub fn WriteLimits::max_entry_uncompressed_bytes(self : WriteLimits) -> Int {
+  self.max_entry_uncompressed_bytes
+}
+
+///|
+pub fn WriteLimits::max_total_uncompressed_bytes(self : WriteLimits) -> Int {
+  self.max_total_uncompressed_bytes
 }
 
 ///|

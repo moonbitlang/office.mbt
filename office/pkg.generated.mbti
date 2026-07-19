@@ -27,7 +27,11 @@ pub const SCHEMA_RAW_PART : String = "office.raw.part/1"
 
 pub const SCHEMA_RAW_RESULT : String = "office.raw.result/1"
 
-pub const SCHEMA_TRANSACTION : String = "office.transaction/1"
+pub const SCHEMA_TRANSACTION : String = "office.transaction/2"
+
+pub const SCHEMA_XLSX_BATCH_RESULT : String = "office.xlsx.batch/1"
+
+pub const SCHEMA_XLSX_CREATE_RESULT : String = "office.xlsx.create/1"
 
 pub const SCHEMA_XLSX_ELEMENT : String = "office.xlsx.element/1"
 
@@ -46,6 +50,18 @@ pub const SELECTOR_MAX_NAME_LENGTH : Int = 32
 pub const SELECTOR_MAX_SELECTIONS : Int = 32
 
 pub const SELECTOR_MAX_VALUE_LENGTH : Int = 256
+
+pub const XLSX_TRANSACTION_MAX_CANDIDATE_ARCHIVE_BYTES : Int = 25165824
+
+pub const XLSX_TRANSACTION_MAX_CANDIDATE_ENTRY_BYTES : Int = 12582912
+
+pub const XLSX_TRANSACTION_MAX_DECODED_XML_BYTES : Int = 16777216
+
+pub const XLSX_TRANSACTION_MAX_MATERIALIZED_CELLS : Int = 32_768
+
+pub const XLSX_TRANSACTION_MAX_ROW_COLUMN_LINES : Int = 32_768
+
+pub const XLSX_TRANSACTION_MAX_XML_MARKUP_TOKENS : Int = 262_144
 
 pub fn capabilities_data(format? : DocumentFormat, operation? : String) -> Json
 

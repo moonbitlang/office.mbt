@@ -184,6 +184,31 @@ pub fn Workbook::sheets(self : Workbook) -> ArrayView[Worksheet] {
 }
 
 ///|
+/// Returns the number of concrete worksheet cell records currently retained
+/// by the workbook. Range metadata such as merges and validations is excluded.
+pub fn Workbook::materialized_cell_count(self : Workbook) -> Int {
+  let mut count = 0
+  for sheet in self.sheets {
+    count = count + sheet.cells().length()
+  }
+  count
+}
+
+///|
+/// Returns the retained row and column dimension records across all worksheets.
+pub fn Workbook::materialized_row_column_dimension_count(
+  self : Workbook,
+) -> Int {
+  let mut count = 0
+  for sheet in self.sheets {
+    count = count +
+      sheet.row_dimensions.length() +
+      sheet.col_dimensions.length()
+  }
+  count
+}
+
+///|
 pub fn Workbook::chart_sheets(self : Workbook) -> ArrayView[ChartSheet] {
   self.chart_sheets
 }

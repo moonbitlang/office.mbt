@@ -1057,7 +1057,8 @@ fn write_styles_xml(
   indexed_colors : Array[String]?,
   mru_colors_xml : String?,
   styles_ext_lst_xml : String?,
-) -> String {
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
   let style_list : Array[Style] = []
   for style in styles {
     style_list.push(style)
@@ -1100,7 +1101,7 @@ fn write_styles_xml(
       _ => ()
     }
   }
-  let sb = StringBuilder::new()
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<styleSheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">\n",
@@ -1110,7 +1111,7 @@ fn write_styles_xml(
     for entry in num_fmt_entries {
       let (id, code) = entry
       sb.write_view("    <numFmt numFmtId=\"\{id}\" formatCode=\"")
-      sb.write_view(escape_xml_attr(code))
+      sb.write_xml_attr(code)
       sb.write_view("\"/>\n")
     }
     sb.write_view("  </numFmts>\n")
@@ -1199,7 +1200,10 @@ fn write_styles_xml(
     "\{family}|\{size}|\{bold}|\{italic}|\{strike}|\{outline}|\{shadow}|\{condense}|\{extended}|\{underline}|\{color}|\{color_theme}|\{color_indexed}|\{color_tint}|\{charset}|\{family_number}|\{scheme}|\{vert_align}"
   }
 
-  fn write_font_color(sb : StringBuilder, font : Font) -> Unit {
+  fn write_font_color(
+    sb : LimitedXmlBuilder,
+    font : Font,
+  ) -> Unit raise XlsxError {
     let tint = match font.color_tint {
       Some(v) => if v == 0.0 { None } else { Some(v) }
       None => None
@@ -1236,7 +1240,9 @@ fn write_styles_xml(
         } else {
           normalized
         }
-        sb.write_view("      <color rgb=\"\{escape_xml_attr(rgb)}\"")
+        sb.write_view("      <color rgb=\"")
+        sb.write_xml_attr(rgb)
+        sb.write_view("\"")
         match tint {
           Some(v) => sb.write_view(" tint=\"\{v}\"")
           None => ()
@@ -1293,8 +1299,11 @@ fn write_styles_xml(
       _ => ()
     }
     match font.underline {
-      Some(value) =>
-        sb.write_view("      <u val=\"\{escape_xml_attr(value)}\"/>\n")
+      Some(value) => {
+        sb.write_view("      <u val=\"")
+        sb.write_xml_attr(value)
+        sb.write_view("\"/>\n")
+      }
       None => ()
     }
     match font.size {
@@ -1311,7 +1320,7 @@ fn write_styles_xml(
       None => font_name
     }
     sb.write_view("      <name val=\"")
-    sb.write_view(escape_xml_attr(family))
+    sb.write_xml_attr(family)
     sb.write_view("\"/>\n")
     let family_number = match font.family_number {
       Some(value) => value
@@ -1319,13 +1328,19 @@ fn write_styles_xml(
     }
     sb.write_view("      <family val=\"\{family_number}\"/>\n")
     match font.vert_align {
-      Some(value) =>
-        sb.write_view("      <vertAlign val=\"\{escape_xml_attr(value)}\"/>\n")
+      Some(value) => {
+        sb.write_view("      <vertAlign val=\"")
+        sb.write_xml_attr(value)
+        sb.write_view("\"/>\n")
+      }
       None => ()
     }
     match font.scheme {
-      Some(value) =>
-        sb.write_view("      <scheme val=\"\{escape_xml_attr(value)}\"/>\n")
+      Some(value) => {
+        sb.write_view("      <scheme val=\"")
+        sb.write_xml_attr(value)
+        sb.write_view("\"/>\n")
+      }
       None => ()
     }
     sb.write_view("    </font>\n")
@@ -1341,6 +1356,10 @@ fn write_styles_xml(
   let fills : Array[String] = [
     "    <fill><patternFill patternType=\"none\"/></fill>\n", "    <fill><patternFill patternType=\"gray125\"/></fill>\n",
   ]
+  let fill_budget = WritePartBudgetTracker::new(sb.remaining_budget())
+  for entry in fills {
+    fill_budget.consume(entry)
+  }
   let fill_ids : Map[String, Int] = Map([])
   fn normalize_pattern_fill_key(
     pattern : Int,
@@ -1394,10 +1413,11 @@ fn write_styles_xml(
     tint : Double?,
     rgb : String?,
     transparency : Int,
-  ) -> String {
+    budget : WritePartBudget?,
+  ) -> String raise XlsxError {
     match theme {
       Some(value) => {
-        let sb = StringBuilder::new()
+        let sb = LimitedXmlBuilder::new(budget)
         sb.write_view("theme=\"\{value}\"")
         match tint {
           Some(v) => if v != 0.0 { sb.write_view(" tint=\"\{v}\"") }
@@ -1409,7 +1429,7 @@ fn write_styles_xml(
     }
     match indexed {
       Some(value) => {
-        let sb = StringBuilder::new()
+        let sb = LimitedXmlBuilder::new(budget)
         sb.write_view("indexed=\"\{value}\"")
         match tint {
           Some(v) => if v != 0.0 { sb.write_view(" tint=\"\{v}\"") }
@@ -1420,7 +1440,13 @@ fn write_styles_xml(
       None => ()
     }
     match rgb {
-      Some(value) => "rgb=\"\{escape_xml_attr(fill_rgb(value, transparency))}\""
+      Some(value) => {
+        let sb = LimitedXmlBuilder::new(budget)
+        sb.write_view("rgb=\"")
+        sb.write_xml_attr(fill_rgb(value, transparency))
+        sb.write_view("\"")
+        sb.to_string()
+      }
       None => ""
     }
   }
@@ -1429,14 +1455,18 @@ fn write_styles_xml(
     pattern : Int,
     fg_attrs : String,
     bg_attrs : String,
-  ) -> String {
+    budget : WritePartBudget?,
+  ) -> String raise XlsxError {
     let pattern_type = fill_patterns[pattern]
+    let sb = LimitedXmlBuilder::new(budget)
     if fg_attrs == "" && bg_attrs == "" {
-      return "    <fill><patternFill patternType=\"\{escape_xml_attr(pattern_type)}\"/></fill>\n"
+      sb.write_view("    <fill><patternFill patternType=\"")
+      sb.write_xml_attr(pattern_type)
+      sb.write_view("\"/></fill>\n")
+      return sb.to_string()
     }
-    let sb = StringBuilder::new()
     sb.write_view("    <fill><patternFill patternType=\"")
-    sb.write_view(escape_xml_attr(pattern_type))
+    sb.write_xml_attr(pattern_type)
     sb.write_view("\">")
     if fg_attrs != "" {
       sb.write_view("<fgColor \{fg_attrs}/>")
@@ -1454,8 +1484,9 @@ fn write_styles_xml(
     c2 : String,
     indent : StringView,
     newline : Bool,
-  ) -> String {
-    let sb = StringBuilder::new()
+    budget : WritePartBudget?,
+  ) -> String raise XlsxError {
+    let sb = LimitedXmlBuilder::new(budget)
     sb.write_view(indent)
     sb.write_view("<fill><gradientFill")
     if variant.bottom != 0.0 {
@@ -1474,13 +1505,15 @@ fn write_styles_xml(
       sb.write_view(" top=\"\{variant.top}\"")
     }
     if variant.typ != "" {
-      sb.write_view(" type=\"\{escape_xml_attr(variant.typ)}\"")
+      sb.write_view(" type=\"")
+      sb.write_xml_attr(variant.typ)
+      sb.write_view("\"")
     }
     sb.write_view(">")
     for i, pos in variant.stops {
       let color = if i == 1 { c2 } else { c1 }
       sb.write_view("<stop position=\"\{pos}\"><color rgb=\"")
-      sb.write_view(escape_xml_attr(color))
+      sb.write_xml_attr(color)
       sb.write_view("\"/></stop>")
     }
     sb.write_view("</gradientFill></fill>")
@@ -1519,6 +1552,7 @@ fn write_styles_xml(
                   fill.fg_tint,
                   fg_rgb,
                   transparency,
+                  fill_budget.remaining_budget(),
                 )
                 let bg_attrs = fill_color_attrs(
                   fill.bg_theme,
@@ -1526,13 +1560,21 @@ fn write_styles_xml(
                   fill.bg_tint,
                   bg_rgb,
                   transparency,
+                  fill_budget.remaining_budget(),
                 )
                 let key = normalize_pattern_fill_key(
                   pattern, fg_attrs, bg_attrs,
                 )
                 if !fill_ids.contains(key) {
                   fill_ids[key] = fills.length()
-                  fills.push(pattern_fill_xml(pattern, fg_attrs, bg_attrs))
+                  let entry = pattern_fill_xml(
+                    pattern,
+                    fg_attrs,
+                    bg_attrs,
+                    fill_budget.remaining_budget(),
+                  )
+                  fill_budget.consume(entry)
+                  fills.push(entry)
                 }
               }
             } else if t == "gradient" {
@@ -1554,15 +1596,16 @@ fn write_styles_xml(
                         let key = normalize_gradient_fill_key(shading, c1, c2)
                         if !fill_ids.contains(key) {
                           fill_ids[key] = fills.length()
-                          fills.push(
-                            gradient_fill_xml(
-                              fill_gradient_variants[shading],
-                              c1,
-                              c2,
-                              "    ",
-                              true,
-                            ),
+                          let entry = gradient_fill_xml(
+                            fill_gradient_variants[shading],
+                            c1,
+                            c2,
+                            "    ",
+                            true,
+                            fill_budget.remaining_budget(),
                           )
+                          fill_budget.consume(entry)
+                          fills.push(entry)
                         }
                       }
                       _ => ()
@@ -1711,7 +1754,7 @@ fn write_styles_xml(
       }
       let style_name = border_styles[style]
       sb.write_view("<\{side} style=\"")
-      sb.write_view(escape_xml_attr(style_name))
+      sb.write_xml_attr(style_name)
       sb.write_view("\">")
       match color {
         Some(value) => {
@@ -1722,7 +1765,7 @@ fn write_styles_xml(
             normalized
           }
           sb.write_view("<color rgb=\"")
-          sb.write_view(escape_xml_attr(rgb))
+          sb.write_xml_attr(rgb)
           sb.write_view("\"/>")
         }
         None => ()
@@ -1784,6 +1827,7 @@ fn write_styles_xml(
                 fill.fg_tint,
                 fg_rgb,
                 transparency,
+                sb.remaining_budget(),
               )
               let bg_attrs = fill_color_attrs(
                 fill.bg_theme,
@@ -1791,6 +1835,7 @@ fn write_styles_xml(
                 fill.bg_tint,
                 bg_rgb,
                 transparency,
+                sb.remaining_budget(),
               )
               match
                 fill_ids.get(
@@ -1908,11 +1953,19 @@ fn write_styles_xml(
           if apply_alignment {
             sb.write_view("<alignment")
             match a.horizontal {
-              Some(v) => sb.write_view(" horizontal=\"\{escape_xml_attr(v)}\"")
+              Some(v) => {
+                sb.write_view(" horizontal=\"")
+                sb.write_xml_attr(v)
+                sb.write_view("\"")
+              }
               None => ()
             }
             match a.vertical {
-              Some(v) => sb.write_view(" vertical=\"\{escape_xml_attr(v)}\"")
+              Some(v) => {
+                sb.write_view(" vertical=\"")
+                sb.write_xml_attr(v)
+                sb.write_view("\"")
+              }
               None => ()
             }
             match a.wrap_text {
@@ -2067,7 +2120,7 @@ fn write_styles_xml(
           match num_fmt_ids.get(code) {
             Some(id) => {
               sb.write_view("<numFmt numFmtId=\"\{id}\" formatCode=\"")
-              sb.write_view(escape_xml_attr(code))
+              sb.write_xml_attr(code)
               sb.write_view("\"/>")
             }
             None => ()
@@ -2107,8 +2160,11 @@ fn write_styles_xml(
               _ => ()
             }
             match font.underline {
-              Some(value) =>
-                sb.write_view("<u val=\"\{escape_xml_attr(value)}\"/>")
+              Some(value) => {
+                sb.write_view("<u val=\"")
+                sb.write_xml_attr(value)
+                sb.write_view("\"/>")
+              }
               None => ()
             }
             match font.size {
@@ -2147,7 +2203,9 @@ fn write_styles_xml(
                         } else {
                           normalized
                         }
-                        sb.write_view("<color rgb=\"\{escape_xml_attr(rgb)}\"")
+                        sb.write_view("<color rgb=\"")
+                        sb.write_xml_attr(rgb)
+                        sb.write_view("\"")
                         match tint {
                           Some(v) => sb.write_view(" tint=\"\{v}\"")
                           None => ()
@@ -2165,7 +2223,7 @@ fn write_styles_xml(
             match font.family {
               Some(value) => {
                 sb.write_view("<name val=\"")
-                sb.write_view(escape_xml_attr(value))
+                sb.write_xml_attr(value)
                 sb.write_view("\"/>")
               }
               None => ()
@@ -2176,13 +2234,19 @@ fn write_styles_xml(
             }
             sb.write_view("<family val=\"\{family_number}\"/>")
             match font.vert_align {
-              Some(value) =>
-                sb.write_view("<vertAlign val=\"\{escape_xml_attr(value)}\"/>")
+              Some(value) => {
+                sb.write_view("<vertAlign val=\"")
+                sb.write_xml_attr(value)
+                sb.write_view("\"/>")
+              }
               None => ()
             }
             match font.scheme {
-              Some(value) =>
-                sb.write_view("<scheme val=\"\{escape_xml_attr(value)}\"/>")
+              Some(value) => {
+                sb.write_view("<scheme val=\"")
+                sb.write_xml_attr(value)
+                sb.write_view("\"/>")
+              }
               None => ()
             }
             sb.write_view("</font>")
@@ -2226,10 +2290,15 @@ fn write_styles_xml(
                       None => fill.fg_tint
                     }
                     let bg_attrs = fill_color_attrs(
-                      bg_theme, bg_indexed, bg_tint, bg_rgb, transparency,
+                      bg_theme,
+                      bg_indexed,
+                      bg_tint,
+                      bg_rgb,
+                      transparency,
+                      sb.remaining_budget(),
                     )
                     sb.write_view("<fill><patternFill patternType=\"")
-                    sb.write_view(escape_xml_attr(pattern_type))
+                    sb.write_xml_attr(pattern_type)
                     sb.write_view("\">")
                     if bg_attrs != "" {
                       sb.write_view("<bgColor \{bg_attrs}/>")
@@ -2259,6 +2328,7 @@ fn write_styles_xml(
                                 c2,
                                 "",
                                 false,
+                                sb.remaining_budget(),
                               ),
                             )
                           }
@@ -2298,7 +2368,7 @@ fn write_styles_xml(
               }
               let style_name = border_styles[style]
               sb.write_view("<\{side} style=\"")
-              sb.write_view(escape_xml_attr(style_name))
+              sb.write_xml_attr(style_name)
               sb.write_view("\">")
               match color {
                 Some(value) => {
@@ -2309,7 +2379,7 @@ fn write_styles_xml(
                     normalized
                   }
                   sb.write_view("<color rgb=\"")
-                  sb.write_view(escape_xml_attr(rgb))
+                  sb.write_xml_attr(rgb)
                   sb.write_view("\"/>")
                 }
                 None => ()
@@ -2325,11 +2395,19 @@ fn write_styles_xml(
           if has_alignment {
             sb.write_view("<alignment")
             match a.horizontal {
-              Some(v) => sb.write_view(" horizontal=\"\{escape_xml_attr(v)}\"")
+              Some(v) => {
+                sb.write_view(" horizontal=\"")
+                sb.write_xml_attr(v)
+                sb.write_view("\"")
+              }
               None => ()
             }
             match a.vertical {
-              Some(v) => sb.write_view(" vertical=\"\{escape_xml_attr(v)}\"")
+              Some(v) => {
+                sb.write_view(" vertical=\"")
+                sb.write_xml_attr(v)
+                sb.write_view("\"")
+              }
               None => ()
             }
             match a.wrap_text {
@@ -2405,9 +2483,9 @@ fn write_styles_xml(
     sb.write_view("  </dxfs>\n")
   }
   sb.write_view("  <tableStyles count=\"0\" defaultTableStyle=\"")
-  sb.write_view(escape_xml_attr(default_table_style))
+  sb.write_xml_attr(default_table_style)
   sb.write_view("\" defaultPivotStyle=\"")
-  sb.write_view(escape_xml_attr(default_pivot_style))
+  sb.write_xml_attr(default_pivot_style)
   sb.write_view("\"/>\n")
   let has_indexed = match indexed_colors {
     Some(colors) => colors.length() > 0
@@ -2428,7 +2506,7 @@ fn write_styles_xml(
             let upper = normalized.to_upper()
             let rgb = if upper.length() == 6 { "FF" + upper } else { upper }
             sb.write_view("<rgbColor rgb=\"")
-            sb.write_view(escape_xml_attr(rgb))
+            sb.write_xml_attr(rgb)
             sb.write_view("\"/>")
           }
           sb.write_view("</indexedColors>")

@@ -3,9 +3,25 @@ test "capability registry claims only wired commands" {
   for command in @lib.capability_commands() {
     assert_true(is_implemented_command(command.name))
   }
-  for name in ["help", "identify", "outline", "get", "text", "query", "raw"] {
+  for
+    name in [
+      "help", "identify", "outline", "get", "text", "query", "create", "batch", "raw",
+    ] {
     assert_true(@lib.find_capability_command(name) is Some(_))
   }
+}
+
+///|
+test "XLSX mutation help exposes only transactional bounded controls" {
+  let create = create_command().render_help()
+  assert_true(create.contains("xlsx"))
+  assert_false(create.to_lower().contains("docx"))
+  let batch = batch_command().render_help()
+  assert_true(batch.contains("--out"))
+  assert_true(batch.contains("--dry-run"))
+  assert_true(batch.contains("--overwrite"))
+  assert_false(batch.to_lower().contains("ppt"))
+  assert_false(batch.to_lower().contains("mcp"))
 }
 
 ///|
@@ -36,7 +52,7 @@ test "bounded diagnostics do not amplify attacker-controlled tokens" {
   let error = unknown_help_token("format", long, ["docx", "xlsx"])
   assert_true(error.message.length() < 180)
   assert_false(error.message.contains("x".repeat(100)))
-  assert_eq(raw_human_text("line\n\u{1b}[31m", 40), "line\\n\\u001b[31m")
+  assert_eq(human_text("line\n\u{1b}[31m", 40), "line\\n\\u001b[31m")
   assert_eq(
     render_failure(
       @lib.protocol_error("office.test", "bad\u{1b}[31m\u{7}line\nnext"),

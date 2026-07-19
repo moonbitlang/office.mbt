@@ -15,10 +15,32 @@
 pub const MAX_BATCH_OPS : Int = 10_000
 
 ///|
+/// Maximum encoded size of one strict batch script. This is enforced before
+/// UTF-8 decode or JSON parsing by `parse_script_bytes`.
+pub const MAX_BATCH_SCRIPT_BYTES : Int = 8 * 1024 * 1024
+
+///|
 /// Aggregate cap on cells touched by `style` range expansions across one
 /// script: the per-range parser caps each range at 100k cells, but 10k
 /// such ops would still be a billion mutations — an OOM, not a workload.
 pub const MAX_TOTAL_STYLE_CELLS : Int64 = 1_000_000
+
+///|
+/// Aggregate cap on direct cell writes, expanded style-range writes, and table
+/// header cells that may be synthesized while applying a table operation.
+/// Validation and conditional formatting never materialize their ranges and
+/// therefore do not consume this counter.
+pub const MAX_TOTAL_TOUCHED_CELLS : Int64 = 1_000_000
+
+///|
+/// Aggregate cap on new workbook style/differential-style records requested by
+/// `style` and `cf` operations.
+pub const MAX_TOTAL_NEW_STYLES : Int = 4_096
+
+///|
+/// Maximum lexical length of a JSON number outside strings. Longer spellings
+/// hit known upstream rounding edge cases and are never useful workbook input.
+pub const MAX_BATCH_NUMBER_TOKEN_CHARS : Int = 40
 
 ///|
 /// The sheet grid limits (Excel's maximums), for the `row`/`col` ops' band
@@ -34,13 +56,14 @@ const MAX_SHEET_COLS : Int = 16_384
 /// agent-supplied `count` is bounded to keep one op's latency in check.
 /// insert/delete are engine-bounded (they pass `count` straight through) and
 /// are not subject to this cap.
-const MAX_ROWCOL_BAND : Int = 10_000
+pub const MAX_ROW_COLUMN_BAND : Int = 10_000
 
 ///|
-/// Aggregate cap on lines touched by `row`/`col` hide/show/height across one
-/// script — the row/col analogue of `MAX_TOTAL_STYLE_CELLS`, bounding total
-/// setter calls even when each op stays under `MAX_ROWCOL_BAND`.
-const MAX_TOTAL_ROWCOL_CELLS : Int64 = 1_000_000
+/// Aggregate cap on dimensions touched by width and `row`/`col`
+/// hide/show/height operations across one script — the row/col analogue of
+/// `MAX_TOTAL_STYLE_CELLS`, bounding total setter calls even when each op stays
+/// locally bounded.
+pub const MAX_TOTAL_ROW_COLUMN_LINES : Int64 = 1_000_000
 
 ///|
 /// A batch script or op that failed validation or application. The
@@ -199,18 +222,40 @@ priv enum OpKind {
 }
 
 ///|
-/// A parsed batch operation, **opaque by design**. Callers get these from
-/// `parse_script` and hand them to `apply_op`; they cannot construct or
-/// pattern-match them. This is deliberate: the op vocabulary grows over
-/// time (new `xlsx.batch/1` ops), and hiding the representation keeps
-/// adding a variant or a field a source-compatible change instead of a
-/// breaking one for every downstream `match`. Discover the current op set
-/// programmatically via `capabilities()`.
-///
-/// A plain (package-private) single-field struct: it appears in the public
-/// `parse_script`/`apply_op`/`name` signatures, so it exports as an
-/// abstract type — external code holds it but cannot construct or match it.
+/// A parsed batch operation, opaque by design. Callers may retain the complete
+/// `BatchPlan` or use the lower-level operation API; neither exposes the
+/// representation. Discover the exact vocabulary of this build through
+/// `capabilities()` instead of assuming compatibility between pre-stable builds.
 struct BatchOp(OpKind)
+
+///|
+/// Resource accounting retained with one parsed batch plan.
+pub struct BatchPlanStats {
+  operation_count : Int
+  touched_cells : Int64
+  style_cells : Int64
+  row_column_lines : Int64
+  new_style_records : Int
+}
+
+///|
+/// An opaque, strictly parsed `xlsx.batch/1` plan. Keeping operations and
+/// accounting together prevents callers from validating one array and applying
+/// another.
+struct BatchPlan {
+  ops : Array[BatchOp]
+  stats : BatchPlanStats
+}
+
+///|
+pub fn BatchPlan::stats(self : BatchPlan) -> BatchPlanStats {
+  self.stats
+}
+
+///|
+pub fn BatchPlan::operation_count(self : BatchPlan) -> Int {
+  self.stats.operation_count
+}
 
 ///|
 /// The op's script name (also its CLI subcommand name), for error text.
@@ -240,6 +285,119 @@ fn op_error(index : Int, op : String, message : String) -> BatchError {
 }
 
 ///|
+/// Reject every enum and action-dependent parameter while the encoded plan is
+/// parsed. This keeps malformed scripts outside workbook I/O and ensures the
+/// transaction never materializes a source package merely to discover a script
+/// grammar error.
+fn validate_parsed_op_contract(op : BatchOp) -> Unit raise BatchError {
+  match op.0 {
+    OpChart(chart_type~, ..) => ignore(chart_type_of(chart_type))
+    OpValidate(
+      validation_type~,
+      operator~,
+      formula1~,
+      formula2~,
+      values~,
+      source~,
+      error_style~,
+      ..
+    ) =>
+      validate_data_validation_contract(
+        validation_type, operator, formula1, formula2, values, source, error_style,
+      )
+    OpCf(
+      cf_type~,
+      criteria~,
+      value~,
+      min_value~,
+      max_value~,
+      formula~,
+      fill~,
+      font_color~,
+      bold~,
+      italic~,
+      min_type~,
+      mid_type~,
+      max_type~,
+      mid_value~,
+      min_color~,
+      mid_color~,
+      max_color~,
+      bar_color~,
+      bar_solid~,
+      bar_direction~,
+      bar_border_color~,
+      icon_style~,
+      reverse_icons~,
+      stop_if_true~,
+      ..
+    ) =>
+      validate_conditional_format_contract(
+        cf_type, criteria, value, min_value, max_value, formula, fill, font_color,
+        bold, italic, min_type, mid_type, max_type, mid_value, min_color, mid_color,
+        max_color, bar_color, bar_solid, bar_direction, bar_border_color, icon_style,
+        reverse_icons, stop_if_true,
+      )
+    OpSheet(action~, to~, ..) =>
+      match action {
+        "rename" =>
+          if to == "" {
+            raise BatchError("sheet: action 'rename' requires 'to'")
+          }
+        "delete" | "hide" | "show" | "very-hide" =>
+          if to != "" {
+            raise BatchError("sheet: action '\{action}' does not take 'to'")
+          }
+        other =>
+          raise BatchError(
+            "sheet: unknown action '\{other}' (expected one of: \{sheet_action_values.join(", ")})",
+          )
+      }
+    OpRow(action~, height~, ..) =>
+      match action {
+        "hide" | "show" =>
+          if height is Some(_) {
+            raise BatchError("row: action '\{action}' does not take 'height'")
+          }
+        "height" =>
+          if height is None {
+            raise BatchError("row: action 'height' requires 'height'")
+          }
+        other =>
+          raise BatchError(
+            "row: unknown action '\{other}' (expected one of: \{row_action_values.join(", ")})",
+          )
+      }
+    OpCol(action~, ..) =>
+      if !column_action_values.contains(action) {
+        raise BatchError(
+          "col: unknown action '\{action}' (expected one of: \{column_action_values.join(", ")})",
+        )
+      }
+    OpStyle(
+      border~,
+      border_top~,
+      border_bottom~,
+      border_left~,
+      border_right~,
+      border_color~,
+      ..
+    ) =>
+      ignore(
+        build_cell_borders(
+          all=border,
+          top=border_top,
+          bottom=border_bottom,
+          left=border_left,
+          right=border_right,
+          color=border_color,
+        ),
+      )
+    _ => ()
+  }
+}
+
+///|
 /// The `row`/`col` actions that apply a per-line setter in a loop (rows have
 /// no range API), and so consume the per-op / script-wide line budgets.
 /// insert/delete (a later op) pass `count` straight to the engine and are not
@@ -253,8 +411,10 @@ fn is_looping_action(action : String) -> Bool {
 /// Validate a `row`/`col` band `[at, at+count-1]` at parse time:
 /// - it must fit within `[1, axis_max]` (checked overflow-safe: never forms
 ///   `at + count`, which could exceed `Int`);
-/// - for a looping action, `count` must stay under `MAX_ROWCOL_BAND`, and the
-///   running total across the script must stay under `MAX_TOTAL_ROWCOL_CELLS`.
+/// - for a looping action, `count` must stay under `MAX_ROW_COLUMN_BAND`, and
+///   the
+///   running total across the script must stay under
+///   `MAX_TOTAL_ROW_COLUMN_LINES`.
 /// `at`/`count` are already validated `>= 1` by the readers. The `action` is
 /// still the raw string (its validity is an apply-time concern), so an
 /// unknown action is only band-checked here — the apply arm rejects it.
@@ -277,30 +437,80 @@ fn validate_rowcol_band(
     )
   }
   if is_looping_action(action) {
-    if count > MAX_ROWCOL_BAND {
+    if count > MAX_ROW_COLUMN_BAND {
       raise op_error(
         reader.index,
         reader.op,
-        "'count' of \{count} exceeds the per-op \{action} limit of \{MAX_ROWCOL_BAND} \{axis}s",
+        "'count' of \{count} exceeds the per-op \{action} limit of \{MAX_ROW_COLUMN_BAND} \{axis}s",
       )
     }
     rowcol_cells.val = rowcol_cells.val + count.to_int64()
-    if rowcol_cells.val > MAX_TOTAL_ROWCOL_CELLS {
+    if rowcol_cells.val > MAX_TOTAL_ROW_COLUMN_LINES {
       raise op_error(
         reader.index,
         reader.op,
-        "row/col hide/show/height touch past \{MAX_TOTAL_ROWCOL_CELLS} total lines",
+        "row/col hide/show/height touch past \{MAX_TOTAL_ROW_COLUMN_LINES} total lines",
       )
     }
   }
 }
 
 ///|
-/// Parses a full `xlsx.batch/1` script document into ops. Strict: the
-/// envelope must be an object holding exactly `schema` and `ops`, the
-/// schema string must match, and every op must validate. Zero ops is a
-/// valid no-op.
-pub fn parse_script(document : Json) -> Array[BatchOp] raise BatchError {
+fn check_number_token_lengths(text : String) -> Unit raise BatchError {
+  let mut in_string = false
+  let mut escaped = false
+  let mut run = 0
+  for index in 0..<text.length() {
+    let character = text[index]
+    if in_string {
+      if escaped {
+        escaped = false
+      } else if character == '\\' {
+        escaped = true
+      } else if character == '"' {
+        in_string = false
+      }
+    } else if character == '"' {
+      in_string = true
+      run = 0
+    } else if character is ('0'..='9' | '.' | 'e' | 'E' | '+' | '-') {
+      run = run + 1
+      if run > MAX_BATCH_NUMBER_TOKEN_CHARS {
+        raise BatchError(
+          "numeric literal longer than \{MAX_BATCH_NUMBER_TOKEN_CHARS} characters",
+        )
+      }
+    } else {
+      run = 0
+    }
+  }
+}
+
+///|
+/// Parses encoded `xlsx.batch/1` bytes under the script-size, UTF-8, numeric
+/// token, JSON and operation-resource boundaries in that order.
+pub fn parse_script_bytes(data : BytesView) -> BatchPlan raise BatchError {
+  if data.length() > MAX_BATCH_SCRIPT_BYTES {
+    raise BatchError(
+      "batch script has \{data.length()} bytes; max is \{MAX_BATCH_SCRIPT_BYTES}",
+    )
+  }
+  let text = @utf8.decode(data, ignore_bom=true) catch {
+    _ => raise BatchError("batch script is not valid UTF-8")
+  }
+  check_number_token_lengths(text)
+  let document = @json.parse(text) catch {
+    error => raise BatchError("invalid batch JSON: \{error}")
+  }
+  parse_plan(document)
+}
+
+///|
+/// Parses a full `xlsx.batch/1` JSON document into one opaque plan. Strict:
+/// the envelope must be an object holding exactly `schema` and `ops`, the
+/// schema string must match, and every op must validate. Zero ops is a valid
+/// no-op.
+fn parse_plan(document : Json) -> BatchPlan raise BatchError {
   let root = match document {
     Object(map) => map
     _ => raise BatchError("batch script must be a JSON object")
@@ -333,11 +543,33 @@ pub fn parse_script(document : Json) -> Array[BatchOp] raise BatchError {
   }
   let ops = []
   let style_cells : Ref[Int64] = Ref(0)
+  let touched_cells : Ref[Int64] = Ref(0)
   let rowcol_cells : Ref[Int64] = Ref(0)
+  let new_styles : Ref[Int] = Ref(0)
   for index, item in items {
-    ops.push(parse_op(index, item, style_cells, rowcol_cells))
+    ops.push(
+      parse_op(
+        index, item, style_cells, touched_cells, rowcol_cells, new_styles,
+      ),
+    )
   }
-  ops
+  {
+    ops,
+    stats: {
+      operation_count: ops.length(),
+      touched_cells: touched_cells.val,
+      style_cells: style_cells.val,
+      row_column_lines: rowcol_cells.val,
+      new_style_records: new_styles.val,
+    },
+  }
+}
+
+///|
+/// Lower-level JSON parser for callers that require per-operation control.
+/// Transactional callers should retain and apply the complete `BatchPlan`.
+pub fn parse_script(document : Json) -> Array[BatchOp] raise BatchError {
+  parse_plan(document).ops.copy()
 }
 
 ///|
@@ -345,7 +577,9 @@ fn parse_op(
   index : Int,
   item : Json,
   style_cells : Ref[Int64],
+  touched_cells : Ref[Int64],
   rowcol_cells : Ref[Int64],
+  new_styles : Ref[Int],
 ) -> BatchOp raise BatchError {
   let entry = match item {
     Object(map) => map
@@ -409,6 +643,14 @@ fn parse_op(
           "style ranges expand past \{MAX_TOTAL_STYLE_CELLS} total cells",
         )
       }
+      touched_cells.val = touched_cells.val + cells
+      if touched_cells.val > MAX_TOTAL_TOUCHED_CELLS {
+        raise op_error(
+          index,
+          name,
+          "cell mutations expand past \{MAX_TOTAL_TOUCHED_CELLS} total cells",
+        )
+      }
       OpStyle(
         sheet=reader.string("sheet"),
         range~,
@@ -428,12 +670,22 @@ fn parse_op(
     }
     "merge" =>
       OpMerge(sheet=reader.string("sheet"), range=reader.colon_range("range"))
-    "width" =>
+    "width" => {
+      let (column, lines) = reader.column("column")
+      rowcol_cells.val = rowcol_cells.val + lines.to_int64()
+      if rowcol_cells.val > MAX_TOTAL_ROW_COLUMN_LINES {
+        raise op_error(
+          index,
+          name,
+          "row/column mutations touch past \{MAX_TOTAL_ROW_COLUMN_LINES} total lines",
+        )
+      }
       OpWidth(
         sheet=reader.string("sheet"),
-        column=reader.column("column"),
+        column~,
         width=reader.number("width"),
       )
+    }
     "freeze" => OpFreeze(sheet=reader.string("sheet"), cell=reader.cell("cell"))
     "filter" =>
       OpFilter(sheet=reader.string("sheet"), range=reader.colon_range("range"))
@@ -448,10 +700,19 @@ fn parse_op(
         series_name=reader.optional_string("name"),
         title=reader.optional_string("title"),
       )
-    "table" =>
+    "table" => {
+      let (range, header_cells) = reader.table_range("range")
+      touched_cells.val = touched_cells.val + header_cells
+      if touched_cells.val > MAX_TOTAL_TOUCHED_CELLS {
+        raise op_error(
+          index,
+          name,
+          "cell mutations expand past \{MAX_TOTAL_TOUCHED_CELLS} total cells",
+        )
+      }
       OpTable(
         sheet=reader.string("sheet"),
-        range=reader.table_range("range"),
+        range~,
         name=reader.optional_string("name"),
         style=reader.optional_string("style"),
         header_row=reader.tristate_bool("header_row"),
@@ -460,6 +721,7 @@ fn parse_op(
         last_column=reader.optional_bool("last_column"),
         column_stripes=reader.optional_bool("column_stripes"),
       )
+    }
     "validate" =>
       OpValidate(
         sheet=reader.string("sheet"),
@@ -553,6 +815,45 @@ fn parse_op(
       )
   }
   reader.finish()
+  validate_parsed_op_contract(op) catch {
+    BatchError(message) => raise op_error(index, name, message)
+  }
+  match op {
+    OpSet(..) | OpFormula(..) => {
+      touched_cells.val = touched_cells.val + 1L
+      if touched_cells.val > MAX_TOTAL_TOUCHED_CELLS {
+        raise op_error(
+          index,
+          name,
+          "cell mutations expand past \{MAX_TOTAL_TOUCHED_CELLS} total cells",
+        )
+      }
+    }
+    OpStyle(..) => {
+      new_styles.val = new_styles.val + 1
+      if new_styles.val > MAX_TOTAL_NEW_STYLES {
+        raise op_error(
+          index,
+          name,
+          "new style records exceed \{MAX_TOTAL_NEW_STYLES} per script",
+        )
+      }
+    }
+    OpCf(fill~, font_color~, bold~, italic~, ..) if fill != "" ||
+      font_color != "" ||
+      bold is Some(true) ||
+      italic is Some(true) => {
+      new_styles.val = new_styles.val + 1
+      if new_styles.val > MAX_TOTAL_NEW_STYLES {
+        raise op_error(
+          index,
+          name,
+          "new style records exceed \{MAX_TOTAL_NEW_STYLES} per script",
+        )
+      }
+    }
+    _ => ()
+  }
   BatchOp(op)
 }
 
@@ -754,14 +1055,15 @@ fn ParamReader::colon_range(
 /// syntax but WITHOUT the 100k-cell expansion cap that `range`/`colon_range`
 /// apply. A table never enumerates its cells (the engine derives columns
 /// from the header row only), so an ordinary large table range must be
-/// accepted rather than rejected as an expansion. Also rejects a single-row
-/// range on the last grid row, which the engine expands downward by one row
-/// and would push off the grid — caught here with a clear message instead of
-/// failing deep in apply.
+/// accepted rather than rejected as an expansion. The returned width charges
+/// the aggregate materialization budget because missing header cells may be
+/// synthesized. Also rejects a single-row range on the last grid row, which
+/// the engine expands downward by one row and would push off the grid — caught
+/// here with a clear message instead of failing deep in apply.
 fn ParamReader::table_range(
   self : ParamReader,
   key : String,
-) -> String raise BatchError {
+) -> (String, Int64) raise BatchError {
   let text = self.string(key)
   let range = @inspect.parse_range_unbounded(text) catch {
     _ =>
@@ -787,7 +1089,7 @@ fn ParamReader::table_range(
       "'\{key}' is a single-row range on the last grid row, leaving no room for a data row: '\{text}'",
     )
   }
-  text
+  (text, (range.col_hi - range.col_lo + 1).to_int64())
 }
 
 ///|
@@ -874,10 +1176,13 @@ fn ParamReader::range(
 fn ParamReader::column(
   self : ParamReader,
   key : String,
-) -> String raise BatchError {
+) -> (String, Int) raise BatchError {
   let text = self.string(key)
-  match text.find(":") {
-    None => ignore(self.column_number(key, text, text))
+  let count = match text.find(":") {
+    None => {
+      ignore(self.column_number(key, text, text))
+      1
+    }
     Some(index) => {
       let lo = self.column_number(key, text[:index].to_owned(), text)
       let hi = self.column_number(key, text[index + 1:].to_owned(), text)
@@ -888,9 +1193,10 @@ fn ParamReader::column(
           "'\{key}' is not a valid column or column range: '\{text}'",
         )
       }
+      hi - lo + 1
     }
   }
-  text
+  (text, count)
 }
 
 ///|
@@ -1706,5 +2012,22 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
             "col: unknown action '\{other}' (expected one of: hide, show)",
           )
       }
+  }
+}
+
+///|
+/// Applies every operation in order to an in-memory workbook. An application
+/// failure is normalized to `BatchError` with the 0-based operation index and
+/// operation name. Callers retain all-or-nothing semantics by discarding this
+/// workbook unless subsequent serialization, validation and publication pass.
+pub fn BatchPlan::apply(
+  self : BatchPlan,
+  workbook : @xlsx.Workbook,
+) -> Unit raise BatchError {
+  for index, op in self.ops {
+    apply_op(workbook, op) catch {
+      BatchError(message) => raise op_error(index, op.name(), message)
+      error => raise op_error(index, op.name(), error.to_string())
+    }
   }
 }

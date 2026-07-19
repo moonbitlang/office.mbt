@@ -189,8 +189,11 @@ fn bool_text(value : Bool) -> String {
 }
 
 ///|
-fn write_core_properties_xml(props : CoreProperties) -> String {
-  let sb = StringBuilder::new()
+fn write_core_properties_xml(
+  props : CoreProperties,
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<cp:coreProperties xmlns:cp=\"http://schemas.openxmlformats.org/package/2006/metadata/core-properties\"\n",
@@ -201,72 +204,72 @@ fn write_core_properties_xml(props : CoreProperties) -> String {
   sb.write_view(" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n")
   if props.title != "" {
     sb.write_view("  <dc:title>")
-    sb.write_view(escape_xml_text(props.title))
+    sb.write_xml_text(props.title)
     sb.write_view("</dc:title>\n")
   }
   if props.subject != "" {
     sb.write_view("  <dc:subject>")
-    sb.write_view(escape_xml_text(props.subject))
+    sb.write_xml_text(props.subject)
     sb.write_view("</dc:subject>\n")
   }
   if props.creator != "" {
     sb.write_view("  <dc:creator>")
-    sb.write_view(escape_xml_text(props.creator))
+    sb.write_xml_text(props.creator)
     sb.write_view("</dc:creator>\n")
   }
   if props.keywords != "" {
     sb.write_view("  <cp:keywords>")
-    sb.write_view(escape_xml_text(props.keywords))
+    sb.write_xml_text(props.keywords)
     sb.write_view("</cp:keywords>\n")
   }
   if props.description != "" {
     sb.write_view("  <dc:description>")
-    sb.write_view(escape_xml_text(props.description))
+    sb.write_xml_text(props.description)
     sb.write_view("</dc:description>\n")
   }
   if props.last_modified_by != "" {
     sb.write_view("  <cp:lastModifiedBy>")
-    sb.write_view(escape_xml_text(props.last_modified_by))
+    sb.write_xml_text(props.last_modified_by)
     sb.write_view("</cp:lastModifiedBy>\n")
   }
   if props.language != "" {
     sb.write_view("  <dc:language>")
-    sb.write_view(escape_xml_text(props.language))
+    sb.write_xml_text(props.language)
     sb.write_view("</dc:language>\n")
   }
   if props.identifier != "" {
     sb.write_view("  <dc:identifier>")
-    sb.write_view(escape_xml_text(props.identifier))
+    sb.write_xml_text(props.identifier)
     sb.write_view("</dc:identifier>\n")
   }
   if props.revision != "" {
     sb.write_view("  <cp:revision>")
-    sb.write_view(escape_xml_text(props.revision))
+    sb.write_xml_text(props.revision)
     sb.write_view("</cp:revision>\n")
   }
   if props.content_status != "" {
     sb.write_view("  <cp:contentStatus>")
-    sb.write_view(escape_xml_text(props.content_status))
+    sb.write_xml_text(props.content_status)
     sb.write_view("</cp:contentStatus>\n")
   }
   if props.category != "" {
     sb.write_view("  <cp:category>")
-    sb.write_view(escape_xml_text(props.category))
+    sb.write_xml_text(props.category)
     sb.write_view("</cp:category>\n")
   }
   if props.version != "" {
     sb.write_view("  <cp:version>")
-    sb.write_view(escape_xml_text(props.version))
+    sb.write_xml_text(props.version)
     sb.write_view("</cp:version>\n")
   }
   if props.created != "" {
     sb.write_view("  <dcterms:created xsi:type=\"dcterms:W3CDTF\">")
-    sb.write_view(escape_xml_text(props.created))
+    sb.write_xml_text(props.created)
     sb.write_view("</dcterms:created>\n")
   }
   if props.modified != "" {
     sb.write_view("  <dcterms:modified xsi:type=\"dcterms:W3CDTF\">")
-    sb.write_view(escape_xml_text(props.modified))
+    sb.write_xml_text(props.modified)
     sb.write_view("</dcterms:modified>\n")
   }
   sb.write_view("</cp:coreProperties>")
@@ -274,8 +277,11 @@ fn write_core_properties_xml(props : CoreProperties) -> String {
 }
 
 ///|
-fn write_app_properties_xml(props : AppProperties) -> String {
-  let sb = StringBuilder::new()
+fn write_app_properties_xml(
+  props : AppProperties,
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<Properties xmlns=\"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties\"\n",
@@ -285,7 +291,7 @@ fn write_app_properties_xml(props : AppProperties) -> String {
   )
   if props.application != "" {
     sb.write_view("  <Application>")
-    sb.write_view(escape_xml_text(props.application))
+    sb.write_xml_text(props.application)
     sb.write_view("</Application>\n")
   }
   match props.scale_crop {
@@ -306,7 +312,7 @@ fn write_app_properties_xml(props : AppProperties) -> String {
   }
   if props.company != "" {
     sb.write_view("  <Company>")
-    sb.write_view(escape_xml_text(props.company))
+    sb.write_xml_text(props.company)
     sb.write_view("</Company>\n")
   }
   match props.links_up_to_date {
@@ -327,7 +333,7 @@ fn write_app_properties_xml(props : AppProperties) -> String {
   }
   if props.app_version != "" {
     sb.write_view("  <AppVersion>")
-    sb.write_view(escape_xml_text(props.app_version))
+    sb.write_xml_text(props.app_version)
     sb.write_view("</AppVersion>\n")
   }
   sb.write_view("</Properties>")
@@ -526,9 +532,9 @@ fn parse_custom_property_value(
 
 ///|
 fn write_custom_property_value(
-  sb : StringBuilder,
+  sb : LimitedXmlBuilder,
   value : CustomPropertyValue,
-) -> Unit {
+) -> Unit raise XlsxError {
   match value {
     Integer(number) => {
       sb.write_view("<vt:i4>")
@@ -547,20 +553,23 @@ fn write_custom_property_value(
     }
     Text(text) => {
       sb.write_view("<vt:lpwstr>")
-      sb.write_view(escape_xml_text(text))
+      sb.write_xml_text(text)
       sb.write_view("</vt:lpwstr>")
     }
     DateTime(text) => {
       sb.write_view("<vt:filetime>")
-      sb.write_view(escape_xml_text(text))
+      sb.write_xml_text(text)
       sb.write_view("</vt:filetime>")
     }
   }
 }
 
 ///|
-fn write_custom_properties_xml(props : ArrayView[CustomProperty]) -> String {
-  let sb = StringBuilder::new()
+fn write_custom_properties_xml(
+  props : ArrayView[CustomProperty],
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view("<Properties xmlns=\"")
   sb.write_view(custom_props_namespace)
@@ -575,7 +584,7 @@ fn write_custom_properties_xml(props : ArrayView[CustomProperty]) -> String {
         sb.write_view("  <property fmtid=\"")
         sb.write_view(custom_props_fmt_id)
         sb.write_view("\" pid=\"\{pid}\" name=\"")
-        sb.write_view(escape_xml_attr(prop.name))
+        sb.write_xml_attr(prop.name)
         sb.write_view("\">")
         write_custom_property_value(sb, value)
         sb.write_view("</property>\n")

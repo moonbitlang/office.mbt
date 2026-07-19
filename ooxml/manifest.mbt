@@ -139,13 +139,52 @@ pub fn WorkbookManifest::content_types_xml(self : WorkbookManifest) -> String {
 }
 
 ///|
+/// Serializes `[Content_Types].xml` only while its UTF-8 output fits `maximum`.
+pub fn WorkbookManifest::content_types_xml_limited(
+  self : WorkbookManifest,
+  maximum : Int,
+) -> String? {
+  if maximum < 0 {
+    None
+  } else {
+    self.content_types.to_xml_with_limit(Some(maximum))
+  }
+}
+
+///|
 pub fn WorkbookManifest::root_rels_xml(self : WorkbookManifest) -> String {
   self.root_rels.to_xml()
 }
 
 ///|
+/// Serializes the package relationships only while UTF-8 output fits `maximum`.
+pub fn WorkbookManifest::root_rels_xml_limited(
+  self : WorkbookManifest,
+  maximum : Int,
+) -> String? {
+  if maximum < 0 {
+    None
+  } else {
+    self.root_rels.to_xml_with_limit(Some(maximum))
+  }
+}
+
+///|
 pub fn WorkbookManifest::workbook_rels_xml(self : WorkbookManifest) -> String {
   self.workbook_rels.to_xml()
+}
+
+///|
+/// Serializes workbook relationships only while UTF-8 output fits `maximum`.
+pub fn WorkbookManifest::workbook_rels_xml_limited(
+  self : WorkbookManifest,
+  maximum : Int,
+) -> String? {
+  if maximum < 0 {
+    None
+  } else {
+    self.workbook_rels.to_xml_with_limit(Some(maximum))
+  }
 }
 
 ///|

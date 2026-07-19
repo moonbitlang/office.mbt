@@ -1623,14 +1623,16 @@ test "post-return budget requires explicit original reuse" {
 test "transaction output schema is deterministic and nests A2 warnings" {
   let report : TransactionReport = {
     format: Docx,
-    input_path: "input.docx",
+    input_path: Some("input.docx"),
     output_path: "output.docx",
     mode: Output,
     dry_run: false,
     changed: true,
     committed: true,
-    original_size: 10,
+    original_size: Some(10),
     result_size: 12,
+    replaced_existing: true,
+    overwritten_size: Some(8L),
     validations: ReadOnlyArray::from_array([
       { name: "office-portable-opc", passed: true, finding_count: 0 },
     ]),
@@ -1651,7 +1653,7 @@ test "transaction output schema is deterministic and nests A2 warnings" {
     "schema": "office.output/1",
     "success": true,
     "data": {
-      "schema": "office.transaction/1",
+      "schema": "office.transaction/2",
       "format": "docx",
       "input": "input.docx",
       "output": "output.docx",
@@ -1661,6 +1663,8 @@ test "transaction output schema is deterministic and nests A2 warnings" {
       "committed": true,
       "original_size": 10,
       "result_size": 12,
+      "replaced_existing": true,
+      "overwritten_size": 8,
       "validations": [
         { "name": "office-portable-opc", "passed": true, "finding_count": 0 },
       ],

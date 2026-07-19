@@ -29,6 +29,8 @@ office help xlsx
 office help all --json
 office help all --jsonl
 office identify report.docx --json
+office create xlsx report.xlsx --sheet Data --json
+office batch report.xlsx changes.json --out revised.xlsx --json
 office raw list report.docx --json
 office raw read report.docx /document --json
 ```
@@ -39,6 +41,11 @@ can detect contract drift. Command families publish explicit variant schemas;
 the raw record describes every `list`, `read`, `replace`, and `edit` input,
 output, constraint, and output mode. PowerPoint and MCP are intentionally
 absent.
+
+`bobzhang/office/xlsx` provides the bounded mutation SDK behind the canonical
+creation and batch commands. It retains strict `xlsx.batch/1` resource
+accounting, validates complete candidates, and publishes through the shared
+async transaction boundary. See `../docs/office-xlsx-mutations.md`.
 
 The `bobzhang/office/docx` package provides the preservation-safe SDK layer for
 editing existing DOCX files. Its async `transact_docx` entry point composes the

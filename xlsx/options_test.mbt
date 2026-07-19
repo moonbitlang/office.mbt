@@ -116,6 +116,26 @@ test "read limits reject non-positive semantic ceilings" {
 }
 
 ///|
+test "read limits reject non-positive row and column dimension work" {
+  let result : Result[@xlsx.ReadLimits, Error] = Ok(
+    @xlsx.ReadLimits::with_values(max_row_column_dimension_work=0),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(result is Err(@xlsx.InvalidOptions(_)), content="true")
+}
+
+///|
+test "read limits reject non-positive relationship ceilings" {
+  let result : Result[@xlsx.ReadLimits, Error] = Ok(
+    @xlsx.ReadLimits::with_values(max_relationship_records=0),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(result is Err(@xlsx.InvalidOptions(_)), content="true")
+}
+
+///|
 test "default read limits expose the complete ZIP policy" {
   let limits = @xlsx.ReadLimits::new()
   assert_eq(limits.max_package_bytes(), 128 * 1024 * 1024)
@@ -127,8 +147,43 @@ test "default read limits expose the complete ZIP policy" {
     128 * 1024 * 1024 + 65_535,
   )
   assert_eq(limits.max_xml_part_bytes(), 16 * 1024 * 1024)
+  assert_eq(limits.max_total_xml_bytes(), 128 * 1024 * 1024)
+  assert_eq(limits.max_xml_markup_tokens(), 2_000_000)
+  assert_eq(limits.max_relationship_records(), 1_000_000)
+  assert_eq(limits.max_relationship_id_chars(), 1_024)
+  assert_eq(limits.max_relationship_type_chars(), 16 * 1_024)
+  assert_eq(limits.max_relationship_target_chars(), 64 * 1_024)
+  assert_eq(limits.max_total_relationship_chars(), 16 * 1_024 * 1_024)
+  assert_eq(limits.max_materialized_cells(), 1_000_000)
+  assert_eq(limits.max_materialized_row_column_dimensions(), 1_000_000)
+  assert_eq(limits.max_row_column_dimension_work(), 1_000_000)
   assert_eq(limits.max_kdf_iterations(), 1_000_000)
   assert_eq(limits.max_workbook_sheets(), 1024)
   assert_eq(limits.max_parser_items(), 2_000_000)
   assert_eq(limits.max_parser_work_units(), 512 * 1024 * 1024)
+}
+
+///|
+test "write limits validate construction ceilings" {
+  let valid = @xlsx.WriteLimits::with_values(
+    max_output_bytes=1024,
+    max_archive_entries=8,
+    max_entry_uncompressed_bytes=256,
+    max_total_uncompressed_bytes=512,
+  )
+  assert_eq(valid.max_output_bytes(), 1024)
+  assert_eq(valid.max_archive_entries(), 8)
+  assert_eq(valid.max_entry_uncompressed_bytes(), 256)
+  assert_eq(valid.max_total_uncompressed_bytes(), 512)
+  let invalid : Result[@xlsx.WriteLimits, Error] = Ok(
+    @xlsx.WriteLimits::with_values(
+      max_output_bytes=1024,
+      max_archive_entries=8,
+      max_entry_uncompressed_bytes=513,
+      max_total_uncompressed_bytes=512,
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(invalid is Err(@xlsx.InvalidOptions(_)), content="true")
 }

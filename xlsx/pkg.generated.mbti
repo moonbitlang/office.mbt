@@ -57,6 +57,8 @@ pub fn validate_ooxml_package(BytesView, limits? : ReadLimits) -> Array[String] 
 
 pub fn write(Workbook) -> Bytes raise XlsxError
 
+pub fn write_limited(Workbook, WriteLimits) -> Bytes raise XlsxError
+
 pub fn write_with_password(Workbook, String) -> Bytes raise XlsxError
 
 // Errors
@@ -1224,15 +1226,25 @@ pub struct ReadLimits {
 pub fn ReadLimits::max_archive_entries(Self) -> Int
 pub fn ReadLimits::max_entry_uncompressed_bytes(Self) -> Int
 pub fn ReadLimits::max_kdf_iterations(Self) -> Int
+pub fn ReadLimits::max_materialized_cells(Self) -> Int
+pub fn ReadLimits::max_materialized_row_column_dimensions(Self) -> Int
 pub fn ReadLimits::max_package_bytes(Self) -> Int
 pub fn ReadLimits::max_parser_items(Self) -> Int
 pub fn ReadLimits::max_parser_work_units(Self) -> Int
+pub fn ReadLimits::max_relationship_id_chars(Self) -> Int
+pub fn ReadLimits::max_relationship_records(Self) -> Int
+pub fn ReadLimits::max_relationship_target_chars(Self) -> Int
+pub fn ReadLimits::max_relationship_type_chars(Self) -> Int
+pub fn ReadLimits::max_row_column_dimension_work(Self) -> Int
 pub fn ReadLimits::max_total_preserved_source_bytes(Self) -> Int
+pub fn ReadLimits::max_total_relationship_chars(Self) -> Int
 pub fn ReadLimits::max_total_uncompressed_bytes(Self) -> Int
+pub fn ReadLimits::max_total_xml_bytes(Self) -> Int
 pub fn ReadLimits::max_workbook_sheets(Self) -> Int
+pub fn ReadLimits::max_xml_markup_tokens(Self) -> Int
 pub fn ReadLimits::max_xml_part_bytes(Self) -> Int
 pub fn ReadLimits::new() -> Self
-pub fn ReadLimits::with_values(max_package_bytes? : Int, max_archive_entries? : Int, max_entry_uncompressed_bytes? : Int, max_total_uncompressed_bytes? : Int, max_total_preserved_source_bytes? : Int, max_xml_part_bytes? : Int, max_kdf_iterations? : Int, max_workbook_sheets? : Int, max_parser_items? : Int, max_parser_work_units? : Int) -> Self raise XlsxError
+pub fn ReadLimits::with_values(max_package_bytes? : Int, max_archive_entries? : Int, max_entry_uncompressed_bytes? : Int, max_total_uncompressed_bytes? : Int, max_total_preserved_source_bytes? : Int, max_xml_part_bytes? : Int, max_total_xml_bytes? : Int, max_xml_markup_tokens? : Int, max_relationship_records? : Int, max_relationship_id_chars? : Int, max_relationship_type_chars? : Int, max_relationship_target_chars? : Int, max_total_relationship_chars? : Int, max_materialized_cells? : Int, max_materialized_row_column_dimensions? : Int, max_row_column_dimension_work? : Int, max_kdf_iterations? : Int, max_workbook_sheets? : Int, max_parser_items? : Int, max_parser_work_units? : Int) -> Self raise XlsxError
 
 pub(all) struct RichTextFont {
   bold : Bool
@@ -1920,6 +1932,8 @@ pub fn Workbook::group_sheets(Self, Array[String]) -> Unit raise XlsxError
 pub fn Workbook::insert_cols(Self, StringView, Int, Int, formula_limits? : SharedFormulaLimits, cancelled? : () -> Bool) -> Unit raise XlsxError
 pub fn Workbook::insert_page_break(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::insert_rows(Self, StringView, Int, Int, formula_limits? : SharedFormulaLimits, cancelled? : () -> Bool) -> Unit raise XlsxError
+pub fn Workbook::materialized_cell_count(Self) -> Int
+pub fn Workbook::materialized_row_column_dimension_count(Self) -> Int
 pub fn Workbook::merge_cell(Self, StringView, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::merge_cells(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::move_sheet(Self, StringView, StringView) -> Unit raise XlsxError
@@ -2217,6 +2231,15 @@ pub fn Worksheet::unset_conditional_format(Self, String) -> Unit raise XlsxError
 pub fn Worksheet::used_bounds_limited(Self, maximum_stored_cells~ : Int, cancelled? : () -> Bool) -> (Int, Int) raise XlsxError
 pub fn Worksheet::vml_drawing_hf_xml(Self) -> String?
 pub fn Worksheet::vml_drawing_xml(Self) -> String?
+
+pub struct WriteLimits {
+  // private fields
+}
+pub fn WriteLimits::max_archive_entries(Self) -> Int
+pub fn WriteLimits::max_entry_uncompressed_bytes(Self) -> Int
+pub fn WriteLimits::max_output_bytes(Self) -> Int
+pub fn WriteLimits::max_total_uncompressed_bytes(Self) -> Int
+pub fn WriteLimits::with_values(max_output_bytes~ : Int, max_archive_entries~ : Int, max_entry_uncompressed_bytes~ : Int, max_total_uncompressed_bytes~ : Int) -> Self raise XlsxError
 
 type X14DataBarProps derive(@debug.Debug)
 #deprecated

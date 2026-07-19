@@ -324,13 +324,17 @@ moon run office/cmd/office -- outline book.xlsx --json
 moon run office/cmd/office -- get book.xlsx '/xlsx/sheet[name="Data"]/range[A1:C12]' --json
 moon run office/cmd/office -- text book.xlsx --under '/xlsx/sheet[name="Data"]' --json
 moon run office/cmd/office -- query book.xlsx 'cell[type=formula]' --under '/xlsx/sheet[name="Data"]' --json
+moon run office/cmd/office -- create xlsx new-book.xlsx --sheet Data --json
+moon run office/cmd/office -- batch new-book.xlsx changes.json --out revised.xlsx --json
 ```
 
 DOCX results use the `office.docx.{outline,element,text,query}/1` family and
-XLSX results use `office.xlsx.{outline,element,text,query}/1`; every result is
-inside `office.output/1`. See
+XLSX reads use `office.xlsx.{outline,element,text,query}/1`; creation and batch
+use `office.xlsx.{create,batch}/1`. Every result is inside `office.output/1`.
+See
 [Unified Office DOCX reads](docs/office-docx-read.md),
-[Unified Office XLSX reads](docs/office-xlsx-read.md), and
+[Unified Office XLSX reads](docs/office-xlsx-read.md),
+[Transactional Office XLSX mutations](docs/office-xlsx-mutations.md), and
 [Canonical Office selectors](docs/office-selectors.md).
 
 ## XLSX command-line tool

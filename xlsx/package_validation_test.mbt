@@ -37,6 +37,36 @@ test "validate_ooxml_package flags a missing relationship target" {
 }
 
 ///|
+test "OOXML validation decodes targets and ignores foreign relationship names" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let archive = @zip.read(@xlsx.write(workbook))
+  let root_rels = match archive.get("_rels/.rels") {
+    Some(data) =>
+      @encoding/utf8.decode(data) catch {
+        _ => fail("root relationships are not UTF-8")
+      }
+    None => fail("missing root relationships")
+  }
+  let namespaced = root_rels.replace_all(
+    old="<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
+    new="<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\" xmlns:v=\"urn:vendor\">",
+  )
+  let injected = namespaced.replace_all(
+    old="</Relationships>",
+    new="<Relationship Id=\"escaped\" Type=\"urn:test\" Target=\"custom/a&amp;b.xml\"/><v:Relationship Id=\"foreign\" Type=\"urn:test\" Target=\"missing.xml\"/></Relationships>",
+  )
+  assert_true(archive.replace("_rels/.rels", @encoding/utf8.encode(injected)))
+  archive.add("custom/a&b.xml", @encoding/utf8.encode("<custom/>"))
+  debug_inspect(
+    @xlsx.validate_ooxml_package(@zip.write(archive)),
+    content=(
+      #|[]
+    ),
+  )
+}
+
+///|
 test "validate_ooxml_package flags an undeclared content type" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
@@ -138,5 +168,220 @@ test "OOXML validation applies XML limits before scanning relationships" {
       assert_true(actual > limit)
     }
     _ => fail("expected validation XML limit")
+  }
+}
+
+///|
+test "OOXML validation follows XML content types beyond file suffixes" {
+  let archive = @zip.Archive::new()
+  archive.add(
+    "[Content_Types].xml",
+    @encoding/utf8.encode(
+      (
+        #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+        #|  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+        #|  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+        #|  <Override PartName="/xl/worksheets/文.dat" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+        #|</Types>
+        #|
+      ),
+    ),
+  )
+  archive.add(
+    "_rels/.rels",
+    @encoding/utf8.encode(
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+        #|  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+        #|</Relationships>
+        #|
+      ),
+    ),
+  )
+  archive.add(
+    "xl/workbook.xml",
+    @encoding/utf8.encode(
+      (
+        #|<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"/>
+      ),
+    ),
+  )
+  archive.add(
+    "xl/_rels/workbook.xml.rels",
+    @encoding/utf8.encode(
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+        #|  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/%E6%96%87.dat"/>
+        #|</Relationships>
+        #|
+      ),
+    ),
+  )
+  let oversized = @encoding/utf8.encode(" ".repeat(2048))
+  archive.add("xl/worksheets/%E6%96%87.dat", oversized)
+  let limit = 1024
+  let result : Result[Array[String], Error] = Ok(
+    @xlsx.validate_ooxml_package(
+      @zip.write(archive),
+      limits=@xlsx.ReadLimits::with_values(max_xml_part_bytes=limit),
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit=actual_limit, actual~)) => {
+      inspect(kind, content="xml_part_bytes")
+      assert_eq(actual_limit, limit)
+      assert_eq(actual, oversized.length())
+    }
+    _ => fail("expected logical XML validation limit")
+  }
+}
+
+///|
+test "OOXML validation enforces aggregate XML bytes" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let limits = @xlsx.ReadLimits::with_values(max_total_xml_bytes=1)
+  let result : Result[Array[String], Error] = Ok(
+    @xlsx.validate_ooxml_package(@xlsx.write(workbook), limits~),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="total_xml_bytes")
+      assert_eq(limit, 1)
+      assert_true(actual > limit)
+    }
+    _ => fail("expected aggregate validation XML limit")
+  }
+}
+
+///|
+test "OOXML validation enforces aggregate markup tokens" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let limits = @xlsx.ReadLimits::with_values(max_xml_markup_tokens=1)
+  let result : Result[Array[String], Error] = Ok(
+    @xlsx.validate_ooxml_package(@xlsx.write(workbook), limits~),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="xml_markup_tokens")
+      assert_eq(limit, 1)
+      assert_true(actual > limit)
+    }
+    _ => fail("expected aggregate validation markup-token limit")
+  }
+}
+
+///|
+test "OOXML validation bounds relationship findings and scan retention" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let archive = @zip.read(@xlsx.write(workbook))
+  let rels = StringBuilder::new()
+  rels.write_string(
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
+  )
+  |> ignore
+  for index in 0..<400 {
+    rels.write_string(
+      "<Relationship Id=\"rId\{index}\" Type=\"urn:test\" Target=\"missing-\{index}.xml\"/>",
+    )
+    |> ignore
+  }
+  rels.write_string("</Relationships>") |> ignore
+  assert_true(
+    archive.replace("_rels/.rels", @encoding/utf8.encode(rels.to_string())),
+  )
+  let problems = @xlsx.validate_ooxml_package(@zip.write(archive))
+  assert_eq(problems.length(), 256)
+  inspect(
+    problems[problems.length() - 1],
+    content="additional package findings were omitted after the bounded validator limit",
+  )
+}
+
+///|
+test "OOXML validation rejects oversized relationship attributes before maps" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let limits = @xlsx.ReadLimits::with_values(max_relationship_target_chars=4)
+  let result : Result[Array[String], Error] = Ok(
+    @xlsx.validate_ooxml_package(@xlsx.write(workbook), limits~),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="relationship_target_chars")
+      assert_eq(limit, 4)
+      assert_true(actual > limit)
+    }
+    _ => fail("expected relationship target limit")
+  }
+}
+
+///|
+test "OOXML validation charges relationship records package-wide" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let limits = @xlsx.ReadLimits::with_values(max_relationship_records=1)
+  let result : Result[Array[String], Error] = Ok(
+    @xlsx.validate_ooxml_package(@xlsx.write(workbook), limits~),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="relationship_records")
+      assert_eq(limit, 1)
+      assert_eq(actual, 2)
+    }
+    _ => fail("expected aggregate relationship-record limit")
+  }
+}
+
+///|
+test "OOXML validation counts case-varied relationship parts with XML whitespace" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let source = @zip.read(@xlsx.write(workbook))
+  let archive = @zip.Archive::new()
+  for entry in source.entries() {
+    if entry.name().has_suffix(".rels") {
+      let xml = @encoding/utf8.decode(entry.data()) catch {
+        _ => fail("relationship part is not UTF-8")
+      }
+      let name = entry.name()
+      let case_varied_name = name[:name.length() - 5].to_owned() + ".RELS"
+      archive.add(
+        case_varied_name,
+        @encoding/utf8.encode(
+          xml.replace_all(old="<Relationship ", new="<Relationship\n"),
+        ),
+      )
+    } else {
+      archive.add(entry.name(), entry.data())
+    }
+  }
+  let limits = @xlsx.ReadLimits::with_values(max_relationship_records=1)
+  let result : Result[Array[String], Error] = Ok(
+    @xlsx.validate_ooxml_package(@zip.write(archive), limits~),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="relationship_records")
+      assert_eq(limit, 1)
+      assert_eq(actual, 2)
+    }
+    _ => fail("expected whitespace-delimited relationship-record limit")
   }
 }

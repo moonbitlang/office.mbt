@@ -1,5 +1,8 @@
 ///|
-fn write_row_attributes(sb : StringBuilder, dim : RowDimension) -> Unit {
+fn write_row_attributes(
+  sb : LimitedXmlBuilder,
+  dim : RowDimension,
+) -> Unit raise XlsxError {
   match dim.height {
     Some(height) => {
       sb.write_view(" ht=\"")
@@ -22,10 +25,10 @@ fn write_row_attributes(sb : StringBuilder, dim : RowDimension) -> Unit {
 
 ///|
 fn write_col_attributes(
-  sb : StringBuilder,
+  sb : LimitedXmlBuilder,
   col : Int,
   dim : ColDimension,
-) -> Unit {
+) -> Unit raise XlsxError {
   sb.write_view("    <col min=\"\{col}\" max=\"\{col}\"")
   match dim.width {
     Some(width) => {
@@ -57,13 +60,16 @@ fn page_margin_value(value : Double?, fallback : Double) -> Double {
 }
 
 ///|
-fn write_print_options_xml(options : PageLayoutMarginsOptions) -> String? {
+fn write_print_options_xml(
+  options : PageLayoutMarginsOptions,
+  budget? : WritePartBudget,
+) -> String? raise XlsxError {
   let has_horizontal = options.horizontally is Some(_)
   let has_vertical = options.vertically is Some(_)
   if !has_horizontal && !has_vertical {
     return None
   }
-  let sb = StringBuilder::new()
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("  <printOptions")
   match options.horizontally {
     Some(true) => sb.write_view(" horizontalCentered=\"1\"")
@@ -80,8 +86,11 @@ fn write_print_options_xml(options : PageLayoutMarginsOptions) -> String? {
 }
 
 ///|
-fn write_page_margins_xml(options : PageLayoutMarginsOptions) -> String {
-  let sb = StringBuilder::new()
+fn write_page_margins_xml(
+  options : PageLayoutMarginsOptions,
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("  <pageMargins")
   let left = page_margin_value(options.left, 0.7)
   let right = page_margin_value(options.right, 0.7)
@@ -100,8 +109,11 @@ fn write_page_margins_xml(options : PageLayoutMarginsOptions) -> String {
 }
 
 ///|
-fn write_page_setup_xml(layout : PageLayoutOptions) -> String {
-  let sb = StringBuilder::new()
+fn write_page_setup_xml(
+  layout : PageLayoutOptions,
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("  <pageSetup")
   match layout.black_and_white {
     Some(true) => sb.write_view(" blackAndWhite=\"1\"")
@@ -123,7 +135,7 @@ fn write_page_setup_xml(layout : PageLayoutOptions) -> String {
   match layout.orientation {
     Some(value) => {
       sb.write_view(" orientation=\"")
-      sb.write_view(escape_xml_attr(value))
+      sb.write_xml_attr(value)
       sb.write_view("\"")
     }
     None => ()
@@ -131,7 +143,7 @@ fn write_page_setup_xml(layout : PageLayoutOptions) -> String {
   match layout.page_order {
     Some(value) => {
       sb.write_view(" pageOrder=\"")
-      sb.write_view(escape_xml_attr(value))
+      sb.write_xml_attr(value)
       sb.write_view("\"")
     }
     None => ()
@@ -152,8 +164,11 @@ fn write_page_setup_xml(layout : PageLayoutOptions) -> String {
 }
 
 ///|
-fn write_header_footer_xml(options : HeaderFooterOptions) -> String {
-  let sb = StringBuilder::new()
+fn write_header_footer_xml(
+  options : HeaderFooterOptions,
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("  <headerFooter")
   if options.different_odd_even {
     sb.write_view(" differentOddEven=\"1\"")
@@ -178,32 +193,32 @@ fn write_header_footer_xml(options : HeaderFooterOptions) -> String {
   sb.write_view(">\n")
   if options.odd_header != "" {
     sb.write_view("    <oddHeader>")
-    sb.write_view(escape_xml_text(options.odd_header))
+    sb.write_xml_text(options.odd_header)
     sb.write_view("</oddHeader>\n")
   }
   if options.odd_footer != "" {
     sb.write_view("    <oddFooter>")
-    sb.write_view(escape_xml_text(options.odd_footer))
+    sb.write_xml_text(options.odd_footer)
     sb.write_view("</oddFooter>\n")
   }
   if options.even_header != "" {
     sb.write_view("    <evenHeader>")
-    sb.write_view(escape_xml_text(options.even_header))
+    sb.write_xml_text(options.even_header)
     sb.write_view("</evenHeader>\n")
   }
   if options.even_footer != "" {
     sb.write_view("    <evenFooter>")
-    sb.write_view(escape_xml_text(options.even_footer))
+    sb.write_xml_text(options.even_footer)
     sb.write_view("</evenFooter>\n")
   }
   if options.first_header != "" {
     sb.write_view("    <firstHeader>")
-    sb.write_view(escape_xml_text(options.first_header))
+    sb.write_xml_text(options.first_header)
     sb.write_view("</firstHeader>\n")
   }
   if options.first_footer != "" {
     sb.write_view("    <firstFooter>")
-    sb.write_view(escape_xml_text(options.first_footer))
+    sb.write_xml_text(options.first_footer)
     sb.write_view("</firstFooter>\n")
   }
   sb.write_view("  </headerFooter>\n")
@@ -211,27 +226,30 @@ fn write_header_footer_xml(options : HeaderFooterOptions) -> String {
 }
 
 ///|
-fn write_sheet_protection_xml(protection : SheetProtection) -> String {
-  let sb = StringBuilder::new()
+fn write_sheet_protection_xml(
+  protection : SheetProtection,
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("  <sheetProtection")
   if protection.algorithm_name != "" {
     sb.write_view(" algorithmName=\"")
-    sb.write_view(escape_xml_attr(protection.algorithm_name))
+    sb.write_xml_attr(protection.algorithm_name)
     sb.write_view("\"")
   }
   if protection.password != "" {
     sb.write_view(" password=\"")
-    sb.write_view(escape_xml_attr(protection.password))
+    sb.write_xml_attr(protection.password)
     sb.write_view("\"")
   }
   if protection.hash_value != "" {
     sb.write_view(" hashValue=\"")
-    sb.write_view(escape_xml_attr(protection.hash_value))
+    sb.write_xml_attr(protection.hash_value)
     sb.write_view("\"")
   }
   if protection.salt_value != "" {
     sb.write_view(" saltValue=\"")
-    sb.write_view(escape_xml_attr(protection.salt_value))
+    sb.write_xml_attr(protection.salt_value)
     sb.write_view("\"")
   }
   if protection.spin_count > 0 {
@@ -293,11 +311,12 @@ fn write_sheet_protection_xml(protection : SheetProtection) -> String {
 fn write_page_breaks_xml(
   tag_name : StringView,
   breaks : ArrayView[PageBreak],
-) -> String? {
+  budget? : WritePartBudget,
+) -> String? raise XlsxError {
   if breaks.length() == 0 {
     return None
   }
-  let sb = StringBuilder::new()
+  let sb = LimitedXmlBuilder::new(budget)
   let mut manual_count = 0
   for brk in breaks {
     if brk.manual {
@@ -325,20 +344,23 @@ fn write_page_breaks_xml(
 }
 
 ///|
-fn write_auto_filter_xml(filter : AutoFilter) -> String raise XlsxError {
-  let sb = StringBuilder::new()
+fn write_auto_filter_xml(
+  filter : AutoFilter,
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  let sb = LimitedXmlBuilder::new(budget)
   let (min_row, min_col, max_row, max_col) = parse_range_ref(filter.range_ref)
   let start_ref = cell_ref_from(min_row, min_col)
   let end_ref = cell_ref_from(max_row, max_col)
   let range_ref = "\{start_ref}:\{end_ref}"
   if filter.columns.length() == 0 {
     sb.write_view("  <autoFilter ref=\"")
-    sb.write_view(escape_xml_attr(range_ref))
+    sb.write_xml_attr(range_ref)
     sb.write_view("\"/>\n")
     return sb.to_string()
   }
   sb.write_view("  <autoFilter ref=\"")
-  sb.write_view(escape_xml_attr(range_ref))
+  sb.write_xml_attr(range_ref)
   sb.write_view("\">\n")
   for column in filter.columns {
     if column.col < min_col || column.col > max_col {
@@ -351,7 +373,7 @@ fn write_auto_filter_xml(filter : AutoFilter) -> String raise XlsxError {
         sb.write_view("      <filters>\n")
         for value in values {
           sb.write_view("        <filter val=\"")
-          sb.write_view(escape_xml_attr(value))
+          sb.write_xml_attr(value)
           sb.write_view("\"/>\n")
         }
         sb.write_view("      </filters>\n")
@@ -367,9 +389,9 @@ fn write_auto_filter_xml(filter : AutoFilter) -> String raise XlsxError {
         sb.write_view(">\n")
         for entry in custom.filters {
           sb.write_view("        <customFilter operator=\"")
-          sb.write_view(escape_xml_attr(entry.operator))
+          sb.write_xml_attr(entry.operator)
           sb.write_view("\" val=\"")
-          sb.write_view(escape_xml_attr(entry.value))
+          sb.write_xml_attr(entry.value)
           sb.write_view("\"/>\n")
         }
         sb.write_view("      </customFilters>\n")

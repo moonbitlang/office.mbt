@@ -56,3 +56,44 @@ test "workbook manifest options and customization" {
   inspect(id, content="rId4")
   inspect(manifest.workbook_rels_xml().contains("example.xml"), content="true")
 }
+
+///|
+test "workbook manifest limited serializers stop at exact UTF-8 ceilings" {
+  let manifest = @ooxml.WorkbookManifest::new(2)
+  manifest.add_content_default("<&\"'", "application/testé&xml")
+  manifest.add_workbook_relationship(
+    "http://example.com/type&escaped", "custom/é<part>.xml",
+  )
+  let content_types = manifest.content_types_xml()
+  let root_rels = manifest.root_rels_xml()
+  let workbook_rels = manifest.workbook_rels_xml()
+  // Each non-ASCII `é` occupies one String code unit and two UTF-8 bytes.
+  let content_types_bytes = content_types.length() + 1
+  let workbook_rels_bytes = workbook_rels.length() + 1
+  inspect(
+    manifest.content_types_xml_limited(content_types_bytes) ==
+    Some(content_types),
+    content="true",
+  )
+  inspect(
+    manifest.content_types_xml_limited(content_types_bytes - 1) is None,
+    content="true",
+  )
+  inspect(
+    manifest.root_rels_xml_limited(root_rels.length()) == Some(root_rels),
+    content="true",
+  )
+  inspect(
+    manifest.root_rels_xml_limited(root_rels.length() - 1) is None,
+    content="true",
+  )
+  inspect(
+    manifest.workbook_rels_xml_limited(workbook_rels_bytes) ==
+    Some(workbook_rels),
+    content="true",
+  )
+  inspect(
+    manifest.workbook_rels_xml_limited(workbook_rels_bytes - 1) is None,
+    content="true",
+  )
+}

@@ -124,17 +124,11 @@ jobs:
       - name: Resolve dependencies
         run: moon update
 
-      # Format check across the whole workspace. The 2026-07-10 nightly's
-      # moonfmt migrates moon.pkg `options("is-main": true)` to a new
-      # `pkgtype(kind: "executable")` form that the same nightly's default
-      # parser still REJECTS (the new syntax is behind preview feature
-      # flags), so a repo carrying either form cannot satisfy both halves.
-      # Until the parser ships by default, restore moon.pkg after fmt and
-      # gate formatting on source files only.
+      # Format check across the whole workspace, including executable package
+      # manifests now that every member uses the supported `pkgtype` syntax.
       - name: Format check
         run: |
           moon fmt
-          git checkout -- ':(glob)**/moon.pkg'
           if ! git diff --quiet; then
             echo "::error::moon fmt changed files; run moon fmt and commit the result."
             git --no-pager diff
@@ -279,9 +273,9 @@ jobs:
             and .success == true
             and .data.schema == "office.capabilities/2"
             and (.data.fingerprint | test("^crc32:[0-9a-f]{8}$"))
-            and ([.data.records[].name] == ["docx", "xlsx", "help", "identify", "outline", "get", "text", "query", "raw"])'
+            and ([.data.records[].name] == ["docx", "xlsx", "help", "identify", "outline", "get", "text", "query", "create", "batch", "raw"])'
           moon run --target wasm office/cmd/office -- help all --jsonl 2>office-wasm.err \
-            | jq -se 'length == 9 and all(.[]; .schema == "office.capability/2")'
+            | jq -se 'length == 11 and all(.[]; .schema == "office.capability/2")'
           if moon run --target wasm office/cmd/office -- help xlxs --json >office-wasm-error.json 2>office-wasm.err; then
             echo "expected unknown office help format to fail"
             exit 1
@@ -332,6 +326,27 @@ jobs:
             and .data.schema == "office.xlsx.query/1"
             and .data.matched_total == 4
             and [.data.matches[].reference] == ["F11", "G11", "H11", "I11"]'
+          # Fresh creation and strict batch mutation use the same async,
+          # bounded transaction path on wasm as native.
+          xc=$(moon run --target wasm office/cmd/office -- create xlsx ci-office-created.xlsx --sheet Data --json 2>office-wasm.err) || { echo "office XLSX create failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "$xc" | jq -e '.success == true
+            and .data.schema == "office.xlsx.create/1"
+            and .data.sheet == "Data"
+            and .data.transaction.committed == true'
+          cat >ci-office-batch.json <<'JSON'
+          {"schema":"xlsx.batch/1","ops":[{"op":"set","params":{"sheet":"Data","cell":"A1","value":"wasm"}},{"op":"formula","params":{"sheet":"Data","cell":"B1","formula":"=LEN(A1)"}}]}
+          JSON
+          xb=$(moon run --target wasm office/cmd/office -- batch ci-office-created.xlsx ci-office-batch.json --out ci-office-batched.xlsx --json 2>office-wasm.err) || { echo "office XLSX batch failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "$xb" | jq -e '.success == true
+            and .data.schema == "office.xlsx.batch/1"
+            and .data.stats.operation_count == 2
+            and .data.stats.touched_cells == 2
+            and .data.transaction.committed == true
+            and any(.warnings[]; .code == "office.xlsx.full_rewrite")'
+          xbg=$(moon run --target wasm office/cmd/office -- get ci-office-batched.xlsx '/xlsx/sheet[name="Data"]/range[A1:B1]' --json 2>office-wasm.err) || { echo "office XLSX batch readback failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "$xbg" | jq -e '.success == true
+            and .data.cells[0].raw.value == "wasm"
+            and .data.cells[1].formula == "LEN(A1)"'
           # DOCX structured reads share one canonical bounded projection.
           # Drive every command through the wasm async filesystem path.
           o=$(moon run --target wasm office/cmd/office -- outline docx2html/tests/cram/fixtures/single-paragraph.docx --json 2>office-wasm.err) || { echo "office DOCX outline failed; stderr:"; cat office-wasm.err; exit 1; }

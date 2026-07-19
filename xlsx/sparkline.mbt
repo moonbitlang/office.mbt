@@ -748,10 +748,10 @@ fn sparkline_preset(style : Int) -> SparklinePreset raise XlsxError {
 
 ///|
 fn write_sparkline_color_xml(
-  sb : StringBuilder,
+  sb : LimitedXmlBuilder,
   tag_name : StringView,
   color : SparklineColor?,
-) -> Unit {
+) -> Unit raise XlsxError {
   match color {
     None => ()
     Some(value) => {
@@ -760,7 +760,7 @@ fn write_sparkline_color_xml(
       match value.rgb {
         Some(rgb) => {
           sb.write_view(" rgb=\"")
-          sb.write_view(escape_xml_attr(rgb))
+          sb.write_xml_attr(rgb)
           sb.write_view("\"")
         }
         None => ()
@@ -779,19 +779,26 @@ fn write_sparkline_color_xml(
 }
 
 ///|
-fn quote_sheet_name_for_formula(sheet_name : StringView) -> String {
-  "'" + sheet_name.to_owned().replace_all(old="'", new="''") + "'"
-}
-
-///|
-fn sparkline_formula_ref_for_xml(
+fn write_sparkline_formula_ref_xml(
+  sb : LimitedXmlBuilder,
   sheet_name : StringView,
   range_ref : StringView,
-) -> String {
+) -> Unit raise XlsxError {
   if range_ref.contains("!") {
-    range_ref.to_owned()
+    sb.write_xml_text(range_ref)
   } else {
-    "\{quote_sheet_name_for_formula(sheet_name)}!\{range_ref.to_owned()}"
+    sb.write_char('\'')
+    for character in sheet_name {
+      match character {
+        '\'' => sb.write_view("''")
+        '&' => sb.write_view("&amp;")
+        '<' => sb.write_view("&lt;")
+        '>' => sb.write_view("&gt;")
+        _ => sb.write_char(character)
+      }
+    }
+    sb.write_view("'!")
+    sb.write_xml_text(range_ref)
   }
 }
 
@@ -799,10 +806,17 @@ fn sparkline_formula_ref_for_xml(
 fn write_sparkline_ext_xml(
   sheet_name : StringView,
   groups : ArrayView[SparklineGroup],
-) -> String {
-  let sb = StringBuilder::new()
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("  <extLst>\n")
-  sb.write_view(write_sparkline_ext_block_xml(sheet_name, groups))
+  sb.write_view(
+    write_sparkline_ext_block_xml(
+      sheet_name,
+      groups,
+      budget?=sb.remaining_budget(),
+    ),
+  )
   sb.write_view("  </extLst>\n")
   sb.to_string()
 }
@@ -811,8 +825,9 @@ fn write_sparkline_ext_xml(
 fn write_sparkline_ext_block_xml(
   sheet_name : StringView,
   groups : ArrayView[SparklineGroup],
-) -> String {
-  let sb = StringBuilder::new()
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("    <ext uri=\"")
   sb.write_view(sparkline_ext_uri)
   sb.write_view("\">\n")
@@ -827,7 +842,7 @@ fn write_sparkline_ext_block_xml(
     sb.write_view("\"")
     if group.options.display_empty_cells_as != "" {
       sb.write_view(" displayEmptyCellsAs=\"")
-      sb.write_view(escape_xml_attr(group.options.display_empty_cells_as))
+      sb.write_xml_attr(group.options.display_empty_cells_as)
       sb.write_view("\"")
     }
     if group.options.date_axis {
@@ -885,14 +900,10 @@ fn write_sparkline_ext_block_xml(
     for sparkline in group.sparklines {
       sb.write_view("            <x14:sparkline>\n")
       sb.write_view("              <xm:f>")
-      sb.write_view(
-        escape_xml_text(
-          sparkline_formula_ref_for_xml(sheet_name, sparkline.range_ref),
-        ),
-      )
+      write_sparkline_formula_ref_xml(sb, sheet_name, sparkline.range_ref)
       sb.write_view("</xm:f>\n")
       sb.write_view("              <xm:sqref>")
-      sb.write_view(escape_xml_text(sparkline.location))
+      sb.write_xml_text(sparkline.location)
       sb.write_view("</xm:sqref>\n")
       sb.write_view("            </x14:sparkline>\n")
     }
