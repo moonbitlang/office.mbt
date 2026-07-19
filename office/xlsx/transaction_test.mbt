@@ -234,7 +234,7 @@ async test "oversized relationship metadata fails closed before publication" {
     archive.add(
       "xl/custom/_rels/item.xml.rels",
       @utf8.encode(
-        "<Relationships><Relationship Id=\"rId1\" Type=\"urn:test\" Target=\"\{target}\"/></Relationships>",
+        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"urn:test\" Target=\"\{target}\"/></Relationships>",
       ),
     )
     let hostile = @zip.write(archive)
