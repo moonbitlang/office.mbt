@@ -33,7 +33,9 @@ fn calc_summary(
 /// engine matches the documented figures except DURATION/MDURATION
 /// (5.9920/5.7339 vs Excel's documented 5.9938/5.7357) and the switching
 /// VDB case (396.31 vs Excel's documented 393.80) — kept as snapshots of
-/// current behavior.
+/// current behavior. ODDFYIELD uses an iterative solver whose final IEEE-754
+/// digit varies across backends, so that case uses the shared numeric tolerance
+/// while every stable result remains in the strict snapshot.
 test "calc financial securities happy paths" {
   inspect(
     calc_summary([
@@ -41,7 +43,6 @@ test "calc financial securities happy paths" {
       "PRICEMAT(DATE(2008,2,15),DATE(2008,4,13),DATE(2007,11,11),0.061,0.061,0)",
       "YIELDMAT(DATE(2008,3,15),DATE(2008,11,3),DATE(2007,11,8),0.0625,100.0123,0)",
       "ODDFPRICE(DATE(2008,11,11),DATE(2021,3,1),DATE(2008,10,15),DATE(2009,3,1),0.0785,0.0625,100,2,1)",
-      "ODDFYIELD(DATE(2008,11,11),DATE(2021,3,1),DATE(2008,10,15),DATE(2009,3,1),0.0575,84.5,100,2,0)",
       "ODDLPRICE(DATE(2008,2,7),DATE(2008,6,15),DATE(2007,10,15),0.0375,0.0405,100,2,0)",
       "ODDLYIELD(DATE(2008,4,20),DATE(2008,6,15),DATE(2007,12,24),0.0375,99.875,100,2,0)",
       "PRICEDISC(DATE(2008,2,16),DATE(2008,3,1),0.0525,100,2)", "YIELDDISC(DATE(2008,2,16),DATE(2008,3,1),99.795,100,2)",
@@ -64,7 +65,6 @@ test "calc financial securities happy paths" {
       #|PRICEMAT(DATE(2008,2,15),DATE(2008,4,13),DATE(2007,11,11),0.061,0.061,0) => 99.984498875557
       #|YIELDMAT(DATE(2008,3,15),DATE(2008,11,3),DATE(2007,11,8),0.0625,100.0123,0) => 0.0609543336915386
       #|ODDFPRICE(DATE(2008,11,11),DATE(2021,3,1),DATE(2008,10,15),DATE(2009,3,1),0.0785,0.0625,100,2,1) => 113.597717474079
-      #|ODDFYIELD(DATE(2008,11,11),DATE(2021,3,1),DATE(2008,10,15),DATE(2009,3,1),0.0575,84.5,100,2,0) => 0.0772455415978174
       #|ODDLPRICE(DATE(2008,2,7),DATE(2008,6,15),DATE(2007,10,15),0.0375,0.0405,100,2,0) => 99.8782860147213
       #|ODDLYIELD(DATE(2008,4,20),DATE(2008,6,15),DATE(2007,12,24),0.0375,99.875,100,2,0) => 0.0451922356291692
       #|PRICEDISC(DATE(2008,2,16),DATE(2008,3,1),0.0525,100,2) => 99.7958333333333
@@ -95,6 +95,15 @@ test "calc financial securities happy paths" {
       #|TBILLYIELD(DATE(2008,3,31),DATE(2008,6,1),98.45) => 0.0914169629253426
       #|
     ),
+  )
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula(
+    "A1", "ODDFYIELD(DATE(2008,11,11),DATE(2021,3,1),DATE(2008,10,15),DATE(2009,3,1),0.0575,84.5,100,2,0)",
+  )
+  assert_calc_numeric_close(
+    workbook.calc_cell_value("Sheet1", "A1"),
+    "0.0772455415978174",
   )
 }
 
