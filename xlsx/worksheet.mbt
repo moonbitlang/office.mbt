@@ -469,7 +469,12 @@ fn validated_shared_formula_masters(
     }
     cell_index += 1
   }
-  validate_shared_formula_master_ranges(masters, budget?, cancelled~)
+  // ISO/IEC 29500 says master ranges on one sheet should not overlap, but
+  // Excel itself has emitted overlapping ranges for distinct shared indices.
+  // Formula cells carry an explicit `si`, so group membership remains
+  // unambiguous. Keep tolerant reads group-local: duplicate masters for one
+  // index were rejected above, and every follower is checked against that
+  // index's own master below. Writers are unaffected by this input tolerance.
   shared_formula_validation_checkpoint(budget, cancelled)
   match budget {
     Some(value) => value.charge_work(cells.length())

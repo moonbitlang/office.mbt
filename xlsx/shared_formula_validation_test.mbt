@@ -443,7 +443,7 @@ test "spill probing propagates shared formula cancellation and limits" {
 }
 
 ///|
-test "XLSX read rejects overlapping shared-formula master ranges" {
+test "XLSX read tolerates overlapping ranges for distinct shared indices" {
   let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Data")
   sheet.set_cell_formula_opts(
@@ -465,14 +465,25 @@ test "XLSX read rejects overlapping shared-formula master ranges" {
       }
     None => fail("missing shared-formula worksheet")
   }
-  let updated = xml.replace(old="ref=\"A1:A2\"", new="ref=\"A1:C1\"")
+  // Excel itself has emitted files whose distinct shared-formula groups have
+  // intersecting advertised ranges. The explicit `si` on each formula cell
+  // still makes group membership unambiguous, so tolerate this on read while
+  // retaining all validation within each shared index.
+  let updated = xml.replace(old="ref=\"A1:A2\"", new="ref=\"A1:C2\"")
   assert_true(updated != xml)
   assert_true(archive.replace(path, @encoding/utf8.encode(updated)))
-  expect_shared_formula_read_error(
-    "overlapping masters",
-    @zip.write(archive),
-    "shared formula master ranges overlap",
-  )
+  let parsed = @xlsx.read(@zip.write(archive))
+  guard parsed.sheet("Data") is Some(parsed_sheet) else {
+    fail("missing shared-formula worksheet")
+  }
+  guard parsed_sheet.shared_formula_masters().get(0) is Some(first) else {
+    fail("missing first shared-formula master")
+  }
+  guard parsed_sheet.shared_formula_masters().get(1) is Some(second) else {
+    fail("missing second shared-formula master")
+  }
+  assert_eq(first.translate_to(2, 1), "B2+1")
+  assert_eq(second.translate_to(2, 3), "D2+1")
 }
 
 ///|

@@ -21,8 +21,8 @@ aliases.
   on `main`, #173 has landed and [#162](https://github.com/moonbitlang/office.mbt/issues/162)
   should be closed. If it is read on the feature branch, finish only #173's
   exact-head review and CI; do not add another capability to it.
-- No additional implementation PR was opened. The known shared-formula
-  compatibility problem is isolated in
+- No additional implementation PR was opened during the #172/#173 landing
+  session. The isolated shared-formula compatibility follow-up is tracked by
   [#176](https://github.com/moonbitlang/office.mbt/issues/176).
 
 The current #173 branch is `agent/office-x3-xlsx-batch`; the working tree used
@@ -45,6 +45,9 @@ rebuilt in later PRs:
 - X3 (#173): `office create xlsx`, strict `xlsx.batch/1` parsing, transactional
   XLSX mutation, dry-run/no-replace/overwrite behavior, preservation reports,
   bounded serialization, and OpenXML validation.
+- [#176](https://github.com/moonbitlang/office.mbt/issues/176): tolerant reads
+  for Excel-produced overlaps between distinct shared-formula indexes, while
+  duplicate masters and out-of-range followers remain rejected per index.
 
 Important implementation invariants:
 
@@ -75,28 +78,22 @@ The detailed contracts live in:
 Each item below already has an issue. Do not duplicate it. Take one issue per
 PR unless the issue itself is first split into independently useful children.
 
-1. [#176 — valid overlapping shared-formula ranges](https://github.com/moonbitlang/office.mbt/issues/176)
-   is a small, known compatibility fix. Confirm the OOXML/Excel behavior, allow
-   valid overlap between distinct shared indexes without weakening same-group
-   validation, and keep bounded/cancellable materialization. The repository
-   fixture `fixtures/excelize/test/Book1.xlsx` demonstrates the problem. Remove
-   any raw-command workaround only after the semantic reader accepts the file.
-2. [#163 — D3 fresh DOCX create and batch](https://github.com/moonbitlang/office.mbt/issues/163).
+1. [#163 — D3 fresh DOCX create and batch](https://github.com/moonbitlang/office.mbt/issues/163).
    Reuse the existing DOCX writer and the X3 transaction/publication pattern;
    do not copy the XLSX engine or mix annotation mutation into this PR.
    Header/footer authoring remains separately tracked by #95.
-3. [#164 — D4 DOCX annotation mutations](https://github.com/moonbitlang/office.mbt/issues/164).
+2. [#164 — D4 DOCX annotation mutations](https://github.com/moonbitlang/office.mbt/issues/164).
    Build only on the source-pinned D1 edit session and preserve unrelated parts.
-4. [#165 — V1 cross-format `validate` and `issues`](https://github.com/moonbitlang/office.mbt/issues/165).
+3. [#165 — V1 cross-format `validate` and `issues`](https://github.com/moonbitlang/office.mbt/issues/165).
    This also subsumes the standalone exit-status gap in #75.
-5. [#166 — P1 deterministic HTML/SVG preview](https://github.com/moonbitlang/office.mbt/issues/166).
+4. [#166 — P1 deterministic HTML/SVG preview](https://github.com/moonbitlang/office.mbt/issues/166).
    Static/offline output only; no browser service, watch mode, or screenshot
    dependency.
-6. [#167 — R1 replayable semantic dump](https://github.com/moonbitlang/office.mbt/issues/167).
+5. [#167 — R1 replayable semantic dump](https://github.com/moonbitlang/office.mbt/issues/167).
    Replay must use the canonical create/batch engines rather than a new writer.
-7. [#168 — T1 XLSX/DOCX template merge](https://github.com/moonbitlang/office.mbt/issues/168).
+6. [#168 — T1 XLSX/DOCX template merge](https://github.com/moonbitlang/office.mbt/issues/168).
    Keep the placeholder language strict and non-executable.
-8. [#169 — F1 final non-PPT acceptance](https://github.com/moonbitlang/office.mbt/issues/169).
+7. [#169 — F1 final non-PPT acceptance](https://github.com/moonbitlang/office.mbt/issues/169).
    Run only after the child capabilities above have landed. This is the place
    for the final fresh-agent discoverability exercise and the ultra review.
 
