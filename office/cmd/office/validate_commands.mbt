@@ -81,7 +81,14 @@ fn office_package_gate_findings(
         ),
       )
   }
-  let raw = (validator.validate)(source.format, b"", source.archive) catch {
+  // mirror the transaction call shape: candidate bytes plus an isolated
+  // archive fork, so byte-aware or archive-mutating validators keep
+  // read-only and pre-commit verdicts aligned
+  let raw = (validator.validate)(
+    source.format,
+    source.bytes,
+    source.archive.fork(),
+  ) catch {
     error if office_async_cancelled() => raise error
     error =>
       raise CliFailure(
@@ -111,11 +118,9 @@ fn office_package_gate_findings(
 fn office_xlsx_formula_findings(
   source : OfficeReadPackage,
   findings : Array[OfficeFinding],
+  cancelled? : () -> Bool = office_async_cancelled,
 ) -> Unit raise {
-  let workbook = open_xlsx_read_package(
-    source,
-    cancelled=office_async_cancelled,
-  )
+  let workbook = open_xlsx_read_package(source, cancelled~)
   let mut scanned = 0
   let mut reported = 0
   let mut omitted = 0
@@ -123,8 +128,9 @@ fn office_xlsx_formula_findings(
     let sheet_name = worksheet.name()
     let (max_row, max_col) = worksheet.used_bounds_limited(
       maximum_stored_cells=office_issues_max_scanned_cells,
-      cancelled=office_async_cancelled,
+      cancelled~,
     ) catch {
+      ReadCancelled as error => raise error
       _ => continue
     }
     for row in 1..<=max_row {
@@ -133,6 +139,16 @@ fn office_xlsx_formula_findings(
           return office_push_formula_omission(findings, omitted, scanned=true)
         }
         scanned += 1
+        if scanned % 1024 == 0 {
+          check_office_read_cancelled(cancelled)
+        }
+        // only formula-backed cells qualify: a literal error cell carries no
+        // cached formula result and is not an actionable formula finding
+        let formula_info = worksheet.get_cell_formula_info_rc(row, column) catch {
+          ReadCancelled as error => raise error
+          _ => None
+        }
+        guard formula_info is Some(_) else { continue }
         let reference = @xlsx.coordinates_to_cell_name(column, row) catch {
           _ => continue
         }
@@ -228,6 +244,14 @@ fn office_docx_reader_findings(
         )
     }
   }
+  for warning in annotated.annotations().warnings() {
+    if findings.length() >= office_finding_report_limit {
+      break
+    }
+    findings.push(
+      office_finding("warning", "office.docx.annotation_warning", warning),
+    )
+  }
 }
 
 ///|
@@ -301,22 +325,33 @@ async fn run_validate(matches : @argparse.Matches) -> Unit {
   let mode = office_validate_output_mode(matches)
   let source = read_office_package(file, cancelled=office_async_cancelled)
   let findings = office_package_gate_findings(source)
-  let data = office_validate_data("office.validate/1", source, findings)
+  let data = office_validate_data(@lib.SCHEMA_VALIDATE_RESULT, source, findings)
   let (errors, _) = office_finding_counts(findings)
   if errors > 0 {
-    raise CliFailure(
-      @lib.protocol_error(
-        "office.validation_failed",
-        "\{source.format.name().to_upper()} package failed validation with \{errors} finding(s)",
-        details=data,
-      ),
-    )
+    raise office_validation_failure(source, errors, data)
   }
   match mode {
     JsonDocument => println(@lib.output_success(data).stringify(indent=2))
     JsonLines => println(@lib.output_success(data).stringify())
     Human => println("valid \{source.format.name()}")
   }
+}
+
+///|
+/// The non-zero validate verdict still carries the complete bounded
+/// office.validate/1 record in the failure envelope's details.
+fn office_validation_failure(
+  source : OfficeReadPackage,
+  errors : Int,
+  data : Json,
+) -> CliFailure {
+  CliFailure(
+    @lib.protocol_error(
+      "office.validation_failed",
+      "\{source.format.name().to_upper()} package failed validation with \{errors} finding(s)",
+      details=data,
+    ),
+  )
 }
 
 ///|
@@ -333,7 +368,7 @@ async fn run_issues(matches : @argparse.Matches) -> Unit {
       Docx => office_docx_reader_findings(source, findings)
     }
   }
-  let data = office_validate_data("office.issues/1", source, findings)
+  let data = office_validate_data(@lib.SCHEMA_ISSUES_RESULT, source, findings)
   match mode {
     JsonDocument => println(@lib.output_success(data).stringify(indent=2))
     JsonLines => println(@lib.output_success(data).stringify())

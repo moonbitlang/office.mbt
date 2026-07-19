@@ -622,6 +622,37 @@ bounded. Text literals preserve whitespace exactly; a JSON-string literal can
 represent closing brackets and escaped characters. No regular expression or
 arbitrary expression is evaluated.
 
+### `office.validate/1` (`office validate FILE --json`) and `office.issues/1` (`office issues FILE --json`)
+
+Both commands share one record shape; only the `schema` identifier differs.
+`validate` re-runs the exact pre-commit mutation gate, so its verdict cannot
+drift from what `office batch`/`office raw` would accept. On error findings,
+`validate` exits non-zero and the complete record travels in the
+`office.validation_failed` failure envelope's `error.details`.
+
+| key | type | notes |
+| --- | --- | --- |
+| `schema` | string | `"office.validate/1"` or `"office.issues/1"` |
+| `file`, `format` | string | bounded input path and `"docx"` \| `"xlsx"` |
+| `valid` | boolean | true when the shared package gate reported no errors |
+| `findings` | array | bounded `office.finding/1` records |
+| `error_count`, `warning_count` | number | counts by severity |
+
+### `office.finding/1` (elements of `findings`)
+
+| key | type | notes |
+| --- | --- | --- |
+| `severity` | string | `"error"` (gate findings) or `"warning"` (actionable analyzers) |
+| `code` | string | stable machine code, e.g. `office.xlsx.package`, `office.xlsx.formula_error_value`, `office.docx.reader_diagnostic` |
+| `message` | string | bounded human-readable description |
+| `location` | string? | canonical location when available, e.g. `Sheet1!B2` |
+
+`issues` adds warnings only when the gate passes: XLSX cells whose stored
+formula caches an error value (bounded scan with omission/truncation
+markers `office.xlsx.formula_findings_omitted` /
+`office.xlsx.formula_scan_truncated`), and the DOCX tolerant reader's
+bounded diagnostics. Warnings never change the exit status.
+
 ## Standalone `docx` CLI schemas
 
 ## `docx.outline/1` — document structure map (`docx outline <file>`)

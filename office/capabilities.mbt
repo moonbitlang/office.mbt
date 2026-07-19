@@ -48,6 +48,18 @@ pub const SCHEMA_XLSX_QUERY : String = "office.xlsx.query/1"
 pub const SCHEMA_XLSX_CREATE_RESULT : String = "office.xlsx.create/1"
 
 ///|
+/// Versioned result schema emitted by `office validate`.
+pub const SCHEMA_VALIDATE_RESULT : String = "office.validate/1"
+
+///|
+/// Versioned result schema emitted by `office issues`.
+pub const SCHEMA_ISSUES_RESULT : String = "office.issues/1"
+
+///|
+/// Versioned finding record carried by validate/issues results.
+pub const SCHEMA_FINDING_RECORD : String = "office.finding/1"
+
+///|
 pub const SCHEMA_XLSX_BATCH_RESULT : String = "office.xlsx.batch/1"
 
 ///|
@@ -629,7 +641,11 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
       ],
       outputs: [
         capability_field(
-          "schema", "enum(office.validate/1)", true, "versioned validate result schema",
+          "schema", "literal(office.validate/1)", true, "versioned validate result schema",
+        ),
+        capability_field("file", "path", true, "the input path, bounded"),
+        capability_field(
+          "format", "enum(docx|xlsx)", true, "the structurally verified package format",
         ),
         capability_field(
           "valid", "boolean", true, "true when the shared package gate reported no errors",
@@ -664,7 +680,14 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
       ],
       outputs: [
         capability_field(
-          "schema", "enum(office.issues/1)", true, "versioned issues result schema",
+          "schema", "literal(office.issues/1)", true, "versioned issues result schema",
+        ),
+        capability_field("file", "path", true, "the input path, bounded"),
+        capability_field(
+          "format", "enum(docx|xlsx)", true, "the structurally verified package format",
+        ),
+        capability_field(
+          "valid", "boolean", true, "true when the shared package gate reported no errors",
         ),
         capability_field(
           "findings", "array", true, "bounded office.finding/1 records; XLSX cached formula errors and DOCX reader diagnostics are warnings",

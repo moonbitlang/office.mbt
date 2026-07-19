@@ -32,6 +32,7 @@ let office_read_max_parser_work_units : Int = 256 * 1024 * 1024
 struct OfficeReadPackage {
   file : String
   format : @lib.DocumentFormat
+  bytes : Bytes
   archive : @zip.Archive
 }
 
@@ -179,7 +180,7 @@ async fn read_office_package(
     error => raise office_zip_read_failure(error, file, expected)
   }
   let format = detect_office_archive_format(file, archive, cancelled)
-  { file, format, archive }
+  { file, format, bytes: data, archive }
 }
 
 ///|

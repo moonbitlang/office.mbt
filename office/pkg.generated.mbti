@@ -19,6 +19,10 @@ pub const SCHEMA_DOCX_QUERY : String = "office.docx.query/1"
 
 pub const SCHEMA_DOCX_TEXT : String = "office.docx.text/1"
 
+pub const SCHEMA_FINDING_RECORD : String = "office.finding/1"
+
+pub const SCHEMA_ISSUES_RESULT : String = "office.issues/1"
+
 pub const SCHEMA_RAW_CHANGE : String = "office.raw.change/1"
 
 pub const SCHEMA_RAW_INVENTORY : String = "office.raw.inventory/1"
@@ -28,6 +32,8 @@ pub const SCHEMA_RAW_PART : String = "office.raw.part/1"
 pub const SCHEMA_RAW_RESULT : String = "office.raw.result/1"
 
 pub const SCHEMA_TRANSACTION : String = "office.transaction/2"
+
+pub const SCHEMA_VALIDATE_RESULT : String = "office.validate/1"
 
 pub const SCHEMA_XLSX_BATCH_RESULT : String = "office.xlsx.batch/1"
 
