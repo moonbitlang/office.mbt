@@ -218,6 +218,21 @@ fn canonical_xlsx_range_path(
 }
 
 ///|
+fn validate_xlsx_max_elements(max_elements : Int) -> Unit raise CliFailure {
+  if max_elements < 1 || max_elements > xlsx_cli_hard_max_scan_cells {
+    raise xlsx_cli_failure(
+      "office.invalid_arguments",
+      "--max-elements must be between 1 and \{xlsx_cli_hard_max_scan_cells}",
+      details=Json::object({
+        "argument": Json::string("max-elements"),
+        "minimum": Json::number(1),
+        "maximum": Json::number(xlsx_cli_hard_max_scan_cells.to_double()),
+      }),
+    )
+  }
+}
+
+///|
 fn make_xlsx_projection(
   file : String,
   workbook : @xlsx.Workbook,
@@ -227,17 +242,7 @@ fn make_xlsx_projection(
   if cancelled() {
     raise xlsx_cli_failure("office.cancelled", "XLSX read was cancelled")
   }
-  if max_elements < 1 || max_elements > docx_cli_hard_max_elements {
-    raise xlsx_cli_failure(
-      "office.invalid_arguments",
-      "--max-elements must be between 1 and \{docx_cli_hard_max_elements}",
-      details=Json::object({
-        "argument": Json::string("max-elements"),
-        "minimum": Json::number(1),
-        "maximum": Json::number(docx_cli_hard_max_elements.to_double()),
-      }),
-    )
-  }
+  validate_xlsx_max_elements(max_elements)
   let worksheets : Map[String, @xlsx.Worksheet] = Map([])
   for worksheet in workbook.sheets() {
     if cancelled() {
@@ -295,7 +300,7 @@ fn make_xlsx_projection(
     workbook,
     sheets,
     sheet_index,
-    max_scan_cells: max_elements.min(xlsx_cli_hard_max_scan_cells),
+    max_scan_cells: max_elements,
     cancelled,
   }
 }
@@ -306,6 +311,8 @@ fn open_xlsx_projection(
   max_elements : Int,
   cancelled? : () -> Bool = () => false,
 ) -> XlsxProjection raise {
+  // Reject format-specific limits before parsing any workbook parts.
+  validate_xlsx_max_elements(max_elements)
   let workbook = open_xlsx_read_package(source, cancelled~)
   make_xlsx_projection(source.file, workbook, max_elements, cancelled~)
 }

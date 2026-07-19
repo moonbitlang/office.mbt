@@ -40,6 +40,46 @@ async fn xlsx_text_test_data(
 }
 
 ///|
+test "XLSX projection enforces its documented scan ceiling" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let error = xlsx_cli_error(() => {
+    ignore(
+      make_xlsx_projection(
+        "oversized.xlsx",
+        workbook,
+        xlsx_cli_hard_max_scan_cells + 1,
+      ),
+    )
+  })
+  assert_eq(error.code, "office.invalid_arguments")
+  assert_eq(
+    error.message,
+    "--max-elements must be between 1 and \{xlsx_cli_hard_max_scan_cells}",
+  )
+  guard error.details is Some(Object(details)) else {
+    fail("expected XLSX max-elements details")
+  }
+  assert_eq(
+    details.get("maximum"),
+    Some(Json::number(xlsx_cli_hard_max_scan_cells.to_double())),
+  )
+  let malformed : OfficeReadPackage = {
+    file: "malformed.xlsx",
+    format: Xlsx,
+    archive: @zip.Archive::new(),
+  }
+  let upfront = xlsx_cli_error(() => {
+    ignore(open_xlsx_projection(malformed, xlsx_cli_hard_max_scan_cells + 1))
+  })
+  assert_eq(upfront.code, "office.invalid_arguments")
+  let projection = make_xlsx_projection(
+    "limit.xlsx", workbook, xlsx_cli_hard_max_scan_cells,
+  )
+  assert_eq(projection.max_scan_cells, xlsx_cli_hard_max_scan_cells)
+}
+
+///|
 async fn xlsx_query_test_data(
   projection : XlsxProjection,
   under : XlsxResolvedSelector?,
