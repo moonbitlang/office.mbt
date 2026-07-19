@@ -134,6 +134,7 @@ pub fn Worksheet::set_cell(
         formula_ref: None,
         formula_shared_index: None,
         formula_value_present: false,
+        style_explicit: self.cells[i].style_explicit,
         style_id,
       }
     }
@@ -151,6 +152,7 @@ pub fn Worksheet::set_cell(
         formula_ref: None,
         formula_shared_index: None,
         formula_value_present: false,
+        style_explicit: false,
         style_id: 0,
       })
       self.record_cell_index_if_valid(row, col, index)
@@ -211,6 +213,7 @@ pub fn Worksheet::set_cell_value(
         formula_ref: None,
         formula_shared_index: None,
         formula_value_present: false,
+        style_explicit: self.cells[i].style_explicit,
         style_id,
       }
     }
@@ -228,6 +231,7 @@ pub fn Worksheet::set_cell_value(
         formula_ref: None,
         formula_shared_index: None,
         formula_value_present: false,
+        style_explicit: false,
         style_id: 0,
       })
       self.record_cell_index_if_valid(row, col, index)
@@ -315,6 +319,7 @@ pub fn Worksheet::set_cell_rich_text(
         formula_ref: None,
         formula_shared_index: None,
         formula_value_present: false,
+        style_explicit: self.cells[i].style_explicit,
         style_id,
       }
     }
@@ -332,6 +337,7 @@ pub fn Worksheet::set_cell_rich_text(
         formula_ref: None,
         formula_shared_index: None,
         formula_value_present: false,
+        style_explicit: false,
         style_id: 0,
       })
       self.record_cell_index_if_valid(row, col, index)
@@ -574,6 +580,7 @@ fn normal_formula_cell_for_structural_edit(
         formula_ref: None,
         formula_shared_index: None,
         formula_value_present: cell.formula_value_present,
+        style_explicit: cell.style_explicit,
         style_id: cell.style_id,
       }
     }
@@ -700,6 +707,7 @@ pub fn Worksheet::set_cell_formula(
         formula_ref: None,
         formula_shared_index: None,
         formula_value_present: value != "",
+        style_explicit: self.cells[i].style_explicit,
         style_id,
       }
     }
@@ -717,6 +725,7 @@ pub fn Worksheet::set_cell_formula(
         formula_ref: None,
         formula_shared_index: None,
         formula_value_present: value != "",
+        style_explicit: false,
         style_id: 0,
       })
       self.record_cell_index_if_valid(row, col, index)
@@ -823,6 +832,7 @@ pub fn Worksheet::set_cell_formula_opts(
               formula_ref: Some(formula_ref),
               formula_shared_index: None,
               formula_value_present: value != "",
+              style_explicit: sheet.cells[i].style_explicit,
               style_id,
             }
           }
@@ -840,6 +850,7 @@ pub fn Worksheet::set_cell_formula_opts(
               formula_ref: Some(formula_ref),
               formula_shared_index: None,
               formula_value_present: value != "",
+              style_explicit: false,
               style_id: 0,
             })
             sheet.record_cell_index_if_valid(row, col, index)
@@ -911,6 +922,7 @@ pub fn Worksheet::set_cell_formula_opts(
               formula_ref,
               formula_shared_index: Some(shared_index),
               formula_value_present: value != "",
+              style_explicit: sheet.cells[i].style_explicit,
               style_id,
             }
           }
@@ -928,6 +940,7 @@ pub fn Worksheet::set_cell_formula_opts(
               formula_ref,
               formula_shared_index: Some(shared_index),
               formula_value_present: value != "",
+              style_explicit: false,
               style_id: 0,
             })
             sheet.record_cell_index_if_valid(row, col, index)
@@ -1184,6 +1197,7 @@ pub fn Worksheet::set_cell_style(
         formula_ref: cell.formula_ref,
         formula_shared_index: cell.formula_shared_index,
         formula_value_present: cell.formula_value_present,
+        style_explicit: true,
         style_id,
       }
     }
@@ -1201,6 +1215,7 @@ pub fn Worksheet::set_cell_style(
         formula_ref: None,
         formula_shared_index: None,
         formula_value_present: false,
+        style_explicit: true,
         style_id,
       })
       self.record_cell_index_if_valid(row, col, index)
@@ -1247,6 +1262,7 @@ pub fn Worksheet::set_cell_style_rc(
         formula_ref: cell.formula_ref,
         formula_shared_index: cell.formula_shared_index,
         formula_value_present: cell.formula_value_present,
+        style_explicit: true,
         style_id,
       }
     }
@@ -1264,6 +1280,7 @@ pub fn Worksheet::set_cell_style_rc(
         formula_ref: None,
         formula_shared_index: None,
         formula_value_present: false,
+        style_explicit: true,
         style_id,
       })
       self.record_cell_index_if_valid(row, col, index)
@@ -1288,8 +1305,9 @@ pub fn Worksheet::get_cell_style_rc(
 
 ///|
 /// Returns the style that formats a resolved coordinate without performing a
-/// workbook sheet-name lookup. Precedence matches the write path: a non-zero
-/// cell style wins, then the row style, then the column style, then style 0.
+/// workbook sheet-name lookup. Precedence matches the write path: an explicit
+/// cell style (including style 0) wins, then the row style, then the column
+/// style, then style 0.
 /// The row and column are 1-based and must fit the XLSX grid.
 pub fn Worksheet::effective_style_id_rc(
   self : Worksheet,
@@ -1297,8 +1315,8 @@ pub fn Worksheet::effective_style_id_rc(
   col : Int,
 ) -> Int raise XlsxError {
   ignore(cell_ref_from(row, col))
-  match self.get_cell_style_rc(row, col) {
-    Some(style_id) if style_id != 0 => style_id
+  match self.cell_index_of(row, col) {
+    Some(i) if self.cells[i].style_explicit => self.cells[i].style_id
     _ =>
       match self.get_row_style(row) {
         Some(style_id) if style_id != 0 => style_id
@@ -2903,6 +2921,7 @@ pub fn Worksheet::set_cell_rc(
         formula_ref: None,
         formula_shared_index: None,
         formula_value_present: false,
+        style_explicit: self.cells[i].style_explicit,
         style_id,
       }
     }
@@ -2920,6 +2939,7 @@ pub fn Worksheet::set_cell_rc(
         formula_ref: None,
         formula_shared_index: None,
         formula_value_present: false,
+        style_explicit: false,
         style_id: 0,
       })
       self.record_cell_index_if_valid(row, col, index)
@@ -2954,6 +2974,7 @@ pub fn Worksheet::set_cell_value_rc(
         formula_ref: None,
         formula_shared_index: None,
         formula_value_present: false,
+        style_explicit: self.cells[i].style_explicit,
         style_id,
       }
     }
@@ -2971,6 +2992,7 @@ pub fn Worksheet::set_cell_value_rc(
         formula_ref: None,
         formula_shared_index: None,
         formula_value_present: false,
+        style_explicit: false,
         style_id: 0,
       })
       self.record_cell_index_if_valid(row, col, index)
@@ -3004,6 +3026,7 @@ pub fn Worksheet::set_cell_formula_rc(
         formula_ref: None,
         formula_shared_index: None,
         formula_value_present: value != "",
+        style_explicit: self.cells[i].style_explicit,
         style_id,
       }
     }
@@ -3021,6 +3044,7 @@ pub fn Worksheet::set_cell_formula_rc(
         formula_ref: None,
         formula_shared_index: None,
         formula_value_present: value != "",
+        style_explicit: false,
         style_id: 0,
       })
       self.record_cell_index_if_valid(row, col, index)
@@ -3687,6 +3711,7 @@ fn Worksheet::insert_rows(
         formula_ref: cell.formula_ref,
         formula_shared_index: cell.formula_shared_index,
         formula_value_present: cell.formula_value_present,
+        style_explicit: cell.style_explicit,
         style_id: cell.style_id,
       })
     } else {
@@ -3934,6 +3959,7 @@ fn Worksheet::remove_rows(
       formula_ref: cell.formula_ref,
       formula_shared_index: cell.formula_shared_index,
       formula_value_present: cell.formula_value_present,
+      style_explicit: cell.style_explicit,
       style_id: cell.style_id,
     })
   }
@@ -4607,6 +4633,7 @@ fn Worksheet::duplicate_row_to(
       formula_ref: cell.formula_ref,
       formula_shared_index: cell.formula_shared_index,
       formula_value_present: cell.formula_value_present,
+      style_explicit: cell.style_explicit,
       style_id: cell.style_id,
     })
   }
@@ -4729,6 +4756,7 @@ fn Worksheet::insert_cols(
         formula_ref: cell.formula_ref,
         formula_shared_index: cell.formula_shared_index,
         formula_value_present: cell.formula_value_present,
+        style_explicit: cell.style_explicit,
         style_id: cell.style_id,
       })
     } else {
@@ -4972,6 +5000,7 @@ fn Worksheet::remove_cols(
       formula_ref: cell.formula_ref,
       formula_shared_index: cell.formula_shared_index,
       formula_value_present: cell.formula_value_present,
+      style_explicit: cell.style_explicit,
       style_id: cell.style_id,
     })
   }

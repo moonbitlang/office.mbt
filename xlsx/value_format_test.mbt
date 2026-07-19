@@ -131,6 +131,19 @@ test "fraction, scientific, percent" {
   inspect(format_numeric(0.0, "# ?/?"), content="0    ")
   inspect(format_numeric(123.456, "0.00E+00"), content="1.23E+02")
   inspect(format_numeric(0.256, "0.00%"), content="25.60%")
+  inspect(format_numeric(1.2345e30, "0.##"), content="1.2345e+30")
+  inspect(
+    format_numeric(9_223_372_036_854_775_808.0, "0"),
+    content="9223372036854775808",
+  )
+  inspect(
+    format_numeric(-9_223_372_036_854_775_808.0, "0.0"),
+    content="-9223372036854775808.0",
+  )
+  inspect(
+    format_numeric(9_223_372_036_854_775_808.0, "# ?/?"),
+    content="9223372036854775808    ",
+  )
   let large_fraction = format_numeric(1.0e20, "# ?/?")
   assert_false(large_fraction.contains("9223372036854775807"))
 }

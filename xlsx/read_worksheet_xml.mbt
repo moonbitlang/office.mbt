@@ -74,7 +74,8 @@ fn parse_worksheet(
       Some(value) => unescape_xml_text(value)
       None => raise InvalidXml(msg="cell reference missing")
     }
-    let style_id = match attr_value(tag, "s") {
+    let style_attribute = attr_value(tag, "s")
+    let style_id = match style_attribute {
       Some(value) =>
         @string.parse_int(value, base=10) catch {
           _ => raise InvalidXml(msg="style id invalid")
@@ -279,6 +280,7 @@ fn parse_worksheet(
       formula_ref,
       formula_shared_index,
       formula_value_present: formula is Some(_) && raw_value_opt is Some(_),
+      style_explicit: style_attribute is Some(_),
       style_id,
     })
   }

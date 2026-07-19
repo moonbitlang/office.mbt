@@ -13,6 +13,9 @@ pub struct Cell {
   /// Whether this formula cell contained an OOXML `<v>` cached-result node.
   /// Empty cached strings are semantically distinct from a missing cache.
   formula_value_present : Bool
+  /// Whether the OOXML cell explicitly specifies its style, including `s="0"`.
+  /// An omitted cell style may inherit from its row or column.
+  style_explicit : Bool
   style_id : Int
 }
 

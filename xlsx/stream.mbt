@@ -447,6 +447,7 @@ pub fn StreamWriter::set_row_cells(
       formula_ref: None,
       formula_shared_index: None,
       formula_value_present: cell.formula is Some(_) && cell.value != "",
+      style_explicit: style_id != 0,
       style_id,
     })
     col = col + 1

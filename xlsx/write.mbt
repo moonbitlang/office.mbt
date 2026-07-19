@@ -2021,7 +2021,7 @@ fn write_worksheet_xml(
       sb.write_view("      <c r=\"")
       sb.write_view(escape_xml_attr(cell.reference))
       sb.write_view("\"")
-      if cell.style_id != 0 {
+      if cell.style_explicit || cell.style_id != 0 {
         sb.write_view(" s=\"\{cell.style_id}\"")
       }
       match cell.formula {
@@ -4080,6 +4080,7 @@ test "write hardening wb: write_worksheet_xml covers formula bool and error bran
     formula_ref: None,
     formula_shared_index: None,
     formula_value_present: true,
+    style_explicit: false,
     style_id: 0,
   })
   sheet.cells.push({
@@ -4094,6 +4095,7 @@ test "write hardening wb: write_worksheet_xml covers formula bool and error bran
     formula_ref: None,
     formula_shared_index: None,
     formula_value_present: true,
+    style_explicit: false,
     style_id: 0,
   })
   let xml = write_worksheet_xml(
@@ -4134,6 +4136,7 @@ test "write hardening wb: write_worksheet_xml covers shared-string and hyperlink
     formula_ref: None,
     formula_shared_index: None,
     formula_value_present: false,
+    style_explicit: false,
     style_id: 0,
   })
   let missing_rich : Result[String, Error] = Ok(
@@ -4173,6 +4176,7 @@ test "write hardening wb: write_worksheet_xml covers shared-string and hyperlink
     formula_ref: None,
     formula_shared_index: None,
     formula_value_present: false,
+    style_explicit: false,
     style_id: 0,
   })
   let missing_plain : Result[String, Error] = Ok(

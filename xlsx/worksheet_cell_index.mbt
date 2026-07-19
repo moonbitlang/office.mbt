@@ -98,6 +98,7 @@ fn raw_cell(reference : String, row : Int, col : Int, value : String) -> Cell {
     formula_ref: None,
     formula_shared_index: None,
     formula_value_present: false,
+    style_explicit: false,
     style_id: 0,
   }
 }
@@ -139,6 +140,35 @@ test "resolved worksheet reads avoid repeated names and preserve style precedenc
   assert_eq(sheet.effective_style_id_rc(2, 2), row_style)
   assert_eq(sheet.effective_style_id_rc(3, 1), column_style)
   assert_eq(sheet.effective_style_id_rc(3, 2), 0)
+}
+
+///|
+test "explicit cell style zero overrides inherited row style after roundtrip" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("S")
+  let row_style = workbook.add_style(Style::builtin_number_format(2))
+  workbook.set_row_style("S", 1, row_style)
+  sheet.set_cell_value_rc(1, 1, Numeric(1.0))
+  sheet.set_cell_style_rc(1, 1, 0)
+  assert_eq(sheet.effective_style_id_rc(1, 1), 0)
+  assert_eq(workbook.get_cell_value("S", "A1"), Some("1"))
+  let parsed = read(write(workbook))
+  guard parsed.sheet("S") is Some(parsed_sheet) else {
+    fail("expected parsed worksheet")
+  }
+  guard parsed_sheet.cell_index_of(1, 1) is Some(cell_index) else {
+    fail("expected parsed cell")
+  }
+  assert_true(parsed_sheet.cells[cell_index].style_explicit)
+  assert_eq(parsed_sheet.cells[cell_index].style_id, 0)
+  assert_eq(parsed_sheet.effective_style_id_rc(1, 1), 0)
+  assert_eq(parsed.get_cell_value("S", "A1"), Some("1"))
+  let reparsed = read(write(parsed))
+  guard reparsed.sheet("S") is Some(reparsed_sheet) else {
+    fail("expected reparsed worksheet")
+  }
+  assert_eq(reparsed_sheet.effective_style_id_rc(1, 1), 0)
+  assert_eq(reparsed.get_cell_value("S", "A1"), Some("1"))
 }
 
 ///|

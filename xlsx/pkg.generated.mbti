@@ -233,6 +233,7 @@ pub struct Cell {
   formula_ref : String?
   formula_shared_index : UInt?
   formula_value_present : Bool
+  style_explicit : Bool
   style_id : Int
 }
 

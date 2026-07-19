@@ -1013,15 +1013,16 @@ fn format_scientific_number(value : Double, info : NumberPatternInfo) -> String 
 
 ///|
 fn format_fraction_number(value : Double, info : NumberPatternInfo) -> String {
-  // `Double::to_int64` saturates rather than reporting overflow. Fraction
-  // formats cannot faithfully render an integer part outside Int64, so retain
-  // the finite numeric value instead of manufacturing the saturation bound.
-  if value > 0x7fff_ffff_ffff_ffffL.to_double() {
+  // The integer part is non-negative here. Keep the full UInt64 range instead
+  // of passing through Double::to_int64, whose saturating conversion would
+  // manufacture Int64::MAX at the signed boundary.
+  if value >= uint64_exclusive_upper_bound_double {
     return value.to_string()
   }
-  let int_part = Double::to_int64(Double::floor(value))
-  let frac = value - int_part.to_double()
-  let integer_text = format_int64_padded(
+  let integer_double = Double::floor(value)
+  let int_part = nonnegative_double_to_uint64(integer_double)
+  let frac = value - integer_double
+  let integer_text = format_uint64_padded(
     int_part,
     info.min_int_digits,
     info.use_group,
@@ -1098,7 +1099,7 @@ fn float_to_frac_use_continued_fraction(
       return if lastb > 0L { (lasta, lastb) } else { (0L, 1L) }
     }
     let floored = Double::floor(r)
-    if floored > maximum_int64.to_double() {
+    if floored >= int64_exclusive_upper_bound_double {
       return if lastb > 0L { (lasta, lastb) } else { (0L, 1L) }
     }
     let a = Double::to_int64(floored)
@@ -1215,8 +1216,19 @@ fn trim_optional_decimals(text : String, required_decimals : Int) -> String {
   match dot {
     None => text
     Some(pos) => {
+      let exponent_pos = match text.find("e") {
+        Some(value) => value
+        None => text.find("E").unwrap_or(text.length())
+      }
+      // A fallback from fixed-point formatting can be scientific notation.
+      // Trim only the significand's fractional zeros and retain the exponent
+      // verbatim (especially its trailing zero).
+      if exponent_pos < pos {
+        return text
+      }
       let int_part = text[:pos].to_owned()
-      let frac_part = text[pos + 1:].to_owned()
+      let frac_part = text[pos + 1:exponent_pos].to_owned()
+      let exponent = text[exponent_pos:].to_owned()
       let mut end = frac_part.length()
       while end > required_decimals {
         if frac_part[end - 1] == '0' {
@@ -1226,11 +1238,30 @@ fn trim_optional_decimals(text : String, required_decimals : Int) -> String {
         }
       }
       if end == 0 && required_decimals == 0 {
-        int_part
+        int_part + exponent
       } else {
-        int_part + "." + frac_part[:end].to_owned()
+        int_part + "." + frac_part[:end].to_owned() + exponent
       }
     }
+  }
+}
+
+///|
+let int64_exclusive_upper_bound_double : Double = 9_223_372_036_854_775_808.0
+
+///|
+let uint64_exclusive_upper_bound_double : Double = 18_446_744_073_709_551_616.0
+
+///|
+fn nonnegative_double_to_uint64(value : Double) -> UInt64 {
+  // Some MoonBit backends currently saturate Double::to_uint64 at the signed
+  // boundary. Split off bit 63 explicitly so behavior is identical across
+  // backends for every finite integral Double in [0, 2^64).
+  if value >= int64_exclusive_upper_bound_double {
+    0x8000_0000_0000_0000UL +
+    Double::to_int64(value - int64_exclusive_upper_bound_double).reinterpret_as_uint64()
+  } else {
+    Double::to_int64(value).reinterpret_as_uint64()
   }
 }
 
@@ -1251,22 +1282,30 @@ fn format_fixed_number(
     decimals
   }
   let scale = pow10_int(places)
-  let scale64 = Int64::from_int(scale)
-  if abs_value > 0x7fff_ffff_ffff_ffffL.to_double() / Double::from_int(scale) {
+  let integer_double = Double::floor(abs_value)
+  if integer_double >= uint64_exclusive_upper_bound_double {
     return abs_value.to_string()
   }
-  let scaled = Double::round(abs_value * Double::from_int(scale))
-  let scaled_int = Double::to_int64(scaled)
-  let int_part = if scale == 0 { scaled_int } else { scaled_int / scale64 }
-  let frac_part = if scale == 0 { 0L } else { scaled_int % scale64 }
+  let scale64 = scale.to_uint64()
+  let mut int_part = nonnegative_double_to_uint64(integer_double)
+  let mut frac_part = nonnegative_double_to_uint64(
+    Double::round((abs_value - integer_double) * Double::from_int(scale)),
+  )
+  if frac_part >= scale64 {
+    if int_part == 0xffff_ffff_ffff_ffffUL {
+      return abs_value.to_string()
+    }
+    int_part = int_part + 1UL
+    frac_part = 0UL
+  }
   let result = StringBuilder::new()
   if negative {
     result.write_char('-')
   }
-  result.write_view(format_int64_padded(int_part, min_int_digits, use_group))
+  result.write_view(format_uint64_padded(int_part, min_int_digits, use_group))
   if places > 0 {
     result.write_char('.')
-    result.write_view(pad_left_int64(frac_part, places))
+    result.write_view(pad_left_uint64(frac_part, places))
   }
   result.to_string()
 }
@@ -1316,8 +1355,24 @@ fn pad_left_int64(value : Int64, width : Int) -> String {
 }
 
 ///|
-fn format_int64_padded(
-  value : Int64,
+fn pad_left_uint64(value : UInt64, width : Int) -> String {
+  let text = value.to_string()
+  if text.length() >= width {
+    return text
+  }
+  let sb = StringBuilder::new()
+  let mut i = text.length()
+  while i < width {
+    sb.write_char('0')
+    i = i + 1
+  }
+  sb.write_view(text)
+  sb.to_string()
+}
+
+///|
+fn format_uint64_padded(
+  value : UInt64,
   min_digits : Int,
   use_group : Bool,
 ) -> String {

@@ -272,6 +272,7 @@ pub fn Workbook::update_linked_value(self : Workbook) -> Unit raise XlsxError {
               formula_ref: cell.formula_ref,
               formula_shared_index: cell.formula_shared_index,
               formula_value_present: false,
+              style_explicit: cell.style_explicit,
               style_id: cell.style_id,
             }
           }
