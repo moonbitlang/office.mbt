@@ -369,3 +369,11 @@ pub async fn create_workbook(
   )
   { sheet, transaction: report }
 }
+
+///|
+/// Builds the strict archive-backed XLSX validator used by edit transactions.
+/// Read-only validation commands share this exact gate so their verdicts
+/// cannot drift from the pre-commit mutation checks.
+pub fn package_validator() -> @transaction.TransactionValidator raise @transaction.TransactionError {
+  xlsx_transaction_validator()
+}

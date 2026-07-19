@@ -9,6 +9,8 @@ import {
 // Values
 pub async fn create_workbook(@transaction.CreateTransactionOptions, String) -> XlsxCreateResult
 
+pub fn package_validator() -> @transaction.TransactionValidator raise @transaction.TransactionError
+
 pub fn parse_batch(BytesView) -> @batch.BatchPlan raise @batch.BatchError
 
 pub async fn transact_batch(@transaction.TransactionOptions, @batch.BatchPlan) -> XlsxBatchResult
