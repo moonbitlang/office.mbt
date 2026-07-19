@@ -200,6 +200,22 @@ fn charge_drawing_anchor_pass(
 }
 
 ///|
+/// Returns the shape-level solid fill, never a line-level fill nested later in
+/// `a:ln`. Drawing structure validation has already rejected every other
+/// `a:solidFill` path before the canonical reader reaches this helper.
+fn drawing_shape_solid_fill_body(sppr_body : StringView) -> String? {
+  let fill_start = match find_xml_open_tag_start(sppr_body, "a:solidFill") {
+    Some(value) => value
+    None => return None
+  }
+  match find_xml_open_tag_start(sppr_body, "a:ln") {
+    Some(line_start) if line_start < fill_start => return None
+    _ => ()
+  }
+  extract_tag_body_from(sppr_body, "a:solidFill")
+}
+
+///|
 fn parse_drawing_images(
   anchors : ArrayView[(String, PicturePositioning)],
   drawing_rels_xml : StringView,
@@ -330,7 +346,14 @@ fn parse_drawing_images(
       Some(value) => unescape_xml_text(value)
       None => ""
     }
-    let lock_aspect_ratio = pic_body.contains("noChangeAspect=\"1\"")
+    let lock_aspect_ratio = match tag_attributes_in(pic_body, "a:picLocks") {
+      Some(tag) =>
+        match attr_value(tag, "noChangeAspect") {
+          Some(value) => parse_bool_attr(value)
+          None => false
+        }
+      None => false
+    }
     let client_tag = match tag_attributes_in(anchor_xml, "xdr:clientData") {
       Some(value) => value
       None => ""
@@ -706,7 +729,7 @@ fn parse_drawing_shapes(
     }
     let mut fill_color = ""
     let mut fill_transparency = 0
-    match extract_tag_body_from(sppr_body, "a:solidFill") {
+    match drawing_shape_solid_fill_body(sppr_body) {
       Some(fill_body) =>
         match tag_attributes_in(fill_body, "a:srgbClr") {
           Some(tag) =>
@@ -1137,7 +1160,7 @@ test "DrawingML rejects supported-namespace reader decoys" {
       (
         #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"><xdr:clientData><xdr:oneCellAnchor/></xdr:clientData></xdr:wsDr>
       ),
-      "drawing anchor is misplaced",
+      "drawing anchor reader target is misplaced",
     ),
     (
       (
@@ -1169,6 +1192,42 @@ test "DrawingML rejects supported-namespace reader decoys" {
       ),
       "drawing anchor has multiple reader objects",
     ),
+    (
+      (
+        #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:s="http://purl.oclc.org/ooxml/drawingml/spreadsheetDrawing"><xdr:oneCellAnchor><s:pic/></xdr:oneCellAnchor></xdr:wsDr>
+      ),
+      "drawing reader target dialect is mixed",
+    ),
+    (
+      (
+        #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><xdr:oneCellAnchor><xdr:pic><a:blip r:embed="decoy"/><xdr:blipFill><a:blip r:embed="real"/></xdr:blipFill></xdr:pic></xdr:oneCellAnchor></xdr:wsDr>
+      ),
+      "drawing blip target is misplaced",
+    ),
+    (
+      (
+        #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><xdr:oneCellAnchor><xdr:pic><xdr:blipFill><a:blip r:embed="first"/><a:blip r:embed="second"/></xdr:blipFill></xdr:pic></xdr:oneCellAnchor></xdr:wsDr>
+      ),
+      "drawing blip target is duplicated",
+    ),
+    (
+      (
+        #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://purl.oclc.org/ooxml/drawingml/main"><xdr:oneCellAnchor><xdr:graphicFrame><a:graphic/></xdr:graphicFrame></xdr:oneCellAnchor></xdr:wsDr>
+      ),
+      "drawing reader target dialect is mixed",
+    ),
+    (
+      (
+        #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://purl.oclc.org/ooxml/officeDocument/relationships"><xdr:oneCellAnchor><xdr:graphicFrame><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="wrong-dialect"/></a:graphicData></a:graphic></xdr:graphicFrame></xdr:oneCellAnchor></xdr:wsDr>
+      ),
+      "drawing relationship attribute dialect is invalid",
+    ),
+    (
+      (
+        #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><xdr:oneCellAnchor><xdr:sp><xdr:spPr><a:t>decoy</a:t></xdr:spPr><xdr:txBody><a:p><a:r><a:t>real</a:t></a:r></a:p></xdr:txBody></xdr:sp></xdr:oneCellAnchor></xdr:wsDr>
+      ),
+      "drawing text target is misplaced",
+    ),
   ]
   for case in cases {
     let (source, expected) = case
@@ -1184,13 +1243,26 @@ test "DrawingML rejects supported-namespace reader decoys" {
 }
 
 ///|
+test "DrawingML shape fill selection excludes line-only fills" {
+  let line_only =
+    #|<a:xfrm><a:ext cx="9525" cy="9525"/></a:xfrm><a:prstGeom prst="rect"/><a:ln><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln>
+  assert_true(drawing_shape_solid_fill_body(line_only) is None)
+  let shape_and_line =
+    #|<a:xfrm><a:ext cx="9525" cy="9525"/></a:xfrm><a:prstGeom prst="rect"/><a:solidFill><a:srgbClr val="00FF00"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln>
+  assert_eq(
+    drawing_shape_solid_fill_body(shape_and_line).unwrap_or(""),
+    "<a:srgbClr val=\"00FF00\"/>",
+  )
+}
+
+///|
 test "DrawingML validates Strict chart dialect and payload URI together" {
   let source =
-    #|<xdr:wsDr xmlns:xdr="http://purl.oclc.org/ooxml/drawingml/spreadsheetDrawing" xmlns:a="http://purl.oclc.org/ooxml/drawingml/main" xmlns:c="http://purl.oclc.org/ooxml/drawingml/chart"><xdr:oneCellAnchor><xdr:graphicFrame><a:graphic><a:graphicData uri="http://purl.oclc.org/ooxml/drawingml/chart"><c:chart/></a:graphicData></a:graphic></xdr:graphicFrame></xdr:oneCellAnchor></xdr:wsDr>
+    #|<xdr:wsDr xmlns:xdr="http://purl.oclc.org/ooxml/drawingml/spreadsheetDrawing" xmlns:a="http://purl.oclc.org/ooxml/drawingml/main" xmlns:c="http://purl.oclc.org/ooxml/drawingml/chart" xmlns:r="http://purl.oclc.org/ooxml/officeDocument/relationships"><xdr:oneCellAnchor><xdr:graphicFrame><a:graphic><a:graphicData uri="http://purl.oclc.org/ooxml/drawingml/chart"><c:chart r:id="chart"/></a:graphicData></a:graphic></xdr:graphicFrame></xdr:oneCellAnchor></xdr:wsDr>
   let canonical = canonicalize_xlsx_drawing_xml(
     source, default_max_xml_part_bytes,
   )
-  assert_true(canonical.contains("<c:chart/>"))
+  assert_true(canonical.contains("<c:chart r:id=\"chart\"/>"))
 }
 
 ///|
