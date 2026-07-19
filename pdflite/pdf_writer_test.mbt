@@ -1328,3 +1328,19 @@ test "encrypted writer wrappers cover CamlPDF-style write workflows" {
     "writer-aesv3-iso",
   )
 }
+
+///|
+test "pdf_write_real keeps magnitude for wide plain reals" {
+  // Regression: the pre-dedupe plain path emitted only the 12 retained
+  // significant digits without magnitude padding, so 13+-integer-digit
+  // reals lost a factor of ten (1234567890123.5 -> "123456789012").
+  inspect(try! @pdflite.pdf_write_real(1234567890123.5), content=(
+    #|b"1234567890120"
+  ))
+  inspect(try! @pdflite.pdf_write_real(9999999999999.5), content=(
+    #|b"10000000000000"
+  ))
+  inspect(try! @pdflite.pdf_write_real(-1234567890123.5), content=(
+    #|b"-1234567890120"
+  ))
+}
