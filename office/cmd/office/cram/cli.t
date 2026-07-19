@@ -120,6 +120,19 @@ syntax and missing paths retain stable machine-readable codes.
   $ jq -c '{success,code:.error.code,resource:.error.details.resource,limit:.error.details.limit}' output-limit.json
   {"success":false,"code":"office.docx.resource_limit","resource":"successful command output characters","limit":40}
 
+The XLSX-specific scan ceiling is rejected from the filename before package
+I/O or parsing. A malformed package therefore cannot mask invalid arguments,
+while the larger DOCX ceiling remains available.
+
+  $ printf 'not a zip' > malformed.xlsx
+  $ office.exe outline malformed.xlsx --max-elements 100001 --json > xlsx-preflight.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code,maximum:.error.details.maximum}' xlsx-preflight.json
+  {"success":false,"code":"office.invalid_arguments","maximum":100000}
+
+  $ office.exe outline "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --max-elements 100001 --json | jq -c '{success,schema:.data.schema}'
+  {"success":true,"schema":"office.docx.outline/1"}
+
 Structured XLSX reads use the same commands and envelope. Positional sheet
 input canonicalizes to stable name paths; ranges, text, and query scan in
 tab/row/column order with exact totals.

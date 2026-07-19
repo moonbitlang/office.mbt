@@ -70,6 +70,20 @@ fn cli_max_elements(matches : @argparse.Matches) -> Int raise CliFailure {
 }
 
 ///|
+/// Applies the tighter XLSX scan ceiling before opening or parsing the input
+/// package. Content-based format validation still happens after the bounded
+/// read, but an `.xlsx` path must never make an oversized request pay that
+/// cost first. DOCX retains its independently documented 200,000-node limit.
+fn validate_xlsx_max_elements_before_read(
+  file : String,
+  max_elements : Int,
+) -> Unit raise CliFailure {
+  if file.to_lower().has_suffix(".xlsx") {
+    validate_xlsx_max_elements(max_elements)
+  }
+}
+
+///|
 fn cli_max_output_chars(matches : @argparse.Matches) -> Int raise CliFailure {
   bounded_decimal_argument(
     matches, "max-output-chars", docx_cli_default_max_output_chars, 1, docx_cli_hard_max_output_chars,
@@ -131,6 +145,7 @@ fn resolve_optional_xlsx_under(
 async fn run_docx_outline(matches : @argparse.Matches) -> Unit {
   let file = required_value(matches, "file")
   let max_elements = cli_max_elements(matches)
+  validate_xlsx_max_elements_before_read(file, max_elements)
   let max_output = cli_max_output_chars(matches)
   let source = read_office_package(file, cancelled=() => {
     @async.is_being_cancelled()
@@ -186,6 +201,7 @@ async fn run_docx_get(matches : @argparse.Matches) -> Unit {
   let file = required_value(matches, "file")
   let selector = required_value(matches, "selector")
   let max_elements = cli_max_elements(matches)
+  validate_xlsx_max_elements_before_read(file, max_elements)
   let max_output = cli_max_output_chars(matches)
   let source = read_office_package(file, cancelled=() => {
     @async.is_being_cancelled()
@@ -256,6 +272,7 @@ async fn run_docx_get(matches : @argparse.Matches) -> Unit {
 async fn run_docx_text(matches : @argparse.Matches) -> Unit {
   let file = required_value(matches, "file")
   let max_elements = cli_max_elements(matches)
+  validate_xlsx_max_elements_before_read(file, max_elements)
   let max_output = cli_max_output_chars(matches)
   let offset = bounded_decimal_argument(
     matches, "offset", 0, 0, docx_cli_hard_max_elements,
@@ -525,6 +542,7 @@ fn reject_docx_content_selector(
 async fn run_docx_query(matches : @argparse.Matches) -> Unit {
   let file = required_value(matches, "file")
   let max_elements = cli_max_elements(matches)
+  validate_xlsx_max_elements_before_read(file, max_elements)
   let max_output = cli_max_output_chars(matches)
   let offset = bounded_decimal_argument(
     matches, "offset", 0, 0, docx_cli_hard_max_elements,
