@@ -1131,6 +1131,69 @@ test "DrawingML rejects extension entries outside extension lists" {
 }
 
 ///|
+test "DrawingML rejects supported-namespace reader decoys" {
+  let cases : Array[(String, String)] = [
+    (
+      (
+        #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"><xdr:clientData><xdr:oneCellAnchor/></xdr:clientData></xdr:wsDr>
+      ),
+      "drawing anchor is misplaced",
+    ),
+    (
+      (
+        #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><xdr:oneCellAnchor><xdr:graphicFrame><a:graphic><a:graphicData uri="urn:vendor"><xdr:pic/></a:graphicData></a:graphic></xdr:graphicFrame></xdr:oneCellAnchor></xdr:wsDr>
+      ),
+      "drawing reader object is misplaced",
+    ),
+    (
+      (
+        #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"><xdr:oneCellAnchor><xdr:clientData><xdr:sp/></xdr:clientData></xdr:oneCellAnchor></xdr:wsDr>
+      ),
+      "drawing reader object is misplaced",
+    ),
+    (
+      (
+        #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><xdr:oneCellAnchor><xdr:graphicFrame><a:graphic><a:graphicData uri="urn:vendor"><c:chart/></a:graphicData></a:graphic></xdr:graphicFrame></xdr:oneCellAnchor></xdr:wsDr>
+      ),
+      "drawing chart graphicData URI is invalid",
+    ),
+    (
+      (
+        #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:sle="http://schemas.microsoft.com/office/drawing/2010/slicer"><xdr:oneCellAnchor><xdr:graphicFrame><a:graphic><a:graphicData uri="urn:vendor"><sle:slicer/></a:graphicData></a:graphic></xdr:graphicFrame></xdr:oneCellAnchor></xdr:wsDr>
+      ),
+      "drawing slicer graphicData URI is invalid",
+    ),
+    (
+      (
+        #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"><xdr:oneCellAnchor><xdr:pic/><xdr:sp/></xdr:oneCellAnchor></xdr:wsDr>
+      ),
+      "drawing anchor has multiple reader objects",
+    ),
+  ]
+  for case in cases {
+    let (source, expected) = case
+    try
+      canonicalize_xlsx_drawing_xml(source, default_max_xml_part_bytes)
+    catch {
+      InvalidXml(msg~) => assert_eq(msg, expected)
+      _ => fail("unexpected drawing structure error")
+    } noraise {
+      _ => fail("expected supported-namespace drawing decoy rejection")
+    }
+  }
+}
+
+///|
+test "DrawingML validates Strict chart dialect and payload URI together" {
+  let source =
+    #|<xdr:wsDr xmlns:xdr="http://purl.oclc.org/ooxml/drawingml/spreadsheetDrawing" xmlns:a="http://purl.oclc.org/ooxml/drawingml/main" xmlns:c="http://purl.oclc.org/ooxml/drawingml/chart"><xdr:oneCellAnchor><xdr:graphicFrame><a:graphic><a:graphicData uri="http://purl.oclc.org/ooxml/drawingml/chart"><c:chart/></a:graphicData></a:graphic></xdr:graphicFrame></xdr:oneCellAnchor></xdr:wsDr>
+  let canonical = canonicalize_xlsx_drawing_xml(
+    source, default_max_xml_part_bytes,
+  )
+  assert_true(canonical.contains("<c:chart/>"))
+}
+
+///|
 test "read_drawing_xml wb: parse_xml_int_tag missing/invalid errors" {
   let missing_tag = "<xdr:from><xdr:row>1</xdr:row></xdr:from>"
   let missing_result : Result[Int, Error] = Ok(

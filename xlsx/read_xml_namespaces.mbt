@@ -82,6 +82,143 @@ let xlsx_drawing_core_element_namespaces : Array[String] = [
 ]
 
 ///|
+fn xlsx_drawing_anchor_name(local_name : StringView) -> Bool {
+  local_name == "oneCellAnchor" || local_name == "twoCellAnchor"
+}
+
+///|
+fn xlsx_drawing_reader_object_name(local_name : StringView) -> Bool {
+  local_name == "pic" || local_name == "sp" || local_name == "graphicFrame"
+}
+
+///|
+/// Proves that every element consumed by a namespace-oblivious drawing reader
+/// occurs on the schema path that reader assumes. Merely filtering namespaces
+/// is insufficient: a supported-namespace decoy nested in `graphicData`, a
+/// group, or another anchor would otherwise win the readers' first-match
+/// lexical searches.
+fn validate_xlsx_drawing_reader_structure(
+  source : StringView,
+  cancelled? : () -> Bool = () => false,
+) -> Unit raise XlsxError {
+  let scanner = @ooxml.XmlStartTagScanner::new(source, cancelled~)
+  if !workbook_scanner_next(scanner) ||
+    scanner.depth() != 1 ||
+    scanner.local_name() != "wsDr" ||
+    (
+      scanner.namespace_uri() != transitional_spreadsheet_drawing_namespace &&
+      scanner.namespace_uri() != strict_spreadsheet_drawing_namespace
+    ) {
+    raise InvalidXml(msg="drawing document element is invalid")
+  }
+  let drawing_namespace = scanner.namespace_uri().to_owned()
+  let (main_namespace, chart_namespace) = if drawing_namespace ==
+    transitional_spreadsheet_drawing_namespace {
+    (transitional_drawing_main_namespace, transitional_drawing_chart_namespace)
+  } else {
+    (strict_drawing_main_namespace, strict_drawing_chart_namespace)
+  }
+  let mut in_reader_anchor = false
+  let mut reader_object_seen = false
+  let mut reader_payload_seen = false
+  let mut graphic_data_uri : String? = None
+  let mut extension_depth : Int? = None
+  while workbook_scanner_next(scanner) {
+    let depth = scanner.depth()
+    let local_name = scanner.local_name()
+    let namespace_uri = scanner.namespace_uri().to_owned()
+    if depth <= 2 {
+      in_reader_anchor = false
+      reader_object_seen = false
+      reader_payload_seen = false
+    }
+    if depth <= 5 {
+      graphic_data_uri = None
+    }
+    match extension_depth {
+      Some(extension_start) if depth > extension_start =>
+        raise InvalidXml(msg="drawing extension payload is misplaced")
+      Some(_) => extension_depth = None
+      None => ()
+    }
+    if local_name == "ext" &&
+      xlsx_drawing_extension_list_namespaces.any(candidate => {
+        candidate == namespace_uri
+      }) {
+      extension_depth = Some(depth)
+    }
+    if namespace_uri == drawing_namespace &&
+      xlsx_drawing_anchor_name(local_name) {
+      if depth != 2 ||
+        scanner.parent_local_name() != Some("wsDr") ||
+        scanner.parent_namespace_uri() != Some(drawing_namespace) {
+        raise InvalidXml(msg="drawing anchor is misplaced")
+      }
+      in_reader_anchor = true
+      reader_object_seen = false
+      reader_payload_seen = false
+    } else if namespace_uri == drawing_namespace &&
+      xlsx_drawing_reader_object_name(local_name) {
+      if depth != 3 ||
+        !in_reader_anchor ||
+        !xlsx_drawing_anchor_name(scanner.parent_local_name().unwrap_or("")) ||
+        scanner.parent_namespace_uri() != Some(drawing_namespace) {
+        raise InvalidXml(msg="drawing reader object is misplaced")
+      }
+      if reader_object_seen {
+        raise InvalidXml(msg="drawing anchor has multiple reader objects")
+      }
+      reader_object_seen = true
+    } else if namespace_uri == main_namespace && local_name == "graphic" {
+      if depth != 4 ||
+        scanner.parent_local_name() != Some("graphicFrame") ||
+        scanner.parent_namespace_uri() != Some(drawing_namespace) {
+        raise InvalidXml(msg="drawing graphic element is misplaced")
+      }
+    } else if namespace_uri == main_namespace && local_name == "graphicData" {
+      if depth != 5 ||
+        scanner.parent_local_name() != Some("graphic") ||
+        scanner.parent_namespace_uri() != Some(main_namespace) {
+        raise InvalidXml(msg="drawing graphicData element is misplaced")
+      }
+      graphic_data_uri = workbook_scanner_attribute(scanner, "", "uri")
+    } else if (
+        namespace_uri == transitional_drawing_chart_namespace ||
+        namespace_uri == strict_drawing_chart_namespace
+      ) &&
+      local_name == "chart" {
+      if namespace_uri != chart_namespace ||
+        depth != 6 ||
+        scanner.parent_local_name() != Some("graphicData") ||
+        scanner.parent_namespace_uri() != Some(main_namespace) {
+        raise InvalidXml(msg="drawing chart payload is misplaced")
+      }
+      if graphic_data_uri != Some(chart_namespace) {
+        raise InvalidXml(msg="drawing chart graphicData URI is invalid")
+      }
+      if reader_payload_seen {
+        raise InvalidXml(msg="drawing anchor has multiple reader payloads")
+      }
+      reader_payload_seen = true
+    } else if namespace_uri == drawing_slicer_namespace &&
+      local_name == "slicer" {
+      if depth != 6 ||
+        scanner.parent_local_name() != Some("graphicData") ||
+        scanner.parent_namespace_uri() != Some(main_namespace) {
+        raise InvalidXml(msg="drawing slicer payload is misplaced")
+      }
+      if graphic_data_uri != Some(drawing_slicer_namespace) {
+        raise InvalidXml(msg="drawing slicer graphicData URI is invalid")
+      }
+      if reader_payload_seen {
+        raise InvalidXml(msg="drawing anchor has multiple reader payloads")
+      }
+      reader_payload_seen = true
+    }
+  }
+}
+
+///|
 /// Produces the effective SpreadsheetML view before namespace filtering or
 /// lexical feature parsing. In particular, core content promoted from an MCE
 /// Fallback must be selected while its namespace context is still available.
@@ -260,28 +397,6 @@ fn canonicalize_xlsx_drawing_xml(
     InvalidXml(msg~) => raise InvalidXml(msg~)
     ReadCancelled => raise ReadCancelled
   }
-  // A schema-invalid extension entry outside an extLst must not become an
-  // alternate route into the first-match drawing readers. Geometry extents
-  // are empty elements too, so accepting explicit empty start/end spellings
-  // remains interoperable while descendant markup is rejected.
-  let projected_scanner = @ooxml.XmlStartTagScanner::new(projected, cancelled~)
-  let mut extension_depth : Int? = None
-  while workbook_scanner_next(projected_scanner) {
-    match extension_depth {
-      Some(depth) if projected_scanner.depth() > depth =>
-        raise InvalidXml(msg="drawing extension payload is misplaced")
-      Some(_) => extension_depth = None
-      None => ()
-    }
-    if projected_scanner.local_name() == "ext" {
-      let namespace_uri = projected_scanner.namespace_uri().to_owned()
-      if xlsx_drawing_extension_list_namespaces.any(candidate => {
-          candidate == namespace_uri
-        }) {
-        extension_depth = Some(projected_scanner.depth())
-      }
-    }
-  }
   // Foreign wrappers are removed with their descendants. Merely renaming a
   // wrapper would leave nested core-looking tags visible to lexical readers.
   let core_projected = @ooxml.remove_xml_foreign_namespace_subtrees(
@@ -292,8 +407,10 @@ fn canonicalize_xlsx_drawing_xml(
     InvalidXml(msg~) => raise InvalidXml(msg~)
     ReadCancelled => raise ReadCancelled
   }
+  let reader_source = core_projected.unwrap_or(projected)
+  validate_xlsx_drawing_reader_structure(reader_source, cancelled~)
   @ooxml.canonicalize_xml_expanded_names(
-    core_projected.unwrap_or(projected),
+    reader_source,
     [],
     [
       (transitional_relationship_attribute_namespace, "r"),
@@ -527,12 +644,13 @@ test "XLSX XML canonicalization follows extension namespace identity" {
 ///|
 test "DrawingML canonicalization follows aliases and removes foreign subtrees" {
   let valid =
-    #|<wsDr xmlns="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:d="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:q="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:rel="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:compat="http://schemas.openxmlformats.org/markup-compatibility/2006"><oneCellAnchor><compat:AlternateContent><compat:Choice Requires="q"><d:graphic><q:chart rel:id="chart"/></d:graphic></compat:Choice></compat:AlternateContent></oneCellAnchor></wsDr>
+    #|<wsDr xmlns="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:d="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:q="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:rel="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:compat="http://schemas.openxmlformats.org/markup-compatibility/2006"><oneCellAnchor><compat:AlternateContent><compat:Choice Requires="q"><graphicFrame><d:graphic><d:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><q:chart rel:id="chart"/></d:graphicData></d:graphic></graphicFrame></compat:Choice></compat:AlternateContent></oneCellAnchor></wsDr>
   let canonical = canonicalize_xlsx_drawing_xml(
     valid, default_max_xml_part_bytes,
   )
   assert_true(canonical.contains("<xdr:wsDr"))
   assert_true(canonical.contains("<xdr:oneCellAnchor>"))
+  assert_true(canonical.contains("<xdr:graphicFrame>"))
   assert_true(canonical.contains("<a:graphic>"))
   assert_true(canonical.contains("<c:chart r:id=\"chart\"/>"))
   assert_false(canonical.contains("<mc:AlternateContent"))
