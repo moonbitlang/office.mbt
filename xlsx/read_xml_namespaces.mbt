@@ -225,6 +225,9 @@ fn validate_xlsx_drawing_reader_structure(
   let mut graphic_data_uri : String? = None
   let mut extension_depth : Int? = None
   let mut text_body_depth : Int? = None
+  let mut text_container = ""
+  let mut text_run_properties_seen = false
+  let mut text_value_seen = false
   let mut solid_fill_depth : Int? = None
   let mut color_depth : Int? = None
   let mut marker_parent = ""
@@ -263,6 +266,14 @@ fn validate_xlsx_drawing_reader_structure(
     let depth = scanner.depth()
     let local_name = scanner.local_name()
     let namespace_uri = scanner.namespace_uri().to_owned()
+    if text_container != "" && depth <= 6 {
+      if (text_container == "r" || text_container == "fld") && !text_value_seen {
+        raise InvalidXml(msg="drawing text run is invalid")
+      }
+      text_container = ""
+      text_run_properties_seen = false
+      text_value_seen = false
+    }
     if marker_parent != "" && depth <= 3 {
       validate_drawing_marker_grammar(marker_parent, marker_sequence)
       marker_parent = ""
@@ -326,15 +337,60 @@ fn validate_xlsx_drawing_reader_structure(
       continue
     }
     // Rich-text run properties use the same DrawingML element names as shape
-    // styling (for example a:rPr/a:solidFill/a:srgbClr), but they are not
-    // inputs to the shape-style reader. Keep dialect checks above active and
-    // ignore only same-dialect DrawingML descendants of the validated txBody;
-    // xdr/c/sle descendants must still be rejected as reader decoys.
+    // styling. Prove every name consumed by the text reader occurs on its
+    // exact txBody/paragraph/run path before tolerating unmodeled DrawingML
+    // properties. Other dialects and xdr/c/sle descendants still fall through
+    // to the normal decoy checks below.
     let inside_shape_text_body = match text_body_depth {
       Some(start) => depth > start
       None => false
     }
     if inside_shape_text_body && namespace_uri == main_namespace {
+      let parent_name = scanner.parent_local_name().unwrap_or("")
+      let parent_namespace = scanner.parent_namespace_uri()
+      if local_name == "p" {
+        if depth != 5 ||
+          parent_name != "txBody" ||
+          parent_namespace != Some(drawing_namespace) {
+          raise InvalidXml(msg="drawing text paragraph is misplaced")
+        }
+      } else if local_name == "r" || local_name == "fld" || local_name == "br" {
+        if depth != 6 ||
+          parent_name != "p" ||
+          parent_namespace != Some(main_namespace) {
+          raise InvalidXml(msg="drawing text run is misplaced")
+        }
+        text_container = local_name.to_owned()
+        text_run_properties_seen = false
+        text_value_seen = false
+      } else if local_name == "rPr" {
+        if depth != 7 ||
+          parent_name != text_container ||
+          parent_namespace != Some(main_namespace) ||
+          text_container == "" {
+          raise InvalidXml(msg="drawing text properties are misplaced")
+        }
+        if text_run_properties_seen || text_value_seen {
+          raise InvalidXml(msg="drawing text run is invalid")
+        }
+        text_run_properties_seen = true
+      } else if local_name == "t" {
+        if depth != 7 ||
+          (text_container != "r" && text_container != "fld") ||
+          parent_name != text_container ||
+          parent_namespace != Some(main_namespace) {
+          raise InvalidXml(msg="drawing text target is misplaced")
+        }
+        if text_value_seen {
+          raise InvalidXml(msg="drawing text run is invalid")
+        }
+        text_value_seen = true
+      }
+      // Run-property parsing below is namespace-aware and only consumes
+      // direct children of the validated rPr above. Other DrawingML text
+      // properties (for example pPr/defRPr defaults and nested underline
+      // fills) are valid but deliberately unmodeled, so they can be ignored
+      // without becoming lexical decoys.
       continue
     }
     if local_name == "ext" &&
@@ -824,6 +880,11 @@ fn validate_xlsx_drawing_reader_structure(
   }
   if in_reader_anchor {
     validate_drawing_anchor_grammar(anchor_name, anchor_sequence)
+  }
+  if text_container != "" &&
+    (text_container == "r" || text_container == "fld") &&
+    !text_value_seen {
+    raise InvalidXml(msg="drawing text run is invalid")
   }
 }
 

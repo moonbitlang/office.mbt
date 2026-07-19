@@ -443,6 +443,179 @@ fn drawing_shape_solid_fill_body(sppr_body : StringView) -> String? {
 }
 
 ///|
+fn drawing_text_bool_attribute(
+  tag : StringView,
+  name : StringView,
+) -> Bool raise XlsxError {
+  match attr_value(tag, name) {
+    Some(value) => parse_bool_attr(value)
+    None => false
+  }
+}
+
+///|
+fn parse_drawing_text_font(
+  container_body : StringView,
+) -> RichTextFont? raise XlsxError {
+  let rpr_tag = match tag_attributes_in(container_body, "a:rPr") {
+    Some(value) => value
+    None => return None
+  }
+  let bold = drawing_text_bool_attribute(rpr_tag, "b")
+  let italic = drawing_text_bool_attribute(rpr_tag, "i")
+  let strike = match attr_value(rpr_tag, "strike") {
+    Some("sngStrike") | Some("dblStrike") => true
+    Some("noStrike") | None => false
+    Some(_) => raise InvalidXml(msg="drawing text strike is invalid")
+  }
+  let underline = match attr_value(rpr_tag, "u") {
+    Some("none") | None => None
+    Some(value) => Some(unescape_xml_text(value))
+  }
+  let size = match attr_value(rpr_tag, "sz") {
+    Some(value) => {
+      let parsed = @string.parse_int(value, base=10) catch {
+        _ => raise InvalidXml(msg="drawing text size is invalid")
+      }
+      if parsed < 0 {
+        raise InvalidXml(msg="drawing text size is invalid")
+      }
+      Some(parsed.to_double() / 100.0)
+    }
+    None => None
+  }
+  let rpr_body = extract_tag_body_from(container_body, "a:rPr").unwrap_or("")
+  let source = "<root xmlns:a=\"" +
+    transitional_drawing_main_namespace +
+    "\">" +
+    rpr_body +
+    "</root>"
+  let scanner = @ooxml.XmlStartTagScanner::new(source)
+  let mut family : String? = None
+  let mut color : String? = None
+  let mut direct_solid_fill = false
+  while workbook_scanner_next(scanner) {
+    let depth = scanner.depth()
+    if depth <= 2 {
+      direct_solid_fill = false
+    }
+    if depth == 2 &&
+      scanner.namespace_uri() == transitional_drawing_main_namespace &&
+      scanner.parent_local_name() == Some("root") {
+      if scanner.local_name() == "latin" && family is None {
+        family = workbook_scanner_attribute(scanner, "", "typeface")
+      } else if scanner.local_name() == "solidFill" {
+        direct_solid_fill = true
+      }
+    } else if direct_solid_fill &&
+      depth == 3 &&
+      scanner.namespace_uri() == transitional_drawing_main_namespace &&
+      scanner.local_name() == "srgbClr" &&
+      scanner.parent_local_name() == Some("solidFill") &&
+      scanner.parent_namespace_uri() ==
+      Some(transitional_drawing_main_namespace) &&
+      color is None {
+      color = match workbook_scanner_attribute(scanner, "", "val") {
+        Some(value) if value != "" => Some(value)
+        _ => raise InvalidXml(msg="drawing text color is invalid")
+      }
+    }
+  }
+  if bold ||
+    italic ||
+    strike ||
+    underline is Some(_) ||
+    size is Some(_) ||
+    family is Some(_) ||
+    color is Some(_) {
+    Some({
+      bold,
+      italic,
+      strike,
+      outline: false,
+      shadow: false,
+      condense: false,
+      extended: false,
+      underline,
+      size,
+      color,
+      color_theme: None,
+      color_indexed: None,
+      color_tint: None,
+      charset: None,
+      family_number: None,
+      scheme: None,
+      vert_align: None,
+      family,
+    })
+  } else {
+    None
+  }
+}
+
+///|
+fn parse_drawing_shape_text_runs(
+  tx_body : StringView,
+) -> Array[RichTextRun] raise XlsxError {
+  let runs : Array[RichTextRun] = []
+  let source = tx_body.to_owned()
+  let container_names : ReadOnlyArray[String] = ["a:r", "a:fld", "a:br"]
+  let mut cursor = 0
+  for ;; {
+    let mut next_start : Int? = None
+    let mut next_name = ""
+    for candidate in container_names {
+      match find_xml_open_tag_start_from(source, candidate, cursor) {
+        Some(start) =>
+          match next_start {
+            Some(current) if current <= start => ()
+            _ => {
+              next_start = Some(start)
+              next_name = candidate
+            }
+          }
+        None => ()
+      }
+    }
+    let start = match next_start {
+      Some(value) => value
+      None => break
+    }
+    let open_end = match xml_open_tag_end_from(source, start + 1) {
+      Some(value) => value
+      None => raise InvalidXml(msg="drawing text tag is not closed")
+    }
+    let self_closing = source[start + 1:open_end].trim().has_suffix("/")
+    let (container_body, close_end) = if self_closing {
+      ("", open_end)
+    } else {
+      let (close_start, end) = match
+        find_xml_close_tag_from(source, next_name, open_end + 1) {
+        Some(value) => value
+        None => raise InvalidXml(msg="drawing text close is missing")
+      }
+      (source[open_end + 1:close_start].to_owned(), end)
+    }
+    if next_name == "a:br" {
+      runs.push({ text: "\n", font: parse_drawing_text_font(container_body) })
+    } else {
+      let text = match extract_tag_body_from(container_body, "a:t") {
+        Some(value) => unescape_xml_text(value)
+        None =>
+          if tag_attributes_in(container_body, "a:t") is Some(_) {
+            ""
+          } else {
+            raise InvalidXml(msg="drawing text value is missing")
+          }
+      }
+      runs.push({ text, font: parse_drawing_text_font(container_body) })
+    }
+    cursor = close_end + 1
+  }
+  runs
+}
+
+///|
 fn parse_drawing_images(
   anchors : ArrayView[DrawingAnchor],
   drawing_rels_xml : StringView,
@@ -814,26 +987,9 @@ fn parse_drawing_shapes(
       }
       None => ()
     }
-    let paragraph : Array[RichTextRun] = []
-    match extract_tag_body_from(sp_body, "xdr:txBody") {
-      Some(tx_body) => {
-        let tx = tx_body.to_string()
-        let mut first = true
-        for chunk in tx.split("<a:t>") {
-          if first {
-            first = false
-            continue
-          }
-          let part = chunk.to_owned()
-          let end = match part.find("</a:t>") {
-            Some(pos) => pos
-            None => continue
-          }
-          let text = part[:end]
-          paragraph.push({ text: unescape_xml_text(text), font: None })
-        }
-      }
-      None => ()
+    let paragraph = match extract_tag_body_from(sp_body, "xdr:txBody") {
+      Some(tx_body) => parse_drawing_shape_text_runs(tx_body)
+      None => []
     }
     let text = ""
     let format = shape_graphic_options(
@@ -1221,6 +1377,12 @@ test "DrawingML rejects supported-namespace reader decoys" {
       ),
       "drawing text target is misplaced",
     ),
+    (
+      (
+        #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><xdr:oneCellAnchor><xdr:sp><xdr:txBody><a:p><a:r><a:rPr><a:t>decoy</a:t></a:rPr><a:t>real</a:t></a:r></a:p></xdr:txBody></xdr:sp></xdr:oneCellAnchor></xdr:wsDr>
+      ),
+      "drawing text target is misplaced",
+    ),
   ]
   for case in cases {
     let (source, expected) = case
@@ -1233,6 +1395,33 @@ test "DrawingML rejects supported-namespace reader decoys" {
       _ => fail("expected supported-namespace drawing decoy rejection")
     }
   }
+}
+
+///|
+test "DrawingML rich text ignores unmodeled paragraph defaults" {
+  let source =
+    #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+    #|  <xdr:oneCellAnchor>
+    #|    <xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
+    #|    <xdr:ext cx="9525" cy="9525"/>
+    #|    <xdr:sp>
+    #|      <xdr:nvSpPr><xdr:cNvPr id="1" name="text"/></xdr:nvSpPr>
+    #|      <xdr:spPr><a:prstGeom prst="rect"/></xdr:spPr>
+    #|      <xdr:txBody><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr><a:solidFill><a:srgbClr val="DECOY"/></a:solidFill></a:defRPr></a:pPr><a:r><a:rPr><a:solidFill><a:srgbClr val="A1B2C3"/></a:solidFill></a:rPr><a:t xml:space="preserve"> real </a:t></a:r><a:endParaRPr><a:latin typeface="Ignored Default"/></a:endParaRPr></a:p></xdr:txBody>
+    #|    </xdr:sp>
+    #|    <xdr:clientData/>
+    #|  </xdr:oneCellAnchor>
+    #|</xdr:wsDr>
+  let canonical = canonicalize_xlsx_drawing_xml(
+    source, default_max_xml_part_bytes,
+  )
+  let tx_body = extract_tag_body_from(canonical, "xdr:txBody").unwrap_or("")
+  let runs = parse_drawing_shape_text_runs(tx_body)
+  inspect(runs.length(), content="1")
+  inspect(runs[0].text, content=" real ")
+  let font = runs[0].font.unwrap()
+  inspect(font.color.unwrap_or(""), content="A1B2C3")
+  inspect(font.family.unwrap_or(""), content="")
 }
 
 ///|
