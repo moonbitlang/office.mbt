@@ -467,8 +467,10 @@ valid packages, non-zero with a complete findings envelope otherwise.
   {"success":false,"code":"office.invalid_package"}
 
 An uncovered extra part is rejected by the structural detector before the
-gate even runs; a structurally sound package whose sheet XML is broken is
-rejected by the shared parse gate with a deterministic classification.
+gate even runs. A package whose sheet XML is broken is rejected either by
+the strict detector or by the shared parse gate: which layer fires depends
+on the byte layout the local zip tool produced, but the verdict is always a
+deterministic non-zero rejection.
 
   $ cp "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" tampered.xlsx
   $ printf 'binary' > extra.bin
@@ -483,8 +485,8 @@ rejected by the shared parse gate with a deterministic classification.
   $ zip -q broken-sheet.xlsx xl/worksheets/sheet1.xml
   $ office.exe validate broken-sheet.xlsx --json > broken-validate.json 2>&1; echo $?
   1
-  $ jq -c '{success,code:.error.code}' broken-validate.json
-  {"success":false,"code":"office.xlsx.validation_failed"}
+  $ jq -c '{success,rejected:(.error.code == "office.xlsx.validation_failed" or .error.code == "office.invalid_package")}' broken-validate.json
+  {"success":false,"rejected":true}
 
 The issues command reports bounded actionable findings without conflating
 warnings with fatal invalidity: cached XLSX formula error values are
