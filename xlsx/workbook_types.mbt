@@ -4,8 +4,8 @@ pub struct Workbook {
   /// A non-empty array is used solely to provide stable reference identity.
   priv worksheet_owner_token : Array[Unit]
   priv sheets : Array[Worksheet]
-  chart_sheets : Array[ChartSheet]
-  sheet_order : Array[SheetEntry]
+  priv chart_sheets : Array[ChartSheet]
+  priv sheet_order : Array[SheetEntry]
   styles : Array[Style]
   conditional_styles : Array[Style]
   defined_names : Array[DefinedName]

@@ -109,7 +109,7 @@ fn find_chart_sheet(
   workbook : @xlsx.Workbook,
   name : String,
 ) -> @xlsx.ChartSheet? {
-  for chart_sheet in workbook.chart_sheets {
+  for chart_sheet in workbook.chart_sheets() {
     if chart_sheet.name() == name {
       return Some(chart_sheet)
     }
