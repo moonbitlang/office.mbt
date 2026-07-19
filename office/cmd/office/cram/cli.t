@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:e17125ec
+    Fingerprint: crc32:3cca2563
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:e17125ec","names":["docx","xlsx","help","identify","outline","get","text","query","create","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:3cca2563","names":["docx","xlsx","help","identify","outline","get","text","query","create","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:e17125ec","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:e17125ec","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:e17125ec","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:e17125ec","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:e17125ec","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:e17125ec","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:e17125ec","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:e17125ec","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:e17125ec","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:e17125ec","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:e17125ec","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:3cca2563","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:3cca2563","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:3cca2563","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:3cca2563","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:3cca2563","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:3cca2563","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:3cca2563","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:3cca2563","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:3cca2563","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:3cca2563","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:3cca2563","kind":"command","name":"raw"}]
 
 The raw command publishes explicit subcommand schemas, including every edit
 input and its conditional constraints.
@@ -69,7 +69,7 @@ all pass.
   {"name":"batch","formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.batch/1","outputs":["stats","transaction"],"constraints":["schema=xlsx.batch/1","overwrite-requires(out)","out-extension-must-match-input-format","transactional-publication","full-workbook-rewrite-on-change","zero-op-reuses-original","transaction-max-materialized-cells=32768","transaction-max-row-column-lines=32768","read-max-decoded-xml-bytes=16777216","read-max-markup-tokens=262144","read-max-materialized-row-column-dimensions=32768","read-max-row-column-dimension-work=32768","candidate-max-entry-bytes=12582912","candidate-max-uncompressed-bytes=25165824"]}]}
 
   $ office.exe create xlsx x3-created.xlsx --sheet Data --json | jq -c '{success,schema:.data.schema,sheet:.data.sheet,transaction_schema:.data.transaction.schema,mode:.data.transaction.mode,input:.data.transaction.input,original_size:.data.transaction.original_size,replaced_existing:.data.transaction.replaced_existing,overwritten_size:.data.transaction.overwritten_size,committed:.data.transaction.committed,validations:[.data.transaction.validations[].name],added:(.data.transaction.preservation.added|length>0)}'
-  {"success":true,"schema":"office.xlsx.create/1","sheet":"Data","transaction_schema":"office.transaction/2","mode":"create","input":null,"original_size":null,"replaced_existing":false,"overwritten_size":null,"committed":true,"validations":["office-portable-opc","office-xlsx-bounded"],"added":true}
+  {"success":true,"schema":"office.xlsx.create/1","sheet":"Data","transaction_schema":"office.transaction/2","mode":"create","input":null,"original_size":null,"replaced_existing":false,"overwritten_size":null,"committed":true,"validations":["office-xlsx-bounded-source","office-portable-opc","office-xlsx-bounded"],"added":true}
 
   $ office.exe identify x3-created.xlsx
   xlsx
