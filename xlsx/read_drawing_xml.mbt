@@ -109,6 +109,7 @@ fn drawing_axis_span_emu(
 fn parse_drawing_anchors(
   drawing_xml : StringView,
   budget? : ReadBudget,
+  include_absolute? : Bool = false,
 ) -> Array[(String, PicturePositioning)] raise XlsxError {
   match budget {
     Some(value) => {
@@ -178,27 +179,33 @@ fn parse_drawing_anchors(
     anchors.push((full, positioning))
     parsed += 1
   }
-  let mut first_absolute = true
-  for chunk in xml_str.split("<xdr:absoluteAnchor") {
-    if first_absolute {
-      first_absolute = false
-      continue
-    }
-    if (parsed & 255) == 0 {
-      match budget {
-        Some(value) => value.checkpoint()
-        None => ()
+  // Worksheet drawing readers currently model cell-relative geometry. Keep
+  // absolute anchors out of those consumers so a drawing they previously
+  // ignored does not become a hard read failure. Chart sheets opt in because
+  // their exact chart relationship selection is position-independent.
+  if include_absolute {
+    let mut first_absolute = true
+    for chunk in xml_str.split("<xdr:absoluteAnchor") {
+      if first_absolute {
+        first_absolute = false
+        continue
       }
+      if (parsed & 255) == 0 {
+        match budget {
+          Some(value) => value.checkpoint()
+          None => ()
+        }
+      }
+      let text = chunk.to_owned()
+      let close_tag = "</xdr:absoluteAnchor>"
+      let end = match text.find(close_tag) {
+        Some(pos) => pos + close_tag.length()
+        None => raise InvalidXml(msg="absoluteAnchor close missing")
+      }
+      let slice = text[:end]
+      anchors.push(("<xdr:absoluteAnchor\{slice.to_owned()}", Absolute))
+      parsed += 1
     }
-    let text = chunk.to_owned()
-    let close_tag = "</xdr:absoluteAnchor>"
-    let end = match text.find(close_tag) {
-      Some(pos) => pos + close_tag.length()
-      None => raise InvalidXml(msg="absoluteAnchor close missing")
-    }
-    let slice = text[:end]
-    anchors.push(("<xdr:absoluteAnchor\{slice.to_owned()}", Absolute))
-    parsed += 1
   }
   match budget {
     Some(value) => value.checkpoint()
@@ -1476,7 +1483,7 @@ test "read_drawing_xml wb: parse_drawing_anchors validation and positioning" {
 
   let absolute_missing_close = "<xdr:wsDr><xdr:absoluteAnchor><xdr:graphicFrame/></xdr:wsDr>"
   let absolute_result : Result[Array[(String, PicturePositioning)], Error] = Ok(
-    parse_drawing_anchors(absolute_missing_close),
+    parse_drawing_anchors(absolute_missing_close, include_absolute=true),
   ) catch {
     e => Err(e)
   }
@@ -1492,7 +1499,9 @@ test "read_drawing_xml wb: parse_drawing_anchors validation and positioning" {
     #|  <xdr:twoCellAnchor editAs="free"></xdr:twoCellAnchor>
     #|  <xdr:absoluteAnchor></xdr:absoluteAnchor>
     #|</xdr:wsDr>
-  let anchors = parse_drawing_anchors(xml)
+  let worksheet_anchors = parse_drawing_anchors(xml)
+  inspect(worksheet_anchors.length(), content="2")
+  let anchors = parse_drawing_anchors(xml, include_absolute=true)
   inspect(anchors.length(), content="3")
   debug_inspect(anchors[0].1, content="Absolute")
   debug_inspect(anchors[1].1, content="TwoCell")

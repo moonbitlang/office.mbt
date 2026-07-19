@@ -5033,6 +5033,7 @@ fn read_zip_archive_core_unchecked(
       let drawing_anchors = parse_drawing_anchors(
         drawing_xml,
         budget=read_budget,
+        include_absolute=true,
       )
       let chart_rel_id = single_drawing_chart_rel_id(
         drawing_anchors,
