@@ -164,6 +164,7 @@ fn CellImage::to_image(self : CellImage, reference : String) -> Image {
     drawing_offset_y_emu: None,
     drawing_width_emu: None,
     drawing_height_emu: None,
+    drawing_order: None,
   }
 }
 

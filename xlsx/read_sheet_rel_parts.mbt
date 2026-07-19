@@ -484,6 +484,7 @@ fn resolve_slicer_sources_after_read(
               drawing_offset_y_emu: slicer.drawing_offset_y_emu,
               drawing_width_emu: slicer.drawing_width_emu,
               drawing_height_emu: slicer.drawing_height_emu,
+              drawing_order: slicer.drawing_order,
             }
           }
         }

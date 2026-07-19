@@ -4779,6 +4779,10 @@ fn read_zip_archive_core_unchecked(
         col_dimensions,
         state,
         stream_state: Idle,
+        next_drawing_order: 0,
+        preserved_drawing_anchors: [],
+        preserved_drawing_relationships: [],
+        preserved_drawing_parts: [],
         cell_vm: if rich_value_images is Some(_) {
           parse_cell_vm_map(sheet_xml)
         } else {
@@ -4830,6 +4834,7 @@ fn read_zip_archive_core_unchecked(
             drawing_xml,
             budget=read_budget,
           )
+          sheet.next_drawing_order = drawing_anchors.length()
           if slicer_part_entries.length() > 0 {
             slicer_anchor_info = parse_drawing_slicer_anchors(
               drawing_anchors,
@@ -4848,6 +4853,20 @@ fn read_zip_archive_core_unchecked(
             Some(value) => decode(value)
             None => ""
           }
+          let (preserved_anchors, preserved_relationships, preserved_parts) = preserved_unsupported_drawing_state(
+            drawing_anchors,
+            drawing_rels_xml,
+            drawing_path,
+            archive,
+            part_names,
+            content_types,
+            decode,
+            budget=read_budget,
+            cancelled~,
+          )
+          sheet.preserved_drawing_anchors.append(preserved_anchors)
+          sheet.preserved_drawing_relationships.append(preserved_relationships)
+          sheet.preserved_drawing_parts.append(preserved_parts)
           let drawing_images = parse_drawing_images(
             drawing_anchors,
             drawing_rels_xml,
@@ -4959,6 +4978,10 @@ fn read_zip_archive_core_unchecked(
           },
           drawing_height_emu: match slicer_anchor_info.get(entry.name) {
             Some(info) => Some(info.height_emu)
+            None => None
+          },
+          drawing_order: match slicer_anchor_info.get(entry.name) {
+            Some(info) => Some(info.order)
             None => None
           },
         })

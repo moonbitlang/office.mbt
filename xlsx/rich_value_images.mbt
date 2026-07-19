@@ -533,6 +533,7 @@ fn Workbook::rich_value_image_for_cell(
         drawing_offset_y_emu: None,
         drawing_width_emu: None,
         drawing_height_emu: None,
+        drawing_order: None,
       })
     }
     None => None

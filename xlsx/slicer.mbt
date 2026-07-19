@@ -17,6 +17,7 @@ pub struct Slicer {
   priv drawing_offset_y_emu : Int?
   priv drawing_width_emu : Int?
   priv drawing_height_emu : Int?
+  priv drawing_order : Int?
 } derive(Debug)
 
 ///|
@@ -61,6 +62,7 @@ pub fn Slicer::new(name : String) -> Slicer raise XlsxError {
     drawing_offset_y_emu: None,
     drawing_width_emu: None,
     drawing_height_emu: None,
+    drawing_order: None,
   }
 }
 

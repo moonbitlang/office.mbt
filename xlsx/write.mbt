@@ -252,6 +252,7 @@ priv struct DrawingChart {
   drawing_offset_y_emu : Int?
   drawing_width_emu : Int?
   drawing_height_emu : Int?
+  drawing_order : Int?
 }
 
 ///|
@@ -265,6 +266,13 @@ priv struct DrawingHyperlink {
 priv struct DrawingSlicer {
   slicer : Slicer
   is_table_slicer : Bool
+}
+
+///|
+priv struct OrderedDrawingAnchor {
+  xml : String
+  order : Int?
+  fallback_order : Int
 }
 
 ///|
@@ -393,30 +401,110 @@ fn two_cell_axis_to(
 }
 
 ///|
+fn write_drawing_open(sb : StringBuilder) -> Unit {
+  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+  sb.write_view(
+    "<xdr:wsDr xmlns:xdr=\"http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\" xmlns:sle=\"http://schemas.microsoft.com/office/drawing/2010/slicer\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">\n",
+  )
+}
+
+///|
+fn allocate_drawing_numeric_id(
+  next : Int,
+  reserved : Set[String],
+) -> (Int, Int) raise XlsxError {
+  let mut candidate = next
+  while reserved.contains("\{candidate}") {
+    if candidate == 0x7fff_ffff {
+      raise InvalidSheetOperation(msg="drawing object id exhausted")
+    }
+    candidate = candidate + 1
+  }
+  if candidate == 0x7fff_ffff {
+    raise InvalidSheetOperation(msg="drawing object id exhausted")
+  }
+  (candidate, candidate + 1)
+}
+
+///|
+fn allocate_drawing_relationship_id(
+  next : Int,
+  reserved : Set[String],
+) -> (Int, Int) raise XlsxError {
+  let mut candidate = next
+  while reserved.contains("rId\{candidate}") {
+    if candidate == 0x7fff_ffff {
+      raise InvalidSheetOperation(msg="drawing relationship id exhausted")
+    }
+    candidate = candidate + 1
+  }
+  if candidate == 0x7fff_ffff {
+    raise InvalidSheetOperation(msg="drawing relationship id exhausted")
+  }
+  (candidate, candidate + 1)
+}
+
+///|
+fn compare_ordered_drawing_anchor(
+  left : OrderedDrawingAnchor,
+  right : OrderedDrawingAnchor,
+) -> Int {
+  match (left.order, right.order) {
+    (Some(a), Some(b)) =>
+      if a < b {
+        -1
+      } else if a > b {
+        1
+      } else if left.fallback_order < right.fallback_order {
+        -1
+      } else if left.fallback_order > right.fallback_order {
+        1
+      } else {
+        0
+      }
+    (Some(_), None) => -1
+    (None, Some(_)) => 1
+    (None, None) =>
+      if left.fallback_order < right.fallback_order {
+        -1
+      } else if left.fallback_order > right.fallback_order {
+        1
+      } else {
+        0
+      }
+  }
+}
+
+///|
 fn write_drawing_xml(
   sheet : Worksheet?,
   images : Array[DrawingImage],
   charts : Array[DrawingChart],
   shapes : Array[Shape],
   slicers : Array[DrawingSlicer],
+  preserved_anchors? : ArrayView[PreservedDrawingAnchor] = [],
+  reserved_object_ids? : ArrayView[String] = [],
 ) -> String raise XlsxError {
   let drawing_metrics = match sheet {
     Some(value) => drawing_metrics_for_sheet(value)
     None => drawing_metrics_for_sheet(Worksheet::new("Drawing"))
   }
   let sb = StringBuilder::new()
-  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-  sb.write_view(
-    "<xdr:wsDr xmlns:xdr=\"http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">\n",
-  )
+  write_drawing_open(sb)
+  let reserved_object_id_set : Set[String] = Set([])
+  for id in reserved_object_ids {
+    reserved_object_id_set.add(id)
+  }
   let mut obj_id = 1
   for item in images {
     let image = item.image
     let (row, col) = cell_ref_to_rc(image.reference)
     let col_idx = col - 1
     let row_idx = row - 1
-    let pic_id = obj_id
-    obj_id = obj_id + 1
+    let (pic_id, next_obj_id) = allocate_drawing_numeric_id(
+      obj_id, reserved_object_id_set,
+    )
+    obj_id = next_obj_id
     let col_off = match image.drawing_offset_x_emu {
       Some(value) => value
       None =>
@@ -575,8 +663,10 @@ fn write_drawing_xml(
     let (row, col) = cell_ref_to_rc(chart.reference)
     let col_idx = col - 1
     let row_idx = row - 1
-    let frame_id = obj_id
-    obj_id = obj_id + 1
+    let (frame_id, next_obj_id) = allocate_drawing_numeric_id(
+      obj_id, reserved_object_id_set,
+    )
+    obj_id = next_obj_id
     let col_off = match chart.drawing_offset_x_emu {
       Some(value) => value
       None =>
@@ -719,8 +809,10 @@ fn write_drawing_xml(
       None =>
         drawing_pixel_offset_for_write(offset_y, "drawing shape row offset")
     }
-    let shape_id = obj_id
-    obj_id = obj_id + 1
+    let (shape_id, next_obj_id) = allocate_drawing_numeric_id(
+      obj_id, reserved_object_id_set,
+    )
+    obj_id = next_obj_id
     let cx = match shape.drawing_width_emu {
       Some(value) => drawing_extent_for_write(value, "drawing shape width")
       None =>
@@ -957,8 +1049,10 @@ fn write_drawing_xml(
     let (row, col) = cell_ref_to_rc(slicer.cell)
     let col_idx = col - 1
     let row_idx = row - 1
-    let frame_id = obj_id
-    obj_id = obj_id + 1
+    let (frame_id, next_obj_id) = allocate_drawing_numeric_id(
+      obj_id, reserved_object_id_set,
+    )
+    obj_id = next_obj_id
     let offset_x = match slicer.format.offset_x {
       Some(v) => v
       None => 0
@@ -1200,7 +1294,65 @@ fn write_drawing_xml(
     }
   }
   sb.write_view("</xdr:wsDr>")
-  sb.to_string()
+  let grouped_xml = sb.to_string()
+  let known_orders : Array[Int?] = []
+  let mut needs_ordering = preserved_anchors.length() > 0
+  for item in images {
+    known_orders.push(item.image.drawing_order)
+    if item.image.drawing_order is Some(_) {
+      needs_ordering = true
+    }
+  }
+  for item in charts {
+    known_orders.push(item.drawing_order)
+    if item.drawing_order is Some(_) {
+      needs_ordering = true
+    }
+  }
+  for shape in shapes {
+    known_orders.push(shape.drawing_order)
+    if shape.drawing_order is Some(_) {
+      needs_ordering = true
+    }
+  }
+  for item in slicers {
+    known_orders.push(item.slicer.drawing_order)
+    if item.slicer.drawing_order is Some(_) {
+      needs_ordering = true
+    }
+  }
+  if !needs_ordering {
+    return grouped_xml
+  }
+  let generated_anchors = parse_drawing_anchors(grouped_xml)
+  if generated_anchors.length() != known_orders.length() {
+    raise InvalidSheetOperation(msg="generated drawing anchor count mismatch")
+  }
+  let ordered : Array[OrderedDrawingAnchor] = []
+  for index, anchor in generated_anchors {
+    ordered.push({
+      xml: anchor.xml,
+      order: known_orders[index],
+      fallback_order: index,
+    })
+  }
+  for index, anchor in preserved_anchors {
+    ordered.push({
+      xml: anchor.xml,
+      order: Some(anchor.order),
+      fallback_order: generated_anchors.length() + index,
+    })
+  }
+  ordered.sort_by(compare_ordered_drawing_anchor)
+  let output = StringBuilder::new()
+  write_drawing_open(output)
+  for anchor in ordered {
+    output.write_view("  ")
+    output.write_view(anchor.xml)
+    output.write_view("\n")
+  }
+  output.write_view("</xdr:wsDr>")
+  output.to_string()
 }
 
 ///|
@@ -2611,12 +2763,29 @@ fn write_with_io(
   let mut slicer_part_index = 1
   for i, sheet in workbook.sheets() {
     let sheet_id = i + 1
+    let preserved_drawing = preserved_drawing_write_plan(sheet, sheet_id)
+    for part in preserved_drawing.parts {
+      archive.add(part.path, part.data)
+      manifest.add_content_override(
+        content_override_path(part.path),
+        part.content_type,
+      )
+      if part.relationships.length() > 0 {
+        archive.add(
+          rels_path_for_part(part.path),
+          @encoding/utf8.encode(
+            write_preserved_drawing_rels_xml(part.relationships),
+          ),
+        )
+      }
+    }
     let sheet_tables = tables_by_sheet[i]
     let sheet_pivots = pivots_by_sheet[i]
     let has_drawing = sheet.images().length() > 0 ||
       sheet.charts().length() > 0 ||
       sheet.shapes().length() > 0 ||
-      sheet.slicers().length() > 0
+      sheet.slicers().length() > 0 ||
+      preserved_drawing.anchors.length() > 0
     let mut rel_id = 1
     let drawing_rel_id = if has_drawing {
       let id = rel_id
@@ -2986,17 +3155,25 @@ fn write_with_io(
     let drawing_charts : Array[DrawingChart] = []
     let drawing_shapes : Array[Shape] = []
     let drawing_slicers : Array[DrawingSlicer] = []
+    let reserved_relationship_ids : Set[String] = Set([])
+    for id in preserved_drawing.relationship_ids {
+      reserved_relationship_ids.add(id)
+    }
     let mut rel_id = 1
     for image in sheet.images() {
       let file_name = "image\{image_index}.\{image.extension}"
       image_index = image_index + 1
       archive.add(media_part_path(file_name), image.data)
-      let image_rel_id = rel_id
-      rel_id = rel_id + 1
+      let (image_rel_id, next_rel_id) = allocate_drawing_relationship_id(
+        rel_id, reserved_relationship_ids,
+      )
+      rel_id = next_rel_id
       let mut hyperlink_rel_id : Int? = None
       if image.hyperlink != "" && image.hyperlink_type != Unset {
-        let link_rel_id = rel_id
-        rel_id = rel_id + 1
+        let (link_rel_id, next_rel_id) = allocate_drawing_relationship_id(
+          rel_id, reserved_relationship_ids,
+        )
+        rel_id = next_rel_id
         drawing_hyperlinks.push({
           rel_id: link_rel_id,
           target: image.hyperlink,
@@ -3015,7 +3192,11 @@ fn write_with_io(
       let file_name = "chart\{chart_index}.xml"
       chart_index = chart_index + 1
       archive.add(chart_part_path(file_name), @encoding/utf8.encode(chart.xml))
-      chart_targets.push((rel_id, chart_rel_target(file_name)))
+      let (chart_rel_id, next_rel_id) = allocate_drawing_relationship_id(
+        rel_id, reserved_relationship_ids,
+      )
+      rel_id = next_rel_id
+      chart_targets.push((chart_rel_id, chart_rel_target(file_name)))
       drawing_charts.push({
         reference: chart.reference,
         offset_x: chart.offset_x,
@@ -3025,13 +3206,13 @@ fn write_with_io(
         print_object: chart.print_object,
         locked: chart.locked,
         positioning: chart.positioning,
-        rel_id,
+        rel_id: chart_rel_id,
         drawing_offset_x_emu: chart.drawing_offset_x_emu,
         drawing_offset_y_emu: chart.drawing_offset_y_emu,
         drawing_width_emu: chart.drawing_width_emu,
         drawing_height_emu: chart.drawing_height_emu,
+        drawing_order: chart.drawing_order,
       })
-      rel_id = rel_id + 1
       manifest.add_content_override(
         content_override_path(chart_part_path(file_name)),
         ct_chart,
@@ -3056,10 +3237,15 @@ fn write_with_io(
       drawing_charts,
       drawing_shapes,
       drawing_slicers,
+      preserved_anchors=preserved_drawing.anchors,
+      reserved_object_ids=preserved_drawing.object_ids,
     )
     archive.add(drawing_part_path(sheet_id), @encoding/utf8.encode(drawing_xml))
     let drawing_rels_xml = write_drawing_rels_xml(
-      image_targets, chart_targets, drawing_hyperlinks,
+      image_targets,
+      chart_targets,
+      drawing_hyperlinks,
+      preserved_relationships=preserved_drawing.drawing_relationships,
     )
     archive.add(
       drawing_rels_part_path(sheet_id),
@@ -3130,6 +3316,7 @@ fn write_with_io(
         drawing_offset_y_emu: None,
         drawing_width_emu: None,
         drawing_height_emu: None,
+        drawing_order: None,
       },
     ]
     let drawing_xml = write_drawing_xml(
@@ -3324,6 +3511,7 @@ fn wb_drawing_image_with_offset(
     drawing_offset_y_emu: None,
     drawing_width_emu: None,
     drawing_height_emu: None,
+    drawing_order: None,
   }
   { image, rel_id: 1, hyperlink_rel_id: None }
 }
@@ -3349,6 +3537,7 @@ fn wb_drawing_chart(positioning : PicturePositioning) -> DrawingChart {
     drawing_offset_y_emu: None,
     drawing_width_emu: None,
     drawing_height_emu: None,
+    drawing_order: None,
   }
 }
 
@@ -3424,6 +3613,7 @@ fn wb_drawing_slicer(
     drawing_offset_y_emu: None,
     drawing_width_emu: None,
     drawing_height_emu: None,
+    drawing_order: None,
   }
   { slicer, is_table_slicer }
 }
@@ -3618,6 +3808,7 @@ test "write hardening wb: two-cell anchors enforce the worksheet boundary" {
     drawing_offset_y_emu: None,
     drawing_width_emu: None,
     drawing_height_emu: None,
+    drawing_order: None,
   }
   let result : Result[String, Error] = Ok(
     write_drawing_xml(Some(Worksheet::new("Sheet1")), [], [chart], [], []),
@@ -3651,6 +3842,7 @@ test "write hardening wb: signed offsets and exact end markers stay readable" {
     drawing_offset_y_emu: None,
     drawing_width_emu: None,
     drawing_height_emu: None,
+    drawing_order: None,
   }
   let boundary_xml = write_drawing_xml(
     Some(Worksheet::new("Sheet1")),
@@ -4144,6 +4336,7 @@ test "write hardening wb: write fails for slicer source missing" {
     drawing_offset_y_emu: None,
     drawing_width_emu: None,
     drawing_height_emu: None,
+    drawing_order: None,
   })
   let result : Result[Bytes, Error] = Ok(write(workbook)) catch { e => Err(e) }
   inspect(result is Err(XlsxError::InvalidSheetOperation(_)), content="true")
@@ -4172,6 +4365,7 @@ test "write hardening wb: write fails for slicer table field missing" {
     drawing_offset_y_emu: None,
     drawing_width_emu: None,
     drawing_height_emu: None,
+    drawing_order: None,
   })
   let result : Result[Bytes, Error] = Ok(write(workbook)) catch { e => Err(e) }
   inspect(result is Err(XlsxError::InvalidSheetOperation(_)), content="true")
@@ -4243,6 +4437,7 @@ test "write hardening wb: default zip writer failure maps to UnsupportedFeature"
     drawing_offset_y_emu: None,
     drawing_width_emu: None,
     drawing_height_emu: None,
+    drawing_order: None,
   })
   let result : Result[Bytes, Error] = Ok(write(workbook)) catch { e => Err(e) }
   inspect(result is Err(XlsxError::UnsupportedFeature(_)), content="true")

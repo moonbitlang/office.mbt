@@ -2025,6 +2025,7 @@ pub fn Worksheet::add_image(
   } else {
     reference
   }
+  let drawing_order = self.allocate_drawing_order()
   self.images.push({
     reference: stored_reference,
     data,
@@ -2048,6 +2049,7 @@ pub fn Worksheet::add_image(
     drawing_offset_y_emu: None,
     drawing_width_emu: None,
     drawing_height_emu: None,
+    drawing_order: Some(drawing_order),
   })
 }
 
@@ -2076,6 +2078,7 @@ fn image_with_reference(image : Image, reference : String) -> Image {
     drawing_offset_y_emu: image.drawing_offset_y_emu,
     drawing_width_emu: image.drawing_width_emu,
     drawing_height_emu: image.drawing_height_emu,
+    drawing_order: image.drawing_order,
   }
 }
 
@@ -2095,6 +2098,7 @@ fn chart_with_reference(chart : Chart, reference : String) -> Chart {
     drawing_offset_y_emu: chart.drawing_offset_y_emu,
     drawing_width_emu: chart.drawing_width_emu,
     drawing_height_emu: chart.drawing_height_emu,
+    drawing_order: chart.drawing_order,
   }
 }
 
@@ -2157,6 +2161,7 @@ pub fn Worksheet::add_chart(
   xml : String,
 ) -> Unit raise XlsxError {
   let (_row, _col) = cell_ref_to_rc(reference)
+  let drawing_order = self.allocate_drawing_order()
   self.charts.push({
     reference,
     xml,
@@ -2171,6 +2176,7 @@ pub fn Worksheet::add_chart(
     drawing_offset_y_emu: None,
     drawing_width_emu: None,
     drawing_height_emu: None,
+    drawing_order: Some(drawing_order),
   })
 }
 
@@ -2228,6 +2234,7 @@ pub fn Worksheet::add_chart_with_options(
     "drawing chart height",
   )
   let xml = chart_options_to_xml(opts)
+  let drawing_order = self.allocate_drawing_order()
   self.charts.push({
     reference,
     xml,
@@ -2242,6 +2249,7 @@ pub fn Worksheet::add_chart_with_options(
     drawing_offset_y_emu: None,
     drawing_width_emu: None,
     drawing_height_emu: None,
+    drawing_order: Some(drawing_order),
   })
 }
 
@@ -2270,7 +2278,8 @@ pub fn Worksheet::add_shape(
   shape : Shape,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
-  self.shapes.push(shape)
+  let drawing_order = self.allocate_drawing_order()
+  self.shapes.push({ ..shape, drawing_order: Some(drawing_order) })
 }
 
 ///|
@@ -2341,7 +2350,8 @@ pub fn Worksheet::add_slicer(
   slicer : Slicer,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
-  self.slicers.push(slicer)
+  let drawing_order = self.allocate_drawing_order()
+  self.slicers.push({ ..slicer, drawing_order: Some(drawing_order) })
 }
 
 ///|

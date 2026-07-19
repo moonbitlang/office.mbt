@@ -56,6 +56,7 @@ pub struct Image {
   priv drawing_offset_y_emu : Int?
   priv drawing_width_emu : Int?
   priv drawing_height_emu : Int?
+  priv drawing_order : Int?
 }
 
 ///|
@@ -73,6 +74,7 @@ pub struct Chart {
   priv drawing_offset_y_emu : Int?
   priv drawing_width_emu : Int?
   priv drawing_height_emu : Int?
+  priv drawing_order : Int?
 }
 
 ///|
@@ -144,6 +146,12 @@ pub struct Worksheet {
   mut stream_state : StreamState
   mut vml_drawing_xml : String?
   mut vml_drawing_hf_xml : String?
+  /// Next stable cross-type drawing order. Source anchors occupy the initial
+  /// range; newly added objects append after them regardless of object kind.
+  priv mut next_drawing_order : Int
+  priv preserved_drawing_anchors : Array[PreservedDrawingAnchor]
+  priv preserved_drawing_relationships : Array[PreservedDrawingRelationship]
+  priv preserved_drawing_parts : Array[PreservedDrawingPart]
   /// Cell value-metadata (`vm`) indices captured on read, keyed by
   /// canonical cell reference. Links a cell to its rich-value embedded
   /// image; lives on the worksheet so it survives rename/copy/delete.
@@ -197,6 +205,10 @@ pub fn Worksheet::new(name : String) -> Worksheet {
     stream_state: Idle,
     vml_drawing_xml: None,
     vml_drawing_hf_xml: None,
+    next_drawing_order: 0,
+    preserved_drawing_anchors: [],
+    preserved_drawing_relationships: [],
+    preserved_drawing_parts: [],
     cell_vm: Map([]),
   }
 }

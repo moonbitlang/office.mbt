@@ -1267,6 +1267,31 @@ fn clone_slicers(values : ArrayView[Slicer]) -> Array[Slicer] {
 }
 
 ///|
+fn clone_preserved_drawing_relationships(
+  values : ArrayView[PreservedDrawingRelationship],
+) -> Array[PreservedDrawingRelationship] {
+  let out : Array[PreservedDrawingRelationship] = []
+  for value in values {
+    out.push(value)
+  }
+  out
+}
+
+///|
+fn clone_preserved_drawing_parts(
+  values : ArrayView[PreservedDrawingPart],
+) -> Array[PreservedDrawingPart] {
+  let out : Array[PreservedDrawingPart] = []
+  for value in values {
+    out.push({
+      ..value,
+      relationships: clone_preserved_drawing_relationships(value.relationships),
+    })
+  }
+  out
+}
+
+///|
 fn clone_ignored_errors(
   values : ArrayView[IgnoredError],
 ) -> Array[IgnoredError] {
@@ -1394,6 +1419,14 @@ fn clone_worksheet(
     stream_state: Idle,
     vml_drawing_xml: sheet.vml_drawing_xml,
     vml_drawing_hf_xml: sheet.vml_drawing_hf_xml,
+    next_drawing_order: sheet.next_drawing_order,
+    preserved_drawing_anchors: sheet.preserved_drawing_anchors.copy(),
+    preserved_drawing_relationships: clone_preserved_drawing_relationships(
+      sheet.preserved_drawing_relationships,
+    ),
+    preserved_drawing_parts: clone_preserved_drawing_parts(
+      sheet.preserved_drawing_parts,
+    ),
     cell_vm: {
       let copy : Map[String, Int] = Map([])
       for reference, vm in sheet.cell_vm {
@@ -2691,6 +2724,7 @@ pub fn Workbook::add_slicer(
     drawing_offset_y_emu: None,
     drawing_width_emu: None,
     drawing_height_emu: None,
+    drawing_order: None,
   }
   sheet.add_slicer(slicer)
 }

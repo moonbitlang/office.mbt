@@ -127,6 +127,8 @@ priv struct DrawingAnchor {
   xml : String
   positioning : PicturePositioning
   form : DrawingAnchorForm
+  order : Int
+  unsupported : Bool
 }
 
 ///|
@@ -367,9 +369,13 @@ fn parse_drawing_anchors(
           None => TwoCell
         }
     }
-    if !drawing_anchor_has_unsupported_reader_object(full) {
-      anchors.push({ xml: full, positioning, form })
-    }
+    anchors.push({
+      xml: full,
+      positioning,
+      form,
+      order: scanned,
+      unsupported: drawing_anchor_has_unsupported_reader_object(full),
+    })
     scanned += 1
     cursor = close_end + 1
   }
@@ -405,6 +411,9 @@ fn single_drawing_chart_rel_id(
 ) -> String raise XlsxError {
   let mut selected : String? = None
   for anchor in anchors {
+    if anchor.unsupported {
+      continue
+    }
     let anchor_xml = anchor.xml
     charge_drawing_anchor_pass(budget, anchor_xml)
     match tag_attributes_in(anchor_xml, "c:chart") {
@@ -649,6 +658,9 @@ fn parse_drawing_images(
     )
   }
   for anchor in anchors {
+    if anchor.unsupported {
+      continue
+    }
     let anchor_xml = anchor.xml
     let positioning = anchor.positioning
     charge_drawing_anchor_pass(budget, anchor_xml)
@@ -758,6 +770,7 @@ fn parse_drawing_images(
       drawing_offset_y_emu: Some(origin.row_off_emu),
       drawing_width_emu: Some(width_emu),
       drawing_height_emu: Some(height_emu),
+      drawing_order: Some(anchor.order),
     })
   }
   images
@@ -788,6 +801,9 @@ fn parse_drawing_charts(
     )
   }
   for anchor in anchors {
+    if anchor.unsupported {
+      continue
+    }
     let anchor_xml = anchor.xml
     let positioning = anchor.positioning
     charge_drawing_anchor_pass(budget, anchor_xml)
@@ -852,6 +868,7 @@ fn parse_drawing_charts(
       drawing_offset_y_emu: Some(origin.row_off_emu),
       drawing_width_emu: Some(width_emu),
       drawing_height_emu: Some(height_emu),
+      drawing_order: Some(anchor.order),
     })
   }
   charts
@@ -865,6 +882,9 @@ fn parse_drawing_shapes(
 ) -> Array[Shape] raise XlsxError {
   let shapes : Array[Shape] = []
   for anchor in anchors {
+    if anchor.unsupported {
+      continue
+    }
     let anchor_xml = anchor.xml
     let positioning = anchor.positioning
     charge_drawing_anchor_pass(budget, anchor_xml)
@@ -1033,6 +1053,7 @@ fn parse_drawing_shapes(
       drawing_offset_y_emu: Some(origin.row_off_emu),
       drawing_width_emu: Some(cx),
       drawing_height_emu: Some(cy),
+      drawing_order: Some(anchor.order),
     })
   }
   shapes
@@ -1054,6 +1075,7 @@ priv struct SlicerAnchorInfo {
   offset_y_emu : Int
   width_emu : Int
   height_emu : Int
+  order : Int
 }
 
 ///|
@@ -1064,6 +1086,9 @@ fn parse_drawing_slicer_anchors(
 ) -> Map[String, SlicerAnchorInfo] raise XlsxError {
   let out : Map[String, SlicerAnchorInfo] = Map([])
   for anchor in anchors {
+    if anchor.unsupported {
+      continue
+    }
     let anchor_xml = anchor.xml
     let positioning = anchor.positioning
     charge_drawing_anchor_pass(budget, anchor_xml)
@@ -1134,6 +1159,7 @@ fn parse_drawing_slicer_anchors(
       offset_y_emu: origin.row_off_emu,
       width_emu,
       height_emu,
+      order: anchor.order,
     }
   }
   out
@@ -1272,7 +1298,7 @@ test "DrawingML extension payload cannot spoof anchors or drawing features" {
 }
 
 ///|
-test "DrawingML ignores valid unsupported anchor objects as complete subtrees" {
+test "DrawingML retains valid unsupported anchors without reading nested objects" {
   let source =
     #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
     #|  <xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="9525" cy="9525"/><xdr:grpSp><xdr:nvGrpSpPr/><xdr:grpSpPr/><xdr:sp><xdr:nvSpPr><xdr:cNvPr id="1" name="nested"/></xdr:nvSpPr><xdr:spPr><a:prstGeom prst="rect"/></xdr:spPr></xdr:sp></xdr:grpSp><xdr:clientData/></xdr:oneCellAnchor>
@@ -1283,10 +1309,19 @@ test "DrawingML ignores valid unsupported anchor objects as complete subtrees" {
   )
   assert_true(drawing.contains("<xdr:grpSp>"))
   let anchors = parse_drawing_anchors(drawing)
-  inspect(anchors.length(), content="1")
-  let anchor_xml = anchors[0].xml
+  inspect(anchors.length(), content="2")
+  assert_true(anchors[0].unsupported)
+  assert_true(anchors[0].xml.contains("name=\"nested\""))
+  assert_false(anchors[1].unsupported)
+  let anchor_xml = anchors[1].xml
   assert_true(anchor_xml.contains("name=\"direct\""))
   assert_false(anchor_xml.contains("name=\"nested\""))
+  let shapes = parse_drawing_shapes(
+    anchors,
+    drawing_metrics_for_sheet(Worksheet::new("Sheet1")),
+  )
+  assert_eq(shapes.length(), 1)
+  assert_eq(shapes[0].name, "direct")
 }
 
 ///|
@@ -1442,7 +1477,13 @@ test "chartsheet drawing selector requires exactly one chart payload" {
   let anchor =
     #|<xdr:oneCellAnchor><xdr:graphicFrame><a:graphic><a:graphicData><c:chart r:id="selected"/></a:graphicData></a:graphic></xdr:graphicFrame></xdr:oneCellAnchor>
   let one : ReadOnlyArray[DrawingAnchor] = [
-    { xml: anchor, positioning: OneCell, form: OneCellAnchor },
+    {
+      xml: anchor,
+      positioning: OneCell,
+      form: OneCellAnchor,
+      order: 0,
+      unsupported: false,
+    },
   ]
   assert_eq(single_drawing_chart_rel_id(one), "selected")
   let empty : ReadOnlyArray[DrawingAnchor] = []
@@ -1453,8 +1494,20 @@ test "chartsheet drawing selector requires exactly one chart payload" {
     _ => fail("expected empty chartsheet drawing rejection")
   }
   let two : ReadOnlyArray[DrawingAnchor] = [
-    { xml: anchor, positioning: OneCell, form: OneCellAnchor },
-    { xml: anchor, positioning: OneCell, form: OneCellAnchor },
+    {
+      xml: anchor,
+      positioning: OneCell,
+      form: OneCellAnchor,
+      order: 0,
+      unsupported: false,
+    },
+    {
+      xml: anchor,
+      positioning: OneCell,
+      form: OneCellAnchor,
+      order: 1,
+      unsupported: false,
+    },
   ]
   try single_drawing_chart_rel_id(two) catch {
     InvalidXml(msg~) => assert_eq(msg, "chartsheet drawing has multiple charts")

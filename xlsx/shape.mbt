@@ -85,6 +85,7 @@ pub struct Shape {
   priv drawing_offset_y_emu : Int?
   priv drawing_width_emu : Int?
   priv drawing_height_emu : Int?
+  priv drawing_order : Int?
 } derive(Debug)
 
 ///|
@@ -210,5 +211,6 @@ pub fn Shape::new(
     drawing_offset_y_emu: None,
     drawing_width_emu: None,
     drawing_height_emu: None,
+    drawing_order: None,
   }
 }
