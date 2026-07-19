@@ -94,6 +94,11 @@ fn xlsx_drawing_reader_object_name(local_name : StringView) -> Bool {
 }
 
 ///|
+fn xlsx_drawing_unsupported_reader_object_name(local_name : StringView) -> Bool {
+  local_name == "grpSp" || local_name == "cxnSp" || local_name == "contentPart"
+}
+
+///|
 fn drawing_reader_relationship_attribute(
   scanner : @ooxml.XmlStartTagScanner,
   relationship_namespace : StringView,
@@ -196,6 +201,7 @@ fn validate_xlsx_drawing_reader_structure(
   let mut text_body_seen = false
   let mut graphic_seen = false
   let mut graphic_data_seen = false
+  let mut unsupported_reader_object_depth : Int? = None
   while workbook_scanner_next(scanner) {
     let depth = scanner.depth()
     let local_name = scanner.local_name()
@@ -239,6 +245,18 @@ fn validate_xlsx_drawing_reader_structure(
       namespace_uri == other_main_namespace ||
       namespace_uri == other_chart_namespace {
       raise InvalidXml(msg="drawing reader target dialect is mixed")
+    }
+    let inside_unsupported_reader_object = match
+      unsupported_reader_object_depth {
+      Some(start) if depth > start => true
+      Some(_) => {
+        unsupported_reader_object_depth = None
+        false
+      }
+      None => false
+    }
+    if inside_unsupported_reader_object {
+      continue
     }
     if local_name == "ext" &&
       xlsx_drawing_extension_list_namespaces.any(candidate => {
@@ -294,6 +312,23 @@ fn validate_xlsx_drawing_reader_structure(
       text_body_seen = false
       graphic_seen = false
       graphic_data_seen = false
+    } else if namespace_uri == drawing_namespace &&
+      xlsx_drawing_unsupported_reader_object_name(local_name) {
+      if depth != 3 ||
+        !in_reader_anchor ||
+        !xlsx_drawing_anchor_name(scanner.parent_local_name().unwrap_or("")) ||
+        scanner.parent_namespace_uri() != Some(drawing_namespace) {
+        raise InvalidXml(msg="unsupported drawing reader object is misplaced")
+      }
+      if reader_object_seen {
+        raise InvalidXml(msg="drawing anchor has multiple reader objects")
+      }
+      // These are valid anchor payloads, but the semantic readers below do
+      // not model them. Ignore the complete subtree so nested `sp`, `pic`, or
+      // `graphicFrame` elements cannot be mistaken for direct anchor objects.
+      reader_object_seen = true
+      current_reader_object = ""
+      unsupported_reader_object_depth = Some(depth)
     } else if namespace_uri == drawing_namespace &&
       (
         local_name == "from" ||

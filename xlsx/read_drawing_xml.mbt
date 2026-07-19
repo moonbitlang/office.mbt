@@ -106,6 +106,16 @@ fn drawing_axis_span_emu(
 }
 
 ///|
+fn drawing_anchor_has_unsupported_reader_object(xml : StringView) -> Bool {
+  // Namespace-aware structure validation has already proved that these
+  // canonical names can only designate the direct unsupported object (or a
+  // descendant of its group subtree), so lexical filtering is safe here.
+  xml.contains("<xdr:grpSp") ||
+  xml.contains("<xdr:cxnSp") ||
+  xml.contains("<xdr:contentPart")
+}
+
+///|
 fn parse_drawing_anchors(
   drawing_xml : StringView,
   budget? : ReadBudget,
@@ -140,8 +150,11 @@ fn parse_drawing_anchors(
       None => raise InvalidXml(msg="oneCellAnchor close missing")
     }
     let slice = text[:end]
-    anchors.push(("<xdr:oneCellAnchor\{slice.to_owned()}", OneCell))
-    parsed += 1
+    let full = "<xdr:oneCellAnchor\{slice.to_owned()}"
+    if !drawing_anchor_has_unsupported_reader_object(full) {
+      anchors.push((full, OneCell))
+      parsed += 1
+    }
   }
   let mut first_two = true
   for chunk in xml_str.split("<xdr:twoCellAnchor") {
@@ -176,8 +189,10 @@ fn parse_drawing_anchors(
         }
       None => TwoCell
     }
-    anchors.push((full, positioning))
-    parsed += 1
+    if !drawing_anchor_has_unsupported_reader_object(full) {
+      anchors.push((full, positioning))
+      parsed += 1
+    }
   }
   // Worksheet drawing readers currently model cell-relative geometry. Keep
   // absolute anchors out of those consumers so a drawing they previously
@@ -203,8 +218,11 @@ fn parse_drawing_anchors(
         None => raise InvalidXml(msg="absoluteAnchor close missing")
       }
       let slice = text[:end]
-      anchors.push(("<xdr:absoluteAnchor\{slice.to_owned()}", Absolute))
-      parsed += 1
+      let full = "<xdr:absoluteAnchor\{slice.to_owned()}"
+      if !drawing_anchor_has_unsupported_reader_object(full) {
+        anchors.push((full, Absolute))
+        parsed += 1
+      }
     }
   }
   match budget {
@@ -1199,6 +1217,24 @@ test "DrawingML extension payload cannot spoof anchors or drawing features" {
   assert_true(chart_anchor.contains("chart-good"))
   assert_true(shape_anchor.contains("good-shape"))
   assert_true(slicer_anchor.contains("slicer-good"))
+}
+
+///|
+test "DrawingML ignores valid unsupported anchor objects as complete subtrees" {
+  let source =
+    #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+    #|  <xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:row>0</xdr:row><xdr:colOff>0</xdr:colOff><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="9525" cy="9525"/><xdr:grpSp><xdr:nvGrpSpPr/><xdr:grpSpPr/><xdr:sp><xdr:nvSpPr><xdr:cNvPr id="1" name="nested"/></xdr:nvSpPr><xdr:spPr><a:prstGeom prst="rect"/></xdr:spPr></xdr:sp></xdr:grpSp><xdr:clientData/></xdr:oneCellAnchor>
+    #|  <xdr:oneCellAnchor><xdr:from><xdr:col>1</xdr:col><xdr:row>0</xdr:row><xdr:colOff>0</xdr:colOff><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="9525" cy="9525"/><xdr:sp><xdr:nvSpPr><xdr:cNvPr id="2" name="direct"/></xdr:nvSpPr><xdr:spPr><a:xfrm><a:ext cx="9525" cy="9525"/></a:xfrm><a:prstGeom prst="rect"/></xdr:spPr></xdr:sp><xdr:clientData/></xdr:oneCellAnchor>
+    #|</xdr:wsDr>
+  let drawing = canonicalize_xlsx_drawing_xml(
+    source, default_max_xml_part_bytes,
+  )
+  assert_true(drawing.contains("<xdr:grpSp>"))
+  let anchors = parse_drawing_anchors(drawing)
+  inspect(anchors.length(), content="1")
+  let (anchor, _) = anchors[0]
+  assert_true(anchor.contains("name=\"direct\""))
+  assert_false(anchor.contains("name=\"nested\""))
 }
 
 ///|
