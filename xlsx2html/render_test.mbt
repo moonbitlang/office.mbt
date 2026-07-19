@@ -61,6 +61,10 @@ test "full-document snapshot: styles, merge, widths, chart, image, freeze" {
       #|.formula-pending{color:#888;font-style:italic}
       #|.truncated,.frozen-hint{color:#888;font-size:9pt}
       #|.chart-placeholder{border:1px dashed #999;padding:8px;margin:4px 0;color:#555;font-size:10pt}
+      #|figure.chart{border:1px solid #d9d9d9;padding:8px;margin:4px 0;display:inline-block}
+      #|figure.chart svg .axis{stroke:#666;stroke-width:1}
+      #|figure.chart svg text{font-family:Calibri,Arial,sans-serif;font-size:9px;fill:#333}
+      #|figure.chart figcaption{color:#555;font-size:9pt;max-width:480px}
       #|figure{margin:4px 0}
       #|.s1{font-weight:bold;color:#FFFFFF;background-color:#4472C4;text-align:center;}
       #|</style>
@@ -81,7 +85,7 @@ test "full-document snapshot: styles, merge, widths, chart, image, freeze" {
       #|</table>
       #|<div class="sheet-objects">
       #|<figure class="image" data-anchor="D6"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==" alt=""></figure>
-      #|<figure class="chart-placeholder" data-anchor="D2">[barChart]<br>series: Report!$A$3:$A$3 → Report!$B$3:$B$3</figure>
+      #|<figure class="chart" data-anchor="D2"><svg role="img" aria-label="barChart with 1 series; series 1 (1 points)" viewBox="0 0 480 280" width="480" height="280" xmlns="http://www.w3.org/2000/svg"><title>barChart</title><desc>barChart with 1 series; series 1 (1 points)</desc><line class="axis" x1="48" y1="24" x2="48" y2="224"/><line class="axis" x1="48" y1="224" x2="448" y2="224"/><text class="tick" x="44" y="28" text-anchor="end">1200.00</text><text class="tick" x="44" y="228" text-anchor="end">0.00</text><text class="tick" x="248.00" y="240" text-anchor="middle">East</text><rect fill="#4472c4" x="88.00" y="24.00" width="320.00" height="200.00"/><rect fill="#4472c4" x="48" y="250" width="10" height="10"/><text class="legend" x="62" y="258">series 1</text></svg><figcaption>barChart with 1 series; series 1 (1 points)</figcaption></figure>
       #|<p class="frozen-hint">frozen panes: 2 row(s), 0 column(s)</p>
       #|</div>
       #|</section>
@@ -195,7 +199,7 @@ test "merged anchor spans and covered cells are skipped" {
 }
 
 ///|
-test "no-images drops figures; chart sheets render placeholder sections" {
+test "no-images drops figures; chart sheets render SVG sections" {
   let workbook = showcase_workbook()
   let bare = @xlsx2html.render_workbook(
     workbook,
@@ -212,7 +216,9 @@ test "no-images drops figures; chart sheets render placeholder sections" {
   ignore(charted.add_chart_sheet_with_options("Trend", chart))
   let document = @xlsx2html.render_workbook(charted, title="c.xlsx")
   assert_true(document.contains("data-sheet=\"Trend\""))
-  assert_true(document.contains("[lineChart]"))
+  // supported chart-sheet kinds now render as inline SVG
+  assert_true(document.contains("<figure class=\"chart\""))
+  assert_true(document.contains("<title>lineChart</title>"))
 }
 
 ///|

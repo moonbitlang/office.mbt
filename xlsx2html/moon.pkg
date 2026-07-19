@@ -3,6 +3,7 @@ import {
   "bobzhang/mbtexcel/xlsx",
   "moonbitlang/core/debug",
   "moonbitlang/core/encoding/base64",
+  "moonbitlang/core/math",
 }
 
 import {
