@@ -116,11 +116,184 @@ fn drawing_anchor_has_unsupported_reader_object(xml : StringView) -> Bool {
 }
 
 ///|
+priv struct DrawingAnchor {
+  xml : String
+  positioning : PicturePositioning
+  native_absolute : Bool
+}
+
+///|
+priv struct DrawingAnchorOrigin {
+  reference : String
+  col_idx0 : Int
+  row_idx0 : Int
+  col_off_emu : Int
+  row_off_emu : Int
+}
+
+///|
+fn parse_drawing_int_attr(
+  tag : StringView,
+  name : StringView,
+  invalid_message : String,
+  missing_message : String,
+) -> Int raise XlsxError {
+  match attr_value(tag, name) {
+    Some(value) =>
+      @string.parse_int(value, base=10) catch {
+        _ => raise InvalidXml(msg=invalid_message)
+      }
+    None => raise InvalidXml(msg=missing_message)
+  }
+}
+
+///|
+fn DrawingAnchor::origin_for_read(
+  self : DrawingAnchor,
+) -> DrawingAnchorOrigin raise XlsxError {
+  if self.native_absolute {
+    let pos_tag = match tag_attributes_in(self.xml, "xdr:pos") {
+      Some(value) => value
+      None => raise InvalidXml(msg="drawing absolute position missing")
+    }
+    let x = parse_drawing_int_attr(
+      pos_tag, "x", "drawing absolute x invalid", "drawing absolute x missing",
+    )
+    let y = parse_drawing_int_attr(
+      pos_tag, "y", "drawing absolute y invalid", "drawing absolute y missing",
+    )
+    {
+      reference: drawing_reference_for_read(0, 0, y, x),
+      col_idx0: 0,
+      row_idx0: 0,
+      col_off_emu: x,
+      row_off_emu: y,
+    }
+  } else {
+    let from_body = match extract_tag_body_from(self.xml, "xdr:from") {
+      Some(value) => value
+      None => raise InvalidXml(msg="drawing anchor from missing")
+    }
+    let col_idx0 = parse_xml_int_tag(
+      from_body, "xdr:col", "drawing col invalid",
+    )
+    let row_idx0 = parse_xml_int_tag(
+      from_body, "xdr:row", "drawing row invalid",
+    )
+    let col_off_emu = parse_xml_int_tag(
+      from_body, "xdr:colOff", "drawing colOff invalid",
+    )
+    let row_off_emu = parse_xml_int_tag(
+      from_body, "xdr:rowOff", "drawing rowOff invalid",
+    )
+    {
+      reference: drawing_reference_for_read(
+        row_idx0, col_idx0, row_off_emu, col_off_emu,
+      ),
+      col_idx0,
+      row_idx0,
+      col_off_emu,
+      row_off_emu,
+    }
+  }
+}
+
+///|
+fn DrawingAnchor::uses_direct_extent(self : DrawingAnchor) -> Bool {
+  if self.native_absolute {
+    true
+  } else {
+    match self.positioning {
+      OneCell => true
+      TwoCell | Absolute => false
+    }
+  }
+}
+
+///|
+fn DrawingAnchor::extent_for_read(
+  self : DrawingAnchor,
+  metrics : DrawingMetrics,
+  origin : DrawingAnchorOrigin,
+  object_name? : String = "",
+) -> (Int, Int) raise XlsxError {
+  let prefix = if object_name == "" {
+    "drawing"
+  } else {
+    "drawing " + object_name
+  }
+  if self.uses_direct_extent() {
+    let ext_tag = match tag_attributes_in(self.xml, "xdr:ext") {
+      Some(value) => value
+      None => raise InvalidXml(msg=prefix + " ext missing")
+    }
+    let cx = parse_drawing_int_attr(
+      ext_tag,
+      "cx",
+      prefix + " cx invalid",
+      prefix + " cx missing",
+    )
+    let cy = parse_drawing_int_attr(
+      ext_tag,
+      "cy",
+      prefix + " cy invalid",
+      prefix + " cy missing",
+    )
+    ignore(validate_drawing_extent_for_read(cx, prefix + " cx"))
+    ignore(validate_drawing_extent_for_read(cy, prefix + " cy"))
+    (cx, cy)
+  } else {
+    let to_body = match extract_tag_body_from(self.xml, "xdr:to") {
+      Some(value) => value
+      None => {
+        let target = if object_name == "" { "drawing anchor" } else { prefix }
+        raise InvalidXml(msg=target + " to missing")
+      }
+    }
+    let to_col_idx0 = parse_xml_int_tag(
+      to_body,
+      "xdr:col",
+      prefix + " to col invalid",
+    )
+    let to_row_idx0 = parse_xml_int_tag(
+      to_body,
+      "xdr:row",
+      prefix + " to row invalid",
+    )
+    let to_col_off = parse_xml_int_tag(
+      to_body,
+      "xdr:colOff",
+      prefix + " to colOff invalid",
+    )
+    let to_row_off = parse_xml_int_tag(
+      to_body,
+      "xdr:rowOff",
+      prefix + " to rowOff invalid",
+    )
+    (
+      drawing_axis_span_emu(
+        metrics.cols,
+        origin.col_idx0,
+        origin.col_off_emu,
+        to_col_idx0,
+        to_col_off,
+      ),
+      drawing_axis_span_emu(
+        metrics.rows,
+        origin.row_idx0,
+        origin.row_off_emu,
+        to_row_idx0,
+        to_row_off,
+      ),
+    )
+  }
+}
+
+///|
 fn parse_drawing_anchors(
   drawing_xml : StringView,
   budget? : ReadBudget,
-  include_absolute? : Bool = false,
-) -> Array[(String, PicturePositioning)] raise XlsxError {
+) -> Array[DrawingAnchor] raise XlsxError {
   match budget {
     Some(value) => {
       value.checkpoint()
@@ -129,98 +302,66 @@ fn parse_drawing_anchors(
     None => ()
   }
   let xml_str = drawing_xml.to_owned()
-  let anchors : Array[(String, PicturePositioning)] = []
-  let mut parsed = 0
-  let mut first_one = true
-  for chunk in xml_str.split("<xdr:oneCellAnchor") {
-    if first_one {
-      first_one = false
-      continue
-    }
-    if (parsed & 255) == 0 {
-      match budget {
-        Some(value) => value.checkpoint()
-        None => ()
-      }
-    }
-    let text = chunk.to_owned()
-    let end = match find_xml_close_tag_from(text, "xdr:oneCellAnchor", 0) {
-      Some((_, close_end)) => close_end + 1
-      None => raise InvalidXml(msg="oneCellAnchor close missing")
-    }
-    let slice = text[:end]
-    let full = "<xdr:oneCellAnchor\{slice.to_owned()}"
-    if !drawing_anchor_has_unsupported_reader_object(full) {
-      anchors.push((full, OneCell))
-      parsed += 1
-    }
-  }
-  let mut first_two = true
-  for chunk in xml_str.split("<xdr:twoCellAnchor") {
-    if first_two {
-      first_two = false
-      continue
-    }
-    if (parsed & 255) == 0 {
-      match budget {
-        Some(value) => value.checkpoint()
-        None => ()
-      }
-    }
-    let text = chunk.to_owned()
-    let end = match find_xml_close_tag_from(text, "xdr:twoCellAnchor", 0) {
-      Some((_, close_end)) => close_end + 1
-      None => raise InvalidXml(msg="twoCellAnchor close missing")
-    }
-    let slice = text[:end]
-    let full = "<xdr:twoCellAnchor\{slice.to_owned()}"
-    let positioning = match tag_attributes_in(full, "xdr:twoCellAnchor") {
-      Some(tag) =>
-        match attr_value(tag, "editAs") {
-          Some(value) =>
-            if value.to_string() == "absolute" {
-              Absolute
-            } else {
-              TwoCell
+  let anchors : Array[DrawingAnchor] = []
+  let anchor_names : ReadOnlyArray[String] = [
+    "xdr:oneCellAnchor", "xdr:twoCellAnchor", "xdr:absoluteAnchor",
+  ]
+  let mut cursor = 0
+  let mut scanned = 0
+  for ;; {
+    let mut next_start : Int? = None
+    let mut next_name = ""
+    for candidate in anchor_names {
+      match find_xml_open_tag_start_from(xml_str, candidate, cursor) {
+        Some(start) =>
+          match next_start {
+            Some(current) if current <= start => ()
+            _ => {
+              next_start = Some(start)
+              next_name = candidate
             }
-          None => TwoCell
-        }
-      None => TwoCell
+          }
+        None => ()
+      }
+    }
+    let start = match next_start {
+      Some(value) => value
+      None => break
+    }
+    if (scanned & 255) == 0 {
+      match budget {
+        Some(value) => value.checkpoint()
+        None => ()
+      }
+    }
+    let close_end = match find_xml_close_tag_from(xml_str, next_name, start) {
+      Some((_, value)) => value
+      None => {
+        let local_name = next_name[4:].to_owned()
+        raise InvalidXml(msg=local_name + " close missing")
+      }
+    }
+    let full = xml_str[start:close_end + 1].to_owned()
+    let native_absolute = next_name == "xdr:absoluteAnchor"
+    let positioning = if native_absolute {
+      Absolute
+    } else if next_name == "xdr:oneCellAnchor" {
+      OneCell
+    } else {
+      match tag_attributes_in(full, "xdr:twoCellAnchor") {
+        Some(tag) =>
+          match attr_value(tag, "editAs") {
+            Some(value) if value == "absolute" => Absolute
+            _ => TwoCell
+          }
+        None => TwoCell
+      }
     }
     if !drawing_anchor_has_unsupported_reader_object(full) {
-      anchors.push((full, positioning))
-      parsed += 1
+      anchors.push({ xml: full, positioning, native_absolute })
     }
-  }
-  // Worksheet drawing readers currently model cell-relative geometry. Keep
-  // absolute anchors out of those consumers so a drawing they previously
-  // ignored does not become a hard read failure. Chart sheets opt in because
-  // their exact chart relationship selection is position-independent.
-  if include_absolute {
-    let mut first_absolute = true
-    for chunk in xml_str.split("<xdr:absoluteAnchor") {
-      if first_absolute {
-        first_absolute = false
-        continue
-      }
-      if (parsed & 255) == 0 {
-        match budget {
-          Some(value) => value.checkpoint()
-          None => ()
-        }
-      }
-      let text = chunk.to_owned()
-      let end = match find_xml_close_tag_from(text, "xdr:absoluteAnchor", 0) {
-        Some((_, close_end)) => close_end + 1
-        None => raise InvalidXml(msg="absoluteAnchor close missing")
-      }
-      let slice = text[:end]
-      let full = "<xdr:absoluteAnchor\{slice.to_owned()}"
-      if !drawing_anchor_has_unsupported_reader_object(full) {
-        anchors.push((full, Absolute))
-        parsed += 1
-      }
-    }
+    scanned += 1
+    cursor = close_end + 1
   }
   match budget {
     Some(value) => value.checkpoint()
@@ -249,12 +390,12 @@ fn charge_drawing_anchor_pass(
 /// path and relationship-attribute dialect; this pass enforces chart-sheet
 /// cardinality and keeps relationship lookup tied to that exact payload.
 fn single_drawing_chart_rel_id(
-  anchors : ArrayView[(String, PicturePositioning)],
+  anchors : ArrayView[DrawingAnchor],
   budget? : ReadBudget,
 ) -> String raise XlsxError {
   let mut selected : String? = None
-  for entry in anchors {
-    let (anchor_xml, _) = entry
+  for anchor in anchors {
+    let anchor_xml = anchor.xml
     charge_drawing_anchor_pass(budget, anchor_xml)
     match tag_attributes_in(anchor_xml, "c:chart") {
       Some(tag) => {
@@ -293,7 +434,7 @@ fn drawing_shape_solid_fill_body(sppr_body : StringView) -> String? {
 
 ///|
 fn parse_drawing_images(
-  anchors : ArrayView[(String, PicturePositioning)],
+  anchors : ArrayView[DrawingAnchor],
   drawing_rels_xml : StringView,
   drawing_part : StringView,
   part_names : Map[String, String],
@@ -324,92 +465,19 @@ fn parse_drawing_images(
       cancelled~,
     )
   }
-  for entry in anchors {
-    let (anchor_xml, positioning) = entry
+  for anchor in anchors {
+    let anchor_xml = anchor.xml
+    let positioning = anchor.positioning
     charge_drawing_anchor_pass(budget, anchor_xml)
     let pic_body = match extract_tag_body_from(anchor_xml, "xdr:pic") {
       Some(value) => value
       None => continue
     }
-    let from_body = match extract_tag_body_from(anchor_xml, "xdr:from") {
-      Some(value) => value
-      None => raise InvalidXml(msg="drawing anchor from missing")
-    }
-    let col_idx0 = parse_xml_int_tag(
-      from_body, "xdr:col", "drawing col invalid",
-    )
-    let row_idx0 = parse_xml_int_tag(
-      from_body, "xdr:row", "drawing row invalid",
-    )
-    let col_off_emu = parse_xml_int_tag(
-      from_body, "xdr:colOff", "drawing colOff invalid",
-    )
-    let row_off_emu = parse_xml_int_tag(
-      from_body, "xdr:rowOff", "drawing rowOff invalid",
-    )
-    let reference = drawing_reference_for_read(
-      row_idx0, col_idx0, row_off_emu, col_off_emu,
-    )
-    let offset_x = col_off_emu / picture_emu_per_pixel
-    let offset_y = row_off_emu / picture_emu_per_pixel
-    let (width_emu, height_emu) = match positioning {
-      OneCell => {
-        let ext_tag = match tag_attributes_in(anchor_xml, "xdr:ext") {
-          Some(value) => value
-          None => raise InvalidXml(msg="drawing ext missing")
-        }
-        let cx = match attr_value(ext_tag, "cx") {
-          Some(value) =>
-            @string.parse_int(value, base=10) catch {
-              _ => raise InvalidXml(msg="drawing cx invalid")
-            }
-          None => raise InvalidXml(msg="drawing cx missing")
-        }
-        let cy = match attr_value(ext_tag, "cy") {
-          Some(value) =>
-            @string.parse_int(value, base=10) catch {
-              _ => raise InvalidXml(msg="drawing cy invalid")
-            }
-          None => raise InvalidXml(msg="drawing cy missing")
-        }
-        ignore(validate_drawing_extent_for_read(cx, "drawing cx"))
-        ignore(validate_drawing_extent_for_read(cy, "drawing cy"))
-        (cx, cy)
-      }
-      _ => {
-        let to_body = match extract_tag_body_from(anchor_xml, "xdr:to") {
-          Some(value) => value
-          None => raise InvalidXml(msg="drawing anchor to missing")
-        }
-        let to_col_idx0 = parse_xml_int_tag(
-          to_body, "xdr:col", "drawing to col invalid",
-        )
-        let to_row_idx0 = parse_xml_int_tag(
-          to_body, "xdr:row", "drawing to row invalid",
-        )
-        let to_col_off = parse_xml_int_tag(
-          to_body, "xdr:colOff", "drawing to colOff invalid",
-        )
-        let to_row_off = parse_xml_int_tag(
-          to_body, "xdr:rowOff", "drawing to rowOff invalid",
-        )
-        let cx = drawing_axis_span_emu(
-          metrics.cols,
-          col_idx0,
-          col_off_emu,
-          to_col_idx0,
-          to_col_off,
-        )
-        let cy = drawing_axis_span_emu(
-          metrics.rows,
-          row_idx0,
-          row_off_emu,
-          to_row_idx0,
-          to_row_off,
-        )
-        (cx, cy)
-      }
-    }
+    let origin = anchor.origin_for_read()
+    let reference = origin.reference
+    let offset_x = origin.col_off_emu / picture_emu_per_pixel
+    let offset_y = origin.row_off_emu / picture_emu_per_pixel
+    let (width_emu, height_emu) = anchor.extent_for_read(metrics, origin)
     let c_nv_pr_tag = match tag_attributes_in(pic_body, "xdr:cNvPr") {
       Some(value) => value
       None => raise InvalidXml(msg="drawing cNvPr missing")
@@ -510,7 +578,7 @@ fn parse_drawing_images(
 
 ///|
 fn parse_drawing_charts(
-  anchors : ArrayView[(String, PicturePositioning)],
+  anchors : ArrayView[DrawingAnchor],
   drawing_rels_xml : StringView,
   drawing_part : StringView,
   part_names : Map[String, String],
@@ -532,8 +600,9 @@ fn parse_drawing_charts(
       cancelled~,
     )
   }
-  for entry in anchors {
-    let (anchor_xml, positioning) = entry
+  for anchor in anchors {
+    let anchor_xml = anchor.xml
+    let positioning = anchor.positioning
     charge_drawing_anchor_pass(budget, anchor_xml)
     let chart_tag = match tag_attributes_in(anchor_xml, "c:chart") {
       Some(value) => value
@@ -565,85 +634,11 @@ fn parse_drawing_charts(
       None => raise MissingPart(path=chart_path)
     }
     let xml = decode(chart_bytes)
-    let from_body = match extract_tag_body_from(anchor_xml, "xdr:from") {
-      Some(value) => value
-      None => raise InvalidXml(msg="drawing anchor from missing")
-    }
-    let col_idx0 = parse_xml_int_tag(
-      from_body, "xdr:col", "drawing col invalid",
-    )
-    let row_idx0 = parse_xml_int_tag(
-      from_body, "xdr:row", "drawing row invalid",
-    )
-    let col_off_emu = parse_xml_int_tag(
-      from_body, "xdr:colOff", "drawing colOff invalid",
-    )
-    let row_off_emu = parse_xml_int_tag(
-      from_body, "xdr:rowOff", "drawing rowOff invalid",
-    )
-    let reference = drawing_reference_for_read(
-      row_idx0, col_idx0, row_off_emu, col_off_emu,
-    )
-    let offset_x = col_off_emu / picture_emu_per_pixel
-    let offset_y = row_off_emu / picture_emu_per_pixel
-    let (width_emu, height_emu) = match positioning {
-      OneCell => {
-        let ext_tag = match tag_attributes_in(anchor_xml, "xdr:ext") {
-          Some(value) => value
-          None => raise InvalidXml(msg="drawing ext missing")
-        }
-        let cx = match attr_value(ext_tag, "cx") {
-          Some(value) =>
-            @string.parse_int(value, base=10) catch {
-              _ => raise InvalidXml(msg="drawing cx invalid")
-            }
-          None => raise InvalidXml(msg="drawing cx missing")
-        }
-        let cy = match attr_value(ext_tag, "cy") {
-          Some(value) =>
-            @string.parse_int(value, base=10) catch {
-              _ => raise InvalidXml(msg="drawing cy invalid")
-            }
-          None => raise InvalidXml(msg="drawing cy missing")
-        }
-        ignore(validate_drawing_extent_for_read(cx, "drawing cx"))
-        ignore(validate_drawing_extent_for_read(cy, "drawing cy"))
-        (cx, cy)
-      }
-      _ => {
-        let to_body = match extract_tag_body_from(anchor_xml, "xdr:to") {
-          Some(value) => value
-          None => raise InvalidXml(msg="drawing anchor to missing")
-        }
-        let to_col_idx0 = parse_xml_int_tag(
-          to_body, "xdr:col", "drawing to col invalid",
-        )
-        let to_row_idx0 = parse_xml_int_tag(
-          to_body, "xdr:row", "drawing to row invalid",
-        )
-        let to_col_off = parse_xml_int_tag(
-          to_body, "xdr:colOff", "drawing to colOff invalid",
-        )
-        let to_row_off = parse_xml_int_tag(
-          to_body, "xdr:rowOff", "drawing to rowOff invalid",
-        )
-        let cx = drawing_axis_span_emu(
-          metrics.cols,
-          col_idx0,
-          col_off_emu,
-          to_col_idx0,
-          to_col_off,
-        )
-        let cy = drawing_axis_span_emu(
-          metrics.rows,
-          row_idx0,
-          row_off_emu,
-          to_row_idx0,
-          to_row_off,
-        )
-        (cx, cy)
-      }
-    }
+    let origin = anchor.origin_for_read()
+    let reference = origin.reference
+    let offset_x = origin.col_off_emu / picture_emu_per_pixel
+    let offset_y = origin.row_off_emu / picture_emu_per_pixel
+    let (width_emu, height_emu) = anchor.extent_for_read(metrics, origin)
     let client_tag = match tag_attributes_in(anchor_xml, "xdr:clientData") {
       Some(value) => value
       None => ""
@@ -673,12 +668,13 @@ fn parse_drawing_charts(
 
 ///|
 fn parse_drawing_shapes(
-  anchors : ArrayView[(String, PicturePositioning)],
+  anchors : ArrayView[DrawingAnchor],
   budget? : ReadBudget,
 ) -> Array[Shape] raise XlsxError {
   let shapes : Array[Shape] = []
-  for entry in anchors {
-    let (anchor_xml, positioning) = entry
+  for anchor in anchors {
+    let anchor_xml = anchor.xml
+    let positioning = anchor.positioning
     charge_drawing_anchor_pass(budget, anchor_xml)
     let sp_body = match extract_tag_body_from(anchor_xml, "xdr:sp") {
       Some(value) => value
@@ -687,51 +683,31 @@ fn parse_drawing_shapes(
     if !sp_body.contains("<a:prstGeom") {
       continue
     }
-    let from_body = match extract_tag_body_from(anchor_xml, "xdr:from") {
-      Some(value) => value
-      None => raise InvalidXml(msg="drawing anchor from missing")
-    }
-    let col_idx0 = parse_xml_int_tag(
-      from_body, "xdr:col", "drawing col invalid",
-    )
-    let row_idx0 = parse_xml_int_tag(
-      from_body, "xdr:row", "drawing row invalid",
-    )
-    let col_off_emu = parse_xml_int_tag(
-      from_body, "xdr:colOff", "drawing colOff invalid",
-    )
-    let row_off_emu = parse_xml_int_tag(
-      from_body, "xdr:rowOff", "drawing rowOff invalid",
-    )
-    let reference = drawing_reference_for_read(
-      row_idx0, col_idx0, row_off_emu, col_off_emu,
-    )
-    match positioning {
-      OneCell => ()
-      _ => {
-        let to_body = match extract_tag_body_from(anchor_xml, "xdr:to") {
-          Some(value) => value
-          None => raise InvalidXml(msg="drawing shape to missing")
-        }
-        let to_col_idx0 = parse_xml_int_tag(
-          to_body, "xdr:col", "drawing shape to col invalid",
-        )
-        let to_row_idx0 = parse_xml_int_tag(
-          to_body, "xdr:row", "drawing shape to row invalid",
-        )
-        let to_col_off = parse_xml_int_tag(
-          to_body, "xdr:colOff", "drawing shape to colOff invalid",
-        )
-        let to_row_off = parse_xml_int_tag(
-          to_body, "xdr:rowOff", "drawing shape to rowOff invalid",
-        )
-        validate_drawing_axis_marker_for_read(
-          "col", to_col_idx0, to_col_off, true,
-        )
-        validate_drawing_axis_marker_for_read(
-          "row", to_row_idx0, to_row_off, true,
-        )
+    let origin = anchor.origin_for_read()
+    let reference = origin.reference
+    if !anchor.uses_direct_extent() {
+      let to_body = match extract_tag_body_from(anchor_xml, "xdr:to") {
+        Some(value) => value
+        None => raise InvalidXml(msg="drawing shape to missing")
       }
+      let to_col_idx0 = parse_xml_int_tag(
+        to_body, "xdr:col", "drawing shape to col invalid",
+      )
+      let to_row_idx0 = parse_xml_int_tag(
+        to_body, "xdr:row", "drawing shape to row invalid",
+      )
+      let to_col_off = parse_xml_int_tag(
+        to_body, "xdr:colOff", "drawing shape to colOff invalid",
+      )
+      let to_row_off = parse_xml_int_tag(
+        to_body, "xdr:rowOff", "drawing shape to rowOff invalid",
+      )
+      validate_drawing_axis_marker_for_read(
+        "col", to_col_idx0, to_col_off, true,
+      )
+      validate_drawing_axis_marker_for_read(
+        "row", to_row_idx0, to_row_off, true,
+      )
     }
     let c_nv_pr_tag = match tag_attributes_in(sp_body, "xdr:cNvPr") {
       Some(value) => value
@@ -765,11 +741,16 @@ fn parse_drawing_shapes(
       Some(value) => value
       None => raise InvalidXml(msg="drawing shape spPr missing")
     }
-    let xfrm_body = match extract_tag_body_from(sppr_body, "a:xfrm") {
-      Some(value) => value
-      None => sppr_body
+    let maybe_ext_tag = if anchor.native_absolute {
+      tag_attributes_in(anchor_xml, "xdr:ext")
+    } else {
+      let xfrm_body = match extract_tag_body_from(sppr_body, "a:xfrm") {
+        Some(value) => value
+        None => sppr_body
+      }
+      tag_attributes_in(xfrm_body, "a:ext")
     }
-    let ext_tag = match tag_attributes_in(xfrm_body, "a:ext") {
+    let ext_tag = match maybe_ext_tag {
       Some(value) => value
       None => raise InvalidXml(msg="drawing shape ext missing")
     }
@@ -891,6 +872,14 @@ fn parse_drawing_shapes(
     let format = shape_graphic_options(
       1.0, 1.0, name, alt_text, print_object, locked, positioning,
     )
+    let offset_x = origin.col_off_emu / picture_emu_per_pixel
+    let offset_y = origin.row_off_emu / picture_emu_per_pixel
+    if offset_x != 0 {
+      format.offset_x = Some(offset_x)
+    }
+    if offset_y != 0 {
+      format.offset_y = Some(offset_y)
+    }
     let fill = shape_fill_from_values(fill_color, fill_transparency)
     let line = shape_line_from_values(line_color, line_width)
     shapes.push({
@@ -938,13 +927,14 @@ priv struct SlicerAnchorInfo {
 
 ///|
 fn parse_drawing_slicer_anchors(
-  anchors : ArrayView[(String, PicturePositioning)],
+  anchors : ArrayView[DrawingAnchor],
   metrics : DrawingMetrics,
   budget? : ReadBudget,
 ) -> Map[String, SlicerAnchorInfo] raise XlsxError {
   let out : Map[String, SlicerAnchorInfo] = Map([])
-  for entry in anchors {
-    let (anchor_xml, positioning) = entry
+  for anchor in anchors {
+    let anchor_xml = anchor.xml
+    let positioning = anchor.positioning
     charge_drawing_anchor_pass(budget, anchor_xml)
     let slicer_tag = match tag_attributes_in(anchor_xml, "sle:slicer") {
       Some(value) => value
@@ -954,85 +944,15 @@ fn parse_drawing_slicer_anchors(
       Some(value) => unescape_xml_text(value)
       None => continue
     }
-    let from_body = match extract_tag_body_from(anchor_xml, "xdr:from") {
-      Some(value) => value
-      None => raise InvalidXml(msg="drawing slicer from missing")
-    }
-    let col_idx0 = parse_xml_int_tag(
-      from_body, "xdr:col", "drawing slicer col invalid",
+    let origin = anchor.origin_for_read()
+    let cell = origin.reference
+    let offset_x = origin.col_off_emu / picture_emu_per_pixel
+    let offset_y = origin.row_off_emu / picture_emu_per_pixel
+    let (width_emu, height_emu) = anchor.extent_for_read(
+      metrics,
+      origin,
+      object_name="slicer",
     )
-    let row_idx0 = parse_xml_int_tag(
-      from_body, "xdr:row", "drawing slicer row invalid",
-    )
-    let col_off_emu = parse_xml_int_tag(
-      from_body, "xdr:colOff", "drawing slicer colOff invalid",
-    )
-    let row_off_emu = parse_xml_int_tag(
-      from_body, "xdr:rowOff", "drawing slicer rowOff invalid",
-    )
-    let cell = drawing_reference_for_read(
-      row_idx0, col_idx0, row_off_emu, col_off_emu,
-    )
-    let offset_x = col_off_emu / picture_emu_per_pixel
-    let offset_y = row_off_emu / picture_emu_per_pixel
-    let (width_emu, height_emu) = match positioning {
-      OneCell => {
-        let ext_tag = match tag_attributes_in(anchor_xml, "xdr:ext") {
-          Some(value) => value
-          None => raise InvalidXml(msg="drawing slicer ext missing")
-        }
-        let cx = match attr_value(ext_tag, "cx") {
-          Some(value) =>
-            @string.parse_int(value, base=10) catch {
-              _ => raise InvalidXml(msg="drawing slicer cx invalid")
-            }
-          None => raise InvalidXml(msg="drawing slicer cx missing")
-        }
-        let cy = match attr_value(ext_tag, "cy") {
-          Some(value) =>
-            @string.parse_int(value, base=10) catch {
-              _ => raise InvalidXml(msg="drawing slicer cy invalid")
-            }
-          None => raise InvalidXml(msg="drawing slicer cy missing")
-        }
-        ignore(validate_drawing_extent_for_read(cx, "drawing slicer cx"))
-        ignore(validate_drawing_extent_for_read(cy, "drawing slicer cy"))
-        (cx, cy)
-      }
-      _ => {
-        let to_body = match extract_tag_body_from(anchor_xml, "xdr:to") {
-          Some(value) => value
-          None => raise InvalidXml(msg="drawing slicer to missing")
-        }
-        let to_col_idx0 = parse_xml_int_tag(
-          to_body, "xdr:col", "drawing slicer to col invalid",
-        )
-        let to_row_idx0 = parse_xml_int_tag(
-          to_body, "xdr:row", "drawing slicer to row invalid",
-        )
-        let to_col_off = parse_xml_int_tag(
-          to_body, "xdr:colOff", "drawing slicer to colOff invalid",
-        )
-        let to_row_off = parse_xml_int_tag(
-          to_body, "xdr:rowOff", "drawing slicer to rowOff invalid",
-        )
-        let cx = drawing_axis_span_emu(
-          metrics.cols,
-          col_idx0,
-          col_off_emu,
-          to_col_idx0,
-          to_col_off,
-        )
-        let cy = drawing_axis_span_emu(
-          metrics.rows,
-          row_idx0,
-          row_off_emu,
-          to_row_idx0,
-          to_row_off,
-        )
-        (cx, cy)
-      }
-    }
     let width = (width_emu.to_double() / picture_emu_per_pixel.to_double())
       .round()
       .to_int()
@@ -1206,10 +1126,10 @@ test "DrawingML extension payload cannot spoof anchors or drawing features" {
   assert_false(drawing.contains("extLst"))
   let anchors = parse_drawing_anchors(drawing)
   inspect(anchors.length(), content="4")
-  let (image_anchor, _) = anchors[0]
-  let (chart_anchor, _) = anchors[1]
-  let (shape_anchor, _) = anchors[2]
-  let (slicer_anchor, _) = anchors[3]
+  let image_anchor = anchors[0].xml
+  let chart_anchor = anchors[1].xml
+  let shape_anchor = anchors[2].xml
+  let slicer_anchor = anchors[3].xml
   assert_true(image_anchor.contains("image-good"))
   assert_true(chart_anchor.contains("chart-good"))
   assert_true(shape_anchor.contains("good-shape"))
@@ -1229,9 +1149,9 @@ test "DrawingML ignores valid unsupported anchor objects as complete subtrees" {
   assert_true(drawing.contains("<xdr:grpSp>"))
   let anchors = parse_drawing_anchors(drawing)
   inspect(anchors.length(), content="1")
-  let (anchor, _) = anchors[0]
-  assert_true(anchor.contains("name=\"direct\""))
-  assert_false(anchor.contains("name=\"nested\""))
+  let anchor_xml = anchors[0].xml
+  assert_true(anchor_xml.contains("name=\"direct\""))
+  assert_false(anchor_xml.contains("name=\"nested\""))
 }
 
 ///|
@@ -1353,18 +1273,20 @@ test "DrawingML shape fill selection excludes line-only fills" {
 test "chartsheet drawing selector requires exactly one chart payload" {
   let anchor =
     #|<xdr:oneCellAnchor><xdr:graphicFrame><a:graphic><a:graphicData><c:chart r:id="selected"/></a:graphicData></a:graphic></xdr:graphicFrame></xdr:oneCellAnchor>
-  let one : ReadOnlyArray[(String, PicturePositioning)] = [(anchor, OneCell)]
+  let one : ReadOnlyArray[DrawingAnchor] = [
+    { xml: anchor, positioning: OneCell, native_absolute: false },
+  ]
   assert_eq(single_drawing_chart_rel_id(one), "selected")
-  let empty : ReadOnlyArray[(String, PicturePositioning)] = []
+  let empty : ReadOnlyArray[DrawingAnchor] = []
   try single_drawing_chart_rel_id(empty) catch {
     InvalidXml(msg~) => assert_eq(msg, "chartsheet chart payload missing")
     _ => fail("unexpected empty chartsheet drawing error")
   } noraise {
     _ => fail("expected empty chartsheet drawing rejection")
   }
-  let two : ReadOnlyArray[(String, PicturePositioning)] = [
-    (anchor, OneCell),
-    (anchor, OneCell),
+  let two : ReadOnlyArray[DrawingAnchor] = [
+    { xml: anchor, positioning: OneCell, native_absolute: false },
+    { xml: anchor, positioning: OneCell, native_absolute: false },
   ]
   try single_drawing_chart_rel_id(two) catch {
     InvalidXml(msg~) => assert_eq(msg, "chartsheet drawing has multiple charts")
@@ -1491,7 +1413,7 @@ test "read_drawing_xml wb: drawing spans reject invalid markers and overflow" {
 ///|
 test "read_drawing_xml wb: parse_drawing_anchors validation and positioning" {
   let one_missing_close = "<xdr:wsDr><xdr:oneCellAnchor><xdr:pic/></xdr:wsDr>"
-  let one_result : Result[Array[(String, PicturePositioning)], Error] = Ok(
+  let one_result : Result[Array[DrawingAnchor], Error] = Ok(
     parse_drawing_anchors(one_missing_close),
   ) catch {
     e => Err(e)
@@ -1503,7 +1425,7 @@ test "read_drawing_xml wb: parse_drawing_anchors validation and positioning" {
   }
 
   let two_missing_close = "<xdr:wsDr><xdr:oneCellAnchor></xdr:oneCellAnchor><xdr:twoCellAnchor></xdr:wsDr>"
-  let two_result : Result[Array[(String, PicturePositioning)], Error] = Ok(
+  let two_result : Result[Array[DrawingAnchor], Error] = Ok(
     parse_drawing_anchors(two_missing_close),
   ) catch {
     e => Err(e)
@@ -1515,8 +1437,8 @@ test "read_drawing_xml wb: parse_drawing_anchors validation and positioning" {
   }
 
   let absolute_missing_close = "<xdr:wsDr><xdr:absoluteAnchor><xdr:graphicFrame/></xdr:wsDr>"
-  let absolute_result : Result[Array[(String, PicturePositioning)], Error] = Ok(
-    parse_drawing_anchors(absolute_missing_close, include_absolute=true),
+  let absolute_result : Result[Array[DrawingAnchor], Error] = Ok(
+    parse_drawing_anchors(absolute_missing_close),
   ) catch {
     e => Err(e)
   }
@@ -1528,17 +1450,19 @@ test "read_drawing_xml wb: parse_drawing_anchors validation and positioning" {
 
   let xml =
     #|<xdr:wsDr>
+    #|  <xdr:absoluteAnchor></xdr:absoluteAnchor >
+    #|  <xdr:oneCellAnchor></xdr:oneCellAnchor>
     #|  <xdr:twoCellAnchor editAs="absolute"></xdr:twoCellAnchor >
     #|  <xdr:twoCellAnchor editAs="free"></xdr:twoCellAnchor>
-    #|  <xdr:absoluteAnchor></xdr:absoluteAnchor >
     #|</xdr:wsDr>
-  let worksheet_anchors = parse_drawing_anchors(xml)
-  inspect(worksheet_anchors.length(), content="2")
-  let anchors = parse_drawing_anchors(xml, include_absolute=true)
-  inspect(anchors.length(), content="3")
-  debug_inspect(anchors[0].1, content="Absolute")
-  debug_inspect(anchors[1].1, content="TwoCell")
-  debug_inspect(anchors[2].1, content="Absolute")
+  let anchors = parse_drawing_anchors(xml)
+  inspect(anchors.length(), content="4")
+  debug_inspect(anchors[0].positioning, content="Absolute")
+  debug_inspect(anchors[1].positioning, content="OneCell")
+  debug_inspect(anchors[2].positioning, content="Absolute")
+  debug_inspect(anchors[3].positioning, content="TwoCell")
+  inspect(anchors[0].native_absolute, content="true")
+  inspect(anchors[2].native_absolute, content="false")
 }
 
 ///|
@@ -1547,7 +1471,7 @@ test "read_drawing_xml wb: anchor parsing checks limits before copying source" {
   let limited = ReadBudget::new(
     ReadLimits::with_values(max_parser_work_units=1),
   )
-  let limit_result : Result[Array[(String, PicturePositioning)], Error] = Ok(
+  let limit_result : Result[Array[DrawingAnchor], Error] = Ok(
     parse_drawing_anchors(drawing_xml, budget=limited),
   ) catch {
     error => Err(error)
@@ -1566,7 +1490,7 @@ test "read_drawing_xml wb: anchor parsing checks limits before copying source" {
     checks += 1
     true
   })
-  let cancel_result : Result[Array[(String, PicturePositioning)], Error] = Ok(
+  let cancel_result : Result[Array[DrawingAnchor], Error] = Ok(
     parse_drawing_anchors(drawing_xml, budget=cancelled),
   ) catch {
     error => Err(error)

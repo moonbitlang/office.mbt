@@ -180,6 +180,7 @@ fn validate_xlsx_drawing_reader_structure(
   let mut marker_row_off_seen = false
   let mut from_seen = false
   let mut to_seen = false
+  let mut anchor_pos_seen = false
   let mut anchor_ext_seen = false
   let mut client_data_seen = false
   let mut non_visual_container_seen = false
@@ -226,6 +227,7 @@ fn validate_xlsx_drawing_reader_structure(
       reader_payload_seen = false
       from_seen = false
       to_seen = false
+      anchor_pos_seen = false
       anchor_ext_seen = false
       client_data_seen = false
     } else if depth <= 3 {
@@ -290,6 +292,7 @@ fn validate_xlsx_drawing_reader_structure(
       reader_payload_seen = false
       from_seen = false
       to_seen = false
+      anchor_pos_seen = false
       anchor_ext_seen = false
       client_data_seen = false
     } else if namespace_uri == drawing_namespace &&
@@ -345,6 +348,7 @@ fn validate_xlsx_drawing_reader_structure(
       (
         local_name == "from" ||
         local_name == "to" ||
+        local_name == "pos" ||
         local_name == "ext" ||
         local_name == "clientData"
       ) {
@@ -355,6 +359,9 @@ fn validate_xlsx_drawing_reader_structure(
         raise InvalidXml(msg="drawing anchor reader target is misplaced")
       }
       if local_name == "from" {
+        if anchor_name == "absoluteAnchor" {
+          raise InvalidXml(msg="drawing anchor from target is misplaced")
+        }
         if from_seen {
           raise InvalidXml(msg="drawing anchor from target is duplicated")
         }
@@ -365,6 +372,9 @@ fn validate_xlsx_drawing_reader_structure(
         marker_row_seen = false
         marker_row_off_seen = false
       } else if local_name == "to" {
+        if anchor_name == "absoluteAnchor" {
+          raise InvalidXml(msg="drawing anchor to target is misplaced")
+        }
         if to_seen {
           raise InvalidXml(msg="drawing anchor to target is duplicated")
         }
@@ -374,6 +384,14 @@ fn validate_xlsx_drawing_reader_structure(
         marker_col_off_seen = false
         marker_row_seen = false
         marker_row_off_seen = false
+      } else if local_name == "pos" {
+        if anchor_name != "absoluteAnchor" {
+          raise InvalidXml(msg="drawing anchor pos target is misplaced")
+        }
+        if anchor_pos_seen {
+          raise InvalidXml(msg="drawing anchor pos target is duplicated")
+        }
+        anchor_pos_seen = true
       } else if local_name == "ext" {
         if anchor_ext_seen {
           raise InvalidXml(msg="drawing anchor ext target is duplicated")

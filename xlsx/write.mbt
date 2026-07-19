@@ -663,6 +663,14 @@ fn write_drawing_xml(
     let (row, col) = cell_ref_to_rc(shape.reference)
     let col_idx = col - 1
     let row_idx = row - 1
+    let offset_x = shape.format.offset_x.unwrap_or(0)
+    let offset_y = shape.format.offset_y.unwrap_or(0)
+    let col_off = drawing_pixel_offset_for_write(
+      offset_x, "drawing shape column offset",
+    )
+    let row_off = drawing_pixel_offset_for_write(
+      offset_y, "drawing shape row offset",
+    )
     let shape_id = obj_id
     obj_id = obj_id + 1
     let cx = drawing_scaled_extent_for_write(
@@ -680,20 +688,20 @@ fn write_drawing_xml(
         sb.write_view("  <xdr:twoCellAnchor>\n")
         sb.write_view("    <xdr:from>\n")
         sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
-        sb.write_view("      <xdr:colOff>0</xdr:colOff>\n")
+        sb.write_view("      <xdr:colOff>\{col_off}</xdr:colOff>\n")
         sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
-        sb.write_view("      <xdr:rowOff>0</xdr:rowOff>\n")
+        sb.write_view("      <xdr:rowOff>\{row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:from>\n")
         let (to_col_idx, to_col_off) = two_cell_axis_to(
           drawing_metrics.cols,
           col_idx,
-          0,
+          col_off,
           cx,
         )
         let (to_row_idx, to_row_off) = two_cell_axis_to(
           drawing_metrics.rows,
           row_idx,
-          0,
+          row_off,
           cy,
         )
         sb.write_view("    <xdr:to>\n")
@@ -707,20 +715,20 @@ fn write_drawing_xml(
         sb.write_view("  <xdr:twoCellAnchor editAs=\"absolute\">\n")
         sb.write_view("    <xdr:from>\n")
         sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
-        sb.write_view("      <xdr:colOff>0</xdr:colOff>\n")
+        sb.write_view("      <xdr:colOff>\{col_off}</xdr:colOff>\n")
         sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
-        sb.write_view("      <xdr:rowOff>0</xdr:rowOff>\n")
+        sb.write_view("      <xdr:rowOff>\{row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:from>\n")
         let (to_col_idx, to_col_off) = two_cell_axis_to(
           drawing_metrics.cols,
           col_idx,
-          0,
+          col_off,
           cx,
         )
         let (to_row_idx, to_row_off) = two_cell_axis_to(
           drawing_metrics.rows,
           row_idx,
-          0,
+          row_off,
           cy,
         )
         sb.write_view("    <xdr:to>\n")
@@ -734,9 +742,9 @@ fn write_drawing_xml(
         sb.write_view("  <xdr:oneCellAnchor>\n")
         sb.write_view("    <xdr:from>\n")
         sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
-        sb.write_view("      <xdr:colOff>0</xdr:colOff>\n")
+        sb.write_view("      <xdr:colOff>\{col_off}</xdr:colOff>\n")
         sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
-        sb.write_view("      <xdr:rowOff>0</xdr:rowOff>\n")
+        sb.write_view("      <xdr:rowOff>\{row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:from>\n")
         sb.write_view("    <xdr:ext cx=\"\{cx}\" cy=\"\{cy}\"/>\n")
       }
