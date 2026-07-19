@@ -35,7 +35,7 @@ Codex review at least at `xhigh` effort.
 | X1: provenance-checked bounded XLSX archive reads | [#160](https://github.com/moonbitlang/office.mbt/issues/160) | Complete |
 | Coordinate validation hardening | [#138](https://github.com/moonbitlang/office.mbt/issues/138) | Complete |
 | X2: unified bounded XLSX outline, get, text, and query | [#161](https://github.com/moonbitlang/office.mbt/issues/161) | Complete |
-| X3: transactional XLSX create and batch | [#162](https://github.com/moonbitlang/office.mbt/issues/162) | In progress |
+| X3: transactional XLSX create and batch | [#162](https://github.com/moonbitlang/office.mbt/issues/162) | Complete |
 | D3: fresh DOCX create and batch | [#163](https://github.com/moonbitlang/office.mbt/issues/163) | Planned |
 | D4: preservation-safe DOCX annotation mutations | [#164](https://github.com/moonbitlang/office.mbt/issues/164) | Planned |
 | V1: cross-format validate and issues | [#165](https://github.com/moonbitlang/office.mbt/issues/165) | Planned |
