@@ -8,24 +8,85 @@ import {
 // Values
 pub fn attr_value(StringView, StringView) -> String? raise ParseXmlError
 
+pub fn canonicalize_xml_expanded_names(StringView, ArrayView[String], ArrayView[(String, String)], max_output_chars? : Int, cancelled? : () -> Bool, element_prefixes? : ArrayView[(String, String)]) -> String raise ParseXmlError
+
+pub fn decode_xml_attribute(StringView, cancelled? : () -> Bool) -> String raise ParseXmlError
+
 pub fn escape_xml_attr(StringView) -> String
 
 pub fn escape_xml_text(StringView) -> String
 
-pub fn find_override_part_by_content_types(StringView, ArrayView[String]) -> String? raise ParseXmlError
+pub fn find_override_part_by_content_types(StringView, ArrayView[String], cancelled? : () -> Bool) -> String? raise ParseXmlError
 
-pub fn parse_relationship_targets(StringView, StringView) -> Map[String, String] raise ParseXmlError
+pub fn find_part_content_type(StringView, StringView, cancelled? : () -> Bool) -> String? raise ParseXmlError
+
+pub fn is_valid_opc_part_segment(StringView) -> Bool
+
+pub fn is_valid_opc_part_segment_cancellable(StringView, cancelled? : () -> Bool) -> Bool raise ParseXmlError
+
+pub fn logical_opc_part_name_from_zip_item_name(StringView) -> String?
+
+pub fn logical_opc_part_name_from_zip_item_name_cancellable(StringView, cancelled? : () -> Bool) -> String? raise ParseXmlError
+
+pub fn opc_part_name_identity_node_count_cancellable(StringView, cancelled? : () -> Bool) -> Int raise ParseXmlError
+
+pub fn package_part_name_key(StringView) -> String
+
+pub fn package_part_name_key_cancellable(StringView, cancelled? : () -> Bool) -> String raise ParseXmlError
+
+pub fn parse_external_relationship_targets(StringView, StringView, cancelled? : () -> Bool) -> Map[String, String] raise ParseXmlError
+
+pub fn parse_external_relationship_targets_by_types(StringView, ArrayView[String], cancelled? : () -> Bool) -> Map[String, String] raise ParseXmlError
+
+pub fn parse_internal_relationship_targets(StringView, StringView, cancelled? : () -> Bool) -> Map[String, String] raise ParseXmlError
+
+pub fn parse_internal_relationship_targets_by_types(StringView, ArrayView[String], cancelled? : () -> Bool) -> Map[String, String] raise ParseXmlError
+
+pub fn parse_package_content_types(StringView, cancelled? : () -> Bool) -> PackageContentTypes raise ParseXmlError
+
+pub fn parse_package_relationships(StringView, cancelled? : () -> Bool) -> Array[PackageRelationship] raise ParseXmlError
+
+pub fn project_xml_markup_compatibility(StringView, ArrayView[String], max_output_chars? : Int, cancelled? : () -> Bool, extension_elements? : ArrayView[(String, String)]) -> String raise ParseXmlError
+
+pub fn remove_xml_expanded_name_subtrees(StringView, ArrayView[String], String, cancelled? : () -> Bool) -> String? raise ParseXmlError
+
+pub fn remove_xml_foreign_namespace_subtrees(StringView, ArrayView[String], cancelled? : () -> Bool) -> String? raise ParseXmlError
 
 pub fn xml_needs_escape(StringView, attr~ : Bool) -> Bool
 
 // Errors
 pub suberror ParseXmlError {
   InvalidXml(msg~ : String)
+  ReadCancelled
 } derive(@debug.Debug)
 #deprecated
 pub fn ParseXmlError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
+pub(all) enum OpcPartNameConflict {
+  Equivalent(String)
+  Derivable(String)
+}
+
+pub struct OpcPartNameRegistry {
+  // private fields
+}
+pub fn OpcPartNameRegistry::new(maximum_identity_nodes? : Int) -> Self
+pub fn OpcPartNameRegistry::register(Self, StringView, String) -> OpcPartNameConflict? raise ParseXmlError
+pub fn OpcPartNameRegistry::register_cancellable(Self, StringView, String, cancelled? : () -> Bool) -> OpcPartNameConflict? raise ParseXmlError
+
+pub struct PackageContentTypes {
+  // private fields
+}
+pub fn PackageContentTypes::content_type_for(Self, StringView, cancelled? : () -> Bool) -> String? raise ParseXmlError
+
+pub struct PackageRelationship {
+  id : String
+  rel_type : String
+  target : String
+  external : Bool
+}
+
 type WorkbookManifest
 pub fn WorkbookManifest::add_content_default(Self, String, String) -> Unit
 pub fn WorkbookManifest::add_content_override(Self, String, String) -> Unit
@@ -37,6 +98,20 @@ pub fn WorkbookManifest::new(Int, include_shared_strings? : Bool, include_calc_c
 pub fn WorkbookManifest::root_rels_xml(Self) -> String
 pub fn WorkbookManifest::set_workbook_content_type(Self, String) -> Unit
 pub fn WorkbookManifest::workbook_rels_xml(Self) -> String
+
+pub struct XmlStartTagScanner {
+  // private fields
+}
+pub fn XmlStartTagScanner::attribute(Self, StringView, StringView) -> String? raise ParseXmlError
+pub fn XmlStartTagScanner::attribute_values_in_namespace(Self, StringView) -> Array[String] raise ParseXmlError
+pub fn XmlStartTagScanner::attribute_view(Self, StringView, StringView) -> StringView? raise ParseXmlError
+pub fn XmlStartTagScanner::depth(Self) -> Int
+pub fn XmlStartTagScanner::local_name(Self) -> StringView
+pub fn XmlStartTagScanner::namespace_uri(Self) -> StringView
+pub fn XmlStartTagScanner::new(StringView, cancelled? : () -> Bool) -> Self
+pub fn XmlStartTagScanner::next(Self) -> Bool raise ParseXmlError
+pub fn XmlStartTagScanner::parent_local_name(Self) -> StringView?
+pub fn XmlStartTagScanner::parent_namespace_uri(Self) -> String?
 
 // Type aliases
 

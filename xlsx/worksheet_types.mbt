@@ -9,8 +9,30 @@ pub struct Cell {
   formula : String?
   formula_type : FormulaType?
   formula_ref : String?
-  formula_shared_index : Int?
+  formula_shared_index : UInt?
+  /// Whether this formula cell contained an OOXML `<v>` cached-result node.
+  /// Empty cached strings are semantically distinct from a missing cache.
+  formula_value_present : Bool
+  /// Whether the OOXML cell explicitly specifies its style, including `s="0"`.
+  /// An omitted cell style may inherit from its row or column.
+  style_explicit : Bool
   style_id : Int
+}
+
+///|
+/// Read-only formula metadata for one worksheet coordinate. `formula` is the
+/// cell's semantic formula text; OOXML says shared-formula follower text is
+/// ignored, so followers are canonicalized to an empty string while
+/// `formula_type` and `shared_index` preserve their formula-bearing state.
+/// Callers that need display/query text can use the shared index to resolve
+/// the corresponding non-empty master formula.
+pub struct CellFormulaInfo {
+  formula : String
+  formula_type : FormulaType?
+  range_ref : String?
+  shared_index : UInt?
+  /// True when the formula has a cached `<v>` result, including `<v></v>`.
+  cached_value_present : Bool
 }
 
 ///|
@@ -33,6 +55,11 @@ pub struct Image {
   alt_text : String
   lock_aspect_ratio : Bool
   positioning : PicturePositioning
+  priv drawing_offset_x_emu : Int?
+  priv drawing_offset_y_emu : Int?
+  priv drawing_width_emu : Int?
+  priv drawing_height_emu : Int?
+  priv drawing_order : Int?
 }
 
 ///|
@@ -46,6 +73,11 @@ pub struct Chart {
   print_object : Bool
   locked : Bool
   positioning : PicturePositioning
+  priv drawing_offset_x_emu : Int?
+  priv drawing_offset_y_emu : Int?
+  priv drawing_width_emu : Int?
+  priv drawing_height_emu : Int?
+  priv drawing_order : Int?
 }
 
 ///|
@@ -73,12 +105,17 @@ pub struct ColDimension {
 
 ///|
 pub struct Worksheet {
+  /// Present only while this worksheet is a live member of a workbook. The
+  /// token supports constant-time ownership checks for bulk workbook reads.
+  priv mut workbook_owner_token : Array[Unit]?
   mut name : String
   sheet_views : Array[SheetView]
   mut dimension_ref : String?
   cells : Array[Cell]
   cell_index : Map[String, Int]
   mut cell_index_valid : Bool
+  shared_formula_masters_index : Map[UInt, SharedFormulaMaster]
+  mut shared_formula_masters_index_valid : Bool
   merged_cells : Array[String]
   hyperlinks : Array[Hyperlink]
   tables : Array[Table]
@@ -112,6 +149,12 @@ pub struct Worksheet {
   mut stream_state : StreamState
   mut vml_drawing_xml : String?
   mut vml_drawing_hf_xml : String?
+  /// Next stable cross-type drawing order. Source anchors occupy the initial
+  /// range; newly added objects append after them regardless of object kind.
+  priv mut next_drawing_order : Int
+  priv preserved_drawing_anchors : Array[PreservedDrawingAnchor]
+  priv preserved_drawing_relationships : Array[PreservedDrawingRelationship]
+  priv preserved_drawing_parts : Array[PreservedDrawingPart]
   /// Cell value-metadata (`vm`) indices captured on read, keyed by
   /// canonical cell reference. Links a cell to its rich-value embedded
   /// image; lives on the worksheet so it survives rename/copy/delete.
@@ -121,12 +164,17 @@ pub struct Worksheet {
 ///|
 pub fn Worksheet::new(name : String) -> Worksheet {
   {
+    workbook_owner_token: None,
     name,
     sheet_views: [],
     dimension_ref: None,
     cells: [],
     cell_index: Map([]),
-    cell_index_valid: false,
+    // Empty worksheets begin with a valid index. Normal mutators update it as
+    // cells are added, avoiding a deferred whole-sheet rebuild on first read.
+    cell_index_valid: true,
+    shared_formula_masters_index: Map([]),
+    shared_formula_masters_index_valid: true,
     merged_cells: [],
     hyperlinks: [],
     tables: [],
@@ -160,6 +208,10 @@ pub fn Worksheet::new(name : String) -> Worksheet {
     stream_state: Idle,
     vml_drawing_xml: None,
     vml_drawing_hf_xml: None,
+    next_drawing_order: 0,
+    preserved_drawing_anchors: [],
+    preserved_drawing_relationships: [],
+    preserved_drawing_parts: [],
     cell_vm: Map([]),
   }
 }
@@ -227,7 +279,8 @@ fn Worksheet::form_controls(self : Worksheet) -> ArrayView[FormControl] {
 }
 
 ///|
-fn Worksheet::slicers(self : Worksheet) -> ArrayView[Slicer] {
+/// Returns the slicers attached to this worksheet in stored order.
+pub fn Worksheet::slicers(self : Worksheet) -> ArrayView[Slicer] {
   self.slicers
 }
 
@@ -249,6 +302,12 @@ pub fn Worksheet::ignored_errors(self : Worksheet) -> ArrayView[IgnoredError] {
 ///|
 pub fn Worksheet::comments(self : Worksheet) -> ArrayView[Comment] {
   self.comments
+}
+
+///|
+/// Returns the retained hyperlink count without copying cell references.
+pub fn Worksheet::hyperlink_count(self : Worksheet) -> Int {
+  self.hyperlinks.length()
 }
 
 ///|

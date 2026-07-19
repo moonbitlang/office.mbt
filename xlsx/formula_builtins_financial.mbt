@@ -63,14 +63,15 @@ fn coupdays_between(
   from_serial : Double,
   to_serial : Double,
   basis : Int,
+  use_1904_dates? : Bool = false,
 ) -> Double {
   let (from_year, from_month, from_day_raw) = match
-    date_parts_from_serial(from_serial) {
+    date_parts_from_serial(from_serial, use_1904_dates~) {
     Some(parts) => parts
     None => return 0.0
   }
   let (to_year, to_month, to_day_raw) = match
-    date_parts_from_serial(to_serial) {
+    date_parts_from_serial(to_serial, use_1904_dates~) {
     Some(parts) => parts
     None => return 0.0
   }
@@ -80,11 +81,12 @@ fn coupdays_between(
   let mut to_day = get_day_on_basis(to_year, to_month, to_day_raw, basis)
   if !is_30_basis_method(basis) {
     let from_adj = match
-      excel_serial_from_date(from_year, from_month, from_day) {
+      excel_serial_from_date(from_year, from_month, from_day, use_1904_dates~) {
       Some(serial) => serial
       None => return 0.0
     }
-    let to_adj = match excel_serial_from_date(to_year, to_month, to_day) {
+    let to_adj = match
+      excel_serial_from_date(to_year, to_month, to_day, use_1904_dates~) {
       Some(serial) => serial
       None => return 0.0
     }
@@ -133,14 +135,15 @@ fn coupon_date_serial(
   settlement_serial : Double,
   maturity_serial : Double,
   frequency : Double,
+  use_1904_dates? : Bool = false,
 ) -> Result[Double, FormulaValue] {
   let (settle_year, settle_month, settle_day) = match
-    date_parts_from_serial(settlement_serial) {
+    date_parts_from_serial(settlement_serial, use_1904_dates~) {
     Some(parts) => parts
     None => return Err(Error(formula_error_value))
   }
   let (mat_year, mat_month, mat_day) = match
-    date_parts_from_serial(maturity_serial) {
+    date_parts_from_serial(maturity_serial, use_1904_dates~) {
     Some(parts) => parts
     None => return Err(Error(formula_error_value))
   }
@@ -168,7 +171,7 @@ fn coupon_date_serial(
   } else if day > 27 && day > days {
     day = days
   }
-  match excel_serial_from_date(year, month, day) {
+  match excel_serial_from_date(year, month, day, use_1904_dates~) {
     Some(serial) => Ok(serial)
     None => Err(Error(formula_error_num))
   }
@@ -177,15 +180,16 @@ fn coupon_date_serial(
 ///|
 fn prepare_coupon_args(
   values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
 ) -> Result[(Double, Double, Double, Int), FormulaValue] {
   if values.length() != 3 && values.length() != 4 {
     return Err(Error(formula_error_value))
   }
-  let settlement = match value_as_date_serial(values[0]) {
+  let settlement = match value_as_date_serial(values[0], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
-  let maturity = match value_as_date_serial(values[1]) {
+  let maturity = match value_as_date_serial(values[1], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
@@ -216,13 +220,20 @@ fn coupdaybs_value(
   maturity : Double,
   frequency : Double,
   basis : Int,
+  use_1904_dates? : Bool = false,
 ) -> Result[Double, FormulaValue] {
   let pcd = match
-    coupon_date_serial("COUPPCD", settlement, maturity, frequency) {
+    coupon_date_serial(
+      "COUPPCD",
+      settlement,
+      maturity,
+      frequency,
+      use_1904_dates~,
+    ) {
     Ok(serial) => serial
     Err(err) => return Err(err)
   }
-  Ok(coupdays_between(pcd, settlement, basis))
+  Ok(coupdays_between(pcd, settlement, basis, use_1904_dates~))
 }
 
 ///|
@@ -231,29 +242,37 @@ fn coupdays_value(
   maturity : Double,
   frequency : Double,
   basis : Int,
+  use_1904_dates? : Bool = false,
 ) -> Result[Double, FormulaValue] {
   if basis == 1 {
     let pcd = match
-      coupon_date_serial("COUPPCD", settlement, maturity, frequency) {
+      coupon_date_serial(
+        "COUPPCD",
+        settlement,
+        maturity,
+        frequency,
+        use_1904_dates~,
+      ) {
       Ok(serial) => serial
       Err(err) => return Err(err)
     }
     let months = 12 / Double::to_int(trunc_double(frequency))
-    let next = match date_parts_from_serial(pcd) {
+    let next = match date_parts_from_serial(pcd, use_1904_dates~) {
       Some((year, month, day)) => {
         let (new_year, new_month, new_day) = normalize_date_parts(
           year,
           month + months,
           day,
         )
-        match excel_serial_from_date(new_year, new_month, new_day) {
+        match
+          excel_serial_from_date(new_year, new_month, new_day, use_1904_dates~) {
           Some(serial) => serial
           None => return Err(Error(formula_error_num))
         }
       }
       None => return Err(Error(formula_error_value))
     }
-    return Ok(coupdays_between(pcd, next, basis))
+    return Ok(coupdays_between(pcd, next, basis, use_1904_dates~))
   }
   let year_days = get_year_days(0, basis)
   Ok(Double::from_int(year_days) / frequency)
@@ -265,13 +284,20 @@ fn coupdaysnc_value(
   maturity : Double,
   frequency : Double,
   basis : Int,
+  use_1904_dates? : Bool = false,
 ) -> Result[Double, FormulaValue] {
   let ncd = match
-    coupon_date_serial("COUPNCD", settlement, maturity, frequency) {
+    coupon_date_serial(
+      "COUPNCD",
+      settlement,
+      maturity,
+      frequency,
+      use_1904_dates~,
+    ) {
     Ok(serial) => serial
     Err(err) => return Err(err)
   }
-  Ok(coupdays_between(settlement, ncd, basis))
+  Ok(coupdays_between(settlement, ncd, basis, use_1904_dates~))
 }
 
 ///|
@@ -279,8 +305,9 @@ fn coupnum_value(
   settlement : Double,
   maturity : Double,
   frequency : Double,
+  use_1904_dates? : Bool = false,
 ) -> Result[Double, FormulaValue] {
-  match yearfrac_value(settlement, maturity, 0) {
+  match yearfrac_value(settlement, maturity, 0, use_1904_dates~) {
     Number(num) => Ok(Double::ceil(num * frequency))
     Error(err) => Err(Error(err))
     _ => Err(Error(formula_error_value))
@@ -292,8 +319,9 @@ fn yearfrac_number(
   start_serial : Double,
   end_serial : Double,
   basis : Int,
+  use_1904_dates? : Bool = false,
 ) -> Result[Double, FormulaValue] {
-  match yearfrac_value(start_serial, end_serial, basis) {
+  match yearfrac_value(start_serial, end_serial, basis, use_1904_dates~) {
     Number(num) => Ok(num)
     Error(err) => Err(Error(err))
     _ => Err(Error(formula_error_value))
@@ -310,7 +338,10 @@ fn round_half_up(value : Double) -> Double {
 }
 
 ///|
-fn amor_date_serial(value : FormulaValue) -> Result[Double, FormulaValue] {
+fn amor_date_serial(
+  value : FormulaValue,
+  use_1904_dates? : Bool = false,
+) -> Result[Double, FormulaValue] {
   let normalized = normalize_scalar(value)
   match normalized {
     String(text) => {
@@ -318,10 +349,10 @@ fn amor_date_serial(value : FormulaValue) -> Result[Double, FormulaValue] {
       if trimmed == "" {
         Err(Error(formula_error_value))
       } else {
-        value_as_date_serial(String(trimmed))
+        value_as_date_serial(String(trimmed), use_1904_dates~)
       }
     }
-    _ => value_as_date_serial(normalized)
+    _ => value_as_date_serial(normalized, use_1904_dates~)
   }
 }
 
@@ -339,6 +370,7 @@ priv struct AmorArgs {
 ///|
 fn prepare_amor_args(
   values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
 ) -> Result[AmorArgs, FormulaValue] {
   if values.length() != 6 && values.length() != 7 {
     return Err(Error(formula_error_value))
@@ -350,11 +382,11 @@ fn prepare_amor_args(
   if cost < 0.0 {
     return Err(Error(formula_error_value))
   }
-  let date_purchased = match amor_date_serial(values[1]) {
+  let date_purchased = match amor_date_serial(values[1], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
-  let first_period = match amor_date_serial(values[2]) {
+  let first_period = match amor_date_serial(values[2], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
@@ -402,8 +434,11 @@ fn prepare_amor_args(
 }
 
 ///|
-fn amordegrc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  let args = match prepare_amor_args(values) {
+fn amordegrc_values(
+  values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
+) -> FormulaValue {
+  let args = match prepare_amor_args(values, use_1904_dates~) {
     Ok(value) => value
     Err(err) => return err
   }
@@ -421,7 +456,12 @@ fn amordegrc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   }
   let rate = args.rate * amor_coeff
   let frac = match
-    yearfrac_number(args.date_purchased, args.first_period, args.basis) {
+    yearfrac_number(
+      args.date_purchased,
+      args.first_period,
+      args.basis,
+      use_1904_dates~,
+    ) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -450,13 +490,21 @@ fn amordegrc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
-fn amorlinc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  let args = match prepare_amor_args(values) {
+fn amorlinc_values(
+  values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
+) -> FormulaValue {
+  let args = match prepare_amor_args(values, use_1904_dates~) {
     Ok(value) => value
     Err(err) => return err
   }
   let frac = match
-    yearfrac_number(args.date_purchased, args.first_period, args.basis) {
+    yearfrac_number(
+      args.date_purchased,
+      args.first_period,
+      args.basis,
+      use_1904_dates~,
+    ) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -2398,15 +2446,18 @@ fn pduration_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
-fn accrint_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+fn accrint_values(
+  values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
+) -> FormulaValue {
   if values.length() < 6 || values.length() > 8 {
     return Error(formula_error_value)
   }
-  let issue = match value_as_date_serial(values[0]) {
+  let issue = match value_as_date_serial(values[0], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
-  let settlement = match value_as_date_serial(values[2]) {
+  let settlement = match value_as_date_serial(values[2], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -2439,7 +2490,7 @@ fn accrint_values(values : ArrayView[FormulaValue]) -> FormulaValue {
       Err(err) => return err
     }
   }
-  let frac = match yearfrac_number(issue, settlement, basis) {
+  let frac = match yearfrac_number(issue, settlement, basis, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -2448,15 +2499,18 @@ fn accrint_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
-fn accrintm_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+fn accrintm_values(
+  values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
+) -> FormulaValue {
   if values.length() != 4 && values.length() != 5 {
     return Error(formula_error_value)
   }
-  let issue = match value_as_date_serial(values[0]) {
+  let issue = match value_as_date_serial(values[0], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
-  let settlement = match value_as_date_serial(values[1]) {
+  let settlement = match value_as_date_serial(values[1], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -2482,7 +2536,7 @@ fn accrintm_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   } else {
     0
   }
-  let frac = match yearfrac_number(issue, settlement, basis) {
+  let frac = match yearfrac_number(issue, settlement, basis, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -2491,56 +2545,77 @@ fn accrintm_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
-fn coupdaybs_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+fn coupdaybs_values(
+  values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
+) -> FormulaValue {
   let (settlement, maturity, frequency, basis) = match
-    prepare_coupon_args(values) {
-    Ok(args) => args
-    Err(err) => return err
-  }
-  let result = match coupdaybs_value(settlement, maturity, frequency, basis) {
-    Ok(num) => num
-    Err(err) => return err
-  }
-  Number(result)
-}
-
-///|
-fn coupdays_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  let (settlement, maturity, frequency, basis) = match
-    prepare_coupon_args(values) {
-    Ok(args) => args
-    Err(err) => return err
-  }
-  let result = match coupdays_value(settlement, maturity, frequency, basis) {
-    Ok(num) => num
-    Err(err) => return err
-  }
-  Number(result)
-}
-
-///|
-fn coupdaysnc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  let (settlement, maturity, frequency, basis) = match
-    prepare_coupon_args(values) {
-    Ok(args) => args
-    Err(err) => return err
-  }
-  let result = match coupdaysnc_value(settlement, maturity, frequency, basis) {
-    Ok(num) => num
-    Err(err) => return err
-  }
-  Number(result)
-}
-
-///|
-fn coupncd_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  let (settlement, maturity, frequency, _basis) = match
-    prepare_coupon_args(values) {
+    prepare_coupon_args(values, use_1904_dates~) {
     Ok(args) => args
     Err(err) => return err
   }
   let result = match
-    coupon_date_serial("COUPNCD", settlement, maturity, frequency) {
+    coupdaybs_value(settlement, maturity, frequency, basis, use_1904_dates~) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  Number(result)
+}
+
+///|
+fn coupdays_values(
+  values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
+) -> FormulaValue {
+  let (settlement, maturity, frequency, basis) = match
+    prepare_coupon_args(values, use_1904_dates~) {
+    Ok(args) => args
+    Err(err) => return err
+  }
+  let result = match
+    coupdays_value(settlement, maturity, frequency, basis, use_1904_dates~) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  Number(result)
+}
+
+///|
+fn coupdaysnc_values(
+  values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
+) -> FormulaValue {
+  let (settlement, maturity, frequency, basis) = match
+    prepare_coupon_args(values, use_1904_dates~) {
+    Ok(args) => args
+    Err(err) => return err
+  }
+  let result = match
+    coupdaysnc_value(settlement, maturity, frequency, basis, use_1904_dates~) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  Number(result)
+}
+
+///|
+fn coupncd_values(
+  values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
+) -> FormulaValue {
+  let (settlement, maturity, frequency, _basis) = match
+    prepare_coupon_args(values, use_1904_dates~) {
+    Ok(args) => args
+    Err(err) => return err
+  }
+  let result = match
+    coupon_date_serial(
+      "COUPNCD",
+      settlement,
+      maturity,
+      frequency,
+      use_1904_dates~,
+    ) {
     Ok(serial) => serial
     Err(err) => return err
   }
@@ -2548,13 +2623,17 @@ fn coupncd_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
-fn coupnum_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+fn coupnum_values(
+  values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
+) -> FormulaValue {
   let (settlement, maturity, frequency, _basis) = match
-    prepare_coupon_args(values) {
+    prepare_coupon_args(values, use_1904_dates~) {
     Ok(args) => args
     Err(err) => return err
   }
-  let result = match coupnum_value(settlement, maturity, frequency) {
+  let result = match
+    coupnum_value(settlement, maturity, frequency, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -2562,14 +2641,23 @@ fn coupnum_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
-fn couppcd_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+fn couppcd_values(
+  values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
+) -> FormulaValue {
   let (settlement, maturity, frequency, _basis) = match
-    prepare_coupon_args(values) {
+    prepare_coupon_args(values, use_1904_dates~) {
     Ok(args) => args
     Err(err) => return err
   }
   let result = match
-    coupon_date_serial("COUPPCD", settlement, maturity, frequency) {
+    coupon_date_serial(
+      "COUPPCD",
+      settlement,
+      maturity,
+      frequency,
+      use_1904_dates~,
+    ) {
     Ok(serial) => serial
     Err(err) => return err
   }
@@ -2580,15 +2668,16 @@ fn couppcd_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 fn disc_intrate_values(
   name : String,
   values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
 ) -> FormulaValue {
   if values.length() != 4 && values.length() != 5 {
     return Error(formula_error_value)
   }
-  let settlement = match value_as_date_serial(values[0]) {
+  let settlement = match value_as_date_serial(values[0], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
-  let maturity = match value_as_date_serial(values[1]) {
+  let maturity = match value_as_date_serial(values[1], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -2617,7 +2706,8 @@ fn disc_intrate_values(
   } else {
     0
   }
-  let frac = match yearfrac_number(settlement, maturity, basis) {
+  let frac = match
+    yearfrac_number(settlement, maturity, basis, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -2630,15 +2720,18 @@ fn disc_intrate_values(
 }
 
 ///|
-fn received_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+fn received_values(
+  values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
+) -> FormulaValue {
   if values.length() != 4 && values.length() != 5 {
     return Error(formula_error_value)
   }
-  let settlement = match value_as_date_serial(values[0]) {
+  let settlement = match value_as_date_serial(values[0], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
-  let maturity = match value_as_date_serial(values[1]) {
+  let maturity = match value_as_date_serial(values[1], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -2664,7 +2757,8 @@ fn received_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   } else {
     0
   }
-  let frac = match yearfrac_number(settlement, maturity, basis) {
+  let frac = match
+    yearfrac_number(settlement, maturity, basis, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -2675,15 +2769,16 @@ fn received_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn prepare_duration_args(
   values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
 ) -> Result[(Double, Double, Double, Double, Double, Int), FormulaValue] {
   if values.length() != 5 && values.length() != 6 {
     return Err(Error(formula_error_value))
   }
-  let settlement = match value_as_date_serial(values[0]) {
+  let settlement = match value_as_date_serial(values[0], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
-  let maturity = match value_as_date_serial(values[1]) {
+  let maturity = match value_as_date_serial(values[1], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
@@ -2730,12 +2825,15 @@ fn duration_calc(
   yld : Double,
   frequency : Double,
   basis : Int,
+  use_1904_dates? : Bool = false,
 ) -> Result[Double, FormulaValue] {
-  let frac = match yearfrac_number(settlement, maturity, basis) {
+  let frac = match
+    yearfrac_number(settlement, maturity, basis, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
-  let coups = match coupnum_value(settlement, maturity, frequency) {
+  let coups = match
+    coupnum_value(settlement, maturity, frequency, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
@@ -2762,14 +2860,25 @@ fn duration_calc(
 }
 
 ///|
-fn duration_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+fn duration_values(
+  values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
+) -> FormulaValue {
   let (settlement, maturity, coupon, yld, frequency, basis) = match
-    prepare_duration_args(values) {
+    prepare_duration_args(values, use_1904_dates~) {
     Ok(args) => args
     Err(err) => return err
   }
   let result = match
-    duration_calc(settlement, maturity, coupon, yld, frequency, basis) {
+    duration_calc(
+      settlement,
+      maturity,
+      coupon,
+      yld,
+      frequency,
+      basis,
+      use_1904_dates~,
+    ) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -2777,14 +2886,25 @@ fn duration_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
-fn mduration_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+fn mduration_values(
+  values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
+) -> FormulaValue {
   let (settlement, maturity, coupon, yld, frequency, basis) = match
-    prepare_duration_args(values) {
+    prepare_duration_args(values, use_1904_dates~) {
     Ok(args) => args
     Err(err) => return err
   }
   let duration = match
-    duration_calc(settlement, maturity, coupon, yld, frequency, basis) {
+    duration_calc(
+      settlement,
+      maturity,
+      coupon,
+      yld,
+      frequency,
+      basis,
+      use_1904_dates~,
+    ) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -2801,6 +2921,7 @@ fn price_value(
   redemption : Double,
   frequency : Double,
   basis : Int,
+  use_1904_dates? : Bool = false,
 ) -> Result[Double, FormulaValue] {
   if settlement >= maturity {
     return Err(Error(formula_error_num))
@@ -2808,19 +2929,23 @@ fn price_value(
   if basis < 0 || basis > 4 {
     return Err(Error(formula_error_num))
   }
-  let e = match coupdays_value(settlement, maturity, frequency, basis) {
+  let e = match
+    coupdays_value(settlement, maturity, frequency, basis, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
-  let dsc = match coupdaysnc_value(settlement, maturity, frequency, basis) {
+  let dsc = match
+    coupdaysnc_value(settlement, maturity, frequency, basis, use_1904_dates~) {
     Ok(num) => num / e
     Err(err) => return Err(err)
   }
-  let n = match coupnum_value(settlement, maturity, frequency) {
+  let n = match
+    coupnum_value(settlement, maturity, frequency, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
-  let a = match coupdaybs_value(settlement, maturity, frequency, basis) {
+  let a = match
+    coupdaybs_value(settlement, maturity, frequency, basis, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
@@ -2857,6 +2982,7 @@ fn yield_value(
   redemption : Double,
   frequency : Double,
   basis : Int,
+  use_1904_dates? : Bool = false,
 ) -> FormulaValue {
   if settlement >= maturity {
     return Error(formula_error_num)
@@ -2865,14 +2991,28 @@ fn yield_value(
   let mut yield2 = 1.0
   let mut price1 = match
     price_value(
-      settlement, maturity, rate, yield1, redemption, frequency, basis,
+      settlement,
+      maturity,
+      rate,
+      yield1,
+      redemption,
+      frequency,
+      basis,
+      use_1904_dates~,
     ) {
     Ok(num) => num
     Err(err) => return err
   }
   let mut price2 = match
     price_value(
-      settlement, maturity, rate, yield2, redemption, frequency, basis,
+      settlement,
+      maturity,
+      rate,
+      yield2,
+      redemption,
+      frequency,
+      basis,
+      use_1904_dates~,
     ) {
     Ok(num) => num
     Err(err) => return err
@@ -2883,7 +3023,14 @@ fn yield_value(
   while iter < 100 && price_n != pr {
     price_n = match
       price_value(
-        settlement, maturity, rate, yield_n, redemption, frequency, basis,
+        settlement,
+        maturity,
+        rate,
+        yield_n,
+        redemption,
+        frequency,
+        basis,
+        use_1904_dates~,
       ) {
       Ok(num) => num
       Err(err) => return err
@@ -2898,7 +3045,14 @@ fn yield_value(
       yield2 = yield2 * 2.0
       price2 = match
         price_value(
-          settlement, maturity, rate, yield2, redemption, frequency, basis,
+          settlement,
+          maturity,
+          rate,
+          yield2,
+          redemption,
+          frequency,
+          basis,
+          use_1904_dates~,
         ) {
         Ok(num) => num
         Err(err) => return err
@@ -2948,15 +3102,16 @@ fn check_price_yield_args(
 fn price_yield_values(
   name : String,
   values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
 ) -> FormulaValue {
   if values.length() != 6 && values.length() != 7 {
     return Error(formula_error_value)
   }
-  let settlement = match value_as_date_serial(values[0]) {
+  let settlement = match value_as_date_serial(values[0], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
-  let maturity = match value_as_date_serial(values[1]) {
+  let maturity = match value_as_date_serial(values[1], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -2992,26 +3147,45 @@ fn price_yield_values(
   if name == "PRICE" {
     let result = match
       price_value(
-        settlement, maturity, rate, pr_yld, redemption, frequency, basis,
+        settlement,
+        maturity,
+        rate,
+        pr_yld,
+        redemption,
+        frequency,
+        basis,
+        use_1904_dates~,
       ) {
       Ok(num) => num
       Err(err) => return err
     }
     return number_or_num_error(round_significant_digits(result, 15))
   }
-  yield_value(settlement, maturity, rate, pr_yld, redemption, frequency, basis)
+  yield_value(
+    settlement,
+    maturity,
+    rate,
+    pr_yld,
+    redemption,
+    frequency,
+    basis,
+    use_1904_dates~,
+  )
 }
 
 ///|
-fn pricedisc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+fn pricedisc_values(
+  values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
+) -> FormulaValue {
   if values.length() != 4 && values.length() != 5 {
     return Error(formula_error_value)
   }
-  let settlement = match value_as_date_serial(values[0]) {
+  let settlement = match value_as_date_serial(values[0], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
-  let maturity = match value_as_date_serial(values[1]) {
+  let maturity = match value_as_date_serial(values[1], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -3040,7 +3214,8 @@ fn pricedisc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   } else {
     0
   }
-  let frac = match yearfrac_number(settlement, maturity, basis) {
+  let frac = match
+    yearfrac_number(settlement, maturity, basis, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -3049,19 +3224,22 @@ fn pricedisc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
-fn pricemat_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+fn pricemat_values(
+  values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
+) -> FormulaValue {
   if values.length() != 5 && values.length() != 6 {
     return Error(formula_error_value)
   }
-  let settlement = match value_as_date_serial(values[0]) {
+  let settlement = match value_as_date_serial(values[0], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
-  let maturity = match value_as_date_serial(values[1]) {
+  let maturity = match value_as_date_serial(values[1], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
-  let issue = match value_as_date_serial(values[2]) {
+  let issue = match value_as_date_serial(values[2], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -3093,15 +3271,16 @@ fn pricemat_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   } else {
     0
   }
-  let dsm = match yearfrac_number(settlement, maturity, basis) {
+  let dsm = match
+    yearfrac_number(settlement, maturity, basis, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
-  let dis = match yearfrac_number(issue, settlement, basis) {
+  let dis = match yearfrac_number(issue, settlement, basis, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
-  let dim = match yearfrac_number(issue, maturity, basis) {
+  let dim = match yearfrac_number(issue, maturity, basis, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -3110,15 +3289,18 @@ fn pricemat_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
-fn tbilleq_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+fn tbilleq_values(
+  values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
+) -> FormulaValue {
   if values.length() != 3 {
     return Error(formula_error_value)
   }
-  let settlement = match value_as_date_serial(values[0]) {
+  let settlement = match value_as_date_serial(values[0], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
-  let maturity = match value_as_date_serial(values[1]) {
+  let maturity = match value_as_date_serial(values[1], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -3138,15 +3320,18 @@ fn tbilleq_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
-fn tbillprice_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+fn tbillprice_values(
+  values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
+) -> FormulaValue {
   if values.length() != 3 {
     return Error(formula_error_value)
   }
-  let settlement = match value_as_date_serial(values[0]) {
+  let settlement = match value_as_date_serial(values[0], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
-  let maturity = match value_as_date_serial(values[1]) {
+  let maturity = match value_as_date_serial(values[1], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -3166,15 +3351,18 @@ fn tbillprice_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
-fn tbillyield_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+fn tbillyield_values(
+  values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
+) -> FormulaValue {
   if values.length() != 3 {
     return Error(formula_error_value)
   }
-  let settlement = match value_as_date_serial(values[0]) {
+  let settlement = match value_as_date_serial(values[0], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
-  let maturity = match value_as_date_serial(values[1]) {
+  let maturity = match value_as_date_serial(values[1], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -3194,15 +3382,18 @@ fn tbillyield_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
-fn yielddisc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+fn yielddisc_values(
+  values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
+) -> FormulaValue {
   if values.length() != 4 && values.length() != 5 {
     return Error(formula_error_value)
   }
-  let settlement = match value_as_date_serial(values[0]) {
+  let settlement = match value_as_date_serial(values[0], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
-  let maturity = match value_as_date_serial(values[1]) {
+  let maturity = match value_as_date_serial(values[1], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -3228,7 +3419,8 @@ fn yielddisc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   } else {
     0
   }
-  let frac = match yearfrac_number(settlement, maturity, basis) {
+  let frac = match
+    yearfrac_number(settlement, maturity, basis, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -3237,19 +3429,22 @@ fn yielddisc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
-fn yieldmat_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+fn yieldmat_values(
+  values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
+) -> FormulaValue {
   if values.length() != 5 && values.length() != 6 {
     return Error(formula_error_value)
   }
-  let settlement = match value_as_date_serial(values[0]) {
+  let settlement = match value_as_date_serial(values[0], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
-  let maturity = match value_as_date_serial(values[1]) {
+  let maturity = match value_as_date_serial(values[1], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
-  let issue = match value_as_date_serial(values[2]) {
+  let issue = match value_as_date_serial(values[2], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -3278,15 +3473,16 @@ fn yieldmat_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   } else {
     0
   }
-  let dim = match yearfrac_number(issue, maturity, basis) {
+  let dim = match yearfrac_number(issue, maturity, basis, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
-  let dis = match yearfrac_number(issue, settlement, basis) {
+  let dis = match yearfrac_number(issue, settlement, basis, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
-  let dsm = match yearfrac_number(settlement, maturity, basis) {
+  let dsm = match
+    yearfrac_number(settlement, maturity, basis, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -3330,8 +3526,10 @@ fn change_month_serial(
   serial : Double,
   num_months : Double,
   return_last_month : Bool,
+  use_1904_dates? : Bool = false,
 ) -> Double {
-  let (year, month, day) = match date_parts_from_serial(serial) {
+  let (year, month, day) = match
+    date_parts_from_serial(serial, use_1904_dates~) {
     Some(parts) => parts
     None => return serial
   }
@@ -3346,12 +3544,13 @@ fn change_month_serial(
   )
   if return_last_month {
     let last_day = days_in_month(new_year, new_month)
-    return match excel_serial_from_date(new_year, new_month, last_day) {
+    return match
+      excel_serial_from_date(new_year, new_month, last_day, use_1904_dates~) {
       Some(serial_value) => serial_value
       None => serial
     }
   }
-  match excel_serial_from_date(new_year, new_month, new_day) {
+  match excel_serial_from_date(new_year, new_month, new_day, use_1904_dates~) {
     Some(serial_value) => serial_value
     None => serial
   }
@@ -3365,6 +3564,7 @@ fn dates_aggregate(
   f : (Double, Double) -> Double,
   acc : Double,
   return_last_month : Bool,
+  use_1904_dates? : Bool = false,
 ) -> (Double, Double, Double) {
   let mut front_date = start_date
   let mut trailing_date = end_date
@@ -3376,7 +3576,12 @@ fn dates_aggregate(
   let mut result = acc
   while !stop {
     trailing_date = front_date
-    front_date = change_month_serial(front_date, num_months, return_last_month)
+    front_date = change_month_serial(
+      front_date,
+      num_months,
+      return_last_month,
+      use_1904_dates~,
+    )
     result = result + f(front_date, trailing_date)
     stop = if num_months > 0.0 {
       front_date >= end_date
@@ -3392,13 +3597,15 @@ fn coup_number(
   maturity : Double,
   settlement : Double,
   num_months : Double,
+  use_1904_dates? : Bool = false,
 ) -> Double {
-  let (mat_year, mat_month, mat_day) = match date_parts_from_serial(maturity) {
+  let (mat_year, mat_month, mat_day) = match
+    date_parts_from_serial(maturity, use_1904_dates~) {
     Some(parts) => parts
     None => return 0.0
   }
   let (settle_year, settle_month, settle_day) = match
-    date_parts_from_serial(settlement) {
+    date_parts_from_serial(settlement, use_1904_dates~) {
     Some(parts) => parts
     None => return 0.0
   }
@@ -3410,15 +3617,31 @@ fn coup_number(
     mat_day < days_in_month(mat_year, mat_month) {
     end_of_month = days_in_month(settle_year, settle_month) == settle_day
   }
-  let start_date = change_month_serial(settlement, 0.0, end_of_month)
+  let start_date = change_month_serial(
+    settlement,
+    0.0,
+    end_of_month,
+    use_1904_dates~,
+  )
   let mut coupons = 0.0
   if start_date > settlement {
     coupons = coupons + 1.0
   }
-  let date = change_month_serial(start_date, num_months, end_of_month)
+  let date = change_month_serial(
+    start_date,
+    num_months,
+    end_of_month,
+    use_1904_dates~,
+  )
   let f = fn(_pcd : Double, _ncd : Double) -> Double { 1.0 }
   let (_, _, result) = dates_aggregate(
-    date, maturity, num_months, f, coupons, end_of_month,
+    date,
+    maturity,
+    num_months,
+    f,
+    coupons,
+    end_of_month,
+    use_1904_dates~,
   )
   result
 }
@@ -3445,23 +3668,24 @@ fn prepare_odd_yld_or_pr_arg(
 fn prepare_oddf_args(
   name : String,
   values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
 ) -> Result[
   (Double, Double, Double, Double, Double, Double, Double, Double, Int),
   FormulaValue,
 ] {
-  let settlement = match value_as_date_serial(values[0]) {
+  let settlement = match value_as_date_serial(values[0], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
-  let maturity = match value_as_date_serial(values[1]) {
+  let maturity = match value_as_date_serial(values[1], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
-  let issue = match value_as_date_serial(values[2]) {
+  let issue = match value_as_date_serial(values[2], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
-  let first_coupon = match value_as_date_serial(values[3]) {
+  let first_coupon = match value_as_date_serial(values[3], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
@@ -3526,37 +3750,52 @@ fn oddfprice_calc(
   redemption : Double,
   frequency : Double,
   basis : Int,
+  use_1904_dates? : Bool = false,
 ) -> Result[Double, FormulaValue] {
   if basis < 0 || basis > 4 {
     return Err(Error(formula_error_num))
   }
-  let (mat_year, mat_month, mat_day) = match date_parts_from_serial(maturity) {
+  let (mat_year, mat_month, mat_day) = match
+    date_parts_from_serial(maturity, use_1904_dates~) {
     Some(parts) => parts
     None => return Err(Error(formula_error_value))
   }
   let return_last_month = days_in_month(mat_year, mat_month) == mat_day
   let num_months = 12.0 / frequency
   let num_months_neg = -num_months
-  let mat = change_month_serial(maturity, num_months_neg, return_last_month)
+  let mat = change_month_serial(
+    maturity,
+    num_months_neg,
+    return_last_month,
+    use_1904_dates~,
+  )
   let f = fn(_d1 : Double, _d2 : Double) -> Double { 0.0 }
   let (pcd, _, _) = dates_aggregate(
-    mat, first_coupon, num_months_neg, f, 0.0, return_last_month,
+    mat,
+    first_coupon,
+    num_months_neg,
+    f,
+    0.0,
+    return_last_month,
+    use_1904_dates~,
   )
   if pcd != first_coupon {
     return Err(Error(formula_error_num))
   }
-  let e = match coupdays_value(settlement, maturity, frequency, basis) {
+  let e = match
+    coupdays_value(settlement, maturity, frequency, basis, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
-  let n = match coupnum_value(settlement, maturity, frequency) {
+  let n = match
+    coupnum_value(settlement, maturity, frequency, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
-  let dfc = coupdays_between(issue, first_coupon, basis)
+  let dfc = coupdays_between(issue, first_coupon, basis, use_1904_dates~)
   if dfc < e {
-    let dsc = coupdays_between(settlement, first_coupon, basis)
-    let a = coupdays_between(issue, settlement, basis)
+    let dsc = coupdays_between(settlement, first_coupon, basis, use_1904_dates~)
+    let a = coupdays_between(issue, settlement, basis, use_1904_dates~)
     let x = yld / frequency + 1.0
     let y = dsc / e
     let p3 = @math.pow(x, n - 1.0 + y)
@@ -3571,7 +3810,8 @@ fn oddfprice_calc(
     let term4 = a / e * (rate / frequency) * 100.0
     return Ok(term1 + term2 + term3[0] - term4)
   }
-  let nc = match coupnum_value(issue, first_coupon, frequency) {
+  let nc = match
+    coupnum_value(issue, first_coupon, frequency, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
@@ -3581,7 +3821,7 @@ fn oddfprice_calc(
     index : Double,
   ) -> Array[Double] {
     let (last_year, last_month, last_day) = match
-      date_parts_from_serial(last_coupon) {
+      date_parts_from_serial(last_coupon, use_1904_dates~) {
       Some(parts) => parts
       None => return acc
     }
@@ -3591,15 +3831,20 @@ fn oddfprice_calc(
       last_day,
     )
     let early_coupon = match
-      excel_serial_from_date(early_year, early_month, early_day) {
+      excel_serial_from_date(
+        early_year,
+        early_month,
+        early_day,
+        use_1904_dates~,
+      ) {
       Some(serial) => serial
       None => return acc
     }
     let mut nl = e
     if basis == 1 {
-      nl = coupdays_between(early_coupon, last_coupon, basis)
+      nl = coupdays_between(early_coupon, last_coupon, basis, use_1904_dates~)
     }
-    let mut dci = coupdays_between(issue, last_coupon, basis)
+    let mut dci = coupdays_between(issue, last_coupon, basis, use_1904_dates~)
     if index > 1.0 {
       dci = nl
     }
@@ -3609,7 +3854,7 @@ fn oddfprice_calc(
     } else {
       last_coupon
     }
-    let a = coupdays_between(start_date, end_date, basis)
+    let a = coupdays_between(start_date, end_date, basis, use_1904_dates~)
     last_coupon = early_coupon
     let dcnl = acc[0] + dci / nl
     let anl = acc[1] + a / nl
@@ -3619,22 +3864,35 @@ fn oddfprice_calc(
   let anl = ag[1]
   let dsc = if basis == 2 || basis == 3 {
     let ncd = match
-      coupon_date_serial("COUPNCD", settlement, first_coupon, frequency) {
+      coupon_date_serial(
+        "COUPNCD",
+        settlement,
+        first_coupon,
+        frequency,
+        use_1904_dates~,
+      ) {
       Ok(serial) => serial
       Err(err) => return Err(err)
     }
-    coupdays_between(settlement, ncd, basis)
+    coupdays_between(settlement, ncd, basis, use_1904_dates~)
   } else {
     let pcd = match
-      coupon_date_serial("COUPPCD", settlement, first_coupon, frequency) {
+      coupon_date_serial(
+        "COUPPCD",
+        settlement,
+        first_coupon,
+        frequency,
+        use_1904_dates~,
+      ) {
       Ok(serial) => serial
       Err(err) => return Err(err)
     }
-    let a = coupdays_between(pcd, settlement, basis)
+    let a = coupdays_between(pcd, settlement, basis, use_1904_dates~)
     e - a
   }
-  let nq = coup_number(first_coupon, settlement, num_months)
-  let n_final = match coupnum_value(first_coupon, maturity, frequency) {
+  let nq = coup_number(first_coupon, settlement, num_months, use_1904_dates~)
+  let n_final = match
+    coupnum_value(first_coupon, maturity, frequency, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
@@ -3654,7 +3912,10 @@ fn oddfprice_calc(
 }
 
 ///|
-fn oddfprice_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+fn oddfprice_values(
+  values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
+) -> FormulaValue {
   if values.length() != 8 && values.length() != 9 {
     return Error(formula_error_value)
   }
@@ -3668,14 +3929,22 @@ fn oddfprice_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     redemption,
     frequency,
     basis,
-  ) = match prepare_oddf_args("ODDFPRICE", values) {
+  ) = match prepare_oddf_args("ODDFPRICE", values, use_1904_dates~) {
     Ok(args) => args
     Err(err) => return err
   }
   let result = match
     oddfprice_calc(
-      settlement, maturity, issue, first_coupon, rate, yld, redemption, frequency,
+      settlement,
+      maturity,
+      issue,
+      first_coupon,
+      rate,
+      yld,
+      redemption,
+      frequency,
       basis,
+      use_1904_dates~,
     ) {
     Ok(num) => num
     Err(err) => return err
@@ -3703,7 +3972,10 @@ fn get_oddfprice(
 }
 
 ///|
-fn oddfyield_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+fn oddfyield_values(
+  values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
+) -> FormulaValue {
   if values.length() != 8 && values.length() != 9 {
     return Error(formula_error_value)
   }
@@ -3717,14 +3989,14 @@ fn oddfyield_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     redemption,
     frequency,
     basis,
-  ) = match prepare_oddf_args("ODDFYIELD", values) {
+  ) = match prepare_oddf_args("ODDFYIELD", values, use_1904_dates~) {
     Ok(args) => args
     Err(err) => return err
   }
   if basis < 0 || basis > 4 {
     return Error(formula_error_num)
   }
-  let years = coupdays_between(settlement, maturity, basis)
+  let years = coupdays_between(settlement, maturity, basis, use_1904_dates~)
   let px = pr - 100.0
   let num = rate * years * 100.0 - px
   let denum = px / 4.0 + years * px / 2.0 + years * 100.0
@@ -3732,8 +4004,16 @@ fn oddfyield_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let f = fn(yld : Double) -> Double {
     match
       oddfprice_calc(
-        settlement, maturity, issue, first_coupon, rate, yld, redemption, frequency,
+        settlement,
+        maturity,
+        issue,
+        first_coupon,
+        rate,
+        yld,
+        redemption,
+        frequency,
         basis,
+        use_1904_dates~,
       ) {
       Ok(price) => pr - price
       Err(_) => 0.0 / 0.0
@@ -3751,19 +4031,20 @@ fn oddfyield_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 fn prepare_oddl_args(
   name : String,
   values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
 ) -> Result[
   (Double, Double, Double, Double, Double, Double, Double, Int),
   FormulaValue,
 ] {
-  let settlement = match value_as_date_serial(values[0]) {
+  let settlement = match value_as_date_serial(values[0], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
-  let maturity = match value_as_date_serial(values[1]) {
+  let maturity = match value_as_date_serial(values[1], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
-  let last_interest = match value_as_date_serial(values[2]) {
+  let last_interest = match value_as_date_serial(values[2], use_1904_dates~) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
@@ -3815,7 +4096,11 @@ fn prepare_oddl_args(
 }
 
 ///|
-fn oddl_values(name : String, values : ArrayView[FormulaValue]) -> FormulaValue {
+fn oddl_values(
+  name : String,
+  values : ArrayView[FormulaValue],
+  use_1904_dates? : Bool = false,
+) -> FormulaValue {
   if values.length() != 7 && values.length() != 8 {
     return Error(formula_error_value)
   }
@@ -3828,7 +4113,7 @@ fn oddl_values(name : String, values : ArrayView[FormulaValue]) -> FormulaValue 
     redemption,
     frequency,
     basis,
-  ) = match prepare_oddl_args(name, values) {
+  ) = match prepare_oddl_args(name, values, use_1904_dates~) {
     Ok(args) => args
     Err(err) => return err
   }
@@ -3836,7 +4121,8 @@ fn oddl_values(name : String, values : ArrayView[FormulaValue]) -> FormulaValue 
     return Error(formula_error_num)
   }
   let num_months = 12.0 / frequency
-  let nc = match coupnum_value(last_interest, maturity, frequency) {
+  let nc = match
+    coupnum_value(last_interest, maturity, frequency, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -3845,9 +4131,19 @@ fn oddl_values(name : String, values : ArrayView[FormulaValue]) -> FormulaValue 
     acc : Array[Double],
     index : Double,
   ) -> Array[Double] {
-    let late_coupon = change_month_serial(early_coupon, num_months, false)
-    let nl = coupdays_between(early_coupon, late_coupon, basis)
-    let mut dci = coupdays_between(early_coupon, maturity, basis)
+    let late_coupon = change_month_serial(
+      early_coupon,
+      num_months,
+      false,
+      use_1904_dates~,
+    )
+    let nl = coupdays_between(early_coupon, late_coupon, basis, use_1904_dates~)
+    let mut dci = coupdays_between(
+      early_coupon,
+      maturity,
+      basis,
+      use_1904_dates~,
+    )
     if index < nc {
       dci = nl
     }
@@ -3855,7 +4151,7 @@ fn oddl_values(name : String, values : ArrayView[FormulaValue]) -> FormulaValue 
     if late_coupon < settlement {
       a = dci
     } else if early_coupon < settlement {
-      a = coupdays_between(early_coupon, settlement, basis)
+      a = coupdays_between(early_coupon, settlement, basis, use_1904_dates~)
     }
     let start_date = if settlement > early_coupon {
       settlement
@@ -3863,7 +4159,7 @@ fn oddl_values(name : String, values : ArrayView[FormulaValue]) -> FormulaValue 
       early_coupon
     }
     let end_date = if maturity < late_coupon { maturity } else { late_coupon }
-    let dsc = coupdays_between(start_date, end_date, basis)
+    let dsc = coupdays_between(start_date, end_date, basis, use_1904_dates~)
     early_coupon = late_coupon
     let dcnl = acc[0] + dci / nl
     let anl = acc[1] + a / nl

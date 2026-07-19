@@ -4,13 +4,30 @@ fn format_cell_value(
   raw : String,
   style : Style?,
   options : Options,
-) -> String {
-  match value_type {
+  use_1904_format? : Bool = false,
+) -> String raise XlsxError {
+  format_cell_value_limited(value_type, raw, style, options, use_1904_format~)
+}
+
+///|
+/// Formats a cell while optionally bounding the materialized UTF-16 output.
+/// The text-pattern path checks each append before it reaches `StringBuilder`,
+/// so repeated `@` placeholders cannot amplify a small cell into an unbounded
+/// intermediate string.
+fn format_cell_value_limited(
+  value_type : CellValueType,
+  raw : String,
+  style : Style?,
+  options : Options,
+  use_1904_format? : Bool = false,
+  max_output_chars? : Int,
+) -> String raise XlsxError {
+  let output = match value_type {
     String =>
       match style {
         Some(style) =>
           match style.number_format {
-            Some(format) => format_text_value(raw, format)
+            Some(format) => format_text_value(raw, format, max_output_chars?)
             None => raw
           }
         None => raw
@@ -21,25 +38,131 @@ fn format_cell_value(
       match style {
         Some(style) =>
           match style.number_format {
-            Some(format) => format_number_with_format(raw, format, options)
+            Some(format) =>
+              format_number_with_format(
+                raw,
+                format,
+                options,
+                use_1904_format,
+                max_output_chars?,
+              )
             None => raw
           }
         None => raw
       }
   }
+  check_formatted_output_length(output, max_output_chars)
+  output
 }
 
 ///|
-fn format_text_value(raw : String, format : NumberFormat) -> String {
+// Bounded formatting is used from cooperative async commands. Keeping every
+// synchronous format program below half of the command's 64-KiB work quantum
+// ensures one cell cannot monopolize the scheduler before the caller reaches
+// its next suspension point.
+let max_bounded_format_program_chars : Int = 32 * 1024
+
+///|
+fn check_bounded_format_program(
+  program : StringView,
+  maximum : Int?,
+) -> Unit raise XlsxError {
+  match maximum {
+    None => ()
+    Some(_) =>
+      if program.length() > max_bounded_format_program_chars {
+        raise ResourceLimitExceeded(
+          kind="formatted_number_format_work_units",
+          limit=max_bounded_format_program_chars,
+          actual=program.length(),
+        )
+      }
+  }
+}
+
+///|
+// Proves a conservative upper bound before any formatted result is allocated.
+// `program_multiplier` covers literal prefixes/suffixes, grouping separators,
+// fraction placeholders, and date-token expansion. Callers select a tighter
+// multiplier for the format family they are about to execute.
+fn check_bounded_numeric_output(
+  fallback_chars : Int,
+  program_chars : Int,
+  program_multiplier : Int,
+  fixed_overhead : Int,
+  maximum : Int?,
+) -> Unit raise XlsxError {
+  match maximum {
+    None => ()
+    Some(limit) => {
+      if limit < 0 {
+        raise InvalidOptions(msg="formatted output limit must be non-negative")
+      }
+      if fallback_chars > limit ||
+        program_chars < 0 ||
+        program_multiplier < 0 ||
+        fixed_overhead < 0 ||
+        fixed_overhead > limit ||
+        program_multiplier == 0 ||
+        program_chars > (limit - fixed_overhead) / program_multiplier {
+        raise ResourceLimitExceeded(
+          kind="formatted_cell_value_chars",
+          limit~,
+          actual=if limit < 0x7fffffff { limit + 1 } else { limit },
+        )
+      }
+    }
+  }
+}
+
+///|
+fn format_text_value(
+  raw : String,
+  format : NumberFormat,
+  max_output_chars? : Int,
+) -> String raise XlsxError {
   match format {
     Builtin(_id) => raw
     Custom(code) =>
       if code.to_lower().trim().to_owned() == "general" {
         raw
       } else {
-        format_text_pattern(raw, code)
+        check_bounded_format_program(code, max_output_chars)
+        format_text_pattern(raw, code, max_output_chars?)
       }
   }
+}
+
+///|
+fn checked_formatted_output_growth(
+  current : Int,
+  amount : Int,
+  maximum : Int?,
+) -> Int raise XlsxError {
+  match maximum {
+    None => current + amount
+    Some(limit) => {
+      if limit < 0 {
+        raise InvalidOptions(msg="formatted output limit must be non-negative")
+      }
+      if amount < 0 || current < 0 || amount > limit - current {
+        raise ResourceLimitExceeded(
+          kind="formatted_cell_value_chars",
+          limit~,
+          actual=if limit < 0x7fffffff { limit + 1 } else { limit },
+        )
+      }
+      current + amount
+    }
+  }
+}
+
+///|
+fn check_formatted_output_length(
+  output : String,
+  maximum : Int?,
+) -> Unit raise XlsxError {
+  ignore(checked_formatted_output_growth(0, output.length(), maximum))
 }
 
 ///|
@@ -47,59 +170,116 @@ fn format_number_with_format(
   raw : String,
   format : NumberFormat,
   options : Options,
-) -> String {
+  use_1904_format : Bool,
+  max_output_chars? : Int,
+) -> String raise XlsxError {
   match format {
-    Builtin(id) => format_number_builtin(raw, id, options)
-    Custom(code) => format_number_code(raw, code, options)
+    Builtin(id) =>
+      format_number_builtin(
+        raw,
+        id,
+        options,
+        use_1904_format,
+        max_output_chars?,
+      )
+    Custom(code) =>
+      format_number_code(
+        raw,
+        code,
+        options,
+        use_1904_format~,
+        max_output_chars?,
+      )
   }
 }
 
 ///|
-fn format_number_builtin(raw : String, id : Int, options : Options) -> String {
+fn format_number_builtin(
+  raw : String,
+  id : Int,
+  options : Options,
+  use_1904_format : Bool,
+  max_output_chars? : Int,
+) -> String raise XlsxError {
   let short_date = options.short_date_pattern
   let long_date = options.long_date_pattern
   let long_time = options.long_time_pattern
   match id {
     0 => raw
-    1 => format_number_simple(raw, 0, false, false)
-    2 => format_number_simple(raw, 2, false, false)
-    3 => format_number_simple(raw, 0, true, false)
-    4 => format_number_simple(raw, 2, true, false)
-    9 => format_number_simple(raw, 0, false, true)
-    10 => format_number_simple(raw, 2, false, true)
+    1 => {
+      check_bounded_numeric_output(raw.length(), 0, 1, 64, max_output_chars)
+      format_number_simple(raw, 0, false, false)
+    }
+    2 => {
+      check_bounded_numeric_output(raw.length(), 0, 1, 64, max_output_chars)
+      format_number_simple(raw, 2, false, false)
+    }
+    3 => {
+      check_bounded_numeric_output(raw.length(), 0, 1, 64, max_output_chars)
+      format_number_simple(raw, 0, true, false)
+    }
+    4 => {
+      check_bounded_numeric_output(raw.length(), 0, 1, 64, max_output_chars)
+      format_number_simple(raw, 2, true, false)
+    }
+    9 => {
+      check_bounded_numeric_output(raw.length(), 0, 1, 65, max_output_chars)
+      format_number_simple(raw, 0, false, true)
+    }
+    10 => {
+      check_bounded_numeric_output(raw.length(), 0, 1, 65, max_output_chars)
+      format_number_simple(raw, 2, false, true)
+    }
     14 =>
       if short_date != "" {
-        format_excel_date(raw, short_date)
+        format_excel_date(raw, short_date, use_1904_format~, max_output_chars?)
       } else {
-        format_excel_date(raw, "mm-dd-yy")
+        format_excel_date(raw, "mm-dd-yy", use_1904_format~, max_output_chars?)
       }
     15 =>
       if long_date != "" {
-        format_excel_date(raw, long_date)
+        format_excel_date(raw, long_date, use_1904_format~, max_output_chars?)
       } else {
-        format_excel_date(raw, "d-mmm-yy")
+        format_excel_date(raw, "d-mmm-yy", use_1904_format~, max_output_chars?)
       }
-    16 => format_excel_date(raw, "d-mmm")
-    17 => format_excel_date(raw, "mmm-yy")
-    18 => format_excel_date(raw, "h:mm AM/PM")
-    19 => format_excel_date(raw, "h:mm:ss AM/PM")
+    16 => format_excel_date(raw, "d-mmm", use_1904_format~, max_output_chars?)
+    17 => format_excel_date(raw, "mmm-yy", use_1904_format~, max_output_chars?)
+    18 =>
+      format_excel_date(raw, "h:mm AM/PM", use_1904_format~, max_output_chars?)
+    19 =>
+      format_excel_date(
+        raw,
+        "h:mm:ss AM/PM",
+        use_1904_format~,
+        max_output_chars?,
+      )
     20 =>
       if long_time != "" {
-        format_excel_date(raw, long_time)
+        format_excel_date(raw, long_time, use_1904_format~, max_output_chars?)
       } else {
-        format_excel_date(raw, "hh:mm")
+        format_excel_date(raw, "hh:mm", use_1904_format~, max_output_chars?)
       }
     21 =>
       if long_time != "" {
-        format_excel_date(raw, long_time)
+        format_excel_date(raw, long_time, use_1904_format~, max_output_chars?)
       } else {
-        format_excel_date(raw, "hh:mm:ss")
+        format_excel_date(raw, "hh:mm:ss", use_1904_format~, max_output_chars?)
       }
     22 =>
       if short_date != "" {
-        format_excel_date(raw, "\{short_date} hh:mm")
+        format_excel_date(
+          raw,
+          "\{short_date} hh:mm",
+          use_1904_format~,
+          max_output_chars?,
+        )
       } else {
-        format_excel_date(raw, "m/d/yy hh:mm")
+        format_excel_date(
+          raw,
+          "m/d/yy hh:mm",
+          use_1904_format~,
+          max_output_chars?,
+        )
       }
     // language-glyph builtin IDs resolve through the workbook culture
     27..=36 | 50..=62 | 67..=81 =>
@@ -108,7 +288,13 @@ fn format_number_builtin(raw : String, id : Int, options : Options) -> String {
           if code == "" {
             raw
           } else {
-            format_number_code(raw, code, options)
+            format_number_code(
+              raw,
+              code,
+              options,
+              use_1904_format~,
+              max_output_chars?,
+            )
           }
         None => raw
       }
@@ -117,8 +303,15 @@ fn format_number_builtin(raw : String, id : Int, options : Options) -> String {
 }
 
 ///|
-fn format_number_code(raw : String, code : String, options : Options) -> String {
+fn format_number_code(
+  raw : String,
+  code : String,
+  options : Options,
+  use_1904_format? : Bool = false,
+  max_output_chars? : Int,
+) -> String raise XlsxError {
   let _ = options
+  check_bounded_format_program(code, max_output_chars)
   let sections = split_format_sections(code)
   if sections.length() == 0 {
     return raw
@@ -127,7 +320,7 @@ fn format_number_code(raw : String, code : String, options : Options) -> String 
     e => Err(e)
   }
   match parsed {
-    Err(_) => format_text_pattern(raw, code)
+    Err(_) => format_text_pattern(raw, code, max_output_chars?)
     Ok(value) => {
       let (section, add_minus) = select_format_section(sections, value)
       let (pattern, locale, currency_prefix) = parse_section_metadata(section)
@@ -136,6 +329,7 @@ fn format_number_code(raw : String, code : String, options : Options) -> String 
       }
       let normalized = pattern.to_lower()
       if normalized == "general" {
+        check_bounded_numeric_output(raw.length(), 0, 1, 0, max_output_chars)
         return format_general_number(raw)
       }
       if has_date_tokens(pattern) {
@@ -143,15 +337,24 @@ fn format_number_code(raw : String, code : String, options : Options) -> String 
           Some(tag) => if !is_supported_locale(tag) { return raw }
           None => ()
         }
-        let formatted = format_excel_date(raw, pattern)
+        check_bounded_numeric_output(
+          raw.length(),
+          code.length(),
+          3,
+          32,
+          max_output_chars,
+        )
+        let formatted = format_excel_date(raw, pattern, use_1904_format~)
         let output = currency_prefix + formatted
         return if add_minus { "-" + output } else { output }
       }
       if !pattern_has_number_placeholders(pattern) {
+        check_bounded_numeric_output(0, code.length(), 2, 2, max_output_chars)
         let literal = render_literal_segment(pattern)
         let output = currency_prefix + literal
         return if add_minus { "-" + output } else { output }
       }
+      check_bounded_numeric_output(0, code.length(), 4, 64, max_output_chars)
       format_number_pattern(raw, pattern, add_minus, currency_prefix)
     }
   }
@@ -341,7 +544,11 @@ fn render_literal_segment(segment : String) -> String {
 }
 
 ///|
-fn format_text_pattern(raw : String, code : String) -> String {
+fn format_text_pattern(
+  raw : String,
+  code : String,
+  max_output_chars? : Int,
+) -> String raise XlsxError {
   let sections = split_format_sections(code)
   if sections.length() == 0 {
     return raw
@@ -349,12 +556,26 @@ fn format_text_pattern(raw : String, code : String) -> String {
   let section = if sections.length() >= 4 { sections[3] } else { sections[0] }
   let (pattern, _locale, currency_prefix) = parse_section_metadata(section)
   let sb = StringBuilder::new()
+  let mut output_chars = checked_formatted_output_growth(
+    0,
+    currency_prefix.length(),
+    max_output_chars,
+  )
   sb.write_view(currency_prefix)
   let mut in_quote = false
   let mut escape_next = false
   let mut skip_next = false
   for c in pattern {
     if escape_next {
+      output_chars = checked_formatted_output_growth(
+        output_chars,
+        if c.to_int() > 0xffff {
+          2
+        } else {
+          1
+        },
+        max_output_chars,
+      )
       sb.write_char(c)
       escape_next = false
       continue
@@ -366,10 +587,50 @@ fn format_text_pattern(raw : String, code : String) -> String {
     match c {
       '\\' => escape_next = true
       '"' => in_quote = !in_quote
-      '_' => if !in_quote { skip_next = true } else { sb.write_char('_') }
-      '*' => if !in_quote { skip_next = true } else { sb.write_char('*') }
-      '@' => if !in_quote { sb.write_view(raw) } else { sb.write_char('@') }
-      _ => sb.write_char(c)
+      '_' =>
+        if !in_quote {
+          skip_next = true
+        } else {
+          output_chars = checked_formatted_output_growth(
+            output_chars, 1, max_output_chars,
+          )
+          sb.write_char('_')
+        }
+      '*' =>
+        if !in_quote {
+          skip_next = true
+        } else {
+          output_chars = checked_formatted_output_growth(
+            output_chars, 1, max_output_chars,
+          )
+          sb.write_char('*')
+        }
+      '@' =>
+        if !in_quote {
+          output_chars = checked_formatted_output_growth(
+            output_chars,
+            raw.length(),
+            max_output_chars,
+          )
+          sb.write_view(raw)
+        } else {
+          output_chars = checked_formatted_output_growth(
+            output_chars, 1, max_output_chars,
+          )
+          sb.write_char('@')
+        }
+      _ => {
+        output_chars = checked_formatted_output_growth(
+          output_chars,
+          if c.to_int() > 0xffff {
+            2
+          } else {
+            1
+          },
+          max_output_chars,
+        )
+        sb.write_char(c)
+      }
     }
   }
   sb.to_string()
@@ -457,13 +718,15 @@ fn format_number_pattern(
   pattern : String,
   add_minus : Bool,
   currency_prefix : String,
-) -> String {
+) -> String raise XlsxError {
   let value = @string.parse_double(raw) catch { _ => return raw }
+  if value.is_nan() || value.is_inf() {
+    raise InvalidXml(msg="cell number must be finite")
+  }
   let negative = value < 0.0
   let abs_value = if negative { -value } else { value }
   let (prefix, suffix, info) = parse_number_pattern(pattern)
-  let scaled = abs_value *
-    @math.pow(100.0, Double::from_int(info.percent_count))
+  let scaled = scale_number_for_percent_format(abs_value, info.percent_count)
   let formatted = if info.has_fraction {
     format_fraction_number(scaled, info)
   } else if info.has_scientific {
@@ -480,6 +743,29 @@ fn format_number_pattern(
   output.write_view(formatted)
   output.write_view(suffix)
   output.to_string()
+}
+
+///|
+fn scale_number_for_percent_format(
+  value : Double,
+  percent_count : Int,
+) -> Double raise XlsxError {
+  // Applying the entire power first can overflow even when the final product
+  // is representable (for example, 1e-300 * 100^155). Scaling one marker at a
+  // time preserves that finite result and lets us fail at the first genuinely
+  // non-finite intermediate. Keeping zero on an explicit fast path also avoids
+  // manufacturing NaN from IEEE-754's 0 * infinity rule.
+  if value == 0.0 || percent_count == 0 {
+    return value
+  }
+  let mut scaled = value
+  for _ in 0..<percent_count {
+    scaled = scaled * 100.0
+    if scaled.is_nan() || scaled.is_inf() {
+      raise InvalidXml(msg="number format scale must remain finite")
+    }
+  }
+  scaled
 }
 
 ///|
@@ -727,9 +1013,16 @@ fn format_scientific_number(value : Double, info : NumberPatternInfo) -> String 
 
 ///|
 fn format_fraction_number(value : Double, info : NumberPatternInfo) -> String {
-  let int_part = Double::to_int64(Double::floor(value))
-  let frac = value - int_part.to_double()
-  let integer_text = format_int64_padded(
+  // The integer part is non-negative here. Keep the full UInt64 range instead
+  // of passing through Double::to_int64, whose saturating conversion would
+  // manufacture Int64::MAX at the signed boundary.
+  if value >= uint64_exclusive_upper_bound_double {
+    return value.to_string()
+  }
+  let integer_double = Double::floor(value)
+  let int_part = nonnegative_double_to_uint64(integer_double)
+  let frac = value - integer_double
+  let integer_text = format_uint64_padded(
     int_part,
     info.min_int_digits,
     info.use_group,
@@ -786,6 +1079,10 @@ fn float_to_frac_use_continued_fraction(
   value : Double,
   denominator_limit : Int64,
 ) -> (Int64, Int64) {
+  if value.is_nan() || value.is_inf() || value <= 0.0 || denominator_limit <= 1L {
+    return (0L, 1L)
+  }
+  let maximum_int64 = 9_223_372_036_854_775_807L
   let mut p1 : Int64 = 1L
   let mut q1 : Int64 = 0L
   let mut p2 : Int64 = 0L
@@ -793,18 +1090,34 @@ fn float_to_frac_use_continued_fraction(
   let mut lasta : Int64 = 0L
   let mut lastb : Int64 = 0L
   let mut r = value
-  while true {
-    let a = Double::to_int64(Double::floor(r))
+  // A finite Double has at most 53 significant binary digits, so 128
+  // continued-fraction steps are more than enough to reach its exact rational
+  // representation. The hard bound also makes this helper total if a future
+  // backend changes floating-point corner-case behavior.
+  for _ in 0..<128 {
+    if r.is_nan() || r.is_inf() || r < 0.0 {
+      return if lastb > 0L { (lasta, lastb) } else { (0L, 1L) }
+    }
+    let floored = Double::floor(r)
+    if floored >= int64_exclusive_upper_bound_double {
+      return if lastb > 0L { (lasta, lastb) } else { (0L, 1L) }
+    }
+    let a = Double::to_int64(floored)
+    if a < 0L ||
+      (p1 > 0L && a > (maximum_int64 - p2) / p1) ||
+      (q1 > 0L && a > (maximum_int64 - q2) / q1) {
+      return if lastb > 0L { (lasta, lastb) } else { (0L, 1L) }
+    }
     let curra = a * p1 + p2
     let currb = a * q1 + q2
+    if currb <= 0L || currb >= denominator_limit {
+      return if lastb > 0L { (lasta, lastb) } else { (0L, 1L) }
+    }
     p2 = p1
     q2 = q1
     p1 = curra
     q1 = currb
     let frac = r - a.to_double()
-    if currb >= denominator_limit {
-      return (lasta, lastb)
-    }
     if frac.abs() < 0.000000000001 {
       return (curra, currb)
     }
@@ -812,7 +1125,11 @@ fn float_to_frac_use_continued_fraction(
     lastb = currb
     r = 1.0 / frac
   }
-  (0L, 1L)
+  if lastb > 0L {
+    (lasta, lastb)
+  } else {
+    (0L, 1L)
+  }
 }
 
 ///|
@@ -833,9 +1150,15 @@ fn format_number_simple(
   decimals : Int,
   use_group : Bool,
   percent : Bool,
-) -> String {
+) -> String raise XlsxError {
   let value = @string.parse_double(raw) catch { _ => return raw }
+  if value.is_nan() || value.is_inf() {
+    raise InvalidXml(msg="cell number must be finite")
+  }
   let scaled = if percent { value * 100.0 } else { value }
+  if scaled.is_nan() || scaled.is_inf() {
+    raise InvalidXml(msg="number format scale must remain finite")
+  }
   let info = {
     min_int_digits: 1,
     required_decimals: decimals,
@@ -893,8 +1216,19 @@ fn trim_optional_decimals(text : String, required_decimals : Int) -> String {
   match dot {
     None => text
     Some(pos) => {
+      let exponent_pos = match text.find("e") {
+        Some(value) => value
+        None => text.find("E").unwrap_or(text.length())
+      }
+      // A fallback from fixed-point formatting can be scientific notation.
+      // Trim only the significand's fractional zeros and retain the exponent
+      // verbatim (especially its trailing zero).
+      if exponent_pos < pos {
+        return text
+      }
       let int_part = text[:pos].to_owned()
-      let frac_part = text[pos + 1:].to_owned()
+      let frac_part = text[pos + 1:exponent_pos].to_owned()
+      let exponent = text[exponent_pos:].to_owned()
       let mut end = frac_part.length()
       while end > required_decimals {
         if frac_part[end - 1] == '0' {
@@ -904,11 +1238,30 @@ fn trim_optional_decimals(text : String, required_decimals : Int) -> String {
         }
       }
       if end == 0 && required_decimals == 0 {
-        int_part
+        int_part + exponent
       } else {
-        int_part + "." + frac_part[:end].to_owned()
+        int_part + "." + frac_part[:end].to_owned() + exponent
       }
     }
+  }
+}
+
+///|
+let int64_exclusive_upper_bound_double : Double = 9_223_372_036_854_775_808.0
+
+///|
+let uint64_exclusive_upper_bound_double : Double = 18_446_744_073_709_551_616.0
+
+///|
+fn nonnegative_double_to_uint64(value : Double) -> UInt64 {
+  // Some MoonBit backends currently saturate Double::to_uint64 at the signed
+  // boundary. Split off bit 63 explicitly so behavior is identical across
+  // backends for every finite integral Double in [0, 2^64).
+  if value >= int64_exclusive_upper_bound_double {
+    0x8000_0000_0000_0000UL +
+    Double::to_int64(value - int64_exclusive_upper_bound_double).reinterpret_as_uint64()
+  } else {
+    Double::to_int64(value).reinterpret_as_uint64()
   }
 }
 
@@ -929,19 +1282,30 @@ fn format_fixed_number(
     decimals
   }
   let scale = pow10_int(places)
-  let scale64 = Int64::from_int(scale)
-  let scaled = Double::round(abs_value * Double::from_int(scale))
-  let scaled_int = Double::to_int64(scaled)
-  let int_part = if scale == 0 { scaled_int } else { scaled_int / scale64 }
-  let frac_part = if scale == 0 { 0L } else { scaled_int % scale64 }
+  let integer_double = Double::floor(abs_value)
+  if integer_double >= uint64_exclusive_upper_bound_double {
+    return abs_value.to_string()
+  }
+  let scale64 = scale.to_uint64()
+  let mut int_part = nonnegative_double_to_uint64(integer_double)
+  let mut frac_part = nonnegative_double_to_uint64(
+    Double::round((abs_value - integer_double) * Double::from_int(scale)),
+  )
+  if frac_part >= scale64 {
+    if int_part == 0xffff_ffff_ffff_ffffUL {
+      return abs_value.to_string()
+    }
+    int_part = int_part + 1UL
+    frac_part = 0UL
+  }
   let result = StringBuilder::new()
   if negative {
     result.write_char('-')
   }
-  result.write_view(format_int64_padded(int_part, min_int_digits, use_group))
+  result.write_view(format_uint64_padded(int_part, min_int_digits, use_group))
   if places > 0 {
     result.write_char('.')
-    result.write_view(pad_left_int64(frac_part, places))
+    result.write_view(pad_left_uint64(frac_part, places))
   }
   result.to_string()
 }
@@ -991,8 +1355,24 @@ fn pad_left_int64(value : Int64, width : Int) -> String {
 }
 
 ///|
-fn format_int64_padded(
-  value : Int64,
+fn pad_left_uint64(value : UInt64, width : Int) -> String {
+  let text = value.to_string()
+  if text.length() >= width {
+    return text
+  }
+  let sb = StringBuilder::new()
+  let mut i = text.length()
+  while i < width {
+    sb.write_char('0')
+    i = i + 1
+  }
+  sb.write_view(text)
+  sb.to_string()
+}
+
+///|
+fn format_uint64_padded(
+  value : UInt64,
   min_digits : Int,
   use_group : Bool,
 ) -> String {
@@ -1030,9 +1410,26 @@ fn format_int_grouped_string(text : String) -> String {
 }
 
 ///|
-fn format_excel_date(raw : String, pattern : String) -> String {
+fn format_excel_date(
+  raw : String,
+  pattern : String,
+  use_1904_format? : Bool = false,
+  max_output_chars? : Int,
+) -> String raise XlsxError {
+  check_bounded_format_program(pattern, max_output_chars)
+  check_bounded_numeric_output(
+    raw.length(),
+    pattern.length(),
+    2,
+    32,
+    max_output_chars,
+  )
   let value = @string.parse_double(raw) catch { _ => return raw }
-  let parts = excel_serial_to_parts(value)
+  let parts = if use_1904_format {
+    excel_serial_to_parts_1904(value)
+  } else {
+    excel_serial_to_parts(value)
+  }
   match parts {
     None => raw
     Some((year, month, day, hour, minute, second)) =>
@@ -1040,63 +1437,6 @@ fn format_excel_date(raw : String, pattern : String) -> String {
         pattern, year, month, day, hour, minute, second, value,
       )
   }
-}
-
-///|
-fn excel_serial_to_parts(value : Double) -> (Int, Int, Int, Int, Int, Int)? {
-  if value < 0.0 {
-    return None
-  }
-  let whole = Double::to_int(Double::floor(value))
-  let mut fraction = value - Double::from_int(whole)
-  if fraction < 0.0 {
-    fraction = 0.0
-  }
-  let mut total_seconds = Double::to_int(Double::round(fraction * 86400.0))
-  let mut add_day = 0
-  if total_seconds >= 86400 {
-    total_seconds = total_seconds - 86400
-    add_day = 1
-  }
-  if whole == 60 {
-    let hour = total_seconds / 3600
-    let minute = total_seconds % 3600 / 60
-    let second = total_seconds % 60
-    return Some((1900, 2, 29, hour, minute, second))
-  }
-  let mut days = whole
-  if days > 59 {
-    days = days - 1
-  }
-  let (year, month, day) = add_days_to_base(days + add_day)
-  let hour = total_seconds / 3600
-  let minute = total_seconds % 3600 / 60
-  let second = total_seconds % 60
-  Some((year, month, day, hour, minute, second))
-}
-
-///|
-fn add_days_to_base(days : Int) -> (Int, Int, Int) {
-  let mut year = 1899
-  let mut month = 12
-  let mut day = 31
-  let mut remaining = days
-  while remaining > 0 {
-    let dim = days_in_month(year, month)
-    if day + remaining <= dim {
-      day = day + remaining
-      remaining = 0
-    } else {
-      remaining = remaining - (dim - day + 1)
-      day = 1
-      month = month + 1
-      if month > 12 {
-        month = 1
-        year = year + 1
-      }
-    }
-  }
-  (year, month, day)
 }
 
 ///|

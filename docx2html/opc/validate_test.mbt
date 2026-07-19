@@ -1247,6 +1247,26 @@ test "duplicate names and CRC corruption are findings" {
 }
 
 ///|
+test "archive validation polls cancellation inside long CRC verification" {
+  let archive = @mbtzip.Archive::new()
+  archive.add("padding.bin", Bytes::make(16 * 1024, b'x'))
+  let checks = [0]
+  let report = @opc.validate_docx_archive_report_limited(
+    archive,
+    max_findings=8,
+    max_message_chars=256,
+    cancelled=() => {
+      checks[0] += 1
+      checks[0] >= 4
+    },
+  )
+  assert_eq(checks[0], 4)
+  assert_true(report.findings_truncated())
+  assert_eq(report.findings(), [])
+  assert_eq(report.main_document_part(), None)
+}
+
+///|
 test "an empty or slash-less Override PartName is a finding, not a crash" {
   let types =
     #|<?xml version="1.0"?>

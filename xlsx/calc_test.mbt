@@ -1,4 +1,27 @@
 ///|
+/// Numerical solvers and transcendental functions may differ by the final few
+/// IEEE-754 digits across MoonBit backends. Compare their numeric meaning while
+/// retaining roughly twelve significant decimal digits of precision.
+fn assert_calc_numeric_close(
+  actual : StringView,
+  expected : StringView,
+) -> Unit raise {
+  let actual_value = @string.parse_double(actual) catch {
+    _ => fail("expected numeric calculation result, got \{actual}")
+  }
+  let expected_value = @string.parse_double(expected) catch {
+    _ => fail("invalid numeric test expectation \{expected}")
+  }
+  let difference = (actual_value - expected_value).abs()
+  let tolerance = expected_value.abs() * 2.0e-12 + 1.0e-300
+  if difference.is_nan() || difference > tolerance {
+    fail(
+      "calculation result \{actual} differs from \{expected} by \{difference} (tolerance \{tolerance})",
+    )
+  }
+}
+
+///|
 test "calc basic operators" {
   let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
@@ -620,9 +643,9 @@ test "calc chi-square test functions" {
   sheet.set_cell_formula("H3", "CHITEST(B3:B4,F3:F4)")
   inspect(workbook.calc_cell_value("Sheet1", "H3"), content="0.152357748933542")
   sheet.set_cell_formula("H4", "CHITEST(B4:B6,F3:F5)")
-  inspect(
+  assert_calc_numeric_close(
     workbook.calc_cell_value("Sheet1", "H4"),
-    content="7.070769514407259e-25",
+    "7.070769514407259e-25",
   )
   sheet.set_cell_formula("H5", "CHISQ.TEST(B3:C5,F3:G5)")
   inspect(
@@ -637,9 +660,9 @@ test "calc chi-square test functions" {
   sheet.set_cell_formula("H7", "CHISQ.TEST(B3:B4,F3:F4)")
   inspect(workbook.calc_cell_value("Sheet1", "H7"), content="0.152357748933542")
   sheet.set_cell_formula("H8", "CHISQ.TEST(B4:B6,F3:F5)")
-  inspect(
+  assert_calc_numeric_close(
     workbook.calc_cell_value("Sheet1", "H8"),
-    content="7.070769514407259e-25",
+    "7.070769514407259e-25",
   )
   sheet.set_cell_formula("H9", "CHITEST()")
   inspect(workbook.calc_cell_value("Sheet1", "H9"), content="#VALUE!")
@@ -2248,9 +2271,9 @@ test "calc trig functions" {
     content="0.7456241416655579",
   )
   sheet.set_cell_formula("U1", "TAN(1.047197551)")
-  inspect(
+  assert_calc_numeric_close(
     workbook.calc_cell_value("Sheet1", "U1"),
-    content="1.7320508067824865",
+    "1.7320508067824865",
   )
   sheet.set_cell_formula("U2", "TAN(0)")
   inspect(workbook.calc_cell_value("Sheet1", "U2"), content="0")
@@ -3628,6 +3651,14 @@ test "calc date and time functions" {
   inspect(workbook.calc_cell_value("Sheet1", "G4"), content="0.5")
   sheet.set_cell_formula("G5", "YEARFRAC(DATE(2020,1,1),DATE(2021,1,1),1)")
   inspect(workbook.calc_cell_value("Sheet1", "G5"), content="1")
+  sheet.set_cell_formula("G6", "ISOWEEKNUM(60)")
+  inspect(workbook.calc_cell_value("Sheet1", "G6"), content="9")
+  sheet.set_cell_formula("G7", "ISOWEEKNUM(60.5)")
+  inspect(workbook.calc_cell_value("Sheet1", "G7"), content="9")
+  sheet.set_cell_formula("G8", "ISOWEEKNUM(59.9999999)")
+  inspect(workbook.calc_cell_value("Sheet1", "G8"), content="9")
+  sheet.set_cell_formula("G9", "DAY(31.9999999)")
+  inspect(workbook.calc_cell_value("Sheet1", "G9"), content="31")
   sheet.set_cell_formula("H1", "WEEKDAY(DATE(2020,1,1))")
   inspect(workbook.calc_cell_value("Sheet1", "H1"), content="4")
   sheet.set_cell_formula("H2", "WEEKDAY(DATE(2020,1,1),2)")
@@ -5043,19 +5074,19 @@ test "calc financial functions" {
   sheet.set_cell_formula("B9", "PV(10%/4,16,2000,0,1)")
   inspect(workbook.calc_cell_value("Sheet1", "B9"), content="-26762.7554528811")
   sheet.set_cell_formula("B10", "RATE(60,-1000,50000)")
-  inspect(
+  assert_calc_numeric_close(
     workbook.calc_cell_value("Sheet1", "B10"),
-    content="0.00618341316212867",
+    "0.00618341316212867",
   )
   sheet.set_cell_formula("B11", "RATE(24,-800,0,20000,1)")
-  inspect(
+  assert_calc_numeric_close(
     workbook.calc_cell_value("Sheet1", "B11"),
-    content="0.00325084350160377",
+    "0.00325084350160377",
   )
   sheet.set_cell_formula("B12", "RATE(48,-200,8000,3,1,0.5)")
-  inspect(
+  assert_calc_numeric_close(
     workbook.calc_cell_value("Sheet1", "B12"),
-    content="0.00804126658316361",
+    "0.00804126658316361",
   )
 }
 
@@ -5331,7 +5362,10 @@ test "calc bond functions" {
     let (formula, expected) = entry
     let cell = "E\{idx + 1}"
     sheet.set_cell_formula(cell, formula)
-    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+    assert_calc_numeric_close(
+      workbook.calc_cell_value("Sheet1", cell),
+      expected,
+    )
   }
 }
 
@@ -7784,4 +7818,23 @@ test "calc text b functions use DBCS semantics without mojibake" {
   // REPLACEB replacing the ASCII tail keeps the wide prefix intact
   sheet.set_cell_formula("A10", "REPLACEB(C1,5,5,\"!\")")
   inspect(workbook.calc_cell_value("Sheet1", "A10"), content="你好!")
+}
+
+///|
+test "TEXT contains formatter failures at the formula boundary" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let format = "# ?/?" + "%".repeat(155)
+  sheet.set_cell_formula("A1", "TEXT(0,\"" + format + "\")")
+  match workbook.calc_cell_typed("Sheet1", "A1") {
+    Some(String(text)) => assert_true(text.contains("%"))
+    other => fail("zero TEXT scaling should stay finite, got \{to_repr(other)}")
+  }
+  sheet.set_cell_formula("A2", "TEXT(1,\"" + format + "\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="#VALUE!")
+  match workbook.calc_cell_typed("Sheet1", "A2") {
+    Some(Error(code)) => inspect(code, content="#VALUE!")
+    other =>
+      fail("TEXT formatter failure should be an error, got \{to_repr(other)}")
+  }
 }

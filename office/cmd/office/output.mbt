@@ -6,6 +6,30 @@ enum OutputMode {
 }
 
 ///|
+fn format_resource_failure(
+  format : String,
+  resource : String,
+  limit : Int,
+  actual? : Int,
+) -> CliFailure {
+  let fields : Map[String, Json] = {
+    "resource": Json::string(resource),
+    "limit": Json::number(limit.to_double()),
+  }
+  match actual {
+    Some(value) => fields["actual"] = Json::number(value.to_double())
+    None => ()
+  }
+  CliFailure(
+    @lib.protocol_error(
+      "office.\{format}.resource_limit",
+      "\{format.to_upper()} \{resource} exceeds the configured limit of \{limit}",
+      details=Json::object(fields),
+    ),
+  )
+}
+
+///|
 fn terminal_hex_digit(value : Int) -> Char {
   match value {
     0 => '0'

@@ -21,12 +21,23 @@ let default_max_xml_part_bytes : Int = 16 * 1024 * 1024
 let default_max_kdf_iterations : Int = 1_000_000
 
 ///|
+let default_max_workbook_sheets : Int = 1024
+
+///|
+let default_max_parser_items : Int = 2_000_000
+
+///|
+let default_max_parser_work_units : Int = 512 * 1024 * 1024
+
+///|
 /// A complete fail-closed resource policy for reading an XLSX package.
 ///
 /// The type is opaque so every public read path receives a validated,
 /// internally consistent policy. ZIP limits are enforced while inflating;
-/// `max_xml_part_bytes` is enforced before any individual XML part is decoded,
-/// and `max_kdf_iterations` bounds encrypted-package password derivation.
+/// `max_xml_part_bytes` is enforced before any individual XML part is decoded.
+/// Semantic ceilings independently bound workbook fan-out, XML-backed parser
+/// items, derived materialization, and cumulative parser work.
+/// `max_kdf_iterations` bounds encrypted-package password derivation.
 pub struct ReadLimits {
   priv max_package_bytes : Int
   priv max_archive_entries : Int
@@ -35,12 +46,16 @@ pub struct ReadLimits {
   priv max_total_preserved_source_bytes : Int
   priv max_xml_part_bytes : Int
   priv max_kdf_iterations : Int
+  priv max_workbook_sheets : Int
+  priv max_parser_items : Int
+  priv max_parser_work_units : Int
 }
 
 ///|
 /// Returns the production XLSX read policy: 128 MiB source packages, 8,192
 /// entries, 64 MiB per entry, 256 MiB aggregate expansion, 16 MiB per XML part,
-/// and one million Agile KDF iterations. Call `with_values` for stricter limits.
+/// 1,024 sheets, two million parser items, 512 Mi parser work units, and one
+/// million Agile KDF iterations. Call `with_values` for stricter limits.
 pub fn ReadLimits::new() -> ReadLimits {
   {
     max_package_bytes: default_max_package_bytes,
@@ -50,6 +65,9 @@ pub fn ReadLimits::new() -> ReadLimits {
     max_total_preserved_source_bytes: default_max_total_preserved_source_bytes,
     max_xml_part_bytes: default_max_xml_part_bytes,
     max_kdf_iterations: default_max_kdf_iterations,
+    max_workbook_sheets: default_max_workbook_sheets,
+    max_parser_items: default_max_parser_items,
+    max_parser_work_units: default_max_parser_work_units,
   }
 }
 
@@ -64,6 +82,9 @@ pub fn ReadLimits::with_values(
   max_total_preserved_source_bytes? : Int = default_max_total_preserved_source_bytes,
   max_xml_part_bytes? : Int = default_max_xml_part_bytes,
   max_kdf_iterations? : Int = default_max_kdf_iterations,
+  max_workbook_sheets? : Int = default_max_workbook_sheets,
+  max_parser_items? : Int = default_max_parser_items,
+  max_parser_work_units? : Int = default_max_parser_work_units,
 ) -> ReadLimits raise XlsxError {
   if max_package_bytes <= 0 ||
     max_archive_entries <= 0 ||
@@ -71,7 +92,10 @@ pub fn ReadLimits::with_values(
     max_total_uncompressed_bytes <= 0 ||
     max_total_preserved_source_bytes <= 0 ||
     max_xml_part_bytes <= 0 ||
-    max_kdf_iterations <= 0 {
+    max_kdf_iterations <= 0 ||
+    max_workbook_sheets <= 0 ||
+    max_parser_items <= 0 ||
+    max_parser_work_units <= 0 {
     raise InvalidOptions(msg="XLSX read limits must be positive")
   }
   if max_entry_uncompressed_bytes > max_total_uncompressed_bytes {
@@ -90,6 +114,9 @@ pub fn ReadLimits::with_values(
     max_total_preserved_source_bytes,
     max_xml_part_bytes,
     max_kdf_iterations,
+    max_workbook_sheets,
+    max_parser_items,
+    max_parser_work_units,
   }
 }
 
@@ -134,6 +161,26 @@ pub fn ReadLimits::max_xml_part_bytes(self : ReadLimits) -> Int {
 /// Returns the maximum accepted Agile password-KDF work factor.
 pub fn ReadLimits::max_kdf_iterations(self : ReadLimits) -> Int {
   self.max_kdf_iterations
+}
+
+///|
+/// Returns the maximum number of logical sheets accepted in one workbook.
+pub fn ReadLimits::max_workbook_sheets(self : ReadLimits) -> Int {
+  self.max_workbook_sheets
+}
+
+///|
+/// Returns the maximum cumulative XML-backed and derived items that a read may
+/// inspect or materialize.
+pub fn ReadLimits::max_parser_items(self : ReadLimits) -> Int {
+  self.max_parser_items
+}
+
+///|
+/// Returns the maximum cumulative XML source units plus derived expansion work
+/// accepted by the parser.
+pub fn ReadLimits::max_parser_work_units(self : ReadLimits) -> Int {
+  self.max_parser_work_units
 }
 
 ///|

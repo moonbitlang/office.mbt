@@ -23,6 +23,10 @@ fn parse_range_ref(
   for part in range_ref.split(":") {
     parts.push(part.to_owned())
   }
+  if parts.length() == 1 {
+    let (row, col) = cell_ref_to_rc(parts[0])
+    return (row, col, row, col)
+  }
   if parts.length() != 2 {
     raise InvalidCellRef(value=range_ref.to_owned())
   }
@@ -112,6 +116,7 @@ pub fn Worksheet::set_cell(
   value : String,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_shared_formula_masters_index()
   let (row, col) = cell_ref_to_rc(reference)
   let canonical = cell_ref_from(row, col)
   match self.cell_index_of(row, col) {
@@ -128,6 +133,8 @@ pub fn Worksheet::set_cell(
         formula_type: None,
         formula_ref: None,
         formula_shared_index: None,
+        formula_value_present: false,
+        style_explicit: self.cells[i].style_explicit,
         style_id,
       }
     }
@@ -144,6 +151,8 @@ pub fn Worksheet::set_cell(
         formula_type: None,
         formula_ref: None,
         formula_shared_index: None,
+        formula_value_present: false,
+        style_explicit: false,
         style_id: 0,
       })
       self.record_cell_index_if_valid(row, col, index)
@@ -184,6 +193,7 @@ pub fn Worksheet::set_cell_value(
   value : CellValue,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_shared_formula_masters_index()
   let (row, col) = cell_ref_to_rc(reference)
   let canonical = cell_ref_from(row, col)
   let value_type = cell_value_type(value)
@@ -202,6 +212,8 @@ pub fn Worksheet::set_cell_value(
         formula_type: None,
         formula_ref: None,
         formula_shared_index: None,
+        formula_value_present: false,
+        style_explicit: self.cells[i].style_explicit,
         style_id,
       }
     }
@@ -218,6 +230,8 @@ pub fn Worksheet::set_cell_value(
         formula_type: None,
         formula_ref: None,
         formula_shared_index: None,
+        formula_value_present: false,
+        style_explicit: false,
         style_id: 0,
       })
       self.record_cell_index_if_valid(row, col, index)
@@ -278,6 +292,7 @@ pub fn Worksheet::set_cell_rich_text(
   runs : ArrayView[RichTextRun],
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_shared_formula_masters_index()
   let total = rich_text_total_units(runs)
   if total > max_cell_chars {
     raise CellTextTooLong(len=total)
@@ -303,6 +318,8 @@ pub fn Worksheet::set_cell_rich_text(
         formula_type: None,
         formula_ref: None,
         formula_shared_index: None,
+        formula_value_present: false,
+        style_explicit: self.cells[i].style_explicit,
         style_id,
       }
     }
@@ -319,6 +336,8 @@ pub fn Worksheet::set_cell_rich_text(
         formula_type: None,
         formula_ref: None,
         formula_shared_index: None,
+        formula_value_present: false,
+        style_explicit: false,
         style_id: 0,
       })
       self.record_cell_index_if_valid(row, col, index)
@@ -379,6 +398,290 @@ pub fn Worksheet::formula_refs(self : Worksheet) -> Array[String] {
 }
 
 ///|
+/// Indexes and validates one worksheet's shared-formula groups. Followers are
+/// omitted from the returned map, so master formula text and its copy anchor
+/// are retained only once even for large shared ranges.
+fn shared_formula_validation_checkpoint(
+  budget : ReadBudget?,
+  cancelled : () -> Bool,
+) -> Unit raise XlsxError {
+  match budget {
+    Some(value) => value.checkpoint()
+    None => if cancelled() { raise ReadCancelled }
+  }
+}
+
+///|
+fn validated_shared_formula_masters(
+  cells : ArrayView[Cell],
+  budget? : ReadBudget,
+  cancelled? : () -> Bool = () => false,
+) -> Map[UInt, SharedFormulaMaster] raise XlsxError {
+  let masters : Map[UInt, SharedFormulaMaster] = Map([])
+  shared_formula_validation_checkpoint(budget, cancelled)
+  match budget {
+    Some(value) => value.charge_work(cells.length())
+    None => ()
+  }
+  let mut cell_index = 0
+  for cell in cells {
+    if (cell_index & 4095) == 0 {
+      shared_formula_validation_checkpoint(budget, cancelled)
+    }
+    match
+      (
+        cell.formula_type,
+        cell.formula,
+        cell.formula_shared_index,
+        cell.formula_ref,
+      ) {
+      (Some(Shared), Some(formula), Some(shared_index), Some(range_ref)) => {
+        if formula == "" {
+          raise InvalidXml(msg="shared formula master text missing")
+        }
+        let (row_lo, column_lo, row_hi, column_hi) = parse_range_ref(range_ref)
+        if cell.row < row_lo ||
+          cell.row > row_hi ||
+          cell.col < column_lo ||
+          cell.col > column_hi {
+          raise InvalidXml(msg="shared formula master is outside its range")
+        }
+        let master : SharedFormulaMaster = {
+          formula,
+          row: cell.row,
+          column: cell.col,
+          row_lo,
+          column_lo,
+          row_hi,
+          column_hi,
+        }
+        match masters.get(shared_index) {
+          Some(_) =>
+            raise InvalidXml(msg="shared formula index has conflicting masters")
+          None => masters[shared_index] = master
+        }
+      }
+      (Some(Shared), Some(_), None, _) =>
+        raise InvalidXml(msg="shared formula index missing")
+      (Some(Shared), None, _, _) =>
+        raise InvalidXml(msg="shared formula text missing")
+      _ => ()
+    }
+    cell_index += 1
+  }
+  validate_shared_formula_master_ranges(masters, budget?, cancelled~)
+  shared_formula_validation_checkpoint(budget, cancelled)
+  match budget {
+    Some(value) => value.charge_work(cells.length())
+    None => ()
+  }
+  cell_index = 0
+  for cell in cells {
+    if (cell_index & 4095) == 0 {
+      shared_formula_validation_checkpoint(budget, cancelled)
+    }
+    match (cell.formula_type, cell.formula_shared_index, cell.formula_ref) {
+      (Some(Shared), Some(shared_index), None) =>
+        match masters.get(shared_index) {
+          Some(master) =>
+            if !master.contains_coordinate(cell.row, cell.col) {
+              raise InvalidXml(
+                msg="shared formula follower is outside the master range",
+              )
+            }
+          None => raise InvalidXml(msg="shared formula follower has no master")
+        }
+      _ => ()
+    }
+    cell_index += 1
+  }
+  shared_formula_validation_checkpoint(budget, cancelled)
+  masters
+}
+
+///|
+fn clone_shared_formula_masters_index(
+  source : Map[UInt, SharedFormulaMaster],
+) -> Map[UInt, SharedFormulaMaster] {
+  let cloned : Map[UInt, SharedFormulaMaster] = Map([])
+  for shared_index, master in source {
+    cloned[shared_index] = master
+  }
+  cloned
+}
+
+///|
+/// Counts only the shared cells an edit will retain or copy, then performs one
+/// aggregate fan-out check before the first translated string is allocated.
+fn preflight_shared_formula_materialization(
+  cells : ArrayView[Cell],
+  masters : Map[UInt, SharedFormulaMaster],
+  budget : SharedFormulaMaterializationBudget,
+  retain : (Cell) -> Bool,
+) -> Unit raise XlsxError {
+  let formula_counts : Map[UInt, Int] = Map([])
+  budget.checkpoint()
+  let mut cell_index = 0
+  for cell in cells {
+    if (cell_index & 4095) == 0 {
+      budget.checkpoint()
+    }
+    if retain(cell) {
+      match (cell.formula_type, cell.formula_shared_index) {
+        (Some(Shared), Some(shared_index)) => {
+          let current = formula_counts.get(shared_index).unwrap_or(0)
+          let (next, exceeded) = read_budget_actual(current, 1, 0x7fffffff)
+          if exceeded {
+            raise ResourceLimitExceeded(
+              kind="shared_formula_followers",
+              limit=0x7fffffff,
+              actual=next,
+            )
+          }
+          formula_counts[shared_index] = next
+        }
+        (Some(Shared), None) =>
+          raise InvalidXml(msg="shared formula index missing")
+        _ => ()
+      }
+    }
+    cell_index += 1
+  }
+  budget.preflight(formula_counts, masters)
+}
+
+///|
+/// Converts one shared-formula cell to an independent normal formula before a
+/// structural edit moves or duplicates it. Shared ranges are metadata over
+/// fixed coordinates; retaining that metadata while coordinates change makes
+/// the group internally inconsistent. Materializing each cell preserves the
+/// formula represented at its original coordinate and makes subsequent cell
+/// movement follow the same rules as every other normal formula.
+fn normal_formula_cell_for_structural_edit(
+  cell : Cell,
+  masters : Map[UInt, SharedFormulaMaster],
+  budget : SharedFormulaMaterializationBudget,
+) -> Cell raise XlsxError {
+  match (cell.formula_type, cell.formula_shared_index) {
+    (Some(Shared), Some(shared_index)) => {
+      let master = match masters.get(shared_index) {
+        Some(value) => value
+        None => raise InvalidXml(msg="shared formula cell has no master")
+      }
+      {
+        reference: cell.reference,
+        row: cell.row,
+        col: cell.col,
+        value: cell.value,
+        value_type: cell.value_type,
+        rich_text: cell.rich_text,
+        formula: Some(budget.translate(master, cell.row, cell.col)),
+        formula_type: None,
+        formula_ref: None,
+        formula_shared_index: None,
+        formula_value_present: cell.formula_value_present,
+        style_explicit: cell.style_explicit,
+        style_id: cell.style_id,
+      }
+    }
+    _ => cell
+  }
+}
+
+///|
+fn Worksheet::invalidate_shared_formula_masters_index(self : Worksheet) -> Unit {
+  self.shared_formula_masters_index.clear()
+  self.shared_formula_masters_index_valid = false
+}
+
+///|
+fn Worksheet::ensure_shared_formula_masters_index(
+  self : Worksheet,
+  cancelled? : () -> Bool = () => false,
+) -> Unit raise XlsxError {
+  if cancelled() {
+    raise ReadCancelled
+  }
+  if self.shared_formula_masters_index_valid {
+    return
+  }
+  let rebuilt = validated_shared_formula_masters(self.cells, cancelled~)
+  self.shared_formula_masters_index.clear()
+  let mut master_index = 0
+  for shared_index, master in rebuilt {
+    if (master_index & 4095) == 0 && cancelled() {
+      self.shared_formula_masters_index.clear()
+      raise ReadCancelled
+    }
+    self.shared_formula_masters_index[shared_index] = master
+    master_index += 1
+  }
+  if cancelled() {
+    self.shared_formula_masters_index.clear()
+    raise ReadCancelled
+  }
+  self.shared_formula_masters_index_valid = true
+}
+
+///|
+/// Returns non-empty shared-formula masters keyed by OOXML shared index after
+/// validating that every follower has exactly one master and lies within the
+/// master's declared range. Conflicting or incomplete groups are rejected.
+pub fn Worksheet::shared_formula_masters(
+  self : Worksheet,
+) -> Map[UInt, SharedFormulaMaster] raise XlsxError {
+  self.ensure_shared_formula_masters_index()
+  clone_shared_formula_masters_index(self.shared_formula_masters_index)
+}
+
+///|
+/// Looks up one validated shared-formula master without cloning the complete
+/// master index. Parsed worksheets already carry an eagerly validated index;
+/// programmatically edited worksheets rebuild it lazily before this lookup.
+/// `cancelled` is polled while rebuilding a stale index.
+pub fn Worksheet::shared_formula_master(
+  self : Worksheet,
+  shared_index : UInt,
+  cancelled? : () -> Bool = () => false,
+) -> SharedFormulaMaster? raise XlsxError {
+  self.ensure_shared_formula_masters_index(cancelled~)
+  self.shared_formula_masters_index.get(shared_index)
+}
+
+///|
+test "shared formula masters stay eagerly indexed after bounded read" {
+  let source = Workbook::new()
+  let source_sheet = source.add_sheet("Data")
+  source_sheet.set_cell_formula_opts(
+    "A1",
+    "C1+1",
+    opts=FormulaOpts::shared("A1:A2"),
+  )
+  let parsed = read(write(source))
+  guard parsed.sheet("Data") is Some(sheet) else {
+    fail("expected parsed shared-formula worksheet")
+  }
+  assert_true(sheet.shared_formula_masters_index_valid)
+  assert_eq(sheet.shared_formula_masters_index.length(), 1)
+  let exported = sheet.shared_formula_masters()
+  exported.clear()
+  assert_eq(sheet.shared_formula_masters_index.length(), 1)
+  assert_true(sheet.shared_formula_master(0) is Some(_))
+}
+
+///|
+test "cell mutation invalidates and safely rebuilds shared formula index" {
+  let sheet = Worksheet::new("Data")
+  sheet.set_cell_formula_opts("A1", "C1+1", opts=FormulaOpts::shared("A1:A2"))
+  assert_false(sheet.shared_formula_masters_index_valid)
+  assert_eq(sheet.shared_formula_masters().length(), 1)
+  assert_true(sheet.shared_formula_masters_index_valid)
+  sheet.set_cell("D1", "value")
+  assert_false(sheet.shared_formula_masters_index_valid)
+  assert_eq(sheet.shared_formula_masters().length(), 1)
+}
+
+///|
 pub fn Worksheet::set_cell_formula(
   self : Worksheet,
   reference : String,
@@ -386,6 +689,7 @@ pub fn Worksheet::set_cell_formula(
   value? : String = "",
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_shared_formula_masters_index()
   let (row, col) = cell_ref_to_rc(reference)
   let canonical = cell_ref_from(row, col)
   match self.cell_index_of(row, col) {
@@ -402,6 +706,8 @@ pub fn Worksheet::set_cell_formula(
         formula_type: None,
         formula_ref: None,
         formula_shared_index: None,
+        formula_value_present: value != "",
+        style_explicit: self.cells[i].style_explicit,
         style_id,
       }
     }
@@ -418,6 +724,8 @@ pub fn Worksheet::set_cell_formula(
         formula_type: None,
         formula_ref: None,
         formula_shared_index: None,
+        formula_value_present: value != "",
+        style_explicit: false,
         style_id: 0,
       })
       self.record_cell_index_if_valid(row, col, index)
@@ -442,6 +750,37 @@ pub fn Worksheet::get_cell_formula(
 }
 
 ///|
+/// Returns the stored formula metadata for a 1-based coordinate without
+/// collapsing an empty shared-formula follower to `None`.
+///
+/// This complements `get_cell_formula`, whose compatibility contract returns
+/// only independently stored, non-empty formula text. The returned formula is
+/// not translated from a shared master; `shared_index` identifies that master
+/// when a consumer needs its text.
+pub fn Worksheet::get_cell_formula_info_rc(
+  self : Worksheet,
+  row : Int,
+  col : Int,
+) -> CellFormulaInfo? raise XlsxError {
+  ignore(cell_ref_from(row, col))
+  match self.cell_index_of(row, col) {
+    Some(i) =>
+      match self.cells[i].formula {
+        Some(formula) =>
+          Some({
+            formula,
+            formula_type: self.cells[i].formula_type,
+            range_ref: self.cells[i].formula_ref,
+            shared_index: self.cells[i].formula_shared_index,
+            cached_value_present: self.cells[i].formula_value_present,
+          })
+        None => None
+      }
+    None => None
+  }
+}
+
+///|
 pub fn Worksheet::set_cell_formula_opts(
   self : Worksheet,
   reference : String,
@@ -450,6 +789,7 @@ pub fn Worksheet::set_cell_formula_opts(
   value? : String = "",
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_shared_formula_masters_index()
   let formula_kind = opts.formula_type
   match formula_kind {
     None => self.set_cell_formula(reference, formula, value~)
@@ -491,6 +831,8 @@ pub fn Worksheet::set_cell_formula_opts(
               formula_type: Some(Array),
               formula_ref: Some(formula_ref),
               formula_shared_index: None,
+              formula_value_present: value != "",
+              style_explicit: sheet.cells[i].style_explicit,
               style_id,
             }
           }
@@ -507,6 +849,8 @@ pub fn Worksheet::set_cell_formula_opts(
               formula_type: Some(Array),
               formula_ref: Some(formula_ref),
               formula_shared_index: None,
+              formula_value_present: value != "",
+              style_explicit: false,
               style_id: 0,
             })
             sheet.record_cell_index_if_valid(row, col, index)
@@ -536,21 +880,30 @@ pub fn Worksheet::set_cell_formula_opts(
           msg="shared formula master must be top-left of ref",
         )
       }
-      let mut max_si = -1
+      let mut max_si : UInt? = None
       for cell in self.cells {
         match cell.formula_shared_index {
-          Some(si) => if si > max_si { max_si = si }
+          Some(si) =>
+            match max_si {
+              Some(current) => if si > current { max_si = Some(si) }
+              None => max_si = Some(si)
+            }
           None => ()
         }
       }
-      let shared_index = max_si + 1
+      let shared_index = match max_si {
+        Some(0xFFFFFFFF) =>
+          raise InvalidSheetOperation(msg="shared formula index exhausted")
+        Some(value) => value + 1
+        None => 0
+      }
       fn set_shared_cell(
         sheet : Worksheet,
         row : Int,
         col : Int,
         formula : String,
         formula_ref : String?,
-        shared_index : Int,
+        shared_index : UInt,
         value : String,
       ) -> Unit raise XlsxError {
         let canonical = cell_ref_from(row, col)
@@ -568,6 +921,8 @@ pub fn Worksheet::set_cell_formula_opts(
               formula_type: Some(Shared),
               formula_ref,
               formula_shared_index: Some(shared_index),
+              formula_value_present: value != "",
+              style_explicit: sheet.cells[i].style_explicit,
               style_id,
             }
           }
@@ -584,6 +939,8 @@ pub fn Worksheet::set_cell_formula_opts(
               formula_type: Some(Shared),
               formula_ref,
               formula_shared_index: Some(shared_index),
+              formula_value_present: value != "",
+              style_explicit: false,
               style_id: 0,
             })
             sheet.record_cell_index_if_valid(row, col, index)
@@ -630,6 +987,9 @@ pub fn Worksheet::set_cell_hyperlink(
   if link_type == Unset {
     self.remove_cell_hyperlink(resolved)
     return
+  }
+  if target.length() > max_hyperlink_target_chars {
+    raise InvalidHyperlink(msg="hyperlink target is too long")
   }
   let display_value = if display == "" { None } else { Some(display) }
   let tooltip_value = if tooltip == "" { None } else { Some(tooltip) }
@@ -836,6 +1196,8 @@ pub fn Worksheet::set_cell_style(
         formula_type: cell.formula_type,
         formula_ref: cell.formula_ref,
         formula_shared_index: cell.formula_shared_index,
+        formula_value_present: cell.formula_value_present,
+        style_explicit: true,
         style_id,
       }
     }
@@ -852,6 +1214,8 @@ pub fn Worksheet::set_cell_style(
         formula_type: None,
         formula_ref: None,
         formula_shared_index: None,
+        formula_value_present: false,
+        style_explicit: true,
         style_id,
       })
       self.record_cell_index_if_valid(row, col, index)
@@ -897,6 +1261,8 @@ pub fn Worksheet::set_cell_style_rc(
         formula_type: cell.formula_type,
         formula_ref: cell.formula_ref,
         formula_shared_index: cell.formula_shared_index,
+        formula_value_present: cell.formula_value_present,
+        style_explicit: true,
         style_id,
       }
     }
@@ -913,6 +1279,8 @@ pub fn Worksheet::set_cell_style_rc(
         formula_type: None,
         formula_ref: None,
         formula_shared_index: None,
+        formula_value_present: false,
+        style_explicit: true,
         style_id,
       })
       self.record_cell_index_if_valid(row, col, index)
@@ -932,6 +1300,32 @@ pub fn Worksheet::get_cell_style_rc(
   match self.cell_index_of(row, col) {
     Some(i) => Some(self.cells[i].style_id)
     None => None
+  }
+}
+
+///|
+/// Returns the style that formats a resolved coordinate without performing a
+/// workbook sheet-name lookup. Precedence matches the write path: an explicit
+/// cell style (including style 0) wins, then the row style, then the column
+/// style, then style 0.
+/// The row and column are 1-based and must fit the XLSX grid.
+pub fn Worksheet::effective_style_id_rc(
+  self : Worksheet,
+  row : Int,
+  col : Int,
+) -> Int raise XlsxError {
+  ignore(cell_ref_from(row, col))
+  match self.cell_index_of(row, col) {
+    Some(i) if self.cells[i].style_explicit => self.cells[i].style_id
+    _ =>
+      match self.get_row_style(row) {
+        Some(style_id) => style_id
+        None =>
+          match self.get_col_style(col) {
+            Some(style_id) => style_id
+            None => 0
+          }
+      }
   }
 }
 
@@ -1649,6 +2043,7 @@ pub fn Worksheet::add_image(
   } else {
     reference
   }
+  let drawing_order = self.allocate_drawing_order()
   self.images.push({
     reference: stored_reference,
     data,
@@ -1668,6 +2063,11 @@ pub fn Worksheet::add_image(
     alt_text,
     lock_aspect_ratio,
     positioning,
+    drawing_offset_x_emu: None,
+    drawing_offset_y_emu: None,
+    drawing_width_emu: None,
+    drawing_height_emu: None,
+    drawing_order: Some(drawing_order),
   })
 }
 
@@ -1692,6 +2092,11 @@ fn image_with_reference(image : Image, reference : String) -> Image {
     alt_text: image.alt_text,
     lock_aspect_ratio: image.lock_aspect_ratio,
     positioning: image.positioning,
+    drawing_offset_x_emu: image.drawing_offset_x_emu,
+    drawing_offset_y_emu: image.drawing_offset_y_emu,
+    drawing_width_emu: image.drawing_width_emu,
+    drawing_height_emu: image.drawing_height_emu,
+    drawing_order: image.drawing_order,
   }
 }
 
@@ -1707,6 +2112,11 @@ fn chart_with_reference(chart : Chart, reference : String) -> Chart {
     print_object: chart.print_object,
     locked: chart.locked,
     positioning: chart.positioning,
+    drawing_offset_x_emu: chart.drawing_offset_x_emu,
+    drawing_offset_y_emu: chart.drawing_offset_y_emu,
+    drawing_width_emu: chart.drawing_width_emu,
+    drawing_height_emu: chart.drawing_height_emu,
+    drawing_order: chart.drawing_order,
   }
 }
 
@@ -1769,6 +2179,7 @@ pub fn Worksheet::add_chart(
   xml : String,
 ) -> Unit raise XlsxError {
   let (_row, _col) = cell_ref_to_rc(reference)
+  let drawing_order = self.allocate_drawing_order()
   self.charts.push({
     reference,
     xml,
@@ -1779,6 +2190,11 @@ pub fn Worksheet::add_chart(
     print_object: true,
     locked: true,
     positioning: TwoCell,
+    drawing_offset_x_emu: None,
+    drawing_offset_y_emu: None,
+    drawing_width_emu: None,
+    drawing_height_emu: None,
+    drawing_order: Some(drawing_order),
   })
 }
 
@@ -1836,6 +2252,7 @@ pub fn Worksheet::add_chart_with_options(
     "drawing chart height",
   )
   let xml = chart_options_to_xml(opts)
+  let drawing_order = self.allocate_drawing_order()
   self.charts.push({
     reference,
     xml,
@@ -1846,6 +2263,11 @@ pub fn Worksheet::add_chart_with_options(
     print_object,
     locked,
     positioning,
+    drawing_offset_x_emu: None,
+    drawing_offset_y_emu: None,
+    drawing_width_emu: None,
+    drawing_height_emu: None,
+    drawing_order: Some(drawing_order),
   })
 }
 
@@ -1874,7 +2296,8 @@ pub fn Worksheet::add_shape(
   shape : Shape,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
-  self.shapes.push(shape)
+  let drawing_order = self.allocate_drawing_order()
+  self.shapes.push({ ..shape, drawing_order: Some(drawing_order) })
 }
 
 ///|
@@ -1945,7 +2368,8 @@ pub fn Worksheet::add_slicer(
   slicer : Slicer,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
-  self.slicers.push(slicer)
+  let drawing_order = self.allocate_drawing_order()
+  self.slicers.push({ ..slicer, drawing_order: Some(drawing_order) })
 }
 
 ///|
@@ -2118,6 +2542,23 @@ fn Worksheet::next_x14_cf_rule_id(self : Worksheet) -> String {
 }
 
 ///|
+fn next_available_x14_cf_rule_id(
+  start : Int,
+  used : Map[String, X14DataBarProps],
+) -> (String, Int) {
+  let mut counter = start
+  while true {
+    let suffix = pad_left_dec(counter, 12)
+    let id = "{00000000-0000-0000-0000-\{suffix}}"
+    counter += 1
+    if used.get(id) is None {
+      return (id, counter)
+    }
+  }
+  ("{00000000-0000-0000-0000-000000000000}", counter)
+}
+
+///|
 fn inject_x14_id_ext_lst_into_cf_rule(
   rule_xml : String,
   id : StringView,
@@ -2216,6 +2657,174 @@ pub fn Worksheet::get_conditional_formats(
 }
 
 ///|
+/// Counts normalized `sqref` ranges directly from retained conditional-format
+/// fragments. Unlike `get_conditional_formats`, this does not materialize rule
+/// objects, maps, or copied range strings. Both retained-source work and the
+/// result are bounded, and long scans poll `cancelled`.
+pub fn conditional_format_xml_range_count_limited(
+  xml : StringView,
+  maximum_ranges : Int,
+  maximum_work_units : Int,
+  cancelled? : () -> Bool = () => false,
+) -> Int raise XlsxError {
+  if maximum_ranges < 0 || maximum_work_units < 0 {
+    raise InvalidOptions(
+      msg="conditional-format count limits must be non-negative",
+    )
+  }
+  let (work, work_exceeded) = read_budget_actual(
+    0,
+    xml.length(),
+    maximum_work_units,
+  )
+  if work_exceeded {
+    raise ResourceLimitExceeded(
+      kind="conditional_format_count_work_units",
+      limit=maximum_work_units,
+      actual=work,
+    )
+  }
+  check_read_cancelled(cancelled)
+  let scanner = @ooxml.XmlStartTagScanner::new(xml, cancelled~)
+  if !workbook_scanner_next(scanner) ||
+    scanner.depth() != 1 ||
+    scanner.local_name() != "conditionalFormatting" {
+    raise InvalidXml(msg="conditionalFormatting tag missing")
+  }
+  let sqref = scanner.attribute_view("", "sqref") catch {
+    InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+  guard sqref is Some(sqref) else {
+    raise InvalidXml(msg="conditional formatting sqref missing")
+  }
+  let mut count = 0
+  let mut in_token = false
+  for index in 0..<sqref.length() {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
+    if is_xml_attr_space_unit(sqref[index]) {
+      in_token = false
+    } else if !in_token {
+      let (next_count, count_exceeded) = read_budget_actual(
+        count, 1, maximum_ranges,
+      )
+      if count_exceeded {
+        raise ResourceLimitExceeded(
+          kind="conditional_format_ranges",
+          limit=maximum_ranges,
+          actual=next_count,
+        )
+      }
+      count = next_count
+      in_token = true
+    }
+  }
+  check_read_cancelled(cancelled)
+  count
+}
+
+///|
+pub fn Worksheet::conditional_format_range_count_limited(
+  self : Worksheet,
+  maximum_ranges : Int,
+  maximum_work_units : Int,
+  cancelled? : () -> Bool = () => false,
+) -> Int raise XlsxError {
+  if maximum_ranges < 0 || maximum_work_units < 0 {
+    raise InvalidOptions(
+      msg="conditional-format count limits must be non-negative",
+    )
+  }
+  let mut count = 0
+  let mut work = 0
+  for xml in self.conditional_formats {
+    check_read_cancelled(cancelled)
+    let (next_work, work_exceeded) = read_budget_actual(
+      work,
+      xml.length(),
+      maximum_work_units,
+    )
+    if work_exceeded {
+      raise ResourceLimitExceeded(
+        kind="conditional_format_count_work_units",
+        limit=maximum_work_units,
+        actual=next_work,
+      )
+    }
+    work = next_work
+    let fragment_count = conditional_format_xml_range_count_limited(
+      xml,
+      maximum_ranges,
+      xml.length(),
+      cancelled~,
+    )
+    let (next_count, count_exceeded) = read_budget_actual(
+      count, fragment_count, maximum_ranges,
+    )
+    if count_exceeded {
+      raise ResourceLimitExceeded(
+        kind="conditional_format_ranges",
+        limit=maximum_ranges,
+        actual=next_count,
+      )
+    }
+    count = next_count
+  }
+  check_read_cancelled(cancelled)
+  count
+}
+
+///|
+test "conditional-format range count stays allocation-free and bounded" {
+  let sheet = Worksheet::new("Sheet1")
+  sheet.conditional_formats.push(
+    (
+      #|<conditionalFormatting sqref="A1 B2"><cfRule type="expression"/></conditionalFormatting>
+    ),
+  )
+  sheet.conditional_formats.push(
+    (
+      #|<conditionalFormatting sqref="C3:D4"><cfRule type="expression"/></conditionalFormatting>
+    ),
+  )
+  inspect(sheet.conditional_format_range_count_limited(3, 4096), content="3")
+  try sheet.conditional_format_range_count_limited(2, 4096) catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) => {
+      inspect(kind, content="conditional_format_ranges")
+      assert_eq(limit, 2)
+      assert_eq(actual, 3)
+    }
+    _ => fail("expected conditional-format range limit")
+  } noraise {
+    _ => fail("expected conditional-format range limit")
+  }
+}
+
+///|
+test "conditional-format range count polls cancellation" {
+  let sheet = Worksheet::new("Sheet1")
+  sheet.conditional_formats.push(
+    "<conditionalFormatting sqref=\"" +
+    "A1 ".repeat(4096) +
+    "\"><cfRule type=\"expression\"/></conditionalFormatting>",
+  )
+  let checks = [0]
+  try
+    sheet.conditional_format_range_count_limited(5000, 64 * 1024, cancelled=() => {
+      checks[0] += 1
+      checks[0] >= 3
+    })
+  catch {
+    ReadCancelled => assert_true(checks[0] >= 3)
+    _ => fail("expected conditional-format count cancellation")
+  } noraise {
+    _ => fail("expected conditional-format count cancellation")
+  }
+}
+
+///|
 pub fn Worksheet::unset_conditional_format(
   self : Worksheet,
   range_ref : String,
@@ -2295,6 +2904,7 @@ pub fn Worksheet::set_cell_rc(
   value : String,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_shared_formula_masters_index()
   let reference = cell_ref_from(row, col)
   match self.cell_index_of(row, col) {
     Some(i) => {
@@ -2310,6 +2920,8 @@ pub fn Worksheet::set_cell_rc(
         formula_type: None,
         formula_ref: None,
         formula_shared_index: None,
+        formula_value_present: false,
+        style_explicit: self.cells[i].style_explicit,
         style_id,
       }
     }
@@ -2326,6 +2938,8 @@ pub fn Worksheet::set_cell_rc(
         formula_type: None,
         formula_ref: None,
         formula_shared_index: None,
+        formula_value_present: false,
+        style_explicit: false,
         style_id: 0,
       })
       self.record_cell_index_if_valid(row, col, index)
@@ -2341,6 +2955,7 @@ pub fn Worksheet::set_cell_value_rc(
   value : CellValue,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_shared_formula_masters_index()
   let reference = cell_ref_from(row, col)
   let value_type = cell_value_type(value)
   let raw_value = cell_value_raw_string(value)
@@ -2358,6 +2973,8 @@ pub fn Worksheet::set_cell_value_rc(
         formula_type: None,
         formula_ref: None,
         formula_shared_index: None,
+        formula_value_present: false,
+        style_explicit: self.cells[i].style_explicit,
         style_id,
       }
     }
@@ -2374,6 +2991,8 @@ pub fn Worksheet::set_cell_value_rc(
         formula_type: None,
         formula_ref: None,
         formula_shared_index: None,
+        formula_value_present: false,
+        style_explicit: false,
         style_id: 0,
       })
       self.record_cell_index_if_valid(row, col, index)
@@ -2390,6 +3009,7 @@ pub fn Worksheet::set_cell_formula_rc(
   value? : String = "",
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_shared_formula_masters_index()
   let reference = cell_ref_from(row, col)
   match self.cell_index_of(row, col) {
     Some(i) => {
@@ -2405,6 +3025,8 @@ pub fn Worksheet::set_cell_formula_rc(
         formula_type: None,
         formula_ref: None,
         formula_shared_index: None,
+        formula_value_present: value != "",
+        style_explicit: self.cells[i].style_explicit,
         style_id,
       }
     }
@@ -2421,6 +3043,8 @@ pub fn Worksheet::set_cell_formula_rc(
         formula_type: None,
         formula_ref: None,
         formula_shared_index: None,
+        formula_value_present: value != "",
+        style_explicit: false,
         style_id: 0,
       })
       self.record_cell_index_if_valid(row, col, index)
@@ -2479,6 +3103,54 @@ pub fn Worksheet::max_col(self : Worksheet) -> Int {
     }
   }
   max_col
+}
+
+///|
+/// Returns the number of stored cell records in this worksheet in O(1) time.
+/// This is a representation count, not the area of the logical used range;
+/// callers can use it to preflight aggregate scan work before iteration.
+pub fn Worksheet::stored_cell_count(self : Worksheet) -> Int {
+  self.cells.length()
+}
+
+///|
+/// Returns the used `(max_row, max_column)` bounds after rejecting a worksheet
+/// whose stored-cell representation exceeds `maximum_stored_cells`. The O(1)
+/// length preflight happens before the scan, so duplicate coordinates cannot
+/// hide unbounded preprocessing behind a tiny logical used range.
+pub fn Worksheet::used_bounds_limited(
+  self : Worksheet,
+  maximum_stored_cells~ : Int,
+  cancelled? : () -> Bool = () => false,
+) -> (Int, Int) raise XlsxError {
+  if maximum_stored_cells < 1 {
+    raise InvalidOptions(msg="maximum stored cells must be positive")
+  }
+  let stored = self.stored_cell_count()
+  if stored > maximum_stored_cells {
+    raise ResourceLimitExceeded(
+      kind="stored_cells",
+      limit=maximum_stored_cells,
+      actual=stored,
+    )
+  }
+  let mut max_row = 0
+  let mut max_col = 0
+  for index, cell in self.cells {
+    if (index & 4095) == 0 && cancelled() {
+      raise ReadCancelled
+    }
+    if cell.row > max_row {
+      max_row = cell.row
+    }
+    if cell.col > max_col {
+      max_col = cell.col
+    }
+  }
+  if cancelled() {
+    raise ReadCancelled
+  }
+  (max_row, max_col)
 }
 
 ///|
@@ -2975,6 +3647,9 @@ fn Worksheet::insert_rows(
   self : Worksheet,
   row : Int,
   count : Int,
+  formula_limits? : SharedFormulaLimits = SharedFormulaLimits::new(),
+  cancelled? : () -> Bool = () => false,
+  formula_budget? : SharedFormulaMaterializationBudget,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   if row <= 0 || row > cell_ref_max_rows {
@@ -2990,15 +3665,37 @@ fn Worksheet::insert_rows(
       msg="row count \{count} exceeds the sheet's \{cell_ref_max_rows} rows",
     )
   }
+  let translation_budget = match formula_budget {
+    Some(value) => value
+    None => SharedFormulaMaterializationBudget::new(formula_limits, cancelled~)
+  }
+  let shared_formula_masters = validated_shared_formula_masters(
+    self.cells,
+    cancelled=translation_budget.cancelled,
+  )
+  preflight_shared_formula_materialization(
+    self.cells,
+    shared_formula_masters,
+    translation_budget,
+    fn(_cell : Cell) -> Bool { true },
+  )
+  translation_budget.checkpoint()
   // Transactional: stage every shifted collection into locals first — cell,
-  // merge, hyperlink, filter, table, sparkline, image, and chart references
-  // shift through `cell_ref_from`/range adjusters that raise once a coordinate
-  // leaves the grid, and the two numerically-shifted collections (row
-  // dimensions, page breaks) are bound-checked explicitly below. Nothing on
-  // `self` is mutated until every stage succeeds, so an overflowing insert
-  // raises and leaves the worksheet unchanged instead of half-shifted.
+  // merge, conditional-format, validation, hyperlink, filter, table,
+  // sparkline, image, and chart references shift through
+  // `cell_ref_from`/range adjusters that raise once a coordinate leaves the
+  // grid, and the two numerically-shifted collections (row dimensions, page
+  // breaks) are bound-checked explicitly below. Nothing on `self` is mutated
+  // until every stage succeeds, so an overflowing insert raises and leaves the
+  // worksheet unchanged instead of half-shifted.
   let updated_cells : Array[Cell] = []
-  for cell in self.cells {
+  for index, stored_cell in self.cells {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
+    let cell = normal_formula_cell_for_structural_edit(
+      stored_cell, shared_formula_masters, translation_budget,
+    )
     if cell.row >= row {
       let new_row = cell.row + count
       let reference = cell_ref_from(new_row, cell.col)
@@ -3013,6 +3710,8 @@ fn Worksheet::insert_rows(
         formula_type: cell.formula_type,
         formula_ref: cell.formula_ref,
         formula_shared_index: cell.formula_shared_index,
+        formula_value_present: cell.formula_value_present,
+        style_explicit: cell.style_explicit,
         style_id: cell.style_id,
       })
     } else {
@@ -3020,11 +3719,38 @@ fn Worksheet::insert_rows(
     }
   }
   let updated_merges : Array[String] = []
-  for range_ref in self.merged_cells {
+  for index, range_ref in self.merged_cells {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     updated_merges.push(adjust_range_after_row_insert(range_ref, row, count))
   }
+  let updated_conditional_formats = adjust_xml_sqrefs_after_insert(
+    self.conditional_formats,
+    row,
+    count,
+    SqrefRows,
+    cancelled=translation_budget.cancelled,
+  )
+  let updated_x14_data_bars = adjust_x14_data_bars_after_insert(
+    self.x14_data_bars,
+    row,
+    count,
+    SqrefRows,
+    cancelled=translation_budget.cancelled,
+  )
+  let updated_data_validations = adjust_xml_sqrefs_after_insert(
+    self.data_validations,
+    row,
+    count,
+    SqrefRows,
+    cancelled=translation_budget.cancelled,
+  )
   let updated_links : Array[Hyperlink] = []
-  for link in self.hyperlinks {
+  for index, link in self.hyperlinks {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     let reference = adjust_hyperlink_ref_after_row_insert(
       link.reference,
       row,
@@ -3039,34 +3765,63 @@ fn Worksheet::insert_rows(
       tooltip: link.tooltip,
     })
   }
+  translation_budget.checkpoint()
   let updated_filter = match self.auto_filter {
     Some(filter) =>
       Some(adjust_auto_filter_after_row_insert(filter, row, count))
     None => None
   }
   let updated_tables : Array[Table] = []
-  for table in self.tables {
-    updated_tables.push(adjust_table_after_row_insert(table, row, count))
+  for index, table in self.tables {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
+    updated_tables.push(
+      adjust_table_after_row_insert(
+        table,
+        row,
+        count,
+        cancelled=translation_budget.cancelled,
+      ),
+    )
   }
   let updated_sparklines : Array[SparklineGroup] = []
-  for group in self.sparkline_groups {
-    let adjusted = adjust_sparkline_group_after_row_insert(group, row, count)
+  for index, group in self.sparkline_groups {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
+    let adjusted = adjust_sparkline_group_after_row_insert(
+      group,
+      row,
+      count,
+      cancelled=translation_budget.cancelled,
+    )
     if adjusted.sparklines.length() > 0 {
       updated_sparklines.push(adjusted)
     }
   }
   let updated_images : Array[Image] = []
-  for image in self.images {
+  for index, image in self.images {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     let reference = adjust_cell_after_row_insert(image.reference, row, count)
     updated_images.push(image_with_reference(image, reference))
   }
   let updated_charts : Array[Chart] = []
-  for chart in self.charts {
+  for index, chart in self.charts {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     let reference = adjust_cell_after_row_insert(chart.reference, row, count)
     updated_charts.push(chart_with_reference(chart, reference))
   }
   let updated_rows : Map[Int, RowDimension] = Map([])
+  let mut dimension_index = 0
   for row_index, dim in self.row_dimensions {
+    if (dimension_index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     let new_row = if row_index >= row {
       // Overflow-safe: a stored dimension key can be arbitrarily large (the
       // dimension setters do not bound it), so validate BEFORE the addition.
@@ -3078,12 +3833,16 @@ fn Worksheet::insert_rows(
       row_index
     }
     updated_rows[new_row] = dim
+    dimension_index += 1
   }
   let break_start = row - 1
   // Break ids are 0-based (id = row - 1), so a shifted id must stay strictly
   // below the row maximum. Check the original ids overflow-safely, before
   // adjust_page_breaks_after_insert performs `id + count`.
-  for brk in self.row_breaks {
+  for index, brk in self.row_breaks {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     if brk.id >= break_start && brk.id > cell_ref_max_rows - 1 - count {
       raise InvalidCellRef(value="\{0}:\{brk.id}")
     }
@@ -3092,14 +3851,25 @@ fn Worksheet::insert_rows(
     self.row_breaks,
     break_start,
     count,
+    cancelled=translation_budget.cancelled,
   )
   // Commit: every stage above succeeded, so applying the staged state cannot
   // fail partway.
+  translation_budget.checkpoint()
+  self.invalidate_shared_formula_masters_index()
   self.invalidate_cell_index()
   self.cells.clear()
   self.cells.append(updated_cells)
   self.merged_cells.clear()
   self.merged_cells.append(updated_merges)
+  self.conditional_formats.clear()
+  self.conditional_formats.append(updated_conditional_formats)
+  self.x14_data_bars.clear()
+  for id, props in updated_x14_data_bars {
+    self.x14_data_bars[id] = props
+  }
+  self.data_validations.clear()
+  self.data_validations.append(updated_data_validations)
   self.hyperlinks.clear()
   self.hyperlinks.append(updated_links)
   self.auto_filter = updated_filter
@@ -3124,9 +3894,10 @@ fn Worksheet::remove_rows(
   self : Worksheet,
   row : Int,
   count : Int,
+  formula_limits? : SharedFormulaLimits = SharedFormulaLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
-  self.invalidate_cell_index()
   if row <= 0 {
     raise InvalidCellRef(value="\{0}:\{row}")
   }
@@ -3143,14 +3914,35 @@ fn Worksheet::remove_rows(
       msg="row count \{count} exceeds the sheet's \{cell_ref_max_rows} rows",
     )
   }
+  let translation_budget = SharedFormulaMaterializationBudget::new(
+    formula_limits,
+    cancelled~,
+  )
+  let shared_formula_masters = validated_shared_formula_masters(
+    self.cells,
+    cancelled=translation_budget.cancelled,
+  )
   let end_row = row + count - 1
+  preflight_shared_formula_materialization(
+    self.cells,
+    shared_formula_masters,
+    translation_budget,
+    fn(cell : Cell) -> Bool { cell.row < row || cell.row > end_row },
+  )
+  translation_budget.checkpoint()
   let updated_cells : Array[Cell] = []
-  for cell in self.cells {
-    if cell.row < row {
-      updated_cells.push(cell)
+  for index, stored_cell in self.cells {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
+    if stored_cell.row >= row && stored_cell.row <= end_row {
       continue
     }
-    if cell.row <= end_row {
+    let cell = normal_formula_cell_for_structural_edit(
+      stored_cell, shared_formula_masters, translation_budget,
+    )
+    if cell.row < row {
+      updated_cells.push(cell)
       continue
     }
     let new_row = cell.row - count
@@ -3166,22 +3958,26 @@ fn Worksheet::remove_rows(
       formula_type: cell.formula_type,
       formula_ref: cell.formula_ref,
       formula_shared_index: cell.formula_shared_index,
+      formula_value_present: cell.formula_value_present,
+      style_explicit: cell.style_explicit,
       style_id: cell.style_id,
     })
   }
-  self.cells.clear()
-  self.cells.append(updated_cells)
   let updated_merges : Array[String] = []
-  for range_ref in self.merged_cells {
+  for index, range_ref in self.merged_cells {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     match adjust_range_after_row_remove(range_ref, row, count) {
       Some(value) => updated_merges.push(value)
       None => ()
     }
   }
-  self.merged_cells.clear()
-  self.merged_cells.append(updated_merges)
   let updated_links : Array[Hyperlink] = []
-  for link in self.hyperlinks {
+  for index, link in self.hyperlinks {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     match adjust_hyperlink_ref_after_row_remove(link.reference, row, count) {
       Some(reference) =>
         updated_links.push({
@@ -3195,72 +3991,112 @@ fn Worksheet::remove_rows(
       None => ()
     }
   }
-  self.hyperlinks.clear()
-  self.hyperlinks.append(updated_links)
-  match self.auto_filter {
+  translation_budget.checkpoint()
+  let updated_filter = match self.auto_filter {
     Some(filter) =>
       match adjust_auto_filter_after_row_remove(filter, row, count) {
-        Some(updated) => self.auto_filter = Some(updated)
-        None => self.auto_filter = None
+        Some(updated) => Some(updated)
+        None => None
       }
-    None => ()
+    None => None
   }
   let updated_tables : Array[Table] = []
-  for table in self.tables {
-    match adjust_table_after_row_remove(table, row, count) {
+  for index, table in self.tables {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
+    match
+      adjust_table_after_row_remove(
+        table,
+        row,
+        count,
+        cancelled=translation_budget.cancelled,
+      ) {
       Some(value) => updated_tables.push(value)
       None => ()
     }
   }
-  self.tables.clear()
-  self.tables.append(updated_tables)
   let updated_sparklines : Array[SparklineGroup] = []
-  for group in self.sparkline_groups {
-    let adjusted = adjust_sparkline_group_after_row_remove(group, row, count)
+  for index, group in self.sparkline_groups {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
+    let adjusted = adjust_sparkline_group_after_row_remove(
+      group,
+      row,
+      count,
+      cancelled=translation_budget.cancelled,
+    )
     if adjusted.sparklines.length() > 0 {
       updated_sparklines.push(adjusted)
     }
   }
-  self.sparkline_groups.clear()
-  self.sparkline_groups.append(updated_sparklines)
   let updated_images : Array[Image] = []
-  for image in self.images {
+  for index, image in self.images {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     match adjust_cell_after_row_remove(image.reference, row, count) {
       Some(reference) =>
         updated_images.push(image_with_reference(image, reference))
       None => ()
     }
   }
-  self.images.clear()
-  self.images.append(updated_images)
   let updated_charts : Array[Chart] = []
-  for chart in self.charts {
+  for index, chart in self.charts {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     match adjust_cell_after_row_remove(chart.reference, row, count) {
       Some(reference) =>
         updated_charts.push(chart_with_reference(chart, reference))
       None => ()
     }
   }
-  self.charts.clear()
-  self.charts.append(updated_charts)
   let updated_rows : Map[Int, RowDimension] = Map([])
+  let mut dimension_index = 0
   for row_index, dim in self.row_dimensions {
+    if (dimension_index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     if row_index < row {
       updated_rows[row_index] = dim
     } else if row_index > end_row {
       updated_rows[row_index - count] = dim
     }
-  }
-  self.row_dimensions.clear()
-  for row_index, dim in updated_rows {
-    self.row_dimensions[row_index] = dim
+    dimension_index += 1
   }
   let break_start = row - 1
   let updated_breaks = adjust_page_breaks_after_remove(
     self.row_breaks,
     break_start,
     count,
+    cancelled=translation_budget.cancelled,
   )
+  // One final cancellation point precedes the only mutation phase. No
+  // cancellation callback runs after this point, so cancellation is atomic.
+  translation_budget.checkpoint()
+  self.invalidate_shared_formula_masters_index()
+  self.invalidate_cell_index()
+  self.cells.clear()
+  self.cells.append(updated_cells)
+  self.merged_cells.clear()
+  self.merged_cells.append(updated_merges)
+  self.hyperlinks.clear()
+  self.hyperlinks.append(updated_links)
+  self.auto_filter = updated_filter
+  self.tables.clear()
+  self.tables.append(updated_tables)
+  self.sparkline_groups.clear()
+  self.sparkline_groups.append(updated_sparklines)
+  self.images.clear()
+  self.images.append(updated_images)
+  self.charts.clear()
+  self.charts.append(updated_charts)
+  self.row_dimensions.clear()
+  for row_index, dim in updated_rows {
+    self.row_dimensions[row_index] = dim
+  }
   self.row_breaks.clear()
   self.row_breaks.append(updated_breaks)
 }
@@ -3297,33 +4133,194 @@ fn format_cell_ref_with_abs(
 }
 
 ///|
+fn split_sqref_range(text : StringView) -> (String, String) {
+  let left = StringBuilder::new()
+  let right = StringBuilder::new()
+  let mut seen_sep = false
+  for ch in text {
+    if !seen_sep && ch == ':' {
+      seen_sep = true
+    } else if seen_sep {
+      right.write_char(ch)
+    } else {
+      left.write_char(ch)
+    }
+  }
+  if seen_sep {
+    (left.to_string(), right.to_string())
+  } else {
+    let cell = text.to_owned()
+    (cell, cell)
+  }
+}
+
+///|
+fn decode_structural_sqref(
+  encoded : StringView,
+  cancelled? : () -> Bool = () => false,
+) -> String raise XlsxError {
+  @ooxml.decode_xml_attribute(encoded, cancelled~) catch {
+    InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+}
+
+///|
+priv enum SqrefInsertAxis {
+  SqrefRows
+  SqrefColumns
+}
+
+///|
+fn adjust_sqref_after_insert(
+  sqref : StringView,
+  start : Int,
+  count : Int,
+  axis : SqrefInsertAxis,
+  cancelled? : () -> Bool = () => false,
+) -> String raise XlsxError {
+  let adjusted : Array[String] = []
+  let tokens = xml_whitespace_tokens_cancellable(sqref, cancelled~)
+  if tokens.length() == 0 {
+    raise InvalidXml(msg="sqref reference invalid")
+  }
+  for index, token in tokens {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
+    if token.length() > 128 {
+      raise InvalidXml(msg="sqref reference invalid")
+    }
+    let had_range = token.contains(":")
+    let range_ref = if had_range { token } else { token + ":" + token }
+    let (min_row, min_col, max_row, max_col) = parse_range_ref(range_ref)
+    let (new_min_row, new_min_col, new_max_row, new_max_col) = match axis {
+      SqrefRows => {
+        let (next_min, next_max) = adjust_bounds_for_insert(
+          min_row, max_row, start, count,
+        )
+        (next_min, min_col, next_max, max_col)
+      }
+      SqrefColumns => {
+        let (next_min, next_max) = adjust_bounds_for_insert(
+          min_col, max_col, start, count,
+        )
+        (min_row, next_min, max_row, next_max)
+      }
+    }
+    let first = cell_ref_from(new_min_row, new_min_col)
+    if had_range {
+      adjusted.push("\{first}:\{cell_ref_from(new_max_row, new_max_col)}")
+    } else {
+      adjusted.push(first)
+    }
+  }
+  check_read_cancelled(cancelled)
+  adjusted.join(" ")
+}
+
+///|
+fn adjust_xml_sqref_after_insert(
+  xml : StringView,
+  start : Int,
+  count : Int,
+  axis : SqrefInsertAxis,
+  cancelled? : () -> Bool = () => false,
+) -> String raise XlsxError {
+  let tag_text = match tag_attributes_in(xml, "conditionalFormatting") {
+    Some(value) => value
+    None =>
+      match tag_attributes_in(xml, "dataValidation") {
+        Some(value) => value
+        None => return xml.to_owned()
+      }
+  }
+  let encoded = match attr_value(tag_text, "sqref") {
+    Some(value) => value
+    None => return xml.to_owned()
+  }
+  let decoded = decode_structural_sqref(encoded, cancelled~)
+  let shifted = adjust_sqref_after_insert(
+    decoded,
+    start,
+    count,
+    axis,
+    cancelled~,
+  )
+  match replace_attr_value_in_open_tag(xml, "sqref", shifted) {
+    Some(value) => value
+    None => raise InvalidXml(msg="sqref update failed")
+  }
+}
+
+///|
+fn adjust_xml_sqrefs_after_insert(
+  entries : ArrayView[String],
+  start : Int,
+  count : Int,
+  axis : SqrefInsertAxis,
+  cancelled? : () -> Bool = () => false,
+) -> Array[String] raise XlsxError {
+  let shifted : Array[String] = []
+  for index, xml in entries {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
+    shifted.push(
+      adjust_xml_sqref_after_insert(xml, start, count, axis, cancelled~),
+    )
+  }
+  check_read_cancelled(cancelled)
+  shifted
+}
+
+///|
+fn adjust_x14_data_bars_after_insert(
+  entries : Map[String, X14DataBarProps],
+  start : Int,
+  count : Int,
+  axis : SqrefInsertAxis,
+  cancelled? : () -> Bool = () => false,
+) -> Map[String, X14DataBarProps] raise XlsxError {
+  let shifted : Map[String, X14DataBarProps] = Map([])
+  let mut index = 0
+  for id, props in entries {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
+    shifted[id] = {
+      sqref: adjust_sqref_after_insert(
+        props.sqref,
+        start,
+        count,
+        axis,
+        cancelled~,
+      ),
+      bar_direction: props.bar_direction,
+      bar_solid: props.bar_solid,
+      bar_border_color: props.bar_border_color,
+    }
+    index += 1
+  }
+  check_read_cancelled(cancelled)
+  shifted
+}
+
+///|
 fn duplicate_sqref_for_row(
   row : Int,
   target_row : Int,
   sqref : StringView,
+  cancelled? : () -> Bool = () => false,
 ) -> Array[String] raise XlsxError {
-  fn split_sqref_range(text : StringView) -> (String, String) {
-    let left = StringBuilder::new()
-    let right = StringBuilder::new()
-    let mut seen_sep = false
-    for ch in text {
-      if !seen_sep && ch == ':' {
-        seen_sep = true
-      } else if seen_sep {
-        right.write_char(ch)
-      } else {
-        left.write_char(ch)
-      }
-    }
-    if seen_sep {
-      (left.to_string(), right.to_string())
-    } else {
-      let cell = text.to_owned()
-      (cell, cell)
-    }
-  }
   let refs : Array[String] = []
-  for text in xml_whitespace_tokens(sqref) {
+  for index, text in xml_whitespace_tokens_cancellable(sqref, cancelled~) {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
+    if text.length() > 128 {
+      raise InvalidXml(msg="sqref reference invalid")
+    }
     let (start_ref, end_ref) = split_sqref_range(text)
     let (row1, col1, abs_col1, abs_row1) = parse_cell_ref_with_abs(start_ref)
     let (row2, col2, abs_col2, abs_row2) = parse_cell_ref_with_abs(end_ref)
@@ -3337,6 +4334,7 @@ fn duplicate_sqref_for_row(
       refs.push("\{from_ref}:\{to_ref}")
     }
   }
+  check_read_cancelled(cancelled)
   refs
 }
 
@@ -3347,6 +4345,7 @@ fn duplicate_xml_sqref(
   xml : StringView,
   row : Int,
   target_row : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> String? raise XlsxError {
   let tag_text = match tag_attributes_in(xml, "conditionalFormatting") {
     Some(value) => value
@@ -3356,11 +4355,12 @@ fn duplicate_xml_sqref(
         None => return None
       }
   }
-  let sqref = match attr_value(tag_text, "sqref") {
+  let encoded_sqref = match attr_value(tag_text, "sqref") {
     Some(value) => value
     None => return None
   }
-  let refs = duplicate_sqref_for_row(row, target_row, sqref)
+  let sqref = decode_structural_sqref(encoded_sqref, cancelled~)
+  let refs = duplicate_sqref_for_row(row, target_row, sqref, cancelled~)
   if refs.length() == 0 {
     return None
   }
@@ -3369,21 +4369,142 @@ fn duplicate_xml_sqref(
 }
 
 ///|
-fn Worksheet::duplicate_conditional_formats(
-  self : Worksheet,
+priv struct ConditionalFormatCopies {
+  xml : Array[String]
+  x14_data_bars : Map[String, X14DataBarProps]
+  next_x14_cf_rule_id_counter : Int
+}
+
+///|
+fn remap_duplicated_x14_ids(
+  xml : StringView,
+  sqref : String,
+  source : Map[String, X14DataBarProps],
+  used : Map[String, X14DataBarProps],
+  start_counter : Int,
+) -> (String, Map[String, X14DataBarProps], Int) raise XlsxError {
+  let chunks = Array::from_iter(xml.split("<x14:id>"))
+  if chunks.length() <= 1 {
+    return (xml.to_owned(), Map([]), start_counter)
+  }
+  let additions : Map[String, X14DataBarProps] = Map([])
+  let builder = StringBuilder::new()
+  builder.write_view(chunks[0])
+  let mut counter = start_counter
+  for index = 1; index < chunks.length(); index = index + 1 {
+    let chunk = chunks[index]
+    let end = match chunk.find("</x14:id>") {
+      Some(value) => value
+      None => {
+        builder.write_view("<x14:id>")
+        builder.write_view(chunk)
+        continue
+      }
+    }
+    let encoded_id = chunk[:end]
+    let id = @ooxml.decode_xml_attribute(encoded_id) catch {
+      InvalidXml(msg~) => raise InvalidXml(msg~)
+      ReadCancelled => raise ReadCancelled
+    }
+    match source.get(id) {
+      Some(props) => {
+        let (new_id, next_counter) = next_available_x14_cf_rule_id(
+          counter, used,
+        )
+        counter = next_counter
+        let duplicated = {
+          sqref,
+          bar_direction: props.bar_direction,
+          bar_solid: props.bar_solid,
+          bar_border_color: props.bar_border_color,
+        }
+        used[new_id] = duplicated
+        additions[new_id] = duplicated
+        builder.write_view("<x14:id>")
+        builder.write_view(escape_xml_text(new_id))
+        builder.write_view("</x14:id>")
+      }
+      None => {
+        builder.write_view("<x14:id>")
+        builder.write_view(encoded_id)
+        builder.write_view("</x14:id>")
+      }
+    }
+    builder.write_view(chunk[end + "</x14:id>".length():])
+  }
+  (builder.to_string(), additions, counter)
+}
+
+///|
+fn duplicate_conditional_format_copies(
+  entries : ArrayView[String],
+  x14_data_bars : Map[String, X14DataBarProps],
+  next_x14_cf_rule_id_counter : Int,
   row : Int,
   target_row : Int,
-) -> Unit raise XlsxError {
+  cancelled? : () -> Bool = () => false,
+) -> ConditionalFormatCopies raise XlsxError {
   let copies : Array[String] = []
-  for xml in self.conditional_formats {
-    match duplicate_xml_sqref(xml, row, target_row) {
+  let additions : Map[String, X14DataBarProps] = Map([])
+  let used : Map[String, X14DataBarProps] = Map([])
+  for id, props in x14_data_bars {
+    used[id] = props
+  }
+  let mut counter = next_x14_cf_rule_id_counter
+  for index, xml in entries {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
+    match duplicate_xml_sqref(xml, row, target_row, cancelled~) {
+      Some(copy) => {
+        let tag = match tag_attributes_in(copy, "conditionalFormatting") {
+          Some(value) => value
+          None => raise InvalidXml(msg="conditionalFormatting tag missing")
+        }
+        let encoded_sqref = match attr_value(tag, "sqref") {
+          Some(value) => value
+          None => raise InvalidXml(msg="conditionalFormatting sqref missing")
+        }
+        let sqref = decode_structural_sqref(encoded_sqref, cancelled~)
+        let (remapped, new_bars, next_counter) = remap_duplicated_x14_ids(
+          copy, sqref, x14_data_bars, used, counter,
+        )
+        counter = next_counter
+        for id, props in new_bars {
+          additions[id] = props
+        }
+        copies.push(remapped)
+      }
+      None => ()
+    }
+  }
+  check_read_cancelled(cancelled)
+  {
+    xml: copies,
+    x14_data_bars: additions,
+    next_x14_cf_rule_id_counter: counter,
+  }
+}
+
+///|
+fn duplicate_xml_sqref_copies(
+  entries : ArrayView[String],
+  row : Int,
+  target_row : Int,
+  cancelled? : () -> Bool = () => false,
+) -> Array[String] raise XlsxError {
+  let copies : Array[String] = []
+  for index, xml in entries {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
+    match duplicate_xml_sqref(xml, row, target_row, cancelled~) {
       Some(value) => copies.push(value)
       None => ()
     }
   }
-  if copies.length() > 0 {
-    self.conditional_formats.append(copies)
-  }
+  check_read_cancelled(cancelled)
+  copies
 }
 
 ///|
@@ -3392,16 +4513,53 @@ fn Worksheet::duplicate_data_validations(
   row : Int,
   target_row : Int,
 ) -> Unit raise XlsxError {
-  let copies : Array[String] = []
-  for xml in self.data_validations {
-    match duplicate_xml_sqref(xml, row, target_row) {
-      Some(value) => copies.push(value)
-      None => ()
-    }
-  }
+  let copies = duplicate_xml_sqref_copies(
+    self.data_validations,
+    row,
+    target_row,
+  )
   if copies.length() > 0 {
     self.data_validations.append(copies)
   }
+}
+
+///|
+fn duplicate_merge_cell_copies(
+  merged_cells : ArrayView[String],
+  row : Int,
+  target_row : Int,
+  cancelled? : () -> Bool = () => false,
+) -> Array[String] raise XlsxError {
+  let copies : Array[String] = []
+  let mut source_row = row
+  if row > target_row {
+    source_row = row + 1
+  }
+  for index, range_ref in merged_cells {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
+    let (min_row, _min_col, max_row, _max_col) = parse_range_ref(range_ref)
+    if min_row < target_row && target_row < max_row {
+      return copies
+    }
+  }
+  for index, range_ref in merged_cells {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
+    let (min_row, min_col, max_row, max_col) = parse_range_ref(range_ref)
+    if min_row == max_row && min_row == source_row {
+      let from_ref = cell_ref_from(target_row, min_col)
+      let to_ref = cell_ref_from(target_row, max_col)
+      let duplicate = normalize_range_ref("\{from_ref}:\{to_ref}")
+      if !merged_cells.contains(duplicate) && !copies.contains(duplicate) {
+        copies.push(duplicate)
+      }
+    }
+  }
+  check_read_cancelled(cancelled)
+  copies
 }
 
 ///|
@@ -3410,24 +4568,8 @@ fn Worksheet::duplicate_merge_cells(
   row : Int,
   target_row : Int,
 ) -> Unit raise XlsxError {
-  let mut source_row = row
-  if row > target_row {
-    source_row = row + 1
-  }
-  for range_ref in self.merged_cells {
-    let (min_row, _min_col, max_row, _max_col) = parse_range_ref(range_ref)
-    if min_row < target_row && target_row < max_row {
-      return
-    }
-  }
-  for range_ref in self.merged_cells {
-    let (min_row, min_col, max_row, max_col) = parse_range_ref(range_ref)
-    if min_row == max_row && min_row == source_row {
-      let from_ref = cell_ref_from(target_row, min_col)
-      let to_ref = cell_ref_from(target_row, max_col)
-      self.merge_cells("\{from_ref}:\{to_ref}")
-    }
-  }
+  let copies = duplicate_merge_cell_copies(self.merged_cells, row, target_row)
+  self.merged_cells.append(copies)
 }
 
 ///|
@@ -3435,9 +4577,10 @@ fn Worksheet::duplicate_row_to(
   self : Worksheet,
   row : Int,
   target_row : Int,
+  formula_limits? : SharedFormulaLimits = SharedFormulaLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
-  self.invalidate_cell_index()
   if row <= 0 || row > cell_ref_max_rows {
     raise InvalidCellRef(value="\{0}:\{row}")
   }
@@ -3449,17 +4592,36 @@ fn Worksheet::duplicate_row_to(
   if target_row > cell_ref_max_rows {
     raise InvalidCellRef(value="\{0}:\{target_row}")
   }
-  let row_cells : Array[Cell] = []
-  for cell in self.cells {
-    if cell.row == row {
-      row_cells.push(cell)
+  let translation_budget = SharedFormulaMaterializationBudget::new(
+    formula_limits,
+    cancelled~,
+  )
+  let shared_formula_masters = validated_shared_formula_masters(
+    self.cells,
+    cancelled=translation_budget.cancelled,
+  )
+  preflight_shared_formula_materialization(
+    self.cells,
+    shared_formula_masters,
+    translation_budget,
+    fn(cell : Cell) -> Bool { cell.row == row },
+  )
+  // Stage every fallible derivative before `insert_rows` commits its own
+  // transactional shift. Once that insert succeeds, the remaining appends and
+  // map assignments below are infallible state installation.
+  let duplicated_cells : Array[Cell] = []
+  for index, stored_cell in self.cells {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
     }
-  }
-  let row_dim = self.row_dimensions.get(row)
-  self.insert_rows(target_row, 1)
-  for cell in row_cells {
+    if stored_cell.row != row {
+      continue
+    }
+    let cell = normal_formula_cell_for_structural_edit(
+      stored_cell, shared_formula_masters, translation_budget,
+    )
     let reference = cell_ref_from(target_row, cell.col)
-    self.cells.push({
+    duplicated_cells.push({
       reference,
       row: target_row,
       col: cell.col,
@@ -3470,16 +4632,64 @@ fn Worksheet::duplicate_row_to(
       formula_type: cell.formula_type,
       formula_ref: cell.formula_ref,
       formula_shared_index: cell.formula_shared_index,
+      formula_value_present: cell.formula_value_present,
+      style_explicit: cell.style_explicit,
       style_id: cell.style_id,
     })
   }
+  let row_dim = self.row_dimensions.get(row)
+  let conditional_format_copies = duplicate_conditional_format_copies(
+    self.conditional_formats,
+    self.x14_data_bars,
+    self.x14_cf_rule_id_counter,
+    row,
+    target_row,
+    cancelled=translation_budget.cancelled,
+  )
+  let data_validation_copies = duplicate_xml_sqref_copies(
+    self.data_validations,
+    row,
+    target_row,
+    cancelled=translation_budget.cancelled,
+  )
+  let shifted_merges : Array[String] = []
+  for index, range_ref in self.merged_cells {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
+    shifted_merges.push(adjust_range_after_row_insert(range_ref, target_row, 1))
+  }
+  let merge_copies = duplicate_merge_cell_copies(
+    shifted_merges,
+    row,
+    target_row,
+    cancelled=translation_budget.cancelled,
+  )
+  translation_budget.checkpoint()
+  self.insert_rows(
+    target_row,
+    1,
+    formula_limits~,
+    cancelled~,
+    formula_budget=translation_budget,
+  )
+  self.cells.append(duplicated_cells)
   match row_dim {
-    Some(dim) => self.set_row_dimension(target_row, dim)
+    Some(dim) =>
+      if row_dimension_is_default(dim) {
+        self.row_dimensions.remove(target_row)
+      } else {
+        self.row_dimensions[target_row] = dim
+      }
     None => self.row_dimensions.remove(target_row)
   }
-  self.duplicate_conditional_formats(row, target_row)
-  self.duplicate_data_validations(row, target_row)
-  self.duplicate_merge_cells(row, target_row)
+  self.conditional_formats.append(conditional_format_copies.xml)
+  for id, props in conditional_format_copies.x14_data_bars {
+    self.x14_data_bars[id] = props
+  }
+  self.x14_cf_rule_id_counter = conditional_format_copies.next_x14_cf_rule_id_counter
+  self.data_validations.append(data_validation_copies)
+  self.merged_cells.append(merge_copies)
 }
 
 ///|
@@ -3487,6 +4697,8 @@ fn Worksheet::insert_cols(
   self : Worksheet,
   col : Int,
   count : Int,
+  formula_limits? : SharedFormulaLimits = SharedFormulaLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   if col <= 0 || col > cell_ref_max_cols {
@@ -3501,12 +4713,34 @@ fn Worksheet::insert_cols(
       msg="column count \{count} exceeds the sheet's \{cell_ref_max_cols} columns",
     )
   }
-  // Transactional (see insert_rows): stage everything into locals — reference
-  // shifts raise once a coordinate leaves the grid, column dimensions and page
-  // breaks are bound-checked explicitly — and commit only once every stage has
-  // succeeded, so an overflowing insert leaves the worksheet unchanged.
+  let translation_budget = SharedFormulaMaterializationBudget::new(
+    formula_limits,
+    cancelled~,
+  )
+  let shared_formula_masters = validated_shared_formula_masters(
+    self.cells,
+    cancelled=translation_budget.cancelled,
+  )
+  preflight_shared_formula_materialization(
+    self.cells,
+    shared_formula_masters,
+    translation_budget,
+    fn(_cell : Cell) -> Bool { true },
+  )
+  translation_budget.checkpoint()
+  // Transactional (see insert_rows): stage everything into locals — including
+  // conditional-format and validation sqrefs. Reference shifts raise once a
+  // coordinate leaves the grid, column dimensions and page breaks are
+  // bound-checked explicitly, and the state commits only after every stage has
+  // succeeded.
   let updated_cells : Array[Cell] = []
-  for cell in self.cells {
+  for index, stored_cell in self.cells {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
+    let cell = normal_formula_cell_for_structural_edit(
+      stored_cell, shared_formula_masters, translation_budget,
+    )
     if cell.col >= col {
       let new_col = cell.col + count
       let reference = cell_ref_from(cell.row, new_col)
@@ -3521,6 +4755,8 @@ fn Worksheet::insert_cols(
         formula_type: cell.formula_type,
         formula_ref: cell.formula_ref,
         formula_shared_index: cell.formula_shared_index,
+        formula_value_present: cell.formula_value_present,
+        style_explicit: cell.style_explicit,
         style_id: cell.style_id,
       })
     } else {
@@ -3528,11 +4764,38 @@ fn Worksheet::insert_cols(
     }
   }
   let updated_merges : Array[String] = []
-  for range_ref in self.merged_cells {
+  for index, range_ref in self.merged_cells {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     updated_merges.push(adjust_range_after_col_insert(range_ref, col, count))
   }
+  let updated_conditional_formats = adjust_xml_sqrefs_after_insert(
+    self.conditional_formats,
+    col,
+    count,
+    SqrefColumns,
+    cancelled=translation_budget.cancelled,
+  )
+  let updated_x14_data_bars = adjust_x14_data_bars_after_insert(
+    self.x14_data_bars,
+    col,
+    count,
+    SqrefColumns,
+    cancelled=translation_budget.cancelled,
+  )
+  let updated_data_validations = adjust_xml_sqrefs_after_insert(
+    self.data_validations,
+    col,
+    count,
+    SqrefColumns,
+    cancelled=translation_budget.cancelled,
+  )
   let updated_links : Array[Hyperlink] = []
-  for link in self.hyperlinks {
+  for index, link in self.hyperlinks {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     let reference = adjust_hyperlink_ref_after_col_insert(
       link.reference,
       col,
@@ -3547,34 +4810,63 @@ fn Worksheet::insert_cols(
       tooltip: link.tooltip,
     })
   }
+  translation_budget.checkpoint()
   let updated_filter = match self.auto_filter {
     Some(filter) =>
       Some(adjust_auto_filter_after_col_insert(filter, col, count))
     None => None
   }
   let updated_tables : Array[Table] = []
-  for table in self.tables {
-    updated_tables.push(adjust_table_after_col_insert(table, col, count))
+  for index, table in self.tables {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
+    updated_tables.push(
+      adjust_table_after_col_insert(
+        table,
+        col,
+        count,
+        cancelled=translation_budget.cancelled,
+      ),
+    )
   }
   let updated_sparklines : Array[SparklineGroup] = []
-  for group in self.sparkline_groups {
-    let adjusted = adjust_sparkline_group_after_col_insert(group, col, count)
+  for index, group in self.sparkline_groups {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
+    let adjusted = adjust_sparkline_group_after_col_insert(
+      group,
+      col,
+      count,
+      cancelled=translation_budget.cancelled,
+    )
     if adjusted.sparklines.length() > 0 {
       updated_sparklines.push(adjusted)
     }
   }
   let updated_images : Array[Image] = []
-  for image in self.images {
+  for index, image in self.images {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     let reference = adjust_cell_after_col_insert(image.reference, col, count)
     updated_images.push(image_with_reference(image, reference))
   }
   let updated_charts : Array[Chart] = []
-  for chart in self.charts {
+  for index, chart in self.charts {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     let reference = adjust_cell_after_col_insert(chart.reference, col, count)
     updated_charts.push(chart_with_reference(chart, reference))
   }
   let updated_cols : Map[Int, ColDimension] = Map([])
+  let mut dimension_index = 0
   for col_index, dim in self.col_dimensions {
+    if (dimension_index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     let new_col = if col_index >= col {
       // Overflow-safe (see insert_rows): stored keys are not bounded by their
       // setters, so validate before the addition.
@@ -3586,10 +4878,14 @@ fn Worksheet::insert_cols(
       col_index
     }
     updated_cols[new_col] = dim
+    dimension_index += 1
   }
   let break_start = col - 1
   // 0-based ids (see insert_rows): validate overflow-safely before the shift.
-  for brk in self.col_breaks {
+  for index, brk in self.col_breaks {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     if brk.id >= break_start && brk.id > cell_ref_max_cols - 1 - count {
       raise InvalidCellRef(value="\{brk.id}:\{0}")
     }
@@ -3598,13 +4894,24 @@ fn Worksheet::insert_cols(
     self.col_breaks,
     break_start,
     count,
+    cancelled=translation_budget.cancelled,
   )
   // Commit.
+  translation_budget.checkpoint()
+  self.invalidate_shared_formula_masters_index()
   self.invalidate_cell_index()
   self.cells.clear()
   self.cells.append(updated_cells)
   self.merged_cells.clear()
   self.merged_cells.append(updated_merges)
+  self.conditional_formats.clear()
+  self.conditional_formats.append(updated_conditional_formats)
+  self.x14_data_bars.clear()
+  for id, props in updated_x14_data_bars {
+    self.x14_data_bars[id] = props
+  }
+  self.data_validations.clear()
+  self.data_validations.append(updated_data_validations)
   self.hyperlinks.clear()
   self.hyperlinks.append(updated_links)
   self.auto_filter = updated_filter
@@ -3629,9 +4936,10 @@ fn Worksheet::remove_cols(
   self : Worksheet,
   col : Int,
   count : Int,
+  formula_limits? : SharedFormulaLimits = SharedFormulaLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
-  self.invalidate_cell_index()
   if col <= 0 {
     raise InvalidCellRef(value="\{col}:\{0}")
   }
@@ -3647,14 +4955,35 @@ fn Worksheet::remove_cols(
       msg="column count \{count} exceeds the sheet's \{cell_ref_max_cols} columns",
     )
   }
+  let translation_budget = SharedFormulaMaterializationBudget::new(
+    formula_limits,
+    cancelled~,
+  )
+  let shared_formula_masters = validated_shared_formula_masters(
+    self.cells,
+    cancelled=translation_budget.cancelled,
+  )
   let end_col = col + count - 1
+  preflight_shared_formula_materialization(
+    self.cells,
+    shared_formula_masters,
+    translation_budget,
+    fn(cell : Cell) -> Bool { cell.col < col || cell.col > end_col },
+  )
+  translation_budget.checkpoint()
   let updated_cells : Array[Cell] = []
-  for cell in self.cells {
-    if cell.col < col {
-      updated_cells.push(cell)
+  for index, stored_cell in self.cells {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
+    if stored_cell.col >= col && stored_cell.col <= end_col {
       continue
     }
-    if cell.col <= end_col {
+    let cell = normal_formula_cell_for_structural_edit(
+      stored_cell, shared_formula_masters, translation_budget,
+    )
+    if cell.col < col {
+      updated_cells.push(cell)
       continue
     }
     let new_col = cell.col - count
@@ -3670,22 +4999,26 @@ fn Worksheet::remove_cols(
       formula_type: cell.formula_type,
       formula_ref: cell.formula_ref,
       formula_shared_index: cell.formula_shared_index,
+      formula_value_present: cell.formula_value_present,
+      style_explicit: cell.style_explicit,
       style_id: cell.style_id,
     })
   }
-  self.cells.clear()
-  self.cells.append(updated_cells)
   let updated_merges : Array[String] = []
-  for range_ref in self.merged_cells {
+  for index, range_ref in self.merged_cells {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     match adjust_range_after_col_remove(range_ref, col, count) {
       Some(value) => updated_merges.push(value)
       None => ()
     }
   }
-  self.merged_cells.clear()
-  self.merged_cells.append(updated_merges)
   let updated_links : Array[Hyperlink] = []
-  for link in self.hyperlinks {
+  for index, link in self.hyperlinks {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     match adjust_hyperlink_ref_after_col_remove(link.reference, col, count) {
       Some(reference) =>
         updated_links.push({
@@ -3699,72 +5032,110 @@ fn Worksheet::remove_cols(
       None => ()
     }
   }
-  self.hyperlinks.clear()
-  self.hyperlinks.append(updated_links)
-  match self.auto_filter {
+  translation_budget.checkpoint()
+  let updated_filter = match self.auto_filter {
     Some(filter) =>
       match adjust_auto_filter_after_col_remove(filter, col, count) {
-        Some(updated) => self.auto_filter = Some(updated)
-        None => self.auto_filter = None
+        Some(updated) => Some(updated)
+        None => None
       }
-    None => ()
+    None => None
   }
   let updated_tables : Array[Table] = []
-  for table in self.tables {
-    match adjust_table_after_col_remove(table, col, count) {
+  for index, table in self.tables {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
+    match
+      adjust_table_after_col_remove(
+        table,
+        col,
+        count,
+        cancelled=translation_budget.cancelled,
+      ) {
       Some(value) => updated_tables.push(value)
       None => ()
     }
   }
-  self.tables.clear()
-  self.tables.append(updated_tables)
   let updated_sparklines : Array[SparklineGroup] = []
-  for group in self.sparkline_groups {
-    let adjusted = adjust_sparkline_group_after_col_remove(group, col, count)
+  for index, group in self.sparkline_groups {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
+    let adjusted = adjust_sparkline_group_after_col_remove(
+      group,
+      col,
+      count,
+      cancelled=translation_budget.cancelled,
+    )
     if adjusted.sparklines.length() > 0 {
       updated_sparklines.push(adjusted)
     }
   }
-  self.sparkline_groups.clear()
-  self.sparkline_groups.append(updated_sparklines)
   let updated_images : Array[Image] = []
-  for image in self.images {
+  for index, image in self.images {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     match adjust_cell_after_col_remove(image.reference, col, count) {
       Some(reference) =>
         updated_images.push(image_with_reference(image, reference))
       None => ()
     }
   }
-  self.images.clear()
-  self.images.append(updated_images)
   let updated_charts : Array[Chart] = []
-  for chart in self.charts {
+  for index, chart in self.charts {
+    if (index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     match adjust_cell_after_col_remove(chart.reference, col, count) {
       Some(reference) =>
         updated_charts.push(chart_with_reference(chart, reference))
       None => ()
     }
   }
-  self.charts.clear()
-  self.charts.append(updated_charts)
   let updated_cols : Map[Int, ColDimension] = Map([])
+  let mut dimension_index = 0
   for col_index, dim in self.col_dimensions {
+    if (dimension_index & 4095) == 0 {
+      translation_budget.checkpoint()
+    }
     if col_index < col {
       updated_cols[col_index] = dim
     } else if col_index > end_col {
       updated_cols[col_index - count] = dim
     }
-  }
-  self.col_dimensions.clear()
-  for col_index, dim in updated_cols {
-    self.col_dimensions[col_index] = dim
+    dimension_index += 1
   }
   let break_start = col - 1
   let updated_breaks = adjust_page_breaks_after_remove(
     self.col_breaks,
     break_start,
     count,
+    cancelled=translation_budget.cancelled,
   )
+  translation_budget.checkpoint()
+  self.invalidate_shared_formula_masters_index()
+  self.invalidate_cell_index()
+  self.cells.clear()
+  self.cells.append(updated_cells)
+  self.merged_cells.clear()
+  self.merged_cells.append(updated_merges)
+  self.hyperlinks.clear()
+  self.hyperlinks.append(updated_links)
+  self.auto_filter = updated_filter
+  self.tables.clear()
+  self.tables.append(updated_tables)
+  self.sparkline_groups.clear()
+  self.sparkline_groups.append(updated_sparklines)
+  self.images.clear()
+  self.images.append(updated_images)
+  self.charts.clear()
+  self.charts.append(updated_charts)
+  self.col_dimensions.clear()
+  for col_index, dim in updated_cols {
+    self.col_dimensions[col_index] = dim
+  }
   self.col_breaks.clear()
   self.col_breaks.append(updated_breaks)
 }
@@ -3826,12 +5197,17 @@ fn adjust_page_breaks_after_insert(
   breaks : Array[PageBreak],
   start : Int,
   count : Int,
-) -> Array[PageBreak] {
+  cancelled? : () -> Bool = () => false,
+) -> Array[PageBreak] raise XlsxError {
   let updated : Array[PageBreak] = []
-  for brk in breaks {
+  for index, brk in breaks {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
     let new_id = if brk.id >= start { brk.id + count } else { brk.id }
     updated.push({ id: new_id, min: brk.min, max: brk.max, manual: brk.manual })
   }
+  check_read_cancelled(cancelled)
   updated
 }
 
@@ -3840,10 +5216,14 @@ fn adjust_page_breaks_after_remove(
   breaks : Array[PageBreak],
   start : Int,
   count : Int,
-) -> Array[PageBreak] {
+  cancelled? : () -> Bool = () => false,
+) -> Array[PageBreak] raise XlsxError {
   let updated : Array[PageBreak] = []
   let end = start + count - 1
-  for brk in breaks {
+  for index, brk in breaks {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
     if brk.id < start {
       updated.push(brk)
       continue
@@ -3857,6 +5237,7 @@ fn adjust_page_breaks_after_remove(
       })
     }
   }
+  check_read_cancelled(cancelled)
   updated
 }
 
@@ -4113,11 +5494,18 @@ fn adjust_cell_after_col_remove(
 }
 
 ///|
-fn clone_table_columns(columns : ArrayView[String]) -> Array[String] {
+fn clone_table_columns(
+  columns : ArrayView[String],
+  cancelled? : () -> Bool = () => false,
+) -> Array[String] raise XlsxError {
   let out : Array[String] = []
-  for column in columns {
+  for index, column in columns {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
     out.push(column)
   }
+  check_read_cancelled(cancelled)
   out
 }
 
@@ -4131,6 +5519,7 @@ fn adjust_table_after_row_insert(
   table : Table,
   row : Int,
   count : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> Table raise XlsxError {
   let range_ref = adjust_range_after_row_insert(table.range_ref, row, count)
   {
@@ -4139,7 +5528,7 @@ fn adjust_table_after_row_insert(
     display_name: table.display_name,
     range: range_ref,
     range_ref,
-    columns: clone_table_columns(table.columns),
+    columns: clone_table_columns(table.columns, cancelled~),
     style_name: table.style_name,
     show_first_column: table.show_first_column,
     show_last_column: table.show_last_column,
@@ -4154,6 +5543,7 @@ fn adjust_table_after_row_remove(
   table : Table,
   row : Int,
   count : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> Table? raise XlsxError {
   match adjust_range_after_row_remove(table.range_ref, row, count) {
     Some(range_ref) =>
@@ -4163,7 +5553,7 @@ fn adjust_table_after_row_remove(
         display_name: table.display_name,
         range: range_ref,
         range_ref,
-        columns: clone_table_columns(table.columns),
+        columns: clone_table_columns(table.columns, cancelled~),
         style_name: table.style_name,
         show_first_column: table.show_first_column,
         show_last_column: table.show_last_column,
@@ -4180,17 +5570,21 @@ fn adjust_table_after_col_insert(
   table : Table,
   col : Int,
   count : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> Table raise XlsxError {
   let (min_row, min_col, max_row, max_col) = parse_range_ref(table.range_ref)
   let (new_min_col, new_max_col) = adjust_bounds_for_insert(
     min_col, max_col, col, count,
   )
-  let columns = clone_table_columns(table.columns)
+  let columns = clone_table_columns(table.columns, cancelled~)
   if col > min_col && col <= max_col {
     let insert_index = col - min_col
     let base = columns.length() + 1
     let mut i = 0
     while i < count {
+      if (i & 4095) == 0 {
+        check_read_cancelled(cancelled)
+      }
       columns.insert(insert_index + i, table_default_column_name(base + i))
       i = i + 1
     }
@@ -4218,11 +5612,12 @@ fn adjust_table_after_col_remove(
   table : Table,
   col : Int,
   count : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> Table? raise XlsxError {
   let (min_row, min_col, max_row, max_col) = parse_range_ref(table.range_ref)
   match adjust_bounds_for_remove(min_col, max_col, col, count) {
     Some((new_min_col, new_max_col)) => {
-      let columns = clone_table_columns(table.columns)
+      let columns = clone_table_columns(table.columns, cancelled~)
       let end_col = col + count - 1
       if !(end_col < min_col || col > max_col) {
         let overlap_start = if col > min_col { col } else { min_col }
@@ -4231,6 +5626,9 @@ fn adjust_table_after_col_remove(
         let remove_index = overlap_start - min_col
         let mut i = 0
         while i < remove_count {
+          if (i & 4095) == 0 {
+            check_read_cancelled(cancelled)
+          }
           ignore(columns.remove(remove_index))
           i = i + 1
         }
@@ -4261,9 +5659,13 @@ fn adjust_sparkline_group_after_row_insert(
   group : SparklineGroup,
   row : Int,
   count : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> SparklineGroup raise XlsxError {
   let updated : Array[Sparkline] = []
-  for sparkline in group.sparklines {
+  for index, sparkline in group.sparklines {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
     let range_ref = adjust_range_after_row_insert(
       sparkline.range_ref,
       row,
@@ -4284,9 +5686,13 @@ fn adjust_sparkline_group_after_row_remove(
   group : SparklineGroup,
   row : Int,
   count : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> SparklineGroup raise XlsxError {
   let updated : Array[Sparkline] = []
-  for sparkline in group.sparklines {
+  for index, sparkline in group.sparklines {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
     let range_ref = adjust_range_after_row_remove(
       sparkline.range_ref,
       row,
@@ -4310,9 +5716,13 @@ fn adjust_sparkline_group_after_col_insert(
   group : SparklineGroup,
   col : Int,
   count : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> SparklineGroup raise XlsxError {
   let updated : Array[Sparkline] = []
-  for sparkline in group.sparklines {
+  for index, sparkline in group.sparklines {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
     let range_ref = adjust_range_after_col_insert(
       sparkline.range_ref,
       col,
@@ -4333,9 +5743,13 @@ fn adjust_sparkline_group_after_col_remove(
   group : SparklineGroup,
   col : Int,
   count : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> SparklineGroup raise XlsxError {
   let updated : Array[Sparkline] = []
-  for sparkline in group.sparklines {
+  for index, sparkline in group.sparklines {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
     let range_ref = adjust_range_after_col_remove(
       sparkline.range_ref,
       col,
@@ -5277,6 +6691,102 @@ test "worksheet wb: duplicate-row helper edge branches" {
     bad_target is Err(XlsxError::InvalidSheetOperation(_)),
     content="true",
   )
+}
+
+///|
+test "worksheet wb: upward duplicate decodes and shifts existing sqrefs" {
+  let sheet = Worksheet::new("EntitySqref")
+  sheet.set_cell("A2", "tail")
+  sheet.set_cell("A5", "source")
+  sheet.add_data_validation_xml(
+    "<dataValidation type=\"whole\" sqref=\"A5&#x20;B5\"/>",
+  )
+  sheet.add_conditional_format_xml(
+    "<conditionalFormatting sqref=\"A5&#x20;B5\"><cfRule type=\"expression\" priority=\"1\"><formula>1=1</formula></cfRule></conditionalFormatting>",
+  )
+  sheet.duplicate_row_to(5, 2)
+  debug_inspect(sheet.get_cell("A2"), content="Some(\"source\")")
+  debug_inspect(sheet.get_cell("A3"), content="Some(\"tail\")")
+  debug_inspect(sheet.get_cell("A6"), content="Some(\"source\")")
+  inspect(sheet.data_validations().length(), content="2")
+  assert_true(sheet.data_validations()[0].contains("sqref=\"A6 B6\""))
+  assert_true(sheet.data_validations()[1].contains("sqref=\"A2:A2 B2:B2\""))
+  inspect(sheet.conditional_formats().length(), content="2")
+  assert_true(sheet.conditional_formats()[0].contains("sqref=\"A6 B6\""))
+  assert_true(sheet.conditional_formats()[1].contains("sqref=\"A2:A2 B2:B2\""))
+}
+
+///|
+test "worksheet wb: duplicate row remaps x14 conditional-format ids" {
+  let sheet = Worksheet::new("X14Duplicate")
+  let data_bar = ConditionalFormatOptions::new("data_bar")
+  data_bar.set_bar_solid(true)
+  data_bar.set_bar_border_color("#0000FF")
+  sheet.set_conditional_format("B5:C5", [data_bar])
+  let source_xml = sheet.conditional_formats()[0]
+  sheet.duplicate_row_to(5, 2)
+  inspect(sheet.conditional_formats().length(), content="2")
+  assert_true(sheet.conditional_formats()[0].contains("sqref=\"B6:C6\""))
+  assert_true(sheet.conditional_formats()[1].contains("sqref=\"B2:C2\""))
+  assert_true(sheet.conditional_formats()[1] != source_xml)
+  assert_eq(sheet.x14_data_bars.length(), 2)
+  let mut shifted = 0
+  let mut duplicated = 0
+  for _, props in sheet.x14_data_bars {
+    if props.sqref == "B6:C6" {
+      shifted += 1
+    } else if props.sqref == "B2:C2" {
+      duplicated += 1
+    }
+  }
+  assert_eq(shifted, 1)
+  assert_eq(duplicated, 1)
+}
+
+///|
+test "worksheet wb: row and column inserts shift sqref ranges" {
+  let rows = Worksheet::new("Rows")
+  rows.add_conditional_format_xml(
+    "<conditionalFormatting sqref=\"A2:B4 C5\"><cfRule type=\"expression\" priority=\"1\"><formula>1=1</formula></cfRule></conditionalFormatting>",
+  )
+  rows.insert_rows(3, 2)
+  assert_true(rows.conditional_formats()[0].contains("sqref=\"A2:B6 C7\""))
+
+  let cols = Worksheet::new("Columns")
+  cols.add_data_validation_xml(
+    "<dataValidation type=\"whole\" sqref=\"B2 C3:D4\"/>",
+  )
+  cols.insert_cols(2, 1)
+  assert_true(cols.data_validations()[0].contains("sqref=\"C2 D3:E4\""))
+
+  let x14 = Worksheet::new("X14")
+  let data_bar = ConditionalFormatOptions::new("data_bar")
+  data_bar.set_bar_solid(true)
+  data_bar.set_bar_border_color("#0000FF")
+  x14.set_conditional_format("B2:C4", [data_bar])
+  x14.insert_rows(3, 2)
+  assert_eq(x14.x14_data_bars.length(), 1)
+  for _, props in x14.x14_data_bars {
+    assert_eq(props.sqref, "B2:C6")
+  }
+}
+
+///|
+test "worksheet wb: malformed sqref insertion remains atomic" {
+  let sheet = Worksheet::new("Atomic")
+  sheet.set_cell("A1", "source")
+  sheet.set_cell("A2", "tail")
+  sheet.add_data_validation_xml(
+    "<dataValidation type=\"whole\" sqref=\"A1&#xZZ;B1\"/>",
+  )
+  let result : Result[Unit, Error] = Ok(sheet.duplicate_row_to(1, 2)) catch {
+    error => Err(error)
+  }
+  assert_true(result is Err(_))
+  debug_inspect(sheet.get_cell("A1"), content="Some(\"source\")")
+  debug_inspect(sheet.get_cell("A2"), content="Some(\"tail\")")
+  debug_inspect(sheet.get_cell("A3"), content="None")
+  inspect(sheet.data_validations().length(), content="1")
 }
 
 ///|

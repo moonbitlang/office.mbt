@@ -166,6 +166,27 @@ fn aes_cbc_decrypt(
 }
 
 ///|
+fn aes_ecb_decrypt_cancellable(
+  key : BytesView,
+  data : BytesView,
+  cancelled : () -> Bool,
+) -> Bytes raise XlsxError {
+  if data.length() % 16 != 0 {
+    raise InvalidEncryptionInfo(msg="invalid AES data length")
+  }
+  let out : Array[Byte] = Array::new(capacity=data.length())
+  let mut offset = 0
+  while offset < data.length() {
+    check_read_cancelled(cancelled)
+    let end = (offset + 4096).min(data.length())
+    out.append(aes_ecb_decrypt(key, data[offset:end]).to_array())
+    offset = end
+  }
+  check_read_cancelled(cancelled)
+  Bytes::from_array(out)
+}
+
+///|
 fn byte_xor(a : Byte, b : Byte) -> Byte {
   (a.to_int() ^ b.to_int()).to_byte()
 }
@@ -463,6 +484,7 @@ fn encryption_mechanism(
 fn derive_password_hash(
   password : String,
   encryption : EncryptionInfo,
+  cancelled? : () -> Bool = () => false,
 ) -> Bytes raise XlsxError {
   let key_data = encryption.encrypted_key.key_data
   let salt_value = key_data.salt_value
@@ -473,9 +495,13 @@ fn derive_password_hash(
   )
   let mut key = hash_parts(key_data.hash_algorithm, [salt_value, password_bytes])
   for i in 0..<encryption.encrypted_key.spin_count {
+    if i % 1024 == 0 {
+      check_read_cancelled(cancelled)
+    }
     let iterator = u32_le_bytes(i)
     key = hash_parts(key_data.hash_algorithm, [iterator, key])
   }
+  check_read_cancelled(cancelled)
   key
 }
 
@@ -571,7 +597,9 @@ fn decrypt_package(
   package_key : BytesView,
   input : BytesView,
   encryption : EncryptionInfo,
+  cancelled? : () -> Bool = () => false,
 ) -> Bytes raise XlsxError {
+  check_read_cancelled(cancelled)
   let block_size = encryption.key_data.block_size
   if input.length() <= package_offset ||
     (input.length() - package_offset) % block_size != 0 {
@@ -582,6 +610,7 @@ fn decrypt_package(
   let mut offset = 0
   let mut index = 0
   while offset < payload.length() {
+    check_read_cancelled(cancelled)
     let end = if offset + package_encryption_chunk_size < payload.length() {
       offset + package_encryption_chunk_size
     } else {
@@ -595,6 +624,7 @@ fn decrypt_package(
     offset = end
     index = index + 1
   }
+  check_read_cancelled(cancelled)
   let raw_size_u64 = @crypto.u64_from_le(input, 0)
   if raw_size_u64 > out.length().to_uint64() {
     raise InvalidEncryptedPackage(msg="decrypted package size is invalid")
@@ -609,7 +639,9 @@ fn agile_decrypt(
   encrypted_package_buf : BytesView,
   password : String,
   limits : ReadLimits,
+  cancelled? : () -> Bool = () => false,
 ) -> DecryptedPackage raise XlsxError {
+  check_read_cancelled(cancelled)
   if encryption_info_buf.length() > limits.max_xml_part_bytes {
     raise ResourceLimitExceeded(
       kind="xml_part_bytes",
@@ -626,7 +658,7 @@ fn agile_decrypt(
     !is_aes_cipher(encryption.encrypted_key.key_data) {
     raise UnsupportedEncryption(msg="unsupported cipher settings")
   }
-  let password_hash = derive_password_hash(password, encryption)
+  let password_hash = derive_password_hash(password, encryption, cancelled~)
   let key = derive_password_key_from_hash(password_hash, block_key, encryption)
   let password_ok = agile_verify_password(password_hash, encryption)
   let salt = encryption.encrypted_key.key_data.salt_value
@@ -636,7 +668,10 @@ fn agile_decrypt(
     encryption.encrypted_key.encrypted_key_value,
   )
   let decrypted = decrypt_package(
-    package_key, encrypted_package_buf, encryption,
+    package_key,
+    encrypted_package_buf,
+    encryption,
+    cancelled~,
   )
   { bytes: decrypted, password_verified: password_ok }
 }
@@ -646,6 +681,7 @@ fn standard_convert_password_to_key(
   key_bits : Int,
   salt : BytesView,
   password : String,
+  cancelled? : () -> Bool = () => false,
 ) -> Bytes raise XlsxError {
   let password_bytes = @encoding/utf16.encode(
     password,
@@ -654,9 +690,13 @@ fn standard_convert_password_to_key(
   )
   let mut key = hash_parts("sha1", [salt, password_bytes])
   for i in 0..<iter_count {
+    if i % 1024 == 0 {
+      check_read_cancelled(cancelled)
+    }
     let iterator = u32_le_bytes(i)
     key = hash_parts("sha1", [iterator, key])
   }
+  check_read_cancelled(cancelled)
   let h_final = hash_parts("sha1", [key, u32_le_bytes(0)])
   let cb_required = key_bits / 8
   let cb_hash = 20
@@ -713,7 +753,9 @@ fn standard_decrypt(
   encrypted_package_buf : BytesView,
   password : String,
   limits? : ReadLimits = ReadLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> DecryptedPackage raise XlsxError {
+  check_read_cancelled(cancelled)
   if encryption_info_buf.length() < 12 {
     raise InvalidEncryptionInfo(msg="standard encryption header too short")
   }
@@ -756,7 +798,12 @@ fn standard_decrypt(
     )
   }
   let salt = verifier_block[4:4 + 16]
-  let secret_key = standard_convert_password_to_key(key_bits, salt, password)
+  let secret_key = standard_convert_password_to_key(
+    key_bits,
+    salt,
+    password,
+    cancelled~,
+  )
   let password_verified = standard_password_verified(
     secret_key, verifier_block, algorithm,
   )
@@ -764,7 +811,11 @@ fn standard_decrypt(
     (encrypted_package_buf.length() - 8) % 16 != 0 {
     raise InvalidEncryptedPackage(msg="invalid encrypted package length")
   }
-  let decrypted = aes_ecb_decrypt(secret_key, encrypted_package_buf[8:])
+  let decrypted = aes_ecb_decrypt_cancellable(
+    secret_key,
+    encrypted_package_buf[8:],
+    cancelled,
+  )
   let raw_size_u64 = @crypto.u64_from_le(encrypted_package_buf, 0)
   if raw_size_u64 > decrypted.length().to_uint64() {
     if password_verified {
@@ -794,18 +845,23 @@ fn decrypt_encrypted_package_result(
   bytes : BytesView,
   password : String,
   limits? : ReadLimits = ReadLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> DecryptedPackage raise XlsxError {
+  check_read_cancelled(cancelled)
   check_source_package_size(bytes, limits)
   if password.length() > max_password_length {
     raise InvalidPasswordLength(len=password.length())
   }
-  let reader = cfb_read(bytes) catch {
+  let reader = cfb_read(bytes, cancelled~) catch {
+    ReadCancelled => raise ReadCancelled
     _ => raise InvalidEncryptedPackage(msg="invalid cfb package")
   }
-  let encryption_info = reader.read_stream("EncryptionInfo") catch {
+  let encryption_info = reader.read_stream("EncryptionInfo", cancelled~) catch {
+    ReadCancelled => raise ReadCancelled
     _ => raise InvalidEncryptedPackage(msg="encryption info missing")
   }
-  let encrypted_package = reader.read_stream("EncryptedPackage") catch {
+  let encrypted_package = reader.read_stream("EncryptedPackage", cancelled~) catch {
+    ReadCancelled => raise ReadCancelled
     _ => raise InvalidEncryptedPackage(msg="encrypted package missing")
   }
   if encryption_info.length() < 8 {
@@ -816,10 +872,23 @@ fn decrypt_encrypted_package_result(
   }
   let decrypted = match encryption_mechanism(encryption_info) {
     Agile =>
-      agile_decrypt(encryption_info[8:], encrypted_package, password, limits)
+      agile_decrypt(
+        encryption_info[8:],
+        encrypted_package,
+        password,
+        limits,
+        cancelled~,
+      )
     Standard =>
-      standard_decrypt(encryption_info, encrypted_package, password, limits~)
+      standard_decrypt(
+        encryption_info,
+        encrypted_package,
+        password,
+        limits~,
+        cancelled~,
+      )
   }
+  check_read_cancelled(cancelled)
   check_source_package_size(decrypted.bytes, limits)
   decrypted
 }
@@ -828,8 +897,9 @@ fn decrypt_encrypted_package_result(
 fn decrypted_package_archive(
   decrypted : DecryptedPackage,
   limits : ReadLimits,
+  cancelled? : () -> Bool = () => false,
 ) -> @zip.Archive raise XlsxError {
-  read_limited_archive(decrypted.bytes, limits) catch {
+  read_limited_archive(decrypted.bytes, limits, cancelled~) catch {
     ResourceLimitExceeded(kind~, limit~, actual~) =>
       raise ResourceLimitExceeded(kind~, limit~, actual~)
     InvalidPackage(msg~) =>
@@ -847,10 +917,12 @@ fn decrypt_encrypted_archive(
   bytes : BytesView,
   password : String,
   limits? : ReadLimits = ReadLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> @zip.Archive raise XlsxError {
   decrypted_package_archive(
-    decrypt_encrypted_package_result(bytes, password, limits~),
+    decrypt_encrypted_package_result(bytes, password, limits~, cancelled~),
     limits,
+    cancelled~,
   )
 }
 
@@ -859,12 +931,18 @@ fn decrypt_encrypted_package(
   bytes : BytesView,
   password : String,
   limits? : ReadLimits = ReadLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> Bytes raise XlsxError {
-  let decrypted = decrypt_encrypted_package_result(bytes, password, limits~)
+  let decrypted = decrypt_encrypted_package_result(
+    bytes,
+    password,
+    limits~,
+    cancelled~,
+  )
   if !decrypted.password_verified {
     // Parse at most once to distinguish a tampered/legacy verifier from a
     // genuinely wrong password. Workbook reads reuse this archive directly.
-    ignore(decrypted_package_archive(decrypted, limits))
+    ignore(decrypted_package_archive(decrypted, limits, cancelled~))
   }
   decrypted.bytes
 }
@@ -940,8 +1018,9 @@ pub fn decrypt(
   raw : BytesView,
   options? : Options = Options::new(),
   limits? : ReadLimits = ReadLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> Bytes raise XlsxError {
-  decrypt_encrypted_package(raw, options.password, limits~)
+  decrypt_encrypted_package(raw, options.password, limits~, cancelled~)
 }
 
 ///|
@@ -1567,6 +1646,41 @@ test "agile verify password" {
   inspect(agile_verify_password(password_hash, encryption), content="true")
   let wrong_hash = derive_password_hash("wrong", encryption)
   inspect(agile_verify_password(wrong_hash, encryption), content="false")
+}
+
+///|
+test "encrypted read primitives observe cancellation during KDF and AES work" {
+  let bytes = decode_base64_multiline(encrypt_sha1_b64)
+  let reader = cfb_read(bytes)
+  let info = reader.read_stream("EncryptionInfo")
+  let encryption = parse_encryption_info(@encoding/utf8.decode(info[8:]))
+  let kdf_checks = [0]
+  let kdf_result : Result[Bytes, Error] = Ok(
+    derive_password_hash("password", encryption, cancelled=() => {
+      kdf_checks[0] += 1
+      kdf_checks[0] >= 3
+    }),
+  ) catch {
+    error => Err(error)
+  }
+  assert_true(kdf_result is Err(ReadCancelled))
+  assert_true(kdf_checks[0] >= 3)
+
+  let aes_checks = [0]
+  let aes_result : Result[Bytes, Error] = Ok(
+    aes_ecb_decrypt_cancellable(
+      Bytes::make(16, b'k'),
+      Bytes::make(16 * 1024, b'v'),
+      () => {
+        aes_checks[0] += 1
+        aes_checks[0] >= 3
+      },
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  assert_true(aes_result is Err(ReadCancelled))
+  assert_true(aes_checks[0] >= 3)
 }
 
 ///|

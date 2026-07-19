@@ -196,6 +196,26 @@ pub fn read_xml_string_strict_encoded(
 }
 
 ///|
+/// Strictly parses an already-decoded XML string under a caller-owned
+/// cumulative budget while enforcing the declared byte encoding.
+pub fn read_xml_string_strict_encoded_limited(
+  source : String,
+  source_encoding : XmlSourceEncoding,
+  budget : XmlReadBudget,
+  namespace_map? : Map[String, String] = Map([]),
+) -> XmlElement raise DocxError {
+  read_xml_string_with_mode(
+    source,
+    namespace_map,
+    true,
+    Some(budget),
+    false,
+    Some(source_encoding),
+    false,
+  )
+}
+
+///|
 /// A cumulative allocation budget shared by one or more XML parses.
 ///
 /// Source storage is charged before decoding, and every materialized XML name,
@@ -207,6 +227,7 @@ pub struct XmlReadBudget {
   priv mut remaining_tokens : Int
   priv mut remaining_materialized_chars : Int
   priv max_token_chars : Int
+  priv cancelled : () -> Bool
 }
 
 ///|
@@ -217,6 +238,7 @@ pub fn xml_read_budget(
   max_tokens~ : Int,
   max_materialized_chars~ : Int,
   max_token_chars~ : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> XmlReadBudget {
   {
     remaining_source_units: if max_source_units > 0 {
@@ -239,6 +261,16 @@ pub fn xml_read_budget(
     } else {
       0
     },
+    cancelled,
+  }
+}
+
+///|
+fn XmlReadBudget::checkpoint(self : XmlReadBudget) -> Unit raise DocxError {
+  if (self.cancelled)() {
+    // Higher layers that supply a cancellation callback translate this
+    // internal parser abort back to their own typed cancellation error.
+    raise InvalidXml(message="XML read cancelled")
   }
 }
 
@@ -247,6 +279,7 @@ fn XmlReadBudget::charge_source(
   self : XmlReadBudget,
   units : Int,
 ) -> Unit raise DocxError {
+  self.checkpoint()
   if units < 0 || units > self.remaining_source_units {
     raise @core.docx_xml_resource_limit_error(DocxXmlSourceUnits)
   }
@@ -258,6 +291,7 @@ fn XmlReadBudget::charge_token(
   self : XmlReadBudget,
   chars : Int,
 ) -> Unit raise DocxError {
+  self.checkpoint()
   if chars < 0 || chars > self.max_token_chars {
     raise @core.docx_xml_resource_limit_error(DocxXmlTokenLength)
   }
@@ -280,6 +314,7 @@ pub fn XmlReadBudget::charge_derived_chars(
   self : XmlReadBudget,
   chars : Int,
 ) -> Unit raise DocxError {
+  self.checkpoint()
   if chars < 0 || chars > self.remaining_materialized_chars {
     raise @core.docx_xml_resource_limit_error(DocxXmlMaterializedCharacters)
   }
@@ -291,6 +326,7 @@ fn XmlReadBudget::charge_namespace_bindings(
   self : XmlReadBudget,
   operations : Int,
 ) -> Unit raise DocxError {
+  self.checkpoint()
   // Namespace declarations allocate one scope-delta record and later restore
   // one map binding. Charge both operations before recording the declaration.
   if operations < 0 || operations > self.remaining_tokens {

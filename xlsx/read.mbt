@@ -91,9 +91,32 @@ fn decode_utf8(
       }
     None => ()
   }
-  @encoding/utf8.decode(bytes) catch {
+  @encoding/utf8.decode(bytes, ignore_bom=true) catch {
     _ => raise InvalidXml(msg="invalid utf8")
   }
+}
+
+///|
+test "XLSX XML decoding strips a legal UTF-8 BOM" {
+  inspect(decode_utf8(b"\xEF\xBB\xBF<root/>", None), content="<root/>")
+}
+
+///|
+/// OOXML numeric attributes must be finite before they enter the workbook
+/// model. MoonBit's parser accepts IEEE NaN and infinities, but those values
+/// cannot be represented by JSON and make comparisons in layout/style logic
+/// non-deterministic.
+fn parse_finite_double_for_read(
+  value : StringView,
+  message : String,
+) -> Double raise XlsxError {
+  let parsed = @string.parse_double(value) catch {
+    _ => raise InvalidXml(msg=message)
+  }
+  if parsed.is_nan() || parsed.is_inf() {
+    raise InvalidXml(msg=message)
+  }
+  parsed
 }
 
 ///|
@@ -205,9 +228,7 @@ fn parse_font_entry(xml : StringView) -> Font raise XlsxError {
       match attr_value(tag, "val") {
         Some(value) =>
           font.size = Some(
-            @string.parse_double(value) catch {
-              _ => raise InvalidXml(msg="font sz invalid")
-            },
+            parse_finite_double_for_read(value, "font sz invalid"),
           )
         None => ()
       }
@@ -292,11 +313,9 @@ fn parse_font_entry(xml : StringView) -> Font raise XlsxError {
       }
       match attr_value(tag, "tint") {
         Some(value) =>
-          try @string.parse_double(value) catch {
-            _ => raise InvalidXml(msg="font color tint invalid")
-          } noraise {
-            val => font.color_tint = Some(val)
-          }
+          font.color_tint = Some(
+            parse_finite_double_for_read(value, "font color tint invalid"),
+          )
         None => ()
       }
     }
@@ -378,47 +397,27 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
       fill.typ = Some("gradient")
       let bottom = match attr_value(tag, "bottom") {
         Some(value) =>
-          try @string.parse_double(value) catch {
-            _ => raise InvalidXml(msg="gradientFill bottom invalid")
-          } noraise {
-            v => v
-          }
+          parse_finite_double_for_read(value, "gradientFill bottom invalid")
         None => 0.0
       }
       let degree = match attr_value(tag, "degree") {
         Some(value) =>
-          try @string.parse_double(value) catch {
-            _ => raise InvalidXml(msg="gradientFill degree invalid")
-          } noraise {
-            v => v
-          }
+          parse_finite_double_for_read(value, "gradientFill degree invalid")
         None => 0.0
       }
       let left = match attr_value(tag, "left") {
         Some(value) =>
-          try @string.parse_double(value) catch {
-            _ => raise InvalidXml(msg="gradientFill left invalid")
-          } noraise {
-            v => v
-          }
+          parse_finite_double_for_read(value, "gradientFill left invalid")
         None => 0.0
       }
       let right = match attr_value(tag, "right") {
         Some(value) =>
-          try @string.parse_double(value) catch {
-            _ => raise InvalidXml(msg="gradientFill right invalid")
-          } noraise {
-            v => v
-          }
+          parse_finite_double_for_read(value, "gradientFill right invalid")
         None => 0.0
       }
       let top = match attr_value(tag, "top") {
         Some(value) =>
-          try @string.parse_double(value) catch {
-            _ => raise InvalidXml(msg="gradientFill top invalid")
-          } noraise {
-            v => v
-          }
+          parse_finite_double_for_read(value, "gradientFill top invalid")
         None => 0.0
       }
       let typ = match attr_value(tag, "type") {
@@ -444,12 +443,11 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
             let open_tag = text[:open_end]
             match attr_value(open_tag, "position") {
               Some(value) =>
-                try @string.parse_double(value) catch {
-                  _ =>
-                    raise InvalidXml(msg="gradientFill stop position invalid")
-                } noraise {
-                  v => stop_positions.push(v)
-                }
+                stop_positions.push(
+                  parse_finite_double_for_read(
+                    value, "gradientFill stop position invalid",
+                  ),
+                )
               None => stop_positions.push(0.0)
             }
             let rest = text[open_end + 1:]
@@ -549,11 +547,9 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
           }
           match attr_value(color_tag, "tint") {
             Some(value) =>
-              try @string.parse_double(value) catch {
-                _ => raise InvalidXml(msg="fill fgColor tint invalid")
-              } noraise {
-                val => fill.fg_tint = Some(val)
-              }
+              fill.fg_tint = Some(
+                parse_finite_double_for_read(value, "fill fgColor tint invalid"),
+              )
             None => ()
           }
           match attr_value(color_tag, "rgb") {
@@ -593,11 +589,9 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
           }
           match attr_value(color_tag, "tint") {
             Some(value) =>
-              try @string.parse_double(value) catch {
-                _ => raise InvalidXml(msg="fill bgColor tint invalid")
-              } noraise {
-                val => fill.bg_tint = Some(val)
-              }
+              fill.bg_tint = Some(
+                parse_finite_double_for_read(value, "fill bgColor tint invalid"),
+              )
             None => ()
           }
           match attr_value(color_tag, "rgb") {
@@ -1058,7 +1052,10 @@ fn parse_merge_cells(xml : StringView) -> Array[String] raise XlsxError {
 }
 
 ///|
-fn parse_data_validations(xml : StringView) -> Array[String] raise XlsxError {
+fn parse_data_validations(
+  xml : StringView,
+  budget? : ReadBudget,
+) -> Array[String] raise XlsxError {
   let validations : Array[String] = []
   let body = match extract_tag_body(xml, "dataValidations") {
     Some(value) => value
@@ -1089,7 +1086,10 @@ fn parse_data_validations(xml : StringView) -> Array[String] raise XlsxError {
     }
     validations.push(
       normalize_xml_sqref_attr_for_read(
-        full, "dataValidation", "data validation",
+        full,
+        "dataValidation",
+        "data validation",
+        budget?,
       ),
     )
   }
@@ -1099,6 +1099,7 @@ fn parse_data_validations(xml : StringView) -> Array[String] raise XlsxError {
 ///|
 fn parse_data_validations_x14(
   xml : StringView,
+  budget? : ReadBudget,
 ) -> Array[String] raise XlsxError {
   let validations : Array[String] = []
   let xml_str = xml.to_owned()
@@ -1137,6 +1138,7 @@ fn parse_data_validations_x14(
         normalize_sqref_for_read(
           unescape_xml_text(value),
           "x14 data validation",
+          budget?,
         )
       None => raise InvalidXml(msg="x14:dataValidation sqref missing")
     }
@@ -1191,7 +1193,10 @@ fn parse_data_validations_x14(
 }
 
 ///|
-fn parse_conditional_formats(xml : StringView) -> Array[String] raise XlsxError {
+fn parse_conditional_formats(
+  xml : StringView,
+  budget? : ReadBudget,
+) -> Array[String] raise XlsxError {
   let formats : Array[String] = []
   let xml_str = xml.to_owned()
   if !xml_str.contains("<conditionalFormatting") {
@@ -1222,7 +1227,10 @@ fn parse_conditional_formats(xml : StringView) -> Array[String] raise XlsxError 
     }
     formats.push(
       normalize_xml_sqref_attr_for_read(
-        full, "conditionalFormatting", "conditional formatting",
+        full,
+        "conditionalFormatting",
+        "conditional formatting",
+        budget?,
       ),
     )
   }
@@ -1430,6 +1438,7 @@ fn parse_x14_conditional_formatting_blocks(
 ///|
 fn parse_x14_data_bars(
   xml : StringView,
+  budget? : ReadBudget,
 ) -> Map[String, X14DataBarProps] raise XlsxError {
   let bars : Map[String, X14DataBarProps] = Map([])
   let blocks = parse_x14_conditional_formatting_blocks(xml)
@@ -1442,6 +1451,7 @@ fn parse_x14_data_bars(
         normalize_sqref_for_read(
           unescape_xml_text(value),
           "x14 conditional formatting",
+          budget?,
         )
       None =>
         match extract_tag_body_from(full, "sqref") {
@@ -1449,6 +1459,7 @@ fn parse_x14_data_bars(
             normalize_sqref_for_read(
               unescape_xml_text(value),
               "x14 conditional formatting",
+              budget?,
             )
           None => continue
         }
@@ -1598,6 +1609,7 @@ fn parse_unknown_worksheet_ext_blocks(
 ///|
 fn parse_conditional_formats_x14(
   xml : StringView,
+  budget? : ReadBudget,
 ) -> Array[String] raise XlsxError {
   let formats : Array[String] = []
   let blocks = parse_x14_conditional_formatting_blocks(xml)
@@ -1610,6 +1622,7 @@ fn parse_conditional_formats_x14(
         normalize_sqref_for_read(
           unescape_xml_text(value),
           "x14 conditional formatting",
+          budget?,
         )
       None =>
         match extract_tag_body_from(full, "sqref") {
@@ -1617,6 +1630,7 @@ fn parse_conditional_formats_x14(
             normalize_sqref_for_read(
               unescape_xml_text(value),
               "x14 conditional formatting",
+              budget?,
             )
           None =>
             raise InvalidXml(msg="x14:conditionalFormatting sqref missing")
@@ -1800,6 +1814,7 @@ fn parse_sheet_view_pane(body : StringView) -> SheetPane? raise XlsxError {
 ///|
 fn parse_sheet_view_selections(
   body : StringView,
+  budget? : ReadBudget,
 ) -> Array[Selection] raise XlsxError {
   let selections : Array[Selection] = []
   let mut first = true
@@ -1824,6 +1839,7 @@ fn parse_sheet_view_selections(
         selection.sqref = normalize_sqref_for_read(
           unescape_xml_text(value),
           "selection",
+          budget?,
         )
       None => ()
     }
@@ -1845,7 +1861,10 @@ fn parse_sheet_view_selections(
 }
 
 ///|
-fn parse_sheet_views(xml : StringView) -> Array[SheetView] raise XlsxError {
+fn parse_sheet_views(
+  xml : StringView,
+  budget? : ReadBudget,
+) -> Array[SheetView] raise XlsxError {
   let views : Array[SheetView] = []
   let body = match extract_tag_body(xml, "sheetViews") {
     Some(value) => value
@@ -1936,7 +1955,7 @@ fn parse_sheet_views(xml : StringView) -> Array[SheetView] raise XlsxError {
       if close > body_start {
         let inner = text[body_start:close]
         view.pane = parse_sheet_view_pane(inner)
-        let selections = parse_sheet_view_selections(inner)
+        let selections = parse_sheet_view_selections(inner, budget?)
         view.selection.clear()
         view.selection.append(selections)
       }
@@ -2697,51 +2716,161 @@ fn parse_hyperlink_elements(
 }
 
 ///|
-fn parse_legacy_drawing_rel_id(
+fn parse_sheet_drawing_rel_ids(
   xml : StringView,
-  tag_name : StringView,
-) -> String? raise XlsxError {
-  let xml_str = xml.to_owned()
-  let marker = "<\{tag_name.to_owned()}"
-  let chars = xml_str.to_array()
-  let mut pos = 0
-  while pos < xml_str.length() {
-    let tail = xml_str[pos:]
-    let rel = match tail.find(marker) {
-      Some(value) => value
-      None => break
+  root_local_name : StringView,
+  budget? : ReadBudget,
+  cancelled? : () -> Bool = () => false,
+) -> (String?, String?, String?) raise XlsxError {
+  match budget {
+    Some(value) => {
+      value.checkpoint()
+      value.charge_work(xml.length())
     }
-    let start = pos + rel
-    let after = start + marker.length()
-    if after < chars.length() {
-      let ch = chars[after]
-      if ch != ' ' &&
-        ch != '\t' &&
-        ch != '\n' &&
-        ch != '\r' &&
-        ch != '>' &&
-        ch != '/' {
-        pos = after
-        continue
-      }
-    }
-    let text = xml_str[start + 1:]
-    let end = match text.find("/>") {
-      Some(value) => value
-      None =>
-        match text.find(">") {
-          Some(value) => value
-          None => raise InvalidXml(msg="\{tag_name.to_owned()} tag not closed")
-        }
-    }
-    let tag = text[:end]
-    let id = match attr_value(tag, "r:id") {
-      Some(value) => value
-      None => raise InvalidXml(msg="\{tag_name.to_owned()} id missing")
-    }
-    return Some(id)
+    None => check_read_cancelled(cancelled)
   }
-  None
+  let scanner = @ooxml.XmlStartTagScanner::new(xml, cancelled~)
+  if !workbook_scanner_next(scanner) ||
+    scanner.depth() != 1 ||
+    scanner.local_name() != root_local_name ||
+    (
+      scanner.namespace_uri() != transitional_spreadsheet_namespace &&
+      scanner.namespace_uri() != strict_spreadsheet_namespace
+    ) {
+    raise InvalidXml(
+      msg="\{root_local_name.to_owned()} document element is invalid",
+    )
+  }
+  let spreadsheet_namespace = scanner.namespace_uri().to_owned()
+  let (relationship_namespace, other_relationship_namespace) = if spreadsheet_namespace ==
+    strict_spreadsheet_namespace {
+    (
+      strict_relationship_attribute_namespace, transitional_relationship_attribute_namespace,
+    )
+  } else {
+    (
+      transitional_relationship_attribute_namespace, strict_relationship_attribute_namespace,
+    )
+  }
+  let mut drawing : String? = None
+  let mut legacy_drawing : String? = None
+  let mut legacy_drawing_hf : String? = None
+  while workbook_scanner_next(scanner) {
+    let local_name = scanner.local_name()
+    let selected = local_name == "drawing" ||
+      (
+        root_local_name == "worksheet" &&
+        (local_name == "legacyDrawing" || local_name == "legacyDrawingHF")
+      )
+    if !selected ||
+      (
+        scanner.namespace_uri() != transitional_spreadsheet_namespace &&
+        scanner.namespace_uri() != strict_spreadsheet_namespace
+      ) {
+      continue
+    }
+    if scanner.namespace_uri() != spreadsheet_namespace ||
+      scanner.depth() != 2 ||
+      scanner.parent_local_name() != Some(root_local_name) ||
+      scanner.parent_namespace_uri() != Some(spreadsheet_namespace) {
+      raise InvalidXml(
+        msg="\{local_name.to_owned()} relationship element is misplaced",
+      )
+    }
+    if workbook_scanner_attribute(scanner, other_relationship_namespace, "id")
+      is Some(_) {
+      raise InvalidXml(
+        msg="\{local_name.to_owned()} relationship namespace is invalid",
+      )
+    }
+    let id = match
+      workbook_scanner_attribute(scanner, relationship_namespace, "id") {
+      Some(value) if value != "" => value
+      _ =>
+        raise InvalidXml(
+          msg="\{local_name.to_owned()} relationship id is missing",
+        )
+    }
+    if local_name == "drawing" {
+      if drawing is Some(_) {
+        raise InvalidXml(msg="drawing relationship element is duplicated")
+      }
+      drawing = Some(id)
+    } else if local_name == "legacyDrawing" {
+      if legacy_drawing is Some(_) {
+        raise InvalidXml(msg="legacyDrawing relationship element is duplicated")
+      }
+      legacy_drawing = Some(id)
+    } else {
+      if legacy_drawing_hf is Some(_) {
+        raise InvalidXml(
+          msg="legacyDrawingHF relationship element is duplicated",
+        )
+      }
+      legacy_drawing_hf = Some(id)
+    }
+  }
+  (drawing, legacy_drawing, legacy_drawing_hf)
+}
+
+///|
+test "sheet drawing relationships require direct dialect-matched roots" {
+  let transitional =
+    #|<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><drawing r:id="drawing"/><legacyDrawing r:id="legacy"/><legacyDrawingHF r:id="header-footer"/></worksheet>
+  let (drawing, legacy, header_footer) = parse_sheet_drawing_rel_ids(
+    transitional, "worksheet",
+  )
+  assert_true(drawing == Some("drawing"))
+  assert_true(legacy == Some("legacy"))
+  assert_true(header_footer == Some("header-footer"))
+  let strict =
+    #|<chartsheet xmlns="http://purl.oclc.org/ooxml/spreadsheetml/main" xmlns:r="http://purl.oclc.org/ooxml/officeDocument/relationships"><drawing r:id="strict-drawing"/></chartsheet>
+  let (strict_drawing, strict_legacy, strict_header_footer) = parse_sheet_drawing_rel_ids(
+    strict, "chartsheet",
+  )
+  assert_true(strict_drawing == Some("strict-drawing"))
+  assert_true(strict_legacy is None)
+  assert_true(strict_header_footer is None)
+
+  let invalid : Array[(String, String, String)] = [
+    (
+      (
+        #|<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetData><drawing r:id="decoy"/></sheetData><drawing r:id="real"/></worksheet>
+      ),
+      "worksheet",
+      "drawing relationship element is misplaced",
+    ),
+    (
+      (
+        #|<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:s="http://purl.oclc.org/ooxml/spreadsheetml/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><s:drawing r:id="decoy"/><drawing r:id="real"/></worksheet>
+      ),
+      "worksheet",
+      "drawing relationship element is misplaced",
+    ),
+    (
+      (
+        #|<chartsheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://purl.oclc.org/ooxml/officeDocument/relationships"><drawing r:id="wrong"/></chartsheet>
+      ),
+      "chartsheet",
+      "drawing relationship namespace is invalid",
+    ),
+    (
+      (
+        #|<chartsheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><drawing r:id="first"/><drawing r:id="second"/></chartsheet>
+      ),
+      "chartsheet",
+      "drawing relationship element is duplicated",
+    ),
+  ]
+  for entry in invalid {
+    let (xml, root, expected) = entry
+    try parse_sheet_drawing_rel_ids(xml, root) catch {
+      InvalidXml(msg~) => assert_eq(msg, expected)
+      _ => fail("unexpected sheet drawing relationship error")
+    } noraise {
+      _ => fail("expected invalid sheet drawing relationship rejection")
+    }
+  }
 }
 
 ///|
@@ -2765,8 +2894,8 @@ fn parse_inline_string(rest : StringView) -> InlineStringEntry raise XlsxError {
     None => raise InvalidXml(msg="inline string not closed")
   }
   let body_start = start + open_end + 1
-  let end = match text.find("</is>") {
-    Some(pos) => pos
+  let end = match find_xml_close_tag_from(text, "is", body_start) {
+    Some((pos, _)) => pos
     None => raise InvalidXml(msg="inline string end missing")
   }
   let body = text[body_start:end]
@@ -2831,7 +2960,8 @@ fn parse_row_dimensions(
         }
       None => 0
     }
-    let style_id = match attr_value(tag, "s") {
+    let style_attribute = attr_value(tag, "s")
+    let style_id = match style_attribute {
       Some(value) =>
         @string.parse_int(value, base=10) catch {
           _ => raise InvalidXml(msg="row style id invalid")
@@ -2841,7 +2971,14 @@ fn parse_row_dimensions(
     if style_id < 0 || style_id >= style_count {
       raise InvalidStyleId(index=style_id)
     }
-    let style = if style_id > 0 { Some(style_id) } else { None }
+    // `s` is only an active row format when `customFormat` is true. Keep
+    // `Some(0)` for that case: an explicit default row format is a real
+    // inheritance boundary and must block a nonzero column style.
+    let custom_format = match attr_value(tag, "customFormat") {
+      Some(value) => parse_bool_attr(value)
+      None => false
+    }
+    let style = if custom_format { Some(style_id) } else { None }
     if height is None && !hidden && outline_level == 0 && style is None {
       continue
     }
@@ -2856,8 +2993,12 @@ fn parse_col_dimensions(
   style_count : Int,
 ) -> Map[Int, ColDimension] raise XlsxError {
   let dims : Map[Int, ColDimension] = Map([])
+  let body = match extract_tag_body(xml, "cols") {
+    Some(value) => value
+    None => return dims
+  }
   let mut first = true
-  for chunk in xml.split("<col ") {
+  for chunk in body.split("<col ") {
     if first {
       first = false
       continue
@@ -2909,7 +3050,8 @@ fn parse_col_dimensions(
         }
       None => 0
     }
-    let style_id = match attr_value(tag, "style") {
+    let style_attribute = attr_value(tag, "style")
+    let style_id = match style_attribute {
       Some(value) =>
         @string.parse_int(value, base=10) catch {
           _ => raise InvalidXml(msg="col style id invalid")
@@ -2919,7 +3061,12 @@ fn parse_col_dimensions(
     if style_id < 0 || style_id >= style_count {
       raise InvalidStyleId(index=style_id)
     }
-    let style = if style_id > 0 { Some(style_id) } else { None }
+    // Unlike rows, columns have no `customFormat` gate. Attribute presence is
+    // therefore the semantic distinction, including an explicit style 0.
+    let style = match style_attribute {
+      Some(_) => Some(style_id)
+      None => None
+    }
     if width is None && !hidden && outline_level == 0 && style is None {
       continue
     }
@@ -2945,9 +3092,12 @@ fn is_xml_package_part(name : StringView) -> Bool {
 fn enforce_archive_limits(
   archive : @zip.Archive,
   limits : ReadLimits,
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
+  check_read_cancelled(cancelled)
   let mut total_size = 0
   for entry in archive.entries() {
+    check_read_cancelled(cancelled)
     let size = entry.data().length()
     if size > limits.max_entry_uncompressed_bytes {
       raise ResourceLimitExceeded(
@@ -2971,9 +3121,14 @@ fn enforce_archive_limits(
         actual=size,
       )
     }
-    if @zip.crc32(entry.data()) != entry.crc32() {
+    let actual_crc = @zip.crc32_cancellable(entry.data(), cancelled~) catch {
+      ReadCancelled => raise ReadCancelled
+      _ => raise InvalidPackage(msg="ZIP entry CRC verification failed")
+    }
+    if actual_crc != entry.crc32() {
       raise InvalidPackage(msg="ZIP entry CRC mismatch")
     }
+    check_read_cancelled(cancelled)
   }
 }
 
@@ -2981,7 +3136,9 @@ fn enforce_archive_limits(
 fn require_bounded_archive(
   archive : @zip.Archive,
   limits : ReadLimits,
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
+  check_read_cancelled(cancelled)
   match
     archive.bounded_source_package_size(
       max_entries=limits.max_archive_entries,
@@ -3006,14 +3163,16 @@ fn require_bounded_archive(
       actual=archive.entries().length(),
     )
   }
-  enforce_archive_limits(archive, limits)
+  enforce_archive_limits(archive, limits, cancelled~)
 }
 
 ///|
 fn read_limited_archive(
   bytes : BytesView,
   limits : ReadLimits,
+  cancelled? : () -> Bool = () => false,
 ) -> @zip.Archive raise XlsxError {
+  check_read_cancelled(cancelled)
   @zip.read_limited(
     bytes,
     max_package_bytes=limits.max_package_bytes,
@@ -3023,9 +3182,11 @@ fn read_limited_archive(
     // The ZIP package preserves exact source records for lossless rewrites.
     // Bound that second compressed representation independently from inflation.
     max_total_preserved_source_bytes=limits.max_total_preserved_source_bytes,
+    cancelled~,
   ) catch {
     ResourceLimitExceeded(kind~, limit~, actual~) =>
       raise ResourceLimitExceeded(kind~, limit~, actual~)
+    ReadCancelled => raise ReadCancelled
     _ => raise InvalidPackage(msg="unreadable ZIP package")
   }
 }
@@ -3047,12 +3208,22 @@ fn check_source_package_size(
 ///|
 fn first_existing_rel_target_path(
   targets : Map[String, String],
-  base_folder : StringView,
-  archive : @zip.Archive,
+  source_part : StringView,
+  part_names : Map[String, String],
+  cancelled? : () -> Bool = () => false,
 ) -> String? raise XlsxError {
   for _, target in targets {
-    let path = resolve_rel_target(target, base_folder)
-    if archive.get(path) is Some(_) {
+    let path = actual_relationship_target_path(
+      source_part,
+      target,
+      part_names,
+      cancelled~,
+    )
+    // `path` is the physical ZIP spelling when the target exists. The archive
+    // index is keyed in logical OPC PartName space, so restore percent-encoded
+    // Unicode before testing identity.
+    let logical_path = logical_archive_part_path(path)
+    if part_names.contains(@ooxml.package_part_name_key(logical_path)) {
       return Some(path)
     }
   }
@@ -3062,15 +3233,386 @@ fn first_existing_rel_target_path(
 ///|
 fn first_existing_workbook_rel_target_path(
   targets : Map[String, String],
-  archive : @zip.Archive,
+  workbook_part : StringView,
+  part_names : Map[String, String],
+  cancelled? : () -> Bool = () => false,
 ) -> String? raise XlsxError {
   for _, target in targets {
-    let path = resolve_workbook_rel_target(target)
-    if archive.get(path) is Some(_) {
-      return Some(path)
+    let path = resolve_part_rel_target(
+      logical_archive_part_path(workbook_part),
+      target,
+      cancelled~,
+    )
+    match part_names.get(@ooxml.package_part_name_key(path)) {
+      Some(actual) => return Some(actual)
+      None => ()
     }
   }
   None
+}
+
+///|
+fn budgeted_package_part_name_key(
+  name : StringView,
+  budget : ReadBudget,
+) -> String raise XlsxError {
+  budget.checkpoint()
+  budget.charge_work(name.length())
+  @ooxml.package_part_name_key_cancellable(name, cancelled=budget.cancelled) catch {
+    InvalidXml(msg~) => raise InvalidPackage(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+}
+
+///|
+fn budgeted_logical_opc_part_name(
+  name : StringView,
+  budget : ReadBudget,
+) -> String? raise XlsxError {
+  budget.checkpoint()
+  budget.charge_work(name.length())
+  @ooxml.logical_opc_part_name_from_zip_item_name_cancellable(
+    name,
+    cancelled=budget.cancelled,
+  ) catch {
+    InvalidXml(msg~) => raise InvalidPackage(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+}
+
+///|
+fn budgeted_register_opc_part_name(
+  registry : @ooxml.OpcPartNameRegistry,
+  name : StringView,
+  display : String,
+  budget : ReadBudget,
+) -> @ooxml.OpcPartNameConflict? raise XlsxError {
+  budget.checkpoint()
+  // Count bounded identity nodes without allocating them, then reserve their
+  // cumulative parser capacity before registration can materialize either its
+  // token array or a detached trie suffix.
+  budget.charge_work(name.length())
+  let identity_nodes = @ooxml.opc_part_name_identity_node_count_cancellable(
+    name,
+    cancelled=budget.cancelled,
+  ) catch {
+    InvalidXml(msg~) => raise InvalidPackage(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+  budget.charge_items(identity_nodes)
+  // Registration performs a tokenization pass followed by a mutation-free
+  // lookup/allocation pass. Charge both before either can run.
+  budget.charge_work(name.length())
+  budget.charge_work(name.length())
+  registry.register_cancellable(name, display, cancelled=budget.cancelled) catch {
+    InvalidXml(msg~) => raise InvalidPackage(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+}
+
+///|
+fn archive_part_name_index(
+  archive : @zip.Archive,
+  budget? : ReadBudget,
+) -> Map[String, String] raise XlsxError {
+  let budget = budget.unwrap_or(ReadBudget::new(ReadLimits::new()))
+  let names : Map[String, String] = Map([])
+  let registry = @ooxml.OpcPartNameRegistry::new(
+    maximum_identity_nodes=budget.limits.max_parser_items,
+  )
+  let content_types_key = @ooxml.package_part_name_key(content_types_part_path)
+  for entry in archive.entries() {
+    budget.checkpoint()
+    let physical_name = entry.name()
+    if physical_name.has_suffix("/") {
+      continue
+    }
+    budget.charge_work(physical_name.length())
+    let logical_name = if physical_name == content_types_part_path {
+      physical_name
+    } else if budgeted_package_part_name_key(physical_name, budget) ==
+      content_types_key {
+      raise InvalidPackage(
+        msg="reserved content-types part name has invalid spelling",
+      )
+    } else {
+      match budgeted_logical_opc_part_name(physical_name, budget) {
+        Some(value) => value
+        None => raise InvalidPackage(msg="invalid OPC ZIP item name")
+      }
+    }
+    let key = budgeted_package_part_name_key(logical_name, budget)
+    if logical_name != content_types_part_path {
+      match
+        budgeted_register_opc_part_name(
+          registry, logical_name, physical_name, budget,
+        ) {
+        Some(Equivalent(_)) =>
+          raise InvalidPackage(msg="duplicate or equivalent OPC part name")
+        Some(Derivable(existing)) =>
+          raise InvalidPackage(
+            msg="OPC part names are derivable: \{existing} and \{physical_name}",
+          )
+        None => ()
+      }
+    }
+    budget.charge_work(key.length())
+    match names.get(key) {
+      Some(_) =>
+        raise InvalidPackage(msg="duplicate or equivalent OPC part name")
+      None => ()
+    }
+    budget.charge_work(key.length())
+    names[key] = physical_name
+  }
+  names
+}
+
+///|
+test "read archive index maps physical Unicode OPC names to logical identity" {
+  let archive = @zip.Archive::new()
+  archive.add(content_types_part_path, b"manifest")
+  archive.add("custom/%E6%96%87.xml", b"workbook")
+  let names = archive_part_name_index(archive)
+  debug_inspect(
+    names.get(@ooxml.package_part_name_key("custom/文.xml")),
+    content="Some(\"custom/%E6%96%87.xml\")",
+  )
+}
+
+///|
+test "relationship selection recognizes physical Unicode chart parts" {
+  let archive = @zip.Archive::new()
+  archive.add(content_types_part_path, b"manifest")
+  archive.add("xl/charts/%E6%96%87.xml", b"unicode chart")
+  archive.add("xl/charts/chart2.xml", b"other chart")
+  let part_names = archive_part_name_index(archive)
+  let targets : Map[String, String] = Map([
+    ("unicode", "../charts/文.xml"),
+    ("other", "../charts/chart2.xml"),
+  ])
+  debug_inspect(
+    first_existing_rel_target_path(
+      targets, "xl/drawings/drawing1.xml", part_names,
+    ),
+    content="Some(\"xl/charts/%E6%96%87.xml\")",
+  )
+}
+
+///|
+test "read archive index rejects ambiguous and misspelled reserved entries" {
+  let duplicate = @zip.Archive::new()
+  duplicate.add(content_types_part_path, b"first")
+  duplicate.add(content_types_part_path, b"second")
+  try archive_part_name_index(duplicate) catch {
+    InvalidPackage(msg~) =>
+      inspect(msg, content="duplicate or equivalent OPC part name")
+    _ => fail("unexpected duplicate OPC part error")
+  } noraise {
+    _ => fail("expected duplicate OPC part rejection")
+  }
+
+  let misspelled = @zip.Archive::new()
+  misspelled.add("[content_types].xml", b"manifest")
+  try archive_part_name_index(misspelled) catch {
+    InvalidPackage(msg~) =>
+      inspect(
+        msg,
+        content="reserved content-types part name has invalid spelling",
+      )
+    _ => fail("unexpected reserved OPC part error")
+  } noraise {
+    _ => fail("expected reserved OPC part spelling rejection")
+  }
+}
+
+///|
+test "read archive index rejects OPC-derivable parts in either order" {
+  for
+    entries in [
+      ["custom/a.xml", "custom/a.xml/child.xml"],
+      ["custom/a.xml/child.xml", "custom/a.xml"],
+    ] {
+    let archive = @zip.Archive::new()
+    archive.add(content_types_part_path, b"manifest")
+    for name in entries {
+      archive.add(name, b"part")
+    }
+    try archive_part_name_index(archive) catch {
+      InvalidPackage(msg~) =>
+        assert_true(msg.contains("OPC part names are derivable"))
+      _ => fail("unexpected derivable OPC part error")
+    } noraise {
+      _ => fail("expected derivable OPC part rejection")
+    }
+  }
+}
+
+///|
+test "read archive index charges physical OPC name work before decoding" {
+  let archive = @zip.Archive::new()
+  archive.add("custom/" + "a".repeat(64) + ".xml", b"part")
+  let budget = ReadBudget::new(
+    ReadLimits::with_values(max_parser_work_units=32),
+  )
+  try archive_part_name_index(archive, budget~) catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) => {
+      inspect(kind, content="parser_work_units")
+      assert_eq(limit, 32)
+      assert_true(actual > limit)
+    }
+    _ => fail("unexpected archive name budget error")
+  } noraise {
+    _ => fail("expected archive name work limit")
+  }
+}
+
+///|
+test "read archive index charges OPC identity nodes as parser items" {
+  let archive = @zip.Archive::new()
+  archive.add("a/b/c.xml", b"part")
+  let budget = ReadBudget::new(ReadLimits::with_values(max_parser_items=2))
+  try archive_part_name_index(archive, budget~) catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) => {
+      inspect(kind, content="parser_items")
+      assert_eq(limit, 2)
+      assert_true(actual > limit)
+    }
+    _ => fail("unexpected archive identity-node budget error")
+  } noraise {
+    _ => fail("expected archive identity-node parser limit")
+  }
+  assert_eq(budget.parser_items, 0)
+}
+
+///|
+test "read archive index polls cancellation inside long OPC names" {
+  let archive = @zip.Archive::new()
+  archive.add("custom/" + "a".repeat(9000) + ".xml", b"part")
+  let checks = [0]
+  let budget = ReadBudget::new(ReadLimits::new(), cancelled=() => {
+    checks[0] = checks[0] + 1
+    checks[0] >= 4
+  })
+  try archive_part_name_index(archive, budget~) catch {
+    ReadCancelled => assert_true(checks[0] >= 4)
+    _ => fail("unexpected archive name cancellation error")
+  } noraise {
+    _ => fail("expected archive name cancellation")
+  }
+}
+
+///|
+fn actual_archive_part_path(
+  part_names : Map[String, String],
+  requested : String,
+) -> String {
+  part_names.get(@ooxml.package_part_name_key(requested)).unwrap_or(requested)
+}
+
+///|
+/// Returns the logical OPC name for either a logical PartName or its physical
+/// ASCII ZIP projection. Relationship resolution must never use the physical
+/// `%HH` spelling because relationships and content types live in the logical
+/// PartName space.
+fn logical_archive_part_path(path : StringView) -> String {
+  if path == content_types_part_path {
+    content_types_part_path
+  } else {
+    @ooxml.logical_opc_part_name_from_zip_item_name(path).unwrap_or(
+      path.to_owned(),
+    )
+  }
+}
+
+///|
+fn actual_relationship_part_path(
+  source_part : StringView,
+  part_names : Map[String, String],
+) -> String raise XlsxError {
+  actual_archive_part_path(
+    part_names,
+    rels_path_for_part(logical_archive_part_path(source_part)),
+  )
+}
+
+///|
+fn actual_relationship_target_path(
+  source_part : StringView,
+  target : StringView,
+  part_names : Map[String, String],
+  cancelled? : () -> Bool = () => false,
+) -> String raise XlsxError {
+  let source_relative = resolve_part_rel_target(
+    logical_archive_part_path(source_part),
+    target,
+    cancelled~,
+  )
+  part_names
+  .get(@ooxml.package_part_name_key(source_relative))
+  .unwrap_or(source_relative)
+}
+
+///|
+test "relationship targets never fall back from source-relative to package root" {
+  let root_media = "xl/media/image1.png"
+  let part_names : Map[String, String] = Map([
+    (@ooxml.package_part_name_key(root_media), root_media),
+  ])
+  inspect(
+    actual_relationship_target_path(
+      "xl/drawings/drawing1.xml", root_media, part_names,
+    ),
+    content="xl/drawings/xl/media/image1.png",
+  )
+  inspect(
+    actual_relationship_target_path(
+      "xl/drawings/drawing1.xml", "../media/image1.png", part_names,
+    ),
+    content="xl/media/image1.png",
+  )
+}
+
+///|
+fn workbook_related_part_path(
+  workbook_rels : StringView,
+  relationship_type : StringView,
+  workbook_part : StringView,
+  fallback : StringView,
+  part_names : Map[String, String],
+  budget? : ReadBudget,
+  cancelled? : () -> Bool = () => false,
+) -> String? raise XlsxError {
+  let targets = parse_internal_relationship_targets(
+    workbook_rels,
+    relationship_type,
+    budget?,
+    cancelled~,
+  )
+  match
+    first_existing_workbook_rel_target_path(
+      targets,
+      workbook_part,
+      part_names,
+      cancelled~,
+    ) {
+    Some(path) => Some(path)
+    None =>
+      match first_relationship_target(targets) {
+        Some(target) =>
+          Some(
+            actual_archive_part_path(
+              part_names,
+              resolve_part_rel_target(
+                logical_archive_part_path(workbook_part),
+                target,
+                cancelled~,
+              ),
+            ),
+          )
+        None => part_names.get(@ooxml.package_part_name_key(fallback))
+      }
+  }
 }
 
 ///|
@@ -3078,9 +3620,12 @@ fn read_zip_archive_core_unchecked(
   archive : @zip.Archive,
   options : Options,
   limits : ReadLimits,
+  cancelled : () -> Bool,
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
-  let decode = (value : BytesView) => {
+  let read_budget = ReadBudget::new(limits, cancelled~)
+  let part_names = archive_part_name_index(archive, budget=read_budget)
+  let decode_source = (value : BytesView) => {
     if value.length() > limits.max_xml_part_bytes {
       raise ResourceLimitExceeded(
         kind="xml_part_bytes",
@@ -3088,21 +3633,95 @@ fn read_zip_archive_core_unchecked(
         actual=value.length(),
       )
     }
-    decode_utf8(value, transcoder)
+    let decoded = decode_utf8(value, transcoder)
+    read_budget.scan_xml(decoded)
+    decoded
   }
-  let workbook_xml_part_path = resolve_workbook_xml_part_path(archive, decode)
+  let decode = (value : BytesView) => {
+    let decoded = decode_source(value)
+    read_budget.charge_work(decoded.length())
+    let canonical = canonicalize_xlsx_xml(
+      decoded,
+      max_output_chars=limits.max_xml_part_bytes,
+      cancelled~,
+    )
+    read_budget.checkpoint()
+    read_budget.charge_work(canonical.length())
+    canonical
+  }
+  let (workbook_logical_part_path, content_types) = resolve_workbook_xml_part_path(
+    archive,
+    part_names,
+    decode,
+    budget=read_budget,
+    cancelled~,
+  )
+  let workbook_xml_part_path = actual_archive_part_path(
+    part_names, workbook_logical_part_path,
+  )
   let workbook_bytes = match archive.get(workbook_xml_part_path) {
     Some(value) => value
     None => raise MissingPart(path=workbook_xml_part_path)
   }
-  let workbook_xml = decode(workbook_bytes)
-  let sheets = parse_workbook_sheets(workbook_xml)
+  let workbook_raw_xml = decode_source(workbook_bytes)
+  read_budget.charge_work(workbook_raw_xml.length())
+  let workbook_source_xml = project_xlsx_markup_compatibility(
+    workbook_raw_xml,
+    limits.max_xml_part_bytes,
+    cancelled~,
+  )
+  if workbook_source_xml != workbook_raw_xml {
+    read_budget.charge_work(workbook_source_xml.length())
+  }
+  let workbook_xml = canonicalize_xlsx_xml(
+    workbook_source_xml,
+    max_output_chars=limits.max_xml_part_bytes,
+    cancelled~,
+  )
+  read_budget.checkpoint()
+  read_budget.charge_work(workbook_xml.length())
+  let workbook_core_xml = match
+    xlsx_core_source_without_foreign(
+      workbook_source_xml,
+      "workbook",
+      cancelled~,
+    ) {
+    Some(filtered) => {
+      read_budget.charge_work(filtered.length())
+      let canonical = canonicalize_xlsx_xml(
+        filtered,
+        max_output_chars=limits.max_xml_part_bytes,
+        cancelled~,
+      )
+      read_budget.checkpoint()
+      read_budget.charge_work(canonical.length())
+      canonical
+    }
+    None => workbook_xml
+  }
+  let workbook_rels_path = actual_relationship_part_path(
+    workbook_xml_part_path, part_names,
+  )
+  let workbook_rels = decode(
+    load_relationship_part(
+      archive,
+      content_types,
+      workbook_rels_path,
+      "workbook relationships",
+      cancelled~,
+    ),
+  )
+  let sheets = parse_workbook_sheets(
+    workbook_source_xml,
+    limits.max_workbook_sheets,
+    cancelled~,
+  )
   let sheet_names : Array[String] = []
   for entry in sheets {
     sheet_names.push(entry.name)
   }
-  let defined_names = parse_defined_names(workbook_xml, sheet_names)
-  let active_index = match parse_active_sheet_index(workbook_xml) {
+  let defined_names = parse_defined_names(workbook_core_xml, sheet_names)
+  let active_index = match parse_active_sheet_index(workbook_core_xml) {
     Some(value) => value
     None => 0
   }
@@ -3111,10 +3730,63 @@ fn read_zip_archive_core_unchecked(
   } else {
     active_index
   }
-  let shared_strings = match archive.get("xl/sharedStrings.xml") {
-    Some(value) => parse_shared_strings(decode(value))
+  let shared_strings_path = workbook_related_part_path(
+    workbook_rels,
+    rel_shared_strings,
+    workbook_xml_part_path,
+    shared_strings_part_path,
+    part_names,
+    budget=read_budget,
+    cancelled~,
+  )
+  let shared_strings = match shared_strings_path {
+    Some(path) => {
+      let value = load_typed_part(
+        archive,
+        content_types,
+        path,
+        [ct_shared_strings],
+        "shared strings",
+        cancelled~,
+      )
+      let raw_source = decode_source(value)
+      read_budget.charge_work(raw_source.length())
+      let source = project_xlsx_markup_compatibility(
+        raw_source,
+        limits.max_xml_part_bytes,
+        cancelled~,
+      )
+      if source != raw_source {
+        read_budget.charge_work(source.length())
+      }
+      let core_source = match
+        xlsx_core_source_without_foreign(source, "sst", cancelled~) {
+        Some(filtered) => filtered
+        None => source
+      }
+      if core_source != source {
+        read_budget.charge_work(core_source.length())
+      }
+      let canonical = canonicalize_xlsx_xml(
+        core_source,
+        max_output_chars=limits.max_xml_part_bytes,
+        cancelled~,
+      )
+      read_budget.checkpoint()
+      read_budget.charge_work(canonical.length())
+      parse_shared_strings(canonical, budget=read_budget)
+    }
     None => []
   }
+  let styles_path = workbook_related_part_path(
+    workbook_rels,
+    rel_styles,
+    workbook_xml_part_path,
+    styles_part_path,
+    part_names,
+    budget=read_budget,
+    cancelled~,
+  )
   let (
     styles,
     conditional_styles,
@@ -3124,20 +3796,63 @@ fn read_zip_archive_core_unchecked(
     indexed_colors,
     mru_colors_xml,
     styles_ext_lst_xml,
-  ) = match archive.get("xl/styles.xml") {
-    Some(value) => {
-      let styles_xml = decode(value)
-      let (styles, conditional_styles) = parse_styles(styles_xml)
-      let (default_table_style, default_pivot_style) = parse_table_styles_defaults(
-        styles_xml,
+  ) = match styles_path {
+    Some(path) => {
+      let value = load_typed_part(
+        archive,
+        content_types,
+        path,
+        [ct_styles],
+        "styles",
+        cancelled~,
       )
-      let indexed_colors = parse_indexed_colors(styles_xml)
-      let mru_colors_xml = parse_mru_colors_xml(styles_xml)
+      let styles_raw_xml = decode_source(value)
+      read_budget.charge_work(styles_raw_xml.length())
+      let styles_source_xml = project_xlsx_markup_compatibility(
+        styles_raw_xml,
+        limits.max_xml_part_bytes,
+        cancelled~,
+      )
+      if styles_source_xml != styles_raw_xml {
+        read_budget.charge_work(styles_source_xml.length())
+      }
+      let styles_xml = canonicalize_xlsx_xml(
+        styles_source_xml,
+        max_output_chars=limits.max_xml_part_bytes,
+        cancelled~,
+      )
+      read_budget.checkpoint()
+      read_budget.charge_work(styles_xml.length())
+      let styles_core_xml = match
+        xlsx_core_source_without_foreign(
+          styles_source_xml,
+          "styleSheet",
+          cancelled~,
+        ) {
+        Some(filtered) => {
+          read_budget.charge_work(filtered.length())
+          let canonical = canonicalize_xlsx_xml(
+            filtered,
+            max_output_chars=limits.max_xml_part_bytes,
+            cancelled~,
+          )
+          read_budget.checkpoint()
+          read_budget.charge_work(canonical.length())
+          canonical
+        }
+        None => styles_xml
+      }
+      let (styles, conditional_styles) = parse_styles(styles_core_xml)
+      let (default_table_style, default_pivot_style) = parse_table_styles_defaults(
+        styles_core_xml,
+      )
+      let indexed_colors = parse_indexed_colors(styles_core_xml)
+      let mru_colors_xml = parse_mru_colors_xml(styles_core_xml)
       let styles_ext_lst_xml = parse_styles_ext_lst_xml(styles_xml)
       (
         styles,
         conditional_styles,
-        parse_default_font(styles_xml),
+        parse_default_font(styles_core_xml),
         default_table_style,
         default_pivot_style,
         indexed_colors,
@@ -3157,8 +3872,27 @@ fn read_zip_archive_core_unchecked(
         None,
       )
   }
-  let theme_xml = match archive.get("xl/theme/theme1.xml") {
-    Some(value) => Some(decode(value))
+  let theme_path = workbook_related_part_path(
+    workbook_rels,
+    rel_theme,
+    workbook_xml_part_path,
+    theme_part_path,
+    part_names,
+    budget=read_budget,
+    cancelled~,
+  )
+  let theme_xml = match theme_path {
+    Some(path) => {
+      let value = load_typed_part(
+        archive,
+        content_types,
+        path,
+        [ct_theme],
+        "theme",
+        cancelled~,
+      )
+      Some(decode(value))
+    }
     None => None
   }
   let theme_colors = match theme_xml {
@@ -3177,35 +3911,82 @@ fn read_zip_archive_core_unchecked(
     Some(value) => parse_custom_properties(decode(value))
     None => []
   }
-  let workbook_props = parse_workbook_props(workbook_xml)
-  let calc_props = parse_calc_props(workbook_xml)
-  let workbook_protection = parse_workbook_protection(workbook_xml)
+  let workbook_props = parse_workbook_props(workbook_core_xml)
+  let calc_props = parse_calc_props(workbook_core_xml)
+  let workbook_protection = parse_workbook_protection(workbook_core_xml)
   let style_count = styles.length()
-  let cell_images = match archive.get("xl/cellimages.xml") {
+  let cell_images_part = actual_archive_part_path(
+    part_names, "xl/cellimages.xml",
+  )
+  let cell_images = match archive.get(cell_images_part) {
     Some(value) => {
-      let rels_xml = match archive.get("xl/_rels/cellimages.xml.rels") {
+      let cell_images_rels_path = actual_relationship_part_path(
+        cell_images_part, part_names,
+      )
+      let rels_xml = match
+        load_optional_relationship_part(
+          archive,
+          content_types,
+          cell_images_rels_path,
+          "cell image relationships",
+          cancelled~,
+        ) {
         Some(rels) => decode(rels)
         None => ""
       }
-      parse_cell_images(decode(value), rels_xml, archive)
+      parse_cell_images(
+        decode(value),
+        rels_xml,
+        cell_images_part,
+        part_names,
+        content_types,
+        archive,
+        budget=read_budget,
+        cancelled~,
+      )
     }
     None => []
   }
-  let rich_value_images = parse_rich_value_images(archive, decode)
+  let rich_value_images = parse_rich_value_images(
+    archive,
+    part_names,
+    content_types,
+    decode,
+    budget=read_budget,
+    cancelled~,
+  )
   let rich_value_media : Map[String, Bytes] = Map([])
   match rich_value_images {
     Some(data) => {
       for _, target in data.rel_targets {
-        let path = normalize_cell_image_target(target)
-        match archive.get(path) {
-          Some(bytes) => rich_value_media[path] = bytes.to_owned()
+        match archive.get(target) {
+          Some(_) => {
+            let (bytes, identity) = load_image_part(
+              archive,
+              content_types,
+              target,
+              "rich value image",
+              cancelled~,
+            )
+            rich_value_media[target] = bytes.to_owned()
+            data.media_identities[target] = identity
+          }
           None => ()
         }
       }
       for _, target in data.web_rel_targets {
-        let path = normalize_cell_image_target(target)
-        match archive.get(path) {
-          Some(bytes) => rich_value_media[path] = bytes.to_owned()
+        match archive.get(target) {
+          Some(_) => {
+            let (bytes, identity) = load_image_part(
+              archive,
+              content_types,
+              target,
+              "rich value web image",
+              cancelled~,
+            )
+            rich_value_media[target] = bytes.to_owned()
+            data.media_identities[target] = identity
+          }
           None => ()
         }
       }
@@ -3213,6 +3994,7 @@ fn read_zip_archive_core_unchecked(
     None => ()
   }
   let workbook : Workbook = {
+    worksheet_owner_token: [()],
     sheets: [],
     chart_sheets: [],
     sheet_order: [],
@@ -3244,62 +4026,162 @@ fn read_zip_archive_core_unchecked(
     rich_value_images,
     rich_value_media,
   }
-  let workbook_rels_path = rels_path_for_part(workbook_xml_part_path)
-  let workbook_rels = match archive.get(workbook_rels_path) {
-    Some(value) => decode(value)
-    None => raise MissingPart(path=workbook_rels_path)
-  }
   let slicer_cache_defs = parse_slicer_cache_definitions(
-    workbook_rels, archive, decode,
+    workbook_rels,
+    workbook_xml_part_path,
+    part_names,
+    content_types,
+    archive,
+    decode,
+    budget=read_budget,
+    cancelled~,
   )
-  let vba_targets = parse_relationship_targets(workbook_rels, rel_vba_project)
+  let vba_targets = parse_internal_relationship_targets(
+    workbook_rels,
+    rel_vba_project,
+    budget=read_budget,
+    cancelled~,
+  )
   let vba_path = match
-    first_existing_workbook_rel_target_path(vba_targets, archive) {
+    first_existing_workbook_rel_target_path(
+      vba_targets,
+      workbook_xml_part_path,
+      part_names,
+      cancelled~,
+    ) {
     Some(path) => Some(path)
     None =>
       match first_relationship_target(vba_targets) {
-        Some(target) => Some(resolve_workbook_rel_target(target))
+        Some(target) =>
+          Some(
+            actual_archive_part_path(
+              part_names,
+              resolve_part_rel_target(
+                logical_archive_part_path(workbook_xml_part_path),
+                target,
+                cancelled~,
+              ),
+            ),
+          )
         None => None
       }
   }
   match vba_path {
     Some(path) => {
-      let vba_bytes = match archive.get(path) {
-        Some(value) => value
-        None => raise MissingPart(path~)
-      }
+      let vba_bytes = load_typed_part(
+        archive,
+        content_types,
+        path,
+        [ct_vba_project],
+        "VBA project",
+        cancelled~,
+      )
       workbook.vba_project = Some(vba_bytes.to_owned())
     }
     None => ()
   }
-  let worksheet_targets = parse_relationship_targets(
-    workbook_rels, rel_worksheet,
+  let worksheet_targets = parse_internal_relationship_targets(
+    workbook_rels,
+    rel_worksheet,
+    budget=read_budget,
+    cancelled~,
   )
-  let chartsheet_targets = parse_relationship_targets(
-    workbook_rels, rel_chartsheet,
+  let chartsheet_targets = parse_internal_relationship_targets(
+    workbook_rels,
+    rel_chartsheet,
+    budget=read_budget,
+    cancelled~,
   )
+  let seen_sheet_parts : Set[String] = Set([])
+  let resolved_sheet_parts : Map[String, String] = Map([])
+  for entry in sheets {
+    let rel_id = entry.rel_id
+    let is_worksheet = worksheet_targets.contains(rel_id)
+    let is_chartsheet = chartsheet_targets.contains(rel_id)
+    if is_worksheet == is_chartsheet {
+      raise InvalidXml(msg="sheet relationship missing or ambiguous")
+    }
+    let target = if is_worksheet {
+      match worksheet_targets.get(rel_id) {
+        Some(value) => value
+        None => raise InvalidXml(msg="worksheet target missing")
+      }
+    } else {
+      match chartsheet_targets.get(rel_id) {
+        Some(value) => value
+        None => raise InvalidXml(msg="chartsheet target missing")
+      }
+    }
+    let path = actual_archive_part_path(
+      part_names,
+      resolve_part_rel_target(
+        logical_archive_part_path(workbook_xml_part_path),
+        target,
+        cancelled~,
+      ),
+    )
+    let part_key = @ooxml.package_part_name_key(path)
+    if seen_sheet_parts.contains(part_key) {
+      raise InvalidXml(msg="sheet part referenced more than once")
+    }
+    seen_sheet_parts.add(part_key)
+    resolved_sheet_parts[rel_id] = path
+  }
   for entry in sheets {
     let name = entry.name
     let state = entry.state
     let rel_id = entry.rel_id
     let is_worksheet = worksheet_targets.contains(rel_id)
-    let is_chartsheet = chartsheet_targets.contains(rel_id)
-    if !is_worksheet && !is_chartsheet {
-      raise InvalidXml(msg="sheet relationship missing")
-    }
     if is_worksheet {
-      let target = match worksheet_targets.get(rel_id) {
+      let sheet_path = match resolved_sheet_parts.get(rel_id) {
         Some(value) => value
         None => raise InvalidXml(msg="worksheet target missing")
       }
-      let sheet_path = resolve_workbook_rel_target(target)
-      let sheet_bytes = match archive.get(sheet_path) {
-        Some(value) => value
-        None => raise MissingPart(path=sheet_path)
+      let sheet_bytes = load_typed_part(
+        archive,
+        content_types,
+        sheet_path,
+        [ct_worksheet],
+        "worksheet",
+        cancelled~,
+      )
+      let sheet_raw_xml = decode_source(sheet_bytes)
+      read_budget.charge_work(sheet_raw_xml.length())
+      let sheet_source_xml = project_xlsx_markup_compatibility(
+        sheet_raw_xml,
+        limits.max_xml_part_bytes,
+        cancelled~,
+      )
+      if sheet_source_xml != sheet_raw_xml {
+        read_budget.charge_work(sheet_source_xml.length())
       }
-      let sheet_xml = decode(sheet_bytes)
+      let sheet_xml = canonicalize_xlsx_xml(
+        sheet_source_xml,
+        max_output_chars=limits.max_xml_part_bytes,
+        cancelled~,
+      )
+      read_budget.checkpoint()
+      read_budget.charge_work(sheet_xml.length())
+      let sheet_core_xml = canonicalize_xlsx_worksheet_core(
+        sheet_source_xml,
+        sheet_xml,
+        limits.max_xml_part_bytes,
+        cancelled~,
+      )
+      read_budget.checkpoint()
+      if sheet_core_xml != sheet_xml {
+        read_budget.charge_work(sheet_core_xml.length())
+      }
+      let sheet_feature_xml = canonicalize_xlsx_worksheet_features(
+        sheet_source_xml,
+        limits.max_xml_part_bytes,
+        cancelled~,
+      )
+      read_budget.checkpoint()
+      read_budget.charge_work(sheet_feature_xml.length())
       let (
         cells,
+        shared_formula_masters_index,
         merged_cells,
         auto_filter,
         row_dimensions,
@@ -3314,30 +4196,54 @@ fn read_zip_archive_core_unchecked(
         sheet_props,
         dimension_ref,
         picture_rel_id,
-      ) = parse_worksheet(sheet_xml, shared_strings, style_count)
-      let hyperlink_elements = parse_hyperlink_elements(sheet_xml)
-      let table_part_ids = parse_table_part_ids(sheet_xml)
-      let pivot_part_ids = parse_pivot_table_part_ids(sheet_xml)
-      let slicer_rel_ids = parse_sheet_slicer_rel_ids(sheet_xml)
-      let drawing_rel_id = parse_legacy_drawing_rel_id(sheet_xml, "drawing")
-      let legacy_drawing_rel_id = parse_legacy_drawing_rel_id(
-        sheet_xml, "legacyDrawing",
+      ) = parse_worksheet(
+        sheet_core_xml,
+        shared_strings,
+        style_count,
+        budget=read_budget,
       )
-      let legacy_drawing_hf_rel_id = parse_legacy_drawing_rel_id(
-        sheet_xml, "legacyDrawingHF",
+      let hyperlink_elements = parse_hyperlink_elements(sheet_core_xml)
+      let table_part_ids = parse_table_part_ids(sheet_core_xml)
+      let pivot_part_ids = parse_pivot_table_part_ids(sheet_core_xml)
+      let slicer_rel_ids = parse_sheet_slicer_rel_ids(sheet_feature_xml)
+      let (drawing_rel_id, legacy_drawing_rel_id, legacy_drawing_hf_rel_id) = parse_sheet_drawing_rel_ids(
+        sheet_source_xml,
+        "worksheet",
+        budget=read_budget,
+        cancelled~,
       )
-      let sparkline_groups = parse_sparkline_groups(sheet_xml)
-      let data_validations = parse_data_validations(sheet_xml)
-      for dv in parse_data_validations_x14(sheet_xml) {
+      let sparkline_groups = parse_sparkline_groups(sheet_feature_xml)
+      let data_validations = parse_data_validations(
+        sheet_core_xml,
+        budget=read_budget,
+      )
+      for
+        dv in parse_data_validations_x14(sheet_feature_xml, budget=read_budget) {
         data_validations.push(dv)
       }
-      let conditional_formats = parse_conditional_formats(sheet_xml)
-      for cf in parse_conditional_formats_x14(sheet_xml) {
+      let conditional_formats = parse_conditional_formats(
+        // Base data-bar rules carry their x14 correlation id in a nested
+        // extLst, so this parser needs the preserved extension view. Cell and
+        // row parsing above still uses the extension-free structural view.
+        sheet_feature_xml,
+        budget=read_budget,
+      )
+      for
+        cf in parse_conditional_formats_x14(
+          sheet_feature_xml,
+          budget=read_budget,
+        ) {
         conditional_formats.push(cf)
       }
-      let x14_data_bars = parse_x14_data_bars(sheet_xml)
+      let x14_data_bars = parse_x14_data_bars(
+        sheet_feature_xml,
+        budget=read_budget,
+      )
       let unknown_ext_blocks = parse_unknown_worksheet_ext_blocks(sheet_xml)
-      let ignored_errors = parse_ignored_errors(sheet_xml)
+      let ignored_errors = parse_ignored_errors(
+        sheet_core_xml,
+        budget=read_budget,
+      )
       let mut needs_hyperlink_rels = false
       for link in hyperlink_elements {
         if link.r_id is Some(_) {
@@ -3353,8 +4259,15 @@ fn read_zip_archive_core_unchecked(
         legacy_drawing_rel_id is Some(_) ||
         legacy_drawing_hf_rel_id is Some(_) ||
         picture_rel_id is Some(_)
-      let rels_path = rels_path_for(sheet_path, "worksheets")
-      let rels_xml = match archive.get(rels_path) {
+      let rels_path = actual_relationship_part_path(sheet_path, part_names)
+      let rels_xml = match
+        load_optional_relationship_part(
+          archive,
+          content_types,
+          rels_path,
+          "worksheet relationships",
+          cancelled~,
+        ) {
         Some(rels_bytes) => decode(rels_bytes)
         None => if needs_rels { raise MissingPart(path=rels_path) } else { "" }
       }
@@ -3364,7 +4277,12 @@ fn read_zip_archive_core_unchecked(
         if rels_xml == "" {
           raise InvalidXml(msg="slicer relationship missing")
         }
-        let rel_targets = parse_relationship_targets(rels_xml, rel_slicer)
+        let rel_targets = parse_internal_relationship_targets(
+          rels_xml,
+          rel_slicer,
+          budget=read_budget,
+          cancelled~,
+        )
         let parsed : Array[ParsedSlicerPartEntry] = []
         let seen_paths : Map[String, Bool] = Map([])
         for rel_id in slicer_rel_ids {
@@ -3372,7 +4290,19 @@ fn read_zip_archive_core_unchecked(
             Some(value) => value
             None => raise InvalidXml(msg="slicer relationship missing")
           }
-          let slicer_path = resolve_rel_target(target, "worksheets")
+          let slicer_path = actual_relationship_target_path(
+            sheet_path,
+            target,
+            part_names,
+            cancelled~,
+          )
+          require_part_content_type(
+            content_types,
+            logical_archive_part_path(slicer_path),
+            [ct_slicer],
+            "slicer",
+            cancelled~,
+          )
           if seen_paths.contains(slicer_path) {
             continue
           }
@@ -3391,33 +4321,34 @@ fn read_zip_archive_core_unchecked(
           if rels_xml == "" {
             raise InvalidXml(msg="picture relationship missing")
           }
-          let image_targets = parse_relationship_targets(rels_xml, rel_image)
+          let image_targets = parse_internal_relationship_targets(
+            rels_xml,
+            rel_image,
+            budget=read_budget,
+            cancelled~,
+          )
           let target = match image_targets.get(rel_id) {
             Some(value) => value
             None => raise InvalidXml(msg="picture target missing")
           }
-          let image_path = resolve_rel_target(target, "worksheets")
-          let image_bytes = match archive.get(image_path) {
-            Some(value) => value
-            None => raise MissingPart(path=image_path)
-          }
-          let path_text = target.to_string()
-          let extension = match path_text.rev_find(".") {
-            Some(pos) =>
-              if pos + 1 < path_text.length() {
-                let view = path_text[pos + 1:]
-                view.to_owned().to_lower()
-              } else {
-                raise InvalidSheetBackground(msg="image extension missing")
-              }
-            None => raise InvalidSheetBackground(msg="image extension missing")
-          }
-          let content_type = match image_content_type(extension) {
-            Some(value) => value
-            None =>
-              raise InvalidSheetBackground(msg="unsupported image extension")
-          }
-          Some({ data: image_bytes.to_owned(), extension, content_type })
+          let image_path = actual_relationship_target_path(
+            sheet_path,
+            target,
+            part_names,
+            cancelled~,
+          )
+          let (image_bytes, identity) = load_image_part(
+            archive,
+            content_types,
+            image_path,
+            "sheet background image",
+            cancelled~,
+          )
+          Some({
+            data: image_bytes.to_owned(),
+            extension: identity.extension,
+            content_type: identity.content_type,
+          })
         }
         None => None
       }
@@ -3425,7 +4356,12 @@ fn read_zip_archive_core_unchecked(
         []
       } else {
         let rel_targets = if needs_hyperlink_rels {
-          parse_relationship_targets(rels_xml, rel_hyperlink)
+          parse_external_relationship_targets(
+            rels_xml,
+            rel_hyperlink,
+            budget=read_budget,
+            cancelled~,
+          )
         } else {
           Map([])
         }
@@ -3466,14 +4402,31 @@ fn read_zip_archive_core_unchecked(
       let tables = if table_part_ids.length() == 0 {
         []
       } else {
-        let rel_targets = parse_relationship_targets(rels_xml, rel_table)
+        let rel_targets = parse_internal_relationship_targets(
+          rels_xml,
+          rel_table,
+          budget=read_budget,
+          cancelled~,
+        )
         let parsed_tables : Array[Table] = []
         for rel_id in table_part_ids {
           let target = match rel_targets.get(rel_id) {
             Some(value) => value
             None => raise InvalidXml(msg="table relationship missing")
           }
-          let table_path = resolve_rel_target(target, "worksheets")
+          let table_path = actual_relationship_target_path(
+            sheet_path,
+            target,
+            part_names,
+            cancelled~,
+          )
+          require_part_content_type(
+            content_types,
+            logical_archive_part_path(table_path),
+            [ct_table],
+            "table",
+            cancelled~,
+          )
           let table_bytes = match archive.get(table_path) {
             Some(value) => value
             None => raise MissingPart(path=table_path)
@@ -3487,7 +4440,12 @@ fn read_zip_archive_core_unchecked(
         let rel_targets = if rels_xml == "" {
           Map([])
         } else {
-          parse_relationship_targets(rels_xml, rel_pivot_table)
+          parse_internal_relationship_targets(
+            rels_xml,
+            rel_pivot_table,
+            budget=read_budget,
+            cancelled~,
+          )
         }
         let pivot_rel_ids : Array[String] = []
         if pivot_part_ids.length() > 0 {
@@ -3508,24 +4466,47 @@ fn read_zip_archive_core_unchecked(
               Some(value) => value
               None => raise InvalidXml(msg="pivot table relationship missing")
             }
-            let pivot_path = resolve_rel_target(target, "worksheets")
+            let pivot_path = actual_relationship_target_path(
+              sheet_path,
+              target,
+              part_names,
+              cancelled~,
+            )
+            require_part_content_type(
+              content_types,
+              logical_archive_part_path(pivot_path),
+              [ct_pivot_table],
+              "pivot table",
+              cancelled~,
+            )
             let pivot_bytes = match archive.get(pivot_path) {
               Some(value) => value
               None => raise MissingPart(path=pivot_path)
             }
             let pivot_xml = decode(pivot_bytes)
-            let pivot_rels_path = rels_path_for(pivot_path, "pivotTables")
-            let pivot_rels_bytes = match archive.get(pivot_rels_path) {
-              Some(value) => value
-              None => raise MissingPart(path=pivot_rels_path)
-            }
+            let pivot_rels_path = actual_relationship_part_path(
+              pivot_path, part_names,
+            )
+            let pivot_rels_bytes = load_relationship_part(
+              archive,
+              content_types,
+              pivot_rels_path,
+              "pivot table relationships",
+              cancelled~,
+            )
             let pivot_rels_xml = decode(pivot_rels_bytes)
-            let cache_targets = parse_relationship_targets(
-              pivot_rels_xml, rel_pivot_cache,
+            let cache_targets = parse_internal_relationship_targets(
+              pivot_rels_xml,
+              rel_pivot_cache,
+              budget=read_budget,
+              cancelled~,
             )
             let cache_path = match
               first_existing_rel_target_path(
-                cache_targets, "pivotTables", archive,
+                cache_targets,
+                pivot_path,
+                part_names,
+                cancelled~,
               ) {
               Some(path) => path
               None => {
@@ -3535,9 +4516,21 @@ fn read_zip_archive_core_unchecked(
                   None =>
                     raise InvalidXml(msg="pivot cache relationship missing")
                 }
-                resolve_rel_target(cache_target, "pivotTables")
+                actual_relationship_target_path(
+                  pivot_path,
+                  cache_target,
+                  part_names,
+                  cancelled~,
+                )
               }
             }
+            require_part_content_type(
+              content_types,
+              logical_archive_part_path(cache_path),
+              [ct_pivot_cache_def],
+              "pivot cache definition",
+              cancelled~,
+            )
             let cache_bytes = match archive.get(cache_path) {
               Some(value) => value
               None => raise MissingPart(path=cache_path)
@@ -3549,27 +4542,56 @@ fn read_zip_archive_core_unchecked(
             let pivot_id = parse_id_from_path(
               pivot_path, "xl/pivotTables/pivotTable",
             )
+            let cache_rels_path = actual_relationship_part_path(
+              cache_path, part_names,
+            )
             let cache_records_xml = match
-              archive.get(rels_path_for(cache_path, "pivotCache")) {
+              load_optional_relationship_part(
+                archive,
+                content_types,
+                cache_rels_path,
+                "pivot cache relationships",
+                cancelled~,
+              ) {
               Some(value) => {
                 let cache_rels_xml = decode(value)
-                let record_targets = parse_relationship_targets(
-                  cache_rels_xml, rel_pivot_cache_records,
+                let record_targets = parse_internal_relationship_targets(
+                  cache_rels_xml,
+                  rel_pivot_cache_records,
+                  budget=read_budget,
+                  cancelled~,
                 )
                 let record_path = match
                   first_existing_rel_target_path(
-                    record_targets, "pivotCache", archive,
+                    record_targets,
+                    cache_path,
+                    part_names,
+                    cancelled~,
                   ) {
                   Some(path) => Some(path)
                   None =>
                     match first_relationship_target(record_targets) {
                       Some(record_target) =>
-                        Some(resolve_rel_target(record_target, "pivotCache"))
+                        Some(
+                          actual_relationship_target_path(
+                            cache_path,
+                            record_target,
+                            part_names,
+                            cancelled~,
+                          ),
+                        )
                       None => None
                     }
                 }
                 match record_path {
                   Some(path) => {
+                    require_part_content_type(
+                      content_types,
+                      logical_archive_part_path(path),
+                      [ct_pivot_cache_records],
+                      "pivot cache records",
+                      cancelled~,
+                    )
                     let record_bytes = match archive.get(path) {
                       Some(value) => value
                       None => raise MissingPart(path~)
@@ -3595,7 +4617,12 @@ fn read_zip_archive_core_unchecked(
       }
       let vml_targets = if legacy_drawing_rel_id is Some(_) ||
         legacy_drawing_hf_rel_id is Some(_) {
-        parse_relationship_targets(rels_xml, rel_vml)
+        parse_internal_relationship_targets(
+          rels_xml,
+          rel_vml,
+          budget=read_budget,
+          cancelled~,
+        )
       } else {
         Map([])
       }
@@ -3605,7 +4632,19 @@ fn read_zip_archive_core_unchecked(
             Some(value) => value
             None => raise InvalidXml(msg="vml drawing relationship missing")
           }
-          let vml_path = resolve_rel_target(target, "worksheets")
+          let vml_path = actual_relationship_target_path(
+            sheet_path,
+            target,
+            part_names,
+            cancelled~,
+          )
+          require_part_content_type(
+            content_types,
+            logical_archive_part_path(vml_path),
+            [ct_vml],
+            "VML drawing",
+            cancelled~,
+          )
           let vml_bytes = match archive.get(vml_path) {
             Some(value) => value
             None => raise MissingPart(path=vml_path)
@@ -3620,7 +4659,19 @@ fn read_zip_archive_core_unchecked(
             Some(value) => value
             None => raise InvalidXml(msg="vml drawing hf relationship missing")
           }
-          let vml_path = resolve_rel_target(target, "worksheets")
+          let vml_path = actual_relationship_target_path(
+            sheet_path,
+            target,
+            part_names,
+            cancelled~,
+          )
+          require_part_content_type(
+            content_types,
+            logical_archive_part_path(vml_path),
+            [ct_vml],
+            "VML drawing",
+            cancelled~,
+          )
           let vml_bytes = match archive.get(vml_path) {
             Some(value) => value
             None => raise MissingPart(path=vml_path)
@@ -3633,27 +4684,57 @@ fn read_zip_archive_core_unchecked(
         Some((xml, path)) => (Some(xml), Some(path))
         None => (None, None)
       }
-      let header_footer_images = match vml_drawing_hf_xml {
-        Some(xml) => {
-          let vml_rels_xml = match vml_drawing_hf_path {
-            Some(path) =>
-              match archive.get(rels_path_for(path, "drawings")) {
-                Some(value) => Some(decode(value))
-                None => None
-              }
+      let header_footer_images = match
+        (vml_drawing_hf_xml, vml_drawing_hf_path) {
+        (Some(xml), Some(path)) => {
+          let vml_rels_xml = match
+            load_optional_relationship_part(
+              archive,
+              content_types,
+              actual_relationship_part_path(path, part_names),
+              "VML relationships",
+              cancelled~,
+            ) {
+            Some(value) => Some(decode(value))
             None => None
           }
-          parse_header_footer_images_from_vml(xml, vml_rels_xml, archive)
+          parse_header_footer_images_from_vml(
+            xml,
+            vml_rels_xml,
+            path,
+            part_names,
+            content_types,
+            archive,
+            budget=read_budget,
+            cancelled~,
+          )
         }
-        None => []
+        _ => []
       }
       let comments = if rels_xml == "" {
         []
       } else {
-        let comment_targets = parse_relationship_targets(rels_xml, rel_comments)
+        let comment_targets = parse_internal_relationship_targets(
+          rels_xml,
+          rel_comments,
+          budget=read_budget,
+          cancelled~,
+        )
         let parsed_comments : Array[Comment] = []
         for _rel_id, target in comment_targets {
-          let comment_path = resolve_rel_target(target, "worksheets")
+          let comment_path = actual_relationship_target_path(
+            sheet_path,
+            target,
+            part_names,
+            cancelled~,
+          )
+          require_part_content_type(
+            content_types,
+            logical_archive_part_path(comment_path),
+            [ct_comments],
+            "comments",
+            cancelled~,
+          )
           let comment_bytes = match archive.get(comment_path) {
             Some(value) => value
             None => raise MissingPart(path=comment_path)
@@ -3668,13 +4749,17 @@ fn read_zip_archive_core_unchecked(
         Some(xml) => parse_form_controls_vml(xml)
         None => []
       }
+      let cell_index = build_bounded_worksheet_cell_index(cells, read_budget)
       let sheet = {
+        workbook_owner_token: Some(workbook.worksheet_owner_token),
         name,
         sheet_views,
         dimension_ref,
         cells,
-        cell_index: Map([]),
-        cell_index_valid: false,
+        cell_index,
+        cell_index_valid: true,
+        shared_formula_masters_index,
+        shared_formula_masters_index_valid: true,
         merged_cells,
         auto_filter,
         page_margins,
@@ -3708,6 +4793,10 @@ fn read_zip_archive_core_unchecked(
         col_dimensions,
         state,
         stream_state: Idle,
+        next_drawing_order: 0,
+        preserved_drawing_anchors: [],
+        preserved_drawing_relationships: [],
+        preserved_drawing_parts: [],
         cell_vm: if rich_value_images is Some(_) {
           parse_cell_vm_map(sheet_xml)
         } else {
@@ -3720,39 +4809,108 @@ fn read_zip_archive_core_unchecked(
           if rels_xml == "" {
             raise InvalidXml(msg="drawing relationship missing")
           }
-          let drawing_targets = parse_relationship_targets(
-            rels_xml, rel_drawing,
+          let drawing_targets = parse_internal_relationship_targets(
+            rels_xml,
+            rel_drawing,
+            budget=read_budget,
+            cancelled~,
           )
           let drawing_target = match drawing_targets.get(rel_id) {
             Some(value) => value
             None => raise InvalidXml(msg="drawing target missing")
           }
-          let drawing_path = resolve_rel_target(drawing_target, "worksheets")
+          let drawing_path = actual_relationship_target_path(
+            sheet_path,
+            drawing_target,
+            part_names,
+            cancelled~,
+          )
+          require_part_content_type(
+            content_types,
+            logical_archive_part_path(drawing_path),
+            [ct_drawing],
+            "drawing",
+            cancelled~,
+          )
           let drawing_bytes = match archive.get(drawing_path) {
             Some(value) => value
             None => raise MissingPart(path=drawing_path)
           }
-          let drawing_xml = decode(drawing_bytes)
+          let drawing_source_xml = decode_source(drawing_bytes)
+          let drawing_xml = canonicalize_xlsx_drawing_xml(
+            drawing_source_xml,
+            limits.max_xml_part_bytes,
+            budget=read_budget,
+            cancelled~,
+          )
           let drawing_metrics = drawing_metrics_for_sheet(sheet)
+          let drawing_anchors = parse_drawing_anchors(
+            drawing_xml,
+            budget=read_budget,
+          )
+          sheet.next_drawing_order = drawing_anchors.length()
           if slicer_part_entries.length() > 0 {
             slicer_anchor_info = parse_drawing_slicer_anchors(
-              drawing_xml, drawing_metrics,
+              drawing_anchors,
+              drawing_metrics,
+              budget=read_budget,
             )
           }
           let drawing_rels_xml = match
-            archive.get(rels_path_for(drawing_path, "drawings")) {
+            load_optional_relationship_part(
+              archive,
+              content_types,
+              actual_relationship_part_path(drawing_path, part_names),
+              "drawing relationships",
+              cancelled~,
+            ) {
             Some(value) => decode(value)
             None => ""
           }
+          let (preserved_anchors, preserved_relationships, preserved_parts) = preserved_unsupported_drawing_state(
+            drawing_anchors,
+            drawing_rels_xml,
+            drawing_path,
+            archive,
+            part_names,
+            content_types,
+            decode,
+            budget=read_budget,
+            cancelled~,
+          )
+          sheet.preserved_drawing_anchors.append(preserved_anchors)
+          sheet.preserved_drawing_relationships.append(preserved_relationships)
+          sheet.preserved_drawing_parts.append(preserved_parts)
           let drawing_images = parse_drawing_images(
-            drawing_xml, drawing_rels_xml, drawing_metrics, archive,
+            drawing_anchors,
+            drawing_rels_xml,
+            drawing_path,
+            part_names,
+            content_types,
+            drawing_metrics,
+            archive,
+            budget=read_budget,
+            cancelled~,
           )
           sheet.images.append(drawing_images)
           let drawing_charts = parse_drawing_charts(
-            drawing_xml, drawing_rels_xml, drawing_metrics, archive, decode,
+            drawing_anchors,
+            drawing_rels_xml,
+            drawing_path,
+            part_names,
+            content_types,
+            drawing_metrics,
+            archive,
+            decode,
+            budget=read_budget,
+            cancelled~,
           )
           sheet.charts.append(drawing_charts)
-          let drawing_shapes = parse_drawing_shapes(drawing_xml)
+          let drawing_shapes = parse_drawing_shapes(
+            drawing_anchors,
+            drawing_metrics,
+            budget=read_budget,
+          )
           sheet.shapes.append(drawing_shapes)
         }
         None => ()
@@ -3820,66 +4978,155 @@ fn read_zip_archive_core_unchecked(
           display_header: entry.display_header,
           item_desc,
           format,
+          drawing_offset_x_emu: match slicer_anchor_info.get(entry.name) {
+            Some(info) => Some(info.offset_x_emu)
+            None => None
+          },
+          drawing_offset_y_emu: match slicer_anchor_info.get(entry.name) {
+            Some(info) => Some(info.offset_y_emu)
+            None => None
+          },
+          drawing_width_emu: match slicer_anchor_info.get(entry.name) {
+            Some(info) => Some(info.width_emu)
+            None => None
+          },
+          drawing_height_emu: match slicer_anchor_info.get(entry.name) {
+            Some(info) => Some(info.height_emu)
+            None => None
+          },
+          drawing_order: match slicer_anchor_info.get(entry.name) {
+            Some(info) => Some(info.order)
+            None => None
+          },
         })
       }
       workbook.sheets.push(sheet)
       workbook.sheet_order.push(Worksheet(workbook.sheets.length() - 1))
     } else {
-      let target = match chartsheet_targets.get(rel_id) {
+      let chartsheet_path = match resolved_sheet_parts.get(rel_id) {
         Some(value) => value
         None => raise InvalidXml(msg="chartsheet target missing")
       }
-      let chartsheet_path = resolve_workbook_rel_target(target)
-      let chartsheet_bytes = match archive.get(chartsheet_path) {
-        Some(value) => value
-        None => raise MissingPart(path=chartsheet_path)
+      let chartsheet_bytes = load_typed_part(
+        archive,
+        content_types,
+        chartsheet_path,
+        [ct_chartsheet],
+        "chartsheet",
+        cancelled~,
+      )
+      let chartsheet_raw_xml = decode_source(chartsheet_bytes)
+      read_budget.charge_work(chartsheet_raw_xml.length())
+      let chartsheet_source_xml = project_xlsx_markup_compatibility(
+        chartsheet_raw_xml,
+        limits.max_xml_part_bytes,
+        cancelled~,
+      )
+      if chartsheet_source_xml != chartsheet_raw_xml {
+        read_budget.charge_work(chartsheet_source_xml.length())
       }
-      let chartsheet_xml = decode(chartsheet_bytes)
-      let drawing_rel_id = parse_legacy_drawing_rel_id(
-        chartsheet_xml, "drawing",
+      let chartsheet_xml = canonicalize_xlsx_xml(
+        chartsheet_source_xml,
+        max_output_chars=limits.max_xml_part_bytes,
+        cancelled~,
+      )
+      read_budget.checkpoint()
+      read_budget.charge_work(chartsheet_xml.length())
+      let (drawing_rel_id, _, _) = parse_sheet_drawing_rel_ids(
+        chartsheet_source_xml,
+        "chartsheet",
+        budget=read_budget,
+        cancelled~,
       )
       let drawing_rel = match drawing_rel_id {
         Some(value) => value
         None => raise InvalidXml(msg="chartsheet drawing missing")
       }
-      let chartsheet_rels_path = rels_path_for(chartsheet_path, "chartsheets")
-      let chartsheet_rels_bytes = match archive.get(chartsheet_rels_path) {
-        Some(value) => value
-        None => raise MissingPart(path=chartsheet_rels_path)
-      }
+      let chartsheet_rels_path = actual_relationship_part_path(
+        chartsheet_path, part_names,
+      )
+      let chartsheet_rels_bytes = load_relationship_part(
+        archive,
+        content_types,
+        chartsheet_rels_path,
+        "chartsheet relationships",
+        cancelled~,
+      )
       let chartsheet_rels_xml = decode(chartsheet_rels_bytes)
-      let drawing_targets = parse_relationship_targets(
-        chartsheet_rels_xml, rel_drawing,
+      let drawing_targets = parse_internal_relationship_targets(
+        chartsheet_rels_xml,
+        rel_drawing,
+        budget=read_budget,
+        cancelled~,
       )
       let drawing_target = match drawing_targets.get(drawing_rel) {
         Some(value) => value
         None => raise InvalidXml(msg="drawing target missing")
       }
-      let drawing_path = resolve_rel_target(drawing_target, "chartsheets")
-      let drawing_rels_path = rels_path_for(drawing_path, "drawings")
-      let drawing_rels_bytes = match archive.get(drawing_rels_path) {
-        Some(value) => value
-        None => raise MissingPart(path=drawing_rels_path)
-      }
-      let drawing_rels_xml = decode(drawing_rels_bytes)
-      let chart_targets = parse_relationship_targets(
-        drawing_rels_xml, rel_chart,
+      let drawing_path = actual_relationship_target_path(
+        chartsheet_path,
+        drawing_target,
+        part_names,
+        cancelled~,
       )
-      let chart_path = match
-        first_existing_rel_target_path(chart_targets, "drawings", archive) {
-        Some(path) => path
-        None => {
-          let chart_target = match first_relationship_target(chart_targets) {
-            Some(value) => value
-            None => raise InvalidXml(msg="chart target missing")
-          }
-          resolve_rel_target(chart_target, "drawings")
-        }
-      }
-      let chart_bytes = match archive.get(chart_path) {
+      let drawing_bytes = load_typed_part(
+        archive,
+        content_types,
+        drawing_path,
+        [ct_drawing],
+        "drawing",
+        cancelled~,
+      )
+      let drawing_source_xml = decode_source(drawing_bytes)
+      let drawing_xml = canonicalize_xlsx_drawing_xml(
+        drawing_source_xml,
+        limits.max_xml_part_bytes,
+        budget=read_budget,
+        cancelled~,
+      )
+      let drawing_anchors = parse_drawing_anchors(
+        drawing_xml,
+        budget=read_budget,
+      )
+      let chart_rel_id = single_drawing_chart_rel_id(
+        drawing_anchors,
+        budget=read_budget,
+      )
+      let drawing_rels_path = actual_relationship_part_path(
+        drawing_path, part_names,
+      )
+      let drawing_rels_bytes = load_relationship_part(
+        archive,
+        content_types,
+        drawing_rels_path,
+        "drawing relationships",
+        cancelled~,
+      )
+      let drawing_rels_xml = decode(drawing_rels_bytes)
+      let chart_targets = parse_internal_relationship_targets(
+        drawing_rels_xml,
+        rel_chart,
+        budget=read_budget,
+        cancelled~,
+      )
+      let chart_target = match chart_targets.get(chart_rel_id) {
         Some(value) => value
-        None => raise MissingPart(path=chart_path)
+        None => raise InvalidXml(msg="chartsheet chart target missing")
       }
+      let chart_path = actual_relationship_target_path(
+        drawing_path,
+        chart_target,
+        part_names,
+        cancelled~,
+      )
+      let chart_bytes = load_typed_part(
+        archive,
+        content_types,
+        chart_path,
+        [ct_chart],
+        "chart",
+        cancelled~,
+      )
       let chart_xml = decode(chart_bytes)
       let chart_sheet = ChartSheet::new(name, chart_xml)
       chart_sheet.state = state
@@ -3888,6 +5135,7 @@ fn read_zip_archive_core_unchecked(
     }
   }
   resolve_slicer_sources_after_read(workbook, slicer_cache_defs)
+  read_budget.checkpoint()
   workbook
 }
 
@@ -3896,14 +5144,16 @@ fn read_zip_archive_core(
   archive : @zip.Archive,
   options : Options,
   limits : ReadLimits,
+  cancelled : () -> Bool,
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
-  match transcoder {
+  let workbook = match transcoder {
     Some(decode) =>
       read_zip_archive_core_unchecked(
         archive,
         options,
         limits,
+        cancelled,
         transcoder=decode,
       ) catch {
         InvalidCellRef(value~) =>
@@ -3911,12 +5161,23 @@ fn read_zip_archive_core(
         other => raise other
       }
     None =>
-      read_zip_archive_core_unchecked(archive, options, limits) catch {
+      read_zip_archive_core_unchecked(archive, options, limits, cancelled) catch {
         InvalidCellRef(value~) =>
           raise InvalidXml(msg="coordinate reference invalid: \{value}")
         other => raise other
       }
   }
+  check_read_cancelled(cancelled)
+  workbook
+}
+
+///|
+fn checked_read_workbook(
+  workbook : Workbook,
+  cancelled : () -> Bool,
+) -> Workbook raise XlsxError {
+  check_read_cancelled(cancelled)
+  workbook
 }
 
 ///|
@@ -3924,15 +5185,24 @@ fn read_zip_bytes(
   bytes : BytesView,
   options? : Options = Options::new(),
   limits? : ReadLimits = ReadLimits::new(),
+  cancelled? : () -> Bool = () => false,
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
-  let archive = read_limited_archive(bytes, limits)
-  require_bounded_archive(archive, limits)
-  match transcoder {
+  check_read_cancelled(cancelled)
+  let archive = read_limited_archive(bytes, limits, cancelled~)
+  require_bounded_archive(archive, limits, cancelled~)
+  let workbook = match transcoder {
     Some(value) =>
-      read_zip_archive_core(archive, options, limits, transcoder=value)
-    None => read_zip_archive_core(archive, options, limits)
+      read_zip_archive_core(
+        archive,
+        options,
+        limits,
+        cancelled,
+        transcoder=value,
+      )
+    None => read_zip_archive_core(archive, options, limits, cancelled)
   }
+  checked_read_workbook(workbook, cancelled)
 }
 
 ///|
@@ -3944,14 +5214,23 @@ pub fn read_bounded_archive(
   archive : @zip.Archive,
   options? : Options = Options::new(),
   limits? : ReadLimits = ReadLimits::new(),
+  cancelled? : () -> Bool = () => false,
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
-  require_bounded_archive(archive, limits)
-  match transcoder {
+  check_read_cancelled(cancelled)
+  require_bounded_archive(archive, limits, cancelled~)
+  let workbook = match transcoder {
     Some(value) =>
-      read_zip_archive_core(archive, options, limits, transcoder=value)
-    None => read_zip_archive_core(archive, options, limits)
+      read_zip_archive_core(
+        archive,
+        options,
+        limits,
+        cancelled,
+        transcoder=value,
+      )
+    None => read_zip_archive_core(archive, options, limits, cancelled)
   }
+  checked_read_workbook(workbook, cancelled)
 }
 
 ///|
@@ -3964,30 +5243,47 @@ pub fn read(
   bytes : BytesView,
   options? : Options = Options::new(),
   limits? : ReadLimits = ReadLimits::new(),
+  cancelled? : () -> Bool = () => false,
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
+  check_read_cancelled(cancelled)
   check_source_package_size(bytes, limits)
   if options.password != "" {
     match transcoder {
       Some(value) =>
-        return read_with_password(
-          bytes,
-          options.password,
-          options~,
-          limits~,
-          transcoder=value,
+        return checked_read_workbook(
+          read_with_password(
+            bytes,
+            options.password,
+            options~,
+            limits~,
+            cancelled~,
+            transcoder=value,
+          ),
+          cancelled,
         )
       None =>
-        return read_with_password(bytes, options.password, options~, limits~)
+        return checked_read_workbook(
+          read_with_password(
+            bytes,
+            options.password,
+            options~,
+            limits~,
+            cancelled~,
+          ),
+          cancelled,
+        )
     }
   }
   if is_encrypted_package(bytes) {
     raise EncryptedPackage
   }
-  match transcoder {
-    Some(value) => read_zip_bytes(bytes, options~, limits~, transcoder=value)
-    None => read_zip_bytes(bytes, options~, limits~)
+  let workbook = match transcoder {
+    Some(value) =>
+      read_zip_bytes(bytes, options~, limits~, cancelled~, transcoder=value)
+    None => read_zip_bytes(bytes, options~, limits~, cancelled~)
   }
+  checked_read_workbook(workbook, cancelled)
 }
 
 ///|
@@ -4000,22 +5296,31 @@ pub fn read_with_password(
   password : String,
   options? : Options = Options::new(),
   limits? : ReadLimits = ReadLimits::new(),
+  cancelled? : () -> Bool = () => false,
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
+  check_read_cancelled(cancelled)
   check_source_package_size(bytes, limits)
   let resolved_options = options_with_password(options, password)
-  if is_encrypted_package(bytes) {
-    let archive = decrypt_encrypted_archive(bytes, password, limits~)
-    require_bounded_archive(archive, limits)
+  let workbook = if is_encrypted_package(bytes) {
+    let archive = decrypt_encrypted_archive(
+      bytes,
+      password,
+      limits~,
+      cancelled~,
+    )
+    require_bounded_archive(archive, limits, cancelled~)
     match transcoder {
       Some(value) =>
         read_zip_archive_core(
           archive,
           resolved_options,
           limits,
+          cancelled,
           transcoder=value,
         )
-      None => read_zip_archive_core(archive, resolved_options, limits)
+      None =>
+        read_zip_archive_core(archive, resolved_options, limits, cancelled)
     }
   } else {
     match transcoder {
@@ -4024,11 +5329,14 @@ pub fn read_with_password(
           bytes,
           options=resolved_options,
           limits~,
+          cancelled~,
           transcoder=value,
         )
-      None => read_zip_bytes(bytes, options=resolved_options, limits~)
+      None =>
+        read_zip_bytes(bytes, options=resolved_options, limits~, cancelled~)
     }
   }
+  checked_read_workbook(workbook, cancelled)
 }
 
 ///|

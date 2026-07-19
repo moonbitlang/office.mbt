@@ -1,10 +1,37 @@
 ///|
+fn worksheet_sheet_data_body(xml : StringView) -> String raise XlsxError {
+  match extract_tag_body(xml, "sheetData") {
+    Some(value) => value
+    None => ""
+  }
+}
+
+///|
+/// Accounts for one lexical worksheet pass before it begins. The worksheet
+/// reader intentionally composes several focused parsers; charging every pass
+/// keeps that convenience inside the same cumulative work policy.
+fn worksheet_parse_pass(
+  source : StringView,
+  budget : ReadBudget?,
+) -> Unit raise XlsxError {
+  match budget {
+    Some(value) => {
+      value.checkpoint()
+      value.charge_work(source.length())
+    }
+    None => ()
+  }
+}
+
+///|
 fn parse_worksheet(
   xml : StringView,
   shared_strings : Array[SharedStringEntry],
   style_count : Int,
+  budget? : ReadBudget,
 ) -> (
   Array[Cell],
+  Map[UInt, SharedFormulaMaster],
   Array[String],
   AutoFilter?,
   Map[Int, RowDimension],
@@ -21,10 +48,20 @@ fn parse_worksheet(
   String?,
 ) raise XlsxError {
   let cells : Array[Cell] = []
+  worksheet_parse_pass(xml, budget)
+  let sheet_data = worksheet_sheet_data_body(xml)
+  worksheet_parse_pass(sheet_data, budget)
   let mut first = true
-  for chunk in xml.split("<c ") {
+  for chunk in sheet_data.split("<c") {
+    match budget {
+      Some(value) => value.checkpoint()
+      None => ()
+    }
     if first {
       first = false
+      continue
+    }
+    if chunk.length() == 0 || !is_xml_open_tag_boundary(chunk[0]) {
       continue
     }
     let text = chunk.to_owned()
@@ -37,7 +74,8 @@ fn parse_worksheet(
       Some(value) => unescape_xml_text(value)
       None => raise InvalidXml(msg="cell reference missing")
     }
-    let style_id = match attr_value(tag, "s") {
+    let style_attribute = attr_value(tag, "s")
+    let style_id = match style_attribute {
       Some(value) =>
         @string.parse_int(value, base=10) catch {
           _ => raise InvalidXml(msg="style id invalid")
@@ -48,23 +86,25 @@ fn parse_worksheet(
       raise InvalidStyleId(index=style_id)
     }
     let cell_type = attr_value(tag, "t")
-    let rest = text[end + 1:]
-    let formula_start = match rest.find("<f>") {
-      Some(pos) => Some(pos)
-      None =>
-        match rest.find("<f ") {
-          Some(pos) => Some(pos)
-          None =>
-            match rest.find("<f/") {
-              Some(pos) => Some(pos)
-              None => None
-            }
-        }
+    let mut tag_last = tag.length() - 1
+    while tag_last >= 0 && is_xml_attr_space_unit(tag[tag_last]) {
+      tag_last = tag_last - 1
     }
+    let self_closing = tag_last >= 0 && tag[tag_last] == '/'
+    let after_open = text[end + 1:]
+    let cell_body = if self_closing {
+      after_open[:0]
+    } else {
+      match find_xml_close_tag_from(after_open, "c", 0) {
+        Some((pos, _)) => after_open[:pos]
+        None => raise InvalidXml(msg="cell not closed")
+      }
+    }
+    let formula_start = find_xml_open_tag_start(cell_body, "f")
     let (formula, formula_type, formula_ref, formula_shared_index) = match
       formula_start {
       Some(pos) => {
-        let f_rest = rest[pos:]
+        let f_rest = cell_body[pos:]
         let open_end = match xml_open_tag_end_from(f_rest, 0) {
           Some(value) => value
           None => raise InvalidXml(msg="formula tag not closed")
@@ -97,7 +137,7 @@ fn parse_worksheet(
         let si_value = match attr_value(open_tag, "si") {
           Some(value) =>
             Some(
-              @string.parse_int(value, base=10) catch {
+              @string.parse_uint(value, base=10) catch {
                 _ => raise InvalidXml(msg="formula si invalid")
               },
             )
@@ -107,8 +147,8 @@ fn parse_worksheet(
           (Some(""), kind, ref_value, si_value)
         } else {
           let after_open = f_rest[open_end + 1:]
-          let close_end = match after_open.find("</f>") {
-            Some(value) => value
+          let close_end = match find_xml_close_tag_from(after_open, "f", 0) {
+            Some((value, _)) => value
             None => raise InvalidXml(msg="formula not closed")
           }
           let content = unescape_xml_text(after_open[:close_end])
@@ -117,20 +157,37 @@ fn parse_worksheet(
       }
       None => (None, None, None, None)
     }
-    let raw_value_opt = match rest.find("<v>") {
+    // ECMA-376 defines the expression on non-master shared formulas as
+    // ignored. Canonicalize followers immediately so downstream consumers do
+    // not accidentally evaluate producer-specific garbage from that node.
+    let formula = match (formula_type, formula_ref, formula) {
+      (Some(Shared), None, Some(_)) => Some("")
+      _ => formula
+    }
+    let raw_value_opt = match find_xml_open_tag_start(cell_body, "v") {
       Some(pos) => {
-        let v_rest = rest[pos + 3:]
-        let v_end = match v_rest.find("</v>") {
+        let v_rest = cell_body[pos:]
+        let open_end = match xml_open_tag_end_from(v_rest, 0) {
           Some(end) => end
-          None => raise InvalidXml(msg="cell value not closed")
+          None => raise InvalidXml(msg="cell value tag not closed")
         }
-        Some(v_rest[:v_end].to_owned())
+        let open_tag = v_rest[:open_end].to_owned()
+        if open_tag.trim().has_suffix("/") {
+          Some("")
+        } else {
+          let value_rest = v_rest[open_end + 1:]
+          let v_end = match find_xml_close_tag_from(value_rest, "v", 0) {
+            Some((end, _)) => end
+            None => raise InvalidXml(msg="cell value not closed")
+          }
+          Some(value_rest[:v_end].to_owned())
+        }
       }
       None => None
     }
     let raw_value = raw_value_opt.unwrap_or("")
     let inline_entry = match cell_type {
-      Some("inlineStr") => Some(parse_inline_string(rest))
+      Some("inlineStr") => Some(parse_inline_string(cell_body))
       _ => None
     }
     let force_string = raw_value_opt is None &&
@@ -193,11 +250,12 @@ fn parse_worksheet(
             value = ""
             value_type = String
           } else {
-            ignore(
-              @string.parse_double(raw_value) catch {
-                _ => raise InvalidXml(msg="cell number invalid")
-              },
-            )
+            let number = @string.parse_double(raw_value) catch {
+              _ => raise InvalidXml(msg="cell number invalid")
+            }
+            if number.is_nan() || number.is_inf() {
+              raise InvalidXml(msg="cell number must be finite")
+            }
             value = raw_value
             value_type = Number
           }
@@ -221,26 +279,48 @@ fn parse_worksheet(
       formula_type,
       formula_ref,
       formula_shared_index,
+      formula_value_present: formula is Some(_) && raw_value_opt is Some(_),
+      style_explicit: style_attribute is Some(_),
       style_id,
     })
   }
+  // Shared formulas are a worksheet-wide construct: followers carry only an
+  // index, so validate the complete group before exposing a partial model.
+  let shared_formula_masters_index = validated_shared_formula_masters(
+    cells,
+    budget?,
+  )
+  worksheet_parse_pass(xml, budget)
   let merged_cells = parse_merge_cells(xml)
+  worksheet_parse_pass(xml, budget)
   let auto_filter = parse_auto_filter(xml)
-  let row_dimensions = parse_row_dimensions(xml, style_count)
+  worksheet_parse_pass(sheet_data, budget)
+  let row_dimensions = parse_row_dimensions(sheet_data, style_count)
+  worksheet_parse_pass(xml, budget)
   let col_dimensions = parse_col_dimensions(xml, style_count)
+  worksheet_parse_pass(xml, budget)
   let page_margins = parse_page_margins(xml)
+  worksheet_parse_pass(xml, budget)
   let page_layout = parse_page_layout(xml)
+  worksheet_parse_pass(xml, budget)
   let header_footer = parse_header_footer(xml)
+  worksheet_parse_pass(xml, budget)
   let sheet_protection = parse_sheet_protection(xml)
+  worksheet_parse_pass(xml, budget)
   let row_breaks = parse_page_breaks(xml, "rowBreaks")
+  worksheet_parse_pass(xml, budget)
   let col_breaks = parse_page_breaks(xml, "colBreaks")
-  let sheet_views = parse_sheet_views(xml)
+  worksheet_parse_pass(xml, budget)
+  let sheet_views = parse_sheet_views(xml, budget?)
+  worksheet_parse_pass(xml, budget)
   let sheet_props = parse_sheet_props(xml)
+  worksheet_parse_pass(xml, budget)
   let dimension_ref = parse_sheet_dimension(xml)
+  worksheet_parse_pass(xml, budget)
   let picture_rel_id = parse_picture_rel_id(xml)
   (
-    cells, merged_cells, auto_filter, row_dimensions, col_dimensions, page_margins,
-    page_layout, header_footer, sheet_protection, row_breaks, col_breaks, sheet_views,
-    sheet_props, dimension_ref, picture_rel_id,
+    cells, shared_formula_masters_index, merged_cells, auto_filter, row_dimensions,
+    col_dimensions, page_margins, page_layout, header_footer, sheet_protection, row_breaks,
+    col_breaks, sheet_views, sheet_props, dimension_ref, picture_rel_id,
   )
 }

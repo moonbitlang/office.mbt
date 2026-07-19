@@ -106,6 +106,19 @@ fn coordinate_hardening_bounded_archive(
 }
 
 ///|
+test "read rejects non-finite numeric cell values before typed projection" {
+  let base = coordinate_hardening_base_bytes()
+  for value in ["NaN", "Infinity", "1e999999999"] {
+    let bytes = coordinate_hardening_insert_sheet_xml(
+      base,
+      "  </sheetData>",
+      "<row r=\"1\"><c r=\"A1\"><v>\{value}</v></c></row>",
+    )
+    coordinate_hardening_assert_invalid_xml("non-finite number \{value}", bytes)
+  }
+}
+
+///|
 test "read rejects every out-of-grid worksheet coordinate ingress" {
   let base = coordinate_hardening_base_bytes()
   let huge_row = "99999999999999999999999999999999999999999999999999"
@@ -414,6 +427,12 @@ test "coordinate attributes accept quoted delimiters and numeric XML spaces" {
   let validations = workbook.get_data_validations("Sheet1")
   inspect(validations.length(), content="1")
   inspect(validations[0].sqref, content="A1 B1 C1")
+  guard workbook.sheet("Sheet1") is Some(sheet) else {
+    fail("missing entity-sqref worksheet")
+  }
+  assert_false(sheet.data_validations()[0].contains("&#"))
+  workbook.duplicate_row_to("Sheet1", 1, 2)
+  ignore(@xlsx.read(@xlsx.write(workbook)))
 }
 
 ///|

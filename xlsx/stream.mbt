@@ -446,6 +446,8 @@ pub fn StreamWriter::set_row_cells(
       formula_type: None,
       formula_ref: None,
       formula_shared_index: None,
+      formula_value_present: cell.formula is Some(_) && cell.value != "",
+      style_explicit: style_id != 0,
       style_id,
     })
     col = col + 1
@@ -454,6 +456,7 @@ pub fn StreamWriter::set_row_cells(
   // index (e.g. from a read on the then-empty sheet) would go stale and
   // make indexed getters miss every streamed cell.
   self.sheet.invalidate_cell_index()
+  self.sheet.invalidate_shared_formula_masters_index()
   self.last_row = row
 }
 

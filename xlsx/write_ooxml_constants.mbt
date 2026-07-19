@@ -14,6 +14,15 @@ let rel_chart = "http://schemas.openxmlformats.org/officeDocument/2006/relations
 let rel_chartsheet = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chartsheet"
 
 ///|
+let rel_shared_strings = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings"
+
+///|
+let rel_styles = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles"
+
+///|
+let rel_theme = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme"
+
+///|
 let rel_table = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/table"
 
 ///|
@@ -42,6 +51,9 @@ let rel_hyperlink = "http://schemas.openxmlformats.org/officeDocument/2006/relat
 
 ///|
 let rel_comments = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments"
+
+///|
+let ct_relationships = "application/vnd.openxmlformats-package.relationships+xml"
 
 ///|
 let ct_drawing = "application/vnd.openxmlformats-officedocument.drawing+xml"
@@ -93,3 +105,15 @@ let ct_vml = "application/vnd.openxmlformats-officedocument.vmlDrawing"
 
 ///|
 let ct_comments = "application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml"
+
+///|
+let ct_worksheet = "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"
+
+///|
+let ct_styles = "application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"
+
+///|
+let ct_shared_strings = "application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"
+
+///|
+let ct_theme = "application/vnd.openxmlformats-officedocument.theme+xml"

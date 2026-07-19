@@ -114,6 +114,7 @@ fn write_ignored_errors_xml(
 ///|
 fn parse_ignored_errors(
   xml : StringView,
+  budget? : ReadBudget,
 ) -> Array[IgnoredError] raise XlsxError {
   let body = match extract_tag_body(xml, "ignoredErrors") {
     Some(value) => value
@@ -138,7 +139,11 @@ fn parse_ignored_errors(
     let tag = text[:end]
     let sqref = match attr_value(tag, "sqref") {
       Some(value) =>
-        normalize_sqref_for_read(unescape_xml_text(value), "ignoredError")
+        normalize_sqref_for_read(
+          unescape_xml_text(value),
+          "ignoredError",
+          budget?,
+        )
       None => raise InvalidXml(msg="ignoredError sqref missing")
     }
     let error : IgnoredError = {

@@ -77,7 +77,7 @@ test "ooxml rels: relationship tag not closed" {
   )
   let result = Ok(@xlsx.read(updated)) catch { e => Err(e) }
   match result {
-    Err(InvalidXml(msg~)) => inspect(msg, content="relationship tag not closed")
+    Err(InvalidXml(msg~)) => inspect(msg, content="XML start tag is not closed")
     _ => fail("expected InvalidXml for relationship tag not closed")
   }
 }
@@ -156,7 +156,7 @@ test "ooxml rels: expanded Relationship tags still read" {
 }
 
 ///|
-test "ooxml rels: workbook targets with ../ prefix" {
+test "ooxml rels: workbook targets resolve parent segments from their source" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let bytes = @xlsx.write(workbook)
@@ -176,12 +176,12 @@ test "ooxml rels: workbook targets with ../ prefix" {
     "xl/_rels/workbook.xml.rels",
     @encoding/utf8.encode(patched),
   )
-  let parsed = @xlsx.read(updated)
-  debug_inspect(parsed.get_sheet_list(), content="[\"Sheet1\"]")
+  let result = Ok(@xlsx.read(updated)) catch { error => Err(error) }
+  assert_true(result is Err(MissingPart(_)))
 }
 
 ///|
-test "ooxml rels: workbook targets with xl/ prefix" {
+test "ooxml rels: workbook targets treat xl prefix as source relative" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let bytes = @xlsx.write(workbook)
@@ -201,12 +201,26 @@ test "ooxml rels: workbook targets with xl/ prefix" {
     "xl/_rels/workbook.xml.rels",
     @encoding/utf8.encode(patched),
   )
-  let parsed = @xlsx.read(updated)
-  debug_inspect(parsed.get_sheet_list(), content="[\"Sheet1\"]")
+  let result = Ok(@xlsx.read(updated)) catch { error => Err(error) }
+  assert_true(result is Err(MissingPart(_)))
 }
 
 ///|
-test "ooxml rels: workbook part path discovered from [Content_Types]" {
+test "ooxml rels: reader rejects case-equivalent part collisions" {
+  let archive = @zip.read(@xlsx.write(@xlsx.Workbook::new()))
+  guard archive.get("xl/workbook.xml") is Some(workbook_xml) else {
+    fail("missing workbook part")
+  }
+  archive.add("xl/Workbook.xml", workbook_xml)
+  let bytes = @zip.write(archive)
+  let result : Result[@xlsx.Workbook, @xlsx.XlsxError] = Ok(@xlsx.read(bytes)) catch {
+    error => Err(error)
+  }
+  assert_true(result is Err(InvalidPackage(_)))
+}
+
+///|
+test "ooxml rels: relocated workbook path requires root relationship and content type" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let bytes = @xlsx.write(workbook)
@@ -221,6 +235,13 @@ test "ooxml rels: workbook part path discovered from [Content_Types]" {
     Some(value) => value
     None => fail("missing workbook.xml.rels")
   }
+  let root_rels_xml = match archive.get("_rels/.rels") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("root relationships utf8 decode failed")
+      }
+    None => fail("missing _rels/.rels")
+  }
   let content_types_xml = match archive.get("[Content_Types].xml") {
     Some(value) =>
       @encoding/utf8.decode(value) catch {
@@ -232,10 +253,15 @@ test "ooxml rels: workbook part path discovered from [Content_Types]" {
     old="PartName=\"/xl/workbook.xml\"",
     new="PartName=\"/xl/workbook2.xml\"",
   )
+  let patched_root_rels = root_rels_xml.replace_all(
+    old="Target=\"xl/workbook.xml\"",
+    new="Target=\"xl/workbook2.xml\"",
+  )
   let updated = @zip.Archive::new()
   for entry in archive.entries() {
     if entry.name() == "xl/workbook.xml" ||
       entry.name() == "xl/_rels/workbook.xml.rels" ||
+      entry.name() == "_rels/.rels" ||
       entry.name() == "[Content_Types].xml" {
       continue
     }
@@ -248,6 +274,7 @@ test "ooxml rels: workbook part path discovered from [Content_Types]" {
   }
   updated.add("xl/workbook2.xml", workbook_xml)
   updated.add("xl/_rels/workbook2.xml.rels", workbook_rels)
+  updated.add("_rels/.rels", @encoding/utf8.encode(patched_root_rels))
   updated.add(
     "[Content_Types].xml",
     @encoding/utf8.encode(patched_content_types),
@@ -257,6 +284,37 @@ test "ooxml rels: workbook part path discovered from [Content_Types]" {
   }
   let parsed = @xlsx.read(updated_bytes)
   debug_inspect(parsed.get_sheet_list(), content="[\"Sheet1\"]")
+}
+
+///|
+test "ooxml rels: worksheet relationship target requires worksheet content type" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let archive = @zip.read(@xlsx.write(workbook)) catch {
+    err => fail("zip read failed: \{repr(err)}")
+  }
+  let content_types = decode_zip_entry_utf8(archive, "[Content_Types].xml")
+  let worksheet_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"
+  let patched_content_types = content_types.replace(
+    old=worksheet_type,
+    new="application/xml",
+  )
+  if patched_content_types == content_types {
+    fail("worksheet content type marker missing")
+  }
+  let updated = rewrite_zip_entry(
+    archive,
+    "[Content_Types].xml",
+    @encoding/utf8.encode(patched_content_types),
+  ) catch {
+    err => fail("zip rewrite failed: \{repr(err)}")
+  }
+  let result = Ok(@xlsx.read(updated)) catch { error => Err(error) }
+  match result {
+    Err(InvalidXml(msg~)) =>
+      inspect(msg, content="worksheet content type is invalid")
+    _ => fail("expected InvalidXml for worksheet content type mismatch")
+  }
 }
 
 ///|
@@ -302,7 +360,7 @@ test "ooxml rels: pivot cache rels tolerate stale first entries and mixed target
     "pivotCacheGhostRecords.xml",
   ).replace_all(
     old="Target=\"pivotCacheRecords1.xml\"",
-    new="Target=\"xl/pivotCache/pivotCacheRecords1.xml\"",
+    new="Target=\"/xl/pivotCache/pivotCacheRecords1.xml\"",
   )
   let updated = rewrite_zip_entry(
     archive_after_pivot_rels,
@@ -323,15 +381,21 @@ test "ooxml rels: pivot cache rels tolerate stale first entries and mixed target
 }
 
 ///|
-test "ooxml rels: chartsheet chart rels tolerate stale first entries and mixed targets" {
+test "ooxml rels: chartsheet binds the chart selected by drawing r:id" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let chart_xml =
     #|<?xml version="1.0" encoding="UTF-8"?>
     #|<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-    #|  <c:chart/>
+    #|  <c:chart><c:title><c:tx><c:v>GOOD</c:v></c:tx></c:title></c:chart>
     #|</c:chartSpace>
   ignore(workbook.add_chart_sheet("Chart1", chart_xml))
+  let decoy_chart_xml =
+    #|<?xml version="1.0" encoding="UTF-8"?>
+    #|<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+    #|  <c:chart><c:title><c:tx><c:v>BAD</c:v></c:tx></c:title></c:chart>
+    #|</c:chartSpace>
+  ignore(workbook.add_chart_sheet("Chart2", decoy_chart_xml))
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
@@ -340,7 +404,7 @@ test "ooxml rels: chartsheet chart rels tolerate stale first entries and mixed t
   let drawing_rels_xml = decode_zip_entry_utf8(archive, drawing_rels_path)
   let patched_drawing_rels = prepend_relationship(
     drawing_rels_xml, "rId0", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart",
-    "../charts/ghostChart.xml",
+    "../charts/chart2.xml",
   ).replace_all(
     old="Target=\"../charts/chart1.xml\"",
     new="Target=\"/xl/charts/chart1.xml\"",
@@ -353,8 +417,90 @@ test "ooxml rels: chartsheet chart rels tolerate stale first entries and mixed t
     err => fail("zip rewrite failed: \{err}")
   }
   let parsed = @xlsx.read(updated)
-  inspect(parsed.chart_sheets().length(), content="1")
+  inspect(parsed.chart_sheets().length(), content="2")
   let parsed_chart = parsed.chart_sheets()[0]
   inspect(parsed_chart.name(), content="Chart1")
   inspect(parsed_chart.chart_xml().contains("<c:chartSpace"), content="true")
+  assert_true(parsed_chart.chart_xml().contains("GOOD"))
+  assert_false(parsed_chart.chart_xml().contains("BAD"))
+}
+
+///|
+test "ooxml rels: chartsheet accepts absoluteAnchor drawings" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  ignore(
+    workbook.add_chart_sheet(
+      "Chart1",
+      (
+        #|<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart><c:title><c:tx><c:v>ABSOLUTE</c:v></c:tx></c:title></c:chart></c:chartSpace>
+      ),
+    ),
+  )
+  let archive = @zip.read(@xlsx.write(workbook)) catch {
+    err => fail("zip read failed: \{repr(err)}")
+  }
+  let drawing_path = "xl/drawings/drawing2.xml"
+  guard archive.get(drawing_path) is Some(_) else {
+    fail("missing chart-sheet drawing fixture")
+  }
+  let absolute_drawing =
+    #|<?xml version="1.0" encoding="UTF-8"?>
+    #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+    #|  <xdr:absoluteAnchor>
+    #|    <xdr:pos x="0" y="0"/>
+    #|    <xdr:ext cx="4572000" cy="2476500"/>
+    #|    <xdr:graphicFrame>
+    #|      <xdr:nvGraphicFramePr><xdr:cNvPr id="1" name="Chart 1"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr>
+    #|      <xdr:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="2476500"/></xdr:xfrm>
+    #|      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
+    #|    </xdr:graphicFrame>
+    #|    <xdr:clientData/>
+    #|  </xdr:absoluteAnchor>
+    #|</xdr:wsDr>
+  assert_true(
+    archive.replace(drawing_path, @encoding/utf8.encode(absolute_drawing)),
+  )
+  let parsed = @xlsx.read(@zip.write(archive))
+  inspect(parsed.chart_sheets().length(), content="1")
+  assert_true(parsed.chart_sheets()[0].chart_xml().contains("ABSOLUTE"))
+}
+
+///|
+test "ooxml rels: chartsheet requires its selected drawing part" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  ignore(
+    workbook.add_chart_sheet(
+      "Chart1",
+      (
+        #|<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart/></c:chartSpace>
+      ),
+    ),
+  )
+  let archive = @zip.read(@xlsx.write(workbook)) catch {
+    err => fail("zip read failed: \{repr(err)}")
+  }
+  let drawing_path = "xl/drawings/drawing2.xml"
+  guard archive.get(drawing_path) is Some(_) else {
+    fail("missing chart-sheet drawing fixture")
+  }
+  let without_drawing = @zip.Archive::new()
+  for entry in archive.entries() {
+    if entry.name() != drawing_path {
+      without_drawing.add(
+        entry.name(),
+        entry.data(),
+        compression=entry.compression(),
+        data_descriptor=entry.data_descriptor(),
+      )
+    }
+  }
+  let result = Ok(@xlsx.read(@zip.write(without_drawing))) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.MissingPart(path~)) => assert_eq(path, drawing_path)
+    _ => fail("expected missing chart-sheet drawing part")
+  }
 }

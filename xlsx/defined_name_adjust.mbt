@@ -342,7 +342,9 @@ fn adjust_defined_name_refers_to_for_sheet(
   refers_to : StringView,
   sheet_name : StringView,
   adjust_fn : (StringView) -> String? raise XlsxError,
+  cancelled? : () -> Bool = () => false,
 ) -> String raise XlsxError {
+  check_read_cancelled(cancelled)
   let raw_chars = refers_to.to_array()
   let plain_prefix = "\{sheet_name.to_owned()}!"
   let quoted_prefix = "'\{escape_sheet_name(sheet_name)}'!"
@@ -354,12 +356,15 @@ fn adjust_defined_name_refers_to_for_sheet(
     text : Array[Char],
     prefix : Array[Char],
     start : Int,
-  ) -> Int? {
+  ) -> Int? raise XlsxError {
     if prefix.length() == 0 {
       return None
     }
     let mut pos = start
     while pos + prefix.length() <= text.length() {
+      if (pos & 4095) == 0 {
+        check_read_cancelled(cancelled)
+      }
       let mut matched = true
       for i in 0..<prefix.length() {
         if text[pos + i] != prefix[i] {
@@ -391,6 +396,9 @@ fn adjust_defined_name_refers_to_for_sheet(
     match next {
       Some((pos, prefix, prefix_len)) => {
         for i in idx..<pos {
+          if (i & 4095) == 0 {
+            check_read_cancelled(cancelled)
+          }
           sb.write_char(raw_chars[i])
         }
         sb.write_view(prefix)
@@ -401,6 +409,9 @@ fn adjust_defined_name_refers_to_for_sheet(
         }
         let ref_sb = StringBuilder::new()
         for i in start..<end {
+          if (i & 4095) == 0 {
+            check_read_cancelled(cancelled)
+          }
           ref_sb.write_char(raw_chars[i])
         }
         let ref_part = ref_sb.to_string()
@@ -413,11 +424,15 @@ fn adjust_defined_name_refers_to_for_sheet(
       }
       None => {
         for i in idx..<raw_chars.length() {
+          if (i & 4095) == 0 {
+            check_read_cancelled(cancelled)
+          }
           sb.write_char(raw_chars[i])
         }
         break
       }
     }
   }
+  check_read_cancelled(cancelled)
   sb.to_string()
 }

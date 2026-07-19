@@ -12,9 +12,11 @@ moon run office/cmd/office -- query report.docx --kind paragraph --text revenue 
 
 Run `office help docx` for the installed command catalog and
 `office help <command> --json` for the declared inputs, outputs, and bounds.
-These commands accept DOCX packages only. Passing an XLSX package fails with
-`office.unsupported_operation`; XLSX selector resolution remains a later
-milestone.
+The file's validated package format selects the result contract. This document
+covers the DOCX branch; passing an XLSX package invokes the corresponding XLSX
+read contract in [office-xlsx-read.md](office-xlsx-read.md). Passing an
+`/xlsx/...` selector to a DOCX package fails with
+`office.docx.selector_format_mismatch`.
 
 ## Output envelope
 

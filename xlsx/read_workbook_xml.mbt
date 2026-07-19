@@ -1,47 +1,233 @@
 ///|
 priv struct WorkbookSheetInfo {
   name : String
+  sheet_id : UInt
   state : SheetState
   rel_id : String
 }
 
 ///|
+let transitional_spreadsheet_namespace = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+
+///|
+let strict_spreadsheet_namespace = "http://purl.oclc.org/ooxml/spreadsheetml/main"
+
+///|
+let transitional_relationship_attribute_namespace = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+
+///|
+let strict_relationship_attribute_namespace = "http://purl.oclc.org/ooxml/officeDocument/relationships"
+
+///|
+fn workbook_scanner_next(
+  scanner : @ooxml.XmlStartTagScanner,
+) -> Bool raise XlsxError {
+  scanner.next() catch {
+    InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+}
+
+///|
+fn workbook_scanner_attribute(
+  scanner : @ooxml.XmlStartTagScanner,
+  namespace_uri : StringView,
+  local_name : StringView,
+) -> String? raise XlsxError {
+  scanner.attribute(namespace_uri, local_name) catch {
+    InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+}
+
+///|
 fn parse_workbook_sheets(
   xml : StringView,
+  max_sheets : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> Array[WorkbookSheetInfo] raise XlsxError {
   let sheets : Array[WorkbookSheetInfo] = []
-  let mut first = true
-  for chunk in xml.split("<sheet ") {
-    if first {
-      first = false
+  let sheet_names : Map[String, Bool] = Map([])
+  let sheet_ids : Map[UInt, Bool] = Map([])
+  let scanner = @ooxml.XmlStartTagScanner::new(xml, cancelled~)
+  let mut workbook_namespace : String? = None
+  while workbook_scanner_next(scanner) {
+    let namespace_uri = scanner.namespace_uri()
+    if scanner.depth() == 1 {
+      if scanner.local_name() != "workbook" ||
+        (
+          namespace_uri != transitional_spreadsheet_namespace &&
+          namespace_uri != strict_spreadsheet_namespace
+        ) {
+        raise InvalidXml(msg="workbook document element is invalid")
+      }
+      workbook_namespace = Some(namespace_uri.to_owned())
       continue
     }
-    let text = chunk.to_owned()
-    let end = match text.find(">") {
-      Some(pos) => pos
-      None => raise InvalidXml(msg="sheet tag not closed")
+    if (
+        namespace_uri != transitional_spreadsheet_namespace &&
+        namespace_uri != strict_spreadsheet_namespace
+      ) ||
+      scanner.local_name() != "sheet" {
+      continue
     }
-    let tag = text[:end]
-    let name = match attr_value(tag, "name") {
-      Some(value) => unescape_xml_text(value)
+    let correct_parent = scanner.parent_local_name() is Some("sheets") &&
+      scanner.parent_namespace_uri() == workbook_namespace
+    if scanner.depth() != 3 ||
+      namespace_uri.to_owned() != workbook_namespace.unwrap_or("") ||
+      !correct_parent {
+      // SpreadsheetML elements outside the schema-defined sheet collection
+      // are extension payload, not logical workbook tabs.
+      continue
+    }
+    if sheets.length() >= max_sheets {
+      raise ResourceLimitExceeded(
+        kind="workbook_sheets",
+        limit=max_sheets,
+        actual=max_sheets + 1,
+      )
+    }
+    let name = match workbook_scanner_attribute(scanner, "", "name") {
+      Some(value) => value
       None => raise InvalidXml(msg="sheet name missing")
     }
-    let rel_id = match attr_value(tag, "r:id") {
+    check_sheet_name(name) catch {
+      InvalidSheetName(msg~) => raise InvalidXml(msg~)
+      error => raise error
+    }
+    let normalized_name = normalize_sheet_name(name)
+    if sheet_names.contains(normalized_name) {
+      raise InvalidXml(msg="duplicate sheet name")
+    }
+    sheet_names[normalized_name] = true
+    let sheet_id = match workbook_scanner_attribute(scanner, "", "sheetId") {
+      Some(value) =>
+        @string.parse_uint(value, base=10) catch {
+          _ => raise InvalidXml(msg="sheetId invalid")
+        }
+      None => raise InvalidXml(msg="sheetId missing")
+    }
+    if sheet_ids.contains(sheet_id) {
+      raise InvalidXml(msg="duplicate sheetId")
+    }
+    sheet_ids[sheet_id] = true
+    let relationship_namespace = if namespace_uri ==
+      strict_spreadsheet_namespace {
+      strict_relationship_attribute_namespace
+    } else {
+      transitional_relationship_attribute_namespace
+    }
+    let rel_id = match
+      workbook_scanner_attribute(scanner, relationship_namespace, "id") {
       Some(value) => value
       None => raise InvalidXml(msg="sheet relationship missing")
     }
-    let state = match attr_value(tag, "state") {
+    let state = match workbook_scanner_attribute(scanner, "", "state") {
       Some(value) =>
-        match value.to_lower() {
+        match value {
+          "visible" => Visible
           "hidden" => Hidden
-          "veryhidden" => VeryHidden
-          _ => Visible
+          "veryHidden" => VeryHidden
+          _ => raise InvalidXml(msg="sheet state invalid")
         }
       None => Visible
     }
-    sheets.push({ name, state, rel_id })
+    sheets.push({ name, sheet_id, state, rel_id })
   }
   sheets
+}
+
+///|
+test "read workbook sheets rejects invalid and case-duplicate names" {
+  let prefix = "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets>"
+  let suffix = "</sheets></workbook>"
+  let invalid = prefix +
+    "<sheet name=\"Bad:Name\" sheetId=\"1\" r:id=\"rId1\"/>" +
+    suffix
+  try parse_workbook_sheets(invalid, 10) catch {
+    InvalidXml(msg~) =>
+      inspect(msg, content="sheet name contains invalid characters")
+    _ => fail("unexpected invalid sheet-name error")
+  } noraise {
+    _ => fail("expected invalid sheet-name rejection")
+  }
+
+  let duplicate = prefix +
+    "<sheet name=\"Data\" sheetId=\"1\" r:id=\"rId1\"/>" +
+    "<sheet name=\"data\" sheetId=\"2\" r:id=\"rId2\"/>" +
+    suffix
+  try parse_workbook_sheets(duplicate, 10) catch {
+    InvalidXml(msg~) => inspect(msg, content="duplicate sheet name")
+    _ => fail("unexpected duplicate sheet-name error")
+  } noraise {
+    _ => fail("expected duplicate sheet-name rejection")
+  }
+}
+
+///|
+test "read workbook sheets requires unique unsigned sheet ids" {
+  let prefix = "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets>"
+  let suffix = "</sheets></workbook>"
+  let invalid : Array[(String, String)] = [
+    ("<sheet name=\"Missing\" r:id=\"rId1\"/>", "sheetId missing"),
+    ("<sheet name=\"Text\" sheetId=\"one\" r:id=\"rId1\"/>", "sheetId invalid"),
+    (
+      "<sheet name=\"Overflow\" sheetId=\"4294967296\" r:id=\"rId1\"/>", "sheetId invalid",
+    ),
+    (
+      "<sheet name=\"First\" sheetId=\"7\" r:id=\"rId1\"/><sheet name=\"Second\" sheetId=\"7\" r:id=\"rId2\"/>",
+      "duplicate sheetId",
+    ),
+  ]
+  for entry in invalid {
+    let (body, expected) = entry
+    try parse_workbook_sheets(prefix + body + suffix, 10) catch {
+      InvalidXml(msg~) => assert_eq(msg, expected)
+      _ => fail("unexpected sheetId error")
+    } noraise {
+      _ => fail("expected invalid sheetId rejection")
+    }
+  }
+
+  let maximum = parse_workbook_sheets(
+    prefix +
+    "<sheet name=\"Maximum\" sheetId=\"4294967295\" r:id=\"rId1\"/>" +
+    suffix,
+    10,
+  )
+  assert_eq(maximum.length(), 1)
+  assert_eq(maximum[0].sheet_id, 4294967295U)
+}
+
+///|
+test "read workbook sheets accepts only exact visibility states" {
+  let prefix = "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets>"
+  let suffix = "</sheets></workbook>"
+  let valid = parse_workbook_sheets(
+    prefix +
+    "<sheet name=\"Default\" sheetId=\"1\" r:id=\"rId1\"/>" +
+    "<sheet name=\"Visible\" sheetId=\"2\" state=\"visible\" r:id=\"rId2\"/>" +
+    "<sheet name=\"Hidden\" sheetId=\"3\" state=\"hidden\" r:id=\"rId3\"/>" +
+    "<sheet name=\"VeryHidden\" sheetId=\"4\" state=\"veryHidden\" r:id=\"rId4\"/>" +
+    suffix,
+    10,
+  )
+  assert_true(valid[0].state is Visible)
+  assert_true(valid[1].state is Visible)
+  assert_true(valid[2].state is Hidden)
+  assert_true(valid[3].state is VeryHidden)
+
+  for state in ["Visible", "Hidden", "veryhidden", "unknown", ""] {
+    let xml = prefix +
+      "<sheet name=\"Invalid\" sheetId=\"1\" state=\"\{state}\" r:id=\"rId1\"/>" +
+      suffix
+    try parse_workbook_sheets(xml, 10) catch {
+      InvalidXml(msg~) => assert_eq(msg, "sheet state invalid")
+      _ => fail("unexpected sheet-state error")
+    } noraise {
+      _ => fail("expected invalid sheet-state rejection")
+    }
+  }
 }
 
 ///|

@@ -1,0 +1,351 @@
+///|
+/// Cumulative semantic budget for one workbook read. Every decoded XML source
+/// is charged before downstream parsers inspect it. Opening elements account
+/// for XML-backed items; range-like constructs that expand into additional
+/// in-memory entries charge those entries separately.
+priv struct ReadBudget {
+  limits : ReadLimits
+  cancelled : () -> Bool
+  mut parser_items : Int
+  mut parser_work_units : Int
+}
+
+///|
+fn ReadBudget::new(
+  limits : ReadLimits,
+  cancelled? : () -> Bool = () => false,
+) -> ReadBudget {
+  { limits, cancelled, parser_items: 0, parser_work_units: 0 }
+}
+
+///|
+fn read_budget_actual(current : Int, amount : Int, limit : Int) -> (Int, Bool) {
+  if amount > limit - current {
+    // `ReadLimits` accepts every positive Int. Keep the reported value
+    // representable when the ceiling is Int::max while carrying overflow as a
+    // separate bit; wrapping `limit + 1` would otherwise turn the rejection
+    // into a negative, apparently in-budget value.
+    (if limit < 0x7fffffff { limit + 1 } else { limit }, true)
+  } else {
+    (current + amount, false)
+  }
+}
+
+///|
+fn ReadBudget::charge_items(
+  self : ReadBudget,
+  amount : Int,
+) -> Unit raise XlsxError {
+  if amount <= 0 {
+    return
+  }
+  let (actual, exceeded) = read_budget_actual(
+    self.parser_items,
+    amount,
+    self.limits.max_parser_items,
+  )
+  if exceeded {
+    raise ResourceLimitExceeded(
+      kind="parser_items",
+      limit=self.limits.max_parser_items,
+      actual~,
+    )
+  }
+  self.parser_items = actual
+}
+
+///|
+fn ReadBudget::charge_work(
+  self : ReadBudget,
+  amount : Int,
+) -> Unit raise XlsxError {
+  if amount <= 0 {
+    return
+  }
+  let (actual, exceeded) = read_budget_actual(
+    self.parser_work_units,
+    amount,
+    self.limits.max_parser_work_units,
+  )
+  if exceeded {
+    raise ResourceLimitExceeded(
+      kind="parser_work_units",
+      limit=self.limits.max_parser_work_units,
+      actual~,
+    )
+  }
+  self.parser_work_units = actual
+}
+
+///|
+fn ReadBudget::checkpoint(self : ReadBudget) -> Unit raise XlsxError {
+  if (self.cancelled)() {
+    raise ReadCancelled
+  }
+}
+
+///|
+fn ReadBudget::tag_end(
+  self : ReadBudget,
+  xml : StringView,
+  start : Int,
+) -> Int? raise XlsxError {
+  let mut index = start
+  let mut next_checkpoint = start
+  let mut quote : UInt16? = None
+  while index < xml.length() {
+    if index >= next_checkpoint {
+      self.checkpoint()
+      next_checkpoint = index + 4096
+    }
+    let unit = xml[index]
+    match quote {
+      Some(delimiter) => if unit == delimiter { quote = None }
+      None =>
+        if unit == ('"' : UInt16) || unit == ('\'' : UInt16) {
+          quote = Some(unit)
+        } else if unit == ('>' : UInt16) {
+          return Some(index)
+        }
+    }
+    index = index + 1
+  }
+  None
+}
+
+///|
+fn xml_sequence_at(
+  xml : StringView,
+  start : Int,
+  sequence : StringView,
+) -> Bool {
+  if start < 0 || start > xml.length() - sequence.length() {
+    return false
+  }
+  for offset in 0..<sequence.length() {
+    if xml[start + offset] != sequence[offset] {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn ReadBudget::sequence_end(
+  self : ReadBudget,
+  xml : StringView,
+  start : Int,
+  sequence : StringView,
+) -> Int? raise XlsxError {
+  let mut index = start
+  let mut next_checkpoint = start
+  while index <= xml.length() - sequence.length() {
+    if index >= next_checkpoint {
+      self.checkpoint()
+      next_checkpoint = index + 4096
+    }
+    if xml_sequence_at(xml, index, sequence) {
+      return Some(index + sequence.length())
+    }
+    index = index + 1
+  }
+  None
+}
+
+///|
+fn xml_name_local_start(xml : StringView, start : Int, end : Int) -> Int {
+  let mut local_start = start
+  for index in start..<end {
+    if xml[index] == (':' : UInt16) {
+      local_start = index + 1
+    }
+  }
+  local_start
+}
+
+///|
+fn xml_name_local_is(
+  xml : StringView,
+  start : Int,
+  end : Int,
+  expected : StringView,
+) -> Bool {
+  let local_start = xml_name_local_start(xml, start, end)
+  if end - local_start != expected.length() {
+    return false
+  }
+  for index in 0..<expected.length() {
+    if xml[local_start + index] != expected[index] {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn ReadBudget::charge_col_expansion(
+  self : ReadBudget,
+  tag : StringView,
+) -> Unit raise XlsxError {
+  guard attr_value(tag, "min") is Some(min_text) &&
+    attr_value(tag, "max") is Some(max_text) else {
+    return
+  }
+  let min_col = @string.parse_int(min_text, base=10) catch { _ => return }
+  let max_col = @string.parse_int(max_text, base=10) catch { _ => return }
+  if min_col <= 0 ||
+    max_col < min_col ||
+    min_col > cell_ref_max_cols ||
+    max_col > cell_ref_max_cols {
+    return
+  }
+  let span = max_col - min_col + 1
+  self.charge_items(span)
+  self.charge_work(span)
+}
+
+///|
+/// Preflights one decoded XML source in a single quote-aware pass. This runs
+/// before any feature parser materializes arrays or maps from the source.
+fn ReadBudget::scan_xml(
+  self : ReadBudget,
+  xml : StringView,
+) -> Unit raise XlsxError {
+  self.checkpoint()
+  self.charge_work(xml.length())
+  let mut index = 0
+  let mut next_checkpoint = 0
+  while index < xml.length() {
+    if index >= next_checkpoint {
+      self.checkpoint()
+      next_checkpoint = index + 4096
+    }
+    if xml[index] != ('<' : UInt16) || index + 1 >= xml.length() {
+      index = index + 1
+      continue
+    }
+    let first = xml[index + 1]
+    if first == ('/' : UInt16) {
+      index = index + 2
+      continue
+    }
+    if first == ('?' : UInt16) {
+      index = match self.sequence_end(xml, index + 2, "?>") {
+        Some(value) => value
+        None => xml.length()
+      }
+      continue
+    }
+    if first == ('!' : UInt16) {
+      index = if xml_sequence_at(xml, index, "<!--") {
+        match self.sequence_end(xml, index + 4, "-->") {
+          Some(value) => value
+          None => xml.length()
+        }
+      } else if xml_sequence_at(xml, index, "<![CDATA[") {
+        match self.sequence_end(xml, index + 9, "]]>") {
+          Some(value) => value
+          None => xml.length()
+        }
+      } else {
+        match self.tag_end(xml, index + 2) {
+          Some(value) => value + 1
+          None => xml.length()
+        }
+      }
+      continue
+    }
+    let name_start = index + 1
+    let mut name_end = name_start
+    while name_end < xml.length() &&
+          !is_xml_attr_space_unit(xml[name_end]) &&
+          xml[name_end] != ('/' : UInt16) &&
+          xml[name_end] != ('>' : UInt16) {
+      name_end = name_end + 1
+    }
+    if name_end == name_start {
+      index = index + 1
+      continue
+    }
+    self.charge_items(1)
+    let tag_end = match self.tag_end(xml, name_end) {
+      Some(value) => value
+      None => return
+    }
+    if xml_name_local_is(xml, name_start, name_end, "col") {
+      self.charge_col_expansion(xml[name_end:tag_end])
+    }
+    index = tag_end + 1
+  }
+}
+
+///|
+test "read budget counts source, elements, and derived column expansion" {
+  let limits = ReadLimits::with_values(
+    max_parser_items=5,
+    max_parser_work_units=1024,
+  )
+  let budget = ReadBudget::new(limits)
+  budget.scan_xml("<worksheet><cols><col min='1' max='2'/></cols></worksheet>")
+  assert_eq(budget.parser_items, 5)
+}
+
+///|
+test "read budget checks cancellation inside a long start tag" {
+  let checks = [0]
+  let budget = ReadBudget::new(ReadLimits::new(), cancelled=() => {
+    checks[0] += 1
+    checks[0] >= 3
+  })
+  let xml = "<item value='" + "x".repeat(12 * 1024) + "'/>"
+  try budget.scan_xml(xml) catch {
+    ReadCancelled => assert_true(checks[0] >= 3)
+    _ => fail("expected read cancellation")
+  } noraise {
+    _ => fail("expected read cancellation")
+  }
+}
+
+///|
+test "read budget ignores element-like text in comments and CDATA" {
+  let budget = ReadBudget::new(ReadLimits::with_values(max_parser_items=2))
+  budget.scan_xml(
+    "<root><!-- <fake/><fake/> --><![CDATA[<fake/><fake/>]]><real/></root>",
+  )
+  assert_eq(budget.parser_items, 2)
+}
+
+///|
+test "read budget rejects overflow at maximum Int limits" {
+  let limits = ReadLimits::with_values(
+    max_parser_items=0x7fffffff,
+    max_parser_work_units=0x7fffffff,
+  )
+  let item_budget = ReadBudget::new(limits)
+  item_budget.parser_items = 0x7ffffffe
+  try item_budget.charge_items(2) catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) => {
+      assert_eq(kind, "parser_items")
+      assert_eq(limit, 0x7fffffff)
+      assert_eq(actual, 0x7fffffff)
+      assert_eq(item_budget.parser_items, 0x7ffffffe)
+    }
+    _ => fail("unexpected parser item overflow error")
+  } noraise {
+    _ => fail("expected parser item overflow rejection")
+  }
+
+  let work_budget = ReadBudget::new(limits)
+  work_budget.parser_work_units = 0x7ffffffe
+  try work_budget.charge_work(2) catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) => {
+      assert_eq(kind, "parser_work_units")
+      assert_eq(limit, 0x7fffffff)
+      assert_eq(actual, 0x7fffffff)
+      assert_eq(work_budget.parser_work_units, 0x7ffffffe)
+    }
+    _ => fail("unexpected parser work overflow error")
+  } noraise {
+    _ => fail("expected parser work overflow rejection")
+  }
+}

@@ -203,6 +203,7 @@ priv struct FindingCollector {
   max_zip_total_entry_name_chars : Int
   mut zip_entry_name_chars : Int
   xml_budget : @xml.XmlReadBudget
+  cancelled : () -> Bool
   mut truncated : Bool
   mut resource_limit : DocxValidationResourceLimit?
   mut main_document_part : String?
@@ -218,6 +219,7 @@ fn FindingCollector::new_with_xml_limits(
   max_xml_tokens : Int,
   max_xml_materialized_chars : Int,
   max_xml_token_chars : Int,
+  cancelled : () -> Bool,
 ) -> FindingCollector {
   {
     findings: [],
@@ -259,7 +261,9 @@ fn FindingCollector::new_with_xml_limits(
       } else {
         0
       },
+      cancelled~,
     ),
+    cancelled,
     truncated: false,
     resource_limit: None,
     main_document_part: None,
@@ -426,6 +430,20 @@ fn FindingCollector::stop(self : FindingCollector) -> Unit {
 }
 
 ///|
+/// Polls the caller's cooperative cancellation hook. Cancellation is recorded
+/// as a stopped/truncated validation rather than a finding so command callers
+/// can translate their own cancellation state without attacker-controlled
+/// diagnostics obscuring it.
+fn FindingCollector::checkpoint(self : FindingCollector) -> Bool {
+  if (self.cancelled)() {
+    self.stop()
+    false
+  } else {
+    true
+  }
+}
+
+///|
 fn default_findings(result : (Array[String], Bool)) -> Array[String] {
   let (findings, truncated) = result
   if truncated {
@@ -508,8 +526,15 @@ pub fn validate_docx_package_report_limited(
   max_xml_token_chars? : Int = DEFAULT_MAX_XML_TOKEN_CHARS,
 ) -> DocxValidationReport {
   let findings = FindingCollector::new_with_xml_limits(
-    max_findings, max_message_chars, max_zip_entry_name_chars, max_zip_total_entry_name_chars,
-    max_xml_source_units, max_xml_tokens, max_xml_materialized_chars, max_xml_token_chars,
+    max_findings,
+    max_message_chars,
+    max_zip_entry_name_chars,
+    max_zip_total_entry_name_chars,
+    max_xml_source_units,
+    max_xml_tokens,
+    max_xml_materialized_chars,
+    max_xml_token_chars,
+    () => false,
   )
   let archive = @mbtzip.read_limited(
     data,
@@ -576,6 +601,7 @@ pub fn validate_docx_archive_limited(
   max_xml_tokens? : Int = DEFAULT_MAX_XML_TOKENS,
   max_xml_materialized_chars? : Int = DEFAULT_MAX_XML_MATERIALIZED_CHARS,
   max_xml_token_chars? : Int = DEFAULT_MAX_XML_TOKEN_CHARS,
+  cancelled? : () -> Bool = () => false,
 ) -> (Array[String], Bool) {
   let report = validate_docx_archive_report_limited(
     archive,
@@ -587,6 +613,7 @@ pub fn validate_docx_archive_limited(
     max_xml_tokens~,
     max_xml_materialized_chars~,
     max_xml_token_chars~,
+    cancelled~,
   )
   (report.findings, report.findings_truncated)
 }
@@ -604,10 +631,12 @@ pub fn validate_docx_archive_report_limited(
   max_xml_tokens? : Int = DEFAULT_MAX_XML_TOKENS,
   max_xml_materialized_chars? : Int = DEFAULT_MAX_XML_MATERIALIZED_CHARS,
   max_xml_token_chars? : Int = DEFAULT_MAX_XML_TOKEN_CHARS,
+  cancelled? : () -> Bool = () => false,
 ) -> DocxValidationReport {
   let findings = FindingCollector::new_with_xml_limits(
     max_findings, max_message_chars, max_zip_entry_name_chars, max_zip_total_entry_name_chars,
     max_xml_source_units, max_xml_tokens, max_xml_materialized_chars, max_xml_token_chars,
+    cancelled,
   )
   validate_docx_archive_into(archive, findings)
   findings.report()
@@ -645,7 +674,21 @@ fn validate_docx_archive_into(
       seen.add(name)
     }
     let logical_name = check_entry_name(name, findings)
-    if entry.crc32() != @mbtzip.crc32(entry.data()) {
+    let actual_crc = @mbtzip.crc32_cancellable(
+      entry.data(),
+      cancelled=findings.cancelled,
+    ) catch {
+      ReadCancelled => {
+        findings.stop()
+        return
+      }
+      _ => {
+        findings.add("entry CRC-32 verification failed: \{findings.text(name)}")
+        findings.stop()
+        return
+      }
+    }
+    if entry.crc32() != actual_crc {
       findings.add(
         "entry data does not match its stored CRC-32: \{findings.text(name)}",
       )
@@ -1350,54 +1393,56 @@ fn check_relationships(
       match parse_relationships_part(root_rels_name, bytes, findings) {
         Some(root) => {
           let main_parts : Array[(String, DocumentDialect)] = []
-          for_each_relationship(ROOT_RELS_PART, root, findings, (
-            _id,
-            rel_type,
-            target,
-            external,
-          ) => {
-            let dialect = office_document_dialect(rel_type)
-            if external {
-              match dialect {
-                Some(_) =>
-                  findings.add(
-                    "\{ROOT_RELS_PART}: officeDocument relationship is not internal",
-                  )
-                None => ()
-              }
-              return
-            }
-            match resolve_part_target("", target) {
-              Some(resolved) =>
-                if is_relationship_part_name(resolved) {
-                  findings.add(
-                    "relationship target must not be a Relationships part: \{ROOT_RELS_PART} -> \{findings.text(target)}",
-                  )
-                } else {
-                  if !contains_part(canonical_names, resolved) {
-                    findings.add(
-                      "relationship target missing: \{ROOT_RELS_PART} -> \{findings.text(target)} (resolved \{findings.text(resolved)})",
-                    )
-                  }
-                  match dialect {
-                    Some(value) => main_parts.push((resolved, value))
-                    None => ()
-                  }
-                }
-              None => {
-                findings.add(
-                  "relationship target invalid: \{ROOT_RELS_PART} -> \{findings.text(target)}",
-                )
+          if !for_each_relationship(ROOT_RELS_PART, root, findings, (
+              _id,
+              rel_type,
+              target,
+              external,
+            ) => {
+              let dialect = office_document_dialect(rel_type)
+              if external {
                 match dialect {
                   Some(_) =>
                     findings.add(
-                      "\{ROOT_RELS_PART}: officeDocument relationship has an invalid target: \{findings.text(target)}",
+                      "\{ROOT_RELS_PART}: officeDocument relationship is not internal",
                     )
                   None => ()
                 }
+                return
               }
-            }
-          })
+              match resolve_part_target("", target) {
+                Some(resolved) =>
+                  if is_relationship_part_name(resolved) {
+                    findings.add(
+                      "relationship target must not be a Relationships part: \{ROOT_RELS_PART} -> \{findings.text(target)}",
+                    )
+                  } else {
+                    if !contains_part(canonical_names, resolved) {
+                      findings.add(
+                        "relationship target missing: \{ROOT_RELS_PART} -> \{findings.text(target)} (resolved \{findings.text(resolved)})",
+                      )
+                    }
+                    match dialect {
+                      Some(value) => main_parts.push((resolved, value))
+                      None => ()
+                    }
+                  }
+                None => {
+                  findings.add(
+                    "relationship target invalid: \{ROOT_RELS_PART} -> \{findings.text(target)}",
+                  )
+                  match dialect {
+                    Some(_) =>
+                      findings.add(
+                        "\{ROOT_RELS_PART}: officeDocument relationship has an invalid target: \{findings.text(target)}",
+                      )
+                    None => ()
+                  }
+                }
+              }
+            }) {
+            return
+          }
           match main_parts {
             [(part, dialect)] =>
               match find_part(parts, canonical_names, part) {
@@ -1458,31 +1503,33 @@ fn check_relationships(
     match parse_relationships_part(name, bytes, findings) {
       Some(root) => {
         let base = rels_base_dir(logical_name)
-        for_each_relationship(name, root, findings, (
-          _id,
-          _rel_type,
-          target,
-          external,
-        ) => {
-          if !external {
-            match resolve_part_target(base, target) {
-              Some(resolved) =>
-                if is_relationship_part_name(resolved) {
+        if !for_each_relationship(name, root, findings, (
+            _id,
+            _rel_type,
+            target,
+            external,
+          ) => {
+            if !external {
+              match resolve_part_target(base, target) {
+                Some(resolved) =>
+                  if is_relationship_part_name(resolved) {
+                    findings.add(
+                      "relationship target must not be a Relationships part: \{findings.text(name)} -> \{findings.text(target)}",
+                    )
+                  } else if !contains_part(canonical_names, resolved) {
+                    findings.add(
+                      "relationship target missing: \{findings.text(name)} -> \{findings.text(target)} (resolved \{findings.text(resolved)})",
+                    )
+                  }
+                None =>
                   findings.add(
-                    "relationship target must not be a Relationships part: \{findings.text(name)} -> \{findings.text(target)}",
+                    "relationship target invalid: \{findings.text(name)} -> \{findings.text(target)}",
                   )
-                } else if !contains_part(canonical_names, resolved) {
-                  findings.add(
-                    "relationship target missing: \{findings.text(name)} -> \{findings.text(target)} (resolved \{findings.text(resolved)})",
-                  )
-                }
-              None =>
-                findings.add(
-                  "relationship target invalid: \{findings.text(name)} -> \{findings.text(target)}",
-                )
+              }
             }
-          }
-        })
+          }) {
+          return
+        }
       }
       None => ()
     }
@@ -1567,17 +1614,27 @@ fn for_each_relationship(
   root : @xml.XmlElement,
   findings : FindingCollector,
   visit : (String, String, String, Bool) -> Unit,
-) -> Unit {
+) -> Bool {
+  if !findings.checkpoint() {
+    return false
+  }
   let relationships_name = "{\{PACKAGE_RELATIONSHIPS_NAMESPACE}}Relationships"
   let relationship_name = "{\{PACKAGE_RELATIONSHIPS_NAMESPACE}}Relationship"
   if root.name != relationships_name {
     findings.add(
       "\{findings.text(part_name)}: root element is not in the OPC package relationships namespace",
     )
-    return
+    return true
   }
   let mut valid_part = true
   for attribute, _ in root.attributes {
+    if !findings.checkpoint() {
+      return false
+    }
+    if findings.full() {
+      findings.stop()
+      return false
+    }
     findings.add(
       "\{findings.text(part_name)}: Relationships has undeclared attribute: \{findings.text(attribute)}",
     )
@@ -1586,10 +1643,12 @@ fn for_each_relationship(
   let ids : StableStringSet = SortedSet([])
   let relationships : Array[(String, String, String, Bool)] = []
   for node in root.children {
+    if !findings.checkpoint() {
+      return false
+    }
     if findings.full() {
       findings.stop()
-      valid_part = false
-      break
+      return false
     }
     guard node is XmlElement(element) else {
       guard node is XmlText(text) else { continue }
@@ -1616,6 +1675,9 @@ fn for_each_relationship(
     }
     let mut valid = true
     for attribute, _ in element.attributes {
+      if !findings.checkpoint() {
+        return false
+      }
       if attribute != "Id" &&
         attribute != "Type" &&
         attribute != "Target" &&
@@ -1627,6 +1689,9 @@ fn for_each_relationship(
       }
     }
     for child in element.children {
+      if !findings.checkpoint() {
+        return false
+      }
       match child {
         XmlElement(_) => {
           findings.add(
@@ -1639,6 +1704,9 @@ fn for_each_relationship(
         // forbidden by the complex type.
         XmlText(_) => ()
       }
+    }
+    if !findings.checkpoint() {
+      return false
     }
     let id = @xml.collapse_xml_schema_whitespace(
       element.attributes.get("Id").unwrap_or(""),
@@ -1661,6 +1729,9 @@ fn for_each_relationship(
     } else {
       ids.add(id)
     }
+    if !findings.checkpoint() {
+      return false
+    }
     let rel_type = @xml.collapse_xml_schema_whitespace(
       element.attributes.get("Type").unwrap_or(""),
     )
@@ -1674,6 +1745,9 @@ fn for_each_relationship(
         "\{findings.text(part_name)}: Relationship Type is not an absolute IRI without a fragment: \{findings.text(rel_type)}",
       )
       valid = false
+    }
+    if !findings.checkpoint() {
+      return false
     }
     let target = @xml.collapse_xml_schema_whitespace(
       element.attributes.get("Target").unwrap_or(""),
@@ -1720,10 +1794,14 @@ fn for_each_relationship(
   }
   if valid_part {
     for relationship in relationships {
+      if !findings.checkpoint() {
+        return false
+      }
       let (id, rel_type, target, external) = relationship
       visit(id, rel_type, target, external)
     }
   }
+  findings.checkpoint()
 }
 
 ///|

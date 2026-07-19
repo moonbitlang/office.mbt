@@ -33,8 +33,8 @@ Codex review at least at `xhigh` effort.
 | D1: preservation-safe DOCX edit sessions | [#146](https://github.com/moonbitlang/office.mbt/issues/146) | Complete |
 | D2: bounded DOCX outline, get, text, and query | [#147](https://github.com/moonbitlang/office.mbt/issues/147) | Complete |
 | X1: provenance-checked bounded XLSX archive reads | [#160](https://github.com/moonbitlang/office.mbt/issues/160) | Complete |
-| Coordinate validation hardening | [#138](https://github.com/moonbitlang/office.mbt/issues/138) | Planned |
-| X2: unified bounded XLSX outline, get, text, and query | [#161](https://github.com/moonbitlang/office.mbt/issues/161) | Planned |
+| Coordinate validation hardening | [#138](https://github.com/moonbitlang/office.mbt/issues/138) | Complete |
+| X2: unified bounded XLSX outline, get, text, and query | [#161](https://github.com/moonbitlang/office.mbt/issues/161) | Complete |
 | X3: transactional XLSX create and batch | [#162](https://github.com/moonbitlang/office.mbt/issues/162) | Planned |
 | D3: fresh DOCX create and batch | [#163](https://github.com/moonbitlang/office.mbt/issues/163) | Planned |
 | D4: preservation-safe DOCX annotation mutations | [#164](https://github.com/moonbitlang/office.mbt/issues/164) | Planned |
@@ -193,8 +193,41 @@ The XLSX SDK now has one fail-closed policy for every package ingestion path:
   relationship-relocated XML, CRC corruption, CFB cycles, KDF work,
   provenance, mutation, async-reader, and encrypted-package cases.
 
-X1 changes the SDK boundary only. Unified XLSX command exposure remains scoped
-to X2 after coordinate validation hardening, and no C stubs are introduced.
+X1 changes the SDK boundary only and introduces no C stubs.
+
+## X2 XLSX read contract
+
+The unified CLI now advertises XLSX support for `outline`, `get`, `text`, and
+`query` only after their end-to-end implementations are present:
+
+- one `moonbitlang/async` bounded file read, validated format dispatch, and one
+  limited ZIP snapshot feed the provenance-checked archive-backed XLSX parser;
+- workbook, name-keyed sheet, cell, and normalized range selectors resolve to
+  canonical `/xlsx/...` paths; positional sheet input is canonicalized to a
+  stable name path, while coordinate paths remain explicitly
+  snapshot-relative;
+- outline reports tab order, active sheet, worksheet/chart-sheet state, used
+  ranges, feature counts, defined names, and effective limits; `get` returns
+  typed raw/formatted/formula values plus effective styles;
+- `text` and `query` scan in tab/row/column order and expose exact bounded-scan
+  totals plus deterministic pagination; formulas without cached display values
+  remain visible through an `=FORMULA` text fallback;
+- query accepts only declared `cell[...]` predicates for type, formula,
+  literal string, and finite numeric comparisons; substring predicates compile
+  once to linear KMP matchers under an explicit command-wide work ceiling;
+- package bytes, ZIP entries and expansion, XML parts, scan rectangles and
+  visited cells, per-value and aggregate strings, metadata, predicates,
+  predicate work, retained results, and successful output all have explicit
+  ceilings with stable XLSX resource failures; and
+- every machine result is wrapped in `office.output/1` and carries one of
+  `office.xlsx.outline/1`, `office.xlsx.element/1`, `office.xlsx.text/1`, or
+  `office.xlsx.query/1`; capability records expose separate DOCX and XLSX
+  variants with the exact result schemas.
+
+Native and Wasm tests exercise the same async filesystem and package dispatch
+paths, with Cram coverage for the public schema, canonical selectors,
+pagination, query predicates, and cross-format mismatch failures. See
+[office-xlsx-read.md](office-xlsx-read.md) for the complete contract.
 
 ## Deferred beyond major parity
 

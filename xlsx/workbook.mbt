@@ -16,6 +16,7 @@ pub fn Workbook::add_sheet(
     None => ()
   }
   let sheet = Worksheet::new(name)
+  sheet.workbook_owner_token = Some(self.worksheet_owner_token)
   self.sheets.push(sheet)
   self.sheet_order.push(Worksheet(self.sheets.length() - 1))
   if self.sheet_order.length() == 1 {
@@ -105,6 +106,22 @@ fn Workbook::require_sheet(
   match self.sheet(sheet_name) {
     Some(value) => value
     None => raise SheetNotFound(name=sheet_name.to_owned())
+  }
+}
+
+///|
+/// Rejects detached or foreign worksheet handles before workbook-owned styles,
+/// options, or date-system settings are applied to their cells.
+fn Workbook::require_owned_worksheet(
+  self : Workbook,
+  worksheet : Worksheet,
+) -> Unit raise XlsxError {
+  match worksheet.workbook_owner_token {
+    Some(owner) if physical_equal(owner, self.worksheet_owner_token) => ()
+    _ =>
+      raise InvalidSheetOperation(
+        msg="worksheet does not belong to this workbook",
+      )
   }
 }
 
@@ -492,6 +509,7 @@ pub fn Workbook::delete_sheet(
   ignore(self.sheet_order.remove(order_index))
   match entry {
     Worksheet(idx) => {
+      self.sheets[idx].workbook_owner_token = None
       ignore(self.sheets.remove(idx))
       let updated : Array[SheetEntry] = []
       for item in self.sheet_order {
@@ -605,6 +623,8 @@ pub fn Workbook::copy_sheet(
         to_sheet.name(),
         to_sheet.state(),
       )
+      to_sheet.workbook_owner_token = None
+      cloned.workbook_owner_token = Some(self.worksheet_owner_token)
       self.sheets[to_sheet_idx] = cloned
     }
     _ => raise InvalidSheetIndex(index=to_index)
@@ -1014,16 +1034,22 @@ fn Workbook::stage_adjusted_defined_names_for_sheet(
   self : Workbook,
   sheet_name : String,
   adjust_fn : (StringView) -> String? raise XlsxError,
+  cancelled? : () -> Bool = () => false,
 ) -> Array[DefinedName]? raise XlsxError {
+  check_read_cancelled(cancelled)
   if self.defined_names.length() == 0 {
     return None
   }
   let updated : Array[DefinedName] = []
-  for dn in self.defined_names {
+  for index, dn in self.defined_names {
+    if (index & 4095) == 0 {
+      check_read_cancelled(cancelled)
+    }
     let refers_to = adjust_defined_name_refers_to_for_sheet(
       dn.refers_to,
       sheet_name,
       adjust_fn,
+      cancelled~,
     )
     updated.push({
       name: dn.name,
@@ -1032,6 +1058,7 @@ fn Workbook::stage_adjusted_defined_names_for_sheet(
       comment: dn.comment,
     })
   }
+  check_read_cancelled(cancelled)
   Some(updated)
 }
 
@@ -1240,6 +1267,31 @@ fn clone_slicers(values : ArrayView[Slicer]) -> Array[Slicer] {
 }
 
 ///|
+fn clone_preserved_drawing_relationships(
+  values : ArrayView[PreservedDrawingRelationship],
+) -> Array[PreservedDrawingRelationship] {
+  let out : Array[PreservedDrawingRelationship] = []
+  for value in values {
+    out.push(value)
+  }
+  out
+}
+
+///|
+fn clone_preserved_drawing_parts(
+  values : ArrayView[PreservedDrawingPart],
+) -> Array[PreservedDrawingPart] {
+  let out : Array[PreservedDrawingPart] = []
+  for value in values {
+    out.push({
+      ..value,
+      relationships: clone_preserved_drawing_relationships(value.relationships),
+    })
+  }
+  out
+}
+
+///|
 fn clone_ignored_errors(
   values : ArrayView[IgnoredError],
 ) -> Array[IgnoredError] {
@@ -1306,13 +1358,19 @@ fn clone_worksheet(
   name : String,
   state : SheetState,
 ) -> Worksheet {
+  let cells = clone_cells(sheet.cells)
   {
+    workbook_owner_token: None,
     name,
     sheet_views: clone_sheet_views(sheet.sheet_views),
     dimension_ref: sheet.dimension_ref,
-    cells: clone_cells(sheet.cells),
-    cell_index: Map([]),
-    cell_index_valid: false,
+    cells,
+    cell_index: build_worksheet_cell_index(cells),
+    cell_index_valid: true,
+    shared_formula_masters_index: clone_shared_formula_masters_index(
+      sheet.shared_formula_masters_index,
+    ),
+    shared_formula_masters_index_valid: sheet.shared_formula_masters_index_valid,
     merged_cells: clone_strings(sheet.merged_cells),
     hyperlinks: clone_hyperlinks(sheet.hyperlinks),
     tables: clone_tables(sheet.tables),
@@ -1361,6 +1419,14 @@ fn clone_worksheet(
     stream_state: Idle,
     vml_drawing_xml: sheet.vml_drawing_xml,
     vml_drawing_hf_xml: sheet.vml_drawing_hf_xml,
+    next_drawing_order: sheet.next_drawing_order,
+    preserved_drawing_anchors: sheet.preserved_drawing_anchors.copy(),
+    preserved_drawing_relationships: clone_preserved_drawing_relationships(
+      sheet.preserved_drawing_relationships,
+    ),
+    preserved_drawing_parts: clone_preserved_drawing_parts(
+      sheet.preserved_drawing_parts,
+    ),
     cell_vm: {
       let copy : Map[String, Int] = Map([])
       for reference, vm in sheet.cell_vm {
@@ -1478,6 +1544,7 @@ pub fn Workbook::get_cell_value_styled(
           cell.value,
           Some(self.styles[style_id]),
           resolved_options,
+          use_1904_format=self.uses_1904_date_system(),
         ),
       )
     }
@@ -1491,6 +1558,7 @@ fn format_cell_value_for_workbook(
   cell : Cell,
   raw : Bool,
   options : Options,
+  use_1904_format? : Bool = false,
 ) -> String raise XlsxError {
   if raw || options.raw_cell_value {
     return cell.value
@@ -1503,7 +1571,13 @@ fn format_cell_value_for_workbook(
     cell.value,
     Some(styles[cell.style_id]),
     options,
+    use_1904_format~,
   )
+}
+
+///|
+fn Workbook::uses_1904_date_system(self : Workbook) -> Bool {
+  self.workbook_props.date_1904.unwrap_or(false)
 }
 
 ///|
@@ -1810,6 +1884,7 @@ pub fn Workbook::get_cell_value(
           sheet.cells[index],
           raw,
           resolved_options,
+          use_1904_format=self.uses_1904_date_system(),
         ),
       )
     None => None
@@ -1817,12 +1892,105 @@ pub fn Workbook::get_cell_value(
 }
 
 ///|
+/// Formats one cell from a worksheet that has already been resolved from this
+/// workbook. This is the bulk-read counterpart to `get_cell_value`: callers
+/// can resolve a worksheet once, then read many coordinates without repeating
+/// the workbook's name lookup for every cell. The cell's own style and the
+/// workbook's formatting options have the same semantics as
+/// `get_cell_value`.
+///
+/// `worksheet` must be a live entry from this workbook's `sheets()` view;
+/// detached, deleted, replaced, or foreign handles raise
+/// `InvalidSheetOperation`. The row and column are 1-based and must fit the
+/// XLSX grid.
+pub fn Workbook::get_cell_value_from_worksheet_rc(
+  self : Workbook,
+  worksheet : Worksheet,
+  row : Int,
+  col : Int,
+  raw? : Bool = false,
+  options? : Options,
+) -> String? raise XlsxError {
+  self.require_owned_worksheet(worksheet)
+  ignore(cell_ref_from(row, col))
+  let resolved_options = match options {
+    Some(value) => value
+    None => self.options
+  }
+  match worksheet.cell_index_of(row, col) {
+    Some(index) =>
+      Some(
+        format_cell_value_for_workbook(
+          self.styles,
+          worksheet.cells[index],
+          raw,
+          resolved_options,
+          use_1904_format=self.uses_1904_date_system(),
+        ),
+      )
+    None => None
+  }
+}
+
+///|
+/// Formats one cell from an already-resolved worksheet using an explicit
+/// style id. This is the bulk-read counterpart to `get_cell_value_styled` and
+/// lets callers apply row/column-inherited styles without repeating a sheet
+/// name lookup for every coordinate. Returns `None` for an absent cell.
+///
+/// `worksheet` must be a live entry from this workbook's `sheets()` view;
+/// detached, deleted, replaced, or foreign handles raise
+/// `InvalidSheetOperation`. The row and column are 1-based and `style_id` must
+/// belong to this workbook.
+pub fn Workbook::get_cell_value_styled_from_worksheet_rc(
+  self : Workbook,
+  worksheet : Worksheet,
+  row : Int,
+  col : Int,
+  style_id : Int,
+  options? : Options,
+  max_output_chars? : Int,
+) -> String? raise XlsxError {
+  self.require_owned_worksheet(worksheet)
+  ignore(cell_ref_from(row, col))
+  self.check_style_id(style_id)
+  let resolved_options = match options {
+    Some(value) => value
+    None => self.options
+  }
+  match worksheet.cell_index_of(row, col) {
+    Some(index) => {
+      let cell = worksheet.cells[index]
+      if resolved_options.raw_cell_value {
+        return Some(cell.value)
+      }
+      Some(
+        format_cell_value_limited(
+          cell.value_type,
+          cell.value,
+          Some(self.styles[style_id]),
+          resolved_options,
+          use_1904_format=self.uses_1904_date_system(),
+          max_output_chars?,
+        ),
+      )
+    }
+    None => None
+  }
+}
+
+///|
+/// Calculates and formats one cell. Shared-formula followers resolved during
+/// the calculation share `formula_limits`; `cancelled` is polled while their
+/// masters are validated and translated.
 pub fn Workbook::calc_cell_value(
   self : Workbook,
   sheet_name : StringView,
   reference : StringView,
   raw? : Bool = false,
   options? : Options,
+  formula_limits? : SharedFormulaLimits = SharedFormulaLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> String raise XlsxError {
   check_sheet_name(sheet_name)
   let resolved_options = match options {
@@ -1835,7 +2003,11 @@ pub fn Workbook::calc_cell_value(
   }
   let (row, col) = cell_ref_to_rc(reference)
   let canonical = cell_ref_from(row, col)
-  let ctx = CalcContext::new()
+  let ctx = CalcContext::new(
+    use_1904_dates=self.uses_1904_date_system(),
+    formula_limits~,
+    cancelled~,
+  )
   let value = resolve_cell_value(self, sheet.name(), canonical, ctx)
   let (value_type, raw_value) = formula_value_to_cell(value)
   if raw || resolved_options.raw_cell_value {
@@ -1856,6 +2028,7 @@ pub fn Workbook::calc_cell_value(
     raw_value,
     Some(self.styles[style_id]),
     resolved_options,
+    use_1904_format=self.uses_1904_date_system(),
   )
 }
 
@@ -1867,12 +2040,28 @@ pub fn Workbook::calc_cell_value_rc(
   col : Int,
   raw? : Bool = false,
   options? : Options,
+  formula_limits? : SharedFormulaLimits = SharedFormulaLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> String raise XlsxError {
   let reference = cell_ref_from(row, col)
   match options {
     Some(value) =>
-      self.calc_cell_value(sheet_name, reference, raw~, options=value)
-    None => self.calc_cell_value(sheet_name, reference, raw~)
+      self.calc_cell_value(
+        sheet_name,
+        reference,
+        raw~,
+        options=value,
+        formula_limits~,
+        cancelled~,
+      )
+    None =>
+      self.calc_cell_value(
+        sheet_name,
+        reference,
+        raw~,
+        formula_limits~,
+        cancelled~,
+      )
   }
 }
 
@@ -1885,10 +2074,14 @@ pub fn Workbook::calc_cell_value_rc(
 /// formula error surfaces as `Some(Error("#…"))` (Excel stores those); only
 /// structural problems (missing sheet, invalid reference) raise `XlsxError`.
 /// Like `calc_cell_value`, this recomputes on every call with no memoization.
+/// Shared-formula resolution uses the cumulative `formula_limits` policy and
+/// polls `cancelled` during validation and translation.
 pub fn Workbook::calc_cell_typed(
   self : Workbook,
   sheet_name : StringView,
   reference : StringView,
+  formula_limits? : SharedFormulaLimits = SharedFormulaLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> CellValue? raise XlsxError {
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
@@ -1897,7 +2090,11 @@ pub fn Workbook::calc_cell_typed(
   }
   let (row, col) = cell_ref_to_rc(reference)
   let canonical = cell_ref_from(row, col)
-  let ctx = CalcContext::new()
+  let ctx = CalcContext::new(
+    use_1904_dates=self.uses_1904_date_system(),
+    formula_limits~,
+    cancelled~,
+  )
   formula_value_to_cell_value(
     resolve_cell_value(self, sheet.name(), canonical, ctx),
   )
@@ -1909,8 +2106,15 @@ pub fn Workbook::calc_cell_typed_rc(
   sheet_name : StringView,
   row : Int,
   col : Int,
+  formula_limits? : SharedFormulaLimits = SharedFormulaLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> CellValue? raise XlsxError {
-  self.calc_cell_typed(sheet_name, cell_ref_from(row, col))
+  self.calc_cell_typed(
+    sheet_name,
+    cell_ref_from(row, col),
+    formula_limits~,
+    cancelled~,
+  )
 }
 
 ///|
@@ -2516,6 +2720,11 @@ pub fn Workbook::add_slicer(
     display_header: opts.display_header,
     item_desc: opts.item_desc,
     format,
+    drawing_offset_x_emu: None,
+    drawing_offset_y_emu: None,
+    drawing_width_emu: None,
+    drawing_height_emu: None,
+    drawing_order: None,
   }
   sheet.add_slicer(slicer)
 }
@@ -3369,7 +3578,13 @@ pub fn Workbook::get_cell_value_rc(
   for cell in sheet.cells() {
     if cell.row == row && cell.col == col {
       return Some(
-        format_cell_value_for_workbook(self.styles, cell, raw, resolved_options),
+        format_cell_value_for_workbook(
+          self.styles,
+          cell,
+          raw,
+          resolved_options,
+          use_1904_format=self.uses_1904_date_system(),
+        ),
       )
     }
   }
@@ -3766,6 +3981,9 @@ pub fn Workbook::get_col_style(
 /// page breaks. Defined names referring to the sheet are adjusted to follow the
 /// shift.
 ///
+/// Shared formulas are materialized transactionally under one cumulative
+/// `formula_limits` budget; `cancelled` is polled before and during fan-out.
+///
 /// Raises `XlsxError` if the sheet name is invalid or no matching sheet exists,
 /// `StreamModeConflict` if the sheet is in stream-writer mode, if `row` is less
 /// than 1, or if `count` is not positive.
@@ -3774,6 +3992,8 @@ pub fn Workbook::insert_rows(
   sheet_name : StringView,
   row : Int,
   count : Int,
+  formula_limits? : SharedFormulaLimits = SharedFormulaLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
   let sheet = self.require_sheet(sheet_name)
   if count > cell_ref_max_rows {
@@ -3788,12 +4008,14 @@ pub fn Workbook::insert_rows(
   // then commit it only after the sheet insert also succeeds. Both the sheet
   // insert and the defined-name adjuster raise on an out-of-grid shift; ordering
   // the two commits last makes the whole operation all-or-nothing.
-  let staged_names = self.stage_adjusted_defined_names_for_sheet(sheet.name(), fn(
-    ref_text : StringView,
-  ) -> String? raise XlsxError {
-    adjust_ref_after_row_insert(ref_text, row, count)
-  })
-  sheet.insert_rows(row, count)
+  let staged_names = self.stage_adjusted_defined_names_for_sheet(
+    sheet.name(),
+    fn(ref_text : StringView) -> String? raise XlsxError {
+      adjust_ref_after_row_insert(ref_text, row, count)
+    },
+    cancelled~,
+  )
+  sheet.insert_rows(row, count, formula_limits~, cancelled~)
   self.commit_adjusted_defined_names(staged_names)
 }
 
@@ -3802,6 +4024,8 @@ pub fn Workbook::insert_rows(
 /// shifting the rows below up and adjusting row dimensions, merged ranges,
 /// hyperlinks, auto filter, tables, sparklines, images, charts, page breaks,
 /// and defined names accordingly.
+/// Shared formulas that survive the removal are materialized under one
+/// cumulative `formula_limits` budget; removed cells are never translated.
 ///
 /// Raises `XlsxError` if the sheet name is invalid or no matching sheet exists,
 /// `StreamModeConflict` if the sheet is in stream-writer mode, if `row` is less
@@ -3811,17 +4035,21 @@ pub fn Workbook::remove_rows(
   sheet_name : StringView,
   row : Int,
   count : Int,
+  formula_limits? : SharedFormulaLimits = SharedFormulaLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
   let sheet = self.require_sheet(sheet_name)
   // Stage the defined-name adjustment before mutating the sheet, then commit it
   // last — so if adjustment raises (e.g. a pre-existing out-of-grid name) the
   // removal is all-or-nothing, matching insert.
-  let staged_names = self.stage_adjusted_defined_names_for_sheet(sheet.name(), fn(
-    ref_text : StringView,
-  ) -> String? raise XlsxError {
-    adjust_ref_after_row_remove(ref_text, row, count)
-  })
-  sheet.remove_rows(row, count)
+  let staged_names = self.stage_adjusted_defined_names_for_sheet(
+    sheet.name(),
+    fn(ref_text : StringView) -> String? raise XlsxError {
+      adjust_ref_after_row_remove(ref_text, row, count)
+    },
+    cancelled~,
+  )
+  sheet.remove_rows(row, count, formula_limits~, cancelled~)
   self.commit_adjusted_defined_names(staged_names)
 }
 
@@ -3831,8 +4059,10 @@ pub fn Workbook::remove_row(
   self : Workbook,
   sheet_name : StringView,
   row : Int,
+  formula_limits? : SharedFormulaLimits = SharedFormulaLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
-  self.remove_rows(sheet_name, row, 1)
+  self.remove_rows(sheet_name, row, 1, formula_limits~, cancelled~)
 }
 
 ///|
@@ -3840,6 +4070,8 @@ pub fn Workbook::remove_row(
 /// shifting existing columns right along with their cells and associated
 /// features. Defined names referring to the sheet are adjusted to follow the
 /// shift.
+/// Shared-formula materialization is bounded by `formula_limits` and polls
+/// `cancelled` before and during fan-out.
 ///
 /// Raises `XlsxError` if the sheet name is invalid or no matching sheet exists,
 /// `StreamModeConflict` if the sheet is in stream-writer mode, if `col` is less
@@ -3849,6 +4081,8 @@ pub fn Workbook::insert_cols(
   sheet_name : StringView,
   col : Int,
   count : Int,
+  formula_limits? : SharedFormulaLimits = SharedFormulaLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
   let sheet = self.require_sheet(sheet_name)
   if count > cell_ref_max_cols {
@@ -3859,12 +4093,14 @@ pub fn Workbook::insert_cols(
   }
   // See insert_rows: stage the defined-name shift, mutate the sheet, then commit
   // the names last so an out-of-grid overflow on either side is all-or-nothing.
-  let staged_names = self.stage_adjusted_defined_names_for_sheet(sheet.name(), fn(
-    ref_text : StringView,
-  ) -> String? raise XlsxError {
-    adjust_ref_after_col_insert(ref_text, col, count)
-  })
-  sheet.insert_cols(col, count)
+  let staged_names = self.stage_adjusted_defined_names_for_sheet(
+    sheet.name(),
+    fn(ref_text : StringView) -> String? raise XlsxError {
+      adjust_ref_after_col_insert(ref_text, col, count)
+    },
+    cancelled~,
+  )
+  sheet.insert_cols(col, count, formula_limits~, cancelled~)
   self.commit_adjusted_defined_names(staged_names)
 }
 
@@ -3872,6 +4108,8 @@ pub fn Workbook::insert_cols(
 /// Removes `count` columns starting at column `col` (1-based) on `sheet_name`,
 /// shifting the columns to its right leftward and adjusting associated features
 /// and defined names accordingly.
+/// Shared formulas that survive the removal are bounded by `formula_limits`;
+/// removed cells are never translated, and `cancelled` is polled during work.
 ///
 /// Raises `XlsxError` if the sheet name is invalid or no matching sheet exists,
 /// `StreamModeConflict` if the sheet is in stream-writer mode, if `col` is less
@@ -3881,15 +4119,19 @@ pub fn Workbook::remove_cols(
   sheet_name : StringView,
   col : Int,
   count : Int,
+  formula_limits? : SharedFormulaLimits = SharedFormulaLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
   let sheet = self.require_sheet(sheet_name)
   // Stage names before mutating the sheet (see remove_rows).
-  let staged_names = self.stage_adjusted_defined_names_for_sheet(sheet.name(), fn(
-    ref_text : StringView,
-  ) -> String? raise XlsxError {
-    adjust_ref_after_col_remove(ref_text, col, count)
-  })
-  sheet.remove_cols(col, count)
+  let staged_names = self.stage_adjusted_defined_names_for_sheet(
+    sheet.name(),
+    fn(ref_text : StringView) -> String? raise XlsxError {
+      adjust_ref_after_col_remove(ref_text, col, count)
+    },
+    cancelled~,
+  )
+  sheet.remove_cols(col, count, formula_limits~, cancelled~)
   self.commit_adjusted_defined_names(staged_names)
 }
 
@@ -3899,8 +4141,10 @@ pub fn Workbook::remove_col(
   self : Workbook,
   sheet_name : StringView,
   col : Int,
+  formula_limits? : SharedFormulaLimits = SharedFormulaLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
-  self.remove_cols(sheet_name, col, 1)
+  self.remove_cols(sheet_name, col, 1, formula_limits~, cancelled~)
 }
 
 ///|
@@ -3915,13 +4159,15 @@ pub fn Workbook::duplicate_row(
   self : Workbook,
   sheet_name : StringView,
   row : Int,
+  formula_limits? : SharedFormulaLimits = SharedFormulaLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
   // Bound `row` before forming `row + 1`, which would otherwise wrap Int for
   // `row == Int::max_value` (duplicate_row_to re-validates both rows too).
   if row < 1 || row > cell_ref_max_rows {
     raise InvalidCellRef(value="\{0}:\{row}")
   }
-  self.duplicate_row_to(sheet_name, row, row + 1)
+  self.duplicate_row_to(sheet_name, row, row + 1, formula_limits~, cancelled~)
 }
 
 ///|
@@ -3932,6 +4178,8 @@ pub fn Workbook::duplicate_row(
 /// ranges scoped to the source row are also duplicated onto `target_row`, though
 /// merged-range duplication is skipped if `target_row` falls inside an existing
 /// merge. Defined names are adjusted for the insert.
+/// Source-row copying and the nested insertion share one `formula_limits`
+/// budget and cancellation callback.
 ///
 /// Raises `XlsxError` if the sheet name is invalid or no matching sheet exists,
 /// `StreamModeConflict` if the sheet is in stream-writer mode, if `row` is less
@@ -3941,16 +4189,20 @@ pub fn Workbook::duplicate_row_to(
   sheet_name : StringView,
   row : Int,
   target_row : Int,
+  formula_limits? : SharedFormulaLimits = SharedFormulaLimits::new(),
+  cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
   let sheet = self.require_sheet(sheet_name)
   // Stage the defined-name shift (which raises if a name would leave the grid)
   // before duplicating the row, then commit the names last — otherwise an
   // overflowing name would raise after the worksheet had already been mutated.
-  let staged_names = self.stage_adjusted_defined_names_for_sheet(sheet.name(), fn(
-    ref_text : StringView,
-  ) -> String? raise XlsxError {
-    adjust_ref_after_row_insert(ref_text, target_row, 1)
-  })
-  sheet.duplicate_row_to(row, target_row)
+  let staged_names = self.stage_adjusted_defined_names_for_sheet(
+    sheet.name(),
+    fn(ref_text : StringView) -> String? raise XlsxError {
+      adjust_ref_after_row_insert(ref_text, target_row, 1)
+    },
+    cancelled~,
+  )
+  sheet.duplicate_row_to(row, target_row, formula_limits~, cancelled~)
   self.commit_adjusted_defined_names(staged_names)
 }

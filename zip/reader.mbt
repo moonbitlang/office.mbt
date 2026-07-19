@@ -115,6 +115,40 @@ fn Reader::skip(self : Reader, len : Int) -> Unit raise ZipError {
 }
 
 ///|
+/// Copies a borrowed ZIP slice into owned storage with bounded cancellation
+/// latency. Large stored entries and preservation records must not hide one
+/// monolithic runtime copy behind a single preflight check.
+fn copy_zip_bytes_cancellable(
+  bytes : BytesView,
+  cancelled : () -> Bool,
+) -> Bytes raise ZipError {
+  check_zip_cancelled(cancelled)
+  // An initialized FixedArray constructor performs a complete zero-fill before
+  // user code can poll cancellation. Allocate uninitialized primitive storage
+  // instead, then initialize every byte under explicit checkpoints.
+  let output : UninitializedArray[Byte] = UninitializedArray::make(
+    bytes.length(),
+  )
+  for index in 0..<bytes.length() {
+    if (index & 0xffff) == 0 {
+      check_zip_cancelled(cancelled)
+    }
+    output[index] = bytes[index]
+  }
+  check_zip_cancelled(cancelled)
+  initialized_zip_byte_buffer_to_bytes(output)
+}
+
+///|
+/// Hands a completely initialized primitive backing store to immutable Bytes
+/// without another allocation or copy. This is the same representation-only
+/// conversion used by MoonBit core's byte constructors; callers must initialize
+/// every element before crossing this private boundary.
+fn initialized_zip_byte_buffer_to_bytes(
+  buffer : UninitializedArray[Byte],
+) -> Bytes = "%identity"
+
+///|
 fn u32_to_int(value : UInt) -> Int raise ZipError {
   let max_u32_int : UInt = 0x7FFFFFFF
   if value > max_u32_int {
@@ -370,6 +404,7 @@ fn read_zip64_eocd(
   bytes : BytesView,
   eocd_offset : Int,
   preserved_source_budget : PreservedSourceBudget,
+  cancelled : () -> Bool,
 ) -> (UInt64, UInt64, UInt64, Int, Zip64TrailerTemplate) raise ZipError {
   let locator_offset = eocd_offset - 20
   if locator_offset < 0 {
@@ -426,9 +461,18 @@ fn read_zip64_eocd(
     central_offset,
     zip64_offset,
     {
-      end_record: bytes[zip64_offset:locator_offset].to_owned(),
-      locator: bytes[locator_offset:eocd_offset].to_owned(),
-      classic_end_record: bytes[eocd_offset:].to_owned(),
+      end_record: copy_zip_bytes_cancellable(
+        bytes[zip64_offset:locator_offset],
+        cancelled,
+      ),
+      locator: copy_zip_bytes_cancellable(
+        bytes[locator_offset:eocd_offset],
+        cancelled,
+      ),
+      classic_end_record: copy_zip_bytes_cancellable(
+        bytes[eocd_offset:],
+        cancelled,
+      ),
     },
   )
 }
@@ -718,7 +762,9 @@ fn materialize_entry_data(
   limit_kind : String,
   reported_limit : Int,
   actual_base : Int,
+  cancelled : () -> Bool,
 ) -> Bytes raise ZipError {
+  check_zip_cancelled(cancelled)
   let data = match record.compression {
     Store => {
       match max_uncompressed_bytes {
@@ -733,7 +779,7 @@ fn materialize_entry_data(
           )
         _ => ()
       }
-      record.compressed.to_owned()
+      copy_zip_bytes_cancellable(record.compressed, cancelled)
     }
     Deflate => {
       // Allow legitimately large declared entries, but keep a hard ceiling so a
@@ -747,7 +793,7 @@ fn materialize_entry_data(
             deflate_max_output_default
           }
       }
-      deflate_decode(record.compressed, max_output~) catch {
+      deflate_decode(record.compressed, max_output~, cancelled~) catch {
         OutputLimitExceeded(limit~) =>
           match max_uncompressed_bytes {
             Some(_) =>
@@ -770,6 +816,7 @@ fn materialize_entry_data(
       msg="decoded data length does not match central size",
     )
   }
+  check_zip_cancelled(cancelled)
   data
 }
 
@@ -781,7 +828,9 @@ fn read_impl(
   max_entry_uncompressed_bytes : Int?,
   max_total_uncompressed_bytes : Int?,
   max_total_preserved_source_bytes : Int?,
+  cancelled : () -> Bool,
 ) -> Archive raise ZipError {
+  check_zip_cancelled(cancelled)
   match max_package_bytes {
     Some(limit) if bytes.length() > limit =>
       raise ResourceLimitExceeded(
@@ -808,7 +857,10 @@ fn read_impl(
   let central_offset_raw = reader.read_u32_raw()
   let comment_len = reader.read_u16()
   preserved_source_budget.charge(comment_len)
-  let archive_comment = reader.read_bytes(comment_len).to_owned()
+  let archive_comment = copy_zip_bytes_cancellable(
+    reader.read_bytes(comment_len),
+    cancelled,
+  )
   if disk_no != 0 || disk_start != 0 {
     raise UnsupportedFeature(msg="multi-disk zip not supported")
   }
@@ -825,7 +877,7 @@ fn read_impl(
     zip64_trailer,
   ) = if needs_zip64 {
     let (zip_entries, zip_size, zip_offset, zip64_offset, zip64_trailer) = read_zip64_eocd(
-      bytes, eocd_offset, preserved_source_budget,
+      bytes, eocd_offset, preserved_source_budget, cancelled,
     )
     if disk_entries != 0xFFFF && disk_entries.to_uint64() != zip_entries {
       raise UnsupportedFeature(msg="classic and zip64 entry count mismatch")
@@ -905,7 +957,10 @@ fn read_impl(
   let central_bytes = bytes[central_offset:central_boundary]
   let central_reader = Reader::new(central_bytes, 0)
   let mut declared_total = 0
-  for _ in 0..<entry_count {
+  for entry_index in 0..<entry_count {
+    if entry_index % 64 == 0 {
+      check_zip_cancelled(cancelled)
+    }
     let central_record_start = central_reader.pos
     let header_offset = central_offset + central_record_start
     let cd_sig = central_reader.read_u32()
@@ -941,7 +996,10 @@ fn read_impl(
     )
     central_reader.skip(comment_len)
     preserved_source_budget.charge(central_reader.pos - central_record_start)
-    let central_record = central_bytes[central_record_start:central_reader.pos].to_owned()
+    let central_record = copy_zip_bytes_cancellable(
+      central_bytes[central_record_start:central_reader.pos],
+      cancelled,
+    )
     if disk != 0 {
       raise UnsupportedFeature(msg="multi-disk zip not supported")
     }
@@ -1070,6 +1128,7 @@ fn read_impl(
   let records : Array[LocalRecord] = Array::new(capacity=metas.length())
   let local_intervals : Array[(Int, Int)] = Array::new(capacity=metas.length())
   for meta in metas {
+    check_zip_cancelled(cancelled)
     let record = read_entry_record(bytes, meta, central_offset)
     preserved_source_budget.charge(record.end - meta.local_header_offset)
     records.push(record)
@@ -1085,6 +1144,7 @@ fn read_impl(
   })
   let mut covered_until = 0
   for interval in local_intervals {
+    check_zip_cancelled(cancelled)
     if interval.0 < covered_until {
       raise UnsupportedFeature(msg="overlapping zip local records")
     }
@@ -1126,6 +1186,7 @@ fn read_impl(
   )
   let mut actual_total = 0
   for index in 0..<metas.length() {
+    check_zip_cancelled(cancelled)
     let meta = metas[index]
     let record = records[index]
     ignore(compression_from_method(meta.compression_method))
@@ -1152,7 +1213,7 @@ fn read_impl(
       None => ()
     }
     let data = materialize_entry_data(
-      record, meta, materialize_limit, limit_kind, reported_limit, actual_base,
+      record, meta, materialize_limit, limit_kind, reported_limit, actual_base, cancelled,
     )
     match max_total_uncompressed_bytes {
       Some(limit) if data.length() > limit - actual_total =>
@@ -1174,7 +1235,10 @@ fn read_impl(
       crc32: meta.crc32,
       source_local_offset: Some(meta.local_header_offset),
       source: Some({
-        local_record: bytes[meta.local_header_offset:record.end].to_owned(),
+        local_record: copy_zip_bytes_cancellable(
+          bytes[meta.local_header_offset:record.end],
+          cancelled,
+        ),
         local_header_length: record.data_start - meta.local_header_offset,
         central_record: meta.central_record,
         local_zip64_uncompressed_position: record.local_zip64_uncompressed_position,
@@ -1188,13 +1252,14 @@ fn read_impl(
       source_unchanged: true,
     })
   }
+  check_zip_cancelled(cancelled)
   archive
 }
 
 ///|
 /// Reads a ZIP archive using the library's compatibility defaults.
 pub fn read(bytes : BytesView) -> Archive raise ZipError {
-  read_impl(bytes, None, None, None, None, None)
+  read_impl(bytes, None, None, None, None, None, () => false)
 }
 
 ///|
@@ -1208,6 +1273,7 @@ pub fn read_limited(
   max_entry_uncompressed_bytes~ : Int,
   max_total_uncompressed_bytes~ : Int,
   max_total_preserved_source_bytes~ : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> Archive raise ZipError {
   if max_package_bytes < 0 ||
     max_entries < 0 ||
@@ -1223,6 +1289,7 @@ pub fn read_limited(
     Some(max_entry_uncompressed_bytes),
     Some(max_total_uncompressed_bytes),
     Some(max_total_preserved_source_bytes),
+    cancelled,
   )
 }
 
@@ -1252,6 +1319,23 @@ fn push_u64_le(buf : Array[Byte], value : UInt64) -> Unit {
 fn push_bytes(buf : Array[Byte], bytes : BytesView) -> Unit {
   for b in bytes {
     buf.push(b)
+  }
+}
+
+///|
+test "ZIP owned copies observe cancellation between chunks" {
+  let source = Bytes::make(256 * 1024, b'x')
+  let checks = [0]
+  try
+    copy_zip_bytes_cancellable(source, () => {
+      checks[0] += 1
+      checks[0] >= 3
+    })
+  catch {
+    ReadCancelled => assert_true(checks[0] >= 3)
+    _ => fail("expected ZIP copy cancellation")
+  } noraise {
+    _ => fail("expected ZIP copy cancellation")
   }
 }
 

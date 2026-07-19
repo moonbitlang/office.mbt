@@ -1,8 +1,27 @@
 ///|
+fn ensure_cell_image_png_content_type(archive : @zip.Archive) -> Unit raise {
+  let path = "[Content_Types].xml"
+  let bytes = match archive.get(path) {
+    Some(value) => value
+    None => fail("written workbook is missing [Content_Types].xml")
+  }
+  let xml = @encoding/utf8.decode(bytes)
+  if xml.contains("Extension=\"png\"") {
+    return
+  }
+  let patched = xml.replace(
+    old="</Types>",
+    new="<Default Extension=\"png\" ContentType=\"image/png\"/></Types>",
+  )
+  assert_true(archive.replace(path, @encoding/utf8.encode(patched)))
+}
+
+///|
 /// Injects synthetic WPS embedded-cell-image parts into a written
 /// workbook: cellimages.xml, its relationships, and one media file.
 fn inject_cell_images(base : Bytes, media : Bytes) -> Bytes raise {
   let archive = @zip.read(base)
+  ensure_cell_image_png_content_type(archive)
   let cellimages_xml =
     #|<?xml version="1.0" encoding="UTF-8"?>
     #|<etc:cellImages xmlns:etc="http://www.wps.cn/officeDocument/2017/etCustomData" xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">

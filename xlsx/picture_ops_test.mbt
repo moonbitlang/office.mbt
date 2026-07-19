@@ -55,6 +55,38 @@ test "picture from bytes add and write" {
 }
 
 ///|
+test "external drawing relationships are never dereferenced as package parts" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.add_picture_from_bytes("Sheet1", "A1", [1, 2, 3], ".png")
+  let archive = @zip.read(@xlsx.write(workbook))
+  let rels_path = "xl/worksheets/_rels/sheet1.xml.rels"
+  let rels = match archive.get(rels_path) {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing worksheet relationships")
+  }
+  let internal_target = "Target=\"../drawings/drawing1.xml\""
+  assert_true(rels.contains(internal_target))
+  assert_true(
+    archive.replace(
+      rels_path,
+      @encoding/utf8.encode(
+        rels.replace(
+          old=internal_target,
+          new=internal_target + " TargetMode=\"External\"",
+        ),
+      ),
+    ),
+  )
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(@zip.write(archive)),
+  ) catch {
+    error => Err(error)
+  }
+  assert_true(result is Err(@xlsx.XlsxError::InvalidXml(_)))
+}
+
+///|
 test "picture dimension parsing (bmp/tiff/ico)" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

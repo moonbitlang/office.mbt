@@ -5,6 +5,9 @@ let docx_cli_max_element_text_chars : Int = 1024 * 1024
 let docx_cli_max_query_text_scan_chars : Int = 16 * 1024 * 1024
 
 ///|
+let docx_cli_text_yield_work_units : Int = 4096
+
+///|
 struct DocxTextBudget {
   resource : String
   maximum : Int
@@ -25,6 +28,8 @@ struct DocxTextCollector {
   mut scanned : Int
   mut pending_newlines : Int
   mut truncated : Bool
+  cancelled : () -> Bool
+  mut work_since_yield : Int
 }
 
 ///|
@@ -56,6 +61,7 @@ fn DocxTextCollector::new_reported(
   reported_maximum : Int,
   reported_offset : Int,
   fail_on_limit : Bool,
+  cancelled? : () -> Bool = () => false,
 ) -> DocxTextCollector {
   {
     maximum,
@@ -68,6 +74,29 @@ fn DocxTextCollector::new_reported(
     scanned: 0,
     pending_newlines: 0,
     truncated: false,
+    cancelled,
+    work_since_yield: 0,
+  }
+}
+
+///|
+fn DocxTextCollector::check_cancelled(
+  self : DocxTextCollector,
+) -> Unit raise CliFailure {
+  check_office_read_cancelled(self.cancelled)
+}
+
+///|
+async fn DocxTextCollector::cooperate(
+  self : DocxTextCollector,
+  work? : Int = 1,
+) -> Unit {
+  self.check_cancelled()
+  self.work_since_yield += work.max(0)
+  if self.work_since_yield >= docx_cli_text_yield_work_units {
+    self.work_since_yield = 0
+    @async.pause()
+    self.check_cancelled()
   }
 }
 
@@ -150,6 +179,70 @@ fn DocxTextCollector::write_literal_string(
 }
 
 ///|
+async fn DocxTextCollector::write_output_char_cooperative(
+  self : DocxTextCollector,
+  value : Char,
+) -> Unit {
+  self.cooperate()
+  self.write_output_char(value)
+}
+
+///|
+async fn DocxTextCollector::flush_pending_newlines_cooperative(
+  self : DocxTextCollector,
+) -> Unit {
+  let count = self.pending_newlines
+  self.pending_newlines = 0
+  for _ in 0..<count {
+    self.write_output_char_cooperative('\n')
+    if self.truncated && !self.fail_on_limit {
+      break
+    }
+  }
+}
+
+///|
+async fn DocxTextCollector::write_literal_char_cooperative(
+  self : DocxTextCollector,
+  value : Char,
+) -> Unit {
+  self.cooperate()
+  if self.scanned >= self.maximum {
+    self.truncated = true
+    if self.fail_on_limit {
+      raise docx_resource_failure(
+        self.resource,
+        self.reported_maximum,
+        actual=self.reported_offset + self.scanned + 1,
+      )
+    }
+    return
+  }
+  self.scanned += 1
+  self.flush_pending_newlines_cooperative()
+  if self.truncated && !self.fail_on_limit {
+    return
+  }
+  self.write_output_char(value)
+}
+
+///|
+async fn DocxTextCollector::write_literal_string_cooperative(
+  self : DocxTextCollector,
+  value : String,
+) -> Unit {
+  if self.truncated && !self.fail_on_limit {
+    return
+  }
+  for character in value {
+    self.write_literal_char_cooperative(character)
+    if self.truncated && !self.fail_on_limit {
+      break
+    }
+  }
+}
+
+///|
 fn DocxTextCollector::queue_paragraph_separator(
   self : DocxTextCollector,
 ) -> Unit {
@@ -206,42 +299,125 @@ fn DocxTextCollector::visit_all(
 }
 
 ///|
-fn collect_docx_text_counted(
+async fn DocxTextCollector::visit_cooperative(
+  self : DocxTextCollector,
+  element : @document.DocumentElement,
+) -> Unit {
+  self.cooperate()
+  if self.truncated && !self.fail_on_limit {
+    return
+  }
+  match element {
+    Text(value) => self.write_literal_string_cooperative(value)
+    Tab => self.write_literal_char_cooperative('\t')
+    Paragraph(children~, ..) => {
+      self.visit_all_cooperative(children)
+      self.queue_paragraph_separator()
+      self.queue_paragraph_separator()
+    }
+    Document(children~, ..)
+    | Run(children~, ..)
+    | Hyperlink(children~, ..)
+    | Table(children~, ..)
+    | TableRow(children~, ..)
+    | TableCell(children~, ..) => self.visit_all_cooperative(children)
+    Checkbox(_)
+    | NoteReference(_)
+    | CommentReference(_)
+    | Image(_)
+    | Break(_)
+    | BookmarkStart(_) => ()
+  }
+}
+
+///|
+async fn DocxTextCollector::visit_all_cooperative(
+  self : DocxTextCollector,
+  elements : Array[@document.DocumentElement],
+) -> Unit {
+  for element in elements {
+    if self.truncated && !self.fail_on_limit {
+      break
+    }
+    self.visit_cooperative(element)
+  }
+}
+
+///|
+async fn trim_docx_text_end_cooperative(
+  value : String,
+  cancelled : () -> Bool,
+) -> String {
+  let mut end = value.length()
+  let mut work = 0
+  while end > 0 && value[end - 1] == ('\n' : UInt16) {
+    if work >= docx_cli_text_yield_work_units {
+      work = 0
+      check_office_read_cancelled(cancelled)
+      @async.pause()
+      check_office_read_cancelled(cancelled)
+    }
+    end -= 1
+    work += 1
+  }
+  check_office_read_cancelled(cancelled)
+  if end == value.length() {
+    value
+  } else {
+    value[:end].to_owned()
+  }
+}
+
+///|
+async fn collect_docx_text_counted_cooperative(
   element : @document.DocumentElement,
   maximum : Int,
   resource : String,
   reported_maximum : Int,
   reported_offset : Int,
   fail_on_limit : Bool,
-) -> DocxCollectedText raise CliFailure {
+  cancelled? : () -> Bool = () => false,
+) -> DocxCollectedText {
   let collector = DocxTextCollector::new_reported(
-    resource, maximum, reported_maximum, reported_offset, fail_on_limit,
+    resource,
+    maximum,
+    reported_maximum,
+    reported_offset,
+    fail_on_limit,
+    cancelled~,
   )
-  collector.visit(element)
-  {
-    text: collector.output.to_string().trim_end(chars="\n").to_owned(),
-    scanned: collector.scanned,
-    truncated: collector.truncated,
-  }
+  collector.visit_cooperative(element)
+  let text = trim_docx_text_end_cooperative(
+    collector.output.to_string(),
+    cancelled,
+  )
+  { text, scanned: collector.scanned, truncated: collector.truncated }
 }
 
 ///|
-fn collect_docx_text_prefix(
+async fn collect_docx_text_prefix_cooperative(
   element : @document.DocumentElement,
   maximum : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> (String, Bool) {
-  // Truncating collectors never raise.
-  let result = try! collect_docx_text_counted(
-    element, maximum, "text preview", maximum, 0, false,
+  let result = collect_docx_text_counted_cooperative(
+    element,
+    maximum,
+    "text preview",
+    maximum,
+    0,
+    false,
+    cancelled~,
   )
   (result.text, result.truncated)
 }
 
 ///|
-fn entry_text_with_budget(
+async fn entry_text_with_budget_cooperative(
   entry : DocxProjectionEntry,
   budget : DocxTextBudget,
-) -> String raise CliFailure {
+  cancelled? : () -> Bool = () => false,
+) -> String {
   guard entry.element is Some(element) else { return "" }
   let remaining = budget.maximum - budget.used
   if remaining < 0 {
@@ -262,20 +438,28 @@ fn entry_text_with_budget(
       budget.reported_offset + budget.used,
     )
   }
-  let result = collect_docx_text_counted(
-    element, element_limit, resource, reported_maximum, reported_offset, true,
+  let result = collect_docx_text_counted_cooperative(
+    element,
+    element_limit,
+    resource,
+    reported_maximum,
+    reported_offset,
+    true,
+    cancelled~,
   )
   budget.used += result.scanned
   result.text
 }
 
 ///|
-fn entry_text_prefix(
+async fn entry_text_prefix_cooperative(
   entry : DocxProjectionEntry,
   maximum : Int,
+  cancelled? : () -> Bool = () => false,
 ) -> (String, Bool) {
   match entry.element {
-    Some(element) => collect_docx_text_prefix(element, maximum)
+    Some(element) =>
+      collect_docx_text_prefix_cooperative(element, maximum, cancelled~)
     None => ("", false)
   }
 }
@@ -354,10 +538,10 @@ fn reject_unsupported_stable_ids(
 }
 
 ///|
-fn resolve_projection_selector(
+async fn resolve_projection_selector(
   projection : DocxProjection,
   input : String,
-) -> DocxProjectionEntry raise CliFailure {
+) -> DocxProjectionEntry {
   let selector = @lib.parse_selector(input) catch {
     error => raise selector_failure(error)
   }
@@ -383,7 +567,9 @@ fn resolve_projection_selector(
     Some((story, kind, id)) => {
       let parent = "/docx/\{story}"
       let mut matches = 0
+      projection.cooperate(work=docx_cli_projection_yield_elements)
       for entry in projection.entries {
+        projection.cooperate()
         if entry.parent == Some(parent) &&
           entry.kind == kind &&
           entry.stable_id == Some(id) {

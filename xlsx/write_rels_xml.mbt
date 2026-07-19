@@ -11,15 +11,17 @@ fn write_rels_open(sb : StringBuilder) -> Unit {
 /// Emit one `<Relationship>` element (two-space indented, newline-terminated).
 /// `external` adds `TargetMode="External"`. Centralizing the element format
 /// keeps every rels writer byte-identical.
-fn write_relationship(
+fn write_relationship_with_id(
   sb : StringBuilder,
-  rel_id : Int,
-  rel_type : String,
-  target : String,
+  rel_id : StringView,
+  rel_type : StringView,
+  target : StringView,
   external? : Bool = false,
 ) -> Unit {
-  sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
-  sb.write_view(rel_type)
+  sb.write_view("  <Relationship Id=\"")
+  sb.write_view(escape_xml_attr(rel_id))
+  sb.write_view("\" Type=\"")
+  sb.write_view(escape_xml_attr(rel_type))
   sb.write_view("\" Target=\"")
   sb.write_view(escape_xml_attr(target))
   if external {
@@ -27,6 +29,17 @@ fn write_relationship(
   } else {
     sb.write_view("\"/>\n")
   }
+}
+
+///|
+fn write_relationship(
+  sb : StringBuilder,
+  rel_id : Int,
+  rel_type : String,
+  target : String,
+  external? : Bool = false,
+) -> Unit {
+  write_relationship_with_id(sb, "rId\{rel_id}", rel_type, target, external~)
 }
 
 ///|
@@ -115,6 +128,7 @@ fn write_drawing_rels_xml(
   image_targets : Array[(Int, String)],
   chart_targets : Array[(Int, String)],
   hyperlink_targets : Array[DrawingHyperlink],
+  preserved_relationships? : ArrayView[PreservedDrawingRelationship] = [],
 ) -> String {
   let sb = StringBuilder::new()
   write_rels_open(sb)
@@ -133,6 +147,34 @@ fn write_drawing_rels_xml(
       rel_hyperlink,
       entry.target,
       external=entry.link_type == External,
+    )
+  }
+  for relationship in preserved_relationships {
+    write_relationship_with_id(
+      sb,
+      relationship.id,
+      relationship.rel_type,
+      relationship.target,
+      external=relationship.external,
+    )
+  }
+  sb.write_view("</Relationships>")
+  sb.to_string()
+}
+
+///|
+fn write_preserved_drawing_rels_xml(
+  relationships : ArrayView[PreservedDrawingRelationship],
+) -> String {
+  let sb = StringBuilder::new()
+  write_rels_open(sb)
+  for relationship in relationships {
+    write_relationship_with_id(
+      sb,
+      relationship.id,
+      relationship.rel_type,
+      relationship.target,
+      external=relationship.external,
     )
   }
   sb.write_view("</Relationships>")

@@ -1,0 +1,1592 @@
+///|
+fn xlsx_read_test_projection() -> XlsxProjection raise {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  ignore(workbook.new_sheet("财务 \"Q1\""))
+  workbook.set_cell_str("Data", "A1", "alpha")
+  workbook.set_cell_formula("Data", "B2", "SUM(1,2)", value="3")
+  workbook.set_cell_formula("Data", "C3", "NOW()")
+  make_xlsx_projection("fixture.xlsx", workbook, 100)
+}
+
+///|
+fn xlsx_cli_error(run : () -> Unit raise) -> @lib.ProtocolError raise {
+  try run() catch {
+    CliFailure(error) => error
+    _ => fail("expected XLSX CLI failure")
+  } noraise {
+    _ => fail("expected XLSX CLI failure")
+  }
+}
+
+///|
+async fn xlsx_cli_error_async(run : async () -> Unit) -> @lib.ProtocolError {
+  try run() catch {
+    CliFailure(error) => error
+    _ => fail("expected XLSX CLI failure")
+  } noraise {
+    _ => fail("expected XLSX CLI failure")
+  }
+}
+
+///|
+async fn xlsx_text_test_data(
+  projection : XlsxProjection,
+  under : XlsxResolvedSelector?,
+  offset : Int,
+  limit : Int,
+) -> Json {
+  xlsx_text_payload(projection, under, offset, limit, 100_000).data
+}
+
+///|
+test "XLSX projection enforces its documented scan ceiling" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let error = xlsx_cli_error(() => {
+    ignore(
+      make_xlsx_projection(
+        "oversized.xlsx",
+        workbook,
+        xlsx_cli_hard_max_scan_cells + 1,
+      ),
+    )
+  })
+  assert_eq(error.code, "office.invalid_arguments")
+  assert_eq(
+    error.message,
+    "--max-elements must be between 1 and \{xlsx_cli_hard_max_scan_cells}",
+  )
+  guard error.details is Some(Object(details)) else {
+    fail("expected XLSX max-elements details")
+  }
+  assert_eq(
+    details.get("maximum"),
+    Some(Json::number(xlsx_cli_hard_max_scan_cells.to_double())),
+  )
+  let malformed : OfficeReadPackage = {
+    file: "malformed.xlsx",
+    format: Xlsx,
+    archive: @zip.Archive::new(),
+  }
+  let upfront = xlsx_cli_error(() => {
+    ignore(open_xlsx_projection(malformed, xlsx_cli_hard_max_scan_cells + 1))
+  })
+  assert_eq(upfront.code, "office.invalid_arguments")
+  let projection = make_xlsx_projection(
+    "limit.xlsx", workbook, xlsx_cli_hard_max_scan_cells,
+  )
+  assert_eq(projection.max_scan_cells, xlsx_cli_hard_max_scan_cells)
+}
+
+///|
+async fn xlsx_query_test_data(
+  projection : XlsxProjection,
+  under : XlsxResolvedSelector?,
+  spec : XlsxQuerySpec,
+) -> Json {
+  xlsx_query_payload(projection, under, spec, 100_000).data
+}
+
+///|
+fn xlsx_bounded_test_source(
+  file : String,
+  bytes : BytesView,
+) -> OfficeReadPackage raise {
+  let archive = @zip.read_limited(
+    bytes,
+    max_package_bytes=office_read_max_package_bytes,
+    max_entries=office_read_max_zip_entries,
+    max_entry_uncompressed_bytes=office_read_max_zip_entry_bytes,
+    max_total_uncompressed_bytes=office_read_max_zip_total_bytes,
+    max_total_preserved_source_bytes=office_read_max_preserved_source_bytes,
+  )
+  { file, format: Xlsx, archive }
+}
+
+///|
+test "XLSX CLI preserves parser cancellation and checkpoints cell scans" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let source = xlsx_bounded_test_source("cancel.xlsx", @xlsx.write(workbook))
+  let parse_result : Result[@xlsx.Workbook, Error] = Ok(
+    open_xlsx_read_package(source, cancelled=() => true),
+  ) catch {
+    error => Err(error)
+  }
+  assert_true(parse_result is Err(@xlsx.ReadCancelled))
+
+  let scan = XlsxScanBudget::new(10, cancelled=() => true)
+  let scan_error = xlsx_cli_error(() => scan.charge_cell())
+  assert_eq(scan_error.code, "office.cancelled")
+}
+
+///|
+async test "XLSX command cell scans yield before their bounded maximum" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let mut checks = 0
+  let projection = {
+    ..make_xlsx_projection("cooperative.xlsx", workbook, 100_000),
+    cancelled: () => {
+      checks += 1
+      false
+    },
+  }
+  guard projection.sheets[0] is sheet && sheet.content is Worksheet(_) else {
+    fail("expected worksheet fixture")
+  }
+  let region : XlsxScanRegion = {
+    sheet,
+    rect: { col_lo: 1, row_lo: 1, col_hi: 1_000, row_hi: 100 },
+  }
+  @async.with_task_group() <| group => {
+    let task = group.spawn(() => {
+      collect_xlsx_cell_page(projection, [region], PresentCells, 0, 0)
+    })
+    // The child first yields before scanning, then again after its first
+    // quantum. Waiting for many checkpoints proves it made partial progress.
+    while checks <= 100 {
+      @async.pause()
+    }
+    assert_true(task.try_wait() is None)
+    task.cancel()
+    let cancelled = try {
+      ignore(task.wait())
+      false
+    } catch {
+      error => @async.is_cancellation_error(error)
+    }
+    assert_true(cancelled)
+  }
+}
+
+///|
+async test "XLSX post-projection metadata, styles, and human output observe cancellation" {
+  let projection = { ..xlsx_read_test_projection(), cancelled: () => true }
+  guard projection.sheets[0].content is Worksheet(worksheet) else {
+    fail("expected worksheet fixture")
+  }
+  for
+    action in [
+      () => ignore(xlsx_styles_json(projection, [])),
+      () => {
+        ignore(
+          xlsx_page_human(
+            projection,
+            { cells: [], matched_total: 0, scanned_cells: 0, offset: 0 },
+            false,
+            10_000,
+          ),
+        )
+      },
+    ] {
+    let error = xlsx_cli_error(() => action())
+    assert_eq(error.code, "office.cancelled")
+  }
+  for
+    error in [
+      xlsx_cli_error_async(() => ignore(xlsx_outline_data(projection))),
+      xlsx_cli_error_async(() => {
+        ignore(
+          xlsx_conditional_format_range_count_with_budget(
+            projection,
+            worksheet,
+            XlsxConditionalFormatBudget::new(),
+          ),
+        )
+      }),
+      xlsx_cli_error_async(() => ignore(xlsx_outline_human(projection, 10_000))),
+    ] {
+    assert_eq(error.code, "office.cancelled")
+  }
+}
+
+///|
+test "Office format detection probes cancellation before and after validation" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let source = xlsx_bounded_test_source("cancel.xlsx", @xlsx.write(workbook))
+  let mut checks = 0
+  let error = xlsx_cli_error(() => {
+    ignore(
+      detect_office_archive_format(source.file, source.archive, () => {
+        checks += 1
+        checks > 1
+      }),
+    )
+  })
+  assert_eq(error.code, "office.cancelled")
+  // The detector observes cancellation internally, and the CLI boundary
+  // rechecks before translating it to a stable protocol error.
+  assert_eq(checks, 3)
+}
+
+///|
+fn xlsx_strict_test_bytes() -> Bytes raise {
+  let archive = @zip.Archive::new()
+  let content_types =
+    #|<ct:Types xmlns:ct="http://schemas.openxmlformats.org/package/2006/content-types"><ct:Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><ct:Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><ct:Override PartName="/xl/worksheets/sheet.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></ct:Types>
+  let root_relationships =
+    #|<pkg:Relationships xmlns:pkg="http://schemas.openxmlformats.org/package/2006/relationships"><pkg:Relationship Id="main" Type="http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument" Target="xl/workbook.xml"/></pkg:Relationships>
+  let workbook =
+    #|<s:workbook xmlns:s="http://purl.oclc.org/ooxml/spreadsheetml/main" xmlns:q="http://purl.oclc.org/ooxml/officeDocument/relationships"><s:sheets><s:sheet name="Strict" sheetId="1" q:id="sheet"/></s:sheets></s:workbook>
+  let workbook_relationships =
+    #|<rels:Relationships xmlns:rels="http://schemas.openxmlformats.org/package/2006/relationships"><rels:Relationship Id="sheet" Type="http://purl.oclc.org/ooxml/officeDocument/relationships/worksheet" Target="worksheets/sheet.xml"/></rels:Relationships>
+  let worksheet =
+    #|<worksheet xmlns="http://purl.oclc.org/ooxml/spreadsheetml/main"><sheetData><row r="1"><c r="A1" t="str"><v>strict-value</v></c></row></sheetData></worksheet>
+  archive.add("[Content_Types].xml", @utf8.encode(content_types))
+  archive.add("_rels/.rels", @utf8.encode(root_relationships))
+  archive.add("xl/workbook.xml", @utf8.encode(workbook))
+  archive.add(
+    "xl/_rels/workbook.xml.rels",
+    @utf8.encode(workbook_relationships),
+  )
+  archive.add("xl/worksheets/sheet.xml", @utf8.encode(worksheet))
+  @zip.write(archive)
+}
+
+///|
+fn xlsx_relocated_test_bytes() -> Bytes raise {
+  let archive = @zip.Archive::new()
+  let content_types =
+    #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/custom/book.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/data/first.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/data/Strings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/><Override PartName="/objects/Table.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml"/><Override PartName="/pages/Chart.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.chartsheet+xml"/><Override PartName="/art/Drawing.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/><Override PartName="/art/SheetDrawing.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/><Override PartName="/charts/Chart.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/><Override PartName="/charts/SheetChart.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/></Types>
+  let root_relationships =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="main" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="custom/book.xml"/></Relationships>
+  let workbook =
+    #|<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Moved" sheetId="1" r:id="sheet"/><sheet name="MovedChart" sheetId="2" r:id="chartSheet"/></sheets></workbook>
+  let workbook_relationships =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="sheet" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="../data/first.xml"/><Relationship Id="chartSheet" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chartsheet" Target="../pages/chart.xml"/><Relationship Id="strings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="../data/strings.xml"/></Relationships>
+  let worksheet =
+    #|<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c></row></sheetData><hyperlinks><hyperlink ref="A1" r:id="link"/></hyperlinks><drawing r:id="drawing"/><tableParts count="1"><tablePart r:id="table"/></tableParts></worksheet>
+  let worksheet_relationships =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="table" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/table" Target="../objects/table.xml"/><Relationship Id="link" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.test/moved" TargetMode="External"/><Relationship Id="drawing" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../art/sheetdrawing.xml"/></Relationships>
+  let shared_strings =
+    #|<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="1" uniqueCount="1"><si><t>relocated-value</t></si></sst>
+  let table =
+    #|<table xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" id="1" name="MovedTable" displayName="MovedTable" ref="A1:A1"><tableColumns count="1"><tableColumn id="1" name="Header"/></tableColumns></table>
+  let sheet_drawing =
+    #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="9525" cy="9525"/><xdr:graphicFrame><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="chart"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:oneCellAnchor><xdr:oneCellAnchor><xdr:from><xdr:col>1</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="9525" cy="9525"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="1" name="Moved image"/></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="image"/></xdr:blipFill></xdr:pic><xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>
+  let sheet_drawing_relationships =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="chart" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/sheetchart.xml"/><Relationship Id="image" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/photo.png"/></Relationships>
+  let sheet_chart =
+    #|<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart/></c:chartSpace>
+  let chart_sheet =
+    #|<chartsheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><drawing r:id="draw"/></chartsheet>
+  let chart_sheet_relationships =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="draw" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../art/drawing.xml"/></Relationships>
+  let drawing =
+    #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="4572000" cy="2476500"/><xdr:graphicFrame><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="chart"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>
+  let drawing_relationships =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="chart" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart.xml"/></Relationships>
+  let chart =
+    #|<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart/></c:chartSpace>
+  archive.add("[Content_Types].xml", @utf8.encode(content_types))
+  archive.add("_rels/.rels", @utf8.encode(root_relationships))
+  archive.add("custom/book.xml", @utf8.encode(workbook))
+  archive.add(
+    "custom/_rels/book.xml.rels",
+    @utf8.encode(workbook_relationships),
+  )
+  archive.add("data/first.xml", @utf8.encode(worksheet))
+  // Relationship parts and their targets are also allowed outside xl/*.
+  // Mixed-case entry names verify lookup through the canonical part index.
+  archive.add(
+    "data/_rels/First.xml.rels",
+    @utf8.encode(worksheet_relationships),
+  )
+  // OPC part lookup is case-insensitive. Keep the relationship spelling lower
+  // case and the actual ZIP entry mixed case to cover canonical resolution.
+  archive.add("data/Strings.xml", @utf8.encode(shared_strings))
+  archive.add("objects/Table.xml", @utf8.encode(table))
+  archive.add("art/SheetDrawing.xml", @utf8.encode(sheet_drawing))
+  archive.add(
+    "art/_rels/SheetDrawing.xml.rels",
+    @utf8.encode(sheet_drawing_relationships),
+  )
+  archive.add("charts/SheetChart.xml", @utf8.encode(sheet_chart))
+  archive.add("media/Photo.png", b"png")
+  archive.add("pages/Chart.xml", @utf8.encode(chart_sheet))
+  archive.add(
+    "pages/_rels/Chart.xml.rels",
+    @utf8.encode(chart_sheet_relationships),
+  )
+  archive.add("art/Drawing.xml", @utf8.encode(drawing))
+  archive.add("art/_rels/Drawing.xml.rels", @utf8.encode(drawing_relationships))
+  archive.add("charts/Chart.xml", @utf8.encode(chart))
+  @zip.write(archive)
+}
+
+///|
+fn xlsx_default_declared_relocated_test_bytes() -> Bytes raise {
+  let source = @zip.read(xlsx_relocated_test_bytes())
+  let archive = @zip.Archive::new()
+  let workbook_override =
+    #|<Override PartName="/custom/book.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  let workbook_default =
+    #|<Default Extension="xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  for entry in source.entries() {
+    let data = if entry.name() == "[Content_Types].xml" {
+      let content_types = @utf8.decode(entry.data(), ignore_bom=true)
+      let updated = content_types.replace(
+        old=workbook_override,
+        new=workbook_default,
+      )
+      if updated == content_types {
+        fail("relocated fixture did not contain its workbook override")
+      }
+      @utf8.encode(updated)
+    } else {
+      entry.data().to_owned()
+    }
+    archive.add(
+      entry.name(),
+      data,
+      compression=entry.compression(),
+      data_descriptor=entry.data_descriptor(),
+    )
+  }
+  @zip.write(archive)
+}
+
+///|
+test "XLSX selectors resolve to stable named canonical paths" {
+  let projection = xlsx_read_test_projection()
+  guard resolve_xlsx_selector(projection, "/xlsx/sheet[2]") is Sheet(second) else {
+    fail("expected sheet selector")
+  }
+  assert_eq(second.name, "财务 \"Q1\"")
+  assert_eq(second.index, 1)
+  assert_eq(second.path, "/xlsx/sheet[name=\"财务 \\\"Q1\\\"\"]")
+  assert_eq(@lib.parse_selector(second.path).render(), second.path)
+  guard resolve_xlsx_selector(
+      projection, "/xlsx/sheet[name=\"Data\"]/range[B2:A1]",
+    )
+    is Range(sheet, rect, path~) else {
+    fail("expected range selector")
+  }
+  assert_eq(sheet.name, "Data")
+  assert_eq(rect.cell_count(), 4L)
+  assert_eq(path, "/xlsx/sheet[name=\"Data\"]/range[A1:B2]")
+  assert_eq(@lib.parse_selector(path).render(), path)
+  guard resolve_xlsx_selector(
+      projection, "/xlsx/sheet[name=\"Data\"]/range[B2:B2]",
+    )
+    is Range(_, singleton, path~) else {
+    fail("expected singleton range selector")
+  }
+  assert_eq(singleton.range_reference(projection.file), "B2:B2")
+  assert_eq(path, "/xlsx/sheet[name=\"Data\"]/range[B2:B2]")
+  assert_eq(@lib.parse_selector(path).render(), path)
+  guard resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"data\"]/cell[A1]")
+    is Cell(case_insensitive_sheet, _, path~) else {
+    fail("expected case-insensitive sheet selector")
+  }
+  assert_eq(case_insensitive_sheet.name, "Data")
+  assert_eq(path, "/xlsx/sheet[name=\"Data\"]/cell[A1]")
+}
+
+///|
+async test "XLSX structured reads accept detector-valid Strict OOXML relationships" {
+  let source = xlsx_bounded_test_source("strict.xlsx", xlsx_strict_test_bytes())
+  assert_true(@lib.detect_archive_format(source.file, source.archive) is Xlsx)
+  let projection = open_xlsx_projection(source, 10)
+  guard xlsx_get_data(
+      projection,
+      resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Strict\"]/cell[A1]"),
+    )
+    is Object(get) &&
+    get.get("cell") is Some(Object(cell)) else {
+    fail("expected Strict XLSX cell")
+  }
+  assert_eq(cell.get("value"), Some(Json::string("strict-value")))
+}
+
+///|
+async test "XLSX structured reads resolve relationships from relocated workbooks" {
+  let source = xlsx_bounded_test_source(
+    "relocated.xlsx",
+    xlsx_relocated_test_bytes(),
+  )
+  assert_true(@lib.detect_archive_format(source.file, source.archive) is Xlsx)
+  let projection = open_xlsx_projection(source, 10)
+  guard xlsx_get_data(
+      projection,
+      resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"moved\"]/cell[A1]"),
+    )
+    is Object(get) &&
+    get.get("cell") is Some(Object(cell)) else {
+    fail("expected relocated XLSX cell")
+  }
+  assert_eq(
+    get.get("path"),
+    Some(Json::string("/xlsx/sheet[name=\"Moved\"]/cell[A1]")),
+  )
+  assert_eq(cell.get("value"), Some(Json::string("relocated-value")))
+  guard xlsx_outline_data(projection) is Object(outline) &&
+    outline.get("sheets") is Some(Array([Object(moved), Object(chart)])) &&
+    moved.get("counts") is Some(Object(moved_counts)) &&
+    chart.get("counts") is Some(Object(chart_counts)) else {
+    fail("expected relocated worksheet and chart-sheet outline")
+  }
+  assert_eq(moved_counts.get("tables"), Some(Json::number(1)))
+  assert_eq(moved_counts.get("hyperlinks"), Some(Json::number(1)))
+  assert_eq(moved_counts.get("charts"), Some(Json::number(1)))
+  assert_eq(moved_counts.get("images"), Some(Json::number(1)))
+  assert_eq(chart.get("kind"), Some(Json::string("chart-sheet")))
+  assert_eq(chart_counts.get("charts"), Some(Json::number(1)))
+}
+
+///|
+async test "XLSX structured reads retain a default-declared relocated workbook path" {
+  let source = xlsx_bounded_test_source(
+    "relocated-default.xlsx",
+    xlsx_default_declared_relocated_test_bytes(),
+  )
+  assert_true(@lib.detect_archive_format(source.file, source.archive) is Xlsx)
+  let projection = open_xlsx_projection(source, 10)
+  guard xlsx_get_data(
+      projection,
+      resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Moved\"]/cell[A1]"),
+    )
+    is Object(get) &&
+    get.get("cell") is Some(Object(cell)) else {
+    fail("expected default-declared relocated XLSX cell")
+  }
+  assert_eq(cell.get("value"), Some(Json::string("relocated-value")))
+}
+
+///|
+test "XLSX selector failures distinguish format, absence, and scan limits" {
+  let projection = xlsx_read_test_projection()
+  let mismatch = xlsx_cli_error(() => {
+    ignore(resolve_xlsx_selector(projection, "/docx/body"))
+  })
+  assert_eq(mismatch.code, "office.xlsx.selector_format_mismatch")
+  let missing = xlsx_cli_error(() => {
+    ignore(resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Missing\"]"))
+  })
+  assert_eq(missing.code, "office.xlsx.selector_not_found")
+  let oversized = xlsx_cli_error(() => {
+    ignore(
+      resolve_xlsx_selector(
+        projection, "/xlsx/sheet[name=\"Data\"]/range[A1:K10]",
+      ),
+    )
+  })
+  assert_eq(oversized.code, "office.xlsx.resource_limit")
+  guard oversized.details is Some(Object(fields)) else {
+    fail("expected scan-limit details")
+  }
+  assert_eq(fields.get("resource"), Some(Json::string("scanned cells")))
+  assert_eq(fields.get("limit"), Some(Json::number(100)))
+  assert_eq(fields.get("actual"), Some(Json::number(110)))
+}
+
+///|
+test "XLSX used-range preprocessing rejects excess stored cells before scanning" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  workbook.set_cell_str("Data", "A1", "first")
+  workbook.set_cell_str("Data", "B1", "second")
+  let projection = make_xlsx_projection("stored-cells.xlsx", workbook, 1)
+  let limited = xlsx_cli_error(() => ignore(xlsx_scan_regions(projection, None)))
+  assert_eq(limited.code, "office.xlsx.resource_limit")
+  guard limited.details is Some(Object(details)) else {
+    fail("expected stored-cell limit details")
+  }
+  assert_eq(details.get("resource"), Some(Json::string("stored_cells")))
+  assert_eq(details.get("limit"), Some(Json::number(1)))
+  assert_eq(details.get("actual"), Some(Json::number(2)))
+}
+
+///|
+async test "XLSX used-range preprocessing shares one stored-cell budget across sheets" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("First"))
+  ignore(workbook.new_sheet("Second"))
+  workbook.set_cell_str("First", "A1", "one")
+  workbook.set_cell_str("Second", "A1", "two")
+  let projection = make_xlsx_projection(
+    "aggregate-stored-cells.xlsx", workbook, 1,
+  )
+  let limited_scan = xlsx_cli_error(() => {
+    ignore(xlsx_scan_regions(projection, None))
+  })
+  let limited_outline = xlsx_cli_error_async(() => {
+    ignore(xlsx_outline_data(projection))
+  })
+  let limited_human = xlsx_cli_error_async(() => {
+    ignore(xlsx_outline_human(projection, 10_000))
+  })
+  for limited in [limited_scan, limited_outline, limited_human] {
+    assert_eq(limited.code, "office.xlsx.resource_limit")
+    guard limited.details is Some(Object(details)) else {
+      fail("expected aggregate stored-cell limit details")
+    }
+    assert_eq(details.get("resource"), Some(Json::string("stored_cells")))
+    assert_eq(details.get("limit"), Some(Json::number(1)))
+    assert_eq(details.get("actual"), Some(Json::number(2)))
+  }
+}
+
+///|
+async test "XLSX outline shares conditional-format budgets across sheets" {
+  let workbook = @xlsx.Workbook::new()
+  let first = workbook.new_sheet("First")
+  let second = workbook.new_sheet("Second")
+  let fragment = "<conditionalFormatting sqref=\"A1\"><cfRule type=\"expression\"/></conditionalFormatting>"
+  first.add_conditional_format_xml(fragment)
+  second.add_conditional_format_xml(fragment)
+  let projection = make_xlsx_projection(
+    "aggregate-conditional-formats.xlsx", workbook, 10,
+  )
+  let range_budget = XlsxConditionalFormatBudget::new(
+    maximum_ranges=1,
+    maximum_work_units=4096,
+  )
+  assert_eq(
+    xlsx_conditional_format_range_count_with_budget(
+      projection, first, range_budget,
+    ),
+    1,
+  )
+  let range_error = xlsx_cli_error_async(() => {
+    ignore(
+      xlsx_conditional_format_range_count_with_budget(
+        projection, second, range_budget,
+      ),
+    )
+  })
+  assert_eq(range_error.code, "office.xlsx.resource_limit")
+  guard range_error.details is Some(Object(range_details)) else {
+    fail("expected aggregate conditional-format range details")
+  }
+  assert_eq(
+    range_details.get("resource"),
+    Some(Json::string("conditional-format ranges")),
+  )
+
+  let work_budget = XlsxConditionalFormatBudget::new(
+    maximum_ranges=10,
+    maximum_work_units=fragment.length() * 2 - 1,
+  )
+  assert_eq(
+    xlsx_conditional_format_range_count_with_budget(
+      projection, first, work_budget,
+    ),
+    1,
+  )
+  let work_error = xlsx_cli_error_async(() => {
+    ignore(
+      xlsx_conditional_format_range_count_with_budget(
+        projection, second, work_budget,
+      ),
+    )
+  })
+  assert_eq(work_error.code, "office.xlsx.resource_limit")
+  guard work_error.details is Some(Object(work_details)) else {
+    fail("expected aggregate conditional-format work details")
+  }
+  assert_eq(
+    work_details.get("resource"),
+    Some(Json::string("conditional-format count work units")),
+  )
+}
+
+///|
+async test "XLSX outline yields between worksheet summaries" {
+  let workbook = @xlsx.Workbook::new()
+  for index in 0..<8 {
+    ignore(workbook.new_sheet("Sheet\{index}"))
+  }
+  let projection = make_xlsx_projection(
+    "cooperative-outline.xlsx",
+    workbook,
+    10,
+    cancelled=() => @async.is_being_cancelled(),
+  )
+  @async.with_task_group() <| group => {
+    let task = group.spawn(() => ignore(xlsx_outline_data(projection)))
+    @async.pause()
+    task.cancel()
+    let cancelled = try {
+      ignore(task.wait())
+      false
+    } catch {
+      error => @async.is_cancellation_error(error)
+    }
+    assert_true(cancelled)
+  }
+}
+
+///|
+test "XLSX cell snapshots preserve typed values, formulas, and canonical paths" {
+  let projection = xlsx_read_test_projection()
+  guard resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]/cell[B2]")
+    is Cell(sheet, rect, path~) else {
+    fail("expected cell selector")
+  }
+  let budget = XlsxScanBudget::new(1)
+  let snapshot = xlsx_cell_snapshot(
+    projection,
+    sheet,
+    rect.row_lo,
+    rect.col_lo,
+    budget,
+  )
+  assert_true(snapshot.is_present())
+  assert_eq(snapshot.path, path)
+  assert_eq(snapshot.reference, "B2")
+  assert_eq(snapshot.row, 2)
+  assert_eq(snapshot.column, 2)
+  assert_eq(snapshot.formula, Some("SUM(1,2)"))
+  assert_eq(snapshot.formatted, None)
+  snapshot.ensure_formatted(projection, budget)
+  assert_eq(snapshot.formatted, Some("3"))
+  assert_true(snapshot.raw is Some(String("3")))
+  assert_eq(budget.scanned, 1)
+}
+
+///|
+test "XLSX cell scans keep the resolved worksheet handle" {
+  let projection = xlsx_read_test_projection()
+  guard resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]/cell[A1]")
+    is Cell(sheet, rect, ..) else {
+    fail("expected cell selector")
+  }
+  projection.workbook.set_sheet_name("Data", "Renamed")
+  let snapshot = xlsx_cell_snapshot(
+    projection,
+    sheet,
+    rect.row_lo,
+    rect.col_lo,
+    XlsxScanBudget::new(1),
+  )
+  guard snapshot.raw is Some(String(raw)) else {
+    fail("expected resolved raw string")
+  }
+  assert_eq(raw, "alpha")
+  snapshot.ensure_formatted(projection, XlsxScanBudget::new(1))
+  assert_eq(snapshot.formatted, Some("alpha"))
+}
+
+///|
+test "XLSX string and metadata accounting fail before unbounded retention" {
+  let per_value = XlsxStringBudget::new(maximum=20, per_value_maximum=3)
+  let too_wide = xlsx_cli_error(() => per_value.charge("cell value", "four"))
+  assert_eq(too_wide.code, "office.xlsx.resource_limit")
+  let aggregate = XlsxStringBudget::new(maximum=5, per_value_maximum=5)
+  aggregate.charge("cell value", "abc")
+  let too_many = xlsx_cli_error(() => aggregate.charge("cell formula", "def"))
+  assert_eq(too_many.code, "office.xlsx.resource_limit")
+  let formulas = XlsxFormulaBudget::new(maximum=3)
+  formulas.charge(2)
+  let formula_work = xlsx_cli_error(() => formulas.charge(2))
+  assert_eq(formula_work.code, "office.xlsx.resource_limit")
+  let metadata : XlsxMetadataBudget = {
+    maximum_items: 1,
+    maximum_string_chars: 4,
+    items: 0,
+    string_chars: 0,
+  }
+  metadata.charge_item(["name"])
+  let metadata_limit = xlsx_cli_error(() => metadata.charge_item([]))
+  assert_eq(metadata_limit.code, "office.xlsx.resource_limit")
+}
+
+///|
+async test "XLSX query selectors are bounded, deterministic predicate conjunctions" {
+  let projection = xlsx_read_test_projection()
+  guard resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]/cell[B2]")
+    is Cell(sheet, rect, ..) else {
+    fail("expected cell selector")
+  }
+  let snapshot = xlsx_cell_snapshot(
+    projection,
+    sheet,
+    rect.row_lo,
+    rect.col_lo,
+    XlsxScanBudget::new(1),
+  )
+  let predicates = parse_xlsx_query_selector(
+    "cell[type=formula][formula~=SUM][text=3]",
+  )
+  assert_eq(predicates.length(), 3)
+  let structured = parse_xlsx_query_selector(
+    "cell[formula~=SUM(Table1[[#Headers],[Amount]])][text~=total]",
+  )
+  assert_eq(structured.length(), 2)
+  guard structured[0] is FormulaContains(literal) else {
+    fail("expected structured-reference formula predicate")
+  }
+  assert_eq(literal, "SUM(Table1[[#Headers],[Amount]])")
+  let work = OfficeQueryWorkBudget::new(1024, format="xlsx")
+  assert_true(
+    xlsx_cell_matches(
+      snapshot,
+      prepare_xlsx_query_predicates(predicates, work),
+      work,
+    ),
+  )
+  let comparison_work = OfficeQueryWorkBudget::new(1024, format="xlsx")
+  assert_false(
+    xlsx_cell_matches(
+      snapshot,
+      prepare_xlsx_query_predicates(
+        parse_xlsx_query_selector("cell[value>3]"),
+        comparison_work,
+      ),
+      comparison_work,
+    ),
+  )
+  let malformed = xlsx_cli_error(() => {
+    ignore(parse_xlsx_query_selector("row[type=number]"))
+  })
+  assert_eq(malformed.code, "office.xlsx.invalid_query")
+  let too_many = "cell" + "[formula]".repeat(17)
+  let predicate_limit = xlsx_cli_error(() => {
+    ignore(parse_xlsx_query_selector(too_many))
+  })
+  assert_eq(predicate_limit.code, "office.xlsx.query_predicate_limit")
+  let work_limit = xlsx_cli_error_async(() => {
+    let limited = OfficeQueryWorkBudget::new(24, format="xlsx")
+    let prepared = prepare_xlsx_query_predicates(
+      parse_xlsx_query_selector("cell[text~=alpha]"),
+      limited,
+    )
+    ignore(xlsx_cell_matches(snapshot, prepared, limited))
+  })
+  assert_eq(work_limit.code, "office.xlsx.resource_limit")
+  guard work_limit.details is Some(Object(fields)) else {
+    fail("expected query-work details")
+  }
+  assert_eq(
+    fields.get("resource"),
+    Some(Json::string("query predicate work units")),
+  )
+}
+
+///|
+async test "XLSX query literals preserve whitespace and support JSON quoting" {
+  let unquoted = parse_xlsx_query_selector("cell[text= leading and trailing ]")
+  guard unquoted[0] is TextEquals(unquoted_text) else {
+    fail("expected exact-text predicate")
+  }
+  assert_eq(unquoted_text, " leading and trailing ")
+
+  let whitespace = parse_xlsx_query_selector("cell[text=\" \"]")
+  guard whitespace[0] is TextEquals(whitespace_text) else {
+    fail("expected quoted exact-text predicate")
+  }
+  assert_eq(whitespace_text, " ")
+
+  let escaped = parse_xlsx_query_selector(
+    "cell[text=\"bracket]quote\\\"slash\\\\\"]",
+  )
+  guard escaped[0] is TextEquals(escaped_text) else {
+    fail("expected escaped exact-text predicate")
+  }
+  assert_eq(escaped_text, "bracket]quote\"slash\\")
+
+  for
+    malformed in [
+      "cell[text=\"unterminated]", "cell[text=\"value\"suffix]", "cell[text=\"bad\\q\"]",
+      "cell[text=\"\"]", "cell[text=\"\\ud800\"]",
+    ] {
+    let error = xlsx_cli_error(() => {
+      ignore(parse_xlsx_query_selector(malformed))
+    })
+    assert_eq(error.code, "office.xlsx.invalid_query")
+  }
+
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  workbook.set_cell_str("Data", "A1", " leading and trailing ")
+  let projection = make_xlsx_projection("whitespace.xlsx", workbook, 10)
+  guard resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]/cell[A1]")
+    is Cell(sheet, rect, ..) else {
+    fail("expected whitespace fixture cell")
+  }
+  let snapshot = xlsx_cell_snapshot(
+    projection,
+    sheet,
+    rect.row_lo,
+    rect.col_lo,
+    XlsxScanBudget::new(1),
+  )
+  for
+    selector in [
+      "cell[text= leading and trailing ]", "cell[text=\" leading and trailing \"]",
+    ] {
+    let work = OfficeQueryWorkBudget::new(1024, format="xlsx")
+    assert_true(
+      xlsx_cell_matches(
+        snapshot,
+        prepare_xlsx_query_predicates(parse_xlsx_query_selector(selector), work),
+        work,
+      ),
+    )
+  }
+}
+
+///|
+async test "XLSX large single-cell predicates yield within the comparison" {
+  let work = OfficeQueryWorkBudget::new(
+    office_cli_max_query_predicate_work_units,
+    format="xlsx",
+  )
+  let pattern = OfficeLinearPattern::compile("missing", false, work)
+  @async.with_task_group() <| group => {
+    let task = group.spawn(() => {
+      pattern.is_in_cooperative("a".repeat(1024 * 1024), work)
+    })
+    // A single cell is larger than one comparison quantum. The child must
+    // yield from inside KMP rather than waiting for the outer cell counter.
+    @async.pause()
+    assert_true(task.try_wait() is None)
+    task.cancel()
+    let cancelled = try {
+      ignore(task.wait())
+      false
+    } catch {
+      error => @async.is_cancellation_error(error)
+    }
+    assert_true(cancelled)
+  }
+}
+
+///|
+async test "XLSX snapshots preserve and resolve shared-formula followers" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  workbook.set_cell_formula_opts(
+    "Data",
+    "A1",
+    "D1+1",
+    opts=@xlsx.FormulaOpts::shared("A1:C1"),
+  )
+  let projection = make_xlsx_projection("shared.xlsx", workbook, 10)
+  let under = Some(
+    resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]"),
+  )
+  let spec : XlsxQuerySpec = {
+    selector: "cell[type=formula]",
+    predicates: parse_xlsx_query_selector("cell[type=formula]"),
+    offset: 0,
+    limit: 10,
+  }
+  guard xlsx_query_test_data(projection, under, spec) is Object(fields) &&
+    fields.get("matches") is Some(Array(matches)) else {
+    fail("expected shared-formula matches")
+  }
+  assert_eq(fields.get("matched_total"), Some(Json::number(3)))
+  assert_eq(matches.length(), 3)
+  assert_true(matches[0].stringify().contains("\"formula\":\"D1+1\""))
+  assert_true(matches[1].stringify().contains("\"formula\":\"E1+1\""))
+  assert_true(matches[2].stringify().contains("\"formula\":\"F1+1\""))
+  let master_only : XlsxQuerySpec = {
+    selector: "cell[formula~=D1]",
+    predicates: parse_xlsx_query_selector("cell[formula~=D1]"),
+    offset: 0,
+    limit: 10,
+  }
+  guard xlsx_query_test_data(projection, under, master_only)
+    is Object(master_fields) else {
+    fail("expected translated shared-formula query")
+  }
+  assert_eq(master_fields.get("matched_total"), Some(Json::number(1)))
+}
+
+///|
+test "XLSX followers reject oversized shared masters before translation" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Data")
+  sheet.set_cell_formula_opts(
+    "A1",
+    "D1+1",
+    opts=@xlsx.FormulaOpts::shared("A1:B1"),
+  )
+  let archive = @zip.read(@xlsx.write(workbook))
+  let path = "xl/worksheets/sheet1.xml"
+  let xml = match archive.get(path) {
+    Some(value) => @utf8.decode(value, ignore_bom=true)
+    None => fail("missing shared-formula worksheet")
+  }
+  let oversized = "A1+" + "1+".repeat(512 * 1024) + "1"
+  assert_true(oversized.length() > xlsx_cli_max_cell_string_chars)
+  let updated = xml.replace(old="D1+1", new=oversized)
+  assert_true(updated != xml)
+  assert_true(archive.replace(path, @utf8.encode(updated)))
+  let source = xlsx_bounded_test_source(
+    "oversized-shared-formula.xlsx",
+    @zip.write(archive),
+  )
+  let projection = open_xlsx_projection(source, 10)
+  guard resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]/cell[B1]")
+    is Cell(target, rect, ..) else {
+    fail("expected shared-formula follower selector")
+  }
+  let error = xlsx_cli_error(() => {
+    ignore(
+      xlsx_cell_snapshot(
+        projection,
+        target,
+        rect.row_lo,
+        rect.col_lo,
+        XlsxScanBudget::new(1),
+      ),
+    )
+  })
+  assert_eq(error.code, "office.xlsx.resource_limit")
+  guard error.details is Some(Object(details)) else {
+    fail("expected shared-formula limit details")
+  }
+  assert_eq(
+    details.get("resource"),
+    Some(Json::string("shared_formula_input_chars")),
+  )
+  assert_eq(
+    details.get("limit"),
+    Some(Json::number(xlsx_cli_max_cell_string_chars.to_double())),
+  )
+}
+
+///|
+test "XLSX structured reads reject shared-formula followers without a master" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Data")
+  sheet.set_cell_formula_opts(
+    "A1",
+    "D1+1",
+    opts=@xlsx.FormulaOpts::shared("A1:C1"),
+  )
+  let archive = @zip.read(@xlsx.write(workbook))
+  let path = "xl/worksheets/sheet1.xml"
+  let xml = match archive.get(path) {
+    Some(value) => @utf8.decode(value, ignore_bom=true)
+    None => fail("missing shared-formula worksheet")
+  }
+  let master = "<f t=\"shared\" ref=\"A1:C1\" si=\"0\">D1+1</f>"
+  let follower = "<f t=\"shared\" si=\"0\"></f>"
+  let malformed = xml.replace(old=master, new=follower)
+  assert_true(malformed != xml)
+  assert_true(archive.replace(path, @utf8.encode(malformed)))
+  let source = xlsx_bounded_test_source(
+    "missing-shared-master.xlsx",
+    @zip.write(archive),
+  )
+  let error = xlsx_cli_error(() => ignore(open_xlsx_projection(source, 10)))
+  assert_eq(error.code, "office.invalid_package")
+  assert_true(error.message.contains("shared formula follower has no master"))
+}
+
+///|
+async test "XLSX formatting is deferred and custom-format work is charged" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  let style_id = workbook.new_style(@xlsx.Style::number_format("[Red]0.00"))
+  for column in 1..<=2 {
+    workbook.set_cell_int(
+      "Data",
+      @xlsx.coordinates_to_cell_name(column, 1),
+      column,
+    )
+    workbook.set_cell_style(
+      "Data",
+      @xlsx.coordinates_to_cell_name(column, 1),
+      style_id,
+    )
+  }
+  let projection = make_xlsx_projection("format-work.xlsx", workbook, 10)
+  let regions = xlsx_scan_regions(
+    projection,
+    Some(resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]")),
+  )
+  // A raw predicate with an empty page never formats matching cells.
+  let page = collect_xlsx_cell_page(
+    projection,
+    regions,
+    xlsx_query_filter(parse_xlsx_query_selector("cell[type=number]")),
+    0,
+    0,
+    format_work_maximum=1,
+  )
+  assert_eq(page.matched_total, 2)
+  assert_eq(page.cells.length(), 0)
+  let limited = xlsx_cli_error_async(() => {
+    ignore(
+      collect_xlsx_cell_page(
+        projection,
+        regions,
+        TextCells,
+        0,
+        10,
+        format_work_maximum=1,
+      ),
+    )
+  })
+  assert_eq(limited.code, "office.xlsx.resource_limit")
+  guard limited.details is Some(Object(details)) else {
+    fail("expected format-work limit details")
+  }
+  assert_eq(
+    details.get("resource"),
+    Some(Json::string("cell formatting work units")),
+  )
+}
+
+///|
+async test "XLSX formatting rejects text amplification before materialization" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  workbook.set_cell_str("Data", "A1", "x".repeat(64 * 1024))
+  let style_id = workbook.new_style(
+    @xlsx.Style::number_format("@".repeat(16 * 1024)),
+  )
+  workbook.set_cell_style("Data", "A1", style_id)
+  let projection = make_xlsx_projection("amplified-format.xlsx", workbook, 10)
+  let regions = xlsx_scan_regions(
+    projection,
+    Some(resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]")),
+  )
+  let limited = xlsx_cli_error_async(() => {
+    ignore(collect_xlsx_cell_page(projection, regions, TextCells, 0, 1))
+  })
+  assert_eq(limited.code, "office.xlsx.resource_limit")
+  guard limited.details is Some(Object(details)) else {
+    fail("expected formatted-output limit details")
+  }
+  assert_eq(
+    details.get("resource"),
+    Some(Json::string("formatted_cell_value_chars")),
+  )
+}
+
+///|
+async test "XLSX formatting rejects scheduler-sized format programs" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  workbook.set_cell_value("Data", "A1", Numeric(1.0))
+  let style_id = workbook.new_style(
+    @xlsx.Style::number_format("0".repeat(32 * 1024 + 1)),
+  )
+  workbook.set_cell_style("Data", "A1", style_id)
+  let projection = make_xlsx_projection("format-program.xlsx", workbook, 10)
+  let regions = xlsx_scan_regions(
+    projection,
+    Some(resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]")),
+  )
+  let limited = xlsx_cli_error_async(() => {
+    ignore(collect_xlsx_cell_page(projection, regions, TextCells, 0, 1))
+  })
+  assert_eq(limited.code, "office.xlsx.resource_limit")
+  guard limited.details is Some(Object(details)) else {
+    fail("expected format-program limit details")
+  }
+  assert_eq(
+    details.get("resource"),
+    Some(Json::string("formatted_number_format_work_units")),
+  )
+}
+
+///|
+async test "XLSX structured formatting contains percent scaling overflow" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  workbook.set_cell_value("Data", "A1", Numeric(0.0))
+  let style_id = workbook.new_style(
+    @xlsx.Style::number_format("# ?/?" + "%".repeat(155)),
+  )
+  workbook.set_cell_style("Data", "A1", style_id)
+  let source = xlsx_bounded_test_source(
+    "non-finite-format.xlsx",
+    @xlsx.write(workbook),
+  )
+  let projection = make_xlsx_projection(
+    source.file,
+    open_xlsx_read_package(source),
+    10,
+  )
+  let resolved = resolve_xlsx_selector(
+    projection, "/xlsx/sheet[name=\"Data\"]/cell[A1]",
+  )
+  assert_true(xlsx_get_data(projection, resolved).stringify().contains("%"))
+
+  workbook.set_cell_value("Data", "A1", Numeric(1.0))
+  let nonzero_source = xlsx_bounded_test_source(
+    "non-finite-nonzero-format.xlsx",
+    @xlsx.write(workbook),
+  )
+  let nonzero_projection = make_xlsx_projection(
+    nonzero_source.file,
+    open_xlsx_read_package(nonzero_source),
+    10,
+  )
+  let nonzero_resolved = resolve_xlsx_selector(
+    nonzero_projection, "/xlsx/sheet[name=\"Data\"]/cell[A1]",
+  )
+  let error = xlsx_cli_error_async(() => {
+    ignore(xlsx_get_data(nonzero_projection, nonzero_resolved))
+  })
+  assert_eq(error.code, "office.invalid_package")
+}
+
+///|
+async test "XLSX outline and get use office schemas with canonical cell records" {
+  let projection = xlsx_read_test_projection()
+  let outline = xlsx_outline_data(projection)
+  guard outline is Object(outline_fields) else {
+    fail("expected outline object")
+  }
+  assert_eq(
+    outline_fields.get("schema"),
+    Some(Json::string(@lib.SCHEMA_XLSX_OUTLINE)),
+  )
+  assert_eq(outline_fields.get("sheet_count"), Some(Json::number(2)))
+  guard outline_fields.get("sheets") is Some(Array(sheets)) else {
+    fail("expected sheets")
+  }
+  assert_eq(sheets.length(), 2)
+  let resolved = resolve_xlsx_selector(
+    projection, "/xlsx/sheet[name=\"Data\"]/range[A1:C3]",
+  )
+  let data = xlsx_get_data(projection, resolved)
+  guard data is Object(fields) && fields.get("cells") is Some(Array(cells)) else {
+    fail("expected range cells")
+  }
+  assert_eq(fields.get("schema"), Some(Json::string(@lib.SCHEMA_XLSX_ELEMENT)))
+  assert_eq(cells.length(), 3)
+  assert_true(cells[0].stringify().contains("alpha"))
+  assert_true(cells[1].stringify().contains("SUM(1,2)"))
+  assert_true(cells[2].stringify().contains("NOW()"))
+  let missing = resolve_xlsx_selector(
+    projection, "/xlsx/sheet[name=\"Data\"]/cell[D4]",
+  )
+  let missing_error = xlsx_cli_error_async(() => {
+    ignore(xlsx_get_data(projection, missing))
+  })
+  assert_eq(missing_error.code, "office.xlsx.selector_not_found")
+}
+
+///|
+async test "XLSX singleton used ranges remain canonical two-endpoint ranges" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Only"))
+  workbook.set_cell_str("Only", "A1", "one")
+  let projection = make_xlsx_projection("one.xlsx", workbook, 10)
+  let outline = xlsx_outline_data(projection)
+  guard outline is Object(fields) &&
+    fields.get("sheets") is Some(Array([Object(sheet), ..])) &&
+    sheet.get("used_range") is Some(Object(used)) else {
+    fail("expected singleton used range")
+  }
+  assert_eq(used.get("reference"), Some(Json::string("A1:A1")))
+  assert_eq(
+    used.get("path"),
+    Some(Json::string("/xlsx/sheet[name=\"Only\"]/range[A1:A1]")),
+  )
+  let resolved = resolve_xlsx_selector(
+    projection, "/xlsx/sheet[name=\"Only\"]/range[A1:A1]",
+  )
+  guard xlsx_get_data(projection, resolved) is Object(get) else {
+    fail("expected singleton range get")
+  }
+  assert_eq(get.get("reference"), Some(Json::string("A1:A1")))
+}
+
+///|
+test "XLSX structured reads reject non-finite package numbers" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  workbook.set_cell_int("Data", "A1", 1)
+  let archive = try! @zip.read(@xlsx.write(workbook))
+  guard archive.get("xl/worksheets/sheet1.xml") is Some(sheet_bytes) else {
+    fail("missing worksheet part")
+  }
+  let sheet_xml = try! @utf8.decode(sheet_bytes, ignore_bom=true)
+  assert_true(sheet_xml.contains("<v>1</v>"))
+  assert_true(
+    archive.replace(
+      "xl/worksheets/sheet1.xml",
+      @utf8.encode(sheet_xml.replace(old="<v>1</v>", new="<v>NaN</v>")),
+    ),
+  )
+  let bytes = @zip.write(archive)
+  let bounded = try! @zip.read_limited(
+    bytes,
+    max_package_bytes=office_read_max_package_bytes,
+    max_entries=office_read_max_zip_entries,
+    max_entry_uncompressed_bytes=office_read_max_zip_entry_bytes,
+    max_total_uncompressed_bytes=office_read_max_zip_total_bytes,
+    max_total_preserved_source_bytes=office_read_max_preserved_source_bytes,
+  )
+  let source : OfficeReadPackage = {
+    file: "non-finite.xlsx",
+    format: Xlsx,
+    archive: bounded,
+  }
+  let error = xlsx_cli_error(() => ignore(open_xlsx_projection(source, 10)))
+  assert_eq(error.code, "office.invalid_package")
+}
+
+///|
+test "XLSX parse-time index corruption is classified as an invalid package" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  workbook.set_cell_str("Data", "A1", "alpha")
+  let shared_archive = @zip.read(@xlsx.write(workbook))
+  guard shared_archive.get("xl/worksheets/sheet1.xml") is Some(shared_bytes) else {
+    fail("missing shared-string worksheet")
+  }
+  let shared_xml = @utf8.decode(shared_bytes, ignore_bom=true)
+  assert_true(shared_xml.contains("<v>0</v>"))
+  assert_true(
+    shared_archive.replace(
+      "xl/worksheets/sheet1.xml",
+      @utf8.encode(shared_xml.replace(old="<v>0</v>", new="<v>7</v>")),
+    ),
+  )
+  let shared_source = xlsx_bounded_test_source(
+    "broken-shared.xlsx",
+    @zip.write(shared_archive),
+  )
+  let shared = xlsx_cli_error(() => {
+    ignore(open_xlsx_projection(shared_source, 10))
+  })
+  assert_eq(shared.code, "office.invalid_package")
+
+  let styled_workbook = @xlsx.Workbook::new()
+  ignore(styled_workbook.new_sheet("Data"))
+  styled_workbook.set_cell_int("Data", "A1", 1)
+  let style_archive = @zip.read(@xlsx.write(styled_workbook))
+  guard style_archive.get("xl/worksheets/sheet1.xml") is Some(style_bytes) else {
+    fail("missing styled worksheet")
+  }
+  let style_xml = @utf8.decode(style_bytes, ignore_bom=true)
+  assert_true(style_xml.contains("<c r=\"A1\""))
+  assert_true(
+    style_archive.replace(
+      "xl/worksheets/sheet1.xml",
+      @utf8.encode(
+        style_xml.replace(old="<c r=\"A1\"", new="<c r=\"A1\" s=\"9\""),
+      ),
+    ),
+  )
+  let style_source = xlsx_bounded_test_source(
+    "broken-style.xlsx",
+    @zip.write(style_archive),
+  )
+  let style = xlsx_cli_error(() => {
+    ignore(open_xlsx_projection(style_source, 10))
+  })
+  assert_eq(style.code, "office.invalid_package")
+}
+
+///|
+test "XLSX style parsing rejects non-finite JSON-facing numbers" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  workbook.set_cell_int("Data", "A1", 1)
+  let style_id = workbook.new_style(
+    @xlsx.Style::font(@xlsx.Font::with_values(size=12.0)),
+  )
+  workbook.set_cell_style("Data", "A1", style_id)
+  let archive = try! @zip.read(@xlsx.write(workbook))
+  guard archive.get("xl/styles.xml") is Some(style_bytes) else {
+    fail("missing styles part")
+  }
+  let styles_xml = try! @utf8.decode(style_bytes, ignore_bom=true)
+  assert_true(styles_xml.contains("<sz val=\"12\"/>"))
+  assert_true(
+    archive.replace(
+      "xl/styles.xml",
+      @utf8.encode(
+        styles_xml.replace(old="<sz val=\"12\"/>", new="<sz val=\"NaN\"/>"),
+      ),
+    ),
+  )
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(@zip.write(archive)),
+  ) catch {
+    error => Err(error)
+  }
+  assert_true(result is Err(@xlsx.XlsxError::InvalidXml(_)))
+}
+
+///|
+async test "XLSX displayed text preserves formula results formatted to blank" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  let style_id = workbook.new_style(@xlsx.Style::number_format(";;;"))
+  workbook.set_cell_formula("Data", "A1", "1+0", value="1")
+  workbook.set_cell_style("Data", "A1", style_id)
+  let archive = try! @zip.read(@xlsx.write(workbook))
+  guard archive.get("xl/worksheets/sheet1.xml") is Some(sheet_bytes) else {
+    fail("missing worksheet part")
+  }
+  let sheet_xml = try! @utf8.decode(sheet_bytes, ignore_bom=true)
+  assert_true(sheet_xml.contains(" t=\"str\""))
+  // Formula setters retain string compatibility. Remove t="str" to model a
+  // normal OOXML cached numeric formula result.
+  assert_true(
+    archive.replace(
+      "xl/worksheets/sheet1.xml",
+      @utf8.encode(sheet_xml.replace(old=" t=\"str\"", new="")),
+    ),
+  )
+  let projection = make_xlsx_projection(
+    "blank-display.xlsx",
+    try! @xlsx.read(@zip.write(archive)),
+    10,
+  )
+  let under = Some(
+    resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]"),
+  )
+  guard xlsx_text_test_data(projection, under, 0, 10) is Object(text) else {
+    fail("expected text result")
+  }
+  assert_eq(text.get("matched_total"), Some(Json::number(0)))
+  guard xlsx_get_data(
+      projection,
+      resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]/cell[A1]"),
+    )
+    is Object(get) &&
+    get.get("cell") is Some(Object(cell)) else {
+    fail("expected formula cell")
+  }
+  assert_eq(cell.get("value"), Some(Json::string("")))
+  assert_eq(cell.get("formula"), Some(Json::string("1+0")))
+}
+
+///|
+async test "XLSX get text and query honor the 1904 date system" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Dates"))
+  workbook.set_workbook_props(
+    Some(@xlsx.WorkbookPropsOptions::with_values(date_1904=true)),
+  )
+  workbook.set_cell_value("Dates", "A1", Numeric(0.0))
+  let style_id = workbook.new_style(@xlsx.Style::number_format("yyyy-mm-dd"))
+  workbook.set_cell_style("Dates", "A1", style_id)
+  let projection = make_xlsx_projection("dates-1904.xlsx", workbook, 10)
+  let cell_selector = resolve_xlsx_selector(
+    projection, "/xlsx/sheet[name=\"Dates\"]/cell[A1]",
+  )
+  guard xlsx_get_data(projection, cell_selector) is Object(get) &&
+    get.get("cell") is Some(Object(cell)) else {
+    fail("expected 1904 get result")
+  }
+  assert_eq(cell.get("value"), Some(Json::string("1904-01-01")))
+
+  let under = Some(
+    resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Dates\"]"),
+  )
+  guard xlsx_text_test_data(projection, under, 0, 10) is Object(text) &&
+    text.get("entries") is Some(Array([Object(text_entry), ..])) else {
+    fail("expected 1904 text result")
+  }
+  assert_eq(text_entry.get("text"), Some(Json::string("1904-01-01")))
+
+  let spec : XlsxQuerySpec = {
+    selector: "cell[type=number]",
+    predicates: parse_xlsx_query_selector("cell[type=number]"),
+    offset: 0,
+    limit: 10,
+  }
+  guard xlsx_query_test_data(projection, under, spec) is Object(query) &&
+    query.get("matches") is Some(Array([Object(query_cell), ..])) else {
+    fail("expected 1904 query result")
+  }
+  assert_eq(query_cell.get("value"), Some(Json::string("1904-01-01")))
+}
+
+///|
+async test "XLSX cached empty formula results remain distinct from a missing cache" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  workbook.set_cell_formula("Data", "A1", "1+0")
+  let archive = @zip.read(@xlsx.write(workbook))
+  guard archive.get("xl/worksheets/sheet1.xml") is Some(sheet_bytes) else {
+    fail("missing formula worksheet")
+  }
+  let sheet_xml = @utf8.decode(sheet_bytes, ignore_bom=true)
+  assert_true(sheet_xml.contains("<f>1+0</f></c>"))
+  let cached_xml = sheet_xml
+    .replace(old="<c r=\"A1\"", new="<c r=\"A1\" t=\"str\"")
+    .replace(old="<f>1+0</f></c>", new="<f>1+0</f><v /></c>")
+  assert_true(
+    archive.replace("xl/worksheets/sheet1.xml", @utf8.encode(cached_xml)),
+  )
+  let parsed = @xlsx.read(@zip.write(archive))
+  guard parsed.sheet("Data") is Some(parsed_sheet) &&
+    parsed_sheet.get_cell_formula_info_rc(1, 1) is Some(info) else {
+    fail("expected cached formula metadata")
+  }
+  assert_true(info.cached_value_present)
+  guard parsed_sheet.get_cell_value_raw("A1") is Some(String(raw)) else {
+    fail("expected cached empty raw string")
+  }
+  assert_eq(raw, "")
+
+  // Cached-presence is part of the reader model, so a write/read cycle must
+  // retain the explicit empty cache rather than collapsing it to no `<v>`.
+  let roundtrip = @zip.read(@xlsx.write(parsed))
+  guard roundtrip.get("xl/worksheets/sheet1.xml") is Some(roundtrip_bytes) else {
+    fail("missing round-trip formula worksheet")
+  }
+  let roundtrip_xml = @utf8.decode(roundtrip_bytes, ignore_bom=true)
+  assert_true(roundtrip_xml.contains("<f>1+0</f><v></v>"))
+
+  let compact_archive = @zip.read(@xlsx.write(workbook))
+  assert_true(
+    compact_archive.replace(
+      "xl/worksheets/sheet1.xml",
+      @utf8.encode(
+        sheet_xml
+        .replace(old="<c r=\"A1\"", new="<c r=\"A1\" t=\"str\"")
+        .replace(old="<f>1+0</f></c>", new="<f>1+0</f><v/></c>"),
+      ),
+    ),
+  )
+  let compact = @xlsx.read(@zip.write(compact_archive))
+  guard compact.sheet("Data") is Some(compact_sheet) &&
+    compact_sheet.get_cell_formula_info_rc(1, 1) is Some(compact_info) else {
+    fail("expected compact cached formula metadata")
+  }
+  assert_true(compact_info.cached_value_present)
+
+  let projection = make_xlsx_projection("cached-empty.xlsx", parsed, 10)
+  guard xlsx_get_data(
+      projection,
+      resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]/cell[A1]"),
+    )
+    is Object(get) &&
+    get.get("cell") is Some(Object(cell)) else {
+    fail("expected cached-empty formula cell")
+  }
+  assert_eq(cell.get("value"), Some(Json::string("")))
+  assert_eq(
+    cell.get("raw"),
+    Some(
+      Json::object({ "type": Json::string("string"), "value": Json::string("") }),
+    ),
+  )
+  guard xlsx_text_test_data(
+      projection,
+      Some(resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]")),
+      0,
+      10,
+    )
+    is Object(text) else {
+    fail("expected cached-empty text result")
+  }
+  assert_eq(text.get("matched_total"), Some(Json::number(0)))
+}
+
+///|
+async test "XLSX text and query scan fully while retaining only the requested page" {
+  let projection = xlsx_read_test_projection()
+  let under = Some(
+    resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]"),
+  )
+  let text = xlsx_text_test_data(projection, under, 1, 1)
+  guard text is Object(text_fields) &&
+    text_fields.get("entries") is Some(Array(entries)) else {
+    fail("expected text entries")
+  }
+  assert_eq(text_fields.get("matched_total"), Some(Json::number(3)))
+  assert_eq(text_fields.get("returned"), Some(Json::number(1)))
+  assert_eq(text_fields.get("truncated"), Some(Json::boolean(true)))
+  assert_eq(text_fields.get("scanned_cells"), Some(Json::number(9)))
+  assert_eq(entries.length(), 1)
+  assert_true(entries[0].stringify().contains("B2"))
+  let formula_query : XlsxQuerySpec = {
+    selector: "cell[formula]",
+    predicates: parse_xlsx_query_selector("cell[formula]"),
+    offset: 0,
+    limit: 10,
+  }
+  let query = xlsx_query_test_data(projection, under, formula_query)
+  guard query is Object(query_fields) &&
+    query_fields.get("matches") is Some(Array(matches)) else {
+    fail("expected query matches")
+  }
+  assert_eq(query_fields.get("matched_total"), Some(Json::number(2)))
+  assert_eq(matches.length(), 2)
+  assert_true(matches[1].stringify().contains("NOW()"))
+}
+
+///|
+async test "XLSX JSON and human output enforce format-specific stdout ceilings" {
+  let projection = xlsx_read_test_projection()
+  let style_id = projection.workbook.new_style(
+    @xlsx.Style::number_format("0.00"),
+  )
+  projection.workbook.set_cell_style("Data", "B2", style_id)
+  let under = Some(
+    resolve_xlsx_selector(projection, "/xlsx/sheet[name=\"Data\"]"),
+  )
+  let range = resolve_xlsx_selector(
+    projection, "/xlsx/sheet[name=\"Data\"]/range[A1:C3]",
+  )
+  let query_spec : XlsxQuerySpec = {
+    selector: "cell[formula]",
+    predicates: parse_xlsx_query_selector("cell[formula]"),
+    offset: 0,
+    limit: 10,
+  }
+  let payloads = [
+    xlsx_outline_payload(projection, 100_000),
+    xlsx_get_payload(projection, range, 100_000),
+    xlsx_text_payload(projection, under, 0, 10, 100_000),
+    xlsx_query_payload(projection, under, query_spec, 100_000),
+  ]
+  for payload in payloads {
+    let json = checked_office_json_output(payload)
+    assert_true(json.contains("office.output/1"))
+    let mut characters = 0
+    for _ in json {
+      characters += 1
+    }
+    assert_eq(characters + docx_cli_output_framing_chars, payload.budget.used)
+  }
+  let too_small = xlsx_cli_error_async(() => {
+    ignore(xlsx_outline_payload(projection, 8))
+  })
+  assert_eq(too_small.code, "office.xlsx.resource_limit")
+  let mut checks = 0
+  let limited_projection = {
+    ..projection,
+    cancelled: () => {
+      checks += 1
+      false
+    },
+  }
+  let range_too_small = xlsx_cli_error_async(() => {
+    ignore(xlsx_get_payload(limited_projection, range, 1))
+  })
+  assert_eq(range_too_small.code, "office.xlsx.resource_limit")
+  // Only the command-entry checkpoint runs: the bounded skeleton rejects the
+  // request before any cell is scanned or retained.
+  assert_eq(checks, 1)
+  let human = xlsx_text_human(projection, under, 0, 10, 10_000)
+  assert_true(human.contains("/cell[A1]\talpha"))
+  assert_true(human.contains("/cell[C3]\t=NOW()"))
+}
+
+///|
+async test "XLSX all-sheet scans reject sparse far extents before visiting cells" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Sparse"))
+  workbook.set_cell_str("Sparse", "K10", "far")
+  let projection = make_xlsx_projection("sparse.xlsx", workbook, 100)
+  let error = xlsx_cli_error_async(() => {
+    ignore(xlsx_text_test_data(projection, None, 0, 10))
+  })
+  assert_eq(error.code, "office.xlsx.resource_limit")
+  guard error.details is Some(Object(fields)) else {
+    fail("expected sparse-scan details")
+  }
+  assert_eq(fields.get("actual"), Some(Json::number(110)))
+}

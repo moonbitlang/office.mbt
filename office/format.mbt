@@ -25,6 +25,8 @@ pub(all) suberror OfficeError {
   UnsupportedFileExtension(String)
   InvalidPackage(String)
   FormatMismatch(expected~ : DocumentFormat, actual~ : DocumentFormat)
+  ResourceLimit(kind~ : String, limit~ : Int, actual~ : Int)
+  Cancelled
 } derive(Debug, Eq)
 
 ///|
@@ -40,8 +42,31 @@ pub impl Show for OfficeError with fn output(self, logger) {
       logger.write_string(
         "file extension says \{expected.name()}, but package content is \{actual.name()}",
       )
+    ResourceLimit(kind~, limit~, actual~) =>
+      logger.write_string(
+        "Office \{kind} exceeds limit \{limit} (actual \{actual})",
+      )
+    Cancelled => logger.write_string("Office format detection was cancelled")
   }
 }
+
+///|
+const DEFAULT_DETECT_MAX_PACKAGE_BYTES : Int = 64 * 1024 * 1024
+
+///|
+const DEFAULT_DETECT_MAX_ARCHIVE_ENTRIES : Int = 4096
+
+///|
+const DEFAULT_DETECT_MAX_ENTRY_BYTES : Int = 32 * 1024 * 1024
+
+///|
+const DEFAULT_DETECT_MAX_TOTAL_BYTES : Int = 128 * 1024 * 1024
+
+///|
+const DEFAULT_DETECT_MAX_XML_PART_BYTES : Int = 16 * 1024 * 1024
+
+///|
+const DEFAULT_DETECT_MAX_XML_TOTAL_UNITS : Int = 64 * 1024 * 1024
 
 ///|
 const XLSX_MAIN_CONTENT_TYPE : String = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"
@@ -271,7 +296,77 @@ priv struct ArchivePartIndex {
 priv struct DecodedXmlPart {
   text : String
   source_encoding : @xml.XmlSourceEncoding
-  source_units : Int
+}
+
+///|
+/// Shared fail-closed state for one format-detection pass. XML trees are
+/// cached so repeated identity and structural checks do not parse or
+/// materialize the same package metadata more than once.
+priv struct OfficeFormatContext {
+  max_xml_part_bytes : Int
+  xml_work_limit : Int
+  xml_budget : @xml.XmlReadBudget
+  cancelled : () -> Bool
+  xml_parts : StableStringMap[@xml.XmlElement]
+  relationship_parts : StableStringMap[@xml.XmlElement]
+}
+
+///|
+fn bounded_scale(value : Int, factor : Int) -> Int {
+  if value <= 0 || factor <= 0 {
+    0
+  } else {
+    let scaled = value.to_int64() * factor.to_int64()
+    if scaled > 2147483647L {
+      2147483647
+    } else {
+      scaled.to_int()
+    }
+  }
+}
+
+///|
+fn OfficeFormatContext::new(
+  max_xml_part_bytes : Int,
+  max_xml_total_units : Int,
+  cancelled? : () -> Bool = () => false,
+) -> OfficeFormatContext {
+  let xml_work_limit = bounded_scale(max_xml_total_units, 4)
+  {
+    max_xml_part_bytes: if max_xml_part_bytes > 0 {
+      max_xml_part_bytes
+    } else {
+      0
+    },
+    xml_work_limit,
+    xml_budget: @xml.xml_read_budget(
+      max_source_units=if max_xml_total_units > 0 {
+        max_xml_total_units
+      } else {
+        0
+      },
+      max_tokens=xml_work_limit,
+      max_materialized_chars=xml_work_limit,
+      max_token_chars=if max_xml_part_bytes > 0 {
+        max_xml_part_bytes
+      } else {
+        0
+      },
+      cancelled~,
+    ),
+    cancelled,
+    xml_parts: SortedMap([]),
+    relationship_parts: SortedMap([]),
+  }
+}
+
+///|
+fn OfficeFormatContext::checkpoint(
+  self : OfficeFormatContext,
+) -> Unit raise OfficeError {
+  if (self.cancelled)() {
+    raise Cancelled
+  }
 }
 
 ///|
@@ -284,20 +379,43 @@ fn archive_entry_logical_part_name(name : StringView) -> String? {
 }
 
 ///|
-fn archive_part_index(archive : @zip.Archive) -> ArchivePartIndex {
+fn archive_part_index(
+  archive : @zip.Archive,
+  context : OfficeFormatContext,
+) -> ArchivePartIndex raise OfficeError {
   let exact : StableStringMap[BytesView] = SortedMap([])
   let canonical : StableStringMap[BytesView] = SortedMap([])
+  let physical : StableStringMap[Bool] = SortedMap([])
   for entry in archive.entries() {
+    context.checkpoint()
     let physical_name = entry.name()
+    if physical.contains(physical_name) {
+      raise InvalidPackage("duplicate entry name: \{physical_name}")
+    }
+    physical[physical_name] = true
+    if physical_name.to_lower() == "[content_types].xml" &&
+      physical_name != "[Content_Types].xml" {
+      raise InvalidPackage(
+        "reserved content-types manifest has invalid physical spelling: \{physical_name}",
+      )
+    }
     let logical_name = archive_entry_logical_part_name(physical_name)
     guard logical_name is Some(name) else { continue }
-    if !exact.contains(name) {
-      exact[name] = entry.data()
+    if opc_part_key(name) == opc_part_key("[Content_Types].xml") &&
+      physical_name != "[Content_Types].xml" {
+      raise InvalidPackage(
+        "reserved content-types manifest has invalid physical spelling: \{physical_name}",
+      )
     }
+    if exact.contains(name) {
+      raise InvalidPackage("duplicate logical part name: \{name}")
+    }
+    exact[name] = entry.data()
     let key = opc_part_key(name)
-    if !canonical.contains(key) {
-      canonical[key] = entry.data()
+    if canonical.contains(key) {
+      raise InvalidPackage("duplicate entry name: \{key}")
     }
+    canonical[key] = entry.data()
   }
   { exact, canonical }
 }
@@ -314,10 +432,19 @@ fn ArchivePartIndex::find(self : ArchivePartIndex, name : String) -> BytesView? 
 fn decode_xml_part(
   parts : ArchivePartIndex,
   name : String,
+  context : OfficeFormatContext,
 ) -> DecodedXmlPart raise OfficeError {
+  context.checkpoint()
   let bytes = match parts.find(name) {
     Some(bytes) => bytes
     None => raise InvalidPackage("missing required part: \{name}")
+  }
+  if bytes.length() > context.max_xml_part_bytes {
+    raise ResourceLimit(
+      kind="xml_part_bytes",
+      limit=context.max_xml_part_bytes,
+      actual=bytes.length(),
+    )
   }
   let (text, source_encoding) : (String, @xml.XmlSourceEncoding) = if bytes.length() >=
     2 &&
@@ -363,56 +490,76 @@ fn decode_xml_part(
       Utf8,
     )
   }
-  { text, source_encoding, source_units: bytes.length() }
+  context.checkpoint()
+  { text, source_encoding }
 }
 
 ///|
 fn read_xml_part(
   parts : ArchivePartIndex,
   name : String,
+  context : OfficeFormatContext,
 ) -> @xml.XmlElement raise OfficeError {
-  let decoded = decode_xml_part(parts, name)
-  @xml.read_xml_string_strict_encoded(decoded.text, decoded.source_encoding) catch {
+  match context.xml_parts.get(opc_part_key(name)) {
+    Some(value) => return value
+    None => ()
+  }
+  let decoded = decode_xml_part(parts, name, context)
+  let root = @xml.read_xml_string_strict_encoded_limited(
+    decoded.text,
+    decoded.source_encoding,
+    context.xml_budget,
+  ) catch {
+    _ if (context.cancelled)() => raise Cancelled
+    @docx_core.ResourceLimit(_) =>
+      raise ResourceLimit(
+        kind="xml_preflight_work_units",
+        limit=context.xml_work_limit,
+        actual=if context.xml_work_limit < 2147483647 {
+          context.xml_work_limit + 1
+        } else {
+          context.xml_work_limit
+        },
+      )
     _ => raise InvalidPackage("\{name} is not well-formed XML")
   }
-}
-
-///|
-fn input_linear_xml_budget(decoded : DecodedXmlPart) -> @xml.XmlReadBudget {
-  let source_units = if decoded.source_units > decoded.text.length() {
-    decoded.source_units
-  } else {
-    decoded.text.length()
-  }
-  let scaled = source_units.to_int64() * 32L
-  let allowance = if scaled <= 0L {
-    1
-  } else if scaled > 2147483647L {
-    2147483647
-  } else {
-    scaled.to_int()
-  }
-  @xml.xml_read_budget(
-    max_source_units=source_units,
-    max_tokens=allowance,
-    max_materialized_chars=allowance,
-    max_token_chars=if source_units > 0 { source_units } else { 1 },
-  )
+  context.checkpoint()
+  context.xml_parts[opc_part_key(name)] = root
+  root
 }
 
 ///|
 fn read_relationships_part(
   parts : ArchivePartIndex,
   name : String,
+  context : OfficeFormatContext,
 ) -> @xml.XmlElement raise OfficeError {
-  let decoded = decode_xml_part(parts, name)
-  @opc.read_opc_relationships_string_encoded_limited(
+  match context.relationship_parts.get(opc_part_key(name)) {
+    Some(value) => return value
+    None => ()
+  }
+  let decoded = decode_xml_part(parts, name, context)
+  let root = @opc.read_opc_relationships_string_encoded_limited(
     decoded.text,
     decoded.source_encoding,
-    input_linear_xml_budget(decoded),
+    context.xml_budget,
   ) catch {
+    _ if (context.cancelled)() => raise Cancelled
+    @docx_core.ResourceLimit(_) =>
+      raise ResourceLimit(
+        kind="xml_preflight_work_units",
+        limit=context.xml_work_limit,
+        actual=if context.xml_work_limit < 2147483647 {
+          context.xml_work_limit + 1
+        } else {
+          context.xml_work_limit
+        },
+      )
     _ => raise InvalidPackage("\{name} is not well-formed XML")
   }
+  context.checkpoint()
+  context.relationship_parts[opc_part_key(name)] = root
+  root
 }
 
 ///|
@@ -1110,19 +1257,69 @@ fn resolve_relationship_target(base : String, target : StringView) -> String? {
 }
 
 ///|
+priv struct StructuralFindings {
+  mut first : String?
+  mut count : Int
+}
+
+///|
+fn StructuralFindings::new() -> StructuralFindings {
+  { first: None, count: 0 }
+}
+
+///|
+fn bounded_structural_finding(value : String, maximum? : Int = 512) -> String {
+  let output = StringBuilder::new()
+  let mut count = 0
+  for character in value {
+    if count >= maximum {
+      output.write_char('…') |> ignore
+      break
+    }
+    output.write_char(character) |> ignore
+    count += 1
+  }
+  output.to_string()
+}
+
+///|
+fn StructuralFindings::push(
+  self : StructuralFindings,
+  finding : String,
+) -> Unit {
+  self.count += 1
+  if self.first is None {
+    self.first = Some(bounded_structural_finding(finding))
+  }
+}
+
+///|
+test "structural findings retain only one bounded diagnostic" {
+  let findings = StructuralFindings::new()
+  findings.push("x".repeat(1024))
+  for _ in 0..<100_000 {
+    findings.push("discarded")
+  }
+  assert_eq(findings.count, 100_001)
+  assert_eq(findings.first.unwrap().length(), 513)
+}
+
+///|
 fn validate_package_structure(
   archive : @zip.Archive,
   part_index : ArchivePartIndex,
   main_part : String,
   require_main_relationships : Bool,
-) -> Array[String] raise OfficeError {
-  let findings : Array[String] = []
+  context : OfficeFormatContext,
+) -> StructuralFindings raise OfficeError {
+  let findings = StructuralFindings::new()
   let parts : StableStringMap[Int] = SortedMap([])
   let part_names : StableStringMap[String] = SortedMap([])
   let package_parts : StableStringMap[Bool] = SortedMap([])
   let document_parts : StableStringMap[Bool] = SortedMap([])
   let part_name_registry = @opc.PartNameRegistry::new()
   for entry in archive.entries() {
+    context.checkpoint()
     let physical_name = entry.name()
     let is_directory = physical_name.has_suffix("/")
     let item_path = if is_directory && physical_name.length() > 0 {
@@ -1210,7 +1407,7 @@ fn validate_package_structure(
 
   let defaults : StableStringMap[String] = SortedMap([])
   let overrides : StableStringMap[String] = SortedMap([])
-  let content_types = read_xml_part(part_index, "[Content_Types].xml")
+  let content_types = read_xml_part(part_index, "[Content_Types].xml", context)
   match unexpected_xml_attribute(content_types, []) {
     Some(attribute) =>
       findings.push(
@@ -1219,6 +1416,7 @@ fn validate_package_structure(
     None => ()
   }
   for child in content_types.children {
+    context.checkpoint()
     match child {
       XmlText(text) =>
         if !text.trim().is_empty() {
@@ -1228,6 +1426,7 @@ fn validate_package_structure(
     }
   }
   for child in content_types.children {
+    context.checkpoint()
     guard child is XmlElement(element) else { continue }
     if element.name == CONTENT_TYPES_DEFAULT {
       match unexpected_xml_attribute(element, ["Extension", "ContentType"]) {
@@ -1333,6 +1532,7 @@ fn validate_package_structure(
     }
   }
   for entry in archive.entries() {
+    context.checkpoint()
     let physical_name = entry.name()
     guard archive_entry_logical_part_name(physical_name) is Some(name) else {
       continue
@@ -1362,6 +1562,7 @@ fn validate_package_structure(
   }
 
   for entry in archive.entries() {
+    context.checkpoint()
     guard archive_entry_logical_part_name(entry.name())
       is Some(relationship_part) else {
       continue
@@ -1399,7 +1600,9 @@ fn validate_package_structure(
         continue
       }
     }
-    let relationships = read_relationships_part(part_index, relationship_part)
+    let relationships = read_relationships_part(
+      part_index, relationship_part, context,
+    )
     if relationships.name != RELATIONSHIPS_ROOT {
       findings.push("\{relationship_part} root element is not Relationships")
       continue
@@ -1410,6 +1613,7 @@ fn validate_package_structure(
       )
     }
     for child in relationships.children {
+      context.checkpoint()
       match child {
         XmlText(text) =>
           if !text.trim().is_empty() {
@@ -1420,6 +1624,7 @@ fn validate_package_structure(
     }
     let ids : StableStringMap[Bool] = SortedMap([])
     for child in relationships.children {
+      context.checkpoint()
       guard child is XmlElement(element) else { continue }
       if element.name != RELATIONSHIP_ELEMENT {
         findings.push(
@@ -1537,14 +1742,16 @@ fn validate_main_identity(
   part_index : ArchivePartIndex,
   format : DocumentFormat,
   declared_main_part : String,
+  context : OfficeFormatContext,
 ) -> Unit raise OfficeError {
   let label = if format is Xlsx { "XLSX" } else { "DOCX" }
-  let root_rels = read_relationships_part(part_index, "_rels/.rels")
+  let root_rels = read_relationships_part(part_index, "_rels/.rels", context)
   if root_rels.name != RELATIONSHIPS_ROOT {
     raise InvalidPackage("_rels/.rels root element is not Relationships")
   }
   let main_targets : Array[(String, String)] = []
   for child in root_rels.children {
+    context.checkpoint()
     guard child is XmlElement(element) && element.name == RELATIONSHIP_ELEMENT else {
       continue
     }
@@ -1596,7 +1803,7 @@ fn validate_main_identity(
       "\{label} officeDocument relationship targets '\{main_target}', but content types declare '\{declared_main_part}'",
     )
   }
-  let main = read_xml_part(part_index, main_target)
+  let main = read_xml_part(part_index, main_target, context)
   let expected_main_relationship = match (format, main.name) {
     (Xlsx, TRANSITIONAL_WORKBOOK_ROOT) | (Docx, TRANSITIONAL_DOCUMENT_ROOT) =>
       Some(TRANSITIONAL_OFFICE_DOCUMENT_REL)
@@ -1620,13 +1827,15 @@ fn validate_main_identity(
 ///|
 fn default_main_target_from_root(
   part_index : ArchivePartIndex,
+  context : OfficeFormatContext,
 ) -> String? raise OfficeError {
-  let root_rels = read_relationships_part(part_index, "_rels/.rels")
+  let root_rels = read_relationships_part(part_index, "_rels/.rels", context)
   if root_rels.name != RELATIONSHIPS_ROOT {
     return None
   }
   let targets : Array[String] = []
   for child in root_rels.children {
+    context.checkpoint()
     guard child is XmlElement(element) && element.name == RELATIONSHIP_ELEMENT else {
       continue
     }
@@ -1658,9 +1867,11 @@ fn default_main_target_from_root(
 fn format_from_archive(
   archive : @zip.Archive,
   part_index : ArchivePartIndex,
+  context : OfficeFormatContext,
 ) -> (DocumentFormat, String) raise OfficeError {
   let physical_names : StableStringMap[Bool] = SortedMap([])
   for entry in archive.entries() {
+    context.checkpoint()
     let name = entry.name()
     if physical_names.contains(name) {
       raise InvalidPackage("duplicate entry name: \{name}")
@@ -1672,13 +1883,20 @@ fn format_from_archive(
         "central-directory file header exceeds the OPC \{MAX_OPC_CENTRAL_DIRECTORY_FILE_HEADER_BYTES}-byte limit: \{name}",
       )
     }
-    if entry.crc32() != @zip.crc32(entry.data()) {
+    let actual_crc = @zip.crc32_cancellable(
+      entry.data(),
+      cancelled=context.cancelled,
+    ) catch {
+      _ if (context.cancelled)() => raise Cancelled
+      _ => raise InvalidPackage("entry CRC-32 verification failed: \{name}")
+    }
+    if entry.crc32() != actual_crc {
       raise InvalidPackage(
         "entry data does not match its stored CRC-32: \{name}",
       )
     }
   }
-  let content_types = read_xml_part(part_index, "[Content_Types].xml")
+  let content_types = read_xml_part(part_index, "[Content_Types].xml", context)
   if content_types.name != CONTENT_TYPES_ROOT {
     raise InvalidPackage("[Content_Types].xml root element is not Types")
   }
@@ -1687,6 +1905,7 @@ fn format_from_archive(
   let overridden_parts : StableStringMap[Bool] = SortedMap([])
   let main_defaults : StableStringMap[DocumentFormat] = SortedMap([])
   for child in content_types.children {
+    context.checkpoint()
     guard child is XmlElement(element) else { continue }
     if element.name == CONTENT_TYPES_DEFAULT {
       let format = match element.attributes.get("ContentType") {
@@ -1733,7 +1952,7 @@ fn format_from_archive(
     }
   }
   if !main_defaults.is_empty() {
-    match default_main_target_from_root(part_index) {
+    match default_main_target_from_root(part_index, context) {
       Some(target) if !overridden_parts.contains(opc_part_key(target)) =>
         match part_extension(target) {
           Some(extension) =>
@@ -1772,8 +1991,15 @@ fn structural_findings(
   archive : @zip.Archive,
   part_index : ArchivePartIndex,
   main_part : String,
-) -> Array[String] raise OfficeError {
-  validate_package_structure(archive, part_index, main_part, format is Xlsx)
+  context : OfficeFormatContext,
+) -> StructuralFindings raise OfficeError {
+  validate_package_structure(
+    archive,
+    part_index,
+    main_part,
+    format is Xlsx,
+    context,
+  )
 }
 
 ///|
@@ -1785,13 +2011,47 @@ fn structural_findings(
 pub fn detect_format(
   path : StringView,
   data : BytesView,
+  max_package_bytes? : Int = DEFAULT_DETECT_MAX_PACKAGE_BYTES,
+  max_archive_entries? : Int = DEFAULT_DETECT_MAX_ARCHIVE_ENTRIES,
+  max_entry_uncompressed_bytes? : Int = DEFAULT_DETECT_MAX_ENTRY_BYTES,
+  max_total_uncompressed_bytes? : Int = DEFAULT_DETECT_MAX_TOTAL_BYTES,
+  max_xml_part_bytes? : Int = DEFAULT_DETECT_MAX_XML_PART_BYTES,
+  max_xml_total_units? : Int = DEFAULT_DETECT_MAX_XML_TOTAL_UNITS,
+  cancelled? : () -> Bool = () => false,
 ) -> DocumentFormat raise OfficeError {
   // Preserve the fail-fast extension contract before parsing package bytes.
   ignore(format_from_extension(path))
-  let archive = @zip.read(data) catch {
+  if cancelled() {
+    raise Cancelled
+  }
+  let preserved_limit = if max_package_bytes > 2147483647 - 65_535 {
+    2147483647
+  } else if max_package_bytes < 0 {
+    0
+  } else {
+    max_package_bytes + 65_535
+  }
+  let archive = @zip.read_limited(
+    data,
+    max_package_bytes~,
+    max_entries=max_archive_entries,
+    max_entry_uncompressed_bytes~,
+    max_total_uncompressed_bytes~,
+    max_total_preserved_source_bytes=preserved_limit,
+    cancelled~,
+  ) catch {
+    @zip.ResourceLimitExceeded(kind~, limit~, actual~) =>
+      raise ResourceLimit(kind~, limit~, actual~)
+    _ if cancelled() => raise Cancelled
     _ => raise InvalidPackage("archive is not a readable ZIP")
   }
-  detect_archive_format(path, archive)
+  detect_archive_format(
+    path,
+    archive,
+    max_xml_part_bytes~,
+    max_xml_total_units~,
+    cancelled~,
+  )
 }
 
 ///|
@@ -1801,23 +2061,37 @@ pub fn detect_format(
 pub fn detect_archive_format(
   path : StringView,
   archive : @zip.Archive,
+  max_xml_part_bytes? : Int = DEFAULT_DETECT_MAX_XML_PART_BYTES,
+  max_xml_total_units? : Int = DEFAULT_DETECT_MAX_XML_TOTAL_UNITS,
+  cancelled? : () -> Bool = () => false,
 ) -> DocumentFormat raise OfficeError {
   let expected = format_from_extension(path)
-  let part_index = archive_part_index(archive)
-  let (actual, main_part) = format_from_archive(archive, part_index)
+  let context = OfficeFormatContext::new(
+    max_xml_part_bytes,
+    max_xml_total_units,
+    cancelled~,
+  )
+  context.checkpoint()
+  let part_index = archive_part_index(archive, context)
+  let (actual, main_part) = format_from_archive(archive, part_index, context)
   if expected != actual {
     raise FormatMismatch(expected~, actual~)
   }
-  validate_main_identity(part_index, actual, main_part)
-  let findings = structural_findings(actual, archive, part_index, main_part)
-  if findings.length() > 0 {
-    let first = findings[0]
-    let suffix = if findings.length() == 1 {
-      ""
-    } else {
-      " (and \{findings.length() - 1} more finding(s))"
+  validate_main_identity(part_index, actual, main_part, context)
+  let findings = structural_findings(
+    actual, archive, part_index, main_part, context,
+  )
+  match findings.first {
+    Some(first) => {
+      let suffix = if findings.count == 1 {
+        ""
+      } else {
+        " (and \{findings.count - 1} more finding(s))"
+      }
+      raise InvalidPackage(first + suffix)
     }
-    raise InvalidPackage(first + suffix)
+    None => ()
   }
+  context.checkpoint()
   actual
 }

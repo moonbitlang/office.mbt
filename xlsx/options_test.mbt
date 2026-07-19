@@ -101,6 +101,21 @@ test "read limits reject a non-positive Agile KDF ceiling" {
 }
 
 ///|
+test "read limits reject non-positive semantic ceilings" {
+  for
+    limits in [
+      () => @xlsx.ReadLimits::with_values(max_workbook_sheets=0),
+      () => @xlsx.ReadLimits::with_values(max_parser_items=0),
+      () => @xlsx.ReadLimits::with_values(max_parser_work_units=0),
+    ] {
+    let result : Result[@xlsx.ReadLimits, Error] = Ok(limits()) catch {
+      error => Err(error)
+    }
+    inspect(result is Err(@xlsx.InvalidOptions(_)), content="true")
+  }
+}
+
+///|
 test "default read limits expose the complete ZIP policy" {
   let limits = @xlsx.ReadLimits::new()
   assert_eq(limits.max_package_bytes(), 128 * 1024 * 1024)
@@ -113,4 +128,7 @@ test "default read limits expose the complete ZIP policy" {
   )
   assert_eq(limits.max_xml_part_bytes(), 16 * 1024 * 1024)
   assert_eq(limits.max_kdf_iterations(), 1_000_000)
+  assert_eq(limits.max_workbook_sheets(), 1024)
+  assert_eq(limits.max_parser_items(), 2_000_000)
+  assert_eq(limits.max_parser_work_units(), 512 * 1024 * 1024)
 }

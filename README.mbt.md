@@ -311,8 +311,7 @@ test "validate output" {
 
 `office/cmd/office` is the agent-oriented facade for DOCX and XLSX packages.
 Its registry-driven help, format detection, validated raw OOXML fallback, and
-DOCX structured reads use versioned JSON envelopes and explicit resource
-limits:
+structured reads use versioned JSON envelopes and explicit resource limits:
 
 ```sh
 moon run office/cmd/office -- help docx
@@ -321,12 +320,17 @@ moon run office/cmd/office -- outline report.docx --json
 moon run office/cmd/office -- get report.docx '/docx/body/p[1]' --json
 moon run office/cmd/office -- text report.docx --under '/docx/comments/comment[id="0"]'
 moon run office/cmd/office -- query report.docx --kind paragraph --text revenue --ignore-case --json
+moon run office/cmd/office -- outline book.xlsx --json
+moon run office/cmd/office -- get book.xlsx '/xlsx/sheet[name="Data"]/range[A1:C12]' --json
+moon run office/cmd/office -- text book.xlsx --under '/xlsx/sheet[name="Data"]' --json
+moon run office/cmd/office -- query book.xlsx 'cell[type=formula]' --under '/xlsx/sheet[name="Data"]' --json
 ```
 
-The four DOCX read schemas are `office.docx.outline/1`,
-`office.docx.element/1`, `office.docx.text/1`, and `office.docx.query/1`, all
+DOCX results use the `office.docx.{outline,element,text,query}/1` family and
+XLSX results use `office.xlsx.{outline,element,text,query}/1`; every result is
 inside `office.output/1`. See
-[Unified Office DOCX reads](docs/office-docx-read.md) and
+[Unified Office DOCX reads](docs/office-docx-read.md),
+[Unified Office XLSX reads](docs/office-xlsx-read.md), and
 [Canonical Office selectors](docs/office-selectors.md).
 
 ## XLSX command-line tool

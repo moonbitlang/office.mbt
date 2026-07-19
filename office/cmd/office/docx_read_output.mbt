@@ -26,12 +26,6 @@ let docx_cli_query_preview_chars : Int = 160
 let docx_cli_heading_preview_chars : Int = 512
 
 ///|
-/// A linear-work ceiling independent of retained output. UTF-16 length is used
-/// as a conservative upper bound for Unicode-scalar iteration, so the limit
-/// also covers supplementary characters without under-counting.
-let docx_cli_max_query_predicate_work_units : Int = 128 * 1024 * 1024
-
-///|
 struct DocxPropertyPredicate {
   name : String
   value : String
@@ -50,137 +44,37 @@ struct DocxQuerySpec {
 }
 
 ///|
-struct DocxQueryWorkBudget {
-  maximum : Int
-  mut used : Int
-}
-
-///|
-fn DocxQueryWorkBudget::new(maximum : Int) -> DocxQueryWorkBudget {
-  { maximum, used: 0 }
-}
-
-///|
-fn DocxQueryWorkBudget::charge(
-  self : DocxQueryWorkBudget,
-  count : Int,
-) -> Unit raise CliFailure {
-  if count < 0 || count > self.maximum - self.used {
-    let actual = if count < 0 { self.used } else { self.used + count }
-    raise docx_resource_failure(
-      "query predicate work units",
-      self.maximum,
-      actual~,
-    )
-  }
-  self.used += count
-}
-
-///|
-/// A Knuth-Morris-Pratt literal pattern. The failure table is compiled once
-/// per command, making every document-text match linear in the scanned text.
-struct DocxLinearPattern {
-  characters : Array[Char]
-  failure : Array[Int]
-  ignore_case : Bool
-}
-
-///|
-fn query_fold_character(character : Char, ignore_case : Bool) -> Char {
-  if ignore_case {
-    // Locale-independent Unicode simple lowercase mapping is one-to-one, so
-    // it preserves substring boundaries and has a fixed bound per scalar.
-    @unicode.to_simple_lowercase(character)
-  } else {
-    character
-  }
-}
-
-///|
-fn DocxLinearPattern::compile(
-  needle : String,
-  ignore_case : Bool,
-  work : DocxQueryWorkBudget,
-) -> DocxLinearPattern raise CliFailure {
-  // Four code-unit work units conservatively cover scalar iteration, simple
-  // folding, and the amortized failure-table comparisons.
-  work.charge(needle.length() * 4 + 1)
-  let characters : Array[Char] = []
-  for character in needle {
-    characters.push(query_fold_character(character, ignore_case))
-  }
-  let failure = Array::make(characters.length(), 0)
-  let mut matched = 0
-  for at in 1..<characters.length() {
-    while matched > 0 && characters[at] != characters[matched] {
-      matched = failure[matched - 1]
-    }
-    if characters[at] == characters[matched] {
-      matched += 1
-    }
-    failure[at] = matched
-  }
-  { characters, failure, ignore_case }
-}
-
-///|
-fn DocxLinearPattern::is_in(
-  self : DocxLinearPattern,
-  value : String,
-  work : DocxQueryWorkBudget,
-) -> Bool raise CliFailure {
-  if self.characters.is_empty() {
-    return true
-  }
-  // KMP performs at most two pattern comparisons per scalar. The third unit
-  // covers iteration/folding; UTF-16 length safely over-counts scalars.
-  work.charge(value.length() * 3 + 1)
-  let mut matched = 0
-  for raw_character in value {
-    let character = query_fold_character(raw_character, self.ignore_case)
-    while matched > 0 && character != self.characters[matched] {
-      matched = self.failure[matched - 1]
-    }
-    if character == self.characters[matched] {
-      matched += 1
-      if matched == self.characters.length() {
-        return true
-      }
-    }
-  }
-  false
-}
-
-///|
 struct PreparedDocxQuery {
   spec : DocxQuerySpec
   scope_path : String?
   scope_prefix : String?
-  text_pattern : DocxLinearPattern?
+  text_pattern : OfficeLinearPattern?
 }
 
 ///|
-fn PreparedDocxQuery::build(
+async fn PreparedDocxQuery::build(
   spec : DocxQuerySpec,
   under : DocxProjectionEntry?,
-  work : DocxQueryWorkBudget,
-) -> PreparedDocxQuery raise CliFailure {
+  work : OfficeQueryWorkBudget,
+) -> PreparedDocxQuery {
   let (scope_path, scope_prefix) = match under {
     Some(root) => (Some(root.path), Some(root.path + "/"))
     None => (None, None)
   }
   let text_pattern = match spec.text {
     Some(needle) =>
-      Some(DocxLinearPattern::compile(needle, spec.ignore_case, work))
+      Some(
+        OfficeLinearPattern::compile_cooperative(needle, spec.ignore_case, work),
+      )
     None => None
   }
   { spec, scope_path, scope_prefix, text_pattern }
 }
 
 ///|
-struct BoundedDocxPayload {
+struct BoundedOfficePayload {
   data : Json
-  budget : DocxOutputBudget
+  budget : OfficeOutputBudget
   warnings : Array[@lib.ProtocolWarning]
 }
 
@@ -188,24 +82,29 @@ struct BoundedDocxPayload {
 /// Counts compact JSON output before allocation and bounds retained records
 /// while they are produced. The counter measures Unicode scalar characters,
 /// including the successful command's explicit trailing line feed.
-struct DocxOutputBudget {
+struct OfficeOutputBudget {
+  format : String
   maximum : Int
   mut used : Int
 }
 
 ///|
-fn DocxOutputBudget::new(maximum : Int) -> DocxOutputBudget {
-  { maximum, used: docx_cli_output_framing_chars }
+fn OfficeOutputBudget::new(
+  maximum : Int,
+  format? : String = "docx",
+) -> OfficeOutputBudget {
+  { format, maximum, used: docx_cli_output_framing_chars }
 }
 
 ///|
-fn DocxOutputBudget::reserve_chars(
-  self : DocxOutputBudget,
+fn OfficeOutputBudget::reserve_chars(
+  self : OfficeOutputBudget,
   count : Int,
 ) -> Unit raise CliFailure {
   if count < 0 || count > self.maximum - self.used {
     let actual = if count < 0 { self.used } else { self.used + count }
-    raise docx_resource_failure(
+    raise format_resource_failure(
+      self.format,
       "successful command output characters",
       self.maximum,
       actual~,
@@ -215,8 +114,8 @@ fn DocxOutputBudget::reserve_chars(
 }
 
 ///|
-fn DocxOutputBudget::reserve_plain_text(
-  self : DocxOutputBudget,
+fn OfficeOutputBudget::reserve_plain_text(
+  self : OfficeOutputBudget,
   value : String,
 ) -> Unit raise CliFailure {
   for _ in value {
@@ -225,8 +124,8 @@ fn DocxOutputBudget::reserve_plain_text(
 }
 
 ///|
-fn DocxOutputBudget::reserve_json_string(
-  self : DocxOutputBudget,
+fn OfficeOutputBudget::reserve_json_string(
+  self : OfficeOutputBudget,
   value : String,
 ) -> Unit raise CliFailure {
   self.reserve_chars(2)
@@ -243,8 +142,8 @@ fn DocxOutputBudget::reserve_json_string(
 }
 
 ///|
-fn DocxOutputBudget::reserve_json(
-  self : DocxOutputBudget,
+fn OfficeOutputBudget::reserve_json(
+  self : OfficeOutputBudget,
   value : Json,
 ) -> Unit raise CliFailure {
   match value {
@@ -283,8 +182,8 @@ fn DocxOutputBudget::reserve_json(
 }
 
 ///|
-fn DocxOutputBudget::reserve_array_item(
-  self : DocxOutputBudget,
+fn OfficeOutputBudget::reserve_array_item(
+  self : OfficeOutputBudget,
   value : Json,
   has_previous : Bool,
 ) -> Unit raise CliFailure {
@@ -297,13 +196,13 @@ fn DocxOutputBudget::reserve_array_item(
 }
 
 ///|
-fn DocxOutputBudget::remaining(self : DocxOutputBudget) -> Int {
+fn OfficeOutputBudget::remaining(self : OfficeOutputBudget) -> Int {
   self.maximum - self.used
 }
 
 ///|
-fn DocxOutputBudget::reserve_json_field(
-  self : DocxOutputBudget,
+fn OfficeOutputBudget::reserve_json_field(
+  self : OfficeOutputBudget,
   name : String,
   value : Json,
   has_previous : Bool,
@@ -317,8 +216,8 @@ fn DocxOutputBudget::reserve_json_field(
 }
 
 ///|
-fn DocxOutputBudget::reserve_warning(
-  self : DocxOutputBudget,
+fn OfficeOutputBudget::reserve_warning(
+  self : OfficeOutputBudget,
   warning : @lib.ProtocolWarning,
 ) -> Unit raise CliFailure {
   self.reserve_chars(1)
@@ -328,8 +227,8 @@ fn DocxOutputBudget::reserve_warning(
 }
 
 ///|
-fn DocxOutputBudget::reserve_success_envelope(
-  self : DocxOutputBudget,
+fn OfficeOutputBudget::reserve_success_envelope(
+  self : OfficeOutputBudget,
   data : Json,
   warnings : Array[@lib.ProtocolWarning],
 ) -> Unit raise CliFailure {
@@ -353,8 +252,8 @@ fn DocxOutputBudget::reserve_success_envelope(
 }
 
 ///|
-fn DocxOutputBudget::reserve_json_string_body(
-  self : DocxOutputBudget,
+fn OfficeOutputBudget::reserve_json_string_body(
+  self : OfficeOutputBudget,
   value : String,
 ) -> Unit raise CliFailure {
   for character in value {
@@ -370,8 +269,8 @@ fn DocxOutputBudget::reserve_json_string_body(
 }
 
 ///|
-fn DocxOutputBudget::reserve_nonnegative_integer_growth(
-  self : DocxOutputBudget,
+fn OfficeOutputBudget::reserve_nonnegative_integer_growth(
+  self : OfficeOutputBudget,
   value : Int,
 ) -> Unit raise CliFailure {
   let mut remaining = value
@@ -385,8 +284,8 @@ fn DocxOutputBudget::reserve_nonnegative_integer_growth(
 }
 
 ///|
-fn DocxOutputBudget::reserve_boolean_growth_from_true(
-  self : DocxOutputBudget,
+fn OfficeOutputBudget::reserve_boolean_growth_from_true(
+  self : OfficeOutputBudget,
   value : Bool,
 ) -> Unit raise CliFailure {
   // `true` is the four-character skeleton placeholder; `false` needs one more.
@@ -412,15 +311,17 @@ fn checked_output_limit(maximum : Int) -> Int raise CliFailure {
 }
 
 ///|
-fn ensure_docx_output_limit(
+fn ensure_office_output_limit(
   output : String,
   maximum : Int,
+  format : String,
 ) -> Unit raise CliFailure {
   let mut count = docx_cli_output_framing_chars
   for _ in output {
     count += 1
     if count > maximum {
-      raise docx_resource_failure(
+      raise format_resource_failure(
+        format,
         "successful command output characters",
         maximum,
         actual=count,
@@ -430,42 +331,76 @@ fn ensure_docx_output_limit(
 }
 
 ///|
-fn bounded_docx_payload(
+fn bounded_office_payload(
   data : Json,
   warnings : Array[@lib.ProtocolWarning],
   maximum : Int,
-) -> BoundedDocxPayload raise CliFailure {
+  format : String,
+) -> BoundedOfficePayload raise CliFailure {
   ignore(checked_output_limit(maximum))
-  let budget = DocxOutputBudget::new(maximum)
+  let budget = OfficeOutputBudget::new(maximum, format~)
   budget.reserve_success_envelope(data, warnings)
   { data, budget, warnings }
 }
 
 ///|
-fn checked_docx_json_output(
-  payload : BoundedDocxPayload,
+fn bounded_docx_payload(
+  data : Json,
+  warnings : Array[@lib.ProtocolWarning],
+  maximum : Int,
+) -> BoundedOfficePayload raise CliFailure {
+  bounded_office_payload(data, warnings, maximum, "docx")
+}
+
+///|
+fn checked_office_json_output(
+  payload : BoundedOfficePayload,
 ) -> String raise CliFailure {
   let envelope = @lib.output_success(payload.data, warnings=payload.warnings)
   // Compact output makes the preflight count exact and avoids indentation
   // overhead that would otherwise need a second allocation-sized pass.
   let output = envelope.stringify()
-  ensure_docx_output_limit(output, payload.budget.maximum)
+  ensure_office_output_limit(
+    output,
+    payload.budget.maximum,
+    payload.budget.format,
+  )
   let mut actual = 0
   for _ in output {
     actual += 1
   }
   if actual + docx_cli_output_framing_chars != payload.budget.used {
-    raise docx_cli_failure(
-      "office.docx.output_accounting_mismatch",
-      "internal DOCX output accounting did not match serialization",
-      details=Json::object({
-        "accounted": Json::number(payload.budget.used.to_double()),
-        "actual": Json::number(
-          (actual + docx_cli_output_framing_chars).to_double(),
-        ),
-      }),
+    raise CliFailure(
+      @lib.protocol_error(
+        "office.\{payload.budget.format}.output_accounting_mismatch",
+        "internal \{payload.budget.format.to_upper()} output accounting did not match serialization",
+        details=Json::object({
+          "accounted": Json::number(payload.budget.used.to_double()),
+          "actual": Json::number(
+            (actual + docx_cli_output_framing_chars).to_double(),
+          ),
+        }),
+      ),
     )
   }
+  output
+}
+
+///|
+fn checked_docx_json_output(
+  payload : BoundedOfficePayload,
+) -> String raise CliFailure {
+  checked_office_json_output(payload)
+}
+
+///|
+fn checked_office_human_output(
+  output : String,
+  maximum : Int,
+  format : String,
+) -> String raise CliFailure {
+  ignore(checked_output_limit(maximum))
+  ensure_office_output_limit(output, maximum, format)
   output
 }
 
@@ -474,17 +409,15 @@ fn checked_docx_human_output(
   output : String,
   maximum : Int,
 ) -> String raise CliFailure {
-  ignore(checked_output_limit(maximum))
-  ensure_docx_output_limit(output, maximum)
-  output
+  checked_office_human_output(output, maximum, "docx")
 }
 
 ///|
-fn get_docx_payload(
+async fn get_docx_payload(
   projection : DocxProjection,
   entry : DocxProjectionEntry,
   max_output_chars : Int,
-) -> BoundedDocxPayload raise CliFailure {
+) -> BoundedOfficePayload {
   let children : Array[Json] = []
   let fields = entry_base_json(entry, children)
   fields["schema"] = Json::string(@lib.SCHEMA_DOCX_ELEMENT)
@@ -500,7 +433,9 @@ fn get_docx_payload(
     projection.warnings,
     max_output_chars,
   )
+  projection.cooperate(work=docx_cli_projection_yield_elements)
   for path in entry.children {
+    projection.cooperate()
     let child = child_reference_json(projection, path)
     bounded.budget.reserve_array_item(child, !children.is_empty())
     children.push(child)
@@ -513,7 +448,11 @@ fn get_docx_payload(
         bounded.budget.maximum,
         bounded.budget.used,
       )
-      let text = entry_text_with_budget(entry, text_budget)
+      let text = entry_text_with_budget_cooperative(
+        entry,
+        text_budget,
+        cancelled=projection.cancelled,
+      )
       bounded.budget.reserve_json_string_body(text)
       fields["text"] = Json::string(text)
     }
@@ -536,14 +475,14 @@ fn text_record_json(entry : DocxProjectionEntry, text : String) -> Json {
 }
 
 ///|
-fn docx_text_payload(
+async fn docx_text_payload(
   projection : DocxProjection,
   under : DocxProjectionEntry?,
   under_path : String?,
   offset : Int,
   limit : Int,
   max_output_chars : Int,
-) -> BoundedDocxPayload raise CliFailure {
+) -> BoundedOfficePayload {
   let entries : Array[Json] = []
   let fields : Map[String, Json] = {
     "schema": Json::string(@lib.SCHEMA_DOCX_TEXT),
@@ -569,7 +508,9 @@ fn docx_text_payload(
     max_output_chars,
   )
   let mut matched = 0
+  projection.cooperate(work=docx_cli_projection_yield_elements)
   for entry in projection.entries {
+    projection.cooperate()
     let in_scope = match under {
       Some(root) => path_is_within(entry.path, root.path)
       None => true
@@ -582,7 +523,11 @@ fn docx_text_payload(
           bounded.budget.maximum,
           bounded.budget.used,
         )
-        let text = entry_text_with_budget(entry, text_budget)
+        let text = entry_text_with_budget_cooperative(
+          entry,
+          text_budget,
+          cancelled=projection.cancelled,
+        )
         let json = text_record_json(entry, text)
         bounded.budget.reserve_array_item(json, !entries.is_empty())
         entries.push(json)
@@ -644,15 +589,15 @@ fn query_record_json(
 }
 
 ///|
-fn entry_matches_properties(
+async fn entry_matches_properties(
   entry : DocxProjectionEntry,
   predicates : Array[DocxPropertyPredicate],
-  work : DocxQueryWorkBudget,
-) -> Bool raise CliFailure {
+  work : OfficeQueryWorkBudget,
+) -> Bool {
   for predicate in predicates {
     match entry.properties.get(predicate.name) {
       Some(value) =>
-        if !query_strings_equal(value, predicate.value, work) {
+        if !query_strings_equal_cooperative(value, predicate.value, work) {
           return false
         }
       None => {
@@ -665,46 +610,36 @@ fn entry_matches_properties(
 }
 
 ///|
-fn query_strings_equal(
-  value : String,
-  expected : String,
-  work : DocxQueryWorkBudget,
-) -> Bool raise CliFailure {
-  work.charge(value.length().min(expected.length()) + 1)
-  value == expected
-}
-
-///|
-fn query_entry_is_in_scope(
+async fn query_entry_is_in_scope(
   entry : DocxProjectionEntry,
   query : PreparedDocxQuery,
-  work : DocxQueryWorkBudget,
-) -> Bool raise CliFailure {
+  work : OfficeQueryWorkBudget,
+) -> Bool {
   match (query.scope_path, query.scope_prefix) {
     (Some(root), Some(prefix)) =>
       if entry.path.length() == root.length() {
-        query_strings_equal(entry.path, root, work)
+        query_strings_equal_cooperative(entry.path, root, work)
       } else {
-        work.charge(entry.path.length().min(prefix.length()) + 1)
-        entry.path.has_prefix(prefix)
+        query_string_has_prefix_cooperative(entry.path, prefix, work)
       }
     _ => true
   }
 }
 
 ///|
-fn entry_matches_query(
+async fn entry_matches_query(
   entry : DocxProjectionEntry,
   query : PreparedDocxQuery,
   scan_budget : DocxTextBudget,
-  work : DocxQueryWorkBudget,
-) -> Bool raise CliFailure {
+  work : OfficeQueryWorkBudget,
+  cancelled : () -> Bool,
+) -> Bool {
   if !query_entry_is_in_scope(entry, query, work) {
     return false
   }
   match query.spec.kind {
     Some(kind) =>
-      if !query_strings_equal(entry.kind, kind, work) {
+      if !query_strings_equal_cooperative(entry.kind, kind, work) {
         return false
       }
     None => ()
@@ -713,7 +648,7 @@ fn entry_matches_query(
     Some(id) =>
       match entry.stable_id {
         Some(actual) =>
-          if !query_strings_equal(actual, id, work) {
+          if !query_strings_equal_cooperative(actual, id, work) {
             return false
           }
         None => {
@@ -728,20 +663,24 @@ fn entry_matches_query(
   }
   match query.text_pattern {
     Some(pattern) => {
-      let value = entry_text_with_budget(entry, scan_budget)
-      pattern.is_in(value, work)
+      let value = entry_text_with_budget_cooperative(
+        entry,
+        scan_budget,
+        cancelled~,
+      )
+      pattern.is_in_cooperative(value, work)
     }
     None => true
   }
 }
 
 ///|
-fn docx_query_payload(
+async fn docx_query_payload(
   projection : DocxProjection,
   under : DocxProjectionEntry?,
   spec : DocxQuerySpec,
   max_output_chars : Int,
-) -> BoundedDocxPayload raise CliFailure {
+) -> BoundedOfficePayload {
   let filter_properties : Array[Json] = []
   let filters : Map[String, Json] = {
     "properties": Json::array(filter_properties),
@@ -798,16 +737,28 @@ fn docx_query_payload(
   let scan_budget = DocxTextBudget::new(
     "query text scan characters", docx_cli_max_query_text_scan_chars,
   )
-  let work = DocxQueryWorkBudget::new(docx_cli_max_query_predicate_work_units)
+  let work = OfficeQueryWorkBudget::new(
+    office_cli_max_query_predicate_work_units,
+  )
   let query = PreparedDocxQuery::build(spec, under, work)
   let mut matched = 0
+  projection.cooperate(work=docx_cli_projection_yield_elements)
   for entry in projection.entries {
-    if !entry_matches_query(entry, query, scan_budget, work) {
+    projection.cooperate()
+    if !entry_matches_query(
+        entry,
+        query,
+        scan_budget,
+        work,
+        projection.cancelled,
+      ) {
       continue
     }
     if matched >= spec.offset && matches.length() < spec.limit {
-      let (preview, preview_truncated) = entry_text_prefix(
-        entry, docx_cli_query_preview_chars,
+      let (preview, preview_truncated) = entry_text_prefix_cooperative(
+        entry,
+        docx_cli_query_preview_chars,
+        cancelled=projection.cancelled,
       )
       let record = query_record_json(entry, preview, preview_truncated)
       bounded.budget.reserve_array_item(record, !matches.is_empty())
@@ -888,7 +839,7 @@ fn section_ref_json(reference : @document.SectionRef) -> Json {
 ///|
 fn bounded_section_json(
   section : @document.DocumentSection,
-  budget : DocxOutputBudget,
+  budget : OfficeOutputBudget,
   has_previous : Bool,
 ) -> Json raise CliFailure {
   let headers : Array[Json] = []
@@ -919,7 +870,7 @@ fn bounded_section_json(
 ///|
 fn reader_diagnostics(
   projection : DocxProjection,
-  retention_budget? : DocxOutputBudget,
+  retention_budget? : OfficeOutputBudget,
 ) -> Array[Json] raise CliFailure {
   let values : Array[Json] = []
   for message in projection.annotated.result().messages {
@@ -941,15 +892,17 @@ fn reader_diagnostics(
 }
 
 ///|
-fn docx_outline_payload(
+async fn docx_outline_payload(
   projection : DocxProjection,
   max_output_chars? : Int = docx_cli_default_max_output_chars,
-) -> BoundedDocxPayload raise CliFailure {
+) -> BoundedOfficePayload {
   ignore(checked_output_limit(max_output_chars))
   let counts : Map[String, Int] = Map([])
   let mut footnotes = 0
   let mut endnotes = 0
+  projection.cooperate(work=docx_cli_projection_yield_elements)
   for entry in projection.entries {
+    projection.cooperate()
     counts[entry.kind] = counts.get(entry.kind).unwrap_or(0) + 1
     if entry.kind == "note" && entry.parent == Some("/docx/footnotes") {
       footnotes += 1
@@ -1001,7 +954,9 @@ fn docx_outline_payload(
     projection.warnings,
     max_output_chars,
   )
+  projection.cooperate(work=docx_cli_projection_yield_elements)
   for entry in projection.entries {
+    projection.cooperate()
     if entry.role is (StoryRoot | AnnotationCollection) {
       let record = Json::object({
         "path": Json::string(entry.path),
@@ -1017,8 +972,10 @@ fn docx_outline_payload(
       Some(element) => {
         match docx_heading_level(element) {
           Some(level) => {
-            let (text, truncated) = entry_text_prefix(
-              entry, docx_cli_heading_preview_chars,
+            let (text, truncated) = entry_text_prefix_cooperative(
+              entry,
+              docx_cli_heading_preview_chars,
+              cancelled=projection.cancelled,
             )
             let record = Json::object({
               "path": Json::string(entry.path),
@@ -1065,6 +1022,7 @@ fn docx_outline_payload(
     }
   }
   for section in result.sections {
+    projection.cooperate()
     sections.push(
       bounded_section_json(section, bounded.budget, !sections.is_empty()),
     )
@@ -1093,6 +1051,7 @@ fn docx_outline_payload(
 
 ///|
 struct DocxHumanWriter {
+  format : String
   maximum : Int
   output : StringBuilder
   mut used : Int
@@ -1100,9 +1059,13 @@ struct DocxHumanWriter {
 }
 
 ///|
-fn DocxHumanWriter::new(maximum : Int) -> DocxHumanWriter raise CliFailure {
+fn DocxHumanWriter::new(
+  maximum : Int,
+  format? : String = "docx",
+) -> DocxHumanWriter raise CliFailure {
   ignore(checked_output_limit(maximum))
   {
+    format,
     maximum,
     output: StringBuilder::new(),
     used: docx_cli_output_framing_chars,
@@ -1121,7 +1084,8 @@ fn DocxHumanWriter::write_char(
   value : Char,
 ) -> Unit raise CliFailure {
   if self.used >= self.maximum {
-    raise docx_resource_failure(
+    raise format_resource_failure(
+      self.format,
       "successful command output characters",
       self.maximum,
       actual=self.used + 1,
@@ -1200,18 +1164,20 @@ fn DocxHumanWriter::write_warnings(
 }
 
 ///|
-fn docx_text_human(
+async fn docx_text_human(
   projection : DocxProjection,
   under : DocxProjectionEntry?,
   offset : Int,
   limit : Int,
   warnings : Array[@lib.ProtocolWarning],
   maximum? : Int = docx_cli_hard_max_output_chars,
-) -> String raise CliFailure {
+) -> String {
   let output = DocxHumanWriter::new(maximum)
   let mut matched = 0
   let mut returned = 0
+  projection.cooperate(work=docx_cli_projection_yield_elements)
   for entry in projection.entries {
+    projection.cooperate()
     let in_scope = match under {
       Some(root) => path_is_within(entry.path, root.path)
       None => true
@@ -1227,7 +1193,11 @@ fn docx_text_human(
           output.maximum,
           output.used,
         )
-        let text = entry_text_with_budget(entry, text_budget)
+        let text = entry_text_with_budget_cooperative(
+          entry,
+          text_budget,
+          cancelled=projection.cancelled,
+        )
         output.write_terminal_safe(text, single_line=true)
         returned += 1
       }
@@ -1239,27 +1209,41 @@ fn docx_text_human(
 }
 
 ///|
-fn docx_query_human(
+async fn docx_query_human(
   projection : DocxProjection,
   under : DocxProjectionEntry?,
   spec : DocxQuerySpec,
   warnings : Array[@lib.ProtocolWarning],
   maximum? : Int = docx_cli_hard_max_output_chars,
-) -> String raise CliFailure {
+) -> String {
   let output = DocxHumanWriter::new(maximum)
   let scan_budget = DocxTextBudget::new(
     "query text scan characters", docx_cli_max_query_text_scan_chars,
   )
-  let work = DocxQueryWorkBudget::new(docx_cli_max_query_predicate_work_units)
+  let work = OfficeQueryWorkBudget::new(
+    office_cli_max_query_predicate_work_units,
+  )
   let query = PreparedDocxQuery::build(spec, under, work)
   let mut matched = 0
   let mut returned = 0
+  projection.cooperate(work=docx_cli_projection_yield_elements)
   for entry in projection.entries {
-    if !entry_matches_query(entry, query, scan_budget, work) {
+    projection.cooperate()
+    if !entry_matches_query(
+        entry,
+        query,
+        scan_budget,
+        work,
+        projection.cancelled,
+      ) {
       continue
     }
     if matched >= spec.offset && returned < spec.limit {
-      let (preview, _) = entry_text_prefix(entry, docx_cli_query_preview_chars)
+      let (preview, _) = entry_text_prefix_cooperative(
+        entry,
+        docx_cli_query_preview_chars,
+        cancelled=projection.cancelled,
+      )
       output.begin_line()
       output.write_terminal_safe(entry.path)
       output.write_char('\t')
@@ -1299,10 +1283,10 @@ fn docx_get_human(
 }
 
 ///|
-fn docx_outline_human(
+async fn docx_outline_human(
   projection : DocxProjection,
   maximum? : Int = docx_cli_hard_max_output_chars,
-) -> String raise CliFailure {
+) -> String {
   let counts : Map[String, Int] = Map([])
   let output = DocxHumanWriter::new(maximum)
   output.begin_line()
@@ -1310,7 +1294,9 @@ fn docx_outline_human(
   output.write_plain(raw_human_text(projection.file, 160))
   output.begin_line()
   output.write_plain("scanned elements: \{projection.entries.length()}")
+  projection.cooperate(work=docx_cli_projection_yield_elements)
   for entry in projection.entries {
+    projection.cooperate()
     counts[entry.kind] = counts.get(entry.kind).unwrap_or(0) + 1
     if entry.role is (StoryRoot | AnnotationCollection) {
       output.begin_line()
@@ -1324,13 +1310,17 @@ fn docx_outline_human(
   output.write_plain(
     "paragraphs: \{counts.get("p").unwrap_or(0)}; tables: \{counts.get("tbl").unwrap_or(0)}; images: \{counts.get("image").unwrap_or(0)}; comments: \{counts.get("comment").unwrap_or(0)}; footnotes/endnotes: \{counts.get("note").unwrap_or(0)}",
   )
+  projection.cooperate(work=docx_cli_projection_yield_elements)
   for entry in projection.entries {
+    projection.cooperate()
     match entry.element {
       Some(element) =>
         match docx_heading_level(element) {
           Some(level) => {
-            let (text, truncated) = entry_text_prefix(
-              entry, docx_cli_heading_preview_chars,
+            let (text, truncated) = entry_text_prefix_cooperative(
+              entry,
+              docx_cli_heading_preview_chars,
+              cancelled=projection.cancelled,
             )
             output.begin_line()
             output.write_plain("heading \{level}\t")

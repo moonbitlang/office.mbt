@@ -73,9 +73,63 @@ test "update linked value clears formula cache" {
   workbook.set_calc_props(
     Some(@xlsx.CalcPropsOptions::with_values(calc_mode="manual")),
   )
+  guard sheet.get_cell_formula_info_rc(1, 1) is Some(before) else {
+    fail("expected formula metadata before cache invalidation")
+  }
+  assert_true(before.cached_value_present)
   workbook.update_linked_value()
   debug_inspect(sheet.get_cell("A1"), content="Some(\"\")")
   debug_inspect(sheet.get_cell("B1"), content="Some(\"keep\")")
+  guard sheet.get_cell_formula_info_rc(1, 1) is Some(after) else {
+    fail("expected formula metadata after cache invalidation")
+  }
+  assert_false(after.cached_value_present)
+  let archive = @zip.read(@xlsx.write(workbook))
+  guard archive.get("xl/worksheets/sheet1.xml") is Some(sheet_bytes) else {
+    fail("expected formula worksheet")
+  }
+  let sheet_xml = @encoding/utf8.decode(sheet_bytes)
+  assert_false(sheet_xml.contains("<f>SUM(1,2)</f><v"))
   let props = workbook.get_calc_props()
   debug_inspect(props.calc_mode, content="None")
+}
+
+///|
+test "update linked value removes an explicit empty formula cache" {
+  let source = @xlsx.Workbook::new()
+  ignore(source.add_sheet("Sheet1"))
+  source.set_cell_formula("Sheet1", "A1", "SUM(1,2)")
+  let archive = @zip.read(@xlsx.write(source))
+  guard archive.get("xl/worksheets/sheet1.xml") is Some(sheet_bytes) else {
+    fail("expected source formula worksheet")
+  }
+  let sheet_xml = @encoding/utf8.decode(sheet_bytes)
+  assert_true(
+    archive.replace(
+      "xl/worksheets/sheet1.xml",
+      @encoding/utf8.encode(
+        sheet_xml.replace(
+          old="<f>SUM(1,2)</f></c>",
+          new="<f>SUM(1,2)</f><v/></c>",
+        ),
+      ),
+    ),
+  )
+  let workbook = @xlsx.read(@zip.write(archive))
+  guard workbook.sheet("Sheet1") is Some(sheet) &&
+    sheet.get_cell_formula_info_rc(1, 1) is Some(before) else {
+    fail("expected explicit empty formula cache")
+  }
+  assert_true(before.cached_value_present)
+  workbook.update_linked_value()
+  guard sheet.get_cell_formula_info_rc(1, 1) is Some(after) else {
+    fail("expected formula metadata after cache invalidation")
+  }
+  assert_false(after.cached_value_present)
+  let output = @zip.read(@xlsx.write(workbook))
+  guard output.get("xl/worksheets/sheet1.xml") is Some(output_bytes) else {
+    fail("expected output formula worksheet")
+  }
+  let output_xml = @encoding/utf8.decode(output_bytes)
+  assert_false(output_xml.contains("<v"))
 }

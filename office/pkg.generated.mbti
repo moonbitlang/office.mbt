@@ -29,6 +29,14 @@ pub const SCHEMA_RAW_RESULT : String = "office.raw.result/1"
 
 pub const SCHEMA_TRANSACTION : String = "office.transaction/1"
 
+pub const SCHEMA_XLSX_ELEMENT : String = "office.xlsx.element/1"
+
+pub const SCHEMA_XLSX_OUTLINE : String = "office.xlsx.outline/1"
+
+pub const SCHEMA_XLSX_QUERY : String = "office.xlsx.query/1"
+
+pub const SCHEMA_XLSX_TEXT : String = "office.xlsx.text/1"
+
 pub const SELECTOR_MAX_DEPTH : Int = 32
 
 pub const SELECTOR_MAX_LENGTH : Int = 2048
@@ -49,9 +57,9 @@ pub fn capability_formats() -> Array[CapabilityFormat]
 
 pub fn capability_records(format? : DocumentFormat, operation? : String) -> Array[Json]
 
-pub fn detect_archive_format(StringView, @zip.Archive) -> DocumentFormat raise OfficeError
+pub fn detect_archive_format(StringView, @zip.Archive, max_xml_part_bytes? : Int, max_xml_total_units? : Int, cancelled? : () -> Bool) -> DocumentFormat raise OfficeError
 
-pub fn detect_format(StringView, BytesView) -> DocumentFormat raise OfficeError
+pub fn detect_format(StringView, BytesView, max_package_bytes? : Int, max_archive_entries? : Int, max_entry_uncompressed_bytes? : Int, max_total_uncompressed_bytes? : Int, max_xml_part_bytes? : Int, max_xml_total_units? : Int, cancelled? : () -> Bool) -> DocumentFormat raise OfficeError
 
 pub fn find_capability_command(StringView) -> CapabilityCommand?
 
@@ -71,6 +79,10 @@ pub fn selector_for_xlsx_cell(String, String) -> OfficeSelector raise SelectorEr
 
 pub fn selector_for_xlsx_range(String, String) -> OfficeSelector raise SelectorError
 
+pub fn selector_for_xlsx_sheet(String) -> OfficeSelector raise SelectorError
+
+pub fn selector_for_xlsx_workbook() -> OfficeSelector raise SelectorError
+
 pub fn selector_from_docx_projection_path(String) -> OfficeSelector raise SelectorError
 
 // Errors
@@ -78,6 +90,8 @@ pub(all) suberror OfficeError {
   UnsupportedFileExtension(String)
   InvalidPackage(String)
   FormatMismatch(expected~ : DocumentFormat, actual~ : DocumentFormat)
+  ResourceLimit(kind~ : String, limit~ : Int, actual~ : Int)
+  Cancelled
 } derive(Eq, @debug.Debug)
 #deprecated
 pub fn OfficeError::equal(Self, Self) -> Bool
@@ -157,7 +171,9 @@ pub struct CellAddress {
   column : Int
   row : Int
 }
+pub fn CellAddress::column(Self) -> Int
 pub fn CellAddress::render(Self) -> String
+pub fn CellAddress::row(Self) -> Int
 
 pub(all) enum DocumentFormat {
   Xlsx

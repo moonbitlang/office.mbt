@@ -1,16 +1,4 @@
 ///|
-let docx_cli_max_package_bytes : Int = 64 * 1024 * 1024
-
-///|
-let docx_cli_max_zip_entries : Int = 4096
-
-///|
-let docx_cli_max_zip_entry_bytes : Int = 32 * 1024 * 1024
-
-///|
-let docx_cli_max_zip_total_bytes : Int = 128 * 1024 * 1024
-
-///|
 let docx_cli_max_xml_source_units : Int = 64 * 1024 * 1024
 
 ///|
@@ -30,6 +18,9 @@ let docx_cli_hard_max_elements : Int = 200_000
 
 ///|
 let docx_cli_max_warnings : Int = 128
+
+///|
+let docx_cli_projection_yield_elements : Int = 256
 
 ///|
 enum DocxProjectionRole {
@@ -61,6 +52,8 @@ struct DocxProjection {
   entries : Array[DocxProjectionEntry]
   entry_index : @sorted_map.SortedMap[String, Int]
   warnings : Array[@lib.ProtocolWarning]
+  cancelled : () -> Bool
+  mut work_since_yield : Int
 }
 
 ///|
@@ -96,6 +89,8 @@ struct DocxProjectionBuilder {
   warnings : Array[@lib.ProtocolWarning]
   warning_keys : Set[String]
   mut warnings_truncated : Bool
+  cancelled : () -> Bool
+  mut work_since_yield : Int
 }
 
 ///|
@@ -113,43 +108,7 @@ fn docx_resource_failure(
   limit : Int,
   actual? : Int,
 ) -> CliFailure {
-  let fields : Map[String, Json] = {
-    "resource": Json::string(resource),
-    "limit": Json::number(limit.to_double()),
-  }
-  match actual {
-    Some(value) => fields["actual"] = Json::number(value.to_double())
-    None => ()
-  }
-  docx_cli_failure(
-    "office.docx.resource_limit",
-    "DOCX \{resource} exceeds the configured limit of \{limit}",
-    details=Json::object(fields),
-  )
-}
-
-///|
-fn docx_zip_failure(error : @zip.ZipError, file : String) -> CliFailure {
-  match error {
-    ResourceLimitExceeded(kind~, limit~, actual~) =>
-      docx_cli_failure(
-        "office.docx.resource_limit",
-        "DOCX ZIP \{bounded_text(kind, 80)} exceeds the configured limit",
-        details=Json::object({
-          "file": Json::string(bounded_text(file, 160)),
-          "resource": Json::string(bounded_text(kind, 80)),
-          "limit": Json::number(limit.to_double()),
-          "actual": Json::number(actual.to_double()),
-        }),
-      )
-    OutputLimitExceeded(limit~) => docx_resource_failure("ZIP output", limit)
-    _ =>
-      docx_cli_failure(
-        "office.invalid_package",
-        "invalid DOCX package: archive is not a readable bounded ZIP",
-        details=Json::object({ "file": Json::string(bounded_text(file, 160)) }),
-      )
-  }
+  format_resource_failure("docx", resource, limit, actual?)
 }
 
 ///|
@@ -198,7 +157,10 @@ fn docx_xml_resource_name(limit : @docx_core.DocxXmlResourceLimit) -> String {
 }
 
 ///|
-fn DocxProjectionBuilder::new(max_elements : Int) -> DocxProjectionBuilder {
+fn DocxProjectionBuilder::new(
+  max_elements : Int,
+  cancelled? : () -> Bool = () => false,
+) -> DocxProjectionBuilder {
   {
     max_elements,
     entries: [],
@@ -206,6 +168,50 @@ fn DocxProjectionBuilder::new(max_elements : Int) -> DocxProjectionBuilder {
     warnings: [],
     warning_keys: Set([]),
     warnings_truncated: false,
+    cancelled,
+    work_since_yield: 0,
+  }
+}
+
+///|
+fn DocxProjectionBuilder::check_cancelled(
+  self : DocxProjectionBuilder,
+) -> Unit raise CliFailure {
+  check_office_read_cancelled(self.cancelled)
+}
+
+///|
+async fn DocxProjectionBuilder::cooperate(
+  self : DocxProjectionBuilder,
+  work? : Int = 1,
+) -> Unit {
+  self.check_cancelled()
+  self.work_since_yield += work.max(0)
+  if self.work_since_yield >= docx_cli_projection_yield_elements {
+    self.work_since_yield = 0
+    @async.pause()
+    self.check_cancelled()
+  }
+}
+
+///|
+fn DocxProjection::check_cancelled(
+  self : DocxProjection,
+) -> Unit raise CliFailure {
+  check_office_read_cancelled(self.cancelled)
+}
+
+///|
+async fn DocxProjection::cooperate(
+  self : DocxProjection,
+  work? : Int = 1,
+) -> Unit {
+  self.check_cancelled()
+  self.work_since_yield += work.max(0)
+  if self.work_since_yield >= docx_cli_projection_yield_elements {
+    self.work_since_yield = 0
+    @async.pause()
+    self.check_cancelled()
   }
 }
 
@@ -246,6 +252,7 @@ fn selector_stability_text(stability : @lib.SelectorStability) -> String {
 fn DocxProjectionBuilder::require_entry_capacity(
   self : DocxProjectionBuilder,
 ) -> Unit raise CliFailure {
+  self.check_cancelled()
   if self.entries.length() >= self.max_elements {
     raise docx_resource_failure(
       "projection elements",
@@ -410,12 +417,14 @@ fn canonical_index_path(
 }
 
 ///|
-fn canonical_index_paths(
+async fn canonical_index_paths(
   paths : Array[String],
   path_roots : @sorted_map.SortedMap[String, String],
+  builder : DocxProjectionBuilder,
 ) -> Json {
   let values : Array[Json] = []
   for path in paths {
+    builder.cooperate()
     match canonical_index_path(path, path_roots) {
       Some(canonical) => values.push(Json::string(canonical))
       None => ()
@@ -425,12 +434,17 @@ fn canonical_index_paths(
 }
 
 ///|
-fn comment_anchor_metadata(
+async fn comment_anchor_metadata(
   anchor : @docx.AnnotationAnchor,
   path_roots : @sorted_map.SortedMap[String, String],
+  builder : DocxProjectionBuilder,
 ) -> Json {
   let fields : Map[String, Json] = {
-    "references": canonical_index_paths(anchor.references(), path_roots),
+    "references": canonical_index_paths(
+      anchor.references(),
+      path_roots,
+      builder,
+    ),
   }
   match canonical_index_path(anchor.story(), path_roots) {
     Some(canonical) => fields["story"] = Json::string(canonical)
@@ -554,11 +568,13 @@ fn stable_annotation_path(
 }
 
 ///|
-fn annotation_id_counts(
+async fn annotation_id_counts(
   pairs : Array[(String, Array[@document.DocumentElement])],
+  builder : DocxProjectionBuilder,
 ) -> @sorted_map.SortedMap[String, Int] {
   let counts : @sorted_map.SortedMap[String, Int] = SortedMap([])
   for pair in pairs {
+    builder.cooperate()
     let (id, _) = pair
     counts[id] = counts.get(id).unwrap_or(0) + 1
   }
@@ -566,18 +582,20 @@ fn annotation_id_counts(
 }
 
 ///|
-fn annotation_story_plan(
+async fn annotation_story_plan(
   story : String,
   kind : String,
   pairs : Array[(String, Array[@document.DocumentElement])],
+  builder : DocxProjectionBuilder,
 ) -> AnnotationStoryPlan {
   let collection_path = "/docx/\{story}"
-  let counts = annotation_id_counts(pairs)
+  let counts = annotation_id_counts(pairs, builder)
   let paths : Array[String] = []
   let mut duplicate_ids = 0
   let mut missing_ids = 0
   let mut unrepresentable_ids = 0
   for index, pair in pairs {
+    builder.cooperate()
     let ordinal = index + 1
     let (id, _) = pair
     let occurrence_count = counts.get(id).unwrap_or(0)
@@ -604,21 +622,25 @@ fn annotation_story_plan(
 }
 
 ///|
-fn add_annotation_path_roots(
+async fn add_annotation_path_roots(
   output : @sorted_map.SortedMap[String, String],
   plan : AnnotationStoryPlan,
+  builder : DocxProjectionBuilder,
 ) -> Unit {
   for index, path in plan.paths {
+    builder.cooperate()
     output["/\{plan.story}/\{plan.kind}[\{index + 1}]"] = path
   }
 }
 
 ///|
-fn index_notes(
+async fn index_notes(
   notes : Array[@docx.NoteInfo],
+  builder : DocxProjectionBuilder,
 ) -> @sorted_map.SortedMap[String, @docx.NoteInfo] {
   let output : @sorted_map.SortedMap[String, @docx.NoteInfo] = SortedMap([])
   for note in notes {
+    builder.cooperate()
     let id = note.id()
     if !output.contains(id) {
       output[id] = note
@@ -628,19 +650,22 @@ fn index_notes(
 }
 
 ///|
-fn index_comment_anchors(
+async fn index_comment_anchors(
   comments : Array[@docx.CommentInfo],
   path_roots : @sorted_map.SortedMap[String, String],
+  builder : DocxProjectionBuilder,
 ) -> @sorted_map.SortedMap[String, Json] {
   let output : @sorted_map.SortedMap[String, Json] = SortedMap([])
   for info in comments {
+    builder.cooperate()
     let id = info.id()
     if output.contains(id) {
       continue
     }
     let anchors : Array[Json] = []
     for anchor in info.anchors() {
-      anchors.push(comment_anchor_metadata(anchor, path_roots))
+      builder.cooperate()
+      anchors.push(comment_anchor_metadata(anchor, path_roots, builder))
     }
     output[id] = Json::array(anchors)
   }
@@ -648,48 +673,56 @@ fn index_comment_anchors(
 }
 
 ///|
-fn index_note_references(
+async fn index_note_references(
   notes : @sorted_map.SortedMap[String, @docx.NoteInfo],
   path_roots : @sorted_map.SortedMap[String, String],
+  builder : DocxProjectionBuilder,
 ) -> @sorted_map.SortedMap[String, Json] {
   let output : @sorted_map.SortedMap[String, Json] = SortedMap([])
   for id, note in notes {
-    output[id] = canonical_index_paths(note.references(), path_roots)
+    builder.cooperate()
+    output[id] = canonical_index_paths(note.references(), path_roots, builder)
   }
   output
 }
 
 ///|
-fn annotation_projection_index(
+async fn annotation_projection_index(
   annotated : @docx.DocxAnnotatedResult,
   footnotes : AnnotationStoryPlan,
   endnotes : AnnotationStoryPlan,
   comments : AnnotationStoryPlan,
+  builder : DocxProjectionBuilder,
 ) -> AnnotationProjectionIndex {
   let path_roots : @sorted_map.SortedMap[String, String] = SortedMap([])
-  add_annotation_path_roots(path_roots, footnotes)
-  add_annotation_path_roots(path_roots, endnotes)
-  add_annotation_path_roots(path_roots, comments)
+  add_annotation_path_roots(path_roots, footnotes, builder)
+  add_annotation_path_roots(path_roots, endnotes, builder)
+  add_annotation_path_roots(path_roots, comments, builder)
   let annotations = annotated.annotations()
   let comment_infos = annotations.comments()
-  let footnote_infos = index_notes(annotations.footnotes())
-  let endnote_infos = index_notes(annotations.endnotes())
+  let footnote_infos = index_notes(annotations.footnotes(), builder)
+  let endnote_infos = index_notes(annotations.endnotes(), builder)
   {
     comments: comment_infos,
-    comment_anchors: index_comment_anchors(comment_infos, path_roots),
-    footnote_references: index_note_references(footnote_infos, path_roots),
-    endnote_references: index_note_references(endnote_infos, path_roots),
+    comment_anchors: index_comment_anchors(comment_infos, path_roots, builder),
+    footnote_references: index_note_references(
+      footnote_infos, path_roots, builder,
+    ),
+    endnote_references: index_note_references(
+      endnote_infos, path_roots, builder,
+    ),
   }
 }
 
 ///|
-fn DocxProjectionBuilder::walk_element_children(
+async fn DocxProjectionBuilder::walk_element_children(
   self : DocxProjectionBuilder,
   parent : DocxProjectionEntry,
   element : @document.DocumentElement,
-) -> Unit raise CliFailure {
+) -> Unit {
   let counters : Map[String, Int] = Map([])
   for child in @docx_paths.element_children(element) {
+    self.cooperate()
     match @docx_paths.segment_kind(child) {
       Some(kind) => {
         let ordinal = counters.get(kind).unwrap_or(0) + 1
@@ -715,13 +748,13 @@ fn DocxProjectionBuilder::walk_element_children(
 }
 
 ///|
-fn DocxProjectionBuilder::add_story(
+async fn DocxProjectionBuilder::add_story(
   self : DocxProjectionBuilder,
   path : String,
   kind : String,
   body : Array[@document.DocumentElement],
   source : Json,
-) -> Unit raise CliFailure {
+) -> Unit {
   let document = @document.document(body)
   let root = self.add_entry(
     path,
@@ -754,12 +787,12 @@ fn docx_story_source_fields(
 }
 
 ///|
-fn DocxProjectionBuilder::add_annotation_story(
+async fn DocxProjectionBuilder::add_annotation_story(
   self : DocxProjectionBuilder,
   annotation_index : AnnotationProjectionIndex,
   plan : AnnotationStoryPlan,
   source : @docx.DocxStoryPartSource?,
-) -> Unit raise CliFailure {
+) -> Unit {
   let story = plan.story
   let kind = plan.kind
   let pairs = plan.pairs
@@ -767,7 +800,10 @@ fn DocxProjectionBuilder::add_annotation_story(
   let combined_body : Array[@document.DocumentElement] = []
   for pair in pairs {
     let (_, body) = pair
-    combined_body.append(body)
+    for element in body {
+      self.cooperate()
+      combined_body.push(element)
+    }
   }
   let collection_source = docx_story_source_fields(story, source)
   let collection = self.add_entry(
@@ -782,6 +818,7 @@ fn DocxProjectionBuilder::add_annotation_story(
     Json::object(collection_source),
   )
   for item_index, pair in pairs {
+    self.cooperate()
     self.require_entry_capacity()
     let ordinal = item_index + 1
     let (id, body) = pair
@@ -859,30 +896,35 @@ fn document_body_elements(
 }
 
 ///|
-fn projection_from_annotated(
+async fn projection_from_annotated(
   file : String,
   annotated : @docx.DocxAnnotatedResult,
   max_elements : Int,
-) -> DocxProjection raise CliFailure {
-  let builder = DocxProjectionBuilder::new(max_elements)
+  cancelled? : () -> Bool = () => false,
+) -> DocxProjection {
+  let builder = DocxProjectionBuilder::new(max_elements, cancelled~)
+  builder.cooperate(work=docx_cli_projection_yield_elements)
   let result = annotated.result()
   let footnotes = annotation_story_plan(
     "footnotes",
     "note",
     annotated.footnote_bodies(),
+    builder,
   )
   let endnotes = annotation_story_plan(
     "endnotes",
     "note",
     annotated.endnote_bodies(),
+    builder,
   )
   let comments = annotation_story_plan(
     "comments",
     "comment",
     annotated.comment_bodies(),
+    builder,
   )
   let annotations = annotation_projection_index(
-    annotated, footnotes, endnotes, comments,
+    annotated, footnotes, endnotes, comments, builder,
   )
   let header_sources = annotated.header_story_sources()
   let footer_sources = annotated.footer_story_sources()
@@ -895,6 +937,7 @@ fn projection_from_annotated(
     ),
   )
   for index, header in result.headers {
+    builder.cooperate()
     let source = docx_story_source_fields("header", header_sources.get(index))
     source["part_index"] = Json::number((index + 1).to_double())
     builder.add_story(
@@ -905,6 +948,7 @@ fn projection_from_annotated(
     )
   }
   for index, footer in result.footers {
+    builder.cooperate()
     let source = docx_story_source_fields("footer", footer_sources.get(index))
     source["part_index"] = Json::number((index + 1).to_double())
     builder.add_story(
@@ -930,6 +974,7 @@ fn projection_from_annotated(
     annotated.comments_story_source(),
   )
   for message in result.messages {
+    builder.cooperate()
     match message {
       Warning(text) => builder.warn("office.docx.reader_warning", text)
       Error(text) => builder.warn("office.docx.reader_error", text)
@@ -941,6 +986,8 @@ fn projection_from_annotated(
     entries: builder.entries,
     entry_index: builder.entry_index,
     warnings: builder.warnings,
+    cancelled,
+    work_since_yield: 0,
   }
 }
 
@@ -948,7 +995,9 @@ fn projection_from_annotated(
 fn validate_docx_read_archive(
   file : String,
   archive : @zip.Archive,
+  cancelled? : () -> Bool = () => false,
 ) -> String raise CliFailure {
+  check_office_read_cancelled(cancelled)
   let lower = file.to_lower()
   if lower.has_suffix(".xlsx") {
     raise docx_cli_failure(
@@ -978,7 +1027,9 @@ fn validate_docx_read_archive(
     max_xml_tokens=docx_cli_max_xml_tokens,
     max_xml_materialized_chars=docx_cli_max_xml_materialized_chars,
     max_xml_token_chars=docx_cli_max_xml_token_chars,
+    cancelled~,
   )
+  check_office_read_cancelled(cancelled)
   match report.resource_limit() {
     Some(limit) =>
       raise docx_cli_failure(
@@ -1019,11 +1070,13 @@ fn validate_docx_read_archive(
 }
 
 ///|
-fn open_docx_projection(
+async fn open_docx_projection_archive(
   file : String,
-  data : BytesView,
+  archive : @zip.Archive,
   max_elements : Int,
-) -> DocxProjection raise CliFailure {
+  cancelled? : () -> Bool = () => false,
+) -> DocxProjection {
+  check_office_read_cancelled(cancelled)
   if max_elements < 1 || max_elements > docx_cli_hard_max_elements {
     raise docx_cli_failure(
       "office.invalid_arguments",
@@ -1035,22 +1088,17 @@ fn open_docx_projection(
       }),
     )
   }
-  let archive = @zip.read_limited(
-    data,
-    max_package_bytes=docx_cli_max_package_bytes,
-    max_entries=docx_cli_max_zip_entries,
-    max_entry_uncompressed_bytes=docx_cli_max_zip_entry_bytes,
-    max_total_uncompressed_bytes=docx_cli_max_zip_total_bytes,
-    max_total_preserved_source_bytes=docx_cli_max_package_bytes,
-  ) catch {
-    error => raise docx_zip_failure(error, file)
-  }
-  let main_document_part = validate_docx_read_archive(file, archive)
+  @async.pause()
+  check_office_read_cancelled(cancelled)
+  let main_document_part = validate_docx_read_archive(file, archive, cancelled~)
+  @async.pause()
+  check_office_read_cancelled(cancelled)
   let xml_budget = @xml.xml_read_budget(
     max_source_units=docx_cli_max_xml_source_units,
     max_tokens=docx_cli_max_xml_tokens,
     max_materialized_chars=docx_cli_max_xml_materialized_chars,
     max_token_chars=docx_cli_max_xml_token_chars,
+    cancelled~,
   )
   let annotated = @docx.read_docx_annotated_archive_tolerant_limited(
     archive,
@@ -1059,22 +1107,12 @@ fn open_docx_projection(
     max_diagnostic_chars=512,
     expected_main_document_path=main_document_part,
   ) catch {
-    error => raise docx_reader_failure(error, file)
+    error => {
+      check_office_read_cancelled(cancelled)
+      raise docx_reader_failure(error, file)
+    }
   }
-  projection_from_annotated(file, annotated, max_elements)
-}
-
-///|
-async fn read_docx_projection(
-  file : String,
-  max_elements : Int,
-) -> DocxProjection {
-  let data = read_bounded_file(
-    file,
-    docx_cli_max_package_bytes,
-    "office.file_read_failed",
-    "input package",
-    limit_code="office.docx.resource_limit",
-  )
-  open_docx_projection(file, data, max_elements)
+  check_office_read_cancelled(cancelled)
+  @async.pause()
+  projection_from_annotated(file, annotated, max_elements, cancelled~)
 }

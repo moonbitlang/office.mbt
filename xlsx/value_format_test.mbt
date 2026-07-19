@@ -25,6 +25,58 @@ fn format_text(value : String, fmt : String) -> String {
 }
 
 ///|
+test "fraction formatting keeps zero finite across percent scaling" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Sheet1"))
+  workbook.set_cell_value("Sheet1", "A1", Numeric(0.0))
+  let style_id = workbook.new_style(
+    @xlsx.Style::number_format("# ?/?" + "%".repeat(155)),
+  )
+  workbook.set_cell_style("Sheet1", "A1", style_id)
+  guard workbook.get_cell_value("Sheet1", "A1") is Some(formatted) else {
+    fail("expected formatted numeric zero")
+  }
+  assert_true(formatted.has_prefix("0"))
+  assert_true(formatted.has_suffix("%".repeat(155)))
+}
+
+///|
+test "fraction formatting rejects non-finite nonzero percent scaling" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Sheet1"))
+  workbook.set_cell_value("Sheet1", "A1", Numeric(1.0))
+  let style_id = workbook.new_style(
+    @xlsx.Style::number_format("# ?/?" + "%".repeat(155)),
+  )
+  workbook.set_cell_style("Sheet1", "A1", style_id)
+  let result : Result[String?, Error] = Ok(
+    workbook.get_cell_value("Sheet1", "A1"),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.XlsxError::InvalidXml(msg~)) =>
+      inspect(msg, content="number format scale must remain finite")
+    _ => fail("expected non-finite number-format scaling rejection")
+  }
+}
+
+///|
+test "TEXT percent scaling keeps finite tiny values and zero total" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let format = "# ?/?" + "%".repeat(155)
+  sheet.set_cell_formula("A1", "TEXT(1E-300,\"" + format + "\")")
+  sheet.set_cell_formula("A2", "TEXT(0,\"" + format + "\")")
+  let finite = workbook.calc_cell_value("Sheet1", "A1")
+  let zero = workbook.calc_cell_value("Sheet1", "A2")
+  assert_true(finite.has_prefix("10000000000"))
+  assert_true(finite.has_suffix("%".repeat(155)))
+  assert_true(zero.has_prefix("0"))
+  assert_true(zero.has_suffix("%".repeat(155)))
+}
+
+///|
 test "general and literal formats" {
   inspect(format_numeric(43543.5448726851, "General"), content="43543.54487")
   inspect(format_numeric(1234567890.12345, "General"), content="1234567890")
@@ -79,4 +131,48 @@ test "fraction, scientific, percent" {
   inspect(format_numeric(0.0, "# ?/?"), content="0    ")
   inspect(format_numeric(123.456, "0.00E+00"), content="1.23E+02")
   inspect(format_numeric(0.256, "0.00%"), content="25.60%")
+  inspect(format_numeric(1.2345e30, "0.##"), content="1.2345e+30")
+  inspect(
+    format_numeric(9_223_372_036_854_775_808.0, "0"),
+    content="9223372036854775808",
+  )
+  inspect(
+    format_numeric(-9_223_372_036_854_775_808.0, "0.0"),
+    content="-9223372036854775808.0",
+  )
+  inspect(
+    format_numeric(9_223_372_036_854_775_808.0, "# ?/?"),
+    content="9223372036854775808    ",
+  )
+  let large_fraction = format_numeric(1.0e20, "# ?/?")
+  assert_false(large_fraction.contains("9223372036854775807"))
+}
+
+///|
+test "bounded numeric formatting rejects amplification before allocation" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.new_sheet("Sheet1")
+  workbook.set_cell_value("Sheet1", "A1", Numeric(1.0))
+  let style_id = workbook.new_style(
+    @xlsx.Style::number_format("0".repeat(1024)),
+  )
+  workbook.set_cell_style("Sheet1", "A1", style_id)
+  try
+    workbook.get_cell_value_styled_from_worksheet_rc(
+      sheet,
+      1,
+      1,
+      style_id,
+      max_output_chars=64,
+    )
+  catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) => {
+      assert_eq(kind, "formatted_cell_value_chars")
+      assert_eq(limit, 64)
+      assert_true(actual > limit)
+    }
+    _ => fail("expected bounded numeric formatting failure")
+  } noraise {
+    _ => fail("expected bounded numeric formatting failure")
+  }
 }

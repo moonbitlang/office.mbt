@@ -26,6 +26,19 @@ fn bounded_fixture_archive(
 }
 
 ///|
+fn replace_xlsx_part(
+  source : BytesView,
+  path : String,
+  content : String,
+) -> Bytes raise {
+  let archive = @zip.read(source)
+  if !archive.replace(path, @encoding/utf8.encode(content)) {
+    fail("missing XLSX fixture part: \{path}")
+  }
+  @zip.write(archive)
+}
+
+///|
 fn lying_deflate_package() -> Bytes raise {
   let archive = @zip.Archive::new()
   let data = Array::make(4096, b'A')
@@ -70,6 +83,30 @@ test "bounded archive and byte reads produce equivalent workbooks" {
     content="Some(\"bounded\")",
   )
   inspect(@xlsx.write(from_archive) == @xlsx.write(from_bytes), content="true")
+}
+
+///|
+test "direct XLSX reads reject OPC-derivable part names" {
+  for
+    entries in [
+      ["custom/a.xml", "custom/a.xml/child.xml"],
+      ["custom/a.xml/child.xml", "custom/a.xml"],
+    ] {
+    let archive = @zip.read(bounded_workbook_fixture())
+    for name in entries {
+      archive.add(name, b"part")
+    }
+    let result : Result[@xlsx.Workbook, Error] = Ok(
+      @xlsx.read(@zip.write(archive)),
+    ) catch {
+      error => Err(error)
+    }
+    match result {
+      Err(@xlsx.InvalidPackage(msg~)) =>
+        assert_true(msg.contains("OPC part names are derivable"))
+      _ => fail("expected direct XLSX derivable-part rejection")
+    }
+  }
 }
 
 ///|
@@ -273,6 +310,231 @@ test "archive read enforces XML limits after provenance verification" {
     }
     _ => fail("expected XML part limit")
   }
+}
+
+///|
+test "semantic read limits reject XML items and derived column expansion" {
+  let bytes = bounded_workbook_fixture()
+  let worksheet =
+    #|<?xml version="1.0" encoding="UTF-8"?>
+    #|<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+    #|  <cols><col min="1" max="16384" width="12"/></cols>
+    #|  <sheetData/>
+    #|</worksheet>
+    #|
+  let expanded = replace_xlsx_part(bytes, "xl/worksheets/sheet1.xml", worksheet)
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(
+      expanded,
+      limits=@xlsx.ReadLimits::with_values(max_parser_items=1000),
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="parser_items")
+      assert_eq(limit, 1000)
+      assert_true(actual > limit)
+    }
+    _ => fail("expected parser item limit")
+  }
+}
+
+///|
+test "comments and CDATA cannot inject worksheet cells or column expansion" {
+  let bytes = bounded_workbook_fixture()
+  let fake_columns = "<col min=\"1\" max=\"16384\" width=\"12\"/>".repeat(8)
+  let fake_cell =
+    #|<row r="99"><c r="Z99" t="str"><v>phantom</v></c></row>
+  let worksheet = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+    "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">\n" +
+    "  <!-- " +
+    fake_columns +
+    " " +
+    fake_cell +
+    " -->\n" +
+    "  <![CDATA[" +
+    fake_columns +
+    " " +
+    fake_cell +
+    "]]>\n" +
+    "  <sheetData><row r=\"1\"><c r=\"A1\" t=\"str\"><v>real</v></c>" +
+    "<c r=\"B1\" t=\"str\"><v><![CDATA[<literal>&value]]></v></c></row></sheetData>\n" +
+    "</worksheet>\n"
+  let parsed = @xlsx.read(
+    replace_xlsx_part(bytes, "xl/worksheets/sheet1.xml", worksheet),
+    limits=@xlsx.ReadLimits::with_values(max_parser_items=1000),
+  )
+  debug_inspect(parsed.get_cell_value("Data", "A1"), content="Some(\"real\")")
+  debug_inspect(
+    parsed.get_cell_value("Data", "B1"),
+    content="Some(\"<literal>&value\")",
+  )
+  debug_inspect(parsed.get_cell_value("Data", "Z99"), content="None")
+}
+
+///|
+test "semantic read limits charge sqref token materialization" {
+  let bytes = bounded_workbook_fixture()
+  let refs : Array[String] = []
+  for _ in 0..<1200 {
+    refs.push("A1")
+  }
+  let joined_refs = refs.join(" ")
+  let worksheet = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+    "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">\n" +
+    "  <sheetViews><sheetView workbookViewId=\"0\"><selection sqref=\"" +
+    joined_refs +
+    "\"/></sheetView></sheetViews>\n" +
+    "  <sheetData/>\n" +
+    "</worksheet>\n"
+  let expanded = replace_xlsx_part(bytes, "xl/worksheets/sheet1.xml", worksheet)
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(
+      expanded,
+      limits=@xlsx.ReadLimits::with_values(max_parser_items=1000),
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="parser_items")
+      assert_eq(limit, 1000)
+      assert_true(actual > limit)
+    }
+    _ => fail("expected sqref parser item limit")
+  }
+}
+
+///|
+test "semantic read limits bound cumulative parser work" {
+  let bytes = bounded_workbook_fixture()
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(
+      bytes,
+      limits=@xlsx.ReadLimits::with_values(max_parser_work_units=1),
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="parser_work_units")
+      assert_eq(limit, 1)
+      assert_true(actual > limit)
+    }
+    _ => fail("expected parser work limit")
+  }
+}
+
+///|
+test "semantic read limits bound sheet fan-out before worksheet parsing" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("One"))
+  ignore(workbook.add_sheet("Two"))
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(
+      @xlsx.write(workbook),
+      limits=@xlsx.ReadLimits::with_values(max_workbook_sheets=1),
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="workbook_sheets")
+      assert_eq(limit, 1)
+      assert_eq(actual, 2)
+    }
+    _ => fail("expected workbook sheet limit")
+  }
+}
+
+///|
+test "duplicate logical sheets cannot reparse one worksheet part" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("One"))
+  ignore(workbook.add_sheet("Two"))
+  let bytes = @xlsx.write(workbook)
+  let archive = @zip.read(bytes)
+  let rels_path = "xl/_rels/workbook.xml.rels"
+  let rels = match archive.get(rels_path) {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing workbook relationships")
+  }
+  let duplicated = rels.replace_all(
+    old="worksheets/sheet2.xml",
+    new="worksheets/sheet1.xml",
+  )
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(replace_xlsx_part(bytes, rels_path, duplicated)),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(
+    result is Err(@xlsx.InvalidXml(msg="sheet part referenced more than once")),
+    content="true",
+  )
+}
+
+///|
+test "read cancellation callback stops semantic preflight" {
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(bounded_workbook_fixture(), cancelled=() => true),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(result is Err(@xlsx.ReadCancelled), content="true")
+}
+
+///|
+test "bounded archive CRC verification polls cancellation inside an entry" {
+  let source = @zip.read(bounded_workbook_fixture())
+  let padded = @zip.Archive::new()
+  // Keep this first so the sixth callback is the 4 KiB checkpoint inside its
+  // CRC loop, after the archive and entry boundary checks.
+  padded.add("padding.bin", Bytes::make(16 * 1024, b'x'))
+  for entry in source.entries() {
+    padded.add(entry.name(), entry.data())
+  }
+  let bounded = bounded_fixture_archive(@zip.write(padded))
+  let checks = [0]
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read_bounded_archive(bounded, cancelled=() => {
+      checks[0] += 1
+      checks[0] >= 6
+    }),
+  ) catch {
+    error => Err(error)
+  }
+  assert_eq(checks[0], 6)
+  assert_true(result is Err(@xlsx.ReadCancelled))
+}
+
+///|
+test "read completion observes cancellation at its final checkpoint" {
+  let bytes = bounded_workbook_fixture()
+  let baseline_checks = [0]
+  ignore(
+    @xlsx.read(bytes, cancelled=() => {
+      baseline_checks[0] += 1
+      false
+    }),
+  )
+  let checks = [0]
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(bytes, cancelled=() => {
+      checks[0] += 1
+      checks[0] >= baseline_checks[0]
+    }),
+  ) catch {
+    error => Err(error)
+  }
+  assert_true(baseline_checks[0] > 1)
+  assert_eq(checks[0], baseline_checks[0])
+  assert_true(result is Err(@xlsx.ReadCancelled))
 }
 
 ///|

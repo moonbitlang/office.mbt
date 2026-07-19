@@ -28,6 +28,8 @@ pub fn read_xml_string_strict(String, namespace_map? : Map[String, String]) -> X
 
 pub fn read_xml_string_strict_encoded(String, XmlSourceEncoding, namespace_map? : Map[String, String]) -> XmlElement raise @core.DocxError
 
+pub fn read_xml_string_strict_encoded_limited(String, XmlSourceEncoding, XmlReadBudget, namespace_map? : Map[String, String]) -> XmlElement raise @core.DocxError
+
 pub fn read_xml_string_strict_limited(String, XmlReadBudget, namespace_map? : Map[String, String]) -> XmlElement raise @core.DocxError
 
 pub fn read_xml_string_strict_mce_encoded_limited(String, XmlSourceEncoding, XmlReadBudget, Array[String]) -> XmlElement raise @core.DocxError
@@ -42,7 +44,7 @@ pub fn write_xml_string(XmlElement, namespaces? : Map[String, String]) -> String
 
 pub fn xml_element(String, attributes? : Map[String, String], children? : Array[XmlNode]) -> XmlElement
 
-pub fn xml_read_budget(max_source_units~ : Int, max_tokens~ : Int, max_materialized_chars~ : Int, max_token_chars~ : Int) -> XmlReadBudget
+pub fn xml_read_budget(max_source_units~ : Int, max_tokens~ : Int, max_materialized_chars~ : Int, max_token_chars~ : Int, cancelled? : () -> Bool) -> XmlReadBudget
 
 pub fn xml_text(String) -> XmlNode
 

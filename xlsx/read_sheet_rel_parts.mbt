@@ -69,7 +69,7 @@ fn parse_comments_xml(xml : StringView) -> Array[Comment] raise XlsxError {
     } else {
       []
     }
-    let text_value = parse_text_nodes(text_body)
+    let text_value = parse_text_nodes(text_body) catch { _ => "" }
     comments.push({
       cell,
       author,
@@ -340,13 +340,37 @@ fn parse_slicer_cache_definition(
 ///|
 fn parse_slicer_cache_definitions(
   workbook_rels_xml : StringView,
+  workbook_part : StringView,
+  part_names : Map[String, String],
+  content_types : @ooxml.PackageContentTypes,
   archive : @zip.Archive,
   decode : (BytesView) -> String raise XlsxError,
+  budget? : ReadBudget,
+  cancelled? : () -> Bool = () => false,
 ) -> Map[String, SlicerCacheDef] raise XlsxError {
   let defs : Map[String, SlicerCacheDef] = Map([])
-  let targets = parse_relationship_targets(workbook_rels_xml, rel_slicer_cache)
+  let targets = parse_internal_relationship_targets(
+    workbook_rels_xml,
+    rel_slicer_cache,
+    budget?,
+    cancelled~,
+  )
   for _rel_id, target in targets {
-    let cache_path = resolve_workbook_rel_target(target)
+    let cache_path = actual_archive_part_path(
+      part_names,
+      resolve_part_rel_target(
+        logical_archive_part_path(workbook_part),
+        target,
+        cancelled~,
+      ),
+    )
+    require_part_content_type(
+      content_types,
+      logical_archive_part_path(cache_path),
+      [ct_slicer_cache],
+      "slicer cache",
+      cancelled~,
+    )
     let cache_bytes = match archive.get(cache_path) {
       Some(value) => value
       None => raise MissingPart(path=cache_path)
@@ -456,6 +480,11 @@ fn resolve_slicer_sources_after_read(
               display_header: slicer.display_header,
               item_desc,
               format: slicer.format,
+              drawing_offset_x_emu: slicer.drawing_offset_x_emu,
+              drawing_offset_y_emu: slicer.drawing_offset_y_emu,
+              drawing_width_emu: slicer.drawing_width_emu,
+              drawing_height_emu: slicer.drawing_height_emu,
+              drawing_order: slicer.drawing_order,
             }
           }
         }

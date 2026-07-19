@@ -128,6 +128,7 @@ fn is_attr_space(ch : Char) -> Bool {
 fn attr_value(tag : StringView, name : StringView) -> String? raise XlsxError {
   @ooxml.attr_value(tag, name) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
   }
 }
 

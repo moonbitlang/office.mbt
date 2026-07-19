@@ -1495,27 +1495,29 @@ fn eval_function(
     "FTEST" => ftest_values(workbook, sheet_name, args, values, ctx)
     "FdotTEST" | "F.TEST" | "_XLFN.F.TEST" =>
       ftest_values(workbook, sheet_name, args, values, ctx)
-    "ACCRINT" => accrint_values(values)
-    "ACCRINTM" => accrintm_values(values)
-    "AMORDEGRC" => amordegrc_values(values)
-    "AMORLINC" => amorlinc_values(values)
-    "COUPDAYBS" => coupdaybs_values(values)
-    "COUPDAYS" => coupdays_values(values)
-    "COUPDAYSNC" => coupdaysnc_values(values)
-    "COUPNCD" => coupncd_values(values)
-    "COUPNUM" => coupnum_values(values)
-    "COUPPCD" => couppcd_values(values)
+    "ACCRINT" => accrint_values(values, use_1904_dates=ctx.use_1904_dates)
+    "ACCRINTM" => accrintm_values(values, use_1904_dates=ctx.use_1904_dates)
+    "AMORDEGRC" => amordegrc_values(values, use_1904_dates=ctx.use_1904_dates)
+    "AMORLINC" => amorlinc_values(values, use_1904_dates=ctx.use_1904_dates)
+    "COUPDAYBS" => coupdaybs_values(values, use_1904_dates=ctx.use_1904_dates)
+    "COUPDAYS" => coupdays_values(values, use_1904_dates=ctx.use_1904_dates)
+    "COUPDAYSNC" => coupdaysnc_values(values, use_1904_dates=ctx.use_1904_dates)
+    "COUPNCD" => coupncd_values(values, use_1904_dates=ctx.use_1904_dates)
+    "COUPNUM" => coupnum_values(values, use_1904_dates=ctx.use_1904_dates)
+    "COUPPCD" => couppcd_values(values, use_1904_dates=ctx.use_1904_dates)
     "CUMIPMT" => cumip_values("CUMIPMT", values)
     "CUMPRINC" => cumip_values("CUMPRINC", values)
-    "DURATION" => duration_values(values)
+    "DURATION" => duration_values(values, use_1904_dates=ctx.use_1904_dates)
     "DB" => db_values(values)
     "DDB" => ddb_values(values)
     "FV" => fv_values(values)
     "FVSCHEDULE" => fvschedule_values(values)
-    "DISC" => disc_intrate_values("DISC", values)
-    "INTRATE" => disc_intrate_values("INTRATE", values)
+    "DISC" =>
+      disc_intrate_values("DISC", values, use_1904_dates=ctx.use_1904_dates)
+    "INTRATE" =>
+      disc_intrate_values("INTRATE", values, use_1904_dates=ctx.use_1904_dates)
     "IRR" => irr_values(values)
-    "MDURATION" => mduration_values(values)
+    "MDURATION" => mduration_values(values, use_1904_dates=ctx.use_1904_dates)
     "MIRR" => mirr_values(values)
     "DOLLAR" => dollar_values(values)
     "DOLLARDE" => dollar_fraction_values("DOLLARDE", values)
@@ -1528,30 +1530,34 @@ fn eval_function(
     "NOMINAL" => nominal_values(values)
     "NPER" => nper_values(values)
     "NPV" => npv_values(values)
-    "ODDFPRICE" => oddfprice_values(values)
-    "ODDFYIELD" => oddfyield_values(values)
-    "ODDLPRICE" => oddl_values("ODDLPRICE", values)
-    "ODDLYIELD" => oddl_values("ODDLYIELD", values)
+    "ODDFPRICE" => oddfprice_values(values, use_1904_dates=ctx.use_1904_dates)
+    "ODDFYIELD" => oddfyield_values(values, use_1904_dates=ctx.use_1904_dates)
+    "ODDLPRICE" =>
+      oddl_values("ODDLPRICE", values, use_1904_dates=ctx.use_1904_dates)
+    "ODDLYIELD" =>
+      oddl_values("ODDLYIELD", values, use_1904_dates=ctx.use_1904_dates)
     "PDURATION" => pduration_values(values)
     "PMT" => pmt_values(values)
     "PPMT" => ipmt_values("PPMT", values)
-    "PRICE" => price_yield_values("PRICE", values)
-    "PRICEDISC" => pricedisc_values(values)
-    "PRICEMAT" => pricemat_values(values)
+    "PRICE" =>
+      price_yield_values("PRICE", values, use_1904_dates=ctx.use_1904_dates)
+    "PRICEDISC" => pricedisc_values(values, use_1904_dates=ctx.use_1904_dates)
+    "PRICEMAT" => pricemat_values(values, use_1904_dates=ctx.use_1904_dates)
     "PV" => pv_values(values)
     "RATE" => rate_values(values)
-    "RECEIVED" => received_values(values)
+    "RECEIVED" => received_values(values, use_1904_dates=ctx.use_1904_dates)
     "RRI" => rri_values(values)
     "SLN" => sln_values(values)
     "SYD" => syd_values(values)
-    "TBILLEQ" => tbilleq_values(values)
-    "TBILLPRICE" => tbillprice_values(values)
-    "TBILLYIELD" => tbillyield_values(values)
+    "TBILLEQ" => tbilleq_values(values, use_1904_dates=ctx.use_1904_dates)
+    "TBILLPRICE" => tbillprice_values(values, use_1904_dates=ctx.use_1904_dates)
+    "TBILLYIELD" => tbillyield_values(values, use_1904_dates=ctx.use_1904_dates)
     "XIRR" => xirr_values(values)
     "XNPV" => xnpv_values(values)
-    "YIELD" => price_yield_values("YIELD", values)
-    "YIELDDISC" => yielddisc_values(values)
-    "YIELDMAT" => yieldmat_values(values)
+    "YIELD" =>
+      price_yield_values("YIELD", values, use_1904_dates=ctx.use_1904_dates)
+    "YIELDDISC" => yielddisc_values(values, use_1904_dates=ctx.use_1904_dates)
+    "YIELDMAT" => yieldmat_values(values, use_1904_dates=ctx.use_1904_dates)
     "VDB" => vdb_values(values)
     "TdotDIST" | "T.DIST" | "_XLFN.T.DIST" => tdist_values(values)
     "TdotDISTdot2T" | "T.DIST.2T" | "_XLFN.T.DIST.2T" => tdist_2t_values(values)
@@ -3345,14 +3351,17 @@ fn eval_function(
           Err(err) => return err
         }
         match value_as_number_text(values[0]) {
-          Ok(num) =>
-            String(
-              format_number_code(
-                format_number(num),
-                format_text,
-                Options::new(),
-              ),
-            )
+          Ok(num) => {
+            let formatted = format_number_code(
+              format_number(num),
+              format_text,
+              Options::new(),
+              use_1904_format=ctx.use_1904_dates,
+            ) catch {
+              _ => return Error(formula_error_value)
+            }
+            String(formatted)
+          }
           Err(err) => err
         }
       } else {
@@ -3590,7 +3599,13 @@ fn eval_function(
             value_as_int(values[2]),
           ) {
           (Ok(year), Ok(month), Ok(day)) =>
-            match excel_serial_from_date(year, month, day) {
+            match
+              excel_serial_from_date(
+                year,
+                month,
+                day,
+                use_1904_dates=ctx.use_1904_dates,
+              ) {
               Some(serial) => Number(serial)
               None => Error(formula_error_num)
             }
@@ -3629,7 +3644,13 @@ fn eval_function(
         }
         match parse_date_parts(text) {
           Some((year, month, day)) =>
-            match excel_serial_from_date(year, month, day) {
+            match
+              excel_serial_from_date(
+                year,
+                month,
+                day,
+                use_1904_dates=ctx.use_1904_dates,
+              ) {
               Some(serial) => Number(serial)
               None => Error(formula_error_value)
             }
@@ -3655,11 +3676,13 @@ fn eval_function(
       }
     "DATEDIF" =>
       if values.length() == 3 {
-        let start_serial = match value_as_date_serial(values[0]) {
+        let start_serial = match
+          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
           Ok(value) => value
           Err(err) => return err
         }
-        let end_serial = match value_as_date_serial(values[1]) {
+        let end_serial = match
+          value_as_date_serial(values[1], use_1904_dates=ctx.use_1904_dates) {
           Ok(value) => value
           Err(err) => return err
         }
@@ -3672,9 +3695,22 @@ fn eval_function(
             Ok(text) => text.to_lower()
             Err(err) => return err
           }
-          // value_as_date_serial rejects negatives; serial-to-date conversion is total on non-negative serials.
-          let (sy, sm, sd) = date_parts_from_serial(start_serial).unwrap()
-          let (ey, em, ed) = date_parts_from_serial(end_serial).unwrap()
+          let (sy, sm, sd) = match
+            date_parts_from_serial(
+              start_serial,
+              use_1904_dates=ctx.use_1904_dates,
+            ) {
+            Some(parts) => parts
+            None => return Error(formula_error_num)
+          }
+          let (ey, em, ed) = match
+            date_parts_from_serial(
+              end_serial,
+              use_1904_dates=ctx.use_1904_dates,
+            ) {
+            Some(parts) => parts
+            None => return Error(formula_error_num)
+          }
           match unit {
             "y" => {
               let mut diff = ey - sy
@@ -3706,8 +3742,18 @@ fn eval_function(
               if em < sm || (em == sm && ed < sd) {
                 target_year = sy + 1
               }
-              let start_base = excel_serial_from_date(sy, sm, sd).unwrap()
-              let end_base = excel_serial_from_date(target_year, em, ed).unwrap()
+              let start_base = excel_serial_from_date(
+                sy,
+                sm,
+                sd,
+                use_1904_dates=ctx.use_1904_dates,
+              ).unwrap()
+              let end_base = excel_serial_from_date(
+                target_year,
+                em,
+                ed,
+                use_1904_dates=ctx.use_1904_dates,
+              ).unwrap()
               Number(end_base - start_base)
             }
             "md" => {
@@ -3728,11 +3774,13 @@ fn eval_function(
       }
     "DAYS" =>
       if values.length() == 2 {
-        let end_serial = match value_as_date_serial(values[0]) {
+        let end_serial = match
+          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
           Ok(value) => value
           Err(err) => return err
         }
-        let start_serial = match value_as_date_serial(values[1]) {
+        let start_serial = match
+          value_as_date_serial(values[1], use_1904_dates=ctx.use_1904_dates) {
           Ok(value) => value
           Err(err) => return err
         }
@@ -3742,16 +3790,29 @@ fn eval_function(
       }
     "DAYS360" =>
       if values.length() == 2 || values.length() == 3 {
-        let start_serial = match value_as_date_serial(values[0]) {
+        let start_serial = match
+          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
           Ok(value) => value
           Err(err) => return err
         }
-        let end_serial = match value_as_date_serial(values[1]) {
+        let end_serial = match
+          value_as_date_serial(values[1], use_1904_dates=ctx.use_1904_dates) {
           Ok(value) => value
           Err(err) => return err
         }
-        let (sy, sm, sd) = date_parts_from_serial(start_serial).unwrap()
-        let (ey, em, ed) = date_parts_from_serial(end_serial).unwrap()
+        let (sy, sm, sd) = match
+          date_parts_from_serial(
+            start_serial,
+            use_1904_dates=ctx.use_1904_dates,
+          ) {
+          Some(parts) => parts
+          None => return Error(formula_error_num)
+        }
+        let (ey, em, ed) = match
+          date_parts_from_serial(end_serial, use_1904_dates=ctx.use_1904_dates) {
+          Some(parts) => parts
+          None => return Error(formula_error_num)
+        }
         let mut start_day = sd
         let mut end_day = ed
         let end_year = ey
@@ -3794,9 +3855,26 @@ fn eval_function(
       }
     "ISOWEEKNUM" =>
       if values.length() == 1 {
-        let (year, month, day) = match date_parts_from_value(values[0]) {
-          Ok(parts) => parts
+        let serial = match
+          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
+          Ok(value) => value
           Err(err) => return err
+        }
+        // Serial zero is the 1900 system's artificial day before its epoch,
+        // but is the real 1904-01-01 epoch in a date-1904 workbook.
+        if !ctx.use_1904_dates && serial < 1.0 {
+          return Error(formula_error_num)
+        }
+        // Excel assigns the fictitious 1900-02-29 (including its time
+        // fraction) to ISO week 9. It cannot pass through the Gregorian helper
+        // below because 1900 was not actually a leap year.
+        if is_1900_phantom_date_serial(serial, ctx.use_1904_dates) {
+          return Number(9.0)
+        }
+        let (year, month, day) = match
+          date_parts_from_serial(serial, use_1904_dates=ctx.use_1904_dates) {
+          Some(parts) => parts
+          None => return Error(formula_error_num)
         }
         match iso_week_number(year, month, day) {
           Some(week) => Number(Double::from_int(week))
@@ -3807,7 +3885,8 @@ fn eval_function(
       }
     "EDATE" =>
       if values.length() == 2 {
-        let (year, month, day) = match date_parts_from_value(values[0]) {
+        let (year, month, day) = match
+          date_parts_from_value(values[0], use_1904_dates=ctx.use_1904_dates) {
           Ok(parts) => parts
           Err(err) => return err
         }
@@ -3818,7 +3897,13 @@ fn eval_function(
         let (new_year, new_month) = normalize_year_month(year, month + months)
         let max_day = days_in_month(new_year, new_month)
         let new_day = if day > max_day { max_day } else { day }
-        match excel_serial_from_date(new_year, new_month, new_day) {
+        match
+          excel_serial_from_date(
+            new_year,
+            new_month,
+            new_day,
+            use_1904_dates=ctx.use_1904_dates,
+          ) {
           Some(serial) => Number(serial)
           None => Error(formula_error_num)
         }
@@ -3827,7 +3912,8 @@ fn eval_function(
       }
     "EOMONTH" =>
       if values.length() == 2 {
-        let (year, month, _) = match date_parts_from_value(values[0]) {
+        let (year, month, _) = match
+          date_parts_from_value(values[0], use_1904_dates=ctx.use_1904_dates) {
           Ok(parts) => parts
           Err(err) => return err
         }
@@ -3837,7 +3923,13 @@ fn eval_function(
         }
         let (new_year, new_month) = normalize_year_month(year, month + months)
         let new_day = days_in_month(new_year, new_month)
-        match excel_serial_from_date(new_year, new_month, new_day) {
+        match
+          excel_serial_from_date(
+            new_year,
+            new_month,
+            new_day,
+            use_1904_dates=ctx.use_1904_dates,
+          ) {
           Some(serial) => Number(serial)
           None => Error(formula_error_num)
         }
@@ -3846,11 +3938,13 @@ fn eval_function(
       }
     "YEARFRAC" =>
       if values.length() == 2 || values.length() == 3 {
-        let start_serial = match value_as_date_serial(values[0]) {
+        let start_serial = match
+          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
           Ok(value) => value
           Err(err) => return err
         }
-        let end_serial = match value_as_date_serial(values[1]) {
+        let end_serial = match
+          value_as_date_serial(values[1], use_1904_dates=ctx.use_1904_dates) {
           Ok(value) => value
           Err(err) => return err
         }
@@ -3862,13 +3956,19 @@ fn eval_function(
         } else {
           0
         }
-        yearfrac_value(start_serial, end_serial, basis)
+        yearfrac_value(
+          start_serial,
+          end_serial,
+          basis,
+          use_1904_dates=ctx.use_1904_dates,
+        )
       } else {
         Error(formula_error_value)
       }
     "WEEKDAY" =>
       if values.length() == 1 || values.length() == 2 {
-        let (year, month, day) = match date_parts_from_value(values[0]) {
+        let (year, month, day) = match
+          date_parts_from_value(values[0], use_1904_dates=ctx.use_1904_dates) {
           Ok(parts) => parts
           Err(err) => return err
         }
@@ -3899,7 +3999,8 @@ fn eval_function(
       }
     "WEEKNUM" =>
       if values.length() == 1 || values.length() == 2 {
-        let (year, month, day) = match date_parts_from_value(values[0]) {
+        let (year, month, day) = match
+          date_parts_from_value(values[0], use_1904_dates=ctx.use_1904_dates) {
           Ok(parts) => parts
           Err(err) => return err
         }
@@ -3946,30 +4047,40 @@ fn eval_function(
       }
     "NETWORKDAYS" =>
       if values.length() == 2 || values.length() == 3 {
-        let start_serial = match value_as_date_serial(values[0]) {
+        let start_serial = match
+          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
           Ok(value) => value
           Err(err) => return err
         }
-        let end_serial = match value_as_date_serial(values[1]) {
+        let end_serial = match
+          value_as_date_serial(values[1], use_1904_dates=ctx.use_1904_dates) {
           Ok(value) => value
           Err(err) => return err
         }
         let holidays = if values.length() == 3 {
-          collect_holidays(values[2])
+          collect_holidays(values[2], use_1904_dates=ctx.use_1904_dates)
         } else {
           []
         }
-        networkdays_intl_value(start_serial, end_serial, Number(1.0), holidays)
+        networkdays_intl_value(
+          start_serial,
+          end_serial,
+          Number(1.0),
+          holidays,
+          use_1904_dates=ctx.use_1904_dates,
+        )
       } else {
         Error(formula_error_value)
       }
     "NETWORKDAYS.INTL" =>
       if values.length() >= 2 && values.length() <= 4 {
-        let start_serial = match value_as_date_serial(values[0]) {
+        let start_serial = match
+          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
           Ok(value) => value
           Err(err) => return err
         }
-        let end_serial = match value_as_date_serial(values[1]) {
+        let end_serial = match
+          value_as_date_serial(values[1], use_1904_dates=ctx.use_1904_dates) {
           Ok(value) => value
           Err(err) => return err
         }
@@ -3979,19 +4090,24 @@ fn eval_function(
           Number(1.0)
         }
         let holidays = if values.length() == 4 {
-          collect_holidays(values[3])
+          collect_holidays(values[3], use_1904_dates=ctx.use_1904_dates)
         } else {
           []
         }
         networkdays_intl_value(
-          start_serial, end_serial, weekend_value, holidays,
+          start_serial,
+          end_serial,
+          weekend_value,
+          holidays,
+          use_1904_dates=ctx.use_1904_dates,
         )
       } else {
         Error(formula_error_value)
       }
     "WORKDAY" =>
       if values.length() == 2 || values.length() == 3 {
-        let start_serial = match value_as_date_serial(values[0]) {
+        let start_serial = match
+          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
           Ok(value) => value
           Err(err) => return err
         }
@@ -4000,17 +4116,24 @@ fn eval_function(
           Err(err) => return err
         }
         let holidays = if values.length() == 3 {
-          collect_holidays(values[2])
+          collect_holidays(values[2], use_1904_dates=ctx.use_1904_dates)
         } else {
           []
         }
-        workday_intl_value(start_serial, days, Number(1.0), holidays)
+        workday_intl_value(
+          start_serial,
+          days,
+          Number(1.0),
+          holidays,
+          use_1904_dates=ctx.use_1904_dates,
+        )
       } else {
         Error(formula_error_value)
       }
     "WORKDAY.INTL" =>
       if values.length() >= 2 && values.length() <= 4 {
-        let start_serial = match value_as_date_serial(values[0]) {
+        let start_serial = match
+          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
           Ok(value) => value
           Err(err) => return err
         }
@@ -4024,11 +4147,17 @@ fn eval_function(
           Number(1.0)
         }
         let holidays = if values.length() == 4 {
-          collect_holidays(values[3])
+          collect_holidays(values[3], use_1904_dates=ctx.use_1904_dates)
         } else {
           []
         }
-        workday_intl_value(start_serial, days, weekend_value, holidays)
+        workday_intl_value(
+          start_serial,
+          days,
+          weekend_value,
+          holidays,
+          use_1904_dates=ctx.use_1904_dates,
+        )
       } else {
         Error(formula_error_value)
       }
@@ -4038,7 +4167,8 @@ fn eval_function(
         let total_seconds = UInt64::to_double(now_ms) / 1000.0
         let days = Double::floor(total_seconds / 86400.0)
         let seconds_in_day = total_seconds - days * 86400.0
-        let serial = days + 25569.0 + seconds_in_day / 86400.0
+        let epoch_serial = if ctx.use_1904_dates { 24107.0 } else { 25569.0 }
+        let serial = days + epoch_serial + seconds_in_day / 86400.0
         Number(serial)
       } else {
         Error(formula_error_value)
@@ -4048,14 +4178,16 @@ fn eval_function(
         let now_ms = @env.now()
         let total_seconds = UInt64::to_double(now_ms) / 1000.0
         let days = Double::floor(total_seconds / 86400.0)
-        Number(days + 25569.0)
+        let epoch_serial = if ctx.use_1904_dates { 24107.0 } else { 25569.0 }
+        Number(days + epoch_serial)
       } else {
         Error(formula_error_value)
       }
     "YEAR" =>
       if values.length() == 1 {
-        match excel_serial_parts(values[0]) {
-          Ok((year, _, _, _, _, _)) => Number(Double::from_int(year))
+        match
+          excel_serial_date_parts(values[0], use_1904_dates=ctx.use_1904_dates) {
+          Ok((year, _, _)) => Number(Double::from_int(year))
           Err(err) => err
         }
       } else {
@@ -4063,8 +4195,9 @@ fn eval_function(
       }
     "MONTH" =>
       if values.length() == 1 {
-        match excel_serial_parts(values[0]) {
-          Ok((_, month, _, _, _, _)) => Number(Double::from_int(month))
+        match
+          excel_serial_date_parts(values[0], use_1904_dates=ctx.use_1904_dates) {
+          Ok((_, month, _)) => Number(Double::from_int(month))
           Err(err) => err
         }
       } else {
@@ -4072,8 +4205,9 @@ fn eval_function(
       }
     "DAY" =>
       if values.length() == 1 {
-        match excel_serial_parts(values[0]) {
-          Ok((_, _, day, _, _, _)) => Number(Double::from_int(day))
+        match
+          excel_serial_date_parts(values[0], use_1904_dates=ctx.use_1904_dates) {
+          Ok((_, _, day)) => Number(Double::from_int(day))
           Err(err) => err
         }
       } else {
@@ -4081,7 +4215,7 @@ fn eval_function(
       }
     "HOUR" =>
       if values.length() == 1 {
-        match excel_serial_parts(values[0]) {
+        match excel_serial_parts(values[0], use_1904_dates=ctx.use_1904_dates) {
           Ok((_, _, _, hour, _, _)) => Number(Double::from_int(hour))
           Err(err) => err
         }
@@ -4090,7 +4224,7 @@ fn eval_function(
       }
     "MINUTE" =>
       if values.length() == 1 {
-        match excel_serial_parts(values[0]) {
+        match excel_serial_parts(values[0], use_1904_dates=ctx.use_1904_dates) {
           Ok((_, _, _, _, minute, _)) => Number(Double::from_int(minute))
           Err(err) => err
         }
@@ -4099,7 +4233,7 @@ fn eval_function(
       }
     "SECOND" =>
       if values.length() == 1 {
-        match excel_serial_parts(values[0]) {
+        match excel_serial_parts(values[0], use_1904_dates=ctx.use_1904_dates) {
           Ok((_, _, _, _, _, second)) => Number(Double::from_int(second))
           Err(err) => err
         }

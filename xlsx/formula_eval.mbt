@@ -5850,36 +5850,12 @@ fn normalize_date_parts(year : Int, month : Int, day : Int) -> (Int, Int, Int) {
 }
 
 ///|
-fn days_before_year(year : Int) -> Int {
-  let mut days = 0
-  let mut y = 1900
-  if year >= 1900 {
-    while y < year {
-      let inc = if is_leap_year(y) { 366 } else { 365 }
-      days = days + inc
-      y = y + 1
-    }
-  } else {
-    while y > year {
-      y = y - 1
-      let dec = if is_leap_year(y) { 366 } else { 365 }
-      days = days - dec
-    }
-  }
-  days
-}
-
-///|
-fn days_before_month(year : Int, month : Int) -> Int {
-  let mut days = 0
-  for m in 1..<month {
-    days = days + days_in_month(year, m)
-  }
-  days
-}
-
-///|
-fn excel_serial_from_date(year : Int, month : Int, day : Int) -> Double? {
+fn excel_serial_from_date(
+  year : Int,
+  month : Int,
+  day : Int,
+  use_1904_dates? : Bool = false,
+) -> Double? {
   if year < 0 || year > 9999 {
     return None
   }
@@ -5887,12 +5863,15 @@ fn excel_serial_from_date(year : Int, month : Int, day : Int) -> Double? {
   if y < 0 || y > 9999 {
     return None
   }
-  let mut days = days_before_year(y)
-  days = days + days_before_month(y, m)
-  days = days + (d - 1)
-  let mut serial = days + 1
-  if serial >= 60 {
-    serial = serial + 1
+  let serial = if use_1904_dates {
+    days_from_civil(y, m, d) - days_from_civil(1904, 1, 1)
+  } else {
+    let civil_day = days_from_civil(y, m, d)
+    let mut value = civil_day - days_from_civil(1899, 12, 31)
+    if civil_day >= days_from_civil(1900, 3, 1) {
+      value = value + 1
+    }
+    value
   }
   if serial < 0 {
     None
@@ -5914,10 +5893,52 @@ fn excel_time_fraction(hours : Int, minutes : Int, seconds : Int) -> Double? {
 ///|
 fn excel_serial_parts(
   value : FormulaValue,
+  use_1904_dates? : Bool = false,
 ) -> Result[(Int, Int, Int, Int, Int, Int), FormulaValue] {
   match value_as_number(value) {
-    Ok(num) =>
-      match excel_serial_to_parts(num) {
+    Ok(num) => {
+      let parts = if use_1904_dates {
+        excel_serial_to_parts_1904(num)
+      } else {
+        excel_serial_to_parts(num)
+      }
+      match parts {
+        Some(parts) => Ok(parts)
+        None => Err(Error(formula_error_num))
+      }
+    }
+    Err(err) => Err(err)
+  }
+}
+
+///|
+fn date_parts_from_serial(
+  serial : Double,
+  use_1904_dates? : Bool = false,
+) -> (Int, Int, Int)? {
+  // Calendar-only formulas use the serial's containing day. Clock rounding is
+  // intentionally confined to time-bearing conversions: 23:59:59.99 must not
+  // make YEAR, DAY, WEEKNUM, or ISOWEEKNUM observe the following date.
+  let date_serial = Double::floor(serial)
+  let parts = if use_1904_dates {
+    excel_serial_to_parts_1904(date_serial)
+  } else {
+    excel_serial_to_parts(date_serial)
+  }
+  match parts {
+    Some((year, month, day, _, _, _)) => Some((year, month, day))
+    None => None
+  }
+}
+
+///|
+fn excel_serial_date_parts(
+  value : FormulaValue,
+  use_1904_dates? : Bool = false,
+) -> Result[(Int, Int, Int), FormulaValue] {
+  match value_as_number(value) {
+    Ok(serial) =>
+      match date_parts_from_serial(serial, use_1904_dates~) {
         Some(parts) => Ok(parts)
         None => Err(Error(formula_error_num))
       }
@@ -5926,40 +5947,42 @@ fn excel_serial_parts(
 }
 
 ///|
-fn date_parts_from_serial(serial : Double) -> (Int, Int, Int)? {
-  match excel_serial_to_parts(serial) {
-    Some((year, month, day, _, _, _)) => Some((year, month, day))
-    None => None
+fn is_1900_phantom_date_serial(serial : Double, use_1904_dates : Bool) -> Bool {
+  !use_1904_dates && serial >= 60.0 && serial < 61.0
+}
+
+///|
+fn validated_date_serial(
+  serial : Double,
+  use_1904_dates : Bool,
+) -> Result[Double, FormulaValue] {
+  match date_parts_from_serial(serial, use_1904_dates~) {
+    Some(_) => Ok(serial)
+    None => Err(Error(formula_error_num))
   }
 }
 
 ///|
-fn value_as_date_serial(value : FormulaValue) -> Result[Double, FormulaValue] {
+fn value_as_date_serial(
+  value : FormulaValue,
+  use_1904_dates? : Bool = false,
+) -> Result[Double, FormulaValue] {
   match normalize_scalar(value) {
-    Number(num) =>
-      if num < 0.0 {
-        Err(Error(formula_error_num))
-      } else {
-        Ok(num)
-      }
-    Bool(flag) => Ok(if flag { 1.0 } else { 0.0 })
-    Empty => Ok(0.0)
+    Number(num) => validated_date_serial(num, use_1904_dates)
+    Bool(flag) =>
+      validated_date_serial(if flag { 1.0 } else { 0.0 }, use_1904_dates)
+    Empty => validated_date_serial(0.0, use_1904_dates)
     String(text) => {
       let trimmed = text.trim().to_owned()
       match parse_date_parts(trimmed) {
         Some((year, month, day)) =>
-          match excel_serial_from_date(year, month, day) {
+          match excel_serial_from_date(year, month, day, use_1904_dates~) {
             Some(serial) => Ok(serial)
             None => Err(Error(formula_error_value))
           }
         None =>
           match parse_value_number(trimmed) {
-            Some(num) =>
-              if num < 0.0 {
-                Err(Error(formula_error_num))
-              } else {
-                Ok(num)
-              }
+            Some(num) => validated_date_serial(num, use_1904_dates)
             None => Err(Error(formula_error_value))
           }
       }
@@ -5972,10 +5995,11 @@ fn value_as_date_serial(value : FormulaValue) -> Result[Double, FormulaValue] {
 ///|
 fn date_parts_from_value(
   value : FormulaValue,
+  use_1904_dates? : Bool = false,
 ) -> Result[(Int, Int, Int), FormulaValue] {
-  match value_as_date_serial(value) {
+  match value_as_date_serial(value, use_1904_dates~) {
     Ok(serial) =>
-      match date_parts_from_serial(serial) {
+      match date_parts_from_serial(serial, use_1904_dates~) {
         Some(parts) => Ok(parts)
         None => Err(Error(formula_error_num))
       }
@@ -5994,15 +6018,13 @@ fn days_in_year(year : Int) -> Int {
 
 ///|
 fn day_of_year(year : Int, month : Int, day : Int) -> Int {
-  days_before_month(year, month) + day
+  days_from_civil(year, month, day) - days_from_civil(year, 1, 1) + 1
 }
 
 ///|
 fn weekday_monday1(year : Int, month : Int, day : Int) -> Int {
-  let mut days = days_before_year(year)
-  days = days + days_before_month(year, month)
-  days = days + (day - 1)
-  let mut idx = days % 7
+  // 1970-01-01 was Thursday, or weekday 4 when Monday is 1.
+  let mut idx = (days_from_civil(year, month, day) + 3) % 7
   if idx < 0 {
     idx = idx + 7
   }
@@ -6020,25 +6042,36 @@ fn weekday_sun1(year : Int, month : Int, day : Int) -> Int {
 }
 
 ///|
+fn iso_weeks_in_year(year : Int) -> Int {
+  let january_first = weekday_monday1(year, 1, 1)
+  if january_first == 4 || (january_first == 3 && is_leap_year(year)) {
+    53
+  } else {
+    52
+  }
+}
+
+///|
 fn iso_week_number(year : Int, month : Int, day : Int) -> Int? {
-  let serial = match excel_serial_from_date(year, month, day) {
-    Some(value) => value
-    None => return None
+  if year < 1 ||
+    year > 9999 ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > days_in_month(year, month) {
+    return None
   }
   let weekday = weekday_monday1(year, month, day)
-  let thursday_serial = serial + Double::from_int(4 - weekday)
-  let (iso_year, _, _) = match date_parts_from_serial(thursday_serial) {
-    Some(parts) => parts
-    None => return None
+  let mut week = (day_of_year(year, month, day) - weekday + 10) / 7
+  if week < 1 {
+    if year == 1 {
+      return None
+    }
+    week = iso_weeks_in_year(year - 1)
+  } else if week > iso_weeks_in_year(year) {
+    week = 1
   }
-  let week1_serial = match excel_serial_from_date(iso_year, 1, 4) {
-    Some(value) => value
-    None => return None
-  }
-  let week1_weekday = weekday_monday1(iso_year, 1, 4)
-  let week1_thursday = week1_serial + Double::from_int(4 - week1_weekday)
-  let offset = (thursday_serial - week1_thursday) / 7.0
-  Some(Double::to_int(Double::floor(offset)) + 1)
+  Some(week)
 }
 
 ///|
@@ -6119,8 +6152,12 @@ fn weekend_mask_from_value(
 }
 
 ///|
-fn is_workday_mask(weekend_mask : Array[Int], serial : Double) -> Bool {
-  match date_parts_from_serial(serial) {
+fn is_workday_mask(
+  weekend_mask : Array[Int],
+  serial : Double,
+  use_1904_dates? : Bool = false,
+) -> Bool {
+  match date_parts_from_serial(serial, use_1904_dates~) {
     Some((year, month, day)) => {
       let weekday = weekday_monday1(year, month, day)
       weekend_mask[weekday - 1] == 0
@@ -6130,11 +6167,53 @@ fn is_workday_mask(weekend_mask : Array[Int], serial : Double) -> Bool {
 }
 
 ///|
-fn collect_holidays(value : FormulaValue) -> Array[Int] {
+fn maximum_supported_formula_date_serial(use_1904_dates : Bool) -> Int {
+  Double::to_int(excel_serial_from_date(9999, 12, 31, use_1904_dates~).unwrap())
+}
+
+///|
+fn formula_date_serial_is_supported(
+  serial : Int,
+  use_1904_dates : Bool,
+) -> Bool {
+  serial >= 0 && serial <= maximum_supported_formula_date_serial(use_1904_dates)
+}
+
+///|
+fn normalized_formula_date_serial(
+  serial : Double,
+  use_1904_dates : Bool,
+) -> Int? {
+  if serial.is_nan() || serial.is_inf() {
+    return None
+  }
+  let normalized = Double::floor(serial)
+  if normalized < 0.0 ||
+    normalized >
+    Double::from_int(maximum_supported_formula_date_serial(use_1904_dates)) {
+    return None
+  }
+  Some(Double::to_int(normalized))
+}
+
+///|
+fn collect_holidays(
+  value : FormulaValue,
+  use_1904_dates? : Bool = false,
+) -> Array[Int] {
   let holidays : Array[Int] = []
+  let seen : Map[Int, Bool] = Map([])
   for item in flatten_values([value]) {
-    match value_as_date_serial(item) {
-      Ok(serial) => holidays.push(Double::to_int(Double::ceil(serial)))
+    match value_as_date_serial(item, use_1904_dates~) {
+      Ok(serial) =>
+        match normalized_formula_date_serial(serial, use_1904_dates) {
+          Some(day) =>
+            if !seen.contains(day) {
+              seen[day] = true
+              holidays.push(day)
+            }
+          None => ()
+        }
       Err(_) => ()
     }
   }
@@ -6147,19 +6226,34 @@ fn workday_intl_adjust(
   sign : Int,
   holidays : Array[Int],
   weekend_mask : Array[Int],
-  start_serial : Double,
-) -> Int {
+  start_date : Int,
+  use_1904_dates? : Bool = false,
+) -> Int? {
   let mut adjusted = end_date
   for holiday in holidays {
     if sign > 0 {
       if holiday > adjusted {
         break
       }
-      if holiday > Double::to_int(Double::ceil(start_serial)) {
-        if is_workday_mask(weekend_mask, Double::from_int(holiday)) {
+      if holiday > start_date {
+        if is_workday_mask(
+            weekend_mask,
+            Double::from_int(holiday),
+            use_1904_dates~,
+          ) {
           adjusted = adjusted + sign
-          while !is_workday_mask(weekend_mask, Double::from_int(adjusted)) {
+          if !formula_date_serial_is_supported(adjusted, use_1904_dates) {
+            return None
+          }
+          while !is_workday_mask(
+                  weekend_mask,
+                  Double::from_int(adjusted),
+                  use_1904_dates~,
+                ) {
             adjusted = adjusted + sign
+            if !formula_date_serial_is_supported(adjusted, use_1904_dates) {
+              return None
+            }
           }
         }
       }
@@ -6167,17 +6261,31 @@ fn workday_intl_adjust(
       if holiday < adjusted {
         continue
       }
-      if holiday < Double::to_int(Double::ceil(start_serial)) {
-        if is_workday_mask(weekend_mask, Double::from_int(holiday)) {
+      if holiday < start_date {
+        if is_workday_mask(
+            weekend_mask,
+            Double::from_int(holiday),
+            use_1904_dates~,
+          ) {
           adjusted = adjusted + sign
-          while !is_workday_mask(weekend_mask, Double::from_int(adjusted)) {
+          if !formula_date_serial_is_supported(adjusted, use_1904_dates) {
+            return None
+          }
+          while !is_workday_mask(
+                  weekend_mask,
+                  Double::from_int(adjusted),
+                  use_1904_dates~,
+                ) {
             adjusted = adjusted + sign
+            if !formula_date_serial_is_supported(adjusted, use_1904_dates) {
+              return None
+            }
           }
         }
       }
     }
   }
-  adjusted
+  Some(adjusted)
 }
 
 ///|
@@ -6186,7 +6294,18 @@ fn networkdays_intl_value(
   end_serial : Double,
   weekend_value : FormulaValue,
   holidays : Array[Int],
+  use_1904_dates? : Bool = false,
 ) -> FormulaValue {
+  let start_date = match
+    normalized_formula_date_serial(start_serial, use_1904_dates) {
+    Some(value) => value
+    None => return Error(formula_error_num)
+  }
+  let end_date = match
+    normalized_formula_date_serial(end_serial, use_1904_dates) {
+    Some(value) => value
+    None => return Error(formula_error_num)
+  }
   holidays.sort()
   let (weekend_mask, workdays) = match weekend_mask_from_value(weekend_value) {
     Ok(value) => value
@@ -6195,8 +6314,8 @@ fn networkdays_intl_value(
   if workdays == 0 {
     return Error(formula_error_value)
   }
-  let mut start = start_serial
-  let mut end = end_serial
+  let mut start = start_date
+  let mut end = end_date
   let mut sign = 1
   if start > end {
     sign = -1
@@ -6205,20 +6324,23 @@ fn networkdays_intl_value(
     end = temp
   }
   let offset = end - start
-  let weeks = Double::to_int(Double::floor(offset / 7.0))
+  let weeks = offset / 7
   let mut count = weeks * workdays
-  let mut days_mod = Double::to_int(Double::floor(offset)) % 7
+  let mut days_mod = offset % 7
   while days_mod >= 0 {
-    if is_workday_mask(weekend_mask, end - Double::from_int(days_mod)) {
+    if is_workday_mask(
+        weekend_mask,
+        Double::from_int(end - days_mod),
+        use_1904_dates~,
+      ) {
       count = count + 1
     }
     days_mod = days_mod - 1
   }
   for holiday in holidays {
-    let holiday_serial = Double::from_int(holiday)
-    if is_workday_mask(weekend_mask, holiday_serial) &&
-      holiday_serial >= start &&
-      holiday_serial <= end {
+    if is_workday_mask(weekend_mask, Double::from_int(holiday), use_1904_dates~) &&
+      holiday >= start &&
+      holiday <= end {
       count = count - 1
     }
   }
@@ -6231,10 +6353,20 @@ fn workday_intl_value(
   days : Double,
   weekend_value : FormulaValue,
   holidays : Array[Int],
+  use_1904_dates? : Bool = false,
 ) -> FormulaValue {
+  let start_date = match
+    normalized_formula_date_serial(start_serial, use_1904_dates) {
+    Some(value) => value
+    None => return Error(formula_error_num)
+  }
+  if days.is_nan() || days.is_inf() {
+    return Error(formula_error_num)
+  }
   holidays.sort()
-  if days == 0.0 {
-    return Number(Double::ceil(start_serial))
+  let days_int = Double::to_int(trunc_double(days))
+  if days_int == 0 {
+    return Number(Double::from_int(start_date))
   }
   let (weekend_mask, workdays) = match weekend_mask_from_value(weekend_value) {
     Ok(value) => value
@@ -6243,22 +6375,42 @@ fn workday_intl_value(
   if workdays == 0 {
     return Error(formula_error_value)
   }
-  let mut sign = 1
-  if days < 0.0 {
-    sign = -1
+  let sign = if days_int < 0 { -1 } else { 1 }
+  let maximum_serial = maximum_supported_formula_date_serial(use_1904_dates)
+  // Bound the arithmetic before multiplying the week offset by seven. Any
+  // larger workday count must leave the supported 0000..9999 date domain,
+  // regardless of weekend or holiday configuration.
+  if days_int > maximum_serial || days_int < -maximum_serial {
+    return Error(formula_error_num)
   }
-  let days_int = Double::to_int(trunc_double(days))
   let offset = days_int / workdays
   let mut days_mod = days_int % workdays
-  let mut end_date = Double::to_int(Double::ceil(start_serial)) + offset * 7
+  let mut end_date = start_date + offset * 7
+  if !formula_date_serial_is_supported(end_date, use_1904_dates) {
+    return Error(formula_error_num)
+  }
   if days_mod == 0 {
-    while !is_workday_mask(weekend_mask, Double::from_int(end_date)) {
+    while !is_workday_mask(
+            weekend_mask,
+            Double::from_int(end_date),
+            use_1904_dates~,
+          ) {
       end_date = end_date - sign
+      if !formula_date_serial_is_supported(end_date, use_1904_dates) {
+        return Error(formula_error_num)
+      }
     }
   } else {
     while days_mod != 0 {
       end_date = end_date + sign
-      if is_workday_mask(weekend_mask, Double::from_int(end_date)) {
+      if !formula_date_serial_is_supported(end_date, use_1904_dates) {
+        return Error(formula_error_num)
+      }
+      if is_workday_mask(
+          weekend_mask,
+          Double::from_int(end_date),
+          use_1904_dates~,
+        ) {
         if days_mod < 0 {
           days_mod = days_mod + 1
         } else {
@@ -6267,10 +6419,18 @@ fn workday_intl_value(
       }
     }
   }
-  let adjusted = workday_intl_adjust(
-    end_date, sign, holidays, weekend_mask, start_serial,
-  )
-  Number(Double::from_int(adjusted))
+  match
+    workday_intl_adjust(
+      end_date,
+      sign,
+      holidays,
+      weekend_mask,
+      start_date,
+      use_1904_dates~,
+    ) {
+    Some(adjusted) => Number(Double::from_int(adjusted))
+    None => Error(formula_error_num)
+  }
 }
 
 ///|
@@ -6290,12 +6450,14 @@ fn yearfrac_basis_cond(
 fn yearfrac_basis0(
   start_serial : Double,
   end_serial : Double,
+  use_1904_dates? : Bool = false,
 ) -> (Double, Double) {
-  let (sy, sm, sd) = match date_parts_from_serial(start_serial) {
+  let (sy, sm, sd) = match
+    date_parts_from_serial(start_serial, use_1904_dates~) {
     Some(parts) => parts
     None => return (0.0, 0.0)
   }
-  let (ey, em, ed) = match date_parts_from_serial(end_serial) {
+  let (ey, em, ed) = match date_parts_from_serial(end_serial, use_1904_dates~) {
     Some(parts) => parts
     None => return (0.0, 0.0)
   }
@@ -6320,12 +6482,14 @@ fn yearfrac_basis0(
 fn yearfrac_basis1(
   start_serial : Double,
   end_serial : Double,
+  use_1904_dates? : Bool = false,
 ) -> (Double, Double) {
-  let (sy, sm, sd) = match date_parts_from_serial(start_serial) {
+  let (sy, sm, sd) = match
+    date_parts_from_serial(start_serial, use_1904_dates~) {
     Some(parts) => parts
     None => return (0.0, 0.0)
   }
-  let (ey, em, ed) = match date_parts_from_serial(end_serial) {
+  let (ey, em, ed) = match date_parts_from_serial(end_serial, use_1904_dates~) {
     Some(parts) => parts
     None => return (0.0, 0.0)
   }
@@ -6352,12 +6516,14 @@ fn yearfrac_basis1(
 fn yearfrac_basis4(
   start_serial : Double,
   end_serial : Double,
+  use_1904_dates? : Bool = false,
 ) -> (Double, Double) {
-  let (sy, sm, sd) = match date_parts_from_serial(start_serial) {
+  let (sy, sm, sd) = match
+    date_parts_from_serial(start_serial, use_1904_dates~) {
     Some(parts) => parts
     None => return (0.0, 0.0)
   }
-  let (ey, em, ed) = match date_parts_from_serial(end_serial) {
+  let (ey, em, ed) = match date_parts_from_serial(end_serial, use_1904_dates~) {
     Some(parts) => parts
     None => return (0.0, 0.0)
   }
@@ -6378,16 +6544,17 @@ fn yearfrac_value(
   start_serial : Double,
   end_serial : Double,
   basis : Int,
+  use_1904_dates? : Bool = false,
 ) -> FormulaValue {
   if start_serial == end_serial {
     return Number(0.0)
   }
   let (day_diff, days_in_year) = match basis {
-    0 => yearfrac_basis0(start_serial, end_serial)
-    1 => yearfrac_basis1(start_serial, end_serial)
+    0 => yearfrac_basis0(start_serial, end_serial, use_1904_dates~)
+    1 => yearfrac_basis1(start_serial, end_serial, use_1904_dates~)
     2 => (end_serial - start_serial, 360.0)
     3 => (end_serial - start_serial, 365.0)
-    4 => yearfrac_basis4(start_serial, end_serial)
+    4 => yearfrac_basis4(start_serial, end_serial, use_1904_dates~)
     _ => return Error(formula_error_num)
   }
   if days_in_year == 0.0 {

@@ -283,7 +283,8 @@ fn read_workbook_from_bytes(
 
 ///|
 /// Reads an XLSX package asynchronously from a reader, stopping before the
-/// configured compressed package limit is exceeded. Cancellation is preserved.
+/// configured compressed package limit is exceeded. Reader I/O is cancellable;
+/// the subsequent resource-bounded semantic parse is currently synchronous.
 pub async fn[R : @async/io.Reader] open_reader(
   reader : R,
   password? : String = "",
@@ -296,6 +297,10 @@ pub async fn[R : @async/io.Reader] open_reader(
     maximum=limits.max_package_bytes,
     resource="package_bytes",
   )
+  // Give scheduled peers and cancellation one explicit turn even when a custom
+  // in-memory Reader completed every read immediately. Mid-parse scheduler
+  // cooperation requires the shared resumable parser tracked in issue #174.
+  @async.pause()
   let io_context = read_io_context(transcoder)
   let workbook = read_workbook_from_bytes(
     bytes, password, options, limits, io_context,
@@ -346,6 +351,7 @@ pub async fn[R : @async/io.Reader] Workbook::read_zip_reader(
     maximum=limits.max_package_bytes,
     resource="package_bytes",
   )
+  @async.pause()
   let workbook = read_workbook_from_bytes(
     bytes, password, resolved_options, limits, io_context,
   )

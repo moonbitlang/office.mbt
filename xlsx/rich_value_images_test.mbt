@@ -1,9 +1,28 @@
 ///|
+fn ensure_rich_value_png_content_type(archive : @zip.Archive) -> Unit raise {
+  let path = "[Content_Types].xml"
+  let bytes = match archive.get(path) {
+    Some(value) => value
+    None => fail("written workbook is missing [Content_Types].xml")
+  }
+  let xml = @encoding/utf8.decode(bytes)
+  if xml.contains("Extension=\"png\"") {
+    return
+  }
+  let patched = xml.replace(
+    old="</Types>",
+    new="<Default Extension=\"png\" ContentType=\"image/png\"/></Types>",
+  )
+  assert_true(archive.replace(path, @encoding/utf8.encode(patched)))
+}
+
+///|
 /// Rewrites a written workbook into a rich-value "Place in cell" image
 /// layout: injects a `vm` attribute onto the A1 cell and adds the
 /// metadata, richData, and media parts a modern embedded image needs.
 fn inject_rich_value_image(base : Bytes, media : Bytes) -> Bytes raise {
   let archive = @zip.read(base)
+  ensure_rich_value_png_content_type(archive)
   let patched = @zip.Archive::new()
   for entry in archive.entries() {
     if entry.name() == "xl/worksheets/sheet1.xml" {
@@ -70,7 +89,7 @@ fn inject_rich_value_image(base : Bytes, media : Bytes) -> Bytes raise {
       (
         #|<?xml version="1.0" encoding="UTF-8"?>
         #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-        #|  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/rv1.png"/>
+        #|  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/rv1.png"/>
         #|</Relationships>
       ),
     ),
@@ -117,6 +136,7 @@ test "rich-value image ignored when cell is not a #VALUE! error" {
 /// lengths, which Excelize refuses to resolve.
 fn inject_mismatched_rich_value(base : Bytes) -> Bytes raise {
   let archive = @zip.read(base)
+  ensure_rich_value_png_content_type(archive)
   let patched = @zip.Archive::new()
   for entry in archive.entries() {
     if entry.name() == "xl/worksheets/sheet1.xml" {
@@ -168,7 +188,7 @@ fn inject_mismatched_rich_value(base : Bytes) -> Bytes raise {
     "xl/richData/_rels/richValueRel.xml.rels",
     @encoding/utf8.encode(
       (
-        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/rv1.png"/></Relationships>
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/rv1.png"/></Relationships>
       ),
     ),
   )
@@ -191,6 +211,7 @@ test "rich-value image suppressed when keys and values length mismatch" {
 /// (WebImageIdentifier) instead of a local place-in-cell image.
 fn inject_web_image(base : Bytes, media : Bytes) -> Bytes raise {
   let archive = @zip.read(base)
+  ensure_rich_value_png_content_type(archive)
   let patched = @zip.Archive::new()
   for entry in archive.entries() {
     if entry.name() == "xl/worksheets/sheet1.xml" {
@@ -243,7 +264,7 @@ fn inject_web_image(base : Bytes, media : Bytes) -> Bytes raise {
     "xl/richData/_rels/rdRichValueWebImage.xml.rels",
     @encoding/utf8.encode(
       (
-        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/web1.png"/></Relationships>
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/web1.png"/></Relationships>
       ),
     ),
   )
@@ -273,6 +294,7 @@ test "get_pictures resolves an IMAGE() web image" {
 /// is present, so no image resolves.
 fn inject_local_key_wins(base : Bytes, media : Bytes) -> Bytes raise {
   let archive = @zip.read(base)
+  ensure_rich_value_png_content_type(archive)
   let patched = @zip.Archive::new()
   for entry in archive.entries() {
     if entry.name() == "xl/worksheets/sheet1.xml" {
@@ -325,7 +347,7 @@ fn inject_local_key_wins(base : Bytes, media : Bytes) -> Bytes raise {
     "xl/richData/_rels/richValueRel.xml.rels",
     @encoding/utf8.encode(
       (
-        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/rv1.png"/></Relationships>
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/rv1.png"/></Relationships>
       ),
     ),
   )
@@ -341,7 +363,7 @@ fn inject_local_key_wins(base : Bytes, media : Bytes) -> Bytes raise {
     "xl/richData/_rels/rdRichValueWebImage.xml.rels",
     @encoding/utf8.encode(
       (
-        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/web1.png"/></Relationships>
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/web1.png"/></Relationships>
       ),
     ),
   )

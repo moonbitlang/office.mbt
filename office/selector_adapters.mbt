@@ -122,6 +122,26 @@ fn selector_for_xlsx_coordinate(
 }
 
 ///|
+/// Builds the canonical selector for the workbook singleton.
+pub fn selector_for_xlsx_workbook() -> OfficeSelector raise SelectorError {
+  parse_selector("/xlsx/workbook")
+}
+
+///|
+/// Builds a stable canonical selector for one named worksheet or chart sheet.
+/// It validates and quotes the name but does not look it up in a workbook.
+pub fn selector_for_xlsx_sheet(
+  sheet_name : String,
+) -> OfficeSelector raise SelectorError {
+  check_xlsx_adapter_argument(
+    sheet_name,
+    "worksheet name",
+    SELECTOR_MAX_VALUE_LENGTH,
+  )
+  parse_selector("/xlsx/sheet[name=\{Json::string(sheet_name).stringify()}]")
+}
+
+///|
 /// Builds a canonical, syntax-validated selector for one cell on a named
 /// worksheet. It does not look up the sheet or cell in a workbook.
 pub fn selector_for_xlsx_cell(

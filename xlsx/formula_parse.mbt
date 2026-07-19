@@ -1,11 +1,20 @@
 ///|
-fn CalcContext::new() -> CalcContext {
+fn CalcContext::new(
+  use_1904_dates? : Bool = false,
+  formula_limits? : SharedFormulaLimits = SharedFormulaLimits::new(),
+  cancelled? : () -> Bool = () => false,
+) -> CalcContext {
   {
     visiting: Map([]),
     depth: 0,
     max_depth: 128,
     current_sheet: "",
     current_ref: "",
+    use_1904_dates,
+    shared_formula_budget: SharedFormulaMaterializationBudget::new(
+      formula_limits,
+      cancelled~,
+    ),
   }
 }
 

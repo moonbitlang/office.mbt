@@ -11,24 +11,65 @@ priv struct InlineStringEntry {
 }
 
 ///|
-fn parse_text_nodes(xml : StringView) -> String {
+fn remove_lexical_element_subtrees(
+  xml : StringView,
+  tag_name : StringView,
+) -> String raise XlsxError {
+  let first = match find_xml_open_tag_start(xml, tag_name) {
+    Some(value) => value
+    None => return xml.to_owned()
+  }
+  let output = StringBuilder::new(size_hint=xml.length())
+  let mut cursor = 0
+  let mut start = first
+  for ;; {
+    output.write_view(xml[cursor:start])
+    let open_end = match xml_open_tag_end_from(xml, start + 1) {
+      Some(value) => value
+      None => raise InvalidXml(msg="\{tag_name.to_owned()} tag not closed")
+    }
+    if xml[start + 1:open_end].trim().has_suffix("/") {
+      cursor = open_end + 1
+    } else {
+      let (close_start, close_end) = match
+        find_xml_close_tag_from(xml, tag_name, open_end + 1) {
+        Some(value) => value
+        None => raise InvalidXml(msg="\{tag_name.to_owned()} close missing")
+      }
+      ignore(close_start)
+      cursor = close_end + 1
+    }
+    match find_xml_open_tag_start_from(xml, tag_name, cursor) {
+      Some(next) => start = next
+      None => break
+    }
+  }
+  output.write_view(xml[cursor:])
+  output.to_string()
+}
+
+///|
+fn parse_text_nodes(xml : StringView) -> String raise XlsxError {
+  // Phonetic guides (`rPh`) are annotations, not displayed cell text.
+  let semantic = remove_lexical_element_subtrees(xml, "rPh")
   let sb = StringBuilder::new()
-  let mut first = true
-  for chunk in xml.split("<t") {
-    if first {
-      first = false
+  let mut cursor = 0
+  while find_xml_open_tag_start_from(semantic, "t", cursor) is Some(start) {
+    let open_end = match xml_open_tag_end_from(semantic, start + 1) {
+      Some(value) => value
+      None => raise InvalidXml(msg="shared string text tag not closed")
+    }
+    if semantic[start + 1:open_end].trim().has_suffix("/") {
+      cursor = open_end + 1
       continue
     }
-    let text = chunk.to_owned()
-    let start = match text.find(">") {
-      Some(pos) => pos + 1
-      None => continue
+    let (close_start, close_end) = match
+      find_xml_close_tag_from(semantic, "t", open_end + 1) {
+      Some(value) => value
+      None => raise InvalidXml(msg="shared string text close missing")
     }
-    let rest = text[start:]
-    match rest.find("</t>") {
-      Some(end) => sb.write_view(unescape_xml_text(rest[:end]))
-      None => ()
-    }
+    sb.write_view(unescape_xml_text(semantic[open_end + 1:close_start]))
+    cursor = close_end + 1
   }
   sb.to_string()
 }
@@ -307,8 +348,9 @@ fn parse_rich_text_runs(xml : StringView) -> Array[RichTextRun] raise XlsxError 
     }
     let body_start = after + open_end_rel + 1
     let body_rest = xml_str[body_start:]
-    let close_rel = match body_rest.find("</r>") {
-      Some(pos) => pos
+    let (close_rel, close_end_rel) = match
+      find_xml_close_tag_from(body_rest, "r", 0) {
+      Some((pos, end)) => (pos, end)
       None => break
     }
     let body_end = body_start + close_rel
@@ -316,31 +358,72 @@ fn parse_rich_text_runs(xml : StringView) -> Array[RichTextRun] raise XlsxError 
     let run_text = parse_text_nodes(body)
     let font = parse_rich_text_font(body)
     runs.push({ text: run_text, font })
-    index = body_end + "</r>".length()
+    index = body_start + close_end_rel + 1
   }
   runs
 }
 
 ///|
-fn parse_shared_strings(xml : StringView) -> Array[SharedStringEntry] {
+fn parse_shared_strings(
+  xml : StringView,
+  budget? : ReadBudget,
+) -> Array[SharedStringEntry] raise XlsxError {
+  match budget {
+    Some(value) => {
+      value.checkpoint()
+      value.charge_work(xml.length())
+    }
+    None => ()
+  }
+  let scanner = @ooxml.XmlStartTagScanner::new(
+    xml,
+    cancelled=match budget {
+      Some(value) => value.cancelled
+      None => () => false
+    },
+  )
+  if !workbook_scanner_next(scanner) ||
+    scanner.depth() != 1 ||
+    scanner.local_name() != "sst" ||
+    (
+      scanner.namespace_uri() != "" &&
+      scanner.namespace_uri() != transitional_spreadsheet_namespace &&
+      scanner.namespace_uri() != strict_spreadsheet_namespace
+    ) {
+    raise InvalidXml(msg="shared strings document element is invalid")
+  }
+  let shared_strings_namespace = scanner.namespace_uri().to_owned()
+  while workbook_scanner_next(scanner) {
+    if scanner.namespace_uri() == shared_strings_namespace &&
+      scanner.local_name() == "si" &&
+      scanner.depth() != 2 {
+      raise InvalidXml(msg="shared string item is not a direct child")
+    }
+  }
+  match budget {
+    Some(value) => {
+      value.checkpoint()
+      value.charge_work(xml.length())
+    }
+    None => ()
+  }
   let values : Array[SharedStringEntry] = []
-  let mut first = true
-  for chunk in xml.split("<si") {
-    if first {
-      first = false
-      continue
+  let mut cursor = 0
+  while find_xml_open_tag_start_from(xml, "si", cursor) is Some(start) {
+    match budget {
+      Some(value) => value.checkpoint()
+      None => ()
     }
-    let text = chunk.to_owned()
-    let start = match text.find(">") {
-      Some(pos) => pos + 1
-      None => continue
+    let open_end = match xml_open_tag_end_from(xml, start + 1) {
+      Some(value) => value
+      None => raise InvalidXml(msg="shared string item tag not closed")
     }
-    let rest = text[start:]
-    let end = match rest.find("</si>") {
-      Some(pos) => pos
-      None => continue
+    let (close_start, close_end) = match
+      find_xml_close_tag_from(xml, "si", open_end + 1) {
+      Some(value) => value
+      None => raise InvalidXml(msg="shared string item close missing")
     }
-    let body = rest[:end]
+    let body = xml[open_end + 1:close_start]
     let runs = if body.contains("<r") {
       let parsed = parse_rich_text_runs(body) catch { _ => [] }
       if parsed.length() > 0 {
@@ -352,6 +435,26 @@ fn parse_shared_strings(xml : StringView) -> Array[SharedStringEntry] {
       None
     }
     values.push({ text: parse_text_nodes(body), runs })
+    cursor = close_end + 1
   }
   values
+}
+
+///|
+test "shared strings reject nested same-namespace index decoys" {
+  let valid =
+    #|<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><si><t>real</t></si></sst>
+  let values = parse_shared_strings(valid)
+  assert_eq(values.length(), 1)
+  assert_eq(values[0].text, "real")
+
+  let nested =
+    #|<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><extLst><si><t>decoy</t></si></extLst><si><t>real</t></si></sst>
+  try parse_shared_strings(nested) catch {
+    InvalidXml(msg~) =>
+      assert_eq(msg, "shared string item is not a direct child")
+    _ => fail("unexpected nested shared-string error")
+  } noraise {
+    _ => fail("nested shared-string decoy was accepted")
+  }
 }

@@ -51,6 +51,11 @@ pub fn HyperlinkOpts::with_values(
 let max_sheet_hyperlinks = 65529
 
 ///|
+/// Keeps every writer-produced relationship start tag below the default
+/// 16 MiB OOXML-part ceiling even when every character needs XML escaping.
+let max_hyperlink_target_chars : Int = 1024 * 1024
+
+///|
 test "hyperlink limit exceeded" {
   let sheet = Worksheet::new("Sheet1")
   let dummy : Hyperlink = {

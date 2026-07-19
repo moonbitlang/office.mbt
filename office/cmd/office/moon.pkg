@@ -6,6 +6,8 @@ import {
   "bobzhang/docx2html/opc",
   "bobzhang/docx2html/paths" @docx_paths,
   "bobzhang/docx2html/xml",
+  "bobzhang/mbtexcel/inspect",
+  "bobzhang/mbtexcel/xlsx",
   "bobzhang/mbtexcel/zip",
   "bobzhang/office" @lib,
   "bobzhang/office/raw",
@@ -18,6 +20,7 @@ import {
   "moonbitlang/core/env",
   "moonbitlang/core/json",
   "moonbitlang/core/sorted_map",
+  "moonbitlang/core/string",
   "tonyfettes/unicode",
 }
 

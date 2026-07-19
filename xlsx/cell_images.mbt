@@ -20,14 +20,24 @@ struct CellImage {
 fn parse_cell_images(
   cell_images_xml : StringView,
   rels_xml : StringView,
+  source_part : StringView,
+  part_names : Map[String, String],
+  content_types : @ooxml.PackageContentTypes,
   archive : @zip.Archive,
+  budget? : ReadBudget,
+  cancelled? : () -> Bool = () => false,
 ) -> Array[CellImage] raise XlsxError {
   let images : Array[CellImage] = []
   let targets = if rels_xml.to_owned() == "" {
     Map([])
   } else {
     // cellimages relationships are always image relationships
-    parse_relationship_targets(rels_xml, rel_image)
+    parse_internal_relationship_targets(
+      rels_xml,
+      rel_image,
+      budget?,
+      cancelled~,
+    )
   }
   let xml_str = cell_images_xml.to_owned()
   // Each embedded image is one <...pic> element; cellimages.xml contains
@@ -96,19 +106,26 @@ fn parse_cell_images(
       Some(value) => value
       None => continue
     }
-    let media_path = normalize_cell_image_target(target)
+    let media_path = actual_relationship_target_path(
+      source_part,
+      target,
+      part_names,
+      cancelled~,
+    )
     match archive.get(media_path) {
-      Some(data) => {
-        let extension = cell_image_extension(media_path)
-        let content_type = match image_content_type(extension[1:]) {
-          Some(value) => value
-          None => ""
-        }
+      Some(_) => {
+        let (data, identity) = load_image_part(
+          archive,
+          content_types,
+          media_path,
+          "cell image",
+          cancelled~,
+        )
         images.push({
           name: unescape_xml_text(name),
           data: data.to_owned(),
-          extension,
-          content_type,
+          extension: "." + identity.extension,
+          content_type: identity.content_type,
           alt_text: unescape_xml_text(alt_text),
         })
       }
@@ -116,31 +133,6 @@ fn parse_cell_images(
     }
   }
   images
-}
-
-///|
-/// Resolves a cellimages relationship target to an archive path. WPS
-/// targets are workbook-relative (e.g. "media/image1.png"); a leading
-/// "/" is absolute and a "../" prefix is rewritten to "xl", matching
-/// Excelize's `"xl/" + r.Target` / package path handling.
-fn normalize_cell_image_target(target : String) -> String {
-  if target.has_prefix("/") {
-    target[1:].to_owned()
-  } else if target.has_prefix("../") {
-    "xl/" + target[3:].to_owned()
-  } else {
-    "xl/" + target
-  }
-}
-
-///|
-/// Returns the file extension (with leading dot) of a media path, or the
-/// empty string when there is none.
-fn cell_image_extension(path : String) -> String {
-  match path.rev_find(".") {
-    Some(pos) => path[pos:].to_owned()
-    None => ""
-  }
 }
 
 ///|
@@ -168,6 +160,11 @@ fn CellImage::to_image(self : CellImage, reference : String) -> Image {
     alt_text: self.alt_text,
     lock_aspect_ratio: false,
     positioning: OneCell,
+    drawing_offset_x_emu: None,
+    drawing_offset_y_emu: None,
+    drawing_width_emu: None,
+    drawing_height_emu: None,
+    drawing_order: None,
   }
 }
 
@@ -237,8 +234,36 @@ test "parse_cell_images handles unprefixed blip without matching blipFill" {
     #|</Relationships>
   let archive = @zip.Archive::new()
   archive.add("xl/media/u.png", b"\x89PNGunprefixed")
-  let images = parse_cell_images(cellimages_xml, rels_xml, archive)
+  let images = parse_cell_images(
+    cellimages_xml,
+    rels_xml,
+    "xl/cellimages.xml",
+    archive_part_name_index(archive),
+    image_reader_test_content_types(),
+    archive,
+  )
   inspect(images.length(), content="1")
   inspect(images[0].name, content="ID_U")
   inspect(images[0].extension, content=".png")
+}
+
+///|
+test "parse_cell_images resolves targets relative to its source part" {
+  let cellimages_xml =
+    #|<cellImages><cellImage><pic><nvPicPr><cNvPr id="1" name="ID_ROOT"/></nvPicPr><blipFill><blip embed="rId1"/></blipFill></pic></cellImage></cellImages>
+  let rels_xml =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../decoy.png"/></Relationships>
+  let archive = @zip.Archive::new()
+  archive.add("decoy.png", b"root image")
+  archive.add("xl/decoy.png", b"wrong image")
+  let images = parse_cell_images(
+    cellimages_xml,
+    rels_xml,
+    "xl/cellimages.xml",
+    archive_part_name_index(archive),
+    image_reader_test_content_types(),
+    archive,
+  )
+  assert_eq(images.length(), 1)
+  assert_eq(images[0].data, b"root image")
 }

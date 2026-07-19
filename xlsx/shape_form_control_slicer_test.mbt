@@ -29,7 +29,7 @@ test "shape size and rich text paragraphs" {
   let sheet = workbook.add_sheet("Sheet1")
   let runs : Array[@xlsx.RichTextRun] = [
     {
-      text: "Rectangle",
+      text: " Rectangle ",
       font: Some({
         bold: false,
         italic: false,
@@ -102,6 +102,60 @@ test "shape size and rich text paragraphs" {
   inspect(drawing_xml.contains("sz=\"1800\""), content="true")
   inspect(drawing_xml.contains("typeface=\"Times New Roman\""), content="true")
   inspect(drawing_xml.contains("val=\"2980B9\""), content="true")
+  inspect(
+    drawing_xml.contains("<a:t xml:space=\"preserve\"> Rectangle </a:t>"),
+    content="true",
+  )
+  let parsed = @xlsx.read(bytes)
+  let parsed_sheet = match parsed.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("missing parsed sheet")
+  }
+  inspect(parsed_sheet.shapes().length(), content="1")
+  let parsed_shape = parsed_sheet.shapes()[0]
+  inspect(parsed_shape.paragraph.length(), content="2")
+  inspect(parsed_shape.paragraph[0].text, content=" Rectangle ")
+  inspect(parsed_shape.paragraph[1].text, content="Shape")
+  let first_font = match parsed_shape.paragraph[0].font {
+    Some(value) => value
+    None => fail("missing first shape run font")
+  }
+  debug_inspect(first_font.color, content="Some(\"CD5C5C\")")
+  let second_font = match parsed_shape.paragraph[1].font {
+    Some(value) => value
+    None => fail("missing second shape run font")
+  }
+  inspect(second_font.bold, content="true")
+  inspect(second_font.italic, content="true")
+  debug_inspect(second_font.underline, content="Some(\"sng\")")
+  inspect(second_font.size == Some(18.0), content="true")
+  debug_inspect(second_font.family, content="Some(\"Times New Roman\")")
+  debug_inspect(second_font.color, content="Some(\"2980B9\")")
+
+  let rewritten_archive = @zip.read(@xlsx.write(parsed)) catch {
+    err => fail("rewritten zip read failed: \{repr(err)}")
+  }
+  let rewritten_drawing = match
+    rewritten_archive.get("xl/drawings/drawing1.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("rewritten drawing1.xml utf8 decode failed")
+      }
+    None => fail("missing rewritten drawing1.xml")
+  }
+  inspect(rewritten_drawing.contains("b=\"1\""), content="true")
+  inspect(rewritten_drawing.contains("i=\"1\""), content="true")
+  inspect(rewritten_drawing.contains("u=\"sng\""), content="true")
+  inspect(rewritten_drawing.contains("sz=\"1800\""), content="true")
+  inspect(
+    rewritten_drawing.contains("typeface=\"Times New Roman\""),
+    content="true",
+  )
+  inspect(rewritten_drawing.contains("val=\"2980B9\""), content="true")
+  inspect(
+    rewritten_drawing.contains("<a:t xml:space=\"preserve\"> Rectangle </a:t>"),
+    content="true",
+  )
 }
 
 ///|
