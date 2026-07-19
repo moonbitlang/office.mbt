@@ -18,22 +18,67 @@ fn push_package_problem(problems : Array[String], problem : String) -> Bool {
 }
 
 ///|
+fn package_content_type_is_xml(value : StringView) -> Bool {
+  let lower = value.to_owned().to_lower()
+  let media_type = match lower.find(";") {
+    Some(index) => lower[:index].trim()
+    None => lower.trim()
+  }
+  media_type == "application/xml" ||
+  media_type == "text/xml" ||
+  media_type.has_suffix("+xml")
+}
+
+///|
+fn package_validation_content_types(
+  archive : @zip.Archive,
+) -> @ooxml.PackageContentTypes? {
+  match archive.get("[Content_Types].xml") {
+    Some(data) =>
+      Some(@ooxml.parse_package_content_types(decode_package_part(data))) catch {
+        _ => None
+      }
+    None => None
+  }
+}
+
+///|
 /// Applies the same aggregate XML-byte and markup-token policy as the complete
 /// workbook reader before package validation starts decoding or scanning
-/// package plumbing. Counting every XML-like package part makes the validation
-/// boundary deterministic and prevents many individually-small relationship
-/// parts from bypassing the aggregate read policy.
+/// package plumbing. XML identity follows the package content-type manifest,
+/// with conventional XML-like suffixes retained as a fail-closed fallback.
+/// Counting every XML package part makes the validation boundary deterministic
+/// and prevents many individually-small parts from bypassing the aggregate read
+/// policy.
 fn enforce_package_validation_xml_limits(
   archive : @zip.Archive,
   limits : ReadLimits,
 ) -> Unit raise XlsxError {
   let mut total_xml_bytes = 0
   let mut markup_tokens = 0
+  let content_types = package_validation_content_types(archive)
   for entry in archive.entries() {
-    if !is_xml_package_part(entry.name()) {
+    let declared_xml = match content_types {
+      Some(index) => {
+        let declared = index.content_type_for(entry.name()) catch { _ => None }
+        match declared {
+          Some(value) => package_content_type_is_xml(value)
+          None => false
+        }
+      }
+      None => false
+    }
+    if !is_xml_package_part(entry.name()) && !declared_xml {
       continue
     }
     let data = entry.data()
+    if data.length() > limits.max_xml_part_bytes {
+      raise ResourceLimitExceeded(
+        kind="xml_part_bytes",
+        limit=limits.max_xml_part_bytes,
+        actual=data.length(),
+      )
+    }
     if data.length() > limits.max_total_xml_bytes - total_xml_bytes {
       raise ResourceLimitExceeded(
         kind="total_xml_bytes",
@@ -109,7 +154,9 @@ pub fn validate_ooxml_bounded_archive(
 }
 
 ///|
-fn validate_ooxml_archive(archive : @zip.Archive) -> Array[String] {
+fn validate_ooxml_archive(
+  archive : @zip.Archive,
+) -> Array[String] raise XlsxError {
   let problems : Array[String] = []
   let parts : Map[String, Int] = Map([])
   for entry in archive.entries() {
@@ -188,49 +235,45 @@ fn validate_ooxml_archive(archive : @zip.Archive) -> Array[String] {
     }
     let base = rels_base_dir(name)
     let rels_xml = decode_package_part(entry.data())
-    let mut first = true
     // Process one relationship at a time. The aggregate token preflight above
     // bounds scan work, while avoiding a second target array proportional to
     // attacker-controlled relationship count.
-    for chunk in rels_xml.split("<Relationship ") {
-      if first {
-        first = false
-        continue
-      }
-      let end = match relationship_start_tag_end(chunk) {
-        Some(pos) => pos
-        None => continue
-      }
-      let tag = chunk[:end]
-      let target_opt = relationship_attribute_view(tag, "Target") catch {
+    for_each_relationship_start_tag(rels_xml, scanner => {
+      let target_opt = relationship_scanner_attribute_view(scanner, "Target") catch {
         _ => None
       }
-      let target = match target_opt {
-        Some(value) => value
-        None => continue
-      }
-      let mode_opt = relationship_attribute_view(tag, "TargetMode") catch {
-        _ => None
-      }
-      let external = match mode_opt {
-        Some(mode) => mode == "External"
-        None => false
-      }
-      if external {
-        continue
-      }
-      let resolved = resolve_part_path(base, target)
-      if resolved != "" && !parts.contains(resolved) {
-        let source_text = package_diagnostic_excerpt(name, 160)
-        let target_text = package_diagnostic_excerpt(target, 160)
-        let resolved_text = package_diagnostic_excerpt(resolved, 160)
-        if !push_package_problem(
-            problems,
-            "relationship in \{source_text} points to a missing part: \{target_text} -> \{resolved_text}",
-          ) {
-          return problems
+      match target_opt {
+        Some(target) => {
+          let mode_opt = relationship_scanner_attribute_view(
+            scanner, "TargetMode",
+          ) catch {
+            _ => None
+          }
+          let external = match mode_opt {
+            Some(mode) => mode == "External"
+            None => false
+          }
+          if !external {
+            let resolved = resolve_part_path(base, target)
+            if resolved != "" && !parts.contains(resolved) {
+              let source_text = package_diagnostic_excerpt(name, 160)
+              let target_text = package_diagnostic_excerpt(target, 160)
+              let resolved_text = package_diagnostic_excerpt(resolved, 160)
+              if !push_package_problem(
+                  problems,
+                  "relationship in \{source_text} points to a missing part: \{target_text} -> \{resolved_text}",
+                ) {
+                return false
+              }
+            }
+          }
         }
+        None => ()
       }
+      true
+    })
+    if problems.length() == max_package_validation_findings {
+      return problems
     }
   }
   problems

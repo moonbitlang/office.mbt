@@ -142,6 +142,73 @@ test "OOXML validation applies XML limits before scanning relationships" {
 }
 
 ///|
+test "OOXML validation follows XML content types beyond file suffixes" {
+  let archive = @zip.Archive::new()
+  archive.add(
+    "[Content_Types].xml",
+    @encoding/utf8.encode(
+      (
+        #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+        #|  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+        #|  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+        #|  <Override PartName="/xl/worksheets/sheet1.dat" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+        #|</Types>
+        #|
+      ),
+    ),
+  )
+  archive.add(
+    "_rels/.rels",
+    @encoding/utf8.encode(
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+        #|  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+        #|</Relationships>
+        #|
+      ),
+    ),
+  )
+  archive.add(
+    "xl/workbook.xml",
+    @encoding/utf8.encode(
+      (
+        #|<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"/>
+      ),
+    ),
+  )
+  archive.add(
+    "xl/_rels/workbook.xml.rels",
+    @encoding/utf8.encode(
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+        #|  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.dat"/>
+        #|</Relationships>
+        #|
+      ),
+    ),
+  )
+  let oversized = @encoding/utf8.encode(" ".repeat(2048))
+  archive.add("xl/worksheets/sheet1.dat", oversized)
+  let limit = 1024
+  let result : Result[Array[String], Error] = Ok(
+    @xlsx.validate_ooxml_package(
+      @zip.write(archive),
+      limits=@xlsx.ReadLimits::with_values(max_xml_part_bytes=limit),
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit=actual_limit, actual~)) => {
+      inspect(kind, content="xml_part_bytes")
+      assert_eq(actual_limit, limit)
+      assert_eq(actual, oversized.length())
+    }
+    _ => fail("expected logical XML validation limit")
+  }
+}
+
+///|
 test "OOXML validation enforces aggregate XML bytes" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
@@ -247,5 +314,42 @@ test "OOXML validation charges relationship records package-wide" {
       assert_eq(actual, 2)
     }
     _ => fail("expected aggregate relationship-record limit")
+  }
+}
+
+///|
+test "OOXML validation counts relationship tags followed by XML whitespace" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let source = @zip.read(@xlsx.write(workbook))
+  let archive = @zip.Archive::new()
+  for entry in source.entries() {
+    if entry.name().has_suffix(".rels") {
+      let xml = @encoding/utf8.decode(entry.data()) catch {
+        _ => fail("relationship part is not UTF-8")
+      }
+      archive.add(
+        entry.name(),
+        @encoding/utf8.encode(
+          xml.replace_all(old="<Relationship ", new="<Relationship\n"),
+        ),
+      )
+    } else {
+      archive.add(entry.name(), entry.data())
+    }
+  }
+  let limits = @xlsx.ReadLimits::with_values(max_relationship_records=1)
+  let result : Result[Array[String], Error] = Ok(
+    @xlsx.validate_ooxml_package(@zip.write(archive), limits~),
+  ) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+      inspect(kind, content="relationship_records")
+      assert_eq(limit, 1)
+      assert_eq(actual, 2)
+    }
+    _ => fail("expected whitespace-delimited relationship-record limit")
   }
 }
