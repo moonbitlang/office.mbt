@@ -353,6 +353,34 @@ fn canonicalize_xlsx_worksheet_features(
 }
 
 ///|
+fn charge_xlsx_drawing_xml_pass(
+  budget : ReadBudget?,
+  xml : StringView,
+) -> Unit raise XlsxError {
+  match budget {
+    Some(value) => {
+      value.checkpoint()
+      value.charge_work(xml.length())
+    }
+    None => ()
+  }
+}
+
+///|
+fn charge_xlsx_drawing_xml_materialization(
+  budget : ReadBudget?,
+  xml : StringView,
+) -> Unit raise XlsxError {
+  match budget {
+    Some(value) => {
+      value.checkpoint()
+      value.charge_work(xml.length())
+    }
+    None => ()
+  }
+}
+
+///|
 /// Produces the effective DrawingML view and canonicalizes it by expanded
 /// namespace identity. MCE selection must run first, while `Choice.Requires`
 /// prefixes still have their original namespace bindings; otherwise a lexical
@@ -363,8 +391,10 @@ fn canonicalize_xlsx_worksheet_features(
 fn canonicalize_xlsx_drawing_xml(
   source : StringView,
   max_output_chars : Int,
+  budget? : ReadBudget,
   cancelled? : () -> Bool = () => false,
 ) -> String raise XlsxError {
+  charge_xlsx_drawing_xml_pass(budget, source)
   let scanner = @ooxml.XmlStartTagScanner::new(source, cancelled~)
   if !workbook_scanner_next(scanner) ||
     scanner.depth() != 1 ||
@@ -378,6 +408,7 @@ fn canonicalize_xlsx_drawing_xml(
   // Application extension payload is deliberately absent from the lexical
   // reader view. Removing its structural container before MCE projection also
   // prevents directives inside opaque payload from affecting core selection.
+  charge_xlsx_drawing_xml_pass(budget, source)
   let without_extension_lists = @ooxml.remove_xml_expanded_name_subtrees(
     source,
     xlsx_drawing_extension_list_namespaces,
@@ -387,18 +418,42 @@ fn canonicalize_xlsx_drawing_xml(
     InvalidXml(msg~) => raise InvalidXml(msg~)
     ReadCancelled => raise ReadCancelled
   }
-  let projected = @ooxml.project_xml_markup_compatibility(
-    without_extension_lists.unwrap_or(source.to_owned()),
-    xlsx_drawing_mce_understood_namespaces,
-    max_output_chars~,
-    cancelled~,
-    extension_elements=xlsx_drawing_mce_extension_elements,
-  ) catch {
-    InvalidXml(msg~) => raise InvalidXml(msg~)
-    ReadCancelled => raise ReadCancelled
+  match without_extension_lists {
+    Some(value) => charge_xlsx_drawing_xml_materialization(budget, value)
+    None => ()
   }
+  let projected = match without_extension_lists {
+    Some(extension_free) => {
+      charge_xlsx_drawing_xml_pass(budget, extension_free)
+      @ooxml.project_xml_markup_compatibility(
+        extension_free,
+        xlsx_drawing_mce_understood_namespaces,
+        max_output_chars~,
+        cancelled~,
+        extension_elements=xlsx_drawing_mce_extension_elements,
+      ) catch {
+        InvalidXml(msg~) => raise InvalidXml(msg~)
+        ReadCancelled => raise ReadCancelled
+      }
+    }
+    None => {
+      charge_xlsx_drawing_xml_pass(budget, source)
+      @ooxml.project_xml_markup_compatibility(
+        source,
+        xlsx_drawing_mce_understood_namespaces,
+        max_output_chars~,
+        cancelled~,
+        extension_elements=xlsx_drawing_mce_extension_elements,
+      ) catch {
+        InvalidXml(msg~) => raise InvalidXml(msg~)
+        ReadCancelled => raise ReadCancelled
+      }
+    }
+  }
+  charge_xlsx_drawing_xml_materialization(budget, projected)
   // Foreign wrappers are removed with their descendants. Merely renaming a
   // wrapper would leave nested core-looking tags visible to lexical readers.
+  charge_xlsx_drawing_xml_pass(budget, projected)
   let core_projected = @ooxml.remove_xml_foreign_namespace_subtrees(
     projected,
     xlsx_drawing_core_element_namespaces,
@@ -407,9 +462,18 @@ fn canonicalize_xlsx_drawing_xml(
     InvalidXml(msg~) => raise InvalidXml(msg~)
     ReadCancelled => raise ReadCancelled
   }
-  let reader_source = core_projected.unwrap_or(projected)
+  match core_projected {
+    Some(value) => charge_xlsx_drawing_xml_materialization(budget, value)
+    None => ()
+  }
+  let reader_source = match core_projected {
+    Some(value) => value
+    None => projected
+  }
+  charge_xlsx_drawing_xml_pass(budget, reader_source)
   validate_xlsx_drawing_reader_structure(reader_source, cancelled~)
-  @ooxml.canonicalize_xml_expanded_names(
+  charge_xlsx_drawing_xml_pass(budget, reader_source)
+  let canonical = @ooxml.canonicalize_xml_expanded_names(
     reader_source,
     [],
     [
@@ -432,6 +496,8 @@ fn canonicalize_xlsx_drawing_xml(
     InvalidXml(msg~) => raise InvalidXml(msg~)
     ReadCancelled => raise ReadCancelled
   }
+  charge_xlsx_drawing_xml_materialization(budget, canonical)
+  canonical
 }
 
 ///|

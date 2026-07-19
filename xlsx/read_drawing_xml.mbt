@@ -1194,6 +1194,30 @@ test "DrawingML validates Strict chart dialect and payload URI together" {
 }
 
 ///|
+test "DrawingML preprocessing charges every bounded pass" {
+  let source =
+    #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"/>
+  // Charging only the source and final output would fit this ceiling. The
+  // independent root-validation, extension-removal, and MCE passes must not.
+  let limit = source.length() * 2
+  let budget = ReadBudget::new(
+    ReadLimits::with_values(max_parser_work_units=limit),
+  )
+  try
+    canonicalize_xlsx_drawing_xml(source, default_max_xml_part_bytes, budget~)
+  catch {
+    ResourceLimitExceeded(kind~, limit=actual_limit, actual~) => {
+      assert_eq(kind, "parser_work_units")
+      assert_eq(actual_limit, limit)
+      assert_true(actual > actual_limit)
+    }
+    _ => fail("unexpected DrawingML preprocessing limit error")
+  } noraise {
+    _ => fail("expected DrawingML preprocessing work rejection")
+  }
+}
+
+///|
 test "read_drawing_xml wb: parse_xml_int_tag missing/invalid errors" {
   let missing_tag = "<xdr:from><xdr:row>1</xdr:row></xdr:from>"
   let missing_result : Result[Int, Error] = Ok(

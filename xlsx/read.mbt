@@ -4712,14 +4712,12 @@ fn read_zip_archive_core_unchecked(
             None => raise MissingPart(path=drawing_path)
           }
           let drawing_source_xml = decode_source(drawing_bytes)
-          read_budget.charge_work(drawing_source_xml.length())
           let drawing_xml = canonicalize_xlsx_drawing_xml(
             drawing_source_xml,
             limits.max_xml_part_bytes,
+            budget=read_budget,
             cancelled~,
           )
-          read_budget.checkpoint()
-          read_budget.charge_work(drawing_xml.length())
           let drawing_metrics = drawing_metrics_for_sheet(sheet)
           let drawing_anchors = parse_drawing_anchors(
             drawing_xml,
