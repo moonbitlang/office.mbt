@@ -665,6 +665,19 @@ fn parse_drawing_images(
       cancelled~,
     )
   }
+  // location links (e.g. "Sheet1!B2") are written as internal-mode
+  // relationships by this library's own writer; reading only external-mode
+  // records would drop them on round-trip
+  let location_hyperlink_targets = if drawing_rels_xml.to_owned() == "" {
+    Map([])
+  } else {
+    parse_internal_relationship_targets(
+      drawing_rels_xml,
+      rel_hyperlink,
+      budget?,
+      cancelled~,
+    )
+  }
   for anchor in anchors {
     if anchor.unsupported {
       continue
@@ -749,7 +762,14 @@ fn parse_drawing_images(
                 hyperlink = value
                 hyperlink_type = External
               }
-              None => ()
+              None =>
+                match location_hyperlink_targets.get(rel_id.to_string()) {
+                  Some(value) => {
+                    hyperlink = value
+                    hyperlink_type = Location
+                  }
+                  None => ()
+                }
             }
           None => ()
         }
