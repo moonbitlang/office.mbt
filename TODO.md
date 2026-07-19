@@ -141,6 +141,10 @@ For every PR:
    the native CLI and run `moon cram test office/cmd/office/cram` from the same
    stub setup used by CI. Mutation work also needs Microsoft
    `DocumentFormat.OpenXml` validation with .NET 8.
+   Pin all validation runs to one exact commit. To reduce wall time, use a
+   separate detached worktree (or at least a separate `--target-dir`) for each
+   target so native, Wasm, and JS can run concurrently without contending on
+   `.moon-lock`; do not edit the source while those runs are active.
 4. Ask a brand-new, ephemeral Codex CLI session to review the exact pushed
    head. Use at least `xhigh`; use `max` routinely for cross-package changes
    and `ultra` for security architecture or final epic acceptance. Never reuse
