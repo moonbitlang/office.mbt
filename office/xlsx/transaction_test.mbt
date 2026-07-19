@@ -228,7 +228,9 @@ async test "oversized relationship metadata fails closed before publication" {
     let output = "\{directory}/output.xlsx"
     let original = xlsx_transaction_fixture()
     let archive = @zip.read(original)
-    let target = "x".repeat(4_097)
+    let target = "x".repeat(
+      @engine.ReadLimits::new().max_relationship_target_chars() + 1,
+    )
     archive.add(
       "xl/custom/_rels/item.xml.rels",
       @utf8.encode(
