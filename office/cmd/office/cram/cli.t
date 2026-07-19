@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:c6d1820e
+    Fingerprint: crc32:dc17bc7e
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:c6d1820e","names":["docx","xlsx","help","identify","outline","get","text","query","validate","issues","create","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:dc17bc7e","names":["docx","xlsx","help","identify","outline","get","text","query","validate","issues","create","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:c6d1820e","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:c6d1820e","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:c6d1820e","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:c6d1820e","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:c6d1820e","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:c6d1820e","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:c6d1820e","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:c6d1820e","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:c6d1820e","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:c6d1820e","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:c6d1820e","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:c6d1820e","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:c6d1820e","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"raw"}]
 
 The raw command publishes explicit subcommand schemas, including every edit
 input and its conditional constraints.

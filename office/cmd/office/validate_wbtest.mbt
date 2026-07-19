@@ -275,8 +275,39 @@ async test "docx issues report annotation warnings" {
     let source = read_office_package(path)
     let findings : Array[OfficeFinding] = []
     office_docx_reader_findings(source, findings)
-    assert_true(findings.length() > 0)
-    assert_true(findings[0].severity == "warning")
-    assert_true(findings[0].code.has_prefix("office.docx."))
+    let mut annotation_warnings = 0
+    for finding in findings {
+      assert_true(finding.severity == "warning")
+      assert_true(finding.code.has_prefix("office.docx."))
+      if finding.code == "office.docx.annotation_warning" {
+        annotation_warnings += 1
+      }
+    }
+    // the orphaned marker yields exactly one specifically coded annotation
+    // warning; annotation texts are never double-counted as generic
+    // reader diagnostics
+    assert_true(annotation_warnings == 1)
   }
+}
+
+///|
+/// Human rendering neutralizes control characters from attacker-derived
+/// finding text.
+test "human findings are terminal-safe" {
+  let findings = [
+    office_finding(
+      "warning",
+      "office.test.finding",
+      "line\nbreak\u{1b}[31mesc",
+      location="Sheet\u{7}1!A1",
+    ),
+  ]
+  // human_text is the same sanitizer the rest of the CLI uses; assert the
+  // renderer routes both message and location through it
+  let message = human_text(findings[0].message, office_finding_message_chars)
+  assert_false(message.contains("\n"))
+  assert_false(message.contains("\u{1b}"))
+  let location = human_text(findings[0].location.unwrap(), 160)
+  assert_false(location.contains("\u{7}"))
+  office_render_findings_human(findings)
 }

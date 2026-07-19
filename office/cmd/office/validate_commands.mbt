@@ -229,28 +229,27 @@ fn office_docx_reader_findings(
       raise docx_reader_failure(error, source.file)
     }
   }
+  // annotation warnings are already merged into the package messages by the
+  // reader; classify them under their specific code exactly once and keep
+  // the remaining reader diagnostics under the generic code
+  let annotation_texts : Set[String] = Set([])
+  for warning in annotated.annotations().warnings() {
+    annotation_texts.add(warning)
+  }
   for message in annotated.result().messages {
     if findings.length() >= office_finding_report_limit {
       break
     }
-    match message {
-      Error(text) =>
-        findings.push(
-          office_finding("warning", "office.docx.reader_diagnostic", text),
-        )
-      Warning(text) =>
-        findings.push(
-          office_finding("warning", "office.docx.reader_diagnostic", text),
-        )
+    let text = match message {
+      Error(text) => text
+      Warning(text) => text
     }
-  }
-  for warning in annotated.annotations().warnings() {
-    if findings.length() >= office_finding_report_limit {
-      break
+    let code = if annotation_texts.contains(text) {
+      "office.docx.annotation_warning"
+    } else {
+      "office.docx.reader_diagnostic"
     }
-    findings.push(
-      office_finding("warning", "office.docx.annotation_warning", warning),
-    )
+    findings.push(office_finding("warning", code, text))
   }
 }
 
@@ -290,12 +289,11 @@ fn office_validate_data(
 fn office_render_findings_human(findings : Array[OfficeFinding]) -> Unit {
   for finding in findings {
     let location = match finding.location {
-      Some(value) => " [\{value}]"
+      Some(value) => " [" + human_text(value, 160) + "]"
       None => ""
     }
-    println(
-      "\{finding.severity} \{finding.code}\{location}: \{finding.message}",
-    )
+    let message = human_text(finding.message, office_finding_message_chars)
+    println("\{finding.severity} \{finding.code}\{location}: \{message}")
   }
 }
 

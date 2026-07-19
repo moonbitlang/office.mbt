@@ -651,7 +651,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "valid", "boolean", true, "true when the shared package gate reported no errors",
         ),
         capability_field(
-          "findings", "array", true, "bounded office.finding/1 records with severity, code, and message",
+          "findings", "array(office.finding/1)", true, "bounded office.finding/1 records with severity, code, and message",
         ),
         capability_field(
           "error_count", "integer", true, "number of error findings",
@@ -690,7 +690,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "valid", "boolean", true, "true when the shared package gate reported no errors",
         ),
         capability_field(
-          "findings", "array", true, "bounded office.finding/1 records; XLSX cached formula errors and DOCX reader diagnostics are warnings",
+          "findings", "array(office.finding/1)", true, "bounded office.finding/1 records; XLSX cached formula errors and DOCX reader diagnostics are warnings",
         ),
         capability_field(
           "error_count", "integer", true, "number of error findings",
