@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:dc17bc7e
+    Fingerprint: crc32:8447458b
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:dc17bc7e","names":["docx","xlsx","help","identify","outline","get","text","query","validate","issues","create","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:8447458b","names":["docx","xlsx","help","identify","outline","get","text","query","validate","issues","preview","create","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"command","name":"raw"}]
 
 The raw command publishes explicit subcommand schemas, including every edit
 input and its conditional constraints.
@@ -498,3 +498,42 @@ warnings with cell locations, and the exit status stays zero.
   $ office.exe create xlsx issues-probe.xlsx --json > /dev/null
   $ office.exe issues issues-probe.xlsx
   xlsx: 0 error(s), 0 warning(s)
+
+The preview command publishes one deterministic self-contained HTML document
+through the atomic create-new path: charts render as inline SVG, an existing
+destination is refused with the shared transaction code unless --overwrite is
+given, and the report is truthful about what was rendered.
+
+  $ xlsx.exe create preview.xlsx --sheet Data >/dev/null
+  $ xlsx.exe set preview.xlsx Data A1 Region >/dev/null
+  $ xlsx.exe set preview.xlsx Data B1 Sales >/dev/null
+  $ xlsx.exe set preview.xlsx Data A2 East >/dev/null
+  $ xlsx.exe set preview.xlsx Data B2 30 >/dev/null
+  $ xlsx.exe set preview.xlsx Data A3 West >/dev/null
+  $ xlsx.exe set preview.xlsx Data B3 70 >/dev/null
+  $ xlsx.exe chart preview.xlsx Data D2 --type col --categories A2:A3 --values B2:B3 --name 'Data!B1' >/dev/null
+  $ office.exe preview preview.xlsx --output preview.html --json | jq -c '{success,data:{schema:.data.schema,format:.data.format,charts_rendered:.data.charts_rendered,charts_placeholder:.data.charts_placeholder,truncated:.data.truncation.truncated_sheets}}'
+  {"success":true,"data":{"schema":"office.preview/1","format":"xlsx","charts_rendered":1,"charts_placeholder":0,"truncated":[]}}
+  $ grep -c '<figure class="chart"' preview.html
+  1
+  $ grep -c 'aria-label="barChart with 1 series; Sales (2 points)"' preview.html
+  1
+
+  $ office.exe preview preview.xlsx --output preview.html --json > preview-exists.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code}' preview-exists.json
+  {"success":false,"code":"office.transaction.output_exists"}
+  $ office.exe preview preview.xlsx --output preview.html --overwrite --jsonl | jq -c '{success,schema:.data.schema}'
+  {"success":true,"schema":"office.preview/1"}
+
+  $ office.exe preview preview.xlsx --output preview.txt --json > preview-ext.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code}' preview-ext.json
+  {"success":false,"code":"office.invalid_arguments"}
+
+DOCX previews inline the shared HTML converter output in one page shell.
+
+  $ office.exe preview "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --output para.html --json | jq -c '{success,data:{schema:.data.schema,format:.data.format,images_embedded:.data.images_embedded}}'
+  {"success":true,"data":{"schema":"office.preview/1","format":"docx","images_embedded":0}}
+  $ grep -c '<!DOCTYPE html>' para.html
+  1

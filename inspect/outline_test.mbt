@@ -140,6 +140,7 @@ test "outline of a rich workbook" {
       #|          ],
       #|          "series": [
       #|            {
+      #|              "name": "Sales",
       #|              "categories": "Data!$A$2:$A$3",
       #|              "values": "Data!$B$2:$B$3"
       #|            }

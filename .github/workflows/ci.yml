@@ -273,9 +273,9 @@ jobs:
             and .success == true
             and .data.schema == "office.capabilities/2"
             and (.data.fingerprint | test("^crc32:[0-9a-f]{8}$"))
-            and ([.data.records[].name] == ["docx", "xlsx", "help", "identify", "outline", "get", "text", "query", "validate", "issues", "create", "batch", "raw"])'
+            and ([.data.records[].name] == ["docx", "xlsx", "help", "identify", "outline", "get", "text", "query", "validate", "issues", "preview", "create", "batch", "raw"])'
           moon run --target wasm office/cmd/office -- help all --jsonl 2>office-wasm.err \
-            | jq -se 'length == 13 and all(.[]; .schema == "office.capability/2")'
+            | jq -se 'length == 14 and all(.[]; .schema == "office.capability/2")'
           v=$(moon run --target wasm office/cmd/office -- validate ci.xlsx --json 2>office-wasm.err) || { echo "office wasm validate failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$v" | jq -e '.schema == "office.output/1"
             and .success == true

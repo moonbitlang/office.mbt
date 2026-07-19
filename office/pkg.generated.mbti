@@ -23,6 +23,8 @@ pub const SCHEMA_FINDING_RECORD : String = "office.finding/1"
 
 pub const SCHEMA_ISSUES_RESULT : String = "office.issues/1"
 
+pub const SCHEMA_PREVIEW_RESULT : String = "office.preview/1"
+
 pub const SCHEMA_RAW_CHANGE : String = "office.raw.change/1"
 
 pub const SCHEMA_RAW_INVENTORY : String = "office.raw.inventory/1"

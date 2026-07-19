@@ -60,6 +60,10 @@ pub const SCHEMA_ISSUES_RESULT : String = "office.issues/1"
 pub const SCHEMA_FINDING_RECORD : String = "office.finding/1"
 
 ///|
+/// Versioned result schema emitted by `office preview`.
+pub const SCHEMA_PREVIEW_RESULT : String = "office.preview/1"
+
+///|
 pub const SCHEMA_XLSX_BATCH_RESULT : String = "office.xlsx.batch/1"
 
 ///|
@@ -697,6 +701,60 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         ),
         capability_field(
           "warning_count", "integer", true, "number of warning findings",
+        ),
+      ],
+      output_modes: ["human", "json", "jsonl"],
+      variants: [],
+    },
+    {
+      name: "preview",
+      summary: "Render a deterministic offline HTML preview with inline assets",
+      usage: "office preview FILE --output OUT.html [--overwrite] [--json|--jsonl]",
+      formats: ["docx", "xlsx"],
+      aliases: [],
+      inputs: [
+        capability_field("file", "path", true, "existing XLSX or DOCX package"),
+        capability_field(
+          "output", "path", true, "destination .html file; created atomically, refused when present unless --overwrite",
+        ),
+        capability_field(
+          "overwrite", "boolean", false, "replace an existing destination (remove-then-stage; not a single atomic swap)",
+        ),
+        capability_field(
+          "json", "boolean", false, "emit one office.output/1 JSON document",
+        ),
+        capability_field(
+          "jsonl", "boolean", false, "emit one office.output/1 line",
+        ),
+      ],
+      outputs: [
+        capability_field(
+          "schema", "literal(office.preview/1)", true, "versioned preview result schema",
+        ),
+        capability_field("file", "path", true, "the input path, bounded"),
+        capability_field(
+          "format", "enum(docx|xlsx)", true, "the structurally verified package format",
+        ),
+        capability_field(
+          "output", "path", true, "the published preview path, bounded",
+        ),
+        capability_field(
+          "bytes_written", "integer", true, "exact published byte count",
+        ),
+        capability_field(
+          "charts_rendered", "integer", true, "charts rendered as inline SVG",
+        ),
+        capability_field(
+          "charts_placeholder", "integer", true, "charts kept as labeled placeholders",
+        ),
+        capability_field(
+          "images_embedded", "integer", true, "images embedded as data URIs",
+        ),
+        capability_field(
+          "truncation", "object", true, "row/column caps, truncated sheet names, and omitted image count",
+        ),
+        capability_field(
+          "warnings", "array", false, "bounded converter warnings",
         ),
       ],
       output_modes: ["human", "json", "jsonl"],

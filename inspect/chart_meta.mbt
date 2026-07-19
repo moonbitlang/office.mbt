@@ -74,7 +74,7 @@ pub fn chart_series(xml : String) -> Array[ChartSeriesMeta] {
         }
         let block = view[content_start:end]
         series.push({
-          name: element_ref(block, "c:tx"),
+          name: series_name(block),
           categories: first_present(block, "c:cat", "c:xVal"),
           values: first_present(block, "c:val", "c:yVal"),
         })
@@ -279,6 +279,33 @@ fn first_present(block : StringView, tag : String, alt : String) -> String? {
   match element_ref(block, tag) {
     Some(reference) => Some(reference)
     None => element_ref(block, alt)
+  }
+}
+
+///|
+/// The series display name inside `<c:tx>`: a `c:f` reference when one is
+/// present, otherwise the literal `<c:v>` text the chart writer emits for
+/// plain string names.
+fn series_name(block : StringView) -> String? {
+  match element_ref(block, "c:tx") {
+    Some(reference) => Some(reference)
+    None => {
+      let (start, end) = match element_content(block, "c:tx", 0) {
+        Some(bounds) => bounds
+        None => return None
+      }
+      let element = block[start:end]
+      let (value_start, value_end) = match element_content(element, "c:v", 0) {
+        Some(bounds) => bounds
+        None => return None
+      }
+      let literal = unescape_xml(element[value_start:value_end])
+      if literal == "" {
+        None
+      } else {
+        Some(literal)
+      }
+    }
   }
 }
 

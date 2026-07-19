@@ -1,28 +1,29 @@
-The agent-oriented read surface: `outline` prints a workbook structure map
-and `get --json` prints a structured range read. Both payloads are versioned
-JSON (see docs/agent-json-schemas.md); this file is their executable
-documentation and runs in a fresh temporary directory.
-
 Build a small workbook with a styled header, a formula, and a chart:
-
   $ xlsx.exe create book.xlsx --sheet Data
   created book.xlsx (sheet Data)
+
+
   $ xlsx.exe set book.xlsx Data A1 Region
   set Data!A1 = Region
+
+
   $ xlsx.exe set book.xlsx Data B1 100
   set Data!B1 = 100
+
+
   $ xlsx.exe formula book.xlsx Data B2 "=B1*2"
   set Data!B2 = =B1*2
+
+
   $ xlsx.exe style book.xlsx Data A1 --bold --fill 4472C4 --font-color FFFFFF
   styled 1 cell(s) in Data!A1
+
+
   $ xlsx.exe chart book.xlsx Data D2 --categories A1:A1 --values B1:B1 --name Sales
   added col chart to Data!D2
 
-`outline` maps the workbook: sheets in tab order with live extents
-(`used_range` is authoritative; `declared_dimension` is the file's retained
-value and may be stale), plus per-sheet inventories of merges, tables,
-charts, images, and object counts:
 
+charts, images, and object counts:
   $ xlsx.exe outline book.xlsx
   {
     "schema": "xlsx.outline/1",
@@ -75,12 +76,8 @@ charts, images, and object counts:
     ]
   }
 
-`get --json` reads a cell or range structurally: formatted display value,
-typed raw value, formula text, and a deduplicated style map. Blank unstyled
-cells (A2 here) are omitted — absence means blank — a plain cell carries no
-style_id, and a formula with no cached result carries only its formula
-text, no fake empty value:
 
+text, no fake empty value:
   $ xlsx.exe get book.xlsx Data A1:B2 --json
   {
     "schema": "xlsx.cells/1",
@@ -129,8 +126,8 @@ text, no fake empty value:
     }
   }
 
-Corner order is normalized, and a single cell echoes a single-cell range:
 
+Corner order is normalized, and a single cell echoes a single-cell range:
   $ xlsx.exe get book.xlsx Data B1 --json | head -5
   {
     "schema": "xlsx.cells/1",
@@ -138,33 +135,32 @@ Corner order is normalized, and a single cell echoes a single-cell range:
     "sheet": "Data",
     "range": "B1",
 
-Without `--json`, `get` behaves exactly as before:
 
+Without `--json`, `get` behaves exactly as before:
   $ xlsx.exe get book.xlsx Data A1
   Region
 
-`query` finds the cells matching a content selector — returned as JSON in the
-same per-cell shape as `get --json` — so an agent can filter (every formula,
-every value over a threshold) instead of reading a whole range and scanning
-it itself. It scans the used range by default, or a `--range`:
 
+it itself. It scans the used range by default, or a `--range`:
   $ xlsx.exe query book.xlsx Data 'cell[type=formula]' | grep -o '"match_count": 1'
   "match_count": 1
+
+
   $ xlsx.exe query book.xlsx Data 'cell[type=formula]' | grep -o '"formula": "B1\*2"'
   "formula": "B1*2"
+
+
   $ xlsx.exe query book.xlsx Data 'cell[value>=100]' | grep -o '"ref": "B1"'
   "ref": "B1"
 
-A malformed selector fails with exit 1 and no partial output:
 
+A malformed selector fails with exit 1 and no partial output:
   $ xlsx.exe query book.xlsx Data 'rows[1]'
   error: selector must be 'cell' optionally followed by [predicate] groups, e.g. cell[type=formula]
   [1]
 
-`calc --json` evaluates a formula and returns its *typed* computed value —
-the gap `get --json` leaves for a formula with no cached value (B2 is `=B1*2`
-with B1=100, so it computes to the number 200):
 
+with B1=100, so it computes to the number 200):
   $ xlsx.exe calc book.xlsx Data B2 --json
   {
     "schema": "xlsx.calc/1",
@@ -177,43 +173,59 @@ with B1=100, so it computes to the number 200):
     }
   }
 
-`lint` recomputes every formula and reports the ones that evaluate to an
-error — the author -> verify half of the loop, and errors that `get`/`query`
-cannot see for a formula with no cached value (the healthy `=A1*2` is not
-reported):
 
+reported):
   $ xlsx.exe create lints.xlsx --sheet S >/dev/null
+
+
   $ xlsx.exe set lints.xlsx S A1 100 >/dev/null
+
+
   $ xlsx.exe formula lints.xlsx S A2 "=A1/0" >/dev/null
+
+
   $ xlsx.exe formula lints.xlsx S A3 "=A1*2" >/dev/null
+
+
   $ xlsx.exe lint lints.xlsx | grep -o '"finding_count": 1'
   "finding_count": 1
+
+
   $ xlsx.exe lint lints.xlsx | grep -o '"ref": "A2"'
   "ref": "A2"
+
+
   $ xlsx.exe lint lints.xlsx | grep -o '"code": "#DIV/0!"'
   "code": "#DIV/0!"
 
-The `style` op also draws cell borders — an all-sides `border`, per-side
-overrides, and a `border_color` — so a table or KPI box looks right, and the
-package stays valid:
 
+package stays valid:
   $ xlsx.exe create bordered.xlsx --sheet S >/dev/null
+
+
   $ cat > borders.json <<'JSON'
   > {"schema": "xlsx.batch/1", "ops": [
   >   {"op": "style", "params": {"sheet": "S", "range": "A1:C3", "border": "thin", "border_bottom": "medium", "border_color": "1F3864"}}
   > ]}
   > JSON
+
+
   $ xlsx.exe batch bordered.xlsx borders.json
   applied 1 op(s) to bordered.xlsx
+
+
   $ xlsx.exe validate bordered.xlsx
   valid
+
+
   $ xlsx.exe get bordered.xlsx S A1 --json | grep -c '"border"'
   1
 
-The `sheet` op renames, deletes, hides, or shows a sheet — so an agent can
-rename the default `Sheet1`, drop a scratch sheet, or hide a helper:
 
+rename the default `Sheet1`, drop a scratch sheet, or hide a helper:
   $ xlsx.exe create sheets.xlsx --sheet Sheet1 >/dev/null
+
+
   $ cat > sheetops.json <<'JSON'
   > {"schema": "xlsx.batch/1", "ops": [
   >   {"op": "add-sheet", "params": {"name": "Scratch"}},
@@ -221,16 +233,21 @@ rename the default `Sheet1`, drop a scratch sheet, or hide a helper:
   >   {"op": "sheet", "params": {"action": "delete", "name": "Scratch"}}
   > ]}
   > JSON
+
+
   $ xlsx.exe batch sheets.xlsx sheetops.json
   applied 3 op(s) to sheets.xlsx
+
+
   $ xlsx.exe sheets sheets.xlsx
   Report
+
+
   $ xlsx.exe validate sheets.xlsx
   valid
 
-The `row` and `col` ops hide/show a band of rows or columns and set row
-heights — so an agent can tuck away helper rows or size a header:
 
+heights — so an agent can tuck away helper rows or size a header:
   $ cat > dims.json <<'JSON'
   > {"schema": "xlsx.batch/1", "ops": [
   >   {"op": "row", "params": {"sheet": "Report", "action": "height", "at": 1, "height": 28}},
@@ -238,35 +255,38 @@ heights — so an agent can tuck away helper rows or size a header:
   >   {"op": "col", "params": {"sheet": "Report", "action": "hide", "at": "F"}}
   > ]}
   > JSON
+
+
   $ xlsx.exe batch sheets.xlsx dims.json
   applied 3 op(s) to sheets.xlsx
+
+
   $ xlsx.exe validate sheets.xlsx
   valid
 
-Errors are strict and leave no partial output — an oversized range (the cap
-is 100,000 cells), a missing sheet, and a missing file all fail with exit 1:
 
+is 100,000 cells), a missing sheet, and a missing file all fail with exit 1:
   $ xlsx.exe get book.xlsx Data A1:K9091 --json
   error: range A1:K9091 covers 100001 cells; max is 100000
   [1]
+
+
   $ xlsx.exe get book.xlsx Missing A1 --json
   error: * (glob)
   [1]
+
+
   $ xlsx.exe outline missing.xlsx
   error: * (glob)
   [1]
 
-The workbook the agent commands read stays a valid OOXML package:
 
+The workbook the agent commands read stays a valid OOXML package:
   $ xlsx.exe validate book.xlsx
   valid
 
-`batch` applies an xlsx.batch/1 op script in one open -> apply -> save
-cycle (ops mirror the subcommands; JSON value types are honored). It is
-all-or-nothing: `--dry-run` writes nothing, a failing op names its 0-based
-index and leaves the file untouched, and the final save goes through a
-temp file + rename:
 
+temp file + rename:
   $ cat > report.json <<'JSON'
   > {
   >   "schema": "xlsx.batch/1",
@@ -281,56 +301,74 @@ temp file + rename:
   >   ]
   > }
   > JSON
+
+
   $ xlsx.exe batch book.xlsx report.json --dry-run
   dry-run ok: 7 op(s); book.xlsx not modified
+
+
   $ xlsx.exe batch book.xlsx report.json
   applied 7 op(s) to book.xlsx
+
+
   $ xlsx.exe get book.xlsx Data D2
   7.5
+
+
   $ xlsx.exe calc book.xlsx Data D3
   15
+
+
   $ xlsx.exe sheets book.xlsx
   Data
   Notes
+
+
   $ xlsx.exe validate book.xlsx
   valid
 
-A failing op reports its index and op name, and the file is not written —
-E9 stays empty even though the first op set it:
 
+E9 stays empty even though the first op set it:
   $ cat > bad.json <<'JSON'
   > {"schema": "xlsx.batch/1", "ops": [
   >   {"op": "set", "params": {"sheet": "Data", "cell": "E9", "value": "x"}},
   >   {"op": "merge", "params": {"sheet": "Missing", "range": "A1:B1"}}
   > ]}
   > JSON
+
+
   $ xlsx.exe batch book.xlsx bad.json
   error: op 1 (merge): * (glob)
   [1]
+
+
   $ test "$(xlsx.exe get book.xlsx Data E9)" = ""
 
-Validation is strict — unknown params fail with the op's index, and a
-wrong schema string is rejected up front:
 
+wrong schema string is rejected up front:
   $ cat > typo.json <<'JSON'
   > {"schema": "xlsx.batch/1", "ops": [
   >   {"op": "style", "params": {"sheet": "Data", "range": "A1", "colour": "FF0000"}}
   > ]}
   > JSON
+
+
   $ xlsx.exe batch book.xlsx typo.json
   error: op 0 (style): unknown param 'colour'
   [1]
+
+
   $ cat > wrong.json <<'JSON'
   > {"schema": "xlsx.batch/9", "ops": []}
   > JSON
+
+
   $ xlsx.exe batch book.xlsx wrong.json
   error: unsupported schema 'xlsx.batch/9' (expected xlsx.batch/1)
   [1]
 
-The `table` op defines an Excel table over a range, taking its column names
-from the header row (blanks/duplicates are auto-named). It then shows up in
-`outline` with its range and columns, and the package stays valid:
 
+`outline` with its range and columns, and the package stays valid:
   $ cat > table.json <<'JSON'
   > {"schema": "xlsx.batch/1", "ops": [
   >   {"op": "set", "params": {"sheet": "Notes", "cell": "A1", "value": "Item"}},
@@ -338,136 +376,181 @@ from the header row (blanks/duplicates are auto-named). It then shows up in
   >   {"op": "table", "params": {"sheet": "Notes", "range": "A1:B3", "name": "Costs", "style": "TableStyleMedium2"}}
   > ]}
   > JSON
+
+
   $ xlsx.exe batch book.xlsx table.json
   applied 3 op(s) to book.xlsx
+
+
   $ xlsx.exe validate book.xlsx
   valid
+
+
   $ xlsx.exe outline book.xlsx | grep -o '"name": "Costs"'
   "name": "Costs"
+
+
   $ xlsx.exe outline book.xlsx | grep -o '"range": "A1:B3"'
   "range": "A1:B3"
+
+
   $ xlsx.exe outline book.xlsx | grep -cE '^ +"(Item|Cost)"'
   2
 
-The `validate` op attaches a data validation to a range — here a dropdown
-list. `outline` counts it per sheet, and the package stays valid:
 
+list. `outline` counts it per sheet, and the package stays valid:
   $ cat > validate.json <<'JSON'
   > {"schema": "xlsx.batch/1", "ops": [
   >   {"op": "validate", "params": {"sheet": "Data", "range": "F1:F20", "type": "list", "values": ["Low", "Medium", "High"]}}
   > ]}
   > JSON
+
+
   $ xlsx.exe batch book.xlsx validate.json
   applied 1 op(s) to book.xlsx
+
+
   $ xlsx.exe validate book.xlsx
   valid
+
+
   $ xlsx.exe outline book.xlsx | grep -c '"data_validations": 1'
   1
 
-The `cf` op adds a conditional-formatting rule — here a 3-color scale over a
-column. `outline` counts the range and the package stays valid:
 
+column. `outline` counts the range and the package stays valid:
   $ cat > cf.json <<'JSON'
   > {"schema": "xlsx.batch/1", "ops": [
   >   {"op": "cf", "params": {"sheet": "Data", "range": "B2:B20", "type": "3_color_scale", "min_color": "F8696B", "mid_color": "FFEB84", "max_color": "63BE7B"}}
   > ]}
   > JSON
+
+
   $ xlsx.exe batch book.xlsx cf.json
   applied 1 op(s) to book.xlsx
+
+
   $ xlsx.exe validate book.xlsx
   valid
+
+
   $ xlsx.exe outline book.xlsx | grep -c '"conditional_format_ranges": 1'
   1
 
-A `data_bar` opts into the x14 extended bar (solid fill, direction, border)
-via the extra bar options, and the package stays valid:
 
+via the extra bar options, and the package stays valid:
   $ cat > cfx14.json <<'JSON'
   > {"schema": "xlsx.batch/1", "ops": [
   >   {"op": "cf", "params": {"sheet": "Data", "range": "D2:D20", "type": "data_bar", "bar_color": "638EC6", "bar_solid": true, "bar_direction": "leftToRight", "bar_border_color": "4472C4"}}
   > ]}
   > JSON
+
+
   $ xlsx.exe batch book.xlsx cfx14.json
   applied 1 op(s) to book.xlsx
+
+
   $ xlsx.exe validate book.xlsx
   valid
 
 
-`html` renders sheets to one self-contained document — the "look" half of
-the agent's render -> look -> fix loop. Structure checks (the document is
 large, so grep, not full literals):
-
   $ xlsx.exe html book.xlsx --out book.html
   wrote book.html
+
+
   $ head -2 book.html
   <!DOCTYPE html>
   <html>
+
+
   $ grep -c '<section data-sheet=' book.html
   2
+
+
   $ grep -c 'class="s[0-9]' book.html | head -1
   1
+
+
   $ xlsx.exe html book.xlsx --sheet Data | grep -c 'data-sheet="Data"'
   1
 
-A formula with no cached result is visibly pending by default and
-evaluates under --calc:
 
+evaluates under --calc:
   $ xlsx.exe html book.xlsx --sheet Data | grep -o 'class="formula-pending">=D2\*2</td>'
   class="formula-pending">=D2*2</td>
+
+
   $ xlsx.exe html book.xlsx --sheet Data --calc | grep -o '<td>15</td>'
   <td>15</td>
 
-Errors are the CLI's usual one-liners:
 
+Errors are the CLI's usual one-liners:
   $ xlsx.exe html book.xlsx --sheet Missing
   error: sheet 'Missing' not found
   [1]
+
+
   $ xlsx.exe html book.xlsx --max-rows zero
   error: invalid --max-rows 'zero' (expected a number)
   [1]
 
-`html` is read-only — writing the document over the input workbook is
-refused:
 
+refused:
   $ xlsx.exe html book.xlsx --out book.xlsx
   error: --out must not be the input workbook
   [1]
+
+
   $ xlsx.exe html book.xlsx --out ./book.xlsx
   error: --out must not be the input workbook
   [1]
 
-A hard link the guard cannot detect is still safe: the rename replaces
-the --out entry, and the workbook keeps its bytes.
 
+the --out entry, and the workbook keeps its bytes.
   $ ln book.xlsx alias.xlsx
+
+
   $ xlsx.exe validate book.xlsx
   valid
+
+
   $ xlsx.exe html book.xlsx --out alias.xlsx
   wrote alias.xlsx
+
+
   $ xlsx.exe validate book.xlsx
   valid
 
---out replaces the named entry itself: a symlink target is not followed,
-so an unrelated file the link points at is left untouched.
 
+so an unrelated file the link points at is left untouched.
   $ xlsx.exe create other.xlsx --sheet Keep >/dev/null
+
+
   $ ln -s other.xlsx link.xlsx
+
+
   $ xlsx.exe html book.xlsx --out link.xlsx
   wrote link.xlsx
+
+
   $ head -1 link.xlsx
   <!DOCTYPE html>
+
+
   $ xlsx.exe validate other.xlsx
   valid
 
-`capabilities` prints the batch op catalog this build supports, so an agent
-can confirm its needed ops exist before generating a script (the JSON
-script contract is backward-compatible, but a stricter older CLI rejects
-ops it doesn't know):
 
+ops it doesn't know):
   $ xlsx.exe capabilities | head -2
   {
     "schema": "xlsx.capabilities/1",
+
+
   $ xlsx.exe capabilities | grep -c '"op":'
   15
+
+
   $ xlsx.exe capabilities | grep -o '"batch_schema": "[^"]*"'
   "batch_schema": "xlsx.batch/1"
