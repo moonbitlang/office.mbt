@@ -273,9 +273,15 @@ jobs:
             and .success == true
             and .data.schema == "office.capabilities/2"
             and (.data.fingerprint | test("^crc32:[0-9a-f]{8}$"))
-            and ([.data.records[].name] == ["docx", "xlsx", "help", "identify", "outline", "get", "text", "query", "create", "batch", "raw"])'
+            and ([.data.records[].name] == ["docx", "xlsx", "help", "identify", "outline", "get", "text", "query", "validate", "issues", "create", "batch", "raw"])'
           moon run --target wasm office/cmd/office -- help all --jsonl 2>office-wasm.err \
-            | jq -se 'length == 11 and all(.[]; .schema == "office.capability/2")'
+            | jq -se 'length == 13 and all(.[]; .schema == "office.capability/2")'
+          v=$(moon run --target wasm office/cmd/office -- validate ci.xlsx --json 2>office-wasm.err) || { echo "office wasm validate failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "$v" | jq -e '.schema == "office.output/1"
+            and .success == true
+            and .data.schema == "office.validate/1"
+            and .data.valid == true
+            and .data.error_count == 0'
           if moon run --target wasm office/cmd/office -- help xlxs --json >office-wasm-error.json 2>office-wasm.err; then
             echo "expected unknown office help format to fail"
             exit 1

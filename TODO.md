@@ -22,6 +22,12 @@ aliases.
   `main` and closed [#176](https://github.com/moonbitlang/office.mbt/issues/176).
   It isolated the post-#173 compatibility fix for Excel-produced overlaps
   between distinct shared-formula indexes.
+- [PR #185](https://github.com/moonbitlang/office.mbt/pull/185) is merged into
+  `main` and closed [#165](https://github.com/moonbitlang/office.mbt/issues/165)
+  and [#75](https://github.com/moonbitlang/office.mbt/issues/75). It delivered
+  cross-format `office validate` and `office issues` on the exact pre-commit
+  mutation gate, with versioned bounded findings and non-zero validate exit
+  status.
 
 The reference OfficeCLI checkout remains `.repos/officecli` in the primary
 repository working tree.
@@ -80,16 +86,14 @@ PR unless the issue itself is first split into independently useful children.
    Header/footer authoring remains separately tracked by #95.
 2. [#164 — D4 DOCX annotation mutations](https://github.com/moonbitlang/office.mbt/issues/164).
    Build only on the source-pinned D1 edit session and preserve unrelated parts.
-3. [#165 — V1 cross-format `validate` and `issues`](https://github.com/moonbitlang/office.mbt/issues/165).
-   This also subsumes the standalone exit-status gap in #75.
-4. [#166 — P1 deterministic HTML/SVG preview](https://github.com/moonbitlang/office.mbt/issues/166).
+3. [#166 — P1 deterministic HTML/SVG preview](https://github.com/moonbitlang/office.mbt/issues/166).
    Static/offline output only; no browser service, watch mode, or screenshot
    dependency.
-5. [#167 — R1 replayable semantic dump](https://github.com/moonbitlang/office.mbt/issues/167).
+4. [#167 — R1 replayable semantic dump](https://github.com/moonbitlang/office.mbt/issues/167).
    Replay must use the canonical create/batch engines rather than a new writer.
-6. [#168 — T1 XLSX/DOCX template merge](https://github.com/moonbitlang/office.mbt/issues/168).
+5. [#168 — T1 XLSX/DOCX template merge](https://github.com/moonbitlang/office.mbt/issues/168).
    Keep the placeholder language strict and non-executable.
-7. [#169 — F1 final non-PPT acceptance](https://github.com/moonbitlang/office.mbt/issues/169).
+6. [#169 — F1 final non-PPT acceptance](https://github.com/moonbitlang/office.mbt/issues/169).
    Run only after the child capabilities above have landed. This is the place
    for the final fresh-agent discoverability exercise and the ultra review.
 

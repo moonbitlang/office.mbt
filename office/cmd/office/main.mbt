@@ -138,6 +138,8 @@ fn build_command() -> @argparse.Command {
       get_command(),
       text_command(),
       query_command(),
+      validate_command(),
+      issues_command(),
       create_command(),
       batch_command(),
       raw_command(),
@@ -154,6 +156,8 @@ fn is_implemented_command(name : StringView) -> Bool {
     | "get"
     | "text"
     | "query"
+    | "validate"
+    | "issues"
     | "create"
     | "batch"
     | "raw" => true
@@ -174,6 +178,8 @@ async fn run_cli(args : Array[String]) -> Unit {
         "get" => run_docx_get(values)
         "text" => run_docx_text(values)
         "query" => run_docx_query(values)
+        "validate" => run_validate(values)
+        "issues" => run_issues(values)
         "create" => run_create(values)
         "batch" => run_xlsx_batch(values)
         "raw" => run_raw(values)

@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:3cca2563
+    Fingerprint: crc32:dc17bc7e
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:3cca2563","names":["docx","xlsx","help","identify","outline","get","text","query","create","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:dc17bc7e","names":["docx","xlsx","help","identify","outline","get","text","query","validate","issues","create","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:3cca2563","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:3cca2563","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:3cca2563","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:3cca2563","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:3cca2563","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:3cca2563","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:3cca2563","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:3cca2563","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:3cca2563","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:3cca2563","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:3cca2563","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:dc17bc7e","kind":"command","name":"raw"}]
 
 The raw command publishes explicit subcommand schemas, including every edit
 input and its conditional constraints.
@@ -449,3 +449,52 @@ without replacing the raw subsystem's stable error code.
   1
   $ jq -c '{success,code:.error.code,has_details:(.error|has("details"))}' long-path.json
   {"success":false,"code":"office.raw.path_not_found","has_details":false}
+
+The cross-format validate command shares the exact pre-commit mutation gate
+and reports a machine-checkable verdict: exit zero with a bounded result for
+valid packages, non-zero with a complete findings envelope otherwise.
+
+  $ office.exe validate "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx"
+  valid xlsx
+
+  $ office.exe validate "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --json | jq -c '{success,data:{schema:.data.schema,format:.data.format,valid:.data.valid,error_count:.data.error_count}}'
+  {"success":true,"data":{"schema":"office.validate/1","format":"docx","valid":true,"error_count":0}}
+
+  $ printf 'not a zip archive' > corrupt.xlsx
+  $ office.exe validate corrupt.xlsx --json > corrupt-validate.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code}' corrupt-validate.json
+  {"success":false,"code":"office.invalid_package"}
+
+An uncovered extra part is rejected by the structural detector before the
+gate even runs. A package whose sheet XML is broken is rejected either by
+the strict detector or by the shared parse gate: which layer fires depends
+on the byte layout the local zip tool produced, but the verdict is always a
+deterministic non-zero rejection.
+
+  $ cp "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" tampered.xlsx
+  $ printf 'binary' > extra.bin
+  $ zip -q tampered.xlsx extra.bin
+  $ office.exe validate tampered.xlsx --json > tampered-validate.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code}' tampered-validate.json
+  {"success":false,"code":"office.invalid_package"}
+
+  $ cp "$TESTDIR/../../../../fixtures/excelize/test/Book1.xlsx" broken-sheet.xlsx
+  $ mkdir -p xl/worksheets && printf '<worksheet' > xl/worksheets/sheet1.xml
+  $ zip -q broken-sheet.xlsx xl/worksheets/sheet1.xml
+  $ office.exe validate broken-sheet.xlsx --json > broken-validate.json 2>&1; echo $?
+  1
+  $ jq -c '{success,rejected:(.error.code == "office.xlsx.validation_failed" or .error.code == "office.invalid_package")}' broken-validate.json
+  {"success":false,"rejected":true}
+
+The issues command reports bounded actionable findings without conflating
+warnings with fatal invalidity: cached XLSX formula error values are
+warnings with cell locations, and the exit status stays zero.
+
+  $ office.exe issues "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --json | jq -c '{success,data:{schema:.data.schema,error_count:.data.error_count}}'
+  {"success":true,"data":{"schema":"office.issues/1","error_count":0}}
+
+  $ office.exe create xlsx issues-probe.xlsx --json > /dev/null
+  $ office.exe issues issues-probe.xlsx
+  xlsx: 0 error(s), 0 warning(s)

@@ -13,6 +13,7 @@ import {
   "bobzhang/office" @lib,
   "bobzhang/office/raw",
   "bobzhang/office/transaction",
+  "bobzhang/office/docx" @office_docx,
   "bobzhang/office/xlsx" @office_xlsx,
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,

@@ -48,6 +48,18 @@ pub const SCHEMA_XLSX_QUERY : String = "office.xlsx.query/1"
 pub const SCHEMA_XLSX_CREATE_RESULT : String = "office.xlsx.create/1"
 
 ///|
+/// Versioned result schema emitted by `office validate`.
+pub const SCHEMA_VALIDATE_RESULT : String = "office.validate/1"
+
+///|
+/// Versioned result schema emitted by `office issues`.
+pub const SCHEMA_ISSUES_RESULT : String = "office.issues/1"
+
+///|
+/// Versioned finding record carried by validate/issues results.
+pub const SCHEMA_FINDING_RECORD : String = "office.finding/1"
+
+///|
 pub const SCHEMA_XLSX_BATCH_RESULT : String = "office.xlsx.batch/1"
 
 ///|
@@ -611,6 +623,84 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           ["format=xlsx"],
         ),
       ],
+    },
+    {
+      name: "validate",
+      summary: "Validate an XLSX or DOCX package with the shared mutation gate",
+      usage: "office validate FILE [--json|--jsonl]",
+      formats: ["docx", "xlsx"],
+      aliases: [],
+      inputs: [
+        capability_field("file", "path", true, "existing XLSX or DOCX package"),
+        capability_field(
+          "json", "boolean", false, "emit one office.output/1 JSON document",
+        ),
+        capability_field(
+          "jsonl", "boolean", false, "emit one office.output/1 line",
+        ),
+      ],
+      outputs: [
+        capability_field(
+          "schema", "literal(office.validate/1)", true, "versioned validate result schema",
+        ),
+        capability_field("file", "path", true, "the input path, bounded"),
+        capability_field(
+          "format", "enum(docx|xlsx)", true, "the structurally verified package format",
+        ),
+        capability_field(
+          "valid", "boolean", true, "true when the shared package gate reported no errors",
+        ),
+        capability_field(
+          "findings", "array(office.finding/1)", true, "bounded office.finding/1 records with severity, code, and message",
+        ),
+        capability_field(
+          "error_count", "integer", true, "number of error findings",
+        ),
+        capability_field(
+          "warning_count", "integer", true, "number of warning findings",
+        ),
+      ],
+      output_modes: ["human", "json", "jsonl"],
+      variants: [],
+    },
+    {
+      name: "issues",
+      summary: "Report bounded actionable findings for an XLSX or DOCX package",
+      usage: "office issues FILE [--json|--jsonl]",
+      formats: ["docx", "xlsx"],
+      aliases: [],
+      inputs: [
+        capability_field("file", "path", true, "existing XLSX or DOCX package"),
+        capability_field(
+          "json", "boolean", false, "emit one office.output/1 JSON document",
+        ),
+        capability_field(
+          "jsonl", "boolean", false, "emit one office.output/1 line",
+        ),
+      ],
+      outputs: [
+        capability_field(
+          "schema", "literal(office.issues/1)", true, "versioned issues result schema",
+        ),
+        capability_field("file", "path", true, "the input path, bounded"),
+        capability_field(
+          "format", "enum(docx|xlsx)", true, "the structurally verified package format",
+        ),
+        capability_field(
+          "valid", "boolean", true, "true when the shared package gate reported no errors",
+        ),
+        capability_field(
+          "findings", "array(office.finding/1)", true, "bounded office.finding/1 records; XLSX cached formula errors and DOCX reader diagnostics are warnings",
+        ),
+        capability_field(
+          "error_count", "integer", true, "number of error findings",
+        ),
+        capability_field(
+          "warning_count", "integer", true, "number of warning findings",
+        ),
+      ],
+      output_modes: ["human", "json", "jsonl"],
+      variants: [],
     },
     {
       name: "create",
