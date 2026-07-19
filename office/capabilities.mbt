@@ -613,6 +613,73 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
       ],
     },
     {
+      name: "validate",
+      summary: "Validate an XLSX or DOCX package with the shared mutation gate",
+      usage: "office validate FILE [--json|--jsonl]",
+      formats: ["docx", "xlsx"],
+      aliases: [],
+      inputs: [
+        capability_field("file", "path", true, "existing XLSX or DOCX package"),
+        capability_field(
+          "json", "boolean", false, "emit one office.output/1 JSON document",
+        ),
+        capability_field(
+          "jsonl", "boolean", false, "emit one office.output/1 line",
+        ),
+      ],
+      outputs: [
+        capability_field(
+          "schema", "enum(office.validate/1)", true, "versioned validate result schema",
+        ),
+        capability_field(
+          "valid", "boolean", true, "true when the shared package gate reported no errors",
+        ),
+        capability_field(
+          "findings", "array", true, "bounded office.finding/1 records with severity, code, and message",
+        ),
+        capability_field(
+          "error_count", "integer", true, "number of error findings",
+        ),
+        capability_field(
+          "warning_count", "integer", true, "number of warning findings",
+        ),
+      ],
+      output_modes: ["human", "json", "jsonl"],
+      variants: [],
+    },
+    {
+      name: "issues",
+      summary: "Report bounded actionable findings for an XLSX or DOCX package",
+      usage: "office issues FILE [--json|--jsonl]",
+      formats: ["docx", "xlsx"],
+      aliases: [],
+      inputs: [
+        capability_field("file", "path", true, "existing XLSX or DOCX package"),
+        capability_field(
+          "json", "boolean", false, "emit one office.output/1 JSON document",
+        ),
+        capability_field(
+          "jsonl", "boolean", false, "emit one office.output/1 line",
+        ),
+      ],
+      outputs: [
+        capability_field(
+          "schema", "enum(office.issues/1)", true, "versioned issues result schema",
+        ),
+        capability_field(
+          "findings", "array", true, "bounded office.finding/1 records; XLSX cached formula errors and DOCX reader diagnostics are warnings",
+        ),
+        capability_field(
+          "error_count", "integer", true, "number of error findings",
+        ),
+        capability_field(
+          "warning_count", "integer", true, "number of warning findings",
+        ),
+      ],
+      output_modes: ["human", "json", "jsonl"],
+      variants: [],
+    },
+    {
       name: "create",
       summary: "Create a validated Office document atomically",
       usage: "office create xlsx OUTPUT [--sheet NAME] [--dry-run] [--overwrite] [--json]",
