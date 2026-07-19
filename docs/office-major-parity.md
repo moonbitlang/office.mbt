@@ -38,7 +38,7 @@ Codex review at least at `xhigh` effort.
 | X3: transactional XLSX create and batch | [#162](https://github.com/moonbitlang/office.mbt/issues/162) | Complete |
 | D3: fresh DOCX create and batch | [#163](https://github.com/moonbitlang/office.mbt/issues/163) | Planned |
 | D4: preservation-safe DOCX annotation mutations | [#164](https://github.com/moonbitlang/office.mbt/issues/164) | Planned |
-| V1: cross-format validate and issues | [#165](https://github.com/moonbitlang/office.mbt/issues/165) | Planned |
+| V1: cross-format validate and issues | [#165](https://github.com/moonbitlang/office.mbt/issues/165) | Implemented |
 | P1: deterministic static HTML/SVG preview | [#166](https://github.com/moonbitlang/office.mbt/issues/166) | Planned |
 | R1: replayable semantic XLSX/DOCX dump | [#167](https://github.com/moonbitlang/office.mbt/issues/167) | Planned |
 | T1: XLSX/DOCX template merge | [#168](https://github.com/moonbitlang/office.mbt/issues/168) | Planned |

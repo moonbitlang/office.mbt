@@ -71,6 +71,9 @@ The detailed contracts live in:
 
 ## Remaining work, in recommended order
 
+Progress since the last update: #176 landed via PR #182, and V1
+validate/issues (#165, subsuming #75) landed via the office-v1-validate PR.
+
 Each item below already has an issue. Do not duplicate it. Take one issue per
 PR unless the issue itself is first split into independently useful children.
 
