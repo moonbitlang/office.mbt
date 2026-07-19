@@ -2716,51 +2716,161 @@ fn parse_hyperlink_elements(
 }
 
 ///|
-fn parse_legacy_drawing_rel_id(
+fn parse_sheet_drawing_rel_ids(
   xml : StringView,
-  tag_name : StringView,
-) -> String? raise XlsxError {
-  let xml_str = xml.to_owned()
-  let marker = "<\{tag_name.to_owned()}"
-  let chars = xml_str.to_array()
-  let mut pos = 0
-  while pos < xml_str.length() {
-    let tail = xml_str[pos:]
-    let rel = match tail.find(marker) {
-      Some(value) => value
-      None => break
+  root_local_name : StringView,
+  budget? : ReadBudget,
+  cancelled? : () -> Bool = () => false,
+) -> (String?, String?, String?) raise XlsxError {
+  match budget {
+    Some(value) => {
+      value.checkpoint()
+      value.charge_work(xml.length())
     }
-    let start = pos + rel
-    let after = start + marker.length()
-    if after < chars.length() {
-      let ch = chars[after]
-      if ch != ' ' &&
-        ch != '\t' &&
-        ch != '\n' &&
-        ch != '\r' &&
-        ch != '>' &&
-        ch != '/' {
-        pos = after
-        continue
-      }
-    }
-    let text = xml_str[start + 1:]
-    let end = match text.find("/>") {
-      Some(value) => value
-      None =>
-        match text.find(">") {
-          Some(value) => value
-          None => raise InvalidXml(msg="\{tag_name.to_owned()} tag not closed")
-        }
-    }
-    let tag = text[:end]
-    let id = match attr_value(tag, "r:id") {
-      Some(value) => value
-      None => raise InvalidXml(msg="\{tag_name.to_owned()} id missing")
-    }
-    return Some(id)
+    None => check_read_cancelled(cancelled)
   }
-  None
+  let scanner = @ooxml.XmlStartTagScanner::new(xml, cancelled~)
+  if !workbook_scanner_next(scanner) ||
+    scanner.depth() != 1 ||
+    scanner.local_name() != root_local_name ||
+    (
+      scanner.namespace_uri() != transitional_spreadsheet_namespace &&
+      scanner.namespace_uri() != strict_spreadsheet_namespace
+    ) {
+    raise InvalidXml(
+      msg="\{root_local_name.to_owned()} document element is invalid",
+    )
+  }
+  let spreadsheet_namespace = scanner.namespace_uri().to_owned()
+  let (relationship_namespace, other_relationship_namespace) = if spreadsheet_namespace ==
+    strict_spreadsheet_namespace {
+    (
+      strict_relationship_attribute_namespace, transitional_relationship_attribute_namespace,
+    )
+  } else {
+    (
+      transitional_relationship_attribute_namespace, strict_relationship_attribute_namespace,
+    )
+  }
+  let mut drawing : String? = None
+  let mut legacy_drawing : String? = None
+  let mut legacy_drawing_hf : String? = None
+  while workbook_scanner_next(scanner) {
+    let local_name = scanner.local_name()
+    let selected = local_name == "drawing" ||
+      (
+        root_local_name == "worksheet" &&
+        (local_name == "legacyDrawing" || local_name == "legacyDrawingHF")
+      )
+    if !selected ||
+      (
+        scanner.namespace_uri() != transitional_spreadsheet_namespace &&
+        scanner.namespace_uri() != strict_spreadsheet_namespace
+      ) {
+      continue
+    }
+    if scanner.namespace_uri() != spreadsheet_namespace ||
+      scanner.depth() != 2 ||
+      scanner.parent_local_name() != Some(root_local_name) ||
+      scanner.parent_namespace_uri() != Some(spreadsheet_namespace) {
+      raise InvalidXml(
+        msg="\{local_name.to_owned()} relationship element is misplaced",
+      )
+    }
+    if workbook_scanner_attribute(scanner, other_relationship_namespace, "id")
+      is Some(_) {
+      raise InvalidXml(
+        msg="\{local_name.to_owned()} relationship namespace is invalid",
+      )
+    }
+    let id = match
+      workbook_scanner_attribute(scanner, relationship_namespace, "id") {
+      Some(value) if value != "" => value
+      _ =>
+        raise InvalidXml(
+          msg="\{local_name.to_owned()} relationship id is missing",
+        )
+    }
+    if local_name == "drawing" {
+      if drawing is Some(_) {
+        raise InvalidXml(msg="drawing relationship element is duplicated")
+      }
+      drawing = Some(id)
+    } else if local_name == "legacyDrawing" {
+      if legacy_drawing is Some(_) {
+        raise InvalidXml(msg="legacyDrawing relationship element is duplicated")
+      }
+      legacy_drawing = Some(id)
+    } else {
+      if legacy_drawing_hf is Some(_) {
+        raise InvalidXml(
+          msg="legacyDrawingHF relationship element is duplicated",
+        )
+      }
+      legacy_drawing_hf = Some(id)
+    }
+  }
+  (drawing, legacy_drawing, legacy_drawing_hf)
+}
+
+///|
+test "sheet drawing relationships require direct dialect-matched roots" {
+  let transitional =
+    #|<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><drawing r:id="drawing"/><legacyDrawing r:id="legacy"/><legacyDrawingHF r:id="header-footer"/></worksheet>
+  let (drawing, legacy, header_footer) = parse_sheet_drawing_rel_ids(
+    transitional, "worksheet",
+  )
+  assert_true(drawing == Some("drawing"))
+  assert_true(legacy == Some("legacy"))
+  assert_true(header_footer == Some("header-footer"))
+  let strict =
+    #|<chartsheet xmlns="http://purl.oclc.org/ooxml/spreadsheetml/main" xmlns:r="http://purl.oclc.org/ooxml/officeDocument/relationships"><drawing r:id="strict-drawing"/></chartsheet>
+  let (strict_drawing, strict_legacy, strict_header_footer) = parse_sheet_drawing_rel_ids(
+    strict, "chartsheet",
+  )
+  assert_true(strict_drawing == Some("strict-drawing"))
+  assert_true(strict_legacy is None)
+  assert_true(strict_header_footer is None)
+
+  let invalid : Array[(String, String, String)] = [
+    (
+      (
+        #|<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetData><drawing r:id="decoy"/></sheetData><drawing r:id="real"/></worksheet>
+      ),
+      "worksheet",
+      "drawing relationship element is misplaced",
+    ),
+    (
+      (
+        #|<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:s="http://purl.oclc.org/ooxml/spreadsheetml/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><s:drawing r:id="decoy"/><drawing r:id="real"/></worksheet>
+      ),
+      "worksheet",
+      "drawing relationship element is misplaced",
+    ),
+    (
+      (
+        #|<chartsheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://purl.oclc.org/ooxml/officeDocument/relationships"><drawing r:id="wrong"/></chartsheet>
+      ),
+      "chartsheet",
+      "drawing relationship namespace is invalid",
+    ),
+    (
+      (
+        #|<chartsheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><drawing r:id="first"/><drawing r:id="second"/></chartsheet>
+      ),
+      "chartsheet",
+      "drawing relationship element is duplicated",
+    ),
+  ]
+  for entry in invalid {
+    let (xml, root, expected) = entry
+    try parse_sheet_drawing_rel_ids(xml, root) catch {
+      InvalidXml(msg~) => assert_eq(msg, expected)
+      _ => fail("unexpected sheet drawing relationship error")
+    } noraise {
+      _ => fail("expected invalid sheet drawing relationship rejection")
+    }
+  }
 }
 
 ///|
@@ -4082,14 +4192,11 @@ fn read_zip_archive_core_unchecked(
       let table_part_ids = parse_table_part_ids(sheet_core_xml)
       let pivot_part_ids = parse_pivot_table_part_ids(sheet_core_xml)
       let slicer_rel_ids = parse_sheet_slicer_rel_ids(sheet_feature_xml)
-      let drawing_rel_id = parse_legacy_drawing_rel_id(
-        sheet_core_xml, "drawing",
-      )
-      let legacy_drawing_rel_id = parse_legacy_drawing_rel_id(
-        sheet_core_xml, "legacyDrawing",
-      )
-      let legacy_drawing_hf_rel_id = parse_legacy_drawing_rel_id(
-        sheet_core_xml, "legacyDrawingHF",
+      let (drawing_rel_id, legacy_drawing_rel_id, legacy_drawing_hf_rel_id) = parse_sheet_drawing_rel_ids(
+        sheet_source_xml,
+        "worksheet",
+        budget=read_budget,
+        cancelled~,
       )
       let sparkline_groups = parse_sparkline_groups(sheet_feature_xml)
       let data_validations = parse_data_validations(
@@ -4871,8 +4978,11 @@ fn read_zip_archive_core_unchecked(
       )
       read_budget.checkpoint()
       read_budget.charge_work(chartsheet_xml.length())
-      let drawing_rel_id = parse_legacy_drawing_rel_id(
-        chartsheet_xml, "drawing",
+      let (drawing_rel_id, _, _) = parse_sheet_drawing_rel_ids(
+        chartsheet_source_xml,
+        "chartsheet",
+        budget=read_budget,
+        cancelled~,
       )
       let drawing_rel = match drawing_rel_id {
         Some(value) => value
