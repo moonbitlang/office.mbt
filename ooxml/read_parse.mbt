@@ -151,6 +151,15 @@ priv enum ParsedRelationshipTargetMode {
 }
 
 ///|
+/// One validated relationship from an OPC `.rels` part.
+pub struct PackageRelationship {
+  id : String
+  rel_type : String
+  target : String
+  external : Bool
+}
+
+///|
 fn relationship_target_mode(
   scanner : XmlStartTagScanner,
 ) -> ParsedRelationshipTargetMode raise ParseXmlError {
@@ -870,6 +879,85 @@ fn parse_relationship_targets_by_types_selected(
   }
   trim_relationship_mce_states(mce_states, 1, mce_context)
   targets
+}
+
+///|
+/// Parses every effective relationship record in source order. The same
+/// namespace, MCE, schema, IRI, uniqueness, cancellation, and resource-limit
+/// checks used by the type-selecting readers apply here.
+pub fn parse_package_relationships(
+  xml : StringView,
+  cancelled? : () -> Bool = () => false,
+) -> Array[PackageRelationship] raise ParseXmlError {
+  let relationships : Array[PackageRelationship] = []
+  let ids : Set[String] = Set([])
+  let scanner = XmlStartTagScanner::new(xml, cancelled~)
+  let mce_states : Array[RelationshipMceState] = []
+  let mce_context = RelationshipMceContext::new()
+  let mut records = 0
+  let mut retained_chars = 0
+  while scanner.next() {
+    let mce_state = relationship_mce_state_for_current_element(
+      scanner, mce_states, mce_context,
+    )
+    mce_states.push(mce_state)
+    if mce_state.element_effective_depth == 1 {
+      continue
+    }
+    if !mce_state.active || !mce_state.included_in_effective_tree {
+      continue
+    }
+    if scanner.namespace_uri() != package_relationships_namespace ||
+      scanner.local_name() != "Relationship" ||
+      mce_state.element_effective_depth != 2 {
+      raise InvalidXml(msg="relationships effective content is invalid")
+    }
+    relationship_schema_attribute_allowed(
+      scanner,
+      mce_context,
+      ["Id", "Type", "Target", "TargetMode"],
+      "record",
+    )
+    records = records + 1
+    if records > max_relationship_records {
+      raise InvalidXml(msg="relationship record limit exceeded")
+    }
+    let rel_type = relationship_attribute(scanner, "Type")
+    let id = relationship_attribute(scanner, "Id")
+    let target = relationship_attribute(scanner, "Target")
+    let parsed_target_mode = relationship_target_mode(scanner)
+    if rel_type.length() > max_relationship_type_chars {
+      raise InvalidXml(msg="relationship type is too long")
+    }
+    if !relationship_type_iri_valid(rel_type) {
+      raise InvalidXml(msg="relationship type is invalid")
+    }
+    if id.length() > max_relationship_id_chars {
+      raise InvalidXml(msg="relationship id is too long")
+    }
+    if !is_xml_ncname(id) {
+      raise InvalidXml(msg="relationship id is invalid")
+    }
+    if target.length() > max_relationship_target_chars {
+      raise InvalidXml(msg="relationship target is too long")
+    }
+    let external_target = parsed_target_mode is ExternalTarget
+    if !relationship_target_iri_valid(target, external_target) {
+      raise InvalidXml(msg="relationship target is invalid")
+    }
+    if ids.contains(id) {
+      raise InvalidXml(msg="duplicate relationship id")
+    }
+    ids.add(id)
+    let retained = id.length() + rel_type.length() + target.length()
+    if retained > max_relationship_retained_chars - retained_chars {
+      raise InvalidXml(msg="relationship retained text limit exceeded")
+    }
+    retained_chars = retained_chars + retained
+    relationships.push({ id, rel_type, target, external: external_target })
+  }
+  trim_relationship_mce_states(mce_states, 1, mce_context)
+  relationships
 }
 
 ///|

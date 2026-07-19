@@ -1915,6 +1915,49 @@ pub fn XmlStartTagScanner::attribute(
 }
 
 ///|
+/// Returns decoded values for every attribute in `namespace_uri` on the
+/// current element. Namespace declarations are excluded and source order is
+/// retained. This is useful for extensible XML vocabularies whose relationship
+/// attribute local names are not known ahead of time.
+pub fn XmlStartTagScanner::attribute_values_in_namespace(
+  self : XmlStartTagScanner,
+  namespace_uri : StringView,
+) -> Array[String] raise ParseXmlError {
+  let values : Array[String] = []
+  let mut next = self.current_name_end
+  while next_xml_attribute(
+          self.xml,
+          next,
+          self.current_tag_end,
+          cancelled=self.cancelled,
+        )
+        is Some(attribute) {
+    next = attribute.next
+    if xml_namespace_declaration_prefix(self.xml, attribute) is Some(_) {
+      continue
+    }
+    let colon = validate_xml_qname(
+      self.xml,
+      attribute.name_start,
+      attribute.name_end,
+    )
+    let prefix = match colon {
+      Some(value) => self.xml[attribute.name_start:value]
+      None => self.xml[attribute.name_start:attribute.name_start]
+    }
+    if xml_string_equals_view(self.resolve_prefix(prefix, true), namespace_uri) {
+      values.push(
+        decode_xml_attribute(
+          self.xml[attribute.value_start:attribute.value_end],
+          cancelled=self.cancelled,
+        ),
+      )
+    }
+  }
+  values
+}
+
+///|
 priv struct XmlExpandedAttributeName {
   namespace_uri : String
   namespace_id : Int

@@ -130,6 +130,36 @@ test "ooxml read_parse: relationship identifiers and URIs fail closed" {
 }
 
 ///|
+test "ooxml read_parse: enumerates validated relationship records" {
+  let xml =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+    #|  <Relationship Id="inside" Type="urn:inside" Target="parts/a.xml"/>
+    #|  <Relationship Id="outside" Type="urn:outside" Target="https://example.invalid/a?x=1&amp;y=2" TargetMode="External"/>
+    #|</Relationships>
+  let records = @ooxml.parse_package_relationships(xml)
+  inspect(records.length(), content="2")
+  inspect(records[0].id, content="inside")
+  inspect(records[0].rel_type, content="urn:inside")
+  inspect(records[0].target, content="parts/a.xml")
+  inspect(records[0].external, content="false")
+  inspect(records[1].id, content="outside")
+  inspect(records[1].target, content="https://example.invalid/a?x=1&y=2")
+  inspect(records[1].external, content="true")
+}
+
+///|
+test "ooxml scanner enumerates relationship namespace attributes" {
+  let xml =
+    #|<root xmlns:r="urn:relationships" xmlns:q="urn:relationships" plain="ignored" r:id="first" q:future="second&amp;value"/>
+  let scanner = @ooxml.XmlStartTagScanner::new(xml)
+  assert_true(scanner.next())
+  debug_inspect(
+    scanner.attribute_values_in_namespace("urn:relationships"),
+    content="[\"first\", \"second&value\"]",
+  )
+}
+
+///|
 test "ooxml read_parse: relationship target modes are explicit and filtered" {
   let xml =
     #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">

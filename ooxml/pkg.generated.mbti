@@ -44,6 +44,8 @@ pub fn parse_internal_relationship_targets_by_types(StringView, ArrayView[String
 
 pub fn parse_package_content_types(StringView, cancelled? : () -> Bool) -> PackageContentTypes raise ParseXmlError
 
+pub fn parse_package_relationships(StringView, cancelled? : () -> Bool) -> Array[PackageRelationship] raise ParseXmlError
+
 pub fn project_xml_markup_compatibility(StringView, ArrayView[String], max_output_chars? : Int, cancelled? : () -> Bool, extension_elements? : ArrayView[(String, String)]) -> String raise ParseXmlError
 
 pub fn remove_xml_expanded_name_subtrees(StringView, ArrayView[String], String, cancelled? : () -> Bool) -> String? raise ParseXmlError
@@ -78,6 +80,13 @@ pub struct PackageContentTypes {
 }
 pub fn PackageContentTypes::content_type_for(Self, StringView, cancelled? : () -> Bool) -> String? raise ParseXmlError
 
+pub struct PackageRelationship {
+  id : String
+  rel_type : String
+  target : String
+  external : Bool
+}
+
 type WorkbookManifest
 pub fn WorkbookManifest::add_content_default(Self, String, String) -> Unit
 pub fn WorkbookManifest::add_content_override(Self, String, String) -> Unit
@@ -94,6 +103,7 @@ pub struct XmlStartTagScanner {
   // private fields
 }
 pub fn XmlStartTagScanner::attribute(Self, StringView, StringView) -> String? raise ParseXmlError
+pub fn XmlStartTagScanner::attribute_values_in_namespace(Self, StringView) -> Array[String] raise ParseXmlError
 pub fn XmlStartTagScanner::attribute_view(Self, StringView, StringView) -> StringView? raise ParseXmlError
 pub fn XmlStartTagScanner::depth(Self) -> Int
 pub fn XmlStartTagScanner::local_name(Self) -> StringView
