@@ -178,6 +178,28 @@ fn parse_drawing_anchors(
     anchors.push((full, positioning))
     parsed += 1
   }
+  let mut first_absolute = true
+  for chunk in xml_str.split("<xdr:absoluteAnchor") {
+    if first_absolute {
+      first_absolute = false
+      continue
+    }
+    if (parsed & 255) == 0 {
+      match budget {
+        Some(value) => value.checkpoint()
+        None => ()
+      }
+    }
+    let text = chunk.to_owned()
+    let close_tag = "</xdr:absoluteAnchor>"
+    let end = match text.find(close_tag) {
+      Some(pos) => pos + close_tag.length()
+      None => raise InvalidXml(msg="absoluteAnchor close missing")
+    }
+    let slice = text[:end]
+    anchors.push(("<xdr:absoluteAnchor\{slice.to_owned()}", Absolute))
+    parsed += 1
+  }
   match budget {
     Some(value) => value.checkpoint()
     None => ()
@@ -1452,15 +1474,29 @@ test "read_drawing_xml wb: parse_drawing_anchors validation and positioning" {
     _ => fail("expected InvalidXml for twoCellAnchor close missing")
   }
 
+  let absolute_missing_close = "<xdr:wsDr><xdr:absoluteAnchor><xdr:graphicFrame/></xdr:wsDr>"
+  let absolute_result : Result[Array[(String, PicturePositioning)], Error] = Ok(
+    parse_drawing_anchors(absolute_missing_close),
+  ) catch {
+    e => Err(e)
+  }
+  match absolute_result {
+    Err(XlsxError::InvalidXml(msg~)) =>
+      inspect(msg, content="absoluteAnchor close missing")
+    _ => fail("expected InvalidXml for absoluteAnchor close missing")
+  }
+
   let xml =
     #|<xdr:wsDr>
     #|  <xdr:twoCellAnchor editAs="absolute"></xdr:twoCellAnchor>
     #|  <xdr:twoCellAnchor editAs="free"></xdr:twoCellAnchor>
+    #|  <xdr:absoluteAnchor></xdr:absoluteAnchor>
     #|</xdr:wsDr>
   let anchors = parse_drawing_anchors(xml)
-  inspect(anchors.length(), content="2")
+  inspect(anchors.length(), content="3")
   debug_inspect(anchors[0].1, content="Absolute")
   debug_inspect(anchors[1].1, content="TwoCell")
+  debug_inspect(anchors[2].1, content="Absolute")
 }
 
 ///|

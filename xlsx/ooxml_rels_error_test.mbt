@@ -426,6 +426,47 @@ test "ooxml rels: chartsheet binds the chart selected by drawing r:id" {
 }
 
 ///|
+test "ooxml rels: chartsheet accepts absoluteAnchor drawings" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  ignore(
+    workbook.add_chart_sheet(
+      "Chart1",
+      (
+        #|<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart><c:title><c:tx><c:v>ABSOLUTE</c:v></c:tx></c:title></c:chart></c:chartSpace>
+      ),
+    ),
+  )
+  let archive = @zip.read(@xlsx.write(workbook)) catch {
+    err => fail("zip read failed: \{repr(err)}")
+  }
+  let drawing_path = "xl/drawings/drawing2.xml"
+  guard archive.get(drawing_path) is Some(_) else {
+    fail("missing chart-sheet drawing fixture")
+  }
+  let absolute_drawing =
+    #|<?xml version="1.0" encoding="UTF-8"?>
+    #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+    #|  <xdr:absoluteAnchor>
+    #|    <xdr:pos x="0" y="0"/>
+    #|    <xdr:ext cx="4572000" cy="2476500"/>
+    #|    <xdr:graphicFrame>
+    #|      <xdr:nvGraphicFramePr><xdr:cNvPr id="1" name="Chart 1"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr>
+    #|      <xdr:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="2476500"/></xdr:xfrm>
+    #|      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
+    #|    </xdr:graphicFrame>
+    #|    <xdr:clientData/>
+    #|  </xdr:absoluteAnchor>
+    #|</xdr:wsDr>
+  assert_true(
+    archive.replace(drawing_path, @encoding/utf8.encode(absolute_drawing)),
+  )
+  let parsed = @xlsx.read(@zip.write(archive))
+  inspect(parsed.chart_sheets().length(), content="1")
+  assert_true(parsed.chart_sheets()[0].chart_xml().contains("ABSOLUTE"))
+}
+
+///|
 test "ooxml rels: chartsheet requires its selected drawing part" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

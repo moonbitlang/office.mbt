@@ -83,7 +83,9 @@ let xlsx_drawing_core_element_namespaces : Array[String] = [
 
 ///|
 fn xlsx_drawing_anchor_name(local_name : StringView) -> Bool {
-  local_name == "oneCellAnchor" || local_name == "twoCellAnchor"
+  local_name == "oneCellAnchor" ||
+  local_name == "twoCellAnchor" ||
+  local_name == "absoluteAnchor"
 }
 
 ///|
