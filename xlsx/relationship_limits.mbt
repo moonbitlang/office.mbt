@@ -89,6 +89,8 @@ fn preflight_archive_relationship_limits(
   archive : @zip.Archive,
   limits : ReadLimits,
   transcoder? : (String, Bytes) -> String raise XlsxError,
+  decode? : (BytesView) -> String raise XlsxError,
+  budget? : ReadBudget,
   cancelled? : () -> Bool = () => false,
 ) -> Unit raise XlsxError {
   let records = Ref(0)
@@ -98,7 +100,19 @@ fn preflight_archive_relationship_limits(
     if !is_relationship_package_part(entry.name()) {
       continue
     }
-    let xml = decode_utf8(entry.data(), transcoder)
+    let xml = match decode {
+      Some(value) => value(entry.data())
+      None => decode_utf8(entry.data(), transcoder)
+    }
+    match budget {
+      Some(value) => {
+        value.checkpoint()
+        // The namespace-aware visitor below is an additional full pass beyond
+        // the source preflight performed by the shared decoder.
+        value.charge_work(xml.length())
+      }
+      None => ()
+    }
     for_each_relationship_start_tag(
       xml,
       scanner => {

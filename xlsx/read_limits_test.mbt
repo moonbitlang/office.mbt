@@ -39,6 +39,16 @@ fn replace_xlsx_part(
 }
 
 ///|
+fn add_unused_relationship_part(
+  source : BytesView,
+  content : String,
+) -> Bytes raise {
+  let archive = @zip.read(source)
+  archive.add("custom/_rels/unused.rels", @encoding/utf8.encode(content))
+  @zip.write(archive)
+}
+
+///|
 fn lying_deflate_package() -> Bytes raise {
   let archive = @zip.Archive::new()
   let data = Array::make(4096, b'A')
@@ -517,6 +527,60 @@ test "semantic read limits bound cumulative parser work" {
       assert_true(actual > limit)
     }
     _ => fail("expected parser work limit")
+  }
+}
+
+///|
+test "semantic read preflight charges unused relationship XML" {
+  let source = bounded_workbook_fixture()
+  let large_relationships = add_unused_relationship_part(
+    source,
+    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
+    " ".repeat(2 * 1024 * 1024) +
+    "</Relationships>",
+  )
+  let markup_relationships = add_unused_relationship_part(
+    source,
+    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
+    "<x/>".repeat(8192) +
+    "</Relationships>",
+  )
+  let aggregate_limit = 1024 * 1024
+  let markup_limit = 4096
+  let aggregate_limits = @xlsx.ReadLimits::with_values(
+    max_total_xml_bytes=aggregate_limit,
+  )
+  let work_limits = @xlsx.ReadLimits::with_values(
+    max_parser_work_units=aggregate_limit,
+  )
+  let markup_limits = @xlsx.ReadLimits::with_values(
+    max_xml_markup_tokens=markup_limit,
+  )
+  // Each policy accepts the ordinary workbook; only the unused relationship
+  // part pushes the corresponding shared budget over its ceiling.
+  for limits in [aggregate_limits, work_limits, markup_limits] {
+    ignore(@xlsx.read(source, limits~))
+  }
+  for
+    entry in [
+      (
+        large_relationships, aggregate_limits, "total_xml_bytes", aggregate_limit,
+      ),
+      (large_relationships, work_limits, "parser_work_units", aggregate_limit),
+      (markup_relationships, markup_limits, "xml_markup_tokens", markup_limit),
+    ] {
+    let (bytes, limits, expected_kind, expected_limit) = entry
+    let result : Result[@xlsx.Workbook, Error] = Ok(@xlsx.read(bytes, limits~)) catch {
+      error => Err(error)
+    }
+    match result {
+      Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
+        assert_eq(kind, expected_kind)
+        assert_eq(limit, expected_limit)
+        assert_true(actual > limit)
+      }
+      _ => fail("expected unused relationship XML limit")
+    }
   }
 }
 

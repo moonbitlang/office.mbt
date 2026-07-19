@@ -3650,19 +3650,8 @@ fn read_zip_archive_core_unchecked(
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
   let read_budget = ReadBudget::new(limits, cancelled~)
-  preflight_archive_relationship_limits(
-    archive,
-    limits,
-    transcoder?,
-    cancelled~,
-  )
-  let part_names = archive_part_name_index(archive, budget=read_budget)
   let decoded_xml_bytes = Ref(0)
   let xml_markup_tokens = Ref(0)
-  let materialized_cells = Ref(0)
-  let materialized_dimensions = Ref(0)
-  let dimension_work = Ref(0)
-  let drawing_media_cache : Map[String, Bytes] = Map([])
   let decode_source = (value : BytesView) => {
     if value.length() > limits.max_xml_part_bytes {
       raise ResourceLimitExceeded(
@@ -3697,6 +3686,18 @@ fn read_zip_archive_core_unchecked(
     read_budget.scan_xml(decoded)
     decoded
   }
+  preflight_archive_relationship_limits(
+    archive,
+    limits,
+    decode=decode_source,
+    budget=read_budget,
+    cancelled~,
+  )
+  let part_names = archive_part_name_index(archive, budget=read_budget)
+  let materialized_cells = Ref(0)
+  let materialized_dimensions = Ref(0)
+  let dimension_work = Ref(0)
+  let drawing_media_cache : Map[String, Bytes] = Map([])
   let decode = (value : BytesView) => {
     let decoded = decode_source(value)
     read_budget.charge_work(decoded.length())
