@@ -274,6 +274,7 @@ pub struct Chart {
   print_object : Bool
   locked : Bool
   positioning : PicturePositioning
+  // private fields
 }
 
 pub(all) struct ChartAxis {
@@ -1052,6 +1053,7 @@ pub struct Image {
   alt_text : String
   lock_aspect_ratio : Bool
   positioning : PicturePositioning
+  // private fields
 }
 
 pub struct MergeCell {
@@ -1336,6 +1338,7 @@ pub struct Shape {
   print_object : Bool
   locked : Bool
   positioning : PicturePositioning
+  // private fields
 } derive(@debug.Debug)
 pub fn Shape::new(String, String, macro_name? : String, text? : String, paragraph? : Array[RichTextRun], width? : Int, height? : Int, scale_x? : Double, scale_y? : Double, fill_color? : String, fill_transparency? : Int, line_color? : String, line_width? : Double, name? : String, alt_text? : String, print_object? : Bool, locked? : Bool, positioning? : PicturePositioning) -> Self raise XlsxError
 #deprecated
@@ -1511,6 +1514,7 @@ pub struct Slicer {
   display_header : Bool?
   item_desc : Bool
   format : GraphicOptions
+  // private fields
 } derive(@debug.Debug)
 pub fn Slicer::new(String) -> Self raise XlsxError
 #deprecated

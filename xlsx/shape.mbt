@@ -81,6 +81,10 @@ pub struct Shape {
   print_object : Bool
   locked : Bool
   positioning : PicturePositioning
+  priv drawing_offset_x_emu : Int?
+  priv drawing_offset_y_emu : Int?
+  priv drawing_width_emu : Int?
+  priv drawing_height_emu : Int?
 } derive(Debug)
 
 ///|
@@ -202,5 +206,9 @@ pub fn Shape::new(
     print_object,
     locked,
     positioning,
+    drawing_offset_x_emu: None,
+    drawing_offset_y_emu: None,
+    drawing_width_emu: None,
+    drawing_height_emu: None,
   }
 }

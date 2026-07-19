@@ -248,6 +248,10 @@ priv struct DrawingChart {
   locked : Bool
   positioning : PicturePositioning
   rel_id : Int
+  drawing_offset_x_emu : Int?
+  drawing_offset_y_emu : Int?
+  drawing_width_emu : Int?
+  drawing_height_emu : Int?
 }
 
 ///|
@@ -413,16 +417,36 @@ fn write_drawing_xml(
     let row_idx = row - 1
     let pic_id = obj_id
     obj_id = obj_id + 1
-    let col_off = drawing_pixel_offset_for_write(
-      image.offset_x,
-      "drawing image column offset",
+    let col_off = match image.drawing_offset_x_emu {
+      Some(value) => value
+      None =>
+        drawing_pixel_offset_for_write(
+          image.offset_x,
+          "drawing image column offset",
+        )
+    }
+    let row_off = match image.drawing_offset_y_emu {
+      Some(value) => value
+      None =>
+        drawing_pixel_offset_for_write(
+          image.offset_y,
+          "drawing image row offset",
+        )
+    }
+    let cx = drawing_extent_for_write(
+      match image.drawing_width_emu {
+        Some(value) => value
+        None => image.width_emu
+      },
+      "drawing image width",
     )
-    let row_off = drawing_pixel_offset_for_write(
-      image.offset_y,
-      "drawing image row offset",
+    let cy = drawing_extent_for_write(
+      match image.drawing_height_emu {
+        Some(value) => value
+        None => image.height_emu
+      },
+      "drawing image height",
     )
-    let cx = drawing_extent_for_write(image.width_emu, "drawing image width")
-    let cy = drawing_extent_for_write(image.height_emu, "drawing image height")
     let picture_name = if image.name == "" {
       "Image \{pic_id}"
     } else {
@@ -553,16 +577,36 @@ fn write_drawing_xml(
     let row_idx = row - 1
     let frame_id = obj_id
     obj_id = obj_id + 1
-    let col_off = drawing_pixel_offset_for_write(
-      chart.offset_x,
-      "drawing chart column offset",
+    let col_off = match chart.drawing_offset_x_emu {
+      Some(value) => value
+      None =>
+        drawing_pixel_offset_for_write(
+          chart.offset_x,
+          "drawing chart column offset",
+        )
+    }
+    let row_off = match chart.drawing_offset_y_emu {
+      Some(value) => value
+      None =>
+        drawing_pixel_offset_for_write(
+          chart.offset_y,
+          "drawing chart row offset",
+        )
+    }
+    let cx = drawing_extent_for_write(
+      match chart.drawing_width_emu {
+        Some(value) => value
+        None => chart.width_emu
+      },
+      "drawing chart width",
     )
-    let row_off = drawing_pixel_offset_for_write(
-      chart.offset_y,
-      "drawing chart row offset",
+    let cy = drawing_extent_for_write(
+      match chart.drawing_height_emu {
+        Some(value) => value
+        None => chart.height_emu
+      },
+      "drawing chart height",
     )
-    let cx = drawing_extent_for_write(chart.width_emu, "drawing chart width")
-    let cy = drawing_extent_for_write(chart.height_emu, "drawing chart height")
     match chart.positioning {
       TwoCell => {
         sb.write_view("  <xdr:twoCellAnchor>\n")
@@ -665,24 +709,36 @@ fn write_drawing_xml(
     let row_idx = row - 1
     let offset_x = shape.format.offset_x.unwrap_or(0)
     let offset_y = shape.format.offset_y.unwrap_or(0)
-    let col_off = drawing_pixel_offset_for_write(
-      offset_x, "drawing shape column offset",
-    )
-    let row_off = drawing_pixel_offset_for_write(
-      offset_y, "drawing shape row offset",
-    )
+    let col_off = match shape.drawing_offset_x_emu {
+      Some(value) => value
+      None =>
+        drawing_pixel_offset_for_write(offset_x, "drawing shape column offset")
+    }
+    let row_off = match shape.drawing_offset_y_emu {
+      Some(value) => value
+      None =>
+        drawing_pixel_offset_for_write(offset_y, "drawing shape row offset")
+    }
     let shape_id = obj_id
     obj_id = obj_id + 1
-    let cx = drawing_scaled_extent_for_write(
-      shape.width.to_double(),
-      shape.scale_x,
-      "drawing shape width",
-    )
-    let cy = drawing_scaled_extent_for_write(
-      shape.height.to_double(),
-      shape.scale_y,
-      "drawing shape height",
-    )
+    let cx = match shape.drawing_width_emu {
+      Some(value) => drawing_extent_for_write(value, "drawing shape width")
+      None =>
+        drawing_scaled_extent_for_write(
+          shape.width.to_double(),
+          shape.scale_x,
+          "drawing shape width",
+        )
+    }
+    let cy = match shape.drawing_height_emu {
+      Some(value) => drawing_extent_for_write(value, "drawing shape height")
+      None =>
+        drawing_scaled_extent_for_write(
+          shape.height.to_double(),
+          shape.scale_y,
+          "drawing shape height",
+        )
+    }
     match shape.positioning {
       TwoCell => {
         sb.write_view("  <xdr:twoCellAnchor>\n")
@@ -911,12 +967,16 @@ fn write_drawing_xml(
       Some(v) => v
       None => 0
     }
-    let col_off = drawing_pixel_offset_for_write(
-      offset_x, "drawing slicer column offset",
-    )
-    let row_off = drawing_pixel_offset_for_write(
-      offset_y, "drawing slicer row offset",
-    )
+    let col_off = match slicer.drawing_offset_x_emu {
+      Some(value) => value
+      None =>
+        drawing_pixel_offset_for_write(offset_x, "drawing slicer column offset")
+    }
+    let row_off = match slicer.drawing_offset_y_emu {
+      Some(value) => value
+      None =>
+        drawing_pixel_offset_for_write(offset_y, "drawing slicer row offset")
+    }
     let scale_x = match slicer.format.scale_x {
       Some(v) => if v <= 0.0 { 1.0 } else { v }
       None => 1.0
@@ -925,16 +985,24 @@ fn write_drawing_xml(
       Some(v) => if v <= 0.0 { 1.0 } else { v }
       None => 1.0
     }
-    let cx = drawing_scaled_extent_for_write(
-      slicer.width.to_double(),
-      scale_x,
-      "drawing slicer width",
-    )
-    let cy = drawing_scaled_extent_for_write(
-      slicer.height.to_double(),
-      scale_y,
-      "drawing slicer height",
-    )
+    let cx = match slicer.drawing_width_emu {
+      Some(value) => drawing_extent_for_write(value, "drawing slicer width")
+      None =>
+        drawing_scaled_extent_for_write(
+          slicer.width.to_double(),
+          scale_x,
+          "drawing slicer width",
+        )
+    }
+    let cy = match slicer.drawing_height_emu {
+      Some(value) => drawing_extent_for_write(value, "drawing slicer height")
+      None =>
+        drawing_scaled_extent_for_write(
+          slicer.height.to_double(),
+          scale_y,
+          "drawing slicer height",
+        )
+    }
     let positioning = match slicer.format.positioning {
       Some(v) => v
       None => TwoCell
@@ -2958,6 +3026,10 @@ fn write_with_io(
         locked: chart.locked,
         positioning: chart.positioning,
         rel_id,
+        drawing_offset_x_emu: chart.drawing_offset_x_emu,
+        drawing_offset_y_emu: chart.drawing_offset_y_emu,
+        drawing_width_emu: chart.drawing_width_emu,
+        drawing_height_emu: chart.drawing_height_emu,
       })
       rel_id = rel_id + 1
       manifest.add_content_override(
@@ -3054,6 +3126,10 @@ fn write_with_io(
         locked: true,
         positioning: OneCell,
         rel_id: 1,
+        drawing_offset_x_emu: None,
+        drawing_offset_y_emu: None,
+        drawing_width_emu: None,
+        drawing_height_emu: None,
       },
     ]
     let drawing_xml = write_drawing_xml(
@@ -3244,6 +3320,10 @@ fn wb_drawing_image_with_offset(
     alt_text: "",
     lock_aspect_ratio: false,
     positioning,
+    drawing_offset_x_emu: None,
+    drawing_offset_y_emu: None,
+    drawing_width_emu: None,
+    drawing_height_emu: None,
   }
   { image, rel_id: 1, hyperlink_rel_id: None }
 }
@@ -3265,6 +3345,10 @@ fn wb_drawing_chart(positioning : PicturePositioning) -> DrawingChart {
     locked: true,
     positioning,
     rel_id: 1,
+    drawing_offset_x_emu: None,
+    drawing_offset_y_emu: None,
+    drawing_width_emu: None,
+    drawing_height_emu: None,
   }
 }
 
@@ -3336,6 +3420,10 @@ fn wb_drawing_slicer(
     display_header: None,
     item_desc: false,
     format,
+    drawing_offset_x_emu: None,
+    drawing_offset_y_emu: None,
+    drawing_width_emu: None,
+    drawing_height_emu: None,
   }
   { slicer, is_table_slicer }
 }
@@ -3526,6 +3614,10 @@ test "write hardening wb: two-cell anchors enforce the worksheet boundary" {
     locked: true,
     positioning: TwoCell,
     rel_id: 1,
+    drawing_offset_x_emu: None,
+    drawing_offset_y_emu: None,
+    drawing_width_emu: None,
+    drawing_height_emu: None,
   }
   let result : Result[String, Error] = Ok(
     write_drawing_xml(Some(Worksheet::new("Sheet1")), [], [chart], [], []),
@@ -3555,6 +3647,10 @@ test "write hardening wb: signed offsets and exact end markers stay readable" {
     locked: true,
     positioning: TwoCell,
     rel_id: 1,
+    drawing_offset_x_emu: None,
+    drawing_offset_y_emu: None,
+    drawing_width_emu: None,
+    drawing_height_emu: None,
   }
   let boundary_xml = write_drawing_xml(
     Some(Worksheet::new("Sheet1")),
@@ -4044,6 +4140,10 @@ test "write hardening wb: write fails for slicer source missing" {
     display_header: None,
     item_desc: false,
     format: GraphicOptions::new(),
+    drawing_offset_x_emu: None,
+    drawing_offset_y_emu: None,
+    drawing_width_emu: None,
+    drawing_height_emu: None,
   })
   let result : Result[Bytes, Error] = Ok(write(workbook)) catch { e => Err(e) }
   inspect(result is Err(XlsxError::InvalidSheetOperation(_)), content="true")
@@ -4068,6 +4168,10 @@ test "write hardening wb: write fails for slicer table field missing" {
     display_header: None,
     item_desc: false,
     format: GraphicOptions::new(),
+    drawing_offset_x_emu: None,
+    drawing_offset_y_emu: None,
+    drawing_width_emu: None,
+    drawing_height_emu: None,
   })
   let result : Result[Bytes, Error] = Ok(write(workbook)) catch { e => Err(e) }
   inspect(result is Err(XlsxError::InvalidSheetOperation(_)), content="true")
@@ -4135,6 +4239,10 @@ test "write hardening wb: default zip writer failure maps to UnsupportedFeature"
     alt_text: "",
     lock_aspect_ratio: false,
     positioning: TwoCell,
+    drawing_offset_x_emu: None,
+    drawing_offset_y_emu: None,
+    drawing_width_emu: None,
+    drawing_height_emu: None,
   })
   let result : Result[Bytes, Error] = Ok(write(workbook)) catch { e => Err(e) }
   inspect(result is Err(XlsxError::UnsupportedFeature(_)), content="true")

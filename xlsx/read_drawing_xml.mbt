@@ -116,10 +116,17 @@ fn drawing_anchor_has_unsupported_reader_object(xml : StringView) -> Bool {
 }
 
 ///|
+priv enum DrawingAnchorForm {
+  OneCellAnchor
+  TwoCellAnchor
+  AbsoluteAnchor
+} derive(Eq, Debug)
+
+///|
 priv struct DrawingAnchor {
   xml : String
   positioning : PicturePositioning
-  native_absolute : Bool
+  form : DrawingAnchorForm
 }
 
 ///|
@@ -151,7 +158,7 @@ fn parse_drawing_int_attr(
 fn DrawingAnchor::origin_for_read(
   self : DrawingAnchor,
 ) -> DrawingAnchorOrigin raise XlsxError {
-  if self.native_absolute {
+  if self.form == AbsoluteAnchor {
     let pos_tag = match tag_attributes_in(self.xml, "xdr:pos") {
       Some(value) => value
       None => raise InvalidXml(msg="drawing absolute position missing")
@@ -200,13 +207,9 @@ fn DrawingAnchor::origin_for_read(
 
 ///|
 fn DrawingAnchor::uses_direct_extent(self : DrawingAnchor) -> Bool {
-  if self.native_absolute {
-    true
-  } else {
-    match self.positioning {
-      OneCell => true
-      TwoCell | Absolute => false
-    }
+  match self.form {
+    OneCellAnchor | AbsoluteAnchor => true
+    TwoCellAnchor => false
   }
 }
 
@@ -342,23 +345,30 @@ fn parse_drawing_anchors(
       }
     }
     let full = xml_str[start:close_end + 1].to_owned()
-    let native_absolute = next_name == "xdr:absoluteAnchor"
-    let positioning = if native_absolute {
-      Absolute
+    let form = if next_name == "xdr:absoluteAnchor" {
+      AbsoluteAnchor
     } else if next_name == "xdr:oneCellAnchor" {
-      OneCell
+      OneCellAnchor
     } else {
-      match tag_attributes_in(full, "xdr:twoCellAnchor") {
-        Some(tag) =>
-          match attr_value(tag, "editAs") {
-            Some(value) if value == "absolute" => Absolute
-            _ => TwoCell
-          }
-        None => TwoCell
-      }
+      TwoCellAnchor
+    }
+    let positioning = match form {
+      AbsoluteAnchor => Absolute
+      OneCellAnchor => OneCell
+      TwoCellAnchor =>
+        match tag_attributes_in(full, "xdr:twoCellAnchor") {
+          Some(tag) =>
+            match attr_value(tag, "editAs") {
+              Some("absolute") => Absolute
+              Some("oneCell") => OneCell
+              Some("twoCell") | None => TwoCell
+              Some(_) => raise InvalidXml(msg="drawing editAs value is invalid")
+            }
+          None => TwoCell
+        }
     }
     if !drawing_anchor_has_unsupported_reader_object(full) {
-      anchors.push({ xml: full, positioning, native_absolute })
+      anchors.push({ xml: full, positioning, form })
     }
     scanned += 1
     cursor = close_end + 1
@@ -571,6 +581,10 @@ fn parse_drawing_images(
       alt_text,
       lock_aspect_ratio,
       positioning,
+      drawing_offset_x_emu: Some(origin.col_off_emu),
+      drawing_offset_y_emu: Some(origin.row_off_emu),
+      drawing_width_emu: Some(width_emu),
+      drawing_height_emu: Some(height_emu),
     })
   }
   images
@@ -661,6 +675,10 @@ fn parse_drawing_charts(
       print_object,
       locked,
       positioning,
+      drawing_offset_x_emu: Some(origin.col_off_emu),
+      drawing_offset_y_emu: Some(origin.row_off_emu),
+      drawing_width_emu: Some(width_emu),
+      drawing_height_emu: Some(height_emu),
     })
   }
   charts
@@ -669,6 +687,7 @@ fn parse_drawing_charts(
 ///|
 fn parse_drawing_shapes(
   anchors : ArrayView[DrawingAnchor],
+  metrics : DrawingMetrics,
   budget? : ReadBudget,
 ) -> Array[Shape] raise XlsxError {
   let shapes : Array[Shape] = []
@@ -685,30 +704,7 @@ fn parse_drawing_shapes(
     }
     let origin = anchor.origin_for_read()
     let reference = origin.reference
-    if !anchor.uses_direct_extent() {
-      let to_body = match extract_tag_body_from(anchor_xml, "xdr:to") {
-        Some(value) => value
-        None => raise InvalidXml(msg="drawing shape to missing")
-      }
-      let to_col_idx0 = parse_xml_int_tag(
-        to_body, "xdr:col", "drawing shape to col invalid",
-      )
-      let to_row_idx0 = parse_xml_int_tag(
-        to_body, "xdr:row", "drawing shape to row invalid",
-      )
-      let to_col_off = parse_xml_int_tag(
-        to_body, "xdr:colOff", "drawing shape to colOff invalid",
-      )
-      let to_row_off = parse_xml_int_tag(
-        to_body, "xdr:rowOff", "drawing shape to rowOff invalid",
-      )
-      validate_drawing_axis_marker_for_read(
-        "col", to_col_idx0, to_col_off, true,
-      )
-      validate_drawing_axis_marker_for_read(
-        "row", to_row_idx0, to_row_off, true,
-      )
-    }
+    let (cx, cy) = anchor.extent_for_read(metrics, origin, object_name="shape")
     let c_nv_pr_tag = match tag_attributes_in(sp_body, "xdr:cNvPr") {
       Some(value) => value
       None => raise InvalidXml(msg="drawing shape cNvPr missing")
@@ -741,35 +737,6 @@ fn parse_drawing_shapes(
       Some(value) => value
       None => raise InvalidXml(msg="drawing shape spPr missing")
     }
-    let maybe_ext_tag = if anchor.native_absolute {
-      tag_attributes_in(anchor_xml, "xdr:ext")
-    } else {
-      let xfrm_body = match extract_tag_body_from(sppr_body, "a:xfrm") {
-        Some(value) => value
-        None => sppr_body
-      }
-      tag_attributes_in(xfrm_body, "a:ext")
-    }
-    let ext_tag = match maybe_ext_tag {
-      Some(value) => value
-      None => raise InvalidXml(msg="drawing shape ext missing")
-    }
-    let cx = match attr_value(ext_tag, "cx") {
-      Some(value) =>
-        @string.parse_int(value, base=10) catch {
-          _ => raise InvalidXml(msg="drawing shape cx invalid")
-        }
-      None => raise InvalidXml(msg="drawing shape cx missing")
-    }
-    let cy = match attr_value(ext_tag, "cy") {
-      Some(value) =>
-        @string.parse_int(value, base=10) catch {
-          _ => raise InvalidXml(msg="drawing shape cy invalid")
-        }
-      None => raise InvalidXml(msg="drawing shape cy missing")
-    }
-    ignore(validate_drawing_extent_for_read(cx, "drawing shape cx"))
-    ignore(validate_drawing_extent_for_read(cy, "drawing shape cy"))
     let width = (cx.to_double() / picture_emu_per_pixel.to_double())
       .round()
       .to_int()
@@ -906,6 +873,10 @@ fn parse_drawing_shapes(
       print_object,
       locked,
       positioning,
+      drawing_offset_x_emu: Some(origin.col_off_emu),
+      drawing_offset_y_emu: Some(origin.row_off_emu),
+      drawing_width_emu: Some(cx),
+      drawing_height_emu: Some(cy),
     })
   }
   shapes
@@ -923,6 +894,10 @@ priv struct SlicerAnchorInfo {
   alt_text : String
   locked : Bool
   print_object : Bool
+  offset_x_emu : Int
+  offset_y_emu : Int
+  width_emu : Int
+  height_emu : Int
 }
 
 ///|
@@ -999,6 +974,10 @@ fn parse_drawing_slicer_anchors(
       alt_text,
       locked,
       print_object,
+      offset_x_emu: origin.col_off_emu,
+      offset_y_emu: origin.row_off_emu,
+      width_emu,
+      height_emu,
     }
   }
   out
@@ -1006,7 +985,7 @@ fn parse_drawing_slicer_anchors(
 
 ///|
 fn wb_from_xml() -> String {
-  "<xdr:from><xdr:col>0</xdr:col><xdr:row>0</xdr:row><xdr:colOff>0</xdr:colOff><xdr:rowOff>0</xdr:rowOff></xdr:from>"
+  "<xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>"
 }
 
 ///|
@@ -1017,13 +996,13 @@ fn wb_pic_xml(embed_id : String) -> String {
 ///|
 fn wb_one_cell_anchor(xml_from : String, xml_ext : String) -> String {
   let pic = wb_pic_xml("rId1")
-  "<xdr:wsDr><xdr:oneCellAnchor>\{xml_from}\{xml_ext}\{pic}</xdr:oneCellAnchor></xdr:wsDr>"
+  "<xdr:wsDr><xdr:oneCellAnchor>\{xml_from}\{xml_ext}\{pic}<xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>"
 }
 
 ///|
 fn wb_two_cell_anchor(xml_from : String, xml_to : String) -> String {
   let pic = wb_pic_xml("rId1")
-  "<xdr:wsDr><xdr:twoCellAnchor>\{xml_from}\{xml_to}\{pic}</xdr:twoCellAnchor></xdr:wsDr>"
+  "<xdr:wsDr><xdr:twoCellAnchor>\{xml_from}\{xml_to}\{pic}<xdr:clientData/></xdr:twoCellAnchor></xdr:wsDr>"
 }
 
 ///|
@@ -1037,10 +1016,10 @@ fn wb_rels_image_target(target : String) -> String {
 test "DrawingML MCE fallback feeds image chart shape and slicer readers" {
   let source =
     #|<wsDr xmlns="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:d="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:q="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:rel="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:compat="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:sl="http://schemas.microsoft.com/office/drawing/2010/slicer" xmlns:future="urn:future-drawing">
-    #|  <oneCellAnchor><from><col>0</col><row>0</row><colOff>0</colOff><rowOff>0</rowOff></from><ext cx="9525" cy="9525"/><compat:AlternateContent><compat:Choice Requires="future"><pic><nvPicPr><cNvPr id="1" name="bad-image"/></nvPicPr><blipFill><d:blip rel:embed="image-bad"/></blipFill></pic></compat:Choice><compat:Fallback><pic><nvPicPr><cNvPr id="2" name="good-image"/></nvPicPr><blipFill><d:blip rel:embed="image-good"/></blipFill></pic></compat:Fallback></compat:AlternateContent></oneCellAnchor>
-    #|  <oneCellAnchor><from><col>1</col><row>0</row><colOff>0</colOff><rowOff>0</rowOff></from><ext cx="9525" cy="9525"/><compat:AlternateContent><compat:Choice Requires="future"><graphicFrame><d:graphic><d:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><q:chart rel:id="chart-bad"/></d:graphicData></d:graphic></graphicFrame></compat:Choice><compat:Fallback><graphicFrame><d:graphic><d:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><q:chart rel:id="chart-good"/></d:graphicData></d:graphic></graphicFrame></compat:Fallback></compat:AlternateContent></oneCellAnchor>
-    #|  <oneCellAnchor><from><col>2</col><row>0</row><colOff>0</colOff><rowOff>0</rowOff></from><compat:AlternateContent><compat:Choice Requires="future"><sp><nvSpPr><cNvPr id="3" name="bad-shape"/></nvSpPr><spPr><d:xfrm><d:ext cx="9525" cy="9525"/></d:xfrm><d:prstGeom prst="bad"/></spPr></sp></compat:Choice><compat:Fallback><sp><nvSpPr><cNvPr id="4" name="good-shape"/></nvSpPr><spPr><d:xfrm><d:ext cx="9525" cy="9525"/></d:xfrm><d:prstGeom prst="rect"/></spPr></sp></compat:Fallback></compat:AlternateContent></oneCellAnchor>
-    #|  <oneCellAnchor><from><col>3</col><row>0</row><colOff>0</colOff><rowOff>0</rowOff></from><ext cx="9525" cy="9525"/><compat:AlternateContent><compat:Choice Requires="future"><graphicFrame macro="bad-macro"><nvGraphicFramePr><cNvPr id="5" descr="bad-slicer"/></nvGraphicFramePr><d:graphic><d:graphicData uri="http://schemas.microsoft.com/office/drawing/2010/slicer"><sl:slicer name="slicer-bad"/></d:graphicData></d:graphic></graphicFrame></compat:Choice><compat:Fallback><graphicFrame macro="good-macro"><nvGraphicFramePr><cNvPr id="6" descr="good-slicer"/></nvGraphicFramePr><d:graphic><d:graphicData uri="http://schemas.microsoft.com/office/drawing/2010/slicer"><sl:slicer name="slicer-good"/></d:graphicData></d:graphic></graphicFrame></compat:Fallback></compat:AlternateContent></oneCellAnchor>
+    #|  <oneCellAnchor><from><col>0</col><colOff>0</colOff><row>0</row><rowOff>0</rowOff></from><ext cx="9525" cy="9525"/><compat:AlternateContent><compat:Choice Requires="future"><pic><nvPicPr><cNvPr id="1" name="bad-image"/></nvPicPr><blipFill><d:blip rel:embed="image-bad"/></blipFill></pic></compat:Choice><compat:Fallback><pic><nvPicPr><cNvPr id="2" name="good-image"/></nvPicPr><blipFill><d:blip rel:embed="image-good"/></blipFill></pic></compat:Fallback></compat:AlternateContent><clientData/></oneCellAnchor>
+    #|  <oneCellAnchor><from><col>1</col><colOff>0</colOff><row>0</row><rowOff>0</rowOff></from><ext cx="9525" cy="9525"/><compat:AlternateContent><compat:Choice Requires="future"><graphicFrame><d:graphic><d:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><q:chart rel:id="chart-bad"/></d:graphicData></d:graphic></graphicFrame></compat:Choice><compat:Fallback><graphicFrame><d:graphic><d:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><q:chart rel:id="chart-good"/></d:graphicData></d:graphic></graphicFrame></compat:Fallback></compat:AlternateContent><clientData/></oneCellAnchor>
+    #|  <oneCellAnchor><from><col>2</col><colOff>0</colOff><row>0</row><rowOff>0</rowOff></from><ext cx="9525" cy="9525"/><compat:AlternateContent><compat:Choice Requires="future"><sp><nvSpPr><cNvPr id="3" name="bad-shape"/></nvSpPr><spPr><d:xfrm><d:ext cx="9525" cy="9525"/></d:xfrm><d:prstGeom prst="bad"/></spPr></sp></compat:Choice><compat:Fallback><sp><nvSpPr><cNvPr id="4" name="good-shape"/></nvSpPr><spPr><d:xfrm><d:ext cx="9525" cy="9525"/></d:xfrm><d:prstGeom prst="rect"/></spPr></sp></compat:Fallback></compat:AlternateContent><clientData/></oneCellAnchor>
+    #|  <oneCellAnchor><from><col>3</col><colOff>0</colOff><row>0</row><rowOff>0</rowOff></from><ext cx="9525" cy="9525"/><compat:AlternateContent><compat:Choice Requires="future"><graphicFrame macro="bad-macro"><nvGraphicFramePr><cNvPr id="5" descr="bad-slicer"/></nvGraphicFramePr><d:graphic><d:graphicData uri="http://schemas.microsoft.com/office/drawing/2010/slicer"><sl:slicer name="slicer-bad"/></d:graphicData></d:graphic></graphicFrame></compat:Choice><compat:Fallback><graphicFrame macro="good-macro"><nvGraphicFramePr><cNvPr id="6" descr="good-slicer"/></nvGraphicFramePr><d:graphic><d:graphicData uri="http://schemas.microsoft.com/office/drawing/2010/slicer"><sl:slicer name="slicer-good"/></d:graphicData></d:graphic></graphicFrame></compat:Fallback></compat:AlternateContent><clientData/></oneCellAnchor>
     #|</wsDr>
   let drawing = canonicalize_xlsx_drawing_xml(
     source, default_max_xml_part_bytes,
@@ -1092,7 +1071,7 @@ test "DrawingML MCE fallback feeds image chart shape and slicer readers" {
   )
   inspect(charts.length(), content="1")
   inspect(charts[0].xml, content="good-chart")
-  let shapes = parse_drawing_shapes(anchors)
+  let shapes = parse_drawing_shapes(anchors, metrics)
   inspect(shapes.length(), content="1")
   inspect(shapes[0].name, content="good-shape")
   inspect(shapes[0].shape_type, content="rect")
@@ -1110,10 +1089,10 @@ test "DrawingML extension payload cannot spoof anchors or drawing features" {
   let source =
     #|<wsDr xmlns="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:d="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:q="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:rel="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:sl="http://schemas.microsoft.com/office/drawing/2010/slicer">
     #|  <d:extLst><d:ext uri="urn:decoy-anchor"><oneCellAnchor><from><col>99</col><row>99</row><colOff>0</colOff><rowOff>0</rowOff></from><ext cx="1" cy="1"/><pic><nvPicPr><cNvPr id="99" name="bad-anchor"/></nvPicPr><blipFill><d:blip rel:embed="image-bad-anchor"/></blipFill></pic></oneCellAnchor></d:ext></d:extLst>
-    #|  <oneCellAnchor><from><col>0</col><row>0</row><colOff>0</colOff><rowOff>0</rowOff></from><ext cx="9525" cy="9525"/><d:extLst><d:ext uri="urn:decoy-image"><pic><nvPicPr><cNvPr id="91" name="bad-image"/></nvPicPr><blipFill><d:blip rel:embed="image-bad"/></blipFill></pic></d:ext></d:extLst><pic><nvPicPr><cNvPr id="1" name="good-image"/></nvPicPr><blipFill><d:blip rel:embed="image-good"/></blipFill></pic></oneCellAnchor>
-    #|  <oneCellAnchor><from><col>1</col><row>0</row><colOff>0</colOff><rowOff>0</rowOff></from><ext cx="9525" cy="9525"/><q:extLst><q:ext uri="urn:decoy-chart"><q:chart rel:id="chart-bad"/></q:ext></q:extLst><graphicFrame><d:graphic><d:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><q:chart rel:id="chart-good"/></d:graphicData></d:graphic></graphicFrame></oneCellAnchor>
-    #|  <oneCellAnchor><from><col>2</col><row>0</row><colOff>0</colOff><rowOff>0</rowOff></from><ext cx="9525" cy="9525"/><d:extLst><d:ext uri="urn:decoy-shape"><sp><nvSpPr><cNvPr id="92" name="bad-shape"/></nvSpPr><spPr><d:xfrm><d:ext cx="1" cy="1"/></d:xfrm><d:prstGeom prst="bad"/></spPr></sp></d:ext></d:extLst><sp><nvSpPr><cNvPr id="2" name="good-shape"/></nvSpPr><spPr><d:xfrm><d:ext cx="9525" cy="9525"/></d:xfrm><d:prstGeom prst="rect"/></spPr></sp></oneCellAnchor>
-    #|  <oneCellAnchor><from><col>3</col><row>0</row><colOff>0</colOff><rowOff>0</rowOff></from><ext cx="9525" cy="9525"/><sl:extLst><sl:ext uri="urn:decoy-slicer"><sl:slicer name="slicer-bad"/></sl:ext></sl:extLst><graphicFrame macro="good-macro"><nvGraphicFramePr><cNvPr id="3" descr="good-slicer"/></nvGraphicFramePr><d:graphic><d:graphicData uri="http://schemas.microsoft.com/office/drawing/2010/slicer"><sl:slicer name="slicer-good"/></d:graphicData></d:graphic></graphicFrame></oneCellAnchor>
+    #|  <oneCellAnchor><from><col>0</col><colOff>0</colOff><row>0</row><rowOff>0</rowOff></from><ext cx="9525" cy="9525"/><d:extLst><d:ext uri="urn:decoy-image"><pic><nvPicPr><cNvPr id="91" name="bad-image"/></nvPicPr><blipFill><d:blip rel:embed="image-bad"/></blipFill></pic></d:ext></d:extLst><pic><nvPicPr><cNvPr id="1" name="good-image"/></nvPicPr><blipFill><d:blip rel:embed="image-good"/></blipFill></pic><clientData/></oneCellAnchor>
+    #|  <oneCellAnchor><from><col>1</col><colOff>0</colOff><row>0</row><rowOff>0</rowOff></from><ext cx="9525" cy="9525"/><q:extLst><q:ext uri="urn:decoy-chart"><q:chart rel:id="chart-bad"/></q:ext></q:extLst><graphicFrame><d:graphic><d:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><q:chart rel:id="chart-good"/></d:graphicData></d:graphic></graphicFrame><clientData/></oneCellAnchor>
+    #|  <oneCellAnchor><from><col>2</col><colOff>0</colOff><row>0</row><rowOff>0</rowOff></from><ext cx="9525" cy="9525"/><d:extLst><d:ext uri="urn:decoy-shape"><sp><nvSpPr><cNvPr id="92" name="bad-shape"/></nvSpPr><spPr><d:xfrm><d:ext cx="1" cy="1"/></d:xfrm><d:prstGeom prst="bad"/></spPr></sp></d:ext></d:extLst><sp><nvSpPr><cNvPr id="2" name="good-shape"/></nvSpPr><spPr><d:xfrm><d:ext cx="9525" cy="9525"/></d:xfrm><d:prstGeom prst="rect"/></spPr></sp><clientData/></oneCellAnchor>
+    #|  <oneCellAnchor><from><col>3</col><colOff>0</colOff><row>0</row><rowOff>0</rowOff></from><ext cx="9525" cy="9525"/><sl:extLst><sl:ext uri="urn:decoy-slicer"><sl:slicer name="slicer-bad"/></sl:ext></sl:extLst><graphicFrame macro="good-macro"><nvGraphicFramePr><cNvPr id="3" descr="good-slicer"/></nvGraphicFramePr><d:graphic><d:graphicData uri="http://schemas.microsoft.com/office/drawing/2010/slicer"><sl:slicer name="slicer-good"/></d:graphicData></d:graphic></graphicFrame><clientData/></oneCellAnchor>
     #|</wsDr>
   let drawing = canonicalize_xlsx_drawing_xml(
     source, default_max_xml_part_bytes,
@@ -1140,8 +1119,8 @@ test "DrawingML extension payload cannot spoof anchors or drawing features" {
 test "DrawingML ignores valid unsupported anchor objects as complete subtrees" {
   let source =
     #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-    #|  <xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:row>0</xdr:row><xdr:colOff>0</xdr:colOff><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="9525" cy="9525"/><xdr:grpSp><xdr:nvGrpSpPr/><xdr:grpSpPr/><xdr:sp><xdr:nvSpPr><xdr:cNvPr id="1" name="nested"/></xdr:nvSpPr><xdr:spPr><a:prstGeom prst="rect"/></xdr:spPr></xdr:sp></xdr:grpSp><xdr:clientData/></xdr:oneCellAnchor>
-    #|  <xdr:oneCellAnchor><xdr:from><xdr:col>1</xdr:col><xdr:row>0</xdr:row><xdr:colOff>0</xdr:colOff><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="9525" cy="9525"/><xdr:sp><xdr:nvSpPr><xdr:cNvPr id="2" name="direct"/></xdr:nvSpPr><xdr:spPr><a:xfrm><a:ext cx="9525" cy="9525"/></a:xfrm><a:prstGeom prst="rect"/></xdr:spPr></xdr:sp><xdr:clientData/></xdr:oneCellAnchor>
+    #|  <xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="9525" cy="9525"/><xdr:grpSp><xdr:nvGrpSpPr/><xdr:grpSpPr/><xdr:sp><xdr:nvSpPr><xdr:cNvPr id="1" name="nested"/></xdr:nvSpPr><xdr:spPr><a:prstGeom prst="rect"/></xdr:spPr></xdr:sp></xdr:grpSp><xdr:clientData/></xdr:oneCellAnchor>
+    #|  <xdr:oneCellAnchor><xdr:from><xdr:col>1</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="9525" cy="9525"/><xdr:sp><xdr:nvSpPr><xdr:cNvPr id="2" name="direct"/></xdr:nvSpPr><xdr:spPr><a:xfrm><a:ext cx="9525" cy="9525"/></a:xfrm><a:prstGeom prst="rect"/></xdr:spPr></xdr:sp><xdr:clientData/></xdr:oneCellAnchor>
     #|</xdr:wsDr>
   let drawing = canonicalize_xlsx_drawing_xml(
     source, default_max_xml_part_bytes,
@@ -1274,7 +1253,7 @@ test "chartsheet drawing selector requires exactly one chart payload" {
   let anchor =
     #|<xdr:oneCellAnchor><xdr:graphicFrame><a:graphic><a:graphicData><c:chart r:id="selected"/></a:graphicData></a:graphic></xdr:graphicFrame></xdr:oneCellAnchor>
   let one : ReadOnlyArray[DrawingAnchor] = [
-    { xml: anchor, positioning: OneCell, native_absolute: false },
+    { xml: anchor, positioning: OneCell, form: OneCellAnchor },
   ]
   assert_eq(single_drawing_chart_rel_id(one), "selected")
   let empty : ReadOnlyArray[DrawingAnchor] = []
@@ -1285,8 +1264,8 @@ test "chartsheet drawing selector requires exactly one chart payload" {
     _ => fail("expected empty chartsheet drawing rejection")
   }
   let two : ReadOnlyArray[DrawingAnchor] = [
-    { xml: anchor, positioning: OneCell, native_absolute: false },
-    { xml: anchor, positioning: OneCell, native_absolute: false },
+    { xml: anchor, positioning: OneCell, form: OneCellAnchor },
+    { xml: anchor, positioning: OneCell, form: OneCellAnchor },
   ]
   try single_drawing_chart_rel_id(two) catch {
     InvalidXml(msg~) => assert_eq(msg, "chartsheet drawing has multiple charts")
@@ -1299,7 +1278,7 @@ test "chartsheet drawing selector requires exactly one chart payload" {
 ///|
 test "DrawingML validates Strict chart dialect and payload URI together" {
   let source =
-    #|<xdr:wsDr xmlns:xdr="http://purl.oclc.org/ooxml/drawingml/spreadsheetDrawing" xmlns:a="http://purl.oclc.org/ooxml/drawingml/main" xmlns:c="http://purl.oclc.org/ooxml/drawingml/chart" xmlns:r="http://purl.oclc.org/ooxml/officeDocument/relationships"><xdr:oneCellAnchor><xdr:graphicFrame><a:graphic><a:graphicData uri="http://purl.oclc.org/ooxml/drawingml/chart"><c:chart r:id="chart"/></a:graphicData></a:graphic></xdr:graphicFrame></xdr:oneCellAnchor></xdr:wsDr>
+    #|<xdr:wsDr xmlns:xdr="http://purl.oclc.org/ooxml/drawingml/spreadsheetDrawing" xmlns:a="http://purl.oclc.org/ooxml/drawingml/main" xmlns:c="http://purl.oclc.org/ooxml/drawingml/chart" xmlns:r="http://purl.oclc.org/ooxml/officeDocument/relationships"><xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="9525" cy="9525"/><xdr:graphicFrame><a:graphic><a:graphicData uri="http://purl.oclc.org/ooxml/drawingml/chart"><c:chart r:id="chart"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>
   let canonical = canonicalize_xlsx_drawing_xml(
     source, default_max_xml_part_bytes,
   )
@@ -1453,16 +1432,28 @@ test "read_drawing_xml wb: parse_drawing_anchors validation and positioning" {
     #|  <xdr:absoluteAnchor></xdr:absoluteAnchor >
     #|  <xdr:oneCellAnchor></xdr:oneCellAnchor>
     #|  <xdr:twoCellAnchor editAs="absolute"></xdr:twoCellAnchor >
-    #|  <xdr:twoCellAnchor editAs="free"></xdr:twoCellAnchor>
+    #|  <xdr:twoCellAnchor editAs="oneCell"></xdr:twoCellAnchor>
+    #|  <xdr:twoCellAnchor editAs="twoCell"></xdr:twoCellAnchor>
     #|</xdr:wsDr>
   let anchors = parse_drawing_anchors(xml)
-  inspect(anchors.length(), content="4")
+  inspect(anchors.length(), content="5")
   debug_inspect(anchors[0].positioning, content="Absolute")
   debug_inspect(anchors[1].positioning, content="OneCell")
   debug_inspect(anchors[2].positioning, content="Absolute")
-  debug_inspect(anchors[3].positioning, content="TwoCell")
-  inspect(anchors[0].native_absolute, content="true")
-  inspect(anchors[2].native_absolute, content="false")
+  debug_inspect(anchors[3].positioning, content="OneCell")
+  debug_inspect(anchors[4].positioning, content="TwoCell")
+  debug_inspect(anchors[0].form, content="AbsoluteAnchor")
+  debug_inspect(anchors[2].form, content="TwoCellAnchor")
+  try
+    parse_drawing_anchors(
+      "<xdr:wsDr><xdr:twoCellAnchor editAs=\"free\"></xdr:twoCellAnchor></xdr:wsDr>",
+    )
+  catch {
+    InvalidXml(msg~) => inspect(msg, content="drawing editAs value is invalid")
+    _ => fail("unexpected drawing editAs error")
+  } noraise {
+    _ => fail("expected invalid drawing editAs rejection")
+  }
 }
 
 ///|

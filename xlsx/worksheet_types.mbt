@@ -52,6 +52,10 @@ pub struct Image {
   alt_text : String
   lock_aspect_ratio : Bool
   positioning : PicturePositioning
+  priv drawing_offset_x_emu : Int?
+  priv drawing_offset_y_emu : Int?
+  priv drawing_width_emu : Int?
+  priv drawing_height_emu : Int?
 }
 
 ///|
@@ -65,6 +69,10 @@ pub struct Chart {
   print_object : Bool
   locked : Bool
   positioning : PicturePositioning
+  priv drawing_offset_x_emu : Int?
+  priv drawing_offset_y_emu : Int?
+  priv drawing_width_emu : Int?
+  priv drawing_height_emu : Int?
 }
 
 ///|

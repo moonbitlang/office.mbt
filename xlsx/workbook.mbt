@@ -2687,6 +2687,10 @@ pub fn Workbook::add_slicer(
     display_header: opts.display_header,
     item_desc: opts.item_desc,
     format,
+    drawing_offset_x_emu: None,
+    drawing_offset_y_emu: None,
+    drawing_width_emu: None,
+    drawing_height_emu: None,
   }
   sheet.add_slicer(slicer)
 }

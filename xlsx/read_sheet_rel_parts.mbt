@@ -480,6 +480,10 @@ fn resolve_slicer_sources_after_read(
               display_header: slicer.display_header,
               item_desc,
               format: slicer.format,
+              drawing_offset_x_emu: slicer.drawing_offset_x_emu,
+              drawing_offset_y_emu: slicer.drawing_offset_y_emu,
+              drawing_width_emu: slicer.drawing_width_emu,
+              drawing_height_emu: slicer.drawing_height_emu,
             }
           }
         }

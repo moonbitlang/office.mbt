@@ -65,11 +65,11 @@ test "native absolute shape geometry survives normalized roundtrip" {
     #|<?xml version="1.0" encoding="UTF-8"?>
     #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
     #|  <xdr:absoluteAnchor>
-    #|    <xdr:pos x="19050" y="28575"/>
-    #|    <xdr:ext cx="95250" cy="190500"/>
+    #|    <xdr:pos x="19051" y="28576"/>
+    #|    <xdr:ext cx="95251" cy="190501"/>
     #|    <xdr:sp>
     #|      <xdr:nvSpPr><xdr:cNvPr id="1" name="Absolute shape"/><xdr:cNvSpPr/></xdr:nvSpPr>
-    #|      <xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="95250" cy="190500"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr>
+    #|      <xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1" cy="2"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr>
     #|    </xdr:sp>
     #|    <xdr:clientData/>
     #|  </xdr:absoluteAnchor >
@@ -102,8 +102,8 @@ test "native absolute shape geometry survives normalized roundtrip" {
   assert_true(
     normalized_drawing.contains("<xdr:twoCellAnchor editAs=\"absolute\">"),
   )
-  assert_true(normalized_drawing.contains("<xdr:colOff>19050</xdr:colOff>"))
-  assert_true(normalized_drawing.contains("<xdr:rowOff>28575</xdr:rowOff>"))
+  assert_true(normalized_drawing.contains("<xdr:colOff>19051</xdr:colOff>"))
+  assert_true(normalized_drawing.contains("<xdr:rowOff>28576</xdr:rowOff>"))
   let reparsed = @xlsx.read(normalized)
   let reparsed_shape = reparsed.sheet("Sheet1").unwrap().shapes()[0]
   inspect(reparsed_shape.width, content="10")
@@ -111,4 +111,83 @@ test "native absolute shape geometry survives normalized roundtrip" {
   debug_inspect(reparsed_shape.format.offset_x, content="Some(2)")
   debug_inspect(reparsed_shape.format.offset_y, content="Some(3)")
   debug_inspect(reparsed_shape.positioning, content="Absolute")
+  let rewritten_archive = @zip.read(@xlsx.write(reparsed)) catch {
+    err => fail("rewritten zip read failed: \{repr(err)}")
+  }
+  let rewritten_drawing = match rewritten_archive.get(drawing_path) {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("rewritten drawing utf8 decode failed")
+      }
+    None => fail("rewritten drawing missing")
+  }
+  inspect(rewritten_drawing == normalized_drawing, content="true")
+}
+
+///|
+test "shape geometry follows anchor form and editAs oneCell normalizes" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.add_shape("Sheet1", @xlsx.Shape::new("A1", "rect"))
+  let archive = @zip.read(@xlsx.write(workbook)) catch {
+    err => fail("zip read failed: \{repr(err)}")
+  }
+  let drawing_path = "xl/drawings/drawing1.xml"
+  let drawing =
+    #|<?xml version="1.0" encoding="UTF-8"?>
+    #|<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+    #|  <xdr:oneCellAnchor>
+    #|    <xdr:from><xdr:col>0</xdr:col><xdr:colOff>19051</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>28576</xdr:rowOff></xdr:from>
+    #|    <xdr:ext cx="95251" cy="190501"/>
+    #|    <xdr:sp><xdr:nvSpPr><xdr:cNvPr id="1" name="One cell shape"/><xdr:cNvSpPr/></xdr:nvSpPr><xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:sp>
+    #|    <xdr:clientData/>
+    #|  </xdr:oneCellAnchor>
+    #|  <xdr:twoCellAnchor editAs="oneCell">
+    #|    <xdr:from><xdr:col>1</xdr:col><xdr:colOff>19052</xdr:colOff><xdr:row>1</xdr:row><xdr:rowOff>28577</xdr:rowOff></xdr:from>
+    #|    <xdr:to><xdr:col>1</xdr:col><xdr:colOff>114303</xdr:colOff><xdr:row>1</xdr:row><xdr:rowOff>219078</xdr:rowOff></xdr:to>
+    #|    <xdr:sp><xdr:nvSpPr><xdr:cNvPr id="2" name="Two cell shape"/><xdr:cNvSpPr/></xdr:nvSpPr><xdr:spPr><a:xfrm><a:ext cx="1" cy="2"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:sp>
+    #|    <xdr:clientData/>
+    #|  </xdr:twoCellAnchor>
+    #|</xdr:wsDr>
+  assert_true(archive.replace(drawing_path, @encoding/utf8.encode(drawing)))
+  let parsed = @xlsx.read(@zip.write(archive))
+  let shapes = parsed.sheet("Sheet1").unwrap().shapes()
+  inspect(shapes.length(), content="2")
+  inspect(shapes[0].width, content="10")
+  inspect(shapes[0].height, content="20")
+  debug_inspect(shapes[0].positioning, content="OneCell")
+  inspect(shapes[1].width, content="10")
+  inspect(shapes[1].height, content="20")
+  debug_inspect(shapes[1].positioning, content="OneCell")
+
+  let normalized = @xlsx.write(parsed)
+  let normalized_archive = @zip.read(normalized) catch {
+    err => fail("normalized zip read failed: \{repr(err)}")
+  }
+  let normalized_drawing = match normalized_archive.get(drawing_path) {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("normalized drawing utf8 decode failed")
+      }
+    None => fail("normalized drawing missing")
+  }
+  inspect(normalized_drawing.split("<xdr:oneCellAnchor>").count(), content="3")
+  assert_false(normalized_drawing.contains("<xdr:twoCellAnchor"))
+  assert_true(normalized_drawing.contains("<xdr:colOff>19051</xdr:colOff>"))
+  assert_true(normalized_drawing.contains("<xdr:colOff>19052</xdr:colOff>"))
+  assert_true(
+    normalized_drawing.contains("<xdr:ext cx=\"95251\" cy=\"190501\"/>"),
+  )
+  let reparsed = @xlsx.read(normalized)
+  let rewritten_archive = @zip.read(@xlsx.write(reparsed)) catch {
+    err => fail("rewritten zip read failed: \{repr(err)}")
+  }
+  let rewritten_drawing = match rewritten_archive.get(drawing_path) {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("rewritten drawing utf8 decode failed")
+      }
+    None => fail("rewritten drawing missing")
+  }
+  inspect(rewritten_drawing == normalized_drawing, content="true")
 }

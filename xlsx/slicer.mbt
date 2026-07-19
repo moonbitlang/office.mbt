@@ -13,6 +13,10 @@ pub struct Slicer {
   display_header : Bool?
   item_desc : Bool
   format : GraphicOptions
+  priv drawing_offset_x_emu : Int?
+  priv drawing_offset_y_emu : Int?
+  priv drawing_width_emu : Int?
+  priv drawing_height_emu : Int?
 } derive(Debug)
 
 ///|
@@ -53,6 +57,10 @@ pub fn Slicer::new(name : String) -> Slicer raise XlsxError {
     display_header: None,
     item_desc: false,
     format: GraphicOptions::new(),
+    drawing_offset_x_emu: None,
+    drawing_offset_y_emu: None,
+    drawing_width_emu: None,
+    drawing_height_emu: None,
   }
 }
 

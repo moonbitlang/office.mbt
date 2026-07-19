@@ -99,6 +99,60 @@ fn xlsx_drawing_unsupported_reader_object_name(local_name : StringView) -> Bool 
 }
 
 ///|
+fn drawing_reader_sequence_matches(
+  actual : ArrayView[String],
+  expected : ArrayView[String],
+) -> Bool {
+  if actual.length() != expected.length() {
+    return false
+  }
+  for i in 0..<actual.length() {
+    if actual[i] != expected[i] {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn validate_drawing_marker_grammar(
+  marker_parent : StringView,
+  sequence : ArrayView[String],
+) -> Unit raise XlsxError {
+  if marker_parent != "" &&
+    !drawing_reader_sequence_matches(sequence, [
+      "col", "colOff", "row", "rowOff",
+    ]) {
+    raise InvalidXml(msg="drawing marker children are invalid")
+  }
+}
+
+///|
+fn validate_drawing_anchor_grammar(
+  anchor_name : StringView,
+  sequence : ArrayView[String],
+) -> Unit raise XlsxError {
+  let valid = if anchor_name == "oneCellAnchor" {
+    drawing_reader_sequence_matches(sequence, [
+      "from", "ext", "object", "clientData",
+    ])
+  } else if anchor_name == "twoCellAnchor" {
+    drawing_reader_sequence_matches(sequence, [
+      "from", "to", "object", "clientData",
+    ])
+  } else if anchor_name == "absoluteAnchor" {
+    drawing_reader_sequence_matches(sequence, [
+      "pos", "ext", "object", "clientData",
+    ])
+  } else {
+    false
+  }
+  if !valid {
+    raise InvalidXml(msg="drawing anchor children are invalid")
+  }
+}
+
+///|
 fn drawing_reader_relationship_attribute(
   scanner : @ooxml.XmlStartTagScanner,
   relationship_namespace : StringView,
@@ -203,10 +257,21 @@ fn validate_xlsx_drawing_reader_structure(
   let mut graphic_seen = false
   let mut graphic_data_seen = false
   let mut unsupported_reader_object_depth : Int? = None
+  let anchor_sequence : Array[String] = []
+  let marker_sequence : Array[String] = []
   while workbook_scanner_next(scanner) {
     let depth = scanner.depth()
     let local_name = scanner.local_name()
     let namespace_uri = scanner.namespace_uri().to_owned()
+    if marker_parent != "" && depth <= 3 {
+      validate_drawing_marker_grammar(marker_parent, marker_sequence)
+      marker_parent = ""
+      marker_sequence.clear()
+    }
+    if in_reader_anchor && depth <= 2 {
+      validate_drawing_anchor_grammar(anchor_name, anchor_sequence)
+      anchor_sequence.clear()
+    }
     match text_body_depth {
       Some(start) if depth <= start => text_body_depth = None
       _ => ()
@@ -295,6 +360,7 @@ fn validate_xlsx_drawing_reader_structure(
       anchor_pos_seen = false
       anchor_ext_seen = false
       client_data_seen = false
+      anchor_sequence.clear()
     } else if namespace_uri == drawing_namespace &&
       xlsx_drawing_reader_object_name(local_name) {
       if depth != 3 ||
@@ -307,6 +373,7 @@ fn validate_xlsx_drawing_reader_structure(
         raise InvalidXml(msg="drawing anchor has multiple reader objects")
       }
       reader_object_seen = true
+      anchor_sequence.push("object")
       current_reader_object = local_name.to_owned()
       non_visual_container_seen = false
       c_nv_pr_seen = false
@@ -342,6 +409,7 @@ fn validate_xlsx_drawing_reader_structure(
       // not model them. Ignore the complete subtree so nested `sp`, `pic`, or
       // `graphicFrame` elements cannot be mistaken for direct anchor objects.
       reader_object_seen = true
+      anchor_sequence.push("object")
       current_reader_object = ""
       unsupported_reader_object_depth = Some(depth)
     } else if namespace_uri == drawing_namespace &&
@@ -358,6 +426,7 @@ fn validate_xlsx_drawing_reader_structure(
         scanner.parent_namespace_uri() != Some(drawing_namespace) {
         raise InvalidXml(msg="drawing anchor reader target is misplaced")
       }
+      anchor_sequence.push(local_name.to_owned())
       if local_name == "from" {
         if anchor_name == "absoluteAnchor" {
           raise InvalidXml(msg="drawing anchor from target is misplaced")
@@ -371,6 +440,7 @@ fn validate_xlsx_drawing_reader_structure(
         marker_col_off_seen = false
         marker_row_seen = false
         marker_row_off_seen = false
+        marker_sequence.clear()
       } else if local_name == "to" {
         if anchor_name == "absoluteAnchor" {
           raise InvalidXml(msg="drawing anchor to target is misplaced")
@@ -384,6 +454,7 @@ fn validate_xlsx_drawing_reader_structure(
         marker_col_off_seen = false
         marker_row_seen = false
         marker_row_off_seen = false
+        marker_sequence.clear()
       } else if local_name == "pos" {
         if anchor_name != "absoluteAnchor" {
           raise InvalidXml(msg="drawing anchor pos target is misplaced")
@@ -416,6 +487,7 @@ fn validate_xlsx_drawing_reader_structure(
         scanner.parent_namespace_uri() != Some(drawing_namespace) {
         raise InvalidXml(msg="drawing marker target is misplaced")
       }
+      marker_sequence.push(local_name.to_owned())
       if local_name == "col" {
         if marker_col_seen {
           raise InvalidXml(msg="drawing marker col target is duplicated")
@@ -739,7 +811,19 @@ fn validate_xlsx_drawing_reader_structure(
         raise InvalidXml(msg="drawing anchor has multiple reader payloads")
       }
       reader_payload_seen = true
+    } else if namespace_uri == drawing_namespace &&
+      depth == 3 &&
+      in_reader_anchor &&
+      scanner.parent_local_name() == Some(anchor_name) &&
+      scanner.parent_namespace_uri() == Some(drawing_namespace) {
+      raise InvalidXml(msg="drawing anchor content is invalid")
     }
+  }
+  if marker_parent != "" {
+    validate_drawing_marker_grammar(marker_parent, marker_sequence)
+  }
+  if in_reader_anchor {
+    validate_drawing_anchor_grammar(anchor_name, anchor_sequence)
   }
 }
 
@@ -1235,7 +1319,7 @@ test "XLSX XML canonicalization follows extension namespace identity" {
 ///|
 test "DrawingML canonicalization follows aliases and removes foreign subtrees" {
   let valid =
-    #|<wsDr xmlns="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:d="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:q="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:rel="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:compat="http://schemas.openxmlformats.org/markup-compatibility/2006"><oneCellAnchor><compat:AlternateContent><compat:Choice Requires="q"><graphicFrame><d:graphic><d:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><q:chart rel:id="chart"/></d:graphicData></d:graphic></graphicFrame></compat:Choice></compat:AlternateContent></oneCellAnchor></wsDr>
+    #|<wsDr xmlns="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:d="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:q="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:rel="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:compat="http://schemas.openxmlformats.org/markup-compatibility/2006"><oneCellAnchor><from><col>0</col><colOff>0</colOff><row>0</row><rowOff>0</rowOff></from><ext cx="9525" cy="9525"/><compat:AlternateContent><compat:Choice Requires="q"><graphicFrame><d:graphic><d:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><q:chart rel:id="chart"/></d:graphicData></d:graphic></graphicFrame></compat:Choice></compat:AlternateContent><clientData/></oneCellAnchor></wsDr>
   let canonical = canonicalize_xlsx_drawing_xml(
     valid, default_max_xml_part_bytes,
   )
@@ -1254,6 +1338,36 @@ test "DrawingML canonicalization follows aliases and removes foreign subtrees" {
   assert_false(spoofed_canonical.contains("oneCellAnchor"))
   assert_false(spoofed_canonical.contains("AlternateContent"))
   assert_false(spoofed_canonical.contains("<mc:AlternateContent"))
+}
+
+///|
+test "DrawingML canonicalization enforces anchor grammar and marker order" {
+  let namespace_uri = "http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"
+  let cases : Array[(String, String)] = [
+    (
+      "<xdr:wsDr xmlns:xdr=\"\{namespace_uri}\"><xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx=\"1\" cy=\"1\"/><xdr:grpSp/></xdr:oneCellAnchor></xdr:wsDr>",
+      "drawing anchor children are invalid",
+    ),
+    (
+      "<xdr:wsDr xmlns:xdr=\"\{namespace_uri}\"><xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:row>0</xdr:row><xdr:colOff>0</xdr:colOff><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx=\"1\" cy=\"1\"/><xdr:grpSp/><xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>",
+      "drawing marker children are invalid",
+    ),
+    (
+      "<xdr:wsDr xmlns:xdr=\"\{namespace_uri}\"><xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:grpSp/><xdr:ext cx=\"1\" cy=\"1\"/><xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>",
+      "drawing anchor children are invalid",
+    ),
+  ]
+  for case in cases {
+    let (source, expected) = case
+    try
+      canonicalize_xlsx_drawing_xml(source, default_max_xml_part_bytes)
+    catch {
+      InvalidXml(msg~) => inspect(msg, content=expected)
+      _ => fail("unexpected drawing grammar error")
+    } noraise {
+      _ => fail("expected drawing grammar rejection")
+    }
+  }
 }
 
 ///|

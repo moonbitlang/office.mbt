@@ -2044,6 +2044,10 @@ pub fn Worksheet::add_image(
     alt_text,
     lock_aspect_ratio,
     positioning,
+    drawing_offset_x_emu: None,
+    drawing_offset_y_emu: None,
+    drawing_width_emu: None,
+    drawing_height_emu: None,
   })
 }
 
@@ -2068,6 +2072,10 @@ fn image_with_reference(image : Image, reference : String) -> Image {
     alt_text: image.alt_text,
     lock_aspect_ratio: image.lock_aspect_ratio,
     positioning: image.positioning,
+    drawing_offset_x_emu: image.drawing_offset_x_emu,
+    drawing_offset_y_emu: image.drawing_offset_y_emu,
+    drawing_width_emu: image.drawing_width_emu,
+    drawing_height_emu: image.drawing_height_emu,
   }
 }
 
@@ -2083,6 +2091,10 @@ fn chart_with_reference(chart : Chart, reference : String) -> Chart {
     print_object: chart.print_object,
     locked: chart.locked,
     positioning: chart.positioning,
+    drawing_offset_x_emu: chart.drawing_offset_x_emu,
+    drawing_offset_y_emu: chart.drawing_offset_y_emu,
+    drawing_width_emu: chart.drawing_width_emu,
+    drawing_height_emu: chart.drawing_height_emu,
   }
 }
 
@@ -2155,6 +2167,10 @@ pub fn Worksheet::add_chart(
     print_object: true,
     locked: true,
     positioning: TwoCell,
+    drawing_offset_x_emu: None,
+    drawing_offset_y_emu: None,
+    drawing_width_emu: None,
+    drawing_height_emu: None,
   })
 }
 
@@ -2222,6 +2238,10 @@ pub fn Worksheet::add_chart_with_options(
     print_object,
     locked,
     positioning,
+    drawing_offset_x_emu: None,
+    drawing_offset_y_emu: None,
+    drawing_width_emu: None,
+    drawing_height_emu: None,
   })
 }
 

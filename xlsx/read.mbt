@@ -4875,6 +4875,7 @@ fn read_zip_archive_core_unchecked(
           sheet.charts.append(drawing_charts)
           let drawing_shapes = parse_drawing_shapes(
             drawing_anchors,
+            drawing_metrics,
             budget=read_budget,
           )
           sheet.shapes.append(drawing_shapes)
@@ -4944,6 +4945,22 @@ fn read_zip_archive_core_unchecked(
           display_header: entry.display_header,
           item_desc,
           format,
+          drawing_offset_x_emu: match slicer_anchor_info.get(entry.name) {
+            Some(info) => Some(info.offset_x_emu)
+            None => None
+          },
+          drawing_offset_y_emu: match slicer_anchor_info.get(entry.name) {
+            Some(info) => Some(info.offset_y_emu)
+            None => None
+          },
+          drawing_width_emu: match slicer_anchor_info.get(entry.name) {
+            Some(info) => Some(info.width_emu)
+            None => None
+          },
+          drawing_height_emu: match slicer_anchor_info.get(entry.name) {
+            Some(info) => Some(info.height_emu)
+            None => None
+          },
         })
       }
       workbook.sheets.push(sheet)

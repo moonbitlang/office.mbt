@@ -529,6 +529,10 @@ fn Workbook::rich_value_image_for_cell(
         alt_text,
         lock_aspect_ratio: false,
         positioning: OneCell,
+        drawing_offset_x_emu: None,
+        drawing_offset_y_emu: None,
+        drawing_width_emu: None,
+        drawing_height_emu: None,
       })
     }
     None => None
