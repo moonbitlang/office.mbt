@@ -43,6 +43,42 @@ fn package_validation_content_types(
 }
 
 ///|
+fn charge_package_validation_xml_part(
+  data : BytesView,
+  limits : ReadLimits,
+  total_xml_bytes : Ref[Int],
+  markup_tokens : Ref[Int],
+) -> Unit raise XlsxError {
+  if data.length() > limits.max_xml_part_bytes {
+    raise ResourceLimitExceeded(
+      kind="xml_part_bytes",
+      limit=limits.max_xml_part_bytes,
+      actual=data.length(),
+    )
+  }
+  if data.length() > limits.max_total_xml_bytes - total_xml_bytes.val {
+    raise ResourceLimitExceeded(
+      kind="total_xml_bytes",
+      limit=limits.max_total_xml_bytes,
+      actual=bounded_actual_above_limit(limits.max_total_xml_bytes),
+    )
+  }
+  total_xml_bytes.val = total_xml_bytes.val + data.length()
+  for byte in data {
+    if byte == b'<' {
+      if markup_tokens.val >= limits.max_xml_markup_tokens {
+        raise ResourceLimitExceeded(
+          kind="xml_markup_tokens",
+          limit=limits.max_xml_markup_tokens,
+          actual=bounded_actual_above_limit(limits.max_xml_markup_tokens),
+        )
+      }
+      markup_tokens.val = markup_tokens.val + 1
+    }
+  }
+}
+
+///|
 /// Applies the same aggregate XML-byte and markup-token policy as the complete
 /// workbook reader before package validation starts decoding or scanning
 /// package plumbing. XML identity follows the package content-type manifest,
@@ -54,13 +90,30 @@ fn enforce_package_validation_xml_limits(
   archive : @zip.Archive,
   limits : ReadLimits,
 ) -> Unit raise XlsxError {
-  let mut total_xml_bytes = 0
-  let mut markup_tokens = 0
+  let total_xml_bytes = Ref(0)
+  let markup_tokens = Ref(0)
+  // Enforce suffix-identifiable XML first. This includes the content-types
+  // manifest itself, so its byte and scan-work ceilings are charged before the
+  // manifest parser is allowed to inspect it.
+  for entry in archive.entries() {
+    if is_xml_package_part(entry.name()) {
+      charge_package_validation_xml_part(
+        entry.data(),
+        limits,
+        total_xml_bytes,
+        markup_tokens,
+      )
+    }
+  }
   let content_types = package_validation_content_types(archive)
   for entry in archive.entries() {
+    if is_xml_package_part(entry.name()) {
+      continue
+    }
     let declared_xml = match content_types {
       Some(index) => {
-        let declared = index.content_type_for(entry.name()) catch { _ => None }
+        let logical_name = logical_archive_part_path(entry.name())
+        let declared = index.content_type_for(logical_name) catch { _ => None }
         match declared {
           Some(value) => package_content_type_is_xml(value)
           None => false
@@ -68,36 +121,13 @@ fn enforce_package_validation_xml_limits(
       }
       None => false
     }
-    if !is_xml_package_part(entry.name()) && !declared_xml {
-      continue
-    }
-    let data = entry.data()
-    if data.length() > limits.max_xml_part_bytes {
-      raise ResourceLimitExceeded(
-        kind="xml_part_bytes",
-        limit=limits.max_xml_part_bytes,
-        actual=data.length(),
+    if declared_xml {
+      charge_package_validation_xml_part(
+        entry.data(),
+        limits,
+        total_xml_bytes,
+        markup_tokens,
       )
-    }
-    if data.length() > limits.max_total_xml_bytes - total_xml_bytes {
-      raise ResourceLimitExceeded(
-        kind="total_xml_bytes",
-        limit=limits.max_total_xml_bytes,
-        actual=bounded_actual_above_limit(limits.max_total_xml_bytes),
-      )
-    }
-    total_xml_bytes = total_xml_bytes + data.length()
-    for byte in data {
-      if byte == b'<' {
-        if markup_tokens >= limits.max_xml_markup_tokens {
-          raise ResourceLimitExceeded(
-            kind="xml_markup_tokens",
-            limit=limits.max_xml_markup_tokens,
-            actual=bounded_actual_above_limit(limits.max_xml_markup_tokens),
-          )
-        }
-        markup_tokens = markup_tokens + 1
-      }
     }
   }
 }
@@ -230,7 +260,7 @@ fn validate_ooxml_archive(
   // relationship target integrity
   for entry in archive.entries() {
     let name = entry.name()
-    if !name.has_suffix(".rels") {
+    if !is_relationship_package_part(name) {
       continue
     }
     let base = rels_base_dir(name)
@@ -239,14 +269,12 @@ fn validate_ooxml_archive(
     // bounds scan work, while avoiding a second target array proportional to
     // attacker-controlled relationship count.
     for_each_relationship_start_tag(rels_xml, scanner => {
-      let target_opt = relationship_scanner_attribute_view(scanner, "Target") catch {
+      let target_opt = relationship_scanner_attribute(scanner, "Target") catch {
         _ => None
       }
       match target_opt {
         Some(target) => {
-          let mode_opt = relationship_scanner_attribute_view(
-            scanner, "TargetMode",
-          ) catch {
+          let mode_opt = relationship_scanner_attribute(scanner, "TargetMode") catch {
             _ => None
           }
           let external = match mode_opt {

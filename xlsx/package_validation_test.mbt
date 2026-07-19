@@ -37,6 +37,36 @@ test "validate_ooxml_package flags a missing relationship target" {
 }
 
 ///|
+test "OOXML validation decodes targets and ignores foreign relationship names" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let archive = @zip.read(@xlsx.write(workbook))
+  let root_rels = match archive.get("_rels/.rels") {
+    Some(data) =>
+      @encoding/utf8.decode(data) catch {
+        _ => fail("root relationships are not UTF-8")
+      }
+    None => fail("missing root relationships")
+  }
+  let namespaced = root_rels.replace_all(
+    old="<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
+    new="<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\" xmlns:v=\"urn:vendor\">",
+  )
+  let injected = namespaced.replace_all(
+    old="</Relationships>",
+    new="<Relationship Id=\"escaped\" Type=\"urn:test\" Target=\"custom/a&amp;b.xml\"/><v:Relationship Id=\"foreign\" Type=\"urn:test\" Target=\"missing.xml\"/></Relationships>",
+  )
+  assert_true(archive.replace("_rels/.rels", @encoding/utf8.encode(injected)))
+  archive.add("custom/a&b.xml", @encoding/utf8.encode("<custom/>"))
+  debug_inspect(
+    @xlsx.validate_ooxml_package(@zip.write(archive)),
+    content=(
+      #|[]
+    ),
+  )
+}
+
+///|
 test "validate_ooxml_package flags an undeclared content type" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
@@ -151,7 +181,7 @@ test "OOXML validation follows XML content types beyond file suffixes" {
         #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
         #|  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
         #|  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
-        #|  <Override PartName="/xl/worksheets/sheet1.dat" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+        #|  <Override PartName="/xl/worksheets/文.dat" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
         #|</Types>
         #|
       ),
@@ -181,14 +211,14 @@ test "OOXML validation follows XML content types beyond file suffixes" {
     @encoding/utf8.encode(
       (
         #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-        #|  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.dat"/>
+        #|  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/%E6%96%87.dat"/>
         #|</Relationships>
         #|
       ),
     ),
   )
   let oversized = @encoding/utf8.encode(" ".repeat(2048))
-  archive.add("xl/worksheets/sheet1.dat", oversized)
+  archive.add("xl/worksheets/%E6%96%87.dat", oversized)
   let limit = 1024
   let result : Result[Array[String], Error] = Ok(
     @xlsx.validate_ooxml_package(
@@ -318,7 +348,7 @@ test "OOXML validation charges relationship records package-wide" {
 }
 
 ///|
-test "OOXML validation counts relationship tags followed by XML whitespace" {
+test "OOXML validation counts case-varied relationship parts with XML whitespace" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let source = @zip.read(@xlsx.write(workbook))
@@ -328,8 +358,10 @@ test "OOXML validation counts relationship tags followed by XML whitespace" {
       let xml = @encoding/utf8.decode(entry.data()) catch {
         _ => fail("relationship part is not UTF-8")
       }
+      let name = entry.name()
+      let case_varied_name = name[:name.length() - 5].to_owned() + ".RELS"
       archive.add(
-        entry.name(),
+        case_varied_name,
         @encoding/utf8.encode(
           xml.replace_all(old="<Relationship ", new="<Relationship\n"),
         ),

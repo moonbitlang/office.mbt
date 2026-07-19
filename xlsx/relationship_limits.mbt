@@ -1,9 +1,28 @@
 ///|
+let package_relationships_namespace_for_validation = "http://schemas.openxmlformats.org/package/2006/relationships"
+
+///|
+fn is_relationship_package_part(name : StringView) -> Bool {
+  name.to_owned().to_lower().has_suffix(".rels")
+}
+
+///|
 fn relationship_scanner_attribute_view(
   scanner : @ooxml.XmlStartTagScanner,
   name : StringView,
 ) -> StringView? raise XlsxError {
   scanner.attribute_view("", name) catch {
+    InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+}
+
+///|
+fn relationship_scanner_attribute(
+  scanner : @ooxml.XmlStartTagScanner,
+  name : StringView,
+) -> String? raise XlsxError {
+  scanner.attribute("", name) catch {
     InvalidXml(msg~) => raise InvalidXml(msg~)
     ReadCancelled => raise ReadCancelled
   }
@@ -30,7 +49,8 @@ fn for_each_relationship_start_tag(
       scanning = false
       continue
     }
-    if scanner.local_name() == "Relationship" {
+    if scanner.namespace_uri() == package_relationships_namespace_for_validation &&
+      scanner.local_name() == "Relationship" {
       if !visit(scanner) {
         scanning = false
       }
@@ -75,7 +95,7 @@ fn preflight_archive_relationship_limits(
   let attribute_chars = Ref(0)
   for entry in archive.entries() {
     check_read_cancelled(cancelled)
-    if !entry.name().has_suffix(".rels") {
+    if !is_relationship_package_part(entry.name()) {
       continue
     }
     let xml = decode_utf8(entry.data(), transcoder)
