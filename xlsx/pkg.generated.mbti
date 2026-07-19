@@ -1747,7 +1747,6 @@ pub fn TableOptions::set_style_name(Self, String) -> Unit
 pub fn TableOptions::to_repr(Self) -> @debug.Repr
 
 pub struct Workbook {
-  sheets : Array[Worksheet]
   chart_sheets : Array[ChartSheet]
   sheet_order : Array[SheetEntry]
   styles : Array[Style]
