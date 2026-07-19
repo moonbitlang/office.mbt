@@ -143,18 +143,7 @@ fn Workbook::resolve_cell_base_style(
   reference : String,
 ) -> Int raise XlsxError {
   let (row, col) = cell_ref_to_rc(reference)
-  match self.get_cell_style(sheet_name, reference) {
-    Some(idx) if idx != 0 => idx
-    _ =>
-      match self.get_row_style(sheet_name, row) {
-        Some(idx) if idx != 0 => idx
-        _ =>
-          match self.get_col_style(sheet_name, col) {
-            Some(idx) if idx != 0 => idx
-            _ => 0
-          }
-      }
-  }
+  self.require_sheet(sheet_name).effective_style_id_rc(row, col)
 }
 
 ///|

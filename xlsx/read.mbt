@@ -2960,7 +2960,8 @@ fn parse_row_dimensions(
         }
       None => 0
     }
-    let style_id = match attr_value(tag, "s") {
+    let style_attribute = attr_value(tag, "s")
+    let style_id = match style_attribute {
       Some(value) =>
         @string.parse_int(value, base=10) catch {
           _ => raise InvalidXml(msg="row style id invalid")
@@ -2970,7 +2971,14 @@ fn parse_row_dimensions(
     if style_id < 0 || style_id >= style_count {
       raise InvalidStyleId(index=style_id)
     }
-    let style = if style_id > 0 { Some(style_id) } else { None }
+    // `s` is only an active row format when `customFormat` is true. Keep
+    // `Some(0)` for that case: an explicit default row format is a real
+    // inheritance boundary and must block a nonzero column style.
+    let custom_format = match attr_value(tag, "customFormat") {
+      Some(value) => parse_bool_attr(value)
+      None => false
+    }
+    let style = if custom_format { Some(style_id) } else { None }
     if height is None && !hidden && outline_level == 0 && style is None {
       continue
     }
@@ -3042,7 +3050,8 @@ fn parse_col_dimensions(
         }
       None => 0
     }
-    let style_id = match attr_value(tag, "style") {
+    let style_attribute = attr_value(tag, "style")
+    let style_id = match style_attribute {
       Some(value) =>
         @string.parse_int(value, base=10) catch {
           _ => raise InvalidXml(msg="col style id invalid")
@@ -3052,7 +3061,12 @@ fn parse_col_dimensions(
     if style_id < 0 || style_id >= style_count {
       raise InvalidStyleId(index=style_id)
     }
-    let style = if style_id > 0 { Some(style_id) } else { None }
+    // Unlike rows, columns have no `customFormat` gate. Attribute presence is
+    // therefore the semantic distinction, including an explicit style 0.
+    let style = match style_attribute {
+      Some(_) => Some(style_id)
+      None => None
+    }
     if width is None && !hidden && outline_level == 0 && style is None {
       continue
     }

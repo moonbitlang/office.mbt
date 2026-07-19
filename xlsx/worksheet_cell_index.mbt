@@ -172,6 +172,95 @@ test "explicit cell style zero overrides inherited row style after roundtrip" {
 }
 
 ///|
+test "row customFormat boundaries control style inheritance after roundtrip" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("S")
+  let column_style = workbook.add_style(
+    Style::font(Font::with_values(bold=true)),
+  )
+  let ignored_row_style = workbook.add_style(
+    Style::font(Font::with_values(italic=true)),
+  )
+  workbook.set_col_style("S", 1, column_style)
+  workbook.set_col_style("S", 2, column_style)
+  for row in 1..<=3 {
+    sheet.set_cell_value_rc(row, 1, Numeric(row.to_double()))
+  }
+  let archive = @zip.read(write(workbook))
+  let path = "xl/worksheets/sheet1.xml"
+  guard archive.get(path) is Some(sheet_bytes) else {
+    fail("expected worksheet part")
+  }
+  let source = @encoding/utf8.decode(sheet_bytes)
+  assert_true(source.contains("<row r=\"1\">"))
+  assert_true(source.contains("<row r=\"2\">"))
+  assert_true(source.contains("<row r=\"3\">"))
+  let patched = source
+    .replace(
+      old="<row r=\"1\">",
+      new="<row r=\"1\" s=\"0\" customFormat=\"1\">",
+    )
+    .replace(
+      old="<row r=\"2\">",
+      new="<row r=\"2\" s=\"\{ignored_row_style}\" customFormat=\"0\">",
+    )
+    .replace(old="<row r=\"3\">", new="<row r=\"3\" customFormat=\"1\">")
+  assert_true(archive.replace(path, @encoding/utf8.encode(patched)))
+
+  let parsed = read(@zip.write(archive))
+  guard parsed.sheet("S") is Some(parsed_sheet) else {
+    fail("expected parsed worksheet")
+  }
+  assert_eq(parsed_sheet.get_row_style(1), Some(0))
+  assert_eq(parsed_sheet.get_row_style(2), None)
+  assert_eq(parsed_sheet.get_row_style(3), Some(0))
+  assert_eq(parsed_sheet.effective_style_id_rc(1, 1), 0)
+  assert_eq(parsed_sheet.effective_style_id_rc(2, 1), column_style)
+  assert_eq(parsed_sheet.effective_style_id_rc(3, 1), 0)
+
+  // Time writes must consult the same effective-style resolver. The explicit
+  // row-zero boundary keeps B1 from inheriting the bold column style.
+  parsed.set_cell_time("S", "B1", @time.date_time(2024, 7, 3))
+  guard parsed.get_cell_style("S", "B1") is Some(time_style_id) else {
+    fail("expected time-cell style")
+  }
+  assert_true(parsed.get_style(time_style_id).font is None)
+
+  let rewritten = @zip.read(write(parsed))
+  guard rewritten.get(path) is Some(rewritten_bytes) else {
+    fail("expected rewritten worksheet part")
+  }
+  let rewritten_xml = @encoding/utf8.decode(rewritten_bytes)
+  assert_true(
+    rewritten_xml.contains("<row r=\"1\" s=\"0\" customFormat=\"1\">"),
+  )
+  assert_false(rewritten_xml.contains("<row r=\"2\" s="))
+  assert_true(
+    rewritten_xml.contains("<row r=\"3\" s=\"0\" customFormat=\"1\">"),
+  )
+  let reparsed = read(@zip.write(rewritten))
+  guard reparsed.sheet("S") is Some(reparsed_sheet) else {
+    fail("expected reparsed worksheet")
+  }
+  assert_eq(reparsed_sheet.get_row_style(1), Some(0))
+  assert_eq(reparsed_sheet.get_row_style(2), None)
+  assert_eq(reparsed_sheet.get_row_style(3), Some(0))
+  assert_eq(reparsed_sheet.effective_style_id_rc(1, 1), 0)
+  assert_eq(reparsed_sheet.effective_style_id_rc(2, 1), column_style)
+  assert_eq(reparsed_sheet.effective_style_id_rc(3, 1), 0)
+}
+
+///|
+test "explicit column style zero remains distinct from an omitted style" {
+  let dimensions = parse_col_dimensions(
+    "<worksheet><cols><col min=\"1\" max=\"1\" style=\"0\"/><col min=\"2\" max=\"2\"/></cols></worksheet>",
+    1,
+  )
+  assert_eq(dimensions.get(1).map(dim => dim.style_id), Some(Some(0)))
+  assert_true(dimensions.get(2) is None)
+}
+
+///|
 fn expect_unowned_worksheet_error(
   action : () -> Unit raise XlsxError,
 ) -> Unit raise {

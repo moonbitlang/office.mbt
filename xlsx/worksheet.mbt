@@ -1319,11 +1319,11 @@ pub fn Worksheet::effective_style_id_rc(
     Some(i) if self.cells[i].style_explicit => self.cells[i].style_id
     _ =>
       match self.get_row_style(row) {
-        Some(style_id) if style_id != 0 => style_id
-        _ =>
+        Some(style_id) => style_id
+        None =>
           match self.get_col_style(col) {
-            Some(style_id) if style_id != 0 => style_id
-            _ => 0
+            Some(style_id) => style_id
+            None => 0
           }
       }
   }
