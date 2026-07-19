@@ -381,15 +381,21 @@ test "ooxml rels: pivot cache rels tolerate stale first entries and mixed target
 }
 
 ///|
-test "ooxml rels: chartsheet chart rels tolerate stale first entries and mixed targets" {
+test "ooxml rels: chartsheet binds the chart selected by drawing r:id" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let chart_xml =
     #|<?xml version="1.0" encoding="UTF-8"?>
     #|<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-    #|  <c:chart/>
+    #|  <c:chart><c:title><c:tx><c:v>GOOD</c:v></c:tx></c:title></c:chart>
     #|</c:chartSpace>
   ignore(workbook.add_chart_sheet("Chart1", chart_xml))
+  let decoy_chart_xml =
+    #|<?xml version="1.0" encoding="UTF-8"?>
+    #|<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+    #|  <c:chart><c:title><c:tx><c:v>BAD</c:v></c:tx></c:title></c:chart>
+    #|</c:chartSpace>
+  ignore(workbook.add_chart_sheet("Chart2", decoy_chart_xml))
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
@@ -398,7 +404,7 @@ test "ooxml rels: chartsheet chart rels tolerate stale first entries and mixed t
   let drawing_rels_xml = decode_zip_entry_utf8(archive, drawing_rels_path)
   let patched_drawing_rels = prepend_relationship(
     drawing_rels_xml, "rId0", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart",
-    "../charts/ghostChart.xml",
+    "../charts/chart2.xml",
   ).replace_all(
     old="Target=\"../charts/chart1.xml\"",
     new="Target=\"/xl/charts/chart1.xml\"",
@@ -411,8 +417,49 @@ test "ooxml rels: chartsheet chart rels tolerate stale first entries and mixed t
     err => fail("zip rewrite failed: \{err}")
   }
   let parsed = @xlsx.read(updated)
-  inspect(parsed.chart_sheets().length(), content="1")
+  inspect(parsed.chart_sheets().length(), content="2")
   let parsed_chart = parsed.chart_sheets()[0]
   inspect(parsed_chart.name(), content="Chart1")
   inspect(parsed_chart.chart_xml().contains("<c:chartSpace"), content="true")
+  assert_true(parsed_chart.chart_xml().contains("GOOD"))
+  assert_false(parsed_chart.chart_xml().contains("BAD"))
+}
+
+///|
+test "ooxml rels: chartsheet requires its selected drawing part" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  ignore(
+    workbook.add_chart_sheet(
+      "Chart1",
+      (
+        #|<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart/></c:chartSpace>
+      ),
+    ),
+  )
+  let archive = @zip.read(@xlsx.write(workbook)) catch {
+    err => fail("zip read failed: \{repr(err)}")
+  }
+  let drawing_path = "xl/drawings/drawing2.xml"
+  guard archive.get(drawing_path) is Some(_) else {
+    fail("missing chart-sheet drawing fixture")
+  }
+  let without_drawing = @zip.Archive::new()
+  for entry in archive.entries() {
+    if entry.name() != drawing_path {
+      without_drawing.add(
+        entry.name(),
+        entry.data(),
+        compression=entry.compression(),
+        data_descriptor=entry.data_descriptor(),
+      )
+    }
+  }
+  let result = Ok(@xlsx.read(@zip.write(without_drawing))) catch {
+    error => Err(error)
+  }
+  match result {
+    Err(@xlsx.MissingPart(path~)) => assert_eq(path, drawing_path)
+    _ => fail("expected missing chart-sheet drawing part")
+  }
 }

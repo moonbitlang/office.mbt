@@ -200,6 +200,38 @@ fn charge_drawing_anchor_pass(
 }
 
 ///|
+/// Returns the sole chart relationship selected by a chart-sheet drawing.
+/// Drawing structure validation has already proved the canonical `c:chart`
+/// path and relationship-attribute dialect; this pass enforces chart-sheet
+/// cardinality and keeps relationship lookup tied to that exact payload.
+fn single_drawing_chart_rel_id(
+  anchors : ArrayView[(String, PicturePositioning)],
+  budget? : ReadBudget,
+) -> String raise XlsxError {
+  let mut selected : String? = None
+  for entry in anchors {
+    let (anchor_xml, _) = entry
+    charge_drawing_anchor_pass(budget, anchor_xml)
+    match tag_attributes_in(anchor_xml, "c:chart") {
+      Some(tag) => {
+        if selected is Some(_) {
+          raise InvalidXml(msg="chartsheet drawing has multiple charts")
+        }
+        selected = match attr_value(tag, "r:id") {
+          Some(value) if value.length() > 0 => Some(value.to_string())
+          _ => raise InvalidXml(msg="chartsheet chart rel id missing")
+        }
+      }
+      None => ()
+    }
+  }
+  match selected {
+    Some(value) => value
+    None => raise InvalidXml(msg="chartsheet chart payload missing")
+  }
+}
+
+///|
 /// Returns the shape-level solid fill, never a line-level fill nested later in
 /// `a:ln`. Drawing structure validation has already rejected every other
 /// `a:solidFill` path before the canonical reader reaches this helper.
@@ -1253,6 +1285,31 @@ test "DrawingML shape fill selection excludes line-only fills" {
     drawing_shape_solid_fill_body(shape_and_line).unwrap_or(""),
     "<a:srgbClr val=\"00FF00\"/>",
   )
+}
+
+///|
+test "chartsheet drawing selector requires exactly one chart payload" {
+  let anchor =
+    #|<xdr:oneCellAnchor><xdr:graphicFrame><a:graphic><a:graphicData><c:chart r:id="selected"/></a:graphicData></a:graphic></xdr:graphicFrame></xdr:oneCellAnchor>
+  let one : ReadOnlyArray[(String, PicturePositioning)] = [(anchor, OneCell)]
+  assert_eq(single_drawing_chart_rel_id(one), "selected")
+  let empty : ReadOnlyArray[(String, PicturePositioning)] = []
+  try single_drawing_chart_rel_id(empty) catch {
+    InvalidXml(msg~) => assert_eq(msg, "chartsheet chart payload missing")
+    _ => fail("unexpected empty chartsheet drawing error")
+  } noraise {
+    _ => fail("expected empty chartsheet drawing rejection")
+  }
+  let two : ReadOnlyArray[(String, PicturePositioning)] = [
+    (anchor, OneCell),
+    (anchor, OneCell),
+  ]
+  try single_drawing_chart_rel_id(two) catch {
+    InvalidXml(msg~) => assert_eq(msg, "chartsheet drawing has multiple charts")
+    _ => fail("unexpected duplicate chartsheet chart error")
+  } noraise {
+    _ => fail("expected duplicate chartsheet chart rejection")
+  }
 }
 
 ///|

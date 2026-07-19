@@ -5015,12 +5015,28 @@ fn read_zip_archive_core_unchecked(
         part_names,
         cancelled~,
       )
-      require_part_content_type(
+      let drawing_bytes = load_typed_part(
+        archive,
         content_types,
-        logical_archive_part_path(drawing_path),
+        drawing_path,
         [ct_drawing],
         "drawing",
         cancelled~,
+      )
+      let drawing_source_xml = decode_source(drawing_bytes)
+      let drawing_xml = canonicalize_xlsx_drawing_xml(
+        drawing_source_xml,
+        limits.max_xml_part_bytes,
+        budget=read_budget,
+        cancelled~,
+      )
+      let drawing_anchors = parse_drawing_anchors(
+        drawing_xml,
+        budget=read_budget,
+      )
+      let chart_rel_id = single_drawing_chart_rel_id(
+        drawing_anchors,
+        budget=read_budget,
       )
       let drawing_rels_path = actual_relationship_part_path(
         drawing_path, part_names,
@@ -5039,38 +5055,24 @@ fn read_zip_archive_core_unchecked(
         budget=read_budget,
         cancelled~,
       )
-      let chart_path = match
-        first_existing_rel_target_path(
-          chart_targets,
-          drawing_path,
-          part_names,
-          cancelled~,
-        ) {
-        Some(path) => path
-        None => {
-          let chart_target = match first_relationship_target(chart_targets) {
-            Some(value) => value
-            None => raise InvalidXml(msg="chart target missing")
-          }
-          actual_relationship_target_path(
-            drawing_path,
-            chart_target,
-            part_names,
-            cancelled~,
-          )
-        }
+      let chart_target = match chart_targets.get(chart_rel_id) {
+        Some(value) => value
+        None => raise InvalidXml(msg="chartsheet chart target missing")
       }
-      require_part_content_type(
+      let chart_path = actual_relationship_target_path(
+        drawing_path,
+        chart_target,
+        part_names,
+        cancelled~,
+      )
+      let chart_bytes = load_typed_part(
+        archive,
         content_types,
-        logical_archive_part_path(chart_path),
+        chart_path,
         [ct_chart],
         "chart",
         cancelled~,
       )
-      let chart_bytes = match archive.get(chart_path) {
-        Some(value) => value
-        None => raise MissingPart(path=chart_path)
-      }
       let chart_xml = decode(chart_bytes)
       let chart_sheet = ChartSheet::new(name, chart_xml)
       chart_sheet.state = state
