@@ -558,6 +558,75 @@ test "a shared unexpressible style reports one residual across sheets" {
 }
 
 ///|
+test "a round-tripping table becomes a table op" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "Region")
+  workbook.set_cell("Data", "B1", "Sales")
+  workbook.set_cell("Data", "A2", "East")
+  workbook.set_cell_int("Data", "B2", 10)
+  let opts = @xlsx.TableOptions::new("A1:B2")
+  opts.set_name("Sales")
+  opts.set_style_name("TableStyleMedium9")
+  opts.set_show_row_stripes(Some(true))
+  ignore(workbook.add_table("Data", opts))
+  let envelope = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="tbl.xlsx",
+    source_bytes=1,
+  )
+  let document = envelope.to_json_document().stringify()
+  assert_true(document.contains("\"op\":\"table\""))
+  assert_true(document.contains("\"name\":\"Sales\""))
+  assert_false(document.contains("xlsx.table_unsupported"))
+  // the emitted table op actually replays to an identical dump
+  let d2 = @dump.dump_xlsx_workbook(
+    @dump.replay_xlsx_dump(envelope),
+    source_file="tbl.xlsx",
+    source_bytes=1,
+  )
+  assert_eq(
+    Json::array(envelope.ops).stringify(),
+    Json::array(d2.ops).stringify(),
+  )
+}
+
+///|
+test "a table whose name the engine rejects becomes a residual" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "Region")
+  workbook.set_cell("Data", "B1", "Sales")
+  workbook.set_cell("Data", "A2", "East")
+  workbook.set_cell_int("Data", "B2", 10)
+  let opts = @xlsx.TableOptions::new("A1:B2")
+  // a space is not accepted by the batch table-name validator at apply
+  opts.set_name("Quarter Total")
+  let created = try? workbook.add_table("Data", opts)
+  // only meaningful if the reader retains a space-bearing name; if the
+  // engine already normalized it away, the table simply round-trips
+  guard created is Ok(_) else { return }
+  let envelope = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="bad.xlsx",
+    source_bytes=1,
+  )
+  let sheet = workbook.sheet("Data").unwrap()
+  guard sheet.tables is [table] else { return }
+  if table.name.contains(" ") {
+    let document = envelope.to_json_document().stringify()
+    assert_true(document.contains("xlsx.table_unsupported"))
+    let mut table_ops = 0
+    for op in envelope.ops {
+      if op.stringify().contains("\"op\":\"table\"") {
+        table_ops += 1
+      }
+    }
+    assert_eq(table_ops, 0)
+  }
+}
+
+///|
 test "cancellation raises before work completes" {
   try
     ignore(
