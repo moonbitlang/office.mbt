@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:8447458b
+    Fingerprint: crc32:ccdafd33
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:8447458b","names":["docx","xlsx","help","identify","outline","get","text","query","validate","issues","preview","create","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:ccdafd33","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","issues","preview","create","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:8447458b","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:ccdafd33","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:ccdafd33","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:ccdafd33","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:ccdafd33","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:ccdafd33","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:ccdafd33","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:ccdafd33","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:ccdafd33","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:ccdafd33","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:ccdafd33","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:ccdafd33","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:ccdafd33","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:ccdafd33","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:ccdafd33","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:ccdafd33","kind":"command","name":"raw"}]
 
 The raw command publishes explicit subcommand schemas, including every edit
 input and its conditional constraints.
@@ -537,3 +537,26 @@ DOCX previews inline the shared HTML converter output in one page shell.
   {"success":true,"data":{"schema":"office.preview/1","format":"docx","images_embedded":0}}
   $ grep -c '<!DOCTYPE html>' para.html
   1
+
+The dump command emits a replayable office.dump/1 op stream: canonical
+ordered batch ops in JSON, the streaming JSONL form with an integrity
+digest, and a typed refusal for DOCX until that slice lands.
+
+  $ xlsx.exe create dump.xlsx --sheet Data >/dev/null
+  $ xlsx.exe set dump.xlsx Data A1 Region >/dev/null
+  $ xlsx.exe set dump.xlsx Data B1 42 >/dev/null
+  $ office.exe dump dump.xlsx --json | jq -c '{schema,format,ops:[.ops[].op],residual:(.residual|length)}'
+  {"schema":"office.dump/1","format":"xlsx","ops":["set","set"],"residual":0}
+  $ office.exe dump dump.xlsx --jsonl | jq -c '.record' | sort -u
+  "end"
+  "header"
+  "op"
+  $ office.exe dump dump.xlsx --jsonl | jq -rc 'select(.record=="end") | (.ops_sha256 | test("^[0-9a-f]{64}$"))'
+  true
+  $ office.exe dump dump.xlsx
+  xlsx dump: 2 op(s), 0 residual, 0 warning(s)
+
+  $ office.exe dump "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --json > dump-docx.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code}' dump-docx.json
+  {"success":false,"code":"office.dump.unsupported_format"}

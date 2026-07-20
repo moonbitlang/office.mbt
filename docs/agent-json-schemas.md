@@ -681,6 +681,38 @@ document content, followed only on an explicit click.
 | `truncation` | object | `max_rows`, `max_cols`, `truncated_sheets`, `images_omitted` |
 | `warnings` | array? | bounded converter warnings (omitted when empty) |
 
+### `office.dump/1` (`office dump FILE [--json|--jsonl]`)
+
+A replayable semantic dump: the workbook re-expressed as an ordered stream
+of canonical `xlsx.batch/1` ops in their exact engine JSON shapes, so
+replaying the ops through the same strict batch engine reconstructs an
+equivalent document — never a second writer. Everything the op vocabulary
+cannot express becomes an ordered, machine-readable `residual` record
+(error cells, array formulas, rich-text flattening, styles, images,
+charts, and so on), so loss is always visible rather than silent. Before
+the envelope is returned, every produced op chunk is dry-run parsed through
+the real batch parser, so a dump can never emit a script the engine would
+refuse. XLSX only for now; DOCX is a later slice and is refused with
+`office.dump.unsupported_format`. Byte-identical replay is an explicit
+non-goal; formula cells carry no cached value and require recalculation.
+
+`--json` prints the single-document form below. `--jsonl` prints the
+streaming form: one `header` line, one `op` line per op (with its 0-based
+`index`), `residual`/`warning` lines, and a terminal `end` line carrying
+the counts plus `ops_sha256` (a digest over the concatenated op lines) for
+truncation detection.
+
+| key | type | notes |
+| --- | --- | --- |
+| `schema` | string | `"office.dump/1"` |
+| `format` | string | `"xlsx"` |
+| `source` | object | bounded `file` and byte count (excluded from fixpoint comparison) |
+| `replay` | object | `batch_schema`, `create` parameters, and engine `limits` |
+| `ops` | array | ordered canonical `xlsx.batch/1` ops (`{op, params}`) |
+| `residual` | array | ordered `{code, severity, scope, location, asset?, detail}` records |
+| `warnings` | array | bounded dump diagnostics |
+| `stats` | object | `ops`, `residual`, `warnings` counts |
+
 ## Standalone `docx` CLI schemas
 
 ## `docx.outline/1` — document structure map (`docx outline <file>`)
