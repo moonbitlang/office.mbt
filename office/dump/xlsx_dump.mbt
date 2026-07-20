@@ -175,7 +175,20 @@ fn dump_sheet_cells(
   residual : Array[DumpResidual],
   cancelled : () -> Bool,
 ) -> Unit raise {
-  let cells = worksheet.cells.copy()
+  // The reader may return more than one entry for a coordinate in a
+  // noncanonical sheet; its defined behavior takes the first occurrence,
+  // so dedup by reference keeping the first before sorting. Sorting on the
+  // now-unique (row, col) is total, so the emitted order is deterministic
+  // regardless of the sort's stability.
+  let seen : Set[String] = Set::new()
+  let cells : Array[@xlsx.Cell] = []
+  for cell in worksheet.cells {
+    if seen.contains(cell.reference) {
+      continue
+    }
+    seen.add(cell.reference)
+    cells.push(cell)
+  }
   cells.sort_by((a, b) => {
     if a.row == b.row {
       a.col - b.col
@@ -303,11 +316,49 @@ fn dump_sheet_cells(
 }
 
 ///|
-/// Emits `merge` ops sorted by their top-left coordinate.
+/// The number of cells a `start:end` range covers, or None when either
+/// endpoint is unparseable. Computed directly from coordinates so it never
+/// hits the reader's own range cap.
+fn range_cell_count(range : String) -> Int64? {
+  let (start, end) = match range.find(":") {
+    Some(colon) =>
+      (
+        range.substring(start=0, end=colon),
+        range.substring(start=colon + 1, end=range.length()),
+      )
+    None => (range, range)
+  }
+  guard (try? @xlsx.cell_name_to_coordinates(start)) is Ok((c1, r1)) else {
+    return None
+  }
+  guard (try? @xlsx.cell_name_to_coordinates(end)) is Ok((c2, r2)) else {
+    return None
+  }
+  let cols = (c2 - c1).abs() + 1
+  let rows = (r2 - r1).abs() + 1
+  Some(cols.to_int64() * rows.to_int64())
+}
+
+///|
+/// Whether a range is small enough for the batch parser to accept
+/// (`@inspect.parse_range` enforces `MAX_RANGE_CELLS`). A larger range must
+/// degrade to a residual, never to a self-check failure.
+fn range_within_batch_ceiling(range : String) -> Bool {
+  match range_cell_count(range) {
+    Some(count) => count <= @inspect.MAX_RANGE_CELLS
+    None => true
+  }
+}
+
+///|
+/// Emits `merge` ops sorted by their top-left coordinate, then by full
+/// range text so shared top-left coordinates stay deterministic. Ranges
+/// beyond the batch range ceiling degrade to a residual.
 fn dump_sheet_merges(
   workbook : @xlsx.Workbook,
   sheet : String,
   ops : Array[Json],
+  residual : Array[DumpResidual],
 ) -> Unit raise {
   let merges = workbook.get_merge_cells(sheet).copy()
   let keyed : Array[(Int, Int, String)] = []
@@ -321,14 +372,35 @@ fn dump_sheet_merges(
     }
     keyed.push((row, col, range))
   }
-  keyed.sort_by((a, b) => if a.0 == b.0 { a.1 - b.1 } else { a.0 - b.0 })
+  keyed.sort_by((a, b) => {
+    if a.0 == b.0 {
+      if a.1 == b.1 {
+        a.2.compare(b.2)
+      } else {
+        a.1 - b.1
+      }
+    } else {
+      a.0 - b.0
+    }
+  })
   for entry in keyed {
-    ops.push(
-      dump_op("merge", {
-        "sheet": Json::string(sheet),
-        "range": Json::string(entry.2),
-      }),
-    )
+    if range_within_batch_ceiling(entry.2) {
+      ops.push(
+        dump_op("merge", {
+          "sheet": Json::string(sheet),
+          "range": Json::string(entry.2),
+        }),
+      )
+    } else {
+      residual.push({
+        code: "xlsx.merge_range_too_large",
+        severity: "dropped",
+        scope: "cells",
+        location: dump_location(sheet, "range", entry.2),
+        asset: None,
+        detail: "merge range exceeds the batch range ceiling of \{@inspect.MAX_RANGE_CELLS} cells",
+      })
+    }
   }
 }
 
@@ -342,6 +414,7 @@ fn dump_sheet_panes(
   residual : Array[DumpResidual],
 ) -> Unit raise {
   let panes = worksheet.get_panes()
+  let sheet_location = Json::object({ "sheet": Json::string(sheet) })
   if panes.freeze && (panes.x_split > 0 || panes.y_split > 0) {
     let cell = @xlsx.coordinates_to_cell_name(
       panes.x_split + 1,
@@ -353,12 +426,26 @@ fn dump_sheet_panes(
         "cell": Json::string(cell),
       }),
     )
-  } else if panes.split {
+    // the freeze op captures only the split boundary; a persisted
+    // scroll position, active pane, or selection is not replayable
+    if panes.selection.length() > 0 || panes.active_pane != "" {
+      residual.push({
+        code: "xlsx.freeze_pane_state_approximated",
+        severity: "approximated",
+        scope: "sheet",
+        location: sheet_location,
+        asset: None,
+        detail: "frozen-pane scroll position, active pane, and selection are not replayable",
+      })
+    }
+  } else if panes.split || panes.x_split > 0 || panes.y_split > 0 {
+    // get_panes() reports split=false for some persisted split panes, so
+    // a non-zero split offset without freeze is the reliable signal
     residual.push({
       code: "xlsx.split_panes_unsupported",
       severity: "dropped",
       scope: "sheet",
-      location: Json::object({ "sheet": Json::string(sheet) }),
+      location: sheet_location,
       asset: None,
       detail: "non-freeze split panes are not expressible in \{XLSX_BATCH_SCHEMA}",
     })
@@ -375,12 +462,23 @@ fn dump_sheet_filter(
   residual : Array[DumpResidual],
 ) -> Unit raise {
   guard workbook.get_auto_filter(sheet) is Some(filter) else { return }
-  ops.push(
-    dump_op("filter", {
-      "sheet": Json::string(sheet),
-      "range": Json::string(filter.range_ref),
-    }),
-  )
+  if range_within_batch_ceiling(filter.range_ref) {
+    ops.push(
+      dump_op("filter", {
+        "sheet": Json::string(sheet),
+        "range": Json::string(filter.range_ref),
+      }),
+    )
+  } else {
+    residual.push({
+      code: "xlsx.filter_range_too_large",
+      severity: "dropped",
+      scope: "sheet",
+      location: dump_location(sheet, "range", filter.range_ref),
+      asset: None,
+      detail: "auto-filter range exceeds the batch range ceiling of \{@inspect.MAX_RANGE_CELLS} cells",
+    })
+  }
   if filter.columns.length() > 0 {
     residual.push({
       code: "xlsx.filter_criteria_dropped",
@@ -423,6 +521,13 @@ fn dump_sheet_coverage_residuals(
       "xlsx.comments_not_dumped",
       (workbook.get_comments(sheet) catch { _ => [] }).length(),
     ),
+    ("xlsx.shapes_not_dumped", worksheet.shapes.length()),
+    ("xlsx.form_controls_not_dumped", worksheet.form_controls.length()),
+    ("xlsx.slicers_not_dumped", worksheet.slicers.length()),
+    (
+      "xlsx.header_footer_images_not_dumped",
+      worksheet.header_footer_images.length(),
+    ),
   ]
   for entry in counts {
     let (code, count) = entry
@@ -436,6 +541,100 @@ fn dump_sheet_coverage_residuals(
         detail: "\{count} not yet covered by the dump (planned follow-up)",
       })
     }
+  }
+  // present-or-absent sheet features the op vocabulary cannot express
+  if worksheet.sheet_background is Some(_) {
+    residual.push({
+      code: "xlsx.sheet_background_dropped",
+      severity: "dropped",
+      scope: "sheet",
+      location: Json::object({ "sheet": Json::string(sheet) }),
+      asset: None,
+      detail: "sheet background image is not expressible in \{XLSX_BATCH_SCHEMA}",
+    })
+  }
+  if worksheet.row_breaks.length() > 0 || worksheet.col_breaks.length() > 0 {
+    residual.push({
+      code: "xlsx.page_breaks_dropped",
+      severity: "dropped",
+      scope: "sheet",
+      location: Json::object({ "sheet": Json::string(sheet) }),
+      asset: None,
+      detail: "manual page breaks are not expressible in \{XLSX_BATCH_SCHEMA}",
+    })
+  }
+  // right-to-left and other non-default primary sheet-view state
+  if (try? workbook.get_sheet_view(sheet, 0)) is Ok(view) &&
+    view.right_to_left is Some(true) {
+    residual.push({
+      code: "xlsx.sheet_view_state_dropped",
+      severity: "dropped",
+      scope: "sheet",
+      location: Json::object({ "sheet": Json::string(sheet) }),
+      asset: None,
+      detail: "right-to-left and other sheet-view state are not expressible in \{XLSX_BATCH_SCHEMA}",
+    })
+  }
+}
+
+///|
+/// Workbook-scoped residuals for content the per-sheet passes cannot see:
+/// defined names, active-sheet selection, document properties, and the
+/// date system (a correctness hazard, not merely lossy).
+fn dump_workbook_residuals(
+  workbook : @xlsx.Workbook,
+  residual : Array[DumpResidual],
+) -> Unit raise {
+  let document = Json::object({ "scope": Json::string("workbook") })
+  let defined = (try? workbook.get_defined_names()).unwrap_or([])
+  // `_xlnm._FilterDatabase` is an internal name the auto-filter creates; a
+  // replayed `filter` op reconstructs it, so it is not a genuine drop
+  let mut dropped_names = 0
+  for name in defined {
+    if !name.name.has_prefix("_xlnm._FilterDatabase") {
+      dropped_names += 1
+    }
+  }
+  if dropped_names > 0 {
+    residual.push({
+      code: "xlsx.defined_names_dropped",
+      severity: "dropped",
+      scope: "document",
+      location: document,
+      asset: None,
+      detail: "\{dropped_names} defined name(s) are not expressible in \{XLSX_BATCH_SCHEMA}",
+    })
+  }
+  if workbook.get_active_sheet_index() != 0 {
+    residual.push({
+      code: "xlsx.active_sheet_dropped",
+      severity: "dropped",
+      scope: "document",
+      location: document,
+      asset: None,
+      detail: "the active-sheet selection is not expressible in \{XLSX_BATCH_SCHEMA}",
+    })
+  }
+  let custom = workbook.get_custom_props()
+  if custom.length() > 0 {
+    residual.push({
+      code: "xlsx.custom_properties_dropped",
+      severity: "dropped",
+      scope: "document",
+      location: document,
+      asset: None,
+      detail: "\{custom.length()} custom document propert(ies) are not expressible in \{XLSX_BATCH_SCHEMA}",
+    })
+  }
+  if workbook.get_workbook_props().date_1904 is Some(true) {
+    residual.push({
+      code: "xlsx.date1904_dropped",
+      severity: "dropped",
+      scope: "document",
+      location: document,
+      asset: None,
+      detail: "source uses the 1904 date system; replay into a 1900-system workbook shifts date-formatted serials",
+    })
   }
 }
 
@@ -487,6 +686,7 @@ pub fn dump_xlsx_workbook(
   workbook : @xlsx.Workbook,
   source_file~ : String,
   source_bytes~ : Int,
+  source_sha256? : String? = None,
   cancelled? : () -> Bool = () => false,
 ) -> DumpEnvelope raise {
   let ops : Array[Json] = []
@@ -520,31 +720,54 @@ pub fn dump_xlsx_workbook(
     guard workbook.sheet(name) is Some(worksheet) else { continue }
     dump_sheet_dimensions(worksheet, name, ops, residual)
     dump_sheet_cells(workbook, worksheet, name, ops, residual, cancelled)
-    dump_sheet_merges(workbook, name, ops)
+    dump_sheet_merges(workbook, name, ops, residual)
     dump_sheet_panes(worksheet, name, ops, residual)
     dump_sheet_filter(workbook, name, ops, residual)
     dump_sheet_coverage_residuals(workbook, worksheet, name, residual)
   }
-  // visibility last: the engine's keep-one-visible guard sees the final
-  // sheet population
+  dump_workbook_residuals(workbook, residual)
+  // Visibility ops come last so the engine's keep-one-visible guard sees
+  // the final sheet population. The replayed workbook contains only
+  // worksheets (chart sheets were dropped), so if every worksheet is
+  // hidden in the source, one hide would be refused at apply time — keep
+  // the first worksheet visible and record that as a residual.
+  let mut visible_worksheets = 0
   for name in worksheet_names {
     guard workbook.sheet(name) is Some(worksheet) else { continue }
-    match worksheet.state() {
-      Hidden =>
-        ops.push(
-          dump_op("sheet", {
-            "action": Json::string("hide"),
-            "name": Json::string(name),
-          }),
-        )
-      VeryHidden =>
-        ops.push(
-          dump_op("sheet", {
-            "action": Json::string("very-hide"),
-            "name": Json::string(name),
-          }),
-        )
-      _ => ()
+    if worksheet.state() is Visible {
+      visible_worksheets += 1
+    }
+  }
+  let mut force_visible = visible_worksheets == 0
+  for name in worksheet_names {
+    guard workbook.sheet(name) is Some(worksheet) else { continue }
+    let action = match worksheet.state() {
+      Hidden => Some("hide")
+      VeryHidden => Some("very-hide")
+      _ => None
+    }
+    match action {
+      Some(verb) =>
+        if force_visible {
+          // this worksheet must stay visible so replay keeps one visible
+          force_visible = false
+          residual.push({
+            code: "xlsx.sheet_visibility_forced_visible",
+            severity: "approximated",
+            scope: "sheet",
+            location: Json::object({ "sheet": Json::string(name) }),
+            asset: None,
+            detail: "every worksheet is hidden in the source (visibility carried by a dropped chart sheet); replay keeps this one visible",
+          })
+        } else {
+          ops.push(
+            dump_op("sheet", {
+              "action": Json::string(verb),
+              "name": Json::string(name),
+            }),
+          )
+        }
+      None => ()
     }
   }
   check_cancelled(cancelled)
@@ -553,6 +776,7 @@ pub fn dump_xlsx_workbook(
     format: "xlsx",
     source_file,
     source_bytes,
+    source_sha256,
     batch_schema: XLSX_BATCH_SCHEMA,
     create_sheet: Some(create_sheet),
     ops,

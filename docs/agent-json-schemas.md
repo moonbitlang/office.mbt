@@ -706,7 +706,7 @@ truncation detection.
 | --- | --- | --- |
 | `schema` | string | `"office.dump/1"` |
 | `format` | string | `"xlsx"` |
-| `source` | object | bounded `file` and byte count (excluded from fixpoint comparison) |
+| `source` | object | bounded `file`, byte count, and `sha256` digest (excluded from fixpoint comparison) |
 | `replay` | object | `batch_schema`, `create` parameters, and engine `limits` |
 | `ops` | array | ordered canonical `xlsx.batch/1` ops (`{op, params}`) |
 | `residual` | array | ordered `{code, severity, scope, location, asset?, detail}` records |

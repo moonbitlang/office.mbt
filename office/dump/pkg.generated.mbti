@@ -11,7 +11,7 @@ pub const SCHEMA_DUMP : String = "office.dump/1"
 
 pub const XLSX_BATCH_SCHEMA : String = "xlsx.batch/1"
 
-pub fn dump_xlsx_workbook(@xlsx.Workbook, source_file~ : String, source_bytes~ : Int, cancelled? : () -> Bool) -> DumpEnvelope raise
+pub fn dump_xlsx_workbook(@xlsx.Workbook, source_file~ : String, source_bytes~ : Int, source_sha256? : String?, cancelled? : () -> Bool) -> DumpEnvelope raise
 
 pub fn sha256_hex_string(String) -> String
 
@@ -27,6 +27,7 @@ pub(all) struct DumpEnvelope {
   format : String
   source_file : String
   source_bytes : Int
+  source_sha256 : String?
   batch_schema : String
   create_sheet : String?
   ops : Array[Json]

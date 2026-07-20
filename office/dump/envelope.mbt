@@ -29,6 +29,7 @@ pub(all) struct DumpEnvelope {
   format : String
   source_file : String
   source_bytes : Int
+  source_sha256 : String?
   batch_schema : String
   create_sheet : String?
   ops : Array[Json]
@@ -71,10 +72,17 @@ pub fn DumpEnvelope::to_json_document(self : DumpEnvelope) -> Json {
   Json::object({
     "schema": Json::string(SCHEMA_DUMP),
     "format": Json::string(self.format),
-    "source": Json::object({
-      "file": Json::string(self.source_file),
-      "bytes": Json::number(self.source_bytes.to_double()),
-    }),
+    "source": {
+      let source : Map[String, Json] = {
+        "file": Json::string(self.source_file),
+        "bytes": Json::number(self.source_bytes.to_double()),
+      }
+      match self.source_sha256 {
+        Some(digest) => source["sha256"] = Json::string(digest)
+        None => ()
+      }
+      Json::object(source)
+    },
     "replay": Json::object(replay),
     "ops": Json::array(self.ops),
     "residual": Json::array(self.residual.map(residual_json)),

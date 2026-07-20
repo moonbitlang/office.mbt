@@ -56,6 +56,7 @@ async fn run_dump(matches : @argparse.Matches) -> Unit {
     workbook,
     source_file=file,
     source_bytes=source.bytes.length(),
+    source_sha256=Some(@lib.sha256_hex(source.bytes)),
     cancelled=office_async_cancelled,
   ) catch {
     error if office_async_cancelled() => raise error

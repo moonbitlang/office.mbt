@@ -237,6 +237,96 @@ test "dimensions become width/row/col ops before cell ops" {
 }
 
 ///|
+test "an all-hidden workbook keeps one worksheet visible on replay" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("A"))
+  workbook.set_cell("A", "A1", "a")
+  // a visible chart sheet lets the engine hide the only worksheet; the
+  // chart sheet is dropped on dump, so replay would have no visible sheet
+  // unless the worksheet's hide is withheld
+  let chart = @xlsx.ChartOptions::new(Col)
+  chart.series.push(@xlsx.ChartSeries::new("A!$A$1:$A$1", "A!$A$1:$A$1"))
+  ignore(workbook.add_chart_sheet_with_options("Chart", chart))
+  workbook.set_sheet_visible("A", false)
+  let envelope = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="hidden.xlsx",
+    source_bytes=1,
+  )
+  // the sole worksheet's hide is withheld so replay keeps it visible
+  let mut hides = 0
+  for op in envelope.ops {
+    if op.stringify().contains("\"op\":\"sheet\"") {
+      hides += 1
+    }
+  }
+  assert_eq(hides, 0)
+  let document = envelope.to_json_document().stringify()
+  assert_true(document.contains("xlsx.sheet_visibility_forced_visible"))
+}
+
+///|
+test "oversized merge and filter ranges degrade to residual, not self-check failure" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "x")
+  // A1:A200000 covers 200000 cells, past the 100000 batch range ceiling
+  workbook.merge_cells("Data", "A1:A200000")
+  // this must succeed (not raise DumpSelfCheckFailed) and record residual
+  let envelope = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="big.xlsx",
+    source_bytes=1,
+  )
+  let document = envelope.to_json_document().stringify()
+  assert_true(document.contains("xlsx.merge_range_too_large"))
+  // no merge op was emitted for the oversized range
+  let mut merge_ops = 0
+  for op in envelope.ops {
+    if op.stringify().contains("\"op\":\"merge\"") {
+      merge_ops += 1
+    }
+  }
+  assert_eq(merge_ops, 0)
+}
+
+///|
+test "workbook-level content produces explicit residuals" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "x")
+  workbook.set_defined_name(@xlsx.DefinedName::new("Choice", "Data!$A$1"))
+  let envelope = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="named.xlsx",
+    source_bytes=1,
+  )
+  assert_true(
+    envelope
+    .to_json_document()
+    .stringify()
+    .contains("xlsx.defined_names_dropped"),
+  )
+}
+
+///|
+test "a source digest travels in the envelope source record" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "x")
+  let envelope = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="d.xlsx",
+    source_bytes=3,
+    source_sha256=Some("abc123"),
+  )
+  let document = envelope.to_json_document().stringify()
+  assert_true(document.contains("\"sha256\":\"abc123\""))
+  // the header line of the JSONL form carries it too
+  assert_true(envelope.to_jsonl_lines()[0].contains("\"sha256\":\"abc123\""))
+}
+
+///|
 test "cancellation raises before work completes" {
   try
     ignore(

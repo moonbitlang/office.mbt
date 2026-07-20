@@ -694,6 +694,9 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "format", "literal(xlsx)", true, "the structurally verified package format",
         ),
         capability_field(
+          "source", "object", true, "bounded input path, byte count, and sha256 digest (excluded from fixpoint comparison)",
+        ),
+        capability_field(
           "replay", "object", true, "batch schema, create parameters, and engine limits for replay",
         ),
         capability_field(

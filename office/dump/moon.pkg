@@ -1,5 +1,6 @@
 import {
   "bobzhang/mbtexcel/batch",
+  "bobzhang/mbtexcel/inspect",
   "bobzhang/mbtexcel/xlsx",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
