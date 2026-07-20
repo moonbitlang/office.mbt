@@ -517,7 +517,6 @@ fn dump_sheet_coverage_residuals(
   residual : Array[DumpResidual],
 ) -> Unit raise {
   let counts : Array[(String, Int)] = [
-    ("xlsx.styles_not_dumped", styled_cell_count(worksheet)),
     ("xlsx.tables_not_dumped", worksheet.tables.length()),
     ("xlsx.images_not_dumped", worksheet.images.length()),
     ("xlsx.charts_not_dumped", worksheet.charts.length()),
@@ -732,17 +731,6 @@ fn dump_workbook_residuals(
 }
 
 ///|
-fn styled_cell_count(worksheet : @xlsx.Worksheet) -> Int {
-  let mut count = 0
-  for cell in worksheet.cells {
-    if cell.style_explicit {
-      count += 1
-    }
-  }
-  count
-}
-
-///|
 /// The dump-time self-check: every produced op chunk must parse through
 /// the real batch parser, so a dump can never emit a script its own
 /// engine refuses.
@@ -813,6 +801,7 @@ pub fn dump_xlsx_workbook(
     guard workbook.sheet(name) is Some(worksheet) else { continue }
     dump_sheet_dimensions(worksheet, name, ops, residual)
     dump_sheet_cells(workbook, worksheet, name, ops, residual, cancelled)
+    dump_sheet_styles(workbook, worksheet, name, ops, residual)
     dump_sheet_merges(workbook, name, ops, residual)
     dump_sheet_panes(workbook, worksheet, name, ops, residual)
     dump_sheet_filter(workbook, name, ops, residual)
