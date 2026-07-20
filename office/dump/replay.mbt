@@ -22,17 +22,29 @@ pub fn replay_xlsx_dump(envelope : DumpEnvelope) -> @xlsx.Workbook raise {
     raise ReplayInvalidFormat("xlsx dump is missing its create sheet")
   }
   let workbook = @xlsx.Workbook::new()
-  ignore(workbook.add_sheet(create_sheet))
-  let script = Json::object({
-    "schema": Json::string(envelope.batch_schema),
-    "ops": Json::array(envelope.ops),
-  })
-  let ops = @batch.parse_script(script) catch {
-    error => raise ReplayFailed("dump ops did not parse: \{error}")
-  }
-  for op in ops {
-    @batch.apply_op(workbook, op) catch {
-      error => raise ReplayFailed("dump op failed to apply: \{error}")
+  ignore(
+    workbook.add_sheet(create_sheet) catch {
+      _ =>
+        raise ReplayInvalidFormat(
+          "create sheet name is invalid: \"\{create_sheet}\"",
+        )
+    },
+  )
+  // apply the ops in the SAME chunks the dump self-check validated, so a
+  // dump spanning the op or new-style ceiling replays exactly as it was
+  // checked (one whole-envelope batch would exceed those limits)
+  for chunk in xlsx_dump_op_chunks(envelope.ops) {
+    let script = Json::object({
+      "schema": Json::string(envelope.batch_schema),
+      "ops": Json::array(chunk),
+    })
+    let ops = @batch.parse_script(script) catch {
+      error => raise ReplayFailed("dump ops did not parse: \{error}")
+    }
+    for op in ops {
+      @batch.apply_op(workbook, op) catch {
+        error => raise ReplayFailed("dump op failed to apply: \{error}")
+      }
     }
   }
   workbook

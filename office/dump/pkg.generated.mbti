@@ -17,6 +17,8 @@ pub fn replay_xlsx_dump(DumpEnvelope) -> @xlsx.Workbook raise
 
 pub fn sha256_hex_string(String) -> String
 
+pub fn xlsx_dump_op_chunks(Array[Json]) -> Array[Array[Json]]
+
 // Errors
 pub suberror DumpError {
   DumpCancelled
