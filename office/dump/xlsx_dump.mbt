@@ -426,9 +426,13 @@ fn dump_sheet_panes(
         "cell": Json::string(cell),
       }),
     )
-    // the freeze op captures only the split boundary; a persisted
-    // scroll position, active pane, or selection is not replayable
-    if panes.selection.length() > 0 || panes.active_pane != "" {
+    // the freeze op captures only the split boundary; a persisted scroll
+    // position (top_left_cell beyond the boundary), active pane, or
+    // selection is not replayable
+    let scroll_lost = panes.top_left_cell != "" &&
+      panes.top_left_cell != "A1" &&
+      panes.top_left_cell != cell
+    if panes.selection.length() > 0 || panes.active_pane != "" || scroll_lost {
       residual.push({
         code: "xlsx.freeze_pane_state_approximated",
         severity: "approximated",
@@ -563,18 +567,56 @@ fn dump_sheet_coverage_residuals(
       detail: "manual page breaks are not expressible in \{XLSX_BATCH_SCHEMA}",
     })
   }
-  // right-to-left and other non-default primary sheet-view state
+  // non-default primary sheet-view state (RTL, grid lines, zoom, …)
   if (try? workbook.get_sheet_view(sheet, 0)) is Ok(view) &&
-    view.right_to_left is Some(true) {
+    sheet_view_is_nondefault(view) {
     residual.push({
       code: "xlsx.sheet_view_state_dropped",
       severity: "dropped",
       scope: "sheet",
       location: Json::object({ "sheet": Json::string(sheet) }),
       asset: None,
-      detail: "right-to-left and other sheet-view state are not expressible in \{XLSX_BATCH_SCHEMA}",
+      detail: "non-default sheet-view state (e.g. right-to-left, grid lines, zoom) is not expressible in \{XLSX_BATCH_SCHEMA}",
     })
   }
+  // retained sheet-level state the op vocabulary cannot express: each is
+  // stored as an Option on the worksheet, so Some means present
+  let present : Array[(String, Bool)] = [
+    ("xlsx.page_margins_dropped", worksheet.page_margins is Some(_)),
+    ("xlsx.page_layout_dropped", worksheet.page_layout is Some(_)),
+    ("xlsx.header_footer_dropped", worksheet.header_footer is Some(_)),
+    ("xlsx.sheet_protection_dropped", worksheet.sheet_protection is Some(_)),
+    ("xlsx.sheet_properties_dropped", worksheet.sheet_props is Some(_)),
+    ("xlsx.ignored_errors_dropped", worksheet.ignored_errors.length() > 0),
+  ]
+  for entry in present {
+    let (code, is_present) = entry
+    if is_present {
+      residual.push({
+        code,
+        severity: "dropped",
+        scope: "sheet",
+        location: Json::object({ "sheet": Json::string(sheet) }),
+        asset: None,
+        detail: "retained sheet state is not expressible in \{XLSX_BATCH_SCHEMA}",
+      })
+    }
+  }
+}
+
+///|
+/// Whether a primary sheet view carries display state the `office dump` op
+/// vocabulary cannot reproduce. Only fields whose non-default value is
+/// unambiguous are tested: the reader materializes some fields with their
+/// defaults (e.g. `show_formulas`/`show_zeros`), so testing those would
+/// false-positive on ordinary sheets. `top_left_cell` is pane scroll state
+/// disclosed by the freeze/split pane path instead.
+fn sheet_view_is_nondefault(view : @xlsx.SheetViewOptions) -> Bool {
+  view.right_to_left is Some(true) ||
+  view.show_grid_lines is Some(false) ||
+  view.show_row_col_headers is Some(false) ||
+  (view.zoom_scale is Some(zoom) && zoom != 100.0) ||
+  (view.view is Some(mode) && mode != "" && mode != "normal")
 }
 
 ///|
@@ -587,11 +629,22 @@ fn dump_workbook_residuals(
 ) -> Unit raise {
   let document = Json::object({ "scope": Json::string("workbook") })
   let defined = (try? workbook.get_defined_names()).unwrap_or([])
-  // `_xlnm._FilterDatabase` is an internal name the auto-filter creates; a
-  // replayed `filter` op reconstructs it, so it is not a genuine drop
+  // The auto-filter internal name `_xlnm._FilterDatabase` is reconstructed
+  // by a replayed `filter` op, so exclude it — but ONLY when it names a
+  // sheet that actually has an auto-filter, and only on an exact-name
+  // match (a distinct name like `_xlnm._FilterDatabaseNote` is a real
+  // drop).
+  let filter_sheets : Set[String] = Set::new()
+  for sheet in workbook.get_sheet_list() {
+    if (try? workbook.get_auto_filter(sheet)) is Ok(Some(_)) {
+      filter_sheets.add(sheet)
+    }
+  }
   let mut dropped_names = 0
   for name in defined {
-    if !name.name.has_prefix("_xlnm._FilterDatabase") {
+    let reconstructed = name.name == "_xlnm._FilterDatabase" &&
+      filter_sheets.contains(name.scope)
+    if !reconstructed {
       dropped_names += 1
     }
   }

@@ -327,6 +327,75 @@ test "a source digest travels in the envelope source record" {
 }
 
 ///|
+test "non-default page and view state produce residuals" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "x")
+  workbook.set_page_margins(
+    "Data",
+    Some(@xlsx.PageLayoutMarginsOptions::with_values(top=1.5, bottom=1.5)),
+  )
+  workbook.set_sheet_view(
+    "Data",
+    0,
+    @xlsx.SheetViewOptions::with_values(show_grid_lines=false, zoom_scale=125.0),
+  )
+  let document = @dump.dump_xlsx_workbook(
+      workbook,
+      source_file="layout.xlsx",
+      source_bytes=1,
+    )
+    .to_json_document()
+    .stringify()
+  assert_true(document.contains("xlsx.page_margins_dropped"))
+  assert_true(document.contains("xlsx.sheet_view_state_dropped"))
+}
+
+///|
+test "a frozen pane with a persisted scroll position is disclosed" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "x")
+  workbook.set_panes(
+    "Data",
+    @xlsx.Panes::with_values(
+      freeze=true,
+      x_split=1,
+      y_split=1,
+      top_left_cell="C5",
+    ),
+  )
+  let document = @dump.dump_xlsx_workbook(
+      workbook,
+      source_file="scroll.xlsx",
+      source_bytes=1,
+    )
+    .to_json_document()
+    .stringify()
+  // freeze op present AND the scroll position disclosed as approximated
+  assert_true(document.contains("\"op\":\"freeze\""))
+  assert_true(document.contains("xlsx.freeze_pane_state_approximated"))
+}
+
+///|
+test "filter-database name is excluded only with a matching auto-filter" {
+  // a _xlnm._FilterDatabase name whose sheet has NO auto-filter is a real
+  // drop, not a reconstructed one
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "x")
+  workbook.set_defined_name(
+    @xlsx.DefinedName::new("_xlnm._FilterDatabase", "Data!$A$1", scope="Data"),
+  )
+  assert_true(
+    @dump.dump_xlsx_workbook(workbook, source_file="d.xlsx", source_bytes=1)
+    .to_json_document()
+    .stringify()
+    .contains("xlsx.defined_names_dropped"),
+  )
+}
+
+///|
 test "cancellation raises before work completes" {
   try
     ignore(
