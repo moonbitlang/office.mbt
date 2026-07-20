@@ -179,6 +179,173 @@ fn LimitedXmlBuilder::write_xml_attr(
 }
 
 ///|
+/// Write a `<t>` text element, adding `xml:space="preserve"` when the text
+/// carries leading/trailing spaces or embedded newlines that XML parsers
+/// would otherwise be free to normalize away.
+fn LimitedXmlBuilder::write_t_element(
+  self : LimitedXmlBuilder,
+  text : StringView,
+) -> Unit raise XlsxError {
+  if text.has_prefix(" ") || text.has_suffix(" ") || text.contains("\n") {
+    self.write_view("<t xml:space=\"preserve\">")
+  } else {
+    self.write_view("<t>")
+  }
+  self.write_xml_text(text)
+  self.write_view("</t>")
+}
+
+///|
+/// Write the `<color .../>` element of a rich-text run font. Theme takes
+/// precedence over indexed, which takes precedence over rgb; a zero tint is
+/// omitted. Shared by the shared-strings and comments writers.
+fn LimitedXmlBuilder::write_rich_text_color(
+  self : LimitedXmlBuilder,
+  font : RichTextFont,
+) -> Unit raise XlsxError {
+  let tint = match font.color_tint {
+    Some(v) => if v == 0.0 { None } else { Some(v) }
+    None => None
+  }
+  match font.color_theme {
+    Some(value) => {
+      self.write_view("<color theme=\"\{value}\"")
+      match tint {
+        Some(v) => self.write_view(" tint=\"\{v}\"")
+        None => ()
+      }
+      self.write_view("/>")
+      return
+    }
+    None => ()
+  }
+  match font.color_indexed {
+    Some(value) => {
+      self.write_view("<color indexed=\"\{value}\"")
+      match tint {
+        Some(v) => self.write_view(" tint=\"\{v}\"")
+        None => ()
+      }
+      self.write_view("/>")
+      return
+    }
+    None => ()
+  }
+  match font.color {
+    Some(color) => {
+      let normalized = color.replace_all(old="#", new="")
+      let rgb = if normalized.length() == 6 {
+        "FF" + normalized
+      } else {
+        normalized
+      }
+      self.write_view("<color rgb=\"")
+      self.write_xml_attr(rgb)
+      self.write_view("\"")
+      match tint {
+        Some(v) => self.write_view(" tint=\"\{v}\"")
+        None => ()
+      }
+      self.write_view("/>")
+    }
+    None => ()
+  }
+}
+
+///|
+/// Write one rich-text run body: the `<rPr>...</rPr>` font properties (when
+/// present) followed by the run's `<t>` element. The caller writes the
+/// surrounding `<r>`/`</r>` markers so each emitter keeps its own indentation
+/// and line-break layout.
+fn LimitedXmlBuilder::write_rich_text_run(
+  self : LimitedXmlBuilder,
+  run : RichTextRun,
+) -> Unit raise XlsxError {
+  match run.font {
+    Some(font) => {
+      self.write_view("<rPr>")
+      if font.bold {
+        self.write_view("<b/>")
+      }
+      if font.italic {
+        self.write_view("<i/>")
+      }
+      if font.strike {
+        self.write_view("<strike/>")
+      }
+      if font.outline {
+        self.write_view("<outline/>")
+      }
+      if font.shadow {
+        self.write_view("<shadow/>")
+      }
+      if font.condense {
+        self.write_view("<condense/>")
+      }
+      if font.extended {
+        self.write_view("<extend/>")
+      }
+      match font.underline {
+        Some(value) => {
+          self.write_view("<u val=\"")
+          self.write_xml_attr(value)
+          self.write_view("\"/>")
+        }
+        None => ()
+      }
+      match font.size {
+        Some(size) => self.write_view("<sz val=\"\{size}\"/>")
+        None => ()
+      }
+      match font.charset {
+        Some(value) => self.write_view("<charset val=\"\{value}\"/>")
+        None => ()
+      }
+      match font.family_number {
+        Some(value) => self.write_view("<family val=\"\{value}\"/>")
+        None => ()
+      }
+      match font.family {
+        Some(family) => {
+          self.write_view("<rFont val=\"")
+          self.write_xml_attr(family)
+          self.write_view("\"/>")
+        }
+        None => ()
+      }
+      match font.color {
+        Some(_) => self.write_rich_text_color(font)
+        None =>
+          if font.color_theme is Some(_) ||
+            font.color_indexed is Some(_) ||
+            font.color_tint is Some(_) {
+            self.write_rich_text_color(font)
+          }
+      }
+      match font.vert_align {
+        Some(value) => {
+          self.write_view("<vertAlign val=\"")
+          self.write_xml_attr(value)
+          self.write_view("\"/>")
+        }
+        None => ()
+      }
+      match font.scheme {
+        Some(value) => {
+          self.write_view("<scheme val=\"")
+          self.write_xml_attr(value)
+          self.write_view("\"/>")
+        }
+        None => ()
+      }
+      self.write_view("</rPr>")
+    }
+    None => ()
+  }
+  self.write_t_element(run.text)
+}
+
+///|
 fn LimitedXmlBuilder::to_string(self : LimitedXmlBuilder) -> String {
   self.builder.to_string()
 }
@@ -357,59 +524,6 @@ fn write_shared_strings_xml(
   total_count : Int,
   budget? : WritePartBudget,
 ) -> String raise XlsxError {
-  fn write_rich_text_color(
-    sb : LimitedXmlBuilder,
-    font : RichTextFont,
-  ) -> Unit raise XlsxError {
-    let tint = match font.color_tint {
-      Some(v) => if v == 0.0 { None } else { Some(v) }
-      None => None
-    }
-    match font.color_theme {
-      Some(value) => {
-        sb.write_view("<color theme=\"\{value}\"")
-        match tint {
-          Some(v) => sb.write_view(" tint=\"\{v}\"")
-          None => ()
-        }
-        sb.write_view("/>")
-        return
-      }
-      None => ()
-    }
-    match font.color_indexed {
-      Some(value) => {
-        sb.write_view("<color indexed=\"\{value}\"")
-        match tint {
-          Some(v) => sb.write_view(" tint=\"\{v}\"")
-          None => ()
-        }
-        sb.write_view("/>")
-        return
-      }
-      None => ()
-    }
-    match font.color {
-      Some(color) => {
-        let normalized = color.replace_all(old="#", new="")
-        let rgb = if normalized.length() == 6 {
-          "FF" + normalized
-        } else {
-          normalized
-        }
-        sb.write_view("<color rgb=\"")
-        sb.write_xml_attr(rgb)
-        sb.write_view("\"")
-        match tint {
-          Some(v) => sb.write_view(" tint=\"\{v}\"")
-          None => ()
-        }
-        sb.write_view("/>")
-      }
-      None => ()
-    }
-  }
-
   let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
@@ -421,110 +535,15 @@ fn write_shared_strings_xml(
         sb.write_view("  <si>\n")
         for run in runs {
           sb.write_view("    <r>")
-          match run.font {
-            Some(font) => {
-              sb.write_view("<rPr>")
-              if font.bold {
-                sb.write_view("<b/>")
-              }
-              if font.italic {
-                sb.write_view("<i/>")
-              }
-              if font.strike {
-                sb.write_view("<strike/>")
-              }
-              if font.outline {
-                sb.write_view("<outline/>")
-              }
-              if font.shadow {
-                sb.write_view("<shadow/>")
-              }
-              if font.condense {
-                sb.write_view("<condense/>")
-              }
-              if font.extended {
-                sb.write_view("<extend/>")
-              }
-              match font.underline {
-                Some(value) => {
-                  sb.write_view("<u val=\"")
-                  sb.write_xml_attr(value)
-                  sb.write_view("\"/>")
-                }
-                None => ()
-              }
-              match font.size {
-                Some(size) => sb.write_view("<sz val=\"\{size}\"/>")
-                None => ()
-              }
-              match font.charset {
-                Some(value) => sb.write_view("<charset val=\"\{value}\"/>")
-                None => ()
-              }
-              match font.family_number {
-                Some(value) => sb.write_view("<family val=\"\{value}\"/>")
-                None => ()
-              }
-              match font.family {
-                Some(family) => {
-                  sb.write_view("<rFont val=\"")
-                  sb.write_xml_attr(family)
-                  sb.write_view("\"/>")
-                }
-                None => ()
-              }
-              match font.color {
-                Some(_) => write_rich_text_color(sb, font)
-                None =>
-                  if font.color_theme is Some(_) ||
-                    font.color_indexed is Some(_) ||
-                    font.color_tint is Some(_) {
-                    write_rich_text_color(sb, font)
-                  }
-              }
-              match font.vert_align {
-                Some(value) => {
-                  sb.write_view("<vertAlign val=\"")
-                  sb.write_xml_attr(value)
-                  sb.write_view("\"/>")
-                }
-                None => ()
-              }
-              match font.scheme {
-                Some(value) => {
-                  sb.write_view("<scheme val=\"")
-                  sb.write_xml_attr(value)
-                  sb.write_view("\"/>")
-                }
-                None => ()
-              }
-              sb.write_view("</rPr>")
-            }
-            None => ()
-          }
-          if run.text.has_prefix(" ") ||
-            run.text.has_suffix(" ") ||
-            run.text.contains("\n") {
-            sb.write_view("<t xml:space=\"preserve\">")
-          } else {
-            sb.write_view("<t>")
-          }
-          sb.write_xml_text(run.text)
-          sb.write_view("</t></r>\n")
+          sb.write_rich_text_run(run)
+          sb.write_view("</r>\n")
         }
         sb.write_view("  </si>\n")
       }
       None => {
         sb.write_view("  <si>")
-        if entry.text.has_prefix(" ") ||
-          entry.text.has_suffix(" ") ||
-          entry.text.contains("\n") {
-          sb.write_view("<t xml:space=\"preserve\">")
-        } else {
-          sb.write_view("<t>")
-        }
-        sb.write_xml_text(entry.text)
-        sb.write_view("</t></si>\n")
+        sb.write_t_element(entry.text)
+        sb.write_view("</si>\n")
       }
     }
   }
