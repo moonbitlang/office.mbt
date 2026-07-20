@@ -28,7 +28,7 @@ fn parse_cell_images(
   cancelled? : () -> Bool = () => false,
 ) -> Array[CellImage] raise XlsxError {
   let images : Array[CellImage] = []
-  let targets = if rels_xml.to_owned() == "" {
+  let targets = if rels_xml is "" {
     Map([])
   } else {
     // cellimages relationships are always image relationships

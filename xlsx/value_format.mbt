@@ -124,7 +124,7 @@ fn format_text_value(
   match format {
     Builtin(_id) => raw
     Custom(code) =>
-      if code.to_lower().trim().to_owned() == "general" {
+      if code.to_lower().trim() is "general" {
         raw
       } else {
         check_bounded_format_program(code, max_output_chars)
