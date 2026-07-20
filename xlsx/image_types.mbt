@@ -47,7 +47,7 @@ priv struct ImagePartIdentity {
 fn canonical_image_extension_for_content_type(
   content_type : StringView,
 ) -> String? {
-  match content_type.to_owned().to_lower() {
+  match content_type.to_lower() {
     "image/bmp" => Some("bmp")
     "image/emf" => Some("emf")
     "image/emz" => Some("emz")

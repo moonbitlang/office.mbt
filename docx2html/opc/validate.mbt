@@ -1900,7 +1900,7 @@ pub fn resolve_target(base : String, target : String) -> String? {
   }
   let path = if target.has_prefix("/") { target[1:] } else { target }
   for segment in path.split("/") {
-    match segment.to_owned() {
+    match segment {
       "" => return None
       "." => ()
       ".." =>
@@ -1909,7 +1909,7 @@ pub fn resolve_target(base : String, target : String) -> String? {
         } else {
           return None
         }
-      other => segments.push(other)
+      other => segments.push(other.to_owned())
     }
   }
   if segments.length() == 0 {

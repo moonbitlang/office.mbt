@@ -277,7 +277,7 @@ pub fn RawAction::name(self : RawAction) -> String {
 
 ///|
 pub fn resolve_raw_action(value : StringView) -> RawAction? {
-  match value.to_owned().to_lower() {
+  match value.to_lower() {
     "append" => Some(Append)
     "prepend" => Some(Prepend)
     "insert-before" => Some(InsertBefore)

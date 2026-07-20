@@ -365,7 +365,7 @@ pub fn SparklineOptions::set_empty_cells(
   self : SparklineOptions,
   mode : StringView,
 ) -> Unit raise XlsxError {
-  match mode.to_owned() {
+  match mode {
     "gap" | "zero" | "span" => self.empty_cells = Some(mode.to_owned())
     _ => raise InvalidSparkline(msg="sparkline empty cells invalid")
   }
@@ -391,7 +391,7 @@ fn sparkline_type_to_string(kind : SparklineType) -> String {
 
 ///|
 fn sparkline_type_from_string(value : StringView) -> SparklineType {
-  match value.to_owned() {
+  match value {
     "column" => Column
     "winLoss" => WinLoss
     "stacked" => WinLoss
