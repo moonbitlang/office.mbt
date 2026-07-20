@@ -20,59 +20,6 @@ fn write_comments_xml(
   comments : ArrayView[Comment],
   budget? : WritePartBudget,
 ) -> String raise XlsxError {
-  fn write_rich_text_color(
-    sb : LimitedXmlBuilder,
-    font : RichTextFont,
-  ) -> Unit raise XlsxError {
-    let tint = match font.color_tint {
-      Some(v) => if v == 0.0 { None } else { Some(v) }
-      None => None
-    }
-    match font.color_theme {
-      Some(value) => {
-        sb.write_view("<color theme=\"\{value}\"")
-        match tint {
-          Some(v) => sb.write_view(" tint=\"\{v}\"")
-          None => ()
-        }
-        sb.write_view("/>")
-        return
-      }
-      None => ()
-    }
-    match font.color_indexed {
-      Some(value) => {
-        sb.write_view("<color indexed=\"\{value}\"")
-        match tint {
-          Some(v) => sb.write_view(" tint=\"\{v}\"")
-          None => ()
-        }
-        sb.write_view("/>")
-        return
-      }
-      None => ()
-    }
-    match font.color {
-      Some(color) => {
-        let normalized = color.replace_all(old="#", new="")
-        let rgb = if normalized.length() == 6 {
-          "FF" + normalized
-        } else {
-          normalized
-        }
-        sb.write_view("<color rgb=\"")
-        sb.write_xml_attr(rgb)
-        sb.write_view("\"")
-        match tint {
-          Some(v) => sb.write_view(" tint=\"\{v}\"")
-          None => ()
-        }
-        sb.write_view("/>")
-      }
-      None => ()
-    }
-  }
-
   let authors : Array[String] = []
   let author_ids : Map[String, Int] = Map([])
   for comment in comments {
@@ -122,108 +69,12 @@ fn write_comments_xml(
     sb.write_view("\" authorId=\"\{author_id}\">\n")
     sb.write_view("      <text>")
     if text_value != "" {
-      if text_value.has_prefix(" ") ||
-        text_value.has_suffix(" ") ||
-        text_value.contains("\n") {
-        sb.write_view("<t xml:space=\"preserve\">")
-      } else {
-        sb.write_view("<t>")
-      }
-      sb.write_xml_text(text_value)
-      sb.write_view("</t>")
+      sb.write_t_element(text_value)
     }
     for run in runs {
       sb.write_view("<r>")
-      match run.font {
-        Some(font) => {
-          sb.write_view("<rPr>")
-          if font.bold {
-            sb.write_view("<b/>")
-          }
-          if font.italic {
-            sb.write_view("<i/>")
-          }
-          if font.strike {
-            sb.write_view("<strike/>")
-          }
-          if font.outline {
-            sb.write_view("<outline/>")
-          }
-          if font.shadow {
-            sb.write_view("<shadow/>")
-          }
-          if font.condense {
-            sb.write_view("<condense/>")
-          }
-          if font.extended {
-            sb.write_view("<extend/>")
-          }
-          match font.underline {
-            Some(value) => {
-              sb.write_view("<u val=\"")
-              sb.write_xml_attr(value)
-              sb.write_view("\"/>")
-            }
-            None => ()
-          }
-          match font.size {
-            Some(size) => sb.write_view("<sz val=\"\{size}\"/>")
-            None => ()
-          }
-          match font.charset {
-            Some(value) => sb.write_view("<charset val=\"\{value}\"/>")
-            None => ()
-          }
-          match font.family_number {
-            Some(value) => sb.write_view("<family val=\"\{value}\"/>")
-            None => ()
-          }
-          match font.family {
-            Some(family) => {
-              sb.write_view("<rFont val=\"")
-              sb.write_xml_attr(family)
-              sb.write_view("\"/>")
-            }
-            None => ()
-          }
-          match font.color {
-            Some(_) => write_rich_text_color(sb, font)
-            None =>
-              if font.color_theme is Some(_) ||
-                font.color_indexed is Some(_) ||
-                font.color_tint is Some(_) {
-                write_rich_text_color(sb, font)
-              }
-          }
-          match font.vert_align {
-            Some(value) => {
-              sb.write_view("<vertAlign val=\"")
-              sb.write_xml_attr(value)
-              sb.write_view("\"/>")
-            }
-            None => ()
-          }
-          match font.scheme {
-            Some(value) => {
-              sb.write_view("<scheme val=\"")
-              sb.write_xml_attr(value)
-              sb.write_view("\"/>")
-            }
-            None => ()
-          }
-          sb.write_view("</rPr>")
-        }
-        None => ()
-      }
-      if run.text.has_prefix(" ") ||
-        run.text.has_suffix(" ") ||
-        run.text.contains("\n") {
-        sb.write_view("<t xml:space=\"preserve\">")
-      } else {
-        sb.write_view("<t>")
-      }
-      sb.write_xml_text(run.text)
-      sb.write_view("</t></r>")
+      sb.write_rich_text_run(run)
+      sb.write_view("</r>")
     }
     sb.write_view("</text>\n")
     sb.write_view("    </comment>\n")
