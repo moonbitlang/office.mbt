@@ -9,6 +9,8 @@ import {
 }
 
 // Values
+pub fn builtin_number_format_code(Int) -> String?
+
 pub fn cell_name_to_coordinates(StringView) -> (Int, Int) raise XlsxError
 
 pub fn column_name_to_number(StringView) -> Int raise XlsxError
@@ -592,7 +594,13 @@ pub struct ColDimension {
   hidden : Bool
   outline_level : Int
   style_id : Int?
-}
+} derive(Eq, @debug.Debug)
+#deprecated
+pub fn ColDimension::equal(Self, Self) -> Bool
+#deprecated
+pub fn ColDimension::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn ColDimension::to_repr(Self) -> @debug.Repr
 
 pub struct Cols {
   sheet : Worksheet
@@ -1285,7 +1293,13 @@ pub struct RowDimension {
   hidden : Bool
   outline_level : Int
   style_id : Int?
-}
+} derive(Eq, @debug.Debug)
+#deprecated
+pub fn RowDimension::equal(Self, Self) -> Bool
+#deprecated
+pub fn RowDimension::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn RowDimension::to_repr(Self) -> @debug.Repr
 
 pub struct RowOpts {
   height : Double
@@ -1882,6 +1896,7 @@ pub fn Workbook::get_cell_value_rc(Self, StringView, Int, Int, raw? : Bool, opti
 pub fn Workbook::get_cell_value_styled(Self, StringView, StringView, Int, options? : Options) -> String? raise XlsxError
 pub fn Workbook::get_cell_value_styled_from_worksheet_rc(Self, Worksheet, Int, Int, Int, options? : Options, max_output_chars? : Int) -> String? raise XlsxError
 pub fn Workbook::get_col(Self, StringView, Int) -> Array[String] raise XlsxError
+pub fn Workbook::get_col_dimensions(Self, StringView) -> Array[(Int, ColDimension)] raise XlsxError
 pub fn Workbook::get_col_outline_level(Self, StringView, Int) -> Int raise XlsxError
 pub fn Workbook::get_col_style(Self, StringView, Int) -> Int? raise XlsxError
 pub fn Workbook::get_col_visible(Self, StringView, Int) -> Bool raise XlsxError
@@ -1910,6 +1925,7 @@ pub fn Workbook::get_picture_cells(Self, StringView) -> Array[String] raise Xlsx
 pub fn Workbook::get_pictures(Self, StringView, StringView) -> Array[Image] raise XlsxError
 pub fn Workbook::get_pivot_tables(Self, StringView) -> Array[PivotTable] raise XlsxError
 pub fn Workbook::get_row(Self, StringView, Int) -> Array[String] raise XlsxError
+pub fn Workbook::get_row_dimensions(Self, StringView) -> Array[(Int, RowDimension)] raise XlsxError
 pub fn Workbook::get_row_height(Self, StringView, Int) -> Double? raise XlsxError
 pub fn Workbook::get_row_outline_level(Self, StringView, Int) -> Int raise XlsxError
 pub fn Workbook::get_row_style(Self, StringView, Int) -> Int? raise XlsxError
@@ -2175,6 +2191,8 @@ pub fn Worksheet::get_sheet_protection(Self) -> SheetProtectionOptions
 pub fn Worksheet::hyperlink_count(Self) -> Int
 pub fn Worksheet::ignored_errors(Self) -> ArrayView[IgnoredError]
 pub fn Worksheet::images(Self) -> ArrayView[Image]
+pub fn Worksheet::materialized_col_dimensions(Self) -> Array[(Int, ColDimension)]
+pub fn Worksheet::materialized_row_dimensions(Self) -> Array[(Int, RowDimension)]
 pub fn Worksheet::max_col(Self) -> Int
 pub fn Worksheet::max_row(Self) -> Int
 pub fn Worksheet::merge_cells(Self, String) -> Unit raise XlsxError

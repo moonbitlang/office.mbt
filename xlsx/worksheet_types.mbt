@@ -93,7 +93,7 @@ pub struct RowDimension {
   hidden : Bool
   outline_level : Int
   style_id : Int?
-}
+} derive(Eq, Debug)
 
 ///|
 pub struct ColDimension {
@@ -101,7 +101,7 @@ pub struct ColDimension {
   hidden : Bool
   outline_level : Int
   style_id : Int?
-}
+} derive(Eq, Debug)
 
 ///|
 pub struct Worksheet {
