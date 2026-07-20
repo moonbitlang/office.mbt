@@ -19,6 +19,8 @@ pub const SCHEMA_DOCX_QUERY : String = "office.docx.query/1"
 
 pub const SCHEMA_DOCX_TEXT : String = "office.docx.text/1"
 
+pub const SCHEMA_DUMP_RESULT : String = "office.dump/1"
+
 pub const SCHEMA_FINDING_RECORD : String = "office.finding/1"
 
 pub const SCHEMA_ISSUES_RESULT : String = "office.issues/1"

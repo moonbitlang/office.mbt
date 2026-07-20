@@ -1,0 +1,15 @@
+import {
+  "bobzhang/mbtexcel/batch",
+  "bobzhang/mbtexcel/inspect",
+  "bobzhang/mbtexcel/xlsx",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
+  "moonbitlang/x/crypto",
+}
+
+import {
+  "bobzhang/mbtexcel/xlsx",
+  "bobzhang/office/dump",
+} for "test"
+
+supported_targets = "native+js+wasm"

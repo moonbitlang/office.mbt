@@ -64,6 +64,10 @@ pub const SCHEMA_FINDING_RECORD : String = "office.finding/1"
 pub const SCHEMA_PREVIEW_RESULT : String = "office.preview/1"
 
 ///|
+/// Versioned replayable dump schema emitted by `office dump`.
+pub const SCHEMA_DUMP_RESULT : String = "office.dump/1"
+
+///|
 pub const SCHEMA_XLSX_BATCH_RESULT : String = "office.xlsx.batch/1"
 
 ///|
@@ -663,6 +667,46 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         capability_field(
           "warning_count", "integer", true, "number of warning findings",
         ),
+      ],
+      output_modes: ["human", "json", "jsonl"],
+      variants: [],
+    },
+    {
+      name: "dump",
+      summary: "Dump an XLSX package as a replayable office.dump/1 op stream",
+      usage: "office dump FILE [--json|--jsonl]",
+      formats: ["xlsx"],
+      aliases: [],
+      inputs: [
+        capability_field("file", "path", true, "existing XLSX package"),
+        capability_field(
+          "json", "boolean", false, "emit the office.dump/1 JSON document",
+        ),
+        capability_field(
+          "jsonl", "boolean", false, "emit the streaming office.dump/1 JSONL form",
+        ),
+      ],
+      outputs: [
+        capability_field(
+          "schema", "literal(office.dump/1)", true, "versioned replayable dump schema",
+        ),
+        capability_field(
+          "format", "literal(xlsx)", true, "the structurally verified package format",
+        ),
+        capability_field(
+          "source", "object", true, "bounded input path, byte count, and sha256 digest (excluded from fixpoint comparison)",
+        ),
+        capability_field(
+          "replay", "object", true, "batch schema, create parameters, and engine limits for replay",
+        ),
+        capability_field(
+          "ops", "array", true, "ordered canonical xlsx.batch/1 ops in engine JSON shapes",
+        ),
+        capability_field(
+          "residual", "array", true, "ordered machine-readable records of content not expressible as ops",
+        ),
+        capability_field("warnings", "array", true, "bounded dump diagnostics"),
+        capability_field("stats", "object", true, "op/residual/warning counts"),
       ],
       output_modes: ["human", "json", "jsonl"],
       variants: [],
