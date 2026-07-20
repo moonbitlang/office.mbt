@@ -1,5 +1,6 @@
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/x/crypto",
   "bobzhang/mbtexcel/zip",
   "bobzhang/docx2html/core" @docx_core,
   "bobzhang/docx2html/opc",

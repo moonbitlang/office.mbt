@@ -109,6 +109,8 @@ pub fn selector_for_xlsx_workbook() -> OfficeSelector raise SelectorError
 
 pub fn selector_from_docx_projection_path(String) -> OfficeSelector raise SelectorError
 
+pub fn sha256_hex(BytesView) -> String
+
 // Errors
 pub(all) suberror OfficeError {
   UnsupportedFileExtension(String)

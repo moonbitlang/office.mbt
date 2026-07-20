@@ -152,6 +152,14 @@ pub extend ChartUpDownBar with @debug.Debug::{to_repr}
 
 ///|
 #deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend ColDimension with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend ColDimension with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
 pub extend Comment with @debug.Debug::{to_repr}
 
 ///|
@@ -333,6 +341,14 @@ pub extend RichTextFont with @debug.Debug::{to_repr}
 ///|
 #deprecated("implicit trait-method promotion is being removed; call via the trait")
 pub extend RichTextRun with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend RowDimension with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend RowDimension with Eq::{not_equal, equal}
 
 ///|
 #deprecated("implicit trait-method promotion is being removed; call via the trait")
