@@ -222,43 +222,69 @@ fn chart_svg_tag_vals(xml : String, tag : String) -> Array[String] {
       from = after
       continue
     }
-    let element_end = match xml[after:].find(">") {
-      Some(close) => after + close
-      None => xml.length()
+    // find the element end while honoring quoted values, so a `>` inside
+    // an attribute value cannot end the element scan early
+    let mut scan = after
+    let mut quote_unit = 0
+    while scan < xml.length() {
+      let unit : Int = xml[scan].to_int()
+      if quote_unit != 0 {
+        if unit == quote_unit {
+          quote_unit = 0
+        }
+      } else if unit is ('"' | '\'') {
+        quote_unit = unit
+      } else if unit is '>' {
+        break
+      }
+      scan += 1
     }
+    let element_end = scan
+    // tokenize `name = "value"` pairs sequentially; values are consumed
+    // atomically, so text inside a value can never read as a name
     let body = xml.substring(start=after, end=element_end)
     let mut cursor = 0
-    while cursor + 3 <= body.length() {
-      guard body[cursor:].find("val") is Some(hit) else { break }
-      let name_start = cursor + hit
-      // the attribute name must stand alone (not `xval` etc.)
-      if name_start > 0 && !(body[name_start - 1] is (' ' | '\t' | '\r' | '\n')) {
-        cursor = name_start + 3
+    while cursor < body.length() {
+      while cursor < body.length() &&
+            body[cursor] is (' ' | '\t' | '\r' | '\n' | '/') {
+        cursor += 1
+      }
+      guard cursor < body.length() else { break }
+      let name_start = cursor
+      while cursor < body.length() &&
+            !(body[cursor] is (' ' | '\t' | '\r' | '\n' | '=' | '/')) {
+        cursor += 1
+      }
+      let attr_name = body.substring(start=name_start, end=cursor)
+      guard attr_name != "" else {
+        cursor += 1
         continue
       }
-      let mut probe = name_start + 3
-      while probe < body.length() && body[probe] is (' ' | '\t' | '\r' | '\n') {
-        probe += 1
+      while cursor < body.length() && body[cursor] is (' ' | '\t' | '\r' | '\n') {
+        cursor += 1
       }
-      guard probe < body.length() && body[probe] is '=' else {
-        cursor = name_start + 3
-        continue
+      guard cursor < body.length() && body[cursor] is '=' else { continue }
+      cursor += 1
+      while cursor < body.length() && body[cursor] is (' ' | '\t' | '\r' | '\n') {
+        cursor += 1
       }
-      probe += 1
-      while probe < body.length() && body[probe] is (' ' | '\t' | '\r' | '\n') {
-        probe += 1
+      // unquoted or missing value: stop parsing this malformed element
+      guard cursor < body.length() && body[cursor] is ('"' | '\'') else {
+        break
       }
-      guard probe < body.length() && body[probe] is ('"' | '\'') else {
-        cursor = name_start + 3
-        continue
+      let quote = body[cursor]
+      cursor += 1
+      let value_start = cursor
+      while cursor < body.length() && body[cursor] != quote {
+        cursor += 1
       }
-      let quote = if body[probe] is '"' { "\"" } else { "'" }
-      let value_start = probe + 1
-      guard body[value_start:].find(quote) is Some(closing) else { break }
-      out.push(body.substring(start=value_start, end=value_start + closing))
-      break
+      guard cursor < body.length() else { break }
+      if attr_name == "val" {
+        out.push(body.substring(start=value_start, end=cursor))
+      }
+      cursor += 1
     }
-    from = element_end
+    from = if element_end > after { element_end } else { after + 1 }
   }
   out
 }
@@ -571,13 +597,24 @@ fn chart_svg_pie(svg : StringBuilder, data : ChartSvgData) -> Unit {
       continue
     }
     let sweep = value / largest / total * tau
+    let colour = chart_svg_palette[slice_index % chart_svg_palette.length()]
+    // a slice sweeping (almost) the full circle degenerates to a zero-area
+    // arc with coincident endpoints — draw the dominant slice as the disc;
+    // the remaining slices are genuinely negligible at this scale
+    if sweep >= tau - 1.0e-4 {
+      svg.write_string(
+        "<circle fill=\"\{colour}\" cx=\"\{svg_num(cx)}\" cy=\"\{svg_num(cy)}\" r=\"\{svg_num(radius)}\"/>",
+      )
+      angle += sweep
+      slice_index += 1
+      continue
+    }
     let end_angle = angle + sweep
     let x1 = cx + radius * @math.cos(angle)
     let y1 = cy + radius * @math.sin(angle)
     let x2 = cx + radius * @math.cos(end_angle)
     let y2 = cy + radius * @math.sin(end_angle)
     let large = if sweep > 3.141592653589793 { 1 } else { 0 }
-    let colour = chart_svg_palette[slice_index % chart_svg_palette.length()]
     svg.write_string(
       "<path fill=\"\{colour}\" d=\"M \{svg_num(cx)} \{svg_num(cy)} L \{svg_num(x1)} \{svg_num(y1)} A \{svg_num(radius)} \{svg_num(radius)} 0 \{large} 1 \{svg_num(x2)} \{svg_num(y2)} Z\"/>",
     )

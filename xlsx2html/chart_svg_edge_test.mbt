@@ -223,3 +223,23 @@ test "subnormal separations keep their midpoint geometry" {
   // (y=124), not collapse to the 224 baseline via underflowing halves
   assert_true(html.contains(",124.00 "))
 }
+
+///|
+test "mixed-magnitude pies keep the dominant slice visible" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "trace")
+  workbook.set_cell("Data", "A2", "bulk")
+  workbook.set_cell_float("Data", "B1", 1.0e-300)
+  workbook.set_cell_float("Data", "B2", 1.0e300)
+  let chart = @xlsx.ChartOptions::new(Pie)
+  chart.series.push(@xlsx.ChartSeries::new("Data!$A$1:$A$2", "Data!$B$1:$B$2"))
+  workbook.add_chart_with_options("Data", "D2", chart)
+  let html = @xlsx2html.render_workbook(workbook, title="mixed.xlsx")
+  // the dominant slice sweeps (almost) the whole circle: a visible disc
+  // in the second slice color, never a zero-area coincident-endpoint arc
+  assert_true(html.contains("<circle fill=\"#ed7d31\""))
+  // both slices stay in the legend
+  assert_true(html.contains(">trace</text>"))
+  assert_true(html.contains(">bulk</text>"))
+}
