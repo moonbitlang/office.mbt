@@ -517,7 +517,6 @@ fn dump_sheet_coverage_residuals(
   residual : Array[DumpResidual],
 ) -> Unit raise {
   let counts : Array[(String, Int)] = [
-    ("xlsx.tables_not_dumped", worksheet.tables.length()),
     ("xlsx.images_not_dumped", worksheet.images.length()),
     ("xlsx.charts_not_dumped", worksheet.charts.length()),
     ("xlsx.hyperlinks_not_dumped", worksheet.hyperlinks.length()),
@@ -822,6 +821,7 @@ pub fn dump_xlsx_workbook(
     dump_sheet_dimensions(worksheet, name, ops, residual)
     dump_sheet_cells(workbook, worksheet, name, ops, residual, cancelled)
     dump_sheet_styles(style_ctx, worksheet, name, ops, residual)
+    dump_sheet_tables(worksheet, name, ops, residual)
     dump_sheet_merges(workbook, name, ops, residual)
     dump_sheet_panes(workbook, worksheet, name, ops, residual)
     dump_sheet_filter(workbook, name, ops, residual)

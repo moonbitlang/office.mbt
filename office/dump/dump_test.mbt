@@ -558,6 +558,46 @@ test "a shared unexpressible style reports one residual across sheets" {
 }
 
 ///|
+test "worksheet tables become replayable table ops" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "Region")
+  workbook.set_cell("Data", "B1", "Sales")
+  workbook.set_cell("Data", "A2", "East")
+  workbook.set_cell_int("Data", "B2", 10)
+  let opts = @xlsx.TableOptions::new("A1:B2")
+  opts.set_name("Sales")
+  opts.set_style_name("TableStyleMedium9")
+  opts.set_show_row_stripes(Some(true))
+  ignore(workbook.add_table("Data", opts))
+  let envelope = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="tbl.xlsx",
+    source_bytes=1,
+  )
+  let document = envelope.to_json_document().stringify()
+  assert_true(document.contains("\"op\":\"table\""))
+  assert_true(document.contains("\"name\":\"Sales\""))
+  assert_true(document.contains("\"style\":\"TableStyleMedium9\""))
+  assert_true(document.contains("\"row_stripes\":true"))
+  // the table op follows the header cell ops so column names resolve
+  let ops = envelope.ops.map(op => op.stringify())
+  let mut first_table = ops.length()
+  let mut header_set = ops.length()
+  for index, op in ops {
+    if op.contains("\"op\":\"table\"") && index < first_table {
+      first_table = index
+    }
+    if op.contains("\"cell\":\"A1\"") && index < header_set {
+      header_set = index
+    }
+  }
+  assert_true(header_set < first_table)
+  // and it replays: the whole stream passes the dump self-check (no raise)
+  assert_true(document.contains("xlsx.table_unsupported") == false)
+}
+
+///|
 test "cancellation raises before work completes" {
   try
     ignore(
