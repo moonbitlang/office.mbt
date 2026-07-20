@@ -517,7 +517,6 @@ fn dump_sheet_coverage_residuals(
   residual : Array[DumpResidual],
 ) -> Unit raise {
   let counts : Array[(String, Int)] = [
-    ("xlsx.styles_not_dumped", styled_cell_count(worksheet)),
     ("xlsx.tables_not_dumped", worksheet.tables.length()),
     ("xlsx.images_not_dumped", worksheet.images.length()),
     ("xlsx.charts_not_dumped", worksheet.charts.length()),
@@ -732,31 +731,35 @@ fn dump_workbook_residuals(
 }
 
 ///|
-fn styled_cell_count(worksheet : @xlsx.Worksheet) -> Int {
-  let mut count = 0
-  for cell in worksheet.cells {
-    if cell.style_explicit {
-      count += 1
-    }
-  }
-  count
-}
-
-///|
 /// The dump-time self-check: every produced op chunk must parse through
 /// the real batch parser, so a dump can never emit a script its own
 /// engine refuses.
+/// A produced op is a new-style op when the batch parser would count it
+/// against the per-script `MAX_TOTAL_NEW_STYLES` budget.
+fn op_creates_style(op : Json) -> Bool {
+  op is Object({ "op": String("style"), .. })
+}
+
+///|
+/// The dump-time self-check: every produced op chunk must parse through the
+/// real batch parser, so a dump can never emit a script its own engine
+/// refuses. Chunks respect BOTH the op-count ceiling and the new-style
+/// budget, mirroring how replay must split the single op stream.
 fn self_check_ops(ops : Array[Json]) -> Unit raise {
   let mut start = 0
   while start < ops.length() {
-    let end = if start + @batch.MAX_BATCH_OPS < ops.length() {
-      start + @batch.MAX_BATCH_OPS
-    } else {
-      ops.length()
-    }
     let chunk : Array[Json] = []
-    for index in start..<end {
-      chunk.push(ops[index])
+    let mut styles = 0
+    let mut index = start
+    while index < ops.length() &&
+          chunk.length() < @batch.MAX_BATCH_OPS &&
+          styles < @batch.MAX_TOTAL_NEW_STYLES {
+      let op = ops[index]
+      if op_creates_style(op) {
+        styles += 1
+      }
+      chunk.push(op)
+      index += 1
     }
     let script = Json::object({
       "schema": Json::string(XLSX_BATCH_SCHEMA),
@@ -767,7 +770,7 @@ fn self_check_ops(ops : Array[Json]) -> Unit raise {
         error => raise DumpSelfCheckFailed("\{error}")
       },
     )
-    start = end
+    start = index
   }
 }
 
@@ -808,11 +811,17 @@ pub fn dump_xlsx_workbook(
   for name in rest {
     ops.push(dump_op("add-sheet", { "name": Json::string(name) }))
   }
+  let style_ctx : StyleContext = {
+    workbook,
+    extracts: {},
+    reported: Set::new(),
+  }
   for name in worksheet_names {
     check_cancelled(cancelled)
     guard workbook.sheet(name) is Some(worksheet) else { continue }
     dump_sheet_dimensions(worksheet, name, ops, residual)
     dump_sheet_cells(workbook, worksheet, name, ops, residual, cancelled)
+    dump_sheet_styles(style_ctx, worksheet, name, ops, residual)
     dump_sheet_merges(workbook, name, ops, residual)
     dump_sheet_panes(workbook, worksheet, name, ops, residual)
     dump_sheet_filter(workbook, name, ops, residual)

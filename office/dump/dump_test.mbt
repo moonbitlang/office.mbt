@@ -440,6 +440,124 @@ test "filter-database scope matches the sheet case-insensitively" {
 }
 
 ///|
+test "explicit styles become style ops with row-run coalescing and residuals" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  // three contiguous cells sharing one bold+fill style -> one range op
+  let header = workbook.new_style(
+    @xlsx.Style::new()
+    .with_font(@xlsx.Font::with_values(bold=true, color="FFFFFF"))
+    .with_fill(@xlsx.Fill::solid("4472C4")),
+  )
+  for col in ["A1", "B1", "C1"] {
+    workbook.set_cell("Data", col, "h")
+    workbook.set_cell_style("Data", col, header)
+  }
+  // a style with an unexpressible attribute (font size) -> residual
+  let sized = workbook.new_style(
+    @xlsx.Style::new().with_font(@xlsx.Font::with_values(size=14.0)),
+  )
+  workbook.set_cell("Data", "A3", "big")
+  workbook.set_cell_style("Data", "A3", sized)
+  let envelope = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="styled.xlsx",
+    source_bytes=1,
+  )
+  let document = envelope.to_json_document().stringify()
+  // the three header cells coalesce into a single A1:C1 style op
+  assert_true(
+    document.contains(
+      "\"op\":\"style\",\"params\":{\"sheet\":\"Data\",\"range\":\"A1:C1\"",
+    ),
+  )
+  assert_true(document.contains("\"bold\":true"))
+  assert_true(document.contains("\"fill\":\"4472C4\""))
+  // exactly one style op for the coalesced header run
+  let mut header_ops = 0
+  for op in envelope.ops {
+    if op.stringify().contains("A1:C1") {
+      header_ops += 1
+    }
+  }
+  assert_eq(header_ops, 1)
+  // the font-size style is disclosed as approximated
+  assert_true(document.contains("xlsx.style_attributes_unexpressible"))
+  assert_true(document.contains("font_size"))
+}
+
+///|
+test "number formats come through the canonical NumberFormat field" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let custom = workbook.new_style(@xlsx.Style::number_format("0.000"))
+  workbook.set_cell("Data", "A1", "x")
+  workbook.set_cell_style("Data", "A1", custom)
+  let builtin = workbook.new_style(@xlsx.Style::builtin_number_format(4))
+  workbook.set_cell("Data", "A2", "y")
+  workbook.set_cell_style("Data", "A2", builtin)
+  let document = @dump.dump_xlsx_workbook(
+      workbook,
+      source_file="nf.xlsx",
+      source_bytes=1,
+    )
+    .to_json_document()
+    .stringify()
+  // custom code verbatim; builtin id 4 resolves to its code (not dropped)
+  assert_true(document.contains("\"number_format\":\"0.000\""))
+  assert_true(document.contains("\"number_format\":\"#,##0.00\""))
+}
+
+///|
+test "unexpressible font and alignment attributes are disclosed" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let styled = workbook.new_style(
+    @xlsx.Style::new()
+    .with_font(@xlsx.Font::with_values(outline=true))
+    .with_alignment(@xlsx.Alignment::with_values(reading_order=2)),
+  )
+  workbook.set_cell("Data", "A1", "x")
+  workbook.set_cell_style("Data", "A1", styled)
+  let document = @dump.dump_xlsx_workbook(
+      workbook,
+      source_file="attrs.xlsx",
+      source_bytes=1,
+    )
+    .to_json_document()
+    .stringify()
+  assert_true(document.contains("xlsx.style_attributes_unexpressible"))
+  assert_true(document.contains("font_effects"))
+  assert_true(document.contains("alignment_unsupported"))
+}
+
+///|
+test "a shared unexpressible style reports one residual across sheets" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("One"))
+  ignore(workbook.add_sheet("Two"))
+  let sized = workbook.new_style(
+    @xlsx.Style::new().with_font(@xlsx.Font::with_values(size=14.0)),
+  )
+  workbook.set_cell("One", "A1", "a")
+  workbook.set_cell_style("One", "A1", sized)
+  workbook.set_cell("Two", "A1", "b")
+  workbook.set_cell_style("Two", "A1", sized)
+  let envelope = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="shared.xlsx",
+    source_bytes=1,
+  )
+  let mut style_residuals = 0
+  for record in envelope.residual {
+    if record.code == "xlsx.style_attributes_unexpressible" {
+      style_residuals += 1
+    }
+  }
+  assert_eq(style_residuals, 1)
+}
+
+///|
 test "cancellation raises before work completes" {
   try
     ignore(
