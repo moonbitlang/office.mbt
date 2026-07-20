@@ -244,7 +244,7 @@ fn parse_table_style(
   xml : StringView,
 ) -> (String, Bool, Bool, Bool, Bool) raise XlsxError {
   fn parse_bool_attr(value : StringView) -> Bool {
-    match value.to_owned() {
+    match value {
       "1" | "true" | "TRUE" => true
       _ => false
     }

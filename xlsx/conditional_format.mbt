@@ -252,7 +252,7 @@ pub fn ConditionalFormatOptions::set_stop_if_true(
 
 ///|
 fn normalize_conditional_type(value : StringView) -> String? {
-  match value.to_owned().to_lower() {
+  match value.to_lower() {
     "cell" => Some("cellIs")
     "average" => Some("aboveAverage")
     "duplicate" => Some("duplicateValues")
@@ -276,7 +276,7 @@ fn normalize_conditional_type(value : StringView) -> String? {
 
 ///|
 fn criteria_type(value : StringView) -> String? {
-  match value.to_owned().to_lower() {
+  match value.to_lower() {
     "!=" | "<>" => Some("notEqual")
     "<" => Some("lessThan")
     "<=" => Some("lessThanOrEqual")
@@ -344,7 +344,7 @@ fn normalize_criteria(value : StringView) -> String? {
 
 ///|
 fn criteria_text_from_operator(value : StringView) -> String {
-  match value.to_owned() {
+  match value {
     "beginsWith" => "begins with"
     "between" => "between"
     "containsText" => "containing"
@@ -408,7 +408,7 @@ fn write_formula(sb : StringBuilder, formula : StringView) -> Unit {
 
 ///|
 fn time_period_formula(criteria : StringView, cell_ref : StringView) -> String? {
-  match criteria.to_owned() {
+  match criteria {
     "yesterday" => Some("FLOOR(\{cell_ref.to_owned()},1)=TODAY()-1")
     "today" => Some("FLOOR(\{cell_ref.to_owned()},1)=TODAY()")
     "tomorrow" => Some("FLOOR(\{cell_ref.to_owned()},1)=TODAY()+1")
@@ -451,7 +451,7 @@ fn text_formula(
   value : StringView,
 ) -> String? {
   let escaped = value.to_owned().replace_all(old="\"", new="\"\"")
-  match criteria.to_owned() {
+  match criteria {
     "containsText" =>
       Some("NOT(ISERROR(SEARCH(\"\{escaped}\",\{cell_ref.to_owned()})))")
     "notContains" =>
@@ -466,7 +466,7 @@ fn text_formula(
 
 ///|
 fn icon_set_steps(icon_style : StringView) -> Array[String]? {
-  match icon_style.to_owned() {
+  match icon_style {
     "3Arrows"
     | "3ArrowsGray"
     | "3Flags"
@@ -590,7 +590,7 @@ fn build_text_rule(
   criteria : StringView,
   master_cell : StringView,
 ) -> String raise XlsxError {
-  let rule_type = match criteria.to_owned() {
+  let rule_type = match criteria {
     "containsText" => "containsText"
     "notContains" => "notContainsText"
     "beginsWith" => "beginsWith"

@@ -81,7 +81,7 @@ fn parse_selector(selector : String) -> Array[Predicate] raise QueryError {
 fn parse_predicate(raw : String) -> Predicate raise QueryError {
   let body = raw.trim().to_owned()
   if body.has_prefix("type=") {
-    match body[5:].to_owned() {
+    match body[5:] {
       "formula" => HasType(KFormula)
       "number" => HasType(KNumber)
       "string" => HasType(KString)

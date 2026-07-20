@@ -1517,7 +1517,7 @@ fn parse_x14_data_bars(
 
 ///|
 fn worksheet_ext_uri_is_known(uri : StringView) -> Bool {
-  match uri.to_owned() {
+  match uri {
     "{78C0D931-6437-407d-A8EE-F0AAD7539E65}" => true
     "{05C60535-1F16-4fd2-B633-F4F36F0B64E0}" => true
     "{A8765BA9-456A-4dab-B4F3-ACF838C121DE}" => true
@@ -2462,7 +2462,7 @@ fn parse_page_breaks(
         }
       None => 0
     }
-    let (id_limit, span_limit) = match tag_name.to_owned() {
+    let (id_limit, span_limit) = match tag_name {
       "rowBreaks" => (max_page_break_rows, max_page_break_cols)
       "colBreaks" => (max_page_break_cols, max_page_break_rows)
       _ => raise InvalidXml(msg="page break axis invalid")
@@ -2854,7 +2854,7 @@ test "sheet drawing relationships require direct dialect-matched roots" {
 
 ///|
 fn parse_bool_attr(value : StringView) -> Bool {
-  match value.to_owned() {
+  match value {
     "1" | "true" | "TRUE" => true
     _ => false
   }

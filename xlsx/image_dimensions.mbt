@@ -537,7 +537,7 @@ fn image_dimensions_px(
   data : BytesView,
   extension_lower : StringView,
 ) -> (Int, Int)? {
-  match extension_lower.to_owned() {
+  match extension_lower {
     "png" => png_dimensions(data)
     "gif" => gif_dimensions(data)
     "jpg" => jpeg_dimensions(data)
