@@ -32,6 +32,15 @@ priv struct OfficePreviewStats {
 }
 
 ///|
+/// Report and human-output strings derive from file content (sheet names,
+/// converter messages) and platform argv; unpaired UTF-16 surrogates in
+/// them must not trap stdout encoding after publication succeeded.
+fn office_preview_clean_text(text : String) -> String {
+  let (clean, _) = @xlsx2html.sanitize_utf16_lossy(text)
+  clean
+}
+
+///|
 fn office_preview_count_occurrences(text : String, needle : String) -> Int {
   guard needle.length() > 0 else { return 0 }
   let mut count = 0
@@ -87,10 +96,30 @@ fn office_preview_render_xlsx(
           ReadCancelled as error => raise error
           _ => continue
         }
-        let (max_row, max_col) = bounds
+        let (stored_rows, stored_cols) = bounds
+        // the renderer treats merged areas as part of the visible sheet
+        // even past the last stored cell; mirror that so the report and
+        // the page agree on what was truncated
+        let mut max_row = stored_rows
+        let mut max_col = stored_cols
+        for
+          info in (workbook.get_merge_cells_info(name, without_values=true) catch {
+            _ => []
+          }) {
+          let end = info.get_end_axis()
+          let (c2, r2) = @xlsx.cell_name_to_coordinates(end) catch {
+            _ => continue
+          }
+          if r2 > max_row {
+            max_row = r2
+          }
+          if c2 > max_col {
+            max_col = c2
+          }
+        }
         if max_row > office_preview_max_rows ||
           max_col > office_preview_max_cols {
-          truncated_sheets.push(name)
+          truncated_sheets.push(office_preview_clean_text(name))
         }
       }
       None => ()
@@ -165,7 +194,7 @@ fn office_preview_render_docx(
       Error(text) => text
       Warning(text) => text
     }
-    warnings.push(bounded_text(text, 240))
+    warnings.push(office_preview_clean_text(bounded_text(text, 240)))
   }
   let page = StringBuilder()
   page.write_string(
@@ -213,9 +242,11 @@ fn office_preview_report(
   }
   let fields : Map[String, Json] = {
     "schema": Json::string(@lib.SCHEMA_PREVIEW_RESULT),
-    "file": Json::string(bounded_text(source.file, 160)),
+    "file": Json::string(
+      office_preview_clean_text(bounded_text(source.file, 160)),
+    ),
     "format": Json::string(source.format.name()),
-    "output": Json::string(bounded_text(output, 160)),
+    "output": Json::string(office_preview_clean_text(bounded_text(output, 160))),
     "bytes_written": Json::number(bytes_written.to_double()),
     "charts_rendered": Json::number(stats.charts_rendered.to_double()),
     "charts_placeholder": Json::number(stats.charts_placeholder.to_double()),
@@ -289,7 +320,7 @@ async fn run_preview(matches : @argparse.Matches) -> Unit {
     Human =>
       println(
         "\{source.format.name()} preview written to " +
-        human_text(output, 160) +
+        office_preview_clean_text(human_text(output, 160)) +
         " (\{payload.length()} bytes)",
       )
   }

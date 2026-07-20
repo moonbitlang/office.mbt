@@ -660,10 +660,14 @@ atomic create-new path (an existing destination is refused with
 `office.transaction.output_exists` unless `--overwrite` is given; overwrite
 removes then re-stages, which is documented as not a single atomic swap).
 XLSX previews reuse the shared bounded `xlsx2html` renderer — supported
-charts (bar, line, pie) render as accessible inline SVG, everything else
-keeps a labeled placeholder — and DOCX previews reuse the shared `docx2html`
+charts (vertical clustered bar, non-stacked line, pie) render as accessible
+inline SVG; every other kind or subtype keeps a labeled placeholder rather
+than being drawn as something it is not — and DOCX previews reuse the shared `docx2html`
 converter with images inlined as data URIs under per-image (4 MiB) and
-total (16 MiB) allowances. The page has no external references.
+total (16 MiB) allowances. Rendering the page fetches nothing: it carries
+no remote scripts, stylesheets, fonts, or image sources. Hyperlink targets
+present in the source document are preserved as ordinary links — they are
+document content, followed only on an explicit click.
 
 | key | type | notes |
 | --- | --- | --- |

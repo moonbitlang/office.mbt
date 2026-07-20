@@ -56,6 +56,14 @@ priv struct ChartSvgData {
 /// Formats an SVG coordinate/length with exactly two deterministic decimal
 /// digits computed in integer space (no float-formatting drift).
 fn svg_num(value : Double) -> String {
+  if value.is_nan() {
+    return "0.00"
+  }
+  // beyond the fixed-point window the Int64 scaling would saturate; the
+  // core float formatter is deterministic across backends
+  if value > 1.0e12 || value < -1.0e12 {
+    return "\{value}"
+  }
   let scaled = (value * 100.0).round().to_int64()
   let negative = scaled < 0L
   let magnitude = if negative { -scaled } else { scaled }
@@ -198,10 +206,38 @@ fn chart_svg_supported_kind(kinds : Array[String]) -> String? {
 }
 
 ///|
+/// The first `<tag val="...">` attribute value in the chart XML, if any.
+fn chart_svg_tag_val(xml : String, tag : String) -> String? {
+  let needle = "<" + tag + " val=\""
+  guard xml.find(needle) is Some(open) else { return None }
+  let value_start = open + needle.length()
+  guard xml[value_start:].find("\"") is Some(quote) else { return None }
+  Some(xml.substring(start=value_start, end=value_start + quote))
+}
+
+///|
+/// Only the subtypes whose geometry matches what the renderer draws are
+/// accepted; stacked/percent groupings and horizontal bars keep the
+/// placeholder instead of being silently drawn as something else.
+fn chart_svg_supported_subtype(xml : String, kind : String) -> Bool {
+  if kind is ("barChart" | "lineChart") &&
+    chart_svg_tag_val(xml, "c:grouping") is Some("stacked" | "percentStacked") {
+    return false
+  }
+  if kind == "barChart" &&
+    chart_svg_tag_val(xml, "c:barDir") is Some(direction) &&
+    direction != "col" {
+    return false
+  }
+  true
+}
+
+///|
 fn chart_svg_collect(workbook : @xlsx.Workbook, xml : String) -> ChartSvgData? {
   guard chart_svg_supported_kind(@inspect.chart_kinds(xml)) is Some(kind) else {
     return None
   }
+  guard chart_svg_supported_subtype(xml, kind) else { return None }
   let metas = @inspect.chart_series(xml)
   guard metas.length() > 0 else { return None }
   let series : Array[ChartSvgSeries] = []
@@ -221,6 +257,14 @@ fn chart_svg_collect(workbook : @xlsx.Workbook, xml : String) -> ChartSvgData? {
       omitted_points = true
     }
     skipped_values += skipped
+    // non-finite magnitudes cannot be drawn truthfully; count them with
+    // the other skipped values
+    for value_index, value in values {
+      if present[value_index] && (value.is_nan() || value.is_inf()) {
+        present[value_index] = false
+        skipped_values += 1
+      }
+    }
     if categories.length() == 0 && meta.categories is Some(categories_ref) {
       categories = chart_range_labels(workbook, categories_ref)
     }
@@ -330,8 +374,10 @@ fn chart_svg_point_count(data : ChartSvgData) -> Int {
 
 ///|
 fn chart_svg_scale_y(value : Double, low : Double, high : Double) -> Double {
-  let span = high - low
-  let ratio = if span == 0.0 { 0.0 } else { (value - low) / span }
+  // halved arithmetic keeps the span finite even when low/high sit at the
+  // opposite extremes of the double range
+  let span = high / 2.0 - low / 2.0
+  let ratio = if span == 0.0 { 0.0 } else { (value / 2.0 - low / 2.0) / span }
   (CHART_SVG_PLOT_TOP + CHART_SVG_PLOT_HEIGHT).to_double() -
   ratio * CHART_SVG_PLOT_HEIGHT.to_double()
 }
@@ -385,7 +431,8 @@ fn chart_svg_lines(
   for series_index, entry in data.series {
     let colour = chart_svg_palette[series_index % chart_svg_palette.length()]
     let points = StringBuilder()
-    let mut first = true
+    let mut plotted = 0
+    let mut only = ("", "")
     for point_index, value in entry.values {
       if entry.present[point_index] == false {
         continue
@@ -393,16 +440,21 @@ fn chart_svg_lines(
       let x = CHART_SVG_PLOT_LEFT.to_double() +
         step * (point_index.to_double() + 0.5)
       let y = chart_svg_scale_y(value, low, high)
-      if !first {
+      if plotted > 0 {
         points.write_string(" ")
       }
-      first = false
-      points.write_string("\{svg_num(x)},\{svg_num(y)}")
+      only = (svg_num(x), svg_num(y))
+      points.write_string("\{only.0},\{only.1}")
+      plotted += 1
     }
-    let rendered = points.to_string()
-    if rendered != "" {
+    // a one-vertex polyline has no visible segment; draw the point itself
+    if plotted == 1 {
       svg.write_string(
-        "<polyline fill=\"none\" stroke=\"\{colour}\" stroke-width=\"2\" points=\"\{rendered}\"/>",
+        "<circle fill=\"\{colour}\" cx=\"\{only.0}\" cy=\"\{only.1}\" r=\"3\"/>",
+      )
+    } else if plotted > 1 {
+      svg.write_string(
+        "<polyline fill=\"none\" stroke=\"\{colour}\" stroke-width=\"2\" points=\"\{points.to_string()}\"/>",
       )
     }
   }
@@ -421,6 +473,20 @@ fn chart_svg_pie(svg : StringBuilder, data : ChartSvgData) -> Unit {
   let cx = (CHART_SVG_WIDTH / 2).to_double()
   let cy = (CHART_SVG_PLOT_TOP + CHART_SVG_PLOT_HEIGHT / 2).to_double()
   let radius = (CHART_SVG_PLOT_HEIGHT / 2).to_double()
+  let mut positive = 0
+  for index, value in entry.values {
+    if entry.present[index] && value > 0.0 {
+      positive += 1
+    }
+  }
+  // a single slice is the whole disc; the arc form degenerates to zero
+  // area because its endpoints coincide
+  if positive == 1 {
+    svg.write_string(
+      "<circle fill=\"\{chart_svg_palette[0]}\" cx=\"\{svg_num(cx)}\" cy=\"\{svg_num(cy)}\" r=\"\{svg_num(radius)}\"/>",
+    )
+    return
+  }
   let mut angle = -1.5707963267948966
   let tau = 6.283185307179586
   let mut slice_index = 0
@@ -449,7 +515,9 @@ fn chart_svg_description(data : ChartSvgData) -> String {
   let text = StringBuilder()
   text.write_string("\{data.kind} with \{data.series.length()} series")
   for entry in data.series {
-    text.write_string("; \{entry.name} (\{entry.values.length()} points)")
+    text.write_string(
+      "; \{chart_label(entry.name)} (\{entry.values.length()} points)",
+    )
   }
   if data.omitted_series > 0 {
     text.write_string("; \{data.omitted_series} series omitted")
@@ -474,11 +542,54 @@ fn chart_svg_figure(
   guard chart_svg_collect(workbook, xml) is Some(data) else { return None }
   let (low, high) = chart_svg_value_bounds(data)
   let description = chart_svg_description(data)
+  // pie slices are colored by slice, so the legend must name slices; the
+  // other kinds color by series
+  let legend : Array[(String, String)] = []
+  if data.kind == "pieChart" && data.series is [entry, ..] {
+    let mut slice_index = 0
+    for index, value in entry.values {
+      if entry.present[index] == false || value <= 0.0 {
+        continue
+      }
+      if slice_index >= CHART_SVG_MAX_SERIES {
+        break
+      }
+      let label = if index < data.categories.length() &&
+        data.categories[index] != "" {
+        data.categories[index]
+      } else {
+        "slice \{index + 1}"
+      }
+      legend.push(
+        (label, chart_svg_palette[slice_index % chart_svg_palette.length()]),
+      )
+      slice_index += 1
+    }
+  } else {
+    for index, entry in data.series {
+      legend.push(
+        (entry.name, chart_svg_palette[index % chart_svg_palette.length()]),
+      )
+    }
+  }
+  // two legend columns; extra rows extend the canvas instead of clipping
+  let legend_rows = (legend.length() + 1) / 2
+  let legend_base = CHART_SVG_PLOT_TOP + CHART_SVG_PLOT_HEIGHT + 34
+  let height = if legend_rows > 1 {
+    let needed = legend_base + (legend_rows - 1) * 16 + 12
+    if needed > CHART_SVG_HEIGHT {
+      needed
+    } else {
+      CHART_SVG_HEIGHT
+    }
+  } else {
+    CHART_SVG_HEIGHT
+  }
   let svg = StringBuilder()
   svg.write_string(
     "<svg role=\"img\" aria-label=\"" +
     escape_html_attribute(description) +
-    "\" viewBox=\"0 0 \{CHART_SVG_WIDTH} \{CHART_SVG_HEIGHT}\" width=\"\{CHART_SVG_WIDTH}\" height=\"\{CHART_SVG_HEIGHT}\" xmlns=\"http://www.w3.org/2000/svg\">",
+    "\" viewBox=\"0 0 \{CHART_SVG_WIDTH} \{height}\" width=\"\{CHART_SVG_WIDTH}\" height=\"\{height}\" xmlns=\"http://www.w3.org/2000/svg\">",
   )
   svg.write_string("<title>\{escape_html(data.kind)}</title>")
   svg.write_string("<desc>\{escape_html(description)}</desc>")
@@ -494,17 +605,16 @@ fn chart_svg_figure(
     }
   }
   // deterministic legend under the plot
-  let legend_y = CHART_SVG_PLOT_TOP + CHART_SVG_PLOT_HEIGHT + 34
-  for index, entry in data.series {
-    let colour = chart_svg_palette[index % chart_svg_palette.length()]
+  for index, item in legend {
+    let (label, colour) = item
     let x = CHART_SVG_PLOT_LEFT + index % 2 * 200
-    let y = legend_y + index / 2 * 16
+    let y = legend_base + index / 2 * 16
     svg.write_string(
       "<rect fill=\"\{colour}\" x=\"\{x}\" y=\"\{y - 8}\" width=\"10\" height=\"10\"/>",
     )
     svg.write_string(
       "<text class=\"legend\" x=\"\{x + 14}\" y=\"\{y}\">" +
-      escape_html(chart_label(entry.name)) +
+      escape_html(chart_label(label)) +
       "</text>",
     )
   }

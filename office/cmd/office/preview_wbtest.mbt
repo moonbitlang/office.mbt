@@ -97,6 +97,32 @@ async test "xlsx preview names sheets exceeding the render window as truncated" 
 }
 
 ///|
+/// A merge extending past the last stored cell widens the rendered sheet;
+/// the report's truncation verdict must follow the page, not just the
+/// stored-cell bounds.
+async test "merge-extended sheets count as truncated like the page says" {
+  @async.with_task_group() <| group => {
+    let directory = @afs.tmpdir(prefix="office-preview-merge-")
+    group.add_defer() <| () => {
+      @async.protect_from_cancel(() => @afs.rmdir(directory, recursive=true))
+    }
+    let workbook = @xlsx.Workbook::new()
+    ignore(workbook.add_sheet("Merged"))
+    workbook.set_cell("Merged", "A1", "anchor")
+    workbook.merge_cells("Merged", "A1:A1500")
+    let path = write_probe_package(
+      directory,
+      "merged.xlsx",
+      @xlsx.write(workbook),
+    )
+    let source = read_office_package(path)
+    let (html, stats) = office_preview_render_xlsx(source)
+    assert_true(html.contains("showing 1000 of 1500 rows"))
+    assert_true(stats.truncated_sheets is ["Merged"])
+  }
+}
+
+///|
 async test "docx preview embeds bounded images and escapes hostile text" {
   @async.with_task_group() <| group => {
     let directory = @afs.tmpdir(prefix="office-preview-docx-")
