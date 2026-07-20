@@ -764,9 +764,11 @@ pub fn xlsx_dump_op_chunks(ops : Array[Json]) -> Array[Array[Json]] {
 }
 
 ///|
-/// The dump-time self-check: every produced op chunk must parse through the
-/// real batch parser, so a dump can never emit a script its own engine
-/// refuses.
+/// The dump-time self-check: every produced op chunk must PARSE through the
+/// real batch parser (schema, per-op shape, and aggregate plan limits), so
+/// a dump can never emit a script the parser rejects. Apply-time,
+/// state-dependent validation (e.g. table-name uniqueness) is proven
+/// separately by replay, not here.
 fn self_check_ops(ops : Array[Json]) -> Unit raise {
   for chunk in xlsx_dump_op_chunks(ops) {
     let script = Json::object({

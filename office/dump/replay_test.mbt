@@ -13,6 +13,11 @@ fn dump_residual(envelope : @dump.DumpEnvelope) -> String {
 }
 
 ///|
+fn dump_warnings(envelope : @dump.DumpEnvelope) -> String {
+  Json::array(envelope.warnings.map(w => w.to_json())).stringify()
+}
+
+///|
 /// Builds a workbook exercising the op families the in-memory dump emits:
 /// add-sheet, width/row-height/row-hide/col-hide dimensions, typed
 /// set (string, empty-string, integer, non-integral number, bool),
@@ -77,7 +82,7 @@ test "dump then replay then dump is a fixpoint on the op stream" {
   assert_eq(dump_ops(d1), dump_ops(d2))
   assert_eq(dump_residual(d1), dump_residual(d2))
   assert_eq(d1.create_sheet, d2.create_sheet)
-  assert_eq(d1.warnings.length(), d2.warnings.length())
+  assert_eq(dump_warnings(d1), dump_warnings(d2))
   // the replayed workbook carries the source semantics, not just a match
   // of op text: sheet set/order/state, typed values, formula, dimensions,
   // merge, and pane all survive
@@ -87,6 +92,8 @@ test "dump then replay then dump is a fixpoint on the op stream" {
   assert_true(replayed.sheet("Buried").unwrap().state() is VeryHidden)
   assert_true(replayed.get_cell_value_raw("Data", "C2") is Some(Numeric(3.5)))
   assert_true(replayed.get_cell_value_raw("Data", "E2") is Some(Bool(true)))
+  // the empty-string cell survives as a string, not an absent cell
+  assert_true(replayed.get_cell_value_raw("Data", "D2") is Some(String("")))
   assert_true(replayed.get_cell_formula("Data", "B3") is Some("SUM(B2:B2)"))
   assert_eq(replayed.get_col_width("Data", 1), Some(18.0))
   assert_false(replayed.get_row_visible("Data", 4))
@@ -162,6 +169,27 @@ test "a dump spanning a chunk boundary still replays" {
     source_bytes=1,
   )
   assert_eq(dump_ops(d1), dump_ops(d2))
+}
+
+///|
+test "replay rejects an unexpected batch schema even with no ops" {
+  let envelope : @dump.DumpEnvelope = {
+    format: "xlsx",
+    source_file: "s.xlsx",
+    source_bytes: 1,
+    source_sha256: None,
+    batch_schema: "xlsx.batch/2",
+    create_sheet: Some("Start"),
+    ops: [],
+    residual: [],
+    warnings: [],
+  }
+  try ignore(@dump.replay_xlsx_dump(envelope)) catch {
+    @dump.ReplayInvalidFormat(_) => ()
+    error => fail("expected ReplayInvalidFormat, got \{error}")
+  } noraise {
+    _ => fail("expected replay to reject an unexpected batch schema")
+  }
 }
 
 ///|
