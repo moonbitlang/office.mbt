@@ -146,3 +146,80 @@ test "descriptions bound series names like every other label" {
   assert_true(html.contains("an extremely long serie\u{2026}"))
   assert_false(html.contains("an extremely long series name that keeps going"))
 }
+
+///|
+test "a stacked combo plot disqualifies the whole chart space" {
+  // chart_kinds deduplicates: Col + ColStacked is still one barChart kind,
+  // so the gate must inspect every plot's grouping, not just the first
+  let workbook = edge_probe_workbook(3)
+  let chart = @xlsx.ChartOptions::new(Col)
+  chart.series.push(
+    @xlsx.ChartSeries::new("Data!$A$1:$A$3", "Data!$B$1:$B$3", name="base"),
+  )
+  let stacked = @xlsx.ChartOptions::new(ColStacked)
+  stacked.series.push(
+    @xlsx.ChartSeries::new("Data!$A$1:$A$3", "Data!$B$1:$B$3", name="extra"),
+  )
+  chart.add_combo_chart(stacked)
+  workbook.add_chart_with_options("Data", "D2", chart)
+  let html = @xlsx2html.render_workbook(workbook, title="combo.xlsx")
+  assert_true(html.contains("<figure class=\"chart-placeholder\""))
+  assert_false(html.contains("<figure class=\"chart\" "))
+}
+
+///|
+test "huge finite pie slices keep visible sweeps" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "half a")
+  workbook.set_cell("Data", "A2", "half b")
+  workbook.set_cell_float("Data", "B1", 1.0e308)
+  workbook.set_cell_float("Data", "B2", 1.0e308)
+  let chart = @xlsx.ChartOptions::new(Pie)
+  chart.series.push(@xlsx.ChartSeries::new("Data!$A$1:$A$2", "Data!$B$1:$B$2"))
+  workbook.add_chart_with_options("Data", "D2", chart)
+  let html = @xlsx2html.render_workbook(workbook, title="halves.xlsx")
+  // two equal slices: two wedge paths whose endpoints differ, both colors
+  assert_true(html.contains("<path fill=\"#4472c4\""))
+  assert_true(html.contains("<path fill=\"#ed7d31\""))
+  // equal halves split at the vertical diameter: the shared endpoint of
+  // both wedges is the bottom of the circle, not a zero-sweep collapse
+  assert_true(html.contains("A 100.00 100.00 0 0 1 240.00 224.00"))
+}
+
+///|
+test "non-finite values neither stretch bounds nor reach the page" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "ok")
+  workbook.set_cell("Data", "A2", "runaway")
+  workbook.set_cell_float("Data", "B1", 10.0)
+  workbook.set_cell_float("Data", "B2", 1.0 / 0.0)
+  let chart = @xlsx.ChartOptions::new(Col)
+  chart.series.push(@xlsx.ChartSeries::new("Data!$A$1:$A$2", "Data!$B$1:$B$2"))
+  workbook.add_chart_with_options("Data", "D2", chart)
+  let html = @xlsx2html.render_workbook(workbook, title="inf.xlsx")
+  assert_true(html.contains("<figure class=\"chart\" "))
+  // the finite value sets the axis; the skipped value is reported
+  assert_true(html.contains(">10.00</text>"))
+  assert_false(html.contains("Infinity"))
+  assert_false(html.contains("NaN"))
+  assert_true(html.contains("1 non-numeric values skipped"))
+}
+
+///|
+test "subnormal separations keep their midpoint geometry" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "mid")
+  workbook.set_cell("Data", "A2", "top")
+  workbook.set_cell_float("Data", "B1", 5.0e-324)
+  workbook.set_cell_float("Data", "B2", 1.0e-323)
+  let chart = @xlsx.ChartOptions::new(Line)
+  chart.series.push(@xlsx.ChartSeries::new("Data!$A$1:$A$2", "Data!$B$1:$B$2"))
+  workbook.add_chart_with_options("Data", "D2", chart)
+  let html = @xlsx2html.render_workbook(workbook, title="tiny.xlsx")
+  // 5e-324 is exactly half of 1e-323: the midpoint must sit mid-plot
+  // (y=124), not collapse to the 224 baseline via underflowing halves
+  assert_true(html.contains(",124.00 "))
+}

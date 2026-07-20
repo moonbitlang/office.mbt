@@ -206,28 +206,83 @@ fn chart_svg_supported_kind(kinds : Array[String]) -> String? {
 }
 
 ///|
-/// The first `<tag val="...">` attribute value in the chart XML, if any.
-fn chart_svg_tag_val(xml : String, tag : String) -> String? {
-  let needle = "<" + tag + " val=\""
-  guard xml.find(needle) is Some(open) else { return None }
-  let value_start = open + needle.length()
-  guard xml[value_start:].find("\"") is Some(quote) else { return None }
-  Some(xml.substring(start=value_start, end=value_start + quote))
+/// Every `val` attribute of every `<tag ...>` element in the chart XML, in
+/// document order. Tolerates whitespace around `=` and either quote style,
+/// so a foreign writer's spelling cannot slip a subtype past the gate.
+fn chart_svg_tag_vals(xml : String, tag : String) -> Array[String] {
+  let out : Array[String] = []
+  let open = "<" + tag
+  let mut from = 0
+  while from < xml.length() {
+    guard xml[from:].find(open) is Some(offset) else { break }
+    let after = from + offset + open.length()
+    guard after < xml.length() else { break }
+    if !(xml[after] is (' ' | '\t' | '\r' | '\n' | '/' | '>')) {
+      // a longer tag name such as <c:barDirExt>
+      from = after
+      continue
+    }
+    let element_end = match xml[after:].find(">") {
+      Some(close) => after + close
+      None => xml.length()
+    }
+    let body = xml.substring(start=after, end=element_end)
+    let mut cursor = 0
+    while cursor + 3 <= body.length() {
+      guard body[cursor:].find("val") is Some(hit) else { break }
+      let name_start = cursor + hit
+      // the attribute name must stand alone (not `xval` etc.)
+      if name_start > 0 && !(body[name_start - 1] is (' ' | '\t' | '\r' | '\n')) {
+        cursor = name_start + 3
+        continue
+      }
+      let mut probe = name_start + 3
+      while probe < body.length() && body[probe] is (' ' | '\t' | '\r' | '\n') {
+        probe += 1
+      }
+      guard probe < body.length() && body[probe] is '=' else {
+        cursor = name_start + 3
+        continue
+      }
+      probe += 1
+      while probe < body.length() && body[probe] is (' ' | '\t' | '\r' | '\n') {
+        probe += 1
+      }
+      guard probe < body.length() && body[probe] is ('"' | '\'') else {
+        cursor = name_start + 3
+        continue
+      }
+      let quote = if body[probe] is '"' { "\"" } else { "'" }
+      let value_start = probe + 1
+      guard body[value_start:].find(quote) is Some(closing) else { break }
+      out.push(body.substring(start=value_start, end=value_start + closing))
+      break
+    }
+    from = element_end
+  }
+  out
 }
 
 ///|
 /// Only the subtypes whose geometry matches what the renderer draws are
 /// accepted; stacked/percent groupings and horizontal bars keep the
-/// placeholder instead of being silently drawn as something else.
+/// placeholder instead of being silently drawn as something else. Every
+/// plot in the chart space is checked — `chart_kinds` deduplicates, so a
+/// clustered plot must not vouch for a stacked one beside it.
 fn chart_svg_supported_subtype(xml : String, kind : String) -> Bool {
-  if kind is ("barChart" | "lineChart") &&
-    chart_svg_tag_val(xml, "c:grouping") is Some("stacked" | "percentStacked") {
-    return false
+  if kind is ("barChart" | "lineChart") {
+    for grouping in chart_svg_tag_vals(xml, "c:grouping") {
+      if grouping is ("stacked" | "percentStacked") {
+        return false
+      }
+    }
   }
-  if kind == "barChart" &&
-    chart_svg_tag_val(xml, "c:barDir") is Some(direction) &&
-    direction != "col" {
-    return false
+  if kind == "barChart" {
+    for direction in chart_svg_tag_vals(xml, "c:barDir") {
+      if direction != "col" {
+        return false
+      }
+    }
   }
   true
 }
@@ -295,7 +350,12 @@ fn chart_svg_value_bounds(data : ChartSvgData) -> (Double, Double) {
   let mut low = 0.0
   let mut high = 0.0
   for entry in data.series {
-    for value in entry.values {
+    for index, value in entry.values {
+      // absent slots hold placeholder zeros and skipped non-finites;
+      // neither may stretch the axis
+      if entry.present[index] == false {
+        continue
+      }
       if value < low {
         low = value
       }
@@ -374,10 +434,17 @@ fn chart_svg_point_count(data : ChartSvgData) -> Int {
 
 ///|
 fn chart_svg_scale_y(value : Double, low : Double, high : Double) -> Double {
-  // halved arithmetic keeps the span finite even when low/high sit at the
-  // opposite extremes of the double range
-  let span = high / 2.0 - low / 2.0
-  let ratio = if span == 0.0 { 0.0 } else { (value / 2.0 - low / 2.0) / span }
+  // the direct span is exact (subnormals included); halved arithmetic is
+  // the fallback that keeps opposite-extreme spans finite
+  let span = high - low
+  let ratio = if span == 0.0 {
+    0.0
+  } else if span.is_inf() {
+    let half_span = high / 2.0 - low / 2.0
+    (value / 2.0 - low / 2.0) / half_span
+  } else {
+    (value - low) / span
+  }
   (CHART_SVG_PLOT_TOP + CHART_SVG_PLOT_HEIGHT).to_double() -
   ratio * CHART_SVG_PLOT_HEIGHT.to_double()
 }
@@ -463,10 +530,19 @@ fn chart_svg_lines(
 ///|
 fn chart_svg_pie(svg : StringBuilder, data : ChartSvgData) -> Unit {
   guard data.series is [entry, ..] else { return }
+  // normalize by the largest slice before summing so huge finite values
+  // cannot overflow the total into a zero-sweep pie
+  let mut largest = 0.0
+  for index, value in entry.values {
+    if entry.present[index] && value > largest {
+      largest = value
+    }
+  }
+  guard largest > 0.0 else { return }
   let mut total = 0.0
   for index, value in entry.values {
     if entry.present[index] && value > 0.0 {
-      total += value
+      total += value / largest
     }
   }
   guard total > 0.0 else { return }
@@ -494,7 +570,7 @@ fn chart_svg_pie(svg : StringBuilder, data : ChartSvgData) -> Unit {
     if entry.present[index] == false || value <= 0.0 {
       continue
     }
-    let sweep = value / total * tau
+    let sweep = value / largest / total * tau
     let end_angle = angle + sweep
     let x1 = cx + radius * @math.cos(angle)
     let y1 = cy + radius * @math.sin(angle)
