@@ -248,7 +248,15 @@ async fn run_preview(matches : @argparse.Matches) -> Unit {
     Xlsx => office_preview_render_xlsx(source)
     Docx => office_preview_render_docx(source)
   }
-  let payload = @utf8.encode(html)
+  // a source file's stored strings can decode to isolated UTF-16
+  // surrogates; encoding must stay total and the report must say so
+  let (safe_html, replaced_units) = @xlsx2html.sanitize_utf16_lossy(html)
+  if replaced_units > 0 {
+    stats.warnings.push(
+      "\{replaced_units} unpaired UTF-16 unit(s) replaced with U+FFFD",
+    )
+  }
+  let payload = @utf8.encode(safe_html)
   if payload.length() > office_preview_max_output_bytes {
     raise CliFailure(
       @lib.protocol_error(

@@ -72,7 +72,13 @@ fn chart_label(text : String) -> String {
   if text.length() <= CHART_SVG_MAX_LABEL_CHARS {
     text
   } else {
-    text.substring(start=0, end=CHART_SVG_MAX_LABEL_CHARS - 1) + "\u{2026}"
+    let mut end = CHART_SVG_MAX_LABEL_CHARS - 1
+    // never cut a surrogate pair in half: a lone leading surrogate would
+    // make the document unencodable
+    if text[end - 1].is_leading_surrogate() {
+      end -= 1
+    }
+    text.substring(start=0, end~) + "\u{2026}"
   }
 }
 

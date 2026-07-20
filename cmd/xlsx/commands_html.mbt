@@ -8,7 +8,7 @@ async fn run_html(m : @argparse.Matches) -> Unit {
   let workbook = @lib.open_file(file)
   let max_rows = parse_positive_int(m, "max-rows", 1000)
   let max_cols = parse_positive_int(m, "max-cols", 256)
-  let document = @xlsx2html.render_workbook(
+  let rendered = @xlsx2html.render_workbook(
     workbook,
     title=file,
     sheet=arg(m, "sheet"),
@@ -17,6 +17,9 @@ async fn run_html(m : @argparse.Matches) -> Unit {
     include_images=!flag(m, "no-images"),
     calc=flag(m, "calc"),
   )
+  // stored strings in a hostile workbook can decode to isolated UTF-16
+  // surrogates; both the stdout and --out paths must stay total
+  let (document, _) = @xlsx2html.sanitize_utf16_lossy(rendered)
   let out = arg(m, "out")
   if out == "" {
     println(document)

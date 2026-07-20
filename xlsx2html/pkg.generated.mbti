@@ -19,6 +19,8 @@ pub fn render_workbook(@xlsx.Workbook, title~ : String, sheet? : String, max_row
 
 pub fn row_height_px(Double) -> Int
 
+pub fn sanitize_utf16_lossy(String) -> (String, Int)
+
 pub fn style_css(@xlsx.Style) -> String
 
 // Errors
