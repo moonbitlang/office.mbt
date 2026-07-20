@@ -408,6 +408,7 @@ fn dump_sheet_merges(
 /// Emits the `freeze` op for frozen panes; non-freeze splits are recorded
 /// as residual rather than approximated into a different view state.
 fn dump_sheet_panes(
+  workbook : @xlsx.Workbook,
   worksheet : @xlsx.Worksheet,
   sheet : String,
   ops : Array[Json],
@@ -415,6 +416,7 @@ fn dump_sheet_panes(
 ) -> Unit raise {
   let panes = worksheet.get_panes()
   let sheet_location = Json::object({ "sheet": Json::string(sheet) })
+  let anchor = sheet_scroll_anchor(workbook, worksheet, sheet)
   if panes.freeze && (panes.x_split > 0 || panes.y_split > 0) {
     let cell = @xlsx.coordinates_to_cell_name(
       panes.x_split + 1,
@@ -427,11 +429,9 @@ fn dump_sheet_panes(
       }),
     )
     // the freeze op captures only the split boundary; a persisted scroll
-    // position (top_left_cell beyond the boundary), active pane, or
-    // selection is not replayable
-    let scroll_lost = panes.top_left_cell != "" &&
-      panes.top_left_cell != "A1" &&
-      panes.top_left_cell != cell
+    // position (anchor beyond the boundary), active pane, or selection is
+    // not replayable
+    let scroll_lost = anchor != "" && anchor != "A1" && anchor != cell
     if panes.selection.length() > 0 || panes.active_pane != "" || scroll_lost {
       residual.push({
         code: "xlsx.freeze_pane_state_approximated",
@@ -452,6 +452,17 @@ fn dump_sheet_panes(
       location: sheet_location,
       asset: None,
       detail: "non-freeze split panes are not expressible in \{XLSX_BATCH_SCHEMA}",
+    })
+  } else if anchor != "" && anchor != "A1" {
+    // a plain scrolled sheet (no frozen or split panes) still carries a
+    // scroll position the op vocabulary cannot reproduce
+    residual.push({
+      code: "xlsx.sheet_scroll_position_dropped",
+      severity: "dropped",
+      scope: "sheet",
+      location: sheet_location,
+      asset: None,
+      detail: "sheet scroll position is not expressible in \{XLSX_BATCH_SCHEMA}",
     })
   }
 }
@@ -612,11 +623,39 @@ fn dump_sheet_coverage_residuals(
 /// false-positive on ordinary sheets. `top_left_cell` is pane scroll state
 /// disclosed by the freeze/split pane path instead.
 fn sheet_view_is_nondefault(view : @xlsx.SheetViewOptions) -> Bool {
+  // materialized defaults (measured on a plain sheet): every boolean is
+  // Some(true), zoom Some(100), view Some("normal"); anything else is real
   view.right_to_left is Some(true) ||
   view.show_grid_lines is Some(false) ||
   view.show_row_col_headers is Some(false) ||
+  view.show_formulas is Some(false) ||
+  view.show_zeros is Some(false) ||
+  view.show_ruler is Some(false) ||
+  view.default_grid_color is Some(false) ||
   (view.zoom_scale is Some(zoom) && zoom != 100.0) ||
   (view.view is Some(mode) && mode != "" && mode != "normal")
+}
+
+///|
+/// The primary sheet view's scroll anchor, preferring the pane's value and
+/// falling back to the sheet view's, or the "A1" default when unset.
+fn sheet_scroll_anchor(
+  workbook : @xlsx.Workbook,
+  worksheet : @xlsx.Worksheet,
+  sheet : String,
+) -> String {
+  let pane_anchor = worksheet.get_panes().top_left_cell
+  if pane_anchor != "" {
+    return pane_anchor
+  }
+  match (try? workbook.get_sheet_view(sheet, 0)) {
+    Ok(view) =>
+      match view.top_left_cell {
+        Some(cell) => cell
+        None => "A1"
+      }
+    Err(_) => "A1"
+  }
 }
 
 ///|
@@ -634,16 +673,17 @@ fn dump_workbook_residuals(
   // sheet that actually has an auto-filter, and only on an exact-name
   // match (a distinct name like `_xlnm._FilterDatabaseNote` is a real
   // drop).
+  // sheet lookup is case-insensitive, so normalize both sides
   let filter_sheets : Set[String] = Set::new()
   for sheet in workbook.get_sheet_list() {
     if (try? workbook.get_auto_filter(sheet)) is Ok(Some(_)) {
-      filter_sheets.add(sheet)
+      filter_sheets.add(sheet.to_lower())
     }
   }
   let mut dropped_names = 0
   for name in defined {
     let reconstructed = name.name == "_xlnm._FilterDatabase" &&
-      filter_sheets.contains(name.scope)
+      filter_sheets.contains(name.scope.to_lower())
     if !reconstructed {
       dropped_names += 1
     }
@@ -774,7 +814,7 @@ pub fn dump_xlsx_workbook(
     dump_sheet_dimensions(worksheet, name, ops, residual)
     dump_sheet_cells(workbook, worksheet, name, ops, residual, cancelled)
     dump_sheet_merges(workbook, name, ops, residual)
-    dump_sheet_panes(worksheet, name, ops, residual)
+    dump_sheet_panes(workbook, worksheet, name, ops, residual)
     dump_sheet_filter(workbook, name, ops, residual)
     dump_sheet_coverage_residuals(workbook, worksheet, name, residual)
   }

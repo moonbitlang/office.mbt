@@ -396,6 +396,50 @@ test "filter-database name is excluded only with a matching auto-filter" {
 }
 
 ///|
+test "additional non-default view fields and plain scroll are disclosed" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "x")
+  workbook.set_sheet_view(
+    "Data",
+    0,
+    @xlsx.SheetViewOptions::with_values(show_zeros=false, top_left_cell="C5"),
+  )
+  let document = @dump.dump_xlsx_workbook(
+      workbook,
+      source_file="v.xlsx",
+      source_bytes=1,
+    )
+    .to_json_document()
+    .stringify()
+  // show_zeros=false is a genuine non-default view state
+  assert_true(document.contains("xlsx.sheet_view_state_dropped"))
+  // a scroll anchor with no frozen/split panes is disclosed too
+  assert_true(document.contains("xlsx.sheet_scroll_position_dropped"))
+}
+
+///|
+test "filter-database scope matches the sheet case-insensitively" {
+  // sheet lookup is case-insensitive; a filter created with a differently
+  // cased sheet name must still suppress the reconstructed builtin name
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "x")
+  workbook.set_cell("Data", "B1", "y")
+  workbook.auto_filter("data", "A1:B1", [])
+  let document = @dump.dump_xlsx_workbook(
+      workbook,
+      source_file="ci.xlsx",
+      source_bytes=1,
+    )
+    .to_json_document()
+    .stringify()
+  assert_true(document.contains("\"op\":\"filter\""))
+  // no spurious defined-names residual for the auto-created builtin
+  assert_false(document.contains("xlsx.defined_names_dropped"))
+}
+
+///|
 test "cancellation raises before work completes" {
   try
     ignore(
