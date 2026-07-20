@@ -8,39 +8,42 @@ priv struct StyleExtract {
 }
 
 ///|
+/// Workbook-scoped state shared across sheets so a style is extracted once
+/// and its unexpressible attributes are reported once per workbook.
+priv struct StyleContext {
+  workbook : @xlsx.Workbook
+  extracts : Map[Int, StyleExtract]
+  reported : Set[Int]
+}
+
+///|
 /// Emits `style` ops for a worksheet's explicitly styled cells, coalescing
 /// same-style contiguous cells within a row into one range op, and records
 /// one residual per distinct style whose attributes are not fully
 /// expressible. Style ops follow the cell ops so replay styles populated
 /// cells.
 fn dump_sheet_styles(
-  workbook : @xlsx.Workbook,
+  ctx : StyleContext,
   worksheet : @xlsx.Worksheet,
   sheet : String,
   ops : Array[Json],
   residual : Array[DumpResidual],
 ) -> Unit raise {
-  // cache the extract per style id; record which styles already reported
-  // residual reasons so a shared style does not repeat them
-  let extracts : Map[Int, StyleExtract] = {}
-  let reported : Set[Int] = Set::new()
+  let workbook = ctx.workbook
   fn extract_for(id : Int) -> StyleExtract raise {
-    match extracts.get(id) {
+    match ctx.extracts.get(id) {
       Some(found) => found
       None => {
-        let style = workbook.get_style(id)
-        let code = match style.num_fmt {
-          Some(fmt) => @xlsx.builtin_number_format_code(fmt)
-          None => None
-        }
-        let extract = extract_style(style, code)
-        extracts[id] = extract
+        let extract = extract_style(workbook.get_style(id))
+        ctx.extracts[id] = extract
         extract
       }
     }
   }
 
-  // styled cells in row-major order (dedup by reference, first wins)
+  // styled cells in row-major order (dedup by reference, first wins). An
+  // explicit style reference is dumped even when its id is 0: the first
+  // cellXfs entry can itself be non-plain.
   let seen : Set[String] = Set::new()
   let styled : Array[@xlsx.Cell] = []
   for cell in worksheet.cells {
@@ -48,7 +51,7 @@ fn dump_sheet_styles(
       continue
     }
     seen.add(cell.reference)
-    if cell.style_explicit && cell.style_id != 0 {
+    if cell.style_explicit {
       styled.push(cell)
     }
   }
@@ -92,8 +95,9 @@ fn dump_sheet_styles(
         }),
       )
     }
-    if extract.unexpressible.length() > 0 && !reported.contains(first.style_id) {
-      reported.add(first.style_id)
+    if extract.unexpressible.length() > 0 &&
+      not(ctx.reported.contains(first.style_id)) {
+      ctx.reported.add(first.style_id)
       residual.push({
         code: "xlsx.style_attributes_unexpressible",
         severity: "approximated",
@@ -138,11 +142,11 @@ fn is_hex6(value : String) -> Bool {
 ///|
 /// Extracts the batch `style` op parameters a `Style` can express, and
 /// records every retained attribute the op vocabulary cannot reproduce.
-fn extract_style(style : @xlsx.Style, num_fmt_code : String?) -> StyleExtract {
+fn extract_style(style : @xlsx.Style) -> StyleExtract {
   let params : Map[String, Json] = {}
   let unexpressible : Array[String] = []
 
-  // font: bold / italic / color are expressible; everything else is not
+  // font: bold / italic / RGB color are expressible; everything else is not
   match style.font {
     Some(font) => {
       if font.bold is Some(true) {
@@ -151,11 +155,16 @@ fn extract_style(style : @xlsx.Style, num_fmt_code : String?) -> StyleExtract {
       if font.italic is Some(true) {
         params["italic"] = Json::boolean(true)
       }
+      // an RGB color is expressible only when no theme/indexed/tint
+      // metadata overrides it
+      let color_plain = font.color_theme is None &&
+        font.color_indexed is None &&
+        font.color_tint is None
       match font.color {
-        Some(color) if is_hex6(color) =>
+        Some(color) if is_hex6(color) && color_plain =>
           params["font_color"] = Json::string(color)
         Some(_) => unexpressible.push("font_color_nonrgb")
-        None => ()
+        None => if not(color_plain) { unexpressible.push("font_color_nonrgb") }
       }
       if font.size is Some(_) {
         unexpressible.push("font_size")
@@ -169,16 +178,25 @@ fn extract_style(style : @xlsx.Style, num_fmt_code : String?) -> StyleExtract {
       if font.vert_align is Some(_) {
         unexpressible.push("font_vert_align")
       }
-      if font.family is Some(_) || font.scheme is Some(_) {
+      if font.family is Some(_) ||
+        font.scheme is Some(_) ||
+        font.family_number is Some(_) ||
+        font.charset is Some(_) {
         unexpressible.push("font_name")
+      }
+      if font.outline is Some(true) ||
+        font.shadow is Some(true) ||
+        font.condense is Some(true) ||
+        font.extended is Some(true) {
+        unexpressible.push("font_effects")
       }
     }
     None => ()
   }
 
   // fill: a solid RGB fill is expressible (Fill::solid is a pattern fill
-  // with pattern code 1 and one RGB color); patterns, themes, and indexed
-  // colors are not
+  // with pattern code 1 and one RGB color, no tint/theme/indexed); every
+  // other fill — patterns, gradients, themes, indexed, tinted — is not
   match style.fill {
     Some(fill) =>
       if fill.pattern is Some(1) &&
@@ -186,8 +204,11 @@ fn extract_style(style : @xlsx.Style, num_fmt_code : String?) -> StyleExtract {
         is_hex6(color) &&
         fill.fg_theme is None &&
         fill.fg_indexed is None &&
+        fill.fg_tint is None &&
         fill.bg_theme is None &&
         fill.bg_indexed is None &&
+        fill.bg_tint is None &&
+        fill.shading is None &&
         (fill.transparency is None || fill.transparency is Some(0)) {
         params["fill"] = Json::string(color)
       } else {
@@ -196,17 +217,23 @@ fn extract_style(style : @xlsx.Style, num_fmt_code : String?) -> StyleExtract {
     None => ()
   }
 
-  // number format: custom code, or a known builtin id → its code
-  match style.custom_num_fmt {
-    Some(code) if code != "" => params["number_format"] = Json::string(code)
-    _ =>
-      match num_fmt_code {
-        Some(code) => params["number_format"] = Json::string(code)
-        None =>
-          if style.num_fmt is Some(id) && id != 0 {
-            unexpressible.push("number_format_builtin_\{id}")
-          }
+  // number format: the canonical NumberFormat field. Custom codes pass
+  // through; builtin ids resolve to their code when known, else residual.
+  match style.number_format {
+    Some(Custom(code)) =>
+      if code != "" {
+        params["number_format"] = Json::string(code)
+      } else {
+        unexpressible.push("number_format_empty")
       }
+    Some(Builtin(id)) =>
+      if id != 0 {
+        match @xlsx.builtin_number_format_code(id) {
+          Some(code) => params["number_format"] = Json::string(code)
+          None => unexpressible.push("number_format_builtin_\{id}")
+        }
+      }
+    None => ()
   }
 
   // alignment: horizontal is expressible; everything else is not
@@ -220,7 +247,10 @@ fn extract_style(style : @xlsx.Style, num_fmt_code : String?) -> StyleExtract {
         align.wrap_text is Some(true) ||
         (align.text_rotation is Some(r) && r != 0) ||
         (align.indent is Some(i) && i != 0) ||
-        align.shrink_to_fit is Some(true) {
+        align.shrink_to_fit is Some(true) ||
+        align.justify_last_line is Some(true) ||
+        (align.reading_order is Some(o) && o != 0) ||
+        (align.relative_indent is Some(ri) && ri != 0) {
         unexpressible.push("alignment_unsupported")
       }
     }
@@ -248,8 +278,13 @@ fn extract_borders(
   params : Map[String, Json],
   unexpressible : Array[String],
 ) -> Unit {
-  let mut border_color : String? = None
-  let mut color_conflict = false
+  // the batch op carries ONE border_color applied to every side. To
+  // reproduce faithfully, every emitted side must share the same color:
+  // track how many sides were emitted and how many distinct colors they
+  // carry (an uncolored side counts as a distinct "no color").
+  let colors : Set[String] = Set::new()
+  let mut emitted_sides = 0
+  let mut uncolored_sides = 0
   for border in borders {
     let key = match border.typ {
       "top" => "border_top"
@@ -262,31 +297,37 @@ fn extract_borders(
         continue
       }
     }
+    let mut emitted = false
     match border.style {
       Some(code) =>
         match border_style_name(code) {
-          Some(name) => params[key] = Json::string(name)
+          Some(name) => {
+            params[key] = Json::string(name)
+            emitted = true
+          }
           None => unexpressible.push("border_style_\{code}")
         }
       None => ()
     }
-    match border.color {
-      Some(color) if is_hex6(color) =>
-        match border_color {
-          None => border_color = Some(color)
-          Some(existing) => if existing != color { color_conflict = true }
+    if emitted {
+      emitted_sides += 1
+      match border.color {
+        Some(color) if is_hex6(color) => colors.add(color)
+        Some(_) => {
+          unexpressible.push("border_color_nonrgb")
+          uncolored_sides += 1
         }
-      Some(_) => unexpressible.push("border_color_nonrgb")
-      None => ()
+        None => uncolored_sides += 1
+      }
     }
   }
-  match border_color {
-    Some(color) => params["border_color"] = Json::string(color)
-    None => ()
-  }
-  if color_conflict {
-    // the op carries a single border_color; distinct per-side colors
-    // cannot be reproduced
+  // a single uniform color across every emitted side is expressible; a mix
+  // of colors, or some colored and some uncolored sides, is not
+  if emitted_sides > 0 && colors.size() == 1 && uncolored_sides == 0 {
+    for color in colors {
+      params["border_color"] = Json::string(color)
+    }
+  } else if colors.size() > 1 || (colors.size() == 1 && uncolored_sides > 0) {
     unexpressible.push("border_per_side_color")
   }
 }
