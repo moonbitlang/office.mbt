@@ -1548,7 +1548,7 @@ fn check_header_footer_image_size(
   value : StringView,
   field_name : StringView,
 ) -> Unit raise XlsxError {
-  if value.to_owned() == "" {
+  if value is "" {
     raise InvalidHeaderFooter(msg="\{field_name.to_owned()} empty")
   }
 }

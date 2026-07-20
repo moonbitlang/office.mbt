@@ -647,7 +647,7 @@ fn parse_drawing_images(
 ) -> Array[Image] raise XlsxError {
   let images : Array[Image] = []
   let retained_media = media_cache.unwrap_or(Map([]))
-  let image_targets = if drawing_rels_xml.to_owned() == "" {
+  let image_targets = if drawing_rels_xml is "" {
     Map([])
   } else {
     parse_internal_relationship_targets(
@@ -657,7 +657,7 @@ fn parse_drawing_images(
       cancelled~,
     )
   }
-  let hyperlink_targets = if drawing_rels_xml.to_owned() == "" {
+  let hyperlink_targets = if drawing_rels_xml is "" {
     Map([])
   } else {
     parse_external_relationship_targets(
@@ -670,7 +670,7 @@ fn parse_drawing_images(
   // location links (e.g. "Sheet1!B2") are written as internal-mode
   // relationships by this library's own writer; reading only external-mode
   // records would drop them on round-trip
-  let location_hyperlink_targets = if drawing_rels_xml.to_owned() == "" {
+  let location_hyperlink_targets = if drawing_rels_xml is "" {
     Map([])
   } else {
     parse_internal_relationship_targets(
@@ -828,7 +828,7 @@ fn parse_drawing_charts(
   cancelled? : () -> Bool = () => false,
 ) -> Array[Chart] raise XlsxError {
   let charts : Array[Chart] = []
-  let chart_targets = if drawing_rels_xml.to_owned() == "" {
+  let chart_targets = if drawing_rels_xml is "" {
     Map([])
   } else {
     parse_internal_relationship_targets(

@@ -327,7 +327,7 @@ fn parse_table_xml(xml : StringView) -> Table raise XlsxError {
     None => raise InvalidXml(msg="table ref missing")
   }
   let show_header_row = match attr_value(tag, "headerRowCount") {
-    Some(value) => value.to_string() != "0"
+    Some(value) => value != "0"
     None => true
   }
   let columns = parse_table_columns(xml)
