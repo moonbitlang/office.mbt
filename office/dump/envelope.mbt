@@ -140,6 +140,15 @@ pub fn DumpEnvelope::to_jsonl_lines(self : DumpEnvelope) -> Array[String] {
       }).stringify(),
     )
   }
+  // integrity digest over the concatenated canonical op lines, so a
+  // truncated or reordered stream is detectable on replay
+  let op_payload = StringBuilder::new()
+  for line in lines {
+    if line.contains("\"record\":\"op\"") {
+      op_payload.write_string(line)
+      op_payload.write_char('\n')
+    }
+  }
   lines.push(
     Json::object({
       "record": Json::string("end"),
@@ -148,7 +157,14 @@ pub fn DumpEnvelope::to_jsonl_lines(self : DumpEnvelope) -> Array[String] {
         "residual": Json::number(self.residual.length().to_double()),
         "warnings": Json::number(self.warnings.length().to_double()),
       }),
+      "ops_sha256": Json::string(sha256_hex_string(op_payload.to_string())),
     }).stringify(),
   )
   lines
+}
+
+///|
+/// Lowercase hex SHA-256 of a string's UTF-8 bytes.
+pub fn sha256_hex_string(text : String) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(text)))
 }

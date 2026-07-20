@@ -45,6 +45,125 @@ fn cell_value_json(value : @xlsx.CellValue) -> Json? {
 }
 
 ///|
+/// Emits width/row/col dimension ops in canonical ascending order (columns
+/// before rows), with residual records for outline levels and line-default
+/// styles the op vocabulary cannot express. These precede cell ops so a
+/// replayed sheet sizes itself before it fills.
+fn dump_sheet_dimensions(
+  worksheet : @xlsx.Worksheet,
+  sheet : String,
+  ops : Array[Json],
+  residual : Array[DumpResidual],
+) -> Unit raise {
+  let cols = worksheet.materialized_col_dimensions()
+  cols.sort_by((a, b) => a.0 - b.0)
+  for entry in cols {
+    let (index, dim) = entry
+    let name = @xlsx.column_number_to_name(index)
+    match dim.width {
+      Some(width) =>
+        ops.push(
+          dump_op("width", {
+            "sheet": Json::string(sheet),
+            "column": Json::string(name),
+            "width": Json::number(width),
+          }),
+        )
+      None => ()
+    }
+    if dim.hidden {
+      ops.push(
+        dump_op("col", {
+          "sheet": Json::string(sheet),
+          "action": Json::string("hide"),
+          "at": Json::string(name),
+        }),
+      )
+    }
+    dump_dimension_residuals(
+      sheet,
+      "col",
+      name,
+      dim.outline_level,
+      dim.style_id,
+      residual,
+    )
+  }
+  let rows = worksheet.materialized_row_dimensions()
+  rows.sort_by((a, b) => a.0 - b.0)
+  for entry in rows {
+    let (index, dim) = entry
+    match dim.height {
+      Some(height) =>
+        ops.push(
+          dump_op("row", {
+            "sheet": Json::string(sheet),
+            "action": Json::string("height"),
+            "at": Json::number(index.to_double()),
+            "height": Json::number(height),
+          }),
+        )
+      None => ()
+    }
+    if dim.hidden {
+      ops.push(
+        dump_op("row", {
+          "sheet": Json::string(sheet),
+          "action": Json::string("hide"),
+          "at": Json::number(index.to_double()),
+        }),
+      )
+    }
+    dump_dimension_residuals(
+      sheet,
+      "row",
+      index.to_string(),
+      dim.outline_level,
+      dim.style_id,
+      residual,
+    )
+  }
+}
+
+///|
+/// Records the dimension attributes no op parameter carries: outline
+/// (grouping) levels and line-default style ids.
+fn dump_dimension_residuals(
+  sheet : String,
+  axis : String,
+  at : String,
+  outline_level : Int,
+  style_id : Int?,
+  residual : Array[DumpResidual],
+) -> Unit {
+  let location = Json::object({
+    "sheet": Json::string(sheet),
+    "axis": Json::string(axis),
+    "at": Json::string(at),
+  })
+  if outline_level > 0 {
+    residual.push({
+      code: "xlsx.\{axis}_outline_level_dropped",
+      severity: "dropped",
+      scope: "sheet",
+      location,
+      asset: None,
+      detail: "\{axis} outline level \{outline_level} is not expressible in \{XLSX_BATCH_SCHEMA}",
+    })
+  }
+  if style_id is Some(_) {
+    residual.push({
+      code: "xlsx.\{axis}_default_style_dropped",
+      severity: "dropped",
+      scope: "sheet",
+      location,
+      asset: None,
+      detail: "\{axis}-level default style is not expressible in \{XLSX_BATCH_SCHEMA}",
+    })
+  }
+}
+
+///|
 /// Emits the row-major `set`/`formula` ops for one worksheet's stored
 /// cells, with residual records for every stored cell the op vocabulary
 /// cannot express.
@@ -298,7 +417,7 @@ fn dump_sheet_coverage_residuals(
     ),
     (
       "xlsx.conditional_formats_not_dumped",
-      (workbook.get_conditional_formats(sheet) catch { _ => Map::new() }).size(),
+      (workbook.get_conditional_formats(sheet) catch { _ => Map::new() }).length(),
     ),
     (
       "xlsx.comments_not_dumped",
@@ -399,6 +518,7 @@ pub fn dump_xlsx_workbook(
   for name in worksheet_names {
     check_cancelled(cancelled)
     guard workbook.sheet(name) is Some(worksheet) else { continue }
+    dump_sheet_dimensions(worksheet, name, ops, residual)
     dump_sheet_cells(workbook, worksheet, name, ops, residual, cancelled)
     dump_sheet_merges(workbook, name, ops)
     dump_sheet_panes(worksheet, name, ops, residual)

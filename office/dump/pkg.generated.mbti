@@ -13,6 +13,8 @@ pub const XLSX_BATCH_SCHEMA : String = "xlsx.batch/1"
 
 pub fn dump_xlsx_workbook(@xlsx.Workbook, source_file~ : String, source_bytes~ : Int, cancelled? : () -> Bool) -> DumpEnvelope raise
 
+pub fn sha256_hex_string(String) -> String
+
 // Errors
 pub suberror DumpError {
   DumpCancelled

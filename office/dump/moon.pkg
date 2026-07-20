@@ -1,7 +1,9 @@
 import {
   "bobzhang/mbtexcel/batch",
   "bobzhang/mbtexcel/xlsx",
+  "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
+  "moonbitlang/x/crypto",
 }
 
 import {

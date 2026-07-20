@@ -199,6 +199,44 @@ test "error cells become residual records, never lossy ops" {
 }
 
 ///|
+test "dimensions become width/row/col ops before cell ops" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Grid"))
+  workbook.set_col_width("Grid", 1, 18.5)
+  workbook.set_row_height("Grid", 2, 30.0)
+  workbook.set_row_visible("Grid", 3, false)
+  workbook.set_col_visible("Grid", 4, false)
+  workbook.set_cell("Grid", "A1", "corner")
+  let envelope = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="grid.xlsx",
+    source_bytes=1,
+  )
+  let ops = envelope.ops.map(op => op.stringify())
+  // width/row/col ops precede the first set op
+  let mut first_set = ops.length()
+  let mut last_dim = -1
+  for index, op in ops {
+    if op.contains("\"op\":\"set\"") && index < first_set {
+      first_set = index
+    }
+    if op.contains("\"op\":\"width\"") ||
+      op.contains("\"op\":\"row\"") ||
+      op.contains("\"op\":\"col\"") {
+      last_dim = index
+    }
+  }
+  assert_true(last_dim >= 0 && last_dim < first_set)
+  let document = envelope.to_json_document().stringify()
+  assert_true(document.contains("\"width\":18.5"))
+  assert_true(document.contains("\"action\":\"height\""))
+  assert_true(document.contains("\"action\":\"hide\""))
+  // the JSONL end record carries an ops integrity digest
+  let lines = envelope.to_jsonl_lines()
+  assert_true(lines[lines.length() - 1].contains("\"ops_sha256\":\""))
+}
+
+///|
 test "cancellation raises before work completes" {
   try
     ignore(
