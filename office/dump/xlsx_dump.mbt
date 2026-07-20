@@ -731,9 +731,6 @@ fn dump_workbook_residuals(
 }
 
 ///|
-/// The dump-time self-check: every produced op chunk must parse through
-/// the real batch parser, so a dump can never emit a script its own
-/// engine refuses.
 /// A produced op is a new-style op when the batch parser would count it
 /// against the per-script `MAX_TOTAL_NEW_STYLES` budget.
 fn op_creates_style(op : Json) -> Bool {
@@ -741,26 +738,39 @@ fn op_creates_style(op : Json) -> Bool {
 }
 
 ///|
-/// The dump-time self-check: every produced op chunk must parse through the
-/// real batch parser, so a dump can never emit a script its own engine
-/// refuses. Chunks respect BOTH the op-count ceiling and the new-style
-/// budget, mirroring how replay must split the single op stream.
-fn self_check_ops(ops : Array[Json]) -> Unit raise {
+/// Splits the single op stream into batch scripts, each within BOTH the
+/// op-count ceiling and the new-style budget. The self-check and replay
+/// share this one chunking policy, so a dump the self-check accepts is
+/// exactly a dump replay can consume.
+pub fn xlsx_dump_op_chunks(ops : Array[Json]) -> Array[Array[Json]] {
+  let chunks : Array[Array[Json]] = []
   let mut start = 0
   while start < ops.length() {
     let chunk : Array[Json] = []
     let mut styles = 0
-    let mut index = start
-    while index < ops.length() &&
+    while start < ops.length() &&
           chunk.length() < @batch.MAX_BATCH_OPS &&
           styles < @batch.MAX_TOTAL_NEW_STYLES {
-      let op = ops[index]
+      let op = ops[start]
       if op_creates_style(op) {
         styles += 1
       }
       chunk.push(op)
-      index += 1
+      start += 1
     }
+    chunks.push(chunk)
+  }
+  chunks
+}
+
+///|
+/// The dump-time self-check: every produced op chunk must PARSE through the
+/// real batch parser (schema, per-op shape, and aggregate plan limits), so
+/// a dump can never emit a script the parser rejects. Apply-time,
+/// state-dependent validation (e.g. table-name uniqueness) is proven
+/// separately by replay, not here.
+fn self_check_ops(ops : Array[Json]) -> Unit raise {
+  for chunk in xlsx_dump_op_chunks(ops) {
     let script = Json::object({
       "schema": Json::string(XLSX_BATCH_SCHEMA),
       "ops": Json::array(chunk),
@@ -770,7 +780,6 @@ fn self_check_ops(ops : Array[Json]) -> Unit raise {
         error => raise DumpSelfCheckFailed("\{error}")
       },
     )
-    start = index
   }
 }
 
