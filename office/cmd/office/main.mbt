@@ -140,6 +140,7 @@ fn build_command() -> @argparse.Command {
       query_command(),
       validate_command(),
       issues_command(),
+      preview_command(),
       create_command(),
       batch_command(),
       raw_command(),
@@ -158,6 +159,7 @@ fn is_implemented_command(name : StringView) -> Bool {
     | "query"
     | "validate"
     | "issues"
+    | "preview"
     | "create"
     | "batch"
     | "raw" => true
@@ -180,6 +182,7 @@ async fn run_cli(args : Array[String]) -> Unit {
         "query" => run_docx_query(values)
         "validate" => run_validate(values)
         "issues" => run_issues(values)
+        "preview" => run_preview(values)
         "create" => run_create(values)
         "batch" => run_xlsx_batch(values)
         "raw" => run_raw(values)

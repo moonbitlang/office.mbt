@@ -55,6 +55,7 @@ charts, images, and object counts:
             ],
             "series": [
               {
+                "name": "Sales",
                 "categories": "'Data'!A1:A1",
                 "values": "'Data'!B1:B1"
               }

@@ -653,6 +653,34 @@ markers `office.xlsx.formula_findings_omitted` /
 `office.xlsx.formula_scan_truncated`), and the DOCX tolerant reader's
 bounded diagnostics. Warnings never change the exit status.
 
+### `office.preview/1` (`office preview FILE --output OUT.html --json`)
+
+One deterministic, self-contained HTML document is published through the
+atomic create-new path (an existing destination is refused with
+`office.transaction.output_exists` unless `--overwrite` is given; overwrite
+removes then re-stages, which is documented as not a single atomic swap).
+XLSX previews reuse the shared bounded `xlsx2html` renderer — supported
+charts (vertical clustered bar, non-stacked line, pie) render as accessible
+inline SVG; every other kind or subtype keeps a labeled placeholder rather
+than being drawn as something it is not — and DOCX previews reuse the shared `docx2html`
+converter with images inlined as data URIs under per-image (4 MiB) and
+total (16 MiB) allowances. Rendering the page fetches nothing: it carries
+no remote scripts, stylesheets, fonts, or image sources. Hyperlink targets
+present in the source document are preserved as ordinary links — they are
+document content, followed only on an explicit click.
+
+| key | type | notes |
+| --- | --- | --- |
+| `schema` | string | `"office.preview/1"` |
+| `file`, `format` | string | bounded input path and `"docx"` \| `"xlsx"` |
+| `output` | string | bounded published path |
+| `bytes_written` | number | exact published byte count |
+| `charts_rendered` | number | charts rendered as inline SVG |
+| `charts_placeholder` | number | charts kept as labeled placeholders |
+| `images_embedded` | number | images inlined as data URIs |
+| `truncation` | object | `max_rows`, `max_cols`, `truncated_sheets`, `images_omitted` |
+| `warnings` | array? | bounded converter warnings (omitted when empty) |
+
 ## Standalone `docx` CLI schemas
 
 ## `docx.outline/1` — document structure map (`docx outline <file>`)

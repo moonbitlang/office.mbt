@@ -55,7 +55,8 @@ pub fn render_workbook(
         )
       None =>
         match find_chart_sheet(workbook, name) {
-          Some(chart_sheet) => render_chart_sheet(body, chart_sheet, name)
+          Some(chart_sheet) =>
+            render_chart_sheet(body, workbook, chart_sheet, name)
           None => ()
         }
     }
@@ -77,6 +78,10 @@ pub fn render_workbook(
       #|.formula-pending{color:#888;font-style:italic}
       #|.truncated,.frozen-hint{color:#888;font-size:9pt}
       #|.chart-placeholder{border:1px dashed #999;padding:8px;margin:4px 0;color:#555;font-size:10pt}
+      #|figure.chart{border:1px solid #d9d9d9;padding:8px;margin:4px 0;display:inline-block}
+      #|figure.chart svg .axis{stroke:#666;stroke-width:1}
+      #|figure.chart svg text{font-family:Calibri,Arial,sans-serif;font-size:9px;fill:#333}
+      #|figure.chart figcaption{color:#555;font-size:9pt;max-width:480px}
       #|figure{margin:4px 0}
     ),
   )
@@ -332,7 +337,13 @@ fn render_sheet_objects(
     }
   }
   for chart in worksheet.charts() {
-    objects.write_string(chart_placeholder(chart.xml, anchor=chart.reference))
+    match chart_svg_figure(workbook, chart.xml, anchor=chart.reference) {
+      Some(figure) => objects.write_string(figure)
+      None =>
+        objects.write_string(
+          chart_placeholder(chart.xml, anchor=chart.reference),
+        )
+    }
   }
   let panes = workbook.get_panes(name)
   if panes.freeze {
@@ -372,11 +383,16 @@ fn chart_placeholder(xml : String, anchor~ : String) -> String {
 ///|
 fn render_chart_sheet(
   body : StringBuilder,
+  workbook : @xlsx.Workbook,
   chart_sheet : @xlsx.ChartSheet,
   name : String,
 ) -> Unit {
   body.write_string("<section data-sheet=\"\{escape_html_attribute(name)}\">\n")
   body.write_string("<h2>\{escape_html(name)}</h2>\n")
-  body.write_string(chart_placeholder(chart_sheet.chart_xml(), anchor=""))
+  match chart_svg_figure(workbook, chart_sheet.chart_xml(), anchor="") {
+    Some(figure) => body.write_string(figure)
+    None =>
+      body.write_string(chart_placeholder(chart_sheet.chart_xml(), anchor=""))
+  }
   body.write_string("</section>\n")
 }
