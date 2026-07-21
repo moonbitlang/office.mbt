@@ -802,3 +802,232 @@ test "a table whose replay diverges becomes a residual, not a lossy op" {
     assert_eq(replayed_table.show_header_row, table.show_header_row)
   }
 }
+
+///|
+test "data validations become validate ops and survive the fixpoint" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "pick")
+  workbook.add_data_validation_list(
+    "Data",
+    "B1:B10",
+    ["North", "South"],
+    allow_blank=true,
+  )
+  let d1 = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="dv.xlsx",
+    source_bytes=1,
+  )
+  let document = d1.to_json_document().stringify()
+  assert_true(document.contains("\"op\":\"validate\""))
+  assert_true(document.contains("\"type\":\"list\""))
+  assert_true(document.contains("\"North\""))
+  assert_false(document.contains("xlsx.validation_unsupported"))
+  // the emitted op replays into a real validation and re-dumps identically
+  let replayed = @dump.replay_xlsx_dump(d1)
+  let replayed_validations = replayed.get_data_validations("Data")
+  assert_eq(replayed_validations.length(), 1)
+  let d2 = @dump.dump_xlsx_workbook(
+    replayed,
+    source_file="dv.xlsx",
+    source_bytes=1,
+  )
+  assert_eq(Json::array(d1.ops).stringify(), Json::array(d2.ops).stringify())
+}
+
+///|
+test "a multi-region validation splits into one faithful op per region" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let dv = @xlsx.DataValidation::new(true)
+  dv.set_sqref("A1:A5 C1:C5")
+  dv.set_range(IntValue(1), IntValue(10), Whole, Between)
+  workbook.add_data_validation("Data", dv)
+  let envelope = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="mr.xlsx",
+    source_bytes=1,
+  )
+  let mut validate_ops = 0
+  for op in envelope.ops {
+    if op.stringify().contains("\"op\":\"validate\"") {
+      validate_ops += 1
+    }
+  }
+  assert_eq(validate_ops, 2)
+  let document = envelope.to_json_document().stringify()
+  assert_true(document.contains("\"range\":\"A1:A5\""))
+  assert_true(document.contains("\"range\":\"C1:C5\""))
+  assert_false(document.contains("xlsx.validation_unsupported"))
+  // both regions replay and the dump is a fixpoint
+  let d2 = @dump.dump_xlsx_workbook(
+    @dump.replay_xlsx_dump(envelope),
+    source_file="mr.xlsx",
+    source_bytes=1,
+  )
+  assert_eq(
+    Json::array(envelope.ops).stringify(),
+    Json::array(d2.ops).stringify(),
+  )
+}
+
+///|
+test "an inline list value with a comma stays honest" {
+  // the stored literal joins values with commas, so a value carrying one
+  // re-splits into separate options on dump — identical stored bytes, which
+  // is how Excel itself reads the literal. The dump must either carry that
+  // faithful (re-split) op or disclose a residual — never a mangled op
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let created = try? workbook.add_data_validation_list("Data", "B1:B5", [
+    "plain", "with,comma",
+  ])
+  guard created is Ok(_) else {
+    // the source engine itself refuses; nothing to dump — vacuously fine
+    return
+  }
+  let envelope = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="comma.xlsx",
+    source_bytes=1,
+  )
+  let document = envelope.to_json_document().stringify()
+  let has_op = document.contains("\"op\":\"validate\"")
+  let has_residual = document.contains("xlsx.validation_unsupported")
+  // either the engine round-trips it faithfully or it is disclosed
+  assert_true(has_op || has_residual)
+  if has_op {
+    let d2 = @dump.dump_xlsx_workbook(
+      @dump.replay_xlsx_dump(envelope),
+      source_file="comma.xlsx",
+      source_bytes=1,
+    )
+    assert_eq(
+      Json::array(envelope.ops).stringify(),
+      Json::array(d2.ops).stringify(),
+    )
+  }
+}
+
+///|
+test "an unreadable stored validation entry residualizes the sheet" {
+  // the reader parses a sheet's stored validations all-or-nothing, so one
+  // entry it cannot read (an x14 validation) hides every validation on the
+  // sheet — the dump must disclose the loss, never emit a silently empty
+  // validation section
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.add_data_validation_list("Data", "B1:B5", ["North", "South"])
+  workbook.add_data_validation_xml(
+    "Data", "<x14:dataValidation type=\"list\" allowBlank=\"1\"><x14:formula1><xm:f>Other!$A$1:$A$3</xm:f></x14:formula1><xm:sqref>D1:D5</xm:sqref></x14:dataValidation>",
+  )
+  let envelope = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="x14.xlsx",
+    source_bytes=1,
+  )
+  let document = envelope.to_json_document().stringify()
+  // no op sneaks through and the plain validation is not silently lost
+  assert_false(document.contains("\"op\":\"validate\""))
+  assert_false(document.contains("\"North\""))
+  assert_true(document.contains("xlsx.validation_unsupported"))
+  assert_true(document.contains("could not be read"))
+}
+
+///|
+test "a custom validation round-trips without operator or formula2" {
+  // Excel ignores the operator for custom rules and the batch reader
+  // rejects it, so the op must carry only formula1 and still replay
+  // faithfully (the apply path pins a placeholder operator)
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let dv = @xlsx.DataValidation::new(true)
+  dv.set_sqref("E1:E5")
+  dv.set_range(TextValue("E1>0"), TextValue(""), Custom, Between)
+  workbook.add_data_validation("Data", dv)
+  let d1 = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="custom.xlsx",
+    source_bytes=1,
+  )
+  let document = d1.to_json_document().stringify()
+  assert_true(document.contains("\"op\":\"validate\""))
+  assert_true(document.contains("\"type\":\"custom\""))
+  assert_false(document.contains("\"operator\""))
+  assert_false(document.contains("xlsx.validation_unsupported"))
+  let d2 = @dump.dump_xlsx_workbook(
+    @dump.replay_xlsx_dump(d1),
+    source_file="custom.xlsx",
+    source_bytes=1,
+  )
+  assert_eq(Json::array(d1.ops).stringify(), Json::array(d2.ops).stringify())
+}
+
+///|
+test "a stored comparison without an operator defaults to between" {
+  // OOXML defaults an absent operator attribute to between; the batch
+  // reader requires one, so the dump emits the default explicitly and the
+  // comparison treats absent and between as the same operator
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.add_data_validation_xml(
+    "Data", "<dataValidation allowBlank=\"1\" sqref=\"F1:F3\" type=\"whole\"><formula1>1</formula1><formula2>5</formula2></dataValidation>",
+  )
+  let d1 = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="defop.xlsx",
+    source_bytes=1,
+  )
+  let document = d1.to_json_document().stringify()
+  assert_true(document.contains("\"op\":\"validate\""))
+  assert_true(document.contains("\"operator\":\"between\""))
+  assert_false(document.contains("xlsx.validation_unsupported"))
+  let d2 = @dump.dump_xlsx_workbook(
+    @dump.replay_xlsx_dump(d1),
+    source_file="defop.xlsx",
+    source_bytes=1,
+  )
+  assert_eq(Json::array(d1.ops).stringify(), Json::array(d2.ops).stringify())
+}
+
+///|
+test "two validations on the same region both survive" {
+  // replay appends validations in op order, so the n-th candidate on a
+  // region pairs with the n-th replayed validation — two rules on the same
+  // range must not compare against each other's replay
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let first = @xlsx.DataValidation::new(true)
+  first.set_sqref("D1:D5")
+  first.set_range(IntValue(1), IntValue(10), Whole, Between)
+  workbook.add_data_validation("Data", first)
+  let second = @xlsx.DataValidation::new(false)
+  second.set_sqref("D1:D5")
+  second.set_range(TextValue("2"), TextValue("8"), Decimal, Between)
+  workbook.add_data_validation("Data", second)
+  let d1 = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="dup.xlsx",
+    source_bytes=1,
+  )
+  let mut validate_ops = 0
+  for op in d1.ops {
+    if op.stringify().contains("\"op\":\"validate\"") {
+      validate_ops += 1
+    }
+  }
+  assert_eq(validate_ops, 2)
+  let document = d1.to_json_document().stringify()
+  assert_true(document.contains("\"type\":\"whole\""))
+  assert_true(document.contains("\"type\":\"decimal\""))
+  assert_false(document.contains("xlsx.validation_unsupported"))
+  let replayed = @dump.replay_xlsx_dump(d1)
+  assert_eq(replayed.get_data_validations("Data").length(), 2)
+  let d2 = @dump.dump_xlsx_workbook(
+    replayed,
+    source_file="dup.xlsx",
+    source_bytes=1,
+  )
+  assert_eq(Json::array(d1.ops).stringify(), Json::array(d2.ops).stringify())
+}

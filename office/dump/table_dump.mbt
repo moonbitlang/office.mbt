@@ -1,11 +1,18 @@
 ///|
-/// One candidate table op awaiting full-replay validation: the op's index
-/// in the stream, the sheet, and the source table to compare readback
+/// The source object a candidate op must reproduce on replay.
+priv enum ObjectPayload {
+  TableObject(@xlsx.Table)
+  ValidationObject(@xlsx.DataValidation, String)
+}
+
+///|
+/// One candidate object op awaiting full-replay validation: the op's index
+/// in the stream, the sheet, and the source object to compare readback
 /// against.
 priv struct TableCandidate {
   op_index : Int
   sheet : String
-  table : @xlsx.Table
+  payload : ObjectPayload
 }
 
 ///|
@@ -32,7 +39,11 @@ fn dump_sheet_tables(
     if table.style_name != "" {
       params["style"] = Json::string(table.style_name)
     }
-    candidates.push({ op_index: ops.length(), sheet, table })
+    candidates.push({
+      op_index: ops.length(),
+      sheet,
+      payload: TableObject(table),
+    })
     ops.push(
       Json::object({
         "op": Json::string("table"),
@@ -43,27 +54,65 @@ fn dump_sheet_tables(
 }
 
 ///|
-/// Whether a replayed workbook carries `candidate`'s table faithfully:
+/// Whether a replayed workbook carries `candidate`'s object faithfully.
+/// `peers` is the current candidate list (ascending op order); validations
+/// use it to pair the n-th candidate on a region with the n-th replayed
+/// validation on that region, so two rules on the same range never compare
+/// against each other's replay.
+fn object_replayed_faithfully(
+  source : @xlsx.Workbook,
+  replayed : @xlsx.Workbook,
+  candidate : TableCandidate,
+  peers : Array[TableCandidate],
+) -> Bool {
+  match candidate.payload {
+    TableObject(table) =>
+      table_replayed_faithfully(source, replayed, candidate.sheet, table)
+    ValidationObject(validation, region) => {
+      let mut ordinal = 0
+      for peer in peers {
+        if peer.op_index >= candidate.op_index {
+          break
+        }
+        if peer.sheet == candidate.sheet &&
+          peer.payload is ValidationObject(_, peer_region) &&
+          peer_region == region {
+          ordinal += 1
+        }
+      }
+      validation_replayed_faithfully(
+        replayed,
+        candidate.sheet,
+        validation,
+        region,
+        ordinal,
+      )
+    }
+  }
+}
+
+///|
+/// Whether a replayed workbook carries the table faithfully:
 /// every table field equals the source, and the header-row cells still
 /// carry the source's values (table creation synthesizes names for blank
 /// or duplicate headers, which would silently change cell content).
 fn table_replayed_faithfully(
   source : @xlsx.Workbook,
   replayed : @xlsx.Workbook,
-  candidate : TableCandidate,
+  candidate_sheet : String,
+  wanted : @xlsx.Table,
 ) -> Bool {
-  guard (try? replayed.sheet(candidate.sheet)) is Ok(Some(sheet)) else {
+  guard (try? replayed.sheet(candidate_sheet)) is Ok(Some(sheet)) else {
     return false
   }
   let mut found : @xlsx.Table? = None
   for table in sheet.tables {
-    if table.name == candidate.table.name {
+    if table.name == wanted.name {
       found = Some(table)
       break
     }
   }
   guard found is Some(replayed_table) else { return false }
-  let wanted = candidate.table
   if replayed_table.range_ref != wanted.range_ref ||
     replayed_table.display_name != wanted.display_name ||
     replayed_table.columns != wanted.columns ||
@@ -84,12 +133,10 @@ fn table_replayed_faithfully(
       return false
     }
     let source_value = try? source.get_cell_value_raw(
-      candidate.sheet,
-      reference,
+      candidate_sheet, reference,
     )
     let replayed_value = try? replayed.get_cell_value_raw(
-      candidate.sheet,
-      reference,
+      candidate_sheet, reference,
     )
     match (source_value, replayed_value) {
       (Ok(a), Ok(b)) => if !cell_values_equal(a, b) { return false }
@@ -101,11 +148,11 @@ fn table_replayed_faithfully(
     // formula-info accessor because get_cell_formula returns None for
     // shared-formula followers with empty stored text — presence, not
     // text, is what a follower loses.
-    let source_info = match source.sheet(candidate.sheet) {
+    let source_info = match source.sheet(candidate_sheet) {
       Some(source_sheet) => try? source_sheet.get_cell_formula_info_rc(row, col)
       None => return false
     }
-    let replayed_info = match replayed.sheet(candidate.sheet) {
+    let replayed_info = match replayed.sheet(candidate_sheet) {
       Some(replayed_sheet) =>
         try? replayed_sheet.get_cell_formula_info_rc(row, col)
       None => return false
@@ -230,7 +277,7 @@ fn validate_table_ops(
       }
       Replayed(replayed) => {
         for candidate in current {
-          if !table_replayed_faithfully(source, replayed, candidate) {
+          if !object_replayed_faithfully(source, replayed, candidate, current) {
             dropped.add(candidate.op_index)
             residual.push(
               table_residual(candidate, "readback diverges from the source"),
@@ -274,7 +321,7 @@ fn remove_dropped(
           next.push({
             op_index: new_index,
             sheet: candidate.sheet,
-            table: candidate.table,
+            payload: candidate.payload,
           })
         None => ()
       }
@@ -285,14 +332,27 @@ fn remove_dropped(
 
 ///|
 fn table_residual(candidate : TableCandidate, reason : String) -> DumpResidual {
-  {
-    code: "xlsx.table_unsupported",
-    severity: "dropped",
-    scope: "cells",
-    location: dump_location(candidate.sheet, "range", candidate.table.range_ref),
-    asset: None,
-    detail: "table \"\{candidate.table.display_name}\" does not replay faithfully through \{XLSX_BATCH_SCHEMA}: " +
-    bounded_reason(reason),
+  match candidate.payload {
+    TableObject(table) =>
+      {
+        code: "xlsx.table_unsupported",
+        severity: "dropped",
+        scope: "cells",
+        location: dump_location(candidate.sheet, "range", table.range_ref),
+        asset: None,
+        detail: "table \"\{table.display_name}\" does not replay faithfully through \{XLSX_BATCH_SCHEMA}: " +
+        bounded_reason(reason),
+      }
+    ValidationObject(_, region) =>
+      {
+        code: "xlsx.validation_unsupported",
+        severity: "dropped",
+        scope: "cells",
+        location: dump_location(candidate.sheet, "range", region),
+        asset: None,
+        detail: "data validation does not replay faithfully through \{XLSX_BATCH_SCHEMA}: " +
+        bounded_reason(reason),
+      }
   }
 }
 
