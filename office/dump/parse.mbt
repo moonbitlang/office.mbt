@@ -83,10 +83,12 @@ pub fn parse_dump_envelope(
     "stats block",
   )
   let declared_ops = match stats.get("ops") {
-    Some(Number(count, ..)) => count.to_int()
+    Some(Number(count, ..)) => count
     _ => raise DumpParseError("missing or non-numeric \"stats.ops\"")
   }
-  guard declared_ops == ops.length() else {
+  // compare as doubles so a fractional count (e.g. 1.5) cannot truncate to
+  // a matching integer
+  guard declared_ops == ops.length().to_double() else {
     raise DumpParseError(
       "stats.ops (\{declared_ops}) does not match the op stream length (\{ops.length()})",
     )

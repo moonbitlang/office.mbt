@@ -78,6 +78,10 @@ test "malformed dumps are rejected" {
   let padded = valid_dump_fields()
   padded["stats"] = Json::object({ "ops": Json::number(2) })
   assert_true(rejects(Json::object(padded)))
+  // a fractional stats.ops must not truncate to a matching integer
+  let fractional = valid_dump_fields()
+  fractional["stats"] = Json::object({ "ops": Json::number(1.5) })
+  assert_true(rejects(Json::object(fractional)))
   // a missing create sheet → rejected by the parser, not deferred to replay
   let no_sheet = valid_dump_fields()
   no_sheet["replay"] = Json::object({
