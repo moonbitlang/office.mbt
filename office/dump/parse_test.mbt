@@ -37,11 +37,54 @@ fn rejects(document : Json) -> Bool {
 }
 
 ///|
+/// A well-formed dump body with one op, for mutating into malformed cases.
+fn valid_dump_fields() -> Map[String, Json] {
+  {
+    "schema": Json::string("office.dump/1"),
+    "format": Json::string("xlsx"),
+    "replay": Json::object({
+      "batch_schema": Json::string("xlsx.batch/1"),
+      "create": Json::object({ "sheet": Json::string("Data") }),
+    }),
+    "ops": Json::array([
+      Json::object({
+        "op": Json::string("set"),
+        "params": Json::object({
+          "sheet": Json::string("Data"),
+          "cell": Json::string("A1"),
+          "value": Json::string("x"),
+        }),
+      }),
+    ]),
+    "stats": Json::object({ "ops": Json::number(1) }),
+  }
+}
+
+///|
 test "malformed dumps are rejected" {
+  // a complete valid dump parses
+  assert_false(rejects(Json::object(valid_dump_fields())))
   // wrong schema
   assert_true(
     rejects(Json::object({ "schema": Json::string("office.dump/2") })),
   )
+  // each required field missing → rejected
+  for key in ["schema", "format", "replay", "ops", "stats"] {
+    let fields = valid_dump_fields()
+    fields.remove(key)
+    assert_true(rejects(Json::object(fields)))
+  }
+  // a stats.ops count that disagrees with the op stream → rejected
+  let padded = valid_dump_fields()
+  padded["stats"] = Json::object({ "ops": Json::number(2) })
+  assert_true(rejects(Json::object(padded)))
+  // a missing create sheet → rejected by the parser, not deferred to replay
+  let no_sheet = valid_dump_fields()
+  no_sheet["replay"] = Json::object({
+    "batch_schema": Json::string("xlsx.batch/1"),
+    "create": Json::object({}),
+  })
+  assert_true(rejects(Json::object(no_sheet)))
   // missing ops
   assert_true(
     rejects(

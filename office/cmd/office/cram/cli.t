@@ -579,17 +579,33 @@ through the atomic create-new path. dump then replay then dump is stable.
   $ diff -q orig.ops.json round.ops.json && echo stable
   stable
 
+  $ before=$(shasum -a 256 replayed.xlsx | cut -d' ' -f1)
   $ office.exe replay replay-src.dump.json --output replayed.xlsx --json > replay-exists.json 2>&1; echo $?
   1
   $ jq -c '{success,code:.error.code}' replay-exists.json
   {"success":false,"code":"office.transaction.output_exists"}
+  $ test "$before" = "$(shasum -a 256 replayed.xlsx | cut -d' ' -f1)" && echo unchanged
+  unchanged
+
   $ office.exe replay replay-src.dump.json --output replayed.txt --json > replay-ext.json 2>&1; echo $?
   1
   $ jq -c '{success,code:.error.code}' replay-ext.json
   {"success":false,"code":"office.invalid_arguments"}
+  $ test ! -e replayed.txt && echo no-write
+  no-write
 
   $ printf 'not json' > bad.dump.json
   $ office.exe replay bad.dump.json --output out.xlsx --json > replay-bad.json 2>&1; echo $?
   1
   $ jq -c '{success,code:.error.code}' replay-bad.json
   {"success":false,"code":"office.replay.invalid_dump"}
+  $ test ! -e out.xlsx && echo no-write
+  no-write
+
+  $ jq '.stats.ops = 999' replay-src.dump.json > padded.dump.json
+  $ office.exe replay padded.dump.json --output padded.xlsx --json > replay-padded.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code}' replay-padded.json
+  {"success":false,"code":"office.replay.invalid_dump"}
+  $ test ! -e padded.xlsx && echo no-write
+  no-write

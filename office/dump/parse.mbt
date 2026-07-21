@@ -29,11 +29,14 @@ fn require_string(
 }
 
 ///|
-/// Parses an `office.dump/1` JSON document into a `DumpEnvelope`. Only the
-/// fields replay needs are required (schema, format, replay batch schema
-/// and create sheet, ops); residual/warnings/source are carried when
-/// present but never required, so a dump trimmed to its replayable core
-/// still parses.
+/// Parses an `office.dump/1` JSON document into the replayable core of a
+/// `DumpEnvelope`: schema, format, replay batch schema and create sheet,
+/// and the ops. The `stats.ops` count is required and must equal the actual
+/// op count, so a truncated or padded op stream is rejected rather than
+/// replayed into a partial workbook. `source` provenance is carried when
+/// well-formed, but `residual`/`warnings` are NOT reconstructed — they are
+/// re-derived when a replayed workbook is dumped again and replay does not
+/// use them, so the returned envelope has empty residual/warnings arrays.
 pub fn parse_dump_envelope(
   document : Json,
 ) -> DumpEnvelope raise DumpParseError {
@@ -50,14 +53,16 @@ pub fn parse_dump_envelope(
     "replay block",
   )
   let batch_schema = require_string(replay, "batch_schema")
-  let create_sheet = match replay.get("create") {
-    Some(Object(create)) =>
-      match create.get("sheet") {
-        Some(String(sheet)) => Some(sheet)
-        _ => None
-      }
-    _ => None
-  }
+  // the create sheet is required for an xlsx dump; a missing or malformed
+  // one is a malformed dump, not a deferred replay failure
+  let create = require_object(
+    match replay.get("create") {
+      Some(value) => value
+      None => raise DumpParseError("missing \"replay.create\" block")
+    },
+    "replay.create block",
+  )
+  let create_sheet = require_string(create, "sheet")
   let ops = match fields.get("ops") {
     Some(Array(items)) => items
     _ => raise DumpParseError("missing or non-array \"ops\"")
@@ -67,6 +72,24 @@ pub fn parse_dump_envelope(
   for op in ops {
     let op_fields = require_object(op, "op")
     ignore(require_string(op_fields, "op"))
+  }
+  // integrity: the declared op count must match the actual op stream, so a
+  // truncated or padded dump cannot silently produce a partial workbook
+  let stats = require_object(
+    match fields.get("stats") {
+      Some(value) => value
+      None => raise DumpParseError("missing \"stats\" block")
+    },
+    "stats block",
+  )
+  let declared_ops = match stats.get("ops") {
+    Some(Number(count, ..)) => count.to_int()
+    _ => raise DumpParseError("missing or non-numeric \"stats.ops\"")
+  }
+  guard declared_ops == ops.length() else {
+    raise DumpParseError(
+      "stats.ops (\{declared_ops}) does not match the op stream length (\{ops.length()})",
+    )
   }
   let source = match fields.get("source") {
     Some(Object(source)) => source
@@ -87,7 +110,7 @@ pub fn parse_dump_envelope(
       _ => None
     },
     batch_schema,
-    create_sheet,
+    create_sheet: Some(create_sheet),
     ops,
     residual: [],
     warnings: [],
