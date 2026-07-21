@@ -794,9 +794,21 @@ fn dump_workbook_residuals(
 
 ///|
 /// A produced op is a new-style op when the batch parser would count it
-/// against the per-script `MAX_TOTAL_NEW_STYLES` budget.
+/// against the per-script `MAX_TOTAL_NEW_STYLES` budget: every `style` op,
+/// and every `cf` op carrying a highlight (the parser mints a dxf for
+/// fill/font_color/bold/italic). The dump emits `bold`/`italic` only when
+/// true, so key presence is exactly the parser's style-counting condition
+/// for produced ops.
 fn op_creates_style(op : Json) -> Bool {
-  op is Object({ "op": String("style"), .. })
+  match op {
+    Object({ "op": String("style"), .. }) => true
+    Object({ "op": String("cf"), "params": Object(params), .. }) =>
+      params.contains("fill") ||
+      params.contains("font_color") ||
+      params.contains("bold") ||
+      params.contains("italic")
+    _ => false
+  }
 }
 
 ///|

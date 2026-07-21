@@ -1,8 +1,10 @@
 ///|
 /// Emits candidate `cf` ops for a worksheet's conditional-format rules, one
-/// op per rule (the writer keeps a multi-region sqref on a single rule, so
-/// regions are never split — a scale or bar computes over its whole range),
-/// and records each for the full-replay validation pass.
+/// op per rule, and records each for the full-replay validation pass.
+/// Multi-region sqrefs are never split (a scale or bar computes over its
+/// whole range, so splitting would change semantics); since the batch
+/// range reader takes a single region, a multi-region rule's op is
+/// rejected by the parse pre-filter and the rule residualizes.
 ///
 /// Rules whose type or options the batch cf vocabulary cannot express
 /// residualize immediately with a named reason; expressible rules flow
