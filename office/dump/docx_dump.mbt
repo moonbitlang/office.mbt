@@ -29,6 +29,28 @@ fn docx_writable_alignment(align : String) -> Bool {
 }
 
 ///|
+/// The closed ST_HighlightColor set the batch writer accepts.
+fn docx_highlight_color(value : String) -> Bool {
+  value
+  is ("black"
+  | "blue"
+  | "cyan"
+  | "darkBlue"
+  | "darkCyan"
+  | "darkGray"
+  | "darkGreen"
+  | "darkMagenta"
+  | "darkRed"
+  | "darkYellow"
+  | "green"
+  | "lightGray"
+  | "magenta"
+  | "red"
+  | "white"
+  | "yellow")
+}
+
+///|
 fn docx_location(block : Int) -> Json {
   Json::object({ "block": Json::number(block.to_double()) })
 }
@@ -183,15 +205,41 @@ fn docx_run_spec(
     None => ()
   }
   match properties.font_size {
-    Some(size) => spec["size"] = Json::number(size.to_double())
+    // the parser's ST_HpsMeasure window; a 0.5pt run reads back as 0 and
+    // an oversized one past 1638, either of which the parser rejects —
+    // keep the run, disclose the size
+    Some(size) =>
+      if size >= 1 && size <= 1638 {
+        spec["size"] = Json::number(size.to_double())
+      } else {
+        residual.push(
+          docx_residual(
+            "docx.font_size_dropped",
+            "block",
+            docx_location(block),
+            "font size \{size}pt is outside the writable range 1..1638",
+          ),
+        )
+      }
     None => ()
   }
   match properties.highlight {
-    // the reader normalizes an absent highlight to None; "none" would be
-    // rejected by the writer, so treat it as absent defensively
-    Some(highlight) if highlight != "none" =>
-      spec["highlight"] = Json::string(highlight)
-    _ => ()
+    // the writer takes the closed ST_HighlightColor list; the reader
+    // passes any attribute value through, so gate here and disclose
+    Some(highlight) =>
+      if docx_highlight_color(highlight) {
+        spec["highlight"] = Json::string(highlight)
+      } else if highlight != "none" {
+        residual.push(
+          docx_residual(
+            "docx.highlight_dropped",
+            "block",
+            docx_location(block),
+            "highlight '\{bounded_reason(highlight)}' is outside the ST_HighlightColor set",
+          ),
+        )
+      }
+    None => ()
   }
   Some(Json::object(spec))
 }
@@ -249,19 +297,6 @@ fn docx_inline_specs(
         }
       Hyperlink(children~, href~, anchor~, target_frame~) =>
         if allow_links {
-          let link : Map[String, Json] = {}
-          match href {
-            Some(value) => link["href"] = Json::string(value)
-            None => ()
-          }
-          match anchor {
-            Some(value) => link["anchor"] = Json::string(value)
-            None => ()
-          }
-          match target_frame {
-            Some(value) => link["target_frame"] = Json::string(value)
-            None => ()
-          }
           let link_runs : Array[Json] = []
           docx_inline_specs(
             children,
@@ -270,7 +305,35 @@ fn docx_inline_specs(
             residual,
             allow_links=false,
           )
-          if link_runs.length() > 0 {
+          if href is None && anchor is None {
+            // the reader yields a target-less hyperlink when the
+            // relationship does not resolve; the writer requires href or
+            // anchor, so keep the text as plain runs and disclose
+            for spec in link_runs {
+              runs.push(spec)
+            }
+            residual.push(
+              docx_residual(
+                "docx.link_unresolved",
+                "block",
+                docx_location(block),
+                "a hyperlink without a resolvable target keeps its text as plain runs",
+              ),
+            )
+          } else if link_runs.length() > 0 {
+            let link : Map[String, Json] = {}
+            match href {
+              Some(value) => link["href"] = Json::string(value)
+              None => ()
+            }
+            match anchor {
+              Some(value) => link["anchor"] = Json::string(value)
+              None => ()
+            }
+            match target_frame {
+              Some(value) => link["target_frame"] = Json::string(value)
+              None => ()
+            }
             link["runs"] = Json::array(link_runs)
             runs.push(Json::object({ "link": Json::object(link) }))
           } else {
@@ -374,7 +437,18 @@ fn docx_paragraph_params(
           ),
         )
       }
-    None => ()
+    None =>
+      // a name without an id cannot round-trip either
+      if properties.style_name is Some(_) {
+        residual.push(
+          docx_residual(
+            "docx.paragraph_style_dropped",
+            "block",
+            docx_location(block),
+            "a named paragraph style without a style id is not expressible",
+          ),
+        )
+      }
   }
   match properties.alignment {
     Some(align) =>
@@ -452,11 +526,11 @@ fn docx_table_params(
       ),
     )
   }
-  let emitted : Array[(Json, Bool)] = []
+  let emitted : Array[(Array[(Map[String, Json], Int, Int)], Bool)] = []
   for child in children {
     match child {
       TableRow(children~, is_header~) => {
-        let cells : Array[Json] = []
+        let cells : Array[(Map[String, Json], Int, Int)] = []
         for cell in children {
           match cell {
             TableCell(children~, col_span~, row_span~) => {
@@ -497,13 +571,7 @@ fn docx_table_params(
               } else {
                 cell_spec["paragraphs"] = Json::array(paragraphs)
               }
-              if col_span > 1 {
-                cell_spec["col_span"] = Json::number(col_span.to_double())
-              }
-              if row_span > 1 {
-                cell_spec["row_span"] = Json::number(row_span.to_double())
-              }
-              cells.push(Json::object(cell_spec))
+              cells.push((cell_spec, col_span, row_span))
             }
             other =>
               residual.push(
@@ -528,7 +596,7 @@ fn docx_table_params(
             ),
           )
         } else {
-          emitted.push((Json::array(cells), is_header))
+          emitted.push((cells, is_header))
         }
       }
       other =>
@@ -560,7 +628,7 @@ fn docx_table_params(
   let rows : Array[Json] = []
   let mut header_rows = 0
   let mut in_leading_headers = true
-  for entry in emitted {
+  for row_index, entry in emitted {
     let (cells, is_header) = entry
     if is_header {
       if in_leading_headers {
@@ -578,7 +646,40 @@ fn docx_table_params(
     } else {
       in_leading_headers = false
     }
-    rows.push(cells)
+    // spans are bounded by the writer (col_span <= 63 grid columns,
+    // row_span <= the rows below this one); the reader passes raw file
+    // values through, so gate here and disclose the geometry loss
+    let row_cells : Array[Json] = []
+    for cell in cells {
+      let (spec, col_span, row_span) = cell
+      if col_span > 1 && col_span <= 63 {
+        spec["col_span"] = Json::number(col_span.to_double())
+      } else if col_span > 63 || col_span < 1 {
+        residual.push(
+          docx_residual(
+            "docx.cell_span_dropped",
+            "block",
+            docx_location(block),
+            "column span \{col_span} is outside the writable range 1..63",
+          ),
+        )
+      }
+      let row_span_cap = emitted.length() - row_index
+      if row_span > 1 && row_span <= row_span_cap {
+        spec["row_span"] = Json::number(row_span.to_double())
+      } else if row_span > row_span_cap || row_span < 1 {
+        residual.push(
+          docx_residual(
+            "docx.cell_span_dropped",
+            "block",
+            docx_location(block),
+            "row span \{row_span} exceeds the rows available below its row",
+          ),
+        )
+      }
+      row_cells.push(Json::object(spec))
+    }
+    rows.push(Json::array(row_cells))
   }
   let params : Map[String, Json] = { "rows": Json::array(rows) }
   if header_rows > 0 {

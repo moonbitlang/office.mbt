@@ -116,3 +116,106 @@ test "run-nested images and references get specific residual codes" {
   assert_true(codes.contains("docx.note_reference_dropped"))
   assert_true(codes.contains("docx.comment_reference_dropped"))
 }
+
+///|
+/// Kimi round-1 findings: parser-rejected values must residualize with
+/// the content kept, never abort the dump. Each emitted shape is proven
+/// against the real parser.
+test "parser-hostile values residualize and the ops still parse" {
+  let residual : Array[DumpResidual] = []
+  // an unresolved hyperlink keeps its text as plain runs
+  let runs : Array[Json] = []
+  docx_inline_specs(
+    [
+      @document.Hyperlink(
+        children=[@document.run([@document.text("dead link text")])],
+        href=None,
+        anchor=None,
+        target_frame=None,
+      ),
+    ],
+    0,
+    runs,
+    residual,
+    allow_links=true,
+  )
+  assert_eq(runs.length(), 1)
+  assert_false(runs[0].stringify().contains("\"link\":"))
+  assert_true(runs[0].stringify().contains("dead link text"))
+  // out-of-range font sizes keep the run, drop the size
+  let tiny = docx_run_spec(
+    [@document.text("small")],
+    @document.run_properties(font_size=Some(0)),
+    0,
+    residual,
+  )
+  guard tiny is Some(tiny) else { fail("expected a run") }
+  assert_false(tiny.stringify().contains("size"))
+  let huge = docx_run_spec(
+    [@document.text("big")],
+    @document.run_properties(font_size=Some(2000)),
+    0,
+    residual,
+  )
+  guard huge is Some(huge) else { fail("expected a run") }
+  assert_false(huge.stringify().contains("size"))
+  // a non-enum highlight keeps the run, drops the highlight
+  let tinted = docx_run_spec(
+    [@document.text("tinted")],
+    @document.run_properties(highlight=Some("teal")),
+    0,
+    residual,
+  )
+  guard tinted is Some(tinted) else { fail("expected a run") }
+  assert_false(tinted.stringify().contains("teal"))
+  let codes = residual.map(entry => entry.code)
+  assert_true(codes.contains("docx.link_unresolved"))
+  assert_true(codes.contains("docx.font_size_dropped"))
+  assert_true(codes.contains("docx.highlight_dropped"))
+  // spans beyond the writer's bounds drop to residuals
+  let spans : Array[DumpResidual] = []
+  let cell = (col : Int, row : Int) => {
+    @document.TableCell(
+      children=[@document.paragraph([@document.run([@document.text("c")])])],
+      col_span=col,
+      row_span=row,
+    )
+  }
+  let params = docx_table_params(
+    [
+      @document.TableRow(children=[cell(64, 1)], is_header=false),
+      @document.TableRow(children=[cell(1, 5)], is_header=false),
+    ],
+    @document.TableProperties::{ style_id: None, style_name: None },
+    0,
+    spans,
+  )
+  guard params is Some(params) else { fail("expected a table op") }
+  let rendered = Json::object(params).stringify()
+  assert_false(rendered.contains("col_span"))
+  assert_false(rendered.contains("row_span"))
+  assert_eq(
+    spans.filter(entry => entry.code == "docx.cell_span_dropped").length(),
+    2,
+  )
+  // every degraded shape still parses through the real batch parser
+  let ops : Array[Json] = [
+    Json::object({
+      "op": Json::string("paragraph"),
+      "params": Json::object({ "runs": Json::array(runs) }),
+    }),
+    Json::object({
+      "op": Json::string("paragraph"),
+      "params": Json::object({ "runs": Json::array([tiny, huge, tinted]) }),
+    }),
+    Json::object({ "op": Json::string("table"), "params": Json::object(params) }),
+  ]
+  ignore(
+    @docx_batch.parse_batch(
+      Json::object({
+        "schema": Json::string("docx.batch/2"),
+        "ops": Json::array(ops),
+      }),
+    ),
+  )
+}
