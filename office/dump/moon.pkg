@@ -1,4 +1,7 @@
 import {
+  "bobzhang/docx2html/batch" @docx_batch,
+  "bobzhang/docx2html/document",
+  "bobzhang/docx2html/docx",
   "bobzhang/mbtexcel/batch",
   "bobzhang/mbtexcel/inspect",
   "bobzhang/mbtexcel/xlsx",
@@ -9,6 +12,10 @@ import {
 }
 
 import {
+  "bobzhang/docx2html" @word,
+  "bobzhang/docx2html/batch" @docx_batch,
+  "bobzhang/docx2html/document",
+  "bobzhang/docx2html/docx",
   "bobzhang/mbtexcel/batch",
   "bobzhang/mbtexcel/xlsx",
   "bobzhang/office/dump",
