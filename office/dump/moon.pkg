@@ -13,6 +13,7 @@ import {
 
 import {
   "bobzhang/docx2html" @word,
+  "moonbitlang/core/encoding/base64" @b64,
   "bobzhang/docx2html/batch" @docx_batch,
   "bobzhang/docx2html/document",
   "bobzhang/docx2html/docx",

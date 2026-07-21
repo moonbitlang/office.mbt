@@ -1,14 +1,66 @@
 ///|
+/// Assembles docx bytes from a batch script exactly the way the `docx
+/// batch` command does: build the body with the given image payloads,
+/// map comment and note ops to writer specs, and write the annotated
+/// package.
+fn docx_assemble(ops : Array[Json], images : Map[String, Bytes]) -> Bytes raise {
+  let parsed = @docx_batch.parse_batch(
+    Json::object({
+      "schema": Json::string("docx.batch/2"),
+      "ops": Json::array(ops),
+    }),
+  )
+  let body = parsed.build_body(images)
+  let comments = []
+  for comment in parsed.build_comments() {
+    match (comment.reply_to(), comment.from_block(), comment.to_block()) {
+      (Some(parent), _, _) =>
+        comments.push(
+          @word.comment_reply(
+            author=comment.author(),
+            initials?=comment.initials(),
+            date?=comment.date(),
+            reply_to=parent,
+            done?=comment.done(),
+            comment.body(),
+          ),
+        )
+      (None, Some(from), Some(to)) =>
+        comments.push(
+          @word.comment_spec(
+            author=comment.author(),
+            initials?=comment.initials(),
+            date?=comment.date(),
+            from~,
+            to~,
+            done?=comment.done(),
+            comment.body(),
+          ),
+        )
+      _ => fail("comment without anchor or reply target")
+    }
+  }
+  let footnotes = []
+  for note in parsed.build_footnotes() {
+    footnotes.push(@word.note_spec(note.body()))
+  }
+  let endnotes = []
+  for note in parsed.build_endnotes() {
+    endnotes.push(@word.note_spec(note.body()))
+  }
+  @word.write_docx_with_annotations(body, comments~, footnotes~, endnotes~)
+}
+
+///|
 /// Re-dumps the ops through the real batch build path and asserts the op
-/// stream is a fixpoint: parse → build body → write bytes → read → dump.
+/// stream is a fixpoint: parse → build → write bytes → read → dump, with
+/// the envelope's assets injected as the image payloads.
 fn docx_fixpoint_ops(envelope : @dump.DumpEnvelope) -> Array[Json] raise {
-  let script = Json::object({
-    "schema": Json::string("docx.batch/2"),
-    "ops": Json::array(envelope.ops),
-  })
-  let parsed = @docx_batch.parse_batch(script)
-  let body = parsed.build_body({})
-  let bytes = @word.write_docx(body)
+  let images : Map[String, Bytes] = {}
+  for id, asset in envelope.assets {
+    images[id] = @b64.decode(asset.data)
+  }
+  let bytes = docx_assemble(envelope.ops, images)
   let annotated = @word.read_docx_annotated(bytes[:])
   let redump = @dump.dump_docx_document(
     annotated,
@@ -149,4 +201,136 @@ test "docx tab text survives the round trip" {
     Json::array(envelope.ops).stringify(),
     Json::array(docx_fixpoint_ops(envelope)).stringify(),
   )
+}
+
+///|
+test "docx images ride as assets and survive the fixpoint" {
+  let payload : Bytes = b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\x0d\x49\x44\x41\x54\x78\x9c\x63\xf8\xcf\xc0\xf0\x1f\x00\x05\x00\x01\xff\x89\x99\x3d\x1d\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82"
+  let body : Array[@document.DocumentElement] = [
+    @document.paragraph([
+      @document.run(
+        [@document.text("logo: ")],
+        properties=@document.run_properties(is_bold=true),
+      ),
+      @document.run([
+        @document.Image(@document.Image::{
+          content_type: "image/png",
+          alt_text: Some("the logo"),
+          data: payload,
+        }),
+      ]),
+    ]),
+  ]
+  let bytes = @word.write_docx(body)
+  let annotated = @word.read_docx_annotated(bytes[:])
+  let d1 = @dump.dump_docx_document(
+    annotated,
+    source_file="img.docx",
+    source_bytes=bytes.length(),
+  )
+  let document = d1.to_json_document().stringify()
+  assert_true(document.contains("\"image\":"))
+  assert_true(document.contains("sha256-"))
+  assert_true(document.contains("the logo"))
+  assert_eq(d1.assets.size(), 1)
+  assert_false(document.contains("docx.images_not_dumped"))
+  let d2_ops = docx_fixpoint_ops(d1)
+  assert_eq(Json::array(d1.ops).stringify(), Json::array(d2_ops).stringify())
+}
+
+///|
+test "docx footnotes dump their bodies and survive the fixpoint" {
+  let script_ops : Array[Json] = [
+    Json::object({
+      "op": Json::string("paragraph"),
+      "params": Json::object({
+        "runs": Json::array([
+          Json::object({ "text": Json::string("claim") }),
+          Json::object({
+            "footnote": Json::object({
+              "paragraphs": Json::array([
+                Json::object({
+                  "runs": Json::array([
+                    Json::object({
+                      "text": Json::string("supporting source"),
+                      "italic": Json::boolean(true),
+                    }),
+                  ]),
+                }),
+              ]),
+            }),
+          }),
+        ]),
+      }),
+    }),
+  ]
+  let bytes = docx_assemble(script_ops, {})
+  let annotated = @word.read_docx_annotated(bytes[:])
+  let d1 = @dump.dump_docx_document(
+    annotated,
+    source_file="fn.docx",
+    source_bytes=bytes.length(),
+  )
+  let document = d1.to_json_document().stringify()
+  assert_true(document.contains("\"footnote\":"))
+  assert_true(document.contains("supporting source"))
+  assert_false(document.contains("docx.note_body_missing"))
+  assert_false(document.contains("docx.note_orphaned"))
+  let d2_ops = docx_fixpoint_ops(d1)
+  assert_eq(Json::array(d1.ops).stringify(), Json::array(d2_ops).stringify())
+}
+
+///|
+test "docx comments anchor, thread, and survive the fixpoint" {
+  let script_ops : Array[Json] = [
+    Json::object({
+      "op": Json::string("paragraph"),
+      "params": Json::object({ "text": Json::string("first block") }),
+    }),
+    Json::object({
+      "op": Json::string("paragraph"),
+      "params": Json::object({ "text": Json::string("second block") }),
+    }),
+    Json::object({
+      "op": Json::string("comment"),
+      "params": Json::object({
+        "on": Json::number(0),
+        "author": Json::string("Reviewer"),
+        "initials": Json::string("RV"),
+        "done": Json::boolean(false),
+        "text": Json::string("please check"),
+      }),
+    }),
+    Json::object({
+      "op": Json::string("comment"),
+      "params": Json::object({
+        "reply_to": Json::number(2),
+        "author": Json::string("Author"),
+        "text": Json::string("checked"),
+      }),
+    }),
+  ]
+  let bytes = docx_assemble(script_ops, {})
+  let annotated = @word.read_docx_annotated(bytes[:])
+  let d1 = @dump.dump_docx_document(
+    annotated,
+    source_file="cm.docx",
+    source_bytes=bytes.length(),
+  )
+  let document = d1.to_json_document().stringify()
+  let mut comment_ops = 0
+  for op in d1.ops {
+    if op.stringify().contains("\"op\":\"comment\"") {
+      comment_ops += 1
+    }
+  }
+  assert_eq(comment_ops, 2)
+  assert_true(document.contains("please check"))
+  assert_true(document.contains("checked"))
+  assert_true(document.contains("\"reply_to\":"))
+  assert_true(document.contains("Reviewer"))
+  assert_false(document.contains("docx.comment_dropped"))
+  assert_false(document.contains("docx.comments_not_dumped"))
+  let d2_ops = docx_fixpoint_ops(d1)
+  assert_eq(Json::array(d1.ops).stringify(), Json::array(d2_ops).stringify())
 }

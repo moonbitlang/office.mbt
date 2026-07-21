@@ -27,6 +27,7 @@ fn wb_run_specs(
     wb_ctx(residual),
     out,
     in_note_body=false,
+    plain=false,
   )
   out
 }
@@ -46,6 +47,7 @@ test "inexpressible paragraph content residualizes and text degrades" {
     3,
     wb_ctx(residual),
     in_note_body=false,
+    plain=false,
   )
   // the text is kept, the style/alignment/bookmark are disclosed
   let rendered = Json::object(params).stringify()
@@ -126,7 +128,10 @@ test "degenerate tables residualize instead of aborting" {
 }
 
 ///|
-test "run-nested comment references get specific residual codes" {
+test "comment references are silent in body, disclosed in bodies" {
+  // in body content the comment op regenerates the reference run, so
+  // the inline reference itself needs no residual and must not force an
+  // empty segment (that would grow the paragraph every replay cycle)
   let residual : Array[DumpResidual] = []
   let specs = wb_run_specs(
     [@document.text("kept"), @document.CommentReference("7")],
@@ -134,8 +139,31 @@ test "run-nested comment references get specific residual codes" {
     residual,
   )
   assert_eq(specs.length(), 1)
-  let codes = residual.map(entry => entry.code)
-  assert_true(codes.contains("docx.comment_reference_dropped"))
+  assert_eq(residual.length(), 0)
+  let mark_only = wb_run_specs(
+    [@document.CommentReference("7")],
+    @document.run_properties(),
+    residual,
+  )
+  assert_eq(mark_only.length(), 0)
+  assert_eq(residual.length(), 0)
+  // inside a comment body there is no op to regenerate it
+  let plain_res : Array[DumpResidual] = []
+  let out : Array[Json] = []
+  docx_run_specs(
+    [@document.CommentReference("7")],
+    @document.run_properties(),
+    0,
+    wb_ctx(plain_res),
+    out,
+    in_note_body=false,
+    plain=true,
+  )
+  assert_true(
+    plain_res
+    .map(entry => entry.code)
+    .contains("docx.comment_reference_dropped"),
+  )
 }
 
 ///|
@@ -160,6 +188,7 @@ test "parser-hostile values residualize and the ops still parse" {
     wb_ctx(residual),
     allow_links=true,
     in_note_body=false,
+    plain=false,
   )
   assert_eq(runs.length(), 1)
   assert_false(runs[0].stringify().contains("\"link\":"))
@@ -262,6 +291,7 @@ test "run-nested images hoist and capture assets" {
     ctx,
     out,
     in_note_body=false,
+    plain=false,
   )
   assert_eq(out.length(), 3)
   assert_true(out[0].stringify().contains("before"))
@@ -289,6 +319,7 @@ test "run-nested images hoist and capture assets" {
     ctx,
     out2,
     in_note_body=false,
+    plain=false,
   )
   assert_eq(ctx.assets.size(), 1)
   // a conflicting content type on the duplicate is disclosed
@@ -306,6 +337,7 @@ test "run-nested images hoist and capture assets" {
     ctx,
     out3,
     in_note_body=false,
+    plain=false,
   )
   assert_true(
     residual
@@ -328,6 +360,7 @@ test "run-nested images hoist and capture assets" {
     ctx,
     out4,
     in_note_body=false,
+    plain=false,
   )
   assert_eq(out4.length(), 1) // the forced empty segment for the run
   assert_true(
@@ -370,6 +403,7 @@ test "note references dump their bodies with honest edge handling" {
     ctx,
     out,
     in_note_body=false,
+    plain=false,
   )
   assert_eq(out.length(), 2)
   assert_true(out[1].stringify().contains("\"footnote\":"))
@@ -385,6 +419,7 @@ test "note references dump their bodies with honest edge handling" {
     ctx,
     out2,
     in_note_body=false,
+    plain=false,
   )
   assert_true(
     residual.map(entry => entry.code).contains("docx.note_body_missing"),
@@ -398,6 +433,7 @@ test "note references dump their bodies with honest edge handling" {
     ctx,
     out3,
     in_note_body=true,
+    plain=false,
   )
   assert_true(
     residual.map(entry => entry.code).contains("docx.note_reference_dropped"),

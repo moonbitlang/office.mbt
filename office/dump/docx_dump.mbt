@@ -206,6 +206,7 @@ fn docx_note_spec(
               block,
               ctx,
               in_note_body=true,
+              plain=false,
             ),
           ),
         )
@@ -229,6 +230,21 @@ fn docx_note_spec(
   let outer : Map[String, Json] = {}
   outer[note_type] = Json::object(body_spec)
   Some(Json::object(outer))
+}
+
+///|
+/// Mirrors the batch writer's attribute contract: non-empty, no control
+/// characters (they cannot survive XML attribute normalization).
+fn docx_attribute_ok(text : String) -> Bool {
+  if text == "" {
+    return false
+  }
+  for unit in text {
+    if unit.to_int() < 0x20 {
+      return false
+    }
+  }
+  true
 }
 
 ///|
@@ -366,6 +382,7 @@ fn docx_run_specs(
   ctx : DocxDumpContext,
   out : Array[Json],
   in_note_body~ : Bool,
+  plain~ : Bool,
 ) -> Unit {
   if properties.style_id is Some(_) || properties.style_name is Some(_) {
     ctx.residual.push(
@@ -379,6 +396,7 @@ fn docx_run_specs(
   }
   let text = StringBuilder::new()
   let mut pushed = false
+  let mut only_references = true
   let flush = (force : Bool) => {
     let value = text.to_string()
     if value != "" || force {
@@ -394,28 +412,48 @@ fn docx_run_specs(
   }
   for child in children {
     match child {
-      Text(value) => text.write_string(value)
-      Tab => text.write_char('\t')
+      Text(value) => {
+        only_references = false
+        text.write_string(value)
+      }
+      Tab => {
+        only_references = false
+        text.write_char('\t')
+      }
       Image(image) => {
+        only_references = false
         flush(false)
-        match docx_image_spec(ctx, image, block) {
-          Some(spec) => {
-            out.push(spec)
-            pushed = true
+        if plain {
+          // comment bodies take plain content only
+          ctx.residual.push(
+            docx_residual(
+              "docx.comment_image_dropped",
+              "block",
+              docx_location(block),
+              "an image inside a comment body is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+            ),
+          )
+        } else {
+          match docx_image_spec(ctx, image, block) {
+            Some(spec) => {
+              out.push(spec)
+              pushed = true
+            }
+            None => ()
           }
-          None => ()
         }
       }
       NoteReference(note_type~, note_id~) => {
+        only_references = false
         flush(false)
-        if in_note_body {
-          // the batch grammar forbids notes inside note bodies
+        if plain || in_note_body {
+          // the batch grammar forbids notes inside note and comment bodies
           ctx.residual.push(
             docx_residual(
               "docx.note_reference_dropped",
               "block",
               docx_location(block),
-              "a \{note_type} reference inside a note body is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+              "a \{note_type} reference inside a note or comment body is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
             ),
           )
         } else {
@@ -428,7 +466,8 @@ fn docx_run_specs(
           }
         }
       }
-      Break(_) =>
+      Break(_) => {
+        only_references = false
         ctx.residual.push(
           docx_residual(
             "docx.break_dropped",
@@ -437,7 +476,9 @@ fn docx_run_specs(
             "an in-run break is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
           ),
         )
-      Checkbox(_) =>
+      }
+      Checkbox(_) => {
+        only_references = false
         ctx.residual.push(
           docx_residual(
             "docx.checkbox_dropped",
@@ -446,16 +487,24 @@ fn docx_run_specs(
             "a checkbox control is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
           ),
         )
+      }
       CommentReference(_) =>
-        ctx.residual.push(
-          docx_residual(
-            "docx.comment_reference_dropped",
-            "block",
-            docx_location(block),
-            "a comment reference is not dumped in this slice",
-          ),
-        )
-      other =>
+        // the comment op regenerates its reference run on replay; a
+        // reference whose comment is dropped is disclosed by that
+        // comment's own residual, and one inside a note or comment body
+        // has no op to regenerate it
+        if in_note_body || plain {
+          ctx.residual.push(
+            docx_residual(
+              "docx.comment_reference_dropped",
+              "block",
+              docx_location(block),
+              "a comment reference inside a note or comment body is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+            ),
+          )
+        }
+      other => {
+        only_references = false
         ctx.residual.push(
           docx_residual(
             "docx.inline_unsupported",
@@ -464,9 +513,13 @@ fn docx_run_specs(
             "run content \{docx_element_name(other)} is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
           ),
         )
+      }
     }
   }
-  flush(!pushed)
+  // a run holding only comment references (or the writer's reference
+  // mark) regenerates on replay; forcing an empty segment for it would
+  // grow the paragraph by one run per replay cycle
+  flush(!pushed && !(only_references && children.length() > 0))
 }
 
 ///|
@@ -501,11 +554,27 @@ fn docx_inline_specs(
   ctx : DocxDumpContext,
   allow_links~ : Bool,
   in_note_body~ : Bool,
+  plain~ : Bool,
 ) -> Unit {
   for child in children {
     match child {
       Run(children~, properties~) =>
-        docx_run_specs(children, properties, block, ctx, runs, in_note_body~)
+        // note and comment bodies open with the writer's childless
+        // reference-mark run; it is regenerated on every write, so
+        // emitting it would grow the body by one empty run per replay
+        if (in_note_body || plain) && children.length() == 0 {
+          ()
+        } else {
+          docx_run_specs(
+            children,
+            properties,
+            block,
+            ctx,
+            runs,
+            in_note_body~,
+            plain~,
+          )
+        }
       Text(value) =>
         // bare text outside a run: wrap as a plain run
         docx_run_specs(
@@ -515,9 +584,11 @@ fn docx_inline_specs(
           ctx,
           runs,
           in_note_body~,
+          plain~,
         )
       Hyperlink(children~, href~, anchor~, target_frame~) =>
-        if allow_links {
+        if plain {
+          // comment bodies take plain content only: keep the text
           let link_runs : Array[Json] = []
           docx_inline_specs(
             children,
@@ -526,6 +597,29 @@ fn docx_inline_specs(
             ctx,
             allow_links=false,
             in_note_body~,
+            plain~,
+          )
+          for spec in link_runs {
+            runs.push(spec)
+          }
+          ctx.residual.push(
+            docx_residual(
+              "docx.link_dropped",
+              "block",
+              docx_location(block),
+              "a hyperlink inside a comment body keeps its text as plain runs",
+            ),
+          )
+        } else if allow_links {
+          let link_runs : Array[Json] = []
+          docx_inline_specs(
+            children,
+            block,
+            link_runs,
+            ctx,
+            allow_links=false,
+            in_note_body~,
+            plain~,
           )
           if href is None && anchor is None {
             // the reader yields a target-less hyperlink when the
@@ -579,18 +673,29 @@ fn docx_inline_specs(
           )
         }
       Image(image) =>
-        match docx_image_spec(ctx, image, block) {
-          Some(spec) => runs.push(spec)
-          None => ()
+        if plain {
+          ctx.residual.push(
+            docx_residual(
+              "docx.comment_image_dropped",
+              "block",
+              docx_location(block),
+              "an image inside a comment body is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+            ),
+          )
+        } else {
+          match docx_image_spec(ctx, image, block) {
+            Some(spec) => runs.push(spec)
+            None => ()
+          }
         }
       NoteReference(note_type~, note_id~) =>
-        if in_note_body {
+        if plain || in_note_body {
           ctx.residual.push(
             docx_residual(
               "docx.note_reference_dropped",
               "block",
               docx_location(block),
-              "a \{note_type} reference inside a note body is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+              "a \{note_type} reference inside a note or comment body is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
             ),
           )
         } else {
@@ -627,6 +732,7 @@ fn docx_inline_specs(
           ctx,
           runs,
           in_note_body~,
+          plain~,
         )
       other =>
         ctx.residual.push(
@@ -650,6 +756,7 @@ fn docx_paragraph_params(
   block : Int,
   ctx : DocxDumpContext,
   in_note_body~ : Bool,
+  plain~ : Bool,
 ) -> Map[String, Json] {
   let params : Map[String, Json] = {}
   match properties.style_id {
@@ -728,7 +835,15 @@ fn docx_paragraph_params(
     )
   }
   let runs : Array[Json] = []
-  docx_inline_specs(children, block, runs, ctx, allow_links=true, in_note_body~)
+  docx_inline_specs(
+    children,
+    block,
+    runs,
+    ctx,
+    allow_links=true,
+    in_note_body~,
+    plain~,
+  )
   if runs.length() == 0 {
     params["text"] = Json::string("")
   } else {
@@ -775,6 +890,7 @@ fn docx_table_params(
                           block,
                           ctx,
                           in_note_body=false,
+                          plain=false,
                         ),
                       ),
                     )
@@ -999,20 +1115,28 @@ pub fn dump_docx_document(
   guard package_result.document is Document(children~, notes~, comments~) else {
     raise DumpUnsupported("the reader returned a non-document root")
   }
-  if comments.length() > 0 {
-    residual.push(
-      docx_residual(
-        "docx.comments_not_dumped",
-        "document",
-        document_location,
-        "\{comments.length()} comment(s) are not dumped in this slice",
-      ),
-    )
-  }
+  ignore(comments)
+  // comment anchors are op-index ranges over PARAGRAPH ops; collect each
+  // covering comment's span while walking (the annotation index keys on
+  // the story-relative /body/p[K] selector, K counting paragraphs only)
+  let comment_spans : Map[String, (Int, Int)] = {}
+  let mut paragraph_ordinal = 0
+  let annotations = annotated.annotations()
   for block, element in children {
     check_cancelled(cancelled)
     match element {
-      Paragraph(children~, properties~) =>
+      Paragraph(children~, properties~) => {
+        paragraph_ordinal += 1
+        let op_index = ops.length()
+        for
+          id in annotations.covering_comment_ids(
+            "/body/p[\{paragraph_ordinal}]",
+          ) {
+          match comment_spans.get(id) {
+            Some((from, _)) => comment_spans[id] = (from, op_index)
+            None => comment_spans[id] = (op_index, op_index)
+          }
+        }
         ops.push(
           Json::object({
             "op": Json::string("paragraph"),
@@ -1023,10 +1147,12 @@ pub fn dump_docx_document(
                 block,
                 ctx,
                 in_note_body=false,
+                plain=false,
               ),
             ),
           }),
         )
+      }
       Table(children~, properties~) =>
         match docx_table_params(children, properties, block, ctx) {
           Some(params) =>
@@ -1067,6 +1193,9 @@ pub fn dump_docx_document(
       ),
     )
   }
+  dump_docx_comments(
+    annotated, ctx, ops, comment_spans, document_location, cancelled,
+  )
   docx_self_check_ops(ops, cancelled)
   {
     format: "docx",
@@ -1079,6 +1208,185 @@ pub fn dump_docx_document(
     assets: ctx.assets,
     residual,
     warnings,
+  }
+}
+
+///|
+/// Emits `comment` ops after the body content: roots anchor to the
+/// paragraph-op span their annotation covers, replies thread to their
+/// parent's op. Multi-pass so a reply always references an earlier op;
+/// anything unanchorable, authorless, or orphaned residualizes with the
+/// reason disclosed — never silently dropped.
+fn dump_docx_comments(
+  annotated : @docx.DocxAnnotatedResult,
+  ctx : DocxDumpContext,
+  ops : Array[Json],
+  comment_spans : Map[String, (Int, Int)],
+  document_location : Json,
+  cancelled : () -> Bool,
+) -> Unit raise DumpError {
+  let infos = annotated.annotations().comments()
+  if infos.length() == 0 {
+    return
+  }
+  // op indexes inside a batch script are chunk-local, so a stream past
+  // one chunk cannot carry cross-chunk comment anchors — disclose
+  if ops.length() > 10000 - infos.length() {
+    ctx.residual.push(
+      docx_residual(
+        "docx.comments_not_dumped",
+        "document",
+        document_location,
+        "\{infos.length()} comment(s) span a chunked op stream and cannot anchor across scripts",
+      ),
+    )
+    return
+  }
+  let bodies : Map[String, Array[@document.DocumentElement]] = {}
+  for entry in annotated.comment_bodies() {
+    let (id, body) = entry
+    bodies[id] = body
+  }
+  let emitted : Map[String, Int] = {}
+  let dropped : Set[String] = Set::new()
+  let drop = (id : String, reason : String) => {
+    dropped.add(id)
+    ctx.residual.push(
+      docx_residual(
+        "docx.comment_dropped",
+        "document",
+        document_location,
+        "comment '\{bounded_reason(id)}' is dropped: " + reason,
+      ),
+    )
+  }
+  // multi-pass: a reply can only be emitted after its parent
+  for ;; {
+    check_cancelled(cancelled)
+    let mut progressed = false
+    let mut remaining = 0
+    for info in infos {
+      let id = info.id()
+      if emitted.contains(id) || dropped.contains(id) {
+        continue
+      }
+      if !info.defined() {
+        drop(id, "the file references it but stores no definition")
+        continue
+      }
+      let author = match info.author() {
+        Some(author) if docx_attribute_ok(author) => author
+        _ => {
+          drop(id, "it carries no writable author attribute")
+          continue
+        }
+      }
+      let params : Map[String, Json] = {}
+      match info.parent_id() {
+        Some(parent) =>
+          if dropped.contains(parent) {
+            drop(id, "its parent comment was dropped")
+            continue
+          } else if emitted.get(parent) is Some(parent_op) {
+            params["reply_to"] = Json::number(parent_op.to_double())
+          } else {
+            // parent not emitted yet: retry next round
+            remaining += 1
+            continue
+          }
+        None =>
+          match comment_spans.get(id) {
+            Some(span) => {
+              let (from, to) = span
+              if from == to {
+                params["on"] = Json::number(from.to_double())
+              } else {
+                params["on"] = Json::object({
+                  "from": Json::number(from.to_double()),
+                  "to": Json::number(to.to_double()),
+                })
+              }
+            }
+            None => {
+              drop(id, "its anchor covers no dumped paragraph")
+              continue
+            }
+          }
+      }
+      params["author"] = Json::string(author)
+      match info.initials() {
+        Some(initials) if docx_attribute_ok(initials) =>
+          params["initials"] = Json::string(initials)
+        _ => ()
+      }
+      match info.date() {
+        Some(date) if docx_attribute_ok(date) =>
+          params["date"] = Json::string(date)
+        _ => ()
+      }
+      match info.done() {
+        Some(done) => params["done"] = Json::boolean(done)
+        None => ()
+      }
+      let paragraphs : Array[Json] = []
+      match bodies.get(id) {
+        Some(body) =>
+          for element in body {
+            match element {
+              Paragraph(children~, properties~) =>
+                paragraphs.push(
+                  Json::object(
+                    docx_paragraph_params(
+                      children,
+                      properties,
+                      ops.length(),
+                      ctx,
+                      in_note_body=false,
+                      plain=true,
+                    ),
+                  ),
+                )
+              other =>
+                ctx.residual.push(
+                  docx_residual(
+                    "docx.block_unsupported",
+                    "document",
+                    document_location,
+                    "comment body content \{docx_element_name(other)} is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+                  ),
+                )
+            }
+          }
+        None => ()
+      }
+      if paragraphs.length() == 0 {
+        params["text"] = Json::string("")
+      } else {
+        params["paragraphs"] = Json::array(paragraphs)
+      }
+      emitted[id] = ops.length()
+      ops.push(
+        Json::object({
+          "op": Json::string("comment"),
+          "params": Json::object(params),
+        }),
+      )
+      progressed = true
+    }
+    if remaining == 0 {
+      break
+    }
+    if !progressed {
+      // the leftovers form reply cycles or thread to comments outside
+      // the stored set; disclose each
+      for info in infos {
+        let id = info.id()
+        if !emitted.contains(id) && !dropped.contains(id) {
+          drop(id, "its reply thread never reaches an emitted parent")
+        }
+      }
+      break
+    }
   }
 }
 
