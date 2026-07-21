@@ -2,6 +2,36 @@
 /// The writer cannot serialize unknown styles or bookmarks, so their
 /// residual paths are exercised directly against the mapping functions
 /// (real files from Word carry both; our writer never emits them).
+fn wb_ctx(residual : Array[DumpResidual]) -> DocxDumpContext {
+  {
+    assets: {},
+    total_asset_bytes: Ref::new(0),
+    residual,
+    footnote_bodies: {},
+    endnote_bodies: {},
+    used_notes: Set::new(),
+  }
+}
+
+///|
+fn wb_run_specs(
+  children : Array[@document.DocumentElement],
+  properties : @document.RunProperties,
+  residual : Array[DumpResidual],
+) -> Array[Json] {
+  let out : Array[Json] = []
+  docx_run_specs(
+    children,
+    properties,
+    0,
+    wb_ctx(residual),
+    out,
+    in_note_body=false,
+  )
+  out
+}
+
+///|
 test "inexpressible paragraph content residualizes and text degrades" {
   let residual : Array[DumpResidual] = []
   let params = docx_paragraph_params(
@@ -14,7 +44,8 @@ test "inexpressible paragraph content residualizes and text degrades" {
       alignment=Some("weird"),
     ),
     3,
-    residual,
+    wb_ctx(residual),
+    in_note_body=false,
   )
   // the text is kept, the style/alignment/bookmark are disclosed
   let rendered = Json::object(params).stringify()
@@ -31,24 +62,22 @@ test "inexpressible paragraph content residualizes and text degrades" {
 ///|
 test "run styles and unserializable text residualize" {
   let residual : Array[DumpResidual] = []
-  let styled = docx_run_spec(
+  let styled = wb_run_specs(
     [@document.text("kept")],
     @document.run_properties(style_id=Some("Emphasis")),
-    0,
     residual,
   )
-  assert_true(styled is Some(_))
+  assert_eq(styled.length(), 1)
   assert_true(
     residual.map(entry => entry.code).contains("docx.run_style_dropped"),
   )
   let bad : Array[DumpResidual] = []
-  let dropped = docx_run_spec(
+  let dropped = wb_run_specs(
     [@document.text("line\nbreak")],
     @document.run_properties(),
-    0,
     bad,
   )
-  assert_true(dropped is None)
+  assert_eq(dropped.length(), 0)
   assert_true(bad.map(entry => entry.code).contains("docx.text_unserializable"))
 }
 
@@ -61,7 +90,7 @@ test "degenerate tables residualize instead of aborting" {
     [],
     @document.TableProperties::{ style_id: None, style_name: None },
     0,
-    residual,
+    wb_ctx(residual),
   )
   assert_true(empty is None)
   assert_true(
@@ -86,7 +115,7 @@ test "degenerate tables residualize instead of aborting" {
     ],
     @document.TableProperties::{ style_id: None, style_name: None },
     0,
-    mixed,
+    wb_ctx(mixed),
   )
   // the empty header row drops; the survivor is a body row, so no
   // header_rows param may claim it
@@ -97,23 +126,15 @@ test "degenerate tables residualize instead of aborting" {
 }
 
 ///|
-/// Word nests images and note references inside runs; the run walk must
-/// disclose them under their specific codes.
-test "run-nested images and references get specific residual codes" {
+test "run-nested comment references get specific residual codes" {
   let residual : Array[DumpResidual] = []
-  let spec = docx_run_spec(
-    [
-      @document.text("kept"),
-      @document.NoteReference(note_type="footnote", note_id="1"),
-      @document.CommentReference("7"),
-    ],
+  let specs = wb_run_specs(
+    [@document.text("kept"), @document.CommentReference("7")],
     @document.run_properties(),
-    0,
     residual,
   )
-  assert_true(spec is Some(_))
+  assert_eq(specs.length(), 1)
   let codes = residual.map(entry => entry.code)
-  assert_true(codes.contains("docx.note_reference_dropped"))
   assert_true(codes.contains("docx.comment_reference_dropped"))
 }
 
@@ -136,37 +157,35 @@ test "parser-hostile values residualize and the ops still parse" {
     ],
     0,
     runs,
-    residual,
+    wb_ctx(residual),
     allow_links=true,
+    in_note_body=false,
   )
   assert_eq(runs.length(), 1)
   assert_false(runs[0].stringify().contains("\"link\":"))
   assert_true(runs[0].stringify().contains("dead link text"))
   // out-of-range font sizes keep the run, drop the size
-  let tiny = docx_run_spec(
+  let tiny_specs = wb_run_specs(
     [@document.text("small")],
     @document.run_properties(font_size=Some(0)),
-    0,
     residual,
   )
-  guard tiny is Some(tiny) else { fail("expected a run") }
+  guard tiny_specs is [tiny] else { fail("expected a run") }
   assert_false(tiny.stringify().contains("size"))
-  let huge = docx_run_spec(
+  let huge_specs = wb_run_specs(
     [@document.text("big")],
     @document.run_properties(font_size=Some(2000)),
-    0,
     residual,
   )
-  guard huge is Some(huge) else { fail("expected a run") }
+  guard huge_specs is [huge] else { fail("expected a run") }
   assert_false(huge.stringify().contains("size"))
   // a non-enum highlight keeps the run, drops the highlight
-  let tinted = docx_run_spec(
+  let tinted_specs = wb_run_specs(
     [@document.text("tinted")],
     @document.run_properties(highlight=Some("teal")),
-    0,
     residual,
   )
-  guard tinted is Some(tinted) else { fail("expected a run") }
+  guard tinted_specs is [tinted] else { fail("expected a run") }
   assert_false(tinted.stringify().contains("teal"))
   let codes = residual.map(entry => entry.code)
   assert_true(codes.contains("docx.link_unresolved"))
@@ -188,7 +207,7 @@ test "parser-hostile values residualize and the ops still parse" {
     ],
     @document.TableProperties::{ style_id: None, style_name: None },
     0,
-    spans,
+    wb_ctx(spans),
   )
   guard params is Some(params) else { fail("expected a table op") }
   let rendered = Json::object(params).stringify()
@@ -215,6 +234,185 @@ test "parser-hostile values residualize and the ops still parse" {
       Json::object({
         "schema": Json::string("docx.batch/2"),
         "ops": Json::array(ops),
+      }),
+    ),
+  )
+}
+
+///|
+/// P4b: an image inside a formatted run hoists as a run-position spec
+/// between the split text segments, carrying its payload as an asset.
+test "run-nested images hoist and capture assets" {
+  let residual : Array[DumpResidual] = []
+  let ctx = wb_ctx(residual)
+  let out : Array[Json] = []
+  let payload : Bytes = "not-really-a-png"
+  docx_run_specs(
+    [
+      @document.text("before"),
+      @document.Image(@document.Image::{
+        content_type: "image/png",
+        alt_text: Some("logo"),
+        data: payload,
+      }),
+      @document.text("after"),
+    ],
+    @document.run_properties(is_bold=true),
+    0,
+    ctx,
+    out,
+    in_note_body=false,
+  )
+  assert_eq(out.length(), 3)
+  assert_true(out[0].stringify().contains("before"))
+  assert_true(out[0].stringify().contains("\"bold\":true"))
+  assert_true(out[1].stringify().contains("\"image\":"))
+  assert_true(out[1].stringify().contains("sha256-"))
+  assert_true(out[1].stringify().contains("image/png"))
+  assert_true(out[1].stringify().contains("logo"))
+  assert_true(out[2].stringify().contains("after"))
+  assert_true(out[2].stringify().contains("\"bold\":true"))
+  assert_eq(ctx.assets.size(), 1)
+  assert_eq(residual.length(), 0)
+  // dedup: the same payload again adds no asset
+  let out2 : Array[Json] = []
+  docx_run_specs(
+    [
+      @document.Image(@document.Image::{
+        content_type: "image/png",
+        alt_text: None,
+        data: payload,
+      }),
+    ],
+    @document.run_properties(),
+    1,
+    ctx,
+    out2,
+    in_note_body=false,
+  )
+  assert_eq(ctx.assets.size(), 1)
+  // a conflicting content type on the duplicate is disclosed
+  let out3 : Array[Json] = []
+  docx_run_specs(
+    [
+      @document.Image(@document.Image::{
+        content_type: "image/jpeg",
+        alt_text: None,
+        data: payload,
+      }),
+    ],
+    @document.run_properties(),
+    2,
+    ctx,
+    out3,
+    in_note_body=false,
+  )
+  assert_true(
+    residual
+    .map(entry => entry.code)
+    .contains("docx.image_content_type_conflict"),
+  )
+  // a missing content type residualizes (an asset id has no extension
+  // for the parser to infer from)
+  let out4 : Array[Json] = []
+  docx_run_specs(
+    [
+      @document.Image(@document.Image::{
+        content_type: "",
+        alt_text: None,
+        data: payload,
+      }),
+    ],
+    @document.run_properties(),
+    3,
+    ctx,
+    out4,
+    in_note_body=false,
+  )
+  assert_eq(out4.length(), 1) // the forced empty segment for the run
+  assert_true(
+    residual
+    .map(entry => entry.code)
+    .contains("docx.image_content_type_missing"),
+  )
+}
+
+///|
+/// P4b: note references pull their stored bodies in as note specs;
+/// unknown ids and notes inside note bodies residualize.
+test "note references dump their bodies with honest edge handling" {
+  let residual : Array[DumpResidual] = []
+  let ctx : DocxDumpContext = {
+    assets: {},
+    total_asset_bytes: Ref::new(0),
+    residual,
+    footnote_bodies: {
+      "1": [
+        @document.paragraph([
+          @document.run(
+            [@document.text("the footnote")],
+            properties=@document.run_properties(is_italic=true),
+          ),
+        ]),
+      ],
+    },
+    endnote_bodies: {},
+    used_notes: Set::new(),
+  }
+  let out : Array[Json] = []
+  docx_run_specs(
+    [
+      @document.text("ref"),
+      @document.NoteReference(note_type="footnote", note_id="1"),
+    ],
+    @document.run_properties(),
+    0,
+    ctx,
+    out,
+    in_note_body=false,
+  )
+  assert_eq(out.length(), 2)
+  assert_true(out[1].stringify().contains("\"footnote\":"))
+  assert_true(out[1].stringify().contains("the footnote"))
+  assert_true(out[1].stringify().contains("\"italic\":true"))
+  assert_true(ctx.used_notes.contains("footnote:1"))
+  // an unknown id residualizes
+  let out2 : Array[Json] = []
+  docx_run_specs(
+    [@document.NoteReference(note_type="footnote", note_id="9")],
+    @document.run_properties(),
+    1,
+    ctx,
+    out2,
+    in_note_body=false,
+  )
+  assert_true(
+    residual.map(entry => entry.code).contains("docx.note_body_missing"),
+  )
+  // a note reference inside a note body is forbidden by the grammar
+  let out3 : Array[Json] = []
+  docx_run_specs(
+    [@document.NoteReference(note_type="footnote", note_id="1")],
+    @document.run_properties(),
+    2,
+    ctx,
+    out3,
+    in_note_body=true,
+  )
+  assert_true(
+    residual.map(entry => entry.code).contains("docx.note_reference_dropped"),
+  )
+  // the emitted paragraph parses through the real batch parser
+  ignore(
+    @docx_batch.parse_batch(
+      Json::object({
+        "schema": Json::string("docx.batch/2"),
+        "ops": Json::array([
+          Json::object({
+            "op": Json::string("paragraph"),
+            "params": Json::object({ "runs": Json::array(out) }),
+          }),
+        ]),
       }),
     ),
   )

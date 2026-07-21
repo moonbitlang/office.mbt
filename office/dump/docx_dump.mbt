@@ -1,8 +1,10 @@
 ///|
 /// DOCX dump: walks the annotated reader's document tree into canonical
-/// docx.batch/2 ops (paragraphs, runs, links, tables), with residual
-/// records for everything the op vocabulary cannot express. Images,
-/// footnotes/endnotes, and comments stay coverage residuals in this slice.
+/// docx.batch/2 ops (paragraphs, runs, links, images, notes, tables),
+/// with residual records for everything the op vocabulary cannot
+/// express. Image payloads ride as content-addressed inline assets; the
+/// op's image path IS the asset id, which replay resolves from the
+/// envelope. Comments stay coverage residuals in this slice.
 ///
 /// Every emitted op chunk must parse through the real batch parser
 /// (dump-time self-check); the replay fixpoint lands with the replay
@@ -51,6 +53,185 @@ fn docx_highlight_color(value : String) -> Bool {
 }
 
 ///|
+/// Shared state threaded through the DOCX walk: the content-addressed
+/// asset store, residuals, the note bodies keyed by note id, and the
+/// note ids the body actually referenced (for orphan disclosure).
+priv struct DocxDumpContext {
+  assets : Map[String, DumpAsset]
+  total_asset_bytes : Ref[Int]
+  residual : Array[DumpResidual]
+  footnote_bodies : Map[String, Array[@document.DocumentElement]]
+  endnote_bodies : Map[String, Array[@document.DocumentElement]]
+  used_notes : Set[String]
+}
+
+///|
+/// Captures an image payload as a content-addressed inline asset,
+/// returning the asset id, or None when the payload exceeds the
+/// allowance (the caller residualizes — an op cannot reference an asset
+/// the envelope does not carry). Dedup is checked before the allowance:
+/// an already-carried payload adds no bytes. A duplicate declaring a
+/// different content type keeps the first entry and is disclosed.
+fn docx_capture_asset(
+  ctx : DocxDumpContext,
+  data : Bytes,
+  content_type : String,
+  block : Int,
+) -> String? {
+  let id = "sha256-" + sha256_hex_bytes(data)
+  match ctx.assets.get(id) {
+    Some(existing) => {
+      if existing.content_type != content_type {
+        ctx.residual.push(
+          docx_residual(
+            "docx.image_content_type_conflict",
+            "block",
+            docx_location(block),
+            "image declares content type \{content_type} but the carried asset is \{existing.content_type}",
+          ),
+        )
+      }
+      Some(id)
+    }
+    None =>
+      if data.length() <= dump_max_asset_bytes &&
+        ctx.total_asset_bytes.val + data.length() <= dump_max_total_asset_bytes {
+        ctx.total_asset_bytes.val += data.length()
+        ctx.assets[id] = {
+          content_type,
+          size: data.length(),
+          data: @base64.encode(data),
+        }
+        Some(id)
+      } else {
+        None
+      }
+  }
+}
+
+///|
+/// Builds the run-position image spec for one reader image, capturing
+/// its payload as an asset. The emitted path is the asset id, so the
+/// content type must always be explicit (an asset id has no extension
+/// for the parser to infer from).
+fn docx_image_spec(
+  ctx : DocxDumpContext,
+  image : @document.Image,
+  block : Int,
+) -> Json? {
+  if image.content_type == "" {
+    ctx.residual.push(
+      docx_residual(
+        "docx.image_content_type_missing",
+        "block",
+        docx_location(block),
+        "an image without a declared content type is not expressible",
+      ),
+    )
+    return None
+  }
+  match docx_capture_asset(ctx, image.data, image.content_type, block) {
+    Some(id) => {
+      let spec : Map[String, Json] = {
+        "path": Json::string(id),
+        "content_type": Json::string(image.content_type),
+      }
+      match image.alt_text {
+        Some(alt) if alt != "" => spec["alt"] = Json::string(alt)
+        _ => ()
+      }
+      Some(Json::object({ "image": Json::object(spec) }))
+    }
+    None => {
+      ctx.residual.push(
+        docx_residual(
+          "docx.image_oversized",
+          "block",
+          docx_location(block),
+          "image payload (\{image.data.length()} bytes) exceeds the inline asset allowance and is not carried",
+        ),
+      )
+      None
+    }
+  }
+}
+
+///|
+/// Builds the run-position footnote/endnote spec for one reference,
+/// mapping the referenced body's paragraphs recursively. Note bodies are
+/// paragraph lists in the batch grammar: nested notes are forbidden and
+/// non-paragraph body blocks residualize.
+fn docx_note_spec(
+  ctx : DocxDumpContext,
+  note_type : String,
+  note_id : String,
+  block : Int,
+) -> Json? {
+  let bodies = match note_type {
+    "footnote" => ctx.footnote_bodies
+    "endnote" => ctx.endnote_bodies
+    other => {
+      ctx.residual.push(
+        docx_residual(
+          "docx.note_reference_dropped",
+          "block",
+          docx_location(block),
+          "a '\{other}' note reference is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+        ),
+      )
+      return None
+    }
+  }
+  guard bodies.get(note_id) is Some(body) else {
+    ctx.residual.push(
+      docx_residual(
+        "docx.note_body_missing",
+        "block",
+        docx_location(block),
+        "a \{note_type} reference points at no stored body and is dropped",
+      ),
+    )
+    return None
+  }
+  ctx.used_notes.add(note_type + ":" + note_id)
+  let paragraphs : Array[Json] = []
+  for element in body {
+    match element {
+      Paragraph(children~, properties~) =>
+        paragraphs.push(
+          Json::object(
+            docx_paragraph_params(
+              children,
+              properties,
+              block,
+              ctx,
+              in_note_body=true,
+            ),
+          ),
+        )
+      other =>
+        ctx.residual.push(
+          docx_residual(
+            "docx.block_unsupported",
+            "block",
+            docx_location(block),
+            "\{note_type} body content \{docx_element_name(other)} is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+          ),
+        )
+    }
+  }
+  let body_spec : Map[String, Json] = {}
+  if paragraphs.length() == 0 {
+    body_spec["text"] = Json::string("")
+  } else {
+    body_spec["paragraphs"] = Json::array(paragraphs)
+  }
+  let outer : Map[String, Json] = {}
+  outer[note_type] = Json::object(body_spec)
+  Some(Json::object(outer))
+}
+
+///|
 fn docx_location(block : Int) -> Json {
   Json::object({ "block": Json::number(block.to_double()) })
 }
@@ -83,80 +264,17 @@ fn docx_text_serializable(text : String) -> Bool {
 }
 
 ///|
-/// Collects one run's expressible spec. Returns None when the run holds
-/// no expressible text (its content residualized entirely).
-fn docx_run_spec(
-  children : Array[@document.DocumentElement],
+/// Builds the run spec for one text segment with the run's formatting
+/// flags. Returns None (with a residual) when the text cannot be
+/// serialized.
+fn docx_segment_spec(
+  value : String,
   properties : @document.RunProperties,
   block : Int,
-  residual : Array[DumpResidual],
+  ctx : DocxDumpContext,
 ) -> Json? {
-  let text = StringBuilder::new()
-  for child in children {
-    match child {
-      Text(value) => text.write_string(value)
-      Tab => text.write_char('\t')
-      Break(_) =>
-        residual.push(
-          docx_residual(
-            "docx.break_dropped",
-            "block",
-            docx_location(block),
-            "an in-run break is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
-          ),
-        )
-      Checkbox(_) =>
-        residual.push(
-          docx_residual(
-            "docx.checkbox_dropped",
-            "block",
-            docx_location(block),
-            "a checkbox control is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
-          ),
-        )
-      // Word nests drawings and note/comment references INSIDE runs, so
-      // these arms are the live path for real files
-      Image(_) =>
-        residual.push(
-          docx_residual(
-            "docx.images_not_dumped",
-            "block",
-            docx_location(block),
-            "images are not dumped in this slice",
-          ),
-        )
-      NoteReference(note_type~, ..) =>
-        residual.push(
-          docx_residual(
-            "docx.note_reference_dropped",
-            "block",
-            docx_location(block),
-            "a \{note_type} reference is not dumped in this slice",
-          ),
-        )
-      CommentReference(_) =>
-        residual.push(
-          docx_residual(
-            "docx.comment_reference_dropped",
-            "block",
-            docx_location(block),
-            "a comment reference is not dumped in this slice",
-          ),
-        )
-      other =>
-        residual.push(
-          docx_residual(
-            "docx.inline_unsupported",
-            "block",
-            docx_location(block),
-            "run content \{docx_element_name(other)} is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
-          ),
-        )
-    }
-  }
-  let value = text.to_string()
   if !docx_text_serializable(value) {
-    residual.push(
+    ctx.residual.push(
       docx_residual(
         "docx.text_unserializable",
         "block",
@@ -165,16 +283,6 @@ fn docx_run_spec(
       ),
     )
     return None
-  }
-  if properties.style_id is Some(_) || properties.style_name is Some(_) {
-    residual.push(
-      docx_residual(
-        "docx.run_style_dropped",
-        "block",
-        docx_location(block),
-        "a run character style is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
-      ),
-    )
   }
   let spec : Map[String, Json] = { "text": Json::string(value) }
   if properties.is_bold {
@@ -212,7 +320,7 @@ fn docx_run_spec(
       if size >= 1 && size <= 1638 {
         spec["size"] = Json::number(size.to_double())
       } else {
-        residual.push(
+        ctx.residual.push(
           docx_residual(
             "docx.font_size_dropped",
             "block",
@@ -230,7 +338,7 @@ fn docx_run_spec(
       if docx_highlight_color(highlight) {
         spec["highlight"] = Json::string(highlight)
       } else if highlight != "none" {
-        residual.push(
+        ctx.residual.push(
           docx_residual(
             "docx.highlight_dropped",
             "block",
@@ -242,6 +350,123 @@ fn docx_run_spec(
     None => ()
   }
   Some(Json::object(spec))
+}
+
+///|
+/// Walks one run's children into run-position specs, pushed onto `out`.
+/// Word nests drawings and note references INSIDE runs, and their batch
+/// specs are run-position siblings, so the accumulated text is flushed
+/// around each hoisted spec — order and formatting are both preserved.
+/// A run that produced nothing else still emits its (possibly empty)
+/// text segment, so empty source runs keep round-tripping.
+fn docx_run_specs(
+  children : Array[@document.DocumentElement],
+  properties : @document.RunProperties,
+  block : Int,
+  ctx : DocxDumpContext,
+  out : Array[Json],
+  in_note_body~ : Bool,
+) -> Unit {
+  if properties.style_id is Some(_) || properties.style_name is Some(_) {
+    ctx.residual.push(
+      docx_residual(
+        "docx.run_style_dropped",
+        "block",
+        docx_location(block),
+        "a run character style is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+      ),
+    )
+  }
+  let text = StringBuilder::new()
+  let mut pushed = false
+  let flush = (force : Bool) => {
+    let value = text.to_string()
+    if value != "" || force {
+      match docx_segment_spec(value, properties, block, ctx) {
+        Some(spec) => {
+          out.push(spec)
+          pushed = true
+        }
+        None => ()
+      }
+    }
+    text.reset()
+  }
+  for child in children {
+    match child {
+      Text(value) => text.write_string(value)
+      Tab => text.write_char('\t')
+      Image(image) => {
+        flush(false)
+        match docx_image_spec(ctx, image, block) {
+          Some(spec) => {
+            out.push(spec)
+            pushed = true
+          }
+          None => ()
+        }
+      }
+      NoteReference(note_type~, note_id~) => {
+        flush(false)
+        if in_note_body {
+          // the batch grammar forbids notes inside note bodies
+          ctx.residual.push(
+            docx_residual(
+              "docx.note_reference_dropped",
+              "block",
+              docx_location(block),
+              "a \{note_type} reference inside a note body is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+            ),
+          )
+        } else {
+          match docx_note_spec(ctx, note_type, note_id, block) {
+            Some(spec) => {
+              out.push(spec)
+              pushed = true
+            }
+            None => ()
+          }
+        }
+      }
+      Break(_) =>
+        ctx.residual.push(
+          docx_residual(
+            "docx.break_dropped",
+            "block",
+            docx_location(block),
+            "an in-run break is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+          ),
+        )
+      Checkbox(_) =>
+        ctx.residual.push(
+          docx_residual(
+            "docx.checkbox_dropped",
+            "block",
+            docx_location(block),
+            "a checkbox control is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+          ),
+        )
+      CommentReference(_) =>
+        ctx.residual.push(
+          docx_residual(
+            "docx.comment_reference_dropped",
+            "block",
+            docx_location(block),
+            "a comment reference is not dumped in this slice",
+          ),
+        )
+      other =>
+        ctx.residual.push(
+          docx_residual(
+            "docx.inline_unsupported",
+            "block",
+            docx_location(block),
+            "run content \{docx_element_name(other)} is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+          ),
+        )
+    }
+  }
+  flush(!pushed)
 }
 
 ///|
@@ -266,35 +491,31 @@ fn docx_element_name(element : @document.DocumentElement) -> String {
 }
 
 ///|
-/// Walks one paragraph's inline children into run/link specs, pushing
-/// residuals for inexpressible content. `allow_links` is false inside
-/// hyperlinks (the batch grammar does not nest them).
+/// Walks one paragraph's inline children into run/link/image/note specs,
+/// pushing residuals for inexpressible content. `allow_links` is false
+/// inside hyperlinks (the batch grammar does not nest them).
 fn docx_inline_specs(
   children : Array[@document.DocumentElement],
   block : Int,
   runs : Array[Json],
-  residual : Array[DumpResidual],
+  ctx : DocxDumpContext,
   allow_links~ : Bool,
+  in_note_body~ : Bool,
 ) -> Unit {
   for child in children {
     match child {
       Run(children~, properties~) =>
-        match docx_run_spec(children, properties, block, residual) {
-          Some(spec) => runs.push(spec)
-          None => ()
-        }
+        docx_run_specs(children, properties, block, ctx, runs, in_note_body~)
       Text(value) =>
         // bare text outside a run: wrap as a plain run
-        match
-          docx_run_spec(
-            [@document.text(value)],
-            @document.run_properties(),
-            block,
-            residual,
-          ) {
-          Some(spec) => runs.push(spec)
-          None => ()
-        }
+        docx_run_specs(
+          [@document.text(value)],
+          @document.run_properties(),
+          block,
+          ctx,
+          runs,
+          in_note_body~,
+        )
       Hyperlink(children~, href~, anchor~, target_frame~) =>
         if allow_links {
           let link_runs : Array[Json] = []
@@ -302,8 +523,9 @@ fn docx_inline_specs(
             children,
             block,
             link_runs,
-            residual,
+            ctx,
             allow_links=false,
+            in_note_body~,
           )
           if href is None && anchor is None {
             // the reader yields a target-less hyperlink when the
@@ -312,7 +534,7 @@ fn docx_inline_specs(
             for spec in link_runs {
               runs.push(spec)
             }
-            residual.push(
+            ctx.residual.push(
               docx_residual(
                 "docx.link_unresolved",
                 "block",
@@ -337,7 +559,7 @@ fn docx_inline_specs(
             link["runs"] = Json::array(link_runs)
             runs.push(Json::object({ "link": Json::object(link) }))
           } else {
-            residual.push(
+            ctx.residual.push(
               docx_residual(
                 "docx.link_dropped",
                 "block",
@@ -347,7 +569,7 @@ fn docx_inline_specs(
             )
           }
         } else {
-          residual.push(
+          ctx.residual.push(
             docx_residual(
               "docx.link_dropped",
               "block",
@@ -356,26 +578,29 @@ fn docx_inline_specs(
             ),
           )
         }
-      Image(_) =>
-        residual.push(
-          docx_residual(
-            "docx.images_not_dumped",
-            "block",
-            docx_location(block),
-            "images are not dumped in this slice",
-          ),
-        )
-      NoteReference(note_type~, ..) =>
-        residual.push(
-          docx_residual(
-            "docx.note_reference_dropped",
-            "block",
-            docx_location(block),
-            "a \{note_type} reference is not dumped in this slice",
-          ),
-        )
+      Image(image) =>
+        match docx_image_spec(ctx, image, block) {
+          Some(spec) => runs.push(spec)
+          None => ()
+        }
+      NoteReference(note_type~, note_id~) =>
+        if in_note_body {
+          ctx.residual.push(
+            docx_residual(
+              "docx.note_reference_dropped",
+              "block",
+              docx_location(block),
+              "a \{note_type} reference inside a note body is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+            ),
+          )
+        } else {
+          match docx_note_spec(ctx, note_type, note_id, block) {
+            Some(spec) => runs.push(spec)
+            None => ()
+          }
+        }
       CommentReference(_) =>
-        residual.push(
+        ctx.residual.push(
           docx_residual(
             "docx.comment_reference_dropped",
             "block",
@@ -384,7 +609,7 @@ fn docx_inline_specs(
           ),
         )
       BookmarkStart(_) =>
-        residual.push(
+        ctx.residual.push(
           docx_residual(
             "docx.bookmark_dropped",
             "block",
@@ -395,13 +620,16 @@ fn docx_inline_specs(
       Tab | Break(_) | Checkbox(_) =>
         // bare inline outside a run: reuse the run walk for the residual
         // (or the tab) by wrapping it as an anonymous run
-        match
-          docx_run_spec([child], @document.run_properties(), block, residual) {
-          Some(spec) => runs.push(spec)
-          None => ()
-        }
+        docx_run_specs(
+          [child],
+          @document.run_properties(),
+          block,
+          ctx,
+          runs,
+          in_note_body~,
+        )
       other =>
-        residual.push(
+        ctx.residual.push(
           docx_residual(
             "docx.inline_unsupported",
             "block",
@@ -414,13 +642,14 @@ fn docx_inline_specs(
 }
 
 ///|
-/// Builds the batch params for one paragraph (shared by paragraph ops and
-/// table-cell paragraphs).
+/// Builds the batch params for one paragraph (shared by paragraph ops,
+/// table-cell paragraphs, and note-body paragraphs).
 fn docx_paragraph_params(
   children : Array[@document.DocumentElement],
   properties : @document.ParagraphProperties,
   block : Int,
-  residual : Array[DumpResidual],
+  ctx : DocxDumpContext,
+  in_note_body~ : Bool,
 ) -> Map[String, Json] {
   let params : Map[String, Json] = {}
   match properties.style_id {
@@ -428,7 +657,7 @@ fn docx_paragraph_params(
       if docx_writable_style(style) {
         params["style"] = Json::string(style)
       } else {
-        residual.push(
+        ctx.residual.push(
           docx_residual(
             "docx.paragraph_style_dropped",
             "block",
@@ -440,7 +669,7 @@ fn docx_paragraph_params(
     None =>
       // a name without an id cannot round-trip either
       if properties.style_name is Some(_) {
-        residual.push(
+        ctx.residual.push(
           docx_residual(
             "docx.paragraph_style_dropped",
             "block",
@@ -455,7 +684,7 @@ fn docx_paragraph_params(
       if docx_writable_alignment(align) {
         params["align"] = Json::string(align)
       } else {
-        residual.push(
+        ctx.residual.push(
           docx_residual(
             "docx.alignment_dropped",
             "block",
@@ -474,7 +703,7 @@ fn docx_paragraph_params(
           "level": Json::number(numbering.level.to_double()),
         })
       } else {
-        residual.push(
+        ctx.residual.push(
           docx_residual(
             "docx.numbering_dropped",
             "block",
@@ -489,7 +718,7 @@ fn docx_paragraph_params(
     properties.indent.end is Some(_) ||
     properties.indent.first_line is Some(_) ||
     properties.indent.hanging is Some(_) {
-    residual.push(
+    ctx.residual.push(
       docx_residual(
         "docx.paragraph_indent_dropped",
         "block",
@@ -499,7 +728,7 @@ fn docx_paragraph_params(
     )
   }
   let runs : Array[Json] = []
-  docx_inline_specs(children, block, runs, residual, allow_links=true)
+  docx_inline_specs(children, block, runs, ctx, allow_links=true, in_note_body~)
   if runs.length() == 0 {
     params["text"] = Json::string("")
   } else {
@@ -514,10 +743,10 @@ fn docx_table_params(
   children : Array[@document.DocumentElement],
   properties : @document.TableProperties,
   block : Int,
-  residual : Array[DumpResidual],
+  ctx : DocxDumpContext,
 ) -> Map[String, Json]? {
   if properties.style_id is Some(_) || properties.style_name is Some(_) {
-    residual.push(
+    ctx.residual.push(
       docx_residual(
         "docx.table_style_dropped",
         "block",
@@ -541,12 +770,16 @@ fn docx_table_params(
                     paragraphs.push(
                       Json::object(
                         docx_paragraph_params(
-                          children, properties, block, residual,
+                          children,
+                          properties,
+                          block,
+                          ctx,
+                          in_note_body=false,
                         ),
                       ),
                     )
                   Table(..) =>
-                    residual.push(
+                    ctx.residual.push(
                       docx_residual(
                         "docx.nested_table_dropped",
                         "block",
@@ -555,7 +788,7 @@ fn docx_table_params(
                       ),
                     )
                   other =>
-                    residual.push(
+                    ctx.residual.push(
                       docx_residual(
                         "docx.block_unsupported",
                         "block",
@@ -574,7 +807,7 @@ fn docx_table_params(
               cells.push((cell_spec, col_span, row_span))
             }
             other =>
-              residual.push(
+              ctx.residual.push(
                 docx_residual(
                   "docx.block_unsupported",
                   "block",
@@ -587,7 +820,7 @@ fn docx_table_params(
         if cells.length() == 0 {
           // the batch parser rejects a row with no cells; dropping the
           // degenerate row keeps the rest of the table replayable
-          residual.push(
+          ctx.residual.push(
             docx_residual(
               "docx.empty_row_dropped",
               "block",
@@ -600,7 +833,7 @@ fn docx_table_params(
         }
       }
       other =>
-        residual.push(
+        ctx.residual.push(
           docx_residual(
             "docx.block_unsupported",
             "block",
@@ -613,7 +846,7 @@ fn docx_table_params(
   if emitted.length() == 0 {
     // the batch parser rejects an empty rows array; the table must
     // residualize rather than abort the dump in the self-check
-    residual.push(
+    ctx.residual.push(
       docx_residual(
         "docx.empty_table_dropped",
         "block",
@@ -634,7 +867,7 @@ fn docx_table_params(
       if in_leading_headers {
         header_rows += 1
       } else {
-        residual.push(
+        ctx.residual.push(
           docx_residual(
             "docx.header_rows_not_leading",
             "block",
@@ -655,7 +888,7 @@ fn docx_table_params(
       if col_span > 1 && col_span <= 63 {
         spec["col_span"] = Json::number(col_span.to_double())
       } else if col_span > 63 || col_span < 1 {
-        residual.push(
+        ctx.residual.push(
           docx_residual(
             "docx.cell_span_dropped",
             "block",
@@ -668,7 +901,7 @@ fn docx_table_params(
       if row_span > 1 && row_span <= row_span_cap {
         spec["row_span"] = Json::number(row_span.to_double())
       } else if row_span > row_span_cap || row_span < 1 {
-        residual.push(
+        ctx.residual.push(
           docx_residual(
             "docx.cell_span_dropped",
             "block",
@@ -690,11 +923,13 @@ fn docx_table_params(
 
 ///|
 /// Dumps an annotated DOCX read into an office.dump/1 envelope of
-/// docx.batch/2 ops. Body paragraphs and tables become ops; images,
-/// footnotes/endnotes, and comments are disclosed as coverage residuals
-/// in this slice; headers, footers, and section properties have no op
-/// vocabulary. The replayed document always carries the writer's default
-/// section, so section properties are disclosed whenever present.
+/// docx.batch/2 ops. Body paragraphs and tables become ops; images ride
+/// as content-addressed assets referenced by their specs; footnote and
+/// endnote bodies are dumped at their references. Comments are disclosed
+/// as coverage residuals in this slice; headers, footers, and section
+/// properties have no op vocabulary. The replayed document always
+/// carries the writer's default section, so section properties are
+/// disclosed whenever present.
 pub fn dump_docx_document(
   annotated : @docx.DocxAnnotatedResult,
   source_file~ : String,
@@ -704,7 +939,25 @@ pub fn dump_docx_document(
 ) -> DumpEnvelope raise DumpError {
   let package_result = annotated.result()
   let ops : Array[Json] = []
-  let residual : Array[DumpResidual] = []
+  let footnote_bodies : Map[String, Array[@document.DocumentElement]] = {}
+  for entry in annotated.footnote_bodies() {
+    let (id, body) = entry
+    footnote_bodies[id] = body
+  }
+  let endnote_bodies : Map[String, Array[@document.DocumentElement]] = {}
+  for entry in annotated.endnote_bodies() {
+    let (id, body) = entry
+    endnote_bodies[id] = body
+  }
+  let ctx : DocxDumpContext = {
+    assets: {},
+    total_asset_bytes: Ref::new(0),
+    residual: [],
+    footnote_bodies,
+    endnote_bodies,
+    used_notes: Set::new(),
+  }
+  let residual = ctx.residual
   let warnings : Array[DumpWarning] = []
   let document_location = Json::object({ "part": Json::string("document") })
   for message in package_result.messages {
@@ -746,16 +999,6 @@ pub fn dump_docx_document(
   guard package_result.document is Document(children~, notes~, comments~) else {
     raise DumpUnsupported("the reader returned a non-document root")
   }
-  if notes.length() > 0 {
-    residual.push(
-      docx_residual(
-        "docx.notes_not_dumped",
-        "document",
-        document_location,
-        "\{notes.length()} footnote/endnote(s) are not dumped in this slice",
-      ),
-    )
-  }
   if comments.length() > 0 {
     residual.push(
       docx_residual(
@@ -774,12 +1017,18 @@ pub fn dump_docx_document(
           Json::object({
             "op": Json::string("paragraph"),
             "params": Json::object(
-              docx_paragraph_params(children, properties, block, residual),
+              docx_paragraph_params(
+                children,
+                properties,
+                block,
+                ctx,
+                in_note_body=false,
+              ),
             ),
           }),
         )
       Table(children~, properties~) =>
-        match docx_table_params(children, properties, block, residual) {
+        match docx_table_params(children, properties, block, ctx) {
           Some(params) =>
             ops.push(
               Json::object({
@@ -800,6 +1049,24 @@ pub fn dump_docx_document(
         )
     }
   }
+  // a stored note body no reference reached is silently invisible in the
+  // replayed document unless disclosed
+  let mut orphaned_notes = 0
+  for note in notes {
+    if !ctx.used_notes.contains(note.note_type + ":" + note.note_id) {
+      orphaned_notes += 1
+    }
+  }
+  if orphaned_notes > 0 {
+    residual.push(
+      docx_residual(
+        "docx.note_orphaned",
+        "document",
+        document_location,
+        "\{orphaned_notes} stored note bodie(s) have no reference in the dumped body and are dropped",
+      ),
+    )
+  }
   docx_self_check_ops(ops, cancelled)
   {
     format: "docx",
@@ -809,7 +1076,7 @@ pub fn dump_docx_document(
     batch_schema: @docx_batch.SCHEMA_BATCH_V2,
     create_sheet: None,
     ops,
-    assets: {},
+    assets: ctx.assets,
     residual,
     warnings,
   }
