@@ -638,6 +638,60 @@ test "oversized image payloads are disclosed without an asset entry" {
 }
 
 ///|
+test "a duplicate encountered after the total cap is still referenced" {
+  // four distinct payloads at exactly the 8 MiB per-asset cap fill the
+  // 32 MiB total; a later DUPLICATE of the first must still reference its
+  // asset (dedup adds no bytes), while a later distinct image is disclosed
+  // without an entry
+  fn padded(tag : Byte) -> Bytes {
+    let bytes : Array[Byte] = []
+    for b in dump_probe_png {
+      bytes.push(b)
+    }
+    bytes.push(tag)
+    for _ in 0..<(8 * 1024 * 1024 - dump_probe_png.length() - 1) {
+      bytes.push(0)
+    }
+    Bytes::from_array(bytes)
+  }
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "x")
+  let first = padded(1)
+  workbook.add_image("Data", "B2", first, "png", "image/png")
+  workbook.add_image("Data", "C2", padded(2), "png", "image/png")
+  workbook.add_image("Data", "D2", padded(3), "png", "image/png")
+  workbook.add_image("Data", "E2", padded(4), "png", "image/png")
+  // duplicate of the first payload, encountered at the exhausted total
+  workbook.add_image("Data", "F2", first, "png", "image/png")
+  // a small distinct payload after exhaustion is disclosed, not carried
+  workbook.add_image("Data", "G2", dump_probe_png, "png", "image/png")
+  let envelope = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="cap.xlsx",
+    source_bytes=1,
+  )
+  assert_eq(envelope.assets.length(), 4)
+  let first_id = "sha256-" + @dump.sha256_hex_bytes(first)
+  let mut first_refs = 0
+  let mut uncarried = 0
+  for record in envelope.residual {
+    if record.code == "xlsx.image_unsupported" {
+      if record.asset is Some(id) && id == first_id {
+        first_refs += 1
+      }
+      if record.asset is None {
+        uncarried += 1
+      }
+    }
+  }
+  // both anchors of the first payload reference the same carried asset
+  assert_eq(first_refs, 2)
+  // only the post-exhaustion distinct payload is uncarried
+  assert_eq(uncarried, 1)
+}
+
+///|
 test "cancellation raises before work completes" {
   try
     ignore(

@@ -539,12 +539,21 @@ fn dump_sheet_images(
         dump_max_total_asset_bytes
       )
     if carried {
-      if !assets.contains(id) {
-        total_asset_bytes.val += image.data.length()
-        assets[id] = {
-          content_type: image.content_type,
-          size: image.data.length(),
-          data: @base64.encode(image.data),
+      // dedup keeps the FIRST entry's metadata; a later declaration with a
+      // different content type is disclosed on that picture's residual
+      let mut type_note = ""
+      match assets.get(id) {
+        Some(existing) =>
+          if existing.content_type != image.content_type {
+            type_note = "; declared content type \{image.content_type} differs from the carried asset's \{existing.content_type}"
+          }
+        None => {
+          total_asset_bytes.val += image.data.length()
+          assets[id] = {
+            content_type: image.content_type,
+            size: image.data.length(),
+            data: @base64.encode(image.data),
+          }
         }
       }
       residual.push({
@@ -553,7 +562,8 @@ fn dump_sheet_images(
         scope: "object",
         location: dump_location(sheet, "anchor", image.reference),
         asset: Some(id),
-        detail: "anchored picture; \{XLSX_BATCH_SCHEMA} has no image op (payload carried as an inline asset)",
+        detail: "anchored picture; \{XLSX_BATCH_SCHEMA} has no image op (payload carried as an inline asset)" +
+        type_note,
       })
     } else {
       residual.push({

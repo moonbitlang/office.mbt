@@ -698,7 +698,8 @@ non-goal; formula cells carry no cached value and require recalculation.
 
 `--json` prints the single-document form below. `--jsonl` prints the
 streaming form: one `header` line, one `op` line per op (with its 0-based
-`index`), `residual`/`warning` lines, and a terminal `end` line carrying
+`index`), one `asset` line per captured binary (between the op and
+residual lines), `residual`/`warning` lines, and a terminal `end` line carrying
 the counts plus `ops_sha256` (a digest over the concatenated op lines) for
 truncation detection.
 
