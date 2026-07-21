@@ -366,8 +366,31 @@ test "run-nested images hoist and capture assets" {
   assert_true(
     residual
     .map(entry => entry.code)
-    .contains("docx.image_content_type_missing"),
+    .contains("docx.image_content_type_unsupported"),
   )
+  // a type outside the writable set is disclosed WITH its carried asset
+  let tiff : Array[DumpResidual] = []
+  let ctx_tiff = wb_ctx(tiff)
+  let out5 : Array[Json] = []
+  docx_run_specs(
+    [
+      @document.Image(@document.Image::{
+        content_type: "image/tiff",
+        alt_text: None,
+        data: payload,
+      }),
+    ],
+    @document.run_properties(),
+    0,
+    ctx_tiff,
+    out5,
+    in_note_body=false,
+    plain=false,
+  )
+  guard tiff is [entry] else { fail("expected one residual") }
+  assert_eq(entry.code, "docx.image_content_type_unsupported")
+  assert_true(entry.asset is Some(_))
+  assert_eq(ctx_tiff.assets.size(), 1)
 }
 
 ///|
@@ -439,6 +462,75 @@ test "note references dump their bodies with honest edge handling" {
     residual.map(entry => entry.code).contains("docx.note_reference_dropped"),
   )
   // the emitted paragraph parses through the real batch parser
+  ignore(
+    @docx_batch.parse_batch(
+      Json::object({
+        "schema": Json::string("docx.batch/2"),
+        "ops": Json::array([
+          Json::object({
+            "op": Json::string("paragraph"),
+            "params": Json::object({ "runs": Json::array(out) }),
+          }),
+        ]),
+      }),
+    ),
+  )
+}
+
+///|
+/// Kimi #203 round-1 finding 1: note bodies are plain content in the
+/// batch grammar — a hyperlink or image inside a footnote must keep its
+/// text / disclose the image, never abort the dump.
+test "links and images inside note bodies degrade honestly" {
+  let residual : Array[DumpResidual] = []
+  let ctx : DocxDumpContext = {
+    assets: {},
+    total_asset_bytes: Ref::new(0),
+    residual,
+    footnote_bodies: {
+      "1": [
+        @document.paragraph([
+          @document.run([@document.text("see ")]),
+          @document.Hyperlink(
+            children=[@document.run([@document.text("the source")])],
+            href=Some("https://example.com/"),
+            anchor=None,
+            target_frame=None,
+          ),
+          @document.run([
+            @document.Image(@document.Image::{
+              content_type: "image/png",
+              alt_text: None,
+              data: b"\x89",
+            }),
+          ]),
+        ]),
+      ],
+    },
+    endnote_bodies: {},
+    used_notes: Set::new(),
+  }
+  let out : Array[Json] = []
+  docx_run_specs(
+    [@document.NoteReference(note_type="footnote", note_id="1")],
+    @document.run_properties(),
+    0,
+    ctx,
+    out,
+    in_note_body=false,
+    plain=false,
+  )
+  guard out is [spec] else { fail("expected one note spec") }
+  let rendered = spec.stringify()
+  assert_true(rendered.contains("the source"))
+  assert_false(rendered.contains("\"link\":"))
+  assert_false(rendered.contains("\"image\":"))
+  let codes = residual.map(entry => entry.code)
+  assert_true(codes.contains("docx.link_dropped"))
+  assert_true(codes.contains("docx.comment_image_dropped"))
+  // no asset captured for the disclosed-in-note image
+  assert_eq(ctx.assets.size(), 0)
+  // and the emitted op parses through the real batch parser
   ignore(
     @docx_batch.parse_batch(
       Json::object({

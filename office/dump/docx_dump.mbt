@@ -119,25 +119,48 @@ fn docx_image_spec(
   image : @document.Image,
   block : Int,
 ) -> Json? {
-  if image.content_type == "" {
-    ctx.residual.push(
-      docx_residual(
-        "docx.image_content_type_missing",
-        "block",
-        docx_location(block),
-        "an image without a declared content type is not expressible",
-      ),
-    )
+  // the batch parser and the writer take exactly this set; the reader
+  // passes any declared part type through (TIFF/EMF/WMF/SVG included),
+  // so gate here — the payload is still carried as an asset
+  if !(image.content_type is ("image/png" | "image/jpeg" | "image/gif")) {
+    let carried = docx_capture_asset(ctx, image.data, image.content_type, block)
+    ctx.residual.push({
+      code: "docx.image_content_type_unsupported",
+      severity: "dropped",
+      scope: "block",
+      location: docx_location(block),
+      asset: carried,
+      detail: "image content type '\{bounded_reason(image.content_type)}' is outside the writable set (png, jpeg, gif); the payload is carried as an asset",
+    })
     return None
   }
   match docx_capture_asset(ctx, image.data, image.content_type, block) {
     Some(id) => {
+      // a dedup hit keeps the FIRST occurrence's content type; the op
+      // must carry the CARRIED type or the re-dumped stream would
+      // diverge from this one (the declared difference is disclosed by
+      // docx_capture_asset)
+      let carried_type = match ctx.assets.get(id) {
+        Some(asset) => asset.content_type
+        None => image.content_type
+      }
       let spec : Map[String, Json] = {
         "path": Json::string(id),
-        "content_type": Json::string(image.content_type),
+        "content_type": Json::string(carried_type),
       }
       match image.alt_text {
-        Some(alt) if alt != "" => spec["alt"] = Json::string(alt)
+        // the parser runs the attribute contract on alt: non-empty,
+        // no control characters — gate and disclose
+        Some(alt) if docx_attribute_ok(alt) => spec["alt"] = Json::string(alt)
+        Some(alt) if alt != "" =>
+          ctx.residual.push(
+            docx_residual(
+              "docx.image_alt_dropped",
+              "block",
+              docx_location(block),
+              "image alt text holds characters the writer cannot serialize",
+            ),
+          )
         _ => ()
       }
       Some(Json::object({ "image": Json::object(spec) }))
@@ -183,6 +206,7 @@ fn docx_note_spec(
     }
   }
   guard bodies.get(note_id) is Some(body) else {
+    ctx.used_notes.add(note_type + ":" + note_id)
     ctx.residual.push(
       docx_residual(
         "docx.note_body_missing",
@@ -206,7 +230,7 @@ fn docx_note_spec(
               block,
               ctx,
               in_note_body=true,
-              plain=false,
+              plain=true,
             ),
           ),
         )
@@ -325,7 +349,20 @@ fn docx_segment_spec(
     Baseline => ()
   }
   match properties.font {
-    Some(font) => spec["font"] = Json::string(font)
+    // the parser runs the attribute contract on the font name
+    Some(font) =>
+      if docx_attribute_ok(font) {
+        spec["font"] = Json::string(font)
+      } else {
+        ctx.residual.push(
+          docx_residual(
+            "docx.font_dropped",
+            "block",
+            docx_location(block),
+            "font name holds characters the writer cannot serialize",
+          ),
+        )
+      }
     None => ()
   }
   match properties.font_size {
@@ -430,7 +467,7 @@ fn docx_run_specs(
               "docx.comment_image_dropped",
               "block",
               docx_location(block),
-              "an image inside a comment body is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+              "an image inside a note or comment body is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
             ),
           )
         } else {
@@ -607,7 +644,7 @@ fn docx_inline_specs(
               "docx.link_dropped",
               "block",
               docx_location(block),
-              "a hyperlink inside a comment body keeps its text as plain runs",
+              "a hyperlink inside a note or comment body keeps its text as plain runs",
             ),
           )
         } else if allow_links {
@@ -621,7 +658,15 @@ fn docx_inline_specs(
             in_note_body~,
             plain~,
           )
-          if href is None && anchor is None {
+          let href_ok = match href {
+            Some(value) => docx_attribute_ok(value)
+            None => false
+          }
+          let anchor_ok = match anchor {
+            Some(value) => docx_attribute_ok(value)
+            None => false
+          }
+          if !href_ok && !anchor_ok {
             // the reader yields a target-less hyperlink when the
             // relationship does not resolve; the writer requires href or
             // anchor, so keep the text as plain runs and disclose
@@ -639,15 +684,27 @@ fn docx_inline_specs(
           } else if link_runs.length() > 0 {
             let link : Map[String, Json] = {}
             match href {
-              Some(value) => link["href"] = Json::string(value)
-              None => ()
+              Some(value) if href_ok => link["href"] = Json::string(value)
+              _ => ()
             }
             match anchor {
-              Some(value) => link["anchor"] = Json::string(value)
-              None => ()
+              Some(value) if anchor_ok => link["anchor"] = Json::string(value)
+              _ => ()
             }
             match target_frame {
-              Some(value) => link["target_frame"] = Json::string(value)
+              Some(value) =>
+                if docx_attribute_ok(value) {
+                  link["target_frame"] = Json::string(value)
+                } else {
+                  ctx.residual.push(
+                    docx_residual(
+                      "docx.link_target_frame_dropped",
+                      "block",
+                      docx_location(block),
+                      "link target frame holds characters the writer cannot serialize",
+                    ),
+                  )
+                }
               None => ()
             }
             link["runs"] = Json::array(link_runs)
@@ -679,7 +736,7 @@ fn docx_inline_specs(
               "docx.comment_image_dropped",
               "block",
               docx_location(block),
-              "an image inside a comment body is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+              "an image inside a note or comment body is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
             ),
           )
         } else {
@@ -1320,8 +1377,24 @@ fn dump_docx_comments(
         _ => ()
       }
       match info.date() {
+        // the writer validates the full xsd:dateTime grammar (the parser
+        // does not), so a free-form date would pass the self-check and
+        // break replay; validate against the REAL writer contract by
+        // constructing a spec — zero mirror drift
         Some(date) if docx_attribute_ok(date) =>
-          params["date"] = Json::string(date)
+          match
+            (try? @word.comment_spec(author="probe", date~, from=0, to=0, [])) {
+            Ok(_) => params["date"] = Json::string(date)
+            Err(_) =>
+              ctx.residual.push(
+                docx_residual(
+                  "docx.comment_metadata_dropped",
+                  "document",
+                  document_location,
+                  "comment date '\{bounded_reason(date)}' is not a writable xsd:dateTime and is dropped",
+                ),
+              )
+          }
         _ => ()
       }
       match info.done() {
