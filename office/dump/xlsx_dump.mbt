@@ -905,7 +905,7 @@ pub fn dump_xlsx_workbook(
     dump_sheet_merges(workbook, name, ops, residual)
     dump_sheet_panes(workbook, worksheet, name, ops, residual)
     dump_sheet_filter(workbook, name, ops, residual)
-    dump_sheet_validations(workbook, name, ops, table_candidates)
+    dump_sheet_validations(workbook, name, ops, table_candidates, residual)
     dump_sheet_coverage_residuals(workbook, worksheet, name, residual)
   }
   dump_workbook_residuals(workbook, residual)

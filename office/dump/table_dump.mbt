@@ -55,21 +55,39 @@ fn dump_sheet_tables(
 
 ///|
 /// Whether a replayed workbook carries `candidate`'s object faithfully.
+/// `peers` is the current candidate list (ascending op order); validations
+/// use it to pair the n-th candidate on a region with the n-th replayed
+/// validation on that region, so two rules on the same range never compare
+/// against each other's replay.
 fn object_replayed_faithfully(
   source : @xlsx.Workbook,
   replayed : @xlsx.Workbook,
   candidate : TableCandidate,
+  peers : Array[TableCandidate],
 ) -> Bool {
   match candidate.payload {
     TableObject(table) =>
       table_replayed_faithfully(source, replayed, candidate.sheet, table)
-    ValidationObject(validation, region) =>
+    ValidationObject(validation, region) => {
+      let mut ordinal = 0
+      for peer in peers {
+        if peer.op_index >= candidate.op_index {
+          break
+        }
+        if peer.sheet == candidate.sheet &&
+          peer.payload is ValidationObject(_, peer_region) &&
+          peer_region == region {
+          ordinal += 1
+        }
+      }
       validation_replayed_faithfully(
         replayed,
         candidate.sheet,
         validation,
         region,
+        ordinal,
       )
+    }
   }
 }
 
@@ -259,7 +277,7 @@ fn validate_table_ops(
       }
       Replayed(replayed) => {
         for candidate in current {
-          if !object_replayed_faithfully(source, replayed, candidate) {
+          if !object_replayed_faithfully(source, replayed, candidate, current) {
             dropped.add(candidate.op_index)
             residual.push(
               table_residual(candidate, "readback diverges from the source"),

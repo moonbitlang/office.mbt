@@ -40,7 +40,9 @@ test "formula headers replaced by equal-text literals are not faithful" {
     "CONCAT(\"Col\",\"umn2\")",
     value="Column2",
   )
-  assert_false(object_replayed_faithfully(source, replayed, candidate))
+  assert_false(
+    object_replayed_faithfully(source, replayed, candidate, [candidate]),
+  )
   // and with matching formulas on both sides it IS faithful
   replayed.set_cell_formula(
     "Data",
@@ -48,5 +50,7 @@ test "formula headers replaced by equal-text literals are not faithful" {
     "CONCAT(\"Col\",\"umn2\")",
     value="Column2",
   )
-  assert_true(object_replayed_faithfully(source, replayed, candidate))
+  assert_true(
+    object_replayed_faithfully(source, replayed, candidate, [candidate]),
+  )
 }
