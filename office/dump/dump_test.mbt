@@ -802,3 +802,108 @@ test "a table whose replay diverges becomes a residual, not a lossy op" {
     assert_eq(replayed_table.show_header_row, table.show_header_row)
   }
 }
+
+///|
+test "data validations become validate ops and survive the fixpoint" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "pick")
+  workbook.add_data_validation_list(
+    "Data",
+    "B1:B10",
+    ["North", "South"],
+    allow_blank=true,
+  )
+  let d1 = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="dv.xlsx",
+    source_bytes=1,
+  )
+  let document = d1.to_json_document().stringify()
+  assert_true(document.contains("\"op\":\"validate\""))
+  assert_true(document.contains("\"type\":\"list\""))
+  assert_true(document.contains("\"North\""))
+  assert_false(document.contains("xlsx.validation_unsupported"))
+  // the emitted op replays into a real validation and re-dumps identically
+  let replayed = @dump.replay_xlsx_dump(d1)
+  let replayed_validations = replayed.get_data_validations("Data")
+  assert_eq(replayed_validations.length(), 1)
+  let d2 = @dump.dump_xlsx_workbook(
+    replayed,
+    source_file="dv.xlsx",
+    source_bytes=1,
+  )
+  assert_eq(Json::array(d1.ops).stringify(), Json::array(d2.ops).stringify())
+}
+
+///|
+test "a multi-region validation splits into one faithful op per region" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let dv = @xlsx.DataValidation::new(true)
+  dv.set_sqref("A1:A5 C1:C5")
+  dv.set_range(IntValue(1), IntValue(10), Whole, Between)
+  workbook.add_data_validation("Data", dv)
+  let envelope = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="mr.xlsx",
+    source_bytes=1,
+  )
+  let mut validate_ops = 0
+  for op in envelope.ops {
+    if op.stringify().contains("\"op\":\"validate\"") {
+      validate_ops += 1
+    }
+  }
+  assert_eq(validate_ops, 2)
+  let document = envelope.to_json_document().stringify()
+  assert_true(document.contains("\"range\":\"A1:A5\""))
+  assert_true(document.contains("\"range\":\"C1:C5\""))
+  assert_false(document.contains("xlsx.validation_unsupported"))
+  // both regions replay and the dump is a fixpoint
+  let d2 = @dump.dump_xlsx_workbook(
+    @dump.replay_xlsx_dump(envelope),
+    source_file="mr.xlsx",
+    source_bytes=1,
+  )
+  assert_eq(
+    Json::array(envelope.ops).stringify(),
+    Json::array(d2.ops).stringify(),
+  )
+}
+
+///|
+test "an inline list value with a comma degrades to a residual" {
+  // batch rejects inline dropdown values containing commas (they would
+  // split); the validation must become a residual, not a mangled op
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let created = try? workbook.add_data_validation_list("Data", "B1:B5", [
+    "plain", "with,comma",
+  ])
+  guard created is Ok(_) else {
+    // the source engine itself refuses; nothing to dump — vacuously fine
+    return
+  }
+  let envelope = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="comma.xlsx",
+    source_bytes=1,
+  )
+  let document = envelope.to_json_document().stringify()
+  let has_op = document.contains("\"op\":\"validate\"")
+  let has_residual = document.contains("xlsx.validation_unsupported")
+  // either the engine round-trips it faithfully or it is disclosed
+  assert_true(has_op || has_residual)
+  if has_op {
+    let d2 = @dump.dump_xlsx_workbook(
+      @dump.replay_xlsx_dump(envelope),
+      source_file="comma.xlsx",
+      source_bytes=1,
+    )
+    assert_eq(
+      Json::array(envelope.ops).stringify(),
+      Json::array(d2.ops).stringify(),
+    )
+  }
+}

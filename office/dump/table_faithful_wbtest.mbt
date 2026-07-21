@@ -30,7 +30,7 @@ test "formula headers replaced by equal-text literals are not faithful" {
   let candidate : TableCandidate = {
     op_index: 0,
     sheet: "Data",
-    table: source_table,
+    payload: TableObject(source_table),
   }
   // add_table normalizes the source header too; force the formula back to
   // simulate a file-read table that retained it
@@ -40,7 +40,7 @@ test "formula headers replaced by equal-text literals are not faithful" {
     "CONCAT(\"Col\",\"umn2\")",
     value="Column2",
   )
-  assert_false(table_replayed_faithfully(source, replayed, candidate))
+  assert_false(object_replayed_faithfully(source, replayed, candidate))
   // and with matching formulas on both sides it IS faithful
   replayed.set_cell_formula(
     "Data",
@@ -48,5 +48,5 @@ test "formula headers replaced by equal-text literals are not faithful" {
     "CONCAT(\"Col\",\"umn2\")",
     value="Column2",
   )
-  assert_true(table_replayed_faithfully(source, replayed, candidate))
+  assert_true(object_replayed_faithfully(source, replayed, candidate))
 }
