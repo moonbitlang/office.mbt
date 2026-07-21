@@ -530,9 +530,15 @@ fn dump_sheet_images(
   for image in worksheet.images {
     let digest = sha256_hex_bytes(image.data)
     let id = "sha256-" + digest
-    let within = image.data.length() <= dump_max_asset_bytes &&
-      total_asset_bytes.val + image.data.length() <= dump_max_total_asset_bytes
-    if within {
+    // an already-carried payload is always referenced, regardless of how
+    // close the running total is: dedup adds no new bytes
+    let carried = assets.contains(id) ||
+      (
+        image.data.length() <= dump_max_asset_bytes &&
+        total_asset_bytes.val + image.data.length() <=
+        dump_max_total_asset_bytes
+      )
+    if carried {
       if !assets.contains(id) {
         total_asset_bytes.val += image.data.length()
         assets[id] = {
