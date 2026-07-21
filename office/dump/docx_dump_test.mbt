@@ -330,7 +330,9 @@ test "docx comments anchor, thread, and survive the fixpoint" {
   assert_true(document.contains("checked"))
   assert_true(document.contains("\"reply_to\":"))
   assert_true(document.contains("Reviewer"))
-  assert_true(document.contains("2026-07-22T10:00:00Z"))
+  // the date must ride in the OP, not merely appear in a residual detail
+  assert_true(document.contains("\"date\":\"2026-07-22T10:00:00Z\""))
+  assert_false(document.contains("docx.comment_metadata_dropped"))
   assert_false(document.contains("docx.comment_dropped"))
   assert_false(document.contains("docx.comments_not_dumped"))
   let d2_ops = docx_fixpoint_ops(d1)

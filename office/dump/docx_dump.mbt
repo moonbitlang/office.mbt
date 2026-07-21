@@ -1383,7 +1383,9 @@ fn dump_docx_comments(
         // constructing a spec — zero mirror drift
         Some(date) if docx_attribute_ok(date) =>
           match
-            (try? @word.comment_spec(author="probe", date~, from=0, to=0, [])) {
+            (try? @word.comment_spec(author="probe", date~, from=0, to=0, [
+              @document.paragraph([]),
+            ])) {
             Ok(_) => params["date"] = Json::string(date)
             Err(_) =>
               ctx.residual.push(
