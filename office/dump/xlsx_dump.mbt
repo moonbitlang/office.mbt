@@ -589,7 +589,6 @@ fn dump_sheet_coverage_residuals(
   residual : Array[DumpResidual],
 ) -> Unit raise {
   let counts : Array[(String, Int)] = [
-    ("xlsx.tables_not_dumped", worksheet.tables.length()),
     ("xlsx.charts_not_dumped", worksheet.charts.length()),
     ("xlsx.hyperlinks_not_dumped", worksheet.hyperlinks.length()),
     ("xlsx.sparklines_not_dumped", worksheet.sparkline_groups.length()),
@@ -866,6 +865,7 @@ pub fn dump_xlsx_workbook(
   cancelled? : () -> Bool = () => false,
 ) -> DumpEnvelope raise {
   let ops : Array[Json] = []
+  let table_candidates : Array[TableCandidate] = []
   let assets : Map[String, DumpAsset] = {}
   let total_asset_bytes : Ref[Int] = Ref::new(0)
   let residual : Array[DumpResidual] = []
@@ -904,6 +904,7 @@ pub fn dump_xlsx_workbook(
     dump_sheet_dimensions(worksheet, name, ops, residual)
     dump_sheet_cells(workbook, worksheet, name, ops, residual, cancelled)
     dump_sheet_styles(style_ctx, worksheet, name, ops, residual)
+    dump_sheet_tables(worksheet, name, ops, table_candidates)
     dump_sheet_images(worksheet, name, assets, total_asset_bytes, residual)
     dump_sheet_merges(workbook, name, ops, residual)
     dump_sheet_panes(workbook, worksheet, name, ops, residual)
@@ -956,7 +957,12 @@ pub fn dump_xlsx_workbook(
     }
   }
   check_cancelled(cancelled)
-  self_check_ops(ops)
+  // full-replay validation: every candidate table op must apply in context
+  // and read back faithfully, or it becomes a residual
+  let validated_ops = validate_table_ops(
+    workbook, create_sheet, ops, table_candidates, residual, cancelled,
+  )
+  self_check_ops(validated_ops)
   {
     format: "xlsx",
     source_file,
@@ -964,7 +970,7 @@ pub fn dump_xlsx_workbook(
     source_sha256,
     batch_schema: XLSX_BATCH_SCHEMA,
     create_sheet: Some(create_sheet),
-    ops,
+    ops: validated_ops,
     assets,
     residual,
     warnings,
