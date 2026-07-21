@@ -709,9 +709,10 @@ truncation detection.
 | `source` | object | bounded `file`, byte count, and `sha256` digest (excluded from fixpoint comparison) |
 | `replay` | object | `batch_schema`, `create` parameters, and engine `limits` |
 | `ops` | array | ordered canonical `xlsx.batch/1` ops (`{op, params}`) |
+| `assets` | object | content-addressed binaries: `sha256-<hex>` → `{content_type, size, data}` (inline base64, per-asset 8 MiB / total 32 MiB; oversized payloads are disclosed in `residual` without an entry) |
 | `residual` | array | ordered `{code, severity, scope, location, asset?, detail}` records |
 | `warnings` | array | bounded dump diagnostics |
-| `stats` | object | `ops`, `residual`, `warnings` counts |
+| `stats` | object | `ops`, `assets`, `residual`, `warnings` counts |
 
 ### `office.replay/1` (`office replay FILE --output OUT.xlsx --json`)
 

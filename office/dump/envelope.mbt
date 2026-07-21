@@ -23,8 +23,19 @@ pub(all) struct DumpWarning {
 } derive(Eq, ToJson)
 
 ///|
+/// One captured binary asset, content-addressed by its SHA-256 digest.
+/// Assets are referenced from residual records (no batch op consumes
+/// them); replay does not reconstruct them.
+pub(all) struct DumpAsset {
+  content_type : String
+  size : Int
+  data : String
+} derive(Eq, ToJson)
+
+///|
 /// A complete semantic dump: ordered batch ops in the target engine's exact
-/// JSON shapes, plus provenance, replay parameters, and explicit residuals.
+/// JSON shapes, plus provenance, replay parameters, content-addressed
+/// assets, and explicit residuals.
 pub(all) struct DumpEnvelope {
   format : String
   source_file : String
@@ -33,6 +44,7 @@ pub(all) struct DumpEnvelope {
   batch_schema : String
   create_sheet : String?
   ops : Array[Json]
+  assets : Map[String, DumpAsset]
   residual : Array[DumpResidual]
   warnings : Array[DumpWarning]
 }
@@ -85,6 +97,13 @@ pub fn DumpEnvelope::to_json_document(self : DumpEnvelope) -> Json {
     },
     "replay": Json::object(replay),
     "ops": Json::array(self.ops),
+    "assets": {
+      let assets : Map[String, Json] = {}
+      for id, asset in self.assets {
+        assets[id] = asset.to_json()
+      }
+      Json::object(assets)
+    },
     "residual": Json::array(self.residual.map(residual_json)),
     "warnings": Json::array(
       self.warnings.map(warning => {
@@ -96,6 +115,7 @@ pub fn DumpEnvelope::to_json_document(self : DumpEnvelope) -> Json {
     ),
     "stats": Json::object({
       "ops": Json::number(self.ops.length().to_double()),
+      "assets": Json::number(self.assets.length().to_double()),
       "residual": Json::number(self.residual.length().to_double()),
       "warnings": Json::number(self.warnings.length().to_double()),
     }),
@@ -131,6 +151,17 @@ pub fn DumpEnvelope::to_jsonl_lines(self : DumpEnvelope) -> Array[String] {
     }
     lines.push(Json::object(line).stringify())
   }
+  for id, asset in self.assets {
+    lines.push(
+      Json::object({
+        "record": Json::string("asset"),
+        "id": Json::string(id),
+        "content_type": Json::string(asset.content_type),
+        "size": Json::number(asset.size.to_double()),
+        "data": Json::string(asset.data),
+      }).stringify(),
+    )
+  }
   for record in self.residual {
     guard residual_json(record) is Object(residual_fields) else { continue }
     let line : Map[String, Json] = { "record": Json::string("residual") }
@@ -162,6 +193,7 @@ pub fn DumpEnvelope::to_jsonl_lines(self : DumpEnvelope) -> Array[String] {
       "record": Json::string("end"),
       "stats": Json::object({
         "ops": Json::number(self.ops.length().to_double()),
+        "assets": Json::number(self.assets.length().to_double()),
         "residual": Json::number(self.residual.length().to_double()),
         "warnings": Json::number(self.warnings.length().to_double()),
       }),
@@ -169,6 +201,12 @@ pub fn DumpEnvelope::to_jsonl_lines(self : DumpEnvelope) -> Array[String] {
     }).stringify(),
   )
   lines
+}
+
+///|
+/// Lowercase hex SHA-256 of a byte payload.
+pub fn sha256_hex_bytes(data : BytesView) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(data))
 }
 
 ///|

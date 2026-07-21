@@ -507,6 +507,62 @@ fn dump_sheet_filter(
 }
 
 ///|
+/// Ceiling on one captured asset's payload.
+let dump_max_asset_bytes : Int = 8 * 1024 * 1024
+
+///|
+/// Ceiling on the total captured asset payload per dump.
+let dump_max_total_asset_bytes : Int = 32 * 1024 * 1024
+
+///|
+/// Captures anchored pictures as content-addressed assets. No batch op can
+/// place an image, so every picture is a residual either way; when the
+/// payload fits the allowance it is carried inline (base64) under a
+/// sha256-addressed id, deduplicated across sheets, so nothing binary is
+/// silently lost.
+fn dump_sheet_images(
+  worksheet : @xlsx.Worksheet,
+  sheet : String,
+  assets : Map[String, DumpAsset],
+  total_asset_bytes : Ref[Int],
+  residual : Array[DumpResidual],
+) -> Unit {
+  for image in worksheet.images {
+    let digest = sha256_hex_bytes(image.data)
+    let id = "sha256-" + digest
+    let within = image.data.length() <= dump_max_asset_bytes &&
+      total_asset_bytes.val + image.data.length() <= dump_max_total_asset_bytes
+    if within {
+      if !assets.contains(id) {
+        total_asset_bytes.val += image.data.length()
+        assets[id] = {
+          content_type: image.content_type,
+          size: image.data.length(),
+          data: @base64.encode(image.data),
+        }
+      }
+      residual.push({
+        code: "xlsx.image_unsupported",
+        severity: "dropped",
+        scope: "object",
+        location: dump_location(sheet, "anchor", image.reference),
+        asset: Some(id),
+        detail: "anchored picture; \{XLSX_BATCH_SCHEMA} has no image op (payload carried as an inline asset)",
+      })
+    } else {
+      residual.push({
+        code: "xlsx.image_unsupported",
+        severity: "dropped",
+        scope: "object",
+        location: dump_location(sheet, "anchor", image.reference),
+        asset: None,
+        detail: "anchored picture \{id}; payload exceeds the inline asset allowance and is not carried",
+      })
+    }
+  }
+}
+
+///|
 /// Coarse per-feature residuals for source content PR1 does not yet dump
 /// as ops. Every record names the feature and its count so nothing is
 /// silently missing from the replayed document.
@@ -518,7 +574,6 @@ fn dump_sheet_coverage_residuals(
 ) -> Unit raise {
   let counts : Array[(String, Int)] = [
     ("xlsx.tables_not_dumped", worksheet.tables.length()),
-    ("xlsx.images_not_dumped", worksheet.images.length()),
     ("xlsx.charts_not_dumped", worksheet.charts.length()),
     ("xlsx.hyperlinks_not_dumped", worksheet.hyperlinks.length()),
     ("xlsx.sparklines_not_dumped", worksheet.sparkline_groups.length()),
@@ -795,6 +850,8 @@ pub fn dump_xlsx_workbook(
   cancelled? : () -> Bool = () => false,
 ) -> DumpEnvelope raise {
   let ops : Array[Json] = []
+  let assets : Map[String, DumpAsset] = {}
+  let total_asset_bytes : Ref[Int] = Ref::new(0)
   let residual : Array[DumpResidual] = []
   let warnings : Array[DumpWarning] = []
   let sheet_names = workbook.get_sheet_list()
@@ -831,6 +888,7 @@ pub fn dump_xlsx_workbook(
     dump_sheet_dimensions(worksheet, name, ops, residual)
     dump_sheet_cells(workbook, worksheet, name, ops, residual, cancelled)
     dump_sheet_styles(style_ctx, worksheet, name, ops, residual)
+    dump_sheet_images(worksheet, name, assets, total_asset_bytes, residual)
     dump_sheet_merges(workbook, name, ops, residual)
     dump_sheet_panes(workbook, worksheet, name, ops, residual)
     dump_sheet_filter(workbook, name, ops, residual)
@@ -891,6 +949,7 @@ pub fn dump_xlsx_workbook(
     batch_schema: XLSX_BATCH_SCHEMA,
     create_sheet: Some(create_sheet),
     ops,
+    assets,
     residual,
     warnings,
   }

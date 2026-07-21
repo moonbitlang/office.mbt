@@ -36,7 +36,8 @@ fn require_string(
 /// replayed into a partial workbook. `source` provenance is carried when
 /// well-formed, but `residual`/`warnings` are NOT reconstructed — they are
 /// re-derived when a replayed workbook is dumped again and replay does not
-/// use them, so the returned envelope has empty residual/warnings arrays.
+/// use them, so the returned envelope has empty asset/residual/warnings
+/// collections.
 pub fn parse_dump_envelope(
   document : Json,
 ) -> DumpEnvelope raise DumpParseError {
@@ -114,6 +115,7 @@ pub fn parse_dump_envelope(
     batch_schema,
     create_sheet: Some(create_sheet),
     ops,
+    assets: {},
     residual: [],
     warnings: [],
   }
