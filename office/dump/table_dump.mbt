@@ -95,6 +95,21 @@ fn table_replayed_faithfully(
       (Ok(a), Ok(b)) => if !cell_values_equal(a, b) { return false }
       _ => return false
     }
+    // a header formula must survive as a formula: table creation can
+    // synthesize a literal whose text happens to equal the cached value,
+    // silently replacing the formula
+    let source_formula = try? source.get_cell_formula(
+      candidate.sheet,
+      reference,
+    )
+    let replayed_formula = try? replayed.get_cell_formula(
+      candidate.sheet,
+      reference,
+    )
+    match (source_formula, replayed_formula) {
+      (Ok(a), Ok(b)) => if a != b { return false }
+      _ => return false
+    }
   }
   true
 }
@@ -132,9 +147,32 @@ fn validate_table_ops(
   residual : Array[DumpResidual],
   cancelled : () -> Bool,
 ) -> Array[Json] raise {
+  guard candidates.length() > 0 else { return ops }
+  // parse pre-filter: a candidate op the batch parser rejects outright
+  // (e.g. a range at the grid boundary the expansion refuses) can never
+  // replay; residualize it here so a chunk parse failure below always
+  // means a non-candidate dump bug
+  let parse_dropped : Set[Int] = Set::new()
+  for candidate in candidates {
+    let script = Json::object({
+      "schema": Json::string(XLSX_BATCH_SCHEMA),
+      "ops": Json::array([ops[candidate.op_index]]),
+    })
+    if (try? @batch.parse_script(script)) is Err(error) {
+      parse_dropped.add(candidate.op_index)
+      residual.push(table_residual(candidate, "\{error}"))
+    }
+  }
   let mut current_ops = ops
   let mut current = candidates
-  while current.length() > 0 {
+  if !parse_dropped.is_empty() {
+    let (next_ops, next) = remove_dropped(current_ops, current, parse_dropped)
+    current_ops = next_ops
+    current = next
+  }
+  // replay-verify loop: every returned stream has passed a full replay,
+  // even after the last candidate was dropped
+  for ;; {
     check_cancelled(cancelled)
     let dropped : Set[Int] = Set::new()
     match replay_ops_traced(create_sheet, current_ops) {
@@ -166,38 +204,49 @@ fn validate_table_ops(
           }
         }
         if dropped.is_empty() {
-          // every remaining table op applied and read back faithfully
+          // the stream we return replayed cleanly with every remaining
+          // table faithful
           return current_ops
         }
       }
     }
-    // rebuild the stream without the dropped ops and re-map indices
-    let next_ops : Array[Json] = []
-    let index_map : Map[Int, Int] = {}
-    for index, op in current_ops {
-      if !dropped.contains(index) {
-        index_map[index] = next_ops.length()
-        next_ops.push(op)
-      }
-    }
-    let next : Array[TableCandidate] = []
-    for candidate in current {
-      if !dropped.contains(candidate.op_index) {
-        match index_map.get(candidate.op_index) {
-          Some(new_index) =>
-            next.push({
-              op_index: new_index,
-              sheet: candidate.sheet,
-              table: candidate.table,
-            })
-          None => ()
-        }
-      }
-    }
+    let (next_ops, next) = remove_dropped(current_ops, current, dropped)
     current_ops = next_ops
     current = next
   }
-  current_ops
+}
+
+///|
+/// Rebuilds the op stream without the dropped indices and re-maps the
+/// remaining candidates to their new positions.
+fn remove_dropped(
+  ops : Array[Json],
+  candidates : Array[TableCandidate],
+  dropped : Set[Int],
+) -> (Array[Json], Array[TableCandidate]) {
+  let next_ops : Array[Json] = []
+  let index_map : Map[Int, Int] = {}
+  for index, op in ops {
+    if !dropped.contains(index) {
+      index_map[index] = next_ops.length()
+      next_ops.push(op)
+    }
+  }
+  let next : Array[TableCandidate] = []
+  for candidate in candidates {
+    if !dropped.contains(candidate.op_index) {
+      match index_map.get(candidate.op_index) {
+        Some(new_index) =>
+          next.push({
+            op_index: new_index,
+            sheet: candidate.sheet,
+            table: candidate.table,
+          })
+        None => ()
+      }
+    }
+  }
+  (next_ops, next)
 }
 
 ///|
