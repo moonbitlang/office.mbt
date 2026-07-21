@@ -186,7 +186,7 @@ test "replay rejects an unexpected batch schema even with no ops" {
   }
   try ignore(@dump.replay_xlsx_dump(envelope)) catch {
     @dump.ReplayInvalidFormat(_) => ()
-    error => fail("expected ReplayInvalidFormat, got \{error}")
+    error => fail("expected ReplayInvalidFormat")
   } noraise {
     _ => fail("expected replay to reject an unexpected batch schema")
   }
@@ -207,7 +207,7 @@ test "replay rejects a non-xlsx envelope" {
   }
   try ignore(@dump.replay_xlsx_dump(envelope)) catch {
     @dump.ReplayInvalidFormat(_) => ()
-    error => fail("expected ReplayInvalidFormat, got \{error}")
+    error => fail("expected ReplayInvalidFormat")
   } noraise {
     _ => fail("expected replay to reject a docx envelope")
   }

@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:548b6707
+    Fingerprint: crc32:662c40e8
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:548b6707","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","issues","preview","create","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:662c40e8","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:548b6707","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:548b6707","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:548b6707","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:548b6707","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:548b6707","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:548b6707","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:548b6707","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:548b6707","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:548b6707","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:548b6707","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:548b6707","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:548b6707","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:548b6707","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:548b6707","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:548b6707","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:662c40e8","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:662c40e8","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:662c40e8","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:662c40e8","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:662c40e8","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:662c40e8","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:662c40e8","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:662c40e8","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:662c40e8","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:662c40e8","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:662c40e8","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:662c40e8","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:662c40e8","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:662c40e8","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:662c40e8","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:662c40e8","kind":"command","name":"raw"}]
 
 The raw command publishes explicit subcommand schemas, including every edit
 input and its conditional constraints.
@@ -560,3 +560,36 @@ digest, and a typed refusal for DOCX until that slice lands.
   1
   $ jq -c '{success,code:.error.code}' dump-docx.json
   {"success":false,"code":"office.dump.unsupported_format"}
+
+The replay command reconstructs an XLSX workbook from an office.dump/1
+document by applying its ops through the same engine, then publishes it
+through the atomic create-new path. dump then replay then dump is stable.
+
+  $ xlsx.exe create replay-src.xlsx --sheet Data >/dev/null
+  $ xlsx.exe set replay-src.xlsx Data A1 Region >/dev/null
+  $ xlsx.exe set replay-src.xlsx Data B1 42 >/dev/null
+  $ xlsx.exe formula replay-src.xlsx Data C1 'B1*2' >/dev/null
+  $ office.exe dump replay-src.xlsx --json > replay-src.dump.json
+  $ office.exe replay replay-src.dump.json --output replayed.xlsx --json | jq -c '{success,data:{schema:.data.schema,format:.data.format,ops:.data.ops_applied}}'
+  {"success":true,"data":{"schema":"office.replay/1","format":"xlsx","ops":3}}
+  $ office.exe identify replayed.xlsx
+  xlsx
+  $ office.exe dump replayed.xlsx --json | jq -c '.ops' > round.ops.json
+  $ office.exe dump replay-src.xlsx --json | jq -c '.ops' > orig.ops.json
+  $ diff -q orig.ops.json round.ops.json && echo stable
+  stable
+
+  $ office.exe replay replay-src.dump.json --output replayed.xlsx --json > replay-exists.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code}' replay-exists.json
+  {"success":false,"code":"office.transaction.output_exists"}
+  $ office.exe replay replay-src.dump.json --output replayed.txt --json > replay-ext.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code}' replay-ext.json
+  {"success":false,"code":"office.invalid_arguments"}
+
+  $ printf 'not json' > bad.dump.json
+  $ office.exe replay bad.dump.json --output out.xlsx --json > replay-bad.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code}' replay-bad.json
+  {"success":false,"code":"office.replay.invalid_dump"}
