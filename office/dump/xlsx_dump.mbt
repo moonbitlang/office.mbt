@@ -594,10 +594,6 @@ fn dump_sheet_coverage_residuals(
     ("xlsx.sparklines_not_dumped", worksheet.sparkline_groups.length()),
     ("xlsx.pivot_tables_not_dumped", worksheet.pivot_tables.length()),
     (
-      "xlsx.conditional_formats_not_dumped",
-      (workbook.get_conditional_formats(sheet) catch { _ => Map::new() }).length(),
-    ),
-    (
       "xlsx.comments_not_dumped",
       (workbook.get_comments(sheet) catch { _ => [] }).length(),
     ),
@@ -906,6 +902,9 @@ pub fn dump_xlsx_workbook(
     dump_sheet_panes(workbook, worksheet, name, ops, residual)
     dump_sheet_filter(workbook, name, ops, residual)
     dump_sheet_validations(workbook, name, ops, table_candidates, residual)
+    dump_sheet_conditional_formats(
+      workbook, name, ops, table_candidates, residual,
+    )
     dump_sheet_coverage_residuals(workbook, worksheet, name, residual)
   }
   dump_workbook_residuals(workbook, residual)
