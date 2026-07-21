@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:3f650528
+    Fingerprint: crc32:d4a0e094
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:3f650528","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:d4a0e094","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:3f650528","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:3f650528","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:3f650528","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:3f650528","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:3f650528","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:3f650528","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:3f650528","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:3f650528","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:3f650528","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:3f650528","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:3f650528","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:3f650528","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:3f650528","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:3f650528","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:3f650528","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:3f650528","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"raw"}]
 
 The raw command publishes explicit subcommand schemas, including every edit
 input and its conditional constraints.
@@ -539,8 +539,8 @@ DOCX previews inline the shared HTML converter output in one page shell.
   1
 
 The dump command emits a replayable office.dump/1 op stream: canonical
-ordered batch ops in JSON, the streaming JSONL form with an integrity
-digest, and a typed refusal for DOCX until that slice lands.
+ordered batch ops in JSON and the streaming JSONL form with an integrity
+digest, for XLSX and DOCX packages alike.
 
   $ xlsx.exe create dump.xlsx --sheet Data >/dev/null
   $ xlsx.exe set dump.xlsx Data A1 Region >/dev/null
@@ -556,10 +556,15 @@ digest, and a typed refusal for DOCX until that slice lands.
   $ office.exe dump dump.xlsx
   xlsx dump: 2 op(s), 0 residual, 0 warning(s)
 
-  $ office.exe dump "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --json > dump-docx.json 2>&1; echo $?
-  1
-  $ jq -c '{success,code:.error.code}' dump-docx.json
-  {"success":false,"code":"office.dump.unsupported_format"}
+A DOCX package dumps to docx.batch/2 ops; the writer's default section
+is disclosed as a residual rather than silently regenerated.
+
+  $ office.exe dump "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx"
+  docx dump: 1 op(s), 1 residual, 0 warning(s)
+  $ office.exe dump "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --json | jq -c '{schema,format,batch:.replay.batch_schema,ops:[.ops[].op],residual:[.residual[].code]}'
+  {"schema":"office.dump/1","format":"docx","batch":"docx.batch/2","ops":["paragraph"],"residual":["docx.sections_not_dumped"]}
+  $ office.exe dump "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --jsonl | jq -rc 'select(.record=="end") | (.ops_sha256 | test("^[0-9a-f]{64}$"))'
+  true
 
 The replay command reconstructs an XLSX workbook from an office.dump/1
 document by applying its ops through the same engine, then publishes it

@@ -2,6 +2,7 @@
 package "bobzhang/office/dump"
 
 import {
+  "bobzhang/docx2html/docx",
   "bobzhang/mbtexcel/xlsx",
   "moonbitlang/core/debug",
 }
@@ -10,6 +11,10 @@ import {
 pub const SCHEMA_DUMP : String = "office.dump/1"
 
 pub const XLSX_BATCH_SCHEMA : String = "xlsx.batch/1"
+
+pub fn docx_dump_op_chunks(Array[Json]) -> Array[Array[Json]]
+
+pub fn dump_docx_document(@docx.DocxAnnotatedResult, source_file~ : String, source_bytes~ : Int, source_sha256? : String?, cancelled? : () -> Bool) -> DumpEnvelope raise DumpError
 
 pub fn dump_xlsx_workbook(@xlsx.Workbook, source_file~ : String, source_bytes~ : Int, source_sha256? : String?, cancelled? : () -> Bool) -> DumpEnvelope raise
 

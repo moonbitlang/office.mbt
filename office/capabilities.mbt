@@ -677,12 +677,12 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
     },
     {
       name: "dump",
-      summary: "Dump an XLSX package as a replayable office.dump/1 op stream",
+      summary: "Dump an XLSX or DOCX package as a replayable office.dump/1 op stream",
       usage: "office dump FILE [--json|--jsonl]",
-      formats: ["xlsx"],
+      formats: ["xlsx", "docx"],
       aliases: [],
       inputs: [
-        capability_field("file", "path", true, "existing XLSX package"),
+        capability_field("file", "path", true, "existing XLSX or DOCX package"),
         capability_field(
           "json", "boolean", false, "emit the office.dump/1 JSON document",
         ),
@@ -695,7 +695,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "schema", "literal(office.dump/1)", true, "versioned replayable dump schema",
         ),
         capability_field(
-          "format", "literal(xlsx)", true, "the structurally verified package format",
+          "format", "enum(xlsx|docx)", true, "the structurally verified package format",
         ),
         capability_field(
           "source", "object", true, "bounded input path, byte count, and sha256 digest (excluded from fixpoint comparison)",

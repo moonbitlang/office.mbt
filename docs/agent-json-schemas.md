@@ -683,18 +683,20 @@ document content, followed only on an explicit click.
 
 ### `office.dump/1` (`office dump FILE [--json|--jsonl]`)
 
-A replayable semantic dump: the workbook re-expressed as an ordered stream
-of canonical `xlsx.batch/1` ops in their exact engine JSON shapes, so
-replaying the ops through the same strict batch engine reconstructs an
-equivalent document — never a second writer. Everything the op vocabulary
-cannot express becomes an ordered, machine-readable `residual` record
-(error cells, array formulas, rich-text flattening, styles, images,
-charts, and so on), so loss is always visible rather than silent. Before
-the envelope is returned, every produced op chunk is dry-run parsed through
-the real batch parser, so a dump can never emit a script the engine would
-refuse. XLSX only for now; DOCX is a later slice and is refused with
-`office.dump.unsupported_format`. Byte-identical replay is an explicit
-non-goal; formula cells carry no cached value and require recalculation.
+A replayable semantic dump: the document re-expressed as an ordered stream
+of canonical batch ops in their exact engine JSON shapes — `xlsx.batch/1`
+for workbooks, `docx.batch/2` for word documents — so replaying the ops
+through the same strict batch engine reconstructs an equivalent document,
+never a second writer. Everything the op vocabulary cannot express becomes
+an ordered, machine-readable `residual` record (error cells, array
+formulas, rich-text flattening, styles, images, charts on the XLSX side;
+headers/footers, sections, notes, comments, bookmarks on the DOCX side),
+so loss is always visible rather than silent. Before the envelope is
+returned, every produced op chunk is dry-run parsed through the real batch
+parser, so a dump can never emit a script the engine would refuse.
+Byte-identical replay is an explicit non-goal; XLSX formula cells carry no
+cached value and require recalculation, and a replayed DOCX carries the
+writer's default section properties.
 
 `--json` prints the single-document form below. `--jsonl` prints the
 streaming form: one `header` line, one `op` line per op (with its 0-based
