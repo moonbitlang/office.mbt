@@ -527,7 +527,7 @@ test "links and images inside note bodies degrade honestly" {
   assert_false(rendered.contains("\"image\":"))
   let codes = residual.map(entry => entry.code)
   assert_true(codes.contains("docx.link_dropped"))
-  assert_true(codes.contains("docx.comment_image_dropped"))
+  assert_true(codes.contains("docx.annotation_image_dropped"))
   // no asset captured for the disclosed-in-note image
   assert_eq(ctx.assets.size(), 0)
   // and the emitted op parses through the real batch parser
@@ -544,4 +544,64 @@ test "links and images inside note bodies degrade honestly" {
       }),
     ),
   )
+}
+
+///|
+/// Kimi #203 round-2 finding: an unsupported-type occurrence capturing a
+/// payload FIRST must not poison a later supported-type occurrence of
+/// the same bytes into an unwritable op — document order cannot decide
+/// between an op and an abort.
+test "dedup-first unsupported type cannot poison a later supported use" {
+  let residual : Array[DumpResidual] = []
+  let ctx = wb_ctx(residual)
+  let payload : Bytes = "shared-payload-bytes"
+  // first occurrence: TIFF — carried as an asset, disclosed, no op
+  let out1 : Array[Json] = []
+  docx_run_specs(
+    [
+      @document.Image(@document.Image::{
+        content_type: "image/tiff",
+        alt_text: None,
+        data: payload,
+      }),
+    ],
+    @document.run_properties(),
+    0,
+    ctx,
+    out1,
+    in_note_body=false,
+    plain=false,
+  )
+  assert_eq(out1.length(), 1) // the forced empty segment only
+  assert_false(out1[0].stringify().contains("\"image\":"))
+  // second occurrence: same bytes declared PNG — dedup resolves to the
+  // stored TIFF entry, so the op would carry an unwritable type; it must
+  // residualize instead
+  let out2 : Array[Json] = []
+  docx_run_specs(
+    [
+      @document.Image(@document.Image::{
+        content_type: "image/png",
+        alt_text: None,
+        data: payload,
+      }),
+    ],
+    @document.run_properties(),
+    1,
+    ctx,
+    out2,
+    in_note_body=false,
+    plain=false,
+  )
+  for spec in out2 {
+    assert_false(spec.stringify().contains("\"image\":"))
+  }
+  assert_eq(ctx.assets.size(), 1)
+  let unsupported = residual.filter(entry => {
+    entry.code == "docx.image_content_type_unsupported"
+  })
+  assert_eq(unsupported.length(), 2)
+  guard unsupported[1].asset is Some(_) else {
+    fail("the poisoned occurrence must reference the carried asset")
+  }
 }

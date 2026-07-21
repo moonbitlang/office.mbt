@@ -9,6 +9,11 @@
 /// Every emitted op chunk must parse through the real batch parser
 /// (dump-time self-check); the replay fixpoint lands with the replay
 /// command.
+///
+/// This package deliberately imports the docx2html WRITER as well as the
+/// reader: values only the writer validates (comment dates today) are
+/// gated by constructing the writer's own specs — a real-contract oracle
+/// instead of a mirror that can drift.
 
 ///|
 /// The paragraph styles the batch writer accepts. Mirrors the parser's
@@ -124,13 +129,19 @@ fn docx_image_spec(
   // so gate here — the payload is still carried as an asset
   if !(image.content_type is ("image/png" | "image/jpeg" | "image/gif")) {
     let carried = docx_capture_asset(ctx, image.data, image.content_type, block)
+    let carriage = match carried {
+      Some(_) => "; the payload is carried as an asset"
+      None =>
+        "; the payload exceeds the inline asset allowance and is not carried"
+    }
     ctx.residual.push({
       code: "docx.image_content_type_unsupported",
       severity: "dropped",
       scope: "block",
       location: docx_location(block),
       asset: carried,
-      detail: "image content type '\{bounded_reason(image.content_type)}' is outside the writable set (png, jpeg, gif); the payload is carried as an asset",
+      detail: "image content type '\{bounded_reason(image.content_type)}' is outside the writable set (png, jpeg, gif)" +
+      carriage,
     })
     return None
   }
@@ -143,6 +154,20 @@ fn docx_image_spec(
       let carried_type = match ctx.assets.get(id) {
         Some(asset) => asset.content_type
         None => image.content_type
+      }
+      // the carried type can be unwritable when an unsupported-type
+      // occurrence captured this payload FIRST (dedup keeps the first
+      // entry); the op must never carry a type the parser rejects
+      if !(carried_type is ("image/png" | "image/jpeg" | "image/gif")) {
+        ctx.residual.push({
+          code: "docx.image_content_type_unsupported",
+          severity: "dropped",
+          scope: "block",
+          location: docx_location(block),
+          asset: Some(id),
+          detail: "the carried asset's content type '\{bounded_reason(carried_type)}' is outside the writable set (png, jpeg, gif)",
+        })
+        return None
       }
       let spec : Map[String, Json] = {
         "path": Json::string(id),
@@ -464,7 +489,7 @@ fn docx_run_specs(
           // comment bodies take plain content only
           ctx.residual.push(
             docx_residual(
-              "docx.comment_image_dropped",
+              "docx.annotation_image_dropped",
               "block",
               docx_location(block),
               "an image inside a note or comment body is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
@@ -733,7 +758,7 @@ fn docx_inline_specs(
         if plain {
           ctx.residual.push(
             docx_residual(
-              "docx.comment_image_dropped",
+              "docx.annotation_image_dropped",
               "block",
               docx_location(block),
               "an image inside a note or comment body is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
