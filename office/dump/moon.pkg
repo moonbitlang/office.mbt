@@ -9,6 +9,7 @@ import {
 }
 
 import {
+  "bobzhang/mbtexcel/batch",
   "bobzhang/mbtexcel/xlsx",
   "bobzhang/office/dump",
 } for "test"

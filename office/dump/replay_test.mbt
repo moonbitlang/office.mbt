@@ -144,6 +144,54 @@ test "the shared chunking policy splits on both op and style ceilings" {
   assert_eq(by_styles.length(), 2)
   assert_eq(by_styles[0].length(), 4096)
   assert_eq(by_styles[1].length(), 1)
+  // a highlighted cf op mints a dxf at parse time, so it counts against
+  // the style budget exactly like a style op; an unhighlighted one (a
+  // color scale) does not
+  let highlighted : Array[Json] = []
+  for _ in 0..<4097 {
+    highlighted.push(
+      Json::object({
+        "op": Json::string("cf"),
+        "params": Json::object({
+          "sheet": Json::string("Data"),
+          "range": Json::string("A1:A5"),
+          "type": Json::string("cell"),
+          "criteria": Json::string(">"),
+          "value": Json::string("5"),
+          "fill": Json::string("FFCC00"),
+        }),
+      }),
+    )
+  }
+  let by_cf = @dump.xlsx_dump_op_chunks(highlighted)
+  assert_eq(by_cf.length(), 2)
+  assert_eq(by_cf[0].length(), 4096)
+  assert_eq(by_cf[1].length(), 1)
+  // and the first chunk must actually satisfy the batch parser's budget
+  ignore(
+    @batch.parse_script(
+      Json::object({
+        "schema": Json::string("xlsx.batch/1"),
+        "ops": Json::array(by_cf[0]),
+      }),
+    ),
+  )
+  let plain_cf : Array[Json] = []
+  for _ in 0..<4097 {
+    plain_cf.push(
+      Json::object({
+        "op": Json::string("cf"),
+        "params": Json::object({
+          "sheet": Json::string("Data"),
+          "range": Json::string("A1:A5"),
+          "type": Json::string("2_color_scale"),
+          "min_color": Json::string("FF0000"),
+          "max_color": Json::string("00FF00"),
+        }),
+      }),
+    )
+  }
+  assert_eq(@dump.xlsx_dump_op_chunks(plain_cf).length(), 1)
 }
 
 ///|

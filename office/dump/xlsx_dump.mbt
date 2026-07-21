@@ -594,10 +594,6 @@ fn dump_sheet_coverage_residuals(
     ("xlsx.sparklines_not_dumped", worksheet.sparkline_groups.length()),
     ("xlsx.pivot_tables_not_dumped", worksheet.pivot_tables.length()),
     (
-      "xlsx.conditional_formats_not_dumped",
-      (workbook.get_conditional_formats(sheet) catch { _ => Map::new() }).length(),
-    ),
-    (
       "xlsx.comments_not_dumped",
       (workbook.get_comments(sheet) catch { _ => [] }).length(),
     ),
@@ -798,9 +794,21 @@ fn dump_workbook_residuals(
 
 ///|
 /// A produced op is a new-style op when the batch parser would count it
-/// against the per-script `MAX_TOTAL_NEW_STYLES` budget.
+/// against the per-script `MAX_TOTAL_NEW_STYLES` budget: every `style` op,
+/// and every `cf` op carrying a highlight (the parser mints a dxf for
+/// fill/font_color/bold/italic). The dump emits `bold`/`italic` only when
+/// true, so key presence is exactly the parser's style-counting condition
+/// for produced ops.
 fn op_creates_style(op : Json) -> Bool {
-  op is Object({ "op": String("style"), .. })
+  match op {
+    Object({ "op": String("style"), .. }) => true
+    Object({ "op": String("cf"), "params": Object(params), .. }) =>
+      params.contains("fill") ||
+      params.contains("font_color") ||
+      params.contains("bold") ||
+      params.contains("italic")
+    _ => false
+  }
 }
 
 ///|
@@ -906,6 +914,9 @@ pub fn dump_xlsx_workbook(
     dump_sheet_panes(workbook, worksheet, name, ops, residual)
     dump_sheet_filter(workbook, name, ops, residual)
     dump_sheet_validations(workbook, name, ops, table_candidates, residual)
+    dump_sheet_conditional_formats(
+      workbook, name, ops, table_candidates, residual,
+    )
     dump_sheet_coverage_residuals(workbook, worksheet, name, residual)
   }
   dump_workbook_residuals(workbook, residual)

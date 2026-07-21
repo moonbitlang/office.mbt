@@ -1031,3 +1031,174 @@ test "two validations on the same region both survive" {
   )
   assert_eq(Json::array(d1.ops).stringify(), Json::array(d2.ops).stringify())
 }
+
+///|
+test "a highlighted cell rule becomes a cf op and survives the fixpoint" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell_int("Data", "A1", 7)
+  let rule = @xlsx.ConditionalFormatOptions::new("cell")
+  rule.set_criteria(">")
+  rule.set_value("5")
+  let style = @batch.build_style(
+    bold=true,
+    italic=false,
+    number_format="",
+    fill="FFCC00",
+    font_color="",
+    align="",
+  )
+  rule.set_format(Some(workbook.new_conditional_style(style)))
+  workbook.set_conditional_format("Data", "A1:A5", [rule])
+  let d1 = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="cf.xlsx",
+    source_bytes=1,
+  )
+  let document = d1.to_json_document().stringify()
+  assert_true(document.contains("\"op\":\"cf\""))
+  assert_true(document.contains("\"type\":\"cell\""))
+  assert_true(document.contains("\"fill\":\"FFCC00\""))
+  assert_false(document.contains("xlsx.conditional_format_unsupported"))
+  let d2 = @dump.dump_xlsx_workbook(
+    @dump.replay_xlsx_dump(d1),
+    source_file="cf.xlsx",
+    source_bytes=1,
+  )
+  assert_eq(Json::array(d1.ops).stringify(), Json::array(d2.ops).stringify())
+}
+
+///|
+test "a three color scale round-trips without a highlight style" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let rule = @xlsx.ConditionalFormatOptions::new("3_color_scale")
+  rule.set_min_color("FF0000")
+  rule.set_mid_color("FFFF00")
+  rule.set_max_color("00FF00")
+  workbook.set_conditional_format("Data", "B1:B9", [rule])
+  let d1 = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="scale.xlsx",
+    source_bytes=1,
+  )
+  let document = d1.to_json_document().stringify()
+  assert_true(document.contains("\"type\":\"3_color_scale\""))
+  assert_false(document.contains("xlsx.conditional_format_unsupported"))
+  let d2 = @dump.dump_xlsx_workbook(
+    @dump.replay_xlsx_dump(d1),
+    source_file="scale.xlsx",
+    source_bytes=1,
+  )
+  assert_eq(Json::array(d1.ops).stringify(), Json::array(d2.ops).stringify())
+}
+
+///|
+test "an inexpressible rule type residualizes with its name" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let rule = @xlsx.ConditionalFormatOptions::new("duplicate")
+  let style = @batch.build_style(
+    bold=false,
+    italic=true,
+    number_format="",
+    fill="",
+    font_color="",
+    align="",
+  )
+  rule.set_format(Some(workbook.new_conditional_style(style)))
+  workbook.set_conditional_format("Data", "C1:C9", [rule])
+  let envelope = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="dup-rule.xlsx",
+    source_bytes=1,
+  )
+  let document = envelope.to_json_document().stringify()
+  assert_false(document.contains("\"op\":\"cf\""))
+  assert_true(document.contains("xlsx.conditional_format_unsupported"))
+  assert_true(document.contains("'duplicate'"))
+}
+
+///|
+test "an extended data bar stays honest through the fixpoint" {
+  // bar_solid/bar_direction take the engine's x14 path; whichever way the
+  // reader models it, the dump must carry a faithful op or disclose it
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let rule = @xlsx.ConditionalFormatOptions::new("data_bar")
+  rule.set_bar_color("638EC6")
+  rule.set_bar_solid(true)
+  rule.set_bar_direction("rightToLeft")
+  workbook.set_conditional_format("Data", "D1:D9", [rule])
+  let envelope = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="bar.xlsx",
+    source_bytes=1,
+  )
+  let document = envelope.to_json_document().stringify()
+  let has_op = document.contains("\"op\":\"cf\"")
+  let has_residual = document.contains("xlsx.conditional_format_unsupported")
+  assert_true(has_op != has_residual)
+  if has_op {
+    let d2 = @dump.dump_xlsx_workbook(
+      @dump.replay_xlsx_dump(envelope),
+      source_file="bar.xlsx",
+      source_bytes=1,
+    )
+    assert_eq(
+      Json::array(envelope.ops).stringify(),
+      Json::array(d2.ops).stringify(),
+    )
+  }
+}
+
+///|
+test "two rules on one range both survive in order" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let first = @xlsx.ConditionalFormatOptions::new("cell")
+  first.set_criteria(">")
+  first.set_value("5")
+  let style_a = @batch.build_style(
+    bold=true,
+    italic=false,
+    number_format="",
+    fill="",
+    font_color="",
+    align="",
+  )
+  first.set_format(Some(workbook.new_conditional_style(style_a)))
+  let second = @xlsx.ConditionalFormatOptions::new("cell")
+  second.set_criteria("<")
+  second.set_value("2")
+  let style_b = @batch.build_style(
+    bold=false,
+    italic=false,
+    number_format="",
+    fill="FF0000",
+    font_color="",
+    align="",
+  )
+  second.set_format(Some(workbook.new_conditional_style(style_b)))
+  workbook.set_conditional_format("Data", "E1:E9", [first, second])
+  let d1 = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="two.xlsx",
+    source_bytes=1,
+  )
+  let mut cf_ops = 0
+  for op in d1.ops {
+    if op.stringify().contains("\"op\":\"cf\"") {
+      cf_ops += 1
+    }
+  }
+  assert_eq(cf_ops, 2)
+  let document = d1.to_json_document().stringify()
+  assert_false(document.contains("xlsx.conditional_format_unsupported"))
+  let d2 = @dump.dump_xlsx_workbook(
+    @dump.replay_xlsx_dump(d1),
+    source_file="two.xlsx",
+    source_bytes=1,
+  )
+  assert_eq(Json::array(d1.ops).stringify(), Json::array(d2.ops).stringify())
+}

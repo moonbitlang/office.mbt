@@ -3,6 +3,29 @@
 priv enum ObjectPayload {
   TableObject(@xlsx.Table)
   ValidationObject(@xlsx.DataValidation, String)
+  ConditionalObject(@xlsx.ConditionalFormatOptions, String)
+}
+
+///|
+/// The region a payload's replay comparison keys on, used for the per-
+/// region ordinal pairing. Payload kinds append to distinct stores, so
+/// ordinals only count peers of the same kind.
+fn payload_region(payload : ObjectPayload) -> String? {
+  match payload {
+    TableObject(_) => None
+    ValidationObject(_, region) => Some(region)
+    ConditionalObject(_, sqref) => Some(sqref)
+  }
+}
+
+///|
+fn same_payload_kind(a : ObjectPayload, b : ObjectPayload) -> Bool {
+  match (a, b) {
+    (TableObject(_), TableObject(_)) => true
+    (ValidationObject(_, _), ValidationObject(_, _)) => true
+    (ConditionalObject(_, _), ConditionalObject(_, _)) => true
+    _ => false
+  }
 }
 
 ///|
@@ -65,29 +88,41 @@ fn object_replayed_faithfully(
   candidate : TableCandidate,
   peers : Array[TableCandidate],
 ) -> Bool {
+  let ordinal_for = (region : String) => {
+    let mut ordinal = 0
+    for peer in peers {
+      if peer.op_index >= candidate.op_index {
+        break
+      }
+      if peer.sheet == candidate.sheet &&
+        same_payload_kind(peer.payload, candidate.payload) &&
+        payload_region(peer.payload) is Some(peer_region) &&
+        peer_region == region {
+        ordinal += 1
+      }
+    }
+    ordinal
+  }
   match candidate.payload {
     TableObject(table) =>
       table_replayed_faithfully(source, replayed, candidate.sheet, table)
-    ValidationObject(validation, region) => {
-      let mut ordinal = 0
-      for peer in peers {
-        if peer.op_index >= candidate.op_index {
-          break
-        }
-        if peer.sheet == candidate.sheet &&
-          peer.payload is ValidationObject(_, peer_region) &&
-          peer_region == region {
-          ordinal += 1
-        }
-      }
+    ValidationObject(validation, region) =>
       validation_replayed_faithfully(
         replayed,
         candidate.sheet,
         validation,
         region,
-        ordinal,
+        ordinal_for(region),
       )
-    }
+    ConditionalObject(rule, sqref) =>
+      conditional_replayed_faithfully(
+        source,
+        replayed,
+        candidate.sheet,
+        rule,
+        sqref,
+        ordinal_for(sqref),
+      )
   }
 }
 
@@ -353,6 +388,7 @@ fn table_residual(candidate : TableCandidate, reason : String) -> DumpResidual {
         detail: "data validation does not replay faithfully through \{XLSX_BATCH_SCHEMA}: " +
         bounded_reason(reason),
       }
+    ConditionalObject(_, sqref) => cf_residual(candidate.sheet, sqref, reason)
   }
 }
 
