@@ -707,10 +707,15 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "ops", "array", true, "ordered canonical xlsx.batch/1 ops in engine JSON shapes",
         ),
         capability_field(
+          "assets", "object", true, "content-addressed binaries: sha256-<hex> id to {content_type, size, data} inline base64 under per-asset and total allowances",
+        ),
+        capability_field(
           "residual", "array", true, "ordered machine-readable records of content not expressible as ops",
         ),
         capability_field("warnings", "array", true, "bounded dump diagnostics"),
-        capability_field("stats", "object", true, "op/residual/warning counts"),
+        capability_field(
+          "stats", "object", true, "op/asset/residual/warning counts",
+        ),
       ],
       output_modes: ["human", "json", "jsonl"],
       variants: [],

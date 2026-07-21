@@ -181,6 +181,7 @@ test "replay rejects an unexpected batch schema even with no ops" {
     batch_schema: "xlsx.batch/2",
     create_sheet: Some("Start"),
     ops: [],
+    assets: {},
     residual: [],
     warnings: [],
   }
@@ -202,6 +203,7 @@ test "replay rejects a non-xlsx envelope" {
     batch_schema: "docx.batch/2",
     create_sheet: None,
     ops: [],
+    assets: {},
     residual: [],
     warnings: [],
   }

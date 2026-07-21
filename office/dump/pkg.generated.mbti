@@ -17,6 +17,8 @@ pub fn parse_dump_envelope(Json) -> DumpEnvelope raise DumpParseError
 
 pub fn replay_xlsx_dump(DumpEnvelope) -> @xlsx.Workbook raise ReplayError
 
+pub fn sha256_hex_bytes(BytesView) -> String
+
 pub fn sha256_hex_string(String) -> String
 
 pub fn xlsx_dump_op_chunks(Array[Json]) -> Array[Array[Json]]
@@ -38,6 +40,12 @@ pub suberror ReplayError {
 } derive(@debug.Debug)
 
 // Types and methods
+pub(all) struct DumpAsset {
+  content_type : String
+  size : Int
+  data : String
+} derive(Eq, ToJson)
+
 pub(all) struct DumpEnvelope {
   format : String
   source_file : String
@@ -46,6 +54,7 @@ pub(all) struct DumpEnvelope {
   batch_schema : String
   create_sheet : String?
   ops : Array[Json]
+  assets : Map[String, DumpAsset]
   residual : Array[DumpResidual]
   warnings : Array[DumpWarning]
 }

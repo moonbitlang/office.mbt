@@ -139,10 +139,12 @@ test "the dump document is canonical, ordered, and replay-shaped" {
       #|      }
       #|    }
       #|  ],
+      #|  "assets": {},
       #|  "residual": [],
       #|  "warnings": [],
       #|  "stats": {
       #|    "ops": 12,
+      #|    "assets": 0,
       #|    "residual": 0,
       #|    "warnings": 0
       #|  }
@@ -555,6 +557,138 @@ test "a shared unexpressible style reports one residual across sheets" {
     }
   }
   assert_eq(style_residuals, 1)
+}
+
+///|
+/// A valid 1x1 PNG (the writer needs a real header for dimensions).
+let dump_probe_png : Bytes = [
+  0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48,
+  0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00,
+  0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78,
+  0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00,
+  0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+]
+
+///|
+test "anchored pictures become content-addressed assets with residuals" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "x")
+  // the same image anchored twice dedups to one asset, two residuals
+  workbook.add_image("Data", "C2", dump_probe_png, "png", "image/png")
+  workbook.add_image("Data", "E5", dump_probe_png, "png", "image/png")
+  let envelope = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="img.xlsx",
+    source_bytes=1,
+  )
+  assert_eq(envelope.assets.length(), 1)
+  let expected_id = "sha256-" + @dump.sha256_hex_bytes(dump_probe_png)
+  guard envelope.assets.get(expected_id) is Some(asset) else {
+    fail("expected the asset under its digest id")
+  }
+  assert_eq(asset.content_type, "image/png")
+  assert_eq(asset.size, dump_probe_png.length())
+  let mut image_residuals = 0
+  for record in envelope.residual {
+    if record.code == "xlsx.image_unsupported" {
+      image_residuals += 1
+      assert_true(record.asset is Some(_))
+    }
+  }
+  assert_eq(image_residuals, 2)
+  // document + JSONL forms carry the asset and count it
+  let document = envelope.to_json_document().stringify()
+  assert_true(document.contains("\"" + expected_id + "\""))
+  assert_true(document.contains("\"assets\":1"))
+  let lines = envelope.to_jsonl_lines()
+  let mut asset_lines = 0
+  for line in lines {
+    if line.contains("\"record\":\"asset\"") {
+      asset_lines += 1
+    }
+  }
+  assert_eq(asset_lines, 1)
+}
+
+///|
+test "oversized image payloads are disclosed without an asset entry" {
+  // a real PNG header followed by padding past the 8 MiB per-asset cap
+  let padded : Array[Byte] = []
+  for byte in dump_probe_png {
+    padded.push(byte)
+  }
+  for _ in 0..<(8 * 1024 * 1024) {
+    padded.push(0)
+  }
+  let big = Bytes::from_array(padded)
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "x")
+  workbook.add_image("Data", "C2", big, "png", "image/png")
+  let envelope = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="big.xlsx",
+    source_bytes=1,
+  )
+  assert_eq(envelope.assets.length(), 0)
+  let document = envelope.to_json_document().stringify()
+  assert_true(document.contains("xlsx.image_unsupported"))
+  assert_true(document.contains("exceeds the inline asset allowance"))
+}
+
+///|
+test "a duplicate encountered after the total cap is still referenced" {
+  // four distinct payloads at exactly the 8 MiB per-asset cap fill the
+  // 32 MiB total; a later DUPLICATE of the first must still reference its
+  // asset (dedup adds no bytes), while a later distinct image is disclosed
+  // without an entry
+  fn padded(tag : Byte) -> Bytes {
+    let bytes : Array[Byte] = []
+    for b in dump_probe_png {
+      bytes.push(b)
+    }
+    bytes.push(tag)
+    for _ in 0..<(8 * 1024 * 1024 - dump_probe_png.length() - 1) {
+      bytes.push(0)
+    }
+    Bytes::from_array(bytes)
+  }
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "x")
+  let first = padded(1)
+  workbook.add_image("Data", "B2", first, "png", "image/png")
+  workbook.add_image("Data", "C2", padded(2), "png", "image/png")
+  workbook.add_image("Data", "D2", padded(3), "png", "image/png")
+  workbook.add_image("Data", "E2", padded(4), "png", "image/png")
+  // duplicate of the first payload, encountered at the exhausted total
+  workbook.add_image("Data", "F2", first, "png", "image/png")
+  // a small distinct payload after exhaustion is disclosed, not carried
+  workbook.add_image("Data", "G2", dump_probe_png, "png", "image/png")
+  let envelope = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="cap.xlsx",
+    source_bytes=1,
+  )
+  assert_eq(envelope.assets.length(), 4)
+  let first_id = "sha256-" + @dump.sha256_hex_bytes(first)
+  let mut first_refs = 0
+  let mut uncarried = 0
+  for record in envelope.residual {
+    if record.code == "xlsx.image_unsupported" {
+      if record.asset is Some(id) && id == first_id {
+        first_refs += 1
+      }
+      if record.asset is None {
+        uncarried += 1
+      }
+    }
+  }
+  // both anchors of the first payload reference the same carried asset
+  assert_eq(first_refs, 2)
+  // only the post-exhaustion distinct payload is uncarried
+  assert_eq(uncarried, 1)
 }
 
 ///|
