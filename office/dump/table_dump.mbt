@@ -97,17 +97,29 @@ fn table_replayed_faithfully(
     }
     // a header formula must survive as a formula: table creation can
     // synthesize a literal whose text happens to equal the cached value,
-    // silently replacing the formula
-    let source_formula = try? source.get_cell_formula(
-      candidate.sheet,
-      reference,
-    )
-    let replayed_formula = try? replayed.get_cell_formula(
-      candidate.sheet,
-      reference,
-    )
-    match (source_formula, replayed_formula) {
-      (Ok(a), Ok(b)) => if a != b { return false }
+    // silently replacing the formula. Presence is compared through the
+    // formula-info accessor because get_cell_formula returns None for
+    // shared-formula followers with empty stored text — presence, not
+    // text, is what a follower loses.
+    let source_info = match source.sheet(candidate.sheet) {
+      Some(source_sheet) => try? source_sheet.get_cell_formula_info_rc(row, col)
+      None => return false
+    }
+    let replayed_info = match replayed.sheet(candidate.sheet) {
+      Some(replayed_sheet) =>
+        try? replayed_sheet.get_cell_formula_info_rc(row, col)
+      None => return false
+    }
+    match (source_info, replayed_info) {
+      (Ok(a), Ok(b)) => {
+        if (a is Some(_)) != (b is Some(_)) {
+          return false
+        }
+        match (a, b) {
+          (Some(sa), Some(sb)) => if sa.formula != sb.formula { return false }
+          _ => ()
+        }
+      }
       _ => return false
     }
   }
@@ -192,6 +204,28 @@ fn validate_table_ops(
           raise DumpSelfCheckFailed(
             "op \{index} failed to apply during validation: \{message}",
           )
+        }
+      }
+      ChunkParseFailed(span_start, span_end, message) => {
+        // aggregate limits are cumulative, so the last candidate in the
+        // failing chunk is the marginal contributor: drop it, disclose it,
+        // and re-validate. With no candidate in the span this is a
+        // non-candidate dump bug.
+        let mut last : TableCandidate? = None
+        for candidate in current {
+          if candidate.op_index >= span_start && candidate.op_index < span_end {
+            last = Some(candidate)
+          }
+        }
+        match last {
+          Some(candidate) => {
+            dropped.add(candidate.op_index)
+            residual.push(table_residual(candidate, message))
+          }
+          None =>
+            raise DumpSelfCheckFailed(
+              "chunk [\{span_start}, \{span_end}) failed to parse during validation: \{message}",
+            )
         }
       }
       Replayed(replayed) => {

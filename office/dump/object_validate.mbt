@@ -7,6 +7,7 @@
 priv enum ReplayOutcome {
   Replayed(@xlsx.Workbook)
   FailedAt(Int, String)
+  ChunkParseFailed(Int, Int, String)
 }
 
 ///|
@@ -30,7 +31,9 @@ fn replay_ops_traced(
       "ops": Json::array(chunk),
     })
     let parsed = @batch.parse_script(script) catch {
-      error => raise DumpSelfCheckFailed("\{error}")
+      // aggregate plan limits can reject a chunk whose ops each parse
+      // alone; report the chunk span so validation can attribute it
+      error => return ChunkParseFailed(base, base + chunk.length(), "\{error}")
     }
     for offset, op in parsed {
       match (try? @batch.apply_op(workbook, op)) {
