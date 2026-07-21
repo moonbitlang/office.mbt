@@ -725,3 +725,80 @@ test "a workbook with only chart sheets is refused with a typed error" {
     _ => fail("expected an empty workbook to be refused")
   }
 }
+
+///|
+test "a faithful table becomes an op and survives the replay fixpoint" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "Region")
+  workbook.set_cell("Data", "B1", "Sales")
+  workbook.set_cell("Data", "A2", "East")
+  workbook.set_cell_int("Data", "B2", 10)
+  let opts = @xlsx.TableOptions::new("A1:B2")
+  opts.set_name("Sales")
+  opts.set_style_name("TableStyleMedium9")
+  opts.set_show_row_stripes(Some(true))
+  ignore(workbook.add_table("Data", opts))
+  let d1 = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="tbl.xlsx",
+    source_bytes=1,
+  )
+  let document = d1.to_json_document().stringify()
+  assert_true(document.contains("\"op\":\"table\""))
+  assert_true(document.contains("\"name\":\"Sales\""))
+  assert_false(document.contains("xlsx.table_unsupported"))
+  // the emitted table op replays into a real table and re-dumps identically
+  let replayed = @dump.replay_xlsx_dump(d1)
+  guard replayed.sheet("Data") is Some(sheet) else { fail("missing sheet") }
+  assert_eq(sheet.tables.length(), 1)
+  let d2 = @dump.dump_xlsx_workbook(
+    replayed,
+    source_file="tbl.xlsx",
+    source_bytes=1,
+  )
+  assert_eq(Json::array(d1.ops).stringify(), Json::array(d2.ops).stringify())
+}
+
+///|
+test "a table whose replay diverges becomes a residual, not a lossy op" {
+  // a hidden-header table: the reader's model range differs from what the
+  // add-table API would produce on replay, so readback diverges
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "Region")
+  workbook.set_cell("Data", "B1", "Sales")
+  workbook.set_cell("Data", "A2", "East")
+  workbook.set_cell_int("Data", "B2", 10)
+  workbook.set_cell("Data", "A3", "West")
+  workbook.set_cell_int("Data", "B3", 20)
+  let opts = @xlsx.TableOptions::new("A1:B3")
+  opts.set_name("Hidden")
+  opts.set_show_header_row(Some(false))
+  ignore(workbook.add_table("Data", opts))
+  let envelope = @dump.dump_xlsx_workbook(
+    workbook,
+    source_file="hidden-header.xlsx",
+    source_bytes=1,
+  )
+  let document = envelope.to_json_document().stringify()
+  guard workbook.sheet("Data") is Some(sheet) else { fail("missing sheet") }
+  guard sheet.tables is [table] else { fail("expected one source table") }
+  // whichever way the engine models the hidden header, the dump must
+  // either carry a faithful op or disclose the table — never neither
+  let has_op = document.contains("\"op\":\"table\"")
+  let has_residual = document.contains("xlsx.table_unsupported")
+  assert_true(has_op != has_residual)
+  if has_op {
+    // if emitted, it must genuinely replay to the same model
+    let replayed = @dump.replay_xlsx_dump(envelope)
+    guard replayed.sheet("Data") is Some(replayed_sheet) else {
+      fail("missing replayed sheet")
+    }
+    guard replayed_sheet.tables is [replayed_table] else {
+      fail("expected one replayed table")
+    }
+    assert_eq(replayed_table.range_ref, table.range_ref)
+    assert_eq(replayed_table.show_header_row, table.show_header_row)
+  }
+}
