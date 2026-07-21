@@ -68,6 +68,10 @@ pub const SCHEMA_PREVIEW_RESULT : String = "office.preview/1"
 pub const SCHEMA_DUMP_RESULT : String = "office.dump/1"
 
 ///|
+/// Versioned result schema emitted by `office replay`.
+pub const SCHEMA_REPLAY_RESULT : String = "office.replay/1"
+
+///|
 pub const SCHEMA_XLSX_BATCH_RESULT : String = "office.xlsx.batch/1"
 
 ///|
@@ -707,6 +711,49 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         ),
         capability_field("warnings", "array", true, "bounded dump diagnostics"),
         capability_field("stats", "object", true, "op/residual/warning counts"),
+      ],
+      output_modes: ["human", "json", "jsonl"],
+      variants: [],
+    },
+    {
+      name: "replay",
+      summary: "Replay an office.dump/1 document into an XLSX workbook",
+      usage: "office replay FILE --output OUT.xlsx [--overwrite] [--json|--jsonl]",
+      formats: ["xlsx"],
+      aliases: [],
+      inputs: [
+        capability_field(
+          "file", "path", true, "existing office.dump/1 JSON document",
+        ),
+        capability_field(
+          "output", "path", true, "destination .xlsx file; created atomically, refused when present unless --overwrite",
+        ),
+        capability_field(
+          "overwrite", "boolean", false, "replace an existing destination (remove-then-stage; not a single atomic swap)",
+        ),
+        capability_field(
+          "json", "boolean", false, "emit one office.output/1 JSON document",
+        ),
+        capability_field(
+          "jsonl", "boolean", false, "emit one office.output/1 line",
+        ),
+      ],
+      outputs: [
+        capability_field(
+          "schema", "literal(office.replay/1)", true, "versioned replay result schema",
+        ),
+        capability_field(
+          "format", "literal(xlsx)", true, "the replayed package format",
+        ),
+        capability_field(
+          "output", "path", true, "the published workbook path, bounded",
+        ),
+        capability_field(
+          "bytes_written", "integer", true, "exact published byte count",
+        ),
+        capability_field(
+          "ops_applied", "integer", true, "number of dump ops replayed",
+        ),
       ],
       output_modes: ["human", "json", "jsonl"],
       variants: [],

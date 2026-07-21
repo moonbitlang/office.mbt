@@ -13,7 +13,9 @@ pub suberror ReplayError {
 /// genuinely replayable. The result reproduces the dump's REPLAYABLE
 /// content only — features recorded as residual (custom properties,
 /// images, and so on) are not reconstructed.
-pub fn replay_xlsx_dump(envelope : DumpEnvelope) -> @xlsx.Workbook raise {
+pub fn replay_xlsx_dump(
+  envelope : DumpEnvelope,
+) -> @xlsx.Workbook raise ReplayError {
   guard envelope.format == "xlsx" else {
     raise ReplayInvalidFormat(
       "replay expects an xlsx dump, got \{envelope.format}",

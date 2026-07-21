@@ -13,7 +13,9 @@ pub const XLSX_BATCH_SCHEMA : String = "xlsx.batch/1"
 
 pub fn dump_xlsx_workbook(@xlsx.Workbook, source_file~ : String, source_bytes~ : Int, source_sha256? : String?, cancelled? : () -> Bool) -> DumpEnvelope raise
 
-pub fn replay_xlsx_dump(DumpEnvelope) -> @xlsx.Workbook raise
+pub fn parse_dump_envelope(Json) -> DumpEnvelope raise DumpParseError
+
+pub fn replay_xlsx_dump(DumpEnvelope) -> @xlsx.Workbook raise ReplayError
 
 pub fn sha256_hex_string(String) -> String
 
@@ -24,6 +26,10 @@ pub suberror DumpError {
   DumpCancelled
   DumpUnsupported(String)
   DumpSelfCheckFailed(String)
+} derive(@debug.Debug)
+
+pub suberror DumpParseError {
+  DumpParseError(String)
 } derive(@debug.Debug)
 
 pub suberror ReplayError {

@@ -713,6 +713,26 @@ truncation detection.
 | `warnings` | array | bounded dump diagnostics |
 | `stats` | object | `ops`, `residual`, `warnings` counts |
 
+### `office.replay/1` (`office replay FILE --output OUT.xlsx --json`)
+
+Reconstructs an XLSX workbook from an `office.dump/1` document by applying
+its ordered ops through the same batch engine that authored them, then
+publishes the workbook through the atomic create-new path (an existing
+destination is refused with `office.transaction.output_exists` unless
+`--overwrite` is given). Malformed or truncated dumps are rejected with
+`office.replay.invalid_dump` before anything is written. The result
+reproduces the dump's replayable content only — features the dump recorded
+as residual are not reconstructed — and byte-identity with the original
+package is an explicit non-goal.
+
+| key | type | notes |
+| --- | --- | --- |
+| `schema` | string | `"office.replay/1"` |
+| `format` | string | `"xlsx"` |
+| `output` | string | bounded published path |
+| `bytes_written` | number | exact published byte count |
+| `ops_applied` | number | number of dump ops replayed |
+
 ## Standalone `docx` CLI schemas
 
 ## `docx.outline/1` — document structure map (`docx outline <file>`)
