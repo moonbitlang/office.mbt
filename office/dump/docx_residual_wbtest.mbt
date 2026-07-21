@@ -51,3 +51,68 @@ test "run styles and unserializable text residualize" {
   assert_true(dropped is None)
   assert_true(bad.map(entry => entry.code).contains("docx.text_unserializable"))
 }
+
+///|
+/// The batch parser rejects empty tables and cell-less rows; both must
+/// residualize instead of aborting the dump in the self-check.
+test "degenerate tables residualize instead of aborting" {
+  let residual : Array[DumpResidual] = []
+  let empty = docx_table_params(
+    [],
+    @document.TableProperties::{ style_id: None, style_name: None },
+    0,
+    residual,
+  )
+  assert_true(empty is None)
+  assert_true(
+    residual.map(entry => entry.code).contains("docx.empty_table_dropped"),
+  )
+  let mixed : Array[DumpResidual] = []
+  let params = docx_table_params(
+    [
+      @document.TableRow(children=[], is_header=true),
+      @document.TableRow(
+        children=[
+          @document.TableCell(
+            children=[
+              @document.paragraph([@document.run([@document.text("x")])]),
+            ],
+            col_span=1,
+            row_span=1,
+          ),
+        ],
+        is_header=false,
+      ),
+    ],
+    @document.TableProperties::{ style_id: None, style_name: None },
+    0,
+    mixed,
+  )
+  // the empty header row drops; the survivor is a body row, so no
+  // header_rows param may claim it
+  guard params is Some(params) else { fail("expected a table op") }
+  let rendered = Json::object(params).stringify()
+  assert_false(rendered.contains("header_rows"))
+  assert_true(mixed.map(entry => entry.code).contains("docx.empty_row_dropped"))
+}
+
+///|
+/// Word nests images and note references inside runs; the run walk must
+/// disclose them under their specific codes.
+test "run-nested images and references get specific residual codes" {
+  let residual : Array[DumpResidual] = []
+  let spec = docx_run_spec(
+    [
+      @document.text("kept"),
+      @document.NoteReference(note_type="footnote", note_id="1"),
+      @document.CommentReference("7"),
+    ],
+    @document.run_properties(),
+    0,
+    residual,
+  )
+  assert_true(spec is Some(_))
+  let codes = residual.map(entry => entry.code)
+  assert_true(codes.contains("docx.note_reference_dropped"))
+  assert_true(codes.contains("docx.comment_reference_dropped"))
+}

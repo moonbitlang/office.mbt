@@ -92,6 +92,35 @@ fn docx_run_spec(
             "a checkbox control is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
           ),
         )
+      // Word nests drawings and note/comment references INSIDE runs, so
+      // these arms are the live path for real files
+      Image(_) =>
+        residual.push(
+          docx_residual(
+            "docx.images_not_dumped",
+            "block",
+            docx_location(block),
+            "images are not dumped in this slice",
+          ),
+        )
+      NoteReference(note_type~, ..) =>
+        residual.push(
+          docx_residual(
+            "docx.note_reference_dropped",
+            "block",
+            docx_location(block),
+            "a \{note_type} reference is not dumped in this slice",
+          ),
+        )
+      CommentReference(_) =>
+        residual.push(
+          docx_residual(
+            "docx.comment_reference_dropped",
+            "block",
+            docx_location(block),
+            "a comment reference is not dumped in this slice",
+          ),
+        )
       other =>
         residual.push(
           docx_residual(
@@ -412,7 +441,7 @@ fn docx_table_params(
   properties : @document.TableProperties,
   block : Int,
   residual : Array[DumpResidual],
-) -> Map[String, Json] {
+) -> Map[String, Json]? {
   if properties.style_id is Some(_) || properties.style_name is Some(_) {
     residual.push(
       docx_residual(
@@ -423,28 +452,10 @@ fn docx_table_params(
       ),
     )
   }
-  let rows : Array[Json] = []
-  let mut header_rows = 0
-  let mut in_leading_headers = true
+  let emitted : Array[(Json, Bool)] = []
   for child in children {
     match child {
       TableRow(children~, is_header~) => {
-        if is_header {
-          if in_leading_headers {
-            header_rows += 1
-          } else {
-            residual.push(
-              docx_residual(
-                "docx.header_rows_not_leading",
-                "block",
-                docx_location(block),
-                "a header row after body rows keeps only its content; header_rows covers leading rows",
-              ),
-            )
-          }
-        } else {
-          in_leading_headers = false
-        }
         let cells : Array[Json] = []
         for cell in children {
           match cell {
@@ -505,7 +516,20 @@ fn docx_table_params(
               )
           }
         }
-        rows.push(Json::array(cells))
+        if cells.length() == 0 {
+          // the batch parser rejects a row with no cells; dropping the
+          // degenerate row keeps the rest of the table replayable
+          residual.push(
+            docx_residual(
+              "docx.empty_row_dropped",
+              "block",
+              docx_location(block),
+              "a table row with no cells is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+            ),
+          )
+        } else {
+          emitted.push((Json::array(cells), is_header))
+        }
       }
       other =>
         residual.push(
@@ -518,11 +542,49 @@ fn docx_table_params(
         )
     }
   }
+  if emitted.length() == 0 {
+    // the batch parser rejects an empty rows array; the table must
+    // residualize rather than abort the dump in the self-check
+    residual.push(
+      docx_residual(
+        "docx.empty_table_dropped",
+        "block",
+        docx_location(block),
+        "a table with no expressible rows is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+      ),
+    )
+    return None
+  }
+  // header_rows counts LEADING header rows among the rows actually
+  // emitted; a header row after body rows keeps only its content
+  let rows : Array[Json] = []
+  let mut header_rows = 0
+  let mut in_leading_headers = true
+  for entry in emitted {
+    let (cells, is_header) = entry
+    if is_header {
+      if in_leading_headers {
+        header_rows += 1
+      } else {
+        residual.push(
+          docx_residual(
+            "docx.header_rows_not_leading",
+            "block",
+            docx_location(block),
+            "a header row after body rows keeps only its content; header_rows covers leading rows",
+          ),
+        )
+      }
+    } else {
+      in_leading_headers = false
+    }
+    rows.push(cells)
+  }
   let params : Map[String, Json] = { "rows": Json::array(rows) }
   if header_rows > 0 {
     params["header_rows"] = Json::number(header_rows.to_double())
   }
-  params
+  Some(params)
 }
 
 ///|
@@ -616,14 +678,16 @@ pub fn dump_docx_document(
           }),
         )
       Table(children~, properties~) =>
-        ops.push(
-          Json::object({
-            "op": Json::string("table"),
-            "params": Json::object(
-              docx_table_params(children, properties, block, residual),
-            ),
-          }),
-        )
+        match docx_table_params(children, properties, block, residual) {
+          Some(params) =>
+            ops.push(
+              Json::object({
+                "op": Json::string("table"),
+                "params": Json::object(params),
+              }),
+            )
+          None => ()
+        }
       other =>
         residual.push(
           docx_residual(
