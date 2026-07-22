@@ -1,0 +1,61 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/office/template"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/ref",
+}
+
+// Values
+pub const SCHEMA_TEMPLATE_DATA : String = "office.template.data/1"
+
+pub fn parse_template_data(String, max_keys? : Int, max_value_units? : Int) -> Map[String, TemplateValue] raise TemplateDataError
+
+pub fn scan_placeholders(Array[String], @ref.Ref[Int]) -> TemplateScan raise TemplateScanError
+
+pub fn template_key_ok(String) -> Bool
+
+// Errors
+pub suberror TemplateDataError {
+  TemplateDataError(String)
+} derive(@debug.Debug)
+
+pub suberror TemplateScanError {
+  TemplateScanBudgetExceeded(String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub(all) struct MalformedPlaceholder {
+  span : TemplateSpan
+  reason : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct PlaceholderMatch {
+  key : String
+  span : TemplateSpan
+} derive(Eq, @debug.Debug)
+
+pub(all) struct TemplateScan {
+  matches : Array[PlaceholderMatch]
+  escapes : Array[TemplateSpan]
+  malformed : Array[MalformedPlaceholder]
+} derive(Eq, @debug.Debug)
+
+pub(all) struct TemplateSpan {
+  start_segment : Int
+  start_offset : Int
+  end_segment : Int
+  end_offset : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) enum TemplateValue {
+  TextValue(String)
+  NumberValue(Double)
+  BoolValue(Bool)
+} derive(Eq, @debug.Debug)
+pub fn TemplateValue::render(Self) -> String
+
+// Type aliases
+
+// Traits
+

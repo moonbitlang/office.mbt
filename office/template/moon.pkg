@@ -1,0 +1,9 @@
+import {
+  "moonbitlang/core/json",
+}
+
+import {
+  "bobzhang/office/template",
+} for "test"
+
+supported_targets = "native+js+wasm"
