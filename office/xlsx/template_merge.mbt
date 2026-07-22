@@ -28,6 +28,12 @@ pub(all) struct XlsxTemplateReport {
   unsupported : Array[XlsxTemplateFinding]
   locations : Array[XlsxTemplateFinding]
   mut locations_truncated : Bool
+  // full occurrence counts per class: the lists above are bounded, so a
+  // consumer must be able to tell exactly-64 from more-than-64
+  mut missing_total : Int
+  mut malformed_total : Int
+  mut unsupported_total : Int
+  mut unused_total : Int
   mut changed : Bool
 } derive(Eq, @debug.Debug)
 
@@ -77,6 +83,10 @@ fn merge_template_workbook(
     unsupported: [],
     locations: [],
     locations_truncated: false,
+    missing_total: 0,
+    malformed_total: 0,
+    unsupported_total: 0,
+    unused_total: 0,
     changed: false,
   }
   let used_keys : Set[String] = Set::new()
@@ -100,6 +110,7 @@ fn merge_template_workbook(
           None => ""
         }
         if formula_text.contains("{{") || cell.value.contains("{{") {
+          report.unsupported_total += 1
           push_bounded(
             report.unsupported,
             location,
@@ -110,6 +121,7 @@ fn merge_template_workbook(
       }
       if cell.rich_text is Some(_) {
         if cell.value.contains("{{") {
+          report.unsupported_total += 1
           push_bounded(
             report.unsupported,
             location,
@@ -127,8 +139,8 @@ fn merge_template_workbook(
       }
       let scan = @template.scan_placeholders([text], budget)
       report.placeholders_found += scan.matches.length()
-      report.escapes_applied += scan.escapes.length()
       for entry in scan.malformed {
+        report.malformed_total += 1
         push_bounded(report.malformed, location, entry.reason)
       }
       if scan.malformed.length() > 0 {
@@ -149,6 +161,7 @@ fn merge_template_workbook(
           None => {
             cell_missing = true
             missing_keys.add(matched.key)
+            report.missing_total += 1
             push_bounded(report.missing, location, matched.key)
           }
         }
@@ -231,6 +244,7 @@ fn merge_template_workbook(
             text.substring(start=cursor, end=escape.start_offset),
           )
           builder.write_string("{{")
+          report.escapes_applied += 1
           rewrote = true
           cursor = escape.end_offset
         }
@@ -256,9 +270,11 @@ fn merge_template_workbook(
     report.changed = true
   }
   for key, _ in values {
-    if !used_keys.contains(key) &&
-      report.unused.length() < template_finding_limit {
-      report.unused.push(key)
+    if !used_keys.contains(key) {
+      report.unused_total += 1
+      if report.unused.length() < template_finding_limit {
+        report.unused.push(key)
+      }
     }
   }
   report.distinct_keys_used = used_keys.size()

@@ -44,6 +44,10 @@ fn template_report_json(
     "unsupported": template_findings_json(report.unsupported),
     "locations": template_findings_json(report.locations),
     "locations_truncated": Json::boolean(report.locations_truncated),
+    "missing_total": Json::number(report.missing_total.to_double()),
+    "malformed_total": Json::number(report.malformed_total.to_double()),
+    "unsupported_total": Json::number(report.unsupported_total.to_double()),
+    "unused_total": Json::number(report.unused_total.to_double()),
   }
   match transaction {
     Some(value) => fields["transaction"] = value
@@ -96,12 +100,7 @@ async fn run_template(matches : @argparse.Matches) -> Unit {
     dry_run=matches.flags.get_or_default("dry-run", false),
     overwrite=matches.flags.get_or_default("overwrite", false),
   ) catch {
-    @transaction.TransactionError(..) as error =>
-      raise transaction_failure(error)
-    error =>
-      raise unexpected_cli_failure(
-        "office.template.failed", "template option validation", error,
-      )
+    error => raise transaction_failure(error)
   }
   let result = @office_xlsx.transact_template(options, values, allow_missing~) catch {
     @office_xlsx.XlsxTemplateRefused(report) => {

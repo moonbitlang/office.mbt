@@ -51,6 +51,10 @@ pub(all) struct XlsxTemplateReport {
   unsupported : Array[XlsxTemplateFinding]
   locations : Array[XlsxTemplateFinding]
   mut locations_truncated : Bool
+  mut missing_total : Int
+  mut malformed_total : Int
+  mut unsupported_total : Int
+  mut unused_total : Int
   mut changed : Bool
 } derive(Eq, @debug.Debug)
 

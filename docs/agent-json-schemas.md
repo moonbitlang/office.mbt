@@ -712,6 +712,7 @@ publishing.
 | `missing` / `malformed` / `unsupported` / `locations` | array | bounded `{location, detail}` findings with canonical `Sheet1!B2` locations |
 | `unused` | array | data keys the template never used (warning-class, still publishes) |
 | `locations_truncated` | boolean | true when the per-key location list hit its bound |
+| `missing_total` / `malformed_total` / `unsupported_total` / `unused_total` | number | full occurrence counts — the finding lists are bounded at 64 entries, so totals distinguish exactly-64 from more |
 | `transaction` | object | untouched `office.transaction/2` report (success only) |
 
 ### `office.dump/1` (`office dump FILE [--json|--jsonl]`)

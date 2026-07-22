@@ -6,6 +6,7 @@ import {
   "bobzhang/office",
   "bobzhang/office/template",
   "bobzhang/office/transaction",
+  "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
 
