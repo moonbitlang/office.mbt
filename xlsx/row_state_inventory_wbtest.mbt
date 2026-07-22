@@ -402,3 +402,82 @@ test "library output with rich features stays classified" {
   assert_true(features.vml_present)
   assert_eq(features.first_vml_part, Some("xl/drawings/vmlDrawing1.vml"))
 }
+
+///|
+test "package feature detection: exact type identities, no alias overreach" {
+  let names : Map[String, String] = {}
+  for physical in ["xl/media/wrapper.xml", "xl/externalLinks/odd.xml"] {
+    names[physical.to_lower()] = physical
+  }
+  let types : Map[String, String] = {
+    // round-2 shape: an alias CONTAINING the official identity must not
+    // classify as an external link
+    "xl/media/wrapper.xml": "application/vnd.example.spreadsheetml.externalLink-wrapper+xml",
+    // a declared non-matching type under the external-links directory is
+    // an unknown part, never an external link by path
+    "xl/externalLinks/odd.xml": "application/vnd.example.opaque+xml",
+  }
+  let features = detect_package_features(names, name => types.get(name))
+  assert_false(features.external_links)
+  assert_true(features.unknown_parts)
+  assert_eq(features.first_unknown_part, Some("xl/externalLinks/odd.xml"))
+}
+
+///|
+test "inventory: partially qualified scoped names keep the static entry" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  // the qualified half shifts (bounded), the unqualified half stays
+  // static — BOTH classes must appear (codex round 2)
+  workbook.set_defined_name(
+    DefinedName::new("mixed", "Data!$A$5+$B$1048576", scope="Data"),
+  )
+  let entries = workbook.sheet_row_state_inventory("Data")
+  assert_eq(
+    wb_inventory_entry(entries, DefinedNameReferences),
+    Some({
+      class: DefinedNameReferences,
+      extent: RowsUpTo(5),
+      handling: ShiftedByInsert,
+    }),
+  )
+  assert_eq(
+    wb_inventory_entry(entries, SheetScopedNamesUnadjusted),
+    Some({
+      class: SheetScopedNamesUnadjusted,
+      extent: WholeSheet,
+      handling: StaticOnWrite,
+    }),
+  )
+}
+
+///|
+test "inventory: heterogeneous ranges the adjuster skips are opaque" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  // the adjuster shifts only cell:cell and row:row; Data!A5:B passes
+  // through unchanged, so a bounded-shifted claim would be false
+  workbook.set_defined_name(DefinedName::new("hetero", "Data!A5:B"))
+  let entries = workbook.sheet_row_state_inventory("Data")
+  assert_eq(
+    wb_inventory_entry(entries, DefinedNameReferences),
+    Some({
+      class: DefinedNameReferences,
+      extent: WholeSheet,
+      handling: ShiftedByInsert,
+    }),
+  )
+  // fully qualified, purely bounded forms stay bounded
+  let bounded = Workbook::new()
+  ignore(bounded.add_sheet("Data"))
+  bounded.set_defined_name(DefinedName::new("rows", "Data!5:9"))
+  let bounded_entries = bounded.sheet_row_state_inventory("Data")
+  assert_eq(
+    wb_inventory_entry(bounded_entries, DefinedNameReferences),
+    Some({
+      class: DefinedNameReferences,
+      extent: RowsUpTo(9),
+      handling: ShiftedByInsert,
+    }),
+  )
+}

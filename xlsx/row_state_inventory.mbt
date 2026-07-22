@@ -381,46 +381,48 @@ priv enum DefinedRefRowBound {
 }
 
 ///|
+/// Mirrors adjust_ref_after_row_insert EXACTLY: the adjuster shifts only
+/// cell:cell ranges, row:row ranges, single cells, and single rows;
+/// column refs pass through unchanged and carry no row semantics; every
+/// other shape (heterogeneous ranges like A5:B, arbitrary text) passes
+/// through unchanged while still LOOKING row-positioned — those are
+/// opaque, never bounded-shifted (codex round 2).
 fn defined_ref_row_bound(text : String) -> DefinedRefRowBound {
-  let parts : Array[String] = []
-  for part in text.split(":") {
-    parts.push(part.to_owned())
-  }
-  if parts.length() > 2 {
-    return OpaqueRef
-  }
-  let mut max_row = 0
-  let mut saw_row = false
-  for part in parts {
-    match parse_cell_ref(part) {
-      Some((row, _, _, _)) => {
-        saw_row = true
-        if row > max_row {
-          max_row = row
-        }
-        continue
+  match text.find(":") {
+    Some(pos) => {
+      let left = text.substring(start=0, end=pos)
+      let right = text.substring(start=pos + 1)
+      match (parse_cell_ref(left), parse_cell_ref(right)) {
+        (Some((r1, _, _, _)), Some((r2, _, _, _))) =>
+          return BoundedRows(if r1 > r2 { r1 } else { r2 })
+        _ => ()
       }
-      None => ()
-    }
-    match parse_row_ref(part) {
-      Some((row, _)) => {
-        saw_row = true
-        if row > max_row {
-          max_row = row
-        }
-        continue
+      match (parse_row_ref(left), parse_row_ref(right)) {
+        (Some((r1, _)), Some((r2, _))) =>
+          return BoundedRows(if r1 > r2 { r1 } else { r2 })
+        _ => ()
       }
-      None => ()
+      match (parse_column_ref(left), parse_column_ref(right)) {
+        (Some(_), Some(_)) => return NoRowBound
+        _ => ()
+      }
+      OpaqueRef
     }
-    match parse_column_ref(part) {
-      Some(_) => continue
-      None => return OpaqueRef
+    None => {
+      match parse_cell_ref(text) {
+        Some((row, _, _, _)) => return BoundedRows(row)
+        None => ()
+      }
+      match parse_row_ref(text) {
+        Some((row, _)) => return BoundedRows(row)
+        None => ()
+      }
+      match parse_column_ref(text) {
+        Some(_) => return NoRowBound
+        None => ()
+      }
+      OpaqueRef
     }
-  }
-  if saw_row {
-    BoundedRows(max_row)
-  } else {
-    NoRowBound
   }
 }
 
@@ -463,7 +465,13 @@ pub fn Workbook::sheet_row_state_inventory(
       adjusted.present = true
       adjusted.opaque = true
     }
-    if visited.val == 0 && defined_name_scope_key(name.scope) == scope_key {
+    ignore(visited.val)
+    // a sheet-scoped name is static-hazardous whenever ANY of its text
+    // sits outside the qualified refs the adjuster rewrites — a partially
+    // qualified "Data!$A$5+$B$1048576" keeps its unqualified half static
+    // even though the probe visited the first half (codex round 2)
+    if defined_name_scope_key(name.scope) == scope_key &&
+      name_has_unqualified_content(name.refers_to, sheet.name()) {
       unadjusted_scoped = true
     }
   }
@@ -476,6 +484,41 @@ pub fn Workbook::sheet_row_state_inventory(
     })
   }
   entries
+}
+
+///|
+/// Whether any of a name's refers_to text sits OUTSIDE the qualified
+/// references the adjuster rewrites for `sheet_name`. Runs the same scan
+/// with an empty-substitution probe, strips every re-emitted qualifier,
+/// and looks for leftover reference-shaped characters. Conservative:
+/// scan errors and constant values (a bare "42") count as unqualified
+/// content.
+fn name_has_unqualified_content(
+  refers_to : String,
+  sheet_name : String,
+) -> Bool {
+  let marked = try? adjust_defined_name_refers_to_for_sheet(
+    refers_to,
+    sheet_name,
+    _ => Some(""),
+  )
+  guard marked is Ok(scanned) else { return true }
+  let plain_prefix = sheet_name + "!"
+  let quoted_prefix = "'" + escape_sheet_name(sheet_name) + "'!"
+  let mut leftover = scanned
+  for prefix in [quoted_prefix, plain_prefix] {
+    let pieces : Array[String] = []
+    for piece in leftover.split(prefix) {
+      pieces.push(piece.to_owned())
+    }
+    leftover = pieces.join("")
+  }
+  for unit in leftover {
+    if unit is ('A'..='Z' | 'a'..='z' | '0'..='9' | '$') {
+      return true
+    }
+  }
+  false
 }
 
 ///|

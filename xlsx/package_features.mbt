@@ -112,36 +112,47 @@ fn detect_package_features(
       Some(value) => value.to_lower()
       None => ""
     }
-    if declared.find("spreadsheetml.externallink") is Some(_) {
+    // exact OFFICIAL type identities only — substring matching classified
+    // a vnd.example ...externallink-wrapper alias as an external link
+    // (codex round 2); unrecognized declared types fall through to the
+    // inert/unknown classification, never to the flag heuristics
+    if declared ==
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.externallink+xml" {
       if !external_links {
         external_links = true
         first_external_link = Some(physical)
       }
       continue
     }
-    if declared.find("spreadsheetml.querytable") is Some(_) {
+    if declared ==
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.querytable+xml" {
       if !query_tables {
         query_tables = true
         first_query_table = Some(physical)
       }
       continue
     }
-    if declared.find("spreadsheetml.connections") is Some(_) {
+    if declared ==
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.connections+xml" {
       if !connections {
         connections = true
         first_connections = Some(physical)
       }
       continue
     }
-    if declared.find("spreadsheetml.pivottable") is Some(_) ||
-      declared.find("spreadsheetml.pivotcache") is Some(_) {
+    if declared ==
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.pivottable+xml" ||
+      declared ==
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotcachedefinition+xml" ||
+      declared ==
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotcacherecords+xml" {
       if !pivot_parts {
         pivot_parts = true
         first_pivot_part = Some(physical)
       }
       continue
     }
-    if declared.find("vmldrawing") is Some(_) {
+    if declared == "application/vnd.openxmlformats-officedocument.vmldrawing" {
       if !vml_present {
         vml_present = true
         first_vml_part = Some(physical)
@@ -149,42 +160,50 @@ fn detect_package_features(
       continue
     }
     // formula-capable classes the model never represents: fail closed
-    if declared.find("macrosheet") is Some(_) {
+    if declared == "application/vnd.ms-excel.macrosheet+xml" ||
+      declared == "application/vnd.ms-excel.intlmacrosheet+xml" {
       if !unknown_parts {
         unknown_parts = true
         first_unknown_part = Some(physical)
       }
       continue
     }
-    if lower.has_suffix(".vml") {
+    // path-based FLAG heuristics apply only to parts with no declared
+    // type; a declared non-matching type under xl/externalLinks/ is an
+    // unknown part, not an external link
+    if declared == "" && lower.has_suffix(".vml") {
       if !vml_present {
         vml_present = true
         first_vml_part = Some(physical)
       }
       continue
     }
-    if lower.has_prefix("xl/externallinks/") {
+    if declared == "" && lower.has_prefix("xl/externallinks/") {
       if !external_links {
         external_links = true
         first_external_link = Some(physical)
       }
       continue
     }
-    if lower.has_prefix("xl/querytables/") {
+    if declared == "" && lower.has_prefix("xl/querytables/") {
       if !query_tables {
         query_tables = true
         first_query_table = Some(physical)
       }
       continue
     }
-    if lower == "xl/connections.xml" {
+    if declared == "" && lower == "xl/connections.xml" {
       if !connections {
         connections = true
         first_connections = Some(physical)
       }
       continue
     }
-    if lower.has_prefix("xl/pivottables/") || lower.has_prefix("xl/pivotcache/") {
+    if declared == "" &&
+      (
+        lower.has_prefix("xl/pivottables/") ||
+        lower.has_prefix("xl/pivotcache/")
+      ) {
       if !pivot_parts {
         pivot_parts = true
         first_pivot_part = Some(physical)
