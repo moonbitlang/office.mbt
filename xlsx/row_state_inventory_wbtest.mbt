@@ -510,3 +510,127 @@ test "inventory: string-literal qualifiers keep the static entry" {
     }),
   )
 }
+
+///|
+test "cf literal proof: formula cfvos, x14 state, and skipped rules disprove" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Data")
+  assert_true(sheet.conditional_formats_provably_literal())
+  // a plain data bar stays provable
+  workbook.set_conditional_format("Data", "A1:A4", [
+    ConditionalFormatOptions::new("data_bar"),
+  ])
+  assert_true(sheet.conditional_formats_provably_literal())
+  // an icon set carrying a formula-typed cfvo (only three thresholds
+  // surface through the options struct) disproves via the raw scan
+  let icon = Workbook::new()
+  let icon_sheet = icon.add_sheet("Data")
+  icon_sheet.add_conditional_format_xml(
+    (
+      #|<conditionalFormatting sqref="B1:B9"><cfRule type="iconSet" priority="1"><iconSet iconSet="4Arrows"><cfvo type="min"/><cfvo type="percent" val="25"/><cfvo type="formula" val="$Z$1"/><cfvo type="percent" val="75"/></iconSet></cfRule></conditionalFormatting>
+    ),
+  )
+  assert_false(icon_sheet.conditional_formats_provably_literal())
+  // a rule type the parsed reader skips leaves a raw/parsed count gap
+  let exotic = Workbook::new()
+  let exotic_sheet = exotic.add_sheet("Data")
+  exotic_sheet.add_conditional_format_xml(
+    (
+      #|<conditionalFormatting sqref="C1:C4"><cfRule type="dataBar" priority="1"><dataBar><cfvo type="min"/><cfvo type="max"/><color rgb="FF638EC6"/></dataBar></cfRule><cfRule type="futureShape" priority="2"/></conditionalFormatting>
+    ),
+  )
+  assert_false(exotic_sheet.conditional_formats_provably_literal())
+}
+
+///|
+test "raw dv criteria preserve quote doubling and mark x14 opaque" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Data")
+  let list = DataValidation::new(true)
+  list.set_range(
+    DataValidationFormula::TextValue("\"It\"\"s,ok\""),
+    DataValidationFormula::TextValue(""),
+    DataValidationType::List,
+    DataValidationOperator::Between,
+  )
+  list.set_sqref("A1")
+  workbook.add_data_validation("Data", list)
+  // the write/read round trip goes through the raw store
+  let reopened = read(write(workbook))
+  guard reopened.sheet("Data") is Some(parsed_sheet) else {
+    fail("sheet missing")
+  }
+  let criteria = parsed_sheet.raw_data_validation_criteria()
+  assert_eq(criteria.length(), 1)
+  assert_eq(criteria[0].validation_type, "list")
+  assert_eq(criteria[0].sqref, "A1")
+  // doubled interior quotes SURVIVE, unlike the parsed reader's collapse
+  assert_eq(criteria[0].formula1, "\"It\"\"s,ok\"")
+  // an x14 entry in the raw store classifies as opaque
+  let x14 = Workbook::new()
+  let x14_sheet = x14.add_sheet("Data")
+  x14_sheet.data_validations.push(
+    "<x14:dataValidation type=\"custom\"><x14:formula1>A1</x14:formula1></x14:dataValidation>",
+  )
+  let x14_criteria = x14_sheet.raw_data_validation_criteria()
+  assert_eq(x14_criteria.length(), 1)
+  assert_eq(x14_criteria[0].validation_type, "opaque")
+}
+
+///|
+test "raw dv criteria: root-tag discipline and tolerant formula tags" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Data")
+  // plural root is not a dataValidation
+  sheet.data_validations.push(
+    "<dataValidations count=\"1\"><dataValidation type=\"list\" sqref=\"A1\"><formula1>\"a\"</formula1></dataValidation></dataValidations>",
+  )
+  // nested attributes must not impersonate an absent root type/sqref
+  sheet.data_validations.push(
+    "<dataValidation sqref=\"B1\"><ext type=\"list\"/><formula1>\"a\"</formula1></dataValidation>",
+  )
+  sheet.data_validations.push(
+    "<dataValidation type=\"list\"><child sqref=\"C1\"/><formula1>\"a\"</formula1></dataValidation>",
+  )
+  // whitespace and attributes in the formula start tag still extract
+  sheet.data_validations.push(
+    "<dataValidation type=\"list\" sqref=\"D1\"><formula1 >\"a,b\"</formula1></dataValidation>",
+  )
+  let criteria = sheet.raw_data_validation_criteria()
+  assert_eq(criteria.length(), 4)
+  assert_eq(criteria[0].validation_type, "opaque")
+  // absent root type defaults to none; the nested type does not leak in
+  assert_eq(criteria[1].validation_type, "none")
+  assert_eq(criteria[1].sqref, "B1")
+  // a child sqref cannot satisfy the missing root sqref
+  assert_eq(criteria[2].validation_type, "opaque")
+  assert_eq(criteria[3].formula1, "\"a,b\"")
+}
+
+///|
+test "raw dv criteria: nested descendants never mask the root formulas" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Data")
+  // the round-5 bypass shape: a child's quoted formula1 appears FIRST,
+  // the root's own reference formula follows — direct-child extraction
+  // must return the ROOT's L1, not the child's literal
+  sheet.data_validations.push(
+    "<dataValidation type=\"list\" sqref=\"A1\"><ext><formula1>\"a,b\"</formula1></ext><formula1>L1</formula1></dataValidation>",
+  )
+  // child-only formula: the root has none, so the list source is absent
+  sheet.data_validations.push(
+    "<dataValidation type=\"list\" sqref=\"B1\"><ext><formula1>\"a,b\"</formula1></ext></dataValidation>",
+  )
+  // a self-closing root has no formulas
+  sheet.data_validations.push("<dataValidation type=\"list\" sqref=\"C1\"/>")
+  // structural surprises (a comment) classify the entry opaque
+  sheet.data_validations.push(
+    "<dataValidation type=\"list\" sqref=\"D1\"><!-- x --><formula1>\"a\"</formula1></dataValidation>",
+  )
+  let criteria = sheet.raw_data_validation_criteria()
+  assert_eq(criteria.length(), 4)
+  assert_eq(criteria[0].formula1, "L1")
+  assert_eq(criteria[1].formula1, "")
+  assert_eq(criteria[2].formula1, "")
+  assert_eq(criteria[3].validation_type, "opaque")
+}

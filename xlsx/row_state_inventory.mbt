@@ -546,3 +546,226 @@ pub fn Worksheet::first_stored_formula_cell(self : Worksheet) -> String? {
 pub fn Worksheet::clear_dimension_ref(self : Worksheet) -> Unit {
   self.dimension_ref = None
 }
+
+///|
+/// Whether this sheet's conditional formatting is PROVABLY free of
+/// formula criteria. False whenever proof is impossible: a raw rule
+/// carries a formula-typed cfvo (icon sets expose only three of their
+/// thresholds through the options surface), x14 extension state exists
+/// (its cfvos are not modeled), the parsed rule count disagrees with the
+/// raw <cfRule> count (the reader silently skips schema-exotic rule
+/// types), or the parsed reader raises. Literal operands inside
+/// <formula> elements (a cellIs against 5) do NOT disprove literal-ness —
+/// callers judge those through the parsed options.
+pub fn Worksheet::conditional_formats_provably_literal(
+  self : Worksheet,
+) -> Bool {
+  let mut raw_rules = 0
+  for xml in self.conditional_formats {
+    if xml.find("type=\"formula\"") is Some(_) {
+      return false
+    }
+    let mut search = 0
+    while search < xml.length() {
+      match xml.substring(start=search).find(xml_probe_cfrule) {
+        Some(offset) => {
+          raw_rules += 1
+          search = search + offset + 1
+        }
+        None => break
+      }
+    }
+  }
+  if self.x14_data_bars.size() > 0 {
+    return false
+  }
+  match (try? self.get_conditional_formats()) {
+    Ok(parsed) => {
+      let mut modeled = 0
+      for _, options in parsed {
+        modeled += options.length()
+      }
+      modeled == raw_rules
+    }
+    Err(_) => false
+  }
+}
+
+///|
+let xml_probe_cfrule : String = "<cfRule"
+
+///|
+/// One data validation's RAW criteria: the stored type, scope, and
+/// formula text with doubled-quote escapes PRESERVED (the parsed reader
+/// collapses them, which makes literal-ness undecidable downstream —
+/// "It""s,ok" and "a"&B1&"b" collapse to structurally similar text).
+/// Entries the raw scan cannot interpret carry validation_type "opaque".
+pub struct RawDataValidationCriteria {
+  validation_type : String
+  sqref : String
+  formula1 : String
+  formula2 : String
+} derive(Eq, @debug.Debug)
+
+///|
+fn raw_tag_end(xml : String, from : Int) -> Int? {
+  let mut index = from
+  let mut quote : UInt16 = ' '
+  let mut quoted = false
+  while index < xml.length() {
+    let unit = xml[index]
+    if quoted {
+      if unit == quote {
+        quoted = false
+      }
+    } else if unit == '"' || unit == '\'' {
+      quoted = true
+      quote = unit
+    } else if unit == '>' {
+      return Some(index + 1)
+    }
+    index += 1
+  }
+  None
+}
+
+///|
+/// Whether the code unit terminates an element NAME (so
+/// "<dataValidation" does not also match "<dataValidations").
+fn raw_name_boundary(unit : UInt16) -> Bool {
+  unit is (' ' | '\t' | '\r' | '\n' | '>' | '/')
+}
+
+///|
+/// Text content of the DIRECT `element` child of the root whose content
+/// begins at `content_start`. Depth-aware: a nested descendant carrying
+/// the same element name never satisfies the lookup (a child's quoted
+/// formula1 masked the root's reference formula and bypassed the
+/// refusal policy — codex round 5). Some("") for absent or self-closing
+/// elements; None when the structure resists the walk (callers classify
+/// the whole entry opaque).
+fn raw_direct_child_text(
+  xml : String,
+  content_start : Int,
+  element : String,
+) -> String? {
+  let close = "</" + element + ">"
+  let mut index = content_start
+  let mut depth = 0
+  while index < xml.length() {
+    let offset = match xml.substring(start=index).find("<") {
+      Some(pos) => pos
+      None => return Some("")
+    }
+    let start = index + offset
+    if start + 1 >= xml.length() {
+      return None
+    }
+    let marker = xml[start + 1]
+    if marker == '!' || marker == '?' {
+      // comments, declarations, PIs: outside the shapes the reader's
+      // canonical store produces — refuse to guess
+      return None
+    }
+    if marker == '/' {
+      if depth == 0 {
+        // the root's own close: the element is absent
+        return Some("")
+      }
+      depth -= 1
+      match raw_tag_end(xml, start) {
+        Some(next) => index = next
+        None => return None
+      }
+      continue
+    }
+    guard raw_tag_end(xml, start) is Some(tag_end) else { return None }
+    let self_closing = tag_end >= 2 && xml[tag_end - 2] == '/'
+    let name_end = start + 1 + element.length()
+    let is_match = depth == 0 &&
+      name_end < xml.length() &&
+      xml.substring(start=start + 1, end=name_end) == element &&
+      raw_name_boundary(xml[name_end])
+    if is_match {
+      if self_closing {
+        return Some("")
+      }
+      match xml.substring(start=tag_end).find(close) {
+        Some(rel) =>
+          return Some(
+            unescape_xml_text(xml.substring(start=tag_end, end=tag_end + rel)),
+          )
+        None => return None
+      }
+    }
+    if !self_closing {
+      depth += 1
+    }
+    index = tag_end
+  }
+  Some("")
+}
+
+///|
+/// The raw criteria of every stored data validation, x14 and other
+/// uninterpretable entries included as "opaque". XML entity escapes are
+/// decoded; formula quote doubling is NOT collapsed.
+pub fn Worksheet::raw_data_validation_criteria(
+  self : Worksheet,
+) -> Array[RawDataValidationCriteria] {
+  let out : Array[RawDataValidationCriteria] = []
+  for xml in self.data_validations {
+    let trimmed = xml.trim(chars=" \t\r\n").to_string()
+    let opaque : RawDataValidationCriteria = {
+      validation_type: "opaque",
+      sqref: "",
+      formula1: "",
+      formula2: "",
+    }
+    // the root must be EXACTLY dataValidation (not dataValidations),
+    // and type/sqref must come from the ROOT TAG alone — a nested
+    // element's attributes must not impersonate the root's (codex
+    // round 4)
+    let name_end = "<dataValidation".length()
+    if !trimmed.has_prefix("<dataValidation") ||
+      name_end >= trimmed.length() ||
+      !raw_name_boundary(trimmed[name_end]) {
+      out.push(opaque)
+      continue
+    }
+    guard raw_tag_end(trimmed, 0) is Some(root_end) else {
+      out.push(opaque)
+      continue
+    }
+    let root_tag = trimmed.substring(start=0, end=root_end)
+    let validation_type = match (try? attr_value(root_tag, "type")) {
+      Ok(Some(value)) => unescape_xml_text(value)
+      Ok(None) => "none"
+      Err(_) => {
+        out.push(opaque)
+        continue
+      }
+    }
+    let sqref = match raw_attr_sqref(root_tag) {
+      Some(value) => value
+      None => ""
+    }
+    if sqref == "" {
+      out.push(opaque)
+      continue
+    }
+    if root_end >= 2 && trimmed[root_end - 2] == '/' {
+      // a self-closing root has no formula children at all
+      out.push({ validation_type, sqref, formula1: "", formula2: "" })
+      continue
+    }
+    let formula1 = raw_direct_child_text(trimmed, root_end, "formula1")
+    let formula2 = raw_direct_child_text(trimmed, root_end, "formula2")
+    match (formula1, formula2) {
+      (Some(first), Some(second)) =>
+        out.push({ validation_type, sqref, formula1: first, formula2: second })
+      _ => out.push(opaque)
+    }
+  }
+  out
+}
