@@ -145,6 +145,7 @@ fn build_command() -> @argparse.Command {
       preview_command(),
       create_command(),
       batch_command(),
+      template_command(),
       raw_command(),
     ],
   )
@@ -166,6 +167,7 @@ fn is_implemented_command(name : StringView) -> Bool {
     | "preview"
     | "create"
     | "batch"
+    | "template"
     | "raw" => true
     _ => false
   }
@@ -191,6 +193,7 @@ async fn run_cli(args : Array[String]) -> Unit {
         "preview" => run_preview(values)
         "create" => run_create(values)
         "batch" => run_xlsx_batch(values)
+        "template" => run_template(values)
         "raw" => run_raw(values)
         _ => ()
       }

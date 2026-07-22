@@ -37,6 +37,8 @@ pub const SCHEMA_RAW_RESULT : String = "office.raw.result/1"
 
 pub const SCHEMA_REPLAY_RESULT : String = "office.replay/1"
 
+pub const SCHEMA_TEMPLATE_RESULT : String = "office.template/1"
+
 pub const SCHEMA_TRANSACTION : String = "office.transaction/2"
 
 pub const SCHEMA_VALIDATE_RESULT : String = "office.validate/1"

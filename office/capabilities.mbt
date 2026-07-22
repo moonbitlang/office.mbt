@@ -72,6 +72,9 @@ pub const SCHEMA_DUMP_RESULT : String = "office.dump/1"
 pub const SCHEMA_REPLAY_RESULT : String = "office.replay/1"
 
 ///|
+pub const SCHEMA_TEMPLATE_RESULT : String = "office.template/1"
+
+///|
 pub const SCHEMA_XLSX_BATCH_RESULT : String = "office.xlsx.batch/1"
 
 ///|
@@ -912,6 +915,56 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           output_modes: ["human", "json"],
         },
       ],
+    },
+    {
+      name: "template",
+      summary: "Merge strict template data into an XLSX workbook",
+      usage: "office template FILE DATA.json --out OUT.xlsx [--dry-run] [--overwrite] [--allow-missing] [--json|--jsonl]",
+      formats: ["xlsx"],
+      aliases: [],
+      inputs: [
+        capability_field(
+          "file", "path", true, "existing XLSX template package (never modified)",
+        ),
+        capability_field(
+          "data", "path", true, "office.template.data/1 JSON document: flat values, string/number/bool only",
+        ),
+        capability_field(
+          "out", "path", true, "destination .xlsx; created atomically, refused when present unless --overwrite",
+        ),
+        capability_field(
+          "dry-run", "boolean", false, "run the full merge and validation without publishing",
+        ),
+        capability_field(
+          "overwrite", "boolean", false, "replace an existing destination",
+        ),
+        capability_field(
+          "allow-missing", "boolean", false, "keep unresolved placeholders as literals instead of failing",
+        ),
+        capability_field(
+          "json", "boolean", false, "emit one office.output/1 JSON document",
+        ),
+        capability_field(
+          "jsonl", "boolean", false, "emit one office.output/1 line",
+        ),
+      ],
+      outputs: [
+        capability_field(
+          "schema", "literal(office.template/1)", true, "versioned template merge result schema",
+        ),
+        capability_field("replaced", "number", true, "placeholders substituted"),
+        capability_field(
+          "missing", "array(finding)", true, "unresolved keys with Sheet1!B2 locations (bounded)",
+        ),
+        capability_field(
+          "unused", "array(string)", true, "data keys the template never used (bounded)",
+        ),
+        capability_field(
+          "transaction", "object", true, "office.transaction/2 report; preservation is authoritative. Values land through literal cell setters (a leading = can never become a formula); formula and rich-text cells are refused contexts; whole-cell placeholders keep the data value's type",
+        ),
+      ],
+      output_modes: ["human", "json", "jsonl"],
+      variants: [],
     },
     {
       name: "batch",

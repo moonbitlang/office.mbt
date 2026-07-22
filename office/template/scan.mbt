@@ -104,7 +104,7 @@ fn ScanCursor::unit_at(self : ScanCursor, position : Int) -> Int {
       high = mid - 1
     }
   }
-  self.segments[low].code_units()[position - self.starts[low]].to_int()
+  self.segments[low][position - self.starts[low]].to_int()
 }
 
 ///|
@@ -114,7 +114,7 @@ fn ScanCursor::point(self : ScanCursor, position : Int) -> (Int, Int) {
   }
   if position >= self.total {
     let last = self.segments.length() - 1
-    return (last, self.segments[last].code_units().length())
+    return (last, self.total - self.starts[last])
   }
   let mut low = 0
   let mut high = self.starts.length() - 1
