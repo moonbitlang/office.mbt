@@ -1105,38 +1105,18 @@ fn docx_table_params(
   // otherwise the batch grammar cannot express the table at all (every
   // script row needs at least one cell) and the table residualizes.
   let kept : Array[(Array[(Map[String, Json], Int, Int)], Bool)] = []
-  let mut vmerge_active = false
+  // an empty (reader-stripped) row is droppable only when no vertical
+  // merge is ACTIVE at its position — decided against the placement
+  // sim's pending state below, not a whole-table flag. Each entry is the
+  // kept-row index the empty row precedes.
+  let empty_positions : Array[Int] = []
   for entry in emitted {
     let (cells, is_header) = entry
     if cells.length() == 0 {
-      if vmerge_active {
-        ctx.residual.push(
-          docx_residual(
-            "docx.table_grid_unsupported",
-            "block",
-            docx_location(block),
-            "a row consisting only of vertical-merge continuations is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
-          ),
-        )
-        return None
-      }
-      ctx.residual.push(
-        docx_residual(
-          "docx.empty_row_dropped",
-          "block",
-          docx_location(block),
-          "a table row with no cells is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
-        ),
-      )
-      continue
+      empty_positions.push(kept.length())
+    } else {
+      kept.push((cells, is_header))
     }
-    for cell in cells {
-      let (_, _, row_span) = cell
-      if row_span > 1 {
-        vmerge_active = true
-      }
-    }
-    kept.push((cells, is_header))
   }
   if kept.length() == 0 {
     ctx.residual.push(
@@ -1189,9 +1169,38 @@ fn docx_table_params(
     }
   }
   // writer step 2: placement — pending merges occupy their columns, own
-  // cells fill the rest in order, coverage must be exact
+  // cells fill the rest in order, coverage must be exact. Empty rows are
+  // judged at their positions against the live pending state: an active
+  // merge there means the batch grammar cannot express the table (every
+  // script row needs a cell); no active merge means the row just drops.
   let pending : Map[Int, (Int, Int)] = {} // start column -> (remaining, width)
+  let judge_empties = (at : Int) => {
+    let mut verdict = true
+    for position in empty_positions {
+      if position == at {
+        if pending.size() > 0 {
+          grid_reject(
+            "a row consisting only of vertical-merge continuations is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+          )
+          verdict = false
+        } else {
+          ctx.residual.push(
+            docx_residual(
+              "docx.empty_row_dropped",
+              "block",
+              docx_location(block),
+              "a table row with no cells is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+            ),
+          )
+        }
+      }
+    }
+    verdict
+  }
   for row_index, entry in kept {
+    if !judge_empties(row_index) {
+      return None
+    }
     let (cells, _) = entry
     let mut grid_column = 0
     let mut cursor = 0
@@ -1241,6 +1250,9 @@ fn docx_table_params(
       )
       return None
     }
+  }
+  if !judge_empties(kept.length()) {
+    return None
   }
   // header_rows counts LEADING header rows among the rows actually
   // emitted; a header row after body rows keeps only its content

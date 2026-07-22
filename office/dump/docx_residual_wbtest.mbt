@@ -750,6 +750,33 @@ test "vmerge tables gate by placement, not raw widths" {
   assert_true(
     stripped.map(entry => entry.code).contains("docx.table_grid_unsupported"),
   )
+  // an empty row BELOW a finished merge drops too — the merge is no
+  // longer active there (Kimi #204 round-2: a sticky flag over-dropped
+  // this shape; the drop decision now consults the live pending state)
+  let after_merge : Array[DumpResidual] = []
+  let below = docx_table_params(
+    [
+      @document.TableRow(children=[cell(1, 2), cell(1, 1)], is_header=false),
+      @document.TableRow(children=[cell(1, 1)], is_header=false),
+      @document.TableRow(children=[], is_header=false),
+      @document.TableRow(children=[cell(1, 1), cell(1, 1)], is_header=false),
+    ],
+    @document.TableProperties::{ style_id: None, style_name: None },
+    0,
+    wb_ctx(after_merge),
+  )
+  guard below is Some(_) else {
+    fail("an empty row below a finished merge must not drop the table")
+  }
+  assert_true(
+    after_merge.map(entry => entry.code).contains("docx.empty_row_dropped"),
+  )
+  assert_eq(
+    after_merge
+    .filter(entry => entry.code == "docx.table_grid_unsupported")
+    .length(),
+    0,
+  )
   // an empty row with NO active merge still just drops
   let plain : Array[DumpResidual] = []
   let survives = docx_table_params(
