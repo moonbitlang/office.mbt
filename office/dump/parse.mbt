@@ -107,7 +107,9 @@ pub fn parse_dump_envelope(
   }
   // assets are reconstructed with full integrity checks: the payload must
   // decode, match its declared size, and hash to its own id — an envelope
-  // with a lying digest is malformed, not a deferred replay failure
+  // with a lying digest is malformed, not a deferred replay failure.
+  // Duplicate JSON keys resolve last-wins in the parsed map, so the entry
+  // checked here is exactly the one replay will use.
   let assets : Map[String, DumpAsset] = {}
   match fields.get("assets") {
     Some(Object(entries)) =>

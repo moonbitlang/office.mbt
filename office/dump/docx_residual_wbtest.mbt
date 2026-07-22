@@ -700,3 +700,118 @@ test "table grid geometry the writer rejects residualizes" {
     0,
   )
 }
+
+///|
+/// Kimi #204 round-1 findings: the grid gate must mirror the writer's
+/// PLACEMENT semantics — pending vertical merges cover columns in the
+/// rows below, so merge-covered "ragged" tables are writable and must
+/// emit, while a row the reader left empty under an active merge is
+/// inexpressible and must residualize the table.
+test "vmerge tables gate by placement, not raw widths" {
+  let cell = (col : Int, row : Int) => {
+    @document.TableCell(
+      children=[@document.paragraph([@document.run([@document.text("c")])])],
+      col_span=col,
+      row_span=row,
+    )
+  }
+  // A(row_span 2) + B over C: row 2's single cell is covered by A's
+  // pending merge — the writer accepts this; the dump must emit it
+  let merged : Array[DumpResidual] = []
+  let ok = docx_table_params(
+    [
+      @document.TableRow(children=[cell(1, 2), cell(1, 1)], is_header=false),
+      @document.TableRow(children=[cell(1, 1)], is_header=false),
+    ],
+    @document.TableProperties::{ style_id: None, style_name: None },
+    0,
+    wb_ctx(merged),
+  )
+  guard ok is Some(params) else { fail("a merge-covered table must emit") }
+  assert_true(Json::object(params).stringify().contains("row_span"))
+  assert_eq(
+    merged.filter(entry => entry.code == "docx.table_grid_unsupported").length(),
+    0,
+  )
+  // a full-continuation row (reader strips its cells) under an active
+  // merge cannot exist in the batch grammar: whole table residualizes
+  let stripped : Array[DumpResidual] = []
+  let dropped = docx_table_params(
+    [
+      @document.TableRow(children=[cell(1, 2), cell(1, 2)], is_header=false),
+      @document.TableRow(children=[], is_header=false),
+      @document.TableRow(children=[cell(1, 1), cell(1, 1)], is_header=false),
+    ],
+    @document.TableProperties::{ style_id: None, style_name: None },
+    0,
+    wb_ctx(stripped),
+  )
+  assert_true(dropped is None)
+  assert_true(
+    stripped.map(entry => entry.code).contains("docx.table_grid_unsupported"),
+  )
+  // an empty row with NO active merge still just drops
+  let plain : Array[DumpResidual] = []
+  let survives = docx_table_params(
+    [
+      @document.TableRow(children=[], is_header=false),
+      @document.TableRow(children=[cell(1, 1)], is_header=false),
+    ],
+    @document.TableProperties::{ style_id: None, style_name: None },
+    0,
+    wb_ctx(plain),
+  )
+  assert_true(survives is Some(_))
+  assert_true(plain.map(entry => entry.code).contains("docx.empty_row_dropped"))
+  // truly ragged (no merge coverage) still residualizes
+  let ragged : Array[DumpResidual] = []
+  let rejected = docx_table_params(
+    [
+      @document.TableRow(children=[cell(1, 1), cell(1, 1)], is_header=false),
+      @document.TableRow(children=[cell(1, 1)], is_header=false),
+    ],
+    @document.TableProperties::{ style_id: None, style_name: None },
+    0,
+    wb_ctx(ragged),
+  )
+  assert_true(rejected is None)
+  assert_true(
+    ragged.map(entry => entry.code).contains("docx.table_grid_unsupported"),
+  )
+}
+
+///|
+/// Kimi #204: a whitespace-only alt is blank to the parser and must
+/// drop, not abort.
+test "blank image alt drops with disclosure" {
+  let residual : Array[DumpResidual] = []
+  let ctx = wb_ctx(residual)
+  let out : Array[Json] = []
+  docx_run_specs(
+    [
+      @document.Image(@document.Image::{
+        content_type: "image/png",
+        alt_text: Some(" "),
+        data: b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\x0d\x49\x44\x41\x54\x78\x9c\x63\xf8\xcf\xc0\xf0\x1f\x00\x00\x00\x05\x00\x01\x5f\xc9\x8e\xd2\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82",
+      }),
+    ],
+    @document.run_properties(),
+    0,
+    ctx,
+    out,
+    in_note_body=false,
+    plain=false,
+  )
+  // the image op emits without alt; the blank alt is disclosed
+  let mut has_image = false
+  for spec in out {
+    if spec.stringify().contains("\"image\":") {
+      has_image = true
+      assert_false(spec.stringify().contains("\"alt\""))
+    }
+  }
+  assert_true(has_image)
+  assert_true(
+    residual.map(entry => entry.code).contains("docx.image_alt_dropped"),
+  )
+}

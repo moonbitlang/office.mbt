@@ -170,14 +170,14 @@ fn replay_command() -> @argparse.Command {
 /// both format paths.
 fn replay_engine_failure(error : @dump.ReplayError) -> CliFailure {
   match error {
-    @dump.ReplayInvalidFormat(reason) =>
+    ReplayInvalidFormat(reason) =>
       CliFailure(
         @lib.protocol_error(
           "office.replay.invalid_dump",
           "dump cannot be replayed: " + bounded_text(reason, 200),
         ),
       )
-    @dump.ReplayFailed(reason) =>
+    ReplayFailed(reason) =>
       CliFailure(
         @lib.protocol_error(
           "office.replay.failed",

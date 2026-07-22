@@ -315,3 +315,40 @@ test "docx comments anchor, thread, and survive the fixpoint" {
   let d2_ops = docx_fixpoint_ops(d1)
   assert_eq(Json::array(d1.ops).stringify(), Json::array(d2_ops).stringify())
 }
+
+///|
+test "docx vertically merged tables survive the fixpoint" {
+  let cell = (text : String, row_span : Int) => {
+    @document.TableCell(
+      children=[@document.paragraph([@document.run([@document.text(text)])])],
+      col_span=1,
+      row_span~,
+    )
+  }
+  let body : Array[@document.DocumentElement] = [
+    @document.Table(
+      children=[
+        @document.TableRow(
+          children=[cell("merged", 2), cell("top", 1)],
+          is_header=false,
+        ),
+        @document.TableRow(children=[cell("bottom", 1)], is_header=false),
+      ],
+      properties=@document.TableProperties::{ style_id: None, style_name: None },
+    ),
+  ]
+  let bytes = @word.write_docx(body)
+  let annotated = @word.read_docx_annotated(bytes[:])
+  let d1 = @dump.dump_docx_document(
+    annotated,
+    source_file="vmerge.docx",
+    source_bytes=bytes.length(),
+  )
+  let document = d1.to_json_document().stringify()
+  assert_true(document.contains("\"row_span\":2"))
+  assert_false(document.contains("docx.table_grid_unsupported"))
+  assert_eq(
+    Json::array(d1.ops).stringify(),
+    Json::array(docx_fixpoint_ops(d1)).stringify(),
+  )
+}

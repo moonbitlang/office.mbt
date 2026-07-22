@@ -219,9 +219,10 @@ fn docx_image_spec(
         "content_type": Json::string(carried_type),
       }
       match image.alt_text {
-        // the parser runs the attribute contract on alt: non-empty,
-        // no control characters — gate and disclose
-        Some(alt) if docx_attribute_ok(alt) => spec["alt"] = Json::string(alt)
+        // the parser runs the attribute contract on alt AND rejects
+        // blank (whitespace-only) values — gate both and disclose
+        Some(alt) if docx_attribute_ok(alt) && alt.trim(chars=" \t") != "" =>
+          spec["alt"] = Json::string(alt)
         Some(alt) if alt != "" =>
           ctx.residual.push(
             docx_residual(
@@ -334,7 +335,14 @@ fn docx_attribute_ok(text : String) -> Bool {
     return false
   }
   for unit in text {
-    if unit.to_int() < 0x20 {
+    let code = unit.to_int()
+    if code < 0x20 {
+      return false
+    }
+    // the parser and writer both reject XML non-characters and unpaired
+    // surrogates; currently unreachable through well-formed XML, kept in
+    // lockstep so one reader laxity cannot reopen the abort class
+    if (code >= 0xD800 && code <= 0xDFFF) || code == 0xFFFE || code == 0xFFFF {
       return false
     }
   }
@@ -1060,20 +1068,9 @@ fn docx_table_params(
               )
           }
         }
-        if cells.length() == 0 {
-          // the batch parser rejects a row with no cells; dropping the
-          // degenerate row keeps the rest of the table replayable
-          ctx.residual.push(
-            docx_residual(
-              "docx.empty_row_dropped",
-              "block",
-              docx_location(block),
-              "a table row with no cells is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
-            ),
-          )
-        } else {
-          emitted.push((cells, is_header))
-        }
+        // empty rows are kept for the gate below: whether one can be
+        // dropped depends on the vertical merges active at its position
+        emitted.push((cells, is_header))
       }
       other =>
         ctx.residual.push(
@@ -1099,39 +1096,148 @@ fn docx_table_params(
     )
     return None
   }
-  // grid gate mirroring the writer: every row's effective width (the
-  // spans the ops will carry, absent = 1) must fit the 63-column grid
-  // AND all rows must be equally wide — the writer rejects narrower
-  // rows rather than padding them, so gate here and disclose
-  let mut grid_width = -1
+  // Grid gate mirroring the writer's PLACEMENT algorithm, vertical
+  // merges included: a pending row_span occupies its columns in the rows
+  // below, own cells fill the remaining columns in order, every row must
+  // cover the grid exactly, and a cell may not stride over a pending
+  // merge column. A row the reader left empty (all its cells were vMerge
+  // continuations) is only droppable when no merge is active there —
+  // otherwise the batch grammar cannot express the table at all (every
+  // script row needs at least one cell) and the table residualizes.
+  let kept : Array[(Array[(Map[String, Json], Int, Int)], Bool)] = []
+  let mut vmerge_active = false
   for entry in emitted {
+    let (cells, is_header) = entry
+    if cells.length() == 0 {
+      if vmerge_active {
+        ctx.residual.push(
+          docx_residual(
+            "docx.table_grid_unsupported",
+            "block",
+            docx_location(block),
+            "a row consisting only of vertical-merge continuations is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+          ),
+        )
+        return None
+      }
+      ctx.residual.push(
+        docx_residual(
+          "docx.empty_row_dropped",
+          "block",
+          docx_location(block),
+          "a table row with no cells is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+        ),
+      )
+      continue
+    }
+    for cell in cells {
+      let (_, _, row_span) = cell
+      if row_span > 1 {
+        vmerge_active = true
+      }
+    }
+    kept.push((cells, is_header))
+  }
+  if kept.length() == 0 {
+    ctx.residual.push(
+      docx_residual(
+        "docx.empty_table_dropped",
+        "block",
+        docx_location(block),
+        "a table with no expressible rows is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+      ),
+    )
+    return None
+  }
+  // the spans the ops will actually carry: out-of-range values were
+  // already residualized and default to 1 at build
+  let effective = (span : Int, cap : Int) => {
+    if span > 1 && span <= cap {
+      span
+    } else {
+      1
+    }
+  }
+  let grid_reject = (reason : String) => {
+    ctx.residual.push(
+      docx_residual(
+        "docx.table_grid_unsupported",
+        "block",
+        docx_location(block),
+        reason,
+      ),
+    )
+  }
+  // writer step 1: the grid width is the widest row's RAW span sum, and
+  // no row's raw sum may pass the 63-column limit
+  let mut grid_width = 0
+  for entry in kept {
     let (cells, _) = entry
     let mut width = 0
     for cell in cells {
       let (_, col_span, _) = cell
-      width += if col_span > 1 && col_span <= 63 { col_span } else { 1 }
+      width += effective(col_span, 63)
     }
     if width > 63 {
-      ctx.residual.push(
-        docx_residual(
-          "docx.table_grid_unsupported",
-          "block",
-          docx_location(block),
-          "a table row spans \{width} grid columns; the writer's limit is 63",
-        ),
+      grid_reject(
+        "a table row spans \{width} grid columns; the writer's limit is 63",
       )
       return None
     }
-    if grid_width < 0 {
+    if width > grid_width {
       grid_width = width
-    } else if width != grid_width {
-      ctx.residual.push(
-        docx_residual(
-          "docx.table_grid_unsupported",
-          "block",
-          docx_location(block),
-          "table rows span \{grid_width} and \{width} grid columns; the writer requires uniform rows",
-        ),
+    }
+  }
+  // writer step 2: placement — pending merges occupy their columns, own
+  // cells fill the rest in order, coverage must be exact
+  let pending : Map[Int, (Int, Int)] = {} // start column -> (remaining, width)
+  for row_index, entry in kept {
+    let (cells, _) = entry
+    let mut grid_column = 0
+    let mut cursor = 0
+    while grid_column < grid_width {
+      match pending.get(grid_column) {
+        Some((remaining, width)) if remaining > 0 => {
+          if remaining == 1 {
+            pending.remove(grid_column)
+          } else {
+            pending[grid_column] = (remaining - 1, width)
+          }
+          grid_column += width
+          continue
+        }
+        _ => ()
+      }
+      if cursor >= cells.length() {
+        break
+      }
+      let (_, raw_col, raw_row) = cells[cursor]
+      cursor += 1
+      let col_span = effective(raw_col, 63)
+      let row_span = effective(raw_row, kept.length() - row_index)
+      for offset in 1..<col_span {
+        if pending.get(grid_column + offset) is Some((interior, _)) &&
+          interior > 0 {
+          grid_reject(
+            "a cell collides with a vertical merge inside its column span",
+          )
+          return None
+        }
+      }
+      if row_span > 1 {
+        pending[grid_column] = (row_span - 1, col_span)
+      }
+      grid_column += col_span
+    }
+    if cursor < cells.length() {
+      grid_reject(
+        "a table row is wider than the grid once vertical merges are placed",
+      )
+      return None
+    }
+    if grid_column != grid_width {
+      grid_reject(
+        "a table row covers \{grid_column} of \{grid_width} grid columns; ragged tables are not serializable",
       )
       return None
     }
@@ -1141,7 +1247,7 @@ fn docx_table_params(
   let rows : Array[Json] = []
   let mut header_rows = 0
   let mut in_leading_headers = true
-  for row_index, entry in emitted {
+  for row_index, entry in kept {
     let (cells, is_header) = entry
     if is_header {
       if in_leading_headers {
@@ -1177,7 +1283,7 @@ fn docx_table_params(
           ),
         )
       }
-      let row_span_cap = emitted.length() - row_index
+      let row_span_cap = kept.length() - row_index
       if row_span > 1 && row_span <= row_span_cap {
         spec["row_span"] = Json::number(row_span.to_double())
       } else if row_span > row_span_cap || row_span < 1 {
@@ -1607,9 +1713,9 @@ fn docx_self_check_ops(
   }
   match (try? docx_assemble_ops(ops, images)) {
     Ok(_) => ()
-    Err(error) =>
+    Err(ReplayInvalidFormat(reason)) | Err(ReplayFailed(reason)) =>
       raise DumpSelfCheckFailed(
-        "the assembled document does not write: \{to_repr(error)}",
+        "the assembled document does not write: " + reason,
       )
   }
 }
