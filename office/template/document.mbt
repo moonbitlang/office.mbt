@@ -184,17 +184,87 @@ fn parse_region_address(
   guard entries.get("row") is Some(Number(row_value, ..)) else {
     raise TemplateDataError("region \"" + name + "\" row must be a number")
   }
+  // the raw pre-scan already rejected any row whose SPELLING is not a
+  // plain in-range integer literal (Double rounding erases fractional
+  // spellings like 1048576.0000000001 before this point — the same
+  // raw-vs-decoded class as escape-spelled keys); this numeric check is
+  // defense in depth for programmatically built documents
   let truncated = row_value.to_int64()
   if truncated.to_double() != row_value ||
     truncated < 1L ||
     truncated > MAX_SHEET_ROW.to_int64() {
-    raise TemplateDataError(
-      "region \"" +
-      name +
-      "\" row must be an integer between 1 and \{MAX_SHEET_ROW}",
-    )
+    raise TemplateDataError(row_bounds_message(name))
   }
   SheetRow(sheet~, row=truncated.to_int())
+}
+
+///|
+fn row_bounds_message(name : String) -> String {
+  "region \"" +
+  name +
+  "\" row must be an integer between 1 and \{MAX_SHEET_ROW}"
+}
+
+///|
+/// Accepts only a plain positive integer literal within the grid: digits
+/// with no sign, fraction, exponent, or leading zero, at most seven of
+/// them, value in 1..=MAX_SHEET_ROW.
+fn parse_strict_row_literal(spelling : String) -> Int? {
+  if spelling.length() == 0 || spelling.length() > 7 {
+    return None
+  }
+  if spelling[0] == '0' {
+    return None
+  }
+  let mut value = 0
+  for unit in spelling {
+    guard unit is ('0'..='9') else { return None }
+    value = value * 10 + (unit.to_int() - '0'.to_int())
+  }
+  if value < 1 || value > MAX_SHEET_ROW {
+    return None
+  }
+  Some(value)
+}
+
+///|
+/// The raw lexical gate for region rows, run during the duplicate-key
+/// pre-scan (post-parse Doubles cannot recover spellings): when a "row"
+/// member is recorded directly inside a region object (frame chain
+/// root -> "regions" -> region), the value token that follows must be a
+/// plain in-range integer literal. Non-numeric tokens are left for the
+/// structured parser's typed errors.
+fn region_row_lexical_gate(
+  text : String,
+) -> (Array[String], String, Int) -> Unit raise TemplateDataError {
+  (labels, key, after_key) => {
+    guard key == "row" && labels.length() == 3 && labels[1] == "regions" else {
+      return
+    }
+    let mut index = after_key
+    while index < text.length() && text[index] is (' ' | '\t' | '\n' | '\r') {
+      index += 1
+    }
+    guard index < text.length() && text[index] == ':' else { return }
+    index += 1
+    while index < text.length() && text[index] is (' ' | '\t' | '\n' | '\r') {
+      index += 1
+    }
+    let token_start = index
+    while index < text.length() &&
+          !(text[index] is (',' | '}' | ']' | ' ' | '\t' | '\n' | '\r')) {
+      index += 1
+    }
+    guard index > token_start else { return }
+    let first = text[token_start]
+    // strings/objects/booleans stay with the structured parser; only
+    // number-shaped tokens are judged lexically here
+    guard first is ('0'..='9') || first == '-' else { return }
+    guard parse_strict_row_literal(text.substring(start=token_start, end=index))
+      is Some(_) else {
+      raise TemplateDataError(row_bounds_message(labels[2]))
+    }
+  }
 }
 
 ///|
@@ -213,7 +283,7 @@ pub fn parse_template_document(
   max_region_records? : Int = MAX_TEMPLATE_REGION_RECORDS,
   max_total_region_rows? : Int = MAX_TEMPLATE_TOTAL_REGION_ROWS,
 ) -> TemplateData raise TemplateDataError {
-  check_duplicate_keys(text)
+  check_duplicate_keys(text, on_member=Some(region_row_lexical_gate(text)))
   let document = @json.parse(text) catch {
     _ => raise TemplateDataError("data document is not valid JSON")
   }

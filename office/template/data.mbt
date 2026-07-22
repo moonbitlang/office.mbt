@@ -73,10 +73,13 @@ fn template_value_text_ok(text : String) -> Bool {
 /// tracks object frames and their seen keys; strings are skipped with
 /// full escape handling. Runs before `@json.parse`, so malformed JSON is
 /// reported by the real parser rather than this pre-scan.
-fn check_duplicate_keys(text : String) -> Unit raise TemplateDataError {
+fn check_duplicate_keys(
+  text : String,
+  on_member? : ((Array[String], String, Int) -> Unit raise TemplateDataError)? = None,
+) -> Unit raise TemplateDataError {
   let units = text.code_units()
   let length = units.length()
-  let frames : Array[(Bool, Set[String], Ref[Bool])] = []
+  let frames : Array[ScanFrame] = []
   let mut index = 0
   while index < length {
     let unit = units[index].to_int()
@@ -90,6 +93,7 @@ fn check_duplicate_keys(text : String) -> Unit raise TemplateDataError {
       let identity = StringBuilder::new()
       let mut escaped = false
       index += 1
+      let string_start = index
       let mut closed = false
       while index < length {
         let piece = units[index].to_int()
@@ -116,7 +120,7 @@ fn check_duplicate_keys(text : String) -> Unit raise TemplateDataError {
         return
       }
       match frames.last() {
-        Some((true, seen, expecting_key)) if expecting_key.val => {
+        Some(frame) if frame.is_object && frame.expecting_key => {
           // a \uXXXX spelling decodes to a character the verbatim
           // identity cannot see (\u0061 aliases "a" and @json.parse is
           // last-wins), so any escape in a KEY is rejected outright —
@@ -127,30 +131,63 @@ fn check_duplicate_keys(text : String) -> Unit raise TemplateDataError {
             )
           }
           let key = identity.to_string()
-          if seen.contains(key) {
+          if frame.seen.contains(key) {
             raise TemplateDataError("duplicate key in the data document")
           }
-          seen.add(key)
-          expecting_key.val = false
+          frame.seen.add(key)
+          frame.expecting_key = false
+          // escaped keys raised above, so the raw span IS the key text —
+          // labels and the callback want characters, not the identity
+          // encoding the seen-set uses
+          let literal = text.substring(start=string_start, end=index - 1)
+          frame.pending_key = literal
+          match on_member {
+            Some(callback) => {
+              let labels = frames.map(open => open.label)
+              callback(labels, literal, index)
+            }
+            None => ()
+          }
         }
         _ => ()
       }
       continue
     }
-    if unit == '{'.to_int() {
-      frames.push((true, Set::new(), Ref::new(true)))
-    } else if unit == '['.to_int() {
-      frames.push((false, Set::new(), Ref::new(false)))
+    if unit == '{'.to_int() || unit == '['.to_int() {
+      let label = match frames.last() {
+        Some(parent) if parent.is_object => parent.pending_key
+        _ => ""
+      }
+      frames.push({
+        is_object: unit == '{'.to_int(),
+        seen: Set::new(),
+        expecting_key: unit == '{'.to_int(),
+        label,
+        pending_key: "",
+      })
     } else if unit == '}'.to_int() || unit == ']'.to_int() {
       ignore(frames.pop())
     } else if unit == ','.to_int() {
       match frames.last() {
-        Some((true, _, expecting_key)) => expecting_key.val = true
+        Some(frame) if frame.is_object => frame.expecting_key = true
         _ => ()
       }
     }
     index += 1
   }
+}
+
+///|
+/// One open JSON container during the raw scan: its seen keys, whether the
+/// next string is a key, the member key under which the container itself
+/// was opened (array items carry ""), and the most recent key read (the
+/// label a child container opened next inherits).
+priv struct ScanFrame {
+  is_object : Bool
+  seen : Set[String]
+  mut expecting_key : Bool
+  label : String
+  mut pending_key : String
 }
 
 ///|

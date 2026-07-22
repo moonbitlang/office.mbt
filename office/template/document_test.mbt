@@ -138,7 +138,13 @@ test "document parser: addressing refusals" {
     head + "\"sheet\": \"S\", \"row\": \"5\"" + tail,
     "region \"items\" row must be a number",
   )
-  for bad_row in ["0", "-3", "5.5", "1e300", "1048577"] {
+  // lexical strictness: spellings that ROUND to an in-range integer are
+  // rejected too (1048576.0000000001 parses to exactly 1048576.0; "5.0"
+  // and "1e3" denote integers but are not plain integer literals)
+  for
+    bad_row in [
+      "0", "-3", "5.5", "1e300", "1048577", "5.0", "1e3", "5.0000000000000001", "1048576.0000000001",
+    ] {
     expect_document_error(
       head + "\"sheet\": \"S\", \"row\": " + bad_row + tail,
       "region \"items\" row must be an integer between 1 and 1048576",
