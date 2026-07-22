@@ -26,6 +26,7 @@ fn template_wb_state() -> DocxMergeState {
     used_keys: Set::new(),
     budget: Ref::new(1_000_000),
     edits: [],
+    checks: [],
     allow_missing: false,
   }
 }
@@ -242,4 +243,24 @@ test "split placeholders in out-of-scope stories are flagged" {
     ),
   ])
   assert_eq(clean.report.unsupported_total, 0)
+}
+
+///|
+/// Codex #208 round-4: an escape whose backslash and braces sit in
+/// different hyperlink parents would migrate the literal outside the
+/// link — it must refuse like a crossing match.
+test "escapes crossing hyperlink parents refuse" {
+  let state = template_wb_state()
+  wb_scan(state, [
+    @document.run([@document.text("\\")]),
+    @document.Hyperlink(
+      children=[@document.run([@document.text("{{k}}")])],
+      href=Some("https://example.com/"),
+      anchor=None,
+      target_frame=None,
+    ),
+  ])
+  assert_eq(state.report.escapes_applied, 0)
+  assert_true(state.report.unsupported_total >= 1)
+  assert_eq(state.edits.length(), 0)
 }

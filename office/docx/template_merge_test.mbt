@@ -136,3 +136,101 @@ async test "docx template refuses missing keys without publishing" {
     }
   }
 }
+
+///|
+/// Codex #208 round-4 bytes-level nets: shapes the parsed model cannot
+/// represent — only the byte-fidelity gate can see them.
+async fn docx_template_bytes_case(
+  directory : String,
+  replacement : String,
+  values : Map[String, @template.TemplateValue],
+  allow_missing : Bool,
+) -> @docx.DocxTemplateReport {
+  let source_bytes = @afs.read_file(
+    "../docx2html/tests/cram/fixtures/single-paragraph.docx",
+  ).binary()
+  let archive = @zip.read(source_bytes[:])
+  let rebuilt = @zip.Archive::new()
+  for entry in archive.entries() {
+    let name = entry.name()
+    guard archive.get(name) is Some(payload) else { continue }
+    let replaced = if name == "word/document.xml" {
+      let text = @utf8.decode(payload)
+      @utf8.encode(
+        text.replace(
+          old="<w:r><w:t>Walking on imported air</w:t></w:r>",
+          new=replacement,
+        ),
+      )
+    } else {
+      payload.to_bytes()
+    }
+    rebuilt.add(name, replaced)
+  }
+  let input = directory + "/bytes-tpl.docx"
+  @afs.write_file(
+    input,
+    @zip.write(rebuilt),
+    create_mode=CreateNew,
+    permission=0o600,
+  )
+  let output = directory + "/bytes-out.docx"
+  match
+    (try? @docx.transact_docx_template(
+      @transaction.transaction_options(input, output_path=output),
+      values,
+      allow_missing~,
+    )) {
+    Err(@docx.DocxTemplateRefused(report)) => {
+      if @afs.exists(output) {
+        fail("refusal must not publish")
+      }
+      report
+    }
+    Err(error) => raise error
+    Ok(_) => fail("expected the typed refusal")
+  }
+}
+
+///|
+async test "a dropped in-run picture cannot be crossed by a placeholder" {
+  @async.with_task_group() <| group => {
+    let directory = @afs.tmpdir(prefix="office-docx-template-pict-")
+    group.add_defer() <| () => {
+      @async.protect_from_cancel(() => @afs.rmdir(directory, recursive=true))
+    }
+    // the reader drops w:pict, leaving Run([]) — indistinguishable from
+    // an empty run in the model; the fidelity gate on interior runs
+    // must refuse the span
+    let report = docx_template_bytes_case(
+      directory,
+      "<w:r><w:t>{</w:t></w:r><w:r><w:pict></w:pict></w:r><w:r><w:t>{k}}</w:t></w:r>",
+      { "k": @template.TextValue("VALUE") },
+      false,
+    )
+    assert_true(report.unsupported_total >= 1)
+    // the refused report still describes the would-have merge; nothing
+    // was published (asserted in the case helper)
+    assert_false(report.changed)
+  }
+}
+
+///|
+async test "unfaithful bytes under a missing-key match refuse even with allow-missing" {
+  @async.with_task_group() <| group => {
+    let directory = @afs.tmpdir(prefix="office-docx-template-sym-")
+    group.add_defer() <| () => {
+      @async.protect_from_cancel(() => @afs.rmdir(directory, recursive=true))
+    }
+    // the run's model text is pure (the hyphen element maps to a text
+    // character) but its bytes cannot round-trip; unsupported must
+    // outrank missing, even under allow-missing
+    let report = docx_template_bytes_case(
+      directory,
+      "<w:r><w:t>{{missing}}</w:t><w:noBreakHyphen/></w:r>",
+      {},
+      true,
+    )
+    assert_true(report.unsupported_total >= 1)
+  }
+}
