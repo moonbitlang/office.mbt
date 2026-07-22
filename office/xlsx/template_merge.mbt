@@ -63,13 +63,150 @@ fn push_bounded(
 }
 
 ///|
+/// The outcome of substituting one cell's text: the shared core used by
+/// the scalar pass and the region fill so their semantics cannot drift.
+priv struct CellSubstitution {
+  malformed_reasons : Array[String]
+  present_keys : Array[String]
+  missing_keys : Array[String]
+  mut typed_edit : @engine.CellValue?
+  mut new_text : String?
+  mut replaced : Int
+  mut escapes_applied : Int
+  mut placeholders_found : Int
+}
+
+///|
+/// Scans one string cell value and computes its substitution under a
+/// resolver. Mirrors the original scalar semantics exactly: any malformed
+/// site freezes the cell; whole-cell single-match substitution keeps the
+/// value's native type; otherwise a left-to-right substring rebuild where
+/// missing keys leave their literal text (the caller decides whether
+/// missing refuses). `new_text` is Some only when the rebuild changed
+/// the text.
+fn substitute_cell_text(
+  text : String,
+  resolve : (String) -> @template.TemplateValue?,
+  budget : Ref[Int],
+) -> CellSubstitution raise {
+  let outcome : CellSubstitution = {
+    malformed_reasons: [],
+    present_keys: [],
+    missing_keys: [],
+    typed_edit: None,
+    new_text: None,
+    replaced: 0,
+    escapes_applied: 0,
+    placeholders_found: 0,
+  }
+  let scan = @template.scan_placeholders([text], budget)
+  outcome.placeholders_found = scan.matches.length()
+  for entry in scan.malformed {
+    outcome.malformed_reasons.push(entry.reason)
+  }
+  if scan.malformed.length() > 0 {
+    return outcome
+  }
+  for matched in scan.matches {
+    match resolve(matched.key) {
+      Some(_) => outcome.present_keys.push(matched.key)
+      None => outcome.missing_keys.push(matched.key)
+    }
+  }
+  let units = text.code_units().length()
+  if scan.matches.length() == 1 &&
+    scan.escapes.length() == 0 &&
+    outcome.missing_keys.length() == 0 {
+    let only = scan.matches[0]
+    if only.span.start_offset == 0 && only.span.end_offset == units {
+      match resolve(only.key) {
+        Some(NumberValue(number)) => {
+          outcome.replaced = 1
+          outcome.typed_edit = Some(@engine.CellValue::Numeric(number))
+          return outcome
+        }
+        Some(BoolValue(flag)) => {
+          outcome.replaced = 1
+          outcome.typed_edit = Some(@engine.CellValue::Bool(flag))
+          return outcome
+        }
+        _ => ()
+      }
+    }
+  }
+  let builder = StringBuilder::new()
+  let mut cursor = 0
+  let mut rewrote = false
+  let mut match_index = 0
+  let mut escape_index = 0
+  while match_index < scan.matches.length() ||
+        escape_index < scan.escapes.length() {
+    let next_match_at = if match_index < scan.matches.length() {
+      scan.matches[match_index].span.start_offset
+    } else {
+      units + 1
+    }
+    let next_escape_at = if escape_index < scan.escapes.length() {
+      scan.escapes[escape_index].start_offset
+    } else {
+      units + 1
+    }
+    if next_match_at < next_escape_at {
+      let matched = scan.matches[match_index]
+      match_index += 1
+      builder.write_string(
+        text.substring(start=cursor, end=matched.span.start_offset),
+      )
+      match resolve(matched.key) {
+        Some(value) => {
+          builder.write_string(value.render())
+          outcome.replaced += 1
+          rewrote = true
+        }
+        None =>
+          // allow-missing: the literal placeholder stays
+          builder.write_string(
+            text.substring(
+              start=matched.span.start_offset,
+              end=matched.span.end_offset,
+            ),
+          )
+      }
+      cursor = matched.span.end_offset
+    } else {
+      let escape = scan.escapes[escape_index]
+      escape_index += 1
+      builder.write_string(
+        text.substring(start=cursor, end=escape.start_offset),
+      )
+      builder.write_string("{{")
+      outcome.escapes_applied += 1
+      rewrote = true
+      cursor = escape.end_offset
+    }
+  }
+  builder.write_string(text.substring(start=cursor, end=units))
+  if rewrote {
+    let final_text = builder.to_string()
+    if final_text != text {
+      outcome.new_text = Some(final_text)
+    }
+  }
+  outcome
+}
+
+///|
 /// Scans and substitutes one workbook in place. The returned report is
 /// complete whether or not the caller publishes; `changed` says whether
-/// any cell was rewritten.
+/// any cell was rewritten. Cells whose (sheet, row) is CLAIMED by a
+/// repetition region are skipped entirely — the region pass owns them —
+/// with the skip count reported through `skipped_cells`.
 fn merge_template_workbook(
   workbook : @engine.Workbook,
   values : Map[String, @template.TemplateValue],
   allow_missing~ : Bool,
+  claimed_rows? : Set[String] = Set::new(),
+  skipped_cells? : Ref[Int] = Ref::new(0),
 ) -> XlsxTemplateReport raise {
   let budget = Ref::new(template_scan_budget)
   let report : XlsxTemplateReport = {
@@ -98,6 +235,11 @@ fn merge_template_workbook(
   for worksheet in workbook.sheets() {
     let sheet_name = worksheet.name
     for cell in worksheet.cells {
+      if claimed_rows.contains("\{sheet_name}\u{0}\{cell.row}") {
+        // the region pass owns every cell on a claimed template row
+        skipped_cells.val += 1
+        continue
+      }
       let location = "\{sheet_name}!\{cell.reference}"
       let is_formula = cell.formula is Some(_) ||
         cell.formula_shared_index is Some(_)
@@ -137,124 +279,47 @@ fn merge_template_workbook(
       if !text.contains("{{") && !text.contains("\\{{") {
         continue
       }
-      let scan = @template.scan_placeholders([text], budget)
-      report.placeholders_found += scan.matches.length()
-      for entry in scan.malformed {
+      let outcome = substitute_cell_text(text, key => values.get(key), budget)
+      report.placeholders_found += outcome.placeholders_found
+      for reason in outcome.malformed_reasons {
         report.malformed_total += 1
-        push_bounded(report.malformed, location, entry.reason)
+        push_bounded(report.malformed, location, reason)
       }
-      if scan.malformed.length() > 0 {
+      if outcome.malformed_reasons.length() > 0 {
         // a cell with any malformed site is never modified
         continue
       }
-      let mut cell_missing = false
-      for matched in scan.matches {
-        match values.get(matched.key) {
-          Some(_) => {
-            used_keys.add(matched.key)
-            if report.locations.length() < template_finding_limit {
-              report.locations.push({ location, detail: matched.key })
-            } else {
-              report.locations_truncated = true
-            }
-          }
-          None => {
-            cell_missing = true
-            missing_keys.add(matched.key)
-            report.missing_total += 1
-            push_bounded(report.missing, location, matched.key)
-          }
+      for key in outcome.present_keys {
+        used_keys.add(key)
+        if report.locations.length() < template_finding_limit {
+          report.locations.push({ location, detail: key })
+        } else {
+          report.locations_truncated = true
         }
       }
-      if cell_missing && !allow_missing {
+      for key in outcome.missing_keys {
+        missing_keys.add(key)
+        report.missing_total += 1
+        push_bounded(report.missing, location, key)
+      }
+      if outcome.missing_keys.length() > 0 && !allow_missing {
         // the transaction will refuse; no edits for this cell
         continue
       }
-      // whole-cell typed substitution: exactly one match covering the
-      // entire value, key present with a non-text value
-      let units = text.code_units().length()
-      if scan.matches.length() == 1 &&
-        scan.escapes.length() == 0 &&
-        !cell_missing {
-        let only = scan.matches[0]
-        if only.span.start_offset == 0 && only.span.end_offset == units {
-          match values.get(only.key) {
-            Some(NumberValue(number)) => {
-              report.replaced += 1
-              typed_edits.push(
-                (sheet_name, cell.reference, @engine.CellValue::Numeric(number)),
-              )
-              continue
-            }
-            Some(BoolValue(flag)) => {
-              report.replaced += 1
-              typed_edits.push(
-                (sheet_name, cell.reference, @engine.CellValue::Bool(flag)),
-              )
-              continue
-            }
-            _ => ()
-          }
+      match outcome.typed_edit {
+        Some(value) => {
+          report.replaced += outcome.replaced
+          typed_edits.push((sheet_name, cell.reference, value))
+          continue
         }
+        None => ()
       }
-      // substring substitution: rebuild the text left to right
-      let builder = StringBuilder::new()
-      let mut cursor = 0
-      let mut rewrote = false
-      let mut match_index = 0
-      let mut escape_index = 0
-      while match_index < scan.matches.length() ||
-            escape_index < scan.escapes.length() {
-        let next_match_at = if match_index < scan.matches.length() {
-          scan.matches[match_index].span.start_offset
-        } else {
-          units + 1
-        }
-        let next_escape_at = if escape_index < scan.escapes.length() {
-          scan.escapes[escape_index].start_offset
-        } else {
-          units + 1
-        }
-        if next_match_at < next_escape_at {
-          let matched = scan.matches[match_index]
-          match_index += 1
-          builder.write_string(
-            text.substring(start=cursor, end=matched.span.start_offset),
-          )
-          match values.get(matched.key) {
-            Some(value) => {
-              builder.write_string(value.render())
-              report.replaced += 1
-              rewrote = true
-            }
-            None =>
-              // allow-missing: the literal placeholder stays
-              builder.write_string(
-                text.substring(
-                  start=matched.span.start_offset,
-                  end=matched.span.end_offset,
-                ),
-              )
-          }
-          cursor = matched.span.end_offset
-        } else {
-          let escape = scan.escapes[escape_index]
-          escape_index += 1
-          builder.write_string(
-            text.substring(start=cursor, end=escape.start_offset),
-          )
-          builder.write_string("{{")
-          report.escapes_applied += 1
-          rewrote = true
-          cursor = escape.end_offset
-        }
-      }
-      builder.write_string(text.substring(start=cursor, end=units))
-      if rewrote {
-        let final_text = builder.to_string()
-        if final_text != text {
+      report.replaced += outcome.replaced
+      report.escapes_applied += outcome.escapes_applied
+      match outcome.new_text {
+        Some(final_text) =>
           text_edits.push((sheet_name, cell.reference, final_text))
-        }
+        None => ()
       }
     }
   }

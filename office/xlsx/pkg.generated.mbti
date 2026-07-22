@@ -19,6 +19,8 @@ pub async fn transact_batch(@transaction.TransactionOptions, @batch.BatchPlan) -
 
 pub async fn transact_template(@transaction.TransactionOptions, Map[String, @template.TemplateValue], allow_missing~ : Bool) -> XlsxTemplateResult
 
+pub async fn transact_template_document(@transaction.TransactionOptions, @template.TemplateData, allow_missing~ : Bool) -> XlsxTemplateDocumentResult
+
 // Errors
 pub suberror XlsxTemplateRefused {
   XlsxTemplateRefused(XlsxTemplateReport)
@@ -32,6 +34,23 @@ pub struct XlsxBatchResult {
 
 pub struct XlsxCreateResult {
   sheet : String
+  transaction : @transaction.TransactionReport
+}
+
+pub(all) struct XlsxRegionOutcome {
+  name : String
+  source_location : String
+  output_rows_start : Int
+  output_rows_count : Int
+  records : Int
+  replaced : Int
+  escapes_applied : Int
+} derive(Eq, @debug.Debug)
+
+pub struct XlsxTemplateDocumentResult {
+  report : XlsxTemplateReport
+  regions : Array[XlsxRegionOutcome]
+  scalar_cells_skipped : Int
   transaction : @transaction.TransactionReport
 }
 
