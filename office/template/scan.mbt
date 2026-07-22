@@ -24,7 +24,12 @@ pub suberror TemplateScanError {
 ///|
 /// A half-open region of the scanned text in segment coordinates:
 /// `[start, end)` where each endpoint is (segment index, code-unit offset
-/// within that segment). `end_offset` may equal the end segment's length.
+/// within that segment). CANONICAL FORM: an end landing exactly on a
+/// segment boundary is reported as (next segment, 0), not
+/// (segment, length) — the two are the same logical position, and
+/// callers rewriting per-segment ranges must treat an end at (i, 0) as
+/// "nothing of segment i is covered". Only a span ending at the very end
+/// of the text uses (last segment, its length).
 pub(all) struct TemplateSpan {
   start_segment : Int
   start_offset : Int
@@ -40,7 +45,8 @@ pub(all) struct PlaceholderMatch {
 } derive(Eq, @debug.Debug)
 
 ///|
-/// One `{{` that forms neither a placeholder nor an escape.
+/// One `{{` that forms neither a placeholder nor an escape. The span
+/// ends AT the offending unit (or at end of text), not past it.
 pub(all) struct MalformedPlaceholder {
   span : TemplateSpan
   reason : String

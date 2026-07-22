@@ -88,11 +88,13 @@ fn check_duplicate_keys(text : String) -> Unit raise TemplateDataError {
       // exact for well-formed data. Values with arbitrary unicode are
       // skipped without materializing characters.
       let identity = StringBuilder::new()
+      let mut escaped = false
       index += 1
       let mut closed = false
       while index < length {
         let piece = units[index].to_int()
         if piece == '\\'.to_int() {
+          escaped = true
           identity.write_string("\{piece},")
           if index + 1 < length {
             identity.write_string("\{units[index + 1].to_int()},")
@@ -115,6 +117,15 @@ fn check_duplicate_keys(text : String) -> Unit raise TemplateDataError {
       }
       match frames.last() {
         Some((true, seen, expecting_key)) if expecting_key.val => {
+          // a \uXXXX spelling decodes to a character the verbatim
+          // identity cannot see (\u0061 aliases "a" and @json.parse is
+          // last-wins), so any escape in a KEY is rejected outright —
+          // grammar keys never need one
+          if escaped {
+            raise TemplateDataError(
+              "data keys must not use JSON escape sequences",
+            )
+          }
           let key = identity.to_string()
           if seen.contains(key) {
             raise TemplateDataError("duplicate key in the data document")
@@ -210,7 +221,17 @@ pub fn parse_template_data(
         }
         values[key] = TextValue(item)
       }
-      Number(number, ..) => values[key] = NumberValue(number)
+      Number(number, ..) => {
+        // JSON has no infinity, but an overflowing literal (1e309)
+        // parses to one — which would substitute the word "Infinity"
+        // into published documents; reject like any other non-scalar
+        if number != number || number.is_inf() {
+          raise TemplateDataError(
+            "value for \"" + key + "\" is not a finite number",
+          )
+        }
+        values[key] = NumberValue(number)
+      }
       True => values[key] = BoolValue(true)
       False => values[key] = BoolValue(false)
       Null =>

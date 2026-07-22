@@ -212,3 +212,33 @@ test "template data bounds" {
     Ok(_) => fail("expected the key bound to reject")
   }
 }
+
+///|
+/// Kimi #205 round-1 findings: escape-spelled keys cannot bypass the
+/// duplicate gate, and overflowing numerals cannot smuggle "Infinity"
+/// into published documents.
+test "escaped keys and non-finite numbers are rejected" {
+  match
+    (try? @template.parse_template_data(
+      "{\"schema\":\"office.template.data/1\",\"values\":{\"a\":1,\"\\u0061\":2}}",
+    )) {
+    Err(@template.TemplateDataError(reason)) =>
+      assert_true(reason.contains("escape sequences"))
+    Ok(_) => fail("a \\u-spelled duplicate key must not parse")
+  }
+  match
+    (try? @template.parse_template_data(
+      "{\"schema\":\"office.template.data/1\",\"values\":{\"n\":1e309}}",
+    )) {
+    Err(@template.TemplateDataError(reason)) =>
+      assert_true(reason.contains("finite"))
+    Ok(_) => fail("an overflowing numeral must not parse")
+  }
+  match
+    (try? @template.parse_template_data(
+      "{\"schema\":\"office.template.data/1\",\"values\":{\"n\":-1e309}}",
+    )) {
+    Err(@template.TemplateDataError(_)) => ()
+    Ok(_) => fail("a negative overflowing numeral must not parse")
+  }
+}
