@@ -266,13 +266,16 @@ fn docx_pure_text_run(
   children : Array[@document.DocumentElement],
 ) -> (Bool, String) {
   let text = StringBuilder::new()
+  let mut pure = true
   for child in children {
     match child {
       Text(value) => text.write_string(value)
-      _ => return (false, text.to_string())
+      // keep collecting: an opaque run's WHOLE text decides whether a
+      // brace pair hides after the opaque child
+      _ => pure = false
     }
   }
-  (true, text.to_string())
+  (pure, text.to_string())
 }
 
 ///|
@@ -295,9 +298,12 @@ fn DocxMergeState::scan_region(
   segments : Array[DocxRunSegment],
 ) -> Unit raise {
   guard segments.length() > 0 else { return }
+  // the grammar spans segments, so the prefilter must be split-proof:
+  // any single '{' or backslash (single units cannot straddle a run
+  // boundary) routes the region through the real scanner
   let mut interesting = false
   for segment in segments {
-    if segment.text.contains("{{") || segment.text.contains("\\") {
+    if segment.text.contains("{") || segment.text.contains("\\") {
       interesting = true
       break
     }
@@ -325,9 +331,16 @@ fn DocxMergeState::scan_region(
   let accepted : Array[@template.PlaceholderMatch] = []
   for matched in scan.matches {
     let start_parent = segments[matched.span.start_segment].parent
+    // canonical span form: an end at (segment, 0) covers nothing of that
+    // segment, so the last covered segment is the previous one
+    let last_covered = if matched.span.end_offset == 0 {
+      matched.span.end_segment - 1
+    } else {
+      matched.span.end_segment
+    }
     let mut crosses = false
     let mut cursor = matched.span.start_segment
-    while cursor <= matched.span.end_segment && cursor < segments.length() {
+    while cursor <= last_covered && cursor < segments.length() {
       if segments[cursor].parent != start_parent {
         crosses = true
         break
@@ -552,12 +565,21 @@ fn DocxMergeState::flag_out_of_scope(
 ) -> Unit {
   for entry in bodies {
     let (id, body) = entry
-    let mut found = false
+    // text is JOINED before the brace check — a pair split across runs
+    // must flag exactly like an unsplit one. Paragraph boundaries and
+    // opaque children insert separators so a pair can never straddle
+    // them.
+    let joined = StringBuilder::new()
     fn walk(element : @document.DocumentElement) -> Unit {
       match element {
-        Text(value) => if value.contains("{{") { found = true }
-        Paragraph(children~, ..)
-        | Run(children~, ..)
+        Text(value) => joined.write_string(value)
+        Paragraph(children~, ..) => {
+          joined.write_char('\n')
+          for child in children {
+            walk(child)
+          }
+        }
+        Run(children~, ..)
         | Hyperlink(children~, ..)
         | Table(children~, ..)
         | TableRow(children~, ..)
@@ -565,12 +587,13 @@ fn DocxMergeState::flag_out_of_scope(
           for child in children {
             walk(child)
           }
-        _ => ()
+        _ => joined.write_char('\n')
       }
     }
     for element in body {
       walk(element)
     }
+    let found = joined.to_string().contains("{{")
     if found {
       self.report.unsupported_total += 1
       if self.report.unsupported.length() < docx_template_finding_limit {

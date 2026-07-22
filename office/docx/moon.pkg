@@ -9,6 +9,7 @@ import {
   "bobzhang/docx2html/splice",
   "bobzhang/docx2html/xml",
   "bobzhang/office/template",
+  "moonbitlang/core/debug",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
 }

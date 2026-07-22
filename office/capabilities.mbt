@@ -954,7 +954,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         ),
         capability_field("replaced", "number", true, "placeholders substituted"),
         capability_field(
-          "missing", "array(finding)", true, "unresolved keys with Sheet1!B2 locations (bounded)",
+          "missing", "array(finding)", true, "unresolved keys with canonical locations (Sheet1!B2 or /docx/body/p[3]; bounded)",
         ),
         capability_field(
           "unused", "array(string)", true, "data keys the template never used (bounded)",
