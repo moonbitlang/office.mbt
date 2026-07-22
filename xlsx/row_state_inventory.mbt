@@ -546,3 +546,50 @@ pub fn Worksheet::first_stored_formula_cell(self : Worksheet) -> String? {
 pub fn Worksheet::clear_dimension_ref(self : Worksheet) -> Unit {
   self.dimension_ref = None
 }
+
+///|
+/// Whether this sheet's conditional formatting is PROVABLY free of
+/// formula criteria. False whenever proof is impossible: a raw rule
+/// carries a formula-typed cfvo (icon sets expose only three of their
+/// thresholds through the options surface), x14 extension state exists
+/// (its cfvos are not modeled), the parsed rule count disagrees with the
+/// raw <cfRule> count (the reader silently skips schema-exotic rule
+/// types), or the parsed reader raises. Literal operands inside
+/// <formula> elements (a cellIs against 5) do NOT disprove literal-ness —
+/// callers judge those through the parsed options.
+pub fn Worksheet::conditional_formats_provably_literal(
+  self : Worksheet,
+) -> Bool {
+  let mut raw_rules = 0
+  for xml in self.conditional_formats {
+    if xml.find("type=\"formula\"") is Some(_) {
+      return false
+    }
+    let mut search = 0
+    while search < xml.length() {
+      match xml.substring(start=search).find(xml_probe_cfrule) {
+        Some(offset) => {
+          raw_rules += 1
+          search = search + offset + 1
+        }
+        None => break
+      }
+    }
+  }
+  if self.x14_data_bars.size() > 0 {
+    return false
+  }
+  match (try? self.get_conditional_formats()) {
+    Ok(parsed) => {
+      let mut modeled = 0
+      for _, options in parsed {
+        modeled += options.length()
+      }
+      modeled == raw_rules
+    }
+    Err(_) => false
+  }
+}
+
+///|
+let xml_probe_cfrule : String = "<cfRule"

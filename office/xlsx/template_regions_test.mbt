@@ -552,3 +552,27 @@ async test "a malformed region template row counts once" {
     }
   }
 }
+
+///|
+async test "icon-set formula cfvos refuse even though the options hide them" {
+  with_region_dir() <| directory => {
+    let workbook = @engine.Workbook::new()
+    let sheet = workbook.add_sheet("Items")
+    sheet.set_cell_value("A2", @engine.CellValue::String("{{item}}"))
+    let other = workbook.add_sheet("Meta")
+    other.set_cell_value("A1", @engine.CellValue::Numeric(1))
+    other.add_conditional_format_xml(
+      (
+        #|<conditionalFormatting sqref="B1:B9"><cfRule type="iconSet" priority="1"><iconSet iconSet="4Arrows"><cfvo type="min"/><cfvo type="percent" val="25"/><cfvo type="formula" val="$Z$1"/><cfvo type="percent" val="75"/></iconSet></cfRule></conditionalFormatting>
+      ),
+    )
+    expect_region_refusal(
+      directory,
+      @engine.write(workbook),
+      "{\"schema\": \"office.template.data/1\", \"values\": {}, " +
+      "\"regions\": {\"items\": {\"sheet\": \"Items\", \"row\": 2, \"records\": [{\"item\": \"a\"}]}}}",
+      "cannot be proven literal",
+    )
+    |> ignore
+  }
+}

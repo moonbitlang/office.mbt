@@ -365,6 +365,16 @@ fn cf_dv_policy_check(
 
   for worksheet in workbook.sheets() {
     let sheet_name = worksheet.name
+    // the parsed options expose only three cfvo slots and the reader
+    // silently skips schema-exotic rule types, so formula criteria can
+    // hide beyond the parsed surface — the engine's raw-scan proof
+    // gates the whole class first (codex round 2: icon-set formula
+    // cfvos and skipped specialized rules published incorrectly)
+    if !worksheet.conditional_formats_provably_literal() {
+      push_policy_finding(
+        report, sheet_name, "conditional formats whose criteria cannot be proven literal",
+      )
+    }
     match (try? worksheet.get_conditional_formats()) {
       Ok(rules) =>
         for sqref, options in rules {

@@ -2211,6 +2211,7 @@ pub fn Worksheet::cols(Self) -> Cols
 pub fn Worksheet::comments(Self) -> ArrayView[Comment]
 pub fn Worksheet::conditional_format_range_count_limited(Self, Int, Int, cancelled? : () -> Bool) -> Int raise XlsxError
 pub fn Worksheet::conditional_formats(Self) -> ArrayView[String]
+pub fn Worksheet::conditional_formats_provably_literal(Self) -> Bool
 pub fn Worksheet::data_validations(Self) -> ArrayView[String]
 pub fn Worksheet::delete_chart(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::delete_comment(Self, StringView) -> Unit raise XlsxError

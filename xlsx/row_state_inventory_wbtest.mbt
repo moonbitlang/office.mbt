@@ -510,3 +510,34 @@ test "inventory: string-literal qualifiers keep the static entry" {
     }),
   )
 }
+
+///|
+test "cf literal proof: formula cfvos, x14 state, and skipped rules disprove" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Data")
+  assert_true(sheet.conditional_formats_provably_literal())
+  // a plain data bar stays provable
+  workbook.set_conditional_format("Data", "A1:A4", [
+    ConditionalFormatOptions::new("data_bar"),
+  ])
+  assert_true(sheet.conditional_formats_provably_literal())
+  // an icon set carrying a formula-typed cfvo (only three thresholds
+  // surface through the options struct) disproves via the raw scan
+  let icon = Workbook::new()
+  let icon_sheet = icon.add_sheet("Data")
+  icon_sheet.add_conditional_format_xml(
+    (
+      #|<conditionalFormatting sqref="B1:B9"><cfRule type="iconSet" priority="1"><iconSet iconSet="4Arrows"><cfvo type="min"/><cfvo type="percent" val="25"/><cfvo type="formula" val="$Z$1"/><cfvo type="percent" val="75"/></iconSet></cfRule></conditionalFormatting>
+    ),
+  )
+  assert_false(icon_sheet.conditional_formats_provably_literal())
+  // a rule type the parsed reader skips leaves a raw/parsed count gap
+  let exotic = Workbook::new()
+  let exotic_sheet = exotic.add_sheet("Data")
+  exotic_sheet.add_conditional_format_xml(
+    (
+      #|<conditionalFormatting sqref="C1:C4"><cfRule type="dataBar" priority="1"><dataBar><cfvo type="min"/><cfvo type="max"/><color rgb="FF638EC6"/></dataBar></cfRule><cfRule type="futureShape" priority="2"/></conditionalFormatting>
+    ),
+  )
+  assert_false(exotic_sheet.conditional_formats_provably_literal())
+}
