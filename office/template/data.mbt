@@ -80,6 +80,7 @@ fn check_duplicate_keys(
   let units = text.code_units()
   let length = units.length()
   let frames : Array[ScanFrame] = []
+  let member_events : Array[(Array[String], String, Int)] = []
   let mut index = 0
   while index < length {
     let unit = units[index].to_int()
@@ -141,12 +142,11 @@ fn check_duplicate_keys(
           // encoding the seen-set uses
           let literal = text.substring(start=string_start, end=index - 1)
           frame.pending_key = literal
-          match on_member {
-            Some(callback) => {
-              let labels = frames.map(open => open.label)
-              callback(labels, literal, index)
-            }
-            None => ()
+          if on_member is Some(_) {
+            // deferred: a duplicate ANYWHERE must win over member-gate
+            // errors ("row": 5.5, "row": 5 reports the duplicate), so
+            // callbacks fire only after the whole scan completes
+            member_events.push((frames.map(open => open.label), literal, index))
           }
         }
         _ => ()
@@ -174,6 +174,17 @@ fn check_duplicate_keys(
       }
     }
     index += 1
+  }
+  // an unterminated string returns early above WITHOUT reaching this
+  // point, so member gates never fire on documents @json.parse will
+  // reject wholesale
+  match on_member {
+    Some(callback) =>
+      for event in member_events {
+        let (labels, key, after_key) = event
+        callback(labels, key, after_key)
+      }
+    None => ()
   }
 }
 

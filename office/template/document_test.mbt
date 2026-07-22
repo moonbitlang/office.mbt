@@ -285,6 +285,17 @@ test "document parser: record string bounds use the shared limit" {
 }
 
 ///|
+test "document parser: duplicates win over the lexical row gate" {
+  // the gate defers until the whole scan completes, so a bad first "row"
+  // followed by a duplicate still reports the duplicate (codex round 2)
+  expect_document_error(
+    "{\"schema\": \"office.template.data/1\", \"values\": {}, \"regions\": {" +
+    "\"items\": {\"sheet\": \"S\", \"row\": 5.5, \"row\": 5, \"records\": [{\"k\": 1}]}}}",
+    "duplicate key in the data document",
+  )
+}
+
+///|
 test "document parser: duplicate keys are rejected inside records and region names" {
   expect_document_error(
     "{\"schema\": \"office.template.data/1\", \"values\": {}, \"regions\": {" +
