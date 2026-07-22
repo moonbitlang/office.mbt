@@ -448,3 +448,107 @@ async test "values keys used only inside regions are not reported unused" {
     }
   }
 }
+
+///|
+async test "formula-free CF and literal-list DV publish; formula criteria refuse" {
+  with_region_dir() <| directory => {
+    // negative case: a formula-free data bar and a literal drop list on
+    // an UNAFFECTED sheet must publish (codex round 1)
+    let clean = {
+      let workbook = @engine.Workbook::new()
+      let sheet = workbook.add_sheet("Items")
+      sheet.set_cell_value("A2", @engine.CellValue::String("{{item}}"))
+      let other = workbook.add_sheet("Meta")
+      other.set_cell_value("A1", @engine.CellValue::Numeric(1))
+      let bar = @engine.ConditionalFormatOptions::new("data_bar")
+      workbook.set_conditional_format("Meta", "A1:A4", [bar])
+      let list = @engine.DataValidation::new(true)
+      list.set_drop_list(["yes", "no"])
+      list.set_sqref("B1:B4")
+      workbook.add_data_validation("Meta", list)
+      @engine.write(workbook)
+    }
+    let input = directory + "/clean.xlsx"
+    @afs.write_file(input, clean, create_mode=CreateNew, permission=0o600)
+    let output = directory + "/clean-out.xlsx"
+    let data = @template.parse_template_document(
+      "{\"schema\": \"office.template.data/1\", \"values\": {}, " +
+      "\"regions\": {\"items\": {\"sheet\": \"Items\", \"row\": 2, \"records\": [{\"item\": \"a\"}, {\"item\": \"b\"}]}}}",
+    )
+    let result = @xlsx.transact_template_document(
+      @transaction.transaction_options(input, output_path=output),
+      data,
+      allow_missing=false,
+    )
+    assert_true(result.report.changed)
+    assert_true(@afs.exists(output))
+    // positive case: custom DV refuses with formula criteria
+    let custom = {
+      let workbook = @engine.Workbook::new()
+      let sheet = workbook.add_sheet("Items")
+      sheet.set_cell_value("A2", @engine.CellValue::String("{{item}}"))
+      let other = workbook.add_sheet("Meta")
+      other.set_cell_value("A1", @engine.CellValue::Numeric(1))
+      let rule = @engine.DataValidation::new(true)
+      rule.set_range(
+        @engine.DataValidationFormula::TextValue("LEN(TRIM(B1))>0"),
+        @engine.DataValidationFormula::TextValue(""),
+        @engine.DataValidationType::Custom,
+        @engine.DataValidationOperator::Between,
+      )
+      rule.set_sqref("B1")
+      workbook.add_data_validation("Meta", rule)
+      @engine.write(workbook)
+    }
+    @afs.mkdir(directory + "/c") catch {
+      _ => ()
+    }
+    expect_region_refusal(
+      directory + "/c",
+      custom,
+      "{\"schema\": \"office.template.data/1\", \"values\": {}, " +
+      "\"regions\": {\"items\": {\"sheet\": \"Items\", \"row\": 2, \"records\": [{\"item\": \"a\"}]}}}",
+      "a data validation with formula criteria",
+    )
+    |> ignore
+  }
+}
+
+///|
+async test "a malformed region template row counts once" {
+  with_region_dir() <| directory => {
+    let workbook = @engine.Workbook::new()
+    let sheet = workbook.add_sheet("Items")
+    sheet.set_cell_value("A2", @engine.CellValue::String("{{bad key}}"))
+    let input = directory + "/malformed.xlsx"
+    @afs.write_file(
+      input,
+      @engine.write(workbook),
+      create_mode=CreateNew,
+      permission=0o600,
+    )
+    let output = directory + "/malformed-out.xlsx"
+    let data = @template.parse_template_document(
+      "{\"schema\": \"office.template.data/1\", \"values\": {}, " +
+      "\"regions\": {\"items\": {\"sheet\": \"Items\", \"row\": 2, \"records\": [{\"item\": \"a\"}]}}}",
+    )
+    try
+      @xlsx.transact_template_document(
+        @transaction.transaction_options(input, output_path=output),
+        data,
+        allow_missing=false,
+      )
+      |> ignore
+    catch {
+      @xlsx.XlsxTemplateRefused(report) => {
+        // the dropped region's row stays claimed, so the scalar pass
+        // never rescans it (codex round 1: was 2)
+        assert_eq(report.malformed_total, 1)
+        assert_eq(report.malformed.length(), 1)
+      }
+      error => fail("expected XlsxTemplateRefused, got \{error}")
+    } noraise {
+      _ => fail("expected the malformed refusal")
+    }
+  }
+}

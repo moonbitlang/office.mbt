@@ -203,14 +203,6 @@ fn region_policy_check(
           push_policy_finding(
             report, sheet_name, "a sparkline (sources are reference-bearing)",
           )
-        ConditionalFormats =>
-          push_policy_finding(
-            report, sheet_name, "conditional formatting (v1 repetition refuses it wholesale)",
-          )
-        DataValidations =>
-          push_policy_finding(
-            report, sheet_name, "data validation (v1 repetition refuses it wholesale)",
-          )
         InternalLinkTargets =>
           push_policy_finding(
             report, sheet_name, "a hyperlink with an internal location target",
@@ -258,6 +250,168 @@ fn region_policy_check(
           }
         _ => ()
       }
+    }
+  }
+}
+
+///|
+/// A plain optionally signed decimal literal — the operand shape that
+/// carries no reference semantics.
+fn plain_number_literal(text : String) -> Bool {
+  let mut index = 0
+  if index < text.length() && (text[index] == '-' || text[index] == '+') {
+    index += 1
+  }
+  let mut digits = 0
+  while index < text.length() && text[index] is ('0'..='9') {
+    digits += 1
+    index += 1
+  }
+  if index < text.length() && text[index] == '.' {
+    index += 1
+    while index < text.length() && text[index] is ('0'..='9') {
+      digits += 1
+      index += 1
+    }
+  }
+  digits > 0 && index == text.length()
+}
+
+///|
+/// Whether one conditional-format rule carries formula criteria: formula
+/// rules outright, formula-typed cfvo bounds, and cell comparisons whose
+/// operand is not a plain number literal (a reference or expression
+/// there would silently mean something else after insertion).
+fn cf_rule_formula_bearing(opts : @engine.ConditionalFormatOptions) -> Bool {
+  if opts.format_type == "formula" {
+    return true
+  }
+  if opts.min_type == "formula" ||
+    opts.mid_type == "formula" ||
+    opts.max_type == "formula" {
+    return true
+  }
+  if opts.format_type == "cell" &&
+    opts.value != "" &&
+    !plain_number_literal(opts.value) {
+    return true
+  }
+  false
+}
+
+///|
+/// Whether one data validation carries formula criteria: custom rules
+/// outright, list sources that are not quoted literals, and comparison
+/// operands that are not plain number literals or empty.
+fn dv_formula_bearing(validation : @engine.DataValidation) -> Bool {
+  fn literal_operand(text : String) -> Bool {
+    text == "" || plain_number_literal(text)
+  }
+
+  match validation.validation_type {
+    "custom" => true
+    "list" => !validation.formula1.has_prefix("\"")
+    "none" | "" =>
+      !(literal_operand(validation.formula1) &&
+      literal_operand(validation.formula2))
+    _ =>
+      !(literal_operand(validation.formula1) &&
+      literal_operand(validation.formula2))
+  }
+}
+
+///|
+/// The formula-criteria CF/DV policy, plan-faithful (codex round 1):
+/// formula-bearing rules refuse workbook-wide; multi-row scopes
+/// intersecting a template row refuse; everything else — formula-free
+/// data bars, scales, literal-list validations — publishes. Unreadable
+/// CF/DV state (the engine's all-or-nothing x14 reader) refuses as
+/// opaque rather than being silently skipped.
+fn cf_dv_policy_check(
+  workbook : @engine.Workbook,
+  plans : Array[RegionPlan],
+  report : XlsxTemplateReport,
+) -> Unit {
+  let template_rows : Map[String, Array[Int]] = {}
+  for plan in plans {
+    match template_rows.get(plan.sheet) {
+      Some(rows) => rows.push(plan.row)
+      None => template_rows[plan.sheet] = [plan.row]
+    }
+  }
+  fn sqref_intersects_template(sheet_name : String, sqref : String) -> Bool {
+    guard template_rows.get(sheet_name) is Some(rows) else { return false }
+    for token in sqref.split(" ") {
+      if token.length() == 0 {
+        continue
+      }
+      match plain_range_rows(token.to_owned()) {
+        Some((low, high)) => {
+          if low == high {
+            continue
+          }
+          for row in rows {
+            if row >= low && row <= high {
+              return true
+            }
+          }
+        }
+        // unreadable scope near a repetition: conservative
+        None => return true
+      }
+    }
+    false
+  }
+
+  for worksheet in workbook.sheets() {
+    let sheet_name = worksheet.name
+    match (try? worksheet.get_conditional_formats()) {
+      Ok(rules) =>
+        for sqref, options in rules {
+          for opts in options {
+            if cf_rule_formula_bearing(opts) {
+              push_policy_finding(
+                report,
+                "\{sheet_name}!\{sqref}",
+                "a conditional format with formula criteria",
+              )
+            }
+          }
+          if sqref_intersects_template(sheet_name, sqref) {
+            push_policy_finding(
+              report,
+              "\{sheet_name}!\{sqref}",
+              "a multi-row conditional format intersects the template row",
+            )
+          }
+        }
+      Err(_) =>
+        push_policy_finding(
+          report, sheet_name, "conditional formats this reader cannot fully interpret",
+        )
+    }
+    match (try? worksheet.get_data_validations()) {
+      Ok(validations) =>
+        for validation in validations {
+          if dv_formula_bearing(validation) {
+            push_policy_finding(
+              report,
+              "\{sheet_name}!\{validation.sqref}",
+              "a data validation with formula criteria",
+            )
+          }
+          if sqref_intersects_template(sheet_name, validation.sqref) {
+            push_policy_finding(
+              report,
+              "\{sheet_name}!\{validation.sqref}",
+              "a multi-row data validation intersects the template row",
+            )
+          }
+        }
+      Err(_) =>
+        push_policy_finding(
+          report, sheet_name, "data validations this reader cannot fully interpret",
+        )
     }
   }
 }
@@ -400,7 +554,7 @@ fn plan_template_regions(
   allow_missing~ : Bool,
   report : XlsxTemplateReport,
   budget : Ref[Int],
-) -> Array[RegionPlan] raise {
+) -> (Array[RegionPlan], Set[String]) raise {
   let plans : Array[RegionPlan] = []
   let claimed : Set[String] = Set::new()
   for region in data.regions {
@@ -512,7 +666,11 @@ fn plan_template_regions(
     })
   }
   ignore(allow_missing)
-  plans
+  // the claimed set covers EVERY resolved (sheet, row) — including
+  // regions later dropped for malformed or placeholder-free rows — so
+  // the scalar pass never rescans a row the region pass already judged
+  // (a dropped malformed row would otherwise double-count, codex round 1)
+  (plans, claimed)
 }
 
 ///|
@@ -694,7 +852,7 @@ pub async fn transact_template_document(
         unused_total: 0,
         changed: false,
       }
-      let plans = if data.regions.length() > 0 {
+      let (plans, claimed) = if data.regions.length() > 0 {
         let planned = plan_template_regions(
           workbook,
           data,
@@ -709,16 +867,16 @@ pub async fn transact_template_document(
             )
           error => raise error
         }
-        region_policy_check(workbook, planned, preflight)
-        region_sheet_check(workbook, planned, preflight)
+        let (planned_regions, _) = planned
+        region_policy_check(workbook, planned_regions, preflight)
+        cf_dv_policy_check(workbook, planned_regions, preflight)
+        region_sheet_check(workbook, planned_regions, preflight)
         planned
       } else {
-        []
+        ([], Set::new())
       }
-      let claimed : Set[String] = Set::new()
       let region_value_keys : Set[String] = Set::new()
       for plan in plans {
-        claimed.add("\{plan.sheet}\u{0}\{plan.row}")
         for key, _ in plan.key_occurrences {
           if data.values.contains(key) {
             region_value_keys.add(key)
