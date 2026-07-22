@@ -1,6 +1,6 @@
 # OfficeCLI parity handoff
 
-Last updated: 2026-07-19 (Asia/Shanghai)
+Last updated: 2026-07-22 (Asia/Shanghai)
 
 This file is the handoff for the non-PPT OfficeCLI parity effort tracked by
 [#139](https://github.com/moonbitlang/office.mbt/issues/139). PowerPoint and MCP
@@ -39,6 +39,27 @@ aliases.
   final round reported zero findings with byte-identity verification.
   Rendered-document UTF-16 sanitization also hardened the pre-existing
   `xlsx html` publication paths.
+- R1 is complete and closed
+  [#167](https://github.com/moonbitlang/office.mbt/issues/167) through PRs
+  #192-#204. `office dump` emits a versioned provenance envelope around
+  canonical batch-op streams for XLSX and DOCX (styles, tables, validations,
+  conditional formats, content-addressed image assets, notes, and threaded
+  comments), `office replay` rebuilds documents through the existing strict
+  engines only, and dump→replay→dump is op-identical for both formats.
+  Non-replayable content is disclosed as machine-readable residuals, never
+  silently dropped.
+- T1 scalar scope is complete and closed
+  [#168](https://github.com/moonbitlang/office.mbt/issues/168) through PRs
+  [#205](https://github.com/moonbitlang/office.mbt/pull/205),
+  [#206](https://github.com/moonbitlang/office.mbt/pull/206), and
+  [#208](https://github.com/moonbitlang/office.mbt/pull/208). `office
+  template` merges strict `office.template.data/1` values into XLSX cells and
+  DOCX stories (body, headers, footers) across split runs, with a
+  non-executable `{{key}}` grammar, refusal precedence
+  malformed > unsupported > missing, `--allow-missing`, and a byte-fidelity
+  gate so substitution never rewrites DOCX runs whose stored bytes do not
+  round-trip to model text. Bounded row/table repetition was split to
+  [#207](https://github.com/moonbitlang/office.mbt/issues/207).
 
 The reference OfficeCLI checkout remains `.repos/officecli` in the primary
 repository working tree.
@@ -97,13 +118,11 @@ PR unless the issue itself is first split into independently useful children.
    Header/footer authoring remains separately tracked by #95.
 2. [#164 — D4 DOCX annotation mutations](https://github.com/moonbitlang/office.mbt/issues/164).
    Build only on the source-pinned D1 edit session and preserve unrelated parts.
-3. [#167 — R1 replayable semantic dump](https://github.com/moonbitlang/office.mbt/issues/167).
-   Replay must use the canonical create/batch engines rather than a new writer.
-4. [#168 — T1 XLSX/DOCX template merge](https://github.com/moonbitlang/office.mbt/issues/168).
-   Keep the placeholder language strict and non-executable.
-5. [#169 — F1 final non-PPT acceptance](https://github.com/moonbitlang/office.mbt/issues/169).
+3. [#169 — F1 final non-PPT acceptance](https://github.com/moonbitlang/office.mbt/issues/169).
    Run only after the child capabilities above have landed. This is the place
    for the final fresh-agent discoverability exercise and the ultra review.
+4. [#207 — T1 child: bounded row/table repetition](https://github.com/moonbitlang/office.mbt/issues/207).
+   Optional post-v1 template depth; it is not a gate for F1.
 
 Architecture work that can proceed independently, but must stay in its own PR:
 
