@@ -238,7 +238,14 @@ fn region_row_lexical_gate(
   text : String,
 ) -> (Array[String], String, Int) -> Unit raise TemplateDataError {
   (labels, key, after_key) => {
-    guard key == "row" && labels.length() == 3 && labels[1] == "regions" else {
+    // labels[2] == "" means the container is an ARRAY ITEM under regions
+    // (array items carry no label) — an array-shaped regions member is a
+    // structural error the parser reports honestly; the gate only speaks
+    // for real named regions
+    guard key == "row" &&
+      labels.length() == 3 &&
+      labels[1] == "regions" &&
+      labels[2] != "" else {
       return
     }
     let mut index = after_key

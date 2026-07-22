@@ -176,6 +176,13 @@ test "document parser: regions container refusals" {
     "{\"schema\": \"office.template.data/1\", \"values\": {}, \"regions\": []}",
     "regions must be an object of named regions",
   )
+  // an array-shaped regions member reports the structural error even when
+  // an item carries a lexically bad "row" — the raw gate speaks only for
+  // real named regions (array items have no name)
+  expect_document_error(
+    "{\"schema\": \"office.template.data/1\", \"values\": {}, \"regions\": [{\"row\": 5.5}]}",
+    "regions must be an object of named regions",
+  )
   expect_document_error(
     "{\"schema\": \"office.template.data/1\", \"values\": {}, \"regions\": {}}",
     "regions must name at least one region when present",
