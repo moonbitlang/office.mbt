@@ -174,6 +174,37 @@ pub fn DocxAnnotatedResult::story_paragraph_span(
 }
 
 ///|
+/// The span of one text RUN in any scanned story, addressed by the
+/// story key ("/body", "/header[1]", ...) and the story-relative ordinal
+/// path ("p[3]/r[2]", "p[1]/hyperlink[1]/r[1]"). The scanner already
+/// records run nodes with full spans in every story; this generalizes
+/// the body-only lookup so template merging can rewrite header and
+/// footer runs through the same byte-span contract.
+pub fn DocxAnnotatedResult::story_run_span(
+  self : DocxAnnotatedResult,
+  story : String,
+  relative_path : String,
+) -> NodeSpan? {
+  for entry in self.index.scans {
+    let (key, scan) = entry
+    if key != story {
+      continue
+    }
+    for node in scan.nodes() {
+      if node.kind == "r" && node.path == relative_path {
+        return Some({
+          byte_start: node.byte_start,
+          byte_end: node.byte_end,
+          content_start: node.content_start,
+          close_tag_start: node.close_tag_start,
+        })
+      }
+    }
+  }
+  None
+}
+
+///|
 fn body_node_span_of_kind(
   annotated : DocxAnnotatedResult,
   relative_path : String,

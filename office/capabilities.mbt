@@ -918,19 +918,19 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
     },
     {
       name: "template",
-      summary: "Merge strict template data into an XLSX workbook",
-      usage: "office template FILE DATA.json --out OUT.xlsx [--dry-run] [--overwrite] [--allow-missing] [--json|--jsonl]",
-      formats: ["xlsx"],
+      summary: "Merge strict template data into an XLSX or DOCX document",
+      usage: "office template FILE DATA.json --out OUT [--dry-run] [--overwrite] [--allow-missing] [--json|--jsonl]",
+      formats: ["xlsx", "docx"],
       aliases: [],
       inputs: [
         capability_field(
-          "file", "path", true, "existing XLSX template package (never modified)",
+          "file", "path", true, "existing XLSX or DOCX template package (never modified)",
         ),
         capability_field(
           "data", "path", true, "office.template.data/1 JSON document: flat values, string/number/bool only",
         ),
         capability_field(
-          "out", "path", true, "destination .xlsx; created atomically, refused when present unless --overwrite",
+          "out", "path", true, "destination matching the template format; created atomically, refused when present unless --overwrite",
         ),
         capability_field(
           "dry-run", "boolean", false, "run the full merge and validation without publishing",
@@ -954,13 +954,13 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         ),
         capability_field("replaced", "number", true, "placeholders substituted"),
         capability_field(
-          "missing", "array(finding)", true, "unresolved keys with Sheet1!B2 locations (bounded)",
+          "missing", "array(finding)", true, "unresolved keys with canonical locations (Sheet1!B2 or /docx/body/p[3]; bounded)",
         ),
         capability_field(
           "unused", "array(string)", true, "data keys the template never used (bounded)",
         ),
         capability_field(
-          "transaction", "object", true, "office.transaction/2 report; preservation is authoritative. Values land through literal cell setters (a leading = can never become a formula); formula and rich-text cells are refused contexts; whole-cell placeholders keep the data value's type",
+          "transaction", "object", true, "office.transaction/2 report; preservation is authoritative. XLSX: values land through literal cell setters (a leading = can never become a formula), formula and rich-text cells are refused contexts, whole-cell placeholders keep the data value's type. DOCX: byte-span run rewrites preserve all unrelated OOXML; values inherit the starting run's formatting; body, header, and footer stories are scanned",
         ),
       ],
       output_modes: ["human", "json", "jsonl"],

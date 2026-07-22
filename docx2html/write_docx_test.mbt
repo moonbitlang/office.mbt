@@ -1857,3 +1857,33 @@ test "L0 review round 1: a self-closing run rewrites by its own span (alternate 
     ),
   )
 }
+
+///|
+/// story_run_span generalizes the body-only run lookup: identical result
+/// for the body story, None for a story the package does not carry.
+test "story_run_span matches body_run_span for the body story" {
+  let bytes = @docx2html.write_docx([
+    @document.paragraph([
+      @document.run([@document.text("alpha")]),
+      @document.run([@document.text("beta")]),
+    ]),
+  ])
+  let annotated = @docx2html.read_docx_annotated(bytes[:])
+  guard annotated.body_run_span("p[1]/r[2]") is Some(by_body)
+  guard annotated.story_run_span("/body", "p[1]/r[2]") is Some(by_story)
+  inspect(by_story.byte_start() == by_body.byte_start(), content="true")
+  inspect(by_story.byte_end() == by_body.byte_end(), content="true")
+  inspect(by_story.content_start() == by_body.content_start(), content="true")
+  inspect(
+    by_story.close_tag_start() == by_body.close_tag_start(),
+    content="true",
+  )
+  inspect(
+    annotated.story_run_span("/header[1]", "p[1]/r[1]") is None,
+    content="true",
+  )
+  inspect(
+    annotated.story_run_span("/body", "p[9]/r[9]") is None,
+    content="true",
+  )
+}

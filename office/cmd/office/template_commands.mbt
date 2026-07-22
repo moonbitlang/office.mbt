@@ -23,13 +23,15 @@ fn template_report_json(
   file : String,
   data_file : String,
   output : String,
+  format : String,
   report : @office_xlsx.XlsxTemplateReport,
   transaction? : Json,
+  stories? : Array[String],
 ) -> Json {
   let fields : Map[String, Json] = {
     "schema": Json::string(@lib.SCHEMA_TEMPLATE_RESULT),
     "file": Json::string(bounded_text(file, 160)),
-    "format": Json::string("xlsx"),
+    "format": Json::string(format),
     "data_file": Json::string(bounded_text(data_file, 160)),
     "output": Json::string(bounded_text(output, 160)),
     "placeholders_found": Json::number(report.placeholders_found.to_double()),
@@ -49,11 +51,60 @@ fn template_report_json(
     "unsupported_total": Json::number(report.unsupported_total.to_double()),
     "unused_total": Json::number(report.unused_total.to_double()),
   }
+  match stories {
+    Some(list) =>
+      fields["stories_scanned"] = Json::array(
+        list.map(story => Json::string(story)),
+      )
+    None => ()
+  }
   match transaction {
     Some(value) => fields["transaction"] = value
     None => ()
   }
   Json::object(fields)
+}
+
+///|
+/// Bridges the DOCX report into the shared XLSX report shape so one
+/// JSON builder serves both formats (the record schemas are identical
+/// except for locations grammar and stories_scanned).
+fn docx_report_as_shared(
+  report : @office_docx.DocxTemplateReport,
+) -> @office_xlsx.XlsxTemplateReport {
+  {
+    placeholders_found: report.placeholders_found,
+    replaced: report.replaced,
+    escapes_applied: report.escapes_applied,
+    distinct_keys_used: report.distinct_keys_used,
+    missing: report.missing.map(entry => {
+      (
+        { location: entry.location, detail: entry.detail } :
+        @office_xlsx.XlsxTemplateFinding)
+    }),
+    unused: report.unused,
+    malformed: report.malformed.map(entry => {
+      (
+        { location: entry.location, detail: entry.detail } :
+        @office_xlsx.XlsxTemplateFinding)
+    }),
+    unsupported: report.unsupported.map(entry => {
+      (
+        { location: entry.location, detail: entry.detail } :
+        @office_xlsx.XlsxTemplateFinding)
+    }),
+    locations: report.locations.map(entry => {
+      (
+        { location: entry.location, detail: entry.detail } :
+        @office_xlsx.XlsxTemplateFinding)
+    }),
+    locations_truncated: report.locations_truncated,
+    missing_total: report.missing_total,
+    malformed_total: report.malformed_total,
+    unsupported_total: report.unsupported_total,
+    unused_total: report.unused_total,
+    changed: report.changed,
+  }
 }
 
 ///|
@@ -63,10 +114,15 @@ async fn run_template(matches : @argparse.Matches) -> Unit {
   let output = required_value(matches, "out")
   let allow_missing = matches.flags.get_or_default("allow-missing", false)
   let mode = office_validate_output_mode(matches)
-  guard output.to_lower().has_suffix(".xlsx") else {
+  // dispatch by the template's extension; each transaction re-validates
+  // the actual package format internally
+  let is_docx = file.to_lower().has_suffix(".docx")
+  let expected_suffix = if is_docx { ".docx" } else { ".xlsx" }
+  guard output.to_lower().has_suffix(expected_suffix) else {
     raise CliFailure(
       @lib.protocol_error(
-        "office.invalid_arguments", "--out must end in .xlsx (template v1 is XLSX-only)",
+        "office.invalid_arguments",
+        "--out must end in \{expected_suffix} to match the template format",
       ),
     )
   }
@@ -102,55 +158,125 @@ async fn run_template(matches : @argparse.Matches) -> Unit {
   ) catch {
     error => raise transaction_failure(error)
   }
-  let result = @office_xlsx.transact_template(options, values, allow_missing~) catch {
-    @office_xlsx.XlsxTemplateRefused(report) => {
-      // strict findings: precedence malformed > unsupported > missing
-      let (code, message) = if report.malformed.length() > 0 {
-        (
-          "office.template.malformed_placeholder", "the template carries malformed placeholders",
-        )
-      } else if report.unsupported.length() > 0 {
-        (
-          "office.template.unsupported_context", "the template carries placeholders in unsupported contexts",
-        )
-      } else {
-        (
-          "office.template.missing_keys", "the data document does not supply every placeholder key",
-        )
-      }
-      raise CliFailure(
-        @lib.protocol_error(
-          code,
-          message,
-          details=template_report_json(file, data_file, output, report),
-        ),
+  fn refusal(
+    report : @office_xlsx.XlsxTemplateReport,
+    format : String,
+    stories : Array[String]?,
+  ) -> CliFailure {
+    // strict findings: precedence malformed > unsupported > missing
+    let (code, message) = if report.malformed.length() > 0 {
+      (
+        "office.template.malformed_placeholder", "the template carries malformed placeholders",
+      )
+    } else if report.unsupported.length() > 0 {
+      (
+        "office.template.unsupported_context", "the template carries placeholders in unsupported contexts",
+      )
+    } else {
+      (
+        "office.template.missing_keys", "the data document does not supply every placeholder key",
       )
     }
-    @transaction.TransactionError(..) as error =>
-      raise transaction_failure(error)
-    error if @async.is_being_cancelled() => raise error
-    error =>
-      raise unexpected_cli_failure(
-        "office.template.failed", "template transaction", error,
-      )
+    CliFailure(
+      @lib.protocol_error(
+        code,
+        message,
+        details=template_report_json(
+          file,
+          data_file,
+          output,
+          format,
+          report,
+          stories?,
+        ),
+      ),
+    )
   }
-  let record = template_report_json(
-    file,
-    data_file,
-    output,
-    result.report,
-    transaction=result.transaction.to_json(),
-  )
+  let record = if is_docx {
+    let result = @office_docx.transact_docx_template(
+      options,
+      values,
+      allow_missing~,
+    ) catch {
+      @office_docx.DocxTemplateRefused(report) =>
+        raise refusal(
+          docx_report_as_shared(report),
+          "docx",
+          Some(report.stories_scanned),
+        )
+      @transaction.TransactionError(..) as error =>
+        raise transaction_failure(error)
+      error if @async.is_being_cancelled() => raise error
+      error =>
+        raise unexpected_cli_failure(
+          "office.template.failed", "template transaction", error,
+        )
+    }
+    template_report_json(
+      file,
+      data_file,
+      output,
+      "docx",
+      docx_report_as_shared(result.report),
+      transaction=result.transaction.to_json(),
+      stories=result.report.stories_scanned,
+    )
+  } else {
+    let result = @office_xlsx.transact_template(options, values, allow_missing~) catch {
+      @office_xlsx.XlsxTemplateRefused(report) =>
+        raise refusal(report, "xlsx", None)
+      @transaction.TransactionError(..) as error =>
+        raise transaction_failure(error)
+      error if @async.is_being_cancelled() => raise error
+      error =>
+        raise unexpected_cli_failure(
+          "office.template.failed", "template transaction", error,
+        )
+    }
+    template_report_json(
+      file,
+      data_file,
+      output,
+      "xlsx",
+      result.report,
+      transaction=result.transaction.to_json(),
+    )
+  }
   match mode {
     JsonDocument => println(@lib.output_success(record).stringify(indent=2))
     JsonLines => println(@lib.output_success(record).stringify())
-    Human =>
+    Human => {
+      let replaced = match record {
+        Object(fields) =>
+          match fields.get("replaced") {
+            Some(Number(count, ..)) => count.to_int()
+            _ => 0
+          }
+        _ => 0
+      }
+      let missing = match record {
+        Object(fields) =>
+          match fields.get("missing_total") {
+            Some(Number(count, ..)) => count.to_int()
+            _ => 0
+          }
+        _ => 0
+      }
+      let unused = match record {
+        Object(fields) =>
+          match fields.get("unused_total") {
+            Some(Number(count, ..)) => count.to_int()
+            _ => 0
+          }
+        _ => 0
+      }
       println(
-        "template: \{result.report.replaced} replaced, " +
-        "\{result.report.missing.length()} missing, " +
-        "\{result.report.unused.length()} unused -> " +
+        "template: \{replaced} replaced, " +
+        "\{missing} missing, " +
+        "\{unused} unused -> " +
         human_text(output, 160),
       )
+    }
   }
 }
 
@@ -166,7 +292,7 @@ fn template_command() -> @argparse.Command {
     positionals=[
       PositionArg(
         "file",
-        about="existing .xlsx template package",
+        about="existing .xlsx or .docx template package",
         num_args=@argparse.ValueRange::single(),
       ),
       PositionArg(
@@ -179,7 +305,7 @@ fn template_command() -> @argparse.Command {
       OptionArg(
         "out",
         long="out",
-        about="destination .xlsx path (the template is never modified)",
+        about="destination path matching the template format (never modified in place)",
       ),
     ],
     flags=[
