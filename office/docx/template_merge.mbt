@@ -195,6 +195,27 @@ fn decode_numeric_entity(entity : String) -> String? {
 }
 
 ///|
+/// Non-overlapping count of "{{" occurrences — the paragraph-level pair
+/// accounting that makes brace detection split-proof across EVERY
+/// content shape: any pair the region scanner did not account for sits
+/// in content the merge cannot rewrite.
+fn docx_count_brace_pairs(text : String) -> Int {
+  let mut count = 0
+  let mut index = 0
+  let length = text.length()
+  while index + 1 < length {
+    if text[index].to_int() == '{'.to_int() &&
+      text[index + 1].to_int() == '{'.to_int() {
+      count += 1
+      index += 2
+    } else {
+      index += 1
+    }
+  }
+  count
+}
+
+///|
 fn docx_escape_text(text : String) -> String {
   let out = StringBuilder::new()
   for ch in text {
@@ -270,9 +291,13 @@ fn docx_pure_text_run(
   for child in children {
     match child {
       Text(value) => text.write_string(value)
-      // keep collecting: an opaque run's WHOLE text decides whether a
-      // brace pair hides after the opaque child
-      _ => pure = false
+      // keep collecting with a separator: the run's whole text feeds the
+      // paragraph's pair accounting, and a non-text child genuinely
+      // breaks rendering adjacency (a pair around a tab is not a pair)
+      _ => {
+        pure = false
+        text.write_char('\n')
+      }
     }
   }
   (pure, text.to_string())
@@ -296,8 +321,8 @@ fn DocxMergeState::scan_region(
   part : String,
   paragraph_location : String,
   segments : Array[DocxRunSegment],
-) -> Unit raise {
-  guard segments.length() > 0 else { return }
+) -> Int raise {
+  guard segments.length() > 0 else { return 0 }
   // the grammar spans segments, so the prefilter must be split-proof:
   // any single '{' or backslash (single units cannot straddle a run
   // boundary) routes the region through the real scanner
@@ -308,9 +333,12 @@ fn DocxMergeState::scan_region(
       break
     }
   }
-  guard interesting else { return }
+  guard interesting else { return 0 }
   let texts = segments.map(segment => segment.text)
   let scan = @template.scan_placeholders(texts, self.budget)
+  let accounted = scan.matches.length() +
+    scan.escapes.length() +
+    scan.malformed.length()
   self.report.placeholders_found += scan.matches.length()
   for entry in scan.malformed {
     self.report.malformed_total += 1
@@ -321,27 +349,35 @@ fn DocxMergeState::scan_region(
       })
     }
   }
-  guard scan.matches.length() > 0 || scan.escapes.length() > 0 else { return }
+  guard scan.matches.length() > 0 || scan.escapes.length() > 0 else {
+    return accounted
+  }
   if scan.malformed.length() > 0 {
     // a region with any malformed site is never edited
-    return
+    return accounted
   }
   // resolve matches: parent agreement + key presence
   let mut region_missing = false
   let accepted : Array[@template.PlaceholderMatch] = []
   for matched in scan.matches {
     let start_parent = segments[matched.span.start_segment].parent
-    // canonical span form: an end at (segment, 0) covers nothing of that
-    // segment, so the last covered segment is the previous one
-    let last_covered = if matched.span.end_offset == 0 {
-      matched.span.end_segment - 1
-    } else {
-      matched.span.end_segment
-    }
+    // a segment participates only when the match covers a POSITIVE-width
+    // slice of it: the canonical end form (segment, 0) and zero-width
+    // segments sitting on the boundary cover nothing
     let mut crosses = false
     let mut cursor = matched.span.start_segment
-    while cursor <= last_covered && cursor < segments.length() {
-      if segments[cursor].parent != start_parent {
+    while cursor <= matched.span.end_segment && cursor < segments.length() {
+      let local_start = if cursor == matched.span.start_segment {
+        matched.span.start_offset
+      } else {
+        0
+      }
+      let local_end = if cursor == matched.span.end_segment {
+        matched.span.end_offset
+      } else {
+        segments[cursor].text.length()
+      }
+      if local_end > local_start && segments[cursor].parent != start_parent {
         crosses = true
         break
       }
@@ -384,9 +420,11 @@ fn DocxMergeState::scan_region(
   }
   if region_missing && !self.allow_missing {
     // the command will refuse; no edits from this region
-    return
+    return accounted
   }
-  guard accepted.length() > 0 || scan.escapes.length() > 0 else { return }
+  guard accepted.length() > 0 || scan.escapes.length() > 0 else {
+    return accounted
+  }
   // rebuild each segment's final text from the pieces intersecting it;
   // a piece contributes its replacement only in its START segment and
   // erases its covered range everywhere else
@@ -468,6 +506,7 @@ fn DocxMergeState::scan_region(
     }
   }
   self.report.escapes_applied += scan.escapes.length()
+  accounted
 }
 
 ///|
@@ -484,11 +523,17 @@ fn DocxMergeState::scan_paragraph(
 ) -> Unit raise {
   let location = "/docx" + story + "/" + paragraph_path
   let region : Array[DocxRunSegment] = []
+  // the paragraph's rendered-adjacent text: run and bare texts appended
+  // in order, separators wherever rendering genuinely breaks adjacency
+  // (opaque children, non-inline elements). Pair accounting over this
+  // stream catches every split shape the regions cannot scan.
+  let detect = StringBuilder::new()
+  let mut accounted = 0
   let mut runs = 0
   let mut hyperlinks = 0
   let flush = () => {
     if region.length() > 0 {
-      self.scan_region(story, part, location, region.copy())
+      accounted += self.scan_region(story, part, location, region.copy())
       region.clear()
     }
   }
@@ -498,19 +543,11 @@ fn DocxMergeState::scan_paragraph(
     parent : String,
   ) => {
     let (pure, text) = docx_pure_text_run(run_children)
+    detect.write_string(text)
     if pure {
       region.push({ run_path, parent, text })
     } else {
       flush()
-      if text.contains("{{") {
-        self.report.unsupported_total += 1
-        if self.report.unsupported.length() < docx_template_finding_limit {
-          self.report.unsupported.push({
-            location,
-            detail: "placeholder inside a run carrying non-text content",
-          })
-        }
-      }
     }
   }
   for child in children {
@@ -533,27 +570,39 @@ fn DocxMergeState::scan_paragraph(
                 link_segment,
               )
             }
-            _ => flush()
+            _ => {
+              detect.write_char('\n')
+              flush()
+            }
           }
         }
       }
       Text(value) => {
-        // bare text under a paragraph has no run to rewrite
+        // bare text under a paragraph has no run to rewrite; it still
+        // renders adjacently, so it joins the detection stream
+        detect.write_string(value)
         flush()
-        if value.contains("{{") {
-          self.report.unsupported_total += 1
-          if self.report.unsupported.length() < docx_template_finding_limit {
-            self.report.unsupported.push({
-              location,
-              detail: "placeholder outside any text run",
-            })
-          }
-        }
       }
-      _ => flush()
+      _ => {
+        detect.write_char('\n')
+        flush()
+      }
     }
   }
   flush()
+  // any pair the region scanner did not account for sits in content the
+  // merge cannot rewrite (bare text, opaque runs, or spans across them)
+  let total_pairs = docx_count_brace_pairs(detect.to_string())
+  if total_pairs > accounted {
+    let excess = total_pairs - accounted
+    self.report.unsupported_total += excess
+    if self.report.unsupported.length() < docx_template_finding_limit {
+      self.report.unsupported.push({
+        location,
+        detail: "\{excess} brace pair(s) sit in content the merge cannot rewrite",
+      })
+    }
+  }
 }
 
 ///|
