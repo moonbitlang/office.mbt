@@ -683,7 +683,7 @@ document content, followed only on an explicit click.
 
 ### `office.template/1` (`office template FILE DATA.json --out OUT.xlsx [--dry-run] [--overwrite] [--allow-missing] [--json|--jsonl]`)
 
-Strict, non-executable template merge (XLSX in v1). Placeholders are
+Strict, non-executable template merge for XLSX and DOCX. Placeholders are
 `{{key}}` with keys `[A-Za-z_][A-Za-z0-9_.-]{0,63}` — no expressions, no
 filters, no traversal; `\{{` escapes a literal `{{`. Data rides in one
 `office.template.data/1` document: a flat `values` object of string,
@@ -707,13 +707,14 @@ publishing.
 | --- | --- | --- |
 | `schema` | string | `"office.template/1"` |
 | `file` / `data_file` / `output` | string | bounded paths |
-| `format` | string | `"xlsx"` |
+| `format` | string | `"xlsx"` or `"docx"` |
 | `placeholders_found` / `replaced` / `escapes_applied` / `distinct_keys_used` | number | merge counters |
 | `missing` / `malformed` / `unsupported` / `locations` | array | bounded `{location, detail}` findings with canonical `Sheet1!B2` locations |
 | `unused` | array | data keys the template never used (warning-class, still publishes) |
 | `locations_truncated` | boolean | true when the per-key location list hit its bound |
 | `missing_total` / `malformed_total` / `unsupported_total` / `unused_total` | number | full occurrence counts — the finding lists are bounded at 64 entries, so totals distinguish exactly-64 from more |
 | `transaction` | object | untouched `office.transaction/2` report (success only) |
+| `stories_scanned` | array | DOCX only: the stories the merge scanned (`/body`, `/header[n]`, `/footer[n]`); placeholders in footnote, endnote, or comment stories are refused as unsupported contexts. DOCX substitution rewrites run content by byte span through the D1 edit session — unrelated OOXML is preserved and the value inherits the starting run's formatting; locations are canonical paragraph selectors (`/docx/body/p[3]`) |
 
 ### `office.dump/1` (`office dump FILE [--json|--jsonl]`)
 

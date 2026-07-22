@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:e94a4ada
+    Fingerprint: crc32:265a9938
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:e94a4ada","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","template","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:265a9938","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","template","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:265a9938","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:265a9938","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:265a9938","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:265a9938","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:265a9938","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:265a9938","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:265a9938","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:265a9938","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:265a9938","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:265a9938","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:265a9938","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:265a9938","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:265a9938","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:265a9938","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:265a9938","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:265a9938","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:265a9938","kind":"command","name":"raw"}]
 
 The raw command publishes explicit subcommand schemas, including every edit
 input and its conditional constraints.
@@ -605,6 +605,43 @@ copy; invalid data fails before the document opens.
   > DATA
   $ office.exe template tpl.xlsx tpl-null.json --out never.xlsx --json 2>&1 | jq -c '{success,code:.error.code}'
   {"success":false,"code":"office.template.invalid_data"}
+
+DOCX templates merge through the preservation-safe edit session: run
+text rewrites by byte span, placeholders may cross run boundaries, and
+only touched parts change. The template file is never modified.
+
+  $ cat > docx-tpl-script.json <<'SCRIPT'
+  > {"schema":"docx.batch/2","ops":[
+  >  {"op":"paragraph","params":{"runs":[
+  >    {"text":"Dear ","bold":true},
+  >    {"text":"{{cus"},
+  >    {"text":"tomer}}, balance "},
+  >    {"text":"{{total}}."}
+  >  ]}},
+  >  {"op":"paragraph","params":{"text":"Escaped: \\{{literal}} end"}}
+  > ]}
+  > SCRIPT
+  $ docx.exe batch docx-tpl.docx docx-tpl-script.json >/dev/null
+  $ cat > docx-tpl-data.json <<'DATA'
+  > {"schema":"office.template.data/1","values":{"customer":"Ada Lovelace","total":1234.5}}
+  > DATA
+  $ office.exe template docx-tpl.docx docx-tpl-data.json --out docx-filled.docx
+  template: 2 replaced, 0 missing, 0 unused -> docx-filled.docx
+  $ docx.exe text docx-filled.docx
+  [/body/p[1]] Dear Ada Lovelace, balance 1234.5.
+  [/body/p[2]] Escaped: {{literal}} end
+  $ office.exe template docx-tpl.docx docx-tpl-data.json --out docx-filled2.docx --json | jq -c '{success,data:{format:.data.format,replaced:.data.replaced,escapes:.data.escapes_applied,stories:.data.stories_scanned,changed:[.data.transaction.preservation.changed[]]}}'
+  {"success":true,"data":{"format":"docx","replaced":2,"escapes":1,"stories":["/body"],"changed":["word/document.xml"]}}
+  $ cat > docx-missing.json <<'DATA'
+  > {"schema":"office.template.data/1","values":{"customer":"Ada"}}
+  > DATA
+  $ office.exe template docx-tpl.docx docx-missing.json --out docx-never.docx --json 2>&1 | jq -c '{success,code:.error.code,missing:[.error.details.missing[].detail],loc:.error.details.missing[0].location}'
+  {"success":false,"code":"office.template.missing_keys","missing":["total"],"loc":"/docx/body/p[1]"}
+  $ test -f docx-never.docx || echo not published
+  not published
+  $ office.exe template docx-tpl.docx docx-missing.json --out docx-part.docx --allow-missing >/dev/null
+  $ docx.exe text docx-part.docx | head -1
+  [/body/p[1]] Dear Ada, balance {{total}}.
 
 The dump command emits a replayable office.dump/1 op stream: canonical
 ordered batch ops in JSON and the streaming JSONL form with an integrity

@@ -3,7 +3,9 @@ package "bobzhang/office/docx"
 
 import {
   "bobzhang/docx2html/splice",
+  "bobzhang/office/template",
   "bobzhang/office/transaction",
+  "moonbitlang/core/debug",
 }
 
 // Values
@@ -11,7 +13,12 @@ pub fn package_validator() -> @transaction.TransactionValidator raise @transacti
 
 pub async fn transact_docx(@transaction.TransactionOptions, (DocxEditSession) -> Unit raise, validators? : Array[@transaction.TransactionValidator]) -> @transaction.TransactionReport
 
+pub async fn transact_docx_template(@transaction.TransactionOptions, Map[String, @template.TemplateValue], allow_missing~ : Bool) -> DocxTemplateResult
+
 // Errors
+pub suberror DocxTemplateRefused {
+  DocxTemplateRefused(DocxTemplateReport)
+} derive(@debug.Debug)
 
 // Types and methods
 pub struct DocxEditSession {
@@ -34,6 +41,35 @@ pub struct DocxPartFingerprint {
 pub fn DocxPartFingerprint::byte_length(Self) -> Int
 pub fn DocxPartFingerprint::crc32(Self) -> UInt
 pub fn DocxPartFingerprint::part(Self) -> String
+
+pub(all) struct DocxTemplateFinding {
+  location : String
+  detail : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct DocxTemplateReport {
+  mut placeholders_found : Int
+  mut replaced : Int
+  mut escapes_applied : Int
+  mut distinct_keys_used : Int
+  missing : Array[DocxTemplateFinding]
+  unused : Array[String]
+  malformed : Array[DocxTemplateFinding]
+  unsupported : Array[DocxTemplateFinding]
+  locations : Array[DocxTemplateFinding]
+  mut locations_truncated : Bool
+  mut missing_total : Int
+  mut malformed_total : Int
+  mut unsupported_total : Int
+  mut unused_total : Int
+  stories_scanned : Array[String]
+  mut changed : Bool
+} derive(Eq, @debug.Debug)
+
+pub struct DocxTemplateResult {
+  report : DocxTemplateReport
+  transaction : @transaction.TransactionReport
+}
 
 // Type aliases
 

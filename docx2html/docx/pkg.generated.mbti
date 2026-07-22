@@ -142,6 +142,7 @@ pub fn DocxAnnotatedResult::main_story_source(Self) -> DocxStoryPartSource
 pub fn DocxAnnotatedResult::result(Self) -> DocxPackageResult
 pub fn DocxAnnotatedResult::story_paragraph_span(Self, String, String) -> NodeSpan?
 pub fn DocxAnnotatedResult::story_root_span(Self, String) -> NodeSpan?
+pub fn DocxAnnotatedResult::story_run_span(Self, String, String) -> NodeSpan?
 
 pub(all) struct DocxPackageResult {
   document : @document.DocumentElement
