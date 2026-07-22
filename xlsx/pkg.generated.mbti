@@ -1336,7 +1336,8 @@ pub(all) enum RowStateClass {
   VmlContent
   UnknownExtensions
   ViewState
-  SheetDefinedNames
+  DefinedNameReferences
+  SheetScopedNamesUnadjusted
 } derive(Eq, @debug.Debug)
 
 pub struct RowStateEntry {

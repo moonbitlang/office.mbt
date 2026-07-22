@@ -57,9 +57,16 @@ pub(all) enum RowStateClass {
   VmlContent
   UnknownExtensions
   ViewState
-  /// Workbook-level entry (sheet-scoped defined names); appended by
+  /// Workbook-level entry: defined names (ANY scope) whose refers_to
+  /// carries references QUALIFIED to this sheet — exactly the refs the
+  /// insertion staging rewrites. Appended by
   /// `Workbook::sheet_row_state_inventory`, never by the worksheet.
-  SheetDefinedNames
+  DefinedNameReferences
+  /// Workbook-level entry: names SCOPED to this sheet whose refers_to
+  /// carries no qualified reference to it — the adjuster leaves their
+  /// text untouched, so an insertion silently changes what unqualified
+  /// context resolves them to.
+  SheetScopedNamesUnadjusted
 } derive(Eq, @debug.Debug)
 
 ///|
@@ -255,6 +262,10 @@ pub fn Worksheet::row_state_inventory(self : Worksheet) -> Array[RowStateEntry] 
   for group in self.sparkline_groups {
     for sparkline in group.sparklines {
       sparks.add_reference(sparkline.location)
+      // insertion shifts the source range too (worksheet.mbt:5678);
+      // sheet-qualified or otherwise unparsable sources degrade the
+      // class to WholeSheet via the accumulator
+      sparks.add_reference(sparkline.range_ref)
     }
   }
   sparks.entry(SparklineAnchors, ShiftedByInsert, entries)
@@ -359,10 +370,68 @@ pub fn Worksheet::row_state_inventory(self : Worksheet) -> Array[RowStateEntry] 
 }
 
 ///|
-/// The complete row-addressed inventory for one sheet: the worksheet's
-/// own classes plus a `SheetDefinedNames` entry when any defined name is
-/// scoped to the sheet (the adjuster rewrites only explicit `Sheet!ref`
-/// substrings, so extents are not row-determinable — WholeSheet).
+/// Row bound of one defined-name reference token (the text after a
+/// `Sheet!` qualifier, `$` markers included): a parsed max row, no row
+/// bound at all (column refs span every row but cannot overflow a row
+/// insertion), or opaque.
+priv enum DefinedRefRowBound {
+  BoundedRows(Int)
+  NoRowBound
+  OpaqueRef
+}
+
+///|
+fn defined_ref_row_bound(text : String) -> DefinedRefRowBound {
+  let parts : Array[String] = []
+  for part in text.split(":") {
+    parts.push(part.to_owned())
+  }
+  if parts.length() > 2 {
+    return OpaqueRef
+  }
+  let mut max_row = 0
+  let mut saw_row = false
+  for part in parts {
+    match parse_cell_ref(part) {
+      Some((row, _, _, _)) => {
+        saw_row = true
+        if row > max_row {
+          max_row = row
+        }
+        continue
+      }
+      None => ()
+    }
+    match parse_row_ref(part) {
+      Some((row, _)) => {
+        saw_row = true
+        if row > max_row {
+          max_row = row
+        }
+        continue
+      }
+      None => ()
+    }
+    match parse_column_ref(part) {
+      Some(_) => continue
+      None => return OpaqueRef
+    }
+  }
+  if saw_row {
+    BoundedRows(max_row)
+  } else {
+    NoRowBound
+  }
+}
+
+///|
+/// The complete row-addressed inventory for one sheet. Defined names are
+/// classified by MIRRORING THE ADJUSTER, not by scope (codex round 1):
+/// the probe runs the same qualified-reference scan the insertion
+/// staging runs, so a workbook-scoped `Data!$A$1048576` lands in Data's
+/// `DefinedNameReferences` (it IS rewritten and can overflow), while a
+/// sheet-scoped `$A$9` with no qualifier lands in
+/// `SheetScopedNamesUnadjusted` (its text never moves).
 pub fn Workbook::sheet_row_state_inventory(
   self : Workbook,
   sheet_name : StringView,
@@ -370,15 +439,41 @@ pub fn Workbook::sheet_row_state_inventory(
   let sheet = self.require_sheet(sheet_name)
   let entries = sheet.row_state_inventory()
   let scope_key = defined_name_scope_key(sheet.name())
+  let adjusted = ExtentAccumulator::new()
+  let mut unadjusted_scoped = false
   for name in self.defined_names {
-    if defined_name_scope_key(name.scope) == scope_key {
-      entries.push({
-        class: SheetDefinedNames,
-        extent: WholeSheet,
-        handling: ShiftedByInsert,
-      })
-      break
+    let visited = Ref(0)
+    let probe = fn(ref_text : StringView) -> String? raise XlsxError {
+      visited.val = visited.val + 1
+      let owned = ref_text.to_owned()
+      adjusted.present = true
+      match defined_ref_row_bound(owned) {
+        BoundedRows(row) => if row > adjusted.max_row { adjusted.max_row = row }
+        NoRowBound => ()
+        OpaqueRef => adjusted.opaque = true
+      }
+      Some(owned)
     }
+    let scan = try? adjust_defined_name_refers_to_for_sheet(
+      name.refers_to,
+      sheet.name(),
+      probe,
+    )
+    if scan is Err(_) {
+      adjusted.present = true
+      adjusted.opaque = true
+    }
+    if visited.val == 0 && defined_name_scope_key(name.scope) == scope_key {
+      unadjusted_scoped = true
+    }
+  }
+  adjusted.entry(DefinedNameReferences, ShiftedByInsert, entries)
+  if unadjusted_scoped {
+    entries.push({
+      class: SheetScopedNamesUnadjusted,
+      extent: WholeSheet,
+      handling: StaticOnWrite,
+    })
   }
   entries
 }

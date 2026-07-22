@@ -73,6 +73,7 @@ fn known_inert_part(lower : String) -> Bool {
       "docprops/thumbnail", "xl/theme/", "xl/worksheets/", "xl/chartsheets/", "xl/tables/",
       "xl/media/", "xl/drawings/", "xl/charts/", "xl/richdata/", "xl/embeddings/",
       "xl/printersettings/", "customxml/", "xl/comments", "xl/slicers/", "xl/slicercaches/",
+      "xl/preserveddrawingparts/",
     ] {
     if lower.has_prefix(prefix) {
       return true
@@ -82,11 +83,16 @@ fn known_inert_part(lower : String) -> Bool {
 }
 
 ///|
-/// Classifies every physical archive part into the feature flags. Order
-/// of checks matters only for VML, which lives under xl/drawings/ and
-/// must be flagged before the drawings prefix would absorb it.
+/// Classifies every physical archive part into the feature flags. The
+/// DECLARED CONTENT TYPE is authoritative and checked first: a part's
+/// path says where it lives, its manifest type says what it is, and a
+/// producer can legally place an external-link part under an inert-
+/// looking path (codex round 1 demonstrated exactly that fail-open).
+/// Path patterns remain as the fallback for undeclared parts, and the
+/// dangerous-but-unmodeled macrosheet types fold into unknown_parts.
 fn detect_package_features(
   part_names : Map[String, String],
+  content_type_of : (String) -> String?,
 ) -> XlsxPackageFeatures {
   let mut external_links = false
   let mut query_tables = false
@@ -102,6 +108,54 @@ fn detect_package_features(
   let mut first_unknown_part : String? = None
   for _, physical in part_names {
     let lower = physical.to_lower()
+    let declared = match content_type_of(physical) {
+      Some(value) => value.to_lower()
+      None => ""
+    }
+    if declared.find("spreadsheetml.externallink") is Some(_) {
+      if !external_links {
+        external_links = true
+        first_external_link = Some(physical)
+      }
+      continue
+    }
+    if declared.find("spreadsheetml.querytable") is Some(_) {
+      if !query_tables {
+        query_tables = true
+        first_query_table = Some(physical)
+      }
+      continue
+    }
+    if declared.find("spreadsheetml.connections") is Some(_) {
+      if !connections {
+        connections = true
+        first_connections = Some(physical)
+      }
+      continue
+    }
+    if declared.find("spreadsheetml.pivottable") is Some(_) ||
+      declared.find("spreadsheetml.pivotcache") is Some(_) {
+      if !pivot_parts {
+        pivot_parts = true
+        first_pivot_part = Some(physical)
+      }
+      continue
+    }
+    if declared.find("vmldrawing") is Some(_) {
+      if !vml_present {
+        vml_present = true
+        first_vml_part = Some(physical)
+      }
+      continue
+    }
+    // formula-capable classes the model never represents: fail closed
+    if declared.find("macrosheet") is Some(_) {
+      if !unknown_parts {
+        unknown_parts = true
+        first_unknown_part = Some(physical)
+      }
+      continue
+    }
     if lower.has_suffix(".vml") {
       if !vml_present {
         vml_present = true

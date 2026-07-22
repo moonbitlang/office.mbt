@@ -43,28 +43,60 @@ test "inventory: API-built classes report parsed extents and insert handling" {
   )
   // absent classes are omitted
   assert_eq(wb_inventory_entry(entries, TableRanges), None)
-  assert_eq(wb_inventory_entry(entries, SheetDefinedNames), None)
+  assert_eq(wb_inventory_entry(entries, DefinedNameReferences), None)
 }
 
 ///|
-test "inventory: defined-name entry appears only for the scoped sheet" {
+test "inventory: defined names classify by the adjuster, not scope" {
   let workbook = Workbook::new()
-  ignore(workbook.add_sheet("Alpha"))
-  ignore(workbook.add_sheet("Beta"))
-  workbook.set_defined_name(
-    DefinedName::new("only_alpha", "Alpha!$A$1", scope="Alpha"),
-  )
-  let alpha = workbook.sheet_row_state_inventory("Alpha")
+  ignore(workbook.add_sheet("Data"))
+  ignore(workbook.add_sheet("Other"))
+  // workbook-scoped but QUALIFIED to Data: the staging rewrites it, so
+  // Data's inventory must carry it with the parsed row bound
+  workbook.set_defined_name(DefinedName::new("wb_ref", "Data!$A$1048576"))
+  // scoped to Data but UNQUALIFIED: the adjuster never touches its text
+  workbook.set_defined_name(DefinedName::new("bare", "$A$9", scope="Data"))
+  let data = workbook.sheet_row_state_inventory("Data")
   assert_eq(
-    wb_inventory_entry(alpha, SheetDefinedNames),
+    wb_inventory_entry(data, DefinedNameReferences),
     Some({
-      class: SheetDefinedNames,
-      extent: WholeSheet,
+      class: DefinedNameReferences,
+      extent: RowsUpTo(1048576),
       handling: ShiftedByInsert,
     }),
   )
-  let beta = workbook.sheet_row_state_inventory("Beta")
-  assert_eq(wb_inventory_entry(beta, SheetDefinedNames), None)
+  assert_eq(
+    wb_inventory_entry(data, SheetScopedNamesUnadjusted),
+    Some({
+      class: SheetScopedNamesUnadjusted,
+      extent: WholeSheet,
+      handling: StaticOnWrite,
+    }),
+  )
+  // Other has no qualified refs and no scoped names: nothing appears
+  let other = workbook.sheet_row_state_inventory("Other")
+  assert_eq(wb_inventory_entry(other, DefinedNameReferences), None)
+  assert_eq(wb_inventory_entry(other, SheetScopedNamesUnadjusted), None)
+}
+
+///|
+test "inventory: sparkline extent folds the source range" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Data")
+  sheet.sparkline_groups.push({
+    sparkline_type: Line,
+    sparklines: [{ range_ref: "A100:A200", location: "F2" }],
+    options: SparklineGroupOptions::new(),
+  })
+  let entries = sheet.row_state_inventory()
+  assert_eq(
+    wb_inventory_entry(entries, SparklineAnchors),
+    Some({
+      class: SparklineAnchors,
+      extent: RowsUpTo(200),
+      handling: ShiftedByInsert,
+    }),
+  )
 }
 
 ///|
@@ -183,7 +215,7 @@ test "package feature detection classifies the raw part list" {
     ] {
     names[physical.to_lower()] = physical
   }
-  let features = detect_package_features(names)
+  let features = detect_package_features(names, _ => None)
   assert_true(features.external_links)
   assert_eq(
     features.first_external_link,
@@ -216,7 +248,10 @@ test "package feature detection stays quiet for a conventional package" {
     ] {
     names[physical.to_lower()] = physical
   }
-  assert_eq(detect_package_features(names), XlsxPackageFeatures::none())
+  assert_eq(
+    detect_package_features(names, _ => None),
+    XlsxPackageFeatures::none(),
+  )
 }
 
 ///|
@@ -308,4 +343,62 @@ test "inventory handling labels match actual insert behavior" {
   assert_eq(sheet.comments.length(), 1)
   assert_eq(sheet.comments[0].cell, "A9")
   assert_eq(sheet.ignored_errors[0].sqref, "A9")
+}
+
+///|
+test "package feature detection: declared content types beat inert paths" {
+  let names : Map[String, String] = {}
+  for
+    physical in [
+      "xl/media/link.xml", "xl/media/macro.xml", "xl/preservedDrawingParts/part1.bin",
+    ] {
+    names[physical.to_lower()] = physical
+  }
+  let types : Map[String, String] = {
+    "xl/media/link.xml": "application/vnd.openxmlformats-officedocument.spreadsheetml.externalLink+xml",
+    "xl/media/macro.xml": "application/vnd.ms-excel.macrosheet+xml",
+  }
+  let features = detect_package_features(names, name => types.get(name))
+  // the round-1 fail-open shape: an external-link part hidden under an
+  // inert-looking path is classified by its manifest type
+  assert_true(features.external_links)
+  assert_eq(features.first_external_link, Some("xl/media/link.xml"))
+  // formula-capable macrosheets fold into unknown_parts
+  assert_true(features.unknown_parts)
+  assert_eq(features.first_unknown_part, Some("xl/media/macro.xml"))
+  // the writer's own preserved-drawing payloads are known-inert
+  assert_false(features.vml_present)
+}
+
+///|
+test "library output with rich features stays classified" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Data")
+  sheet.set_cell_value("A1", String("x"))
+  sheet.add_comment({
+    cell: "B2",
+    author: "a",
+    author_id: None,
+    text: "note",
+    paragraph: [],
+    width: None,
+    height: None,
+  })
+  let chart_xml =
+    #|<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+    #|  <c:chart/>
+    #|</c:chartSpace>
+  sheet.add_chart("C3", chart_xml)
+  let parsed = read(write(workbook))
+  let features = parsed.package_features()
+  // the library's own conventional output never counts as unknown
+  assert_false(features.unknown_parts)
+  assert_false(features.external_links)
+  assert_false(features.query_tables)
+  assert_false(features.connections)
+  assert_false(features.pivot_parts)
+  // comments legitimately raise the VML flag: the writer emits legacy
+  // VML comment boxes, and VML is opaque static content on read
+  assert_true(features.vml_present)
+  assert_eq(features.first_vml_part, Some("xl/drawings/vmlDrawing1.vml"))
 }
