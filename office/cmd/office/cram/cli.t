@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:239ec1f8
+    Fingerprint: crc32:e94a4ada
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:239ec1f8","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:e94a4ada","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","template","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:e94a4ada","kind":"command","name":"raw"}]
 
 The raw command publishes explicit subcommand schemas, including every edit
 input and its conditional constraints.
@@ -537,6 +537,74 @@ DOCX previews inline the shared HTML converter output in one page shell.
   {"success":true,"data":{"schema":"office.preview/1","format":"docx","images_embedded":0}}
   $ grep -c '<!DOCTYPE html>' para.html
   1
+
+The template command merges strict office.template.data/1 values into a
+workbook: {{key}} placeholders substitute (whole-cell placeholders keep
+the data value's type), \{{ escapes yield literals, missing keys refuse
+by default, and formula cells are refused contexts. The template file is
+never modified.
+
+  $ xlsx.exe create tpl.xlsx --sheet Data >/dev/null
+  $ xlsx.exe set tpl.xlsx Data A1 'Customer: {{customer}}' >/dev/null
+  $ xlsx.exe set tpl.xlsx Data B1 '{{total}}' >/dev/null
+  $ xlsx.exe set tpl.xlsx Data C1 '\{{literal}} and {{paid}}' >/dev/null
+  $ cat > tpl-data.json <<'DATA'
+  > {"schema":"office.template.data/1","values":{"customer":"Ada Lovelace","total":1234.5,"paid":true,"fax":"unused"}}
+  > DATA
+  $ office.exe template tpl.xlsx tpl-data.json --out filled.xlsx
+  template: 3 replaced, 0 missing, 1 unused -> filled.xlsx
+  $ xlsx.exe get filled.xlsx Data A1
+  Customer: Ada Lovelace
+  $ xlsx.exe get filled.xlsx Data B1
+  1234.5
+  $ xlsx.exe get filled.xlsx Data C1
+  {{literal}} and true
+  $ office.exe template tpl.xlsx tpl-data.json --out filled-json.xlsx --json | jq -c '{success,data:{schema:.data.schema,replaced:.data.replaced,escapes:.data.escapes_applied,unused:.data.unused}}'
+  {"success":true,"data":{"schema":"office.template/1","replaced":3,"escapes":1,"unused":["fax"]}}
+
+Missing keys refuse publication with the report in the failure details;
+--allow-missing keeps the literal placeholders and publishes.
+
+  $ cat > tpl-missing.json <<'DATA'
+  > {"schema":"office.template.data/1","values":{"customer":"Ada"}}
+  > DATA
+  $ office.exe template tpl.xlsx tpl-missing.json --out refused.xlsx --json 2>&1 | jq -c '{success,code:.error.code,missing:[.error.details.missing[].detail]}'
+  {"success":false,"code":"office.template.missing_keys","missing":["total","paid"]}
+  $ test -f refused.xlsx || echo not published
+  not published
+  $ office.exe template tpl.xlsx tpl-missing.json --out partial.xlsx --allow-missing --json | jq -c '{success,replaced:.data.replaced,missing:[.data.missing[].detail]}'
+  {"success":true,"replaced":1,"missing":["total","paid"]}
+  $ xlsx.exe get partial.xlsx Data B1
+  {{total}}
+
+Malformed placeholders and formula-cell contexts are typed refusals; a
+dry run reports without publishing; a no-op merge publishes a validated
+copy; invalid data fails before the document opens.
+
+  $ xlsx.exe create tpl-bad.xlsx --sheet Data >/dev/null
+  $ xlsx.exe set tpl-bad.xlsx Data A1 'oops {{9bad}}' >/dev/null
+  $ office.exe template tpl-bad.xlsx tpl-data.json --out bad-out.xlsx --json 2>&1 | jq -c '{success,code:.error.code}'
+  {"success":false,"code":"office.template.malformed_placeholder"}
+  $ xlsx.exe create tpl-formula.xlsx --sheet Data >/dev/null
+  $ xlsx.exe formula tpl-formula.xlsx Data A1 'CONCAT("{{x}}","y")' >/dev/null
+  $ office.exe template tpl-formula.xlsx tpl-data.json --out f-out.xlsx --json 2>&1 | jq -c '{success,code:.error.code,loc:.error.details.unsupported[0].location}'
+  {"success":false,"code":"office.template.unsupported_context","loc":"Data!A1"}
+  $ office.exe template tpl.xlsx tpl-data.json --out dry.xlsx --dry-run --json | jq -c '{success,replaced:.data.replaced}'
+  {"success":true,"replaced":3}
+  $ test -f dry.xlsx || echo not published
+  not published
+  $ xlsx.exe create tpl-plain.xlsx --sheet Data >/dev/null
+  $ xlsx.exe set tpl-plain.xlsx Data A1 'no placeholders here' >/dev/null
+  $ cat > tpl-empty.json <<'DATA'
+  > {"schema":"office.template.data/1","values":{}}
+  > DATA
+  $ office.exe template tpl-plain.xlsx tpl-empty.json --out plain-out.xlsx --json | jq -c '{success,replaced:.data.replaced,changed_parts:(.data.transaction.preservation.changed|length)}'
+  {"success":true,"replaced":0,"changed_parts":0}
+  $ cat > tpl-null.json <<'DATA'
+  > {"schema":"office.template.data/1","values":{"a":null}}
+  > DATA
+  $ office.exe template tpl.xlsx tpl-null.json --out never.xlsx --json 2>&1 | jq -c '{success,code:.error.code}'
+  {"success":false,"code":"office.template.invalid_data"}
 
 The dump command emits a replayable office.dump/1 op stream: canonical
 ordered batch ops in JSON and the streaming JSONL form with an integrity

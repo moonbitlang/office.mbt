@@ -681,6 +681,39 @@ document content, followed only on an explicit click.
 | `truncation` | object | `max_rows`, `max_cols`, `truncated_sheets`, `images_omitted` |
 | `warnings` | array? | bounded converter warnings (omitted when empty) |
 
+### `office.template/1` (`office template FILE DATA.json --out OUT.xlsx [--dry-run] [--overwrite] [--allow-missing] [--json|--jsonl]`)
+
+Strict, non-executable template merge (XLSX in v1). Placeholders are
+`{{key}}` with keys `[A-Za-z_][A-Za-z0-9_.-]{0,63}` — no expressions, no
+filters, no traversal; `\{{` escapes a literal `{{`. Data rides in one
+`office.template.data/1` document: a flat `values` object of string,
+number, and boolean members (null, arrays, nesting, duplicate keys, and
+strings the XML serializers cannot represent are rejected before the
+document is opened). A whole-cell placeholder keeps the data value's
+native type; a substring placeholder produces text with deterministic
+stringification. Values always land through the literal cell setters, so
+a data value beginning with `=` can never become a formula. Strict by
+default: malformed placeholders (`office.template.malformed_placeholder`),
+placeholders in formula or rich-text cells
+(`office.template.unsupported_context`), and unresolved keys
+(`office.template.missing_keys`, unless `--allow-missing` keeps the
+literal placeholder bytes and publishes) each refuse publication with the
+full `office.template/1` record in `error.details`. The template file is
+never modified; output publishes through the transaction layer with the
+authoritative preservation report, and `--dry-run` reports without
+publishing.
+
+| key | type | notes |
+| --- | --- | --- |
+| `schema` | string | `"office.template/1"` |
+| `file` / `data_file` / `output` | string | bounded paths |
+| `format` | string | `"xlsx"` |
+| `placeholders_found` / `replaced` / `escapes_applied` / `distinct_keys_used` | number | merge counters |
+| `missing` / `malformed` / `unsupported` / `locations` | array | bounded `{location, detail}` findings with canonical `Sheet1!B2` locations |
+| `unused` | array | data keys the template never used (warning-class, still publishes) |
+| `locations_truncated` | boolean | true when the per-key location list hit its bound |
+| `transaction` | object | untouched `office.transaction/2` report (success only) |
+
 ### `office.dump/1` (`office dump FILE [--json|--jsonl]`)
 
 A replayable semantic dump: the document re-expressed as an ordered stream

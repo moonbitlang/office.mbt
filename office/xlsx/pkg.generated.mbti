@@ -3,7 +3,9 @@ package "bobzhang/office/xlsx"
 
 import {
   "bobzhang/mbtexcel/batch",
+  "bobzhang/office/template",
   "bobzhang/office/transaction",
+  "moonbitlang/core/debug",
 }
 
 // Values
@@ -15,7 +17,12 @@ pub fn parse_batch(BytesView) -> @batch.BatchPlan raise @batch.BatchError
 
 pub async fn transact_batch(@transaction.TransactionOptions, @batch.BatchPlan) -> XlsxBatchResult
 
+pub async fn transact_template(@transaction.TransactionOptions, Map[String, @template.TemplateValue], allow_missing~ : Bool) -> XlsxTemplateResult
+
 // Errors
+pub suberror XlsxTemplateRefused {
+  XlsxTemplateRefused(XlsxTemplateReport)
+} derive(@debug.Debug)
 
 // Types and methods
 pub struct XlsxBatchResult {
@@ -25,6 +32,30 @@ pub struct XlsxBatchResult {
 
 pub struct XlsxCreateResult {
   sheet : String
+  transaction : @transaction.TransactionReport
+}
+
+pub(all) struct XlsxTemplateFinding {
+  location : String
+  detail : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct XlsxTemplateReport {
+  mut placeholders_found : Int
+  mut replaced : Int
+  mut escapes_applied : Int
+  mut distinct_keys_used : Int
+  missing : Array[XlsxTemplateFinding]
+  unused : Array[String]
+  malformed : Array[XlsxTemplateFinding]
+  unsupported : Array[XlsxTemplateFinding]
+  locations : Array[XlsxTemplateFinding]
+  mut locations_truncated : Bool
+  mut changed : Bool
+} derive(Eq, @debug.Debug)
+
+pub struct XlsxTemplateResult {
+  report : XlsxTemplateReport
   transaction : @transaction.TransactionReport
 }
 

@@ -4,6 +4,7 @@ import {
   "bobzhang/mbtexcel/xlsx" @engine,
   "bobzhang/mbtexcel/zip",
   "bobzhang/office",
+  "bobzhang/office/template",
   "bobzhang/office/transaction",
   "moonbitlang/core/json",
 }
