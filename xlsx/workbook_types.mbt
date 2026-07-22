@@ -35,6 +35,9 @@ pub struct Workbook {
   rich_value_images : RichValueImages?
   /// Media parts referenced by rich-value images, keyed by archive path.
   rich_value_media : Map[String, Bytes]
+  /// Raw-package feature flags captured at read time, before lossy
+  /// modeling; `XlsxPackageFeatures::none()` for API-built workbooks.
+  package_features : XlsxPackageFeatures
 }
 
 ///|
@@ -190,5 +193,6 @@ pub fn Workbook::new(options? : Options = Options::new()) -> Workbook {
     cell_images: [],
     rich_value_images: None,
     rich_value_media: Map([]),
+    package_features: XlsxPackageFeatures::none(),
   }
 }

@@ -1311,6 +1311,53 @@ pub struct RowOpts {
 pub fn RowOpts::to_repr(Self) -> @debug.Repr
 pub fn RowOpts::with_values(height? : Double, hidden? : Bool, style_id? : Int, outline_level? : Int) -> Self
 
+pub(all) enum RowStateClass {
+  Cells
+  RowDimensions
+  MergedRanges
+  ConditionalFormats
+  DataValidations
+  HyperlinkAnchors
+  InternalLinkTargets
+  AutoFilterRange
+  TableRanges
+  SparklineAnchors
+  ImageAnchors
+  ChartAnchors
+  ShapeAnchors
+  FormControlAnchors
+  SlicerAnchors
+  CommentAnchors
+  IgnoredErrorRanges
+  RowPageBreaks
+  CellValueMetadata
+  DimensionRef
+  PreservedDrawingAnchors
+  VmlContent
+  UnknownExtensions
+  ViewState
+  DefinedNameReferences
+  SheetScopedNamesUnadjusted
+} derive(Eq, @debug.Debug)
+
+pub struct RowStateEntry {
+  class : RowStateClass
+  extent : RowStateExtent
+  handling : RowStateHandling
+} derive(Eq, @debug.Debug)
+
+pub(all) enum RowStateExtent {
+  RowsUpTo(Int)
+  WholeSheet
+  Positionless
+} derive(Eq, @debug.Debug)
+
+pub(all) enum RowStateHandling {
+  ShiftedByInsert
+  StaticOnWrite
+  DroppedByWriter
+} derive(Eq, @debug.Debug)
+
 pub struct RowStream {
   cells : Array[Cell]
   mut index : Int
@@ -1763,6 +1810,7 @@ pub struct Table {
   show_row_stripes : Bool
   show_column_stripes : Bool
   show_header_row : Bool
+  carries_source_formulas : Bool
 }
 
 type TableOptions derive(@debug.Debug)
@@ -1802,6 +1850,7 @@ pub struct Workbook {
   cell_images : Array[CellImage]
   rich_value_images : RichValueImages?
   rich_value_media : Map[String, Bytes]
+  package_features : XlsxPackageFeatures
   // private fields
 }
 pub fn Workbook::active_sheet_index(Self) -> Int
@@ -1874,6 +1923,7 @@ pub fn Workbook::delete_table(Self, StringView) -> Unit raise XlsxError
 pub fn Workbook::doc_properties(Self) -> CoreProperties
 pub fn Workbook::duplicate_row(Self, StringView, Int, formula_limits? : SharedFormulaLimits, cancelled? : () -> Bool) -> Unit raise XlsxError
 pub fn Workbook::duplicate_row_to(Self, StringView, Int, Int, formula_limits? : SharedFormulaLimits, cancelled? : () -> Bool) -> Unit raise XlsxError
+pub fn Workbook::first_table_with_source_formulas(Self) -> (String, String)?
 pub fn Workbook::get_active_sheet_index(Self) -> Int
 pub fn Workbook::get_app_props(Self) -> AppProperties
 pub fn Workbook::get_auto_filter(Self, StringView) -> AutoFilter? raise XlsxError
@@ -1958,6 +2008,7 @@ pub fn Workbook::new_conditional_style(Self, Style) -> Int
 pub fn Workbook::new_sheet(Self, String) -> Worksheet raise XlsxError
 pub fn Workbook::new_stream_writer(Self, StringView) -> StreamWriter raise XlsxError
 pub fn Workbook::new_style(Self, Style) -> Int
+pub fn Workbook::package_features(Self) -> XlsxPackageFeatures
 pub fn Workbook::protect_sheet(Self, StringView, SheetProtectionOptions) -> Unit raise XlsxError
 pub fn Workbook::protect_workbook(Self, options? : WorkbookProtectionOptions) -> Unit raise XlsxError
 pub async fn[R : @io.Reader] Workbook::read_zip_reader(Self, R, password? : String, options? : Options, limits? : ReadLimits, transcoder? : (String, Bytes) -> String raise XlsxError) -> Self
@@ -2041,6 +2092,7 @@ pub fn Workbook::set_zip_writer(Self, (@zip.Archive) -> Bytes raise) -> Unit
 pub fn Workbook::sheet(Self, StringView) -> Worksheet?
 pub fn Workbook::sheet_index(Self, StringView) -> Int raise XlsxError
 pub fn Workbook::sheet_name(Self, Int) -> String?
+pub fn Workbook::sheet_row_state_inventory(Self, StringView) -> Array[RowStateEntry] raise XlsxError
 pub fn Workbook::sheet_visible(Self, StringView) -> Bool raise XlsxError
 pub fn Workbook::sheets(Self) -> ArrayView[Worksheet]
 pub fn Workbook::styles(Self) -> ArrayView[Style]
@@ -2151,6 +2203,7 @@ pub fn Worksheet::add_vml_drawing_xml(Self, String) -> Unit raise XlsxError
 pub fn Worksheet::auto_filter(Self) -> AutoFilter?
 pub fn Worksheet::charts(Self) -> ArrayView[Chart]
 pub fn Worksheet::clear_auto_filter(Self) -> Unit raise XlsxError
+pub fn Worksheet::clear_dimension_ref(Self) -> Unit
 pub fn Worksheet::col_breaks(Self) -> ArrayView[PageBreak]
 pub fn Worksheet::col_outline_level(Self, Int) -> Int raise XlsxError
 pub fn Worksheet::col_visible(Self, Int) -> Bool raise XlsxError
@@ -2165,6 +2218,7 @@ pub fn Worksheet::delete_data_validation(Self, sqrefs? : Array[String]) -> Unit 
 pub fn Worksheet::delete_pivot_table(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::delete_table(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::effective_style_id_rc(Self, Int, Int) -> Int raise XlsxError
+pub fn Worksheet::first_stored_formula_cell(Self) -> String?
 pub fn Worksheet::formula_refs(Self) -> Array[String]
 pub fn Worksheet::get_cell(Self, StringView) -> String? raise XlsxError
 pub fn Worksheet::get_cell_formula(Self, StringView) -> String? raise XlsxError
@@ -2203,6 +2257,7 @@ pub fn Worksheet::pivot_tables(Self) -> ArrayView[PivotTable]
 pub fn Worksheet::protect_sheet(Self, SheetProtectionOptions) -> Unit raise XlsxError
 pub fn Worksheet::remove_cell_hyperlink(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::row_breaks(Self) -> ArrayView[PageBreak]
+pub fn Worksheet::row_state_inventory(Self) -> Array[RowStateEntry]
 pub fn Worksheet::row_stream(Self) -> RowStream
 pub fn Worksheet::row_visible(Self, Int) -> Bool raise XlsxError
 pub fn Worksheet::rows(Self) -> Rows
@@ -2262,6 +2317,22 @@ pub fn WriteLimits::with_values(max_output_bytes~ : Int, max_archive_entries~ : 
 type X14DataBarProps derive(@debug.Debug)
 #deprecated
 pub fn X14DataBarProps::to_repr(Self) -> @debug.Repr
+
+pub struct XlsxPackageFeatures {
+  external_links : Bool
+  query_tables : Bool
+  connections : Bool
+  pivot_parts : Bool
+  vml_present : Bool
+  unknown_parts : Bool
+  first_external_link : String?
+  first_query_table : String?
+  first_connections : String?
+  first_pivot_part : String?
+  first_vml_part : String?
+  first_unknown_part : String?
+} derive(Eq, @debug.Debug)
+pub fn XlsxPackageFeatures::none() -> Self
 
 // Type aliases
 

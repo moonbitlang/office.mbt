@@ -4086,6 +4086,12 @@ fn read_zip_archive_core_unchecked(
     cell_images,
     rich_value_images,
     rich_value_media,
+    package_features: detect_package_features(part_names, name => {
+      match (try? content_types.content_type_for(name)) {
+        Ok(Some(value)) => Some(value)
+        _ => None
+      }
+    }),
   }
   let slicer_cache_defs = parse_slicer_cache_definitions(
     workbook_rels,

@@ -12,6 +12,15 @@ pub struct Table {
   show_row_stripes : Bool
   show_column_stripes : Bool
   show_header_row : Bool
+  /// Whether the SOURCE table part carried calculatedColumnFormula or
+  /// totalsRowFormula markup. The model does not retain those constructs
+  /// and the writer regenerates table XML without them, so a rewrite of a
+  /// workbook whose table carries them silently drops the formulas —
+  /// callers that must not lose formula content check this flag. Detection
+  /// is a raw scan of the part, so a column literally named after one of
+  /// the elements also raises the flag (conservative, never the reverse).
+  /// Always false for API-built tables.
+  carries_source_formulas : Bool
 }
 
 ///|
@@ -155,6 +164,7 @@ fn Table::new(
     show_row_stripes,
     show_column_stripes,
     show_header_row,
+    carries_source_formulas: false,
   }
 }
 
@@ -357,5 +367,7 @@ fn parse_table_xml(xml : StringView) -> Table raise XlsxError {
     show_row_stripes,
     show_column_stripes,
     show_header_row,
+    carries_source_formulas: text.find("calculatedColumnFormula") is Some(_) ||
+    text.find("totalsRowFormula") is Some(_),
   }
 }
