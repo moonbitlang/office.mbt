@@ -606,3 +606,31 @@ test "raw dv criteria: root-tag discipline and tolerant formula tags" {
   assert_eq(criteria[2].validation_type, "opaque")
   assert_eq(criteria[3].formula1, "\"a,b\"")
 }
+
+///|
+test "raw dv criteria: nested descendants never mask the root formulas" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Data")
+  // the round-5 bypass shape: a child's quoted formula1 appears FIRST,
+  // the root's own reference formula follows — direct-child extraction
+  // must return the ROOT's L1, not the child's literal
+  sheet.data_validations.push(
+    "<dataValidation type=\"list\" sqref=\"A1\"><ext><formula1>\"a,b\"</formula1></ext><formula1>L1</formula1></dataValidation>",
+  )
+  // child-only formula: the root has none, so the list source is absent
+  sheet.data_validations.push(
+    "<dataValidation type=\"list\" sqref=\"B1\"><ext><formula1>\"a,b\"</formula1></ext></dataValidation>",
+  )
+  // a self-closing root has no formulas
+  sheet.data_validations.push("<dataValidation type=\"list\" sqref=\"C1\"/>")
+  // structural surprises (a comment) classify the entry opaque
+  sheet.data_validations.push(
+    "<dataValidation type=\"list\" sqref=\"D1\"><!-- x --><formula1>\"a\"</formula1></dataValidation>",
+  )
+  let criteria = sheet.raw_data_validation_criteria()
+  assert_eq(criteria.length(), 4)
+  assert_eq(criteria[0].formula1, "L1")
+  assert_eq(criteria[1].formula1, "")
+  assert_eq(criteria[2].formula1, "")
+  assert_eq(criteria[3].validation_type, "opaque")
+}

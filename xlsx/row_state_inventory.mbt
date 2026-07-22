@@ -637,36 +637,73 @@ fn raw_name_boundary(unit : UInt16) -> Bool {
 }
 
 ///|
-/// Text content of the FIRST `element` child, tolerant of whitespace and
-/// attributes in its start tag; "" for absent or self-closing elements.
-/// The tag-end scan honors quoted attribute values (P1 lesson).
-fn raw_element_text(xml : String, element : String) -> String {
-  let open = "<" + element
+/// Text content of the DIRECT `element` child of the root whose content
+/// begins at `content_start`. Depth-aware: a nested descendant carrying
+/// the same element name never satisfies the lookup (a child's quoted
+/// formula1 masked the root's reference formula and bypassed the
+/// refusal policy — codex round 5). Some("") for absent or self-closing
+/// elements; None when the structure resists the walk (callers classify
+/// the whole entry opaque).
+fn raw_direct_child_text(
+  xml : String,
+  content_start : Int,
+  element : String,
+) -> String? {
   let close = "</" + element + ">"
-  let mut search = 0
-  while search < xml.length() {
-    let offset = match xml.substring(start=search).find(open) {
+  let mut index = content_start
+  let mut depth = 0
+  while index < xml.length() {
+    let offset = match xml.substring(start=index).find("<") {
       Some(pos) => pos
-      None => return ""
+      None => return Some("")
     }
-    let start = search + offset
-    let name_end = start + open.length()
-    if name_end < xml.length() && raw_name_boundary(xml[name_end]) {
-      guard raw_tag_end(xml, start) is Some(content_start) else { return "" }
-      if content_start >= 2 && xml[content_start - 2] == '/' {
-        return ""
+    let start = index + offset
+    if start + 1 >= xml.length() {
+      return None
+    }
+    let marker = xml[start + 1]
+    if marker == '!' || marker == '?' {
+      // comments, declarations, PIs: outside the shapes the reader's
+      // canonical store produces — refuse to guess
+      return None
+    }
+    if marker == '/' {
+      if depth == 0 {
+        // the root's own close: the element is absent
+        return Some("")
       }
-      match xml.substring(start=content_start).find(close) {
+      depth -= 1
+      match raw_tag_end(xml, start) {
+        Some(next) => index = next
+        None => return None
+      }
+      continue
+    }
+    guard raw_tag_end(xml, start) is Some(tag_end) else { return None }
+    let self_closing = tag_end >= 2 && xml[tag_end - 2] == '/'
+    let name_end = start + 1 + element.length()
+    let is_match = depth == 0 &&
+      name_end < xml.length() &&
+      xml.substring(start=start + 1, end=name_end) == element &&
+      raw_name_boundary(xml[name_end])
+    if is_match {
+      if self_closing {
+        return Some("")
+      }
+      match xml.substring(start=tag_end).find(close) {
         Some(rel) =>
-          return unescape_xml_text(
-            xml.substring(start=content_start, end=content_start + rel),
+          return Some(
+            unescape_xml_text(xml.substring(start=tag_end, end=tag_end + rel)),
           )
-        None => return ""
+        None => return None
       }
     }
-    search = start + 1
+    if !self_closing {
+      depth += 1
+    }
+    index = tag_end
   }
-  ""
+  Some("")
 }
 
 ///|
@@ -717,12 +754,18 @@ pub fn Worksheet::raw_data_validation_criteria(
       out.push(opaque)
       continue
     }
-    out.push({
-      validation_type,
-      sqref,
-      formula1: raw_element_text(trimmed, "formula1"),
-      formula2: raw_element_text(trimmed, "formula2"),
-    })
+    if root_end >= 2 && trimmed[root_end - 2] == '/' {
+      // a self-closing root has no formula children at all
+      out.push({ validation_type, sqref, formula1: "", formula2: "" })
+      continue
+    }
+    let formula1 = raw_direct_child_text(trimmed, root_end, "formula1")
+    let formula2 = raw_direct_child_text(trimmed, root_end, "formula2")
+    match (formula1, formula2) {
+      (Some(first), Some(second)) =>
+        out.push({ validation_type, sqref, formula1: first, formula2: second })
+      _ => out.push(opaque)
+    }
   }
   out
 }
