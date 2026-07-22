@@ -1228,6 +1228,13 @@ pub fn Protection::not_equal(Self, Self) -> Bool
 pub fn Protection::to_repr(Self) -> @debug.Repr
 pub fn Protection::with_values(hidden? : Bool, locked? : Bool) -> Self
 
+pub struct RawDataValidationCriteria {
+  validation_type : String
+  sqref : String
+  formula1 : String
+  formula2 : String
+} derive(Eq, @debug.Debug)
+
 pub struct ReadLimits {
   // private fields
 }
@@ -2256,6 +2263,7 @@ pub fn Worksheet::name(Self) -> String
 pub fn Worksheet::new(String) -> Self
 pub fn Worksheet::pivot_tables(Self) -> ArrayView[PivotTable]
 pub fn Worksheet::protect_sheet(Self, SheetProtectionOptions) -> Unit raise XlsxError
+pub fn Worksheet::raw_data_validation_criteria(Self) -> Array[RawDataValidationCriteria]
 pub fn Worksheet::remove_cell_hyperlink(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::row_breaks(Self) -> ArrayView[PageBreak]
 pub fn Worksheet::row_state_inventory(Self) -> Array[RowStateEntry]

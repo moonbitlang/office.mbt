@@ -593,3 +593,84 @@ pub fn Worksheet::conditional_formats_provably_literal(
 
 ///|
 let xml_probe_cfrule : String = "<cfRule"
+
+///|
+/// One data validation's RAW criteria: the stored type, scope, and
+/// formula text with doubled-quote escapes PRESERVED (the parsed reader
+/// collapses them, which makes literal-ness undecidable downstream —
+/// "It""s,ok" and "a"&B1&"b" collapse to structurally similar text).
+/// Entries the raw scan cannot interpret carry validation_type "opaque".
+pub struct RawDataValidationCriteria {
+  validation_type : String
+  sqref : String
+  formula1 : String
+  formula2 : String
+} derive(Eq, @debug.Debug)
+
+///|
+fn raw_element_text(xml : String, element : String) -> String {
+  let open = "<" + element + ">"
+  let close = "</" + element + ">"
+  match xml.find(open) {
+    Some(start) => {
+      let content_start = start + open.length()
+      match xml.find(close) {
+        Some(end) =>
+          if end >= content_start {
+            unescape_xml_text(xml.substring(start=content_start, end~))
+          } else {
+            ""
+          }
+        None => ""
+      }
+    }
+    None => ""
+  }
+}
+
+///|
+/// The raw criteria of every stored data validation, x14 and other
+/// uninterpretable entries included as "opaque". XML entity escapes are
+/// decoded; formula quote doubling is NOT collapsed.
+pub fn Worksheet::raw_data_validation_criteria(
+  self : Worksheet,
+) -> Array[RawDataValidationCriteria] {
+  let out : Array[RawDataValidationCriteria] = []
+  for xml in self.data_validations {
+    let trimmed = xml.trim(chars=" \t\r\n").to_string()
+    if !trimmed.has_prefix("<dataValidation") {
+      out.push({
+        validation_type: "opaque",
+        sqref: "",
+        formula1: "",
+        formula2: "",
+      })
+      continue
+    }
+    let validation_type = match (try? attr_value(trimmed, "type")) {
+      Ok(Some(value)) => unescape_xml_text(value)
+      Ok(None) => "none"
+      Err(_) => "opaque"
+    }
+    let sqref = match raw_attr_sqref(trimmed) {
+      Some(value) => value
+      None => ""
+    }
+    if sqref == "" {
+      out.push({
+        validation_type: "opaque",
+        sqref: "",
+        formula1: "",
+        formula2: "",
+      })
+      continue
+    }
+    out.push({
+      validation_type,
+      sqref,
+      formula1: raw_element_text(trimmed, "formula1"),
+      formula2: raw_element_text(trimmed, "formula2"),
+    })
+  }
+  out
+}

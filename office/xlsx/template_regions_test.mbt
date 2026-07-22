@@ -653,3 +653,49 @@ async test "two-operand comparisons and concatenated list sources refuse" {
     assert_true(result.report.changed)
   }
 }
+
+///|
+async test "escaped-quote list literals publish on the raw proof" {
+  with_region_dir() <| directory => {
+    let workbook = @engine.Workbook::new()
+    let sheet = workbook.add_sheet("Items")
+    sheet.set_cell_value("A2", @engine.CellValue::String("{{item}}"))
+    let other = workbook.add_sheet("Meta")
+    other.set_cell_value("A1", @engine.CellValue::Numeric(1))
+    let list = @engine.DataValidation::new(true)
+    list.set_range(
+      @engine.DataValidationFormula::TextValue("\"It\"\"s,ok\""),
+      @engine.DataValidationFormula::TextValue(""),
+      @engine.DataValidationType::List,
+      @engine.DataValidationOperator::Between,
+    )
+    list.set_sqref("B1")
+    workbook.add_data_validation("Meta", list)
+    let empty = @engine.DataValidation::new(true)
+    empty.set_range(
+      @engine.DataValidationFormula::TextValue("\"\""),
+      @engine.DataValidationFormula::TextValue(""),
+      @engine.DataValidationType::List,
+      @engine.DataValidationOperator::Between,
+    )
+    empty.set_sqref("B2")
+    workbook.add_data_validation("Meta", empty)
+    let input = directory + "/quotes.xlsx"
+    @afs.write_file(
+      input,
+      @engine.write(workbook),
+      create_mode=CreateNew,
+      permission=0o600,
+    )
+    let output = directory + "/quotes-out.xlsx"
+    let result = @xlsx.transact_template_document(
+      @transaction.transaction_options(input, output_path=output),
+      @template.parse_template_document(
+        "{\"schema\": \"office.template.data/1\", \"values\": {}, " +
+        "\"regions\": {\"items\": {\"sheet\": \"Items\", \"row\": 2, \"records\": [{\"item\": \"a\"}]}}}",
+      ),
+      allow_missing=false,
+    )
+    assert_true(result.report.changed)
+  }
+}

@@ -541,3 +541,38 @@ test "cf literal proof: formula cfvos, x14 state, and skipped rules disprove" {
   )
   assert_false(exotic_sheet.conditional_formats_provably_literal())
 }
+
+///|
+test "raw dv criteria preserve quote doubling and mark x14 opaque" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Data")
+  let list = DataValidation::new(true)
+  list.set_range(
+    DataValidationFormula::TextValue("\"It\"\"s,ok\""),
+    DataValidationFormula::TextValue(""),
+    DataValidationType::List,
+    DataValidationOperator::Between,
+  )
+  list.set_sqref("A1")
+  workbook.add_data_validation("Data", list)
+  // the write/read round trip goes through the raw store
+  let reopened = read(write(workbook))
+  guard reopened.sheet("Data") is Some(parsed_sheet) else {
+    fail("sheet missing")
+  }
+  let criteria = parsed_sheet.raw_data_validation_criteria()
+  assert_eq(criteria.length(), 1)
+  assert_eq(criteria[0].validation_type, "list")
+  assert_eq(criteria[0].sqref, "A1")
+  // doubled interior quotes SURVIVE, unlike the parsed reader's collapse
+  assert_eq(criteria[0].formula1, "\"It\"\"s,ok\"")
+  // an x14 entry in the raw store classifies as opaque
+  let x14 = Workbook::new()
+  let x14_sheet = x14.add_sheet("Data")
+  x14_sheet.data_validations.push(
+    "<x14:dataValidation type=\"custom\"><x14:formula1>A1</x14:formula1></x14:dataValidation>",
+  )
+  let x14_criteria = x14_sheet.raw_data_validation_criteria()
+  assert_eq(x14_criteria.length(), 1)
+  assert_eq(x14_criteria[0].validation_type, "opaque")
+}

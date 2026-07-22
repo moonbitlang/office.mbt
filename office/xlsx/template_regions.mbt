@@ -336,20 +336,18 @@ fn cf_rule_formula_bearing(opts : @engine.ConditionalFormatOptions) -> Bool {
 /// concatenation like "prefix"&D1 starts with a quote but carries a
 /// reference — codex round 2b), and comparison operands that are not
 /// plain number literals or empty.
-fn dv_formula_bearing(validation : @engine.DataValidation) -> Bool {
+fn dv_formula_bearing(criteria : @engine.RawDataValidationCriteria) -> Bool {
   fn literal_operand(text : String) -> Bool {
     text == "" || plain_number_literal(text)
   }
 
-  match validation.validation_type {
+  match criteria.validation_type {
     "custom" => true
-    "list" => !quoted_string_literal(validation.formula1)
+    "list" => !quoted_string_literal(criteria.formula1)
     "none" | "" =>
-      !(literal_operand(validation.formula1) &&
-      literal_operand(validation.formula2))
+      !(literal_operand(criteria.formula1) && literal_operand(criteria.formula2))
     _ =>
-      !(literal_operand(validation.formula1) &&
-      literal_operand(validation.formula2))
+      !(literal_operand(criteria.formula1) && literal_operand(criteria.formula2))
   }
 }
 
@@ -433,28 +431,30 @@ fn cf_dv_policy_check(
           report, sheet_name, "conditional formats this reader cannot fully interpret",
         )
     }
-    match (try? worksheet.get_data_validations()) {
-      Ok(validations) =>
-        for validation in validations {
-          if dv_formula_bearing(validation) {
-            push_policy_finding(
-              report,
-              "\{sheet_name}!\{validation.sqref}",
-              "a data validation with formula criteria",
-            )
-          }
-          if sqref_intersects_template(sheet_name, validation.sqref) {
-            push_policy_finding(
-              report,
-              "\{sheet_name}!\{validation.sqref}",
-              "a multi-row data validation intersects the template row",
-            )
-          }
-        }
-      Err(_) =>
+    // RAW criteria: the parsed reader collapses doubled quotes, which
+    // makes list-literal proof undecidable downstream (codex round 3) —
+    // and x14 entries surface as "opaque" instead of a raise
+    for criteria in worksheet.raw_data_validation_criteria() {
+      if criteria.validation_type == "opaque" {
         push_policy_finding(
-          report, sheet_name, "data validations this reader cannot fully interpret",
+          report, sheet_name, "a data validation this reader cannot fully interpret",
         )
+        continue
+      }
+      if dv_formula_bearing(criteria) {
+        push_policy_finding(
+          report,
+          "\{sheet_name}!\{criteria.sqref}",
+          "a data validation with formula criteria",
+        )
+      }
+      if sqref_intersects_template(sheet_name, criteria.sqref) {
+        push_policy_finding(
+          report,
+          "\{sheet_name}!\{criteria.sqref}",
+          "a multi-row data validation intersects the template row",
+        )
+      }
     }
   }
 }
