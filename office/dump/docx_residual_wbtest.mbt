@@ -10,6 +10,7 @@ fn wb_ctx(residual : Array[DumpResidual]) -> DocxDumpContext {
     footnote_bodies: {},
     endnote_bodies: {},
     used_notes: Set::new(),
+    image_verdicts: {},
   }
 }
 
@@ -275,7 +276,7 @@ test "run-nested images hoist and capture assets" {
   let residual : Array[DumpResidual] = []
   let ctx = wb_ctx(residual)
   let out : Array[Json] = []
-  let payload : Bytes = "not-really-a-png"
+  let payload : Bytes = b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\x0d\x49\x44\x41\x54\x78\x9c\x63\xf8\xcf\xc0\xf0\x1f\x00\x05\x00\x01\xff\x89\x99\x3d\x1d\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82"
   docx_run_specs(
     [
       @document.text("before"),
@@ -414,6 +415,7 @@ test "note references dump their bodies with honest edge handling" {
     },
     endnote_bodies: {},
     used_notes: Set::new(),
+    image_verdicts: {},
   }
   let out : Array[Json] = []
   docx_run_specs(
@@ -509,6 +511,7 @@ test "links and images inside note bodies degrade honestly" {
     },
     endnote_bodies: {},
     used_notes: Set::new(),
+    image_verdicts: {},
   }
   let out : Array[Json] = []
   docx_run_specs(
@@ -604,4 +607,96 @@ test "dedup-first unsupported type cannot poison a later supported use" {
   guard unsupported[1].asset is Some(_) else {
     fail("the poisoned occurrence must reference the carried asset")
   }
+}
+
+///|
+/// PR5 writer-oracle layers: a payload the writer cannot sniff (valid
+/// declared type, garbage bytes) residualizes as unwritable with its
+/// asset carried; the verdict is cached per asset so a second reference
+/// runs no second probe (observable through the single residual pair).
+test "unsniffable image payloads residualize via the writer oracle" {
+  let residual : Array[DumpResidual] = []
+  let ctx = wb_ctx(residual)
+  let out : Array[Json] = []
+  docx_run_specs(
+    [
+      @document.Image(@document.Image::{
+        content_type: "image/png",
+        alt_text: None,
+        data: "definitely-not-a-png",
+      }),
+    ],
+    @document.run_properties(),
+    0,
+    ctx,
+    out,
+    in_note_body=false,
+    plain=false,
+  )
+  assert_eq(out.length(), 1) // forced empty segment only, no image spec
+  assert_false(out[0].stringify().contains("\"image\":"))
+  let unwritable = residual.filter(entry => {
+    entry.code == "docx.image_unwritable"
+  })
+  guard unwritable is [entry] else { fail("expected one unwritable residual") }
+  assert_true(entry.asset is Some(_))
+  assert_eq(ctx.assets.size(), 1)
+  assert_eq(ctx.image_verdicts.size(), 1)
+}
+
+///|
+/// PR5 grid gate: rows past 63 effective columns or non-uniform row
+/// widths residualize the table — the writer would reject both, and a
+/// dump must never emit what its own replay cannot write.
+test "table grid geometry the writer rejects residualizes" {
+  let cell = (span : Int) => {
+    @document.TableCell(
+      children=[@document.paragraph([@document.run([@document.text("c")])])],
+      col_span=span,
+      row_span=1,
+    )
+  }
+  // 32 + 32 = 64 effective columns in one row
+  let overflow : Array[DumpResidual] = []
+  let wide = docx_table_params(
+    [@document.TableRow(children=[cell(32), cell(32)], is_header=false)],
+    @document.TableProperties::{ style_id: None, style_name: None },
+    0,
+    wb_ctx(overflow),
+  )
+  assert_true(wide is None)
+  assert_true(
+    overflow.map(entry => entry.code).contains("docx.table_grid_unsupported"),
+  )
+  // rows of width 2 and width 1 — the writer rejects narrower rows
+  let uneven : Array[DumpResidual] = []
+  let ragged = docx_table_params(
+    [
+      @document.TableRow(children=[cell(1), cell(1)], is_header=false),
+      @document.TableRow(children=[cell(1)], is_header=false),
+    ],
+    @document.TableProperties::{ style_id: None, style_name: None },
+    0,
+    wb_ctx(uneven),
+  )
+  assert_true(ragged is None)
+  assert_true(
+    uneven.map(entry => entry.code).contains("docx.table_grid_unsupported"),
+  )
+  // a uniform two-column table still emits
+  let fine : Array[DumpResidual] = []
+  let ok = docx_table_params(
+    [
+      @document.TableRow(children=[cell(1), cell(1)], is_header=false),
+      @document.TableRow(children=[cell(2)], is_header=false),
+    ],
+    @document.TableProperties::{ style_id: None, style_name: None },
+    0,
+    wb_ctx(fine),
+  )
+  assert_true(ok is Some(_))
+  assert_eq(
+    fine.filter(entry => entry.code == "docx.table_grid_unsupported").length(),
+    0,
+  )
 }

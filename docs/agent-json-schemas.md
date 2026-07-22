@@ -719,11 +719,15 @@ truncation detection.
 
 ### `office.replay/1` (`office replay FILE --output OUT.xlsx --json`)
 
-Reconstructs an XLSX workbook from an `office.dump/1` document by applying
-its ordered ops through the same batch engine that authored them, then
-publishes the workbook through the atomic create-new path (an existing
-destination is refused with `office.transaction.output_exists` unless
-`--overwrite` is given). Malformed or truncated dumps are rejected with
+Reconstructs a package from an `office.dump/1` document by applying its
+ordered ops through the same batch engine that authored them — the XLSX
+apply path for workbooks, the DOCX build-and-write path (with the
+envelope's content-addressed assets supplying image payloads) for word
+documents — then publishes it through the atomic create-new path (an
+existing destination is refused with `office.transaction.output_exists`
+unless `--overwrite` is given). The `--output` extension must match the
+dump's format. Malformed or truncated dumps — including assets whose
+payloads fail their size or sha256 integrity checks — are rejected with
 `office.replay.invalid_dump` before anything is written. The result
 reproduces the dump's replayable content only — features the dump recorded
 as residual are not reconstructed — and byte-identity with the original
@@ -732,7 +736,7 @@ package is an explicit non-goal.
 | key | type | notes |
 | --- | --- | --- |
 | `schema` | string | `"office.replay/1"` |
-| `format` | string | `"xlsx"` |
+| `format` | string | `"xlsx"` or `"docx"` |
 | `output` | string | bounded published path |
 | `bytes_written` | number | exact published byte count |
 | `ops_applied` | number | number of dump ops replayed |

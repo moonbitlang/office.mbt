@@ -4,51 +4,28 @@
 /// map comment and note ops to writer specs, and write the annotated
 /// package.
 fn docx_assemble(ops : Array[Json], images : Map[String, Bytes]) -> Bytes raise {
-  let parsed = @docx_batch.parse_batch(
-    Json::object({
-      "schema": Json::string("docx.batch/2"),
-      "ops": Json::array(ops),
-    }),
-  )
-  let body = parsed.build_body(images)
-  let comments = []
-  for comment in parsed.build_comments() {
-    match (comment.reply_to(), comment.from_block(), comment.to_block()) {
-      (Some(parent), _, _) =>
-        comments.push(
-          @word.comment_reply(
-            author=comment.author(),
-            initials?=comment.initials(),
-            date?=comment.date(),
-            reply_to=parent,
-            done?=comment.done(),
-            comment.body(),
-          ),
-        )
-      (None, Some(from), Some(to)) =>
-        comments.push(
-          @word.comment_spec(
-            author=comment.author(),
-            initials?=comment.initials(),
-            date?=comment.date(),
-            from~,
-            to~,
-            done?=comment.done(),
-            comment.body(),
-          ),
-        )
-      _ => fail("comment without anchor or reply target")
+  // route through the REAL replay engine so every fixpoint test also
+  // exercises the exact path `office replay` runs
+  let assets : Map[String, @dump.DumpAsset] = {}
+  for id, data in images {
+    assets[id] = {
+      content_type: "image/png",
+      size: data.length(),
+      data: @b64.encode(data),
     }
   }
-  let footnotes = []
-  for note in parsed.build_footnotes() {
-    footnotes.push(@word.note_spec(note.body()))
-  }
-  let endnotes = []
-  for note in parsed.build_endnotes() {
-    endnotes.push(@word.note_spec(note.body()))
-  }
-  @word.write_docx_with_annotations(body, comments~, footnotes~, endnotes~)
+  @dump.replay_docx_dump({
+    format: "docx",
+    source_file: "assemble.docx",
+    source_bytes: 1,
+    source_sha256: None,
+    batch_schema: "docx.batch/2",
+    create_sheet: None,
+    ops,
+    assets,
+    residual: [],
+    warnings: [],
+  })
 }
 
 ///|

@@ -68,6 +68,10 @@ priv struct DocxDumpContext {
   footnote_bodies : Map[String, Array[@document.DocumentElement]]
   endnote_bodies : Map[String, Array[@document.DocumentElement]]
   used_notes : Set[String]
+  // per-payload writer-oracle verdicts, keyed by asset id: None = the
+  // writer accepts it; Some(reason) = it does not (cached so dedup hits
+  // never re-run the mini-write)
+  image_verdicts : Map[String, String?]
 }
 
 ///|
@@ -168,6 +172,47 @@ fn docx_image_spec(
           detail: "the carried asset's content type '\{bounded_reason(carried_type)}' is outside the writable set (png, jpeg, gif)",
         })
         return None
+      }
+      // writer oracle: dimensions come from sniffing the payload header,
+      // and only the writer knows its full contract (formats, EMU
+      // bounds) — probe it with a one-image document instead of
+      // mirroring rules that could drift. Verdicts are cached per asset.
+      let verdict = match ctx.image_verdicts.get(id) {
+        Some(cached) => cached
+        None => {
+          let verdict = match
+            (try? @word.write_docx([
+              @document.paragraph([
+                @document.run([
+                  @document.Image(@document.Image::{
+                    content_type: carried_type,
+                    alt_text: None,
+                    data: image.data,
+                  }),
+                ]),
+              ]),
+            ])) {
+            Ok(_) => None
+            Err(error) => Some("\{to_repr(error)}")
+          }
+          ctx.image_verdicts[id] = verdict
+          verdict
+        }
+      }
+      match verdict {
+        Some(reason) => {
+          ctx.residual.push({
+            code: "docx.image_unwritable",
+            severity: "dropped",
+            scope: "block",
+            location: docx_location(block),
+            asset: Some(id),
+            detail: "the writer rejects this image payload: " +
+            bounded_reason(reason),
+          })
+          return None
+        }
+        None => ()
       }
       let spec : Map[String, Json] = {
         "path": Json::string(id),
@@ -1054,6 +1099,43 @@ fn docx_table_params(
     )
     return None
   }
+  // grid gate mirroring the writer: every row's effective width (the
+  // spans the ops will carry, absent = 1) must fit the 63-column grid
+  // AND all rows must be equally wide — the writer rejects narrower
+  // rows rather than padding them, so gate here and disclose
+  let mut grid_width = -1
+  for entry in emitted {
+    let (cells, _) = entry
+    let mut width = 0
+    for cell in cells {
+      let (_, col_span, _) = cell
+      width += if col_span > 1 && col_span <= 63 { col_span } else { 1 }
+    }
+    if width > 63 {
+      ctx.residual.push(
+        docx_residual(
+          "docx.table_grid_unsupported",
+          "block",
+          docx_location(block),
+          "a table row spans \{width} grid columns; the writer's limit is 63",
+        ),
+      )
+      return None
+    }
+    if grid_width < 0 {
+      grid_width = width
+    } else if width != grid_width {
+      ctx.residual.push(
+        docx_residual(
+          "docx.table_grid_unsupported",
+          "block",
+          docx_location(block),
+          "table rows span \{grid_width} and \{width} grid columns; the writer requires uniform rows",
+        ),
+      )
+      return None
+    }
+  }
   // header_rows counts LEADING header rows among the rows actually
   // emitted; a header row after body rows keeps only its content
   let rows : Array[Json] = []
@@ -1154,6 +1236,7 @@ pub fn dump_docx_document(
     footnote_bodies,
     endnote_bodies,
     used_notes: Set::new(),
+    image_verdicts: {},
   }
   let residual = ctx.residual
   let warnings : Array[DumpWarning] = []
@@ -1278,7 +1361,7 @@ pub fn dump_docx_document(
   dump_docx_comments(
     annotated, ctx, ops, comment_spans, document_location, cancelled,
   )
-  docx_self_check_ops(ops, cancelled)
+  docx_self_check_ops(ops, ctx.assets, cancelled)
   {
     format: "docx",
     source_file,
@@ -1495,6 +1578,7 @@ fn dump_docx_comments(
 /// so a dump this check accepts is exactly a script replay can consume.
 fn docx_self_check_ops(
   ops : Array[Json],
+  assets : Map[String, DumpAsset],
   cancelled : () -> Bool,
 ) -> Unit raise DumpError {
   for chunk in docx_dump_op_chunks(ops) {
@@ -1508,6 +1592,25 @@ fn docx_self_check_ops(
       Err(error) =>
         raise DumpSelfCheckFailed("docx op chunk rejected: \{error}")
     }
+  }
+  // the parse check cannot see writer-only contracts (grid geometry,
+  // image payload sniffing, comment metadata), so run the FULL assembly
+  // the replay command will run. The per-value gates above make a
+  // failure here unreachable from source content — reaching it means a
+  // dump bug, which must be loud, never a replay-time user failure.
+  check_cancelled(cancelled)
+  let images : Map[String, Bytes] = {}
+  for id, asset in assets {
+    images[id] = @base64.decode(asset.data) catch {
+      _ => raise DumpSelfCheckFailed("asset \{id} does not decode")
+    }
+  }
+  match (try? docx_assemble_ops(ops, images)) {
+    Ok(_) => ()
+    Err(error) =>
+      raise DumpSelfCheckFailed(
+        "the assembled document does not write: \{to_repr(error)}",
+      )
   }
 }
 

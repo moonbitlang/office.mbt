@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:d4a0e094
+    Fingerprint: crc32:239ec1f8
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:d4a0e094","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:239ec1f8","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:d4a0e094","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:239ec1f8","kind":"command","name":"raw"}]
 
 The raw command publishes explicit subcommand schemas, including every edit
 input and its conditional constraints.
@@ -567,7 +567,25 @@ is disclosed as a residual rather than silently regenerated.
   true
 
 Comments become comment ops threaded to their anchors, and pictures ride
-as content-addressed assets referenced by their image specs.
+as content-addressed assets referenced by their image specs. The replay
+command rebuilds a DOCX from the dump through the same batch build path,
+and dump then replay then dump is stable.
+
+  $ office.exe dump "$TESTDIR/../../../../docx2html/tests/cram/fixtures/commented.docx" --json > commented.dump.json
+  $ office.exe replay commented.dump.json --output replayed-comments.docx --json | jq -c '{success,data:{schema:.data.schema,format:.data.format,ops:.data.ops_applied}}'
+  {"success":true,"data":{"schema":"office.replay/1","format":"docx","ops":5}}
+  $ office.exe dump replayed-comments.docx --json | jq -c '{ops:[.ops[].op]}'
+  {"ops":["paragraph","paragraph","paragraph","comment","comment"]}
+  $ office.exe dump "$TESTDIR/../../../../docx2html/tests/cram/fixtures/tiny-picture.docx" --json > picture.dump.json
+  $ office.exe replay picture.dump.json --output replayed-picture.docx >/dev/null
+  $ office.exe dump replayed-picture.docx --json | jq -c '{ops:[.ops[].op],assets:(.assets|length)}'
+  {"ops":["paragraph"],"assets":1}
+  $ jq -c '.ops' picture.dump.json > before.ops.json
+  $ office.exe dump replayed-picture.docx --json | jq -c '.ops' > after.ops.json
+  $ cmp before.ops.json after.ops.json && echo identical
+  identical
+  $ office.exe replay commented.dump.json --output wrong-extension.xlsx --json 2>&1 | jq -c '{success,code:.error.code}'
+  {"success":false,"code":"office.invalid_arguments"}
 
   $ office.exe dump "$TESTDIR/../../../../docx2html/tests/cram/fixtures/commented.docx" --json | jq -c '{ops:[.ops[].op],residual:[.residual[].code]}'
   {"ops":["paragraph","paragraph","paragraph","comment","comment"],"residual":["docx.sections_not_dumped","docx.run_style_dropped"]}
