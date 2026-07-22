@@ -566,6 +566,14 @@ is disclosed as a residual rather than silently regenerated.
   $ office.exe dump "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --jsonl | jq -rc 'select(.record=="end") | (.ops_sha256 | test("^[0-9a-f]{64}$"))'
   true
 
+Comments become comment ops threaded to their anchors, and pictures ride
+as content-addressed assets referenced by their image specs.
+
+  $ office.exe dump "$TESTDIR/../../../../docx2html/tests/cram/fixtures/commented.docx" --json | jq -c '{ops:[.ops[].op],residual:[.residual[].code]}'
+  {"ops":["paragraph","paragraph","paragraph","comment","comment"],"residual":["docx.sections_not_dumped","docx.run_style_dropped"]}
+  $ office.exe dump "$TESTDIR/../../../../docx2html/tests/cram/fixtures/tiny-picture.docx" --json | jq -c '{ops:[.ops[].op],assets:(.assets|length),residual:[.residual[].code]}'
+  {"ops":["paragraph"],"assets":1,"residual":["docx.sections_not_dumped"]}
+
 The replay command reconstructs an XLSX workbook from an office.dump/1
 document by applying its ops through the same engine, then publishes it
 through the atomic create-new path. dump then replay then dump is stable.
