@@ -481,3 +481,32 @@ test "inventory: heterogeneous ranges the adjuster skips are opaque" {
     }),
   )
 }
+
+///|
+test "inventory: string-literal qualifiers keep the static entry" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  // a Data-scoped name whose refers_to is the string CONSTANT "Data!":
+  // the (engine-faithful, literal-unaware) scan consumes the qualifier,
+  // but the leftover quotes are static content — both classes appear
+  workbook.set_defined_name(
+    DefinedName::new("label", "\"Data!\"", scope="Data"),
+  )
+  let entries = workbook.sheet_row_state_inventory("Data")
+  assert_eq(
+    wb_inventory_entry(entries, DefinedNameReferences),
+    Some({
+      class: DefinedNameReferences,
+      extent: WholeSheet,
+      handling: ShiftedByInsert,
+    }),
+  )
+  assert_eq(
+    wb_inventory_entry(entries, SheetScopedNamesUnadjusted),
+    Some({
+      class: SheetScopedNamesUnadjusted,
+      extent: WholeSheet,
+      handling: StaticOnWrite,
+    }),
+  )
+}

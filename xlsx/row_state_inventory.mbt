@@ -514,7 +514,11 @@ fn name_has_unqualified_content(
     leftover = pieces.join("")
   }
   for unit in leftover {
-    if unit is ('A'..='Z' | 'a'..='z' | '0'..='9' | '$') {
+    // quote characters count: a string literal in refers_to is static
+    // text by definition, even when the (literal-unaware, engine-
+    // faithful) scan consumed a qualifier spelled inside it — the
+    // "Data!" constant shape (codex round 3)
+    if unit is ('A'..='Z' | 'a'..='z' | '0'..='9' | '$' | '"' | '\'') {
       return true
     }
   }
