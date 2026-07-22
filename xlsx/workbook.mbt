@@ -1195,6 +1195,7 @@ fn clone_tables(values : ArrayView[Table]) -> Array[Table] {
       show_row_stripes: value.show_row_stripes,
       show_column_stripes: value.show_column_stripes,
       show_header_row: value.show_header_row,
+      carries_source_formulas: value.carries_source_formulas,
     })
   }
   out

@@ -5540,6 +5540,7 @@ fn adjust_table_after_row_insert(
     show_row_stripes: table.show_row_stripes,
     show_column_stripes: table.show_column_stripes,
     show_header_row: table.show_header_row,
+    carries_source_formulas: table.carries_source_formulas,
   }
 }
 
@@ -5565,6 +5566,7 @@ fn adjust_table_after_row_remove(
         show_row_stripes: table.show_row_stripes,
         show_column_stripes: table.show_column_stripes,
         show_header_row: table.show_header_row,
+        carries_source_formulas: table.carries_source_formulas,
       })
     None => None
   }
@@ -5609,6 +5611,7 @@ fn adjust_table_after_col_insert(
     show_row_stripes: table.show_row_stripes,
     show_column_stripes: table.show_column_stripes,
     show_header_row: table.show_header_row,
+    carries_source_formulas: table.carries_source_formulas,
   }
 }
 
@@ -5653,6 +5656,7 @@ fn adjust_table_after_col_remove(
         show_row_stripes: table.show_row_stripes,
         show_column_stripes: table.show_column_stripes,
         show_header_row: table.show_header_row,
+        carries_source_formulas: table.carries_source_formulas,
       })
     }
     None => None

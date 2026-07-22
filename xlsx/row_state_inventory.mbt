@@ -1,0 +1,406 @@
+///|
+/// The engine-owned row-addressed state inventory: one authoritative
+/// enumeration of every worksheet feature that lives at (or spans) row
+/// positions, with how row INSERTION treats it. Consumers that must not
+/// move content wrongly (template repetition preflight) read this instead
+/// of maintaining a parallel hand-list that drifts from the writer.
+
+///|
+/// How `insert_rows`/`duplicate_row_to` treat a class today.
+pub(all) enum RowStateHandling {
+  /// Insertion adjusts the stored positions (staged, atomic — #136).
+  ShiftedByInsert
+  /// Written back unchanged; positions do NOT follow an insertion.
+  StaticOnWrite
+  /// Read into the model but never emitted by the writer.
+  DroppedByWriter
+} derive(Eq, @debug.Debug)
+
+///|
+/// The row extent a class occupies.
+pub(all) enum RowStateExtent {
+  /// Parsed positions; the highest 1-based row addressed.
+  RowsUpTo(Int)
+  /// Present but not row-interpretable (opaque markup, unparsable refs) —
+  /// treat as touching every row.
+  WholeSheet
+  /// Present but carries no row semantics (view / pane presentation state).
+  Positionless
+} derive(Eq, @debug.Debug)
+
+///|
+pub(all) enum RowStateClass {
+  Cells
+  RowDimensions
+  MergedRanges
+  ConditionalFormats
+  DataValidations
+  HyperlinkAnchors
+  /// Hyperlinks whose `location` names an internal destination — the
+  /// anchor shifts but the TARGET text never does, so insertion can
+  /// silently retarget them.
+  InternalLinkTargets
+  AutoFilterRange
+  TableRanges
+  SparklineAnchors
+  ImageAnchors
+  ChartAnchors
+  ShapeAnchors
+  FormControlAnchors
+  SlicerAnchors
+  CommentAnchors
+  IgnoredErrorRanges
+  RowPageBreaks
+  CellValueMetadata
+  DimensionRef
+  PreservedDrawingAnchors
+  VmlContent
+  UnknownExtensions
+  ViewState
+  /// Workbook-level entry (sheet-scoped defined names); appended by
+  /// `Workbook::sheet_row_state_inventory`, never by the worksheet.
+  SheetDefinedNames
+} derive(Eq, @debug.Debug)
+
+///|
+pub struct RowStateEntry {
+  class : RowStateClass
+  extent : RowStateExtent
+  handling : RowStateHandling
+} derive(Eq, @debug.Debug)
+
+///|
+/// Highest 1-based row of a cell or range reference, None when unparsable.
+fn reference_max_row(reference : String) -> Int? {
+  match (try? parse_range_ref(reference)) {
+    Ok((_, _, max_row, _)) => Some(max_row)
+    Err(_) => None
+  }
+}
+
+///|
+/// Highest row across a space-separated sqref list; None on any
+/// unparsable component (callers degrade to WholeSheet).
+fn sqref_max_row(sqref : String) -> Int? {
+  let mut best = 0
+  for token in sqref.split(" ") {
+    if token.length() == 0 {
+      continue
+    }
+    match reference_max_row(token.to_owned()) {
+      Some(row) => if row > best { best = row }
+      None => return None
+    }
+  }
+  if best == 0 {
+    None
+  } else {
+    Some(best)
+  }
+}
+
+///|
+/// Folds one anchor reference into a running (present, parsed-max,
+/// any-unparsable) accumulator.
+priv struct ExtentAccumulator {
+  mut present : Bool
+  mut max_row : Int
+  mut opaque : Bool
+}
+
+///|
+fn ExtentAccumulator::new() -> ExtentAccumulator {
+  { present: false, max_row: 0, opaque: false }
+}
+
+///|
+fn ExtentAccumulator::add_reference(
+  self : ExtentAccumulator,
+  reference : String,
+) -> Unit {
+  self.present = true
+  match reference_max_row(reference) {
+    Some(row) => if row > self.max_row { self.max_row = row }
+    None => self.opaque = true
+  }
+}
+
+///|
+fn ExtentAccumulator::add_sqref(
+  self : ExtentAccumulator,
+  sqref : String,
+) -> Unit {
+  self.present = true
+  match sqref_max_row(sqref) {
+    Some(row) => if row > self.max_row { self.max_row = row }
+    None => self.opaque = true
+  }
+}
+
+///|
+fn ExtentAccumulator::entry(
+  self : ExtentAccumulator,
+  class : RowStateClass,
+  handling : RowStateHandling,
+  into : Array[RowStateEntry],
+) -> Unit {
+  if !self.present {
+    return
+  }
+  let extent = if self.opaque || self.max_row == 0 {
+    WholeSheet
+  } else {
+    RowsUpTo(self.max_row)
+  }
+  into.push({ class, extent, handling })
+}
+
+///|
+/// The value of an attribute in a raw feature XML string, or None. Used
+/// for sqref extraction from stored conditional-format / data-validation
+/// markup without materializing the full parse.
+fn raw_attr_sqref(xml : String) -> String? {
+  match (try? attr_value(xml, "sqref")) {
+    Ok(Some(value)) => Some(unescape_xml_text(value))
+    _ => None
+  }
+}
+
+///|
+/// Every row-addressed feature PRESENT on this worksheet, with extent and
+/// insertion handling. Absent classes are omitted. Sheet-scoped defined
+/// names live on the workbook — use `Workbook::sheet_row_state_inventory`
+/// for the complete picture.
+pub fn Worksheet::row_state_inventory(self : Worksheet) -> Array[RowStateEntry] {
+  let entries : Array[RowStateEntry] = []
+  if self.cells.length() > 0 {
+    let mut max_row = 0
+    for cell in self.cells {
+      if cell.row > max_row {
+        max_row = cell.row
+      }
+    }
+    entries.push({
+      class: Cells,
+      extent: RowsUpTo(max_row),
+      handling: ShiftedByInsert,
+    })
+  }
+  if self.row_dimensions.size() > 0 {
+    let mut max_row = 0
+    for row, _ in self.row_dimensions {
+      if row > max_row {
+        max_row = row
+      }
+    }
+    entries.push({
+      class: RowDimensions,
+      extent: RowsUpTo(max_row),
+      handling: ShiftedByInsert,
+    })
+  }
+  let merges = ExtentAccumulator::new()
+  for range in self.merged_cells {
+    merges.add_reference(range)
+  }
+  merges.entry(MergedRanges, ShiftedByInsert, entries)
+  let cf = ExtentAccumulator::new()
+  for xml in self.conditional_formats {
+    cf.present = true
+    match raw_attr_sqref(xml) {
+      Some(sqref) => cf.add_sqref(sqref)
+      None => cf.opaque = true
+    }
+  }
+  cf.entry(ConditionalFormats, ShiftedByInsert, entries)
+  let dv = ExtentAccumulator::new()
+  for xml in self.data_validations {
+    dv.present = true
+    match raw_attr_sqref(xml) {
+      Some(sqref) => dv.add_sqref(sqref)
+      None => dv.opaque = true
+    }
+  }
+  dv.entry(DataValidations, ShiftedByInsert, entries)
+  let links = ExtentAccumulator::new()
+  let mut internal_targets = false
+  for link in self.hyperlinks {
+    links.add_reference(link.reference)
+    if link.location is Some(_) {
+      internal_targets = true
+    }
+  }
+  links.entry(HyperlinkAnchors, ShiftedByInsert, entries)
+  if internal_targets {
+    entries.push({
+      class: InternalLinkTargets,
+      extent: WholeSheet,
+      handling: StaticOnWrite,
+    })
+  }
+  match self.auto_filter {
+    Some(filter) => {
+      let acc = ExtentAccumulator::new()
+      acc.add_reference(filter.range_ref)
+      acc.entry(AutoFilterRange, ShiftedByInsert, entries)
+    }
+    None => ()
+  }
+  let tables = ExtentAccumulator::new()
+  for table in self.tables {
+    tables.add_reference(table.range_ref)
+  }
+  tables.entry(TableRanges, ShiftedByInsert, entries)
+  let sparks = ExtentAccumulator::new()
+  for group in self.sparkline_groups {
+    for sparkline in group.sparklines {
+      sparks.add_reference(sparkline.location)
+    }
+  }
+  sparks.entry(SparklineAnchors, ShiftedByInsert, entries)
+  let images = ExtentAccumulator::new()
+  for image in self.images {
+    images.add_reference(image.reference)
+  }
+  images.entry(ImageAnchors, ShiftedByInsert, entries)
+  let charts = ExtentAccumulator::new()
+  for chart in self.charts {
+    charts.add_reference(chart.reference)
+  }
+  charts.entry(ChartAnchors, ShiftedByInsert, entries)
+  let shapes = ExtentAccumulator::new()
+  for shape in self.shapes {
+    shapes.add_reference(shape.cell)
+  }
+  shapes.entry(ShapeAnchors, StaticOnWrite, entries)
+  let controls = ExtentAccumulator::new()
+  for control in self.form_controls {
+    controls.add_reference(control.cell)
+  }
+  controls.entry(FormControlAnchors, StaticOnWrite, entries)
+  let slicers = ExtentAccumulator::new()
+  for slicer in self.slicers {
+    slicers.add_reference(slicer.cell)
+  }
+  slicers.entry(SlicerAnchors, StaticOnWrite, entries)
+  let comments = ExtentAccumulator::new()
+  for comment in self.comments {
+    comments.add_reference(comment.cell)
+  }
+  comments.entry(CommentAnchors, StaticOnWrite, entries)
+  let ignored = ExtentAccumulator::new()
+  for item in self.ignored_errors {
+    ignored.add_sqref(item.sqref)
+  }
+  ignored.entry(IgnoredErrorRanges, StaticOnWrite, entries)
+  if self.row_breaks.length() > 0 {
+    // row-break ids are 0-based (id = row - 1, #136); report the 1-based
+    // row below the break, capped to the grid
+    let mut max_row = 0
+    for brk in self.row_breaks {
+      let row = if brk.id >= cell_ref_max_rows {
+        cell_ref_max_rows
+      } else {
+        brk.id + 1
+      }
+      if row > max_row {
+        max_row = row
+      }
+    }
+    entries.push({
+      class: RowPageBreaks,
+      extent: RowsUpTo(max_row),
+      handling: ShiftedByInsert,
+    })
+  }
+  let vm = ExtentAccumulator::new()
+  for reference, _ in self.cell_vm {
+    vm.add_reference(reference)
+  }
+  vm.entry(CellValueMetadata, DroppedByWriter, entries)
+  match self.dimension_ref {
+    Some(reference) => {
+      let acc = ExtentAccumulator::new()
+      acc.add_reference(reference)
+      acc.entry(DimensionRef, StaticOnWrite, entries)
+    }
+    None => ()
+  }
+  if self.preserved_drawing_anchors.length() > 0 ||
+    self.preserved_drawing_parts.length() > 0 {
+    entries.push({
+      class: PreservedDrawingAnchors,
+      extent: WholeSheet,
+      handling: StaticOnWrite,
+    })
+  }
+  if self.vml_drawing_xml is Some(_) || self.vml_drawing_hf_xml is Some(_) {
+    entries.push({
+      class: VmlContent,
+      extent: WholeSheet,
+      handling: StaticOnWrite,
+    })
+  }
+  if self.unknown_ext_blocks.length() > 0 {
+    entries.push({
+      class: UnknownExtensions,
+      extent: WholeSheet,
+      handling: StaticOnWrite,
+    })
+  }
+  if self.sheet_views.length() > 0 {
+    entries.push({
+      class: ViewState,
+      extent: Positionless,
+      handling: StaticOnWrite,
+    })
+  }
+  entries
+}
+
+///|
+/// The complete row-addressed inventory for one sheet: the worksheet's
+/// own classes plus a `SheetDefinedNames` entry when any defined name is
+/// scoped to the sheet (the adjuster rewrites only explicit `Sheet!ref`
+/// substrings, so extents are not row-determinable — WholeSheet).
+pub fn Workbook::sheet_row_state_inventory(
+  self : Workbook,
+  sheet_name : StringView,
+) -> Array[RowStateEntry] raise XlsxError {
+  let sheet = self.require_sheet(sheet_name)
+  let entries = sheet.row_state_inventory()
+  let scope_key = defined_name_scope_key(sheet.name())
+  for name in self.defined_names {
+    if defined_name_scope_key(name.scope) == scope_key {
+      entries.push({
+        class: SheetDefinedNames,
+        extent: WholeSheet,
+        handling: ShiftedByInsert,
+      })
+      break
+    }
+  }
+  entries
+}
+
+///|
+/// The first stored cell on this sheet carrying formula state — the
+/// STORED presence test (`formula is Some(_)`, empty text included, so
+/// shared-formula followers and array members count). `formula_refs()`
+/// excludes empty formulas and must not be used for wrong-number gates.
+pub fn Worksheet::first_stored_formula_cell(self : Worksheet) -> String? {
+  for cell in self.cells {
+    if cell.formula is Some(_) {
+      return Some(cell.reference)
+    }
+  }
+  None
+}
+
+///|
+/// Clears the stored `<dimension>` so the writer recomputes it from live
+/// geometry (cells, merges, tables, auto-filter). A stored value is
+/// otherwise echoed verbatim and goes stale after row insertion.
+pub fn Worksheet::clear_dimension_ref(self : Worksheet) -> Unit {
+  self.dimension_ref = None
+}
