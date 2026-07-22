@@ -73,10 +73,14 @@ fn template_value_text_ok(text : String) -> Bool {
 /// tracks object frames and their seen keys; strings are skipped with
 /// full escape handling. Runs before `@json.parse`, so malformed JSON is
 /// reported by the real parser rather than this pre-scan.
-fn check_duplicate_keys(text : String) -> Unit raise TemplateDataError {
+fn check_duplicate_keys(
+  text : String,
+  on_member? : ((Array[String], String, Int) -> Unit raise TemplateDataError)? = None,
+) -> Unit raise TemplateDataError {
   let units = text.code_units()
   let length = units.length()
-  let frames : Array[(Bool, Set[String], Ref[Bool])] = []
+  let frames : Array[ScanFrame] = []
+  let member_events : Array[(Array[String], String, Int)] = []
   let mut index = 0
   while index < length {
     let unit = units[index].to_int()
@@ -90,6 +94,7 @@ fn check_duplicate_keys(text : String) -> Unit raise TemplateDataError {
       let identity = StringBuilder::new()
       let mut escaped = false
       index += 1
+      let string_start = index
       let mut closed = false
       while index < length {
         let piece = units[index].to_int()
@@ -116,7 +121,7 @@ fn check_duplicate_keys(text : String) -> Unit raise TemplateDataError {
         return
       }
       match frames.last() {
-        Some((true, seen, expecting_key)) if expecting_key.val => {
+        Some(frame) if frame.is_object && frame.expecting_key => {
           // a \uXXXX spelling decodes to a character the verbatim
           // identity cannot see (\u0061 aliases "a" and @json.parse is
           // last-wins), so any escape in a KEY is rejected outright —
@@ -127,30 +132,73 @@ fn check_duplicate_keys(text : String) -> Unit raise TemplateDataError {
             )
           }
           let key = identity.to_string()
-          if seen.contains(key) {
+          if frame.seen.contains(key) {
             raise TemplateDataError("duplicate key in the data document")
           }
-          seen.add(key)
-          expecting_key.val = false
+          frame.seen.add(key)
+          frame.expecting_key = false
+          // escaped keys raised above, so the raw span IS the key text —
+          // labels and the callback want characters, not the identity
+          // encoding the seen-set uses
+          let literal = text.substring(start=string_start, end=index - 1)
+          frame.pending_key = literal
+          if on_member is Some(_) {
+            // deferred: a duplicate ANYWHERE must win over member-gate
+            // errors ("row": 5.5, "row": 5 reports the duplicate), so
+            // callbacks fire only after the whole scan completes
+            member_events.push((frames.map(open => open.label), literal, index))
+          }
         }
         _ => ()
       }
       continue
     }
-    if unit == '{'.to_int() {
-      frames.push((true, Set::new(), Ref::new(true)))
-    } else if unit == '['.to_int() {
-      frames.push((false, Set::new(), Ref::new(false)))
+    if unit == '{'.to_int() || unit == '['.to_int() {
+      let label = match frames.last() {
+        Some(parent) if parent.is_object => parent.pending_key
+        _ => ""
+      }
+      frames.push({
+        is_object: unit == '{'.to_int(),
+        seen: Set::new(),
+        expecting_key: unit == '{'.to_int(),
+        label,
+        pending_key: "",
+      })
     } else if unit == '}'.to_int() || unit == ']'.to_int() {
       ignore(frames.pop())
     } else if unit == ','.to_int() {
       match frames.last() {
-        Some((true, _, expecting_key)) => expecting_key.val = true
+        Some(frame) if frame.is_object => frame.expecting_key = true
         _ => ()
       }
     }
     index += 1
   }
+  // an unterminated string returns early above WITHOUT reaching this
+  // point, so member gates never fire on documents @json.parse will
+  // reject wholesale
+  match on_member {
+    Some(callback) =>
+      for event in member_events {
+        let (labels, key, after_key) = event
+        callback(labels, key, after_key)
+      }
+    None => ()
+  }
+}
+
+///|
+/// One open JSON container during the raw scan: its seen keys, whether the
+/// next string is a key, the member key under which the container itself
+/// was opened (array items carry ""), and the most recent key read (the
+/// label a child container opened next inherits).
+priv struct ScanFrame {
+  is_object : Bool
+  seen : Set[String]
+  mut expecting_key : Bool
+  label : String
+  mut pending_key : String
 }
 
 ///|
@@ -193,27 +241,52 @@ pub fn parse_template_data(
   guard fields.get("values") is Some(Object(entries)) else {
     raise TemplateDataError("data document needs a \"values\" object")
   }
+  parse_scalar_entries(entries, max_keys, max_value_units, "", "values")
+}
+
+///|
+/// Validates one flat scalar object (the `values` member, or one region
+/// record) under the shared gates: key grammar, string bounds and
+/// serializability, finite numbers, no null/array/nesting. `prefix` scopes
+/// error messages to the container ("" for `values`, a region/record label
+/// for records); `container` names it in the key-count message.
+fn parse_scalar_entries(
+  entries : Map[String, Json],
+  max_keys : Int,
+  max_value_units : Int,
+  prefix : String,
+  container : String,
+) -> Map[String, TemplateValue] raise TemplateDataError {
   if entries.size() > max_keys {
     raise TemplateDataError(
-      "values carries \{entries.size()} keys; the limit is \{max_keys}",
+      prefix +
+      container +
+      " carries \{entries.size()} keys; the limit is \{max_keys}",
     )
   }
   let values : Map[String, TemplateValue] = {}
   for key, value in entries {
     if !template_key_ok(key) {
       raise TemplateDataError(
-        "value key \"" + key + "\" is outside the placeholder key grammar",
+        prefix +
+        "value key \"" +
+        key +
+        "\" is outside the placeholder key grammar",
       )
     }
     match value {
       String(item) => {
         if item.code_units().length() > max_value_units {
           raise TemplateDataError(
-            "value for \"" + key + "\" exceeds \{max_value_units} units",
+            prefix +
+            "value for \"" +
+            key +
+            "\" exceeds \{max_value_units} units",
           )
         }
         if !template_value_text_ok(item) {
           raise TemplateDataError(
+            prefix +
             "value for \"" +
             key +
             "\" carries characters the document serializers cannot represent",
@@ -227,7 +300,7 @@ pub fn parse_template_data(
         // into published documents; reject like any other non-scalar
         if number != number || number.is_inf() {
           raise TemplateDataError(
-            "value for \"" + key + "\" is not a finite number",
+            prefix + "value for \"" + key + "\" is not a finite number",
           )
         }
         values[key] = NumberValue(number)
@@ -236,12 +309,14 @@ pub fn parse_template_data(
       False => values[key] = BoolValue(false)
       Null =>
         raise TemplateDataError(
+          prefix +
           "value for \"" +
           key +
           "\" is null; only string, number, and boolean values are supported",
         )
       _ =>
         raise TemplateDataError(
+          prefix +
           "value for \"" +
           key +
           "\" is not a scalar; only string, number, and boolean values are supported",
