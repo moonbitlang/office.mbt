@@ -407,3 +407,44 @@ async test "scalar-only documents behave exactly like transact_template" {
     }
   }
 }
+
+///|
+async test "values keys used only inside regions are not reported unused" {
+  with_region_dir() <| directory => {
+    let workbook = @engine.Workbook::new()
+    let sheet = workbook.add_sheet("Data")
+    // "unit_label" resolves from values inside every clone; no scalar
+    // cell references it
+    sheet.set_cell_value(
+      "A2",
+      @engine.CellValue::String("{{item}} ({{unit_label}})"),
+    )
+    let input = directory + "/regiononly.xlsx"
+    @afs.write_file(
+      input,
+      @engine.write(workbook),
+      create_mode=CreateNew,
+      permission=0o600,
+    )
+    let output = directory + "/regiononly-out.xlsx"
+    let data = @template.parse_template_document(
+      "{\"schema\": \"office.template.data/1\", " +
+      "\"values\": {\"unit_label\": \"pcs\"}, " +
+      "\"regions\": {\"items\": {\"sheet\": \"Data\", \"row\": 2, \"records\": [" +
+      "{\"item\": \"Widget\"}, {\"item\": \"Gadget\"}]}}}",
+    )
+    let result = @xlsx.transact_template_document(
+      @transaction.transaction_options(input, output_path=output),
+      data,
+      allow_missing=false,
+    )
+    assert_eq(result.report.unused_total, 0)
+    assert_eq(result.report.unused.length(), 0)
+    let published = @engine.read(@afs.read_file(output).binary()[:])
+    match published.get_cell_value_raw("Data", "A3") {
+      Some(String(text)) => assert_eq(text, "Gadget (pcs)")
+      other =>
+        fail("expected the values fallback in the clone, got \{to_repr(other)}")
+    }
+  }
+}

@@ -716,8 +716,14 @@ pub async fn transact_template_document(
         []
       }
       let claimed : Set[String] = Set::new()
+      let region_value_keys : Set[String] = Set::new()
       for plan in plans {
         claimed.add("\{plan.sheet}\u{0}\{plan.row}")
+        for key, _ in plan.key_occurrences {
+          if data.values.contains(key) {
+            region_value_keys.add(key)
+          }
+        }
       }
       let merge = merge_template_workbook(
         workbook,
@@ -725,6 +731,7 @@ pub async fn transact_template_document(
         allow_missing~,
         claimed_rows=claimed,
         skipped_cells~,
+        pre_used_keys=region_value_keys,
       ) catch {
         @template.TemplateScanBudgetExceeded(_) =>
           raise xlsx_transaction_failure(
