@@ -48,12 +48,15 @@ let docx_template_scan_budget : Int = 4 * 1024 * 1024
 
 ///|
 /// One text-bearing run segment inside a scan region.
-priv struct DocxRunSegment {
+priv struct DocxPiece {
+  // "" when the piece is not rewritable (bare text, opaque-run text,
+  // complex-field descendants, separators)
   run_path : String
   // paragraph-relative parent identity: "" for direct runs, else the
   // hyperlink path segment — placeholder matches may not cross parents
   parent : String
   text : String
+  rewritable : Bool
 }
 
 ///|
@@ -195,27 +198,6 @@ fn decode_numeric_entity(entity : String) -> String? {
 }
 
 ///|
-/// Non-overlapping count of "{{" occurrences — the paragraph-level pair
-/// accounting that makes brace detection split-proof across EVERY
-/// content shape: any pair the region scanner did not account for sits
-/// in content the merge cannot rewrite.
-fn docx_count_brace_pairs(text : String) -> Int {
-  let mut count = 0
-  let mut index = 0
-  let length = text.length()
-  while index + 1 < length {
-    if text[index].to_int() == '{'.to_int() &&
-      text[index + 1].to_int() == '{'.to_int() {
-      count += 1
-      index += 2
-    } else {
-      index += 1
-    }
-  }
-  count
-}
-
-///|
 fn docx_escape_text(text : String) -> String {
   let out = StringBuilder::new()
   for ch in text {
@@ -279,31 +261,6 @@ fn docx_collect_paragraphs(
 }
 
 ///|
-/// Whether a run holds only Text children (the scannable, rewritable
-/// shape). Runs carrying tabs, breaks, images, or references are opaque
-/// boundaries: their text is never scanned and a brace pair inside one
-/// is an unsupported context.
-fn docx_pure_text_run(
-  children : Array[@document.DocumentElement],
-) -> (Bool, String) {
-  let text = StringBuilder::new()
-  let mut pure = true
-  for child in children {
-    match child {
-      Text(value) => text.write_string(value)
-      // keep collecting with a separator: the run's whole text feeds the
-      // paragraph's pair accounting, and a non-text child genuinely
-      // breaks rendering adjacency (a pair around a tab is not a pair)
-      _ => {
-        pure = false
-        text.write_char('\n')
-      }
-    }
-  }
-  (pure, text.to_string())
-}
-
-///|
 /// Shared mutable state for one merge pass.
 priv struct DocxMergeState {
   report : DocxTemplateReport
@@ -315,205 +272,15 @@ priv struct DocxMergeState {
 }
 
 ///|
-fn DocxMergeState::scan_region(
-  self : DocxMergeState,
-  story : String,
-  part : String,
-  paragraph_location : String,
-  segments : Array[DocxRunSegment],
-) -> Int raise {
-  guard segments.length() > 0 else { return 0 }
-  // the grammar spans segments, so the prefilter must be split-proof:
-  // any single '{' or backslash (single units cannot straddle a run
-  // boundary) routes the region through the real scanner
-  let mut interesting = false
-  for segment in segments {
-    if segment.text.contains("{") || segment.text.contains("\\") {
-      interesting = true
-      break
-    }
-  }
-  guard interesting else { return 0 }
-  let texts = segments.map(segment => segment.text)
-  let scan = @template.scan_placeholders(texts, self.budget)
-  let accounted = scan.matches.length() +
-    scan.escapes.length() +
-    scan.malformed.length()
-  self.report.placeholders_found += scan.matches.length()
-  for entry in scan.malformed {
-    self.report.malformed_total += 1
-    if self.report.malformed.length() < docx_template_finding_limit {
-      self.report.malformed.push({
-        location: paragraph_location,
-        detail: entry.reason,
-      })
-    }
-  }
-  guard scan.matches.length() > 0 || scan.escapes.length() > 0 else {
-    return accounted
-  }
-  if scan.malformed.length() > 0 {
-    // a region with any malformed site is never edited
-    return accounted
-  }
-  // resolve matches: parent agreement + key presence
-  let mut region_missing = false
-  let accepted : Array[@template.PlaceholderMatch] = []
-  for matched in scan.matches {
-    let start_parent = segments[matched.span.start_segment].parent
-    // a segment participates only when the match covers a POSITIVE-width
-    // slice of it: the canonical end form (segment, 0) and zero-width
-    // segments sitting on the boundary cover nothing
-    let mut crosses = false
-    let mut cursor = matched.span.start_segment
-    while cursor <= matched.span.end_segment && cursor < segments.length() {
-      let local_start = if cursor == matched.span.start_segment {
-        matched.span.start_offset
-      } else {
-        0
-      }
-      let local_end = if cursor == matched.span.end_segment {
-        matched.span.end_offset
-      } else {
-        segments[cursor].text.length()
-      }
-      if local_end > local_start && segments[cursor].parent != start_parent {
-        crosses = true
-        break
-      }
-      cursor += 1
-    }
-    if crosses {
-      self.report.unsupported_total += 1
-      if self.report.unsupported.length() < docx_template_finding_limit {
-        self.report.unsupported.push({
-          location: paragraph_location,
-          detail: "placeholder crosses a hyperlink boundary",
-        })
-      }
-      continue
-    }
-    match self.values.get(matched.key) {
-      Some(_) => {
-        self.used_keys.add(matched.key)
-        if self.report.locations.length() < docx_template_finding_limit {
-          self.report.locations.push({
-            location: paragraph_location,
-            detail: matched.key,
-          })
-        } else {
-          self.report.locations_truncated = true
-        }
-        accepted.push(matched)
-      }
-      None => {
-        region_missing = true
-        self.report.missing_total += 1
-        if self.report.missing.length() < docx_template_finding_limit {
-          self.report.missing.push({
-            location: paragraph_location,
-            detail: matched.key,
-          })
-        }
-      }
-    }
-  }
-  if region_missing && !self.allow_missing {
-    // the command will refuse; no edits from this region
-    return accounted
-  }
-  guard accepted.length() > 0 || scan.escapes.length() > 0 else {
-    return accounted
-  }
-  // rebuild each segment's final text from the pieces intersecting it;
-  // a piece contributes its replacement only in its START segment and
-  // erases its covered range everywhere else
-  for index, segment in segments {
-    let original = segment.text
-    let length = original.length()
-    // (local_start, local_end, replacement)
-    let pieces : Array[(Int, Int, String)] = []
-    for matched in accepted {
-      let span = matched.span
-      if span.start_segment <= index && index <= span.end_segment {
-        let local_start = if span.start_segment == index {
-          span.start_offset
-        } else {
-          0
-        }
-        let local_end = if span.end_segment == index {
-          span.end_offset
-        } else {
-          length
-        }
-        let replacement = if span.start_segment == index {
-          match self.values.get(matched.key) {
-            Some(value) => value.render()
-            None => original.substring(start=local_start, end=local_end)
-          }
-        } else {
-          ""
-        }
-        pieces.push((local_start, local_end, replacement))
-      }
-    }
-    for span in scan.escapes {
-      if span.start_segment <= index && index <= span.end_segment {
-        let local_start = if span.start_segment == index {
-          span.start_offset
-        } else {
-          0
-        }
-        let local_end = if span.end_segment == index {
-          span.end_offset
-        } else {
-          length
-        }
-        let replacement = if span.start_segment == index { "{{" } else { "" }
-        pieces.push((local_start, local_end, replacement))
-      }
-    }
-    if pieces.length() == 0 {
-      continue
-    }
-    pieces.sort_by((a, b) => a.0 - b.0)
-    let builder = StringBuilder::new()
-    let mut cursor = 0
-    for piece in pieces {
-      let (local_start, local_end, replacement) = piece
-      builder.write_string(original.substring(start=cursor, end=local_start))
-      builder.write_string(replacement)
-      cursor = local_end
-    }
-    builder.write_string(original.substring(start=cursor, end=length))
-    let final_text = builder.to_string()
-    if final_text != original {
-      self.edits.push({
-        story,
-        part,
-        run_path: segment.run_path,
-        paragraph_location,
-        original_text: original,
-        final_text,
-      })
-    }
-  }
-  // counters reflect applied work: every accepted PRESENT match and
-  // every escape lands in an emitted or identity rebuild above
-  for matched in accepted {
-    if self.values.get(matched.key) is Some(_) {
-      self.report.replaced += 1
-    }
-  }
-  self.report.escapes_applied += scan.escapes.length()
-  accounted
-}
-
-///|
-/// Builds the scan regions of one paragraph: maximal sequences of
-/// pure-text runs (direct or inside hyperlinks). Opaque runs — those
-/// carrying tabs, breaks, images, or references — close the current
-/// region; a brace pair inside one is an unsupported context.
+/// Scans one paragraph as a SINGLE stream of rendering-adjacent pieces.
+/// Every piece is either rewritable (a pure text-only run in scope) or
+/// not (bare text, opaque-run text, complex-field descendants); true
+/// rendering interruptions (tabs, breaks, images, note marks) become
+/// separator pieces whose text can never pair, and zero-width elements
+/// (bookmarks, comment references) contribute nothing. One scan over
+/// the stream keeps full grammar context across every boundary: a
+/// match or escape touching any unrewritable piece refuses, so no
+/// split shape can silently survive and no counting is needed.
 fn DocxMergeState::scan_paragraph(
   self : DocxMergeState,
   story : String,
@@ -522,19 +289,32 @@ fn DocxMergeState::scan_paragraph(
   children : Array[@document.DocumentElement],
 ) -> Unit raise {
   let location = "/docx" + story + "/" + paragraph_path
-  let region : Array[DocxRunSegment] = []
-  // the paragraph's rendered-adjacent text: run and bare texts appended
-  // in order, separators wherever rendering genuinely breaks adjacency
-  // (opaque children, non-inline elements). Pair accounting over this
-  // stream catches every split shape the regions cannot scan.
-  let detect = StringBuilder::new()
-  let mut accounted = 0
-  let mut runs = 0
-  let mut hyperlinks = 0
-  let flush = () => {
-    if region.length() > 0 {
-      accounted += self.scan_region(story, part, location, region.copy())
-      region.clear()
+  let pieces : Array[DocxPiece] = []
+  let separator = () => {
+    pieces.push({ run_path: "", parent: "", text: "\n", rewritable: false })
+  }
+  let opaque_text = (value : String) => {
+    pieces.push({ run_path: "", parent: "", text: value, rewritable: false })
+  }
+  // descendant collector for content nested inside opaque runs (complex
+  // fields wrap hyperlinks inside runs): text renders adjacently but is
+  // never rewritable
+  fn collect_opaque(element : @document.DocumentElement) -> Unit {
+    match element {
+      Text(value) => opaque_text(value)
+      BookmarkStart(_) | CommentReference(_) => ()
+      Tab | Break(_) | Checkbox(_) => separator()
+      NoteReference(..) => separator()
+      Run(children~, ..)
+      | Hyperlink(children~, ..)
+      | Paragraph(children~, ..)
+      | Table(children~, ..)
+      | TableRow(children~, ..)
+      | TableCell(children~, ..) =>
+        for child in children {
+          collect_opaque(child)
+        }
+      _ => separator()
     }
   }
   let handle_run = (
@@ -542,14 +322,35 @@ fn DocxMergeState::scan_paragraph(
     run_path : String,
     parent : String,
   ) => {
-    let (pure, text) = docx_pure_text_run(run_children)
-    detect.write_string(text)
+    let mut pure = true
+    for child in run_children {
+      if !(child is Text(_)) {
+        pure = false
+        break
+      }
+    }
     if pure {
-      region.push({ run_path, parent, text })
+      let text = StringBuilder::new()
+      for child in run_children {
+        if child is Text(value) {
+          text.write_string(value)
+        }
+      }
+      pieces.push({ run_path, parent, text: text.to_string(), rewritable: true })
     } else {
-      flush()
+      for child in run_children {
+        match child {
+          Text(value) => opaque_text(value)
+          BookmarkStart(_) | CommentReference(_) => ()
+          Tab | Break(_) | Checkbox(_) => separator()
+          NoteReference(..) => separator()
+          other => collect_opaque(other)
+        }
+      }
     }
   }
+  let mut runs = 0
+  let mut hyperlinks = 0
   for child in children {
     match child {
       Run(children=run_children, ..) => {
@@ -570,39 +371,243 @@ fn DocxMergeState::scan_paragraph(
                 link_segment,
               )
             }
-            _ => {
-              detect.write_char('\n')
-              flush()
-            }
+            Text(value) => opaque_text(value)
+            BookmarkStart(_) | CommentReference(_) => ()
+            _ => separator()
           }
         }
       }
-      Text(value) => {
-        // bare text under a paragraph has no run to rewrite; it still
-        // renders adjacently, so it joins the detection stream
-        detect.write_string(value)
-        flush()
+      Text(value) => opaque_text(value)
+      BookmarkStart(_) | CommentReference(_) => ()
+      _ => separator()
+    }
+  }
+  guard pieces.length() > 0 else { return }
+  // split-proof prefilter: single code units cannot straddle pieces
+  let mut interesting = false
+  for piece in pieces {
+    if piece.text.contains("{") || piece.text.contains("\\") {
+      interesting = true
+      break
+    }
+  }
+  guard interesting else { return }
+  let scan = @template.scan_placeholders(
+    pieces.map(piece => piece.text),
+    self.budget,
+  )
+  self.report.placeholders_found += scan.matches.length()
+  for entry in scan.malformed {
+    self.report.malformed_total += 1
+    if self.report.malformed.length() < docx_template_finding_limit {
+      self.report.malformed.push({ location, detail: entry.reason })
+    }
+  }
+  guard scan.matches.length() > 0 || scan.escapes.length() > 0 else { return }
+  if scan.malformed.length() > 0 {
+    // a paragraph with any malformed site is never edited
+    return
+  }
+  // positive-width coverage: a span touches piece `index` only when it
+  // covers at least one code unit of it
+  let covered_width = (span : @template.TemplateSpan, index : Int) => {
+    if span.start_segment > index || index > span.end_segment {
+      0
+    } else {
+      let local_start = if index == span.start_segment {
+        span.start_offset
+      } else {
+        0
       }
-      _ => {
-        detect.write_char('\n')
-        flush()
+      let local_end = if index == span.end_segment {
+        span.end_offset
+      } else {
+        pieces[index].text.length()
+      }
+      if local_end > local_start {
+        local_end - local_start
+      } else {
+        0
       }
     }
   }
-  flush()
-  // any pair the region scanner did not account for sits in content the
-  // merge cannot rewrite (bare text, opaque runs, or spans across them)
-  let total_pairs = docx_count_brace_pairs(detect.to_string())
-  if total_pairs > accounted {
-    let excess = total_pairs - accounted
-    self.report.unsupported_total += excess
-    if self.report.unsupported.length() < docx_template_finding_limit {
-      self.report.unsupported.push({
-        location,
-        detail: "\{excess} brace pair(s) sit in content the merge cannot rewrite",
+  let mut region_missing = false
+  let accepted : Array[@template.PlaceholderMatch] = []
+  for matched in scan.matches {
+    let mut unrewritable = false
+    let mut crosses = false
+    let mut anchor_parent : String? = None
+    let mut cursor = matched.span.start_segment
+    while cursor <= matched.span.end_segment && cursor < pieces.length() {
+      if covered_width(matched.span, cursor) > 0 {
+        if !pieces[cursor].rewritable {
+          unrewritable = true
+        } else {
+          match anchor_parent {
+            None => anchor_parent = Some(pieces[cursor].parent)
+            Some(parent) =>
+              if pieces[cursor].parent != parent {
+                crosses = true
+              }
+          }
+        }
+      }
+      cursor += 1
+    }
+    if unrewritable {
+      self.report.unsupported_total += 1
+      if self.report.unsupported.length() < docx_template_finding_limit {
+        self.report.unsupported.push({
+          location,
+          detail: "placeholder overlaps content the merge cannot rewrite",
+        })
+      }
+      continue
+    }
+    if crosses {
+      self.report.unsupported_total += 1
+      if self.report.unsupported.length() < docx_template_finding_limit {
+        self.report.unsupported.push({
+          location,
+          detail: "placeholder crosses a hyperlink boundary",
+        })
+      }
+      continue
+    }
+    match self.values.get(matched.key) {
+      Some(_) => {
+        self.used_keys.add(matched.key)
+        if self.report.locations.length() < docx_template_finding_limit {
+          self.report.locations.push({ location, detail: matched.key })
+        } else {
+          self.report.locations_truncated = true
+        }
+        accepted.push(matched)
+      }
+      None => {
+        region_missing = true
+        self.report.missing_total += 1
+        if self.report.missing.length() < docx_template_finding_limit {
+          self.report.missing.push({ location, detail: matched.key })
+        }
+      }
+    }
+  }
+  // an escape needing a rewrite in unrewritable content refuses too: its
+  // backslash or braces would otherwise survive or corrupt
+  let ok_escapes : Array[@template.TemplateSpan] = []
+  for span in scan.escapes {
+    let mut unrewritable = false
+    let mut cursor = span.start_segment
+    while cursor <= span.end_segment && cursor < pieces.length() {
+      if covered_width(span, cursor) > 0 && !pieces[cursor].rewritable {
+        unrewritable = true
+        break
+      }
+      cursor += 1
+    }
+    if unrewritable {
+      self.report.unsupported_total += 1
+      if self.report.unsupported.length() < docx_template_finding_limit {
+        self.report.unsupported.push({
+          location,
+          detail: "escape sequence overlaps content the merge cannot rewrite",
+        })
+      }
+    } else {
+      ok_escapes.push(span)
+    }
+  }
+  if region_missing && !self.allow_missing {
+    // the command will refuse; no edits from this paragraph
+    return
+  }
+  guard accepted.length() > 0 || ok_escapes.length() > 0 else { return }
+  // rebuild each rewritable piece's final text from the spans that
+  // cover it; a span contributes its replacement only in its START
+  // piece and erases its covered range everywhere else
+  for index, piece in pieces {
+    if !piece.rewritable {
+      continue
+    }
+    let original = piece.text
+    let length = original.length()
+    let piece_edits : Array[(Int, Int, String)] = []
+    for matched in accepted {
+      if covered_width(matched.span, index) > 0 ||
+        (
+          matched.span.start_segment == index &&
+          matched.span.start_offset == 0 &&
+          length == 0
+        ) {
+        let local_start = if matched.span.start_segment == index {
+          matched.span.start_offset
+        } else {
+          0
+        }
+        let local_end = if matched.span.end_segment == index {
+          matched.span.end_offset
+        } else {
+          length
+        }
+        let replacement = if matched.span.start_segment == index {
+          match self.values.get(matched.key) {
+            Some(value) => value.render()
+            None => original.substring(start=local_start, end=local_end)
+          }
+        } else {
+          ""
+        }
+        piece_edits.push((local_start, local_end, replacement))
+      }
+    }
+    for span in ok_escapes {
+      if covered_width(span, index) > 0 {
+        let local_start = if span.start_segment == index {
+          span.start_offset
+        } else {
+          0
+        }
+        let local_end = if span.end_segment == index {
+          span.end_offset
+        } else {
+          length
+        }
+        let replacement = if span.start_segment == index { "{{" } else { "" }
+        piece_edits.push((local_start, local_end, replacement))
+      }
+    }
+    if piece_edits.length() == 0 {
+      continue
+    }
+    piece_edits.sort_by((a, b) => a.0 - b.0)
+    let builder = StringBuilder::new()
+    let mut cursor = 0
+    for edit in piece_edits {
+      let (local_start, local_end, replacement) = edit
+      builder.write_string(original.substring(start=cursor, end=local_start))
+      builder.write_string(replacement)
+      cursor = local_end
+    }
+    builder.write_string(original.substring(start=cursor, end=length))
+    let final_text = builder.to_string()
+    if final_text != original {
+      self.edits.push({
+        story,
+        part,
+        run_path: piece.run_path,
+        paragraph_location: location,
+        original_text: original,
+        final_text,
       })
     }
   }
+  for matched in accepted {
+    if self.values.get(matched.key) is Some(_) {
+      self.report.replaced += 1
+    }
+  }
+  self.report.escapes_applied += ok_escapes.length()
 }
 
 ///|
@@ -636,6 +641,8 @@ fn DocxMergeState::flag_out_of_scope(
           for child in children {
             walk(child)
           }
+        // zero-width elements render nothing and must not separate
+        BookmarkStart(_) | CommentReference(_) => ()
         _ => joined.write_char('\n')
       }
     }

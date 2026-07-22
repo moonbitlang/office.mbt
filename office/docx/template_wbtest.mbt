@@ -1,7 +1,7 @@
 ///|
-/// Codex #208 round-1 findings: every brace-pair detector must be
-/// split-proof — the grammar spans run boundaries, so per-node contains
-/// checks silently pass split placeholders into published output.
+/// The v3 unified-stream nets: one scan per paragraph over rendering-
+/// adjacent pieces with per-piece rewritability. Every shape the review
+/// rounds probed is pinned here, positives and negatives.
 fn template_wb_state() -> DocxMergeState {
   {
     report: {
@@ -31,32 +31,172 @@ fn template_wb_state() -> DocxMergeState {
 }
 
 ///|
-test "a brace pair split across runs is still scanned" {
-  let state = template_wb_state()
-  state.scan_paragraph("/body", "word/document.xml", "p[1]", [
-    @document.run([@document.text("{")]),
-    @document.run([@document.text("{k}}")]),
-  ])
-  assert_eq(state.report.placeholders_found, 1)
-  assert_eq(state.report.replaced, 1)
-  assert_eq(state.edits.length(), 2)
+fn wb_scan(
+  state : DocxMergeState,
+  children : Array[@document.DocumentElement],
+) -> Unit raise {
+  state.scan_paragraph("/body", "word/document.xml", "p[1]", children)
 }
 
 ///|
-test "an opaque run's text after the opaque child is still inspected" {
-  let (pure, text) = docx_pure_text_run([
-    @document.tab(),
-    @document.text("{{k}}"),
+test "split placeholders substitute across two and three runs" {
+  let two = template_wb_state()
+  wb_scan(two, [
+    @document.run([@document.text("{")]),
+    @document.run([@document.text("{k}}")]),
   ])
-  assert_false(pure)
-  // the opaque child contributes a separator so pair accounting cannot
-  // join text across it
-  assert_eq(text, "\n{{k}}")
-  let state = template_wb_state()
-  state.scan_paragraph("/body", "word/document.xml", "p[1]", [
-    @document.run([@document.tab(), @document.text("{{k}}")]),
+  assert_eq(two.report.replaced, 1)
+  assert_eq(two.edits.length(), 2)
+  let three = template_wb_state()
+  wb_scan(three, [
+    @document.run([@document.text("{")]),
+    @document.run([@document.text("{k}")]),
+    @document.run([@document.text("}")]),
   ])
-  assert_eq(state.report.unsupported_total, 1)
+  assert_eq(three.report.replaced, 1)
+  assert_eq(three.report.unsupported_total, 0)
+}
+
+///|
+test "brace pairs in unrewritable content refuse in every split shape" {
+  // whole pair inside an opaque run's text
+  let opaque = template_wb_state()
+  wb_scan(opaque, [@document.run([@document.tab(), @document.text("{{k}}")])])
+  assert_eq(opaque.report.unsupported_total, 1)
+  assert_eq(opaque.report.replaced, 0)
+  // pair split across bare sibling texts (renders adjacently)
+  let bare = template_wb_state()
+  wb_scan(bare, [@document.text("{"), @document.text("{k}}")])
+  assert_eq(bare.report.unsupported_total, 1)
+  // pair starting in a REWRITABLE run and ending in bare text
+  let mixed = template_wb_state()
+  wb_scan(mixed, [@document.run([@document.text("{{k")]), @document.text("}}")])
+  assert_eq(mixed.report.unsupported_total, 1)
+  assert_eq(mixed.edits.length(), 0)
+  // complex field: a hyperlink nested INSIDE a run — descendant text is
+  // rendered but never rewritable
+  let field = template_wb_state()
+  wb_scan(field, [
+    @document.run([
+      @document.Hyperlink(
+        children=[@document.run([@document.text("{{k}}")])],
+        href=Some("https://example.com/"),
+        anchor=None,
+        target_frame=None,
+      ),
+    ]),
+  ])
+  assert_eq(field.report.unsupported_total, 1)
+  assert_eq(field.report.replaced, 0)
+}
+
+///|
+test "separators and zero-width elements follow rendering semantics" {
+  // a pair split around a tab is NOT a pair (the tab renders between)
+  let tabbed = template_wb_state()
+  wb_scan(tabbed, [
+    @document.run([@document.text("{"), @document.tab(), @document.text("{k}}")]),
+  ])
+  assert_eq(tabbed.report.unsupported_total, 0)
+  assert_eq(tabbed.report.replaced, 0)
+  // a bookmark renders NOTHING: the pair around it is real and, sitting
+  // in rewritable runs both sides, substitutes
+  let bookmark = template_wb_state()
+  wb_scan(bookmark, [
+    @document.run([@document.text("{")]),
+    @document.BookmarkStart("mark"),
+    @document.run([@document.text("{k}}")]),
+  ])
+  assert_eq(bookmark.report.replaced, 1)
+  assert_eq(bookmark.report.unsupported_total, 0)
+  // a note reference renders a visible mark: braces around it never pair
+  let marked = template_wb_state()
+  wb_scan(marked, [
+    @document.run([@document.text("{")]),
+    @document.NoteReference(note_type="footnote", note_id="1"),
+    @document.run([@document.text("{k}}")]),
+  ])
+  assert_eq(marked.report.replaced, 0)
+  assert_eq(marked.report.unsupported_total, 0)
+}
+
+///|
+test "escapes touching unrewritable content refuse" {
+  // the backslash sits after a tab inside an opaque run; the braces sit
+  // in a rewritable run — rewriting only half would corrupt
+  let split_escape = template_wb_state()
+  wb_scan(split_escape, [
+    @document.run([@document.tab(), @document.text("\\")]),
+    @document.run([@document.text("{{k}}")]),
+  ])
+  // the stream reads \{{k}} — one escape then "k}}" text; the escape
+  // covers the opaque backslash piece
+  assert_eq(split_escape.report.unsupported_total, 1)
+  assert_eq(split_escape.report.replaced, 0)
+  assert_eq(split_escape.report.escapes_applied, 0)
+  // a fully rewritable escape still applies
+  let fine = template_wb_state()
+  wb_scan(fine, [@document.run([@document.text("a \\{{ b")])])
+  assert_eq(fine.report.escapes_applied, 1)
+  assert_eq(fine.edits.length(), 1)
+}
+
+///|
+test "hyperlink parents and zero-width boundaries" {
+  // placeholder immediately before a hyperlink substitutes
+  let before = template_wb_state()
+  wb_scan(before, [
+    @document.run([@document.text("{{k}}")]),
+    @document.Hyperlink(
+      children=[@document.run([@document.text("tail")])],
+      href=Some("https://example.com/"),
+      anchor=None,
+      target_frame=None,
+    ),
+  ])
+  assert_eq(before.report.replaced, 1)
+  assert_eq(before.report.unsupported_total, 0)
+  // hyperlink placeholder immediately before a direct run substitutes
+  let inside = template_wb_state()
+  wb_scan(inside, [
+    @document.Hyperlink(
+      children=[@document.run([@document.text("{{k}}")])],
+      href=Some("https://example.com/"),
+      anchor=None,
+      target_frame=None,
+    ),
+    @document.run([@document.text("tail")]),
+  ])
+  assert_eq(inside.report.replaced, 1)
+  assert_eq(inside.report.unsupported_total, 0)
+  // an EMPTY run between the placeholder and following content covers
+  // nothing and cannot fake a crossing
+  let empty_between = template_wb_state()
+  wb_scan(empty_between, [
+    @document.run([@document.text("{{k}}")]),
+    @document.Hyperlink(
+      children=[@document.run([])],
+      href=Some("https://example.com/"),
+      anchor=None,
+      target_frame=None,
+    ),
+    @document.run([@document.text("tail")]),
+  ])
+  assert_eq(empty_between.report.replaced, 1)
+  assert_eq(empty_between.report.unsupported_total, 0)
+  // a genuine crossing still refuses
+  let crossing = template_wb_state()
+  wb_scan(crossing, [
+    @document.run([@document.text("{{k")]),
+    @document.Hyperlink(
+      children=[@document.run([@document.text("}}")])],
+      href=Some("https://example.com/"),
+      anchor=None,
+      target_frame=None,
+    ),
+  ])
+  assert_eq(crossing.report.unsupported_total, 1)
+  assert_eq(crossing.report.replaced, 0)
 }
 
 ///|
@@ -75,6 +215,21 @@ test "split placeholders in out-of-scope stories are flagged" {
     ),
   ])
   assert_eq(state.report.unsupported_total, 1)
+  // a bookmark between the braces is zero-width there too
+  let marked = template_wb_state()
+  marked.flag_out_of_scope("footnotes", [
+    (
+      "1",
+      [
+        @document.paragraph([
+          @document.run([@document.text("{")]),
+          @document.BookmarkStart("m"),
+          @document.run([@document.text("{k}}")]),
+        ]),
+      ],
+    ),
+  ])
+  assert_eq(marked.report.unsupported_total, 1)
   // paragraph boundaries never pair
   let clean = template_wb_state()
   clean.flag_out_of_scope("footnotes", [
@@ -87,87 +242,4 @@ test "split placeholders in out-of-scope stories are flagged" {
     ),
   ])
   assert_eq(clean.report.unsupported_total, 0)
-}
-
-///|
-test "a placeholder ending exactly before a hyperlink does not cross" {
-  let state = template_wb_state()
-  ignore(
-    state.scan_region("/body", "word/document.xml", "/docx/body/p[1]", [
-      { run_path: "p[1]/r[1]", parent: "", text: "{{k}}" },
-      { run_path: "p[1]/hyperlink[1]/r[1]", parent: "hyperlink[1]", text: "x" },
-    ]),
-  )
-  assert_eq(state.report.unsupported_total, 0)
-  assert_eq(state.report.replaced, 1)
-  // a genuine crossing still refuses
-  let crossing = template_wb_state()
-  ignore(
-    crossing.scan_region("/body", "word/document.xml", "/docx/body/p[1]", [
-      { run_path: "p[1]/r[1]", parent: "", text: "{{k" },
-      { run_path: "p[1]/hyperlink[1]/r[1]", parent: "hyperlink[1]", text: "}}" },
-    ]),
-  )
-  assert_eq(crossing.report.unsupported_total, 1)
-  assert_eq(crossing.report.replaced, 0)
-}
-
-///|
-/// Codex #208 round-2 findings: bare sibling texts render adjacently and
-/// must be pair-accounted; zero-width segments on a match boundary cover
-/// nothing.
-test "split pairs across bare texts and three-run forms are caught" {
-  // sibling bare texts "{" + "{k}}" render as a pair the scanner cannot
-  // rewrite — the paragraph pair accounting must refuse
-  let bare = template_wb_state()
-  bare.scan_paragraph("/body", "word/document.xml", "p[1]", [
-    @document.text("{"),
-    @document.text("{k}}"),
-  ])
-  assert_eq(bare.report.unsupported_total, 1)
-  // the three-run split substitutes
-  let three = template_wb_state()
-  three.scan_paragraph("/body", "word/document.xml", "p[1]", [
-    @document.run([@document.text("{")]),
-    @document.run([@document.text("{k}")]),
-    @document.run([@document.text("}")]),
-  ])
-  assert_eq(three.report.replaced, 1)
-  assert_eq(three.report.unsupported_total, 0)
-  // a pair split around an opaque child inside one run is NOT adjacent
-  let tabbed = template_wb_state()
-  tabbed.scan_paragraph("/body", "word/document.xml", "p[1]", [
-    @document.run([@document.text("{"), @document.tab(), @document.text("{k}}")]),
-  ])
-  // "{k}}" alone carries no pair; the tab separates the braces
-  assert_eq(tabbed.report.unsupported_total, 0)
-  assert_eq(tabbed.report.replaced, 0)
-}
-
-///|
-test "zero-width segments on a match boundary do not cross parents" {
-  let state = template_wb_state()
-  ignore(
-    state.scan_region("/body", "word/document.xml", "/docx/body/p[1]", [
-      { run_path: "p[1]/r[1]", parent: "", text: "{{k}}" },
-      { run_path: "p[1]/hyperlink[1]/r[1]", parent: "hyperlink[1]", text: "" },
-      { run_path: "p[1]/r[2]", parent: "", text: "tail" },
-    ]),
-  )
-  assert_eq(state.report.unsupported_total, 0)
-  assert_eq(state.report.replaced, 1)
-  // the mirror direction: hyperlink placeholder before a direct run
-  let mirrored = template_wb_state()
-  ignore(
-    mirrored.scan_region("/body", "word/document.xml", "/docx/body/p[1]", [
-      {
-        run_path: "p[1]/hyperlink[1]/r[1]",
-        parent: "hyperlink[1]",
-        text: "{{k}}",
-      },
-      { run_path: "p[1]/r[1]", parent: "", text: "tail" },
-    ]),
-  )
-  assert_eq(mirrored.report.unsupported_total, 0)
-  assert_eq(mirrored.report.replaced, 1)
 }
