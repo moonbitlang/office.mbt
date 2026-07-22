@@ -722,16 +722,16 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
     },
     {
       name: "replay",
-      summary: "Replay an office.dump/1 document into an XLSX workbook",
-      usage: "office replay FILE --output OUT.xlsx [--overwrite] [--json|--jsonl]",
-      formats: ["xlsx"],
+      summary: "Replay an office.dump/1 document into an XLSX or DOCX package",
+      usage: "office replay FILE --output OUT [--overwrite] [--json|--jsonl]",
+      formats: ["xlsx", "docx"],
       aliases: [],
       inputs: [
         capability_field(
           "file", "path", true, "existing office.dump/1 JSON document",
         ),
         capability_field(
-          "output", "path", true, "destination .xlsx file; created atomically, refused when present unless --overwrite",
+          "output", "path", true, "destination file matching the dump format (.xlsx or .docx); created atomically, refused when present unless --overwrite",
         ),
         capability_field(
           "overwrite", "boolean", false, "replace an existing destination (remove-then-stage; not a single atomic swap)",
@@ -748,7 +748,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "schema", "literal(office.replay/1)", true, "versioned replay result schema",
         ),
         capability_field(
-          "format", "literal(xlsx)", true, "the replayed package format",
+          "format", "enum(xlsx|docx)", true, "the replayed package format",
         ),
         capability_field(
           "output", "path", true, "the published workbook path, bounded",

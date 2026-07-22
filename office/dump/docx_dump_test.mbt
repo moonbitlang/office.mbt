@@ -4,51 +4,28 @@
 /// map comment and note ops to writer specs, and write the annotated
 /// package.
 fn docx_assemble(ops : Array[Json], images : Map[String, Bytes]) -> Bytes raise {
-  let parsed = @docx_batch.parse_batch(
-    Json::object({
-      "schema": Json::string("docx.batch/2"),
-      "ops": Json::array(ops),
-    }),
-  )
-  let body = parsed.build_body(images)
-  let comments = []
-  for comment in parsed.build_comments() {
-    match (comment.reply_to(), comment.from_block(), comment.to_block()) {
-      (Some(parent), _, _) =>
-        comments.push(
-          @word.comment_reply(
-            author=comment.author(),
-            initials?=comment.initials(),
-            date?=comment.date(),
-            reply_to=parent,
-            done?=comment.done(),
-            comment.body(),
-          ),
-        )
-      (None, Some(from), Some(to)) =>
-        comments.push(
-          @word.comment_spec(
-            author=comment.author(),
-            initials?=comment.initials(),
-            date?=comment.date(),
-            from~,
-            to~,
-            done?=comment.done(),
-            comment.body(),
-          ),
-        )
-      _ => fail("comment without anchor or reply target")
+  // route through the REAL replay engine so every fixpoint test also
+  // exercises the exact path `office replay` runs
+  let assets : Map[String, @dump.DumpAsset] = {}
+  for id, data in images {
+    assets[id] = {
+      content_type: "image/png",
+      size: data.length(),
+      data: @b64.encode(data),
     }
   }
-  let footnotes = []
-  for note in parsed.build_footnotes() {
-    footnotes.push(@word.note_spec(note.body()))
-  }
-  let endnotes = []
-  for note in parsed.build_endnotes() {
-    endnotes.push(@word.note_spec(note.body()))
-  }
-  @word.write_docx_with_annotations(body, comments~, footnotes~, endnotes~)
+  @dump.replay_docx_dump({
+    format: "docx",
+    source_file: "assemble.docx",
+    source_bytes: 1,
+    source_sha256: None,
+    batch_schema: "docx.batch/2",
+    create_sheet: None,
+    ops,
+    assets,
+    residual: [],
+    warnings: [],
+  })
 }
 
 ///|
@@ -337,4 +314,41 @@ test "docx comments anchor, thread, and survive the fixpoint" {
   assert_false(document.contains("docx.comments_not_dumped"))
   let d2_ops = docx_fixpoint_ops(d1)
   assert_eq(Json::array(d1.ops).stringify(), Json::array(d2_ops).stringify())
+}
+
+///|
+test "docx vertically merged tables survive the fixpoint" {
+  let cell = (text : String, row_span : Int) => {
+    @document.TableCell(
+      children=[@document.paragraph([@document.run([@document.text(text)])])],
+      col_span=1,
+      row_span~,
+    )
+  }
+  let body : Array[@document.DocumentElement] = [
+    @document.Table(
+      children=[
+        @document.TableRow(
+          children=[cell("merged", 2), cell("top", 1)],
+          is_header=false,
+        ),
+        @document.TableRow(children=[cell("bottom", 1)], is_header=false),
+      ],
+      properties=@document.TableProperties::{ style_id: None, style_name: None },
+    ),
+  ]
+  let bytes = @word.write_docx(body)
+  let annotated = @word.read_docx_annotated(bytes[:])
+  let d1 = @dump.dump_docx_document(
+    annotated,
+    source_file="vmerge.docx",
+    source_bytes=bytes.length(),
+  )
+  let document = d1.to_json_document().stringify()
+  assert_true(document.contains("\"row_span\":2"))
+  assert_false(document.contains("docx.table_grid_unsupported"))
+  assert_eq(
+    Json::array(d1.ops).stringify(),
+    Json::array(docx_fixpoint_ops(d1)).stringify(),
+  )
 }

@@ -68,6 +68,10 @@ priv struct DocxDumpContext {
   footnote_bodies : Map[String, Array[@document.DocumentElement]]
   endnote_bodies : Map[String, Array[@document.DocumentElement]]
   used_notes : Set[String]
+  // per-payload writer-oracle verdicts, keyed by asset id: None = the
+  // writer accepts it; Some(reason) = it does not (cached so dedup hits
+  // never re-run the mini-write)
+  image_verdicts : Map[String, String?]
 }
 
 ///|
@@ -169,14 +173,56 @@ fn docx_image_spec(
         })
         return None
       }
+      // writer oracle: dimensions come from sniffing the payload header,
+      // and only the writer knows its full contract (formats, EMU
+      // bounds) — probe it with a one-image document instead of
+      // mirroring rules that could drift. Verdicts are cached per asset.
+      let verdict = match ctx.image_verdicts.get(id) {
+        Some(cached) => cached
+        None => {
+          let verdict = match
+            (try? @word.write_docx([
+              @document.paragraph([
+                @document.run([
+                  @document.Image(@document.Image::{
+                    content_type: carried_type,
+                    alt_text: None,
+                    data: image.data,
+                  }),
+                ]),
+              ]),
+            ])) {
+            Ok(_) => None
+            Err(error) => Some("\{to_repr(error)}")
+          }
+          ctx.image_verdicts[id] = verdict
+          verdict
+        }
+      }
+      match verdict {
+        Some(reason) => {
+          ctx.residual.push({
+            code: "docx.image_unwritable",
+            severity: "dropped",
+            scope: "block",
+            location: docx_location(block),
+            asset: Some(id),
+            detail: "the writer rejects this image payload: " +
+            bounded_reason(reason),
+          })
+          return None
+        }
+        None => ()
+      }
       let spec : Map[String, Json] = {
         "path": Json::string(id),
         "content_type": Json::string(carried_type),
       }
       match image.alt_text {
-        // the parser runs the attribute contract on alt: non-empty,
-        // no control characters — gate and disclose
-        Some(alt) if docx_attribute_ok(alt) => spec["alt"] = Json::string(alt)
+        // the parser runs the attribute contract on alt AND rejects
+        // blank (whitespace-only) values — gate both and disclose
+        Some(alt) if docx_attribute_ok(alt) && alt.trim(chars=" \t") != "" =>
+          spec["alt"] = Json::string(alt)
         Some(alt) if alt != "" =>
           ctx.residual.push(
             docx_residual(
@@ -289,7 +335,14 @@ fn docx_attribute_ok(text : String) -> Bool {
     return false
   }
   for unit in text {
-    if unit.to_int() < 0x20 {
+    let code = unit.to_int()
+    if code < 0x20 {
+      return false
+    }
+    // the parser and writer both reject XML non-characters and unpaired
+    // surrogates; currently unreachable through well-formed XML, kept in
+    // lockstep so one reader laxity cannot reopen the abort class
+    if (code >= 0xD800 && code <= 0xDFFF) || code == 0xFFFE || code == 0xFFFF {
       return false
     }
   }
@@ -1015,20 +1068,9 @@ fn docx_table_params(
               )
           }
         }
-        if cells.length() == 0 {
-          // the batch parser rejects a row with no cells; dropping the
-          // degenerate row keeps the rest of the table replayable
-          ctx.residual.push(
-            docx_residual(
-              "docx.empty_row_dropped",
-              "block",
-              docx_location(block),
-              "a table row with no cells is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
-            ),
-          )
-        } else {
-          emitted.push((cells, is_header))
-        }
+        // empty rows are kept for the gate below: whether one can be
+        // dropped depends on the vertical merges active at its position
+        emitted.push((cells, is_header))
       }
       other =>
         ctx.residual.push(
@@ -1054,12 +1096,170 @@ fn docx_table_params(
     )
     return None
   }
+  // Grid gate mirroring the writer's PLACEMENT algorithm, vertical
+  // merges included: a pending row_span occupies its columns in the rows
+  // below, own cells fill the remaining columns in order, every row must
+  // cover the grid exactly, and a cell may not stride over a pending
+  // merge column. A row the reader left empty (all its cells were vMerge
+  // continuations) is only droppable when no merge is active there —
+  // otherwise the batch grammar cannot express the table at all (every
+  // script row needs at least one cell) and the table residualizes.
+  let kept : Array[(Array[(Map[String, Json], Int, Int)], Bool)] = []
+  // an empty (reader-stripped) row is droppable only when no vertical
+  // merge is ACTIVE at its position — decided against the placement
+  // sim's pending state below, not a whole-table flag. Each entry is the
+  // kept-row index the empty row precedes.
+  let empty_positions : Array[Int] = []
+  for entry in emitted {
+    let (cells, is_header) = entry
+    if cells.length() == 0 {
+      empty_positions.push(kept.length())
+    } else {
+      kept.push((cells, is_header))
+    }
+  }
+  if kept.length() == 0 {
+    ctx.residual.push(
+      docx_residual(
+        "docx.empty_table_dropped",
+        "block",
+        docx_location(block),
+        "a table with no expressible rows is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+      ),
+    )
+    return None
+  }
+  // the spans the ops will actually carry: out-of-range values were
+  // already residualized and default to 1 at build
+  let effective = (span : Int, cap : Int) => {
+    if span > 1 && span <= cap {
+      span
+    } else {
+      1
+    }
+  }
+  let grid_reject = (reason : String) => {
+    ctx.residual.push(
+      docx_residual(
+        "docx.table_grid_unsupported",
+        "block",
+        docx_location(block),
+        reason,
+      ),
+    )
+  }
+  // writer step 1: the grid width is the widest row's RAW span sum, and
+  // no row's raw sum may pass the 63-column limit
+  let mut grid_width = 0
+  for entry in kept {
+    let (cells, _) = entry
+    let mut width = 0
+    for cell in cells {
+      let (_, col_span, _) = cell
+      width += effective(col_span, 63)
+    }
+    if width > 63 {
+      grid_reject(
+        "a table row spans \{width} grid columns; the writer's limit is 63",
+      )
+      return None
+    }
+    if width > grid_width {
+      grid_width = width
+    }
+  }
+  // writer step 2: placement — pending merges occupy their columns, own
+  // cells fill the rest in order, coverage must be exact. Empty rows are
+  // judged at their positions against the live pending state: an active
+  // merge there means the batch grammar cannot express the table (every
+  // script row needs a cell); no active merge means the row just drops.
+  let pending : Map[Int, (Int, Int)] = {} // start column -> (remaining, width)
+  let judge_empties = (at : Int) => {
+    let mut verdict = true
+    for position in empty_positions {
+      if position == at {
+        if pending.size() > 0 {
+          grid_reject(
+            "a row consisting only of vertical-merge continuations is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+          )
+          verdict = false
+        } else {
+          ctx.residual.push(
+            docx_residual(
+              "docx.empty_row_dropped",
+              "block",
+              docx_location(block),
+              "a table row with no cells is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
+            ),
+          )
+        }
+      }
+    }
+    verdict
+  }
+  for row_index, entry in kept {
+    if !judge_empties(row_index) {
+      return None
+    }
+    let (cells, _) = entry
+    let mut grid_column = 0
+    let mut cursor = 0
+    while grid_column < grid_width {
+      match pending.get(grid_column) {
+        Some((remaining, width)) if remaining > 0 => {
+          if remaining == 1 {
+            pending.remove(grid_column)
+          } else {
+            pending[grid_column] = (remaining - 1, width)
+          }
+          grid_column += width
+          continue
+        }
+        _ => ()
+      }
+      if cursor >= cells.length() {
+        break
+      }
+      let (_, raw_col, raw_row) = cells[cursor]
+      cursor += 1
+      let col_span = effective(raw_col, 63)
+      let row_span = effective(raw_row, kept.length() - row_index)
+      for offset in 1..<col_span {
+        if pending.get(grid_column + offset) is Some((interior, _)) &&
+          interior > 0 {
+          grid_reject(
+            "a cell collides with a vertical merge inside its column span",
+          )
+          return None
+        }
+      }
+      if row_span > 1 {
+        pending[grid_column] = (row_span - 1, col_span)
+      }
+      grid_column += col_span
+    }
+    if cursor < cells.length() {
+      grid_reject(
+        "a table row is wider than the grid once vertical merges are placed",
+      )
+      return None
+    }
+    if grid_column != grid_width {
+      grid_reject(
+        "a table row covers \{grid_column} of \{grid_width} grid columns; ragged tables are not serializable",
+      )
+      return None
+    }
+  }
+  if !judge_empties(kept.length()) {
+    return None
+  }
   // header_rows counts LEADING header rows among the rows actually
   // emitted; a header row after body rows keeps only its content
   let rows : Array[Json] = []
   let mut header_rows = 0
   let mut in_leading_headers = true
-  for row_index, entry in emitted {
+  for row_index, entry in kept {
     let (cells, is_header) = entry
     if is_header {
       if in_leading_headers {
@@ -1095,7 +1295,7 @@ fn docx_table_params(
           ),
         )
       }
-      let row_span_cap = emitted.length() - row_index
+      let row_span_cap = kept.length() - row_index
       if row_span > 1 && row_span <= row_span_cap {
         spec["row_span"] = Json::number(row_span.to_double())
       } else if row_span > row_span_cap || row_span < 1 {
@@ -1154,6 +1354,7 @@ pub fn dump_docx_document(
     footnote_bodies,
     endnote_bodies,
     used_notes: Set::new(),
+    image_verdicts: {},
   }
   let residual = ctx.residual
   let warnings : Array[DumpWarning] = []
@@ -1278,7 +1479,7 @@ pub fn dump_docx_document(
   dump_docx_comments(
     annotated, ctx, ops, comment_spans, document_location, cancelled,
   )
-  docx_self_check_ops(ops, cancelled)
+  docx_self_check_ops(ops, ctx.assets, cancelled)
   {
     format: "docx",
     source_file,
@@ -1495,6 +1696,7 @@ fn dump_docx_comments(
 /// so a dump this check accepts is exactly a script replay can consume.
 fn docx_self_check_ops(
   ops : Array[Json],
+  assets : Map[String, DumpAsset],
   cancelled : () -> Bool,
 ) -> Unit raise DumpError {
   for chunk in docx_dump_op_chunks(ops) {
@@ -1508,6 +1710,25 @@ fn docx_self_check_ops(
       Err(error) =>
         raise DumpSelfCheckFailed("docx op chunk rejected: \{error}")
     }
+  }
+  // the parse check cannot see writer-only contracts (grid geometry,
+  // image payload sniffing, comment metadata), so run the FULL assembly
+  // the replay command will run. The per-value gates above make a
+  // failure here unreachable from source content — reaching it means a
+  // dump bug, which must be loud, never a replay-time user failure.
+  check_cancelled(cancelled)
+  let images : Map[String, Bytes] = {}
+  for id, asset in assets {
+    images[id] = @base64.decode(asset.data) catch {
+      _ => raise DumpSelfCheckFailed("asset \{id} does not decode")
+    }
+  }
+  match (try? docx_assemble_ops(ops, images)) {
+    Ok(_) => ()
+    Err(ReplayInvalidFormat(reason)) | Err(ReplayFailed(reason)) =>
+      raise DumpSelfCheckFailed(
+        "the assembled document does not write: " + reason,
+      )
   }
 }
 

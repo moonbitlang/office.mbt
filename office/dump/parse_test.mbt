@@ -120,3 +120,121 @@ test "malformed dumps are rejected" {
     ),
   )
 }
+
+///|
+/// PR5: a docx envelope parses without a create sheet, and assets are
+/// reconstructed only when their integrity holds — the payload must
+/// decode, match its declared size, and hash to its own id.
+test "docx envelopes and asset integrity at parse" {
+  let payload : Bytes = "asset-bytes"
+  let data = @b64.encode(payload)
+  let id = "sha256-" + @dump.sha256_hex_bytes(payload)
+  let keyed = (key : String, entry : Json) => {
+    let map : Map[String, Json] = {}
+    map[key] = entry
+    Json::object(map)
+  }
+  let document = (assets : Json) => {
+    Json::object({
+      "schema": Json::string("office.dump/1"),
+      "format": Json::string("docx"),
+      "replay": Json::object({
+        "batch_schema": Json::string("docx.batch/2"),
+        "create": Json::object({}),
+      }),
+      "ops": Json::array([
+        Json::object({
+          "op": Json::string("paragraph"),
+          "params": Json::object({ "text": Json::string("x") }),
+        }),
+      ]),
+      "assets": assets,
+      "stats": Json::object({ "ops": Json::number(1) }),
+    })
+  }
+  // a well-formed asset reconstructs
+  let good = @dump.parse_dump_envelope(
+    document(
+      keyed(
+        id,
+        Json::object({
+          "content_type": Json::string("image/png"),
+          "size": Json::number(payload.length().to_double()),
+          "data": Json::string(data),
+        }),
+      ),
+    ),
+  )
+  assert_eq(good.format, "docx")
+  assert_true(good.create_sheet is None)
+  assert_eq(good.assets.size(), 1)
+  // a lying digest is a malformed dump
+  match
+    (try? @dump.parse_dump_envelope(
+      document(
+        keyed(
+          "sha256-0000000000000000000000000000000000000000000000000000000000000000",
+          Json::object({
+            "content_type": Json::string("image/png"),
+            "size": Json::number(payload.length().to_double()),
+            "data": Json::string(data),
+          }),
+        ),
+      ),
+    )) {
+    Err(@dump.DumpParseError(reason)) =>
+      assert_true(reason.contains("does not hash"))
+    Ok(_) => fail("a lying digest must not parse")
+  }
+  // a size mismatch is a malformed dump
+  match
+    (try? @dump.parse_dump_envelope(
+      document(
+        keyed(
+          id,
+          Json::object({
+            "content_type": Json::string("image/png"),
+            "size": Json::number(999),
+            "data": Json::string(data),
+          }),
+        ),
+      ),
+    )) {
+    Err(@dump.DumpParseError(reason)) => assert_true(reason.contains("bytes"))
+    Ok(_) => fail("a size mismatch must not parse")
+  }
+  // invalid base64 is a malformed dump
+  match
+    (try? @dump.parse_dump_envelope(
+      document(
+        keyed(
+          id,
+          Json::object({
+            "content_type": Json::string("image/png"),
+            "size": Json::number(payload.length().to_double()),
+            "data": Json::string("!!!not-base64!!!"),
+          }),
+        ),
+      ),
+    )) {
+    Err(@dump.DumpParseError(reason)) => assert_true(reason.contains("base64"))
+    Ok(_) => fail("invalid base64 must not parse")
+  }
+  // an xlsx envelope still requires its create sheet
+  match
+    (try? @dump.parse_dump_envelope(
+      Json::object({
+        "schema": Json::string("office.dump/1"),
+        "format": Json::string("xlsx"),
+        "replay": Json::object({
+          "batch_schema": Json::string("xlsx.batch/1"),
+          "create": Json::object({}),
+        }),
+        "ops": Json::array([]),
+        "stats": Json::object({ "ops": Json::number(0) }),
+      }),
+    )) {
+    Err(@dump.DumpParseError(reason)) => assert_true(reason.contains("sheet"))
+    Ok(_) => fail("an xlsx dump without a create sheet must not parse")
+  }
+}

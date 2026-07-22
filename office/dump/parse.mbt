@@ -34,10 +34,11 @@ fn require_string(
 /// and the ops. The `stats.ops` count is required and must equal the actual
 /// op count, so a truncated or padded op stream is rejected rather than
 /// replayed into a partial workbook. `source` provenance is carried when
-/// well-formed, but `residual`/`warnings` are NOT reconstructed — they are
-/// re-derived when a replayed workbook is dumped again and replay does not
-/// use them, so the returned envelope has empty asset/residual/warnings
-/// collections.
+/// well-formed. Assets ARE reconstructed — docx replay feeds them to the
+/// writer as image payloads — and each one is integrity-checked (base64
+/// decodes, size matches, payload hashes to its own id). `residual` and
+/// `warnings` are NOT reconstructed: they are re-derived when a replayed
+/// document is dumped again and replay does not use them.
 pub fn parse_dump_envelope(
   document : Json,
 ) -> DumpEnvelope raise DumpParseError {
@@ -54,8 +55,10 @@ pub fn parse_dump_envelope(
     "replay block",
   )
   let batch_schema = require_string(replay, "batch_schema")
-  // the create sheet is required for an xlsx dump; a missing or malformed
-  // one is a malformed dump, not a deferred replay failure
+  // the create block is always present; the create SHEET is required for
+  // an xlsx dump (its replay starts from a named sheet) and absent for a
+  // docx dump (its writer builds the whole document). A missing sheet on
+  // an xlsx dump is a malformed dump, not a deferred replay failure.
   let create = require_object(
     match replay.get("create") {
       Some(value) => value
@@ -63,7 +66,15 @@ pub fn parse_dump_envelope(
     },
     "replay.create block",
   )
-  let create_sheet = require_string(create, "sheet")
+  let create_sheet = if format == "xlsx" {
+    Some(require_string(create, "sheet"))
+  } else {
+    match create.get("sheet") {
+      Some(String(sheet)) => Some(sheet)
+      Some(_) => raise DumpParseError("non-string \"replay.create.sheet\"")
+      None => None
+    }
+  }
   let ops = match fields.get("ops") {
     Some(Array(items)) => items
     _ => raise DumpParseError("missing or non-array \"ops\"")
@@ -94,6 +105,44 @@ pub fn parse_dump_envelope(
       "stats.ops (\{declared_ops}) does not match the op stream length (\{ops.length()})",
     )
   }
+  // assets are reconstructed with full integrity checks: the payload must
+  // decode, match its declared size, and hash to its own id — an envelope
+  // with a lying digest is malformed, not a deferred replay failure.
+  // Duplicate JSON keys resolve last-wins in the parsed map, so the entry
+  // checked here is exactly the one replay will use.
+  let assets : Map[String, DumpAsset] = {}
+  match fields.get("assets") {
+    Some(Object(entries)) =>
+      for id, entry in entries {
+        let asset = require_object(entry, "asset \"\{id}\"")
+        let content_type = require_string(asset, "content_type")
+        let data = require_string(asset, "data")
+        let declared_size = match asset.get("size") {
+          Some(Number(size, ..)) => size
+          _ =>
+            raise DumpParseError(
+              "asset \"\{id}\" has a missing or non-numeric size",
+            )
+        }
+        let decoded = @base64.decode(data) catch {
+          _ =>
+            raise DumpParseError("asset \"\{id}\" payload is not valid base64")
+        }
+        guard declared_size == decoded.length().to_double() else {
+          raise DumpParseError(
+            "asset \"\{id}\" declares \{declared_size} bytes but decodes to \{decoded.length()}",
+          )
+        }
+        guard id == "sha256-" + sha256_hex_bytes(decoded) else {
+          raise DumpParseError(
+            "asset \"\{id}\" payload does not hash to its id",
+          )
+        }
+        assets[id] = { content_type, size: decoded.length(), data }
+      }
+    Some(_) => raise DumpParseError("non-object \"assets\"")
+    None => ()
+  }
   let source = match fields.get("source") {
     Some(Object(source)) => source
     _ => Map::new()
@@ -113,9 +162,9 @@ pub fn parse_dump_envelope(
       _ => None
     },
     batch_schema,
-    create_sheet: Some(create_sheet),
+    create_sheet,
     ops,
-    assets: {},
+    assets,
     residual: [],
     warnings: [],
   }
