@@ -576,3 +576,33 @@ test "raw dv criteria preserve quote doubling and mark x14 opaque" {
   assert_eq(x14_criteria.length(), 1)
   assert_eq(x14_criteria[0].validation_type, "opaque")
 }
+
+///|
+test "raw dv criteria: root-tag discipline and tolerant formula tags" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Data")
+  // plural root is not a dataValidation
+  sheet.data_validations.push(
+    "<dataValidations count=\"1\"><dataValidation type=\"list\" sqref=\"A1\"><formula1>\"a\"</formula1></dataValidation></dataValidations>",
+  )
+  // nested attributes must not impersonate an absent root type/sqref
+  sheet.data_validations.push(
+    "<dataValidation sqref=\"B1\"><ext type=\"list\"/><formula1>\"a\"</formula1></dataValidation>",
+  )
+  sheet.data_validations.push(
+    "<dataValidation type=\"list\"><child sqref=\"C1\"/><formula1>\"a\"</formula1></dataValidation>",
+  )
+  // whitespace and attributes in the formula start tag still extract
+  sheet.data_validations.push(
+    "<dataValidation type=\"list\" sqref=\"D1\"><formula1 >\"a,b\"</formula1></dataValidation>",
+  )
+  let criteria = sheet.raw_data_validation_criteria()
+  assert_eq(criteria.length(), 4)
+  assert_eq(criteria[0].validation_type, "opaque")
+  // absent root type defaults to none; the nested type does not leak in
+  assert_eq(criteria[1].validation_type, "none")
+  assert_eq(criteria[1].sqref, "B1")
+  // a child sqref cannot satisfy the missing root sqref
+  assert_eq(criteria[2].validation_type, "opaque")
+  assert_eq(criteria[3].formula1, "\"a,b\"")
+}

@@ -608,24 +608,65 @@ pub struct RawDataValidationCriteria {
 } derive(Eq, @debug.Debug)
 
 ///|
+fn raw_tag_end(xml : String, from : Int) -> Int? {
+  let mut index = from
+  let mut quote : UInt16 = ' '
+  let mut quoted = false
+  while index < xml.length() {
+    let unit = xml[index]
+    if quoted {
+      if unit == quote {
+        quoted = false
+      }
+    } else if unit == '"' || unit == '\'' {
+      quoted = true
+      quote = unit
+    } else if unit == '>' {
+      return Some(index + 1)
+    }
+    index += 1
+  }
+  None
+}
+
+///|
+/// Whether the code unit terminates an element NAME (so
+/// "<dataValidation" does not also match "<dataValidations").
+fn raw_name_boundary(unit : UInt16) -> Bool {
+  unit is (' ' | '\t' | '\r' | '\n' | '>' | '/')
+}
+
+///|
+/// Text content of the FIRST `element` child, tolerant of whitespace and
+/// attributes in its start tag; "" for absent or self-closing elements.
+/// The tag-end scan honors quoted attribute values (P1 lesson).
 fn raw_element_text(xml : String, element : String) -> String {
-  let open = "<" + element + ">"
+  let open = "<" + element
   let close = "</" + element + ">"
-  match xml.find(open) {
-    Some(start) => {
-      let content_start = start + open.length()
-      match xml.find(close) {
-        Some(end) =>
-          if end >= content_start {
-            unescape_xml_text(xml.substring(start=content_start, end~))
-          } else {
-            ""
-          }
-        None => ""
+  let mut search = 0
+  while search < xml.length() {
+    let offset = match xml.substring(start=search).find(open) {
+      Some(pos) => pos
+      None => return ""
+    }
+    let start = search + offset
+    let name_end = start + open.length()
+    if name_end < xml.length() && raw_name_boundary(xml[name_end]) {
+      guard raw_tag_end(xml, start) is Some(content_start) else { return "" }
+      if content_start >= 2 && xml[content_start - 2] == '/' {
+        return ""
+      }
+      match xml.substring(start=content_start).find(close) {
+        Some(rel) =>
+          return unescape_xml_text(
+            xml.substring(start=content_start, end=content_start + rel),
+          )
+        None => return ""
       }
     }
-    None => ""
+    search = start + 1
   }
+  ""
 }
 
 ///|
@@ -638,31 +679,42 @@ pub fn Worksheet::raw_data_validation_criteria(
   let out : Array[RawDataValidationCriteria] = []
   for xml in self.data_validations {
     let trimmed = xml.trim(chars=" \t\r\n").to_string()
-    if !trimmed.has_prefix("<dataValidation") {
-      out.push({
-        validation_type: "opaque",
-        sqref: "",
-        formula1: "",
-        formula2: "",
-      })
+    let opaque : RawDataValidationCriteria = {
+      validation_type: "opaque",
+      sqref: "",
+      formula1: "",
+      formula2: "",
+    }
+    // the root must be EXACTLY dataValidation (not dataValidations),
+    // and type/sqref must come from the ROOT TAG alone — a nested
+    // element's attributes must not impersonate the root's (codex
+    // round 4)
+    let name_end = "<dataValidation".length()
+    if !trimmed.has_prefix("<dataValidation") ||
+      name_end >= trimmed.length() ||
+      !raw_name_boundary(trimmed[name_end]) {
+      out.push(opaque)
       continue
     }
-    let validation_type = match (try? attr_value(trimmed, "type")) {
+    guard raw_tag_end(trimmed, 0) is Some(root_end) else {
+      out.push(opaque)
+      continue
+    }
+    let root_tag = trimmed.substring(start=0, end=root_end)
+    let validation_type = match (try? attr_value(root_tag, "type")) {
       Ok(Some(value)) => unescape_xml_text(value)
       Ok(None) => "none"
-      Err(_) => "opaque"
+      Err(_) => {
+        out.push(opaque)
+        continue
+      }
     }
-    let sqref = match raw_attr_sqref(trimmed) {
+    let sqref = match raw_attr_sqref(root_tag) {
       Some(value) => value
       None => ""
     }
     if sqref == "" {
-      out.push({
-        validation_type: "opaque",
-        sqref: "",
-        formula1: "",
-        formula2: "",
-      })
+      out.push(opaque)
       continue
     }
     out.push({
