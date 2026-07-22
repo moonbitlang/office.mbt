@@ -576,3 +576,80 @@ async test "icon-set formula cfvos refuse even though the options hide them" {
     |> ignore
   }
 }
+
+///|
+async test "two-operand comparisons and concatenated list sources refuse" {
+  with_region_dir() <| directory => {
+    let region_data_text = "{\"schema\": \"office.template.data/1\", \"values\": {}, " +
+      "\"regions\": {\"items\": {\"sheet\": \"Items\", \"row\": 2, \"records\": [{\"item\": \"a\"}]}}}"
+    // between with a reference upper bound lands in max_value (round 2b)
+    let between_ref = {
+      let workbook = @engine.Workbook::new()
+      let sheet = workbook.add_sheet("Items")
+      sheet.set_cell_value("A2", @engine.CellValue::String("{{item}}"))
+      let other = workbook.add_sheet("Meta")
+      other.set_cell_value("A1", @engine.CellValue::Numeric(1))
+      let rule = @engine.ConditionalFormatOptions::new("cell")
+      rule.criteria = "between"
+      rule.min_value = "1"
+      rule.max_value = "B1"
+      workbook.set_conditional_format("Meta", "A1:A4", [rule])
+      @engine.write(workbook)
+    }
+    expect_region_refusal(
+      directory, between_ref, region_data_text, "formula criteria",
+    )
+    |> ignore
+    // a quoted-prefix concatenation is not a literal list source
+    let concat_list = {
+      let workbook = @engine.Workbook::new()
+      let sheet = workbook.add_sheet("Items")
+      sheet.set_cell_value("A2", @engine.CellValue::String("{{item}}"))
+      let other = workbook.add_sheet("Meta")
+      other.set_cell_value("A1", @engine.CellValue::Numeric(1))
+      let rule = @engine.DataValidation::new(true)
+      rule.set_range(
+        @engine.DataValidationFormula::TextValue("\"prefix\"&D1"),
+        @engine.DataValidationFormula::TextValue(""),
+        @engine.DataValidationType::List,
+        @engine.DataValidationOperator::Between,
+      )
+      rule.set_sqref("B1")
+      workbook.add_data_validation("Meta", rule)
+      @engine.write(workbook)
+    }
+    @afs.mkdir(directory + "/l") catch {
+      _ => ()
+    }
+    expect_region_refusal(
+      directory + "/l",
+      concat_list,
+      region_data_text,
+      "formula criteria",
+    )
+    |> ignore
+    // a literal between publishes
+    let between_ok = {
+      let workbook = @engine.Workbook::new()
+      let sheet = workbook.add_sheet("Items")
+      sheet.set_cell_value("A2", @engine.CellValue::String("{{item}}"))
+      let other = workbook.add_sheet("Meta")
+      other.set_cell_value("A1", @engine.CellValue::Numeric(1))
+      let rule = @engine.ConditionalFormatOptions::new("cell")
+      rule.criteria = "between"
+      rule.min_value = "1"
+      rule.max_value = "10"
+      workbook.set_conditional_format("Meta", "A1:A4", [rule])
+      @engine.write(workbook)
+    }
+    let input = directory + "/ok.xlsx"
+    @afs.write_file(input, between_ok, create_mode=CreateNew, permission=0o600)
+    let output = directory + "/ok-out.xlsx"
+    let result = @xlsx.transact_template_document(
+      @transaction.transaction_options(input, output_path=output),
+      @template.parse_template_document(region_data_text),
+      allow_missing=false,
+    )
+    assert_true(result.report.changed)
+  }
+}

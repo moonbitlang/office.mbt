@@ -4,9 +4,11 @@
 /// substitutes per-record values with the shared cell machinery. Strict
 /// v1 posture: the workbook must be FORMULA-FREE in the widest sense
 /// (stored formulas, table formulas, defined names, charts, sparklines,
-/// conditional formats, data validations, pivot/external/query/
-/// connection/VML/unknown parts, internal-location links, form controls
-/// all refuse) because cloned and shifted formula text is never
+/// formula-bearing or unprovable conditional formats and data
+/// validations, pivot/external/query/connection/VML/unknown parts,
+/// internal-location links, form controls all refuse; formula-free
+/// data bars, scales, and literal drop lists publish) because cloned
+/// and shifted formula text is never
 /// rewritten — a silently wrong number is worse than a refusal. All
 /// preflight runs before ANY mutation; the transaction publishes only a
 /// clean merge.
@@ -278,10 +280,37 @@ fn plain_number_literal(text : String) -> Bool {
 }
 
 ///|
+/// Whether `text` is exactly ONE quoted string literal with interior
+/// quotes escaped by doubling — anything after the closing quote (a
+/// concatenation like "prefix"&D1) disqualifies it.
+fn quoted_string_literal(text : String) -> Bool {
+  if text.length() < 2 || text[0] != '"' {
+    return false
+  }
+  let mut index = 1
+  while index < text.length() {
+    if text[index] == '"' {
+      if index == text.length() - 1 {
+        return true
+      }
+      if index + 1 < text.length() && text[index + 1] == '"' {
+        index += 2
+        continue
+      }
+      return false
+    }
+    index += 1
+  }
+  false
+}
+
+///|
 /// Whether one conditional-format rule carries formula criteria: formula
 /// rules outright, formula-typed cfvo bounds, and cell comparisons whose
-/// operand is not a plain number literal (a reference or expression
-/// there would silently mean something else after insertion).
+/// operands — including BOTH bounds of between/notBetween, which land in
+/// min_value/max_value (codex round 2b) — are not plain number literals
+/// (a reference or expression there would silently mean something else
+/// after insertion).
 fn cf_rule_formula_bearing(opts : @engine.ConditionalFormatOptions) -> Bool {
   if opts.format_type == "formula" {
     return true
@@ -291,18 +320,22 @@ fn cf_rule_formula_bearing(opts : @engine.ConditionalFormatOptions) -> Bool {
     opts.max_type == "formula" {
     return true
   }
-  if opts.format_type == "cell" &&
-    opts.value != "" &&
-    !plain_number_literal(opts.value) {
-    return true
+  if opts.format_type == "cell" {
+    for operand in [opts.value, opts.min_value, opts.max_value] {
+      if operand != "" && !plain_number_literal(operand) {
+        return true
+      }
+    }
   }
   false
 }
 
 ///|
 /// Whether one data validation carries formula criteria: custom rules
-/// outright, list sources that are not quoted literals, and comparison
-/// operands that are not plain number literals or empty.
+/// outright, list sources that are not a SINGLE quoted literal (a
+/// concatenation like "prefix"&D1 starts with a quote but carries a
+/// reference — codex round 2b), and comparison operands that are not
+/// plain number literals or empty.
 fn dv_formula_bearing(validation : @engine.DataValidation) -> Bool {
   fn literal_operand(text : String) -> Bool {
     text == "" || plain_number_literal(text)
@@ -310,7 +343,7 @@ fn dv_formula_bearing(validation : @engine.DataValidation) -> Bool {
 
   match validation.validation_type {
     "custom" => true
-    "list" => !validation.formula1.has_prefix("\"")
+    "list" => !quoted_string_literal(validation.formula1)
     "none" | "" =>
       !(literal_operand(validation.formula1) &&
       literal_operand(validation.formula2))
