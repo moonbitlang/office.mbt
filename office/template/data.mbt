@@ -193,27 +193,52 @@ pub fn parse_template_data(
   guard fields.get("values") is Some(Object(entries)) else {
     raise TemplateDataError("data document needs a \"values\" object")
   }
+  parse_scalar_entries(entries, max_keys, max_value_units, "", "values")
+}
+
+///|
+/// Validates one flat scalar object (the `values` member, or one region
+/// record) under the shared gates: key grammar, string bounds and
+/// serializability, finite numbers, no null/array/nesting. `prefix` scopes
+/// error messages to the container ("" for `values`, a region/record label
+/// for records); `container` names it in the key-count message.
+fn parse_scalar_entries(
+  entries : Map[String, Json],
+  max_keys : Int,
+  max_value_units : Int,
+  prefix : String,
+  container : String,
+) -> Map[String, TemplateValue] raise TemplateDataError {
   if entries.size() > max_keys {
     raise TemplateDataError(
-      "values carries \{entries.size()} keys; the limit is \{max_keys}",
+      prefix +
+      container +
+      " carries \{entries.size()} keys; the limit is \{max_keys}",
     )
   }
   let values : Map[String, TemplateValue] = {}
   for key, value in entries {
     if !template_key_ok(key) {
       raise TemplateDataError(
-        "value key \"" + key + "\" is outside the placeholder key grammar",
+        prefix +
+        "value key \"" +
+        key +
+        "\" is outside the placeholder key grammar",
       )
     }
     match value {
       String(item) => {
         if item.code_units().length() > max_value_units {
           raise TemplateDataError(
-            "value for \"" + key + "\" exceeds \{max_value_units} units",
+            prefix +
+            "value for \"" +
+            key +
+            "\" exceeds \{max_value_units} units",
           )
         }
         if !template_value_text_ok(item) {
           raise TemplateDataError(
+            prefix +
             "value for \"" +
             key +
             "\" carries characters the document serializers cannot represent",
@@ -227,7 +252,7 @@ pub fn parse_template_data(
         // into published documents; reject like any other non-scalar
         if number != number || number.is_inf() {
           raise TemplateDataError(
-            "value for \"" + key + "\" is not a finite number",
+            prefix + "value for \"" + key + "\" is not a finite number",
           )
         }
         values[key] = NumberValue(number)
@@ -236,12 +261,14 @@ pub fn parse_template_data(
       False => values[key] = BoolValue(false)
       Null =>
         raise TemplateDataError(
+          prefix +
           "value for \"" +
           key +
           "\" is null; only string, number, and boolean values are supported",
         )
       _ =>
         raise TemplateDataError(
+          prefix +
           "value for \"" +
           key +
           "\" is not a scalar; only string, number, and boolean values are supported",
