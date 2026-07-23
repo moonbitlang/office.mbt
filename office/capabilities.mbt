@@ -970,6 +970,56 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
       variants: [],
     },
     {
+      name: "annotate",
+      summary: "Mutate DOCX comments through a strict annotation script",
+      usage: "office annotate FILE SCRIPT.json --out OUT.docx [--dry-run] [--overwrite] [--json|--jsonl]",
+      formats: ["docx"],
+      aliases: [],
+      inputs: [
+        capability_field(
+          "file", "path", true, "existing .docx package (never modified in place)",
+        ),
+        capability_field(
+          "script", "docx.annotation-batch/1-file", true, "strict comment add/reply/resolve/unresolve script; body is plain paragraphs, anchors are /docx/body/p[K], references are tagged {label} or {comment_id}",
+        ),
+        capability_field(
+          "out", "path", true, "destination .docx; created atomically, refused when present unless --overwrite",
+        ),
+        capability_field(
+          "dry-run", "boolean", false, "run the full fold and validation without publishing",
+        ),
+        capability_field(
+          "overwrite", "boolean", false, "replace an existing destination",
+        ),
+        capability_field(
+          "json", "boolean", false, "emit one office.output/1 JSON document",
+        ),
+        capability_field(
+          "jsonl", "boolean", false, "emit one office.output/1 line",
+        ),
+      ],
+      outputs: [
+        capability_field(
+          "schema", "literal(office.docx.annotation-batch/1)", true, "versioned annotation-batch result schema",
+        ),
+        capability_field("ops_applied", "number", true, "comment ops folded"),
+        capability_field(
+          "results", "array(object)", true, "per op: op, comment_id, done, anchor + anchor_to (comment_add; anchor_to only on a paragraph range), target (reply/resolve/unresolve) — all bounded",
+        ),
+        capability_field(
+          "labels", "array(object)", true, "same-script label -> minted comment_id map",
+        ),
+        capability_field(
+          "changed_parts", "array(string)", true, "the union changed-part manifest across every op",
+        ),
+        capability_field(
+          "transaction", "object", true, "office.transaction/2 report; preservation is authoritative. Comment ops fold over the source-pinned D1 edit session one snapshot at a time; the document part gains only the narrow comment-anchor markers (the body text is never wholesale-rewritten), while the comment, content-type, and relationship parts are added or updated as the comments require; nothing is published on any refusal",
+        ),
+      ],
+      output_modes: ["human", "json", "jsonl"],
+      variants: [],
+    },
+    {
       name: "batch",
       summary: "Apply one strict XLSX operation script transactionally",
       usage: "office batch FILE SCRIPT [--out FILE] [--dry-run] [--overwrite] [--json]",

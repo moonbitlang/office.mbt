@@ -9,20 +9,58 @@ import {
 }
 
 // Values
+pub const SCHEMA_ANNOTATION_BATCH : String = "docx.annotation-batch/1"
+
+pub const SCHEMA_ANNOTATION_RESULT : String = "office.docx.annotation-batch/1"
+
 pub fn package_validator() -> @transaction.TransactionValidator raise @transaction.TransactionError
 
+pub fn parse_annotation_batch(String) -> AnnotationBatch raise DocxAnnotationParseError
+
 pub async fn transact_docx(@transaction.TransactionOptions, (DocxEditSession) -> Unit raise, validators? : Array[@transaction.TransactionValidator]) -> @transaction.TransactionReport
+
+pub async fn transact_docx_annotations(@transaction.TransactionOptions, AnnotationBatch) -> DocxAnnotationBatchResult
 
 pub async fn transact_docx_template(@transaction.TransactionOptions, Map[String, @template.TemplateValue], allow_missing~ : Bool) -> DocxTemplateResult
 
 pub async fn transact_docx_template_document(@transaction.TransactionOptions, @template.TemplateData, allow_missing~ : Bool) -> DocxTemplateDocumentResult
 
 // Errors
+pub suberror DocxAnnotationParseError {
+  DocxAnnotationParseError(String)
+} derive(@debug.Debug)
+
 pub suberror DocxTemplateRefused {
   DocxTemplateRefused(DocxTemplateReport)
 } derive(@debug.Debug)
 
 // Types and methods
+pub struct AnnotationBatch {
+  // private fields
+}
+
+pub struct DocxAnnotationBatchResult {
+  report : DocxAnnotationReport
+  transaction : @transaction.TransactionReport
+}
+
+pub(all) struct DocxAnnotationOpResult {
+  op : String
+  comment_id : String
+  done : Bool?
+  anchor : String?
+  anchor_to : String?
+  target : String?
+} derive(Eq, @debug.Debug)
+
+pub(all) struct DocxAnnotationReport {
+  mut ops_applied : Int
+  results : Array[DocxAnnotationOpResult]
+  labels : Array[(String, String)]
+  changed_parts : Array[String]
+  mut changed : Bool
+} derive(Eq, @debug.Debug)
+
 pub struct DocxEditSession {
   // private fields
 }

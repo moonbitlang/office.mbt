@@ -488,6 +488,39 @@ fn DocxEditSession::finish(
 }
 
 ///|
+/// Stages this session's queued plan onto its archive and returns the
+/// resulting ARCHIVE plus the plan's declared parts, WITHOUT serializing.
+/// The multi-op annotation fold uses this to apply one comment op, reopen
+/// a session on the result, and stage the next; only the final archive is
+/// serialized. `remaining_materialized_bytes` is the fold's decreasing
+/// ceiling (base splice allowance minus cumulative staged growth) so N
+/// stages together never exceed the transaction's single splice budget.
+/// An empty plan returns the archive unchanged with no declared parts.
+fn DocxEditSession::stage_to_archive(
+  self : DocxEditSession,
+  remaining_materialized_bytes~ : Int,
+) -> (@zip.Archive, Array[String]) raise @transaction.TransactionError {
+  if self.plan.is_empty() {
+    return (self.archive, [])
+  }
+  let declared = self.plan.declared_parts()
+  let limits = self.splice_limits.with_max_materialized_bytes(
+    remaining_materialized_bytes,
+  ) catch {
+    error => raise mapped_plan_failure(error)
+  }
+  let staged = @splice.stage_spliced_archive(
+    self.archive,
+    self.plan,
+    require_pins=true,
+    limits~,
+  ) catch {
+    error => raise mapped_plan_failure(error)
+  }
+  (staged, declared)
+}
+
+///|
 fn docx_validator_message(text : String) -> String {
   bounded_docx_text(text, 480)
 }

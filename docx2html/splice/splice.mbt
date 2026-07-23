@@ -473,6 +473,38 @@ pub fn splice_docx_archive(
 }
 
 ///|
+/// A copy of these limits with a reduced materialization ceiling — a
+/// multi-step fold shrinks it per step so cumulative staged growth stays
+/// under the transaction's single splice allowance. `bytes` may be zero
+/// (an all-consumed budget); a negative value is refused.
+pub fn SpliceLimits::with_max_materialized_bytes(
+  self : SpliceLimits,
+  bytes : Int,
+) -> SpliceLimits raise @core.DocxError {
+  if bytes < 0 {
+    raise Unsupported(
+      message="the reduced materialized ceiling cannot be negative",
+    )
+  }
+  { ..self, max_materialized_bytes: bytes }
+}
+
+///|
+/// Applies a plan to an isolated fork and returns the spliced ARCHIVE
+/// without serializing it — the seam a multi-step fold uses to stage one
+/// op, reindex on the result, and stage the next, serializing only once
+/// at the end. Limits are enforced before any edited payload is
+/// allocated, exactly as `splice_docx_archive` does.
+pub fn stage_spliced_archive(
+  original : @mbtzip.Archive,
+  plan : SplicePlan,
+  require_pins? : Bool = false,
+  limits? : SpliceLimits,
+) -> @mbtzip.Archive raise @core.DocxError {
+  build_spliced_archive(original, plan, require_pins, limits)
+}
+
+///|
 /// One checked existing-part splice. Preparation sorts and validates the
 /// ranges and computes the exact result size/token count without allocating
 /// the edited payload.
