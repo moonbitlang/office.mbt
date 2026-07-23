@@ -135,6 +135,7 @@ fn row_element_allowed(local : String) -> Bool {
     | "tblHeader"
     | "cnfStyle"
     | "tblPrEx"
+    | "tblBorders"
     | "tc"
     | "tcPr"
     | "tcW"
@@ -200,7 +201,6 @@ fn row_wml_attr_allowed(element_local : String, attr_local : String) -> Bool {
     "jc"
     | "cantSplit"
     | "tblHeader"
-    | "cnfStyle"
     | "gridSpan"
     | "vAlign"
     | "pStyle"
@@ -220,7 +220,12 @@ fn row_wml_attr_allowed(element_local : String, attr_local : String) -> Bool {
     | "szCs"
     | "highlight"
     | "rStyle" => attr_local == "val"
-    "u" => attr_local == "val" || attr_local == "color"
+    "u" =>
+      attr_local == "val" ||
+      attr_local == "color" ||
+      attr_local == "themeColor" ||
+      attr_local == "themeTint" ||
+      attr_local == "themeShade"
     "tcW" => attr_local == "w" || attr_local == "type"
     "shd" =>
       attr_local == "val" ||
@@ -229,7 +234,9 @@ fn row_wml_attr_allowed(element_local : String, attr_local : String) -> Bool {
       attr_local == "themeColor" ||
       attr_local == "themeFill" ||
       attr_local == "themeTint" ||
-      attr_local == "themeShade"
+      attr_local == "themeShade" ||
+      attr_local == "themeFillTint" ||
+      attr_local == "themeFillShade"
     "top"
     | "bottom"
     | "left"
@@ -243,13 +250,19 @@ fn row_wml_attr_allowed(element_local : String, attr_local : String) -> Bool {
       attr_local == "space" ||
       attr_local == "color" ||
       attr_local == "themeColor" ||
+      attr_local == "themeTint" ||
+      attr_local == "themeShade" ||
+      attr_local == "shadow" ||
+      attr_local == "frame" ||
       attr_local == "w" ||
       attr_local == "type"
     "spacing" =>
       attr_local == "before" ||
       attr_local == "beforeLines" ||
+      attr_local == "beforeAutospacing" ||
       attr_local == "after" ||
       attr_local == "afterLines" ||
+      attr_local == "afterAutospacing" ||
       attr_local == "line" ||
       attr_local == "lineRule"
     "ind" =>
@@ -262,7 +275,9 @@ fn row_wml_attr_allowed(element_local : String, attr_local : String) -> Bool {
       attr_local == "hanging" ||
       attr_local == "hangingChars" ||
       attr_local == "start" ||
-      attr_local == "end"
+      attr_local == "startChars" ||
+      attr_local == "end" ||
+      attr_local == "endChars"
     "tab" =>
       attr_local == "val" || attr_local == "pos" || attr_local == "leader"
     "lang" =>
@@ -277,7 +292,26 @@ fn row_wml_attr_allowed(element_local : String, attr_local : String) -> Bool {
       attr_local == "hAnsi" ||
       attr_local == "eastAsia" ||
       attr_local == "cs" ||
-      attr_local == "hint"
+      attr_local == "hint" ||
+      attr_local == "asciiTheme" ||
+      attr_local == "hAnsiTheme" ||
+      attr_local == "eastAsiaTheme" ||
+      attr_local == "cstheme"
+    "cnfStyle" =>
+      // all inert conditional-format boolean flags
+      attr_local == "val" ||
+      attr_local == "firstRow" ||
+      attr_local == "lastRow" ||
+      attr_local == "firstColumn" ||
+      attr_local == "lastColumn" ||
+      attr_local == "oddVBand" ||
+      attr_local == "evenVBand" ||
+      attr_local == "oddHBand" ||
+      attr_local == "evenHBand" ||
+      attr_local == "firstRowFirstColumn" ||
+      attr_local == "firstRowLastColumn" ||
+      attr_local == "lastRowFirstColumn" ||
+      attr_local == "lastRowLastColumn"
     "br" => attr_local == "type" || attr_local == "clear"
     _ => false
   }
@@ -457,6 +491,18 @@ fn row_safety_gate(
         "}" +
         element_local +
         " is outside the repeatable-row whitelist",
+      )
+    }
+    // the {WML}t element must be spelled with the literal "w:" prefix:
+    // clone construction and the byte-fidelity decoder both match only
+    // "<w:t"; an aliased or default-namespace text element resolves to
+    // {WML}t here but would be refused downstream — refuse it up front
+    // with a truthful reason instead (codex #213 round 2, discrepancy A)
+    if element_local == "t" && raw_name != "w:t" {
+      return row_gate_refuse(
+        "a text element spelled \"" +
+        raw_name +
+        "\" rather than the literal w:t that clone fidelity requires",
       )
     }
     // judge each attribute

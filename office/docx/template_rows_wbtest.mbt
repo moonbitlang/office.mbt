@@ -168,10 +168,11 @@ test "part bindings walk sees ancestors and respects closes" {
 ///|
 test "row gate accepts numeric refs in binding values and aliased WML prefixes" {
   // an alias prefix bound (with a numeric ref spelling) to the WML URI
-  // resolves per-URI: w2:t is {WML}t and passes
+  // resolves per-URI: w2:r is {WML}r and passes (the t element alone is
+  // held to the literal w:t spelling elsewhere)
   let outcome = wb_gate(
     "<w:tr><w:tc><w:p xmlns:w2=\"http://schemas.openxmlformats.org/wordprocessingml/2006/mai&#x6E;\">" +
-    "<w:r><w2:t>x</w2:t></w:r></w:p></w:tc></w:tr>",
+    "<w2:r><w:t>x</w:t></w2:r></w:p></w:tc></w:tr>",
   )
   assert_eq(outcome.refusal, None)
 }
@@ -188,4 +189,24 @@ test "row gate: per-element attribute discipline" {
     "<w:tr><w:tc><w:p xml:space=\"preserve\"><w:r><w:t>y</w:t></w:r></w:p></w:tc></w:tr>",
   )
   assert_true(space_on_p.refusal is Some(_))
+}
+
+///|
+test "row gate admits Word invoice formatting; refuses aliased w:t" {
+  // a realistic Word-authored row with theme borders, conditional
+  // format flags, theme fonts, autospacing, and tblPrEx borders
+  let rich = wb_gate(
+    (
+      #|<w:tr><w:trPr><w:cnfStyle w:val="100000000000" w:firstRow="1" w:lastColumn="0"/><w:tblPrEx><w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="auto" w:themeColor="text1" w:themeTint="80"/></w:tblBorders></w:tblPrEx></w:trPr><w:tc><w:tcPr><w:tcW w:w="2000" w:type="dxa"/><w:tcBorders><w:bottom w:val="single" w:sz="4" w:themeShade="40" w:shadow="0" w:frame="1"/></w:tcBorders><w:shd w:val="clear" w:fill="auto" w:themeFillTint="20"/></w:tcPr><w:p><w:pPr><w:spacing w:before="0" w:beforeAutospacing="1" w:line="240" w:lineRule="auto"/><w:ind w:left="0" w:startChars="0"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:asciiTheme="minorHAnsi" w:hAnsiTheme="minorHAnsi"/><w:u w:val="single" w:themeColor="hyperlink"/></w:rPr><w:t xml:space="preserve">{{item}}</w:t></w:r></w:p></w:tc></w:tr>
+    ),
+  )
+  assert_eq(rich.refusal, None)
+  // an aliased text element resolves to {WML}t but refuses at the gate
+  let aliased = wb_gate(
+    "<w:tr><w:tc><w:p><w:r><w2:t xmlns:w2=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">x</w2:t></w:r></w:p></w:tc></w:tr>",
+  )
+  match aliased.refusal {
+    Some(reason) => assert_true(reason.contains("literal w:t"))
+    None => fail("aliased w:t must refuse at the gate")
+  }
 }
