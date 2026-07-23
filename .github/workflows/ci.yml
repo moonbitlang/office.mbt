@@ -353,6 +353,24 @@ jobs:
           echo "$xbg" | jq -e '.success == true
             and .data.cells[0].raw.value == "wasm"
             and .data.cells[1].formula == "LEN(A1)"'
+          # Fresh DOCX creation and authoring (D3) run through the same wasm
+          # async transaction path.
+          dc=$(moon run --target wasm office/cmd/office -- create docx ci-office-created.docx --json 2>office-wasm.err) || { echo "office DOCX create failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "$dc" | jq -e '.success == true
+            and .data.schema == "office.docx.create/1"
+            and .data.format == "docx"
+            and .data.transaction.committed == true'
+          printf '{"schema": "docx.batch/2", "ops": [{"op": "paragraph", "params": {"text": "Heading", "style": "Heading1"}}, {"op": "paragraph", "params": {"runs": [{"text": "body", "bold": true}]}}, {"op": "comment", "params": {"on": 0, "text": "note", "author": "CI"}}]}' > ci-office-author.json
+          db=$(moon run --target wasm office/cmd/office -- batch --format docx ci-office-authored.docx ci-office-author.json --json 2>office-wasm.err) || { echo "office DOCX authoring failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "$db" | jq -e '.success == true
+            and .data.schema == "office.docx.batch/1"
+            and .data.ops == 3
+            and .data.comments == 1
+            and .data.transaction.committed == true'
+          dbt=$(moon run --target wasm office/cmd/office -- text ci-office-authored.docx --json 2>office-wasm.err) || { echo "office DOCX authoring readback failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "$dbt" | jq -e '.success == true
+            and (.data.entries[0].text == "Heading")
+            and (.data.entries[1].text == "body")'
           # DOCX structured reads share one canonical bounded projection.
           # Drive every command through the wasm async filesystem path.
           o=$(moon run --target wasm office/cmd/office -- outline docx2html/tests/cram/fixtures/single-paragraph.docx --json 2>office-wasm.err) || { echo "office DOCX outline failed; stderr:"; cat office-wasm.err; exit 1; }

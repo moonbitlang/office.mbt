@@ -290,6 +290,36 @@ async test "a full-surface docx.batch/1 script is Microsoft OpenXML schema-valid
 }
 
 ///|
+/// D3 (#163): the office fresh-authoring path (`author_docx_bytes`) folds a
+/// docx.batch/2 script — headings, styled runs, a list, a table, a footnote,
+/// and a threaded comment — into a package that must be Microsoft-schema-valid,
+/// not just structurally valid. Exercises the batch->writer assembly plus the
+/// comment/note parts through the SDK, the authoritative oracle.
+async test "office authored document is schema-valid" {
+  let dir = fresh_scratch_dir()
+  let script = @batch.parse_batch(
+    @json.parse(
+      (
+        #|{"schema": "docx.batch/2", "ops": [
+        #|  {"op": "paragraph", "params": {"text": "Report", "style": "Heading1"}},
+        #|  {"op": "paragraph", "params": {"runs": [
+        #|    {"text": "bold ", "bold": true}, {"text": "italic", "italic": true}
+        #|  ]}},
+        #|  {"op": "paragraph", "params": {"text": "item", "list": {"ordered": true, "level": 1}}},
+        #|  {"op": "table", "params": {"rows": [[{"text": "A"}, {"text": "B"}]]}},
+        #|  {"op": "paragraph", "params": {"runs": [
+        #|    {"text": "cite"}, {"footnote": {"text": "a footnote"}}
+        #|  ]}},
+        #|  {"op": "comment", "params": {"on": 0, "text": "please revise", "author": "Ada"}}
+        #|]}
+      ),
+    ),
+  )
+  let authored = @docx_impl.author_docx_bytes(script, Map::new())
+  validate_docx_via_sdk(dir, "office_authored_document", authored)
+}
+
+///|
 /// Phase-2 J1: the annotated-comments CONFORMANCE fixture must be
 /// Microsoft-schema-valid AND the annotation index must read it back with
 /// the plan's semantics. (The tolerant-reader NEGATIVE fixtures live in

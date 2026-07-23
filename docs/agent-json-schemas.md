@@ -477,6 +477,44 @@ also advertises the lower transaction materialization ceilings applied to
 existing-plus-projected cells, row/column records, decoded XML, markup tokens,
 and generated uncompressed archive parts.
 
+### `office.docx.create/1` (`office create docx OUTPUT --json`)
+
+| key | type | notes |
+| --- | --- | --- |
+| `schema` | string | `"office.docx.create/1"` |
+| `format` | string | `"docx"` |
+| `output` | string | bounded destination path |
+| `transaction` | object | `office.transaction/2` validation, preservation, and publication report; creation has null `input`/`original_size` |
+
+`office create docx` publishes a minimal valid blank document (one empty
+paragraph, Normal style, Letter section). It is fresh-only, no-replace by
+default (`--overwrite` to replace), and `--dry-run` validates the candidate
+without publishing.
+
+### `office.docx.batch/1` (`office batch --format docx OUTPUT SCRIPT --json`)
+
+| key | type | notes |
+| --- | --- | --- |
+| `schema` | string | `"office.docx.batch/1"` |
+| `format` | string | `"docx"` |
+| `output` | string | bounded destination path |
+| `ops` / `comments` / `footnotes` / `endnotes` | number | authoring op counts applied |
+| `transaction` | object | `office.transaction/2` validation, preservation, and publication report |
+
+Fresh DOCX authoring from a `docx.batch/2` script (accepts `docx.batch/1`;
+comment and note ops require `/2`) — paragraphs, runs, headings
+(Normal/Heading1..6 only), ordered/unordered lists, tables (with col/row
+spans), hyperlinks, images, footnotes/endnotes, and threaded comments. This is
+distinct from XLSX `batch`: DOCX has no existing-document mutation (#95), so it
+is selected with `--format docx`, publishes to the positional destination
+(never `--out`), and is no-replace by default (`--overwrite` to replace).
+Document properties are not authored (the writer has no path for them; a
+follow-up). The candidate is serialized under the transaction budget BEFORE
+allocation; a ceiling breach is `office.docx.resource_limit` (with
+kind/limit/actual), and any unsupported feature is a fail-closed
+`office.docx.unsupported` — nothing is published on refusal. Images are bounded
+to 8 MiB each and 32 MiB in aggregate.
+
 ### `office.docx.outline/1` (`office outline FILE --json`)
 
 | key | type | notes |
