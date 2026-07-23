@@ -36,6 +36,8 @@ pub fn extract_raw_text(BytesView, external_file_access? : Bool, read_external_f
 
 pub fn new_blank_docx() -> Bytes
 
+pub fn new_blank_docx_limited(@opc.PackageLimits) -> Bytes raise @core.DocxError
+
 pub fn note_spec(Array[@document.DocumentElement]) -> NoteSpec raise @core.DocxError
 
 pub fn plan_comment_addition(DocxAnnotatedResult, BytesView, at_relative~ : String, to_relative~ : String, CommentSpec, max_fragment_bytes? : Int) -> (@splice.SplicePlan, String) raise @core.DocxError
