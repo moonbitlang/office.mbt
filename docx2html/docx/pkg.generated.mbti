@@ -2,6 +2,7 @@
 package "bobzhang/docx2html/docx"
 
 import {
+  "bobzhang/docx2html/batch",
   "bobzhang/docx2html/converter",
   "bobzhang/docx2html/core",
   "bobzhang/docx2html/document",
@@ -13,6 +14,8 @@ import {
 }
 
 // Values
+pub fn author_docx_bytes(@batch.BatchScript, Map[String, Bytes], limits? : @opc.PackageLimits) -> Bytes raise @core.DocxError
+
 pub fn comment_anchor_fragments(id~ : String, wordprocessing_namespace? : String) -> (String, String)
 
 pub fn comment_definition_fragment(CommentSpec, id~ : String, para_ids? : Array[String], max_output_bytes? : Int, wordprocessing_namespace? : String) -> String raise @core.DocxError
