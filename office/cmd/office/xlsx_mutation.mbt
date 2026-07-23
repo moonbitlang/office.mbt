@@ -162,11 +162,11 @@ async fn run_create_xlsx(matches : @argparse.Matches) -> Unit {
 
 ///|
 async fn run_xlsx_batch(matches : @argparse.Matches) -> Unit {
-  let file = required_value(matches, "file")
+  let file = required_value(matches, "target")
   let script = required_value(matches, "script")
   // Reject structurally invalid CLI combinations before any script I/O so
   // argument failures are deterministic and independent of the script path.
-  let options = checked_transaction_options(matches)
+  let options = checked_transaction_options(matches, positional="target")
   let encoded = read_bounded_file(
     script,
     @batch.MAX_BATCH_SCRIPT_BYTES,
@@ -229,6 +229,30 @@ fn create_command() -> @argparse.Command {
           FlagArg("json", long="json", about="print office.output/1 JSON"),
         ],
       ),
+      Command(
+        "docx",
+        about="Create a validated blank Word document",
+        positionals=[
+          PositionArg(
+            "output",
+            about="new .docx destination",
+            num_args=@argparse.ValueRange::single(),
+          ),
+        ],
+        flags=[
+          FlagArg(
+            "dry-run",
+            long="dry-run",
+            about="validate without publishing",
+          ),
+          FlagArg(
+            "overwrite",
+            long="overwrite",
+            about="replace an existing regular-file destination",
+          ),
+          FlagArg("json", long="json", about="print office.output/1 JSON"),
+        ],
+      ),
     ],
   )
 }
@@ -237,24 +261,30 @@ fn create_command() -> @argparse.Command {
 fn batch_command() -> @argparse.Command {
   Command(
     "batch",
-    about="Apply one strict XLSX operation script transactionally",
+    about="Apply a strict operation script transactionally (XLSX mutate, DOCX fresh author)",
     positionals=[
       PositionArg(
-        "file",
-        about="existing .xlsx package",
+        "target",
+        about="XLSX: existing .xlsx package to mutate; DOCX (--format docx): new .docx destination",
         num_args=@argparse.ValueRange::single(),
       ),
       PositionArg(
         "script",
-        about="strict xlsx.batch/1 JSON script",
+        about="strict xlsx.batch/1 (XLSX) or docx.batch/2 (DOCX) JSON script",
         num_args=@argparse.ValueRange::single(),
       ),
     ],
     options=[
       OptionArg(
+        "format",
+        long="format",
+        about="xlsx (default, mutate existing) or docx (fresh authoring)",
+        default_values=["xlsx"],
+      ),
+      OptionArg(
         "out",
         long="out",
-        about="publish to a separate .xlsx path instead of replacing the input",
+        about="XLSX only: publish to a separate .xlsx path instead of replacing the input",
       ),
     ],
     flags=[
@@ -262,7 +292,7 @@ fn batch_command() -> @argparse.Command {
       FlagArg(
         "overwrite",
         long="overwrite",
-        about="allow replacement of an existing separate --out destination",
+        about="allow replacement of an existing destination",
       ),
       FlagArg("json", long="json", about="print office.output/1 JSON"),
     ],
@@ -270,13 +300,33 @@ fn batch_command() -> @argparse.Command {
 }
 
 ///|
+/// Dispatches `office batch` by --format: docx fresh authoring vs the default
+/// XLSX mutation path.
+async fn run_batch(matches : @argparse.Matches) -> Unit {
+  match optional_value(matches, "format").unwrap_or("xlsx") {
+    "docx" => run_docx_batch(matches)
+    "xlsx" => run_xlsx_batch(matches)
+    other =>
+      raise CliFailure(
+        @lib.protocol_error(
+          "office.invalid_arguments",
+          "unsupported --format '" +
+          bounded_text(other, 40) +
+          "' (expected xlsx or docx)",
+        ),
+      )
+  }
+}
+
+///|
 async fn run_create(matches : @argparse.Matches) -> Unit {
   match matches.subcommand {
     Some(("xlsx", values)) => run_create_xlsx(values)
+    Some(("docx", values)) => run_create_docx(values)
     _ =>
       raise CliFailure(
         @lib.protocol_error(
-          "office.invalid_arguments", "create requires the xlsx document format",
+          "office.invalid_arguments", "create requires a document format (xlsx or docx)",
         ),
       )
   }

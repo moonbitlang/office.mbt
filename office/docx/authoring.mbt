@@ -8,14 +8,6 @@
 // mutation — that is out of scope, #95).
 
 ///|
-/// The `office.docx.create/1` result schema (blank creation).
-pub const SCHEMA_DOCX_CREATE_RESULT : String = "office.docx.create/1"
-
-///|
-/// The `office.docx.batch/1` result schema (fresh authoring).
-pub const SCHEMA_DOCX_BATCH_RESULT : String = "office.docx.batch/1"
-
-///|
 /// Errors parsing a fresh-authoring `docx.batch/2` script.
 pub suberror DocxAuthorParseError {
   DocxAuthorParseError(String)

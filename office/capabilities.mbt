@@ -48,6 +48,12 @@ pub const SCHEMA_XLSX_QUERY : String = "office.xlsx.query/1"
 pub const SCHEMA_XLSX_CREATE_RESULT : String = "office.xlsx.create/1"
 
 ///|
+pub const SCHEMA_DOCX_CREATE_RESULT : String = "office.docx.create/1"
+
+///|
+pub const SCHEMA_DOCX_BATCH_RESULT : String = "office.docx.batch/1"
+
+///|
 /// Versioned result schema emitted by `office validate`.
 pub const SCHEMA_VALIDATE_RESULT : String = "office.validate/1"
 
@@ -862,12 +868,12 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
     {
       name: "create",
       summary: "Create a validated Office document atomically",
-      usage: "office create xlsx OUTPUT [--sheet NAME] [--dry-run] [--overwrite] [--json]",
-      formats: ["xlsx"],
+      usage: "office create (xlsx OUTPUT [--sheet NAME] | docx OUTPUT) [--dry-run] [--overwrite] [--json]",
+      formats: ["xlsx", "docx"],
       aliases: [],
       inputs: [
         capability_field(
-          "format", "literal(xlsx)", true, "document format subcommand",
+          "format", "literal(xlsx|docx)", true, "document format subcommand",
         ),
       ],
       outputs: [],
@@ -904,12 +910,44 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
             ),
           ],
           constraints: [
+            "format=xlsx",
             "output-extension=.xlsx",
             "create-new-by-default",
             "transactional-publication",
             "bounded-candidate-package",
             "candidate-max-entry-bytes=\{XLSX_TRANSACTION_MAX_CANDIDATE_ENTRY_BYTES}",
             "candidate-max-uncompressed-bytes=\{XLSX_TRANSACTION_MAX_CANDIDATE_ARCHIVE_BYTES}",
+          ],
+          actions: [],
+          output_modes: ["human", "json"],
+        },
+        {
+          name: "docx",
+          usage: "office create docx OUTPUT [--dry-run] [--overwrite] [--json]",
+          result_schema: SCHEMA_DOCX_CREATE_RESULT,
+          inputs: [
+            capability_field("output", "path", true, "new .docx destination"),
+            capability_field(
+              "dry-run", "boolean", false, "validate without publishing",
+            ),
+            capability_field(
+              "overwrite", "boolean", false, "atomically replace an existing regular-file destination",
+            ),
+            capability_field(
+              "json", "boolean", false, "emit office.output/1 JSON",
+            ),
+          ],
+          outputs: [
+            capability_field(
+              "transaction",
+              SCHEMA_TRANSACTION,
+              true,
+              "validation, preservation, and publication report",
+            ),
+          ],
+          constraints: [
+            "format=docx", "output-extension=.docx", "create-new-by-default", "transactional-publication",
+            "bounded-candidate-package", "blank-document-only",
           ],
           actions: [],
           output_modes: ["human", "json"],
@@ -1021,9 +1059,9 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
     },
     {
       name: "batch",
-      summary: "Apply one strict XLSX operation script transactionally",
-      usage: "office batch FILE SCRIPT [--out FILE] [--dry-run] [--overwrite] [--json]",
-      formats: ["xlsx"],
+      summary: "Apply a strict operation script transactionally (XLSX mutate, DOCX fresh author)",
+      usage: "office batch TARGET SCRIPT [--format xlsx|docx] [--out FILE] [--dry-run] [--overwrite] [--json]",
+      formats: ["xlsx", "docx"],
       aliases: [],
       inputs: [],
       outputs: [],
@@ -1031,7 +1069,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
       variants: [
         {
           name: "xlsx",
-          usage: "office batch FILE SCRIPT [--out FILE] [--dry-run] [--overwrite] [--json]",
+          usage: "office batch TARGET SCRIPT [--out FILE] [--dry-run] [--overwrite] [--json]",
           result_schema: SCHEMA_XLSX_BATCH_RESULT,
           inputs: [
             capability_field("file", "path", true, "existing .xlsx package"),
@@ -1064,6 +1102,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
             ),
           ],
           constraints: [
+            "format=xlsx",
             "schema=xlsx.batch/1",
             "overwrite-requires(out)",
             "out-extension-must-match-input-format",
@@ -1078,6 +1117,60 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
             "read-max-row-column-dimension-work=\{XLSX_TRANSACTION_MAX_ROW_COLUMN_LINES}",
             "candidate-max-entry-bytes=\{XLSX_TRANSACTION_MAX_CANDIDATE_ENTRY_BYTES}",
             "candidate-max-uncompressed-bytes=\{XLSX_TRANSACTION_MAX_CANDIDATE_ARCHIVE_BYTES}",
+          ],
+          actions: [],
+          output_modes: ["human", "json"],
+        },
+        {
+          name: "docx",
+          usage: "office batch --format docx TARGET SCRIPT [--dry-run] [--overwrite] [--json]",
+          result_schema: SCHEMA_DOCX_BATCH_RESULT,
+          inputs: [
+            capability_field(
+              "target", "path", true, "new .docx destination (fresh authoring; never mutates an existing file)",
+            ),
+            capability_field(
+              "script", "docx.batch/2-file", true, "strict bounded UTF-8 authoring script",
+            ),
+            capability_field(
+              "dry-run", "boolean", false, "validate without publishing",
+            ),
+            capability_field(
+              "overwrite", "boolean", false, "replace an existing destination",
+            ),
+            capability_field(
+              "json", "boolean", false, "emit office.output/1 JSON",
+            ),
+          ],
+          outputs: [
+            capability_field("ops", "number", true, "authoring ops applied"),
+            capability_field("comments", "number", true, "comment ops applied"),
+            capability_field(
+              "footnotes", "number", true, "footnote refs authored",
+            ),
+            capability_field(
+              "endnotes", "number", true, "endnote refs authored",
+            ),
+            capability_field(
+              "transaction",
+              SCHEMA_TRANSACTION,
+              true,
+              "validation, preservation, and publication report",
+            ),
+          ],
+          constraints: [
+            "format=docx",
+            "preferred-schema=docx.batch/2",
+            "accepts-schema=docx.batch/1",
+            "output-extension=.docx",
+            "fresh-authoring-only",
+            "create-new-by-default",
+            "out-not-accepted",
+            "transactional-publication",
+            "bounded-candidate-package",
+            "comments-and-notes-require=docx.batch/2",
+            "max-image-bytes=\{8 * 1024 * 1024}",
+            "max-total-image-bytes=\{32 * 1024 * 1024}",
           ],
           actions: [],
           output_modes: ["human", "json"],

@@ -11,6 +11,10 @@ pub const SCHEMA_CAPABILITIES : String = "office.capabilities/2"
 
 pub const SCHEMA_CAPABILITY : String = "office.capability/2"
 
+pub const SCHEMA_DOCX_BATCH_RESULT : String = "office.docx.batch/1"
+
+pub const SCHEMA_DOCX_CREATE_RESULT : String = "office.docx.create/1"
+
 pub const SCHEMA_DOCX_ELEMENT : String = "office.docx.element/1"
 
 pub const SCHEMA_DOCX_OUTLINE : String = "office.docx.outline/1"

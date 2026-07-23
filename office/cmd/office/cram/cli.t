@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:9d350deb
+    Fingerprint: crc32:6b566232
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:9d350deb","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","template","annotate","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:6b566232","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","template","annotate","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:9d350deb","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:9d350deb","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:9d350deb","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:9d350deb","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:9d350deb","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:9d350deb","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:9d350deb","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:9d350deb","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:9d350deb","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:9d350deb","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:9d350deb","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:9d350deb","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:9d350deb","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:9d350deb","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:9d350deb","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:9d350deb","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:9d350deb","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:9d350deb","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"raw"}]
 
 The raw command publishes explicit subcommand schemas, including every edit
 input and its conditional constraints.
@@ -63,10 +63,10 @@ until parsing, application, serialization, and complete candidate validation
 all pass.
 
   $ office.exe help create --json | jq -c '.data.records[0] | {name,formats,variants:[.variants[]|{name,result_schema,inputs:[.inputs[].name],constraints}]}'
-  {"name":"create","formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.create/1","inputs":["output","sheet","dry-run","overwrite","json"],"constraints":["output-extension=.xlsx","create-new-by-default","transactional-publication","bounded-candidate-package","candidate-max-entry-bytes=12582912","candidate-max-uncompressed-bytes=25165824"]}]}
+  {"name":"create","formats":["xlsx","docx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.create/1","inputs":["output","sheet","dry-run","overwrite","json"],"constraints":["format=xlsx","output-extension=.xlsx","create-new-by-default","transactional-publication","bounded-candidate-package","candidate-max-entry-bytes=12582912","candidate-max-uncompressed-bytes=25165824"]},{"name":"docx","result_schema":"office.docx.create/1","inputs":["output","dry-run","overwrite","json"],"constraints":["format=docx","output-extension=.docx","create-new-by-default","transactional-publication","bounded-candidate-package","blank-document-only"]}]}
 
   $ office.exe help batch --json | jq -c '.data.records[0] | {name,formats,variants:[.variants[]|{name,result_schema,outputs:[.outputs[].name],constraints}]}'
-  {"name":"batch","formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.batch/1","outputs":["stats","transaction"],"constraints":["schema=xlsx.batch/1","overwrite-requires(out)","out-extension-must-match-input-format","transactional-publication","full-workbook-rewrite-on-change","zero-op-reuses-original","transaction-max-materialized-cells=32768","transaction-max-row-column-lines=32768","read-max-decoded-xml-bytes=16777216","read-max-markup-tokens=262144","read-max-materialized-row-column-dimensions=32768","read-max-row-column-dimension-work=32768","candidate-max-entry-bytes=12582912","candidate-max-uncompressed-bytes=25165824"]}]}
+  {"name":"batch","formats":["xlsx","docx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.batch/1","outputs":["stats","transaction"],"constraints":["format=xlsx","schema=xlsx.batch/1","overwrite-requires(out)","out-extension-must-match-input-format","transactional-publication","full-workbook-rewrite-on-change","zero-op-reuses-original","transaction-max-materialized-cells=32768","transaction-max-row-column-lines=32768","read-max-decoded-xml-bytes=16777216","read-max-markup-tokens=262144","read-max-materialized-row-column-dimensions=32768","read-max-row-column-dimension-work=32768","candidate-max-entry-bytes=12582912","candidate-max-uncompressed-bytes=25165824"]},{"name":"docx","result_schema":"office.docx.batch/1","outputs":["ops","comments","footnotes","endnotes","transaction"],"constraints":["format=docx","preferred-schema=docx.batch/2","accepts-schema=docx.batch/1","output-extension=.docx","fresh-authoring-only","create-new-by-default","out-not-accepted","transactional-publication","bounded-candidate-package","comments-and-notes-require=docx.batch/2","max-image-bytes=8388608","max-total-image-bytes=33554432"]}]}
 
   $ office.exe create xlsx x3-created.xlsx --sheet Data --json | jq -c '{success,schema:.data.schema,sheet:.data.sheet,transaction_schema:.data.transaction.schema,mode:.data.transaction.mode,input:.data.transaction.input,original_size:.data.transaction.original_size,replaced_existing:.data.transaction.replaced_existing,overwritten_size:.data.transaction.overwritten_size,committed:.data.transaction.committed,validations:[.data.transaction.validations[].name],added:(.data.transaction.preservation.added|length>0)}'
   {"success":true,"schema":"office.xlsx.create/1","sheet":"Data","transaction_schema":"office.transaction/2","mode":"create","input":null,"original_size":null,"replaced_existing":false,"overwritten_size":null,"committed":true,"validations":["office-xlsx-bounded-source","office-portable-opc","office-xlsx-bounded"],"added":true}
@@ -153,6 +153,57 @@ explicit overwrite opt-in.
   $ office.exe create xlsx x3-created.xlsx --sheet Replaced --overwrite
   committed: created XLSX sheet "Replaced" -> x3-created.xlsx
   warning [office.transaction.path_based_commit_semantics]: publication uses moonbitlang/async path APIs; atomic rename is guaranteed, but hostile concurrent directory-entry replacement is outside the portable contract
+
+Fresh DOCX creation (blank) and fresh authoring (a docx.batch/2 script) publish
+through the same validated create transaction. DOCX is fresh-only — there is no
+existing-document mutation — so authoring is selected with `--format docx` and
+refuses `--out` and an existing destination without `--overwrite`. Capability
+help filters both create and batch to the requested format.
+
+  $ office.exe help docx create --json | jq -c '.data.records[0]|{name,formats,variants:[.variants[].name]}'
+  {"name":"create","formats":["docx"],"variants":["docx"]}
+  $ office.exe help xlsx batch --json | jq -c '.data.records[0]|{name,formats,variants:[.variants[].name]}'
+  {"name":"batch","formats":["xlsx"],"variants":["xlsx"]}
+
+  $ office.exe create docx d3-blank.docx --json | jq -c '{success,schema:.data.schema,format:.data.format,mode:.data.transaction.mode,committed:.data.transaction.committed}'
+  {"success":true,"schema":"office.docx.create/1","format":"docx","mode":"create","committed":true}
+  $ office.exe identify d3-blank.docx
+  docx
+
+  $ printf '%s\n' '{"schema":"docx.batch/2","ops":[{"op":"paragraph","params":{"text":"Report","style":"Heading1"}},{"op":"paragraph","params":{"runs":[{"text":"body ","bold":true},{"text":"text"}]}},{"op":"comment","params":{"on":0,"text":"revise","author":"Ada"}}]}' > d3-author.json
+  $ office.exe batch --format docx d3-authored.docx d3-author.json --json | jq -c '{success,schema:.data.schema,format:.data.format,ops:.data.ops,comments:.data.comments,committed:.data.transaction.committed}'
+  {"success":true,"schema":"office.docx.batch/1","format":"docx","ops":3,"comments":1,"committed":true}
+  $ office.exe text d3-authored.docx --json | jq -rc '.data.entries[] | .path + "\t" + .text'
+  /docx/body/p[1]	Report
+  /docx/body/p[2]	body text
+  /docx/comments/comment[id="0"]/p[1]	revise
+
+DOCX authoring is fail-closed: --out is rejected, an unsupported style is
+refused at parse, and neither publishes anything.
+
+  $ office.exe batch --format docx d3-out.docx d3-author.json --out d3-elsewhere.docx --json > d3-out.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code}' d3-out.json
+  {"success":false,"code":"office.invalid_arguments"}
+  $ test ! -e d3-out.docx; echo $?
+  0
+  $ printf '%s\n' '{"schema":"docx.batch/2","ops":[{"op":"paragraph","params":{"text":"x","style":"Title"}}]}' > d3-bad-style.json
+  $ office.exe batch --format docx d3-bad.docx d3-bad-style.json --json > d3-bad.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code}' d3-bad.json
+  {"success":false,"code":"office.docx.invalid_script"}
+  $ test ! -e d3-bad.docx; echo $?
+  0
+
+  $ office.exe batch --format docx d3-authored.docx d3-author.json --json > d3-exists.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code}' d3-exists.json
+  {"success":false,"code":"office.transaction.output_exists"}
+
+  $ office.exe batch --format docx d3-dry.docx d3-author.json --dry-run --json | jq -c '{dry_run:.data.transaction.dry_run,committed:.data.transaction.committed}'
+  {"dry_run":true,"committed":false}
+  $ test ! -e d3-dry.docx; echo $?
+  0
 
 Structured DOCX reads share one bounded projection. Outline provides the map,
 get resolves a canonical path, text emits path-tagged paragraphs, and query

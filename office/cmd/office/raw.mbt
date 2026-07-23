@@ -341,8 +341,9 @@ async fn run_raw_read(matches : @argparse.Matches) -> Unit {
 ///|
 fn checked_transaction_options(
   matches : @argparse.Matches,
+  positional? : String = "file",
 ) -> @transaction.TransactionOptions raise CliFailure {
-  let file = required_value(matches, "file")
+  let file = required_value(matches, positional)
   let output = optional_value(matches, "out")
   let dry_run = matches.flags.get_or_default("dry-run", false)
   let overwrite = matches.flags.get_or_default("overwrite", false)

@@ -14,10 +14,6 @@ pub const SCHEMA_ANNOTATION_BATCH : String = "docx.annotation-batch/1"
 
 pub const SCHEMA_ANNOTATION_RESULT : String = "office.docx.annotation-batch/1"
 
-pub const SCHEMA_DOCX_BATCH_RESULT : String = "office.docx.batch/1"
-
-pub const SCHEMA_DOCX_CREATE_RESULT : String = "office.docx.create/1"
-
 pub async fn author_document(@transaction.CreateTransactionOptions, @batch.BatchScript, Map[String, Bytes]) -> DocxAuthorResult
 
 pub async fn create_blank_document(@transaction.CreateTransactionOptions) -> DocxCreateResult
