@@ -1,6 +1,6 @@
 # OfficeCLI parity handoff
 
-Last updated: 2026-07-22 (Asia/Shanghai)
+Last updated: 2026-07-23 (Asia/Shanghai)
 
 This file is the handoff for the non-PPT OfficeCLI parity effort tracked by
 [#139](https://github.com/moonbitlang/office.mbt/issues/139). PowerPoint and MCP
@@ -60,6 +60,16 @@ aliases.
   gate so substitution never rewrites DOCX runs whose stored bytes do not
   round-trip to model text. Bounded row/table repetition was split to
   [#207](https://github.com/moonbitlang/office.mbt/issues/207).
+- [#207](https://github.com/moonbitlang/office.mbt/issues/207) is closed
+  through PRs #210-#214. `office template` now also clones a marked
+  template row once per record: the additive `regions` map addresses an
+  XLSX sheet row (cloned through the atomic grid-bounded insert; any
+  formula-bearing workbook refuses) or a DOCX body table row (cloned
+  through a fail-closed namespace/attribute whitelist that strips w14
+  paragraph ids), with records under the scalar data gates and a
+  values/record disjoint-union rule. The `office.template/1` record gains
+  a bounded `regions` array and `regions_total`. Repetition depth beyond
+  v1 (nested regions, column repetition) remains out of scope.
 
 The reference OfficeCLI checkout remains `.repos/officecli` in the primary
 repository working tree.
@@ -121,8 +131,6 @@ PR unless the issue itself is first split into independently useful children.
 3. [#169 — F1 final non-PPT acceptance](https://github.com/moonbitlang/office.mbt/issues/169).
    Run only after the child capabilities above have landed. This is the place
    for the final fresh-agent discoverability exercise and the ultra review.
-4. [#207 — T1 child: bounded row/table repetition](https://github.com/moonbitlang/office.mbt/issues/207).
-   Optional post-v1 template depth; it is not a gate for F1.
 
 Architecture work that can proceed independently, but must stay in its own PR:
 
