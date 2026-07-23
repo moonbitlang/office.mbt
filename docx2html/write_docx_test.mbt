@@ -1887,3 +1887,43 @@ test "story_run_span matches body_run_span for the body story" {
     content="true",
   )
 }
+
+///|
+/// story_row_span resolves table rows by their story-relative ordinal
+/// path; the returned span brackets the exact <w:tr> byte region.
+test "story_row_span resolves table rows in the body story" {
+  let bytes = @docx2html.write_docx([
+    @document.paragraph([@document.run([@document.text("before")])]),
+    @document.table([
+      @document.table_row([
+        @document.table_cell([
+          @document.paragraph([@document.run([@document.text("one")])]),
+        ]),
+      ]),
+      @document.table_row([
+        @document.table_cell([
+          @document.paragraph([@document.run([@document.text("two")])]),
+        ]),
+      ]),
+    ]),
+  ])
+  let annotated = @docx2html.read_docx_annotated(bytes[:])
+  guard annotated.story_row_span("/body", "tbl[1]/tr[2]") is Some(span)
+  let part = annotated.main_story_source().part()
+  let archive = @mbtzip.read(bytes)
+  guard archive.get(part) is Some(source) else {
+    fail("main story part missing")
+  }
+  let text = @utf8.decode(
+    source[span.byte_start():span.byte_end()].to_bytes(),
+    ignore_bom=true,
+  )
+  inspect(text.has_prefix("<w:tr"), content="true")
+  inspect(text.has_suffix("</w:tr>"), content="true")
+  inspect(text.contains("two"), content="true")
+  inspect(text.contains("one"), content="false")
+  inspect(
+    annotated.story_row_span("/body", "tbl[1]/tr[9]") is None,
+    content="true",
+  )
+}

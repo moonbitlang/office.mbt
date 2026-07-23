@@ -15,6 +15,8 @@ pub async fn transact_docx(@transaction.TransactionOptions, (DocxEditSession) ->
 
 pub async fn transact_docx_template(@transaction.TransactionOptions, Map[String, @template.TemplateValue], allow_missing~ : Bool) -> DocxTemplateResult
 
+pub async fn transact_docx_template_document(@transaction.TransactionOptions, @template.TemplateData, allow_missing~ : Bool) -> DocxTemplateDocumentResult
+
 // Errors
 pub suberror DocxTemplateRefused {
   DocxTemplateRefused(DocxTemplateReport)
@@ -41,6 +43,21 @@ pub struct DocxPartFingerprint {
 pub fn DocxPartFingerprint::byte_length(Self) -> Int
 pub fn DocxPartFingerprint::crc32(Self) -> UInt
 pub fn DocxPartFingerprint::part(Self) -> String
+
+pub(all) struct DocxRegionOutcome {
+  name : String
+  source_location : String
+  records : Int
+  replaced : Int
+  escapes_applied : Int
+} derive(Eq, @debug.Debug)
+
+pub struct DocxTemplateDocumentResult {
+  report : DocxTemplateReport
+  regions : Array[DocxRegionOutcome]
+  scalar_paragraphs_skipped : Int
+  transaction : @transaction.TransactionReport
+}
 
 pub(all) struct DocxTemplateFinding {
   location : String

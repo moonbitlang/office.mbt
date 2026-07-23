@@ -205,6 +205,36 @@ pub fn DocxAnnotatedResult::story_run_span(
 }
 
 ///|
+/// The span of one table ROW in any scanned story, addressed by the
+/// story key ("/body", "/header[1]", ...) and the story-relative ordinal
+/// path ("tbl[1]/tr[2]"). The scanner already records tr nodes with full
+/// spans; template repetition replaces a row's byte region with filled
+/// clones through this.
+pub fn DocxAnnotatedResult::story_row_span(
+  self : DocxAnnotatedResult,
+  story : String,
+  relative_path : String,
+) -> NodeSpan? {
+  for entry in self.index.scans {
+    let (key, scan) = entry
+    if key != story {
+      continue
+    }
+    for node in scan.nodes() {
+      if node.kind == "tr" && node.path == relative_path {
+        return Some({
+          byte_start: node.byte_start,
+          byte_end: node.byte_end,
+          content_start: node.content_start,
+          close_tag_start: node.close_tag_start,
+        })
+      }
+    }
+  }
+  None
+}
+
+///|
 fn body_node_span_of_kind(
   annotated : DocxAnnotatedResult,
   relative_path : String,

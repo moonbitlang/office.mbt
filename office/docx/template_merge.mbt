@@ -824,108 +824,8 @@ pub async fn transact_docx_template(
       }
     }
     state.report.distinct_keys_used = state.used_keys.size()
-    // fidelity gate: every run ANY match or escape touches must store
-    // bytes that decode to exactly its model text — including interior
-    // zero-width runs a span crosses (dropped in-run pictures live
-    // there) and runs under missing-key matches (unsupported outranks
-    // missing)
-    let checked : Set[String] = Set::new()
-    for check in state.checks {
-      let check_key = check.part + "\u{0}" + check.run_path
-      if checked.contains(check_key) {
-        continue
-      }
-      checked.add(check_key)
-      guard annotated.story_run_span(check.story, check.run_path) is Some(span) else {
-        state.report.unsupported_total += 1
-        if state.report.unsupported.length() < docx_template_finding_limit {
-          state.report.unsupported.push({
-            location: check.paragraph_location,
-            detail: "a matched run has no byte span in the source snapshot",
-          })
-        }
-        continue
-      }
-      guard (span.content_start(), span.close_tag_start())
-        is (Some(content_start), Some(close_tag_start)) else {
-        // a self-closing empty run stores no content at all: nothing can
-        // hide in it, and there is nothing to verify
-        continue
-      }
-      guard session.archive.get(check.part) is Some(part_bytes) else {
-        state.report.unsupported_total += 1
-        if state.report.unsupported.length() < docx_template_finding_limit {
-          state.report.unsupported.push({
-            location: check.paragraph_location,
-            detail: "the source part bytes for a matched run are unavailable",
-          })
-        }
-        continue
-      }
-      let region = @utf8.decode(part_bytes[content_start:close_tag_start]) catch {
-        _ => {
-          state.report.unsupported_total += 1
-          if state.report.unsupported.length() < docx_template_finding_limit {
-            state.report.unsupported.push({
-              location: check.paragraph_location,
-              detail: "stored run content is not decodable text",
-            })
-          }
-          continue
-        }
-      }
-      match docx_decode_text_region(region) {
-        Some(decoded) if decoded == check.original_text => ()
-        _ => {
-          state.report.unsupported_total += 1
-          if state.report.unsupported.length() < docx_template_finding_limit {
-            state.report.unsupported.push({
-              location: check.paragraph_location,
-              detail: "stored run content does not round-trip to its model text",
-            })
-          }
-        }
-      }
-    }
-    // emission: fidelity already ran over the full check set (edited
-    // runs are a subset of it); the refusal totals gate every queue
-    for edit in state.edits {
-      guard annotated.story_run_span(edit.story, edit.run_path) is Some(span) else {
-        // already disclosed by the fidelity pass
-        continue
-      }
-      guard (span.content_start(), span.close_tag_start())
-        is (Some(content_start), Some(close_tag_start)) else {
-        // an empty self-closing run cannot receive a content rewrite; a
-        // non-empty final text for one is a planner bug surfaced by the
-        // whole-transaction validators, and an empty final is a no-op
-        continue
-      }
-      if state.report.malformed_total > 0 ||
-        state.report.unsupported_total > 0 ||
-        (state.report.missing_total > 0 && !allow_missing) {
-        continue
-      }
-      if edit.final_text == "" {
-        session.queue_span_edit(
-          edit.part,
-          start=span.byte_start(),
-          end=span.byte_end(),
-          b"",
-        )
-      } else {
-        let replacement = "<w:t xml:space=\"preserve\">" +
-          docx_escape_text(edit.final_text) +
-          "</w:t>"
-        session.queue_span_edit(
-          edit.part,
-          start=content_start,
-          end=close_tag_start,
-          @utf8.encode(replacement),
-        )
-      }
-      state.report.changed = true
-    }
+    docx_run_fidelity_pass(state, session, annotated)
+    docx_emit_scalar_edits(state, session, annotated)
     collected.val = Some(state.report)
     if state.report.malformed_total > 0 ||
       state.report.unsupported_total > 0 ||
@@ -950,4 +850,131 @@ pub async fn transact_docx_template(
     )
   }
   { report: merge, transaction: report }
+}
+
+///|
+/// The byte-fidelity gate over the full touch set: every run ANY match
+/// or escape touches must store bytes that decode to exactly its model
+/// text — including interior zero-width runs a span crosses (dropped
+/// in-run pictures live there) and runs under missing-key matches
+/// (unsupported outranks missing). Shared by the scalar and document
+/// drivers so their guarantees cannot drift.
+fn docx_run_fidelity_pass(
+  state : DocxMergeState,
+  session : DocxEditSession,
+  annotated : @word.DocxAnnotatedResult,
+) -> Unit raise {
+  // fidelity gate: every run ANY match or escape touches must store
+  // bytes that decode to exactly its model text — including interior
+  // zero-width runs a span crosses (dropped in-run pictures live
+  // there) and runs under missing-key matches (unsupported outranks
+  // missing)
+  let checked : Set[String] = Set::new()
+  for check in state.checks {
+    let check_key = check.part + "\u{0}" + check.run_path
+    if checked.contains(check_key) {
+      continue
+    }
+    checked.add(check_key)
+    guard annotated.story_run_span(check.story, check.run_path) is Some(span) else {
+      state.report.unsupported_total += 1
+      if state.report.unsupported.length() < docx_template_finding_limit {
+        state.report.unsupported.push({
+          location: check.paragraph_location,
+          detail: "a matched run has no byte span in the source snapshot",
+        })
+      }
+      continue
+    }
+    guard (span.content_start(), span.close_tag_start())
+      is (Some(content_start), Some(close_tag_start)) else {
+      // a self-closing empty run stores no content at all: nothing can
+      // hide in it, and there is nothing to verify
+      continue
+    }
+    guard session.archive.get(check.part) is Some(part_bytes) else {
+      state.report.unsupported_total += 1
+      if state.report.unsupported.length() < docx_template_finding_limit {
+        state.report.unsupported.push({
+          location: check.paragraph_location,
+          detail: "the source part bytes for a matched run are unavailable",
+        })
+      }
+      continue
+    }
+    let region = @utf8.decode(part_bytes[content_start:close_tag_start]) catch {
+      _ => {
+        state.report.unsupported_total += 1
+        if state.report.unsupported.length() < docx_template_finding_limit {
+          state.report.unsupported.push({
+            location: check.paragraph_location,
+            detail: "stored run content is not decodable text",
+          })
+        }
+        continue
+      }
+    }
+    match docx_decode_text_region(region) {
+      Some(decoded) if decoded == check.original_text => ()
+      _ => {
+        state.report.unsupported_total += 1
+        if state.report.unsupported.length() < docx_template_finding_limit {
+          state.report.unsupported.push({
+            location: check.paragraph_location,
+            detail: "stored run content does not round-trip to its model text",
+          })
+        }
+      }
+    }
+  }
+}
+
+///|
+/// Emits the scalar pass's run rewrites; each queue re-checks the
+/// refusal totals so a refused merge never mutates. Shared by both
+/// drivers.
+fn docx_emit_scalar_edits(
+  state : DocxMergeState,
+  session : DocxEditSession,
+  annotated : @word.DocxAnnotatedResult,
+) -> Unit raise {
+  // emission: fidelity already ran over the full check set (edited
+  // runs are a subset of it); the refusal totals gate every queue
+  for edit in state.edits {
+    guard annotated.story_run_span(edit.story, edit.run_path) is Some(span) else {
+      // already disclosed by the fidelity pass
+      continue
+    }
+    guard (span.content_start(), span.close_tag_start())
+      is (Some(content_start), Some(close_tag_start)) else {
+      // an empty self-closing run cannot receive a content rewrite; a
+      // non-empty final text for one is a planner bug surfaced by the
+      // whole-transaction validators, and an empty final is a no-op
+      continue
+    }
+    if state.report.malformed_total > 0 ||
+      state.report.unsupported_total > 0 ||
+      (state.report.missing_total > 0 && !state.allow_missing) {
+      continue
+    }
+    if edit.final_text == "" {
+      session.queue_span_edit(
+        edit.part,
+        start=span.byte_start(),
+        end=span.byte_end(),
+        b"",
+      )
+    } else {
+      let replacement = "<w:t xml:space=\"preserve\">" +
+        docx_escape_text(edit.final_text) +
+        "</w:t>"
+      session.queue_span_edit(
+        edit.part,
+        start=content_start,
+        end=close_tag_start,
+        @utf8.encode(replacement),
+      )
+    }
+    state.report.changed = true
+  }
 }
