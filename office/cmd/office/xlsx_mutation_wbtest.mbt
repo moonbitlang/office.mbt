@@ -37,14 +37,22 @@ test "XLSX create and batch capability variants declare transactional schemas" {
   guard @lib.find_capability_command("create") is Some(create) else {
     fail("create capability must exist")
   }
-  assert_eq(create.formats, ["xlsx"])
-  assert_eq(create.variants.length(), 1)
+  assert_eq(create.formats, ["xlsx", "docx"])
+  assert_eq(create.variants.length(), 2)
   assert_eq(create.variants[0].result_schema, @lib.SCHEMA_XLSX_CREATE_RESULT)
+  assert_eq(create.variants[1].result_schema, @lib.SCHEMA_DOCX_CREATE_RESULT)
+  // every variant carries an explicit format= constraint so help filters
+  assert_true(create.variants[0].constraints.contains("format=xlsx"))
+  assert_true(create.variants[1].constraints.contains("format=docx"))
   guard @lib.find_capability_command("batch") is Some(batch) else {
     fail("batch capability must exist")
   }
-  assert_eq(batch.formats, ["xlsx"])
-  assert_eq(batch.variants.length(), 1)
+  assert_eq(batch.formats, ["xlsx", "docx"])
+  assert_eq(batch.variants.length(), 2)
   assert_eq(batch.variants[0].result_schema, @lib.SCHEMA_XLSX_BATCH_RESULT)
+  assert_eq(batch.variants[1].result_schema, @lib.SCHEMA_DOCX_BATCH_RESULT)
+  assert_true(batch.variants[0].constraints.contains("format=xlsx"))
   assert_true(batch.variants[0].constraints.contains("zero-op-reuses-original"))
+  assert_true(batch.variants[1].constraints.contains("format=docx"))
+  assert_true(batch.variants[1].constraints.contains("fresh-authoring-only"))
 }

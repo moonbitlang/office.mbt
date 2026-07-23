@@ -162,8 +162,12 @@ help filters both create and batch to the requested format.
 
   $ office.exe help docx create --json | jq -c '.data.records[0]|{name,formats,variants:[.variants[].name]}'
   {"name":"create","formats":["docx"],"variants":["docx"]}
+  $ office.exe help xlsx create --json | jq -c '.data.records[0]|{name,formats,variants:[.variants[].name]}'
+  {"name":"create","formats":["xlsx"],"variants":["xlsx"]}
   $ office.exe help xlsx batch --json | jq -c '.data.records[0]|{name,formats,variants:[.variants[].name]}'
   {"name":"batch","formats":["xlsx"],"variants":["xlsx"]}
+  $ office.exe help docx batch --json | jq -c '.data.records[0]|{name,formats,variants:[.variants[].name]}'
+  {"name":"batch","formats":["docx"],"variants":["docx"]}
 
   $ office.exe create docx d3-blank.docx --json | jq -c '{success,schema:.data.schema,format:.data.format,mode:.data.transaction.mode,committed:.data.transaction.committed}'
   {"success":true,"schema":"office.docx.create/1","format":"docx","mode":"create","committed":true}
@@ -177,6 +181,25 @@ help filters both create and batch to the requested format.
   /docx/body/p[1]	Report
   /docx/body/p[2]	body text
   /docx/comments/comment[id="0"]/p[1]	revise
+
+Authoring embeds referenced images (bounded per image and in aggregate); the
+authored document reads back with the media in place.
+
+  $ cp "$TESTDIR/../../../../fixtures/excelize/logo.png" d3-logo.png
+  $ printf '%s\n' '{"schema":"docx.batch/2","ops":[{"op":"paragraph","params":{"runs":[{"image":{"path":"d3-logo.png","alt":"logo"}}]}}]}' > d3-image.json
+  $ office.exe batch --format docx d3-image.docx d3-image.json --json | jq -c '{success,ops:.data.ops}'
+  {"success":true,"ops":1}
+  $ office.exe outline d3-image.docx --json | jq -c '{images:.data.counts.images}'
+  {"images":1}
+  $ office.exe query d3-image.docx --kind picture --json | jq -c '{pictures:(.data.matches|length)}'
+  {"pictures":1}
+  $ printf '%s\n' '{"schema":"docx.batch/2","ops":[{"op":"paragraph","params":{"runs":[{"image":{"path":"d3-missing.png"}}]}}]}' > d3-missing-image.json
+  $ office.exe batch --format docx d3-miss.docx d3-missing-image.json --json > d3-miss.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code}' d3-miss.json
+  {"success":false,"code":"office.docx.author_asset_read_failed"}
+  $ test ! -e d3-miss.docx; echo $?
+  0
 
 DOCX authoring is fail-closed: --out is rejected, an unsupported style is
 refused at parse, and neither publishes anything.

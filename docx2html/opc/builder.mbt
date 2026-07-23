@@ -483,10 +483,13 @@ fn PackageBuilder::build_internal(
     Some(l) =>
       @mbtzip.write_limited(archive, max_output_bytes=l.max_output_bytes) catch {
         OutputLimitExceeded(limit~) =>
+          // The zip sizing pass short-circuits at the ceiling (bounded work),
+          // so the exact serialized size is not computed; `actual` is the
+          // truthful strict lower bound "at least one byte over the limit".
           raise PackageLimitExceeded(
             kind="output_bytes",
             limit=limit.to_int64(),
-            actual=limit.to_int64(),
+            actual=limit.to_int64() + 1L,
           )
         err =>
           raise PackageBuildError(

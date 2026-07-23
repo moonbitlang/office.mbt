@@ -123,4 +123,11 @@ test "parse_docx_authoring_script rejects malformed input" {
     ),
     "known styles",
   )
+  // duplicate JSON keys are refused by the strict pre-scan
+  expect(
+    (
+      #|{"schema": "docx.batch/2", "schema": "x", "ops": []}
+    ),
+    "repeats the key",
+  )
 }

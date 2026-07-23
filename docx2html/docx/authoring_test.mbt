@@ -46,3 +46,44 @@ test "author_docx_bytes refuses over the serialization ceiling with a typed limi
     _ => fail("expected the serialization ceiling to be exceeded")
   }
 }
+
+///|
+test "image_occurrences counts every reference, image_paths deduplicates" {
+  let script = authoring_script(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"runs": [
+      #|    {"image": {"path": "a.png"}}, {"image": {"path": "a.png"}},
+      #|    {"image": {"path": "b.png"}}
+      #|  ]}}
+      #|]}
+    ),
+  )
+  // three occurrences (two of a.png), two distinct assets to load
+  assert_eq(script.image_occurrences().length(), 3)
+  assert_eq(script.image_paths().length(), 2)
+}
+
+///|
+test "author_docx_bytes refuses over the emitted-media part ceiling" {
+  let runs = StringBuilder::new()
+  for i in 0..<1001 {
+    if i > 0 {
+      runs.write_string(",")
+    }
+    runs.write_string("{\"image\":{\"path\":\"d.png\"}}")
+  }
+  let script = authoring_script(
+    "{\"schema\":\"docx.batch/2\",\"ops\":[{\"op\":\"paragraph\",\"params\":{\"runs\":[" +
+    runs.to_string() +
+    "]}}]}",
+  )
+  // the parts ceiling is checked BEFORE build_body, so no image bytes are
+  // needed to trip it
+  try @docx.author_docx_bytes(script, Map::new()) |> ignore catch {
+    WriteResourceLimit(kind~, ..) => assert_eq(kind, "media_parts")
+    err => fail("expected a media-parts limit, got: \{err.description()}")
+  } noraise {
+    _ => fail("expected the emitted-media part ceiling to be exceeded")
+  }
+}

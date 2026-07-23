@@ -111,23 +111,15 @@ async fn load_docx_authoring_images(
       Some(reference) => " (referenced at \{reference})"
       None => ""
     }
-    let bytes = @afs.read_file(path).binary() catch {
-      error =>
-        raise CliFailure(
-          @lib.protocol_error(
-            "office.docx.author_asset_read_failed",
-            "could not read image '\{bounded_text(path, 160)}'\{at}: \{error}",
-          ),
-        )
-    }
-    if bytes.length() > office_docx_author_max_image_bytes {
-      raise CliFailure(
-        @lib.protocol_error(
-          "office.docx.resource_limit",
-          "image '\{bounded_text(path, 160)}'\{at} exceeds the \{office_docx_author_max_image_bytes}-byte per-image ceiling",
-        ),
-      )
-    }
+    // read_bounded_file checks the file size BEFORE reading, so an oversized
+    // asset is refused without materializing it.
+    let bytes = read_bounded_file(
+      path,
+      office_docx_author_max_image_bytes,
+      "office.docx.author_asset_read_failed",
+      "image '\{bounded_text(path, 160)}'\{at}",
+      limit_code="office.docx.resource_limit",
+    )
     total += bytes.length()
     if total > office_docx_author_max_total_image_bytes {
       raise CliFailure(
