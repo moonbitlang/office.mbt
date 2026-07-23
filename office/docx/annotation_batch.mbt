@@ -4,8 +4,9 @@
 /// unresolve ops folded over the D1 source-pinned edit session. Each op
 /// is one semantic mutation against a fresh snapshot; the fold reindexes
 /// at the archive level (no bytes reinflation), accumulates a union
-/// changed-part manifest, and serializes ONCE at the end. No body
-/// rewrite, no tracked changes.
+/// changed-part manifest, and serializes ONCE at the end. The body text
+/// is never wholesale-rewritten — only the narrow comment-anchor markers
+/// are spliced into the document part — and there are no tracked changes.
 
 ///|
 pub const SCHEMA_ANNOTATION_BATCH : String = "docx.annotation-batch/1"
@@ -61,11 +62,16 @@ priv enum AnnotationOp {
 }
 
 ///|
-/// One applied op's outcome for the report.
+/// One applied op's outcome for the report. `anchor` is the resolved
+/// paragraph selector for `comment_add`; `target` is the referenced
+/// comment id for `comment_reply` (its parent) and `comment_resolve`
+/// / `comment_unresolve` (the comment acted on).
 pub(all) struct DocxAnnotationOpResult {
   op : String
   comment_id : String
   done : Bool?
+  anchor : String?
+  target : String?
 } derive(Eq, @debug.Debug)
 
 ///|
@@ -89,6 +95,23 @@ pub struct DocxAnnotationBatchResult {
 /// The parsed, validated script.
 pub struct AnnotationBatch {
   priv ops : Array[AnnotationOp]
+}
+
+///|
+/// Rejects any object member outside the allowed set — misspelled fields
+/// must fail loudly, not be silently ignored (codex #216).
+fn annotation_reject_unknown(
+  fields : Map[String, Json],
+  allowed : Array[String],
+  context : String,
+) -> Unit raise DocxAnnotationParseError {
+  for key, _ in fields {
+    if !allowed.contains(key) {
+      raise annotation_parse_error(
+        context + " has unknown member \"" + key + "\"",
+      )
+    }
+  }
 }
 
 ///|
@@ -218,6 +241,7 @@ fn annotation_ref(
       field + " must be {\"comment_id\": ...} or {\"label\": ...}",
     )
   }
+  annotation_reject_unknown(entries, ["comment_id", "label"], field)
   let has_id = entries.contains("comment_id")
   let has_label = entries.contains("label")
   if has_id && has_label {
@@ -255,6 +279,7 @@ pub fn parse_annotation_batch(
   guard document is Object(fields) else {
     raise annotation_parse_error("annotation script must be a JSON object")
   }
+  annotation_reject_unknown(fields, ["schema", "ops"], "the annotation script")
   guard fields.get("schema") is Some(String(schema)) else {
     raise annotation_parse_error(
       "annotation script needs \"schema\": \"" + SCHEMA_ANNOTATION_BATCH + "\"",
@@ -267,9 +292,6 @@ pub fn parse_annotation_batch(
   }
   guard fields.get("ops") is Some(Array(op_items)) else {
     raise annotation_parse_error("annotation script needs an \"ops\" array")
-  }
-  if op_items.length() == 0 {
-    raise annotation_parse_error("ops must not be empty")
   }
   if op_items.length() > annotation_max_ops {
     raise annotation_parse_error(
@@ -316,9 +338,15 @@ pub fn parse_annotation_batch(
     let kind = annotation_string_field(op, "op", "ops[\{index}]")
     match kind {
       "comment_add" => {
+        annotation_reject_unknown(
+          op,
+          ["op", "anchor", "author", "initials", "date", "body", "label"],
+          "comment_add",
+        )
         guard op.get("anchor") is Some(Object(anchor)) else {
           raise annotation_parse_error("comment_add needs an \"anchor\" object")
         }
+        annotation_reject_unknown(anchor, ["at", "to"], "comment_add anchor")
         let at = annotation_string_field(anchor, "at", "comment_add anchor")
         let anchor_at = annotation_anchor(at, "comment_add anchor.at")
         let anchor_to = match anchor.get("to") {
@@ -344,6 +372,11 @@ pub fn parse_annotation_batch(
         )
       }
       "comment_reply" => {
+        annotation_reject_unknown(
+          op,
+          ["op", "parent", "author", "initials", "date", "body", "label"],
+          "comment_reply",
+        )
         guard op.get("parent") is Some(parent_json) else {
           raise annotation_parse_error("comment_reply needs a \"parent\"")
         }
@@ -363,6 +396,7 @@ pub fn parse_annotation_batch(
         ops.push(Reply(parent~, author~, initials~, date~, body~, label~))
       }
       "comment_resolve" | "comment_unresolve" => {
+        annotation_reject_unknown(op, ["op", "target"], kind)
         guard op.get("target") is Some(target_json) else {
           raise annotation_parse_error(kind + " needs a \"target\"")
         }
@@ -413,6 +447,12 @@ pub async fn transact_docx_annotations(
         labels: [],
         changed_parts: [],
         changed: false,
+      }
+      // An empty script is a valid no-op: reuse the source bytes exactly
+      // rather than round-tripping the archive through a candidate package.
+      if batch.ops.is_empty() {
+        collected.val = Some(result)
+        return @transaction.transaction_reuse_original()
       }
       let base_allowance = budget.max_splice_materialized_bytes()
       let original_bytes = annotation_archive_payload_bytes(archive)
@@ -479,9 +519,19 @@ pub async fn transact_docx_annotations(
               Some(name) => minted[name] = id
               None => ()
             }
+            let anchor = if anchor_at == anchor_to {
+              "/docx/body/" + anchor_at
+            } else {
+              "/docx/body/" + anchor_at + ".." + anchor_to
+            }
             (
-              { op: "comment_add", comment_id: id, done: None } :
-              DocxAnnotationOpResult)
+              {
+                op: "comment_add",
+                comment_id: id,
+                done: None,
+                anchor: Some(anchor),
+                target: None,
+              } : DocxAnnotationOpResult)
           }
           Reply(parent~, author~, initials~, date~, body~, label~) => {
             let parent_id = resolve_ref(parent)
@@ -504,8 +554,13 @@ pub async fn transact_docx_annotations(
               None => ()
             }
             (
-              { op: "comment_reply", comment_id: id, done: None } :
-              DocxAnnotationOpResult)
+              {
+                op: "comment_reply",
+                comment_id: id,
+                done: None,
+                anchor: None,
+                target: Some(parent_id),
+              } : DocxAnnotationOpResult)
           }
           Resolve(target~, done~) => {
             let comment_id = resolve_ref(target)
@@ -515,7 +570,14 @@ pub async fn transact_docx_annotations(
             } else {
               "comment_unresolve"
             }
-            ({ op: kind, comment_id, done: Some(done) } : DocxAnnotationOpResult)
+            (
+              {
+                op: kind,
+                comment_id,
+                done: Some(done),
+                anchor: None,
+                target: Some(comment_id),
+              } : DocxAnnotationOpResult)
           }
         }
         let (staged, declared) = session.stage_to_archive(

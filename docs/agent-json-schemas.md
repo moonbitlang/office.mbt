@@ -737,9 +737,12 @@ regions, 4096 records/region, 10000 total written rows.
 Preservation-safe comment mutation of an EXISTING DOCX: a strict
 `docx.annotation-batch/1` script of `comment_add`, `comment_reply`,
 `comment_resolve`, and `comment_unresolve` ops folded over the D1
-source-pinned edit session. This never rewrites the document body — only
-comment and relationship parts change — and is distinct from `office
-batch` (XLSX cell mutation) and from fresh DOCX authoring.
+source-pinned edit session. This never wholesale-rewrites the document
+body — the document part gains only the narrow comment-anchor markers,
+while the comment, content-type, and relationship parts are added or
+updated as the comments require — and is distinct from `office batch`
+(XLSX cell mutation) and from fresh DOCX authoring. An empty `ops` array
+is a valid no-op that republishes the source bytes exactly.
 
 The script is `{"schema": "docx.annotation-batch/1", "ops": [...]}` with at
 most 128 ops. Each op:
@@ -772,10 +775,10 @@ any refusal publishes nothing.
 | `file` / `output` | string | bounded paths |
 | `format` | string | `"docx"` |
 | `ops_applied` | number | comment ops folded |
-| `results` | array | per op `{op, comment_id, done}` (done is null except for resolve/unresolve) |
+| `results` | array | per op `{op, comment_id, done}` plus `anchor` (the resolved `/docx/body/p[K]` selector, `comment_add` only) or `target` (the referenced comment id — the parent for `comment_reply`, the acted-on comment for resolve/unresolve); `done` is null except for resolve/unresolve |
 | `labels` | array | `{label, comment_id}` for each same-script label, mapping it to the minted id |
 | `changed_parts` | array | the sorted union changed-part manifest across every op (added parts included: `word/comments.xml` and `word/commentsExtended.xml` when first created, plus `[Content_Types].xml` and the document relationships) |
-| `transaction` | object | untouched `office.transaction/2` report; preservation is authoritative. Comment ops touch only comment and relationship parts — the body is never rewritten |
+| `transaction` | object | untouched `office.transaction/2` report; preservation is authoritative. The document part gains only the narrow comment-anchor markers (the body text is never wholesale-rewritten), while the comment, content-type, and relationship parts are added or updated as the comments require |
 
 ### `office.dump/1` (`office dump FILE [--json|--jsonl]`)
 

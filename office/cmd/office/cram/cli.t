@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:9d9a03fc
+    Fingerprint: crc32:dc0dc2cc
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:9d9a03fc","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","template","annotate","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:dc0dc2cc","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","template","annotate","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:9d9a03fc","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:9d9a03fc","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:9d9a03fc","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:9d9a03fc","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:9d9a03fc","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:9d9a03fc","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:9d9a03fc","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:9d9a03fc","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:9d9a03fc","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:9d9a03fc","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:9d9a03fc","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:9d9a03fc","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:9d9a03fc","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:9d9a03fc","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:9d9a03fc","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:9d9a03fc","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:9d9a03fc","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:9d9a03fc","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:dc0dc2cc","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:dc0dc2cc","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:dc0dc2cc","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:dc0dc2cc","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:dc0dc2cc","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:dc0dc2cc","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:dc0dc2cc","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:dc0dc2cc","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:dc0dc2cc","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:dc0dc2cc","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:dc0dc2cc","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:dc0dc2cc","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:dc0dc2cc","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:dc0dc2cc","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:dc0dc2cc","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:dc0dc2cc","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:dc0dc2cc","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:dc0dc2cc","kind":"command","name":"raw"}]
 
 The raw command publishes explicit subcommand schemas, including every edit
 input and its conditional constraints.
@@ -705,8 +705,10 @@ element/attribute whitelist, addressed by its dump-grammar path.
 
 The annotate command mutates the comments of an EXISTING DOCX through a
 strict docx.annotation-batch/1 script folded over the preservation-safe
-edit session: add/reply/resolve/unresolve touch only comment and
-relationship parts, never the document body.
+edit session: add/reply/resolve/unresolve add only the narrow
+comment-anchor markers to the document part (the body text is never
+wholesale-rewritten) while updating the comment, content-type, and
+relationship parts as the comments require.
 
   $ cat > ann-base-script.json <<'SCRIPT'
   > {"schema":"docx.batch/2","ops":[
@@ -725,6 +727,20 @@ relationship parts, never the document body.
   annotate: 3 op(s) -> ann-out.docx
   $ office.exe annotate ann-base.docx ann-script.json --out ann-json.docx --json | jq -c '{success,data:{schema:.data.schema,ops:.data.ops_applied,labels:(.data.labels|length),changed:(.data.changed_parts|sort)}}'
   {"success":true,"data":{"schema":"office.docx.annotation-batch/1","ops":3,"labels":2,"changed":["[Content_Types].xml","word/_rels/document.xml.rels","word/comments.xml","word/commentsExtended.xml","word/document.xml"]}}
+
+The per-op results surface the resolved anchor (comment_add) and the
+referenced target id (reply's parent, resolve's acted-on comment).
+
+  $ office.exe annotate ann-base.docx ann-script.json --out ann-shape.docx --json | jq -c '[.data.results[] | {op,anchor,target}]'
+  [{"op":"comment_add","anchor":"/docx/body/p[1]","target":null},{"op":"comment_reply","anchor":null,"target":"0"},{"op":"comment_resolve","anchor":null,"target":"0"}]
+
+An empty ops array is a valid no-op that republishes nothing changed.
+
+  $ cat > ann-noop.json <<'SCRIPT'
+  > {"schema":"docx.annotation-batch/1","ops":[]}
+  > SCRIPT
+  $ office.exe annotate ann-base.docx ann-noop.json --out ann-noop.docx --json | jq -c '{success,ops:.data.ops_applied,changed:(.data.changed_parts|length)}'
+  {"success":true,"ops":0,"changed":0}
 
 A reply to a comment id that does not exist refuses and publishes nothing.
 

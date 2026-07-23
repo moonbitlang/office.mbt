@@ -64,6 +64,23 @@ async test "annotation batch folds add, reply, and resolve in one script" {
     assert_true(result.report.changed)
     // two comments minted with distinct ids
     assert_eq(result.report.labels.length(), 2)
+    // per-op anchor/target are surfaced in the report (codex #216)
+    assert_eq(result.report.results[0].op, "comment_add")
+    assert_eq(result.report.results[0].anchor, Some("/docx/body/p[1]"))
+    assert_eq(result.report.results[0].target, None)
+    assert_eq(result.report.results[1].op, "comment_reply")
+    assert_eq(result.report.results[1].anchor, None)
+    // the reply's target is the root comment (its parent), not its own id
+    assert_eq(
+      result.report.results[1].target,
+      Some(result.report.results[0].comment_id),
+    )
+    assert_eq(result.report.results[2].op, "comment_resolve")
+    assert_eq(result.report.results[2].done, Some(true))
+    assert_eq(
+      result.report.results[2].target,
+      Some(result.report.results[0].comment_id),
+    )
     // the comments part carries both bodies
     guard published_part(output, "word/comments.xml") is Some(comments) else {
       fail("published comments.xml missing")
@@ -94,8 +111,9 @@ test "annotation batch parser refusals" {
 
   expect("{", "not valid JSON")
   expect("{\"ops\": []}", "needs \"schema\"")
+  // unknown members must fail loudly rather than be silently ignored
   expect(
-    "{\"schema\": \"docx.annotation-batch/1\", \"ops\": []}", "ops must not be empty",
+    "{\"schema\": \"docx.annotation-batch/1\", \"ops\": [], \"extra\": 1}", "unknown member",
   )
   expect(
     "{\"schema\": \"docx.annotation-batch/1\", \"ops\": [{\"op\": \"nope\"}]}", "unknown op",
@@ -125,6 +143,45 @@ test "annotation batch parser refusals" {
     "{\"op\": \"comment_add\", \"anchor\": {\"at\": \"/docx/body/p[1]\"}, \"author\": \"A\", \"body\": []}]}",
     "at least one paragraph",
   )
+  // unknown members inside op / anchor / reference objects also refuse
+  expect(
+    "{\"schema\": \"docx.annotation-batch/1\", \"ops\": [" +
+    "{\"op\": \"comment_add\", \"anchor\": {\"at\": \"/docx/body/p[1]\"}, \"author\": \"A\", \"body\": [\"x\"], \"typo\": 1}]}",
+    "unknown member",
+  )
+  expect(
+    "{\"schema\": \"docx.annotation-batch/1\", \"ops\": [" +
+    "{\"op\": \"comment_add\", \"anchor\": {\"at\": \"/docx/body/p[1]\", \"nope\": 1}, \"author\": \"A\", \"body\": [\"x\"]}]}",
+    "unknown member",
+  )
+  expect(
+    "{\"schema\": \"docx.annotation-batch/1\", \"ops\": [" +
+    "{\"op\": \"comment_resolve\", \"target\": {\"comment_id\": \"1\", \"stray\": 1}}]}",
+    "unknown member",
+  )
+}
+
+///|
+async test "annotation batch with no ops republishes the source bytes exactly" {
+  with_annotation_dir() <| directory => {
+    let input = directory + "/base.docx"
+    let source = annotation_fixture()
+    @afs.write_file(input, source, create_mode=CreateNew, permission=0o600)
+    let output = directory + "/noop.docx"
+    let batch = @docx.parse_annotation_batch(
+      "{\"schema\": \"docx.annotation-batch/1\", \"ops\": []}",
+    )
+    let result = @docx.transact_docx_annotations(
+      @transaction.transaction_options(input, output_path=output),
+      batch,
+    )
+    assert_eq(result.report.ops_applied, 0)
+    assert_false(result.report.changed)
+    assert_eq(result.report.changed_parts.length(), 0)
+    // the published bytes are byte-for-byte the source (reuse-original)
+    let published = @afs.read_file(output).binary()
+    assert_eq(published, source)
+  }
 }
 
 ///|

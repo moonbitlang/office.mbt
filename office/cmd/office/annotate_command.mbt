@@ -2,8 +2,9 @@
 /// The `office annotate` command (#164 D4): preservation-safe comment
 /// mutation of an existing DOCX through a strict docx.annotation-batch/1
 /// script. Distinct from `office batch` (XLSX cell mutation) and from
-/// fresh DOCX authoring: this preserves the body and touches only comment
-/// and relationship parts.
+/// fresh DOCX authoring: the body text is preserved (the document part
+/// gains only narrow comment-anchor markers), while the comment,
+/// content-type, and relationship parts are added or updated as needed.
 
 ///|
 let office_annotation_max_script_bytes : Int = 4 * 1024 * 1024
@@ -17,14 +18,23 @@ fn annotation_report_json(
   transaction? : Json,
 ) -> Json {
   let results = report.results.map(entry => {
-    Json::object({
+    let fields : Map[String, Json] = {
       "op": Json::string(entry.op),
       "comment_id": Json::string(bounded_text(entry.comment_id, 80)),
       "done": match entry.done {
         Some(flag) => Json::boolean(flag)
         None => Json::null()
       },
-    })
+    }
+    match entry.anchor {
+      Some(anchor) => fields["anchor"] = Json::string(bounded_text(anchor, 160))
+      None => ()
+    }
+    match entry.target {
+      Some(target) => fields["target"] = Json::string(bounded_text(target, 80))
+      None => ()
+    }
+    Json::object(fields)
   })
   let labels = report.labels.map(pair => {
     let (label, id) = pair

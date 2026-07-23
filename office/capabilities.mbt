@@ -1004,7 +1004,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         ),
         capability_field("ops_applied", "number", true, "comment ops folded"),
         capability_field(
-          "results", "array(object)", true, "per op: kind, comment_id, done (bounded)",
+          "results", "array(object)", true, "per op: kind, comment_id, done, anchor (comment_add), target (reply/resolve) — all bounded",
         ),
         capability_field(
           "labels", "array(object)", true, "same-script label -> minted comment_id map",
@@ -1013,7 +1013,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "changed_parts", "array(string)", true, "the union changed-part manifest across every op",
         ),
         capability_field(
-          "transaction", "object", true, "office.transaction/2 report; preservation is authoritative. Comment ops fold over the source-pinned D1 edit session one snapshot at a time and touch only comment and relationship parts — the document body is never rewritten; nothing is published on any refusal",
+          "transaction", "object", true, "office.transaction/2 report; preservation is authoritative. Comment ops fold over the source-pinned D1 edit session one snapshot at a time; the document part gains only the narrow comment-anchor markers (the body text is never wholesale-rewritten), while the comment, content-type, and relationship parts are added or updated as the comments require; nothing is published on any refusal",
         ),
       ],
       output_modes: ["human", "json", "jsonl"],
