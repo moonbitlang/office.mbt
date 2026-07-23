@@ -2,6 +2,7 @@
 package "bobzhang/office/docx"
 
 import {
+  "bobzhang/docx2html/batch",
   "bobzhang/docx2html/splice",
   "bobzhang/office/template",
   "bobzhang/office/transaction",
@@ -13,9 +14,15 @@ pub const SCHEMA_ANNOTATION_BATCH : String = "docx.annotation-batch/1"
 
 pub const SCHEMA_ANNOTATION_RESULT : String = "office.docx.annotation-batch/1"
 
+pub async fn author_document(@transaction.CreateTransactionOptions, @batch.BatchScript, Map[String, Bytes]) -> DocxAuthorResult
+
+pub async fn create_blank_document(@transaction.CreateTransactionOptions) -> DocxCreateResult
+
 pub fn package_validator() -> @transaction.TransactionValidator raise @transaction.TransactionError
 
 pub fn parse_annotation_batch(String) -> AnnotationBatch raise DocxAnnotationParseError
+
+pub fn parse_docx_authoring_script(String) -> @batch.BatchScript raise DocxAuthorParseError
 
 pub async fn transact_docx(@transaction.TransactionOptions, (DocxEditSession) -> Unit raise, validators? : Array[@transaction.TransactionValidator]) -> @transaction.TransactionReport
 
@@ -28,6 +35,10 @@ pub async fn transact_docx_template_document(@transaction.TransactionOptions, @t
 // Errors
 pub suberror DocxAnnotationParseError {
   DocxAnnotationParseError(String)
+} derive(@debug.Debug)
+
+pub suberror DocxAuthorParseError {
+  DocxAuthorParseError(String)
 } derive(@debug.Debug)
 
 pub suberror DocxTemplateRefused {
@@ -60,6 +71,22 @@ pub(all) struct DocxAnnotationReport {
   changed_parts : Array[String]
   mut changed : Bool
 } derive(Eq, @debug.Debug)
+
+pub(all) struct DocxAuthorReport {
+  ops : Int
+  comments : Int
+  footnotes : Int
+  endnotes : Int
+} derive(Eq, @debug.Debug)
+
+pub struct DocxAuthorResult {
+  report : DocxAuthorReport
+  transaction : @transaction.TransactionReport
+}
+
+pub struct DocxCreateResult {
+  transaction : @transaction.TransactionReport
+}
 
 pub struct DocxEditSession {
   // private fields

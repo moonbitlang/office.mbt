@@ -48,7 +48,8 @@ fn[T] expect_splice_failure(
         | InvalidZip(message~)
         | InvalidXml(message~)
         | MissingPart(message~)
-        | ResourceLimit(message~, ..) => message
+        | ResourceLimit(message~, ..)
+        | WriteResourceLimit(message~, ..) => message
       }
       if !message.has_prefix(expected_prefix) {
         fail("unexpected message: \{message}")

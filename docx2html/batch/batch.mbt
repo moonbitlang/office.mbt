@@ -268,6 +268,45 @@ pub fn BatchScript::image_reference(
 }
 
 ///|
+/// Every image reference in document order, INCLUDING duplicates — one entry
+/// per media part the writer will emit (`image_paths()` deduplicates for
+/// loading, but each occurrence becomes a distinct part). Fresh-authoring
+/// callers bound this against their emitted-media ceilings BEFORE building the
+/// writer graph, so a script with thousands of references to one asset is
+/// refused cheaply rather than after materializing every part.
+pub fn BatchScript::image_occurrences(self : BatchScript) -> Array[String] {
+  let occurrences : Array[String] = []
+  fn scan_inlines(inlines : Array[InlineSpec]) -> Unit {
+    for inline in inlines {
+      match inline {
+        ImageSpec(path~, ..) => occurrences.push(path)
+        LinkSpec(runs~, ..) => scan_inlines(runs)
+        _ => ()
+      }
+    }
+  }
+
+  fn scan_paragraphs(paragraphs : Array[ParagraphSpec]) -> Unit {
+    for paragraph in paragraphs {
+      scan_inlines(paragraph.inlines)
+    }
+  }
+
+  for op in self.ops {
+    match op {
+      ParagraphOp(spec) => scan_inlines(spec.inlines)
+      TableOp(rows~, ..) =>
+        for cells in rows {
+          for cell in cells {
+            scan_paragraphs(cell.paragraphs)
+          }
+        }
+    }
+  }
+  occurrences
+}
+
+///|
 /// Parses and strictly validates a `docx.batch/1` or `docx.batch/2`
 /// script (`comment` ops need the `/2` declaration).
 pub fn parse_batch(script : Json) -> BatchScript raise BatchError {

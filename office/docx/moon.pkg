@@ -2,6 +2,7 @@ import {
   "bobzhang/office",
   "bobzhang/office/transaction",
   "bobzhang/mbtexcel/zip",
+  "bobzhang/docx2html/batch" @docxbatch,
   "bobzhang/docx2html/core" @docxcore,
   "bobzhang/docx2html/document",
   "bobzhang/docx2html/docx" @word,

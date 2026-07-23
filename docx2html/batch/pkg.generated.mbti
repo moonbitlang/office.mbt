@@ -69,6 +69,7 @@ pub fn BatchScript::build_comments(Self) -> Array[BatchComment] raise BatchError
 pub fn BatchScript::build_endnotes(Self) -> Array[BatchNote] raise BatchError
 pub fn BatchScript::build_footnotes(Self) -> Array[BatchNote] raise BatchError
 pub fn BatchScript::comment_count(Self) -> Int
+pub fn BatchScript::image_occurrences(Self) -> Array[String]
 pub fn BatchScript::image_paths(Self) -> Array[String]
 pub fn BatchScript::image_reference(Self, String) -> String?
 pub fn BatchScript::note_counts(Self) -> (Int, Int)

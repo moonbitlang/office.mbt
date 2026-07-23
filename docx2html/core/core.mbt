@@ -50,6 +50,16 @@ pub(all) suberror DocxError {
   MissingPart(message~ : String)
   Unsupported(message~ : String)
   ResourceLimit(limit~ : DocxXmlResourceLimit, message~ : String)
+  // A package-WRITE resource ceiling (output/entries/uncompressed bytes) was
+  // exceeded during bounded serialization. Distinct from ResourceLimit, which
+  // is an XML-READ/parser guard. `kind` is machine-readable; office maps this
+  // to office.docx.resource_limit with limit/actual.
+  WriteResourceLimit(
+    kind~ : String,
+    limit~ : Int64,
+    actual~ : Int64,
+    message~ : String
+  )
 } derive(Debug, Eq)
 
 ///|
@@ -86,6 +96,7 @@ pub fn DocxError::description(self : DocxError) -> String {
     | MissingPart(message~)
     | Unsupported(message~) => message
     ResourceLimit(message~, ..) => message
+    WriteResourceLimit(message~, ..) => message
   }
 }
 

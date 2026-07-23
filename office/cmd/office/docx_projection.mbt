@@ -122,6 +122,9 @@ fn docx_reader_failure(
     MissingPart(message~) => ("missing-part", message, None)
     Unsupported(message~) => ("unsupported", message, None)
     ResourceLimit(limit~, message~) => ("xml", message, Some(limit))
+    // A write-side ceiling never arises on the read path, but the match
+    // must stay exhaustive.
+    WriteResourceLimit(message~, ..) => ("write-limit", message, None)
   }
   let normalized = bounded_text(message, 320)
   let code = if resource_limit is Some(_) {

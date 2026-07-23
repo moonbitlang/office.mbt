@@ -27,30 +27,57 @@ const BLANK_STYLES_XML : String =
 /// inputs are compile-time constants, so builder failures are programming
 /// errors — hence the abort rather than a raise.
 pub fn new_blank_docx() -> Bytes {
+  try! blank_docx_builder().build()
+}
+
+///|
+/// Like `new_blank_docx`, but serialized under `limits` so a fresh-creation
+/// transaction can bound the candidate BEFORE allocation (the blank package is
+/// a small constant, so this never actually breaches — it keeps the create
+/// path on the same bounded-writer contract as authored documents). An over-
+/// limit ceiling surfaces as the typed `WriteResourceLimit`.
+pub fn new_blank_docx_limited(
+  limits : @opc.PackageLimits,
+) -> Bytes raise DocxError {
+  blank_docx_builder().build_limited(limits) catch {
+    @opc.PackageLimitExceeded(kind~, limit~, actual~) =>
+      raise WriteResourceLimit(
+        kind~,
+        limit~,
+        actual~,
+        message="package \{kind} ceiling exceeded: limit \{limit}, actual \{actual}",
+      )
+    err =>
+      raise Unsupported(message="could not assemble the blank document: \{err}")
+  }
+}
+
+///|
+/// The shared blank-document package assembly. All inputs are compile-time
+/// constants, so any `add_*` failure is a programming error.
+fn blank_docx_builder() -> @opc.PackageBuilder raise @opc.PackageBuildError {
   let builder = @opc.PackageBuilder::new()
-  try! ({
-    builder.add_default(
-      "rels", "application/vnd.openxmlformats-package.relationships+xml",
-    )
-    builder.add_default("xml", "application/xml")
-    builder.add_override(
-      "/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
-    )
-    builder.add_override(
-      "/word/styles.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml",
-    )
-    builder.add_relationship(
-      "rId1", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
-      "word/document.xml",
-    )
-    builder.add_relationship(
-      "rId1",
-      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
-      "styles.xml",
-      source="word/document.xml",
-    )
-    builder.add_part("word/document.xml", @utf8.encode(BLANK_DOCUMENT_XML))
-    builder.add_part("word/styles.xml", @utf8.encode(BLANK_STYLES_XML))
-    builder.build()
-  })
+  builder.add_default(
+    "rels", "application/vnd.openxmlformats-package.relationships+xml",
+  )
+  builder.add_default("xml", "application/xml")
+  builder.add_override(
+    "/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+  )
+  builder.add_override(
+    "/word/styles.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml",
+  )
+  builder.add_relationship(
+    "rId1", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "word/document.xml",
+  )
+  builder.add_relationship(
+    "rId1",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
+    "styles.xml",
+    source="word/document.xml",
+  )
+  builder.add_part("word/document.xml", @utf8.encode(BLANK_DOCUMENT_XML))
+  builder.add_part("word/styles.xml", @utf8.encode(BLANK_STYLES_XML))
+  builder
 }

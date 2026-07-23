@@ -2,9 +2,11 @@
 package "bobzhang/docx2html/docx"
 
 import {
+  "bobzhang/docx2html/batch",
   "bobzhang/docx2html/converter",
   "bobzhang/docx2html/core",
   "bobzhang/docx2html/document",
+  "bobzhang/docx2html/opc",
   "bobzhang/docx2html/splice",
   "bobzhang/docx2html/xml",
   "bobzhang/mbtexcel/zip",
@@ -12,6 +14,8 @@ import {
 }
 
 // Values
+pub fn author_docx_bytes(@batch.BatchScript, Map[String, Bytes], limits? : @opc.PackageLimits) -> Bytes raise @core.DocxError
+
 pub fn comment_anchor_fragments(id~ : String, wordprocessing_namespace? : String) -> (String, String)
 
 pub fn comment_definition_fragment(CommentSpec, id~ : String, para_ids? : Array[String], max_output_bytes? : Int, wordprocessing_namespace? : String) -> String raise @core.DocxError
@@ -31,6 +35,8 @@ pub fn embed_style_map(BytesView, String) -> Bytes raise @core.DocxError
 pub fn extract_raw_text(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @core.ConversionResult raise @core.DocxError
 
 pub fn new_blank_docx() -> Bytes
+
+pub fn new_blank_docx_limited(@opc.PackageLimits) -> Bytes raise @core.DocxError
 
 pub fn note_spec(Array[@document.DocumentElement]) -> NoteSpec raise @core.DocxError
 
@@ -68,7 +74,7 @@ pub fn validate_global_para_id_state_archive_limited(DocxAnnotatedResult, @zip.A
 
 pub fn write_docx(Array[@document.DocumentElement]) -> Bytes raise @core.DocxError
 
-pub fn write_docx_with_annotations(Array[@document.DocumentElement], comments? : Array[CommentSpec], footnotes? : Array[NoteSpec], endnotes? : Array[NoteSpec]) -> Bytes raise @core.DocxError
+pub fn write_docx_with_annotations(Array[@document.DocumentElement], comments? : Array[CommentSpec], footnotes? : Array[NoteSpec], endnotes? : Array[NoteSpec], limits? : @opc.PackageLimits) -> Bytes raise @core.DocxError
 
 pub fn write_docx_with_comments(Array[@document.DocumentElement], Array[CommentSpec]) -> Bytes raise @core.DocxError
 

@@ -12,12 +12,15 @@ test "capability registry claims only wired commands" {
 }
 
 ///|
-test "XLSX mutation help exposes only transactional bounded controls" {
+test "create and batch help expose both document formats and bounded controls" {
   let create = create_command().render_help()
   assert_true(create.contains("xlsx"))
-  assert_false(create.to_lower().contains("docx"))
+  // docx is a first-class create subcommand (D3), unsupported formats are not
+  assert_true(create.to_lower().contains("docx"))
+  assert_false(create.to_lower().contains("ppt"))
   let batch = batch_command().render_help()
   assert_true(batch.contains("--out"))
+  assert_true(batch.contains("--format"))
   assert_true(batch.contains("--dry-run"))
   assert_true(batch.contains("--overwrite"))
   assert_false(batch.to_lower().contains("ppt"))

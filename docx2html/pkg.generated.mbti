@@ -187,6 +187,7 @@ pub(all) suberror DocxError {
   MissingPart(message~ : String)
   Unsupported(message~ : String)
   ResourceLimit(limit~ : @core.DocxXmlResourceLimit, message~ : String)
+  WriteResourceLimit(kind~ : String, limit~ : Int64, actual~ : Int64, message~ : String)
 } derive(Eq, @debug.Debug)
 #deprecated
 pub fn DocxError::equal(Self, Self) -> Bool

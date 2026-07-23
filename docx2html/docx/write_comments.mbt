@@ -412,6 +412,7 @@ pub fn write_docx_with_annotations(
   comments? : Array[CommentSpec] = [],
   footnotes? : Array[NoteSpec] = [],
   endnotes? : Array[NoteSpec] = [],
+  limits? : @opc.PackageLimits,
 ) -> Bytes raise DocxError {
   for index, note in footnotes {
     check_annotation_body(note.body, what="footnote") catch {
@@ -700,7 +701,17 @@ pub fn write_docx_with_annotations(
     comments_extended_xml~,
     footnotes_xml~,
     endnotes_xml~,
+    limits?,
   ) catch {
+    // Preserve a typed write ceiling breach; flatten every other package
+    // assembly failure to Unsupported as before.
+    @opc.PackageLimitExceeded(kind~, limit~, actual~) =>
+      raise WriteResourceLimit(
+        kind~,
+        limit~,
+        actual~,
+        message="package \{kind} ceiling exceeded: limit \{limit}, actual \{actual}",
+      )
     err =>
       raise Unsupported(
         message="could not assemble the document package: \{err}",

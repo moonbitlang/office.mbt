@@ -1,5 +1,6 @@
 import {
   "moonbitlang/core/debug",
+  "bobzhang/docx2html/batch",
   "bobzhang/docx2html/opc",
   "bobzhang/docx2html/paths",
   "bobzhang/docx2html/converter",
@@ -19,5 +20,7 @@ import {
 
 import {
   "bobzhang/docx2html/opc",
+  "bobzhang/docx2html/batch",
   "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
 } for "test"

@@ -194,7 +194,7 @@ async fn run_cli(args : Array[String]) -> Unit {
         "issues" => run_issues(values)
         "preview" => run_preview(values)
         "create" => run_create(values)
-        "batch" => run_xlsx_batch(values)
+        "batch" => run_batch(values)
         "template" => run_template(values)
         "annotate" => run_annotate(values)
         "raw" => run_raw(values)
