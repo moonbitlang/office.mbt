@@ -703,16 +703,32 @@ never modified; output publishes through the transaction layer with the
 authoritative preservation report, and `--dry-run` reports without
 publishing.
 
+The data document may additionally carry an optional `regions` map for
+bounded row repetition: each named region marks one template row and
+supplies a non-empty `records` array of flat scalar objects (the same
+gates as `values`; record keys and `values` keys must be disjoint), and
+the row is cloned once per record with per-record substitution. A region
+is addressed by `{"sheet": ..., "row": ...}` for XLSX or
+`{"path": "/docx/body/tbl[N]/tr[M]"}` for DOCX (body tables only in v1).
+Repetition is strict and fail-closed: XLSX refuses any formula-bearing
+workbook (cloned and shifted formula text is never rewritten) and rows
+intersecting multi-row merges, tables, or filters; DOCX clones a table
+row only through a fail-closed element/attribute whitelist (bookmarks,
+comments, notes, drawings, fields, content controls, and vertical merges
+refuse) and strips `w14:paraId`/`textId` from every clone. Bounds: 64
+regions, 4096 records/region, 10000 total written rows.
+
 | key | type | notes |
 | --- | --- | --- |
 | `schema` | string | `"office.template/1"` |
 | `file` / `data_file` / `output` | string | bounded paths |
 | `format` | string | `"xlsx"` or `"docx"` |
-| `placeholders_found` / `replaced` / `escapes_applied` / `distinct_keys_used` | number | merge counters |
-| `missing` / `malformed` / `unsupported` / `locations` | array | bounded `{location, detail}` findings with canonical `Sheet1!B2` locations |
-| `unused` | array | data keys the template never used (warning-class, still publishes) |
+| `placeholders_found` / `replaced` / `escapes_applied` / `distinct_keys_used` | number | merge counters (region clones included) |
+| `missing` / `malformed` / `unsupported` / `locations` | array | bounded `{location, detail}` findings with canonical `Sheet1!B2` locations; region-record findings carry a `record N:` ordinal in `detail` |
+| `unused` | array | data keys the template never used (warning-class, still publishes); unused region-record keys read `region NAME record N: KEY` |
 | `locations_truncated` | boolean | true when the per-key location list hit its bound |
 | `missing_total` / `malformed_total` / `unsupported_total` / `unused_total` | number | full occurrence counts — the finding lists are bounded at 64 entries, so totals distinguish exactly-64 from more |
+| `regions` / `regions_total` | array / number | per repeated region `{name, source_location, records, replaced, escapes_applied}` (XLSX adds `output_rows: {start, count}` with final placement after all insertions); empty when the data document declares no regions |
 | `transaction` | object | untouched `office.transaction/2` report (success only) |
 | `stories_scanned` | array | DOCX only: the stories the merge scanned (`/body`, `/header[n]`, `/footer[n]`); placeholders in footnote, endnote, or comment stories are refused as unsupported contexts. DOCX substitution rewrites run content by byte span through the D1 edit session — unrelated OOXML is preserved and the value inherits the starting run's formatting; locations are canonical paragraph selectors (`/docx/body/p[3]`) |
 

@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:29cecf2a
+    Fingerprint: crc32:5a0ae306
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:29cecf2a","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","template","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:5a0ae306","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","template","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:29cecf2a","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:29cecf2a","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:29cecf2a","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:29cecf2a","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:29cecf2a","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:29cecf2a","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:29cecf2a","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:29cecf2a","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:29cecf2a","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:29cecf2a","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:29cecf2a","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:29cecf2a","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:29cecf2a","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:29cecf2a","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:29cecf2a","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:29cecf2a","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:29cecf2a","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:5a0ae306","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:5a0ae306","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:5a0ae306","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:5a0ae306","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:5a0ae306","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:5a0ae306","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:5a0ae306","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:5a0ae306","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:5a0ae306","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:5a0ae306","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:5a0ae306","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:5a0ae306","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:5a0ae306","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:5a0ae306","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:5a0ae306","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:5a0ae306","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:5a0ae306","kind":"command","name":"raw"}]
 
 The raw command publishes explicit subcommand schemas, including every edit
 input and its conditional constraints.
@@ -642,6 +642,66 @@ only touched parts change. The template file is never modified.
   $ office.exe template docx-tpl.docx docx-missing.json --out docx-part.docx --allow-missing >/dev/null
   $ docx.exe text docx-part.docx | head -1
   [/body/p[1]] Dear Ada, balance {{total}}.
+
+The template data document may carry repeating regions: a marked row is
+cloned once per record. XLSX clones a marked sheet row through the atomic
+grid-bounded insert; a formula-bearing workbook is refused wholesale.
+
+  $ xlsx.exe create rep.xlsx --sheet Items >/dev/null
+  $ xlsx.exe set rep.xlsx Items A1 'Invoice {{company}}' >/dev/null
+  $ xlsx.exe set rep.xlsx Items A2 '{{item}}' >/dev/null
+  $ xlsx.exe set rep.xlsx Items B2 '{{qty}}' >/dev/null
+  $ xlsx.exe set rep.xlsx Items A3 footer >/dev/null
+  $ cat > rep-data.json <<'DATA'
+  > {"schema":"office.template.data/1","values":{"company":"ACME"},"regions":{"items":{"sheet":"Items","row":2,"records":[{"item":"Widget","qty":2},{"item":"Gadget","qty":3}]}}}
+  > DATA
+  $ office.exe template rep.xlsx rep-data.json --out rep-out.xlsx --json | jq -c '{success,replaced:.data.replaced,regions:[.data.regions[]|{name,records,replaced,rows:.output_rows}],total:.data.regions_total}'
+  {"success":true,"replaced":5,"regions":[{"name":"items","records":2,"replaced":4,"rows":{"start":2,"count":2}}],"total":1}
+  $ xlsx.exe get rep-out.xlsx Items A2
+  Widget
+  $ xlsx.exe get rep-out.xlsx Items A3
+  Gadget
+  $ xlsx.exe get rep-out.xlsx Items A4
+  footer
+
+A formula anywhere in the workbook refuses row repetition, since cloned
+and shifted formula text is never rewritten.
+
+  $ xlsx.exe create rep-f.xlsx --sheet Items >/dev/null
+  $ xlsx.exe set rep-f.xlsx Items A2 '{{item}}' >/dev/null
+  $ xlsx.exe formula rep-f.xlsx Items C1 '1+1' >/dev/null
+  $ cat > rep-f-data.json <<'DATA'
+  > {"schema":"office.template.data/1","values":{},"regions":{"items":{"sheet":"Items","row":2,"records":[{"item":"x"}]}}}
+  > DATA
+  $ office.exe template rep-f.xlsx rep-f-data.json --out rep-f-out.xlsx --json 2>&1 | jq -c '{success,code:.error.code}'
+  {"success":false,"code":"office.template.unsupported_context"}
+  $ test -f rep-f-out.xlsx || echo not published
+  not published
+
+DOCX repetition clones a marked table row through a fail-closed
+element/attribute whitelist, addressed by its dump-grammar path.
+
+  $ cat > docx-rep-script.json <<'SCRIPT'
+  > {"schema":"docx.batch/2","ops":[
+  >  {"op":"table","params":{"rows":[
+  >    [{"text":"Item"},{"text":"Qty"}],
+  >    [{"text":"{{item}}"},{"text":"{{qty}} pcs"}]
+  >  ]}}
+  > ]}
+  > SCRIPT
+  $ docx.exe batch docx-rep.docx docx-rep-script.json >/dev/null
+  $ cat > docx-rep-data.json <<'DATA'
+  > {"schema":"office.template.data/1","values":{},"regions":{"rows":{"path":"/docx/body/tbl[1]/tr[2]","records":[{"item":"Widget","qty":2},{"item":"Gadget","qty":3}]}}}
+  > DATA
+  $ office.exe template docx-rep.docx docx-rep-data.json --out docx-rep-out.docx --json | jq -c '{success,replaced:.data.replaced,regions:[.data.regions[]|{name,records,replaced,loc:.source_location}],total:.data.regions_total}'
+  {"success":true,"replaced":4,"regions":[{"name":"rows","records":2,"replaced":4,"loc":"/docx/body/tbl[1]/tr[2]"}],"total":1}
+  $ docx.exe text docx-rep-out.docx
+  [/body/tbl[1]/tr[1]/tc[1]/p[1]] Item
+  [/body/tbl[1]/tr[1]/tc[2]/p[1]] Qty
+  [/body/tbl[1]/tr[2]/tc[1]/p[1]] Widget
+  [/body/tbl[1]/tr[2]/tc[2]/p[1]] 2 pcs
+  [/body/tbl[1]/tr[3]/tc[1]/p[1]] Gadget
+  [/body/tbl[1]/tr[3]/tc[2]/p[1]] 3 pcs
 
 The dump command emits a replayable office.dump/1 op stream: canonical
 ordered batch ops in JSON and the streaming JSONL form with an integrity

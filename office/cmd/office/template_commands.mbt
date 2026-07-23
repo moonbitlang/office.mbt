@@ -27,6 +27,7 @@ fn template_report_json(
   report : @office_xlsx.XlsxTemplateReport,
   transaction? : Json,
   stories? : Array[String],
+  regions? : Array[Json] = [],
 ) -> Json {
   let fields : Map[String, Json] = {
     "schema": Json::string(@lib.SCHEMA_TEMPLATE_RESULT),
@@ -50,6 +51,8 @@ fn template_report_json(
     "malformed_total": Json::number(report.malformed_total.to_double()),
     "unsupported_total": Json::number(report.unsupported_total.to_double()),
     "unused_total": Json::number(report.unused_total.to_double()),
+    "regions": Json::array(regions),
+    "regions_total": Json::number(regions.length().to_double()),
   }
   match stories {
     Some(list) =>
@@ -108,6 +111,44 @@ fn docx_report_as_shared(
 }
 
 ///|
+/// Serializes XLSX repeated-region outcomes into the shared regions
+/// array; `output_rows` gives the final placement after all insertions.
+fn xlsx_regions_json(
+  regions : Array[@office_xlsx.XlsxRegionOutcome],
+) -> Array[Json] {
+  regions.map(region => {
+    Json::object({
+      "name": Json::string(bounded_text(region.name, 80)),
+      "source_location": Json::string(bounded_text(region.source_location, 160)),
+      "records": Json::number(region.records.to_double()),
+      "replaced": Json::number(region.replaced.to_double()),
+      "escapes_applied": Json::number(region.escapes_applied.to_double()),
+      "output_rows": Json::object({
+        "start": Json::number(region.output_rows_start.to_double()),
+        "count": Json::number(region.output_rows_count.to_double()),
+      }),
+    })
+  })
+}
+
+///|
+/// Serializes DOCX repeated-region outcomes into the shared regions
+/// array (a DOCX region emits one cloned row block, no sheet coords).
+fn docx_regions_json(
+  regions : Array[@office_docx.DocxRegionOutcome],
+) -> Array[Json] {
+  regions.map(region => {
+    Json::object({
+      "name": Json::string(bounded_text(region.name, 80)),
+      "source_location": Json::string(bounded_text(region.source_location, 160)),
+      "records": Json::number(region.records.to_double()),
+      "replaced": Json::number(region.replaced.to_double()),
+      "escapes_applied": Json::number(region.escapes_applied.to_double()),
+    })
+  })
+}
+
+///|
 async fn run_template(matches : @argparse.Matches) -> Unit {
   let file = required_value(matches, "file")
   let data_file = required_value(matches, "data")
@@ -141,7 +182,7 @@ async fn run_template(matches : @argparse.Matches) -> Unit {
         ),
       )
   }
-  let values = @template.parse_template_data(data_text) catch {
+  let data = @template.parse_template_document(data_text) catch {
     @template.TemplateDataError(reason) =>
       raise CliFailure(
         @lib.protocol_error(
@@ -193,9 +234,9 @@ async fn run_template(matches : @argparse.Matches) -> Unit {
     )
   }
   let record = if is_docx {
-    let result = @office_docx.transact_docx_template(
+    let result = @office_docx.transact_docx_template_document(
       options,
-      values,
+      data,
       allow_missing~,
     ) catch {
       @office_docx.DocxTemplateRefused(report) =>
@@ -220,9 +261,14 @@ async fn run_template(matches : @argparse.Matches) -> Unit {
       docx_report_as_shared(result.report),
       transaction=result.transaction.to_json(),
       stories=result.report.stories_scanned,
+      regions=docx_regions_json(result.regions),
     )
   } else {
-    let result = @office_xlsx.transact_template(options, values, allow_missing~) catch {
+    let result = @office_xlsx.transact_template_document(
+      options,
+      data,
+      allow_missing~,
+    ) catch {
       @office_xlsx.XlsxTemplateRefused(report) =>
         raise refusal(report, "xlsx", None)
       @transaction.TransactionError(..) as error =>
@@ -240,6 +286,7 @@ async fn run_template(matches : @argparse.Matches) -> Unit {
       "xlsx",
       result.report,
       transaction=result.transaction.to_json(),
+      regions=xlsx_regions_json(result.regions),
     )
   }
   match mode {

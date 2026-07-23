@@ -927,7 +927,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "file", "path", true, "existing XLSX or DOCX template package (never modified)",
         ),
         capability_field(
-          "data", "path", true, "office.template.data/1 JSON document: flat values, string/number/bool only",
+          "data", "path", true, "office.template.data/1 JSON document: flat `values` (string/number/bool) plus an optional `regions` map cloning a marked template row (XLSX {sheet,row}, DOCX {path}) once per record",
         ),
         capability_field(
           "out", "path", true, "destination matching the template format; created atomically, refused when present unless --overwrite",
@@ -958,6 +958,9 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         ),
         capability_field(
           "unused", "array(string)", true, "data keys the template never used (bounded)",
+        ),
+        capability_field(
+          "regions", "array(object)", true, "per repeated region: name, source_location, records, replaced (bounded). XLSX clones a marked row through the atomic grid-bounded insert and refuses any formula-bearing workbook; DOCX clones a marked table row through a fail-closed element/attribute whitelist, stripping w14 paragraph ids. Empty when the data document declares no regions",
         ),
         capability_field(
           "transaction", "object", true, "office.transaction/2 report; preservation is authoritative. XLSX: values land through literal cell setters (a leading = can never become a formula), formula and rich-text cells are refused contexts, whole-cell placeholders keep the data value's type. DOCX: byte-span run rewrites preserve all unrelated OOXML; values inherit the starting run's formatting; body, header, and footer stories are scanned",
