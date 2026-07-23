@@ -543,3 +543,540 @@ fn part_root_bindings(part : Bytes) -> Map[String, String]? {
   }
   Some(bindings)
 }
+
+///|
+/// The published outcome of one repeated row after a successful merge.
+pub(all) struct DocxRegionOutcome {
+  name : String
+  /// The region as addressed ("/docx/body/tbl[1]/tr[2]").
+  source_location : String
+  records : Int
+  replaced : Int
+  escapes_applied : Int
+} derive(Eq, @debug.Debug)
+
+///|
+/// Result of one strict document-level DOCX template transaction.
+pub struct DocxTemplateDocumentResult {
+  report : DocxTemplateReport
+  regions : Array[DocxRegionOutcome]
+  scalar_paragraphs_skipped : Int
+  transaction : @transaction.TransactionReport
+}
+
+///|
+/// Total clone bytes one merge may materialize before the splice layer
+/// even sees them (its own aggregate accounting remains authoritative
+/// once queued).
+let docx_clone_byte_guard : Int = 8 * 1024 * 1024
+
+///|
+priv struct DocxRegionPlan {
+  name : String
+  source_location : String
+  tr_path : String
+  span_start : Int
+  span_end : Int
+  strip_spans : Array[(Int, Int)]
+  paragraphs : Array[(String, Array[@document.DocumentElement])]
+  records : Array[Map[String, @template.TemplateValue]]
+}
+
+///|
+/// One local byte edit inside a row clone.
+priv struct CloneEdit {
+  start : Int
+  end : Int
+  replacement : Bytes
+}
+
+///|
+/// Merges a full template data document (scalar values plus repeating
+/// table-row regions) into a DOCX package. Regions resolve against the
+/// BODY story only in v1; every clone passes the row-safety gate, run
+/// rewrites ride the same unified-stream scan and byte-fidelity checks
+/// as the scalar pass, paraId/textId strip from every clone, and the
+/// scalar pass never touches a claimed row. With no regions this
+/// behaves exactly like `transact_docx_template`.
+pub async fn transact_docx_template_document(
+  options : @transaction.TransactionOptions,
+  data : @template.TemplateData,
+  allow_missing~ : Bool,
+) -> DocxTemplateDocumentResult {
+  let collected : Ref[DocxTemplateReport?] = Ref::new(None)
+  let outcomes : Ref[Array[DocxRegionOutcome]] = Ref::new([])
+  let skipped : Ref[Int] = Ref::new(0)
+  let report = transact_docx(options, session => {
+    let state : DocxMergeState = {
+      report: {
+        placeholders_found: 0,
+        replaced: 0,
+        escapes_applied: 0,
+        distinct_keys_used: 0,
+        missing: [],
+        unused: [],
+        malformed: [],
+        unsupported: [],
+        locations: [],
+        locations_truncated: false,
+        missing_total: 0,
+        malformed_total: 0,
+        unsupported_total: 0,
+        unused_total: 0,
+        stories_scanned: [],
+        changed: false,
+      },
+      values: data.values,
+      used_keys: Set::new(),
+      budget: Ref::new(docx_template_scan_budget),
+      edits: [],
+      checks: [],
+      allow_missing,
+    }
+    fn refuse(location : String, detail : String) {
+      state.report.unsupported_total += 1
+      if state.report.unsupported.length() < docx_template_finding_limit {
+        state.report.unsupported.push({ location, detail })
+      }
+    }
+
+    let annotated = session.annotated()
+    let result = annotated.result()
+    guard result.document is Document(children~, ..) else {
+      raise docx_failure(
+        "office.docx.template_internal", "the reader returned a non-document root",
+      )
+    }
+    let body_part = annotated.main_story_source().part()
+    let body_paragraphs : Array[(String, Array[@document.DocumentElement])] = []
+    docx_collect_paragraphs(children, "", body_paragraphs)
+    // ---- region resolution and the row-safety gate (all read-only) ----
+    let plans : Array[DocxRegionPlan] = []
+    let claimed_paths : Set[String] = Set::new()
+    for region in data.regions {
+      let location = "region \"" + region.name + "\""
+      guard region.address is TableRow(story~, table~, row~) else {
+        refuse(
+          location, "sheet-row addressing applies to XLSX merges; this file is DOCX",
+        )
+        continue
+      }
+      guard story is BodyStory else {
+        refuse(
+          location, "header and footer table rows are beyond v1 repetition support",
+        )
+        continue
+      }
+      let tr_path = "tbl[\{table}]/tr[\{row}]"
+      if claimed_paths.contains(tr_path) {
+        refuse(location, "another region already claims " + tr_path)
+        continue
+      }
+      guard annotated.story_row_span("/body", tr_path) is Some(span) else {
+        refuse(
+          location,
+          "the body carries no table row at /docx/body/" + tr_path,
+        )
+        continue
+      }
+      claimed_paths.add(tr_path)
+      guard session.archive.get(body_part) is Some(part_bytes) else {
+        refuse(location, "the body part bytes are unavailable")
+        continue
+      }
+      let gate = row_safety_gate(
+        part_bytes[span.byte_start():span.byte_end()],
+        match part_root_bindings(part_bytes.to_bytes()) {
+          Some(bindings) => bindings
+          None => {
+            refuse(location, "the body root namespace bindings resist parsing")
+            continue
+          }
+        },
+      )
+      match gate.refusal {
+        Some(reason) =>
+          refuse("/docx/body/" + tr_path, "the row carries " + reason)
+        None => {
+          let row_paragraphs : Array[(String, Array[@document.DocumentElement])] = []
+          for paragraph in body_paragraphs {
+            let (path, paragraph_children) = paragraph
+            if path.has_prefix(tr_path + "/") {
+              row_paragraphs.push((path, paragraph_children))
+            }
+          }
+          plans.push({
+            name: region.name,
+            source_location: "/docx/body/" + tr_path,
+            tr_path,
+            span_start: span.byte_start(),
+            span_end: span.byte_end(),
+            strip_spans: gate.strip_spans,
+            paragraphs: row_paragraphs,
+            records: region.records,
+          })
+        }
+      }
+    }
+    // ---- scalar pass over every story, skipping claimed rows ----
+    let stories : Array[(String, String, Array[@document.DocumentElement])] = [
+      ("/body", body_part, children),
+    ]
+    for index, source in annotated.header_story_sources() {
+      if index < result.headers.length() {
+        stories.push(
+          ("/header[\{index + 1}]", source.part(), result.headers[index].body),
+        )
+      }
+    }
+    for index, source in annotated.footer_story_sources() {
+      if index < result.footers.length() {
+        stories.push(
+          ("/footer[\{index + 1}]", source.part(), result.footers[index].body),
+        )
+      }
+    }
+    for entry in stories {
+      let (story, part, story_children) = entry
+      state.report.stories_scanned.push(story)
+      let paragraphs : Array[(String, Array[@document.DocumentElement])] = []
+      if story == "/body" {
+        for paragraph in body_paragraphs {
+          paragraphs.push(paragraph)
+        }
+      } else {
+        docx_collect_paragraphs(story_children, "", paragraphs)
+      }
+      for paragraph in paragraphs {
+        let (path, paragraph_children) = paragraph
+        if story == "/body" {
+          let mut owned = false
+          for tr_path in claimed_paths {
+            if path.has_prefix(tr_path + "/") {
+              owned = true
+              break
+            }
+          }
+          if owned {
+            skipped.val += 1
+            continue
+          }
+        }
+        state.scan_paragraph(story, part, path, paragraph_children) catch {
+          @template.TemplateScanBudgetExceeded(_) =>
+            raise docx_failure(
+              "office.docx.resource_limit", "template scan work exceeds the configured ceiling",
+            )
+          error => raise error
+        }
+      }
+    }
+    // ---- region scans: one pass per record so missing accounting is
+    // record-ordinal and final texts are per clone ----
+    let region_edits : Array[Array[Array[DocxRunEdit]]] = []
+    let region_counters : Array[(Int, Int)] = []
+    for plan in plans {
+      let per_record : Array[Array[DocxRunEdit]] = []
+      let mut region_replaced = 0
+      let mut region_escapes = 0
+      let malformed_before = state.report.malformed_total
+      let mut aborted = false
+      for record_index, record in plan.records {
+        if aborted {
+          break
+        }
+        let merged : Map[String, @template.TemplateValue] = {}
+        for key, value in data.values {
+          merged[key] = value
+        }
+        for key, value in record {
+          merged[key] = value
+        }
+        let record_state : DocxMergeState = {
+          report: state.report,
+          values: merged,
+          used_keys: state.used_keys,
+          budget: state.budget,
+          edits: [],
+          checks: state.checks,
+          allow_missing,
+        }
+        let replaced_before = state.report.replaced
+        let escapes_before = state.report.escapes_applied
+        let missing_before = state.report.missing_total
+        let missing_list_before = state.report.missing.length()
+        for paragraph in plan.paragraphs {
+          let (path, paragraph_children) = paragraph
+          record_state.scan_paragraph(
+            "/body", body_part, path, paragraph_children,
+          ) catch {
+            @template.TemplateScanBudgetExceeded(_) =>
+              raise docx_failure(
+                "office.docx.resource_limit", "template scan work exceeds the configured ceiling",
+              )
+            error => raise error
+          }
+        }
+        if state.report.malformed_total > malformed_before {
+          // the template row itself is malformed: identical in every
+          // record, so one scan's findings suffice
+          aborted = true
+          break
+        }
+        if record_index == 0 &&
+          state.report.replaced == replaced_before &&
+          state.report.escapes_applied == escapes_before &&
+          state.report.missing_total == missing_before &&
+          record_state.edits.length() == 0 {
+          refuse(
+            plan.source_location,
+            "the template row carries no placeholder",
+          )
+          aborted = true
+          break
+        }
+        // missing findings gain their record ordinal so a consumer can
+        // tell WHICH clone lacks the key
+        let mut finding = missing_list_before
+        while finding < state.report.missing.length() {
+          let entry = state.report.missing[finding]
+          state.report.missing[finding] = {
+            location: entry.location,
+            detail: "record \{record_index}: " + entry.detail,
+          }
+          finding += 1
+        }
+        ignore(missing_before)
+        region_replaced += state.report.replaced - replaced_before
+        region_escapes += state.report.escapes_applied - escapes_before
+        per_record.push(record_state.edits)
+      }
+      region_edits.push(per_record)
+      region_counters.push((region_replaced, region_escapes))
+    }
+    // record-key hygiene: keys a record carries that no placeholder in
+    // its region consumes are unused findings with ordinals
+    for plan_index, plan in plans {
+      if plan_index >= region_edits.length() {
+        continue
+      }
+      // the scan marks used keys globally; per-record unused derives
+      // from the used set restricted to the record's own keys
+      for record_index, record in plan.records {
+        for key, _ in record {
+          if !state.used_keys.contains(key) {
+            state.report.unused_total += 1
+            if state.report.unused.length() < docx_template_finding_limit {
+              state.report.unused.push(
+                "region " + plan.name + " record \{record_index}: " + key,
+              )
+            }
+          }
+        }
+      }
+    }
+    state.flag_out_of_scope("footnotes", annotated.footnote_bodies())
+    state.flag_out_of_scope("endnotes", annotated.endnote_bodies())
+    state.flag_out_of_scope("comments", annotated.comment_bodies())
+    for key, _ in data.values {
+      if !state.used_keys.contains(key) {
+        state.report.unused_total += 1
+        if state.report.unused.length() < docx_template_finding_limit {
+          state.report.unused.push(key)
+        }
+      }
+    }
+    state.report.distinct_keys_used = state.used_keys.size()
+    docx_run_fidelity_pass(state, session, annotated)
+    // ---- clone materialization (exact accounting BEFORE building) ----
+    let replacements : Array[(Int, Int, Bytes)] = []
+    let clean = state.report.malformed_total == 0 &&
+      state.report.unsupported_total == 0 &&
+      (state.report.missing_total == 0 || allow_missing)
+    if clean && plans.length() > 0 {
+      guard session.archive.get(body_part) is Some(part_bytes) else {
+        raise docx_failure(
+          "office.docx.template_internal", "the body part vanished mid-merge",
+        )
+      }
+      let mut total_bytes = 0
+      let planned : Array[(DocxRegionPlan, Array[Bytes])] = []
+      for plan_index, plan in plans {
+        if plan_index >= region_edits.length() {
+          continue
+        }
+        let per_record = region_edits[plan_index]
+        if per_record.length() != plan.records.length() {
+          continue
+        }
+        let clones : Array[Bytes] = []
+        let mut ok = true
+        for record_edits in per_record {
+          match
+            docx_build_row_clone(
+              part_bytes,
+              plan.span_start,
+              plan.span_end,
+              plan.strip_spans,
+              record_edits,
+              annotated,
+            ) {
+            Some(clone) => {
+              total_bytes += clone.length()
+              clones.push(clone)
+            }
+            None => {
+              refuse(
+                plan.source_location,
+                "a clone edit fell outside the row region",
+              )
+              ok = false
+              break
+            }
+          }
+        }
+        if ok {
+          planned.push((plan, clones))
+        }
+      }
+      if total_bytes > docx_clone_byte_guard {
+        refuse(
+          "package",
+          "materializing \{total_bytes} clone bytes exceeds the \{docx_clone_byte_guard} ceiling",
+        )
+      }
+      if state.report.unsupported_total == 0 {
+        for entry in planned {
+          let (plan, clones) = entry
+          let builder = @buffer.new()
+          for clone in clones {
+            builder.write_bytes(clone)
+          }
+          replacements.push(
+            (plan.span_start, plan.span_end, builder.contents()),
+          )
+        }
+      }
+    }
+    // ---- emission ----
+    let still_clean = state.report.malformed_total == 0 &&
+      state.report.unsupported_total == 0 &&
+      (state.report.missing_total == 0 || allow_missing)
+    if still_clean {
+      docx_emit_scalar_edits(state, session, annotated)
+      for replacement in replacements {
+        let (start, end, bytes) = replacement
+        session.queue_span_edit(body_part, start~, end~, bytes)
+        state.report.changed = true
+      }
+      let built : Array[DocxRegionOutcome] = []
+      for plan_index, plan in plans {
+        if plan_index >= region_counters.length() {
+          continue
+        }
+        let (replaced, escapes) = region_counters[plan_index]
+        built.push({
+          name: plan.name,
+          source_location: plan.source_location,
+          records: plan.records.length(),
+          replaced,
+          escapes_applied: escapes,
+        })
+      }
+      outcomes.val = built
+    }
+    collected.val = Some(state.report)
+    if !still_clean {
+      raise docx_failure(
+        "office.docx.template_refused", "strict template findings refuse publication",
+      )
+    }
+  }) catch {
+    error =>
+      match collected.val {
+        Some(merge) if merge.malformed_total > 0 ||
+          merge.unsupported_total > 0 ||
+          (merge.missing_total > 0 && !allow_missing) =>
+          raise DocxTemplateRefused(merge)
+        _ => raise error
+      }
+  }
+  guard collected.val is Some(merge) else {
+    raise docx_failure(
+      "office.docx.template_internal", "the merge produced no report",
+    )
+  }
+  {
+    report: merge,
+    regions: outcomes.val,
+    scalar_paragraphs_skipped: skipped.val,
+    transaction: report,
+  }
+}
+
+///|
+/// Builds one filled clone of the row: the source bytes with the
+/// record's run rewrites and the paraId/textId strips applied as one
+/// ascending, non-overlapping local edit set. None when any edit falls
+/// outside the region (a planner inconsistency, surfaced as a refusal).
+fn docx_build_row_clone(
+  part_bytes : BytesView,
+  span_start : Int,
+  span_end : Int,
+  strip_spans : Array[(Int, Int)],
+  record_edits : Array[DocxRunEdit],
+  annotated : @word.DocxAnnotatedResult,
+) -> Bytes? {
+  let edits : Array[CloneEdit] = []
+  for strip in strip_spans {
+    let (start, end) = strip
+    edits.push({ start, end, replacement: b"" })
+  }
+  for edit in record_edits {
+    guard annotated.story_run_span(edit.story, edit.run_path) is Some(span) else {
+      return None
+    }
+    if edit.final_text == "" {
+      let start = span.byte_start() - span_start
+      let end = span.byte_end() - span_start
+      if start < 0 || end > span_end - span_start || start > end {
+        return None
+      }
+      edits.push({ start, end, replacement: b"" })
+      continue
+    }
+    guard (span.content_start(), span.close_tag_start())
+      is (Some(content_start), Some(close_tag_start)) else {
+      // a self-closing run cannot receive content; the fidelity pass
+      // already judged it, and an empty final is handled above
+      continue
+    }
+    let start = content_start - span_start
+    let end = close_tag_start - span_start
+    if start < 0 || end > span_end - span_start || start > end {
+      return None
+    }
+    let replacement = "<w:t xml:space=\"preserve\">" +
+      docx_escape_text(edit.final_text) +
+      "</w:t>"
+    edits.push({ start, end, replacement: @utf8.encode(replacement) })
+  }
+  edits.sort_by((a, b) => a.start - b.start)
+  let mut previous_end = 0
+  for edit in edits {
+    if edit.start < previous_end {
+      return None
+    }
+    previous_end = edit.end
+  }
+  let row = part_bytes[span_start:span_end]
+  let builder = @buffer.new()
+  let mut cursor = 0
+  for edit in edits {
+    builder.write_bytesview(row[cursor:edit.start])
+    builder.write_bytes(edit.replacement)
+    cursor = edit.end
+  }
+  builder.write_bytesview(row[cursor:])
+  Some(builder.contents())
+}
