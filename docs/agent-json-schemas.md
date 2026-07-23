@@ -775,7 +775,7 @@ any refusal publishes nothing.
 | `file` / `output` | string | bounded paths |
 | `format` | string | `"docx"` |
 | `ops_applied` | number | comment ops folded |
-| `results` | array | per op `{op, comment_id, done}` plus `anchor` (the resolved `/docx/body/p[K]` selector, `comment_add` only) or `target` (the referenced comment id — the parent for `comment_reply`, the acted-on comment for resolve/unresolve); `done` is null except for resolve/unresolve |
+| `results` | array | per op `{op, comment_id, done}` plus, for `comment_add`, `anchor` (the resolved canonical start selector `/docx/body/p[K]`) and, when the comment spans a paragraph range, `anchor_to` (the canonical end selector `/docx/body/p[M]` — a range is two individually valid selectors, never a `..` literal); or `target` (the referenced comment id — the parent for `comment_reply`, the acted-on comment for resolve/unresolve); `done` is null except for resolve/unresolve |
 | `labels` | array | `{label, comment_id}` for each same-script label, mapping it to the minted id |
 | `changed_parts` | array | the sorted union changed-part manifest across every op (added parts included: `word/comments.xml` and `word/commentsExtended.xml` when first created, plus `[Content_Types].xml` and the document relationships) |
 | `transaction` | object | untouched `office.transaction/2` report; preservation is authoritative. The document part gains only the narrow comment-anchor markers (the body text is never wholesale-rewritten), while the comment, content-type, and relationship parts are added or updated as the comments require |

@@ -26,6 +26,14 @@ let annotation_max_ops : Int = 128
 let annotation_max_total_growth : Int64 = 32L * 1024L * 1024L
 
 ///|
+/// The union of every member any op kind accepts — used only to detect a
+/// typo'd `op` discriminator as an unknown member before reporting the
+/// discriminator missing.
+let annotation_op_member_union : Array[String] = [
+  "op", "anchor", "author", "initials", "date", "body", "label", "parent", "target",
+]
+
+///|
 /// Errors raised while parsing a `docx.annotation-batch/1` script.
 pub suberror DocxAnnotationParseError {
   DocxAnnotationParseError(String)
@@ -63,14 +71,18 @@ priv enum AnnotationOp {
 
 ///|
 /// One applied op's outcome for the report. `anchor` is the resolved
-/// paragraph selector for `comment_add`; `target` is the referenced
-/// comment id for `comment_reply` (its parent) and `comment_resolve`
-/// / `comment_unresolve` (the comment acted on).
+/// canonical start selector for `comment_add` (`/docx/body/p[K]`);
+/// `anchor_to` is the canonical end selector when the comment spans a
+/// paragraph range, otherwise None. `target` is the referenced comment
+/// id for `comment_reply` (its parent) and `comment_resolve` /
+/// `comment_unresolve` (the comment acted on). Both selectors are always
+/// individually valid — a range is two selectors, never a `..` literal.
 pub(all) struct DocxAnnotationOpResult {
   op : String
   comment_id : String
   done : Bool?
   anchor : String?
+  anchor_to : String?
   target : String?
 } derive(Eq, @debug.Debug)
 
@@ -335,7 +347,17 @@ pub fn parse_annotation_batch(
     guard op_item is Object(op) else {
       raise annotation_parse_error("ops[\{index}] must be an object")
     }
-    let kind = annotation_string_field(op, "op", "ops[\{index}]")
+    // The "op" discriminator selects the per-kind member allowlist. When it
+    // is absent, a typo'd discriminator (e.g. "opp") is itself an unknown
+    // member, so check against the union of every op member first — the
+    // strict "unknown member" contract must hold before reporting a missing
+    // op, otherwise a misspelled key masquerades as a plain omission.
+    guard op.get("op") is Some(String(kind)) && kind.length() > 0 else {
+      annotation_reject_unknown(op, annotation_op_member_union, "ops[\{index}]")
+      raise annotation_parse_error(
+        "ops[\{index}] needs a non-empty string \"op\"",
+      )
+    }
     match kind {
       "comment_add" => {
         annotation_reject_unknown(
@@ -519,10 +541,13 @@ pub async fn transact_docx_annotations(
               Some(name) => minted[name] = id
               None => ()
             }
-            let anchor = if anchor_at == anchor_to {
-              "/docx/body/" + anchor_at
+            // both are individually valid canonical selectors; a range is
+            // surfaced as two selectors, never a "p[K]..p[M]" literal
+            let anchor = "/docx/body/" + anchor_at
+            let anchor_to = if anchor_at == anchor_to {
+              None
             } else {
-              "/docx/body/" + anchor_at + ".." + anchor_to
+              Some("/docx/body/" + anchor_to)
             }
             (
               {
@@ -530,6 +555,7 @@ pub async fn transact_docx_annotations(
                 comment_id: id,
                 done: None,
                 anchor: Some(anchor),
+                anchor_to,
                 target: None,
               } : DocxAnnotationOpResult)
           }
@@ -559,6 +585,7 @@ pub async fn transact_docx_annotations(
                 comment_id: id,
                 done: None,
                 anchor: None,
+                anchor_to: None,
                 target: Some(parent_id),
               } : DocxAnnotationOpResult)
           }
@@ -576,6 +603,7 @@ pub async fn transact_docx_annotations(
                 comment_id,
                 done: Some(done),
                 anchor: None,
+                anchor_to: None,
                 target: Some(comment_id),
               } : DocxAnnotationOpResult)
           }

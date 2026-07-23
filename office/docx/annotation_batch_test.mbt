@@ -67,6 +67,7 @@ async test "annotation batch folds add, reply, and resolve in one script" {
     // per-op anchor/target are surfaced in the report (codex #216)
     assert_eq(result.report.results[0].op, "comment_add")
     assert_eq(result.report.results[0].anchor, Some("/docx/body/p[1]"))
+    assert_eq(result.report.results[0].anchor_to, None)
     assert_eq(result.report.results[0].target, None)
     assert_eq(result.report.results[1].op, "comment_reply")
     assert_eq(result.report.results[1].anchor, None)
@@ -159,6 +160,47 @@ test "annotation batch parser refusals" {
     "{\"op\": \"comment_resolve\", \"target\": {\"comment_id\": \"1\", \"stray\": 1}}]}",
     "unknown member",
   )
+  // a typo'd discriminator is an unknown member, not merely a missing op
+  expect(
+    "{\"schema\": \"docx.annotation-batch/1\", \"ops\": [" +
+    "{\"opp\": \"comment_add\", \"anchor\": {\"at\": \"/docx/body/p[1]\"}, \"author\": \"A\", \"body\": [\"x\"]}]}",
+    "unknown member",
+  )
+  // a genuinely omitted op (no stray members) still reports the missing op
+  expect(
+    "{\"schema\": \"docx.annotation-batch/1\", \"ops\": [" +
+    "{\"author\": \"A\", \"body\": [\"x\"]}]}",
+    "needs a non-empty string \"op\"",
+  )
+}
+
+///|
+async test "annotation range comment_add surfaces two valid selectors" {
+  with_annotation_dir() <| directory => {
+    let input = directory + "/base.docx"
+    @afs.write_file(
+      input,
+      annotation_fixture(),
+      create_mode=CreateNew,
+      permission=0o600,
+    )
+    let output = directory + "/ranged.docx"
+    let batch = @docx.parse_annotation_batch(
+      "{\"schema\": \"docx.annotation-batch/1\", \"ops\": [" +
+      "{\"op\": \"comment_add\", \"anchor\": {\"at\": \"/docx/body/p[1]\", \"to\": \"/docx/body/p[2]\"}, " +
+      "\"author\": \"Ada\", \"body\": [\"Spans two paragraphs\"]}" +
+      "]}",
+    )
+    let result = @docx.transact_docx_annotations(
+      @transaction.transaction_options(input, output_path=output),
+      batch,
+    )
+    let add = result.report.results[0]
+    // a range is two individually valid canonical selectors, not a ".."
+    // literal — both are the exact canonical /docx/body/p[K] form
+    assert_eq(add.anchor, Some("/docx/body/p[1]"))
+    assert_eq(add.anchor_to, Some("/docx/body/p[2]"))
+  }
 }
 
 ///|

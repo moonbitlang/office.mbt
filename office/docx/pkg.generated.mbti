@@ -49,6 +49,7 @@ pub(all) struct DocxAnnotationOpResult {
   comment_id : String
   done : Bool?
   anchor : String?
+  anchor_to : String?
   target : String?
 } derive(Eq, @debug.Debug)
 

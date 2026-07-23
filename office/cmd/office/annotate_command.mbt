@@ -30,6 +30,11 @@ fn annotation_report_json(
       Some(anchor) => fields["anchor"] = Json::string(bounded_text(anchor, 160))
       None => ()
     }
+    match entry.anchor_to {
+      Some(anchor_to) =>
+        fields["anchor_to"] = Json::string(bounded_text(anchor_to, 160))
+      None => ()
+    }
     match entry.target {
       Some(target) => fields["target"] = Json::string(bounded_text(target, 80))
       None => ()
