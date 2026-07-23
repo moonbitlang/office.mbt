@@ -18,6 +18,12 @@ pub(all) suberror DocxError {
   MissingPart(message~ : String)
   Unsupported(message~ : String)
   ResourceLimit(limit~ : DocxXmlResourceLimit, message~ : String)
+  WriteResourceLimit(
+    kind~ : String,
+    limit~ : Int64,
+    actual~ : Int64,
+    message~ : String
+  )
 } derive(Debug, Eq)
 
 ///|
@@ -54,5 +60,7 @@ fn[T] bridge_core_error(
     MissingPart(message~) => raise MissingPart(message~)
     Unsupported(message~) => raise Unsupported(message~)
     ResourceLimit(limit~, message~) => raise ResourceLimit(limit~, message~)
+    WriteResourceLimit(kind~, limit~, actual~, message~) =>
+      raise WriteResourceLimit(kind~, limit~, actual~, message~)
   }
 }

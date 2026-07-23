@@ -174,7 +174,8 @@ fn office_preview_render_docx(
     | InvalidXml(message~)
     | MissingPart(message~)
     | Unsupported(message~)
-    | ResourceLimit(message~, ..) =>
+    | ResourceLimit(message~, ..)
+    | WriteResourceLimit(message~, ..) =>
       raise CliFailure(
         @lib.protocol_error(
           "office.docx.preview_failed",

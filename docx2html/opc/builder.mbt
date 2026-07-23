@@ -12,17 +12,38 @@
 // the same Types/Relationships XML; migrate it onto these emitters.
 
 ///|
-/// A package that cannot be built as specified. The message is
-/// caller-facing and names the offending part/relationship.
+/// A package that cannot be built as specified. `PackageBuildError` carries
+/// a caller-facing message naming the offending part/relationship;
+/// `PackageLimitExceeded` is the TYPED resource-limit refusal from
+/// `build_limited` — it survives to the office transaction layer as a
+/// machine-readable ceiling breach (kind ∈ output_bytes / entries /
+/// entry_uncompressed_bytes / total_uncompressed_bytes) rather than being
+/// flattened into a string.
 pub(all) suberror PackageBuildError {
   PackageBuildError(String)
+  PackageLimitExceeded(kind~ : String, limit~ : Int64, actual~ : Int64)
 } derive(Eq)
 
 ///|
 pub impl Show for PackageBuildError with fn output(self, logger) {
   match self {
     PackageBuildError(message) => logger.write_string(message)
+    PackageLimitExceeded(kind~, limit~, actual~) =>
+      logger.write_string(
+        "package \{kind} ceiling exceeded: limit \{limit}, actual \{actual}",
+      )
   }
+}
+
+///|
+/// Pre-allocation ceilings for `PackageBuilder::build_limited`, mirroring the
+/// four `TransactionBudget` dimensions. Every bound is checked BEFORE the
+/// package archive materializes its (potentially large) entry payloads.
+pub(all) struct PackageLimits {
+  max_output_bytes : Int
+  max_entries : Int
+  max_entry_uncompressed_bytes : Int
+  max_total_uncompressed_bytes : Int
 }
 
 ///|
@@ -220,6 +241,26 @@ pub fn PackageBuilder::add_relationship(
 pub fn PackageBuilder::build(
   self : PackageBuilder,
 ) -> Bytes raise PackageBuildError {
+  self.build_internal(None)
+}
+
+///|
+/// Like `build()`, but enforces the given resource ceilings BEFORE the
+/// archive payloads are copied/compressed. Over-limit packages raise a typed
+/// `PackageLimitExceeded` (never a flattened string), so callers can map the
+/// breach to a machine-readable transaction refusal.
+pub fn PackageBuilder::build_limited(
+  self : PackageBuilder,
+  limits : PackageLimits,
+) -> Bytes raise PackageBuildError {
+  self.build_internal(Some(limits))
+}
+
+///|
+fn PackageBuilder::build_internal(
+  self : PackageBuilder,
+  limits : PackageLimits?,
+) -> Bytes raise PackageBuildError {
   // Authoritative name set, revalidated from scratch.
   let part_names : StableStringMap[String] = SortedMap([])
   let package_names : StableStringMap[String] = SortedMap([])
@@ -383,29 +424,82 @@ pub fn PackageBuilder::build(
       }
     }
   }
-  let archive = @mbtzip.Archive::new()
-  archive.add(
-    CONTENT_TYPES_PART,
-    @utf8.encode(self.content_types_xml()),
-    compression=Deflate,
-  )
+  // Collect the full entry set as (zip_name, data) FIRST. `data` here is the
+  // caller's immutable Bytes reference (no copy yet — Archive::add is what
+  // calls to_owned), so building this list is cheap even for a package that
+  // references one large asset thousands of times. The limit preflight then
+  // runs BEFORE any copy/compression, so an over-budget package is refused
+  // without materializing gigabytes of archive storage.
+  let entries : Array[(String, Bytes)] = []
+  entries.push((CONTENT_TYPES_PART, @utf8.encode(self.content_types_xml())))
   for source, rels in self.relationships {
     let name = relationships_part_name_for_source(source)
     let zip_name = zip_item_name_from_logical_part_name(name).unwrap()
-    archive.add(
-      zip_name,
-      @utf8.encode(relationships_xml(rels)),
-      compression=Deflate,
-    )
+    entries.push((zip_name, @utf8.encode(relationships_xml(rels))))
   }
   for entry in self.parts {
     let (name, data) = entry
     let zip_name = zip_item_name_from_logical_part_name(name).unwrap()
+    entries.push((zip_name, data))
+  }
+  match limits {
+    Some(l) => {
+      if entries.length() > l.max_entries {
+        raise PackageLimitExceeded(
+          kind="entries",
+          limit=l.max_entries.to_int64(),
+          actual=entries.length().to_int64(),
+        )
+      }
+      let mut total = 0L
+      for entry in entries {
+        let (_, data) = entry
+        let n = data.length()
+        if n > l.max_entry_uncompressed_bytes {
+          raise PackageLimitExceeded(
+            kind="entry_uncompressed_bytes",
+            limit=l.max_entry_uncompressed_bytes.to_int64(),
+            actual=n.to_int64(),
+          )
+        }
+        total = total + n.to_int64()
+        if total > l.max_total_uncompressed_bytes.to_int64() {
+          raise PackageLimitExceeded(
+            kind="total_uncompressed_bytes",
+            limit=l.max_total_uncompressed_bytes.to_int64(),
+            actual=total,
+          )
+        }
+      }
+    }
+    None => ()
+  }
+  let archive = @mbtzip.Archive::new()
+  for entry in entries {
+    let (zip_name, data) = entry
     archive.add(zip_name, data, compression=Deflate)
   }
-  @mbtzip.write(archive) catch {
-    err =>
-      raise PackageBuildError("could not assemble the archive: \{repr(err)}")
+  match limits {
+    Some(l) =>
+      @mbtzip.write_limited(archive, max_output_bytes=l.max_output_bytes) catch {
+        OutputLimitExceeded(limit~) =>
+          raise PackageLimitExceeded(
+            kind="output_bytes",
+            limit=limit.to_int64(),
+            actual=limit.to_int64(),
+          )
+        err =>
+          raise PackageBuildError(
+            "could not assemble the archive: \{repr(err)}",
+          )
+      }
+    None =>
+      @mbtzip.write(archive) catch {
+        err =>
+          raise PackageBuildError(
+            "could not assemble the archive: \{repr(err)}",
+          )
+      }
   }
 }
 
@@ -642,6 +736,7 @@ test "build revalidates relationship metadata from raw state" {
         ),
         content="true",
       )
+    PackageLimitExceeded(_) => fail("unexpected package limit error")
   } noraise {
     _ => fail("expected build-time relationship-Type rejection")
   }
@@ -659,6 +754,7 @@ test "build revalidates relationship metadata from raw state" {
         ),
         content="true",
       )
+    PackageLimitExceeded(_) => fail("unexpected package limit error")
   } noraise {
     _ => fail("expected build-time external-Target rejection")
   }
@@ -674,6 +770,7 @@ test "build revalidates relationship metadata from raw state" {
         message.has_prefix("duplicate relationship Id 'rId1' for source ''"),
         content="true",
       )
+    PackageLimitExceeded(_) => fail("unexpected package limit error")
   } noraise {
     _ => fail("expected build-time duplicate-id rejection")
   }
@@ -695,6 +792,7 @@ test "build revalidates part names from raw state" {
         message.has_prefix("duplicate part name: word/document.xml"),
         content="true",
       )
+    PackageLimitExceeded(_) => fail("unexpected package limit error")
   } noraise {
     _ => fail("expected build-time duplicate-part rejection")
   }
@@ -718,7 +816,83 @@ test "build revalidates content-type defaults from raw state" {
         ),
         content="true",
       )
+    PackageLimitExceeded(_) => fail("unexpected package limit error")
   } noraise {
     _ => fail("expected build-time ST_Extension rejection")
   }
+}
+
+///|
+/// A minimal valid single-part package builder for limit tests.
+fn limit_test_builder() -> PackageBuilder raise PackageBuildError {
+  let builder = PackageBuilder::new()
+  builder.add_default("xml", "application/xml")
+  builder.add_override("/word/document.xml", "application/xml")
+  builder.add_part("word/document.xml", b"<document/>")
+  builder
+}
+
+///|
+test "build_limited accepts a package within every ceiling" {
+  let bytes = limit_test_builder().build_limited({
+    max_output_bytes: 1 << 20,
+    max_entries: 16,
+    max_entry_uncompressed_bytes: 1 << 20,
+    max_total_uncompressed_bytes: 1 << 20,
+  })
+  // content-types + document.xml round-trips as a real zip
+  assert_true(bytes.length() > 0)
+}
+
+///|
+test "build_limited refuses over each ceiling with a typed breach" {
+  fn breach(limits : PackageLimits, kind : String) -> Unit raise {
+    try limit_test_builder().build_limited(limits) |> ignore catch {
+      PackageLimitExceeded(kind=k, ..) => assert_eq(k, kind)
+      PackageBuildError(m) => fail("expected a typed limit, got: \{m}")
+    } noraise {
+      _ => fail("expected \{kind} ceiling to be exceeded")
+    }
+  }
+
+  // entry count: content-types + the document part = 2 entries > 1
+  breach(
+    {
+      max_output_bytes: 1 << 20,
+      max_entries: 1,
+      max_entry_uncompressed_bytes: 1 << 20,
+      max_total_uncompressed_bytes: 1 << 20,
+    },
+    "entries",
+  )
+  // a single entry larger than the per-entry ceiling
+  breach(
+    {
+      max_output_bytes: 1 << 20,
+      max_entries: 16,
+      max_entry_uncompressed_bytes: 4,
+      max_total_uncompressed_bytes: 1 << 20,
+    },
+    "entry_uncompressed_bytes",
+  )
+  // aggregate uncompressed over the total ceiling
+  breach(
+    {
+      max_output_bytes: 1 << 20,
+      max_entries: 16,
+      max_entry_uncompressed_bytes: 1 << 20,
+      max_total_uncompressed_bytes: 8,
+    },
+    "total_uncompressed_bytes",
+  )
+  // output bytes: a 1-byte package cannot hold a real zip
+  breach(
+    {
+      max_output_bytes: 1,
+      max_entries: 16,
+      max_entry_uncompressed_bytes: 1 << 20,
+      max_total_uncompressed_bytes: 1 << 20,
+    },
+    "output_bytes",
+  )
 }

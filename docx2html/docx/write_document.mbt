@@ -69,6 +69,7 @@ fn build_docx_package(
   comments_extended_xml~ : String?,
   footnotes_xml~ : String?,
   endnotes_xml~ : String?,
+  limits? : @opc.PackageLimits,
 ) -> Bytes raise @opc.PackageBuildError {
   builder.add_default(
     "rels", "application/vnd.openxmlformats-package.relationships+xml",
@@ -162,7 +163,10 @@ fn build_docx_package(
   }
   builder.add_part("word/document.xml", @utf8.encode(document_xml))
   builder.add_part("word/styles.xml", @utf8.encode(styles_xml))
-  builder.build()
+  match limits {
+    Some(l) => builder.build_limited(l)
+    None => builder.build()
+  }
 }
 
 ///|

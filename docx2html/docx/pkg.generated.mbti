@@ -5,6 +5,7 @@ import {
   "bobzhang/docx2html/converter",
   "bobzhang/docx2html/core",
   "bobzhang/docx2html/document",
+  "bobzhang/docx2html/opc",
   "bobzhang/docx2html/splice",
   "bobzhang/docx2html/xml",
   "bobzhang/mbtexcel/zip",
@@ -68,7 +69,7 @@ pub fn validate_global_para_id_state_archive_limited(DocxAnnotatedResult, @zip.A
 
 pub fn write_docx(Array[@document.DocumentElement]) -> Bytes raise @core.DocxError
 
-pub fn write_docx_with_annotations(Array[@document.DocumentElement], comments? : Array[CommentSpec], footnotes? : Array[NoteSpec], endnotes? : Array[NoteSpec]) -> Bytes raise @core.DocxError
+pub fn write_docx_with_annotations(Array[@document.DocumentElement], comments? : Array[CommentSpec], footnotes? : Array[NoteSpec], endnotes? : Array[NoteSpec], limits? : @opc.PackageLimits) -> Bytes raise @core.DocxError
 
 pub fn write_docx_with_comments(Array[@document.DocumentElement], Array[CommentSpec]) -> Bytes raise @core.DocxError
 
