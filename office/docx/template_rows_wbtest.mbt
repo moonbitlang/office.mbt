@@ -131,9 +131,61 @@ test "part root bindings seed w and w14" {
       #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"><w:body/></w:document>
     ),
   )
-  guard part_root_bindings(part) is Some(bindings) else {
+  // query INSIDE the body, where the root's declarations are in scope
+  let text = @utf8.decode(part)
+  guard text.find("<w:body") is Some(body_at) else { fail("body missing") }
+  guard part_bindings_at(part[:], body_at + 1) is Some(bindings) else {
     fail("root bindings must parse")
   }
   assert_eq(bindings.get("w"), Some(wml_ns))
   assert_eq(bindings.get("w14"), Some(w14_ns))
+}
+
+///|
+test "part bindings walk sees ancestors and respects closes" {
+  let part = @utf8.encode(
+    "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">" +
+    "<w:body><w:tbl xmlns:w2=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">" +
+    "<w:tr><w:tc/></w:tr></w:tbl>" +
+    "<w:p xmlns:q=\"urn:gone\"/><w:p/></w:body></w:document>",
+  )
+  let text = @utf8.decode(part)
+  // inside the table: w2 (bound on w:tbl) is in scope
+  guard text.find("<w:tr") is Some(tr_at) else { fail("tr missing") }
+  guard part_bindings_at(part[:], tr_at) is Some(inside) else {
+    fail("bindings at tr must parse")
+  }
+  assert_eq(inside.get("w2"), Some(wml_ns))
+  // after the self-closing paragraph: its q binding is out of scope
+  guard text.find("<w:p/>") is Some(after_at) else { fail("plain p missing") }
+  guard part_bindings_at(part[:], after_at) is Some(outside) else {
+    fail("bindings after must parse")
+  }
+  assert_eq(outside.get("q"), None)
+  assert_eq(outside.get("w2"), None)
+}
+
+///|
+test "row gate accepts numeric refs in binding values and aliased WML prefixes" {
+  // an alias prefix bound (with a numeric ref spelling) to the WML URI
+  // resolves per-URI: w2:t is {WML}t and passes
+  let outcome = wb_gate(
+    "<w:tr><w:tc><w:p xmlns:w2=\"http://schemas.openxmlformats.org/wordprocessingml/2006/mai&#x6E;\">" +
+    "<w:r><w2:t>x</w2:t></w:r></w:p></w:tc></w:tr>",
+  )
+  assert_eq(outcome.refusal, None)
+}
+
+///|
+test "row gate: per-element attribute discipline" {
+  // w:val is fine on w:jc but alien on w:p
+  let misplaced = wb_gate(
+    "<w:tr><w:tc><w:p w:val=\"x\"><w:r><w:t>y</w:t></w:r></w:p></w:tc></w:tr>",
+  )
+  assert_true(misplaced.refusal is Some(_))
+  // xml:space belongs to w:t alone
+  let space_on_p = wb_gate(
+    "<w:tr><w:tc><w:p xml:space=\"preserve\"><w:r><w:t>y</w:t></w:r></w:p></w:tc></w:tr>",
+  )
+  assert_true(space_on_p.refusal is Some(_))
 }

@@ -369,3 +369,107 @@ async test "docx scalar-only documents match transact_docx_template" {
     assert_true(document.contains("9 pcs"))
   }
 }
+
+///|
+async test "docx region unused keys attribute per region, not globally" {
+  with_docx_region_dir() <| directory => {
+    // "shared" is unused in region A (tr[2], which uses only item/qty)
+    // but consumed in region B (tr[3]); region A record 0 must report it
+    let two_row = {
+      let archive = @zip.read(docx_region_fixture()[:])
+      let rebuilt = @zip.Archive::new()
+      for entry in archive.entries() {
+        let name = entry.name()
+        guard archive.get(name) is Some(payload) else { continue }
+        if name == "word/document.xml" {
+          let text = @utf8.decode(payload)
+          let anchor = "<w:tr><w:tc><w:p><w:r><w:t>{{item}}</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>{{qty}} pcs</w:t></w:r></w:p></w:tc></w:tr>"
+          let clone_row = "<w:tr><w:tc><w:p><w:r><w:t>{{code}}</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>{{shared}}</w:t></w:r></w:p></w:tc></w:tr>"
+          let injected = text.replace(old=anchor, new=anchor + clone_row)
+          if injected == text {
+            fail("two-row injection found no anchor")
+          }
+          rebuilt.add(name, @utf8.encode(injected))
+        } else {
+          rebuilt.add(name, payload.to_bytes())
+        }
+      }
+      @zip.write(rebuilt)
+    }
+    let input = directory + "/two-region.docx"
+    @afs.write_file(input, two_row, create_mode=CreateNew, permission=0o600)
+    let output = directory + "/two-region-out.docx"
+    // region A (tr[2]) provides shared as an UNUSED record key; region B
+    // (tr[3]) consumes it
+    let data = @template.parse_template_document(
+      "{\"schema\": \"office.template.data/1\", \"values\": {\"company\": \"C\"}, \"regions\": {" +
+      "\"a\": {\"path\": \"/docx/body/tbl[1]/tr[2]\", \"records\": [{\"item\": \"i\", \"qty\": 1, \"shared\": \"x\"}]}, " +
+      "\"b\": {\"path\": \"/docx/body/tbl[1]/tr[3]\", \"records\": [{\"code\": \"c\", \"shared\": \"y\"}]}}}",
+    )
+    let result = @docx.transact_docx_template_document(
+      @transaction.transaction_options(input, output_path=output),
+      data,
+      allow_missing=false,
+    )
+    // region A's record 0 carries shared but its row never uses it
+    let mut seen = false
+    for key in result.report.unused {
+      if key == "region a record 0: shared" {
+        seen = true
+      }
+    }
+    assert_true(seen)
+  }
+}
+
+///|
+async test "docx region clone bytes are bounded before allocation" {
+  with_docx_region_dir() <| directory => {
+    let input = directory + "/huge.docx"
+    @afs.write_file(
+      input,
+      docx_region_fixture(),
+      create_mode=CreateNew,
+      permission=0o600,
+    )
+    let output = directory + "/huge-out.docx"
+    // 4096 records each carrying a 65536-unit value: the pre-allocation
+    // bound must refuse before materializing
+    let big = String::make(65536, 'x')
+    let records = StringBuilder::new()
+    for index in 0..<4096 {
+      if index > 0 {
+        records.write_string(", ")
+      }
+      records.write_string("{\"item\": \"" + big + "\", \"qty\": 1}")
+    }
+    let data = @template.parse_template_document(
+      "{\"schema\": \"office.template.data/1\", \"values\": {\"company\": \"C\"}, " +
+      "\"regions\": {\"items\": {\"path\": \"/docx/body/tbl[1]/tr[2]\", \"records\": [" +
+      records.to_string() +
+      "]}}}",
+    )
+    try
+      @docx.transact_docx_template_document(
+        @transaction.transaction_options(input, output_path=output),
+        data,
+        allow_missing=false,
+      )
+      |> ignore
+    catch {
+      @docx.DocxTemplateRefused(report) => {
+        let mut seen = false
+        for finding in report.unsupported {
+          if finding.detail.contains("materialize more than") {
+            seen = true
+          }
+        }
+        assert_true(seen)
+      }
+      error => fail("expected a bounded refusal, got \{error}")
+    } noraise {
+      _ => fail("expected the oversized merge to refuse")
+    }
+    assert_false(@afs.exists(output))
+  }
+}

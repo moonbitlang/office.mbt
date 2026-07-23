@@ -101,7 +101,11 @@ fn row_attr_value(bytes : BytesView, start : Int, end : Int) -> String? {
         "&gt;" => out.write_char('>')
         "&quot;" => out.write_char('"')
         "&apos;" => out.write_char('\'')
-        _ => return None
+        _ =>
+          match decode_numeric_entity(entity) {
+            Some(decoded) => out.write_string(decoded)
+            None => return None
+          }
       }
       index = semi + 1
       continue
@@ -183,44 +187,99 @@ fn row_element_allowed(local : String) -> Bool {
 }
 
 ///|
-/// WML attributes admitted anywhere inside the row (value-carrying
-/// formatting attributes plus inert revision-save provenance). Keyed by
-/// local name within the W namespace.
-fn row_wml_attr_allowed(local : String) -> Bool {
-  match local {
-    "val"
-    | "w"
-    | "type"
-    | "fill"
-    | "color"
-    | "themeColor"
-    | "themeFill"
-    | "themeTint"
-    | "themeShade"
-    | "ascii"
-    | "hAnsi"
-    | "eastAsia"
-    | "cs"
-    | "hint"
+/// WML attributes admitted on ONE element (per-element expanded-name
+/// discipline — codex #213 round 1: a global list let inert-but-alien
+/// attribute placements clone through). rsid* provenance passes on any
+/// admitted element; xml:space belongs to w:t alone.
+fn row_wml_attr_allowed(element_local : String, attr_local : String) -> Bool {
+  if attr_local.has_prefix("rsid") {
+    return true
+  }
+  match element_local {
+    "trHeight" => attr_local == "val" || attr_local == "hRule"
+    "jc"
+    | "cantSplit"
+    | "tblHeader"
+    | "cnfStyle"
+    | "gridSpan"
+    | "vAlign"
+    | "pStyle"
+    | "keepNext"
+    | "keepLines"
+    | "widowControl"
+    | "noProof"
+    | "b"
+    | "bCs"
+    | "i"
+    | "iCs"
+    | "strike"
+    | "caps"
+    | "smallCaps"
+    | "vertAlign"
     | "sz"
-    | "space"
-    | "before"
-    | "beforeLines"
-    | "after"
-    | "afterLines"
-    | "line"
-    | "lineRule"
-    | "firstLine"
-    | "firstLineChars"
-    | "hangingChars"
-    | "leftChars"
-    | "rightChars"
-    | "hanging"
-    | "pos"
-    | "leader"
-    | "hRule"
-    | "clear" => true
-    _ => local.has_prefix("rsid")
+    | "szCs"
+    | "highlight"
+    | "rStyle" => attr_local == "val"
+    "u" => attr_local == "val" || attr_local == "color"
+    "tcW" => attr_local == "w" || attr_local == "type"
+    "shd" =>
+      attr_local == "val" ||
+      attr_local == "fill" ||
+      attr_local == "color" ||
+      attr_local == "themeColor" ||
+      attr_local == "themeFill" ||
+      attr_local == "themeTint" ||
+      attr_local == "themeShade"
+    "top"
+    | "bottom"
+    | "left"
+    | "right"
+    | "start"
+    | "end"
+    | "insideH"
+    | "insideV" =>
+      attr_local == "val" ||
+      attr_local == "sz" ||
+      attr_local == "space" ||
+      attr_local == "color" ||
+      attr_local == "themeColor" ||
+      attr_local == "w" ||
+      attr_local == "type"
+    "spacing" =>
+      attr_local == "before" ||
+      attr_local == "beforeLines" ||
+      attr_local == "after" ||
+      attr_local == "afterLines" ||
+      attr_local == "line" ||
+      attr_local == "lineRule"
+    "ind" =>
+      attr_local == "left" ||
+      attr_local == "leftChars" ||
+      attr_local == "right" ||
+      attr_local == "rightChars" ||
+      attr_local == "firstLine" ||
+      attr_local == "firstLineChars" ||
+      attr_local == "hanging" ||
+      attr_local == "hangingChars" ||
+      attr_local == "start" ||
+      attr_local == "end"
+    "tab" =>
+      attr_local == "val" || attr_local == "pos" || attr_local == "leader"
+    "lang" =>
+      attr_local == "val" || attr_local == "eastAsia" || attr_local == "bidi"
+    "color" =>
+      attr_local == "val" ||
+      attr_local == "themeColor" ||
+      attr_local == "themeTint" ||
+      attr_local == "themeShade"
+    "rFonts" =>
+      attr_local == "ascii" ||
+      attr_local == "hAnsi" ||
+      attr_local == "eastAsia" ||
+      attr_local == "cs" ||
+      attr_local == "hint"
+    "br" => attr_local == "type" || attr_local == "clear"
+    _ => false
   }
 }
 
@@ -430,10 +489,12 @@ fn row_safety_gate(
         strip_spans.push((token_start, token_end))
         continue
       }
-      if attr_ns == wml_ns && row_wml_attr_allowed(attr_local) {
+      if attr_ns == wml_ns && row_wml_attr_allowed(element_local, attr_local) {
         continue
       }
-      if attr_ns == xml_builtin_ns && attr_local == "space" {
+      if attr_ns == xml_builtin_ns &&
+        attr_local == "space" &&
+        element_local == "t" {
         continue
       }
       return row_gate_refuse(
@@ -454,94 +515,145 @@ fn row_safety_gate(
 }
 
 ///|
-/// Prefix bindings declared on the part's ROOT element, seeding the row
-/// gate with the ancestor namespace context (document.xml binds w and
-/// w14 at the root). None when the root tag itself resists parsing.
-fn part_root_bindings(part : Bytes) -> Map[String, String]? {
-  let view = part[:]
+/// Prefix bindings in scope at `offset`: a depth walk over every tag
+/// before it, pushing binding frames on opens and popping on closes, so
+/// declarations on ANY ancestor (the document root, an enclosing
+/// w:tbl, ...) reach the row (codex #213 round 1: a tbl-level binding
+/// was refused as unbound). None when the structure resists the walk.
+fn part_bindings_at(part : BytesView, offset : Int) -> Map[String, String]? {
+  let frames : Array[Map[String, String]] = []
   let mut index = 0
-  // skip the XML declaration and whitespace
-  while index < view.length() {
-    if view[index] == b'<' {
-      if index + 1 < view.length() && view[index + 1] == b'?' {
-        while index < view.length() && view[index] != b'>' {
+  while index < offset && index < part.length() {
+    if part[index] != b'<' {
+      index += 1
+      continue
+    }
+    if index + 1 >= part.length() {
+      return None
+    }
+    let marker = part[index + 1]
+    if marker == b'?' {
+      while index + 1 < part.length() &&
+            !(part[index] == b'?' && part[index + 1] == b'>') {
+        index += 1
+      }
+      index += 2
+      continue
+    }
+    if marker == b'!' {
+      // comments and other declarations: skip atomically
+      if index + 3 < part.length() &&
+        part[index + 2] == b'-' &&
+        part[index + 3] == b'-' {
+        while index + 2 < part.length() &&
+              !(part[index] == b'-' &&
+              part[index + 1] == b'-' &&
+              part[index + 2] == b'>') {
           index += 1
         }
-        index += 1
+        index += 3
         continue
       }
-      break
-    }
-    index += 1
-  }
-  guard index < view.length() && view[index] == b'<' else { return None }
-  let mut tag_end = index + 1
-  let mut quoted = false
-  let mut quote = b'"'
-  while tag_end < view.length() {
-    let byte = view[tag_end]
-    if quoted {
-      if byte == quote {
-        quoted = false
+      while index < part.length() && part[index] != b'>' {
+        index += 1
       }
-    } else if byte == b'"' || byte == b'\'' {
-      quoted = true
-      quote = byte
-    } else if byte == b'>' {
-      break
+      index += 1
+      continue
     }
-    tag_end += 1
-  }
-  guard tag_end < view.length() else { return None }
-  let bindings : Map[String, String] = {}
-  let mut cursor = index + 1
-  // skip the element name
-  while cursor < tag_end &&
-        (row_byte_is_name(view[cursor]) || view[cursor] == b':') {
-    cursor += 1
-  }
-  while cursor < tag_end {
-    while cursor < tag_end && row_byte_is_space(view[cursor]) {
-      cursor += 1
+    if marker == b'/' {
+      while index < part.length() && part[index] != b'>' {
+        index += 1
+      }
+      index += 1
+      if frames.length() > 0 {
+        ignore(frames.pop())
+      }
+      continue
     }
-    if cursor >= tag_end {
-      break
+    // open or self-closing tag
+    let mut tag_end = index + 1
+    let mut quoted = false
+    let mut quote = b'"'
+    while tag_end < part.length() {
+      let byte = part[tag_end]
+      if quoted {
+        if byte == quote {
+          quoted = false
+        }
+      } else if byte == b'"' || byte == b'\'' {
+        quoted = true
+        quote = byte
+      } else if byte == b'>' {
+        break
+      }
+      tag_end += 1
     }
-    let attr_start = cursor
-    while cursor < tag_end &&
-          (row_byte_is_name(view[cursor]) || view[cursor] == b':') {
-      cursor += 1
-    }
-    guard cursor < tag_end && view[cursor] == b'=' else { return None }
-    guard row_ascii(view, attr_start, cursor) is Some(attr_name) else {
+    if tag_end >= part.length() {
       return None
     }
-    cursor += 1
-    guard cursor < tag_end && (view[cursor] == b'"' || view[cursor] == b'\'') else {
-      return None
-    }
-    let value_quote = view[cursor]
-    cursor += 1
-    let value_start = cursor
-    while cursor < tag_end && view[cursor] != value_quote {
+    let self_closing = part[tag_end - 1] == b'/'
+    // exclude the self-closing slash from attribute scanning
+    let attr_limit = if self_closing { tag_end - 1 } else { tag_end }
+    let bindings : Map[String, String] = {}
+    let mut cursor = index + 1
+    while cursor < attr_limit &&
+          (row_byte_is_name(part[cursor]) || part[cursor] == b':') {
       cursor += 1
     }
-    guard cursor < tag_end else { return None }
-    if attr_name == "xmlns" {
-      match row_attr_value(view, value_start, cursor) {
-        Some(uri) => bindings[""] = uri
-        None => return None
+    while cursor < attr_limit {
+      while cursor < attr_limit && row_byte_is_space(part[cursor]) {
+        cursor += 1
       }
-    } else if attr_name.has_prefix("xmlns:") {
-      match row_attr_value(view, value_start, cursor) {
-        Some(uri) =>
-          bindings[attr_name.substring(start="xmlns:".length())] = uri
-        None => return None
+      if cursor >= attr_limit {
+        break
       }
+      let attr_start = cursor
+      while cursor < attr_limit &&
+            (row_byte_is_name(part[cursor]) || part[cursor] == b':') {
+        cursor += 1
+      }
+      guard cursor < attr_limit && part[cursor] == b'=' else { return None }
+      guard row_ascii(part, attr_start, cursor) is Some(attr_name) else {
+        return None
+      }
+      cursor += 1
+      guard cursor < attr_limit &&
+        (part[cursor] == b'"' || part[cursor] == b'\'') else {
+        return None
+      }
+      let value_quote = part[cursor]
+      cursor += 1
+      let value_start = cursor
+      while cursor < attr_limit && part[cursor] != value_quote {
+        cursor += 1
+      }
+      guard cursor < attr_limit else { return None }
+      if attr_name == "xmlns" {
+        match row_attr_value(part, value_start, cursor) {
+          Some(uri) => bindings[""] = uri
+          None => return None
+        }
+      } else if attr_name.has_prefix("xmlns:") {
+        match row_attr_value(part, value_start, cursor) {
+          Some(uri) =>
+            bindings[attr_name.substring(start="xmlns:".length())] = uri
+          None => return None
+        }
+      }
+      cursor += 1
     }
-    cursor += 1
+    if !self_closing {
+      frames.push(bindings)
+    }
+    index = tag_end + 1
   }
-  Some(bindings)
+  let flattened : Map[String, String] = {}
+  for frame in frames {
+    for prefix, uri in frame {
+      flattened[prefix] = uri
+    }
+  }
+  Some(flattened)
 }
 
 ///|
@@ -588,6 +700,38 @@ priv struct CloneEdit {
   start : Int
   end : Int
   replacement : Bytes
+}
+
+///|
+/// A conservative upper bound (saturating, never wrapping Int) on the
+/// bytes one row clone materializes: the whole row region plus, for each
+/// run rewrite, the escaped replacement wrapper — the replacement never
+/// shrinks the bound below the region, so this over-counts and cannot
+/// under-report.
+fn docx_clone_upper_bound(
+  span_start : Int,
+  span_end : Int,
+  record_edits : Array[DocxRunEdit],
+) -> Int {
+  fn saturating_add(a : Int, b : Int) -> Int {
+    if a > 0x3FFFFFFF - b {
+      0x3FFFFFFF
+    } else {
+      a + b
+    }
+  }
+
+  let mut bound = span_end - span_start
+  for edit in record_edits {
+    // "<w:t xml:space=\"preserve\">" + escaped + "</w:t>"; each source
+    // char escapes to at most 6 bytes ("&quot;"), UTF-8 to at most 4
+    let escaped_max = saturating_add(
+      edit.final_text.code_units().length() * 6,
+      48,
+    )
+    bound = saturating_add(bound, escaped_max)
+  }
+  bound
 }
 
 ///|
@@ -686,10 +830,10 @@ pub async fn transact_docx_template_document(
       }
       let gate = row_safety_gate(
         part_bytes[span.byte_start():span.byte_end()],
-        match part_root_bindings(part_bytes.to_bytes()) {
+        match part_bindings_at(part_bytes, span.byte_start()) {
           Some(bindings) => bindings
           None => {
-            refuse(location, "the body root namespace bindings resist parsing")
+            refuse(location, "the body namespace bindings resist parsing")
             continue
           }
         },
@@ -774,9 +918,11 @@ pub async fn transact_docx_template_document(
     // ---- region scans: one pass per record so missing accounting is
     // record-ordinal and final texts are per clone ----
     let region_edits : Array[Array[Array[DocxRunEdit]]] = []
+    let region_used : Array[Array[Set[String]]] = []
     let region_counters : Array[(Int, Int)] = []
     for plan in plans {
       let per_record : Array[Array[DocxRunEdit]] = []
+      let per_record_used : Array[Set[String]] = []
       let mut region_replaced = 0
       let mut region_escapes = 0
       let malformed_before = state.report.malformed_total
@@ -792,10 +938,14 @@ pub async fn transact_docx_template_document(
         for key, value in record {
           merged[key] = value
         }
+        // each record scan tracks its OWN used keys so per-record unused
+        // is exact (a key consumed by another region must not mask this
+        // record's unused key — codex #213 round 1)
+        let record_used : Set[String] = Set::new()
         let record_state : DocxMergeState = {
           report: state.report,
           values: merged,
-          used_keys: state.used_keys,
+          used_keys: record_used,
           budget: state.budget,
           edits: [],
           checks: state.checks,
@@ -849,9 +999,16 @@ pub async fn transact_docx_template_document(
         ignore(missing_before)
         region_replaced += state.report.replaced - replaced_before
         region_escapes += state.report.escapes_applied - escapes_before
+        // union this record's used keys into the global set (drives
+        // distinct_keys_used and the values-key unused pass)
+        for key in record_used {
+          state.used_keys.add(key)
+        }
         per_record.push(record_state.edits)
+        per_record_used.push(record_used)
       }
       region_edits.push(per_record)
+      region_used.push(per_record_used)
       region_counters.push((region_replaced, region_escapes))
     }
     // record-key hygiene: keys a record carries that no placeholder in
@@ -860,11 +1017,15 @@ pub async fn transact_docx_template_document(
       if plan_index >= region_edits.length() {
         continue
       }
-      // the scan marks used keys globally; per-record unused derives
-      // from the used set restricted to the record's own keys
+      guard plan_index < region_used.length() else { continue }
+      let used_per_record = region_used[plan_index]
       for record_index, record in plan.records {
+        if record_index >= used_per_record.length() {
+          continue
+        }
+        let record_used = used_per_record[record_index]
         for key, _ in record {
-          if !state.used_keys.contains(key) {
+          if !record_used.contains(key) {
             state.report.unused_total += 1
             if state.report.unused.length() < docx_template_finding_limit {
               state.report.unused.push(
@@ -899,8 +1060,22 @@ pub async fn transact_docx_template_document(
           "office.docx.template_internal", "the body part vanished mid-merge",
         )
       }
-      let mut total_bytes = 0
-      let planned : Array[(DocxRegionPlan, Array[Bytes])] = []
+      fn saturating_add(a : Int, b : Int) -> Int {
+        if a > 0x3FFFFFFF - b {
+          0x3FFFFFFF
+        } else {
+          a + b
+        }
+      }
+
+      // PRE-ALLOCATION bound: the final body part is at most its current
+      // size plus every clone's upper bound (each region's row region is
+      // itself replaced, so this over-counts). Check it against BOTH the
+      // configured guard and the session's real splice materialization
+      // allowance BEFORE building anything (codex #213 round 1: the
+      // splice layer charges the whole edited part, so post-build clone
+      // bytes alone under-counted). queue_plan stays authoritative.
+      let mut replacement_bound = 0
       for plan_index, plan in plans {
         if plan_index >= region_edits.length() {
           continue
@@ -909,41 +1084,66 @@ pub async fn transact_docx_template_document(
         if per_record.length() != plan.records.length() {
           continue
         }
-        let clones : Array[Bytes] = []
-        let mut ok = true
         for record_edits in per_record {
-          match
-            docx_build_row_clone(
-              part_bytes,
-              plan.span_start,
-              plan.span_end,
-              plan.strip_spans,
-              record_edits,
-              annotated,
-            ) {
-            Some(clone) => {
-              total_bytes += clone.length()
-              clones.push(clone)
-            }
-            None => {
-              refuse(
-                plan.source_location,
-                "a clone edit fell outside the row region",
-              )
-              ok = false
-              break
-            }
-          }
-        }
-        if ok {
-          planned.push((plan, clones))
+          replacement_bound = saturating_add(
+            replacement_bound,
+            docx_clone_upper_bound(plan.span_start, plan.span_end, record_edits),
+          )
         }
       }
-      if total_bytes > docx_clone_byte_guard {
+      let part_size_bound = saturating_add(
+        part_bytes.length(),
+        replacement_bound,
+      )
+      let session_allowance = session.construction_byte_allowance()
+      let allowance = if docx_clone_byte_guard < session_allowance {
+        docx_clone_byte_guard
+      } else {
+        session_allowance
+      }
+      if replacement_bound > allowance || part_size_bound > allowance {
         refuse(
           "package",
-          "materializing \{total_bytes} clone bytes exceeds the \{docx_clone_byte_guard} ceiling",
+          "the repeated rows would materialize more than the \{allowance}-byte ceiling",
         )
+      }
+      let planned : Array[(DocxRegionPlan, Array[Bytes])] = []
+      if state.report.unsupported_total == 0 {
+        for plan_index, plan in plans {
+          if plan_index >= region_edits.length() {
+            continue
+          }
+          let per_record = region_edits[plan_index]
+          if per_record.length() != plan.records.length() {
+            continue
+          }
+          let clones : Array[Bytes] = []
+          let mut ok = true
+          for record_edits in per_record {
+            match
+              docx_build_row_clone(
+                part_bytes,
+                plan.span_start,
+                plan.span_end,
+                plan.strip_spans,
+                record_edits,
+                annotated,
+              ) {
+              Some(clone) => clones.push(clone)
+              None => {
+                refuse(
+                  plan.source_location,
+                  "a clone edit fell outside the row region",
+                )
+                ok = false
+                break
+              }
+            }
+          }
+          if ok {
+            planned.push((plan, clones))
+          }
+        }
       }
       if state.report.unsupported_total == 0 {
         for entry in planned {
