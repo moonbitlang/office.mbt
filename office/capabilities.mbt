@@ -1004,7 +1004,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         ),
         capability_field("ops_applied", "number", true, "comment ops folded"),
         capability_field(
-          "results", "array(object)", true, "per op: kind, comment_id, done, anchor + anchor_to (comment_add; anchor_to only on a paragraph range), target (reply/resolve/unresolve) — all bounded",
+          "results", "array(object)", true, "per op: op, comment_id, done, anchor + anchor_to (comment_add; anchor_to only on a paragraph range), target (reply/resolve/unresolve) — all bounded",
         ),
         capability_field(
           "labels", "array(object)", true, "same-script label -> minted comment_id map",
