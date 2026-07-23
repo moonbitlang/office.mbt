@@ -732,6 +732,51 @@ regions, 4096 records/region, 10000 total written rows.
 | `transaction` | object | untouched `office.transaction/2` report (success only) |
 | `stories_scanned` | array | DOCX only: the stories the merge scanned (`/body`, `/header[n]`, `/footer[n]`); placeholders in footnote, endnote, or comment stories are refused as unsupported contexts. DOCX substitution rewrites run content by byte span through the D1 edit session — unrelated OOXML is preserved and the value inherits the starting run's formatting; locations are canonical paragraph selectors (`/docx/body/p[3]`) |
 
+### `office.docx.annotation-batch/1` (`office annotate FILE SCRIPT.json --out OUT.docx [--dry-run] [--overwrite] [--json|--jsonl]`)
+
+Preservation-safe comment mutation of an EXISTING DOCX: a strict
+`docx.annotation-batch/1` script of `comment_add`, `comment_reply`,
+`comment_resolve`, and `comment_unresolve` ops folded over the D1
+source-pinned edit session. This never rewrites the document body — only
+comment and relationship parts change — and is distinct from `office
+batch` (XLSX cell mutation) and from fresh DOCX authoring.
+
+The script is `{"schema": "docx.annotation-batch/1", "ops": [...]}` with at
+most 128 ops. Each op:
+
+- `comment_add`: `anchor` `{"at": "/docx/body/p[K]", "to"?: "/docx/body/p[M]"}`
+  (a single body paragraph when `to` is omitted; header/footer and
+  non-paragraph anchors are refused), `author`, `initials?`, `date?` (a
+  lexically valid `xsd:dateTime`, emitted verbatim; omitted means no
+  `w:date` attribute — dates are never synthesized), `body` (a non-empty
+  array of non-empty plain paragraph strings; styles, lists, hyperlinks,
+  and images are refused), and an optional unique `label`.
+- `comment_reply`: `parent` (a tagged `{"comment_id": "..."}` or
+  `{"label": "..."}`; replies to replies are allowed; the target must be a
+  defined comment with at least one body paragraph), plus the same
+  author/initials/date/body/label fields.
+- `comment_resolve` / `comment_unresolve`: `target` (tagged
+  `{"comment_id"}` or `{"label"}`).
+
+References are tagged only — a `label` resolves to a comment minted by an
+EARLIER op in the same script (forward and duplicate labels are refused);
+a `comment_id` is an existing engine id. Ops fold one snapshot at a time:
+each op reindexes on the prior op's result, so a reply can target a
+comment added earlier in the batch. The fold's cumulative staged growth
+is bounded (decreasing per-step splice ceiling plus a 32 MiB total), and
+any refusal publishes nothing.
+
+| key | type | notes |
+| --- | --- | --- |
+| `schema` | string | `"office.docx.annotation-batch/1"` |
+| `file` / `output` | string | bounded paths |
+| `format` | string | `"docx"` |
+| `ops_applied` | number | comment ops folded |
+| `results` | array | per op `{op, comment_id, done}` (done is null except for resolve/unresolve) |
+| `labels` | array | `{label, comment_id}` for each same-script label, mapping it to the minted id |
+| `changed_parts` | array | the sorted union changed-part manifest across every op (added parts included: `word/comments.xml` and `word/commentsExtended.xml` when first created, plus `[Content_Types].xml` and the document relationships) |
+| `transaction` | object | untouched `office.transaction/2` report; preservation is authoritative. Comment ops touch only comment and relationship parts — the body is never rewritten |
+
 ### `office.dump/1` (`office dump FILE [--json|--jsonl]`)
 
 A replayable semantic dump: the document re-expressed as an ordered stream
