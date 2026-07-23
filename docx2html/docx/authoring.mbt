@@ -1,10 +1,11 @@
 // Shared fresh-DOCX authoring: turns a parsed docx.batch/2 script plus its
-// preloaded image bytes into a written package. Centralizes the batch ->
-// writer mapping (body build + comment/note spec construction) so the office
-// CLI, the standalone `docx batch` CLI, and any other caller share ONE
-// implementation instead of drifting copies. Serialization is bounded by the
-// optional `limits`, so an over-budget package is refused as a typed
-// WriteResourceLimit before the archive payloads are materialized.
+// preloaded image bytes into a written package, centralizing the batch ->
+// writer mapping (body build + comment/note spec construction). The office
+// fresh-authoring surface (office/docx) uses this; the standalone `docx batch`
+// CLI still carries its own inline copy (adopting this is a tracked follow-up,
+// deferred to avoid churning its separate cram/acceptance suite). Serialization
+// is bounded by the optional `limits`, so an over-budget package is refused as
+// a typed WriteResourceLimit before the archive payloads are materialized.
 
 ///|
 /// Maximum distinct media parts a fresh-authoring script may emit (one per

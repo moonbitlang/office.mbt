@@ -217,6 +217,13 @@ refused at parse, and neither publishes anything.
   {"success":false,"code":"office.docx.invalid_script"}
   $ test ! -e d3-bad.docx; echo $?
   0
+  $ printf '%s\n' '{"schema":"docx.batch/2","schema":"x","ops":[]}' > d3-dup.json
+  $ office.exe batch --format docx d3-dup.docx d3-dup.json --json > d3-dup-result.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code}' d3-dup-result.json
+  {"success":false,"code":"office.docx.invalid_script"}
+  $ test ! -e d3-dup.docx; echo $?
+  0
 
   $ office.exe batch --format docx d3-authored.docx d3-author.json --json > d3-exists.json 2>&1; echo $?
   1
