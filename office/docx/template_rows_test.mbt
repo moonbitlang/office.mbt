@@ -433,11 +433,14 @@ async test "docx region clone bytes are bounded before allocation" {
       permission=0o600,
     )
     let output = directory + "/huge-out.docx"
-    // 4096 records each carrying a 65536-unit value: the pre-allocation
-    // bound must refuse before materializing
+    // ~40 records each carrying a 65536-unit value: the per-clone upper
+    // bound (value units x 6 for escaping) crosses the 8 MiB ceiling by
+    // record ~22, so this refuses before materializing — kept small so
+    // the data document stays a few MiB (a 4096-record document would
+    // itself be hundreds of MiB and OOM the wasm runtime)
     let big = String::make(65536, 'x')
     let records = StringBuilder::new()
-    for index in 0..<4096 {
+    for index in 0..<40 {
       if index > 0 {
         records.write_string(", ")
       }
