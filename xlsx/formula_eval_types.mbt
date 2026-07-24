@@ -95,7 +95,20 @@ let category_information = 11
 let category_speed = 12
 
 ///|
-let rand_state : @random.Rand = @random.Rand::new()
+let formula_rand_state : Ref[@random.Rand?] = { val: None }
+
+///|
+/// Defer the WASI-backed seed until after the command runtime initializes memory.
+fn formula_rand() -> @random.Rand {
+  match formula_rand_state.val {
+    Some(rng) => rng
+    None => {
+      let rng = @random.Rand::new()
+      formula_rand_state.val = Some(rng)
+      rng
+    }
+  }
+}
 
 ///|
 priv enum FormulaValue {

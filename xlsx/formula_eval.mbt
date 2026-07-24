@@ -1338,13 +1338,17 @@ fn randarray_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     }
     let range = max_int - min_int + 1
     for _i in 0..<(rows * cols) {
-      let rand_value = if range > 0 { rand_state.int(limit=range) } else { 0 }
+      let rand_value = if range > 0 {
+        formula_rand().int(limit=range)
+      } else {
+        0
+      }
       out.push(Number(Double::from_int(rand_value + min_int)))
     }
   } else {
     let span = max - min
     for _i in 0..<(rows * cols) {
-      let value = min + rand_state.double() * span
+      let value = min + formula_rand().double() * span
       out.push(Number(value))
     }
   }

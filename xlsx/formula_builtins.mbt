@@ -1832,7 +1832,7 @@ fn eval_function(
       }
     "RAND" =>
       if values.length() == 0 {
-        Number(rand_state.double())
+        Number(formula_rand().double())
       } else {
         Error(formula_error_value)
       }
@@ -1848,7 +1848,7 @@ fn eval_function(
               let bottom_int = trunc_double(bottom)
               let top_int = trunc_double(top)
               let range = top_int - bottom_int + 1.0
-              let rand_value = Double::floor(rand_state.double() * range)
+              let rand_value = Double::floor(formula_rand().double() * range)
               Number(bottom_int + rand_value)
             }
           (Err(err), _) => err
