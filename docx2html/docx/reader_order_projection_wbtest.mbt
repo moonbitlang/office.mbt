@@ -215,6 +215,27 @@ test "reader order discovers textboxes inside deleted revisions" {
 }
 
 ///|
+test "reader order discovers pict block outputs inside deleted revisions" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>A</w:t></w:r><w:del><w:pict><w:r><w:p><w:r><w:t>X</w:t></w:r></w:p></w:r></w:pict></w:del><w:r><w:t>B</w:t></w:r></w:p></w:body></w:document>
+  let projection = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(source),
+  )
+  assert_eq(
+    provisional_story_text(projection),
+    current_reader_story_text(source),
+  )
+  assert_reader_order_identity_mapping(projection)
+  debug_inspect(
+    projection.paragraphs.map(paragraph => {
+      (paragraph.reader_text(), paragraph.from_text_box)
+    }),
+    content="[(\"AB\", false), (\"X\", true)]",
+  )
+}
+
+///|
 test "reader order preserves vMerge cells when malformed tables fail open" {
   let sources = [
     (

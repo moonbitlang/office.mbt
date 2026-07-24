@@ -568,12 +568,13 @@ fn reader_order_projection_visibility(
     }
   }
   // The reader's primary inline pass suppresses w:del, but its independent
-  // paragraph-extras pass still descends through that physical subtree and
-  // emits any textbox content it finds.
+  // paragraph-extras pass still descends through that physical subtree.
+  // A direct txbxContent delegates to read_children, while pict's own extra
+  // reader can also emit malformed-but-tolerated block descendants.
   for element in elements {
     budget.charge_visit(1)
     if is_wml_uri(element.uri) &&
-      element.local_name == "txbxContent" &&
+      element.local_name is ("txbxContent" | "pict") &&
       inside_deleted_revision[element.identity] &&
       deleted_row_ancestor[element.identity] < 0 {
       if merged_cell_ancestor[element.identity] < 0 {
