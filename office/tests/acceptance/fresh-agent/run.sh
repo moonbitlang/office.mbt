@@ -88,7 +88,6 @@ codex_name="$(basename "$codex_bin")"
 
 codex_runtime_name=""
 codex_runtime_bin=""
-codex_shell_wrapper=false
 codex_shebang=""
 IFS= read -r codex_shebang < "$codex_bin" || true
 codex_shebang="${codex_shebang%$'\r'}"
@@ -132,18 +131,6 @@ case "$codex_shebang" in
         codex_runtime_bin="$runtime_dir/$(basename "$runtime_bin")"
         ;;
     esac
-    case "$(basename "$runtime_name")" in
-      sh | bash | dash | ksh | zsh) codex_shell_wrapper=true ;;
-    esac
-    ;;
-  "#!"*)
-    interpreter_spec="${codex_shebang#\#!}"
-    read -r -a interpreter_parts <<< "$interpreter_spec"
-    if [ "${#interpreter_parts[@]}" -gt 0 ]; then
-      case "$(basename "${interpreter_parts[0]}")" in
-        sh | bash | dash | ksh | zsh) codex_shell_wrapper=true ;;
-      esac
-    fi
     ;;
 esac
 
@@ -161,30 +148,49 @@ mkdir -p \
   "$isolated_launcher_bin"
 install -m 0600 "$auth_json" "$isolated_codex_state/auth.json"
 
+write_launcher_forwarder() {
+  local target_path="$1"
+  local forwarder_path="$2"
+  local quoted_target
+  printf -v quoted_target '%q' "$target_path"
+  printf '#!/bin/bash\nexec %s "$@"\n' "$quoted_target" > "$forwarder_path"
+  chmod 0700 "$forwarder_path"
+}
+
 if [ -n "$codex_runtime_name" ]; then
-  ln -s "$codex_runtime_bin" "$isolated_launcher_bin/$codex_runtime_name"
+  write_launcher_forwarder \
+    "$codex_runtime_bin" \
+    "$isolated_launcher_bin/$codex_runtime_name"
 fi
 
-if [ "$codex_shell_wrapper" = true ]; then
-  launcher_text="$(< "$codex_bin")"
-  for helper_path in "$codex_bin_dir"/*; do
-    if [ ! -x "$helper_path" ]; then
-      continue
-    fi
-    helper_name="$(basename "$helper_path")"
-    if [ "$helper_name" = "$codex_name" ]; then
-      continue
-    fi
+launcher_helper_spec="${OFFICE_F1B_CODEX_LAUNCHER_HELPERS:-}"
+if [ -n "$launcher_helper_spec" ]; then
+  IFS=: read -r -a launcher_helper_names <<< "$launcher_helper_spec"
+  launcher_seen_names=":$codex_name:"
+  for helper_name in "${launcher_helper_names[@]}"; do
     case "$helper_name" in
-      -* | *[!A-Za-z0-9._+-]*) continue ;;
+      "" | -* | *[!A-Za-z0-9._+-]*)
+        echo "error: invalid Codex launcher helper name: $helper_name" >&2
+        exit 1
+        ;;
     esac
-    helper_pattern="${helper_name//./\\.}"
-    helper_pattern="${helper_pattern//+/\\+}"
-    reference_pattern="(^|[^A-Za-z0-9_./+-])${helper_pattern}([^A-Za-z0-9_./+-]|$)"
-    if [[ "$launcher_text" =~ $reference_pattern ]] &&
-      [ ! -e "$isolated_launcher_bin/$helper_name" ]; then
-      ln -s "$helper_path" "$isolated_launcher_bin/$helper_name"
+    case "$launcher_seen_names" in
+      *":$helper_name:"*) continue ;;
+    esac
+    helper_path="$codex_bin_dir/$helper_name"
+    if [ ! -f "$helper_path" ] || [ ! -x "$helper_path" ]; then
+      echo "error: Codex launcher helper is unavailable: $helper_path" >&2
+      exit 1
     fi
+    if [ -e "$isolated_launcher_bin/$helper_name" ]; then
+      echo "error: Codex launcher helper conflicts with runtime: $helper_name" >&2
+      exit 1
+    fi
+
+    launcher_seen_names="${launcher_seen_names}${helper_name}:"
+    write_launcher_forwarder \
+      "$helper_path" \
+      "$isolated_launcher_bin/$helper_name"
   done
 fi
 
