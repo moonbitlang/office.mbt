@@ -13,8 +13,8 @@ fail() {
 }
 
 install_root="$test_root/install"
-codex_bin_dir="$test_root/codex-bin"
-runtime_bin_dir="$test_root/runtime-bin"
+codex_bin_dir="$test_root/codex=bin"
+runtime_bin_dir="$test_root/runtime=bin"
 mkdir -p "$install_root/bin" "$codex_bin_dir" "$runtime_bin_dir"
 
 for command_name in office-native office-wasm; do
