@@ -152,9 +152,10 @@ priv struct ScannedElement {
 priv struct ProjectionSourceBudget {
   mut elements_left : Int
   // Cumulative source bytes retained as element QNames or relevant
-  // attribute names/values. Charging raw UTF-8 spans before decoding is a
-  // conservative upper bound on their eventual UTF-16 String storage.
-  mut retained_name_chars_left : Int
+  // attribute names/values, plus derived canonical sibling-counter keys.
+  // Charging raw UTF-8 spans and derived output lengths before allocation is
+  // a conservative upper bound on their eventual UTF-16 String storage.
+  mut retained_chars_left : Int
   max_depth : Int
   text_budget : TokenMapBudget
 }
@@ -193,7 +194,7 @@ fn projection_source_budget(
   }
   {
     elements_left: max_elements,
-    retained_name_chars_left: max_attribute_chars,
+    retained_chars_left: max_attribute_chars,
     max_depth,
     text_budget: token_map_budget(max_text_bytes, max_text_tokens) catch {
       TokenMapError(message) => raise Unsupported(message~)
@@ -216,14 +217,14 @@ fn ProjectionSourceBudget::charge_element(
 }
 
 ///|
-fn ProjectionSourceBudget::charge_retained_source_chars(
+fn ProjectionSourceBudget::charge_retained_chars(
   self : ProjectionSourceBudget,
   chars : Int,
 ) -> Unit raise DocxError {
-  guard chars >= 0 && chars <= self.retained_name_chars_left else {
+  guard chars >= 0 && chars <= self.retained_chars_left else {
     raise @core.docx_xml_resource_limit_error(DocxXmlMaterializedCharacters)
   }
-  self.retained_name_chars_left -= chars
+  self.retained_chars_left -= chars
 }
 
 ///|
@@ -263,6 +264,18 @@ fn canonical_physical_name(uri : String, local_name : String) -> String {
     local_name
   } else {
     "{" + uri + "}" + local_name
+  }
+}
+
+///|
+fn canonical_physical_name_chars(uri : String, local_name : String) -> Int {
+  if is_wml_uri(uri) || uri == MC_URI {
+    2 + local_name.length()
+  } else if uri == "" {
+    local_name.length()
+  } else {
+    // {uri}local
+    2 + uri.length() + local_name.length()
   }
 }
 
@@ -633,6 +646,9 @@ fn scan_closing_name(
       message="the projection source scanner found an empty closing tag",
     )
   }
+  guard at - name_start <= max_annotation_relevant_attribute_bytes else {
+    raise @core.docx_xml_resource_limit_error(DocxXmlTokenLength)
+  }
   let name = utf8_slice(part, name_start, at)
   while at < close_end - 1 && is_xml_space(part[at]) {
     at += 1
@@ -960,17 +976,24 @@ fn scan_story(
     let (prefix, local_name) = split_qualified_name(name)
     let uri = resolve(prefix)
     let element_index = match source_budget {
-      Some(_) => {
+      Some(budget) => {
         let parent_index = match frames.last() {
           Some(parent) => parent.element_index
           None => -1
         }
         let same_name_ordinal = match frames.last() {
-          Some(parent) =>
+          Some(parent) => {
+            // For arbitrary namespaces the canonical key contains the URI.
+            // Charge it before concatenation so a long URI repeated across
+            // many child names cannot amplify into unbounded retained keys.
+            budget.charge_retained_chars(
+              canonical_physical_name_chars(uri, local_name),
+            )
             bump_counter(
               parent.physical_counters,
               physical_counter_key(uri, local_name),
             )
+          }
           None => 1
         }
         let identity = elements.length()
@@ -1611,7 +1634,7 @@ fn scan_tag(
       guard at - name_start <= max_annotation_relevant_attribute_bytes else {
         raise @core.docx_xml_resource_limit_error(DocxXmlTokenLength)
       }
-      budget.charge_retained_source_chars(at - name_start)
+      budget.charge_retained_chars(at - name_start)
     }
     None => ()
   }
@@ -1684,9 +1707,7 @@ fn scan_tag(
       }
       match source_budget {
         Some(budget) =>
-          budget.charge_retained_source_chars(
-            attr_end - attr_start + at - value_start,
-          )
+          budget.charge_retained_chars(attr_end - attr_start + at - value_start)
         None => ()
       }
       let attr_name = utf8_slice(part, attr_start, attr_end)
