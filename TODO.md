@@ -179,9 +179,9 @@ The dependency-ordered small-PR plan for closing the broader agent-relevant
 OfficeCLI gaps now lives in `docs/office-major-parity.md`. Give every proposed
 slice its own issue before implementation and do not fold it into #169. Issue
 #139 remains open until the major ledger is complete. At the pinned baseline the
-full delivery denominator has 380 unique acceptance rows: 369
+full delivery denominator has 382 unique acceptance rows: 371
 parity/QA/export rows plus 11 explicit beyond-parity/delivery rows. That total
-combines 18 landed initial foundations with the 362-row incremental ledger and
+combines 18 landed initial foundations with the 364-row incremental ledger and
 does not double-count overlapping status rows, using the counting rule in the
 ledger.
 The ledger explicitly
@@ -194,8 +194,10 @@ preservation-safe cell shifts, cascade-safe worksheet rename, unmerge,
    AutoFilter lifecycle, stable chart enumerate/create/update/remove with
    relationship cleanup, array-formula add/set/readback, ordinary
 table/data-validation/conditional-format update and removal, row/column
-page-break lifecycle, workbook core/custom properties, `date1904` and
-calculation settings, `activeTab`/`firstSheet` state, and RTL/zoom/view state;
+page-break lifecycle, workbook core/custom properties, `date1904` conversion,
+`dateCompatibility`, calculation settings, remaining `workbookPr` readback and
+object-display/privacy state, explicit workbook lock/password protection,
+`activeTab`/`firstSheet` state, and RTL/zoom/view state;
    preservation-safe existing-DOCX table content, separately reviewable complete
    common table/row/cell-property changes (including style/grid widths/banding,
    direction/indent/spacing/padding/metadata/conditional state, diagonal
