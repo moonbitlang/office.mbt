@@ -56,7 +56,7 @@ fn req(name : String, kind : String) -> ParamSpec {
     kind,
     required: true,
     allowed_values: [],
-    accepts_empty_string: kind == "string",
+    accepts_empty_string: kind == "string" || kind == "value",
     default_when_omitted: Json::null(),
   }
 }
@@ -387,6 +387,9 @@ fn op_constraint_specs(op : String) -> Array[ConstraintSpec] {
             "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"list\",\"values\":[\"" +
             "😀".repeat(127) +
             "a\"]}",
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"list\",\"values\":[\"" +
+            "a".repeat(253) +
+            "\",\"b\"]}",
           ],
           [
             "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"list\",\"values\":[\"" +
@@ -395,6 +398,9 @@ fn op_constraint_specs(op : String) -> Array[ConstraintSpec] {
             "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"list\",\"values\":[\"" +
             "😀".repeat(128) +
             "\"]}",
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"list\",\"values\":[\"" +
+            "a".repeat(254) +
+            "\",\"b\"]}",
           ],
         ),
         constraint(
@@ -548,6 +554,27 @@ fn op_constraints(op : String) -> Array[String] {
 }
 
 ///|
+/// Capability declarations are module globals, while Json arrays and objects
+/// are mutable. Never return their storage directly to a caller.
+fn copy_capability_json(value : Json) -> Json {
+  match value {
+    Null => Json::null()
+    True => Json::boolean(true)
+    False => Json::boolean(false)
+    Number(number, ..) => Json::number(number)
+    String(text) => Json::string(text)
+    Array(values) => Json::array(values.map(copy_capability_json))
+    Object(fields) => {
+      let copied : Map[String, Json] = Map([])
+      for key, field in fields {
+        copied[key] = copy_capability_json(field)
+      }
+      Json::object(copied)
+    }
+  }
+}
+
+///|
 /// The `xlsx.capabilities/1` JSON payload: the batch schema this build
 /// speaks, its limits, and every op + param it accepts.
 pub fn capabilities() -> Json {
@@ -564,7 +591,7 @@ pub fn capabilities() -> Json {
             p.allowed_values.map(value => Json::string(value)),
           ),
           "accepts_empty_string": Json::boolean(p.accepts_empty_string),
-          "default_when_omitted": p.default_when_omitted,
+          "default_when_omitted": copy_capability_json(p.default_when_omitted),
         }),
       )
     }

@@ -132,9 +132,12 @@ test "capabilities payload is field-exact" {
         Some(False) => false
         _ => fail("accepts_empty_string must be an explicit boolean")
       }
-      let expected_empty = pt == "string" &&
-        !(req && !choices.is_empty()) &&
-        !(name == "chart" && pn == "type")
+      let expected_empty = pt == "value" ||
+        (
+          pt == "string" &&
+          !(req && !choices.is_empty()) &&
+          !(name == "chart" && pn == "type")
+        )
       assert_eq(
         accepts_empty,
         expected_empty,
@@ -266,8 +269,26 @@ test "every advertised constraint has production parser witnesses" {
 }
 
 ///|
-test "empty choices and omitted boolean defaults match parse and apply" {
+test "list values precedence is proven by application" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("S"))
+  let parsed = parse_script(
+    @json.parse(
+      one_op_script(
+        "validate", "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"list\",\"values\":[\"a\",\"b\"],\"source\":\"S!Z1:Z2\"}",
+      ),
+    ),
+  )
+  apply_op(workbook, parsed[0])
+  let validations = workbook.get_data_validations("S")
+  assert_eq(validations.length(), 1)
+  inspect(validations[0].formula1, content="\"a,b\"")
+}
+
+///|
+test "empty values and omitted defaults match parse and apply" {
   let accepted_empty_choices : Array[(String, String)] = [
+    ("set", "{\"sheet\":\"S\",\"cell\":\"A1\",\"value\":\"\"}"),
     ("style", "{\"sheet\":\"S\",\"range\":\"A1\",\"border\":\"\"}"),
     (
       "validate", "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"list\",\"source\":\"S!A1\",\"error_style\":\"\"}",
@@ -314,6 +335,11 @@ test "empty choices and omitted boolean defaults match parse and apply" {
       (
         "validate", "{\"sheet\":\"S\",\"range\":\"C1\",\"type\":\"list\",\"source\":\"S!A1\"}",
       ),
+      (
+        "chart", "{\"sheet\":\"S\",\"anchor\":\"E2\",\"categories\":\"A1:A2\",\"values\":\"B1:B2\"}",
+      ),
+      ("row", "{\"sheet\":\"S\",\"action\":\"hide\",\"at\":2}"),
+      ("col", "{\"sheet\":\"S\",\"action\":\"hide\",\"at\":\"B\"}"),
     ] {
     let (op_name, params) = entry
     let parsed = parse_script(@json.parse(one_op_script(op_name, params)))
@@ -327,6 +353,41 @@ test "empty choices and omitted boolean defaults match parse and apply" {
   let validations = workbook.get_data_validations("S")
   assert_eq(validations.length(), 1)
   assert_true(validations[0].allow_blank)
+  let charts = workbook.sheets()[0].charts()
+  assert_eq(charts.length(), 1)
+  assert_true(charts[0].xml.contains("<c:barChart>"))
+  assert_true(charts[0].xml.contains("barDir val=\"col\""))
+  assert_false(workbook.row_visible("S", 2))
+  assert_true(workbook.row_visible("S", 3))
+  assert_false(workbook.col_visible("S", 2))
+  assert_true(workbook.col_visible("S", 3))
+}
+
+///|
+test "capability calls do not share mutable default JSON" {
+  let baseline = capabilities().stringify()
+  guard capabilities() is Object(root) && root.get("ops") is Some(Array(ops)) else {
+    fail("capability ops must be an array")
+  }
+  let mut mutated = false
+  for op in ops {
+    guard op is Object(op_fields) &&
+      op_fields.get("op") is Some(String("validate")) &&
+      op_fields.get("params") is Some(Array(params)) else {
+      continue
+    }
+    for param in params {
+      guard param is Object(fields) &&
+        fields.get("name") is Some(String("values")) &&
+        fields.get("default_when_omitted") is Some(Array(values)) else {
+        continue
+      }
+      values.push(Json::string("poison"))
+      mutated = true
+    }
+  }
+  assert_true(mutated)
+  assert_eq(capabilities().stringify(), baseline)
 }
 
 ///|
