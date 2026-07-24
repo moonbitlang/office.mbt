@@ -79,18 +79,24 @@ may stack on an unmerged sibling. Split earlier than the repository's roughly
 
 The contracts and adversarial matrices for N0-N4 are already reviewed in
 [docx-agent-roadmap.md](docx-agent-roadmap.md#phase-3--targeted-edits-of-existing-documents-reviewed-plan).
-N0 is deliberately split into three private foundations; merged
+N0 is deliberately split into six review-sized private foundations: N0a, four
+N0b projection slices, and N0c. Merged
 [PR #224](https://github.com/moonbitlang/office.mbt/pull/224) covers N0a only
-and does not satisfy the whole gate.
+and does not satisfy the whole gate. Issue
+[#221](https://github.com/moonbitlang/office.mbt/issues/221) is now the N0b
+umbrella rather than a single oversized implementation PR.
 
 | Slice | Acceptance boundary | Depends on |
 | --- | --- | --- |
 | N0a: lexical map ([#219](https://github.com/moonbitlang/office.mbt/issues/219)) | Map supported `w:t` lexical content to exact UTF-8 source and UTF-16 text boundaries under cumulative budgets; [PR #224](https://github.com/moonbitlang/office.mbt/pull/224) is landed. | D4 |
-| N0b: projection index ([#221](https://github.com/moonbitlang/office.mbt/issues/221)) | Build a reader-exact paragraph/run projection index over N0a spans and prove it against the existing read oracle. | N0a |
-| N0c: private surgery ([#222](https://github.com/moonbitlang/office.mbt/issues/222)) | Prove source-pinned splice/synthesis, `xml:space`, preservation, and fail-closed refusal without a public mutation API. | N0b |
+| N0b1: source-tree identity ([#231](https://github.com/moonbitlang/office.mbt/issues/231)) | Retain a bounded namespace-resolved source tree with identity-bearing physical paragraph/run nodes and canonical physical ancestry, without changing non-retaining scanner behavior. | N0a |
+| N0b2: reader-order mapping ([#232](https://github.com/moonbitlang/office.mbt/issues/232)) | Mirror BodyReader normal-flow/text-box order and deleted-paragraph joins; map stable logical paragraph/run paths and UTF-16 intervals back to N0b1 identities. | N0b1 |
+| N0b3: field classification ([#233](https://github.com/moonbitlang/office.mbt/issues/233)) | Advance nested complex-field state at carrier boundaries across each story under explicit depth/work limits, with deterministic restriction/refusal provenance. | N0b2 |
+| N0b4: reader transforms and oracle ([#234](https://github.com/moonbitlang/office.mbt/issues/234)) | Match first-direct SDT/checkbox and Markup Compatibility transforms, complete suppression/barrier classification, and pass the full hostile reader oracle. | N0b3 |
+| N0c: private surgery ([#222](https://github.com/moonbitlang/office.mbt/issues/222)) | Prove source-pinned splice/synthesis, `xml:space`, preservation, and fail-closed refusal without a public mutation API. | N0b1-N0b4 |
 | N1a: transaction SDK | Add transaction-backed, globally preflighted run-scoped `set-text` while preserving every byte outside the declared footprint. | N0c |
 | N1b: unified CLI | Expose N1a as the bounded `office edit set-text` command with deterministic receipts and native/Wasm acceptance. | N1a |
-| N2a: read-only `find` | Emit bounded, path-addressed actionable and restricted hits with stable ordinals, directly from the locator/classification foundation. | N0b |
+| N2a: read-only `find` | Emit bounded, path-addressed actionable and restricted hits with stable ordinals, directly from the locator/classification foundation. | N0b4 |
 | N2b: guarded `replace` | Support `--nth`, `--expect`, `--allow-zero`, and identical-pipeline `--dry-run`; prove the foreign-document typo-fix footprint. | N2a |
 | N3a: insert paragraph | Insert one resource-free paragraph before/after a body paragraph using the dedicated strict payload. | N1b |
 | N3b: delete paragraph | Delete one body paragraph only after section, field, range-marker, revision, reference, and comment-anchor checks pass. | N1b |
@@ -119,7 +125,7 @@ round-tripping an existing document through the fresh-authoring model.
 | W2: numbering definitions | Author verified numbering definitions and explicit list references without grafting implicit ids. | D3 |
 | W3: sections and page setup | Author bounded section properties, page size, orientation, and margins. | W1 |
 | W4: headers and footers ([#95](https://github.com/moonbitlang/office.mbt/issues/95)) | Author section-linked headers/footers with preservation and relationship validation. | W3 |
-| W5a: field/bookmark inventory | Inventory simple and complex fields, instructions/results, dirty/locked state, bookmarks, dependencies, and layout-dependent residuals with stable source-pinned identity. | D2, N0b |
+| W5a: field/bookmark inventory | Inventory simple and complex fields, instructions/results, dirty/locked state, bookmarks, dependencies, and layout-dependent residuals with stable source-pinned identity. | D2, N0b4 |
 | W5b1: basic field/bookmark authoring | Add PAGE/NUMPAGES/DATE/MERGEFIELD fields and bounded bookmarks with typed readback; do not imply that authored results have been refreshed. | D3 |
 | W5b2: cross-reference field authoring | Add bounded REF, PAGEREF, and NOTEREF authoring with typed target/switch validation, bookmark or note identity readback, and explicit stale cached-result state. | W5a, W5b1 |
 | W5c: TOC authoring | Author a bounded TOC contract over explicit heading/style inputs with field instructions and stale-state readback, without fabricating page-number results. | W1, W3, W5b1 |
@@ -135,17 +141,17 @@ round-tripping an existing document through the fresh-authoring model.
 | W7: revision read surface | Surface inserted/deleted/moved content with author, date, type, and addressed provenance. | N4 |
 | W8: accept/reject revisions | Preview and atomically accept or reject selected revisions with explicit affected paths. | W7 |
 | W9: tracked-change authoring | Author attributed insertions/deletions only after W8's identity and validation rules are proven. | W8 |
-| W10: form read and identity | Inventory SDTs, legacy form fields, and document-protection state with stable paths, aliases/tags, types, options, and editability. MERGEFIELD parity remains owned by W5a/W5b1, not the forms inventory. | D2, N0b |
+| W10: form read and identity | Inventory SDTs, legacy form fields, and document-protection state with stable paths, aliases/tags, types, options, and editability. MERGEFIELD parity remains owned by W5a/W5b1, not the forms inventory. | D2, N0b4 |
 | W11a: text/rich-text SDTs | Author text and rich-text controls with required stable identity, aliases/tags, content constraints, and typed readback. | D3, W1, W10 |
 | W11b: choice/date SDTs | Add checkbox state, dropdown, combobox, and date controls with bounded options/formats and typed readback. | W11a |
 | W11c: picture/group SDTs | Add bounded picture and group controls with media/relationship limits, nesting rules, lifecycle cleanup, and typed readback. | W11a |
 | W12: legacy form fields | Author and read back real legacy checkbox fields under Word's name limits without pretending visual blanks are fields. | W5b1, W10 |
 | W13: forms protection | Enforce, inspect, clear, and verify forms-only document protection; allow field edits while refusing protected static-content edits unless an explicit override is supported. | W11b, W11c, W12 |
 | W14: form QA and integration capstone | Integrate W11 SDT controls and W12 legacy fields into one truthful forms inventory; separately cross-check W5b1 MERGEFIELD output without classifying or counting it as a form. A fresh agent creates a protected intake form and verifies aliases/tags, list items, date formats, both checkbox families, editability, and zero simulated underscore fields. | W5b1, W13 |
-| WH1: existing hyperlink inventory | Inventory external and bookmark hyperlinks with stable source-pinned identity, strict target/anchor readback, and unsupported residuals. | D2, N0b, W5b1 |
+| WH1: existing hyperlink inventory | Inventory external and bookmark hyperlinks with stable source-pinned identity, strict target/anchor readback, and unsupported residuals. | D2, N0b4, W5b1 |
 | WH2: existing hyperlink lifecycle | Add, update text/target, or remove one WH1 link with strict relationship/anchor validation, atomic failure, and unrelated-byte preservation. | A4, D1, N0c, WH1 |
 | WH3: hyperlink exposure | Expose WH1/WH2 through typed get/query and mutation commands with installed help, validation, readback, and exact footprint receipts. | A2, WH2 |
-| WP1: existing picture inventory | Inventory inline and a bounded anchored-picture subset with stable media/relationship identity, geometry/alt-text readback, content limits, and unsupported residuals. | D2, N0b |
+| WP1: existing picture inventory | Inventory inline and a bounded anchored-picture subset with stable media/relationship identity, geometry/alt-text readback, content limits, and unsupported residuals. | D2, N0b4 |
 | WP2: picture replace/properties | Replace one WP1 asset or update a bounded size/crop/alt-text subset with content-addressed inputs, source-pinned preservation, and no relationship/id churn. | A4, D1, N0c, WP1 |
 | WP3: picture removal/cleanup | Remove one WP1 picture and prove relationship/media orphan cleanup without deleting shared or unrelated resources. | A4, D1, WP1 |
 | WP4: picture exposure | Expose WP1-WP3 through typed get/query and mutation commands with installed help, validation, readback, and exact footprint receipts. | A2, WP2, WP3 |
