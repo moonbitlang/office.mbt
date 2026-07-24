@@ -116,6 +116,79 @@ fn check_bounded_numeric_output(
 }
 
 ///|
+fn number_format_ascii_fold(unit : UInt16) -> Int {
+  let value = unit.to_int()
+  if value >= 65 && value <= 90 {
+    value + 32
+  } else {
+    value
+  }
+}
+
+///|
+fn number_format_ascii_case_equal(
+  value : StringView,
+  expected : StringView,
+) -> Bool {
+  if value.length() != expected.length() {
+    return false
+  }
+  for i in 0..<value.length() {
+    if number_format_ascii_fold(value[i]) !=
+      number_format_ascii_fold(expected[i]) {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn number_format_ascii_case_contains(
+  value : StringView,
+  expected : StringView,
+) -> Bool {
+  if expected.length() == 0 {
+    return true
+  }
+  if value.length() < expected.length() {
+    return false
+  }
+  for start in 0..<=(value.length() - expected.length()) {
+    let mut matches = true
+    for offset in 0..<expected.length() {
+      if number_format_ascii_fold(value[start + offset]) !=
+        number_format_ascii_fold(expected[offset]) {
+        matches = false
+        break
+      }
+    }
+    if matches {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn number_format_elapsed_token(content : StringView) -> String? {
+  if number_format_ascii_case_equal(content, "h") {
+    Some("h")
+  } else if number_format_ascii_case_equal(content, "hh") {
+    Some("hh")
+  } else if number_format_ascii_case_equal(content, "m") {
+    Some("m")
+  } else if number_format_ascii_case_equal(content, "mm") {
+    Some("mm")
+  } else if number_format_ascii_case_equal(content, "s") {
+    Some("s")
+  } else if number_format_ascii_case_equal(content, "ss") {
+    Some("ss")
+  } else {
+    None
+  }
+}
+
+///|
 fn format_text_value(
   raw : String,
   format : NumberFormat,
@@ -124,7 +197,7 @@ fn format_text_value(
   match format {
     Builtin(_id) => raw
     Custom(code) =>
-      if code.to_lower().trim() is "general" {
+      if number_format_ascii_case_equal(code.trim(), "general") {
         raw
       } else {
         check_bounded_format_program(code, max_output_chars)
@@ -327,8 +400,7 @@ fn format_number_code(
       if pattern == "" {
         return ""
       }
-      let normalized = pattern.to_lower()
-      if normalized == "general" {
+      if number_format_ascii_case_equal(pattern, "general") {
         check_bounded_numeric_output(raw.length(), 0, 1, 0, max_output_chars)
         return format_general_number(raw)
       }
@@ -428,7 +500,7 @@ fn select_format_section(
 }
 
 ///|
-fn number_format_scalar_width_at(text : String, at : Int) -> Int {
+fn number_format_scalar_width_at(text : StringView, at : Int) -> Int {
   if text[at].is_leading_surrogate() &&
     at + 1 < text.length() &&
     text[at + 1].is_trailing_surrogate() {
@@ -482,31 +554,29 @@ fn parse_section_metadata(section : String) -> (String, String?, String) {
           }
           if j < len {
             let content = section[i + 1:j]
-            let lower = content.to_lower().to_owned()
-            if lower == "h" ||
-              lower == "hh" ||
-              lower == "m" ||
-              lower == "mm" ||
-              lower == "s" ||
-              lower == "ss" {
-              sb.write_char('[')
-              sb.write_view(lower)
-              sb.write_char(']')
-            } else if content.has_prefix("$") {
-              let trimmed = content[1:]
-              match trimmed.rev_find("-") {
-                Some(pos) => {
-                  let prefix = trimmed[:pos].to_owned()
-                  let tag = trimmed[pos + 1:].to_owned()
-                  if prefix != "" {
-                    currency_prefix = prefix
-                  }
-                  if tag != "" {
-                    locale = Some(tag)
+            match number_format_elapsed_token(content) {
+              Some(elapsed) => {
+                sb.write_char('[')
+                sb.write_string(elapsed)
+                sb.write_char(']')
+              }
+              None =>
+                if content.has_prefix("$") {
+                  let trimmed = content[1:]
+                  match trimmed.rev_find("-") {
+                    Some(pos) => {
+                      let prefix = trimmed[:pos].to_owned()
+                      let tag = trimmed[pos + 1:].to_owned()
+                      if prefix != "" {
+                        currency_prefix = prefix
+                      }
+                      if tag != "" {
+                        locale = Some(tag)
+                      }
+                    }
+                    None => ()
                   }
                 }
-                None => ()
-              }
             }
             i = j
           }
@@ -527,11 +597,11 @@ fn parse_section_metadata(section : String) -> (String, String?, String) {
 
 ///|
 fn is_supported_locale(tag : String) -> Bool {
-  let normalized = tag.to_lower().trim().to_owned()
-  normalized == "409" ||
-  normalized == "0409" ||
-  normalized == "en-us" ||
-  normalized == "en_us"
+  let normalized = tag.trim()
+  number_format_ascii_case_equal(normalized, "409") ||
+  number_format_ascii_case_equal(normalized, "0409") ||
+  number_format_ascii_case_equal(normalized, "en-us") ||
+  number_format_ascii_case_equal(normalized, "en_us")
 }
 
 ///|
@@ -705,12 +775,11 @@ fn has_date_tokens(code : StringView) -> Bool {
   let mut escape_next = false
   let mut i = 0
   let len = code.length()
-  let lower = code.to_owned().to_lower()
   while i < len {
     let c = code[i]
     if escape_next {
       escape_next = false
-      i = i + 1
+      i = i + number_format_scalar_width_at(code, i)
       continue
     }
     match c {
@@ -723,13 +792,7 @@ fn has_date_tokens(code : StringView) -> Bool {
             j = j + 1
           }
           if j < len {
-            let content = lower[i + 1:j]
-            if content == "h" ||
-              content == "hh" ||
-              content == "m" ||
-              content == "mm" ||
-              content == "s" ||
-              content == "ss" {
+            if number_format_elapsed_token(code[i + 1:j]) is Some(_) {
               return true
             }
             i = j
@@ -752,9 +815,10 @@ fn has_date_tokens(code : StringView) -> Bool {
           return true
         }
     }
-    i = i + 1
+    i = i + number_format_scalar_width_at(code, i)
   }
-  lower.contains("am/pm") || lower.contains("a/p")
+  number_format_ascii_case_contains(code, "am/pm") ||
+  number_format_ascii_case_contains(code, "a/p")
 }
 
 ///|
@@ -1587,14 +1651,14 @@ fn tokenize_date_pattern(pattern : String) -> Array[DateToken] {
   let mut in_quote = false
   let mut escape_next = false
   let len = pattern.length()
-  let lower = pattern.to_lower()
   let mut i = 0
   while i < len {
+    let scalar_width = number_format_scalar_width_at(pattern, i)
     if escape_next {
-      sb.write_view(pattern[i:i + 1])
+      sb.write_view(pattern[i:i + scalar_width])
       has_literal = true
       escape_next = false
-      i = i + 1
+      i = i + scalar_width
       continue
     }
     let c = pattern[i]
@@ -1608,16 +1672,19 @@ fn tokenize_date_pattern(pattern : String) -> Array[DateToken] {
             j = j + 1
           }
           if j < len {
-            let content = lower[i + 1:j]
             if has_literal {
               tokens.push(Literal(sb.to_string()))
               sb = StringBuilder::new()
               has_literal = false
             }
-            match content {
-              "h" | "hh" => tokens.push(ElapsedHour(content.length()))
-              "m" | "mm" => tokens.push(ElapsedMinute(content.length()))
-              "s" | "ss" => tokens.push(ElapsedSecond(content.length()))
+            match number_format_elapsed_token(pattern[i + 1:j]) {
+              Some(content) =>
+                match content {
+                  "h" | "hh" => tokens.push(ElapsedHour(content.length()))
+                  "m" | "mm" => tokens.push(ElapsedMinute(content.length()))
+                  "s" | "ss" => tokens.push(ElapsedSecond(content.length()))
+                  _ => ()
+                }
               _ => ()
             }
             i = j
@@ -1628,36 +1695,34 @@ fn tokenize_date_pattern(pattern : String) -> Array[DateToken] {
         }
       _ =>
         if !in_quote {
-          let maybe_ampm = if i + 4 < len {
-            lower[i:i + 5].to_owned()
-          } else {
-            ""
-          }
-          if maybe_ampm == "am/pm" {
+          let is_ampm = i + 5 <= len &&
+            (c == 'a' || c == 'A') &&
+            (pattern[i + 1] == 'm' || pattern[i + 1] == 'M') &&
+            pattern[i + 2] == '/' &&
+            (pattern[i + 3] == 'p' || pattern[i + 3] == 'P') &&
+            (pattern[i + 4] == 'm' || pattern[i + 4] == 'M')
+          if is_ampm {
             if has_literal {
               tokens.push(Literal(sb.to_string()))
               sb = StringBuilder::new()
               has_literal = false
             }
-            let raw = pattern[i:i + 5].to_owned()
-            let upper = raw.contains("A") || raw.contains("P")
+            let upper = c == 'A' || pattern[i + 3] == 'P'
             tokens.push(AmPm(upper))
             i = i + 5
             continue
           }
-          let maybe_ap = if i + 2 < len {
-            lower[i:i + 3].to_owned()
-          } else {
-            ""
-          }
-          if maybe_ap == "a/p" {
+          let is_ap = i + 3 <= len &&
+            (c == 'a' || c == 'A') &&
+            pattern[i + 1] == '/' &&
+            (pattern[i + 2] == 'p' || pattern[i + 2] == 'P')
+          if is_ap {
             if has_literal {
               tokens.push(Literal(sb.to_string()))
               sb = StringBuilder::new()
               has_literal = false
             }
-            let raw = pattern[i:i + 3].to_owned()
-            let upper = raw.contains("A") || raw.contains("P")
+            let upper = c == 'A' || pattern[i + 2] == 'P'
             tokens.push(Ap(upper))
             i = i + 3
             continue
@@ -1678,30 +1743,41 @@ fn tokenize_date_pattern(pattern : String) -> Array[DateToken] {
               has_literal = false
             }
             let mut j = i
-            while j < len && lower[j] == lower[i] {
+            while j < len {
+              let repeated = match c {
+                'y' | 'Y' => pattern[j] == 'y' || pattern[j] == 'Y'
+                'm' | 'M' => pattern[j] == 'm' || pattern[j] == 'M'
+                'd' | 'D' => pattern[j] == 'd' || pattern[j] == 'D'
+                'h' | 'H' => pattern[j] == 'h' || pattern[j] == 'H'
+                's' | 'S' => pattern[j] == 's' || pattern[j] == 'S'
+                _ => false
+              }
+              if !repeated {
+                break
+              }
               j = j + 1
             }
             let count = j - i
-            let kind = match lower[i] {
-              'y' => Year(count)
-              'm' => Month(count)
-              'd' => Day(count)
-              'h' => Hour(count)
-              's' => Second(count)
+            let kind = match c {
+              'y' | 'Y' => Year(count)
+              'm' | 'M' => Month(count)
+              'd' | 'D' => Day(count)
+              'h' | 'H' => Hour(count)
+              's' | 'S' => Second(count)
               _ => Literal(pattern[i:j].to_owned())
             }
             tokens.push(kind)
             i = j
             continue
           }
-          sb.write_view(pattern[i:i + 1])
+          sb.write_view(pattern[i:i + scalar_width])
           has_literal = true
         } else {
-          sb.write_view(pattern[i:i + 1])
+          sb.write_view(pattern[i:i + scalar_width])
           has_literal = true
         }
     }
-    i = i + 1
+    i = i + scalar_width
   }
   if has_literal {
     tokens.push(Literal(sb.to_string()))

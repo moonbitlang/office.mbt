@@ -1439,6 +1439,28 @@ async test "XLSX get text and query honor the 1904 date system" {
 }
 
 ///|
+async test "XLSX get preserves astral literals in numeric date formats" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Dates"))
+  workbook.set_cell_value("Dates", "A1", Numeric(43528.0))
+  let style_id = workbook.new_style(@xlsx.Style::number_format("!abc😀yyyy"))
+  workbook.set_cell_style("Dates", "A1", style_id)
+  let projection = make_xlsx_projection(
+    "astral-date.xlsx",
+    @xlsx.read(@xlsx.write(workbook)),
+    10,
+  )
+  let selector = resolve_xlsx_selector(
+    projection, "/xlsx/sheet[name=\"Dates\"]/cell[A1]",
+  )
+  guard xlsx_get_data(projection, selector) is Object(get) &&
+    get.get("cell") is Some(Object(cell)) else {
+    fail("expected astral date-format get result")
+  }
+  assert_eq(cell.get("value"), Some(Json::string("!abc😀2019")))
+}
+
+///|
 async test "XLSX cached empty formula results remain distinct from a missing cache" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.new_sheet("Data"))
