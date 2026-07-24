@@ -395,17 +395,25 @@ fn parse_drawing_anchors(
 }
 
 ///|
-fn charge_drawing_anchor_pass(
+fn charge_drawing_work(
   budget : ReadBudget?,
-  anchor_xml : String,
+  units : Int,
 ) -> Unit raise XlsxError {
   match budget {
     Some(value) => {
       value.checkpoint()
-      value.charge_work(anchor_xml.length())
+      value.charge_work(units)
     }
     None => ()
   }
+}
+
+///|
+fn charge_drawing_anchor_pass(
+  budget : ReadBudget?,
+  anchor_xml : StringView,
+) -> Unit raise XlsxError {
+  charge_drawing_work(budget, anchor_xml.length())
 }
 
 ///|
@@ -892,6 +900,15 @@ fn parse_drawing_charts(
       Some(value) => parse_bool_attr(value)
       None => true
     }
+    let drawing_frame_canonical = drawing_chart_frame_is_canonical(
+      anchor_xml,
+      width_emu,
+      height_emu,
+      locked,
+      print_object,
+      budget?,
+      cancelled~,
+    )
     charts.push({
       reference,
       xml,
@@ -907,9 +924,212 @@ fn parse_drawing_charts(
       drawing_width_emu: Some(width_emu),
       drawing_height_emu: Some(height_emu),
       drawing_order: Some(anchor.order),
+      drawing_frame_canonical,
     })
   }
   charts
+}
+
+///|
+/// Checks the complete graphic-frame subtree against the exact structural
+/// subset the writer can regenerate from `Chart`. A single namespace-aware
+/// scan rejects additional attributes, children, locks, names, alternative
+/// text, or transforms instead of accepting the first familiar descendant.
+fn drawing_chart_frame_is_canonical(
+  anchor_xml : StringView,
+  width_emu : Int,
+  height_emu : Int,
+  locked : Bool,
+  print_object : Bool,
+  budget? : ReadBudget,
+  cancelled? : () -> Bool = () => false,
+) -> Bool raise XlsxError {
+  if cancelled() {
+    raise ReadCancelled
+  }
+  let wrapper_prefix = "<frame-root xmlns:xdr=\"" +
+    transitional_spreadsheet_drawing_namespace +
+    "\" xmlns:a=\"" +
+    transitional_drawing_main_namespace +
+    "\" xmlns:c=\"" +
+    transitional_drawing_chart_namespace +
+    "\" xmlns:r=\"" +
+    transitional_relationship_attribute_namespace +
+    "\">"
+  let wrapper_suffix = "</frame-root>"
+  let wrapped_length = wrapper_prefix.length() +
+    anchor_xml.length() +
+    wrapper_suffix.length()
+  // Preflight the retained-fragment materialization. The two wrapped charges
+  // cover the scanner's complete pass (including character-data
+  // classification) and the exact-attribute pass. Attribute values are
+  // extracted during that exact pass, so there are no hidden rescans.
+  charge_drawing_work(budget, wrapped_length)
+  let wrapper = StringBuilder::new(size_hint=wrapped_length)
+  wrapper.write_string(wrapper_prefix)
+  wrapper.write_view(anchor_xml)
+  wrapper.write_string(wrapper_suffix)
+  let wrapped = wrapper.to_string()
+  charge_drawing_anchor_pass(budget, wrapped)
+  charge_drawing_anchor_pass(budget, wrapped)
+  try {
+    let scanner = @ooxml.XmlStartTagScanner::new(wrapped, cancelled~)
+    let drawing_namespace = transitional_spreadsheet_drawing_namespace
+    let main_namespace = transitional_drawing_main_namespace
+    let chart_namespace = transitional_drawing_chart_namespace
+    let relationship_namespace = transitional_relationship_attribute_namespace
+    let mut step = 0
+    let mut frame_id = ""
+    while workbook_scanner_next(scanner) {
+      let depth = scanner.depth()
+      let local_name = scanner.local_name()
+      let namespace_uri = scanner.namespace_uri()
+      if step == 0 {
+        let direct_frame = depth == 3 &&
+          namespace_uri == drawing_namespace &&
+          local_name == "graphicFrame" &&
+          scanner.parent_namespace_uri() == Some(drawing_namespace) &&
+          scanner
+          .parent_local_name()
+          .map(name => xlsx_drawing_anchor_name(name))
+          .unwrap_or(false)
+        if direct_frame {
+          guard workbook_scanner_has_exact_attributes(scanner, []) else {
+            return false
+          }
+          step = 1
+        }
+        continue
+      }
+      if !scanner.intervening_character_data_is_whitespace() {
+        return false
+      }
+      let matched = match step {
+        1 =>
+          depth == 4 &&
+          namespace_uri == drawing_namespace &&
+          local_name == "nvGraphicFramePr" &&
+          scanner.parent_namespace_uri() == Some(drawing_namespace) &&
+          scanner.parent_local_name() == Some("graphicFrame") &&
+          workbook_scanner_has_exact_attributes(scanner, [])
+        2 => {
+          guard depth == 5 &&
+            namespace_uri == drawing_namespace &&
+            local_name == "cNvPr" &&
+            scanner.parent_namespace_uri() == Some(drawing_namespace) &&
+            scanner.parent_local_name() == Some("nvGraphicFramePr") else {
+            return false
+          }
+          guard workbook_scanner_exact_attribute_values(scanner, [
+              ("", "id"),
+              ("", "name"),
+            ])
+            is Some(attributes) else {
+            return false
+          }
+          frame_id = attributes[0]
+          guard frame_id != "" else { return false }
+          let parsed_id = @string.parse_int(frame_id, base=10) catch {
+            _ => return false
+          }
+          parsed_id > 0 &&
+          frame_id == "\{parsed_id}" &&
+          attributes[1] == "Chart " + frame_id
+        }
+        3 =>
+          depth == 5 &&
+          namespace_uri == drawing_namespace &&
+          local_name == "cNvGraphicFramePr" &&
+          scanner.parent_namespace_uri() == Some(drawing_namespace) &&
+          scanner.parent_local_name() == Some("nvGraphicFramePr") &&
+          workbook_scanner_has_exact_attributes(scanner, [])
+        4 =>
+          depth == 4 &&
+          namespace_uri == drawing_namespace &&
+          local_name == "xfrm" &&
+          scanner.parent_namespace_uri() == Some(drawing_namespace) &&
+          scanner.parent_local_name() == Some("graphicFrame") &&
+          workbook_scanner_has_exact_attributes(scanner, [])
+        5 =>
+          depth == 5 &&
+          namespace_uri == main_namespace &&
+          local_name == "off" &&
+          scanner.parent_namespace_uri() == Some(drawing_namespace) &&
+          scanner.parent_local_name() == Some("xfrm") &&
+          workbook_scanner_has_exact_attributes(scanner, [
+            ("", "x", "0"),
+            ("", "y", "0"),
+          ])
+        6 =>
+          depth == 5 &&
+          namespace_uri == main_namespace &&
+          local_name == "ext" &&
+          scanner.parent_namespace_uri() == Some(drawing_namespace) &&
+          scanner.parent_local_name() == Some("xfrm") &&
+          workbook_scanner_has_exact_attributes(scanner, [
+            ("", "cx", "\{width_emu}"),
+            ("", "cy", "\{height_emu}"),
+          ])
+        7 =>
+          depth == 4 &&
+          namespace_uri == main_namespace &&
+          local_name == "graphic" &&
+          scanner.parent_namespace_uri() == Some(drawing_namespace) &&
+          scanner.parent_local_name() == Some("graphicFrame") &&
+          workbook_scanner_has_exact_attributes(scanner, [])
+        8 =>
+          depth == 5 &&
+          namespace_uri == main_namespace &&
+          local_name == "graphicData" &&
+          scanner.parent_namespace_uri() == Some(main_namespace) &&
+          scanner.parent_local_name() == Some("graphic") &&
+          workbook_scanner_has_exact_attributes(scanner, [
+            ("", "uri", chart_namespace),
+          ])
+        9 => {
+          guard depth == 6 &&
+            namespace_uri == chart_namespace &&
+            local_name == "chart" &&
+            scanner.parent_namespace_uri() == Some(main_namespace) &&
+            scanner.parent_local_name() == Some("graphicData") else {
+            return false
+          }
+          guard workbook_scanner_exact_attribute_values(scanner, [
+              (relationship_namespace, "id"),
+            ])
+            is Some(attributes) else {
+            return false
+          }
+          attributes[0] != ""
+        }
+        10 =>
+          depth == 3 &&
+          namespace_uri == drawing_namespace &&
+          local_name == "clientData" &&
+          scanner.parent_namespace_uri() == Some(drawing_namespace) &&
+          scanner
+          .parent_local_name()
+          .map(name => xlsx_drawing_anchor_name(name))
+          .unwrap_or(false) &&
+          workbook_scanner_has_exact_attributes(scanner, [
+            ("", "fLocksWithSheet", if locked { "1" } else { "0" }),
+            ("", "fPrintsWithSheet", if print_object { "1" } else { "0" }),
+          ])
+        _ => false
+      }
+      if !matched {
+        return false
+      }
+      step += 1
+    }
+    step == 11 &&
+    frame_id != "" &&
+    scanner.intervening_character_data_is_whitespace()
+  } catch {
+    InvalidXml(_) => false
+    ReadCancelled => raise ReadCancelled
+    error => raise error
+  }
 }
 
 ///|
@@ -1230,6 +1450,32 @@ fn wb_rels_image_target(target : String) -> String {
   "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
   "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"\{target}\"/>" +
   "</Relationships>"
+}
+
+///|
+fn wb_canonical_chart_anchor() -> String {
+  let anchor =
+    #|<xdr:oneCellAnchor>
+    #|  <xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
+    #|  <xdr:ext cx="9525" cy="9525"/>
+    #|  <xdr:graphicFrame>
+    #|    <xdr:nvGraphicFramePr>
+    #|      <xdr:cNvPr id="1" name="Chart 1"/>
+    #|      <xdr:cNvGraphicFramePr/>
+    #|    </xdr:nvGraphicFramePr>
+    #|    <xdr:xfrm>
+    #|      <a:off x="0" y="0"/>
+    #|      <a:ext cx="9525" cy="9525"/>
+    #|    </xdr:xfrm>
+    #|    <a:graphic>
+    #|      <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
+    #|        <c:chart r:id="rId1"/>
+    #|      </a:graphicData>
+    #|    </a:graphic>
+    #|  </xdr:graphicFrame>
+    #|  <xdr:clientData fLocksWithSheet="1" fPrintsWithSheet="1"/>
+    #|</xdr:oneCellAnchor>
+  anchor
 }
 
 ///|
@@ -1586,6 +1832,85 @@ test "DrawingML preprocessing charges every bounded pass" {
     _ => fail("unexpected DrawingML preprocessing limit error")
   } noraise {
     _ => fail("expected DrawingML preprocessing work rejection")
+  }
+}
+
+///|
+test "chart frame fidelity scan rejects extra content and charges its work" {
+  let anchor = wb_canonical_chart_anchor()
+  let budget = ReadBudget::new(
+    ReadLimits::with_values(max_parser_work_units=1024 * 1024),
+  )
+  assert_true(
+    drawing_chart_frame_is_canonical(anchor, 9525, 9525, true, true, budget~),
+  )
+  let charged_work = budget.parser_work_units
+  assert_true(charged_work > anchor.length() * 3)
+  let exact_budget = ReadBudget::new(
+    ReadLimits::with_values(max_parser_work_units=charged_work),
+  )
+  assert_true(
+    drawing_chart_frame_is_canonical(
+      anchor,
+      9525,
+      9525,
+      true,
+      true,
+      budget=exact_budget,
+    ),
+  )
+  let limited_budget = ReadBudget::new(
+    ReadLimits::with_values(max_parser_work_units=charged_work - 1),
+  )
+  try
+    drawing_chart_frame_is_canonical(
+      anchor,
+      9525,
+      9525,
+      true,
+      true,
+      budget=limited_budget,
+    )
+    |> ignore
+  catch {
+    ResourceLimitExceeded(kind~, ..) => assert_eq(kind, "parser_work_units")
+    _ => fail("unexpected chart frame work-limit error")
+  } noraise {
+    _ => fail("expected chart frame work-limit rejection")
+  }
+  let extra_transform = anchor.replace(
+    old="    <a:graphic>\n",
+    new="    <xdr:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"9525\" cy=\"9525\"/></xdr:xfrm>\n    <a:graphic>\n",
+  )
+  assert_false(
+    drawing_chart_frame_is_canonical(extra_transform, 9525, 9525, true, true),
+  )
+  let extra_attribute = anchor.replace(
+    old="<a:graphicData uri=",
+    new="<a:graphicData custom=\"x\" uri=",
+  )
+  assert_false(
+    drawing_chart_frame_is_canonical(extra_attribute, 9525, 9525, true, true),
+  )
+  let extra_text = anchor.replace(
+    old="<xdr:cNvPr id=\"1\" name=\"Chart 1\"/>\n",
+    new="<xdr:cNvPr id=\"1\" name=\"Chart 1\"/>custom\n",
+  )
+  assert_false(
+    drawing_chart_frame_is_canonical(extra_text, 9525, 9525, true, true),
+  )
+  let mut cancellation_checks = 0
+  try
+    drawing_chart_frame_is_canonical(anchor, 9525, 9525, true, true, cancelled=() => {
+      cancellation_checks += 1
+      cancellation_checks >= 2
+    })
+    |> ignore
+  catch {
+    ReadCancelled => assert_true(cancellation_checks >= 2)
+    _ => fail("unexpected chart frame cancellation error")
+  } noraise {
+    _ => fail("expected chart frame cancellation")
   }
 }
 

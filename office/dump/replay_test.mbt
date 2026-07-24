@@ -105,6 +105,343 @@ test "v2 dump then replay then dump is a fixpoint on the op stream" {
 }
 
 ///|
+test "a batch-authored chart survives the file-backed dump replay fixpoint" {
+  let source = @xlsx.Workbook::new()
+  ignore(source.add_sheet("Data"))
+  source.set_cell("Data", "A1", "Quarter")
+  source.set_cell("Data", "B1", "Revenue")
+  source.set_cell("Data", "A2", "Q1")
+  source.set_cell_int("Data", "B2", 10)
+  source.set_cell("Data", "A3", "Q2")
+  source.set_cell_int("Data", "B3", 15)
+  let script = Json::object({
+    "schema": Json::string("xlsx.batch/2"),
+    "ops": Json::array([
+      Json::object({
+        "op": Json::string("chart"),
+        "params": Json::object({
+          "sheet": Json::string("Data"),
+          "anchor": Json::string("E2"),
+          "type": Json::string("line"),
+          "categories": Json::string("A2:A3"),
+          "values": Json::string("B2:B3"),
+          "name": Json::string("Revenue"),
+          "title": Json::string("By quarter"),
+        }),
+      }),
+    ]),
+  })
+  for op in @batch.parse_script(script) {
+    @batch.apply_op(source, op)
+  }
+  let file_backed = @xlsx.read(@xlsx.write(source))
+  guard file_backed.sheet("Data") is Some(source_sheet) else {
+    fail("missing file-backed Data")
+  }
+  assert_eq(source_sheet.charts().length(), 1)
+  let source_chart = source_sheet.charts()[0]
+  assert_eq(@inspect.chart_title(source_chart.xml), Some("By quarter"))
+  let source_series = @inspect.chart_series(source_chart.xml)
+  assert_eq(source_series.length(), 1)
+  assert_eq(source_series[0].name, Some("Revenue"))
+  assert_eq(source_series[0].categories, Some("'Data'!A2:A3"))
+  assert_eq(source_series[0].values, Some("'Data'!B2:B3"))
+  let candidate_book = @xlsx.Workbook::new()
+  let candidate_sheet = candidate_book.add_sheet("Data")
+  let candidate_options = @xlsx.ChartOptions::new(Line)
+  candidate_options.title = "By quarter"
+  candidate_options.series.push(
+    @xlsx.ChartSeries::new("'Data'!A2:A3", "'Data'!B2:B3", name="Revenue"),
+  )
+  candidate_book.add_chart_with_options("Data", "E2", candidate_options)
+  let candidate_chart = candidate_sheet.charts()[0]
+  assert_true(candidate_chart.xml.has_suffix(source_chart.xml))
+  assert_eq(candidate_chart.offset_x, source_chart.offset_x)
+  assert_eq(candidate_chart.offset_y, source_chart.offset_y)
+  assert_eq(candidate_chart.width_emu, source_chart.width_emu)
+  assert_eq(candidate_chart.height_emu, source_chart.height_emu)
+  assert_eq(candidate_chart.print_object, source_chart.print_object)
+  assert_eq(candidate_chart.locked, source_chart.locked)
+  let d1 = @dump.dump_xlsx_workbook(
+    file_backed,
+    source_file="charted.xlsx",
+    source_bytes=1,
+  )
+  let document = d1.to_json_document().stringify()
+  assert_true(document.contains("\"op\":\"chart\""))
+  assert_true(document.contains("\"anchor\":\"E2\""))
+  assert_true(document.contains("\"type\":\"line\""))
+  assert_true(document.contains("\"categories\":\"A2:A3\""))
+  assert_true(document.contains("\"values\":\"B2:B3\""))
+  assert_true(document.contains("\"name\":\"Revenue\""))
+  assert_true(document.contains("\"title\":\"By quarter\""))
+  assert_false(document.contains("xlsx.charts_not_dumped"))
+  let replayed = @xlsx.read(@xlsx.write(@dump.replay_xlsx_dump(d1)))
+  guard replayed.sheet("Data") is Some(sheet) else { fail("missing Data") }
+  assert_eq(sheet.charts().length(), 1)
+  let replayed_chart = sheet.charts()[0]
+  assert_eq(replayed_chart.reference, "E2")
+  assert_eq(@inspect.chart_kinds(replayed_chart.xml), ["lineChart"])
+  assert_eq(@inspect.chart_title(replayed_chart.xml), Some("By quarter"))
+  let series = @inspect.chart_series(replayed_chart.xml)
+  assert_eq(series.length(), 1)
+  assert_eq(series[0].name, Some("Revenue"))
+  assert_eq(series[0].categories, Some("'Data'!A2:A3"))
+  assert_eq(series[0].values, Some("'Data'!B2:B3"))
+  let d2 = @dump.dump_xlsx_workbook(
+    replayed,
+    source_file="charted.xlsx",
+    source_bytes=1,
+  )
+  assert_eq(dump_ops(d1), dump_ops(d2))
+  assert_eq(dump_residual(d1), dump_residual(d2))
+}
+
+///|
+test "a batch chart on a bang-named sheet remains replayable" {
+  let source = @xlsx.Workbook::new()
+  ignore(source.add_sheet("Bang!"))
+  let script = Json::object({
+    "schema": Json::string("xlsx.batch/2"),
+    "ops": Json::array([
+      Json::object({
+        "op": Json::string("chart"),
+        "params": Json::object({
+          "sheet": Json::string("Bang!"),
+          "anchor": Json::string("E2"),
+          "type": Json::string("line"),
+          "categories": Json::string("A1:A2"),
+          "values": Json::string("B1:B2"),
+        }),
+      }),
+    ]),
+  })
+  for op in @batch.parse_script(script) {
+    @batch.apply_op(source, op)
+  }
+  let d1 = @dump.dump_xlsx_workbook(
+    @xlsx.read(@xlsx.write(source)),
+    source_file="bang.xlsx",
+    source_bytes=1,
+  )
+  assert_true(dump_ops(d1).contains("\"categories\":\"A1:A2\""))
+  assert_true(dump_ops(d1).contains("\"values\":\"B1:B2\""))
+  assert_false(dump_residual(d1).contains("xlsx.charts_not_dumped"))
+  let d2 = @dump.dump_xlsx_workbook(
+    @xlsx.read(@xlsx.write(@dump.replay_xlsx_dump(d1))),
+    source_file="bang.xlsx",
+    source_bytes=1,
+  )
+  assert_eq(dump_ops(d1), dump_ops(d2))
+  assert_eq(dump_residual(d1), dump_residual(d2))
+}
+
+///|
+test "non-batch chart formulas become a residual instead of aborting dump" {
+  let source = @xlsx.Workbook::new()
+  ignore(source.add_sheet("Data"))
+  let options = @xlsx.ChartOptions::new(Line)
+  options.series.push(@xlsx.ChartSeries::new("CategoryName", "ValueName"))
+  source.add_chart_with_options("Data", "E2", options)
+  let envelope = @dump.dump_xlsx_workbook(
+    @xlsx.read(@xlsx.write(source)),
+    source_file="named-formulas.xlsx",
+    source_bytes=1,
+  )
+  assert_false(dump_ops(envelope).contains("\"op\":\"chart\""))
+  assert_true(dump_residual(envelope).contains("xlsx.charts_not_dumped"))
+}
+
+///|
+test "unqualified SDK chart ranges are not misclassified as batch-authored" {
+  let source = @xlsx.Workbook::new()
+  ignore(source.add_sheet("Data"))
+  let options = @xlsx.ChartOptions::new(Line)
+  options.series.push(@xlsx.ChartSeries::new("A1:A2", "B1:B2"))
+  source.add_chart_with_options("Data", "E2", options)
+  let envelope = @dump.dump_xlsx_workbook(
+    @xlsx.read(@xlsx.write(source)),
+    source_file="unqualified.xlsx",
+    source_bytes=1,
+  )
+  assert_false(dump_ops(envelope).contains("\"op\":\"chart\""))
+  assert_true(dump_residual(envelope).contains("xlsx.charts_not_dumped"))
+}
+
+///|
+test "custom chart frame metadata prevents lossy chart op emission" {
+  let source = @xlsx.Workbook::new()
+  ignore(source.add_sheet("Data"))
+  let options = @xlsx.ChartOptions::new(Line)
+  options.series.push(@xlsx.ChartSeries::new("'Data'!A1:A2", "'Data'!B1:B2"))
+  source.add_chart_with_options("Data", "E2", options)
+  let archive = @zip.read(@xlsx.write(source))
+  let drawing_path = "xl/drawings/drawing1.xml"
+  guard archive.get(drawing_path) is Some(drawing_bytes) else {
+    fail("missing chart drawing")
+  }
+  let drawing = @utf8.decode(drawing_bytes)
+  let customized = drawing.replace(
+    old="name=\"Chart 1\"/>",
+    new="name=\"Custom chart\" descr=\"Accessible chart\"/>",
+  )
+  assert_false(customized == drawing)
+  assert_true(archive.replace(drawing_path, @utf8.encode(customized)))
+  let file_backed = @xlsx.read(@zip.write(archive))
+  guard file_backed.sheet("Data") is Some(sheet) else { fail("missing Data") }
+  assert_false(sheet.charts()[0].drawing_frame_is_canonical())
+  let envelope = @dump.dump_xlsx_workbook(
+    file_backed,
+    source_file="custom-frame.xlsx",
+    source_bytes=1,
+  )
+  assert_false(dump_ops(envelope).contains("\"op\":\"chart\""))
+  assert_true(dump_residual(envelope).contains("xlsx.charts_not_dumped"))
+}
+
+///|
+test "unmodeled chart frame content prevents lossy chart op emission" {
+  let mutations = [
+    (
+      "a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/chart\"",
+      "a:graphicData custom=\"x\" uri=\"http://schemas.openxmlformats.org/drawingml/2006/chart\"",
+    ),
+    (
+      "      <a:graphic>\n", "      <xdr:xfrm rot=\"1\"><a:off x=\"3\" y=\"4\"/><a:ext cx=\"5\" cy=\"6\"/></xdr:xfrm>\n      <a:graphic>\n",
+    ),
+    (
+      "<xdr:cNvPr id=\"1\" name=\"Chart 1\"/>\n", "<xdr:cNvPr id=\"1\" name=\"Chart 1\"/>custom\n",
+    ),
+  ]
+  for mutation in mutations {
+    let (old, replacement) = mutation
+    let source = @xlsx.Workbook::new()
+    ignore(source.add_sheet("Data"))
+    let options = @xlsx.ChartOptions::new(Line)
+    options.series.push(@xlsx.ChartSeries::new("'Data'!A1:A2", "'Data'!B1:B2"))
+    source.add_chart_with_options("Data", "E2", options)
+    let archive = @zip.read(@xlsx.write(source))
+    let drawing_path = "xl/drawings/drawing1.xml"
+    guard archive.get(drawing_path) is Some(drawing_bytes) else {
+      fail("missing chart drawing")
+    }
+    let drawing = @utf8.decode(drawing_bytes)
+    let customized = drawing.replace(old~, new=replacement)
+    assert_false(customized == drawing)
+    assert_true(archive.replace(drawing_path, @utf8.encode(customized)))
+    let file_backed = @xlsx.read(@zip.write(archive))
+    guard file_backed.sheet("Data") is Some(sheet) else { fail("missing Data") }
+    assert_false(sheet.charts()[0].drawing_frame_is_canonical())
+    let envelope = @dump.dump_xlsx_workbook(
+      file_backed,
+      source_file="unmodeled-frame.xlsx",
+      source_bytes=1,
+    )
+    assert_false(dump_ops(envelope).contains("\"op\":\"chart\""))
+    assert_true(dump_residual(envelope).contains("xlsx.charts_not_dumped"))
+  }
+}
+
+///|
+test "every advertised batch chart type dumps and aliases canonicalize" {
+  let source = @xlsx.Workbook::new()
+  ignore(source.add_sheet("Data"))
+  let cases : Array[(String, String, String)] = [
+    ("col", "col", "E2"),
+    ("column", "col", "E20"),
+    ("bar", "bar", "K2"),
+    ("line", "line", "K20"),
+    ("pie", "pie", "Q2"),
+    ("area", "area", "Q20"),
+    ("scatter", "scatter", "W2"),
+    ("doughnut", "doughnut", "W20"),
+    ("donut", "doughnut", "AC2"),
+    ("radar", "radar", "AC20"),
+  ]
+  for chart_case in cases {
+    let (input_type, _, anchor) = chart_case
+    let script = Json::object({
+      "schema": Json::string("xlsx.batch/2"),
+      "ops": Json::array([
+        Json::object({
+          "op": Json::string("chart"),
+          "params": Json::object({
+            "sheet": Json::string("Data"),
+            "anchor": Json::string(anchor),
+            "type": Json::string(input_type),
+            "categories": Json::string("A1:A3"),
+            "values": Json::string("B1:B3"),
+          }),
+        }),
+      ]),
+    })
+    for op in @batch.parse_script(script) {
+      @batch.apply_op(source, op)
+    }
+  }
+  let file_backed = @xlsx.read(@xlsx.write(source))
+  guard file_backed.sheet("Data") is Some(source_sheet) else {
+    fail("missing file-backed Data")
+  }
+  assert_eq(source_sheet.charts().length(), cases.length())
+  let d1 = @dump.dump_xlsx_workbook(
+    file_backed,
+    source_file="chart-types.xlsx",
+    source_bytes=1,
+  )
+  let ops = dump_ops(d1)
+  let mut chart_ops = 0
+  for op in d1.ops {
+    if op.stringify().contains("\"op\":\"chart\"") {
+      chart_ops += 1
+    }
+  }
+  assert_eq(chart_ops, cases.length())
+  for chart_case in cases {
+    let (_, canonical_type, anchor) = chart_case
+    assert_true(
+      ops.contains("\"anchor\":\"\{anchor}\",\"type\":\"\{canonical_type}\""),
+    )
+  }
+  assert_false(dump_residual(d1).contains("xlsx.charts_not_dumped"))
+  let replayed = @xlsx.read(@xlsx.write(@dump.replay_xlsx_dump(d1)))
+  guard replayed.sheet("Data") is Some(replayed_sheet) else {
+    fail("missing replayed Data")
+  }
+  assert_eq(replayed_sheet.charts().length(), cases.length())
+  let d2 = @dump.dump_xlsx_workbook(
+    replayed,
+    source_file="chart-types.xlsx",
+    source_bytes=1,
+  )
+  assert_eq(dump_ops(d1), dump_ops(d2))
+  assert_eq(dump_residual(d1), dump_residual(d2))
+}
+
+///|
+test "charts outside the batch-authored subset retain a bounded residual" {
+  let source = @xlsx.Workbook::new()
+  ignore(source.add_sheet("Data"))
+  let options = @xlsx.ChartOptions::new(Col)
+  options.series.push(
+    @xlsx.ChartSeries::new("Data!A1:A2", "Data!B1:B2", name="one"),
+  )
+  options.series.push(
+    @xlsx.ChartSeries::new("Data!A1:A2", "Data!C1:C2", name="two"),
+  )
+  source.add_chart_with_options("Data", "E2", options)
+  let envelope = @dump.dump_xlsx_workbook(
+    @xlsx.read(@xlsx.write(source)),
+    source_file="unsupported-chart.xlsx",
+    source_bytes=1,
+  )
+  let document = envelope.to_json_document().stringify()
+  assert_false(document.contains("\"op\":\"chart\""))
+  assert_true(document.contains("xlsx.charts_not_dumped"))
+  assert_true(document.contains("1 not yet covered by the dump"))
+}
+
+///|
 test "historical v1 XLSX dumps remain replayable" {
   let source = @xlsx.Workbook::new()
   ignore(source.add_sheet("Data"))

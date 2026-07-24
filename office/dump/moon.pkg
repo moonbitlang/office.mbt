@@ -20,6 +20,7 @@ import {
   "bobzhang/docx2html/docx",
   "bobzhang/mbtexcel/batch",
   "bobzhang/mbtexcel/xlsx",
+  "bobzhang/mbtexcel/zip",
   "bobzhang/office/dump",
 } for "test"
 

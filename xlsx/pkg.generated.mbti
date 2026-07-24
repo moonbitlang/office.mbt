@@ -281,6 +281,7 @@ pub struct Chart {
   positioning : PicturePositioning
   // private fields
 }
+pub fn Chart::drawing_frame_is_canonical(Self) -> Bool
 
 pub(all) struct ChartAxis {
   mut none : Bool

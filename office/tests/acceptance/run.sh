@@ -119,13 +119,14 @@ json office.dump/1 dump "$work/xlsx-filled.xlsx" --json >"$work/xlsx.dump.json"
 jq -e '
   .format == "xlsx" and
   (.ops | length) > 0 and
-  ([.residual[].code] | index("xlsx.charts_not_dumped")) != null
-' "$work/xlsx.dump.json" >/dev/null || fail "xlsx dump or chart-loss disclosure"
+  ([.ops[] | select(.op == "chart")] | length) == 1 and
+  ([.residual[].code] | index("xlsx.charts_not_dumped")) == null
+' "$work/xlsx.dump.json" >/dev/null || fail "xlsx dump chart preservation"
 jq -e '.success == true and .data.format == "xlsx"' >/dev/null <<<"$(json office.replay/1 replay "$work/xlsx.dump.json" --output "$work/xlsx-replayed.xlsx" --json)" || fail "xlsx replay"
+jq -e '.data.sheets[0].counts.charts == 1' >/dev/null <<<"$(json office.xlsx.outline/1 outline "$work/xlsx-replayed.xlsx" --json)" || fail "xlsx replay chart"
 json office.dump/1 dump "$work/xlsx-replayed.xlsx" --json >"$work/xlsx.replayed.dump.json"
-# The first projection may intentionally drop features disclosed by residuals
-# (the chart in this fixture). Prove that the complete projected envelope then
-# reaches a fixpoint; only source-path/byte provenance is contractually ignored.
+# Prove that the complete projected envelope reaches a fixpoint; only
+# source-path/byte provenance is contractually ignored.
 jq -e '.success == true and .data.format == "xlsx"' >/dev/null <<<"$(json office.replay/1 replay "$work/xlsx.replayed.dump.json" --output "$work/xlsx-replayed-2.xlsx" --json)" || fail "xlsx second replay"
 json office.dump/1 dump "$work/xlsx-replayed-2.xlsx" --json >"$work/xlsx.replayed-2.dump.json"
 jq -S 'del(.source)' "$work/xlsx.replayed.dump.json" >"$work/xlsx.fixpoint-1.json"

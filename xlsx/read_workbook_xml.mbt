@@ -41,6 +41,39 @@ fn workbook_scanner_attribute(
 }
 
 ///|
+fn workbook_scanner_exact_attribute_values(
+  scanner : @ooxml.XmlStartTagScanner,
+  expected : ArrayView[(String, String)],
+) -> Array[String]? raise XlsxError {
+  scanner.exact_attribute_values(expected) catch {
+    InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+}
+
+///|
+fn workbook_scanner_has_exact_attributes(
+  scanner : @ooxml.XmlStartTagScanner,
+  expected : ArrayView[(String, String, String)],
+) -> Bool raise XlsxError {
+  let names : Array[(String, String)] = []
+  for entry in expected {
+    let (namespace_uri, local_name, _) = entry
+    names.push((namespace_uri, local_name))
+  }
+  guard workbook_scanner_exact_attribute_values(scanner, names) is Some(values) else {
+    return false
+  }
+  for index, entry in expected {
+    let (_, _, expected_value) = entry
+    if values[index] != expected_value {
+      return false
+    }
+  }
+  true
+}
+
+///|
 fn parse_workbook_sheets(
   xml : StringView,
   max_sheets : Int,

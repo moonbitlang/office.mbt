@@ -78,6 +78,16 @@ pub struct Chart {
   priv drawing_width_emu : Int?
   priv drawing_height_emu : Int?
   priv drawing_order : Int?
+  priv drawing_frame_canonical : Bool
+}
+
+///|
+/// Whether this chart's drawing frame matches the canonical frame emitted by
+/// the writer. A false value means frame-level metadata such as a custom object
+/// name, alternative text, locks, or transform details would be lost by
+/// reconstructing only the chart part and public geometry.
+pub fn Chart::drawing_frame_is_canonical(self : Chart) -> Bool {
+  self.drawing_frame_canonical
 }
 
 ///|

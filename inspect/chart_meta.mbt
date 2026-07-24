@@ -86,6 +86,48 @@ pub fn chart_series(xml : String) -> Array[ChartSeriesMeta] {
 }
 
 ///|
+/// The decoded plain text of the chart-level title, when present. Axis titles
+/// live inside `c:plotArea` and are deliberately excluded. Multiple rich-text
+/// runs are concatenated in document order; callers that require a stricter
+/// shape can compare a reconstructed chart against the retained XML.
+pub fn chart_title(xml : String) -> String? {
+  let cleaned = preprocess_chart_xml(xml)
+  let view = cleaned[:]
+  let (chart_start, chart_end) = match element_content(view, "c:chart", 0) {
+    Some(bounds) => bounds
+    None => return None
+  }
+  let chart = view[chart_start:chart_end]
+  let before_plot_end = match find_tag_open(chart, "c:plotArea", 0) {
+    Some(position) => position
+    None => chart.length()
+  }
+  let before_plot = chart[:before_plot_end]
+  let (title_start, title_end) = match
+    element_content(before_plot, "c:title", 0) {
+    Some(bounds) => bounds
+    None => return None
+  }
+  let title = before_plot[title_start:title_end]
+  let out = StringBuilder()
+  let mut found = false
+  for from = 0 {
+    let (text_start, text_end) = match element_content(title, "a:t", from) {
+      Some(bounds) => bounds
+      None => break
+    }
+    out.write_string(unescape_xml(title[text_start:text_end]))
+    found = true
+    continue text_end
+  }
+  if found {
+    Some(out.to_string())
+  } else {
+    None
+  }
+}
+
+///|
 /// Whether `c` may directly follow a tag name inside its markup: `>`,
 /// whitespace (attributes follow), or `/` (self-closing).
 fn is_tag_delimiter(c : UInt16) -> Bool {

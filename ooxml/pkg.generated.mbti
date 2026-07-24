@@ -111,6 +111,8 @@ pub fn XmlStartTagScanner::attribute(Self, StringView, StringView) -> String? ra
 pub fn XmlStartTagScanner::attribute_values_in_namespace(Self, StringView) -> Array[String] raise ParseXmlError
 pub fn XmlStartTagScanner::attribute_view(Self, StringView, StringView) -> StringView? raise ParseXmlError
 pub fn XmlStartTagScanner::depth(Self) -> Int
+pub fn XmlStartTagScanner::exact_attribute_values(Self, ArrayView[(String, String)]) -> Array[String]? raise ParseXmlError
+pub fn XmlStartTagScanner::intervening_character_data_is_whitespace(Self) -> Bool
 pub fn XmlStartTagScanner::local_name(Self) -> StringView
 pub fn XmlStartTagScanner::namespace_uri(Self) -> StringView
 pub fn XmlStartTagScanner::new(StringView, cancelled? : () -> Bool) -> Self

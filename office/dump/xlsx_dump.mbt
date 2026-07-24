@@ -579,6 +579,144 @@ fn dump_sheet_images(
 }
 
 ///|
+/// Canonical spellings for the chart types accepted by the batch contract.
+/// Aliases such as `column` and `donut` generate the same chart XML and are
+/// normalized to these names in a dump.
+let xlsx_batch_chart_types : Array[String] = [
+  "col", "bar", "line", "pie", "area", "scatter", "doughnut", "radar",
+]
+
+///|
+fn same_chart_positioning(
+  left : @xlsx.PicturePositioning,
+  right : @xlsx.PicturePositioning,
+) -> Bool {
+  match (left, right) {
+    (OneCell, OneCell) | (TwoCell, TwoCell) | (Absolute, Absolute) => true
+    _ => false
+  }
+}
+
+///|
+/// The XLSX reader removes a leading XML declaration from retained chart XML
+/// while leaving the following newline intact. Compare the body so a chart
+/// authored by the batch writer still recognizes after a file round-trip.
+fn batch_chart_xml_body(xml : String) -> StringView {
+  if xml.has_prefix("<?xml") && xml.find("?>") is Some(end) {
+    xml[end + 2:]
+  } else {
+    xml
+  }
+}
+
+///|
+/// Converts the writer's canonical qualification for the chart's own sheet
+/// back to the unqualified spelling accepted by the batch op. Besides keeping
+/// dumps canonical, this is required for valid sheet names containing `!`:
+/// their stored formula (`'Bang!'!A1:A2`) cannot otherwise be distinguished by
+/// the batch grammar's last-bang split.
+fn batch_chart_series_param(formula : String, sheet : String) -> String {
+  let own_sheet_prefix = @batch.qualify_range(sheet, "")
+  if formula.has_prefix(own_sheet_prefix) {
+    formula[own_sheet_prefix.length():].to_owned()
+  } else {
+    formula
+  }
+}
+
+///|
+/// Rebuilds one candidate by parsing and applying the exact batch op that the
+/// dump would emit, then requires byte-identical chart XML plus default batch
+/// geometry. This is deliberately fail-closed: foreign or customized charts
+/// may expose the same ranges and title, but are emitted only when replay would
+/// reproduce the retained chart without dropping options.
+fn batch_chart_candidate_matches(
+  chart : @xlsx.Chart,
+  sheet : String,
+  params : Map[String, Json],
+) -> Bool {
+  try {
+    let probe = @xlsx.Workbook::new()
+    let probe_sheet = probe.add_sheet(sheet)
+    let script = Json::object({
+      "schema": Json::string(XLSX_BATCH_SCHEMA),
+      "ops": Json::array([dump_op("chart", params)]),
+    })
+    let parsed = @batch.parse_script(script)
+    guard parsed is [op] else { return false }
+    @batch.apply_op(probe, op)
+    let candidates = probe_sheet.charts()
+    guard candidates.length() == 1 else { return false }
+    let candidate = candidates[0]
+    candidate.reference == chart.reference &&
+    batch_chart_xml_body(candidate.xml) == batch_chart_xml_body(chart.xml) &&
+    candidate.offset_x == chart.offset_x &&
+    candidate.offset_y == chart.offset_y &&
+    candidate.width_emu == chart.width_emu &&
+    candidate.height_emu == chart.height_emu &&
+    candidate.print_object == chart.print_object &&
+    candidate.locked == chart.locked &&
+    same_chart_positioning(candidate.positioning, chart.positioning)
+  } catch {
+    _ => false
+  }
+}
+
+///|
+/// Returns the existing `chart` op only for the exact one-series chart subset
+/// authored by XLSX batch. The raw-XML reconstruction check is the authority;
+/// metadata extraction merely supplies a candidate.
+fn batch_chart_dump_op(chart : @xlsx.Chart, sheet : String) -> Json? {
+  guard chart.drawing_frame_is_canonical() else { return None }
+  let series = @inspect.chart_series(chart.xml)
+  guard series is [entry] else { return None }
+  guard entry.categories is Some(categories) && entry.values is Some(values) else {
+    return None
+  }
+  let categories = batch_chart_series_param(categories, sheet)
+  let values = batch_chart_series_param(values, sheet)
+  let series_name = entry.name.unwrap_or("")
+  let title = @inspect.chart_title(chart.xml).unwrap_or("")
+  for name in xlsx_batch_chart_types {
+    let params : Map[String, Json] = {
+      "sheet": Json::string(sheet),
+      "anchor": Json::string(chart.reference),
+      "type": Json::string(name),
+      "categories": Json::string(categories),
+      "values": Json::string(values),
+    }
+    if series_name != "" {
+      params["name"] = Json::string(series_name)
+    }
+    if title != "" {
+      params["title"] = Json::string(title)
+    }
+    if batch_chart_candidate_matches(chart, sheet, params) {
+      return Some(dump_op("chart", params))
+    }
+  }
+  None
+}
+
+///|
+/// Emits every faithfully reconstructible worksheet chart and returns the
+/// unsupported count for one bounded sheet-level residual.
+fn dump_sheet_charts(
+  worksheet : @xlsx.Worksheet,
+  sheet : String,
+  ops : Array[Json],
+) -> Int {
+  let mut unsupported = 0
+  for chart in worksheet.charts() {
+    match batch_chart_dump_op(chart, sheet) {
+      Some(op) => ops.push(op)
+      None => unsupported += 1
+    }
+  }
+  unsupported
+}
+
+///|
 /// Coarse per-feature residuals for source content PR1 does not yet dump
 /// as ops. Every record names the feature and its count so nothing is
 /// silently missing from the replayed document.
@@ -586,10 +724,11 @@ fn dump_sheet_coverage_residuals(
   workbook : @xlsx.Workbook,
   worksheet : @xlsx.Worksheet,
   sheet : String,
+  unsupported_charts : Int,
   residual : Array[DumpResidual],
 ) -> Unit raise {
   let counts : Array[(String, Int)] = [
-    ("xlsx.charts_not_dumped", worksheet.charts.length()),
+    ("xlsx.charts_not_dumped", unsupported_charts),
     ("xlsx.hyperlinks_not_dumped", worksheet.hyperlinks.length()),
     ("xlsx.sparklines_not_dumped", worksheet.sparkline_groups.length()),
     ("xlsx.pivot_tables_not_dumped", worksheet.pivot_tables.length()),
@@ -917,7 +1056,10 @@ pub fn dump_xlsx_workbook(
     dump_sheet_conditional_formats(
       workbook, name, ops, table_candidates, residual,
     )
-    dump_sheet_coverage_residuals(workbook, worksheet, name, residual)
+    let unsupported_charts = dump_sheet_charts(worksheet, name, ops)
+    dump_sheet_coverage_residuals(
+      workbook, worksheet, name, unsupported_charts, residual,
+    )
   }
   dump_workbook_residuals(workbook, residual)
   // Visibility ops come last so the engine's keep-one-visible guard sees
