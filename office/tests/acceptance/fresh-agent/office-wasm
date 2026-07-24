@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+
+prefix=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+exec "$prefix/libexec/moonrun" "$prefix/libexec/office.wasm" "$@"
