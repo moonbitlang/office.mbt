@@ -1,34 +1,12 @@
 ///|
-let schema_input_contracts : String = "office.input-contracts/1"
+let schema_input_contracts : String = @input_contract.SCHEMA_INVENTORY
 
 ///|
-let schema_input_contract : String = "office.input-contract/1"
-
-///|
-struct InputContractCore {
-  id : String
-  summary : String
-  consumed_by : Array[String]
-  envelope : Json
-  definitions : Array[Json]
-  operations : Array[Json]
-  constraints : Array[String]
-  limits : Json
-  examples : Array[Json]
-}
+type InputContractCore = @input_contract.Core
 
 ///|
 fn contract_strings(values : Array[String]) -> Json {
-  Json::array(values.map(Json::string))
-}
-
-///|
-fn contract_members(entries : Array[(String, String)]) -> Json {
-  let members : Map[String, Json] = Map([])
-  for name_and_type in entries {
-    members[name_and_type.0] = Json::string(name_and_type.1)
-  }
-  Json::object(members)
+  @input_contract.contract_strings(values)
 }
 
 ///|
@@ -38,14 +16,7 @@ fn contract_object(
   required? : Array[String] = [],
   constraints? : Array[String] = [],
 ) -> Json {
-  Json::object({
-    "name": Json::string(name),
-    "type": Json::string("object"),
-    "members": contract_members(entries),
-    "required": contract_strings(required),
-    "additional_members": Json::boolean(false),
-    "constraints": contract_strings(constraints),
-  })
+  @input_contract.contract_object(name, entries, required~, constraints~)
 }
 
 ///|
@@ -54,11 +25,7 @@ fn contract_type(
   type_name : String,
   constraints? : Array[String] = [],
 ) -> Json {
-  Json::object({
-    "name": Json::string(name),
-    "type": Json::string(type_name),
-    "constraints": contract_strings(constraints),
-  })
+  @input_contract.contract_type(name, type_name, constraints~)
 }
 
 ///|
@@ -66,7 +33,7 @@ fn contract_envelope(
   entries : Array[(String, String)],
   required : Array[String],
 ) -> Json {
-  contract_object("envelope", entries, required~)
+  @input_contract.contract_envelope(entries, required)
 }
 
 ///|
@@ -205,6 +172,14 @@ fn docx_input_contract() -> InputContractCore {
       ["schema", "ops"],
     ),
     definitions: [
+      contract_type("docx_text", "string", constraints=[
+        "XML 1.0 characters only", "C0 controls are forbidden except tab", "raw CR and LF are forbidden; paragraphs are the hard-break unit",
+        "unpaired surrogates and U+FFFE/U+FFFF are forbidden",
+      ]),
+      contract_type("xml_attribute_string", "nonempty-string", constraints=[
+        "XML 1.0 characters only", "all C0 controls, including tab, CR, and LF, are forbidden",
+        "unpaired surrogates and U+FFFE/U+FFFF are forbidden",
+      ]),
       contract_object(
         "docx_operation",
         [("op", "enum(operations[].op)"), ("params", "operation.params")],
@@ -214,7 +189,7 @@ fn docx_input_contract() -> InputContractCore {
       contract_object(
         "paragraph",
         [
-          ("text", "string"),
+          ("text", "docx_text"),
           ("runs", "nonempty-array(run)"),
           ("style", "enum(Normal|Heading1..Heading6)"),
           ("align", "enum(left|center|right|both|start|end|distribute)"),
@@ -230,7 +205,7 @@ fn docx_input_contract() -> InputContractCore {
       contract_object(
         "text_run",
         [
-          ("text", "string"),
+          ("text", "docx_text"),
           ("bold", "boolean"),
           ("italic", "boolean"),
           ("underline", "boolean"),
@@ -238,7 +213,7 @@ fn docx_input_contract() -> InputContractCore {
           ("all_caps", "boolean"),
           ("small_caps", "boolean"),
           ("vertical", "enum(superscript|subscript)"),
-          ("font", "nonempty-string"),
+          ("font", "xml_attribute_string"),
           ("size", "integer(1..1638)"),
           ("highlight", "ST_HighlightColor except none"),
         ],
@@ -247,10 +222,10 @@ fn docx_input_contract() -> InputContractCore {
       contract_object(
         "link",
         [
-          ("href", "nonempty-string"),
-          ("anchor", "nonempty-string"),
-          ("target_frame", "nonempty-string"),
-          ("text", "string"),
+          ("href", "xml_attribute_string"),
+          ("anchor", "xml_attribute_string"),
+          ("target_frame", "xml_attribute_string"),
+          ("text", "docx_text"),
           ("runs", "nonempty-array(text_run|{image:image})"),
         ],
         constraints=[
@@ -262,13 +237,16 @@ fn docx_input_contract() -> InputContractCore {
         [
           ("path", "string"),
           ("content_type", "enum(image/png|image/jpeg|image/gif)"),
-          ("alt", "nonblank-string"),
+          ("alt", "xml_attribute_string"),
         ],
         required=["path"],
+        constraints=[
+          "alt, when present, must contain a non-space non-tab character",
+        ],
       ),
       contract_object(
         "note_body",
-        [("text", "string"), ("paragraphs", "nonempty-array(paragraph)")],
+        [("text", "docx_text"), ("paragraphs", "nonempty-array(paragraph)")],
         constraints=["exactly-one(text,paragraphs)", "plain content only"],
       ),
       contract_type(
@@ -279,7 +257,7 @@ fn docx_input_contract() -> InputContractCore {
       contract_object(
         "table_cell",
         [
-          ("text", "string"),
+          ("text", "docx_text"),
           ("paragraphs", "nonempty-array(paragraph)"),
           ("col_span", "integer(1..63,default=1)"),
           ("row_span", "integer(1..remaining-rows,default=1)"),
@@ -300,10 +278,10 @@ fn docx_input_contract() -> InputContractCore {
         [
           ("on", "earlier-paragraph-op-index|{from:integer,to:integer}"),
           ("reply_to", "earlier-comment-op-index"),
-          ("text", "string"),
+          ("text", "docx_text"),
           ("paragraphs", "nonempty-array(paragraph)"),
-          ("author", "nonempty-string"),
-          ("initials", "nonempty-string"),
+          ("author", "xml_attribute_string"),
+          ("initials", "xml_attribute_string"),
           ("date", "xsd:dateTime-string"),
           ("done", "boolean"),
         ],
@@ -394,10 +372,13 @@ fn template_input_contract() -> InputContractCore {
           ("records", "nonempty-array(object<template_key,scalar>)"),
         ],
         required=["records"],
-        constraints=["exactly-one(sheet+row,path)"],
+        constraints=[
+          "exactly-one(sheet+row,path)", "sheet+row is accepted only for an XLSX template",
+          "path is accepted only for a DOCX template and must address a body table row",
+        ],
       ),
       contract_type(
-        "table-row-selector", "/docx/body/tbl[N]/tr[M] | /docx/header[K]/tbl[N]/tr[M] | /docx/footer[K]/tbl[N]/tr[M]; K=1..99; N,M are 1..7 digits, positive, without a leading zero",
+        "table-row-selector", "/docx/body/tbl[N]/tr[M]; N and M are 1..7 digits, positive, without a leading zero",
       ),
     ],
     operations: [],
@@ -405,6 +386,7 @@ fn template_input_contract() -> InputContractCore {
       "unknown and duplicate members are rejected", "null, arrays, and nested values are rejected",
       "values keys and every region-record key set are disjoint", "region names and scalar keys use template_key",
       "regions is optional, but when present it must contain 1..max_regions named members",
+      "XLSX regions require sheet+row and reject path; DOCX regions require a body-table path and reject sheet+row",
     ],
     limits: Json::object({
       "max_data_bytes": Json::number(office_template_max_data_bytes.to_double()),
@@ -423,9 +405,6 @@ fn template_input_contract() -> InputContractCore {
       ),
       "max_sheet_row": Json::number(
         @template.MAX_TEMPLATE_SHEET_ROW.to_double(),
-      ),
-      "max_docx_story_ordinal": Json::number(
-        @template.MAX_TEMPLATE_STORY_ORDINAL.to_double(),
       ),
       "max_docx_path_ordinal_digits": Json::number(
         @template.MAX_TEMPLATE_PATH_ORDINAL_DIGITS.to_double(),
@@ -463,8 +442,8 @@ fn annotation_operation(name : String) -> Json {
         [
           ("op", "literal(comment_add)"),
           ("anchor", "comment_anchor"),
-          ("author", "nonempty-string"),
-          ("initials", "nonempty-string"),
+          ("author", "xml_attribute_string"),
+          ("initials", "xml_attribute_string"),
           ("date", "xsd:dateTime-string"),
           ("body", "comment_body"),
           ("label", "template_key"),
@@ -477,8 +456,8 @@ fn annotation_operation(name : String) -> Json {
         [
           ("op", "literal(comment_reply)"),
           ("parent", "comment_ref"),
-          ("author", "nonempty-string"),
-          ("initials", "nonempty-string"),
+          ("author", "xml_attribute_string"),
+          ("initials", "xml_attribute_string"),
           ("date", "xsd:dateTime-string"),
           ("body", "comment_body"),
           ("label", "template_key"),
@@ -526,13 +505,24 @@ fn annotation_input_contract() -> InputContractCore {
       contract_type(
         "comment_ref", "exactly-one({comment_id:nonempty-string}|{label:template_key})",
       ),
-      contract_type("comment_body", "nonempty-array(nonempty-string)"),
+      contract_type("docx_text", "string", constraints=[
+        "XML 1.0 characters only", "C0 controls are forbidden except tab", "raw CR and LF are forbidden; paragraphs are the hard-break unit",
+        "unpaired surrogates and U+FFFE/U+FFFF are forbidden",
+      ]),
+      contract_type("xml_attribute_string", "nonempty-string", constraints=[
+        "XML 1.0 characters only", "all C0 controls, including tab, CR, and LF, are forbidden",
+        "unpaired surrogates and U+FFFE/U+FFFF are forbidden",
+      ]),
+      contract_type("comment_body", "nonempty-array(docx_text)", constraints=[
+        "every paragraph string is nonempty",
+      ]),
       contract_type("template_key", "[A-Za-z_][A-Za-z0-9_.-]{0,63}"),
     ],
     operations,
     constraints: [
       "unknown members and operation names are rejected", "labels are unique and references may name only earlier labels",
       "anchors address body paragraphs and ranges are ordered", "operations fold over fresh snapshots and publish atomically",
+      "each comment body serializes to at most max_comment_fragment_bytes UTF-8 XML bytes; the effective transaction-derived ceiling may be lower",
     ],
     limits: Json::object({
       "max_script_bytes": Json::number(
@@ -541,6 +531,9 @@ fn annotation_input_contract() -> InputContractCore {
       "max_ops": Json::number(@office_docx.MAX_ANNOTATION_OPS.to_double()),
       "max_total_growth_bytes": Json::number(
         @office_docx.MAX_ANNOTATION_TOTAL_GROWTH.to_double(),
+      ),
+      "max_comment_fragment_bytes": Json::number(
+        @office_docx.MAX_COMMENT_FRAGMENT_BYTES.to_double(),
       ),
     }),
     examples: [
@@ -586,41 +579,8 @@ fn input_contract_cores() -> Array[InputContractCore] {
 }
 
 ///|
-fn input_contract_core_json(core : InputContractCore) -> Json {
-  Json::object({
-    "id": Json::string(core.id),
-    "summary": Json::string(core.summary),
-    "consumed_by": contract_strings(core.consumed_by),
-    "envelope": core.envelope,
-    "definitions": Json::array(core.definitions),
-    "operations": Json::array(core.operations),
-    "constraints": contract_strings(core.constraints),
-    "limits": core.limits,
-    "examples": Json::array(core.examples),
-  })
-}
-
-///|
-fn input_contract_fingerprint(core : InputContractCore) -> String {
-  "sha256:" +
-  @lib.sha256_hex(@utf8.encode(input_contract_core_json(core).stringify()))
-}
-
-///|
 fn input_contract_record(core : InputContractCore) -> Json {
-  Json::object({
-    "schema": Json::string(schema_input_contract),
-    "id": Json::string(core.id),
-    "fingerprint": Json::string(input_contract_fingerprint(core)),
-    "summary": Json::string(core.summary),
-    "consumed_by": contract_strings(core.consumed_by),
-    "envelope": core.envelope,
-    "definitions": Json::array(core.definitions),
-    "operations": Json::array(core.operations),
-    "constraints": contract_strings(core.constraints),
-    "limits": core.limits,
-    "examples": Json::array(core.examples),
-  })
+  @input_contract.record(core)
 }
 
 ///|
@@ -640,24 +600,7 @@ fn find_input_contract(id : String) -> Json? {
 
 ///|
 fn input_contract_inventory() -> Json {
-  let summaries : Array[Json] = []
-  for core in input_contract_cores() {
-    summaries.push(
-      Json::object({
-        "id": Json::string(core.id),
-        "fingerprint": Json::string(input_contract_fingerprint(core)),
-        "summary": Json::string(core.summary),
-        "consumed_by": contract_strings(core.consumed_by),
-      }),
-    )
-  }
-  let fingerprint = "sha256:" +
-    @lib.sha256_hex(@utf8.encode(Json::array(summaries).stringify()))
-  Json::object({
-    "schema": Json::string(schema_input_contracts),
-    "fingerprint": Json::string(fingerprint),
-    "contracts": Json::array(summaries),
-  })
+  @input_contract.inventory(input_contract_cores())
 }
 
 ///|

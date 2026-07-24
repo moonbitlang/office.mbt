@@ -23,7 +23,7 @@ test "input contract inventory is stable, ordered, and versioned" {
     fields.get("fingerprint"),
     Some(
       Json::string(
-        "sha256:049a75bf88d5782e59decdd01466a742462ce71dc852cd57c6640f42979197f9",
+        "sha256:547a19834be0182ba4abd8268c535a784c351268908ba83490888018719506fd",
       ),
     ),
   )
@@ -78,7 +78,8 @@ test "operation inventories come from their production parser owners" {
     @office_docx.annotation_batch_operation_names(),
   )
   guard docx_input_contract().limits is Object(docx_limits) &&
-    template_input_contract().limits is Object(template_limits) else {
+    template_input_contract().limits is Object(template_limits) &&
+    annotation_input_contract().limits is Object(annotation_limits) else {
     fail("contract limits must be objects")
   }
   assert_eq(
@@ -90,13 +91,35 @@ test "operation inventories come from their production parser owners" {
     Some(Json::number(@docx.MAX_AUTHORED_MEDIA_BYTES.to_double())),
   )
   assert_eq(
-    template_limits.get("max_docx_story_ordinal"),
-    Some(Json::number(@template.MAX_TEMPLATE_STORY_ORDINAL.to_double())),
+    annotation_limits.get("max_comment_fragment_bytes"),
+    Some(Json::number(@office_docx.MAX_COMMENT_FRAGMENT_BYTES.to_double())),
   )
   assert_eq(
     template_limits.get("max_docx_path_ordinal_digits"),
     Some(Json::number(@template.MAX_TEMPLATE_PATH_ORDINAL_DIGITS.to_double())),
   )
+}
+
+///|
+test "format-dependent template regions and XML strings are exact" {
+  let template = @input_contract.core_json(template_input_contract()).stringify()
+  assert_true(
+    template.contains("sheet+row is accepted only for an XLSX template"),
+  )
+  assert_true(template.contains("path is accepted only for a DOCX template"))
+  assert_true(template.contains("must address a body table row"))
+  assert_true(template.contains("/docx/body/tbl[N]/tr[M]"))
+  assert_false(template.contains("/docx/header"))
+  assert_false(template.contains("/docx/footer"))
+  let authoring = @input_contract.core_json(docx_input_contract()).stringify()
+  let annotation = @input_contract.core_json(annotation_input_contract()).stringify()
+  for contract in [authoring, annotation] {
+    assert_true(contract.contains("docx_text"))
+    assert_true(contract.contains("raw CR and LF are forbidden"))
+    assert_true(contract.contains("xml_attribute_string"))
+    assert_true(contract.contains("including tab, CR, and LF, are forbidden"))
+  }
+  assert_true(annotation.contains("max_comment_fragment_bytes"))
 }
 
 ///|
@@ -111,7 +134,10 @@ test "schema help emits versioned JSONL and unknown ids have bounded typed sugge
   guard lines is [Object(record)] else {
     fail("schema JSONL must be one input-contract record")
   }
-  assert_eq(record.get("schema"), Some(Json::string(schema_input_contract)))
+  assert_eq(
+    record.get("schema"),
+    Some(Json::string(@input_contract.SCHEMA_RECORD)),
+  )
   assert_true(render_overview(true).contains("office help schemas"))
   try resolve_help_query(Some("schema"), Some("docx.batc/2"), None) catch {
     CliFailure(error) => {

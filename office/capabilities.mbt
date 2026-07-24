@@ -243,16 +243,144 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "jsonl", "boolean", false, "emit one self-contained help record per line",
         ),
       ],
-      outputs: [
-        capability_field(
-          "fingerprint", "string", true, "deterministic registry fingerprint",
-        ),
-        capability_field(
-          "records", "array", true, "truthful implemented formats, commands, and fields",
-        ),
-      ],
+      outputs: [],
       output_modes: ["human", "json", "jsonl"],
-      variants: [],
+      variants: [
+        {
+          name: "capabilities",
+          usage: "office help [all|<format>|<operation>|<format> <operation>] [--json]",
+          result_schema: SCHEMA_CAPABILITIES,
+          inputs: [
+            capability_field(
+              "query", "enum(all)|format|operation|format+operation", false, "optional capability query",
+            ),
+            capability_field(
+              "json", "boolean", false, "emit one office.output/1 JSON document",
+            ),
+          ],
+          outputs: [
+            capability_field(
+              "schema", "literal(office.capabilities/2)", true, "registry schema",
+            ),
+            capability_field(
+              "fingerprint", "string", true, "deterministic registry fingerprint",
+            ),
+            capability_field(
+              "records", "array", true, "truthful implemented formats, commands, and fields",
+            ),
+          ],
+          constraints: ["json-data-schema=office.capabilities/2"],
+          actions: [],
+          output_modes: ["human", "json"],
+        },
+        {
+          name: "capability-records",
+          usage: "office help [all|<format>|<operation>|<format> <operation>] --jsonl",
+          result_schema: SCHEMA_CAPABILITY,
+          inputs: [
+            capability_field(
+              "query", "enum(all)|format|operation|format+operation", false, "optional capability query",
+            ),
+            capability_field(
+              "jsonl", "literal(true)", true, "emit one capability record per line",
+            ),
+          ],
+          outputs: [
+            capability_field(
+              "schema", "literal(office.capability/2)", true, "record schema",
+            ),
+            capability_field(
+              "fingerprint", "string", true, "deterministic registry fingerprint",
+            ),
+            capability_field(
+              "kind", "enum(format|command)", true, "capability record kind",
+            ),
+            capability_field("name", "string", true, "capability name"),
+          ],
+          constraints: ["one-self-contained-record-per-line"],
+          actions: [],
+          output_modes: ["jsonl"],
+        },
+        {
+          name: "schemas",
+          usage: "office help schemas [--json|--jsonl]",
+          result_schema: "office.input-contracts/1",
+          inputs: [
+            capability_field(
+              "json", "boolean", false, "emit one office.output/1 JSON document",
+            ),
+            capability_field(
+              "jsonl", "boolean", false, "emit the inventory as one compact line",
+            ),
+          ],
+          outputs: [
+            capability_field(
+              "schema", "literal(office.input-contracts/1)", true, "inventory schema",
+            ),
+            capability_field(
+              "fingerprint", "sha256", true, "aggregate canonical inventory fingerprint",
+            ),
+            capability_field(
+              "contracts", "array", true, "ordered installed input-contract summaries",
+            ),
+          ],
+          constraints: ["exactly-four-consumed-contracts"],
+          actions: [],
+          output_modes: ["human", "json", "jsonl"],
+        },
+        {
+          name: "schema",
+          usage: "office help schema <id> [--json|--jsonl]",
+          result_schema: "office.input-contract/1",
+          inputs: [
+            capability_field(
+              "id", "enum(installed-input-contract-id)", true, "exact contract id",
+            ),
+            capability_field(
+              "json", "boolean", false, "emit one office.output/1 JSON document",
+            ),
+            capability_field(
+              "jsonl", "boolean", false, "emit one compact contract record",
+            ),
+          ],
+          outputs: [
+            capability_field(
+              "schema", "literal(office.input-contract/1)", true, "record schema",
+            ),
+            capability_field(
+              "id", "string", true, "versioned input-contract id",
+            ),
+            capability_field(
+              "fingerprint", "sha256", true, "canonical contract fingerprint",
+            ),
+            capability_field("summary", "string", true, "contract purpose"),
+            capability_field(
+              "consumed_by", "array(string)", true, "installed command consumers",
+            ),
+            capability_field(
+              "envelope", "object", true, "closed top-level shape",
+            ),
+            capability_field(
+              "definitions", "array", true, "reusable strict input definitions",
+            ),
+            capability_field(
+              "operations", "array", true, "ordered parser-owned operations",
+            ),
+            capability_field(
+              "constraints", "array(string)", true, "cross-field and application rules",
+            ),
+            capability_field(
+              "limits", "object", true, "numeric resource ceilings",
+            ),
+            capability_field(
+              "examples", "array", true, "production-parser-verified examples",
+            ),
+          ],
+          constraints: ["unknown-id-is-a-typed-nonzero-failure"],
+          actions: [],
+          output_modes: ["human", "json", "jsonl"],
+        },
+      ],
     },
     {
       name: "identify",
@@ -966,7 +1094,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "file", "path", true, "existing XLSX or DOCX template package (never modified)",
         ),
         capability_field(
-          "data", "path", true, "office.template.data/1 JSON document: flat `values` (string/number/bool) plus an optional `regions` map cloning a marked template row (XLSX {sheet,row}, DOCX {path}) once per record",
+          "data", "path", true, "office.template.data/1 JSON document: flat `values` (string/number/bool) plus an optional `regions` map cloning a marked template row once per record; XLSX accepts {sheet,row}, while DOCX accepts only a body-table {path}",
         ),
         capability_field(
           "out", "path", true, "destination matching the template format; created atomically, refused when present unless --overwrite",

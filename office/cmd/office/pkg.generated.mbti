@@ -43,8 +43,6 @@ type DocxTextCollector
 
 type HelpQuery
 
-type InputContractCore
-
 type OfficeLinearPattern
 
 type OfficeOutputBudget
