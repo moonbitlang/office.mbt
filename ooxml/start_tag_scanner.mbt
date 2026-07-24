@@ -1958,6 +1958,75 @@ pub fn XmlStartTagScanner::attribute_values_in_namespace(
 }
 
 ///|
+/// Reports whether the current element has exactly `expected` non-namespace
+/// attributes, selected by expanded name and decoded value. Namespace
+/// declarations are ignored. Duplicate expected expanded names return false;
+/// duplicate source expanded names have already been rejected by `next`.
+pub fn XmlStartTagScanner::has_exact_attributes(
+  self : XmlStartTagScanner,
+  expected : ArrayView[(String, String, String)],
+) -> Bool raise ParseXmlError {
+  let expected_values : Map[String, Map[String, String]] = Map([])
+  for entry in expected {
+    let (namespace_uri, local_name, value) = entry
+    let namespace_values = match expected_values.get(namespace_uri) {
+      Some(values) => values
+      None => {
+        let values : Map[String, String] = Map([])
+        expected_values[namespace_uri] = values
+        values
+      }
+    }
+    if namespace_values.contains(local_name) {
+      return false
+    }
+    namespace_values[local_name] = value
+  }
+  let mut matched = 0
+  let mut next = self.current_name_end
+  while next_xml_attribute(
+          self.xml,
+          next,
+          self.current_tag_end,
+          cancelled=self.cancelled,
+        )
+        is Some(attribute) {
+    next = attribute.next
+    if xml_namespace_declaration_prefix(self.xml, attribute) is Some(_) {
+      continue
+    }
+    let colon = validate_xml_qname(
+      self.xml,
+      attribute.name_start,
+      attribute.name_end,
+    )
+    let (prefix, local_start) = match colon {
+      Some(value) => (self.xml[attribute.name_start:value], value + 1)
+      None =>
+        (
+          self.xml[attribute.name_start:attribute.name_start],
+          attribute.name_start,
+        )
+    }
+    let namespace_uri = self.resolve_prefix(prefix, true)
+    let local_name = self.xml[local_start:attribute.name_end]
+    guard expected_values.get(namespace_uri) is Some(namespace_values) &&
+      namespace_values.get(local_name.to_owned()) is Some(expected_value) else {
+      return false
+    }
+    let actual_value = decode_xml_attribute(
+      self.xml[attribute.value_start:attribute.value_end],
+      cancelled=self.cancelled,
+    )
+    if actual_value != expected_value {
+      return false
+    }
+    matched += 1
+  }
+  matched == expected.length()
+}
+
+///|
 priv struct XmlExpandedAttributeName {
   namespace_uri : String
   namespace_id : Int
@@ -2378,6 +2447,26 @@ test "namespace duplicate checks retain namespace identities once" {
   assert_true(scanner.next())
   assert_eq(scanner.depth(), 1)
   assert_false(scanner.next())
+}
+
+///|
+test "start tag scanner matches exact expanded attributes" {
+  let scanner = XmlStartTagScanner::new(
+    "<root xmlns:p='urn:rel'><p:item id='7' p:name='A&amp;B'/></root>",
+  )
+  assert_true(scanner.next())
+  assert_true(scanner.next())
+  assert_true(
+    scanner.has_exact_attributes([("", "id", "7"), ("urn:rel", "name", "A&B")]),
+  )
+  assert_false(scanner.has_exact_attributes([("", "id", "7")]))
+  assert_false(
+    scanner.has_exact_attributes([
+      ("", "id", "7"),
+      ("urn:rel", "name", "different"),
+    ]),
+  )
+  assert_false(scanner.has_exact_attributes([("", "id", "7"), ("", "id", "7")]))
 }
 
 ///|

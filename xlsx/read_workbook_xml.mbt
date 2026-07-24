@@ -41,6 +41,17 @@ fn workbook_scanner_attribute(
 }
 
 ///|
+fn workbook_scanner_has_exact_attributes(
+  scanner : @ooxml.XmlStartTagScanner,
+  expected : ArrayView[(String, String, String)],
+) -> Bool raise XlsxError {
+  scanner.has_exact_attributes(expected) catch {
+    InvalidXml(msg~) => raise InvalidXml(msg~)
+    ReadCancelled => raise ReadCancelled
+  }
+}
+
+///|
 fn parse_workbook_sheets(
   xml : StringView,
   max_sheets : Int,

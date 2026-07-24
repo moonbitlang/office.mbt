@@ -300,6 +300,46 @@ test "custom chart frame metadata prevents lossy chart op emission" {
 }
 
 ///|
+test "unmodeled chart frame content prevents lossy chart op emission" {
+  let mutations = [
+    (
+      "a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/chart\"",
+      "a:graphicData custom=\"x\" uri=\"http://schemas.openxmlformats.org/drawingml/2006/chart\"",
+    ),
+    (
+      "      <a:graphic>\n", "      <xdr:xfrm rot=\"1\"><a:off x=\"3\" y=\"4\"/><a:ext cx=\"5\" cy=\"6\"/></xdr:xfrm>\n      <a:graphic>\n",
+    ),
+  ]
+  for mutation in mutations {
+    let (old, replacement) = mutation
+    let source = @xlsx.Workbook::new()
+    ignore(source.add_sheet("Data"))
+    let options = @xlsx.ChartOptions::new(Line)
+    options.series.push(@xlsx.ChartSeries::new("'Data'!A1:A2", "'Data'!B1:B2"))
+    source.add_chart_with_options("Data", "E2", options)
+    let archive = @zip.read(@xlsx.write(source))
+    let drawing_path = "xl/drawings/drawing1.xml"
+    guard archive.get(drawing_path) is Some(drawing_bytes) else {
+      fail("missing chart drawing")
+    }
+    let drawing = @utf8.decode(drawing_bytes)
+    let customized = drawing.replace(old~, new=replacement)
+    assert_false(customized == drawing)
+    assert_true(archive.replace(drawing_path, @utf8.encode(customized)))
+    let file_backed = @xlsx.read(@zip.write(archive))
+    guard file_backed.sheet("Data") is Some(sheet) else { fail("missing Data") }
+    assert_false(sheet.charts()[0].drawing_frame_is_canonical())
+    let envelope = @dump.dump_xlsx_workbook(
+      file_backed,
+      source_file="unmodeled-frame.xlsx",
+      source_bytes=1,
+    )
+    assert_false(dump_ops(envelope).contains("\"op\":\"chart\""))
+    assert_true(dump_residual(envelope).contains("xlsx.charts_not_dumped"))
+  }
+}
+
+///|
 test "every advertised batch chart type dumps and aliases canonicalize" {
   let source = @xlsx.Workbook::new()
   ignore(source.add_sheet("Data"))
