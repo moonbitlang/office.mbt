@@ -172,8 +172,11 @@ The dependency-ordered small-PR plan for closing the broader agent-relevant
 OfficeCLI gaps now lives in `docs/office-major-parity.md`. Give every proposed
 slice its own issue before implementation and do not fold it into #169. Issue
 #139 remains open until the major ledger is complete. At the pinned baseline the
-full delivery ledger has 350 acceptance rows: 343 parity/QA/export rows plus 7
-explicit beyond-parity/delivery rows, using the counting rule in the ledger.
+full delivery denominator has 371 unique acceptance rows: 364
+parity/QA/export rows plus 7 explicit beyond-parity/delivery rows. That total
+combines 18 landed initial foundations with the 353-row incremental ledger and
+does not double-count overlapping status rows, using the counting rule in the
+ledger.
 The ledger explicitly
 includes bounded XLSX formula calculation/lint and cache refresh, worksheet
 tab-color/reorder/clone and freeze/unfreeze lifecycle, full common cell/range
@@ -185,8 +188,10 @@ table/data-validation/conditional-format update and removal, row/column
 page-break lifecycle, workbook core/custom properties, `date1904` and
 calculation settings, active/selected-sheet state, and RTL/zoom/view state;
    preservation-safe existing-DOCX table content, separately reviewable complete
-   common table/row/cell-property changes (including direction/indent/spacing/
-   padding/metadata/conditional state and cell flow), paragraph/table/row/column move-copy-swap, row/column
+   common table/row/cell-property changes (including style/grid widths/banding,
+   direction/indent/spacing/padding/metadata/conditional state, diagonal
+   borders, cell flow, spans, and horizontal/vertical merges),
+   paragraph/table/row/column move-copy-swap, row/column
 edits, and table structural edits; paragraph,
 character, table, and numbering-style lifecycle; numbering, first/even/default
 header/footer, paragraph-tab-stop, positional-tab, break, editing-permission
@@ -206,9 +211,10 @@ document properties; deterministic locale/script-font and RTL defaults plus
    gutter/book-fold/privacy/font-embedding settings; tab stops and page/column
    breaks; fresh and source-pinned add/update/remove for equations, watermarks,
    drawing text boxes, and shapes; content/move/property revision readback,
-   separately scoped accept/reject, and attributed insertion/deletion/move/
-   formatting authoring; fresh and source-pinned add/update/remove for both SDT
-   and legacy checkbox forms;
+   separately scoped accept/reject, attributed insertion/deletion/move/
+   formatting authoring, and installed revision exposure/QA; fresh and
+   source-pinned add/update/remove for SDTs and legacy text/checkbox/dropdown
+   forms;
 CSV/TSV file-or-stdin import with start-cell/inference/header behavior;
 path-scoped dump; and DOCX/XLSX-to-PDF parity. XLSX engine hardening can proceed
 beside the versioned registry/common-receipt work; only each feature's `office`
