@@ -65,6 +65,23 @@ test "hyperlink resolves merged cell anchor" {
       #|)
     ),
   )
+  debug_inspect(
+    sheet.get_cell_hyperlink("B2"),
+    content=(
+      #|Some(
+      #|  {
+      #|    reference: "A1",
+      #|    target: "https://example.com",
+      #|    link_type: External,
+      #|    location: None,
+      #|    display: None,
+      #|    tooltip: None,
+      #|  },
+      #|)
+    ),
+  )
+  sheet.remove_cell_hyperlink("C3")
+  debug_inspect(sheet.get_cell_hyperlink("A1"), content="None")
   debug_inspect(sheet.get_cell_hyperlink("B2"), content="None")
 }
 
@@ -486,6 +503,161 @@ test "get_hyperlink_cells filters by link type" {
 }
 
 ///|
+test "typed hyperlink enumeration returns full filtered records" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell_hyperlink(
+    "Sheet1",
+    "A1",
+    "https://example.com",
+    External,
+    display="Example",
+    tooltip="Open example",
+  )
+  workbook.set_cell_hyperlink("Sheet1", "B2", "Sheet1!D4", Location)
+  let all = workbook.get_hyperlinks("Sheet1")
+  inspect(all.length(), content="2")
+  inspect(all[0].reference, content="A1")
+  inspect(all[0].target, content="https://example.com")
+  debug_inspect(
+    all[0].display,
+    content=(
+      #|Some("Example")
+    ),
+  )
+  debug_inspect(
+    all[0].tooltip,
+    content=(
+      #|Some("Open example")
+    ),
+  )
+  inspect(all[1].reference, content="B2")
+  debug_inspect(all[1].link_type, content="Location")
+  let external = workbook.get_hyperlinks("Sheet1", link_type=External)
+  inspect(external.length(), content="1")
+  inspect(external[0].reference, content="A1")
+  let locations = workbook.get_hyperlinks("Sheet1", link_type=Location)
+  inspect(locations.length(), content="1")
+  inspect(locations[0].reference, content="B2")
+  inspect(
+    workbook.get_hyperlinks("Sheet1", link_type=Unset).length(),
+    content="0",
+  )
+  let missing : Result[Array[@xlsx.Hyperlink], Error] = Ok(
+    workbook.get_hyperlinks("Missing"),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(missing is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
+}
+
+///|
+test "hyperlink mutation accepts the Office-safe external scheme set" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let targets = [
+    "http://example.com", "https://example.com", "mailto:person@example.com", "ftp://example.com/file",
+    "ftps://example.com/file", "sftp://example.com/file", "news:comp.lang.moonbit",
+    "tel:+123456", "sms:+123456", "file:///tmp/workbook.xlsx", "about:blank", "ppaction://hlinkshowjump?jump=nextslide",
+    "relative/path/workbook.xlsx",
+  ]
+  for index, target in targets {
+    sheet.set_cell_hyperlink("A\{index + 1}", target, External)
+    let probe = @xlsx.Workbook::new()
+    let probe_sheet = probe.add_sheet("Sheet1")
+    probe_sheet.set_cell_hyperlink("A1", target, External)
+    let parsed_probe = @xlsx.read(@xlsx.write(probe)) catch {
+      error => fail("\{target}: safe target roundtrip failed: \{repr(error)}")
+    }
+    guard parsed_probe.get_cell_hyperlink("Sheet1", "A1") is Some(link) else {
+      fail("\{target}: safe target disappeared after roundtrip")
+    }
+    if link.target != target {
+      fail("\{target}: safe target changed after roundtrip to \{link.target}")
+    }
+  }
+  inspect(sheet.get_hyperlinks().length(), content="13")
+  let parsed = @xlsx.read(@xlsx.write(workbook)) catch {
+    error => fail("combined safe target roundtrip failed: \{repr(error)}")
+  }
+  inspect(parsed.get_hyperlinks("Sheet1").length(), content="13")
+  debug_inspect(
+    parsed.get_cell_hyperlink("Sheet1", "A13").map(link => link.target),
+    content=(
+      #|Some("relative/path/workbook.xlsx")
+    ),
+  )
+}
+
+///|
+test "hyperlink mutation rejects empty and unsafe targets atomically" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_hyperlink("A1", "https://before.example", External)
+  let rejected : Array[(String, String, @xlsx.HyperlinkType)] = [
+    ("empty", "", External),
+    ("whitespace", " \t\r\n", External),
+    ("javascript", "javascript:alert(1)", External),
+    ("data", "DATA:text/html,bad", External),
+    ("vbscript", "vbscript:msgbox(1)", External),
+    ("unknown", "custom-scheme:value", External),
+    ("one-letter unknown", "x:value", External),
+    ("backslash path", "C:\\workbooks\\book.xlsx", External),
+    ("location URI", "https://example.com", Location),
+  ]
+  for rejected_case in rejected {
+    let (label, target, link_type) = rejected_case
+    let result : Result[Unit, Error] = Ok(
+      sheet.set_cell_hyperlink("A1", target, link_type),
+    ) catch {
+      error => Err(error)
+    }
+    if !(result is Err(@xlsx.XlsxError::InvalidHyperlink(_))) {
+      fail("\{label}: expected InvalidHyperlink")
+    }
+    guard sheet.get_cell_hyperlink("A1") is Some(existing) else {
+      fail("\{label}: existing hyperlink disappeared")
+    }
+    if existing.target != "https://before.example" {
+      fail("\{label}: existing hyperlink changed")
+    }
+  }
+  let empty_location : Result[Unit, Error] = Ok(
+    sheet.set_cell_hyperlink("B2", " ", Location),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(
+    empty_location is Err(@xlsx.XlsxError::InvalidHyperlink(_)),
+    content="true",
+  )
+  inspect(sheet.get_hyperlinks().length(), content="1")
+}
+
+///|
+test "hyperlink mutation rejects XML-illegal text before mutation" {
+  let sheet = @xlsx.Worksheet::new("Sheet1")
+  let control = String::from_array([Int::unsafe_to_char(1)])
+  let cases : Array[(String, String, String, String)] = [
+    ("target", "https://example.com/\{control}", "", ""),
+    ("display", "https://example.com", "bad\{control}", ""),
+    ("tooltip", "https://example.com", "", "bad\{control}"),
+  ]
+  for invalid_case in cases {
+    let (label, target, display, tooltip) = invalid_case
+    let result : Result[Unit, Error] = Ok(
+      sheet.set_cell_hyperlink("A1", target, External, display~, tooltip~),
+    ) catch {
+      error => Err(error)
+    }
+    if !(result is Err(@xlsx.XlsxError::InvalidHyperlink(_))) {
+      fail("\{label}: expected InvalidHyperlink")
+    }
+  }
+  inspect(sheet.get_hyperlinks().length(), content="0")
+}
+
+///|
 test "hyperlink with both r:id and location matches both filters" {
   // Build a workbook with an external hyperlink, then inject a location
   // attribute into the sheet XML the way another producer could
@@ -538,6 +710,14 @@ test "hyperlink with both r:id and location matches both filters" {
     content=(
       #|["A1"]
     ),
+  )
+  inspect(
+    parsed.get_hyperlinks("Sheet1", link_type=External).length(),
+    content="1",
+  )
+  inspect(
+    parsed.get_hyperlinks("Sheet1", link_type=Location).length(),
+    content="1",
   )
   // and the location survives a write roundtrip
   let rewritten = @xlsx.read(@xlsx.write(parsed))
