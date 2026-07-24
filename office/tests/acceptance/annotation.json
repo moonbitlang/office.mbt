@@ -1,0 +1,8 @@
+{
+  "schema": "docx.annotation-batch/1",
+  "ops": [
+    {"op": "comment_add", "anchor": {"at": "/docx/body/p[2]"}, "author": "Reviewer", "body": ["Confirm the decision owner."], "label": "root"},
+    {"op": "comment_reply", "parent": {"label": "root"}, "author": "Author", "body": ["Owner confirmed."], "label": "answer"},
+    {"op": "comment_resolve", "target": {"label": "root"}}
+  ]
+}
