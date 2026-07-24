@@ -179,10 +179,15 @@ preservation-safe cell shifts, unmerge, AutoFilter lifecycle, ordinary
 table/data-validation/conditional-format update and removal, row/column
 page-break lifecycle, workbook core/custom properties, `date1904` and
 calculation settings, active/selected-sheet state, and RTL/zoom/view state;
-preservation-safe existing-DOCX table content, property, row/column, and table
-structural edits; existing style, numbering, header/footer, tab-stop, break,
-and section inventory/mutation/exposure; DOCX field and bookmark inventory,
-authoring, update/removal, and refresh (including REF/PAGEREF/NOTEREF authoring);
+preservation-safe existing-DOCX table content, separately reviewable table/row/
+cell-property changes, row/column edits, and table structural edits; paragraph,
+character, table, and numbering-style lifecycle; numbering, first/even/default
+header/footer, paragraph-tab-stop, positional-tab, break, editing-permission
+range, and section inventory/mutation/exposure, including columns, page-number
+format/start, line numbering, `titlePage`, and `evenAndOddHeaders`; DOCX field
+and bookmark inventory, typed authoring across pagination, cross-reference,
+metadata, time/lifecycle, statistics, section, SEQ, STYLEREF, DOCPROPERTY, and IF
+families, update/removal, and refresh;
 embedded-chart authoring/readback and source-pinned lifecycle; existing
 comment, footnote/endnote, hyperlink, and picture lifecycle; typed core/custom
 document properties; deterministic locale/script-font and RTL defaults plus
@@ -277,8 +282,10 @@ feature PR.
   structural-edit lifecycle, partial-cell shifts,
   workbook/date-system/calculation/selection/view state, unmerge/AutoFilter and
   ordinary table/validation/conditional-format/page-break lifecycle,
-  existing-DOCX table, style, numbering, header/footer, tab/break, and section
-  editing, DOCX locale/RTL and field/bookmark authoring/update/removal/refresh,
+  existing-DOCX table, all four style types, numbering, header/footer,
+  paragraph/positional-tab, permission-range, break, and advanced section
+  editing, DOCX locale/RTL and complete typed field/bookmark
+  authoring/update/removal/refresh,
   embedded charts, fillable Word forms, equations,
   watermarks, text boxes, shapes, path-scoped dump, DOCX/XLSX-to-PDF export,
   and richer engine-backed XLSX operations are not part of the initial F1 gate;
