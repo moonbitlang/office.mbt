@@ -85,6 +85,12 @@ fi
 codex_bin_dir="$(canonical_directory "$(dirname "$codex_bin")")"
 codex_bin="$codex_bin_dir/$(basename "$codex_bin")"
 codex_name="$(basename "$codex_bin")"
+exec_trampoline="/usr/bin/perl"
+exec_trampoline_program='my $target = shift @ARGV; exec {$target} $target, @ARGV; die "exec $target: $!\n";'
+if [ ! -x "$exec_trampoline" ]; then
+  echo "error: fresh-agent exec trampoline is unavailable: $exec_trampoline" >&2
+  exit 1
+fi
 
 codex_runtime_name=""
 codex_runtime_bin=""
@@ -151,11 +157,13 @@ install -m 0600 "$auth_json" "$isolated_codex_state/auth.json"
 write_launcher_forwarder() {
   local target_path="$1"
   local forwarder_path="$2"
+  local quoted_program
   local quoted_target
+  printf -v quoted_program '%q' "$exec_trampoline_program"
   printf -v quoted_target '%q' "$target_path"
   printf \
-    '#!/bin/bash\nexec /usr/bin/env -u PWD -u SHLVL -u _ %s "$@"\n' \
-    "$quoted_target" > "$forwarder_path"
+    '#!/bin/bash\nexec /usr/bin/env -u PWD -u SHLVL -u _ /usr/bin/perl -e %s %s "$@"\n' \
+    "$quoted_program" "$quoted_target" > "$forwarder_path"
   chmod 0700 "$forwarder_path"
 }
 
@@ -206,6 +214,7 @@ env -i \
   TMPDIR="$isolated_tmp" \
   LANG=C \
   LC_ALL=C \
+  "$exec_trampoline" -e "$exec_trampoline_program" \
   "$codex_bin" exec \
   --ephemeral \
   --skip-git-repo-check \
