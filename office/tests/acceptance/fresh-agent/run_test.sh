@@ -59,6 +59,31 @@ if grep -q "$runtime_bin_dir" \
   fail "runtime directory leaked into PATH"
 fi
 
+ln -s /usr/bin/awk "$runtime_bin_dir/env_runtime"
+printf '%s\n' \
+  '#!/usr/bin/env -S env_runtime -f' \
+  'BEGIN {' \
+  '  if ("PWD" in ENVIRON) { print "PWD leaked" > "/dev/stderr"; exit 44 }' \
+  '  if ("SHLVL" in ENVIRON) { print "SHLVL leaked" > "/dev/stderr"; exit 45 }' \
+  '  if ("_" in ENVIRON) { print "_ leaked" > "/dev/stderr"; exit 46 }' \
+  '  print "forwarder-env-isolated"' \
+  '  exit 0' \
+  '}' \
+  > "$codex_bin_dir/codex"
+chmod +x "$codex_bin_dir/codex"
+
+mkdir -p "$test_root/probe-env" "$test_root/evidence-env"
+PATH="$codex_bin_dir:$runtime_bin_dir:/usr/bin:/bin" \
+  bash "$runner" \
+  "$install_root" \
+  "$test_root/probe-env" \
+  "$test_root/evidence-env" \
+  "$test_root/auth.json" \
+  >/dev/null
+grep -q '^forwarder-env-isolated$' \
+  "$test_root/evidence-env/codex-transcript.log" ||
+  fail "forwarder environment isolation"
+
 printf '%s\n' \
   '#!/bin/sh' \
   'exec codex-helper "$@"' \
