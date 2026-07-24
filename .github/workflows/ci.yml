@@ -485,3 +485,6 @@ jobs:
         run: |
           bash office/tests/acceptance/run.sh native
           bash office/tests/acceptance/run.sh wasm
+
+      - name: Fresh-agent runner isolation
+        run: bash office/tests/acceptance/fresh-agent/run_test.sh
