@@ -1,0 +1,16 @@
+{
+  "schema": "docx.batch/2",
+  "ops": [
+    {"op": "paragraph", "params": {"text": "Quarterly report for {{customer}}", "style": "Heading1"}},
+    {"op": "paragraph", "params": {"runs": [
+      {"text": "Review the "},
+      {"link": {"href": "https://example.org/agenda", "text": "published agenda"}},
+      {"text": " before approving {{total}}."}
+    ]}},
+    {"op": "table", "params": {"header_rows": 1, "rows": [
+      [{"text": "Region"}, {"text": "Sales"}],
+      [{"text": "East"}, {"text": "30"}],
+      [{"text": "West"}, {"text": "70"}]
+    ]}}
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "schema": "xlsx.batch/1",
+  "ops": [
+    {"op": "set", "params": {"sheet": "Data", "cell": "A1", "value": "Customer: {{customer}}"}},
+    {"op": "set", "params": {"sheet": "Data", "cell": "B1", "value": "{{total}}"}},
+    {"op": "set", "params": {"sheet": "Data", "cell": "A2", "value": "East"}},
+    {"op": "set", "params": {"sheet": "Data", "cell": "B2", "value": 30}},
+    {"op": "set", "params": {"sheet": "Data", "cell": "A3", "value": "West"}},
+    {"op": "set", "params": {"sheet": "Data", "cell": "B3", "value": 70}},
+    {"op": "formula", "params": {"sheet": "Data", "cell": "C2", "formula": "=B2*2"}},
+    {"op": "style", "params": {"sheet": "Data", "range": "A1:B1", "bold": true, "fill": "4472C4", "font_color": "FFFFFF"}},
+    {"op": "chart", "params": {"sheet": "Data", "anchor": "E2", "type": "col", "categories": "A2:A3", "values": "B2:B3", "name": "Sales", "title": "By region"}}
+  ]
+}

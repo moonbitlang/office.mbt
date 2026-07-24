@@ -468,3 +468,8 @@ jobs:
           # The checked-in authoring acceptance scenario (see
           # docx2html/tests/acceptance/README.md) — same wasm build.
           bash docx2html/tests/acceptance/run.sh
+
+      - name: Unified Office acceptance (native + wasm)
+        run: |
+          bash office/tests/acceptance/run.sh native
+          bash office/tests/acceptance/run.sh wasm

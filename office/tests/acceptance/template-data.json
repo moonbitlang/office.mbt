@@ -1,0 +1,7 @@
+{
+  "schema": "office.template.data/1",
+  "values": {
+    "customer": "Ada Lovelace",
+    "total": 100
+  }
+}
