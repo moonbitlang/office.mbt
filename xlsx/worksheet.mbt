@@ -2122,6 +2122,7 @@ fn chart_with_reference(chart : Chart, reference : String) -> Chart {
     drawing_width_emu: chart.drawing_width_emu,
     drawing_height_emu: chart.drawing_height_emu,
     drawing_order: chart.drawing_order,
+    drawing_frame_canonical: chart.drawing_frame_canonical,
   }
 }
 
@@ -2200,6 +2201,7 @@ pub fn Worksheet::add_chart(
     drawing_width_emu: None,
     drawing_height_emu: None,
     drawing_order: Some(drawing_order),
+    drawing_frame_canonical: true,
   })
 }
 
@@ -2273,6 +2275,7 @@ pub fn Worksheet::add_chart_with_options(
     drawing_width_emu: None,
     drawing_height_emu: None,
     drawing_order: Some(drawing_order),
+    drawing_frame_canonical: true,
   })
 }
 

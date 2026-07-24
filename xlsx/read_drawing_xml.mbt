@@ -892,6 +892,9 @@ fn parse_drawing_charts(
       Some(value) => parse_bool_attr(value)
       None => true
     }
+    let drawing_frame_canonical = drawing_chart_frame_is_canonical(
+      anchor_xml, width_emu, height_emu,
+    )
     charts.push({
       reference,
       xml,
@@ -907,9 +910,88 @@ fn parse_drawing_charts(
       drawing_width_emu: Some(width_emu),
       drawing_height_emu: Some(height_emu),
       drawing_order: Some(anchor.order),
+      drawing_frame_canonical,
     })
   }
   charts
+}
+
+///|
+/// Checks the nonvisual frame and transform against the exact semantic subset
+/// the writer can regenerate from `Chart`. The tag spelling is deliberately
+/// strict: a chart whose frame carries any additional attribute, child, lock,
+/// name, alternative text, or transform is not safe to reduce to chart XML and
+/// public geometry alone.
+fn drawing_chart_frame_is_canonical(
+  anchor_xml : StringView,
+  width_emu : Int,
+  height_emu : Int,
+) -> Bool {
+  try {
+    let graphic_frame = match
+      tag_attributes_in(anchor_xml, "xdr:graphicFrame") {
+      Some(value) => value
+      None => return false
+    }
+    guard graphic_frame == "xdr:graphicFrame" else { return false }
+    let nv_frame = match tag_attributes_in(anchor_xml, "xdr:nvGraphicFramePr") {
+      Some(value) => value
+      None => return false
+    }
+    guard nv_frame == "xdr:nvGraphicFramePr" else { return false }
+    let c_nv_pr = match tag_attributes_in(anchor_xml, "xdr:cNvPr") {
+      Some(value) => value
+      None => return false
+    }
+    let frame_id = match attr_value(c_nv_pr, "id") {
+      Some(value) => value
+      None => return false
+    }
+    let expected_c_nv_pr = "xdr:cNvPr id=\"" +
+      frame_id +
+      "\" name=\"Chart " +
+      frame_id +
+      "\"/"
+    guard c_nv_pr == expected_c_nv_pr else { return false }
+    let c_nv_graphic = match
+      tag_attributes_in(anchor_xml, "xdr:cNvGraphicFramePr") {
+      Some(value) => value
+      None => return false
+    }
+    guard c_nv_graphic == "xdr:cNvGraphicFramePr/" else { return false }
+    let nv_body = match
+      extract_tag_body_from(anchor_xml, "xdr:nvGraphicFramePr") {
+      Some(value) => value
+      None => return false
+    }
+    let nv_remainder = nv_body
+      .replace_all(old="<\{expected_c_nv_pr}>", new="")
+      .replace_all(old="<xdr:cNvGraphicFramePr/>", new="")
+    guard nv_remainder.trim(chars=" \t\r\n") == "" else { return false }
+    let xfrm = match tag_attributes_in(anchor_xml, "xdr:xfrm") {
+      Some(value) => value
+      None => return false
+    }
+    guard xfrm == "xdr:xfrm" else { return false }
+    let xfrm_body = match extract_tag_body_from(anchor_xml, "xdr:xfrm") {
+      Some(value) => value
+      None => return false
+    }
+    let expected_off = "a:off x=\"0\" y=\"0\"/"
+    let expected_ext = "a:ext cx=\"\{width_emu}\" cy=\"\{height_emu}\"/"
+    guard tag_attributes_in(xfrm_body, "a:off") == Some(expected_off) else {
+      return false
+    }
+    guard tag_attributes_in(xfrm_body, "a:ext") == Some(expected_ext) else {
+      return false
+    }
+    let xfrm_remainder = xfrm_body
+      .replace_all(old="<\{expected_off}>", new="")
+      .replace_all(old="<\{expected_ext}>", new="")
+    xfrm_remainder.trim(chars=" \t\r\n") == ""
+  } catch {
+    _ => false
+  }
 }
 
 ///|

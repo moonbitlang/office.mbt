@@ -582,15 +582,8 @@ fn dump_sheet_images(
 /// Canonical spellings for the chart types accepted by the batch contract.
 /// Aliases such as `column` and `donut` generate the same chart XML and are
 /// normalized to these names in a dump.
-let xlsx_batch_chart_types : Array[(String, @xlsx.ChartType)] = [
-  ("col", Col),
-  ("bar", Bar),
-  ("line", Line),
-  ("pie", Pie),
-  ("area", Area),
-  ("scatter", Scatter),
-  ("doughnut", Doughnut),
-  ("radar", Radar),
+let xlsx_batch_chart_types : Array[String] = [
+  "col", "bar", "line", "pie", "area", "scatter", "doughnut", "radar",
 ]
 
 ///|
@@ -617,31 +610,41 @@ fn batch_chart_xml_body(xml : String) -> StringView {
 }
 
 ///|
-/// Rebuilds one candidate through the exact batch-authoring path and requires
-/// byte-identical chart XML plus default batch geometry. This is deliberately
-/// fail-closed: foreign or customized charts may expose the same ranges and
-/// title, but are emitted only when replay would reproduce the retained chart
-/// without dropping options.
+/// Converts the writer's canonical qualification for the chart's own sheet
+/// back to the unqualified spelling accepted by the batch op. Besides keeping
+/// dumps canonical, this is required for valid sheet names containing `!`:
+/// their stored formula (`'Bang!'!A1:A2`) cannot otherwise be distinguished by
+/// the batch grammar's last-bang split.
+fn batch_chart_series_param(formula : String, sheet : String) -> String {
+  let own_sheet_prefix = @batch.qualify_range(sheet, "")
+  if formula.has_prefix(own_sheet_prefix) {
+    formula[own_sheet_prefix.length():].to_owned()
+  } else {
+    formula
+  }
+}
+
+///|
+/// Rebuilds one candidate by parsing and applying the exact batch op that the
+/// dump would emit, then requires byte-identical chart XML plus default batch
+/// geometry. This is deliberately fail-closed: foreign or customized charts
+/// may expose the same ranges and title, but are emitted only when replay would
+/// reproduce the retained chart without dropping options.
 fn batch_chart_candidate_matches(
   chart : @xlsx.Chart,
   sheet : String,
-  chart_type : @xlsx.ChartType,
-  categories : String,
-  values : String,
-  series_name : String,
-  title : String,
+  params : Map[String, Json],
 ) -> Bool {
   try {
     let probe = @xlsx.Workbook::new()
     let probe_sheet = probe.add_sheet(sheet)
-    let options = @xlsx.ChartOptions::new(chart_type)
-    if title != "" {
-      options.title = title
-    }
-    options.series.push(
-      @xlsx.ChartSeries::new(categories, values, name=series_name),
-    )
-    probe.add_chart_with_options(sheet, chart.reference, options)
+    let script = Json::object({
+      "schema": Json::string(XLSX_BATCH_SCHEMA),
+      "ops": Json::array([dump_op("chart", params)]),
+    })
+    let parsed = @batch.parse_script(script)
+    guard parsed is [op] else { return false }
+    @batch.apply_op(probe, op)
     let candidates = probe_sheet.charts()
     guard candidates.length() == 1 else { return false }
     let candidate = candidates[0]
@@ -664,31 +667,31 @@ fn batch_chart_candidate_matches(
 /// authored by XLSX batch. The raw-XML reconstruction check is the authority;
 /// metadata extraction merely supplies a candidate.
 fn batch_chart_dump_op(chart : @xlsx.Chart, sheet : String) -> Json? {
+  guard chart.drawing_frame_is_canonical() else { return None }
   let series = @inspect.chart_series(chart.xml)
   guard series is [entry] else { return None }
   guard entry.categories is Some(categories) && entry.values is Some(values) else {
     return None
   }
+  let categories = batch_chart_series_param(categories, sheet)
+  let values = batch_chart_series_param(values, sheet)
   let series_name = entry.name.unwrap_or("")
   let title = @inspect.chart_title(chart.xml).unwrap_or("")
-  for chart_entry in xlsx_batch_chart_types {
-    let (name, chart_type) = chart_entry
-    if batch_chart_candidate_matches(
-        chart, sheet, chart_type, categories, values, series_name, title,
-      ) {
-      let params : Map[String, Json] = {
-        "sheet": Json::string(sheet),
-        "anchor": Json::string(chart.reference),
-        "type": Json::string(name),
-        "categories": Json::string(categories),
-        "values": Json::string(values),
-      }
-      if series_name != "" {
-        params["name"] = Json::string(series_name)
-      }
-      if title != "" {
-        params["title"] = Json::string(title)
-      }
+  for name in xlsx_batch_chart_types {
+    let params : Map[String, Json] = {
+      "sheet": Json::string(sheet),
+      "anchor": Json::string(chart.reference),
+      "type": Json::string(name),
+      "categories": Json::string(categories),
+      "values": Json::string(values),
+    }
+    if series_name != "" {
+      params["name"] = Json::string(series_name)
+    }
+    if title != "" {
+      params["title"] = Json::string(title)
+    }
+    if batch_chart_candidate_matches(chart, sheet, params) {
       return Some(dump_op("chart", params))
     }
   }
