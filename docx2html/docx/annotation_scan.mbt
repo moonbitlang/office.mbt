@@ -143,6 +143,17 @@ priv struct ScannedElement {
   mut content_end : Int
   mut byte_end : Int
   mut text_map : WtContentMap?
+  // Source-retaining consumers need to distinguish reader-semantic
+  // retractions from elements that were never projection nodes. In
+  // particular, BodyReader fails open and keeps every cell when a table has
+  // an unexpected row/cell shape.
+  mut retracted_by_vmerge : Bool
+  mut deleted_table_row : Bool
+  // Retain the reader's first-tcPr cell properties even when an ancestor was
+  // already suppressed. N0b2 needs them to rebuild merge visibility inside a
+  // continuation cell that a malformed outer table makes visible again.
+  mut table_cell_vmerge_continue : Bool
+  mut table_cell_grid_span : Int
 }
 
 ///|
@@ -1022,7 +1033,7 @@ fn scan_story(
               (Some(cell), Some(table)) =>
                 if cell.vmerge_continue &&
                   table.origin_columns.contains(cell.grid_column) {
-                  retract_cell(cell, nodes, markers, work)
+                  retract_cell(cell, elements, nodes, markers, work)
                 }
               _ => ()
             }
@@ -1037,6 +1048,7 @@ fn scan_story(
                   retract_row(
                     row,
                     nearest_frame_by_kind(frames, "tbl"),
+                    elements,
                     nodes,
                     markers,
                     work,
@@ -1052,6 +1064,11 @@ fn scan_story(
           // by the span (the reader's parse can yield zero or negative
           // spans, mirrored verbatim).
           if frame.is_wml && frame.local_name == "tc" {
+            if frame.element_index >= 0 &&
+              frame.element_index < elements.length() {
+              elements[frame.element_index].table_cell_vmerge_continue = frame.vmerge_continue
+              elements[frame.element_index].table_cell_grid_span = frame.grid_span
+            }
             match
               (
                 nearest_frame_by_kind(frames, "tr"),
@@ -1265,6 +1282,10 @@ fn scan_story(
             -1
           },
           text_map: None,
+          retracted_by_vmerge: false,
+          deleted_table_row: false,
+          table_cell_vmerge_continue: false,
+          table_cell_grid_span: 1,
         })
         match frames.last() {
           Some(parent) => {
@@ -1758,10 +1779,14 @@ fn purge_subtree(
 fn retract_row(
   row : ScanFrame,
   table : ScanFrame?,
+  elements : Array[ScannedElement],
   nodes : Array[ScannedNode],
   markers : Array[ScannedMarker],
   work : AnnotationScanWork,
 ) -> Unit {
+  if row.element_index >= 0 && row.element_index < elements.length() {
+    elements[row.element_index].deleted_table_row = true
+  }
   match (row.projection_path, row.counter_owner) {
     (Some(_), Some(counters)) => {
       let current = counters.get_or_default("tr", 0)
@@ -1792,6 +1817,7 @@ fn retract_row(
 /// ordinal and suppresses the whole subtree.
 fn retract_cell(
   cell : ScanFrame,
+  elements : Array[ScannedElement],
   nodes : Array[ScannedNode],
   markers : Array[ScannedMarker],
   work : AnnotationScanWork,
@@ -1805,6 +1831,9 @@ fn retract_cell(
       cell.projection_path = None
       cell.counter_owner = None
       cell.suppressed = true
+      if cell.element_index >= 0 && cell.element_index < elements.length() {
+        elements[cell.element_index].retracted_by_vmerge = true
+      }
       purge_subtree(cell, nodes, markers, work)
     }
     _ => ()

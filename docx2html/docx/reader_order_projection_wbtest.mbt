@@ -162,6 +162,77 @@ test "reader order emits textbox paragraphs after the primary paragraph" {
 }
 
 ///|
+test "reader order discovers textboxes inside deleted revisions" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:v="urn:schemas-microsoft-com:vml"><w:body><w:p><w:r><w:t>A</w:t></w:r><w:del><w:r><w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:t>X</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict></w:r></w:del><w:r><w:t>B</w:t></w:r></w:p></w:body></w:document>
+  let projection = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(source),
+  )
+  assert_eq(
+    provisional_story_text(projection),
+    current_reader_story_text(source),
+  )
+  assert_reader_order_identity_mapping(projection)
+  debug_inspect(
+    projection.paragraphs.map(paragraph => {
+      (paragraph.reader_text(), paragraph.from_text_box)
+    }),
+    content="[(\"AB\", false), (\"X\", true)]",
+  )
+}
+
+///|
+test "reader order preserves vMerge cells when malformed tables fail open" {
+  let sources = [
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc></w:tr><w:p><w:r><w:t>Between</w:t></w:r></w:p><w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>B</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>
+    ),
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:p><w:r><w:t>Between</w:t></w:r></w:p><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>B</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>
+    ),
+  ]
+  let projected : Array[Array[String]] = []
+  for source in sources {
+    let projection = scan_reader_order_projection(
+      "word/document.xml",
+      @utf8.encode(source),
+    )
+    assert_eq(
+      provisional_story_text(projection),
+      current_reader_story_text(source),
+    )
+    assert_reader_order_identity_mapping(projection)
+    projected.push(
+      projection.paragraphs.map(paragraph => paragraph.reader_text()),
+    )
+  }
+  debug_inspect(
+    projected,
+    content="[[\"A\", \"Between\", \"B\"], [\"A\", \"Between\", \"B\"]]",
+  )
+}
+
+///|
+test "reader order keeps nested table merge semantics when outer table fails open" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>Outer A</w:t></w:r></w:p></w:tc></w:tr><w:p><w:r><w:t>Between</w:t></w:r></w:p><w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>Outer B</w:t></w:r></w:p><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>Nested A</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>Nested merged away</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:trPr><w:del/></w:trPr><w:tc><w:p><w:r><w:t>Nested deleted row</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:tc></w:tr></w:tbl></w:body></w:document>
+  let projection = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(source),
+  )
+  assert_eq(
+    provisional_story_text(projection),
+    current_reader_story_text(source),
+  )
+  assert_reader_order_identity_mapping(projection)
+  debug_inspect(
+    projection.paragraphs.map(paragraph => paragraph.reader_text()),
+    content="[\"Outer A\", \"Between\", \"Outer B\", \"Nested A\"]",
+  )
+}
+
+///|
 test "reader order keeps deleted paragraph-mark prefixes as physical contributors" {
   let source =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:v="urn:schemas-microsoft-com:vml"><w:body><w:p><w:pPr><w:rPr><w:del/></w:rPr></w:pPr><w:r><w:t>A</w:t></w:r><w:r><w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:t>discarded box</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict></w:r></w:p><w:proofErr/><w:p><w:r><w:t>B</w:t></w:r></w:p><w:p><w:pPr><w:rPr><w:del/></w:rPr></w:pPr><w:r><w:t>trailing</w:t></w:r></w:p></w:body></w:document>

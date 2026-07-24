@@ -207,7 +207,183 @@ fn reader_order_projection_visibility(
       None => ()
     }
   }
+  let nearest_table = Array::make(elements.length(), -1)
+  let inside_deleted_revision = Array::make(elements.length(), false)
+  let deleted_row_ancestor = Array::make(elements.length(), -1)
+  for element in elements {
+    let parent = element.parent_index
+    if parent >= 0 && parent < elements.length() {
+      let parent_element = elements[parent]
+      nearest_table[element.identity] = if is_wml_uri(parent_element.uri) &&
+        parent_element.local_name == "tbl" {
+        parent
+      } else {
+        nearest_table[parent]
+      }
+      inside_deleted_revision[element.identity] = (
+          is_wml_uri(parent_element.uri) && parent_element.local_name == "del"
+        ) ||
+        inside_deleted_revision[parent]
+      deleted_row_ancestor[element.identity] = if parent_element.deleted_table_row {
+        parent
+      } else {
+        deleted_row_ancestor[parent]
+      }
+    }
+  }
+  // BodyReader abandons vMerge collapsing for the whole table when its
+  // flattened children contain a non-row, or one row contains a non-cell.
+  // The streaming N0b1 scanner has already retracted continuation cells by
+  // that point, so source-retaining N0b2 reconstructs those subtrees here.
+  let fail_open_table = Array::make(elements.length(), false)
+  for table in elements {
+    if is_wml_uri(table.uri) && table.local_name == "tbl" {
+      let mut child = table.first_child_index
+      while child >= 0 {
+        let element = elements[child]
+        budget.charge_visit(1)
+        if projection_kind(element.uri, element.local_name) is Some(_) &&
+          !(is_wml_uri(element.uri) && element.local_name == "tr") {
+          fail_open_table[table.identity] = true
+        }
+        if is_wml_uri(element.uri) && element.local_name == "tr" {
+          let mut row_child = element.first_child_index
+          while row_child >= 0 {
+            let row_element = elements[row_child]
+            budget.charge_visit(2)
+            if projection_kind(row_element.uri, row_element.local_name)
+              is Some(_) &&
+              !(is_wml_uri(row_element.uri) && row_element.local_name == "tc") {
+              fail_open_table[table.identity] = true
+            }
+            row_child = row_element.next_sibling_index
+          }
+        }
+        child = element.next_sibling_index
+      }
+    }
+  }
+  // Recompute continuation visibility from the retained physical table
+  // properties. A whole outer cell can have been suppressed before its
+  // nested table was scanned, so the original projection checkpoints alone
+  // cannot describe that nested table's independent merge semantics.
+  let merged_by_vmerge = Array::make(elements.length(), false)
+  for table in elements {
+    if is_wml_uri(table.uri) &&
+      table.local_name == "tbl" &&
+      !fail_open_table[table.identity] {
+      let open_columns : Set[Int] = Set([])
+      let mut row = table.first_child_index
+      while row >= 0 {
+        let row_element = elements[row]
+        budget.charge_visit(1)
+        if is_wml_uri(row_element.uri) &&
+          row_element.local_name == "tr" &&
+          !row_element.deleted_table_row {
+          let mut column = 0
+          let mut cell = row_element.first_child_index
+          while cell >= 0 {
+            let cell_element = elements[cell]
+            budget.charge_visit(2)
+            if is_wml_uri(cell_element.uri) && cell_element.local_name == "tc" {
+              if cell_element.table_cell_vmerge_continue &&
+                open_columns.contains(column) {
+                merged_by_vmerge[cell] = true
+              } else {
+                open_columns.add(column)
+              }
+              column += cell_element.table_cell_grid_span
+            }
+            cell = cell_element.next_sibling_index
+          }
+        }
+        row = row_element.next_sibling_index
+      }
+    }
+  }
+  let merged_cell_ancestor = Array::make(elements.length(), -1)
+  for element in elements {
+    let parent = element.parent_index
+    if parent >= 0 && parent < elements.length() {
+      merged_cell_ancestor[element.identity] = if merged_by_vmerge[parent] {
+        parent
+      } else {
+        merged_cell_ancestor[parent]
+      }
+    }
+  }
+  for element in elements {
+    if element.retracted_by_vmerge {
+      let table = nearest_table[element.identity]
+      if table >= 0 && fail_open_table[table] {
+        restore_fail_open_projection(
+          elements,
+          visible,
+          merged_by_vmerge,
+          element.identity,
+          1,
+          budget,
+        )
+      }
+    }
+  }
+  // The reader's primary inline pass suppresses w:del, but its independent
+  // paragraph-extras pass still descends through that physical subtree and
+  // emits any textbox content it finds.
+  for element in elements {
+    if is_wml_uri(element.uri) &&
+      element.local_name == "txbxContent" &&
+      inside_deleted_revision[element.identity] &&
+      deleted_row_ancestor[element.identity] < 0 {
+      if merged_cell_ancestor[element.identity] < 0 {
+        restore_fail_open_projection(
+          elements,
+          visible,
+          merged_by_vmerge,
+          element.identity,
+          1,
+          budget,
+        )
+      }
+    }
+  }
   visible
+}
+
+///|
+fn restore_fail_open_projection(
+  elements : Array[ScannedElement],
+  visible : Array[Bool],
+  merged_by_vmerge : Array[Bool],
+  identity : Int,
+  depth : Int,
+  budget : ReaderOrderBudget,
+) -> Unit raise DocxError {
+  guard identity >= 0 && identity < elements.length() else { return }
+  budget.charge_visit(depth)
+  let element = elements[identity]
+  if element.deleted_table_row {
+    return
+  }
+  if merged_by_vmerge[identity] {
+    return
+  }
+  if projection_kind(element.uri, element.local_name) is Some(_) {
+    visible[identity] = true
+  }
+  let mut child = element.first_child_index
+  while child >= 0 {
+    let child_element = elements[child]
+    restore_fail_open_projection(
+      elements,
+      visible,
+      merged_by_vmerge,
+      child,
+      depth + 1,
+      budget,
+    )
+    child = child_element.next_sibling_index
+  }
 }
 
 ///|
@@ -553,7 +729,10 @@ fn ReaderOrderWalker::walk_paragraph_extras(
       match element.local_name {
         "pict" => self.walk_pict_extras(child, depth)
         "txbxContent" => self.walk_flow_children(child, depth, true)
-        "del" | "sdt" | "sdtContent" => ()
+        // BodyReader suppresses deleted inline atoms, then independently
+        // recurses through the physical paragraph to discover textboxes.
+        "del" => self.walk_paragraph_extras(child, depth)
+        "sdt" | "sdtContent" => ()
         _ => self.walk_paragraph_extras(child, depth)
       }
     } else if element.uri == MC_URI && element.local_name == "AlternateContent" {
