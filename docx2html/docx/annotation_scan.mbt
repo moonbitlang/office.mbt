@@ -1108,7 +1108,7 @@ fn scan_story(
       }
       None => ()
     }
-    let (name, attributes, self_closing, tag_end) = scan_tag(
+    let (name, attributes, unretained_attribute_names, self_closing, tag_end) = scan_tag(
       part, index, length, source_budget,
     )
     // Namespace declarations bind before resolving this element's name.
@@ -1163,7 +1163,18 @@ fn scan_story(
       }
     }
     match source_budget {
-      Some(_) =>
+      Some(_) => {
+        for attr_name in unretained_attribute_names {
+          let (attr_prefix, _) = split_qualified_name(attr_name)
+          if attr_prefix != "" {
+            guard namespaces.get(attr_prefix) is Some(stack) &&
+              stack.length() > 0 else {
+              raise Unsupported(
+                message="the projection source scanner found an unbound attribute namespace prefix",
+              )
+            }
+          }
+        }
         for pair in attributes {
           let attr_name = pair.0
           if attr_name != "xmlns" && !attr_name.has_prefix("xmlns:") {
@@ -1178,6 +1189,7 @@ fn scan_story(
             }
           }
         }
+      }
       None => ()
     }
     let element_index = match source_budget {
@@ -1208,17 +1220,32 @@ fn scan_story(
           local_name,
           same_name_ordinal,
           field_char_type: if is_wml_uri(uri) && local_name == "fldChar" {
-            attribute_value(attributes, "fldCharType", namespaces)
+            attribute_value(
+              attributes,
+              "fldCharType",
+              namespaces,
+              prefer_last=source_budget is Some(_),
+            )
           } else {
             None
           },
           symbol_font: if is_wml_uri(uri) && local_name == "sym" {
-            attribute_value(attributes, "font", namespaces)
+            attribute_value(
+              attributes,
+              "font",
+              namespaces,
+              prefer_last=source_budget is Some(_),
+            )
           } else {
             None
           },
           symbol_char: if is_wml_uri(uri) && local_name == "sym" {
-            attribute_value(attributes, "char", namespaces)
+            attribute_value(
+              attributes,
+              "char",
+              namespaces,
+              prefer_last=source_budget is Some(_),
+            )
           } else {
             None
           },
@@ -1272,7 +1299,12 @@ fn scan_story(
     }
     let plumbing_note = is_wml_uri(uri) &&
       local_name is ("footnote" | "endnote") &&
-      attribute_value(attributes, "type", namespaces)
+      attribute_value(
+        attributes,
+        "type",
+        namespaces,
+        prefer_last=source_budget is Some(_),
+      )
       is (Some("separator")
       | Some("continuationSeparator")
       | Some("continuationNotice"))
@@ -1293,7 +1325,12 @@ fn scan_story(
           // Recorded whether self-closing or not (Word emits them
           // self-closing; a non-empty form still marks its position).
           seq += 1
-          let id = attribute_value(attributes, "id", namespaces)
+          let id = attribute_value(
+            attributes,
+            "id",
+            namespaces,
+            prefer_last=source_budget is Some(_),
+          )
           let (container_path, after_child) = match current_projection() {
             Some(frame) => (frame.projection_path, frame.last_closed_child)
             None => (None, None)
@@ -1364,7 +1401,10 @@ fn scan_story(
           if !cell.vmerge_seen {
             cell.vmerge_seen = true
             cell.vmerge_continue = attribute_value(
-                attributes, "val", namespaces,
+                attributes,
+                "val",
+                namespaces,
+                prefer_last=source_budget is Some(_),
               )
               is (None | Some("continue"))
           }
@@ -1378,7 +1418,12 @@ fn scan_story(
           if !cell.grid_span_seen {
             cell.grid_span_seen = true
             cell.grid_span = parse_grid_span(
-              attribute_value(attributes, "val", namespaces).unwrap_or("1"),
+              attribute_value(
+                attributes,
+                "val",
+                namespaces,
+                prefer_last=source_budget is Some(_),
+              ).unwrap_or("1"),
             )
           }
         None => ()
@@ -1821,14 +1866,16 @@ fn finish_frame(
 
 ///|
 /// Reads the qualified name and attributes of the tag opening at `start`
-/// (which points at '<'). Returns (name, attributes, self_closing,
-/// index-just-past '>').
+/// (which points at '<'). In source-retaining mode, attribute QNames that the
+/// semantic scanner does not otherwise need are returned separately so their
+/// namespace prefixes can still be validated. Returns (name, retained
+/// attributes, unretained attribute names, self_closing, index-just-past '>').
 fn scan_tag(
   part : BytesView,
   start : Int,
   length : Int,
   source_budget : ProjectionSourceBudget?,
-) -> (String, Array[(String, String)], Bool, Int) raise DocxError {
+) -> (String, Array[(String, String)], Array[String], Bool, Int) raise DocxError {
   let mut at = start + 1
   let name_start = at
   while at < length && !is_name_end(part[at]) {
@@ -1855,6 +1902,7 @@ fn scan_tag(
     None => ()
   }
   let attributes : Array[(String, String)] = []
+  let unretained_attribute_names : Array[String] = []
   let mut self_closing = false
   while at < length {
     // Skip whitespace.
@@ -1868,7 +1916,7 @@ fn scan_tag(
     }
     if part[at] == b'>' {
       at += 1
-      return (name, attributes, self_closing, at)
+      return (name, attributes, unretained_attribute_names, self_closing, at)
     }
     if part[at] == b'/' {
       match source_budget {
@@ -1878,7 +1926,7 @@ fn scan_tag(
               message="the projection source scanner found malformed self-closing-tag content",
             )
           }
-          return (name, attributes, true, at + 2)
+          return (name, attributes, unretained_attribute_names, true, at + 2)
         }
         None => ()
       }
@@ -1905,27 +1953,35 @@ fn scan_tag(
       at += 1
     }
     let attr_end = at
-    let validated_source_name = match source_budget {
-      Some(_) => {
-        guard attr_end - attr_start <= max_annotation_relevant_attribute_bytes else {
-          raise @core.docx_xml_resource_limit_error(DocxXmlTokenLength)
-        }
-        let candidate = utf8_slice(part, attr_start, attr_end)
-        guard projection_source_is_xml_qname(candidate) else {
-          raise Unsupported(
-            message="the projection source scanner found an invalid attribute QName",
-          )
-        }
-        Some(candidate)
-      }
-      None => None
-    }
     let relevant_attribute = annotation_attribute_is_relevant(
       part,
       attr_start,
       attr_end,
       source_budget is Some(_),
     )
+    let validated_source_name = match source_budget {
+      Some(budget) => {
+        guard attr_end - attr_start <= max_annotation_relevant_attribute_bytes else {
+          raise @core.docx_xml_resource_limit_error(DocxXmlTokenLength)
+        }
+        // Refuse before materializing every source attribute QName. Relevant
+        // names live in the retained attribute array; other names live just
+        // long enough for scan_story's post-declaration namespace check.
+        budget.charge_retained_token()
+        budget.charge_retained_chars(attr_end - attr_start)
+        let candidate = utf8_slice(part, attr_start, attr_end)
+        guard projection_source_is_xml_qname(candidate) else {
+          raise Unsupported(
+            message="the projection source scanner found an invalid attribute QName",
+          )
+        }
+        if !relevant_attribute {
+          unretained_attribute_names.push(candidate)
+        }
+        Some(candidate)
+      }
+      None => None
+    }
     while at < length && is_xml_space(part[at]) {
       at += 1
     }
@@ -1966,10 +2022,10 @@ fn scan_tag(
         raise @core.docx_xml_resource_limit_error(DocxXmlTokenLength)
       }
       match source_budget {
-        Some(budget) => {
-          budget.charge_retained_token()
-          budget.charge_retained_chars(attr_end - attr_start + at - value_start)
-        }
+        Some(budget) =>
+          // The QName and its fixed-size retained slot were charged before the
+          // QName allocation above; only the value remains.
+          budget.charge_retained_chars(at - value_start)
         None => ()
       }
       let attr_name = match validated_source_name {
@@ -2087,13 +2143,15 @@ fn utf8_slice(
 ///|
 /// The marker's id attribute is namespace-qualified (`w:id`): any prefix
 /// bound to a WML URI matches; unprefixed attributes never do (default
-/// namespaces do not apply to attributes). Keep the last matching physical
-/// attribute so mixed Strict/Transitional input follows the XML reader's
+/// namespaces do not apply to attributes). Legacy scans preserve their
+/// historical first-match rule; source-retaining scans request the last
+/// physical match so mixed Strict/Transitional input follows the XML reader's
 /// canonical-map overwrite precedence.
 fn attribute_value(
   attributes : Array[(String, String)],
   local_name : String,
   namespaces : StableStringMap[Array[String]],
+  prefer_last? : Bool = false,
 ) -> String? {
   let mut matched : String? = None
   for pair in attributes {
@@ -2105,7 +2163,12 @@ fn attribute_value(
         if attr_local == local_name {
           match namespaces.get(prefix) {
             Some(stack) if stack.length() > 0 &&
-              is_wml_uri(stack[stack.length() - 1]) => matched = Some(value)
+              is_wml_uri(stack[stack.length() - 1]) => {
+              if !prefer_last {
+                return Some(value)
+              }
+              matched = Some(value)
+            }
             _ => ()
           }
         }

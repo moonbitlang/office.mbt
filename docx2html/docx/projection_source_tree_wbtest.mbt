@@ -194,6 +194,18 @@ test "projection source attributes follow reader precedence across WML dialects"
 }
 
 ///|
+test "source precedence does not change legacy annotation scanning" {
+  let source =
+    #|<root xmlns:t="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:s="http://purl.oclc.org/ooxml/wordprocessingml/main"><t:commentRangeStart t:id="first" s:id="last"/></root>
+  let legacy = scan_story(@utf8.encode(source))
+  let retained = scan_projection_source_tree(@utf8.encode(source))
+  debug_inspect(
+    (legacy.markers()[0].id(), retained.markers()[0].id()),
+    content="(\"first\", \"last\")",
+  )
+}
+
+///|
 test "annotation-only scans ignore projection-only attribute lookalikes" {
   let source = StringBuilder()
   source.write_string("<q:root xmlns:q=\"urn:not-word\" q:font=\"")
@@ -324,6 +336,49 @@ test "projection source attribute and text limits are cumulative and exact" {
       max_text_tokens=0,
     ),
     "DocxXmlMaterializedCharacters",
+  )
+
+  // Every source attribute QName is charged before it is materialized, even
+  // when the annotation scanner does not retain its value. The ordinary p:x
+  // name consumes one character-budget slice and one fixed-size token.
+  let ordinary_attribute =
+    #|<a xmlns:p="u" p:x="ignored"/>
+  ignore(
+    scan_projection_source_tree(
+      @utf8.encode(ordinary_attribute),
+      budget=projection_source_budget(
+        max_elements=1,
+        max_attribute_chars=12,
+        max_retained_tokens=4,
+        max_depth=1,
+        max_text_bytes=0,
+        max_text_tokens=0,
+      ),
+    ),
+  )
+  assert_projection_source_refuses(
+    ordinary_attribute,
+    projection_source_budget(
+      max_elements=1,
+      max_attribute_chars=11,
+      max_retained_tokens=4,
+      max_depth=1,
+      max_text_bytes=0,
+      max_text_tokens=0,
+    ),
+    "DocxXmlMaterializedCharacters",
+  )
+  assert_projection_source_refuses(
+    ordinary_attribute,
+    projection_source_budget(
+      max_elements=1,
+      max_attribute_chars=12,
+      max_retained_tokens=3,
+      max_depth=1,
+      max_text_bytes=0,
+      max_text_tokens=0,
+    ),
+    "DocxXmlTokens",
   )
 
   // Every retained namespace declaration consumes one attribute tuple and
@@ -563,6 +618,7 @@ test "projection source mode refuses unbound and reserved namespace identities" 
   for
     case in [
       ("<root><p:x/><x/></root>", "unbound namespace prefix"),
+      ("<root p:x=\"1\"/>", "unbound attribute namespace prefix"),
       ("<root xmlns:xml=\"urn:evil\"/>", "invalid xml namespace binding"),
       (
         "<root xmlns:p=\"http://www.w3.org/XML/1998/namespace\"/>", "reserved XML namespace",
