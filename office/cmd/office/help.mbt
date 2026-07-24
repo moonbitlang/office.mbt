@@ -2,6 +2,8 @@
 enum HelpQuery {
   Overview
   All
+  Schemas
+  Schema(String)
   Format(@lib.DocumentFormat)
   Operation(@lib.DocumentFormat?, @lib.CapabilityCommand)
 }
@@ -149,7 +151,10 @@ fn unknown_first_help_token(value : String) -> @lib.ProtocolError {
     (Some(_), None) => unknown_help_token("format", value, formats)
     (None, Some(_)) => unknown_help_token("operation", value, operations)
     (None, None) => {
-      let topics = formats.copy()
+      let topics = ["schema", "schemas"]
+      for format in formats {
+        topics.push(format)
+      }
       for operation in operations {
         topics.push(operation)
       }
@@ -174,6 +179,32 @@ fn resolve_help_query(
 ) -> HelpQuery raise CliFailure {
   guard first is Some(first) else { return Overview }
   let normalized = first.to_lower()
+  if normalized == "schemas" {
+    if second is Some(value) {
+      raise CliFailure(unknown_help_token("element", value, []))
+    }
+    return Schemas
+  }
+  if normalized == "schema" {
+    guard second is Some(id) else {
+      raise CliFailure(
+        @lib.protocol_error(
+          "office.invalid_arguments",
+          "office help schema requires one input contract id",
+          details=Json::object({
+            "expected": Json::string("office help schema <id>"),
+          }),
+        ),
+      )
+    }
+    if third is Some(element) {
+      raise CliFailure(unknown_help_token("element", element, []))
+    }
+    if !input_contract_ids().contains(id) {
+      raise CliFailure(unknown_help_token("schema", id, input_contract_ids()))
+    }
+    return Schema(id)
+  }
   if normalized == "all" {
     if second is Some(value) {
       raise CliFailure(unknown_help_token("element", value, []))
@@ -321,6 +352,11 @@ fn render_overview(verbose : Bool) -> String {
       }
     }
   }
+  if verbose {
+    lines.push("Consumed input contracts:")
+    lines.push("  office help schemas [--json|--jsonl]")
+    lines.push("  office help schema <id> [--json|--jsonl]")
+  }
   lines.push(
     "Use 'office help <format>' or 'office help <format> <operation>'.",
   )
@@ -331,6 +367,12 @@ fn render_overview(verbose : Bool) -> String {
 fn records_for_query(query : HelpQuery) -> Array[Json] {
   match query {
     Overview | All => @lib.capability_records()
+    Schemas => [input_contract_inventory()]
+    Schema(id) =>
+      match find_input_contract(id) {
+        Some(record) => [record]
+        None => []
+      }
     Format(format) => @lib.capability_records(format~)
     Operation(Some(format), command) =>
       @lib.capability_records(format~, operation=command.name)
@@ -342,6 +384,12 @@ fn records_for_query(query : HelpQuery) -> Array[Json] {
 fn data_for_query(query : HelpQuery) -> Json {
   match query {
     Overview | All => @lib.capabilities_data()
+    Schemas => input_contract_inventory()
+    Schema(id) =>
+      match find_input_contract(id) {
+        Some(record) => record
+        None => Json::empty_object()
+      }
     Format(format) => @lib.capabilities_data(format~)
     Operation(Some(format), command) =>
       @lib.capabilities_data(format~, operation=command.name)
@@ -354,6 +402,12 @@ fn render_human_query(query : HelpQuery) -> String {
   match query {
     Overview => render_overview(false)
     All => render_overview(true)
+    Schemas => render_input_contract_inventory()
+    Schema(id) =>
+      match find_input_contract(id) {
+        Some(record) => record.stringify(indent=2)
+        None => ""
+      }
     Format(format) => render_format(format)
     Operation(_, command) => render_command(command)
   }

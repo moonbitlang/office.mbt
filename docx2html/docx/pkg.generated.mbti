@@ -14,6 +14,10 @@ import {
 }
 
 // Values
+pub const MAX_AUTHORED_MEDIA_BYTES : Int64 = 67108864
+
+pub const MAX_AUTHORED_MEDIA_PARTS : Int = 1000
+
 pub fn author_docx_bytes(@batch.BatchScript, Map[String, Bytes], limits? : @opc.PackageLimits) -> Bytes raise @core.DocxError
 
 pub fn comment_anchor_fragments(id~ : String, wordprocessing_namespace? : String) -> (String, String)

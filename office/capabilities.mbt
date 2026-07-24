@@ -227,19 +227,20 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
   let commands : Array[CapabilityCommand] = [
     {
       name: "help",
-      summary: "Show the implemented Office capability registry",
-      usage: "office help [all|<format>|<operation>|<format> <operation>] [--json|--jsonl]",
+      summary: "Show implemented capabilities or consumed input contracts",
+      usage: "office help [all|schemas|schema <id>|<format>|<operation>|<format> <operation>] [--json|--jsonl]",
       formats: [],
       aliases: [],
       inputs: [
         capability_field(
-          "query", "enum(all)|format|operation|format+operation", false, "optional all, format, operation, or format-operation query",
+          "query", "enum(all|schemas)|schema+id|format|operation|format+operation",
+          false, "optional capability or consumed-input-contract query",
         ),
         capability_field(
           "json", "boolean", false, "emit one office.output/1 JSON document",
         ),
         capability_field(
-          "jsonl", "boolean", false, "emit one self-contained capability record per line",
+          "jsonl", "boolean", false, "emit one self-contained help record per line",
         ),
       ],
       outputs: [

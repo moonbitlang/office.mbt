@@ -18,12 +18,24 @@ pub const SCHEMA_ANNOTATION_RESULT : String = "office.docx.annotation-batch/1"
 /// Coarse op-count backstop; the true guard is the cumulative staged-byte
 /// ceiling below (transact exposes no cancellation hook to its sync
 /// callback, and scheduler-cooperative parsing is deferred to #174).
-let annotation_max_ops : Int = 128
+pub const MAX_ANNOTATION_OPS : Int = 128
 
 ///|
 /// Absolute ceiling on cumulative staged-archive payload growth across
 /// the whole fold — the observable "work" bound.
-let annotation_max_total_growth : Int64 = 32L * 1024L * 1024L
+pub const MAX_ANNOTATION_TOTAL_GROWTH : Int64 = 32L * 1024L * 1024L
+
+///|
+/// The parser-owned operation discriminator vocabulary, in stable order.
+let annotation_operation_names : Array[String] = [
+  "comment_add", "comment_reply", "comment_resolve", "comment_unresolve",
+]
+
+///|
+/// Returns the annotation operation vocabulary accepted by this build.
+pub fn annotation_batch_operation_names() -> Array[String] {
+  annotation_operation_names.copy()
+}
 
 ///|
 /// The union of every member any op kind accepts — used only to detect a
@@ -305,9 +317,9 @@ pub fn parse_annotation_batch(
   guard fields.get("ops") is Some(Array(op_items)) else {
     raise annotation_parse_error("annotation script needs an \"ops\" array")
   }
-  if op_items.length() > annotation_max_ops {
+  if op_items.length() > MAX_ANNOTATION_OPS {
     raise annotation_parse_error(
-      "ops carries \{op_items.length()} entries; the limit is \{annotation_max_ops}",
+      "ops carries \{op_items.length()} entries; the limit is \{MAX_ANNOTATION_OPS}",
     )
   }
   let labels_seen : Set[String] = Set::new()
@@ -357,6 +369,9 @@ pub fn parse_annotation_batch(
       raise annotation_parse_error(
         "ops[\{index}] needs a non-empty string \"op\"",
       )
+    }
+    if !annotation_operation_names.contains(kind) {
+      raise annotation_parse_error("unknown op \"" + kind + "\"")
     }
     match kind {
       "comment_add" => {
@@ -500,7 +515,7 @@ pub async fn transact_docx_annotations(
         // decreasing budget: the ceiling for this stage is the base
         // splice allowance minus the growth already retained in `current`
         let grown = annotation_archive_payload_bytes(current) - original_bytes
-        if grown > annotation_max_total_growth {
+        if grown > MAX_ANNOTATION_TOTAL_GROWTH {
           raise docx_failure(
             "office.docx.annotation_growth_exceeded", "the annotation batch would grow the package beyond the ceiling",
           )

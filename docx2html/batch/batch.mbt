@@ -32,7 +32,8 @@ pub const SCHEMA_BATCH : String = "docx.batch/1"
 pub const SCHEMA_BATCH_V2 : String = "docx.batch/2"
 
 ///|
-const MAX_OPS : Int = 10000
+/// Maximum number of operations in one DOCX authoring script.
+pub const MAX_BATCH_OPS : Int = 10000
 
 ///|
 /// Bounds mirroring the writer's fail-closed guards, enforced here too so
@@ -40,10 +41,23 @@ const MAX_OPS : Int = 10000
 /// whole-document writer error: Word's font-size cap (write_document.mbt)
 /// and Word's 63-column table limit (write_tables.mbt). Row spans are
 /// bounded by the table's remaining rows, exactly like the writer.
-const MAX_FONT_SIZE_POINTS : Int = 1638
+pub const MAX_FONT_SIZE_POINTS : Int = 1638
 
 ///|
-const MAX_GRID_COLUMNS : Int = 63
+/// Maximum grid-column count accepted by the DOCX table writer.
+pub const MAX_GRID_COLUMNS : Int = 63
+
+///|
+/// The operation discriminator vocabulary accepted by this build. The Office
+/// input-contract help consumes this parser-owned inventory instead of
+/// maintaining a second list.
+let batch_operation_names : Array[String] = ["paragraph", "table", "comment"]
+
+///|
+/// Returns the operation discriminator vocabulary in stable order.
+pub fn operation_names() -> Array[String] {
+  batch_operation_names.copy()
+}
 
 ///|
 /// Paragraph styles the writer can serialize (write_document.mbt's
@@ -327,9 +341,9 @@ pub fn parse_batch(script : Json) -> BatchScript raise BatchError {
   guard root.get("ops") is Some(Array(ops_json)) else {
     raise BatchError("the script needs \"ops\": [...]")
   }
-  if ops_json.length() > MAX_OPS {
+  if ops_json.length() > MAX_BATCH_OPS {
     raise BatchError(
-      "the script has \{ops_json.length()} ops; the cap is \{MAX_OPS}",
+      "the script has \{ops_json.length()} ops; the cap is \{MAX_BATCH_OPS}",
     )
   }
   let ops : Array[OpSpec] = []
@@ -358,6 +372,11 @@ pub fn parse_batch(script : Json) -> BatchScript raise BatchError {
       Some(Object(params)) => params
       Some(_) => raise BatchError("\{at}.params must be an object")
       None => Map([])
+    }
+    if !batch_operation_names.contains(op_name) {
+      raise BatchError(
+        "\{at}.op '\{op_name}' is unknown (known ops: paragraph, table, comment)",
+      )
     }
     match op_name {
       "paragraph" => {

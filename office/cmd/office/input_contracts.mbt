@@ -1,0 +1,674 @@
+///|
+let schema_input_contracts : String = "office.input-contracts/1"
+
+///|
+let schema_input_contract : String = "office.input-contract/1"
+
+///|
+struct InputContractCore {
+  id : String
+  summary : String
+  consumed_by : Array[String]
+  envelope : Json
+  definitions : Array[Json]
+  operations : Array[Json]
+  constraints : Array[String]
+  limits : Json
+  examples : Array[Json]
+}
+
+///|
+fn contract_strings(values : Array[String]) -> Json {
+  Json::array(values.map(Json::string))
+}
+
+///|
+fn contract_members(entries : Array[(String, String)]) -> Json {
+  let members : Map[String, Json] = Map([])
+  for name_and_type in entries {
+    members[name_and_type.0] = Json::string(name_and_type.1)
+  }
+  Json::object(members)
+}
+
+///|
+fn contract_object(
+  name : String,
+  entries : Array[(String, String)],
+  required? : Array[String] = [],
+  constraints? : Array[String] = [],
+) -> Json {
+  Json::object({
+    "name": Json::string(name),
+    "type": Json::string("object"),
+    "members": contract_members(entries),
+    "required": contract_strings(required),
+    "additional_members": Json::boolean(false),
+    "constraints": contract_strings(constraints),
+  })
+}
+
+///|
+fn contract_type(
+  name : String,
+  type_name : String,
+  constraints? : Array[String] = [],
+) -> Json {
+  Json::object({
+    "name": Json::string(name),
+    "type": Json::string(type_name),
+    "constraints": contract_strings(constraints),
+  })
+}
+
+///|
+fn contract_envelope(
+  entries : Array[(String, String)],
+  required : Array[String],
+) -> Json {
+  contract_object("envelope", entries, required~)
+}
+
+///|
+fn copied_object_member(source : Json, key : String) -> Json {
+  match source {
+    Object(fields) =>
+      match fields.get(key) {
+        Some(Object(values)) => {
+          let copied : Map[String, Json] = Map([])
+          for name, value in values {
+            copied[name] = value
+          }
+          Json::object(copied)
+        }
+        _ => Json::empty_object()
+      }
+    _ => Json::empty_object()
+  }
+}
+
+///|
+fn copied_array_member(source : Json, key : String) -> Array[Json] {
+  match source {
+    Object(fields) =>
+      match fields.get(key) {
+        Some(Array(values)) => values.copy()
+        _ => []
+      }
+    _ => []
+  }
+}
+
+///|
+fn xlsx_input_contract() -> InputContractCore {
+  let owner = @batch.capabilities()
+  let limits = match copied_object_member(owner, "limits") {
+    Object(values) => {
+      values["max_number_token_chars"] = Json::number(
+        @batch.MAX_BATCH_NUMBER_TOKEN_CHARS.to_double(),
+      )
+      values["max_enumerated_range_cells"] = Json::number(
+        @inspect.MAX_RANGE_CELLS.to_double(),
+      )
+      Json::object(values)
+    }
+    other => other
+  }
+  {
+    id: @inspect.SCHEMA_BATCH,
+    summary: "Strict transactional spreadsheet mutation script",
+    consumed_by: ["office batch WORKBOOK.xlsx SCRIPT.json [--out OUTPUT.xlsx]"],
+    envelope: contract_envelope(
+      [("schema", "literal(xlsx.batch/1)"), ("ops", "array(xlsx_operation)")],
+      ["schema", "ops"],
+    ),
+    definitions: [
+      contract_object(
+        "xlsx_operation",
+        [
+          ("op", "enum(operations[].op)"),
+          ("params", "object(operations[op].params)"),
+        ],
+        required=["op", "params"],
+      ),
+      contract_type("value", "string|finite-number|boolean|null"),
+      contract_type("cell", "single in-grid A1 cell"),
+      contract_type("range", "in-grid cell or A1:B2 range"),
+      contract_type("colon_range", "in-grid A1:B2 range"),
+      contract_type(
+        "table_range", "uncapped in-grid A1:B2 range; a one-row range on row 1048576 is forbidden",
+      ),
+      contract_type("sqref", "uncapped in-grid cell or A1:B2 range"),
+      contract_type("column", "column letter or ascending column range"),
+      contract_type(
+        "series_range", "in-grid range with optional non-empty Sheet! qualifier",
+      ),
+    ],
+    operations: copied_array_member(owner, "ops"),
+    constraints: [
+      "unknown envelope members, operations, and params are rejected", "JSON numbers must be finite and are stored as IEEE-754 doubles",
+      "all references are validated before workbook I/O", "zero operations is a valid no-op",
+      "application and publication are all-or-nothing",
+    ],
+    limits,
+    examples: [
+      Json::object({
+        "schema": Json::string(@inspect.SCHEMA_BATCH),
+        "ops": Json::array([
+          Json::object({
+            "op": Json::string("set"),
+            "params": Json::object({
+              "sheet": Json::string("Data"),
+              "cell": Json::string("A1"),
+              "value": Json::string("Hello"),
+            }),
+          }),
+        ]),
+      }),
+    ],
+  }
+}
+
+///|
+fn docx_operation(name : String, params : String) -> Json {
+  Json::object({
+    "op": Json::string(name),
+    "params": Json::string(params),
+    "schema_versions": contract_strings(
+      if name == "comment" {
+        [@docx_batch.SCHEMA_BATCH_V2]
+      } else {
+        [@docx_batch.SCHEMA_BATCH, @docx_batch.SCHEMA_BATCH_V2]
+      },
+    ),
+  })
+}
+
+///|
+fn docx_input_contract() -> InputContractCore {
+  let operations : Array[Json] = []
+  for name in @docx_batch.operation_names() {
+    let params = match name {
+      "paragraph" => "paragraph"
+      "table" => "table"
+      "comment" => "comment"
+      _ => "unknown"
+    }
+    operations.push(docx_operation(name, params))
+  }
+  {
+    id: @docx_batch.SCHEMA_BATCH_V2,
+    summary: "Strict fresh-DOCX authoring script with comments and notes",
+    consumed_by: ["office batch --format docx OUTPUT.docx SCRIPT.json"],
+    envelope: contract_envelope(
+      [("schema", "literal(docx.batch/2)"), ("ops", "array(docx_operation)")],
+      ["schema", "ops"],
+    ),
+    definitions: [
+      contract_object(
+        "docx_operation",
+        [("op", "enum(operations[].op)"), ("params", "operation.params")],
+        required=["op"],
+        constraints=["params defaults to an empty object when omitted"],
+      ),
+      contract_object(
+        "paragraph",
+        [
+          ("text", "string"),
+          ("runs", "nonempty-array(run)"),
+          ("style", "enum(Normal|Heading1..Heading6)"),
+          ("align", "enum(left|center|right|both|start|end|distribute)"),
+          ("list", "list"),
+        ],
+        constraints=["exactly-one(text,runs)"],
+      ),
+      contract_object(
+        "list",
+        [("ordered", "boolean"), ("level", "integer(1..9,default=1)")],
+        required=["ordered"],
+      ),
+      contract_object(
+        "text_run",
+        [
+          ("text", "string"),
+          ("bold", "boolean"),
+          ("italic", "boolean"),
+          ("underline", "boolean"),
+          ("strike", "boolean"),
+          ("all_caps", "boolean"),
+          ("small_caps", "boolean"),
+          ("vertical", "enum(superscript|subscript)"),
+          ("font", "nonempty-string"),
+          ("size", "integer(1..1638)"),
+          ("highlight", "ST_HighlightColor except none"),
+        ],
+        required=["text"],
+      ),
+      contract_object(
+        "link",
+        [
+          ("href", "nonempty-string"),
+          ("anchor", "nonempty-string"),
+          ("target_frame", "nonempty-string"),
+          ("text", "string"),
+          ("runs", "nonempty-array(text_run|{image:image})"),
+        ],
+        constraints=[
+          "exactly-one(href,anchor)", "exactly-one(text,runs)", "links cannot nest",
+        ],
+      ),
+      contract_object(
+        "image",
+        [
+          ("path", "string"),
+          ("content_type", "enum(image/png|image/jpeg|image/gif)"),
+          ("alt", "nonblank-string"),
+        ],
+        required=["path"],
+      ),
+      contract_object(
+        "note_body",
+        [("text", "string"), ("paragraphs", "nonempty-array(paragraph)")],
+        constraints=["exactly-one(text,paragraphs)", "plain content only"],
+      ),
+      contract_type(
+        "run",
+        "one-of(text_run|{link:link}|{image:image}|{footnote:note_body}|{endnote:note_body})",
+        constraints=["notes require docx.batch/2 and cannot nest"],
+      ),
+      contract_object(
+        "table_cell",
+        [
+          ("text", "string"),
+          ("paragraphs", "nonempty-array(paragraph)"),
+          ("col_span", "integer(1..63,default=1)"),
+          ("row_span", "integer(1..remaining-rows,default=1)"),
+        ],
+        constraints=["exactly-one(text,paragraphs)"],
+      ),
+      contract_object(
+        "table",
+        [
+          ("rows", "nonempty-array(nonempty-array(table_cell))"),
+          ("header_rows", "integer(0..row-count,default=0)"),
+        ],
+        required=["rows"],
+        constraints=["rows tile one equal-width grid of at most 63 columns"],
+      ),
+      contract_object(
+        "comment",
+        [
+          ("on", "earlier-paragraph-op-index|{from:integer,to:integer}"),
+          ("reply_to", "earlier-comment-op-index"),
+          ("text", "string"),
+          ("paragraphs", "nonempty-array(paragraph)"),
+          ("author", "nonempty-string"),
+          ("initials", "nonempty-string"),
+          ("date", "xsd:dateTime-string"),
+          ("done", "boolean"),
+        ],
+        required=["author"],
+        constraints=[
+          "exactly-one(on,reply_to)", "exactly-one(text,paragraphs)", "body is plain content",
+        ],
+      ),
+    ],
+    operations,
+    constraints: [
+      "docx.batch/1 is accepted as the paragraph/table-only subset", "unknown and duplicate members are rejected",
+      "all numeric lexemes are plain decimal integers", "document text must be XML-serializable",
+      "the destination is fresh; existing documents are not mutated",
+    ],
+    limits: Json::object({
+      "max_script_bytes": Json::number(
+        office_docx_author_max_script_bytes.to_double(),
+      ),
+      "max_ops": Json::number(@docx_batch.MAX_BATCH_OPS.to_double()),
+      "max_font_size_points": Json::number(
+        @docx_batch.MAX_FONT_SIZE_POINTS.to_double(),
+      ),
+      "max_table_columns": Json::number(
+        @docx_batch.MAX_GRID_COLUMNS.to_double(),
+      ),
+      "max_image_bytes": Json::number(
+        office_docx_author_max_image_bytes.to_double(),
+      ),
+      "max_total_image_bytes": Json::number(
+        office_docx_author_max_total_image_bytes.to_double(),
+      ),
+      "max_emitted_media_parts": Json::number(
+        @docx.MAX_AUTHORED_MEDIA_PARTS.to_double(),
+      ),
+      "max_emitted_media_bytes": Json::number(
+        @docx.MAX_AUTHORED_MEDIA_BYTES.to_double(),
+      ),
+    }),
+    examples: [
+      Json::object({
+        "schema": Json::string(@docx_batch.SCHEMA_BATCH_V2),
+        "ops": Json::array([
+          Json::object({
+            "op": Json::string("paragraph"),
+            "params": Json::object({
+              "text": Json::string("Quarterly findings"),
+              "style": Json::string("Heading1"),
+            }),
+          }),
+          Json::object({
+            "op": Json::string("comment"),
+            "params": Json::object({
+              "on": Json::number(0.0),
+              "author": Json::string("Reviewer"),
+              "text": Json::string("Add a source."),
+            }),
+          }),
+        ]),
+      }),
+    ],
+  }
+}
+
+///|
+fn template_input_contract() -> InputContractCore {
+  {
+    id: @template.SCHEMA_TEMPLATE_DATA,
+    summary: "Strict non-executable scalar and repeating-region template data",
+    consumed_by: ["office template TEMPLATE DATA.json --out OUTPUT"],
+    envelope: contract_envelope(
+      [
+        ("schema", "literal(office.template.data/1)"),
+        ("values", "object<template_key,scalar>"),
+        ("regions", "nonempty-object<template_key,region>"),
+      ],
+      ["schema", "values"],
+    ),
+    definitions: [
+      contract_type("template_key", "[A-Za-z_][A-Za-z0-9_.-]{0,63}"),
+      contract_type("scalar", "XML-safe-string|finite-number|boolean"),
+      contract_object(
+        "region",
+        [
+          ("sheet", "nonempty-string"),
+          ("row", "plain-integer(1..1048576)"),
+          ("path", "table-row-selector"),
+          ("records", "nonempty-array(object<template_key,scalar>)"),
+        ],
+        required=["records"],
+        constraints=["exactly-one(sheet+row,path)"],
+      ),
+      contract_type(
+        "table-row-selector", "/docx/body/tbl[N]/tr[M] | /docx/header[K]/tbl[N]/tr[M] | /docx/footer[K]/tbl[N]/tr[M]; K=1..99; N,M are 1..7 digits, positive, without a leading zero",
+      ),
+    ],
+    operations: [],
+    constraints: [
+      "unknown and duplicate members are rejected", "null, arrays, and nested values are rejected",
+      "values keys and every region-record key set are disjoint", "region names and scalar keys use template_key",
+      "regions is optional, but when present it must contain 1..max_regions named members",
+    ],
+    limits: Json::object({
+      "max_data_bytes": Json::number(office_template_max_data_bytes.to_double()),
+      "max_keys_per_values_or_record": Json::number(
+        @template.MAX_TEMPLATE_KEYS.to_double(),
+      ),
+      "max_string_utf16_units": Json::number(
+        @template.MAX_TEMPLATE_VALUE_UNITS.to_double(),
+      ),
+      "max_regions": Json::number(@template.MAX_TEMPLATE_REGIONS.to_double()),
+      "max_records_per_region": Json::number(
+        @template.MAX_TEMPLATE_REGION_RECORDS.to_double(),
+      ),
+      "max_total_region_rows": Json::number(
+        @template.MAX_TEMPLATE_TOTAL_REGION_ROWS.to_double(),
+      ),
+      "max_sheet_row": Json::number(
+        @template.MAX_TEMPLATE_SHEET_ROW.to_double(),
+      ),
+      "max_docx_story_ordinal": Json::number(
+        @template.MAX_TEMPLATE_STORY_ORDINAL.to_double(),
+      ),
+      "max_docx_path_ordinal_digits": Json::number(
+        @template.MAX_TEMPLATE_PATH_ORDINAL_DIGITS.to_double(),
+      ),
+    }),
+    examples: [
+      Json::object({
+        "schema": Json::string(@template.SCHEMA_TEMPLATE_DATA),
+        "values": Json::object({
+          "company": Json::string("Acme"),
+          "approved": Json::boolean(true),
+        }),
+        "regions": Json::object({
+          "items": Json::object({
+            "sheet": Json::string("Data"),
+            "row": Json::number(2.0),
+            "records": Json::array([
+              Json::object({
+                "item": Json::string("Widget"),
+                "amount": Json::number(3.0),
+              }),
+            ]),
+          }),
+        }),
+      }),
+    ],
+  }
+}
+
+///|
+fn annotation_operation(name : String) -> Json {
+  let (entries, required, constraints) = match name {
+    "comment_add" =>
+      (
+        [
+          ("op", "literal(comment_add)"),
+          ("anchor", "comment_anchor"),
+          ("author", "nonempty-string"),
+          ("initials", "nonempty-string"),
+          ("date", "xsd:dateTime-string"),
+          ("body", "comment_body"),
+          ("label", "template_key"),
+        ],
+        ["op", "anchor", "author", "body"],
+        [],
+      )
+    "comment_reply" =>
+      (
+        [
+          ("op", "literal(comment_reply)"),
+          ("parent", "comment_ref"),
+          ("author", "nonempty-string"),
+          ("initials", "nonempty-string"),
+          ("date", "xsd:dateTime-string"),
+          ("body", "comment_body"),
+          ("label", "template_key"),
+        ],
+        ["op", "parent", "author", "body"],
+        ["label references resolve only to earlier operations"],
+      )
+    "comment_resolve" | "comment_unresolve" =>
+      (
+        [("op", "literal(\{name})"), ("target", "comment_ref")],
+        ["op", "target"],
+        [],
+      )
+    _ => ([], [], ["unknown parser operation"])
+  }
+  contract_object(name, entries, required~, constraints~)
+}
+
+///|
+fn annotation_input_contract() -> InputContractCore {
+  let operations : Array[Json] = []
+  for name in @office_docx.annotation_batch_operation_names() {
+    operations.push(annotation_operation(name))
+  }
+  {
+    id: @office_docx.SCHEMA_ANNOTATION_BATCH,
+    summary: "Strict preservation-safe comment mutation script for an existing DOCX",
+    consumed_by: ["office annotate INPUT.docx SCRIPT.json --out OUTPUT.docx"],
+    envelope: contract_envelope(
+      [
+        ("schema", "literal(docx.annotation-batch/1)"),
+        ("ops", "array(annotation_operation)"),
+      ],
+      ["schema", "ops"],
+    ),
+    definitions: [
+      contract_object(
+        "comment_anchor",
+        [
+          ("at", "canonical-/docx/body/p[K]-selector"),
+          ("to", "canonical-/docx/body/p[M]-selector"),
+        ],
+        required=["at"],
+      ),
+      contract_type(
+        "comment_ref", "exactly-one({comment_id:nonempty-string}|{label:template_key})",
+      ),
+      contract_type("comment_body", "nonempty-array(nonempty-string)"),
+      contract_type("template_key", "[A-Za-z_][A-Za-z0-9_.-]{0,63}"),
+    ],
+    operations,
+    constraints: [
+      "unknown members and operation names are rejected", "labels are unique and references may name only earlier labels",
+      "anchors address body paragraphs and ranges are ordered", "operations fold over fresh snapshots and publish atomically",
+    ],
+    limits: Json::object({
+      "max_script_bytes": Json::number(
+        office_annotation_max_script_bytes.to_double(),
+      ),
+      "max_ops": Json::number(@office_docx.MAX_ANNOTATION_OPS.to_double()),
+      "max_total_growth_bytes": Json::number(
+        @office_docx.MAX_ANNOTATION_TOTAL_GROWTH.to_double(),
+      ),
+    }),
+    examples: [
+      Json::object({
+        "schema": Json::string(@office_docx.SCHEMA_ANNOTATION_BATCH),
+        "ops": Json::array([
+          Json::object({
+            "op": Json::string("comment_add"),
+            "anchor": Json::object({ "at": Json::string("/docx/body/p[1]") }),
+            "author": Json::string("Reviewer"),
+            "body": Json::array([Json::string("Check this figure.")]),
+            "label": Json::string("review"),
+          }),
+          Json::object({
+            "op": Json::string("comment_reply"),
+            "parent": Json::object({ "label": Json::string("review") }),
+            "author": Json::string("Author"),
+            "body": Json::array([Json::string("Verified.")]),
+            "label": Json::string("answer"),
+          }),
+          Json::object({
+            "op": Json::string("comment_resolve"),
+            "target": Json::object({ "label": Json::string("answer") }),
+          }),
+          Json::object({
+            "op": Json::string("comment_unresolve"),
+            "target": Json::object({ "label": Json::string("answer") }),
+          }),
+        ]),
+      }),
+    ],
+  }
+}
+
+///|
+fn input_contract_cores() -> Array[InputContractCore] {
+  [
+    xlsx_input_contract(),
+    docx_input_contract(),
+    template_input_contract(),
+    annotation_input_contract(),
+  ]
+}
+
+///|
+fn input_contract_core_json(core : InputContractCore) -> Json {
+  Json::object({
+    "id": Json::string(core.id),
+    "summary": Json::string(core.summary),
+    "consumed_by": contract_strings(core.consumed_by),
+    "envelope": core.envelope,
+    "definitions": Json::array(core.definitions),
+    "operations": Json::array(core.operations),
+    "constraints": contract_strings(core.constraints),
+    "limits": core.limits,
+    "examples": Json::array(core.examples),
+  })
+}
+
+///|
+fn input_contract_fingerprint(core : InputContractCore) -> String {
+  "sha256:" +
+  @lib.sha256_hex(@utf8.encode(input_contract_core_json(core).stringify()))
+}
+
+///|
+fn input_contract_record(core : InputContractCore) -> Json {
+  Json::object({
+    "schema": Json::string(schema_input_contract),
+    "id": Json::string(core.id),
+    "fingerprint": Json::string(input_contract_fingerprint(core)),
+    "summary": Json::string(core.summary),
+    "consumed_by": contract_strings(core.consumed_by),
+    "envelope": core.envelope,
+    "definitions": Json::array(core.definitions),
+    "operations": Json::array(core.operations),
+    "constraints": contract_strings(core.constraints),
+    "limits": core.limits,
+    "examples": Json::array(core.examples),
+  })
+}
+
+///|
+fn input_contract_ids() -> Array[String] {
+  input_contract_cores().map(core => core.id)
+}
+
+///|
+fn find_input_contract(id : String) -> Json? {
+  for core in input_contract_cores() {
+    if core.id == id {
+      return Some(input_contract_record(core))
+    }
+  }
+  None
+}
+
+///|
+fn input_contract_inventory() -> Json {
+  let summaries : Array[Json] = []
+  for core in input_contract_cores() {
+    summaries.push(
+      Json::object({
+        "id": Json::string(core.id),
+        "fingerprint": Json::string(input_contract_fingerprint(core)),
+        "summary": Json::string(core.summary),
+        "consumed_by": contract_strings(core.consumed_by),
+      }),
+    )
+  }
+  let fingerprint = "sha256:" +
+    @lib.sha256_hex(@utf8.encode(Json::array(summaries).stringify()))
+  Json::object({
+    "schema": Json::string(schema_input_contracts),
+    "fingerprint": Json::string(fingerprint),
+    "contracts": Json::array(summaries),
+  })
+}
+
+///|
+fn render_input_contract_inventory() -> String {
+  let lines : Array[String] = [
+    "Consumed input contracts",
+    "  Schema: \{schema_input_contracts}",
+  ]
+  for core in input_contract_cores() {
+    lines.push("  \{core.id} — \{core.summary}")
+  }
+  lines.push("Use 'office help schema <id> --json' for the exact contract.")
+  lines.join("\n")
+}

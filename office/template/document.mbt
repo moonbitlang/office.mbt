@@ -18,6 +18,16 @@ pub const MAX_TEMPLATE_REGION_RECORDS : Int = 4096
 pub const MAX_TEMPLATE_TOTAL_REGION_ROWS : Int = 10000
 
 ///|
+/// Header/footer story ordinals and table/row path ordinals are bounded before
+/// arithmetic or selector allocation.
+pub const MAX_TEMPLATE_STORY_ORDINAL : Int = 99
+
+///|
+/// Maximum decimal digits accepted for table and row ordinals in a DOCX
+/// repeating-region path.
+pub const MAX_TEMPLATE_PATH_ORDINAL_DIGITS : Int = 7
+
+///|
 /// Which story of a DOCX document a table path addresses. v1 merges only
 /// body tables; header/footer paths parse (they are well-formed addresses)
 /// and the merge layer refuses them as unsupported.
@@ -73,7 +83,7 @@ fn parse_bracket_ordinal(text : String, start : Int) -> (Int, Int)? {
     }
     value = value * 10 + (text[index].to_int() - '0'.to_int())
     digits += 1
-    if digits > 7 {
+    if digits > MAX_TEMPLATE_PATH_ORDINAL_DIGITS {
       return None
     }
     index += 1
@@ -97,7 +107,7 @@ fn parse_table_row_path(path : String) -> TemplateRegionAddress? {
   } else if path.substring(start=index).has_prefix("header") {
     index += "header".length()
     guard parse_bracket_ordinal(path, index) is Some((ordinal, next)) &&
-      ordinal <= 99 &&
+      ordinal <= MAX_TEMPLATE_STORY_ORDINAL &&
       next < path.length() &&
       path[next] == '/' else {
       return None
@@ -107,7 +117,7 @@ fn parse_table_row_path(path : String) -> TemplateRegionAddress? {
   } else if path.substring(start=index).has_prefix("footer") {
     index += "footer".length()
     guard parse_bracket_ordinal(path, index) is Some((ordinal, next)) &&
-      ordinal <= 99 &&
+      ordinal <= MAX_TEMPLATE_STORY_ORDINAL &&
       next < path.length() &&
       path[next] == '/' else {
       return None
@@ -137,7 +147,7 @@ fn parse_table_row_path(path : String) -> TemplateRegionAddress? {
 ///|
 /// The largest addressable spreadsheet row (XLSX grid bound; the merge
 /// layer still verifies the row against the actual workbook).
-const MAX_SHEET_ROW : Int = 1048576
+pub const MAX_TEMPLATE_SHEET_ROW : Int = 1048576
 
 ///|
 /// Validates one region object into its address. Exactly one addressing
@@ -192,7 +202,7 @@ fn parse_region_address(
   let truncated = row_value.to_int64()
   if truncated.to_double() != row_value ||
     truncated < 1L ||
-    truncated > MAX_SHEET_ROW.to_int64() {
+    truncated > MAX_TEMPLATE_SHEET_ROW.to_int64() {
     raise TemplateDataError(row_bounds_message(name))
   }
   SheetRow(sheet~, row=truncated.to_int())
@@ -202,13 +212,13 @@ fn parse_region_address(
 fn row_bounds_message(name : String) -> String {
   "region \"" +
   name +
-  "\" row must be an integer between 1 and \{MAX_SHEET_ROW}"
+  "\" row must be an integer between 1 and \{MAX_TEMPLATE_SHEET_ROW}"
 }
 
 ///|
 /// Accepts only a plain positive integer literal within the grid: digits
 /// with no sign, fraction, exponent, or leading zero, at most seven of
-/// them, value in 1..=MAX_SHEET_ROW.
+/// them, value in 1..=MAX_TEMPLATE_SHEET_ROW.
 fn parse_strict_row_literal(spelling : String) -> Int? {
   if spelling.length() == 0 || spelling.length() > 7 {
     return None
@@ -221,7 +231,7 @@ fn parse_strict_row_literal(spelling : String) -> Int? {
     guard unit is ('0'..='9') else { return None }
     value = value * 10 + (unit.to_int() - '0'.to_int())
   }
-  if value < 1 || value > MAX_SHEET_ROW {
+  if value < 1 || value > MAX_TEMPLATE_SHEET_ROW {
     return None
   }
   Some(value)
@@ -284,8 +294,8 @@ fn region_row_lexical_gate(
 /// record is rejected, so region lookup (record ∪ values) is unambiguous.
 pub fn parse_template_document(
   text : String,
-  max_keys? : Int = 4096,
-  max_value_units? : Int = 65536,
+  max_keys? : Int = MAX_TEMPLATE_KEYS,
+  max_value_units? : Int = MAX_TEMPLATE_VALUE_UNITS,
   max_regions? : Int = MAX_TEMPLATE_REGIONS,
   max_region_records? : Int = MAX_TEMPLATE_REGION_RECORDS,
   max_total_region_rows? : Int = MAX_TEMPLATE_TOTAL_REGION_ROWS,
