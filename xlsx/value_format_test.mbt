@@ -101,6 +101,7 @@ test "text formats require an explicit text placeholder or fourth section" {
   inspect(format_text("Total", "0;_😀@"), content="Total")
   inspect(format_text("Total", "0;*😀@"), content="Total")
   inspect(format_text("Total", "0;\"😀\"@"), content="😀Total")
+  inspect(format_text("Total", "é@"), content="éTotal")
   inspect(
     format_text("Total", "0;[Red]-0;0;\"label: \"@"),
     content="label: Total",
@@ -144,6 +145,34 @@ test "date tokens and elapsed" {
     content="US03/04/2019",
   )
   inspect(format_numeric(43528.0, "[$-111]MM/DD/YYYY"), content="43528")
+}
+
+///|
+test "date formats preserve astral literals after workbook readback" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Dates"))
+  let cases = [
+    ("A1", "😀yyyy", "😀2019"),
+    ("B1", "\\😀yyyy", "😀2019"),
+    ("C1", "\"😀\"yyyy", "😀2019"),
+    ("D1", "!abc😀yyyy", "!abc😀2019"),
+    ("E1", "yyyy😀", "2019😀"),
+    ("F1", "éyyyy", "é2019"),
+    ("G1", "😀AM/PM", "😀AM"),
+    ("H1", "😀A/P", "😀A"),
+    ("I1", "[$😀-409]yyyy", "😀2019"),
+  ]
+  for case in cases {
+    let (reference, format, _expected) = case
+    workbook.set_cell_value("Dates", reference, Numeric(43528.0))
+    let style_id = workbook.add_style(@xlsx.Style::number_format(format))
+    workbook.set_cell_style("Dates", reference, style_id)
+  }
+  let reopened = @xlsx.read(@xlsx.write(workbook))
+  for case in cases {
+    let (reference, _format, expected) = case
+    assert_eq(reopened.get_cell_value("Dates", reference), Some(expected))
+  }
 }
 
 ///|
