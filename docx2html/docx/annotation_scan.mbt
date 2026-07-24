@@ -122,6 +122,23 @@ priv struct ScannedNode {
 }
 
 ///|
+/// One namespace-resolved raw element in open order. N0b consumes this
+/// private event stream so source-aware readers share this scanner's tag and
+/// namespace grammar rather than tokenizing XML again.
+priv struct ScannedElement {
+  uri : String
+  local_name : String
+  field_char_type : String?
+  symbol_font : String?
+  symbol_char : String?
+  parent_index : Int
+  byte_start : Int
+  content_start : Int
+  mut content_end : Int
+  mut byte_end : Int
+}
+
+///|
 /// Precomputed fallback for a marker outside every projection node. When
 /// `node_is_after` is true the marker is before `path`; otherwise it is after
 /// the nearest preceding node.
@@ -154,6 +171,7 @@ fn ScannedNode::close_seq(self : ScannedNode) -> Int {
 /// document order, and non-fatal diagnostics.
 priv struct StoryScan {
   nodes : Array[ScannedNode]
+  elements : Array[ScannedElement]
   markers : Array[ScannedMarker]
   warnings : Array[String]
   story_level_positions : Map[Int, StoryLevelMarkerPosition]
@@ -276,6 +294,11 @@ fn StoryScan::nodes(self : StoryScan) -> Array[ScannedNode] {
 }
 
 ///|
+fn StoryScan::elements(self : StoryScan) -> Array[ScannedElement] {
+  self.elements
+}
+
+///|
 /// Annotation markers, in document order.
 fn StoryScan::markers(self : StoryScan) -> Array[ScannedMarker] {
   self.markers
@@ -331,6 +354,7 @@ priv struct ScanFrame {
   projection_open_order : Int
   open_seq : Int
   byte_start : Int
+  element_index : Int
   // Earliest interior insertion offset (just past the open tag, moved
   // past a leading pPr when one closes directly inside this element).
   mut content_start : Int
@@ -451,6 +475,7 @@ fn scan_story(
   part : BytesView,
   path_budget? : AnnotationPathBudget,
   warning_collector? : AnnotationWarningCollector,
+  retain_elements? : Bool = false,
 ) -> StoryScan raise DocxError {
   // A UTF-16 BOM means byte-level markup scanning would be wrong.
   if part.length() >= 2 &&
@@ -463,6 +488,7 @@ fn scan_story(
     )
   }
   let nodes : Array[ScannedNode] = []
+  let elements : Array[ScannedElement] = []
   let markers : Array[ScannedMarker] = []
   let owns_warning_collector = warning_collector is None
   let warnings = match warning_collector {
@@ -563,6 +589,10 @@ fn scan_story(
       let close_end = skip_until(b">", index + 2)
       match frames.pop() {
         Some(frame) => {
+          if frame.element_index >= 0 {
+            elements[frame.element_index].content_end = index
+            elements[frame.element_index].byte_end = close_end
+          }
           seq += 1
           for prefix in frame.declared {
             match namespaces.get(prefix) {
@@ -702,6 +732,35 @@ fn scan_story(
       None => ("", name)
     }
     let uri = resolve(prefix)
+    let element_index = if retain_elements {
+      let element_index = elements.length()
+      elements.push({
+        uri,
+        local_name,
+        field_char_type: attribute_value(attributes, "fldCharType", namespaces),
+        symbol_font: attribute_value(attributes, "font", namespaces),
+        symbol_char: attribute_value(attributes, "char", namespaces),
+        parent_index: match frames.last() {
+          Some(parent) => parent.element_index
+          None => -1
+        },
+        byte_start: index,
+        content_start: tag_end,
+        content_end: if self_closing {
+          tag_end
+        } else {
+          -1
+        },
+        byte_end: if self_closing {
+          tag_end
+        } else {
+          -1
+        },
+      })
+      element_index
+    } else {
+      -1
+    }
     if frames.length() == 0 && root_namespace_uri is None {
       root_namespace_uri = Some(uri)
     }
@@ -969,6 +1028,7 @@ fn scan_story(
         projection_open_order,
         open_seq: seq,
         byte_start: index,
+        element_index,
         content_start: tag_end,
         transparent,
         suppressed,
@@ -997,6 +1057,7 @@ fn scan_story(
   let nodes_by_open = nodes_in_open_order(nodes, projection_open_count, work)
   {
     nodes,
+    elements,
     markers,
     warnings: if owns_warning_collector {
       warnings.finish()
@@ -1398,7 +1459,13 @@ fn annotation_attribute_is_relevant(
   bytes_range_has_ascii_prefix(part, start, end, "xmlns:") ||
   bytes_range_has_ascii_suffix(part, start, end, ":id") ||
   bytes_range_has_ascii_suffix(part, start, end, ":type") ||
-  bytes_range_has_ascii_suffix(part, start, end, ":val")
+  bytes_range_has_ascii_suffix(part, start, end, ":val") ||
+  // N0's projection index shares this lexer and needs the three WML
+  // attributes that decide field and symbol projection. Keeping them in the
+  // bounded relevant-attribute set avoids a second tag grammar.
+  bytes_range_has_ascii_suffix(part, start, end, ":fldCharType") ||
+  bytes_range_has_ascii_suffix(part, start, end, ":font") ||
+  bytes_range_has_ascii_suffix(part, start, end, ":char")
 }
 
 ///|
