@@ -283,8 +283,23 @@ fn canonical_physical_name(uri : String, local_name : String) -> String {
   } else if uri == "" {
     local_name
   } else {
-    "{" + uri + "}" + local_name
+    // Length-prefix arbitrary namespace URIs. Namespace names may legally
+    // contain every delimiter used by the human-readable ancestry syntax;
+    // the prefix keeps the concatenated path injective without depending on
+    // URI escaping rules.
+    "{\{uri.length()}:\{uri}}\{local_name}"
   }
+}
+
+///|
+fn nonnegative_decimal_digits(value : Int) -> Int {
+  let mut remaining = value
+  let mut digits = 1
+  while remaining >= 10 {
+    remaining /= 10
+    digits += 1
+  }
+  digits
 }
 
 ///|
@@ -294,8 +309,11 @@ fn canonical_physical_name_chars(uri : String, local_name : String) -> Int {
   } else if uri == "" {
     local_name.length()
   } else {
-    // {uri}local
-    2 + uri.length() + local_name.length()
+    // {uri-length:uri}local
+    3 +
+    nonnegative_decimal_digits(uri.length()) +
+    uri.length() +
+    local_name.length()
   }
 }
 
@@ -624,6 +642,110 @@ const MC_URI : String = "http://schemas.openxmlformats.org/markup-compatibility/
 const XML_NAMESPACE_URI : String = "http://www.w3.org/XML/1998/namespace"
 
 ///|
+const XMLNS_NAMESPACE_URI : String = "http://www.w3.org/2000/xmlns/"
+
+///|
+fn projection_source_is_xml_name_start(char : Char) -> Bool {
+  let code = char.to_int()
+  char.is_ascii_alphabetic() ||
+  char == ':' ||
+  char == '_' ||
+  (code >= 0xc0 && code <= 0xd6) ||
+  (code >= 0xd8 && code <= 0xf6) ||
+  (code >= 0xf8 && code <= 0x2ff) ||
+  (code >= 0x370 && code <= 0x37d) ||
+  (code >= 0x37f && code <= 0x1fff) ||
+  (code >= 0x200c && code <= 0x200d) ||
+  (code >= 0x2070 && code <= 0x218f) ||
+  (code >= 0x2c00 && code <= 0x2fef) ||
+  (code >= 0x3001 && code <= 0xd7ff) ||
+  (code >= 0xf900 && code <= 0xfdcf) ||
+  (code >= 0xfdf0 && code <= 0xfffd) ||
+  (code >= 0x10000 && code <= 0xeffff)
+}
+
+///|
+fn projection_source_is_xml_name_char(char : Char) -> Bool {
+  let code = char.to_int()
+  projection_source_is_xml_name_start(char) ||
+  char == '-' ||
+  char == '.' ||
+  char.is_ascii_digit() ||
+  code == 0xb7 ||
+  (code >= 0x300 && code <= 0x36f) ||
+  (code >= 0x203f && code <= 0x2040)
+}
+
+///|
+fn projection_source_is_xml_ncname(value : StringView) -> Bool {
+  let mut offset = 0
+  let mut first = true
+  while offset < value.length() {
+    guard value.get_char(offset) is Some(char) else { return false }
+    if char == ':' ||
+      (if first {
+        !projection_source_is_xml_name_start(char)
+      } else {
+        !projection_source_is_xml_name_char(char)
+      }) {
+      return false
+    }
+    first = false
+    offset += char.utf16_len()
+  }
+  !first
+}
+
+///|
+fn projection_source_is_xml_qname(value : String) -> Bool {
+  match value.find(":") {
+    Some(colon) => {
+      let prefix = value[:colon]
+      let local_name = value[colon + 1:]
+      projection_source_is_xml_ncname(prefix) &&
+      projection_source_is_xml_ncname(local_name) &&
+      !local_name.contains(":")
+    }
+    None => projection_source_is_xml_ncname(value)
+  }
+}
+
+///|
+fn validate_projection_source_namespace(
+  prefix : String,
+  namespace_uri : String,
+) -> Unit raise DocxError {
+  for char in namespace_uri {
+    if char == ' ' || char == '\t' || char == '\n' || char == '\r' {
+      raise Unsupported(
+        message="the projection source scanner found whitespace in a namespace name",
+      )
+    }
+  }
+  if prefix == "xmlns" || namespace_uri == XMLNS_NAMESPACE_URI {
+    raise Unsupported(
+      message="the projection source scanner found an invalid xmlns namespace binding",
+    )
+  }
+  if prefix == "xml" {
+    if namespace_uri != XML_NAMESPACE_URI {
+      raise Unsupported(
+        message="the projection source scanner found an invalid xml namespace binding",
+      )
+    }
+  } else if namespace_uri == XML_NAMESPACE_URI {
+    raise Unsupported(
+      message="the projection source scanner found the reserved XML namespace on a non-xml prefix",
+    )
+  }
+  if prefix != "" && namespace_uri == "" {
+    raise Unsupported(
+      message="the projection source scanner found an undeclared namespace prefix",
+    )
+  }
+}
+
+///|
 /// Subtrees the reader removes entirely.
 fn is_suppressed_container(uri : String, local_name : String) -> Bool {
   (is_wml_uri(uri) && local_name == "del") ||
@@ -660,8 +782,10 @@ fn scan_closing_name(
   close_end : Int,
 ) -> String raise DocxError {
   let mut at = start + 2
-  while at < close_end && is_xml_space(part[at]) {
-    at += 1
+  guard at < close_end && !is_xml_space(part[at]) else {
+    raise Unsupported(
+      message="the projection source scanner found whitespace after a closing-tag opener",
+    )
   }
   let name_start = at
   while at < close_end && !is_name_end(part[at]) {
@@ -676,6 +800,11 @@ fn scan_closing_name(
     raise @core.docx_xml_resource_limit_error(DocxXmlTokenLength)
   }
   let name = utf8_slice(part, name_start, at)
+  guard projection_source_is_xml_qname(name) else {
+    raise Unsupported(
+      message="the projection source scanner found an invalid closing-tag QName",
+    )
+  }
   while at < close_end - 1 && is_xml_space(part[at]) {
     at += 1
   }
@@ -743,12 +872,6 @@ fn scan_story(
   }
   let length = part.length()
   let mut index = 0
-  fn resolve(prefix : String) -> String {
-    match namespaces.get(prefix) {
-      Some(stack) if stack.length() > 0 => stack[stack.length() - 1]
-      _ => ""
-    }
-  }
   fn current_projection() -> ScanFrame? {
     for at = frames.length() - 1; at >= 0; at = at - 1 {
       if frames[at].projection_path is Some(_) {
@@ -982,6 +1105,7 @@ fn scan_story(
     )
     // Namespace declarations bind before resolving this element's name.
     let declared : Array[String] = []
+    let declared_prefixes : StableStringMap[Bool] = SortedMap([])
     for pair in attributes {
       let (attr_name, attr_value) = pair
       if attr_name == "xmlns" || attr_name.has_prefix("xmlns:") {
@@ -996,6 +1120,21 @@ fn scan_story(
         } else {
           attr_name[6:].to_owned()
         }
+        match source_budget {
+          Some(budget) => {
+            // The per-tag duplicate detector is another fixed-size retained
+            // entry during start-tag processing; charge it before insertion.
+            budget.charge_retained_token()
+            guard !declared_prefixes.contains(prefix) else {
+              raise Unsupported(
+                message="the projection source scanner found a duplicate namespace declaration",
+              )
+            }
+            validate_projection_source_namespace(prefix, attr_value)
+            declared_prefixes[prefix] = true
+          }
+          None => ()
+        }
         match namespaces.get(prefix) {
           Some(stack) => stack.push(attr_value)
           None => namespaces[prefix] = [attr_value]
@@ -1004,7 +1143,35 @@ fn scan_story(
       }
     }
     let (prefix, local_name) = split_qualified_name(name)
-    let uri = resolve(prefix)
+    let uri = match namespaces.get(prefix) {
+      Some(stack) if stack.length() > 0 => stack[stack.length() - 1]
+      _ => {
+        guard source_budget is None || prefix == "" else {
+          raise Unsupported(
+            message="the projection source scanner found an unbound namespace prefix",
+          )
+        }
+        ""
+      }
+    }
+    match source_budget {
+      Some(_) =>
+        for pair in attributes {
+          let attr_name = pair.0
+          if attr_name != "xmlns" && !attr_name.has_prefix("xmlns:") {
+            let (attr_prefix, _) = split_qualified_name(attr_name)
+            if attr_prefix != "" {
+              guard namespaces.get(attr_prefix) is Some(stack) &&
+                stack.length() > 0 else {
+                raise Unsupported(
+                  message="the projection source scanner found an unbound attribute namespace prefix",
+                )
+              }
+            }
+          }
+        }
+      None => ()
+    }
     let element_index = match source_budget {
       Some(budget) => {
         let parent_index = match frames.last() {
@@ -1669,11 +1836,23 @@ fn scan_tag(
     None => ()
   }
   let name = utf8_slice(part, name_start, at)
+  match source_budget {
+    Some(_) => {
+      guard projection_source_is_xml_qname(name) else {
+        raise Unsupported(
+          message="the projection source scanner found an invalid element QName",
+        )
+      }
+    }
+    None => ()
+  }
   let attributes : Array[(String, String)] = []
   let mut self_closing = false
   while at < length {
     // Skip whitespace.
+    let mut separated = false
     while at < length && is_xml_space(part[at]) {
+      separated = true
       at += 1
     }
     if at >= length {
@@ -1684,9 +1863,30 @@ fn scan_tag(
       return (name, attributes, self_closing, at)
     }
     if part[at] == b'/' {
+      match source_budget {
+        Some(_) => {
+          guard at + 1 < length && part[at + 1] == b'>' else {
+            raise Unsupported(
+              message="the projection source scanner found malformed self-closing-tag content",
+            )
+          }
+          return (name, attributes, true, at + 2)
+        }
+        None => ()
+      }
       self_closing = true
       at += 1
       continue
+    }
+    match source_budget {
+      Some(_) => {
+        guard separated else {
+          raise Unsupported(
+            message="the projection source scanner found attributes without separating whitespace",
+          )
+        }
+      }
+      None => ()
     }
     // Attribute name.
     let attr_start = at
@@ -1697,6 +1897,21 @@ fn scan_tag(
       at += 1
     }
     let attr_end = at
+    let validated_source_name = match source_budget {
+      Some(_) => {
+        guard attr_end - attr_start <= max_annotation_relevant_attribute_bytes else {
+          raise @core.docx_xml_resource_limit_error(DocxXmlTokenLength)
+        }
+        let candidate = utf8_slice(part, attr_start, attr_end)
+        guard projection_source_is_xml_qname(candidate) else {
+          raise Unsupported(
+            message="the projection source scanner found an invalid attribute QName",
+          )
+        }
+        Some(candidate)
+      }
+      None => None
+    }
     let relevant_attribute = annotation_attribute_is_relevant(
       part,
       attr_start,
@@ -1707,8 +1922,15 @@ fn scan_tag(
       at += 1
     }
     if at >= length || part[at] != b'=' {
-      // Valueless attribute (not well-formed XML; tolerate and continue).
-      continue
+      match source_budget {
+        Some(_) =>
+          raise Unsupported(
+            message="the projection source scanner found a valueless attribute",
+          )
+        // The ordinary annotation scanner historically tolerates valueless
+        // attributes; source retention alone needs strict physical identity.
+        None => continue
+      }
     }
     at += 1
     while at < length && is_xml_space(part[at]) {
@@ -1742,7 +1964,10 @@ fn scan_tag(
         }
         None => ()
       }
-      let attr_name = utf8_slice(part, attr_start, attr_end)
+      let attr_name = match validated_source_name {
+        Some(value) => value
+        None => utf8_slice(part, attr_start, attr_end)
+      }
       let raw_value = @utf8.decode(part[value_start:at]) catch {
         _ =>
           raise Unsupported(

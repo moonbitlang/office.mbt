@@ -153,7 +153,7 @@ test "projection source identity seeds the implicit xml namespace" {
     elements[1:].map(element => element.physical_path(elements)),
     content=(
       #|[
-      #|  "/root[1]/{http://www.w3.org/XML/1998/namespace}x[1]",
+      #|  "/root[1]/{36:http://www.w3.org/XML/1998/namespace}x[1]",
       #|  "/root[1]/x[1]",
       #|]
     ),
@@ -341,7 +341,7 @@ test "projection source attribute and text limits are cumulative and exact" {
       budget=projection_source_budget(
         max_elements=1,
         max_attribute_chars=4096,
-        max_retained_tokens=128,
+        max_retained_tokens=192,
         max_depth=1,
         max_text_bytes=0,
         max_text_tokens=0,
@@ -353,7 +353,7 @@ test "projection source attribute and text limits are cumulative and exact" {
     projection_source_budget(
       max_elements=1,
       max_attribute_chars=4096,
-      max_retained_tokens=127,
+      max_retained_tokens=191,
       max_depth=1,
       max_text_bytes=0,
       max_text_tokens=0,
@@ -362,7 +362,7 @@ test "projection source attribute and text limits are cumulative and exact" {
   )
 
   // Root QName + namespace declaration = 13. Each child then retains its
-  // three-byte source QName plus an eight-character `{urn:x}local` key.
+  // three-byte source QName plus a ten-character `{5:urn:x}local` key.
   let derived_keys =
     #|<r xmlns:q="urn:x"><q:a/><q:b/></r>
   ignore(
@@ -370,7 +370,7 @@ test "projection source attribute and text limits are cumulative and exact" {
       @utf8.encode(derived_keys),
       budget=projection_source_budget(
         max_elements=3,
-        max_attribute_chars=35,
+        max_attribute_chars=39,
         max_depth=2,
         max_text_bytes=0,
         max_text_tokens=0,
@@ -381,7 +381,7 @@ test "projection source attribute and text limits are cumulative and exact" {
     derived_keys,
     projection_source_budget(
       max_elements=3,
-      max_attribute_chars=34,
+      max_attribute_chars=38,
       max_depth=2,
       max_text_bytes=0,
       max_text_tokens=0,
@@ -487,6 +487,19 @@ test "projection source mode fails closed on ambiguous physical structure" {
     projection_source_budget(),
     "malformed closing-tag content",
   )
+  for
+    case in [
+      ("<root/ junk=\"x\">", "malformed self-closing-tag content"),
+      ("<root bad></root>", "valueless attribute"),
+      ("<root></ root>", "whitespace after a closing-tag opener"),
+    ] {
+    assert_projection_source_refuses(case.0, projection_source_budget(), case.1)
+  }
+  // These inputs remain accepted by the legacy non-retaining scan. N0b1's
+  // strictness is confined to the physical-identity mode.
+  for source in ["<root/ junk=\"x\">", "<root bad></root>", "<root></ root>"] {
+    assert_true(scan_story(@utf8.encode(source)).root() is Some(_))
+  }
   let multiple =
     #|<a/><b/>
   assert_projection_source_refuses(
@@ -504,5 +517,37 @@ test "projection source mode fails closed on ambiguous physical structure" {
     oversized_close.to_string(),
     projection_source_budget(),
     "DocxXmlTokenLength",
+  )
+}
+
+///|
+test "projection source mode refuses unbound and reserved namespace identities" {
+  for
+    case in [
+      ("<root><p:x/><x/></root>", "unbound namespace prefix"),
+      ("<root xmlns:xml=\"urn:evil\"/>", "invalid xml namespace binding"),
+      (
+        "<root xmlns:p=\"http://www.w3.org/XML/1998/namespace\"/>", "reserved XML namespace",
+      ),
+      ("<root xmlns:xmlns=\"urn:evil\"/>", "invalid xmlns namespace binding"),
+    ] {
+    assert_projection_source_refuses(case.0, projection_source_budget(), case.1)
+  }
+}
+
+///|
+test "projection source physical paths length-prefix arbitrary namespace URIs" {
+  let source =
+    #|<root xmlns:u="u" xmlns:v="v" xmlns:q="u}a[1]/{v"><u:a><v:b/></u:a><q:b/></root>
+  let scan = scan_projection_source_tree(@utf8.encode(source))
+  let elements = scan.elements()
+  let nested = elements[2].physical_path(elements)
+  let sibling = elements[3].physical_path(elements)
+  assert_false(nested == sibling)
+  debug_inspect(
+    (nested, sibling),
+    content=(
+      #|("/root[1]/{1:u}a[1]/{1:v}b[1]", "/root[1]/{9:u}a[1]/{v}b[1]")
+    ),
   )
 }
