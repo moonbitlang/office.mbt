@@ -27,6 +27,10 @@ moon_bin="$(command -v moon)"
 moonrun_bin="$(command -v moonrun)"
 
 cd "$root"
+# A clean checkout has no dependency tree. Let the supported build path resolve
+# the exact versions pinned by the workspace manifests before frozen builds
+# verify that no dependency metadata can drift.
+"$moon_bin" build --release --target native office/cmd/office
 "$moon_bin" run --frozen --release --target native office/cmd/office -- \
   help all --json > "$scratch/native-help.json"
 "$moon_bin" run --frozen --release --target wasm office/cmd/office -- \
