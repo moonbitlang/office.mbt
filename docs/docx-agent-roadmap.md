@@ -835,12 +835,15 @@ content is an explicit MATCH BARRIER, never silent glue.
 ## N0 — token-map and surgery foundations (GO/NO-GO gate for the phase)
 
 N0 lands as seven review-sized private slices. N0a's exact lexical map is landed
-in [PR #224](https://github.com/moonbitlang/office.mbt/pull/224). The N0b
+in [PR #224](https://github.com/moonbitlang/office.mbt/pull/224), and N0b1's
+bounded physical source-tree identity is landed in
+[PR #235](https://github.com/moonbitlang/office.mbt/pull/235). The N0b
 projection index is tracked by umbrella
 [#221](https://github.com/moonbitlang/office.mbt/issues/221) and split into:
 
 1. N0b1 [#231](https://github.com/moonbitlang/office.mbt/issues/231): bounded
-   retained source-tree nodes and identity-bearing physical paths;
+   retained source-tree nodes and identity-bearing physical paths (landed via
+   PR #235);
 2. N0b2 [#232](https://github.com/moonbitlang/office.mbt/issues/232): exact
    BodyReader normal-flow/text-box order and deleted-paragraph joins as
    provisional ordered contributors mapped to physical identities, without
