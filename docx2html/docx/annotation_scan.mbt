@@ -156,6 +156,10 @@ priv struct ProjectionSourceBudget {
   // Charging raw UTF-8 spans and derived output lengths before allocation is
   // a conservative upper bound on their eventual UTF-16 String storage.
   mut retained_chars_left : Int
+  // Fixed-size retained objects need their own ceiling: short attributes and
+  // namespace declarations can otherwise stay under the character budget
+  // while multiplying tuples, map entries, scope stacks, and declarations.
+  mut retained_tokens_left : Int
   max_depth : Int
   text_budget : TokenMapBudget
 }
@@ -165,6 +169,9 @@ let max_projection_source_elements : Int = 1_000_000
 
 ///|
 let max_projection_source_attribute_chars : Int = 8 * 1024 * 1024
+
+///|
+let max_projection_source_retained_tokens : Int = 1_000_000
 
 ///|
 let max_projection_source_depth : Int = 256
@@ -179,12 +186,14 @@ let max_projection_source_text_tokens : Int = 1_000_000
 fn projection_source_budget(
   max_elements? : Int = max_projection_source_elements,
   max_attribute_chars? : Int = max_projection_source_attribute_chars,
+  max_retained_tokens? : Int = max_projection_source_retained_tokens,
   max_depth? : Int = max_projection_source_depth,
   max_text_bytes? : Int = max_projection_source_text_bytes,
   max_text_tokens? : Int = max_projection_source_text_tokens,
 ) -> ProjectionSourceBudget raise DocxError {
   guard max_elements >= 0 &&
     max_attribute_chars >= 0 &&
+    max_retained_tokens >= 0 &&
     max_depth >= 0 &&
     max_text_bytes >= 0 &&
     max_text_tokens >= 0 else {
@@ -195,6 +204,7 @@ fn projection_source_budget(
   {
     elements_left: max_elements,
     retained_chars_left: max_attribute_chars,
+    retained_tokens_left: max_retained_tokens,
     max_depth,
     text_budget: token_map_budget(max_text_bytes, max_text_tokens) catch {
       TokenMapError(message) => raise Unsupported(message~)
@@ -225,6 +235,16 @@ fn ProjectionSourceBudget::charge_retained_chars(
     raise @core.docx_xml_resource_limit_error(DocxXmlMaterializedCharacters)
   }
   self.retained_chars_left -= chars
+}
+
+///|
+fn ProjectionSourceBudget::charge_retained_token(
+  self : ProjectionSourceBudget,
+) -> Unit raise DocxError {
+  guard self.retained_tokens_left > 0 else {
+    raise @core.docx_xml_resource_limit_error(DocxXmlTokens)
+  }
+  self.retained_tokens_left -= 1
 }
 
 ///|
@@ -598,6 +618,12 @@ fn is_transparent_container(uri : String, local_name : String) -> Bool {
 const MC_URI : String = "http://schemas.openxmlformats.org/markup-compatibility/2006"
 
 ///|
+/// XML Namespaces binds this prefix implicitly in every document. Keeping it
+/// in the physical-identity table prevents `xml:x` from aliasing unqualified
+/// `x` even when the source correctly omits an explicit declaration.
+const XML_NAMESPACE_URI : String = "http://www.w3.org/XML/1998/namespace"
+
+///|
 /// Subtrees the reader removes entirely.
 fn is_suppressed_container(uri : String, local_name : String) -> Bool {
   (is_wml_uri(uri) && local_name == "del") ||
@@ -695,8 +721,11 @@ fn scan_story(
   let mut root_namespace_uri : String? = None
   let frames : Array[ScanFrame] = []
   let root_counters : StableStringMap[Int] = SortedMap([])
-  // Prefix -> stack of URIs (innermost last). "" is the default namespace.
-  let namespaces : StableStringMap[Array[String]] = SortedMap([])
+  // Prefix -> stack of URIs (innermost last). "" is the default namespace;
+  // `xml` is the reserved implicit binding supplied by the XML standard.
+  let namespaces : StableStringMap[Array[String]] = SortedMap([
+    ("xml", [XML_NAMESPACE_URI]),
+  ])
   let mut seq = 0
   let mut projection_open_count = 0
   let work : AnnotationScanWork = {
@@ -955,22 +984,23 @@ fn scan_story(
     let declared : Array[String] = []
     for pair in attributes {
       let (attr_name, attr_value) = pair
-      let bound_prefix = if attr_name == "xmlns" {
-        Some("")
-      } else if attr_name.has_prefix("xmlns:") {
-        Some(attr_name[6:].to_owned())
-      } else {
-        None
-      }
-      match bound_prefix {
-        Some(prefix) => {
-          match namespaces.get(prefix) {
-            Some(stack) => stack.push(attr_value)
-            None => namespaces[prefix] = [attr_value]
-          }
-          declared.push(prefix)
+      if attr_name == "xmlns" || attr_name.has_prefix("xmlns:") {
+        match source_budget {
+          // Charge the binding before allocating its prefix, scope-stack/map
+          // state, or closing-scope declaration entry.
+          Some(budget) => budget.charge_retained_token()
+          None => ()
         }
-        None => ()
+        let prefix = if attr_name == "xmlns" {
+          ""
+        } else {
+          attr_name[6:].to_owned()
+        }
+        match namespaces.get(prefix) {
+          Some(stack) => stack.push(attr_value)
+          None => namespaces[prefix] = [attr_value]
+        }
+        declared.push(prefix)
       }
     }
     let (prefix, local_name) = split_qualified_name(name)
@@ -1706,8 +1736,10 @@ fn scan_tag(
         raise @core.docx_xml_resource_limit_error(DocxXmlTokenLength)
       }
       match source_budget {
-        Some(budget) =>
+        Some(budget) => {
+          budget.charge_retained_token()
           budget.charge_retained_chars(attr_end - attr_start + at - value_start)
+        }
         None => ()
       }
       let attr_name = utf8_slice(part, attr_start, attr_end)

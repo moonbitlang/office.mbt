@@ -144,6 +144,23 @@ test "projection source identity uses canonical sibling ordinals across WML dial
 }
 
 ///|
+test "projection source identity seeds the implicit xml namespace" {
+  let source =
+    #|<root><xml:x/><x/></root>
+  let scan = scan_projection_source_tree(@utf8.encode(source))
+  let elements = scan.elements()
+  debug_inspect(
+    elements[1:].map(element => element.physical_path(elements)),
+    content=(
+      #|[
+      #|  "/root[1]/{http://www.w3.org/XML/1998/namespace}x[1]",
+      #|  "/root[1]/x[1]",
+      #|]
+    ),
+  )
+}
+
+///|
 test "projection source attributes follow reader precedence across WML dialects" {
   let source =
     #|<root xmlns:t="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:s="http://purl.oclc.org/ooxml/wordprocessingml/main"><t:fldChar t:fldCharType="begin" s:fldCharType="end"/><s:fldChar s:fldCharType="end" t:fldCharType="begin"/><t:sym t:font="Transitional" s:font="Strict" t:char="F041" s:char="F042"/><s:sym s:font="Strict" t:font="Transitional" s:char="F042" t:char="F041"/></root>
@@ -307,6 +324,41 @@ test "projection source attribute and text limits are cumulative and exact" {
       max_text_tokens=0,
     ),
     "DocxXmlMaterializedCharacters",
+  )
+
+  // Every retained namespace declaration consumes one attribute tuple and
+  // one binding/scope token. Prove the exact cumulative boundary with enough
+  // short unique prefixes to exercise the amplification shape.
+  let many_bindings = StringBuilder()
+  many_bindings.write_string("<a")
+  for index in 0..<64 {
+    many_bindings.write_string(" xmlns:p\{index}=\"u\"")
+  }
+  many_bindings.write_string("/>")
+  ignore(
+    scan_projection_source_tree(
+      @utf8.encode(many_bindings.to_string()),
+      budget=projection_source_budget(
+        max_elements=1,
+        max_attribute_chars=4096,
+        max_retained_tokens=128,
+        max_depth=1,
+        max_text_bytes=0,
+        max_text_tokens=0,
+      ),
+    ),
+  )
+  assert_projection_source_refuses(
+    many_bindings.to_string(),
+    projection_source_budget(
+      max_elements=1,
+      max_attribute_chars=4096,
+      max_retained_tokens=127,
+      max_depth=1,
+      max_text_bytes=0,
+      max_text_tokens=0,
+    ),
+    "DocxXmlTokens",
   )
 
   // Root QName + namespace declaration = 13. Each child then retains its
