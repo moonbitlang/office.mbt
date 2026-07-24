@@ -189,6 +189,91 @@ fn reader_order_atom_span(element : ScannedElement) -> ReaderOrderSourceSpan {
 }
 
 ///|
+priv enum ReaderOrderBodyOutputKind {
+  ReaderOrderTableRow
+  ReaderOrderTableCell
+  ReaderOrderOther
+}
+
+///|
+fn reader_order_body_output_kind(
+  element : ScannedElement,
+) -> ReaderOrderBodyOutputKind? {
+  if is_wml_uri(element.uri) {
+    match element.local_name {
+      "tr" => Some(ReaderOrderTableRow)
+      "tc" => Some(ReaderOrderTableCell)
+      "p"
+      | "r"
+      | "t"
+      | "tab"
+      | "noBreakHyphen"
+      | "softHyphen"
+      | "sym"
+      | "footnoteReference"
+      | "endnoteReference"
+      | "commentReference"
+      | "br"
+      | "bookmarkStart"
+      | "hyperlink"
+      | "tbl" => Some(ReaderOrderOther)
+      _ => None
+    }
+  } else {
+    None
+  }
+}
+
+///|
+fn reader_order_is_body_flattening_container(element : ScannedElement) -> Bool {
+  is_transparent_container(element.uri, element.local_name) ||
+  (
+    element.uri == READER_ORDER_VML_URI &&
+    element.local_name is ("roundrect" | "shape" | "textbox" | "group" | "rect")
+  )
+}
+
+///|
+/// Mirrors the `read_children`/`read_element` wrappers that can flatten rows,
+/// cells, or unexpected body elements into a table's immediate logical
+/// children. The returned identities name the physical elements that emitted
+/// those logical children; suppressed revisions and deleted rows emit nothing.
+fn collect_reader_order_body_outputs(
+  elements : Array[ScannedElement],
+  parent_identity : Int,
+  output : Array[(Int, ReaderOrderBodyOutputKind)],
+  depth : Int,
+  budget : ReaderOrderBudget,
+) -> Unit raise DocxError {
+  guard parent_identity >= 0 && parent_identity < elements.length() else {
+    return
+  }
+  let mut child = elements[parent_identity].first_child_index
+  while child >= 0 {
+    let element = elements[child]
+    budget.charge_visit(depth)
+    if element.deleted_table_row ||
+      is_suppressed_container(element.uri, element.local_name) {
+      ()
+    } else if reader_order_is_body_flattening_container(element) {
+      collect_reader_order_body_outputs(
+        elements,
+        child,
+        output,
+        depth + 1,
+        budget,
+      )
+    } else {
+      match reader_order_body_output_kind(element) {
+        Some(kind) => output.push((child, kind))
+        None => ()
+      }
+    }
+    child = element.next_sibling_index
+  }
+}
+
+///|
 fn reader_order_projection_visibility(
   scan : StoryScan,
   budget : ReaderOrderBudget,
@@ -238,28 +323,30 @@ fn reader_order_projection_visibility(
   let fail_open_table = Array::make(elements.length(), false)
   for table in elements {
     if is_wml_uri(table.uri) && table.local_name == "tbl" {
-      let mut child = table.first_child_index
-      while child >= 0 {
-        let element = elements[child]
-        budget.charge_visit(1)
-        if projection_kind(element.uri, element.local_name) is Some(_) &&
-          !(is_wml_uri(element.uri) && element.local_name == "tr") {
+      let rows : Array[(Int, ReaderOrderBodyOutputKind)] = []
+      collect_reader_order_body_outputs(
+        elements,
+        table.identity,
+        rows,
+        1,
+        budget,
+      )
+      for row in rows {
+        let (row_identity, row_kind) = row
+        if !(row_kind is ReaderOrderTableRow) {
           fail_open_table[table.identity] = true
-        }
-        if is_wml_uri(element.uri) && element.local_name == "tr" {
-          let mut row_child = element.first_child_index
-          while row_child >= 0 {
-            let row_element = elements[row_child]
-            budget.charge_visit(2)
-            if projection_kind(row_element.uri, row_element.local_name)
-              is Some(_) &&
-              !(is_wml_uri(row_element.uri) && row_element.local_name == "tc") {
+        } else {
+          let cells : Array[(Int, ReaderOrderBodyOutputKind)] = []
+          collect_reader_order_body_outputs(
+            elements, row_identity, cells, 2, budget,
+          )
+          for cell in cells {
+            let (_, cell_kind) = cell
+            if !(cell_kind is ReaderOrderTableCell) {
               fail_open_table[table.identity] = true
             }
-            row_child = row_element.next_sibling_index
           }
         }
-        child = element.next_sibling_index
       }
     }
   }
@@ -273,31 +360,36 @@ fn reader_order_projection_visibility(
       table.local_name == "tbl" &&
       !fail_open_table[table.identity] {
       let open_columns : Set[Int] = Set([])
-      let mut row = table.first_child_index
-      while row >= 0 {
-        let row_element = elements[row]
-        budget.charge_visit(1)
-        if is_wml_uri(row_element.uri) &&
-          row_element.local_name == "tr" &&
-          !row_element.deleted_table_row {
+      let rows : Array[(Int, ReaderOrderBodyOutputKind)] = []
+      collect_reader_order_body_outputs(
+        elements,
+        table.identity,
+        rows,
+        1,
+        budget,
+      )
+      for row in rows {
+        let (row_identity, row_kind) = row
+        if row_kind is ReaderOrderTableRow {
           let mut column = 0
-          let mut cell = row_element.first_child_index
-          while cell >= 0 {
-            let cell_element = elements[cell]
-            budget.charge_visit(2)
-            if is_wml_uri(cell_element.uri) && cell_element.local_name == "tc" {
+          let cells : Array[(Int, ReaderOrderBodyOutputKind)] = []
+          collect_reader_order_body_outputs(
+            elements, row_identity, cells, 2, budget,
+          )
+          for cell in cells {
+            let (cell_identity, cell_kind) = cell
+            if cell_kind is ReaderOrderTableCell {
+              let cell_element = elements[cell_identity]
               if cell_element.table_cell_vmerge_continue &&
                 open_columns.contains(column) {
-                merged_by_vmerge[cell] = true
+                merged_by_vmerge[cell_identity] = true
               } else {
                 open_columns.add(column)
               }
               column += cell_element.table_cell_grid_span
             }
-            cell = cell_element.next_sibling_index
           }
         }
-        row = row_element.next_sibling_index
       }
     }
   }

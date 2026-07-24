@@ -191,6 +191,12 @@ test "reader order preserves vMerge cells when malformed tables fail open" {
     (
       #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:p><w:r><w:t>Between</w:t></w:r></w:p><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>B</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>
     ),
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc></w:tr><w:ins><w:p><w:r><w:t>Between</w:t></w:r></w:p></w:ins><w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>B</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>
+    ),
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:ins><w:p><w:r><w:t>Between</w:t></w:r></w:p></w:ins><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>B</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>
+    ),
   ]
   let projected : Array[Array[String]] = []
   for source in sources {
@@ -209,7 +215,57 @@ test "reader order preserves vMerge cells when malformed tables fail open" {
   }
   debug_inspect(
     projected,
-    content="[[\"A\", \"Between\", \"B\"], [\"A\", \"Between\", \"B\"]]",
+    content=(
+      #|[
+      #|  ["A", "Between", "B"],
+      #|  ["A", "Between", "B"],
+      #|  ["A", "Between", "B"],
+      #|  ["A", "Between", "B"],
+      #|]
+    ),
+  )
+}
+
+///|
+test "reader order detects flattened non-projection table outputs" {
+  let sources = [
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc></w:tr><w:t>Direct table text</w:t><w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>B</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>
+    ),
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:t>Direct row text</w:t><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>B</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>
+    ),
+  ]
+  for source in sources {
+    let projection = scan_reader_order_projection(
+      "word/document.xml",
+      @utf8.encode(source),
+    )
+    assert_reader_order_identity_mapping(projection)
+    debug_inspect(
+      projection.paragraphs.map(paragraph => paragraph.reader_text()),
+      content="[\"A\", \"B\"]",
+    )
+    assert_true(current_reader_story_text(source).contains("B"))
+  }
+}
+
+///|
+test "reader order skips deleted rows when deciding table fail-open" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:trPr><w:del/></w:trPr><w:p><w:r><w:t>Deleted malformed row</w:t></w:r></w:p></w:tr><w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>Merged away</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>
+  let projection = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(source),
+  )
+  assert_eq(
+    provisional_story_text(projection),
+    current_reader_story_text(source),
+  )
+  assert_reader_order_identity_mapping(projection)
+  debug_inspect(
+    projection.paragraphs.map(paragraph => paragraph.reader_text()),
+    content="[\"A\"]",
   )
 }
 
@@ -217,6 +273,25 @@ test "reader order preserves vMerge cells when malformed tables fail open" {
 test "reader order keeps nested table merge semantics when outer table fails open" {
   let source =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>Outer A</w:t></w:r></w:p></w:tc></w:tr><w:p><w:r><w:t>Between</w:t></w:r></w:p><w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>Outer B</w:t></w:r></w:p><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>Nested A</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>Nested merged away</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:trPr><w:del/></w:trPr><w:tc><w:p><w:r><w:t>Nested deleted row</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:tc></w:tr></w:tbl></w:body></w:document>
+  let projection = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(source),
+  )
+  assert_eq(
+    provisional_story_text(projection),
+    current_reader_story_text(source),
+  )
+  assert_reader_order_identity_mapping(projection)
+  debug_inspect(
+    projection.paragraphs.map(paragraph => paragraph.reader_text()),
+    content="[\"Outer A\", \"Between\", \"Outer B\", \"Nested A\"]",
+  )
+}
+
+///|
+test "reader order rebuilds nested merges through transparent row and cell wrappers" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>Outer A</w:t></w:r></w:p></w:tc></w:tr><w:p><w:r><w:t>Between</w:t></w:r></w:p><w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>Outer B</w:t></w:r></w:p><w:tbl><w:ins><w:tr><w:smartTag><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>Nested A</w:t></w:r></w:p></w:tc></w:smartTag></w:tr></w:ins><w:smartTag><w:tr><w:ins><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>Nested merged away</w:t></w:r></w:p></w:tc></w:ins></w:tr></w:smartTag></w:tbl></w:tc></w:tr></w:tbl></w:body></w:document>
   let projection = scan_reader_order_projection(
     "word/document.xml",
     @utf8.encode(source),
