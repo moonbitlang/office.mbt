@@ -175,16 +175,20 @@ slice its own issue before implementation and do not fold it into #169. Issue
 includes bounded XLSX formula calculation/lint and cache refresh, worksheet
 tab-color/reorder/clone and freeze/unfreeze lifecycle, full common cell/range
 formatting, row/column dimension/outline/autofit, row/column structural edits,
-preservation-safe cell shifts, unmerge, AutoFilter lifecycle, ordinary
+preservation-safe cell shifts, cascade-safe worksheet rename, unmerge,
+AutoFilter lifecycle, ordinary
 table/data-validation/conditional-format update and removal, row/column
 page-break lifecycle, workbook core/custom properties, `date1904` and
 calculation settings, active/selected-sheet state, and RTL/zoom/view state;
 preservation-safe existing-DOCX table content, separately reviewable table/row/
-cell-property changes, row/column edits, and table structural edits; paragraph,
+cell-property changes, paragraph/table/row/column move-copy-swap, row/column
+edits, and table structural edits; paragraph,
 character, table, and numbering-style lifecycle; numbering, first/even/default
 header/footer, paragraph-tab-stop, positional-tab, break, editing-permission
 range, and section inventory/mutation/exposure, including columns, page-number
-format/start, line numbering, `titlePage`, and `evenAndOddHeaders`; DOCX field
+format/start, line numbering, `titlePage`, `evenAndOddHeaders`, page borders,
+paper sources, vertical alignment/text direction, and footnote/endnote numbering
+and placement controls; DOCX field
 and bookmark inventory, typed authoring across pagination, cross-reference,
 metadata, time/lifecycle, statistics, section, SEQ, STYLEREF, DOCPROPERTY, and IF
 families, update/removal, and refresh;
@@ -192,7 +196,8 @@ embedded-chart authoring/readback and source-pinned lifecycle; existing
 comment, footnote/endnote, hyperlink, and picture lifecycle; typed core/custom
 document properties; deterministic locale/script-font and RTL defaults plus
 language/direction authoring; tab stops and page/column breaks; equations,
-watermarks, drawing text boxes, and shapes; both SDT and legacy checkbox forms;
+watermarks, drawing text boxes, and shapes; revision readback, accept/reject, and
+attributed tracked-change authoring; both SDT and legacy checkbox forms;
 CSV/TSV file-or-stdin import with start-cell/inference/header behavior;
 path-scoped dump; and DOCX/XLSX-to-PDF parity. XLSX engine hardening can proceed
 beside the versioned registry/common-receipt work; only each feature's `office`
@@ -277,15 +282,19 @@ feature PR.
 - PowerPoint/PPTX.
 - MCP, resident mode, and live watch/selection.
 - Plugin and language-SDK wrappers.
-- Formula verification/cache refresh, XLSX worksheet reorder/clone/tab-color,
+- Formula verification/cache refresh, XLSX cascade-safe worksheet rename plus
+  reorder/clone/tab-color,
   pane, cell/range-formatting, row/column dimension/autofit/outline and
   structural-edit lifecycle, partial-cell shifts,
   workbook/date-system/calculation/selection/view state, unmerge/AutoFilter and
   ordinary table/validation/conditional-format/page-break lifecycle,
-  existing-DOCX table, all four style types, numbering, header/footer,
+  existing-DOCX paragraph/table/row/column move-copy-swap, all four style types,
+  numbering, header/footer,
   paragraph/positional-tab, permission-range, break, and advanced section
-  editing, DOCX locale/RTL and complete typed field/bookmark
-  authoring/update/removal/refresh,
+  editing (including page borders, paper sources, vertical alignment/text
+  direction, and section note controls), DOCX locale/RTL, complete typed
+  field/bookmark authoring/update/removal/refresh, revision read/accept/reject
+  and tracked-change authoring,
   embedded charts, fillable Word forms, equations,
   watermarks, text boxes, shapes, path-scoped dump, DOCX/XLSX-to-PDF export,
   and richer engine-backed XLSX operations are not part of the initial F1 gate;
