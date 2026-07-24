@@ -590,7 +590,7 @@ fixes the order and the strategic bets.
 - **Phase 3 — targeted edits of existing documents.** The L0 byte-span
   layer generalizes past annotations: set/replace text in an addressed run
   or paragraph, insert/delete paragraphs at a path, find/replace with
-  hit-listing (`docx edit`, `docx replace --dry-run` listing matches as
+  hit-listing (`office edit`, `office replace --dry-run` listing matches as
   paths). This is OfficeCLI's core `set`/find-replace surface, rebuilt on
   preservation-safe splicing instead of a DOM. Success criterion: an agent
   can fix a typo in a real-world document without disturbing one byte it
@@ -644,6 +644,9 @@ insert/delete-paragraph on documents we did not author — the OfficeCLI
 criterion (unchanged): an agent fixes a typo in a real-world document
 without disturbing one byte it didn't touch.
 
+Every installed command below is specified on the canonical `office` surface.
+No parallel legacy `docx` command is part of this phase.
+
 ## What OfficeCLI ships, and where we beat it (survey, 2026-07-12)
 
 Surveyed `.repos/OfficeCLI` (`Handlers/Word/WordHandler.Set*.cs`,
@@ -682,7 +685,7 @@ content is an explicit MATCH BARRIER, never silent glue.
 
 - **Match text = the read projection, classified by a five-class
   inventory.** Matching operates per paragraph on exactly the text
-  agents see in `docx text`/`get` (`to_raw_text`). Every inline node
+  agents see in `office text`/`office get` (`to_raw_text`). Every inline node
   the scanner meets is classified, namespace-aware, into exactly one
   class, and the inventory is NORMATIVE (a table in the code, pinned by
   tests; anything unrecognized falls in class 3):
@@ -758,7 +761,7 @@ content is an explicit MATCH BARRIER, never silent glue.
   cuts at the reference's edge; CDATA-context tokens REFUSE mutation in
   v1 (escaped insertions inside CDATA are wrong, and splitting `]]>` is
   a trap). There is NO line-end normalization: the XML reader returns
-  literal source text (`docx text`'s CR/LF-to-space flattening is
+  literal source text (`office text`'s CR/LF-to-space flattening is
   presentation-only, in that one view), so the canonical matching
   projection carries literal `\r`/`\n` where the source has them and
   the token map mirrors the reader byte-for-byte. Needles reject
@@ -785,7 +788,7 @@ content is an explicit MATCH BARRIER, never silent glue.
   are found left-to-right, non-overlapping. No regex (injection/DoS
   surface — OfficeCLI needed a timeout), no case folding, no
   whole-word; all documented non-goals with the workaround (read exact
-  text via `docx text`/`docx find` first).
+  text via `office text`/`office find` first).
 - **Occurrence selection is defined over ALL candidates.** Every
   candidate match gets an ordinal in document order, INCLUDING
   restricted/skipped ones; `--nth K` selects by that ordinal before
@@ -869,7 +872,7 @@ hyperlinks, `w:ins`/`w:del` incl. tracked-deleted paragraph MARKS
 `mc:AlternateContent` with BOTH Choice and Fallback branches,
 textboxes, self-closing `<w:t/>` and atom-less runs):
 (a) concatenated projection equals the reader's canonical projection
-exactly (`docx text` modulo its documented presentation flattening);
+exactly (`office text` modulo its documented presentation flattening);
 (b) classification matches the normative inventory, pinned against the
 reader's actual behavior;
 (c) SPLICE TRIALS — for every PERMITTED (start-kind, end-kind) token
@@ -884,9 +887,9 @@ each fail closed with their exact declared error.
 GO = oracle green on the matrix; NO-GO reverts Phase 3 to design. Like
 L0: pub surface only what N1/N2 need.
 
-## N1 — `docx edit set-text` (run-scoped)
+## N1 — `office edit set-text` (run-scoped)
 
-- `docx edit set-text <in> <out> --at /body/p[i]/r[j] --text '...'`:
+- `office edit set-text <in> <out> --at /body/p[i]/r[j] --text '...'`:
   replace the addressed run's projecting content (its `w:t` slices and
   atoms, via the token map), preserving rPr and every byte outside the
   declared footprint. Refuse runs containing hard barriers or
@@ -905,9 +908,9 @@ L0: pub surface only what N1/N2 need.
   footprint. Batch-op counterpart is NOT added (batch authors fresh
   docs).
 
-## N2a — `docx find` (read-only hit lister)
+## N2a — `office find` (read-only hit lister)
 
-- `docx find <file> --text 'needle' [--in <path>]` → `docx.matches/1`:
+- `office find <file> --text 'needle' [--in <path>]` → `docx.matches/1`:
   one entry per candidate — `ordinal`, `story` (reserved; `"body"` in
   v1), paragraph `path`, paragraph-relative `{start, end, unit:
   "utf16"}` over the projection, `text` (the matched projection),
@@ -925,9 +928,9 @@ L0: pub surface only what N1/N2 need.
   is a match schema; the future semantic-diff payload will CONSUME the
   same provenance, not reuse this schema.
 
-## N2b — `docx replace` (the mutation)
+## N2b — `office replace` (the mutation)
 
-- `docx replace <in> <out> --text 'needle' --with 'replacement'
+- `office replace <in> <out> --text 'needle' --with 'replacement'
   [--in <path>] [--nth K] [--expect N] [--allow-zero] [--dry-run]`,
   exactly per the locked occurrence/selection/dry-run semantics and
   cross-run surgery. Same belts; read-back compares each affected
@@ -939,9 +942,9 @@ L0: pub surface only what N1/N2 need.
   not a general invariant once escaping/xml:space normalize). Flag +
   stdout contracts land IN THIS PR.
 
-## N3a — `docx edit insert-paragraph`
+## N3a — `office edit insert-paragraph`
 
-- `docx edit insert-paragraph <in> <out> (--before|--after) /body/p[i]
+- `office edit insert-paragraph <in> <out> (--before|--after) /body/p[i]
   --json <payload>` with a DEDICATED `docx.paragraph/1` payload (not
   the raw batch op): v1 accepts resource-free content only — text runs
   with direct formatting, and style references that must exist in the
@@ -953,9 +956,9 @@ L0: pub surface only what N1/N2 need.
   are namespace-self-contained (L0 rules). Direct `/body/p[i]`
   children only. Docs land in this PR.
 
-## N3b — `docx edit delete-paragraph`
+## N3b — `office edit delete-paragraph`
 
-- `docx edit delete-paragraph <in> <out> --at /body/p[i]`: consuming
+- `office edit delete-paragraph <in> <out> --at /body/p[i]`: consuming
   span edit, direct `/body/p[i]` children only in v1 (no table-cell
   paragraphs — cell-emptying invariants are their own problem).
   Fail-closed inventory (the error names the blocking content and its
@@ -991,10 +994,10 @@ N0a → N0b1 → N0b2 → N0b3 → N0b4 → N0c1 → N1;
 N0c1 → N0c2; N0b4 → N2a; N0c2 + N1 + N2a → N2b.
 N3a/N3b need N0c1 and the shared CLI plumbing, but not N0c2's
 partial-replacement primitive, and may interleave after N1 as review pacing
-favors. N4 last. Every PR
-through the standing gate: self-adversarial pass, subal review (xhigh
-features / high confirmations) to APPROVE, green nightly CI,
-review-trail comment, rebase-merge. The N0 GO/NO-GO verdict is
+favors. N4 last. Every PR goes through the standing exact-head gate:
+self-adversarial pass, a brand-new ephemeral reviewer at `xhigh` or higher to
+APPROVE, every required CI check green on that same pushed commit, review-trail
+comment, and rebase-merge. The N0 GO/NO-GO verdict is
 recorded in this file like L0's. Non-goals for the phase:
 regex/case-insensitive/whole-word matching, header/footer/notes scope
 for find+replace (the story-generic map makes this a small follow-up
