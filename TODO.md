@@ -171,17 +171,22 @@ small steps:
 The dependency-ordered small-PR plan for closing the broader agent-relevant
 OfficeCLI gaps now lives in `docs/office-major-parity.md`. Give every proposed
 slice its own issue before implementation and do not fold it into #169. Issue
-#139 remains open until the major ledger is complete. The ledger explicitly
+#139 remains open until the major ledger is complete. At the pinned baseline the
+full delivery ledger has 350 acceptance rows: 343 parity/QA/export rows plus 7
+explicit beyond-parity/delivery rows, using the counting rule in the ledger.
+The ledger explicitly
 includes bounded XLSX formula calculation/lint and cache refresh, worksheet
 tab-color/reorder/clone and freeze/unfreeze lifecycle, full common cell/range
 formatting, row/column dimension/outline/autofit, row/column structural edits,
 preservation-safe cell shifts, cascade-safe worksheet rename, unmerge,
-AutoFilter lifecycle, ordinary
+   AutoFilter lifecycle, stable chart enumerate/create/update/remove with
+   relationship cleanup, array-formula add/set/readback, ordinary
 table/data-validation/conditional-format update and removal, row/column
 page-break lifecycle, workbook core/custom properties, `date1904` and
 calculation settings, active/selected-sheet state, and RTL/zoom/view state;
-preservation-safe existing-DOCX table content, separately reviewable table/row/
-cell-property changes, paragraph/table/row/column move-copy-swap, row/column
+   preservation-safe existing-DOCX table content, separately reviewable complete
+   common table/row/cell-property changes (including direction/indent/spacing/
+   padding/metadata/conditional state and cell flow), paragraph/table/row/column move-copy-swap, row/column
 edits, and table structural edits; paragraph,
 character, table, and numbering-style lifecycle; numbering, first/even/default
 header/footer, paragraph-tab-stop, positional-tab, break, editing-permission
@@ -189,15 +194,21 @@ range, and section inventory/mutation/exposure, including columns, page-number
 format/start, line numbering, `titlePage`, `evenAndOddHeaders`, page borders,
 paper sources, vertical alignment/text direction, and footnote/endnote numbering
 and placement controls; DOCX field
-and bookmark inventory, typed authoring across pagination, cross-reference,
+   and bookmark inventory, typed authoring across pagination, cross-reference,
 metadata, time/lifecycle, statistics, section, SEQ, STYLEREF, DOCPROPERTY, and IF
-families, update/removal, and refresh;
-embedded-chart authoring/readback and source-pinned lifecycle; existing
-comment, footnote/endnote, hyperlink, and picture lifecycle; typed core/custom
+   families, source-pinned existing add/update/removal, and refresh;
+   embedded-chart authoring/readback and source-pinned add/update/delete
+   lifecycle; existing comment, footnote/endnote, hyperlink, and picture
+   add/update/remove lifecycle; typed core/custom
 document properties; deterministic locale/script-font and RTL defaults plus
-language/direction authoring; tab stops and page/column breaks; equations,
-watermarks, drawing text boxes, and shapes; revision readback, accept/reject, and
-attributed tracked-change authoring; both SDT and legacy checkbox forms;
+   language/direction authoring; root document defaults plus grid/compatibility/
+   CJK/default-tab/hyphenation, trackRevisions/updateFields/recalcFields, mirror/
+   gutter/book-fold/privacy/font-embedding settings; tab stops and page/column
+   breaks; fresh and source-pinned add/update/remove for equations, watermarks,
+   drawing text boxes, and shapes; content/move/property revision readback,
+   separately scoped accept/reject, and attributed insertion/deletion/move/
+   formatting authoring; fresh and source-pinned add/update/remove for both SDT
+   and legacy checkbox forms;
 CSV/TSV file-or-stdin import with start-cell/inference/header behavior;
 path-scoped dump; and DOCX/XLSX-to-PDF parity. XLSX engine hardening can proceed
 beside the versioned registry/common-receipt work; only each feature's `office`
@@ -282,21 +293,25 @@ feature PR.
 - PowerPoint/PPTX.
 - MCP, resident mode, and live watch/selection.
 - Plugin and language-SDK wrappers.
-- Formula verification/cache refresh, XLSX cascade-safe worksheet rename plus
+- Formula verification/cache refresh and array-formula add/set/readback, XLSX
+  cascade-safe worksheet rename plus
   reorder/clone/tab-color,
   pane, cell/range-formatting, row/column dimension/autofit/outline and
   structural-edit lifecycle, partial-cell shifts,
-  workbook/date-system/calculation/selection/view state, unmerge/AutoFilter and
+  workbook/date-system/calculation/selection/view state, stable chart
+  enumerate/create/update/remove with cleanup, unmerge/AutoFilter and
   ordinary table/validation/conditional-format/page-break lifecycle,
-  existing-DOCX paragraph/table/row/column move-copy-swap, all four style types,
+  existing-DOCX paragraph/table/row/column move-copy-swap, full common table/row/
+  cell properties, all four style types,
   numbering, header/footer,
   paragraph/positional-tab, permission-range, break, and advanced section
   editing (including page borders, paper sources, vertical alignment/text
   direction, and section note controls), DOCX locale/RTL, complete typed
-  field/bookmark authoring/update/removal/refresh, revision read/accept/reject
-  and tracked-change authoring,
-  embedded charts, fillable Word forms, equations,
-  watermarks, text boxes, shapes, path-scoped dump, DOCX/XLSX-to-PDF export,
+  field/bookmark existing add/update/removal/refresh, root document defaults and
+  settings, content/move/property revision read/accept/reject and matching
+  tracked-change authoring, embedded charts, source-pinned SDT/legacy-form
+  lifecycle, and existing add/update/remove for notes, pictures, equations,
+  watermarks, text boxes, and shapes; path-scoped dump, DOCX/XLSX-to-PDF export,
   and richer engine-backed XLSX operations are not part of the initial F1 gate;
   they are explicit later slices in the ledger.
 - Word-identical portable DOCX pagination remains a differentiator beyond basic

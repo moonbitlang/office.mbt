@@ -66,6 +66,12 @@ Rows at the same dependency level may proceed in separate worktrees, but no PR
 may stack on an unmerged sibling. Split earlier than the repository's roughly
 1,000 hand-written-line or 15-production-file review trigger.
 
+At this pinned baseline the reproducible delivery ledger contains 350
+acceptance rows: 343 parity/QA/export rows from Baseline acceptance through E1d,
+plus 7 explicitly labeled beyond-parity/delivery rows. Table headers and the
+Current work status summary are excluded; landed foundation rows remain in the
+denominator for traceability and change status instead of disappearing.
+
 ### Baseline acceptance
 
 | Slice | Acceptance boundary | Depends on |
@@ -125,16 +131,19 @@ round-tripping an existing document through the fresh-authoring model.
 | N5c3: column move | Move one virtual column within the same table by relocating its grid definition and per-row cells in lockstep; refuse every ambiguous grid-span/vertical-merge geometry and prove unrelated-cell preservation. | N5c1, N5c2 |
 | N5c4: column copy | Clone one virtual column within the same table with collision-safe cell identities, exact grid-width semantics, and dependency-closed content; reject ambiguous spans/merges rather than targeting cell ordinals as grid slots. | N5c1, N5a |
 | N5c5: column swap | Swap two virtual columns within the same table by moving grid definitions and per-row cells atomically, with span/merge refusal and exact source/destination receipts. | N5c2, N5c3 |
-| N5d1: table/row/cell property inventory | Inventory the supported table, row, and cell property subsets plus unknown residuals by stable N5a table/row/cell identity; define common clear/inherit/readback semantics without mutating the package. | N5a |
-| N5d2: table-property mutation | Preservation-safely update or clear bounded table layout, alignment, width, and border properties; retain unknown table properties and refuse conflicting merge/layout geometry. | A4, D1, N0c2, N5d1 |
-| N5d3: row-property mutation | Preservation-safely update or clear bounded row height, header-repeat, split, and alignment properties; retain unknown row properties and refuse revision/merge conflicts. | A4, D1, N0c2, N5d1 |
-| N5d4: cell-property mutation | Preservation-safely update or clear bounded cell width, shading, borders, vertical alignment, and text-direction properties; retain unknown cell properties and refuse conflicting span/merge geometry. | A4, D1, N0c2, N5d1 |
+| N5d1: table/row/cell property inventory | Inventory the common OfficeCLI table, row, and cell properties plus unknown residuals by stable N5a identity: table layout/direction/alignment/width/indent/cell-spacing/default-padding/borders/caption/description/tblLook; row height/header/split/alignment, gridBefore/gridAfter, and conditional-style state; and cell width/shading/borders/padding/vertical-alignment/text-direction/no-wrap/fit-text. Define explicit/inherited/cleared readback without mutating the package. | N5a |
+| N5d2a: table geometry/property mutation | Preservation-safely update or clear bounded table layout, direction, alignment, width, indent, and cell-spacing properties; retain unknown properties and refuse conflicting merge/layout geometry. | A4, D1, N0c2, N5d1 |
+| N5d2b: table appearance/metadata mutation | Preservation-safely update or clear bounded default cell padding, borders, caption, description, and tblLook/conditional-style flags without rewriting cell content or unknown table properties. | A4, D1, N0c2, N5d1 |
+| N5d3a: row base-property mutation | Preservation-safely update or clear bounded row height, header-repeat, split, and alignment properties; retain unknown row properties and refuse revision/merge conflicts. | A4, D1, N0c2, N5d1 |
+| N5d3b: row grid/conditional-property mutation | Preservation-safely update or clear gridBefore/gridAfter and bounded conditional-style state with exact virtual-grid validation and no implicit cell insertion or deletion. | A4, D1, N0c2, N5d1, N5d3a |
+| N5d4a: cell geometry/appearance mutation | Preservation-safely update or clear bounded cell width, shading, borders, vertical alignment, and text-direction properties; retain unknown cell properties and refuse conflicting span/merge geometry. | A4, D1, N0c2, N5d1 |
+| N5d4b: cell padding/flow mutation | Preservation-safely update or clear per-side cell padding, no-wrap, and fit-text state with typed inherited/explicit readback and no unrelated table-property normalization. | A4, D1, N0c2, N5d1, N5d4a |
 | N5e1: table insertion | Insert one explicitly authored table before or after an addressed body block while preserving surrounding section and paragraph structure. | N3a, N5a |
 | N5e2: table deletion | Delete one addressed table under last-block, section, revision, range-marker, reference, and comment-anchor checks. | N3b, N5a |
 | N5e3: table move | Move one addressed table to a source-pinned body-block destination with overlap and section-boundary checks and an exact footprint receipt. | N5e1, N5e2 |
 | N5e4: table copy | Clone one addressed table to a source-pinned body-block destination with collision-safe local identities and dependency-closed styles, numbering, relationships, and embedded resources; refuse unresolved or ambiguous dependencies. | N5e1, N5a |
 | N5e5: table swap | Swap two addressed body tables under section, revision, marker, reference, and comment-anchor guards without rewriting table contents or intervening blocks. | N5e2, N5e3 |
-| N5f: table-edit capstone | A fresh agent edits cell content, changes table/row/cell properties, inserts/deletes/moves/copies/swaps rows and columns, inserts/deletes/moves/copies/swaps a table, validates, and proves byte preservation outside each declared footprint. | N5b1, N5b2, N5b3, N5b4, N5b5, N5c1, N5c2, N5c3, N5c4, N5c5, N5d2, N5d3, N5d4, N5e1, N5e2, N5e3, N5e4, N5e5 |
+| N5f: table-edit capstone | A fresh agent edits cell content, changes every proven table/row/cell property family, inserts/deletes/moves/copies/swaps rows and columns, inserts/deletes/moves/copies/swaps a table, validates, and proves byte preservation outside each declared footprint. | N5b1, N5b2, N5b3, N5b4, N5b5, N5c1, N5c2, N5c3, N5c4, N5c5, N5d2a, N5d2b, N5d3a, N5d3b, N5d4a, N5d4b, N5e1, N5e2, N5e3, N5e4, N5e5 |
 
 ### DOCX authoring and structure depth
 
@@ -153,6 +162,16 @@ round-tripping an existing document through the fresh-authoring model.
 | W3e: fresh section note controls | Author section-scoped footnote/endnote numbering format, restart, start, and placement controls with typed readback and validation against the note parts. | D3, W3 |
 | W4: headers and footers ([#95](https://github.com/moonbitlang/office.mbt/issues/95)) | Author section-linked first/even/default headers/footers with preservation and relationship validation. | W3, W3a, W3b |
 | WL2: locale-aware DOCX creation | Expose an explicit locale in installed create/batch help and author matching `themeFontLang`, script-specific `docDefaults`, and section/default-paragraph bidi state with typed readback, OpenXML validation, and RTL preview evidence. | A2, D3, W1, W3, WL1 |
+| WSET1: document settings/defaults inventory | Inventory styles.xml document defaults, settings.xml root state, and final-section document-grid state with typed explicit/defaulted provenance, stable package identity, and residuals for unsupported compatibility settings. | D2, N0b4 |
+| WSET2a: fresh document-default authoring | Author the bounded common run/paragraph docDefaults subset—script fonts, size, color, bold/italic, RTL, alignment, spacing, and line spacing—without conflating it with named styles. | D3, W1, WL1 |
+| WSET2b: fresh typography/compatibility settings | Author bounded document-grid, compatibility-mode, character-spacing/CJK auto-spacing and line-breaking, default-tab-stop, and auto-hyphenation state with units/range validation and typed readback. | D3, W3, WL1 |
+| WSET2c: fresh revision/field automation settings | Author trackRevisions and updateFields flags, and route explicit recalcFields requests through the bounded field-refresh contract with backend/provenance and truthful layout-dependent residuals. | D3, W5b7, W5r1 |
+| WSET2d: fresh print/privacy/font settings | Author bounded mirror-margin, gutter-at-top, book-fold, background-display, personal-information/date-removal, and font-embedding/subsetting flags; validate cross-property invariants without claiming that merely setting a flag embeds unavailable fonts. | D3, W3 |
+| WSET3a: existing document-default mutation | Preservation-safely update or clear the WSET2a docDefaults subset while retaining unknown styles.xml defaults, named styles, and unrelated bytes. | A4, D1, N0c2, WSET1, WSET2a |
+| WSET3b: existing typography/compatibility mutation | Preservation-safely update or clear the WSET2b grid/compatibility/CJK/default-tab/hyphenation subset with exact settings/section footprints and unknown-setting preservation. | A4, D1, N0c2, WSET1, WSET2b |
+| WSET3c: existing revision/field automation mutation | Preservation-safely update or clear trackRevisions/updateFields and execute requested bounded recalculation through W5r, never disguising an unsupported pagination-derived field as refreshed. | A4, D1, N0c2, W5r2, WSET1, WSET2c |
+| WSET3d: existing print/privacy/font mutation | Preservation-safely update or clear the WSET2d layout/privacy/font flags with cross-setting validation, font-resource residuals, and no unrelated settings normalization. | A4, D1, N0c2, WSET1, WSET2d |
+| WSET4: document settings/defaults exposure | Expose WSET1-WSET3d through document/settings get/query, fresh create/batch, source-pinned edit, help, dump/replay, typed receipts, OpenXML validation, and native/Wasm acceptance. | A2, R1, WSET3a, WSET3b, WSET3c, WSET3d |
 | WST1: existing-style inventory | Inventory paragraph, character, table, and numbering styles, based-on/next/link/list dependencies, typed property state, use sites, and unsupported residuals with stable package/source identity. | D2, N0b4 |
 | WST2: existing-style addition | Add one bounded paragraph, character, table, or numbering style definition with unique identity, a validated type-specific dependency graph, and no rewrite of unrelated definitions or use sites. | A4, D1, N0c2, W1, W1a, W1b, WST1 |
 | WST3: existing paragraph/character-style update | Update the proven W1 property/dependency subset of one paragraph or character style while preserving its identity, unknown properties, dependents, and unrelated bytes. | A4, D1, N0c2, WST1 |
@@ -188,30 +207,49 @@ round-tripping an existing document through the fresh-authoring model.
 | W5b6: conditional field authoring | Add bounded IF fields with a strict expression/branch payload, instruction escaping, nesting/work limits, dependency readback, and explicit stale cached-result state. | W5a, W5b1, W5b3 |
 | W5b7: typed field-authoring exposure | Expose W5b1-W5b6 through fresh create/batch, shared schema help, typed readback, validation, dump/replay where lossless, stale-cache receipts, and native/Wasm acceptance. | A2, R1, W5b2, W5b3, W5b4, W5b5, W5b6 |
 | W5c: TOC authoring | Author a bounded TOC contract over explicit heading/style inputs with field instructions and stale-state readback, without fabricating page-number results. | W1, W3, W5b1 |
+| W5d0: existing-field addition | Insert one supported W5b/W5c simple or balanced complex field at a source-pinned paragraph/run boundary with typed target/switch validation, collision-safe identities, explicit stale-cache state, and no unrelated run normalization. | A4, D1, N0c2, W5a, W5b7, W5c |
 | W5d1: existing-field update | Update the supported instruction, switch, dirty/locked, and cached-result policy of one W5a simple or balanced complex field through source-pinned surgery; reject malformed or shared structures. | A4, D1, N0c2, W5a |
 | W5d2: existing-field removal | Remove one W5a simple or balanced complex field under an explicit delete-versus-unwrap-result policy, preserving unrelated runs and refusing ambiguous nesting or cross-structure markers. | A4, D1, N0c2, W5a, W5d1 |
+| W5e0: existing-bookmark addition | Add one uniquely named, collision-safe paired bookmark around a source-pinned bounded content range with crossing-range, field-reference, revision, and protection checks. | A4, D1, N0c2, W5a, W5b1 |
 | W5e1: existing-bookmark rename | Rename one W5a bookmark by its paired markers with name/id uniqueness, range-integrity, field-reference impact, and malformed/orphan refusal rules. | A4, D1, N0c2, W5a |
 | W5e2: existing-bookmark removal | Remove one W5a bookmark's paired markers under explicit field-reference impact, range-integrity, and malformed/orphan refusal rules without deleting its content. | A4, D1, N0c2, W5a |
-| W5e3: existing field/bookmark exposure | Expose W5d1-W5e2 through installed help, typed readback, source-pinned commands, exact footprint/dependency receipts, validation, and native/Wasm acceptance. | A2, W5d1, W5d2, W5e1, W5e2 |
+| W5e3: existing field/bookmark exposure | Expose W5d0-W5e2 through installed help, typed readback, source-pinned add/update/remove commands, exact footprint/dependency receipts, validation, and native/Wasm acceptance. | A2, W5d0, W5d1, W5d2, W5e0, W5e1, W5e2 |
 | W5r1: existing-field refresh contract | Define a bounded refresh-backend protocol over W5a's existing-document inventory, including dependency/stale-state reporting and explicit unsupported layout-dependent values. | W5a |
 | W5r2: existing-field refresh exposure | Add explicit `office refresh` into a separate output with backend/provenance reporting, deterministic receipts, stale-field readback, and backend-specific QA for TOC page numbers, PAGE/NUMPAGES, and cross-references. | A4, D1, N0c2, W5r1 |
 | WC1a: fresh embedded-chart engine | Add one bounded DOCX embedded-chart authoring subset with stable typed readback, explicit workbook/data limits, and truthful unsupported-variant residuals. | D3, W3 |
 | WC1b: existing-chart lifecycle engine | Inventory existing embedded charts with source-pinned identity, then update or delete one chart atomically while preserving unrelated chart, relationship, embedded-workbook, and media identities. | A4, D1, N0c2, WC1a |
+| WC1c: existing-chart addition | Insert one WC1a-compatible embedded chart at a source-pinned body/header/footer location with collision-free part/relationship/drawing ids, bounded embedded-workbook resources, and exact package-footprint receipts. | A4, D1, N0c2, WC1a, WC1b |
 | WC2a: fresh embedded-chart command | Expose WC1a through the shared registry/help/validation and fresh batch authoring with a feature-specific deterministic receipt. | A2, A4, WC1a |
 | WC2b: embedded-chart dump/replay | Add the WC1a subset to semantic dump/replay with typed residuals for every unsupported chart option or dependent resource. | R1, WC1a, WC2a |
-| WC2c: existing-chart lifecycle command | Expose WC1b inventory/update/delete as source-pinned existing-document commands with readback and exact footprint receipts. | WC1b, WC2a |
+| WC2c: existing-chart lifecycle command | Expose WC1b/WC1c inventory/add/update/delete as source-pinned existing-document commands with readback and exact relationship/resource cleanup receipts. | WC1b, WC1c, WC2a |
 | WC3: embedded-chart QA capstone | Prove OpenXML validity, round-trip readback, update/delete cleanup, unsupported-feature residuals, and preview coverage/degradation for authored and edited embedded charts. | WC2b, WC2c, Q4 |
-| W6: existing-document formatting | Apply addressed style/direct-format changes, including bounded paragraph/run BCP-47 language slots and bidi direction, through source-pinned surgery; refuse lossy rewrites. | A4, D1, N0c2, W1-W3, WL1 |
-| W7: revision read surface | Surface inserted/deleted/moved content with author, date, type, and addressed provenance. | D2, N0b4 |
-| W8: accept/reject revisions | Preview and atomically accept or reject selected revisions with explicit affected paths. | A4, D1, N0c2, W7 |
-| W9: tracked-change authoring | Author attributed insertions/deletions only after W8's identity and validation rules are proven. | A4, D1, N0c2, W8 |
+| W6a: existing paragraph direct formatting | Apply or clear the bounded paragraph-direct-format subset, including alignment/spacing/indentation and BCP-47 language/bidi state, through source-pinned surgery without changing style or numbering bindings. | A4, D1, N0c2, WL1 |
+| W6b: existing run direct formatting | Apply or clear the bounded run-direct-format subset, including font/emphasis/color/size and script-specific language/bidi state, through source-pinned surgery without lossy run reconstruction. | A4, D1, N0c2, WL1 |
+| W6c: existing style/numbering bindings | Change addressed paragraph/run style, listStyle, or numId bindings only after WST1/WNUM1 resolve the target and dependency graph; preserve direct formatting and refuse missing, wrong-kind, cyclic, or ambiguous references. | A4, D1, N0c2, WST1, WNUM1 |
+| W6d: existing-formatting exposure | Expose W6a-W6c through typed get/query/edit help, explicit clear/inherit semantics, exact footprint/dependency receipts, validation, dump/replay where lossless, and native/Wasm acceptance. | A2, R1, W6a, W6b, W6c |
+| W7a: content/move revision inventory | Surface run/paragraph insertions and deletions, paragraph-mark changes, and paired moveFrom/moveTo content with author/date/id/type, source-pinned addressed provenance, malformed-pair residuals, and stable query order. | D2, N0b4 |
+| W7b: property revision inventory | Surface rPr/pPr/sectPr/tblPr/trPr/tcPr change records with author/date/id, host identity, preserved before-snapshot or explicit beforeLost residual, and stable source-pinned provenance. | D2, N0b4, N5d1, WSEC1 |
+| W8a: accept/reject content revisions | Preview and atomically accept or reject selected insertion/deletion and paragraph-mark revisions with exact affected paths, join/split semantics, and marker/reference integrity checks. | A4, D1, N0c2, W7a |
+| W8b: accept/reject move revisions | Preview and atomically accept or reject a complete paired moveFrom/moveTo identity with overlap, orphan, ordering, range-marker, and reference checks; never act on only one half. | A4, D1, N0c2, W7a, W8a |
+| W8c: accept/reject run/paragraph property revisions | Accept or reject selected rPr/pPr change records only when the before snapshot is complete enough to apply the chosen direction; otherwise emit a typed refusal without mutation. | A4, D1, N0c2, W6a, W6b, W7b |
+| W8d: accept/reject structural property revisions | Accept or reject selected sectPr/tblPr/trPr/tcPr changes with section/table identity, merge/layout, protection, and complete-before-snapshot validation. | A4, D1, N0c2, N5d1, WSEC1, W7b |
+| W9a: attributed insertion/deletion authoring | Author attributed run/paragraph insertions, deletions, and paragraph-mark changes with validated author/date/collision-free ids after W8a's topology rules are proven. | A4, D1, N0c2, W8a |
+| W9b: attributed move authoring | Author paired moveFrom/moveTo revisions with one stable id, explicit source/destination preconditions, overlap/integrity checks, and exact source-pinned receipts. | A4, D1, N0c2, W8b |
+| W9c: attributed run/paragraph format authoring | Wrap real W6a/W6b changes in rPr/pPr revisions with a preserved before snapshot; reject bare attribution that would fabricate an empty or lossy change. | A4, D1, N0c2, W6a, W6b, W8c |
+| W9d: attributed structural-property authoring | Author sectPr/tblPr/trPr/tcPr changes for real WSEC/N5d mutations with author/date/id and a complete before snapshot, under merge/layout/protection validation. | A4, D1, N0c2, N5d2a, N5d2b, N5d3a, N5d3b, N5d4a, N5d4b, WSEC2, W8d |
 | W10: form read and identity | Inventory SDTs, legacy form fields, document-protection state, and section-level `formProt` carriers with stable paths, aliases/tags, types, options, and editability. MERGEFIELD parity remains owned by W5a/W5b1, not the forms inventory. | D2, N0b4 |
 | W11a: text/rich-text SDTs | Author text and rich-text controls with required stable identity, aliases/tags, content constraints, and typed readback. | D3, W1, W10 |
 | W11b: choice/date SDTs | Add checkbox state, dropdown, combobox, and date controls with bounded options/formats and typed readback. | W11a |
 | W11c: picture/group SDTs | Add bounded picture and group controls with media/relationship limits, nesting rules, lifecycle cleanup, and typed readback. | W11a |
 | W12: legacy form fields | Author and read back real legacy checkbox fields under Word's name limits without pretending visual blanks are fields. | W5b1, W10 |
-| W13: forms protection | Enforce, inspect, clear, and verify forms-only document protection through a source-pinned transaction; allow field edits while refusing protected static-content edits unless an explicit override is supported. | A4, D1, N0c2, W11b, W11c, W12 |
-| W14: form QA and integration capstone | Integrate W11 SDT controls and W12 legacy fields into one truthful forms inventory; separately cross-check W5b1 MERGEFIELD output without classifying or counting it as a form. A fresh agent creates a protected intake form and verifies aliases/tags, list items, date formats, both checkbox families, editability, and zero simulated underscore fields. | W5b1, W13 |
+| W11d: existing SDT addition | Insert one W11-compatible SDT at a source-pinned body/header/footer/table location with collision-safe identity, nesting/content-model checks, and exact media/relationship receipts where applicable. | A4, D1, N0c2, W10, W11c |
+| W11e: existing SDT update | Update one W10 SDT's supported alias/tag/content/state/options/date/picture subset while preserving its stable identity, unknown properties, nested controls, and unrelated bytes. | A4, D1, N0c2, W10, W11c |
+| W11f: existing SDT removal | Remove or unwrap one W10 SDT under an explicit content policy with nesting, range-marker, revision, protection, and media/relationship cleanup checks. | A4, D1, N0c2, W10, W11e |
+| W12a: existing legacy-form addition | Insert one real W12-compatible legacy checkbox field at a source-pinned run boundary with collision-safe field name/id and no simulated visual-blank fallback. | A4, D1, N0c2, W10, W12 |
+| W12b: existing legacy-form update | Update one W10 legacy field's supported name/default/state/enabled subset while preserving its balanced field topology, unknown FFData, and unrelated runs. | A4, D1, N0c2, W10, W12 |
+| W12c: existing legacy-form removal | Remove one complete W10 legacy field under an explicit delete-versus-unwrap-result policy with balanced-field, revision, and protection checks. | A4, D1, N0c2, W10, W12b |
+| W13: forms protection | Enforce, inspect, clear, and verify forms-only document and section formProt protection through a source-pinned transaction; allow validated W11/W12 field edits while refusing protected static-content edits unless an explicit override is supported. | A4, D1, N0c2, W11d, W11e, W11f, W12a, W12b, W12c |
+| W14: form QA and integration capstone | Integrate fresh and existing W11 SDT controls plus W12 legacy fields into one truthful forms inventory; separately cross-check W5b1 MERGEFIELD output without classifying or counting it as a form. A fresh agent creates, updates, and removes controls in a protected intake form and verifies aliases/tags, list items, date formats, both checkbox families, editability, cleanup, and zero simulated underscore fields. | W5b1, W13 |
 | WPERM1: editing-permission range inventory | Inventory paired `permStart`/`permEnd` ranges with stable ids, body/paragraph/table-column scope, editing group or user, source-pinned boundaries, protection context, and malformed/orphan residuals. | D2, N0b4 |
 | WPERM2: fresh editing-permission authoring | Author bounded, uniquely identified permission ranges for a validated editing group or user, including optional table-column scope and typed readback; reject crossing or orphan marker topology. | D3, WPERM1 |
 | WPERM3: existing editing-permission lifecycle | Add or remove one complete WPERM1 range through source-pinned surgery with protection-impact reporting, marker-topology checks, and preservation of unrelated content and ranges. | A4, D1, N0c2, WPERM1 |
@@ -221,9 +259,10 @@ round-tripping an existing document through the fresh-authoring model.
 | WCM3: existing-comment deletion | Delete one WCM1 comment with explicit thread policy and complete cross-story range/reference cleanup; refuse ambiguous, shared, malformed, or protected anchors. | A4, D1, N0c2, WCM1 |
 | WCM4: comment lifecycle exposure | Extend `office annotate` with typed comment inventory/update/delete, installed help, readback, and exact footprint/cleanup receipts. | A2, WCM2, WCM3 |
 | WN1: existing-note inventory | Inventory existing footnotes/endnotes and every reference with stable part/id/source identity, typed content readback, and plumbing-note/unsupported residuals. | D2, N0b4 |
+| WN2a: existing-note addition | Add one footnote or endnote plus a source-pinned reference with collision-free id, bounded supported content, section note-control compatibility, and no renumbering of unrelated notes. | A4, D1, N0c2, WN1, W3e |
 | WN2: existing-note update | Replace supported content in one WN1 note through source-pinned surgery while preserving its id, references, unrelated notes, and package bytes. | A4, D1, N0c2, WN1 |
 | WN3: existing-note deletion | Delete one WN1 note and its references under explicit orphan/shared-reference rules, without renumbering unrelated note identities. | A4, D1, N0c2, WN1 |
-| WN4: note lifecycle exposure | Expose note inventory/update/delete through typed get/query and mutation commands with installed help, readback, and exact footprint/cleanup receipts. | A2, WN2, WN3 |
+| WN4: note lifecycle exposure | Expose note inventory/add/update/delete through typed get/query and mutation commands with installed help, readback, and exact footprint/cleanup receipts. | A2, WN2a, WN2, WN3 |
 | WDP1: document-property inventory | Inventory typed core and custom document properties with stable names, value kinds, package provenance, and residuals for application-derived or unsupported property forms. | D2 |
 | WDP2: core-property lifecycle | Author, update, or clear the proven core-property subset in fresh and existing documents without fabricating application-derived metadata. | A4, D1, D3, WDP1 |
 | WDP3: custom-property lifecycle | Add, update, or remove bounded typed custom properties with case/format-id/pid uniqueness, value validation, and unrelated-property preservation. | A4, D1, D3, WDP1 |
@@ -232,9 +271,10 @@ round-tripping an existing document through the fresh-authoring model.
 | WH2: existing hyperlink lifecycle | Add, update text/target, or remove one WH1 link with strict relationship/anchor validation, atomic failure, and unrelated-byte preservation. | A4, D1, N0c2, WH1 |
 | WH3: hyperlink exposure | Expose WH1/WH2 through typed get/query and mutation commands with installed help, validation, readback, and exact footprint receipts. | A2, WH2 |
 | WP1: existing picture inventory | Inventory inline and a bounded anchored-picture subset with stable media/relationship identity, geometry/alt-text readback, content limits, and unsupported residuals. | D2, N0b4 |
+| WP2a: existing picture addition | Insert one bounded inline or proven anchored picture at a source-pinned story location with verified media bytes/type, collision-free relationship/drawing ids, geometry/alt text, and content-addressed reuse rules. | A4, D1, N0c2, WP1 |
 | WP2: picture replace/properties | Replace one WP1 asset or update a bounded size/crop/alt-text subset with content-addressed inputs, source-pinned preservation, and no relationship/id churn. | A4, D1, N0c2, WP1 |
 | WP3: picture removal/cleanup | Remove one WP1 picture and prove relationship/media orphan cleanup without deleting shared or unrelated resources. | A4, D1, N0c2, WP1 |
-| WP4: picture exposure | Expose WP1-WP3 through typed get/query and mutation commands with installed help, validation, readback, and exact footprint receipts. | A2, WP2, WP3 |
+| WP4: picture exposure | Expose WP1-WP3 through typed get/query and add/replace/update/remove commands with installed help, validation, readback, and exact footprint/cleanup receipts. | A2, WP2a, WP2, WP3 |
 | WT1: fresh paragraph tab-stop engine | Author bounded tab stops and typed readback for position, alignment, and leader without conflating stops with inline tab characters. | D3 |
 | WT2: paragraph tab-stop exposure | Expose WT1 through shared help, batch/dump/replay, validation, and feature-specific receipts. | A2, A4, R1, WT1 |
 | WTE1: existing tab-stop inventory | Inventory paragraph tab stops, direct-versus-style provenance, position/alignment/leader state, and unsupported residuals with stable source-pinned paragraph identity. | D2, N0b4, WT1 |
@@ -251,20 +291,24 @@ round-tripping an existing document through the fresh-authoring model.
 | WBE3: existing break exposure | Expose WBE1/WBE2 through shared get/query/edit help, typed readback, exact footprint receipts, validation, dump/replay where lossless, and native/Wasm acceptance. | A2, R1, WBE2 |
 | WEQ1: equation inventory | Inventory existing OMML equations with stable source-pinned identity, a bounded typed semantic subset, and explicit residuals for unsupported constructs. | D2, N0b4 |
 | WEQ2: equation authoring | Author the proven WEQ1 subset from a strict typed payload with OpenXML and round-trip semantic validation. | D3, WEQ1 |
-| WEQ3: existing-equation lifecycle | Replace or remove one WEQ1 equation atomically while preserving unrelated runs, relationships, and package bytes. | A4, D1, N0c2, WEQ1 |
-| WEQ4: equation exposure | Expose inventory, fresh authoring, existing lifecycle, and dump/replay with typed residuals and feature-specific receipts. | A2, R1, WEQ2, WEQ3 |
+| WEQ3a: existing-equation addition | Insert one WEQ2-compatible equation at a source-pinned run/paragraph boundary with content-model, revision, and protection checks plus exact footprint readback. | A4, D1, N0c2, WEQ1, WEQ2 |
+| WEQ3: existing-equation update/removal | Replace or remove one WEQ1 equation atomically while preserving unrelated runs, relationships, and package bytes. | A4, D1, N0c2, WEQ1 |
+| WEQ4: equation exposure | Expose inventory, fresh and existing addition, update/removal, and dump/replay with typed residuals and feature-specific receipts. | A2, R1, WEQ2, WEQ3a, WEQ3 |
 | WWM1: watermark inventory | Inventory text and picture watermarks across header stories with stable section/header, drawing, media, and relationship identity. | D2, N0b4, W4 |
 | WWM2: watermark authoring | Author a bounded text/picture watermark subset with explicit section/header linkage, geometry, opacity, and media limits. | D3, W4, WWM1 |
-| WWM3: existing-watermark lifecycle | Update or remove one WWM1 watermark with source-pinned cleanup and no unrelated header or relationship churn. | A4, D1, N0c2, WWM1 |
-| WWM4: watermark exposure | Expose inventory, fresh authoring, existing lifecycle, and dump/replay with deterministic receipts and unsupported-variant residuals. | A2, R1, WWM2, WWM3 |
+| WWM3a: existing-watermark addition | Add one WWM2-compatible watermark to an existing section/header through source-pinned linkage, with collision-safe drawing/media/relationship ids and shared-header impact reporting. | A4, D1, N0c2, WWM1, WWM2 |
+| WWM3: existing-watermark update/removal | Update or remove one WWM1 watermark with source-pinned cleanup and no unrelated header or relationship churn. | A4, D1, N0c2, WWM1 |
+| WWM4: watermark exposure | Expose inventory, fresh/existing addition, update/removal, and dump/replay with deterministic receipts and unsupported-variant residuals. | A2, R1, WWM2, WWM3a, WWM3 |
 | WTB1: text-box inventory | Inventory VML and DrawingML text boxes with stable physical/story identity, geometry, contained logical content, and unsupported residuals. | D2, N0b4 |
 | WTB2: text-box authoring | Author a bounded DrawingML text-box subset with explicit geometry, wrapping, style, and contained-document limits. | D3, W3, WTB1 |
-| WTB3: existing-text-box lifecycle | Update text/properties or remove one WTB1 text box atomically while preserving unrelated drawing and relationship identity. | A4, D1, N0c2, WTB1 |
-| WTB4: text-box exposure | Expose inventory, fresh authoring, existing lifecycle, and dump/replay with exact footprint receipts. | A2, R1, WTB2, WTB3 |
+| WTB3a: existing-text-box addition | Insert one WTB2-compatible DrawingML text box at a source-pinned story location with collision-safe drawing/relationship identity, bounded contained content, and exact footprint receipts. | A4, D1, N0c2, WTB1, WTB2 |
+| WTB3: existing-text-box update/removal | Update text/properties or remove one WTB1 text box atomically while preserving unrelated drawing and relationship identity. | A4, D1, N0c2, WTB1 |
+| WTB4: text-box exposure | Expose inventory, fresh/existing addition, update/removal, and dump/replay with exact footprint receipts. | A2, R1, WTB2, WTB3a, WTB3 |
 | WSH1: shape inventory | Inventory a bounded Word shape subset with stable drawing identity, geometry/style/text readback, and explicit residuals for unsupported geometry. | D2, N0b4 |
 | WSH2: shape authoring | Author the proven WSH1 subset with bounded geometry, fill/line/text, anchoring, and z-order. | D3, W3, WSH1 |
-| WSH3: existing-shape lifecycle | Update properties/text or remove one WSH1 shape atomically with relationship/id preservation and cleanup. | A4, D1, N0c2, WSH1 |
-| WSH4: shape exposure | Expose inventory, fresh authoring, existing lifecycle, and dump/replay with deterministic receipts and truthful residuals. | A2, R1, WSH2, WSH3 |
+| WSH3a: existing-shape addition | Insert one WSH2-compatible shape at a source-pinned story location with collision-safe drawing identity, anchoring/z-order checks, and bounded fill/line/text resources. | A4, D1, N0c2, WSH1, WSH2 |
+| WSH3: existing-shape update/removal | Update properties/text or remove one WSH1 shape atomically with relationship/id preservation and cleanup. | A4, D1, N0c2, WSH1 |
+| WSH4: shape exposure | Expose inventory, fresh/existing addition, update/removal, and dump/replay with deterministic receipts and truthful residuals. | A2, R1, WSH2, WSH3a, WSH3 |
 
 Fillable forms are a separate major capability, not a synonym for W5 fields.
 Their acceptance is data-plumbing and protection correctness, not merely visual
@@ -322,7 +366,9 @@ it must not duplicate the engine.
 | X4l1: print-layout hardening | Validate numeric ranges and clear semantics for page layout and worksheet header/footer controls. | X3 |
 | X4l2: print-layout exposure | Expose the proven print-layout subset through registry, receipts, and replay. | X4a2, X4l1 |
 | X4m1: chart read/limit hardening | Add typed option readback, explicit bounds, and truthful residuals for the supported chart subset. | X3 |
-| X4m2: richer chart exposure | Expose supported chart options and report preview support separately from authoring support. | X4a2, X4m1 |
+| X4m1a: chart create/update lifecycle | Harden bounded chart creation and add stable-identity update for supported chart type, series, axes, title, legend, style, placement, and source-range state without replacing unrelated drawings. | X3, X4m1 |
+| X4m1b: chart removal/cleanup lifecycle | Remove one stably identified chart and clean only orphaned drawing, chart, relationship, and dependent parts; preserve shared drawings/resources and refuse ambiguous ownership. | X3, X4m1, X4m1a |
+| X4m2: richer chart lifecycle exposure | Expose chart enumerate/create/update/remove and supported options through shared help, batch, dump/replay, typed lifecycle/cleanup receipts, and separate preview-versus-authoring support reporting. | X4a2, X4m1, X4m1a, X4m1b |
 | X4n: dashboard capstone | A fresh agent creates, recalculates, validates, dumps/replays, and previews a dashboard containing a picture, pivot, slicer, sparkline, and chart. | X4f2, X4h2, X4i2, X4j2, X4m2, X5h |
 
 Engine hardening may proceed beside X4a1/X4a2. Only the corresponding exposure
@@ -348,6 +394,8 @@ operations fail closed when an affected filter would need relocation.
 | X5c: CSV/TSV import engine | Add bounded UTF-8 CSV/TSV decoding, delimiter selection, start-cell placement, deterministic type inference, and atomic grid-limit failure behind a typed import API; keep host file/stdin I/O outside the engine. | X3 |
 | X5d1: CSV/TSV base import exposure | Accept exactly one file or stdin source, select CSV/TSV explicitly or by a deterministic default, and expose start-cell and inference controls with help, validation, CLI acceptance, and replayable resulting workbook state. | X4a2, X5c |
 | X5d2: CSV/TSV header enhancement | Add explicit `--header` by applying the proven AutoFilter lifecycle plus freeze-header behavior, without delaying the independently useful base import command. | X4p2, X5d1, X7e1 |
+| X5e0a: array-formula authoring engine | Add bounded create/update/readback for one array-formula master and its exact rectangular range with overlap, shared-formula, merged-cell, grid, cache, and atomic-clear semantics; never write independent formulas into array slaves. | X3 |
+| X5e0b: array-formula authoring exposure | Expose array-formula add/set/readback through cell/range get, shared help, create/batch, dump/replay, and typed master/range/cache receipts with native/Wasm acceptance. | X4a2, X5e0a |
 | X5e: formula verification engine | Reuse the typed evaluator for bounded one-cell calculation and workbook formula-master scans with cancellation, deterministic findings, and explicit shared/array-slave residuals. | X3 |
 | X5f1: calc/lint read-result schemas | Define and test bounded typed calculation values, lint findings, source/cache provenance, and unsupported/shared/array residuals; distinguish a missing cache from an empty result. | X5e |
 | X5f2: calc/lint exposure | Add read-only `office calc` and `office lint` using X5f1's schemas; these read-only commands do not depend on mutation receipts. | X5f1 |
@@ -371,7 +419,7 @@ operations fail closed when an affected filter would need relocation.
 | X9d2: workbook selection-state exposure | Expose active/selected sheets through shared get/create/batch/help/dump/replay with identity-based readback and deterministic receipts. | X4a2, X9d1 |
 | X9e1: worksheet-view state hardening | Inventory and mutate a bounded view subset covering RTL, zoom, normal/page-break/page-layout mode, gridlines, and headings; consume X4p1 for pane state while preserving unsupported selection extensions. | X3, X4p1 |
 | X9e2: worksheet-view state exposure | Expose X9e1 per stable sheet/view identity through get/create/batch/help/dump/replay and feature-specific receipts. | X4a2, X9e1 |
-| X6a1: cell-formula relocation kernel | Add a bounded syntax-aware rewrite kernel for ordinary, shared-master, and array-master cell formulas with relative/absolute A1 semantics, sheet qualification, deterministic residuals, and proof that structural edits no longer copy affected formula text unchanged. | X3 |
+| X6a1: cell-formula relocation kernel | Add a bounded syntax-aware rewrite kernel for ordinary, shared-master, and array-master cell formulas with relative/absolute A1 semantics, sheet qualification, deterministic residuals, and proof that structural edits no longer copy affected formula text unchanged. | X3, X5e0a |
 | X6a1n: defined-name relocation audit | Audit and harden the existing workbook/sheet defined-name adjustment path with scope-aware syntax evidence, bounds, and typed residuals for every unsupported expression. | X3, X4c1 |
 | X6a2: structured/chart reference rewrite | Extend X6a1/X6a1n to table structured references and supported chart-series ranges with stable table identity and typed unsupported residuals. | X6a1, X6a1n, X4m1, X8a1 |
 | X6a3: validation/format reference rewrite | Extend X6a1/X6a1n to data-validation and conditional-format formulas plus the remaining explicitly supported A1-bearing records. | X6a1, X6a1n, X8b1, X8c1 |
@@ -444,7 +492,7 @@ separate differentiator below.
 | Q4: preview coverage manifest | Report which document/chart features rendered, degraded, or became placeholders. | P1 |
 | Q5: static preview depth | Expand chart SVG coverage and DOCX print CSS while retaining deterministic self-contained HTML. | Q4 |
 | Q6: optional screenshot adapter | Add PNG/contact-sheet production as a separate host adapter; keep the portable core free of browser dependencies. | Q4 |
-| Q7: QA capstone | Fresh agent previews, consumes addressed findings, repairs missing alt text, heading hierarchy, leaked placeholders, and formula caches through the same advertised operations, then verifies the repaired output. | Q2, Q3, Q5, N2b, W6, WP2, X5h |
+| Q7: QA capstone | Fresh agent previews, consumes addressed findings, repairs missing alt text, heading hierarchy, leaked placeholders, and formula caches through the same advertised operations, then verifies the repaired output. | Q2, Q3, Q5, N2b, W6d, WP2, X5h |
 
 ### Office-to-PDF export parity
 
