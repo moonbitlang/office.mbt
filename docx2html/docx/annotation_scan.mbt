@@ -151,7 +151,10 @@ priv struct ScannedElement {
 /// small text nodes cannot multiply the retention allowance.
 priv struct ProjectionSourceBudget {
   mut elements_left : Int
-  mut attribute_chars_left : Int
+  // Cumulative source bytes retained as element QNames or relevant
+  // attribute names/values. Charging raw UTF-8 spans before decoding is a
+  // conservative upper bound on their eventual UTF-16 String storage.
+  mut retained_name_chars_left : Int
   max_depth : Int
   text_budget : TokenMapBudget
 }
@@ -190,7 +193,7 @@ fn projection_source_budget(
   }
   {
     elements_left: max_elements,
-    attribute_chars_left: max_attribute_chars,
+    retained_name_chars_left: max_attribute_chars,
     max_depth,
     text_budget: token_map_budget(max_text_bytes, max_text_tokens) catch {
       TokenMapError(message) => raise Unsupported(message~)
@@ -213,18 +216,14 @@ fn ProjectionSourceBudget::charge_element(
 }
 
 ///|
-fn ProjectionSourceBudget::charge_attributes(
+fn ProjectionSourceBudget::charge_retained_source_chars(
   self : ProjectionSourceBudget,
-  attributes : Array[(String, String)],
+  chars : Int,
 ) -> Unit raise DocxError {
-  let mut chars = 0
-  for attribute in attributes {
-    chars += attribute.0.length() + attribute.1.length()
-  }
-  guard chars >= 0 && chars <= self.attribute_chars_left else {
+  guard chars >= 0 && chars <= self.retained_name_chars_left else {
     raise @core.docx_xml_resource_limit_error(DocxXmlMaterializedCharacters)
   }
-  self.attribute_chars_left -= chars
+  self.retained_name_chars_left -= chars
 }
 
 ///|
@@ -920,17 +919,22 @@ fn scan_story(
       index = close_end
       continue
     }
-    // Opening (or empty) element.
-    let (name, attributes, self_closing, tag_end) = scan_tag(
-      part,
-      index,
-      length,
-      source_budget is Some(_),
-    )
+    // Opening (or empty) element. Source mode refuses before scan_tag
+    // materializes this element's QName or any retained attribute.
     match source_budget {
-      Some(budget) => budget.charge_attributes(attributes)
+      Some(budget) => {
+        guard frames.length() > 0 || elements.length() == 0 else {
+          raise Unsupported(
+            message="the projection source scanner found multiple root elements",
+          )
+        }
+        budget.charge_element(frames.length() + 1)
+      }
       None => ()
     }
+    let (name, attributes, self_closing, tag_end) = scan_tag(
+      part, index, length, source_budget,
+    )
     // Namespace declarations bind before resolving this element's name.
     let declared : Array[String] = []
     for pair in attributes {
@@ -956,13 +960,7 @@ fn scan_story(
     let (prefix, local_name) = split_qualified_name(name)
     let uri = resolve(prefix)
     let element_index = match source_budget {
-      Some(budget) => {
-        guard frames.length() > 0 || elements.length() == 0 else {
-          raise Unsupported(
-            message="the projection source scanner found multiple root elements",
-          )
-        }
-        budget.charge_element(frames.length() + 1)
+      Some(_) => {
         let parent_index = match frames.last() {
           Some(parent) => parent.element_index
           None => -1
@@ -981,11 +979,21 @@ fn scan_story(
           uri,
           local_name,
           same_name_ordinal,
-          field_char_type: attribute_value(
-            attributes, "fldCharType", namespaces,
-          ),
-          symbol_font: attribute_value(attributes, "font", namespaces),
-          symbol_char: attribute_value(attributes, "char", namespaces),
+          field_char_type: if is_wml_uri(uri) && local_name == "fldChar" {
+            attribute_value(attributes, "fldCharType", namespaces)
+          } else {
+            None
+          },
+          symbol_font: if is_wml_uri(uri) && local_name == "sym" {
+            attribute_value(attributes, "font", namespaces)
+          } else {
+            None
+          },
+          symbol_char: if is_wml_uri(uri) && local_name == "sym" {
+            attribute_value(attributes, "char", namespaces)
+          } else {
+            None
+          },
           parent_index,
           first_child_index: -1,
           next_sibling_index: -1,
@@ -1014,16 +1022,9 @@ fn scan_story(
           }
           None => ()
         }
-        if self_closing && is_wml_uri(uri) && local_name == "t" {
-          elements[identity].text_map = Some(
-            map_wt_content(part, tag_end, tag_end, budget.text_budget) catch {
-              TokenMapError(message) =>
-                raise Unsupported(
-                  message="projection source scanner: \{message}",
-                )
-            },
-          )
-        }
+        // A self-closing w:t has no interior insertion point. Leave its map
+        // absent so later surgery cannot treat the byte after '/>' as text
+        // content; rewriting the whole empty-element tag is a later slice.
         identity
       }
       None => -1
@@ -1539,7 +1540,7 @@ fn retract_cell(
 
 ///|
 fn physical_counter_key(uri : String, local_name : String) -> String {
-  "{" + uri + "}" + local_name
+  canonical_physical_name(uri, local_name)
 }
 
 ///|
@@ -1598,12 +1599,21 @@ fn scan_tag(
   part : BytesView,
   start : Int,
   length : Int,
-  retain_projection_attributes : Bool,
+  source_budget : ProjectionSourceBudget?,
 ) -> (String, Array[(String, String)], Bool, Int) raise DocxError {
   let mut at = start + 1
   let name_start = at
   while at < length && !is_name_end(part[at]) {
     at += 1
+  }
+  match source_budget {
+    Some(budget) => {
+      guard at - name_start <= max_annotation_relevant_attribute_bytes else {
+        raise @core.docx_xml_resource_limit_error(DocxXmlTokenLength)
+      }
+      budget.charge_retained_source_chars(at - name_start)
+    }
+    None => ()
   }
   let name = utf8_slice(part, name_start, at)
   let attributes : Array[(String, String)] = []
@@ -1635,7 +1645,10 @@ fn scan_tag(
     }
     let attr_end = at
     let relevant_attribute = annotation_attribute_is_relevant(
-      part, attr_start, attr_end, retain_projection_attributes,
+      part,
+      attr_start,
+      attr_end,
+      source_budget is Some(_),
     )
     while at < length && is_xml_space(part[at]) {
       at += 1
@@ -1668,6 +1681,13 @@ fn scan_tag(
       if attr_end - attr_start > max_annotation_relevant_attribute_bytes ||
         at - value_start > max_annotation_relevant_attribute_bytes {
         raise @core.docx_xml_resource_limit_error(DocxXmlTokenLength)
+      }
+      match source_budget {
+        Some(budget) =>
+          budget.charge_retained_source_chars(
+            attr_end - attr_start + at - value_start,
+          )
+        None => ()
       }
       let attr_name = utf8_slice(part, attr_start, attr_end)
       let raw_value = @utf8.decode(part[value_start:at]) catch {
