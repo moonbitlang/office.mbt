@@ -345,6 +345,32 @@ test "reader order restores orphan merges after ignored physical origins" {
 }
 
 ///|
+test "reader order hides continuations found by merge recomputation" {
+  let hidden_origins = [
+    "<w:del><w:tc><w:tcPr><w:gridSpan w:val=\"2\"/></w:tcPr><w:p><w:r><w:t>deleted</w:t></w:r></w:p></w:tc></w:del>",
+    "<mc:Choice><w:tc><w:tcPr><w:gridSpan w:val=\"2\"/></w:tcPr><w:p><w:r><w:t>ignored</w:t></w:r></w:p></w:tc></mc:Choice>",
+  ]
+  for hidden_origin in hidden_origins {
+    let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><w:body><w:tbl><w:tr>" +
+      hidden_origin +
+      "<w:tc><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>merged away</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>"
+    let projection = scan_reader_order_projection(
+      "word/document.xml",
+      @utf8.encode(source),
+    )
+    assert_eq(
+      provisional_story_text(projection),
+      current_reader_story_text(source),
+    )
+    assert_reader_order_identity_mapping(projection)
+    debug_inspect(
+      projection.paragraphs.map(paragraph => paragraph.reader_text()),
+      content="[\"A\"]",
+    )
+  }
+}
+
+///|
 test "reader order ignores nested row and cell property containers" {
   let rows = [
     "<w:tr><w:tc><w:p><w:r><w:tcPr><w:vMerge/></w:tcPr><w:t>B</w:t></w:r></w:p></w:tc></w:tr>",
@@ -374,10 +400,12 @@ test "reader order ignores nested row and cell property containers" {
 test "reader order flattens inline drawing and object children" {
   let inners = [
     "<w:drawing><w:r><w:t>D</w:t></w:r></w:drawing>", "<w:object><w:ins><w:r><w:t>O</w:t></w:r></w:ins></w:object>",
+    "<w:object><v:shape><w:r><w:t>V</w:t></w:r></v:shape></w:object>", "<w:drawing><v:group><v:rect><w:r><w:t>G</w:t></w:r></v:rect></v:group></w:drawing>",
+    "<w:object><v:roundrect><v:textbox><w:r><w:t>T</w:t></w:r></v:textbox></v:roundrect></w:object>",
   ]
   let projected : Array[String] = []
   for inner in inners {
-    let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:t>A</w:t></w:r>" +
+    let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body><w:p><w:r><w:t>A</w:t></w:r>" +
       inner +
       "<w:r><w:t>B</w:t></w:r></w:p></w:body></w:document>"
     let projection = scan_reader_order_projection(
@@ -391,7 +419,10 @@ test "reader order flattens inline drawing and object children" {
     assert_reader_order_identity_mapping(projection)
     projected.push(projection.paragraphs[0].reader_text())
   }
-  debug_inspect(projected, content="[\"ADB\", \"AOB\"]")
+  debug_inspect(
+    projected,
+    content="[\"ADB\", \"AOB\", \"AVB\", \"AGB\", \"ATB\"]",
+  )
 }
 
 ///|
@@ -532,14 +563,15 @@ test "reader order retains physical coordinates without premature logical interv
 test "reader order budgets bound cumulative visits depth text and contributors" {
   let source =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>A</w:t></w:r></w:p></w:body></w:document>
-  // Exact witnesses: five source identities + two visible projection nodes,
-  // then root/body/p + the pPr lookup + main r/t + textbox discovery r/t =
-  // 15 cumulative visits. Output retains paragraph, p, run, seam, and atom.
+  // Exact witnesses: five source identities across seven metered full-tree
+  // passes + two visible projection nodes, then root/body/p + the pPr lookup
+  // + main r/t + textbox discovery r/t = 45 cumulative visits. Output retains
+  // paragraph, p, run, seam, and atom.
   let accepted = scan_reader_order_projection(
     "word/document.xml",
     @utf8.encode(source),
     reader_budget=reader_order_budget(
-      max_node_visits=15,
+      max_node_visits=45,
       max_projected_chars=1,
       max_retained_contributors=5,
       max_depth=5,
@@ -549,7 +581,7 @@ test "reader order budgets bound cumulative visits depth text and contributors" 
   assert_reader_order_refuses(
     source,
     reader_order_budget(
-      max_node_visits=14,
+      max_node_visits=44,
       max_projected_chars=1,
       max_retained_contributors=5,
       max_depth=5,
@@ -559,7 +591,7 @@ test "reader order budgets bound cumulative visits depth text and contributors" 
   assert_reader_order_refuses(
     source,
     reader_order_budget(
-      max_node_visits=15,
+      max_node_visits=45,
       max_projected_chars=1,
       max_retained_contributors=5,
       max_depth=4,
@@ -569,7 +601,7 @@ test "reader order budgets bound cumulative visits depth text and contributors" 
   assert_reader_order_refuses(
     source,
     reader_order_budget(
-      max_node_visits=15,
+      max_node_visits=45,
       max_projected_chars=0,
       max_retained_contributors=5,
       max_depth=5,
@@ -579,7 +611,7 @@ test "reader order budgets bound cumulative visits depth text and contributors" 
   assert_reader_order_refuses(
     source,
     reader_order_budget(
-      max_node_visits=15,
+      max_node_visits=45,
       max_projected_chars=1,
       max_retained_contributors=4,
       max_depth=5,

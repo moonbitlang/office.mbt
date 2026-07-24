@@ -251,6 +251,12 @@ fn reader_order_body_output_kind(
 }
 
 ///|
+fn reader_order_is_vml_flattening_container(element : ScannedElement) -> Bool {
+  element.uri == READER_ORDER_VML_URI &&
+  element.local_name is ("roundrect" | "shape" | "textbox" | "group" | "rect")
+}
+
+///|
 fn reader_order_is_body_flattening_container(element : ScannedElement) -> Bool {
   is_transparent_container(element.uri, element.local_name) ||
   (
@@ -259,10 +265,7 @@ fn reader_order_is_body_flattening_container(element : ScannedElement) -> Bool {
     !(element.hyperlink_relationship_id is Some(id) && id != "") &&
     !(element.hyperlink_anchor is Some(anchor) && anchor != "")
   ) ||
-  (
-    element.uri == READER_ORDER_VML_URI &&
-    element.local_name is ("roundrect" | "shape" | "textbox" | "group" | "rect")
-  )
+  reader_order_is_vml_flattening_container(element)
 }
 
 ///|
@@ -390,6 +393,7 @@ fn reader_order_projection_visibility(
   let inside_deleted_revision = Array::make(elements.length(), false)
   let deleted_row_ancestor = Array::make(elements.length(), -1)
   for element in elements {
+    budget.charge_visit(1)
     let parent = element.parent_index
     if parent >= 0 && parent < elements.length() {
       let parent_element = elements[parent]
@@ -410,6 +414,7 @@ fn reader_order_projection_visibility(
   // that point, so source-retaining N0b2 reconstructs those subtrees here.
   let fail_open_table = Array::make(elements.length(), false)
   for table in elements {
+    budget.charge_visit(1)
     if is_wml_uri(table.uri) && table.local_name == "tbl" {
       let rows : Array[(Int, ReaderOrderBodyOutputKind)] = []
       collect_reader_order_body_outputs(
@@ -444,6 +449,7 @@ fn reader_order_projection_visibility(
   // cannot describe that nested table's independent merge semantics.
   let merged_by_vmerge = Array::make(elements.length(), false)
   for table in elements {
+    budget.charge_visit(1)
     if is_wml_uri(table.uri) &&
       table.local_name == "tbl" &&
       !fail_open_table[table.identity] {
@@ -483,6 +489,7 @@ fn reader_order_projection_visibility(
   }
   let merged_cell_ancestor = Array::make(elements.length(), -1)
   for element in elements {
+    budget.charge_visit(1)
     let parent = element.parent_index
     if parent >= 0 && parent < elements.length() {
       merged_cell_ancestor[element.identity] = if merged_by_vmerge[parent] {
@@ -491,12 +498,17 @@ fn reader_order_projection_visibility(
         merged_cell_ancestor[parent]
       }
     }
+    if merged_by_vmerge[element.identity] ||
+      merged_cell_ancestor[element.identity] >= 0 {
+      visible[element.identity] = false
+    }
   }
   // Undo every streaming retraction that the reader-order reconstruction no
   // longer considers merged. This covers malformed fail-open tables and
   // continuations whose apparent origin lived under a BodyReader-ignored
   // wrapper, while leaving deleted/merged ancestor suppression intact.
   for element in elements {
+    budget.charge_visit(1)
     if element.retracted_by_vmerge &&
       !merged_by_vmerge[element.identity] &&
       merged_cell_ancestor[element.identity] < 0 &&
@@ -516,6 +528,7 @@ fn reader_order_projection_visibility(
   // paragraph-extras pass still descends through that physical subtree and
   // emits any textbox content it finds.
   for element in elements {
+    budget.charge_visit(1)
     if is_wml_uri(element.uri) &&
       element.local_name == "txbxContent" &&
       inside_deleted_revision[element.identity] &&
@@ -724,8 +737,7 @@ fn ReaderOrderWalker::walk_structural_element(
       "sdt" | "sdtContent" | "txbxContent" => ()
       _ => ()
     }
-  } else if element.uri == READER_ORDER_VML_URI &&
-    element.local_name is ("roundrect" | "shape" | "textbox" | "group" | "rect") {
+  } else if reader_order_is_vml_flattening_container(element) {
     self.walk_flow_children(identity, depth, from_text_box)
   } else {
     ()
@@ -806,7 +818,14 @@ fn ReaderOrderWalker::walk_inline_element(
     )
   }
   if !is_wml_uri(element.uri) {
-    add(HardBarrier, "", reader_order_element_span(element))
+    if reader_order_is_vml_flattening_container(element) {
+      add(TransparentSeam, "", reader_order_element_span(element))
+      self.walk_inline_children(
+        identity, depth, paragraph, paragraph_source, current_run,
+      )
+    } else {
+      add(HardBarrier, "", reader_order_element_span(element))
+    }
     return
   }
   match element.local_name {
@@ -942,9 +961,7 @@ fn ReaderOrderWalker::walk_pict_extras(
       self.walk_flow_children(child, depth, true)
     } else if is_wml_uri(element.uri) && element.local_name == "pict" {
       self.walk_pict_extras(child, depth)
-    } else if element.uri == READER_ORDER_VML_URI &&
-      element.local_name
-      is ("roundrect" | "shape" | "textbox" | "group" | "rect") {
+    } else if reader_order_is_vml_flattening_container(element) {
       self.walk_pict_extras(child, depth)
     } else if element.uri == MC_URI && element.local_name == "AlternateContent" {
       ()
