@@ -97,6 +97,10 @@ test "text formats require an explicit text placeholder or fourth section" {
   inspect(format_text("Total", "0;@\" suffix\";0"), content="Total")
   inspect(format_text("Total", "0;@\" suffix\""), content="Total suffix")
   inspect(format_text("Total", "0;0;@\" suffix\""), content="Total suffix")
+  inspect(format_text("Total", "0;\\😀@"), content="😀Total")
+  inspect(format_text("Total", "0;_😀@"), content="Total")
+  inspect(format_text("Total", "0;*😀@"), content="Total")
+  inspect(format_text("Total", "0;\"😀\"@"), content="😀Total")
   inspect(
     format_text("Total", "0;[Red]-0;0;\"label: \"@"),
     content="label: Total",

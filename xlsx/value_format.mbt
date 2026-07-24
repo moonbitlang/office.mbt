@@ -428,6 +428,17 @@ fn select_format_section(
 }
 
 ///|
+fn number_format_scalar_width_at(text : String, at : Int) -> Int {
+  if text[at].is_leading_surrogate() &&
+    at + 1 < text.length() &&
+    text[at + 1].is_trailing_surrogate() {
+    2
+  } else {
+    1
+  }
+}
+
+///|
 fn parse_section_metadata(section : String) -> (String, String?, String) {
   let sb = StringBuilder::new()
   let mut in_quote = false
@@ -440,14 +451,16 @@ fn parse_section_metadata(section : String) -> (String, String?, String) {
   while i < len {
     let c = section[i]
     if escape_next {
-      sb.write_view(section[i:i + 1])
+      let width = number_format_scalar_width_at(section, i)
+      sb.write_view(section[i:i + width])
       escape_next = false
-      i = i + 1
+      i = i + width
       continue
     }
     if skip_next {
+      let width = number_format_scalar_width_at(section, i)
       skip_next = false
-      i = i + 1
+      i = i + width
       continue
     }
     match c {
@@ -500,7 +513,12 @@ fn parse_section_metadata(section : String) -> (String, String?, String) {
         } else {
           sb.write_char('[')
         }
-      _ => sb.write_view(section[i:i + 1])
+      _ => {
+        let width = number_format_scalar_width_at(section, i)
+        sb.write_view(section[i:i + width])
+        i = i + width
+        continue
+      }
     }
     i = i + 1
   }
