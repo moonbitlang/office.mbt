@@ -172,15 +172,17 @@ The dependency-ordered small-PR plan for closing the broader agent-relevant
 OfficeCLI gaps now lives in `docs/office-major-parity.md`. Give every proposed
 slice its own issue before implementation and do not fold it into #169. Issue
 #139 remains open until the major ledger is complete. The ledger explicitly
-includes bounded XLSX formula calculation/lint and cache refresh, row/column
-structural edits, preservation-safe cell shifts, unmerge, AutoFilter lifecycle,
-ordinary table/data-validation/conditional-format update and removal,
-row/column page-break lifecycle, workbook core/custom properties, `date1904`
-and calculation settings, active/selected-sheet state, and RTL/zoom/view state;
-preservation-safe existing-DOCX table content and property edits; existing
-section inventory, property updates, insertion, and removal; DOCX field and
-bookmark inventory, authoring, update/removal, and refresh (including
-REF/PAGEREF/NOTEREF authoring);
+includes bounded XLSX formula calculation/lint and cache refresh, worksheet
+tab-color/reorder/clone and freeze/unfreeze lifecycle, full common cell/range
+formatting, row/column dimension/outline/autofit, row/column structural edits,
+preservation-safe cell shifts, unmerge, AutoFilter lifecycle, ordinary
+table/data-validation/conditional-format update and removal, row/column
+page-break lifecycle, workbook core/custom properties, `date1904` and
+calculation settings, active/selected-sheet state, and RTL/zoom/view state;
+preservation-safe existing-DOCX table content, property, row/column, and table
+structural edits; existing style, numbering, header/footer, tab-stop, break,
+and section inventory/mutation/exposure; DOCX field and bookmark inventory,
+authoring, update/removal, and refresh (including REF/PAGEREF/NOTEREF authoring);
 embedded-chart authoring/readback and source-pinned lifecycle; existing
 comment, footnote/endnote, hyperlink, and picture lifecycle; typed core/custom
 document properties; deterministic locale/script-font and RTL defaults plus
@@ -270,12 +272,14 @@ feature PR.
 - PowerPoint/PPTX.
 - MCP, resident mode, and live watch/selection.
 - Plugin and language-SDK wrappers.
-- Formula verification/cache refresh, XLSX row/column structural edits and
-  partial-cell shifts, workbook/date-system/calculation/selection/view state,
-  unmerge/AutoFilter and ordinary table/validation/conditional-format/page-break
-  lifecycle, existing-DOCX table and section editing, DOCX locale/RTL and
-  field/bookmark authoring/update/removal/refresh, embedded charts, fillable
-  Word forms, equations,
+- Formula verification/cache refresh, XLSX worksheet reorder/clone/tab-color,
+  pane, cell/range-formatting, row/column dimension/autofit/outline and
+  structural-edit lifecycle, partial-cell shifts,
+  workbook/date-system/calculation/selection/view state, unmerge/AutoFilter and
+  ordinary table/validation/conditional-format/page-break lifecycle,
+  existing-DOCX table, style, numbering, header/footer, tab/break, and section
+  editing, DOCX locale/RTL and field/bookmark authoring/update/removal/refresh,
+  embedded charts, fillable Word forms, equations,
   watermarks, text boxes, shapes, path-scoped dump, DOCX/XLSX-to-PDF export,
   and richer engine-backed XLSX operations are not part of the initial F1 gate;
   they are explicit later slices in the ledger.
