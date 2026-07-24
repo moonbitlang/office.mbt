@@ -135,6 +135,10 @@ priv struct ScannedElement {
   field_char_type : String?
   symbol_font : String?
   symbol_char : String?
+  break_type : String?
+  bookmark_name : String?
+  hyperlink_relationship_id : String?
+  hyperlink_anchor : String?
   parent_index : Int
   mut first_child_index : Int
   mut next_sibling_index : Int
@@ -143,6 +147,17 @@ priv struct ScannedElement {
   mut content_end : Int
   mut byte_end : Int
   mut text_map : WtContentMap?
+  // Source-retaining consumers need to distinguish reader-semantic
+  // retractions from elements that were never projection nodes. In
+  // particular, BodyReader fails open and keeps every cell when a table has
+  // an unexpected row/cell shape.
+  mut retracted_by_vmerge : Bool
+  mut deleted_table_row : Bool
+  // Retain the reader's first-tcPr cell properties even when an ancestor was
+  // already suppressed. N0b2 needs them to rebuild merge visibility inside a
+  // continuation cell that a malformed outer table makes visible again.
+  mut table_cell_vmerge_continue : Bool
+  mut table_cell_grid_span : Int
 }
 
 ///|
@@ -638,6 +653,12 @@ fn is_transparent_container(uri : String, local_name : String) -> Bool {
 const MC_URI : String = "http://schemas.openxmlformats.org/markup-compatibility/2006"
 
 ///|
+const TRANSITIONAL_OFFICE_RELATIONSHIPS_URI : String = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+
+///|
+const STRICT_OFFICE_RELATIONSHIPS_URI : String = "http://purl.oclc.org/ooxml/officeDocument/relationships"
+
+///|
 /// XML Namespaces binds this prefix implicitly in every document. Keeping it
 /// in the physical-identity table prevents `xml:x` from aliasing unqualified
 /// `x` even when the source correctly omits an explicit declaration.
@@ -1014,15 +1035,13 @@ fn scan_story(
           if frame.is_wml &&
             frame.local_name == "tcPr" &&
             frame.first_properties {
-            match
-              (
-                nearest_frame_by_kind(frames, "tc"),
-                nearest_frame_by_kind(frames, "tbl"),
-              ) {
+            match (frames.last(), nearest_frame_by_kind(frames, "tbl")) {
               (Some(cell), Some(table)) =>
-                if cell.vmerge_continue &&
+                if cell.is_wml &&
+                  cell.local_name == "tc" &&
+                  cell.vmerge_continue &&
                   table.origin_columns.contains(cell.grid_column) {
-                  retract_cell(cell, nodes, markers, work)
+                  retract_cell(cell, elements, nodes, markers, work)
                 }
               _ => ()
             }
@@ -1031,18 +1050,19 @@ fn scan_story(
           if frame.is_wml &&
             frame.local_name == "trPr" &&
             frame.first_properties {
-            match nearest_frame_by_kind(frames, "tr") {
-              Some(row) =>
+            match frames.last() {
+              Some(row) if row.is_wml && row.local_name == "tr" =>
                 if row.row_deleted {
                   retract_row(
                     row,
                     nearest_frame_by_kind(frames, "tbl"),
+                    elements,
                     nodes,
                     markers,
                     work,
                   )
                 }
-              None => ()
+              _ => ()
             }
           }
           // Close bookkeeping at tc close: EVERY kept cell registers as
@@ -1052,6 +1072,11 @@ fn scan_story(
           // by the span (the reader's parse can yield zero or negative
           // spans, mirrored verbatim).
           if frame.is_wml && frame.local_name == "tc" {
+            if frame.element_index >= 0 &&
+              frame.element_index < elements.length() {
+              elements[frame.element_index].table_cell_vmerge_continue = frame.vmerge_continue
+              elements[frame.element_index].table_cell_grid_span = frame.grid_span
+            }
             match
               (
                 nearest_frame_by_kind(frames, "tr"),
@@ -1249,6 +1274,47 @@ fn scan_story(
           } else {
             None
           },
+          break_type: if is_wml_uri(uri) && local_name == "br" {
+            attribute_value(
+              attributes,
+              "type",
+              namespaces,
+              prefer_last=source_budget is Some(_),
+            )
+          } else {
+            None
+          },
+          bookmark_name: if is_wml_uri(uri) && local_name == "bookmarkStart" {
+            attribute_value(
+              attributes,
+              "name",
+              namespaces,
+              prefer_last=source_budget is Some(_),
+            )
+          } else {
+            None
+          },
+          hyperlink_relationship_id: if is_wml_uri(uri) &&
+            local_name == "hyperlink" {
+            relationship_attribute_value(
+              attributes,
+              "id",
+              namespaces,
+              prefer_last=source_budget is Some(_),
+            )
+          } else {
+            None
+          },
+          hyperlink_anchor: if is_wml_uri(uri) && local_name == "hyperlink" {
+            attribute_value(
+              attributes,
+              "anchor",
+              namespaces,
+              prefer_last=source_budget is Some(_),
+            )
+          } else {
+            None
+          },
           parent_index,
           first_child_index: -1,
           next_sibling_index: -1,
@@ -1265,6 +1331,10 @@ fn scan_story(
             -1
           },
           text_map: None,
+          retracted_by_vmerge: false,
+          deleted_table_row: false,
+          table_cell_vmerge_continue: false,
+          table_cell_grid_span: 1,
         })
         match frames.last() {
           Some(parent) => {
@@ -1445,9 +1515,10 @@ fn scan_story(
       // are vacuously empty and its close-decision is a no-op.
       if is_wml_uri(uri) && local_name is ("tcPr" | "trPr") {
         let owner_kind = if local_name == "tcPr" { "tc" } else { "tr" }
-        match nearest_frame_by_kind(frames, owner_kind) {
-          Some(owner) => owner.properties_seen = true
-          None => ()
+        match frames.last() {
+          Some(owner) if owner.is_wml && owner.local_name == owner_kind =>
+            owner.properties_seen = true
+          _ => ()
         }
       }
       // A self-closing <w:tc/> is a normal span-1 cell to the reader:
@@ -1545,15 +1616,15 @@ fn scan_story(
       let first_properties = if is_wml_uri(uri) &&
         local_name is ("tcPr" | "trPr") {
         let owner_kind = if local_name == "tcPr" { "tc" } else { "tr" }
-        match nearest_frame_by_kind(frames, owner_kind) {
-          Some(owner) =>
+        match frames.last() {
+          Some(owner) if owner.is_wml && owner.local_name == owner_kind =>
             if owner.properties_seen {
               false
             } else {
               owner.properties_seen = true
               true
             }
-          None => false
+          _ => false
         }
       } else {
         false
@@ -1758,10 +1829,14 @@ fn purge_subtree(
 fn retract_row(
   row : ScanFrame,
   table : ScanFrame?,
+  elements : Array[ScannedElement],
   nodes : Array[ScannedNode],
   markers : Array[ScannedMarker],
   work : AnnotationScanWork,
 ) -> Unit {
+  if row.element_index >= 0 && row.element_index < elements.length() {
+    elements[row.element_index].deleted_table_row = true
+  }
   match (row.projection_path, row.counter_owner) {
     (Some(_), Some(counters)) => {
       let current = counters.get_or_default("tr", 0)
@@ -1792,6 +1867,7 @@ fn retract_row(
 /// ordinal and suppresses the whole subtree.
 fn retract_cell(
   cell : ScanFrame,
+  elements : Array[ScannedElement],
   nodes : Array[ScannedNode],
   markers : Array[ScannedMarker],
   work : AnnotationScanWork,
@@ -1805,6 +1881,9 @@ fn retract_cell(
       cell.projection_path = None
       cell.counter_owner = None
       cell.suppressed = true
+      if cell.element_index >= 0 && cell.element_index < elements.length() {
+        elements[cell.element_index].retracted_by_vmerge = true
+      }
       purge_subtree(cell, nodes, markers, work)
     }
     _ => ()
@@ -2093,8 +2172,8 @@ fn bytes_range_has_ascii_suffix(
 
 ///|
 /// Filters before materialization. Namespace declarations are needed to
-/// resolve names; all other scanner consumers request only qualified WML
-/// `id`, `type`, or `val` attributes.
+/// resolve names; source-retaining reader projection additionally needs the
+/// few attributes that make BodyReader emit zero versus one logical element.
 fn annotation_attribute_is_relevant(
   part : BytesView,
   start : Int,
@@ -2111,7 +2190,9 @@ fn annotation_attribute_is_relevant(
     (
       bytes_range_has_ascii_suffix(part, start, end, ":fldCharType") ||
       bytes_range_has_ascii_suffix(part, start, end, ":font") ||
-      bytes_range_has_ascii_suffix(part, start, end, ":char")
+      bytes_range_has_ascii_suffix(part, start, end, ":char") ||
+      bytes_range_has_ascii_suffix(part, start, end, ":name") ||
+      bytes_range_has_ascii_suffix(part, start, end, ":anchor")
     )
   )
 }
@@ -2175,6 +2256,42 @@ fn attribute_value(
       }
       // Unprefixed attributes are in NO namespace (default xmlns does not
       // apply to attributes) — they never match a w: attribute.
+      None => ()
+    }
+  }
+  matched
+}
+
+///|
+fn relationship_attribute_value(
+  attributes : Array[(String, String)],
+  local_name : String,
+  namespaces : StableStringMap[Array[String]],
+  prefer_last? : Bool = false,
+) -> String? {
+  let mut matched : String? = None
+  for pair in attributes {
+    let (name, value) = pair
+    match name.find(":") {
+      Some(colon) => {
+        let prefix = name[0:colon].to_owned()
+        let attr_local = name[colon + 1:].to_owned()
+        if attr_local == local_name {
+          match namespaces.get(prefix) {
+            Some(stack) if stack.length() > 0 => {
+              let uri = stack[stack.length() - 1]
+              if uri == TRANSITIONAL_OFFICE_RELATIONSHIPS_URI ||
+                uri == STRICT_OFFICE_RELATIONSHIPS_URI {
+                if !prefer_last {
+                  return Some(value)
+                }
+                matched = Some(value)
+              }
+            }
+            _ => ()
+          }
+        }
+      }
       None => ()
     }
   }
