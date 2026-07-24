@@ -268,6 +268,12 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
             capability_field(
               "records", "array", true, "truthful implemented formats, commands, and fields",
             ),
+            capability_field(
+              "format", "enum(docx|xlsx)", false, "normalized format filter when requested",
+            ),
+            capability_field(
+              "operation", "string", false, "normalized operation filter when requested",
+            ),
           ],
           constraints: ["json-data-schema=office.capabilities/2"],
           actions: [],
@@ -296,8 +302,40 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
               "kind", "enum(format|command)", true, "capability record kind",
             ),
             capability_field("name", "string", true, "capability name"),
+            capability_field(
+              "aliases", "array(string)", true, "accepted aliases in stable order",
+            ),
+            capability_field(
+              "description", "string", false, "format record description",
+            ),
+            capability_field(
+              "selector", "object{schema,root,status,examples,description}", false,
+              "format record selector contract",
+            ),
+            capability_field(
+              "summary", "string", false, "command record summary",
+            ),
+            capability_field("usage", "string", false, "command record usage"),
+            capability_field(
+              "formats", "array(string)", false, "command record formats",
+            ),
+            capability_field(
+              "inputs", "array(capability-field)", false, "command record inputs",
+            ),
+            capability_field(
+              "outputs", "array(capability-field)", false, "command record outputs",
+            ),
+            capability_field(
+              "output_modes", "array(string)", false, "command record output modes",
+            ),
+            capability_field(
+              "variants", "array(capability-variant)", false, "command record variants",
+            ),
           ],
-          constraints: ["one-self-contained-record-per-line"],
+          constraints: [
+            "one-self-contained-record-per-line", "kind=format requires(description,selector) and forbids(summary,usage,formats,inputs,outputs,output_modes,variants)",
+            "kind=command requires(summary,usage,formats,inputs,outputs,output_modes,variants) and forbids(description,selector)",
+          ],
           actions: [],
           output_modes: ["jsonl"],
         },

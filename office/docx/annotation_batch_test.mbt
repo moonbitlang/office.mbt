@@ -138,6 +138,24 @@ test "annotation batch parser refusals" {
     "{\"op\": \"comment_add\", \"anchor\": {\"at\": \"/docx/body/tbl[1]/tr[1]\"}, \"author\": \"A\", \"body\": [\"x\"]}]}",
     "single body paragraph",
   )
+  // annotation anchors require the selector parser's canonical rendering and
+  // expose their tighter owner-defined ordinal ceiling.
+  expect(
+    "{\"schema\": \"docx.annotation-batch/1\", \"ops\": [" +
+    "{\"op\": \"comment_add\", \"anchor\": {\"at\": \"/docx/body/p[01]\"}, \"author\": \"A\", \"body\": [\"x\"]}]}",
+    "canonical selector spelling",
+  )
+  ignore(
+    @docx.parse_annotation_batch(
+      "{\"schema\": \"docx.annotation-batch/1\", \"ops\": [" +
+      "{\"op\": \"comment_add\", \"anchor\": {\"at\": \"/docx/body/p[9999999]\"}, \"author\": \"A\", \"body\": [\"x\"]}]}",
+    ),
+  )
+  expect(
+    "{\"schema\": \"docx.annotation-batch/1\", \"ops\": [" +
+    "{\"op\": \"comment_add\", \"anchor\": {\"at\": \"/docx/body/p[10000000]\"}, \"author\": \"A\", \"body\": [\"x\"]}]}",
+    "paragraph index is out of range",
+  )
   // empty body
   expect(
     "{\"schema\": \"docx.annotation-batch/1\", \"ops\": [" +

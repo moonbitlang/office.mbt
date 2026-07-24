@@ -23,7 +23,7 @@ test "input contract inventory is stable, ordered, and versioned" {
     fields.get("fingerprint"),
     Some(
       Json::string(
-        "sha256:547a19834be0182ba4abd8268c535a784c351268908ba83490888018719506fd",
+        "sha256:2a8eda3cef39377039b7df984e520727decdd8dd69cee4be15e76e483724d432",
       ),
     ),
   )
@@ -95,6 +95,10 @@ test "operation inventories come from their production parser owners" {
     Some(Json::number(@office_docx.MAX_COMMENT_FRAGMENT_BYTES.to_double())),
   )
   assert_eq(
+    annotation_limits.get("max_annotation_anchor_ordinal"),
+    Some(Json::number(@office_docx.MAX_ANNOTATION_ANCHOR_ORDINAL.to_double())),
+  )
+  assert_eq(
     template_limits.get("max_docx_path_ordinal_digits"),
     Some(Json::number(@template.MAX_TEMPLATE_PATH_ORDINAL_DIGITS.to_double())),
   )
@@ -120,6 +124,9 @@ test "format-dependent template regions and XML strings are exact" {
     assert_true(contract.contains("including tab, CR, and LF, are forbidden"))
   }
   assert_true(annotation.contains("max_comment_fragment_bytes"))
+  assert_true(annotation.contains("complete serialized <w:comment> fragment"))
+  assert_true(annotation.contains("max_annotation_anchor_ordinal"))
+  assert_true(annotation.contains("no-leading-zero"))
 }
 
 ///|
