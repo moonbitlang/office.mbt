@@ -172,16 +172,19 @@ OfficeCLI gaps now lives in `docs/office-major-parity.md`. Give every proposed
 slice its own issue before implementation and do not fold it into #169. Issue
 #139 remains open until the major ledger is complete. The ledger explicitly
 includes bounded XLSX formula calculation/lint and cache refresh, row/column
-structural edits, unmerge, AutoFilter lifecycle, ordinary table/data-validation/
-conditional-format update and removal, and row/column page-break lifecycle;
+structural edits, preservation-safe cell shifts, unmerge, AutoFilter lifecycle,
+ordinary table/data-validation/conditional-format update and removal,
+row/column page-break lifecycle, workbook core/custom properties, `date1904`
+and calculation settings, active/selected-sheet state, and RTL/zoom/view state;
 preservation-safe existing-DOCX table content and property edits; DOCX field
 inventory, authoring, and refresh (including REF/PAGEREF/NOTEREF authoring);
 embedded-chart authoring/readback and source-pinned lifecycle; existing
 comment, footnote/endnote, hyperlink, and picture lifecycle; typed core/custom
-document properties; tab stops and page/column breaks; equations, watermarks,
-drawing text boxes, and shapes; both SDT and legacy checkbox forms;
+document properties; deterministic locale/script-font and RTL defaults plus
+language/direction authoring; tab stops and page/column breaks; equations,
+watermarks, drawing text boxes, and shapes; both SDT and legacy checkbox forms;
 CSV/TSV file-or-stdin import with start-cell/inference/header behavior;
-path-scoped dump; and DOCX-to-PDF parity. XLSX engine hardening can proceed
+path-scoped dump; and DOCX/XLSX-to-PDF parity. XLSX engine hardening can proceed
 beside the versioned registry/common-receipt work; only each feature's `office`
 exposure depends on both layers.
 
@@ -264,13 +267,14 @@ feature PR.
 - PowerPoint/PPTX.
 - MCP, resident mode, and live watch/selection.
 - Plugin and language-SDK wrappers.
-- Formula verification/cache refresh, XLSX row/column structural edits,
+- Formula verification/cache refresh, XLSX row/column structural edits and
+  partial-cell shifts, workbook/date-system/calculation/selection/view state,
   unmerge/AutoFilter and ordinary table/validation/conditional-format/page-break
-  lifecycle, existing-DOCX table editing, DOCX field authoring/refresh, embedded
-  charts, fillable Word forms, equations, watermarks, text boxes, shapes,
-  path-scoped dump, DOCX-to-PDF export, and richer engine-backed XLSX operations
-  are not part of the initial F1 gate; they are explicit later slices in the
-  ledger.
+  lifecycle, existing-DOCX table editing, DOCX locale/RTL and field
+  authoring/refresh, embedded charts, fillable Word forms, equations,
+  watermarks, text boxes, shapes, path-scoped dump, DOCX/XLSX-to-PDF export,
+  and richer engine-backed XLSX operations are not part of the initial F1 gate;
+  they are explicit later slices in the ledger.
 - Word-identical portable DOCX pagination remains a differentiator beyond basic
   backend-provenance PDF export. OLE, diagrams, and other low-frequency
   long-tail Office features still require demonstrated workflow demand and a
