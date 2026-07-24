@@ -194,9 +194,14 @@ preservation-safe cell shifts, cascade-safe worksheet rename, unmerge,
    AutoFilter lifecycle, stable chart enumerate/create/update/remove with
    relationship cleanup, array-formula add/set/readback, ordinary
 table/data-validation/conditional-format update and removal, row/column
-page-break lifecycle, workbook core/custom properties, `date1904` conversion,
-`dateCompatibility`, calculation settings, remaining `workbookPr` readback and
-object-display/privacy state, explicit workbook lock/password protection,
+page-break lifecycle, workbook core properties (`title`, `author`/`creator`,
+`subject`, `description`, `keywords`, `category`, `lastModifiedBy`, and
+`revisionNumber`) plus read-only `created`/`modified` and custom `string`,
+`bool`, signed-32-bit integer, finite-double, or UTC-date values, with
+save-managed fields excluded from typed semantic replay;
+`date1904` conversion, `dateCompatibility`, calculation settings, remaining
+`workbookPr` readback and object-display/privacy state, explicit workbook
+lock/password protection,
 `activeTab`/`firstSheet` state, and RTL/zoom/view state;
    preservation-safe existing-DOCX table content, separately reviewable complete
    common table/row/cell-property changes (including style/grid widths/banding,
@@ -215,8 +220,11 @@ metadata, time/lifecycle, statistics, section, SEQ, STYLEREF, DOCPROPERTY, and I
    families, source-pinned existing add/update/removal, and refresh;
    embedded-chart authoring/readback and source-pinned add/update/delete
    lifecycle; existing comment, footnote/endnote, hyperlink, and picture
-   add/update/remove lifecycle; typed core/custom
-document properties; deterministic locale/script-font and RTL defaults plus
+   add/update/remove lifecycle; DOCX core properties `title`, `author`/`creator`,
+`subject`, `description`, `keywords`, `category`, `lastModifiedBy`, and
+`revisionNumber`, read-only `created`/`modified`, and the same five custom value
+kinds, with save-managed replay exclusions; deterministic locale/script-font
+and RTL defaults plus
    language/direction authoring; root document defaults plus grid/compatibility/
    CJK/default-tab/hyphenation, trackRevisions/updateFields/recalcFields, mirror/
    gutter/book-fold/privacy/font-embedding settings, and document-root page
