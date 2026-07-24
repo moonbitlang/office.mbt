@@ -95,7 +95,9 @@ aliases.
   transaction SDK and unified CLI slices.
 
 The reference OfficeCLI checkout remains `.repos/OfficeCLI` in the primary
-repository working tree.
+repository working tree. This handoff and the major ledger were audited against
+commit `b8669389dbe1f8a5fd0927a51b5ccf91b1dfe3e6`; re-audit and update that pin
+before changing the parity denominator or declaring the ledger complete.
 
 ## What is complete on current `main`
 
@@ -169,10 +171,13 @@ slice its own issue before implementation and do not fold it into #169. Issue
 includes bounded XLSX formula calculation/lint and cache refresh, row/column
 structural edits, unmerge, and AutoFilter lifecycle; preservation-safe
 existing-DOCX table content and property edits; DOCX field inventory, authoring,
-and refresh; embedded-chart authoring/readback/lifecycle; both SDT and legacy
-checkbox forms; path-scoped dump; and DOCX-to-PDF parity. XLSX engine hardening
-can proceed beside the versioned registry/common-receipt work; only each
-feature's `office` exposure depends on both layers.
+and refresh (including REF/PAGEREF/NOTEREF authoring); embedded-chart
+authoring/readback and source-pinned lifecycle; existing hyperlink and picture
+lifecycle; tab stops and page/column breaks; both SDT and legacy checkbox forms;
+CSV/TSV file-or-stdin import with start-cell/inference/header behavior;
+path-scoped dump; and DOCX-to-PDF parity. XLSX engine hardening can proceed
+beside the versioned registry/common-receipt work; only each feature's `office`
+exposure depends on both layers.
 
 Architecture work that can proceed independently, but must stay in its own PR:
 
