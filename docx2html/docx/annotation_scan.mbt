@@ -304,8 +304,10 @@ fn nonnegative_decimal_digits(value : Int) -> Int {
 
 ///|
 fn canonical_physical_name_chars(uri : String, local_name : String) -> Int {
-  if is_wml_uri(uri) || uri == MC_URI {
+  if is_wml_uri(uri) {
     2 + local_name.length()
+  } else if uri == MC_URI {
+    3 + local_name.length()
   } else if uri == "" {
     local_name.length()
   } else {
@@ -905,7 +907,13 @@ fn scan_story(
       continue
     }
     if index + 1 >= length {
-      break
+      match source_budget {
+        Some(_) =>
+          raise Unsupported(
+            message="the projection source scanner found an unterminated markup opener",
+          )
+        None => break
+      }
     }
     let next = part[index + 1]
     if next == b'?' {

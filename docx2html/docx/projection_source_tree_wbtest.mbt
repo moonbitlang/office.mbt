@@ -389,6 +389,40 @@ test "projection source attribute and text limits are cumulative and exact" {
     "DocxXmlMaterializedCharacters",
   )
 
+  // Root QName + namespace declaration + child QName + canonical `mc:` key.
+  // The rendered prefix is three characters, so the exact boundary must
+  // include all three rather than sharing WML's two-character `w:` charge.
+  let mc_uri = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+  let mc_child = "<r xmlns:m=\"" + mc_uri + "\"><m:Fallback/></r>"
+  let mc_exact = "r".length() +
+    "xmlns:m".length() +
+    mc_uri.length() +
+    "m:Fallback".length() +
+    "mc:Fallback".length()
+  ignore(
+    scan_projection_source_tree(
+      @utf8.encode(mc_child),
+      budget=projection_source_budget(
+        max_elements=2,
+        max_attribute_chars=mc_exact,
+        max_depth=2,
+        max_text_bytes=0,
+        max_text_tokens=0,
+      ),
+    ),
+  )
+  assert_projection_source_refuses(
+    mc_child,
+    projection_source_budget(
+      max_elements=2,
+      max_attribute_chars=mc_exact - 1,
+      max_depth=2,
+      max_text_bytes=0,
+      max_text_tokens=0,
+    ),
+    "DocxXmlMaterializedCharacters",
+  )
+
   let source =
     #|<w:t xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">A&amp;😀</w:t>
   ignore(
@@ -492,12 +526,16 @@ test "projection source mode fails closed on ambiguous physical structure" {
       ("<root/ junk=\"x\">", "malformed self-closing-tag content"),
       ("<root bad></root>", "valueless attribute"),
       ("<root></ root>", "whitespace after a closing-tag opener"),
+      ("<root/><", "unterminated markup opener"),
     ] {
     assert_projection_source_refuses(case.0, projection_source_budget(), case.1)
   }
   // These inputs remain accepted by the legacy non-retaining scan. N0b1's
   // strictness is confined to the physical-identity mode.
-  for source in ["<root/ junk=\"x\">", "<root bad></root>", "<root></ root>"] {
+  for
+    source in [
+      "<root/ junk=\"x\">", "<root bad></root>", "<root></ root>", "<root/><",
+    ] {
     assert_true(scan_story(@utf8.encode(source)).root() is Some(_))
   }
   let multiple =
