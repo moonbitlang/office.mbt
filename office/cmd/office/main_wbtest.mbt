@@ -47,6 +47,24 @@ test "raw generated help exposes only the bounded operation family" {
 }
 
 ///|
+test "template help publishes the placeholder grammar and format examples" {
+  guard @lib.find_capability_command("template") is Some(template) else {
+    fail("expected template capability")
+  }
+  let human = render_command(template)
+  let json = data_for_query(Operation(None, template)).stringify()
+  for
+    expected in [
+      "{{key}}", "[A-Za-z_][A-Za-z0-9_.-]{0,63}", "\\{{ emits a literal {{", "XLSX cell `Invoice for {{customer}}`",
+      "DOCX text `Prepared for {{customer}}`",
+    ] {
+    assert_true(human.contains(expected))
+    assert_true(json.contains(expected))
+  }
+  assert_true(render_overview(true).contains("{{key}}"))
+}
+
+///|
 test "bounded diagnostics do not amplify attacker-controlled tokens" {
   let long = "x".repeat(1_000)
   let bounded = bounded_text(long, 24)
