@@ -1,6 +1,6 @@
 # OfficeCLI parity handoff
 
-Last updated: 2026-07-23 (Asia/Shanghai)
+Last updated: 2026-07-24 (Asia/Shanghai)
 
 This file is the handoff for the non-PPT OfficeCLI parity effort tracked by
 [#139](https://github.com/moonbitlang/office.mbt/issues/139). PowerPoint and MCP
@@ -70,11 +70,34 @@ aliases.
   values/record disjoint-union rule. The `office.template/1` record gains
   a bounded `regions` array and `regions_total`. Repetition depth beyond
   v1 (nested regions, column repetition) remains out of scope.
+- [PR #216](https://github.com/moonbitlang/office.mbt/pull/216) is merged into
+  `main` and closed [#164](https://github.com/moonbitlang/office.mbt/issues/164).
+  It delivered `office annotate` add/reply/resolve/unresolve operations through
+  the source-pinned DOCX edit session, with strict annotation validation and
+  preservation-safe publication.
+- [PR #217](https://github.com/moonbitlang/office.mbt/pull/217) is merged into
+  `main` and closed [#163](https://github.com/moonbitlang/office.mbt/issues/163).
+  It delivered `office create docx` and `office batch --format docx` with the
+  strict `docx.batch/2` authoring contract, bounded embedded images,
+  transactional publication, and native/Wasm/OpenXML acceptance coverage.
+- [PR #218](https://github.com/moonbitlang/office.mbt/pull/218) is merged into
+  `main`. It added the unified native/Wasm acceptance task matrix. This is the
+  checked-in matrix half of F1, not the uncoached installed-command probe.
+- [PR #225](https://github.com/moonbitlang/office.mbt/pull/225) is merged into
+  `main` and closed [#220](https://github.com/moonbitlang/office.mbt/issues/220).
+  It makes the unified `office` command the repository skill's default
+  entrypoint and reserves legacy commands for explicit capability gaps.
+- [PR #224](https://github.com/moonbitlang/office.mbt/pull/224) is merged into
+  `main` and closed [#219](https://github.com/moonbitlang/office.mbt/issues/219).
+  It is only N0a's exact lexical DOCX token map, ahead of N0b
+  [#221](https://github.com/moonbitlang/office.mbt/issues/221), N0c
+  [#222](https://github.com/moonbitlang/office.mbt/issues/222), and the later
+  transaction SDK and unified CLI slices.
 
-The reference OfficeCLI checkout remains `.repos/officecli` in the primary
+The reference OfficeCLI checkout remains `.repos/OfficeCLI` in the primary
 repository working tree.
 
-## What is complete after #173
+## What is complete on current `main`
 
 The following major-parity foundations are implemented and should not be
 rebuilt in later PRs:
@@ -89,6 +112,13 @@ rebuilt in later PRs:
 - X3 (#173): `office create xlsx`, strict `xlsx.batch/1` parsing, transactional
   XLSX mutation, dry-run/no-replace/overwrite behavior, preservation reports,
   bounded serialization, and OpenXML validation.
+- D3 (#163/#217): `office create docx`, strict fresh-document
+  `docx.batch/2` authoring, and transactional `office batch --format docx`.
+- D4 (#164/#216): preservation-safe DOCX comment add, reply, resolve, and
+  unresolve through `office annotate`.
+- F1 matrix (#218): checked-in native/Wasm task acceptance through the unified
+  command. Installed-help discoverability and the uncoached baseline probe
+  remain open.
 - [#176](https://github.com/moonbitlang/office.mbt/issues/176): tolerant reads
   for Excel-produced overlaps between distinct shared-formula indexes, while
   duplicate masters and out-of-range followers remain rejected per index.
@@ -119,18 +149,30 @@ The detailed contracts live in:
 
 ## Remaining work, in recommended order
 
-Each item below already has an issue. Do not duplicate it. Take one issue per
-PR unless the issue itself is first split into independently useful children.
+The original initial-parity implementation issues and F1a unified entrypoint are
+complete. Close the remaining installed-command baseline acceptance work in two
+small steps:
 
-1. [#163 — D3 fresh DOCX create and batch](https://github.com/moonbitlang/office.mbt/issues/163).
-   Reuse the existing DOCX writer and the X3 transaction/publication pattern;
-   do not copy the XLSX engine or mix annotation mutation into this PR.
-   Header/footer authoring remains separately tracked by #95.
-2. [#164 — D4 DOCX annotation mutations](https://github.com/moonbitlang/office.mbt/issues/164).
-   Build only on the source-pinned D1 edit session and preserve unrelated parts.
-3. [#169 — F1 final non-PPT acceptance](https://github.com/moonbitlang/office.mbt/issues/169).
-   Run only after the child capabilities above have landed. This is the place
-   for the final fresh-agent discoverability exercise and the ultra review.
+1. [#223 — installed-help input contracts](https://github.com/moonbitlang/office.mbt/issues/223).
+   Expose every consumed JSON schema and bounded example through `office help`.
+   This blocks the uncoached F1b probe because an installed agent must not
+   need repository-only schema documentation or hidden coaching.
+2. [#169 — F1b installed-command baseline acceptance](https://github.com/moonbitlang/office.mbt/issues/169).
+   Run the uncoached fresh-agent exercise after #223 lands; require exact-head
+   gates and an `ultra` review, then record the initial baseline result. Passing
+   #169 does not close the broader non-PPT parity epic.
+
+The dependency-ordered small-PR plan for closing the broader agent-relevant
+OfficeCLI gaps now lives in `docs/office-major-parity.md`. Give every proposed
+slice its own issue before implementation and do not fold it into #169. Issue
+#139 remains open until the major ledger is complete. The ledger explicitly
+includes bounded XLSX formula calculation/lint and cache refresh, row/column
+structural edits, unmerge, and AutoFilter lifecycle; preservation-safe
+existing-DOCX table content and property edits; DOCX field inventory, authoring,
+and refresh; embedded-chart authoring/readback/lifecycle; both SDT and legacy
+checkbox forms; path-scoped dump; and DOCX-to-PDF parity. XLSX engine hardening
+can proceed beside the versioned registry/common-receipt work; only each
+feature's `office` exposure depends on both layers.
 
 Architecture work that can proceed independently, but must stay in its own PR:
 
@@ -178,9 +220,10 @@ For every PR:
    target so native, Wasm, and JS can run concurrently without contending on
    `.moon-lock`; do not edit the source while those runs are active.
 4. Ask a brand-new, ephemeral Codex CLI session to review the exact pushed
-   head. Use at least `xhigh`; use `max` routinely for cross-package changes
-   and `ultra` for security architecture or final epic acceptance. Never reuse
-   the implementation session as the approving reviewer.
+   head. Use `xhigh` for normal reviews; escalate to `max` or `ultra` whenever
+   uncertainty remains, with `ultra` required for security architecture and
+   final epic acceptance. Never reuse the implementation session as the
+   approving reviewer.
 5. If the reviewer changes the code, commit the fix and run a new fresh review
    over the changed exact head (or a clearly bounded delta ending at it).
 6. Merge only when exact-head CI and the fresh review are both green. Update or
@@ -205,15 +248,24 @@ is allowed when it has a concrete benefit, but it must be an isolated dependency
 PR with native/Wasm scheduler and filesystem tests; do not combine it with a
 feature PR.
 
-## Deliberate deferrals
+## Deferred from the initial F1 baseline
 
 - PowerPoint/PPTX.
 - MCP, resident mode, and live watch/selection.
 - Plugin and language-SDK wrappers.
-- Pixel-perfect DOCX pagination, tracked-change authoring, OLE, diagrams, and
-  other low-frequency long-tail Office features.
+- Formula verification/cache refresh, XLSX row/column structural edits,
+  unmerge/AutoFilter lifecycle, existing-DOCX table editing, DOCX field
+  authoring/refresh, embedded charts, fillable Word forms, path-scoped dump,
+  tracked-change authoring, DOCX-to-PDF export, and richer engine-backed XLSX
+  operations are not part of the initial F1 gate; they are explicit later
+  slices in the ledger.
+- Word-identical portable DOCX pagination remains a differentiator beyond basic
+  backend-provenance PDF export. OLE, diagrams, and other low-frequency
+  long-tail Office features still require demonstrated workflow demand and a
+  reviewed issue sequence.
 - Backwards-compatibility aliases for unreleased APIs.
 
 Keep `docs/office-major-parity.md`, issue #139, and this handoff synchronized as
-work lands. The final acceptance issue #169, not an informal percentage, is the
-authority for declaring the non-PPT parity effort complete.
+work lands. Issue #169 records only the installed-command baseline. Issue #139
+and completion evidence for every in-scope major-ledger slice are the authority
+for declaring the non-PPT parity effort complete.
