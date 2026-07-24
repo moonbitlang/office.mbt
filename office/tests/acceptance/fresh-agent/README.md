@@ -24,10 +24,10 @@ personal skills, plugins, configuration, and rules cannot coach the probe. Its
 PATH contains only the installed Office commands, a private launcher directory,
 and fixed system directories. That private directory exposes the exact
 `/usr/bin/env` runtime. Private forwarding entries preserve the runtime's
-original invocation path, and the original runtime and launcher directories are
-never added wholesale. The runner resolves paths physically without ambient
-`CDPATH` semantics and rejects overlapping probe/evidence paths before capture
-files are created.
+original invocation path without retaining shell-added environment variables,
+and the original runtime and launcher directories are never added wholesale.
+The runner resolves paths physically without ambient `CDPATH` semantics and
+rejects overlapping probe/evidence paths before capture files are created.
 
 ```sh
 probe="$(mktemp -d "${TMPDIR:-/tmp}/office-f1b-probe.XXXXXX")"

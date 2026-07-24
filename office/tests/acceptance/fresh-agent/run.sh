@@ -153,7 +153,9 @@ write_launcher_forwarder() {
   local forwarder_path="$2"
   local quoted_target
   printf -v quoted_target '%q' "$target_path"
-  printf '#!/bin/bash\nexec %s "$@"\n' "$quoted_target" > "$forwarder_path"
+  printf \
+    '#!/bin/bash\nexec /usr/bin/env -u PWD -u SHLVL -u _ %s "$@"\n' \
+    "$quoted_target" > "$forwarder_path"
   chmod 0700 "$forwarder_path"
 }
 
