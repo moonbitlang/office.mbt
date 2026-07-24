@@ -837,12 +837,14 @@ projection index is tracked by umbrella
 1. N0b1 [#231](https://github.com/moonbitlang/office.mbt/issues/231): bounded
    retained source-tree nodes and identity-bearing physical paths;
 2. N0b2 [#232](https://github.com/moonbitlang/office.mbt/issues/232): exact
-   BodyReader paragraph/run order and logical-to-physical mappings;
+   BodyReader normal-flow/text-box order and deleted-paragraph joins as
+   provisional ordered contributors mapped to physical identities, without
+   assigning final logical paths or UTF-16 intervals;
 3. N0b3 [#233](https://github.com/moonbitlang/office.mbt/issues/233):
    carrier-boundary, story-wide nested complex-field classification; and
 4. N0b4 [#234](https://github.com/moonbitlang/office.mbt/issues/234): SDT and
-   Markup Compatibility transforms plus the complete hostile projection
-   oracle.
+   Markup Compatibility transforms, final logical paragraph/run path and
+   UTF-16 interval assignment, plus the complete hostile projection oracle.
 
 N0c [#222](https://github.com/moonbitlang/office.mbt/issues/222) then proves
 the source-pinned splice/synthesis kernel. No N0b child exposes mutation, and
