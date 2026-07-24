@@ -15,6 +15,8 @@ priv struct ParamSpec {
   kind : String
   required : Bool
   allowed_values : Array[String]
+  accepts_empty_string : Bool
+  default_when_omitted : Json
 }
 
 ///|
@@ -28,23 +30,117 @@ priv struct OpSpec {
 }
 
 ///|
+/// One advertised conditional rule plus executable parser examples. Capability
+/// serialization and the behavioral lockstep wbtest consume the same value, so
+/// changing a rule cannot leave an unexercised prose-only promise behind.
+#warnings("-unused_field")
+priv struct ConstraintSpec {
+  text : String
+  accepted_params : Array[String]
+  rejected_params : Array[String]
+}
+
+///|
+fn constraint(
+  text : String,
+  accepted_params : Array[String],
+  rejected_params : Array[String],
+) -> ConstraintSpec {
+  { text, accepted_params, rejected_params }
+}
+
+///|
 fn req(name : String, kind : String) -> ParamSpec {
-  { name, kind, required: true, allowed_values: [] }
+  {
+    name,
+    kind,
+    required: true,
+    allowed_values: [],
+    accepts_empty_string: kind == "string",
+    default_when_omitted: Json::null(),
+  }
 }
 
 ///|
 fn opt(name : String, kind : String) -> ParamSpec {
-  { name, kind, required: false, allowed_values: [] }
+  let default_when_omitted = match kind {
+    "string" => Json::string("")
+    "bool" => Json::boolean(false)
+    "string_array" => Json::array([])
+    _ => Json::null()
+  }
+  {
+    name,
+    kind,
+    required: false,
+    allowed_values: [],
+    accepts_empty_string: kind == "string",
+    default_when_omitted,
+  }
 }
 
 ///|
 fn req_choice(name : String, allowed_values : Array[String]) -> ParamSpec {
-  { name, kind: "string", required: true, allowed_values }
+  {
+    name,
+    kind: "string",
+    required: true,
+    allowed_values,
+    accepts_empty_string: false,
+    default_when_omitted: Json::null(),
+  }
 }
 
 ///|
 fn opt_choice(name : String, allowed_values : Array[String]) -> ParamSpec {
-  { name, kind: "string", required: false, allowed_values }
+  {
+    name,
+    kind: "string",
+    required: false,
+    allowed_values,
+    accepts_empty_string: true,
+    default_when_omitted: Json::string(""),
+  }
+}
+
+///|
+fn opt_choice_default(
+  name : String,
+  allowed_values : Array[String],
+  default : String,
+) -> ParamSpec {
+  {
+    name,
+    kind: "string",
+    required: false,
+    allowed_values,
+    accepts_empty_string: false,
+    default_when_omitted: Json::string(default),
+  }
+}
+
+///|
+fn opt_bool_default(name : String, default : Bool) -> ParamSpec {
+  {
+    name,
+    kind: "bool",
+    required: false,
+    allowed_values: [],
+    accepts_empty_string: false,
+    default_when_omitted: Json::boolean(default),
+  }
+}
+
+///|
+fn opt_number_default(name : String, default : Int) -> ParamSpec {
+  {
+    name,
+    kind: "number",
+    required: false,
+    allowed_values: [],
+    accepts_empty_string: false,
+    default_when_omitted: Json::number(default.to_double()),
+  }
 }
 
 ///|
@@ -104,7 +200,7 @@ let op_specs : Array[OpSpec] = [
       req("anchor", "cell"),
       req("categories", "series_range"),
       req("values", "series_range"),
-      opt_choice("type", chart_type_values),
+      opt_choice_default("type", chart_type_values, "col"),
       opt("name", "string"),
       opt("title", "string"),
     ],
@@ -116,8 +212,8 @@ let op_specs : Array[OpSpec] = [
       req("range", "table_range"),
       opt("name", "string"),
       opt("style", "string"),
-      opt("header_row", "bool"),
-      opt("row_stripes", "bool"),
+      opt_bool_default("header_row", true),
+      opt_bool_default("row_stripes", true),
       opt("first_column", "bool"),
       opt("last_column", "bool"),
       opt("column_stripes", "bool"),
@@ -134,7 +230,7 @@ let op_specs : Array[OpSpec] = [
       opt("formula2", "string"),
       opt("values", "string_array"),
       opt("source", "string"),
-      opt("allow_blank", "bool"),
+      opt_bool_default("allow_blank", true),
       opt("input_title", "string"),
       opt("input_message", "string"),
       opt("error_title", "string"),
@@ -156,7 +252,7 @@ let op_specs : Array[OpSpec] = [
       req("sheet", "string"),
       req_choice("action", row_action_values),
       req("at", "number"),
-      opt("count", "number"),
+      opt_number_default("count", 1),
       opt("height", "number"),
     ],
   },
@@ -166,7 +262,7 @@ let op_specs : Array[OpSpec] = [
       req("sheet", "string"),
       req_choice("action", column_action_values),
       req("at", "column"),
-      opt("count", "number"),
+      opt_number_default("count", 1),
     ],
   },
   {
@@ -238,6 +334,220 @@ fn op_param_names(op : String) -> Array[String] {
 }
 
 ///|
+/// Discriminator-dependent grammar enforced by `validate_parsed_op_contract`.
+/// Each rule carries accepted and rejected parser examples, exercised by the
+/// wbtest rather than being a snapshot-only restatement of production behavior.
+fn op_constraint_specs(op : String) -> Array[ConstraintSpec] {
+  match op {
+    "style" =>
+      [
+        constraint(
+          "border_color, when nonempty, is exactly 6 hex RGB digits with an optional leading '#'",
+          ["{\"sheet\":\"S\",\"range\":\"A1\",\"border_color\":\"#00ffAA\"}"],
+          ["{\"sheet\":\"S\",\"range\":\"A1\",\"border_color\":\"red\"}"],
+        ),
+      ]
+    "table" =>
+      [
+        constraint(
+          "range must not be one row on grid row 1048576",
+          ["{\"sheet\":\"S\",\"range\":\"A1048575:B1048575\"}"],
+          ["{\"sheet\":\"S\",\"range\":\"A1048576:B1048576\"}"],
+        ),
+      ]
+    "validate" =>
+      [
+        constraint(
+          "type=list: require nonempty values or source; operator,formula1,formula2 must be empty or omitted; nonempty values take precedence when both values and source are present",
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"list\",\"values\":[\"a\"],\"source\":\"S!A1\"}",
+          ],
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"list\"}", "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"list\",\"source\":\"S!A1\",\"operator\":\"equal\"}",
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"list\",\"source\":\"S!A1\",\"formula1\":\"1\"}",
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"list\",\"source\":\"S!A1\",\"formula2\":\"2\"}",
+          ],
+        ),
+        constraint(
+          "type=list values: no item may contain a comma and the first item must not start with '='",
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"list\",\"values\":[\"a\",\"b\"]}",
+          ],
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"list\",\"values\":[\"a,b\"]}",
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"list\",\"values\":[\"=A1\"]}",
+          ],
+        ),
+        constraint(
+          "type=list values: the comma-joined list is at most 255 UTF-16 code units",
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"list\",\"values\":[\"" +
+            "a".repeat(255) +
+            "\"]}",
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"list\",\"values\":[\"" +
+            "😀".repeat(127) +
+            "a\"]}",
+          ],
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"list\",\"values\":[\"" +
+            "a".repeat(256) +
+            "\"]}",
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"list\",\"values\":[\"" +
+            "😀".repeat(128) +
+            "\"]}",
+          ],
+        ),
+        constraint(
+          "type=custom: require nonempty formula1; operator,formula2,source must be empty or omitted and values must be empty or omitted",
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"custom\",\"formula1\":\"A1>0\"}",
+          ],
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"custom\"}", "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"custom\",\"formula1\":\"A1>0\",\"operator\":\"equal\"}",
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"custom\",\"formula1\":\"A1>0\",\"formula2\":\"2\"}",
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"custom\",\"formula1\":\"A1>0\",\"source\":\"S!A1\"}",
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"custom\",\"formula1\":\"A1>0\",\"values\":[\"a\"]}",
+          ],
+        ),
+        constraint(
+          "type=whole|decimal|date|time|textLength: require operator,formula1; source must be empty or omitted and values must be empty or omitted",
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"whole\",\"operator\":\"greaterThan\",\"formula1\":\"0\"}",
+          ],
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"whole\",\"formula1\":\"0\"}",
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"whole\",\"operator\":\"greaterThan\"}",
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"whole\",\"operator\":\"greaterThan\",\"formula1\":\"0\",\"source\":\"S!A1\"}",
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"whole\",\"operator\":\"greaterThan\",\"formula1\":\"0\",\"values\":[\"1\"]}",
+          ],
+        ),
+        constraint(
+          "operator=between|notBetween: require nonempty formula2; every other comparison operator requires formula2 to be empty or omitted",
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"whole\",\"operator\":\"between\",\"formula1\":\"0\",\"formula2\":\"10\"}",
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"whole\",\"operator\":\"greaterThan\",\"formula1\":\"0\"}",
+          ],
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"whole\",\"operator\":\"between\",\"formula1\":\"0\"}",
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"whole\",\"operator\":\"greaterThan\",\"formula1\":\"0\",\"formula2\":\"10\"}",
+          ],
+        ),
+      ]
+    "sheet" =>
+      [
+        constraint(
+          "action=rename: require nonempty to",
+          ["{\"action\":\"rename\",\"name\":\"S\",\"to\":\"S2\"}"],
+          ["{\"action\":\"rename\",\"name\":\"S\"}"],
+        ),
+        constraint(
+          "action=delete|hide|show|very-hide: forbid nonempty to",
+          ["{\"action\":\"delete\",\"name\":\"S\"}"],
+          ["{\"action\":\"delete\",\"name\":\"S\",\"to\":\"S2\"}"],
+        ),
+      ]
+    "row" =>
+      [
+        constraint(
+          "action=height: require height",
+          ["{\"sheet\":\"S\",\"action\":\"height\",\"at\":1,\"height\":20}"],
+          ["{\"sheet\":\"S\",\"action\":\"height\",\"at\":1}"],
+        ),
+        constraint(
+          "action=hide|show: forbid height",
+          ["{\"sheet\":\"S\",\"action\":\"hide\",\"at\":1}"],
+          ["{\"sheet\":\"S\",\"action\":\"show\",\"at\":1,\"height\":20}"],
+        ),
+      ]
+    "cf" =>
+      [
+        constraint(
+          "type=cell: allow criteria,value,min_value,max_value,fill,font_color,bold,italic,stop_if_true; require criteria and a highlight (fill, font_color, bold=true, or italic=true)",
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"cell\",\"criteria\":\">\",\"value\":\"0\",\"fill\":\"FF0000\"}",
+          ],
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"cell\",\"value\":\"0\",\"fill\":\"FF0000\"}",
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"cell\",\"criteria\":\">\",\"value\":\"0\",\"bold\":false}",
+          ],
+        ),
+        constraint(
+          "type=cell criteria are case-insensitively exactly one of >|>=|<|<=|=|==|!=|<>|between|not between|notbetween; simple comparisons require value and forbid min_value,max_value; between forms require min_value,max_value and forbid value",
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"cell\",\"criteria\":\"BETWEEN\",\"min_value\":\"0\",\"max_value\":\"10\",\"fill\":\"FF0000\"}",
+          ],
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"cell\",\"criteria\":\"contains\",\"value\":\"x\",\"fill\":\"FF0000\"}",
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"cell\",\"criteria\":\"between\",\"min_value\":\"0\",\"fill\":\"FF0000\"}",
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"cell\",\"criteria\":\">\",\"fill\":\"FF0000\"}",
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"cell\",\"criteria\":\">\",\"value\":\"0\",\"min_value\":\"0\",\"fill\":\"FF0000\"}",
+          ],
+        ),
+        constraint(
+          "type=formula: allow formula,fill,font_color,bold,italic,stop_if_true; require formula and a highlight (fill, font_color, bold=true, or italic=true)",
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"formula\",\"formula\":\"A1>0\",\"fill\":\"FF0000\"}",
+          ],
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"formula\",\"fill\":\"FF0000\"}",
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"formula\",\"formula\":\"A1>0\"}",
+          ],
+        ),
+        constraint(
+          "type=2_color_scale: allow min_type,min_value,min_color,max_type,max_value,max_color; require min_color,max_color",
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"2_color_scale\",\"min_color\":\"FF0000\",\"max_color\":\"00FF00\"}",
+          ],
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"2_color_scale\",\"min_color\":\"FF0000\"}",
+          ],
+        ),
+        constraint(
+          "type=3_color_scale: allow min_type,min_value,min_color,mid_type,mid_value,mid_color,max_type,max_value,max_color; require min_color,mid_color,max_color",
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"3_color_scale\",\"min_color\":\"FF0000\",\"mid_color\":\"FFFF00\",\"max_color\":\"00FF00\"}",
+          ],
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"3_color_scale\",\"min_color\":\"FF0000\",\"max_color\":\"00FF00\"}",
+          ],
+        ),
+        constraint(
+          "type=data_bar: allow bar_color,min_type,min_value,max_type,max_value,bar_solid,bar_direction,bar_border_color",
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"data_bar\",\"bar_color\":\"00FF00\",\"bar_solid\":false}",
+          ],
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"data_bar\",\"formula\":\"A1>0\"}",
+          ],
+        ),
+        constraint(
+          "type=icon_set: allow icon_style,reverse_icons; require icon_style",
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"icon_set\",\"icon_style\":\"3Arrows\",\"reverse_icons\":false}",
+          ],
+          ["{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"icon_set\"}"],
+        ),
+        constraint(
+          "parameters not allowed for the selected type are permitted only when string-valued and empty or omitted; disallowed booleans are permitted only when omitted; every nonempty color is exactly 6 hex RGB with an optional leading '#'",
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"data_bar\",\"formula\":\"\",\"bar_color\":\"#00ff00\"}",
+          ],
+          [
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"data_bar\",\"stop_if_true\":false}",
+            "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"data_bar\",\"bar_color\":\"green\"}",
+          ],
+        ),
+      ]
+    _ => []
+  }
+}
+
+///|
+fn op_constraints(op : String) -> Array[String] {
+  op_constraint_specs(op).map(spec => spec.text)
+}
+
+///|
 /// The `xlsx.capabilities/1` JSON payload: the batch schema this build
 /// speaks, its limits, and every op + param it accepts.
 pub fn capabilities() -> Json {
@@ -253,6 +563,8 @@ pub fn capabilities() -> Json {
           "allowed_values": Json::array(
             p.allowed_values.map(value => Json::string(value)),
           ),
+          "accepts_empty_string": Json::boolean(p.accepts_empty_string),
+          "default_when_omitted": p.default_when_omitted,
         }),
       )
     }
@@ -260,6 +572,9 @@ pub fn capabilities() -> Json {
       Json::object({
         "op": Json::string(spec.op),
         "params": Json::array(params),
+        "constraints": Json::array(
+          op_constraints(spec.op).map(rule => Json::string(rule)),
+        ),
       }),
     )
   }
@@ -275,6 +590,9 @@ pub fn capabilities() -> Json {
       "max_row_column_band": Json::number(MAX_ROW_COLUMN_BAND.to_double()),
       "max_row_column_lines": Json::number(
         MAX_TOTAL_ROW_COLUMN_LINES.to_double(),
+      ),
+      "max_inline_validation_list_utf16_units": Json::number(
+        max_inline_validation_list_utf16_units.to_double(),
       ),
     }),
     "ops": Json::array(ops),
