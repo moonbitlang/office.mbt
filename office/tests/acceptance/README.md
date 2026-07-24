@@ -24,3 +24,8 @@ OpenXML SDK validators, fuzz/resource-boundary tests, and a fresh Codex agent
 probe remain independent gates. The fresh agent receives only the installed
 command, `office help all --json`, and a task prompt; its transcript and verdict
 should be attached to the F1 PR rather than encoded as a deterministic test.
+
+The reproducible installed-command probe lives in
+[`fresh-agent/`](fresh-agent/README.md). It builds native and Wasm release
+artifacts from one clean candidate commit, installs them outside the checkout,
+and gives a brand-new agent only those commands and the checked-in task prompt.
