@@ -177,8 +177,9 @@ conditional-format update and removal, and row/column page-break lifecycle;
 preservation-safe existing-DOCX table content and property edits; DOCX field
 inventory, authoring, and refresh (including REF/PAGEREF/NOTEREF authoring);
 embedded-chart authoring/readback and source-pinned lifecycle; existing
-hyperlink and picture lifecycle; tab stops and page/column breaks; equations,
-watermarks, drawing text boxes, and shapes; both SDT and legacy checkbox forms;
+comment, footnote/endnote, hyperlink, and picture lifecycle; typed core/custom
+document properties; tab stops and page/column breaks; equations, watermarks,
+drawing text boxes, and shapes; both SDT and legacy checkbox forms;
 CSV/TSV file-or-stdin import with start-cell/inference/header behavior;
 path-scoped dump; and DOCX-to-PDF parity. XLSX engine hardening can proceed
 beside the versioned registry/common-receipt work; only each feature's `office`

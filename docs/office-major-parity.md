@@ -97,7 +97,7 @@ umbrella rather than a single oversized implementation PR.
 | N1a: transaction SDK | Add transaction-backed, globally preflighted run-scoped `set-text` while preserving every byte outside the declared footprint. | N0c |
 | N1b: unified CLI | Expose N1a as the bounded `office edit set-text` command with deterministic receipts and native/Wasm acceptance. | N1a |
 | N2a: read-only `find` | Emit bounded, path-addressed actionable and restricted hits with stable ordinals, directly from the locator/classification foundation. | N0b4 |
-| N2b: guarded `replace` | Support `--nth`, `--expect`, `--allow-zero`, and identical-pipeline `--dry-run`; prove the foreign-document typo-fix footprint. | N2a |
+| N2b: guarded `replace` | Support `--nth`, `--expect`, `--allow-zero`, and identical-pipeline `--dry-run`; prove the foreign-document typo-fix footprint. | N0c, N1a, N2a |
 | N3a: insert paragraph | Insert one resource-free paragraph before/after a body paragraph using the dedicated strict payload. | N1b |
 | N3b: delete paragraph | Delete one body paragraph only after section, field, range-marker, revision, reference, and comment-anchor checks pass. | N1b |
 | N4: edit-loop capstone | Fresh agent performs find → dry-run → replace with `--expect` → verify, plus set/insert/delete Wasm smoke and per-verb preservation proofs. | N2b, N3a, N3b |
@@ -148,6 +148,18 @@ round-tripping an existing document through the fresh-authoring model.
 | W12: legacy form fields | Author and read back real legacy checkbox fields under Word's name limits without pretending visual blanks are fields. | W5b1, W10 |
 | W13: forms protection | Enforce, inspect, clear, and verify forms-only document protection; allow field edits while refusing protected static-content edits unless an explicit override is supported. | W11b, W11c, W12 |
 | W14: form QA and integration capstone | Integrate W11 SDT controls and W12 legacy fields into one truthful forms inventory; separately cross-check W5b1 MERGEFIELD output without classifying or counting it as a form. A fresh agent creates a protected intake form and verifies aliases/tags, list items, date formats, both checkbox families, editability, and zero simulated underscore fields. | W5b1, W13 |
+| WCM1: existing-comment inventory | Inventory comment ids, body content, author/initials/date, resolution/thread state, and every range/reference anchor with stable source-pinned identities and orphan/unsupported residuals. | D2, D4, N0b4 |
+| WCM2: existing-comment update | Update one WCM1 comment's body or supported metadata atomically while preserving its id, anchors, replies, unrelated comments, and package bytes. | A4, D1, N0c, WCM1 |
+| WCM3: existing-comment deletion | Delete one WCM1 comment with explicit thread policy and complete cross-story range/reference cleanup; refuse ambiguous, shared, malformed, or protected anchors. | A4, D1, N0c, WCM1 |
+| WCM4: comment lifecycle exposure | Extend `office annotate` with typed comment inventory/update/delete, installed help, readback, and exact footprint/cleanup receipts. | A2, WCM2, WCM3 |
+| WN1: existing-note inventory | Inventory existing footnotes/endnotes and every reference with stable part/id/source identity, typed content readback, and plumbing-note/unsupported residuals. | D2, N0b4 |
+| WN2: existing-note update | Replace supported content in one WN1 note through source-pinned surgery while preserving its id, references, unrelated notes, and package bytes. | A4, D1, N0c, WN1 |
+| WN3: existing-note deletion | Delete one WN1 note and its references under explicit orphan/shared-reference rules, without renumbering unrelated note identities. | A4, D1, N0c, WN1 |
+| WN4: note lifecycle exposure | Expose note inventory/update/delete through typed get/query and mutation commands with installed help, readback, and exact footprint/cleanup receipts. | A2, WN2, WN3 |
+| WDP1: document-property inventory | Inventory typed core and custom document properties with stable names, value kinds, package provenance, and residuals for application-derived or unsupported property forms. | D2 |
+| WDP2: core-property lifecycle | Author, update, or clear the proven core-property subset in fresh and existing documents without fabricating application-derived metadata. | A4, D1, D3, WDP1 |
+| WDP3: custom-property lifecycle | Add, update, or remove bounded typed custom properties with case/format-id/pid uniqueness, value validation, and unrelated-property preservation. | A4, D1, D3, WDP1 |
+| WDP4: document-property exposure | Expose WDP1-WDP3 through shared help, create/batch, dump/replay, typed readback, and feature-specific receipts. | A2, R1, WDP2, WDP3 |
 | WH1: existing hyperlink inventory | Inventory external and bookmark hyperlinks with stable source-pinned identity, strict target/anchor readback, and unsupported residuals. | D2, N0b4, W5a |
 | WH2: existing hyperlink lifecycle | Add, update text/target, or remove one WH1 link with strict relationship/anchor validation, atomic failure, and unrelated-byte preservation. | A4, D1, N0c, WH1 |
 | WH3: hyperlink exposure | Expose WH1/WH2 through typed get/query and mutation commands with installed help, validation, readback, and exact footprint receipts. | A2, WH2 |
@@ -230,15 +242,16 @@ defined-name adjustment, merge/unmerge, AutoFilter creation/removal, and several
 sidecar relocations. X6 and X7 therefore begin with audits and hardening of that
 code, not replacement greenfield engines. The axis-specific rows make partial
 coverage and review scope visible. AutoFilter structural relocation belongs
-only to X7d2: until it lands, X6 operations fail closed when an affected filter
-would need relocation.
+only to X7d2a-X7d2e: until the matching integration slice lands, X6 operations
+fail closed when an affected filter would need relocation.
 
 | Slice | Acceptance boundary | Depends on |
 | --- | --- | --- |
 | X5a: bounded row-sort engine | Add a deterministic public workbook sort operation with formula/reference and cancellation tests. | X3 |
 | X5b: row-sort exposure | Expose X5a through the shared registry, dump/replay, capability help, and CLI acceptance. | X4a2, X5a |
 | X5c: CSV/TSV import engine | Add bounded UTF-8 CSV/TSV decoding, delimiter selection, start-cell placement, deterministic type inference, and atomic grid-limit failure behind a typed import API; keep host file/stdin I/O outside the engine. | X3 |
-| X5d: CSV/TSV import exposure | Accept exactly one file or stdin source, select CSV/TSV explicitly or by a deterministic default, expose start-cell and inference controls, and implement `--header` by applying the proven AutoFilter lifecycle plus freeze-header behavior; cover help, validation, CLI acceptance, and replayable resulting workbook state. | X4a2, X5c, X7e1 |
+| X5d1: CSV/TSV base import exposure | Accept exactly one file or stdin source, select CSV/TSV explicitly or by a deterministic default, and expose start-cell and inference controls with help, validation, CLI acceptance, and replayable resulting workbook state. | X4a2, X5c |
+| X5d2: CSV/TSV header enhancement | Add explicit `--header` by applying the proven AutoFilter lifecycle plus freeze-header behavior, without delaying the independently useful base import command. | X5d1, X7e1 |
 | X5e: formula verification engine | Reuse the typed evaluator for bounded one-cell calculation and workbook formula-master scans with cancellation, deterministic findings, and explicit shared/array-slave residuals. | X3 |
 | X5f1: calc/lint read-result schemas | Define and test bounded typed calculation values, lint findings, source/cache provenance, and unsupported/shared/array residuals; distinguish a missing cache from an empty result. | X5e |
 | X5f2: calc/lint exposure | Add read-only `office calc` and `office lint` using X5f1's schemas; these read-only commands do not depend on mutation receipts. | X5f1 |
@@ -283,9 +296,16 @@ would need relocation.
 | X7b: merge/unmerge exposure | Expose merge and unmerge lifecycle through the shared registry, help, dump/replay, and feature-specific receipts. | X4a2, X7a |
 | X7c: AutoFilter criteria/readback | Define a bounded typed criteria grammar and enumerate filter range, per-column criteria, sort/filter state, and unsupported residuals without evaluating hidden rows implicitly. | X3 |
 | X7d1: AutoFilter lifecycle audit and hardening | Audit the existing create/remove path and complete validated create/update/clear with stable identity, cleanup, round-trip fidelity, and atomic failure, excluding structural row/column relocation. | X7c |
-| X7d2: AutoFilter structural relocation | As the sole owner of filter relocation, integrate X7d1 ranges and criteria with row/column insert/delete/move/clone and collision rules, replacing X6's temporary fail-closed behavior. | X6c1, X6c2, X6d1, X6d2, X6e1, X6e2, X6f1, X6f2, X7d1 |
+| X7d2a: AutoFilter relocation kernel | Define and prove the bounded filter-range/criteria relocation kernel, overlap/collision policy, stable identity, and typed residuals independently of any one structural operation. | X7d1 |
+| X7d2b: row insert/delete integration | Integrate X7d2a with row insertion and deletion, replacing the matching fail-closed path and proving round-trip range/criteria results. | X6c1, X6d1, X7d2a |
+| X7d2c: column insert/delete integration | Integrate X7d2a with column insertion and deletion, replacing the matching fail-closed path and proving round-trip range/criteria results. | X6c2, X6d2, X7d2a |
+| X7d2d: row move/clone integration | Integrate X7d2a with row move and clone under explicit source/destination, overlap, and copied-filter identity rules. | X6e1, X6f1, X7d2a |
+| X7d2e: column move/clone integration | Integrate X7d2a with column move and clone under explicit source/destination, overlap, and copied-filter identity rules. | X6e2, X6f2, X7d2a |
 | X7e1: AutoFilter lifecycle exposure | Expose X7c/X7d1 create/update/clear through shared help, batch, dump/replay, and feature-specific receipts. | X4a2, X7d1 |
-| X7e2: AutoFilter relocation exposure | Extend X7e1 receipts and replay with X7d2 structural-relocation results and residuals. | X7d2, X7e1 |
+| X7e2a: row insert/delete relocation exposure | Extend row insert/delete receipts and replay with X7d2b filter-relocation results and residuals. | X6g1, X6g3, X7d2b, X7e1 |
+| X7e2b: column insert/delete relocation exposure | Extend column insert/delete receipts and replay with X7d2c filter-relocation results and residuals. | X6g2, X6g4, X7d2c, X7e1 |
+| X7e2c: row move/clone relocation exposure | Extend row move/clone receipts and replay with X7d2d filter-relocation results and residuals. | X6g5, X6g7, X7d2d, X7e1 |
+| X7e2d: column move/clone relocation exposure | Extend column move/clone receipts and replay with X7d2e filter-relocation results and residuals. | X6g6, X6g8, X7d2e, X7e1 |
 
 ### Path-scoped dump parity
 
@@ -560,6 +580,6 @@ complete command, schema, resource, and SDK contract.
 - MCP and resident mode
 - live browser watch/selection
 - plugins and language SDK wrappers
-- pixel-perfect DOCX pagination
-- tracked-change authoring
-- OLE, diagrams, and other low-frequency long-tail parity
+- Word-identical portable DOCX pagination
+- OLE, SmartArt, diagrams, and other low-frequency features that first require
+  demonstrated workflow demand and a reviewed issue sequence
