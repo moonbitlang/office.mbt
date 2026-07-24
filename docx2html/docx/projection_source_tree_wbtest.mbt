@@ -100,13 +100,9 @@ test "projection source tree retains identity links spans and lexical maps" {
     (mapped.projection, mapped.projection.length(), mapped.tokens.length()),
     content="(\"A&😀\", 4, 3)",
   )
-  guard texts[1].text_map is Some(empty) else {
-    fail("expected a self-closing w:t lexical map")
-  }
-  debug_inspect(
-    (empty.projection, empty.byte_start == empty.byte_end),
-    content="(\"\", true)",
-  )
+  // There is no byte position inside `<w:t/>`; treating the following byte
+  // as an empty text boundary would let later surgery write outside the tag.
+  assert_true(texts[1].text_map is None)
 
   let fields = retained_wml_elements(scan, "fldChar")
   let symbols = retained_wml_elements(scan, "sym")
@@ -132,6 +128,18 @@ test "projection source identity normalizes strict default namespaces" {
   debug_inspect(
     (field.field_char_type, symbol.symbol_font, symbol.symbol_char),
     content="(Some(\"begin\"), Some(\"Symbol\"), Some(\"F041\"))",
+  )
+}
+
+///|
+test "projection source identity uses canonical sibling ordinals across WML dialects" {
+  let source =
+    #|<root xmlns:t="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:s="http://purl.oclc.org/ooxml/wordprocessingml/main"><t:p/><s:p/></root>
+  let scan = scan_projection_source_tree(@utf8.encode(source))
+  let elements = scan.elements()
+  debug_inspect(
+    retained_wml_elements(scan, "p").map(p => p.physical_path(elements)),
+    content="[\"/root[1]/w:p[1]\", \"/root[1]/w:p[2]\"]",
   )
 }
 
@@ -198,7 +206,7 @@ test "projection source attribute and text limits are cumulative and exact" {
       @utf8.encode(no_text),
       budget=projection_source_budget(
         max_elements=1,
-        max_attribute_chars=8,
+        max_attribute_chars=9,
         max_depth=1,
         max_text_bytes=0,
         max_text_tokens=0,
@@ -209,7 +217,7 @@ test "projection source attribute and text limits are cumulative and exact" {
     no_text,
     projection_source_budget(
       max_elements=1,
-      max_attribute_chars=7,
+      max_attribute_chars=8,
       max_depth=1,
       max_text_bytes=0,
       max_text_tokens=0,
@@ -223,7 +231,7 @@ test "projection source attribute and text limits are cumulative and exact" {
       @utf8.encode(two_attributes),
       budget=projection_source_budget(
         max_elements=2,
-        max_attribute_chars=13,
+        max_attribute_chars=15,
         max_depth=2,
         max_text_bytes=0,
         max_text_tokens=0,
@@ -234,8 +242,34 @@ test "projection source attribute and text limits are cumulative and exact" {
     two_attributes,
     projection_source_budget(
       max_elements=2,
-      max_attribute_chars=12,
+      max_attribute_chars=14,
       max_depth=2,
+      max_text_bytes=0,
+      max_text_tokens=0,
+    ),
+    "DocxXmlMaterializedCharacters",
+  )
+
+  let one_tag_two_attributes =
+    #|<a xmlns:x="u" xmlns:y="v"/>
+  ignore(
+    scan_projection_source_tree(
+      @utf8.encode(one_tag_two_attributes),
+      budget=projection_source_budget(
+        max_elements=1,
+        max_attribute_chars=17,
+        max_depth=1,
+        max_text_bytes=0,
+        max_text_tokens=0,
+      ),
+    ),
+  )
+  assert_projection_source_refuses(
+    one_tag_two_attributes,
+    projection_source_budget(
+      max_elements=1,
+      max_attribute_chars=16,
+      max_depth=1,
       max_text_bytes=0,
       max_text_tokens=0,
     ),
