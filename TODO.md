@@ -89,8 +89,11 @@ aliases.
   entrypoint and reserves legacy commands for explicit capability gaps.
 - [PR #224](https://github.com/moonbitlang/office.mbt/pull/224) is merged into
   `main` and closed [#219](https://github.com/moonbitlang/office.mbt/issues/219).
-  It is only N0a's exact lexical DOCX token map, ahead of N0b
-  [#221](https://github.com/moonbitlang/office.mbt/issues/221), N0c
+  It is only N0a's exact lexical DOCX token map, ahead of the four N0b
+  projection foundations tracked by
+  [#221](https://github.com/moonbitlang/office.mbt/issues/221) as
+  [#231](https://github.com/moonbitlang/office.mbt/issues/231) through
+  [#234](https://github.com/moonbitlang/office.mbt/issues/234), N0c
   [#222](https://github.com/moonbitlang/office.mbt/issues/222), and the later
   transaction SDK and unified CLI slices.
 

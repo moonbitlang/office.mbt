@@ -765,7 +765,7 @@ content is an explicit MATCH BARRIER, never silent glue.
   control characters (the same rule as replacement text), so such
   positions are matchable-around, never matchable-through — and the N0
   matrix proves offsets stay correct ACROSS literal control characters.
-- **Logical paragraphs are physical in v1.** The reader merges a
+- **Logical addressing retains physical identity in v1.** The reader merges a
   physical `w:p` whose paragraph MARK is tracked-deleted into the
   following logical paragraph, so one `/body/p[i]` projection can span
   several physical `w:p` nodes. The token map is built per PHYSICAL
@@ -827,7 +827,27 @@ content is an explicit MATCH BARRIER, never silent glue.
   whole-package `assert_preserved` acceptance proofs with per-verb
   footprints.
 
-## N0 — token-map spike (GO/NO-GO gate for the phase)
+## N0 — token-map and surgery foundations (GO/NO-GO gate for the phase)
+
+N0 lands as six review-sized private slices. N0a's exact lexical map is landed
+in [PR #224](https://github.com/moonbitlang/office.mbt/pull/224). The N0b
+projection index is tracked by umbrella
+[#221](https://github.com/moonbitlang/office.mbt/issues/221) and split into:
+
+1. N0b1 [#231](https://github.com/moonbitlang/office.mbt/issues/231): bounded
+   retained source-tree nodes and identity-bearing physical paths;
+2. N0b2 [#232](https://github.com/moonbitlang/office.mbt/issues/232): exact
+   BodyReader paragraph/run order and logical-to-physical mappings;
+3. N0b3 [#233](https://github.com/moonbitlang/office.mbt/issues/233):
+   carrier-boundary, story-wide nested complex-field classification; and
+4. N0b4 [#234](https://github.com/moonbitlang/office.mbt/issues/234): SDT and
+   Markup Compatibility transforms plus the complete hostile projection
+   oracle.
+
+N0c [#222](https://github.com/moonbitlang/office.mbt/issues/222) then proves
+the source-pinned splice/synthesis kernel. No N0b child exposes mutation, and
+each child must be independently useful, testable, and below the normal review
+trigger.
 
 The one new hard primitive: the per-paragraph projection-to-source
 TOKEN MAP (classes, tokens, context kinds, valid split boundaries,
@@ -962,7 +982,8 @@ L0: pub surface only what N1/N2 need.
 
 ## Ordering and gates
 
-N0 → N1 → N2a → N2b; N3a/N3b need only N0 (+ the shared CLI plumbing)
+N0a → N0b1 → N0b2 → N0b3 → N0b4 → N0c → N1 → N2a → N2b;
+N3a/N3b need the complete N0 gate (+ the shared CLI plumbing)
 and may interleave after N1 as review pacing favors. N4 last. Every PR
 through the standing gate: self-adversarial pass, subal review (xhigh
 features / high confirmations) to APPROVE, green nightly CI,
