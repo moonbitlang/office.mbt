@@ -13,6 +13,38 @@ fn current_reader_story_text(source : String) -> String raise DocxError {
 }
 
 ///|
+fn current_reader_story_text_with(
+  source : String,
+  reader : BodyReader,
+) -> String raise DocxError {
+  let root = read_xml_string(source, namespace_map=office_namespace_map())
+  let children = match root.first("w:body") {
+    Some(body) => body.children
+    None => root.children
+  }
+  document(reader.read_children(children)).to_raw_text()
+}
+
+///|
+fn reader_order_projection_with_all_image_outputs(
+  source : String,
+) -> ReaderOrderProjection raise DocxError {
+  let source_tree = scan_projection_source_tree(@utf8.encode(source))
+  let elements = source_tree.elements()
+  let reader_image_outputs = Array::make(elements.length(), false)
+  for element in elements {
+    if reader_order_is_image_output_element(element) {
+      reader_image_outputs[element.identity] = true
+    }
+  }
+  project_reader_order_from_source_tree(
+    "word/document.xml",
+    source_tree,
+    reader_image_outputs~,
+  )
+}
+
+///|
 fn ReaderOrderParagraph::reader_text(self : ReaderOrderParagraph) -> String {
   let output = StringBuilder()
   for contribution in self.contributions {
@@ -471,6 +503,166 @@ test "reader order preserves block descendants of flattened inline wrappers" {
       #|]
     ),
   )
+}
+
+///|
+test "reader order traverses block descendants of flow-level runs" {
+  let sources = [
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:r><w:p><w:r><w:t>P</w:t></w:r></w:p></w:r><w:p><w:r><w:t>A</w:t></w:r></w:p></w:body></w:document>
+    ),
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:tbl><w:r><w:p><w:r><w:t>P</w:t></w:r></w:p></w:r><w:tr><w:tc><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>
+    ),
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:v="urn:schemas-microsoft-com:vml"><w:body><w:p><w:r><w:pict><v:shape><v:textbox><w:txbxContent><w:r><w:p><w:r><w:t>X</w:t></w:r></w:p></w:r></w:txbxContent></v:textbox></v:shape></w:pict></w:r></w:p></w:body></w:document>
+    ),
+  ]
+  let projected : Array[Array[String]] = []
+  for source in sources {
+    let projection = scan_reader_order_projection(
+      "word/document.xml",
+      @utf8.encode(source),
+    )
+    assert_eq(
+      provisional_story_text(projection),
+      current_reader_story_text(source),
+    )
+    assert_reader_order_identity_mapping(projection)
+    projected.push(
+      projection.paragraphs.map(paragraph => paragraph.reader_text()),
+    )
+  }
+  debug_inspect(
+    projected,
+    content="[[\"P\", \"A\"], [\"P\", \"A\"], [\"\", \"X\"]]",
+  )
+}
+
+///|
+test "reader order preserves block output inside runs under pict" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:v="urn:schemas-microsoft-com:vml"><w:body><w:p><w:r><w:t>A</w:t><w:pict><w:r><w:p><w:r><w:t>P</w:t></w:r></w:p></w:r></w:pict><w:t>B</w:t></w:r></w:p></w:body></w:document>
+  let projection = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(source),
+  )
+  assert_eq(
+    provisional_story_text(projection),
+    current_reader_story_text(source),
+  )
+  assert_reader_order_identity_mapping(projection)
+  debug_inspect(
+    projection.paragraphs.map(paragraph => paragraph.reader_text()),
+    content="[\"AB\", \"P\"]",
+  )
+}
+
+///|
+test "reader order only traverses story containers from their root context" {
+  let document_source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>A</w:t></w:r></w:p><w:body><w:p><w:r><w:t>body</w:t></w:r></w:p></w:body><w:hdr><w:p><w:r><w:t>header</w:t></w:r></w:p></w:hdr><w:ftr><w:p><w:r><w:t>footer</w:t></w:r></w:p></w:ftr><w:footnotes><w:p><w:r><w:t>notes</w:t></w:r></w:p></w:footnotes><w:endnotes><w:p><w:r><w:t>endnotes</w:t></w:r></w:p></w:endnotes><w:comments><w:p><w:r><w:t>comments</w:t></w:r></w:p></w:comments><w:footnote><w:p><w:r><w:t>footnote</w:t></w:r></w:p></w:footnote><w:endnote><w:p><w:r><w:t>endnote</w:t></w:r></w:p></w:endnote><w:comment><w:p><w:r><w:t>comment</w:t></w:r></w:p></w:comment><w:p><w:r><w:t>B</w:t></w:r></w:p></w:body></w:document>
+  let document_projection = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(document_source),
+  )
+  assert_eq(
+    provisional_story_text(document_projection),
+    current_reader_story_text(document_source),
+  )
+  assert_reader_order_identity_mapping(document_projection)
+  debug_inspect(
+    document_projection.paragraphs.map(paragraph => paragraph.reader_text()),
+    content="[\"A\", \"B\"]",
+  )
+  let footnotes_source =
+    #|<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:type="separator" w:id="-1"><w:p><w:r><w:t>plumbing</w:t></w:r></w:p></w:footnote><w:footnote w:id="1"><w:p><w:r><w:t>N</w:t></w:r></w:p></w:footnote></w:footnotes>
+  let footnotes_projection = scan_reader_order_projection(
+    "word/footnotes.xml",
+    @utf8.encode(footnotes_source),
+  )
+  assert_reader_order_identity_mapping(footnotes_projection)
+  debug_inspect(
+    footnotes_projection.paragraphs.map(paragraph => paragraph.reader_text()),
+    content="[\"N\"]",
+  )
+  let comments_source =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="1"><w:p><w:r><w:t>C</w:t></w:r></w:p></w:comment></w:comments>
+  let comments_projection = scan_reader_order_projection(
+    "word/comments.xml",
+    @utf8.encode(comments_source),
+  )
+  assert_reader_order_identity_mapping(comments_projection)
+  debug_inspect(
+    comments_projection.paragraphs.map(paragraph => paragraph.reader_text()),
+    content="[\"C\"]",
+  )
+}
+
+///|
+test "reader order image outputs preserve malformed table fail-open behavior" {
+  let drawings = [
+    (
+      #|<w:drawing><wp:inline><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rImage"/></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>
+    ),
+    (
+      #|<w:drawing><wp:anchor><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rImage"/></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>
+    ),
+    (
+      #|<w:drawing><v:shape><v:imagedata r:id="rImage"/></v:shape></w:drawing>
+    ),
+    (
+      #|<w:drawing><wp:inline xmlns:wp="http://purl.oclc.org/ooxml/drawingml/wordprocessingDrawing" xmlns:a="http://purl.oclc.org/ooxml/drawingml/main" xmlns:pic="http://purl.oclc.org/ooxml/drawingml/picture" xmlns:r="http://purl.oclc.org/ooxml/officeDocument/relationships"><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rImage"/></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>
+    ),
+  ]
+  let with_images : Array[Array[String]] = []
+  for drawing in drawings {
+    let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val=\"restart\"/></w:tcPr><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc></w:tr>" +
+      drawing +
+      "<w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>B</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>"
+    let without_image = scan_reader_order_projection(
+      "word/document.xml",
+      @utf8.encode(source),
+    )
+    assert_eq(
+      provisional_story_text(without_image),
+      current_reader_story_text(source),
+    )
+    let with_image = reader_order_projection_with_all_image_outputs(source)
+    assert_eq(
+      provisional_story_text(with_image),
+      current_reader_story_text_with(source, drawing_image_reader()),
+    )
+    assert_reader_order_identity_mapping(with_image)
+    with_images.push(
+      with_image.paragraphs.map(paragraph => paragraph.reader_text()),
+    )
+  }
+  debug_inspect(
+    with_images,
+    content=(
+      #|[["A", "B"], ["A", "B"], ["A", "B"], ["A", "B"]]
+    ),
+  )
+}
+
+///|
+test "reader order validates image output context cardinality" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:document>
+  let source_tree = scan_projection_source_tree(@utf8.encode(source))
+  try
+    project_reader_order_from_source_tree("word/document.xml", source_tree, reader_image_outputs=[])
+    |> ignore
+  catch {
+    Unsupported(message~) =>
+      assert_true(
+        message.contains("must match the retained source element count"),
+      )
+    _ => fail("unexpected reader-order image context error")
+  } noraise {
+    _ => fail("expected a reader-order image context cardinality error")
+  }
 }
 
 ///|

@@ -186,6 +186,12 @@ priv struct ReaderOrderInlineState {
 const READER_ORDER_VML_URI : String = "urn:schemas-microsoft-com:vml"
 
 ///|
+const READER_ORDER_TRANSITIONAL_WORDPROCESSING_DRAWING_URI : String = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+
+///|
+const READER_ORDER_STRICT_WORDPROCESSING_DRAWING_URI : String = "http://purl.oclc.org/ooxml/drawingml/wordprocessingDrawing"
+
+///|
 fn reader_order_element_span(element : ScannedElement) -> ReaderOrderSourceSpan {
   { byte_start: element.byte_start, byte_end: element.byte_end }
 }
@@ -211,6 +217,7 @@ priv enum ReaderOrderBodyOutputKind {
 ///|
 fn reader_order_body_output_kind(
   element : ScannedElement,
+  reader_image_outputs : Array[Bool],
 ) -> ReaderOrderBodyOutputKind? {
   if is_wml_uri(element.uri) {
     match element.local_name {
@@ -258,9 +265,26 @@ fn reader_order_body_output_kind(
         }
       _ => None
     }
+  } else if reader_order_is_image_output_element(element) &&
+    element.identity >= 0 &&
+    element.identity < reader_image_outputs.length() &&
+    reader_image_outputs[element.identity] {
+    Some(ReaderOrderOther)
   } else {
     None
   }
+}
+
+///|
+fn reader_order_is_image_output_element(element : ScannedElement) -> Bool {
+  (
+    (
+      element.uri == READER_ORDER_TRANSITIONAL_WORDPROCESSING_DRAWING_URI ||
+      element.uri == READER_ORDER_STRICT_WORDPROCESSING_DRAWING_URI
+    ) &&
+    element.local_name is ("inline" | "anchor")
+  ) ||
+  (element.uri == READER_ORDER_VML_URI && element.local_name == "imagedata")
 }
 
 ///|
@@ -349,6 +373,7 @@ fn collect_reader_order_body_outputs(
   elements : Array[ScannedElement],
   parent_identity : Int,
   output : Array[(Int, ReaderOrderBodyOutputKind)],
+  reader_image_outputs : Array[Bool],
   depth : Int,
   budget : ReaderOrderBudget,
 ) -> Unit raise DocxError {
@@ -371,11 +396,12 @@ fn collect_reader_order_body_outputs(
         elements,
         child,
         output,
+        reader_image_outputs,
         depth + 1,
         budget,
       )
     } else {
-      match reader_order_body_output_kind(element) {
+      match reader_order_body_output_kind(element, reader_image_outputs) {
         Some(kind) => output.push((child, kind))
         None => ()
       }
@@ -388,6 +414,7 @@ fn collect_reader_order_body_outputs(
 fn reader_order_projection_visibility(
   scan : StoryScan,
   budget : ReaderOrderBudget,
+  reader_image_outputs : Array[Bool],
 ) -> Array[Bool] raise DocxError {
   let elements = scan.elements()
   let visible = Array::make(elements.length(), false)
@@ -434,6 +461,7 @@ fn reader_order_projection_visibility(
         elements,
         table.identity,
         rows,
+        reader_image_outputs,
         1,
         budget,
       )
@@ -444,7 +472,7 @@ fn reader_order_projection_visibility(
         } else {
           let cells : Array[(Int, ReaderOrderBodyOutputKind)] = []
           collect_reader_order_body_outputs(
-            elements, row_identity, cells, 2, budget,
+            elements, row_identity, cells, reader_image_outputs, 2, budget,
           )
           for cell in cells {
             let (_, cell_kind) = cell
@@ -472,6 +500,7 @@ fn reader_order_projection_visibility(
         elements,
         table.identity,
         rows,
+        reader_image_outputs,
         1,
         budget,
       )
@@ -481,7 +510,7 @@ fn reader_order_projection_visibility(
           let mut column = 0
           let cells : Array[(Int, ReaderOrderBodyOutputKind)] = []
           collect_reader_order_body_outputs(
-            elements, row_identity, cells, 2, budget,
+            elements, row_identity, cells, reader_image_outputs, 2, budget,
           )
           for cell in cells {
             let (cell_identity, cell_kind) = cell
@@ -673,12 +702,70 @@ fn ReaderOrderWalker::walk(self : ReaderOrderWalker) -> Unit raise DocxError {
     return
   }
   self.budget.charge_visit(1)
-  self.walk_structural_element(
-    self.elements[0].identity,
-    1,
-    false,
-    self.paragraphs,
-  )
+  let root = self.elements[0]
+  if is_wml_uri(root.uri) {
+    match root.local_name {
+      "document" =>
+        match self.first_wml_child(root.identity, "body", 2) {
+          Some(body) => self.walk_flow_children(body, 2, false, self.paragraphs)
+          None => ()
+        }
+      "body" | "hdr" | "ftr" =>
+        self.walk_flow_children(root.identity, 1, false, self.paragraphs)
+      "footnotes" =>
+        self.walk_annotation_story_containers(
+          root.identity,
+          1,
+          "footnote",
+          self.paragraphs,
+        )
+      "endnotes" =>
+        self.walk_annotation_story_containers(
+          root.identity,
+          1,
+          "endnote",
+          self.paragraphs,
+        )
+      "comments" =>
+        self.walk_annotation_story_containers(
+          root.identity,
+          1,
+          "comment",
+          self.paragraphs,
+        )
+      _ =>
+        self.walk_structural_element(root.identity, 1, false, self.paragraphs)
+    }
+  } else {
+    self.walk_structural_element(root.identity, 1, false, self.paragraphs)
+  }
+}
+
+///|
+/// Note/comment parts enumerate their story containers before asking
+/// BodyReader to read each container's children. Keeping this traversal at the
+/// actual story root prevents identically named wrappers in ordinary body flow
+/// from being mistaken for story containers.
+fn ReaderOrderWalker::walk_annotation_story_containers(
+  self : ReaderOrderWalker,
+  parent_identity : Int,
+  parent_depth : Int,
+  container_name : String,
+  output : Array[ReaderOrderParagraph],
+) -> Unit raise DocxError {
+  let mut child = self.elements[parent_identity].first_child_index
+  while child >= 0 {
+    let element = self.elements[child]
+    let depth = parent_depth + 1
+    self.budget.charge_visit(depth)
+    if is_wml_uri(element.uri) && element.local_name == container_name {
+      if self.is_projection_visible(child) {
+        self.walk_flow_children(child, depth, false, output)
+      }
+    }
+    self.walk_annotation_story_containers(child, depth, container_name, output)
+    child = element.next_sibling_index
+  }
 }
 
 ///|
@@ -729,23 +816,17 @@ fn ReaderOrderWalker::walk_structural_element(
   let element = self.elements[identity]
   if is_wml_uri(element.uri) {
     match element.local_name {
-      "document" =>
-        match self.first_wml_child(identity, "body", depth + 1) {
-          Some(body) =>
-            self.walk_flow_children(body, depth + 1, from_text_box, output)
-          None => ()
-        }
-      "body" | "hdr" | "ftr" | "footnotes" | "endnotes" | "comments" =>
-        self.walk_flow_children(identity, depth, from_text_box, output)
-      "footnote" | "endnote" | "comment" =>
-        if self.is_projection_visible(identity) {
-          self.walk_flow_children(identity, depth, from_text_box, output)
-        }
       "p" =>
         if self.is_projection_visible(identity) &&
           !self.is_deleted_paragraph_mark(identity, depth) {
           self.emit_paragraph([{ identity, depth }], from_text_box, output)
           self.walk_paragraph_extras(identity, depth, output)
+        }
+      "r" =>
+        if self.is_projection_visible(identity) {
+          // A malformed-but-tolerated run can occur directly in flow and can
+          // itself carry paragraphs/tables through BodyReader::read_children.
+          self.walk_flow_children(identity, depth, from_text_box, output)
         }
       "tbl" | "tr" | "tc" =>
         if self.is_projection_visible(identity) {
@@ -1123,6 +1204,7 @@ fn ReaderOrderWalker::walk_pict_extras(
     } else if is_wml_uri(element.uri) &&
       element.local_name
       is ("p"
+      | "r"
       | "tbl"
       | "tr"
       | "tc"
@@ -1143,14 +1225,35 @@ fn project_reader_order_from_source_tree(
   source_part : String,
   source_tree : StoryScan,
   budget? : ReaderOrderBudget,
+  reader_image_outputs? : Array[Bool],
 ) -> ReaderOrderProjection raise DocxError {
   let budget = match budget {
     Some(value) => value
     None => reader_order_budget()
   }
+  let elements = source_tree.elements()
+  // Image resolution depends on the part relationships, package entries,
+  // external-file policy, and read_images flag, none of which belongs to the
+  // retained XML tree. Package-aware callers supply one bit per source
+  // identity for wp:inline/wp:anchor/v:imagedata elements that actually
+  // emitted an Image. The source-only test helper defaults to the empty-reader
+  // context, where no image relationship resolves.
+  let reader_image_outputs = match reader_image_outputs {
+    Some(value) => {
+      guard value.length() == elements.length() else {
+        raise Unsupported(
+          message="reader-order image output context must match the retained source element count",
+        )
+      }
+      value
+    }
+    None => Array::make(elements.length(), false)
+  }
   let walker : ReaderOrderWalker = {
-    elements: source_tree.elements(),
-    projection_visible: reader_order_projection_visibility(source_tree, budget),
+    elements,
+    projection_visible: reader_order_projection_visibility(
+      source_tree, budget, reader_image_outputs,
+    ),
     budget,
     paragraphs: [],
   }
@@ -1171,11 +1274,13 @@ fn scan_reader_order_projection(
   part : BytesView,
   source_budget? : ProjectionSourceBudget,
   reader_budget? : ReaderOrderBudget,
+  reader_image_outputs? : Array[Bool],
 ) -> ReaderOrderProjection raise DocxError {
   let source_tree = scan_projection_source_tree(part, budget?=source_budget)
   project_reader_order_from_source_tree(
     source_part,
     source_tree,
     budget?=reader_budget,
+    reader_image_outputs?,
   )
 }
