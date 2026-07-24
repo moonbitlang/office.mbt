@@ -589,7 +589,7 @@ fixes the order and the strategic bets.
 
 - **Phase 3 — targeted edits of existing documents.** The L0 byte-span
   layer generalizes past annotations: set/replace text in an addressed run
-  or paragraph, insert/delete paragraphs at a path, find/replace with
+  or paragraph, insert/delete/move/copy/swap paragraphs at a path, find/replace with
   hit-listing (`office edit`, `office replace --dry-run` listing matches as
   paths). This is OfficeCLI's core `set`/find-replace surface, rebuilt on
   preservation-safe splicing instead of a DOM. Success criterion: an agent
@@ -600,10 +600,12 @@ fixes the order and the strategic bets.
   section properties, header/footer authoring — batch ops for fresh
   documents and surgery for existing ones.
 - **Phase 5 — tracked changes.** Read first (revisions surfaced in
-  outline/get with author/date/type; accept/reject preview), write later
-  (attributed insertions/deletions). OfficeCLI's 1.6k-line revision
-  surface is the map; its bug history is the minefield chart. Hardest and
-  last.
+  outline/get with author/date/type; accept/reject preview), then author
+  attributed insertions/deletions, paired moves, run/paragraph formatting,
+  and section/table/row/cell property changes with complete before snapshots.
+  The phase ends only after installed help/commands, dump/replay where lossless,
+  and native/Wasm/OpenXML QA cover every class. OfficeCLI's 1.6k-line revision
+  surface is the map; its bug history is the minefield chart. Hardest and last.
 - **Continuous**: every phase extends the acceptance probe and the skill;
   the fresh-agent test remains the definition of "agent-friendly"; parity
   claims are only made for surfaces the probe has passed.
@@ -978,6 +980,38 @@ L0: pub surface only what N1/N2 need.
   DOES inherit the Phase-2 annotation-integrity gates (it can affect
   anchors). Docs land in this PR.
 
+## N3c — `office edit move-paragraph`
+
+- `office edit move-paragraph <in> <out> --at /body/p[i]
+  (--before|--after) /body/{p|tbl}[j]` moves one direct body paragraph to a
+  source-pinned body-block boundary. Preflight the complete source and
+  destination before mutation; refuse overlap, `sectPr`, revisions, field
+  regions, cross-boundary paired markers, note/comment references, and any
+  annotation-integrity violation under N3b's global rules. The receipt names
+  both snapshot identities and the exact two affected byte intervals; all
+  intervening and package-external bytes are preservation witnesses.
+
+## N3d — `office edit copy-paragraph`
+
+- `office edit copy-paragraph <in> <out> --at /body/p[i]
+  (--before|--after) /body/{p|tbl}[j]` clones one direct body paragraph only
+  when its content is dependency-closed in the target package. Existing style,
+  numbering, and relationship references must resolve with the right kind;
+  local ids are reminted collision-free; unresolved media, external
+  relationships, crossing markers, revisions, fields, or section properties
+  refuse before allocation. Readback proves the inserted paragraph projection
+  and dependency identities without normalizing the source paragraph.
+
+## N3e — `office edit swap-paragraphs`
+
+- `office edit swap-paragraphs <in> <out> --first /body/p[i]
+  --second /body/p[j]` swaps two distinct direct body paragraphs. Both pass the
+  N3b integrity inventory independently; either `sectPr`, overlap/identity
+  ambiguity, a cross-paragraph paired marker, reference, revision, or comment
+  anchor refuses the whole transaction. The two original byte slices move
+  atomically without rewriting either slice or the content between them, and
+  the receipt reports both before/after paths.
+
 ## N4 — capstone (M-pattern, consolidation only)
 
 - A typo-fix + review-edit recipe in docs/agent-json-schemas.md (find →
@@ -985,7 +1019,7 @@ L0: pub surface only what N1/N2 need.
   extended with the full edit loop and per-verb `assert_preserved`
   footprints; fresh-agent probe re-run (docs + --help only) before N4
   merges; CI wasm smoke: find, replace --expect, set-text,
-  insert/delete. N4 consolidates — every interface contract has
+  insert/delete/move/copy/swap. N4 consolidates — every interface contract has
   already shipped with its own PR.
 
 ## Ordering and gates
@@ -993,8 +1027,10 @@ L0: pub surface only what N1/N2 need.
 N0a → N0b1 → N0b2 → N0b3 → N0b4 → N0c1 → N1;
 N0c1 → N0c2; N0b4 → N2a; N0c2 + N1 + N2a → N2b.
 N3a/N3b need N0c1 and the shared CLI plumbing, but not N0c2's
-partial-replacement primitive, and may interleave after N1 as review pacing
-favors. N4 last. Every PR goes through the standing exact-head gate:
+partial-replacement primitive; N3c follows N3a+N3b, N3d follows N3a+N0c2,
+and N3e follows N3b+N3c. These rows may interleave after N1 only when their
+dependencies are landed. N4 follows N2b and N3a-N3e. Every PR goes through the
+standing exact-head gate:
 self-adversarial pass, a brand-new ephemeral reviewer at `xhigh` or higher to
 APPROVE, every required CI check green on that same pushed commit, review-trail
 comment, and rebase-merge. The N0 GO/NO-GO verdict is
