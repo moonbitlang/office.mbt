@@ -179,9 +179,9 @@ The dependency-ordered small-PR plan for closing the broader agent-relevant
 OfficeCLI gaps now lives in `docs/office-major-parity.md`. Give every proposed
 slice its own issue before implementation and do not fold it into #169. Issue
 #139 remains open until the major ledger is complete. At the pinned baseline the
-full delivery denominator has 382 unique acceptance rows: 371
-parity/QA/export rows plus 11 explicit beyond-parity/delivery rows. That total
-combines 18 landed initial foundations with the 364-row incremental ledger and
+full delivery denominator has 384 unique acceptance rows: 371
+parity/QA/export rows plus 13 explicit beyond-parity/delivery rows. That total
+combines 18 landed initial foundations with the 366-row incremental ledger and
 does not double-count overlapping status rows, using the counting rule in the
 ledger.
 The ledger explicitly
@@ -196,9 +196,10 @@ preservation-safe cell shifts, cascade-safe worksheet rename, unmerge,
 table/data-validation/conditional-format update and removal, row/column
 page-break lifecycle, workbook core properties (`title`, `author`/`creator`,
 `subject`, `description`, `keywords`, `category`, `lastModifiedBy`, and
-`revisionNumber`) plus read-only `created`/`modified` and custom `string`,
-`bool`, signed-32-bit integer, finite-double, or UTC-date values, with
-save-managed fields excluded from typed semantic replay;
+`revisionNumber`) plus read-only `created`/`modified`; mutable extended
+`template`/`manager`/`company` properties plus the eight OfficeCLI-visible
+read-only application/statistics values, with only `lastModifiedBy`, timestamps,
+and application-derived values excluded from typed semantic replay;
 `date1904` conversion, `dateCompatibility`, calculation settings, remaining
 `workbookPr` readback and object-display/privacy state, explicit workbook
 lock/password protection,
@@ -222,8 +223,9 @@ metadata, time/lifecycle, statistics, section, SEQ, STYLEREF, DOCPROPERTY, and I
    lifecycle; existing comment, footnote/endnote, hyperlink, and picture
    add/update/remove lifecycle; DOCX core properties `title`, `author`/`creator`,
 `subject`, `description`, `keywords`, `category`, `lastModifiedBy`, and
-`revisionNumber`, read-only `created`/`modified`, and the same five custom value
-kinds, with save-managed replay exclusions; deterministic locale/script-font
+`revisionNumber`, read-only `created`/`modified`, plus the same three mutable and
+eight read-only extended properties, with only save/application-managed replay
+exclusions; deterministic locale/script-font
 and RTL defaults plus
    language/direction authoring; root document defaults plus grid/compatibility/
    CJK/default-tab/hyphenation, trackRevisions/updateFields/recalcFields, mirror/
@@ -342,8 +344,12 @@ feature PR.
   lifecycle, and existing add/update/remove for notes, pictures, equations,
   watermarks, text boxes, and shapes; path-scoped dump, DOCX/XLSX-to-PDF export,
   and richer engine-backed XLSX operations are not part of the initial F1 gate;
-  they are explicit later slices in the ledger. Whole-worksheet clone and
-  multi-sheet selection state are separately labeled beyond-parity slices.
+  they are explicit later slices in the ledger. Whole-worksheet clone,
+  multi-sheet selection state, and typed DOCX/XLSX user-custom-property
+  inventory/lifecycle for `string`, `bool`, signed-32-bit integer,
+  finite-double, and UTC-date values are separately labeled beyond-parity
+  slices; OfficeCLI has no typed user-custom-property lifecycle, and its
+  lossless Word dump falls back to whole-part raw carriage.
 - Word-identical portable DOCX pagination remains a differentiator beyond basic
   backend-provenance PDF export. OLE, diagrams, and other low-frequency
   long-tail Office features still require demonstrated workflow demand and a
