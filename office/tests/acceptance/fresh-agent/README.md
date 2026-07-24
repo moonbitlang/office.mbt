@@ -23,17 +23,30 @@ an empty user home, and an empty Codex home, so global `AGENTS.md` files,
 personal skills, plugins, configuration, and rules cannot coach the probe. Its
 PATH contains only the installed Office commands, a private launcher directory,
 and fixed system directories. That private directory exposes the exact
-`/usr/bin/env` runtime plus any executable sibling explicitly referenced by a
-shell-wrapper launcher; the original runtime and launcher directories are never
-added wholesale. The runner resolves paths physically without ambient `CDPATH`
-semantics and rejects overlapping probe/evidence paths before capture files are
-created.
+`/usr/bin/env` runtime. Private forwarding entries preserve the runtime's
+original invocation path, and the original runtime and launcher directories are
+never added wholesale. The runner resolves paths physically without ambient
+`CDPATH` semantics and rejects overlapping probe/evidence paths before capture
+files are created.
 
 ```sh
 probe="$(mktemp -d "${TMPDIR:-/tmp}/office-f1b-probe.XXXXXX")"
 evidence="$(mktemp -d "${TMPDIR:-/tmp}/office-f1b-evidence.XXXXXX")"
 auth_json="$HOME/.codex/auth.json"
 bash office/tests/acceptance/fresh-agent/run.sh \
+  "$prefix" "$probe" "$evidence" "$auth_json"
+```
+
+If `codex` is a shell wrapper that invokes bare co-installed helper commands,
+inspect the wrapper and pass their exact basenames as a colon-separated
+`OFFICE_F1B_CODEX_LAUNCHER_HELPERS` allowlist. Path-qualified helpers need no
+entry because the original wrapper path is preserved. Each allowlisted helper
+is validated and forwarded through its original path without exposing unrelated
+siblings:
+
+```sh
+OFFICE_F1B_CODEX_LAUNCHER_HELPERS="codex-helper:codex-real" \
+  bash office/tests/acceptance/fresh-agent/run.sh \
   "$prefix" "$probe" "$evidence" "$auth_json"
 ```
 

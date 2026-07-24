@@ -3,6 +3,7 @@ set -euo pipefail
 
 root="$(git rev-parse --show-toplevel)"
 runner="$root/office/tests/acceptance/fresh-agent/run.sh"
+mkdir -p "$root/_build"
 test_root="$(mktemp -d "$root/_build/fresh-agent-runner.XXXXXX")"
 trap 'rm -rf -- "$test_root"' EXIT
 
@@ -23,11 +24,16 @@ done
 printf 'test-candidate\n' > "$install_root/CANDIDATE"
 printf '{}\n' > "$test_root/auth.json"
 
-printf '#!/bin/sh\nscript=$1\nshift\nexec /bin/sh "$script" "$@"\n' \
+printf '%s\n' \
+  '#!/bin/sh' \
+  'exec "$(dirname "$0")/runtime-real" "$@"' \
   > "$runtime_bin_dir/fake_runtime"
+printf '#!/bin/sh\nscript=$1\nshift\nexec /bin/sh "$script" "$@"\n' \
+  > "$runtime_bin_dir/runtime-real"
 printf '#!/bin/sh\nexit 99\n' > "$runtime_bin_dir/forbidden-sibling"
 chmod +x \
   "$runtime_bin_dir/fake_runtime" \
+  "$runtime_bin_dir/runtime-real" \
   "$runtime_bin_dir/forbidden-sibling"
 
 printf '%s\n' \
@@ -59,17 +65,28 @@ printf '%s\n' \
   > "$codex_bin_dir/codex"
 printf '%s\n' \
   '#!/bin/sh' \
+  'exec codex-real "$@"' \
+  > "$codex_bin_dir/codex-helper"
+printf '%s\n' \
+  '#!/bin/sh' \
+  'exec "$(dirname "$0")/codex-final" "$@"' \
+  > "$codex_bin_dir/codex-real"
+printf '%s\n' \
+  '#!/bin/sh' \
   'if command -v forbidden-sibling >/dev/null 2>&1; then exit 42; fi' \
   'printf "wrapper-isolated\n"' \
-  > "$codex_bin_dir/codex-helper"
+  > "$codex_bin_dir/codex-final"
 printf '#!/bin/sh\nexit 98\n' > "$codex_bin_dir/forbidden-sibling"
 chmod +x \
   "$codex_bin_dir/codex" \
   "$codex_bin_dir/codex-helper" \
+  "$codex_bin_dir/codex-real" \
+  "$codex_bin_dir/codex-final" \
   "$codex_bin_dir/forbidden-sibling"
 
 mkdir -p "$test_root/probe-wrapper" "$test_root/evidence-wrapper"
-PATH="$codex_bin_dir:/usr/bin:/bin" \
+OFFICE_F1B_CODEX_LAUNCHER_HELPERS="codex-helper:codex-real" \
+  PATH="$codex_bin_dir:/usr/bin:/bin" \
   bash "$runner" \
   "$install_root" \
   "$test_root/probe-wrapper" \
@@ -91,7 +108,8 @@ physical_probe="$(
   pwd -P
 )"
 physical_output="$(
-  PATH="$codex_bin_dir:/usr/bin:/bin" \
+  OFFICE_F1B_CODEX_LAUNCHER_HELPERS="codex-helper:codex-real" \
+    PATH="$codex_bin_dir:/usr/bin:/bin" \
     bash "$runner" \
     "$install_root" \
     "$test_root/a/link/../probe" \
@@ -113,6 +131,7 @@ mkdir -p \
 (
   cd "$root"
   CDPATH="$test_root/cdpath" \
+    OFFICE_F1B_CODEX_LAUNCHER_HELPERS="codex-helper:codex-real" \
     PATH="$codex_bin_dir:/usr/bin:/bin" \
     bash "$runner" \
     "$relative_root/install" \
@@ -124,6 +143,28 @@ mkdir -p \
 grep -q '^wrapper-isolated$' \
   "$test_root/evidence-relative/codex-transcript.log" ||
   fail "relative paths with ambient CDPATH"
+
+printf '%s\n' \
+  '#!/bin/sh' \
+  '# forbidden-sibling is not a launcher dependency' \
+  'helper_name=forbidden' \
+  'helper_name="${helper_name}-sibling"' \
+  'if command -v "$helper_name" >/dev/null 2>&1; then exit 43; fi' \
+  'printf "comment-isolated\n"' \
+  > "$codex_bin_dir/codex"
+chmod +x "$codex_bin_dir/codex"
+
+mkdir -p "$test_root/probe-comment" "$test_root/evidence-comment"
+PATH="$codex_bin_dir:/usr/bin:/bin" \
+  bash "$runner" \
+  "$install_root" \
+  "$test_root/probe-comment" \
+  "$test_root/evidence-comment" \
+  "$test_root/auth.json" \
+  >/dev/null
+grep -q '^comment-isolated$' \
+  "$test_root/evidence-comment/codex-transcript.log" ||
+  fail "non-command launcher text leaked a sibling"
 
 mkdir -p "$test_root/overlap"
 if PATH="$codex_bin_dir:/usr/bin:/bin" \
