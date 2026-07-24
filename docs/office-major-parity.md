@@ -121,10 +121,12 @@ round-tripping an existing document through the fresh-authoring model.
 
 | Slice | Acceptance boundary | Depends on |
 | --- | --- | --- |
-| W1: style definitions | Author and validate custom paragraph/character styles without changing the existing fixed-style defaults. | D3 |
+| WL1: locale/language foundation | Add deterministic BCP-47 validation plus a bounded locale-to-Latin/East-Asian/complex-script default-font and RTL classification registry; an omitted locale remains neutral rather than inheriting host process state. | D3 |
+| W1: style definitions | Author and validate custom paragraph/character styles, including the proven script-language and paragraph/run-direction subset, without changing the existing fixed-style defaults. | D3, WL1 |
 | W2: numbering definitions | Author verified numbering definitions and explicit list references without grafting implicit ids. | D3 |
-| W3: sections and page setup | Author bounded section properties, page size, orientation, and margins. | D3 |
+| W3: sections and page setup | Author bounded section properties, page size, orientation, margins, section bidi direction, and RTL gutter state. | D3 |
 | W4: headers and footers ([#95](https://github.com/moonbitlang/office.mbt/issues/95)) | Author section-linked headers/footers with preservation and relationship validation. | W3 |
+| WL2: locale-aware DOCX creation | Expose an explicit locale in installed create/batch help and author matching `themeFontLang`, script-specific `docDefaults`, and section/default-paragraph bidi state with typed readback, OpenXML validation, and RTL preview evidence. | A2, D3, W1, W3, WL1 |
 | W5a: field/bookmark inventory | Inventory simple and complex fields, instructions/results, dirty/locked state, bookmarks, dependencies, and layout-dependent residuals with stable source-pinned identity. | D2, N0b4 |
 | W5b1: basic field/bookmark authoring | Add PAGE/NUMPAGES/DATE/MERGEFIELD fields and bounded bookmarks with typed readback; do not imply that authored results have been refreshed. | D3 |
 | W5b2: cross-reference field authoring | Add bounded REF, PAGEREF, and NOTEREF authoring with typed target/switch validation, bookmark or note identity readback, and explicit stale cached-result state. | W5a, W5b1 |
@@ -137,7 +139,7 @@ round-tripping an existing document through the fresh-authoring model.
 | WC2b: embedded-chart dump/replay | Add the WC1a subset to semantic dump/replay with typed residuals for every unsupported chart option or dependent resource. | R1, WC1a, WC2a |
 | WC2c: existing-chart lifecycle command | Expose WC1b inventory/update/delete as source-pinned existing-document commands with readback and exact footprint receipts. | WC1b, WC2a |
 | WC3: embedded-chart QA capstone | Prove OpenXML validity, round-trip readback, update/delete cleanup, unsupported-feature residuals, and preview coverage/degradation for authored and edited embedded charts. | WC2b, WC2c, Q4 |
-| W6: existing-document formatting | Apply addressed style/direct-format changes through source-pinned surgery; refuse lossy rewrites. | N0c, W1-W3 |
+| W6: existing-document formatting | Apply addressed style/direct-format changes, including bounded paragraph/run BCP-47 language slots and bidi direction, through source-pinned surgery; refuse lossy rewrites. | N0c, W1-W3, WL1 |
 | W7: revision read surface | Surface inserted/deleted/moved content with author, date, type, and addressed provenance. | D2, N0b4 |
 | W8: accept/reject revisions | Preview and atomically accept or reject selected revisions with explicit affected paths. | W7 |
 | W9: tracked-change authoring | Author attributed insertions/deletions only after W8's identity and validation rules are proven. | W8 |
@@ -265,6 +267,16 @@ fail closed when an affected filter would need relocation.
 | X8c2: conditional-format lifecycle exposure | Expose conditional-format enumerate/create/update/remove through shared help, batch, dump/replay, and feature-specific receipts. | X4a2, X8c1 |
 | X8d1: worksheet page-break lifecycle audit and hardening | Audit row/column page-break support and complete bounded enumerate/create/remove with valid ids, limits, and round-trip fidelity. | X3 |
 | X8d2: worksheet page-break exposure | Expose row/column page-break enumerate/create/remove through shared help, batch, dump/replay, and feature-specific receipts. | X4a2, X8d1 |
+| X9a1: workbook document-property engine | Inventory and add bounded typed core/custom package-property lifecycle with stable names/value kinds, pid/fmtid uniqueness, application-derived residuals, and unrelated-property preservation. | X3 |
+| X9a2: workbook document-property exposure | Expose X9a1 through workbook get/query, create/batch, shared help, dump/replay, and property-specific receipts. | X4a2, X9a1 |
+| X9b1: workbook date-system hardening | Preserve and surface `date1904`; define fresh-workbook selection and a fail-closed existing-workbook switch policy that distinguishes serial-preserving from interpreted-date-preserving conversion and reports formula/ambiguous-numeric residuals. | X3, X5e |
+| X9b2: workbook date-system exposure | Expose X9b1 through typed readback, create/batch, help, dump/replay, and receipts that state the selected conversion policy and every unconverted residual. | X4a2, X9b1 |
+| X9c1: calculation-settings state | Inventory and author the bounded workbook calculation-property subset (mode/id/iteration/full-calc flags) without claiming that formula caches were evaluated or refreshed. | X3, X5f1 |
+| X9c2: calculation-settings exposure | Expose X9c1 through typed get/create/batch/help/dump/replay while keeping settings provenance separate from X5h evaluator/cache-refresh evidence. | X4a2, X9c1 |
+| X9d1: workbook selection-state hardening | Add stable typed readback and mutation for active tab and selected-sheet state with sheet-visibility, index, multi-selection, and at-least-one-visible-sheet invariants. | X3 |
+| X9d2: workbook selection-state exposure | Expose active/selected sheets through shared get/create/batch/help/dump/replay with identity-based readback and deterministic receipts. | X4a2, X9d1 |
+| X9e1: worksheet-view state hardening | Inventory and mutate a bounded view subset covering RTL, zoom, normal/page-break/page-layout mode, gridlines, headings, and preserved unsupported pane/selection extensions. | X3 |
+| X9e2: worksheet-view state exposure | Expose X9e1 per stable sheet/view identity through get/create/batch/help/dump/replay and feature-specific receipts. | X4a2, X9e1 |
 | X6a1: formula/name relocation audit | Audit and harden the existing cell-formula and workbook/sheet defined-name adjustment kernel with bounds, syntax-aware evidence, and typed residuals for every unsupported expression. | X3 |
 | X6a2: structured/chart reference rewrite | Extend X6a1 to table structured references and supported chart-series ranges with typed unsupported residuals. | X6a1, X4c1, X4m1 |
 | X6a3: validation/format reference rewrite | Extend X6a1 to data-validation and conditional-format formulas plus the remaining explicitly supported A1-bearing records. | X6a1 |
@@ -284,6 +296,13 @@ fail closed when an affected filter would need relocation.
 | X6e2: column-move engine | Move addressed column ranges with source/destination preconditions, overlap rules, formula/reference rewriting, sidecar relocation, and preservation evidence. | X6c2, X6d2 |
 | X6f1: row-clone engine | Clone addressed row ranges with explicit relative/absolute-reference semantics, collision-safe sidecar identity, bounded resource copying, and preservation evidence. | X6c1, X6d1 |
 | X6f2: column-clone engine | Clone addressed column ranges with explicit relative/absolute-reference semantics, collision-safe sidecar identity, bounded resource copying, and preservation evidence. | X6c2, X6d2 |
+| X6h1: partial-grid shift contract/kernel | Define and prove a bounded rectangular cell-shift kernel with source/destination and overlap rules, grid-edge failure, formula/name rewrite semantics, sidecar intersection policy, stable identity, and typed residuals; do not inherit OfficeCLI's known unadjusted-formula/sidecar behavior. | X6a2, X6a3, X6b2a, X6b2b, X6b3a, X6b3b, X6b4a, X6b4b |
+| X6h2: shift-right insertion engine | Insert an addressed blank rectangle by shifting affected row segments right through X6h1, with collision/grid limits, atomic failure, and round-trip preservation evidence. | X6c2, X6h1 |
+| X6h3: shift-down insertion engine | Insert an addressed blank rectangle by shifting affected column segments down through X6h1, with collision/grid limits, atomic failure, and round-trip preservation evidence. | X6c1, X6h1 |
+| X6h4: shift-left deletion engine | Delete an addressed rectangle and shift the remaining row segments left, applying explicit dangling-reference/sidecar cleanup rules and preserving unaffected cells. | X6d2, X6h1 |
+| X6h5: shift-up deletion engine | Delete an addressed rectangle and shift the remaining column segments up, applying explicit dangling-reference/sidecar cleanup rules and preserving unaffected cells. | X6d1, X6h1 |
+| X6h6: cell-insert shift exposure | Expose shift-right and shift-down insertion through shared help, batch, dump/replay, typed readback, and footprint/residual receipts. | X4a2, X6h2, X6h3 |
+| X6h7: cell-delete shift exposure | Expose shift-left and shift-up deletion independently with cleanup/readback receipts, deterministic replay, and native/Wasm acceptance. | X4a2, X6h4, X6h5 |
 | X6g1: row-insert exposure | Expose row insertion through the shared registry, help, dump/replay, and feature-specific receipts with native/Wasm acceptance. | X4a2, X6c1 |
 | X6g2: column-insert exposure | Expose column insertion independently with typed readback, footprint receipts, and deterministic replay. | X4a2, X6c2 |
 | X6g3: row-delete exposure | Expose row deletion independently with dangling-reference/readback receipts and deterministic replay. | X4a2, X6d1 |
@@ -332,15 +351,18 @@ separate differentiator below.
 | Q6: optional screenshot adapter | Add PNG/contact-sheet production as a separate host adapter; keep the portable core free of browser dependencies. | Q4 |
 | Q7: QA capstone | Fresh agent previews, consumes addressed findings, repairs the document, refreshes formula caches when required, and verifies the repaired output. | Q2, Q3, Q5, X5h |
 
-### DOCX-to-PDF export parity
+### Office-to-PDF export parity
 
 OfficeCLI already exposes PDF view/export through an exporter backend. Command
-parity therefore belongs in the main ledger; only a portable host-free backend
-is a differentiator.
+parity for both in-scope formats therefore belongs in the main ledger; only a
+portable host-free backend is a differentiator.
 
 | Slice | Acceptance boundary | Depends on |
 | --- | --- | --- |
-| E1: DOCX-to-PDF export | Add explicit `office export ... --format pdf` (and the corresponding view workflow) with atomic publication, backend availability/provenance, rendering limits, and typed layout/degradation residuals; never claim Word-identical pagination from a weaker backend. | P1, Q4 |
+| E1a: PDF backend contract | Define one bounded export/view adapter contract with atomic publication, backend availability/version/provenance, cancellation, output/page limits, and typed layout/degradation residuals shared by DOCX and XLSX. | A4, P1, Q4 |
+| E1b: DOCX-to-PDF export | Add explicit DOCX `office export ... --format pdf` and the corresponding view workflow through E1a; report unsupported content and never claim Word-identical pagination from a weaker backend. | E1a, Q5 |
+| E1c: XLSX-to-PDF export | Add workbook/sheet/range PDF export and view through E1a with explicit print-area, page-layout, hidden-sheet, scaling, and multi-sheet ordering semantics plus backend-specific fidelity evidence. | E1a, X4l1, X9e1 |
+| E1d: cross-format PDF capstone | Prove installed-help discovery, deterministic selection, atomic failure, provenance, resource ceilings, and truthful preview-versus-PDF differences for both DOCX and XLSX. | E1b, E1c |
 
 ### Beyond-parity differentiators and delivery
 
@@ -349,7 +371,7 @@ is a differentiator.
 | B1: semantic `office diff` | Report a bounded typed read-only comparison of path-addressed before/after content plus changed/added/removed/untouched package impact; it consumes no mutation receipt contract. | N4, X3 |
 | B2: `office plan`/`apply` | Bind planned operations to the source SHA-256 and expected hits; dry-run and conflict detection share the apply pipeline. | B1 |
 | B3: dependency-closed subtree bundle | Extend R2 into a self-contained replay unit that carries every referenced style, numbering definition, media asset, and relationship—or reports a typed residual—and prove replay into an empty package. | R2d |
-| B4: portable host-free DOCX-to-PDF backend | Give E1 a deterministic MoonBit-only sandbox/backend under explicit rendering/resource limits, so PDF export no longer depends on Word, a browser, or another host renderer. | E1, Q5, B5 |
+| B4: portable host-free DOCX-to-PDF backend | Give E1b a deterministic MoonBit-only sandbox/backend under explicit rendering/resource limits, so DOCX PDF export no longer depends on Word, a browser, or another host renderer. | E1b, Q5, B5 |
 | B5: publish the hostile-file contract ([#76](https://github.com/moonbitlang/office.mbt/issues/76)) | Document and test one user-facing resource/sandbox policy across both formats and targets. | S1 may proceed independently |
 | L1: prebuilt distribution | Publish reproducible native and Wasm artifacts plus a one-line installer after the task-level capability gates are stable. | F1b |
 | L2: thin language wrappers | Generate Python/Node wrappers from the same capability schemas; do not fork command semantics. | L1 |
