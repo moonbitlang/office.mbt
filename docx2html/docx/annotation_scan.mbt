@@ -122,6 +122,112 @@ priv struct ScannedNode {
 }
 
 ///|
+/// One namespace-resolved source element in opening-tag order. Its array
+/// index is its stable identity; parent/child/sibling links and the same-name
+/// sibling ordinal form the canonical physical tree independently of the
+/// reader's flattened logical projection.
+#warnings("-unused_field")
+priv struct ScannedElement {
+  identity : Int
+  uri : String
+  local_name : String
+  same_name_ordinal : Int
+  field_char_type : String?
+  symbol_font : String?
+  symbol_char : String?
+  parent_index : Int
+  mut first_child_index : Int
+  mut next_sibling_index : Int
+  byte_start : Int
+  content_start : Int
+  mut content_end : Int
+  mut byte_end : Int
+  mut text_map : WtContentMap?
+}
+
+///|
+/// Caller-owned cumulative limits for the retained N0b source tree. The
+/// lexical budget is shared by every `w:t` in one story, so many individually
+/// small text nodes cannot multiply the retention allowance.
+priv struct ProjectionSourceBudget {
+  mut elements_left : Int
+  mut attribute_chars_left : Int
+  max_depth : Int
+  text_budget : TokenMapBudget
+}
+
+///|
+let max_projection_source_elements : Int = 1_000_000
+
+///|
+let max_projection_source_attribute_chars : Int = 8 * 1024 * 1024
+
+///|
+let max_projection_source_depth : Int = 256
+
+///|
+let max_projection_source_text_bytes : Int = 64 * 1024 * 1024
+
+///|
+let max_projection_source_text_tokens : Int = 1_000_000
+
+///|
+fn projection_source_budget(
+  max_elements? : Int = max_projection_source_elements,
+  max_attribute_chars? : Int = max_projection_source_attribute_chars,
+  max_depth? : Int = max_projection_source_depth,
+  max_text_bytes? : Int = max_projection_source_text_bytes,
+  max_text_tokens? : Int = max_projection_source_text_tokens,
+) -> ProjectionSourceBudget raise DocxError {
+  guard max_elements >= 0 &&
+    max_attribute_chars >= 0 &&
+    max_depth >= 0 &&
+    max_text_bytes >= 0 &&
+    max_text_tokens >= 0 else {
+    raise Unsupported(
+      message="projection source-tree budget limits must be non-negative",
+    )
+  }
+  {
+    elements_left: max_elements,
+    attribute_chars_left: max_attribute_chars,
+    max_depth,
+    text_budget: token_map_budget(max_text_bytes, max_text_tokens) catch {
+      TokenMapError(message) => raise Unsupported(message~)
+    },
+  }
+}
+
+///|
+fn ProjectionSourceBudget::charge_element(
+  self : ProjectionSourceBudget,
+  depth : Int,
+) -> Unit raise DocxError {
+  guard self.elements_left > 0 else {
+    raise @core.docx_xml_resource_limit_error(DocxXmlTokens)
+  }
+  guard depth > 0 && depth <= self.max_depth else {
+    raise @core.docx_xml_resource_limit_error(DocxXmlNestingDepth)
+  }
+  self.elements_left -= 1
+}
+
+///|
+fn ProjectionSourceBudget::charge_attributes(
+  self : ProjectionSourceBudget,
+  attributes : Array[(String, String)],
+) -> Unit raise DocxError {
+  let mut chars = 0
+  for attribute in attributes {
+    chars += attribute.0.length() + attribute.1.length()
+  }
+  guard chars >= 0 && chars <= self.attribute_chars_left else {
+    raise @core.docx_xml_resource_limit_error(DocxXmlMaterializedCharacters)
+  }
+  self.attribute_chars_left -= chars
+}
+
+///|
 /// Precomputed fallback for a marker outside every projection node. When
 /// `node_is_after` is true the marker is before `path`; otherwise it is after
 /// the nearest preceding node.
@@ -149,11 +255,52 @@ fn ScannedNode::close_seq(self : ScannedNode) -> Int {
 }
 
 ///|
+fn canonical_physical_name(uri : String, local_name : String) -> String {
+  if is_wml_uri(uri) {
+    "w:\{local_name}"
+  } else if uri == MC_URI {
+    "mc:\{local_name}"
+  } else if uri == "" {
+    local_name
+  } else {
+    "{" + uri + "}" + local_name
+  }
+}
+
+///|
+/// Canonical physical path derived from identity-bearing parent links. Prefix
+/// spelling never enters the path: namespace-equivalent Transitional/Strict
+/// and alternate-prefix documents therefore describe the same tree shape.
+#warnings("-unused_value")
+fn ScannedElement::physical_path(
+  self : ScannedElement,
+  elements : Array[ScannedElement],
+) -> String {
+  let ancestry : Array[Int] = []
+  let mut at = self.identity
+  while at >= 0 &&
+        at < elements.length() &&
+        ancestry.length() <= elements.length() {
+    ancestry.push(at)
+    at = elements[at].parent_index
+  }
+  let out = StringBuilder()
+  for index = ancestry.length() - 1; index >= 0; index = index - 1 {
+    let element = elements[ancestry[index]]
+    out.write_string(
+      "/\{canonical_physical_name(element.uri, element.local_name)}[\{element.same_name_ordinal}]",
+    )
+  }
+  out.to_string()
+}
+
+///|
 /// Scanner output for one story part: nodes in CLOSE order (a node is
 /// complete only at its close tag), markers in
 /// document order, and non-fatal diagnostics.
 priv struct StoryScan {
   nodes : Array[ScannedNode]
+  elements : Array[ScannedElement]
   markers : Array[ScannedMarker]
   warnings : Array[String]
   story_level_positions : Map[Int, StoryLevelMarkerPosition]
@@ -276,6 +423,12 @@ fn StoryScan::nodes(self : StoryScan) -> Array[ScannedNode] {
 }
 
 ///|
+#warnings("-unused_value")
+fn StoryScan::elements(self : StoryScan) -> Array[ScannedElement] {
+  self.elements
+}
+
+///|
 /// Annotation markers, in document order.
 fn StoryScan::markers(self : StoryScan) -> Array[ScannedMarker] {
   self.markers
@@ -316,7 +469,10 @@ fn StoryScan::complexity_counters(
 ///|
 /// One open element during the walk.
 priv struct ScanFrame {
-  // Resolved local name (for the node's kind on close) + WML-ness.
+  // Exact source QName plus resolved local name. Source-retaining mode
+  // compares the QName on close because namespace-equivalent but differently
+  // prefixed open/close tags are not well-formed XML.
+  qualified_name : String
   local_name : String
   is_wml : Bool
   // Namespace prefixes THIS element declared (to pop on close).
@@ -331,6 +487,12 @@ priv struct ScanFrame {
   projection_open_order : Int
   open_seq : Int
   byte_start : Int
+  // Identity in StoryScan.elements when source-tree retention is enabled.
+  element_index : Int
+  // Raw source-tree sibling ordinals and links are deliberately separate from
+  // the reader-flattened projection counters above.
+  physical_counters : StableStringMap[Int]
+  mut last_element_child : Int
   // Earliest interior insertion offset (just past the open tag, moved
   // past a leading pPr when one closes directly inside this element).
   mut content_start : Int
@@ -446,11 +608,51 @@ fn marker_kind(uri : String, local_name : String) -> ScanMarkerKind? {
 }
 
 ///|
+fn split_qualified_name(name : String) -> (String, String) {
+  match name.find(":") {
+    Some(colon) => (name[0:colon].to_owned(), name[colon + 1:].to_owned())
+    None => ("", name)
+  }
+}
+
+///|
+fn scan_closing_name(
+  part : BytesView,
+  start : Int,
+  close_end : Int,
+) -> String raise DocxError {
+  let mut at = start + 2
+  while at < close_end && is_xml_space(part[at]) {
+    at += 1
+  }
+  let name_start = at
+  while at < close_end && !is_name_end(part[at]) {
+    at += 1
+  }
+  guard at > name_start else {
+    raise Unsupported(
+      message="the projection source scanner found an empty closing tag",
+    )
+  }
+  let name = utf8_slice(part, name_start, at)
+  while at < close_end - 1 && is_xml_space(part[at]) {
+    at += 1
+  }
+  guard at == close_end - 1 else {
+    raise Unsupported(
+      message="the projection source scanner found malformed closing-tag content",
+    )
+  }
+  name
+}
+
+///|
 /// Scans one story part. `part` is the ORIGINAL part bytes (UTF-8).
 fn scan_story(
   part : BytesView,
   path_budget? : AnnotationPathBudget,
   warning_collector? : AnnotationWarningCollector,
+  source_budget? : ProjectionSourceBudget,
 ) -> StoryScan raise DocxError {
   // A UTF-16 BOM means byte-level markup scanning would be wrong.
   if part.length() >= 2 &&
@@ -463,6 +665,7 @@ fn scan_story(
     )
   }
   let nodes : Array[ScannedNode] = []
+  let elements : Array[ScannedElement] = []
   let markers : Array[ScannedMarker] = []
   let owns_warning_collector = warning_collector is None
   let warnings = match warning_collector {
@@ -561,8 +764,47 @@ fn scan_story(
     if next == b'/' {
       // Closing tag.
       let close_end = skip_until(b">", index + 2)
+      let closing_name = match source_budget {
+        Some(_) => Some(scan_closing_name(part, index, close_end))
+        None => None
+      }
       match frames.pop() {
         Some(frame) => {
+          match source_budget {
+            Some(budget) => {
+              let name = closing_name.unwrap_or("")
+              guard name == frame.qualified_name else {
+                raise Unsupported(
+                  message="the projection source scanner found a mismatched closing tag",
+                )
+              }
+              guard frame.element_index >= 0 &&
+                frame.element_index < elements.length() else {
+                raise Unsupported(
+                  message="the projection source scanner lost an element identity",
+                )
+              }
+              let element = elements[frame.element_index]
+              element.content_end = index
+              element.byte_end = close_end
+              if is_wml_uri(element.uri) && element.local_name == "t" {
+                element.text_map = Some(
+                  map_wt_content(
+                    part,
+                    element.content_start,
+                    element.content_end,
+                    budget.text_budget,
+                  ) catch {
+                    TokenMapError(message) =>
+                      raise Unsupported(
+                        message="projection source scanner: \{message}",
+                      )
+                  },
+                )
+              }
+            }
+            None => ()
+          }
           seq += 1
           for prefix in frame.declared {
             match namespaces.get(prefix) {
@@ -666,15 +908,29 @@ fn scan_story(
             })
           }
         }
-        None => warnings.add("annotation scanner: unbalanced closing tag")
+        None =>
+          match source_budget {
+            Some(_) =>
+              raise Unsupported(
+                message="the projection source scanner found an unbalanced closing tag",
+              )
+            None => warnings.add("annotation scanner: unbalanced closing tag")
+          }
       }
       index = close_end
       continue
     }
     // Opening (or empty) element.
     let (name, attributes, self_closing, tag_end) = scan_tag(
-      part, index, length,
+      part,
+      index,
+      length,
+      source_budget is Some(_),
     )
+    match source_budget {
+      Some(budget) => budget.charge_attributes(attributes)
+      None => ()
+    }
     // Namespace declarations bind before resolving this element's name.
     let declared : Array[String] = []
     for pair in attributes {
@@ -697,11 +953,81 @@ fn scan_story(
         None => ()
       }
     }
-    let (prefix, local_name) = match name.find(":") {
-      Some(colon) => (name[0:colon].to_owned(), name[colon + 1:].to_owned())
-      None => ("", name)
-    }
+    let (prefix, local_name) = split_qualified_name(name)
     let uri = resolve(prefix)
+    let element_index = match source_budget {
+      Some(budget) => {
+        guard frames.length() > 0 || elements.length() == 0 else {
+          raise Unsupported(
+            message="the projection source scanner found multiple root elements",
+          )
+        }
+        budget.charge_element(frames.length() + 1)
+        let parent_index = match frames.last() {
+          Some(parent) => parent.element_index
+          None => -1
+        }
+        let same_name_ordinal = match frames.last() {
+          Some(parent) =>
+            bump_counter(
+              parent.physical_counters,
+              physical_counter_key(uri, local_name),
+            )
+          None => 1
+        }
+        let identity = elements.length()
+        elements.push({
+          identity,
+          uri,
+          local_name,
+          same_name_ordinal,
+          field_char_type: attribute_value(
+            attributes, "fldCharType", namespaces,
+          ),
+          symbol_font: attribute_value(attributes, "font", namespaces),
+          symbol_char: attribute_value(attributes, "char", namespaces),
+          parent_index,
+          first_child_index: -1,
+          next_sibling_index: -1,
+          byte_start: index,
+          content_start: tag_end,
+          content_end: if self_closing {
+            tag_end
+          } else {
+            -1
+          },
+          byte_end: if self_closing {
+            tag_end
+          } else {
+            -1
+          },
+          text_map: None,
+        })
+        match frames.last() {
+          Some(parent) => {
+            if parent.last_element_child >= 0 {
+              elements[parent.last_element_child].next_sibling_index = identity
+            } else {
+              elements[parent_index].first_child_index = identity
+            }
+            parent.last_element_child = identity
+          }
+          None => ()
+        }
+        if self_closing && is_wml_uri(uri) && local_name == "t" {
+          elements[identity].text_map = Some(
+            map_wt_content(part, tag_end, tag_end, budget.text_budget) catch {
+              TokenMapError(message) =>
+                raise Unsupported(
+                  message="projection source scanner: \{message}",
+                )
+            },
+          )
+        }
+        identity
+      }
+      None => -1
+    }
     if frames.length() == 0 && root_namespace_uri is None {
       root_namespace_uri = Some(uri)
     }
@@ -959,6 +1285,7 @@ fn scan_story(
         false
       }
       frames.push({
+        qualified_name: name,
         local_name,
         is_wml: is_wml_uri(uri),
         declared,
@@ -969,6 +1296,9 @@ fn scan_story(
         projection_open_order,
         open_seq: seq,
         byte_start: index,
+        element_index,
+        physical_counters: SortedMap([]),
+        last_element_child: -1,
         content_start: tag_end,
         transparent,
         suppressed,
@@ -992,11 +1322,19 @@ fn scan_story(
     index = tag_end
   }
   if frames.length() > 0 {
-    warnings.add("annotation scanner: unbalanced open tags at end of part")
+    match source_budget {
+      Some(_) =>
+        raise Unsupported(
+          message="the projection source scanner found unbalanced open tags at end of part",
+        )
+      None =>
+        warnings.add("annotation scanner: unbalanced open tags at end of part")
+    }
   }
   let nodes_by_open = nodes_in_open_order(nodes, projection_open_count, work)
   {
     nodes,
+    elements,
     markers,
     warnings: if owns_warning_collector {
       warnings.finish()
@@ -1200,6 +1538,11 @@ fn retract_cell(
 }
 
 ///|
+fn physical_counter_key(uri : String, local_name : String) -> String {
+  "{" + uri + "}" + local_name
+}
+
+///|
 fn bump_counter(counters : StableStringMap[Int], kind : String) -> Int {
   let next = counters.get_or_default(kind, 0) + 1
   counters[kind] = next
@@ -1255,6 +1598,7 @@ fn scan_tag(
   part : BytesView,
   start : Int,
   length : Int,
+  retain_projection_attributes : Bool,
 ) -> (String, Array[(String, String)], Bool, Int) raise DocxError {
   let mut at = start + 1
   let name_start = at
@@ -1291,7 +1635,7 @@ fn scan_tag(
     }
     let attr_end = at
     let relevant_attribute = annotation_attribute_is_relevant(
-      part, attr_start, attr_end,
+      part, attr_start, attr_end, retain_projection_attributes,
     )
     while at < length && is_xml_space(part[at]) {
       at += 1
@@ -1393,12 +1737,21 @@ fn annotation_attribute_is_relevant(
   part : BytesView,
   start : Int,
   end : Int,
+  retain_projection_attributes : Bool,
 ) -> Bool {
   bytes_range_equals_ascii(part, start, end, "xmlns") ||
   bytes_range_has_ascii_prefix(part, start, end, "xmlns:") ||
   bytes_range_has_ascii_suffix(part, start, end, ":id") ||
   bytes_range_has_ascii_suffix(part, start, end, ":type") ||
-  bytes_range_has_ascii_suffix(part, start, end, ":val")
+  bytes_range_has_ascii_suffix(part, start, end, ":val") ||
+  (
+    retain_projection_attributes &&
+    (
+      bytes_range_has_ascii_suffix(part, start, end, ":fldCharType") ||
+      bytes_range_has_ascii_suffix(part, start, end, ":font") ||
+      bytes_range_has_ascii_suffix(part, start, end, ":char")
+    )
+  )
 }
 
 ///|
@@ -1604,6 +1957,19 @@ fn parse_char_reference(digits : String, base : Int) -> Char? {
     }
   }
   value.to_char()
+}
+
+///|
+#warnings("-unused_value")
+fn scan_projection_source_tree(
+  part : BytesView,
+  budget? : ProjectionSourceBudget,
+) -> StoryScan raise DocxError {
+  let budget = match budget {
+    Some(value) => value
+    None => projection_source_budget()
+  }
+  scan_story(part, source_budget=budget)
 }
 
 ///|
