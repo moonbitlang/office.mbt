@@ -2,6 +2,21 @@
 // the public workbook API cannot produce but foreign chart XML can.
 
 ///|
+test "chart references split quoted bang and apostrophe sheet names" {
+  assert_true(chart_ref_parts("'Bang!'!$A$1:$A$2") is Some(("Bang!", "A1:A2")))
+  assert_true(
+    chart_ref_parts("'O''Brien'!$B$1:$B$2") is Some(("O'Brien", "B1:B2")),
+  )
+  assert_true(chart_ref_parts("'😀!'!$C$1") is Some(("😀!", "C1")))
+  for
+    malformed in [
+      "''!A1:A2", "'Bang!A1:A2", "'Bang'junk!A1:A2", "'Bang!'!A1!A2",
+    ] {
+    assert_true(chart_ref_parts(malformed) is None)
+  }
+}
+
+///|
 test "attribute values never read as attribute names" {
   // `val = 'col'` inside the note value is data, not an attribute
   let decoy = "<c:barDir note=\"plain val = 'col'\" val='bar'/>"

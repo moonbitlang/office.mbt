@@ -1342,6 +1342,64 @@ fn ParamReader::optional_number(
 }
 
 ///|
+/// Returns the cell-range suffix when `text` has either no sheet qualifier or
+/// one syntactically valid qualifier. Quoted sheet names use Excel's doubled
+/// apostrophe escape, so an interior `!` is data rather than a separator.
+///
+/// This is a single bounded scan over the input. Unquoted qualifiers retain the
+/// v1 grammar: any non-empty text other than an additional `!` is accepted as
+/// the workbook-owned sheet name.
+fn chart_series_range_part(text : String) -> String? {
+  if text.length() == 0 {
+    return Some(text)
+  }
+  let mut range_start = -1
+  if text[0] == '\'' {
+    let mut index = 1
+    let mut sheet_length = 0
+    while index < text.length() {
+      if text[index] == '\'' {
+        if index + 1 < text.length() && text[index + 1] == '\'' {
+          sheet_length += 1
+          index += 2
+          continue
+        }
+        if sheet_length == 0 ||
+          index + 1 >= text.length() ||
+          text[index + 1] != '!' {
+          return None
+        }
+        range_start = index + 2
+        break
+      }
+      sheet_length += 1
+      index += 1
+    }
+    if range_start < 0 {
+      return None
+    }
+  } else {
+    for index in 0..<text.length() {
+      if text[index] == '!' {
+        if index == 0 || range_start >= 0 {
+          return None
+        }
+        range_start = index + 1
+      }
+    }
+    if range_start < 0 {
+      return Some(text)
+    }
+  }
+  for index in range_start..<text.length() {
+    if text[index] == '!' {
+      return None
+    }
+  }
+  Some(text[range_start:].to_owned())
+}
+
+///|
 /// A chart series range: an optional `Sheet!` qualification followed by a
 /// cell range. Only the range part is validated; the sheet name is the
 /// workbook's concern.
@@ -1350,22 +1408,14 @@ fn ParamReader::series_range(
   key : String,
 ) -> String raise BatchError {
   let text = self.string(key)
-  let range_part = match text.rev_find("!") {
-    Some(index) => {
-      // The optional qualification before the last '!' must itself be a
-      // plausible sheet ref: non-empty and free of further '!' — else
-      // "!A1:A2" or "Data!A1!B1:B2" would flow into the chart formula.
-      let sheet_part = text[:index].to_owned()
-      if sheet_part == "" || sheet_part.contains("!") {
-        raise op_error(
-          self.index,
-          self.op,
-          "'\{key}' is not a valid series range: '\{text}'",
-        )
-      }
-      text[index + 1:].to_owned()
-    }
-    None => text
+  let range_part = match chart_series_range_part(text) {
+    Some(range) => range
+    None =>
+      raise op_error(
+        self.index,
+        self.op,
+        "'\{key}' is not a valid series range: '\{text}'",
+      )
   }
   // Validate exactly what will be emitted: `parse_range` accepts correctly
   // placed `$` anchors, so misplaced ones (`A$B1`) must fail here rather

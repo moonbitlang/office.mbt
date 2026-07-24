@@ -1695,6 +1695,36 @@ test "references are validated strictly at parse time" {
         ),
         "op 0 (chart): 'categories' is not a valid series range: 'Data!A1!B1:B2'",
       ),
+      (
+        (
+          #|{"schema": "xlsx.batch/1", "ops": [{"op": "chart", "params": {"sheet": "S", "anchor": "E2", "categories": "''!A1:A2", "values": "B1:B3"}}]}
+        ),
+        "op 0 (chart): 'categories' is not a valid series range: '''!A1:A2'",
+      ),
+      (
+        (
+          #|{"schema": "xlsx.batch/1", "ops": [{"op": "chart", "params": {"sheet": "S", "anchor": "E2", "categories": "'Bang!A1:A2", "values": "B1:B3"}}]}
+        ),
+        "op 0 (chart): 'categories' is not a valid series range: ''Bang!A1:A2'",
+      ),
+      (
+        (
+          #|{"schema": "xlsx.batch/1", "ops": [{"op": "chart", "params": {"sheet": "S", "anchor": "E2", "categories": "'Bang'junk!A1:A2", "values": "B1:B3"}}]}
+        ),
+        "op 0 (chart): 'categories' is not a valid series range: ''Bang'junk!A1:A2'",
+      ),
+      (
+        (
+          #|{"schema": "xlsx.batch/1", "ops": [{"op": "chart", "params": {"sheet": "S", "anchor": "E2", "categories": "'O'Brien'!A1:A2", "values": "B1:B3"}}]}
+        ),
+        "op 0 (chart): 'categories' is not a valid series range: ''O'Brien'!A1:A2'",
+      ),
+      (
+        (
+          #|{"schema": "xlsx.batch/1", "ops": [{"op": "chart", "params": {"sheet": "S", "anchor": "E2", "categories": "'Bang!'!A1!A2", "values": "B1:B3"}}]}
+        ),
+        "op 0 (chart): 'categories' is not a valid series range: ''Bang!'!A1!A2'",
+      ),
     ] {
     let (script, expected) = case
     try ignore(parse_ops(script)) catch {
@@ -1709,6 +1739,31 @@ test "references are validated strictly at parse time" {
     #|{"schema": "xlsx.batch/1",
     #| "ops": [{"op": "chart", "params": {"sheet": "S", "anchor": "E2", "categories": "'My Data'!$A$1:$A$3", "values": "B1:B3"}}]}
   inspect(parse_ops(ok).length(), content="1")
+  let quoted_bang =
+    #|{"schema": "xlsx.batch/1",
+    #| "ops": [{"op": "chart", "params": {"sheet": "S", "anchor": "E2", "categories": "'Bang!'!A1:A2", "values": "'O''Brien'!B1:B2"}}]}
+  inspect(parse_ops(quoted_bang).length(), content="1")
+  let quoted_unicode =
+    #|{"schema": "xlsx.batch/1",
+    #| "ops": [{"op": "chart", "params": {"sheet": "S", "anchor": "E2", "categories": "'😀!'!A1:A2", "values": "B1:B2"}}]}
+  inspect(parse_ops(quoted_unicode).length(), content="1")
+}
+
+///|
+test "a chart op round-trips quoted cross-sheet series references" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  ignore(workbook.add_sheet("Bang!"))
+  ignore(workbook.add_sheet("O'Brien"))
+  let script =
+    #|{"schema": "xlsx.batch/1",
+    #| "ops": [{"op": "chart", "params": {"sheet": "Data", "anchor": "E2", "type": "line", "categories": "'Bang!'!A1:A2", "values": "'O''Brien'!B1:B2"}}]}
+  inspect(apply_script(workbook, script), content="1")
+  let reopened = @xlsx.read(@xlsx.write(workbook))
+  let charts = reopened.sheets()[0].charts()
+  assert_eq(charts.length(), 1)
+  assert_true(charts[0].xml.contains("'Bang!'!A1:A2"))
+  assert_true(charts[0].xml.contains("'O''Brien'!B1:B2"))
 }
 
 ///|
