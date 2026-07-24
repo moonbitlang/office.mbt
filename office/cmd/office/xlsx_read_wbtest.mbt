@@ -1038,6 +1038,41 @@ async test "XLSX formatting is deferred and custom-format work is charged" {
 }
 
 ///|
+async test "XLSX get preserves text under a numeric-only number format" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.new_sheet("Data"))
+  workbook.set_cell_str("Data", "A5", "Total")
+  let style_id = workbook.new_style(@xlsx.Style::number_format("0"))
+  workbook.set_cell_style("Data", "A5", style_id)
+  let source = xlsx_bounded_test_source(
+    "text-with-numeric-format.xlsx",
+    @xlsx.write(workbook),
+  )
+  let projection = make_xlsx_projection(
+    source.file,
+    open_xlsx_read_package(source),
+    10,
+  )
+  let resolved = resolve_xlsx_selector(
+    projection, "/xlsx/sheet[name=\"Data\"]/cell[A5]",
+  )
+  guard xlsx_get_data(projection, resolved) is Object(get) &&
+    get.get("cell") is Some(Object(cell)) else {
+    fail("expected formatted text cell")
+  }
+  assert_eq(cell.get("value"), Some(Json::string("Total")))
+  assert_eq(
+    cell.get("raw"),
+    Some(
+      Json::object({
+        "type": Json::string("string"),
+        "value": Json::string("Total"),
+      }),
+    ),
+  )
+}
+
+///|
 async test "XLSX formatting rejects text amplification before materialization" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.new_sheet("Data"))

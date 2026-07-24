@@ -428,6 +428,17 @@ fn select_format_section(
 }
 
 ///|
+fn number_format_scalar_width_at(text : String, at : Int) -> Int {
+  if text[at].is_leading_surrogate() &&
+    at + 1 < text.length() &&
+    text[at + 1].is_trailing_surrogate() {
+    2
+  } else {
+    1
+  }
+}
+
+///|
 fn parse_section_metadata(section : String) -> (String, String?, String) {
   let sb = StringBuilder::new()
   let mut in_quote = false
@@ -440,14 +451,16 @@ fn parse_section_metadata(section : String) -> (String, String?, String) {
   while i < len {
     let c = section[i]
     if escape_next {
-      sb.write_view(section[i:i + 1])
+      let width = number_format_scalar_width_at(section, i)
+      sb.write_view(section[i:i + width])
       escape_next = false
-      i = i + 1
+      i = i + width
       continue
     }
     if skip_next {
+      let width = number_format_scalar_width_at(section, i)
       skip_next = false
-      i = i + 1
+      i = i + width
       continue
     }
     match c {
@@ -500,7 +513,12 @@ fn parse_section_metadata(section : String) -> (String, String?, String) {
         } else {
           sb.write_char('[')
         }
-      _ => sb.write_view(section[i:i + 1])
+      _ => {
+        let width = number_format_scalar_width_at(section, i)
+        sb.write_view(section[i:i + width])
+        i = i + width
+        continue
+      }
     }
     i = i + 1
   }
@@ -544,16 +562,61 @@ fn render_literal_segment(segment : String) -> String {
 }
 
 ///|
+fn text_format_section_has_placeholder(section : StringView) -> Bool {
+  let mut in_quote = false
+  let mut escape_next = false
+  let mut skip_next = false
+  let mut bracket_depth = 0
+  for c in section {
+    if escape_next {
+      escape_next = false
+      continue
+    }
+    if skip_next {
+      skip_next = false
+      continue
+    }
+    match c {
+      '\\' => escape_next = true
+      '"' => in_quote = !in_quote
+      '[' => if !in_quote { bracket_depth = bracket_depth + 1 }
+      ']' =>
+        if !in_quote && bracket_depth > 0 {
+          bracket_depth = bracket_depth - 1
+        }
+      '_' | '*' => if !in_quote && bracket_depth == 0 { skip_next = true }
+      '@' => if !in_quote && bracket_depth == 0 { return true }
+      _ => ()
+    }
+  }
+  false
+}
+
+///|
+fn select_text_format_section(sections : ArrayView[String]) -> String? {
+  if sections.length() >= 4 {
+    return Some(sections[3])
+  }
+  guard sections.length() > 0 else { return None }
+  let final_section = sections[sections.length() - 1]
+  if text_format_section_has_placeholder(final_section) {
+    Some(final_section)
+  } else {
+    None
+  }
+}
+
+///|
 fn format_text_pattern(
   raw : String,
   code : String,
   max_output_chars? : Int,
 ) -> String raise XlsxError {
   let sections = split_format_sections(code)
-  if sections.length() == 0 {
-    return raw
+  let section = match select_text_format_section(sections) {
+    Some(section) => section
+    None => return raw
   }
-  let section = if sections.length() >= 4 { sections[3] } else { sections[0] }
   let (pattern, _locale, currency_prefix) = parse_section_metadata(section)
   let sb = StringBuilder::new()
   let mut output_chars = checked_formatted_output_growth(
