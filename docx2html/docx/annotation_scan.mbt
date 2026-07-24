@@ -1822,12 +1822,15 @@ fn utf8_slice(
 ///|
 /// The marker's id attribute is namespace-qualified (`w:id`): any prefix
 /// bound to a WML URI matches; unprefixed attributes never do (default
-/// namespaces do not apply to attributes).
+/// namespaces do not apply to attributes). Keep the last matching physical
+/// attribute so mixed Strict/Transitional input follows the XML reader's
+/// canonical-map overwrite precedence.
 fn attribute_value(
   attributes : Array[(String, String)],
   local_name : String,
   namespaces : StableStringMap[Array[String]],
 ) -> String? {
+  let mut matched : String? = None
   for pair in attributes {
     let (name, value) = pair
     match name.find(":") {
@@ -1837,7 +1840,7 @@ fn attribute_value(
         if attr_local == local_name {
           match namespaces.get(prefix) {
             Some(stack) if stack.length() > 0 &&
-              is_wml_uri(stack[stack.length() - 1]) => return Some(value)
+              is_wml_uri(stack[stack.length() - 1]) => matched = Some(value)
             _ => ()
           }
         }
@@ -1847,7 +1850,7 @@ fn attribute_value(
       None => ()
     }
   }
-  None
+  matched
 }
 
 ///|
