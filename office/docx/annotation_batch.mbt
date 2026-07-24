@@ -26,6 +26,12 @@ pub const MAX_ANNOTATION_OPS : Int = 128
 pub const MAX_ANNOTATION_TOTAL_GROWTH : Int64 = 32L * 1024L * 1024L
 
 ///|
+/// Largest paragraph ordinal accepted by annotation anchors. This is below the
+/// shared selector parser's integer ceiling and keeps the annotation grammar's
+/// public bound explicit.
+pub const MAX_ANNOTATION_ANCHOR_ORDINAL : Int = 9999999
+
+///|
 /// The parser-owned operation discriminator vocabulary, in stable order.
 let annotation_operation_names : Array[String] = [
   "comment_add", "comment_reply", "comment_resolve", "comment_unresolve",
@@ -174,26 +180,26 @@ fn annotation_anchor(
       field + " must address a paragraph (p): " + selector,
     )
   }
-  // extract the 1-based index from the rendered canonical form
   let rendered = parsed.render()
+  guard rendered == selector else {
+    raise annotation_parse_error(
+      field + " must use canonical selector spelling; expected " + rendered,
+    )
+  }
   guard rendered.has_prefix("/docx/body/p[") && rendered.has_suffix("]") else {
     raise annotation_parse_error(
       field + " must be /docx/body/p[K]: " + selector,
     )
   }
-  let inner = rendered.substring(
-    start="/docx/body/p[".length(),
-    end=rendered.length() - 1,
-  )
-  guard inner.length() > 0 && inner.length() <= 7 else {
+  guard segments[1].position() is Some(ordinal) else {
+    raise annotation_parse_error(
+      field + " must use a positional paragraph selector /docx/body/p[K]",
+    )
+  }
+  guard ordinal <= MAX_ANNOTATION_ANCHOR_ORDINAL else {
     raise annotation_parse_error(field + " paragraph index is out of range")
   }
-  for unit in inner {
-    guard unit is ('0'..='9') else {
-      raise annotation_parse_error(field + " paragraph index is not numeric")
-    }
-  }
-  "p[" + inner + "]"
+  "p[" + ordinal.to_string() + "]"
 }
 
 ///|

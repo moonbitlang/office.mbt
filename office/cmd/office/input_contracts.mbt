@@ -497,8 +497,12 @@ fn annotation_input_contract() -> InputContractCore {
       contract_object(
         "comment_anchor",
         [
-          ("at", "canonical-/docx/body/p[K]-selector"),
-          ("to", "canonical-/docx/body/p[M]-selector"),
+          (
+            "at", "canonical-/docx/body/p[K]-selector(K=1..max_annotation_anchor_ordinal,no-leading-zero)",
+          ),
+          (
+            "to", "canonical-/docx/body/p[M]-selector(M=1..max_annotation_anchor_ordinal,no-leading-zero)",
+          ),
         ],
         required=["at"],
       ),
@@ -522,7 +526,7 @@ fn annotation_input_contract() -> InputContractCore {
     constraints: [
       "unknown members and operation names are rejected", "labels are unique and references may name only earlier labels",
       "anchors address body paragraphs and ranges are ordered", "operations fold over fresh snapshots and publish atomically",
-      "each comment body serializes to at most max_comment_fragment_bytes UTF-8 XML bytes; the effective transaction-derived ceiling may be lower",
+      "each complete serialized <w:comment> fragment (metadata, namespaces, reply paraIds, and body) is at most max_comment_fragment_bytes UTF-8 XML bytes; the effective transaction-derived ceiling may be lower",
     ],
     limits: Json::object({
       "max_script_bytes": Json::number(
@@ -534,6 +538,9 @@ fn annotation_input_contract() -> InputContractCore {
       ),
       "max_comment_fragment_bytes": Json::number(
         @office_docx.MAX_COMMENT_FRAGMENT_BYTES.to_double(),
+      ),
+      "max_annotation_anchor_ordinal": Json::number(
+        @office_docx.MAX_ANNOTATION_ANCHOR_ORDINAL.to_double(),
       ),
     }),
     examples: [
