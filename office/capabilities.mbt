@@ -1131,7 +1131,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
     },
     {
       name: "template",
-      summary: "Merge strict template data into an XLSX or DOCX document",
+      summary: "Merge strict {{key}} template data into an XLSX or DOCX document",
       usage: "office template FILE DATA.json --out OUT [--dry-run] [--overwrite] [--allow-missing] [--json|--jsonl]",
       formats: ["xlsx", "docx"],
       aliases: [],
@@ -1140,7 +1140,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "file", "path", true, "existing XLSX or DOCX template package (never modified)",
         ),
         capability_field(
-          "data", "path", true, "office.template.data/1 JSON document: flat `values` (string/number/bool) plus an optional `regions` map cloning a marked template row once per record; XLSX accepts {sheet,row}, while DOCX accepts only a body-table {path}",
+          "data", "path", true, "office.template.data/1 JSON document. Template text uses {{key}}, where key matches [A-Za-z_][A-Za-z0-9_.-]{0,63}; \\{{ emits a literal {{. Examples: XLSX cell `Invoice for {{customer}}`; DOCX text `Prepared for {{customer}}`. Data contains flat `values` (string/number/bool) plus an optional `regions` map cloning a marked template row once per record; XLSX accepts {sheet,row}, while DOCX accepts only a body-table {path}",
         ),
         capability_field(
           "out", "path", true, "destination matching the template format; created atomically, refused when present unless --overwrite",
