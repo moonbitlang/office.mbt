@@ -179,14 +179,16 @@ The dependency-ordered small-PR plan for closing the broader agent-relevant
 OfficeCLI gaps now lives in `docs/office-major-parity.md`. Give every proposed
 slice its own issue before implementation and do not fold it into #169. Issue
 #139 remains open until the major ledger is complete. At the pinned baseline the
-full delivery denominator has 371 unique acceptance rows: 364
+full delivery denominator has 377 unique acceptance rows: 370
 parity/QA/export rows plus 7 explicit beyond-parity/delivery rows. That total
-combines 18 landed initial foundations with the 353-row incremental ledger and
+combines 18 landed initial foundations with the 359-row incremental ledger and
 does not double-count overlapping status rows, using the counting rule in the
 ledger.
 The ledger explicitly
 includes bounded XLSX formula calculation/lint and cache refresh, worksheet
-tab-color/reorder/clone and freeze/unfreeze lifecycle, full common cell/range
+tab-color/reorder/clone, visible/hidden/veryHidden, freeze/unfreeze, and
+print-title row/column lifecycle, bounded boolean `and`/`or` and
+row-by-column-name query, full common cell/range
 formatting, row/column dimension/outline/autofit, row/column structural edits,
 preservation-safe cell shifts, cascade-safe worksheet rename, unmerge,
    AutoFilter lifecycle, stable chart enumerate/create/update/remove with
@@ -215,7 +217,8 @@ metadata, time/lifecycle, statistics, section, SEQ, STYLEREF, DOCPROPERTY, and I
 document properties; deterministic locale/script-font and RTL defaults plus
    language/direction authoring; root document defaults plus grid/compatibility/
    CJK/default-tab/hyphenation, trackRevisions/updateFields/recalcFields, mirror/
-   gutter/book-fold/privacy/font-embedding settings; tab stops and page/column
+   gutter/book-fold/privacy/font-embedding settings, and document-root page
+   background color distinct from the background-display flag; tab stops and page/column
    breaks; fresh and source-pinned add/update/remove for equations, watermarks,
    drawing text boxes, and shapes; content/move/property revision readback,
    separately scoped accept/reject, attributed insertion/deletion/move/
@@ -308,7 +311,8 @@ feature PR.
 - Plugin and language-SDK wrappers.
 - Formula verification/cache refresh and array-formula add/set/readback, XLSX
   cascade-safe worksheet rename plus
-  reorder/clone/tab-color,
+  reorder/clone/tab-color/visibility and print-title rows/columns,
+  bounded boolean/row-by-column-name query,
   pane, cell/range-formatting, row/column dimension/autofit/outline and
   structural-edit lifecycle, partial-cell shifts,
   workbook/date-system/calculation/selection/view state, stable chart
@@ -320,8 +324,8 @@ feature PR.
   paragraph/positional-tab, permission-range, break, and advanced section
   editing (including page borders, paper sources, vertical alignment/text
   direction, and section note controls), DOCX locale/RTL, complete typed
-  field/bookmark existing add/update/removal/refresh, root document defaults and
-  settings, content/move/property revision read/accept/reject and matching
+  field/bookmark existing add/update/removal/refresh, root document defaults,
+  page-background color, and settings, content/move/property revision read/accept/reject and matching
   tracked-change authoring, embedded charts, source-pinned SDT/legacy-form
   lifecycle, and existing add/update/remove for notes, pictures, equations,
   watermarks, text boxes, and shapes; path-scoped dump, DOCX/XLSX-to-PDF export,
