@@ -43,8 +43,8 @@ output, constraint, and output mode. PowerPoint and MCP are intentionally
 absent.
 
 `bobzhang/office/xlsx` provides the bounded mutation SDK behind the canonical
-creation and batch commands. It retains strict `xlsx.batch/1` resource
-accounting, validates complete candidates, and publishes through the shared
+creation and batch commands. It prefers `xlsx.batch/2`, retains exact
+`xlsx.batch/1` behavior and shared resource accounting, validates complete candidates, and publishes through the shared
 async transaction boundary. See `../docs/office-xlsx-mutations.md`.
 
 The `bobzhang/office/docx` package provides the preservation-safe SDK layer for

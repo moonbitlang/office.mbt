@@ -82,11 +82,11 @@ fn xlsx_input_contract() -> InputContractCore {
     other => other
   }
   {
-    id: @inspect.SCHEMA_BATCH,
+    id: @inspect.SCHEMA_BATCH_V2,
     summary: "Strict transactional spreadsheet mutation script",
     consumed_by: ["office batch WORKBOOK.xlsx SCRIPT.json [--out OUTPUT.xlsx]"],
     envelope: contract_envelope(
-      [("schema", "literal(xlsx.batch/1)"), ("ops", "array(xlsx_operation)")],
+      [("schema", "literal(xlsx.batch/2)"), ("ops", "array(xlsx_operation)")],
       ["schema", "ops"],
     ),
     definitions: [
@@ -115,12 +115,12 @@ fn xlsx_input_contract() -> InputContractCore {
     constraints: [
       "unknown envelope members, operations, and params are rejected", "JSON numbers must be finite and are stored as IEEE-754 doubles",
       "all references are validated before workbook I/O", "zero operations is a valid no-op",
-      "application and publication are all-or-nothing",
+      "application and publication are all-or-nothing", "xlsx.batch/2 is preferred; historical xlsx.batch/1 remains accepted with its exact v1 registry subset",
     ],
     limits,
     examples: [
       Json::object({
-        "schema": Json::string(@inspect.SCHEMA_BATCH),
+        "schema": Json::string(@inspect.SCHEMA_BATCH_V2),
         "ops": Json::array([
           Json::object({
             "op": Json::string("set"),

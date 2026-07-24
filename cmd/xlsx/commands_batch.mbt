@@ -1,4 +1,4 @@
-// The `batch` subcommand: apply an `xlsx.batch/1` op script in one
+// The `batch` subcommand: apply a versioned XLSX batch op script in one
 // open → mutate → write cycle. All-or-nothing: parse and op failures leave
 // the file untouched, zero ops writes nothing, and the final save goes
 // through an exclusively-created unique temp file — written through the

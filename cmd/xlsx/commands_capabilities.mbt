@@ -1,4 +1,4 @@
-// The `capabilities` command: print the machine-readable `xlsx.batch/1` op
+// The `capabilities` command: print the machine-readable versioned XLSX batch op
 // catalog this build supports, so an agent can check its needed ops are
 // present before generating a script (forward-compat discovery).
 

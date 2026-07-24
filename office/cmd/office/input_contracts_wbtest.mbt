@@ -23,7 +23,7 @@ test "input contract inventory is stable, ordered, and versioned" {
     fields.get("fingerprint"),
     Some(
       Json::string(
-        "sha256:2a8eda3cef39377039b7df984e520727decdd8dd69cee4be15e76e483724d432",
+        "sha256:e8bd5b7a53f47189b7de5cd06a00a1163e5e1d7978658ecc7c9c8ea548ac538a",
       ),
     ),
   )
@@ -42,7 +42,7 @@ test "input contract inventory is stable, ordered, and versioned" {
     assert_eq(fingerprint.length(), 71)
   }
   assert_eq(ids, [
-    "xlsx.batch/1", "docx.batch/2", "office.template.data/1", "docx.annotation-batch/1",
+    "xlsx.batch/2", "docx.batch/2", "office.template.data/1", "docx.annotation-batch/1",
   ])
 }
 
@@ -132,11 +132,11 @@ test "format-dependent template regions and XML strings are exact" {
 ///|
 test "schema help emits versioned JSONL and unknown ids have bounded typed suggestions" {
   assert_true(resolve_help_query(Some("schemas"), None, None) is Schemas)
-  guard resolve_help_query(Some("schema"), Some("xlsx.batch/1"), None)
+  guard resolve_help_query(Some("schema"), Some("xlsx.batch/2"), None)
     is Schema(id) else {
     fail("expected one schema query")
   }
-  assert_eq(id, "xlsx.batch/1")
+  assert_eq(id, "xlsx.batch/2")
   let lines = records_for_query(Schema(id))
   guard lines is [Object(record)] else {
     fail("schema JSONL must be one input-contract record")

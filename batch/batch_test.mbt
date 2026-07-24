@@ -1,4 +1,4 @@
-// Blackbox tests for the xlsx.batch/1 script engine: every op kind
+// Blackbox tests for the versioned XLSX batch script engine: every op kind
 // applies through the same library calls as its CLI twin, JSON value
 // types are honored, and validation is strict with 0-based op indexes.
 
@@ -36,12 +36,45 @@ test "opaque batch plans retain deterministic resource accounting" {
     #|}
   let plan = @batch.parse_script_bytes(@utf8.encode(script))
   let stats = plan.stats()
+  assert_eq(plan.schema(), "xlsx.batch/1")
   assert_eq(plan.operation_count(), 5)
   assert_eq(stats.operation_count, 5)
   assert_eq(stats.touched_cells, 6L)
   assert_eq(stats.style_cells, 4L)
   assert_eq(stats.row_column_lines, 3L)
   assert_eq(stats.new_style_records, 2)
+}
+
+///|
+test "plans retain either accepted declared schema" {
+  for schema in ["xlsx.batch/1", "xlsx.batch/2"] {
+    let plan = @batch.parse_script_bytes(
+      @utf8.encode("{\"schema\":\"\{schema}\",\"ops\":[]}"),
+    )
+    assert_eq(plan.schema(), schema)
+  }
+}
+
+///|
+test "representative v1 and v2 applications serialize byte-identically" {
+  let operations =
+    #|[{"op":"set","params":{"sheet":"Data","cell":"A1","value":"Region"}},
+    #| {"op":"set","params":{"sheet":"Data","cell":"B1","value":42}},
+    #| {"op":"formula","params":{"sheet":"Data","cell":"B2","formula":"SUM(B1:B1)"}},
+    #| {"op":"style","params":{"sheet":"Data","range":"A1:B1","bold":true,"fill":"4472C4"}},
+    #| {"op":"width","params":{"sheet":"Data","column":"A:B","width":18}},
+    #| {"op":"freeze","params":{"sheet":"Data","cell":"A2"}}]
+  let outputs : Array[Bytes] = []
+  for schema in ["xlsx.batch/1", "xlsx.batch/2"] {
+    let workbook = @xlsx.Workbook::new()
+    ignore(workbook.add_sheet("Data"))
+    let plan = @batch.parse_script_bytes(
+      @utf8.encode("{\"schema\":\"\{schema}\",\"ops\":\{operations}}"),
+    )
+    plan.apply(workbook)
+    outputs.push(@xlsx.write(workbook))
+  }
+  assert_eq(outputs[0], outputs[1])
 }
 
 ///|
@@ -1799,13 +1832,13 @@ test "strict validation names the 0-based op index" {
       (
         #|{"ops": []}
       ),
-      "missing \"schema\" (expected xlsx.batch/1)",
+      "missing \"schema\" (accepted: xlsx.batch/1, xlsx.batch/2; preferred: xlsx.batch/2)",
     ),
     (
       (
-        #|{"schema": "xlsx.batch/2", "ops": []}
+        #|{"schema": "xlsx.batch/3", "ops": []}
       ),
-      "unsupported schema 'xlsx.batch/2' (expected xlsx.batch/1)",
+      "unsupported schema 'xlsx.batch/3' (accepted: xlsx.batch/1, xlsx.batch/2; preferred: xlsx.batch/2)",
     ),
     (
       (

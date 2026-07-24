@@ -64,13 +64,14 @@ fn fixpoint_workbook() -> @xlsx.Workbook raise {
 }
 
 ///|
-test "dump then replay then dump is a fixpoint on the op stream" {
+test "v2 dump then replay then dump is a fixpoint on the op stream" {
   let source = fixpoint_workbook()
   let d1 = @dump.dump_xlsx_workbook(
     source,
     source_file="fixpoint.xlsx",
     source_bytes=1,
   )
+  assert_eq(d1.batch_schema, "xlsx.batch/2")
   // replay the dump into a fresh workbook using the same engine, then dump
   // that — the ops, residuals, create sheet, and warnings must be stable
   let replayed = @dump.replay_xlsx_dump(d1)
@@ -101,6 +102,23 @@ test "dump then replay then dump is a fixpoint on the op stream" {
   assert_eq(replayed.get_merge_cells("Data"), ["A5:B5"])
   assert_true(replayed.get_auto_filter("Data") is Some(_))
   assert_true(replayed.get_panes("Data").freeze)
+}
+
+///|
+test "historical v1 XLSX dumps remain replayable" {
+  let source = @xlsx.Workbook::new()
+  ignore(source.add_sheet("Data"))
+  source.set_cell("Data", "A1", "legacy")
+  source.set_cell_int("Data", "B1", 7)
+  let current = @dump.dump_xlsx_workbook(
+    source,
+    source_file="legacy.xlsx",
+    source_bytes=1,
+  )
+  let historical = { ..current, batch_schema: "xlsx.batch/1" }
+  let replayed = @dump.replay_xlsx_dump(historical)
+  assert_eq(replayed.get_cell_value("Data", "A1"), Some("legacy"))
+  assert_eq(replayed.get_cell_value("Data", "B1"), Some("7"))
 }
 
 ///|
@@ -226,7 +244,7 @@ test "replay rejects an unexpected batch schema even with no ops" {
     source_file: "s.xlsx",
     source_bytes: 1,
     source_sha256: None,
-    batch_schema: "xlsx.batch/2",
+    batch_schema: "xlsx.batch/3",
     create_sheet: Some("Start"),
     ops: [],
     assets: {},
@@ -234,7 +252,10 @@ test "replay rejects an unexpected batch schema even with no ops" {
     warnings: [],
   }
   try ignore(@dump.replay_xlsx_dump(envelope)) catch {
-    @dump.ReplayInvalidFormat(_) => ()
+    @dump.ReplayInvalidFormat(message) =>
+      assert_eq(
+        message, "unsupported XLSX batch schema 'xlsx.batch/3' (accepted: xlsx.batch/1, xlsx.batch/2)",
+      )
     error => fail("expected ReplayInvalidFormat")
   } noraise {
     _ => fail("expected replay to reject an unexpected batch schema")

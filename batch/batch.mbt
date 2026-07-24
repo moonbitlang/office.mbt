@@ -1,4 +1,4 @@
-// Parsing and application of `xlsx.batch/1` op scripts (see
+// Parsing and application of versioned XLSX batch op scripts (see
 // docs/agent-json-schemas.md). Parsing is strict — an unknown op, an
 // unknown param key, or a wrong param type fails naming the 0-based op
 // index — and application delegates to the same library calls as the
@@ -239,12 +239,19 @@ pub struct BatchPlanStats {
 }
 
 ///|
-/// An opaque, strictly parsed `xlsx.batch/1` plan. Keeping operations and
+/// An opaque, strictly parsed XLSX batch plan. Keeping operations and
 /// accounting together prevents callers from validating one array and applying
 /// another.
 struct BatchPlan {
+  schema : String
   ops : Array[BatchOp]
   stats : BatchPlanStats
+}
+
+///|
+/// The exact schema declared by the parsed script.
+pub fn BatchPlan::schema(self : BatchPlan) -> String {
+  self.schema
 }
 
 ///|
@@ -487,7 +494,7 @@ fn check_number_token_lengths(text : String) -> Unit raise BatchError {
 }
 
 ///|
-/// Parses encoded `xlsx.batch/1` bytes under the script-size, UTF-8, numeric
+/// Parses encoded XLSX batch bytes under the script-size, UTF-8, numeric
 /// token, JSON and operation-resource boundaries in that order.
 pub fn parse_script_bytes(data : BytesView) -> BatchPlan raise BatchError {
   if data.length() > MAX_BATCH_SCRIPT_BYTES {
@@ -506,7 +513,7 @@ pub fn parse_script_bytes(data : BytesView) -> BatchPlan raise BatchError {
 }
 
 ///|
-/// Parses a full `xlsx.batch/1` JSON document into one opaque plan. Strict:
+/// Parses a full versioned XLSX batch JSON document into one opaque plan. Strict:
 /// the envelope must be an object holding exactly `schema` and `ops`, the
 /// schema string must match, and every op must validate. Zero ops is a valid
 /// no-op.
@@ -520,16 +527,20 @@ fn parse_plan(document : Json) -> BatchPlan raise BatchError {
       raise BatchError("unknown top-level key '\{key}'")
     }
   }
-  match root.get("schema") {
-    Some(String(schema)) =>
-      if schema != @inspect.SCHEMA_BATCH {
+  let schema = match root.get("schema") {
+    Some(String(schema)) => {
+      if !accepted_batch_schemas().contains(schema) {
         raise BatchError(
-          "unsupported schema '\{schema}' (expected \{@inspect.SCHEMA_BATCH})",
+          "unsupported schema '\{schema}' (accepted: \{accepted_batch_schemas().join(", ")}; preferred: \{@inspect.SCHEMA_BATCH_V2})",
         )
       }
+      schema
+    }
     Some(_) => raise BatchError("\"schema\" must be a string")
     None =>
-      raise BatchError("missing \"schema\" (expected \{@inspect.SCHEMA_BATCH})")
+      raise BatchError(
+        "missing \"schema\" (accepted: \{accepted_batch_schemas().join(", ")}; preferred: \{@inspect.SCHEMA_BATCH_V2})",
+      )
   }
   let items = match root.get("ops") {
     Some(Array(items)) => items
@@ -549,11 +560,12 @@ fn parse_plan(document : Json) -> BatchPlan raise BatchError {
   for index, item in items {
     ops.push(
       parse_op(
-        index, item, style_cells, touched_cells, rowcol_cells, new_styles,
+        schema, index, item, style_cells, touched_cells, rowcol_cells, new_styles,
       ),
     )
   }
   {
+    schema,
     ops,
     stats: {
       operation_count: ops.length(),
@@ -574,6 +586,7 @@ pub fn parse_script(document : Json) -> Array[BatchOp] raise BatchError {
 
 ///|
 fn parse_op(
+  schema : String,
   index : Int,
   item : Json,
   style_cells : Ref[Int64],
@@ -603,11 +616,11 @@ fn parse_op(
   // Gate on the catalog before dispatch: an op is parseable iff it is
   // advertised by `capabilities`, so a dispatch arm without a catalog
   // entry is unreachable and the two cannot drift.
-  if !is_known_op(name) {
+  if !is_known_op(schema, name) {
     raise op_error(
       index,
       name,
-      "unknown op (expected one of: \{accepted_op_names().join(", ")})",
+      "unknown op (expected one of: \{accepted_op_names(schema).join(", ")})",
     )
   }
   // The reader is told the op's advertised param names; reading a param
@@ -618,7 +631,8 @@ fn parse_op(
     op: name,
     params,
     used: Map([]),
-    declared: op_param_names(name),
+    declared: op_param_names(schema, name),
+    known: all_op_param_names(name),
   }
   let op = match name {
     "set" =>
@@ -811,7 +825,7 @@ fn parse_op(
       raise op_error(
         index,
         name,
-        "unknown op (expected one of: \{accepted_op_names().join(", ")})",
+        "unknown op (expected one of: \{accepted_op_names(schema).join(", ")})",
       )
   }
   reader.finish()
@@ -867,6 +881,9 @@ priv struct ParamReader {
   used : Map[String, Unit]
   /// The op's advertised param names (from the capability catalog).
   declared : Array[String]
+  /// Every versioned param name for this op, used to distinguish a
+  /// later-schema member from parser/catalog drift.
+  known : Array[String]
 }
 
 ///|
@@ -875,8 +892,14 @@ fn ParamReader::take(self : ParamReader, key : String) -> Json? {
   // undeclared param is a programming error (the catalog and parser have
   // drifted), not a user error — abort so every parse of that op fails
   // loudly rather than silently accepting an undocumented param.
-  if !self.declared.contains(key) {
+  if !self.known.contains(key) {
     abort("batch: op '\{self.op}' reads undeclared param '\{key}'")
+  }
+  // A parser arm may know about a later optional parameter while parsing an
+  // older schema. Treat it as omitted and leave any supplied value unused so
+  // `finish` rejects it as an unknown parameter under that schema.
+  if !self.declared.contains(key) {
+    return None
   }
   self.used[key] = ()
   self.params.get(key)

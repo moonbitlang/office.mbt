@@ -10,7 +10,7 @@ pub suberror DumpError {
 
 ///|
 /// The XLSX batch schema every dump op stream targets.
-pub const XLSX_BATCH_SCHEMA : String = "xlsx.batch/1"
+pub const XLSX_BATCH_SCHEMA : String = @inspect.SCHEMA_BATCH_V2
 
 ///|
 fn dump_op(op : String, params : Map[String, Json]) -> Json {
@@ -859,7 +859,7 @@ fn self_check_ops(ops : Array[Json]) -> Unit raise {
 
 ///|
 /// Dumps a workbook into an `office.dump/1` envelope: canonical ordered
-/// `xlsx.batch/1` ops plus explicit residual records for everything the op
+/// preferred-version XLSX batch ops plus explicit residual records for everything the op
 /// vocabulary cannot express.
 pub fn dump_xlsx_workbook(
   workbook : @xlsx.Workbook,

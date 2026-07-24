@@ -40,6 +40,7 @@ test "capability fingerprint distinguishes collection boundaries" {
         name: "variant",
         usage: "office example variant",
         result_schema: "office.example/1",
+        registry: None,
         inputs: [field],
         outputs: [],
         constraints: ["required(value)"],
@@ -52,6 +53,15 @@ test "capability fingerprint distinguishes collection boundaries" {
   assert_true(encoded != fingerprint_command_for_test(moved_format))
   assert_true(encoded != fingerprint_command_for_test(moved_field))
   assert_true(encoded != fingerprint_command_for_test(with_variant))
+  let registry_variant = {
+    ..with_variant.variants[0],
+    registry: Some(Json::object({ "schema": Json::string("probe/1") })),
+  }
+  let with_registry = { ..with_variant, variants: [registry_variant] }
+  assert_true(
+    fingerprint_command_for_test(with_variant) !=
+    fingerprint_command_for_test(with_registry),
+  )
 }
 
 ///|

@@ -1,18 +1,17 @@
-// The machine-readable capability descriptor for `xlsx.batch/1`: the ops and
-// parameters accepted by this exact build. Agents query it (`xlsx
-// capabilities`) instead of assuming a vocabulary or limit set. Before the
-// schema is declared stable, newer builds may intentionally revise the
-// contract without compatibility aliases.
+// The machine-readable, version-aware capability descriptor for XLSX batch
+// scripts. Agents query it (`xlsx capabilities`) instead of assuming a
+// vocabulary or limit set.
 
 ///|
 /// Schema id of the `capabilities` payload (see docs/agent-json-schemas.md).
-pub const SCHEMA_CAPABILITIES : String = "xlsx.capabilities/1"
+pub const SCHEMA_CAPABILITIES : String = "xlsx.capabilities/2"
 
 ///|
 /// A single param of a batch op, for the capability descriptor.
 priv struct ParamSpec {
   name : String
   kind : String
+  introduced_in : String
   required : Bool
   allowed_values : Array[String]
   accepts_empty_string : Bool
@@ -26,6 +25,7 @@ priv struct ParamSpec {
 /// sync with the parser.
 priv struct OpSpec {
   op : String
+  introduced_in : String
   params : Array[ParamSpec]
 }
 
@@ -50,10 +50,15 @@ fn constraint(
 }
 
 ///|
-fn req(name : String, kind : String) -> ParamSpec {
+fn req(
+  name : String,
+  kind : String,
+  introduced_in? : String = @inspect.SCHEMA_BATCH,
+) -> ParamSpec {
   {
     name,
     kind,
+    introduced_in,
     required: true,
     allowed_values: [],
     accepts_empty_string: kind == "string" || kind == "value",
@@ -62,7 +67,11 @@ fn req(name : String, kind : String) -> ParamSpec {
 }
 
 ///|
-fn opt(name : String, kind : String) -> ParamSpec {
+fn opt(
+  name : String,
+  kind : String,
+  introduced_in? : String = @inspect.SCHEMA_BATCH,
+) -> ParamSpec {
   let default_when_omitted = match kind {
     "string" => Json::string("")
     "bool" => Json::boolean(false)
@@ -72,6 +81,7 @@ fn opt(name : String, kind : String) -> ParamSpec {
   {
     name,
     kind,
+    introduced_in,
     required: false,
     allowed_values: [],
     accepts_empty_string: kind == "string",
@@ -80,10 +90,15 @@ fn opt(name : String, kind : String) -> ParamSpec {
 }
 
 ///|
-fn req_choice(name : String, allowed_values : Array[String]) -> ParamSpec {
+fn req_choice(
+  name : String,
+  allowed_values : Array[String],
+  introduced_in? : String = @inspect.SCHEMA_BATCH,
+) -> ParamSpec {
   {
     name,
     kind: "string",
+    introduced_in,
     required: true,
     allowed_values,
     accepts_empty_string: false,
@@ -92,10 +107,15 @@ fn req_choice(name : String, allowed_values : Array[String]) -> ParamSpec {
 }
 
 ///|
-fn opt_choice(name : String, allowed_values : Array[String]) -> ParamSpec {
+fn opt_choice(
+  name : String,
+  allowed_values : Array[String],
+  introduced_in? : String = @inspect.SCHEMA_BATCH,
+) -> ParamSpec {
   {
     name,
     kind: "string",
+    introduced_in,
     required: false,
     allowed_values,
     accepts_empty_string: true,
@@ -108,10 +128,12 @@ fn opt_choice_default(
   name : String,
   allowed_values : Array[String],
   default : String,
+  introduced_in? : String = @inspect.SCHEMA_BATCH,
 ) -> ParamSpec {
   {
     name,
     kind: "string",
+    introduced_in,
     required: false,
     allowed_values,
     accepts_empty_string: false,
@@ -120,10 +142,15 @@ fn opt_choice_default(
 }
 
 ///|
-fn opt_bool_default(name : String, default : Bool) -> ParamSpec {
+fn opt_bool_default(
+  name : String,
+  default : Bool,
+  introduced_in? : String = @inspect.SCHEMA_BATCH,
+) -> ParamSpec {
   {
     name,
     kind: "bool",
+    introduced_in,
     required: false,
     allowed_values: [],
     accepts_empty_string: false,
@@ -132,10 +159,15 @@ fn opt_bool_default(name : String, default : Bool) -> ParamSpec {
 }
 
 ///|
-fn opt_number_default(name : String, default : Int) -> ParamSpec {
+fn opt_number_default(
+  name : String,
+  default : Int,
+  introduced_in? : String = @inspect.SCHEMA_BATCH,
+) -> ParamSpec {
   {
     name,
     kind: "number",
+    introduced_in,
     required: false,
     allowed_values: [],
     accepts_empty_string: false,
@@ -149,10 +181,12 @@ fn opt_number_default(name : String, default : Int) -> ParamSpec {
 let op_specs : Array[OpSpec] = [
   {
     op: "set",
+    introduced_in: @inspect.SCHEMA_BATCH,
     params: [req("sheet", "string"), req("cell", "cell"), req("value", "value")],
   },
   {
     op: "formula",
+    introduced_in: @inspect.SCHEMA_BATCH,
     params: [
       req("sheet", "string"),
       req("cell", "cell"),
@@ -161,6 +195,7 @@ let op_specs : Array[OpSpec] = [
   },
   {
     op: "style",
+    introduced_in: @inspect.SCHEMA_BATCH,
     params: [
       req("sheet", "string"),
       req("range", "range"),
@@ -178,23 +213,38 @@ let op_specs : Array[OpSpec] = [
       opt("border_color", "string"),
     ],
   },
-  { op: "merge", params: [req("sheet", "string"), req("range", "colon_range")] },
+  {
+    op: "merge",
+    introduced_in: @inspect.SCHEMA_BATCH,
+    params: [req("sheet", "string"), req("range", "colon_range")],
+  },
   {
     op: "width",
+    introduced_in: @inspect.SCHEMA_BATCH,
     params: [
       req("sheet", "string"),
       req("column", "column"),
       req("width", "number"),
     ],
   },
-  { op: "freeze", params: [req("sheet", "string"), req("cell", "cell")] },
+  {
+    op: "freeze",
+    introduced_in: @inspect.SCHEMA_BATCH,
+    params: [req("sheet", "string"), req("cell", "cell")],
+  },
   {
     op: "filter",
+    introduced_in: @inspect.SCHEMA_BATCH,
     params: [req("sheet", "string"), req("range", "colon_range")],
   },
-  { op: "add-sheet", params: [req("name", "string")] },
+  {
+    op: "add-sheet",
+    introduced_in: @inspect.SCHEMA_BATCH,
+    params: [req("name", "string")],
+  },
   {
     op: "chart",
+    introduced_in: @inspect.SCHEMA_BATCH,
     params: [
       req("sheet", "string"),
       req("anchor", "cell"),
@@ -207,6 +257,7 @@ let op_specs : Array[OpSpec] = [
   },
   {
     op: "table",
+    introduced_in: @inspect.SCHEMA_BATCH,
     params: [
       req("sheet", "string"),
       req("range", "table_range"),
@@ -221,6 +272,7 @@ let op_specs : Array[OpSpec] = [
   },
   {
     op: "validate",
+    introduced_in: @inspect.SCHEMA_BATCH,
     params: [
       req("sheet", "string"),
       req("range", "sqref"),
@@ -240,6 +292,7 @@ let op_specs : Array[OpSpec] = [
   },
   {
     op: "sheet",
+    introduced_in: @inspect.SCHEMA_BATCH,
     params: [
       req_choice("action", sheet_action_values),
       req("name", "string"),
@@ -248,6 +301,7 @@ let op_specs : Array[OpSpec] = [
   },
   {
     op: "row",
+    introduced_in: @inspect.SCHEMA_BATCH,
     params: [
       req("sheet", "string"),
       req_choice("action", row_action_values),
@@ -258,6 +312,7 @@ let op_specs : Array[OpSpec] = [
   },
   {
     op: "col",
+    introduced_in: @inspect.SCHEMA_BATCH,
     params: [
       req("sheet", "string"),
       req_choice("action", column_action_values),
@@ -267,6 +322,7 @@ let op_specs : Array[OpSpec] = [
   },
   {
     op: "cf",
+    introduced_in: @inspect.SCHEMA_BATCH,
     params: [
       req("sheet", "string"),
       req("range", "sqref"),
@@ -301,8 +357,34 @@ let op_specs : Array[OpSpec] = [
 ///|
 /// The accepted op names, derived from the catalog (single source of truth
 /// for the unknown-op error text).
-fn accepted_op_names() -> Array[String] {
-  op_specs.map(spec => spec.op)
+fn accepted_batch_schemas() -> Array[String] {
+  [@inspect.SCHEMA_BATCH, @inspect.SCHEMA_BATCH_V2]
+}
+
+///|
+fn schema_includes(schema : String, introduced_in : String) -> Bool {
+  match schema {
+    @inspect.SCHEMA_BATCH => introduced_in == @inspect.SCHEMA_BATCH
+    @inspect.SCHEMA_BATCH_V2 =>
+      introduced_in == @inspect.SCHEMA_BATCH ||
+      introduced_in == @inspect.SCHEMA_BATCH_V2
+    _ => false
+  }
+}
+
+///|
+fn accepted_op_names_in(
+  specs : Array[OpSpec],
+  schema : String,
+) -> Array[String] {
+  specs
+  .filter(spec => schema_includes(schema, spec.introduced_in))
+  .map(spec => spec.op)
+}
+
+///|
+fn accepted_op_names(schema : String) -> Array[String] {
+  accepted_op_names_in(op_specs, schema)
 }
 
 ///|
@@ -311,9 +393,13 @@ fn accepted_op_names() -> Array[String] {
 /// entry — a `parse_op` arm added without an `op_specs` entry is
 /// unreachable, which structurally prevents the parser and the advertised
 /// `capabilities` from drifting apart.
-fn is_known_op(name : String) -> Bool {
-  for spec in op_specs {
-    if spec.op == name {
+fn is_known_op_in(
+  specs : Array[OpSpec],
+  schema : String,
+  name : String,
+) -> Bool {
+  for spec in specs {
+    if spec.op == name && schema_includes(schema, spec.introduced_in) {
       return true
     }
   }
@@ -321,13 +407,39 @@ fn is_known_op(name : String) -> Bool {
 }
 
 ///|
+fn is_known_op(schema : String, name : String) -> Bool {
+  is_known_op_in(op_specs, schema, name)
+}
+
+///|
 /// The advertised param names for `op` (empty for an unknown op — callers
 /// gate on `is_known_op` first). The parser's `ParamReader` uses this to
 /// refuse reading any param outside the catalog.
-fn op_param_names(op : String) -> Array[String] {
+fn op_param_names_in(
+  specs : Array[OpSpec],
+  schema : String,
+  op : String,
+) -> Array[String] {
+  for spec in specs {
+    if spec.op == op && schema_includes(schema, spec.introduced_in) {
+      return spec.params
+        .filter(param => schema_includes(schema, param.introduced_in))
+        .map(param => param.name)
+    }
+  }
+  []
+}
+
+///|
+fn op_param_names(schema : String, op : String) -> Array[String] {
+  op_param_names_in(op_specs, schema, op)
+}
+
+///|
+fn all_op_param_names(op : String) -> Array[String] {
   for spec in op_specs {
     if spec.op == op {
-      return spec.params.map(p => p.name)
+      return spec.params.map(param => param.name)
     }
   }
   []
@@ -575,8 +687,8 @@ fn copy_capability_json(value : Json) -> Json {
 }
 
 ///|
-/// The `xlsx.capabilities/1` JSON payload: the batch schema this build
-/// speaks, its limits, and every op + param it accepts.
+/// The `xlsx.capabilities/2` JSON payload: the preferred and accepted batch
+/// schemas, parser-owned versioned registry, and resource limits.
 pub fn capabilities() -> Json {
   let ops = []
   for spec in op_specs {
@@ -586,6 +698,7 @@ pub fn capabilities() -> Json {
         Json::object({
           "name": Json::string(p.name),
           "type": Json::string(p.kind),
+          "introduced_in": Json::string(p.introduced_in),
           "required": Json::boolean(p.required),
           "allowed_values": Json::array(
             p.allowed_values.map(value => Json::string(value)),
@@ -598,6 +711,7 @@ pub fn capabilities() -> Json {
     ops.push(
       Json::object({
         "op": Json::string(spec.op),
+        "introduced_in": Json::string(spec.introduced_in),
         "params": Json::array(params),
         "constraints": Json::array(
           op_constraints(spec.op).map(rule => Json::string(rule)),
@@ -607,7 +721,10 @@ pub fn capabilities() -> Json {
   }
   Json::object({
     "schema": Json::string(SCHEMA_CAPABILITIES),
-    "batch_schema": Json::string(@inspect.SCHEMA_BATCH),
+    "preferred_schema": Json::string(@inspect.SCHEMA_BATCH_V2),
+    "accepted_schemas": Json::array(
+      accepted_batch_schemas().map(schema => Json::string(schema)),
+    ),
     "limits": Json::object({
       "max_script_bytes": Json::number(MAX_BATCH_SCRIPT_BYTES.to_double()),
       "max_ops": Json::number(MAX_BATCH_OPS.to_double()),

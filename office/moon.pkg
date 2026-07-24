@@ -10,6 +10,7 @@ import {
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
   "moonbitlang/core/sorted_map",
+  "bobzhang/mbtexcel/batch",
 }
 
 import {

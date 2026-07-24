@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:e0e3a0e5
+    Fingerprint: crc32:9dac1240
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:e0e3a0e5","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","template","annotate","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:9dac1240","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","template","annotate","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:e0e3a0e5","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:e0e3a0e5","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:e0e3a0e5","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:e0e3a0e5","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:e0e3a0e5","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:e0e3a0e5","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:e0e3a0e5","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:e0e3a0e5","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:e0e3a0e5","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:e0e3a0e5","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:e0e3a0e5","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:e0e3a0e5","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:e0e3a0e5","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:e0e3a0e5","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:e0e3a0e5","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:e0e3a0e5","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:e0e3a0e5","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:e0e3a0e5","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:9dac1240","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:9dac1240","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:9dac1240","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:9dac1240","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:9dac1240","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:9dac1240","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:9dac1240","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:9dac1240","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:9dac1240","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:9dac1240","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:9dac1240","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:9dac1240","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:9dac1240","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:9dac1240","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:9dac1240","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:9dac1240","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:9dac1240","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:9dac1240","kind":"command","name":"raw"}]
 
 Installed help exposes every consumed JSON input contract without requiring
 repository-only documentation. Inventory and individual records are versioned;
@@ -52,17 +52,17 @@ an unknown ID fails nonzero with a bounded typed suggestion.
   $ office.exe help schemas
   Consumed input contracts
     Schema: office.input-contracts/1
-    xlsx.batch/1 — Strict transactional spreadsheet mutation script
+    xlsx.batch/2 — Strict transactional spreadsheet mutation script
     docx.batch/2 — Strict fresh-DOCX authoring script with comments and notes
     office.template.data/1 — Strict non-executable scalar and repeating-region template data
     docx.annotation-batch/1 — Strict preservation-safe comment mutation script for an existing DOCX
   Use 'office help schema <id> --json' for the exact contract.
 
   $ office.exe help schemas --json | jq -c '{schema,success,data:{schema:.data.schema,ids:[.data.contracts[].id],fingerprints_valid:all(.data.contracts[];.fingerprint|test("^sha256:[0-9a-f]{64}$"))}}'
-  {"schema":"office.output/1","success":true,"data":{"schema":"office.input-contracts/1","ids":["xlsx.batch/1","docx.batch/2","office.template.data/1","docx.annotation-batch/1"],"fingerprints_valid":true}}
+  {"schema":"office.output/1","success":true,"data":{"schema":"office.input-contracts/1","ids":["xlsx.batch/2","docx.batch/2","office.template.data/1","docx.annotation-batch/1"],"fingerprints_valid":true}}
 
   $ office.exe help schemas --jsonl | jq -c '{schema,contracts:[.contracts[].id]}'
-  {"schema":"office.input-contracts/1","contracts":["xlsx.batch/1","docx.batch/2","office.template.data/1","docx.annotation-batch/1"]}
+  {"schema":"office.input-contracts/1","contracts":["xlsx.batch/2","docx.batch/2","office.template.data/1","docx.annotation-batch/1"]}
 
   $ office.exe help schema docx.batch/2 | jq -c '{schema,id,definitions:(.definitions|length)}'
   {"schema":"office.input-contract/1","id":"docx.batch/2","definitions":13}
@@ -100,7 +100,10 @@ all pass.
   {"name":"create","formats":["xlsx","docx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.create/1","inputs":["output","sheet","dry-run","overwrite","json"],"constraints":["format=xlsx","output-extension=.xlsx","create-new-by-default","transactional-publication","bounded-candidate-package","candidate-max-entry-bytes=12582912","candidate-max-uncompressed-bytes=25165824"]},{"name":"docx","result_schema":"office.docx.create/1","inputs":["output","dry-run","overwrite","json"],"constraints":["format=docx","output-extension=.docx","create-new-by-default","transactional-publication","bounded-candidate-package","blank-document-only"]}]}
 
   $ office.exe help batch --json | jq -c '.data.records[0] | {name,formats,variants:[.variants[]|{name,result_schema,outputs:[.outputs[].name],constraints}]}'
-  {"name":"batch","formats":["xlsx","docx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.batch/1","outputs":["stats","transaction"],"constraints":["format=xlsx","schema=xlsx.batch/1","overwrite-requires(out)","out-extension-must-match-input-format","transactional-publication","full-workbook-rewrite-on-change","zero-op-reuses-original","transaction-max-materialized-cells=32768","transaction-max-row-column-lines=32768","read-max-decoded-xml-bytes=16777216","read-max-markup-tokens=262144","read-max-materialized-row-column-dimensions=32768","read-max-row-column-dimension-work=32768","candidate-max-entry-bytes=12582912","candidate-max-uncompressed-bytes=25165824"]},{"name":"docx","result_schema":"office.docx.batch/1","outputs":["ops","comments","footnotes","endnotes","transaction"],"constraints":["format=docx","preferred-schema=docx.batch/2","accepts-schema=docx.batch/1","output-extension=.docx","fresh-authoring-only","create-new-by-default","out-not-accepted","transactional-publication","bounded-candidate-package","comments-and-notes-require=docx.batch/2","max-image-bytes=8388608","max-total-image-bytes=33554432"]}]}
+  {"name":"batch","formats":["xlsx","docx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.batch/1","outputs":["stats","transaction"],"constraints":["format=xlsx","preferred-schema=xlsx.batch/2","accepted-schemas=xlsx.batch/1|xlsx.batch/2","overwrite-requires(out)","out-extension-must-match-input-format","transactional-publication","full-workbook-rewrite-on-change","zero-op-reuses-original","transaction-max-materialized-cells=32768","transaction-max-row-column-lines=32768","read-max-decoded-xml-bytes=16777216","read-max-markup-tokens=262144","read-max-materialized-row-column-dimensions=32768","read-max-row-column-dimension-work=32768","candidate-max-entry-bytes=12582912","candidate-max-uncompressed-bytes=25165824"]},{"name":"docx","result_schema":"office.docx.batch/1","outputs":["ops","comments","footnotes","endnotes","transaction"],"constraints":["format=docx","preferred-schema=docx.batch/2","accepts-schema=docx.batch/1","output-extension=.docx","fresh-authoring-only","create-new-by-default","out-not-accepted","transactional-publication","bounded-candidate-package","comments-and-notes-require=docx.batch/2","max-image-bytes=8388608","max-total-image-bytes=33554432"]}]}
+
+  $ office.exe help batch --json | jq -c '.data.records[0].variants[] | select(.name=="xlsx") | .registry | {schema,preferred_schema,accepted_schemas,ops:(.ops|length)}'
+  {"schema":"xlsx.capabilities/2","preferred_schema":"xlsx.batch/2","accepted_schemas":["xlsx.batch/1","xlsx.batch/2"],"ops":15}
 
   $ office.exe create xlsx x3-created.xlsx --sheet Data --json | jq -c '{success,schema:.data.schema,sheet:.data.sheet,transaction_schema:.data.transaction.schema,mode:.data.transaction.mode,input:.data.transaction.input,original_size:.data.transaction.original_size,replaced_existing:.data.transaction.replaced_existing,overwritten_size:.data.transaction.overwritten_size,committed:.data.transaction.committed,validations:[.data.transaction.validations[].name],added:(.data.transaction.preservation.added|length>0)}'
   {"success":true,"schema":"office.xlsx.create/1","sheet":"Data","transaction_schema":"office.transaction/2","mode":"create","input":null,"original_size":null,"replaced_existing":false,"overwritten_size":null,"committed":true,"validations":["office-xlsx-bounded-source","office-portable-opc","office-xlsx-bounded"],"added":true}
@@ -108,7 +111,7 @@ all pass.
   $ office.exe identify x3-created.xlsx
   xlsx
 
-  $ printf '%s\n' '{"schema":"xlsx.batch/1","ops":[{"op":"set","params":{"sheet":"Data","cell":"A1","value":"one"}},{"op":"formula","params":{"sheet":"Data","cell":"B1","formula":"=LEN(A1)"}},{"op":"style","params":{"sheet":"Data","range":"A1:B1","bold":true}}]}' > x3-batch.json
+  $ printf '%s\n' '{"schema":"xlsx.batch/2","ops":[{"op":"set","params":{"sheet":"Data","cell":"A1","value":"one"}},{"op":"formula","params":{"sheet":"Data","cell":"B1","formula":"=LEN(A1)"}},{"op":"style","params":{"sheet":"Data","range":"A1:B1","bold":true}}]}' > x3-batch.json
   $ office.exe batch x3-created.xlsx x3-batch.json --out x3-batched.xlsx --json | jq -c '{success,schema:.data.schema,stats:.data.stats,committed:.data.transaction.committed,changed:.data.transaction.changed,full_rewrite:any(.warnings[];.code=="office.xlsx.full_rewrite")}'
   {"success":true,"schema":"office.xlsx.batch/1","stats":{"operation_count":3,"touched_cells":4,"style_cells":2,"row_column_lines":0,"new_style_records":1},"committed":true,"changed":true,"full_rewrite":true}
 

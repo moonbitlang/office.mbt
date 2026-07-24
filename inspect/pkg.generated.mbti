@@ -11,6 +11,8 @@ pub const MAX_RANGE_CELLS : Int64 = 100_000
 
 pub const SCHEMA_BATCH : String = "xlsx.batch/1"
 
+pub const SCHEMA_BATCH_V2 : String = "xlsx.batch/2"
+
 pub const SCHEMA_CALC : String = "xlsx.calc/1"
 
 pub const SCHEMA_CELLS : String = "xlsx.cells/1"

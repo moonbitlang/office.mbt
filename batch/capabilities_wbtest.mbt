@@ -34,8 +34,12 @@ fn required_samples() -> Map[String, String] {
 }
 
 ///|
-fn one_op_script(name : String, params : String) -> String {
-  "{\"schema\":\"xlsx.batch/1\",\"ops\":[{\"op\":\"\{name}\",\"params\":\{params}}]}"
+fn one_op_script(
+  name : String,
+  params : String,
+  schema? : String = @inspect.SCHEMA_BATCH,
+) -> String {
+  "{\"schema\":\"\{schema}\",\"ops\":[{\"op\":\"\{name}\",\"params\":\{params}}]}"
 }
 
 ///|
@@ -59,11 +63,24 @@ test "capabilities payload is field-exact" {
     Object(map) => map
     _ => fail("capabilities must be a JSON object")
   }
-  assert_exact_keys(obj, ["schema", "batch_schema", "limits", "ops"], "root")
-  match (obj.get("schema"), obj.get("batch_schema")) {
-    (Some(String("xlsx.capabilities/1")), Some(String("xlsx.batch/1"))) => ()
+  assert_exact_keys(
+    obj,
+    ["schema", "preferred_schema", "accepted_schemas", "limits", "ops"],
+    "root",
+  )
+  match (obj.get("schema"), obj.get("preferred_schema")) {
+    (Some(String("xlsx.capabilities/2")), Some(String("xlsx.batch/2"))) => ()
     _ => fail("unexpected capabilities envelope")
   }
+  assert_eq(
+    obj.get("accepted_schemas"),
+    Some(
+      Json::array([
+        Json::string(@inspect.SCHEMA_BATCH),
+        Json::string(@inspect.SCHEMA_BATCH_V2),
+      ]),
+    ),
+  )
   let lines = []
   let constraint_lines = []
   let ops = match obj.get("ops") {
@@ -75,11 +92,20 @@ test "capabilities payload is field-exact" {
       Object(map) => map
       _ => fail("op")
     }
-    assert_exact_keys(op_obj, ["op", "params", "constraints"], "op")
+    assert_exact_keys(
+      op_obj,
+      ["op", "introduced_in", "params", "constraints"],
+      "op",
+    )
     let name = match op_obj.get("op") {
       Some(String(s)) => s
       _ => fail("op name")
     }
+    assert_eq(
+      op_obj.get("introduced_in"),
+      Some(Json::string(@inspect.SCHEMA_BATCH)),
+      msg="introduction schema for \{name}",
+    )
     let params = match op_obj.get("params") {
       Some(Array(ps)) => ps
       _ => fail("params")
@@ -97,7 +123,8 @@ test "capabilities payload is field-exact" {
       assert_exact_keys(
         pm,
         [
-          "name", "type", "required", "allowed_values", "accepts_empty_string", "default_when_omitted",
+          "name", "type", "introduced_in", "required", "allowed_values", "accepts_empty_string",
+          "default_when_omitted",
         ],
         "param",
       )
@@ -105,6 +132,11 @@ test "capabilities payload is field-exact" {
         Some(String(s)) => s
         _ => fail("param name")
       }
+      assert_eq(
+        pm.get("introduced_in"),
+        Some(Json::string(@inspect.SCHEMA_BATCH)),
+        msg="introduction schema for \{name}.\{pn}",
+      )
       let pt = match pm.get("type") {
         Some(String(s)) => s
         _ => fail("param type")
@@ -238,30 +270,37 @@ test "capabilities payload is field-exact" {
 
 ///|
 test "every advertised constraint has production parser witnesses" {
-  for op in accepted_op_names() {
-    for spec in op_constraint_specs(op) {
-      assert_true(
-        !spec.accepted_params.is_empty(),
-        msg="constraint has no accepted witness: \{op}: \{spec.text}",
-      )
-      assert_true(
-        !spec.rejected_params.is_empty(),
-        msg="constraint has no rejected witness: \{op}: \{spec.text}",
-      )
-      for params in spec.accepted_params {
-        let parsed = parse_script(@json.parse(one_op_script(op, params)))
-        assert_eq(
-          parsed.length(),
-          1,
-          msg="accepted witness: \{op}: \{spec.text}",
+  for schema in accepted_batch_schemas() {
+    for op in accepted_op_names(schema) {
+      for spec in op_constraint_specs(op) {
+        assert_true(
+          !spec.accepted_params.is_empty(),
+          msg="constraint has no accepted witness: \{schema}: \{op}: \{spec.text}",
         )
-      }
-      for params in spec.rejected_params {
-        let document = @json.parse(one_op_script(op, params))
-        try ignore(parse_script(document)) catch {
-          BatchError(_) => ()
-        } noraise {
-          _ => fail("rejected witness parsed: \{op}: \{spec.text}: \{params}")
+        assert_true(
+          !spec.rejected_params.is_empty(),
+          msg="constraint has no rejected witness: \{schema}: \{op}: \{spec.text}",
+        )
+        for params in spec.accepted_params {
+          let parsed = parse_script(
+            @json.parse(one_op_script(op, params, schema~)),
+          )
+          assert_eq(
+            parsed.length(),
+            1,
+            msg="accepted witness: \{schema}: \{op}: \{spec.text}",
+          )
+        }
+        for params in spec.rejected_params {
+          let document = @json.parse(one_op_script(op, params, schema~))
+          try ignore(parse_script(document)) catch {
+            BatchError(_) => ()
+          } noraise {
+            _ =>
+              fail(
+                "rejected witness parsed: \{schema}: \{op}: \{spec.text}: \{params}",
+              )
+          }
         }
       }
     }
@@ -443,37 +482,72 @@ test "capabilities expose every command-wide batch resource ceiling" {
 ///   with the `ParamReader` `declared` guard (which aborts if a parser arm reads
 ///   an undeclared param), the catalog cannot omit a parameter consumed by the
 ///   parser. Mode-specific tests cover conditionally accepted optional params.
-test "catalog and parser agree in both directions" {
+test "catalog and parser agree in both directions under every schema" {
   let samples = required_samples()
-  let catalog = accepted_op_names()
-  let catalog_set : Map[String, Unit] = Map([])
-  for name in catalog {
-    assert_false(catalog_set.contains(name)) // names unique
-    catalog_set[name] = ()
-  }
-  // parser → catalog: our ground-truth op list is fully advertised.
-  for name, _ in samples {
-    assert_true(catalog_set.contains(name))
-  }
-  // catalog → parser: advertised ops parse; and a bogus param is rejected.
-  for name in catalog {
-    let params = match samples.get(name) {
-      Some(p) => p
-      None => fail("op '\{name}' advertised but has no ground-truth sample")
+  for schema in accepted_batch_schemas() {
+    let catalog = accepted_op_names(schema)
+    let catalog_set : Map[String, Unit] = Map([])
+    for name in catalog {
+      assert_false(catalog_set.contains(name)) // names unique
+      catalog_set[name] = ()
     }
-    let ops = parse_script(@json.parse(one_op_script(name, params)))
-    assert_eq(ops.length(), 1)
-    assert_eq(ops[0].name(), name)
-    // Same op with one param outside the catalog must fail unknown-param.
-    // Parse the (valid) JSON outside the `try` so the catch handles only
-    // parse_script's BatchError, not @json.parse's ParseError.
-    let bogus = params[:params.length() - 1].to_owned() +
-      ",\"__not_a_real_param__\":1}"
-    let doc = @json.parse(one_op_script(name, bogus))
-    try ignore(parse_script(doc)) catch {
-      BatchError(msg) => assert_true(msg.contains("unknown param"))
-    } noraise {
-      _ => fail("op '\{name}' accepted a param outside its catalog spec")
+    // parser → catalog: our ground-truth op list is fully advertised.
+    for name, _ in samples {
+      assert_true(catalog_set.contains(name))
+    }
+    // catalog → parser: advertised ops parse; and a bogus param is rejected.
+    for name in catalog {
+      let params = match samples.get(name) {
+        Some(p) => p
+        None => fail("op '\{name}' advertised but has no ground-truth sample")
+      }
+      let ops = parse_script(@json.parse(one_op_script(name, params, schema~)))
+      assert_eq(ops.length(), 1)
+      assert_eq(ops[0].name(), name)
+      // Same op with one param outside the catalog must fail unknown-param.
+      // Parse the (valid) JSON outside the `try` so the catch handles only
+      // parse_script's BatchError, not @json.parse's ParseError.
+      let bogus = params[:params.length() - 1].to_owned() +
+        ",\"__not_a_real_param__\":1}"
+      let doc = @json.parse(one_op_script(name, bogus, schema~))
+      try ignore(parse_script(doc)) catch {
+        BatchError(msg) => assert_true(msg.contains("unknown param"))
+      } noraise {
+        _ =>
+          fail(
+            "op '\{name}' accepted a param outside its \{schema} catalog spec",
+          )
+      }
     }
   }
+}
+
+///|
+test "schema gate excludes synthetic v2-only operations and parameters from v1" {
+  let synthetic : Array[OpSpec] = [
+    {
+      op: "legacy",
+      introduced_in: @inspect.SCHEMA_BATCH,
+      params: [
+        req("legacy", "string"),
+        opt("future", "string", introduced_in=@inspect.SCHEMA_BATCH_V2),
+      ],
+    },
+    {
+      op: "future",
+      introduced_in: @inspect.SCHEMA_BATCH_V2,
+      params: [req("value", "string", introduced_in=@inspect.SCHEMA_BATCH_V2)],
+    },
+  ]
+  assert_eq(accepted_op_names_in(synthetic, @inspect.SCHEMA_BATCH), ["legacy"])
+  assert_false(is_known_op_in(synthetic, @inspect.SCHEMA_BATCH, "future"))
+  assert_eq(op_param_names_in(synthetic, @inspect.SCHEMA_BATCH, "legacy"), [
+    "legacy",
+  ])
+  assert_eq(accepted_op_names_in(synthetic, @inspect.SCHEMA_BATCH_V2), [
+    "legacy", "future",
+  ])
+  assert_eq(op_param_names_in(synthetic, @inspect.SCHEMA_BATCH_V2, "legacy"), [
+    "legacy", "future",
+  ])
 }
