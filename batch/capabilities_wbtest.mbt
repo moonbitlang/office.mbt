@@ -39,6 +39,16 @@ fn one_op_script(name : String, params : String) -> String {
 }
 
 ///|
+fn assert_exact_keys(
+  map : Map[String, Json],
+  expected : Array[String],
+  label : String,
+) -> Unit raise {
+  assert_eq(map.length(), expected.length(), msg="\{label} key count")
+  for key in expected {
+    assert_true(map.contains(key), msg="\{label} missing key '\{key}'")
+  }
+}
 
 ///|
 /// Field-exact snapshot of the emitted catalog: `op: pname:ptype[!][=values]`
@@ -49,11 +59,13 @@ test "capabilities payload is field-exact" {
     Object(map) => map
     _ => fail("capabilities must be a JSON object")
   }
+  assert_exact_keys(obj, ["schema", "batch_schema", "limits", "ops"], "root")
   match (obj.get("schema"), obj.get("batch_schema")) {
     (Some(String("xlsx.capabilities/1")), Some(String("xlsx.batch/1"))) => ()
     _ => fail("unexpected capabilities envelope")
   }
   let lines = []
+  let constraint_lines = []
   let ops = match obj.get("ops") {
     Some(Array(items)) => items
     _ => fail("ops")
@@ -63,6 +75,7 @@ test "capabilities payload is field-exact" {
       Object(map) => map
       _ => fail("op")
     }
+    assert_exact_keys(op_obj, ["op", "params", "constraints"], "op")
     let name = match op_obj.get("op") {
       Some(String(s)) => s
       _ => fail("op name")
@@ -71,12 +84,23 @@ test "capabilities payload is field-exact" {
       Some(Array(ps)) => ps
       _ => fail("params")
     }
+    let constraints = match op_obj.get("constraints") {
+      Some(Array(rules)) => rules
+      _ => fail("constraints")
+    }
     let parts = []
     for p in params {
       let pm = match p {
         Object(map) => map
         _ => fail("param")
       }
+      assert_exact_keys(
+        pm,
+        [
+          "name", "type", "required", "allowed_values", "accepts_empty_string", "default_when_omitted",
+        ],
+        "param",
+      )
       let pn = match pm.get("name") {
         Some(String(s)) => s
         _ => fail("param name")
@@ -85,7 +109,11 @@ test "capabilities payload is field-exact" {
         Some(String(s)) => s
         _ => fail("param type")
       }
-      let req = pm.get("required") is Some(True)
+      let req = match pm.get("required") {
+        Some(True) => true
+        Some(False) => false
+        _ => fail("required must be an explicit boolean")
+      }
       let choices = match pm.get("allowed_values") {
         Some(Array(values)) => {
           let names = []
@@ -99,6 +127,50 @@ test "capabilities payload is field-exact" {
         }
         _ => fail("allowed_values")
       }
+      let accepts_empty = match pm.get("accepts_empty_string") {
+        Some(True) => true
+        Some(False) => false
+        _ => fail("accepts_empty_string must be an explicit boolean")
+      }
+      let expected_empty = pt == "string" &&
+        !(req && !choices.is_empty()) &&
+        !(name == "chart" && pn == "type")
+      assert_eq(
+        accepts_empty,
+        expected_empty,
+        msg="empty-string semantics for \{name}.\{pn}",
+      )
+      let omitted = pm.get("default_when_omitted").unwrap()
+      let expected_omitted = if req {
+        Json::null()
+      } else {
+        match pt {
+          "string" =>
+            if name == "chart" && pn == "type" {
+              Json::string("col")
+            } else {
+              Json::string("")
+            }
+          "bool" =>
+            Json::boolean(
+              (name == "table" && pn is ("header_row" | "row_stripes")) ||
+              (name == "validate" && pn == "allow_blank"),
+            )
+          "string_array" => Json::array([])
+          "number" =>
+            if pn == "count" {
+              Json::number(1.0)
+            } else {
+              Json::null()
+            }
+          _ => Json::null()
+        }
+      }
+      assert_eq(
+        omitted,
+        expected_omitted,
+        msg="omitted default for \{name}.\{pn}",
+      )
       let choice_text = if choices.is_empty() {
         ""
       } else {
@@ -107,6 +179,12 @@ test "capabilities payload is field-exact" {
       parts.push("\{pn}:\{pt}\{if req { "!" } else { "" }}\{choice_text}")
     }
     lines.push("\{name}: \{parts.join(" ")}")
+    for rule in constraints {
+      match rule {
+        String(text) => constraint_lines.push("\{name}: \{text}")
+        _ => fail("constraint")
+      }
+    }
   }
   inspect(
     lines.join("\n"),
@@ -128,6 +206,127 @@ test "capabilities payload is field-exact" {
       #|cf: sheet:string! range:sqref! type:string!=cell|formula|2_color_scale|3_color_scale|data_bar|icon_set criteria:string value:string min_value:string max_value:string formula:string fill:string font_color:string bold:bool italic:bool min_type:string=num|min|max|percent|percentile|formula mid_type:string=num|min|max|percent|percentile|formula max_type:string=num|min|max|percent|percentile|formula mid_value:string min_color:string mid_color:string max_color:string bar_color:string bar_solid:bool bar_direction:string=leftToRight|rightToLeft bar_border_color:string icon_style:string=3Arrows|3ArrowsGray|3Flags|3Signs|3Symbols|3Symbols2|3TrafficLights1|3TrafficLights2|4Arrows|4ArrowsGray|4Rating|4RedToBlack|4TrafficLights|5Arrows|5ArrowsGray|5Quarters|5Rating reverse_icons:bool stop_if_true:bool
     ),
   )
+  inspect(
+    constraint_lines.join("\n"),
+    content=(
+      #|style: border_color, when nonempty, is exactly 6 hex RGB digits with an optional leading '#'
+      #|table: range must not be one row on grid row 1048576
+      #|validate: type=list: require nonempty values or source; operator,formula1,formula2 must be empty or omitted; nonempty values take precedence when both values and source are present
+      #|validate: type=list values: no item may contain a comma and the first item must not start with '='
+      #|validate: type=list values: the comma-joined list is at most 255 UTF-16 code units
+      #|validate: type=custom: require nonempty formula1; operator,formula2,source must be empty or omitted and values must be empty or omitted
+      #|validate: type=whole|decimal|date|time|textLength: require operator,formula1; source must be empty or omitted and values must be empty or omitted
+      #|validate: operator=between|notBetween: require nonempty formula2; every other comparison operator requires formula2 to be empty or omitted
+      #|sheet: action=rename: require nonempty to
+      #|sheet: action=delete|hide|show|very-hide: forbid nonempty to
+      #|row: action=height: require height
+      #|row: action=hide|show: forbid height
+      #|cf: type=cell: allow criteria,value,min_value,max_value,fill,font_color,bold,italic,stop_if_true; require criteria and a highlight (fill, font_color, bold=true, or italic=true)
+      #|cf: type=cell criteria are case-insensitively exactly one of >|>=|<|<=|=|==|!=|<>|between|not between|notbetween; simple comparisons require value and forbid min_value,max_value; between forms require min_value,max_value and forbid value
+      #|cf: type=formula: allow formula,fill,font_color,bold,italic,stop_if_true; require formula and a highlight (fill, font_color, bold=true, or italic=true)
+      #|cf: type=2_color_scale: allow min_type,min_value,min_color,max_type,max_value,max_color; require min_color,max_color
+      #|cf: type=3_color_scale: allow min_type,min_value,min_color,mid_type,mid_value,mid_color,max_type,max_value,max_color; require min_color,mid_color,max_color
+      #|cf: type=data_bar: allow bar_color,min_type,min_value,max_type,max_value,bar_solid,bar_direction,bar_border_color
+      #|cf: type=icon_set: allow icon_style,reverse_icons; require icon_style
+      #|cf: parameters not allowed for the selected type are permitted only when string-valued and empty or omitted; disallowed booleans are permitted only when omitted; every nonempty color is exactly 6 hex RGB with an optional leading '#'
+    ),
+  )
+}
+
+///|
+test "every advertised constraint has production parser witnesses" {
+  for op in accepted_op_names() {
+    for spec in op_constraint_specs(op) {
+      assert_true(
+        !spec.accepted_params.is_empty(),
+        msg="constraint has no accepted witness: \{op}: \{spec.text}",
+      )
+      assert_true(
+        !spec.rejected_params.is_empty(),
+        msg="constraint has no rejected witness: \{op}: \{spec.text}",
+      )
+      for params in spec.accepted_params {
+        let parsed = parse_script(@json.parse(one_op_script(op, params)))
+        assert_eq(
+          parsed.length(),
+          1,
+          msg="accepted witness: \{op}: \{spec.text}",
+        )
+      }
+      for params in spec.rejected_params {
+        let document = @json.parse(one_op_script(op, params))
+        try ignore(parse_script(document)) catch {
+          BatchError(_) => ()
+        } noraise {
+          _ => fail("rejected witness parsed: \{op}: \{spec.text}: \{params}")
+        }
+      }
+    }
+  }
+}
+
+///|
+test "empty choices and omitted boolean defaults match parse and apply" {
+  let accepted_empty_choices : Array[(String, String)] = [
+    ("style", "{\"sheet\":\"S\",\"range\":\"A1\",\"border\":\"\"}"),
+    (
+      "validate", "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"list\",\"source\":\"S!A1\",\"error_style\":\"\"}",
+    ),
+    (
+      "cf", "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"3_color_scale\",\"min_type\":\"\",\"mid_type\":\"\",\"max_type\":\"\",\"min_color\":\"FF0000\",\"mid_color\":\"FFFF00\",\"max_color\":\"00FF00\"}",
+    ),
+    (
+      "cf", "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"data_bar\",\"bar_direction\":\"\"}",
+    ),
+  ]
+  for entry in accepted_empty_choices {
+    let (op_name, params) = entry
+    let parsed = parse_script(@json.parse(one_op_script(op_name, params)))
+    let workbook = @xlsx.Workbook::new()
+    ignore(workbook.add_sheet("S"))
+    apply_op(workbook, parsed[0])
+  }
+  try
+    ignore(
+      parse_script(
+        @json.parse(
+          one_op_script(
+            "chart", "{\"sheet\":\"S\",\"anchor\":\"E2\",\"categories\":\"A1:A2\",\"values\":\"B1:B2\",\"type\":\"\"}",
+          ),
+        ),
+      ),
+    )
+  catch {
+    BatchError(message) => assert_true(message.contains("unknown chart type"))
+    _ => fail("unexpected error for an explicit empty chart type")
+  } noraise {
+    _ =>
+      fail(
+        "an explicit empty chart type must not use the omitted 'col' default",
+      )
+  }
+
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("S"))
+  for
+    entry in [
+      ("table", "{\"sheet\":\"S\",\"range\":\"A1:B2\"}"),
+      (
+        "validate", "{\"sheet\":\"S\",\"range\":\"C1\",\"type\":\"list\",\"source\":\"S!A1\"}",
+      ),
+    ] {
+    let (op_name, params) = entry
+    let parsed = parse_script(@json.parse(one_op_script(op_name, params)))
+    apply_op(workbook, parsed[0])
+  }
+  let tables = workbook.sheets()[0].tables()
+  assert_eq(tables.length(), 1)
+  assert_true(tables[0].show_header_row)
+  assert_true(tables[0].show_row_stripes)
+  assert_false(tables[0].show_first_column)
+  let validations = workbook.get_data_validations("S")
+  assert_eq(validations.length(), 1)
+  assert_true(validations[0].allow_blank)
 }
 
 ///|
@@ -136,7 +335,7 @@ test "capabilities expose every command-wide batch resource ceiling" {
     root.get("limits") is Some(Object(limits)) else {
     fail("capabilities limits must be an object")
   }
-  assert_eq(limits.length(), 7)
+  assert_eq(limits.length(), 8)
   assert_eq(
     limits.get("max_script_bytes"),
     Some(Json::number(MAX_BATCH_SCRIPT_BYTES.to_double())),
@@ -164,6 +363,10 @@ test "capabilities expose every command-wide batch resource ceiling" {
   assert_eq(
     limits.get("max_row_column_lines"),
     Some(Json::number(MAX_TOTAL_ROW_COLUMN_LINES.to_double())),
+  )
+  assert_eq(
+    limits.get("max_inline_validation_list_utf16_units"),
+    Some(Json::number(max_inline_validation_list_utf16_units.to_double())),
   )
 }
 

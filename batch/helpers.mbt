@@ -223,12 +223,28 @@ fn reject_list_only_validate_params(
 /// Rejects inline dropdown values the engine's comma-join + quote cannot
 /// faithfully represent: a value containing a comma (it would split into two
 /// options) or a leading `=` on the first value (read as a formula, not a
-/// literal list). Steers the caller to `source` with a cell range instead.
+/// literal list). Excel additionally caps the joined formula at 255 UTF-16
+/// code units. Steers the caller to `source` with a cell range instead.
+let max_inline_validation_list_utf16_units = 255
+
+///|
 fn check_inline_list_values(values : Array[String]) -> Unit raise BatchError {
-  for value in values {
+  let mut joined_utf16_units = 0
+  for index, value in values {
     if value.contains(",") {
       raise BatchError(
         "validate: inline list value '\{value}' contains a comma; use 'source' with a cell range instead",
+      )
+    }
+    if index > 0 {
+      joined_utf16_units += 1
+    }
+    for char in value {
+      joined_utf16_units += if char.to_int() > 0xFFFF { 2 } else { 1 }
+    }
+    if joined_utf16_units > max_inline_validation_list_utf16_units {
+      raise BatchError(
+        "validate: inline list values exceed \{max_inline_validation_list_utf16_units} UTF-16 code units; use 'source' with a cell range instead",
       )
     }
   }
