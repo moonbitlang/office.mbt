@@ -73,6 +73,41 @@ async test "xlsx preview renders charts inline and reports truthful stats" {
 }
 
 ///|
+async test "xlsx preview resolves batch chart refs with quoted sheet punctuation" {
+  @async.with_task_group() <| group => {
+    let directory = @afs.tmpdir(prefix="office-preview-xlsx-bang-")
+    group.add_defer() <| () => {
+      @async.protect_from_cancel(() => @afs.rmdir(directory, recursive=true))
+    }
+    let workbook = @xlsx.Workbook::new()
+    ignore(workbook.add_sheet("Data"))
+    ignore(workbook.add_sheet("Bang!"))
+    ignore(workbook.add_sheet("O'Brien"))
+    workbook.set_cell("Bang!", "A1", "East")
+    workbook.set_cell("Bang!", "A2", "West")
+    workbook.set_cell_int("O'Brien", "B1", 30)
+    workbook.set_cell_int("O'Brien", "B2", 70)
+    let script =
+      #|{"schema":"xlsx.batch/1","ops":[{"op":"chart","params":{"sheet":"Data","anchor":"D2","categories":"'Bang!'!A1:A2","values":"'O''Brien'!B1:B2","type":"line"}}]}
+    let plan = @batch.parse_script_bytes(@utf8.encode(script))
+    plan.apply(workbook)
+    let path = write_probe_package(
+      directory,
+      "quoted-chart.xlsx",
+      @xlsx.write(workbook),
+    )
+    let source = read_office_package(path)
+    let (html, stats) = office_preview_render_xlsx(source)
+    assert_true(html.contains("<figure class=\"chart\""))
+    assert_true(html.contains(">East</text>"))
+    assert_true(html.contains(">West</text>"))
+    assert_true(html.contains("<polyline"))
+    assert_eq(stats.charts_rendered, 1)
+    assert_eq(stats.charts_placeholder, 0)
+  }
+}
+
+///|
 async test "xlsx preview names sheets exceeding the render window as truncated" {
   @async.with_task_group() <| group => {
     let directory = @afs.tmpdir(prefix="office-preview-trunc-")

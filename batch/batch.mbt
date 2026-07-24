@@ -1350,24 +1350,23 @@ fn ParamReader::optional_number(
 /// v1 grammar: any non-empty text other than an additional `!` is accepted as
 /// the workbook-owned sheet name.
 fn chart_series_range_part(text : String) -> String? {
-  let chars = text.to_array()
-  if chars.length() == 0 {
+  if text.length() == 0 {
     return Some(text)
   }
   let mut range_start = -1
-  if chars[0] == '\'' {
+  if text[0] == '\'' {
     let mut index = 1
     let mut sheet_length = 0
-    while index < chars.length() {
-      if chars[index] == '\'' {
-        if index + 1 < chars.length() && chars[index + 1] == '\'' {
+    while index < text.length() {
+      if text[index] == '\'' {
+        if index + 1 < text.length() && text[index + 1] == '\'' {
           sheet_length += 1
           index += 2
           continue
         }
         if sheet_length == 0 ||
-          index + 1 >= chars.length() ||
-          chars[index + 1] != '!' {
+          index + 1 >= text.length() ||
+          text[index + 1] != '!' {
           return None
         }
         range_start = index + 2
@@ -1380,8 +1379,8 @@ fn chart_series_range_part(text : String) -> String? {
       return None
     }
   } else {
-    for index in 0..<chars.length() {
-      if chars[index] == '!' {
+    for index in 0..<text.length() {
+      if text[index] == '!' {
         if index == 0 || range_start >= 0 {
           return None
         }
@@ -1392,14 +1391,12 @@ fn chart_series_range_part(text : String) -> String? {
       return Some(text)
     }
   }
-  let range = StringBuilder::new()
-  for index in range_start..<chars.length() {
-    if chars[index] == '!' {
+  for index in range_start..<text.length() {
+    if text[index] == '!' {
       return None
     }
-    range.write_char(chars[index])
   }
-  Some(range.to_string())
+  Some(text[range_start:].to_owned())
 }
 
 ///|

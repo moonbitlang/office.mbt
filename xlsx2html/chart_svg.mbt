@@ -91,11 +91,65 @@ fn chart_label(text : String) -> String {
 }
 
 ///|
+/// Finds the one sheet/range separator in a chart formula reference. Excel
+/// quotes sheet names with apostrophes and doubles an apostrophe inside the
+/// name, so `!` only separates the range after the closing quote.
+fn chart_ref_separator(reference : String) -> Int? {
+  if reference.length() == 0 {
+    return None
+  }
+  let mut separator = -1
+  if reference[0] == '\'' {
+    let mut index = 1
+    let mut sheet_length = 0
+    while index < reference.length() {
+      if reference[index] == '\'' {
+        if index + 1 < reference.length() && reference[index + 1] == '\'' {
+          sheet_length += 1
+          index += 2
+          continue
+        }
+        if sheet_length == 0 ||
+          index + 1 >= reference.length() ||
+          reference[index + 1] != '!' {
+          return None
+        }
+        separator = index + 1
+        break
+      }
+      sheet_length += 1
+      index += 1
+    }
+    if separator < 0 {
+      return None
+    }
+  } else {
+    for index in 0..<reference.length() {
+      if reference[index] == '!' {
+        if index == 0 || separator >= 0 {
+          return None
+        }
+        separator = index
+      }
+    }
+    if separator < 0 {
+      return None
+    }
+  }
+  for index in (separator + 1)..<reference.length() {
+    if reference[index] == '!' {
+      return None
+    }
+  }
+  Some(separator)
+}
+
+///|
 /// Splits a chart data reference like `'My Sheet'!$B$2:$B$9` into its sheet
 /// name and plain `B2:B9` range. Returns None for shapes the previewer does
 /// not resolve (missing sheet, literal arrays).
 fn chart_ref_parts(reference : String) -> (String, String)? {
-  guard reference.find("!") is Some(bang) else { return None }
+  guard chart_ref_separator(reference) is Some(bang) else { return None }
   let sheet_raw = reference.substring(start=0, end=bang)
   let range_raw = reference.substring(start=bang + 1, end=reference.length())
   let sheet = if sheet_raw.length() >= 2 &&

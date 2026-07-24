@@ -1743,6 +1743,10 @@ test "references are validated strictly at parse time" {
     #|{"schema": "xlsx.batch/1",
     #| "ops": [{"op": "chart", "params": {"sheet": "S", "anchor": "E2", "categories": "'Bang!'!A1:A2", "values": "'O''Brien'!B1:B2"}}]}
   inspect(parse_ops(quoted_bang).length(), content="1")
+  let quoted_unicode =
+    #|{"schema": "xlsx.batch/1",
+    #| "ops": [{"op": "chart", "params": {"sheet": "S", "anchor": "E2", "categories": "'😀!'!A1:A2", "values": "B1:B2"}}]}
+  inspect(parse_ops(quoted_unicode).length(), content="1")
 }
 
 ///|
