@@ -20,6 +20,7 @@ ordinary incremental reviews may use `xhigh`.
 
 ```sh
 probe="$(mktemp -d "${TMPDIR:-/tmp}/office-f1b-probe.XXXXXX")"
+evidence="$(mktemp -d "${TMPDIR:-/tmp}/office-f1b-evidence.XXXXXX")"
 PATH="$prefix/bin:$PATH" codex exec \
   --ephemeral \
   --skip-git-repo-check \
@@ -29,13 +30,15 @@ PATH="$prefix/bin:$PATH" codex exec \
   -m gpt-5.6-sol \
   -c 'model_reasoning_effort="max"' \
   -C "$probe" \
-  --output-last-message "$probe/final-message.md" \
+  --output-last-message "$evidence/final-message.md" \
   - < office/tests/acceptance/fresh-agent/prompt.md \
-  > "$probe/codex-transcript.log" 2>&1
+  > "$evidence/codex-transcript.log" 2>&1
 ```
 
-Attach the exact candidate head, `CANDIDATE`, `probe-result.md`,
-`probe-transcript.md`, final message, and Codex transcript to the scoped F1b
-pull request. If the candidate head changes, prepare a new prefix and repeat the
+Attach the exact candidate head, `$prefix/CANDIDATE`, the probe's
+`probe-result.md` and `probe-transcript.md`, and the evidence directory's final
+message and Codex transcript to the scoped F1b pull request. Keeping capture
+files outside `$probe` makes the agent's working directory genuinely empty at
+startup. If the candidate head changes, prepare a new prefix and repeat the
 probe. Record every P0-P2 gap as a follow-up issue under the Office parity epic;
 do not silently coach around it or claim that this baseline closes the epic.

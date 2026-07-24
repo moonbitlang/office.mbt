@@ -9,8 +9,8 @@ fi
 root="$(git rev-parse --show-toplevel)"
 install_root="$1"
 
-if [ -n "$(git -C "$root" status --porcelain --untracked-files=no)" ]; then
-  echo "error: candidate checkout has tracked changes" >&2
+if [ -n "$(git -C "$root" status --porcelain --untracked-files=all)" ]; then
+  echo "error: candidate checkout has tracked or untracked changes" >&2
   exit 1
 fi
 
@@ -27,11 +27,16 @@ moon_bin="$(command -v moon)"
 moonrun_bin="$(command -v moonrun)"
 
 cd "$root"
-"$moon_bin" run --release --target native office/cmd/office -- \
+"$moon_bin" run --frozen --release --target native office/cmd/office -- \
   help all --json > "$scratch/native-help.json"
-"$moon_bin" run --release --target wasm office/cmd/office -- \
+"$moon_bin" run --frozen --release --target wasm office/cmd/office -- \
   help all --json > "$scratch/wasm-help.json"
 cmp "$scratch/native-help.json" "$scratch/wasm-help.json"
+
+if [ -n "$(git -C "$root" status --porcelain --untracked-files=all)" ]; then
+  echo "error: candidate build changed the checkout" >&2
+  exit 1
+fi
 
 native_artifact="$root/_build/native/release/build/bobzhang/office/cmd/office/office.exe"
 wasm_artifact="$root/_build/wasm/release/build/bobzhang/office/cmd/office/office.wasm"
