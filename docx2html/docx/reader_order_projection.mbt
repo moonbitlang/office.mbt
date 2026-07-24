@@ -209,14 +209,40 @@ fn reader_order_body_output_kind(
       | "tab"
       | "noBreakHyphen"
       | "softHyphen"
-      | "sym"
       | "footnoteReference"
       | "endnoteReference"
       | "commentReference"
-      | "br"
-      | "bookmarkStart"
-      | "hyperlink"
       | "tbl" => Some(ReaderOrderOther)
+      "sym" =>
+        if symbol_to_unicode(
+            element.symbol_font.unwrap_or(""),
+            element.symbol_char.unwrap_or(""),
+          )
+          is Some(_) {
+          Some(ReaderOrderOther)
+        } else {
+          None
+        }
+      "br" =>
+        if element.break_type
+          is (None | Some("textWrapping") | Some("page") | Some("column")) {
+          Some(ReaderOrderOther)
+        } else {
+          None
+        }
+      "bookmarkStart" =>
+        if element.bookmark_name == Some("_GoBack") {
+          None
+        } else {
+          Some(ReaderOrderOther)
+        }
+      "hyperlink" =>
+        if (element.hyperlink_relationship_id is Some(id) && id != "") ||
+          (element.hyperlink_anchor is Some(anchor) && anchor != "") {
+          Some(ReaderOrderOther)
+        } else {
+          None
+        }
       _ => None
     }
   } else {
@@ -228,9 +254,74 @@ fn reader_order_body_output_kind(
 fn reader_order_is_body_flattening_container(element : ScannedElement) -> Bool {
   is_transparent_container(element.uri, element.local_name) ||
   (
+    is_wml_uri(element.uri) &&
+    element.local_name == "hyperlink" &&
+    !(element.hyperlink_relationship_id is Some(id) && id != "") &&
+    !(element.hyperlink_anchor is Some(anchor) && anchor != "")
+  ) ||
+  (
     element.uri == READER_ORDER_VML_URI &&
     element.local_name is ("roundrect" | "shape" | "textbox" | "group" | "rect")
   )
+}
+
+///|
+fn reader_order_first_direct_wml_child(
+  elements : Array[ScannedElement],
+  parent_identity : Int,
+  local_name : String,
+  depth : Int,
+  budget : ReaderOrderBudget,
+) -> Int? raise DocxError {
+  let mut child = elements[parent_identity].first_child_index
+  while child >= 0 {
+    let element = elements[child]
+    budget.charge_visit(depth)
+    if is_wml_uri(element.uri) && element.local_name == local_name {
+      return Some(child)
+    }
+    child = element.next_sibling_index
+  }
+  None
+}
+
+///|
+fn reader_order_is_deleted_body_paragraph(
+  elements : Array[ScannedElement],
+  paragraph_identity : Int,
+  paragraph_depth : Int,
+  budget : ReaderOrderBudget,
+) -> Bool raise DocxError {
+  match
+    reader_order_first_direct_wml_child(
+      elements,
+      paragraph_identity,
+      "pPr",
+      paragraph_depth + 1,
+      budget,
+    ) {
+    Some(properties) =>
+      match
+        reader_order_first_direct_wml_child(
+          elements,
+          properties,
+          "rPr",
+          paragraph_depth + 2,
+          budget,
+        ) {
+        Some(run_properties) =>
+          reader_order_first_direct_wml_child(
+            elements,
+            run_properties,
+            "del",
+            paragraph_depth + 3,
+            budget,
+          )
+          is Some(_)
+        None => false
+      }
+    None => false
+  }
 }
 
 ///|
@@ -254,6 +345,10 @@ fn collect_reader_order_body_outputs(
     budget.charge_visit(depth)
     if element.deleted_table_row ||
       is_suppressed_container(element.uri, element.local_name) {
+      ()
+    } else if is_wml_uri(element.uri) &&
+      element.local_name == "p" &&
+      reader_order_is_deleted_body_paragraph(elements, child, depth, budget) {
       ()
     } else if reader_order_is_body_flattening_container(element) {
       collect_reader_order_body_outputs(
@@ -292,19 +387,12 @@ fn reader_order_projection_visibility(
       None => ()
     }
   }
-  let nearest_table = Array::make(elements.length(), -1)
   let inside_deleted_revision = Array::make(elements.length(), false)
   let deleted_row_ancestor = Array::make(elements.length(), -1)
   for element in elements {
     let parent = element.parent_index
     if parent >= 0 && parent < elements.length() {
       let parent_element = elements[parent]
-      nearest_table[element.identity] = if is_wml_uri(parent_element.uri) &&
-        parent_element.local_name == "tbl" {
-        parent
-      } else {
-        nearest_table[parent]
-      }
       inside_deleted_revision[element.identity] = (
           is_wml_uri(parent_element.uri) && parent_element.local_name == "del"
         ) ||
@@ -404,19 +492,24 @@ fn reader_order_projection_visibility(
       }
     }
   }
+  // Undo every streaming retraction that the reader-order reconstruction no
+  // longer considers merged. This covers malformed fail-open tables and
+  // continuations whose apparent origin lived under a BodyReader-ignored
+  // wrapper, while leaving deleted/merged ancestor suppression intact.
   for element in elements {
-    if element.retracted_by_vmerge {
-      let table = nearest_table[element.identity]
-      if table >= 0 && fail_open_table[table] {
-        restore_fail_open_projection(
-          elements,
-          visible,
-          merged_by_vmerge,
-          element.identity,
-          1,
-          budget,
-        )
-      }
+    if element.retracted_by_vmerge &&
+      !merged_by_vmerge[element.identity] &&
+      merged_cell_ancestor[element.identity] < 0 &&
+      deleted_row_ancestor[element.identity] < 0 &&
+      !inside_deleted_revision[element.identity] {
+      restore_reader_projection_subtree(
+        elements,
+        visible,
+        merged_by_vmerge,
+        element.identity,
+        1,
+        budget,
+      )
     }
   }
   // The reader's primary inline pass suppresses w:del, but its independent
@@ -428,7 +521,7 @@ fn reader_order_projection_visibility(
       inside_deleted_revision[element.identity] &&
       deleted_row_ancestor[element.identity] < 0 {
       if merged_cell_ancestor[element.identity] < 0 {
-        restore_fail_open_projection(
+        restore_reader_projection_subtree(
           elements,
           visible,
           merged_by_vmerge,
@@ -443,7 +536,7 @@ fn reader_order_projection_visibility(
 }
 
 ///|
-fn restore_fail_open_projection(
+fn restore_reader_projection_subtree(
   elements : Array[ScannedElement],
   visible : Array[Bool],
   merged_by_vmerge : Array[Bool],
@@ -466,7 +559,7 @@ fn restore_fail_open_projection(
   let mut child = element.first_child_index
   while child >= 0 {
     let child_element = elements[child]
-    restore_fail_open_projection(
+    restore_reader_projection_subtree(
       elements,
       visible,
       merged_by_vmerge,
@@ -624,7 +717,7 @@ fn ReaderOrderWalker::walk_structural_element(
         if self.is_projection_visible(identity) {
           self.walk_flow_children(identity, depth, from_text_box)
         }
-      "drawing" | "object" | "ins" | "smartTag" =>
+      "hyperlink" | "drawing" | "object" | "ins" | "smartTag" =>
         self.walk_flow_children(identity, depth, from_text_box)
       // Branch/SDT selection belongs to N0b4. Do not silently pick a branch
       // or content node while constructing the provisional N0b2 order.
@@ -763,7 +856,7 @@ fn ReaderOrderWalker::walk_inline_element(
           add(SymbolAtom, value, reader_order_element_span(element))
         None => add(HardBarrier, "", reader_order_element_span(element))
       }
-    "hyperlink" | "ins" | "smartTag" => {
+    "hyperlink" | "drawing" | "object" | "ins" | "smartTag" => {
       add(TransparentSeam, "", reader_order_element_span(element))
       self.walk_inline_children(
         identity, depth, paragraph, paragraph_source, current_run,
@@ -790,8 +883,6 @@ fn ReaderOrderWalker::walk_inline_element(
     | "commentReference"
     | "footnoteRef"
     | "endnoteRef"
-    | "drawing"
-    | "object"
     | "pict"
     | "del"
     | "fldChar"
@@ -859,7 +950,15 @@ fn ReaderOrderWalker::walk_pict_extras(
       ()
     } else if is_wml_uri(element.uri) &&
       element.local_name
-      is ("p" | "tbl" | "tr" | "tc" | "drawing" | "object" | "ins" | "smartTag") {
+      is ("p"
+      | "tbl"
+      | "tr"
+      | "tc"
+      | "hyperlink"
+      | "drawing"
+      | "object"
+      | "ins"
+      | "smartTag") {
       self.walk_structural_element(child, depth, true)
     }
     child = element.next_sibling_index

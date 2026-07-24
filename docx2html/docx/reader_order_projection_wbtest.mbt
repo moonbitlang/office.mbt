@@ -270,6 +270,131 @@ test "reader order skips deleted rows when deciding table fail-open" {
 }
 
 ///|
+test "reader order classifies conditional empty table outputs like BodyReader" {
+  let separators = [
+    "<w:bookmarkStart w:name=\"_GoBack\"/>", "<w:br w:type=\"unsupported\"/>", "<w:sym w:font=\"Arial\" w:char=\"0041\"/>",
+    "<w:hyperlink/>", "<w:p><w:pPr><w:rPr><w:del/></w:rPr></w:pPr><w:r><w:t>deleted prefix</w:t></w:r></w:p>",
+    "<w:hyperlink><w:tr><w:tc><w:p><w:r><w:t>wrapped</w:t></w:r></w:p></w:tc></w:tr></w:hyperlink>",
+    "<w:hyperlink w:anchor=\"x\"/>", "<w:hyperlink q:id=\"missing\"/>",
+  ]
+  let projected : Array[Array[String]] = []
+  for separator in separators {
+    let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:q=\"http://purl.oclc.org/ooxml/officeDocument/relationships\"><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val=\"restart\"/></w:tcPr><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc></w:tr>" +
+      separator +
+      "<w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>B</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>"
+    let projection = scan_reader_order_projection(
+      "word/document.xml",
+      @utf8.encode(source),
+    )
+    assert_eq(
+      provisional_story_text(projection),
+      current_reader_story_text(source),
+    )
+    assert_reader_order_identity_mapping(projection)
+    projected.push(
+      projection.paragraphs.map(paragraph => paragraph.reader_text()),
+    )
+  }
+  debug_inspect(
+    projected,
+    content=(
+      #|[
+      #|  ["A"],
+      #|  ["A"],
+      #|  ["A"],
+      #|  ["A"],
+      #|  ["A"],
+      #|  ["A", "wrapped"],
+      #|  ["A", "B"],
+      #|  ["A", "B"],
+      #|]
+    ),
+  )
+}
+
+///|
+test "reader order restores orphan merges after ignored physical origins" {
+  let wrappers = [
+    ("<w:customXml>", "</w:customXml>"),
+    ("<w:unknown>", "</w:unknown>"),
+    ("<w:pict>", "</w:pict>"),
+    ("<w:tblPr>", "</w:tblPr>"),
+    ("<x:unknown xmlns:x=\"urn:unknown\">", "</x:unknown>"),
+  ]
+  for wrapper in wrappers {
+    let (opening, closing) = wrapper
+    let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:tbl>" +
+      opening +
+      "<w:tr><w:tc><w:p><w:r><w:t>ignored origin</w:t></w:r></w:p></w:tc></w:tr>" +
+      closing +
+      "<w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>orphan kept</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>"
+    let projection = scan_reader_order_projection(
+      "word/document.xml",
+      @utf8.encode(source),
+    )
+    assert_eq(
+      provisional_story_text(projection),
+      current_reader_story_text(source),
+    )
+    assert_reader_order_identity_mapping(projection)
+    debug_inspect(
+      projection.paragraphs.map(paragraph => paragraph.reader_text()),
+      content="[\"orphan kept\"]",
+    )
+  }
+}
+
+///|
+test "reader order ignores nested row and cell property containers" {
+  let rows = [
+    "<w:tr><w:tc><w:p><w:r><w:tcPr><w:vMerge/></w:tcPr><w:t>B</w:t></w:r></w:p></w:tc></w:tr>",
+    "<w:tr><w:tc><w:p><w:r><w:t>B</w:t><w:trPr><w:del/></w:trPr></w:r></w:p></w:tc></w:tr>",
+  ]
+  for row in rows {
+    let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:tbl><w:tr><w:tc><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc></w:tr>" +
+      row +
+      "</w:tbl></w:body></w:document>"
+    let projection = scan_reader_order_projection(
+      "word/document.xml",
+      @utf8.encode(source),
+    )
+    assert_eq(
+      provisional_story_text(projection),
+      current_reader_story_text(source),
+    )
+    assert_reader_order_identity_mapping(projection)
+    debug_inspect(
+      projection.paragraphs.map(paragraph => paragraph.reader_text()),
+      content="[\"A\", \"B\"]",
+    )
+  }
+}
+
+///|
+test "reader order flattens inline drawing and object children" {
+  let inners = [
+    "<w:drawing><w:r><w:t>D</w:t></w:r></w:drawing>", "<w:object><w:ins><w:r><w:t>O</w:t></w:r></w:ins></w:object>",
+  ]
+  let projected : Array[String] = []
+  for inner in inners {
+    let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:t>A</w:t></w:r>" +
+      inner +
+      "<w:r><w:t>B</w:t></w:r></w:p></w:body></w:document>"
+    let projection = scan_reader_order_projection(
+      "word/document.xml",
+      @utf8.encode(source),
+    )
+    assert_eq(
+      provisional_story_text(projection),
+      current_reader_story_text(source),
+    )
+    assert_reader_order_identity_mapping(projection)
+    projected.push(projection.paragraphs[0].reader_text())
+  }
+  debug_inspect(projected, content="[\"ADB\", \"AOB\"]")
+}
+
+///|
 test "reader order keeps nested table merge semantics when outer table fails open" {
   let source =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>Outer A</w:t></w:r></w:p></w:tc></w:tr><w:p><w:r><w:t>Between</w:t></w:r></w:p><w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>Outer B</w:t></w:r></w:p><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>Nested A</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>Nested merged away</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:trPr><w:del/></w:trPr><w:tc><w:p><w:r><w:t>Nested deleted row</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:tc></w:tr></w:tbl></w:body></w:document>
