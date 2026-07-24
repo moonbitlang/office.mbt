@@ -45,6 +45,21 @@ test "chart_series extracts tx/cat/val refs" {
 }
 
 ///|
+test "chart_title reads only the chart title before the plot area" {
+  let xml =
+    #|<c:chart><c:title><c:tx><c:rich><a:p><a:r><a:t>Revenue &amp; </a:t></a:r><a:r><a:t>cost</a:t></a:r></a:p></c:rich></c:tx></c:title>
+    #|<c:plotArea><c:catAx><c:title><c:tx><c:rich><a:p><a:r><a:t>Quarter</a:t></a:r></a:p></c:rich></c:tx></c:title></c:catAx></c:plotArea></c:chart>
+  assert_eq(@inspect.chart_title(xml), Some("Revenue & cost"))
+  assert_eq(@inspect.chart_title("<c:chart><c:plotArea/></c:chart>"), None)
+  assert_eq(
+    @inspect.chart_title(
+      "<c:chart><c:title><c:tx><c:rich><a:p><a:t><![CDATA[A&B]]></a:t></a:p></c:rich></c:tx></c:title><c:plotArea/></c:chart>",
+    ),
+    Some("A&B"),
+  )
+}
+
+///|
 test "chart_series maps scatter xVal/yVal to categories/values" {
   let xml =
     #|<c:ser><c:xVal><c:numRef><c:f>Data!$A$2:$A$9</c:f></c:numRef></c:xVal>

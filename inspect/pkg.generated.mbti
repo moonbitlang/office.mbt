@@ -31,6 +31,8 @@ pub fn chart_kinds(String) -> Array[String]
 
 pub fn chart_series(String) -> Array[ChartSeriesMeta]
 
+pub fn chart_title(String) -> String?
+
 pub fn effective_style_id(@xlsx.Workbook, String, String, row~ : Int, col~ : Int) -> Int raise @xlsx.XlsxError
 
 pub fn lint(@xlsx.Workbook, file~ : String, sheet? : String) -> Json raise
