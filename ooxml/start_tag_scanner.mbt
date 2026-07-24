@@ -329,20 +329,24 @@ fn xml_span_equals_ascii_case_insensitive(
 }
 
 ///|
-fn validate_xml_character_span(
+fn validate_xml_character_span_and_check_whitespace(
   xml : StringView,
   start : Int,
   end : Int,
   cancelled : () -> Bool,
-) -> Unit raise ParseXmlError {
+) -> Bool raise ParseXmlError {
   let mut index = start
   let mut next_checkpoint = start
+  let mut whitespace = true
   while index < end {
     if index >= next_checkpoint {
       check_xml_cancelled(cancelled)
       next_checkpoint = index + 4096
     }
     let unit = xml[index]
+    if !is_attr_space(unit) {
+      whitespace = false
+    }
     if unit < 0x20 &&
       unit != ('\t' : UInt16) &&
       unit != ('\n' : UInt16) &&
@@ -362,6 +366,19 @@ fn validate_xml_character_span(
     }
   }
   check_xml_cancelled(cancelled)
+  whitespace
+}
+
+///|
+fn validate_xml_character_span(
+  xml : StringView,
+  start : Int,
+  end : Int,
+  cancelled : () -> Bool,
+) -> Unit raise ParseXmlError {
+  ignore(
+    validate_xml_character_span_and_check_whitespace(xml, start, end, cancelled),
+  )
 }
 
 ///|
@@ -1499,14 +1516,13 @@ pub fn XmlStartTagScanner::next(
           Some(value) => value
           None => raise InvalidXml(msg="XML CDATA section is not closed")
         }
-        validate_xml_character_span(self.xml, start + 9, end, self.cancelled)
-        let mut character_index = start + 9
-        while character_index < end {
-          if !is_attr_space(self.xml[character_index]) {
-            self.intervening_character_data_is_whitespace = false
-            break
-          }
-          character_index = character_index + 1
+        if !validate_xml_character_span_and_check_whitespace(
+            self.xml,
+            start + 9,
+            end,
+            self.cancelled,
+          ) {
+          self.intervening_character_data_is_whitespace = false
         }
         if self.canonicalize_markup {
           self.record_rewrite(
@@ -2504,7 +2520,7 @@ test "start tag scanner extracts exact expanded attributes" {
 ///|
 test "start tag scanner reports intervening character data" {
   let scanner = XmlStartTagScanner::new(
-    "<root><first> \t<![CDATA[\n]]></first><second/>text<third/></root>",
+    "<root><first> \t<![CDATA[\n]]></first><second/>text<third><![CDATA[text]]></third><fourth/></root>",
   )
   assert_true(scanner.next())
   assert_true(scanner.intervening_character_data_is_whitespace())
@@ -2514,8 +2530,28 @@ test "start tag scanner reports intervening character data" {
   assert_true(scanner.intervening_character_data_is_whitespace())
   assert_true(scanner.next())
   assert_false(scanner.intervening_character_data_is_whitespace())
+  assert_true(scanner.next())
+  assert_false(scanner.intervening_character_data_is_whitespace())
   assert_false(scanner.next())
   assert_true(scanner.intervening_character_data_is_whitespace())
+}
+
+///|
+test "CDATA whitespace classification polls cancellation" {
+  let value = " ".repeat(32 * 1024)
+  let checks = [0]
+  try
+    validate_xml_character_span_and_check_whitespace(value, 0, value.length(), () => {
+      checks[0] += 1
+      checks[0] >= 4
+    })
+    |> ignore
+  catch {
+    ReadCancelled => assert_true(checks[0] >= 4)
+    _ => fail("unexpected CDATA classification cancellation")
+  } noraise {
+    _ => fail("expected CDATA classification cancellation")
+  }
 }
 
 ///|
