@@ -270,7 +270,7 @@ fn batch_command() -> @argparse.Command {
       ),
       PositionArg(
         "script",
-        about="strict xlsx.batch/1 (XLSX) or docx.batch/2 (DOCX) JSON script",
+        about="strict xlsx.batch/2 preferred (XLSX; v1 retained) or docx.batch/2 (DOCX) JSON script",
         num_args=@argparse.ValueRange::single(),
       ),
     ],

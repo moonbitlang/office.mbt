@@ -14,7 +14,7 @@ disagree, the tests are the source of truth and this document has a bug.
   facade instead puts the result inside an `office.output/1` envelope; its
   `data.schema` identifies the result, but inner-object key order is not an
   API. Identifiers are declared once per package: xlsx identifiers (including the consumed
-  `xlsx.batch/1`) in `inspect/schema.mbt`, docx read-side identifiers in
+  `xlsx.batch/1` and preferred `xlsx.batch/2`) in `inspect/schema.mbt`, docx read-side identifiers in
   `docx2html/inspect/schema.mbt`, and the consumed `docx.batch/1` /
   `docx.batch/2` identifiers in `docx2html/batch` (`SCHEMA_BATCH`,
   `SCHEMA_BATCH_V2`), next to their parser.
@@ -23,7 +23,7 @@ disagree, the tests are the source of truth and this document has a bug.
   an existing identifier; keys are never renamed, removed, or retyped. A
   breaking change mints a new identifier with a bumped major. Consumers
   must ignore keys they do not recognize.
-- **Consumed scripts** (`xlsx.batch/1`, `docx.batch/1`, `docx.batch/2`)
+- **Consumed scripts** (`xlsx.batch/1`, `xlsx.batch/2`, `docx.batch/1`, `docx.batch/2`)
   are the opposite:
   validation is STRICT. Unknown keys, unknown enum values, and wrong value
   types are rejected with an error naming the op — a typo must fail
@@ -244,13 +244,18 @@ evaluated. Scans all sheets, or only `--sheet`.
   non-zero exit rather than being reported as a finding.
 - `lint` is read-only.
 
-## `xlsx.batch/1` — mutation script (`xlsx batch <file> <script.json>`)
+## `xlsx.batch/1` and `xlsx.batch/2` — mutation script (`xlsx batch <file> <script.json>`)
+
+`xlsx.batch/2` is preferred for new scripts. The exact `xlsx.batch/1` parser
+and behavior remain available for historical callers. Both schemas currently
+contain the same operations and parameters, so changing only the envelope
+schema preserves application behavior and serialized workbook bytes.
 
 Envelope:
 
 ```json
 {
-  "schema": "xlsx.batch/1",
+  "schema": "xlsx.batch/2",
   "ops": [
     {"op": "set", "params": {"sheet": "Data", "cell": "A1", "value": "Hello"}}
   ]
@@ -398,16 +403,19 @@ Envelope:
   the original (Windows follows directory ACLs); chmod afterwards for
   group access.
 
-### Capability negotiation & `xlsx.capabilities/1` (`xlsx capabilities`)
+### Capability negotiation & `xlsx.capabilities/2` (`xlsx capabilities`)
 
-Before a stable release, `xlsx.batch/1` does not promise backward or forward
-compatibility. An agent targeting an unknown build must query the executable
-capability catalog instead of assuming an operation, parameter, or limit:
+An agent targeting an unknown build must query the executable capability
+catalog instead of assuming an operation, parameter, or limit. The catalog is
+the parser's versioned registry: every operation and parameter names the schema
+that introduced it, and parser lookup filters that registry by the script's
+declared schema.
 
 ```json
 {
-  "schema": "xlsx.capabilities/1",
-  "batch_schema": "xlsx.batch/1",
+  "schema": "xlsx.capabilities/2",
+  "preferred_schema": "xlsx.batch/2",
+  "accepted_schemas": ["xlsx.batch/1", "xlsx.batch/2"],
   "limits": {
     "max_script_bytes": 8388608,
     "max_ops": 10000,
@@ -418,10 +426,10 @@ capability catalog instead of assuming an operation, parameter, or limit:
     "max_row_column_lines": 1000000
   },
   "ops": [
-    { "op": "set", "params": [
-        { "name": "sheet", "type": "string", "required": true },
-        { "name": "cell",  "type": "cell",   "required": true },
-        { "name": "value", "type": "value",  "required": true } ] }
+    { "op": "set", "introduced_in": "xlsx.batch/1", "params": [
+        { "name": "sheet", "type": "string", "introduced_in": "xlsx.batch/1", "required": true },
+        { "name": "cell",  "type": "cell",   "introduced_in": "xlsx.batch/1", "required": true },
+        { "name": "value", "type": "value",  "introduced_in": "xlsx.batch/1", "required": true } ] }
     // … one entry per op this build accepts
   ]
 }
@@ -437,6 +445,11 @@ cell or `A1:B2` range a validation covers, also not cell-capped), `column`,
 the single source of truth an agent should read rather than hard-coding the
 op list. (Parsed ops are opaque in the library API too, so growing the op
 set is a source-compatible change.)
+
+The XLSX variant of `office help xlsx batch --json` carries this exact payload
+as its `registry` member. The Office capability fingerprint includes the
+canonical registry JSON, so any parser-owned operation, parameter, version, or
+limit change also changes the Office fingerprint.
 
 ## Unified `office` facade envelopes
 
@@ -821,8 +834,9 @@ any refusal publishes nothing.
 ### `office.dump/1` (`office dump FILE [--json|--jsonl]`)
 
 A replayable semantic dump: the document re-expressed as an ordered stream
-of canonical batch ops in their exact engine JSON shapes — `xlsx.batch/1`
-for workbooks, `docx.batch/2` for word documents — so replaying the ops
+of canonical batch ops in their exact engine JSON shapes — `xlsx.batch/2`
+for new workbook dumps (`xlsx.batch/1` historical dumps remain replayable),
+and `docx.batch/2` for word documents — so replaying the ops
 through the same strict batch engine reconstructs an equivalent document,
 never a second writer. Everything the op vocabulary cannot express becomes
 an ordered, machine-readable `residual` record (error cells, array

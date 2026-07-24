@@ -10,7 +10,7 @@ import {
 // Values
 pub const SCHEMA_DUMP : String = "office.dump/1"
 
-pub const XLSX_BATCH_SCHEMA : String = "xlsx.batch/1"
+pub const XLSX_BATCH_SCHEMA : String = "xlsx.batch/2"
 
 pub fn docx_dump_op_chunks(Array[Json]) -> Array[Array[Json]]
 

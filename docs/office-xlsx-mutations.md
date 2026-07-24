@@ -35,7 +35,8 @@ JSON success data uses `office.xlsx.create/1`:
 office batch FILE SCRIPT [--out FILE] [--dry-run] [--overwrite] [--json]
 ```
 
-`SCRIPT` is a strict UTF-8 `xlsx.batch/1` document. The parser rejects unknown
+`SCRIPT` is a strict UTF-8 XLSX batch document. `xlsx.batch/2` is preferred;
+historical `xlsx.batch/1` scripts retain their exact behavior. The parser rejects unknown
 keys, operations, parameters, types, and enum values. It retains an opaque plan
 with resource accounting, and the transaction applies that exact plan in order
 to one bounded workbook snapshot. A failed parse, operation, serialization,
@@ -72,7 +73,7 @@ JSON success data uses `office.xlsx.batch/1`:
 ## Resource boundaries
 
 The encoded script is limited before UTF-8 decoding or JSON parsing. The
-current `xlsx.batch/1` ceilings are:
+current `xlsx.batch/1` and `xlsx.batch/2` ceilings are:
 
 - 8 MiB of encoded script input;
 - 10,000 operations;
@@ -85,7 +86,7 @@ current `xlsx.batch/1` ceilings are:
 - 1,000,000 row/column lines across bounded width, hide, show, and height
   operations.
 
-Those parser ceilings describe scripts accepted by `xlsx.batch/1`. The Office
+Those parser ceilings describe scripts accepted by either schema. The Office
 transaction applies a stricter live-materialization policy before mutation: at
 most 32,768 existing-plus-projected concrete cells, 32,768
 existing-plus-projected row/column records, 16 MiB of decoded source XML, and
@@ -98,7 +99,8 @@ limits partition the transaction's fixed working reserve; exceeding one returns
 Individual coordinates, ranges, row/column bands, package bytes, entries,
 inflation, validation findings, paths, and diagnostics have additional
 lower-level ceilings. Agents should inspect both `xlsx capabilities` for the
-script grammar and `office help batch --json` for the transaction constraints;
+versioned parser-owned script registry and `office help batch --json` for the
+same exact embedded registry plus transaction constraints;
 those records are the executable sources of truth.
 
 ## SDK API

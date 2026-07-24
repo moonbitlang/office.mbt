@@ -261,7 +261,7 @@ fn build_command() -> @argparse.Command {
       ),
       Command(
         "batch",
-        about="Apply an xlsx.batch/1 JSON op script and save in place",
+        about="Apply an xlsx.batch/2 JSON op script (v1 retained) and save in place",
         positionals=[
           PositionArg("file"),
           PositionArg(

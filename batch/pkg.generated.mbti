@@ -23,7 +23,7 @@ pub const MAX_TOTAL_STYLE_CELLS : Int64 = 1_000_000
 
 pub const MAX_TOTAL_TOUCHED_CELLS : Int64 = 1_000_000
 
-pub const SCHEMA_CAPABILITIES : String = "xlsx.capabilities/1"
+pub const SCHEMA_CAPABILITIES : String = "xlsx.capabilities/2"
 
 pub fn apply_op(@xlsx.Workbook, BatchOp) -> Unit raise
 
@@ -58,6 +58,7 @@ pub fn BatchOp::name(Self) -> String
 type BatchPlan
 pub fn BatchPlan::apply(Self, @xlsx.Workbook) -> Unit raise BatchError
 pub fn BatchPlan::operation_count(Self) -> Int
+pub fn BatchPlan::schema(Self) -> String
 pub fn BatchPlan::stats(Self) -> BatchPlanStats
 
 pub struct BatchPlanStats {

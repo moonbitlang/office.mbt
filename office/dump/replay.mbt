@@ -23,9 +23,10 @@ pub fn replay_xlsx_dump(
   }
   // validate the batch schema up front — an empty op stream produces no
   // chunks, so the per-chunk parse below would never see a wrong schema
-  guard envelope.batch_schema == XLSX_BATCH_SCHEMA else {
+  guard envelope.batch_schema == @inspect.SCHEMA_BATCH ||
+    envelope.batch_schema == @inspect.SCHEMA_BATCH_V2 else {
     raise ReplayInvalidFormat(
-      "xlsx dump has an unexpected batch schema: \{envelope.batch_schema}",
+      "unsupported XLSX batch schema '\{envelope.batch_schema}' (accepted: \{@inspect.SCHEMA_BATCH}, \{@inspect.SCHEMA_BATCH_V2})",
     )
   }
   guard envelope.create_sheet is Some(create_sheet) else {

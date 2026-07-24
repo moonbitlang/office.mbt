@@ -196,6 +196,7 @@ pub(all) struct CapabilityVariant {
   name : String
   usage : String
   result_schema : String
+  registry : Json?
   inputs : Array[CapabilityField]
   outputs : Array[CapabilityField]
   constraints : Array[String]

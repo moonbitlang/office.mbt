@@ -261,15 +261,16 @@ The workbook the agent commands read stays a valid OOXML package:
   $ xlsx.exe validate book.xlsx
   valid
 
-`batch` applies an xlsx.batch/1 op script in one open -> apply -> save
-cycle (ops mirror the subcommands; JSON value types are honored). It is
+`batch` applies a versioned XLSX op script in one open -> apply -> save
+cycle (xlsx.batch/2 is preferred and xlsx.batch/1 remains accepted; ops mirror
+the subcommands and JSON value types are honored). It is
 all-or-nothing: `--dry-run` writes nothing, a failing op names its 0-based
 index and leaves the file untouched, and the final save goes through a
 temp file + rename:
 
   $ cat > report.json <<'JSON'
   > {
-  >   "schema": "xlsx.batch/1",
+  >   "schema": "xlsx.batch/2",
   >   "ops": [
   >     {"op": "set", "params": {"sheet": "Data", "cell": "D1", "value": "Qty"}},
   >     {"op": "set", "params": {"sheet": "Data", "cell": "D2", "value": 7.5}},
@@ -324,7 +325,7 @@ wrong schema string is rejected up front:
   > {"schema": "xlsx.batch/9", "ops": []}
   > JSON
   $ xlsx.exe batch book.xlsx wrong.json
-  error: unsupported schema 'xlsx.batch/9' (expected xlsx.batch/1)
+  error: unsupported schema 'xlsx.batch/9' (accepted: xlsx.batch/1, xlsx.batch/2; preferred: xlsx.batch/2)
   [1]
 
 The `table` op defines an Excel table over a range, taking its column names
@@ -466,8 +467,12 @@ ops it doesn't know):
 
   $ xlsx.exe capabilities | head -2
   {
-    "schema": "xlsx.capabilities/1",
+    "schema": "xlsx.capabilities/2",
   $ xlsx.exe capabilities | grep -c '"op":'
   15
-  $ xlsx.exe capabilities | grep -o '"batch_schema": "[^"]*"'
-  "batch_schema": "xlsx.batch/1"
+  $ xlsx.exe capabilities | grep -o '"preferred_schema": "[^"]*"'
+  "preferred_schema": "xlsx.batch/2"
+  $ xlsx.exe capabilities | grep -A2 '"accepted_schemas"'
+    "accepted_schemas": [
+      "xlsx.batch/1",
+      "xlsx.batch/2"

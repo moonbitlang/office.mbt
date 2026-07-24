@@ -107,6 +107,7 @@ pub(all) struct CapabilityVariant {
   name : String
   usage : String
   result_schema : String
+  registry : Json?
   inputs : Array[CapabilityField]
   outputs : Array[CapabilityField]
   constraints : Array[String]
@@ -179,6 +180,7 @@ fn capability_variant(
     name,
     usage,
     result_schema,
+    registry: None,
     inputs: [],
     outputs: [],
     constraints,
@@ -250,6 +252,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           name: "capabilities",
           usage: "office help [all|<format>|<operation>|<format> <operation>] [--json]",
           result_schema: SCHEMA_CAPABILITIES,
+          registry: None,
           inputs: [
             capability_field(
               "query", "enum(all)|format|operation|format+operation", false, "optional capability query",
@@ -283,6 +286,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           name: "capability-records",
           usage: "office help [all|<format>|<operation>|<format> <operation>] --jsonl",
           result_schema: SCHEMA_CAPABILITY,
+          registry: None,
           inputs: [
             capability_field(
               "query", "enum(all)|format|operation|format+operation", false, "optional capability query",
@@ -343,6 +347,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           name: "schemas",
           usage: "office help schemas [--json|--jsonl]",
           result_schema: "office.input-contracts/1",
+          registry: None,
           inputs: [
             capability_field(
               "json", "boolean", false, "emit one office.output/1 JSON document",
@@ -370,6 +375,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           name: "schema",
           usage: "office help schema <id> [--json|--jsonl]",
           result_schema: "office.input-contract/1",
+          registry: None,
           inputs: [
             capability_field(
               "id", "enum(installed-input-contract-id)", true, "exact contract id",
@@ -880,7 +886,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "replay", "object", true, "batch schema, create parameters, and engine limits for replay",
         ),
         capability_field(
-          "ops", "array", true, "ordered canonical xlsx.batch/1 ops in engine JSON shapes",
+          "ops", "array", true, "ordered canonical versioned batch ops in engine JSON shapes",
         ),
         capability_field(
           "assets", "object", true, "content-addressed binaries: sha256-<hex> id to {content_type, size, data} inline base64 under per-asset and total allowances",
@@ -1050,6 +1056,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           name: "xlsx",
           usage: "office create xlsx OUTPUT [--sheet NAME] [--dry-run] [--overwrite] [--json]",
           result_schema: SCHEMA_XLSX_CREATE_RESULT,
+          registry: None,
           inputs: [
             capability_field("output", "path", true, "new .xlsx destination"),
             capability_field(
@@ -1092,6 +1099,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           name: "docx",
           usage: "office create docx OUTPUT [--dry-run] [--overwrite] [--json]",
           result_schema: SCHEMA_DOCX_CREATE_RESULT,
+          registry: None,
           inputs: [
             capability_field("output", "path", true, "new .docx destination"),
             capability_field(
@@ -1238,10 +1246,11 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           name: "xlsx",
           usage: "office batch TARGET SCRIPT [--out FILE] [--dry-run] [--overwrite] [--json]",
           result_schema: SCHEMA_XLSX_BATCH_RESULT,
+          registry: Some(@batch.capabilities()),
           inputs: [
             capability_field("file", "path", true, "existing .xlsx package"),
             capability_field(
-              "script", "xlsx.batch/1-file", true, "strict bounded UTF-8 JSON operation script",
+              "script", "xlsx.batch/2-file", true, "preferred strict bounded UTF-8 JSON operation script; historical xlsx.batch/1 is also accepted",
             ),
             capability_field(
               "out", "path", false, "separate .xlsx publication destination",
@@ -1270,7 +1279,8 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           ],
           constraints: [
             "format=xlsx",
-            "schema=xlsx.batch/1",
+            "preferred-schema=xlsx.batch/2",
+            "accepted-schemas=xlsx.batch/1|xlsx.batch/2",
             "overwrite-requires(out)",
             "out-extension-must-match-input-format",
             "transactional-publication",
@@ -1292,6 +1302,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           name: "docx",
           usage: "office batch --format docx TARGET SCRIPT [--dry-run] [--overwrite] [--json]",
           result_schema: SCHEMA_DOCX_BATCH_RESULT,
+          registry: None,
           inputs: [
             capability_field(
               "target", "path", true, "new .docx destination (fresh authoring; never mutates an existing file)",
@@ -1365,6 +1376,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           name: "list",
           usage: "office raw list FILE [--json]",
           result_schema: SCHEMA_RAW_INVENTORY,
+          registry: None,
           inputs: [
             capability_field(
               "file", "path", true, "existing XLSX or DOCX package",
@@ -1393,6 +1405,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           name: "read",
           usage: "office raw read FILE PART [--json] [--base64 | --output FILE]",
           result_schema: SCHEMA_RAW_PART,
+          registry: None,
           inputs: [
             capability_field(
               "file", "path", true, "existing XLSX or DOCX package",
@@ -1439,6 +1452,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           name: "replace",
           usage: "office raw replace FILE PART (--xml XML | --xml-file FILE) [--out FILE] [--dry-run] [--overwrite] [--json]",
           result_schema: SCHEMA_RAW_RESULT,
+          registry: None,
           inputs: [
             capability_field(
               "file", "path", true, "existing XLSX or DOCX package",
@@ -1490,6 +1504,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           name: "edit",
           usage: "office raw edit FILE PART --path PATH --action ACTION [action arguments] [--namespace PREFIX=URI]... [--all] [--out FILE] [--dry-run] [--overwrite] [--json]",
           result_schema: SCHEMA_RAW_RESULT,
+          registry: None,
           inputs: [
             capability_field(
               "file", "path", true, "existing XLSX or DOCX package",
@@ -1645,7 +1660,7 @@ fn capability_action_json(action : CapabilityAction) -> Json {
 
 ///|
 fn capability_variant_json(variant : CapabilityVariant) -> Json {
-  Json::object({
+  let fields : Map[String, Json] = {
     "name": Json::string(variant.name),
     "usage": Json::string(variant.usage),
     "result_schema": Json::string(variant.result_schema),
@@ -1654,7 +1669,12 @@ fn capability_variant_json(variant : CapabilityVariant) -> Json {
     "constraints": json_strings(variant.constraints),
     "actions": Json::array(variant.actions.map(capability_action_json)),
     "output_modes": json_strings(variant.output_modes),
-  })
+  }
+  match variant.registry {
+    Some(registry) => fields["registry"] = registry
+    None => ()
+  }
+  Json::object(fields)
 }
 
 ///|
@@ -1794,6 +1814,10 @@ fn append_fingerprint_command(
     append_fingerprint_token(buffer, variant.name)
     append_fingerprint_token(buffer, variant.usage)
     append_fingerprint_token(buffer, variant.result_schema)
+    match variant.registry {
+      Some(registry) => append_fingerprint_token(buffer, registry.stringify())
+      None => append_fingerprint_token(buffer, "")
+    }
     append_fingerprint_section(
       buffer,
       "variant_inputs",
@@ -2023,6 +2047,7 @@ fn hydrate_capability_command_variants(
           name: variant.name,
           usage: variant.usage,
           result_schema: variant.result_schema,
+          registry: variant.registry,
           inputs: if variant.inputs.is_empty() {
             exact_capability_fields(
               command.name,
@@ -2089,6 +2114,7 @@ fn capability_command_for_format(
         name: variant.name,
         usage: variant.usage,
         result_schema: variant.result_schema,
+        registry: variant.registry,
         inputs: exact_capability_fields(
           command.name,
           variant.inputs,

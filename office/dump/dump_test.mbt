@@ -38,7 +38,7 @@ test "the dump document is canonical, ordered, and replay-shaped" {
       #|    "bytes": 1234
       #|  },
       #|  "replay": {
-      #|    "batch_schema": "xlsx.batch/1",
+      #|    "batch_schema": "xlsx.batch/2",
       #|    "create": {
       #|      "sheet": "Data"
       #|    },
