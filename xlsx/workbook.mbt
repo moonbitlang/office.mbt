@@ -1832,6 +1832,18 @@ pub fn Workbook::get_cell_hyper_link(
 }
 
 ///|
+/// Returns full hyperlink records for `sheet_name` in worksheet XML/insertion
+/// order. See `Worksheet::get_hyperlinks` for filter semantics.
+pub fn Workbook::get_hyperlinks(
+  self : Workbook,
+  sheet_name : StringView,
+  link_type? : HyperlinkType,
+) -> Array[Hyperlink] raise XlsxError {
+  let sheet = self.require_sheet(sheet_name)
+  sheet.get_hyperlinks(link_type?)
+}
+
+///|
 pub fn Workbook::get_hyperlink_cells(
   self : Workbook,
   sheet_name : StringView,

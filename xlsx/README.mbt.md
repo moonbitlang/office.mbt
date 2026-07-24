@@ -388,8 +388,19 @@ test "hyperlinks" {
   // Internal link to another cell
   sheet.set_cell("A2", "Go to Data")
   sheet.set_cell_hyperlink("A2", "Sheet2!A1", Location)
+
+  // Enumerate full typed records, optionally filtered by hyperlink kind.
+  inspect(sheet.get_hyperlinks().length(), content="2")
+  inspect(sheet.get_hyperlinks(link_type=External).length(), content="1")
 }
 ```
+
+Mutation rejects empty targets, XML-illegal text, and unsafe or unknown absolute
+URI schemes. Absolute external targets allow `http`, `https`, `mailto`, `ftp`,
+`ftps`, `sftp`, `news`, `tel`, `sms`, `file`, `about`, and `ppaction`;
+forward-slash relative external paths remain supported. A hyperlink set on any
+cell in a merged range is addressed consistently through the range's top-left
+anchor for set, get, and remove.
 
 ## Sheet Operations
 

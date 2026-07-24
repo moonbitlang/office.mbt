@@ -102,6 +102,18 @@ fn Worksheet::merged_anchor_for_cell(
 }
 
 ///|
+fn Worksheet::hyperlink_anchor_for_cell(
+  self : Worksheet,
+  row : Int,
+  col : Int,
+) -> String raise XlsxError {
+  match self.merged_anchor_for_cell(row, col) {
+    Some(value) => value
+    None => cell_ref_from(row, col)
+  }
+}
+
+///|
 /// Writes `value` into the cell at `reference` (A1 notation, e.g. `"B2"`) as a
 /// raw string, overwriting any existing content while preserving the cell's
 /// style. For numeric or boolean values use `set_cell_value`; for dates and
@@ -974,6 +986,12 @@ pub fn Worksheet::set_cell_formula_opts(
 }
 
 ///|
+/// Sets or replaces the hyperlink identified by `reference`. Cells inside a
+/// merged range use its top-left anchor as their shared identity. `External`
+/// targets accept the documented safe URI schemes or forward-slash relative
+/// paths; `Location` targets reject explicit URI schemes. Empty, XML-illegal,
+/// unsafe-scheme, and backslash-form external targets raise `InvalidHyperlink`
+/// before mutation. Passing `Unset` removes the anchored hyperlink.
 pub fn Worksheet::set_cell_hyperlink(
   self : Worksheet,
   reference : String,
@@ -984,56 +1002,42 @@ pub fn Worksheet::set_cell_hyperlink(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   let (row, col) = cell_ref_to_rc(reference)
-  let canonical = cell_ref_from(row, col)
-  let resolved = match self.merged_anchor_for_cell(row, col) {
-    Some(value) => value
-    None => canonical
-  }
+  let resolved = self.hyperlink_anchor_for_cell(row, col)
   if link_type == Unset {
     self.remove_cell_hyperlink(resolved)
     return
   }
-  if target.length() > max_hyperlink_target_chars {
-    raise InvalidHyperlink(msg="hyperlink target is too long")
-  }
+  validate_hyperlink_values(target, link_type, display, tooltip)
   let display_value = if display == "" { None } else { Some(display) }
   let tooltip_value = if tooltip == "" { None } else { Some(tooltip) }
   let normalized_ref = normalize_cell_or_range_ref(resolved)
-  let mut updated = false
+  let mut existing_index : Int? = None
   for i, link in self.hyperlinks {
     if link.reference == normalized_ref {
-      self.hyperlinks[i] = {
-        reference: normalized_ref,
-        target,
-        link_type,
-        location: if link_type == Location {
-          Some(target)
-        } else {
-          None
-        },
-        display: display_value,
-        tooltip: tooltip_value,
-      }
-      updated = true
+      existing_index = Some(i)
       break
     }
   }
-  if !updated {
-    if self.hyperlinks.length() > max_sheet_hyperlinks {
-      raise HyperlinkLimitExceeded(limit=max_sheet_hyperlinks)
+  let next : Hyperlink = {
+    reference: normalized_ref,
+    target,
+    link_type,
+    location: if link_type == Location {
+      Some(target)
+    } else {
+      None
+    },
+    display: display_value,
+    tooltip: tooltip_value,
+  }
+  match existing_index {
+    Some(index) => self.hyperlinks[index] = next
+    None => {
+      if self.hyperlinks.length() >= max_sheet_hyperlinks {
+        raise HyperlinkLimitExceeded(limit=max_sheet_hyperlinks)
+      }
+      self.hyperlinks.push(next)
     }
-    self.hyperlinks.push({
-      reference: normalized_ref,
-      target,
-      link_type,
-      location: if link_type == Location {
-        Some(target)
-      } else {
-        None
-      },
-      display: display_value,
-      tooltip: tooltip_value,
-    })
   }
 }
 
@@ -1062,12 +1066,32 @@ pub fn Worksheet::get_cell_hyperlink(
   reference : StringView,
 ) -> Hyperlink? raise XlsxError {
   let (row, col) = cell_ref_to_rc(reference)
+  let resolved = self.hyperlink_anchor_for_cell(row, col)
+  let (resolved_row, resolved_col) = cell_ref_to_rc(resolved)
   for link in self.hyperlinks {
-    if cell_in_reference(link.reference, row, col) {
+    if cell_in_reference(link.reference, resolved_row, resolved_col) {
       return Some(link)
     }
   }
   None
+}
+
+///|
+/// Returns full hyperlink records in worksheet XML/insertion order. References
+/// are canonical A1 cell/range references. Omitting `link_type` returns every
+/// hyperlink; `External` and `Location` filter by hyperlink kind; `Unset`
+/// returns no records.
+pub fn Worksheet::get_hyperlinks(
+  self : Worksheet,
+  link_type? : HyperlinkType,
+) -> Array[Hyperlink] {
+  let links : Array[Hyperlink] = []
+  for link in self.hyperlinks {
+    if hyperlink_matches_type(link, link_type) {
+      links.push(link)
+    }
+  }
+  links
 }
 
 ///|
@@ -1080,27 +1104,8 @@ pub fn Worksheet::get_hyperlink_cells(
   link_type? : HyperlinkType,
 ) -> Array[String] {
   let references : Array[String] = []
-  match link_type {
-    None =>
-      for link in self.hyperlinks {
-        references.push(link.reference)
-      }
-    Some(Unset) => ()
-    // Excelize filters External by r:id presence and Location by the
-    // location attribute independently, so an external link that also
-    // carries a location fragment matches both filters.
-    Some(Location) =>
-      for link in self.hyperlinks {
-        if link.link_type == Location || link.location is Some(_) {
-          references.push(link.reference)
-        }
-      }
-    Some(wanted) =>
-      for link in self.hyperlinks {
-        if link.link_type == wanted {
-          references.push(link.reference)
-        }
-      }
+  for link in self.get_hyperlinks(link_type?) {
+    references.push(link.reference)
   }
   references
 }
@@ -1111,9 +1116,11 @@ pub fn Worksheet::remove_cell_hyperlink(
   reference : StringView,
 ) -> Unit raise XlsxError {
   let (row, col) = cell_ref_to_rc(reference)
+  let resolved = self.hyperlink_anchor_for_cell(row, col)
+  let (resolved_row, resolved_col) = cell_ref_to_rc(resolved)
   let updated : Array[Hyperlink] = []
   for link in self.hyperlinks {
-    if cell_in_reference(link.reference, row, col) {
+    if cell_in_reference(link.reference, resolved_row, resolved_col) {
       continue
     }
     updated.push(link)
