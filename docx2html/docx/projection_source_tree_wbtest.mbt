@@ -231,7 +231,7 @@ test "projection source attribute and text limits are cumulative and exact" {
       @utf8.encode(two_attributes),
       budget=projection_source_budget(
         max_elements=2,
-        max_attribute_chars=15,
+        max_attribute_chars=16,
         max_depth=2,
         max_text_bytes=0,
         max_text_tokens=0,
@@ -242,7 +242,7 @@ test "projection source attribute and text limits are cumulative and exact" {
     two_attributes,
     projection_source_budget(
       max_elements=2,
-      max_attribute_chars=14,
+      max_attribute_chars=15,
       max_depth=2,
       max_text_bytes=0,
       max_text_tokens=0,
@@ -270,6 +270,34 @@ test "projection source attribute and text limits are cumulative and exact" {
       max_elements=1,
       max_attribute_chars=16,
       max_depth=1,
+      max_text_bytes=0,
+      max_text_tokens=0,
+    ),
+    "DocxXmlMaterializedCharacters",
+  )
+
+  // Root QName + namespace declaration = 13. Each child then retains its
+  // three-byte source QName plus an eight-character `{urn:x}local` key.
+  let derived_keys =
+    #|<r xmlns:q="urn:x"><q:a/><q:b/></r>
+  ignore(
+    scan_projection_source_tree(
+      @utf8.encode(derived_keys),
+      budget=projection_source_budget(
+        max_elements=3,
+        max_attribute_chars=35,
+        max_depth=2,
+        max_text_bytes=0,
+        max_text_tokens=0,
+      ),
+    ),
+  )
+  assert_projection_source_refuses(
+    derived_keys,
+    projection_source_budget(
+      max_elements=3,
+      max_attribute_chars=34,
+      max_depth=2,
       max_text_bytes=0,
       max_text_tokens=0,
     ),
@@ -380,5 +408,16 @@ test "projection source mode fails closed on ambiguous physical structure" {
     multiple,
     projection_source_budget(),
     "multiple root elements",
+  )
+  let oversized_close = StringBuilder()
+  oversized_close.write_string("<a></")
+  for _ in 0..<(max_annotation_relevant_attribute_bytes + 1) {
+    oversized_close.write_char('a')
+  }
+  oversized_close.write_char('>')
+  assert_projection_source_refuses(
+    oversized_close.to_string(),
+    projection_source_budget(),
+    "DocxXmlTokenLength",
   )
 }
