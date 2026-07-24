@@ -17,12 +17,12 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:6b566232
+    Fingerprint: crc32:49f88d54
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
   Commands:
-    help — Show the implemented Office capability registry
+    help — Show implemented capabilities or consumed input contracts
 
   $ office.exe help word | sed -n '1,7p'
   Format: docx (aliases: word)
@@ -40,10 +40,35 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:6b566232","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","template","annotate","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:49f88d54","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","template","annotate","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:6b566232","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:49f88d54","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:49f88d54","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:49f88d54","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:49f88d54","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:49f88d54","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:49f88d54","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:49f88d54","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:49f88d54","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:49f88d54","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:49f88d54","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:49f88d54","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:49f88d54","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:49f88d54","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:49f88d54","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:49f88d54","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:49f88d54","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:49f88d54","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:49f88d54","kind":"command","name":"raw"}]
+
+Installed help exposes every consumed JSON input contract without requiring
+repository-only documentation. Inventory and individual records are versioned;
+an unknown ID fails nonzero with a bounded typed suggestion.
+
+  $ office.exe help schemas
+  Consumed input contracts
+    Schema: office.input-contracts/1
+    xlsx.batch/1 — Strict transactional spreadsheet mutation script
+    docx.batch/2 — Strict fresh-DOCX authoring script with comments and notes
+    office.template.data/1 — Strict non-executable scalar and repeating-region template data
+    docx.annotation-batch/1 — Strict preservation-safe comment mutation script for an existing DOCX
+  Use 'office help schema <id> --json' for the exact contract.
+
+  $ office.exe help schemas --json | jq -c '{schema,success,data:{schema:.data.schema,ids:[.data.contracts[].id],fingerprints_valid:all(.data.contracts[];.fingerprint|test("^sha256:[0-9a-f]{64}$"))}}'
+  {"schema":"office.output/1","success":true,"data":{"schema":"office.input-contracts/1","ids":["xlsx.batch/1","docx.batch/2","office.template.data/1","docx.annotation-batch/1"],"fingerprints_valid":true}}
+
+  $ office.exe help schema docx.batch/2 --jsonl | jq -c '{schema,id,example_schema:.examples[0].schema,ops:[.operations[].op],limits:{max_ops:.limits.max_ops,max_table_columns:.limits.max_table_columns}}'
+  {"schema":"office.input-contract/1","id":"docx.batch/2","example_schema":"docx.batch/2","ops":["paragraph","table","comment"],"limits":{"max_ops":10000,"max_table_columns":63}}
+
+  $ office.exe help schema docx.batc/2 --json > unknown-schema.json; echo $?
+  1
+
+  $ jq -c '{schema,success,code:.error.code,suggestions:.error.details.suggestions}' unknown-schema.json
+  {"schema":"office.output/1","success":false,"code":"office.unknown_schema","suggestions":["docx.batch/2"]}
 
 The raw command publishes explicit subcommand schemas, including every edit
 input and its conditional constraints.
