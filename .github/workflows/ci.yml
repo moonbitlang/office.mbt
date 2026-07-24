@@ -276,6 +276,18 @@ jobs:
             and ([.data.records[].name] == ["docx", "xlsx", "help", "identify", "outline", "get", "text", "query", "validate", "dump", "replay", "issues", "preview", "create", "template", "annotate", "batch", "raw"])'
           moon run --target wasm office/cmd/office -- help all --jsonl 2>office-wasm.err \
             | jq -se 'length == 18 and all(.[]; .schema == "office.capability/2")'
+          moon run --target wasm office/cmd/office -- help schemas 2>office-wasm.err \
+            | grep -q '^Consumed input contracts$'
+          hs=$(moon run --target wasm office/cmd/office -- help schemas --json 2>office-wasm.err)
+          echo "$hs" | jq -e '.success == true and .data.schema == "office.input-contracts/1" and (.data.contracts | length) == 4'
+          moon run --target wasm office/cmd/office -- help schemas --jsonl 2>office-wasm.err \
+            | jq -e '.schema == "office.input-contracts/1" and (.contracts | length) == 4'
+          moon run --target wasm office/cmd/office -- help schema docx.batch/2 2>office-wasm.err \
+            | jq -e '.schema == "office.input-contract/1" and .id == "docx.batch/2"'
+          hc=$(moon run --target wasm office/cmd/office -- help schema docx.batch/2 --json 2>office-wasm.err)
+          echo "$hc" | jq -e '.success == true and .data.schema == "office.input-contract/1" and .data.id == "docx.batch/2"'
+          moon run --target wasm office/cmd/office -- help schema docx.batch/2 --jsonl 2>office-wasm.err \
+            | jq -e '.schema == "office.input-contract/1" and .id == "docx.batch/2"'
           v=$(moon run --target wasm office/cmd/office -- validate ci.xlsx --json 2>office-wasm.err) || { echo "office wasm validate failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$v" | jq -e '.schema == "office.output/1"
             and .success == true

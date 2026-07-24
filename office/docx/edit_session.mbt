@@ -64,6 +64,12 @@ let candidate_xml_materialized_chars : Int = 8 * 1024 * 1024
 let candidate_xml_token_chars : Int = 8 * 1024 * 1024
 
 ///|
+/// Absolute serialized-XML ceiling for one comment fragment. A transaction
+/// may supply a lower effective ceiling when its source package consumes more
+/// of the shared live-materialization budget.
+pub const MAX_COMMENT_FRAGMENT_BYTES : Int = 1024 * 1024
+
+///|
 let bounded_identifier_name : String = "office-docx-bounded"
 
 ///|
@@ -248,7 +254,9 @@ fn open_edit_session(
     annotated,
     fingerprints: source_fingerprints(archive),
     max_candidate_package_bytes: budget.max_candidate_package_bytes(),
-    max_comment_fragment_bytes: budget.max_splice_materialized_bytes() / 8,
+    max_comment_fragment_bytes: (budget.max_splice_materialized_bytes() / 8).min(
+      MAX_COMMENT_FRAGMENT_BYTES,
+    ),
     splice_limits,
     splice_materialized_allowance: budget.max_splice_materialized_bytes(),
     splice_token_allowance: budget.max_splice_xml_tokens(),
