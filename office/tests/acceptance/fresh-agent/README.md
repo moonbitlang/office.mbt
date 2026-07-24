@@ -20,7 +20,10 @@ ordinary incremental reviews may use `xhigh`. Point `auth_json` at the current
 Codex `auth.json` (normally `~/.codex/auth.json`). The runner copies only that
 credential into temporary state; it launches Codex with an empty environment,
 an empty user home, and an empty Codex home, so global `AGENTS.md` files,
-personal skills, plugins, configuration, and rules cannot coach the probe.
+personal skills, plugins, configuration, and rules cannot coach the probe. Its
+PATH contains only the installed Office commands, the resolved Codex launcher
+runtime, and fixed system directories. The runner canonicalizes all directories
+and rejects overlapping probe/evidence paths before capture files are created.
 
 ```sh
 probe="$(mktemp -d "${TMPDIR:-/tmp}/office-f1b-probe.XXXXXX")"
