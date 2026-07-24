@@ -395,17 +395,25 @@ fn parse_drawing_anchors(
 }
 
 ///|
-fn charge_drawing_anchor_pass(
+fn charge_drawing_work(
   budget : ReadBudget?,
-  anchor_xml : StringView,
+  units : Int,
 ) -> Unit raise XlsxError {
   match budget {
     Some(value) => {
       value.checkpoint()
-      value.charge_work(anchor_xml.length())
+      value.charge_work(units)
     }
     None => ()
   }
+}
+
+///|
+fn charge_drawing_anchor_pass(
+  budget : ReadBudget?,
+  anchor_xml : StringView,
+) -> Unit raise XlsxError {
+  charge_drawing_work(budget, anchor_xml.length())
 }
 
 ///|
@@ -939,11 +947,7 @@ fn drawing_chart_frame_is_canonical(
   if cancelled() {
     raise ReadCancelled
   }
-  // Preflight the one retained-fragment materialization. The two wrapped
-  // charges cover the scanner's complete pass and the exact-attribute pass;
-  // both are linear in the wrapped fragment and poll `cancelled`.
-  charge_drawing_anchor_pass(budget, anchor_xml)
-  let wrapped = "<frame-root xmlns:xdr=\"" +
+  let wrapper_prefix = "<frame-root xmlns:xdr=\"" +
     transitional_spreadsheet_drawing_namespace +
     "\" xmlns:a=\"" +
     transitional_drawing_main_namespace +
@@ -951,9 +955,21 @@ fn drawing_chart_frame_is_canonical(
     transitional_drawing_chart_namespace +
     "\" xmlns:r=\"" +
     transitional_relationship_attribute_namespace +
-    "\">" +
-    anchor_xml.to_owned() +
-    "</frame-root>"
+    "\">"
+  let wrapper_suffix = "</frame-root>"
+  let wrapped_length = wrapper_prefix.length() +
+    anchor_xml.length() +
+    wrapper_suffix.length()
+  // Preflight the retained-fragment materialization. The two wrapped charges
+  // cover the scanner's complete pass (including character-data
+  // classification) and the exact-attribute pass. Attribute values are
+  // extracted during that exact pass, so there are no hidden rescans.
+  charge_drawing_work(budget, wrapped_length)
+  let wrapper = StringBuilder::new(size_hint=wrapped_length)
+  wrapper.write_string(wrapper_prefix)
+  wrapper.write_view(anchor_xml)
+  wrapper.write_string(wrapper_suffix)
+  let wrapped = wrapper.to_string()
   charge_drawing_anchor_pass(budget, wrapped)
   charge_drawing_anchor_pass(budget, wrapped)
   try {
@@ -985,6 +1001,9 @@ fn drawing_chart_frame_is_canonical(
         }
         continue
       }
+      if !scanner.intervening_character_data_is_whitespace() {
+        return false
+      }
       let matched = match step {
         1 =>
           depth == 4 &&
@@ -1001,17 +1020,21 @@ fn drawing_chart_frame_is_canonical(
             scanner.parent_local_name() == Some("nvGraphicFramePr") else {
             return false
           }
-          frame_id = workbook_scanner_attribute(scanner, "", "id").unwrap_or("")
+          guard workbook_scanner_exact_attribute_values(scanner, [
+              ("", "id"),
+              ("", "name"),
+            ])
+            is Some(attributes) else {
+            return false
+          }
+          frame_id = attributes[0]
           guard frame_id != "" else { return false }
           let parsed_id = @string.parse_int(frame_id, base=10) catch {
             _ => return false
           }
           parsed_id > 0 &&
           frame_id == "\{parsed_id}" &&
-          workbook_scanner_has_exact_attributes(scanner, [
-            ("", "id", frame_id),
-            ("", "name", "Chart " + frame_id),
-          ])
+          attributes[1] == "Chart " + frame_id
         }
         3 =>
           depth == 5 &&
@@ -1071,13 +1094,13 @@ fn drawing_chart_frame_is_canonical(
             scanner.parent_local_name() == Some("graphicData") else {
             return false
           }
-          let relationship_id = workbook_scanner_attribute(
-            scanner, relationship_namespace, "id",
-          ).unwrap_or("")
-          relationship_id != "" &&
-          workbook_scanner_has_exact_attributes(scanner, [
-            (relationship_namespace, "id", relationship_id),
-          ])
+          guard workbook_scanner_exact_attribute_values(scanner, [
+              (relationship_namespace, "id"),
+            ])
+            is Some(attributes) else {
+            return false
+          }
+          attributes[0] != ""
         }
         10 =>
           depth == 3 &&
@@ -1099,7 +1122,9 @@ fn drawing_chart_frame_is_canonical(
       }
       step += 1
     }
-    step == 11 && frame_id != ""
+    step == 11 &&
+    frame_id != "" &&
+    scanner.intervening_character_data_is_whitespace()
   } catch {
     InvalidXml(_) => false
     ReadCancelled => raise ReadCancelled
@@ -1819,7 +1844,40 @@ test "chart frame fidelity scan rejects extra content and charges its work" {
   assert_true(
     drawing_chart_frame_is_canonical(anchor, 9525, 9525, true, true, budget~),
   )
-  assert_true(budget.parser_work_units > anchor.length() * 2)
+  let charged_work = budget.parser_work_units
+  assert_true(charged_work > anchor.length() * 3)
+  let exact_budget = ReadBudget::new(
+    ReadLimits::with_values(max_parser_work_units=charged_work),
+  )
+  assert_true(
+    drawing_chart_frame_is_canonical(
+      anchor,
+      9525,
+      9525,
+      true,
+      true,
+      budget=exact_budget,
+    ),
+  )
+  let limited_budget = ReadBudget::new(
+    ReadLimits::with_values(max_parser_work_units=charged_work - 1),
+  )
+  try
+    drawing_chart_frame_is_canonical(
+      anchor,
+      9525,
+      9525,
+      true,
+      true,
+      budget=limited_budget,
+    )
+    |> ignore
+  catch {
+    ResourceLimitExceeded(kind~, ..) => assert_eq(kind, "parser_work_units")
+    _ => fail("unexpected chart frame work-limit error")
+  } noraise {
+    _ => fail("expected chart frame work-limit rejection")
+  }
   let extra_transform = anchor.replace(
     old="    <a:graphic>\n",
     new="    <xdr:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"9525\" cy=\"9525\"/></xdr:xfrm>\n    <a:graphic>\n",
@@ -1833,6 +1891,13 @@ test "chart frame fidelity scan rejects extra content and charges its work" {
   )
   assert_false(
     drawing_chart_frame_is_canonical(extra_attribute, 9525, 9525, true, true),
+  )
+  let extra_text = anchor.replace(
+    old="<xdr:cNvPr id=\"1\" name=\"Chart 1\"/>\n",
+    new="<xdr:cNvPr id=\"1\" name=\"Chart 1\"/>custom\n",
+  )
+  assert_false(
+    drawing_chart_frame_is_canonical(extra_text, 9525, 9525, true, true),
   )
   let mut cancellation_checks = 0
   try

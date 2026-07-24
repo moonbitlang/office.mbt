@@ -309,6 +309,9 @@ test "unmodeled chart frame content prevents lossy chart op emission" {
     (
       "      <a:graphic>\n", "      <xdr:xfrm rot=\"1\"><a:off x=\"3\" y=\"4\"/><a:ext cx=\"5\" cy=\"6\"/></xdr:xfrm>\n      <a:graphic>\n",
     ),
+    (
+      "<xdr:cNvPr id=\"1\" name=\"Chart 1\"/>\n", "<xdr:cNvPr id=\"1\" name=\"Chart 1\"/>custom\n",
+    ),
   ]
   for mutation in mutations {
     let (old, replacement) = mutation

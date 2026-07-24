@@ -80,6 +80,7 @@ pub struct XmlStartTagScanner {
   priv mut current_depth : Int
   priv mut current_namespace_uri : String
   priv mut current_namespace_id : Int
+  priv mut intervening_character_data_is_whitespace : Bool
   priv capture_element_namespaces : Array[String]
   priv capture_element_local_name : String
   priv retain_element_namespaces : Array[String]
@@ -1261,6 +1262,7 @@ fn xml_start_tag_scanner_with_rewrites(
     current_depth: 0,
     current_namespace_uri: "",
     current_namespace_id: 0,
+    intervening_character_data_is_whitespace: true,
     capture_element_namespaces,
     capture_element_local_name,
     retain_element_namespaces,
@@ -1367,6 +1369,7 @@ pub fn XmlStartTagScanner::next(
   self : XmlStartTagScanner,
 ) -> Bool raise ParseXmlError {
   check_xml_cancelled(self.cancelled)
+  self.intervening_character_data_is_whitespace = true
   match self.pending_namespace_pop {
     Some(depth) => {
       self.pop_namespace_depth(depth)
@@ -1397,11 +1400,22 @@ pub fn XmlStartTagScanner::next(
           Some(found) => found
           None => raise InvalidXml(msg="XML entity is not closed")
         }
-        if xml_entity_value(self.xml[self.index + 1:entity_end]) is None {
-          raise InvalidXml(msg="XML entity is invalid")
+        let character = match
+          xml_entity_value(self.xml[self.index + 1:entity_end]) {
+          Some(value) => value
+          None => raise InvalidXml(msg="XML entity is invalid")
+        }
+        if character != ' ' &&
+          character != '\t' &&
+          character != '\n' &&
+          character != '\r' {
+          self.intervening_character_data_is_whitespace = false
         }
         self.index = entity_end + 1
         continue
+      }
+      if !is_attr_space(unit) {
+        self.intervening_character_data_is_whitespace = false
       }
       if unit == (']' : UInt16) &&
         self.index + 2 < self.xml.length() &&
@@ -1486,6 +1500,14 @@ pub fn XmlStartTagScanner::next(
           None => raise InvalidXml(msg="XML CDATA section is not closed")
         }
         validate_xml_character_span(self.xml, start + 9, end, self.cancelled)
+        let mut character_index = start + 9
+        while character_index < end {
+          if !is_attr_space(self.xml[character_index]) {
+            self.intervening_character_data_is_whitespace = false
+            break
+          }
+          character_index = character_index + 1
+        }
         if self.canonicalize_markup {
           self.record_rewrite(
             start,
@@ -1664,6 +1686,17 @@ fn XmlStartTagScanner::current_namespace_identity(
 /// Returns the one-based nesting depth of the current start tag.
 pub fn XmlStartTagScanner::depth(self : XmlStartTagScanner) -> Int {
   self.current_depth
+}
+
+///|
+/// Reports whether character data consumed since the preceding start-tag
+/// result consists only of XML whitespace. After `next` returns `false`, this
+/// reports on the trailing character data since the final start tag. Comments
+/// and processing instructions are markup rather than character data.
+pub fn XmlStartTagScanner::intervening_character_data_is_whitespace(
+  self : XmlStartTagScanner,
+) -> Bool {
+  self.intervening_character_data_is_whitespace
 }
 
 ///|
@@ -1958,30 +1991,32 @@ pub fn XmlStartTagScanner::attribute_values_in_namespace(
 }
 
 ///|
-/// Reports whether the current element has exactly `expected` non-namespace
-/// attributes, selected by expanded name and decoded value. Namespace
-/// declarations are ignored. Duplicate expected expanded names return false;
-/// duplicate source expanded names have already been rejected by `next`.
-pub fn XmlStartTagScanner::has_exact_attributes(
+/// Returns decoded attribute values, aligned with `expected`, when the current
+/// element has exactly those expanded attribute names. Namespace declarations
+/// are ignored. Duplicate expected expanded names, extra source attributes,
+/// or missing source attributes return `None`; duplicate source expanded names
+/// have already been rejected by `next`.
+pub fn XmlStartTagScanner::exact_attribute_values(
   self : XmlStartTagScanner,
-  expected : ArrayView[(String, String, String)],
-) -> Bool raise ParseXmlError {
-  let expected_values : Map[String, Map[String, String]] = Map([])
-  for entry in expected {
-    let (namespace_uri, local_name, value) = entry
-    let namespace_values = match expected_values.get(namespace_uri) {
-      Some(values) => values
+  expected : ArrayView[(String, String)],
+) -> Array[String]? raise ParseXmlError {
+  let expected_indices : Map[String, Map[String, Int]] = Map([])
+  for index, entry in expected {
+    let (namespace_uri, local_name) = entry
+    let namespace_indices = match expected_indices.get(namespace_uri) {
+      Some(indices) => indices
       None => {
-        let values : Map[String, String] = Map([])
-        expected_values[namespace_uri] = values
-        values
+        let indices : Map[String, Int] = Map([])
+        expected_indices[namespace_uri] = indices
+        indices
       }
     }
-    if namespace_values.contains(local_name) {
-      return false
+    if namespace_indices.contains(local_name) {
+      return None
     }
-    namespace_values[local_name] = value
+    namespace_indices[local_name] = index
   }
+  let values : Array[String] = Array::make(expected.length(), "")
   let mut matched = 0
   let mut next = self.current_name_end
   while next_xml_attribute(
@@ -2010,20 +2045,21 @@ pub fn XmlStartTagScanner::has_exact_attributes(
     }
     let namespace_uri = self.resolve_prefix(prefix, true)
     let local_name = self.xml[local_start:attribute.name_end]
-    guard expected_values.get(namespace_uri) is Some(namespace_values) &&
-      namespace_values.get(local_name.to_owned()) is Some(expected_value) else {
-      return false
+    guard expected_indices.get(namespace_uri) is Some(namespace_indices) &&
+      namespace_indices.get(local_name.to_owned()) is Some(index) else {
+      return None
     }
-    let actual_value = decode_xml_attribute(
+    values[index] = decode_xml_attribute(
       self.xml[attribute.value_start:attribute.value_end],
       cancelled=self.cancelled,
     )
-    if actual_value != expected_value {
-      return false
-    }
     matched += 1
   }
-  matched == expected.length()
+  if matched == expected.length() {
+    Some(values)
+  } else {
+    None
+  }
 }
 
 ///|
@@ -2450,23 +2486,36 @@ test "namespace duplicate checks retain namespace identities once" {
 }
 
 ///|
-test "start tag scanner matches exact expanded attributes" {
+test "start tag scanner extracts exact expanded attributes" {
   let scanner = XmlStartTagScanner::new(
     "<root xmlns:p='urn:rel'><p:item id='7' p:name='A&amp;B'/></root>",
   )
   assert_true(scanner.next())
   assert_true(scanner.next())
-  assert_true(
-    scanner.has_exact_attributes([("", "id", "7"), ("urn:rel", "name", "A&B")]),
+  guard scanner.exact_attribute_values([("", "id"), ("urn:rel", "name")])
+    is Some(values) else {
+    fail("expected exact expanded attributes")
+  }
+  assert_eq(values, ["7", "A&B"])
+  assert_true(scanner.exact_attribute_values([("", "id")]) is None)
+  assert_true(scanner.exact_attribute_values([("", "id"), ("", "id")]) is None)
+}
+
+///|
+test "start tag scanner reports intervening character data" {
+  let scanner = XmlStartTagScanner::new(
+    "<root><first> \t<![CDATA[\n]]></first><second/>text<third/></root>",
   )
-  assert_false(scanner.has_exact_attributes([("", "id", "7")]))
-  assert_false(
-    scanner.has_exact_attributes([
-      ("", "id", "7"),
-      ("urn:rel", "name", "different"),
-    ]),
-  )
-  assert_false(scanner.has_exact_attributes([("", "id", "7"), ("", "id", "7")]))
+  assert_true(scanner.next())
+  assert_true(scanner.intervening_character_data_is_whitespace())
+  assert_true(scanner.next())
+  assert_true(scanner.intervening_character_data_is_whitespace())
+  assert_true(scanner.next())
+  assert_true(scanner.intervening_character_data_is_whitespace())
+  assert_true(scanner.next())
+  assert_false(scanner.intervening_character_data_is_whitespace())
+  assert_false(scanner.next())
+  assert_true(scanner.intervening_character_data_is_whitespace())
 }
 
 ///|
