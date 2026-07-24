@@ -426,6 +426,54 @@ test "reader order flattens inline drawing and object children" {
 }
 
 ///|
+test "reader order preserves block descendants of flattened inline wrappers" {
+  let cases = [
+    "<w:r><w:t>A</w:t></w:r><w:drawing><w:p><w:r><w:t>D</w:t></w:r></w:p></w:drawing><w:r><w:t>B</w:t></w:r>",
+    "<w:r><w:t>A</w:t><w:object><w:p><w:r><w:t>D</w:t></w:r></w:p><w:p><w:r><w:t>E</w:t></w:r></w:p></w:object><w:t>B</w:t></w:r>",
+    "<w:r><w:t>A</w:t><w:object><w:tbl><w:tr><w:tc><w:p><w:r><w:t>T</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:p><w:r><w:t>U</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:object><w:t>B</w:t></w:r>",
+    "<w:r><w:t>A</w:t></w:r><w:drawing><w:p/></w:drawing>", "<w:r><w:t>A</w:t></w:r><w:hyperlink w:anchor=\"target\"><w:p><w:r><w:t>H</w:t></w:r></w:p></w:hyperlink><w:r><w:t>B</w:t></w:r>",
+    "<w:r><w:t>A</w:t></w:r><w:ins><w:p><w:r><w:t>I</w:t></w:r></w:p></w:ins><w:r><w:t>B</w:t></w:r>",
+    "<w:r><w:t>A</w:t></w:r><w:smartTag><w:p><w:r><w:t>S</w:t></w:r></w:p></w:smartTag><w:r><w:t>B</w:t></w:r>",
+    "<w:r><w:t>A</w:t></w:r><w:object><v:shape><w:p><w:r><w:t>V</w:t></w:r></w:p></v:shape></w:object><w:r><w:t>B</w:t></w:r>",
+    "<w:r><w:t>A</w:t></w:r><w:drawing><w:p><w:pPr><w:rPr><w:del/></w:rPr></w:pPr><w:r><w:t>D</w:t></w:r></w:p><w:r><w:t>M</w:t></w:r><w:p><w:r><w:t>E</w:t></w:r></w:p></w:drawing><w:r><w:t>B</w:t></w:r>",
+  ]
+  let projected : Array[Array[String]] = []
+  for inner in cases {
+    let source = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body><w:p>" +
+      inner +
+      "</w:p></w:body></w:document>"
+    let projection = scan_reader_order_projection(
+      "word/document.xml",
+      @utf8.encode(source),
+    )
+    assert_eq(
+      provisional_story_text(projection),
+      current_reader_story_text(source),
+    )
+    assert_reader_order_identity_mapping(projection)
+    projected.push(
+      projection.paragraphs.map(paragraph => paragraph.reader_text()),
+    )
+  }
+  debug_inspect(
+    projected,
+    content=(
+      #|[
+      #|  ["AD", "B"],
+      #|  ["AD", "E", "B"],
+      #|  ["AT", "U", "B"],
+      #|  ["A", ""],
+      #|  ["AH", "B"],
+      #|  ["AI", "B"],
+      #|  ["AS", "B"],
+      #|  ["AV", "B"],
+      #|  ["AMDE", "B"],
+      #|]
+    ),
+  )
+}
+
+///|
 test "reader order keeps nested table merge semantics when outer table fails open" {
   let source =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>Outer A</w:t></w:r></w:p></w:tc></w:tr><w:p><w:r><w:t>Between</w:t></w:r></w:p><w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>Outer B</w:t></w:r></w:p><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>Nested A</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>Nested merged away</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:trPr><w:del/></w:trPr><w:tc><w:p><w:r><w:t>Nested deleted row</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:tc></w:tr></w:tbl></w:body></w:document>

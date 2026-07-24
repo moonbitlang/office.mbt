@@ -170,6 +170,19 @@ priv struct ReaderOrderWalker {
 }
 
 ///|
+/// Mutable inline projection state for one physical paragraph. Tolerant
+/// BodyReader inputs can contain block elements below wrappers that normally
+/// carry inline content. A nested block closes the current reader paragraph,
+/// so the state retains completed segments while traversal resumes in a fresh
+/// segment backed by the same outer physical paragraph/run.
+priv struct ReaderOrderInlineState {
+  mut current : ReaderOrderParagraph
+  mut source_by_identity : Map[Int, ReaderOrderParagraphSource]
+  completed : Array[ReaderOrderParagraph]
+  from_text_box : Bool
+}
+
+///|
 const READER_ORDER_VML_URI : String = "urn:schemas-microsoft-com:vml"
 
 ///|
@@ -660,7 +673,12 @@ fn ReaderOrderWalker::walk(self : ReaderOrderWalker) -> Unit raise DocxError {
     return
   }
   self.budget.charge_visit(1)
-  self.walk_structural_element(self.elements[0].identity, 1, false)
+  self.walk_structural_element(
+    self.elements[0].identity,
+    1,
+    false,
+    self.paragraphs,
+  )
 }
 
 ///|
@@ -669,6 +687,7 @@ fn ReaderOrderWalker::walk_flow_children(
   parent_identity : Int,
   parent_depth : Int,
   from_text_box : Bool,
+  output : Array[ReaderOrderParagraph],
 ) -> Unit raise DocxError {
   let pending : Array[PendingDeletedParagraph] = []
   let mut child = self.elements[parent_identity].first_child_index
@@ -686,14 +705,14 @@ fn ReaderOrderWalker::walk_flow_children(
         let contributors : Array[PendingDeletedParagraph] = []
         contributors.append(pending)
         contributors.push({ identity: child, depth })
-        self.emit_paragraph(contributors, from_text_box)
+        self.emit_paragraph(contributors, from_text_box, output)
         pending.clear()
         // BodyReader's extra pass only scans the terminal paragraph. Textboxes
         // physically nested in a deleted-prefix paragraph remain discarded.
-        self.walk_paragraph_extras(child, depth)
+        self.walk_paragraph_extras(child, depth, output)
       }
     } else {
-      self.walk_structural_element(child, depth, from_text_box)
+      self.walk_structural_element(child, depth, from_text_box, output)
     }
     child = element.next_sibling_index
   }
@@ -705,40 +724,42 @@ fn ReaderOrderWalker::walk_structural_element(
   identity : Int,
   depth : Int,
   from_text_box : Bool,
+  output : Array[ReaderOrderParagraph],
 ) -> Unit raise DocxError {
   let element = self.elements[identity]
   if is_wml_uri(element.uri) {
     match element.local_name {
       "document" =>
         match self.first_wml_child(identity, "body", depth + 1) {
-          Some(body) => self.walk_flow_children(body, depth + 1, from_text_box)
+          Some(body) =>
+            self.walk_flow_children(body, depth + 1, from_text_box, output)
           None => ()
         }
       "body" | "hdr" | "ftr" | "footnotes" | "endnotes" | "comments" =>
-        self.walk_flow_children(identity, depth, from_text_box)
+        self.walk_flow_children(identity, depth, from_text_box, output)
       "footnote" | "endnote" | "comment" =>
         if self.is_projection_visible(identity) {
-          self.walk_flow_children(identity, depth, from_text_box)
+          self.walk_flow_children(identity, depth, from_text_box, output)
         }
       "p" =>
         if self.is_projection_visible(identity) &&
           !self.is_deleted_paragraph_mark(identity, depth) {
-          self.emit_paragraph([{ identity, depth }], from_text_box)
-          self.walk_paragraph_extras(identity, depth)
+          self.emit_paragraph([{ identity, depth }], from_text_box, output)
+          self.walk_paragraph_extras(identity, depth, output)
         }
       "tbl" | "tr" | "tc" =>
         if self.is_projection_visible(identity) {
-          self.walk_flow_children(identity, depth, from_text_box)
+          self.walk_flow_children(identity, depth, from_text_box, output)
         }
       "hyperlink" | "drawing" | "object" | "ins" | "smartTag" =>
-        self.walk_flow_children(identity, depth, from_text_box)
+        self.walk_flow_children(identity, depth, from_text_box, output)
       // Branch/SDT selection belongs to N0b4. Do not silently pick a branch
       // or content node while constructing the provisional N0b2 order.
       "sdt" | "sdtContent" | "txbxContent" => ()
       _ => ()
     }
   } else if reader_order_is_vml_flattening_container(element) {
-    self.walk_flow_children(identity, depth, from_text_box)
+    self.walk_flow_children(identity, depth, from_text_box, output)
   } else {
     ()
   }
@@ -749,31 +770,140 @@ fn ReaderOrderWalker::emit_paragraph(
   self : ReaderOrderWalker,
   contributors : Array[PendingDeletedParagraph],
   from_text_box : Bool,
+  output : Array[ReaderOrderParagraph],
 ) -> Unit raise DocxError {
-  self.budget.charge_contributor()
-  let paragraph : ReaderOrderParagraph = {
+  let state : ReaderOrderInlineState = {
+    current: self.new_reader_order_paragraph(from_text_box),
+    source_by_identity: Map([]),
+    completed: [],
     from_text_box,
-    sources: [],
-    contributions: [],
   }
   for contributor in contributors {
-    let element = self.elements[contributor.identity]
-    self.budget.charge_contributor()
-    let source : ReaderOrderParagraphSource = {
-      identity: contributor.identity,
-      source_span: reader_order_element_span(element),
-      runs: [],
-    }
-    paragraph.sources.push(source)
+    ignore(self.ensure_reader_order_source(state, contributor.identity))
     self.walk_inline_children(
       contributor.identity,
       contributor.depth,
-      paragraph,
-      source,
+      state,
+      contributor.identity,
       None,
     )
   }
-  self.paragraphs.push(paragraph)
+  output.append(state.completed)
+  output.push(state.current)
+}
+
+///|
+fn ReaderOrderWalker::new_reader_order_paragraph(
+  self : ReaderOrderWalker,
+  from_text_box : Bool,
+) -> ReaderOrderParagraph raise DocxError {
+  self.budget.charge_contributor()
+  { from_text_box, sources: [], contributions: [] }
+}
+
+///|
+fn ReaderOrderWalker::ensure_reader_order_source(
+  self : ReaderOrderWalker,
+  state : ReaderOrderInlineState,
+  paragraph_identity : Int,
+) -> ReaderOrderParagraphSource raise DocxError {
+  match state.source_by_identity.get(paragraph_identity) {
+    Some(source) => return source
+    None => ()
+  }
+  let element = self.elements[paragraph_identity]
+  self.budget.charge_contributor()
+  let source : ReaderOrderParagraphSource = {
+    identity: paragraph_identity,
+    source_span: reader_order_element_span(element),
+    runs: [],
+  }
+  state.current.sources.push(source)
+  state.source_by_identity[paragraph_identity] = source
+  source
+}
+
+///|
+fn ReaderOrderWalker::open_reader_order_run(
+  self : ReaderOrderWalker,
+  state : ReaderOrderInlineState,
+  paragraph_identity : Int,
+  run_identity : Int,
+) -> Unit raise DocxError {
+  let source = self.ensure_reader_order_source(state, paragraph_identity)
+  let run = self.elements[run_identity]
+  self.budget.charge_contributor()
+  source.runs.push({
+    identity: run_identity,
+    source_span: reader_order_element_span(run),
+  })
+  self.add_contribution(
+    state.current,
+    TransparentSeam,
+    "",
+    run_identity,
+    paragraph_identity,
+    Some(run_identity),
+    reader_order_element_span(run),
+  )
+}
+
+///|
+fn ReaderOrderWalker::add_inline_contribution(
+  self : ReaderOrderWalker,
+  state : ReaderOrderInlineState,
+  kind : ProvisionalContributionKind,
+  value : String,
+  source_identity : Int,
+  paragraph_identity : Int,
+  current_run : Int?,
+  source_span : ReaderOrderSourceSpan,
+) -> Unit raise DocxError {
+  ignore(self.ensure_reader_order_source(state, paragraph_identity))
+  self.add_contribution(
+    state.current,
+    kind,
+    value,
+    source_identity,
+    paragraph_identity,
+    current_run,
+    source_span,
+  )
+}
+
+///|
+fn ReaderOrderWalker::consume_inline_block_output(
+  self : ReaderOrderWalker,
+  state : ReaderOrderInlineState,
+  block_output : Array[ReaderOrderParagraph],
+  paragraph_identity : Int,
+  current_run : Int?,
+) -> Unit raise DocxError {
+  if block_output.is_empty() {
+    return
+  }
+  // The first nested paragraph is a child of the current BodyReader paragraph:
+  // its terminator closes the text already accumulated before the block.
+  state.current.sources.append(block_output[0].sources)
+  for source in block_output[0].sources {
+    state.source_by_identity[source.identity] = source
+  }
+  state.current.contributions.append(block_output[0].contributions)
+  state.completed.push(state.current)
+  // Every later nested paragraph has both its own start and terminator.
+  for index in 1..<block_output.length() {
+    state.completed.push(block_output[index])
+  }
+  // BodyReader still terminates the physical outer paragraph after the nested
+  // block, even when no inline content follows it.
+  state.current = self.new_reader_order_paragraph(state.from_text_box)
+  state.source_by_identity = Map([])
+  ignore(self.ensure_reader_order_source(state, paragraph_identity))
+  match current_run {
+    Some(run_identity) =>
+      self.open_reader_order_run(state, paragraph_identity, run_identity)
+    None => ()
+  }
 }
 
 ///|
@@ -781,18 +911,43 @@ fn ReaderOrderWalker::walk_inline_children(
   self : ReaderOrderWalker,
   parent_identity : Int,
   parent_depth : Int,
-  paragraph : ReaderOrderParagraph,
-  paragraph_source : ReaderOrderParagraphSource,
+  state : ReaderOrderInlineState,
+  paragraph_identity : Int,
   current_run : Int?,
 ) -> Unit raise DocxError {
+  // `drawing`, `object`, VML, and the other transparent wrappers delegate to
+  // BodyReader::read_children. Preserve its deleted paragraph-mark prefix
+  // queue even though the resulting block output is embedded in an outer
+  // paragraph's inline stream.
+  let pending : Array[PendingDeletedParagraph] = []
   let mut child = self.elements[parent_identity].first_child_index
   while child >= 0 {
     let element = self.elements[child]
     let depth = parent_depth + 1
     self.budget.charge_visit(depth)
-    self.walk_inline_element(
-      child, depth, paragraph, paragraph_source, current_run,
-    )
+    if is_wml_uri(element.uri) &&
+      element.local_name == "p" &&
+      self.is_projection_visible(child) {
+      if self.is_deleted_paragraph_mark(child, depth) {
+        self.budget.charge_contributor()
+        pending.push({ identity: child, depth })
+      } else {
+        let contributors : Array[PendingDeletedParagraph] = []
+        contributors.append(pending)
+        contributors.push({ identity: child, depth })
+        let block_output : Array[ReaderOrderParagraph] = []
+        self.emit_paragraph(contributors, state.from_text_box, block_output)
+        pending.clear()
+        self.walk_paragraph_extras(child, depth, block_output)
+        self.consume_inline_block_output(
+          state, block_output, paragraph_identity, current_run,
+        )
+      }
+    } else {
+      self.walk_inline_element(
+        child, depth, state, paragraph_identity, current_run,
+      )
+    }
     child = element.next_sibling_index
   }
 }
@@ -802,26 +957,25 @@ fn ReaderOrderWalker::walk_inline_element(
   self : ReaderOrderWalker,
   identity : Int,
   depth : Int,
-  paragraph : ReaderOrderParagraph,
-  paragraph_source : ReaderOrderParagraphSource,
+  state : ReaderOrderInlineState,
+  paragraph_identity : Int,
   current_run : Int?,
 ) -> Unit raise DocxError {
   let element = self.elements[identity]
-  let paragraph_identity = paragraph_source.identity
   let add = fn(
     kind : ProvisionalContributionKind,
     value : String,
     span : ReaderOrderSourceSpan,
   ) -> Unit raise DocxError {
-    self.add_contribution(
-      paragraph, kind, value, identity, paragraph_identity, current_run, span,
+    self.add_inline_contribution(
+      state, kind, value, identity, paragraph_identity, current_run, span,
     )
   }
   if !is_wml_uri(element.uri) {
     if reader_order_is_vml_flattening_container(element) {
       add(TransparentSeam, "", reader_order_element_span(element))
       self.walk_inline_children(
-        identity, depth, paragraph, paragraph_source, current_run,
+        identity, depth, state, paragraph_identity, current_run,
       )
     } else {
       add(HardBarrier, "", reader_order_element_span(element))
@@ -831,25 +985,12 @@ fn ReaderOrderWalker::walk_inline_element(
   match element.local_name {
     "r" =>
       if self.is_projection_visible(identity) {
-        self.budget.charge_contributor()
-        paragraph_source.runs.push({
-          identity,
-          source_span: reader_order_element_span(element),
-        })
-        self.add_contribution(
-          paragraph,
-          TransparentSeam,
-          "",
-          identity,
-          paragraph_identity,
-          Some(identity),
-          reader_order_element_span(element),
-        )
+        self.open_reader_order_run(state, paragraph_identity, identity)
         self.walk_inline_children(
           identity,
           depth,
-          paragraph,
-          paragraph_source,
+          state,
+          paragraph_identity,
           Some(identity),
         )
       }
@@ -875,10 +1016,22 @@ fn ReaderOrderWalker::walk_inline_element(
           add(SymbolAtom, value, reader_order_element_span(element))
         None => add(HardBarrier, "", reader_order_element_span(element))
       }
+    "p" | "tbl" | "tr" | "tc" => {
+      let block_output : Array[ReaderOrderParagraph] = []
+      self.walk_structural_element(
+        identity,
+        depth,
+        state.from_text_box,
+        block_output,
+      )
+      self.consume_inline_block_output(
+        state, block_output, paragraph_identity, current_run,
+      )
+    }
     "hyperlink" | "drawing" | "object" | "ins" | "smartTag" => {
       add(TransparentSeam, "", reader_order_element_span(element))
       self.walk_inline_children(
-        identity, depth, paragraph, paragraph_source, current_run,
+        identity, depth, state, paragraph_identity, current_run,
       )
     }
     "pPr"
@@ -921,6 +1074,7 @@ fn ReaderOrderWalker::walk_paragraph_extras(
   self : ReaderOrderWalker,
   parent_identity : Int,
   parent_depth : Int,
+  output : Array[ReaderOrderParagraph],
 ) -> Unit raise DocxError {
   let mut child = self.elements[parent_identity].first_child_index
   while child >= 0 {
@@ -929,18 +1083,18 @@ fn ReaderOrderWalker::walk_paragraph_extras(
     self.budget.charge_visit(depth)
     if is_wml_uri(element.uri) {
       match element.local_name {
-        "pict" => self.walk_pict_extras(child, depth)
-        "txbxContent" => self.walk_flow_children(child, depth, true)
+        "pict" => self.walk_pict_extras(child, depth, output)
+        "txbxContent" => self.walk_flow_children(child, depth, true, output)
         // BodyReader suppresses deleted inline atoms, then independently
         // recurses through the physical paragraph to discover textboxes.
-        "del" => self.walk_paragraph_extras(child, depth)
+        "del" => self.walk_paragraph_extras(child, depth, output)
         "sdt" | "sdtContent" => ()
-        _ => self.walk_paragraph_extras(child, depth)
+        _ => self.walk_paragraph_extras(child, depth, output)
       }
     } else if element.uri == MC_URI && element.local_name == "AlternateContent" {
       ()
     } else {
-      self.walk_paragraph_extras(child, depth)
+      self.walk_paragraph_extras(child, depth, output)
     }
     child = element.next_sibling_index
   }
@@ -951,6 +1105,7 @@ fn ReaderOrderWalker::walk_pict_extras(
   self : ReaderOrderWalker,
   parent_identity : Int,
   parent_depth : Int,
+  output : Array[ReaderOrderParagraph],
 ) -> Unit raise DocxError {
   let mut child = self.elements[parent_identity].first_child_index
   while child >= 0 {
@@ -958,11 +1113,11 @@ fn ReaderOrderWalker::walk_pict_extras(
     let depth = parent_depth + 1
     self.budget.charge_visit(depth)
     if is_wml_uri(element.uri) && element.local_name == "txbxContent" {
-      self.walk_flow_children(child, depth, true)
+      self.walk_flow_children(child, depth, true, output)
     } else if is_wml_uri(element.uri) && element.local_name == "pict" {
-      self.walk_pict_extras(child, depth)
+      self.walk_pict_extras(child, depth, output)
     } else if reader_order_is_vml_flattening_container(element) {
-      self.walk_pict_extras(child, depth)
+      self.walk_pict_extras(child, depth, output)
     } else if element.uri == MC_URI && element.local_name == "AlternateContent" {
       ()
     } else if is_wml_uri(element.uri) &&
@@ -976,7 +1131,7 @@ fn ReaderOrderWalker::walk_pict_extras(
       | "object"
       | "ins"
       | "smartTag") {
-      self.walk_structural_element(child, depth, true)
+      self.walk_structural_element(child, depth, true, output)
     }
     child = element.next_sibling_index
   }
