@@ -93,9 +93,10 @@ aliases.
   projection foundations tracked by
   [#221](https://github.com/moonbitlang/office.mbt/issues/221) as
   [#231](https://github.com/moonbitlang/office.mbt/issues/231) through
-  [#234](https://github.com/moonbitlang/office.mbt/issues/234), N0c
-  [#222](https://github.com/moonbitlang/office.mbt/issues/222), and the later
-  transaction SDK and unified CLI slices.
+  [#234](https://github.com/moonbitlang/office.mbt/issues/234), whole-run N0c1
+  [#222](https://github.com/moonbitlang/office.mbt/issues/222), partial-boundary
+  N0c2 [#236](https://github.com/moonbitlang/office.mbt/issues/236), and the
+  later transaction SDK and unified CLI slices.
 
 The reference OfficeCLI checkout remains `.repos/OfficeCLI` in the primary
 repository working tree. This handoff and the major ledger were audited against
@@ -176,8 +177,10 @@ structural edits, preservation-safe cell shifts, unmerge, AutoFilter lifecycle,
 ordinary table/data-validation/conditional-format update and removal,
 row/column page-break lifecycle, workbook core/custom properties, `date1904`
 and calculation settings, active/selected-sheet state, and RTL/zoom/view state;
-preservation-safe existing-DOCX table content and property edits; DOCX field
-inventory, authoring, and refresh (including REF/PAGEREF/NOTEREF authoring);
+preservation-safe existing-DOCX table content and property edits; existing
+section inventory, property updates, insertion, and removal; DOCX field and
+bookmark inventory, authoring, update/removal, and refresh (including
+REF/PAGEREF/NOTEREF authoring);
 embedded-chart authoring/readback and source-pinned lifecycle; existing
 comment, footnote/endnote, hyperlink, and picture lifecycle; typed core/custom
 document properties; deterministic locale/script-font and RTL defaults plus
@@ -270,8 +273,9 @@ feature PR.
 - Formula verification/cache refresh, XLSX row/column structural edits and
   partial-cell shifts, workbook/date-system/calculation/selection/view state,
   unmerge/AutoFilter and ordinary table/validation/conditional-format/page-break
-  lifecycle, existing-DOCX table editing, DOCX locale/RTL and field
-  authoring/refresh, embedded charts, fillable Word forms, equations,
+  lifecycle, existing-DOCX table and section editing, DOCX locale/RTL and
+  field/bookmark authoring/update/removal/refresh, embedded charts, fillable
+  Word forms, equations,
   watermarks, text boxes, shapes, path-scoped dump, DOCX/XLSX-to-PDF export,
   and richer engine-backed XLSX operations are not part of the initial F1 gate;
   they are explicit later slices in the ledger.

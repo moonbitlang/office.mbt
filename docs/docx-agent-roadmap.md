@@ -829,7 +829,7 @@ content is an explicit MATCH BARRIER, never silent glue.
 
 ## N0 — token-map and surgery foundations (GO/NO-GO gate for the phase)
 
-N0 lands as six review-sized private slices. N0a's exact lexical map is landed
+N0 lands as seven review-sized private slices. N0a's exact lexical map is landed
 in [PR #224](https://github.com/moonbitlang/office.mbt/pull/224). The N0b
 projection index is tracked by umbrella
 [#221](https://github.com/moonbitlang/office.mbt/issues/221) and split into:
@@ -846,10 +846,13 @@ projection index is tracked by umbrella
    Markup Compatibility transforms, final logical paragraph/run path and
    UTF-16 interval assignment, plus the complete hostile projection oracle.
 
-N0c [#222](https://github.com/moonbitlang/office.mbt/issues/222) then proves
-the source-pinned splice/synthesis kernel. No N0b child exposes mutation, and
-each child must be independently useful, testable, and below the normal review
-trigger.
+N0c1 [#222](https://github.com/moonbitlang/office.mbt/issues/222) then proves
+whole-indexed-run source-pinned splice/synthesis, including atom-only and
+atomless-run synthesis. N0c2
+[#236](https://github.com/moonbitlang/office.mbt/issues/236) separately proves
+the partial intra-run, cross-run, and multiple-edit token-boundary primitive
+required by N2b. No N0b child exposes mutation, and each child must be
+independently useful, testable, and below the normal review trigger.
 
 The one new hard primitive: the per-paragraph projection-to-source
 TOKEN MAP (classes, tokens, context kinds, valid split boundaries,
@@ -893,7 +896,7 @@ L0: pub surface only what N1/N2 need.
   emptied, elements kept). A run with NO projecting atom (empty,
   self-closing, or seams-only) gets a namespace-correct `w:t`
   synthesized at its content start, immediately after any `rPr` — the
-  same synthesis rule the replace surgery uses, proven in N0. Empty
+  same synthesis rule the replace surgery uses, proven in N0c1. Empty
   `--text ''` is legal (empties the run). Ships its own stdout-contract + docs section.
 - Anchors reuse the annotate paths grammar (`--at` must end in `r[j]`;
   same corrective sibling-count errors). Same belts; read-back compares
@@ -984,9 +987,11 @@ L0: pub surface only what N1/N2 need.
 
 ## Ordering and gates
 
-N0a → N0b1 → N0b2 → N0b3 → N0b4 → N0c → N1 → N2a → N2b;
-N3a/N3b need the complete N0 gate (+ the shared CLI plumbing)
-and may interleave after N1 as review pacing favors. N4 last. Every PR
+N0a → N0b1 → N0b2 → N0b3 → N0b4 → N0c1 → N1;
+N0c1 → N0c2; N0b4 → N2a; N0c2 + N1 + N2a → N2b.
+N3a/N3b need N0c1 and the shared CLI plumbing, but not N0c2's
+partial-replacement primitive, and may interleave after N1 as review pacing
+favors. N4 last. Every PR
 through the standing gate: self-adversarial pass, subal review (xhigh
 features / high confirmations) to APPROVE, green nightly CI,
 review-trail comment, rebase-merge. The N0 GO/NO-GO verdict is
