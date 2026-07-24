@@ -179,14 +179,14 @@ The dependency-ordered small-PR plan for closing the broader agent-relevant
 OfficeCLI gaps now lives in `docs/office-major-parity.md`. Give every proposed
 slice its own issue before implementation and do not fold it into #169. Issue
 #139 remains open until the major ledger is complete. At the pinned baseline the
-full delivery denominator has 377 unique acceptance rows: 370
-parity/QA/export rows plus 7 explicit beyond-parity/delivery rows. That total
-combines 18 landed initial foundations with the 359-row incremental ledger and
+full delivery denominator has 380 unique acceptance rows: 369
+parity/QA/export rows plus 11 explicit beyond-parity/delivery rows. That total
+combines 18 landed initial foundations with the 362-row incremental ledger and
 does not double-count overlapping status rows, using the counting rule in the
 ledger.
 The ledger explicitly
 includes bounded XLSX formula calculation/lint and cache refresh, worksheet
-tab-color/reorder/clone, visible/hidden/veryHidden, freeze/unfreeze, and
+tab-color/reorder, visible/hidden/veryHidden, freeze/unfreeze, and
 print-title row/column lifecycle, bounded boolean `and`/`or` and
 row-by-column-name query, full common cell/range
 formatting, row/column dimension/outline/autofit, row/column structural edits,
@@ -195,7 +195,7 @@ preservation-safe cell shifts, cascade-safe worksheet rename, unmerge,
    relationship cleanup, array-formula add/set/readback, ordinary
 table/data-validation/conditional-format update and removal, row/column
 page-break lifecycle, workbook core/custom properties, `date1904` and
-calculation settings, active/selected-sheet state, and RTL/zoom/view state;
+calculation settings, `activeTab`/`firstSheet` state, and RTL/zoom/view state;
    preservation-safe existing-DOCX table content, separately reviewable complete
    common table/row/cell-property changes (including style/grid widths/banding,
    direction/indent/spacing/padding/metadata/conditional state, diagonal
@@ -228,7 +228,9 @@ document properties; deterministic locale/script-font and RTL defaults plus
 CSV/TSV file-or-stdin import with start-cell/inference/header behavior;
 path-scoped dump; and DOCX/XLSX-to-PDF parity. XLSX engine hardening can proceed
 beside the versioned registry/common-receipt work; only each feature's `office`
-exposure depends on both layers.
+exposure depends on both layers. Worksheet clone and multi-sheet selection state
+remain in the ledger as explicitly counted beyond-parity differentiators rather
+than being attributed to OfficeCLI.
 
 Architecture work that can proceed independently, but must stay in its own PR:
 
@@ -311,11 +313,11 @@ feature PR.
 - Plugin and language-SDK wrappers.
 - Formula verification/cache refresh and array-formula add/set/readback, XLSX
   cascade-safe worksheet rename plus
-  reorder/clone/tab-color/visibility and print-title rows/columns,
+  reorder/tab-color/visibility and print-title rows/columns,
   bounded boolean/row-by-column-name query,
   pane, cell/range-formatting, row/column dimension/autofit/outline and
   structural-edit lifecycle, partial-cell shifts,
-  workbook/date-system/calculation/selection/view state, stable chart
+  workbook/date-system/calculation/active-tab/first-sheet/view state, stable chart
   enumerate/create/update/remove with cleanup, unmerge/AutoFilter and
   ordinary table/validation/conditional-format/page-break lifecycle,
   existing-DOCX paragraph/table/row/column move-copy-swap, full common table/row/
@@ -330,7 +332,8 @@ feature PR.
   lifecycle, and existing add/update/remove for notes, pictures, equations,
   watermarks, text boxes, and shapes; path-scoped dump, DOCX/XLSX-to-PDF export,
   and richer engine-backed XLSX operations are not part of the initial F1 gate;
-  they are explicit later slices in the ledger.
+  they are explicit later slices in the ledger. Whole-worksheet clone and
+  multi-sheet selection state are separately labeled beyond-parity slices.
 - Word-identical portable DOCX pagination remains a differentiator beyond basic
   backend-provenance PDF export. OLE, diagrams, and other low-frequency
   long-tail Office features still require demonstrated workflow demand and a
