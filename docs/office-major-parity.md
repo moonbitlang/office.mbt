@@ -90,9 +90,9 @@ umbrella rather than a single oversized implementation PR.
 | --- | --- | --- |
 | N0a: lexical map ([#219](https://github.com/moonbitlang/office.mbt/issues/219)) | Map supported `w:t` lexical content to exact UTF-8 source and UTF-16 text boundaries under cumulative budgets; [PR #224](https://github.com/moonbitlang/office.mbt/pull/224) is landed. | D4 |
 | N0b1: source-tree identity ([#231](https://github.com/moonbitlang/office.mbt/issues/231)) | Retain a bounded namespace-resolved source tree with identity-bearing physical paragraph/run nodes and canonical physical ancestry, without changing non-retaining scanner behavior. | N0a |
-| N0b2: reader-order mapping ([#232](https://github.com/moonbitlang/office.mbt/issues/232)) | Mirror BodyReader normal-flow/text-box order and deleted-paragraph joins; map stable logical paragraph/run paths and UTF-16 intervals back to N0b1 identities. | N0b1 |
+| N0b2: reader-order mapping ([#232](https://github.com/moonbitlang/office.mbt/issues/232)) | Mirror BodyReader normal-flow/text-box order and deleted-paragraph joins as provisional ordered contributors mapped to N0b1 identities; do not assign final logical paths or UTF-16 intervals before later reader transforms. | N0b1 |
 | N0b3: field classification ([#233](https://github.com/moonbitlang/office.mbt/issues/233)) | Advance nested complex-field state at carrier boundaries across each story under explicit depth/work limits, with deterministic restriction/refusal provenance. | N0b2 |
-| N0b4: reader transforms and oracle ([#234](https://github.com/moonbitlang/office.mbt/issues/234)) | Match first-direct SDT/checkbox and Markup Compatibility transforms, complete suppression/barrier classification, and pass the full hostile reader oracle. | N0b3 |
+| N0b4: reader transforms and oracle ([#234](https://github.com/moonbitlang/office.mbt/issues/234)) | Match first-direct SDT/checkbox and Markup Compatibility transforms, then assign final logical paragraph/run paths and UTF-16 intervals, complete suppression/barrier classification, and pass the full hostile reader oracle. | N0b3 |
 | N0c: private surgery ([#222](https://github.com/moonbitlang/office.mbt/issues/222)) | Prove source-pinned splice/synthesis, `xml:space`, preservation, and fail-closed refusal without a public mutation API. | N0b1-N0b4 |
 | N1a: transaction SDK | Add transaction-backed, globally preflighted run-scoped `set-text` while preserving every byte outside the declared footprint. | N0c |
 | N1b: unified CLI | Expose N1a as the bounded `office edit set-text` command with deterministic receipts and native/Wasm acceptance. | N1a |
@@ -123,7 +123,7 @@ round-tripping an existing document through the fresh-authoring model.
 | --- | --- | --- |
 | W1: style definitions | Author and validate custom paragraph/character styles without changing the existing fixed-style defaults. | D3 |
 | W2: numbering definitions | Author verified numbering definitions and explicit list references without grafting implicit ids. | D3 |
-| W3: sections and page setup | Author bounded section properties, page size, orientation, and margins. | W1 |
+| W3: sections and page setup | Author bounded section properties, page size, orientation, and margins. | D3 |
 | W4: headers and footers ([#95](https://github.com/moonbitlang/office.mbt/issues/95)) | Author section-linked headers/footers with preservation and relationship validation. | W3 |
 | W5a: field/bookmark inventory | Inventory simple and complex fields, instructions/results, dirty/locked state, bookmarks, dependencies, and layout-dependent residuals with stable source-pinned identity. | D2, N0b4 |
 | W5b1: basic field/bookmark authoring | Add PAGE/NUMPAGES/DATE/MERGEFIELD fields and bounded bookmarks with typed readback; do not imply that authored results have been refreshed. | D3 |
@@ -137,8 +137,8 @@ round-tripping an existing document through the fresh-authoring model.
 | WC2b: embedded-chart dump/replay | Add the WC1a subset to semantic dump/replay with typed residuals for every unsupported chart option or dependent resource. | R1, WC1a, WC2a |
 | WC2c: existing-chart lifecycle command | Expose WC1b inventory/update/delete as source-pinned existing-document commands with readback and exact footprint receipts. | WC1b, WC2a |
 | WC3: embedded-chart QA capstone | Prove OpenXML validity, round-trip readback, update/delete cleanup, unsupported-feature residuals, and preview coverage/degradation for authored and edited embedded charts. | WC2b, WC2c, Q4 |
-| W6: existing-document formatting | Apply addressed style/direct-format changes through source-pinned surgery; refuse lossy rewrites. | N4, W1-W3 |
-| W7: revision read surface | Surface inserted/deleted/moved content with author, date, type, and addressed provenance. | N4 |
+| W6: existing-document formatting | Apply addressed style/direct-format changes through source-pinned surgery; refuse lossy rewrites. | N0c, W1-W3 |
+| W7: revision read surface | Surface inserted/deleted/moved content with author, date, type, and addressed provenance. | D2, N0b4 |
 | W8: accept/reject revisions | Preview and atomically accept or reject selected revisions with explicit affected paths. | W7 |
 | W9: tracked-change authoring | Author attributed insertions/deletions only after W8's identity and validation rules are proven. | W8 |
 | W10: form read and identity | Inventory SDTs, legacy form fields, and document-protection state with stable paths, aliases/tags, types, options, and editability. MERGEFIELD parity remains owned by W5a/W5b1, not the forms inventory. | D2, N0b4 |
@@ -148,17 +148,33 @@ round-tripping an existing document through the fresh-authoring model.
 | W12: legacy form fields | Author and read back real legacy checkbox fields under Word's name limits without pretending visual blanks are fields. | W5b1, W10 |
 | W13: forms protection | Enforce, inspect, clear, and verify forms-only document protection; allow field edits while refusing protected static-content edits unless an explicit override is supported. | W11b, W11c, W12 |
 | W14: form QA and integration capstone | Integrate W11 SDT controls and W12 legacy fields into one truthful forms inventory; separately cross-check W5b1 MERGEFIELD output without classifying or counting it as a form. A fresh agent creates a protected intake form and verifies aliases/tags, list items, date formats, both checkbox families, editability, and zero simulated underscore fields. | W5b1, W13 |
-| WH1: existing hyperlink inventory | Inventory external and bookmark hyperlinks with stable source-pinned identity, strict target/anchor readback, and unsupported residuals. | D2, N0b4, W5b1 |
+| WH1: existing hyperlink inventory | Inventory external and bookmark hyperlinks with stable source-pinned identity, strict target/anchor readback, and unsupported residuals. | D2, N0b4, W5a |
 | WH2: existing hyperlink lifecycle | Add, update text/target, or remove one WH1 link with strict relationship/anchor validation, atomic failure, and unrelated-byte preservation. | A4, D1, N0c, WH1 |
 | WH3: hyperlink exposure | Expose WH1/WH2 through typed get/query and mutation commands with installed help, validation, readback, and exact footprint receipts. | A2, WH2 |
 | WP1: existing picture inventory | Inventory inline and a bounded anchored-picture subset with stable media/relationship identity, geometry/alt-text readback, content limits, and unsupported residuals. | D2, N0b4 |
 | WP2: picture replace/properties | Replace one WP1 asset or update a bounded size/crop/alt-text subset with content-addressed inputs, source-pinned preservation, and no relationship/id churn. | A4, D1, N0c, WP1 |
 | WP3: picture removal/cleanup | Remove one WP1 picture and prove relationship/media orphan cleanup without deleting shared or unrelated resources. | A4, D1, WP1 |
 | WP4: picture exposure | Expose WP1-WP3 through typed get/query and mutation commands with installed help, validation, readback, and exact footprint receipts. | A2, WP2, WP3 |
-| WT1: paragraph tab-stop engine | Add bounded tab-stop add/update/remove and typed readback for position, alignment, and leader without conflating stops with inline tab characters. | D3, W3 |
+| WT1: paragraph tab-stop engine | Add bounded tab-stop add/update/remove and typed readback for position, alignment, and leader without conflating stops with inline tab characters. | D3 |
 | WT2: paragraph tab-stop exposure | Expose WT1 through shared help, batch/dump/replay, validation, and feature-specific receipts. | A2, A4, R1, WT1 |
 | WB1: page/column-break engine | Add typed page, column, and line-break authoring/readback in body/header/footer stories with exact inline-run identity. | D3, W4 |
 | WB2: page/column-break exposure | Expose WB1 through shared help, batch/dump/replay, validation, and feature-specific receipts. | A2, A4, R1, WB1 |
+| WEQ1: equation inventory | Inventory existing OMML equations with stable source-pinned identity, a bounded typed semantic subset, and explicit residuals for unsupported constructs. | D2, N0b4 |
+| WEQ2: equation authoring | Author the proven WEQ1 subset from a strict typed payload with OpenXML and round-trip semantic validation. | D3, WEQ1 |
+| WEQ3: existing-equation lifecycle | Replace or remove one WEQ1 equation atomically while preserving unrelated runs, relationships, and package bytes. | A4, D1, N0c, WEQ1 |
+| WEQ4: equation exposure | Expose inventory, fresh authoring, existing lifecycle, and dump/replay with typed residuals and feature-specific receipts. | A2, R1, WEQ2, WEQ3 |
+| WWM1: watermark inventory | Inventory text and picture watermarks across header stories with stable section/header, drawing, media, and relationship identity. | D2, N0b4, W4 |
+| WWM2: watermark authoring | Author a bounded text/picture watermark subset with explicit section/header linkage, geometry, opacity, and media limits. | D3, W4, WWM1 |
+| WWM3: existing-watermark lifecycle | Update or remove one WWM1 watermark with source-pinned cleanup and no unrelated header or relationship churn. | A4, D1, N0c, WWM1 |
+| WWM4: watermark exposure | Expose inventory, fresh authoring, existing lifecycle, and dump/replay with deterministic receipts and unsupported-variant residuals. | A2, R1, WWM2, WWM3 |
+| WTB1: text-box inventory | Inventory VML and DrawingML text boxes with stable physical/story identity, geometry, contained logical content, and unsupported residuals. | D2, N0b4 |
+| WTB2: text-box authoring | Author a bounded DrawingML text-box subset with explicit geometry, wrapping, style, and contained-document limits. | D3, W3, WTB1 |
+| WTB3: existing-text-box lifecycle | Update text/properties or remove one WTB1 text box atomically while preserving unrelated drawing and relationship identity. | A4, D1, N0c, WTB1 |
+| WTB4: text-box exposure | Expose inventory, fresh authoring, existing lifecycle, and dump/replay with exact footprint receipts. | A2, R1, WTB2, WTB3 |
+| WSH1: shape inventory | Inventory a bounded Word shape subset with stable drawing identity, geometry/style/text readback, and explicit residuals for unsupported geometry. | D2, N0b4 |
+| WSH2: shape authoring | Author the proven WSH1 subset with bounded geometry, fill/line/text, anchoring, and z-order. | D3, W3, WSH1 |
+| WSH3: existing-shape lifecycle | Update properties/text or remove one WSH1 shape atomically with relationship/id preservation and cleanup. | A4, D1, N0c, WSH1 |
+| WSH4: shape exposure | Expose inventory, fresh authoring, existing lifecycle, and dump/replay with deterministic receipts and truthful residuals. | A2, R1, WSH2, WSH3 |
 
 Fillable forms are a separate major capability, not a synonym for W5 fields.
 Their acceptance is data-plumbing and protection correctness, not merely visual
@@ -209,6 +225,14 @@ waits for both the hardened engine slice and common façade receipt envelope.
 Each exposure slice supplies its own typed receipt payload. Sorting,
 structured import, and formula verification follow the same layering.
 
+The workbook engine already has row/column insertion and deletion, formula and
+defined-name adjustment, merge/unmerge, AutoFilter creation/removal, and several
+sidecar relocations. X6 and X7 therefore begin with audits and hardening of that
+code, not replacement greenfield engines. The axis-specific rows make partial
+coverage and review scope visible. AutoFilter structural relocation belongs
+only to X7d2: until it lands, X6 operations fail closed when an affected filter
+would need relocation.
+
 | Slice | Acceptance boundary | Depends on |
 | --- | --- | --- |
 | X5a: bounded row-sort engine | Add a deterministic public workbook sort operation with formula/reference and cancellation tests. | X3 |
@@ -220,25 +244,46 @@ structured import, and formula verification follow the same layering.
 | X5f2: calc/lint exposure | Add read-only `office calc` and `office lint` using X5f1's schemas; these read-only commands do not depend on mutation receipts. | X5f1 |
 | X5g: cache-refresh transaction | Define and implement source-pinned cache refresh into a separate output, preserving formula text/metadata, writing only proven master results, and reporting every unrefreshed shared/array slave. | X5e |
 | X5h: cache-refresh exposure | Expose explicit recalculation/cache refresh with dry-run, deterministic receipts, validation, and readback rather than silently recalculating unrelated mutations. | X4a2, X5g |
-| X6a1: cell-formula/name rewrite kernel | Add bounded syntax-aware relocation for cell formulas and workbook/sheet defined names, preserving and reporting unsupported expressions instead of substring rewriting. | X3 |
+| X8a1: table lifecycle audit and hardening | Audit ordinary worksheet-table creation and add bounded typed update/remove with stable identity, reference cleanup, and round-trip validation. | X3 |
+| X8a2: table lifecycle exposure | Expose table enumerate/create/update/remove through shared help, batch, dump/replay, and feature-specific receipts. | X4a2, X8a1 |
+| X8b1: data-validation lifecycle audit and hardening | Audit existing validation creation and add bounded enumerate/update/remove with formula, range, identity, and overlap rules. | X3 |
+| X8b2: data-validation lifecycle exposure | Expose validation enumerate/create/update/remove through shared help, batch, dump/replay, and feature-specific receipts. | X4a2, X8b1 |
+| X8c1: conditional-format lifecycle audit and hardening | Audit existing conditional-format creation and add bounded enumerate/update/remove with rule identity, priority, formula, and differential-style cleanup. | X3 |
+| X8c2: conditional-format lifecycle exposure | Expose conditional-format enumerate/create/update/remove through shared help, batch, dump/replay, and feature-specific receipts. | X4a2, X8c1 |
+| X8d1: worksheet page-break lifecycle audit and hardening | Audit row/column page-break support and complete bounded enumerate/create/remove with valid ids, limits, and round-trip fidelity. | X3 |
+| X8d2: worksheet page-break exposure | Expose row/column page-break enumerate/create/remove through shared help, batch, dump/replay, and feature-specific receipts. | X4a2, X8d1 |
+| X6a1: formula/name relocation audit | Audit and harden the existing cell-formula and workbook/sheet defined-name adjustment kernel with bounds, syntax-aware evidence, and typed residuals for every unsupported expression. | X3 |
 | X6a2: structured/chart reference rewrite | Extend X6a1 to table structured references and supported chart-series ranges with typed unsupported residuals. | X6a1, X4c1, X4m1 |
-| X6a3: validation/format reference rewrite | Extend the kernel to data-validation and conditional-format formulas plus the remaining explicitly supported A1-bearing records. | X6a1 |
-| X6b1: grid sidecar relocation | Inventory and atomically relocate or reject affected merges and row/column dimensions, styles, hidden state, and outline properties under explicit overlap rules. | X6a1 |
-| X6b2: structured sidecar relocation | Add tables, AutoFilters, validations, and conditional formats under stable identity, cleanup, and collision rules. | X6a2, X6a3, X6b1, X7d1 |
-| X6b3: linked-object sidecar relocation | Add hyperlinks, comments, pictures, shapes, and other supported drawings under stable relationship/object identity and bounded copy rules. | X6b1, X4b1, X4d1, X4f1, X4g1 |
-| X6c: row/column insertion engine | Insert bounded row or column ranges with all applicable X6a rewrites and X6b sidecar handling, grid-limit/overlap checks, typed readback, and atomic failure. | X6a2, X6a3, X6b2, X6b3 |
-| X6d: row/column deletion engine | Delete bounded row or column ranges with explicit dangling-reference policy, all applicable X6b cleanup/relocation, typed readback, and atomic failure. | X6a2, X6a3, X6b2, X6b3 |
-| X6e: row/column move engine | Move addressed row or column ranges with source/destination preconditions, overlap rules, formula/reference rewriting, sidecar relocation, and preservation evidence. | X6c, X6d |
-| X6f: row/column clone engine | Clone addressed row or column ranges with explicit relative/absolute-reference semantics, collision-safe sidecar identity, bounded resource copying, and preservation evidence. | X6c, X6d |
-| X6g1: insert exposure | Expose row/column insert through the shared registry, help, dump/replay, and feature-specific receipts with native/Wasm acceptance. | X4a2, X6c |
-| X6g2: delete exposure | Expose row/column delete independently with dangling-reference/readback receipts and deterministic replay. | X4a2, X6d |
-| X6g3: move exposure | Expose row/column move independently with source/destination preconditions, footprint receipts, and deterministic replay. | X4a2, X6e |
-| X6g4: clone exposure | Expose row/column clone independently with copy/resource receipts, collision reporting, and deterministic replay. | X4a2, X6f |
-| X7a: unmerge engine | Add stable merged-range enumeration and bounded unmerge with explicit retained-cell/value/style semantics, typed readback, and round-trip validation. | X3 |
+| X6a3: validation/format reference rewrite | Extend X6a1 to data-validation and conditional-format formulas plus the remaining explicitly supported A1-bearing records. | X6a1 |
+| X6b1a: row grid-sidecar audit | Inventory and harden existing row relocation for merges, row dimensions, styles, hidden/outline state, and row page breaks under explicit overlap/refusal rules. | X6a1, X8d1 |
+| X6b1b: column grid-sidecar audit | Inventory and harden existing column relocation for merges, column dimensions, styles, hidden/outline state, and column page breaks under explicit overlap/refusal rules. | X6a1, X8d1 |
+| X6b2a: row structured-sidecar relocation | Relocate or reject affected tables, validations, and conditional formats under stable identity, cleanup, and collision rules; AutoFilters are explicitly excluded. | X6a2, X6a3, X6b1a, X8a1, X8b1, X8c1 |
+| X6b2b: column structured-sidecar relocation | Relocate or reject affected tables, validations, and conditional formats under stable identity, cleanup, and collision rules; AutoFilters are explicitly excluded. | X6a2, X6a3, X6b1b, X8a1, X8b1, X8c1 |
+| X6b3a: row linked-sidecar relocation | Audit and harden row relocation for hyperlinks and comments under stable object identity and bounded copy/cleanup rules. | X6b1a, X4b1, X4d1 |
+| X6b3b: column linked-sidecar relocation | Audit and harden column relocation for hyperlinks and comments under stable object identity and bounded copy/cleanup rules. | X6b1b, X4b1, X4d1 |
+| X6b4a: row drawing-sidecar relocation | Audit and harden row relocation for pictures, shapes, and other supported drawings under stable relationship/object identity and bounded copy rules. | X6b1a, X4f1, X4g1 |
+| X6b4b: column drawing-sidecar relocation | Audit and harden column relocation for pictures, shapes, and other supported drawings under stable relationship/object identity and bounded copy rules. | X6b1b, X4f1, X4g1 |
+| X6c1: row-insertion hardening | Prove and harden the existing bounded row insertion path with all applicable rewrites/sidecars, grid-limit and overlap checks, typed readback, and atomic failure. | X6a2, X6a3, X6b2a, X6b3a, X6b4a |
+| X6c2: column-insertion hardening | Prove and harden the existing bounded column insertion path with all applicable rewrites/sidecars, grid-limit and overlap checks, typed readback, and atomic failure. | X6a2, X6a3, X6b2b, X6b3b, X6b4b |
+| X6d1: row-deletion hardening | Prove and harden the existing bounded row deletion path with explicit dangling-reference policy, applicable cleanup/relocation, typed readback, and atomic failure. | X6a2, X6a3, X6b2a, X6b3a, X6b4a |
+| X6d2: column-deletion hardening | Prove and harden the existing bounded column deletion path with explicit dangling-reference policy, applicable cleanup/relocation, typed readback, and atomic failure. | X6a2, X6a3, X6b2b, X6b3b, X6b4b |
+| X6e1: row-move engine | Move addressed row ranges with source/destination preconditions, overlap rules, formula/reference rewriting, sidecar relocation, and preservation evidence. | X6c1, X6d1 |
+| X6e2: column-move engine | Move addressed column ranges with source/destination preconditions, overlap rules, formula/reference rewriting, sidecar relocation, and preservation evidence. | X6c2, X6d2 |
+| X6f1: row-clone engine | Clone addressed row ranges with explicit relative/absolute-reference semantics, collision-safe sidecar identity, bounded resource copying, and preservation evidence. | X6c1, X6d1 |
+| X6f2: column-clone engine | Clone addressed column ranges with explicit relative/absolute-reference semantics, collision-safe sidecar identity, bounded resource copying, and preservation evidence. | X6c2, X6d2 |
+| X6g1: row-insert exposure | Expose row insertion through the shared registry, help, dump/replay, and feature-specific receipts with native/Wasm acceptance. | X4a2, X6c1 |
+| X6g2: column-insert exposure | Expose column insertion independently with typed readback, footprint receipts, and deterministic replay. | X4a2, X6c2 |
+| X6g3: row-delete exposure | Expose row deletion independently with dangling-reference/readback receipts and deterministic replay. | X4a2, X6d1 |
+| X6g4: column-delete exposure | Expose column deletion independently with dangling-reference/readback receipts and deterministic replay. | X4a2, X6d2 |
+| X6g5: row-move exposure | Expose row move independently with source/destination preconditions, footprint receipts, and deterministic replay. | X4a2, X6e1 |
+| X6g6: column-move exposure | Expose column move independently with source/destination preconditions, footprint receipts, and deterministic replay. | X4a2, X6e2 |
+| X6g7: row-clone exposure | Expose row clone independently with copy/resource receipts, collision reporting, and deterministic replay. | X4a2, X6f1 |
+| X6g8: column-clone exposure | Expose column clone independently with copy/resource receipts, collision reporting, and deterministic replay. | X4a2, X6f2 |
+| X7a: unmerge audit and hardening | Audit the existing merge/unmerge implementation, add stable merged-range enumeration, and prove bounded unmerge with explicit retained-cell/value/style semantics and round-trip validation. | X3 |
 | X7b: merge/unmerge exposure | Expose merge and unmerge lifecycle through the shared registry, help, dump/replay, and feature-specific receipts. | X4a2, X7a |
 | X7c: AutoFilter criteria/readback | Define a bounded typed criteria grammar and enumerate filter range, per-column criteria, sort/filter state, and unsupported residuals without evaluating hidden rows implicitly. | X3 |
-| X7d1: AutoFilter lifecycle engine | Add validated create/update/clear with stable identity, cleanup, round-trip fidelity, and atomic failure, excluding structural row/column relocation. | X7c |
-| X7d2: AutoFilter structural relocation | Integrate X7d1 ranges and criteria with X6b2 insert/delete/move/clone relocation and collision rules. | X6b2, X7d1 |
+| X7d1: AutoFilter lifecycle audit and hardening | Audit the existing create/remove path and complete validated create/update/clear with stable identity, cleanup, round-trip fidelity, and atomic failure, excluding structural row/column relocation. | X7c |
+| X7d2: AutoFilter structural relocation | As the sole owner of filter relocation, integrate X7d1 ranges and criteria with row/column insert/delete/move/clone and collision rules, replacing X6's temporary fail-closed behavior. | X6c1, X6c2, X6d1, X6d2, X6e1, X6e2, X6f1, X6f2, X7d1 |
 | X7e1: AutoFilter lifecycle exposure | Expose X7c/X7d1 create/update/clear through shared help, batch, dump/replay, and feature-specific receipts. | X4a2, X7d1 |
 | X7e2: AutoFilter relocation exposure | Extend X7e1 receipts and replay with X7d2 structural-relocation results and residuals. | X7d2, X7e1 |
 
