@@ -515,6 +515,43 @@ test "projection source attribute and text limits are cumulative and exact" {
     "w:t token budget",
   )
 
+  let mixed_text =
+    #|<r xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:t>A</w:t><w:instrText>&amp;😀</w:instrText></r>
+  ignore(
+    scan_projection_source_tree(
+      @utf8.encode(mixed_text),
+      budget=projection_source_budget(
+        max_elements=3,
+        max_attribute_chars=1024,
+        max_depth=2,
+        max_text_bytes=10,
+        max_text_tokens=3,
+      ),
+    ),
+  )
+  assert_projection_source_refuses(
+    mixed_text,
+    projection_source_budget(
+      max_elements=3,
+      max_attribute_chars=1024,
+      max_depth=2,
+      max_text_bytes=9,
+      max_text_tokens=3,
+    ),
+    "source byte budget",
+  )
+  assert_projection_source_refuses(
+    mixed_text,
+    projection_source_budget(
+      max_elements=3,
+      max_attribute_chars=1024,
+      max_depth=2,
+      max_text_bytes=10,
+      max_text_tokens=2,
+    ),
+    "token budget",
+  )
+
   let two_texts =
     #|<r xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:t>A</w:t><w:t>B</w:t></r>
   ignore(

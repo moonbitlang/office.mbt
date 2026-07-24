@@ -146,6 +146,9 @@ priv struct ScannedElement {
   content_start : Int
   mut content_end : Int
   mut byte_end : Int
+  // Source-retaining mode populates this map for non-empty `w:t` and
+  // `w:instrText` content. Both element kinds draw from the same cumulative
+  // lexical budget.
   mut text_map : WtContentMap?
   // Source-retaining consumers need to distinguish reader-semantic
   // retractions from elements that were never projection nodes. In
@@ -162,8 +165,8 @@ priv struct ScannedElement {
 
 ///|
 /// Caller-owned cumulative limits for the retained N0b source tree. The
-/// lexical budget is shared by every `w:t` in one story, so many individually
-/// small text nodes cannot multiply the retention allowance.
+/// lexical budget is shared by every `w:t` and `w:instrText` in one story, so
+/// many individually small text nodes cannot multiply the retention allowance.
 priv struct ProjectionSourceBudget {
   mut elements_left : Int
   // Cumulative source bytes retained as element QNames or relevant
@@ -983,7 +986,8 @@ fn scan_story(
               let element = elements[frame.element_index]
               element.content_end = index
               element.byte_end = close_end
-              if is_wml_uri(element.uri) && element.local_name == "t" {
+              if is_wml_uri(element.uri) &&
+                element.local_name is ("t" | "instrText") {
                 element.text_map = Some(
                   map_wt_content(
                     part,
