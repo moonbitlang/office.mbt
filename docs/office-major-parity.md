@@ -67,10 +67,10 @@ Rows at the same dependency level may proceed in separate worktrees, but no PR
 may stack on an unmerged sibling. Split earlier than the repository's roughly
 1,000 hand-written-line or 15-production-file review trigger.
 
-At this pinned baseline the reproducible full-delivery denominator contains 380
-unique acceptance rows: 369 parity/QA/export rows and 11 explicitly labeled
-beyond-parity/delivery rows. The incremental ledger below contains 362 of those
-rows (351 parity/QA/export plus 11 beyond-parity/delivery); the other 18 are the
+At this pinned baseline the reproducible full-delivery denominator contains 382
+unique acceptance rows: 371 parity/QA/export rows and 11 explicitly labeled
+beyond-parity/delivery rows. The incremental ledger below contains 364 of those
+rows (353 parity/QA/export plus 11 beyond-parity/delivery); the other 18 are the
 landed initial-foundation milestones in Current work that are not repeated
 below. Table headers and Current work rows already represented below are not
 double-counted. S1 remains an independent status item rather than a parity row.
@@ -374,8 +374,8 @@ it must not duplicate the engine.
 | X4i2: sparkline exposure | Expose bounded sparkline groups and replay independently of pivots. | X4a2, X4i1 |
 | X4j1: pivot-slicer hardening | Replace XML substring identity and enforce cleanup/guard rules against hardened pivots. | X4h1 |
 | X4j2: pivot-slicer exposure | Expose bounded pivot-backed slicer lifecycle and replay. | X4a2, X4h2, X4j1 |
-| X4k1: protection-state API | Add safe typed workbook/sheet protection readback and verified unprotect semantics. | X3 |
-| X4k2: protection exposure | Expose protection without conflating it with encryption or promising ordinary dump fixpoints. | X4a2, X4k1 |
+| X4k1: protection-state API | Add safe typed workbook/sheet protection readback and verified clear semantics, explicitly including OfficeCLI's workbook `lockStructure`, `lockWindows`, and legacy-password state; preserve unsupported hash metadata and distinguish worksheet/workbook locks from package encryption. | X3 |
+| X4k2: protection exposure | Expose the proven sheet flags and workbook lock/password lifecycle through get, batch, help, receipts, and guarded dump/replay without conflating protection with encryption or promising ordinary dump fixpoints. | X4a2, X4k1 |
 | X4l1: print-layout hardening | Inventory and validate orientation, paper size, fit/scale, print area, per-side margins, worksheet header/footer controls, and sheet-local repeating print-title rows/columns; define bounded ranges, quoted-sheet handling, `_xlnm.Print_Titles` row/column coexistence, clear semantics, typed readback, and unsupported residuals. | X3, X4c1 |
 | X4l2: print-layout exposure | Expose the complete X4l1 subset, including independent print-title row/column set/clear and readback, through registry, create/batch/help, receipts, dump/replay, and native/Wasm acceptance. | X4a2, X4l1 |
 | X4m1: chart read/limit hardening | Add typed option readback, explicit bounds, and truthful residuals for the supported chart subset. | X3 |
@@ -432,6 +432,8 @@ operations fail closed when an affected filter would need relocation.
 | X9d2: workbook active/first-sheet exposure | Expose `activeTab` and `firstSheet` through shared get/create/batch/help/dump/replay with deterministic identity-based receipts that distinguish view reconciliation from X4o6 visibility mutation. | X4a2, X4o6, X9d1 |
 | X9e1: worksheet-view state hardening | Inventory and mutate a bounded view subset covering RTL, zoom, normal/page-break/page-layout mode, gridlines, and headings; consume X4p1 for pane state while preserving unsupported selection extensions. | X3, X4p1 |
 | X9e2: worksheet-view state exposure | Expose X9e1 per stable sheet/view identity through get/create/batch/help/dump/replay and feature-specific receipts. | X4a2, X9e1 |
+| X9f1: workbook behavior-property hardening | Inventory and reconcile OfficeCLI's remaining `workbookPr` behavior surface: typed readback for `backupFile`, `codeName`, `dateCompatibility`, `filterPrivacy`, and `showObjects`; bounded set/clear only where the installed contract proves it; preservation of unknown attributes; and explicit separation of object-display policy from worksheet view state or drawing deletion. | X3, X9b1 |
+| X9f2: workbook behavior-property exposure | Expose the proven X9f1 subset through workbook get/query, create/batch where mutable, shared help, receipts, and guarded dump/replay with truthful per-field mutability and native/Wasm acceptance. | X4a2, X9f1 |
 | X6a1: cell-formula relocation kernel | Add a bounded syntax-aware rewrite kernel for ordinary, shared-master, and array-master cell formulas with relative/absolute A1 semantics, sheet qualification, deterministic residuals, and proof that structural edits no longer copy affected formula text unchanged. | X3, X5e0a |
 | X6a1n: defined-name relocation audit | Audit and harden the existing workbook/sheet defined-name adjustment path with scope-aware syntax evidence, bounds, and typed residuals for every unsupported expression. | X3, X4c1 |
 | X6a2: structured/chart reference rewrite | Extend X6a1/X6a1n to table structured references and supported chart-series ranges with stable table identity and typed unsupported residuals. | X6a1, X6a1n, X4m1, X8a1 |
