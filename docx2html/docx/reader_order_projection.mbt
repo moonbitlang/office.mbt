@@ -1,7 +1,8 @@
-// N0b2 — a bounded, private reader-order view over N0b1's physical source
-// identities. This layer deliberately stops before field classification,
-// SDT/Markup Compatibility transforms, final logical paths, and UTF-16
-// intervals. Later N0b slices consume these ordered physical contributors.
+// N0b2/N0b3 — a bounded, private reader-order view over N0b1's physical
+// source identities, followed by story-wide complex-field classification.
+// This layer still stops before SDT/Markup Compatibility transforms, final
+// logical paths, and UTF-16 intervals. Later N0b slices consume these ordered
+// physical contributors and their source-pinned field provenance.
 
 ///|
 #warnings("-unused_field")
@@ -35,6 +36,9 @@ priv struct ReaderOrderContribution {
   paragraph_identity : Int
   run_identity : Int?
   source_span : ReaderOrderSourceSpan
+  mut field_identity : Int?
+  mut field_region : ReaderOrderFieldRegion
+  mut field_refusal : Int?
 }
 
 ///|
@@ -71,6 +75,7 @@ priv struct ReaderOrderProjection {
   source_part : String
   source_elements : Array[ScannedElement]
   paragraphs : Array[ReaderOrderParagraph]
+  mut field_index : ReaderOrderFieldIndex
 }
 
 ///|
@@ -695,6 +700,9 @@ fn ReaderOrderWalker::add_contribution(
     paragraph_identity,
     run_identity,
     source_span,
+    field_identity: None,
+    field_region: OutsideField,
+    field_refusal: None,
   })
 }
 
@@ -1230,6 +1238,7 @@ fn project_reader_order_from_source_tree(
   source_tree : StoryScan,
   budget? : ReaderOrderBudget,
   reader_image_outputs? : Array[Bool],
+  field_budget? : ReaderOrderFieldBudget,
 ) -> ReaderOrderProjection raise DocxError {
   let budget = match budget {
     Some(value) => value
@@ -1262,11 +1271,17 @@ fn project_reader_order_from_source_tree(
     paragraphs: [],
   }
   walker.walk()
-  {
+  let projection = ReaderOrderProjection::{
     source_part,
     source_elements: walker.elements,
     paragraphs: walker.paragraphs,
+    field_index: empty_reader_order_field_index(),
   }
+  projection.field_index = classify_reader_order_fields(
+    projection,
+    budget?=field_budget,
+  )
+  projection
 }
 
 ///|
@@ -1279,6 +1294,7 @@ fn scan_reader_order_projection(
   source_budget? : ProjectionSourceBudget,
   reader_budget? : ReaderOrderBudget,
   reader_image_outputs? : Array[Bool],
+  field_budget? : ReaderOrderFieldBudget,
 ) -> ReaderOrderProjection raise DocxError {
   let source_tree = scan_projection_source_tree(part, budget?=source_budget)
   project_reader_order_from_source_tree(
@@ -1286,5 +1302,6 @@ fn scan_reader_order_projection(
     source_tree,
     budget?=reader_budget,
     reader_image_outputs?,
+    field_budget?,
   )
 }
