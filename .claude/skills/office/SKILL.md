@@ -1,173 +1,173 @@
 ---
 name: office
 description: >-
-  Work with Office/OOXML documents — Excel .xlsx spreadsheets and Word .docx
-  files — by running this repo's CLIs on the WebAssembly backend, a
-  memory-safe sandbox with no native document libraries. Use it to generate a
-  spreadsheet or Word document, turn CSV/table data into .xlsx, author a
-  .docx (headings, styled text, links, images, lists, tables) from a JSON op
-  script, read a document's structure/text/elements as JSON, convert a .docx
-  to HTML or Markdown, extract images, or check that a file is structurally
-  valid. Reach for this instead of openpyxl / ExcelJS / python-docx / pandoc
-  / LibreOffice.
+  Work with non-PowerPoint Office/OOXML documents through this repository's
+  unified office CLI: identify, inspect, query, validate, diagnose, preview,
+  create, template, comment, batch-edit, dump/replay, or safely inspect raw
+  parts in .docx and .xlsx files. Use this for Word and Excel tasks instead of
+  python-docx, openpyxl, ExcelJS, pandoc, or LibreOffice. Use the legacy
+  format-specific CLIs only for the few workflows the umbrella command does
+  not provide: direct CSV import/export, formula calculation, fine-grained
+  XLSX formula linting and live batch-capability discovery, fine-grained XLSX
+  rendering controls, and DOCX Markdown/style-map/image-extraction conversion.
 ---
 
-# office — documents via the WebAssembly sandbox
+# Office documents through one CLI
 
-This toolkit compiles to **WebAssembly** and runs on MoonBit's own runtime, so
-every operation happens inside a memory-safe sandbox: the code cannot execute
-other programs or open network connections — its only effects are reading and
-writing the files you point it at. That makes it the right place to open a
-document you don't fully trust. (It is *not* a resource sandbox: a hostile file
-can still burn CPU or memory, and the tool touches whatever paths you pass.)
+Use the unified `office` command for every DOCX/XLSX workflow unless the
+legacy-only table below names the exact missing capability.
 
-Run everything from the repository root with this one pattern:
+Run from the repository root:
 
 ```
-moon run --target wasm <tool> -- <args...>
+moon run --target wasm office/cmd/office -- help all --json
+moon run --target wasm office/cmd/office -- <command> <args...>
 ```
 
-- `<tool>` is `cmd/xlsx` (spreadsheets), `docx2html/cmd/docx` (read, inspect,
-  validate, and author Word docs), or `docx2html/cmd/docx2html` (convert Word
-  docs to HTML/Markdown).
-- The first run builds the wasm module (a few seconds); later runs are fast.
-- For trusted files where speed matters, swap `--target wasm` for
-  `--target native`.
+The WebAssembly target is the default for untrusted documents. It cannot spawn
+programs or open network connections, and the unified CLI also applies bounded
+package, XML, scan, output, and mutation limits. It can still read or write the
+paths supplied to it and consume CPU within those limits. For trusted files,
+`--target native` is a faster drop-in.
 
-### Run anywhere (no repo, no build toolchain)
+## Default workflow
 
-`moon run` is just the in-repo convenience — build + run. The compiled `.wasm`
-is portable: ship it alongside `moonrun` (MoonBit's WebAssembly runtime, which
-supports the async I/O these tools use out of the box) and run it directly on
-any platform `moonrun` targets, with no repo and no build step:
+1. Discover the unified surface with `office help all --json` or
+   `office help <command> --json`. Treat its fingerprinted registry as more
+   authoritative than prose. Before authoring an XLSX batch script, also run
+   the legacy `xlsx capabilities` fallback below: unified help does not yet
+   expose that parser-owned operation and parameter catalog.
+2. Run `identify`, then `outline --json` before choosing paths or edits.
+3. Inspect only the needed content with `get`, `text`, or `query`. Reuse the
+   canonical paths returned by the CLI; do not invent selectors.
+4. For mutations, prefer a separate output, run `--dry-run` where supported,
+   and inspect the transaction preservation report.
+5. Read the result back and run `validate` and `issues`. For any XLSX containing
+   formulas, also run the legacy `xlsx lint` fallback below and require its
+   `finding_count` to be zero; newly authored formulas have no cached results,
+   so unified `issues` and `preview` cannot evaluate them. Lint evaluates
+   formula masters but not shared/array slave formulas. Treat those slaves as
+   an unresolved residual rather than claiming formula correctness.
+6. Generate a `preview` and visually inspect the HTML before delivery.
 
-```
-moon build --target wasm cmd/xlsx                 # once, produces xlsx.wasm
-moonrun path/to/xlsx.wasm create book.xlsx --sheet Data   # anywhere
-```
+Every documented command failure exits non-zero, but successful diagnostic
+commands can report warnings or formula findings with exit code zero. Inspect
+their structured counts and records, not just the exit code.
+Ordinary `--json` commands emit one `office.output/1` success/failure envelope.
+`dump --json` is the deliberate exception: it emits the replayable
+`office.dump/1` document directly.
 
-So this is genuinely cross-platform: a ~1 MB `.wasm` plus the `moonrun` binary,
-not a Python/LibreOffice install.
+## Command map
 
-## I want to… → run this
-
-Every command starts with `moon run --target wasm` (written in full below so each
-row is copy-pasteable):
+The logical syntax below uses the compiled command name `office`; prepend the
+`moon run --target wasm office/cmd/office --` launcher shown above.
 
 | Goal | Command |
 | --- | --- |
-| Turn a CSV / table into a spreadsheet | `moon run --target wasm cmd/xlsx -- csv data.csv out.xlsx` |
-| Create an empty workbook | `moon run --target wasm cmd/xlsx -- create out.xlsx --sheet Data` |
-| Set a cell | `moon run --target wasm cmd/xlsx -- set f.xlsx Sheet1 A1 hi` |
-| Set a formula | `moon run --target wasm cmd/xlsx -- formula f.xlsx Sheet1 B4 "=SUM(B1:B3)"` |
-| Compute a formula's value | `moon run --target wasm cmd/xlsx -- calc f.xlsx Sheet1 B4` |
-| Style a cell/range | `moon run --target wasm cmd/xlsx -- style f.xlsx Sheet1 A1:B1 --bold --fill 4472C4 --font-color FFFFFF` |
-| Merge cells | `moon run --target wasm cmd/xlsx -- merge f.xlsx Sheet1 A1:C1` |
-| Set column width(s) | `moon run --target wasm cmd/xlsx -- width f.xlsx Sheet1 A:C 16` |
-| Freeze the header row | `moon run --target wasm cmd/xlsx -- freeze f.xlsx Sheet1 A2` |
-| Add a filter to a range | `moon run --target wasm cmd/xlsx -- filter f.xlsx Sheet1 A1:C10` |
-| Add a chart from data | `moon run --target wasm cmd/xlsx -- chart f.xlsx Sheet1 E2 --type col --categories A2:A6 --values B2:B6 --title Sales` |
-| Add a sheet | `moon run --target wasm cmd/xlsx -- add-sheet f.xlsx Summary` |
-| Read a cell | `moon run --target wasm cmd/xlsx -- get f.xlsx Sheet1 A1` |
-| See a sheet as a table | `moon run --target wasm cmd/xlsx -- view f.xlsx` |
-| Dump a sheet as CSV | `moon run --target wasm cmd/xlsx -- rows f.xlsx` |
-| List sheets | `moon run --target wasm cmd/xlsx -- sheets f.xlsx` |
-| Apply many edits in one pass | `moon run --target wasm cmd/xlsx -- batch f.xlsx script.json` |
-| See an .xlsx's structure as JSON | `moon run --target wasm cmd/xlsx -- outline f.xlsx` |
-| Read a cell/range as JSON | `moon run --target wasm cmd/xlsx -- get f.xlsx Sheet1 A1:B4 --json` |
-| **Render sheets to HTML** (to look at) | `moon run --target wasm cmd/xlsx -- html f.xlsx --out f.html` |
-| Check an .xlsx is well-formed | `moon run --target wasm cmd/xlsx -- validate f.xlsx` |
-| See a .docx's structure as JSON | `moon run --target wasm docx2html/cmd/docx -- outline in.docx` |
-| Extract a .docx's text (with paths) | `moon run --target wasm docx2html/cmd/docx -- text in.docx` |
-| Read one element as JSON | `moon run --target wasm docx2html/cmd/docx -- get in.docx '/body/p[2]' --json` |
-| **Author a Word document** from JSON ops | `moon run --target wasm docx2html/cmd/docx -- batch out.docx script.json` |
-| Create a blank .docx | `moon run --target wasm docx2html/cmd/docx -- create out.docx` |
-| Check a .docx is well-formed | `moon run --target wasm docx2html/cmd/docx -- validate in.docx` |
-| **Comment on an EXISTING .docx** (byte-preserving) | `moon run --target wasm docx2html/cmd/docx -- annotate add in.docx out.docx --at '/body/p[2]' --text 'Cite the source.' --author Reviewer --initials RV` |
-| Reply in a comment thread | `moon run --target wasm docx2html/cmd/docx -- annotate reply in.docx out.docx --comment 0 --text 'Source added.' --author Author` |
-| Resolve / unresolve a comment | `moon run --target wasm docx2html/cmd/docx -- annotate resolve in.docx out.docx --comment 0` |
-| Read one comment as JSON (metadata, anchors, body) | `moon run --target wasm docx2html/cmd/docx -- get in.docx '/comments/comment[@id=0]' --json` |
-| See the thread shape (replies link via `parent_id`) | `moon run --target wasm docx2html/cmd/docx -- outline in.docx` |
-| Author a .docx WITH comments / foot-endnotes | `moon run --target wasm docx2html/cmd/docx -- batch out.docx script.json` (a `docx.batch/2` script) |
-| Convert a .docx to HTML | `moon run --target wasm docx2html/cmd/docx2html -- in.docx out.html` |
-| Convert a .docx to Markdown | `moon run --target wasm docx2html/cmd/docx2html -- --output-format=markdown in.docx out.md` |
-| Convert a .docx + extract images | `moon run --target wasm docx2html/cmd/docx2html -- --output-dir ./out in.docx` |
+| Discover formats, commands, fields, limits | `office help [all\|FORMAT\|COMMAND\|FORMAT COMMAND] [--json\|--jsonl]` |
+| Verify and identify a package | `office identify FILE [--json]` |
+| Map document/workbook structure | `office outline FILE [--max-elements N] [--max-output-chars N] [--json]` |
+| Resolve one canonical selector | `office get FILE SELECTOR [limits] [--json]` |
+| Extract path-tagged paragraphs/cells | `office text FILE [--under SELECTOR] [--offset N] [--limit N] [limits] [--json]` |
+| Search bounded literal predicates | `office query FILE [CELL_SELECTOR] [--under SELECTOR] [DOCX predicates] [pagination/limits] [--json]` |
+| Run the exact mutation validation gate | `office validate FILE [--json\|--jsonl]` |
+| Report validation plus bounded actionable warnings | `office issues FILE [--json\|--jsonl]` |
+| Publish deterministic offline HTML | `office preview FILE --output OUT.html [--overwrite] [--json\|--jsonl]` |
+| Create a blank validated file | `office create xlsx OUT.xlsx [--sheet NAME] [--dry-run] [--overwrite] [--json]` or `office create docx OUT.docx [--dry-run] [--overwrite] [--json]` |
+| Merge strict placeholders/row regions | `office template FILE DATA.json --out OUT [--dry-run] [--overwrite] [--allow-missing] [--json\|--jsonl]` |
+| Add/reply/resolve DOCX comments | `office annotate FILE SCRIPT.json --out OUT.docx [--dry-run] [--overwrite] [--json\|--jsonl]` |
+| Mutate an XLSX transactionally | `office batch BOOK.xlsx SCRIPT.json [--out OUT.xlsx] [--dry-run] [--overwrite] [--json]` |
+| Author a fresh DOCX from ops | `office batch --format docx OUT.docx SCRIPT.json [--dry-run] [--overwrite] [--json]` |
+| Produce a replayable semantic dump | `office dump FILE --json` or streaming `--jsonl` |
+| Reconstruct replayable dump content | `office replay DUMP.json --output OUT [--overwrite] [--json\|--jsonl]` |
+| Inventory/read OOXML parts | `office raw list FILE [--json]`; `office raw read FILE PART [--json] [--base64\|--output FILE]` |
+| Replace one XML part | `office raw replace FILE PART (--xml XML \| --xml-file FILE) [--out FILE] [--dry-run] [--overwrite] [--json]` |
+| Edit inside one XML part | `office raw edit FILE PART --path PATH --action ACTION [action arguments] [--namespace PREFIX=URI]... [--all] [--out FILE] [--dry-run] [--overwrite] [--json]` |
 
-Omit the output path on `docx2html` to write to stdout. Note that each `style`
-call sets a cell's **complete** style (it replaces, not merges), so combine all
-the formatting for a cell into one command and avoid overlapping styled ranges.
+`[limits]` abbreviates `--max-elements N --max-output-chars N`. DOCX query
+predicates are `--kind`, `--text`, `--id`, repeatable `--property NAME=VALUE`,
+and `--ignore-case`. XLSX query uses a quoted cell selector such as
+`'cell[type=number][value>0]'`.
 
-The batch script formats — `docx.batch/1` (or `docx.batch/2`, which adds
-`comment` ops and inline foot/endnotes) for Word documents, `xlsx.batch/1`
-for spreadsheets — are specified normatively in `docs/agent-json-schemas.md`;
-read the matching section before writing a script (validation is strict:
-unknown keys, duplicate keys, and non-integer numbers are errors, and `docx
-batch` only creates NEW files). `recipes/author-docx.md` walks the whole
-author→verify loop.
+## Canonical selectors
 
-**Commenting on an existing document is different from authoring.** `batch`
-only makes NEW files; to add/reply/resolve comments on a document you did not
-author, use `docx annotate <add|reply|resolve|unresolve>`. These do
-**byte-preserving surgery** — they rewrite only the comment-related parts
-(`comments.xml`, `commentsExtended.xml`, the relationships and content-types
-entries, and the marker fragments spliced into `document.xml`) and leave every
-other *unrelated* existing part — `styles.xml`, other stories, media — byte
-for byte identical, so they are safe on documents whose full content the lossy
-reader does not model. Each verb writes a NEW
-output file (never in place) and reads back before publishing. Read a document
-and its existing discussion first (`outline`, then `get '/comments/comment[@id=N]'
---json`), because comment ids are the document's own spelled values.
-`recipes/review-docx.md` walks the read→comment→reply→resolve loop.
-
-For spreadsheets the same three verbs close an **inspect → edit → render**
-loop: `outline` / `get … --json` show you what a workbook contains (and what
-your edit produced) as parseable JSON; `batch` applies a whole set of changes
-atomically; `html` renders a sheet to a self-contained document you can open
-or screenshot to *see* the result — fonts, fills, merges, widths, images,
-chart placeholders. Don't guess the state of a file you are editing; read it
-back and look at it. `recipes/render-review-fix.md` walks the loop end to end.
-
-## Going deeper
-
-The table above is the fast path. When you need exact flags, output shapes, or
-edge-case behavior, read the matching file (don't guess):
-
-- `reference/xlsx.md` — every `cmd/xlsx` subcommand, its arguments, and quirks.
-- `reference/docx.md` — the `docx` agent CLI (outline/text/get/validate/
-  create/batch) and the `docx2html` converter: options, output modes, the
-  batch authoring contract, and image handling.
-- `docs/agent-json-schemas.md` (repo root) — the normative spec of every JSON
-  payload the CLIs emit or consume.
-
-For end-to-end workflows, follow a recipe:
-
-- `recipes/data-to-spreadsheet.md` — build a spreadsheet from data in the conversation.
-- `recipes/batch-edits.md` — make many spreadsheet edits in one atomic `batch` pass.
-- `recipes/render-review-fix.md` — build a spreadsheet, render it to HTML, look, and correct it.
-- `recipes/author-docx.md` — author a Word document from a JSON op script and verify it.
-- `recipes/review-docx.md` — comment on an existing document: read → `annotate add` → reply → resolve, byte-preserving.
-- `recipes/doc-to-markdown.md` — convert a Word document to clean Markdown/HTML.
-- `recipes/inspect-untrusted.md` — safely dump and validate a file you don't trust.
-
-## Confirm, don't assume
-
-Both tools are self-describing. If you're unsure of a subcommand or flag, ask
-the tool rather than guessing — it runs in the same sandbox:
+Selectors are format-rooted:
 
 ```
-moon run --target wasm cmd/xlsx -- --help
-moon run --target wasm cmd/xlsx -- csv --help
-moon run --target wasm docx2html/cmd/docx -- --help
-moon run --target wasm docx2html/cmd/docx -- batch --help
-moon run --target wasm docx2html/cmd/docx -- annotate --help
-moon run --target wasm docx2html/cmd/docx -- annotate add --help
-moon run --target wasm docx2html/cmd/docx2html -- --help
+/docx/body/p[1]
+/docx/body/tbl[1]/tr[1]/tc[2]/p[1]
+/docx/comments/comment[id="7"]
+/xlsx/workbook
+/xlsx/sheet[name="Data"]
+/xlsx/sheet[name="Data"]/cell[A1]
+/xlsx/sheet[name="Data"]/range[A1:C12]
 ```
 
-A failed run prints a diagnostic and exits non-zero. Batch-script errors are
-always prefixed `error: …` and name the exact op (`error: ops[3].params.style
-'Heading7' is unknown`); file-level failures are prefixed with the program
-name (`docx: …` / `docx2html: …`); other usage/argument errors keep their
-parser message, which is often but not always `error:`-prefixed. Either way, the
-wasm backend has no stderr, so the diagnostic and any normal output both
-arrive on stdout — check the exit code.
+Ordinal paths are snapshot-relative. Re-run `outline` or `text` after a
+mutation before reusing them.
+
+## Mutation contracts
+
+- `create` is create-new by default; `--overwrite` explicitly replaces an
+  existing destination. `--dry-run` validates without publishing.
+- XLSX `batch` consumes `xlsx.batch/1`. With no `--out` it rewrites the input
+  after all operations pass; prefer `--out` when preserving the source matters.
+- DOCX `batch --format docx` consumes `docx.batch/2` (and accepts
+  `docx.batch/1`) and only authors a fresh destination. It does not edit an
+  existing DOCX and does not accept `--out`.
+- `template` never modifies its template. It substitutes non-executable
+  `{{key}}` placeholders from flat scalar data and optional marked-row regions
+  into a separate output.
+- `annotate` is the preservation-safe existing-DOCX mutation surface. It
+  consumes `docx.annotation-batch/1` with `comment_add`, `comment_reply`,
+  `comment_resolve`, and `comment_unresolve` ops and publishes a separate
+  output.
+- `raw replace` and `raw edit` are expert fallbacks. Use `--dry-run` and a
+  separate `--out`; semantic commands are safer whenever they can express the
+  task.
+- A preservation report is authoritative. Do not infer preservation from the
+  requested operations.
+- `dump --json` is the form accepted by `replay`. `dump --jsonl` is a
+  streaming inspection form with a terminal digest, not replay input.
+- `preview --overwrite` and `replay --overwrite` remove the old destination
+  before staging the replacement; a later write failure can leave it absent.
+  Use a fresh destination, or make and verify a backup before explicit
+  replacement. They do not share the atomic-overwrite guarantee of the
+  transaction-backed mutation commands.
+
+Read `docs/agent-json-schemas.md` before authoring any consumed JSON document.
+It is normative for `xlsx.batch/1`, `docx.batch/2`,
+`office.template.data/1`, `docx.annotation-batch/1`, and `office.dump/1`.
+
+## Further detail
+
+Use `office help all --json` for the live command contract and
+`docs/agent-json-schemas.md` for consumed/emitted JSON. The existing
+`reference/` and `recipes/` files describe the older format-specific binaries;
+consult them only for a legacy-only capability named below. They are not the
+command reference for the unified facade.
+
+## Legacy-only fallbacks
+
+Do not start with these. Use them only when the named capability is required:
+
+| Missing from `office` | Legacy command |
+| --- | --- |
+| Direct CSV import to a new workbook | `moon run --target wasm cmd/xlsx -- csv INPUT.csv OUT.xlsx --sheet Data` |
+| Evaluate one formula locally | `moon run --target wasm cmd/xlsx -- calc BOOK.xlsx Sheet1 B4` |
+| Recompute and lint formula masters, including formulas with no cached result; shared/array slave formulas are not evaluated | `moon run --target wasm cmd/xlsx -- lint BOOK.xlsx [--sheet Sheet1]` |
+| Discover the exact XLSX batch operations, parameters, allowed values, and limits accepted by this build | `moon run --target wasm cmd/xlsx -- capabilities` |
+| Export one sheet as generic CSV (LF-delimited records) | `moon run --target wasm cmd/xlsx -- rows BOOK.xlsx --sheet Sheet1` |
+| Render a selected or bounded XLSX view, suppress images, or calculate uncached formulas | `moon run --target wasm cmd/xlsx -- html BOOK.xlsx --out OUT.html [--sheet Sheet1] [--max-rows N] [--max-cols N] [--no-images] [--calc]` |
+| DOCX to Markdown, custom Mammoth style maps, or extracted-image directories | `moon run --target wasm docx2html/cmd/docx2html -- ...` |
+
+The legacy writers do not share the unified transaction contract. CSV import
+truncates an existing output, and XLSX HTML rendering replaces its output.
+Use verified-new destination paths unless replacement is explicitly intended.
+DOCX conversion truncates output files and writes extracted images
+non-transactionally, so use a fresh output directory and publish it only after
+the command completes successfully.
+
+The umbrella already covers general HTML preview, read/query, validation,
+creation, batch authoring, templating, comments, and raw OOXML access. Do not
+route those tasks through the legacy agent CLIs.
