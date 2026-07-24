@@ -10,12 +10,25 @@ install_root="$1"
 probe_root="$2"
 evidence_root="$3"
 auth_json="$4"
+invocation_root="$(pwd -P)"
+
+canonical_directory() {
+  local candidate="$1"
+  case "$candidate" in
+    /*) ;;
+    *) candidate="$invocation_root/$candidate" ;;
+  esac
+  (
+    unset CDPATH
+    cd -P -- "$candidate" >/dev/null && pwd -P
+  )
+}
 
 if [ ! -d "$install_root" ]; then
   echo "error: install prefix does not exist: $install_root" >&2
   exit 1
 fi
-install_root="$(cd "$install_root" && pwd -P)"
+install_root="$(canonical_directory "$install_root")"
 
 if [ ! -x "$install_root/bin/office-native" ] ||
   [ ! -x "$install_root/bin/office-wasm" ] ||
@@ -29,7 +42,7 @@ if [ ! -f "$auth_json" ]; then
   exit 1
 fi
 
-auth_dir="$(cd "$(dirname "$auth_json")" && pwd -P)"
+auth_dir="$(canonical_directory "$(dirname "$auth_json")")"
 auth_json="$auth_dir/$(basename "$auth_json")"
 
 for output_root in "$probe_root" "$evidence_root"; do
@@ -40,8 +53,8 @@ for output_root in "$probe_root" "$evidence_root"; do
   mkdir -p "$output_root"
 done
 
-probe_root="$(cd "$probe_root" && pwd -P)"
-evidence_root="$(cd "$evidence_root" && pwd -P)"
+probe_root="$(canonical_directory "$probe_root")"
+evidence_root="$(canonical_directory "$evidence_root")"
 case "$probe_root/" in
   "$evidence_root/"*)
     echo "error: probe and evidence directories must not overlap" >&2
@@ -64,14 +77,18 @@ done
 
 root="$(git rev-parse --show-toplevel)"
 prompt="$root/office/tests/acceptance/fresh-agent/prompt.md"
-codex_bin="$(command -v codex)"
+codex_bin="$(command -v codex || true)"
 if [ ! -x "$codex_bin" ]; then
   echo "error: Codex CLI is not executable: $codex_bin" >&2
   exit 1
 fi
-codex_bin="$(cd "$(dirname "$codex_bin")" && pwd -P)/$(basename "$codex_bin")"
+codex_bin_dir="$(canonical_directory "$(dirname "$codex_bin")")"
+codex_bin="$codex_bin_dir/$(basename "$codex_bin")"
+codex_name="$(basename "$codex_bin")"
 
-codex_runtime_dir=""
+codex_runtime_name=""
+codex_runtime_bin=""
+codex_shell_wrapper=false
 codex_shebang=""
 IFS= read -r codex_shebang < "$codex_bin" || true
 codex_shebang="${codex_shebang%$'\r'}"
@@ -93,12 +110,40 @@ case "$codex_shebang" in
       echo "error: could not resolve Codex launcher runtime: $codex_shebang" >&2
       exit 1
     fi
-    runtime_bin="$(command -v "$runtime_name" || true)"
-    if [ -z "$runtime_bin" ] || [ ! -x "$runtime_bin" ]; then
-      echo "error: Codex launcher runtime is unavailable: $runtime_name" >&2
-      exit 1
+    case "$runtime_name" in
+      /*)
+        if [ ! -x "$runtime_name" ]; then
+          echo "error: Codex launcher runtime is unavailable: $runtime_name" >&2
+          exit 1
+        fi
+        ;;
+      */* | *[!A-Za-z0-9._+-]*)
+        echo "error: unsupported Codex launcher runtime name: $runtime_name" >&2
+        exit 1
+        ;;
+      *)
+        runtime_bin="$(command -v "$runtime_name" || true)"
+        if [ -z "$runtime_bin" ] || [ ! -x "$runtime_bin" ]; then
+          echo "error: Codex launcher runtime is unavailable: $runtime_name" >&2
+          exit 1
+        fi
+        runtime_dir="$(canonical_directory "$(dirname "$runtime_bin")")"
+        codex_runtime_name="$runtime_name"
+        codex_runtime_bin="$runtime_dir/$(basename "$runtime_bin")"
+        ;;
+    esac
+    case "$(basename "$runtime_name")" in
+      sh | bash | dash | ksh | zsh) codex_shell_wrapper=true ;;
+    esac
+    ;;
+  "#!"*)
+    interpreter_spec="${codex_shebang#\#!}"
+    read -r -a interpreter_parts <<< "$interpreter_spec"
+    if [ "${#interpreter_parts[@]}" -gt 0 ]; then
+      case "$(basename "${interpreter_parts[0]}")" in
+        sh | bash | dash | ksh | zsh) codex_shell_wrapper=true ;;
+      esac
     fi
-    codex_runtime_dir="$(cd "$(dirname "$runtime_bin")" && pwd -P)"
     ;;
 esac
 
@@ -108,14 +153,42 @@ trap 'rm -rf -- "$isolation_root"' EXIT
 isolated_user_home="$isolation_root/home"
 isolated_codex_state="$isolation_root/codex"
 isolated_tmp="$isolation_root/tmp"
-mkdir -p "$isolated_user_home" "$isolated_codex_state" "$isolated_tmp"
+isolated_launcher_bin="$isolation_root/launcher-bin"
+mkdir -p \
+  "$isolated_user_home" \
+  "$isolated_codex_state" \
+  "$isolated_tmp" \
+  "$isolated_launcher_bin"
 install -m 0600 "$auth_json" "$isolated_codex_state/auth.json"
 
-probe_path="$install_root/bin"
-if [ -n "$codex_runtime_dir" ]; then
-  probe_path="$probe_path:$codex_runtime_dir"
+if [ -n "$codex_runtime_name" ]; then
+  ln -s "$codex_runtime_bin" "$isolated_launcher_bin/$codex_runtime_name"
 fi
-probe_path="$probe_path:/usr/bin:/bin:/usr/sbin:/sbin"
+
+if [ "$codex_shell_wrapper" = true ]; then
+  launcher_text="$(< "$codex_bin")"
+  for helper_path in "$codex_bin_dir"/*; do
+    if [ ! -x "$helper_path" ]; then
+      continue
+    fi
+    helper_name="$(basename "$helper_path")"
+    if [ "$helper_name" = "$codex_name" ]; then
+      continue
+    fi
+    case "$helper_name" in
+      -* | *[!A-Za-z0-9._+-]*) continue ;;
+    esac
+    helper_pattern="${helper_name//./\\.}"
+    helper_pattern="${helper_pattern//+/\\+}"
+    reference_pattern="(^|[^A-Za-z0-9_./+-])${helper_pattern}([^A-Za-z0-9_./+-]|$)"
+    if [[ "$launcher_text" =~ $reference_pattern ]] &&
+      [ ! -e "$isolated_launcher_bin/$helper_name" ]; then
+      ln -s "$helper_path" "$isolated_launcher_bin/$helper_name"
+    fi
+  done
+fi
+
+probe_path="$install_root/bin:$isolated_launcher_bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
 set +e
 env -i \

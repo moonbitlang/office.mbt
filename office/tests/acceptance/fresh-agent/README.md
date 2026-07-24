@@ -21,9 +21,13 @@ Codex `auth.json` (normally `~/.codex/auth.json`). The runner copies only that
 credential into temporary state; it launches Codex with an empty environment,
 an empty user home, and an empty Codex home, so global `AGENTS.md` files,
 personal skills, plugins, configuration, and rules cannot coach the probe. Its
-PATH contains only the installed Office commands, the resolved Codex launcher
-runtime, and fixed system directories. The runner canonicalizes all directories
-and rejects overlapping probe/evidence paths before capture files are created.
+PATH contains only the installed Office commands, a private launcher directory,
+and fixed system directories. That private directory exposes the exact
+`/usr/bin/env` runtime plus any executable sibling explicitly referenced by a
+shell-wrapper launcher; the original runtime and launcher directories are never
+added wholesale. The runner resolves paths physically without ambient `CDPATH`
+semantics and rejects overlapping probe/evidence paths before capture files are
+created.
 
 ```sh
 probe="$(mktemp -d "${TMPDIR:-/tmp}/office-f1b-probe.XXXXXX")"
