@@ -559,6 +559,25 @@ test "reader order preserves block output inside runs under pict" {
 }
 
 ///|
+test "reader order restores every enclosing run after an inline block" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:r><w:p><w:r><w:t>P</w:t></w:r></w:p></w:r><w:t>B</w:t></w:r></w:p></w:body></w:document>
+  let projection = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(source),
+  )
+  assert_eq(
+    provisional_story_text(projection),
+    current_reader_story_text(source),
+  )
+  assert_reader_order_identity_mapping(projection)
+  debug_inspect(
+    projection.paragraphs.map(paragraph => paragraph.reader_text()),
+    content="[\"P\", \"B\"]",
+  )
+}
+
+///|
 test "reader order only traverses story containers from their root context" {
   let document_source =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>A</w:t></w:r></w:p><w:body><w:p><w:r><w:t>body</w:t></w:r></w:p></w:body><w:hdr><w:p><w:r><w:t>header</w:t></w:r></w:p></w:hdr><w:ftr><w:p><w:r><w:t>footer</w:t></w:r></w:p></w:ftr><w:footnotes><w:p><w:r><w:t>notes</w:t></w:r></w:p></w:footnotes><w:endnotes><w:p><w:r><w:t>endnotes</w:t></w:r></w:p></w:endnotes><w:comments><w:p><w:r><w:t>comments</w:t></w:r></w:p></w:comments><w:footnote><w:p><w:r><w:t>footnote</w:t></w:r></w:p></w:footnote><w:endnote><w:p><w:r><w:t>endnote</w:t></w:r></w:p></w:endnote><w:comment><w:p><w:r><w:t>comment</w:t></w:r></w:p></w:comment><w:p><w:r><w:t>B</w:t></w:r></w:p></w:body></w:document>
@@ -597,6 +616,35 @@ test "reader order only traverses story containers from their root context" {
     comments_projection.paragraphs.map(paragraph => paragraph.reader_text()),
     content="[\"C\"]",
   )
+  let nested_story_sources : Array[(String, String)] = [
+    (
+      "word/footnotes.xml",
+      (
+        #|<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:wrapper><w:footnote w:id="1"><w:p><w:r><w:t>nested footnote</w:t></w:r></w:p></w:footnote></w:wrapper></w:footnotes>
+      ),
+    ),
+    (
+      "word/endnotes.xml",
+      (
+        #|<w:endnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:wrapper><w:endnote w:id="1"><w:p><w:r><w:t>nested endnote</w:t></w:r></w:p></w:endnote></w:wrapper></w:endnotes>
+      ),
+    ),
+    (
+      "word/comments.xml",
+      (
+        #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:wrapper><w:comment w:id="1"><w:p><w:r><w:t>nested comment</w:t></w:r></w:p></w:comment></w:wrapper></w:comments>
+      ),
+    ),
+  ]
+  for entry in nested_story_sources {
+    let (part_name, source) = entry
+    let projection = scan_reader_order_projection(
+      part_name,
+      @utf8.encode(source),
+    )
+    assert_reader_order_identity_mapping(projection)
+    assert_eq(projection.paragraphs.length(), 0)
+  }
 }
 
 ///|
@@ -731,6 +779,25 @@ test "reader order keeps deleted paragraph-mark prefixes as physical contributor
       paragraph.reader_text().contains("discarded") ||
       paragraph.reader_text().contains("trailing")
     }),
+  )
+}
+
+///|
+test "reader order drops deleted paragraphs visited as paragraph children" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>A</w:t></w:r><w:p><w:pPr><w:rPr><w:del/></w:rPr></w:pPr><w:r><w:t>D</w:t></w:r></w:p><w:p><w:r><w:t>P</w:t></w:r></w:p><w:r><w:t>B</w:t></w:r></w:p></w:body></w:document>
+  let projection = scan_reader_order_projection(
+    "word/document.xml",
+    @utf8.encode(source),
+  )
+  assert_eq(
+    provisional_story_text(projection),
+    current_reader_story_text(source),
+  )
+  assert_reader_order_identity_mapping(projection)
+  debug_inspect(
+    projection.paragraphs.map(paragraph => paragraph.reader_text()),
+    content="[\"AP\", \"B\"]",
   )
 }
 
