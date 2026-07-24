@@ -97,6 +97,15 @@ aliases.
   [#222](https://github.com/moonbitlang/office.mbt/issues/222), partial-boundary
   N0c2 [#236](https://github.com/moonbitlang/office.mbt/issues/236), and the
   later transaction SDK and unified CLI slices.
+- [PR #228](https://github.com/moonbitlang/office.mbt/pull/228) is merged into
+  `main` and closed [#223](https://github.com/moonbitlang/office.mbt/issues/223).
+  Installed `office help` now exposes the four consumed input contracts with
+  parser-owned constraints, canonical examples, deterministic fingerprints,
+  and human/JSON/JSONL output. This unblocks the F1b fresh-agent probe in #169.
+- [PR #235](https://github.com/moonbitlang/office.mbt/pull/235) is merged into
+  `main` and closed [#231](https://github.com/moonbitlang/office.mbt/issues/231).
+  It landed N0b1's bounded namespace-resolved source-tree identities and exact
+  source spans without changing the ordinary non-retaining scanner contract.
 
 The reference OfficeCLI checkout remains `.repos/OfficeCLI` in the primary
 repository working tree. This handoff and the major ledger were audited against
@@ -122,9 +131,12 @@ rebuilt in later PRs:
   `docx.batch/2` authoring, and transactional `office batch --format docx`.
 - D4 (#164/#216): preservation-safe DOCX comment add, reply, resolve, and
   unresolve through `office annotate`.
-- F1 matrix (#218): checked-in native/Wasm task acceptance through the unified
-  command. Installed-help discoverability and the uncoached baseline probe
-  remain open.
+- F1 matrix/help (#218/#228): checked-in native/Wasm task acceptance plus the
+  exact installed input contracts consumed by the command. Only the uncoached
+  baseline probe in #169 remains open.
+- N0a/N0b1 (#224/#235): exact DOCX lexical tokens and bounded physical
+  source-tree identity are landed; reader order, field classification, reader
+  transforms, and surgery remain in later N0 slices.
 - [#176](https://github.com/moonbitlang/office.mbt/issues/176): tolerant reads
   for Excel-produced overlaps between distinct shared-formula indexes, while
   duplicate masters and out-of-range followers remain rejected per index.
@@ -155,18 +167,13 @@ The detailed contracts live in:
 
 ## Remaining work, in recommended order
 
-The original initial-parity implementation issues and F1a unified entrypoint are
-complete. Close the remaining installed-command baseline acceptance work in two
-small steps:
-
-1. [#223 — installed-help input contracts](https://github.com/moonbitlang/office.mbt/issues/223).
-   Expose every consumed JSON schema and bounded example through `office help`.
-   This blocks the uncoached F1b probe because an installed agent must not
-   need repository-only schema documentation or hidden coaching.
-2. [#169 — F1b installed-command baseline acceptance](https://github.com/moonbitlang/office.mbt/issues/169).
-   Run the uncoached fresh-agent exercise after #223 lands; require exact-head
-   gates and an `ultra` review, then record the initial baseline result. Passing
-   #169 does not close the broader non-PPT parity epic.
+The original initial-parity implementation issues, F1a unified entrypoint, and
+installed-help prerequisite are complete. The remaining installed-command
+baseline step is
+[#169 — F1b installed-command baseline acceptance](https://github.com/moonbitlang/office.mbt/issues/169):
+run the uncoached fresh-agent exercise against the exact installed candidate,
+require exact-head gates and an `ultra` review, and record the initial result.
+Passing #169 does not close the broader non-PPT parity epic.
 
 The dependency-ordered small-PR plan for closing the broader agent-relevant
 OfficeCLI gaps now lives in `docs/office-major-parity.md`. Give every proposed

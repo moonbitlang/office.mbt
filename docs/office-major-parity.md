@@ -51,10 +51,11 @@ without copying its generic DOM surface.
 | R1: replayable semantic XLSX/DOCX dump | [#167](https://github.com/moonbitlang/office.mbt/issues/167) | Complete via #192, #193, #195, and #197-#204; #194 and #196 were superseded |
 | T1: scalar XLSX/DOCX template merge | [#168](https://github.com/moonbitlang/office.mbt/issues/168) | Complete via #205, #206, and #208 |
 | T1-R: bounded XLSX/DOCX row repetition | [#207](https://github.com/moonbitlang/office.mbt/issues/207) | Complete via #210-#214 |
-| F1b: installed-command baseline acceptance | [#169](https://github.com/moonbitlang/office.mbt/issues/169) | Open; task matrix landed via [#218](https://github.com/moonbitlang/office.mbt/pull/218), but the uncoached baseline probe waits on #223; it does not close #139 |
+| F1b: installed-command baseline acceptance | [#169](https://github.com/moonbitlang/office.mbt/issues/169) | Open and unblocked; task matrix landed via [#218](https://github.com/moonbitlang/office.mbt/pull/218) and installed contracts via [#228](https://github.com/moonbitlang/office.mbt/pull/228); the uncoached probe does not close #139 |
 | F1a: unified agent entrypoint | [#220](https://github.com/moonbitlang/office.mbt/issues/220) | Complete via [#225](https://github.com/moonbitlang/office.mbt/pull/225) |
-| F1 help input contracts | [#223](https://github.com/moonbitlang/office.mbt/issues/223) | Open; blocks the uncoached F1b baseline probe |
+| F1 help input contracts | [#223](https://github.com/moonbitlang/office.mbt/issues/223) | Complete via [#228](https://github.com/moonbitlang/office.mbt/pull/228) |
 | N0a: exact DOCX lexical token map | [#219](https://github.com/moonbitlang/office.mbt/issues/219) | Complete via [#224](https://github.com/moonbitlang/office.mbt/pull/224); first foundation only |
+| N0b1: bounded DOCX source-tree identity | [#231](https://github.com/moonbitlang/office.mbt/issues/231) | Complete via [#235](https://github.com/moonbitlang/office.mbt/pull/235); physical identity foundation only |
 | S1: scheduler-cooperative Office parsing | [#174](https://github.com/moonbitlang/office.mbt/issues/174) | Open; independent of F1 |
 
 ## Dependency-ordered incremental PR ledger
@@ -80,7 +81,7 @@ double-counted. S1 remains an independent status item rather than a parity row.
 | --- | --- | --- |
 | F1 matrix | [PR #218](https://github.com/moonbitlang/office.mbt/pull/218) supplies checked-in native/Wasm task acceptance without claiming the uncoached installed-command result. | Landed on `main` |
 | F1a: unified agent entrypoint | [#220](https://github.com/moonbitlang/office.mbt/issues/220) makes the repository skill lead with `office help all --json`; [PR #225](https://github.com/moonbitlang/office.mbt/pull/225) is landed. | F1 matrix |
-| F1 help input contracts | [#223](https://github.com/moonbitlang/office.mbt/issues/223) exposes the exact consumed JSON schemas and bounded examples through installed `office help`. | A2; may proceed beside F1a |
+| F1 help input contracts | [#223](https://github.com/moonbitlang/office.mbt/issues/223) exposes the exact consumed JSON schemas and bounded examples through installed `office help`; [PR #228](https://github.com/moonbitlang/office.mbt/pull/228) is landed. | A2; landed on `main` |
 | F1b: installed-command baseline ([#169](https://github.com/moonbitlang/office.mbt/issues/169)) | An uncoached fresh agent completes the documented workflows from installed help, without repository-only schema docs or hidden coaching; exact-head gates and an `ultra` review pass. Record the initial baseline result without closing #139 or claiming completion of the major ledger. | F1a, #223 |
 
 ### Existing-DOCX targeted editing
@@ -90,15 +91,16 @@ move/copy/swap integrity rules, are reviewed in
 [docx-agent-roadmap.md](docx-agent-roadmap.md#phase-3--targeted-edits-of-existing-documents-reviewed-plan).
 N0 is deliberately split into seven review-sized private foundations: N0a,
 four N0b projection slices, and two N0c surgery slices. Merged
-[PR #224](https://github.com/moonbitlang/office.mbt/pull/224) covers N0a only
-and does not satisfy the whole gate. Issue
+[PR #224](https://github.com/moonbitlang/office.mbt/pull/224) covers N0a and
+[PR #235](https://github.com/moonbitlang/office.mbt/pull/235) covers N0b1;
+neither satisfies the whole gate. Issue
 [#221](https://github.com/moonbitlang/office.mbt/issues/221) is now the N0b
 umbrella rather than a single oversized implementation PR.
 
 | Slice | Acceptance boundary | Depends on |
 | --- | --- | --- |
 | N0a: lexical map ([#219](https://github.com/moonbitlang/office.mbt/issues/219)) | Map supported `w:t` lexical content to exact UTF-8 source and UTF-16 text boundaries under cumulative budgets; [PR #224](https://github.com/moonbitlang/office.mbt/pull/224) is landed. | D4 |
-| N0b1: source-tree identity ([#231](https://github.com/moonbitlang/office.mbt/issues/231)) | Retain a bounded namespace-resolved source tree with identity-bearing physical paragraph/run nodes and canonical physical ancestry, without changing non-retaining scanner behavior. | N0a |
+| N0b1: source-tree identity ([#231](https://github.com/moonbitlang/office.mbt/issues/231)) | Retain a bounded namespace-resolved source tree with identity-bearing physical paragraph/run nodes and canonical physical ancestry, without changing non-retaining scanner behavior; [PR #235](https://github.com/moonbitlang/office.mbt/pull/235) is landed. | N0a; landed on `main` |
 | N0b2: reader-order mapping ([#232](https://github.com/moonbitlang/office.mbt/issues/232)) | Mirror BodyReader normal-flow/text-box order and deleted-paragraph joins as provisional ordered contributors mapped to N0b1 identities; do not assign final logical paths or UTF-16 intervals before later reader transforms. | N0b1 |
 | N0b3: field classification ([#233](https://github.com/moonbitlang/office.mbt/issues/233)) | Advance nested complex-field state at carrier boundaries across each story under explicit depth/work limits, with deterministic restriction/refusal provenance. | N0b2 |
 | N0b4: reader transforms and oracle ([#234](https://github.com/moonbitlang/office.mbt/issues/234)) | Match first-direct SDT/checkbox and Markup Compatibility transforms, then assign final logical paragraph/run paths and UTF-16 intervals, complete suppression/barrier classification, and pass the full hostile reader oracle. | N0b3 |
