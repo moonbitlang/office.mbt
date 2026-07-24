@@ -144,6 +144,39 @@ test "projection source identity uses canonical sibling ordinals across WML dial
 }
 
 ///|
+test "projection source attributes follow reader precedence across WML dialects" {
+  let source =
+    #|<root xmlns:t="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:s="http://purl.oclc.org/ooxml/wordprocessingml/main"><t:fldChar t:fldCharType="begin" s:fldCharType="end"/><s:fldChar s:fldCharType="end" t:fldCharType="begin"/><t:sym t:font="Transitional" s:font="Strict" t:char="F041" s:char="F042"/><s:sym s:font="Strict" t:font="Transitional" s:char="F042" t:char="F041"/></root>
+  let scan = scan_projection_source_tree(@utf8.encode(source))
+  let fields = retained_wml_elements(scan, "fldChar")
+  let symbols = retained_wml_elements(scan, "sym")
+  let reader = @xml.read_xml_string_strict(
+    source,
+    namespace_map=office_namespace_map(),
+  )
+  let reader_fields = reader.descendants_by_tag_name("w:fldChar")
+  let reader_symbols = reader.descendants_by_tag_name("w:sym")
+  debug_inspect(
+    (
+      fields.map(field => field.field_char_type),
+      symbols.map(symbol => (symbol.symbol_font, symbol.symbol_char)),
+      reader_fields.map(field => field.attributes.get("w:fldCharType")),
+      reader_symbols.map(symbol => {
+        (symbol.attributes.get("w:font"), symbol.attributes.get("w:char"))
+      }),
+    ),
+    content=(
+      #|(
+      #|  [Some("end"), Some("begin")],
+      #|  [(Some("Strict"), Some("F042")), (Some("Transitional"), Some("F041"))],
+      #|  [Some("end"), Some("begin")],
+      #|  [(Some("Strict"), Some("F042")), (Some("Transitional"), Some("F041"))],
+      #|)
+    ),
+  )
+}
+
+///|
 test "annotation-only scans ignore projection-only attribute lookalikes" {
   let source = StringBuilder()
   source.write_string("<q:root xmlns:q=\"urn:not-word\" q:font=\"")
