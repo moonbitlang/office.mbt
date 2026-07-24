@@ -13,10 +13,12 @@
 /// byte ceiling summed over occurrences. Enforced BEFORE the writer graph is
 /// built, so a script that references one asset thousands of times is refused
 /// as a typed media limit rather than after materializing every part.
-let max_authored_media_parts : Int = 1000
+pub const MAX_AUTHORED_MEDIA_PARTS : Int = 1000
 
 ///|
-let max_authored_media_bytes : Int64 = 64L * 1024L * 1024L
+/// Maximum aggregate emitted-media bytes, summed over image occurrences rather
+/// than unique assets.
+pub const MAX_AUTHORED_MEDIA_BYTES : Int64 = 64L * 1024L * 1024L
 
 ///|
 /// Builds a fresh DOCX from an already-parsed `docx.batch/2` script and the
@@ -33,12 +35,12 @@ pub fn author_docx_bytes(
   // Emitted-media preflight, BEFORE build_body materializes per-occurrence
   // document nodes / relationships / media metadata.
   let occurrences = script.image_occurrences()
-  if occurrences.length() > max_authored_media_parts {
+  if occurrences.length() > MAX_AUTHORED_MEDIA_PARTS {
     raise WriteResourceLimit(
       kind="media_parts",
-      limit=max_authored_media_parts.to_int64(),
+      limit=MAX_AUTHORED_MEDIA_PARTS.to_int64(),
       actual=occurrences.length().to_int64(),
-      message="the authoring script emits \{occurrences.length()} media parts; the limit is \{max_authored_media_parts}",
+      message="the authoring script emits \{occurrences.length()} media parts; the limit is \{MAX_AUTHORED_MEDIA_PARTS}",
     )
   }
   let mut media_bytes = 0L
@@ -48,12 +50,12 @@ pub fn author_docx_bytes(
         Some(bytes) => bytes.length()
         None => 0
       }).to_int64()
-    if media_bytes > max_authored_media_bytes {
+    if media_bytes > MAX_AUTHORED_MEDIA_BYTES {
       raise WriteResourceLimit(
         kind="media_bytes",
-        limit=max_authored_media_bytes,
+        limit=MAX_AUTHORED_MEDIA_BYTES,
         actual=media_bytes,
-        message="the authoring script's emitted media exceeds the \{max_authored_media_bytes}-byte ceiling",
+        message="the authoring script's emitted media exceeds the \{MAX_AUTHORED_MEDIA_BYTES}-byte ceiling",
       )
     }
   }

@@ -10,6 +10,14 @@
 pub const SCHEMA_TEMPLATE_DATA : String = "office.template.data/1"
 
 ///|
+/// Default maximum number of scalar keys in `values` or one region record.
+pub const MAX_TEMPLATE_KEYS : Int = 4096
+
+///|
+/// Default maximum UTF-16 code units in one template string value.
+pub const MAX_TEMPLATE_VALUE_UNITS : Int = 65536
+
+///|
 /// Errors raised while parsing a template data document.
 pub suberror TemplateDataError {
   TemplateDataError(String)
@@ -207,8 +215,8 @@ priv struct ScanFrame {
 /// `max_value_units` UTF-16 code units.
 pub fn parse_template_data(
   text : String,
-  max_keys? : Int = 4096,
-  max_value_units? : Int = 65536,
+  max_keys? : Int = MAX_TEMPLATE_KEYS,
+  max_value_units? : Int = MAX_TEMPLATE_VALUE_UNITS,
 ) -> Map[String, TemplateValue] raise TemplateDataError {
   check_duplicate_keys(text)
   let document = @json.parse(text) catch {

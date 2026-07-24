@@ -7,11 +7,21 @@ import {
 }
 
 // Values
+pub const MAX_TEMPLATE_KEYS : Int = 4096
+
+pub const MAX_TEMPLATE_PATH_ORDINAL_DIGITS : Int = 7
+
 pub const MAX_TEMPLATE_REGIONS : Int = 64
 
 pub const MAX_TEMPLATE_REGION_RECORDS : Int = 4096
 
+pub const MAX_TEMPLATE_SHEET_ROW : Int = 1048576
+
+pub const MAX_TEMPLATE_STORY_ORDINAL : Int = 99
+
 pub const MAX_TEMPLATE_TOTAL_REGION_ROWS : Int = 10000
+
+pub const MAX_TEMPLATE_VALUE_UNITS : Int = 65536
 
 pub const SCHEMA_TEMPLATE_DATA : String = "office.template.data/1"
 

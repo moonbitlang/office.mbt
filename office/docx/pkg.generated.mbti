@@ -10,9 +10,15 @@ import {
 }
 
 // Values
+pub const MAX_ANNOTATION_OPS : Int = 128
+
+pub const MAX_ANNOTATION_TOTAL_GROWTH : Int64 = 33554432
+
 pub const SCHEMA_ANNOTATION_BATCH : String = "docx.annotation-batch/1"
 
 pub const SCHEMA_ANNOTATION_RESULT : String = "office.docx.annotation-batch/1"
+
+pub fn annotation_batch_operation_names() -> Array[String]
 
 pub async fn author_document(@transaction.CreateTransactionOptions, @batch.BatchScript, Map[String, Bytes]) -> DocxAuthorResult
 
