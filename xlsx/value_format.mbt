@@ -544,16 +544,61 @@ fn render_literal_segment(segment : String) -> String {
 }
 
 ///|
+fn text_format_section_has_placeholder(section : StringView) -> Bool {
+  let mut in_quote = false
+  let mut escape_next = false
+  let mut skip_next = false
+  let mut bracket_depth = 0
+  for c in section {
+    if escape_next {
+      escape_next = false
+      continue
+    }
+    if skip_next {
+      skip_next = false
+      continue
+    }
+    match c {
+      '\\' => escape_next = true
+      '"' => in_quote = !in_quote
+      '[' => if !in_quote { bracket_depth = bracket_depth + 1 }
+      ']' =>
+        if !in_quote && bracket_depth > 0 {
+          bracket_depth = bracket_depth - 1
+        }
+      '_' | '*' => if !in_quote && bracket_depth == 0 { skip_next = true }
+      '@' => if !in_quote && bracket_depth == 0 { return true }
+      _ => ()
+    }
+  }
+  false
+}
+
+///|
+fn select_text_format_section(sections : ArrayView[String]) -> String? {
+  if sections.length() >= 4 {
+    return Some(sections[3])
+  }
+  guard sections.length() > 0 else { return None }
+  let final_section = sections[sections.length() - 1]
+  if text_format_section_has_placeholder(final_section) {
+    Some(final_section)
+  } else {
+    None
+  }
+}
+
+///|
 fn format_text_pattern(
   raw : String,
   code : String,
   max_output_chars? : Int,
 ) -> String raise XlsxError {
   let sections = split_format_sections(code)
-  if sections.length() == 0 {
-    return raw
+  let section = match select_text_format_section(sections) {
+    Some(section) => section
+    None => return raw
   }
-  let section = if sections.length() >= 4 { sections[3] } else { sections[0] }
   let (pattern, _locale, currency_prefix) = parse_section_metadata(section)
   let sb = StringBuilder::new()
   let mut output_chars = checked_formatted_output_growth(

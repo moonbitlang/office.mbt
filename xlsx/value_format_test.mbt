@@ -86,6 +86,26 @@ test "general and literal formats" {
 }
 
 ///|
+test "text formats require an explicit text placeholder or fourth section" {
+  inspect(format_text("Total", "0"), content="Total")
+  inspect(format_text("Total", "0;[Red]-0;0"), content="Total")
+  inspect(format_text("Total", "\"literal @\""), content="Total")
+  inspect(format_text("Total", "\\@"), content="Total")
+  inspect(format_text("Total", "_@"), content="Total")
+  inspect(format_text("Total", "*@"), content="Total")
+  inspect(format_text("Total", "[$@-409]"), content="Total")
+  inspect(format_text("Total", "0;@\" suffix\";0"), content="Total")
+  inspect(format_text("Total", "0;@\" suffix\""), content="Total suffix")
+  inspect(format_text("Total", "0;0;@\" suffix\""), content="Total suffix")
+  inspect(
+    format_text("Total", "0;[Red]-0;0;\"label: \"@"),
+    content="label: Total",
+  )
+  inspect(format_text("Total", "0;[Red]-0;0;\"redacted\""), content="redacted")
+  inspect(format_text("Total", "0;[Red]-0;0;"), content="")
+}
+
+///|
 test "date tokens and elapsed" {
   inspect(format_numeric(43528.0, "ddd"), content="Mon")
   inspect(format_numeric(43528.0, "dddd"), content="Monday")

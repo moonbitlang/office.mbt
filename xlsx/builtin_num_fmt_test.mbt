@@ -121,9 +121,9 @@ test "numfmt reverse lookup coverage is exactly the fixed-code ids" {
 
 ///|
 test "numfmt equivalence domain edges are pinned: text cells and negative serials" {
-  // Text cells: a builtin format leaves text untouched; the equivalent
-  // custom code runs the text through its literal pattern. The reverse
-  // table's docs scope equivalence to numeric cells; this pins the edge.
+  // Text cells: builtin formats and equivalent numeric custom codes both
+  // leave text untouched unless an explicit text placeholder or fourth
+  // section applies. This pins that equivalence outside the numeric domain.
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Edge"))
   let builtin_style = workbook.add_style(@xlsx.Style::builtin_number_format(2))
@@ -136,7 +136,10 @@ test "numfmt equivalence domain edges are pinned: text cells and negative serial
     workbook.get_cell_value("Edge", "A1"),
     content="Some(\"hello\")",
   )
-  debug_inspect(workbook.get_cell_value("Edge", "B1"), content="Some(\"0.00\")")
+  debug_inspect(
+    workbook.get_cell_value("Edge", "B1"),
+    content="Some(\"hello\")",
+  )
   // Negative serials under a date id: the builtin path renders the raw
   // value; the custom-code path prefixes the sign it split off.
   let date_builtin = workbook.add_style(@xlsx.Style::builtin_number_format(14))
