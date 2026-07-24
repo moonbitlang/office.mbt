@@ -67,10 +67,10 @@ Rows at the same dependency level may proceed in separate worktrees, but no PR
 may stack on an unmerged sibling. Split earlier than the repository's roughly
 1,000 hand-written-line or 15-production-file review trigger.
 
-At this pinned baseline the reproducible full-delivery denominator contains 377
-unique acceptance rows: 370 parity/QA/export rows and 7 explicitly labeled
-beyond-parity/delivery rows. The incremental ledger below contains 359 of those
-rows (352 parity/QA/export plus 7 beyond-parity/delivery); the other 18 are the
+At this pinned baseline the reproducible full-delivery denominator contains 380
+unique acceptance rows: 369 parity/QA/export rows and 11 explicitly labeled
+beyond-parity/delivery rows. The incremental ledger below contains 362 of those
+rows (351 parity/QA/export plus 11 beyond-parity/delivery); the other 18 are the
 landed initial-foundation milestones in Current work that are not repeated
 below. Table headers and Current work rows already represented below are not
 double-counted. S1 remains an independent status item rather than a parity row.
@@ -174,7 +174,7 @@ round-tripping an existing document through the fresh-authoring model.
 | WSET2b: fresh typography/compatibility settings | Author bounded document-grid, compatibility-mode, character-spacing/CJK auto-spacing and line-breaking, default-tab-stop, and auto-hyphenation state with units/range validation and typed readback. | D3, W3, WL1 |
 | WSET2c: fresh revision/field automation settings | Author trackRevisions and updateFields flags, and route explicit recalcFields requests through the bounded field-refresh contract with backend/provenance and truthful layout-dependent residuals. | D3, W5b7, W5r1 |
 | WSET2d: fresh print/privacy/font settings | Author bounded mirror-margin, gutter-at-top, book-fold, background-display, personal-information/date-removal, and font-embedding/subsetting flags; validate cross-property invariants without claiming that merely setting a flag embeds unavailable fonts. | D3, W3 |
-| WSET2e: fresh document page background | Author document-root `w:background` color with a closed canonical RGB/`auto` contract, explicit clear/default state, typed readback, and OpenXML validation; keep it distinct from WSET2d's `w:displayBackgroundShape` setting. | D3 |
+| WSET2e: fresh document page background | Author document-root `w:background` color with a closed canonical RGB/`auto` contract, explicit clear/default state, typed readback, and OpenXML validation; select WSET2d's `w:displayBackgroundShape` state explicitly and report the two states separately. | D3, WSET2d |
 | WSET3a: existing document-default mutation | Preservation-safely update or clear the WSET2a docDefaults subset while retaining unknown styles.xml defaults, named styles, and unrelated bytes. | A4, D1, N0c2, WSET1, WSET2a |
 | WSET3b: existing typography/compatibility mutation | Preservation-safely update or clear the WSET2b grid/compatibility/CJK/default-tab/hyphenation subset with exact settings/section footprints and unknown-setting preservation. | A4, D1, N0c2, WSET1, WSET2b |
 | WSET3c: existing revision/field automation mutation | Preservation-safely update or clear trackRevisions/updateFields and execute requested bounded recalculation through W5r, never disguising an unsupported pagination-derived field as refreshed. | A4, D1, N0c2, W5r2, WSET1, WSET2c |
@@ -344,10 +344,9 @@ it must not duplicate the engine.
 | X4o1b: cascade-safe worksheet rename | Replace the current non-cascading rename with a source-pinned atomic integration over X4o1a; inventory the entire workbook first and fail closed if any affected reference carrier cannot be rewritten, then prove stable sheet identity and no stale old-name references. | X3, X4o1a |
 | X4o1c: cascade-safe worksheet rename exposure | Expose X4o1b through shared get/batch/help/dump/replay with typed old/new identity, rewritten/residual reference receipts, and native/Wasm acceptance independently of the other worksheet-lifecycle verbs. | X4a2, X4o1b |
 | X4o1: worksheet tab-color hardening | Add stable typed tab-color readback, bounded theme/RGB/indexed color validation, explicit clear semantics, and round-trip preservation for unsupported color metadata. | X3 |
-| X4o2: worksheet reorder engine | Move one stably identified worksheet to a validated position while preserving workbook/sheet identity, active/selected state, defined names, relationships, and unrelated package bytes. | X3 |
-| X4o3: worksheet clone engine | Clone one stably identified worksheet with collision-free name/part/relationship ids, explicit formula/name/drawing-sidecar policy, bounded size, and atomic failure. | X3 |
-| X4o4: worksheet lifecycle exposure | Expose tab-color update, reorder, and clone through shared get/batch/help/dump/replay with typed identities, deterministic receipts, and native/Wasm acceptance. | X4a2, X4o1, X4o2, X4o3 |
-| X4o5: worksheet visibility-state engine | Inventory and mutate the explicit `visible`/`hidden`/`veryHidden` lifecycle for a stably identified sheet, preserving unsupported workbook metadata and enforcing at least one visible sheet plus valid active/selected-state reconciliation with atomic failure. | X3 |
+| X4o2: worksheet reorder engine | Move one stably identified worksheet to a validated position while preserving workbook/sheet identity, active-tab/first-sheet state, defined names, relationships, and unrelated package bytes. | X3 |
+| X4o4: worksheet lifecycle exposure | Expose tab-color update and reorder through shared get/batch/help/dump/replay with typed identities, deterministic receipts, and native/Wasm acceptance. | X4a2, X4o1, X4o2 |
+| X4o5: worksheet visibility-state engine | Inventory and mutate the explicit `visible`/`hidden`/`veryHidden` lifecycle for a stably identified sheet, preserving unsupported workbook metadata and enforcing at least one visible sheet plus valid active-tab/first-sheet reconciliation with atomic failure. | X3 |
 | X4o6: worksheet visibility exposure | Expose X4o5 through get/create/batch/help/dump/replay with typed visibility readback, deterministic before/after receipts, clear/unhide semantics, and native/Wasm acceptance. | X4a2, X4o5 |
 | X4p1: worksheet pane-state engine | Inventory and mutate a bounded freeze/split-pane subset with stable view identity, explicit freeze/unfreeze/clear semantics, valid anchors, and preserved unsupported selection extensions. | X3 |
 | X4p2: worksheet pane-state exposure | Expose freeze/unfreeze and the proven split-pane subset through shared get/create/batch/help/dump/replay with typed readback and deterministic receipts. | X4a2, X4p1 |
@@ -429,8 +428,8 @@ operations fail closed when an affected filter would need relocation.
 | X9b2: workbook date-system exposure | Expose X9b1 through typed readback, create/batch, help, dump/replay, and receipts that state the selected conversion policy and every unconverted residual. | X4a2, X9b1 |
 | X9c1: calculation-settings state | Inventory and author the bounded workbook calculation-property subset (mode/id/iteration/full-calc flags) without claiming that formula caches were evaluated or refreshed. | X3, X5f1 |
 | X9c2: calculation-settings exposure | Expose X9c1 through typed get/create/batch/help/dump/replay while keeping settings provenance separate from X5h evaluator/cache-refresh evidence. | X4a2, X9c1 |
-| X9d1: workbook selection-state hardening | Add stable typed readback and mutation for active tab and selected-sheet state integrated with X4o5 visibility identity, index, multi-selection, and at-least-one-visible-sheet invariants. | X3, X4o5 |
-| X9d2: workbook selection-state exposure | Expose active/selected sheets through shared get/create/batch/help/dump/replay with identity-based readback and deterministic receipts that distinguish selection reconciliation from X4o6 visibility mutation. | X4a2, X4o6, X9d1 |
+| X9d1: workbook active/first-sheet state hardening | Add stable identity-based readback and mutation for OfficeCLI's `activeTab` and `firstSheet` workbook-view state, with index, visibility, reorder, and at-least-one-visible-sheet invariants. | X3, X4o2, X4o5 |
+| X9d2: workbook active/first-sheet exposure | Expose `activeTab` and `firstSheet` through shared get/create/batch/help/dump/replay with deterministic identity-based receipts that distinguish view reconciliation from X4o6 visibility mutation. | X4a2, X4o6, X9d1 |
 | X9e1: worksheet-view state hardening | Inventory and mutate a bounded view subset covering RTL, zoom, normal/page-break/page-layout mode, gridlines, and headings; consume X4p1 for pane state while preserving unsupported selection extensions. | X3, X4p1 |
 | X9e2: worksheet-view state exposure | Expose X9e1 per stable sheet/view identity through get/create/batch/help/dump/replay and feature-specific receipts. | X4a2, X9e1 |
 | X6a1: cell-formula relocation kernel | Add a bounded syntax-aware rewrite kernel for ordinary, shared-master, and array-master cell formulas with relative/absolute A1 semantics, sheet qualification, deterministic residuals, and proof that structural edits no longer copy affected formula text unchanged. | X3, X5e0a |
@@ -518,7 +517,7 @@ portable host-free backend is a differentiator.
 | --- | --- | --- |
 | E1a: PDF backend contract | Define one bounded export/view adapter contract with atomic publication, backend availability/version/provenance, cancellation, output/page limits, and typed layout/degradation residuals shared by DOCX and XLSX. | A4, P1, Q4 |
 | E1b: DOCX-to-PDF export | Add explicit DOCX `office export ... --format pdf` and the corresponding view workflow through E1a; report unsupported content and never claim Word-identical pagination from a weaker backend. | E1a, Q5 |
-| E1c: XLSX-to-PDF export | Add workbook/sheet/range PDF export and view through E1a with explicit print-area, page-layout, hidden-sheet, scaling, and multi-sheet ordering semantics plus backend-specific fidelity evidence. | E1a, X4l1, X9e1 |
+| E1c: XLSX-to-PDF export | Add workbook/sheet/range PDF export and view through E1a with explicit print-area, page-layout, hidden-sheet, scaling, and multi-sheet ordering semantics plus backend-specific fidelity evidence. | E1a, X4l1, X4o6, X9e1 |
 | E1d: cross-format PDF capstone | Prove installed-help discovery, deterministic selection, atomic failure, provenance, resource ceilings, and truthful preview-versus-PDF differences for both DOCX and XLSX. | E1b, E1c |
 
 ### Beyond-parity differentiators and delivery
@@ -530,6 +529,10 @@ portable host-free backend is a differentiator.
 | B3: dependency-closed subtree bundle | Extend R2 into a self-contained replay unit that carries every referenced style, numbering definition, media asset, and relationship—or reports a typed residual—and prove replay into an empty package. | R2d |
 | B4: portable host-free DOCX-to-PDF backend | Give E1b a deterministic MoonBit-only sandbox/backend under explicit rendering/resource limits, so DOCX PDF export no longer depends on Word, a browser, or another host renderer. | E1b, Q5, B5 |
 | B5: publish the hostile-file contract ([#76](https://github.com/moonbitlang/office.mbt/issues/76)) | Document and test one user-facing resource/sandbox policy across both formats and targets. | S1 may proceed independently |
+| B6: worksheet clone engine | Go beyond OfficeCLI's explicit whole-sheet copy refusal: clone one stably identified worksheet with collision-free name/part/relationship ids, explicit formula/name/drawing-sidecar policy, bounded size, and atomic failure. | X3, X4o2 |
+| B7: worksheet clone exposure | Expose B6 through shared get/batch/help/dump/replay with typed source/clone identities, copied/resource/residual receipts, and native/Wasm acceptance without presenting clone as OfficeCLI parity. | X4a2, B6 |
+| B8: selected-sheet state engine | Go beyond OfficeCLI's `activeTab`/`firstSheet` surface with stable typed multi-sheet selection state, integrating X4o5 visibility, X9d1 workbook-view identity, reorder/clone effects, and at-least-one-visible-sheet rules. | B6, X4o5, X9d1 |
+| B9: selected-sheet exposure | Expose B8 through get/create/batch/help/dump/replay with deterministic identity-based selection receipts and native/Wasm acceptance, explicitly labeled as a differentiator. | B8, X4a2, X9d2 |
 | L1: prebuilt distribution | Publish reproducible native and Wasm artifacts plus a one-line installer after the task-level capability gates are stable. | F1b |
 | L2: thin language wrappers | Generate Python/Node wrappers from the same capability schemas; do not fork command semantics. | L1 |
 
