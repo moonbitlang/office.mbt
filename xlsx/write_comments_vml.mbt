@@ -1,41 +1,18 @@
 ///|
-fn truncate_comment_content(comment : Comment) -> (String, Array[RichTextRun]) {
-  let mut remaining = max_cell_chars
-  let mut text = comment.text
-  if text != "" {
-    let units = count_utf16_units(text)
-    if units > remaining {
-      text = truncate_utf16_units(text, remaining)
-      remaining = 0
-    } else {
-      remaining = remaining - units
-    }
-  }
-  let runs = rich_text_truncate_runs(comment.paragraph, remaining)
-  (text, runs)
-}
-
-///|
 fn write_comments_xml(
   comments : ArrayView[Comment],
   budget? : WritePartBudget,
 ) -> String raise XlsxError {
+  let normalized : Array[Comment] = []
+  for comment in comments {
+    normalized.push(normalize_comment(comment))
+  }
   let authors : Array[String] = []
   let author_ids : Map[String, Int] = Map([])
-  for comment in comments {
-    let base_author = if comment.author == "" {
-      "Author"
-    } else {
-      comment.author
-    }
-    let author = if count_utf16_units(base_author) > max_comment_author_chars {
-      truncate_utf16_units(base_author, max_comment_author_chars)
-    } else {
-      base_author
-    }
-    if !author_ids.contains(author) {
-      author_ids[author] = authors.length()
-      authors.push(author)
+  for comment in normalized {
+    if !author_ids.contains(comment.author) {
+      author_ids[comment.author] = authors.length()
+      authors.push(comment.author)
     }
   }
   let sb = LimitedXmlBuilder::new(budget)
@@ -51,27 +28,16 @@ fn write_comments_xml(
   }
   sb.write_view("  </authors>\n")
   sb.write_view("  <commentList>\n")
-  for comment in comments {
-    let base_author = if comment.author == "" {
-      "Author"
-    } else {
-      comment.author
-    }
-    let author = if count_utf16_units(base_author) > max_comment_author_chars {
-      truncate_utf16_units(base_author, max_comment_author_chars)
-    } else {
-      base_author
-    }
-    let author_id = author_ids.get(author).unwrap_or(0)
-    let (text_value, runs) = truncate_comment_content(comment)
+  for comment in normalized {
+    let author_id = author_ids.get(comment.author).unwrap_or(0)
     sb.write_view("    <comment ref=\"")
     sb.write_xml_attr(comment.cell)
     sb.write_view("\" authorId=\"\{author_id}\">\n")
     sb.write_view("      <text>")
-    if text_value != "" {
-      sb.write_t_element(text_value)
+    if comment.paragraph.length() == 0 && comment.text != "" {
+      sb.write_t_element(comment.text)
     }
-    for run in runs {
+    for run in comment.paragraph {
       sb.write_view("<r>")
       sb.write_rich_text_run(run)
       sb.write_view("</r>")
@@ -521,10 +487,8 @@ test "write comments vml wb: rich comment xml branches" {
     vert_align: None,
     family: None,
   }
-  let long_author = "A".repeat(max_comment_author_chars + 5)
-  let long_text = "B".repeat(max_cell_chars + 10)
   let comments : ReadOnlyArray[Comment] = [
-    wb_comment("A1", "", " lead\n", [
+    wb_comment("A1", "", "", [
       { text: "Rich", font: Some(rich_font) },
       { text: "Theme", font: Some(theme_font) },
       { text: "Indexed", font: Some(indexed_font) },
@@ -532,7 +496,7 @@ test "write comments vml wb: rich comment xml branches" {
       { text: "IndexedNoTint", font: Some(indexed_no_tint_font) },
       { text: "TintOnly", font: Some(tint_only_font) },
     ]),
-    wb_comment("B2", long_author, long_text, []),
+    wb_comment("B2", "Bob", " lead\n", []),
   ]
   let xml = write_comments_xml(comments)
   inspect(xml.contains("<author>Author</author>"), content="true")
@@ -559,6 +523,25 @@ test "write comments vml wb: rich comment xml branches" {
   inspect(xml.contains("<color theme=\"2\" tint=\"0.5\"/>"), content="true")
   inspect(xml.contains("<color indexed=\"7\"/>"), content="true")
   inspect(xml.contains("TintOnly"), content="true")
+}
+
+///|
+test "write comments vml wb: invalid comments reject without truncation" {
+  let invalid_comments : Array[Comment] = [
+    wb_comment("A1", "A".repeat(max_comment_author_chars + 1), "valid", []),
+    wb_comment("A1", "Alice", "B".repeat(max_comment_content_chars + 1), []),
+    wb_comment("A1", "Alice", "", [
+      { text: "C".repeat(max_comment_content_chars + 1), font: None },
+    ]),
+    wb_comment("A1", "Alice", "plain", [{ text: "rich", font: None }]),
+  ]
+  for comment in invalid_comments {
+    let one : ReadOnlyArray[Comment] = [comment]
+    let result : Result[String, Error] = Ok(write_comments_xml(one)) catch {
+      error => Err(error)
+    }
+    inspect(result is Err(XlsxError::InvalidComment(_)), content="true")
+  }
 }
 
 ///|

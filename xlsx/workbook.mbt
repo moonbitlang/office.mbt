@@ -2824,6 +2824,28 @@ pub fn Workbook::add_comment(
 }
 
 ///|
+/// Replaces the existing classic comment at `comment.cell` on `sheet_name`.
+pub fn Workbook::replace_comment(
+  self : Workbook,
+  sheet_name : StringView,
+  comment : Comment,
+) -> Unit raise XlsxError {
+  let sheet = self.require_sheet(sheet_name)
+  sheet.replace_comment(comment)
+}
+
+///|
+/// Returns the classic comment anchored at `cell` on `sheet_name`, if present.
+pub fn Workbook::get_comment(
+  self : Workbook,
+  sheet_name : StringView,
+  cell : StringView,
+) -> Comment? raise XlsxError {
+  let sheet = self.require_sheet(sheet_name)
+  sheet.get_comment(cell)
+}
+
+///|
 pub fn Workbook::delete_comment(
   self : Workbook,
   sheet_name : StringView,

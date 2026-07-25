@@ -100,7 +100,9 @@ pub suberror XlsxError {
   CellTextTooLong(len~ : Int)
   GraphicNameTooLong(len~ : Int, limit~ : Int)
   GraphicAltTextTooLong(len~ : Int, limit~ : Int)
+  InvalidComment(msg~ : String)
   CommentAlreadyExists(cell~ : String)
+  CommentNotFound(cell~ : String)
   TableNotFound(name~ : String)
   StreamModeConflict(msg~ : String)
   StreamRowOrder(last~ : Int, next~ : Int)
@@ -1960,6 +1962,7 @@ pub fn Workbook::get_col_style(Self, StringView, Int) -> Int? raise XlsxError
 pub fn Workbook::get_col_visible(Self, StringView, Int) -> Bool raise XlsxError
 pub fn Workbook::get_col_width(Self, StringView, Int) -> Double? raise XlsxError
 pub fn Workbook::get_cols(Self, StringView, options? : Options) -> Array[Array[String]] raise XlsxError
+pub fn Workbook::get_comment(Self, StringView, StringView) -> Comment? raise XlsxError
 pub fn Workbook::get_comments(Self, StringView) -> Array[Comment] raise XlsxError
 pub fn Workbook::get_conditional_formats(Self, StringView) -> Map[String, Array[ConditionalFormatOptions]] raise XlsxError
 pub fn Workbook::get_conditional_style(Self, Int) -> Style raise XlsxError
@@ -2026,6 +2029,7 @@ pub fn Workbook::remove_cols(Self, StringView, Int, Int, formula_limits? : Share
 pub fn Workbook::remove_page_break(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::remove_row(Self, StringView, Int, formula_limits? : SharedFormulaLimits, cancelled? : () -> Bool) -> Unit raise XlsxError
 pub fn Workbook::remove_rows(Self, StringView, Int, Int, formula_limits? : SharedFormulaLimits, cancelled? : () -> Bool) -> Unit raise XlsxError
+pub fn Workbook::replace_comment(Self, StringView, Comment) -> Unit raise XlsxError
 pub fn Workbook::row_outline_level(Self, StringView, Int) -> Int raise XlsxError
 pub fn Workbook::row_stream(Self, StringView) -> RowStream raise XlsxError
 pub fn Workbook::row_visible(Self, StringView, Int) -> Bool raise XlsxError
@@ -2242,6 +2246,7 @@ pub fn Worksheet::get_col(Self, Int) -> Array[String] raise XlsxError
 pub fn Worksheet::get_col_style(Self, Int) -> Int? raise XlsxError
 pub fn Worksheet::get_col_width(Self, Int) -> Double? raise XlsxError
 pub fn Worksheet::get_cols(Self) -> Array[Array[String]]
+pub fn Worksheet::get_comment(Self, StringView) -> Comment? raise XlsxError
 pub fn Worksheet::get_conditional_formats(Self) -> Map[String, Array[ConditionalFormatOptions]] raise XlsxError
 pub fn Worksheet::get_data_validations(Self) -> Array[DataValidation] raise XlsxError
 pub fn Worksheet::get_header_footer_images(Self) -> Array[HeaderFooterImageOptions]
@@ -2266,6 +2271,7 @@ pub fn Worksheet::pivot_tables(Self) -> ArrayView[PivotTable]
 pub fn Worksheet::protect_sheet(Self, SheetProtectionOptions) -> Unit raise XlsxError
 pub fn Worksheet::raw_data_validation_criteria(Self) -> Array[RawDataValidationCriteria]
 pub fn Worksheet::remove_cell_hyperlink(Self, StringView) -> Unit raise XlsxError
+pub fn Worksheet::replace_comment(Self, Comment) -> Unit raise XlsxError
 pub fn Worksheet::row_breaks(Self) -> ArrayView[PageBreak]
 pub fn Worksheet::row_state_inventory(Self) -> Array[RowStateEntry]
 pub fn Worksheet::row_stream(Self) -> RowStream

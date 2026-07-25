@@ -8,6 +8,23 @@ fn repeat_comment_text(text : String, count : Int) -> String {
 }
 
 ///|
+fn plain_comment(
+  cell : String,
+  author : String,
+  text : String,
+) -> @xlsx.Comment {
+  {
+    cell,
+    author,
+    author_id: None,
+    text,
+    paragraph: [],
+    width: None,
+    height: None,
+  }
+}
+
+///|
 test "comment add/delete" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
@@ -120,7 +137,28 @@ test "comment roundtrip" {
     height: None,
   }
   workbook.add_comment("Sheet1", comment)
-  let parsed = @xlsx.read(@xlsx.write(workbook))
+  match workbook.get_comment("Sheet1", "b2") {
+    Some(normalized) => inspect(normalized.text, content="Note 1")
+    None => fail("expected normalized rich comment")
+  }
+  let first_write = @xlsx.write(workbook)
+  let parsed = @xlsx.read(first_write)
+  let second_write = @xlsx.write(parsed)
+  let first_archive = @zip.read(first_write)
+  let second_archive = @zip.read(second_write)
+  match
+    (
+      first_archive.get("xl/comments1.xml"),
+      second_archive.get("xl/comments1.xml"),
+    ) {
+    (Some(first_comments), Some(second_comments)) =>
+      inspect(second_comments == first_comments, content="true")
+    _ => fail("expected comments part in both writes")
+  }
+  match @xlsx.read(second_write).get_comment("Sheet1", "B2") {
+    Some(rewritten) => inspect(rewritten.text, content="Note 1")
+    None => fail("expected comment after second write")
+  }
   debug_inspect(
     parsed.get_comments("Sheet1"),
     content=(
@@ -167,69 +205,168 @@ test "comment roundtrip" {
 }
 
 ///|
-test "comment author truncation" {
+test "comment UTF-16 limits reject without truncation or mutation" {
   let workbook = @xlsx.Workbook::new()
-  ignore(workbook.add_sheet("Sheet1"))
-  let author = repeat_comment_text("a", 300)
-  let comment : @xlsx.Comment = {
-    cell: "C3",
-    author,
-    author_id: None,
-    text: "Hi",
-    paragraph: [],
-    width: None,
-    height: None,
+  let sheet = workbook.add_sheet("Sheet1")
+  let author_at_limit = repeat_comment_text("a", 253) + "😀"
+  sheet.add_comment(plain_comment("A1", author_at_limit, "author boundary"))
+  let author_over_limit = author_at_limit + "b"
+  let author_result : Result[Unit, Error] = Ok(
+    sheet.add_comment(plain_comment("A2", author_over_limit, "too long")),
+  ) catch {
+    error => Err(error)
   }
-  workbook.add_comment("Sheet1", comment)
-  let comments = workbook.get_comments("Sheet1")
-  let author_len = match comments.get(0) {
-    Some(entry) => entry.author.length()
-    None => 0
+  inspect(
+    author_result is Err(@xlsx.XlsxError::InvalidComment(_)),
+    content="true",
+  )
+  let content_at_limit = repeat_comment_text("x", 32765) + "😀"
+  sheet.add_comment(plain_comment("B1", "Alice", content_at_limit))
+  let content_over_limit = content_at_limit + "y"
+  let content_result : Result[Unit, Error] = Ok(
+    sheet.add_comment(plain_comment("B2", "Alice", content_over_limit)),
+  ) catch {
+    error => Err(error)
   }
-  inspect(author_len, content="255")
+  inspect(
+    content_result is Err(@xlsx.XlsxError::InvalidComment(_)),
+    content="true",
+  )
+  inspect(sheet.comments().length(), content="2")
+  inspect(sheet.get_comment("A2") is None, content="true")
+  inspect(sheet.get_comment("B2") is None, content="true")
+  match sheet.get_comment("A1") {
+    Some(comment) => inspect(comment.author == author_at_limit, content="true")
+    None => fail("expected author boundary comment")
+  }
+  match sheet.get_comment("B1") {
+    Some(comment) => inspect(comment.text == content_at_limit, content="true")
+    None => fail("expected content boundary comment")
+  }
+  ignore(@xlsx.write(workbook))
 }
 
 ///|
-test "comment rich text truncation preserves run prefix" {
+test "comment XML-invalid fields reject atomically" {
   let workbook = @xlsx.Workbook::new()
-  ignore(workbook.add_sheet("Sheet1"))
-  let font : @xlsx.RichTextFont = {
-    bold: true,
-    italic: false,
-    strike: false,
-    outline: false,
-    shadow: false,
-    condense: false,
-    extended: false,
-    underline: None,
-    size: None,
-    color: None,
-    color_theme: None,
-    color_indexed: None,
-    color_tint: None,
-    charset: None,
-    family_number: None,
-    scheme: None,
-    vert_align: None,
-    family: None,
+  let sheet = workbook.add_sheet("Sheet1")
+  let invalid_comments : Array[@xlsx.Comment] = [
+    plain_comment("A1", "Ali\u{1}ce", "bad author"),
+    plain_comment("A2", "Alice", "bad\u{1} text"),
+    {
+      cell: "A3",
+      author: "Alice",
+      author_id: None,
+      text: "",
+      paragraph: [{ text: "bad\u{1} run", font: None }],
+      width: None,
+      height: None,
+    },
+  ]
+  for comment in invalid_comments {
+    let result : Result[Unit, Error] = Ok(sheet.add_comment(comment)) catch {
+      error => Err(error)
+    }
+    inspect(result is Err(@xlsx.XlsxError::InvalidComment(_)), content="true")
   }
-  let comment : @xlsx.Comment = {
+  inspect(sheet.comments().length(), content="0")
+}
+
+///|
+test "comment rich runs are authoritative and conflicts reject" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let runs : Array[@xlsx.RichTextRun] = [
+    { text: "rich", font: None },
+    { text: " text", font: None },
+  ]
+  sheet.add_comment({
+    cell: "C3",
+    author: "Alice",
+    author_id: None,
+    text: "",
+    paragraph: runs,
+    width: None,
+    height: None,
+  })
+  match sheet.get_comment("c3") {
+    Some(comment) => inspect(comment.text, content="rich text")
+    None => fail("expected normalized rich comment")
+  }
+  let conflicting : @xlsx.Comment = {
     cell: "D4",
     author: "Alice",
     author_id: None,
-    text: repeat_comment_text("a", 32766),
-    paragraph: [{ text: "AB", font: Some(font) }, { text: "Z", font: None }],
+    text: "different",
+    paragraph: [{ text: "rich", font: None }],
     width: None,
     height: None,
   }
-  workbook.add_comment("Sheet1", comment)
-  let parsed = @xlsx.read(@xlsx.write(workbook))
-  let comments = parsed.get_comments("Sheet1")
-  inspect(comments.length(), content="1")
-  inspect(comments[0].text.length(), content="32767")
-  inspect(comments[0].paragraph.length(), content="1")
-  inspect(comments[0].paragraph[0].text, content="A")
-  inspect(comments[0].paragraph[0].font is Some(_), content="true")
+  let result : Result[Unit, Error] = Ok(sheet.add_comment(conflicting)) catch {
+    error => Err(error)
+  }
+  inspect(result is Err(@xlsx.XlsxError::InvalidComment(_)), content="true")
+  inspect(sheet.comments().length(), content="1")
+}
+
+///|
+test "comment replace/get/delete lifecycle is deterministic and atomic" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.add_comment("Sheet1", plain_comment("A1", "A", "one"))
+  workbook.add_comment("Sheet1", plain_comment("B2", "B", "two"))
+  workbook.replace_comment(
+    "Sheet1",
+    plain_comment("a1", "Updated", "replacement"),
+  )
+  let comments = workbook.get_comments("Sheet1")
+  inspect(comments.length(), content="2")
+  inspect(comments[0].cell, content="A1")
+  inspect(comments[0].text, content="replacement")
+  inspect(comments[1].cell, content="B2")
+  match workbook.get_comment("Sheet1", "a1") {
+    Some(comment) => inspect(comment.author, content="Updated")
+    None => fail("expected replaced comment")
+  }
+  let invalid_replace : Result[Unit, Error] = Ok(
+    workbook.replace_comment(
+      "Sheet1",
+      plain_comment("A1", repeat_comment_text("z", 256), "invalid"),
+    ),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(
+    invalid_replace is Err(@xlsx.XlsxError::InvalidComment(_)),
+    content="true",
+  )
+  match workbook.get_comment("Sheet1", "A1") {
+    Some(comment) => inspect(comment.text, content="replacement")
+    None => fail("expected original replacement after failed update")
+  }
+  let missing_replace : Result[Unit, Error] = Ok(
+    workbook.replace_comment("Sheet1", plain_comment("C3", "C", "missing")),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(
+    missing_replace is Err(@xlsx.XlsxError::CommentNotFound(_)),
+    content="true",
+  )
+  let missing_delete : Result[Unit, Error] = Ok(
+    workbook.delete_comment("Sheet1", "C3"),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(
+    missing_delete is Err(@xlsx.XlsxError::CommentNotFound(_)),
+    content="true",
+  )
+  inspect(workbook.get_comments("Sheet1").length(), content="2")
+  workbook.delete_comment("Sheet1", "B2")
+  let remaining = workbook.get_comments("Sheet1")
+  inspect(remaining.length(), content="1")
+  inspect(remaining[0].cell, content="A1")
 }
 
 ///|

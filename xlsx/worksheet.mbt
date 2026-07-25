@@ -1123,40 +1123,63 @@ pub fn Worksheet::remove_cell_hyperlink(
 }
 
 ///|
+fn Worksheet::comment_index(self : Worksheet, cell : String) -> Int? {
+  for index, comment in self.comments {
+    if comment.cell == cell {
+      return Some(index)
+    }
+  }
+  None
+}
+
+///|
+/// Adds a classic cell comment. The cell must not already have a comment, and
+/// the complete record is validated without truncation before mutation.
 pub fn Worksheet::add_comment(
   self : Worksheet,
   comment : Comment,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
-  let (row, col) = cell_ref_to_rc(comment.cell)
-  let canonical = cell_ref_from(row, col)
-  for entry in self.comments {
-    if entry.cell == canonical {
-      raise CommentAlreadyExists(cell=canonical)
-    }
+  let normalized = normalize_comment(comment)
+  if self.comment_index(normalized.cell) is Some(_) {
+    raise CommentAlreadyExists(cell=normalized.cell)
   }
-  let author_name = if comment.author == "" { "Author" } else { comment.author }
-  let author = if count_utf16_units(author_name) > max_comment_author_chars {
-    truncate_utf16_units(author_name, max_comment_author_chars)
-  } else {
-    author_name
-  }
-  let paragraph : Array[RichTextRun] = []
-  for run in comment.paragraph {
-    paragraph.push(run)
-  }
-  self.comments.push({
-    cell: canonical,
-    author,
-    author_id: comment.author_id,
-    text: comment.text,
-    paragraph,
-    width: comment.width,
-    height: comment.height,
-  })
+  self.comments.push(normalized)
 }
 
 ///|
+/// Replaces the existing classic comment at `comment.cell` without changing
+/// comment enumeration order. Raises `CommentNotFound` when the cell has no
+/// comment and validates the complete replacement before mutation.
+pub fn Worksheet::replace_comment(
+  self : Worksheet,
+  comment : Comment,
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  let normalized = normalize_comment(comment)
+  match self.comment_index(normalized.cell) {
+    Some(index) => self.comments[index] = normalized
+    None => raise CommentNotFound(cell=normalized.cell)
+  }
+}
+
+///|
+/// Returns the classic comment anchored at `cell`, if one exists.
+pub fn Worksheet::get_comment(
+  self : Worksheet,
+  cell : StringView,
+) -> Comment? raise XlsxError {
+  let (row, col) = cell_ref_to_rc(cell)
+  let canonical = cell_ref_from(row, col)
+  match self.comment_index(canonical) {
+    Some(index) => Some(self.comments[index])
+    None => None
+  }
+}
+
+///|
+/// Deletes the classic comment anchored at `cell`. Raises `CommentNotFound`
+/// without mutation when no comment exists.
 pub fn Worksheet::delete_comment(
   self : Worksheet,
   cell : StringView,
@@ -1165,11 +1188,16 @@ pub fn Worksheet::delete_comment(
   let (row, col) = cell_ref_to_rc(cell)
   let canonical = cell_ref_from(row, col)
   let updated : Array[Comment] = []
+  let mut found = false
   for entry in self.comments {
     if entry.cell == canonical {
+      found = true
       continue
     }
     updated.push(entry)
+  }
+  if !found {
+    raise CommentNotFound(cell=canonical)
   }
   self.comments.clear()
   self.comments.append(updated)

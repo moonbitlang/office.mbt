@@ -513,7 +513,7 @@ test "workbook: copy_sheet clones complex worksheet state" {
     cell: "A1",
     author: "me",
     author_id: None,
-    text: "note",
+    text: "ab",
     paragraph: [
       { text: "a", font: None },
       {
