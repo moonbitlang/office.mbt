@@ -102,6 +102,7 @@ pub suberror XlsxError {
   GraphicAltTextTooLong(len~ : Int, limit~ : Int)
   InvalidComment(msg~ : String)
   CommentAlreadyExists(cell~ : String)
+  CommentNotFound(cell~ : String)
   TableNotFound(name~ : String)
   StreamModeConflict(msg~ : String)
   StreamRowOrder(last~ : Int, next~ : Int)
@@ -2028,6 +2029,7 @@ pub fn Workbook::remove_cols(Self, StringView, Int, Int, formula_limits? : Share
 pub fn Workbook::remove_page_break(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::remove_row(Self, StringView, Int, formula_limits? : SharedFormulaLimits, cancelled? : () -> Bool) -> Unit raise XlsxError
 pub fn Workbook::remove_rows(Self, StringView, Int, Int, formula_limits? : SharedFormulaLimits, cancelled? : () -> Bool) -> Unit raise XlsxError
+pub fn Workbook::replace_comment(Self, StringView, Comment) -> Unit raise XlsxError
 pub fn Workbook::row_outline_level(Self, StringView, Int) -> Int raise XlsxError
 pub fn Workbook::row_stream(Self, StringView) -> RowStream raise XlsxError
 pub fn Workbook::row_visible(Self, StringView, Int) -> Bool raise XlsxError
@@ -2269,6 +2271,7 @@ pub fn Worksheet::pivot_tables(Self) -> ArrayView[PivotTable]
 pub fn Worksheet::protect_sheet(Self, SheetProtectionOptions) -> Unit raise XlsxError
 pub fn Worksheet::raw_data_validation_criteria(Self) -> Array[RawDataValidationCriteria]
 pub fn Worksheet::remove_cell_hyperlink(Self, StringView) -> Unit raise XlsxError
+pub fn Worksheet::replace_comment(Self, Comment) -> Unit raise XlsxError
 pub fn Worksheet::row_breaks(Self) -> ArrayView[PageBreak]
 pub fn Worksheet::row_state_inventory(Self) -> Array[RowStateEntry]
 pub fn Worksheet::row_stream(Self) -> RowStream

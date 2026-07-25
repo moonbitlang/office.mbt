@@ -1148,6 +1148,22 @@ pub fn Worksheet::add_comment(
 }
 
 ///|
+/// Replaces the existing classic comment at `comment.cell` without changing
+/// comment enumeration order. The complete replacement is validated before
+/// mutation.
+pub fn Worksheet::replace_comment(
+  self : Worksheet,
+  comment : Comment,
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  let normalized = normalize_comment(comment)
+  match self.comment_index(normalized.cell) {
+    Some(index) => self.comments[index] = normalized
+    None => raise CommentNotFound(cell=normalized.cell)
+  }
+}
+
+///|
 /// Returns the classic comment anchored at `cell`, if one exists.
 pub fn Worksheet::get_comment(
   self : Worksheet,
@@ -1171,14 +1187,24 @@ pub fn Worksheet::delete_comment(
   let (row, col) = cell_ref_to_rc(cell)
   let canonical = cell_ref_from(row, col)
   let updated : Array[Comment] = []
+  let mut found = false
   for entry in self.comments {
     if entry.cell == canonical {
+      found = true
       continue
     }
     updated.push(entry)
   }
+  if !found {
+    raise CommentNotFound(cell=canonical)
+  }
+  let next_vml_drawing_xml = match self.vml_drawing_xml {
+    Some(xml) => Some(remove_vml_comment_shapes_at_cell(xml, canonical))
+    None => None
+  }
   self.comments.clear()
   self.comments.append(updated)
+  self.vml_drawing_xml = next_vml_drawing_xml
 }
 
 ///|

@@ -3441,31 +3441,89 @@ fn write_with_io(
       rel_id = rel_id + comment_targets.length()
     }
     let vml_targets : Array[String] = []
-    let base_vml = match sheet.vml_drawing_xml() {
-      Some(xml) => Some(xml)
-      None => None
-    }
     // Comment/control VML can require several retained intermediates before
     // the final part is known. Give the whole composition one parent budget,
     // debit each generated intermediate immediately, and archive the final
     // part below before beginning any other generated VML.
     let legacy_vml_budget = archive.next_composition_budget()
-    let comment_vml_xml = if stored_comments.length() > 0 {
-      let xml = write_comments_vml(
-        sheet_id,
-        stored_comments,
-        budget?=legacy_vml_budget.remaining_budget(),
-      )
-      legacy_vml_budget.consume(xml)
-      Some(xml)
-    } else {
-      None
+    let source_vml = sheet.vml_drawing_xml()
+    let form_controls = sheet.form_controls()
+    let (base_vml, missing_comments, max_retained_shape_id) = match source_vml {
+      Some(xml) =>
+        if stored_comments.length() > 0 {
+          let (reconciled, missing, max_shape_id) = reconcile_vml_comment_shapes(
+            xml,
+            stored_comments,
+            budget?=legacy_vml_budget.remaining_budget(),
+          )
+          if reconciled != xml {
+            legacy_vml_budget.consume(reconciled)
+          }
+          (Some(reconciled), missing, max_shape_id)
+        } else {
+          let max_shape_id = if form_controls.length() > 0 {
+            max_vml_shape_numeric_id(xml)
+          } else {
+            1024
+          }
+          (Some(xml), [], max_shape_id)
+        }
+      None => (None, [], 1024)
     }
-    let form_control_vml_xml = if sheet.form_controls().length() > 0 {
+    let generated_comment_count = match source_vml {
+      Some(_) => missing_comments.length()
+      None => stored_comments.length()
+    }
+    let next_comment_shape_id = if generated_comment_count > 0 ||
+      form_controls.length() > 0 {
+      next_vml_shape_numeric_id_after(max_retained_shape_id)
+    } else {
+      1025
+    }
+    if generated_comment_count > 0x7fffffff - next_comment_shape_id {
+      raise InvalidVmlDrawing(msg="comment VML shape id range is invalid")
+    }
+    let next_generated_shape_id = next_comment_shape_id +
+      generated_comment_count
+    let form_control_shape_id_start = if next_generated_shape_id > 2048 {
+      next_generated_shape_id
+    } else {
+      2048
+    }
+    let comment_vml_xml = match source_vml {
+      Some(_) =>
+        if missing_comments.length() > 0 {
+          let xml = write_comments_vml(
+            sheet_id,
+            missing_comments,
+            shape_id_start=next_comment_shape_id,
+            budget?=legacy_vml_budget.remaining_budget(),
+          )
+          legacy_vml_budget.consume(xml)
+          Some(xml)
+        } else {
+          None
+        }
+      None =>
+        if stored_comments.length() > 0 {
+          let xml = write_comments_vml(
+            sheet_id,
+            stored_comments,
+            shape_id_start=next_comment_shape_id,
+            budget?=legacy_vml_budget.remaining_budget(),
+          )
+          legacy_vml_budget.consume(xml)
+          Some(xml)
+        } else {
+          None
+        }
+    }
+    let form_control_vml_xml = if form_controls.length() > 0 {
       let xml = write_form_controls_vml(
         sheet_id,
         sheet,
-        sheet.form_controls(),
+        form_controls,
+        shape_id_start=form_control_shape_id_start,
         budget?=legacy_vml_budget.remaining_budget(),
       )
       legacy_vml_budget.consume(xml)
