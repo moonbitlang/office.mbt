@@ -2384,6 +2384,7 @@ fn Worksheet::delete_form_control(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   let (target_row, target_col) = cell_ref_to_rc(cell)
+  let canonical = cell_ref_from(target_row, target_col)
   let remaining : Array[FormControl] = []
   let mut removed = false
   for control in self.form_controls {
@@ -2397,10 +2398,15 @@ fn Worksheet::delete_form_control(
   if !removed {
     return
   }
+  let next_vml_drawing_xml = match self.vml_drawing_xml {
+    Some(xml) => Some(remove_vml_form_control_shapes_at_cell(xml, canonical))
+    None => None
+  }
   self.form_controls.clear()
   for control in remaining {
     self.form_controls.push(control)
   }
+  self.vml_drawing_xml = next_vml_drawing_xml
 }
 
 ///|

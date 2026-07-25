@@ -719,6 +719,89 @@ test "retained maximum VML shape id round-trips without a successor" {
 }
 
 ///|
+test "live VML classification ignores commented ClientData literals" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.add_comment(plain_comment("A1", "Alice", "generated"))
+  let retained_control = "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\" " +
+    "xmlns:o=\"urn:schemas-microsoft-com:office:office\" " +
+    "xmlns:x=\"urn:schemas-microsoft-com:office:excel\">" +
+    "<v:shape id=\"_x0000_s2048\">" +
+    "<!-- <x:ClientData ObjectType=\"Note\"><x:Row>0</x:Row>" +
+    "<x:Column>0</x:Column></x:ClientData> -->" +
+    "<![CDATA[<x:ClientData ObjectType=\"Note\"><x:Row>0</x:Row>" +
+    "<x:Column>0</x:Column></x:ClientData>]]>" +
+    "<x:ClientData ObjectType=\"Button\"><x:Row>0</x:Row>" +
+    "<x:Column>0</x:Column></x:ClientData></v:shape></xml>"
+  sheet.add_vml_drawing_xml(retained_control)
+  let written = @xlsx.write(workbook) catch {
+    error => fail("live ClientData write failed: \{repr(error)}")
+  }
+  let archive = @zip.read(written)
+  let vml = match archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(bytes) => @encoding/utf8.decode(bytes)
+    None => fail("expected reconciled VML drawing")
+  }
+  inspect(vml.contains("id=\"_x0000_s2048\""), content="true")
+  inspect(vml.contains("id=\"_x0000_s2049\""), content="true")
+  inspect(
+    vml.contains("<![CDATA[<x:ClientData ObjectType=\"Note\">"),
+    content="true",
+  )
+  let parsed = @xlsx.read(written) catch {
+    error => fail("live ClientData read failed: \{repr(error)}")
+  }
+  inspect(parsed.get_comments("Sheet1").length(), content="1")
+  inspect(parsed.get_form_controls("Sheet1").length(), content="1")
+
+  sheet.delete_comment("A1")
+  inspect(sheet.vml_drawing_xml() == Some(retained_control), content="true")
+}
+
+///|
+test "retained Note may derive its cell from Anchor" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.add_comment(plain_comment("B3", "Alice", "retained"))
+  let retained_vml = "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\" " +
+    "xmlns:x=\"urn:schemas-microsoft-com:office:excel\">" +
+    "<v:shape id=\"_x0000_s1025\"><x:ClientData ObjectType=\"Note\">" +
+    "<x:Anchor>1, 0, 2, 0, 3, 0, 5, 0</x:Anchor>" +
+    "</x:ClientData></v:shape></xml>"
+  sheet.add_vml_drawing_xml(retained_vml)
+  let archive = @zip.read(@xlsx.write(workbook))
+  let written_vml = match archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(bytes) => @encoding/utf8.decode(bytes)
+    None => fail("expected retained comment VML drawing")
+  }
+  inspect(written_vml == retained_vml, content="true")
+
+  sheet.delete_comment("B3")
+  inspect(
+    sheet.vml_drawing_xml().unwrap().contains("_x0000_s1025"),
+    content="false",
+  )
+}
+
+///|
+test "generated comment falls back below retained maximum VML id" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.add_vml_drawing_xml(
+    "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\">" +
+    "<v:shape id=\"_x0000_s2147483647\"/></xml>",
+  )
+  sheet.add_comment(plain_comment("A1", "Alice", "free lower id"))
+  let archive = @zip.read(@xlsx.write(workbook))
+  let vml = match archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(bytes) => @encoding/utf8.decode(bytes)
+    None => fail("expected generated comment VML drawing")
+  }
+  inspect(vml.contains("id=\"_x0000_s2147483647\""), content="true")
+  inspect(vml.contains("id=\"_x0000_s1025\""), content="true")
+}
+
+///|
 test "comment delete rejects malformed retained VML without mutation" {
   let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

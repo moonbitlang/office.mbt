@@ -653,23 +653,6 @@ fn write_form_controls_vml(
 }
 
 ///|
-fn xml_has_tag(body : StringView, tag : StringView) -> Bool {
-  let t = tag.to_owned()
-  body.contains("<\{t}/>") ||
-  body.contains("<\{t} />") ||
-  body.contains("<\{t}></\{t}>") ||
-  body.contains("<\{t}>")
-}
-
-///|
-fn extract_xml_text_tag(body : StringView, tag : StringView) -> String? {
-  match extract_tag_body_from(body, tag) {
-    Some(value) => Some(unescape_xml_text(value))
-    None => None
-  }
-}
-
-///|
 fn strip_vml_font_markup(text : StringView) -> String {
   let mut s = text.to_owned()
   s = s.replace(old="<b>", new="")
@@ -831,81 +814,25 @@ fn parse_form_controls_vml(
   xml : StringView,
 ) -> Array[FormControl] raise XlsxError {
   let out : Array[FormControl] = []
-  for chunk in xml.split("<v:shape") {
-    if chunk == "" || !chunk.contains("<x:ClientData") {
-      continue
-    }
-    let cd_start = match chunk.find("<x:ClientData") {
-      Some(v) => v
-      None => continue
-    }
-    let cd = chunk[cd_start + "<x:ClientData".length():]
-    let end_tag = match cd.find(">") {
-      Some(v) => v
-      None => continue
-    }
-    let tag = cd[:end_tag]
-    let object_type = match attr_value(tag, "ObjectType") {
-      Some(v) => v
-      None => continue
+  for span in extract_vml_shape_spans(xml) {
+    let chunk = xml[span.start:span.end]
+    let (object_type, body) = match vml_client_data_parts(chunk) {
+      Some((Some(kind), body)) => (kind, body)
+      _ => continue
     }
     if object_type == "Note" {
       continue
     }
-    let body = cd[end_tag + 1:]
-    let mut row0_opt : Int? = None
-    let mut col0_opt : Int? = None
-    match extract_xml_text_tag(body, "x:Row") {
-      Some(v) =>
-        try @string.parse_int(v, base=10) catch {
-          _ => ()
-        } noraise {
-          value => row0_opt = Some(value)
-        }
-      None => ()
-    }
-    match extract_xml_text_tag(body, "x:Column") {
-      Some(v) =>
-        try @string.parse_int(v, base=10) catch {
-          _ => ()
-        } noraise {
-          value => col0_opt = Some(value)
-        }
-      None => ()
-    }
-    let (row0, col0) = match (row0_opt, col0_opt) {
-      (Some(r), Some(c)) => (r, c)
-      _ =>
-        match extract_xml_text_tag(body, "x:Anchor") {
-          Some(anchor) => {
-            let parts : Array[StringView] = []
-            for part in anchor.split(",") {
-              parts.push(part)
-            }
-            if parts.length() < 4 {
-              continue
-            }
-            let col0 = try @string.parse_int(parts[0].trim(), base=10) catch {
-              _ => continue
-            } noraise {
-              value => value
-            }
-            let row0 = try @string.parse_int(parts[2].trim(), base=10) catch {
-              _ => continue
-            } noraise {
-              value => value
-            }
-            (row0, col0)
-          }
-          None => continue
-        }
+    let (row0, col0) = match vml_client_data_coordinates(body) {
+      Some(value) => value
+      None => continue
     }
     let cell = cell_ref_from(row0 + 1, col0 + 1)
     let (textbox_text, paragraph) = parse_vml_textbox(chunk)
     let text = if textbox_text != "" {
       textbox_text
     } else {
-      match extract_xml_text_tag(body, "x:Text") {
+      match vml_live_element_text(body, "x:Text") {
         Some(v) => v
         None => ""
       }
@@ -914,15 +841,15 @@ fn parse_form_controls_vml(
       _ => continue
     }
     control.paragraph = paragraph
-    match extract_xml_text_tag(body, "x:FmlaMacro") {
+    match vml_live_element_text(body, "x:FmlaMacro") {
       Some(v) => control.macro_name = if v == "" { None } else { Some(v) }
       None => ()
     }
-    match extract_xml_text_tag(body, "x:FmlaLink") {
+    match vml_live_element_text(body, "x:FmlaLink") {
       Some(v) => control.cell_link = if v == "" { None } else { Some(v) }
       None => ()
     }
-    match extract_xml_text_tag(body, "x:Val") {
+    match vml_live_element_text(body, "x:Val") {
       Some(v) => {
         let n = @string.parse_int(v.trim(), base=10) catch { _ => 0 }
         if n >= 0 && n <= max_form_control_value {
@@ -931,7 +858,7 @@ fn parse_form_controls_vml(
       }
       None => ()
     }
-    match extract_xml_text_tag(body, "x:Min") {
+    match vml_live_element_text(body, "x:Min") {
       Some(v) => {
         let n = @string.parse_int(v.trim(), base=10) catch { _ => 0 }
         if n >= 0 && n <= max_form_control_value {
@@ -940,7 +867,7 @@ fn parse_form_controls_vml(
       }
       None => ()
     }
-    match extract_xml_text_tag(body, "x:Max") {
+    match vml_live_element_text(body, "x:Max") {
       Some(v) => {
         let n = @string.parse_int(v.trim(), base=10) catch { _ => 0 }
         if n >= 0 && n <= max_form_control_value {
@@ -949,7 +876,7 @@ fn parse_form_controls_vml(
       }
       None => ()
     }
-    match extract_xml_text_tag(body, "x:Inc") {
+    match vml_live_element_text(body, "x:Inc") {
       Some(v) => {
         let n = @string.parse_int(v.trim(), base=10) catch { _ => 0 }
         if n >= 0 && n <= max_form_control_value {
@@ -958,7 +885,7 @@ fn parse_form_controls_vml(
       }
       None => ()
     }
-    match extract_xml_text_tag(body, "x:Page") {
+    match vml_live_element_text(body, "x:Page") {
       Some(v) => {
         let n = @string.parse_int(v.trim(), base=10) catch { _ => 0 }
         if n >= 0 && n <= max_form_control_value {
@@ -967,10 +894,10 @@ fn parse_form_controls_vml(
       }
       None => ()
     }
-    if xml_has_tag(body, "x:Horiz") {
+    if vml_has_live_element(body, "x:Horiz") {
       control.horizontally = Some(true)
     }
-    match extract_xml_text_tag(body, "x:PrintObject") {
+    match vml_live_element_text(body, "x:PrintObject") {
       Some(v) => {
         let s = v.trim().to_lower()
         if s == "false" || s == "0" {
@@ -981,13 +908,13 @@ fn parse_form_controls_vml(
       }
       None => ()
     }
-    if xml_has_tag(body, "x:MoveWithCells") &&
-      xml_has_tag(body, "x:SizeWithCells") {
+    if vml_has_live_element(body, "x:MoveWithCells") &&
+      vml_has_live_element(body, "x:SizeWithCells") {
       control.format.positioning = Some(Absolute)
-    } else if xml_has_tag(body, "x:SizeWithCells") {
+    } else if vml_has_live_element(body, "x:SizeWithCells") {
       control.format.positioning = Some(OneCell)
     }
-    match extract_xml_text_tag(body, "x:Checked") {
+    match vml_live_element_text(body, "x:Checked") {
       Some(v) => {
         let checked_text = v.trim().to_lower()
         control.checked = Some(
@@ -999,6 +926,128 @@ fn parse_form_controls_vml(
     out.push(control)
   }
   out
+}
+
+///|
+fn vml_positioning_equal(
+  left : PicturePositioning?,
+  right : PicturePositioning?,
+) -> Bool {
+  match (left, right) {
+    (None, None) => true
+    (Some(OneCell), Some(OneCell)) => true
+    (Some(TwoCell), Some(TwoCell)) => true
+    (Some(Absolute), Some(Absolute)) => true
+    _ => false
+  }
+}
+
+///|
+fn vml_rich_text_font_equal(
+  left : RichTextFont?,
+  right : RichTextFont?,
+) -> Bool {
+  match (left, right) {
+    (None, None) => true
+    (Some(a), Some(b)) =>
+      a.bold == b.bold &&
+      a.italic == b.italic &&
+      a.underline == b.underline &&
+      a.size == b.size &&
+      a.color == b.color &&
+      a.family == b.family
+    _ => false
+  }
+}
+
+///|
+fn vml_rich_text_runs_equal(
+  left : ArrayView[RichTextRun],
+  right : ArrayView[RichTextRun],
+) -> Bool {
+  if left.length() != right.length() {
+    return false
+  }
+  for index, run in left {
+    let other = right[index]
+    if run.text != other.text || !vml_rich_text_font_equal(run.font, other.font) {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn vml_form_controls_equal(left : FormControl, right : FormControl) -> Bool {
+  left.cell == right.cell &&
+  left.control_type == right.control_type &&
+  left.text == right.text &&
+  left.macro_name == right.macro_name &&
+  left.checked == right.checked &&
+  left.cell_link == right.cell_link &&
+  left.width == right.width &&
+  left.height == right.height &&
+  left.current_val == right.current_val &&
+  left.min_val == right.min_val &&
+  left.max_val == right.max_val &&
+  left.inc_change == right.inc_change &&
+  left.page_change == right.page_change &&
+  left.horizontally == right.horizontally &&
+  left.format.scale_x == right.format.scale_x &&
+  left.format.scale_y == right.format.scale_y &&
+  left.format.print_object == right.format.print_object &&
+  vml_positioning_equal(left.format.positioning, right.format.positioning) &&
+  vml_rich_text_runs_equal(left.paragraph, right.paragraph)
+}
+
+///|
+fn reconcile_vml_form_control_shapes(
+  base_xml : String,
+  controls : ArrayView[FormControl],
+  budget? : WritePartBudget,
+) -> (String, Array[FormControl]) raise XlsxError {
+  let matched : Array[Bool] = Array::make(controls.length(), false)
+  let remove : Array[VmlShapeSpan] = []
+  for span in extract_vml_shape_spans(base_xml) {
+    let parsed = parse_form_controls_vml(base_xml[span.start:span.end])
+    if parsed.length() == 0 {
+      continue
+    }
+    let mut match_index : Int? = None
+    for index, control in controls {
+      if !matched[index] && vml_form_controls_equal(control, parsed[0]) {
+        match_index = Some(index)
+        break
+      }
+    }
+    match match_index {
+      Some(index) => matched[index] = true
+      None => remove.push(span)
+    }
+  }
+  let missing : Array[FormControl] = []
+  for index, control in controls {
+    if !matched[index] {
+      missing.push(control)
+    }
+  }
+  (remove_vml_shape_spans(base_xml, remove, budget?), missing)
+}
+
+///|
+fn remove_vml_form_control_shapes_at_cell(
+  base_xml : String,
+  cell : String,
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  let remove : Array[VmlShapeSpan] = []
+  for span in extract_vml_shape_spans(base_xml) {
+    let parsed = parse_form_controls_vml(base_xml[span.start:span.end])
+    if parsed.length() > 0 && parsed[0].cell == cell {
+      remove.push(span)
+    }
+  }
+  remove_vml_shape_spans(base_xml, remove, budget?)
 }
 
 ///|

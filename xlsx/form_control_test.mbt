@@ -246,3 +246,75 @@ test "generated form control may use final VML shape ID" {
   }
   inspect(vml.contains("id=\"_x0000_s2147483647\""), content="true")
 }
+
+///|
+test "retained maximum-ID form control is not regenerated" {
+  let retained_vml = "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\" " +
+    "xmlns:x=\"urn:schemas-microsoft-com:office:excel\">" +
+    "<v:shape id=\"_x0000_s2147483647\">" +
+    "<x:ClientData ObjectType=\"Button\"><x:Row>0</x:Row>" +
+    "<x:Column>0</x:Column></x:ClientData></v:shape></xml>"
+  let source = @xlsx.Workbook::new()
+  source.add_sheet("Sheet1").add_vml_drawing_xml(retained_vml)
+  let parsed = @xlsx.read(@xlsx.write(source))
+  inspect(parsed.get_form_controls("Sheet1").length(), content="1")
+  let archive = @zip.read(@xlsx.write(parsed))
+  let vml = match archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(bytes) => @encoding/utf8.decode(bytes)
+    None => fail("expected retained form-control VML drawing")
+  }
+  inspect(vml == retained_vml, content="true")
+}
+
+///|
+test "changed and deleted retained form controls reconcile without duplicates" {
+  let source = @xlsx.Workbook::new()
+  ignore(source.add_sheet("Sheet1"))
+  source.add_form_control("Sheet1", @xlsx.FormControl::new("A1", "Button"))
+  let source_bytes = @xlsx.write(source)
+
+  let changed = @xlsx.read(source_bytes)
+  let changed_control = changed.get_form_controls("Sheet1")[0]
+  changed_control.set_macro_name("Changed_Click")
+  let changed_archive = @zip.read(@xlsx.write(changed))
+  let changed_vml = match changed_archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(bytes) => @encoding/utf8.decode(bytes)
+    None => fail("expected changed form-control VML drawing")
+  }
+  inspect(
+    changed_vml.contains("<x:FmlaMacro>Changed_Click</x:FmlaMacro>"),
+    content="true",
+  )
+  let first_button = changed_vml.find("ObjectType=\"Button\"").unwrap()
+  inspect(
+    changed_vml[first_button + 1:].contains("ObjectType=\"Button\""),
+    content="false",
+  )
+
+  let deleted = @xlsx.read(source_bytes)
+  deleted.delete_form_control("Sheet1", "a1")
+  let deleted_archive = @zip.read(@xlsx.write(deleted))
+  let deleted_vml = match deleted_archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(bytes) => @encoding/utf8.decode(bytes)
+    None => fail("expected retained VML container")
+  }
+  inspect(deleted_vml.contains("ObjectType=\"Button\""), content="false")
+}
+
+///|
+test "generated form control falls back below retained maximum VML id" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.add_vml_drawing_xml(
+    "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\">" +
+    "<v:shape id=\"_x0000_s2147483647\"/></xml>",
+  )
+  workbook.add_form_control("Sheet1", @xlsx.FormControl::new("A1", "Button"))
+  let archive = @zip.read(@xlsx.write(workbook))
+  let vml = match archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(bytes) => @encoding/utf8.decode(bytes)
+    None => fail("expected generated form-control VML drawing")
+  }
+  inspect(vml.contains("id=\"_x0000_s2147483647\""), content="true")
+  inspect(vml.contains("id=\"_x0000_s2048\""), content="true")
+}
