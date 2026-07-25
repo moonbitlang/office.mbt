@@ -601,6 +601,74 @@ test "retained VML o:spid reserves generated comment IDs" {
 }
 
 ///|
+test "comment and CDATA shape literals do not suppress generated VML" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.add_comment(plain_comment("A1", "Alice", "first"))
+  sheet.add_comment(plain_comment("B2", "Bob", "second"))
+  let retained_vml = "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\" " +
+    "xmlns:x=\"urn:schemas-microsoft-com:office:excel\">" +
+    "<!-- </xml><v:shape id=\"_x0000_s2147483647\" " +
+    "type=\"#_x0000_t202\">" +
+    "<x:ClientData ObjectType=\"Note\"><x:Row>0</x:Row>" +
+    "<x:Column>0</x:Column></x:ClientData></v:shape> -->" +
+    "<![CDATA[<v:shape id=\"_x0000_s2147483646\">" +
+    "<x:ClientData ObjectType=\"Note\"><x:Row>1</x:Row>" +
+    "<x:Column>1</x:Column></x:ClientData></v:shape>]]></xml>"
+  sheet.add_vml_drawing_xml(retained_vml)
+  let archive = @zip.read(@xlsx.write(workbook))
+  let vml = match archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(bytes) => @encoding/utf8.decode(bytes)
+    None => fail("expected generated comment VML drawing")
+  }
+  inspect(
+    vml.contains("<!-- </xml><v:shape id=\"_x0000_s2147483647\""),
+    content="true",
+  )
+  inspect(
+    vml.contains("<![CDATA[<v:shape id=\"_x0000_s2147483646\">"),
+    content="true",
+  )
+  inspect(vml.contains("<v:shapetype id=\"_x0000_t202\""), content="true")
+  inspect(
+    vml.contains("<v:shape id=\"_x0000_s1025\" type=\"#_x0000_t202\""),
+    content="true",
+  )
+  inspect(
+    vml.contains("<v:shape id=\"_x0000_s1026\" type=\"#_x0000_t202\""),
+    content="true",
+  )
+}
+
+///|
+test "removed duplicate Note does not reserve its VML shape ID" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.add_comment(plain_comment("A1", "Alice", "retained"))
+  sheet.add_comment(plain_comment("B2", "Bob", "generated"))
+  sheet.add_vml_drawing_xml(
+    "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\" " +
+    "xmlns:x=\"urn:schemas-microsoft-com:office:excel\">" +
+    "<v:shape id=\"_x0000_s1025\"><x:ClientData ObjectType=\"Note\">" +
+    "<x:Row>0</x:Row><x:Column>0</x:Column>" +
+    "</x:ClientData></v:shape>" +
+    "<v:shape id=\"_x0000_s2147483647\">" +
+    "<x:ClientData ObjectType=\"Note\"><x:Row>0</x:Row>" +
+    "<x:Column>0</x:Column></x:ClientData></v:shape></xml>",
+  )
+  let archive = @zip.read(@xlsx.write(workbook))
+  let vml = match archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(bytes) => @encoding/utf8.decode(bytes)
+    None => fail("expected reconciled comment VML drawing")
+  }
+  inspect(vml.contains("id=\"_x0000_s1025\""), content="true")
+  inspect(vml.contains("id=\"_x0000_s1026\""), content="true")
+  inspect(vml.contains("id=\"_x0000_s2147483647\""), content="false")
+  inspect(vml.contains("<x:Row>1</x:Row>"), content="true")
+  inspect(vml.contains("<x:Column>1</x:Column>"), content="true")
+}
+
+///|
 test "generated comment may use final VML shape ID" {
   let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
