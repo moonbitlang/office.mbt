@@ -1157,19 +1157,7 @@ fn clone_hyperlinks(values : ArrayView[Hyperlink]) -> Array[Hyperlink] {
 fn clone_comments(values : ArrayView[Comment]) -> Array[Comment] {
   let out : Array[Comment] = []
   for value in values {
-    let paragraph : Array[RichTextRun] = []
-    for run in value.paragraph {
-      paragraph.push(run)
-    }
-    out.push({
-      cell: value.cell,
-      author: value.author,
-      author_id: value.author_id,
-      text: value.text,
-      paragraph,
-      width: value.width,
-      height: value.height,
-    })
+    out.push(clone_comment(value))
   }
   out
 }
@@ -2824,6 +2812,17 @@ pub fn Workbook::add_comment(
 }
 
 ///|
+/// Returns the classic comment anchored at `cell` on `sheet_name`, if present.
+pub fn Workbook::get_comment(
+  self : Workbook,
+  sheet_name : StringView,
+  cell : StringView,
+) -> Comment? raise XlsxError {
+  let sheet = self.require_sheet(sheet_name)
+  sheet.get_comment(cell)
+}
+
+///|
 pub fn Workbook::delete_comment(
   self : Workbook,
   sheet_name : StringView,
@@ -2839,11 +2838,7 @@ pub fn Workbook::get_comments(
   sheet_name : StringView,
 ) -> Array[Comment] raise XlsxError {
   let sheet = self.require_sheet(sheet_name)
-  let comments : Array[Comment] = []
-  for comment in sheet.comments() {
-    comments.push(comment)
-  }
-  comments
+  clone_comments(sheet.comments)
 }
 
 ///|

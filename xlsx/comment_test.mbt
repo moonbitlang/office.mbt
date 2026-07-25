@@ -8,6 +8,23 @@ fn repeat_comment_text(text : String, count : Int) -> String {
 }
 
 ///|
+fn plain_comment(
+  cell : String,
+  author : String,
+  text : String,
+) -> @xlsx.Comment {
+  {
+    cell,
+    author,
+    author_id: None,
+    text,
+    paragraph: [],
+    width: None,
+    height: None,
+  }
+}
+
+///|
 test "comment add/delete" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
@@ -120,7 +137,28 @@ test "comment roundtrip" {
     height: None,
   }
   workbook.add_comment("Sheet1", comment)
-  let parsed = @xlsx.read(@xlsx.write(workbook))
+  match workbook.get_comment("Sheet1", "b2") {
+    Some(normalized) => inspect(normalized.text, content="Note 1")
+    None => fail("expected normalized rich comment")
+  }
+  let first_write = @xlsx.write(workbook)
+  let parsed = @xlsx.read(first_write)
+  let second_write = @xlsx.write(parsed)
+  let first_archive = @zip.read(first_write)
+  let second_archive = @zip.read(second_write)
+  match
+    (
+      first_archive.get("xl/comments1.xml"),
+      second_archive.get("xl/comments1.xml"),
+    ) {
+    (Some(first_comments), Some(second_comments)) =>
+      inspect(second_comments == first_comments, content="true")
+    _ => fail("expected comments part in both writes")
+  }
+  match @xlsx.read(second_write).get_comment("Sheet1", "B2") {
+    Some(rewritten) => inspect(rewritten.text, content="Note 1")
+    None => fail("expected comment after second write")
+  }
   debug_inspect(
     parsed.get_comments("Sheet1"),
     content=(
@@ -167,69 +205,160 @@ test "comment roundtrip" {
 }
 
 ///|
-test "comment author truncation" {
+test "comment UTF-16 limits reject without truncation or mutation" {
   let workbook = @xlsx.Workbook::new()
-  ignore(workbook.add_sheet("Sheet1"))
-  let author = repeat_comment_text("a", 300)
-  let comment : @xlsx.Comment = {
-    cell: "C3",
-    author,
-    author_id: None,
-    text: "Hi",
-    paragraph: [],
-    width: None,
-    height: None,
+  let sheet = workbook.add_sheet("Sheet1")
+  let author_at_limit = repeat_comment_text("a", 253) + "😀"
+  sheet.add_comment(plain_comment("A1", author_at_limit, "author boundary"))
+  let author_over_limit = author_at_limit + "b"
+  let author_result : Result[Unit, Error] = Ok(
+    sheet.add_comment(plain_comment("A2", author_over_limit, "too long")),
+  ) catch {
+    error => Err(error)
   }
-  workbook.add_comment("Sheet1", comment)
-  let comments = workbook.get_comments("Sheet1")
-  let author_len = match comments.get(0) {
-    Some(entry) => entry.author.length()
-    None => 0
+  inspect(
+    author_result is Err(@xlsx.XlsxError::InvalidComment(_)),
+    content="true",
+  )
+  let content_at_limit = repeat_comment_text("x", 32765) + "😀"
+  sheet.add_comment(plain_comment("B1", "Alice", content_at_limit))
+  let content_over_limit = content_at_limit + "y"
+  let content_result : Result[Unit, Error] = Ok(
+    sheet.add_comment(plain_comment("B2", "Alice", content_over_limit)),
+  ) catch {
+    error => Err(error)
   }
-  inspect(author_len, content="255")
+  inspect(
+    content_result is Err(@xlsx.XlsxError::InvalidComment(_)),
+    content="true",
+  )
+  let rich_result : Result[Unit, Error] = Ok(
+    sheet.add_comment({
+      cell: "C1",
+      author: "Alice",
+      author_id: None,
+      text: "",
+      paragraph: [
+        { text: repeat_comment_text("r", 20000), font: None },
+        { text: repeat_comment_text("s", 20000), font: None },
+      ],
+      width: None,
+      height: None,
+    }),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(
+    rich_result is Err(@xlsx.XlsxError::InvalidComment(_)),
+    content="true",
+  )
+  inspect(sheet.comments().length(), content="2")
+  inspect(sheet.get_comment("A2") is None, content="true")
+  inspect(sheet.get_comment("B2") is None, content="true")
+  inspect(sheet.get_comment("C1") is None, content="true")
+  match sheet.get_comment("A1") {
+    Some(comment) => inspect(comment.author == author_at_limit, content="true")
+    None => fail("expected author boundary comment")
+  }
+  match sheet.get_comment("B1") {
+    Some(comment) => inspect(comment.text == content_at_limit, content="true")
+    None => fail("expected content boundary comment")
+  }
+  ignore(@xlsx.write(workbook))
 }
 
 ///|
-test "comment rich text truncation preserves run prefix" {
+test "comment XML-invalid fields reject atomically" {
   let workbook = @xlsx.Workbook::new()
-  ignore(workbook.add_sheet("Sheet1"))
-  let font : @xlsx.RichTextFont = {
-    bold: true,
-    italic: false,
-    strike: false,
-    outline: false,
-    shadow: false,
-    condense: false,
-    extended: false,
-    underline: None,
-    size: None,
-    color: None,
-    color_theme: None,
-    color_indexed: None,
-    color_tint: None,
-    charset: None,
-    family_number: None,
-    scheme: None,
-    vert_align: None,
-    family: None,
+  let sheet = workbook.add_sheet("Sheet1")
+  let invalid_comments : Array[@xlsx.Comment] = [
+    plain_comment("A1", "Ali\u{1}ce", "bad author"),
+    plain_comment("A2", "Alice", "bad\u{1} text"),
+    {
+      cell: "A3",
+      author: "Alice",
+      author_id: None,
+      text: "",
+      paragraph: [{ text: "bad\u{1} run", font: None }],
+      width: None,
+      height: None,
+    },
+  ]
+  for comment in invalid_comments {
+    let result : Result[Unit, Error] = Ok(sheet.add_comment(comment)) catch {
+      error => Err(error)
+    }
+    inspect(result is Err(@xlsx.XlsxError::InvalidComment(_)), content="true")
   }
-  let comment : @xlsx.Comment = {
+  inspect(sheet.comments().length(), content="0")
+}
+
+///|
+test "comment rich runs are authoritative and conflicts reject" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let runs : Array[@xlsx.RichTextRun] = [
+    { text: "rich", font: None },
+    { text: " text", font: None },
+  ]
+  sheet.add_comment({
+    cell: "C3",
+    author: "Alice",
+    author_id: None,
+    text: "",
+    paragraph: runs,
+    width: None,
+    height: None,
+  })
+  match sheet.get_comment("c3") {
+    Some(comment) => inspect(comment.text, content="rich text")
+    None => fail("expected normalized rich comment")
+  }
+  let conflicting : @xlsx.Comment = {
     cell: "D4",
     author: "Alice",
     author_id: None,
-    text: repeat_comment_text("a", 32766),
-    paragraph: [{ text: "AB", font: Some(font) }, { text: "Z", font: None }],
+    text: "different",
+    paragraph: [{ text: "rich", font: None }],
     width: None,
     height: None,
   }
-  workbook.add_comment("Sheet1", comment)
-  let parsed = @xlsx.read(@xlsx.write(workbook))
-  let comments = parsed.get_comments("Sheet1")
-  inspect(comments.length(), content="1")
-  inspect(comments[0].text.length(), content="32767")
-  inspect(comments[0].paragraph.length(), content="1")
-  inspect(comments[0].paragraph[0].text, content="A")
-  inspect(comments[0].paragraph[0].font is Some(_), content="true")
+  let result : Result[Unit, Error] = Ok(sheet.add_comment(conflicting)) catch {
+    error => Err(error)
+  }
+  inspect(result is Err(@xlsx.XlsxError::InvalidComment(_)), content="true")
+  inspect(sheet.comments().length(), content="1")
+}
+
+///|
+test "comment read APIs return detached rich-text arrays" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.add_comment({
+    cell: "A1",
+    author: "Alice",
+    author_id: None,
+    text: "",
+    paragraph: [{ text: "stored", font: None }],
+    width: None,
+    height: None,
+  })
+
+  let single = sheet.get_comment("A1").unwrap()
+  single.paragraph.push({ text: "single mutation", font: None })
+  let workbook_list = workbook.get_comments("Sheet1")
+  workbook_list[0].paragraph.push({ text: "list mutation", font: None })
+  let sheet_view = sheet.comments()
+  sheet_view[0].paragraph.push({ text: "view mutation", font: None })
+
+  match sheet.get_comment("A1") {
+    Some(stored) => {
+      inspect(stored.text, content="stored")
+      inspect(stored.paragraph.length(), content="1")
+    }
+    None => fail("expected stored comment")
+  }
+  ignore(@xlsx.write(workbook))
 }
 
 ///|
