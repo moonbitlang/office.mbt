@@ -3445,10 +3445,11 @@ fn write_with_io(
     // part below before beginning any other generated VML.
     let legacy_vml_budget = archive.next_composition_budget()
     let source_vml = sheet.vml_drawing_xml()
-    let (base_vml, missing_comments, next_comment_shape_id) = match source_vml {
+    let form_controls = sheet.form_controls()
+    let (base_vml, missing_comments, max_retained_shape_id) = match source_vml {
       Some(xml) =>
         if comments.length() > 0 {
-          let (reconciled, missing, next_shape_id) = reconcile_vml_comment_shapes(
+          let (reconciled, missing, max_shape_id) = reconcile_vml_comment_shapes(
             xml,
             comments,
             budget?=legacy_vml_budget.remaining_budget(),
@@ -3456,15 +3457,26 @@ fn write_with_io(
           if reconciled != xml {
             legacy_vml_budget.consume(reconciled)
           }
-          (Some(reconciled), missing, next_shape_id)
+          (Some(reconciled), missing, max_shape_id)
         } else {
-          (Some(xml), [], next_vml_shape_numeric_id(xml))
+          let max_shape_id = if form_controls.length() > 0 {
+            max_vml_shape_numeric_id(xml)
+          } else {
+            1024
+          }
+          (Some(xml), [], max_shape_id)
         }
-      None => (None, [], 1025)
+      None => (None, [], 1024)
     }
     let generated_comment_count = match source_vml {
       Some(_) => missing_comments.length()
       None => comments.length()
+    }
+    let next_comment_shape_id = if generated_comment_count > 0 ||
+      form_controls.length() > 0 {
+      next_vml_shape_numeric_id_after(max_retained_shape_id)
+    } else {
+      1025
     }
     if generated_comment_count > 0x7fffffff - next_comment_shape_id {
       raise InvalidVmlDrawing(msg="comment VML shape id range is invalid")
@@ -3504,11 +3516,11 @@ fn write_with_io(
           None
         }
     }
-    let form_control_vml_xml = if sheet.form_controls().length() > 0 {
+    let form_control_vml_xml = if form_controls.length() > 0 {
       let xml = write_form_controls_vml(
         sheet_id,
         sheet,
-        sheet.form_controls(),
+        form_controls,
         shape_id_start=form_control_shape_id_start,
         budget?=legacy_vml_budget.remaining_budget(),
       )

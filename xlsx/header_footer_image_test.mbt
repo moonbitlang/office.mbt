@@ -243,7 +243,8 @@ test "header footer vml merge preserves existing shapes" {
   let base_vml =
     #|<xml xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
     #|  <v:shapetype id="_x0000_t75"></v:shapetype>
-    #|  <v:shape id="CH" type="#_x0000_t75"></v:shape>
+    #|  <v:shape
+    #|    id="CH" type="#_x0000_t75"></v:shape>
     #|</xml>
   sheet.add_vml_drawing_hf_xml(base_vml)
   let img : Bytes = [7, 8, 9]

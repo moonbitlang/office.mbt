@@ -129,7 +129,8 @@ fn extract_vml_shape_spans(xml : StringView) -> Array[VmlShapeSpan] {
       None
     }
     let is_shape = match next_char {
-      Some(' ') | Some('>') | Some('/') => true
+      Some(character) =>
+        is_attr_space(character) || character == '>' || character == '/'
       _ => false
     }
     if !is_shape {
@@ -270,7 +271,7 @@ fn vml_shape_numeric_id(shape_xml : StringView) -> Int? raise XlsxError {
 }
 
 ///|
-fn next_vml_shape_numeric_id(base_xml : StringView) -> Int raise XlsxError {
+fn max_vml_shape_numeric_id(base_xml : StringView) -> Int raise XlsxError {
   let mut max_shape_id = 1024
   for span in extract_vml_shape_spans(base_xml) {
     match vml_shape_numeric_id(base_xml[span.start:span.end]) {
@@ -278,10 +279,20 @@ fn next_vml_shape_numeric_id(base_xml : StringView) -> Int raise XlsxError {
       None => ()
     }
   }
+  max_shape_id
+}
+
+///|
+fn next_vml_shape_numeric_id_after(max_shape_id : Int) -> Int raise XlsxError {
   if max_shape_id >= 0x7fffffff {
     raise InvalidVmlDrawing(msg="VML shape id space is exhausted")
   }
   max_shape_id + 1
+}
+
+///|
+fn next_vml_shape_numeric_id(base_xml : StringView) -> Int raise XlsxError {
+  next_vml_shape_numeric_id_after(max_vml_shape_numeric_id(base_xml))
 }
 
 ///|
@@ -356,10 +367,7 @@ fn reconcile_vml_comment_shapes(
       missing.push(comment)
     }
   }
-  if max_shape_id >= 0x7fffffff {
-    raise InvalidVmlDrawing(msg="comment VML shape id space is exhausted")
-  }
-  (remove_vml_shape_spans(base_xml, remove, budget?), missing, max_shape_id + 1)
+  (remove_vml_shape_spans(base_xml, remove, budget?), missing, max_shape_id)
 }
 
 ///|
@@ -761,6 +769,13 @@ test "write comments vml wb: vml writer and extraction branches" {
   inspect(extract_vml_shapes("<xml><v:shape id=\"x\">").length(), content="0")
   debug_inspect(vml_shape_id("<v:shape id=\"x></v:shape>"), content="None")
   debug_inspect(vml_shape_id("<v:shape></v:shape>"), content="None")
+  let xml_whitespace_shapes = "<xml>" +
+    "<v:shape\tid=\"tab\"/>" +
+    "<v:shape\nid=\"line-feed\"/>" +
+    "<v:shape\rid=\"carriage-return\"/>" +
+    "<v:shape id=\"space\"/>" +
+    "</xml>"
+  inspect(extract_vml_shapes(xml_whitespace_shapes).length(), content="4")
 
   let self_closing_before_note = "<xml>" +
     "<v:shape id='_x0000_s2000'/>" +
@@ -807,7 +822,7 @@ test "write comments vml wb: filter and merge branches" {
     "<x:Column>0</x:Column></x:ClientData></v:shape>" +
     "<v:shape id=\"_x0000_s2048\"><x:ClientData ObjectType=\"Button\">" +
     "</x:ClientData></v:shape><tail keep=\"true\"/></xml>"
-  let (reconciled, missing, next_shape_id) = reconcile_vml_comment_shapes(
+  let (reconciled, missing, max_shape_id) = reconcile_vml_comment_shapes(
     custom, comments,
   )
   inspect(
@@ -823,6 +838,8 @@ test "write comments vml wb: filter and merge branches" {
   inspect(reconciled.contains("<tail keep=\"true\"/>"), content="true")
   inspect(missing.length(), content="1")
   inspect(missing[0].cell, content="B2")
+  inspect(max_shape_id, content="2048")
+  let next_shape_id = next_vml_shape_numeric_id_after(max_shape_id)
   inspect(next_shape_id, content="2049")
   let generated_missing = write_comments_vml(
     1,

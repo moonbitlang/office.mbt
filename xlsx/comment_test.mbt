@@ -486,6 +486,43 @@ test "comment replace/get/delete lifecycle is deterministic and atomic" {
     invalid_replace is Err(@xlsx.XlsxError::InvalidComment(_)),
     content="true",
   )
+  let invalid_font : @xlsx.RichTextFont = {
+    bold: false,
+    italic: false,
+    strike: false,
+    outline: false,
+    shadow: false,
+    condense: false,
+    extended: false,
+    underline: None,
+    size: None,
+    color: None,
+    color_theme: None,
+    color_indexed: None,
+    color_tint: None,
+    charset: None,
+    family_number: None,
+    scheme: None,
+    vert_align: None,
+    family: Some("invalid\u{0}family"),
+  }
+  let invalid_font_replace : Result[Unit, Error] = Ok(
+    workbook.replace_comment("Sheet1", {
+      cell: "A1",
+      author: "Updated",
+      author_id: None,
+      text: "",
+      paragraph: [{ text: "invalid", font: Some(invalid_font) }],
+      width: None,
+      height: None,
+    }),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(
+    invalid_font_replace is Err(@xlsx.XlsxError::InvalidComment(_)),
+    content="true",
+  )
   match workbook.get_comment("Sheet1", "A1") {
     Some(comment) => inspect(comment.text, content="replacement")
     None => fail("expected original replacement after failed update")
@@ -513,6 +550,40 @@ test "comment replace/get/delete lifecycle is deterministic and atomic" {
   let remaining = workbook.get_comments("Sheet1")
   inspect(remaining.length(), content="1")
   inspect(remaining[0].cell, content="A1")
+  ignore(@xlsx.write(workbook))
+}
+
+///|
+test "retained maximum VML shape id round-trips without a successor" {
+  let max_shape_id = "_x0000_s2147483647"
+  let retained_only_vml = "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\">" +
+    "<v:shape id=\"\{max_shape_id}\"></v:shape></xml>"
+  let retained_only = @xlsx.Workbook::new()
+  retained_only.add_sheet("Sheet1").add_vml_drawing_xml(retained_only_vml)
+  let retained_archive = @zip.read(@xlsx.write(retained_only))
+  let retained_output = match
+    retained_archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(bytes) => @encoding/utf8.decode(bytes)
+    None => fail("expected retained-only VML drawing")
+  }
+  inspect(retained_output == retained_only_vml, content="true")
+
+  let retained_note_vml = "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\" " +
+    "xmlns:x=\"urn:schemas-microsoft-com:office:excel\">" +
+    "<v:shape id=\"\{max_shape_id}\">" +
+    "<x:ClientData ObjectType=\"Note\"><x:Row>0</x:Row>" +
+    "<x:Column>0</x:Column></x:ClientData></v:shape></xml>"
+  let retained_note = @xlsx.Workbook::new()
+  let retained_note_sheet = retained_note.add_sheet("Sheet1")
+  retained_note_sheet.add_comment(plain_comment("A1", "Alice", "retained"))
+  retained_note_sheet.add_vml_drawing_xml(retained_note_vml)
+  let retained_note_archive = @zip.read(@xlsx.write(retained_note))
+  let retained_note_output = match
+    retained_note_archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(bytes) => @encoding/utf8.decode(bytes)
+    None => fail("expected retained-note VML drawing")
+  }
+  inspect(retained_note_output == retained_note_vml, content="true")
 }
 
 ///|
