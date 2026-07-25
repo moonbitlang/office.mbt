@@ -207,8 +207,17 @@ test "comment roundtrip" {
 ///|
 test "comment read-modify-write reconciles retained VML shapes" {
   let workbook = @xlsx.Workbook::new()
-  ignore(workbook.add_sheet("Sheet1"))
-  workbook.add_comment("Sheet1", plain_comment("A1", "A", "original"))
+  let sheet = workbook.add_sheet("Sheet1")
+  let custom_vml = "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\" " +
+    "xmlns:x=\"urn:schemas-microsoft-com:office:excel\">" +
+    "<meta keep=\"true\"/><v:shape id=\"_x0000_s1026\" " +
+    "style=\"position:absolute;width:86pt;height:24pt;visibility:visible\" " +
+    "fillcolor=\"#123456\"><x:ClientData ObjectType=\"Note\">" +
+    "<x:Anchor>0, 1, 0, 1, 1, 1, 1, 1</x:Anchor>" +
+    "<x:Row>0</x:Row><x:Column>0</x:Column>" +
+    "</x:ClientData></v:shape><tail keep=\"true\"/></xml>"
+  sheet.add_vml_drawing_xml(custom_vml)
+  sheet.add_comment(plain_comment("A1", "A", "original"))
   let parsed = @xlsx.read(@xlsx.write(workbook))
   parsed.replace_comment("Sheet1", plain_comment("A1", "B", "replacement"))
   let replaced_bytes = @xlsx.write(parsed)
@@ -222,11 +231,20 @@ test "comment read-modify-write reconciles retained VML shapes" {
     note_shapes = note_shapes + 1
   }
   let mut first_shape_ids = -1
-  for _ in replaced_vml.split("_x0000_s1025") {
+  for _ in replaced_vml.split("_x0000_s1026") {
     first_shape_ids = first_shape_ids + 1
   }
   inspect(note_shapes, content="1")
   inspect(first_shape_ids, content="1")
+  inspect(
+    replaced_vml.contains(
+      "style=\"position:absolute;width:86pt;height:24pt;visibility:visible\"",
+    ),
+    content="true",
+  )
+  inspect(replaced_vml.contains("fillcolor=\"#123456\""), content="true")
+  inspect(replaced_vml.contains("<meta keep=\"true\"/>"), content="true")
+  inspect(replaced_vml.contains("<tail keep=\"true\"/>"), content="true")
   match @xlsx.read(replaced_bytes).get_comment("Sheet1", "A1") {
     Some(comment) => inspect(comment.text, content="replacement")
     None => fail("expected replacement comment")
@@ -244,6 +262,33 @@ test "comment read-modify-write reconciles retained VML shapes" {
     @xlsx.read(deleted_bytes).get_comment("Sheet1", "A1") is None,
     content="true",
   )
+}
+
+///|
+#cfg(target="native")
+async test "excelize Book1 comment replacement preserves retained VML formatting" {
+  let source = @async/fs.read_file("fixtures/excelize/test/Book1.xlsx").binary()
+  let workbook = @xlsx.read(source)
+  workbook.replace_comment(
+    "Sheet1",
+    plain_comment("A22", "Reviewer", "replacement"),
+  )
+  let archive = @zip.read(@xlsx.write(workbook))
+  let vml = match archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(bytes) => @encoding/utf8.decode(bytes)
+    None => fail("expected Book1 VML drawing")
+  }
+  inspect(vml.contains("margin-left:43pt;margin-top:345pt"), content="true")
+  inspect(vml.contains("width:86pt;height:24pt"), content="true")
+  inspect(vml.contains("fillcolor=\"#fbf6d6\""), content="true")
+  inspect(vml.contains("strokecolor=\"#edeaa1\""), content="true")
+  inspect(vml.contains("<x:Row>21</x:Row>"), content="true")
+  inspect(vml.contains("<x:Column>0</x:Column>"), content="true")
+  let mut note_shapes = -1
+  for _ in vml.split("ObjectType=\"Note\"") {
+    note_shapes = note_shapes + 1
+  }
+  inspect(note_shapes, content="1")
 }
 
 ///|
@@ -440,6 +485,27 @@ test "comment replace/get/delete lifecycle is deterministic and atomic" {
   let remaining = workbook.get_comments("Sheet1")
   inspect(remaining.length(), content="1")
   inspect(remaining[0].cell, content="A1")
+}
+
+///|
+test "comment delete rejects malformed retained VML without mutation" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.add_comment(plain_comment("A1", "Alice", "keep"))
+  let malformed_vml = "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\" " +
+    "xmlns:x=\"urn:schemas-microsoft-com:office:excel\">" +
+    "<v:shape id=\"_x0000_s1025\"><x:ClientData ObjectType=\"Note\">" +
+    "<x:Column>0</x:Column></x:ClientData></v:shape></xml>"
+  sheet.add_vml_drawing_xml(malformed_vml)
+  let result : Result[Unit, Error] = Ok(sheet.delete_comment("A1")) catch {
+    error => Err(error)
+  }
+  inspect(result is Err(@xlsx.XlsxError::InvalidVmlDrawing(_)), content="true")
+  match sheet.get_comment("A1") {
+    Some(comment) => inspect(comment.text, content="keep")
+    None => fail("failed deletion must preserve the comment")
+  }
+  inspect(sheet.vml_drawing_xml() == Some(malformed_vml), content="true")
 }
 
 ///|

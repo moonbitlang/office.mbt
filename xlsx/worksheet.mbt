@@ -1199,8 +1199,13 @@ pub fn Worksheet::delete_comment(
   if !found {
     raise CommentNotFound(cell=canonical)
   }
+  let next_vml_drawing_xml = match self.vml_drawing_xml {
+    Some(xml) => Some(remove_vml_comment_shapes_at_cell(xml, canonical))
+    None => None
+  }
   self.comments.clear()
   self.comments.append(updated)
+  self.vml_drawing_xml = next_vml_drawing_xml
 }
 
 ///|

@@ -3416,10 +3416,9 @@ fn write_with_io(
       }
     }
     let comment_targets : Array[String] = []
-    let comment_xml = if sheet.comments().length() > 0 {
-      Some(
-        write_comments_xml(sheet.comments(), budget?=archive.next_part_budget()),
-      )
+    let comments = sheet.comment_records()
+    let comment_xml = if comments.length() > 0 {
+      Some(write_comments_xml(comments, budget?=archive.next_part_budget()))
     } else {
       None
     }
@@ -3445,29 +3444,50 @@ fn write_with_io(
     // debit each generated intermediate immediately, and archive the final
     // part below before beginning any other generated VML.
     let legacy_vml_budget = archive.next_composition_budget()
-    let base_vml = match sheet.vml_drawing_xml() {
-      Some(xml) => {
-        let filtered = filter_vml_comment_shapes(
-          xml,
-          budget?=legacy_vml_budget.remaining_budget(),
-        )
-        if filtered != xml {
-          legacy_vml_budget.consume(filtered)
+    let source_vml = sheet.vml_drawing_xml()
+    let (base_vml, missing_comments, next_comment_shape_id) = match source_vml {
+      Some(xml) =>
+        if comments.length() > 0 {
+          let (reconciled, missing, next_shape_id) = reconcile_vml_comment_shapes(
+            xml,
+            comments,
+            budget?=legacy_vml_budget.remaining_budget(),
+          )
+          if reconciled != xml {
+            legacy_vml_budget.consume(reconciled)
+          }
+          (Some(reconciled), missing, next_shape_id)
+        } else {
+          (Some(xml), [], 1025)
         }
-        Some(filtered)
-      }
-      None => None
+      None => (None, [], 1025)
     }
-    let comment_vml_xml = if sheet.comments().length() > 0 {
-      let xml = write_comments_vml(
-        sheet_id,
-        sheet.comments(),
-        budget?=legacy_vml_budget.remaining_budget(),
-      )
-      legacy_vml_budget.consume(xml)
-      Some(xml)
-    } else {
-      None
+    let comment_vml_xml = match source_vml {
+      Some(_) =>
+        if missing_comments.length() > 0 {
+          let xml = write_comments_vml(
+            sheet_id,
+            missing_comments,
+            shape_id_start=next_comment_shape_id,
+            budget?=legacy_vml_budget.remaining_budget(),
+          )
+          legacy_vml_budget.consume(xml)
+          Some(xml)
+        } else {
+          None
+        }
+      None =>
+        if comments.length() > 0 {
+          let xml = write_comments_vml(
+            sheet_id,
+            comments,
+            budget?=legacy_vml_budget.remaining_budget(),
+          )
+          legacy_vml_budget.consume(xml)
+          Some(xml)
+        } else {
+          None
+        }
     }
     let form_control_vml_xml = if sheet.form_controls().length() > 0 {
       let xml = write_form_controls_vml(

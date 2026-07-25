@@ -315,6 +315,11 @@ pub fn Worksheet::comments(self : Worksheet) -> ArrayView[Comment] {
 }
 
 ///|
+fn Worksheet::comment_records(self : Worksheet) -> ArrayView[Comment] {
+  self.comments
+}
+
+///|
 /// Returns the retained hyperlink count without copying cell references.
 pub fn Worksheet::hyperlink_count(self : Worksheet) -> Int {
   self.hyperlinks.length()
