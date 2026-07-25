@@ -3458,9 +3458,23 @@ fn write_with_io(
           }
           (Some(reconciled), missing, next_shape_id)
         } else {
-          (Some(xml), [], 1025)
+          (Some(xml), [], next_vml_shape_numeric_id(xml))
         }
       None => (None, [], 1025)
+    }
+    let generated_comment_count = match source_vml {
+      Some(_) => missing_comments.length()
+      None => comments.length()
+    }
+    if generated_comment_count > 0x7fffffff - next_comment_shape_id {
+      raise InvalidVmlDrawing(msg="comment VML shape id range is invalid")
+    }
+    let next_generated_shape_id = next_comment_shape_id +
+      generated_comment_count
+    let form_control_shape_id_start = if next_generated_shape_id > 2048 {
+      next_generated_shape_id
+    } else {
+      2048
     }
     let comment_vml_xml = match source_vml {
       Some(_) =>
@@ -3481,6 +3495,7 @@ fn write_with_io(
           let xml = write_comments_vml(
             sheet_id,
             comments,
+            shape_id_start=next_comment_shape_id,
             budget?=legacy_vml_budget.remaining_budget(),
           )
           legacy_vml_budget.consume(xml)
@@ -3494,6 +3509,7 @@ fn write_with_io(
         sheet_id,
         sheet,
         sheet.form_controls(),
+        shape_id_start=form_control_shape_id_start,
         budget?=legacy_vml_budget.remaining_budget(),
       )
       legacy_vml_budget.consume(xml)

@@ -292,6 +292,34 @@ async test "excelize Book1 comment replacement preserves retained VML formatting
 }
 
 ///|
+test "generated comment and form-control VML IDs do not collide" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.add_vml_drawing_xml(
+    "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\" " +
+    "xmlns:x=\"urn:schemas-microsoft-com:office:excel\">" +
+    "<v:shape id=\"_x0000_s2047\"></v:shape></xml>",
+  )
+  sheet.add_comment(plain_comment("A1", "Alice", "note"))
+  workbook.add_form_control("Sheet1", @xlsx.FormControl::new("B2", "Button"))
+  let archive = @zip.read(@xlsx.write(workbook))
+  let vml = match archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(bytes) => @encoding/utf8.decode(bytes)
+    None => fail("expected mixed comment/control VML drawing")
+  }
+  let mut comment_shape_ids = -1
+  for _ in vml.split("_x0000_s2048") {
+    comment_shape_ids = comment_shape_ids + 1
+  }
+  let mut control_shape_ids = -1
+  for _ in vml.split("_x0000_s2049") {
+    control_shape_ids = control_shape_ids + 1
+  }
+  inspect(comment_shape_ids, content="1")
+  inspect(control_shape_ids, content="1")
+}
+
+///|
 test "comment UTF-16 limits reject without truncation or mutation" {
   let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
@@ -506,6 +534,25 @@ test "comment delete rejects malformed retained VML without mutation" {
     None => fail("failed deletion must preserve the comment")
   }
   inspect(sheet.vml_drawing_xml() == Some(malformed_vml), content="true")
+}
+
+///|
+test "comment delete preserves unrelated self-closing VML shapes" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.add_comment(plain_comment("A1", "Alice", "remove"))
+  sheet.add_vml_drawing_xml(
+    "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\" " +
+    "xmlns:x=\"urn:schemas-microsoft-com:office:excel\">" +
+    "<v:shape id=\"_x0000_s2000\"/>" +
+    "<v:shape id=\"_x0000_s1025\"><x:ClientData ObjectType=\"Note\">" +
+    "<x:Row>0</x:Row><x:Column>0</x:Column>" +
+    "</x:ClientData></v:shape></xml>",
+  )
+  sheet.delete_comment("A1")
+  let retained = sheet.vml_drawing_xml().unwrap()
+  inspect(retained.contains("<v:shape id=\"_x0000_s2000\"/>"), content="true")
+  inspect(retained.contains("_x0000_s1025"), content="false")
 }
 
 ///|

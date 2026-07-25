@@ -332,8 +332,12 @@ fn write_form_controls_vml(
   sheet_id : Int,
   sheet : Worksheet,
   controls : ArrayView[FormControl],
+  shape_id_start? : Int = 2048,
   budget? : WritePartBudget,
 ) -> String raise XlsxError {
+  if shape_id_start <= 0 || controls.length() > 0x7fffffff - shape_id_start {
+    raise InvalidVmlDrawing(msg="form control VML shape id range is invalid")
+  }
   let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
@@ -348,7 +352,7 @@ fn write_form_controls_vml(
   sb.write_view("    <v:stroke joinstyle=\"miter\"/>\n")
   sb.write_view("    <v:path o:connecttype=\"rect\"/>\n")
   sb.write_view("  </v:shapetype>\n")
-  let mut shape_id = 2048
+  let mut shape_id = shape_id_start
   for control in controls {
     let (_, object_type) = normalize_form_control_type(control.control_type)
     let (row, col) = cell_ref_to_rc(control.cell)

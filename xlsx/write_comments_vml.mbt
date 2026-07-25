@@ -136,12 +136,19 @@ fn extract_vml_shape_spans(xml : StringView) -> Array[VmlShapeSpan] {
       start_pos = start + 1
       continue
     }
-    let shape_rest = xml[start:]
-    let end_rel = match shape_rest.find("</v:shape>") {
+    let open_end = match xml_open_tag_end_from(xml, after) {
       Some(pos) => pos
       None => break
     }
-    let end = start + end_rel + "</v:shape>".length()
+    let self_closing = xml[start + 1:open_end].trim().has_suffix("/")
+    let end = if self_closing {
+      open_end + 1
+    } else {
+      match find_xml_close_tag_from(xml, "v:shape", open_end + 1) {
+        Some((_close_start, close_end)) => close_end + 1
+        None => break
+      }
+    }
     spans.push({ start, end })
     start_pos = end
   }
@@ -241,9 +248,13 @@ fn vml_comment_cell(shape_xml : StringView) -> String? raise XlsxError {
 }
 
 ///|
-fn vml_shape_numeric_id(shape_xml : StringView) -> Int? {
+fn vml_shape_numeric_id(shape_xml : StringView) -> Int? raise XlsxError {
   let prefix = "_x0000_s"
-  match vml_shape_id(shape_xml) {
+  let open_end = match xml_open_tag_end_from(shape_xml, "<v:shape".length()) {
+    Some(pos) => pos
+    None => return None
+  }
+  match attr_value(shape_xml["<v:shape".length():open_end], "id") {
     Some(id) =>
       if !id.has_prefix(prefix) {
         None
@@ -256,6 +267,21 @@ fn vml_shape_numeric_id(shape_xml : StringView) -> Int? {
       }
     None => None
   }
+}
+
+///|
+fn next_vml_shape_numeric_id(base_xml : StringView) -> Int raise XlsxError {
+  let mut max_shape_id = 1024
+  for span in extract_vml_shape_spans(base_xml) {
+    match vml_shape_numeric_id(base_xml[span.start:span.end]) {
+      Some(id) => if id > max_shape_id { max_shape_id = id }
+      None => ()
+    }
+  }
+  if max_shape_id >= 0x7fffffff {
+    raise InvalidVmlDrawing(msg="VML shape id space is exhausted")
+  }
+  max_shape_id + 1
 }
 
 ///|
@@ -735,6 +761,19 @@ test "write comments vml wb: vml writer and extraction branches" {
   inspect(extract_vml_shapes("<xml><v:shape id=\"x\">").length(), content="0")
   debug_inspect(vml_shape_id("<v:shape id=\"x></v:shape>"), content="None")
   debug_inspect(vml_shape_id("<v:shape></v:shape>"), content="None")
+
+  let self_closing_before_note = "<xml>" +
+    "<v:shape id='_x0000_s2000'/>" +
+    "<v:shape id=\"_x0000_s1025\"><x:ClientData ObjectType=\"Note\">" +
+    "<x:Row>0</x:Row><x:Column>0</x:Column>" +
+    "</x:ClientData></v:shape></xml>"
+  inspect(extract_vml_shapes(self_closing_before_note).length(), content="2")
+  inspect(next_vml_shape_numeric_id(self_closing_before_note), content="2001")
+  let without_note = remove_vml_comment_shapes_at_cell(
+    self_closing_before_note, "A1",
+  )
+  inspect(without_note.contains("_x0000_s2000"), content="true")
+  inspect(without_note.contains("_x0000_s1025"), content="false")
 }
 
 ///|
