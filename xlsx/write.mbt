@@ -3478,13 +3478,27 @@ fn write_with_io(
     } else {
       1025
     }
-    if generated_comment_count > 0x7fffffff - next_comment_shape_id {
+    if !vml_shape_id_range_is_valid(
+        next_comment_shape_id, generated_comment_count,
+      ) {
       raise InvalidVmlDrawing(msg="comment VML shape id range is invalid")
     }
-    let next_generated_shape_id = next_comment_shape_id +
-      generated_comment_count
-    let form_control_shape_id_start = if next_generated_shape_id > 2048 {
-      next_generated_shape_id
+    let form_control_shape_id_start = if form_controls.length() > 0 {
+      let next_generated_shape_id = if generated_comment_count == 0 {
+        next_comment_shape_id
+      } else {
+        if generated_comment_count > 0x7fffffff - next_comment_shape_id {
+          raise InvalidVmlDrawing(
+            msg="form control VML shape id range is invalid",
+          )
+        }
+        next_comment_shape_id + generated_comment_count
+      }
+      if next_generated_shape_id > 2048 {
+        next_generated_shape_id
+      } else {
+        2048
+      }
     } else {
       2048
     }

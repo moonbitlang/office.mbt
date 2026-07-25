@@ -554,6 +554,70 @@ test "comment replace/get/delete lifecycle is deterministic and atomic" {
 }
 
 ///|
+test "retained comment VML accepts XML whitespace in cell tags" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.add_comment(plain_comment("A1", "Alice", "retained"))
+  let retained_vml = "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\" " +
+    "xmlns:x=\"urn:schemas-microsoft-com:office:excel\">" +
+    "<v:shape id=\"_x0000_s1025\"><x:ClientData ObjectType=\"Note\">" +
+    "<x:Row \n>0</x:Row \r><x:Column\t>0</x:Column\n>" +
+    "</x:ClientData></v:shape></xml>"
+  sheet.add_vml_drawing_xml(retained_vml)
+  let archive = @zip.read(@xlsx.write(workbook))
+  let written_vml = match archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(bytes) => @encoding/utf8.decode(bytes)
+    None => fail("expected retained comment VML drawing")
+  }
+  inspect(written_vml == retained_vml, content="true")
+
+  sheet.delete_comment("A1")
+  let after_delete = sheet.vml_drawing_xml().unwrap()
+  inspect(after_delete.contains("_x0000_s1025"), content="false")
+}
+
+///|
+test "retained VML o:spid reserves generated comment IDs" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.add_comment(plain_comment("A1", "Alice", "retained"))
+  sheet.add_comment(plain_comment("B2", "Bob", "generated"))
+  sheet.add_vml_drawing_xml(
+    "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\" " +
+    "xmlns:o=\"urn:schemas-microsoft-com:office:office\" " +
+    "xmlns:x=\"urn:schemas-microsoft-com:office:excel\">" +
+    "<v:shape id='friendly-note' o:spid='_x0000_s4096'>" +
+    "<x:ClientData ObjectType='Note'><x:Row>0</x:Row>" +
+    "<x:Column>0</x:Column></x:ClientData></v:shape></xml>",
+  )
+  let archive = @zip.read(@xlsx.write(workbook))
+  let vml = match archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(bytes) => @encoding/utf8.decode(bytes)
+    None => fail("expected reconciled comment VML drawing")
+  }
+  inspect(vml.contains("o:spid='_x0000_s4096'"), content="true")
+  inspect(vml.contains("id=\"_x0000_s4097\""), content="true")
+  inspect(vml.contains("id=\"_x0000_s4096\""), content="false")
+}
+
+///|
+test "generated comment may use final VML shape ID" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.add_vml_drawing_xml(
+    "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\">" +
+    "<v:shape id=\"_x0000_s2147483646\"/></xml>",
+  )
+  sheet.add_comment(plain_comment("A1", "Alice", "final id"))
+  let archive = @zip.read(@xlsx.write(workbook))
+  let vml = match archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(bytes) => @encoding/utf8.decode(bytes)
+    None => fail("expected generated comment VML drawing")
+  }
+  inspect(vml.contains("id=\"_x0000_s2147483647\""), content="true")
+}
+
+///|
 test "retained maximum VML shape id round-trips without a successor" {
   let max_shape_id = "_x0000_s2147483647"
   let retained_only_vml = "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\">" +

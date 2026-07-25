@@ -229,3 +229,20 @@ test "form control invalid inputs and delete no-op" {
     content="true",
   )
 }
+
+///|
+test "generated form control may use final VML shape ID" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.add_vml_drawing_xml(
+    "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\">" +
+    "<v:shape id=\"_x0000_s2147483646\"/></xml>",
+  )
+  workbook.add_form_control("Sheet1", @xlsx.FormControl::new("A1", "Button"))
+  let archive = @zip.read(@xlsx.write(workbook))
+  let vml = match archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(bytes) => @encoding/utf8.decode(bytes)
+    None => fail("expected generated form control VML drawing")
+  }
+  inspect(vml.contains("id=\"_x0000_s2147483647\""), content="true")
+}

@@ -51,13 +51,24 @@ fn write_comments_xml(
 }
 
 ///|
+fn vml_shape_id_range_is_valid(shape_id_start : Int, count : Int) -> Bool {
+  if shape_id_start <= 0 {
+    false
+  } else if count == 0 {
+    true
+  } else {
+    count - 1 <= 0x7fffffff - shape_id_start
+  }
+}
+
+///|
 fn write_comments_vml(
   sheet_id : Int,
   comments : ArrayView[Comment],
   shape_id_start? : Int = 1025,
   budget? : WritePartBudget,
 ) -> String raise XlsxError {
-  if shape_id_start <= 0 || comments.length() > 0x7fffffff - shape_id_start {
+  if !vml_shape_id_range_is_valid(shape_id_start, comments.length()) {
     raise InvalidVmlDrawing(msg="comment VML shape id range is invalid")
   }
   let sb = LimitedXmlBuilder::new(budget)
@@ -74,8 +85,8 @@ fn write_comments_vml(
   sb.write_view("    <v:stroke joinstyle=\"miter\"/>\n")
   sb.write_view("    <v:path o:connecttype=\"rect\"/>\n")
   sb.write_view("  </v:shapetype>\n")
-  let mut shape_id = shape_id_start
-  for comment in comments {
+  for index, comment in comments {
+    let shape_id = shape_id_start + index
     let (row, col) = cell_ref_to_rc(comment.cell)
     let row0 = row - 1
     let col0 = col - 1
@@ -98,7 +109,6 @@ fn write_comments_vml(
     sb.write_view("      <x:Column>\{col0}</x:Column>\n")
     sb.write_view("    </x:ClientData>\n")
     sb.write_view("  </v:shape>\n")
-    shape_id = shape_id + 1
   }
   sb.write_view("</xml>")
   sb.to_string()
@@ -249,25 +259,44 @@ fn vml_comment_cell(shape_xml : StringView) -> String? raise XlsxError {
 }
 
 ///|
-fn vml_shape_numeric_id(shape_xml : StringView) -> Int? raise XlsxError {
+fn parse_vml_shape_numeric_id(value : StringView) -> Int? {
   let prefix = "_x0000_s"
+  if !value.has_prefix(prefix) {
+    return None
+  }
+  try @string.parse_int(value[prefix.length():], base=10) catch {
+    _ => None
+  } noraise {
+    value => if value > 0 { Some(value) } else { None }
+  }
+}
+
+///|
+fn vml_shape_numeric_id(shape_xml : StringView) -> Int? raise XlsxError {
   let open_end = match xml_open_tag_end_from(shape_xml, "<v:shape".length()) {
     Some(pos) => pos
     None => return None
   }
-  match attr_value(shape_xml["<v:shape".length():open_end], "id") {
-    Some(id) =>
-      if !id.has_prefix(prefix) {
-        None
-      } else {
-        try @string.parse_int(id[prefix.length():], base=10) catch {
-          _ => None
-        } noraise {
-          value => if value > 0 { Some(value) } else { None }
+  let attributes = shape_xml["<v:shape".length():open_end]
+  let mut maximum : Int? = None
+  for attribute_name in ["id", "o:spid"] {
+    match attr_value(attributes, attribute_name) {
+      Some(value) =>
+        match parse_vml_shape_numeric_id(value) {
+          Some(candidate) =>
+            match maximum {
+              Some(current) =>
+                if candidate > current {
+                  maximum = Some(candidate)
+                }
+              None => maximum = Some(candidate)
+            }
+          None => ()
         }
-      }
-    None => None
+      None => ()
+    }
   }
+  maximum
 }
 
 ///|

@@ -335,7 +335,7 @@ fn write_form_controls_vml(
   shape_id_start? : Int = 2048,
   budget? : WritePartBudget,
 ) -> String raise XlsxError {
-  if shape_id_start <= 0 || controls.length() > 0x7fffffff - shape_id_start {
+  if !vml_shape_id_range_is_valid(shape_id_start, controls.length()) {
     raise InvalidVmlDrawing(msg="form control VML shape id range is invalid")
   }
   let sb = LimitedXmlBuilder::new(budget)
@@ -352,8 +352,8 @@ fn write_form_controls_vml(
   sb.write_view("    <v:stroke joinstyle=\"miter\"/>\n")
   sb.write_view("    <v:path o:connecttype=\"rect\"/>\n")
   sb.write_view("  </v:shapetype>\n")
-  let mut shape_id = shape_id_start
-  for control in controls {
+  for index, control in controls {
+    let shape_id = shape_id_start + index
     let (_, object_type) = normalize_form_control_type(control.control_type)
     let (row, col) = cell_ref_to_rc(control.cell)
     let row0 = row - 1
@@ -647,7 +647,6 @@ fn write_form_controls_vml(
     sb.write_view("      <x:Column>\{col0}</x:Column>\n")
     sb.write_view("    </x:ClientData>\n")
     sb.write_view("  </v:shape>\n")
-    shape_id = shape_id + 1
   }
   sb.write_view("</xml>")
   sb.to_string()
@@ -664,18 +663,8 @@ fn xml_has_tag(body : StringView, tag : StringView) -> Bool {
 
 ///|
 fn extract_xml_text_tag(body : StringView, tag : StringView) -> String? {
-  let open = "<\{tag.to_owned()}>"
-  let close = "</\{tag.to_owned()}>"
-  match body.find(open) {
-    Some(start) => {
-      let rest = body[start + open.length():]
-      let end = match rest.find(close) {
-        Some(v) => v
-        None => return None
-      }
-      let value = rest[:end]
-      Some(unescape_xml_text(value))
-    }
+  match extract_tag_body_from(body, tag) {
+    Some(value) => Some(unescape_xml_text(value))
     None => None
   }
 }
