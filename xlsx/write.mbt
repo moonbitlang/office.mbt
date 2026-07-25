@@ -3416,9 +3416,10 @@ fn write_with_io(
       }
     }
     let comment_targets : Array[String] = []
-    let comment_xml = if sheet.comments().length() > 0 {
+    let stored_comments = sheet.stored_comments()
+    let comment_xml = if stored_comments.length() > 0 {
       Some(
-        write_comments_xml(sheet.comments(), budget?=archive.next_part_budget()),
+        write_comments_xml(stored_comments, budget?=archive.next_part_budget()),
       )
     } else {
       None
@@ -3449,10 +3450,10 @@ fn write_with_io(
     // debit each generated intermediate immediately, and archive the final
     // part below before beginning any other generated VML.
     let legacy_vml_budget = archive.next_composition_budget()
-    let comment_vml_xml = if sheet.comments().length() > 0 {
+    let comment_vml_xml = if stored_comments.length() > 0 {
       let xml = write_comments_vml(
         sheet_id,
-        sheet.comments(),
+        stored_comments,
         budget?=legacy_vml_budget.remaining_budget(),
       )
       legacy_vml_budget.consume(xml)

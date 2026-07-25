@@ -100,6 +100,7 @@ pub suberror XlsxError {
   CellTextTooLong(len~ : Int)
   GraphicNameTooLong(len~ : Int, limit~ : Int)
   GraphicAltTextTooLong(len~ : Int, limit~ : Int)
+  InvalidComment(msg~ : String)
   CommentAlreadyExists(cell~ : String)
   TableNotFound(name~ : String)
   StreamModeConflict(msg~ : String)
@@ -1960,6 +1961,7 @@ pub fn Workbook::get_col_style(Self, StringView, Int) -> Int? raise XlsxError
 pub fn Workbook::get_col_visible(Self, StringView, Int) -> Bool raise XlsxError
 pub fn Workbook::get_col_width(Self, StringView, Int) -> Double? raise XlsxError
 pub fn Workbook::get_cols(Self, StringView, options? : Options) -> Array[Array[String]] raise XlsxError
+pub fn Workbook::get_comment(Self, StringView, StringView) -> Comment? raise XlsxError
 pub fn Workbook::get_comments(Self, StringView) -> Array[Comment] raise XlsxError
 pub fn Workbook::get_conditional_formats(Self, StringView) -> Map[String, Array[ConditionalFormatOptions]] raise XlsxError
 pub fn Workbook::get_conditional_style(Self, Int) -> Style raise XlsxError
@@ -2242,6 +2244,7 @@ pub fn Worksheet::get_col(Self, Int) -> Array[String] raise XlsxError
 pub fn Worksheet::get_col_style(Self, Int) -> Int? raise XlsxError
 pub fn Worksheet::get_col_width(Self, Int) -> Double? raise XlsxError
 pub fn Worksheet::get_cols(Self) -> Array[Array[String]]
+pub fn Worksheet::get_comment(Self, StringView) -> Comment? raise XlsxError
 pub fn Worksheet::get_conditional_formats(Self) -> Map[String, Array[ConditionalFormatOptions]] raise XlsxError
 pub fn Worksheet::get_data_validations(Self) -> Array[DataValidation] raise XlsxError
 pub fn Worksheet::get_header_footer_images(Self) -> Array[HeaderFooterImageOptions]
