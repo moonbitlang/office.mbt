@@ -347,9 +347,30 @@ test "comment UTF-16 limits reject without truncation or mutation" {
     content_result is Err(@xlsx.XlsxError::InvalidComment(_)),
     content="true",
   )
+  let rich_result : Result[Unit, Error] = Ok(
+    sheet.add_comment({
+      cell: "C1",
+      author: "Alice",
+      author_id: None,
+      text: "",
+      paragraph: [
+        { text: repeat_comment_text("r", 20000), font: None },
+        { text: repeat_comment_text("s", 20000), font: None },
+      ],
+      width: None,
+      height: None,
+    }),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(
+    rich_result is Err(@xlsx.XlsxError::InvalidComment(_)),
+    content="true",
+  )
   inspect(sheet.comments().length(), content="2")
   inspect(sheet.get_comment("A2") is None, content="true")
   inspect(sheet.get_comment("B2") is None, content="true")
+  inspect(sheet.get_comment("C1") is None, content="true")
   match sheet.get_comment("A1") {
     Some(comment) => inspect(comment.author == author_at_limit, content="true")
     None => fail("expected author boundary comment")

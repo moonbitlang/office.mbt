@@ -136,6 +136,9 @@ pub struct Worksheet {
   charts : Array[Chart]
   shapes : Array[Shape]
   form_controls : Array[FormControl]
+  /// Parallel to `form_controls`; true only when the semantic record was
+  /// parsed from the currently retained VML and may replace that raw shape.
+  priv form_controls_vml_backed : Array[Bool]
   slicers : Array[Slicer]
   data_validations : Array[String]
   conditional_formats : Array[String]
@@ -195,6 +198,7 @@ pub fn Worksheet::new(name : String) -> Worksheet {
     charts: [],
     shapes: [],
     form_controls: [],
+    form_controls_vml_backed: [],
     slicers: [],
     data_validations: [],
     conditional_formats: [],
@@ -286,6 +290,11 @@ pub fn Worksheet::shapes(self : Worksheet) -> ArrayView[Shape] {
 ///|
 fn Worksheet::form_controls(self : Worksheet) -> ArrayView[FormControl] {
   self.form_controls
+}
+
+///|
+fn Worksheet::form_controls_vml_backed(self : Worksheet) -> ArrayView[Bool] {
+  self.form_controls_vml_backed
 }
 
 ///|

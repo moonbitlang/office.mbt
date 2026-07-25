@@ -1395,6 +1395,7 @@ fn clone_worksheet(
     charts: clone_charts(sheet.charts),
     shapes: clone_shapes(sheet.shapes),
     form_controls: clone_form_controls(sheet.form_controls),
+    form_controls_vml_backed: sheet.form_controls_vml_backed.copy(),
     slicers: clone_slicers(sheet.slicers),
     data_validations: clone_strings(sheet.data_validations),
     conditional_formats: clone_strings(sheet.conditional_formats),

@@ -3446,6 +3446,7 @@ fn write_with_io(
     let legacy_vml_budget = archive.next_composition_budget()
     let source_vml = sheet.vml_drawing_xml()
     let form_controls = sheet.form_controls()
+    let form_controls_vml_backed = sheet.form_controls_vml_backed()
     let (comment_base_vml, missing_comments) = match source_vml {
       Some(xml) =>
         if comments.length() > 0 {
@@ -3469,6 +3470,7 @@ fn write_with_io(
           let (reconciled, missing) = reconcile_vml_form_control_shapes(
             xml,
             form_controls,
+            form_controls_vml_backed,
             budget?=legacy_vml_budget.remaining_budget(),
           )
           if reconciled != xml {

@@ -4854,6 +4854,7 @@ fn read_zip_archive_core_unchecked(
         charts: [],
         shapes: [],
         form_controls,
+        form_controls_vml_backed: Array::make(form_controls.length(), true),
         slicers: [],
         data_validations,
         conditional_formats,

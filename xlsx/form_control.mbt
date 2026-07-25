@@ -1001,28 +1001,64 @@ fn vml_form_controls_equal(left : FormControl, right : FormControl) -> Bool {
 }
 
 ///|
+fn vml_form_control_identity_equal(
+  left : FormControl,
+  right : FormControl,
+) -> Bool {
+  left.cell == right.cell && left.control_type == right.control_type
+}
+
+///|
+priv struct ParsedVmlFormControlShape {
+  span : VmlShapeSpan
+  control : FormControl
+}
+
+///|
 fn reconcile_vml_form_control_shapes(
   base_xml : String,
   controls : ArrayView[FormControl],
+  vml_backed : ArrayView[Bool],
   budget? : WritePartBudget,
 ) -> (String, Array[FormControl]) raise XlsxError {
+  if vml_backed.length() != controls.length() {
+    raise InvalidVmlDrawing(msg="form control VML provenance is inconsistent")
+  }
   let matched : Array[Bool] = Array::make(controls.length(), false)
-  let remove : Array[VmlShapeSpan] = []
+  let retained : Array[ParsedVmlFormControlShape] = []
   for span in extract_vml_shape_spans(base_xml) {
     let parsed = parse_form_controls_vml(base_xml[span.start:span.end])
-    if parsed.length() == 0 {
-      continue
+    if parsed.length() > 0 {
+      retained.push({ span, control: parsed[0] })
     }
-    let mut match_index : Int? = None
-    for index, control in controls {
-      if !matched[index] && vml_form_controls_equal(control, parsed[0]) {
-        match_index = Some(index)
+  }
+  let retained_matched : Array[Bool] = Array::make(retained.length(), false)
+  for retained_index, shape in retained {
+    for control_index, control in controls {
+      if vml_backed[control_index] &&
+        !matched[control_index] &&
+        vml_form_controls_equal(control, shape.control) {
+        matched[control_index] = true
+        retained_matched[retained_index] = true
         break
       }
     }
-    match match_index {
-      Some(index) => matched[index] = true
-      None => remove.push(span)
+  }
+  let remove : Array[VmlShapeSpan] = []
+  let replacement_claimed : Array[Bool] = Array::make(controls.length(), false)
+  for retained_index, shape in retained {
+    if retained_matched[retained_index] {
+      continue
+    }
+    for control_index, control in controls {
+      if vml_backed[control_index] &&
+        !matched[control_index] &&
+        !replacement_claimed[control_index] &&
+        vml_form_control_identity_equal(control, shape.control) {
+        remove.push(shape.span)
+        replacement_claimed[control_index] = true
+        break
+      }
     }
   }
   let missing : Array[FormControl] = []

@@ -2349,6 +2349,10 @@ pub fn Worksheet::add_vml_drawing_xml(
   if xml == "" {
     raise InvalidVmlDrawing(msg="vml drawing xml empty")
   }
+  self.form_controls_vml_backed.clear()
+  for _ in self.form_controls {
+    self.form_controls_vml_backed.push(false)
+  }
   self.vml_drawing_xml = Some(xml)
 }
 
@@ -2370,6 +2374,7 @@ pub fn Worksheet::add_form_control(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   self.form_controls.push(control)
+  self.form_controls_vml_backed.push(false)
 }
 
 ///|
@@ -2386,13 +2391,15 @@ fn Worksheet::delete_form_control(
   let (target_row, target_col) = cell_ref_to_rc(cell)
   let canonical = cell_ref_from(target_row, target_col)
   let remaining : Array[FormControl] = []
+  let remaining_vml_backed : Array[Bool] = []
   let mut removed = false
-  for control in self.form_controls {
+  for index, control in self.form_controls {
     let (row, col) = cell_ref_to_rc(control.cell)
     if row == target_row && col == target_col {
       removed = true
     } else {
       remaining.push(control)
+      remaining_vml_backed.push(self.form_controls_vml_backed[index])
     }
   }
   if !removed {
@@ -2403,8 +2410,12 @@ fn Worksheet::delete_form_control(
     None => None
   }
   self.form_controls.clear()
+  self.form_controls_vml_backed.clear()
   for control in remaining {
     self.form_controls.push(control)
+  }
+  for vml_backed in remaining_vml_backed {
+    self.form_controls_vml_backed.push(vml_backed)
   }
   self.vml_drawing_xml = next_vml_drawing_xml
 }

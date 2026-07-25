@@ -71,12 +71,28 @@ fn validate_comment_rich_text_font(font : RichTextFont) -> Unit raise XlsxError 
 }
 
 ///|
-fn comment_rich_text_value(runs : ArrayView[RichTextRun]) -> String {
-  let text = StringBuilder::new()
-  for run in runs {
-    text.write_view(run.text)
+fn validate_comment_content_units(
+  value : StringView,
+  field : StringView,
+  initial_units : Int,
+) -> Int raise XlsxError {
+  let mut units = initial_units
+  for character in value {
+    if !is_valid_xml_output_character(character) {
+      raise InvalidComment(
+        msg="\{field} contains forbidden XML code point \{character.to_int()}",
+      )
+    }
+    let character_units = if character.to_int() > 0xffff { 2 } else { 1 }
+    if character_units > max_comment_content_chars - units {
+      raise InvalidComment(
+        msg="comment content exceeds \{max_comment_content_chars} UTF-16 units " +
+          "(at least \{units + character_units})",
+      )
+    }
+    units = units + character_units
   }
-  text.to_string()
+  units
 }
 
 ///|
@@ -92,17 +108,24 @@ fn normalize_comment(comment : Comment) -> Comment raise XlsxError {
         "(actual \{author_units})",
     )
   }
-  validate_comment_xml_text(comment.text, "comment text")
+  ignore(validate_comment_content_units(comment.text, "comment text", 0))
   let paragraph : Array[RichTextRun] = []
+  let rich_text_builder = StringBuilder::new()
+  let mut rich_text_units = 0
   for run in comment.paragraph {
-    validate_comment_xml_text(run.text, "comment rich-text run")
+    rich_text_units = validate_comment_content_units(
+      run.text,
+      "comment rich-text run",
+      rich_text_units,
+    )
     match run.font {
       Some(font) => validate_comment_rich_text_font(font)
       None => ()
     }
+    rich_text_builder.write_view(run.text)
     paragraph.push(run)
   }
-  let rich_text = comment_rich_text_value(paragraph)
+  let rich_text = rich_text_builder.to_string()
   let text = if paragraph.length() == 0 {
     comment.text
   } else {
@@ -113,13 +136,6 @@ fn normalize_comment(comment : Comment) -> Comment raise XlsxError {
       )
     }
     rich_text
-  }
-  let content_units = count_utf16_units(text)
-  if content_units > max_comment_content_chars {
-    raise InvalidComment(
-      msg="comment content exceeds \{max_comment_content_chars} UTF-16 units " +
-        "(actual \{content_units})",
-    )
   }
   {
     cell,

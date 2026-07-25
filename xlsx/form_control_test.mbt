@@ -267,6 +267,62 @@ test "retained maximum-ID form control is not regenerated" {
 }
 
 ///|
+test "raw-only retained form control survives adding a semantic control" {
+  let retained_shape = "<v:shape id=\"_x0000_s3000\">" +
+    "<x:ClientData ObjectType=\"Button\"><x:Row>1</x:Row>" +
+    "<x:Column>1</x:Column></x:ClientData></v:shape>"
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.add_vml_drawing_xml(
+    "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\" " +
+    "xmlns:x=\"urn:schemas-microsoft-com:office:excel\">" +
+    retained_shape +
+    "</xml>",
+  )
+  workbook.add_form_control("Sheet1", @xlsx.FormControl::new("A1", "Button"))
+  let archive = @zip.read(@xlsx.write(workbook))
+  let vml = match archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(bytes) => @encoding/utf8.decode(bytes)
+    None => fail("expected composed form-control VML drawing")
+  }
+  inspect(vml.contains(retained_shape), content="true")
+  inspect(vml.contains("id=\"_x0000_s3001\""), content="true")
+  let mut button_count = -1
+  for _ in vml.split("ObjectType=\"Button\"") {
+    button_count = button_count + 1
+  }
+  inspect(button_count, content="2")
+}
+
+///|
+test "same-cell raw-only and added form controls remain distinct" {
+  let retained_shape = "<v:shape id=\"_x0000_s3000\">" +
+    "<x:ClientData ObjectType=\"Button\"><x:Row>0</x:Row>" +
+    "<x:Column>0</x:Column></x:ClientData></v:shape>"
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.add_vml_drawing_xml(
+    "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\" " +
+    "xmlns:x=\"urn:schemas-microsoft-com:office:excel\">" +
+    retained_shape +
+    "</xml>",
+  )
+  workbook.add_form_control("Sheet1", @xlsx.FormControl::new("A1", "Button"))
+  let archive = @zip.read(@xlsx.write(workbook))
+  let vml = match archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(bytes) => @encoding/utf8.decode(bytes)
+    None => fail("expected composed same-cell form-control VML drawing")
+  }
+  inspect(vml.contains(retained_shape), content="true")
+  inspect(vml.contains("id=\"_x0000_s3001\""), content="true")
+  let mut button_count = -1
+  for _ in vml.split("ObjectType=\"Button\"") {
+    button_count = button_count + 1
+  }
+  inspect(button_count, content="2")
+}
+
+///|
 test "changed and deleted retained form controls reconcile without duplicates" {
   let source = @xlsx.Workbook::new()
   ignore(source.add_sheet("Sheet1"))
