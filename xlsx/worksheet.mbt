@@ -1172,7 +1172,7 @@ pub fn Worksheet::get_comment(
   let (row, col) = cell_ref_to_rc(cell)
   let canonical = cell_ref_from(row, col)
   match self.comment_index(canonical) {
-    Some(index) => Some(self.comments[index])
+    Some(index) => Some(clone_comment(self.comments[index]))
     None => None
   }
 }

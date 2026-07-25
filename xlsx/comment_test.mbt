@@ -205,6 +205,48 @@ test "comment roundtrip" {
 }
 
 ///|
+test "comment read-modify-write reconciles retained VML shapes" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.add_comment("Sheet1", plain_comment("A1", "A", "original"))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
+  parsed.replace_comment("Sheet1", plain_comment("A1", "B", "replacement"))
+  let replaced_bytes = @xlsx.write(parsed)
+  let replaced_archive = @zip.read(replaced_bytes)
+  let replaced_vml = match replaced_archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(bytes) => @encoding/utf8.decode(bytes)
+    None => fail("expected VML drawing after comment replacement")
+  }
+  let mut note_shapes = -1
+  for _ in replaced_vml.split("ObjectType=\"Note\"") {
+    note_shapes = note_shapes + 1
+  }
+  let mut first_shape_ids = -1
+  for _ in replaced_vml.split("_x0000_s1025") {
+    first_shape_ids = first_shape_ids + 1
+  }
+  inspect(note_shapes, content="1")
+  inspect(first_shape_ids, content="1")
+  match @xlsx.read(replaced_bytes).get_comment("Sheet1", "A1") {
+    Some(comment) => inspect(comment.text, content="replacement")
+    None => fail("expected replacement comment")
+  }
+
+  parsed.delete_comment("Sheet1", "A1")
+  let deleted_bytes = @xlsx.write(parsed)
+  let deleted_archive = @zip.read(deleted_bytes)
+  let deleted_vml = match deleted_archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(bytes) => @encoding/utf8.decode(bytes)
+    None => fail("expected retained VML wrapper after comment deletion")
+  }
+  inspect(deleted_vml.contains("ObjectType=\"Note\""), content="false")
+  inspect(
+    @xlsx.read(deleted_bytes).get_comment("Sheet1", "A1") is None,
+    content="true",
+  )
+}
+
+///|
 test "comment UTF-16 limits reject without truncation or mutation" {
   let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
@@ -307,6 +349,37 @@ test "comment rich runs are authoritative and conflicts reject" {
   }
   inspect(result is Err(@xlsx.XlsxError::InvalidComment(_)), content="true")
   inspect(sheet.comments().length(), content="1")
+}
+
+///|
+test "comment read APIs return detached rich-text arrays" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.add_comment({
+    cell: "A1",
+    author: "Alice",
+    author_id: None,
+    text: "",
+    paragraph: [{ text: "stored", font: None }],
+    width: None,
+    height: None,
+  })
+
+  let single = sheet.get_comment("A1").unwrap()
+  single.paragraph.push({ text: "single mutation", font: None })
+  let workbook_list = workbook.get_comments("Sheet1")
+  workbook_list[0].paragraph.push({ text: "list mutation", font: None })
+  let sheet_view = sheet.comments()
+  sheet_view[0].paragraph.push({ text: "view mutation", font: None })
+
+  match sheet.get_comment("A1") {
+    Some(stored) => {
+      inspect(stored.text, content="stored")
+      inspect(stored.paragraph.length(), content="1")
+    }
+    None => fail("expected stored comment")
+  }
+  ignore(@xlsx.write(workbook))
 }
 
 ///|

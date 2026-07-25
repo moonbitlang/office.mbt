@@ -311,7 +311,7 @@ pub fn Worksheet::ignored_errors(self : Worksheet) -> ArrayView[IgnoredError] {
 
 ///|
 pub fn Worksheet::comments(self : Worksheet) -> ArrayView[Comment] {
-  self.comments
+  clone_comments(self.comments)
 }
 
 ///|

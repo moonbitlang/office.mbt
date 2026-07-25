@@ -10,6 +10,23 @@ pub(all) struct Comment {
 } derive(Debug)
 
 ///|
+fn clone_comment(comment : Comment) -> Comment {
+  let paragraph : Array[RichTextRun] = []
+  for run in comment.paragraph {
+    paragraph.push(run)
+  }
+  {
+    cell: comment.cell,
+    author: comment.author,
+    author_id: comment.author_id,
+    text: comment.text,
+    paragraph,
+    width: comment.width,
+    height: comment.height,
+  }
+}
+
+///|
 let max_comment_author_chars = 255
 
 ///|

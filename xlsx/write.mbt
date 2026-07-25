@@ -3440,15 +3440,24 @@ fn write_with_io(
       rel_id = rel_id + comment_targets.length()
     }
     let vml_targets : Array[String] = []
-    let base_vml = match sheet.vml_drawing_xml() {
-      Some(xml) => Some(xml)
-      None => None
-    }
     // Comment/control VML can require several retained intermediates before
     // the final part is known. Give the whole composition one parent budget,
     // debit each generated intermediate immediately, and archive the final
     // part below before beginning any other generated VML.
     let legacy_vml_budget = archive.next_composition_budget()
+    let base_vml = match sheet.vml_drawing_xml() {
+      Some(xml) => {
+        let filtered = filter_vml_comment_shapes(
+          xml,
+          budget?=legacy_vml_budget.remaining_budget(),
+        )
+        if filtered != xml {
+          legacy_vml_budget.consume(filtered)
+        }
+        Some(filtered)
+      }
+      None => None
+    }
     let comment_vml_xml = if sheet.comments().length() > 0 {
       let xml = write_comments_vml(
         sheet_id,

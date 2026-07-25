@@ -169,6 +169,75 @@ fn vml_shape_id(shape_xml : StringView) -> StringView? {
 }
 
 ///|
+fn vml_shape_is_comment(shape_xml : StringView) -> Bool raise XlsxError {
+  let client_data = "<x:ClientData"
+  let start = match shape_xml.find(client_data) {
+    Some(pos) => pos + client_data.length()
+    None => return false
+  }
+  let rest = shape_xml[start:]
+  let end = match rest.find(">") {
+    Some(pos) => pos
+    None => raise InvalidXml(msg="VML ClientData tag not closed")
+  }
+  attr_value(rest[:end], "ObjectType") == Some("Note")
+}
+
+///|
+fn filter_vml_comment_shapes(
+  base_xml : String,
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  let needle = "<v:shape"
+  if !base_xml.contains(needle) {
+    return base_xml
+  }
+  let sb = LimitedXmlBuilder::new(budget)
+  let mut cursor = 0
+  let mut search_from = 0
+  let mut removed = false
+  while search_from < base_xml.length() {
+    let rest = base_xml[search_from:]
+    let rel = match rest.find(needle) {
+      Some(pos) => pos
+      None => break
+    }
+    let start = search_from + rel
+    let after = start + needle.length()
+    let next_char = if after < base_xml.length() {
+      base_xml.get_char(after)
+    } else {
+      None
+    }
+    let is_shape = match next_char {
+      Some(' ') | Some('>') | Some('/') => true
+      _ => false
+    }
+    if !is_shape {
+      search_from = start + 1
+      continue
+    }
+    let shape_rest = base_xml[start:]
+    let end_rel = match shape_rest.find("</v:shape>") {
+      Some(pos) => pos
+      None => break
+    }
+    let end = start + end_rel + "</v:shape>".length()
+    if vml_shape_is_comment(base_xml[start:end]) {
+      sb.write_view(base_xml[cursor:start])
+      cursor = end
+      removed = true
+    }
+    search_from = end
+  }
+  if !removed {
+    return base_xml
+  }
+  sb.write_view(base_xml[cursor:])
+  sb.to_string()
+}
+
+///|
 fn filter_vml_shapes_by_id(
   base_xml : String,
   remove_ids : Array[String],
@@ -590,6 +659,20 @@ test "write comments vml wb: filter and merge branches" {
   inspect(
     filter_vml_shapes_by_id(no_id_xml, ["_x0000_s1025"]) == no_id_xml,
     content="true",
+  )
+  let mixed = "<xml><meta keep=\"true\"/><v:shape id=\"note\"><x:ClientData " +
+    "ObjectType=\"Note\"></x:ClientData></v:shape><!--keep-->" +
+    "<v:shape id=\"button\"><x:ClientData ObjectType=\"Button\">" +
+    "</x:ClientData></v:shape><tail keep=\"true\"/></xml>"
+  let without_comments = filter_vml_comment_shapes(mixed)
+  inspect(without_comments.contains("id=\"note\""), content="false")
+  inspect(without_comments.contains("id=\"button\""), content="true")
+  inspect(without_comments.contains("<!--keep-->"), content="true")
+  inspect(without_comments.contains("<meta keep=\"true\"/>"), content="true")
+  inspect(without_comments.contains("<tail keep=\"true\"/>"), content="true")
+  inspect(
+    filter_vml_comment_shapes("<xml><v:shapetype/></xml>"),
+    content="<xml><v:shapetype/></xml>",
   )
 
   inspect(merge_vml_drawings("broken", base), content=base)
