@@ -51,6 +51,34 @@ test "vml drawing roundtrip" {
 }
 
 ///|
+test "raw note VML without semantic comments is preserved byte-for-byte" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let raw_vml = "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\" " +
+    "xmlns:x=\"urn:schemas-microsoft-com:office:excel\">" +
+    "<meta keep=\"true\"/><v:shape id=\"_x0000_s4096\" " +
+    "style=\"width:86pt;height:24pt\" fillcolor=\"#123456\">" +
+    "<x:ClientData ObjectType=\"Note\"><x:Row>4</x:Row>" +
+    "<x:Column>2</x:Column></x:ClientData></v:shape>" +
+    "<tail keep=\"true\"/></xml>"
+  sheet.add_vml_drawing_xml(raw_vml)
+  let first_archive = @zip.read(@xlsx.write(workbook))
+  let first_vml = match first_archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing first VML drawing")
+  }
+  inspect(first_vml == raw_vml, content="true")
+
+  let parsed = @xlsx.read(@xlsx.write(workbook))
+  let second_archive = @zip.read(@xlsx.write(parsed))
+  let second_vml = match second_archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing roundtrip VML drawing")
+  }
+  inspect(second_vml == raw_vml, content="true")
+}
+
+///|
 test "vml drawing hf roundtrip" {
   let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

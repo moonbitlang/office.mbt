@@ -54,8 +54,12 @@ fn write_comments_xml(
 fn write_comments_vml(
   sheet_id : Int,
   comments : ArrayView[Comment],
+  shape_id_start? : Int = 1025,
   budget? : WritePartBudget,
 ) -> String raise XlsxError {
+  if shape_id_start <= 0 || comments.length() > 0x7fffffff - shape_id_start {
+    raise InvalidVmlDrawing(msg="comment VML shape id range is invalid")
+  }
   let sb = LimitedXmlBuilder::new(budget)
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
@@ -70,7 +74,7 @@ fn write_comments_vml(
   sb.write_view("    <v:stroke joinstyle=\"miter\"/>\n")
   sb.write_view("    <v:path o:connecttype=\"rect\"/>\n")
   sb.write_view("  </v:shapetype>\n")
-  let mut shape_id = 1025
+  let mut shape_id = shape_id_start
   for comment in comments {
     let (row, col) = cell_ref_to_rc(comment.cell)
     let row0 = row - 1
@@ -101,22 +105,14 @@ fn write_comments_vml(
 }
 
 ///|
-fn extract_vml_shapetype(xml : StringView) -> StringView? {
-  let start = match xml.find("<v:shapetype") {
-    Some(pos) => pos
-    None => return None
-  }
-  let tail = xml[start:]
-  let end = match tail.find("</v:shapetype>") {
-    Some(pos) => start + pos + "</v:shapetype>".length()
-    None => return None
-  }
-  Some(xml[start:end])
+priv struct VmlShapeSpan {
+  start : Int
+  end : Int
 }
 
 ///|
-fn extract_vml_shapes(xml : StringView) -> Array[StringView] {
-  let shapes : Array[StringView] = []
+fn extract_vml_shape_spans(xml : StringView) -> Array[VmlShapeSpan] {
+  let spans : Array[VmlShapeSpan] = []
   let needle = "<v:shape"
   let mut start_pos = 0
   while start_pos < xml.length() {
@@ -133,21 +129,52 @@ fn extract_vml_shapes(xml : StringView) -> Array[StringView] {
       None
     }
     let is_shape = match next_char {
-      Some(' ') | Some('>') | Some('/') => true
+      Some(character) =>
+        is_attr_space(character) || character == '>' || character == '/'
       _ => false
     }
     if !is_shape {
       start_pos = start + 1
       continue
     }
-    let shape_rest = xml[start:]
-    let end_rel = match shape_rest.find("</v:shape>") {
+    let open_end = match xml_open_tag_end_from(xml, after) {
       Some(pos) => pos
       None => break
     }
-    let end = start + end_rel + "</v:shape>".length()
-    shapes.push(xml[start:end])
+    let self_closing = xml[start + 1:open_end].trim().has_suffix("/")
+    let end = if self_closing {
+      open_end + 1
+    } else {
+      match find_xml_close_tag_from(xml, "v:shape", open_end + 1) {
+        Some((_close_start, close_end)) => close_end + 1
+        None => break
+      }
+    }
+    spans.push({ start, end })
     start_pos = end
+  }
+  spans
+}
+
+///|
+fn extract_vml_shapetype(xml : StringView) -> StringView? {
+  let start = match xml.find("<v:shapetype") {
+    Some(pos) => pos
+    None => return None
+  }
+  let tail = xml[start:]
+  let end = match tail.find("</v:shapetype>") {
+    Some(pos) => start + pos + "</v:shapetype>".length()
+    None => return None
+  }
+  Some(xml[start:end])
+}
+
+///|
+fn extract_vml_shapes(xml : StringView) -> Array[StringView] {
+  let shapes : Array[StringView] = []
+  for span in extract_vml_shape_spans(xml) {
+    shapes.push(xml[span.start:span.end])
   }
   shapes
 }
@@ -166,6 +193,181 @@ fn vml_shape_id(shape_xml : StringView) -> StringView? {
   }
   let end = start + end_rel
   Some(shape_xml[start:end])
+}
+
+///|
+fn vml_shape_is_comment(shape_xml : StringView) -> Bool raise XlsxError {
+  let client_data = "<x:ClientData"
+  let start = match shape_xml.find(client_data) {
+    Some(pos) => pos + client_data.length()
+    None => return false
+  }
+  let rest = shape_xml[start:]
+  let end = match rest.find(">") {
+    Some(pos) => pos
+    None => raise InvalidVmlDrawing(msg="comment VML ClientData tag not closed")
+  }
+  attr_value(rest[:end], "ObjectType") == Some("Note")
+}
+
+///|
+fn vml_comment_cell(shape_xml : StringView) -> String? raise XlsxError {
+  if !vml_shape_is_comment(shape_xml) {
+    return None
+  }
+  let client_data = "<x:ClientData"
+  let start = shape_xml.find(client_data).unwrap() + client_data.length()
+  let rest = shape_xml[start:]
+  let open_end = match rest.find(">") {
+    Some(pos) => pos
+    None => raise InvalidVmlDrawing(msg="comment VML ClientData tag not closed")
+  }
+  let body = rest[open_end + 1:]
+  let row_text = match extract_xml_text_tag(body, "x:Row") {
+    Some(value) => value
+    None => raise InvalidVmlDrawing(msg="comment VML row is missing")
+  }
+  let col_text = match extract_xml_text_tag(body, "x:Column") {
+    Some(value) => value
+    None => raise InvalidVmlDrawing(msg="comment VML column is missing")
+  }
+  let row0 = @string.parse_int(row_text.trim(), base=10) catch {
+    _ => raise InvalidVmlDrawing(msg="comment VML row is invalid")
+  }
+  let col0 = @string.parse_int(col_text.trim(), base=10) catch {
+    _ => raise InvalidVmlDrawing(msg="comment VML column is invalid")
+  }
+  if row0 < 0 ||
+    row0 >= cell_ref_max_rows ||
+    col0 < 0 ||
+    col0 >= cell_ref_max_cols {
+    raise InvalidVmlDrawing(
+      msg="comment VML cell is outside the worksheet grid",
+    )
+  }
+  Some(cell_ref_from(row0 + 1, col0 + 1))
+}
+
+///|
+fn vml_shape_numeric_id(shape_xml : StringView) -> Int? raise XlsxError {
+  let prefix = "_x0000_s"
+  let open_end = match xml_open_tag_end_from(shape_xml, "<v:shape".length()) {
+    Some(pos) => pos
+    None => return None
+  }
+  match attr_value(shape_xml["<v:shape".length():open_end], "id") {
+    Some(id) =>
+      if !id.has_prefix(prefix) {
+        None
+      } else {
+        try @string.parse_int(id[prefix.length():], base=10) catch {
+          _ => None
+        } noraise {
+          value => if value > 0 { Some(value) } else { None }
+        }
+      }
+    None => None
+  }
+}
+
+///|
+fn max_vml_shape_numeric_id(base_xml : StringView) -> Int raise XlsxError {
+  let mut max_shape_id = 1024
+  for span in extract_vml_shape_spans(base_xml) {
+    match vml_shape_numeric_id(base_xml[span.start:span.end]) {
+      Some(id) => if id > max_shape_id { max_shape_id = id }
+      None => ()
+    }
+  }
+  max_shape_id
+}
+
+///|
+fn next_vml_shape_numeric_id_after(max_shape_id : Int) -> Int raise XlsxError {
+  if max_shape_id >= 0x7fffffff {
+    raise InvalidVmlDrawing(msg="VML shape id space is exhausted")
+  }
+  max_shape_id + 1
+}
+
+///|
+fn next_vml_shape_numeric_id(base_xml : StringView) -> Int raise XlsxError {
+  next_vml_shape_numeric_id_after(max_vml_shape_numeric_id(base_xml))
+}
+
+///|
+fn remove_vml_shape_spans(
+  base_xml : String,
+  remove : ArrayView[VmlShapeSpan],
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  if remove.length() == 0 {
+    return base_xml
+  }
+  let sb = LimitedXmlBuilder::new(budget)
+  let mut cursor = 0
+  for span in remove {
+    sb.write_view(base_xml[cursor:span.start])
+    cursor = span.end
+  }
+  sb.write_view(base_xml[cursor:])
+  sb.to_string()
+}
+
+///|
+fn remove_vml_comment_shapes_at_cell(
+  base_xml : String,
+  cell : String,
+  budget? : WritePartBudget,
+) -> String raise XlsxError {
+  let remove : Array[VmlShapeSpan] = []
+  for span in extract_vml_shape_spans(base_xml) {
+    match vml_comment_cell(base_xml[span.start:span.end]) {
+      Some(shape_cell) => if shape_cell == cell { remove.push(span) }
+      None => ()
+    }
+  }
+  remove_vml_shape_spans(base_xml, remove, budget?)
+}
+
+///|
+fn reconcile_vml_comment_shapes(
+  base_xml : String,
+  comments : ArrayView[Comment],
+  budget? : WritePartBudget,
+) -> (String, Array[Comment], Int) raise XlsxError {
+  let wanted : Map[String, Bool] = Map([])
+  for comment in comments {
+    wanted[comment.cell] = true
+  }
+  let seen : Map[String, Bool] = Map([])
+  let remove : Array[VmlShapeSpan] = []
+  let mut max_shape_id = 1024
+  for span in extract_vml_shape_spans(base_xml) {
+    let shape = base_xml[span.start:span.end]
+    match vml_shape_numeric_id(shape) {
+      Some(id) => if id > max_shape_id { max_shape_id = id }
+      None => ()
+    }
+    match vml_comment_cell(shape) {
+      Some(cell) =>
+        if wanted.contains(cell) {
+          if seen.contains(cell) {
+            remove.push(span)
+          } else {
+            seen[cell] = true
+          }
+        }
+      None => ()
+    }
+  }
+  let missing : Array[Comment] = []
+  for comment in comments {
+    if !seen.contains(comment.cell) {
+      missing.push(comment)
+    }
+  }
+  (remove_vml_shape_spans(base_xml, remove, budget?), missing, max_shape_id)
 }
 
 ///|
@@ -567,6 +769,25 @@ test "write comments vml wb: vml writer and extraction branches" {
   inspect(extract_vml_shapes("<xml><v:shape id=\"x\">").length(), content="0")
   debug_inspect(vml_shape_id("<v:shape id=\"x></v:shape>"), content="None")
   debug_inspect(vml_shape_id("<v:shape></v:shape>"), content="None")
+  let xml_whitespace_shapes = "<xml>" +
+    "<v:shape\tid=\"tab\"/>" +
+    "<v:shape\nid=\"line-feed\"/>" +
+    "<v:shape\rid=\"carriage-return\"/>" +
+    "<v:shape id=\"space\"/>" +
+    "</xml>"
+  inspect(extract_vml_shapes(xml_whitespace_shapes).length(), content="4")
+  let self_closing_before_note = "<xml>" +
+    "<v:shape id='_x0000_s2000'/>" +
+    "<v:shape id=\"_x0000_s1025\"><x:ClientData ObjectType=\"Note\">" +
+    "<x:Row>0</x:Row><x:Column>0</x:Column>" +
+    "</x:ClientData></v:shape></xml>"
+  inspect(extract_vml_shapes(self_closing_before_note).length(), content="2")
+  inspect(next_vml_shape_numeric_id(self_closing_before_note), content="2001")
+  let without_note = remove_vml_comment_shapes_at_cell(
+    self_closing_before_note, "A1",
+  )
+  inspect(without_note.contains("_x0000_s2000"), content="true")
+  inspect(without_note.contains("_x0000_s1025"), content="false")
 }
 
 ///|
@@ -591,6 +812,42 @@ test "write comments vml wb: filter and merge branches" {
     filter_vml_shapes_by_id(no_id_xml, ["_x0000_s1025"]) == no_id_xml,
     content="true",
   )
+  let custom = "<xml><meta keep=\"true\"/>" +
+    "<v:shape id=\"_x0000_s1026\" style=\"width:86pt;height:24pt\" " +
+    "fillcolor=\"#123456\"><x:ClientData ObjectType=\"Note\">" +
+    "<x:Row>0</x:Row><x:Column>0</x:Column></x:ClientData></v:shape>" +
+    "<!--keep--><v:shape id=\"_x0000_s1027\">" +
+    "<x:ClientData ObjectType=\"Note\"><x:Row>0</x:Row>" +
+    "<x:Column>0</x:Column></x:ClientData></v:shape>" +
+    "<v:shape id=\"_x0000_s2048\"><x:ClientData ObjectType=\"Button\">" +
+    "</x:ClientData></v:shape><tail keep=\"true\"/></xml>"
+  let (reconciled, missing, max_shape_id) = reconcile_vml_comment_shapes(
+    custom, comments,
+  )
+  inspect(
+    reconciled.contains("style=\"width:86pt;height:24pt\""),
+    content="true",
+  )
+  inspect(reconciled.contains("fillcolor=\"#123456\""), content="true")
+  inspect(reconciled.contains("_x0000_s1026"), content="true")
+  inspect(reconciled.contains("_x0000_s1027"), content="false")
+  inspect(reconciled.contains("_x0000_s2048"), content="true")
+  inspect(reconciled.contains("<!--keep-->"), content="true")
+  inspect(reconciled.contains("<meta keep=\"true\"/>"), content="true")
+  inspect(reconciled.contains("<tail keep=\"true\"/>"), content="true")
+  inspect(missing.length(), content="1")
+  inspect(missing[0].cell, content="B2")
+  inspect(max_shape_id, content="2048")
+  let next_shape_id = next_vml_shape_numeric_id_after(max_shape_id)
+  inspect(next_shape_id, content="2049")
+  let generated_missing = write_comments_vml(
+    1,
+    missing,
+    shape_id_start=next_shape_id,
+  )
+  inspect(generated_missing.contains("_x0000_s2049"), content="true")
+  inspect(generated_missing.contains("<x:Row>1</x:Row>"), content="true")
+  inspect(generated_missing.contains("<x:Column>1</x:Column>"), content="true")
   inspect(merge_vml_drawings("broken", base), content=base)
   let inserted = merge_vml_drawings("<xml></xml>", base)
   inspect(inserted.contains("_x0000_t202"), content="true")

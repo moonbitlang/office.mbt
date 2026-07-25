@@ -37,6 +37,7 @@ pub suberror XlsxError {
   GraphicAltTextTooLong(len~ : Int, limit~ : Int)
   InvalidComment(msg~ : String)
   CommentAlreadyExists(cell~ : String)
+  CommentNotFound(cell~ : String)
   TableNotFound(name~ : String)
   StreamModeConflict(msg~ : String)
   StreamRowOrder(last~ : Int, next~ : Int)
