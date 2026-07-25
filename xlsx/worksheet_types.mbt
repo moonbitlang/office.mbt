@@ -315,6 +315,14 @@ pub fn Worksheet::comments(self : Worksheet) -> ArrayView[Comment] {
 }
 
 ///|
+/// Package-internal comment storage for serialization. Public read APIs return
+/// detached paragraph arrays, but the writer must not deep-copy the complete
+/// comment tree each time it checks or emits a part.
+fn Worksheet::stored_comments(self : Worksheet) -> ArrayView[Comment] {
+  self.comments
+}
+
+///|
 /// Returns the retained hyperlink count without copying cell references.
 pub fn Worksheet::hyperlink_count(self : Worksheet) -> Int {
   self.hyperlinks.length()

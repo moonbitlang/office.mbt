@@ -205,6 +205,63 @@ test "comment roundtrip" {
 }
 
 ///|
+test "legacy mixed plain and rich comment rewrites without loss" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.add_comment({
+    cell: "A1",
+    author: "Alice",
+    author_id: None,
+    text: "",
+    paragraph: [{ text: "rich", font: None }],
+    width: None,
+    height: None,
+  })
+  let source = @zip.read(@xlsx.write(workbook))
+  let legacy = @zip.Archive::new()
+  let comment_part = "xl/comments1.xml"
+  let mut patched = false
+  for entry in source.entries() {
+    if entry.name() == comment_part {
+      let xml = @encoding/utf8.decode(entry.data())
+      let mixed = xml.replace_all(old="<text><r>", new="<text><t>plain </t><r>")
+      if mixed == xml {
+        fail("expected rich comment XML")
+      }
+      legacy.add(comment_part, @encoding/utf8.encode(mixed))
+      patched = true
+    } else {
+      legacy.add(
+        entry.name(),
+        entry.data(),
+        compression=entry.compression(),
+        data_descriptor=entry.data_descriptor(),
+      )
+    }
+  }
+  inspect(patched, content="true")
+  let parsed = @xlsx.read(@zip.write(legacy))
+  match parsed.get_comment("Sheet1", "A1") {
+    Some(comment) => {
+      inspect(comment.text, content="plain rich")
+      inspect(comment.paragraph.length(), content="2")
+      inspect(comment.paragraph[0].text, content="plain ")
+      inspect(comment.paragraph[1].text, content="rich")
+    }
+    None => fail("expected legacy mixed comment")
+  }
+  let first_write = @xlsx.write(parsed)
+  let second_write = @xlsx.write(@xlsx.read(first_write))
+  let first_archive = @zip.read(first_write)
+  let second_archive = @zip.read(second_write)
+  match (first_archive.get(comment_part), second_archive.get(comment_part)) {
+    (Some(first_comments), Some(second_comments)) =>
+      inspect(second_comments == first_comments, content="true")
+    _ => fail("expected comments part in both writes")
+  }
+}
+
+///|
 test "comment UTF-16 limits reject without truncation or mutation" {
   let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

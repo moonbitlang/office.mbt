@@ -23,6 +23,44 @@ fn parse_comment_authors(xml : StringView) -> Array[String] raise XlsxError {
 }
 
 ///|
+/// Older writers emitted a plain `<t>` prefix before rich `<r>` elements.
+/// `parse_text_nodes` returns the complete visible text while
+/// `parse_rich_text_runs` returns only the rich suffix. Convert that retained
+/// prefix into an unformatted run so the in-memory representation has one
+/// authoritative run sequence and can be written again without loss.
+fn normalize_parsed_comment_runs(
+  text : String,
+  runs : Array[RichTextRun],
+) -> Array[RichTextRun] {
+  if runs.length() == 0 {
+    return runs
+  }
+  let rich_text_builder = StringBuilder::new()
+  for run in runs {
+    rich_text_builder.write_view(run.text)
+  }
+  let rich_text = rich_text_builder.to_string()
+  if text == rich_text {
+    return runs
+  }
+  match text.strip_suffix(rich_text) {
+    Some(prefix) =>
+      if prefix.length() > 0 {
+        let normalized : Array[RichTextRun] = [
+          { text: prefix.to_owned(), font: None },
+        ]
+        for run in runs {
+          normalized.push(run)
+        }
+        normalized
+      } else {
+        runs
+      }
+    None => runs
+  }
+}
+
+///|
 fn parse_comments_xml(xml : StringView) -> Array[Comment] raise XlsxError {
   let comments : Array[Comment] = []
   let authors = parse_comment_authors(xml)
@@ -62,7 +100,7 @@ fn parse_comments_xml(xml : StringView) -> Array[Comment] raise XlsxError {
       Some(value) => value
       None => ""
     }
-    let paragraph = if text_body.contains("<r") {
+    let parsed_runs = if text_body.contains("<r") {
       parse_rich_text_runs(text_body) catch {
         _ => []
       }
@@ -70,6 +108,7 @@ fn parse_comments_xml(xml : StringView) -> Array[Comment] raise XlsxError {
       []
     }
     let text_value = parse_text_nodes(text_body) catch { _ => "" }
+    let paragraph = normalize_parsed_comment_runs(text_value, parsed_runs)
     comments.push({
       cell,
       author,
