@@ -69,23 +69,35 @@ codex_sha="$(/usr/bin/shasum -a 256 "$codex_native" |
 "$codex_native" --version
 ```
 
-On Linux, also select and hash the `bwrap` resource shipped beside that exact
-native executable. It is part of the approved runtime closure; a system
-`bwrap` is deliberately not used as an unpinned substitute:
+On Linux, also select and hash the exact `bwrap` that Codex will execute. Codex
+prefers the first system `bwrap` on its sanitized `PATH`; the runner therefore
+requires that executable to be the caller-approved one. This is also required
+on Ubuntu 24.04, whose AppArmor policy grants user-namespace access to the
+fixed `/usr/bin/bwrap` path rather than an arbitrary copied binary:
 
 ```sh
-codex_vendor="$(/usr/bin/dirname "$(/usr/bin/dirname "$codex_native")")"
-codex_bwrap="$codex_vendor/codex-resources/bwrap"
+codex_bwrap="$(command -v bwrap)"
 bwrap_sha="$(/usr/bin/shasum -a 256 "$codex_bwrap" |
   /usr/bin/awk '{print substr($1, length($1) - 63)}')"
 ```
 
-The runner checks every external digest, copies the executable and (on native
-Linux) its required `bwrap` into their original relative layout inside the
-private isolation, and repeatedly checks the copies. Every
+If no system `bwrap` exists, select the resource shipped beside the approved
+native Codex instead; the runner will copy it into the same relative layout as
+the privately staged Codex:
+
+```sh
+codex_vendor="$(/usr/bin/dirname "$(/usr/bin/dirname "$codex_native")")"
+codex_bwrap="$codex_vendor/codex-resources/bwrap"
+```
+
+The runner privately stages and repeatedly verifies Codex. A selected system
+`bwrap` is accepted in place only when it is root-owned, executable, not
+group/other-writable, free of special mode bits, on the sanitized `PATH`, and
+still matches the caller's digest at every integrity checkpoint. With no system
+helper, the approved fallback is privately staged and checked instead. Every
 version/canary/session operation runs under `env -i`. Exact `#!/bin/sh` and
 `#!/bin/bash` test executables are also supported with fixed system
-interpreters; other shebangs are rejected and cannot accept a `bwrap` resource.
+interpreters; other shebangs are rejected and cannot accept a `bwrap`.
 
 ## Run in least privilege
 
@@ -109,10 +121,10 @@ Native Linux runs append `"$codex_bwrap" "$bwrap_sha"` as the final two
 arguments. macOS runs and explicit test scripts omit them.
 
 The runner revalidates the externally anchored candidate, privately stages the
-entire candidate and approved Codex runtime closure, and executes only the
-staged copies. The credential is copied only after every unauthenticated
-preflight and debug-sandbox canary has passed; the cleanup trap is armed before
-any copy.
+entire candidate and approved Codex, and verifies the selected Linux sandbox
+helper as described above. The credential is copied only after every
+unauthenticated preflight and debug-sandbox canary has passed; the cleanup trap
+is armed before any copy.
 
 Codex receives a generated isolated configuration:
 
@@ -122,7 +134,8 @@ Codex receives a generated isolated configuration:
   controllers, auth/state, and evidence are denied;
 - only staged Office `bin`/`libexec`, the exact staged Codex executable needed
   by Linux bubblewrap re-entry, the isolated shell home, and the fixed canary
-  launcher are readable; the staged `bwrap` resource itself remains denied;
+  launcher are added as readable roots; any privately staged `bwrap` resource
+  itself remains denied;
 - only the empty probe directory and isolated `TMPDIR` scratch directory are
   writable;
 - network, web search, MCP servers, hooks, login shells, project instructions,
@@ -178,6 +191,9 @@ The evidence directory contains:
 - copies of `probe-result.md` and `probe-transcript.md`; and
 - `EVIDENCE.json`, which records the byte length and SHA-256 of every retained
   artifact other than itself.
+
+The run manifests record the selected bubblewrap strategy (`system` or
+`private`), exact digest, and whether it was privately staged.
 
 Publish the complete non-secret evidence directory (for example as a CI
 artifact or an unlisted durable review attachment), not hashes without their

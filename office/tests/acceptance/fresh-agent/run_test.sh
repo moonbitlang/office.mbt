@@ -339,8 +339,7 @@ evidence="$case_root/evidence"
   .codex_exit_status == 0 and
   .integrity.privately_staged_candidate == true and
   .integrity.privately_staged_codex == true and
-  .integrity.bubblewrap_sha256 == null and
-  .integrity.privately_staged_bubblewrap == false
+  .integrity.bubblewrap == null
 ' "$evidence/RUN.json" >/dev/null ||
   fail "final run manifest"
 /usr/bin/jq -e '
@@ -348,8 +347,7 @@ evidence="$case_root/evidence"
   .candidate_head == $head and
   .codex.version == "codex-cli 0.145.0" and
   .codex.privately_staged == true and
-  .codex.bubblewrap_sha256 == null and
-  .codex.bubblewrap_privately_staged == false
+  .codex.bubblewrap == null
 ' --arg head "$head" "$evidence/RUN-PREFLIGHT.json" >/dev/null ||
   fail "preflight manifest"
 /usr/bin/jq -e '
@@ -456,13 +454,23 @@ expect_failure wrong-codex-digest 1 'caller-supplied digest' \
 
 if [ "$(/usr/bin/uname -s)" = "Linux" ]; then
   native_codex="$case_root/native-codex"
-  /usr/bin/install -m 0500 /bin/sh "$native_codex"
+  /usr/bin/install -m 0500 /bin/echo "$native_codex"
   native_codex_sha="$(sha256_file "$native_codex")"
   expect_failure linux-native-runtime-closure 1 \
-    'requires an approved bubblewrap resource and digest' \
+    'requires an approved bubblewrap executable and digest' \
     "$runner" "$head" "$candidate_sha" \
     "$case_root/native-probe" "$case_root/native-evidence" \
     "$case_root/auth.json" "$native_codex" "$native_codex_sha"
+  system_bwrap="$(command -v bwrap || true)"
+  if [ -n "$system_bwrap" ]; then
+    system_bwrap_sha="$(sha256_file "$system_bwrap")"
+    expect_failure linux-system-bwrap-version 1 \
+      'could not identify Codex CLI version' \
+      "$runner" "$head" "$candidate_sha" \
+      "$case_root/system-bwrap-probe" "$case_root/system-bwrap-evidence" \
+      "$case_root/auth.json" "$native_codex" "$native_codex_sha" \
+      "$system_bwrap" "$system_bwrap_sha"
+  fi
 fi
 
 /bin/ln -s "$case_root/auth.json" "$case_root/auth-link.json"
