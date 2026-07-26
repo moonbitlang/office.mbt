@@ -351,6 +351,52 @@ test "comment XML-invalid fields reject atomically" {
 }
 
 ///|
+test "comment replacement rejects XML-invalid rich fonts atomically" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.add_comment(plain_comment("A1", "Alice", "original"))
+  let invalid_font : @xlsx.RichTextFont = {
+    bold: false,
+    italic: false,
+    strike: false,
+    outline: false,
+    shadow: false,
+    condense: false,
+    extended: false,
+    underline: None,
+    size: None,
+    color: None,
+    color_theme: None,
+    color_indexed: None,
+    color_tint: None,
+    charset: None,
+    family_number: None,
+    scheme: None,
+    vert_align: None,
+    family: Some("bad\u{0}font"),
+  }
+  let result : Result[Unit, Error] = Ok(
+    sheet.replace_comment({
+      cell: "A1",
+      author: "Alice",
+      author_id: None,
+      text: "",
+      paragraph: [{ text: "replacement", font: Some(invalid_font) }],
+      width: None,
+      height: None,
+    }),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(result is Err(@xlsx.XlsxError::InvalidComment(_)), content="true")
+  match sheet.get_comment("A1") {
+    Some(comment) => inspect(comment.text, content="original")
+    None => fail("expected original comment after rejected replacement")
+  }
+  ignore(@xlsx.write(workbook))
+}
+
+///|
 test "comment rich runs are authoritative and conflicts reject" {
   let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

@@ -47,6 +47,30 @@ fn validate_comment_xml_text(
 }
 
 ///|
+fn validate_comment_rich_text_font(font : RichTextFont) -> Unit raise XlsxError {
+  match font.underline {
+    Some(value) => validate_comment_xml_text(value, "comment font underline")
+    None => ()
+  }
+  match font.color {
+    Some(value) => validate_comment_xml_text(value, "comment font color")
+    None => ()
+  }
+  match font.scheme {
+    Some(value) => validate_comment_xml_text(value, "comment font scheme")
+    None => ()
+  }
+  match font.vert_align {
+    Some(value) => validate_comment_xml_text(value, "comment font vert_align")
+    None => ()
+  }
+  match font.family {
+    Some(value) => validate_comment_xml_text(value, "comment font family")
+    None => ()
+  }
+}
+
+///|
 fn validate_comment_content_units(
   value : StringView,
   field : StringView,
@@ -94,6 +118,10 @@ fn normalize_comment(comment : Comment) -> Comment raise XlsxError {
       "comment rich-text run",
       rich_text_units,
     )
+    match run.font {
+      Some(font) => validate_comment_rich_text_font(font)
+      None => ()
+    }
     paragraph.push(run)
     rich_text_builder.write_view(run.text)
   }
