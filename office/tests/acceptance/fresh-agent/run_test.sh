@@ -1,234 +1,404 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 
-root="$(git rev-parse --show-toplevel)"
-runner="$root/office/tests/acceptance/fresh-agent/run.sh"
-mkdir -p "$root/_build"
-test_root="$(mktemp -d "$root/_build/fresh-agent-runner.XXXXXX")"
-trap 'rm -rf -- "$test_root"' EXIT
+script_dir="$(
+  unset CDPATH
+  cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null
+  pwd -P
+)"
+root="$(
+  unset CDPATH
+  cd -P -- "$script_dir/../../../.." >/dev/null
+  pwd -P
+)"
+head="$(git -C "$root" rev-parse --verify HEAD)"
+git_common_dir="$(git -C "$root" rev-parse --git-common-dir)"
+case "$git_common_dir" in
+  /*) ;;
+  *) git_common_dir="$root/$git_common_dir" ;;
+esac
+git_common_dir="$(
+  unset CDPATH
+  cd -P -- "$git_common_dir" >/dev/null
+  pwd -P
+)"
+
+test_root="$(mktemp -d "${TMPDIR:-/tmp}/office-f1b-runner.XXXXXX")"
+chmod 0700 "$test_root"
+
+cleanup() {
+  local status="$?"
+  if [ "${OFFICE_F1B_KEEP_TEST_ROOT:-0}" = "1" ]; then
+    echo "kept fresh-agent test root: $test_root" >&2
+    exit "$status"
+  fi
+  chmod -R u+w -- "$test_root" 2>/dev/null || true
+  rm -rf -- "$test_root"
+  exit "$status"
+}
+trap cleanup EXIT HUP INT TERM
 
 fail() {
   echo "FRESH-AGENT RUNNER TEST FAIL: $*" >&2
   exit 1
 }
 
-install_root="$test_root/install"
+sha256_file() {
+  shasum -a 256 "$1" | awk '{print $1}'
+}
+
+make_candidate() {
+  local install_root="$1"
+  local native_sha
+  local wasm_wrapper_sha
+  local moonrun_sha
+  local wasm_sha
+  local runner_sha
+  local prompt_sha
+  local schema_sha
+  local canary_sha
+  local private_sha
+
+  mkdir -m 0700 \
+    "$install_root" \
+    "$install_root/bin" \
+    "$install_root/libexec" \
+    "$install_root/control"
+  printf '#!/bin/sh\nexit 0\n' > "$install_root/bin/office-native"
+  install -m 0500 "$script_dir/office-wasm" "$install_root/bin/office-wasm"
+  printf '#!/bin/sh\nexit 0\n' > "$install_root/libexec/moonrun"
+  printf 'fake wasm\n' > "$install_root/libexec/office.wasm"
+  install -m 0500 "$script_dir/run.sh" "$install_root/control/run.sh"
+  install -m 0400 "$script_dir/prompt.md" "$install_root/control/prompt.md"
+  install -m 0400 \
+    "$script_dir/final.schema.json" \
+    "$install_root/control/final.schema.json"
+  install -m 0500 \
+    "$script_dir/permission-canary.sh" \
+    "$install_root/control/permission-canary.sh"
+  chmod 0500 \
+    "$install_root/bin/office-native" \
+    "$install_root/libexec/moonrun"
+  chmod 0400 "$install_root/libexec/office.wasm"
+  ln -s office-native "$install_root/bin/office"
+
+  jq -n \
+    --arg schema "office.fresh-agent.private/1" \
+    --arg source_root "$root" \
+    --arg git_common_dir "$git_common_dir" \
+    '{
+      schema: $schema,
+      source_root: $source_root,
+      git_common_dir: $git_common_dir
+    }' > "$install_root/control/private.json"
+  chmod 0400 "$install_root/control/private.json"
+
+  native_sha="$(sha256_file "$install_root/bin/office-native")"
+  wasm_wrapper_sha="$(sha256_file "$install_root/bin/office-wasm")"
+  moonrun_sha="$(sha256_file "$install_root/libexec/moonrun")"
+  wasm_sha="$(sha256_file "$install_root/libexec/office.wasm")"
+  runner_sha="$(sha256_file "$install_root/control/run.sh")"
+  prompt_sha="$(sha256_file "$install_root/control/prompt.md")"
+  schema_sha="$(sha256_file "$install_root/control/final.schema.json")"
+  canary_sha="$(sha256_file "$install_root/control/permission-canary.sh")"
+  private_sha="$(sha256_file "$install_root/control/private.json")"
+
+  jq -n \
+    --arg schema "office.fresh-agent.candidate/1" \
+    --arg candidate_head "$head" \
+    --arg native_sha "$native_sha" \
+    --arg wasm_wrapper_sha "$wasm_wrapper_sha" \
+    --arg moonrun_sha "$moonrun_sha" \
+    --arg wasm_sha "$wasm_sha" \
+    --arg runner_sha "$runner_sha" \
+    --arg prompt_sha "$prompt_sha" \
+    --arg schema_sha "$schema_sha" \
+    --arg canary_sha "$canary_sha" \
+    --arg private_sha "$private_sha" \
+    '{
+      schema: $schema,
+      candidate_head: $candidate_head,
+      build: {
+        moon_version: "fake-moon 1",
+        moon_sha256: ("a" * 64),
+        moonrun_version: "fake-moonrun 1",
+        dependency_tree_sha256: ("b" * 64),
+        capability_schema: "office.capabilities/test",
+        capability_fingerprint: "test:fingerprint"
+      },
+      files: [
+        {path: "bin/office-native", kind: "file", mode: "0500", sha256: $native_sha},
+        {path: "bin/office-wasm", kind: "file", mode: "0500", sha256: $wasm_wrapper_sha},
+        {path: "libexec/moonrun", kind: "file", mode: "0500", sha256: $moonrun_sha},
+        {path: "libexec/office.wasm", kind: "file", mode: "0400", sha256: $wasm_sha},
+        {path: "control/run.sh", kind: "file", mode: "0500", sha256: $runner_sha},
+        {path: "control/prompt.md", kind: "file", mode: "0400", sha256: $prompt_sha},
+        {path: "control/final.schema.json", kind: "file", mode: "0400", sha256: $schema_sha},
+        {path: "control/permission-canary.sh", kind: "file", mode: "0500", sha256: $canary_sha},
+        {path: "control/private.json", kind: "file", mode: "0400", sha256: $private_sha}
+      ],
+      symlinks: [
+        {path: "bin/office", target: "office-native"}
+      ]
+    }' > "$install_root/CANDIDATE.json"
+  chmod 0400 "$install_root/CANDIDATE.json"
+  chmod 0500 \
+    "$install_root/bin" \
+    "$install_root/libexec" \
+    "$install_root/control" \
+    "$install_root"
+}
+
+case_root="$test_root/space = case"
+mkdir -m 0700 "$case_root"
+install_root="$case_root/install"
+make_candidate "$install_root"
+printf '{}\n' > "$case_root/auth.json"
+chmod 0600 "$case_root/auth.json"
+
 codex_bin_dir="$test_root/codex=bin"
 runtime_bin_dir="$test_root/runtime=bin"
-mkdir -p "$install_root/bin" "$codex_bin_dir" "$runtime_bin_dir"
-
-for command_name in office-native office-wasm; do
-  printf '#!/bin/sh\nexit 0\n' > "$install_root/bin/$command_name"
-  chmod +x "$install_root/bin/$command_name"
-done
-printf 'test-candidate\n' > "$install_root/CANDIDATE"
-printf '{}\n' > "$test_root/auth.json"
-
+mkdir -m 0700 "$codex_bin_dir" "$runtime_bin_dir"
 printf '%s\n' \
   '#!/bin/sh' \
-  'exec "$(dirname "$0")/runtime-real" "$@"' \
+  'if [ "${1:-}" = "--version" ]; then echo "fake-runtime 1.0"; exit 0; fi' \
+  'script=$1' \
+  'shift' \
+  'exec /bin/sh "$script" "$@"' \
   > "$runtime_bin_dir/fake_runtime"
-printf '#!/bin/sh\nscript=$1\nshift\nexec /bin/sh "$script" "$@"\n' \
-  > "$runtime_bin_dir/runtime-real"
-printf '#!/bin/sh\nexit 99\n' > "$runtime_bin_dir/forbidden-sibling"
-chmod +x \
-  "$runtime_bin_dir/fake_runtime" \
-  "$runtime_bin_dir/runtime-real" \
-  "$runtime_bin_dir/forbidden-sibling"
+chmod 0500 "$runtime_bin_dir/fake_runtime"
+printf 'pass\n' > "$codex_bin_dir/mode"
+chmod 0600 "$codex_bin_dir/mode"
 
-printf '%s\n' \
-  '#!/usr/bin/env fake_runtime' \
-  'if command -v forbidden-sibling >/dev/null 2>&1; then exit 41; fi' \
-  'printf "runtime-isolated PATH=%s\n" "$PATH"' \
-  > "$codex_bin_dir/codex"
-chmod +x "$codex_bin_dir/codex"
+{
+  printf '%s\n' \
+    '#!/usr/bin/env fake_runtime' \
+    'set -eu'
+  printf 'forbidden_runtime_dir=%q\n' "$runtime_bin_dir"
+  printf '%s\n' \
+    'mode=$(cat "$(dirname "$0")/mode")' \
+    'if [ "${1:-}" = "--version" ]; then echo "codex-cli 0.145.0"; exit 0; fi' \
+    'config="$CODEX_HOME/config.toml"' \
+    'test -f "$config"' \
+    'grep -q '\''^default_permissions = "fresh_agent"$'\'' "$config"' \
+    'grep -q '\''^web_search = "disabled"$'\'' "$config"' \
+    'grep -q '\''^allow_login_shell = false$'\'' "$config"' \
+    'grep -q '\''^project_doc_max_bytes = 0$'\'' "$config"' \
+    'grep -q '\''^\[permissions.fresh_agent.filesystem\.":root"\]$'\'' "$config"' \
+    'grep -q '\''^\[permissions.fresh_agent.network\]$'\'' "$config"' \
+    'grep -q '\''^enabled = false$'\'' "$config"' \
+    'if awk '\''/^\[shell_environment_policy.set\]/{inside=1;next} /^\[/{inside=0} inside{print}'\'' "$config" | grep -q CODEX_HOME; then exit 61; fi' \
+    'case "$PATH" in *"$(dirname "$0")"*) exit 62 ;; esac' \
+    'case "$PATH" in *"$forbidden_runtime_dir"*) exit 63 ;; esac' \
+    'test -z "${OPENAI_API_KEY+x}"' \
+    'test -z "${GITHUB_TOKEN+x}"' \
+    'command="${1:-}"' \
+    'shift || true' \
+    'if [ "$command" = "sandbox" ]; then' \
+    '  case " $* " in *" -P fresh_agent "*) ;; *) exit 64 ;; esac' \
+    '  case " $* " in *" -C "*) ;; *) exit 65 ;; esac' \
+    '  echo "FRESH-AGENT PERMISSION CANARY PASS"' \
+    '  exit 0' \
+    'fi' \
+    'test "$command" = "exec"' \
+    'case " $* " in *" --sandbox "*|*" --ignore-user-config "*) exit 66 ;; esac' \
+    'ephemeral=0; strict=0; json=0; ignore_rules=0; skip_git=0' \
+    'probe=""; output=""; schema=""; model=""; reasoning=""' \
+    'while [ "$#" -gt 0 ]; do' \
+    '  case "$1" in' \
+    '    --ephemeral) ephemeral=1; shift ;;' \
+    '    --strict-config) strict=1; shift ;;' \
+    '    --json) json=1; shift ;;' \
+    '    --ignore-rules) ignore_rules=1; shift ;;' \
+    '    --skip-git-repo-check) skip_git=1; shift ;;' \
+    '    -C) probe=$2; shift 2 ;;' \
+    '    --output-last-message) output=$2; shift 2 ;;' \
+    '    --output-schema) schema=$2; shift 2 ;;' \
+    '    -m) model=$2; shift 2 ;;' \
+    '    -c) reasoning=$2; shift 2 ;;' \
+    '    -) shift; cat > "$probe/prompt-seen.txt"; break ;;' \
+    '    *) exit 67 ;;' \
+    '  esac' \
+    'done' \
+    'test "$ephemeral$strict$json$ignore_rules$skip_git" = "11111"' \
+    'test "$model" = "gpt-5.6-sol"' \
+    'test "$reasoning" = '\''model_reasoning_effort="max"'\''' \
+    'test -d "$probe"' \
+    'test -f "$schema"' \
+    'test -n "$output"' \
+    'grep -q "Use this severity rubric" "$probe/prompt-seen.txt"' \
+    'install_root=$(CDPATH= cd -- "$(dirname "$schema")/.." && pwd)' \
+    'evidence_root=$(dirname "$output")' \
+    'grep -Fq "\"$install_root\" = \"read\"" "$config"' \
+    'grep -Fq "\"$probe\" = \"write\"" "$config"' \
+    'grep -Fq "\"$evidence_root\" = \"deny\"" "$config"' \
+    'case "$PATH" in "$install_root/bin:"*) ;; *) exit 68 ;; esac' \
+    'if [ "$mode" = "exit19" ]; then exit 19; fi' \
+    'verdict="BASELINE PASS"' \
+    'if [ "$mode" = "fail" ]; then verdict="BASELINE FAIL"; fi' \
+    'printf "# Probe result\n\n%s\n" "$verdict" > "$probe/probe-result.md"' \
+    'printf "# Probe transcript\n\nfake command, exit 0\n" > "$probe/probe-transcript.md"' \
+    'if [ "$mode" = "malformed" ]; then' \
+    '  printf "{\n" > "$output"' \
+    'else' \
+    '  printf '\''{"verdict":"%s","result_path":"probe-result.md","transcript_path":"probe-transcript.md"}\n'\'' "$verdict" > "$output"' \
+    'fi' \
+    'printf '\''{"type":"fake-result"}\n'\'''
+} > "$codex_bin_dir/codex"
+chmod 0500 "$codex_bin_dir/codex"
 
-mkdir -p "$test_root/probe-runtime" "$test_root/evidence-runtime"
+runner="$install_root/control/run.sh"
+probe="$case_root/probe"
+evidence="$case_root/evidence"
 PATH="$codex_bin_dir:$runtime_bin_dir:/usr/bin:/bin" \
-  bash "$runner" \
-  "$install_root" \
-  "$test_root/probe-runtime" \
-  "$test_root/evidence-runtime" \
-  "$test_root/auth.json" \
-  >/dev/null
-grep -q '^runtime-isolated PATH=/' \
-  "$test_root/evidence-runtime/codex-transcript.log" ||
-  fail "private runtime launch"
-if grep -q "$runtime_bin_dir" \
-  "$test_root/evidence-runtime/codex-transcript.log"; then
-  fail "runtime directory leaked into PATH"
+  "$runner" "$head" "$probe" "$evidence" "$case_root/auth.json" \
+  > "$case_root/success.stdout"
+
+grep -Fq "verdict=BASELINE PASS" "$case_root/success.stdout" ||
+  fail "successful structured verdict"
+jq -e '
+  .schema == "office.fresh-agent.run/1" and
+  .verdict == "BASELINE PASS" and
+  .codex_exit_status == 0 and
+  (.integrity.candidate_manifest.before ==
+    .integrity.candidate_manifest.after) and
+  (.integrity.codex_launcher.before ==
+    .integrity.codex_launcher.after) and
+  (.integrity.codex_runtime.before ==
+    .integrity.codex_runtime.after) and
+  (.integrity.isolation_config.before ==
+    .integrity.isolation_config.after)
+' "$evidence/RUN.json" >/dev/null ||
+  fail "final run manifest"
+jq -e '
+  .schema == "office.fresh-agent.run-preflight/1" and
+  .candidate_head == $head and
+  (.codex.launcher_version | startswith("codex-cli "))
+' --arg head "$head" "$evidence/RUN-PREFLIGHT.json" >/dev/null ||
+  fail "preflight manifest"
+grep -q '^FRESH-AGENT PERMISSION CANARY PASS$' \
+  "$evidence/permission-canary.log" ||
+  fail "permission canary evidence"
+if find "$case_root" -maxdepth 1 -type d -name '.office-f1b-isolation.*' |
+  grep -q .; then
+  fail "isolated credential state was not cleaned"
 fi
 
-ln -s /usr/bin/awk "$runtime_bin_dir/env_runtime"
+expect_failure() {
+  local label="$1"
+  local expected_status="$2"
+  local pattern="$3"
+  shift 3
+  local stdout="$test_root/$label.stdout"
+  local stderr="$test_root/$label.stderr"
+  local status
+  set +e
+  PATH="$codex_bin_dir:$runtime_bin_dir:/usr/bin:/bin" \
+    "$@" >"$stdout" 2>"$stderr"
+  status="$?"
+  set -e
+  [ "$status" -eq "$expected_status" ] ||
+    fail "$label status: expected $expected_status, found $status"
+  if [ -n "$pattern" ]; then
+    grep -q "$pattern" "$stderr" ||
+      fail "$label diagnostic"
+  fi
+}
+
+mkdir -m 0700 "$case_root/preexisting-probe"
+expect_failure \
+  preexisting 1 'must not already exist' \
+  "$runner" "$head" \
+  "$case_root/preexisting-probe" \
+  "$case_root/preexisting-evidence" \
+  "$case_root/auth.json"
+
+expect_failure \
+  overlap 1 'must not overlap' \
+  "$runner" "$head" \
+  "$case_root/same-output" \
+  "$case_root/same-output" \
+  "$case_root/auth.json"
+
+weak_parent="$test_root/weak-parent"
+mkdir -m 0755 "$weak_parent"
+expect_failure \
+  weak-parent 1 'must not grant group or other access' \
+  "$runner" "$head" \
+  "$weak_parent/probe" \
+  "$weak_parent/evidence" \
+  "$case_root/auth.json"
+
+expect_failure \
+  wrong-head 1 'candidate manifest failed strict schema validation' \
+  "$runner" "0000000000000000000000000000000000000000" \
+  "$case_root/wrong-head-probe" \
+  "$case_root/wrong-head-evidence" \
+  "$case_root/auth.json"
+
+ln -s "$case_root/auth.json" "$case_root/auth-link.json"
+expect_failure \
+  auth-symlink 1 'must not be a symlink' \
+  "$runner" "$head" \
+  "$case_root/auth-link-probe" \
+  "$case_root/auth-link-evidence" \
+  "$case_root/auth-link.json"
+
+colon_parent="$test_root/colon:parent"
+mkdir -m 0700 "$colon_parent"
+colon_install="$colon_parent/install"
+make_candidate "$colon_install"
+expect_failure \
+  colon-path 1 "must not contain ':'" \
+  "$colon_install/control/run.sh" "$head" \
+  "$colon_parent/probe" \
+  "$colon_parent/evidence" \
+  "$case_root/auth.json"
+
+chmod 0700 "$codex_bin_dir"
+chmod 0700 "$codex_bin_dir/codex"
+cp "$codex_bin_dir/codex" "$codex_bin_dir/codex.simple"
 printf '%s\n' \
-  '#!/usr/bin/env -S env_runtime -f' \
-  'BEGIN {' \
-  '  if ("PWD" in ENVIRON) { print "PWD leaked" > "/dev/stderr"; exit 44 }' \
-  '  if ("SHLVL" in ENVIRON) { print "SHLVL leaked" > "/dev/stderr"; exit 45 }' \
-  '  if ("_" in ENVIRON) { print "_ leaked" > "/dev/stderr"; exit 46 }' \
-  '  print "forwarder-env-isolated"' \
-  '  exit 0' \
-  '}' \
+  '#!/usr/bin/env -S fake_runtime --flag' \
+  'exit 0' \
   > "$codex_bin_dir/codex"
-chmod +x "$codex_bin_dir/codex"
+chmod 0500 "$codex_bin_dir/codex"
+expect_failure \
+  env-shebang 1 'must name exactly one simple runtime' \
+  "$runner" "$head" \
+  "$case_root/env-shebang-probe" \
+  "$case_root/env-shebang-evidence" \
+  "$case_root/auth.json"
+mv "$codex_bin_dir/codex.simple" "$codex_bin_dir/codex"
+chmod 0500 "$codex_bin_dir/codex"
+chmod 0700 "$codex_bin_dir"
 
-mkdir -p "$test_root/probe-env" "$test_root/evidence-env"
-PATH="$codex_bin_dir:$runtime_bin_dir:/usr/bin:/bin" \
-  bash "$runner" \
-  "$install_root" \
-  "$test_root/probe-env" \
-  "$test_root/evidence-env" \
-  "$test_root/auth.json" \
-  >/dev/null
-grep -q '^forwarder-env-isolated$' \
-  "$test_root/evidence-env/codex-transcript.log" ||
-  fail "forwarder environment isolation"
+printf 'exit19\n' > "$codex_bin_dir/mode"
+expect_failure \
+  codex-status 19 'Codex probe exited with status 19' \
+  "$runner" "$head" \
+  "$case_root/status-probe" \
+  "$case_root/status-evidence" \
+  "$case_root/auth.json"
 
-printf '%s\n' \
-  '#!/bin/sh' \
-  'expected_path=$PATH' \
-  'for login_shell in /bin/sh /bin/bash /bin/zsh; do' \
-  '  [ -x "$login_shell" ] || continue' \
-  '  actual_path=$("$login_shell" -lc '\''printf "%s" "$PATH"'\'')' \
-  '  if [ "$actual_path" != "$expected_path" ]; then' \
-  '    printf "login shell changed PATH: %s -> %s\n" "$expected_path" "$actual_path" >&2' \
-  '    exit 47' \
-  '  fi' \
-  'done' \
-  'printf "login-shell-path-isolated\n"' \
-  > "$codex_bin_dir/codex"
-chmod +x "$codex_bin_dir/codex"
+printf 'malformed\n' > "$codex_bin_dir/mode"
+expect_failure \
+  malformed-final 1 'did not match the required structured result' \
+  "$runner" "$head" \
+  "$case_root/malformed-probe" \
+  "$case_root/malformed-evidence" \
+  "$case_root/auth.json"
 
-mkdir -p "$test_root/probe-login" "$test_root/evidence-login"
-PATH="$codex_bin_dir:/usr/bin:/bin" \
-  bash "$runner" \
-  "$install_root" \
-  "$test_root/probe-login" \
-  "$test_root/evidence-login" \
-  "$test_root/auth.json" \
-  >/dev/null
-grep -q '^login-shell-path-isolated$' \
-  "$test_root/evidence-login/codex-transcript.log" ||
-  fail "login-shell PATH isolation"
-
-printf '%s\n' \
-  '#!/bin/sh' \
-  'exec codex-helper "$@"' \
-  > "$codex_bin_dir/codex"
-printf '%s\n' \
-  '#!/bin/sh' \
-  'exec codex-real "$@"' \
-  > "$codex_bin_dir/codex-helper"
-printf '%s\n' \
-  '#!/bin/sh' \
-  'exec "$(dirname "$0")/codex-final" "$@"' \
-  > "$codex_bin_dir/codex-real"
-printf '%s\n' \
-  '#!/bin/sh' \
-  'if command -v forbidden-sibling >/dev/null 2>&1; then exit 42; fi' \
-  'printf "wrapper-isolated\n"' \
-  > "$codex_bin_dir/codex-final"
-printf '#!/bin/sh\nexit 98\n' > "$codex_bin_dir/forbidden-sibling"
-chmod +x \
-  "$codex_bin_dir/codex" \
-  "$codex_bin_dir/codex-helper" \
-  "$codex_bin_dir/codex-real" \
-  "$codex_bin_dir/codex-final" \
-  "$codex_bin_dir/forbidden-sibling"
-
-mkdir -p "$test_root/probe-wrapper" "$test_root/evidence-wrapper"
-OFFICE_F1B_CODEX_LAUNCHER_HELPERS="codex-helper:codex-real" \
-  PATH="$codex_bin_dir:/usr/bin:/bin" \
-  bash "$runner" \
-  "$install_root" \
-  "$test_root/probe-wrapper" \
-  "$test_root/evidence-wrapper" \
-  "$test_root/auth.json" \
-  >/dev/null
-grep -q '^wrapper-isolated$' \
-  "$test_root/evidence-wrapper/codex-transcript.log" ||
-  fail "shell-wrapper helper launch"
-
-mkdir -p \
-  "$test_root/a/probe" \
-  "$test_root/b/sub" \
-  "$test_root/b/probe" \
-  "$test_root/evidence-physical"
-ln -s "$test_root/b/sub" "$test_root/a/link"
-physical_probe="$(
-  cd -P -- "$test_root/a/link/../probe" >/dev/null
-  pwd -P
-)"
-physical_output="$(
-  OFFICE_F1B_CODEX_LAUNCHER_HELPERS="codex-helper:codex-real" \
-    PATH="$codex_bin_dir:/usr/bin:/bin" \
-    bash "$runner" \
-    "$install_root" \
-    "$test_root/a/link/../probe" \
-    "$test_root/evidence-physical" \
-    "$test_root/auth.json"
-)"
-case "$physical_output" in
-  *"probe_dir=$physical_probe"*) ;;
-  *) fail "physical path canonicalization" ;;
-esac
-
-relative_root="${test_root#"$root/"}"
-mkdir -p \
-  "$test_root/probe-relative" \
-  "$test_root/evidence-relative" \
-  "$test_root/cdpath/$relative_root/install" \
-  "$test_root/cdpath/$relative_root/probe-relative" \
-  "$test_root/cdpath/$relative_root/evidence-relative"
-(
-  cd "$root"
-  CDPATH="$test_root/cdpath" \
-    OFFICE_F1B_CODEX_LAUNCHER_HELPERS="codex-helper:codex-real" \
-    PATH="$codex_bin_dir:/usr/bin:/bin" \
-    bash "$runner" \
-    "$relative_root/install" \
-    "$relative_root/probe-relative" \
-    "$relative_root/evidence-relative" \
-    "$relative_root/auth.json" \
-    >/dev/null
-)
-grep -q '^wrapper-isolated$' \
-  "$test_root/evidence-relative/codex-transcript.log" ||
-  fail "relative paths with ambient CDPATH"
-
-printf '%s\n' \
-  '#!/bin/sh' \
-  '# forbidden-sibling is not a launcher dependency' \
-  'helper_name=forbidden' \
-  'helper_name="${helper_name}-sibling"' \
-  'if command -v "$helper_name" >/dev/null 2>&1; then exit 43; fi' \
-  'printf "comment-isolated\n"' \
-  > "$codex_bin_dir/codex"
-chmod +x "$codex_bin_dir/codex"
-
-mkdir -p "$test_root/probe-comment" "$test_root/evidence-comment"
-PATH="$codex_bin_dir:/usr/bin:/bin" \
-  bash "$runner" \
-  "$install_root" \
-  "$test_root/probe-comment" \
-  "$test_root/evidence-comment" \
-  "$test_root/auth.json" \
-  >/dev/null
-grep -q '^comment-isolated$' \
-  "$test_root/evidence-comment/codex-transcript.log" ||
-  fail "non-command launcher text leaked a sibling"
-
-mkdir -p "$test_root/overlap"
-if PATH="$codex_bin_dir:/usr/bin:/bin" \
-  bash "$runner" \
-  "$install_root" \
-  "$test_root/overlap" \
-  "$test_root/overlap" \
-  "$test_root/auth.json" \
-  >"$test_root/overlap.stdout" 2>"$test_root/overlap.stderr"; then
-  fail "overlapping output directories were accepted"
-fi
-grep -q 'must not overlap' "$test_root/overlap.stderr" ||
-  fail "overlap diagnostic"
+printf 'fail\n' > "$codex_bin_dir/mode"
+expect_failure \
+  baseline-fail 3 '' \
+  "$runner" "$head" \
+  "$case_root/fail-probe" \
+  "$case_root/fail-evidence" \
+  "$case_root/auth.json"
+jq -e '.verdict == "BASELINE FAIL"' \
+  "$case_root/fail-evidence/RUN.json" >/dev/null ||
+  fail "BASELINE FAIL run manifest"
 
 echo "FRESH-AGENT RUNNER TEST PASS"
