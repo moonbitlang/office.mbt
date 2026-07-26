@@ -3448,10 +3448,10 @@ fn write_with_io(
     let legacy_vml_budget = archive.next_composition_budget()
     let source_vml = sheet.vml_drawing_xml()
     let form_controls = sheet.form_controls()
-    let (base_vml, missing_comments, max_retained_shape_id) = match source_vml {
+    let (base_vml, missing_comments) = match source_vml {
       Some(xml) =>
         if stored_comments.length() > 0 {
-          let (reconciled, missing, max_shape_id) = reconcile_vml_comment_shapes(
+          let (reconciled, missing, _) = reconcile_vml_comment_shapes(
             xml,
             stored_comments,
             budget?=legacy_vml_budget.remaining_budget(),
@@ -3459,34 +3459,51 @@ fn write_with_io(
           if reconciled != xml {
             legacy_vml_budget.consume(reconciled)
           }
-          (Some(reconciled), missing, max_shape_id)
+          (Some(reconciled), missing)
         } else {
-          let max_shape_id = if form_controls.length() > 0 {
-            max_vml_shape_numeric_id(xml)
-          } else {
-            1024
-          }
-          (Some(xml), [], max_shape_id)
+          (Some(xml), [])
         }
-      None => (None, [], 1024)
+      None => (None, [])
     }
     let generated_comment_count = match source_vml {
       Some(_) => missing_comments.length()
       None => stored_comments.length()
     }
-    let next_comment_shape_id = if generated_comment_count > 0 ||
-      form_controls.length() > 0 {
-      next_vml_shape_numeric_id_after(max_retained_shape_id)
+    let needs_generated_vml_ids = generated_comment_count > 0 ||
+      form_controls.length() > 0
+    let (used_vml_shape_ids, max_retained_shape_id) = if needs_generated_vml_ids {
+      match base_vml {
+        Some(xml) => vml_used_shape_numeric_ids(xml)
+        None => (Map([]), 1024)
+      }
+    } else {
+      (Map([]), 1024)
+    }
+    let next_comment_shape_id = if generated_comment_count > 0 {
+      allocate_vml_shape_id_range(
+        used_vml_shape_ids, max_retained_shape_id, 1025, generated_comment_count,
+      )
     } else {
       1025
     }
-    if generated_comment_count > 0x7fffffff - next_comment_shape_id {
-      raise InvalidVmlDrawing(msg="comment VML shape id range is invalid")
+    reserve_vml_shape_id_range(
+      used_vml_shape_ids, next_comment_shape_id, generated_comment_count,
+    )
+    let preferred_after_comments = if generated_comment_count > 0 {
+      let last_comment_shape_id = next_comment_shape_id +
+        generated_comment_count -
+        1
+      last_comment_shape_id.max(max_retained_shape_id)
+    } else {
+      max_retained_shape_id
     }
-    let next_generated_shape_id = next_comment_shape_id +
-      generated_comment_count
-    let form_control_shape_id_start = if next_generated_shape_id > 2048 {
-      next_generated_shape_id
+    let form_control_shape_id_start = if form_controls.length() > 0 {
+      allocate_vml_shape_id_range(
+        used_vml_shape_ids,
+        preferred_after_comments,
+        2048,
+        form_controls.length(),
+      )
     } else {
       2048
     }
