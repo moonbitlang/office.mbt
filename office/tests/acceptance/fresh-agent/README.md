@@ -19,12 +19,15 @@ CLI instance. The F1b evidence run uses the current CLI's `max` reasoning tier;
 ordinary incremental reviews may use `xhigh`. Point `auth_json` at the current
 Codex `auth.json` (normally `~/.codex/auth.json`). The runner copies only that
 credential into temporary state; it launches Codex with an empty environment,
-an empty user home, and an empty Codex home, so global `AGENTS.md` files,
-personal skills, plugins, configuration, and rules cannot coach the probe. Its
-PATH contains only the installed Office commands, a private launcher directory,
-and fixed system directories. That private directory exposes the exact
-`/usr/bin/env` runtime. Private forwarding entries preserve the runtime's
-original invocation path without retaining shell-added environment variables.
+an isolated Codex home, and an isolated user home containing only generated
+login-shell PATH guards, so global `AGENTS.md` files, personal skills, plugins,
+configuration, and rules cannot coach the probe. An explicit Codex subprocess
+environment policy and the guards restore the allowlist after system login
+profiles run. Its PATH therefore contains only the installed Office commands, a
+private launcher directory, and fixed system directories. That private
+directory exposes the exact `/usr/bin/env` runtime. Private forwarding entries
+preserve the runtime's original invocation path without retaining shell-added
+environment variables.
 A fixed `/usr/bin/perl` exec trampoline keeps executable paths out of
 `/usr/bin/env`'s assignment grammar; the original runtime and launcher
 directories are never added wholesale. The runner resolves paths physically

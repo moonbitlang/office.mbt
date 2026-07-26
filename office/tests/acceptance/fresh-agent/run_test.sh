@@ -86,6 +86,33 @@ grep -q '^forwarder-env-isolated$' \
 
 printf '%s\n' \
   '#!/bin/sh' \
+  'expected_path=$PATH' \
+  'for login_shell in /bin/sh /bin/bash /bin/zsh; do' \
+  '  [ -x "$login_shell" ] || continue' \
+  '  actual_path=$("$login_shell" -lc '\''printf "%s" "$PATH"'\'')' \
+  '  if [ "$actual_path" != "$expected_path" ]; then' \
+  '    printf "login shell changed PATH: %s -> %s\n" "$expected_path" "$actual_path" >&2' \
+  '    exit 47' \
+  '  fi' \
+  'done' \
+  'printf "login-shell-path-isolated\n"' \
+  > "$codex_bin_dir/codex"
+chmod +x "$codex_bin_dir/codex"
+
+mkdir -p "$test_root/probe-login" "$test_root/evidence-login"
+PATH="$codex_bin_dir:/usr/bin:/bin" \
+  bash "$runner" \
+  "$install_root" \
+  "$test_root/probe-login" \
+  "$test_root/evidence-login" \
+  "$test_root/auth.json" \
+  >/dev/null
+grep -q '^login-shell-path-isolated$' \
+  "$test_root/evidence-login/codex-transcript.log" ||
+  fail "login-shell PATH isolation"
+
+printf '%s\n' \
+  '#!/bin/sh' \
   'exec codex-helper "$@"' \
   > "$codex_bin_dir/codex"
 printf '%s\n' \
