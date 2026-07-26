@@ -222,6 +222,7 @@ chmod 0600 "$codex_bin_dir/mode"
     'if [ "$command" = "sandbox" ]; then' \
     '  case " $* " in *" --include-managed-config "*) ;; *) exit 62 ;; esac' \
     '  case " $* " in *" -P fresh_agent "*) ;; *) exit 63 ;; esac' \
+    '  if [ "$mode" = "sandbox-fail" ]; then echo "sandbox diagnostic" >&2; exit 41; fi' \
     '  printf "FRESH-AGENT PERMISSION CANARY PASS\\n"' \
     '  exit 0' \
     'fi' \
@@ -475,6 +476,12 @@ expect_failure indirect-bash 2 'execute run.sh directly' \
   /bin/bash "$runner"
 expect_failure indirect-prepare-bash 2 'execute prepare.sh directly' \
   /bin/bash "$script_dir/prepare.sh"
+
+printf 'sandbox-fail\n' > "$codex_bin_dir/mode"
+expect_failure sandbox-fail 1 'sandbox diagnostic' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/sandbox-fail-probe" "$case_root/sandbox-fail-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'old-version\n' > "$codex_bin_dir/mode"
 expect_failure old-version 1 '0.145.0 or newer is required' \
