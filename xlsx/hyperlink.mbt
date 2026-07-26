@@ -48,7 +48,7 @@ pub fn HyperlinkOpts::with_values(
 }
 
 ///|
-let max_sheet_hyperlinks = 65529
+let max_sheet_hyperlinks = 65530
 
 ///|
 /// Keeps every writer-produced relationship start tag below the default
@@ -118,6 +118,25 @@ fn is_allowed_external_hyperlink_scheme(scheme : StringView) -> Bool {
 }
 
 ///|
+/// Unqualified A1 ranges such as `A1:B2` and `A:A` resemble URI schemes at
+/// their first colon. Recognize the complete range before applying the URI
+/// scheme guard to workbook-internal locations.
+fn is_unqualified_hyperlink_location_range(target : StringView) -> Bool {
+  let trimmed = target.trim()
+  match trimmed.split_once(":") {
+    None => false
+    Some((start, end)) => {
+      if end.contains(":") {
+        return false
+      }
+      (parse_cell_ref(start) is Some(_) && parse_cell_ref(end) is Some(_)) ||
+      (parse_column_ref(start) is Some(_) && parse_column_ref(end) is Some(_)) ||
+      (parse_row_ref(start) is Some(_) && parse_row_ref(end) is Some(_))
+    }
+  }
+}
+
+///|
 fn validate_hyperlink_xml_text(
   value : StringView,
   field : StringView,
@@ -162,9 +181,11 @@ fn validate_hyperlink_values(
             )
           }
         Location =>
-          raise InvalidHyperlink(
-            msg="location hyperlink target must not use URI scheme '\{scheme}:'",
-          )
+          if !is_unqualified_hyperlink_location_range(target) {
+            raise InvalidHyperlink(
+              msg="location hyperlink target must not use URI scheme '\{scheme}:'",
+            )
+          }
         Unset => ()
       }
     None => ()
@@ -187,7 +208,6 @@ fn hyperlink_matches_type(link : Hyperlink, link_type : HyperlinkType?) -> Bool 
 ///|
 test "hyperlink ceiling permits replacement and rejects a new identity" {
   let sheet = Worksheet::new("Sheet1")
-  sheet.set_cell_hyperlink("A1", "https://before.example", External)
   let dummy : Hyperlink = {
     reference: "Z1",
     target: "https://example.com",
@@ -198,6 +218,8 @@ test "hyperlink ceiling permits replacement and rejects a new identity" {
   }
   let many : Array[Hyperlink] = Array::make(max_sheet_hyperlinks - 1, dummy)
   sheet.hyperlinks.append(many)
+  sheet.set_cell_hyperlink("A1", "https://before.example", External)
+  inspect(sheet.get_hyperlinks().length(), content="65530")
   sheet.set_cell_hyperlink("A1", "https://after.example", External)
   debug_inspect(
     sheet.get_cell_hyperlink("A1").map(link => link.target),
@@ -213,7 +235,7 @@ test "hyperlink ceiling permits replacement and rejects a new identity" {
   debug_inspect(
     result,
     content=(
-      #|Err(HyperlinkLimitExceeded(limit=65529))
+      #|Err(HyperlinkLimitExceeded(limit=65530))
     ),
   )
 }
