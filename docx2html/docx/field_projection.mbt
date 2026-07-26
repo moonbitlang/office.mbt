@@ -249,6 +249,7 @@ fn reader_order_field_story_identity(
 fn scan_reader_order_field_carrier(
   elements : Array[ScannedElement],
   identity : Int,
+  story_identity : Int,
   instruction_target : StringBuilder?,
   budget : ReaderOrderFieldBudget,
 ) -> ReaderOrderCarrierSummary raise DocxError {
@@ -257,6 +258,11 @@ fn scan_reader_order_field_carrier(
   fn visit(current : Int) -> Unit raise DocxError {
     budget.charge_work()
     let element = elements[current]
+    if is_wml_uri(element.uri) &&
+      element.local_name == "txbxContent" &&
+      current != story_identity {
+      return
+    }
     if is_wml_uri(element.uri) {
       if element.local_name == "fldChar" {
         marker_count += 1
@@ -284,23 +290,24 @@ fn scan_reader_order_field_carrier(
 }
 
 ///|
-fn collect_reader_order_carrier_sources(
+fn reader_order_contribution_carrier(
   elements : Array[ScannedElement],
-  identity : Int,
-  carrier_identity : Int,
-  source_carriers : Map[Int, Int],
+  contribution : ReaderOrderContribution,
   budget : ReaderOrderFieldBudget,
-) -> Unit raise DocxError {
-  budget.charge_work()
-  budget.charge_retained()
-  source_carriers[identity] = carrier_identity
-  let mut child = elements[identity].first_child_index
-  while child >= 0 {
-    collect_reader_order_carrier_sources(
-      elements, child, carrier_identity, source_carriers, budget,
-    )
-    child = elements[child].next_sibling_index
+) -> Int? raise DocxError {
+  let paragraph_identity = contribution.paragraph_identity
+  let mut current = contribution.source_identity
+  while current >= 0 &&
+        current < elements.length() &&
+        current != paragraph_identity {
+    budget.charge_work()
+    let parent = elements[current].parent_index
+    if parent == paragraph_identity {
+      return Some(current)
+    }
+    current = parent
   }
+  None
 }
 
 ///|
@@ -594,24 +601,14 @@ fn classify_reader_order_carrier(
 ///|
 fn apply_reader_order_carrier_class(
   contributions : Array[ReaderOrderContribution],
-  source_carriers : Map[Int, Int],
-  classes : Map[Int, ReaderOrderCarrierClass],
+  classification : ReaderOrderCarrierClass,
   budget : ReaderOrderFieldBudget,
 ) -> Unit raise DocxError {
   for contribution in contributions {
     budget.charge_work()
-    match source_carriers.get(contribution.source_identity) {
-      Some(carrier_identity) =>
-        match classes.get(carrier_identity) {
-          Some(classification) => {
-            contribution.field_identity = classification.field_identity
-            contribution.field_region = classification.region
-            contribution.field_refusal = classification.refusal_identity
-          }
-          None => ()
-        }
-      None => ()
-    }
+    contribution.field_identity = classification.field_identity
+    contribution.field_region = classification.region
+    contribution.field_refusal = classification.refusal_identity
   }
 }
 
@@ -652,104 +649,98 @@ fn classify_reader_order_fields(
     None => reader_order_field_budget()
   }
   let index = empty_reader_order_field_index()
-  let contributions_by_paragraph : Map[Int, Array[ReaderOrderContribution]] = Map([],
+  let contributions_by_carrier : Map[Int, Array[ReaderOrderContribution]] = Map([],
   )
   for paragraph in projection.paragraphs {
     for contribution in paragraph.contributions {
       budget.charge_work()
-      budget.charge_retained()
-      match contributions_by_paragraph.get(contribution.paragraph_identity) {
-        Some(items) => items.push(contribution)
-        None =>
-          contributions_by_paragraph[contribution.paragraph_identity] = [
-            contribution,
-          ]
+      match
+        reader_order_contribution_carrier(
+          projection.source_elements,
+          contribution,
+          budget,
+        ) {
+        Some(carrier_identity) => {
+          budget.charge_retained()
+          match contributions_by_carrier.get(carrier_identity) {
+            Some(items) => items.push(contribution)
+            None => contributions_by_carrier[carrier_identity] = [contribution]
+          }
+        }
+        None => ()
       }
     }
   }
   let states : Array[ReaderOrderFieldStoryState] = []
   let state_by_story : Map[Int, ReaderOrderFieldStoryState] = Map([])
-  let seen_paragraphs : Map[Int, Bool] = Map([])
+  let story_by_paragraph : Map[Int, Int] = Map([])
   let seen_markers : Map[Int, Int] = Map([])
-  for paragraph in projection.paragraphs {
-    for source in paragraph.sources {
-      let paragraph_identity = source.identity
-      if seen_paragraphs.contains(paragraph_identity) {
-        continue
-      }
-      budget.charge_retained()
-      seen_paragraphs[paragraph_identity] = true
-      let story_identity = reader_order_field_story_identity(
-        projection.source_elements,
-        paragraph_identity,
-        budget,
-      )
-      let state = match state_by_story.get(story_identity) {
-        Some(value) => value
-        None => {
-          budget.charge_retained()
-          let value = ReaderOrderFieldStoryState::{
-            identity: story_identity,
-            stack: [],
-            failed_refusal: None,
-          }
-          states.push(value)
-          state_by_story[story_identity] = value
-          value
-        }
-      }
-      let classes : Map[Int, ReaderOrderCarrierClass] = Map([])
-      let source_carriers : Map[Int, Int] = Map([])
-      let mut carrier = projection.source_elements[paragraph_identity].first_child_index
-      while carrier >= 0 {
+  for event in projection.field_carriers {
+    let paragraph_identity = event.paragraph_identity
+    let carrier = event.carrier_identity
+    let story_identity = match story_by_paragraph.get(paragraph_identity) {
+      Some(value) => value
+      None => {
+        let value = reader_order_field_story_identity(
+          projection.source_elements,
+          paragraph_identity,
+          budget,
+        )
         budget.charge_retained()
-        collect_reader_order_carrier_sources(
-          projection.source_elements,
-          carrier,
-          carrier,
-          source_carriers,
-          budget,
-        )
-        let summary = match state.failed_refusal {
-          Some(_) => { marker_identity: None, marker_count: 0 }
-          None => {
-            // BodyReader collects all instruction text in the carrier before
-            // it interprets the carrier's first descendant field marker.
-            let instruction_target = match state.stack.last() {
-              Some(field_identity) =>
-                if index.fields[field_identity].result is None {
-                  Some(index.fields[field_identity].instruction_text)
-                } else {
-                  None
-                }
-              None => None
-            }
-            scan_reader_order_field_carrier(
-              projection.source_elements,
-              carrier,
-              instruction_target,
-              budget,
-            )
-          }
+        story_by_paragraph[paragraph_identity] = value
+        value
+      }
+    }
+    let state = match state_by_story.get(story_identity) {
+      Some(value) => value
+      None => {
+        budget.charge_retained()
+        let value = ReaderOrderFieldStoryState::{
+          identity: story_identity,
+          stack: [],
+          failed_refusal: None,
         }
-        classes[carrier] = classify_reader_order_carrier(
-          index,
-          state,
-          summary,
-          carrier,
+        states.push(value)
+        state_by_story[story_identity] = value
+        value
+      }
+    }
+    let summary = match state.failed_refusal {
+      Some(_) => { marker_identity: None, marker_count: 0 }
+      None => {
+        // BodyReader collects all instruction text in the carrier before
+        // it interprets the carrier's first descendant field marker.
+        let instruction_target = match state.stack.last() {
+          Some(field_identity) =>
+            if index.fields[field_identity].result is None {
+              Some(index.fields[field_identity].instruction_text)
+            } else {
+              None
+            }
+          None => None
+        }
+        scan_reader_order_field_carrier(
           projection.source_elements,
-          seen_markers,
+          carrier,
+          story_identity,
+          instruction_target,
           budget,
         )
-        carrier = projection.source_elements[carrier].next_sibling_index
       }
-      match contributions_by_paragraph.get(paragraph_identity) {
-        Some(contributions) =>
-          apply_reader_order_carrier_class(
-            contributions, source_carriers, classes, budget,
-          )
-        None => ()
-      }
+    }
+    let classification = classify_reader_order_carrier(
+      index,
+      state,
+      summary,
+      carrier,
+      projection.source_elements,
+      seen_markers,
+      budget,
+    )
+    match contributions_by_carrier.get(carrier) {
+      Some(contributions) =>
+        apply_reader_order_carrier_class(contributions, classification, budget)
+      None => ()
     }
   }
   for state in states {
