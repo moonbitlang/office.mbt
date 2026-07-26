@@ -532,52 +532,52 @@ write_office_launcher() {
   chmod 0500 "$launcher"
 }
 
-assert_recorded_office_command() {
+record_workflow_evidence() {
   local runtime="$1"
-  local verb="$2"
-  /usr/bin/jq -e \
+  local format="$2"
+  local verb="$3"
+  local matches
+  matches="$(/usr/bin/jq -c \
     --arg executable "office-$runtime" \
+    --arg format "$format" \
     --arg verb "$verb" \
     '
       def masks_status:
+        test("[\\r\\n]") or
         test("[;]|&&|[|][|]|(^|[^|])[|]([^|]|$)|(^|[^>])&([^>]|$)");
       def standalone_command($executable; $verb):
         test(
           "^([[:space:]]*|/bin/(sh|bash|zsh) -l?c [^A-Za-z0-9_-]?)" +
           $executable + "[[:space:]]+" + $verb + "([[:space:]]|$)"
         ) and (masks_status | not);
-      any(.[].item?;
-        .type == "command_execution" and
-        .status == "completed" and
-        .exit_code == 0 and
-        (.command | standalone_command($executable; $verb))
-      )
-    ' "$isolation_root/transcript-array.json" >/dev/null ||
-    die "Codex transcript does not record office-$runtime $verb"
-}
-
-assert_recorded_office_format() {
-  local runtime="$1"
-  local extension="$2"
-  /usr/bin/jq -e \
-    --arg executable "office-$runtime" \
-    --arg extension ".$extension" \
-    '
-      def masks_status:
-        test("[;]|&&|[|][|]|(^|[^|])[|]([^|]|$)|(^|[^>])&([^>]|$)");
-      def standalone_format($executable; $extension):
-        test(
-          "^([[:space:]]*|/bin/(sh|bash|zsh) -l?c [^A-Za-z0-9_-]?)" +
-          $executable + "[[:space:]]+[A-Za-z0-9_-]+[[:space:]]"
-        ) and contains($extension) and (masks_status | not);
-      any(.[].item?;
-        .type == "command_execution" and
-        .status == "completed" and
-        .exit_code == 0 and
-        (.command | standalone_format($executable; $extension))
-      )
-    ' "$isolation_root/transcript-array.json" >/dev/null ||
-    die "Codex transcript does not record a successful office-$runtime .$extension target"
+      def targets_format($format):
+        $format == "all" or
+        (split(">")[0] | ascii_downcase |
+          test("\\." + $format + "([^A-Za-z0-9._-]|$)"));
+      [
+        .[] |
+        select(
+          .status == "completed" and
+          .exit_code == 0 and
+          (.command | standalone_command($executable; $verb)) and
+          (.command | targets_format($format))
+        ) |
+        {event_id: .id, command: .command}
+      ]
+    ' "$isolation_root/COMMANDS.json")"
+  /usr/bin/jq -e 'length > 0' <<<"$matches" >/dev/null ||
+    die "Codex transcript does not record required workflow: $runtime/$format/$verb"
+  /usr/bin/jq -cn \
+    --arg runtime "$runtime" \
+    --arg format "$format" \
+    --arg operation "$verb" \
+    --argjson events "$matches" \
+    '{
+      runtime: $runtime,
+      format: $format,
+      operation: $operation,
+      events: $events
+    }' >> "$workflow_entries"
 }
 
 write_evidence_manifest() {
@@ -587,6 +587,7 @@ write_evidence_manifest() {
   for name in \
     CANDIDATE.json \
     COMMANDS.json \
+    WORKFLOWS.json \
     CONFIG.toml \
     RUN-PREFLIGHT.json \
     RUN.json \
@@ -1276,13 +1277,45 @@ done < "$evidence_root/codex-transcript.jsonl"
 /usr/bin/install -m 0600 "$isolation_root/COMMANDS.json" \
   "$evidence_root/COMMANDS.json"
 
+workflow_entries="$isolation_root/workflow-entries.jsonl"
+: > "$workflow_entries"
 for runtime in native wasm; do
-  for verb in help batch identify outline get text query validate issues preview template dump replay raw annotate; do
-    assert_recorded_office_command "$runtime" "$verb"
+  record_workflow_evidence "$runtime" all help
+  for verb in create batch identify outline get text query validate issues preview template dump replay raw; do
+    record_workflow_evidence "$runtime" xlsx "$verb"
   done
-  assert_recorded_office_format "$runtime" xlsx
-  assert_recorded_office_format "$runtime" docx
+  for verb in batch identify outline get text query validate issues preview template dump replay raw annotate; do
+    record_workflow_evidence "$runtime" docx "$verb"
+  done
 done
+/usr/bin/jq -s \
+  --arg schema "office.fresh-agent.workflows/1" \
+  '{
+    schema: $schema,
+    required_count: length,
+    workflows: .
+  }' "$workflow_entries" > "$isolation_root/WORKFLOWS.json"
+/usr/bin/jq -e '
+  keys == ["required_count", "schema", "workflows"] and
+  .schema == "office.fresh-agent.workflows/1" and
+  .required_count == 58 and
+  (.workflows | length) == 58 and
+  (.workflows | unique_by([.runtime, .format, .operation]) | length) == 58 and
+  (.workflows | all(
+    keys == ["events", "format", "operation", "runtime"] and
+    (.runtime == "native" or .runtime == "wasm") and
+    (.format == "all" or .format == "xlsx" or .format == "docx") and
+    (.events | length) > 0 and
+    (.events | all(
+      keys == ["command", "event_id"] and
+      (.command | type) == "string" and
+      (.event_id | type) == "string"
+    ))
+  ))
+' "$isolation_root/WORKFLOWS.json" >/dev/null ||
+  die "host-generated workflow evidence failed strict validation"
+/usr/bin/install -m 0600 "$isolation_root/WORKFLOWS.json" \
+  "$evidence_root/WORKFLOWS.json"
 
 /usr/bin/jq -e '
   keys == ["gaps", "result_path", "targets", "transcript_path", "verdict"] and
@@ -1329,6 +1362,53 @@ assert_owned_private_file "$transcript_file" "probe transcript"
 IFS= read -r result_header < "$result_file" || true
 [ "$result_header" = "Verdict: $verdict" ] ||
   die "probe result does not begin with the exact structured verdict"
+summary_line=2
+for runtime in native wasm; do
+  case "$runtime" in
+    native) runtime_label=Native ;;
+    wasm) runtime_label=Wasm ;;
+  esac
+  for format in xlsx docx; do
+    case "$format" in
+      xlsx) format_label=XLSX ;;
+      docx) format_label=DOCX ;;
+    esac
+    outcome="$(/usr/bin/jq -er \
+      --arg runtime "$runtime" \
+      --arg format "$format" \
+      '.targets[$runtime][$format]' \
+      "$evidence_root/final-message.json")"
+    [ "$(/usr/bin/sed -n "${summary_line}p" "$result_file")" = \
+      "$runtime_label $format_label: $outcome" ] ||
+      die "probe result omits structured outcome: $runtime_label $format_label"
+    summary_line=$((summary_line + 1))
+  done
+done
+candidate_capability_schema="$(
+  /usr/bin/jq -er '.build.capability_schema' "$candidate_root/CANDIDATE.json"
+)"
+candidate_capability_fingerprint="$(
+  /usr/bin/jq -er '.build.capability_fingerprint' "$candidate_root/CANDIDATE.json"
+)"
+[ "$(/usr/bin/sed -n '6p' "$result_file")" = \
+  "Capability schema: $candidate_capability_schema" ] ||
+  die "probe result omits the installed capability schema"
+[ "$(/usr/bin/sed -n '7p' "$result_file")" = \
+  "Capability fingerprint: $candidate_capability_fingerprint" ] ||
+  die "probe result omits the installed capability fingerprint"
+if [ "$verdict" = "BASELINE PASS" ]; then
+  [ "$(/usr/bin/sed -n '8p' "$result_file")" = 'Discoverability: PASS' ] ||
+    die "passing probe result does not attest discoverability"
+  [ "$(/usr/bin/sed -n '9p' "$result_file")" = 'Native/Wasm comparison: PASS' ] ||
+    die "passing probe result does not attest native/Wasm parity"
+else
+  /usr/bin/sed -n '8p' "$result_file" |
+    /usr/bin/grep -Eq '^Discoverability: (PASS|FAIL)$' ||
+    die "failing probe result omits discoverability outcome"
+  /usr/bin/sed -n '9p' "$result_file" |
+    /usr/bin/grep -Eq '^Native/Wasm comparison: (PASS|FAIL)$' ||
+    die "failing probe result omits native/Wasm comparison"
+fi
 
 /usr/bin/install -m 0600 "$result_file" "$evidence_root/probe-result.md"
 /usr/bin/install -m 0600 "$transcript_file" "$evidence_root/probe-transcript.md"
@@ -1347,6 +1427,7 @@ IFS= read -r result_header < "$result_file" || true
   --arg raw_transcript_sha256 "$(sha256_file "$evidence_root/codex-transcript.jsonl")" \
   --arg stderr_sha256 "$(sha256_file "$evidence_root/codex-stderr.log")" \
   --arg commands_sha256 "$(sha256_file "$evidence_root/COMMANDS.json")" \
+  --arg workflows_sha256 "$(sha256_file "$evidence_root/WORKFLOWS.json")" \
   --arg final_message_sha256 "$(sha256_file "$evidence_root/final-message.json")" \
   '{
     schema: $schema,
@@ -1367,6 +1448,7 @@ IFS= read -r result_header < "$result_file" || true
       raw_codex_transcript_sha256: $raw_transcript_sha256,
       codex_stderr_sha256: $stderr_sha256,
       commands_sha256: $commands_sha256,
+      workflows_sha256: $workflows_sha256,
       final_message_sha256: $final_message_sha256
     }
   }' > "$isolation_root/RUN.json"

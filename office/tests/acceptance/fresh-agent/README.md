@@ -209,8 +209,10 @@ configuration administratively.
 
 Successful full completion requires a zero Codex status, valid JSONL on stdout
 with stderr retained separately, the exact live canary as the first command,
-recorded native and Wasm invocations for every required operation, a strict
-per-target final object, and an exact first-line verdict in `probe-result.md`.
+host-bound events for all 58 required runtime/format/operation workflows, a
+strict per-target final object, and the exact nine-line machine-readable summary
+in `probe-result.md`. Format-bearing evidence must name its target before any
+output redirection and cannot contain status-masking control operators.
 `BASELINE PASS` requires all four runtime/format outcomes to pass and no P0-P2
 gap. `BASELINE FAIL` returns 3.
 
@@ -218,7 +220,7 @@ The evidence directory contains:
 
 - the anchored `CANDIDATE.json`, generated `CONFIG.toml`,
   `RUN-PREFLIGHT.json`, and `RUN.json`;
-- `permission-canary.log`, host-derived `COMMANDS.json`,
+- `permission-canary.log`, host-derived `COMMANDS.json` and `WORKFLOWS.json`,
   `codex-transcript.jsonl`, separate `codex-stderr.log`, final message, and exit
   status;
 - copies of `probe-result.md` and `probe-transcript.md`; and

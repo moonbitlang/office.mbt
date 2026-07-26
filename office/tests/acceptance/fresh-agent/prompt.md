@@ -20,11 +20,17 @@ Rules:
 - Include the literal executable name (`office-native` or `office-wasm`) and
   operation in each evidence-bearing shell command. The host derives a command
   and exit-status inventory from Codex events and rejects unrecorded outcomes.
-- For host attestation, run at least one successful invocation of every required
-  operation and target format as a standalone shell command: the Office
-  executable must be the first token and the operation the second. Do not use a
-  pipe, `&&`, `||`, `;`, or backgrounding in those attested invocations;
-  ordinary output redirection is allowed.
+- For host attestation, run `help` successfully on each runtime. For both XLSX
+  runtimes, run `create`, `batch`, `identify`, `outline`, `get`, `text`,
+  `query`, `validate`, `issues`, `preview`, `template`, `dump`, `replay`, and
+  `raw` successfully. For both DOCX runtimes, run `batch`, `identify`,
+  `outline`, `get`, `text`, `query`, `validate`, `issues`, `preview`,
+  `template`, `dump`, `replay`, `raw`, and `annotate` successfully. Each must
+  be a standalone shell command: the Office executable must be the first token
+  and the operation the second, and the target extension must occur before any
+  output redirection. Do not use a newline, pipe, `&&`, `||`, `;`, or
+  backgrounding in those attested invocations; ordinary output redirection is
+  allowed.
 - Do not hide failed attempts. A typed diagnostic that lets you correct an
   input counts as useful discoverability evidence; an undocumented workaround
   is a gap.
@@ -57,9 +63,25 @@ Exercise these outcomes:
    warning is acceptable or documented; distinguish a bounded, evidenced
    target limitation from a behavioral mismatch.
 
-Create two concise evidence files in the current directory. The first line of
-`probe-result.md` must be exactly `Verdict: BASELINE PASS` or
-`Verdict: BASELINE FAIL`, matching your final structured verdict:
+Create two concise evidence files in the current directory. The first nine
+lines of `probe-result.md` must use this exact machine-readable summary, with
+the observed values substituted and each outcome matching your final
+structured verdict:
+
+```text
+Verdict: BASELINE PASS
+Native XLSX: PASS
+Native DOCX: PASS
+Wasm XLSX: PASS
+Wasm DOCX: PASS
+Capability schema: <installed schema>
+Capability fingerprint: <installed fingerprint>
+Discoverability: PASS
+Native/Wasm comparison: PASS
+```
+
+Use `BASELINE FAIL` and the appropriate `PASS`/`FAIL` values when a required
+outcome fails. After that summary:
 
 - `probe-transcript.md`: chronological commands, exit status, relevant schemas
   and assertions, including failed attempts, without pasting large base64 or
