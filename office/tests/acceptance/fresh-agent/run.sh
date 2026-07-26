@@ -585,6 +585,8 @@ config_file="$isolated_codex_state/config.toml"
     '' \
     '[permissions.fresh_agent.network]' \
     'enabled = false'
+  printf '\n[projects.%s]\n' "$(toml_string "$probe_root")"
+  printf 'trust_level = "trusted"\n'
 } > "$config_tmp"
 chmod 0600 "$config_tmp"
 mv "$config_tmp" "$config_file"

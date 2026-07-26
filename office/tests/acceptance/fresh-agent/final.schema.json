@@ -16,9 +16,11 @@
       ]
     },
     "result_path": {
+      "type": "string",
       "const": "probe-result.md"
     },
     "transcript_path": {
+      "type": "string",
       "const": "probe-transcript.md"
     }
   }

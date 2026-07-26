@@ -44,6 +44,12 @@ fail() {
   exit 1
 }
 
+jq -e '
+  .properties.result_path.type == "string" and
+  .properties.transcript_path.type == "string"
+' "$script_dir/final.schema.json" >/dev/null ||
+  fail "structured output schema requires explicit string types"
+
 sha256_file() {
   shasum -a 256 "$1" | awk '{print $1}'
 }
@@ -233,6 +239,7 @@ chmod 0600 "$codex_bin_dir/mode"
     'grep -Fq "\"$install_root\" = \"read\"" "$config"' \
     'grep -Fq "\"$probe\" = \"write\"" "$config"' \
     'grep -Fq "\"$evidence_root\" = \"deny\"" "$config"' \
+    'grep -Fq "[projects.\"$probe\"]" "$config"' \
     'case "$PATH" in "$install_root/bin:"*) ;; *) exit 68 ;; esac' \
     'if [ "$mode" = "exit19" ]; then exit 19; fi' \
     'verdict="BASELINE PASS"' \
