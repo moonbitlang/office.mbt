@@ -509,11 +509,18 @@ test "ooxml read_parse: relationship IRIs follow OPC component grammar" {
   )
   assert_eq(unicode_targets.get("unicode"), Some("路径/文件.xml?键=值"))
   let external_xml =
-    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="ipv6" Type="https://[2001:db8::1]/type" Target="https://[::1]:443/book.xlsx" TargetMode="External"/><Relationship Id="windows" Type="urn:windows-file" Target="file:///C:\Temp\book.xlsx" TargetMode="External"/></Relationships>
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="ipv6" Type="https://[2001:db8::1]/type" Target="https://[::1]:443/book.xlsx" TargetMode="External"/><Relationship Id="ipv4-tail" Type="urn:ipv4-tail" Target="https://[::ffff:192.0.2.1]/book.xlsx" TargetMode="External"/><Relationship Id="windows" Type="urn:windows-file" Target="file:///C:\Temp\book.xlsx" TargetMode="External"/></Relationships>
   let ipv6_targets = @ooxml.parse_external_relationship_targets(
     external_xml, "https://[2001:db8::1]/type",
   )
   assert_eq(ipv6_targets.get("ipv6"), Some("https://[::1]:443/book.xlsx"))
+  let ipv4_tail_targets = @ooxml.parse_external_relationship_targets(
+    external_xml, "urn:ipv4-tail",
+  )
+  assert_eq(
+    ipv4_tail_targets.get("ipv4-tail"),
+    Some("https://[::ffff:192.0.2.1]/book.xlsx"),
+  )
   let windows_targets = @ooxml.parse_external_relationship_targets(
     external_xml, "urn:windows-file",
   )
@@ -556,6 +563,12 @@ test "ooxml read_parse: malformed relationship IRIs fail closed" {
     (
       (
         #|<Relationship Id="bad" Type="urn:other" Target="http://[::1]:port/path" TargetMode="External"/>
+      ),
+      "relationship target is invalid",
+    ),
+    (
+      (
+        #|<Relationship Id="bad" Type="urn:other" Target="https://[::ffff:192.0.2.1.]/" TargetMode="External"/>
       ),
       "relationship target is invalid",
     ),

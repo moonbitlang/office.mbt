@@ -4470,7 +4470,9 @@ fn read_zip_archive_core_unchecked(
               }
           }
         }
-        canonicalize_loaded_hyperlinks_for_merges(parsed_links, merged_cells)
+        canonicalize_loaded_hyperlinks_for_merges(
+          parsed_links, merged_cells, read_budget,
+        )
         parsed_links
       }
       let tables = if table_part_ids.length() == 0 {
