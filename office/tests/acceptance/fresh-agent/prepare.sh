@@ -151,14 +151,27 @@ moonrun_bin="$(command -v moonrun)"
 moon_version="$("$moon_bin" --version | head -n 1)"
 moonrun_version="$("$moonrun_bin" --version | head -n 1)"
 
-(
+build_log="$scratch/build.log"
+if ! (
   cd "$snapshot"
   "$moon_bin" build --release --target native office/cmd/office
-  "$moon_bin" run --frozen --release --target native office/cmd/office -- \
-    help all --json > "$scratch/native-help.json"
-  "$moon_bin" run --frozen --release --target wasm office/cmd/office -- \
-    help all --json > "$scratch/wasm-help.json"
-)
+  "$moon_bin" build --frozen --release --target native office/cmd/office
+  "$moon_bin" build --frozen --release --target wasm office/cmd/office
+) >"$build_log" 2>&1; then
+  echo "error: fresh release build failed; complete build log follows" >&2
+  cat "$build_log" >&2
+  exit 1
+fi
+
+native_artifact="$snapshot/_build/native/release/build/bobzhang/office/cmd/office/office.exe"
+wasm_artifact="$snapshot/_build/wasm/release/build/bobzhang/office/cmd/office/office.wasm"
+[ -x "$native_artifact" ] ||
+  die "native release artifact was not built"
+[ -f "$wasm_artifact" ] ||
+  die "Wasm release artifact was not built"
+
+"$native_artifact" help all --json > "$scratch/native-help.json"
+"$moonrun_bin" "$wasm_artifact" help all --json > "$scratch/wasm-help.json"
 cmp "$scratch/native-help.json" "$scratch/wasm-help.json"
 
 dependency_hashes="$scratch/dependency-files.sha256"
@@ -175,13 +188,6 @@ dependency_hashes="$scratch/dependency-files.sha256"
 [ -s "$dependency_hashes" ] ||
   die "fresh build did not materialize a dependency tree"
 dependency_tree_sha256="$(sha256_file "$dependency_hashes")"
-
-native_artifact="$snapshot/_build/native/release/build/bobzhang/office/cmd/office/office.exe"
-wasm_artifact="$snapshot/_build/wasm/release/build/bobzhang/office/cmd/office/office.wasm"
-[ -x "$native_artifact" ] ||
-  die "native release artifact was not built"
-[ -f "$wasm_artifact" ] ||
-  die "Wasm release artifact was not built"
 
 mkdir -m 0700 "$stage/bin" "$stage/libexec" "$stage/control"
 install -m 0500 "$native_artifact" "$stage/bin/office-native"

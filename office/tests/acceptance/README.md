@@ -27,5 +27,7 @@ should be attached to the F1 PR rather than encoded as a deterministic test.
 
 The reproducible installed-command probe lives in
 [`fresh-agent/`](fresh-agent/README.md). It builds native and Wasm release
-artifacts from one clean candidate commit, installs them outside the checkout,
-and gives a brand-new agent only those commands and the checked-in task prompt.
+artifacts from a fresh export of one exact clean candidate commit, installs a
+hash-manifested runner outside the checkout, proves its split permission
+profile, and gives a brand-new agent only those commands and the installed task
+prompt.
