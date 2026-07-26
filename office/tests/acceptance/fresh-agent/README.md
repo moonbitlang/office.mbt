@@ -145,9 +145,10 @@ Codex receives a generated isolated configuration:
   only the candidate runtime closure and the two output roots;
 - ambient `/tmp`, source/Git storage, the original candidate,
   controllers, auth/state, and evidence are denied;
-- only staged Office `bin`/`libexec`, the exact staged Codex executable needed
-  by Linux bubblewrap re-entry, the isolated shell home, and the fixed canary
-  launcher are added as readable roots; any privately staged `bwrap` resource
+- the staged candidate is mounted read-only while its manifest and controller
+  subtree remain denied; the exact staged Codex executable needed by Linux
+  bubblewrap re-entry, the isolated shell home, and the fixed canary launcher
+  are the other readable roots, and any privately staged `bwrap` resource
   itself remains denied;
 - only the empty probe directory and isolated `TMPDIR` scratch directory are
   writable;

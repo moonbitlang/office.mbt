@@ -226,9 +226,12 @@ chmod 0600 "$codex_bin_dir/mode"
     '/usr/bin/grep -q '\''^mcp_servers = {}$'\'' "$config"' \
     '/usr/bin/grep -q '\''^":minimal" = "read"$'\'' "$config"' \
     '/usr/bin/grep -q '\''^":tmpdir" = "write"$'\'' "$config"' \
+    '/usr/bin/grep -q '\''candidate" = "read"$'\'' "$config"' \
+    '/usr/bin/grep -q '\''candidate/CANDIDATE.json" = "deny"$'\'' "$config"' \
     '/usr/bin/grep -q '\''codex-bin" = "read"$'\'' "$config"' \
     '/usr/bin/grep -q '\''codex-resources" = "deny"$'\'' "$config"' \
     'if /usr/bin/grep -q '\''":root"'\'' "$config"; then exit 61; fi' \
+    'if [ "$(/usr/bin/uname -s)" = "Linux" ]; then /usr/bin/grep -q '\''^"/etc" = "deny"$'\'' "$config"; fi' \
     'test -z "${OPENAI_API_KEY+x}"' \
     'test -z "${GITHUB_TOKEN+x}"' \
     'command="${1:-}"' \

@@ -32,6 +32,10 @@ if mkdir "$candidate_root/.permission-canary" >/dev/null 2>&1; then
   echo "permission canary: staged candidate is writable" >&2
   exit 11
 fi
+if cat "$candidate_root/CANDIDATE.json" >/dev/null 2>&1; then
+  echo "permission canary: staged candidate manifest is readable" >&2
+  exit 25
+fi
 if ls "$candidate_root/control" >/dev/null 2>&1; then
   echo "permission canary: staged controller directory is readable" >&2
   exit 12
