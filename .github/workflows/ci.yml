@@ -53,6 +53,10 @@ jobs:
       - name: Resolve dependencies
         run: moon update
 
+      - name: Fresh-agent runner contract (macOS)
+        if: runner.os == 'macOS'
+        run: bash office/tests/acceptance/fresh-agent/run_test.sh
+
       - name: Check transactional editing packages
         run: |
           moon check --target native office/transaction
@@ -123,6 +127,29 @@ jobs:
       # runner (all deps are first-party: moonbitlang/async and moonbitlang/x).
       - name: Resolve dependencies
         run: moon update
+
+      - name: Installed Office release smoke
+        run: |
+          head=$(git rev-parse --verify HEAD)
+          install_parent=$(mktemp -d "${RUNNER_TEMP}/office-f1b-install.XXXXXX")
+          prefix="$install_parent/candidate"
+          prepare="$PWD/office/tests/acceptance/fresh-agent/prepare.sh"
+          (
+            cd "$RUNNER_TEMP"
+            bash "$prepare" "$head" "$prefix"
+          )
+          "$prefix/bin/office-native" help all --json > "$install_parent/native.json"
+          "$prefix/bin/office-wasm" help all --json > "$install_parent/wasm.json"
+          cmp "$install_parent/native.json" "$install_parent/wasm.json"
+          jq -e \
+            --arg head "$head" \
+            '.schema == "office.fresh-agent.candidate/1"
+              and .candidate_head == $head
+              and (.files | length) == 9
+              and .symlinks == [
+                {path: "bin/office", target: "office-native"}
+              ]' \
+            "$prefix/CANDIDATE.json"
 
       # Format check across the whole workspace, including executable package
       # manifests now that every member uses the supported `pkgtype` syntax.
@@ -486,5 +513,5 @@ jobs:
           bash office/tests/acceptance/run.sh native
           bash office/tests/acceptance/run.sh wasm
 
-      - name: Fresh-agent runner isolation
+      - name: Fresh-agent runner contract (Ubuntu)
         run: bash office/tests/acceptance/fresh-agent/run_test.sh
