@@ -503,3 +503,11 @@ fn relationship_target_iri_valid(value : StringView, external : Bool) -> Bool {
   relationship_iri_reference_valid(value) ||
   (external && office_windows_file_iri_valid(value))
 }
+
+///|
+/// Returns whether `value` is a complete OPC external Relationship Target
+/// IRI reference. In addition to RFC 3987 syntax, this accepts the narrow
+/// legacy Windows `file:///` spellings emitted by Microsoft Office.
+pub fn is_valid_external_relationship_target_iri(value : StringView) -> Bool {
+  relationship_target_iri_valid(value, true)
+}

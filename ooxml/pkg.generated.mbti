@@ -22,6 +22,8 @@ pub fn find_override_part_by_content_types(StringView, ArrayView[String], cancel
 
 pub fn find_part_content_type(StringView, StringView, cancelled? : () -> Bool) -> String? raise ParseXmlError
 
+pub fn is_valid_external_relationship_target_iri(StringView) -> Bool
+
 pub fn is_valid_opc_part_segment(StringView) -> Bool
 
 pub fn is_valid_opc_part_segment_cancellable(StringView, cancelled? : () -> Bool) -> Bool raise ParseXmlError

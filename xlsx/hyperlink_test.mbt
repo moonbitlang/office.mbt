@@ -137,6 +137,67 @@ test "merge rejects conflicting hyperlink identities atomically" {
 }
 
 ///|
+test "reader canonicalizes a merged non-anchor hyperlink identity" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_hyperlink("A1", "https://legacy.example", External)
+  sheet.merge_cells("A1:C3")
+  let archive = @zip.read(@xlsx.write(workbook))
+  let patched = @zip.Archive::new()
+  for entry in archive.entries() {
+    if entry.name() == "xl/worksheets/sheet1.xml" {
+      let xml = @encoding/utf8.decode(entry.data())
+      let mutated = xml.replace(
+        old="<hyperlink ref=\"A1\"",
+        new="<hyperlink ref=\"B2\"",
+      )
+      patched.add(entry.name(), @encoding/utf8.encode(mutated))
+    } else {
+      patched.add(entry.name(), entry.data())
+    }
+  }
+  let parsed = @xlsx.read(@zip.write(patched))
+  inspect(parsed.get_hyperlinks("Sheet1").length(), content="1")
+  inspect(parsed.get_hyperlinks("Sheet1")[0].reference, content="A1")
+  debug_inspect(
+    parsed.get_cell_hyperlink("Sheet1", "B2").map(link => link.target),
+    content="Some(\"https://legacy.example\")",
+  )
+  let rewritten = @xlsx.read(@xlsx.write(parsed))
+  inspect(rewritten.get_hyperlinks("Sheet1")[0].reference, content="A1")
+  parsed.remove_cell_hyperlink("Sheet1", "C3")
+  inspect(parsed.get_hyperlinks("Sheet1").length(), content="0")
+}
+
+///|
+test "reader rejects conflicting hyperlink identities in one merged range" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell_hyperlink("Sheet1", "A1", "https://a.example", External)
+  workbook.set_cell_hyperlink("Sheet1", "B2", "https://b.example", External)
+  let archive = @zip.read(@xlsx.write(workbook))
+  let patched = @zip.Archive::new()
+  for entry in archive.entries() {
+    if entry.name() == "xl/worksheets/sheet1.xml" {
+      let xml = @encoding/utf8.decode(entry.data())
+      let mutated = xml.replace(
+        old="</sheetData>",
+        new="</sheetData><mergeCells count=\"1\"><mergeCell ref=\"A1:C3\"/></mergeCells>",
+      )
+      patched.add(entry.name(), @encoding/utf8.encode(mutated))
+    } else {
+      patched.add(entry.name(), entry.data())
+    }
+  }
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.read(@zip.write(patched)),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(result is Err(@xlsx.XlsxError::InvalidXml(_)), content="true")
+}
+
+///|
 test "hyperlink remove keeps other links" {
   let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
@@ -653,6 +714,10 @@ test "hyperlink mutation rejects empty and unsafe targets atomically" {
     ("vbscript", "vbscript:msgbox(1)", External),
     ("unknown", "custom-scheme:value", External),
     ("one-letter unknown", "x:value", External),
+    ("malformed authority", "https://[broken", External),
+    ("malformed percent escape", "https://host/%GG", External),
+    ("malformed port", "https://[::1]:port/path", External),
+    ("control in scheme", "java\tscript:alert(1)", External),
     ("backslash path", "C:\\workbooks\\book.xlsx", External),
     ("location URI", "https://example.com", Location),
   ]

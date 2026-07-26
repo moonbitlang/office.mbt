@@ -166,10 +166,17 @@ fn validate_hyperlink_values(
   validate_hyperlink_xml_text(target, "hyperlink target")
   validate_hyperlink_xml_text(display, "hyperlink display")
   validate_hyperlink_xml_text(tooltip, "hyperlink tooltip")
-  if link_type == External && target.contains("\\") {
-    raise InvalidHyperlink(
-      msg="external hyperlink target must use URI forward slashes",
-    )
+  if link_type == External {
+    if target.contains("\\") {
+      raise InvalidHyperlink(
+        msg="external hyperlink target must use URI forward slashes",
+      )
+    }
+    if !@ooxml.is_valid_external_relationship_target_iri(target) {
+      raise InvalidHyperlink(
+        msg="external hyperlink target is not a valid IRI reference",
+      )
+    }
   }
   match explicit_hyperlink_uri_scheme(target) {
     Some(scheme) =>
@@ -189,6 +196,90 @@ fn validate_hyperlink_values(
         Unset => ()
       }
     None => ()
+  }
+}
+
+///|
+priv enum HyperlinkMergePlan {
+  Keep
+  Reanchor(Int)
+  Conflict(String)
+}
+
+///|
+/// Plans how the hyperlink sidecar participates in one merged range. Keeping
+/// this decision separate from mutation lets both the public merge API and the
+/// reader enforce the same identity rules with context-appropriate errors.
+fn plan_hyperlinks_for_merge(
+  hyperlinks : ArrayView[Hyperlink],
+  merge_bounds : (Int, Int, Int, Int),
+) -> HyperlinkMergePlan raise XlsxError {
+  let (min_row, min_col, _, _) = merge_bounds
+  let mut overlapping_hyperlink : Int? = None
+  let mut reanchor_hyperlink : Int? = None
+  for index, link in hyperlinks {
+    let link_bounds = parse_range_ref(link.reference)
+    if rects_overlap(merge_bounds, link_bounds) {
+      if overlapping_hyperlink is Some(_) {
+        return Conflict("merged range contains multiple hyperlink identities")
+      }
+      overlapping_hyperlink = Some(index)
+      if bounds_contain(merge_bounds, link_bounds) {
+        reanchor_hyperlink = Some(index)
+      } else {
+        let (link_min_row, link_min_col, link_max_row, link_max_col) = link_bounds
+        if !cell_in_bounds(
+            min_row, min_col, link_min_row, link_min_col, link_max_row, link_max_col,
+          ) {
+          return Conflict(
+            "merged range partially overlaps a hyperlink range away from its anchor",
+          )
+        }
+      }
+    }
+  }
+  match reanchor_hyperlink {
+    Some(index) => Reanchor(index)
+    None => Keep
+  }
+}
+
+///|
+fn reanchor_hyperlink(
+  hyperlinks : Array[Hyperlink],
+  index : Int,
+  anchor : String,
+) -> Unit {
+  let link = hyperlinks[index]
+  hyperlinks[index] = {
+    reference: anchor,
+    target: link.target,
+    link_type: link.link_type,
+    location: link.location,
+    display: link.display,
+    tooltip: link.tooltip,
+  }
+}
+
+///|
+/// Canonicalizes hyperlink identities retained from an existing workbook.
+/// Older producers (including earlier mbtexcel versions) can leave a link on
+/// a non-anchor cell inside a merged range. Reject ambiguous layouts rather
+/// than exposing a hyperlink that lookup and removal cannot address.
+fn canonicalize_loaded_hyperlinks_for_merges(
+  hyperlinks : Array[Hyperlink],
+  merged_cells : ArrayView[String],
+) -> Unit raise XlsxError {
+  for merged in merged_cells {
+    let merge_bounds = parse_range_ref(merged)
+    let (min_row, min_col, _, _) = merge_bounds
+    match plan_hyperlinks_for_merge(hyperlinks, merge_bounds) {
+      Keep => ()
+      Reanchor(index) =>
+        reanchor_hyperlink(hyperlinks, index, cell_ref_from(min_row, min_col))
+      Conflict(msg) =>
+        raise InvalidXml(msg="invalid merged-cell hyperlink layout: \{msg}")
+    }
   }
 }
 

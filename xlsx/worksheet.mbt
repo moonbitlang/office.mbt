@@ -1405,44 +1405,11 @@ pub fn Worksheet::merge_cells(
   let merge_bounds = parse_range_ref(normalized)
   let (min_row, min_col, _, _) = merge_bounds
   let anchor = cell_ref_from(min_row, min_col)
-  let mut overlapping_hyperlink : Int? = None
-  let mut reanchor_hyperlink = false
-  for index, link in self.hyperlinks {
-    let link_bounds = parse_range_ref(link.reference)
-    if rects_overlap(merge_bounds, link_bounds) {
-      if overlapping_hyperlink is Some(_) {
-        raise InvalidSheetOperation(
-          msg="cannot merge cells containing multiple hyperlink identities",
-        )
-      }
-      overlapping_hyperlink = Some(index)
-      if bounds_contain(merge_bounds, link_bounds) {
-        reanchor_hyperlink = true
-      } else {
-        let (link_min_row, link_min_col, link_max_row, link_max_col) = link_bounds
-        if !cell_in_bounds(
-            min_row, min_col, link_min_row, link_min_col, link_max_row, link_max_col,
-          ) {
-          raise InvalidSheetOperation(
-            msg="cannot merge cells across a partially overlapping hyperlink range",
-          )
-        }
-      }
-    }
-  }
-  match overlapping_hyperlink {
-    Some(index) if reanchor_hyperlink => {
-      let link = self.hyperlinks[index]
-      self.hyperlinks[index] = {
-        reference: anchor,
-        target: link.target,
-        link_type: link.link_type,
-        location: link.location,
-        display: link.display,
-        tooltip: link.tooltip,
-      }
-    }
-    _ => ()
+  match plan_hyperlinks_for_merge(self.hyperlinks, merge_bounds) {
+    Keep => ()
+    Reanchor(index) => reanchor_hyperlink(self.hyperlinks, index, anchor)
+    Conflict(msg) =>
+      raise InvalidSheetOperation(msg="cannot merge cells: \{msg}")
   }
   self.merged_cells.push(normalized)
 }
