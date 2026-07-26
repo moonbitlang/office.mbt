@@ -1,7 +1,7 @@
 # Office major-parity ledger
 
 Tracking epic: [#139](https://github.com/moonbitlang/office.mbt/issues/139).
-Last updated: 2026-07-24 (Asia/Shanghai).
+Last updated: 2026-07-26 (Asia/Shanghai).
 
 Comparison baseline: `.repos/OfficeCLI` at commit
 `b8669389dbe1f8a5fd0927a51b5ccf91b1dfe3e6`. Re-audit and update this pin
@@ -16,10 +16,11 @@ common XLSX and DOCX content.
 Quality, preservation, and review evidence take precedence over delivery
 speed. Each implementation issue maps to a scoped PR with logical buildable
 commits, native, Wasm, and JS gates, OpenXML validation, and a fresh ephemeral
-Codex review using `xhigh` for normal work and `max` or `ultra` whenever the
-reviewer is uncertain. After the initial acceptance baseline, the same rules govern
-the incremental plan for closing the remaining agent-relevant OfficeCLI gaps
-without copying its generic DOM surface.
+Codex review that never runs below `xhigh`, normally uses `max`, and uses
+`ultra` for final, security-sensitive, or uncertain reviews. After the initial
+acceptance baseline, the same rules govern the incremental plan for closing the
+remaining agent-relevant OfficeCLI gaps without copying its generic DOM
+surface.
 
 ## Initial baseline delivery order
 
@@ -56,6 +57,12 @@ without copying its generic DOM surface.
 | F1 help input contracts | [#223](https://github.com/moonbitlang/office.mbt/issues/223) | Complete via [#228](https://github.com/moonbitlang/office.mbt/pull/228) |
 | N0a: exact DOCX lexical token map | [#219](https://github.com/moonbitlang/office.mbt/issues/219) | Complete via [#224](https://github.com/moonbitlang/office.mbt/pull/224); first foundation only |
 | N0b1: bounded DOCX source-tree identity | [#231](https://github.com/moonbitlang/office.mbt/issues/231) | Complete via [#235](https://github.com/moonbitlang/office.mbt/pull/235); physical identity foundation only |
+| N0b2: DOCX reader-order projection | [#232](https://github.com/moonbitlang/office.mbt/issues/232) | Complete via [#247](https://github.com/moonbitlang/office.mbt/pull/247); provisional reader-order foundation only |
+| N0b3: story-wide complex-field classification | [#233](https://github.com/moonbitlang/office.mbt/issues/233) | Complete via [#251](https://github.com/moonbitlang/office.mbt/pull/251); classification foundation only |
+| X4a1: version-aware XLSX mutation registry | [#226](https://github.com/moonbitlang/office.mbt/issues/226) | Complete via [#242](https://github.com/moonbitlang/office.mbt/pull/242) |
+| X4b1: bounded XLSX hyperlink engine | [#252](https://github.com/moonbitlang/office.mbt/issues/252) | Complete via [#253](https://github.com/moonbitlang/office.mbt/pull/253); facade exposure remains X4b2 |
+| X4d1a: no-loss XLSX comment validation | [#254](https://github.com/moonbitlang/office.mbt/issues/254) | Complete via [#258](https://github.com/moonbitlang/office.mbt/pull/258) |
+| X4d1b: retained note-VML reconciliation | [#255](https://github.com/moonbitlang/office.mbt/issues/255) | Complete via [#259](https://github.com/moonbitlang/office.mbt/pull/259); X4d1c/X4d1d remain [#256](https://github.com/moonbitlang/office.mbt/issues/256)/[#257](https://github.com/moonbitlang/office.mbt/issues/257) |
 | S1: scheduler-cooperative Office parsing | [#174](https://github.com/moonbitlang/office.mbt/issues/174) | Open; independent of F1 |
 
 ## Dependency-ordered incremental PR ledger
@@ -91,9 +98,11 @@ move/copy/swap integrity rules, are reviewed in
 [docx-agent-roadmap.md](docx-agent-roadmap.md#phase-3--targeted-edits-of-existing-documents-reviewed-plan).
 N0 is deliberately split into seven review-sized private foundations: N0a,
 four N0b projection slices, and two N0c surgery slices. Merged
-[PR #224](https://github.com/moonbitlang/office.mbt/pull/224) covers N0a and
-[PR #235](https://github.com/moonbitlang/office.mbt/pull/235) covers N0b1;
-neither satisfies the whole gate. Issue
+[PR #224](https://github.com/moonbitlang/office.mbt/pull/224) covers N0a;
+[PR #235](https://github.com/moonbitlang/office.mbt/pull/235),
+[PR #247](https://github.com/moonbitlang/office.mbt/pull/247), and
+[PR #251](https://github.com/moonbitlang/office.mbt/pull/251) cover N0b1-N0b3.
+These foundations do not satisfy the whole gate. Issue
 [#221](https://github.com/moonbitlang/office.mbt/issues/221) is now the N0b
 umbrella rather than a single oversized implementation PR.
 
@@ -101,8 +110,8 @@ umbrella rather than a single oversized implementation PR.
 | --- | --- | --- |
 | N0a: lexical map ([#219](https://github.com/moonbitlang/office.mbt/issues/219)) | Map supported `w:t` lexical content to exact UTF-8 source and UTF-16 text boundaries under cumulative budgets; [PR #224](https://github.com/moonbitlang/office.mbt/pull/224) is landed. | D4 |
 | N0b1: source-tree identity ([#231](https://github.com/moonbitlang/office.mbt/issues/231)) | Retain a bounded namespace-resolved source tree with identity-bearing physical paragraph/run nodes and canonical physical ancestry, without changing non-retaining scanner behavior; [PR #235](https://github.com/moonbitlang/office.mbt/pull/235) is landed. | N0a; landed on `main` |
-| N0b2: reader-order mapping ([#232](https://github.com/moonbitlang/office.mbt/issues/232)) | Mirror BodyReader normal-flow/text-box order and deleted-paragraph joins as provisional ordered contributors mapped to N0b1 identities; do not assign final logical paths or UTF-16 intervals before later reader transforms. | N0b1 |
-| N0b3: field classification ([#233](https://github.com/moonbitlang/office.mbt/issues/233)) | Advance nested complex-field state at carrier boundaries across each story under explicit depth/work limits, with deterministic restriction/refusal provenance. | N0b2 |
+| N0b2: reader-order mapping ([#232](https://github.com/moonbitlang/office.mbt/issues/232)) | Mirror BodyReader normal-flow/text-box order and deleted-paragraph joins as provisional ordered contributors mapped to N0b1 identities; do not assign final logical paths or UTF-16 intervals before later reader transforms. [PR #247](https://github.com/moonbitlang/office.mbt/pull/247) is landed. | N0b1; landed on `main` |
+| N0b3: field classification ([#233](https://github.com/moonbitlang/office.mbt/issues/233)) | Advance nested complex-field state at carrier boundaries across each story under explicit depth/work limits, with deterministic restriction/refusal provenance. [PR #251](https://github.com/moonbitlang/office.mbt/pull/251) is landed. | N0b2; landed on `main` |
 | N0b4: reader transforms and oracle ([#234](https://github.com/moonbitlang/office.mbt/issues/234)) | Match first-direct SDT/checkbox and Markup Compatibility transforms, then assign final logical paragraph/run paths and UTF-16 intervals, complete suppression/barrier classification, and pass the full hostile reader oracle. | N0b3 |
 | N0c1: private whole-run surgery ([#222](https://github.com/moonbitlang/office.mbt/issues/222)) | Replace one indexed run's complete projecting content through source-pinned splice/synthesis, including atom-only and atomless-run `w:t` synthesis, `xml:space`, preservation, and fail-closed refusal without a public mutation API. | N0b1-N0b4 |
 | N0c2: private partial-boundary surgery ([#236](https://github.com/moonbitlang/office.mbt/issues/236)) | Prove partial intra-run and cross-run surgery for every permitted token-boundary pair plus multiple non-overlapping edits, with exact projection, byte-union, and refusal witnesses. | N0c1 |
@@ -338,7 +347,7 @@ it must not duplicate the engine.
 | --- | --- | --- |
 | X2q1: bounded boolean and row-query engine | Extend the existing XLSX query engine with an explicit bounded `and`/`or` grammar over declared predicates plus row-by-column-name comparisons against an addressed table/header range; define precedence, duplicate/missing-header refusal, typed numeric/string comparison, deterministic order, and aggregate scan/work ceilings without importing OfficeCLI's generic DOM selector surface. | A3, X2 |
 | X2q2: extended XLSX query exposure and QA | Expose X2q1 through installed `office query` help and versioned human/JSON output, preserving pagination and canonical paths; prove native/Wasm behavior for compound filters, row filters, ambiguous headers, malformed expressions, and work-limit failures. | A2, X2q1 |
-| X4a1: version-aware registry ([#226](https://github.com/moonbitlang/office.mbt/issues/226)) | Add `xlsx.batch/2` and retain the exact `xlsx.batch/1` parser and behavior. | X3, R1 |
+| X4a1: version-aware registry ([#226](https://github.com/moonbitlang/office.mbt/issues/226)) | Add `xlsx.batch/2` and retain the exact `xlsx.batch/1` parser and behavior. [PR #242](https://github.com/moonbitlang/office.mbt/pull/242) is landed. | X3, R1; landed on `main` |
 | X4a2: common receipt envelope | Add the bounded deterministic receipt envelope, stable operation indexes, status/error semantics, and extension point used by every mutation. Each feature exposure PR owns and tests its feature-specific typed identity/readback payload. | X4a1 |
 | X4o1a: worksheet-reference rename kernel | Add a bounded syntax-aware sheet-name rewrite kernel for quoted/unquoted references across ordinary/shared/array formulas, defined names, chart series, print areas/titles, validations, conditional formats, and every other supported reference-bearing carrier, with deterministic residuals for unsupported syntax. | X3, X4c1, X4m1, X6a1 |
 | X4o1b: cascade-safe worksheet rename | Replace the current non-cascading rename with a source-pinned atomic integration over X4o1a; inventory the entire workbook first and fail closed if any affected reference carrier cannot be rewritten, then prove stable sheet identity and no stale old-name references. | X3, X4o1a |
@@ -356,11 +365,11 @@ it must not duplicate the engine.
 | X4r1: row dimension/outline/autofit engine | Inventory and mutate bounded row height, hidden, outline/collapsed state, and deterministic autofit under explicit text-measurement, merged-cell, and maximum-size rules. | X3 |
 | X4r2: column dimension/outline/autofit engine | Inventory and mutate bounded column width, hidden, outline/collapsed state, and deterministic autofit under explicit text-measurement, merged-cell, and maximum-size rules. | X3 |
 | X4r3: row/column dimension exposure | Expose X4r1/X4r2 through shared get/batch/help/dump/replay with typed dimension readback, deterministic receipts, and native/Wasm acceptance. | X4a2, X4r1, X4r2 |
-| X4b1: hyperlink engine hardening | Fix link-count boundaries, reject empty/unsafe targets, define merged-anchor identity, and add typed enumeration. | X3 |
+| X4b1: hyperlink engine hardening ([#252](https://github.com/moonbitlang/office.mbt/issues/252)) | Fix link-count boundaries, reject empty/unsafe targets, define merged-anchor identity, and add typed enumeration. [PR #253](https://github.com/moonbitlang/office.mbt/pull/253) is landed. | X3; landed on `main` |
 | X4b2: hyperlink exposure | Expose hyperlinks through batch/help/dump/replay with strict targets and receipts; this is the first user-visible X4 slice. | X4a2, X4b1 |
 | X4c1: defined-name hardening | Enforce scope, case-insensitive uniqueness, reference syntax, and reserved-name collisions. | X3 |
 | X4c2: defined-name exposure | Expose bounded workbook/sheet-scoped name identity, lifecycle, typed readback, and replay. | X4a2, X4c1 |
-| X4d1: comment hardening | Replace silent author/text/run truncation with bounded no-loss validation and explicit lifecycle semantics. | X3 |
+| X4d1: comment hardening ([#254](https://github.com/moonbitlang/office.mbt/issues/254), [#255](https://github.com/moonbitlang/office.mbt/issues/255)) | Replace silent author/text/run truncation with bounded no-loss validation and explicit lifecycle semantics, then reconcile only matched retained note VML without destroying unrelated shapes. [PR #258](https://github.com/moonbitlang/office.mbt/pull/258) and [PR #259](https://github.com/moonbitlang/office.mbt/pull/259) are landed; adversarial VML scanning and form-control provenance remain [#256](https://github.com/moonbitlang/office.mbt/issues/256) and [#257](https://github.com/moonbitlang/office.mbt/issues/257). | X3; validation and retained-VML foundations landed on `main` |
 | X4d2: comment exposure | Expose bounded cell-comment add/replace/remove, typed readback, and replay. | X4a2, X4d1 |
 | X4e1: rich-text hardening | Add run-count and text limits plus typed readback and round-trip evidence. | X3 |
 | X4e2: rich-text exposure | Expose bounded cell rich-text runs through the shared registry and replay surface. | X4a2, X4e1 |
