@@ -1,22 +1,26 @@
 #!/bin/sh
 set -eu
 
-if [ "$#" -ne 8 ]; then
-  echo "permission canary: expected 8 arguments" >&2
+if [ "$#" -ne 12 ]; then
+  echo "permission canary: expected 12 arguments" >&2
   exit 2
 fi
 
-install_root="$1"
-probe_root="$2"
-scratch_root="$3"
-evidence_root="$4"
-isolated_state="$5"
-original_auth="$6"
-source_root="$7"
-ambient_write_path="$8"
+candidate_root="$1"
+original_install_root="$2"
+probe_root="$3"
+scratch_root="$4"
+evidence_root="$5"
+isolated_state="$6"
+original_auth="$7"
+source_root="$8"
+git_common_dir="$9"
+ambient_write_path="${10}"
+network_port="${11}"
+platform_name="${12}"
 
-test -r "$install_root/CANDIDATE.json"
-test -x "$install_root/bin/office-native"
+test -x "$candidate_root/bin/office-native"
+test -x "$candidate_root/bin/office-wasm"
 
 probe_marker="$probe_root/.permission-canary"
 scratch_marker="$scratch_root/.permission-canary"
@@ -24,33 +28,71 @@ mkdir "$probe_marker"
 mkdir "$scratch_marker"
 rmdir "$probe_marker" "$scratch_marker"
 
-if mkdir "$install_root/.permission-canary" >/dev/null 2>&1; then
-  echo "permission canary: install prefix is writable" >&2
+if mkdir "$candidate_root/.permission-canary" >/dev/null 2>&1; then
+  echo "permission canary: staged candidate is writable" >&2
   exit 11
+fi
+if ls "$candidate_root/control" >/dev/null 2>&1; then
+  echo "permission canary: staged controller directory is readable" >&2
+  exit 12
+fi
+if ls "$original_install_root" >/dev/null 2>&1; then
+  echo "permission canary: original candidate is readable" >&2
+  exit 13
 fi
 if ls "$evidence_root" >/dev/null 2>&1; then
   echo "permission canary: evidence directory is readable" >&2
-  exit 12
-fi
-if cat "$isolated_state/auth.json" >/dev/null 2>&1; then
-  echo "permission canary: isolated credential is readable" >&2
-  exit 13
-fi
-if cat "$original_auth" >/dev/null 2>&1; then
-  echo "permission canary: original credential is readable" >&2
   exit 14
+fi
+if cat "$isolated_state/credential-canary" >/dev/null 2>&1; then
+  echo "permission canary: isolated credential state is readable" >&2
+  exit 15
+fi
+if [ -n "$original_auth" ] && cat "$original_auth" >/dev/null 2>&1; then
+  echo "permission canary: original credential is readable" >&2
+  exit 16
 fi
 if ls "$source_root" >/dev/null 2>&1; then
   echo "permission canary: candidate checkout is readable" >&2
-  exit 15
+  exit 17
+fi
+if ls "$git_common_dir" >/dev/null 2>&1; then
+  echo "permission canary: Git common directory is readable" >&2
+  exit 18
+fi
+if [ "$platform_name" != "Darwin" ]; then
+  if cat /etc/hosts >/dev/null 2>&1; then
+    echo "permission canary: ambient /etc data is readable" >&2
+    exit 19
+  fi
+  if cat /etc/passwd >/dev/null 2>&1; then
+    echo "permission canary: ambient account data is readable" >&2
+    exit 20
+  fi
+  if ls /tmp >/dev/null 2>&1; then
+    echo "permission canary: ambient temporary storage is readable" >&2
+    exit 21
+  fi
 fi
 if mkdir "$ambient_write_path" >/dev/null 2>&1; then
   echo "permission canary: ambient temporary storage is writable" >&2
-  exit 16
+  exit 22
 fi
 if [ -n "${CODEX_HOME:-}" ]; then
   echo "permission canary: CODEX_HOME leaked into child commands" >&2
-  exit 17
+  exit 23
 fi
+if /bin/bash -p -c 'exec 3<>/dev/tcp/127.0.0.1/$1' \
+  office-permission-canary "$network_port" >/dev/null 2>&1; then
+  echo "permission canary: loopback network is reachable" >&2
+  exit 24
+fi
+
+"$candidate_root/bin/office-native" help all --json \
+  > "$scratch_root/native-help.json"
+"$candidate_root/bin/office-wasm" help all --json \
+  > "$scratch_root/wasm-help.json"
+cmp "$scratch_root/native-help.json" "$scratch_root/wasm-help.json"
+rm -f "$scratch_root/native-help.json" "$scratch_root/wasm-help.json"
 
 echo "FRESH-AGENT PERMISSION CANARY PASS"

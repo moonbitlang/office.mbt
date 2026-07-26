@@ -14,7 +14,7 @@ jobs:
   transaction-platforms:
     name: office transactional editing (${{ matrix.os }}, nightly)
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -30,6 +30,15 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Assert exact workflow head
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse --verify HEAD)" = "$EXPECTED_HEAD"
 
       - name: Set up MoonBit (nightly, Unix)
         if: runner.os != 'Windows'
@@ -55,7 +64,44 @@ jobs:
 
       - name: Fresh-agent runner contract (macOS)
         if: runner.os == 'macOS'
-        run: bash office/tests/acceptance/fresh-agent/run_test.sh
+        run: office/tests/acceptance/fresh-agent/run_test.sh
+
+      - name: Install pinned Codex CLI (macOS canary)
+        if: runner.os == 'macOS'
+        run: npm install --global @openai/codex@0.145.0
+
+      - name: Prepared-candidate real Codex canary (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          head=$(git rev-parse --verify HEAD)
+          parent=$(mktemp -d "${TMPDIR}/office-f1b-ci.XXXXXX")
+          prefix="$parent/candidate"
+          moon_bin=$(command -v moon)
+          moonrun_bin=$(command -v moonrun)
+          moon_sha=$(/usr/bin/shasum -a 256 "$moon_bin" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
+          moonrun_sha=$(/usr/bin/shasum -a 256 "$moonrun_bin" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
+          office/tests/acceptance/fresh-agent/prepare.sh \
+            "$head" "$prefix" \
+            "$moon_bin" "$moon_sha" \
+            "$moonrun_bin" "$moonrun_sha"
+          candidate_sha=$(/usr/bin/shasum -a 256 "$prefix/CANDIDATE.json" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
+          codex_native=$(find "$(npm root -g)/@openai" -type f \
+            -path '*/vendor/*/bin/codex' -print | head -n 1)
+          test -n "$codex_native"
+          codex_sha=$(/usr/bin/shasum -a 256 "$codex_native" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
+          "$prefix/control/run.sh" --canary-only \
+            "$head" "$candidate_sha" \
+            "$parent/probe" "$parent/evidence" \
+            "$codex_native" "$codex_sha"
+          echo "F1B_CANARY_EVIDENCE=$parent/evidence" >> "$GITHUB_ENV"
+
+      - name: Upload real Codex canary evidence (macOS)
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fresh-agent-canary-macos-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ env.F1B_CANARY_EVIDENCE }}
+          if-no-files-found: error
 
       - name: Check transactional editing packages
         run: |
@@ -87,6 +133,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Assert exact workflow head
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse --verify HEAD)" = "$EXPECTED_HEAD"
 
       # This repo is a `moon work` workspace with four members: `.`
       # (bobzhang/mbtexcel), `./docx2html` (bobzhang/docx2html), and `./pdflite`
@@ -128,15 +182,28 @@ jobs:
       - name: Resolve dependencies
         run: moon update
 
+      - name: Install pinned Codex CLI and netcat
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y netcat-openbsd
+          npm install --global @openai/codex@0.145.0
+
       - name: Installed Office release smoke
         run: |
           head=$(git rev-parse --verify HEAD)
-          install_parent=$(mktemp -d "${RUNNER_TEMP}/office-f1b-install.XXXXXX")
+          install_parent=$(mktemp -d /tmp/office-f1b-install.XXXXXX)
           prefix="$install_parent/candidate"
           prepare="$PWD/office/tests/acceptance/fresh-agent/prepare.sh"
+          moon_bin=$(command -v moon)
+          moonrun_bin=$(command -v moonrun)
+          moon_sha=$(/usr/bin/shasum -a 256 "$moon_bin" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
+          moonrun_sha=$(/usr/bin/shasum -a 256 "$moonrun_bin" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
           (
-            cd "$RUNNER_TEMP"
-            bash "$prepare" "$head" "$prefix"
+            cd /tmp
+            "$prepare" \
+              "$head" "$prefix" \
+              "$moon_bin" "$moon_sha" \
+              "$moonrun_bin" "$moonrun_sha"
           )
           "$prefix/bin/office-native" help all --json > "$install_parent/native.json"
           "$prefix/bin/office-wasm" help all --json > "$install_parent/wasm.json"
@@ -150,6 +217,24 @@ jobs:
                 {path: "bin/office", target: "office-native"}
               ]' \
             "$prefix/CANDIDATE.json"
+          candidate_sha=$(/usr/bin/shasum -a 256 "$prefix/CANDIDATE.json" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
+          codex_native=$(find "$(npm root -g)/@openai" -type f \
+            -path '*/vendor/*/bin/codex' -print | head -n 1)
+          test -n "$codex_native"
+          codex_sha=$(/usr/bin/shasum -a 256 "$codex_native" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
+          run_parent=$(mktemp -d /tmp/office-f1b-canary.XXXXXX)
+          "$prefix/control/run.sh" --canary-only \
+            "$head" "$candidate_sha" \
+            "$run_parent/probe" "$run_parent/evidence" \
+            "$codex_native" "$codex_sha"
+          echo "F1B_CANARY_EVIDENCE=$run_parent/evidence" >> "$GITHUB_ENV"
+
+      - name: Upload real Codex canary evidence (Ubuntu)
+        uses: actions/upload-artifact@v4
+        with:
+          name: fresh-agent-canary-ubuntu-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ env.F1B_CANARY_EVIDENCE }}
+          if-no-files-found: error
 
       # Format check across the whole workspace, including executable package
       # manifests now that every member uses the supported `pkgtype` syntax.
@@ -514,4 +599,4 @@ jobs:
           bash office/tests/acceptance/run.sh wasm
 
       - name: Fresh-agent runner contract (Ubuntu)
-        run: bash office/tests/acceptance/fresh-agent/run_test.sh
+        run: office/tests/acceptance/fresh-agent/run_test.sh

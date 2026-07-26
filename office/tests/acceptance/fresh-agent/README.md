@@ -1,45 +1,85 @@
 # Installed-command fresh-agent probe
 
 This is the uncoached half of the F1b baseline. It builds one exact commit from
-a fresh exported snapshot, installs native and Wasm commands outside the
+a fresh exported snapshot, publishes native and Wasm commands outside the
 checkout, and gives a new Codex session only those commands and their installed
-help. The task prompt contains outcomes, not command syntax, JSON examples,
-repository paths, or corrective hints.
+help. The task prompt contains outcomes, not product command syntax, JSON
+examples, repository paths, or corrective hints.
+
+The scripts are security gates. Execute them directly so their fixed
+`#!/bin/bash -p` interpreter can reject `BASH_ENV` startup hooks. Invoking them
+as `bash script.sh` is deliberately rejected.
 
 ## Prepare an exact candidate
 
-Start from a clean checkout. Pass the full 40-character HEAD and an absent
-install path whose existing parent is owned by the caller and has no group or
-other permissions:
+Start from a clean checkout. Pass the full 40-character HEAD, an absent install
+path under a private existing parent, and the exact Moon compiler/runtime files
+plus caller-computed SHA-256 values:
 
 ```sh
 head="$(git rev-parse --verify HEAD)"
 install_parent="$(mktemp -d "${TMPDIR:-/tmp}/office-f1b-install.XXXXXX")"
 prefix="$install_parent/candidate"
-bash office/tests/acceptance/fresh-agent/prepare.sh "$head" "$prefix"
+moon_bin="$(command -v moon)"
+moonrun_bin="$(command -v moonrun)"
+moon_sha="$(/usr/bin/shasum -a 256 "$moon_bin" |
+  /usr/bin/awk '{print substr($1, length($1) - 63)}')"
+moonrun_sha="$(/usr/bin/shasum -a 256 "$moonrun_bin" |
+  /usr/bin/awk '{print substr($1, length($1) - 63)}')"
+office/tests/acceptance/fresh-agent/prepare.sh \
+  "$head" "$prefix" \
+  "$moon_bin" "$moon_sha" \
+  "$moonrun_bin" "$moonrun_sha"
 ```
 
-The installer derives the checkout from its own physical path, so its behavior
-does not depend on the caller's working directory. It exports exactly `head`
-with `git archive`, resolves pinned dependencies in that new tree, performs
-frozen native and Wasm release builds, and compares their complete installed
-help. Ignored checkout caches such as `_build` and `.mooncakes` are
-never build inputs.
+The installer sanitizes its startup environment, derives the checkout from its
+own physical path, verifies the supplied tool hashes, and exports exactly
+`head` with `git archive`. It resolves dependencies and performs frozen native
+and Wasm release builds in that snapshot. Every tracked controller asset is
+also copied from the snapshot, never from the mutable checkout.
 
-Publication is an atomic rename from a private sibling staging directory.
-`CANDIDATE.json` is a strict machine-readable manifest containing the
-full commit, toolchain and dependency-tree hashes, capability identity, and
-hashes and modes for every installed executable, runtime, runner, prompt,
-schema, and permission canary. `control/private.json` records the source
-and Git-common paths needed to deny checkout access; it is separately denied to
-probe commands.
+The absent destination is atomically reserved before the build. Fixed
+subtrees are published without clobbering, directory modes are locked, and
+`CANDIDATE.json` is linked into place last as the atomic commit marker. A prefix
+without that marker is incomplete. The manifest records the full commit,
+toolchain and dependency-tree hashes, capability identity, and hashes and
+modes for every candidate file. The runner additionally requires one hard link
+per regular file and exact directory modes.
 
-## Run in split permissions
+Record the manifest digest outside the candidate; it is the trust anchor for
+the run:
 
-The live runner requires Codex CLI 0.138 or newer; this harness is verified
-against Codex CLI 0.145.0. Use the runner copied into the candidate, not the
-checkout copy. The probe and evidence paths must be absent siblings under a
-fresh private parent:
+```sh
+candidate_sha="$(/usr/bin/shasum -a 256 "$prefix/CANDIDATE.json" |
+  /usr/bin/awk '{print substr($1, length($1) - 63)}')"
+```
+
+## Select an approved Codex executable
+
+The runner requires Codex CLI 0.145.0 or newer and an explicit executable
+SHA-256. Use the platform-native Codex executable, not the mutable npm JavaScript
+launcher. For the official npm package, the native executable is under the
+installed platform package's `vendor/.../bin/codex` directory:
+
+```sh
+codex_native="$(find "$(npm root -g)/@openai" -type f \
+  -path '*/vendor/*/bin/codex' -print | head -n 1)"
+codex_sha="$(/usr/bin/shasum -a 256 "$codex_native" |
+  /usr/bin/awk '{print substr($1, length($1) - 63)}')"
+"$codex_native" --version
+```
+
+The runner checks the external digest, copies the executable into its private
+isolation, checks the copy, and invokes every version/canary/session operation
+under `env -i`. Exact `#!/bin/sh` and `#!/bin/bash` test executables are also
+supported with fixed system interpreters; other shebangs are rejected.
+
+## Run in least privilege
+
+Use the runner copied into the candidate. Probe and evidence paths must be
+absent siblings under a fresh private parent outside protected home/workspace
+storage. The real auth file must be private, regular, single-linked, and owned
+by the caller:
 
 ```sh
 run_parent="$(mktemp -d "${TMPDIR:-/tmp}/office-f1b-run.XXXXXX")"
@@ -47,71 +87,83 @@ probe="$run_parent/probe"
 evidence="$run_parent/evidence"
 auth_json="$HOME/.codex/auth.json"
 "$prefix/control/run.sh" \
-  "$head" "$probe" "$evidence" "$auth_json"
+  "$head" "$candidate_sha" \
+  "$probe" "$evidence" \
+  "$auth_json" "$codex_native" "$codex_sha"
 ```
 
-The runner verifies the entire candidate manifest before and after the session
-and revalidates directory device/inode identities. It rejects pre-existing,
-shared, overlapping, source-contained, protected-home, or PATH-ambiguous
-locations. Spaces and `=` are supported; `:` is rejected because
-POSIX PATH cannot represent it safely.
+The runner revalidates the externally anchored candidate, privately stages the
+entire candidate and approved Codex executable, and executes only the staged
+copies. The credential is copied only after every unauthenticated preflight and
+debug-sandbox canary has passed; the cleanup trap is armed before any copy.
 
-Codex receives a runner-generated isolated configuration:
+Codex receives a generated isolated configuration:
 
-- `web_search = "disabled"`, network disabled, approvals disabled,
-  project instructions disabled, and no personal skills, plugins, apps,
-  browser, Computer Use, memories, or subagents;
-- user/workspace roots plus the exact source and Git-common paths are denied;
-- the installed candidate and isolated shell home are read-only;
-- only the empty probe directory and private scratch directory are writable;
-- the original and copied auth, isolated Codex state, and evidence directory
-  are denied to model-authored commands; and
-- `CODEX_HOME` is available to the Codex parent for authentication but
-  omitted from every model-authored child environment.
+- the custom profile starts from Codex's `:minimal`, never `:root`, and adds
+  only the candidate runtime closure and the two output roots;
+- ambient `/tmp`, source/Git storage, the original candidate,
+  controllers, auth/state, and evidence are denied;
+- only staged `bin`/`libexec`, the isolated shell home, and the fixed canary
+  launcher are readable;
+- only the empty probe directory and isolated `TMPDIR` scratch directory are
+  writable;
+- network, web search, MCP servers, hooks, login shells, project instructions,
+  skills, plugins, apps, browser/Computer Use, memories, and subagents are
+  disabled; and
+- the live invocation explicitly selects `fresh_agent`; the debug sandbox
+  selects the same profile with `--include-managed-config`.
 
-No legacy `--sandbox` option is passed because it would override the
-custom permission profile. Before the model starts,
-`codex sandbox -P fresh_agent` runs the installed permission canary. It
-proves candidate read/no-write, probe/scratch write, source/auth/evidence
-denial, no ambient `/tmp` write, and no child `CODEX_HOME`. A
-failed canary aborts the probe.
+The debug canary and the first command of the real model session both test
+candidate read/no-write, controller/original/source/auth/state/evidence denial,
+absence of child `CODEX_HOME`, native/Wasm execution, and denial of a
+connection to a live host loopback listener. Linux additionally proves ambient
+`/etc` and temporary-storage read denial. A mismatch aborts the probe.
 
-If the Codex launcher uses a simple `#!/usr/bin/env runtime` shebang, the
-runner exposes only an exact private forwarder for that runtime. Complex
-`env -S`, option-bearing, or assignment-bearing shebangs are rejected. A
-shell wrapper that invokes co-installed helpers by basename may use an explicit
-colon-separated allowlist:
+Codex 0.145.0's built-in macOS `:minimal` policy itself permits standard
+system configuration plus `/private/tmp`; custom deny entries cannot override
+those later platform-default Seatbelt rules. The runner therefore refuses to
+place the candidate, auth, probe, evidence, or isolation under any such macOS
+platform-default root. Run macOS probes only on a disposable host whose ambient
+temporary storage contains no unrelated secrets. The Linux canary is the
+strict ambient-read gate; the macOS canary gates product behavior and every
+harness-owned secret/output boundary.
+
+CI can run the unauthenticated half against a prepared candidate and pinned
+real Codex executable:
 
 ```sh
-OFFICE_F1B_CODEX_LAUNCHER_HELPERS="codex-helper:codex-real" \
-  "$prefix/control/run.sh" \
-  "$head" "$probe" "$evidence" "$auth_json"
+"$prefix/control/run.sh" --canary-only \
+  "$head" "$candidate_sha" \
+  "$run_parent/probe" "$run_parent/evidence" \
+  "$codex_native" "$codex_sha"
 ```
 
 ## Evidence and cleanup
 
-Successful completion requires both a zero Codex process status and a final
-JSON object matching `control/final.schema.json`. The runner returns
-nonzero for an incomplete/malformed response and returns 3 for
-`BASELINE FAIL`.
+Successful full completion requires a zero Codex status, valid JSONL on stdout
+with stderr retained separately, the exact live canary as the first command,
+recorded native and Wasm invocations for every required operation, a strict
+per-target final object, and an exact first-line verdict in `probe-result.md`.
+`BASELINE PASS` requires all four runtime/format outcomes to pass and no P0-P2
+gap. `BASELINE FAIL` returns 3.
 
-Retain:
+The evidence directory contains:
 
-- `CANDIDATE.json`;
-- `RUN-PREFLIGHT.json`, `RUN.json`, and
-  `permission-canary.log`;
-- `probe-result.md` and `probe-transcript.md`;
-- `final-message.json`, `codex-transcript.jsonl`, and
-  `codex-exit-status.txt`.
+- the anchored `CANDIDATE.json`, generated `CONFIG.toml`,
+  `RUN-PREFLIGHT.json`, and `RUN.json`;
+- `permission-canary.log`, host-derived `COMMANDS.json`,
+  `codex-transcript.jsonl`, separate `codex-stderr.log`, final message, and exit
+  status;
+- copies of `probe-result.md` and `probe-transcript.md`; and
+- `EVIDENCE.json`, which records the byte length and SHA-256 of every retained
+  artifact other than itself.
 
-The normal EXIT/HUP/INT/TERM trap deletes the isolated Codex home and copied
-credential. SIGKILL and machine failure cannot run a trap. Prefer a short-lived
-credential when available, keep each `run_parent` one-shot and mode 0700,
-and after collecting evidence inspect it for a hidden
-`.office-f1b-isolation.*` directory before deleting the entire one-shot
-parent. That removes any stale credential copy without scanning or deleting
-unrelated temporary directories.
+Publish the complete non-secret evidence directory (for example as a CI
+artifact or an unlisted durable review attachment), not hashes without their
+recomputable inputs.
 
-If the candidate head changes, discard the prefix and evidence and repeat from
-preparation. Record every P0-P2 product gap as a follow-up issue under the
-Office parity epic. This baseline does not close the epic.
+The normal EXIT/HUP/INT/TERM trap deletes the isolated Codex home and credential
+copy. SIGKILL and machine failure cannot run a trap; use a one-shot private
+parent and remove it after evidence collection. If the candidate head changes,
+discard the prefix and evidence and repeat from preparation. Record every P0-P2
+product gap under the Office parity epic; this baseline does not close the epic.
