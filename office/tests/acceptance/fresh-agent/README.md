@@ -14,11 +14,18 @@ as `bash script.sh` is deliberately rejected.
 
 Start from a clean checkout. Pass the full 40-character HEAD, an absent install
 path under a private existing parent, and the exact Moon compiler/runtime files
-plus caller-computed SHA-256 values:
+plus caller-computed SHA-256 values. Linux must keep every harness-owned path
+outside `/tmp`, which the permission profile deliberately denies; use a private
+directory beneath `/var/tmp`. macOS must use its private per-user `TMPDIR`:
 
 ```sh
 head="$(git rev-parse --verify HEAD)"
-install_parent="$(mktemp -d "${TMPDIR:-/tmp}/office-f1b-install.XXXXXX")"
+case "$(uname -s)" in
+  Linux) scratch_root=/var/tmp ;;
+  Darwin) scratch_root="${TMPDIR:?TMPDIR must be set on macOS}" ;;
+  *) scratch_root="${TMPDIR:-/tmp}" ;;
+esac
+install_parent="$(mktemp -d "$scratch_root/office-f1b-install.XXXXXX")"
 prefix="$install_parent/candidate"
 moon_bin="$(command -v moon)"
 moonrun_bin="$(command -v moonrun)"
@@ -101,11 +108,19 @@ interpreters; other shebangs are rejected and cannot accept a `bwrap`.
 
 Use the runner copied into the candidate. Probe and evidence paths must be
 absent siblings under a fresh private parent outside protected home/workspace
-storage. The real auth file must be private, regular, single-linked, and owned
-by the caller:
+storage. On Linux, the install, probe, evidence, source checkout, Git common
+directory, and auth file must also remain outside `/tmp`; this keeps all scoped
+read/write roots disjoint from the ambient `/tmp` denial used by bubblewrap.
+The real auth file must be private, regular, single-linked, and owned by the
+caller:
 
 ```sh
-run_parent="$(mktemp -d "${TMPDIR:-/tmp}/office-f1b-run.XXXXXX")"
+case "$(uname -s)" in
+  Linux) scratch_root=/var/tmp ;;
+  Darwin) scratch_root="${TMPDIR:?TMPDIR must be set on macOS}" ;;
+  *) scratch_root="${TMPDIR:-/tmp}" ;;
+esac
+run_parent="$(mktemp -d "$scratch_root/office-f1b-run.XXXXXX")"
 probe="$run_parent/probe"
 evidence="$run_parent/evidence"
 auth_json="$HOME/.codex/auth.json"
