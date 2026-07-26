@@ -157,9 +157,11 @@ Codex receives a generated isolated configuration:
   are the other readable roots, and any privately staged `bwrap` resource
   itself remains denied;
 - only the empty probe directory and isolated Office-child scratch directory
-  are writable; Codex's controller `TMPDIR` stays inside its denied private
-  state, and fixed read-only command launchers select the child `TMPDIR` only
-  after sandbox entry so Linux bubblewrap bookkeeping cannot enter it;
+  are writable inside the sandbox; a dedicated mode-0700 policy sentinel is
+  host-writable before and after the canary but explicitly read-only in the
+  profile. Codex's controller `TMPDIR` stays inside its denied private state,
+  and fixed read-only command launchers select the child `TMPDIR` only after
+  sandbox entry so Linux bubblewrap bookkeeping cannot enter it;
 - network, web search, MCP servers, hooks, login shells, project instructions,
   skills, plugins, apps, browser/Computer Use, memories, and subagents are
   disabled; and
@@ -170,7 +172,9 @@ The debug canary and the first command of the real model session both test
 candidate read/no-write, controller/original/source/auth/state/evidence denial,
 absence of child `CODEX_HOME`, native/Wasm execution, and denial of a
 connection to a live host loopback listener. Linux additionally proves ambient
-`/etc` and temporary-storage read denial. A mismatch aborts the probe.
+`/etc` and temporary-storage read denial. The policy sentinel distinguishes a
+sandbox write denial from ordinary DAC mode denial. A mismatch aborts the
+probe.
 
 Codex 0.145.0's built-in macOS `:minimal` policy itself permits standard
 system configuration plus `/private/tmp`; custom deny entries cannot override

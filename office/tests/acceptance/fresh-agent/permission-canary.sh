@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 
-if [ "$#" -ne 12 ]; then
-  echo "permission canary: expected 12 arguments" >&2
+if [ "$#" -ne 13 ]; then
+  echo "permission canary: expected 13 arguments" >&2
   exit 2
 fi
 
@@ -18,6 +18,7 @@ git_common_dir="$9"
 ambient_write_path="${10}"
 network_port="${11}"
 platform_name="${12}"
+policy_readonly_root="${13}"
 
 test -x "$candidate_root/bin/office-native"
 test -x "$candidate_root/bin/office-wasm"
@@ -31,6 +32,14 @@ rmdir "$probe_marker" "$scratch_marker"
 if mkdir "$candidate_root/.permission-canary" >/dev/null 2>&1; then
   echo "permission canary: staged candidate is writable" >&2
   exit 11
+fi
+if ! ls "$policy_readonly_root" >/dev/null 2>&1; then
+  echo "permission canary: policy read-only directory is not readable" >&2
+  exit 26
+fi
+if mkdir "$policy_readonly_root/.permission-canary" >/dev/null 2>&1; then
+  echo "permission canary: policy read-only directory is writable" >&2
+  exit 27
 fi
 if cat "$candidate_root/CANDIDATE.json" >/dev/null 2>&1; then
   echo "permission canary: staged candidate manifest is readable" >&2
