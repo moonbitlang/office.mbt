@@ -257,7 +257,7 @@ test "malformed field transitions retain deterministic refusal provenance" {
     let refusal = projection.field_index.refusals[0]
     assert_eq(refusal.kind, expected)
     assert_true(refusal.carrier_identity >= 0)
-    assert_true(refusal.marker_identity is Some(_))
+    assert_true(refusal.offending_identity is Some(_))
     assert_true(refusal.source_span.byte_start < refusal.source_span.byte_end)
   }
 }
@@ -281,6 +281,31 @@ test "a marker observed through two reader carriers fails closed" {
   let after = field_contribution(projection, "after")
   assert_true(after.field_region is MalformedField)
   assert_eq(after.field_refusal, Some(refusal.identity))
+}
+
+///|
+test "an instruction observed through two reader carriers fails closed" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p>
+    #|<w:r><w:fldChar w:fldCharType="begin"/></w:r>
+    #|<w:p><w:r><w:instrText> CODE </w:instrText></w:r><w:r><w:t>nested</w:t></w:r></w:p>
+    #|<w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>after</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>
+    #|</w:p></w:body></w:document>
+  let projection = field_test_projection(source)
+  assert_eq(projection.field_index.fields.length(), 1)
+  assert_eq(projection.field_index.refusals.length(), 1)
+  let field = projection.field_index.fields[0]
+  let refusal = projection.field_index.refusals[0]
+  assert_true(refusal.kind is RepeatedInstruction)
+  assert_eq(field.instruction_text.to_string(), " CODE ")
+  assert_eq(field.refusal_identity, Some(refusal.identity))
+  let offending = refusal.offending_identity.unwrap()
+  assert_eq(projection.source_elements[offending].local_name, "instrText")
+  for value in ["nested", "after"] {
+    let contribution = field_contribution(projection, value)
+    assert_true(contribution.field_region is MalformedField)
+    assert_eq(contribution.field_refusal, Some(refusal.identity))
+  }
 }
 
 ///|
