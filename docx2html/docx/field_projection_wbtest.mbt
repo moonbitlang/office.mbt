@@ -191,6 +191,32 @@ test "field state resets between note stories" {
 }
 
 ///|
+test "textbox fields do not leak across story boundaries" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:v="urn:schemas-microsoft-com:vml"><w:body><w:p>
+    #|<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> OUT</w:instrText></w:r>
+    #|<w:r><w:pict><v:shape><v:textbox><w:txbxContent><w:p>
+    #|<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> INNER </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>inside</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>
+    #|</w:p></w:txbxContent></v:textbox></v:shape></w:pict></w:r>
+    #|<w:r><w:instrText> TAIL </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>outside</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>
+    #|</w:p></w:body></w:document>
+  let projection = field_test_projection(source)
+  assert_eq(projection.field_index.fields.length(), 2)
+  assert_eq(projection.field_index.refusals.length(), 0)
+  let outer = projection.field_index.fields[0]
+  let inner = projection.field_index.fields[1]
+  assert_true(outer.story_identity != inner.story_identity)
+  assert_eq(outer.instruction_text.to_string(), " OUT TAIL ")
+  assert_eq(inner.instruction_text.to_string(), " INNER ")
+  assert_true(
+    field_contribution(projection, "outside").field_region is FieldResult,
+  )
+  assert_true(
+    field_contribution(projection, "inside").field_region is FieldResult,
+  )
+}
+
+///|
 test "malformed field transitions retain deterministic refusal provenance" {
   let cases : Array[(String, ReaderOrderFieldRefusalKind)] = [
     (
@@ -239,7 +265,7 @@ test "malformed field transitions retain deterministic refusal provenance" {
 ///|
 test "a marker observed through two reader carriers fails closed" {
   let source =
-    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:p><w:r><w:fldChar w:fldCharType="begin"/><w:t>X</w:t></w:r></w:p></w:p></w:body></w:document>
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:p><w:r><w:fldChar w:fldCharType="begin"/><w:t>X</w:t></w:r></w:p><w:r><w:fldChar w:fldCharType="end"/></w:r><w:r><w:t>after</w:t></w:r></w:p></w:body></w:document>
   let projection = field_test_projection(source)
   assert_eq(projection.field_index.fields.length(), 1)
   assert_eq(projection.field_index.refusals.length(), 1)
@@ -252,6 +278,9 @@ test "a marker observed through two reader carriers fails closed" {
   let x = field_contribution(projection, "X")
   assert_true(x.field_region is MalformedField)
   assert_eq(x.field_refusal, Some(refusal.identity))
+  let after = field_contribution(projection, "after")
+  assert_true(after.field_region is MalformedField)
+  assert_eq(after.field_refusal, Some(refusal.identity))
 }
 
 ///|

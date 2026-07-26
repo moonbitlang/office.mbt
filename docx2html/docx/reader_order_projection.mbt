@@ -68,6 +68,17 @@ priv struct ReaderOrderParagraph {
 }
 
 ///|
+/// One direct physical paragraph child observed at the same point where
+/// BodyReader begins interpreting that carrier. Keeping this event stream on
+/// the N0b2 walk preserves recursive block order for N0b3 without reconstructing
+/// it from the completed paragraph segments. Each event follows a charged N0b2
+/// node visit, so the reader-order visit budget also bounds retained events.
+priv struct ReaderOrderFieldCarrierEvent {
+  paragraph_identity : Int
+  carrier_identity : Int
+}
+
+///|
 /// Private N0b2 result. `source_part` identifies the OPC part, while every
 /// other coordinate remains an exact N0b1 identity or physical byte span.
 #warnings("-unused_field")
@@ -75,6 +86,7 @@ priv struct ReaderOrderProjection {
   source_part : String
   source_elements : Array[ScannedElement]
   paragraphs : Array[ReaderOrderParagraph]
+  field_carriers : Array[ReaderOrderFieldCarrierEvent]
   mut field_index : ReaderOrderFieldIndex
 }
 
@@ -172,6 +184,7 @@ priv struct ReaderOrderWalker {
   projection_visible : Array[Bool]
   budget : ReaderOrderBudget
   paragraphs : Array[ReaderOrderParagraph]
+  field_carriers : Array[ReaderOrderFieldCarrierEvent]
 }
 
 ///|
@@ -1015,6 +1028,9 @@ fn ReaderOrderWalker::walk_inline_children(
     let element = self.elements[child]
     let depth = parent_depth + 1
     self.budget.charge_visit(depth)
+    if parent_identity == paragraph_identity {
+      self.field_carriers.push({ paragraph_identity, carrier_identity: child })
+    }
     if is_wml_uri(element.uri) &&
       element.local_name == "p" &&
       self.is_projection_visible(child) {
@@ -1269,12 +1285,14 @@ fn project_reader_order_from_source_tree(
     ),
     budget,
     paragraphs: [],
+    field_carriers: [],
   }
   walker.walk()
   let projection = ReaderOrderProjection::{
     source_part,
     source_elements: walker.elements,
     paragraphs: walker.paragraphs,
+    field_carriers: walker.field_carriers,
     field_index: empty_reader_order_field_index(),
   }
   projection.field_index = classify_reader_order_fields(
