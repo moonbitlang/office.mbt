@@ -333,10 +333,15 @@ verify_candidate() {
         "dependency_tree_sha256",
         "moon_sha256",
         "moon_version",
-        "moonrun_version"
+        "moonc_sha256",
+        "moonc_version",
+        "moonrun_version",
+        "source_tree"
       ] and
       (.build.dependency_tree_sha256 | test("^[0-9a-f]{64}$")) and
+      (.build.moonc_sha256 | test("^[0-9a-f]{64}$")) and
       (.build.moon_sha256 | test("^[0-9a-f]{64}$")) and
+      (.build.source_tree | test("^[0-9a-f]{40}$")) and
       (.files | map(keys == ["kind", "mode", "path", "sha256"]) | all) and
       (.files | map(.path)) == [
         "bin/office-native",
@@ -799,7 +804,7 @@ network_listener_pid=""
 ambient_write_path=""
 
 cleanup() {
-  local status="$?"
+  local status="$1"
   trap - EXIT HUP INT TERM
   if [ -n "${network_listener_pid:-}" ]; then
     /bin/kill "$network_listener_pid" 2>/dev/null || true
@@ -814,7 +819,10 @@ cleanup() {
   fi
   exit "$status"
 }
-trap cleanup EXIT HUP INT TERM
+trap 'cleanup $?' EXIT
+trap 'cleanup 129' HUP
+trap 'cleanup 130' INT
+trap 'cleanup 143' TERM
 
 assert_owned_private_directory "$isolation_root"
 reject_path_syntax "$isolation_root" "isolation directory"
