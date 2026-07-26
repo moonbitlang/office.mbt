@@ -221,13 +221,27 @@ jobs:
           codex_native=$(find "$(npm root -g)/@openai" -type f \
             -path '*/vendor/*/bin/codex' -print | head -n 1)
           test -n "$codex_native"
+          codex_vendor=$(/usr/bin/dirname "$(/usr/bin/dirname "$codex_native")")
+          codex_bwrap="$codex_vendor/codex-resources/bwrap"
+          test -f "$codex_bwrap"
+          test -x "$codex_bwrap"
           codex_sha=$(/usr/bin/shasum -a 256 "$codex_native" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
+          bwrap_sha=$(/usr/bin/shasum -a 256 "$codex_bwrap" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
           run_parent=$(mktemp -d /tmp/office-f1b-canary.XXXXXX)
           echo "F1B_CANARY_EVIDENCE=$run_parent/evidence" >> "$GITHUB_ENV"
           "$prefix/control/run.sh" --canary-only \
             "$head" "$candidate_sha" \
             "$run_parent/probe" "$run_parent/evidence" \
-            "$codex_native" "$codex_sha"
+            "$codex_native" "$codex_sha" \
+            "$codex_bwrap" "$bwrap_sha"
+          jq -e --arg bwrap_sha "$bwrap_sha" \
+            '.codex.bubblewrap_sha256 == $bwrap_sha
+              and .verdict == "CANARY PASS"' \
+            "$run_parent/evidence/RUN.json"
+          jq -e --arg bwrap_sha "$bwrap_sha" \
+            '.codex.bubblewrap_sha256 == $bwrap_sha
+              and .codex.bubblewrap_privately_staged == true' \
+            "$run_parent/evidence/RUN-PREFLIGHT.json"
 
       - name: Upload real Codex canary evidence (Ubuntu)
         if: ${{ always() && env.F1B_CANARY_EVIDENCE != '' }}

@@ -214,6 +214,8 @@ chmod 0600 "$codex_bin_dir/mode"
     '/usr/bin/grep -q '\''^mcp_servers = {}$'\'' "$config"' \
     '/usr/bin/grep -q '\''^":minimal" = "read"$'\'' "$config"' \
     '/usr/bin/grep -q '\''^":tmpdir" = "write"$'\'' "$config"' \
+    '/usr/bin/grep -q '\''codex-bin" = "read"$'\'' "$config"' \
+    '/usr/bin/grep -q '\''codex-resources" = "deny"$'\'' "$config"' \
     'if /usr/bin/grep -q '\''":root"'\'' "$config"; then exit 61; fi' \
     'test -z "${OPENAI_API_KEY+x}"' \
     'test -z "${GITHUB_TOKEN+x}"' \
@@ -336,14 +338,18 @@ evidence="$case_root/evidence"
   .verdict == "BASELINE PASS" and
   .codex_exit_status == 0 and
   .integrity.privately_staged_candidate == true and
-  .integrity.privately_staged_codex == true
+  .integrity.privately_staged_codex == true and
+  .integrity.bubblewrap_sha256 == null and
+  .integrity.privately_staged_bubblewrap == false
 ' "$evidence/RUN.json" >/dev/null ||
   fail "final run manifest"
 /usr/bin/jq -e '
   .schema == "office.fresh-agent.run-preflight/2" and
   .candidate_head == $head and
   .codex.version == "codex-cli 0.145.0" and
-  .codex.privately_staged == true
+  .codex.privately_staged == true and
+  .codex.bubblewrap_sha256 == null and
+  .codex.bubblewrap_privately_staged == false
 ' --arg head "$head" "$evidence/RUN-PREFLIGHT.json" >/dev/null ||
   fail "preflight manifest"
 /usr/bin/jq -e '
@@ -447,6 +453,17 @@ expect_failure wrong-codex-digest 1 'caller-supplied digest' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/codex-digest-probe" "$case_root/codex-digest-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$(printf '0%.0s' {1..64})"
+
+if [ "$(/usr/bin/uname -s)" = "Linux" ]; then
+  native_codex="$case_root/native-codex"
+  /usr/bin/install -m 0500 /bin/sh "$native_codex"
+  native_codex_sha="$(sha256_file "$native_codex")"
+  expect_failure linux-native-runtime-closure 1 \
+    'requires an approved bubblewrap resource and digest' \
+    "$runner" "$head" "$candidate_sha" \
+    "$case_root/native-probe" "$case_root/native-evidence" \
+    "$case_root/auth.json" "$native_codex" "$native_codex_sha"
+fi
 
 /bin/ln -s "$case_root/auth.json" "$case_root/auth-link.json"
 expect_failure auth-symlink 1 'must be regular' \
