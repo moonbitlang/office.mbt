@@ -442,7 +442,7 @@ run_codex() {
     CODEX_HOME="$isolated_codex_state" \
     ZDOTDIR="$isolated_user_home" \
     PATH=/usr/bin:/bin:/usr/sbin:/sbin \
-    TMPDIR="$isolated_tmp" \
+    TMPDIR="$isolated_codex_tmp" \
     LANG=C \
     LC_ALL=C \
     "${codex_argv[@]}" "$@"
@@ -817,6 +817,7 @@ fi
 
 isolated_user_home="$isolation_root/home"
 isolated_codex_state="$isolation_root/codex"
+isolated_codex_tmp="$isolated_codex_state/runtime-tmp"
 isolated_tmp="$isolation_root/tmp"
 isolated_launcher_bin="$isolation_root/launcher-bin"
 candidate_root="$isolation_root/candidate"
@@ -825,6 +826,7 @@ isolated_codex_resources="$isolation_root/codex-resources"
 /bin/mkdir -m 0700 \
   "$isolated_user_home" \
   "$isolated_codex_state" \
+  "$isolated_codex_tmp" \
   "$isolated_tmp" \
   "$isolated_launcher_bin" \
   "$candidate_root" \
@@ -963,7 +965,7 @@ config_file="$isolated_codex_state/config.toml"
     'description = "Installed Office probe with explicit least-privilege roots."' \
     '' \
     '[permissions.fresh_agent.filesystem]' \
-    '":tmpdir" = "write"' \
+    '":tmpdir" = "deny"' \
     '":slash_tmp" = "deny"' \
     '":minimal" = "read"'
   printf '%s = "deny"\n' "$(toml_string "$install_root")"

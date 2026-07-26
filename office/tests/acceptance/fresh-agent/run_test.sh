@@ -225,7 +225,7 @@ chmod 0600 "$codex_bin_dir/mode"
     '/usr/bin/grep -q '\''^hooks = {}$'\'' "$config"' \
     '/usr/bin/grep -q '\''^mcp_servers = {}$'\'' "$config"' \
     '/usr/bin/grep -q '\''^":minimal" = "read"$'\'' "$config"' \
-    '/usr/bin/grep -q '\''^":tmpdir" = "write"$'\'' "$config"' \
+    '/usr/bin/grep -q '\''^":tmpdir" = "deny"$'\'' "$config"' \
     '/usr/bin/grep -q '\''candidate" = "read"$'\'' "$config"' \
     '/usr/bin/grep -q '\''candidate/CANDIDATE.json" = "deny"$'\'' "$config"' \
     '/usr/bin/grep -q '\''codex-bin" = "read"$'\'' "$config"' \
@@ -240,6 +240,8 @@ chmod 0600 "$codex_bin_dir/mode"
     '  case " $* " in *" --include-managed-config "*) ;; *) exit 62 ;; esac' \
     '  case " $* " in *" -P fresh_agent "*) ;; *) exit 63 ;; esac' \
     '  if [ "$mode" = "sandbox-fail" ]; then echo "sandbox diagnostic" >&2; exit 41; fi' \
+    '  /bin/mkdir -p "$TMPDIR/codex-bwrap-synthetic-mount-targets-fake"' \
+    '  : > "$TMPDIR/codex-bwrap-synthetic-mount-targets-fake/lock"' \
     '  printf "FRESH-AGENT PERMISSION CANARY PASS\\n"' \
     '  exit 0' \
     'fi' \
