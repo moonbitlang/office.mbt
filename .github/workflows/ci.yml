@@ -88,7 +88,9 @@ jobs:
           codex_native=$(find "$(npm root -g)/@openai" -type f \
             -path '*/vendor/*/bin/codex' -print | head -n 1)
           test -n "$codex_native"
-          codex_sha=$(/usr/bin/shasum -a 256 "$codex_native" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
+          codex_sha=1da3f4e0e96028b8a771814293c3033dafd1971f943f6c7e79b0897fe705f590
+          actual_codex_sha=$(/usr/bin/shasum -a 256 "$codex_native" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
+          test "$actual_codex_sha" = "$codex_sha"
           echo "F1B_CANARY_EVIDENCE=$parent/evidence" >> "$GITHUB_ENV"
           "$prefix/control/run.sh" --canary-only \
             "$head" "$candidate_sha" \
@@ -125,7 +127,7 @@ jobs:
 
   test:
     name: check + test (mbtexcel + docx2html + office + pdflite, nightly)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Native tests take ~10 minutes; everything else is small. Fail loudly if
     # something (e.g. an accidental whole-workspace exe build pulling in
     # pdflite's pathological markdown CLI) blows the budget.
@@ -182,10 +184,16 @@ jobs:
       - name: Resolve dependencies
         run: moon update
 
-      - name: Install pinned Codex CLI and netcat
+      - name: Install pinned Codex CLI, bubblewrap, and netcat
         run: |
           sudo apt-get update
-          sudo apt-get install -y netcat-openbsd
+          # Noble's AppArmor user-namespace exception is attached to the
+          # packaged /usr/bin/bwrap path, so pin and approve that executable.
+          sudo apt-get install -y \
+            bubblewrap=0.9.0-1ubuntu0.1 \
+            netcat-openbsd
+          test "$(dpkg-query -W -f='${Version}' bubblewrap)" = \
+            "0.9.0-1ubuntu0.1"
           npm install --global @openai/codex@0.145.0
 
       - name: Installed Office release smoke
@@ -221,12 +229,16 @@ jobs:
           codex_native=$(find "$(npm root -g)/@openai" -type f \
             -path '*/vendor/*/bin/codex' -print | head -n 1)
           test -n "$codex_native"
-          codex_vendor=$(/usr/bin/dirname "$(/usr/bin/dirname "$codex_native")")
-          codex_bwrap="$codex_vendor/codex-resources/bwrap"
+          codex_bwrap=$(command -v bwrap)
+          test "$codex_bwrap" = "/usr/bin/bwrap"
           test -f "$codex_bwrap"
           test -x "$codex_bwrap"
-          codex_sha=$(/usr/bin/shasum -a 256 "$codex_native" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
-          bwrap_sha=$(/usr/bin/shasum -a 256 "$codex_bwrap" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
+          codex_sha=a2a05dafaa1acb002a45eaec0a462de5b13694fcfcd7bc43305f14781ce7be14
+          actual_codex_sha=$(/usr/bin/shasum -a 256 "$codex_native" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
+          test "$actual_codex_sha" = "$codex_sha"
+          bwrap_sha=52231e1caf55bcbc667b269f49c63599a6f7db4767ae6a039580d0ff853db712
+          actual_bwrap_sha=$(/usr/bin/shasum -a 256 "$codex_bwrap" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
+          test "$actual_bwrap_sha" = "$bwrap_sha"
           run_parent=$(mktemp -d /tmp/office-f1b-canary.XXXXXX)
           echo "F1B_CANARY_EVIDENCE=$run_parent/evidence" >> "$GITHUB_ENV"
           "$prefix/control/run.sh" --canary-only \
@@ -235,12 +247,19 @@ jobs:
             "$codex_native" "$codex_sha" \
             "$codex_bwrap" "$bwrap_sha"
           jq -e --arg bwrap_sha "$bwrap_sha" \
-            '.codex.bubblewrap_sha256 == $bwrap_sha
+            '.codex.bubblewrap == {
+              selection: "system",
+              sha256: $bwrap_sha,
+              privately_staged: false
+            }
               and .verdict == "CANARY PASS"' \
             "$run_parent/evidence/RUN.json"
           jq -e --arg bwrap_sha "$bwrap_sha" \
-            '.codex.bubblewrap_sha256 == $bwrap_sha
-              and .codex.bubblewrap_privately_staged == true' \
+            '.codex.bubblewrap == {
+              selection: "system",
+              sha256: $bwrap_sha,
+              privately_staged: false
+            }' \
             "$run_parent/evidence/RUN-PREFLIGHT.json"
 
       - name: Upload real Codex canary evidence (Ubuntu)

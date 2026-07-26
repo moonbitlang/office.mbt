@@ -132,6 +132,26 @@ assert_owned_private_file() {
     die "$label must have exactly one link: $path"
 }
 
+assert_root_owned_system_executable() {
+  local path="$1"
+  local label="$2"
+  local owner
+  local mode
+  local nlink
+  [ -f "$path" ] && [ ! -L "$path" ] ||
+    die "$label must be a regular non-symlink file: $path"
+  read -r owner mode nlink <<<"$(stat_owner_mode_nlink "$path")"
+  [ "$owner" = "0" ] || die "$label must be owned by root: $path"
+  case "$mode" in
+    "" | *[!0-7]*) die "could not read $label mode: $path" ;;
+  esac
+  (( (8#$mode & 07000) == 0 )) ||
+    die "$label must not carry setuid, setgid, or sticky bits: $path (mode $mode)"
+  (( (8#$mode & 022) == 0 )) ||
+    die "$label must not be group- or other-writable: $path (mode $mode)"
+  (( (8#$mode & 0111) != 0 )) || die "$label must be executable: $path"
+}
+
 canonical_directory() {
   (
     unset CDPATH
@@ -404,15 +424,21 @@ run_codex() {
     "${codex_argv[@]}" "$@"
 }
 
-verify_staged_codex_runtime() {
+verify_codex_runtime() {
   assert_owned_file "$codex_bin" "0500" "1" "staged Codex executable"
   [ "$(sha256_file "$codex_bin")" = "$expected_codex_sha256" ] ||
     die "staged Codex executable hash mismatch"
   if [ -n "$bwrap_bin" ]; then
-    assert_owned_file \
-      "$bwrap_bin" "0500" "1" "staged Codex bubblewrap resource"
+    if [ "$bwrap_selection" = "system" ]; then
+      assert_root_owned_system_executable "$bwrap_bin" "system bubblewrap"
+    else
+      assert_owned_file \
+        "$bwrap_bin" "0500" "1" "staged Codex bubblewrap executable"
+    fi
     [ "$(sha256_file "$bwrap_bin")" = "$expected_bwrap_sha256" ] ||
-      die "staged Codex bubblewrap resource hash mismatch"
+      die "approved Codex bubblewrap executable hash mismatch"
+    [ "$(sha256_file "$bwrap_source")" = "$expected_bwrap_sha256" ] ||
+      die "approved Codex bubblewrap executable changed during the run"
   fi
 }
 
@@ -671,12 +697,12 @@ codex_source="$(canonical_regular_file "$codex_input" "Codex executable")"
 bwrap_source=""
 if [ -n "$bwrap_input" ]; then
   bwrap_source="$(
-    canonical_regular_file "$bwrap_input" "Codex bubblewrap resource"
+    canonical_regular_file "$bwrap_input" "Codex bubblewrap executable"
   )"
   [ -x "$bwrap_source" ] ||
-    die "Codex bubblewrap resource is not executable: $bwrap_source"
+    die "Codex bubblewrap helper is not executable: $bwrap_source"
   [ "$(sha256_file "$bwrap_source")" = "$expected_bwrap_sha256" ] ||
-    die "Codex bubblewrap resource does not match the caller-supplied digest"
+    die "Codex bubblewrap executable does not match the caller-supplied digest"
 fi
 
 probe_root="$(canonical_absent_directory "$probe_input" "probe directory")"
@@ -710,7 +736,7 @@ fi
 reject_overlap "$install_root" "install prefix" "$codex_source" "Codex executable"
 if [ -n "$bwrap_source" ]; then
   reject_overlap \
-    "$install_root" "install prefix" "$bwrap_source" "Codex bubblewrap resource"
+    "$install_root" "install prefix" "$bwrap_source" "Codex bubblewrap executable"
 fi
 
 /bin/mkdir -m 0700 "$probe_root"
@@ -756,7 +782,7 @@ if [ -n "$auth_json" ]; then
 fi
 if [ -n "$bwrap_source" ]; then
   reject_overlap \
-    "$isolation_root" "isolation directory" "$bwrap_source" "Codex bubblewrap resource"
+    "$isolation_root" "isolation directory" "$bwrap_source" "Codex bubblewrap executable"
 fi
 
 isolated_user_home="$isolation_root/home"
@@ -809,17 +835,28 @@ case "$codex_first_line" in
 esac
 
 bwrap_bin=""
+bwrap_selection="none"
 if [ "$platform_name" = "Linux" ] && [ "$codex_is_native" -eq 1 ]; then
   [ -n "$bwrap_source" ] ||
-    die "native Linux Codex requires an approved bubblewrap resource and digest"
-  bwrap_bin="$isolated_codex_resources/bwrap"
-  /usr/bin/install -m 0500 "$bwrap_source" "$bwrap_bin"
-  [ "$(sha256_file "$bwrap_source")" = "$expected_bwrap_sha256" ] ||
-    die "approved Codex bubblewrap resource changed while it was staged"
+    die "native Linux Codex requires an approved bubblewrap executable and digest"
+  system_bwrap="$(command -v bwrap || true)"
+  if [ -n "$system_bwrap" ]; then
+    system_bwrap="$(
+      canonical_regular_file "$system_bwrap" "system bubblewrap executable"
+    )"
+    [ "$bwrap_source" = "$system_bwrap" ] ||
+      die "the bubblewrap executable selected from sanitized PATH must be the caller-approved executable"
+    bwrap_bin="$system_bwrap"
+    bwrap_selection="system"
+  else
+    bwrap_bin="$isolated_codex_resources/bwrap"
+    /usr/bin/install -m 0500 "$bwrap_source" "$bwrap_bin"
+    bwrap_selection="private"
+  fi
 elif [ -n "$bwrap_source" ]; then
-  die "a Codex bubblewrap resource is accepted only for native Linux Codex"
+  die "a Codex bubblewrap executable is accepted only for native Linux Codex"
 fi
-verify_staged_codex_runtime
+verify_codex_runtime
 
 codex_version="$(run_codex --version | /usr/bin/head -n 1)"
 if [[ ! "$codex_version" =~ ^codex-cli[[:space:]]+([0-9]+)\.([0-9]+)\.([0-9]+)([-+][0-9A-Za-z.-]+)?$ ]]; then
@@ -968,12 +1005,22 @@ fi
   die "permission canary left the probe directory non-empty"
 [ "$(/usr/bin/find "$isolated_tmp" -mindepth 1 -print -quit)" = "" ] ||
   die "permission canary left the isolated scratch directory non-empty"
-verify_staged_codex_runtime
+verify_codex_runtime
 
 runner_sha256="$(sha256_file "$candidate_root/control/run.sh")"
 prompt_sha256="$(sha256_file "$candidate_root/control/prompt.md")"
 output_schema_sha256="$(sha256_file "$candidate_root/control/final.schema.json")"
 canary_sha256="$(sha256_file "$evidence_root/permission-canary.log")"
+bwrap_evidence_json="$(
+  /usr/bin/jq -cn \
+    --arg selection "$bwrap_selection" \
+    --arg sha256 "$expected_bwrap_sha256" \
+    'if $selection == "none" then null else {
+      selection: $selection,
+      sha256: $sha256,
+      privately_staged: ($selection == "private")
+    } end'
+)"
 
 /usr/bin/jq -n \
   --arg schema "office.fresh-agent.run-preflight/2" \
@@ -984,7 +1031,7 @@ canary_sha256="$(sha256_file "$evidence_root/permission-canary.log")"
   --arg output_schema_sha256 "$output_schema_sha256" \
   --arg codex_version "$codex_version" \
   --arg codex_sha256 "$expected_codex_sha256" \
-  --arg bwrap_sha256 "$expected_bwrap_sha256" \
+  --argjson bubblewrap "$bwrap_evidence_json" \
   --arg config_sha256 "$config_sha256_before" \
   --arg permission_canary_sha256 "$canary_sha256" \
   '{
@@ -1002,10 +1049,7 @@ canary_sha256="$(sha256_file "$evidence_root/permission-canary.log")"
       version: $codex_version,
       sha256: $codex_sha256,
       privately_staged: true,
-      bubblewrap_sha256: (
-        if $bwrap_sha256 == "" then null else $bwrap_sha256 end
-      ),
-      bubblewrap_privately_staged: ($bwrap_sha256 != "")
+      bubblewrap: $bubblewrap
     }
   }' > "$isolation_root/RUN-PREFLIGHT.json"
 /usr/bin/install -m 0600 "$isolation_root/RUN-PREFLIGHT.json" \
@@ -1017,7 +1061,7 @@ canary_sha256="$(sha256_file "$evidence_root/permission-canary.log")"
 if [ "$canary_only" -eq 1 ]; then
   verify_candidate "$install_root" "$expected_candidate_sha256"
   verify_candidate "$candidate_root" "$expected_candidate_sha256"
-  verify_staged_codex_runtime
+  verify_codex_runtime
   [ "$(sha256_file "$config_file")" = "$config_sha256_before" ] ||
     die "Codex isolation config changed during the canary"
   /usr/bin/jq -n \
@@ -1026,7 +1070,7 @@ if [ "$canary_only" -eq 1 ]; then
     --arg candidate_manifest_sha256 "$expected_candidate_sha256" \
     --arg codex_version "$codex_version" \
     --arg codex_sha256 "$expected_codex_sha256" \
-    --arg bwrap_sha256 "$expected_bwrap_sha256" \
+    --argjson bubblewrap "$bwrap_evidence_json" \
     --arg config_sha256 "$config_sha256_before" \
     --arg permission_canary_sha256 "$canary_sha256" \
     '{
@@ -1036,9 +1080,7 @@ if [ "$canary_only" -eq 1 ]; then
       codex: {
         version: $codex_version,
         sha256: $codex_sha256,
-        bubblewrap_sha256: (
-          if $bwrap_sha256 == "" then null else $bwrap_sha256 end
-        )
+        bubblewrap: $bubblewrap
       },
       isolation_config_sha256: $config_sha256,
       permission_canary_sha256: $permission_canary_sha256,
@@ -1060,7 +1102,7 @@ verify_candidate "$candidate_root" "$expected_candidate_sha256"
   die "probe directory identity changed before the probe"
 [ "$(stat_identity "$evidence_root")" = "$evidence_identity" ] ||
   die "evidence directory identity changed before the probe"
-verify_staged_codex_runtime
+verify_codex_runtime
 
 # The real credential enters the isolation only after every unauthenticated
 # preflight and sandbox check has succeeded. The cleanup trap has been armed
@@ -1097,7 +1139,7 @@ chmod u+w "$isolated_codex_state/auth.json" 2>/dev/null || true
 
 verify_candidate "$install_root" "$expected_candidate_sha256"
 verify_candidate "$candidate_root" "$expected_candidate_sha256"
-verify_staged_codex_runtime
+verify_codex_runtime
 [ "$(sha256_file "$config_file")" = "$config_sha256_before" ] ||
   die "Codex isolation config changed during the probe"
 [ "$(stat_identity "$install_root")" = "$install_identity" ] ||
@@ -1232,7 +1274,7 @@ IFS= read -r result_header < "$result_file" || true
   --arg verdict "$verdict" \
   --argjson codex_exit_status "$codex_status" \
   --arg codex_sha256 "$expected_codex_sha256" \
-  --arg bwrap_sha256 "$expected_bwrap_sha256" \
+  --argjson bubblewrap "$bwrap_evidence_json" \
   --arg config_sha256 "$config_sha256_before" \
   --arg result_sha256 "$(sha256_file "$result_file")" \
   --arg transcript_sha256 "$(sha256_file "$transcript_file")" \
@@ -1248,13 +1290,10 @@ IFS= read -r result_header < "$result_file" || true
     codex_exit_status: $codex_exit_status,
     integrity: {
       codex_sha256: $codex_sha256,
-      bubblewrap_sha256: (
-        if $bwrap_sha256 == "" then null else $bwrap_sha256 end
-      ),
+      bubblewrap: $bubblewrap,
       isolation_config_sha256: $config_sha256,
       privately_staged_candidate: true,
-      privately_staged_codex: true,
-      privately_staged_bubblewrap: ($bwrap_sha256 != "")
+      privately_staged_codex: true
     },
     evidence: {
       result_sha256: $result_sha256,
