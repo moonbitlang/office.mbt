@@ -115,6 +115,9 @@ fn relationship_ipv4_literal_valid(
       return false
     }
     index += 1
+    if index == end {
+      return false
+    }
   }
   components == 4
 }

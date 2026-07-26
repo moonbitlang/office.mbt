@@ -671,7 +671,7 @@ test "hyperlink mutation accepts the Office-safe external scheme set" {
     "http://example.com", "https://example.com", "mailto:person@example.com", "ftp://example.com/file",
     "ftps://example.com/file", "sftp://example.com/file", "news:comp.lang.moonbit",
     "tel:+123456", "sms:+123456", "file:///tmp/workbook.xlsx", "about:blank", "ppaction://hlinkshowjump?jump=nextslide",
-    "relative/path/workbook.xlsx",
+    "https://[::ffff:192.0.2.1]/book.xlsx", "relative/path/workbook.xlsx",
   ]
   for index, target in targets {
     sheet.set_cell_hyperlink("A\{index + 1}", target, External)
@@ -688,13 +688,13 @@ test "hyperlink mutation accepts the Office-safe external scheme set" {
       fail("\{target}: safe target changed after roundtrip to \{link.target}")
     }
   }
-  inspect(sheet.get_hyperlinks().length(), content="13")
+  inspect(sheet.get_hyperlinks().length(), content="14")
   let parsed = @xlsx.read(@xlsx.write(workbook)) catch {
     error => fail("combined safe target roundtrip failed: \{repr(error)}")
   }
-  inspect(parsed.get_hyperlinks("Sheet1").length(), content="13")
+  inspect(parsed.get_hyperlinks("Sheet1").length(), content="14")
   debug_inspect(
-    parsed.get_cell_hyperlink("Sheet1", "A13").map(link => link.target),
+    parsed.get_cell_hyperlink("Sheet1", "A14").map(link => link.target),
     content=(
       #|Some("relative/path/workbook.xlsx")
     ),
@@ -715,6 +715,7 @@ test "hyperlink mutation rejects empty and unsafe targets atomically" {
     ("unknown", "custom-scheme:value", External),
     ("one-letter unknown", "x:value", External),
     ("malformed authority", "https://[broken", External),
+    ("malformed embedded IPv4", "https://[::ffff:192.0.2.1.]/", External),
     ("malformed percent escape", "https://host/%GG", External),
     ("malformed port", "https://[::1]:port/path", External),
     ("control in scheme", "java\tscript:alert(1)", External),

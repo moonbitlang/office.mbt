@@ -207,6 +207,40 @@ priv enum HyperlinkMergePlan {
 }
 
 ///|
+priv struct IndexedHyperlinkBounds {
+  index : Int
+  bounds : (Int, Int, Int, Int)
+}
+
+///|
+priv struct IndexedMergedRangeBounds {
+  order : Int
+  bounds : (Int, Int, Int, Int)
+  anchor : String
+}
+
+///|
+fn plan_overlapping_hyperlink_for_merge(
+  index : Int,
+  link_bounds : (Int, Int, Int, Int),
+  merge_bounds : (Int, Int, Int, Int),
+) -> HyperlinkMergePlan {
+  if bounds_contain(merge_bounds, link_bounds) {
+    return Reanchor(index)
+  }
+  let (min_row, min_col, _, _) = merge_bounds
+  let (link_min_row, link_min_col, link_max_row, link_max_col) = link_bounds
+  if !cell_in_bounds(
+      min_row, min_col, link_min_row, link_min_col, link_max_row, link_max_col,
+    ) {
+    return Conflict(
+      "merged range partially overlaps a hyperlink range away from its anchor",
+    )
+  }
+  Keep
+}
+
+///|
 /// Plans how the hyperlink sidecar participates in one merged range. Keeping
 /// this decision separate from mutation lets both the public merge API and the
 /// reader enforce the same identity rules with context-appropriate errors.
@@ -214,9 +248,8 @@ fn plan_hyperlinks_for_merge(
   hyperlinks : ArrayView[Hyperlink],
   merge_bounds : (Int, Int, Int, Int),
 ) -> HyperlinkMergePlan raise XlsxError {
-  let (min_row, min_col, _, _) = merge_bounds
   let mut overlapping_hyperlink : Int? = None
-  let mut reanchor_hyperlink : Int? = None
+  let mut plan : HyperlinkMergePlan = Keep
   for index, link in hyperlinks {
     let link_bounds = parse_range_ref(link.reference)
     if rects_overlap(merge_bounds, link_bounds) {
@@ -224,24 +257,15 @@ fn plan_hyperlinks_for_merge(
         return Conflict("merged range contains multiple hyperlink identities")
       }
       overlapping_hyperlink = Some(index)
-      if bounds_contain(merge_bounds, link_bounds) {
-        reanchor_hyperlink = Some(index)
-      } else {
-        let (link_min_row, link_min_col, link_max_row, link_max_col) = link_bounds
-        if !cell_in_bounds(
-            min_row, min_col, link_min_row, link_min_col, link_max_row, link_max_col,
-          ) {
-          return Conflict(
-            "merged range partially overlaps a hyperlink range away from its anchor",
-          )
-        }
+      plan = plan_overlapping_hyperlink_for_merge(
+        index, link_bounds, merge_bounds,
+      )
+      if plan is Conflict(_) {
+        return plan
       }
     }
   }
-  match reanchor_hyperlink {
-    Some(index) => Reanchor(index)
-    None => Keep
-  }
+  plan
 }
 
 ///|
@@ -262,24 +286,200 @@ fn reanchor_hyperlink(
 }
 
 ///|
+fn compare_bounds_then_order(
+  left_bounds : (Int, Int, Int, Int),
+  left_order : Int,
+  right_bounds : (Int, Int, Int, Int),
+  right_order : Int,
+) -> Int {
+  let (left_min_row, left_min_col, left_max_row, left_max_col) = left_bounds
+  let (right_min_row, right_min_col, right_max_row, right_max_col) = right_bounds
+  if left_min_row != right_min_row {
+    left_min_row.compare(right_min_row)
+  } else if left_min_col != right_min_col {
+    left_min_col.compare(right_min_col)
+  } else if left_max_row != right_max_row {
+    left_max_row.compare(right_max_row)
+  } else if left_max_col != right_max_col {
+    left_max_col.compare(right_max_col)
+  } else {
+    left_order.compare(right_order)
+  }
+}
+
+///|
+fn compare_indexed_hyperlink_bounds(
+  left : IndexedHyperlinkBounds,
+  right : IndexedHyperlinkBounds,
+) -> Int {
+  compare_bounds_then_order(left.bounds, left.index, right.bounds, right.index)
+}
+
+///|
+fn compare_indexed_merged_range_bounds(
+  left : IndexedMergedRangeBounds,
+  right : IndexedMergedRangeBounds,
+) -> Int {
+  compare_bounds_then_order(left.bounds, left.order, right.bounds, right.order)
+}
+
+///|
+/// Charges the comparison levels of a bounded sort without multiplying two
+/// caller-controlled integers. The actual library sort is short for ordinary
+/// sheets; checkpoints before and after it keep cancellation responsive.
+fn charge_hyperlink_bound_sort(
+  budget : ReadBudget,
+  count : Int,
+) -> Unit raise XlsxError {
+  let mut width = 1
+  while width < count {
+    budget.checkpoint()
+    budget.charge_work(count)
+    if width > count / 2 {
+      break
+    }
+    width = width * 2
+  }
+}
+
+///|
+fn index_hyperlink_bounds(
+  hyperlinks : ArrayView[Hyperlink],
+  budget : ReadBudget,
+) -> Array[IndexedHyperlinkBounds] raise XlsxError {
+  budget.checkpoint()
+  budget.charge_work(hyperlinks.length())
+  let indexed : Array[IndexedHyperlinkBounds] = []
+  for index, link in hyperlinks {
+    if index % 4096 == 0 {
+      budget.checkpoint()
+    }
+    indexed.push({ index, bounds: parse_range_ref(link.reference) })
+  }
+  charge_hyperlink_bound_sort(budget, indexed.length())
+  indexed.sort_by(compare_indexed_hyperlink_bounds)
+  budget.checkpoint()
+  indexed
+}
+
+///|
+fn index_merged_range_bounds(
+  merged_cells : ArrayView[String],
+  budget : ReadBudget,
+) -> Array[IndexedMergedRangeBounds] raise XlsxError {
+  budget.checkpoint()
+  budget.charge_work(merged_cells.length())
+  let indexed : Array[IndexedMergedRangeBounds] = []
+  for order, merged in merged_cells {
+    if order % 4096 == 0 {
+      budget.checkpoint()
+    }
+    let bounds = parse_range_ref(merged)
+    let (min_row, min_col, _, _) = bounds
+    indexed.push({ order, bounds, anchor: cell_ref_from(min_row, min_col) })
+  }
+  charge_hyperlink_bound_sort(budget, indexed.length())
+  indexed.sort_by(compare_indexed_merged_range_bounds)
+  budget.checkpoint()
+  indexed
+}
+
+///|
 /// Canonicalizes hyperlink identities retained from an existing workbook.
 /// Older producers (including earlier mbtexcel versions) can leave a link on
 /// a non-anchor cell inside a merged range. Reject ambiguous layouts rather
-/// than exposing a hyperlink that lookup and removal cannot address.
+/// than exposing a hyperlink that lookup and removal cannot address. A row
+/// sweep keeps disjoint layouts near O((H + M) log(H + M)); every residual
+/// active-set comparison is budgeted and cancellation-aware.
 fn canonicalize_loaded_hyperlinks_for_merges(
   hyperlinks : Array[Hyperlink],
   merged_cells : ArrayView[String],
+  budget : ReadBudget,
 ) -> Unit raise XlsxError {
-  for merged in merged_cells {
-    let merge_bounds = parse_range_ref(merged)
-    let (min_row, min_col, _, _) = merge_bounds
-    match plan_hyperlinks_for_merge(hyperlinks, merge_bounds) {
+  if hyperlinks.length() == 0 || merged_cells.length() == 0 {
+    return
+  }
+  let indexed_hyperlinks = index_hyperlink_bounds(hyperlinks, budget)
+  let indexed_merges = index_merged_range_bounds(merged_cells, budget)
+  let mut active : Array[IndexedHyperlinkBounds] = []
+  let planned_anchors : Map[Int, String] = Map([])
+  let reanchors : Array[(Int, String)] = []
+  let mut hyperlink_cursor = 0
+  for merged in indexed_merges {
+    budget.checkpoint()
+    let (merge_min_row, _, merge_max_row, _) = merged.bounds
+    while hyperlink_cursor < indexed_hyperlinks.length() {
+      let (link_min_row, _, _, _) = indexed_hyperlinks[hyperlink_cursor].bounds
+      if link_min_row > merge_max_row {
+        break
+      }
+      if hyperlink_cursor % 4096 == 0 {
+        budget.checkpoint()
+      }
+      budget.charge_work(1)
+      active.push(indexed_hyperlinks[hyperlink_cursor])
+      hyperlink_cursor += 1
+    }
+    let retained : Array[IndexedHyperlinkBounds] = []
+    let mut found_overlap = false
+    let mut plan : HyperlinkMergePlan = Keep
+    let mut active_index = 0
+    while active_index < active.length() {
+      if active_index % 4096 == 0 {
+        budget.checkpoint()
+        let remaining = active.length() - active_index
+        budget.charge_work(if remaining > 4096 { 4096 } else { remaining })
+      }
+      let indexed = active[active_index]
+      let (_, _, link_max_row, _) = indexed.bounds
+      if link_max_row >= merge_min_row {
+        retained.push(indexed)
+        if rects_overlap(merged.bounds, indexed.bounds) {
+          if found_overlap {
+            raise InvalidXml(
+              msg="invalid merged-cell hyperlink layout: merged range contains multiple hyperlink identities",
+            )
+          }
+          found_overlap = true
+          plan = plan_overlapping_hyperlink_for_merge(
+            indexed.index,
+            indexed.bounds,
+            merged.bounds,
+          )
+          if plan is Conflict(msg) {
+            raise InvalidXml(msg="invalid merged-cell hyperlink layout: \{msg}")
+          }
+        }
+      }
+      active_index += 1
+    }
+    active = retained
+    match plan {
       Keep => ()
       Reanchor(index) =>
-        reanchor_hyperlink(hyperlinks, index, cell_ref_from(min_row, min_col))
+        match planned_anchors.get(index) {
+          Some(existing) =>
+            if existing != merged.anchor {
+              raise InvalidXml(
+                msg="invalid merged-cell hyperlink layout: hyperlink resolves to multiple merged-cell anchors",
+              )
+            }
+          None => {
+            planned_anchors[index] = merged.anchor
+            reanchors.push((index, merged.anchor))
+          }
+        }
       Conflict(msg) =>
         raise InvalidXml(msg="invalid merged-cell hyperlink layout: \{msg}")
     }
+  }
+  for action_index, action in reanchors {
+    if action_index % 4096 == 0 {
+      budget.checkpoint()
+    }
+    budget.charge_work(1)
+    let (index, anchor) = action
+    reanchor_hyperlink(hyperlinks, index, anchor)
   }
 }
 
@@ -329,4 +529,76 @@ test "hyperlink ceiling permits replacement and rejects a new identity" {
       #|Err(HyperlinkLimitExceeded(limit=65530))
     ),
   )
+}
+
+///|
+fn hyperlink_merge_budget_fixture(
+  count : Int,
+) -> (Array[Hyperlink], Array[String]) {
+  let hyperlinks : Array[Hyperlink] = []
+  let merged_cells : Array[String] = []
+  for index in 0..<count {
+    let row = index * 2 + 1
+    hyperlinks.push({
+      reference: "B\{row}",
+      target: "https://example.test/\{index}",
+      link_type: External,
+      location: None,
+      display: None,
+      tooltip: None,
+    })
+    merged_cells.push("A\{row}:B\{row}")
+  }
+  (hyperlinks, merged_cells)
+}
+
+///|
+test "loaded hyperlink merge sweep is budgeted and cancellable" {
+  let count = 256
+  let (hyperlinks, merged_cells) = hyperlink_merge_budget_fixture(count)
+  let budget = ReadBudget::new(
+    ReadLimits::with_values(max_parser_work_units=1024 * 1024),
+  )
+  canonicalize_loaded_hyperlinks_for_merges(hyperlinks, merged_cells, budget)
+  assert_eq(hyperlinks[0].reference, "A1")
+  assert_eq(hyperlinks[count - 1].reference, "A511")
+  // A Cartesian implementation needs 65,536 comparisons here. Sorting and
+  // sweeping disjoint rows stays comfortably below that bound.
+  assert_true(budget.parser_work_units < count * count)
+  let charged_work = budget.parser_work_units
+
+  let (limited_hyperlinks, _) = hyperlink_merge_budget_fixture(count)
+  let limited_budget = ReadBudget::new(
+    ReadLimits::with_values(max_parser_work_units=charged_work - 1),
+  )
+  try
+    canonicalize_loaded_hyperlinks_for_merges(
+      limited_hyperlinks, merged_cells, limited_budget,
+    )
+  catch {
+    ResourceLimitExceeded(kind~, ..) => assert_eq(kind, "parser_work_units")
+    _ => fail("unexpected merged hyperlink work-limit error")
+  } noraise {
+    _ => fail("expected merged hyperlink work-limit rejection")
+  }
+
+  let (cancelled_hyperlinks, _) = hyperlink_merge_budget_fixture(count)
+  let checks = [0]
+  let cancelled_budget = ReadBudget::new(
+    ReadLimits::with_values(max_parser_work_units=1024 * 1024),
+    cancelled=() => {
+      checks[0] += 1
+      checks[0] >= 25
+    },
+  )
+  try
+    canonicalize_loaded_hyperlinks_for_merges(
+      cancelled_hyperlinks, merged_cells, cancelled_budget,
+    )
+  catch {
+    ReadCancelled => assert_true(checks[0] >= 25)
+    _ => fail("unexpected merged hyperlink cancellation error")
+  } noraise {
+    _ => fail("expected merged hyperlink cancellation")
+  }
 }
