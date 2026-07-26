@@ -105,6 +105,7 @@ make_candidate() {
     "$install_root/control"
   printf '%s\n' \
     '#!/bin/sh' \
+    'case "${TMPDIR:-}" in */.office-f1b-isolation.*/tmp) ;; *) exit 70 ;; esac' \
     'printf "fake-office %s\\n" "${1:-help}"' \
     > "$install_root/bin/office-native"
   /usr/bin/install -m 0500 "$script_dir/office-wasm" \
@@ -112,6 +113,7 @@ make_candidate() {
   printf '%s\n' \
     '#!/bin/sh' \
     'shift' \
+    'case "${TMPDIR:-}" in */.office-f1b-isolation.*/tmp) ;; *) exit 70 ;; esac' \
     'printf "fake-office %s\\n" "${1:-help}"' \
     > "$install_root/libexec/moonrun"
   printf 'fake wasm\n' > "$install_root/libexec/office.wasm"
@@ -232,8 +234,14 @@ chmod 0600 "$codex_bin_dir/mode"
     'child_tmp="$isolation_root/tmp"' \
     'test "$TMPDIR" = "$CODEX_HOME/runtime-tmp"' \
     'test "$TMPDIR" != "$child_tmp"' \
+    'runtime_tmp_key=$(/usr/bin/jq -Rn --arg value "$TMPDIR" '\''$value'\'')' \
+    '/usr/bin/grep -Fqx "TMPDIR = $runtime_tmp_key" "$config"' \
     'child_tmp_key=$(/usr/bin/jq -Rn --arg value "$child_tmp" '\''$value'\'')' \
     '/usr/bin/grep -Fqx "$child_tmp_key = \"write\"" "$config"' \
+    'probe_path="$isolation_root/launcher-bin:$isolation_root/candidate/bin:/usr/bin:/bin:/usr/sbin:/sbin"' \
+    'probe_path_key=$(/usr/bin/jq -Rn --arg value "$probe_path" '\''$value'\'')' \
+    '/usr/bin/grep -Fqx "PATH = $probe_path_key" "$config"' \
+    'PATH=$probe_path; export PATH' \
     '/usr/bin/grep -q '\''candidate" = "read"$'\'' "$config"' \
     '/usr/bin/grep -q '\''candidate/CANDIDATE.json" = "deny"$'\'' "$config"' \
     '/usr/bin/grep -q '\''codex-bin" = "read"$'\'' "$config"' \
@@ -311,7 +319,7 @@ chmod 0600 "$codex_bin_dir/mode"
     '      emit_started "cmd-$index" "$cmd"' \
     '      if [ "$mode" = "spoof-office" ]; then body="spoof"; status=0; else' \
     '        set +e' \
-    '        body=$("$candidate/bin/office-$runtime" "$verb" 2>&1)' \
+    '        body=$("office-$runtime" "$verb" 2>&1)' \
     '        status=$?' \
     '        set -e' \
     '      fi' \
@@ -321,7 +329,7 @@ chmod 0600 "$codex_bin_dir/mode"
     '      index=$((index + 1))' \
     '      if [ "$mode" = "spoof-office" ]; then cmd="echo office-$runtime identify sample.$extension"; else cmd="office-$runtime identify sample.$extension"; fi' \
     '      emit_started "cmd-$index" "$cmd"' \
-    '      if [ "$mode" = "spoof-office" ]; then body="spoof"; else body=$("$candidate/bin/office-$runtime" identify "sample.$extension" 2>&1); fi' \
+    '      if [ "$mode" = "spoof-office" ]; then body="spoof"; else body=$("office-$runtime" identify "sample.$extension" 2>&1); fi' \
     '      emit_completed "cmd-$index" "$cmd" 0 "$body"' \
     '    done' \
     '  done' \

@@ -150,10 +150,10 @@ Codex receives a generated isolated configuration:
   bubblewrap re-entry, the isolated shell home, and the fixed canary launcher
   are the other readable roots, and any privately staged `bwrap` resource
   itself remains denied;
-- only the empty probe directory and isolated child `TMPDIR` scratch directory
-  are writable; Codex's separate controller-runtime `TMPDIR` stays inside its
-  denied private state so Linux bubblewrap bookkeeping cannot enter the child
-  scratch root;
+- only the empty probe directory and isolated Office-child scratch directory
+  are writable; Codex's controller `TMPDIR` stays inside its denied private
+  state, and fixed read-only command launchers select the child `TMPDIR` only
+  after sandbox entry so Linux bubblewrap bookkeeping cannot enter it;
 - network, web search, MCP servers, hooks, login shells, project instructions,
   skills, plugins, apps, browser/Computer Use, memories, and subagents are
   disabled; and
