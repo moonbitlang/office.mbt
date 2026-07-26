@@ -206,10 +206,29 @@ fi
 
 probe_path="$install_root/bin:$isolated_launcher_bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
+# Codex invokes model-authored commands through the account's login shell.
+# System login profiles (macOS /etc/zprofile in particular) can prepend package
+# manager directories after the clean environment below is installed. Keep the
+# generated home free of coaching, but give each common login shell one
+# runner-owned guard that restores the exact allowlisted PATH after system
+# profiles run.
+write_shell_path_guard() {
+  local profile="$1"
+  local quoted_path
+  printf -v quoted_path '%q' "$probe_path"
+  printf 'PATH=%s\nexport PATH\nunset CDPATH\n' "$quoted_path" > "$profile"
+  chmod 0600 "$profile"
+}
+
+for profile_name in .profile .bash_profile .zprofile; do
+  write_shell_path_guard "$isolated_user_home/$profile_name"
+done
+
 set +e
 env -i \
   HOME="$isolated_user_home" \
   CODEX_HOME="$isolated_codex_state" \
+  ZDOTDIR="$isolated_user_home" \
   PATH="$probe_path" \
   TMPDIR="$isolated_tmp" \
   LANG=C \
@@ -223,6 +242,9 @@ env -i \
   --sandbox workspace-write \
   -m gpt-5.6-sol \
   -c 'model_reasoning_effort="max"' \
+  -c 'shell_environment_policy.inherit="all"' \
+  -c 'shell_environment_policy.include_only=["HOME","CODEX_HOME","ZDOTDIR","PATH","TMPDIR","LANG","LC_ALL"]' \
+  -c 'shell_environment_policy.experimental_use_profile=false' \
   -C "$probe_root" \
   --output-last-message "$evidence_root/final-message.md" \
   - < "$prompt" \
