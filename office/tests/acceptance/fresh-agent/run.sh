@@ -223,6 +223,17 @@ paths_overlap() {
   return 1
 }
 
+path_is_within_or_equal() {
+  local path="$1"
+  local root="$2"
+  [ "$root" = "/" ] && return 0
+  [ "$path" = "$root" ] && return 0
+  case "$path/" in
+    "$root/"*) return 0 ;;
+  esac
+  return 1
+}
+
 reject_overlap() {
   local left="$1"
   local left_label="$2"
@@ -960,9 +971,14 @@ config_file="$isolated_codex_state/config.toml"
     printf '%s = "deny"\n' "$(toml_string /proc)"
   fi
   printf '%s = "deny"\n' "$(toml_string "$source_root")"
-  printf '%s = "deny"\n' "$(toml_string "$git_common_dir")"
+  if ! path_is_within_or_equal "$git_common_dir" "$source_root"; then
+    printf '%s = "deny"\n' "$(toml_string "$git_common_dir")"
+  fi
   if [ -n "$auth_json" ]; then
-    printf '%s = "deny"\n' "$(toml_string "$auth_json")"
+    if ! path_is_within_or_equal "$auth_json" "$source_root" &&
+      ! path_is_within_or_equal "$auth_json" "$git_common_dir"; then
+      printf '%s = "deny"\n' "$(toml_string "$auth_json")"
+    fi
   fi
   printf '%s = "deny"\n' "$(toml_string "$isolated_codex_state")"
   printf '%s = "deny"\n' "$(toml_string "$isolated_codex_resources")"
