@@ -86,6 +86,8 @@ sha256_file() {
 
 make_candidate() {
   local install_root="$1"
+  local source_root="${2:-$root}"
+  local common_dir="${3:-$git_common_dir}"
   local native_sha
   local wasm_wrapper_sha
   local moonrun_sha
@@ -129,8 +131,8 @@ make_candidate() {
 
   /usr/bin/jq -n \
     --arg schema "office.fresh-agent.private/1" \
-    --arg source_root "$root" \
-    --arg git_common_dir "$git_common_dir" \
+    --arg source_root "$source_root" \
+    --arg git_common_dir "$common_dir" \
     '{
       schema: $schema,
       source_root: $source_root,
@@ -383,7 +385,14 @@ fi
 special_parent="$test_root/special # [x] * back\\slash"
 /bin/mkdir -m 0700 "$special_parent"
 special_install="$special_parent/install"
-make_candidate "$special_install"
+nested_source="$test_root/nested-source"
+/bin/mkdir -m 0700 "$nested_source" "$nested_source/.git"
+nested_source="$(
+  unset CDPATH
+  cd -P -- "$nested_source" >/dev/null
+  pwd -P
+)"
+make_candidate "$special_install" "$nested_source" "$nested_source/.git"
 special_candidate_sha="$(sha256_file "$special_install/CANDIDATE.json")"
 "$special_install/control/run.sh" --canary-only \
   "$head" "$special_candidate_sha" \
@@ -397,6 +406,15 @@ special_candidate_sha="$(sha256_file "$special_install/CANDIDATE.json")"
   (.artifacts | length) == 5
 ' "$special_parent/evidence/EVIDENCE.json" >/dev/null ||
   fail "canary-only evidence"
+source_key="$(/usr/bin/jq -Rn --arg value "$nested_source" '$value')"
+git_key="$(/usr/bin/jq -Rn --arg value "$nested_source/.git" '$value')"
+source_deny="$source_key = \"deny\""
+git_deny="$git_key = \"deny\""
+/usr/bin/grep -Fqx "$source_deny" "$special_parent/evidence/CONFIG.toml" ||
+  fail "source checkout deny rule"
+if /usr/bin/grep -Fqx "$git_deny" "$special_parent/evidence/CONFIG.toml"; then
+  fail "redundant nested Git deny rule"
+fi
 
 expect_failure() {
   local label="$1"
