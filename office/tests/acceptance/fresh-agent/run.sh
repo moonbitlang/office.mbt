@@ -495,6 +495,7 @@ write_live_canary_launcher() {
     "$candidate_root/control/permission-canary.sh" "$canary_body"
   {
     printf '%s\n' '#!/bin/bash -p' 'set -euo pipefail'
+    printf 'TMPDIR=%q\nexport TMPDIR\n' "$isolated_tmp"
     printf 'exec %q' "$canary_body"
     printf ' %q' \
       "$candidate_root" \
@@ -510,6 +511,18 @@ write_live_canary_launcher() {
       "$network_port" \
       "$platform_name"
     printf '\n'
+  } > "$launcher"
+  chmod 0500 "$launcher"
+}
+
+write_office_launcher() {
+  local runtime="$1"
+  local launcher="$isolated_launcher_bin/office-$runtime"
+  local target="$candidate_root/bin/office-$runtime"
+  {
+    printf '%s\n' '#!/bin/bash -p' 'set -euo pipefail'
+    printf 'TMPDIR=%q\nexport TMPDIR\n' "$isolated_tmp"
+    printf 'exec %q "$@"\n' "$target"
   } > "$launcher"
   chmod 0500 "$launcher"
 }
@@ -910,8 +923,10 @@ fi
   die "ambient permission-canary path unexpectedly exists"
 start_loopback_listener
 write_live_canary_launcher
+write_office_launcher native
+write_office_launcher wasm
 
-probe_path="$candidate_root/bin:$isolated_launcher_bin:/usr/bin:/bin:/usr/sbin:/sbin"
+probe_path="$isolated_launcher_bin:$candidate_root/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 for profile_name in .profile .bash_profile .zprofile .zlogin .zshenv; do
   printf 'PATH=%q\nexport PATH\nunset CDPATH CODEX_HOME\n' "$probe_path" \
     > "$isolated_user_home/$profile_name"
@@ -956,7 +971,7 @@ config_file="$isolated_codex_state/config.toml"
   printf 'HOME = %s\n' "$(toml_string "$isolated_user_home")"
   printf 'ZDOTDIR = %s\n' "$(toml_string "$isolated_user_home")"
   printf 'PATH = %s\n' "$(toml_string "$probe_path")"
-  printf 'TMPDIR = %s\n' "$(toml_string "$isolated_tmp")"
+  printf 'TMPDIR = %s\n' "$(toml_string "$isolated_codex_tmp")"
   printf '%s\n' \
     'LANG = "C"' \
     'LC_ALL = "C"' \
@@ -1187,6 +1202,8 @@ verify_codex_runtime
   die "probe directory identity changed during the probe"
 [ "$(stat_identity "$evidence_root")" = "$evidence_identity" ] ||
   die "evidence directory identity changed during the probe"
+[ "$(/usr/bin/find "$isolated_tmp" -mindepth 1 -print -quit)" = "" ] ||
+  die "Office probe left the isolated child scratch directory non-empty"
 
 [ "$codex_status" -eq 0 ] || {
   echo "error: Codex probe exited with status $codex_status" >&2
