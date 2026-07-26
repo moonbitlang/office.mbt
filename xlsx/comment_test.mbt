@@ -631,23 +631,31 @@ test "retained maximum VML shape id needs no successor" {
 
 ///|
 test "comment delete rejects malformed retained VML without mutation" {
-  let workbook = @xlsx.Workbook::new()
-  let sheet = workbook.add_sheet("Sheet1")
-  sheet.add_comment(plain_comment("A1", "Alice", "keep"))
-  let malformed_vml = "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\" " +
+  let prefix = "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\" " +
     "xmlns:x=\"urn:schemas-microsoft-com:office:excel\">" +
-    "<v:shape id=\"_x0000_s1025\"><x:ClientData ObjectType=\"Note\">" +
-    "<x:Column>0</x:Column></x:ClientData></v:shape></xml>"
-  sheet.add_vml_drawing_xml(malformed_vml)
-  let result : Result[Unit, Error] = Ok(sheet.delete_comment("A1")) catch {
-    error => Err(error)
+    "<v:shape id=\"_x0000_s1025\"><x:ClientData ObjectType=\"Note\">"
+  let malformed_vmls = [
+    prefix + "<x:Column>0</x:Column></x:ClientData></v:shape></xml>",
+    prefix + "<x:Row>0</x:Row><x:Column>0</x:Column></v:shape></xml>",
+  ]
+  for malformed_vml in malformed_vmls {
+    let workbook = @xlsx.Workbook::new()
+    let sheet = workbook.add_sheet("Sheet1")
+    sheet.add_comment(plain_comment("A1", "Alice", "keep"))
+    sheet.add_vml_drawing_xml(malformed_vml)
+    let result : Result[Unit, Error] = Ok(sheet.delete_comment("A1")) catch {
+      error => Err(error)
+    }
+    inspect(
+      result is Err(@xlsx.XlsxError::InvalidVmlDrawing(_)),
+      content="true",
+    )
+    match sheet.get_comment("A1") {
+      Some(comment) => inspect(comment.text, content="keep")
+      None => fail("failed deletion must preserve the comment")
+    }
+    inspect(sheet.vml_drawing_xml() == Some(malformed_vml), content="true")
   }
-  inspect(result is Err(@xlsx.XlsxError::InvalidVmlDrawing(_)), content="true")
-  match sheet.get_comment("A1") {
-    Some(comment) => inspect(comment.text, content="keep")
-    None => fail("failed deletion must preserve the comment")
-  }
-  inspect(sheet.vml_drawing_xml() == Some(malformed_vml), content="true")
 }
 
 ///|

@@ -249,10 +249,31 @@ fn extract_vml_element_spans(
 }
 
 ///|
+fn vml_element_open_at(
+  xml : StringView,
+  start : Int,
+  element_name : StringView,
+) -> Bool {
+  let name_length = element_name.length()
+  if start < 0 ||
+    start + 1 + name_length > xml.length() ||
+    xml[start] != ('<' : UInt16) {
+    return false
+  }
+  for offset in 0..<name_length {
+    if xml[start + 1 + offset] != element_name[offset] {
+      return false
+    }
+  }
+  let boundary = start + 1 + name_length
+  boundary == xml.length() || is_xml_open_tag_boundary(xml[boundary])
+}
+
+///|
 fn vml_direct_element_span(
   xml : StringView,
   element_name : StringView,
-) -> VmlShapeSpan? {
+) -> VmlShapeSpan? raise XlsxError {
   let masked = mask_vml_non_element_markup(xml)
   let mut depth = 0
   let mut index = 0
@@ -262,9 +283,18 @@ fn vml_direct_element_span(
       None => return None
     }
     let start = index + relative
+    let target_at_start = depth == 0 &&
+      vml_element_open_at(masked, start, element_name)
     let open_end = match xml_open_tag_end_from(masked, start + 1) {
       Some(value) => value
-      None => return None
+      None =>
+        if target_at_start {
+          raise InvalidVmlDrawing(
+            msg="retained VML \{element_name.to_owned()} element is malformed",
+          )
+        } else {
+          return None
+        }
     }
     let closing = start + 1 < masked.length() &&
       masked[start + 1] == ('/' : UInt16)
@@ -276,15 +306,17 @@ fn vml_direct_element_span(
       continue
     }
     let self_closing = masked[start + 1:open_end].trim().has_suffix("/")
-    if depth == 0 &&
-      find_xml_open_tag_start_from(masked, element_name, start) == Some(start) {
+    if target_at_start {
       if self_closing {
         return Some({ start, close_start: open_end, end: open_end + 1 })
       }
       return match find_xml_close_tag_from(masked, element_name, open_end + 1) {
         Some((close_start, close_end)) =>
           Some({ start, close_start, end: close_end + 1 })
-        None => None
+        None =>
+          raise InvalidVmlDrawing(
+            msg="retained VML \{element_name.to_owned()} element is malformed",
+          )
       }
     }
     if !self_closing {
@@ -304,7 +336,7 @@ fn extract_vml_shape_spans(xml : StringView) -> Array[VmlShapeSpan] {
 fn vml_live_element_text(
   xml : StringView,
   element_name : StringView,
-) -> String? {
+) -> String? raise XlsxError {
   let span = match vml_direct_element_span(xml, element_name) {
     Some(value) => value
     None => return None
@@ -360,7 +392,9 @@ fn parse_vml_coordinate(value : String?) -> Int? {
 }
 
 ///|
-fn vml_client_data_coordinates(body : StringView) -> (Int, Int)? {
+fn vml_client_data_coordinates(
+  body : StringView,
+) -> (Int, Int)? raise XlsxError {
   let row = parse_vml_coordinate(vml_live_element_text(body, "x:Row"))
   let column = parse_vml_coordinate(vml_live_element_text(body, "x:Column"))
   match (row, column) {
@@ -1211,6 +1245,27 @@ test "write comments vml wb: live ClientData, coordinates, and free IDs" {
     "<x:Column>0</x:Column></x:ClientData></v:shape>"
   inspect(vml_shape_is_comment(spoofed_control), content="false")
   debug_inspect(vml_comment_cell(spoofed_control), content="None")
+
+  let crowded_note = StringBuilder::new()
+  crowded_note.write_view("<v:shape id='_x0000_s2049'>")
+  for _ in 0..<1024 {
+    crowded_note.write_view("<v:path/>")
+  }
+  crowded_note.write_view(
+    "<x:ClientData ObjectType='Note'><x:Row>0</x:Row>" +
+    "<x:Column>0</x:Column></x:ClientData></v:shape>",
+  )
+  inspect(vml_shape_is_comment(crowded_note.to_string()), content="true")
+
+  let malformed_live = "<v:shape id='_x0000_s2050'>" +
+    "<x:ClientData ObjectType='Note'><x:Row>0</x:Row>" +
+    "<x:Column>0</x:Column></v:shape>"
+  let malformed_result : Result[Bool, Error] = Ok(
+    vml_shape_is_comment(malformed_live),
+  ) catch {
+    error => Err(error)
+  }
+  inspect(malformed_result is Err(InvalidVmlDrawing(_)), content="true")
 
   let whitespace_note = "<v:shape id=\"_x0000_s1025\">" +
     "<x:ClientData ObjectType=\"Note\"><x:Row \n>0</x:Row \r>" +
