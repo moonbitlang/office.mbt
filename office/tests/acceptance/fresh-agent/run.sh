@@ -532,6 +532,27 @@ write_office_launcher() {
   chmod 0500 "$launcher"
 }
 
+write_host_command_transcript() {
+  local ledger="$isolation_root/COMMANDS.json"
+  local transcript="$isolation_root/probe-transcript.md"
+  {
+    printf '%s\n\n' '# Host-attested command chronology'
+    printf '%s\n\n' \
+      'Generated mechanically from paired Codex command events in start order.'
+    printf "Candidate HEAD: \`%s\`\n\n" "$expected_head"
+    printf "Raw transcript SHA-256: \`%s\`\n\n" \
+      "$(sha256_file "$evidence_root/codex-transcript.jsonl")"
+    printf "Command ledger SHA-256: \`%s\`\n\n" "$(sha256_file "$ledger")"
+    printf "Command events: \`%s\`\n\n" "$(/usr/bin/jq 'length' "$ledger")"
+    /usr/bin/jq -r '
+      to_entries[] |
+      "## Event \(.key + 1)\n\n    \(.value | tojson)\n"
+    ' "$ledger"
+  } > "$transcript"
+  /usr/bin/install -m 0600 "$transcript" \
+    "$evidence_root/probe-transcript.md"
+}
+
 record_workflow_evidence() {
   local runtime="$1"
   local format="$2"
@@ -1251,6 +1272,7 @@ done < "$evidence_root/codex-transcript.jsonl"
     ($completed | map({id, command}) | sort_by(.id)) and
   all($completed[];
     (.exit_code | type) == "number" and
+    (.aggregated_output | type) == "string" and
     ((.status == "completed" and .exit_code == 0) or
      (.status == "failed" and .exit_code != 0))) and
   $first_event.type == "item.started" and
@@ -1262,20 +1284,24 @@ done < "$evidence_root/codex-transcript.jsonl"
 ' "$isolation_root/transcript-array.json" >/dev/null ||
   die "Codex command events were incomplete or the first live command was not the exact permission canary"
 
-/usr/bin/jq '[
-  .[] |
-  select(.type == "item.completed" and .item.type == "command_execution") |
-  .item |
-  {
-    id,
-    command,
-    status,
-    exit_code,
-    output_bytes: (.aggregated_output | length)
-  }
-]' "$isolation_root/transcript-array.json" > "$isolation_root/COMMANDS.json"
+/usr/bin/jq '
+  ([.[] | select(.type == "item.started" and .item.type == "command_execution") | .item]) as $started |
+  ([.[] | select(.type == "item.completed" and .item.type == "command_execution") | .item]) as $completed |
+  [
+    $started[] as $start |
+    ($completed | map(select(.id == $start.id))[0]) |
+    {
+      id: $start.id,
+      command: $start.command,
+      status,
+      exit_code,
+      output_bytes: (.aggregated_output | utf8bytelength)
+    }
+  ]
+' "$isolation_root/transcript-array.json" > "$isolation_root/COMMANDS.json"
 /usr/bin/install -m 0600 "$isolation_root/COMMANDS.json" \
   "$evidence_root/COMMANDS.json"
+write_host_command_transcript
 
 workflow_entries="$isolation_root/workflow-entries.jsonl"
 : > "$workflow_entries"
@@ -1318,10 +1344,9 @@ done
   "$evidence_root/WORKFLOWS.json"
 
 /usr/bin/jq -e '
-  keys == ["gaps", "result_path", "targets", "transcript_path", "verdict"] and
+  keys == ["gaps", "result_path", "targets", "verdict"] and
   (.verdict == "BASELINE PASS" or .verdict == "BASELINE FAIL") and
   .result_path == "probe-result.md" and
-  .transcript_path == "probe-transcript.md" and
   (.targets | keys) == ["native", "wasm"] and
   ([.targets.native, .targets.wasm] |
     map(keys == ["docx", "xlsx"] and
@@ -1354,11 +1379,8 @@ else
 fi
 
 result_file="$probe_root/probe-result.md"
-transcript_file="$probe_root/probe-transcript.md"
 assert_owned_private_file "$result_file" "probe result"
-assert_owned_private_file "$transcript_file" "probe transcript"
 [ -s "$result_file" ] || die "probe result is empty"
-[ -s "$transcript_file" ] || die "probe transcript is empty"
 IFS= read -r result_header < "$result_file" || true
 [ "$result_header" = "Verdict: $verdict" ] ||
   die "probe result does not begin with the exact structured verdict"
@@ -1411,7 +1433,6 @@ else
 fi
 
 /usr/bin/install -m 0600 "$result_file" "$evidence_root/probe-result.md"
-/usr/bin/install -m 0600 "$transcript_file" "$evidence_root/probe-transcript.md"
 
 /usr/bin/jq -n \
   --arg schema "office.fresh-agent.run/2" \
@@ -1423,7 +1444,7 @@ fi
   --argjson bubblewrap "$bwrap_evidence_json" \
   --arg config_sha256 "$config_sha256_before" \
   --arg result_sha256 "$(sha256_file "$result_file")" \
-  --arg transcript_sha256 "$(sha256_file "$transcript_file")" \
+  --arg transcript_sha256 "$(sha256_file "$evidence_root/probe-transcript.md")" \
   --arg raw_transcript_sha256 "$(sha256_file "$evidence_root/codex-transcript.jsonl")" \
   --arg stderr_sha256 "$(sha256_file "$evidence_root/codex-stderr.log")" \
   --arg commands_sha256 "$(sha256_file "$evidence_root/COMMANDS.json")" \

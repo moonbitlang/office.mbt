@@ -5,7 +5,6 @@
   "required": [
     "verdict",
     "result_path",
-    "transcript_path",
     "targets",
     "gaps"
   ],
@@ -20,10 +19,6 @@
     "result_path": {
       "type": "string",
       "const": "probe-result.md"
-    },
-    "transcript_path": {
-      "type": "string",
-      "const": "probe-transcript.md"
     },
     "targets": {
       "type": "object",

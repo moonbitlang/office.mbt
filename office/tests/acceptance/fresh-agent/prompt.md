@@ -63,7 +63,7 @@ Exercise these outcomes:
    warning is acceptable or documented; distinguish a bounded, evidenced
    target limitation from a behavioral mismatch.
 
-Create two concise evidence files in the current directory. The first nine
+Create one concise evidence file in the current directory. The first nine
 lines of `probe-result.md` must use this exact machine-readable summary, with
 the observed values substituted and each outcome matching your final
 structured verdict:
@@ -81,15 +81,15 @@ Native/Wasm comparison: PASS
 ```
 
 Use `BASELINE FAIL` and the appropriate `PASS`/`FAIL` values when a required
-outcome fails. After that summary:
-
-- `probe-transcript.md`: chronological commands, exit status, relevant schemas
-  and assertions, including failed attempts, without pasting large base64 or
-  complete OOXML payloads.
-- `probe-result.md`: candidate commands tested; PASS or FAIL for every outcome;
+outcome fails. After that summary, use `probe-result.md` to record candidate
+commands tested; PASS or FAIL for every outcome;
   exact schema versions and fingerprints; discoverability assessment; native
   versus Wasm comparison; failure diagnostics; and every residual gap graded
   P0, P1, P2, or P3.
+
+The host generates the authoritative chronological command transcript directly
+from paired Codex events. Do not create `probe-transcript.md`, and do not
+restate command strings or exit statuses as a separate chronology.
 
 Use this severity rubric:
 
@@ -105,7 +105,6 @@ Use this severity rubric:
 A P0-P2 gap requires `BASELINE FAIL`; P3 follow-ups may accompany
 `BASELINE PASS`. Put the same verdict prominently in `probe-result.md`.
 Finish with only a JSON object matching the supplied output schema. Set
-`verdict`, `result_path` to `probe-result.md`, `transcript_path` to
-`probe-transcript.md`, the XLSX and DOCX outcome for each target, and every
-observed gap with its severity. All four target outcomes must be `PASS` and
-`gaps` must contain no P0-P2 entry for `BASELINE PASS`.
+`verdict`, `result_path` to `probe-result.md`, the XLSX and DOCX outcome for
+each target, and every observed gap with its severity. All four target outcomes
+must be `PASS` and `gaps` must contain no P0-P2 entry for `BASELINE PASS`.

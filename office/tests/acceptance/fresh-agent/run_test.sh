@@ -83,7 +83,7 @@ sha256_file() {
   .properties.targets.type == "object" and
   .properties.gaps.type == "array" and
   .properties.result_path.type == "string" and
-  .properties.transcript_path.type == "string"
+  (.properties | has("transcript_path") | not)
 ' "$script_dir/final.schema.json" >/dev/null ||
   fail "structured output schema has strict target and gap evidence"
 
@@ -357,11 +357,10 @@ chmod 0600 "$codex_bin_dir/mode"
     'else' \
     '  printf "%s\\nNative XLSX: %s\\nNative DOCX: %s\\nWasm XLSX: %s\\nWasm DOCX: %s\\nCapability schema: office.capabilities/test\\nCapability fingerprint: test:fingerprint\\nDiscoverability: %s\\nNative/Wasm comparison: %s\\n\\n# Probe result\\n" "$header" "$outcome" "$outcome" "$outcome" "$outcome" "$outcome" "$outcome" > "$probe/probe-result.md"' \
     'fi' \
-    'printf "# Probe transcript\\n\\nfake commands executed\\n" > "$probe/probe-transcript.md"' \
     'if [ "$mode" = "malformed" ]; then' \
     '  printf "{\\n" > "$output"' \
     'else' \
-    '  /usr/bin/jq -n --arg verdict "$verdict" --arg outcome "$outcome" --argjson gaps "$gaps" '\''{verdict:$verdict,result_path:"probe-result.md",transcript_path:"probe-transcript.md",targets:{native:{xlsx:$outcome,docx:$outcome},wasm:{xlsx:$outcome,docx:$outcome}},gaps:$gaps}'\'' > "$output"' \
+    '  /usr/bin/jq -n --arg verdict "$verdict" --arg outcome "$outcome" --argjson gaps "$gaps" '\''{verdict:$verdict,result_path:"probe-result.md",targets:{native:{xlsx:$outcome,docx:$outcome},wasm:{xlsx:$outcome,docx:$outcome}},gaps:$gaps}'\'' > "$output"' \
     'fi' \
     '/usr/bin/jq -cn '\''{type:"turn.completed",usage:{input_tokens:1,output_tokens:1}}'\'''
 } > "$codex_bin_dir/codex"
@@ -418,6 +417,18 @@ evidence="$case_root/evidence"
   (.workflows | all((.events | length) > 0))
 ' "$evidence/WORKFLOWS.json" >/dev/null ||
   fail "host-derived workflow matrix"
+[ ! -e "$probe/probe-transcript.md" ] ||
+  fail "agent unexpectedly authored the command transcript"
+[ "$(/usr/bin/grep -c '^## Event ' "$evidence/probe-transcript.md")" -eq 60 ] ||
+  fail "host transcript event count"
+ledger_sha="$(sha256_file "$evidence/COMMANDS.json")"
+raw_sha="$(sha256_file "$evidence/codex-transcript.jsonl")"
+/usr/bin/grep -Fq "Command ledger SHA-256: \`$ledger_sha\`" \
+  "$evidence/probe-transcript.md" ||
+  fail "host transcript ledger anchor"
+/usr/bin/grep -Fq "Raw transcript SHA-256: \`$raw_sha\`" \
+  "$evidence/probe-transcript.md" ||
+  fail "host transcript raw-event anchor"
 /usr/bin/grep -qx 'FRESH-AGENT PERMISSION CANARY PASS' \
   "$evidence/permission-canary.log" ||
   fail "permission canary evidence"

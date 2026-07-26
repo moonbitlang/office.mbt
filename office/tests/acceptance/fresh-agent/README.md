@@ -223,7 +223,9 @@ The evidence directory contains:
 - `permission-canary.log`, host-derived `COMMANDS.json` and `WORKFLOWS.json`,
   `codex-transcript.jsonl`, separate `codex-stderr.log`, final message, and exit
   status;
-- copies of `probe-result.md` and `probe-transcript.md`; and
+- the agent-authored semantic result `probe-result.md` and the host-generated
+  `probe-transcript.md`, which renders every paired command event in start
+  order; and
 - `EVIDENCE.json`, which records the byte length and SHA-256 of every retained
   artifact other than itself.
 
