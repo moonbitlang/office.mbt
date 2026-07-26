@@ -40,8 +40,14 @@ git_common_dir="$(
   pwd -P
 )"
 
-test_root="$(/usr/bin/mktemp -d "${TMPDIR:-/tmp}/office-f1b-runner.XXXXXX")"
+if [ "$(/usr/bin/uname -s)" = "Linux" ]; then
+  test_tmp_root=/var/tmp
+else
+  test_tmp_root="${TMPDIR:-/tmp}"
+fi
+test_root="$(/usr/bin/mktemp -d "$test_tmp_root/office-f1b-runner.XXXXXX")"
 chmod 0700 "$test_root"
+linux_tmp_parent=""
 
 cleanup() {
   local status="$?"
@@ -52,6 +58,10 @@ cleanup() {
   fi
   chmod -R u+w -- "$test_root" 2>/dev/null || true
   /bin/rm -rf -- "$test_root"
+  if [ -n "$linux_tmp_parent" ] && [ -d "$linux_tmp_parent" ]; then
+    chmod -R u+w -- "$linux_tmp_parent" 2>/dev/null || true
+    /bin/rm -rf -- "$linux_tmp_parent"
+  fi
   exit "$status"
 }
 trap cleanup EXIT HUP INT TERM
@@ -453,6 +463,15 @@ expect_failure wrong-codex-digest 1 'caller-supplied digest' \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$(printf '0%.0s' {1..64})"
 
 if [ "$(/usr/bin/uname -s)" = "Linux" ]; then
+  linux_tmp_parent="$(/usr/bin/mktemp -d /tmp/office-f1b-rejected.XXXXXX)"
+  chmod 0700 "$linux_tmp_parent"
+  expect_failure linux-slash-tmp 1 'outside Linux /tmp' \
+    "$runner" "$head" "$candidate_sha" \
+    "$linux_tmp_parent/probe" "$linux_tmp_parent/evidence" \
+    "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+  /bin/rmdir "$linux_tmp_parent"
+  linux_tmp_parent=""
+
   native_codex="$case_root/native-codex"
   /usr/bin/install -m 0500 /bin/echo "$native_codex"
   native_codex_sha="$(sha256_file "$native_codex")"

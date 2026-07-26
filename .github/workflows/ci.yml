@@ -193,7 +193,7 @@ jobs:
       - name: Installed Office release smoke
         run: |
           head=$(git rev-parse --verify HEAD)
-          install_parent=$(mktemp -d /tmp/office-f1b-install.XXXXXX)
+          install_parent=$(mktemp -d /var/tmp/office-f1b-install.XXXXXX)
           prefix="$install_parent/candidate"
           prepare="$PWD/office/tests/acceptance/fresh-agent/prepare.sh"
           moon_bin=$(command -v moon)
@@ -201,7 +201,7 @@ jobs:
           moon_sha=$(/usr/bin/shasum -a 256 "$moon_bin" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
           moonrun_sha=$(/usr/bin/shasum -a 256 "$moonrun_bin" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
           (
-            cd /tmp
+            cd /var/tmp
             "$prepare" \
               "$head" "$prefix" \
               "$moon_bin" "$moon_sha" \
@@ -234,7 +234,7 @@ jobs:
           bwrap_sha=77360cb751ccedc5971391444ac86a8a33c15b04d6b4a6fe45f5d25496e62c4c
           actual_bwrap_sha=$(/usr/bin/shasum -a 256 "$codex_bwrap" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
           test "$actual_bwrap_sha" = "$bwrap_sha"
-          run_parent=$(mktemp -d /tmp/office-f1b-canary.XXXXXX)
+          run_parent=$(mktemp -d /var/tmp/office-f1b-canary.XXXXXX)
           echo "F1B_CANARY_EVIDENCE=$run_parent/evidence" >> "$GITHUB_ENV"
 
           # Match the official codex-action prerequisite for GitHub-hosted

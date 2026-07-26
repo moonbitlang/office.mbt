@@ -261,6 +261,19 @@ reject_macos_platform_default_location() {
   esac
 }
 
+reject_linux_slash_tmp_location() {
+  local path="$1"
+  local label="$2"
+  local slash_tmp
+  [ "$platform_name" = "Linux" ] || return 0
+  slash_tmp="$(canonical_directory /tmp)"
+  case "$path/" in
+    "$slash_tmp/"*)
+      die "$label must be outside Linux /tmp because the fresh-agent profile denies /tmp before layering scoped roots: $path"
+      ;;
+  esac
+}
+
 assert_sha256() {
   local value="$1"
   local label="$2"
@@ -666,6 +679,7 @@ install_root="$(canonical_directory "$control_dir/..")"
 [ "$control_dir" = "$install_root/control" ] ||
   die "runner must be invoked from a prepared candidate prefix"
 reject_path_syntax "$install_root" "install prefix"
+reject_linux_slash_tmp_location "$install_root" "install prefix"
 assert_owned_private_directory "$(/usr/bin/dirname -- "$install_root")"
 verify_candidate "$install_root" "$expected_candidate_sha256"
 install_identity="$(stat_identity "$install_root")"
@@ -682,6 +696,8 @@ source_root="$(canonical_directory "$(/usr/bin/jq -er '.source_root' "$private_m
 git_common_dir="$(
   canonical_directory "$(/usr/bin/jq -er '.git_common_dir' "$private_manifest")"
 )"
+reject_linux_slash_tmp_location "$source_root" "source checkout"
+reject_linux_slash_tmp_location "$git_common_dir" "Git common directory"
 reject_overlap "$install_root" "install prefix" "$source_root" "source checkout"
 reject_overlap "$install_root" "install prefix" "$git_common_dir" "Git common directory"
 
@@ -689,6 +705,7 @@ auth_json=""
 if [ "$canary_only" -eq 0 ]; then
   auth_json="$(canonical_regular_file "$auth_input" "Codex auth JSON")"
   assert_owned_private_file "$auth_json" "Codex auth JSON"
+  reject_linux_slash_tmp_location "$auth_json" "Codex auth JSON"
 fi
 codex_source="$(canonical_regular_file "$codex_input" "Codex executable")"
 [ -x "$codex_source" ] || die "Codex executable is not executable: $codex_source"
@@ -709,6 +726,8 @@ probe_root="$(canonical_absent_directory "$probe_input" "probe directory")"
 evidence_root="$(
   canonical_absent_directory "$evidence_input" "evidence directory"
 )"
+reject_linux_slash_tmp_location "$probe_root" "probe directory"
+reject_linux_slash_tmp_location "$evidence_root" "evidence directory"
 reject_protected_location "$install_root" "install prefix"
 reject_protected_location "$probe_root" "probe directory"
 reject_protected_location "$evidence_root" "evidence directory"
