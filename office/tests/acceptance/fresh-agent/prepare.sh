@@ -394,7 +394,7 @@ jq -n \
   }' > "$scratch/CANDIDATE.json"
 install -m 0400 "$scratch/CANDIDATE.json" "$stage/CANDIDATE.json"
 
-chmod 0500 "$stage/bin" "$stage/libexec" "$stage/control" "$stage"
+chmod 0500 "$stage/bin" "$stage/libexec" "$stage/control"
 
 [ "$(git -C "$source_root" rev-parse --verify HEAD)" = "$expected_head" ] ||
   die "candidate HEAD changed during preparation"
