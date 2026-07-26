@@ -238,6 +238,11 @@ chmod 0600 "$codex_bin_dir/mode"
     'codex_home_key=$(/usr/bin/jq -Rn --arg value "$CODEX_HOME" '\''$value'\'')' \
     '/usr/bin/grep -Fqx "$codex_home_key = \"deny\"" "$config"' \
     'isolation_root=$(CDPATH= cd -- "$CODEX_HOME/.." && pwd)' \
+    'policy_readonly="$isolation_root/policy-readonly"' \
+    'test -d "$policy_readonly"' \
+    'test -w "$policy_readonly"' \
+    'policy_readonly_key=$(/usr/bin/jq -Rn --arg value "$policy_readonly" '\''$value'\'')' \
+    '/usr/bin/grep -Fqx "$policy_readonly_key = \"read\"" "$config"' \
     'child_tmp="$isolation_root/tmp"' \
     'test "$TMPDIR" = "$CODEX_HOME/runtime-tmp"' \
     'test "$TMPDIR" != "$child_tmp"' \
@@ -397,7 +402,12 @@ evidence="$case_root/evidence"
   .candidate_head == $head and
   .codex.version == "codex-cli 0.145.0" and
   .codex.privately_staged == true and
-  .codex.bubblewrap == null
+  .codex.bubblewrap == null and
+  .harness.policy_readonly_canary == {
+    host_write_preflight: true,
+    sandbox_write_denied: true,
+    host_write_postflight: true
+  }
 ' --arg head "$head" "$evidence/RUN-PREFLIGHT.json" >/dev/null ||
   fail "preflight manifest"
 /usr/bin/jq -e '

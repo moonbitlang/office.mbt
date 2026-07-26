@@ -514,7 +514,8 @@ write_live_canary_launcher() {
       "$git_common_dir" \
       "$ambient_write_path" \
       "$network_port" \
-      "$platform_name"
+      "$platform_name" \
+      "$policy_readonly_root"
     printf '\n'
   } > "$launcher"
   chmod 0500 "$launcher"
@@ -866,6 +867,7 @@ isolated_launcher_bin="$isolation_root/launcher-bin"
 candidate_root="$isolation_root/candidate"
 isolated_codex_bin="$isolation_root/codex-bin"
 isolated_codex_resources="$isolation_root/codex-resources"
+policy_readonly_root="$isolation_root/policy-readonly"
 /bin/mkdir -m 0700 \
   "$isolated_user_home" \
   "$isolated_codex_state" \
@@ -874,10 +876,18 @@ isolated_codex_resources="$isolation_root/codex-resources"
   "$isolated_launcher_bin" \
   "$candidate_root" \
   "$isolated_codex_bin" \
-  "$isolated_codex_resources"
+  "$isolated_codex_resources" \
+  "$policy_readonly_root"
 printf '%s\n' 'non-secret permission sentinel' \
   > "$isolated_codex_state/credential-canary"
 chmod 0600 "$isolated_codex_state/credential-canary"
+policy_host_marker="$policy_readonly_root/.host-write-preflight"
+printf '%s\n' 'host-writable policy sentinel' > "$policy_host_marker"
+[ -f "$policy_host_marker" ] ||
+  die "policy read-only canary is not writable before sandboxing"
+/bin/rm -f -- "$policy_host_marker"
+[ "$(/usr/bin/find "$policy_readonly_root" -mindepth 1 -print -quit)" = "" ] ||
+  die "policy read-only canary preflight left unexpected content"
 
 /bin/cp -R "$install_root/." "$candidate_root/"
 chmod 0500 "$candidate_root" "$candidate_root/bin" \
@@ -1034,6 +1044,7 @@ config_file="$isolated_codex_state/config.toml"
   printf '%s = "deny"\n' "$(toml_string "$candidate_root/control")"
   printf '%s = "deny"\n' "$(toml_string "$candidate_root/CANDIDATE.json")"
   printf '%s = "read"\n' "$(toml_string "$candidate_root")"
+  printf '%s = "read"\n' "$(toml_string "$policy_readonly_root")"
   printf '%s = "read"\n' "$(toml_string "$isolated_user_home")"
   printf '%s = "read"\n' "$(toml_string "$isolated_launcher_bin")"
   # Linux bubblewrap re-enters this exact executable inside the namespace.
@@ -1084,6 +1095,16 @@ if [ "$(/usr/bin/wc -l < "$evidence_root/permission-canary.log" | /usr/bin/tr -d
 fi
 [ ! -e "$ambient_write_path" ] && [ ! -L "$ambient_write_path" ] ||
   die "permission canary created its ambient write path"
+[ ! -e "$policy_readonly_root/.permission-canary" ] &&
+  [ ! -L "$policy_readonly_root/.permission-canary" ] ||
+  die "permission canary wrote into its policy read-only directory"
+policy_host_marker="$policy_readonly_root/.host-write-postflight"
+if ! printf '%s\n' 'host-writable policy sentinel' > "$policy_host_marker"; then
+  die "policy read-only canary lost host write access after sandboxing"
+fi
+/bin/rm -f -- "$policy_host_marker"
+[ "$(/usr/bin/find "$policy_readonly_root" -mindepth 1 -print -quit)" = "" ] ||
+  die "policy read-only canary left unexpected content"
 [ "$(/usr/bin/find "$probe_root" -mindepth 1 -print -quit)" = "" ] ||
   die "permission canary left the probe directory non-empty"
 [ "$(/usr/bin/find "$isolated_tmp" -mindepth 1 -print -quit)" = "" ] ||
@@ -1126,7 +1147,12 @@ bwrap_evidence_json="$(
       prompt_sha256: $prompt_sha256,
       output_schema_sha256: $output_schema_sha256,
       config_sha256: $config_sha256,
-      permission_canary_sha256: $permission_canary_sha256
+      permission_canary_sha256: $permission_canary_sha256,
+      policy_readonly_canary: {
+        host_write_preflight: true,
+        sandbox_write_denied: true,
+        host_write_postflight: true
+      }
     },
     codex: {
       version: $codex_version,
