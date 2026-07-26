@@ -1,6 +1,6 @@
 # OfficeCLI parity handoff
 
-Last updated: 2026-07-24 (Asia/Shanghai)
+Last updated: 2026-07-26 (Asia/Shanghai)
 
 This file is the handoff for the non-PPT OfficeCLI parity effort tracked by
 [#139](https://github.com/moonbitlang/office.mbt/issues/139). PowerPoint and MCP
@@ -106,6 +106,37 @@ aliases.
   `main` and closed [#231](https://github.com/moonbitlang/office.mbt/issues/231).
   It landed N0b1's bounded namespace-resolved source-tree identities and exact
   source spans without changing the ordinary non-retaining scanner contract.
+- [PR #242](https://github.com/moonbitlang/office.mbt/pull/242) is merged into
+  `main` and closed [#226](https://github.com/moonbitlang/office.mbt/issues/226).
+  It established the version-aware `xlsx.batch/2` registry and retained exact
+  `xlsx.batch/1` compatibility for historical dump/replay envelopes.
+- [PR #247](https://github.com/moonbitlang/office.mbt/pull/247) and
+  [PR #251](https://github.com/moonbitlang/office.mbt/pull/251) are merged into
+  `main` and closed [#232](https://github.com/moonbitlang/office.mbt/issues/232)
+  and [#233](https://github.com/moonbitlang/office.mbt/issues/233). N0b2 now
+  mirrors reader-order projection and N0b3 classifies bounded story-wide nested
+  fields. N0b4 [#234](https://github.com/moonbitlang/office.mbt/issues/234) is
+  the remaining projection-oracle foundation under #221.
+- The three P2 gaps discovered by the provisional F1b exercise are closed by
+  PRs #243, #241, and #244: formatted XLSX text readback, installed template
+  grammar, and supported-chart dump/replay. PRs #248-#250 also fixed Wasm CLI
+  startup, Unicode date-format scanning, and quoted chart-series sheet names.
+- [PR #253](https://github.com/moonbitlang/office.mbt/pull/253) is merged into
+  `main` and closed [#252](https://github.com/moonbitlang/office.mbt/issues/252),
+  landing X4b1's bounded, merged-cell-aware XLSX hyperlink engine foundation.
+- [PR #258](https://github.com/moonbitlang/office.mbt/pull/258) and
+  [PR #259](https://github.com/moonbitlang/office.mbt/pull/259) are merged into
+  `main` and closed [#254](https://github.com/moonbitlang/office.mbt/issues/254)
+  and [#255](https://github.com/moonbitlang/office.mbt/issues/255). They land
+  strict classic-comment validation plus preservation-safe replace/delete VML
+  reconciliation. Prefix-independent VML scanning #256 and semantic
+  form-control provenance #257 remain separate slices.
+- At the 2026-07-26 rescan, draft
+  [PR #237](https://github.com/moonbitlang/office.mbt/pull/237) was the only
+  in-flight PR. It carries the F1b installed-command baseline harness, exact-head
+  publication checks, real Linux/macOS Codex canaries, and structured evidence.
+  It closes #169 only after exact-head CI and a brand-new ephemeral `ultra`
+  Codex CLI review both approve; this handoff intentionally travels in that PR.
 
 The reference OfficeCLI checkout remains `.repos/OfficeCLI` in the primary
 repository working tree. This handoff and the major ledger were audited against
@@ -132,11 +163,19 @@ rebuilt in later PRs:
 - D4 (#164/#216): preservation-safe DOCX comment add, reply, resolve, and
   unresolve through `office annotate`.
 - F1 matrix/help (#218/#228): checked-in native/Wasm task acceptance plus the
-  exact installed input contracts consumed by the command. Only the uncoached
-  baseline probe in #169 remains open.
-- N0a/N0b1 (#224/#235): exact DOCX lexical tokens and bounded physical
-  source-tree identity are landed; reader order, field classification, reader
-  transforms, and surgery remain in later N0 slices.
+  exact installed input contracts consumed by the command. The separate
+  uncoached installed baseline is scoped to #237/#169; it does not close #139.
+- N0a/N0b1-N0b3 (#224/#235/#247/#251): exact DOCX lexical tokens, bounded
+  physical source-tree identity, reader-order projection, and story-wide field
+  classification are landed. N0b4 reader transforms and the N0c surgery proofs
+  remain later, independently reviewed slices.
+- X4a1 (#242): the preferred version-aware XLSX mutation registry is landed,
+  with historical batch envelopes remaining replayable.
+- X4b1 (#253): the bounded XLSX hyperlink engine lifecycle is landed. Unified
+  Office exposure remains a separate ledger slice.
+- X4d1a/X4d1b (#258/#259): classic comments are validated without truncation
+  and matched note VML is reconciled without destroying unrelated retained VML.
+  The adversarial scanner and form-control provenance work remain #256/#257.
 - [#176](https://github.com/moonbitlang/office.mbt/issues/176): tolerant reads
   for Excel-produced overlaps between distinct shared-formula indexes, while
   duplicate masters and out-of-range followers remain rejected per index.
@@ -167,13 +206,21 @@ The detailed contracts live in:
 
 ## Remaining work, in recommended order
 
-The original initial-parity implementation issues, F1a unified entrypoint, and
-installed-help prerequisite are complete. The remaining installed-command
-baseline step is
-[#169 — F1b installed-command baseline acceptance](https://github.com/moonbitlang/office.mbt/issues/169):
-run the uncoached fresh-agent exercise against the exact installed candidate,
-require exact-head gates and an `ultra` review, and record the initial result.
-Passing #169 does not close the broader non-PPT parity epic.
+The original initial-parity implementation issues, F1a unified entrypoint,
+installed-help prerequisite, and F1b harness/evidence implementation are
+complete. [PR #237](https://github.com/moonbitlang/office.mbt/pull/237) is the
+single landing vehicle for
+[#169 — F1b installed-command baseline acceptance](https://github.com/moonbitlang/office.mbt/issues/169).
+#169 is complete only if #237 is merged after exact-head CI and a fresh
+ephemeral `ultra` review both approve. If a relay sees #237 still open, finish
+those gates and land it before starting another PR. Passing #169 does not close
+the broader non-PPT parity epic.
+
+After F1b, resume the dependency ledger with small PRs. N0b4 #234 is the next
+projection foundation under #221; whole-run N0c1 #222 and partial-boundary N0c2
+#236 follow it. XLSX VML hardening #256/#257 is independent. The four
+non-blocking baseline residuals are already filed as #260-#263 and must not be
+folded into an unrelated feature PR.
 
 The dependency-ordered small-PR plan for closing the broader agent-relevant
 OfficeCLI gaps now lives in `docs/office-major-parity.md`. Give every proposed
