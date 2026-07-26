@@ -193,7 +193,19 @@ fn ReaderOrderFieldBudget::check_field_depth(
 priv struct ReaderOrderCarrierSummary {
   marker_identity : Int?
   marker_count : Int
-  repeated_instruction_identity : Int?
+  repeated_instruction : ReaderOrderRepeatedInstruction?
+}
+
+///|
+priv struct ReaderOrderInstructionTarget {
+  field_identity : Int
+  instruction : StringBuilder
+}
+
+///|
+priv struct ReaderOrderRepeatedInstruction {
+  instruction_identity : Int
+  owner_field_identity : Int
 }
 
 ///|
@@ -252,13 +264,13 @@ fn scan_reader_order_field_carrier(
   elements : Array[ScannedElement],
   identity : Int,
   story_identity : Int,
-  instruction_target : StringBuilder?,
+  instruction_target : ReaderOrderInstructionTarget?,
   seen_instructions : Map[Int, Int],
   budget : ReaderOrderFieldBudget,
 ) -> ReaderOrderCarrierSummary raise DocxError {
   let mut marker_identity : Int? = None
   let mut marker_count = 0
-  let mut repeated_instruction_identity : Int? = None
+  let mut repeated_instruction : ReaderOrderRepeatedInstruction? = None
   fn visit(current : Int) -> Unit raise DocxError {
     budget.charge_work()
     let element = elements[current]
@@ -275,15 +287,19 @@ fn scan_reader_order_field_carrier(
         }
       } else if element.local_name == "instrText" {
         match (instruction_target, element.text_map) {
-          (Some(instruction), Some(mapped)) =>
-            if repeated_instruction_identity is None {
+          (Some(target), Some(mapped)) =>
+            if repeated_instruction is None {
               match seen_instructions.get(current) {
-                Some(_) => repeated_instruction_identity = Some(current)
+                Some(owner_field_identity) =>
+                  repeated_instruction = Some({
+                    instruction_identity: current,
+                    owner_field_identity,
+                  })
                 None => {
                   budget.charge_retained()
-                  seen_instructions[current] = story_identity
+                  seen_instructions[current] = target.field_identity
                   budget.charge_instruction(mapped.projection.length())
-                  instruction.write_string(mapped.projection)
+                  target.instruction.write_string(mapped.projection)
                 }
               }
             }
@@ -298,7 +314,7 @@ fn scan_reader_order_field_carrier(
     }
   }
   visit(identity)
-  { marker_identity, marker_count, repeated_instruction_identity }
+  { marker_identity, marker_count, repeated_instruction }
 }
 
 ///|
@@ -366,16 +382,33 @@ fn add_reader_order_field_refusal(
 }
 
 ///|
-fn mark_reader_order_open_fields_failed(
+fn mark_reader_order_field_failed(
   index : ReaderOrderFieldIndex,
-  state : ReaderOrderFieldStoryState,
+  field_identity : Int,
   refusal_identity : Int,
 ) -> Unit {
-  for field_identity in state.stack {
+  if field_identity >= 0 && field_identity < index.fields.length() {
     let field = index.fields[field_identity]
     if field.refusal_identity is None {
       field.refusal_identity = Some(refusal_identity)
     }
+  }
+}
+
+///|
+fn mark_reader_order_story_failed(
+  index : ReaderOrderFieldIndex,
+  state : ReaderOrderFieldStoryState,
+  implicated_field_identity : Int?,
+  refusal_identity : Int,
+) -> Unit {
+  match implicated_field_identity {
+    Some(field_identity) =>
+      mark_reader_order_field_failed(index, field_identity, refusal_identity)
+    None => ()
+  }
+  for field_identity in state.stack {
+    mark_reader_order_field_failed(index, field_identity, refusal_identity)
   }
   state.stack.clear()
   state.failed_refusal = Some(refusal_identity)
@@ -422,16 +455,22 @@ fn fail_reader_order_field_story(
   kind : ReaderOrderFieldRefusalKind,
   carrier_identity : Int,
   offending_identity : Int?,
-  field_identity : Int?,
+  implicated_field_identity : Int?,
   elements : Array[ScannedElement],
   budget : ReaderOrderFieldBudget,
 ) -> ReaderOrderCarrierClass raise DocxError {
   let refusal = add_reader_order_field_refusal(
-    index, state, kind, carrier_identity, offending_identity, field_identity, elements,
-    budget,
+    index, state, kind, carrier_identity, offending_identity, implicated_field_identity,
+    elements, budget,
   )
-  mark_reader_order_open_fields_failed(index, state, refusal)
-  { field_identity, region: MalformedField, refusal_identity: Some(refusal) }
+  mark_reader_order_story_failed(
+    index, state, implicated_field_identity, refusal,
+  )
+  {
+    field_identity: implicated_field_identity,
+    region: MalformedField,
+    refusal_identity: Some(refusal),
+  }
 }
 
 ///|
@@ -449,15 +488,15 @@ fn classify_reader_order_carrier(
     None => ()
   }
   if summary.marker_count == 0 {
-    match summary.repeated_instruction_identity {
-      Some(identity) =>
+    match summary.repeated_instruction {
+      Some(repeated) =>
         return fail_reader_order_field_story(
           index,
           state,
           RepeatedInstruction,
           carrier_identity,
-          Some(identity),
-          state.stack.last(),
+          Some(repeated.instruction_identity),
+          Some(repeated.owner_field_identity),
           elements,
           budget,
         )
@@ -479,38 +518,35 @@ fn classify_reader_order_carrier(
     )
   }
   match seen_markers.get(marker_identity) {
-    Some(_) =>
+    Some(owner_field_identity) =>
       return fail_reader_order_field_story(
         index,
         state,
         RepeatedMarker,
         carrier_identity,
         Some(marker_identity),
-        state.stack.last(),
+        Some(owner_field_identity),
         elements,
         budget,
       )
     None =>
-      match summary.repeated_instruction_identity {
-        Some(identity) =>
+      match summary.repeated_instruction {
+        Some(repeated) =>
           return fail_reader_order_field_story(
             index,
             state,
             RepeatedInstruction,
             carrier_identity,
-            Some(identity),
-            state.stack.last(),
+            Some(repeated.instruction_identity),
+            Some(repeated.owner_field_identity),
             elements,
             budget,
           )
-        None => {
-          budget.charge_retained()
-          seen_markers[marker_identity] = state.identity
-        }
+        None => ()
       }
   }
   let transition = elements[marker_identity].field_char_type
-  match transition {
+  let classification = match transition {
     Some("begin") => {
       budget.check_field_depth(state.stack.length() + 1)
       budget.charge_retained()
@@ -635,6 +671,16 @@ fn classify_reader_order_carrier(
         budget,
       )
   }
+  if classification.refusal_identity is None {
+    match classification.field_identity {
+      Some(owner_field_identity) => {
+        budget.charge_retained()
+        seen_markers[marker_identity] = owner_field_identity
+      }
+      None => ()
+    }
+  }
+  classification
 }
 
 ///|
@@ -747,18 +793,18 @@ fn classify_reader_order_fields(
     }
     let summary = match state.failed_refusal {
       Some(_) =>
-        {
-          marker_identity: None,
-          marker_count: 0,
-          repeated_instruction_identity: None,
-        }
+        { marker_identity: None, marker_count: 0, repeated_instruction: None }
       None => {
         // BodyReader collects all instruction text in the carrier before
         // it interprets the carrier's first descendant field marker.
-        let instruction_target = match state.stack.last() {
+        let instruction_target : ReaderOrderInstructionTarget? = match
+          state.stack.last() {
           Some(field_identity) =>
             if index.fields[field_identity].result is None {
-              Some(index.fields[field_identity].instruction_text)
+              Some({
+                field_identity,
+                instruction: index.fields[field_identity].instruction_text,
+              })
             } else {
               None
             }
