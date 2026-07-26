@@ -394,8 +394,6 @@ jq -n \
   }' > "$scratch/CANDIDATE.json"
 install -m 0400 "$scratch/CANDIDATE.json" "$stage/CANDIDATE.json"
 
-chmod 0500 "$stage/bin" "$stage/libexec" "$stage/control"
-
 [ "$(git -C "$source_root" rev-parse --verify HEAD)" = "$expected_head" ] ||
   die "candidate HEAD changed during preparation"
 if [ -n "$(git -C "$source_root" status --porcelain=v1 --untracked-files=all)" ]; then
@@ -423,18 +421,17 @@ for subtree in bin libexec control; do
   mv -n -- "$stage/$subtree" "$install_root/$subtree"
   [ ! -e "$stage/$subtree" ] && [ -d "$install_root/$subtree" ] ||
     die "could not publish candidate subtree without clobbering: $subtree"
+  # macOS requires owner-write access on a directory while its parent entry is
+  # renamed. Lock each directory immediately after the no-clobber move.
+  chmod 0500 "$install_root/$subtree"
 done
-chmod 0500 \
-  "$install_root/bin" \
-  "$install_root/libexec" \
-  "$install_root/control" \
-  "$install_root"
 [ ! -e "$install_root/CANDIDATE.json" ] &&
   [ ! -L "$install_root/CANDIDATE.json" ] ||
   die "candidate commit marker already exists"
 ln "$stage/CANDIDATE.json" "$install_root/CANDIDATE.json" ||
   die "could not atomically publish candidate commit marker"
 rm -f -- "$stage/CANDIDATE.json"
+chmod 0500 "$install_root"
 [ "$(stat_identity "$install_root")" = "$install_identity" ] ||
   die "reserved install prefix identity changed during publication"
 [ "$(sha256_file "$install_root/CANDIDATE.json")" = "$(sha256_file "$scratch/CANDIDATE.json")" ] ||
