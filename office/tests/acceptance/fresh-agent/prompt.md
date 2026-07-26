@@ -4,6 +4,9 @@ toolkit. Two candidate commands are already installed on `PATH`:
 
 Rules:
 
+- Your first command must be exactly `office-permission-canary`. Do not combine
+  it with another command. Stop and report `BASELINE FAIL` if it does not print
+  exactly `FRESH-AGENT PERMISSION CANARY PASS` with exit status zero.
 - Work only in the current empty directory.
 - Do not inspect a source checkout, repository files, package registry, prior
   transcripts, or the internet. Do not use MoonBit tooling or legacy
@@ -14,6 +17,14 @@ Rules:
 - Shell utilities such as `jq`, `shasum`, `cmp`, and ZIP inspectors are allowed
   for assertions, but all Office creation, reading, mutation, validation,
   preview, dump/replay, and template work must use the installed commands.
+- Include the literal executable name (`office-native` or `office-wasm`) and
+  operation in each evidence-bearing shell command. The host derives a command
+  and exit-status inventory from Codex events and rejects unrecorded outcomes.
+- For host attestation, run at least one successful invocation of every required
+  operation and target format as a standalone shell command: the Office
+  executable must be the first token and the operation the second. Do not use a
+  pipe, `&&`, `||`, `;`, or backgrounding in those attested invocations;
+  ordinary output redirection is allowed.
 - Do not hide failed attempts. A typed diagnostic that lets you correct an
   input counts as useful discoverability evidence; an undocumented workaround
   is a gap.
@@ -46,7 +57,9 @@ Exercise these outcomes:
    warning is acceptable or documented; distinguish a bounded, evidenced
    target limitation from a behavioral mismatch.
 
-Create two concise evidence files in the current directory:
+Create two concise evidence files in the current directory. The first line of
+`probe-result.md` must be exactly `Verdict: BASELINE PASS` or
+`Verdict: BASELINE FAIL`, matching your final structured verdict:
 
 - `probe-transcript.md`: chronological commands, exit status, relevant schemas
   and assertions, including failed attempts, without pasting large base64 or
@@ -69,6 +82,8 @@ Use this severity rubric:
 
 A P0-P2 gap requires `BASELINE FAIL`; P3 follow-ups may accompany
 `BASELINE PASS`. Put the same verdict prominently in `probe-result.md`.
-Finish with only a JSON object matching the supplied output schema: set
-`verdict`, `result_path` to `probe-result.md`, and
-`transcript_path` to `probe-transcript.md`.
+Finish with only a JSON object matching the supplied output schema. Set
+`verdict`, `result_path` to `probe-result.md`, `transcript_path` to
+`probe-transcript.md`, the XLSX and DOCX outcome for each target, and every
+observed gap with its severity. All four target outcomes must be `PASS` and
+`gaps` must contain no P0-P2 entry for `BASELINE PASS`.

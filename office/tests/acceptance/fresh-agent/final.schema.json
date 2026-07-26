@@ -5,7 +5,9 @@
   "required": [
     "verdict",
     "result_path",
-    "transcript_path"
+    "transcript_path",
+    "targets",
+    "gaps"
   ],
   "properties": {
     "verdict": {
@@ -22,6 +24,74 @@
     "transcript_path": {
       "type": "string",
       "const": "probe-transcript.md"
+    },
+    "targets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "native",
+        "wasm"
+      ],
+      "properties": {
+        "native": {
+          "$ref": "#/$defs/target"
+        },
+        "wasm": {
+          "$ref": "#/$defs/target"
+        }
+      }
+    },
+    "gaps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "severity",
+          "summary"
+        ],
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": [
+              "P0",
+              "P1",
+              "P2",
+              "P3"
+            ]
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "xlsx",
+        "docx"
+      ],
+      "properties": {
+        "xlsx": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL"
+          ]
+        },
+        "docx": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL"
+          ]
+        }
+      }
     }
   }
 }
