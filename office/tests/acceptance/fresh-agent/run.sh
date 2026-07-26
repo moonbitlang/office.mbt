@@ -961,7 +961,6 @@ config_file="$isolated_codex_state/config.toml"
     'multi_agent = false' \
     'plugins = false' \
     'skill_search = false' \
-    'web_search = false' \
     '' \
     '[shell_environment_policy]' \
     'inherit = "none"' \

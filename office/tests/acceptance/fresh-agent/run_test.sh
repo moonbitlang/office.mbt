@@ -224,6 +224,7 @@ chmod 0600 "$codex_bin_dir/mode"
     'test -f "$config"' \
     '/usr/bin/grep -q '\''^default_permissions = "fresh_agent"$'\'' "$config"' \
     '/usr/bin/grep -q '\''^web_search = "disabled"$'\'' "$config"' \
+    'if /usr/bin/grep -q '\''^web_search = false$'\'' "$config"; then exit 66; fi' \
     '/usr/bin/grep -q '\''^hooks = {}$'\'' "$config"' \
     '/usr/bin/grep -q '\''^mcp_servers = {}$'\'' "$config"' \
     '/usr/bin/grep -q '\''^":minimal" = "read"$'\'' "$config"' \
