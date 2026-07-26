@@ -299,7 +299,7 @@ chmod 0600 "$codex_bin_dir/mode"
     '}' \
     'emit_completed() {' \
     '  id=$1; cmd=$2; status=$3; body=$4' \
-    '  /usr/bin/jq -cn --arg id "$id" --arg cmd "$cmd" --arg body "$body" --argjson status "$status" '\''{type:"item.completed",item:{id:$id,type:"command_execution",command:$cmd,aggregated_output:$body,exit_code:$status,status:"completed"}}'\''' \
+    '  /usr/bin/jq -cn --arg id "$id" --arg cmd "$cmd" --arg body "$body" --argjson status "$status" '\''{type:"item.completed",item:{id:$id,type:"command_execution",command:$cmd,aggregated_output:$body,exit_code:$status,status:(if $status == 0 then "completed" else "failed" end)}}'\''' \
     '}' \
     '/usr/bin/jq -cn '\''{type:"thread.started",thread_id:"fake-thread"}'\''' \
     '/usr/bin/jq -cn '\''{type:"turn.started"}'\''' \
@@ -311,6 +311,8 @@ chmod 0600 "$codex_bin_dir/mode"
     'canary_body=$(/usr/bin/printf "FRESH-AGENT PERMISSION CANARY PASS\\n_")' \
     'canary_body=${canary_body%_}' \
     'emit_completed canary "/bin/sh -c '\''office-permission-canary'\''" 0 "$canary_body"' \
+    'emit_started expected-refusal "false"' \
+    'emit_completed expected-refusal "false" 1 ""' \
     'if [ "$mode" != "no-office" ]; then' \
     '  index=0' \
     '  for runtime in native wasm; do' \
@@ -391,7 +393,7 @@ evidence="$case_root/evidence"
   (.artifacts | map(.path) | index("COMMANDS.json")) != null
 ' "$evidence/EVIDENCE.json" >/dev/null ||
   fail "complete evidence manifest"
-[ "$(/usr/bin/jq 'length' "$evidence/COMMANDS.json")" -eq 35 ] ||
+[ "$(/usr/bin/jq 'length' "$evidence/COMMANDS.json")" -eq 36 ] ||
   fail "host-derived command inventory"
 /usr/bin/grep -qx 'FRESH-AGENT PERMISSION CANARY PASS' \
   "$evidence/permission-canary.log" ||

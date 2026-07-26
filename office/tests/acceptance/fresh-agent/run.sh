@@ -1240,7 +1240,10 @@ done < "$evidence_root/codex-transcript.jsonl"
   ($completed | map(.id) | length) == ($completed | map(.id) | unique | length) and
   ($started | map({id, command}) | sort_by(.id)) ==
     ($completed | map({id, command}) | sort_by(.id)) and
-  all($completed[]; .status == "completed" and (.exit_code | type) == "number") and
+  all($completed[];
+    (.exit_code | type) == "number" and
+    ((.status == "completed" and .exit_code == 0) or
+     (.status == "failed" and .exit_code != 0))) and
   $first_event.type == "item.started" and
   ($first_event.item.command | exact_canary_command) and
   ([ $completed[] | select(.id == $first_event.item.id) ][0] |
