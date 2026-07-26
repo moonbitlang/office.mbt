@@ -205,7 +205,12 @@ priv struct ReaderOrderInstructionTarget {
 ///|
 priv struct ReaderOrderRepeatedInstruction {
   instruction_identity : Int
-  owner_field_identity : Int
+  owner_field_identity : Int?
+}
+
+///|
+priv struct ReaderOrderInstructionObservation {
+  owner_field_identity : Int?
 }
 
 ///|
@@ -265,7 +270,7 @@ fn scan_reader_order_field_carrier(
   identity : Int,
   story_identity : Int,
   instruction_target : ReaderOrderInstructionTarget?,
-  seen_instructions : Map[Int, Int],
+  seen_instructions : Map[Int, ReaderOrderInstructionObservation],
   budget : ReaderOrderFieldBudget,
 ) -> ReaderOrderCarrierSummary raise DocxError {
   let mut marker_identity : Int? = None
@@ -285,32 +290,33 @@ fn scan_reader_order_field_carrier(
         if marker_identity is None {
           marker_identity = Some(current)
         }
-      } else if element.local_name == "instrText" {
-        match element.text_map {
-          Some(mapped) =>
-            if repeated_instruction is None {
-              // Recursive carrier events can re-observe this physical node
-              // after its owner has closed. Always consult retained ownership;
-              // the current target only controls first-time consumption.
-              match seen_instructions.get(current) {
-                Some(owner_field_identity) =>
-                  repeated_instruction = Some({
-                    instruction_identity: current,
-                    owner_field_identity,
-                  })
-                None =>
-                  match instruction_target {
-                    Some(target) => {
-                      budget.charge_retained()
-                      seen_instructions[current] = target.field_identity
-                      budget.charge_instruction(mapped.projection.length())
-                      target.instruction.write_string(mapped.projection)
-                    }
-                    None => ()
-                  }
-              }
+      } else if element.local_name == "instrText" &&
+        repeated_instruction is None {
+        // Recursive carrier events can re-observe this physical node after
+        // field state changes. Retain every first observation, including an
+        // ownerless or self-closing instruction; the current target and text
+        // map control only first-time consumption.
+        match seen_instructions.get(current) {
+          Some(observation) =>
+            repeated_instruction = Some({
+              instruction_identity: current,
+              owner_field_identity: observation.owner_field_identity,
+            })
+          None => {
+            budget.charge_retained()
+            let owner_field_identity = match instruction_target {
+              Some(target) => Some(target.field_identity)
+              None => None
             }
-          None => ()
+            seen_instructions[current] = { owner_field_identity, }
+            match (instruction_target, element.text_map) {
+              (Some(target), Some(mapped)) => {
+                budget.charge_instruction(mapped.projection.length())
+                target.instruction.write_string(mapped.projection)
+              }
+              _ => ()
+            }
+          }
         }
       }
     }
@@ -503,7 +509,7 @@ fn classify_reader_order_carrier(
           RepeatedInstruction,
           carrier_identity,
           Some(repeated.instruction_identity),
-          Some(repeated.owner_field_identity),
+          repeated.owner_field_identity,
           elements,
           budget,
         )
@@ -545,7 +551,7 @@ fn classify_reader_order_carrier(
             RepeatedInstruction,
             carrier_identity,
             Some(repeated.instruction_identity),
-            Some(repeated.owner_field_identity),
+            repeated.owner_field_identity,
             elements,
             budget,
           )
@@ -767,7 +773,7 @@ fn classify_reader_order_fields(
   let state_by_story : Map[Int, ReaderOrderFieldStoryState] = Map([])
   let story_by_paragraph : Map[Int, Int] = Map([])
   let seen_markers : Map[Int, Int] = Map([])
-  let seen_instructions : Map[Int, Int] = Map([])
+  let seen_instructions : Map[Int, ReaderOrderInstructionObservation] = Map([])
   for event in projection.field_carriers {
     let paragraph_identity = event.paragraph_identity
     let carrier = event.carrier_identity
