@@ -50,7 +50,7 @@ chmod 0700 "$test_root"
 linux_tmp_parent=""
 
 cleanup() {
-  local status="$?"
+  local status="$1"
   trap - EXIT HUP INT TERM
   if [ "${OFFICE_F1B_KEEP_TEST_ROOT:-0}" = "1" ]; then
     echo "kept fresh-agent test root: $test_root" >&2
@@ -64,7 +64,10 @@ cleanup() {
   fi
   exit "$status"
 }
-trap cleanup EXIT HUP INT TERM
+trap 'cleanup $?' EXIT
+trap 'cleanup 129' HUP
+trap 'cleanup 130' INT
+trap 'cleanup 143' TERM
 
 fail() {
   echo "FRESH-AGENT RUNNER TEST FAIL: $*" >&2
@@ -168,8 +171,11 @@ make_candidate() {
       schema: $schema,
       candidate_head: $candidate_head,
       build: {
+        source_tree: ("c" * 40),
         moon_version: "fake-moon 1",
         moon_sha256: ("a" * 64),
+        moonc_version: "fake-moonc 1",
+        moonc_sha256: ("d" * 64),
         moonrun_version: "fake-moonrun 1",
         dependency_tree_sha256: ("b" * 64),
         capability_schema: "office.capabilities/test",

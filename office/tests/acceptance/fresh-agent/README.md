@@ -28,30 +28,36 @@ esac
 install_parent="$(mktemp -d "$scratch_root/office-f1b-install.XXXXXX")"
 prefix="$install_parent/candidate"
 moon_bin="$(command -v moon)"
+moonc_bin="$(command -v moonc)"
 moonrun_bin="$(command -v moonrun)"
 moon_sha="$(/usr/bin/shasum -a 256 "$moon_bin" |
+  /usr/bin/awk '{print substr($1, length($1) - 63)}')"
+moonc_sha="$(/usr/bin/shasum -a 256 "$moonc_bin" |
   /usr/bin/awk '{print substr($1, length($1) - 63)}')"
 moonrun_sha="$(/usr/bin/shasum -a 256 "$moonrun_bin" |
   /usr/bin/awk '{print substr($1, length($1) - 63)}')"
 office/tests/acceptance/fresh-agent/prepare.sh \
   "$head" "$prefix" \
   "$moon_bin" "$moon_sha" \
+  "$moonc_bin" "$moonc_sha" \
   "$moonrun_bin" "$moonrun_sha"
 ```
 
 The installer sanitizes its startup environment, derives the checkout from its
-own physical path, verifies the supplied tool hashes, and exports exactly
-`head` with `git archive`. It resolves dependencies and performs frozen native
-and Wasm release builds in that snapshot. Every tracked controller asset is
-also copied from the snapshot, never from the mutable checkout.
+own physical path, disables Git replacement objects plus ambient configuration
+and attributes, and exports the exact tree bound to `head`. It verifies the
+supplied `moon`,
+`moonc`, and `moonrun` hashes, resolves that closure under `env -i`, then
+performs frozen native and Wasm release builds in the snapshot. Every tracked
+controller asset is copied from the snapshot, never from the mutable checkout.
 
 The absent destination is atomically reserved before the build. Fixed
 subtrees are published without clobbering, directory modes are locked, and
 `CANDIDATE.json` is linked into place last as the atomic commit marker. A prefix
-without that marker is incomplete. The manifest records the full commit,
-toolchain and dependency-tree hashes, capability identity, and hashes and
-modes for every candidate file. The runner additionally requires one hard link
-per regular file and exact directory modes.
+without that marker is incomplete. The manifest records the full commit and
+source-tree identity, driver/code-generator/runtime and dependency-tree hashes,
+capability identity, and hashes and modes for every candidate file. The runner
+additionally requires one hard link per regular file and exact directory modes.
 
 Record the manifest digest outside the candidate; it is the trust anchor for
 the run:

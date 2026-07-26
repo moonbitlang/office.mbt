@@ -15,7 +15,8 @@ PATH=/usr/bin:/bin:/usr/sbin:/sbin
 export PATH
 unset BASH_ENV ENV CDPATH GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY
 unset GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_COMMON_DIR GIT_CONFIG GIT_CONFIG_GLOBAL
-unset GIT_CONFIG_SYSTEM GIT_CEILING_DIRECTORIES NODE_OPTIONS
+unset GIT_CONFIG_SYSTEM GIT_CONFIG_COUNT GIT_CEILING_DIRECTORIES NODE_OPTIONS
+unset GIT_EXEC_PATH GIT_TEMPLATE_DIR GIT_ATTR_NOSYSTEM GIT_NO_REPLACE_OBJECTS
 unset DYLD_INSERT_LIBRARIES DYLD_LIBRARY_PATH LD_PRELOAD LD_LIBRARY_PATH
 TMPDIR=/tmp
 export TMPDIR
@@ -26,7 +27,7 @@ die() {
 }
 
 usage() {
-  echo "usage: $0 EXPECTED_FULL_HEAD ABSENT_INSTALL_PREFIX MOON_BIN MOON_SHA256 MOONRUN_BIN MOONRUN_SHA256" >&2
+  echo "usage: $0 EXPECTED_FULL_HEAD ABSENT_INSTALL_PREFIX MOON_BIN MOON_SHA256 MOONC_BIN MOONC_SHA256 MOONRUN_BIN MOONRUN_SHA256" >&2
   exit 2
 }
 
@@ -38,6 +39,19 @@ require_command() {
 sha256_file() {
   /usr/bin/shasum -a 256 "$1" |
     /usr/bin/awk '{print substr($1, length($1) - 63)}'
+}
+
+trusted_git() {
+  GIT_NO_REPLACE_OBJECTS=1 \
+    GIT_CONFIG=/dev/null \
+    GIT_CONFIG_GLOBAL=/dev/null \
+    GIT_CONFIG_SYSTEM=/dev/null \
+    GIT_ATTR_NOSYSTEM=1 \
+    /usr/bin/git --no-replace-objects \
+      -c core.attributesFile=/dev/null \
+      -c core.fsmonitor=false \
+      -c core.untrackedCache=false \
+      "$@"
 }
 
 stat_owner_mode() {
@@ -150,59 +164,79 @@ reject_overlap() {
   fi
 }
 
-[ "$#" -eq 6 ] || usage
+[ "$#" -eq 8 ] || usage
 expected_head="$1"
 install_input="$2"
 moon_input="$3"
 expected_moon_sha256="$4"
-moonrun_input="$5"
-expected_moonrun_sha256="$6"
+moonc_input="$5"
+expected_moonc_sha256="$6"
+moonrun_input="$7"
+expected_moonrun_sha256="$8"
 
 case "$expected_head" in
   [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;;
   *) die "EXPECTED_FULL_HEAD must be a lowercase 40-character commit id" ;;
 esac
 
-for tool in git jq shasum awk find sort tar cmp install mktemp stat id basename dirname mv ln; do
+for tool in git jq shasum awk sed find sort tar cmp install mktemp stat id basename dirname mv ln env; do
   require_command "$tool"
 done
 
-case "$expected_moon_sha256:$expected_moonrun_sha256" in
-  *[!0-9a-f:]* | *:*:* | :* | *:) die "Moon tool hashes must be lowercase SHA-256 values" ;;
+case "$expected_moon_sha256:$expected_moonc_sha256:$expected_moonrun_sha256" in
+  *[!0-9a-f:]* | *:*:*:* | :* | *:) die "Moon tool hashes must be lowercase SHA-256 values" ;;
 esac
 [ "${#expected_moon_sha256}" -eq 64 ] &&
+  [ "${#expected_moonc_sha256}" -eq 64 ] &&
   [ "${#expected_moonrun_sha256}" -eq 64 ] ||
   die "Moon tool hashes must be lowercase 64-character SHA-256 values"
 
 moon_bin="$(canonical_regular_file "$moon_input" "Moon compiler")"
+moonc_bin="$(canonical_regular_file "$moonc_input" "Moon code generator")"
 moonrun_bin="$(canonical_regular_file "$moonrun_input" "Moon runtime")"
 [ "$(sha256_file "$moon_bin")" = "$expected_moon_sha256" ] ||
   die "Moon compiler hash does not match the caller-supplied digest"
+[ "$(sha256_file "$moonc_bin")" = "$expected_moonc_sha256" ] ||
+  die "Moon code-generator hash does not match the caller-supplied digest"
 [ "$(sha256_file "$moonrun_bin")" = "$expected_moonrun_sha256" ] ||
   die "Moon runtime hash does not match the caller-supplied digest"
 
+moon_bin_dir="$(canonical_directory "$(/usr/bin/dirname -- "$moon_bin")")"
+[ "$(canonical_directory "$(/usr/bin/dirname -- "$moonc_bin")")" = "$moon_bin_dir" ] ||
+  die "Moon compiler and code generator must belong to one toolchain"
+[ "$(canonical_directory "$(/usr/bin/dirname -- "$moonrun_bin")")" = "$moon_bin_dir" ] ||
+  die "Moon compiler and runtime must belong to one toolchain"
+moon_toolchain_root="$(canonical_directory "$moon_bin_dir/..")"
+
 script_dir="$(canonical_directory "$(/usr/bin/dirname -- "${BASH_SOURCE[0]}")")"
 source_root="$(canonical_directory "$script_dir/../../../..")"
-git_root="$(canonical_directory "$(git -C "$source_root" rev-parse --show-toplevel)")"
+git_root="$(canonical_directory "$(trusted_git -C "$source_root" rev-parse --show-toplevel)")"
 [ "$git_root" = "$source_root" ] ||
   die "fresh-agent harness is not rooted in the expected checkout"
 
-actual_head="$(git -C "$source_root" rev-parse --verify HEAD)"
+actual_head="$(trusted_git -C "$source_root" rev-parse --verify HEAD)"
 [ "$actual_head" = "$expected_head" ] ||
   die "candidate HEAD mismatch: expected $expected_head, found $actual_head"
-[ "$(git -C "$source_root" rev-parse --verify "$expected_head^{commit}")" = "$expected_head" ] ||
+[ "$(trusted_git -C "$source_root" rev-parse --verify "$expected_head^{commit}")" = "$expected_head" ] ||
   die "EXPECTED_FULL_HEAD does not resolve to the requested commit"
+expected_tree="$(trusted_git -C "$source_root" rev-parse --verify "$expected_head^{tree}")"
+case "$expected_tree" in
+  [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;;
+  *) die "candidate source tree must be a lowercase 40-character object id" ;;
+esac
 
-if [ -n "$(git -C "$source_root" status --porcelain=v1 --untracked-files=all)" ]; then
+if [ -n "$(trusted_git -C "$source_root" status --porcelain=v1 --untracked-files=all)" ]; then
   die "candidate checkout has tracked or untracked changes"
 fi
 
-git_common_dir="$(git -C "$source_root" rev-parse --git-common-dir)"
+git_common_dir="$(trusted_git -C "$source_root" rev-parse --git-common-dir)"
 case "$git_common_dir" in
   /*) ;;
   *) git_common_dir="$source_root/$git_common_dir" ;;
 esac
 git_common_dir="$(canonical_directory "$git_common_dir")"
+[ ! -s "$git_common_dir/info/attributes" ] ||
+  die "Git common-directory attributes must be empty for an exact source export"
 
 reject_path_syntax "$install_input" "install prefix"
 install_root="$(canonical_absent_path "$install_input")"
@@ -221,7 +255,8 @@ install_identity=""
 published=0
 
 cleanup() {
-  local status="$?"
+  local status="$1"
+  trap - EXIT HUP INT TERM
   if [ -n "${stage:-}" ] && [ -d "$stage" ]; then
     chmod -R u+w -- "$stage" 2>/dev/null || true
     rm -rf -- "$stage"
@@ -239,7 +274,10 @@ cleanup() {
   fi
   exit "$status"
 }
-trap cleanup EXIT HUP INT TERM
+trap 'cleanup $?' EXIT
+trap 'cleanup 129' HUP
+trap 'cleanup 130' INT
+trap 'cleanup 143' TERM
 
 if ! mkdir -m 0700 "$install_root"; then
   die "could not atomically reserve absent install prefix: $install_root"
@@ -249,18 +287,45 @@ assert_private_directory "$install_root"
 
 snapshot="$scratch/source"
 mkdir -m 0700 "$snapshot"
-git -C "$source_root" archive --format=tar "$expected_head" |
+trusted_git -C "$source_root" archive --format=tar "$expected_tree" |
   tar -xf - -C "$snapshot"
 
-moon_version="$("$moon_bin" --version | /usr/bin/head -n 1)"
-moonrun_version="$("$moonrun_bin" --version | /usr/bin/head -n 1)"
+build_home="$scratch/home"
+build_moon_home="$scratch/moon-home"
+build_tmp="$scratch/tmp"
+mkdir -m 0700 "$build_home" "$build_moon_home" "$build_tmp"
+
+run_moon() {
+  /usr/bin/env -i \
+    HOME="$build_home" \
+    MOON_HOME="$build_moon_home" \
+    MOON_TOOLCHAIN_ROOT="$moon_toolchain_root" \
+    PATH=/usr/bin:/bin:/usr/sbin:/sbin \
+    TMPDIR="$build_tmp" \
+    LANG=C \
+    LC_ALL=C \
+    "$moon_bin" "$@"
+}
+
+toolchain_versions="$scratch/toolchain-versions.txt"
+run_moon version --all > "$toolchain_versions"
+[ "$(/usr/bin/awk 'NR == 1 { print $NF }' "$toolchain_versions")" = "$moon_bin" ] ||
+  die "Moon driver resolved outside the approved toolchain closure"
+[ "$(/usr/bin/awk 'NR == 2 { print $NF }' "$toolchain_versions")" = "$moonc_bin" ] ||
+  die "Moon driver resolved an unapproved code generator"
+[ "$(/usr/bin/awk 'NR == 3 { print $NF }' "$toolchain_versions")" = "$moonrun_bin" ] ||
+  die "Moon driver resolved an unapproved runtime"
+moon_version="$(/usr/bin/sed -n '1p' "$toolchain_versions")"
+moonc_version="$(/usr/bin/sed -n '2p' "$toolchain_versions")"
+moonrun_version="$(/usr/bin/sed -n '3p' "$toolchain_versions")"
 
 build_log="$scratch/build.log"
 if ! (
   cd "$snapshot"
-  "$moon_bin" build --release --target native office/cmd/office
-  "$moon_bin" build --frozen --release --target native office/cmd/office
-  "$moon_bin" build --frozen --release --target wasm office/cmd/office
+  run_moon update
+  run_moon build --release --target native office/cmd/office
+  run_moon build --frozen --release --target native office/cmd/office
+  run_moon build --frozen --release --target wasm office/cmd/office
 ) >"$build_log" 2>&1; then
   echo "error: fresh release build failed; complete build log follows" >&2
   cat "$build_log" >&2
@@ -347,12 +412,16 @@ schema_sha256="$(sha256_file "$stage/control/final.schema.json")"
 canary_sha256="$(sha256_file "$stage/control/permission-canary.sh")"
 private_sha256="$(sha256_file "$stage/control/private.json")"
 moon_sha256="$(sha256_file "$moon_bin")"
+moonc_sha256="$(sha256_file "$moonc_bin")"
 
 jq -n \
   --arg schema "office.fresh-agent.candidate/1" \
   --arg candidate_head "$expected_head" \
+  --arg source_tree "$expected_tree" \
   --arg moon_version "$moon_version" \
   --arg moon_sha256 "$moon_sha256" \
+  --arg moonc_version "$moonc_version" \
+  --arg moonc_sha256 "$moonc_sha256" \
   --arg moonrun_version "$moonrun_version" \
   --arg dependency_tree_sha256 "$dependency_tree_sha256" \
   --arg capability_schema "$capability_schema" \
@@ -370,8 +439,11 @@ jq -n \
     schema: $schema,
     candidate_head: $candidate_head,
     build: {
+      source_tree: $source_tree,
       moon_version: $moon_version,
       moon_sha256: $moon_sha256,
+      moonc_version: $moonc_version,
+      moonc_sha256: $moonc_sha256,
       moonrun_version: $moonrun_version,
       dependency_tree_sha256: $dependency_tree_sha256,
       capability_schema: $capability_schema,
@@ -394,14 +466,18 @@ jq -n \
   }' > "$scratch/CANDIDATE.json"
 install -m 0400 "$scratch/CANDIDATE.json" "$stage/CANDIDATE.json"
 
-[ "$(git -C "$source_root" rev-parse --verify HEAD)" = "$expected_head" ] ||
+[ "$(trusted_git -C "$source_root" rev-parse --verify HEAD)" = "$expected_head" ] ||
   die "candidate HEAD changed during preparation"
-if [ -n "$(git -C "$source_root" status --porcelain=v1 --untracked-files=all)" ]; then
+[ "$(trusted_git -C "$source_root" rev-parse --verify "$expected_head^{tree}")" = "$expected_tree" ] ||
+  die "candidate source tree changed during preparation"
+if [ -n "$(trusted_git -C "$source_root" status --porcelain=v1 --untracked-files=all)" ]; then
   die "candidate checkout changed during preparation"
 fi
 
 [ "$(sha256_file "$moon_bin")" = "$expected_moon_sha256" ] ||
   die "Moon compiler changed during candidate preparation"
+[ "$(sha256_file "$moonc_bin")" = "$expected_moonc_sha256" ] ||
+  die "Moon code generator changed during candidate preparation"
 [ "$(sha256_file "$moonrun_bin")" = "$expected_moonrun_sha256" ] ||
   die "Moon runtime changed during candidate preparation"
 [ "$(stat_identity "$install_parent")" = "$install_parent_identity" ] ||
