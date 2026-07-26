@@ -54,7 +54,7 @@ candidate_sha="$(/usr/bin/shasum -a 256 "$prefix/CANDIDATE.json" |
   /usr/bin/awk '{print substr($1, length($1) - 63)}')"
 ```
 
-## Select an approved Codex executable
+## Select an approved Codex runtime closure
 
 The runner requires Codex CLI 0.145.0 or newer and an explicit executable
 SHA-256. Use the platform-native Codex executable, not the mutable npm JavaScript
@@ -69,10 +69,23 @@ codex_sha="$(/usr/bin/shasum -a 256 "$codex_native" |
 "$codex_native" --version
 ```
 
-The runner checks the external digest, copies the executable into its private
-isolation, checks the copy, and invokes every version/canary/session operation
-under `env -i`. Exact `#!/bin/sh` and `#!/bin/bash` test executables are also
-supported with fixed system interpreters; other shebangs are rejected.
+On Linux, also select and hash the `bwrap` resource shipped beside that exact
+native executable. It is part of the approved runtime closure; a system
+`bwrap` is deliberately not used as an unpinned substitute:
+
+```sh
+codex_vendor="$(/usr/bin/dirname "$(/usr/bin/dirname "$codex_native")")"
+codex_bwrap="$codex_vendor/codex-resources/bwrap"
+bwrap_sha="$(/usr/bin/shasum -a 256 "$codex_bwrap" |
+  /usr/bin/awk '{print substr($1, length($1) - 63)}')"
+```
+
+The runner checks every external digest, copies the executable and (on native
+Linux) its required `bwrap` into their original relative layout inside the
+private isolation, and repeatedly checks the copies. Every
+version/canary/session operation runs under `env -i`. Exact `#!/bin/sh` and
+`#!/bin/bash` test executables are also supported with fixed system
+interpreters; other shebangs are rejected and cannot accept a `bwrap` resource.
 
 ## Run in least privilege
 
@@ -92,10 +105,14 @@ auth_json="$HOME/.codex/auth.json"
   "$auth_json" "$codex_native" "$codex_sha"
 ```
 
+Native Linux runs append `"$codex_bwrap" "$bwrap_sha"` as the final two
+arguments. macOS runs and explicit test scripts omit them.
+
 The runner revalidates the externally anchored candidate, privately stages the
-entire candidate and approved Codex executable, and executes only the staged
-copies. The credential is copied only after every unauthenticated preflight and
-debug-sandbox canary has passed; the cleanup trap is armed before any copy.
+entire candidate and approved Codex runtime closure, and executes only the
+staged copies. The credential is copied only after every unauthenticated
+preflight and debug-sandbox canary has passed; the cleanup trap is armed before
+any copy.
 
 Codex receives a generated isolated configuration:
 
@@ -103,8 +120,9 @@ Codex receives a generated isolated configuration:
   only the candidate runtime closure and the two output roots;
 - ambient `/tmp`, source/Git storage, the original candidate,
   controllers, auth/state, and evidence are denied;
-- only staged `bin`/`libexec`, the isolated shell home, and the fixed canary
-  launcher are readable;
+- only staged Office `bin`/`libexec`, the exact staged Codex executable needed
+  by Linux bubblewrap re-entry, the isolated shell home, and the fixed canary
+  launcher are readable; the staged `bwrap` resource itself remains denied;
 - only the empty probe directory and isolated `TMPDIR` scratch directory are
   writable;
 - network, web search, MCP servers, hooks, login shells, project instructions,
@@ -137,6 +155,9 @@ real Codex executable:
   "$run_parent/probe" "$run_parent/evidence" \
   "$codex_native" "$codex_sha"
 ```
+
+As with a full run, append the approved `bwrap` path and digest on native
+Linux.
 
 ## Evidence and cleanup
 
