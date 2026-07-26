@@ -877,8 +877,11 @@ run_codex sandbox \
   > "$evidence_root/permission-canary.log" 2>&1
 canary_status="$?"
 set -e
-[ "$canary_status" -eq 0 ] ||
+if [ "$canary_status" -ne 0 ]; then
+  echo "error: Codex permission-profile canary log follows" >&2
+  /bin/cat "$evidence_root/permission-canary.log" >&2
   die "Codex permission-profile canary failed; see $evidence_root/permission-canary.log"
+fi
 if [ "$(/usr/bin/wc -l < "$evidence_root/permission-canary.log" | /usr/bin/tr -d ' ')" != "1" ] ||
   ! /usr/bin/grep -qx 'FRESH-AGENT PERMISSION CANARY PASS' \
     "$evidence_root/permission-canary.log"; then

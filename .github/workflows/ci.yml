@@ -89,14 +89,14 @@ jobs:
             -path '*/vendor/*/bin/codex' -print | head -n 1)
           test -n "$codex_native"
           codex_sha=$(/usr/bin/shasum -a 256 "$codex_native" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
+          echo "F1B_CANARY_EVIDENCE=$parent/evidence" >> "$GITHUB_ENV"
           "$prefix/control/run.sh" --canary-only \
             "$head" "$candidate_sha" \
             "$parent/probe" "$parent/evidence" \
             "$codex_native" "$codex_sha"
-          echo "F1B_CANARY_EVIDENCE=$parent/evidence" >> "$GITHUB_ENV"
 
       - name: Upload real Codex canary evidence (macOS)
-        if: runner.os == 'macOS'
+        if: ${{ always() && runner.os == 'macOS' && env.F1B_CANARY_EVIDENCE != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: fresh-agent-canary-macos-${{ github.event.pull_request.head.sha || github.sha }}
@@ -223,13 +223,14 @@ jobs:
           test -n "$codex_native"
           codex_sha=$(/usr/bin/shasum -a 256 "$codex_native" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
           run_parent=$(mktemp -d /tmp/office-f1b-canary.XXXXXX)
+          echo "F1B_CANARY_EVIDENCE=$run_parent/evidence" >> "$GITHUB_ENV"
           "$prefix/control/run.sh" --canary-only \
             "$head" "$candidate_sha" \
             "$run_parent/probe" "$run_parent/evidence" \
             "$codex_native" "$codex_sha"
-          echo "F1B_CANARY_EVIDENCE=$run_parent/evidence" >> "$GITHUB_ENV"
 
       - name: Upload real Codex canary evidence (Ubuntu)
+        if: ${{ always() && env.F1B_CANARY_EVIDENCE != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: fresh-agent-canary-ubuntu-${{ github.event.pull_request.head.sha || github.sha }}
