@@ -286,24 +286,31 @@ fn scan_reader_order_field_carrier(
           marker_identity = Some(current)
         }
       } else if element.local_name == "instrText" {
-        match (instruction_target, element.text_map) {
-          (Some(target), Some(mapped)) =>
+        match element.text_map {
+          Some(mapped) =>
             if repeated_instruction is None {
+              // Recursive carrier events can re-observe this physical node
+              // after its owner has closed. Always consult retained ownership;
+              // the current target only controls first-time consumption.
               match seen_instructions.get(current) {
                 Some(owner_field_identity) =>
                   repeated_instruction = Some({
                     instruction_identity: current,
                     owner_field_identity,
                   })
-                None => {
-                  budget.charge_retained()
-                  seen_instructions[current] = target.field_identity
-                  budget.charge_instruction(mapped.projection.length())
-                  target.instruction.write_string(mapped.projection)
-                }
+                None =>
+                  match instruction_target {
+                    Some(target) => {
+                      budget.charge_retained()
+                      seen_instructions[current] = target.field_identity
+                      budget.charge_instruction(mapped.projection.length())
+                      target.instruction.write_string(mapped.projection)
+                    }
+                    None => ()
+                  }
               }
             }
-          _ => ()
+          None => ()
         }
       }
     }
