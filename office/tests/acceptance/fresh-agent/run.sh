@@ -967,6 +967,9 @@ config_file="$isolated_codex_state/config.toml"
     '":slash_tmp" = "deny"' \
     '":minimal" = "read"'
   printf '%s = "deny"\n' "$(toml_string "$install_root")"
+  if [ "$platform_name" = "Linux" ] && [ -d /etc ]; then
+    printf '%s = "deny"\n' "$(toml_string /etc)"
+  fi
   if [ -d /proc ]; then
     printf '%s = "deny"\n' "$(toml_string /proc)"
   fi
@@ -984,8 +987,8 @@ config_file="$isolated_codex_state/config.toml"
   printf '%s = "deny"\n' "$(toml_string "$isolated_codex_resources")"
   printf '%s = "deny"\n' "$(toml_string "$evidence_root")"
   printf '%s = "deny"\n' "$(toml_string "$candidate_root/control")"
-  printf '%s = "read"\n' "$(toml_string "$candidate_root/bin")"
-  printf '%s = "read"\n' "$(toml_string "$candidate_root/libexec")"
+  printf '%s = "deny"\n' "$(toml_string "$candidate_root/CANDIDATE.json")"
+  printf '%s = "read"\n' "$(toml_string "$candidate_root")"
   printf '%s = "read"\n' "$(toml_string "$isolated_user_home")"
   printf '%s = "read"\n' "$(toml_string "$isolated_launcher_bin")"
   # Linux bubblewrap re-enters this exact executable inside the namespace.
