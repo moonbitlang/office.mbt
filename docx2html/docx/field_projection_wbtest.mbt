@@ -422,6 +422,57 @@ test "a repeated child instruction refuses a result-region parent" {
 }
 
 ///|
+test "an initially untargeted repeated instruction refuses the later field" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p>
+    #|<w:r><w:fldChar w:fldCharType="begin"/><w:p><w:r><w:instrText> OUTSIDE </w:instrText><w:t>nested</w:t></w:r></w:p></w:r>
+    #|<w:r><w:t>after</w:t></w:r>
+    #|</w:p></w:body></w:document>
+  let projection = field_test_projection(source)
+  assert_eq(projection.field_index.fields.length(), 1)
+  assert_eq(projection.field_index.refusals.length(), 1)
+  let field = projection.field_index.fields[0]
+  let refusal = projection.field_index.refusals[0]
+  assert_true(refusal.kind is RepeatedInstruction)
+  assert_eq(refusal.field_identity, None)
+  assert_eq(field.refusal_identity, Some(refusal.identity))
+  assert_eq(field.instruction_text.to_string(), "")
+  let offending = refusal.offending_identity.unwrap()
+  assert_eq(projection.source_elements[offending].local_name, "instrText")
+  for value in ["nested", "after"] {
+    let contribution = field_contribution(projection, value)
+    assert_true(contribution.field_region is MalformedField)
+    assert_eq(contribution.field_refusal, Some(refusal.identity))
+  }
+}
+
+///|
+test "a repeated self-closing instruction refuses its field" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p>
+    #|<w:r><w:fldChar w:fldCharType="begin"/></w:r>
+    #|<w:p><w:r><w:instrText/><w:t>nested</w:t></w:r></w:p>
+    #|<w:r><w:t>after</w:t></w:r>
+    #|</w:p></w:body></w:document>
+  let projection = field_test_projection(source)
+  assert_eq(projection.field_index.fields.length(), 1)
+  assert_eq(projection.field_index.refusals.length(), 1)
+  let field = projection.field_index.fields[0]
+  let refusal = projection.field_index.refusals[0]
+  assert_true(refusal.kind is RepeatedInstruction)
+  assert_eq(refusal.field_identity, Some(field.identity))
+  assert_eq(field.refusal_identity, Some(refusal.identity))
+  assert_eq(field.instruction_text.to_string(), "")
+  let offending = refusal.offending_identity.unwrap()
+  assert_eq(projection.source_elements[offending].local_name, "instrText")
+  for value in ["nested", "after"] {
+    let contribution = field_contribution(projection, value)
+    assert_true(contribution.field_region is MalformedField)
+    assert_eq(contribution.field_refusal, Some(refusal.identity))
+  }
+}
+
+///|
 test "truncated fields mark prior contributions with the final refusal" {
   let source =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:t>X</w:t></w:r></w:p></w:body></w:document>
