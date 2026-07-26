@@ -86,6 +86,57 @@ test "hyperlink resolves merged cell anchor" {
 }
 
 ///|
+test "hyperlink created before merge moves to the merged anchor" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_hyperlink("B2", "https://before.example", External)
+  sheet.merge_cells("A1:C3")
+  inspect(sheet.get_hyperlinks().length(), content="1")
+  inspect(sheet.get_hyperlinks()[0].reference, content="A1")
+  debug_inspect(
+    sheet.get_cell_hyperlink("A1").map(link => link.target),
+    content="Some(\"https://before.example\")",
+  )
+  debug_inspect(
+    sheet.get_cell_hyperlink("B2").map(link => link.target),
+    content="Some(\"https://before.example\")",
+  )
+  sheet.set_cell_hyperlink("C3", "https://after.example", External)
+  inspect(sheet.get_hyperlinks().length(), content="1")
+  debug_inspect(
+    sheet.get_cell_hyperlink("A1").map(link => link.target),
+    content="Some(\"https://after.example\")",
+  )
+  sheet.remove_cell_hyperlink("B2")
+  debug_inspect(sheet.get_cell_hyperlink("A1"), content="None")
+}
+
+///|
+test "merge rejects conflicting hyperlink identities atomically" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_hyperlink("A1", "https://a.example", External)
+  sheet.set_cell_hyperlink("B2", "https://b.example", External)
+  let result : Result[Unit, Error] = Ok(sheet.merge_cells("A1:C3")) catch {
+    error => Err(error)
+  }
+  inspect(
+    result is Err(@xlsx.XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
+  inspect(sheet.merged_cells().length(), content="0")
+  inspect(sheet.get_hyperlinks().length(), content="2")
+  debug_inspect(
+    sheet.get_cell_hyperlink("A1").map(link => link.target),
+    content="Some(\"https://a.example\")",
+  )
+  debug_inspect(
+    sheet.get_cell_hyperlink("B2").map(link => link.target),
+    content="Some(\"https://b.example\")",
+  )
+}
+
+///|
 test "hyperlink remove keeps other links" {
   let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
@@ -632,6 +683,25 @@ test "hyperlink mutation rejects empty and unsafe targets atomically" {
     content="true",
   )
   inspect(sheet.get_hyperlinks().length(), content="1")
+}
+
+///|
+test "location hyperlink accepts unqualified A1 ranges" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let targets = ["A1:B2", "A:A", "$A$1:$B$2", "$A:$B"]
+  for index, target in targets {
+    workbook.set_cell_hyperlink("Sheet1", "A\{index + 1}", target, Location)
+  }
+  let parsed = @xlsx.read(@xlsx.write(workbook))
+  for index, target in targets {
+    debug_inspect(
+      parsed
+      .get_cell_hyperlink("Sheet1", "A\{index + 1}")
+      .map(link => link.target),
+      content="Some(\"\{target}\")",
+    )
+  }
 }
 
 ///|
