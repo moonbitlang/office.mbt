@@ -15,6 +15,8 @@ jobs:
     name: office transactional editing (${{ matrix.os }}, nightly)
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    env:
+      EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
     strategy:
       fail-fast: false
       matrix:
@@ -36,8 +38,6 @@ jobs:
 
       - name: Assert exact workflow head
         shell: bash
-        env:
-          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: test "$(git rev-parse --verify HEAD)" = "$EXPECTED_HEAD"
 
       - name: Set up MoonBit (nightly, Unix)
@@ -72,8 +72,10 @@ jobs:
 
       - name: Prepared-candidate real Codex canary (macOS)
         if: runner.os == 'macOS'
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          head=$(git rev-parse --verify HEAD)
+          head="$EXPECTED_HEAD"
           parent=$(mktemp -d "${TMPDIR}/office-f1b-ci.XXXXXX")
           prefix="$parent/candidate"
           moon_bin=$(command -v moon)
@@ -82,6 +84,8 @@ jobs:
           moon_sha=$(/usr/bin/shasum -a 256 "$moon_bin" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
           moonc_sha=$(/usr/bin/shasum -a 256 "$moonc_bin" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
           moonrun_sha=$(/usr/bin/shasum -a 256 "$moonrun_bin" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
+          test "$(git rev-parse --verify HEAD)" = "$head"
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
           office/tests/acceptance/fresh-agent/prepare.sh \
             "$head" "$prefix" \
             "$moon_bin" "$moon_sha" \
@@ -135,6 +139,8 @@ jobs:
     # something (e.g. an accidental whole-workspace exe build pulling in
     # pdflite's pathological markdown CLI) blows the budget.
     timeout-minutes: 45
+    env:
+      EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -143,8 +149,6 @@ jobs:
           persist-credentials: false
 
       - name: Assert exact workflow head
-        env:
-          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: test "$(git rev-parse --verify HEAD)" = "$EXPECTED_HEAD"
 
       # This repo is a `moon work` workspace with four members: `.`
@@ -194,8 +198,10 @@ jobs:
           npm install --global @openai/codex@0.145.0
 
       - name: Installed Office release smoke
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          head=$(git rev-parse --verify HEAD)
+          head="$EXPECTED_HEAD"
           install_parent=$(mktemp -d /var/tmp/office-f1b-install.XXXXXX)
           prefix="$install_parent/candidate"
           prepare="$PWD/office/tests/acceptance/fresh-agent/prepare.sh"
@@ -205,6 +211,8 @@ jobs:
           moon_sha=$(/usr/bin/shasum -a 256 "$moon_bin" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
           moonc_sha=$(/usr/bin/shasum -a 256 "$moonc_bin" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
           moonrun_sha=$(/usr/bin/shasum -a 256 "$moonrun_bin" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
+          test "$(git rev-parse --verify HEAD)" = "$head"
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
           (
             cd /var/tmp
             "$prepare" \

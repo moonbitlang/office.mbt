@@ -87,19 +87,20 @@ prefers the first system `bwrap` on its sanitized `PATH`; the runner therefore
 requires that executable to be the caller-approved one:
 
 ```sh
-codex_bwrap="$(command -v bwrap)"
+codex_bwrap="$(command -v bwrap || true)"
+if [ -z "$codex_bwrap" ]; then
+  codex_vendor="$(/usr/bin/dirname "$(/usr/bin/dirname "$codex_native")")"
+  codex_bwrap="$codex_vendor/codex-resources/bwrap"
+fi
+test -f "$codex_bwrap" && test -x "$codex_bwrap"
 bwrap_sha="$(/usr/bin/shasum -a 256 "$codex_bwrap" |
   /usr/bin/awk '{print substr($1, length($1) - 63)}')"
 ```
 
 If no system `bwrap` exists, select the resource shipped beside the approved
 native Codex instead; the runner will copy it into the same relative layout as
-the privately staged Codex:
-
-```sh
-codex_vendor="$(/usr/bin/dirname "$(/usr/bin/dirname "$codex_native")")"
-codex_bwrap="$codex_vendor/codex-resources/bwrap"
-```
+the privately staged Codex. The branch above selects that resource before
+computing `bwrap_sha`, so the supplied digest always binds the selected file.
 
 The runner privately stages and repeatedly verifies Codex. A selected system
 `bwrap` is accepted in place only when it is root-owned, executable, not
