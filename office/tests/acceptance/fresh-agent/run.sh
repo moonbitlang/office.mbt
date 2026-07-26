@@ -965,7 +965,6 @@ config_file="$isolated_codex_state/config.toml"
     'description = "Installed Office probe with explicit least-privilege roots."' \
     '' \
     '[permissions.fresh_agent.filesystem]' \
-    '":tmpdir" = "deny"' \
     '":slash_tmp" = "deny"' \
     '":minimal" = "read"'
   printf '%s = "deny"\n' "$(toml_string "$install_root")"

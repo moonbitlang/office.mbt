@@ -225,7 +225,15 @@ chmod 0600 "$codex_bin_dir/mode"
     '/usr/bin/grep -q '\''^hooks = {}$'\'' "$config"' \
     '/usr/bin/grep -q '\''^mcp_servers = {}$'\'' "$config"' \
     '/usr/bin/grep -q '\''^":minimal" = "read"$'\'' "$config"' \
-    '/usr/bin/grep -q '\''^":tmpdir" = "deny"$'\'' "$config"' \
+    'if /usr/bin/grep -q '\''^":tmpdir" = '\'' "$config"; then exit 65; fi' \
+    'codex_home_key=$(/usr/bin/jq -Rn --arg value "$CODEX_HOME" '\''$value'\'')' \
+    '/usr/bin/grep -Fqx "$codex_home_key = \"deny\"" "$config"' \
+    'isolation_root=$(CDPATH= cd -- "$CODEX_HOME/.." && pwd)' \
+    'child_tmp="$isolation_root/tmp"' \
+    'test "$TMPDIR" = "$CODEX_HOME/runtime-tmp"' \
+    'test "$TMPDIR" != "$child_tmp"' \
+    'child_tmp_key=$(/usr/bin/jq -Rn --arg value "$child_tmp" '\''$value'\'')' \
+    '/usr/bin/grep -Fqx "$child_tmp_key = \"write\"" "$config"' \
     '/usr/bin/grep -q '\''candidate" = "read"$'\'' "$config"' \
     '/usr/bin/grep -q '\''candidate/CANDIDATE.json" = "deny"$'\'' "$config"' \
     '/usr/bin/grep -q '\''codex-bin" = "read"$'\'' "$config"' \
