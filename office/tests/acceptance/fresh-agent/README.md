@@ -71,9 +71,7 @@ codex_sha="$(/usr/bin/shasum -a 256 "$codex_native" |
 
 On Linux, also select and hash the exact `bwrap` that Codex will execute. Codex
 prefers the first system `bwrap` on its sanitized `PATH`; the runner therefore
-requires that executable to be the caller-approved one. This is also required
-on Ubuntu 24.04, whose AppArmor policy grants user-namespace access to the
-fixed `/usr/bin/bwrap` path rather than an arbitrary copied binary:
+requires that executable to be the caller-approved one:
 
 ```sh
 codex_bwrap="$(command -v bwrap)"
@@ -171,6 +169,17 @@ real Codex executable:
 
 As with a full run, append the approved `bwrap` path and digest on native
 Linux.
+
+Bubblewrap also requires host support for unprivileged user namespaces.
+GitHub-hosted Ubuntu 24.04 enables an AppArmor gate that otherwise rejects the
+namespace setup. The CI workflow follows the
+[official `codex-action` prerequisite](https://github.com/openai/codex-action/blob/dd78cb653811af44014baa08fe954e28d32c1bf9/action.yml#L278-L301)
+immediately before its canary: it enables
+`kernel.unprivileged_userns_clone` when present, temporarily clears
+`kernel.apparmor_restrict_unprivileged_userns`, and restores both original
+values through an EXIT trap on success or failure. The runner itself never
+changes host policy; self-hosted machines must provide a supported namespace
+configuration administratively.
 
 ## Evidence and cleanup
 
