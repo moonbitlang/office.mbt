@@ -41,8 +41,10 @@ Exercise these outcomes:
    prove the projected dump reaches a fixpoint; read the main document through
    the raw command; and provoke one typed malformed-input failure that creates
    neither an output nor a staging artifact.
-4. Compare native and Wasm results. Distinguish documented target-specific
-   transaction warnings from behavioral mismatches.
+4. Compare native and Wasm results. Classify every target-specific warning you
+   actually observe from installed help or command output. Do not assume a
+   warning is acceptable or documented; distinguish a bounded, evidenced
+   target limitation from a behavioral mismatch.
 
 Create two concise evidence files in the current directory:
 
@@ -54,6 +56,19 @@ Create two concise evidence files in the current directory:
   versus Wasm comparison; failure diagnostics; and every residual gap graded
   P0, P1, P2, or P3.
 
-Finish your response with exactly one of `BASELINE PASS` or `BASELINE FAIL` and
-the paths to both evidence files. A P0-P2 gap requires `BASELINE FAIL`; P3
-follow-ups may accompany `BASELINE PASS`.
+Use this severity rubric:
+
+- P0: security boundary failure, data loss/corruption, or an unsafe operation
+  presented as safe.
+- P1: a required workflow cannot complete correctly, required output is
+  materially wrong, or native/Wasm behavior diverges materially.
+- P2: a material fidelity, portability, discoverability, or diagnostic gap
+  that makes normal agent use unreliable but has a bounded workaround.
+- P3: cosmetic friction or a narrowly bounded caveat that does not compromise
+  any required outcome.
+
+A P0-P2 gap requires `BASELINE FAIL`; P3 follow-ups may accompany
+`BASELINE PASS`. Put the same verdict prominently in `probe-result.md`.
+Finish with only a JSON object matching the supplied output schema: set
+`verdict`, `result_path` to `probe-result.md`, and
+`transcript_path` to `probe-transcript.md`.

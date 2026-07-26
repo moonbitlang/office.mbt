@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "verdict",
+    "result_path",
+    "transcript_path"
+  ],
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "BASELINE PASS",
+        "BASELINE FAIL"
+      ]
+    },
+    "result_path": {
+      "const": "probe-result.md"
+    },
+    "transcript_path": {
+      "const": "probe-transcript.md"
+    }
+  }
+}
