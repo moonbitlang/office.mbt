@@ -322,24 +322,28 @@ chmod 0600 "$codex_bin_dir/mode"
     'if [ "$mode" != "no-office" ]; then' \
     '  index=0' \
     '  for runtime in native wasm; do' \
-    '    for verb in help batch identify outline get text query validate issues preview template dump replay raw annotate; do' \
+    '    index=$((index + 1))' \
+    '    if [ "$mode" = "spoof-office" ]; then cmd="echo office-$runtime help all --json"; else cmd="office-$runtime help all --json"; fi' \
+    '    emit_started "cmd-$index" "$cmd"' \
+    '    if [ "$mode" = "spoof-office" ]; then body="spoof"; status=0; else body=$("office-$runtime" help all --json 2>&1); status=$?; fi' \
+    '    emit_completed "cmd-$index" "$cmd" "$status" "$body"' \
+    '    for format in xlsx docx; do' \
+    '      if [ "$format" = "xlsx" ]; then verbs="create batch identify outline get text query validate issues preview template dump replay raw"; else verbs="batch identify outline get text query validate issues preview template dump replay raw annotate"; fi' \
+    '      for verb in $verbs; do' \
+    '        if [ "$mode" = "missing-create" ] && [ "$runtime/$format/$verb" = "native/xlsx/create" ]; then continue; fi' \
     '      index=$((index + 1))' \
-    '      if [ "$mode" = "spoof-office" ]; then cmd="echo office-$runtime $verb"; else cmd="office-$runtime $verb"; fi' \
+    '      if [ "$mode" = "spoof-office" ]; then cmd="echo office-$runtime $verb sample.$format --json"; else cmd="office-$runtime $verb sample.$format --json"; fi' \
+    '      if [ "$mode" = "format-redirection-spoof" ] && [ "$runtime/$format/$verb" = "native/xlsx/create" ]; then cmd="office-native create missing-target --json > proof.xlsx"; fi' \
+    '      if [ "$mode" = "newline-mask" ] && [ "$runtime/$format/$verb" = "native/xlsx/create" ]; then cmd=$(/usr/bin/printf "office-native create sample.xlsx --json\\ntrue"); fi' \
     '      emit_started "cmd-$index" "$cmd"' \
     '      if [ "$mode" = "spoof-office" ]; then body="spoof"; status=0; else' \
     '        set +e' \
-    '        body=$("office-$runtime" "$verb" 2>&1)' \
+    '        body=$("office-$runtime" "$verb" "sample.$format" --json 2>&1)' \
     '        status=$?' \
     '        set -e' \
     '      fi' \
     '      emit_completed "cmd-$index" "$cmd" "$status" "$body"' \
-    '    done' \
-    '    for extension in xlsx docx; do' \
-    '      index=$((index + 1))' \
-    '      if [ "$mode" = "spoof-office" ]; then cmd="echo office-$runtime identify sample.$extension"; else cmd="office-$runtime identify sample.$extension"; fi' \
-    '      emit_started "cmd-$index" "$cmd"' \
-    '      if [ "$mode" = "spoof-office" ]; then body="spoof"; else body=$("office-$runtime" identify "sample.$extension" 2>&1); fi' \
-    '      emit_completed "cmd-$index" "$cmd" 0 "$body"' \
+    '      done' \
     '    done' \
     '  done' \
     'fi' \
@@ -348,7 +352,11 @@ chmod 0600 "$codex_bin_dir/mode"
     'if [ "$mode" = "fail" ]; then verdict="BASELINE FAIL"; outcome="FAIL"; gaps='\''[{"severity":"P1","summary":"fake failure"}]'\''; fi' \
     'header="Verdict: $verdict"' \
     'if [ "$mode" = "contradictory" ]; then header="Verdict: BASELINE FAIL"; fi' \
-    'printf "%s\\n\\n# Probe result\\n" "$header" > "$probe/probe-result.md"' \
+    'if [ "$mode" = "incomplete-report" ]; then' \
+    '  printf "%s\\n\\n# Probe result\\n" "$header" > "$probe/probe-result.md"' \
+    'else' \
+    '  printf "%s\\nNative XLSX: %s\\nNative DOCX: %s\\nWasm XLSX: %s\\nWasm DOCX: %s\\nCapability schema: office.capabilities/test\\nCapability fingerprint: test:fingerprint\\nDiscoverability: %s\\nNative/Wasm comparison: %s\\n\\n# Probe result\\n" "$header" "$outcome" "$outcome" "$outcome" "$outcome" "$outcome" "$outcome" > "$probe/probe-result.md"' \
+    'fi' \
     'printf "# Probe transcript\\n\\nfake commands executed\\n" > "$probe/probe-transcript.md"' \
     'if [ "$mode" = "malformed" ]; then' \
     '  printf "{\\n" > "$output"' \
@@ -381,7 +389,8 @@ evidence="$case_root/evidence"
   .codex_exit_status == 0 and
   .integrity.privately_staged_candidate == true and
   .integrity.privately_staged_codex == true and
-  .integrity.bubblewrap == null
+  .integrity.bubblewrap == null and
+  (.evidence.workflows_sha256 | test("^[0-9a-f]{64}$"))
 ' "$evidence/RUN.json" >/dev/null ||
   fail "final run manifest"
 /usr/bin/jq -e '
@@ -394,13 +403,21 @@ evidence="$case_root/evidence"
   fail "preflight manifest"
 /usr/bin/jq -e '
   .schema == "office.fresh-agent.evidence/1" and
-  (.artifacts | length) == 12 and
+  (.artifacts | length) == 13 and
   (.artifacts | map(.path) | index("codex-stderr.log")) != null and
-  (.artifacts | map(.path) | index("COMMANDS.json")) != null
+  (.artifacts | map(.path) | index("COMMANDS.json")) != null and
+  (.artifacts | map(.path) | index("WORKFLOWS.json")) != null
 ' "$evidence/EVIDENCE.json" >/dev/null ||
   fail "complete evidence manifest"
-[ "$(/usr/bin/jq 'length' "$evidence/COMMANDS.json")" -eq 36 ] ||
+[ "$(/usr/bin/jq 'length' "$evidence/COMMANDS.json")" -eq 60 ] ||
   fail "host-derived command inventory"
+/usr/bin/jq -e '
+  .schema == "office.fresh-agent.workflows/1" and
+  .required_count == 58 and
+  (.workflows | length) == 58 and
+  (.workflows | all((.events | length) > 0))
+' "$evidence/WORKFLOWS.json" >/dev/null ||
+  fail "host-derived workflow matrix"
 /usr/bin/grep -qx 'FRESH-AGENT PERMISSION CANARY PASS' \
   "$evidence/permission-canary.log" ||
   fail "permission canary evidence"
@@ -600,15 +617,39 @@ expect_failure contradictory 1 'exact structured verdict' \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'no-office\n' > "$codex_bin_dir/mode"
-expect_failure no-office 1 'does not record office-native help' \
+expect_failure no-office 1 'required workflow: native/all/help' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/no-office-probe" "$case_root/no-office-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'spoof-office\n' > "$codex_bin_dir/mode"
-expect_failure spoof-office 1 'does not record office-native help' \
+expect_failure spoof-office 1 'required workflow: native/all/help' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/spoof-office-probe" "$case_root/spoof-office-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'missing-create\n' > "$codex_bin_dir/mode"
+expect_failure missing-create 1 'required workflow: native/xlsx/create' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/missing-create-probe" "$case_root/missing-create-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'format-redirection-spoof\n' > "$codex_bin_dir/mode"
+expect_failure format-redirection-spoof 1 'required workflow: native/xlsx/create' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/format-spoof-probe" "$case_root/format-spoof-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'newline-mask\n' > "$codex_bin_dir/mode"
+expect_failure newline-mask 1 'required workflow: native/xlsx/create' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/newline-mask-probe" "$case_root/newline-mask-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'incomplete-report\n' > "$codex_bin_dir/mode"
+expect_failure incomplete-report 1 'structured outcome: Native XLSX' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/incomplete-report-probe" "$case_root/incomplete-report-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'pre-canary\n' > "$codex_bin_dir/mode"
