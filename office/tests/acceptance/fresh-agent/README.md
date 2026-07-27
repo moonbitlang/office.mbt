@@ -65,16 +65,14 @@ is copied from the snapshot, never from the mutable checkout.
 CI installs the immutable MoonBit snapshot named by the locked `moonc` version
 (`0.10.5+5be960077`), rather than the mutable `nightly` CDN alias. Any deliberate
 toolchain upgrade must update that workflow version and both platform inventories
-in `build-lock.json` together. CI also verifies each official platform installer
-against its tracked SHA-256 before executing it; on Unix, that script sets file
-modes that are part of the reviewed closure. Every runner installs into an
-explicitly absent private root under its per-job temporary directory, so a
-preinstalled or stale user toolchain cannot enter the inventory. The generic
-Unix installer
-omits its nightly-only LLVM bundle when given an exact version, so CI explicitly
-finishes the same LLVM then wasm-gc bundle sequence before the locked inventory is
-checked. The Linux inventory is generated as a non-root user with `umask 0022`,
-matching the hosted runner's installed `0644`/`0755` modes rather than root tar
+in `build-lock.json` together. CI downloads the exact platform distribution and
+core archives and verifies both tracked SHA-256 digests before either archive is
+extracted or any downloaded executable is run. It then recreates the official
+all-target, LLVM, and wasm-gc bundle sequence directly in an explicitly absent
+private root under the per-job temporary directory, so a mutable installer,
+preinstalled toolchain, or stale user state cannot enter the reviewed closure.
+The Linux inventory is generated as a non-root user with `umask 0022`, matching
+the hosted runner's installed `0644`/`0755` modes rather than root tar
 extraction's group-writable modes.
 
 The absent destination is atomically reserved before the build. Fixed

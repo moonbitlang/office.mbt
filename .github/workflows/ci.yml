@@ -15,8 +15,11 @@ concurrency:
 # the lock describes so an unrelated nightly publication cannot break the gate.
 env:
   MOONBIT_TOOLCHAIN_VERSION: "0.10.5+5be960077"
-  MOONBIT_UNIX_INSTALLER_SHA256: "46495f8cdc0050f79b6cb195d66478d101cb3601d68506568fbe377fcdf2a9fe"
-  MOONBIT_WINDOWS_INSTALLER_SHA256: "a5101e91ffa9905fb25cd009b9a4aa942971a294bd055c89836e3af89b710c64"
+  MOONBIT_DARWIN_ARCHIVE_SHA256: "0ad04301481bf57d23da81fb79931ef4f6e3a7d71b8c04a2511fc42a1d14aaa2"
+  MOONBIT_LINUX_ARCHIVE_SHA256: "ce81292c53fb7829d3c1f0596f4ed17af2cdc394ec520988f0618eb971a8891f"
+  MOONBIT_WINDOWS_ARCHIVE_SHA256: "42414700ea44fe40609e01611f267d1e9e90bf364893845a5934e437cb689222"
+  MOONBIT_UNIX_CORE_SHA256: "24d316f81cc0c2c23de1bf512f8b5cc06477f7b6eede88700ae055206a4abc0c"
+  MOONBIT_WINDOWS_CORE_SHA256: "0a323c3c5b097b3df8e784da9c04a134699f923565b3230661b53034f22f3e36"
 
 jobs:
   transaction-platforms:
@@ -51,15 +54,41 @@ jobs:
       - name: Set up MoonBit (pinned nightly, Unix)
         if: runner.os != 'Windows'
         run: |
-          installer="$RUNNER_TEMP/moonbit-unix-installer.sh"
           toolchain="$RUNNER_TEMP/moonbit-f1b-toolchain"
+          archive="$RUNNER_TEMP/moonbit-f1b-toolchain.tar.gz"
+          core_archive="$RUNNER_TEMP/moonbit-f1b-core.tar.gz"
+          version_path="${MOONBIT_TOOLCHAIN_VERSION//+/%2B}"
           test ! -e "$toolchain" && test ! -L "$toolchain"
-          curl -fsSL -o "$installer" https://cli.moonbitlang.com/install/unix.sh
-          test "$(shasum -a 256 "$installer" | awk '{print $1}')" = \
-            "$MOONBIT_UNIX_INSTALLER_SHA256"
-          MOON_HOME="$toolchain" bash "$installer" "$MOONBIT_TOOLCHAIN_VERSION"
+          case "$(uname -ms)" in
+            'Darwin arm64')
+              target=darwin-aarch64
+              archive_sha="$MOONBIT_DARWIN_ARCHIVE_SHA256"
+              ;;
+            'Linux x86_64')
+              target=linux-x86_64
+              archive_sha="$MOONBIT_LINUX_ARCHIVE_SHA256"
+              ;;
+            *)
+              echo "unsupported pinned MoonBit platform: $(uname -ms)" >&2
+              exit 1
+              ;;
+          esac
+          curl -fsSL -o "$archive" \
+            "https://cli.moonbitlang.com/binaries/$version_path/moonbit-$target.tar.gz"
+          curl -fsSL -o "$core_archive" \
+            "https://cli.moonbitlang.com/cores/core-$version_path.tar.gz"
+          test "$(shasum -a 256 "$archive" | awk '{print $1}')" = "$archive_sha"
+          test "$(shasum -a 256 "$core_archive" | awk '{print $1}')" = \
+            "$MOONBIT_UNIX_CORE_SHA256"
+          mkdir -m 0700 "$toolchain"
+          tar -xzf "$archive" -C "$toolchain"
+          mkdir -p "$toolchain/lib"
+          tar -xzf "$core_archive" -C "$toolchain/lib"
+          ln -sfn moon "$toolchain/bin/moonx"
+          chmod +x "$toolchain"/bin/* "$toolchain/bin/internal/tcc"
           echo "MOON_HOME=$toolchain" >> "$GITHUB_ENV"
           echo "$toolchain/bin" >> "$GITHUB_PATH"
+          "$toolchain/bin/moon" -C "$toolchain/lib/core" bundle --warn-list -a --all
           "$toolchain/bin/moon" -C "$toolchain/lib/core" bundle --warn-list -a --target llvm
           "$toolchain/bin/moon" -C "$toolchain/lib/core" bundle --warn-list -a --target wasm-gc --quiet
 
@@ -69,19 +98,32 @@ jobs:
         env:
           MOONBIT_INSTALL_VERSION: ${{ env.MOONBIT_TOOLCHAIN_VERSION }}
         run: |
-          $installer = Join-Path $env:RUNNER_TEMP "moonbit-windows-installer.ps1"
           $toolchain = Join-Path $env:RUNNER_TEMP "moonbit-f1b-toolchain"
+          $archive = Join-Path $env:RUNNER_TEMP "moonbit-f1b-toolchain.zip"
+          $coreArchive = Join-Path $env:RUNNER_TEMP "moonbit-f1b-core.zip"
           if (Test-Path -LiteralPath $toolchain) {
             throw "MoonBit install root must be absent"
           }
-          Invoke-WebRequest https://cli.moonbitlang.com/install/powershell.ps1 -OutFile $installer
-          $actualInstallerSha = (Get-FileHash -Algorithm SHA256 $installer).Hash.ToLowerInvariant()
-          if ($actualInstallerSha -ne $env:MOONBIT_WINDOWS_INSTALLER_SHA256) {
-            throw "MoonBit installer SHA-256 mismatch"
+          $versionPath = $env:MOONBIT_INSTALL_VERSION.Replace("+", "%2B")
+          $archiveUri = "https://cli.moonbitlang.com/binaries/$versionPath/moonbit-windows-x86_64.zip"
+          $coreUri = "https://cli.moonbitlang.com/cores/core-$versionPath.zip"
+          Invoke-WebRequest -Uri $archiveUri -OutFile $archive
+          Invoke-WebRequest -Uri $coreUri -OutFile $coreArchive
+          $actualArchiveSha = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
+          $actualCoreSha = (Get-FileHash -Algorithm SHA256 $coreArchive).Hash.ToLowerInvariant()
+          if ($actualArchiveSha -ne $env:MOONBIT_WINDOWS_ARCHIVE_SHA256) {
+            throw "MoonBit toolchain archive SHA-256 mismatch"
           }
-          $env:MOON_HOME = $toolchain
-          Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
-          & $installer
+          if ($actualCoreSha -ne $env:MOONBIT_WINDOWS_CORE_SHA256) {
+            throw "MoonBit core archive SHA-256 mismatch"
+          }
+          New-Item -Path $toolchain -ItemType Directory | Out-Null
+          Expand-Archive $archive -DestinationPath $toolchain
+          New-Item -Path "$toolchain\lib" -ItemType Directory -Force | Out-Null
+          Expand-Archive $coreArchive -DestinationPath "$toolchain\lib"
+          New-Item -ItemType HardLink -Path "$toolchain\bin\moonx.exe" -Value "$toolchain\bin\moon.exe" | Out-Null
+          & "$toolchain\bin\moon.exe" -C "$toolchain\lib\core" bundle --warn-list -a --all
+          & "$toolchain\bin\moon.exe" -C "$toolchain\lib\core" bundle --warn-list -a --target wasm-gc --quiet
           "MOON_HOME=$toolchain" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "$toolchain\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
@@ -206,15 +248,28 @@ jobs:
       # has aligned the workspace members on async@0.20.2 + x@0.4.43.
       - name: Set up MoonBit (pinned nightly snapshot)
         run: |
-          installer="$RUNNER_TEMP/moonbit-unix-installer.sh"
           toolchain="$RUNNER_TEMP/moonbit-f1b-toolchain"
+          archive="$RUNNER_TEMP/moonbit-f1b-toolchain.tar.gz"
+          core_archive="$RUNNER_TEMP/moonbit-f1b-core.tar.gz"
+          version_path="${MOONBIT_TOOLCHAIN_VERSION//+/%2B}"
           test ! -e "$toolchain" && test ! -L "$toolchain"
-          curl -fsSL -o "$installer" https://cli.moonbitlang.com/install/unix.sh
-          test "$(shasum -a 256 "$installer" | awk '{print $1}')" = \
-            "$MOONBIT_UNIX_INSTALLER_SHA256"
-          MOON_HOME="$toolchain" bash "$installer" "$MOONBIT_TOOLCHAIN_VERSION"
+          curl -fsSL -o "$archive" \
+            "https://cli.moonbitlang.com/binaries/$version_path/moonbit-linux-x86_64.tar.gz"
+          curl -fsSL -o "$core_archive" \
+            "https://cli.moonbitlang.com/cores/core-$version_path.tar.gz"
+          test "$(shasum -a 256 "$archive" | awk '{print $1}')" = \
+            "$MOONBIT_LINUX_ARCHIVE_SHA256"
+          test "$(shasum -a 256 "$core_archive" | awk '{print $1}')" = \
+            "$MOONBIT_UNIX_CORE_SHA256"
+          mkdir -m 0700 "$toolchain"
+          tar -xzf "$archive" -C "$toolchain"
+          mkdir -p "$toolchain/lib"
+          tar -xzf "$core_archive" -C "$toolchain/lib"
+          ln -sfn moon "$toolchain/bin/moonx"
+          chmod +x "$toolchain"/bin/* "$toolchain/bin/internal/tcc"
           echo "MOON_HOME=$toolchain" >> "$GITHUB_ENV"
           echo "$toolchain/bin" >> "$GITHUB_PATH"
+          "$toolchain/bin/moon" -C "$toolchain/lib/core" bundle --warn-list -a --all
           "$toolchain/bin/moon" -C "$toolchain/lib/core" bundle --warn-list -a --target llvm
           "$toolchain/bin/moon" -C "$toolchain/lib/core" bundle --warn-list -a --target wasm-gc --quiet
 
