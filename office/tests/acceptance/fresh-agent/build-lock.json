@@ -32,7 +32,7 @@
         "lib",
         "share"
       ],
-      "manifest_sha256": "6e3f94d72da48a221b3cf1e5178653fc75d92765ec392fabe3e14beae853bd1d",
+      "manifest_sha256": "9f79b8b0bf8dbc12f47685e6d2e93cc9649b99e9ef5be93fd1c5ffa15091ab04",
       "moon_version": "moon 0.1.20260724 (5f1406a 2026-07-24)",
       "moonc_version": "moonc v0.10.5+5be960077 (2026-07-24)",
       "moonrun_version": "moonrun 0.1.20260724 (5f1406a 2026-07-24)"
