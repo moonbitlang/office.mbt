@@ -386,9 +386,10 @@ source_toolchain_manifest="$scratch/source-toolchain.manifest"
   "$source_toolchain_manifest" \
   "$build_platform" \
   "${toolchain_entries[@]}"
-[ "$(sha256_file "$source_toolchain_manifest")" = \
+actual_toolchain_manifest_sha256="$(sha256_file "$source_toolchain_manifest")"
+[ "$actual_toolchain_manifest_sha256" = \
   "$expected_toolchain_manifest_sha256" ] ||
-  die "complete Moon toolchain inventory does not match the tracked build lock"
+  die "complete Moon toolchain inventory does not match the tracked build lock: expected $expected_toolchain_manifest_sha256, found $actual_toolchain_manifest_sha256"
 
 toolchain_archive="$scratch/toolchain.tar"
 /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
