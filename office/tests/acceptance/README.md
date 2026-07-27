@@ -21,9 +21,10 @@ and Wasm filesystem paths.
 
 This is not a substitute for the rest of F1: the full workspace test matrix,
 OpenXML SDK validators, fuzz/resource-boundary tests, and a fresh Codex agent
-probe remain independent gates. The fresh agent receives only the installed
-command, `office help all --json`, and a task prompt; its transcript and verdict
-should be attached to the F1 PR rather than encoded as a deterministic test.
+probe remain independent gates. The constrained agent receives only the
+installed commands, their help, and a protocol/coverage prompt; its transcript
+and verdict should be attached to the F1 PR rather than encoded as a
+deterministic test.
 
 The reproducible installed-command probe lives in
 [`fresh-agent/`](fresh-agent/README.md). It builds native and Wasm release

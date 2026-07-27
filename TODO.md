@@ -82,7 +82,7 @@ aliases.
   transactional publication, and native/Wasm/OpenXML acceptance coverage.
 - [PR #218](https://github.com/moonbitlang/office.mbt/pull/218) is merged into
   `main`. It added the unified native/Wasm acceptance task matrix. This is the
-  checked-in matrix half of F1, not the uncoached installed-command probe.
+  checked-in matrix half of F1, not the constrained installed-command probe.
 - [PR #225](https://github.com/moonbitlang/office.mbt/pull/225) is merged into
   `main` and closed [#220](https://github.com/moonbitlang/office.mbt/issues/220).
   It makes the unified `office` command the repository skill's default
@@ -164,7 +164,8 @@ rebuilt in later PRs:
   unresolve through `office annotate`.
 - F1 matrix/help (#218/#228): checked-in native/Wasm task acceptance plus the
   exact installed input contracts consumed by the command. The separate
-  uncoached installed baseline is scoped to #237/#169; it does not close #139.
+  protocol-driven installed baseline is scoped to #237/#169; it does not close
+  #139.
 - N0a/N0b1-N0b3 (#224/#235/#247/#251): exact DOCX lexical tokens, bounded
   physical source-tree identity, reader-order projection, and story-wide field
   classification are landed. N0b4 reader transforms and the N0c surgery proofs

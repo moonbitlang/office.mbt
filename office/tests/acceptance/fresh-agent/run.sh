@@ -625,7 +625,7 @@ start_loopback_listener() {
     wait "$network_listener_pid" 2>/dev/null || true
     network_listener_pid=""
   done
-  die "could not start the loopback denial canary listener"
+  die "netcat does not support the required 'nc -l -k HOST PORT' listener form, or no loopback port could be bound"
 }
 
 write_live_canary_launcher() {
