@@ -70,6 +70,11 @@ def main():
         "printf 'ok' 2> result.log",
         "head -c 100000000 /dev/zero",
         "find . -exec rm {} ;",
+        "awk 'BEGIN { system(\"setsid /bin/sleep 600\") }'",
+        "sed -n 'e setsid /bin/sleep 600' sample.txt",
+        "rg --pre 'setsid /bin/sleep 600' needle .",
+        "sort --compress-program='setsid /bin/sleep 600' sample.txt",
+        "zip -T -TT 'setsid /bin/sleep 600' sample.zip",
     ]
     for command in unsafe_commands:
         expect_rejected(policy, command)

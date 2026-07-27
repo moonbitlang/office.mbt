@@ -18,7 +18,6 @@ MAX_INPUT_BYTES = 64 * 1024 * 1024
 
 APPROVED_UTILITIES = frozenset(
     {
-        "awk",
         "cat",
         "cksum",
         "cmp",
@@ -40,12 +39,9 @@ APPROVED_UTILITIES = frozenset(
         "printf",
         "pwd",
         "readlink",
-        "rg",
         "rm",
-        "sed",
         "sha256sum",
         "shasum",
-        "sort",
         "stat",
         "tail",
         "test",
@@ -55,7 +51,6 @@ APPROVED_UTILITIES = frozenset(
         "uniq",
         "unzip",
         "wc",
-        "zip",
         "zipinfo",
     }
 )
