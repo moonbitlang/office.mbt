@@ -120,6 +120,50 @@ def main(argv):
         expect(policy, root, "valid-xlsx", "xlsx", fixture("xlsx"), True)
         expect(policy, root, "valid-docx", "docx", fixture("docx"), True)
 
+        encoded_types = fixture("xlsx")
+        encoded_types["[Content%5FTypes].xml"] = encoded_types.pop(
+            "[Content_Types].xml"
+        )
+        expect(
+            policy,
+            root,
+            "percent-encoded-content-types",
+            "xlsx",
+            encoded_types,
+            False,
+            "non-canonical percent escape",
+        )
+
+        encoded_main = fixture("xlsx")
+        encoded_main["xl/workbook%2Exml"] = encoded_main.pop("xl/workbook.xml")
+        expect(
+            policy,
+            root,
+            "percent-encoded-main-part",
+            "xlsx",
+            encoded_main,
+            False,
+            "non-canonical percent escape",
+        )
+
+        overridden_rels = fixture("xlsx")
+        overridden_rels["[Content_Types].xml"] = content_types(
+            "xl/workbook.xml",
+            XLSX_CONTENT_TYPE,
+            extras=(
+                '<Override PartName="/_rels/.rels" ContentType="text/plain"/>',
+            ),
+        )
+        expect(
+            policy,
+            root,
+            "relationships-override",
+            "xlsx",
+            overridden_rels,
+            False,
+            "wrong effective content type",
+        )
+
         lzma_parts = fixture("xlsx")
         lzma_parts["payload.bin"] = b"\0" * (1024 * 1024)
         expect(
