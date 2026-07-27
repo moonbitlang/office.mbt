@@ -108,4 +108,30 @@ fi
 cmp "$scratch_root/native-help.json" "$scratch_root/wasm-help.json"
 rm -f "$scratch_root/native-help.json" "$scratch_root/wasm-help.json"
 
+# Exercise the same privately staged attester that every full-probe workflow
+# uses. This keeps the unauthenticated real-sandbox canary from passing when the
+# controller is readable only to the host but unavailable to command children.
+for runtime in native wasm; do
+  runtime_root="$scratch_root/$runtime-attest"
+  mkdir "$runtime_root"
+  (
+    cd "$runtime_root"
+    "office-$runtime" create xlsx canary.xlsx --json \
+      --attest-result canary-result.json > canary-attestation.txt
+    test -s canary.xlsx
+    test -s canary-result.json
+    test "$(wc -l < canary-attestation.txt | tr -d ' ')" = 1
+    grep -q '^OFFICE_F1B_ATTESTATION' canary-attestation.txt
+    jq -e '
+      .schema == "office.output/1" and
+      .success == true and
+      .data.schema == "office.xlsx.create/1" and
+      .data.format == "xlsx" and
+      .data.transaction.committed == true
+    ' canary-result.json >/dev/null
+    rm -f canary.xlsx canary-result.json canary-attestation.txt
+  )
+  rmdir "$runtime_root"
+done
+
 echo "FRESH-AGENT PERMISSION CANARY PASS"

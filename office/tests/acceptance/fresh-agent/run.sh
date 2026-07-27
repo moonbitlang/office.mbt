@@ -1090,11 +1090,31 @@ write_live_canary_launcher() {
   chmod 0500 "$launcher"
 }
 
+stage_attester() {
+  staged_attester="$isolated_launcher_bin/.office-attest.py"
+  expected_attester_sha256="$(
+    sha256_file "$candidate_root/control/attest.py"
+  )"
+  /usr/bin/install -m 0500 \
+    "$candidate_root/control/attest.py" "$staged_attester"
+  verify_staged_attester
+}
+
+verify_staged_attester() {
+  assert_owned_file "$staged_attester" "0500" "1" \
+    "privately staged Office attester"
+  [ "$(sha256_file "$staged_attester")" = "$expected_attester_sha256" ] ||
+    die "privately staged Office attester hash mismatch"
+  [ "$(sha256_file "$candidate_root/control/attest.py")" = \
+    "$expected_attester_sha256" ] ||
+    die "candidate Office attester changed after private staging"
+}
+
 write_office_launcher() {
   local runtime="$1"
   local launcher="$isolated_launcher_bin/office-$runtime"
   local target="$candidate_root/bin/office-$runtime"
-  local attester="$candidate_root/control/attest.py"
+  local attester="$staged_attester"
   {
     printf '%s\n' '#!/bin/bash -p' 'set -euo pipefail'
     printf 'TMPDIR=%q\nexport TMPDIR\n' "$isolated_tmp"
@@ -2039,6 +2059,7 @@ fi
 [ ! -e "$ambient_write_path" ] && [ ! -L "$ambient_write_path" ] ||
   die "ambient permission-canary path unexpectedly exists"
 start_loopback_listener
+stage_attester
 write_live_canary_launcher
 write_office_launcher native
 write_office_launcher wasm
@@ -2054,6 +2075,7 @@ chmod 0500 \
   "$isolated_launcher_bin" \
   "$isolated_codex_bin" \
   "$isolated_codex_resources"
+verify_staged_attester
 
 config_tmp="$isolated_codex_state/config.toml.tmp"
 config_file="$isolated_codex_state/config.toml"
@@ -2196,6 +2218,7 @@ assert_empty_directory "$probe_root" "probe directory after permission canary"
 assert_empty_directory "$isolated_tmp" \
   "isolated scratch directory after permission canary"
 verify_codex_runtime
+verify_staged_attester
 
 runner_sha256="$(sha256_file "$candidate_root/control/run.sh")"
 prompt_sha256="$(sha256_file "$candidate_root/control/prompt.md")"
@@ -2217,6 +2240,7 @@ bwrap_evidence_json="$(
   --arg candidate_head "$expected_head" \
   --arg candidate_manifest_sha256 "$expected_candidate_sha256" \
   --arg runner_sha256 "$runner_sha256" \
+  --arg attester_sha256 "$expected_attester_sha256" \
   --arg prompt_sha256 "$prompt_sha256" \
   --arg output_schema_sha256 "$output_schema_sha256" \
   --arg codex_version "$codex_version" \
@@ -2230,6 +2254,7 @@ bwrap_evidence_json="$(
     candidate_manifest_sha256: $candidate_manifest_sha256,
     harness: {
       runner_sha256: $runner_sha256,
+      attester_sha256: $attester_sha256,
       prompt_sha256: $prompt_sha256,
       output_schema_sha256: $output_schema_sha256,
       config_sha256: $config_sha256,
@@ -2257,6 +2282,7 @@ if [ "$canary_only" -eq 1 ]; then
   verify_candidate "$install_root" "$expected_candidate_sha256"
   verify_candidate "$candidate_root" "$expected_candidate_sha256"
   verify_codex_runtime
+  verify_staged_attester
   [ "$(sha256_file "$config_file")" = "$config_sha256_before" ] ||
     die "Codex isolation config changed during the canary"
   /usr/bin/jq -n \
@@ -2298,6 +2324,7 @@ verify_candidate "$candidate_root" "$expected_candidate_sha256"
 [ "$(stat_identity "$evidence_root")" = "$evidence_identity" ] ||
   die "evidence directory identity changed before the probe"
 verify_codex_runtime
+verify_staged_attester
 
 # The real credential enters the isolation only after every unauthenticated
 # preflight and sandbox check has succeeded. The cleanup trap has been armed
@@ -2349,6 +2376,7 @@ remove_isolated_auth ||
 verify_candidate "$install_root" "$expected_candidate_sha256"
 verify_candidate "$candidate_root" "$expected_candidate_sha256"
 verify_codex_runtime
+verify_staged_attester
 [ "$(sha256_file "$config_file")" = "$config_sha256_before" ] ||
   die "Codex isolation config changed during the probe"
 [ "$(stat_identity "$install_root")" = "$install_identity" ] ||
