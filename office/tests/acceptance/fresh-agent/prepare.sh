@@ -173,18 +173,20 @@ add_host_inventory_path() {
   relative="${resolved#"$host_inventory_root/"}"
   [ -n "$relative" ] ||
     die "build-host inventory must select a strict descendant"
-  for existing in "${host_inventory_entries[@]}"; do
-    if [ "$relative" = "$existing" ]; then
-      return 0
-    fi
-    case "$relative/" in
-      "$existing/"*) return 0 ;;
-    esac
-    case "$existing/" in
-      "$relative/"*) continue ;;
-    esac
-    retained+=("$existing")
-  done
+  if (( ${#host_inventory_entries[@]} > 0 )); then
+    for existing in "${host_inventory_entries[@]}"; do
+      if [ "$relative" = "$existing" ]; then
+        return 0
+      fi
+      case "$relative/" in
+        "$existing/"*) return 0 ;;
+      esac
+      case "$existing/" in
+        "$relative/"*) continue ;;
+      esac
+      retained+=("$existing")
+    done
+  fi
   retained+=("$relative")
   host_inventory_entries=("${retained[@]}")
 }
