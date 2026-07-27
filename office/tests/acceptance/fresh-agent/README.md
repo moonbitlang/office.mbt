@@ -67,7 +67,10 @@ CI installs the immutable MoonBit snapshot named by the locked `moonc` version
 toolchain upgrade must update that workflow version and both platform inventories
 in `build-lock.json` together. CI also verifies each official platform installer
 against its tracked SHA-256 before executing it; on Unix, that script sets file
-modes that are part of the reviewed closure. The generic Unix installer
+modes that are part of the reviewed closure. Every runner installs into an
+explicitly absent private root under its per-job temporary directory, so a
+preinstalled or stale user toolchain cannot enter the inventory. The generic
+Unix installer
 omits its nightly-only LLVM bundle when given an exact version, so CI explicitly
 finishes the same LLVM then wasm-gc bundle sequence before the locked inventory is
 checked.

@@ -52,13 +52,16 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           installer="$RUNNER_TEMP/moonbit-unix-installer.sh"
+          toolchain="$RUNNER_TEMP/moonbit-f1b-toolchain"
+          test ! -e "$toolchain" && test ! -L "$toolchain"
           curl -fsSL -o "$installer" https://cli.moonbitlang.com/install/unix.sh
           test "$(shasum -a 256 "$installer" | awk '{print $1}')" = \
             "$MOONBIT_UNIX_INSTALLER_SHA256"
-          bash "$installer" "$MOONBIT_TOOLCHAIN_VERSION"
-          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
-          "$HOME/.moon/bin/moon" -C "$HOME/.moon/lib/core" bundle --warn-list -a --target llvm
-          "$HOME/.moon/bin/moon" -C "$HOME/.moon/lib/core" bundle --warn-list -a --target wasm-gc --quiet
+          MOON_HOME="$toolchain" bash "$installer" "$MOONBIT_TOOLCHAIN_VERSION"
+          echo "MOON_HOME=$toolchain" >> "$GITHUB_ENV"
+          echo "$toolchain/bin" >> "$GITHUB_PATH"
+          "$toolchain/bin/moon" -C "$toolchain/lib/core" bundle --warn-list -a --target llvm
+          "$toolchain/bin/moon" -C "$toolchain/lib/core" bundle --warn-list -a --target wasm-gc --quiet
 
       - name: Set up MoonBit (pinned nightly, Windows)
         if: runner.os == 'Windows'
@@ -67,14 +70,20 @@ jobs:
           MOONBIT_INSTALL_VERSION: ${{ env.MOONBIT_TOOLCHAIN_VERSION }}
         run: |
           $installer = Join-Path $env:RUNNER_TEMP "moonbit-windows-installer.ps1"
+          $toolchain = Join-Path $env:RUNNER_TEMP "moonbit-f1b-toolchain"
+          if (Test-Path -LiteralPath $toolchain) {
+            throw "MoonBit install root must be absent"
+          }
           Invoke-WebRequest https://cli.moonbitlang.com/install/powershell.ps1 -OutFile $installer
           $actualInstallerSha = (Get-FileHash -Algorithm SHA256 $installer).Hash.ToLowerInvariant()
           if ($actualInstallerSha -ne $env:MOONBIT_WINDOWS_INSTALLER_SHA256) {
             throw "MoonBit installer SHA-256 mismatch"
           }
+          $env:MOON_HOME = $toolchain
           Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
           & $installer
-          "$HOME\.moon\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          "MOON_HOME=$toolchain" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "$toolchain\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: MoonBit versions
         run: moon version --all
@@ -198,13 +207,16 @@ jobs:
       - name: Set up MoonBit (pinned nightly snapshot)
         run: |
           installer="$RUNNER_TEMP/moonbit-unix-installer.sh"
+          toolchain="$RUNNER_TEMP/moonbit-f1b-toolchain"
+          test ! -e "$toolchain" && test ! -L "$toolchain"
           curl -fsSL -o "$installer" https://cli.moonbitlang.com/install/unix.sh
           test "$(shasum -a 256 "$installer" | awk '{print $1}')" = \
             "$MOONBIT_UNIX_INSTALLER_SHA256"
-          bash "$installer" "$MOONBIT_TOOLCHAIN_VERSION"
-          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
-          "$HOME/.moon/bin/moon" -C "$HOME/.moon/lib/core" bundle --warn-list -a --target llvm
-          "$HOME/.moon/bin/moon" -C "$HOME/.moon/lib/core" bundle --warn-list -a --target wasm-gc --quiet
+          MOON_HOME="$toolchain" bash "$installer" "$MOONBIT_TOOLCHAIN_VERSION"
+          echo "MOON_HOME=$toolchain" >> "$GITHUB_ENV"
+          echo "$toolchain/bin" >> "$GITHUB_PATH"
+          "$toolchain/bin/moon" -C "$toolchain/lib/core" bundle --warn-list -a --target llvm
+          "$toolchain/bin/moon" -C "$toolchain/lib/core" bundle --warn-list -a --target wasm-gc --quiet
 
       - name: MoonBit versions
         run: moon version --all
