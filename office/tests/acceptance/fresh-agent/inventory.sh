@@ -22,7 +22,7 @@ die() {
 }
 
 usage() {
-  echo "usage: $0 ROOT ABSENT_OUTPUT LABEL [--root-alias ROOT] RELATIVE_ENTRY..." >&2
+  echo "usage: $0 ROOT ABSENT_OUTPUT LABEL [--root-alias ROOT] [--allow-external-symlinks] RELATIVE_ENTRY..." >&2
   exit 2
 }
 
@@ -40,11 +40,24 @@ output="$2"
 label="$3"
 shift 3
 root_alias=""
-if [ "${1:-}" = "--root-alias" ]; then
-  [ "$#" -ge 3 ] || usage
-  root_alias="$(canonical_directory "$2")"
-  shift 2
-fi
+allow_external_symlinks=0
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --root-alias)
+      [ "$#" -ge 3 ] || usage
+      [ -z "$root_alias" ] || die "--root-alias may be supplied only once"
+      root_alias="$(canonical_directory "$2")"
+      shift 2
+      ;;
+    --allow-external-symlinks)
+      [ "$allow_external_symlinks" -eq 0 ] ||
+        die "--allow-external-symlinks may be supplied only once"
+      allow_external_symlinks=1
+      shift
+      ;;
+    *) break ;;
+  esac
+done
 [ "$#" -ge 1 ] || usage
 
 case "$output" in
@@ -82,6 +95,7 @@ done
 
 if ! /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
   /usr/bin/perl - "$root" "$root_alias" "$label" "$@" \
+    "$allow_external_symlinks" \
     > "$manifest_tmp" <<'PERL'
 use strict;
 use warnings;
@@ -90,7 +104,11 @@ use Digest::SHA ();
 use Fcntl qw(S_ISDIR S_ISLNK S_ISREG);
 use File::Find ();
 
-my ($root, $root_alias, $label, @entries) = @ARGV;
+my ($root, $root_alias, $label, @arguments) = @ARGV;
+my $allow_external_symlinks = pop @arguments;
+my @entries = @arguments;
+die "invalid absolute-symlink policy\n"
+  unless $allow_external_symlinks eq "0" || $allow_external_symlinks eq "1";
 my $root_marker = q{${INVENTORY_ROOT}};
 my %seen_roots;
 my @normalization_roots = sort { length($b) <=> length($a) }
@@ -141,7 +159,9 @@ for my $path (@paths) {
     my $target = readlink($path);
     die "could not read inventory symlink: $relative\n" unless defined $target;
     die "inventory symlink has an unsafe target: $relative\n"
-      if $target eq q{} || $target =~ m{(?:^/|(?:^|/)\.\.(?:/|$)|[\t\r\n])};
+      if $target eq q{} || $target =~ m{[\t\r\n]} ||
+        (!$allow_external_symlinks &&
+          $target =~ m{(?:^/|(?:^|/)\.\.(?:/|$))});
     print "L\t-\t-\t$target\t$relative\n";
   } elsif (S_ISDIR($mode)) {
     printf "D\t%04o\t-\t-\t%s\n", $mode & 07777, $relative;

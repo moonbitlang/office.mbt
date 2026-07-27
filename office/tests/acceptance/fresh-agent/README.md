@@ -81,10 +81,15 @@ subtrees are published without clobbering, directory modes are locked, and
 without that marker is incomplete. The manifest records the full commit and
 source-tree identity, driver/code-generator/runtime hashes, build-lock identity,
 complete toolchain and dependency inventories, and hashes and modes for every
-candidate file. Runtime
-capability identity is derived only from commands executed inside the isolated
-probe; candidate code is never executed by the preparer. The runner
-additionally requires one hard link per regular file and exact directory modes.
+candidate file. Native builds also explicitly select `MOON_CC` and `MOON_AR`
+(plus `SDKROOT` on macOS), retain the normalized dry-run command plan, and bind
+the resolved compiler, archiver, linker, assembler, OS identity, and SDK/system
+header and runtime-library inventory in `build-host.json` and
+`build-host.manifest`. The host inventory is repeated after both release builds
+to detect drift. Runtime capability identity is derived only from commands
+executed inside the isolated probe; candidate code is never executed by the
+preparer. The runner additionally requires one hard link per regular file and
+exact directory modes.
 Preparation scratch and staging directories are private siblings of the absent
 destination, so the build does not depend on ambient `TMPDIR` or an executable
 system `/tmp` mount.
