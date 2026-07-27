@@ -672,11 +672,18 @@ chmod 0600 "$codex_bin_dir/mode"
   printf 'mode_file=%q\n' "$codex_bin_dir/mode"
   printf '%s\n' \
     'mode=$(/bin/cat "$mode_file")' \
+    ': <&9' \
     'file_limit=$(ulimit -f)' \
     'test "$file_limit" != unlimited' \
-    'test "$file_limit" -le 262144' \
+    'test "$file_limit" -le 131072' \
     'descriptor_limit=$(ulimit -n)' \
     'test "$descriptor_limit" -le 256' \
+    'cpu_limit=$(ulimit -t)' \
+    'test "$cpu_limit" != unlimited' \
+    'test "$cpu_limit" -le 1900' \
+    'process_limit=$(ulimit -u)' \
+    'test "$process_limit" != unlimited' \
+    'if [ "$(/usr/bin/uname -s)" = "Linux" ]; then address_limit=$(ulimit -v); test "$address_limit" != unlimited; test "$address_limit" -le 4194304; fi' \
     'if [ "${1:-}" = "--version" ]; then' \
     '  if [ "$mode" = "version-hang" ]; then trap "" HUP INT TERM; while :; do /bin/sleep 1; done; fi' \
     '  if [ "$mode" = "old-version" ]; then echo "codex-cli 0.144.9"; elif [ "$mode" = "prerelease-version" ]; then echo "codex-cli 0.145.0-rc.1"; else echo "codex-cli 0.145.0"; fi' \
@@ -714,6 +721,7 @@ chmod 0600 "$codex_bin_dir/mode"
     '/usr/bin/grep -q '\''candidate/CANDIDATE.json" = "deny"$'\'' "$config"' \
     '/usr/bin/grep -q '\''codex-bin" = "read"$'\'' "$config"' \
     '/usr/bin/grep -q '\''codex-resources" = "deny"$'\'' "$config"' \
+    '/usr/bin/grep -q '\''job-sentinel" = "deny"$'\'' "$config"' \
     'if /usr/bin/grep -q '\''":root"'\'' "$config"; then exit 61; fi' \
     'if [ "$(/usr/bin/uname -s)" = "Linux" ]; then /usr/bin/grep -q '\''^"/etc" = "deny"$'\'' "$config"; fi' \
     'test -z "${OPENAI_API_KEY+x}"' \
@@ -746,6 +754,10 @@ chmod 0600 "$codex_bin_dir/mode"
     'if [ "$mode" = "orphan-child" ]; then' \
     '  (trap "" HUP INT TERM; while :; do /bin/sleep 1; done) &' \
     '  printf "%s\n" "$!" > "$mode_file.child-pid"' \
+    '  exit 0' \
+    'fi' \
+    'if [ "$mode" = "detached-child" ]; then' \
+    '  /usr/bin/perl -MPOSIX -e '\''POSIX::setsid(); $SIG{HUP}=$SIG{INT}=$SIG{TERM}="IGNORE"; open my $out, ">", $ARGV[0] or die $!; print {$out} "$$\\n"; close $out; sleep 60'\'' "$mode_file.child-pid" &' \
     '  exit 0' \
     'fi' \
     'if [ "$mode" = "probe-hang" ]; then' \
@@ -789,10 +801,21 @@ chmod 0600 "$codex_bin_dir/mode"
     '/usr/bin/grep -q "office-permission-canary" "$probe/prompt-seen.txt"' \
     'candidate=$(CDPATH= cd -- "$(/usr/bin/dirname "$schema")/.." && pwd)' \
     'cd "$probe"' \
-    'if [ "$mode" = "resource-exhaustion" ]; then' \
-    '  /bin/dd if=/dev/zero of=resource.bin bs=1048576 count=4 2>/dev/null' \
+    'if [ "$mode" = "resource-exhaustion" ] || [ "$mode" = "resource-state-exhaustion" ] || [ "$mode" = "resource-evidence-exhaustion" ]; then' \
+    '  resource_path=resource.bin' \
+    '  if [ "$mode" = "resource-state-exhaustion" ]; then resource_path="$CODEX_HOME/runtime-tmp/resource.bin"; fi' \
+    '  if [ "$mode" = "resource-evidence-exhaustion" ]; then resource_path="$output.resource.bin"; fi' \
+    '  /bin/dd if=/dev/zero of="$resource_path" bs=1048576 count=4 2>/dev/null' \
     '  trap "" HUP INT TERM' \
     '  while :; do /bin/sleep 1; done' \
+    'fi' \
+    'if [ "$mode" = "resource-process-exhaustion" ]; then' \
+    '  child=0' \
+    '  while [ "$child" -lt 8 ]; do /bin/sleep 60 & child=$((child + 1)); done' \
+    '  wait' \
+    'fi' \
+    'if [ "$mode" = "resource-rss-exhaustion" ]; then' \
+    '  /usr/bin/perl -e '\''$data = "x" x (32 * 1024 * 1024); sleep 60'\''' \
     'fi' \
     'emit_started() {' \
     '  id=$1; cmd=$2' \
@@ -993,12 +1016,27 @@ evidence="$case_root/evidence"
   .codex.version == "codex-cli 0.145.0" and
   .codex.privately_staged == true and
   .codex.bubblewrap == null and
+  .harness.job_identity.inherited_fd == 9 and
+  .harness.job_identity.detached_member_discovery == "lsof" and
+  (.harness.job_identity.sentinel_sha256 | test("^[0-9a-f]{64}$")) and
+  .harness.resource_policy == {
+    cpu_seconds: 1900,
+    file_size_bytes: 134217728,
+    open_files: 256,
+    process_count: 128,
+    rss_kib: 4194304,
+    storage_kib: 524288,
+    storage_entries: 8192,
+    virtual_memory_kib: (if $platform == "Linux" then 4194304 else null end),
+    writable_roots: ["probe", "evidence", "home", "scratch", "codex_state"]
+  } and
   .harness.policy_readonly_canary == {
     host_write_preflight: true,
     sandbox_write_denied: true,
     host_write_postflight: true
   }
-' --arg head "$head" "$evidence/RUN-PREFLIGHT.json" >/dev/null ||
+' --arg head "$head" --arg platform "$(/usr/bin/uname -s)" \
+  "$evidence/RUN-PREFLIGHT.json" >/dev/null ||
   fail "preflight manifest"
 /usr/bin/jq -e '
   .schema == "office.fresh-agent.evidence/2" and
@@ -1124,11 +1162,15 @@ expect_failure() {
   "$@" >"$stdout" 2>"$stderr"
   status="$?"
   set -e
-  [ "$status" -eq "$expected_status" ] ||
+  if [ "$status" -ne "$expected_status" ]; then
+    /bin/cat "$stderr" >&2
     fail "$label status: expected $expected_status, found $status"
+  fi
   if [ -n "$pattern" ]; then
-    /usr/bin/grep -q "$pattern" "$stderr" ||
+    if ! /usr/bin/grep -q "$pattern" "$stderr"; then
+      /bin/cat "$stderr" >&2
       fail "$label diagnostic"
+    fi
   fi
 }
 
@@ -1352,9 +1394,39 @@ expect_failure probe-timeout 124 'installed-command probe exceeded its 1s deadli
 
 printf 'resource-exhaustion\n' > "$codex_bin_dir/mode"
 OFFICE_F1B_PROBE_MAX_KIB=1024 \
-expect_failure resource-exhaustion 125 'bounded storage policy' \
+expect_failure resource-exhaustion 125 'bounded resource policy' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/resource-probe" "$case_root/resource-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'resource-state-exhaustion\n' > "$codex_bin_dir/mode"
+OFFICE_F1B_PROBE_MAX_KIB=1024 \
+expect_failure resource-state-exhaustion 125 'bounded resource policy' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/resource-state-probe" "$case_root/resource-state-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'resource-evidence-exhaustion\n' > "$codex_bin_dir/mode"
+OFFICE_F1B_PROBE_MAX_KIB=1024 \
+expect_failure resource-evidence-exhaustion 125 'bounded resource policy' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/resource-evidence-probe" \
+  "$case_root/resource-evidence-output" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'resource-process-exhaustion\n' > "$codex_bin_dir/mode"
+OFFICE_F1B_PROBE_MAX_PROCESSES=4 \
+expect_failure resource-process-exhaustion 125 'reached .* processes' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/resource-process-probe" \
+  "$case_root/resource-process-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'resource-rss-exhaustion\n' > "$codex_bin_dir/mode"
+OFFICE_F1B_PROBE_MAX_RSS_KIB=8192 \
+expect_failure resource-rss-exhaustion 125 'reached .* KiB RSS' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/resource-rss-probe" "$case_root/resource-rss-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'orphan-child\n' > "$codex_bin_dir/mode"
@@ -1377,6 +1449,28 @@ done
 case "$orphan_child_state" in
   "" | Z*) ;;
   *) fail "Codex descendant survived after its leader exited" ;;
+esac
+
+printf 'detached-child\n' > "$codex_bin_dir/mode"
+/bin/rm -f -- "$codex_bin_dir/mode.child-pid"
+expect_failure detached-child 1 'Codex final message' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/detached-probe" "$case_root/detached-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+detached_child_pid="$(/bin/cat "$codex_bin_dir/mode.child-pid")"
+for _ in {1..20}; do
+  detached_child_state="$(
+    /bin/ps -o stat= -p "$detached_child_pid" 2>/dev/null |
+      /usr/bin/tr -d ' ' || true
+  )"
+  case "$detached_child_state" in
+    "" | Z*) break ;;
+  esac
+  /bin/sleep 0.1
+done
+case "$detached_child_state" in
+  "" | Z*) ;;
+  *) fail "session-detached Codex descendant survived runner cleanup" ;;
 esac
 
 printf 'ignore-term\n' > "$codex_bin_dir/mode"

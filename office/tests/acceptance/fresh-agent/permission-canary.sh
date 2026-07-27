@@ -20,6 +20,11 @@ network_port="${11}"
 platform_name="${12}"
 policy_readonly_root="${13}"
 
+if ! { : <&9; } 2>/dev/null; then
+  echo "permission canary: Codex job sentinel was not inherited" >&2
+  exit 28
+fi
+
 test -x "$candidate_root/bin/office-native"
 test -x "$candidate_root/bin/office-wasm"
 

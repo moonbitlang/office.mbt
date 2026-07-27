@@ -281,10 +281,10 @@ jobs:
       - name: Resolve dependencies
         run: moon update
 
-      - name: Install pinned Codex CLI and netcat
+      - name: Install pinned Codex CLI and runner dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y netcat-openbsd
+          sudo apt-get install -y lsof netcat-openbsd
           npm install --global @openai/codex@0.145.0
 
       - name: Capture installed MoonBit inventory
