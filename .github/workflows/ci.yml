@@ -232,6 +232,16 @@ jobs:
           sudo apt-get install -y netcat-openbsd
           npm install --global @openai/codex@0.145.0
 
+      - name: Capture installed MoonBit inventory
+        run: |
+          manifest="$RUNNER_TEMP/moonbit-f1b-toolchain.manifest"
+          test ! -e "$manifest" && test ! -L "$manifest"
+          office/tests/acceptance/fresh-agent/inventory.sh \
+            "$MOON_HOME" "$manifest" linux-x86_64 \
+            CREDITS.md bin include lib share
+          shasum -a 256 "$manifest"
+          echo "F1B_TOOLCHAIN_MANIFEST=$manifest" >> "$GITHUB_ENV"
+
       - name: Installed Office release smoke
         env:
           EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -334,6 +344,14 @@ jobs:
               privately_staged: true
             }' \
             "$run_parent/evidence/RUN-PREFLIGHT.json"
+
+      - name: Upload installed MoonBit inventory
+        if: ${{ always() && env.F1B_TOOLCHAIN_MANIFEST != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: fresh-agent-toolchain-ubuntu-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ env.F1B_TOOLCHAIN_MANIFEST }}
+          if-no-files-found: error
 
       - name: Upload real Codex canary evidence (Ubuntu)
         if: ${{ always() && env.F1B_CANARY_EVIDENCE != '' }}
