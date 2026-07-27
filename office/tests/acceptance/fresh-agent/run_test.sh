@@ -95,6 +95,10 @@ fail() {
   /usr/bin/python3 -I "$script_dir/transcript_policy_test.py" \
   "$script_dir/transcript_policy.py" ||
   fail "bounded transcript-policy unit tests"
+/usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+  /usr/bin/python3 -I "$script_dir/evidence_policy_test.py" \
+  "$script_dir/evidence_policy.py" ||
+  fail "self-contained evidence-policy unit tests"
 
 sha256_file() {
   /usr/bin/shasum -a 256 "$1" |
@@ -335,6 +339,8 @@ make_candidate() {
     "$install_root/control/opc-policy.py"
   /usr/bin/install -m 0400 "$script_dir/transcript_policy.py" \
     "$install_root/control/transcript-policy.py"
+  /usr/bin/install -m 0400 "$script_dir/evidence_policy.py" \
+    "$install_root/control/evidence-policy.py"
   /usr/bin/install -m 0400 "$script_dir/build_host_discovery.py" \
     "$install_root/control/build-host-discovery.py"
   /usr/bin/install -m 0500 "$script_dir/inventory.sh" \
@@ -559,6 +565,7 @@ make_candidate() {
   command_policy_sha="$(sha256_file "$install_root/control/command-policy.py")"
   opc_policy_sha="$(sha256_file "$install_root/control/opc-policy.py")"
   transcript_policy_sha="$(sha256_file "$install_root/control/transcript-policy.py")"
+  evidence_policy_sha="$(sha256_file "$install_root/control/evidence-policy.py")"
   build_host_discovery_policy_sha="$(
     sha256_file "$install_root/control/build-host-discovery.py"
   )"
@@ -589,6 +596,7 @@ make_candidate() {
     --arg command_policy_sha "$command_policy_sha" \
     --arg opc_policy_sha "$opc_policy_sha" \
     --arg transcript_policy_sha "$transcript_policy_sha" \
+    --arg evidence_policy_sha "$evidence_policy_sha" \
     --arg private_sha "$private_sha" \
     --arg inventory_sha "$inventory_sha" \
     '{
@@ -623,6 +631,7 @@ make_candidate() {
         {path: "control/command-policy.py", kind: "file", mode: "0400", sha256: $command_policy_sha},
         {path: "control/opc-policy.py", kind: "file", mode: "0400", sha256: $opc_policy_sha},
         {path: "control/transcript-policy.py", kind: "file", mode: "0400", sha256: $transcript_policy_sha},
+        {path: "control/evidence-policy.py", kind: "file", mode: "0400", sha256: $evidence_policy_sha},
         {path: "control/private.json", kind: "file", mode: "0400", sha256: $private_sha},
         {path: "control/inventory.sh", kind: "file", mode: "0500", sha256: $inventory_sha},
         {path: "control/build-lock.json", kind: "file", mode: "0400", sha256: $build_lock_sha},
@@ -992,13 +1001,31 @@ evidence="$case_root/evidence"
 ' --arg head "$head" "$evidence/RUN-PREFLIGHT.json" >/dev/null ||
   fail "preflight manifest"
 /usr/bin/jq -e '
-  .schema == "office.fresh-agent.evidence/1" and
-  (.artifacts | length) == 13 and
+  .schema == "office.fresh-agent.evidence/2" and
+  .artifact_count == (.artifacts | length) and
+  .file_count > 20 and
+  .total_bytes > 0 and
   (.artifacts | map(.path) | index("codex-stderr.log")) != null and
   (.artifacts | map(.path) | index("COMMANDS.json")) != null and
-  (.artifacts | map(.path) | index("WORKFLOWS.json")) != null
+  (.artifacts | map(.path) | index("WORKFLOWS.json")) != null and
+  (.artifacts | map(.path) | index("closure/candidate/control/build-host.json")) != null and
+  (.artifacts | map(.path) | index("closure/probe/probe-result.md")) != null and
+  (.artifacts | map(.path) | index("closure/runtime/RUNTIME.json")) != null and
+  (.artifacts | map(.path) | index("closure/runtime/codex")) != null and
+  (.artifacts[] | select(.path == "closure/candidate/bin/office")) == {
+    kind: "symlink",
+    path: "closure/candidate/bin/office",
+    target: "office-native"
+  }
 ' "$evidence/EVIDENCE.json" >/dev/null ||
   fail "complete evidence manifest"
+/usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+  /usr/bin/python3 -I \
+    "$evidence/closure/candidate/control/evidence-policy.py" verify \
+    --evidence-root "$evidence" \
+    --manifest "$evidence/EVIDENCE.json" \
+    --timeout-seconds 30 ||
+  fail "independent evidence manifest verification"
 [ "$(/usr/bin/jq 'length' "$evidence/COMMANDS.json")" -eq 61 ] ||
   fail "host-derived command inventory"
 /usr/bin/jq -e '
@@ -1067,8 +1094,12 @@ special_candidate_sha="$(sha256_file "$special_install/CANDIDATE.json")"
 /usr/bin/grep -qx 'verdict=CANARY PASS' "$special_parent/canary.stdout" ||
   fail "special-character prefix canary"
 /usr/bin/jq -e '
-  .schema == "office.fresh-agent.canary-evidence/1" and
-  (.artifacts | length) == 5
+  .schema == "office.fresh-agent.canary-evidence/2" and
+  .artifact_count == (.artifacts | length) and
+  (.artifacts | map(.path) | index("closure/candidate/CANDIDATE.json")) != null and
+  (.artifacts | map(.path) | index("closure/probe")) != null and
+  (.artifacts | map(.path) | index("closure/runtime/codex")) != null and
+  (.artifacts | map(.path) | index("closure/runtime/bwrap")) == null
 ' "$special_parent/evidence/EVIDENCE.json" >/dev/null ||
   fail "canary-only evidence"
 source_key="$(/usr/bin/jq -Rn --arg value "$nested_source" '$value')"

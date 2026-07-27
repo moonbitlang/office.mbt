@@ -322,7 +322,7 @@ jobs:
             --arg head "$head" \
             '.schema == "office.fresh-agent.candidate/5"
               and .candidate_head == $head
-              and (.files | length) == 21
+              and (.files | length) == 22
               and .symlinks == [
                 {path: "bin/office", target: "office-native"}
               ]' \

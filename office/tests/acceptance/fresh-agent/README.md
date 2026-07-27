@@ -343,15 +343,31 @@ The evidence directory contains:
 - the agent-authored semantic result `probe-result.md` and the host-generated
   `probe-transcript.md`, which renders every paired command event in start
   order; and
-- `EVIDENCE.json`, which records the byte length and SHA-256 of every retained
-  artifact other than itself.
+- one atomically published `closure/` containing the complete verified
+  candidate (including every build/toolchain/dependency/host provenance
+  record), an immutable snapshot of the complete probe tree, and the exact
+  approved Codex executable plus bubblewrap when Linux selected it;
+  `closure/runtime/RUNTIME.json` binds those runtime files to their versions,
+  hashes, selection policy, candidate head, and candidate manifest; and
+- `EVIDENCE.json` schema v2, which recursively records every retained file,
+  directory, mode, symlink target, byte length, and SHA-256 other than itself.
+  The installed `closure/candidate/control/evidence-policy.py verify` command
+  recomputes that manifest without repository access.
+
+Evidence publication shares the global post-processing deadline and is bounded
+to 10,000 entries, 768 MiB cumulatively, and 512 MiB per file. Probe paths must
+remain lowercase portable names; probe symlinks, hard links, special files,
+group/world permissions, and changing inputs are rejected. The only retained
+symlink is the reviewed relative `closure/candidate/bin/office` alias.
 
 The run manifests record the selected bubblewrap strategy (`system` or
 `private`), exact digest, and whether it was privately staged.
 
-Publish both complete non-secret probe and evidence directories (for example as
-a CI artifact or an unlisted durable review attachment), not hashes without
-their recomputable result and artifact inputs.
+Publish the complete non-secret evidence directory (for example as a CI
+artifact or an unlisted durable review attachment), not hashes without their
+recomputable inputs. The original probe directory may also be retained for
+operator convenience, but its immutable bytes are already inside
+`closure/probe` so the evidence artifact is independently complete.
 
 The normal EXIT/HUP/INT/TERM trap first blocks additional cleanup signals,
 removes the staged credential, terminates the supervised process group and
