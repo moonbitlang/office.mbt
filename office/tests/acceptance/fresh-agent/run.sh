@@ -347,6 +347,8 @@ verify_candidate() {
   local build_platform
   local toolchain_header
   local dependency_header
+  local build_host_header
+  local observed_native_plan_sha256
 
   assert_owned_directory_mode "$root" "0500" "candidate root"
   for relative in bin control libexec; do
@@ -361,9 +363,11 @@ verify_candidate() {
     --arg head "$expected_head" \
     '
       keys == ["build", "candidate_head", "files", "schema", "symlinks"] and
-      .schema == "office.fresh-agent.candidate/3" and
+      .schema == "office.fresh-agent.candidate/4" and
       .candidate_head == $head and
       (.build | keys) == [
+        "build_host_manifest_sha256",
+        "build_host_sha256",
         "build_lock_sha256",
         "dependency_manifest_sha256",
         "moon_sha256",
@@ -376,6 +380,8 @@ verify_candidate() {
         "toolchain_manifest_sha256"
       ] and
       (.build.build_lock_sha256 | test("^[0-9a-f]{64}$")) and
+      (.build.build_host_sha256 | test("^[0-9a-f]{64}$")) and
+      (.build.build_host_manifest_sha256 | test("^[0-9a-f]{64}$")) and
       (.build.dependency_manifest_sha256 | test("^[0-9a-f]{64}$")) and
       (.build.toolchain_manifest_sha256 | test("^[0-9a-f]{64}$")) and
       (.build.moonc_sha256 | test("^[0-9a-f]{64}$")) and
@@ -397,7 +403,9 @@ verify_candidate() {
         "control/inventory.sh",
         "control/build-lock.json",
         "control/toolchain.manifest",
-        "control/dependencies.manifest"
+        "control/dependencies.manifest",
+        "control/build-host.json",
+        "control/build-host.manifest"
       ] and
       (.files | map(.kind == "file") | all) and
       (.files | map(.sha256 | test("^[0-9a-f]{64}$")) | all) and
@@ -435,6 +443,8 @@ control/inventory.sh|0500
 control/build-lock.json|0400
 control/toolchain.manifest|0400
 control/dependencies.manifest|0400
+control/build-host.json|0400
+control/build-host.manifest|0400
 EOF
 
   while IFS='|' read -r field relative; do
@@ -446,6 +456,8 @@ EOF
 build_lock_sha256|control/build-lock.json
 toolchain_manifest_sha256|control/toolchain.manifest
 dependency_manifest_sha256|control/dependencies.manifest
+build_host_sha256|control/build-host.json
+build_host_manifest_sha256|control/build-host.manifest
 EOF
   build_platform="$(/usr/bin/jq -er '.build.platform' "$manifest")"
   /usr/bin/jq -e \
@@ -471,6 +483,87 @@ EOF
   [ "$dependency_header" = \
     "office.fresh-agent.tree-manifest/1"$'\t'"dependencies" ] ||
     die "retained dependency inventory has an unexpected header"
+  IFS= read -r build_host_header < "$root/control/build-host.manifest" || true
+  [ "$build_host_header" = \
+    "office.fresh-agent.tree-manifest/1"$'\t'"build-host" ] ||
+    die "retained build-host inventory has an unexpected header"
+  /usr/bin/jq -e \
+    --arg platform "$build_platform" \
+    --arg manifest_sha256 "$(
+      /usr/bin/jq -er '.build.build_host_manifest_sha256' "$manifest"
+    )" '
+      keys == ["archiver", "assembler", "compiler", "environment", "host",
+        "inventory", "linker", "native_plan", "platform", "schema", "sdk"] and
+      .schema == "office.fresh-agent.build-host/1" and
+      .platform == $platform and
+      (.environment | keys) == ["moon_ar", "moon_cc", "sdkroot"] and
+      (.environment.moon_cc | startswith("/")) and
+      (.environment.moon_ar | startswith("/")) and
+      (.environment.sdkroot == null or
+        (.environment.sdkroot | startswith("/"))) and
+      (.compiler | keys) == ["resolved_path", "resource_dir", "selected_path",
+        "sha256", "target", "version"] and
+      .compiler.selected_path == .environment.moon_cc and
+      (.compiler.resolved_path | startswith("/")) and
+      (.compiler.resource_dir | startswith("/")) and
+      (.compiler.sha256 | test("^[0-9a-f]{64}$")) and
+      (.compiler.target | type) == "string" and
+      (.compiler.target | length) > 0 and
+      (.compiler.version | type) == "string" and
+      (.compiler.version | length) > 0 and
+      (.archiver | keys) == ["resolved_path", "selected_path", "sha256"] and
+      .archiver.selected_path == .environment.moon_ar and
+      (.archiver.resolved_path | startswith("/")) and
+      (.archiver.sha256 | test("^[0-9a-f]{64}$")) and
+      (.linker | keys) == ["resolved_path", "sha256", "version"] and
+      (.linker.resolved_path | startswith("/")) and
+      (.linker.sha256 | test("^[0-9a-f]{64}$")) and
+      (.linker.version | type) == "string" and
+      (.linker.version | length) > 0 and
+      (.assembler | keys) == ["resolved_path", "sha256"] and
+      (.assembler.resolved_path | startswith("/")) and
+      (.assembler.sha256 | test("^[0-9a-f]{64}$")) and
+      (.host | keys) == ["identity_path", "identity_sha256", "kernel"] and
+      (.host.identity_path | startswith("/")) and
+      (.host.identity_sha256 | test("^[0-9a-f]{64}$")) and
+      (.host.kernel | type) == "string" and (.host.kernel | length) > 0 and
+      (.sdk | keys) == ["kind", "path", "version"] and
+      (.sdk.path | startswith("/")) and
+      (.sdk.version | type) == "string" and (.sdk.version | length) > 0 and
+      (if $platform == "darwin-arm64" then
+        .sdk.kind == "macos-sdk" and .environment.sdkroot == .sdk.path
+      else
+        .sdk.kind == "linux-sysroot" and .environment.sdkroot == null
+      end) and
+      (.inventory | keys) == ["entries", "manifest_sha256", "root"] and
+      (.inventory.root | startswith("/")) and
+      (.inventory.entries | type) == "array" and
+      (.inventory.entries | length) > 0 and
+      (.inventory.entries | all(type == "string" and length > 0)) and
+      (.inventory.entries | unique | length) == (.inventory.entries | length) and
+      .inventory.manifest_sha256 == $manifest_sha256 and
+      (.native_plan | keys) == ["commands", "sha256"] and
+      (.native_plan.sha256 | test("^[0-9a-f]{64}$")) and
+      (.native_plan.commands | type) == "array" and
+      (.native_plan.commands | length) > 0 and
+      (.native_plan.commands | all(type == "string" and length > 0)) and
+      (. as $host |
+        any(.native_plan.commands[];
+          startswith($host.environment.moon_cc + " ")) and
+        any(.native_plan.commands[];
+          startswith($host.environment.moon_ar + " ")))
+    ' "$root/control/build-host.json" >/dev/null ||
+    die "retained native build-host provenance failed strict validation"
+  observed_native_plan_sha256="$(
+    /usr/bin/jq -r '.native_plan.commands[]' \
+      "$root/control/build-host.json" |
+      /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+        /usr/bin/shasum -a 256 |
+      /usr/bin/awk '{print substr($1, length($1) - 63)}'
+  )"
+  [ "$observed_native_plan_sha256" = "$(
+    /usr/bin/jq -er '.native_plan.sha256' "$root/control/build-host.json"
+  )" ] || die "retained native build plan hash is inconsistent"
 
   [ -L "$root/bin/office" ] ||
     die "candidate office alias is not a symlink"
@@ -491,6 +584,8 @@ EOF
       bin/office \
       bin/office-native \
       bin/office-wasm \
+      control/build-host.json \
+      control/build-host.manifest \
       control/final.schema.json \
       control/build-lock.json \
       control/dependencies.manifest \

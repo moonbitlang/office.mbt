@@ -135,6 +135,25 @@ if /usr/bin/cmp -s "$test_root/inventory-a.manifest" \
   "$test_root/inventory-changed.manifest"; then
   fail "inventory normalization concealed a non-root content change"
 fi
+/bin/ln -s ../inventory-b/payload.txt "$inventory_root_a/external-link"
+set +e
+"$script_dir/inventory.sh" \
+  "$inventory_root_a" "$test_root/inventory-external-rejected.manifest" \
+  build-host external-link \
+  >"$test_root/inventory-external.stdout" \
+  2>"$test_root/inventory-external.stderr"
+external_inventory_status="$?"
+set -e
+[ "$external_inventory_status" -eq 1 ] ||
+  fail "external inventory symlink default policy"
+/usr/bin/grep -q 'unsafe target' "$test_root/inventory-external.stderr" ||
+  fail "external inventory symlink rejection diagnostic"
+"$script_dir/inventory.sh" \
+  "$inventory_root_a" "$test_root/inventory-external-allowed.manifest" \
+  build-host --allow-external-symlinks external-link
+/usr/bin/grep -Fq $'L\t-\t-\t../inventory-b/payload.txt\texternal-link' \
+  "$test_root/inventory-external-allowed.manifest" ||
+  fail "explicit build-host external symlink inventory"
 
 make_candidate() {
   local install_root="$1"
@@ -153,6 +172,9 @@ make_candidate() {
   local build_lock_sha
   local toolchain_manifest_sha
   local dependency_manifest_sha
+  local build_host_sha
+  local build_host_manifest_sha
+  local native_plan_sha
   local build_platform
 
   /bin/mkdir -m 0700 \
@@ -318,6 +340,84 @@ make_candidate() {
     }' > "$install_root/control/build-lock.json"
   chmod 0400 "$install_root/control/build-lock.json"
 
+  printf '%s\n' \
+    "office.fresh-agent.tree-manifest/1"$'\t'"build-host" \
+    'F	0444	7	eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee	sdk/header.h' \
+    > "$install_root/control/build-host.manifest"
+  chmod 0400 "$install_root/control/build-host.manifest"
+  build_host_manifest_sha="$(
+    sha256_file "$install_root/control/build-host.manifest"
+  )"
+  native_plan_sha="$(
+    printf '%s\n' \
+      '/usr/bin/cc -c fixture.c -o fixture.o' \
+      '/usr/bin/ar -r -c -s libfixture.a fixture.o' |
+      /usr/bin/shasum -a 256 |
+      /usr/bin/awk '{print substr($1, length($1) - 63)}'
+  )"
+  /usr/bin/jq -n \
+    --arg schema "office.fresh-agent.build-host/1" \
+    --arg platform "$build_platform" \
+    --arg manifest_sha "$build_host_manifest_sha" \
+    --arg plan_sha "$native_plan_sha" \
+    '{
+      schema: $schema,
+      platform: $platform,
+      environment: {
+        moon_cc: "/usr/bin/cc",
+        moon_ar: "/usr/bin/ar",
+        sdkroot: (if $platform == "darwin-arm64" then "/fixture/sdk" else null end)
+      },
+      host: {
+        kernel: "fixture-kernel",
+        identity_path: "/fixture/os-release",
+        identity_sha256: ("1" * 64)
+      },
+      compiler: {
+        selected_path: "/usr/bin/cc",
+        resolved_path: "/usr/bin/cc",
+        sha256: ("2" * 64),
+        version: "fixture cc 1",
+        target: (if $platform == "darwin-arm64"
+          then "arm64-apple-darwin" else "x86_64-linux-gnu" end),
+        resource_dir: "/fixture/compiler/include"
+      },
+      archiver: {
+        selected_path: "/usr/bin/ar",
+        resolved_path: "/usr/bin/ar",
+        sha256: ("3" * 64)
+      },
+      linker: {
+        resolved_path: "/usr/bin/ld",
+        sha256: ("4" * 64),
+        version: "fixture ld 1"
+      },
+      assembler: {
+        resolved_path: "/usr/bin/as",
+        sha256: ("5" * 64)
+      },
+      sdk: {
+        kind: (if $platform == "darwin-arm64"
+          then "macos-sdk" else "linux-sysroot" end),
+        path: (if $platform == "darwin-arm64" then "/fixture/sdk" else "/" end),
+        version: "fixture-sdk-1"
+      },
+      inventory: {
+        root: "/fixture",
+        entries: ["sdk"],
+        manifest_sha256: $manifest_sha
+      },
+      native_plan: {
+        sha256: $plan_sha,
+        commands: [
+          "/usr/bin/cc -c fixture.c -o fixture.o",
+          "/usr/bin/ar -r -c -s libfixture.a fixture.o"
+        ]
+      }
+    }' > "$install_root/control/build-host.json"
+  chmod 0400 "$install_root/control/build-host.json"
+  build_host_sha="$(sha256_file "$install_root/control/build-host.json")"
+
   native_sha="$(sha256_file "$install_root/bin/office-native")"
   wasm_wrapper_sha="$(sha256_file "$install_root/bin/office-wasm")"
   moonrun_sha="$(sha256_file "$install_root/libexec/moonrun")"
@@ -331,12 +431,14 @@ make_candidate() {
   build_lock_sha="$(sha256_file "$install_root/control/build-lock.json")"
 
   /usr/bin/jq -n \
-    --arg schema "office.fresh-agent.candidate/3" \
+    --arg schema "office.fresh-agent.candidate/4" \
     --arg candidate_head "$head" \
     --arg build_platform "$build_platform" \
     --arg build_lock_sha "$build_lock_sha" \
     --arg toolchain_manifest_sha "$toolchain_manifest_sha" \
     --arg dependency_manifest_sha "$dependency_manifest_sha" \
+    --arg build_host_sha "$build_host_sha" \
+    --arg build_host_manifest_sha "$build_host_manifest_sha" \
     --arg native_sha "$native_sha" \
     --arg wasm_wrapper_sha "$wasm_wrapper_sha" \
     --arg moonrun_sha "$moonrun_sha" \
@@ -356,6 +458,8 @@ make_candidate() {
         build_lock_sha256: $build_lock_sha,
         toolchain_manifest_sha256: $toolchain_manifest_sha,
         dependency_manifest_sha256: $dependency_manifest_sha,
+        build_host_sha256: $build_host_sha,
+        build_host_manifest_sha256: $build_host_manifest_sha,
         moon_version: "fake-moon 1",
         moon_sha256: ("a" * 64),
         moonc_version: "fake-moonc 1",
@@ -375,7 +479,9 @@ make_candidate() {
         {path: "control/inventory.sh", kind: "file", mode: "0500", sha256: $inventory_sha},
         {path: "control/build-lock.json", kind: "file", mode: "0400", sha256: $build_lock_sha},
         {path: "control/toolchain.manifest", kind: "file", mode: "0400", sha256: $toolchain_manifest_sha},
-        {path: "control/dependencies.manifest", kind: "file", mode: "0400", sha256: $dependency_manifest_sha}
+        {path: "control/dependencies.manifest", kind: "file", mode: "0400", sha256: $dependency_manifest_sha},
+        {path: "control/build-host.json", kind: "file", mode: "0400", sha256: $build_host_sha},
+        {path: "control/build-host.manifest", kind: "file", mode: "0400", sha256: $build_host_manifest_sha}
       ],
       symlinks: [
         {path: "bin/office", target: "office-native"}

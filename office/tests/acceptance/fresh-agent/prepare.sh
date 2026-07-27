@@ -99,6 +99,96 @@ canonical_directory() {
   )
 }
 
+canonical_existing_path() {
+  local input="$1"
+  /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+    /usr/bin/perl -MCwd=realpath -e '
+      use strict;
+      use warnings;
+      my $resolved = realpath($ARGV[0]);
+      defined $resolved or exit 1;
+      $resolved !~ /[\t\r\n]/ or exit 1;
+      print "$resolved\n";
+    ' "$input" || die "could not resolve build-host path: $input"
+}
+
+assert_system_executable() {
+  local selected="$1"
+  local label="$2"
+  local resolved
+  local owner
+  local mode
+  case "$selected" in
+    /*) ;;
+    *) die "$label must use an absolute selected path: $selected" ;;
+  esac
+  [ -f "$selected" ] && [ -x "$selected" ] ||
+    die "$label must select an executable file: $selected"
+  resolved="$(canonical_existing_path "$selected")"
+  [ -f "$resolved" ] && [ -x "$resolved" ] ||
+    die "$label does not resolve to an executable regular file: $resolved"
+  read -r owner mode <<<"$(stat_owner_mode "$resolved")"
+  [ "$owner" = "0" ] || die "$label must resolve to a root-owned file"
+  (( (8#$mode & 022) == 0 )) ||
+    die "$label must not resolve to a group- or other-writable file"
+}
+
+resolve_compiler_program() {
+  local selected_cc="$1"
+  local program_name="$2"
+  local selected
+  selected="$("$selected_cc" "-print-prog-name=$program_name")"
+  case "$selected" in
+    /*) ;;
+    */*) selected="$(/usr/bin/dirname -- "$selected_cc")/$selected" ;;
+    *) selected="$(command -v "$selected" || true)" ;;
+  esac
+  [ -n "$selected" ] ||
+    die "C compiler did not resolve required program: $program_name"
+  canonical_existing_path "$selected"
+}
+
+capture_tool_version() {
+  local tool="$1"
+  local output
+  output="$(
+    { "$tool" --version 2>&1 || "$tool" -v 2>&1 || true; } |
+      /usr/bin/sed -n '1,20p'
+  )"
+  [ -n "$output" ] || die "could not identify build-host tool: $tool"
+  printf '%s\n' "$output"
+}
+
+add_host_inventory_path() {
+  local input="$1"
+  local resolved
+  local relative
+  local existing
+  local -a retained=()
+  resolved="$(canonical_existing_path "$input")"
+  case "$resolved/" in
+    "$host_inventory_root/"*) ;;
+    *) die "build-host inventory path escapes its root: $resolved" ;;
+  esac
+  relative="${resolved#"$host_inventory_root/"}"
+  [ -n "$relative" ] ||
+    die "build-host inventory must select a strict descendant"
+  for existing in "${host_inventory_entries[@]}"; do
+    if [ "$relative" = "$existing" ]; then
+      return 0
+    fi
+    case "$relative/" in
+      "$existing/"*) return 0 ;;
+    esac
+    case "$existing/" in
+      "$relative/"*) continue ;;
+    esac
+    retained+=("$existing")
+  done
+  retained+=("$relative")
+  host_inventory_entries=("${retained[@]}")
+}
+
 canonical_regular_file() {
   local input="$1"
   local label="$2"
@@ -431,20 +521,138 @@ for tool_path in "$moon_bin" "$moonc_bin" "$moonrun_bin"; do
     die "staged Moon tool is not an executable regular file: $tool_path"
 done
 
+build_sdkroot=""
+case "$build_platform" in
+  darwin-arm64)
+    for tool in xcrun xcode-select sw_vers; do
+      require_command "$tool"
+    done
+    build_cc="$(canonical_existing_path "$(/usr/bin/xcrun --sdk macosx --find clang)")"
+    build_ar="$(canonical_existing_path "$(/usr/bin/xcrun --sdk macosx --find ar)")"
+    build_sdkroot="$(
+      canonical_directory "$(/usr/bin/xcrun --sdk macosx --show-sdk-path)"
+    )"
+    build_sdk_kind="macos-sdk"
+    build_sdk_version="$(/usr/bin/xcrun --sdk macosx --show-sdk-version)"
+    host_inventory_root="$(canonical_directory "$(/usr/bin/xcode-select -p)")"
+    host_identity_path="$(
+      canonical_existing_path /System/Library/CoreServices/SystemVersion.plist
+    )"
+    ;;
+  linux-x86_64)
+    build_cc=/usr/bin/cc
+    build_ar=/usr/bin/ar
+    build_sdk_kind="linux-sysroot"
+    host_inventory_root=/usr
+    host_identity_path="$(canonical_existing_path /etc/os-release)"
+    ;;
+  *) die "no native build-host policy is registered for $build_platform" ;;
+esac
+assert_system_executable "$build_cc" "native C compiler"
+assert_system_executable "$build_ar" "native archive tool"
+build_cc_resolved="$(canonical_existing_path "$build_cc")"
+build_ar_resolved="$(canonical_existing_path "$build_ar")"
+build_linker="$(resolve_compiler_program "$build_cc" ld)"
+build_assembler="$(resolve_compiler_program "$build_cc" as)"
+assert_system_executable "$build_linker" "native linker"
+assert_system_executable "$build_assembler" "native assembler"
+build_cc_sha256="$(sha256_file "$build_cc_resolved")"
+build_ar_sha256="$(sha256_file "$build_ar_resolved")"
+build_linker_sha256="$(sha256_file "$build_linker")"
+build_assembler_sha256="$(sha256_file "$build_assembler")"
+build_cc_version="$(capture_tool_version "$build_cc")"
+build_linker_version="$(capture_tool_version "$build_linker")"
+build_cc_target="$("$build_cc" -dumpmachine)"
+case "$build_cc_target" in
+  "" | *$'\t'* | *$'\r'* | *$'\n'*)
+    die "native C compiler reported an invalid target"
+    ;;
+esac
+build_cc_resource_dir="$(
+  "$build_cc" -print-resource-dir 2>/dev/null ||
+    "$build_cc" -print-file-name=include
+)"
+build_cc_resource_dir="$(canonical_directory "$build_cc_resource_dir")"
+host_identity_sha256="$(sha256_file "$host_identity_path")"
+host_kernel="$(/usr/bin/uname -a)"
+
+host_inventory_entries=()
+case "$build_platform" in
+  darwin-arm64)
+    add_host_inventory_path "$build_sdkroot"
+    add_host_inventory_path "$build_cc_resource_dir"
+    add_host_inventory_path "$build_cc_resolved"
+    add_host_inventory_path "$build_ar_resolved"
+    add_host_inventory_path "$build_linker"
+    add_host_inventory_path "$build_assembler"
+    ;;
+  linux-x86_64)
+    build_sdkroot="$("$build_cc" -print-sysroot)"
+    [ -n "$build_sdkroot" ] || build_sdkroot=/
+    build_sdkroot="$(canonical_directory "$build_sdkroot")"
+    build_sdk_version="$build_cc_target"
+    add_host_inventory_path /usr/include
+    [ ! -d /usr/local/include ] || add_host_inventory_path /usr/local/include
+    [ ! -d "/usr/include/$build_cc_target" ] ||
+      add_host_inventory_path "/usr/include/$build_cc_target"
+    add_host_inventory_path "$build_cc_resource_dir"
+    build_libgcc="$("$build_cc" -print-libgcc-file-name)"
+    [ -f "$build_libgcc" ] ||
+      die "native C compiler did not resolve libgcc"
+    add_host_inventory_path "$(/usr/bin/dirname -- "$build_libgcc")"
+    add_host_inventory_path "$build_cc_resolved"
+    add_host_inventory_path "$build_ar_resolved"
+    add_host_inventory_path "$build_linker"
+    add_host_inventory_path "$build_assembler"
+    for runtime_input in \
+      crt1.o Scrt1.o crti.o crtn.o libc.so libc.so.6 libc_nonshared.a \
+      libm.so libm.so.6 libpthread.so.0 librt.so.1 libdl.so.2 \
+      ld-linux-x86-64.so.2; do
+      runtime_path="$("$build_cc" "-print-file-name=$runtime_input")"
+      case "$runtime_path" in
+        /*)
+          if [ -e "$runtime_path" ] || [ -L "$runtime_path" ]; then
+            add_host_inventory_path "$runtime_path"
+          fi
+          ;;
+      esac
+    done
+    ;;
+esac
+mapfile -t host_inventory_entries < <(
+  printf '%s\n' "${host_inventory_entries[@]}" | LC_ALL=C /usr/bin/sort
+)
+build_host_manifest="$scratch/build-host.manifest"
+"$snapshot_inventory" \
+  "$host_inventory_root" \
+  "$build_host_manifest" \
+  build-host \
+  --allow-external-symlinks \
+  "${host_inventory_entries[@]}"
+build_host_manifest_sha256="$(sha256_file "$build_host_manifest")"
+
 build_home="$scratch/home"
 build_moon_home="$scratch/moon-home"
 build_tmp="$scratch/tmp"
 mkdir -m 0700 "$build_home" "$build_moon_home" "$build_tmp"
 
 run_moon() {
+  local -a build_environment=(
+    HOME="$build_home"
+    MOON_HOME="$build_moon_home"
+    MOON_TOOLCHAIN_ROOT="$moon_toolchain_root"
+    MOON_CC="$build_cc"
+    MOON_AR="$build_ar"
+    PATH=/usr/bin:/bin:/usr/sbin:/sbin
+    TMPDIR="$build_tmp"
+    LANG=C
+    LC_ALL=C
+  )
+  if [ -n "$build_sdkroot" ] && [ "$build_platform" = "darwin-arm64" ]; then
+    build_environment+=(SDKROOT="$build_sdkroot")
+  fi
   /usr/bin/env -i \
-    HOME="$build_home" \
-    MOON_HOME="$build_moon_home" \
-    MOON_TOOLCHAIN_ROOT="$moon_toolchain_root" \
-    PATH=/usr/bin:/bin:/usr/sbin:/sbin \
-    TMPDIR="$build_tmp" \
-    LANG=C \
-    LC_ALL=C \
+    "${build_environment[@]}" \
     "$moon_bin" "$@"
 }
 
@@ -528,6 +736,136 @@ dependency_manifest="$scratch/dependencies.manifest"
   "$expected_dependency_manifest_sha256" ] ||
   die "resolved dependency inventory does not match the tracked build lock"
 
+native_plan_raw="$scratch/native-build-plan.raw"
+native_plan="$scratch/native-build-plan.txt"
+if ! (
+  cd "$snapshot"
+  run_moon build --frozen --release --target native --dry-run -v \
+    office/cmd/office
+) >"$native_plan_raw" 2>&1; then
+  echo "error: native build planning failed; complete log follows" >&2
+  cat "$native_plan_raw" >&2
+  exit 1
+fi
+/usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+  /usr/bin/perl - "$native_plan_raw" "$native_plan" \
+    "$snapshot" "$moon_toolchain_root" "$build_home" "$build_moon_home" \
+    "$build_tmp" "$scratch" <<'PERL'
+use strict;
+use warnings;
+
+my ($input, $output, @roots) = @ARGV;
+my @markers = (
+  '${SOURCE_ROOT}',
+  '${MOON_TOOLCHAIN_ROOT}',
+  '${BUILD_HOME}',
+  '${BUILD_MOON_HOME}',
+  '${BUILD_TMP}',
+  '${PREPARE_ROOT}',
+);
+open my $input_handle, '<', $input or die "could not read native plan\n";
+local $/;
+my $plan = <$input_handle>;
+close $input_handle or die "could not close native plan input\n";
+for my $index (sort { length($roots[$b]) <=> length($roots[$a]) } 0 .. $#roots) {
+  $plan =~ s/\Q$roots[$index]\E/$markers[$index]/g;
+}
+$plan = join("\n", grep { length $_ } split /\n/, $plan) . "\n";
+open my $output_handle, '>', $output or die "could not write native plan\n";
+print {$output_handle} $plan;
+close $output_handle or die "could not close native plan output\n";
+PERL
+[ -s "$native_plan" ] || die "normalized native build plan is empty"
+/usr/bin/grep -F -- "$build_cc " "$native_plan" >/dev/null ||
+  die "native build plan does not use the explicitly selected C compiler"
+/usr/bin/grep -F -- "$build_ar " "$native_plan" >/dev/null ||
+  die "native build plan does not use the explicitly selected archive tool"
+native_plan_sha256="$(sha256_file "$native_plan")"
+host_inventory_entries_json="$(
+  printf '%s\n' "${host_inventory_entries[@]}" |
+    /usr/bin/jq -Rsc 'split("\n") | map(select(length > 0))'
+)"
+build_sdkroot_environment=""
+if [ "$build_platform" = darwin-arm64 ]; then
+  build_sdkroot_environment="$build_sdkroot"
+fi
+build_host_json="$scratch/build-host.json"
+/usr/bin/jq -n \
+  --arg schema "office.fresh-agent.build-host/1" \
+  --arg platform "$build_platform" \
+  --arg moon_cc "$build_cc" \
+  --arg moon_ar "$build_ar" \
+  --arg sdkroot "$build_sdkroot_environment" \
+  --arg kernel "$host_kernel" \
+  --arg identity_path "$host_identity_path" \
+  --arg identity_sha256 "$host_identity_sha256" \
+  --arg cc_resolved "$build_cc_resolved" \
+  --arg cc_sha256 "$build_cc_sha256" \
+  --arg cc_version "$build_cc_version" \
+  --arg cc_target "$build_cc_target" \
+  --arg cc_resource_dir "$build_cc_resource_dir" \
+  --arg ar_resolved "$build_ar_resolved" \
+  --arg ar_sha256 "$build_ar_sha256" \
+  --arg linker_resolved "$build_linker" \
+  --arg linker_sha256 "$build_linker_sha256" \
+  --arg linker_version "$build_linker_version" \
+  --arg assembler_resolved "$build_assembler" \
+  --arg assembler_sha256 "$build_assembler_sha256" \
+  --arg sdk_kind "$build_sdk_kind" \
+  --arg sdk_path "$build_sdkroot" \
+  --arg sdk_version "$build_sdk_version" \
+  --arg inventory_root "$host_inventory_root" \
+  --arg inventory_sha256 "$build_host_manifest_sha256" \
+  --arg native_plan_sha256 "$native_plan_sha256" \
+  --argjson inventory_entries "$host_inventory_entries_json" \
+  --rawfile native_plan "$native_plan" \
+  '{
+    schema: $schema,
+    platform: $platform,
+    environment: {
+      moon_cc: $moon_cc,
+      moon_ar: $moon_ar,
+      sdkroot: (if $sdkroot == "" then null else $sdkroot end)
+    },
+    host: {
+      kernel: $kernel,
+      identity_path: $identity_path,
+      identity_sha256: $identity_sha256
+    },
+    compiler: {
+      selected_path: $moon_cc,
+      resolved_path: $cc_resolved,
+      sha256: $cc_sha256,
+      version: $cc_version,
+      target: $cc_target,
+      resource_dir: $cc_resource_dir
+    },
+    archiver: {
+      selected_path: $moon_ar,
+      resolved_path: $ar_resolved,
+      sha256: $ar_sha256
+    },
+    linker: {
+      resolved_path: $linker_resolved,
+      sha256: $linker_sha256,
+      version: $linker_version
+    },
+    assembler: {
+      resolved_path: $assembler_resolved,
+      sha256: $assembler_sha256
+    },
+    sdk: {kind: $sdk_kind, path: $sdk_path, version: $sdk_version},
+    inventory: {
+      root: $inventory_root,
+      entries: $inventory_entries,
+      manifest_sha256: $inventory_sha256
+    },
+    native_plan: {
+      sha256: $native_plan_sha256,
+      commands: ($native_plan | split("\n") | map(select(length > 0)))
+    }
+  }' > "$build_host_json"
+
 build_log="$scratch/build.log"
 if ! (
   cd "$snapshot"
@@ -569,6 +907,21 @@ postbuild_toolchain_manifest="$scratch/postbuild-toolchain.manifest"
       /usr/bin/sed -n '1,200p' >&2 || true
     die "pinned Moon toolchain changed during frozen release builds"
   }
+postbuild_host_manifest="$scratch/postbuild-host.manifest"
+"$snapshot_inventory" \
+  "$host_inventory_root" \
+  "$postbuild_host_manifest" \
+  build-host \
+  --allow-external-symlinks \
+  "${host_inventory_entries[@]}"
+/usr/bin/cmp "$build_host_manifest" "$postbuild_host_manifest" ||
+  die "native build-host closure changed during frozen release builds"
+[ "$(sha256_file "$build_cc_resolved")" = "$build_cc_sha256" ] &&
+  [ "$(sha256_file "$build_ar_resolved")" = "$build_ar_sha256" ] &&
+  [ "$(sha256_file "$build_linker")" = "$build_linker_sha256" ] &&
+  [ "$(sha256_file "$build_assembler")" = "$build_assembler_sha256" ] &&
+  [ "$(sha256_file "$host_identity_path")" = "$host_identity_sha256" ] ||
+  die "native build-host tool or OS identity changed during the build"
 mkdir -m 0700 "$stage/bin" "$stage/libexec" "$stage/control"
 install -m 0500 "$native_artifact" "$stage/bin/office-native"
 install -m 0500 \
@@ -594,6 +947,9 @@ install -m 0400 "$source_toolchain_manifest" \
   "$stage/control/toolchain.manifest"
 install -m 0400 "$dependency_manifest" \
   "$stage/control/dependencies.manifest"
+install -m 0400 "$build_host_json" "$stage/control/build-host.json"
+install -m 0400 "$build_host_manifest" \
+  "$stage/control/build-host.manifest"
 ln -s office-native "$stage/bin/office"
 
 jq -n \
@@ -620,17 +976,23 @@ inventory_sha256="$(sha256_file "$stage/control/inventory.sh")"
 installed_build_lock_sha256="$(sha256_file "$stage/control/build-lock.json")"
 toolchain_manifest_sha256="$(sha256_file "$stage/control/toolchain.manifest")"
 dependency_manifest_sha256="$(sha256_file "$stage/control/dependencies.manifest")"
+installed_build_host_sha256="$(sha256_file "$stage/control/build-host.json")"
+installed_build_host_manifest_sha256="$(
+  sha256_file "$stage/control/build-host.manifest"
+)"
 moon_sha256="$(sha256_file "$moon_bin")"
 moonc_sha256="$(sha256_file "$moonc_bin")"
 
 jq -n \
-  --arg schema "office.fresh-agent.candidate/3" \
+  --arg schema "office.fresh-agent.candidate/4" \
   --arg candidate_head "$expected_head" \
   --arg source_tree "$expected_tree" \
   --arg build_platform "$build_platform" \
   --arg build_lock_sha256 "$installed_build_lock_sha256" \
   --arg toolchain_manifest_sha256 "$toolchain_manifest_sha256" \
   --arg dependency_manifest_sha256 "$dependency_manifest_sha256" \
+  --arg build_host_sha256 "$installed_build_host_sha256" \
+  --arg build_host_manifest_sha256 "$installed_build_host_manifest_sha256" \
   --arg moon_version "$moon_version" \
   --arg moon_sha256 "$moon_sha256" \
   --arg moonc_version "$moonc_version" \
@@ -655,6 +1017,8 @@ jq -n \
       build_lock_sha256: $build_lock_sha256,
       toolchain_manifest_sha256: $toolchain_manifest_sha256,
       dependency_manifest_sha256: $dependency_manifest_sha256,
+      build_host_sha256: $build_host_sha256,
+      build_host_manifest_sha256: $build_host_manifest_sha256,
       moon_version: $moon_version,
       moon_sha256: $moon_sha256,
       moonc_version: $moonc_version,
@@ -674,7 +1038,9 @@ jq -n \
       {path: "control/inventory.sh", kind: "file", mode: "0500", sha256: $inventory_sha256},
       {path: "control/build-lock.json", kind: "file", mode: "0400", sha256: $build_lock_sha256},
       {path: "control/toolchain.manifest", kind: "file", mode: "0400", sha256: $toolchain_manifest_sha256},
-      {path: "control/dependencies.manifest", kind: "file", mode: "0400", sha256: $dependency_manifest_sha256}
+      {path: "control/dependencies.manifest", kind: "file", mode: "0400", sha256: $dependency_manifest_sha256},
+      {path: "control/build-host.json", kind: "file", mode: "0400", sha256: $build_host_sha256},
+      {path: "control/build-host.manifest", kind: "file", mode: "0400", sha256: $build_host_manifest_sha256}
     ],
     symlinks: [
       {path: "bin/office", target: "office-native"}
