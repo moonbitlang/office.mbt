@@ -161,6 +161,17 @@ release supervision: the controller terminates and drains any remaining live
 process-group member before it clears the PGID or continues, and removes the
 staged credential before signaling descendants.
 
+The controller also disables core dumps and caps every Codex process at a
+128 MiB single-file size and 256 open descriptors. While the live probe runs,
+it samples the probe plus both isolated scratch roots and aborts with status
+125 if their combined allocation exceeds 512 MiB or 8,192 filesystem entries.
+`OFFICE_F1B_PROBE_MAX_KIB` and `OFFICE_F1B_PROBE_MAX_ENTRIES` may lower those
+limits within the runner's validated ranges. Failure to inspect either bound
+is itself a policy violation. Successful model execution is followed by a
+five-minute global post-processing budget. The validated
+`OFFICE_F1B_POSTPROCESS_TIMEOUT_SECONDS` override may select one second through
+the fixed ten-minute ceiling.
+
 A POSIX process group is treated as bounded cleanup for normal descendants,
 not as an unescapable cross-platform job object: a deliberately detaching child
 could create another session. The pinned, hashed Codex runtime is therefore
@@ -302,6 +313,13 @@ normalizes the actual first token and permits only one simple command; input
 redirection, comments, cross-format package decoys, help/version modes, shell
 substitution or globbing, detachment syntax, unapproved executables, and every
 control operator are rejected.
+Before any whole-document query, a streaming parser limits the transcript to
+32 MiB, 4,096 newline-terminated events, and 1 MiB per event; it also requires
+one thread, one turn, a successful terminal turn, paired command lifecycle
+events in causal order, integral shell exit codes, and agreement with the
+outer Codex status. Final-message and stderr inputs are independently capped at
+1 MiB and 8 MiB. These checks prevent malformed or oversized model output from
+reaching `jq` aggregation or evidence generation.
 `BASELINE PASS` requires all four runtime/format outcomes to pass and no P0-P2
 gap. `BASELINE FAIL` returns 3.
 
@@ -327,10 +345,12 @@ Publish both complete non-secret probe and evidence directories (for example as
 a CI artifact or an unlisted durable review attachment), not hashes without
 their recomputable result and artifact inputs.
 
-The normal EXIT/HUP/INT/TERM trap terminates the supervised process group and
-deletes the isolated Codex home and credential copy. The same cleanup runs
-after a normal leader exit, including when a descendant ignores TERM. SIGKILL
-and machine failure cannot run a trap; use a one-shot private parent and remove
-it after evidence collection. If the candidate head changes, discard the
-prefix and evidence and repeat from preparation. Record every P0-P2 product gap
-under the Office parity epic; this baseline does not close the epic.
+The normal EXIT/HUP/INT/TERM trap first blocks additional cleanup signals,
+removes the staged credential, terminates the supervised process group and
+resource monitor, and then deletes the isolated Codex home. The same cleanup
+runs after a normal leader exit, including when a descendant ignores TERM.
+SIGKILL and machine failure cannot run a trap; use a one-shot private parent
+and remove it after evidence collection. If the candidate head changes,
+discard the prefix and evidence and repeat from preparation. Record every
+P0-P2 product gap under the Office parity epic; this baseline does not close
+the epic.
