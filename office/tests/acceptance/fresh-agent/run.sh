@@ -36,6 +36,18 @@ require_command() {
     die "required command is unavailable: $1"
 }
 
+validate_timeout_seconds() {
+  local value="$1"
+  local maximum="$2"
+  local label="$3"
+  case "$value" in
+    "" | *[!0-9]*) die "$label must be an integer number of seconds" ;;
+  esac
+  if (( value < 1 || value > maximum )); then
+    die "$label must be between 1 and $maximum seconds"
+  fi
+}
+
 sha256_file() {
   /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
     /usr/bin/shasum -a 256 "$1" |
@@ -533,34 +545,72 @@ remove_isolated_auth() {
   fi
 }
 
+process_is_live() {
+  local pid="$1"
+  local state
+  state="$(/bin/ps -o stat= -p "$pid" 2>/dev/null | /usr/bin/tr -d ' ')"
+  case "$state" in
+    "" | Z*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
+process_group_has_live_processes() {
+  local pgid="$1"
+  /bin/ps -axo pgid=,stat= 2>/dev/null |
+    /usr/bin/awk -v expected="$pgid" '
+      $1 == expected && $2 !~ /^Z/ { found = 1 }
+      END { exit(found ? 0 : 1) }
+    '
+}
+
 terminate_supervised_codex() {
   local attempt
   local pid="${codex_pid:-}"
   local pgid="${codex_pgid:-}"
+  local survived=0
   remove_isolated_auth
-  [ -n "$pid" ] || return 0
-  if [ -n "$pgid" ] && [ "$pgid" = "$pid" ]; then
-    if /bin/kill -0 "-$pgid" 2>/dev/null; then
+  if [ -n "$pgid" ] && [ -n "$pid" ] && [ "$pgid" = "$pid" ]; then
+    if process_group_has_live_processes "$pgid"; then
       /bin/kill -TERM "-$pgid" 2>/dev/null || true
       for attempt in {1..20}; do
-        /bin/kill -0 "-$pgid" 2>/dev/null || break
+        process_group_has_live_processes "$pgid" || break
         /bin/sleep 0.1
       done
-      if /bin/kill -0 "-$pgid" 2>/dev/null; then
+      if process_group_has_live_processes "$pgid"; then
         /bin/kill -KILL "-$pgid" 2>/dev/null || true
+        for attempt in {1..20}; do
+          process_group_has_live_processes "$pgid" || break
+          /bin/sleep 0.1
+        done
+      fi
+      if process_group_has_live_processes "$pgid"; then
+        survived=1
       fi
     fi
-  elif /bin/kill -0 "$pid" 2>/dev/null; then
+  elif [ -n "$pid" ] && process_is_live "$pid"; then
     /bin/kill -TERM "$pid" 2>/dev/null || true
     for attempt in {1..20}; do
-      /bin/kill -0 "$pid" 2>/dev/null || break
+      process_is_live "$pid" || break
       /bin/sleep 0.1
     done
-    /bin/kill -KILL "$pid" 2>/dev/null || true
+    if process_is_live "$pid"; then
+      /bin/kill -KILL "$pid" 2>/dev/null || true
+      for attempt in {1..20}; do
+        process_is_live "$pid" || break
+        /bin/sleep 0.1
+      done
+    fi
+    if process_is_live "$pid"; then
+      survived=1
+    fi
   fi
-  wait "$pid" 2>/dev/null || true
+  if [ -n "$pid" ]; then
+    wait "$pid" 2>/dev/null || true
+  fi
   codex_pid=""
   codex_pgid=""
+  [ "$survived" -eq 0 ]
 }
 
 arm_codex_supervision() {
@@ -579,13 +629,47 @@ arm_codex_supervision() {
   fi
 }
 
+supervised_codex_leader_is_running() {
+  local pid="${codex_pid:-}"
+  [ -n "$pid" ] && process_is_live "$pid"
+}
+
 wait_for_supervised_codex() {
-  set +e
-  wait "$codex_pid"
-  supervised_codex_status="$?"
-  set -e
-  codex_pid=""
-  codex_pgid=""
+  local operation="$1"
+  local timeout_seconds="$2"
+  local deadline=$((SECONDS + timeout_seconds))
+  local timed_out=0
+  local leader_status
+
+  while supervised_codex_leader_is_running; do
+    if (( SECONDS >= deadline )); then
+      timed_out=1
+      break
+    fi
+    /bin/sleep 0.1
+  done
+
+  if [ "$timed_out" -eq 0 ]; then
+    set +e
+    wait "$codex_pid"
+    leader_status="$?"
+    set -e
+  else
+    leader_status=124
+  fi
+
+  # Keep the dedicated PGID until every descendant has been terminated. A
+  # Codex launcher may exit after forking a child, so the leader alone is not a
+  # sufficient lifecycle boundary.
+  if ! terminate_supervised_codex; then
+    die "Codex $operation left a process that survived TERM/KILL escalation"
+  fi
+  if [ "$timed_out" -eq 1 ]; then
+    echo "error: Codex $operation exceeded its ${timeout_seconds}s deadline" >&2
+    supervised_codex_status=124
+  else
+    supervised_codex_status="$leader_status"
+  fi
 }
 
 verify_codex_runtime() {
@@ -1239,6 +1323,18 @@ case "$netcat_bin" in
   *) die "netcat must resolve to an absolute path" ;;
 esac
 platform_name="$(/usr/bin/uname -s)"
+codex_version_timeout_seconds="${OFFICE_F1B_CODEX_VERSION_TIMEOUT_SECONDS:-30}"
+codex_canary_timeout_seconds="${OFFICE_F1B_CODEX_CANARY_TIMEOUT_SECONDS:-180}"
+codex_probe_timeout_seconds="${OFFICE_F1B_CODEX_PROBE_TIMEOUT_SECONDS:-1800}"
+validate_timeout_seconds \
+  "$codex_version_timeout_seconds" 30 \
+  OFFICE_F1B_CODEX_VERSION_TIMEOUT_SECONDS
+validate_timeout_seconds \
+  "$codex_canary_timeout_seconds" 180 \
+  OFFICE_F1B_CODEX_CANARY_TIMEOUT_SECONDS
+validate_timeout_seconds \
+  "$codex_probe_timeout_seconds" 1800 \
+  OFFICE_F1B_CODEX_PROBE_TIMEOUT_SECONDS
 
 control_dir="$(canonical_directory "$(/usr/bin/dirname -- "${BASH_SOURCE[0]}")")"
 install_root="$(canonical_directory "$control_dir/..")"
@@ -1345,7 +1441,7 @@ codex_pgid=""
 cleanup() {
   local status="$1"
   trap - EXIT HUP INT TERM
-  terminate_supervised_codex
+  terminate_supervised_codex || true
   remove_isolated_auth
   if [ -n "${network_listener_pid:-}" ]; then
     /bin/kill "$network_listener_pid" 2>/dev/null || true
@@ -1462,7 +1558,23 @@ elif [ -n "$bwrap_source" ]; then
 fi
 verify_codex_runtime
 
-codex_version="$(run_codex --version | /usr/bin/head -n 1)"
+codex_version_stdout="$isolation_root/codex-version.stdout"
+codex_version_stderr="$isolation_root/codex-version.stderr"
+set -m
+run_codex --version >"$codex_version_stdout" 2>"$codex_version_stderr" &
+arm_codex_supervision "$!"
+set +m
+wait_for_supervised_codex \
+  "version probe" "$codex_version_timeout_seconds"
+codex_version_status="$supervised_codex_status"
+if [ "$codex_version_status" -ne 0 ]; then
+  /bin/cat "$codex_version_stderr" >&2
+  if [ "$codex_version_status" -eq 124 ]; then
+    exit 124
+  fi
+  die "Codex version probe failed with status $codex_version_status"
+fi
+codex_version="$(/usr/bin/sed -n '1p' "$codex_version_stdout")"
 if [[ ! "$codex_version" =~ ^codex-cli[[:space:]]+([0-9]+)\.([0-9]+)\.([0-9]+)([-+][0-9A-Za-z.-]+)?$ ]]; then
   die "could not identify Codex CLI version: $codex_version"
 fi
@@ -1602,11 +1714,15 @@ run_codex sandbox \
   > "$evidence_root/permission-canary.log" 2>&1 &
 arm_codex_supervision "$!"
 set +m
-wait_for_supervised_codex
+wait_for_supervised_codex \
+  "permission canary" "$codex_canary_timeout_seconds"
 canary_status="$supervised_codex_status"
 if [ "$canary_status" -ne 0 ]; then
   echo "error: Codex permission-profile canary log follows" >&2
   /bin/cat "$evidence_root/permission-canary.log" >&2
+  if [ "$canary_status" -eq 124 ]; then
+    exit 124
+  fi
   die "Codex permission-profile canary failed; see $evidence_root/permission-canary.log"
 fi
 if [ "$(/usr/bin/wc -l < "$evidence_root/permission-canary.log" | /usr/bin/tr -d ' ')" != "1" ] ||
@@ -1760,7 +1876,8 @@ run_codex exec \
   2> "$evidence_root/codex-stderr.log" &
 arm_codex_supervision "$!"
 set +m
-wait_for_supervised_codex
+wait_for_supervised_codex \
+  "installed-command probe" "$codex_probe_timeout_seconds"
 codex_status="$supervised_codex_status"
 
 printf 'codex_exit_status=%s\n' "$codex_status" \
