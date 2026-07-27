@@ -303,9 +303,13 @@ completion-time byte counts and SHA-256 digests for the result and every named
 Office/preview file in that same Codex command event. Final bytes must still
 match those event-time digests before the operation-specific
 schema/format/postconditions and referenced Office ZIP or preview artifact
-validate. Office packages are subject to fixed compressed/expanded-size and
-entry-count limits, case-folded entry uniqueness, safe part paths, and exact
-content-type, root-relationship, main-part, and main-namespace checks. Probe
+validate. Office packages are subject to fixed compressed/expanded-size,
+address-space, CPU, XML-part, and entry-count limits. Only stored and deflated
+ZIP entries are accepted; raw-NUL/truncated names, special files, ambiguous or
+case/URI-colliding part paths, and incomplete content-type coverage are
+rejected. The validator parses every XML-typed part without DTDs/entities,
+checks every relationships part and internal target, and requires the exact
+root office-document relationship, main content type, part, and namespace. Probe
 paths must be lowercase and may not traverse a symlinked parent, so
 command-event IDs and result paths remain globally and physically unique on
 both case-sensitive and case-insensitive filesystems. A quote-aware parser
