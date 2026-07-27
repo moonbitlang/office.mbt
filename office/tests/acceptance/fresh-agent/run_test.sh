@@ -75,6 +75,15 @@ fail() {
   exit 1
 }
 
+/usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+  /usr/bin/python3 -I "$script_dir/command_policy_test.py" \
+  "$script_dir/command_policy.py" ||
+  fail "adversarial command-policy unit tests"
+/usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+  /usr/bin/python3 -I "$script_dir/attest_test.py" \
+  "$script_dir/attest.py" ||
+  fail "atomic completion-attestation unit tests"
+
 sha256_file() {
   /usr/bin/shasum -a 256 "$1" |
     /usr/bin/awk '{print substr($1, length($1) - 63)}'
@@ -183,6 +192,8 @@ make_candidate() {
   local prompt_sha
   local schema_sha
   local canary_sha
+  local attest_sha
+  local command_policy_sha
   local private_sha
   local inventory_sha
   local build_lock_sha
@@ -300,6 +311,10 @@ make_candidate() {
     "$install_root/control/final.schema.json"
   /usr/bin/install -m 0500 "$script_dir/permission-canary.sh" \
     "$install_root/control/permission-canary.sh"
+  /usr/bin/install -m 0400 "$script_dir/attest.py" \
+    "$install_root/control/attest.py"
+  /usr/bin/install -m 0400 "$script_dir/command_policy.py" \
+    "$install_root/control/command-policy.py"
   /usr/bin/install -m 0500 "$script_dir/inventory.sh" \
     "$install_root/control/inventory.sh"
   chmod 0500 \
@@ -442,12 +457,14 @@ make_candidate() {
   prompt_sha="$(sha256_file "$install_root/control/prompt.md")"
   schema_sha="$(sha256_file "$install_root/control/final.schema.json")"
   canary_sha="$(sha256_file "$install_root/control/permission-canary.sh")"
+  attest_sha="$(sha256_file "$install_root/control/attest.py")"
+  command_policy_sha="$(sha256_file "$install_root/control/command-policy.py")"
   private_sha="$(sha256_file "$install_root/control/private.json")"
   inventory_sha="$(sha256_file "$install_root/control/inventory.sh")"
   build_lock_sha="$(sha256_file "$install_root/control/build-lock.json")"
 
   /usr/bin/jq -n \
-    --arg schema "office.fresh-agent.candidate/4" \
+    --arg schema "office.fresh-agent.candidate/5" \
     --arg candidate_head "$head" \
     --arg build_platform "$build_platform" \
     --arg build_lock_sha "$build_lock_sha" \
@@ -463,6 +480,8 @@ make_candidate() {
     --arg prompt_sha "$prompt_sha" \
     --arg schema_sha "$schema_sha" \
     --arg canary_sha "$canary_sha" \
+    --arg attest_sha "$attest_sha" \
+    --arg command_policy_sha "$command_policy_sha" \
     --arg private_sha "$private_sha" \
     --arg inventory_sha "$inventory_sha" \
     '{
@@ -491,6 +510,8 @@ make_candidate() {
         {path: "control/prompt.md", kind: "file", mode: "0400", sha256: $prompt_sha},
         {path: "control/final.schema.json", kind: "file", mode: "0400", sha256: $schema_sha},
         {path: "control/permission-canary.sh", kind: "file", mode: "0500", sha256: $canary_sha},
+        {path: "control/attest.py", kind: "file", mode: "0400", sha256: $attest_sha},
+        {path: "control/command-policy.py", kind: "file", mode: "0400", sha256: $command_policy_sha},
         {path: "control/private.json", kind: "file", mode: "0400", sha256: $private_sha},
         {path: "control/inventory.sh", kind: "file", mode: "0500", sha256: $inventory_sha},
         {path: "control/build-lock.json", kind: "file", mode: "0400", sha256: $build_lock_sha},
@@ -719,7 +740,7 @@ chmod 0600 "$codex_bin_dir/mode"
     '        if [ "$mode" = "aliased-result-parent" ] && [ "$runtime/$format/$verb" = "native/xlsx/batch" ]; then result=aliases/batch.json; fi' \
     '        if [ "$mode" = "duplicate-result-path" ] && { [ "$runtime/$format/$verb" = "native/xlsx/create" ] || [ "$runtime/$format/$verb" = "native/xlsx/batch" ]; }; then result=duplicate-result.json; fi' \
     '        if [ "$mode" = "uppercase-result-path" ] && [ "$runtime/$format/$verb" = "native/xlsx/create" ]; then result=Uppercase-result.json; fi' \
-    '        if [ "$mode" = "spoof-office" ]; then cmd="echo office-$runtime $verb $run_args --json > $result"; else cmd="office-$runtime $verb $run_args --json > $result"; fi' \
+    '        if [ "$mode" = "spoof-office" ]; then cmd="echo office-$runtime $verb $run_args --json --attest-result $result"; else cmd="office-$runtime $verb $run_args --json --attest-result $result"; fi' \
     '        if [ "$mode" = "format-redirection-spoof" ] && [ "$runtime/$format/$verb" = "native/xlsx/create" ]; then cmd="office-native create missing-target --json > proof.xlsx"; fi' \
     '        if [ "$mode" = "newline-mask" ] && [ "$runtime/$format/$verb" = "native/xlsx/create" ]; then cmd=$(/usr/bin/printf "office-native create xlsx sample.xlsx --json > result.json\\ntrue"); fi' \
     '        if [ "$mode" = "help-only" ] && [ "$runtime/$format/$verb" = "native/xlsx/create" ]; then cmd="office-native create --help proof.xlsx --json > $result"; fi' \
@@ -730,12 +751,33 @@ chmod 0600 "$codex_bin_dir/mode"
     '        if [ "$mode" = "reused-event-id" ] && { [ "$runtime/$format/$verb" = "native/xlsx/create" ] || [ "$runtime/$format/$verb" = "native/xlsx/batch" ]; }; then event_id=reused-workflow; fi' \
     '        emit_started "$event_id" "$cmd"' \
     '        if [ "$mode" = "spoof-office" ]; then body="spoof"; status=0; else' \
+    '          if [ "$runtime/$format/$verb" = "native/xlsx/create" ]; then' \
+    '            if [ "$mode" = "invalid-artifact" ]; then printf '\''not an Office package\n'\'' > "$package"; fi' \
+    '            if [ "$mode" = "generic-zip-artifact" ]; then printf '\''payload\n'\'' > generic-payload.txt; /usr/bin/zip -q "$package" generic-payload.txt; /bin/rm -f generic-payload.txt; fi' \
+    '            if [ "$mode" = "decoy-opc-root" ] || [ "$mode" = "nested-content-types" ] || [ "$mode" = "nested-relationships" ]; then' \
+    '              office-native create xlsx "$package" --json >/dev/null' \
+    '              package_path=$PWD/$package' \
+    '              opc_tmp=$TMPDIR/adversarial-opc-$$' \
+    '              /bin/rm -rf -- "$opc_tmp"' \
+    '              /bin/mkdir -m 0700 "$opc_tmp"' \
+    '              /usr/bin/unzip -q "$package_path" -d "$opc_tmp"' \
+    '              if [ "$mode" = "decoy-opc-root" ]; then printf "%s\n" '\''<decoy><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"/></decoy>'\'' > "$opc_tmp/xl/workbook.xml"; fi' \
+    '              if [ "$mode" = "nested-content-types" ]; then printf "%s\n" '\''<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Wrapper><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/></Wrapper></Types>'\'' > "$opc_tmp/[Content_Types].xml"; fi' \
+    '              if [ "$mode" = "nested-relationships" ]; then printf "%s\n" '\''<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Wrapper><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Wrapper></Relationships>'\'' > "$opc_tmp/_rels/.rels"; fi' \
+    '              /bin/rm -f -- "$package_path"' \
+    '              (cd "$opc_tmp" && /usr/bin/zip -q "$package_path" "[Content_Types].xml" "_rels/.rels" "xl/workbook.xml")' \
+    '              /bin/rm -rf -- "$opc_tmp"' \
+    '            fi' \
+    '            if [ "$mode" = "oversized-zip-entry" ]; then /bin/dd if=/dev/zero of=oversized.bin bs=1048576 count=65 2>/dev/null; /usr/bin/zip -q "$package" oversized.bin; /bin/rm -f oversized.bin; fi' \
+    '            if [ "$mode" = "zip-symlink-artifact" ]; then : > symlink-target; /bin/ln -s symlink-target package-link; /usr/bin/zip -q -y "$package" package-link; /bin/rm -f package-link symlink-target; fi' \
+    '          fi' \
     '          set +e' \
-    '          "office-$runtime" "$verb" $run_args --json > "$result" 2> "$result.stderr"' \
+    '          "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
     '          status=$?' \
     '          set -e' \
-    '          body=$(/bin/cat "$result.stderr")' \
-    '          /bin/rm -f "$result.stderr"' \
+    '          body=$(/bin/cat "$result.attestation"; /bin/cat "$result.stderr"; /usr/bin/printf _)' \
+    '          body=${body%_}' \
+    '          /bin/rm -f "$result.attestation" "$result.stderr"' \
     '        fi' \
     '        emit_completed "$event_id" "$cmd" "$status" "$body"' \
     '        if [ "$stop_after" = "$runtime/$format/$verb" ]; then break 3; fi' \
@@ -758,32 +800,6 @@ chmod 0600 "$codex_bin_dir/mode"
     '  fi' \
     'fi' \
     'if [ "$mode" = "wrong-result-schema" ]; then printf '\''{"schema":"office.output/1","success":true,"data":{"schema":"office.identify/1","format":"xlsx","file":"native-xlsx-base.xlsx"}}\n'\'' > native-xlsx-create-3.json; fi' \
-    'if [ "$mode" = "invalid-artifact" ]; then printf '\''not an Office package\n'\'' > native-xlsx-base.xlsx; fi' \
-    'if [ "$mode" = "generic-zip-artifact" ]; then /bin/rm -f native-xlsx-base.xlsx; printf '\''payload\n'\'' > generic-payload.txt; /usr/bin/zip -q native-xlsx-base.xlsx generic-payload.txt; fi' \
-    'if [ "$mode" = "decoy-opc-root" ] || [ "$mode" = "nested-content-types" ] || [ "$mode" = "nested-relationships" ]; then' \
-    '  package_path=$PWD/native-xlsx-base.xlsx' \
-    '  opc_tmp=$TMPDIR/adversarial-opc-$$' \
-    '  /bin/rm -rf -- "$opc_tmp"' \
-    '  /bin/mkdir -m 0700 "$opc_tmp"' \
-    '  /usr/bin/unzip -q "$package_path" -d "$opc_tmp"' \
-    '  if [ "$mode" = "decoy-opc-root" ]; then printf "%s\n" '\''<decoy><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"/></decoy>'\'' > "$opc_tmp/xl/workbook.xml"; fi' \
-    '  if [ "$mode" = "nested-content-types" ]; then printf "%s\n" '\''<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Wrapper><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/></Wrapper></Types>'\'' > "$opc_tmp/[Content_Types].xml"; fi' \
-    '  if [ "$mode" = "nested-relationships" ]; then printf "%s\n" '\''<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Wrapper><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Wrapper></Relationships>'\'' > "$opc_tmp/_rels/.rels"; fi' \
-    '  /bin/rm -f -- "$package_path"' \
-    '  (cd "$opc_tmp" && /usr/bin/zip -q "$package_path" "[Content_Types].xml" "_rels/.rels" "xl/workbook.xml")' \
-    '  /bin/rm -rf -- "$opc_tmp"' \
-    'fi' \
-    'if [ "$mode" = "oversized-zip-entry" ]; then' \
-    '  /bin/dd if=/dev/zero of=oversized.bin bs=1048576 count=65 2>/dev/null' \
-    '  /usr/bin/zip -q native-xlsx-base.xlsx oversized.bin' \
-    '  /bin/rm -f oversized.bin' \
-    'fi' \
-    'if [ "$mode" = "zip-symlink-artifact" ]; then' \
-    '  : > symlink-target' \
-    '  /bin/ln -s symlink-target package-link' \
-    '  /usr/bin/zip -q -y native-xlsx-base.xlsx package-link' \
-    '  /bin/rm -f package-link symlink-target' \
-    'fi' \
     'if [ "$mode" = "exit19" ]; then exit 19; fi' \
     'verdict="BASELINE PASS"; outcome="PASS"; gaps="[]"' \
     'if [ "$mode" = "fail" ]; then verdict="BASELINE FAIL"; outcome="FAIL"; gaps='\''[{"severity":"P1","summary":"fake failure"}]'\''; fi' \
@@ -857,10 +873,10 @@ evidence="$case_root/evidence"
 [ "$(/usr/bin/jq 'length' "$evidence/COMMANDS.json")" -eq 61 ] ||
   fail "host-derived command inventory"
 /usr/bin/jq -e '
-  .schema == "office.fresh-agent.workflows/2" and
+  .schema == "office.fresh-agent.workflows/3" and
   .required_count == 58 and
   (.workflows | length) == 58 and
-  (.workflows | all((.events | length) > 0)) and
+  (.workflows | all((.events | length) == 1)) and
   ([.workflows[].events[].event_id] as $ids |
     ($ids | length) == 58 and ($ids | unique | length) == 58) and
   ([.workflows[].events[].result.path | select(. != null)] as $paths |
@@ -871,6 +887,8 @@ evidence="$case_root/evidence"
     else
       (.events | all(
         (.artifact.sha256 | test("^[0-9a-f]{64}$")) and
+        (.artifact.bytes | type) == "number" and .artifact.bytes > 0 and
+        (.result.bytes | type) == "number" and .result.bytes > 0 and
         (.result.path | type) == "string"
       ))
     end
@@ -1256,43 +1274,52 @@ expect_failure spoof-office 1 'exact isolated help result for native' \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'missing-create\n' > "$codex_bin_dir/mode"
-expect_failure missing-create 1 'canonical result-bearing workflow: native/xlsx/create' \
+expect_failure missing-create 1 'exactly one canonical attested workflow: native/xlsx/create' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/missing-create-probe" "$case_root/missing-create-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'format-redirection-spoof\n' > "$codex_bin_dir/mode"
-expect_failure format-redirection-spoof 1 'canonical result-bearing workflow: native/xlsx/create' \
+expect_failure format-redirection-spoof 1 'exactly one canonical attested workflow: native/xlsx/create' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/format-spoof-probe" "$case_root/format-spoof-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'newline-mask\n' > "$codex_bin_dir/mode"
-expect_failure newline-mask 1 'non-detaching acceptance policy' \
+expect_failure newline-mask 1 'simple-command acceptance policy' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/newline-mask-probe" "$case_root/newline-mask-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
-for spoof_mode in help-only comment-spoof; do
-  printf '%s\n' "$spoof_mode" > "$codex_bin_dir/mode"
-  expect_failure "$spoof_mode" 1 \
-    'canonical result-bearing workflow: native/xlsx/create' \
-    "$runner" "$head" "$candidate_sha" \
-    "$case_root/$spoof_mode-probe" "$case_root/$spoof_mode-evidence" \
-    "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
-done
+printf 'help-only\n' > "$codex_bin_dir/mode"
+expect_failure help-only 1 \
+  'exactly one canonical attested workflow: native/xlsx/create' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/help-only-probe" "$case_root/help-only-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
-for spoof_mode in input-redirection cross-format; do
-  printf '%s\n' "$spoof_mode" > "$codex_bin_dir/mode"
-  expect_failure "$spoof_mode" 1 \
-    'canonical result-bearing workflow: native/xlsx/validate' \
-    "$runner" "$head" "$candidate_sha" \
-    "$case_root/$spoof_mode-probe" "$case_root/$spoof_mode-evidence" \
-    "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
-done
+printf 'comment-spoof\n' > "$codex_bin_dir/mode"
+expect_failure comment-spoof 1 'simple-command acceptance policy' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/comment-spoof-probe" "$case_root/comment-spoof-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'input-redirection\n' > "$codex_bin_dir/mode"
+expect_failure input-redirection 1 'simple-command acceptance policy' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/input-redirection-probe" "$case_root/input-redirection-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'cross-format\n' > "$codex_bin_dir/mode"
+expect_failure cross-format 1 \
+  'exactly one canonical attested workflow: native/xlsx/validate' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/cross-format-probe" "$case_root/cross-format-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'duplicate-result-path\n' > "$codex_bin_dir/mode"
-expect_failure duplicate-result-path 1 'required office.xlsx.create/1 result' \
+expect_failure duplicate-result-path 1 \
+  'exactly one canonical attested workflow: native/xlsx/batch' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/duplicate-result-probe" \
   "$case_root/duplicate-result-evidence" \
@@ -1300,21 +1327,22 @@ expect_failure duplicate-result-path 1 'required office.xlsx.create/1 result' \
 
 printf 'aliased-result-parent\n' > "$codex_bin_dir/mode"
 expect_failure aliased-result-parent 1 \
-  'must not traverse a symlink or physical path alias' \
+  'exactly one canonical attested workflow: native/xlsx/batch' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/aliased-result-probe" \
   "$case_root/aliased-result-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'uppercase-result-path\n' > "$codex_bin_dir/mode"
-expect_failure uppercase-result-path 1 'must use lowercase' \
+expect_failure uppercase-result-path 1 'simple-command acceptance policy' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/uppercase-result-probe" \
   "$case_root/uppercase-result-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'wrong-result-schema\n' > "$codex_bin_dir/mode"
-expect_failure wrong-result-schema 1 'required office.xlsx.create/1 result' \
+expect_failure wrong-result-schema 1 \
+  'workflow result changed after its command completed' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/wrong-schema-probe" "$case_root/wrong-schema-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
@@ -1384,7 +1412,7 @@ expect_failure pre-canary 1 'transcript lifecycle' \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'detaching-command\n' > "$codex_bin_dir/mode"
-expect_failure detaching-command 1 'non-detaching acceptance policy' \
+expect_failure detaching-command 1 'simple-command acceptance policy' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/detaching-command-probe" \
   "$case_root/detaching-command-evidence" \

@@ -18,31 +18,37 @@ Rules:
 - Shell utilities such as `jq`, `shasum`, `cmp`, and ZIP inspectors are allowed
   for assertions, but all Office creation, reading, mutation, validation,
   preview, dump/replay, and template work must use the installed commands.
-- Every command must directly invoke an installed Office command or a simple
-  filesystem/assertion utility. Do not invoke interpreters, schedulers,
-  service managers, `setsid`, `nohup`, `disown`, `xargs`, `find -exec`, process
-  substitution, or background jobs. The host rejects the entire run if any
-  recorded command falls outside this non-detaching policy.
+- Every command must be one standalone simple command that directly invokes an
+  installed Office command or a filesystem/assertion utility. Run separate
+  commands instead of using a pipe, `&&`, `||`, `;`, a subshell, input
+  redirection, shell expansion, a comment, or a background job. Do not invoke
+  interpreters, schedulers, service managers, `setsid`, `nohup`, `disown`,
+  `xargs`, `find -exec`, or process substitution. The host parses shell quoting,
+  validates the resolved first token, and rejects the whole run on any breach.
 - Include the literal executable name (`office-native` or `office-wasm`) and
-  operation in each evidence-bearing shell command. The host derives a command,
-  result, and artifact inventory from Codex events and rejects unrecorded or
-  structurally invalid outcomes.
+  operation in each evidence-bearing shell command. The host wrapper atomically
+  writes the JSON result and emits completion-time hashes for it and every named
+  Office/preview file; the host rejects missing, changed, or structurally invalid
+  outcomes.
 - For host attestation, run `help` successfully on each runtime. For both XLSX
   runtimes, run `create`, `batch`, `identify`, `outline`, `get`, `text`,
   `query`, `validate`, `issues`, `preview`, `template`, `dump`, `replay`, and
   `raw` successfully. For both DOCX runtimes, run `batch`, `identify`,
   `outline`, `get`, `text`, `query`, `validate`, `issues`, `preview`,
   `template`, `dump`, `replay`, `raw`, and `annotate` successfully. Each must
-  be a standalone result-bearing shell command: the Office executable must be
-  the first token and the operation the second; `--json` must be the final
-  option; and one ordinary `>` redirection to a unique `.json` result path must
-  end the command. Use only lowercase relative result and artifact paths
+  have exactly one successful host-attested command. It must be standalone: the
+  Office executable must be the first token and the operation the second;
+  product arguments must end with `--json`; and the wrapper-only pair
+  `--attest-result <unique-result.json>` must end the command. Do not redirect
+  this command: the wrapper writes the result file and prints its attestation.
+  Use only lowercase relative result and artifact paths
   composed of letters, digits, `_`, `-`, `.`, and `/`, with every path as a
   separate shell token. Each format-bearing invocation must name at least one package of the
   required format and no package of the other format. Do not use help/version
-  modes, input redirection, comments, command or process substitution, a
-  newline, pipe, `&&`, `||`, `;`, or backgrounding in those attested
-  invocations. The host validates the exact operation-specific result schema,
+  modes or shell metasyntax in those attested invocations. If you need another
+  invocation of the same operation for exploration or determinism comparison,
+  run it without `--attest-result`; reserve that option for exactly one final
+  evidence event per runtime/format/operation tuple. The host validates the exact operation-specific result schema,
   format, successful mutation/read postconditions, and resulting Office ZIP or
   preview artifact; it also rejects reused command-event IDs or result paths.
 - Do not hide failed attempts. A typed diagnostic that lets you correct an

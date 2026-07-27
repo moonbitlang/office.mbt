@@ -363,7 +363,7 @@ verify_candidate() {
     --arg head "$expected_head" \
     '
       keys == ["build", "candidate_head", "files", "schema", "symlinks"] and
-      .schema == "office.fresh-agent.candidate/4" and
+      .schema == "office.fresh-agent.candidate/5" and
       .candidate_head == $head and
       (.build | keys) == [
         "build_host_manifest_sha256",
@@ -399,6 +399,8 @@ verify_candidate() {
         "control/prompt.md",
         "control/final.schema.json",
         "control/permission-canary.sh",
+        "control/attest.py",
+        "control/command-policy.py",
         "control/private.json",
         "control/inventory.sh",
         "control/build-lock.json",
@@ -438,6 +440,8 @@ control/run.sh|0500
 control/prompt.md|0400
 control/final.schema.json|0400
 control/permission-canary.sh|0500
+control/attest.py|0400
+control/command-policy.py|0400
 control/private.json|0400
 control/inventory.sh|0500
 control/build-lock.json|0400
@@ -589,6 +593,8 @@ EOF
       control/build-host.json \
       control/build-host.manifest \
       control/final.schema.json \
+      control/attest.py \
+      control/command-policy.py \
       control/build-lock.json \
       control/dependencies.manifest \
       control/inventory.sh \
@@ -884,10 +890,25 @@ write_office_launcher() {
   local runtime="$1"
   local launcher="$isolated_launcher_bin/office-$runtime"
   local target="$candidate_root/bin/office-$runtime"
+  local attester="$candidate_root/control/attest.py"
   {
     printf '%s\n' '#!/bin/bash -p' 'set -euo pipefail'
     printf 'TMPDIR=%q\nexport TMPDIR\n' "$isolated_tmp"
-    printf 'exec %q "$@"\n' "$target"
+    printf 'target=%q\n' "$target"
+    printf 'attester=%q\n' "$attester"
+    printf '%s\n' \
+      'args=("$@")' \
+      'count=${#args[@]}' \
+      'if (( count >= 2 )); then' \
+      '  marker_index=$((count - 2))' \
+      '  result_index=$((count - 1))' \
+      '  if [ "${args[$marker_index]}" = --attest-result ]; then' \
+      '    result=${args[$result_index]}' \
+      '    unset '\''args[$marker_index]'\'' '\''args[$result_index]'\''' \
+      '    exec /usr/bin/python3 -I "$attester" "$target" "$result" "${args[@]}"' \
+      '  fi' \
+      'fi'
+    printf '%s\n' 'exec "$target" "$@"'
   } > "$launcher"
   chmod 0500 "$launcher"
 }
@@ -1277,6 +1298,8 @@ validate_workflow_event() {
   local result_relative
   local result_file
   local result_schema
+  local result_sha256
+  local result_bytes
   local artifact_relative
   local artifact_json
   local produced_relative=""
@@ -1284,7 +1307,7 @@ validate_workflow_event() {
 
   event_id="$(/usr/bin/jq -er '.event_id' <<<"$match")"
   command="$(/usr/bin/jq -er '.command' <<<"$match")"
-  result_relative="$(/usr/bin/jq -er '.result_path' <<<"$match")"
+  result_relative="$(/usr/bin/jq -er '.attestation.result.path' <<<"$match")"
   assert_safe_probe_relative_path "$result_relative" \
     "workflow result for $runtime/$format/$verb"
   result_file="$probe_root/$result_relative"
@@ -1292,6 +1315,15 @@ validate_workflow_event() {
     "workflow result for $runtime/$format/$verb"
   [ -s "$result_file" ] ||
     die "workflow result is empty for $runtime/$format/$verb"
+  result_sha256="$(sha256_file "$result_file")"
+  result_bytes="$(stat_size "$result_file")"
+  /usr/bin/jq -e \
+    --arg sha256 "$result_sha256" \
+    --argjson bytes "$result_bytes" '
+      .attestation.result.sha256 == $sha256 and
+      .attestation.result.bytes == $bytes
+    ' <<<"$match" >/dev/null ||
+    die "workflow result changed after its command completed for $runtime/$format/$verb"
   result_schema="$(expected_workflow_schema "$format" "$verb")"
 
   /usr/bin/jq -e \
@@ -1392,10 +1424,19 @@ validate_workflow_event() {
     die "workflow result artifact is not an exact command argument for $runtime/$format/$verb"
   assert_workflow_package "$artifact_relative" "$format" \
     "workflow artifact for $runtime/$format/$verb"
-  artifact_json="$(/usr/bin/jq -cn \
-    --arg path "$artifact_relative" \
+  artifact_json="$(/usr/bin/jq -cer --arg path "$artifact_relative" '
+    [.attestation.files[] | select(.path == $path)] |
+    if length == 1 then .[0]
+    else error("workflow artifact is absent from the completion attestation")
+    end
+  ' <<<"$match")" ||
+    die "workflow artifact lacks completion-time evidence for $runtime/$format/$verb"
+  /usr/bin/jq -e \
     --arg sha256 "$(sha256_file "$probe_root/$artifact_relative")" \
-    '{path: $path, sha256: $sha256}')"
+    --argjson bytes "$(stat_size "$probe_root/$artifact_relative")" '
+      .sha256 == $sha256 and .bytes == $bytes
+    ' <<<"$artifact_json" >/dev/null ||
+    die "workflow artifact changed after its command completed for $runtime/$format/$verb"
 
   if [ "$verb" = "preview" ]; then
     produced_relative="$(/usr/bin/jq -er '.data.output' "$result_file")"
@@ -1404,17 +1445,27 @@ validate_workflow_event() {
       die "preview output is not an exact command argument for $runtime/$format"
     assert_workflow_output "$produced_relative" html \
       "preview output for $runtime/$format"
-    produced_json="$(/usr/bin/jq -cn \
-      --arg path "$produced_relative" \
+    produced_json="$(/usr/bin/jq -cer --arg path "$produced_relative" '
+      [.attestation.files[] | select(.path == $path)] |
+      if length == 1 then .[0]
+      else error("preview output is absent from the completion attestation")
+      end
+    ' <<<"$match")" ||
+      die "preview output lacks completion-time evidence for $runtime/$format"
+    /usr/bin/jq -e \
       --arg sha256 "$(sha256_file "$probe_root/$produced_relative")" \
-      '{path: $path, sha256: $sha256}')"
+      --argjson bytes "$(stat_size "$probe_root/$produced_relative")" '
+        .sha256 == $sha256 and .bytes == $bytes
+      ' <<<"$produced_json" >/dev/null ||
+      die "preview output changed after its command completed for $runtime/$format"
   fi
 
   /usr/bin/jq -cn \
     --arg event_id "$event_id" \
     --arg command "$command" \
     --arg result_path "$result_relative" \
-    --arg result_sha256 "$(sha256_file "$result_file")" \
+    --arg result_sha256 "$result_sha256" \
+    --argjson result_bytes "$result_bytes" \
     --arg result_schema "$result_schema" \
     --argjson artifact "$artifact_json" \
     --argjson produced "$produced_json" '
@@ -1424,6 +1475,7 @@ validate_workflow_event() {
         result: {
           path: $result_path,
           sha256: $result_sha256,
+          bytes: $result_bytes,
           schema: $result_schema
         },
         artifact: $artifact,
@@ -1440,15 +1492,14 @@ record_workflow_evidence() {
   local validated_entries
   local match
   local help_file
-  local result_relative
-  local expected_schema
 
   if [ "$format" = "all" ] && [ "$verb" = "help" ]; then
     help_file="$isolation_root/$runtime-help.json"
     matches="$(/usr/bin/jq -c \
       --arg bare "office-$runtime help all --json" \
       --arg result_schema "$(/usr/bin/jq -er '.data.schema' "$help_file")" \
-      --arg result_sha256 "$(sha256_file "$help_file")" '
+      --arg result_sha256 "$(sha256_file "$help_file")" \
+      --argjson result_bytes "$(stat_size "$help_file")" '
         def exact_command($command):
           . == $command or
           . == ("/bin/sh -c '\''" + $command + "'\''") or
@@ -1466,6 +1517,7 @@ record_workflow_evidence() {
             result: {
               path: null,
               sha256: $result_sha256,
+              bytes: $result_bytes,
               schema: $result_schema
             },
             artifact: null,
@@ -1481,68 +1533,45 @@ record_workflow_evidence() {
       --arg format "$format" \
       --arg opposite "$(if [ "$format" = xlsx ]; then printf docx; else printf xlsx; fi)" \
       --arg verb "$verb" '
-        def command_body($executable):
-          if test("^" + $executable + " ") then .
-          elif test("^/bin/(?:sh|bash|zsh) -c '\''") then
-            capture(
-              "^/bin/(?:sh|bash|zsh) -c '\''(?<body>[^'\'']*)'\''$"
-            ).body
-          elif test("^/bin/(?:sh|bash|zsh) -c \\\"") then
-            capture(
-              "^/bin/(?:sh|bash|zsh) -c \\\"(?<body>(?:[^\\\"\\\\]|\\\\\\\")*)\\\"$"
-            ).body
-          else
-            empty
-          end;
         def parsed_command($executable; $verb):
-          command_body($executable) as $body |
-          try ($body | capture(
-            "^" + $executable + " " + $verb +
-            " (?<args>[^\\r\\n\\t;<|&#`$>]+) --json > " +
-            "(?<result>[A-Za-z0-9][A-Za-z0-9._/-]*\\.json)$"
-          )) catch empty |
-          select((.args | gsub("\\\\\\\""; "") | contains("\\\\") | not)) |
-          (.args | gsub("\\\\\\\""; "\\\"") | gsub("[\\\"'\'']"; "") |
-            split(" ") | map(select(length > 0))) as $tokens |
+          select(.product_argv != null) |
+          .product_argv as $tokens |
+          select(
+            ($tokens | length) >= 3 and
+            $tokens[0] == $executable and
+            $tokens[1] == $verb and
+            $tokens[-1] == "--json"
+          ) |
           select(all($tokens[];
             test("^(?:--help|-h|help|--version|-V)(?:=|$)") | not)) |
-          select(($tokens | index("--json")) == null) |
-          select(
-            (.result | startswith("/") | not) and
-            all(.result | split("/")[]; . != "" and . != "." and . != "..")
-          ) |
           ($tokens | map(select(test("\\." + $format + "$"; "i")))) as $format_paths |
           select(($format_paths | length) > 0) |
           select(all($tokens[]; test("\\." + $opposite + "$"; "i") | not)) |
           {
-            result_path: .result,
+            result_path: .attestation.result.path,
             tokens: $tokens,
-            format_paths: $format_paths
+            format_paths: $format_paths,
+            attestation: .attestation
           };
         [
           .[] |
           select(.status == "completed" and .exit_code == 0) |
           . as $event |
-          ($event.command | parsed_command($executable; $verb)) |
+          ($event | parsed_command($executable; $verb)) |
           . + {event_id: $event.id, command: $event.command}
         ]
       ' "$isolation_root/COMMANDS.json")"
-    /usr/bin/jq -e 'length > 0' <<<"$matches" >/dev/null ||
-      die "Codex transcript does not record a canonical result-bearing workflow: $runtime/$format/$verb"
+    /usr/bin/jq -e 'length == 1' <<<"$matches" >/dev/null ||
+      die "Codex transcript must record exactly one canonical attested workflow: $runtime/$format/$verb"
     validated_entries="$isolation_root/workflow-$runtime-$format-$verb.jsonl"
     : > "$validated_entries"
-    expected_schema="$(expected_workflow_schema "$format" "$verb")"
     while IFS= read -r match; do
-      result_relative="$(/usr/bin/jq -er '.result_path' <<<"$match")"
-      if is_expected_workflow_result \
-        "$probe_root/$result_relative" "$expected_schema"; then
-        validate_workflow_event "$runtime" "$format" "$verb" "$match" \
-          >> "$validated_entries"
-      fi
+      validate_workflow_event "$runtime" "$format" "$verb" "$match" \
+        >> "$validated_entries"
     done < <(/usr/bin/jq -c '.[]' <<<"$matches")
     matches="$(/usr/bin/jq -s '.' "$validated_entries")"
-    /usr/bin/jq -e 'length > 0' <<<"$matches" >/dev/null ||
-      die "Codex transcript does not record the required $expected_schema result for $runtime/$format/$verb"
+    /usr/bin/jq -e 'length == 1' <<<"$matches" >/dev/null ||
+      die "Codex transcript does not record one validated workflow for $runtime/$format/$verb"
   fi
 
   /usr/bin/jq -cn \
@@ -2411,46 +2440,15 @@ done < "$evidence_root/codex-transcript.jsonl"
       command: $start.item.command,
       status,
       exit_code,
-      output_bytes: (.aggregated_output | utf8bytelength)
+      aggregated_output
     }
   ]
-' "$isolation_root/transcript-array.json" > "$isolation_root/COMMANDS.json"
-/usr/bin/jq -e '
-  def command_body:
-    sub("^/bin/(?:sh|bash|zsh) -c [\"\u0027]?"; "") |
-    sub("[\"\u0027]$"; "");
-  def approved_executable:
-    test(
-      "^(?:(?:/usr)?/bin/)?(?:" +
-      "office-(?:native|wasm)|office-permission-canary|" +
-      "awk|cat|cksum|cmp|comm|cp|cut|diff|echo|false|file|find|" +
-      "grep|head|jq|ls|mkdir|mv|paste|printf|pwd|readlink|rg|rm|" +
-      "sed|sha256sum|shasum|sort|stat|tail|test|touch|tr|uniq|" +
-      "unzip|wc|zip|zipinfo)(?:[[:space:]]|$)"
-    );
-  def has_detachment_syntax:
-    test("[\\r\\n\\t`]") or
-    test("\\$\\(") or
-    test("<\\(") or
-    test(">\\(") or
-    test("(^|[^&>])&([^&>]|$)") or
-    test(
-      "(^|[[:space:]/])(?:setsid|nohup|disown|daemonize|" +
-      "systemd-run|start-stop-daemon|launchctl|crontab|at|xargs|" +
-      "python[0-9.]*|node|ruby|perl|lua|osascript|open)" +
-      "([[:space:]]|$)";
-      "i"
-    ) or
-    test("(^|[[:space:]])find[[:space:]].*-(?:exec|execdir|ok|okdir)([[:space:]]|$)");
-  type == "array" and
-  length > 0 and
-  all(.[].command;
-    (type == "string") and
-    (length > 0) and
-    (command_body | approved_executable and (has_detachment_syntax | not))
-  )
-' "$isolation_root/COMMANDS.json" >/dev/null ||
-  die "Codex transcript contains a command outside the non-detaching acceptance policy"
+' "$isolation_root/transcript-array.json" > "$isolation_root/raw-commands.json"
+if ! /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+  /usr/bin/python3 -I "$candidate_root/control/command-policy.py" \
+  "$isolation_root/raw-commands.json" "$isolation_root/COMMANDS.json"; then
+  die "Codex transcript contains a command outside the simple-command acceptance policy"
+fi
 /usr/bin/install -m 0600 "$isolation_root/COMMANDS.json" \
   "$evidence_root/COMMANDS.json"
 write_host_command_transcript
@@ -2484,7 +2482,7 @@ for runtime in native wasm; do
   done
 done
 /usr/bin/jq -s \
-  --arg schema "office.fresh-agent.workflows/2" \
+  --arg schema "office.fresh-agent.workflows/3" \
   '{
     schema: $schema,
     required_count: length,
@@ -2492,7 +2490,7 @@ done
   }' "$workflow_entries" > "$isolation_root/WORKFLOWS.json"
 /usr/bin/jq -e '
   keys == ["required_count", "schema", "workflows"] and
-  .schema == "office.fresh-agent.workflows/2" and
+  .schema == "office.fresh-agent.workflows/3" and
   .required_count == 58 and
   (.workflows | length) == 58 and
   (.workflows | unique_by([.runtime, .format, .operation]) | length) == 58 and
@@ -2504,23 +2502,29 @@ done
     keys == ["events", "format", "operation", "runtime"] and
     (.runtime == "native" or .runtime == "wasm") and
     (.format == "all" or .format == "xlsx" or .format == "docx") and
-    (.events | length) > 0 and
+    (.events | length) == 1 and
     (.events | all(
       keys == ["artifact", "command", "event_id", "produced", "result"] and
       (.command | type) == "string" and
       (.event_id | type) == "string" and (.event_id | length) > 0 and
-      (.result | keys) == ["path", "schema", "sha256"] and
+      (.result | keys) == ["bytes", "path", "schema", "sha256"] and
       (.result.path == null or (.result.path | type) == "string") and
+      (.result.bytes | type) == "number" and
+      .result.bytes == (.result.bytes | floor) and .result.bytes > 0 and
       (.result.schema | type) == "string" and
       (.result.sha256 | test("^[0-9a-f]{64}$")) and
       (.artifact == null or (
-        (.artifact | keys) == ["path", "sha256"] and
+        (.artifact | keys) == ["bytes", "path", "sha256"] and
         (.artifact.path | type) == "string" and
+        (.artifact.bytes | type) == "number" and
+        .artifact.bytes == (.artifact.bytes | floor) and .artifact.bytes > 0 and
         (.artifact.sha256 | test("^[0-9a-f]{64}$"))
       )) and
       (.produced == null or (
-        (.produced | keys) == ["path", "sha256"] and
+        (.produced | keys) == ["bytes", "path", "sha256"] and
         (.produced.path | type) == "string" and
+        (.produced.bytes | type) == "number" and
+        .produced.bytes == (.produced.bytes | floor) and .produced.bytes > 0 and
         (.produced.sha256 | test("^[0-9a-f]{64}$"))
       ))
     ))
