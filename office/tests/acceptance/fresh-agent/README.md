@@ -41,14 +41,26 @@ office/tests/acceptance/fresh-agent/prepare.sh \
 
 The installer sanitizes its startup environment, derives the checkout from its
 own physical path, disables Git replacement objects plus ambient configuration
-and attributes, and exports the exact tree bound to `head`. It verifies the
-complete toolchain distribution against the reviewed, platform-specific
-`build-lock.json` before executing it, privately stages that exact closure, and
-resolves dependencies without compiling candidate code. It inventories the
-complete resolved dependency tree against the same lock before performing only
-frozen native and Wasm release builds. Both inventories are reverified after
-the build and retained with the candidate. Every tracked controller asset is
-copied from the snapshot, never from the mutable checkout.
+and attributes, and exports the exact tree bound to `head`. It verifies a
+relocatable inventory of the complete toolchain distribution against the
+reviewed, platform-specific `build-lock.json` before executing it, privately
+stages that exact closure, and resolves dependencies without compiling
+candidate code. Moon's generated `all_pkgs.json` and `packages.json` indexes
+embed the physical toolchain root, so only those known index contents are
+hashed after replacing the current root and the preparer's explicit original
+root alias with a fixed marker. Generated
+`bundle.moon_db` lookup databases also have nondeterministic record order and
+path-derived fingerprints, so their paths, types, and modes are inventoried but
+their bytes are not. Every pinned js/LLVM/native/wasm-gc/wasm database is deleted
+from the private stage before any target is consumed. The preparer repeats the
+official all-target, LLVM, and wasm-gc bundle sequence from pinned core inputs,
+restores the locked database modes, and reverifies the regenerated closure before
+candidate dependency resolution or compilation. All other files, including the
+compiler and runtime, are locked by their original bytes. The preparer inventories
+the complete resolved dependency tree against the same lock before performing
+only frozen native and Wasm release builds. Both inventories are reverified
+after the build and retained with the candidate. Every tracked controller asset
+is copied from the snapshot, never from the mutable checkout.
 
 The absent destination is atomically reserved before the build. Fixed
 subtrees are published without clobbering, directory modes are locked, and

@@ -403,6 +403,7 @@ staged_toolchain_manifest="$scratch/staged-toolchain.manifest"
   "$moon_toolchain_root" \
   "$staged_toolchain_manifest" \
   "$build_platform" \
+  --root-alias "$approved_toolchain_root" \
   "${toolchain_entries[@]}"
 /usr/bin/cmp "$source_toolchain_manifest" "$staged_toolchain_manifest" ||
   {
@@ -412,6 +413,15 @@ staged_toolchain_manifest="$scratch/staged-toolchain.manifest"
       /usr/bin/sed -n '1,200p' >&2 || true
     die "privately staged Moon toolchain differs from the pinned source closure"
   }
+
+for target in js llvm native wasm-gc wasm; do
+  generated_bundle_db="$moon_toolchain_root/lib/core/_build/$target/release/bundle/bundle.moon_db"
+  [ -f "$generated_bundle_db" ] && [ ! -L "$generated_bundle_db" ] ||
+    die "expected generated Moon bundle database is unavailable: $target"
+  /bin/rm -f -- "$generated_bundle_db"
+  [ ! -e "$generated_bundle_db" ] && [ ! -L "$generated_bundle_db" ] ||
+    die "could not reset generated Moon bundle database: $target"
+done
 
 moon_bin="$moon_toolchain_root/bin/moon"
 moonc_bin="$moon_toolchain_root/bin/moonc"
@@ -461,6 +471,41 @@ moonrun_version="$(/usr/bin/sed -n '3p' "$toolchain_versions")"
 moon_version="$expected_moon_version"
 moonc_version="$expected_moonc_version"
 moonrun_version="$expected_moonrun_version"
+
+bundle_log="$scratch/bundle.log"
+if ! (
+  run_moon -C "$moon_toolchain_root/lib/core" \
+    bundle --warn-list -a --all
+  run_moon -C "$moon_toolchain_root/lib/core" \
+    bundle --warn-list -a --target llvm
+  run_moon -C "$moon_toolchain_root/lib/core" \
+    bundle --warn-list -a --target wasm-gc --quiet
+) >"$bundle_log" 2>&1; then
+  echo "error: trusted core bundle regeneration failed; complete log follows" >&2
+  cat "$bundle_log" >&2
+  exit 1
+fi
+for target in js llvm native wasm-gc wasm; do
+  generated_bundle_db="$moon_toolchain_root/lib/core/_build/$target/release/bundle/bundle.moon_db"
+  [ -f "$generated_bundle_db" ] && [ ! -L "$generated_bundle_db" ] ||
+    die "trusted core bundle regeneration omitted a database: $target"
+  chmod 0644 "$generated_bundle_db"
+done
+regenerated_toolchain_manifest="$scratch/regenerated-toolchain.manifest"
+"$snapshot_inventory" \
+  "$moon_toolchain_root" \
+  "$regenerated_toolchain_manifest" \
+  "$build_platform" \
+  --root-alias "$approved_toolchain_root" \
+  "${toolchain_entries[@]}"
+/usr/bin/cmp "$staged_toolchain_manifest" "$regenerated_toolchain_manifest" ||
+  {
+    echo "error: regenerated toolchain inventory diff follows" >&2
+    /usr/bin/diff -u "$staged_toolchain_manifest" \
+      "$regenerated_toolchain_manifest" |
+      /usr/bin/sed -n '1,200p' >&2 || true
+    die "trusted core bundle regeneration changed the pinned toolchain closure"
+  }
 
 resolve_log="$scratch/resolve.log"
 if ! (
@@ -514,9 +559,16 @@ postbuild_toolchain_manifest="$scratch/postbuild-toolchain.manifest"
   "$moon_toolchain_root" \
   "$postbuild_toolchain_manifest" \
   "$build_platform" \
+  --root-alias "$approved_toolchain_root" \
   "${toolchain_entries[@]}"
 /usr/bin/cmp "$staged_toolchain_manifest" "$postbuild_toolchain_manifest" ||
-  die "pinned Moon toolchain changed during frozen release builds"
+  {
+    echo "error: post-build toolchain inventory diff follows" >&2
+    /usr/bin/diff -u "$staged_toolchain_manifest" \
+      "$postbuild_toolchain_manifest" |
+      /usr/bin/sed -n '1,200p' >&2 || true
+    die "pinned Moon toolchain changed during frozen release builds"
+  }
 mkdir -m 0700 "$stage/bin" "$stage/libexec" "$stage/control"
 install -m 0500 "$native_artifact" "$stage/bin/office-native"
 install -m 0500 \
