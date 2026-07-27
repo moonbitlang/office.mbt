@@ -119,6 +119,7 @@ make_candidate() {
     'case "${1:-}" in *.wasm) shift ;; esac' \
     'verb=${1:-help}' \
     'shift || true' \
+    'raw_action=${1:-}' \
     'if [ "$verb" = help ]; then' \
     '  printf '\''{"data":{"schema":"office.capabilities/test","fingerprint":"test:fingerprint"}}\n'\''' \
     '  exit 0' \
@@ -183,11 +184,11 @@ make_candidate() {
     '  dump/*) result_schema=office.dump/1 ;;' \
     '  replay/*) result_schema=office.replay/1 ;;' \
     '  raw/xlsx) result_schema=office.raw.inventory/1 ;;' \
-    '  raw/docx) result_schema=office.raw.part/1 ;;' \
+    '  raw/docx) if [ "$raw_action" = list ]; then result_schema=office.raw.inventory/1; else result_schema=office.raw.part/1; fi ;;' \
     '  annotate/docx) result_schema=office.docx.annotation-batch/1 ;;' \
     '  *) exit 72 ;;' \
     'esac' \
-    '/usr/bin/jq -cn --arg verb "$verb" --arg format "$format" --arg schema "$result_schema" --arg source "$source_file" --arg output "$artifact" --arg produced "$output_file" '\''if $verb == "dump" then {schema:$schema,format:$format,source:{file:$source},ops:[{}]} else {schema:"office.output/1",success:true,data:({schema:$schema,format:$format} + if $verb == "create" or $verb == "batch" then {transaction:{format:$format,output:$output,committed:true,dry_run:false,changed:true}} elif $verb == "identify" then {file:$source} elif $verb == "outline" or $verb == "get" then {file:$source,path:"/"} elif $verb == "text" or $verb == "query" then {file:$source,returned:1} elif $verb == "validate" or $verb == "issues" then {file:$source,valid:true,error_count:0} elif $verb == "preview" then {file:$source,output:$produced,bytes_written:1} elif $verb == "template" then {output:$output,replaced:1,transaction:{committed:true}} elif $verb == "replay" then {output:$output,bytes_written:1,ops_applied:1} elif $verb == "raw" and $format == "xlsx" then {part_count:1} elif $verb == "raw" and $format == "docx" then {content:"<document/>"} elif $verb == "annotate" then {output:$output,ops_applied:1,transaction:{committed:true}} else {} end)} end'\''' \
+    '/usr/bin/jq -cn --arg verb "$verb" --arg format "$format" --arg schema "$result_schema" --arg source "$source_file" --arg output "$artifact" --arg produced "$output_file" '\''if $verb == "dump" then {schema:$schema,format:$format,source:{file:$source},ops:[{}]} else {schema:"office.output/1",success:true,data:({schema:$schema,format:$format} + if $verb == "create" or $verb == "batch" then {transaction:{format:$format,output:$output,committed:true,dry_run:false,changed:true}} elif $verb == "identify" then {file:$source} elif $verb == "outline" or $verb == "get" then {file:$source,path:"/"} elif $verb == "text" or $verb == "query" then {file:$source,returned:1} elif $verb == "validate" or $verb == "issues" then {file:$source,valid:true,error_count:0} elif $verb == "preview" then {file:$source,output:$produced,bytes_written:1} elif $verb == "template" then {output:$output,replaced:1,transaction:{committed:true}} elif $verb == "replay" then {output:$output,bytes_written:1,ops_applied:1} elif $verb == "raw" and $schema == "office.raw.inventory/1" then {part_count:1} elif $verb == "raw" and $format == "docx" then {content:"<document/>"} elif $verb == "annotate" then {output:$output,ops_applied:1,transaction:{committed:true}} else {} end)} end'\''' \
     > "$install_root/bin/office-native"
   /usr/bin/install -m 0500 "$script_dir/office-wasm" \
     "$install_root/bin/office-wasm"
@@ -515,6 +516,19 @@ chmod 0600 "$codex_bin_dir/mode"
     '          /bin/rm -f "$result.stderr"' \
     '        fi' \
     '        emit_completed "$event_id" "$cmd" "$status" "$body"' \
+    '        if [ "$mode" != "spoof-office" ] && [ "$runtime/$format/$verb" = "native/docx/raw" ]; then' \
+    '          index=$((index + 1))' \
+    '          extra_result=native-docx-raw-inventory-extra.json' \
+    '          extra_cmd="office-native raw list $package --json > $extra_result"' \
+    '          emit_started "cmd-$index" "$extra_cmd"' \
+    '          set +e' \
+    '          office-native raw list "$package" --json > "$extra_result" 2> "$extra_result.stderr"' \
+    '          extra_status=$?' \
+    '          set -e' \
+    '          extra_body=$(/bin/cat "$extra_result.stderr")' \
+    '          /bin/rm -f "$extra_result.stderr"' \
+    '          emit_completed "cmd-$index" "$extra_cmd" "$extra_status" "$extra_body"' \
+    '        fi' \
     '      done' \
     '    done' \
     '  done' \
@@ -591,7 +605,7 @@ evidence="$case_root/evidence"
   (.artifacts | map(.path) | index("WORKFLOWS.json")) != null
 ' "$evidence/EVIDENCE.json" >/dev/null ||
   fail "complete evidence manifest"
-[ "$(/usr/bin/jq 'length' "$evidence/COMMANDS.json")" -eq 60 ] ||
+[ "$(/usr/bin/jq 'length' "$evidence/COMMANDS.json")" -eq 61 ] ||
   fail "host-derived command inventory"
 /usr/bin/jq -e '
   .schema == "office.fresh-agent.workflows/2" and
@@ -616,7 +630,7 @@ evidence="$case_root/evidence"
   fail "host-derived workflow matrix"
 [ ! -e "$probe/probe-transcript.md" ] ||
   fail "agent unexpectedly authored the command transcript"
-[ "$(/usr/bin/grep -c '^## Event ' "$evidence/probe-transcript.md")" -eq 60 ] ||
+[ "$(/usr/bin/grep -c '^## Event ' "$evidence/probe-transcript.md")" -eq 61 ] ||
   fail "host transcript event count"
 ledger_sha="$(sha256_file "$evidence/COMMANDS.json")"
 raw_sha="$(sha256_file "$evidence/codex-transcript.jsonl")"
@@ -973,14 +987,14 @@ for spoof_mode in input-redirection cross-format; do
 done
 
 printf 'duplicate-result-path\n' > "$codex_bin_dir/mode"
-expect_failure duplicate-result-path 1 'workflow result violates' \
+expect_failure duplicate-result-path 1 'required office.xlsx.create/1 result' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/duplicate-result-probe" \
   "$case_root/duplicate-result-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'wrong-result-schema\n' > "$codex_bin_dir/mode"
-expect_failure wrong-result-schema 1 'workflow result violates' \
+expect_failure wrong-result-schema 1 'required office.xlsx.create/1 result' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/wrong-schema-probe" "$case_root/wrong-schema-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"

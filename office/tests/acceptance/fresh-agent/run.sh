@@ -772,6 +772,21 @@ expected_workflow_schema() {
   esac
 }
 
+is_expected_workflow_result() {
+  local result_file="$1"
+  local expected_schema="$2"
+  [ -f "$result_file" ] && [ ! -L "$result_file" ] || return 1
+  /usr/bin/jq -e --arg expected_schema "$expected_schema" '
+    if $expected_schema == "office.dump/1" then
+      .schema == $expected_schema
+    else
+      .schema == "office.output/1" and
+      .success == true and
+      .data.schema == $expected_schema
+    end
+  ' "$result_file" >/dev/null 2>&1
+}
+
 validate_workflow_event() {
   local runtime="$1"
   local format="$2"
@@ -945,6 +960,8 @@ record_workflow_evidence() {
   local validated_entries
   local match
   local help_file
+  local result_relative
+  local expected_schema
 
   if [ "$format" = "all" ] && [ "$verb" = "help" ]; then
     help_file="$isolation_root/$runtime-help.json"
@@ -1034,11 +1051,18 @@ record_workflow_evidence() {
       die "Codex transcript does not record a canonical result-bearing workflow: $runtime/$format/$verb"
     validated_entries="$isolation_root/workflow-$runtime-$format-$verb.jsonl"
     : > "$validated_entries"
+    expected_schema="$(expected_workflow_schema "$format" "$verb")"
     while IFS= read -r match; do
-      validate_workflow_event "$runtime" "$format" "$verb" "$match" \
-        >> "$validated_entries"
+      result_relative="$(/usr/bin/jq -er '.result_path' <<<"$match")"
+      if is_expected_workflow_result \
+        "$probe_root/$result_relative" "$expected_schema"; then
+        validate_workflow_event "$runtime" "$format" "$verb" "$match" \
+          >> "$validated_entries"
+      fi
     done < <(/usr/bin/jq -c '.[]' <<<"$matches")
     matches="$(/usr/bin/jq -s '.' "$validated_entries")"
+    /usr/bin/jq -e 'length > 0' <<<"$matches" >/dev/null ||
+      die "Codex transcript does not record the required $expected_schema result for $runtime/$format/$verb"
   fi
 
   /usr/bin/jq -cn \
