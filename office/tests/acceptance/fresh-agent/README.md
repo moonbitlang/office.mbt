@@ -251,7 +251,8 @@ changes host policy; self-hosted machines must provide a supported namespace
 configuration administratively.
 
 The network-denial canary requires `nc` with the OpenBSD/BSD listener form
-`nc -l -k HOST PORT` and Info-ZIP `unzip`. Ubuntu hosts should install
+`nc -l -k HOST PORT`, Info-ZIP `unzip`, and the system Perl interpreter used by
+the independent OPC metadata check. Ubuntu hosts should install
 `netcat-openbsd`; macOS supplies the compatible BSD utility. Before staging the
 real Codex credential, the runner feature-tests the listener by opening a
 random loopback port and connecting to it. An unsupported dialect, failed bind,
@@ -266,7 +267,11 @@ strict per-target final object, and the exact nine-line machine-readable summary
 in `probe-result.md`. Each non-help workflow must end in one unique JSON result
 redirection and is accepted only when the command grammar, operation-specific
 schema/format/postconditions, and referenced Office ZIP or preview artifact all
-validate. Command-event IDs and result paths are globally unique. Input
+validate. Office packages are subject to fixed compressed/expanded-size and
+entry-count limits, case-folded entry uniqueness, safe part paths, and exact
+content-type, root-relationship, main-part, and main-namespace checks. Probe
+paths must be lowercase, so command-event IDs and result paths remain globally
+unique on both case-sensitive and case-insensitive filesystems. Input
 redirection, comments, cross-format package decoys, help/version modes, shell
 substitution, and status-masking control operators are rejected.
 `BASELINE PASS` requires all four runtime/format outcomes to pass and no P0-P2

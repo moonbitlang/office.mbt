@@ -193,13 +193,25 @@ make_candidate() {
     '  /bin/mkdir -p "$(/usr/bin/dirname -- "$package_path")"' \
     '  package_tmp="$TMPDIR/fake-office-package-$$"' \
     '  /bin/rm -rf -- "$package_tmp"' \
-    '  /bin/mkdir -m 0700 "$package_tmp"' \
-    '  printf '\''<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>\n'\'' > "$package_tmp/[Content_Types].xml"' \
-    '  (cd "$package_tmp" && /usr/bin/zip -q "$package_path" "[Content_Types].xml")' \
+    '  /bin/mkdir -m 0700 "$package_tmp" "$package_tmp/_rels"' \
+    '  if [ "$format" = xlsx ]; then' \
+    '    main_part=xl/workbook.xml' \
+    '    main_content_type=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml' \
+    '    main_xml="<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"/>"' \
+    '  else' \
+    '    main_part=word/document.xml' \
+    '    main_content_type=application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml' \
+    '    main_xml="<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body/></w:document>"' \
+    '  fi' \
+    '  /bin/mkdir -p "$package_tmp/$(/usr/bin/dirname -- "$main_part")"' \
+    '  printf "%s\n" "<?xml version=\"1.0\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Override PartName=\"/$main_part\" ContentType=\"$main_content_type\"/></Types>" > "$package_tmp/[Content_Types].xml"' \
+    '  printf "%s\n" "<?xml version=\"1.0\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"$main_part\"/></Relationships>" > "$package_tmp/_rels/.rels"' \
+    '  printf "%s\n" "$main_xml" > "$package_tmp/$main_part"' \
+    '  (cd "$package_tmp" && /usr/bin/zip -q "$package_path" "[Content_Types].xml" "_rels/.rels" "$main_part")' \
     '  /bin/rm -rf -- "$package_tmp"' \
     '}' \
     '[ -n "$source_file" ] || source_file="fixture.$format"' \
-    'make_package "$source_file"' \
+    '[ -f "$source_file" ] || make_package "$source_file"' \
     'artifact=$source_file' \
     'case "$verb" in' \
     '  template|replay|annotate)' \
@@ -527,6 +539,13 @@ chmod 0600 "$codex_bin_dir/mode"
     'fi' \
     'emit_started expected-refusal "false"' \
     'emit_completed expected-refusal "false" 1 ""' \
+    'stop_after=' \
+    'case "$mode" in' \
+    '  spoof-office|missing-create|pre-canary|completion-before-start|fractional-exit|out-of-domain-exit|missing-turn-completed|turn-failed) stop_after=all/help ;;' \
+    '  format-redirection-spoof|newline-mask|help-only|comment-spoof|uppercase-result-path|wrong-result-schema|invalid-artifact|generic-zip-artifact) stop_after=native/xlsx/create ;;' \
+    '  duplicate-result-path|reused-event-id) stop_after=native/xlsx/batch ;;' \
+    '  input-redirection|cross-format) stop_after=native/xlsx/validate ;;' \
+    'esac' \
     'if [ "$mode" != "no-office" ]; then' \
     '  index=0' \
     '  for runtime in native wasm; do' \
@@ -535,6 +554,9 @@ chmod 0600 "$codex_bin_dir/mode"
     '    emit_started "cmd-$index" "$cmd"' \
     '    if [ "$mode" = "spoof-office" ]; then body="spoof"; status=0; else body=$("office-$runtime" help all --json 2>&1); status=$?; fi' \
     '    emit_completed "cmd-$index" "$cmd" "$status" "$body"' \
+    '  done' \
+    '  if [ "$stop_after" != all/help ]; then' \
+    '    for runtime in native wasm; do' \
     '    for format in xlsx docx; do' \
     '      if [ "$format" = "xlsx" ]; then verbs="create batch identify outline get text query validate issues preview template dump replay raw"; else verbs="batch identify outline get text query validate issues preview template dump replay raw annotate"; fi' \
     '      for verb in $verbs; do' \
@@ -556,6 +578,7 @@ chmod 0600 "$codex_bin_dir/mode"
     '        esac' \
     '        result="$runtime-$format-$verb-$index.json"' \
     '        if [ "$mode" = "duplicate-result-path" ] && { [ "$runtime/$format/$verb" = "native/xlsx/create" ] || [ "$runtime/$format/$verb" = "native/xlsx/batch" ]; }; then result=duplicate-result.json; fi' \
+    '        if [ "$mode" = "uppercase-result-path" ] && [ "$runtime/$format/$verb" = "native/xlsx/create" ]; then result=Uppercase-result.json; fi' \
     '        if [ "$mode" = "spoof-office" ]; then cmd="echo office-$runtime $verb $run_args --json > $result"; else cmd="office-$runtime $verb $run_args --json > $result"; fi' \
     '        if [ "$mode" = "format-redirection-spoof" ] && [ "$runtime/$format/$verb" = "native/xlsx/create" ]; then cmd="office-native create missing-target --json > proof.xlsx"; fi' \
     '        if [ "$mode" = "newline-mask" ] && [ "$runtime/$format/$verb" = "native/xlsx/create" ]; then cmd=$(/usr/bin/printf "office-native create xlsx sample.xlsx --json > result.json\\ntrue"); fi' \
@@ -575,6 +598,7 @@ chmod 0600 "$codex_bin_dir/mode"
     '          /bin/rm -f "$result.stderr"' \
     '        fi' \
     '        emit_completed "$event_id" "$cmd" "$status" "$body"' \
+    '        if [ "$stop_after" = "$runtime/$format/$verb" ]; then break 3; fi' \
     '        if [ "$mode" != "spoof-office" ] && [ "$runtime/$format/$verb" = "native/docx/raw" ]; then' \
     '          index=$((index + 1))' \
     '          extra_result=native-docx-raw-inventory-extra.json' \
@@ -591,9 +615,11 @@ chmod 0600 "$codex_bin_dir/mode"
     '      done' \
     '    done' \
     '  done' \
+    '  fi' \
     'fi' \
-    'if [ "$mode" = "wrong-result-schema" ]; then printf '\''{"schema":"office.output/1","success":true,"data":{"schema":"office.identify/1","format":"xlsx","file":"native-xlsx-base.xlsx"}}\n'\'' > native-xlsx-create-2.json; fi' \
+    'if [ "$mode" = "wrong-result-schema" ]; then printf '\''{"schema":"office.output/1","success":true,"data":{"schema":"office.identify/1","format":"xlsx","file":"native-xlsx-base.xlsx"}}\n'\'' > native-xlsx-create-3.json; fi' \
     'if [ "$mode" = "invalid-artifact" ]; then printf '\''not an Office package\n'\'' > native-xlsx-base.xlsx; fi' \
+    'if [ "$mode" = "generic-zip-artifact" ]; then /bin/rm -f native-xlsx-base.xlsx; printf '\''payload\n'\'' > generic-payload.txt; /usr/bin/zip -q native-xlsx-base.xlsx generic-payload.txt; fi' \
     'if [ "$mode" = "exit19" ]; then exit 19; fi' \
     'verdict="BASELINE PASS"; outcome="PASS"; gaps="[]"' \
     'if [ "$mode" = "fail" ]; then verdict="BASELINE FAIL"; outcome="FAIL"; gaps='\''[{"severity":"P1","summary":"fake failure"}]'\''; fi' \
@@ -1095,6 +1121,13 @@ expect_failure duplicate-result-path 1 'required office.xlsx.create/1 result' \
   "$case_root/duplicate-result-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
+printf 'uppercase-result-path\n' > "$codex_bin_dir/mode"
+expect_failure uppercase-result-path 1 'must use lowercase' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/uppercase-result-probe" \
+  "$case_root/uppercase-result-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
 printf 'wrong-result-schema\n' > "$codex_bin_dir/mode"
 expect_failure wrong-result-schema 1 'required office.xlsx.create/1 result' \
   "$runner" "$head" "$candidate_sha" \
@@ -1102,10 +1135,17 @@ expect_failure wrong-result-schema 1 'required office.xlsx.create/1 result' \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'invalid-artifact\n' > "$codex_bin_dir/mode"
-expect_failure invalid-artifact 1 'not a structurally valid Office ZIP package' \
+expect_failure invalid-artifact 1 'unreadable ZIP central directory' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/invalid-artifact-probe" \
   "$case_root/invalid-artifact-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'generic-zip-artifact\n' > "$codex_bin_dir/mode"
+expect_failure generic-zip-artifact 1 'missing required OPC part' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/generic-zip-probe" \
+  "$case_root/generic-zip-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'reused-event-id\n' > "$codex_bin_dir/mode"

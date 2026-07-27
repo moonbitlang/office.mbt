@@ -31,9 +31,9 @@ Rules:
   be a standalone result-bearing shell command: the Office executable must be
   the first token and the operation the second; `--json` must be the final
   option; and one ordinary `>` redirection to a unique `.json` result path must
-  end the command. Use only relative result and artifact paths composed of
-  letters, digits, `_`, `-`, `.`, and `/`, with every path as a separate shell
-  token. Each format-bearing invocation must name at least one package of the
+  end the command. Use only lowercase relative result and artifact paths
+  composed of letters, digits, `_`, `-`, `.`, and `/`, with every path as a
+  separate shell token. Each format-bearing invocation must name at least one package of the
   required format and no package of the other format. Do not use help/version
   modes, input redirection, comments, command or process substitution, a
   newline, pipe, `&&`, `||`, `;`, or backgrounding in those attested
