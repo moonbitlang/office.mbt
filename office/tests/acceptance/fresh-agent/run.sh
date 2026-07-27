@@ -428,6 +428,7 @@ verify_candidate() {
         "control/command-policy.py",
         "control/opc-policy.py",
         "control/transcript-policy.py",
+        "control/evidence-policy.py",
         "control/private.json",
         "control/inventory.sh",
         "control/build-lock.json",
@@ -473,6 +474,7 @@ control/attest.py|0400
 control/command-policy.py|0400
 control/opc-policy.py|0400
 control/transcript-policy.py|0400
+control/evidence-policy.py|0400
 control/private.json|0400
 control/inventory.sh|0500
 control/build-lock.json|0400
@@ -686,6 +688,7 @@ EOF
       control/command-policy.py \
       control/opc-policy.py \
       control/transcript-policy.py \
+      control/evidence-policy.py \
       control/build-lock.json \
       control/dependencies.manifest \
       control/inventory.sh \
@@ -946,6 +949,7 @@ start_probe_resource_monitor() {
   probe_resource_violation_file="$isolation_root/resource-violation.log"
   : > "$probe_resource_violation_file"
   (
+    local inspection_failures=0
     trap 'exit 0' HUP INT TERM
     while :; do
       local entry_count
@@ -955,9 +959,14 @@ start_probe_resource_monitor() {
           "$probe_root" "$isolated_tmp" "$isolated_codex_tmp" 2>/dev/null |
           /usr/bin/awk '{ total += $1 } END { print total + 0 }'
       )"; then
-        printf '%s\n' 'probe storage became uninspectable' \
-          > "$probe_resource_violation_file"
-        exit 0
+        inspection_failures=$((inspection_failures + 1))
+        if (( inspection_failures >= 10 )); then
+          printf '%s\n' 'probe storage remained uninspectable across 10 samples' \
+            > "$probe_resource_violation_file"
+          exit 0
+        fi
+        /bin/sleep 0.05
+        continue
       fi
       if ! entry_count="$(
         /usr/bin/find \
@@ -966,10 +975,16 @@ start_probe_resource_monitor() {
           /usr/bin/wc -l |
           /usr/bin/tr -d ' '
       )"; then
-        printf '%s\n' 'probe entry count became uninspectable' \
-          > "$probe_resource_violation_file"
-        exit 0
+        inspection_failures=$((inspection_failures + 1))
+        if (( inspection_failures >= 10 )); then
+          printf '%s\n' 'probe entry count remained uninspectable across 10 samples' \
+            > "$probe_resource_violation_file"
+          exit 0
+        fi
+        /bin/sleep 0.05
+        continue
       fi
+      inspection_failures=0
       if (( usage_kib > probe_max_kib )); then
         printf 'probe storage reached %s KiB (limit %s KiB)\n' \
           "$usage_kib" "$probe_max_kib" > "$probe_resource_violation_file"
@@ -1591,75 +1606,89 @@ extract_isolated_help() {
     die "installed $runtime help did not produce a capability identity"
 }
 
-write_evidence_manifest() {
-  local entries="$isolation_root/evidence-entries.jsonl"
-  local name
-  require_postprocess_budget "evidence manifest publication"
-  : > "$entries"
-  for name in \
-    CANDIDATE.json \
-    COMMANDS.json \
-    WORKFLOWS.json \
-    CONFIG.toml \
-    RUN-PREFLIGHT.json \
-    RUN.json \
-    codex-exit-status.txt \
-    codex-stderr.log \
-    codex-transcript.jsonl \
-    final-message.json \
-    permission-canary.log \
-    probe-result.md \
-    probe-transcript.md; do
-    [ -f "$evidence_root/$name" ] ||
-      die "retained evidence artifact is missing: $name"
-    /usr/bin/jq -n \
-      --arg path "$name" \
-      --arg sha256 "$(sha256_file "$evidence_root/$name")" \
-      --argjson bytes "$(/usr/bin/wc -c < "$evidence_root/$name" | /usr/bin/tr -d ' ')" \
-      '{path: $path, sha256: $sha256, bytes: $bytes}' >> "$entries"
-  done
-  /usr/bin/jq -s \
-    --arg schema "office.fresh-agent.evidence/1" \
-    --arg candidate_head "$expected_head" \
-    --arg candidate_manifest_sha256 "$expected_candidate_sha256" \
-    '{
-      schema: $schema,
-      candidate_head: $candidate_head,
-      candidate_manifest_sha256: $candidate_manifest_sha256,
-      artifacts: .
-    }' "$entries" > "$isolation_root/EVIDENCE.json"
-  /usr/bin/install -m 0600 "$isolation_root/EVIDENCE.json" \
-    "$evidence_root/EVIDENCE.json"
+ensure_postprocess_deadline() {
+  if (( ${postprocess_deadline:-0} == 0 )); then
+    postprocess_deadline=$((SECONDS + postprocess_timeout_seconds))
+  fi
 }
 
-write_canary_evidence_manifest() {
-  local entries="$isolation_root/canary-evidence-entries.jsonl"
-  local name
-  : > "$entries"
-  for name in \
-    CANDIDATE.json \
-    CONFIG.toml \
-    RUN-PREFLIGHT.json \
-    RUN.json \
-    permission-canary.log; do
-    /usr/bin/jq -n \
-      --arg path "$name" \
-      --arg sha256 "$(sha256_file "$evidence_root/$name")" \
-      --argjson bytes "$(/usr/bin/wc -c < "$evidence_root/$name" | /usr/bin/tr -d ' ')" \
-      '{path: $path, sha256: $sha256, bytes: $bytes}' >> "$entries"
-  done
-  /usr/bin/jq -s \
-    --arg schema "office.fresh-agent.canary-evidence/1" \
-    --arg candidate_head "$expected_head" \
-    --arg candidate_manifest_sha256 "$expected_candidate_sha256" \
-    '{
-      schema: $schema,
-      candidate_head: $candidate_head,
-      candidate_manifest_sha256: $candidate_manifest_sha256,
-      artifacts: .
-    }' "$entries" > "$isolation_root/EVIDENCE.json"
+remaining_postprocess_budget() {
+  local label="$1"
+  local remaining_seconds
+  ensure_postprocess_deadline
+  require_postprocess_budget "$label"
+  remaining_seconds=$((postprocess_deadline - SECONDS))
+  (( remaining_seconds >= 1 )) ||
+    die "post-processing exceeded its ${postprocess_timeout_seconds}s global deadline before $label"
+  printf '%s\n' "$remaining_seconds"
+}
+
+publish_evidence_closure() {
+  local evidence_policy="$candidate_root/control/evidence-policy.py"
+  local remaining_seconds
+  local -a publish_args
+  remaining_seconds="$(remaining_postprocess_budget "evidence closure publication")"
+  publish_args=(
+    publish
+    --evidence-root "$evidence_root"
+    --candidate-root "$candidate_root"
+    --probe-root "$probe_root"
+    --candidate-head "$expected_head"
+    --candidate-sha256 "$expected_candidate_sha256"
+    --codex-bin "$codex_bin"
+    --codex-version "$codex_version"
+    --codex-sha256 "$expected_codex_sha256"
+    --bwrap-selection "$bwrap_selection"
+    --timeout-seconds "$remaining_seconds"
+  )
+  if [ "$bwrap_selection" != "none" ]; then
+    publish_args+=(
+      --bwrap-bin "$bwrap_bin"
+      --bwrap-sha256 "$expected_bwrap_sha256"
+    )
+  fi
+  /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+    /usr/bin/python3 -I "$evidence_policy" "${publish_args[@]}" ||
+    die "could not publish the bounded self-contained evidence closure"
+  verify_candidate \
+    "$evidence_root/closure/candidate" "$expected_candidate_sha256"
+  [ "$(sha256_file "$evidence_root/closure/runtime/codex")" = \
+    "$expected_codex_sha256" ] ||
+    die "retained Codex runtime does not match its approved digest"
+  if [ "$bwrap_selection" != "none" ]; then
+    [ "$(sha256_file "$evidence_root/closure/runtime/bwrap")" = \
+      "$expected_bwrap_sha256" ] ||
+      die "retained bubblewrap runtime does not match its approved digest"
+  fi
+  verify_candidate "$candidate_root" "$expected_candidate_sha256"
+  verify_candidate "$install_root" "$expected_candidate_sha256"
+  verify_codex_runtime
+}
+
+write_evidence_manifest() {
+  local mode="$1"
+  local evidence_policy="$candidate_root/control/evidence-policy.py"
+  local remaining_seconds
+  publish_evidence_closure
+  remaining_seconds="$(remaining_postprocess_budget "evidence manifest publication")"
+  /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+    /usr/bin/python3 -I "$evidence_policy" manifest \
+      --evidence-root "$evidence_root" \
+      --mode "$mode" \
+      --candidate-head "$expected_head" \
+      --candidate-sha256 "$expected_candidate_sha256" \
+      --output "$isolation_root/EVIDENCE.json" \
+      --timeout-seconds "$remaining_seconds" ||
+    die "could not create the recursive evidence manifest"
   /usr/bin/install -m 0600 "$isolation_root/EVIDENCE.json" \
     "$evidence_root/EVIDENCE.json"
+  remaining_seconds="$(remaining_postprocess_budget "evidence manifest verification")"
+  /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+    /usr/bin/python3 -I "$evidence_policy" verify \
+      --evidence-root "$evidence_root" \
+      --manifest "$evidence_root/EVIDENCE.json" \
+      --timeout-seconds "$remaining_seconds" ||
+    die "published evidence does not reproduce its recursive manifest"
 }
 
 canary_only=0
@@ -2253,7 +2282,7 @@ if [ "$canary_only" -eq 1 ]; then
       verdict: "CANARY PASS"
     }' > "$isolation_root/RUN.json"
   /usr/bin/install -m 0600 "$isolation_root/RUN.json" "$evidence_root/RUN.json"
-  write_canary_evidence_manifest
+  write_evidence_manifest canary
   printf 'probe_dir=%s\n' "$probe_root"
   printf 'evidence_dir=%s\n' "$evidence_root"
   printf 'verdict=CANARY PASS\n'
@@ -2593,7 +2622,7 @@ fi
     }
   }' > "$isolation_root/RUN.json"
 /usr/bin/install -m 0600 "$isolation_root/RUN.json" "$evidence_root/RUN.json"
-write_evidence_manifest
+write_evidence_manifest baseline
 require_postprocess_budget "successful evidence completion"
 
 printf 'probe_dir=%s\n' "$probe_root"
