@@ -104,6 +104,10 @@ fail() {
   "$script_dir/transcript_policy.py" ||
   fail "bounded transcript-policy unit tests"
 /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+  /usr/bin/python3 -I "$script_dir/scenario_policy_test.py" \
+  "$script_dir/scenario_policy.py" ||
+  fail "host-derived scenario-policy unit tests"
+/usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
   /usr/bin/python3 -I "$script_dir/evidence_policy_test.py" \
   "$script_dir/evidence_policy.py" ||
   fail "self-contained evidence-policy unit tests"
