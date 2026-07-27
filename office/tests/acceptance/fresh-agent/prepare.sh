@@ -183,7 +183,7 @@ case "$expected_head" in
   *) die "EXPECTED_FULL_HEAD must be a lowercase 40-character commit id" ;;
 esac
 
-for tool in git jq shasum awk sed find sort tar cmp install mktemp stat id basename dirname mv ln env perl uname; do
+for tool in git jq shasum awk sed find sort tar cmp diff install mktemp stat id basename dirname mv ln env perl uname; do
   require_command "$tool"
 done
 
@@ -396,7 +396,12 @@ staged_toolchain_manifest="$scratch/staged-toolchain.manifest"
   "$build_platform" \
   "${toolchain_entries[@]}"
 /usr/bin/cmp "$source_toolchain_manifest" "$staged_toolchain_manifest" ||
-  die "privately staged Moon toolchain differs from the pinned source closure"
+  {
+    echo "error: staged toolchain inventory diff follows" >&2
+    /usr/bin/diff -u "$source_toolchain_manifest" \
+      "$staged_toolchain_manifest" >&2 || true
+    die "privately staged Moon toolchain differs from the pinned source closure"
+  }
 
 moon_bin="$moon_toolchain_root/bin/moon"
 moonc_bin="$moon_toolchain_root/bin/moonc"
