@@ -81,16 +81,20 @@ subtrees are published without clobbering, directory modes are locked, and
 without that marker is incomplete. The manifest records the full commit and
 source-tree identity, driver/code-generator/runtime hashes, build-lock identity,
 complete toolchain and dependency inventories, and hashes and modes for every
-candidate file. Native builds also explicitly select `MOON_CC` and `MOON_AR`
-(plus `SDKROOT` on macOS) as canonical regular-file paths, never mutable
-compiler or archiver symlink aliases. They retain the normalized dry-run command
-plan and bind the resolved compiler, archiver, linker, assembler, OS identity,
-and SDK/system header and runtime-library inventory in `build-host.json` and
-`build-host.manifest`. The build-host inventory is rooted at `/`; every selected
-symlink's canonical referent is recursively included, so a stable link target
-cannot conceal changed referent bytes. The complete host inventory and every
-compiler-discovered tool, target, resource directory, and SDK/sysroot selection
-are resolved again after both release builds to detect drift. Runtime capability
+candidate file. Native builds explicitly select `MOON_CC`, `MOON_AR`, and the
+macOS `SDKROOT` from a fixed clean environment. Selected logical paths and
+canonical referents are recorded separately, so compiler, archiver, SDK,
+runtime, or plugin symlink changes remain visible. The normalized dry-run plan
+is retained alongside deterministic discovery of compiler queries,
+linker/assembler selection, search/resource paths, startup objects, link
+scripts, compiler runtimes and plugins, and the dynamic-loader closure. Linux
+records resolved `ldd` inputs; macOS records recursive Mach-O dependencies plus
+the UUID and logical path of every image loaded by the tool probes, including
+shared-cache images without standalone files. Existing files feed the
+root-relative `build-host.manifest`, including selected symlinks and their
+referents. The discovery, inventory bytes, Xcode selector results, OS identity,
+and SDK version are recomputed after both release builds and must match
+byte-for-byte. Runtime capability
 identity is derived only from commands
 executed inside the isolated probe; candidate code is never executed by the
 preparer. The runner additionally requires one hard link per regular file and

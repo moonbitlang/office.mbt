@@ -387,6 +387,8 @@ verify_candidate() {
       .schema == "office.fresh-agent.candidate/5" and
       .candidate_head == $head and
       (.build | keys) == [
+        "build_host_discovery_policy_sha256",
+        "build_host_discovery_sha256",
         "build_host_manifest_sha256",
         "build_host_sha256",
         "build_lock_sha256",
@@ -403,6 +405,8 @@ verify_candidate() {
       (.build.build_lock_sha256 | test("^[0-9a-f]{64}$")) and
       (.build.build_host_sha256 | test("^[0-9a-f]{64}$")) and
       (.build.build_host_manifest_sha256 | test("^[0-9a-f]{64}$")) and
+      (.build.build_host_discovery_policy_sha256 | test("^[0-9a-f]{64}$")) and
+      (.build.build_host_discovery_sha256 | test("^[0-9a-f]{64}$")) and
       (.build.dependency_manifest_sha256 | test("^[0-9a-f]{64}$")) and
       (.build.toolchain_manifest_sha256 | test("^[0-9a-f]{64}$")) and
       (.build.moonc_sha256 | test("^[0-9a-f]{64}$")) and
@@ -430,7 +434,9 @@ verify_candidate() {
         "control/toolchain.manifest",
         "control/dependencies.manifest",
         "control/build-host.json",
-        "control/build-host.manifest"
+        "control/build-host.manifest",
+        "control/build-host-discovery.py",
+        "control/build-host-discovery.json"
       ] and
       (.files | map(.kind == "file") | all) and
       (.files | map(.sha256 | test("^[0-9a-f]{64}$")) | all) and
@@ -474,6 +480,8 @@ control/toolchain.manifest|0400
 control/dependencies.manifest|0400
 control/build-host.json|0400
 control/build-host.manifest|0400
+control/build-host-discovery.py|0400
+control/build-host-discovery.json|0400
 EOF
 
   while IFS='|' read -r field relative; do
@@ -487,6 +495,8 @@ toolchain_manifest_sha256|control/toolchain.manifest
 dependency_manifest_sha256|control/dependencies.manifest
 build_host_sha256|control/build-host.json
 build_host_manifest_sha256|control/build-host.manifest
+build_host_discovery_policy_sha256|control/build-host-discovery.py
+build_host_discovery_sha256|control/build-host-discovery.json
 EOF
   build_platform="$(/usr/bin/jq -er '.build.platform' "$manifest")"
   /usr/bin/jq -e \
@@ -520,51 +530,103 @@ EOF
     --arg platform "$build_platform" \
     --arg manifest_sha256 "$(
       /usr/bin/jq -er '.build.build_host_manifest_sha256' "$manifest"
-    )" '
-      keys == ["archiver", "assembler", "compiler", "environment", "host",
-        "inventory", "linker", "native_plan", "platform", "schema", "sdk"] and
-      .schema == "office.fresh-agent.build-host/1" and
+    )" \
+    --arg discovery_sha256 "$(
+      /usr/bin/jq -er '.build.build_host_discovery_sha256' "$manifest"
+    )" \
+    --slurpfile discovery "$root/control/build-host-discovery.json" '
+      ($discovery[0]) as $d |
+      keys == ["archiver", "assembler", "compiler", "discovery",
+        "environment", "host", "inventory", "linker", "native_plan",
+        "platform", "schema", "sdk"] and
+      .schema == "office.fresh-agent.build-host/2" and
       .platform == $platform and
+      .discovery == {
+        schema: "office.fresh-agent.build-host-discovery/1",
+        sha256: $discovery_sha256
+      } and
+      ($d | keys) == ["compiler_queries", "environment", "inventory_paths",
+        "loader", "platform", "schema", "sdk", "tools"] and
+      $d.schema == .discovery.schema and $d.platform == $platform and
+      $d.environment == {
+        lang: "C",
+        lc_all: "C",
+        path: "/usr/bin:/bin:/usr/sbin:/sbin",
+        sdkroot: .environment.sdkroot
+      } and
+      ($d.tools | keys) == ["archiver", "assembler", "compiler", "linker"] and
+      ($d.tools | all(
+        (keys == ["bytes", "kind", "mode", "resolved_path", "selected_kind",
+          "selected_path", "sha256", "version"]) and
+        .kind == "file" and
+        (.selected_kind == "file" or .selected_kind == "symlink") and
+        (.selected_path | startswith("/")) and
+        (.resolved_path | startswith("/")) and
+        (.sha256 | test("^[0-9a-f]{64}$")) and
+        (.bytes | type) == "number" and .bytes > 0 and
+        (.version | type) == "array" and (.version | length) > 0
+      )) and
+      ($d.compiler_queries | keys) == ["reported_sysroot",
+        "resource_directory", "runtime_files", "search_directories",
+        "target"] and
+      ($d.compiler_queries.runtime_files | type) == "array" and
+      ($d.compiler_queries.runtime_files | length) > 0 and
+      ($d.compiler_queries.search_directories | type) == "array" and
+      ($d.inventory_paths | type) == "array" and
+      ($d.inventory_paths | length) > 0 and
+      ($d.inventory_paths | sort) == $d.inventory_paths and
+      ($d.inventory_paths | unique | length) == ($d.inventory_paths | length) and
+      (if $platform == "darwin-arm64" then
+        $d.loader.strategy == "mach-o-and-dyld-images" and
+        ($d.loader.declared_dependencies | length) > 0 and
+        ($d.loader.loaded_images | length) > 0
+      else
+        $d.loader.strategy == "ldd" and
+        ($d.loader.dependencies | length) > 0
+      end) and
       (.environment | keys) == ["moon_ar", "moon_cc", "sdkroot"] and
-      (.environment.moon_cc | startswith("/")) and
-      (.environment.moon_ar | startswith("/")) and
+      .environment.moon_cc == $d.tools.compiler.selected_path and
+      .environment.moon_ar == $d.tools.archiver.selected_path and
       (.environment.sdkroot == null or
         (.environment.sdkroot | startswith("/"))) and
       (.compiler | keys) == ["resolved_path", "resource_dir", "selected_path",
         "sha256", "target", "version"] and
       .compiler.selected_path == .environment.moon_cc and
-      .compiler.selected_path == .compiler.resolved_path and
-      (.compiler.resolved_path | startswith("/")) and
-      (.compiler.resource_dir | startswith("/")) and
-      (.compiler.sha256 | test("^[0-9a-f]{64}$")) and
-      (.compiler.target | type) == "string" and
-      (.compiler.target | length) > 0 and
-      (.compiler.version | type) == "string" and
-      (.compiler.version | length) > 0 and
+      .compiler.resolved_path == $d.tools.compiler.resolved_path and
+      .compiler.sha256 == $d.tools.compiler.sha256 and
+      .compiler.version == ($d.tools.compiler.version | join("\n")) and
+      .compiler.target == $d.compiler_queries.target and
+      .compiler.resource_dir == {
+        selected_path: $d.compiler_queries.resource_directory.selected_path,
+        resolved_path: $d.compiler_queries.resource_directory.resolved_path
+      } and
       (.archiver | keys) == ["resolved_path", "selected_path", "sha256"] and
       .archiver.selected_path == .environment.moon_ar and
-      .archiver.selected_path == .archiver.resolved_path and
-      (.archiver.resolved_path | startswith("/")) and
-      (.archiver.sha256 | test("^[0-9a-f]{64}$")) and
-      (.linker | keys) == ["resolved_path", "sha256", "version"] and
-      (.linker.resolved_path | startswith("/")) and
-      (.linker.sha256 | test("^[0-9a-f]{64}$")) and
-      (.linker.version | type) == "string" and
-      (.linker.version | length) > 0 and
-      (.assembler | keys) == ["resolved_path", "sha256"] and
-      (.assembler.resolved_path | startswith("/")) and
-      (.assembler.sha256 | test("^[0-9a-f]{64}$")) and
+      .archiver.resolved_path == $d.tools.archiver.resolved_path and
+      .archiver.sha256 == $d.tools.archiver.sha256 and
+      (.linker | keys) == ["resolved_path", "selected_path", "sha256", "version"] and
+      .linker.selected_path == $d.tools.linker.selected_path and
+      .linker.resolved_path == $d.tools.linker.resolved_path and
+      .linker.sha256 == $d.tools.linker.sha256 and
+      .linker.version == ($d.tools.linker.version | join("\n")) and
+      (.assembler | keys) == ["resolved_path", "selected_path", "sha256"] and
+      .assembler.selected_path == $d.tools.assembler.selected_path and
+      .assembler.resolved_path == $d.tools.assembler.resolved_path and
+      .assembler.sha256 == $d.tools.assembler.sha256 and
       (.host | keys) == ["identity_path", "identity_sha256", "kernel"] and
       (.host.identity_path | startswith("/")) and
       (.host.identity_sha256 | test("^[0-9a-f]{64}$")) and
       (.host.kernel | type) == "string" and (.host.kernel | length) > 0 and
-      (.sdk | keys) == ["kind", "path", "version"] and
-      (.sdk.path | startswith("/")) and
+      (.sdk | keys) == ["kind", "resolved_path", "selected_path", "version"] and
+      .sdk.selected_path == $d.sdk.selected_path and
+      .sdk.resolved_path == $d.sdk.resolved_path and
       (.sdk.version | type) == "string" and (.sdk.version | length) > 0 and
       (if $platform == "darwin-arm64" then
-        .sdk.kind == "macos-sdk" and .environment.sdkroot == .sdk.path
+        .sdk.kind == "macos-sdk" and
+        .environment.sdkroot == .sdk.selected_path
       else
-        .sdk.kind == "linux-sysroot" and .environment.sdkroot == null
+        .sdk.kind == "linux-sysroot" and .environment.sdkroot == null and
+        .sdk.selected_path == "/" and .sdk.resolved_path == "/"
       end) and
       (.inventory | keys) == ["entries", "manifest_sha256", "root"] and
       .inventory.root == "/" and
@@ -617,6 +679,8 @@ EOF
       bin/office-wasm \
       control/build-host.json \
       control/build-host.manifest \
+      control/build-host-discovery.py \
+      control/build-host-discovery.json \
       control/final.schema.json \
       control/attest.py \
       control/command-policy.py \

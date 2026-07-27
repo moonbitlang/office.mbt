@@ -80,6 +80,10 @@ fail() {
   "$script_dir/command_policy.py" ||
   fail "adversarial command-policy unit tests"
 /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+  /usr/bin/python3 -I "$script_dir/build_host_discovery_test.py" \
+  "$script_dir/build_host_discovery.py" ||
+  fail "native build-host discovery unit tests"
+/usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
   /usr/bin/python3 -I "$script_dir/attest_test.py" \
   "$script_dir/attest.py" ||
   fail "atomic completion-attestation unit tests"
@@ -211,6 +215,8 @@ make_candidate() {
   local dependency_manifest_sha
   local build_host_sha
   local build_host_manifest_sha
+  local build_host_discovery_policy_sha
+  local build_host_discovery_sha
   local native_plan_sha
   local build_platform
 
@@ -329,6 +335,8 @@ make_candidate() {
     "$install_root/control/opc-policy.py"
   /usr/bin/install -m 0400 "$script_dir/transcript_policy.py" \
     "$install_root/control/transcript-policy.py"
+  /usr/bin/install -m 0400 "$script_dir/build_host_discovery.py" \
+    "$install_root/control/build-host-discovery.py"
   /usr/bin/install -m 0500 "$script_dir/inventory.sh" \
     "$install_root/control/inventory.sh"
   chmod 0500 \
@@ -401,13 +409,83 @@ make_candidate() {
       /usr/bin/awk '{print substr($1, length($1) - 63)}'
   )"
   /usr/bin/jq -n \
-    --arg schema "office.fresh-agent.build-host/1" \
+    --arg platform "$build_platform" '
+    def tool($selected; $resolved; $sha; $version): {
+      bytes: 1,
+      kind: "file",
+      mode: "0755",
+      resolved_path: $resolved,
+      selected_kind: "file",
+      selected_path: $selected,
+      sha256: $sha,
+      version: [$version]
+    };
+    {
+      schema: "office.fresh-agent.build-host-discovery/1",
+      platform: $platform,
+      environment: {
+        lang: "C",
+        lc_all: "C",
+        path: "/usr/bin:/bin:/usr/sbin:/sbin",
+        sdkroot: (if $platform == "darwin-arm64" then "/fixture/sdk" else null end)
+      },
+      tools: {
+        compiler: tool("/usr/bin/cc"; "/usr/bin/cc"; ("2" * 64); "fixture cc 1"),
+        archiver: tool("/usr/bin/ar"; "/usr/bin/ar"; ("3" * 64); "fixture ar 1"),
+        linker: tool("/usr/bin/ld"; "/usr/bin/ld"; ("4" * 64); "fixture ld 1"),
+        assembler: tool("/usr/bin/as"; "/usr/bin/as"; ("5" * 64); "fixture as 1")
+      },
+      sdk: {
+        kind: "directory",
+        mode: "0755",
+        resolved_path: (if $platform == "darwin-arm64" then "/fixture/sdk" else "/" end),
+        selected_kind: "directory",
+        selected_path: (if $platform == "darwin-arm64" then "/fixture/sdk" else "/" end)
+      },
+      compiler_queries: {
+        reported_sysroot: (if $platform == "darwin-arm64" then "/fixture/sdk" else "/" end),
+        resource_directory: {
+          kind: "directory",
+          mode: "0755",
+          resolved_path: "/fixture/compiler/include",
+          selected_kind: "directory",
+          selected_path: "/fixture/compiler/include"
+        },
+        runtime_files: [{name: "fixture-runtime", reported: "fixture-runtime", path: null}],
+        search_directories: ["programs: =/usr/bin"],
+        target: (if $platform == "darwin-arm64"
+          then "arm64-apple-darwin" else "x86_64-linux-gnu" end)
+      },
+      inventory_paths: [
+        "/fixture/compiler/include", "/usr/bin/ar", "/usr/bin/as",
+        "/usr/bin/cc", "/usr/bin/ld"
+      ],
+      loader: (if $platform == "darwin-arm64" then {
+        strategy: "mach-o-and-dyld-images",
+        declared_dependencies: [{declared: "/usr/lib/libSystem.B.dylib"}],
+        loaded_images: [{path: "/usr/lib/libSystem.B.dylib"}]
+      } else {
+        strategy: "ldd",
+        dependencies: [{library: "libc.so.6", tool: "compiler", path: null}]
+      } end)
+    }' > "$install_root/control/build-host-discovery.json"
+  chmod 0400 "$install_root/control/build-host-discovery.json"
+  build_host_discovery_sha="$(
+    sha256_file "$install_root/control/build-host-discovery.json"
+  )"
+  /usr/bin/jq -n \
+    --arg schema "office.fresh-agent.build-host/2" \
     --arg platform "$build_platform" \
     --arg manifest_sha "$build_host_manifest_sha" \
+    --arg discovery_sha "$build_host_discovery_sha" \
     --arg plan_sha "$native_plan_sha" \
     '{
       schema: $schema,
       platform: $platform,
+      discovery: {
+        schema: "office.fresh-agent.build-host-discovery/1",
+        sha256: $discovery_sha
+      },
       environment: {
         moon_cc: "/usr/bin/cc",
         moon_ar: "/usr/bin/ar",
@@ -425,7 +503,10 @@ make_candidate() {
         version: "fixture cc 1",
         target: (if $platform == "darwin-arm64"
           then "arm64-apple-darwin" else "x86_64-linux-gnu" end),
-        resource_dir: "/fixture/compiler/include"
+        resource_dir: {
+          selected_path: "/fixture/compiler/include",
+          resolved_path: "/fixture/compiler/include"
+        }
       },
       archiver: {
         selected_path: "/usr/bin/ar",
@@ -433,18 +514,21 @@ make_candidate() {
         sha256: ("3" * 64)
       },
       linker: {
+        selected_path: "/usr/bin/ld",
         resolved_path: "/usr/bin/ld",
         sha256: ("4" * 64),
         version: "fixture ld 1"
       },
       assembler: {
+        selected_path: "/usr/bin/as",
         resolved_path: "/usr/bin/as",
         sha256: ("5" * 64)
       },
       sdk: {
         kind: (if $platform == "darwin-arm64"
           then "macos-sdk" else "linux-sysroot" end),
-        path: (if $platform == "darwin-arm64" then "/fixture/sdk" else "/" end),
+        selected_path: (if $platform == "darwin-arm64" then "/fixture/sdk" else "/" end),
+        resolved_path: (if $platform == "darwin-arm64" then "/fixture/sdk" else "/" end),
         version: "fixture-sdk-1"
       },
       inventory: {
@@ -475,6 +559,9 @@ make_candidate() {
   command_policy_sha="$(sha256_file "$install_root/control/command-policy.py")"
   opc_policy_sha="$(sha256_file "$install_root/control/opc-policy.py")"
   transcript_policy_sha="$(sha256_file "$install_root/control/transcript-policy.py")"
+  build_host_discovery_policy_sha="$(
+    sha256_file "$install_root/control/build-host-discovery.py"
+  )"
   private_sha="$(sha256_file "$install_root/control/private.json")"
   inventory_sha="$(sha256_file "$install_root/control/inventory.sh")"
   build_lock_sha="$(sha256_file "$install_root/control/build-lock.json")"
@@ -488,6 +575,8 @@ make_candidate() {
     --arg dependency_manifest_sha "$dependency_manifest_sha" \
     --arg build_host_sha "$build_host_sha" \
     --arg build_host_manifest_sha "$build_host_manifest_sha" \
+    --arg build_host_discovery_policy_sha "$build_host_discovery_policy_sha" \
+    --arg build_host_discovery_sha "$build_host_discovery_sha" \
     --arg native_sha "$native_sha" \
     --arg wasm_wrapper_sha "$wasm_wrapper_sha" \
     --arg moonrun_sha "$moonrun_sha" \
@@ -513,6 +602,8 @@ make_candidate() {
         dependency_manifest_sha256: $dependency_manifest_sha,
         build_host_sha256: $build_host_sha,
         build_host_manifest_sha256: $build_host_manifest_sha,
+        build_host_discovery_policy_sha256: $build_host_discovery_policy_sha,
+        build_host_discovery_sha256: $build_host_discovery_sha,
         moon_version: "fake-moon 1",
         moon_sha256: ("a" * 64),
         moonc_version: "fake-moonc 1",
@@ -538,7 +629,9 @@ make_candidate() {
         {path: "control/toolchain.manifest", kind: "file", mode: "0400", sha256: $toolchain_manifest_sha},
         {path: "control/dependencies.manifest", kind: "file", mode: "0400", sha256: $dependency_manifest_sha},
         {path: "control/build-host.json", kind: "file", mode: "0400", sha256: $build_host_sha},
-        {path: "control/build-host.manifest", kind: "file", mode: "0400", sha256: $build_host_manifest_sha}
+        {path: "control/build-host.manifest", kind: "file", mode: "0400", sha256: $build_host_manifest_sha},
+        {path: "control/build-host-discovery.py", kind: "file", mode: "0400", sha256: $build_host_discovery_policy_sha},
+        {path: "control/build-host-discovery.json", kind: "file", mode: "0400", sha256: $build_host_discovery_sha}
       ],
       symlinks: [
         {path: "bin/office", target: "office-native"}

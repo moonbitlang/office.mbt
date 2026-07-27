@@ -19,6 +19,10 @@ unset GIT_CONFIG_SYSTEM GIT_CONFIG_COUNT GIT_CEILING_DIRECTORIES NODE_OPTIONS
 unset GIT_EXEC_PATH GIT_TEMPLATE_DIR GIT_ATTR_NOSYSTEM GIT_NO_REPLACE_OBJECTS
 unset DYLD_INSERT_LIBRARIES DYLD_LIBRARY_PATH LD_PRELOAD LD_LIBRARY_PATH
 unset PERL5OPT PERL5LIB TAR_OPTIONS POSIXLY_CORRECT BLOCKSIZE
+unset AR AS CC CFLAGS CPPFLAGS CXX CXXFLAGS LD LDFLAGS
+unset CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH OBJC_INCLUDE_PATH
+unset COMPILER_PATH GCC_EXEC_PREFIX LIBRARY_PATH
+unset DEVELOPER_DIR MACOSX_DEPLOYMENT_TARGET SDKROOT TOOLCHAINS
 unset TMPDIR
 
 die() {
@@ -112,63 +116,29 @@ canonical_existing_path() {
     ' "$input" || die "could not resolve build-host path: $input"
 }
 
-assert_system_executable() {
-  local selected="$1"
-  local label="$2"
-  local resolved
-  local owner
-  local mode
-  case "$selected" in
-    /*) ;;
-    *) die "$label must use an absolute selected path: $selected" ;;
-  esac
-  [ -f "$selected" ] && [ -x "$selected" ] ||
-    die "$label must select an executable file: $selected"
-  resolved="$(canonical_existing_path "$selected")"
-  [ -f "$resolved" ] && [ -x "$resolved" ] ||
-    die "$label does not resolve to an executable regular file: $resolved"
-  read -r owner mode <<<"$(stat_owner_mode "$resolved")"
-  [ "$owner" = "0" ] || die "$label must resolve to a root-owned file"
-  (( (8#$mode & 022) == 0 )) ||
-    die "$label must not resolve to a group- or other-writable file"
-}
-
-resolve_compiler_program() {
-  local selected_cc="$1"
-  local program_name="$2"
-  local selected
-  selected="$("$selected_cc" "-print-prog-name=$program_name")"
-  case "$selected" in
-    /*) ;;
-    */*) selected="$(/usr/bin/dirname -- "$selected_cc")/$selected" ;;
-    *) selected="$(command -v "$selected" || true)" ;;
-  esac
-  [ -n "$selected" ] ||
-    die "C compiler did not resolve required program: $program_name"
-  canonical_existing_path "$selected"
-}
-
-capture_tool_version() {
-  local tool="$1"
-  local output
-  output="$(
-    { "$tool" --version 2>&1 || "$tool" -v 2>&1 || true; } |
-      /usr/bin/sed -n '1,20p'
-  )"
-  [ -n "$output" ] || die "could not identify build-host tool: $tool"
-  printf '%s\n' "$output"
-}
-
 add_host_inventory_path() {
   local input="$1"
   local resolved
+  local selected
   local relative
   local existing
   local -a retained=()
+  case "$input" in
+    /*) ;;
+    *) die "build-host inventory path must be absolute: $input" ;;
+  esac
+  case "$input" in
+    / | */ | *//* | */./* | */. | */../* | */.. | *$'\t'* | *$'\r'* | *$'\n'*)
+      die "build-host inventory path is not canonical: $input"
+      ;;
+  esac
+  [ -e "$input" ] || [ -L "$input" ] ||
+    die "build-host inventory path does not exist: $input"
+  selected="$input"
   resolved="$(canonical_existing_path "$input")"
   if [ "$host_inventory_root" = / ]; then
     case "$resolved" in
-      /*) relative="${resolved#/}" ;;
+      /*) relative="${selected#/}" ;;
       *) die "build-host inventory path escapes its root: $resolved" ;;
     esac
   else
@@ -176,7 +146,10 @@ add_host_inventory_path() {
       "$host_inventory_root/"*) ;;
       *) die "build-host inventory path escapes its root: $resolved" ;;
     esac
-    relative="${resolved#"$host_inventory_root/"}"
+    case "$selected/" in
+      "$host_inventory_root/"*) relative="${selected#"$host_inventory_root/"}" ;;
+      *) relative="${resolved#"$host_inventory_root/"}" ;;
+    esac
   fi
   [ -n "$relative" ] ||
     die "build-host inventory must select a strict descendant"
@@ -292,7 +265,7 @@ case "$expected_head" in
   *) die "EXPECTED_FULL_HEAD must be a lowercase 40-character commit id" ;;
 esac
 
-for tool in git jq shasum awk sed find sort tar cmp diff install mktemp stat id basename dirname mv ln env perl uname; do
+for tool in git jq shasum awk sed find sort tar cmp diff install mktemp stat id basename dirname mv ln env perl python3 uname; do
   require_command "$tool"
 done
 
@@ -531,104 +504,98 @@ for tool_path in "$moon_bin" "$moonc_bin" "$moonrun_bin"; do
 done
 
 build_sdkroot=""
+build_sdkroot_argument=-
 case "$build_platform" in
   darwin-arm64)
     for tool in xcrun xcode-select sw_vers; do
       require_command "$tool"
     done
-    build_cc="$(canonical_existing_path "$(/usr/bin/xcrun --sdk macosx --find clang)")"
-    build_ar="$(canonical_existing_path "$(/usr/bin/xcrun --sdk macosx --find ar)")"
-    build_sdkroot="$(
-      canonical_directory "$(/usr/bin/xcrun --sdk macosx --show-sdk-path)"
-    )"
+    build_cc="$(/usr/bin/env -i PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG=C LC_ALL=C \
+      /usr/bin/xcrun --sdk macosx --find clang)"
+    build_ar="$(/usr/bin/env -i PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG=C LC_ALL=C \
+      /usr/bin/xcrun --sdk macosx --find ar)"
+    build_sdkroot="$(/usr/bin/env -i PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG=C LC_ALL=C \
+      /usr/bin/xcrun --sdk macosx --show-sdk-path)"
+    build_sdkroot_argument="$build_sdkroot"
     build_sdk_kind="macos-sdk"
-    build_sdk_version="$(/usr/bin/xcrun --sdk macosx --show-sdk-version)"
+    build_sdk_version="$(/usr/bin/env -i PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG=C LC_ALL=C \
+      /usr/bin/xcrun --sdk macosx --show-sdk-version)"
     host_inventory_root=/
-    host_identity_path="$(
-      canonical_existing_path /System/Library/CoreServices/SystemVersion.plist
-    )"
+    host_identity_path="$(canonical_existing_path \
+      /System/Library/CoreServices/SystemVersion.plist)"
     ;;
   linux-x86_64)
-    build_cc="$(canonical_existing_path /usr/bin/cc)"
-    build_ar="$(canonical_existing_path /usr/bin/ar)"
+    build_cc=/usr/bin/cc
+    build_ar=/usr/bin/ar
     build_sdk_kind="linux-sysroot"
     host_inventory_root=/
     host_identity_path="$(canonical_existing_path /etc/os-release)"
     ;;
   *) die "no native build-host policy is registered for $build_platform" ;;
 esac
-assert_system_executable "$build_cc" "native C compiler"
-assert_system_executable "$build_ar" "native archive tool"
-build_cc_resolved="$(canonical_existing_path "$build_cc")"
-build_ar_resolved="$(canonical_existing_path "$build_ar")"
-build_linker="$(resolve_compiler_program "$build_cc" ld)"
-build_assembler="$(resolve_compiler_program "$build_cc" as)"
-assert_system_executable "$build_linker" "native linker"
-assert_system_executable "$build_assembler" "native assembler"
-build_cc_sha256="$(sha256_file "$build_cc_resolved")"
-build_ar_sha256="$(sha256_file "$build_ar_resolved")"
-build_linker_sha256="$(sha256_file "$build_linker")"
-build_assembler_sha256="$(sha256_file "$build_assembler")"
-build_cc_version="$(capture_tool_version "$build_cc")"
-build_linker_version="$(capture_tool_version "$build_linker")"
-build_cc_target="$("$build_cc" -dumpmachine)"
-case "$build_cc_target" in
-  "" | *$'\t'* | *$'\r'* | *$'\n'*)
-    die "native C compiler reported an invalid target"
-    ;;
-esac
-build_cc_resource_dir="$(
-  "$build_cc" -print-resource-dir 2>/dev/null ||
-    "$build_cc" -print-file-name=include
-)"
-build_cc_resource_dir="$(canonical_directory "$build_cc_resource_dir")"
+
+build_host_discovery_policy="$snapshot/office/tests/acceptance/fresh-agent/build_host_discovery.py"
+[ -f "$build_host_discovery_policy" ] && [ ! -L "$build_host_discovery_policy" ] ||
+  die "build-host discovery policy is unavailable from the exported snapshot"
+build_host_discovery_json="$scratch/build-host-discovery.json"
+build_host_discovery_paths="$scratch/build-host-discovery.paths"
+if ! /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+  /usr/bin/python3 -I "$build_host_discovery_policy" \
+  "$build_platform" "$build_cc" "$build_ar" "$build_sdkroot_argument" \
+  "$build_host_discovery_json" "$build_host_discovery_paths"; then
+  die "could not discover the native build-host closure"
+fi
+/usr/bin/jq -e --arg platform "$build_platform" '
+  keys == ["compiler_queries", "environment", "inventory_paths", "loader",
+    "platform", "schema", "sdk", "tools"] and
+  .schema == "office.fresh-agent.build-host-discovery/1" and
+  .platform == $platform and
+  (.tools | keys) == ["archiver", "assembler", "compiler", "linker"] and
+  (.inventory_paths | type) == "array" and
+  (.inventory_paths | length) > 0 and
+  (.inventory_paths | all(type == "string" and startswith("/"))) and
+  (.inventory_paths | unique | length) == (.inventory_paths | length)
+' "$build_host_discovery_json" >/dev/null ||
+  die "native build-host discovery failed strict validation"
+build_host_discovery_sha256="$(sha256_file "$build_host_discovery_json")"
+build_cc="$(/usr/bin/jq -er '.tools.compiler.selected_path' "$build_host_discovery_json")"
+build_cc_resolved="$(/usr/bin/jq -er '.tools.compiler.resolved_path' "$build_host_discovery_json")"
+build_cc_sha256="$(/usr/bin/jq -er '.tools.compiler.sha256' "$build_host_discovery_json")"
+build_cc_version="$(/usr/bin/jq -r '.tools.compiler.version[]' "$build_host_discovery_json")"
+build_cc_target="$(/usr/bin/jq -er '.compiler_queries.target' "$build_host_discovery_json")"
+build_cc_resource_dir="$(/usr/bin/jq -er '.compiler_queries.resource_directory.selected_path' "$build_host_discovery_json")"
+build_cc_resource_dir_resolved="$(/usr/bin/jq -er '.compiler_queries.resource_directory.resolved_path' "$build_host_discovery_json")"
+build_ar="$(/usr/bin/jq -er '.tools.archiver.selected_path' "$build_host_discovery_json")"
+build_ar_resolved="$(/usr/bin/jq -er '.tools.archiver.resolved_path' "$build_host_discovery_json")"
+build_ar_sha256="$(/usr/bin/jq -er '.tools.archiver.sha256' "$build_host_discovery_json")"
+build_linker="$(/usr/bin/jq -er '.tools.linker.selected_path' "$build_host_discovery_json")"
+build_linker_resolved="$(/usr/bin/jq -er '.tools.linker.resolved_path' "$build_host_discovery_json")"
+build_linker_sha256="$(/usr/bin/jq -er '.tools.linker.sha256' "$build_host_discovery_json")"
+build_linker_version="$(/usr/bin/jq -r '.tools.linker.version[]' "$build_host_discovery_json")"
+build_assembler="$(/usr/bin/jq -er '.tools.assembler.selected_path' "$build_host_discovery_json")"
+build_assembler_resolved="$(/usr/bin/jq -er '.tools.assembler.resolved_path' "$build_host_discovery_json")"
+build_assembler_sha256="$(/usr/bin/jq -er '.tools.assembler.sha256' "$build_host_discovery_json")"
+build_sdkroot="$(/usr/bin/jq -er '.sdk.selected_path' "$build_host_discovery_json")"
+build_sdkroot_resolved="$(/usr/bin/jq -er '.sdk.resolved_path' "$build_host_discovery_json")"
+if [ "$build_platform" = linux-x86_64 ]; then
+  build_sdk_version="$build_cc_target"
+fi
 host_identity_sha256="$(sha256_file "$host_identity_path")"
-host_kernel="$(/usr/bin/uname -a)"
+host_kernel="$(/usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C /usr/bin/uname -a)"
 
 host_inventory_entries=()
 add_host_inventory_path "$host_identity_path"
-case "$build_platform" in
-  darwin-arm64)
-    add_host_inventory_path "$build_sdkroot"
-    add_host_inventory_path "$build_cc_resource_dir"
-    add_host_inventory_path "$build_cc_resolved"
-    add_host_inventory_path "$build_ar_resolved"
-    add_host_inventory_path "$build_linker"
-    add_host_inventory_path "$build_assembler"
-    ;;
-  linux-x86_64)
-    build_sdkroot="$("$build_cc" -print-sysroot)"
-    [ -n "$build_sdkroot" ] || build_sdkroot=/
-    build_sdkroot="$(canonical_directory "$build_sdkroot")"
-    build_sdk_version="$build_cc_target"
-    add_host_inventory_path /usr/include
-    [ ! -d /usr/local/include ] || add_host_inventory_path /usr/local/include
-    [ ! -d "/usr/include/$build_cc_target" ] ||
-      add_host_inventory_path "/usr/include/$build_cc_target"
-    add_host_inventory_path "$build_cc_resource_dir"
-    build_libgcc="$("$build_cc" -print-libgcc-file-name)"
-    [ -f "$build_libgcc" ] ||
-      die "native C compiler did not resolve libgcc"
-    add_host_inventory_path "$(/usr/bin/dirname -- "$build_libgcc")"
-    add_host_inventory_path "$build_cc_resolved"
-    add_host_inventory_path "$build_ar_resolved"
-    add_host_inventory_path "$build_linker"
-    add_host_inventory_path "$build_assembler"
-    for runtime_input in \
-      crt1.o Scrt1.o crti.o crtn.o libc.so libc.so.6 libc_nonshared.a \
-      libm.so libm.so.6 libpthread.so.0 librt.so.1 libdl.so.2 \
-      ld-linux-x86-64.so.2; do
-      runtime_path="$("$build_cc" "-print-file-name=$runtime_input")"
-      case "$runtime_path" in
-        /*)
-          if [ -e "$runtime_path" ] || [ -L "$runtime_path" ]; then
-            add_host_inventory_path "$runtime_path"
-          fi
-          ;;
-      esac
-    done
-    ;;
-esac
+while IFS= read -r discovered_host_path; do
+  [ -n "$discovered_host_path" ] || continue
+  [ "$discovered_host_path" = / ] || add_host_inventory_path "$discovered_host_path"
+done < "$build_host_discovery_paths"
+if [ "$build_platform" = linux-x86_64 ]; then
+  add_host_inventory_path /usr/include
+  [ ! -d /usr/local/include ] || add_host_inventory_path /usr/local/include
+  [ ! -d "/usr/include/$build_cc_target" ] ||
+    add_host_inventory_path "/usr/include/$build_cc_target"
+fi
+
 sorted_host_inventory_entries=()
 while IFS= read -r host_inventory_entry; do
   sorted_host_inventory_entries+=("$host_inventory_entry")
@@ -804,8 +771,9 @@ if [ "$build_platform" = darwin-arm64 ]; then
 fi
 build_host_json="$scratch/build-host.json"
 /usr/bin/jq -n \
-  --arg schema "office.fresh-agent.build-host/1" \
+  --arg schema "office.fresh-agent.build-host/2" \
   --arg platform "$build_platform" \
+  --arg discovery_sha256 "$build_host_discovery_sha256" \
   --arg moon_cc "$build_cc" \
   --arg moon_ar "$build_ar" \
   --arg sdkroot "$build_sdkroot_environment" \
@@ -817,15 +785,19 @@ build_host_json="$scratch/build-host.json"
   --arg cc_version "$build_cc_version" \
   --arg cc_target "$build_cc_target" \
   --arg cc_resource_dir "$build_cc_resource_dir" \
+  --arg cc_resource_dir_resolved "$build_cc_resource_dir_resolved" \
   --arg ar_resolved "$build_ar_resolved" \
   --arg ar_sha256 "$build_ar_sha256" \
-  --arg linker_resolved "$build_linker" \
+  --arg linker_selected "$build_linker" \
+  --arg linker_resolved "$build_linker_resolved" \
   --arg linker_sha256 "$build_linker_sha256" \
   --arg linker_version "$build_linker_version" \
-  --arg assembler_resolved "$build_assembler" \
+  --arg assembler_selected "$build_assembler" \
+  --arg assembler_resolved "$build_assembler_resolved" \
   --arg assembler_sha256 "$build_assembler_sha256" \
   --arg sdk_kind "$build_sdk_kind" \
   --arg sdk_path "$build_sdkroot" \
+  --arg sdk_resolved "$build_sdkroot_resolved" \
   --arg sdk_version "$build_sdk_version" \
   --arg inventory_root "$host_inventory_root" \
   --arg inventory_sha256 "$build_host_manifest_sha256" \
@@ -835,6 +807,10 @@ build_host_json="$scratch/build-host.json"
   '{
     schema: $schema,
     platform: $platform,
+    discovery: {
+      schema: "office.fresh-agent.build-host-discovery/1",
+      sha256: $discovery_sha256
+    },
     environment: {
       moon_cc: $moon_cc,
       moon_ar: $moon_ar,
@@ -851,7 +827,10 @@ build_host_json="$scratch/build-host.json"
       sha256: $cc_sha256,
       version: $cc_version,
       target: $cc_target,
-      resource_dir: $cc_resource_dir
+      resource_dir: {
+        selected_path: $cc_resource_dir,
+        resolved_path: $cc_resource_dir_resolved
+      }
     },
     archiver: {
       selected_path: $moon_ar,
@@ -859,15 +838,22 @@ build_host_json="$scratch/build-host.json"
       sha256: $ar_sha256
     },
     linker: {
+      selected_path: $linker_selected,
       resolved_path: $linker_resolved,
       sha256: $linker_sha256,
       version: $linker_version
     },
     assembler: {
+      selected_path: $assembler_selected,
       resolved_path: $assembler_resolved,
       sha256: $assembler_sha256
     },
-    sdk: {kind: $sdk_kind, path: $sdk_path, version: $sdk_version},
+    sdk: {
+      kind: $sdk_kind,
+      selected_path: $sdk_path,
+      resolved_path: $sdk_resolved,
+      version: $sdk_version
+    },
     inventory: {
       root: $inventory_root,
       entries: $inventory_entries,
@@ -928,46 +914,43 @@ postbuild_host_manifest="$scratch/postbuild-host.manifest"
   "${host_inventory_entries[@]}"
 /usr/bin/cmp "$build_host_manifest" "$postbuild_host_manifest" ||
   die "native build-host closure changed during frozen release builds"
-postbuild_cc_resolved="$(canonical_existing_path "$build_cc")"
-postbuild_ar_resolved="$(canonical_existing_path "$build_ar")"
-postbuild_linker="$(resolve_compiler_program "$build_cc" ld)"
-postbuild_assembler="$(resolve_compiler_program "$build_cc" as)"
-postbuild_cc_target="$("$build_cc" -dumpmachine)"
-postbuild_cc_resource_dir="$(
-  "$build_cc" -print-resource-dir 2>/dev/null ||
-    "$build_cc" -print-file-name=include
-)"
-postbuild_cc_resource_dir="$(canonical_directory "$postbuild_cc_resource_dir")"
-case "$build_platform" in
-  darwin-arm64)
-    postbuild_sdkroot="$(
-      canonical_directory "$(/usr/bin/xcrun --sdk macosx --show-sdk-path)"
-    )"
-    postbuild_sdk_version="$(/usr/bin/xcrun --sdk macosx --show-sdk-version)"
-    ;;
-  linux-x86_64)
-    postbuild_sdkroot="$("$build_cc" -print-sysroot)"
-    [ -n "$postbuild_sdkroot" ] || postbuild_sdkroot=/
-    postbuild_sdkroot="$(canonical_directory "$postbuild_sdkroot")"
-    postbuild_sdk_version="$postbuild_cc_target"
-    ;;
-esac
-[ "$postbuild_cc_resolved" = "$build_cc_resolved" ] &&
-  [ "$postbuild_ar_resolved" = "$build_ar_resolved" ] &&
-  [ "$postbuild_linker" = "$build_linker" ] &&
-  [ "$postbuild_assembler" = "$build_assembler" ] &&
-  [ "$postbuild_cc_target" = "$build_cc_target" ] &&
-  [ "$postbuild_cc_resource_dir" = "$build_cc_resource_dir" ] &&
-  [ "$postbuild_sdkroot" = "$build_sdkroot" ] &&
-  [ "$postbuild_sdk_version" = "$build_sdk_version" ] &&
-  [ "$(/usr/bin/uname -a)" = "$host_kernel" ] ||
-  die "native build-host selection changed during the build"
-[ "$(sha256_file "$build_cc_resolved")" = "$build_cc_sha256" ] &&
-  [ "$(sha256_file "$build_ar_resolved")" = "$build_ar_sha256" ] &&
-  [ "$(sha256_file "$build_linker")" = "$build_linker_sha256" ] &&
-  [ "$(sha256_file "$build_assembler")" = "$build_assembler_sha256" ] &&
+postbuild_discovery_cc="$build_cc"
+postbuild_discovery_ar="$build_ar"
+postbuild_discovery_sdk_argument=-
+postbuild_sdk_version="$build_sdk_version"
+if [ "$build_platform" = darwin-arm64 ]; then
+  postbuild_discovery_cc="$(/usr/bin/env -i PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG=C LC_ALL=C \
+    /usr/bin/xcrun --sdk macosx --find clang)"
+  postbuild_discovery_ar="$(/usr/bin/env -i PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG=C LC_ALL=C \
+    /usr/bin/xcrun --sdk macosx --find ar)"
+  postbuild_discovery_sdk_argument="$(/usr/bin/env -i PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG=C LC_ALL=C \
+    /usr/bin/xcrun --sdk macosx --show-sdk-path)"
+  postbuild_sdk_version="$(/usr/bin/env -i PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG=C LC_ALL=C \
+    /usr/bin/xcrun --sdk macosx --show-sdk-version)"
+fi
+[ "$postbuild_discovery_cc" = "$build_cc" ] &&
+  [ "$postbuild_discovery_ar" = "$build_ar" ] &&
+  { [ "$build_platform" = linux-x86_64 ] ||
+    [ "$postbuild_discovery_sdk_argument" = "$build_sdkroot" ]; } &&
+  [ "$postbuild_sdk_version" = "$build_sdk_version" ] ||
+  die "native build-host selector changed during the build"
+postbuild_discovery_json="$scratch/postbuild-host-discovery.json"
+postbuild_discovery_paths="$scratch/postbuild-host-discovery.paths"
+if ! /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+  /usr/bin/python3 -I "$build_host_discovery_policy" \
+  "$build_platform" "$postbuild_discovery_cc" "$postbuild_discovery_ar" \
+  "$postbuild_discovery_sdk_argument" \
+  "$postbuild_discovery_json" "$postbuild_discovery_paths"; then
+  die "could not rediscover the native build-host closure after the build"
+fi
+/usr/bin/cmp "$build_host_discovery_json" "$postbuild_discovery_json" ||
+  die "native build-host selections or loaded dependencies changed during the build"
+/usr/bin/cmp "$build_host_discovery_paths" "$postbuild_discovery_paths" ||
+  die "native build-host inventory roots changed during the build"
+[ "$(/usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C /usr/bin/uname -a)" = \
+  "$host_kernel" ] &&
   [ "$(sha256_file "$host_identity_path")" = "$host_identity_sha256" ] ||
-  die "native build-host tool or OS identity changed during the build"
+  die "native build-host OS identity changed during the build"
 mkdir -m 0700 "$stage/bin" "$stage/libexec" "$stage/control"
 install -m 0500 "$native_artifact" "$stage/bin/office-native"
 install -m 0500 \
@@ -1008,6 +991,10 @@ install -m 0400 "$dependency_manifest" \
 install -m 0400 "$build_host_json" "$stage/control/build-host.json"
 install -m 0400 "$build_host_manifest" \
   "$stage/control/build-host.manifest"
+install -m 0400 "$build_host_discovery_policy" \
+  "$stage/control/build-host-discovery.py"
+install -m 0400 "$build_host_discovery_json" \
+  "$stage/control/build-host-discovery.json"
 ln -s office-native "$stage/bin/office"
 
 jq -n \
@@ -1042,6 +1029,12 @@ installed_build_host_sha256="$(sha256_file "$stage/control/build-host.json")"
 installed_build_host_manifest_sha256="$(
   sha256_file "$stage/control/build-host.manifest"
 )"
+build_host_discovery_policy_sha256="$(
+  sha256_file "$stage/control/build-host-discovery.py"
+)"
+installed_build_host_discovery_sha256="$(
+  sha256_file "$stage/control/build-host-discovery.json"
+)"
 moon_sha256="$(sha256_file "$moon_bin")"
 moonc_sha256="$(sha256_file "$moonc_bin")"
 
@@ -1055,6 +1048,8 @@ jq -n \
   --arg dependency_manifest_sha256 "$dependency_manifest_sha256" \
   --arg build_host_sha256 "$installed_build_host_sha256" \
   --arg build_host_manifest_sha256 "$installed_build_host_manifest_sha256" \
+  --arg build_host_discovery_policy_sha256 "$build_host_discovery_policy_sha256" \
+  --arg build_host_discovery_sha256 "$installed_build_host_discovery_sha256" \
   --arg moon_version "$moon_version" \
   --arg moon_sha256 "$moon_sha256" \
   --arg moonc_version "$moonc_version" \
@@ -1085,6 +1080,8 @@ jq -n \
       dependency_manifest_sha256: $dependency_manifest_sha256,
       build_host_sha256: $build_host_sha256,
       build_host_manifest_sha256: $build_host_manifest_sha256,
+      build_host_discovery_policy_sha256: $build_host_discovery_policy_sha256,
+      build_host_discovery_sha256: $build_host_discovery_sha256,
       moon_version: $moon_version,
       moon_sha256: $moon_sha256,
       moonc_version: $moonc_version,
@@ -1110,7 +1107,9 @@ jq -n \
       {path: "control/toolchain.manifest", kind: "file", mode: "0400", sha256: $toolchain_manifest_sha256},
       {path: "control/dependencies.manifest", kind: "file", mode: "0400", sha256: $dependency_manifest_sha256},
       {path: "control/build-host.json", kind: "file", mode: "0400", sha256: $build_host_sha256},
-      {path: "control/build-host.manifest", kind: "file", mode: "0400", sha256: $build_host_manifest_sha256}
+      {path: "control/build-host.manifest", kind: "file", mode: "0400", sha256: $build_host_manifest_sha256},
+      {path: "control/build-host-discovery.py", kind: "file", mode: "0400", sha256: $build_host_discovery_policy_sha256},
+      {path: "control/build-host-discovery.json", kind: "file", mode: "0400", sha256: $build_host_discovery_sha256}
     ],
     symlinks: [
       {path: "bin/office", target: "office-native"}
