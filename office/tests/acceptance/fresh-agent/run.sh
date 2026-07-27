@@ -641,11 +641,23 @@ run_codex() {
 }
 
 remove_isolated_auth() {
-  local staged_auth="${isolated_codex_state:-}/auth.json"
-  if [ -n "${isolated_codex_state:-}" ] &&
-    { [ -e "$staged_auth" ] || [ -L "$staged_auth" ]; }; then
+  local codex_state="${isolated_codex_state:-}"
+  local observed_identity
+  local staged_auth
+  [ -n "$codex_state" ] || return 0
+  staged_auth="$codex_state/auth.json"
+  if [ -e "$staged_auth" ] || [ -L "$staged_auth" ]; then
+    observed_identity="$(stat_identity "$codex_state" 2>/dev/null || true)"
+    if [ -n "${isolated_codex_state_identity:-}" ] &&
+      { [ ! -d "$codex_state" ] || [ -L "$codex_state" ] ||
+        [ "$observed_identity" != "$isolated_codex_state_identity" ]; }; then
+      return 1
+    fi
+    chmod u+rwx -- "$codex_state" 2>/dev/null || true
+    chmod u+rw -- "$staged_auth" 2>/dev/null || true
     /bin/rm -f -- "$staged_auth" 2>/dev/null || true
   fi
+  [ ! -e "$staged_auth" ] && [ ! -L "$staged_auth" ]
 }
 
 process_is_live() {
@@ -671,16 +683,24 @@ terminate_supervised_codex() {
   local attempt
   local pid="${codex_pid:-}"
   local pgid="${codex_pgid:-}"
+  local auth_removed=1
+  local first_signal=TERM
   local survived=0
-  remove_isolated_auth
+  if ! remove_isolated_auth; then
+    auth_removed=0
+    # Do not give a process a graceful-shutdown window while its staged
+    # credential is still present. A direct KILL is the fail-closed fallback.
+    first_signal=KILL
+  fi
   if [ -n "$pgid" ] && [ -n "$pid" ] && [ "$pgid" = "$pid" ]; then
     if process_group_has_live_processes "$pgid"; then
-      /bin/kill -TERM "-$pgid" 2>/dev/null || true
+      /bin/kill -"$first_signal" "-$pgid" 2>/dev/null || true
       for attempt in {1..20}; do
         process_group_has_live_processes "$pgid" || break
         /bin/sleep 0.1
       done
-      if process_group_has_live_processes "$pgid"; then
+      if [ "$first_signal" = TERM ] &&
+        process_group_has_live_processes "$pgid"; then
         /bin/kill -KILL "-$pgid" 2>/dev/null || true
         for attempt in {1..20}; do
           process_group_has_live_processes "$pgid" || break
@@ -692,12 +712,12 @@ terminate_supervised_codex() {
       fi
     fi
   elif [ -n "$pid" ] && process_is_live "$pid"; then
-    /bin/kill -TERM "$pid" 2>/dev/null || true
+    /bin/kill -"$first_signal" "$pid" 2>/dev/null || true
     for attempt in {1..20}; do
       process_is_live "$pid" || break
       /bin/sleep 0.1
     done
-    if process_is_live "$pid"; then
+    if [ "$first_signal" = TERM ] && process_is_live "$pid"; then
       /bin/kill -KILL "$pid" 2>/dev/null || true
       for attempt in {1..20}; do
         process_is_live "$pid" || break
@@ -708,9 +728,11 @@ terminate_supervised_codex() {
       survived=1
     fi
   fi
-  if [ -n "$pid" ]; then
+  if [ -n "$pid" ] && ! process_is_live "$pid"; then
     wait "$pid" 2>/dev/null || true
   fi
+  remove_isolated_auth || survived=1
+  [ "$auth_removed" -eq 1 ] || survived=1
   codex_pid=""
   codex_pgid=""
   [ "$survived" -eq 0 ]
@@ -724,9 +746,13 @@ arm_codex_supervision() {
   if /bin/kill -0 "$pid" 2>/dev/null; then
     observed_pgid="$(
       /bin/ps -o pgid= -p "$pid" 2>/dev/null | /usr/bin/tr -d ' '
-    )"
+    )" || true
     if [ -n "$observed_pgid" ] && [ "$observed_pgid" != "$pid" ]; then
-      terminate_supervised_codex
+      # Never signal an unexpected process group: it may be the runner's own
+      # group. Clear the group claim and use bounded direct termination.
+      codex_pgid=""
+      terminate_supervised_codex ||
+        die "Codex child in an unexpected process group survived termination"
       die "Codex child did not enter its dedicated process group"
     fi
   fi
@@ -802,17 +828,26 @@ start_loopback_listener() {
       </dev/null >"$isolation_root/network-listener.log" 2>&1 &
     network_listener_pid="$!"
     /bin/sleep 0.05
-    if /bin/kill -0 "$network_listener_pid" 2>/dev/null &&
-      /bin/bash -p -c 'exec 3<>/dev/tcp/127.0.0.1/$1' \
-        office-listener "$port" >/dev/null 2>&1; then
+    if /bin/kill -0 "$network_listener_pid" 2>/dev/null; then
       network_port="$port"
-      return 0
+      if assert_loopback_listener_reachable; then
+        return 0
+      fi
     fi
     /bin/kill "$network_listener_pid" 2>/dev/null || true
     wait "$network_listener_pid" 2>/dev/null || true
     network_listener_pid=""
   done
   die "netcat does not support the required 'nc -l -k HOST PORT' listener form, or no loopback port could be bound"
+}
+
+assert_loopback_listener_reachable() {
+  [ -n "${network_listener_pid:-}" ] &&
+    /bin/kill -0 "$network_listener_pid" 2>/dev/null ||
+    return 1
+  /bin/bash -p -c 'exec 3<>/dev/tcp/127.0.0.1/$1; exec 3>&-; exec 3<&-' \
+    office-listener "$network_port" >/dev/null 2>&1 || return 1
+  /bin/kill -0 "$network_listener_pid" 2>/dev/null
 }
 
 write_live_canary_launcher() {
@@ -1753,12 +1788,17 @@ network_listener_pid=""
 ambient_write_path=""
 codex_pid=""
 codex_pgid=""
+isolated_codex_state_identity=""
 
 cleanup() {
   local status="$1"
   trap - EXIT HUP INT TERM
-  terminate_supervised_codex || true
-  remove_isolated_auth
+  if ! terminate_supervised_codex; then
+    status=1
+  fi
+  if ! remove_isolated_auth; then
+    status=1
+  fi
   if [ -n "${network_listener_pid:-}" ]; then
     /bin/kill "$network_listener_pid" 2>/dev/null || true
     wait "$network_listener_pid" 2>/dev/null || true
@@ -1809,6 +1849,7 @@ policy_readonly_root="$isolation_root/policy-readonly"
   "$isolated_codex_bin" \
   "$isolated_codex_resources" \
   "$policy_readonly_root"
+isolated_codex_state_identity="$(stat_identity "$isolated_codex_state")"
 printf '%s\n' 'non-secret permission sentinel' \
   > "$isolated_codex_state/credential-canary"
 chmod 0600 "$isolated_codex_state/credential-canary"
@@ -1896,6 +1937,10 @@ if [[ ! "$codex_version" =~ ^codex-cli[[:space:]]+([0-9]+)\.([0-9]+)\.([0-9]+)([
 fi
 codex_major="${BASH_REMATCH[1]}"
 codex_minor="${BASH_REMATCH[2]}"
+codex_suffix="${BASH_REMATCH[4]:-}"
+case "$codex_suffix" in
+  -*) die "Codex CLI prerelease builds are not accepted: $codex_version" ;;
+esac
 if (( codex_major == 0 && codex_minor < 145 )); then
   die "Codex CLI 0.145.0 or newer is required: $codex_version"
 fi
@@ -2009,6 +2054,8 @@ chmod 0600 "$config_tmp"
 /bin/mv "$config_tmp" "$config_file"
 config_sha256_before="$(sha256_file "$config_file")"
 
+assert_loopback_listener_reachable ||
+  die "loopback denial-canary listener is not live before the permission canary"
 set -m
 run_codex sandbox \
   --include-managed-config \
@@ -2033,6 +2080,8 @@ set +m
 wait_for_supervised_codex \
   "permission canary" "$codex_canary_timeout_seconds"
 canary_status="$supervised_codex_status"
+assert_loopback_listener_reachable ||
+  die "loopback denial-canary listener is not live after the permission canary"
 if [ "$canary_status" -ne 0 ]; then
   echo "error: Codex permission-profile canary log follows" >&2
   /bin/cat "$evidence_root/permission-canary.log" >&2
@@ -2170,6 +2219,8 @@ verify_codex_runtime
 # since the isolation root was created.
 /usr/bin/install -m 0600 "$auth_json" "$isolated_codex_state/auth.json"
 
+assert_loopback_listener_reachable ||
+  die "loopback denial-canary listener is not live before the installed-command probe"
 set -m
 run_codex exec \
   --ephemeral \
@@ -2195,10 +2246,13 @@ set +m
 wait_for_supervised_codex \
   "installed-command probe" "$codex_probe_timeout_seconds"
 codex_status="$supervised_codex_status"
+assert_loopback_listener_reachable ||
+  die "loopback denial-canary listener is not live after the installed-command probe"
 
 printf 'codex_exit_status=%s\n' "$codex_status" \
   > "$evidence_root/codex-exit-status.txt"
-remove_isolated_auth
+remove_isolated_auth ||
+  die "could not remove the staged Codex credential after the probe"
 
 verify_candidate "$install_root" "$expected_candidate_sha256"
 verify_candidate "$candidate_root" "$expected_candidate_sha256"
