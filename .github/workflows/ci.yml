@@ -320,9 +320,9 @@ jobs:
           )
           jq -e \
             --arg head "$head" \
-            '.schema == "office.fresh-agent.candidate/3"
+            '.schema == "office.fresh-agent.candidate/4"
               and .candidate_head == $head
-              and (.files | length) == 13
+              and (.files | length) == 15
               and .symlinks == [
                 {path: "bin/office", target: "office-native"}
               ]' \
