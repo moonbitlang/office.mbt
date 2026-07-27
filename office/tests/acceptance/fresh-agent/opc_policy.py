@@ -30,6 +30,9 @@ OFFICE_DOCUMENT_REL = (
     "http://schemas.openxmlformats.org/officeDocument/2006/"
     "relationships/officeDocument"
 )
+URI_UNRESERVED = frozenset(
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
+)
 
 
 class ValidationError(Exception):
@@ -63,6 +66,12 @@ def decode_uri_path(value, label):
                 for character in value[index + 1 : index + 3]
             ):
                 fail("invalid percent escape in %s" % label)
+            encoded = value[index + 1 : index + 3]
+            if encoded != encoded.upper():
+                fail("non-canonical percent escape in %s" % label)
+            decoded_octet = chr(int(encoded, 16))
+            if decoded_octet in URI_UNRESERVED or decoded_octet in "/\\":
+                fail("non-canonical percent escape in %s" % label)
             index += 3
         else:
             index += 1
@@ -77,16 +86,27 @@ def decode_uri_path(value, label):
 
 def validate_part_path(value, label, allow_trailing_slash=False):
     decoded = decode_uri_path(value, label)
-    if decoded.startswith("/") or "//" in decoded:
+    if (
+        value.startswith("/")
+        or "//" in value
+        or decoded.startswith("/")
+        or "//" in decoded
+    ):
         fail("non-canonical %s" % label)
-    if allow_trailing_slash and decoded.endswith("/"):
+    if allow_trailing_slash and value.endswith("/"):
+        value = value[:-1]
         decoded = decoded[:-1]
-    elif decoded.endswith("/"):
+    elif value.endswith("/") or decoded.endswith("/"):
         fail("non-canonical %s" % label)
-    components = decoded.split("/")
-    if not components or any(component in ("", ".", "..") for component in components):
+    components = value.split("/")
+    decoded_components = decoded.split("/")
+    if (
+        not components
+        or any(component in ("", ".", "..") for component in components)
+        or any(component in ("", ".", "..") for component in decoded_components)
+    ):
         fail("non-canonical %s" % label)
-    return decoded
+    return value
 
 
 def parse_xml(payload, part_name):
@@ -264,6 +284,14 @@ def parse_content_types(root, file_names):
             content_type = defaults.get(extension)
         if has_unsafe_text(content_type):
             fail("OPC part has no complete content-type declaration: %s" % part_name)
+        if (
+            part_name.casefold().endswith(".rels")
+            and content_type != RELATIONSHIPS_CONTENT_TYPE
+        ):
+            fail(
+                "OPC relationships part has the wrong effective content type: %s"
+                % part_name
+            )
         content_types[part_name] = content_type
     return content_types
 
@@ -285,12 +313,12 @@ def resolve_internal_target(source_part, target):
     parsed = urllib.parse.urlsplit(target)
     if parsed.scheme or parsed.netloc or parsed.query or parsed.fragment:
         fail("internal OPC relationship target is not a plain part path")
-    decoded = decode_uri_path(parsed.path, "OPC relationship target")
-    if decoded.startswith("/"):
-        candidate = decoded[1:]
+    decode_uri_path(parsed.path, "OPC relationship target")
+    if parsed.path.startswith("/"):
+        candidate = parsed.path[1:]
     else:
         base = posixpath.dirname(source_part) if source_part is not None else ""
-        candidate = posixpath.join(base, decoded)
+        candidate = posixpath.join(base, parsed.path)
     normalized = posixpath.normpath(candidate)
     if normalized in ("", ".", "..") or normalized.startswith("../"):
         fail("OPC relationship target escapes the package")
