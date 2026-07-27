@@ -18,6 +18,11 @@ Rules:
 - Shell utilities such as `jq`, `shasum`, `cmp`, and ZIP inspectors are allowed
   for assertions, but all Office creation, reading, mutation, validation,
   preview, dump/replay, and template work must use the installed commands.
+- Every command must directly invoke an installed Office command or a simple
+  filesystem/assertion utility. Do not invoke interpreters, schedulers,
+  service managers, `setsid`, `nohup`, `disown`, `xargs`, `find -exec`, process
+  substitution, or background jobs. The host rejects the entire run if any
+  recorded command falls outside this non-detaching policy.
 - Include the literal executable name (`office-native` or `office-wasm`) and
   operation in each evidence-bearing shell command. The host derives a command,
   result, and artifact inventory from Codex events and rejects unrecorded or

@@ -156,6 +156,17 @@ release supervision: the controller terminates and drains any remaining live
 process-group member before it clears the PGID or continues, and removes the
 staged credential before signaling descendants.
 
+A POSIX process group is treated as bounded cleanup for normal descendants,
+not as an unescapable cross-platform job object: a deliberately detaching child
+could create another session. The pinned, hashed Codex runtime is therefore
+part of the trusted controller boundary. Model-issued commands are separately
+fail-closed: every recorded command must begin with an approved Office or
+assertion executable and must not contain backgrounding, detachment,
+scheduler/service-manager, interpreter, process-substitution, or `find -exec`
+syntax. A run containing such an event cannot produce accepted evidence. The
+permission canary independently proves model-issued commands cannot read the
+privately staged credential.
+
 ## Run in least privilege
 
 Use the runner copied into the candidate. Probe and evidence paths must be
@@ -275,10 +286,12 @@ schema/format/postconditions, and referenced Office ZIP or preview artifact all
 validate. Office packages are subject to fixed compressed/expanded-size and
 entry-count limits, case-folded entry uniqueness, safe part paths, and exact
 content-type, root-relationship, main-part, and main-namespace checks. Probe
-paths must be lowercase, so command-event IDs and result paths remain globally
-unique on both case-sensitive and case-insensitive filesystems. Input
-redirection, comments, cross-format package decoys, help/version modes, shell
-substitution, and status-masking control operators are rejected.
+paths must be lowercase and may not traverse a symlinked parent, so
+command-event IDs and result paths remain globally and physically unique on
+both case-sensitive and case-insensitive filesystems. Input redirection,
+comments, cross-format package decoys, help/version modes, shell substitution,
+detachment syntax, unapproved executables, and status-masking control operators
+are rejected.
 `BASELINE PASS` requires all four runtime/format outcomes to pass and no P0-P2
 gap. `BASELINE FAIL` returns 3.
 
