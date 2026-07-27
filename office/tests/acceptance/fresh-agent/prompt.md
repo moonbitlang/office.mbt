@@ -1,4 +1,4 @@
-You are running the uncoached installed-command acceptance probe for an Office
+You are running the constrained installed-command acceptance probe for an Office
 toolkit. Two candidate commands are already installed on `PATH`:
 `office-native` and `office-wasm`.
 
@@ -11,8 +11,9 @@ Rules:
 - Do not inspect a source checkout, repository files, package registry, prior
   transcripts, or the internet. Do not use MoonBit tooling or legacy
   format-specific Office commands.
-- Your only product documentation is the installed command help. Begin with
-  `office-native help all --json`. Discover consumed JSON contracts through
+- Your only product documentation is the installed command help. Run
+  `office-native help all --json` and `office-wasm help all --json` as separate,
+  direct commands without redirection. Discover consumed JSON contracts through
   installed help; do not guess them from prior knowledge.
 - Shell utilities such as `jq`, `shasum`, `cmp`, and ZIP inspectors are allowed
   for assertions, but all Office creation, reading, mutation, validation,

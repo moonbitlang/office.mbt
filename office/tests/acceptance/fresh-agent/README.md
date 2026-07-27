@@ -1,6 +1,6 @@
 # Installed-command fresh-agent probe
 
-This is the uncoached half of the F1b baseline. It builds one exact commit from
+This is the constrained installed-command half of the F1b baseline. It builds one exact commit from
 a fresh exported snapshot, publishes native and Wasm commands outside the
 checkout, and gives a new Codex session only those commands and their installed
 help. The task prompt contains outcomes, not product command syntax, JSON
@@ -56,7 +56,9 @@ subtrees are published without clobbering, directory modes are locked, and
 `CANDIDATE.json` is linked into place last as the atomic commit marker. A prefix
 without that marker is incomplete. The manifest records the full commit and
 source-tree identity, driver/code-generator/runtime and dependency-tree hashes,
-capability identity, and hashes and modes for every candidate file. The runner
+build-input identity, and hashes and modes for every candidate file. Runtime
+capability identity is derived only from commands executed inside the isolated
+probe; candidate code is never executed by the preparer. The runner
 additionally requires one hard link per regular file and exact directory modes.
 
 Record the manifest digest outside the candidate; it is the trust anchor for

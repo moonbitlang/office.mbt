@@ -18,6 +18,7 @@ unset GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_COMMON_DIR GIT_CONFIG GIT_CONFIG_GLOB
 unset GIT_CONFIG_SYSTEM GIT_CONFIG_COUNT GIT_CEILING_DIRECTORIES NODE_OPTIONS
 unset GIT_EXEC_PATH GIT_TEMPLATE_DIR GIT_ATTR_NOSYSTEM GIT_NO_REPLACE_OBJECTS
 unset DYLD_INSERT_LIBRARIES DYLD_LIBRARY_PATH LD_PRELOAD LD_LIBRARY_PATH
+unset PERL5OPT PERL5LIB TAR_OPTIONS POSIXLY_CORRECT BLOCKSIZE
 TMPDIR=/tmp
 export TMPDIR
 
@@ -37,12 +38,18 @@ require_command() {
 }
 
 sha256_file() {
-  /usr/bin/shasum -a 256 "$1" |
-    /usr/bin/awk '{print substr($1, length($1) - 63)}'
+  /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+    /usr/bin/shasum -a 256 "$1" |
+    /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+      /usr/bin/awk '{print substr($1, length($1) - 63)}'
 }
 
 trusted_git() {
-  GIT_NO_REPLACE_OBJECTS=1 \
+  /usr/bin/env -i \
+    PATH=/usr/bin:/bin:/usr/sbin:/sbin \
+    LANG=C \
+    LC_ALL=C \
+    GIT_NO_REPLACE_OBJECTS=1 \
     GIT_CONFIG=/dev/null \
     GIT_CONFIG_GLOBAL=/dev/null \
     GIT_CONFIG_SYSTEM=/dev/null \
@@ -287,8 +294,11 @@ assert_private_directory "$install_root"
 
 snapshot="$scratch/source"
 mkdir -m 0700 "$snapshot"
-trusted_git -C "$source_root" archive --format=tar "$expected_tree" |
-  tar -xf - -C "$snapshot"
+source_archive="$scratch/source.tar"
+trusted_git -C "$source_root" archive --format=tar "$expected_tree" \
+  > "$source_archive"
+/usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+  /usr/bin/tar -xf "$source_archive" -C "$snapshot"
 
 build_home="$scratch/home"
 build_moon_home="$scratch/moon-home"
@@ -339,10 +349,6 @@ wasm_artifact="$snapshot/_build/wasm/release/build/bobzhang/office/cmd/office/of
 [ -f "$wasm_artifact" ] ||
   die "Wasm release artifact was not built"
 
-"$native_artifact" help all --json > "$scratch/native-help.json"
-"$moonrun_bin" "$wasm_artifact" help all --json > "$scratch/wasm-help.json"
-cmp "$scratch/native-help.json" "$scratch/wasm-help.json"
-
 dependency_hashes="$scratch/dependency-files.sha256"
 (
   cd "$snapshot"
@@ -390,18 +396,6 @@ jq -n \
   }' > "$scratch/private.json"
 install -m 0400 "$scratch/private.json" "$stage/control/private.json"
 
-"$stage/bin/office-native" help all --json \
-  > "$scratch/installed-native-help.json"
-"$stage/bin/office-wasm" help all --json \
-  > "$scratch/installed-wasm-help.json"
-cmp "$scratch/installed-native-help.json" "$scratch/installed-wasm-help.json"
-cmp "$scratch/native-help.json" "$scratch/installed-native-help.json"
-
-capability_schema="$(jq -er '.data.schema' "$scratch/installed-native-help.json")"
-capability_fingerprint="$(
-  jq -er '.data.fingerprint' "$scratch/installed-native-help.json"
-)"
-
 native_sha256="$(sha256_file "$stage/bin/office-native")"
 wasm_wrapper_sha256="$(sha256_file "$stage/bin/office-wasm")"
 moonrun_sha256="$(sha256_file "$stage/libexec/moonrun")"
@@ -415,7 +409,7 @@ moon_sha256="$(sha256_file "$moon_bin")"
 moonc_sha256="$(sha256_file "$moonc_bin")"
 
 jq -n \
-  --arg schema "office.fresh-agent.candidate/1" \
+  --arg schema "office.fresh-agent.candidate/2" \
   --arg candidate_head "$expected_head" \
   --arg source_tree "$expected_tree" \
   --arg moon_version "$moon_version" \
@@ -424,8 +418,6 @@ jq -n \
   --arg moonc_sha256 "$moonc_sha256" \
   --arg moonrun_version "$moonrun_version" \
   --arg dependency_tree_sha256 "$dependency_tree_sha256" \
-  --arg capability_schema "$capability_schema" \
-  --arg capability_fingerprint "$capability_fingerprint" \
   --arg native_sha256 "$native_sha256" \
   --arg wasm_wrapper_sha256 "$wasm_wrapper_sha256" \
   --arg moonrun_sha256 "$moonrun_sha256" \
@@ -445,9 +437,7 @@ jq -n \
       moonc_version: $moonc_version,
       moonc_sha256: $moonc_sha256,
       moonrun_version: $moonrun_version,
-      dependency_tree_sha256: $dependency_tree_sha256,
-      capability_schema: $capability_schema,
-      capability_fingerprint: $capability_fingerprint
+      dependency_tree_sha256: $dependency_tree_sha256
     },
     files: [
       {path: "bin/office-native", kind: "file", mode: "0500", sha256: $native_sha256},

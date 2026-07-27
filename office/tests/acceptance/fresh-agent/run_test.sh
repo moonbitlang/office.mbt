@@ -17,6 +17,7 @@ PATH=/usr/bin:/bin:/usr/sbin:/sbin
 export PATH
 unset BASH_ENV ENV CDPATH NODE_OPTIONS
 unset DYLD_INSERT_LIBRARIES DYLD_LIBRARY_PATH LD_PRELOAD LD_LIBRARY_PATH
+unset PERL5OPT PERL5LIB TAR_OPTIONS POSIXLY_CORRECT BLOCKSIZE
 
 script_dir="$(
   unset CDPATH
@@ -109,7 +110,7 @@ make_candidate() {
   printf '%s\n' \
     '#!/bin/sh' \
     'case "${TMPDIR:-}" in */.office-f1b-isolation.*/tmp) ;; *) exit 70 ;; esac' \
-    'printf "fake-office %s\\n" "${1:-help}"' \
+    'if [ "${1:-}" = help ]; then printf '\''{"data":{"schema":"office.capabilities/test","fingerprint":"test:fingerprint"}}\n'\''; else printf "fake-office %s\\n" "${1:-help}"; fi' \
     > "$install_root/bin/office-native"
   /usr/bin/install -m 0500 "$script_dir/office-wasm" \
     "$install_root/bin/office-wasm"
@@ -117,7 +118,7 @@ make_candidate() {
     '#!/bin/sh' \
     'shift' \
     'case "${TMPDIR:-}" in */.office-f1b-isolation.*/tmp) ;; *) exit 70 ;; esac' \
-    'printf "fake-office %s\\n" "${1:-help}"' \
+    'if [ "${1:-}" = help ]; then printf '\''{"data":{"schema":"office.capabilities/test","fingerprint":"test:fingerprint"}}\n'\''; else printf "fake-office %s\\n" "${1:-help}"; fi' \
     > "$install_root/libexec/moonrun"
   printf 'fake wasm\n' > "$install_root/libexec/office.wasm"
   /usr/bin/install -m 0500 "$script_dir/run.sh" \
@@ -156,7 +157,7 @@ make_candidate() {
   private_sha="$(sha256_file "$install_root/control/private.json")"
 
   /usr/bin/jq -n \
-    --arg schema "office.fresh-agent.candidate/1" \
+    --arg schema "office.fresh-agent.candidate/2" \
     --arg candidate_head "$head" \
     --arg native_sha "$native_sha" \
     --arg wasm_wrapper_sha "$wasm_wrapper_sha" \
@@ -177,9 +178,7 @@ make_candidate() {
         moonc_version: "fake-moonc 1",
         moonc_sha256: ("d" * 64),
         moonrun_version: "fake-moonrun 1",
-        dependency_tree_sha256: ("b" * 64),
-        capability_schema: "office.capabilities/test",
-        capability_fingerprint: "test:fingerprint"
+        dependency_tree_sha256: ("b" * 64)
       },
       files: [
         {path: "bin/office-native", kind: "file", mode: "0500", sha256: $native_sha},
@@ -638,13 +637,13 @@ expect_failure contradictory 1 'exact structured verdict' \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'no-office\n' > "$codex_bin_dir/mode"
-expect_failure no-office 1 'required workflow: native/all/help' \
+expect_failure no-office 1 'exact isolated help result for native' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/no-office-probe" "$case_root/no-office-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'spoof-office\n' > "$codex_bin_dir/mode"
-expect_failure spoof-office 1 'required workflow: native/all/help' \
+expect_failure spoof-office 1 'exact isolated help result for native' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/spoof-office-probe" "$case_root/spoof-office-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"

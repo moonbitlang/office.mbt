@@ -18,6 +18,7 @@ unset GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_COMMON_DIR GIT_CONFIG GIT_CONFIG_GLOB
 unset GIT_CONFIG_SYSTEM GIT_CEILING_DIRECTORIES NODE_OPTIONS
 unset DYLD_INSERT_LIBRARIES DYLD_LIBRARY_PATH LD_PRELOAD LD_LIBRARY_PATH
 unset OPENAI_API_KEY GITHUB_TOKEN GH_TOKEN
+unset PERL5OPT PERL5LIB TAR_OPTIONS POSIXLY_CORRECT BLOCKSIZE
 
 die() {
   echo "error: $*" >&2
@@ -36,8 +37,10 @@ require_command() {
 }
 
 sha256_file() {
-  /usr/bin/shasum -a 256 "$1" |
-    /usr/bin/awk '{print substr($1, length($1) - 63)}'
+  /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+    /usr/bin/shasum -a 256 "$1" |
+    /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+      /usr/bin/awk '{print substr($1, length($1) - 63)}'
 }
 
 stat_owner_mode_nlink() {
@@ -325,11 +328,9 @@ verify_candidate() {
     --arg head "$expected_head" \
     '
       keys == ["build", "candidate_head", "files", "schema", "symlinks"] and
-      .schema == "office.fresh-agent.candidate/1" and
+      .schema == "office.fresh-agent.candidate/2" and
       .candidate_head == $head and
       (.build | keys) == [
-        "capability_fingerprint",
-        "capability_schema",
         "dependency_tree_sha256",
         "moon_sha256",
         "moon_version",
@@ -600,6 +601,44 @@ record_workflow_evidence() {
       operation: $operation,
       events: $events
     }' >> "$workflow_entries"
+}
+
+extract_isolated_help() {
+  local runtime="$1"
+  local output="$2"
+  local bare="office-$runtime help all --json"
+  /usr/bin/jq -er \
+    --arg bare "$bare" \
+    '
+      def exact_command($command):
+        . == $command or
+        . == ("/bin/sh -c '\''" + $command + "'\''") or
+        . == ("/bin/bash -c '\''" + $command + "'\''") or
+        . == ("/bin/zsh -c '\''" + $command + "'\''");
+      [
+        .[] |
+        select(
+          .type == "item.completed" and
+          .item.type == "command_execution" and
+          .item.status == "completed" and
+          .item.exit_code == 0 and
+          (.item.command | exact_command($bare))
+        ) |
+        .item.aggregated_output
+      ] |
+      if length == 1 then .[0]
+      else error("expected exactly one canonical isolated help command")
+      end
+    ' "$isolation_root/transcript-array.json" > "$output" ||
+    die "Codex transcript lacks one exact isolated help result for $runtime"
+  /usr/bin/jq -e '
+    (.data | type) == "object" and
+    (.data.schema | type) == "string" and
+    (.data.schema | length) > 0 and
+    (.data.fingerprint | type) == "string" and
+    (.data.fingerprint | length) > 0
+  ' "$output" >/dev/null ||
+    die "installed $runtime help did not produce a capability identity"
 }
 
 write_evidence_manifest() {
@@ -1329,6 +1368,23 @@ done < "$evidence_root/codex-transcript.jsonl"
   "$evidence_root/COMMANDS.json"
 write_host_command_transcript
 
+extract_isolated_help native "$isolation_root/native-help.json"
+extract_isolated_help wasm "$isolation_root/wasm-help.json"
+/usr/bin/jq -S -c . "$isolation_root/native-help.json" \
+  > "$isolation_root/native-help.canonical.json"
+/usr/bin/jq -S -c . "$isolation_root/wasm-help.json" \
+  > "$isolation_root/wasm-help.canonical.json"
+/usr/bin/cmp \
+  "$isolation_root/native-help.canonical.json" \
+  "$isolation_root/wasm-help.canonical.json" ||
+  die "installed native and Wasm capability help differ"
+observed_capability_schema="$(
+  /usr/bin/jq -er '.data.schema' "$isolation_root/native-help.json"
+)"
+observed_capability_fingerprint="$(
+  /usr/bin/jq -er '.data.fingerprint' "$isolation_root/native-help.json"
+)"
+
 workflow_entries="$isolation_root/workflow-entries.jsonl"
 : > "$workflow_entries"
 for runtime in native wasm; do
@@ -1432,17 +1488,11 @@ for runtime in native wasm; do
     summary_line=$((summary_line + 1))
   done
 done
-candidate_capability_schema="$(
-  /usr/bin/jq -er '.build.capability_schema' "$candidate_root/CANDIDATE.json"
-)"
-candidate_capability_fingerprint="$(
-  /usr/bin/jq -er '.build.capability_fingerprint' "$candidate_root/CANDIDATE.json"
-)"
 [ "$(/usr/bin/sed -n '6p' "$result_file")" = \
-  "Capability schema: $candidate_capability_schema" ] ||
+  "Capability schema: $observed_capability_schema" ] ||
   die "probe result omits the installed capability schema"
 [ "$(/usr/bin/sed -n '7p' "$result_file")" = \
-  "Capability fingerprint: $candidate_capability_fingerprint" ] ||
+  "Capability fingerprint: $observed_capability_fingerprint" ] ||
   die "probe result omits the installed capability fingerprint"
 if [ "$verdict" = "BASELINE PASS" ]; then
   [ "$(/usr/bin/sed -n '8p' "$result_file")" = 'Discoverability: PASS' ] ||
