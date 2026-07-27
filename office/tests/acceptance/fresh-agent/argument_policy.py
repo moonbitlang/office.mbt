@@ -37,6 +37,8 @@ def add_reference(references, arguments, index, role, access):
     if access not in PATH_ACCESSES:
         fail("internal path access is invalid: %s" % access)
     path = safe_relative_path(value, "%s path" % role)
+    if path == "input-evidence" or path.startswith("input-evidence/"):
+        fail("%s path uses the host-managed input-evidence namespace" % role)
     references.append(
         {
             "access": access,

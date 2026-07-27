@@ -2,6 +2,7 @@
 """Validate and normalize fresh-agent command events without executing shell text."""
 
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -58,8 +59,12 @@ OFFICE_COMMANDS = frozenset(
     {"office-native", "office-wasm", "office-permission-canary"}
 )
 SHELLS = frozenset({"/bin/sh", "/bin/bash", "/bin/zsh"})
-SAFE_RELATIVE = re.compile(r"^[a-z0-9][a-z0-9._/-]*$")
 HEX_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+SNAPSHOT_PATH = re.compile(
+    r"input-evidence/event-[0-9a-f]{32}/"
+    r"[0-9]{3}(?:[.]input|[.](?:xlsx|docx|html|json|xml))"
+)
+ATTESTATION_SCHEMA = "office.fresh-agent.command-attestation/2"
 ATTESTATION_PREFIX = "OFFICE_F1B_ATTESTATION\t"
 
 
@@ -69,6 +74,24 @@ class PolicyError(Exception):
 
 def fail(message):
     raise PolicyError(message)
+
+
+def load_argument_policy():
+    directory = os.path.dirname(os.path.abspath(__file__))
+    for name in ("argument-policy.py", "argument_policy.py"):
+        path = os.path.join(directory, name)
+        if not os.path.isfile(path):
+            continue
+        spec = importlib.util.spec_from_file_location(
+            "fresh_agent_argument_policy", path
+        )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    fail("Office argument policy is unavailable")
+
+
+ARGUMENT_POLICY = load_argument_policy()
 
 
 def utf8_bytes(value, label):
@@ -81,13 +104,10 @@ def utf8_bytes(value, label):
 
 
 def safe_relative_path(value, label):
-    if not isinstance(value, str) or not SAFE_RELATIVE.fullmatch(value):
-        fail("%s is not a portable lowercase relative path: %r" % (label, value))
-    if value.endswith("/") or "//" in value:
-        fail("%s is not canonical: %r" % (label, value))
-    if any(part in ("", ".", "..") for part in value.split("/")):
-        fail("%s traverses a non-canonical path: %r" % (label, value))
-    return value
+    try:
+        return ARGUMENT_POLICY.safe_relative_path(value, label)
+    except ARGUMENT_POLICY.ArgumentPolicyError as exc:
+        fail(str(exc))
 
 
 def unwrap_command(raw):
@@ -225,7 +245,7 @@ def validate_utility(name, argv):
         fail("byte-count head/tail operations are outside the resource policy")
 
 
-def parse_attestation(output, result_path):
+def parse_attestation(output, result_path, product_arguments, path_references):
     if len(utf8_bytes(output, "command output")) > 64 * 1024:
         fail("an attested command emitted more than 64 KiB")
     if not output.startswith(ATTESTATION_PREFIX) or not output.endswith("\n"):
@@ -237,9 +257,14 @@ def parse_attestation(output, result_path):
         value = json.loads(payload)
     except (TypeError, ValueError) as exc:
         fail("attestation is not valid JSON: %s" % exc)
-    if not isinstance(value, dict) or set(value) != {"files", "result", "schema"}:
+    if not isinstance(value, dict) or set(value) != {
+        "files",
+        "inputs",
+        "result",
+        "schema",
+    }:
         fail("attestation has an unexpected top-level shape")
-    if value["schema"] != "office.fresh-agent.command-attestation/1":
+    if value["schema"] != ATTESTATION_SCHEMA:
         fail("attestation has an unexpected schema")
     validate_digest_record(value["result"], "attestation result")
     if value["result"]["path"] != result_path:
@@ -252,9 +277,45 @@ def parse_attestation(output, result_path):
         validate_digest_record(record, "attestation file %d" % index)
         if not record["path"].lower().endswith((".xlsx", ".docx", ".html")):
             fail("attestation file has an unsupported suffix: %s" % record["path"])
+        if record["path"] not in product_arguments:
+            fail("attestation file is not an exact Office argument: %s" % record["path"])
         paths.append(record["path"])
     if paths != sorted(set(paths)):
         fail("attestation file paths must be sorted and unique")
+
+    expected_inputs = [
+        reference
+        for reference in path_references
+        if reference["access"] in ("input", "input-output")
+    ]
+    inputs = value["inputs"]
+    if not isinstance(inputs, list) or len(inputs) != len(expected_inputs):
+        fail("attestation input set does not match the Office command contract")
+    snapshot_paths = []
+    for index, (record, expected) in enumerate(zip(inputs, expected_inputs)):
+        if not isinstance(record, dict) or set(record) != {
+            "access",
+            "argument_index",
+            "path",
+            "role",
+            "snapshot",
+        }:
+            fail("attestation input %d has an unexpected shape" % index)
+        for field in ("access", "argument_index", "path", "role"):
+            if record[field] != expected[field]:
+                fail(
+                    "attestation input %d contradicts its Office argument %s"
+                    % (index, field)
+                )
+        validate_digest_record(
+            record["snapshot"], "attestation input %d snapshot" % index
+        )
+        snapshot_path = record["snapshot"]["path"]
+        if not SNAPSHOT_PATH.fullmatch(snapshot_path):
+            fail("attestation input snapshot path is outside the managed namespace")
+        snapshot_paths.append(snapshot_path)
+    if len(snapshot_paths) != len(set(snapshot_paths)):
+        fail("attestation input snapshot paths must be unique")
     canonical = json.dumps(value, sort_keys=True, separators=(",", ":"))
     if payload != canonical:
         fail("attestation JSON is not canonical")
@@ -300,6 +361,7 @@ def normalize_event(event, seen_results):
     attestation = None
     if name in ("office-native", "office-wasm"):
         positions = [index for index, value in enumerate(argv) if value == "--attest-result"]
+        path_references = None
         if positions:
             if positions != [len(argv) - 2] or len(argv) < 5:
                 fail("--attest-result must be the final Office wrapper option")
@@ -308,18 +370,36 @@ def normalize_event(event, seen_results):
             if redirect_path is not None:
                 fail("attested Office commands may not use shell redirection")
             result_path = safe_relative_path(argv[-1], "--attest-result")
+            if result_path == "input-evidence" or result_path.startswith(
+                "input-evidence/"
+            ):
+                fail("--attest-result uses the host-managed input-evidence namespace")
             if not result_path.endswith(".json"):
                 fail("--attest-result must name a .json file")
+            product_arguments = argv[1:-2]
+            try:
+                path_references = ARGUMENT_POLICY.classify_office_paths(
+                    product_arguments
+                )
+            except ARGUMENT_POLICY.ArgumentPolicyError as exc:
+                fail(str(exc))
             if exit_code == 0:
                 if result_path in seen_results:
                     fail("attested result paths must be unique: %s" % result_path)
                 seen_results.add(result_path)
                 product_argv = argv[:-2]
-                attestation = parse_attestation(output, result_path)
+                attestation = parse_attestation(
+                    output, result_path, product_arguments, path_references
+                )
             elif ATTESTATION_PREFIX in output:
                 fail("failed Office command may not claim a completion attestation")
         elif "--attest-result" in argv:
             fail("invalid --attest-result placement")
+        else:
+            try:
+                path_references = ARGUMENT_POLICY.classify_office_paths(argv[1:])
+            except ARGUMENT_POLICY.ArgumentPolicyError as exc:
+                fail(str(exc))
         if any(argument.startswith("/") for argument in argv[1:]):
             fail("absolute Office arguments are not allowed")
     elif name == "office-permission-canary":

@@ -302,10 +302,17 @@ host-bound events for all 58 required runtime/format/operation workflows, a
 strict per-target final object, and the exact nine-line machine-readable summary
 in `probe-result.md`. Each non-help workflow must end in one unique JSON result
 written through the wrapper-only `--attest-result` protocol. The wrapper invokes
-the installed command, atomically publishes its JSON, and emits canonical
-completion-time byte counts and SHA-256 digests for the result and every named
-Office/preview file in that same Codex command event. Final bytes must still
-match those event-time digests before the operation-specific
+the installed command only after a shared argument policy has classified every
+filesystem-bearing token. It opens each consumed input component-by-component
+without following symlinks, copies the held descriptor into a private read-only
+`input-evidence/event-*/` snapshot, and records its argument index, role, access
+mode, byte count, and SHA-256 in command-attestation schema v2. Read-only inputs
+must retain the same identity and bytes until the command exits; in-place
+operations retain the exact before-image. The wrapper then atomically publishes
+the command JSON and emits canonical completion-time byte counts and SHA-256
+digests for the result and every named Office/preview file in that same Codex
+command event. The host revalidates every retained input snapshot, and final
+bytes must still match all event-time digests before the operation-specific
 schema/format/postconditions and referenced Office ZIP or preview artifact
 validate. Office packages are subject to fixed compressed/expanded-size,
 address-space, CPU, XML-part, and entry-count limits. Only stored and deflated
@@ -337,9 +344,9 @@ The evidence directory contains:
   `RUN-PREFLIGHT.json`, and `RUN.json`;
 - `permission-canary.log`, host-derived `COMMANDS.json` and `WORKFLOWS.json`,
   `codex-transcript.jsonl`, separate `codex-stderr.log`, final message, and exit
-  status; `WORKFLOWS.json` binds every accepted event to result, primary
-  artifact, optional produced-output paths, and their completion-time byte
-  lengths and SHA-256 digests;
+  status; `WORKFLOWS.json` schema v4 binds every accepted event to its retained
+  inputs, result, primary artifact, optional produced-output paths, and their
+  event-time byte lengths and SHA-256 digests;
 - the agent-authored semantic result `probe-result.md` and the host-generated
   `probe-transcript.md`, which renders every paired command event in start
   order; and

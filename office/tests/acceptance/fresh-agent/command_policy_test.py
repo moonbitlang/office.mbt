@@ -34,6 +34,14 @@ def completed_event(command, output=""):
     }
 
 
+def expect_event_rejected(policy, event):
+    try:
+        policy.normalize_event(event, set())
+    except policy.PolicyError:
+        return
+    raise AssertionError("unsafe command event was accepted: %r" % event["command"])
+
+
 def main():
     if len(sys.argv) != 2:
         raise SystemExit("usage: command_policy_test.py COMMAND_POLICY")
@@ -83,10 +91,24 @@ def main():
     files = [
         {"bytes": 101, "path": "sample.xlsx", "sha256": "2" * 64},
     ]
+    inputs = [
+        {
+            "access": "input",
+            "argument_index": 1,
+            "path": "sample.xlsx",
+            "role": "package",
+            "snapshot": {
+                "bytes": 101,
+                "path": "input-evidence/event-" + "a" * 32 + "/000.xlsx",
+                "sha256": "3" * 64,
+            },
+        }
+    ]
     attestation = {
         "files": files,
+        "inputs": inputs,
         "result": result,
-        "schema": "office.fresh-agent.command-attestation/1",
+        "schema": "office.fresh-agent.command-attestation/2",
     }
     output = policy.ATTESTATION_PREFIX + json.dumps(
         attestation, sort_keys=True, separators=(",", ":")
@@ -107,6 +129,18 @@ def main():
     ]
     assert normalized["attestation"] == attestation
     assert normalized["stdout_path"] is None
+
+    traversal_event = {
+        "aggregated_output": "typed refusal\n",
+        "command": (
+            "office-native batch source.xlsx "
+            "../../../../private/tmp/ops.json --json"
+        ),
+        "exit_code": 2,
+        "id": "traversal",
+        "status": "failed",
+    }
+    expect_event_rejected(policy, traversal_event)
 
 
 if __name__ == "__main__":

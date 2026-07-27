@@ -449,6 +449,7 @@ verify_candidate() {
         "control/final.schema.json",
         "control/permission-canary.sh",
         "control/attest.py",
+        "control/argument-policy.py",
         "control/auth-guard.py",
         "control/command-policy.py",
         "control/opc-policy.py",
@@ -496,6 +497,7 @@ control/prompt.md|0400
 control/final.schema.json|0400
 control/permission-canary.sh|0500
 control/attest.py|0400
+control/argument-policy.py|0400
 control/auth-guard.py|0400
 control/command-policy.py|0400
 control/opc-policy.py|0400
@@ -711,6 +713,7 @@ EOF
       control/build-host-discovery.json \
       control/final.schema.json \
       control/attest.py \
+      control/argument-policy.py \
       control/auth-guard.py \
       control/command-policy.py \
       control/opc-policy.py \
@@ -1430,11 +1433,17 @@ write_live_canary_launcher() {
 
 stage_attester() {
   staged_attester="$isolated_launcher_bin/.office-attest.py"
+  staged_argument_policy="$isolated_launcher_bin/.office-argument-policy.py"
   expected_attester_sha256="$(
     sha256_file "$candidate_root/control/attest.py"
   )"
+  expected_argument_policy_sha256="$(
+    sha256_file "$candidate_root/control/argument-policy.py"
+  )"
   /usr/bin/install -m 0500 \
     "$candidate_root/control/attest.py" "$staged_attester"
+  /usr/bin/install -m 0400 \
+    "$candidate_root/control/argument-policy.py" "$staged_argument_policy"
   verify_staged_attester
 }
 
@@ -1446,6 +1455,14 @@ verify_staged_attester() {
   [ "$(sha256_file "$candidate_root/control/attest.py")" = \
     "$expected_attester_sha256" ] ||
     die "candidate Office attester changed after private staging"
+  assert_owned_file "$staged_argument_policy" "0400" "1" \
+    "privately staged Office argument policy"
+  [ "$(sha256_file "$staged_argument_policy")" = \
+    "$expected_argument_policy_sha256" ] ||
+    die "privately staged Office argument policy hash mismatch"
+  [ "$(sha256_file "$candidate_root/control/argument-policy.py")" = \
+    "$expected_argument_policy_sha256" ] ||
+    die "candidate Office argument policy changed after private staging"
 }
 
 write_office_launcher() {
@@ -1528,6 +1545,40 @@ assert_safe_probe_relative_path() {
   physical_parent="$(canonical_directory "$expected_parent")"
   [ "$physical_parent" = "$expected_parent" ] ||
     die "$label parent must not traverse a symlink or physical path alias: $relative"
+}
+
+verify_command_input_snapshots() {
+  local ledger="$1"
+  local bytes
+  local path
+  local sha256
+  local parent
+
+  /usr/bin/jq -e '
+    [.[] | select(.attestation != null) |
+      .attestation.inputs[].snapshot.path] as $paths |
+    ($paths | length) == ($paths | unique | length)
+  ' "$ledger" >/dev/null ||
+    die "command input snapshot paths are not globally unique"
+
+  while IFS=$'\t' read -r path bytes sha256; do
+    require_postprocess_budget "command input snapshot validation"
+    [ -n "$path" ] || die "command input snapshot path is empty"
+    assert_safe_probe_relative_path "$path" "command input snapshot"
+    parent="$probe_root/$(/usr/bin/dirname -- "$path")"
+    assert_owned_private_directory "$parent"
+    assert_owned_file "$probe_root/$path" "0400" "1" "command input snapshot"
+    [ "$(stat_size "$probe_root/$path")" = "$bytes" ] ||
+      die "command input snapshot byte count changed after its Office event: $path"
+    [ "$(sha256_file "$probe_root/$path")" = "$sha256" ] ||
+      die "command input snapshot digest changed after its Office event: $path"
+  done < <(
+    /usr/bin/jq -r '
+      .[] | select(.attestation != null) |
+      .attestation.inputs[].snapshot |
+      [.path, (.bytes | tostring), .sha256] | @tsv
+    ' "$ledger"
+  )
 }
 
 assert_valid_opc_archive() {
@@ -1637,6 +1688,7 @@ validate_workflow_event() {
   local result_bytes
   local artifact_relative
   local artifact_json
+  local inputs_json
   local produced_relative=""
   local produced_json=null
 
@@ -1774,6 +1826,7 @@ validate_workflow_event() {
     die "workflow artifact changed after its command completed for $runtime/$format/$verb"
   assert_workflow_package "$artifact_relative" "$format" \
     "workflow artifact for $runtime/$format/$verb"
+  inputs_json="$(/usr/bin/jq -c '.attestation.inputs' <<<"$match")"
 
   if [ "$verb" = "preview" ]; then
     produced_relative="$(/usr/bin/jq -er '.data.output' "$result_file")"
@@ -1805,6 +1858,7 @@ validate_workflow_event() {
     --argjson result_bytes "$result_bytes" \
     --arg result_schema "$result_schema" \
     --argjson artifact "$artifact_json" \
+    --argjson inputs "$inputs_json" \
     --argjson produced "$produced_json" '
       {
         event_id: $event_id,
@@ -1816,6 +1870,7 @@ validate_workflow_event() {
           schema: $result_schema
         },
         artifact: $artifact,
+        inputs: $inputs,
         produced: $produced
       }
     '
@@ -1860,6 +1915,7 @@ record_workflow_evidence() {
               schema: $result_schema
             },
             artifact: null,
+            inputs: [],
             produced: null
           }
         ]
@@ -2618,6 +2674,7 @@ bwrap_evidence_json="$(
   --arg candidate_manifest_sha256 "$expected_candidate_sha256" \
   --arg runner_sha256 "$runner_sha256" \
   --arg attester_sha256 "$expected_attester_sha256" \
+  --arg argument_policy_sha256 "$expected_argument_policy_sha256" \
   --arg auth_guard_sha256 "$(sha256_file "$candidate_root/control/auth-guard.py")" \
   --arg job_sentinel_sha256 "$(sha256_file "$job_sentinel")" \
   --arg prompt_sha256 "$prompt_sha256" \
@@ -2640,6 +2697,7 @@ bwrap_evidence_json="$(
     harness: {
       runner_sha256: $runner_sha256,
       attester_sha256: $attester_sha256,
+      argument_policy_sha256: $argument_policy_sha256,
       credential_guard: {
         policy_sha256: $auth_guard_sha256,
         source_open: "component-wise O_NOFOLLOW retained FD",
@@ -2843,6 +2901,8 @@ if ! /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
   die "Codex transcript contains a command outside the simple-command acceptance policy"
 fi
 require_postprocess_budget "command-policy validation"
+verify_command_input_snapshots "$isolation_root/COMMANDS.json"
+require_postprocess_budget "command input snapshot validation"
 /usr/bin/install -m 0600 "$isolation_root/COMMANDS.json" \
   "$evidence_root/COMMANDS.json"
 write_host_command_transcript
@@ -2876,7 +2936,7 @@ for runtime in native wasm; do
   done
 done
 /usr/bin/jq -s \
-  --arg schema "office.fresh-agent.workflows/3" \
+  --arg schema "office.fresh-agent.workflows/4" \
   '{
     schema: $schema,
     required_count: length,
@@ -2884,7 +2944,7 @@ done
   }' "$workflow_entries" > "$isolation_root/WORKFLOWS.json"
 /usr/bin/jq -e '
   keys == ["required_count", "schema", "workflows"] and
-  .schema == "office.fresh-agent.workflows/3" and
+  .schema == "office.fresh-agent.workflows/4" and
   .required_count == 58 and
   (.workflows | length) == 58 and
   (.workflows | unique_by([.runtime, .format, .operation]) | length) == 58 and
@@ -2898,7 +2958,7 @@ done
     (.format == "all" or .format == "xlsx" or .format == "docx") and
     (.events | length) == 1 and
     (.events | all(
-      keys == ["artifact", "command", "event_id", "produced", "result"] and
+      keys == ["artifact", "command", "event_id", "inputs", "produced", "result"] and
       (.command | type) == "string" and
       (.event_id | type) == "string" and (.event_id | length) > 0 and
       (.result | keys) == ["bytes", "path", "schema", "sha256"] and
@@ -2913,6 +2973,21 @@ done
         (.artifact.bytes | type) == "number" and
         .artifact.bytes == (.artifact.bytes | floor) and .artifact.bytes > 0 and
         (.artifact.sha256 | test("^[0-9a-f]{64}$"))
+      )) and
+      (.inputs | type) == "array" and
+      (.inputs | all(
+        keys == ["access", "argument_index", "path", "role", "snapshot"] and
+        (.access == "input" or .access == "input-output") and
+        (.argument_index | type) == "number" and
+        .argument_index == (.argument_index | floor) and .argument_index >= 0 and
+        (.path | type) == "string" and (.path | length) > 0 and
+        (.role | type) == "string" and (.role | length) > 0 and
+        (.snapshot | keys) == ["bytes", "path", "sha256"] and
+        (.snapshot.bytes | type) == "number" and
+        .snapshot.bytes == (.snapshot.bytes | floor) and
+        .snapshot.bytes > 0 and
+        (.snapshot.path | test("^input-evidence/event-[0-9a-f]{32}/[0-9]{3}[.]")) and
+        (.snapshot.sha256 | test("^[0-9a-f]{64}$"))
       )) and
       (.produced == null or (
         (.produced | keys) == ["bytes", "path", "sha256"] and
