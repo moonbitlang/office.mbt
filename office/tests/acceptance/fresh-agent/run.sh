@@ -504,6 +504,7 @@ EOF
       (.compiler | keys) == ["resolved_path", "resource_dir", "selected_path",
         "sha256", "target", "version"] and
       .compiler.selected_path == .environment.moon_cc and
+      .compiler.selected_path == .compiler.resolved_path and
       (.compiler.resolved_path | startswith("/")) and
       (.compiler.resource_dir | startswith("/")) and
       (.compiler.sha256 | test("^[0-9a-f]{64}$")) and
@@ -513,6 +514,7 @@ EOF
       (.compiler.version | length) > 0 and
       (.archiver | keys) == ["resolved_path", "selected_path", "sha256"] and
       .archiver.selected_path == .environment.moon_ar and
+      .archiver.selected_path == .archiver.resolved_path and
       (.archiver.resolved_path | startswith("/")) and
       (.archiver.sha256 | test("^[0-9a-f]{64}$")) and
       (.linker | keys) == ["resolved_path", "sha256", "version"] and
@@ -536,7 +538,7 @@ EOF
         .sdk.kind == "linux-sysroot" and .environment.sdkroot == null
       end) and
       (.inventory | keys) == ["entries", "manifest_sha256", "root"] and
-      (.inventory.root | startswith("/")) and
+      .inventory.root == "/" and
       (.inventory.entries | type) == "array" and
       (.inventory.entries | length) > 0 and
       (.inventory.entries | all(type == "string" and length > 0)) and

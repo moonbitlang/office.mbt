@@ -22,7 +22,7 @@ die() {
 }
 
 usage() {
-  echo "usage: $0 ROOT ABSENT_OUTPUT LABEL [--root-alias ROOT] [--allow-external-symlinks] RELATIVE_ENTRY..." >&2
+  echo "usage: $0 ROOT ABSENT_OUTPUT LABEL [--root-alias ROOT] RELATIVE_ENTRY..." >&2
   exit 2
 }
 
@@ -40,7 +40,6 @@ output="$2"
 label="$3"
 shift 3
 root_alias=""
-allow_external_symlinks=0
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --root-alias)
@@ -48,12 +47,6 @@ while [ "$#" -gt 0 ]; do
       [ -z "$root_alias" ] || die "--root-alias may be supplied only once"
       root_alias="$(canonical_directory "$2")"
       shift 2
-      ;;
-    --allow-external-symlinks)
-      [ "$allow_external_symlinks" -eq 0 ] ||
-        die "--allow-external-symlinks may be supplied only once"
-      allow_external_symlinks=1
-      shift
       ;;
     *) break ;;
   esac
@@ -95,24 +88,39 @@ done
 
 if ! /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
   /usr/bin/perl - "$root" "$root_alias" "$label" "$@" \
-    "$allow_external_symlinks" \
     > "$manifest_tmp" <<'PERL'
 use strict;
 use warnings;
 use bytes;
+use Cwd ();
 use Digest::SHA ();
 use Fcntl qw(S_ISDIR S_ISLNK S_ISREG);
 use File::Find ();
 
-my ($root, $root_alias, $label, @arguments) = @ARGV;
-my $allow_external_symlinks = pop @arguments;
-my @entries = @arguments;
-die "invalid absolute-symlink policy\n"
-  unless $allow_external_symlinks eq "0" || $allow_external_symlinks eq "1";
+my ($root, $root_alias, $label, @entries) = @ARGV;
 my $root_marker = q{${INVENTORY_ROOT}};
 my %seen_roots;
 my @normalization_roots = sort { length($b) <=> length($a) }
-  grep { $_ ne q{} && !$seen_roots{$_}++ } ($root, $root_alias);
+  grep { $_ ne q{} && $_ ne q{/} && !$seen_roots{$_}++ }
+  ($root, $root_alias);
+
+sub path_within_root {
+  my ($path) = @_;
+  return index($path, q{/}) == 0 if $root eq q{/};
+  return $path eq $root || index($path, "$root/") == 0;
+}
+
+sub relative_to_root {
+  my ($path) = @_;
+  return substr($path, 1) if $root eq q{/};
+  return substr($path, length($root) + 1);
+}
+
+sub root_entry_path {
+  my ($entry) = @_;
+  return "/$entry" if $root eq q{/};
+  return "$root/$entry";
+}
 
 sub normalized_file_fingerprint {
   my ($file, $relative) = @_;
@@ -130,26 +138,51 @@ sub normalized_file_fingerprint {
 }
 
 my @paths;
-for my $entry (@entries) {
-  my $start = "$root/$entry";
+my @pending_starts = map { root_entry_path($_) } @entries;
+my %collected;
+my %scanned_starts;
+while (@pending_starts) {
+  my $start = shift @pending_starts;
+  next if $scanned_starts{$start}++ || $collected{$start};
+  die "inventory closure escaped its root: $start\n"
+    unless path_within_root($start) && $start ne $root;
   File::Find::find(
     {
       no_chdir => 1,
       follow => 0,
-      wanted => sub { push @paths, $File::Find::name },
+      wanted => sub {
+        my $path = $File::Find::name;
+        return if $collected{$path}++;
+        push @paths, $path;
+        die "inventory closure exceeds 200000 entries\n"
+          if @paths > 200000;
+        my @stat = lstat($path);
+        die "could not stat inventory path during closure: $path\n"
+          unless @stat;
+        return unless S_ISLNK($stat[2]);
+        my $resolved = Cwd::realpath($path);
+        die "inventory contains a broken symlink: $path\n"
+          unless defined $resolved;
+        die "inventory symlink referent escaped its root: $path\n"
+          unless path_within_root($resolved) && $resolved ne $root;
+        for my $covered_start (keys %scanned_starts) {
+          return if $resolved eq $covered_start ||
+            index($resolved, "$covered_start/") == 0;
+        }
+        push @pending_starts, $resolved
+          unless $collected{$resolved} || $scanned_starts{$resolved};
+      },
     },
     $start,
   );
 }
 
-my %seen;
 @paths = sort @paths;
 print "office.fresh-agent.tree-manifest/1\t$label\n";
 for my $path (@paths) {
-  die "inventory entries overlap at $path\n" if $seen{$path}++;
   die "inventory path escaped its root: $path\n"
-    unless index($path, "$root/") == 0;
-  my $relative = substr($path, length($root) + 1);
+    unless path_within_root($path);
+  my $relative = relative_to_root($path);
   die "inventory path contains unsafe syntax\n"
     if $relative eq q{} || $relative =~ /[\t\r\n]/;
   my @stat = lstat($path);
@@ -159,9 +192,7 @@ for my $path (@paths) {
     my $target = readlink($path);
     die "could not read inventory symlink: $relative\n" unless defined $target;
     die "inventory symlink has an unsafe target: $relative\n"
-      if $target eq q{} || $target =~ m{[\t\r\n]} ||
-        (!$allow_external_symlinks &&
-          $target =~ m{(?:^/|(?:^|/)\.\.(?:/|$))});
+      if $target eq q{} || $target =~ m{[\t\r\n]};
     print "L\t-\t-\t$target\t$relative\n";
   } elsif (S_ISDIR($mode)) {
     printf "D\t%04o\t-\t-\t%s\n", $mode & 07777, $relative;

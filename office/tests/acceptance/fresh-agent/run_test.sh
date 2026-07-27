@@ -146,14 +146,29 @@ external_inventory_status="$?"
 set -e
 [ "$external_inventory_status" -eq 1 ] ||
   fail "external inventory symlink default policy"
-/usr/bin/grep -q 'unsafe target' "$test_root/inventory-external.stderr" ||
+/usr/bin/grep -q 'referent escaped its root' \
+  "$test_root/inventory-external.stderr" ||
   fail "external inventory symlink rejection diagnostic"
 "$script_dir/inventory.sh" \
-  "$inventory_root_a" "$test_root/inventory-external-allowed.manifest" \
-  build-host --allow-external-symlinks external-link
-/usr/bin/grep -Fq $'L\t-\t-\t../inventory-b/payload.txt\texternal-link' \
-  "$test_root/inventory-external-allowed.manifest" ||
-  fail "explicit build-host external symlink inventory"
+  "$test_root" "$test_root/inventory-symlink-closure.manifest" \
+  build-host inventory-a/external-link
+/usr/bin/grep -Fq \
+  $'L\t-\t-\t../inventory-b/payload.txt\tinventory-a/external-link' \
+  "$test_root/inventory-symlink-closure.manifest" ||
+  fail "build-host symlink inventory"
+/usr/bin/grep -Eq \
+  $'^F\t[0-7]{4}\t[0-9]+\t[0-9a-f]{64}\tinventory-b/payload.txt$' \
+  "$test_root/inventory-symlink-closure.manifest" ||
+  fail "build-host symlink referent inventory"
+printf 'referent changed after inventory\n' > "$inventory_root_b/payload.txt"
+"$script_dir/inventory.sh" \
+  "$test_root" "$test_root/inventory-symlink-closure-changed.manifest" \
+  build-host inventory-a/external-link
+if /usr/bin/cmp -s \
+  "$test_root/inventory-symlink-closure.manifest" \
+  "$test_root/inventory-symlink-closure-changed.manifest"; then
+  fail "build-host inventory did not bind a symlink referent"
+fi
 
 make_candidate() {
   local install_root="$1"
@@ -403,8 +418,8 @@ make_candidate() {
         version: "fixture-sdk-1"
       },
       inventory: {
-        root: "/fixture",
-        entries: ["sdk"],
+        root: "/",
+        entries: ["fixture/sdk"],
         manifest_sha256: $manifest_sha
       },
       native_plan: {
