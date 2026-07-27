@@ -221,6 +221,30 @@ canonical_regular_file() {
   printf '%s\n' "$path"
 }
 
+canonical_unopened_leaf() {
+  local input="$1"
+  local label="$2"
+  local name
+  local parent
+  local path
+  case "$input" in
+    /*) ;;
+    *) die "$label path must be absolute: $input" ;;
+  esac
+  reject_path_syntax "$input" "$label"
+  name="$(/usr/bin/basename -- "$input")"
+  case "$name" in
+    "" | "." | "..") die "invalid $label path: $input" ;;
+  esac
+  parent="$(canonical_directory "$(/usr/bin/dirname -- "$input")")"
+  if [ "$parent" = "/" ]; then
+    path="/$name"
+  else
+    path="$parent/$name"
+  fi
+  printf '%s\n' "$path"
+}
+
 reject_path_syntax() {
   local path="$1"
   local label="$2"
@@ -425,6 +449,7 @@ verify_candidate() {
         "control/final.schema.json",
         "control/permission-canary.sh",
         "control/attest.py",
+        "control/auth-guard.py",
         "control/command-policy.py",
         "control/opc-policy.py",
         "control/transcript-policy.py",
@@ -471,6 +496,7 @@ control/prompt.md|0400
 control/final.schema.json|0400
 control/permission-canary.sh|0500
 control/attest.py|0400
+control/auth-guard.py|0400
 control/command-policy.py|0400
 control/opc-policy.py|0400
 control/transcript-policy.py|0400
@@ -685,6 +711,7 @@ EOF
       control/build-host-discovery.json \
       control/final.schema.json \
       control/attest.py \
+      control/auth-guard.py \
       control/command-policy.py \
       control/opc-policy.py \
       control/transcript-policy.py \
@@ -735,6 +762,7 @@ run_codex() (
   local hard_limit
   local observed_limit
   local target_limit
+  exec 7>&- 8>&-
   exec 9< "$job_sentinel" ||
     die "could not open the Codex job sentinel"
   ulimit -c 0
@@ -855,6 +883,148 @@ remove_isolated_auth() {
     /bin/rm -f -- "$staged_auth" 2>/dev/null || true
   fi
   [ ! -e "$staged_auth" ] && [ ! -L "$staged_auth" ]
+}
+
+close_auth_guard_fds() {
+  exec 7>&- || true
+  exec 8>&- || true
+}
+
+remove_auth_guard_root() {
+  local observed_identity
+  [ -n "${auth_guard_root:-}" ] || return 0
+  if [ ! -e "$auth_guard_root" ] && [ ! -L "$auth_guard_root" ]; then
+    return 0
+  fi
+  observed_identity="$(stat_identity "$auth_guard_root" 2>/dev/null || true)"
+  if [ ! -d "$auth_guard_root" ] || [ -L "$auth_guard_root" ] ||
+    [ -z "${auth_guard_root_identity:-}" ] ||
+    [ "$observed_identity" != "$auth_guard_root_identity" ]; then
+    return 1
+  fi
+  chmod u+rwx -- "$auth_guard_root" 2>/dev/null || true
+  /bin/rm -f -- \
+    "$auth_guard_request" "$auth_guard_response" "$auth_guard_log" \
+    2>/dev/null || true
+  /bin/rmdir "$auth_guard_root" 2>/dev/null || true
+  [ ! -e "$auth_guard_root" ] && [ ! -L "$auth_guard_root" ]
+}
+
+stop_auth_guard() {
+  local attempt
+  local pid="${auth_guard_pid:-}"
+  local survived=0
+  close_auth_guard_fds
+  if [ -n "$pid" ] && process_is_live "$pid"; then
+    /bin/kill -TERM "$pid" 2>/dev/null || true
+    for attempt in {1..10}; do
+      process_is_live "$pid" || break
+      /bin/sleep 0.1
+    done
+    if process_is_live "$pid"; then
+      /bin/kill -KILL "$pid" 2>/dev/null || true
+      for attempt in {1..10}; do
+        process_is_live "$pid" || break
+        /bin/sleep 0.1
+      done
+    fi
+  fi
+  if [ -n "$pid" ]; then
+    process_is_live "$pid" && survived=1
+    wait "$pid" 2>/dev/null || true
+  fi
+  auth_guard_pid=""
+  remove_auth_guard_root || survived=1
+  [ "$survived" -eq 0 ]
+}
+
+read_auth_guard_response() {
+  local label="$1"
+  if ! IFS= read -r -t 10 -u 8 auth_guard_response_json; then
+    if [ -s "$auth_guard_log" ]; then
+      /bin/cat "$auth_guard_log" >&2
+    fi
+    die "Codex credential guard timed out while waiting for $label"
+  fi
+  [ "${#auth_guard_response_json}" -le 4096 ] ||
+    die "Codex credential guard returned an oversized response"
+}
+
+start_auth_guard() {
+  local policy="$install_root/control/auth-guard.py"
+  auth_guard_root="$isolation_root/auth-guard"
+  auth_guard_request="$auth_guard_root/request.fifo"
+  auth_guard_response="$auth_guard_root/response.fifo"
+  auth_guard_log="$auth_guard_root/guard.log"
+  /bin/mkdir -m 0700 "$auth_guard_root"
+  auth_guard_root_identity="$(stat_identity "$auth_guard_root")"
+  /usr/bin/mkfifo "$auth_guard_request" "$auth_guard_response"
+  chmod 0600 "$auth_guard_request" "$auth_guard_response"
+  : > "$auth_guard_log"
+  chmod 0600 "$auth_guard_log"
+  exec 7<> "$auth_guard_request"
+  exec 8<> "$auth_guard_response"
+  /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+    /usr/bin/python3 -I "$policy" serve \
+      "$auth_json" "$auth_guard_request" "$auth_guard_response" \
+      > /dev/null 2> "$auth_guard_log" 7>&- 8>&- &
+  auth_guard_pid="$!"
+  read_auth_guard_response "source validation"
+  if ! /usr/bin/jq -e '
+    keys == ["schema", "source", "status"] and
+    .schema == "office.fresh-agent.auth-guard/1" and
+    .status == "ready" and
+    (.source | keys) == ["bytes", "sha256"] and
+    (.source.bytes | type == "number" and . == floor and . > 0 and . <= 1048576) and
+    (.source.sha256 | test("^[0-9a-f]{64}$"))
+  ' <<< "$auth_guard_response_json" >/dev/null; then
+    if [ -s "$auth_guard_log" ]; then
+      /bin/cat "$auth_guard_log" >&2
+    fi
+    die "Codex credential guard rejected the source credential"
+  fi
+  auth_source_bytes="$(
+    /usr/bin/jq -er '.source.bytes' <<< "$auth_guard_response_json"
+  )"
+  auth_source_sha256="$(
+    /usr/bin/jq -er '.source.sha256' <<< "$auth_guard_response_json"
+  )"
+}
+
+stage_isolated_auth() {
+  local destination="$isolated_codex_state/auth.json"
+  local guard_status
+  /usr/bin/jq -nc --arg destination "$destination" \
+    '{destination: $destination, op: "stage"}' >&7
+  read_auth_guard_response "credential staging"
+  if ! /usr/bin/jq -e \
+    --arg sha256 "$auth_source_sha256" \
+    --argjson bytes "$auth_source_bytes" '
+      keys == ["destination", "schema", "status"] and
+      .schema == "office.fresh-agent.auth-guard/1" and
+      .status == "staged" and
+      .destination == {bytes: $bytes, sha256: $sha256}
+    ' <<< "$auth_guard_response_json" >/dev/null; then
+    if [ -s "$auth_guard_log" ]; then
+      /bin/cat "$auth_guard_log" >&2
+    fi
+    die "Codex credential guard failed to stage the source credential"
+  fi
+  set +e
+  wait "$auth_guard_pid"
+  guard_status="$?"
+  set -e
+  auth_guard_pid=""
+  [ "$guard_status" -eq 0 ] ||
+    die "Codex credential guard exited with status $guard_status"
+  close_auth_guard_fds
+  assert_owned_file "$destination" "0600" "1" "staged Codex credential"
+  [ "$(stat_size "$destination")" = "$auth_source_bytes" ] ||
+    die "staged Codex credential size mismatch"
+  [ "$(sha256_file "$destination")" = "$auth_source_sha256" ] ||
+    die "staged Codex credential hash mismatch"
+  remove_auth_guard_root ||
+    die "could not remove the Codex credential guard endpoints"
 }
 
 process_is_live() {
@@ -1923,7 +2093,7 @@ if [ -n "$bwrap_input" ] || [ -n "$expected_bwrap_sha256" ]; then
   assert_sha256 "$expected_bwrap_sha256" "EXPECTED_BWRAP_SHA256"
 fi
 
-for tool in jq shasum awk du find sort stat id mktemp install wc tr readlink nc python3 uname ps sleep perl grep lsof; do
+for tool in jq shasum awk du find sort stat id mktemp mkfifo install wc tr readlink nc python3 uname ps sleep perl grep lsof; do
   require_command "$tool"
 done
 netcat_bin="$(command -v nc)"
@@ -1998,8 +2168,9 @@ reject_overlap "$install_root" "install prefix" "$git_common_dir" "Git common di
 
 auth_json=""
 if [ "$canary_only" -eq 0 ]; then
-  auth_json="$(canonical_regular_file "$auth_input" "Codex auth JSON")"
-  assert_owned_private_file "$auth_json" "Codex auth JSON"
+  # Validate only the canonical path here. The credential guard performs the
+  # authoritative symlink-free open and retains that exact file description.
+  auth_json="$(canonical_unopened_leaf "$auth_input" "Codex auth JSON")"
   reject_linux_slash_tmp_location "$auth_json" "Codex auth JSON"
 fi
 codex_source="$(canonical_regular_file "$codex_input" "Codex executable")"
@@ -2074,6 +2245,15 @@ probe_resource_monitor_pid=""
 probe_resource_violation_file=""
 isolated_codex_state_identity=""
 job_sentinel=""
+auth_guard_pid=""
+auth_guard_root=""
+auth_guard_root_identity=""
+auth_guard_request=""
+auth_guard_response=""
+auth_guard_log=""
+auth_guard_response_json=""
+auth_source_bytes=""
+auth_source_sha256=""
 
 cleanup() {
   local status="$1"
@@ -2083,6 +2263,9 @@ cleanup() {
     status=1
   fi
   stop_probe_resource_monitor
+  if ! stop_auth_guard; then
+    status=1
+  fi
   if ! remove_isolated_auth; then
     status=1
   fi
@@ -2142,6 +2325,9 @@ printf 'office-f1b-job %s %s\n' "$expected_head" "$$" > "$job_sentinel"
 chmod 0400 "$job_sentinel"
 assert_owned_file "$job_sentinel" "0400" "1" "Codex job sentinel"
 isolated_codex_state_identity="$(stat_identity "$isolated_codex_state")"
+if [ "$canary_only" -eq 0 ]; then
+  start_auth_guard
+fi
 printf '%s\n' 'non-secret permission sentinel' \
   > "$isolated_codex_state/credential-canary"
 chmod 0600 "$isolated_codex_state/credential-canary"
@@ -2327,6 +2513,9 @@ config_file="$isolated_codex_state/config.toml"
   printf '%s = "deny"\n' "$(toml_string "$isolated_codex_state")"
   printf '%s = "deny"\n' "$(toml_string "$isolated_codex_resources")"
   printf '%s = "deny"\n' "$(toml_string "$job_sentinel")"
+  if [ -n "$auth_guard_root" ]; then
+    printf '%s = "deny"\n' "$(toml_string "$auth_guard_root")"
+  fi
   printf '%s = "deny"\n' "$(toml_string "$evidence_root")"
   printf '%s = "deny"\n' "$(toml_string "$candidate_root/control")"
   printf '%s = "deny"\n' "$(toml_string "$candidate_root/CANDIDATE.json")"
@@ -2429,6 +2618,7 @@ bwrap_evidence_json="$(
   --arg candidate_manifest_sha256 "$expected_candidate_sha256" \
   --arg runner_sha256 "$runner_sha256" \
   --arg attester_sha256 "$expected_attester_sha256" \
+  --arg auth_guard_sha256 "$(sha256_file "$candidate_root/control/auth-guard.py")" \
   --arg job_sentinel_sha256 "$(sha256_file "$job_sentinel")" \
   --arg prompt_sha256 "$prompt_sha256" \
   --arg output_schema_sha256 "$output_schema_sha256" \
@@ -2450,6 +2640,11 @@ bwrap_evidence_json="$(
     harness: {
       runner_sha256: $runner_sha256,
       attester_sha256: $attester_sha256,
+      credential_guard: {
+        policy_sha256: $auth_guard_sha256,
+        source_open: "component-wise O_NOFOLLOW retained FD",
+        delayed_staging: true
+      },
       prompt_sha256: $prompt_sha256,
       output_schema_sha256: $output_schema_sha256,
       config_sha256: $config_sha256,
@@ -2538,9 +2733,9 @@ verify_codex_runtime
 verify_staged_attester
 
 # The real credential enters the isolation only after every unauthenticated
-# preflight and sandbox check has succeeded. The cleanup trap has been armed
-# since the isolation root was created.
-/usr/bin/install -m 0600 "$auth_json" "$isolated_codex_state/auth.json"
+# preflight and sandbox check has succeeded. The guard copies the immutable
+# snapshot from its retained, symlink-free source FD; this path is not reopened.
+stage_isolated_auth
 
 assert_loopback_listener_reachable ||
   die "loopback denial-canary listener is not live before the installed-command probe"
