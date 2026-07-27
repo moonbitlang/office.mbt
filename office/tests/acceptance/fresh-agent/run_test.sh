@@ -660,7 +660,7 @@ chmod 0600 "$codex_bin_dir/mode"
     'stop_after=' \
     'case "$mode" in' \
     '  spoof-office|missing-create|pre-canary|completion-before-start|fractional-exit|out-of-domain-exit|missing-turn-completed|turn-failed) stop_after=all/help ;;' \
-    '  format-redirection-spoof|newline-mask|help-only|comment-spoof|uppercase-result-path|wrong-result-schema|invalid-artifact|generic-zip-artifact) stop_after=native/xlsx/create ;;' \
+    '  format-redirection-spoof|newline-mask|help-only|comment-spoof|uppercase-result-path|wrong-result-schema|invalid-artifact|generic-zip-artifact|decoy-opc-root|nested-content-types|nested-relationships|oversized-zip-entry|zip-symlink-artifact) stop_after=native/xlsx/create ;;' \
     '  duplicate-result-path|reused-event-id) stop_after=native/xlsx/batch ;;' \
     '  input-redirection|cross-format) stop_after=native/xlsx/validate ;;' \
     'esac' \
@@ -738,6 +738,30 @@ chmod 0600 "$codex_bin_dir/mode"
     'if [ "$mode" = "wrong-result-schema" ]; then printf '\''{"schema":"office.output/1","success":true,"data":{"schema":"office.identify/1","format":"xlsx","file":"native-xlsx-base.xlsx"}}\n'\'' > native-xlsx-create-3.json; fi' \
     'if [ "$mode" = "invalid-artifact" ]; then printf '\''not an Office package\n'\'' > native-xlsx-base.xlsx; fi' \
     'if [ "$mode" = "generic-zip-artifact" ]; then /bin/rm -f native-xlsx-base.xlsx; printf '\''payload\n'\'' > generic-payload.txt; /usr/bin/zip -q native-xlsx-base.xlsx generic-payload.txt; fi' \
+    'if [ "$mode" = "decoy-opc-root" ] || [ "$mode" = "nested-content-types" ] || [ "$mode" = "nested-relationships" ]; then' \
+    '  package_path=$PWD/native-xlsx-base.xlsx' \
+    '  opc_tmp=$TMPDIR/adversarial-opc-$$' \
+    '  /bin/rm -rf -- "$opc_tmp"' \
+    '  /bin/mkdir -m 0700 "$opc_tmp"' \
+    '  /usr/bin/unzip -q "$package_path" -d "$opc_tmp"' \
+    '  if [ "$mode" = "decoy-opc-root" ]; then printf "%s\n" '\''<decoy><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"/></decoy>'\'' > "$opc_tmp/xl/workbook.xml"; fi' \
+    '  if [ "$mode" = "nested-content-types" ]; then printf "%s\n" '\''<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Wrapper><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/></Wrapper></Types>'\'' > "$opc_tmp/[Content_Types].xml"; fi' \
+    '  if [ "$mode" = "nested-relationships" ]; then printf "%s\n" '\''<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Wrapper><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Wrapper></Relationships>'\'' > "$opc_tmp/_rels/.rels"; fi' \
+    '  /bin/rm -f -- "$package_path"' \
+    '  (cd "$opc_tmp" && /usr/bin/zip -q "$package_path" "[Content_Types].xml" "_rels/.rels" "xl/workbook.xml")' \
+    '  /bin/rm -rf -- "$opc_tmp"' \
+    'fi' \
+    'if [ "$mode" = "oversized-zip-entry" ]; then' \
+    '  /bin/dd if=/dev/zero of=oversized.bin bs=1048576 count=65 2>/dev/null' \
+    '  /usr/bin/zip -q native-xlsx-base.xlsx oversized.bin' \
+    '  /bin/rm -f oversized.bin' \
+    'fi' \
+    'if [ "$mode" = "zip-symlink-artifact" ]; then' \
+    '  : > symlink-target' \
+    '  /bin/ln -s symlink-target package-link' \
+    '  /usr/bin/zip -q -y native-xlsx-base.xlsx package-link' \
+    '  /bin/rm -f package-link symlink-target' \
+    'fi' \
     'if [ "$mode" = "exit19" ]; then exit 19; fi' \
     'verdict="BASELINE PASS"; outcome="PASS"; gaps="[]"' \
     'if [ "$mode" = "fail" ]; then verdict="BASELINE FAIL"; outcome="FAIL"; gaps='\''[{"severity":"P1","summary":"fake failure"}]'\''; fi' \
@@ -1266,7 +1290,7 @@ expect_failure wrong-result-schema 1 'required office.xlsx.create/1 result' \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'invalid-artifact\n' > "$codex_bin_dir/mode"
-expect_failure invalid-artifact 1 'unreadable ZIP central directory' \
+expect_failure invalid-artifact 1 'unreadable or corrupt ZIP package' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/invalid-artifact-probe" \
   "$case_root/invalid-artifact-evidence" \
@@ -1277,6 +1301,38 @@ expect_failure generic-zip-artifact 1 'missing required OPC part' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/generic-zip-probe" \
   "$case_root/generic-zip-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'decoy-opc-root\n' > "$codex_bin_dir/mode"
+expect_failure decoy-opc-root 1 'unexpected OPC main-part root' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/decoy-opc-probe" "$case_root/decoy-opc-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'nested-content-types\n' > "$codex_bin_dir/mode"
+expect_failure nested-content-types 1 \
+  'invalid OPC content-types child structure' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/nested-types-probe" "$case_root/nested-types-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'nested-relationships\n' > "$codex_bin_dir/mode"
+expect_failure nested-relationships 1 \
+  'invalid OPC relationship child structure' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/nested-rels-probe" "$case_root/nested-rels-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'oversized-zip-entry\n' > "$codex_bin_dir/mode"
+expect_failure oversized-zip-entry 1 'ZIP entry expands beyond 64 MiB' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/oversized-zip-probe" "$case_root/oversized-zip-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'zip-symlink-artifact\n' > "$codex_bin_dir/mode"
+expect_failure zip-symlink-artifact 1 'ZIP contains a non-file entry' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/zip-symlink-probe" "$case_root/zip-symlink-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'reused-event-id\n' > "$codex_bin_dir/mode"
