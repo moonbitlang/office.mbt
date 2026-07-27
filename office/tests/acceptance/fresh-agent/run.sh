@@ -939,208 +939,249 @@ assert_safe_probe_relative_path() {
   esac
 }
 
-assert_bounded_opc_archive() {
-  local package="$1"
-  local label="$2"
-  local entries_file="$3"
-  local entry_count
-  local archive_stats
-  local listed_count
-  local total_size
-
-  [ "$(stat_size "$package")" -le 134217728 ] ||
-    die "$label exceeds the 128 MiB compressed package limit"
-  /usr/bin/unzip -Z1 -- "$package" > "$entries_file" 2>/dev/null ||
-    die "$label has an unreadable ZIP central directory"
-  entry_count="$(/usr/bin/wc -l < "$entries_file" | /usr/bin/tr -d '[:space:]')"
-  case "$entry_count" in
-    "" | *[!0-9]*) die "$label has an invalid ZIP entry count" ;;
-  esac
-  (( entry_count >= 1 && entry_count <= 2048 )) ||
-    die "$label must contain between 1 and 2048 ZIP entries"
-
-  LC_ALL=C /usr/bin/awk '
-    {
-      name = $0
-      if (name == "" || name ~ /[[:cntrl:]]/ || name ~ /\\/ ||
-          name ~ /:/ || substr(name, 1, 1) == "/" || name ~ /\/\//) {
-        exit 1
-      }
-      parts = split(name, component, "/")
-      for (component_index = 1; component_index <= parts; component_index++) {
-        if (component[component_index] == "." ||
-            component[component_index] == ".." ||
-            (component[component_index] == "" && component_index != parts)) {
-          exit 1
-        }
-      }
-      folded = tolower(name)
-      if (seen[folded]++) {
-        exit 1
-      }
-    }
-  ' "$entries_file" ||
-    die "$label contains an unsafe or case-colliding ZIP entry"
-
-  archive_stats="$(
-    /usr/bin/unzip -Z -l -- "$package" 2>/dev/null |
-      LC_ALL=C /usr/bin/awk '
-        $1 ~ /^[-d]/ {
-          count++
-          if (($1 !~ /^-/ && $1 !~ /^d/) || $4 !~ /^[0-9]+$/) {
-            invalid = 1
-          }
-          total += $4
-          if ($4 > 67108864) {
-            too_large = 1
-          }
-        }
-        END {
-          if (invalid || too_large || total > 134217728) {
-            exit 1
-          }
-          printf "%d %d\n", count, total
-        }
-      '
-  )" || die "$label exceeds its bounded ZIP expansion policy"
-  read -r listed_count total_size <<<"$archive_stats"
-  [ "$listed_count" = "$entry_count" ] ||
-    die "$label ZIP inventory is ambiguous or contains a non-file entry"
-  (( total_size >= 1 )) || die "$label expands to an empty ZIP package"
-
-  /usr/bin/unzip -tqq -- "$package" >/dev/null 2>&1 ||
-    die "$label is not a structurally valid Office ZIP package"
-}
-
-assert_opc_metadata() {
+assert_valid_opc_archive() {
   local package="$1"
   local format="$2"
   local label="$3"
-  local entries_file="$4"
-  local main_part
-  local content_type
-  local root_name
-  local root_namespace
-  local content_types_xml
-  local relationships_xml
-  local main_xml
-  local required_part
 
-  case "$format" in
-    xlsx)
-      main_part="xl/workbook.xml"
-      content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"
-      root_name="workbook"
-      root_namespace="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
-      ;;
-    docx)
-      main_part="word/document.xml"
-      content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
-      root_name="document"
-      root_namespace="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-      ;;
-    *) die "no OPC metadata policy is registered for format: $format" ;;
-  esac
+  [ "$(stat_size "$package")" -le 134217728 ] ||
+    die "$label exceeds the 128 MiB compressed package limit"
+  if ! /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+    /usr/bin/python3 -I - "$package" "$format" <<'PY'
+import os
+import signal
+import stat
+import sys
+import zipfile
+import xml.etree.ElementTree as ET
 
-  for required_part in '[Content_Types].xml' '_rels/.rels' "$main_part"; do
-    /usr/bin/grep -Fqx -- "$required_part" "$entries_file" ||
-      die "$label is missing required OPC part: $required_part"
-  done
+MAX_ARCHIVE_BYTES = 128 * 1024 * 1024
+MAX_ENTRY_BYTES = 64 * 1024 * 1024
+MAX_EXPANDED_BYTES = 128 * 1024 * 1024
+MAX_ENTRIES = 2048
+MAX_XML_BYTES = 8 * 1024 * 1024
+CHUNK_BYTES = 1024 * 1024
 
-  content_types_xml="$(/usr/bin/mktemp "$isolation_root/opc-types.XXXXXX")"
-  relationships_xml="$(/usr/bin/mktemp "$isolation_root/opc-rels.XXXXXX")"
-  main_xml="$(/usr/bin/mktemp "$isolation_root/opc-main.XXXXXX")"
-  /usr/bin/unzip -p -- "$package" '\[Content_Types\].xml' \
-    > "$content_types_xml" 2>/dev/null ||
-    die "$label has an unreadable OPC content-types part"
-  /usr/bin/unzip -p -- "$package" '_rels/.rels' \
-    > "$relationships_xml" 2>/dev/null ||
-    die "$label has an unreadable OPC root-relationships part"
-  /usr/bin/unzip -p -- "$package" "$main_part" \
-    > "$main_xml" 2>/dev/null ||
-    die "$label has an unreadable OPC main part"
-  [ -s "$content_types_xml" ] && [ -s "$relationships_xml" ] &&
-    [ -s "$main_xml" ] || die "$label contains an empty required OPC part"
+CONTENT_TYPES_NS = (
+    "http://schemas.openxmlformats.org/package/2006/content-types"
+)
+RELATIONSHIPS_NS = (
+    "http://schemas.openxmlformats.org/package/2006/relationships"
+)
+OFFICE_DOCUMENT_REL = (
+    "http://schemas.openxmlformats.org/officeDocument/2006/"
+    "relationships/officeDocument"
+)
 
-  /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
-    /usr/bin/perl -0777 -e '
-      use strict;
-      use warnings;
 
-      my ($main_part, $content_type, $root_name, $root_namespace,
-          $types_path, $rels_path, $main_path) = @ARGV;
+class ValidationError(Exception):
+    pass
 
-      sub read_xml {
-        my ($path) = @_;
-        open my $handle, "<", $path or exit 2;
-        local $/;
-        my $xml = <$handle>;
-        close $handle or exit 2;
-        defined $xml && length $xml or exit 1;
-        $xml !~ /\x00|<!DOCTYPE|<!ENTITY|<!--|<!\[CDATA\[/i or exit 1;
-        return $xml;
-      }
 
-      sub tags {
-        my ($xml, $local_name) = @_;
-        my @found;
-        while ($xml =~ m{<([A-Za-z_][A-Za-z0-9_.-]*:)?\Q$local_name\E\b([^<>]*?)(/?)>}g) {
-          my ($captured_prefix, $body, $closing_marker) = ($1, $2, $3);
-          my $prefix = $captured_prefix // "";
-          my $self_closing = $closing_marker eq "/";
-          $prefix =~ s/:$//;
-          my %attributes;
-          while ($body =~ /([A-Za-z_][A-Za-z0-9_.:-]*)\s*=\s*(["\x27])(.*?)\2/gs) {
-            my ($name, $value) = ($1, $3);
-            exit 1 if exists $attributes{$name};
-            $attributes{$name} = $value;
-          }
-          push @found, [$prefix, \%attributes, $self_closing];
-        }
-        return @found;
-      }
+def reject_timeout(_signum, _frame):
+    raise ValidationError("archive validation exceeded 30 seconds")
 
-      my $types = read_xml($types_path);
-      my $rels = read_xml($rels_path);
-      my $main = read_xml($main_path);
 
-      my $override_ok = 0;
-      for my $tag (tags($types, "Override")) {
-        my $attributes = $tag->[1];
-        $override_ok = 1 if
-          ($attributes->{PartName} // "") eq "/$main_part" &&
-          ($attributes->{ContentType} // "") eq $content_type;
-      }
-      exit 1 unless $override_ok;
+def qname(namespace, local_name):
+    return "{%s}%s" % (namespace, local_name)
 
-      my $relationship_type =
-        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument";
-      my $relationship_ok = 0;
-      for my $tag (tags($rels, "Relationship")) {
-        my $attributes = $tag->[1];
-        my $target = $attributes->{Target} // "";
-        $target =~ s{^/}{};
-        my $target_mode = $attributes->{TargetMode} // "Internal";
-        $relationship_ok = 1 if
-          ($attributes->{Type} // "") eq $relationship_type &&
-          $target eq $main_part && $target_mode eq "Internal";
-      }
-      exit 1 unless $relationship_ok;
 
-      my $root_ok = 0;
-      for my $tag (tags($main, $root_name)) {
-        my ($prefix, $attributes, $self_closing) = @$tag;
-        my $namespace_key = $prefix eq "" ? "xmlns" : "xmlns:$prefix";
-        next unless ($attributes->{$namespace_key} // "") eq $root_namespace;
-        my $qualified = $prefix eq "" ? $root_name : "$prefix:$root_name";
-        next unless $self_closing || $main =~ m{</\Q$qualified\E\s*>};
-        $root_ok = 1;
-      }
-      exit 1 unless $root_ok;
-    ' \
-    "$main_part" "$content_type" "$root_name" "$root_namespace" \
-    "$content_types_xml" "$relationships_xml" "$main_xml" ||
-    die "$label does not bind the expected $format OPC main part"
+def parse_xml(payload, part_name):
+    if not payload:
+        raise ValidationError("empty required OPC part: %s" % part_name)
+    upper = payload.upper()
+    for token in ("<!DOCTYPE", "<!ENTITY"):
+        for encoding in (
+            "ascii",
+            "utf-16le",
+            "utf-16be",
+            "utf-32le",
+            "utf-32be",
+        ):
+            if token.encode(encoding) in upper:
+                raise ValidationError(
+                    "DTD or entity declaration in required OPC XML"
+                )
+    try:
+        return ET.fromstring(payload)
+    except (ET.ParseError, ValueError) as error:
+        raise ValidationError("malformed required OPC XML: %s" % part_name) from error
+
+
+def validate_entry_name(name, is_directory, folded_names):
+    if (
+        not name
+        or name.startswith("/")
+        or "\\" in name
+        or ":" in name
+        or "//" in name
+        or any(ord(character) < 32 or ord(character) == 127 for character in name)
+    ):
+        raise ValidationError("unsafe ZIP entry name")
+    components = name.split("/")
+    if is_directory:
+        if components[-1] != "":
+            raise ValidationError("ambiguous ZIP directory entry")
+        components = components[:-1]
+    if not components or any(component in ("", ".", "..") for component in components):
+        raise ValidationError("non-canonical ZIP entry name")
+    folded = name.casefold()
+    if folded in folded_names:
+        raise ValidationError("case-colliding ZIP entry name")
+    folded_names.add(folded)
+
+
+def read_archive(package_path, required_parts):
+    archive_size = os.lstat(package_path).st_size
+    if archive_size > MAX_ARCHIVE_BYTES:
+        raise ValidationError("compressed package exceeds 128 MiB")
+    payloads = {}
+    expanded_bytes = 0
+    folded_names = set()
+    try:
+        with zipfile.ZipFile(package_path, "r") as archive:
+            entries = archive.infolist()
+            if not 1 <= len(entries) <= MAX_ENTRIES:
+                raise ValidationError("ZIP entry count is outside 1..2048")
+            for info in entries:
+                is_directory = info.is_dir()
+                validate_entry_name(info.filename, is_directory, folded_names)
+                unix_mode = (info.external_attr >> 16) & 0xFFFF
+                entry_kind = stat.S_IFMT(unix_mode)
+                if entry_kind not in (0, stat.S_IFREG, stat.S_IFDIR):
+                    raise ValidationError("ZIP contains a non-file entry")
+                if is_directory:
+                    if entry_kind not in (0, stat.S_IFDIR) or info.file_size != 0:
+                        raise ValidationError("invalid ZIP directory entry")
+                    continue
+                if entry_kind == stat.S_IFDIR:
+                    raise ValidationError("ambiguous ZIP file entry")
+                if info.flag_bits & 1:
+                    raise ValidationError("encrypted ZIP entries are not accepted")
+                actual_size = 0
+                retained = bytearray() if info.filename in required_parts else None
+                with archive.open(info, "r") as source:
+                    while True:
+                        chunk = source.read(CHUNK_BYTES)
+                        if not chunk:
+                            break
+                        actual_size += len(chunk)
+                        expanded_bytes += len(chunk)
+                        if actual_size > MAX_ENTRY_BYTES:
+                            raise ValidationError("ZIP entry expands beyond 64 MiB")
+                        if expanded_bytes > MAX_EXPANDED_BYTES:
+                            raise ValidationError("ZIP expands beyond 128 MiB")
+                        if retained is not None:
+                            if actual_size > MAX_XML_BYTES:
+                                raise ValidationError(
+                                    "required OPC XML part exceeds 8 MiB"
+                                )
+                            retained.extend(chunk)
+                if actual_size != info.file_size:
+                    raise ValidationError("ZIP entry size disagrees with its payload")
+                if retained is not None:
+                    payloads[info.filename] = bytes(retained)
+    except (OSError, RuntimeError, zipfile.BadZipFile, zipfile.LargeZipFile) as error:
+        raise ValidationError("unreadable or corrupt ZIP package") from error
+    if expanded_bytes < 1:
+        raise ValidationError("ZIP package expands to no file content")
+    missing = [part for part in required_parts if part not in payloads]
+    if missing:
+        raise ValidationError("missing required OPC part: %s" % missing[0])
+    return payloads
+
+
+def validate_opc(package_path, package_format):
+    if package_format == "xlsx":
+        main_part = "xl/workbook.xml"
+        main_content_type = (
+            "application/vnd.openxmlformats-officedocument.spreadsheetml."
+            "sheet.main+xml"
+        )
+        main_qname = qname(
+            "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
+            "workbook",
+        )
+    elif package_format == "docx":
+        main_part = "word/document.xml"
+        main_content_type = (
+            "application/vnd.openxmlformats-officedocument.wordprocessingml."
+            "document.main+xml"
+        )
+        main_qname = qname(
+            "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
+            "document",
+        )
+    else:
+        raise ValidationError("unsupported OPC format")
+
+    required_parts = ("[Content_Types].xml", "_rels/.rels", main_part)
+    payloads = read_archive(package_path, required_parts)
+    types_root = parse_xml(payloads[required_parts[0]], required_parts[0])
+    rels_root = parse_xml(payloads[required_parts[1]], required_parts[1])
+    main_root = parse_xml(payloads[main_part], main_part)
+
+    types_qname = qname(CONTENT_TYPES_NS, "Types")
+    default_qname = qname(CONTENT_TYPES_NS, "Default")
+    override_qname = qname(CONTENT_TYPES_NS, "Override")
+    if types_root.tag != types_qname:
+        raise ValidationError("unexpected OPC content-types root")
+    overrides = []
+    for child in list(types_root):
+        if child.tag not in (default_qname, override_qname) or list(child):
+            raise ValidationError("invalid OPC content-types child structure")
+        if (
+            child.tag == override_qname
+            and child.attrib.get("PartName") == "/" + main_part
+            and child.attrib.get("ContentType") == main_content_type
+        ):
+            overrides.append(child)
+    if len(overrides) != 1:
+        raise ValidationError("expected exactly one main-part content-type override")
+
+    relationships_qname = qname(RELATIONSHIPS_NS, "Relationships")
+    relationship_qname = qname(RELATIONSHIPS_NS, "Relationship")
+    if rels_root.tag != relationships_qname:
+        raise ValidationError("unexpected OPC relationships root")
+    relationship_ids = set()
+    office_relationships = []
+    for child in list(rels_root):
+        if child.tag != relationship_qname or list(child):
+            raise ValidationError("invalid OPC relationship child structure")
+        relationship_id = child.attrib.get("Id", "")
+        if not relationship_id or relationship_id in relationship_ids:
+            raise ValidationError("missing or duplicate OPC relationship Id")
+        relationship_ids.add(relationship_id)
+        if child.attrib.get("Type") == OFFICE_DOCUMENT_REL:
+            office_relationships.append(child)
+    if len(office_relationships) != 1:
+        raise ValidationError("expected exactly one officeDocument relationship")
+    office_relationship = office_relationships[0]
+    target = office_relationship.attrib.get("Target", "")
+    if target.startswith("/"):
+        target = target[1:]
+    if (
+        target != main_part
+        or office_relationship.attrib.get("TargetMode", "Internal") != "Internal"
+    ):
+        raise ValidationError("officeDocument relationship targets the wrong part")
+    if main_root.tag != main_qname:
+        raise ValidationError("unexpected OPC main-part root")
+
+
+signal.signal(signal.SIGALRM, reject_timeout)
+signal.alarm(30)
+try:
+    validate_opc(sys.argv[1], sys.argv[2])
+except (ValidationError, IndexError) as error:
+    print("OPC validation failed: %s" % error, file=sys.stderr)
+    sys.exit(1)
+finally:
+    signal.alarm(0)
+PY
+  then
+    die "$label is not a bounded, structurally valid $format OPC package"
+  fi
 }
 
 assert_workflow_package() {
@@ -1156,11 +1197,7 @@ assert_workflow_package() {
   esac
   assert_owned_private_file "$probe_root/$relative" "$label"
   [ -s "$probe_root/$relative" ] || die "$label is empty: $relative"
-  local opc_entries
-  opc_entries="$(/usr/bin/mktemp "$isolation_root/opc-package-entries.XXXXXX")"
-  assert_bounded_opc_archive "$probe_root/$relative" "$label" "$opc_entries"
-  assert_opc_metadata \
-    "$probe_root/$relative" "$format" "$label" "$opc_entries"
+  assert_valid_opc_archive "$probe_root/$relative" "$format" "$label"
 }
 
 assert_workflow_output() {
@@ -1665,7 +1702,7 @@ if [ -n "$bwrap_input" ] || [ -n "$expected_bwrap_sha256" ]; then
   assert_sha256 "$expected_bwrap_sha256" "EXPECTED_BWRAP_SHA256"
 fi
 
-for tool in jq shasum awk find sort stat id mktemp install wc tr readlink nc unzip uname ps sleep perl grep; do
+for tool in jq shasum awk find sort stat id mktemp install wc tr readlink nc python3 uname ps sleep perl grep; do
   require_command "$tool"
 done
 netcat_bin="$(command -v nc)"
