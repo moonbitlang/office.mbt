@@ -81,16 +81,11 @@ jobs:
           moon_bin=$(command -v moon)
           moonc_bin=$(command -v moonc)
           moonrun_bin=$(command -v moonrun)
-          moon_sha=$(/usr/bin/shasum -a 256 "$moon_bin" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
-          moonc_sha=$(/usr/bin/shasum -a 256 "$moonc_bin" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
-          moonrun_sha=$(/usr/bin/shasum -a 256 "$moonrun_bin" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
           test "$(git rev-parse --verify HEAD)" = "$head"
           test -z "$(git status --porcelain=v1 --untracked-files=all)"
           office/tests/acceptance/fresh-agent/prepare.sh \
             "$head" "$prefix" \
-            "$moon_bin" "$moon_sha" \
-            "$moonc_bin" "$moonc_sha" \
-            "$moonrun_bin" "$moonrun_sha"
+            "$moon_bin" "$moonc_bin" "$moonrun_bin"
           candidate_sha=$(/usr/bin/shasum -a 256 "$prefix/CANDIDATE.json" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
           codex_native=$(find "$(npm root -g)/@openai" -type f \
             -path '*/vendor/*/bin/codex' -print | head -n 1)
@@ -208,24 +203,19 @@ jobs:
           moon_bin=$(command -v moon)
           moonc_bin=$(command -v moonc)
           moonrun_bin=$(command -v moonrun)
-          moon_sha=$(/usr/bin/shasum -a 256 "$moon_bin" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
-          moonc_sha=$(/usr/bin/shasum -a 256 "$moonc_bin" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
-          moonrun_sha=$(/usr/bin/shasum -a 256 "$moonrun_bin" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
           test "$(git rev-parse --verify HEAD)" = "$head"
           test -z "$(git status --porcelain=v1 --untracked-files=all)"
           (
             cd /var/tmp
             "$prepare" \
               "$head" "$prefix" \
-              "$moon_bin" "$moon_sha" \
-              "$moonc_bin" "$moonc_sha" \
-              "$moonrun_bin" "$moonrun_sha"
+              "$moon_bin" "$moonc_bin" "$moonrun_bin"
           )
           jq -e \
             --arg head "$head" \
-            '.schema == "office.fresh-agent.candidate/2"
+            '.schema == "office.fresh-agent.candidate/3"
               and .candidate_head == $head
-              and (.files | length) == 9
+              and (.files | length) == 13
               and .symlinks == [
                 {path: "bin/office", target: "office-native"}
               ]' \

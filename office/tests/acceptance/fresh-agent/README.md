@@ -13,8 +13,8 @@ as `bash script.sh` is deliberately rejected.
 ## Prepare an exact candidate
 
 Start from a clean checkout. Pass the full 40-character HEAD, an absent install
-path under a private existing parent, and the exact Moon compiler/runtime files
-plus caller-computed SHA-256 values. Linux must keep every harness-owned path
+path under a private existing parent, and the canonical Moon compiler/runtime
+files from one toolchain root. Linux must keep every harness-owned path
 outside `/tmp`, which the permission profile deliberately denies; use a private
 directory beneath `/var/tmp`. macOS must use its private per-user `TMPDIR`:
 
@@ -30,33 +30,29 @@ prefix="$install_parent/candidate"
 moon_bin="$(command -v moon)"
 moonc_bin="$(command -v moonc)"
 moonrun_bin="$(command -v moonrun)"
-moon_sha="$(/usr/bin/shasum -a 256 "$moon_bin" |
-  /usr/bin/awk '{print substr($1, length($1) - 63)}')"
-moonc_sha="$(/usr/bin/shasum -a 256 "$moonc_bin" |
-  /usr/bin/awk '{print substr($1, length($1) - 63)}')"
-moonrun_sha="$(/usr/bin/shasum -a 256 "$moonrun_bin" |
-  /usr/bin/awk '{print substr($1, length($1) - 63)}')"
 office/tests/acceptance/fresh-agent/prepare.sh \
   "$head" "$prefix" \
-  "$moon_bin" "$moon_sha" \
-  "$moonc_bin" "$moonc_sha" \
-  "$moonrun_bin" "$moonrun_sha"
+  "$moon_bin" "$moonc_bin" "$moonrun_bin"
 ```
 
 The installer sanitizes its startup environment, derives the checkout from its
 own physical path, disables Git replacement objects plus ambient configuration
 and attributes, and exports the exact tree bound to `head`. It verifies the
-supplied `moon`,
-`moonc`, and `moonrun` hashes, resolves that closure under `env -i`, then
-performs frozen native and Wasm release builds in the snapshot. Every tracked
-controller asset is copied from the snapshot, never from the mutable checkout.
+complete toolchain distribution against the reviewed, platform-specific
+`build-lock.json` before executing it, privately stages that exact closure, and
+resolves dependencies without compiling candidate code. It inventories the
+complete resolved dependency tree against the same lock before performing only
+frozen native and Wasm release builds. Both inventories are reverified after
+the build and retained with the candidate. Every tracked controller asset is
+copied from the snapshot, never from the mutable checkout.
 
 The absent destination is atomically reserved before the build. Fixed
 subtrees are published without clobbering, directory modes are locked, and
 `CANDIDATE.json` is linked into place last as the atomic commit marker. A prefix
 without that marker is incomplete. The manifest records the full commit and
-source-tree identity, driver/code-generator/runtime and dependency-tree hashes,
-build-input identity, and hashes and modes for every candidate file. Runtime
+source-tree identity, driver/code-generator/runtime hashes, build-lock identity,
+complete toolchain and dependency inventories, and hashes and modes for every
+candidate file. Runtime
 capability identity is derived only from commands executed inside the isolated
 probe; candidate code is never executed by the preparer. The runner
 additionally requires one hard link per regular file and exact directory modes.
