@@ -731,33 +731,101 @@ EOF
 }
 
 run_codex() (
+  local current_processes
+  local hard_limit
   local observed_limit
+  local target_limit
+  exec 9< "$job_sentinel" ||
+    die "could not open the Codex job sentinel"
   ulimit -c 0
-  observed_limit="$(ulimit -f)"
-  if [ "$observed_limit" = unlimited ]; then
-    ulimit -f 262144
-  elif (( observed_limit > 262144 )); then
-    ulimit -f 262144
+  hard_limit="$(ulimit -H -f)"
+  target_limit=131072
+  if [ "$hard_limit" != unlimited ] && (( hard_limit < target_limit )); then
+    target_limit="$hard_limit"
   fi
-  observed_limit="$(ulimit -f)"
+  ulimit -S -f "$target_limit"
+  if [ "$hard_limit" = unlimited ] || (( hard_limit > target_limit )); then
+    ulimit -H -f "$target_limit"
+  fi
+  observed_limit="$(ulimit -S -f)"
   if [ "$observed_limit" = unlimited ]; then
     die "could not apply the 128 MiB Codex file-size limit"
   fi
-  if (( observed_limit > 262144 )); then
+  if (( observed_limit > 131072 )); then
     die "could not apply the 128 MiB Codex file-size limit"
   fi
-  observed_limit="$(ulimit -n)"
-  if [ "$observed_limit" = unlimited ]; then
-    ulimit -n 256
-  elif (( observed_limit > 256 )); then
-    ulimit -n 256
+
+  hard_limit="$(ulimit -H -n)"
+  target_limit=256
+  if [ "$hard_limit" != unlimited ] && (( hard_limit < target_limit )); then
+    target_limit="$hard_limit"
   fi
-  observed_limit="$(ulimit -n)"
+  ulimit -S -n "$target_limit"
+  if [ "$hard_limit" = unlimited ] || (( hard_limit > target_limit )); then
+    ulimit -H -n "$target_limit"
+  fi
+  observed_limit="$(ulimit -S -n)"
   if [ "$observed_limit" = unlimited ]; then
     die "could not apply the Codex descriptor limit"
   fi
   (( observed_limit <= 256 )) ||
     die "could not apply the Codex descriptor limit"
+
+  hard_limit="$(ulimit -H -t)"
+  target_limit="$probe_max_cpu_seconds"
+  if [ "$hard_limit" != unlimited ] && (( hard_limit < target_limit )); then
+    target_limit="$hard_limit"
+  fi
+  ulimit -S -t "$target_limit"
+  if [ "$hard_limit" = unlimited ] || (( hard_limit > target_limit )); then
+    ulimit -H -t "$target_limit"
+  fi
+  observed_limit="$(ulimit -S -t)"
+  if [ "$observed_limit" = unlimited ] ||
+    (( observed_limit > probe_max_cpu_seconds )); then
+    die "could not apply the Codex CPU-time limit"
+  fi
+
+  current_processes="$(
+    /bin/ps -axo uid= 2>/dev/null |
+      /usr/bin/awk -v expected="$(/usr/bin/id -u)" '$1 == expected { count++ } END { print count + 0 }'
+  )"
+  case "$current_processes" in
+    '' | *[!0-9]*) die "could not count current user processes" ;;
+  esac
+  hard_limit="$(ulimit -H -u)"
+  target_limit=$((current_processes + probe_max_processes))
+  if [ "$hard_limit" != unlimited ] && (( hard_limit < target_limit )); then
+    target_limit="$hard_limit"
+  fi
+  (( target_limit > current_processes )) ||
+    die "the host process limit leaves no bounded Codex process budget"
+  ulimit -S -u "$target_limit"
+  if [ "$hard_limit" = unlimited ] || (( hard_limit > target_limit )); then
+    ulimit -H -u "$target_limit"
+  fi
+  observed_limit="$(ulimit -S -u)"
+  if [ "$observed_limit" = unlimited ] ||
+    (( observed_limit > current_processes + probe_max_processes )); then
+    die "could not apply the Codex user-process limit"
+  fi
+
+  if [ "$platform_name" = "Linux" ]; then
+    hard_limit="$(ulimit -H -v)"
+    target_limit=4194304
+    if [ "$hard_limit" != unlimited ] && (( hard_limit < target_limit )); then
+      target_limit="$hard_limit"
+    fi
+    ulimit -S -v "$target_limit"
+    if [ "$hard_limit" = unlimited ] || (( hard_limit > target_limit )); then
+      ulimit -H -v "$target_limit"
+    fi
+    observed_limit="$(ulimit -S -v)"
+    if [ "$observed_limit" = unlimited ] ||
+      (( observed_limit > 4194304 )); then
+      die "could not apply the Codex virtual-memory limit"
+    fi
+  fi
   /usr/bin/env -i \
     HOME="$isolated_user_home" \
     CODEX_HOME="$isolated_codex_state" \
@@ -799,17 +867,51 @@ process_is_live() {
   esac
 }
 
-process_group_has_live_processes() {
-  local pgid="$1"
-  /bin/ps -axo pgid=,stat= 2>/dev/null |
-    /usr/bin/awk -v expected="$pgid" '
-      $1 == expected && $2 !~ /^Z/ { found = 1 }
-      END { exit(found ? 0 : 1) }
-    '
+job_member_pids() {
+  local pgid="${codex_pgid:-}"
+  {
+    if [ -n "$pgid" ]; then
+      /bin/ps -axo pid=,pgid=,stat= 2>/dev/null |
+        /usr/bin/awk -v expected="$pgid" '
+          $2 == expected && $3 !~ /^Z/ { print $1 }
+        '
+    fi
+    if [ -n "${job_sentinel:-}" ] &&
+      { [ -e "$job_sentinel" ] || [ -L "$job_sentinel" ]; }; then
+      {
+        "$lsof_bin" -F p -- "$job_sentinel" 2>/dev/null || true
+      } | /usr/bin/awk '/^p[0-9]+$/ { print substr($0, 2) }'
+    fi
+  } | /usr/bin/awk -v runner="$$" '
+    /^[0-9]+$/ && $1 > 1 && $1 != runner && !seen[$1]++ { print $1 }
+  '
+}
+
+pid_list_has_live_processes() {
+  local pid
+  while IFS= read -r pid; do
+    [ -n "$pid" ] || continue
+    if process_is_live "$pid"; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+signal_pid_list() {
+  local pid
+  local signal="$1"
+  local pids="$2"
+  while IFS= read -r pid; do
+    [ -n "$pid" ] || continue
+    /bin/kill -"$signal" "$pid" 2>/dev/null || true
+  done <<< "$pids"
 }
 
 terminate_supervised_codex() {
   local attempt
+  local final_pids
+  local initial_pids
   local pid="${codex_pid:-}"
   local pgid="${codex_pgid:-}"
   local auth_removed=1
@@ -821,41 +923,35 @@ terminate_supervised_codex() {
     # credential is still present. A direct KILL is the fail-closed fallback.
     first_signal=KILL
   fi
+  initial_pids="$(job_member_pids)"
   if [ -n "$pgid" ] && [ -n "$pid" ] && [ "$pgid" = "$pid" ]; then
-    if process_group_has_live_processes "$pgid"; then
-      /bin/kill -"$first_signal" "-$pgid" 2>/dev/null || true
-      for attempt in {1..20}; do
-        process_group_has_live_processes "$pgid" || break
-        /bin/sleep 0.1
-      done
-      if [ "$first_signal" = TERM ] &&
-        process_group_has_live_processes "$pgid"; then
-        /bin/kill -KILL "-$pgid" 2>/dev/null || true
-        for attempt in {1..20}; do
-          process_group_has_live_processes "$pgid" || break
-          /bin/sleep 0.1
-        done
-      fi
-      if process_group_has_live_processes "$pgid"; then
-        survived=1
-      fi
+    /bin/kill -"$first_signal" "-$pgid" 2>/dev/null || true
+  fi
+  signal_pid_list "$first_signal" "$initial_pids"
+  for attempt in {1..5}; do
+    pid_list_has_live_processes <<< "$initial_pids" || break
+    /bin/sleep 0.1
+  done
+  final_pids="$(job_member_pids)"
+  if [ "$first_signal" = TERM ] &&
+    { [ -n "$final_pids" ] || pid_list_has_live_processes <<< "$initial_pids"; }; then
+    if [ -n "$pgid" ] && [ -n "$pid" ] && [ "$pgid" = "$pid" ]; then
+      /bin/kill -KILL "-$pgid" 2>/dev/null || true
     fi
-  elif [ -n "$pid" ] && process_is_live "$pid"; then
-    /bin/kill -"$first_signal" "$pid" 2>/dev/null || true
-    for attempt in {1..20}; do
-      process_is_live "$pid" || break
+    signal_pid_list KILL "$initial_pids"
+    signal_pid_list KILL "$final_pids"
+    for attempt in {1..5}; do
+      if ! pid_list_has_live_processes <<< "$initial_pids" &&
+        ! pid_list_has_live_processes <<< "$final_pids"; then
+        break
+      fi
       /bin/sleep 0.1
     done
-    if [ "$first_signal" = TERM ] && process_is_live "$pid"; then
-      /bin/kill -KILL "$pid" 2>/dev/null || true
-      for attempt in {1..20}; do
-        process_is_live "$pid" || break
-        /bin/sleep 0.1
-      done
-    fi
-    if process_is_live "$pid"; then
-      survived=1
-    fi
+  fi
+  final_pids="$(job_member_pids)"
+  if [ -n "$final_pids" ] ||
+    pid_list_has_live_processes <<< "$initial_pids"; then
+    survived=1
   fi
   if [ -n "$pid" ] && ! process_is_live "$pid"; then
     wait "$pid" 2>/dev/null || true
@@ -937,7 +1033,7 @@ wait_for_supervised_codex() {
     echo "error: Codex $operation exceeded its ${timeout_seconds}s deadline" >&2
     supervised_codex_status=124
   elif [ "$resource_exceeded" -eq 1 ]; then
-    echo "error: Codex probe exceeded its bounded storage policy" >&2
+    echo "error: Codex probe exceeded its bounded resource policy" >&2
     /bin/cat "$probe_resource_violation_file" >&2
     supervised_codex_status=125
   else
@@ -946,17 +1042,26 @@ wait_for_supervised_codex() {
 }
 
 start_probe_resource_monitor() {
+  local monitored_pgid="$1"
+  case "$monitored_pgid" in
+    '' | *[!0-9]*) die "invalid Codex process group for resource monitor" ;;
+  esac
   probe_resource_violation_file="$isolation_root/resource-violation.log"
   : > "$probe_resource_violation_file"
   (
     local inspection_failures=0
     trap 'exit 0' HUP INT TERM
     while :; do
+      local cpu_seconds
       local entry_count
+      local process_count
+      local process_snapshot
+      local rss_kib
       local usage_kib
       if ! usage_kib="$(
         /usr/bin/du -sk \
-          "$probe_root" "$isolated_tmp" "$isolated_codex_tmp" 2>/dev/null |
+          "$probe_root" "$evidence_root" "$isolated_user_home" \
+          "$isolated_tmp" "$isolated_codex_state" 2>/dev/null |
           /usr/bin/awk '{ total += $1 } END { print total + 0 }'
       )"; then
         inspection_failures=$((inspection_failures + 1))
@@ -970,7 +1075,8 @@ start_probe_resource_monitor() {
       fi
       if ! entry_count="$(
         /usr/bin/find \
-          "$probe_root" "$isolated_tmp" "$isolated_codex_tmp" \
+          "$probe_root" "$evidence_root" "$isolated_user_home" \
+          "$isolated_tmp" "$isolated_codex_state" \
           -mindepth 1 -print 2>/dev/null |
           /usr/bin/wc -l |
           /usr/bin/tr -d ' '
@@ -984,6 +1090,45 @@ start_probe_resource_monitor() {
         /bin/sleep 0.05
         continue
       fi
+      if ! process_snapshot="$(
+        /bin/ps -axo pgid=,rss=,time=,stat= 2>/dev/null |
+          /usr/bin/awk -v expected="$monitored_pgid" '
+            function seconds(raw, count, fields, whole) {
+              count = split(raw, fields, ":")
+              sub(/[.][0-9]+$/, "", fields[count])
+              if (count == 3) {
+                return (fields[1] * 3600) + (fields[2] * 60) + fields[3]
+              }
+              if (count == 2) {
+                return (fields[1] * 60) + fields[2]
+              }
+              return fields[1] + 0
+            }
+            $1 == expected && $4 !~ /^Z/ {
+              processes++
+              rss += $2
+              cpu += seconds($3)
+            }
+            END { print processes + 0, rss + 0, cpu + 0 }
+          '
+      )"; then
+        inspection_failures=$((inspection_failures + 1))
+        if (( inspection_failures >= 10 )); then
+          printf '%s\n' 'Codex process resources remained uninspectable across 10 samples' \
+            > "$probe_resource_violation_file"
+          exit 0
+        fi
+        /bin/sleep 0.05
+        continue
+      fi
+      read -r process_count rss_kib cpu_seconds <<< "$process_snapshot"
+      case "$process_count:$rss_kib:$cpu_seconds" in
+        *[!0-9:]*)
+          printf '%s\n' 'Codex process resource snapshot was malformed' \
+            > "$probe_resource_violation_file"
+          exit 0
+          ;;
+      esac
       inspection_failures=0
       if (( usage_kib > probe_max_kib )); then
         printf 'probe storage reached %s KiB (limit %s KiB)\n' \
@@ -995,13 +1140,36 @@ start_probe_resource_monitor() {
           "$entry_count" "$probe_max_entries" > "$probe_resource_violation_file"
         exit 0
       fi
+      if (( process_count > probe_max_processes )); then
+        printf 'Codex job reached %s processes (limit %s)\n' \
+          "$process_count" "$probe_max_processes" \
+          > "$probe_resource_violation_file"
+        exit 0
+      fi
+      if (( rss_kib > probe_max_rss_kib )); then
+        printf 'Codex job reached %s KiB RSS (limit %s KiB)\n' \
+          "$rss_kib" "$probe_max_rss_kib" \
+          > "$probe_resource_violation_file"
+        exit 0
+      fi
+      if (( cpu_seconds >= probe_max_cpu_seconds )); then
+        printf 'Codex job reached %s CPU seconds (limit %s)\n' \
+          "$cpu_seconds" "$probe_max_cpu_seconds" \
+          > "$probe_resource_violation_file"
+        exit 0
+      fi
       /bin/sleep 0.1
     done
   ) &
   probe_resource_monitor_pid="$!"
   /bin/sleep 0.05
-  /bin/kill -0 "$probe_resource_monitor_pid" 2>/dev/null ||
-    die "probe resource monitor did not start"
+  if ! /bin/kill -0 "$probe_resource_monitor_pid" 2>/dev/null; then
+    # A small limit can be exceeded by the first sample. In that case the
+    # monitor has completed its job before this readiness check; the durable
+    # violation record is the successful readiness signal.
+    [ -s "$probe_resource_violation_file" ] ||
+      die "probe resource monitor did not start"
+  fi
 }
 
 stop_probe_resource_monitor() {
@@ -1755,13 +1923,18 @@ if [ -n "$bwrap_input" ] || [ -n "$expected_bwrap_sha256" ]; then
   assert_sha256 "$expected_bwrap_sha256" "EXPECTED_BWRAP_SHA256"
 fi
 
-for tool in jq shasum awk du find sort stat id mktemp install wc tr readlink nc python3 uname ps sleep perl grep; do
+for tool in jq shasum awk du find sort stat id mktemp install wc tr readlink nc python3 uname ps sleep perl grep lsof; do
   require_command "$tool"
 done
 netcat_bin="$(command -v nc)"
 case "$netcat_bin" in
   /*) ;;
   *) die "netcat must resolve to an absolute path" ;;
+esac
+lsof_bin="$(command -v lsof)"
+case "$lsof_bin" in
+  /*) ;;
+  *) die "lsof must resolve to an absolute path" ;;
 esac
 platform_name="$(/usr/bin/uname -s)"
 codex_version_timeout_seconds="${OFFICE_F1B_CODEX_VERSION_TIMEOUT_SECONDS:-30}"
@@ -1770,6 +1943,9 @@ codex_probe_timeout_seconds="${OFFICE_F1B_CODEX_PROBE_TIMEOUT_SECONDS:-1800}"
 postprocess_timeout_seconds="${OFFICE_F1B_POSTPROCESS_TIMEOUT_SECONDS:-300}"
 probe_max_kib="${OFFICE_F1B_PROBE_MAX_KIB:-524288}"
 probe_max_entries="${OFFICE_F1B_PROBE_MAX_ENTRIES:-8192}"
+probe_max_rss_kib="${OFFICE_F1B_PROBE_MAX_RSS_KIB:-4194304}"
+probe_max_processes="${OFFICE_F1B_PROBE_MAX_PROCESSES:-128}"
+probe_max_cpu_seconds="${OFFICE_F1B_PROBE_MAX_CPU_SECONDS:-1900}"
 validate_timeout_seconds \
   "$codex_version_timeout_seconds" 30 \
   OFFICE_F1B_CODEX_VERSION_TIMEOUT_SECONDS
@@ -1786,6 +1962,12 @@ validate_integer_range \
   "$probe_max_kib" 1024 524288 OFFICE_F1B_PROBE_MAX_KIB
 validate_integer_range \
   "$probe_max_entries" 128 8192 OFFICE_F1B_PROBE_MAX_ENTRIES
+validate_integer_range \
+  "$probe_max_rss_kib" 8192 4194304 OFFICE_F1B_PROBE_MAX_RSS_KIB
+validate_integer_range \
+  "$probe_max_processes" 4 128 OFFICE_F1B_PROBE_MAX_PROCESSES
+validate_integer_range \
+  "$probe_max_cpu_seconds" 1 1900 OFFICE_F1B_PROBE_MAX_CPU_SECONDS
 
 control_dir="$(canonical_directory "$(/usr/bin/dirname -- "${BASH_SOURCE[0]}")")"
 install_root="$(canonical_directory "$control_dir/..")"
@@ -1891,6 +2073,7 @@ codex_pgid=""
 probe_resource_monitor_pid=""
 probe_resource_violation_file=""
 isolated_codex_state_identity=""
+job_sentinel=""
 
 cleanup() {
   local status="$1"
@@ -1954,6 +2137,10 @@ policy_readonly_root="$isolation_root/policy-readonly"
   "$isolated_codex_bin" \
   "$isolated_codex_resources" \
   "$policy_readonly_root"
+job_sentinel="$isolation_root/job-sentinel"
+printf 'office-f1b-job %s %s\n' "$expected_head" "$$" > "$job_sentinel"
+chmod 0400 "$job_sentinel"
+assert_owned_file "$job_sentinel" "0400" "1" "Codex job sentinel"
 isolated_codex_state_identity="$(stat_identity "$isolated_codex_state")"
 printf '%s\n' 'non-secret permission sentinel' \
   > "$isolated_codex_state/credential-canary"
@@ -2139,6 +2326,7 @@ config_file="$isolated_codex_state/config.toml"
   fi
   printf '%s = "deny"\n' "$(toml_string "$isolated_codex_state")"
   printf '%s = "deny"\n' "$(toml_string "$isolated_codex_resources")"
+  printf '%s = "deny"\n' "$(toml_string "$job_sentinel")"
   printf '%s = "deny"\n' "$(toml_string "$evidence_root")"
   printf '%s = "deny"\n' "$(toml_string "$candidate_root/control")"
   printf '%s = "deny"\n' "$(toml_string "$candidate_root/CANDIDATE.json")"
@@ -2241,6 +2429,7 @@ bwrap_evidence_json="$(
   --arg candidate_manifest_sha256 "$expected_candidate_sha256" \
   --arg runner_sha256 "$runner_sha256" \
   --arg attester_sha256 "$expected_attester_sha256" \
+  --arg job_sentinel_sha256 "$(sha256_file "$job_sentinel")" \
   --arg prompt_sha256 "$prompt_sha256" \
   --arg output_schema_sha256 "$output_schema_sha256" \
   --arg codex_version "$codex_version" \
@@ -2248,6 +2437,12 @@ bwrap_evidence_json="$(
   --argjson bubblewrap "$bwrap_evidence_json" \
   --arg config_sha256 "$config_sha256_before" \
   --arg permission_canary_sha256 "$canary_sha256" \
+  --argjson max_cpu_seconds "$probe_max_cpu_seconds" \
+  --argjson max_entries "$probe_max_entries" \
+  --argjson max_processes "$probe_max_processes" \
+  --argjson max_rss_kib "$probe_max_rss_kib" \
+  --argjson max_storage_kib "$probe_max_kib" \
+  --arg platform_name "$platform_name" \
   '{
     schema: $schema,
     candidate_head: $candidate_head,
@@ -2259,6 +2454,22 @@ bwrap_evidence_json="$(
       output_schema_sha256: $output_schema_sha256,
       config_sha256: $config_sha256,
       permission_canary_sha256: $permission_canary_sha256,
+      job_identity: {
+        inherited_fd: 9,
+        sentinel_sha256: $job_sentinel_sha256,
+        detached_member_discovery: "lsof"
+      },
+      resource_policy: {
+        cpu_seconds: $max_cpu_seconds,
+        file_size_bytes: 134217728,
+        open_files: 256,
+        process_count: $max_processes,
+        rss_kib: $max_rss_kib,
+        storage_kib: $max_storage_kib,
+        storage_entries: $max_entries,
+        virtual_memory_kib: (if $platform_name == "Linux" then 4194304 else null end),
+        writable_roots: ["probe", "evidence", "home", "scratch", "codex_state"]
+      },
       policy_readonly_canary: {
         host_write_preflight: true,
         sandbox_write_denied: true,
@@ -2333,7 +2544,6 @@ verify_staged_attester
 
 assert_loopback_listener_reachable ||
   die "loopback denial-canary listener is not live before the installed-command probe"
-start_probe_resource_monitor
 set -m
 run_codex exec \
   --ephemeral \
@@ -2356,12 +2566,13 @@ run_codex exec \
   2> "$evidence_root/codex-stderr.log" &
 arm_codex_supervision "$!"
 set +m
+start_probe_resource_monitor "$codex_pgid"
 wait_for_supervised_codex \
   "installed-command probe" "$codex_probe_timeout_seconds"
 codex_status="$supervised_codex_status"
 stop_probe_resource_monitor
 if [ -s "$probe_resource_violation_file" ] && [ "$codex_status" -eq 0 ]; then
-  echo "error: Codex probe exceeded its bounded storage policy" >&2
+  echo "error: Codex probe exceeded its bounded resource policy" >&2
   /bin/cat "$probe_resource_violation_file" >&2
   codex_status=125
 fi
