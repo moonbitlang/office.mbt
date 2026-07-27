@@ -166,11 +166,18 @@ add_host_inventory_path() {
   local existing
   local -a retained=()
   resolved="$(canonical_existing_path "$input")"
-  case "$resolved/" in
-    "$host_inventory_root/"*) ;;
-    *) die "build-host inventory path escapes its root: $resolved" ;;
-  esac
-  relative="${resolved#"$host_inventory_root/"}"
+  if [ "$host_inventory_root" = / ]; then
+    case "$resolved" in
+      /*) relative="${resolved#/}" ;;
+      *) die "build-host inventory path escapes its root: $resolved" ;;
+    esac
+  else
+    case "$resolved/" in
+      "$host_inventory_root/"*) ;;
+      *) die "build-host inventory path escapes its root: $resolved" ;;
+    esac
+    relative="${resolved#"$host_inventory_root/"}"
+  fi
   [ -n "$relative" ] ||
     die "build-host inventory must select a strict descendant"
   if (( ${#host_inventory_entries[@]} > 0 )); then
@@ -536,16 +543,16 @@ case "$build_platform" in
     )"
     build_sdk_kind="macos-sdk"
     build_sdk_version="$(/usr/bin/xcrun --sdk macosx --show-sdk-version)"
-    host_inventory_root="$(canonical_directory "$(/usr/bin/xcode-select -p)")"
+    host_inventory_root=/
     host_identity_path="$(
       canonical_existing_path /System/Library/CoreServices/SystemVersion.plist
     )"
     ;;
   linux-x86_64)
-    build_cc=/usr/bin/cc
-    build_ar=/usr/bin/ar
+    build_cc="$(canonical_existing_path /usr/bin/cc)"
+    build_ar="$(canonical_existing_path /usr/bin/ar)"
     build_sdk_kind="linux-sysroot"
-    host_inventory_root=/usr
+    host_inventory_root=/
     host_identity_path="$(canonical_existing_path /etc/os-release)"
     ;;
   *) die "no native build-host policy is registered for $build_platform" ;;
@@ -579,6 +586,7 @@ host_identity_sha256="$(sha256_file "$host_identity_path")"
 host_kernel="$(/usr/bin/uname -a)"
 
 host_inventory_entries=()
+add_host_inventory_path "$host_identity_path"
 case "$build_platform" in
   darwin-arm64)
     add_host_inventory_path "$build_sdkroot"
@@ -633,7 +641,6 @@ build_host_manifest="$scratch/build-host.manifest"
   "$host_inventory_root" \
   "$build_host_manifest" \
   build-host \
-  --allow-external-symlinks \
   "${host_inventory_entries[@]}"
 build_host_manifest_sha256="$(sha256_file "$build_host_manifest")"
 
@@ -918,10 +925,43 @@ postbuild_host_manifest="$scratch/postbuild-host.manifest"
   "$host_inventory_root" \
   "$postbuild_host_manifest" \
   build-host \
-  --allow-external-symlinks \
   "${host_inventory_entries[@]}"
 /usr/bin/cmp "$build_host_manifest" "$postbuild_host_manifest" ||
   die "native build-host closure changed during frozen release builds"
+postbuild_cc_resolved="$(canonical_existing_path "$build_cc")"
+postbuild_ar_resolved="$(canonical_existing_path "$build_ar")"
+postbuild_linker="$(resolve_compiler_program "$build_cc" ld)"
+postbuild_assembler="$(resolve_compiler_program "$build_cc" as)"
+postbuild_cc_target="$("$build_cc" -dumpmachine)"
+postbuild_cc_resource_dir="$(
+  "$build_cc" -print-resource-dir 2>/dev/null ||
+    "$build_cc" -print-file-name=include
+)"
+postbuild_cc_resource_dir="$(canonical_directory "$postbuild_cc_resource_dir")"
+case "$build_platform" in
+  darwin-arm64)
+    postbuild_sdkroot="$(
+      canonical_directory "$(/usr/bin/xcrun --sdk macosx --show-sdk-path)"
+    )"
+    postbuild_sdk_version="$(/usr/bin/xcrun --sdk macosx --show-sdk-version)"
+    ;;
+  linux-x86_64)
+    postbuild_sdkroot="$("$build_cc" -print-sysroot)"
+    [ -n "$postbuild_sdkroot" ] || postbuild_sdkroot=/
+    postbuild_sdkroot="$(canonical_directory "$postbuild_sdkroot")"
+    postbuild_sdk_version="$postbuild_cc_target"
+    ;;
+esac
+[ "$postbuild_cc_resolved" = "$build_cc_resolved" ] &&
+  [ "$postbuild_ar_resolved" = "$build_ar_resolved" ] &&
+  [ "$postbuild_linker" = "$build_linker" ] &&
+  [ "$postbuild_assembler" = "$build_assembler" ] &&
+  [ "$postbuild_cc_target" = "$build_cc_target" ] &&
+  [ "$postbuild_cc_resource_dir" = "$build_cc_resource_dir" ] &&
+  [ "$postbuild_sdkroot" = "$build_sdkroot" ] &&
+  [ "$postbuild_sdk_version" = "$build_sdk_version" ] &&
+  [ "$(/usr/bin/uname -a)" = "$host_kernel" ] ||
+  die "native build-host selection changed during the build"
 [ "$(sha256_file "$build_cc_resolved")" = "$build_cc_sha256" ] &&
   [ "$(sha256_file "$build_ar_resolved")" = "$build_ar_sha256" ] &&
   [ "$(sha256_file "$build_linker")" = "$build_linker_sha256" ] &&
