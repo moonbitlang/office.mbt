@@ -140,6 +140,16 @@ version/canary/session operation runs under `env -i`. Exact `#!/bin/sh` and
 `#!/bin/bash` test executables are also supported with fixed system
 interpreters; other shebangs are rejected and cannot accept a `bwrap`.
 
+Every Codex operation also runs in a dedicated process group. The controller
+uses hard deadlines of 30 seconds for version discovery, 180 seconds for the
+permission canary, and 1,800 seconds for the installed-command probe. The
+corresponding `OFFICE_F1B_CODEX_*_TIMEOUT_SECONDS` variables may only lower
+those bounds (the contract suite uses that path); they cannot extend them. A
+deadline returns status 124 after TERM/KILL escalation. A leader exit does not
+release supervision: the controller terminates and drains any remaining live
+process-group member before it clears the PGID or continues, and removes the
+staged credential before signaling descendants.
+
 ## Run in least privilege
 
 Use the runner copied into the candidate. Probe and evidence paths must be
@@ -282,8 +292,10 @@ Publish both complete non-secret probe and evidence directories (for example as
 a CI artifact or an unlisted durable review attachment), not hashes without
 their recomputable result and artifact inputs.
 
-The normal EXIT/HUP/INT/TERM trap deletes the isolated Codex home and credential
-copy. SIGKILL and machine failure cannot run a trap; use a one-shot private
-parent and remove it after evidence collection. If the candidate head changes,
-discard the prefix and evidence and repeat from preparation. Record every P0-P2
-product gap under the Office parity epic; this baseline does not close the epic.
+The normal EXIT/HUP/INT/TERM trap terminates the supervised process group and
+deletes the isolated Codex home and credential copy. The same cleanup runs
+after a normal leader exit, including when a descendant ignores TERM. SIGKILL
+and machine failure cannot run a trap; use a one-shot private parent and remove
+it after evidence collection. If the candidate head changes, discard the
+prefix and evidence and repeat from preparation. Record every P0-P2 product gap
+under the Office parity epic; this baseline does not close the epic.

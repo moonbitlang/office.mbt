@@ -396,6 +396,7 @@ chmod 0600 "$codex_bin_dir/mode"
   printf '%s\n' \
     'mode=$(/bin/cat "$mode_file")' \
     'if [ "${1:-}" = "--version" ]; then' \
+    '  if [ "$mode" = "version-hang" ]; then trap "" HUP INT TERM; while :; do /bin/sleep 1; done; fi' \
     '  if [ "$mode" = "old-version" ]; then echo "codex-cli 0.144.9"; else echo "codex-cli 0.145.0"; fi' \
     '  exit 0' \
     'fi' \
@@ -440,6 +441,7 @@ chmod 0600 "$codex_bin_dir/mode"
     'if [ "$command" = "sandbox" ]; then' \
     '  case " $* " in *" --include-managed-config "*) ;; *) exit 62 ;; esac' \
     '  case " $* " in *" -P fresh_agent "*) ;; *) exit 63 ;; esac' \
+    '  if [ "$mode" = "canary-hang" ]; then trap "" HUP INT TERM; while :; do /bin/sleep 1; done; fi' \
     '  if [ "$mode" = "sandbox-fail" ]; then echo "sandbox diagnostic" >&2; exit 41; fi' \
     '  if [ "$mode" = "unreadable-policy" ]; then chmod 0300 "$policy_readonly"; fi' \
     '  /bin/mkdir -p "$TMPDIR/codex-bwrap-synthetic-mount-targets-fake"' \
@@ -448,6 +450,15 @@ chmod 0600 "$codex_bin_dir/mode"
     '  exit 0' \
     'fi' \
     'test "$command" = "exec"' \
+    'if [ "$mode" = "orphan-child" ]; then' \
+    '  (trap "" HUP INT TERM; while :; do /bin/sleep 1; done) &' \
+    '  printf "%s\n" "$!" > "$mode_file.child-pid"' \
+    '  exit 0' \
+    'fi' \
+    'if [ "$mode" = "probe-hang" ]; then' \
+    '  trap "" HUP INT TERM' \
+    '  while :; do /bin/sleep 1; done' \
+    'fi' \
     'if [ "$mode" = "ignore-term" ]; then' \
     '  printf "%s\n" "$$" > "$mode_file.child-pid"' \
     '  trap "" HUP INT TERM' \
@@ -910,6 +921,13 @@ expect_failure sandbox-fail 1 'sandbox diagnostic' \
   "$case_root/sandbox-fail-probe" "$case_root/sandbox-fail-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
+printf 'canary-hang\n' > "$codex_bin_dir/mode"
+OFFICE_F1B_CODEX_CANARY_TIMEOUT_SECONDS=1 \
+expect_failure canary-timeout 124 'permission canary exceeded its 1s deadline' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/canary-timeout-probe" "$case_root/canary-timeout-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
 printf 'unreadable-policy\n' > "$codex_bin_dir/mode"
 expect_failure unreadable-policy 1 'could not inspect policy read-only canary' \
   "$runner" "$head" "$candidate_sha" \
@@ -923,11 +941,47 @@ expect_failure old-version 1 '0.145.0 or newer is required' \
   "$case_root/old-probe" "$case_root/old-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
+printf 'version-hang\n' > "$codex_bin_dir/mode"
+OFFICE_F1B_CODEX_VERSION_TIMEOUT_SECONDS=1 \
+expect_failure version-timeout 124 'version probe exceeded its 1s deadline' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/version-timeout-probe" "$case_root/version-timeout-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
 printf 'exit19\n' > "$codex_bin_dir/mode"
 expect_failure codex-status 19 'Codex probe exited with status 19' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/status-probe" "$case_root/status-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'probe-hang\n' > "$codex_bin_dir/mode"
+OFFICE_F1B_CODEX_PROBE_TIMEOUT_SECONDS=1 \
+expect_failure probe-timeout 124 'installed-command probe exceeded its 1s deadline' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/probe-timeout-probe" "$case_root/probe-timeout-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'orphan-child\n' > "$codex_bin_dir/mode"
+/bin/rm -f -- "$codex_bin_dir/mode.child-pid"
+expect_failure orphan-child 1 'Codex final message' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/orphan-probe" "$case_root/orphan-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+orphan_child_pid="$(/bin/cat "$codex_bin_dir/mode.child-pid")"
+for _ in {1..20}; do
+  orphan_child_state="$(
+    /bin/ps -o stat= -p "$orphan_child_pid" 2>/dev/null |
+      /usr/bin/tr -d ' ' || true
+  )"
+  case "$orphan_child_state" in
+    "" | Z*) break ;;
+  esac
+  /bin/sleep 0.1
+done
+case "$orphan_child_state" in
+  "" | Z*) ;;
+  *) fail "Codex descendant survived after its leader exited" ;;
+esac
 
 printf 'ignore-term\n' > "$codex_bin_dir/mode"
 signal_probe="$case_root/signal-probe"
@@ -941,7 +995,7 @@ signal_stderr="$test_root/signal.stderr"
 signal_runner_pid="$!"
 signal_child_pid=""
 staged_auth=""
-for attempt in {1..100}; do
+for _ in {1..100}; do
   if [ -s "$codex_bin_dir/mode.child-pid" ]; then
     signal_child_pid="$(/bin/cat "$codex_bin_dir/mode.child-pid")"
     staged_auth="$(/usr/bin/find "$case_root" -path \
