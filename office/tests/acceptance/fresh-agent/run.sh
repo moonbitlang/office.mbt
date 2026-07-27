@@ -48,6 +48,27 @@ validate_timeout_seconds() {
   fi
 }
 
+validate_integer_range() {
+  local value="$1"
+  local minimum="$2"
+  local maximum="$3"
+  local label="$4"
+  case "$value" in
+    "" | *[!0-9]*) die "$label must be an integer" ;;
+  esac
+  if (( value < minimum || value > maximum )); then
+    die "$label must be between $minimum and $maximum"
+  fi
+}
+
+require_postprocess_budget() {
+  local label="$1"
+  local deadline="${postprocess_deadline:-0}"
+  if (( deadline > 0 && SECONDS >= deadline )); then
+    die "post-processing exceeded its ${postprocess_timeout_seconds}s global deadline before $label"
+  fi
+}
+
 sha256_file() {
   /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
     /usr/bin/shasum -a 256 "$1" |
@@ -401,6 +422,7 @@ verify_candidate() {
         "control/permission-canary.sh",
         "control/attest.py",
         "control/command-policy.py",
+        "control/transcript-policy.py",
         "control/private.json",
         "control/inventory.sh",
         "control/build-lock.json",
@@ -442,6 +464,7 @@ control/final.schema.json|0400
 control/permission-canary.sh|0500
 control/attest.py|0400
 control/command-policy.py|0400
+control/transcript-policy.py|0400
 control/private.json|0400
 control/inventory.sh|0500
 control/build-lock.json|0400
@@ -595,6 +618,7 @@ EOF
       control/final.schema.json \
       control/attest.py \
       control/command-policy.py \
+      control/transcript-policy.py \
       control/build-lock.json \
       control/dependencies.manifest \
       control/inventory.sh \
@@ -636,7 +660,34 @@ EOF
     die "candidate manifest changed while it was verified"
 }
 
-run_codex() {
+run_codex() (
+  local observed_limit
+  ulimit -c 0
+  observed_limit="$(ulimit -f)"
+  if [ "$observed_limit" = unlimited ]; then
+    ulimit -f 262144
+  elif (( observed_limit > 262144 )); then
+    ulimit -f 262144
+  fi
+  observed_limit="$(ulimit -f)"
+  if [ "$observed_limit" = unlimited ]; then
+    die "could not apply the 128 MiB Codex file-size limit"
+  fi
+  if (( observed_limit > 262144 )); then
+    die "could not apply the 128 MiB Codex file-size limit"
+  fi
+  observed_limit="$(ulimit -n)"
+  if [ "$observed_limit" = unlimited ]; then
+    ulimit -n 256
+  elif (( observed_limit > 256 )); then
+    ulimit -n 256
+  fi
+  observed_limit="$(ulimit -n)"
+  if [ "$observed_limit" = unlimited ]; then
+    die "could not apply the Codex descriptor limit"
+  fi
+  (( observed_limit <= 256 )) ||
+    die "could not apply the Codex descriptor limit"
   /usr/bin/env -i \
     HOME="$isolated_user_home" \
     CODEX_HOME="$isolated_codex_state" \
@@ -646,7 +697,7 @@ run_codex() {
     LANG=C \
     LC_ALL=C \
     "${codex_argv[@]}" "$@"
-}
+)
 
 remove_isolated_auth() {
   local codex_state="${isolated_codex_state:-}"
@@ -776,9 +827,15 @@ wait_for_supervised_codex() {
   local timeout_seconds="$2"
   local deadline=$((SECONDS + timeout_seconds))
   local timed_out=0
+  local resource_exceeded=0
   local leader_status
 
   while supervised_codex_leader_is_running; do
+    if [ -n "${probe_resource_violation_file:-}" ] &&
+      [ -s "$probe_resource_violation_file" ]; then
+      resource_exceeded=1
+      break
+    fi
     if (( SECONDS >= deadline )); then
       timed_out=1
       break
@@ -786,7 +843,12 @@ wait_for_supervised_codex() {
     /bin/sleep 0.1
   done
 
-  if [ "$timed_out" -eq 0 ]; then
+  if [ -n "${probe_resource_violation_file:-}" ] &&
+    [ -s "$probe_resource_violation_file" ]; then
+    resource_exceeded=1
+  fi
+
+  if [ "$timed_out" -eq 0 ] && [ "$resource_exceeded" -eq 0 ]; then
     set +e
     wait "$codex_pid"
     leader_status="$?"
@@ -804,8 +866,68 @@ wait_for_supervised_codex() {
   if [ "$timed_out" -eq 1 ]; then
     echo "error: Codex $operation exceeded its ${timeout_seconds}s deadline" >&2
     supervised_codex_status=124
+  elif [ "$resource_exceeded" -eq 1 ]; then
+    echo "error: Codex probe exceeded its bounded storage policy" >&2
+    /bin/cat "$probe_resource_violation_file" >&2
+    supervised_codex_status=125
   else
     supervised_codex_status="$leader_status"
+  fi
+}
+
+start_probe_resource_monitor() {
+  probe_resource_violation_file="$isolation_root/resource-violation.log"
+  : > "$probe_resource_violation_file"
+  (
+    trap 'exit 0' HUP INT TERM
+    while :; do
+      local entry_count
+      local usage_kib
+      if ! usage_kib="$(
+        /usr/bin/du -sk \
+          "$probe_root" "$isolated_tmp" "$isolated_codex_tmp" 2>/dev/null |
+          /usr/bin/awk '{ total += $1 } END { print total + 0 }'
+      )"; then
+        printf '%s\n' 'probe storage became uninspectable' \
+          > "$probe_resource_violation_file"
+        exit 0
+      fi
+      if ! entry_count="$(
+        /usr/bin/find \
+          "$probe_root" "$isolated_tmp" "$isolated_codex_tmp" \
+          -mindepth 1 -print 2>/dev/null |
+          /usr/bin/wc -l |
+          /usr/bin/tr -d ' '
+      )"; then
+        printf '%s\n' 'probe entry count became uninspectable' \
+          > "$probe_resource_violation_file"
+        exit 0
+      fi
+      if (( usage_kib > probe_max_kib )); then
+        printf 'probe storage reached %s KiB (limit %s KiB)\n' \
+          "$usage_kib" "$probe_max_kib" > "$probe_resource_violation_file"
+        exit 0
+      fi
+      if (( entry_count > probe_max_entries )); then
+        printf 'probe storage reached %s entries (limit %s)\n' \
+          "$entry_count" "$probe_max_entries" > "$probe_resource_violation_file"
+        exit 0
+      fi
+      /bin/sleep 0.1
+    done
+  ) &
+  probe_resource_monitor_pid="$!"
+  /bin/sleep 0.05
+  /bin/kill -0 "$probe_resource_monitor_pid" 2>/dev/null ||
+    die "probe resource monitor did not start"
+}
+
+stop_probe_resource_monitor() {
+  local pid="${probe_resource_monitor_pid:-}"
+  if [ -n "$pid" ]; then
+    /bin/kill -TERM "$pid" 2>/dev/null || true
+    wait "$pid" 2>/dev/null || true
+    probe_resource_monitor_pid=""
   fi
 }
 
@@ -972,6 +1094,8 @@ assert_valid_opc_archive() {
   local package="$1"
   local format="$2"
   local label="$3"
+
+  require_postprocess_budget "$label OPC validation"
 
   [ "$(stat_size "$package")" -le 134217728 ] ||
     die "$label exceeds the 128 MiB compressed package limit"
@@ -1305,6 +1429,8 @@ validate_workflow_event() {
   local produced_relative=""
   local produced_json=null
 
+  require_postprocess_budget "$runtime/$format/$verb workflow validation"
+
   event_id="$(/usr/bin/jq -er '.event_id' <<<"$match")"
   command="$(/usr/bin/jq -er '.command' <<<"$match")"
   result_relative="$(/usr/bin/jq -er '.attestation.result.path' <<<"$match")"
@@ -1493,6 +1619,8 @@ record_workflow_evidence() {
   local match
   local help_file
 
+  require_postprocess_budget "$runtime/$format/$verb workflow selection"
+
   if [ "$format" = "all" ] && [ "$verb" = "help" ]; then
     help_file="$isolation_root/$runtime-help.json"
     matches="$(/usr/bin/jq -c \
@@ -1628,6 +1756,7 @@ extract_isolated_help() {
 write_evidence_manifest() {
   local entries="$isolation_root/evidence-entries.jsonl"
   local name
+  require_postprocess_budget "evidence manifest publication"
   : > "$entries"
   for name in \
     CANDIDATE.json \
@@ -1739,7 +1868,7 @@ if [ -n "$bwrap_input" ] || [ -n "$expected_bwrap_sha256" ]; then
   assert_sha256 "$expected_bwrap_sha256" "EXPECTED_BWRAP_SHA256"
 fi
 
-for tool in jq shasum awk find sort stat id mktemp install wc tr readlink nc python3 uname ps sleep perl grep; do
+for tool in jq shasum awk du find sort stat id mktemp install wc tr readlink nc python3 uname ps sleep perl grep; do
   require_command "$tool"
 done
 netcat_bin="$(command -v nc)"
@@ -1751,6 +1880,9 @@ platform_name="$(/usr/bin/uname -s)"
 codex_version_timeout_seconds="${OFFICE_F1B_CODEX_VERSION_TIMEOUT_SECONDS:-30}"
 codex_canary_timeout_seconds="${OFFICE_F1B_CODEX_CANARY_TIMEOUT_SECONDS:-180}"
 codex_probe_timeout_seconds="${OFFICE_F1B_CODEX_PROBE_TIMEOUT_SECONDS:-1800}"
+postprocess_timeout_seconds="${OFFICE_F1B_POSTPROCESS_TIMEOUT_SECONDS:-300}"
+probe_max_kib="${OFFICE_F1B_PROBE_MAX_KIB:-524288}"
+probe_max_entries="${OFFICE_F1B_PROBE_MAX_ENTRIES:-8192}"
 validate_timeout_seconds \
   "$codex_version_timeout_seconds" 30 \
   OFFICE_F1B_CODEX_VERSION_TIMEOUT_SECONDS
@@ -1760,6 +1892,13 @@ validate_timeout_seconds \
 validate_timeout_seconds \
   "$codex_probe_timeout_seconds" 1800 \
   OFFICE_F1B_CODEX_PROBE_TIMEOUT_SECONDS
+validate_timeout_seconds \
+  "$postprocess_timeout_seconds" 600 \
+  OFFICE_F1B_POSTPROCESS_TIMEOUT_SECONDS
+validate_integer_range \
+  "$probe_max_kib" 1024 524288 OFFICE_F1B_PROBE_MAX_KIB
+validate_integer_range \
+  "$probe_max_entries" 128 8192 OFFICE_F1B_PROBE_MAX_ENTRIES
 
 control_dir="$(canonical_directory "$(/usr/bin/dirname -- "${BASH_SOURCE[0]}")")"
 install_root="$(canonical_directory "$control_dir/..")"
@@ -1862,14 +2001,18 @@ network_listener_pid=""
 ambient_write_path=""
 codex_pid=""
 codex_pgid=""
+probe_resource_monitor_pid=""
+probe_resource_violation_file=""
 isolated_codex_state_identity=""
 
 cleanup() {
   local status="$1"
-  trap - EXIT HUP INT TERM
+  trap - EXIT
+  trap '' HUP INT TERM
   if ! terminate_supervised_codex; then
     status=1
   fi
+  stop_probe_resource_monitor
   if ! remove_isolated_auth; then
     status=1
   fi
@@ -1885,6 +2028,7 @@ cleanup() {
     chmod -R u+rwx -- "$isolation_root" 2>/dev/null || true
     /bin/rm -rf -- "$isolation_root"
   fi
+  trap - HUP INT TERM
   exit "$status"
 }
 trap 'cleanup $?' EXIT
@@ -2295,6 +2439,7 @@ verify_codex_runtime
 
 assert_loopback_listener_reachable ||
   die "loopback denial-canary listener is not live before the installed-command probe"
+start_probe_resource_monitor
 set -m
 run_codex exec \
   --ephemeral \
@@ -2320,6 +2465,12 @@ set +m
 wait_for_supervised_codex \
   "installed-command probe" "$codex_probe_timeout_seconds"
 codex_status="$supervised_codex_status"
+stop_probe_resource_monitor
+if [ -s "$probe_resource_violation_file" ] && [ "$codex_status" -eq 0 ]; then
+  echo "error: Codex probe exceeded its bounded storage policy" >&2
+  /bin/cat "$probe_resource_violation_file" >&2
+  codex_status=125
+fi
 assert_loopback_listener_reachable ||
   die "loopback denial-canary listener is not live after the installed-command probe"
 
@@ -2347,81 +2498,22 @@ assert_empty_directory "$isolated_tmp" \
   exit "$codex_status"
 }
 
+postprocess_deadline=$((SECONDS + postprocess_timeout_seconds))
+
 assert_owned_private_file "$evidence_root/final-message.json" "Codex final message"
 assert_owned_private_file "$evidence_root/codex-transcript.jsonl" "Codex transcript"
 assert_owned_private_file "$evidence_root/codex-stderr.log" "Codex stderr"
-[ -s "$evidence_root/codex-transcript.jsonl" ] ||
-  die "Codex JSONL transcript is empty"
-
-while IFS= read -r json_line || [ -n "$json_line" ]; do
-  [ -n "$json_line" ] || die "Codex JSONL transcript contains a blank line"
-  printf '%s\n' "$json_line" | /usr/bin/jq -e \
-    'type == "object" and (.type | type == "string")' >/dev/null ||
-    die "Codex transcript contains a malformed JSONL event"
-done < "$evidence_root/codex-transcript.jsonl"
-/usr/bin/jq -s '.' "$evidence_root/codex-transcript.jsonl" \
-  > "$isolation_root/transcript-array.json"
-/usr/bin/jq -e '
-  def exact_canary_command:
-    . == "office-permission-canary" or
-    . == "/bin/sh -c office-permission-canary" or
-    . == "/bin/sh -c '\''office-permission-canary'\''" or
-    . == "/bin/bash -c office-permission-canary" or
-    . == "/bin/bash -c '\''office-permission-canary'\''" or
-    . == "/bin/zsh -c office-permission-canary" or
-    . == "/bin/zsh -c '\''office-permission-canary'\''";
-  (to_entries) as $events |
-  ([$events[] | select(.value.type == "thread.started")]) as $thread_started |
-  ([$events[] | select(.value.type == "turn.started")]) as $turn_started |
-  ([$events[] | select(.value.type == "turn.completed")]) as $turn_completed |
-  ([$events[] | select(.value.type == "turn.failed")]) as $turn_failed |
-  ([$events[] |
-    select(.value.type == "item.started" and
-      .value.item.type == "command_execution") |
-    {index: .key, item: .value.item}]) as $started |
-  ([$events[] |
-    select(.value.type == "item.completed" and
-      .value.item.type == "command_execution") |
-    {index: .key, item: .value.item}]) as $completed |
-  ([$events[] | select(.value.item?.type == "command_execution")][0]) as $first_event |
-  ($events | length) > 0 and
-  ($thread_started | length) == 1 and
-  $thread_started[0].key == 0 and
-  ($turn_started | length) == 1 and
-  ($turn_completed | length) == 1 and
-  ($turn_failed | length) == 0 and
-  $turn_started[0].key < $turn_completed[0].key and
-  $turn_completed[0].key == (($events | length) - 1) and
-  ($started | length) > 0 and
-  ($started | map(.item.id) | length) ==
-    ($started | map(.item.id) | unique | length) and
-  ($completed | map(.item.id) | length) ==
-    ($completed | map(.item.id) | unique | length) and
-  ($started | map(.item | {id, command}) | sort_by(.id)) ==
-    ($completed | map(.item | {id, command}) | sort_by(.id)) and
-  all($started[];
-    . as $start |
-    ([$completed[] | select(.item.id == $start.item.id)]) as $terminals |
-    ($terminals | length) == 1 and
-    $start.index > $turn_started[0].key and
-    $terminals[0].index > $start.index and
-    $terminals[0].index < $turn_completed[0].key) and
-  all($completed[];
-    (.item.exit_code | type) == "number" and
-    .item.exit_code == (.item.exit_code | floor) and
-    .item.exit_code >= 0 and .item.exit_code <= 255 and
-    (.item.aggregated_output | type) == "string" and
-    ((.item.status == "completed" and .item.exit_code == 0) or
-     (.item.status == "failed" and .item.exit_code >= 1))) and
-  $first_event.value.type == "item.started" and
-  ($first_event.value.item.command | exact_canary_command) and
-  ([ $completed[] |
-    select(.item.id == $first_event.value.item.id) ][0].item |
-    .exit_code == 0 and
-    .aggregated_output == "FRESH-AGENT PERMISSION CANARY PASS\n" and
-    (.command | exact_canary_command))
-' "$isolation_root/transcript-array.json" >/dev/null ||
-  die "Codex transcript lifecycle, command pairing, exit domain, or first live canary was invalid"
+[ "$(stat_size "$evidence_root/final-message.json")" -le 1048576 ] ||
+  die "Codex final message exceeds 1 MiB"
+[ "$(stat_size "$evidence_root/codex-stderr.log")" -le 8388608 ] ||
+  die "Codex stderr exceeds 8 MiB"
+if ! /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+  /usr/bin/python3 -I "$candidate_root/control/transcript-policy.py" \
+  "$evidence_root/codex-transcript.jsonl" "$codex_status" \
+  "$isolation_root/transcript-array.json"; then
+  die "Codex transcript lifecycle or size policy was invalid"
+fi
+require_postprocess_budget "transcript validation"
 
 /usr/bin/jq '
   ([to_entries[] |
@@ -2449,6 +2541,7 @@ if ! /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
   "$isolation_root/raw-commands.json" "$isolation_root/COMMANDS.json"; then
   die "Codex transcript contains a command outside the simple-command acceptance policy"
 fi
+require_postprocess_budget "command-policy validation"
 /usr/bin/install -m 0600 "$isolation_root/COMMANDS.json" \
   "$evidence_root/COMMANDS.json"
 write_host_command_transcript
@@ -2533,6 +2626,7 @@ done
   die "host-generated workflow evidence failed strict validation"
 /usr/bin/install -m 0600 "$isolation_root/WORKFLOWS.json" \
   "$evidence_root/WORKFLOWS.json"
+require_postprocess_budget "workflow evidence aggregation"
 
 /usr/bin/jq -e '
   keys == ["gaps", "result_path", "targets", "verdict"] and
@@ -2572,6 +2666,8 @@ fi
 result_file="$probe_root/probe-result.md"
 assert_owned_private_file "$result_file" "probe result"
 [ -s "$result_file" ] || die "probe result is empty"
+[ "$(stat_size "$result_file")" -le 1048576 ] ||
+  die "probe result exceeds 1 MiB"
 IFS= read -r result_header < "$result_file" || true
 [ "$result_header" = "Verdict: $verdict" ] ||
   die "probe result does not begin with the exact structured verdict"
@@ -2660,6 +2756,7 @@ fi
   }' > "$isolation_root/RUN.json"
 /usr/bin/install -m 0600 "$isolation_root/RUN.json" "$evidence_root/RUN.json"
 write_evidence_manifest
+require_postprocess_budget "successful evidence completion"
 
 printf 'probe_dir=%s\n' "$probe_root"
 printf 'evidence_dir=%s\n' "$evidence_root"

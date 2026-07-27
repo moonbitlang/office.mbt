@@ -83,6 +83,10 @@ fail() {
   /usr/bin/python3 -I "$script_dir/attest_test.py" \
   "$script_dir/attest.py" ||
   fail "atomic completion-attestation unit tests"
+/usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+  /usr/bin/python3 -I "$script_dir/transcript_policy_test.py" \
+  "$script_dir/transcript_policy.py" ||
+  fail "bounded transcript-policy unit tests"
 
 sha256_file() {
   /usr/bin/shasum -a 256 "$1" |
@@ -194,6 +198,7 @@ make_candidate() {
   local canary_sha
   local attest_sha
   local command_policy_sha
+  local transcript_policy_sha
   local private_sha
   local inventory_sha
   local build_lock_sha
@@ -315,6 +320,8 @@ make_candidate() {
     "$install_root/control/attest.py"
   /usr/bin/install -m 0400 "$script_dir/command_policy.py" \
     "$install_root/control/command-policy.py"
+  /usr/bin/install -m 0400 "$script_dir/transcript_policy.py" \
+    "$install_root/control/transcript-policy.py"
   /usr/bin/install -m 0500 "$script_dir/inventory.sh" \
     "$install_root/control/inventory.sh"
   chmod 0500 \
@@ -459,6 +466,7 @@ make_candidate() {
   canary_sha="$(sha256_file "$install_root/control/permission-canary.sh")"
   attest_sha="$(sha256_file "$install_root/control/attest.py")"
   command_policy_sha="$(sha256_file "$install_root/control/command-policy.py")"
+  transcript_policy_sha="$(sha256_file "$install_root/control/transcript-policy.py")"
   private_sha="$(sha256_file "$install_root/control/private.json")"
   inventory_sha="$(sha256_file "$install_root/control/inventory.sh")"
   build_lock_sha="$(sha256_file "$install_root/control/build-lock.json")"
@@ -482,6 +490,7 @@ make_candidate() {
     --arg canary_sha "$canary_sha" \
     --arg attest_sha "$attest_sha" \
     --arg command_policy_sha "$command_policy_sha" \
+    --arg transcript_policy_sha "$transcript_policy_sha" \
     --arg private_sha "$private_sha" \
     --arg inventory_sha "$inventory_sha" \
     '{
@@ -512,6 +521,7 @@ make_candidate() {
         {path: "control/permission-canary.sh", kind: "file", mode: "0500", sha256: $canary_sha},
         {path: "control/attest.py", kind: "file", mode: "0400", sha256: $attest_sha},
         {path: "control/command-policy.py", kind: "file", mode: "0400", sha256: $command_policy_sha},
+        {path: "control/transcript-policy.py", kind: "file", mode: "0400", sha256: $transcript_policy_sha},
         {path: "control/private.json", kind: "file", mode: "0400", sha256: $private_sha},
         {path: "control/inventory.sh", kind: "file", mode: "0500", sha256: $inventory_sha},
         {path: "control/build-lock.json", kind: "file", mode: "0400", sha256: $build_lock_sha},
@@ -550,6 +560,11 @@ chmod 0600 "$codex_bin_dir/mode"
   printf 'mode_file=%q\n' "$codex_bin_dir/mode"
   printf '%s\n' \
     'mode=$(/bin/cat "$mode_file")' \
+    'file_limit=$(ulimit -f)' \
+    'test "$file_limit" != unlimited' \
+    'test "$file_limit" -le 262144' \
+    'descriptor_limit=$(ulimit -n)' \
+    'test "$descriptor_limit" -le 256' \
     'if [ "${1:-}" = "--version" ]; then' \
     '  if [ "$mode" = "version-hang" ]; then trap "" HUP INT TERM; while :; do /bin/sleep 1; done; fi' \
     '  if [ "$mode" = "old-version" ]; then echo "codex-cli 0.144.9"; elif [ "$mode" = "prerelease-version" ]; then echo "codex-cli 0.145.0-rc.1"; else echo "codex-cli 0.145.0"; fi' \
@@ -662,6 +677,11 @@ chmod 0600 "$codex_bin_dir/mode"
     '/usr/bin/grep -q "office-permission-canary" "$probe/prompt-seen.txt"' \
     'candidate=$(CDPATH= cd -- "$(/usr/bin/dirname "$schema")/.." && pwd)' \
     'cd "$probe"' \
+    'if [ "$mode" = "resource-exhaustion" ]; then' \
+    '  /bin/dd if=/dev/zero of=resource.bin bs=1048576 count=4 2>/dev/null' \
+    '  trap "" HUP INT TERM' \
+    '  while :; do /bin/sleep 1; done' \
+    'fi' \
     'emit_started() {' \
     '  id=$1; cmd=$2' \
     '  /usr/bin/jq -cn --arg id "$id" --arg cmd "$cmd" '\''{type:"item.started",item:{id:$id,type:"command_execution",command:$cmd,aggregated_output:"",exit_code:null,status:"in_progress"}}'\''' \
@@ -680,6 +700,11 @@ chmod 0600 "$codex_bin_dir/mode"
     'canary_body=$(/usr/bin/printf "FRESH-AGENT PERMISSION CANARY PASS\\n_")' \
     'canary_body=${canary_body%_}' \
     'emit_completed canary "/bin/sh -c '\''office-permission-canary'\''" 0 "$canary_body"' \
+    'if [ "$mode" = "oversized-transcript" ]; then' \
+    '  oversized_body=$(/bin/dd if=/dev/zero bs=1048576 count=2 2>/dev/null | /usr/bin/tr "\\000" x)' \
+    '  emit_started oversized-transcript "true"' \
+    '  emit_completed oversized-transcript "true" 0 "$oversized_body"' \
+    'fi' \
     'if [ "$mode" = "completion-before-start" ]; then' \
     '  emit_completed lifecycle-order "true" 0 ""' \
     '  emit_started lifecycle-order "true"' \
@@ -700,7 +725,7 @@ chmod 0600 "$codex_bin_dir/mode"
     'fi' \
     'stop_after=' \
     'case "$mode" in' \
-    '  spoof-office|missing-create|pre-canary|completion-before-start|fractional-exit|out-of-domain-exit|missing-turn-completed|turn-failed|detaching-command) stop_after=all/help ;;' \
+    '  spoof-office|missing-create|pre-canary|completion-before-start|fractional-exit|out-of-domain-exit|missing-turn-completed|turn-failed|detaching-command|oversized-transcript) stop_after=all/help ;;' \
     '  format-redirection-spoof|newline-mask|help-only|comment-spoof|uppercase-result-path|wrong-result-schema|invalid-artifact|generic-zip-artifact|decoy-opc-root|nested-content-types|nested-relationships|oversized-zip-entry|zip-symlink-artifact) stop_after=native/xlsx/create ;;' \
     '  duplicate-result-path|aliased-result-parent|reused-event-id) stop_after=native/xlsx/batch ;;' \
     '  input-redirection|cross-format) stop_after=native/xlsx/validate ;;' \
@@ -983,6 +1008,14 @@ runner_args() {
     "$codex_sha"
 }
 
+printf 'pass\n' > "$codex_bin_dir/mode"
+OFFICE_F1B_POSTPROCESS_TIMEOUT_SECONDS=1 \
+expect_failure postprocess-timeout 1 'post-processing exceeded its 1s global deadline' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/postprocess-timeout-probe" \
+  "$case_root/postprocess-timeout-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
 /bin/mkdir -m 0700 "$case_root/preexisting-probe"
 expect_failure preexisting 1 'must not already exist' \
   "$runner" "$head" "$candidate_sha" \
@@ -1182,6 +1215,13 @@ expect_failure probe-timeout 124 'installed-command probe exceeded its 1s deadli
   "$case_root/probe-timeout-probe" "$case_root/probe-timeout-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
+printf 'resource-exhaustion\n' > "$codex_bin_dir/mode"
+OFFICE_F1B_PROBE_MAX_KIB=1024 \
+expect_failure resource-exhaustion 125 'bounded storage policy' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/resource-probe" "$case_root/resource-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
 printf 'orphan-child\n' > "$codex_bin_dir/mode"
 /bin/rm -f -- "$codex_bin_dir/mode.child-pid"
 expect_failure orphan-child 1 'Codex final message' \
@@ -1205,6 +1245,7 @@ case "$orphan_child_state" in
 esac
 
 printf 'ignore-term\n' > "$codex_bin_dir/mode"
+/bin/rm -f -- "$codex_bin_dir/mode.child-pid"
 signal_probe="$case_root/signal-probe"
 signal_evidence="$case_root/signal-evidence"
 signal_stdout="$test_root/signal.stdout"
@@ -1216,7 +1257,7 @@ signal_stderr="$test_root/signal.stderr"
 signal_runner_pid="$!"
 signal_child_pid=""
 staged_auth=""
-for _ in {1..100}; do
+for _ in {1..300}; do
   if [ -s "$codex_bin_dir/mode.child-pid" ]; then
     signal_child_pid="$(/bin/cat "$codex_bin_dir/mode.child-pid")"
     staged_auth="$(/usr/bin/find "$case_root" -path \
@@ -1230,6 +1271,14 @@ done
   fail "signal test did not stage the isolated credential"
 signal_started_at="$SECONDS"
 /bin/kill -TERM "$signal_runner_pid"
+for _ in {1..100}; do
+  [ ! -e "$staged_auth" ] && [ ! -L "$staged_auth" ] && break
+  /bin/sleep 0.01
+done
+if /bin/kill -0 "$signal_runner_pid" 2>/dev/null; then
+  /bin/kill -HUP "$signal_runner_pid"
+  /bin/kill -INT "$signal_runner_pid"
+fi
 set +e
 wait "$signal_runner_pid"
 signal_status="$?"
@@ -1416,6 +1465,13 @@ expect_failure detaching-command 1 'simple-command acceptance policy' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/detaching-command-probe" \
   "$case_root/detaching-command-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'oversized-transcript\n' > "$codex_bin_dir/mode"
+expect_failure oversized-transcript 1 'transcript lifecycle or size policy' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/oversized-transcript-probe" \
+  "$case_root/oversized-transcript-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 for lifecycle_mode in \
