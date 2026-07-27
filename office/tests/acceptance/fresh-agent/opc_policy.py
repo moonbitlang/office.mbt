@@ -17,9 +17,16 @@ MAX_ENTRY_BYTES = 64 * 1024 * 1024
 MAX_EXPANDED_BYTES = 128 * 1024 * 1024
 MAX_ENTRIES = 2048
 MAX_XML_BYTES = 8 * 1024 * 1024
+MAX_XML_DEPTH = 256
 MAX_ADDRESS_SPACE_BYTES = 256 * 1024 * 1024
 CHUNK_BYTES = 1024 * 1024
 SUPPORTED_COMPRESSION = frozenset({zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED})
+FORBIDDEN_XML_TOKENS = tuple(
+    token.encode(encoding)
+    for token in ("<!DOCTYPE", "<!ENTITY")
+    for encoding in ("ascii", "utf-16le", "utf-16be", "utf-32le", "utf-32be")
+)
+FORBIDDEN_XML_TAIL_BYTES = max(len(token) for token in FORBIDDEN_XML_TOKENS) - 1
 
 CONTENT_TYPES_NS = "http://schemas.openxmlformats.org/package/2006/content-types"
 RELATIONSHIPS_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
@@ -109,31 +116,17 @@ def validate_part_path(value, label, allow_trailing_slash=False):
     return value
 
 
-def parse_xml(payload, part_name):
-    if not payload:
-        fail("empty OPC XML part: %s" % part_name)
-    upper = payload.upper()
-    for token in ("<!DOCTYPE", "<!ENTITY"):
-        for encoding in ("ascii", "utf-16le", "utf-16be", "utf-32le", "utf-32be"):
-            if token.encode(encoding) in upper:
-                fail("DTD or entity declaration in OPC XML: %s" % part_name)
-    try:
-        return ET.fromstring(payload)
-    except (ET.ParseError, ValueError) as error:
-        raise ValidationError("malformed OPC XML: %s" % part_name) from error
-
-
 def require_whitespace(value, label):
     if value is not None and value.strip():
         fail("unexpected text in %s" % label)
 
 
-def require_attributes(element, required, optional, label):
-    keys = set(element.attrib)
+def require_attributes(attributes, required, optional, label):
+    keys = set(attributes)
     if not required.issubset(keys) or not keys.issubset(required | optional):
         fail("invalid attributes on %s" % label)
     for key in required:
-        if has_unsafe_text(element.attrib[key]):
+        if has_unsafe_text(attributes[key]):
             fail("empty or unsafe %s attribute" % label)
 
 
@@ -207,9 +200,8 @@ def inspect_entries(archive):
     return by_logical_name, file_names
 
 
-def read_entry(archive, info, part_name, retain, expanded_state):
+def read_entry(archive, info, part_name, expanded_state):
     actual_size = 0
-    payload = bytearray() if retain else None
     try:
         with archive.open(info, "r") as source:
             while True:
@@ -222,51 +214,51 @@ def read_entry(archive, info, part_name, retain, expanded_state):
                     fail("ZIP entry expands beyond 64 MiB")
                 if expanded_state[0] > MAX_EXPANDED_BYTES:
                     fail("ZIP expands beyond 128 MiB")
-                if payload is not None:
-                    if actual_size > MAX_XML_BYTES:
-                        fail("OPC XML part exceeds 8 MiB: %s" % part_name)
-                    payload.extend(chunk)
     except (RuntimeError, zipfile.BadZipFile) as error:
         raise ValidationError("unreadable or corrupt ZIP entry: %s" % part_name) from error
     if actual_size != info.file_size:
         fail("ZIP entry size disagrees with its payload")
-    return bytes(payload) if payload is not None else None
 
 
-def parse_content_types(root, file_names):
-    if root.tag != qname(CONTENT_TYPES_NS, "Types") or root.attrib:
-        fail("unexpected OPC content-types root")
-    require_whitespace(root.text, "OPC content-types root")
-    defaults = {}
-    overrides = {}
-    for child in list(root):
-        require_whitespace(child.text, "OPC content-types child")
-        require_whitespace(child.tail, "OPC content-types child tail")
-        if list(child):
-            fail("invalid OPC content-types child structure")
-        if child.tag == qname(CONTENT_TYPES_NS, "Default"):
-            require_attributes(child, {"Extension", "ContentType"}, set(), "Default")
-            extension = child.attrib["Extension"]
-            if extension.startswith(".") or "/" in extension or "\\" in extension:
-                fail("invalid OPC default extension")
-            folded = extension.casefold()
-            if folded in defaults:
-                fail("duplicate OPC default extension")
-            defaults[folded] = child.attrib["ContentType"]
-        elif child.tag == qname(CONTENT_TYPES_NS, "Override"):
-            require_attributes(child, {"PartName", "ContentType"}, set(), "Override")
-            part_name = child.attrib["PartName"]
-            if not part_name.startswith("/") or part_name.startswith("//"):
-                fail("invalid OPC override PartName")
-            logical_name = validate_part_path(part_name[1:], "OPC override PartName")
-            folded = logical_name.casefold()
-            if folded in overrides:
-                fail("duplicate OPC content-type override")
-            if logical_name not in file_names or logical_name == "[Content_Types].xml":
-                fail("OPC override names a missing or reserved part")
-            overrides[folded] = (logical_name, child.attrib["ContentType"])
-        else:
-            fail("invalid OPC content-types child structure")
+def scan_xml_chunk(chunk, tail, part_name):
+    window = tail + chunk.upper()
+    if any(token in window for token in FORBIDDEN_XML_TOKENS):
+        fail("DTD or entity declaration in OPC XML: %s" % part_name)
+    return window[-FORBIDDEN_XML_TAIL_BYTES:]
+
+
+def stream_xml_entry(archive, info, part_name, target, expanded_state):
+    if info.file_size > MAX_XML_BYTES:
+        fail("OPC XML part exceeds 8 MiB: %s" % part_name)
+    actual_size = 0
+    forbidden_tail = b""
+    parser = ET.XMLParser(target=target)
+    try:
+        with archive.open(info, "r") as source:
+            while True:
+                chunk = source.read(CHUNK_BYTES)
+                if not chunk:
+                    break
+                actual_size += len(chunk)
+                expanded_state[0] += len(chunk)
+                if actual_size > MAX_XML_BYTES:
+                    fail("OPC XML part exceeds 8 MiB: %s" % part_name)
+                if expanded_state[0] > MAX_EXPANDED_BYTES:
+                    fail("ZIP expands beyond 128 MiB")
+                forbidden_tail = scan_xml_chunk(chunk, forbidden_tail, part_name)
+                parser.feed(chunk)
+        if actual_size != info.file_size:
+            fail("ZIP entry size disagrees with its payload")
+        if actual_size == 0:
+            fail("empty OPC XML part: %s" % part_name)
+        return parser.close()
+    except (ET.ParseError, ValueError) as error:
+        raise ValidationError("malformed OPC XML: %s" % part_name) from error
+    except (RuntimeError, zipfile.BadZipFile) as error:
+        raise ValidationError("unreadable or corrupt ZIP entry: %s" % part_name) from error
+
+
+def finalize_content_types(defaults, overrides, file_names):
     if defaults.get("rels") != RELATIONSHIPS_CONTENT_TYPE:
         fail("OPC content types omit the relationships declaration")
     content_types = {}
@@ -294,6 +286,76 @@ def parse_content_types(root, file_names):
             )
         content_types[part_name] = content_type
     return content_types
+
+
+class ContentTypesTarget:
+    def __init__(self, file_names):
+        self.file_names = file_names
+        self.depth = 0
+        self.root_seen = False
+        self.defaults = {}
+        self.overrides = {}
+
+    def start(self, tag, attributes):
+        self.depth += 1
+        if self.depth == 1:
+            if (
+                self.root_seen
+                or tag != qname(CONTENT_TYPES_NS, "Types")
+                or attributes
+            ):
+                fail("unexpected OPC content-types root")
+            self.root_seen = True
+            return
+        if self.depth != 2:
+            fail("invalid OPC content-types child structure")
+        if tag == qname(CONTENT_TYPES_NS, "Default"):
+            require_attributes(
+                attributes,
+                {"Extension", "ContentType"},
+                set(),
+                "Default",
+            )
+            extension = attributes["Extension"]
+            if extension.startswith(".") or "/" in extension or "\\" in extension:
+                fail("invalid OPC default extension")
+            folded = extension.casefold()
+            if folded in self.defaults:
+                fail("duplicate OPC default extension")
+            self.defaults[folded] = attributes["ContentType"]
+        elif tag == qname(CONTENT_TYPES_NS, "Override"):
+            require_attributes(
+                attributes,
+                {"PartName", "ContentType"},
+                set(),
+                "Override",
+            )
+            part_name = attributes["PartName"]
+            if not part_name.startswith("/") or part_name.startswith("//"):
+                fail("invalid OPC override PartName")
+            logical_name = validate_part_path(part_name[1:], "OPC override PartName")
+            folded = logical_name.casefold()
+            if folded in self.overrides:
+                fail("duplicate OPC content-type override")
+            if (
+                logical_name not in self.file_names
+                or logical_name == "[Content_Types].xml"
+            ):
+                fail("OPC override names a missing or reserved part")
+            self.overrides[folded] = (logical_name, attributes["ContentType"])
+        else:
+            fail("invalid OPC content-types child structure")
+
+    def end(self, _tag):
+        self.depth -= 1
+
+    def data(self, value):
+        require_whitespace(value, "OPC content-types structure")
+
+    def close(self):
+        if not self.root_seen or self.depth != 0:
+            fail("invalid OPC content-types structure")
+        return finalize_content_types(self.defaults, self.overrides, self.file_names)
 
 
 def relationship_source(part_name):
@@ -325,45 +387,97 @@ def resolve_internal_target(source_part, target):
     return validate_part_path(normalized, "resolved OPC relationship target")
 
 
-def validate_relationships(root, part_name, source_part, file_names):
-    if root.tag != qname(RELATIONSHIPS_NS, "Relationships") or root.attrib:
-        fail("unexpected OPC relationships root: %s" % part_name)
-    require_whitespace(root.text, "OPC relationships root")
-    identifiers = set()
-    office_targets = []
-    for child in list(root):
-        require_whitespace(child.text, "OPC relationship")
-        require_whitespace(child.tail, "OPC relationship tail")
-        if child.tag != qname(RELATIONSHIPS_NS, "Relationship") or list(child):
+class RelationshipsTarget:
+    def __init__(self, part_name, source_part, file_names):
+        self.part_name = part_name
+        self.source_part = source_part
+        self.file_names = file_names
+        self.depth = 0
+        self.root_seen = False
+        self.identifiers = set()
+        self.office_targets = []
+
+    def start(self, tag, attributes):
+        self.depth += 1
+        if self.depth == 1:
+            if (
+                self.root_seen
+                or tag != qname(RELATIONSHIPS_NS, "Relationships")
+                or attributes
+            ):
+                fail("unexpected OPC relationships root: %s" % self.part_name)
+            self.root_seen = True
+            return
+        if self.depth != 2 or tag != qname(RELATIONSHIPS_NS, "Relationship"):
             fail("invalid OPC relationship child structure")
         require_attributes(
-            child,
+            attributes,
             {"Id", "Type", "Target"},
             {"TargetMode"},
             "Relationship",
         )
-        identifier = child.attrib["Id"]
-        if identifier in identifiers:
+        identifier = attributes["Id"]
+        if identifier in self.identifiers:
             fail("duplicate OPC relationship Id")
-        identifiers.add(identifier)
-        target_mode = child.attrib.get("TargetMode", "Internal")
+        self.identifiers.add(identifier)
+        target_mode = attributes.get("TargetMode", "Internal")
         if target_mode not in ("Internal", "External"):
             fail("invalid OPC relationship TargetMode")
-        relationship_type = child.attrib["Type"]
-        target = child.attrib["Target"]
+        relationship_type = attributes["Type"]
+        target = attributes["Target"]
         if target_mode == "Internal":
-            resolved = resolve_internal_target(source_part, target)
-            if resolved not in file_names:
+            resolved = resolve_internal_target(self.source_part, target)
+            if resolved not in self.file_names:
                 fail("OPC relationship targets a missing part: %s" % resolved)
         else:
             if has_unsafe_text(target):
                 fail("empty or unsafe external OPC relationship target")
             resolved = None
         if relationship_type == OFFICE_DOCUMENT_REL:
-            if source_part is not None or target_mode != "Internal":
+            if self.source_part is not None or target_mode != "Internal":
                 fail("officeDocument relationship must be internal and package-rooted")
-            office_targets.append(resolved)
-    return office_targets
+            self.office_targets.append(resolved)
+
+    def end(self, _tag):
+        self.depth -= 1
+
+    def data(self, value):
+        require_whitespace(value, "OPC relationships structure")
+
+    def close(self):
+        if not self.root_seen or self.depth != 0:
+            fail("invalid OPC relationships structure: %s" % self.part_name)
+        return self.office_targets
+
+
+class RootNameTarget:
+    def __init__(self, part_name):
+        self.part_name = part_name
+        self.depth = 0
+        self.root_name = None
+
+    def start(self, tag, _attributes):
+        self.depth += 1
+        if self.depth > MAX_XML_DEPTH:
+            fail(
+                "OPC XML nesting exceeds %d levels: %s"
+                % (MAX_XML_DEPTH, self.part_name)
+            )
+        if self.depth == 1:
+            if self.root_name is not None:
+                fail("multiple OPC XML roots: %s" % self.part_name)
+            self.root_name = tag
+
+    def end(self, _tag):
+        self.depth -= 1
+
+    def data(self, _value):
+        pass
+
+    def close(self):
+        if self.root_name is None or self.depth != 0:
+            fail("invalid OPC XML structure: %s" % self.part_name)
+        return self.root_name
 
 
 def is_xml_part(part_name, content_type):
@@ -417,49 +531,57 @@ def validate_opc(package_path, package_format):
                 if missing:
                     fail("missing required OPC part: %s" % missing[0])
 
-                scratch_expanded = [0]
-                types_payload = read_entry(
+                expanded = [0]
+                content_types = stream_xml_entry(
                     archive,
                     entries["[Content_Types].xml"],
                     "[Content_Types].xml",
-                    True,
-                    scratch_expanded,
+                    ContentTypesTarget(file_names),
+                    expanded,
                 )
-                types_root = parse_xml(types_payload, "[Content_Types].xml")
-                content_types = parse_content_types(types_root, file_names)
                 if content_types.get(main_part) != main_content_type:
                     fail("main OPC part has the wrong content type")
 
-                expanded = [0]
-                xml_roots = {}
+                office_targets = []
+                main_root = None
                 for part_name, info in entries.items():
-                    if info.is_dir():
+                    if info.is_dir() or part_name == "[Content_Types].xml":
                         continue
-                    retain = part_name == "[Content_Types].xml" or is_xml_part(
-                        part_name,
-                        content_types.get(part_name, "application/xml"),
-                    )
-                    if retain and info.file_size > MAX_XML_BYTES:
-                        fail("OPC XML part exceeds 8 MiB: %s" % part_name)
-                    payload = read_entry(archive, info, part_name, retain, expanded)
-                    if retain:
-                        xml_roots[part_name] = parse_xml(payload, part_name)
+                    content_type = content_types[part_name]
+                    if part_name.casefold().endswith(".rels"):
+                        source_part = relationship_source(part_name)
+                        if source_part is not None and source_part not in file_names:
+                            fail("relationships part refers to a missing source part")
+                        office_targets.extend(
+                            stream_xml_entry(
+                                archive,
+                                info,
+                                part_name,
+                                RelationshipsTarget(
+                                    part_name,
+                                    source_part,
+                                    file_names,
+                                ),
+                                expanded,
+                            )
+                        )
+                    elif is_xml_part(part_name, content_type):
+                        root_name = stream_xml_entry(
+                            archive,
+                            info,
+                            part_name,
+                            RootNameTarget(part_name),
+                            expanded,
+                        )
+                        if part_name == main_part:
+                            main_root = root_name
+                    else:
+                        read_entry(archive, info, part_name, expanded)
                 if expanded[0] < 1:
                     fail("ZIP package expands to no file content")
-
-                office_targets = []
-                for part_name, root in xml_roots.items():
-                    if not part_name.casefold().endswith(".rels"):
-                        continue
-                    source_part = relationship_source(part_name)
-                    if source_part is not None and source_part not in file_names:
-                        fail("relationships part refers to a missing source part")
-                    office_targets.extend(
-                        validate_relationships(root, part_name, source_part, file_names)
-                    )
                 if office_targets != [main_part]:
                     fail("expected exactly one root officeDocument relationship to the main part")
-                if xml_roots[main_part].tag != main_qname:
+                if main_root != main_qname:
                     fail("unexpected OPC main-part root")
         except (OSError, RuntimeError, zipfile.BadZipFile, zipfile.LargeZipFile) as error:
             raise ValidationError("unreadable or corrupt ZIP package") from error
@@ -473,7 +595,11 @@ def apply_resource_limits(timeout_seconds):
     signal.signal(signal.SIGXCPU, reject_timeout)
     signal.alarm(timeout_seconds)
     cpu_soft, cpu_hard = resource.getrlimit(resource.RLIMIT_CPU)
-    desired_cpu = timeout_seconds if cpu_soft == resource.RLIM_INFINITY else min(cpu_soft, timeout_seconds)
+    desired_cpu = (
+        timeout_seconds
+        if cpu_soft == resource.RLIM_INFINITY
+        else min(cpu_soft, timeout_seconds)
+    )
     resource.setrlimit(resource.RLIMIT_CPU, (desired_cpu, cpu_hard))
     if sys.platform.startswith("linux"):
         address_soft, address_hard = resource.getrlimit(resource.RLIMIT_AS)

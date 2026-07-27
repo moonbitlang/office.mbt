@@ -215,6 +215,40 @@ def main(argv):
             "DTD or entity declaration",
         )
 
+        split_dtd = fixture("xlsx", include_xml_default=True)
+        split_dtd["customXml/item2.xml"] = (
+            b" " * ((1024 * 1024) - 4) + b"<!DOCTYPE x><x/>"
+        )
+        expect(
+            policy,
+            root,
+            "split-dtd",
+            "xlsx",
+            split_dtd,
+            False,
+            "DTD or entity declaration",
+        )
+
+        deeply_nested = fixture("xlsx", include_xml_default=True)
+        deeply_nested["customXml/deep.xml"] = (
+            b"<n>" * 257 + b"</n>" * 257
+        )
+        expect(
+            policy,
+            root,
+            "deep-xml",
+            "xlsx",
+            deeply_nested,
+            False,
+            "nesting exceeds 256 levels",
+        )
+
+        wide_xml = fixture("xlsx", include_xml_default=True)
+        wide_xml["customXml/wide.xml"] = (
+            b"<root>" + b"<node/>" * 400000 + b"</root>"
+        )
+        expect(policy, root, "wide-xml", "xlsx", wide_xml, True)
+
         missing_target = fixture("xlsx")
         missing_target["xl/_rels/workbook.xml.rels"] = (
             '<?xml version="1.0"?><Relationships xmlns="%s">'
