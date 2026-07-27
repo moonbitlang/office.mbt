@@ -62,6 +62,13 @@ only frozen native and Wasm release builds. Both inventories are reverified
 after the build and retained with the candidate. Every tracked controller asset
 is copied from the snapshot, never from the mutable checkout.
 
+CI installs the immutable MoonBit snapshot named by the locked `moonc` version
+(`0.10.5+5be960077`), rather than the mutable `nightly` CDN alias. Any deliberate
+toolchain upgrade must update that workflow version and both platform inventories
+in `build-lock.json` together. The generic installer omits its nightly-only LLVM
+bundle when given an exact version, so CI explicitly finishes the same LLVM then
+wasm-gc bundle sequence before the locked inventory is checked.
+
 The absent destination is atomically reserved before the build. Fixed
 subtrees are published without clobbering, directory modes are locked, and
 `CANDIDATE.json` is linked into place last as the atomic commit marker. A prefix
