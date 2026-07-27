@@ -135,7 +135,8 @@ if /usr/bin/cmp -s "$test_root/inventory-a.manifest" \
   "$test_root/inventory-changed.manifest"; then
   fail "inventory normalization concealed a non-root content change"
 fi
-/bin/ln -s ../inventory-b/payload.txt "$inventory_root_a/external-link"
+/bin/ln -s ../inventory-relocated-longer/payload.txt \
+  "$inventory_root_a/external-link"
 set +e
 "$script_dir/inventory.sh" \
   "$inventory_root_a" "$test_root/inventory-external-rejected.manifest" \
@@ -153,11 +154,11 @@ set -e
   "$test_root" "$test_root/inventory-symlink-closure.manifest" \
   build-host inventory-a/external-link
 /usr/bin/grep -Fq \
-  $'L\t-\t-\t../inventory-b/payload.txt\tinventory-a/external-link' \
+  $'L\t-\t-\t../inventory-relocated-longer/payload.txt\tinventory-a/external-link' \
   "$test_root/inventory-symlink-closure.manifest" ||
   fail "build-host symlink inventory"
 /usr/bin/grep -Eq \
-  $'^F\t[0-7]{4}\t[0-9]+\t[0-9a-f]{64}\tinventory-b/payload.txt$' \
+  $'^F\t[0-7]{4}\t[0-9]+\t[0-9a-f]{64}\tinventory-relocated-longer/payload.txt$' \
   "$test_root/inventory-symlink-closure.manifest" ||
   fail "build-host symlink referent inventory"
 printf 'referent changed after inventory\n' > "$inventory_root_b/payload.txt"
