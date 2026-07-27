@@ -85,6 +85,9 @@ candidate file. Runtime
 capability identity is derived only from commands executed inside the isolated
 probe; candidate code is never executed by the preparer. The runner
 additionally requires one hard link per regular file and exact directory modes.
+Preparation scratch and staging directories are private siblings of the absent
+destination, so the build does not depend on ambient `TMPDIR` or an executable
+system `/tmp` mount.
 
 Record the manifest digest outside the candidate; it is the trust anchor for
 the run:

@@ -19,8 +19,7 @@ unset GIT_CONFIG_SYSTEM GIT_CONFIG_COUNT GIT_CEILING_DIRECTORIES NODE_OPTIONS
 unset GIT_EXEC_PATH GIT_TEMPLATE_DIR GIT_ATTR_NOSYSTEM GIT_NO_REPLACE_OBJECTS
 unset DYLD_INSERT_LIBRARIES DYLD_LIBRARY_PATH LD_PRELOAD LD_LIBRARY_PATH
 unset PERL5OPT PERL5LIB TAR_OPTIONS POSIXLY_CORRECT BLOCKSIZE
-TMPDIR=/tmp
-export TMPDIR
+unset TMPDIR
 
 die() {
   echo "error: $*" >&2
@@ -324,7 +323,7 @@ reject_overlap "$install_root" "install prefix" "$git_common_dir" "Git common di
 
 install_parent="$(canonical_directory "$(/usr/bin/dirname -- "$install_root")")"
 install_parent_identity="$(stat_identity "$install_parent")"
-scratch="$(mktemp -d "${TMPDIR:-/tmp}/office-f1b-prepare.XXXXXX")"
+scratch="$(mktemp -d "$install_parent/.office-f1b-prepare.XXXXXX")"
 stage="$(mktemp -d "$install_parent/.office-f1b-stage.XXXXXX")"
 chmod 0700 "$scratch" "$stage"
 assert_private_directory "$scratch"
