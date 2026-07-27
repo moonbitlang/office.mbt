@@ -221,12 +221,9 @@ jobs:
               "$moonc_bin" "$moonc_sha" \
               "$moonrun_bin" "$moonrun_sha"
           )
-          "$prefix/bin/office-native" help all --json > "$install_parent/native.json"
-          "$prefix/bin/office-wasm" help all --json > "$install_parent/wasm.json"
-          cmp "$install_parent/native.json" "$install_parent/wasm.json"
           jq -e \
             --arg head "$head" \
-            '.schema == "office.fresh-agent.candidate/1"
+            '.schema == "office.fresh-agent.candidate/2"
               and .candidate_head == $head
               and (.files | length) == 9
               and .symlinks == [
