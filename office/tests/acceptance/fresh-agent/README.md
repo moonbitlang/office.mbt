@@ -73,7 +73,9 @@ preinstalled or stale user toolchain cannot enter the inventory. The generic
 Unix installer
 omits its nightly-only LLVM bundle when given an exact version, so CI explicitly
 finishes the same LLVM then wasm-gc bundle sequence before the locked inventory is
-checked.
+checked. The Linux inventory is generated as a non-root user with `umask 0022`,
+matching the hosted runner's installed `0644`/`0755` modes rather than root tar
+extraction's group-writable modes.
 
 The absent destination is atomically reserved before the build. Fixed
 subtrees are published without clobbering, directory modes are locked, and
