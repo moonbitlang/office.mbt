@@ -915,9 +915,12 @@ assert_safe_probe_relative_path() {
   local relative="$1"
   local label="$2"
   local relative_lower
-  local parent
+  local expected_parent
+  local physical_parent
+  local relative_parent
   case "$relative" in
-    "" | /* | . | .. | ./* | ../* | */../* | */.. | *//* | \
+    "" | /* | . | .. | ./* | ../* | */./* | */. | */../* | */.. | \
+      */ | *//* | \
       *$'\r'* | *$'\n'* | *$'\t'*)
       die "$label is not a canonical relative probe path: $relative"
       ;;
@@ -930,13 +933,16 @@ assert_safe_probe_relative_path() {
   )"
   [ "$relative" = "$relative_lower" ] ||
     die "$label must use lowercase to remain unique on case-insensitive filesystems: $relative"
-  parent="$(/usr/bin/dirname -- "$probe_root/$relative")"
-  [ -d "$parent" ] || die "$label parent is missing: $relative"
-  parent="$(canonical_directory "$parent")"
-  case "$parent/" in
-    "$probe_root/"*) ;;
-    *) die "$label escapes the probe directory: $relative" ;;
-  esac
+  relative_parent="$(/usr/bin/dirname -- "$relative")"
+  if [ "$relative_parent" = . ]; then
+    expected_parent="$probe_root"
+  else
+    expected_parent="$probe_root/$relative_parent"
+  fi
+  [ -d "$expected_parent" ] || die "$label parent is missing: $relative"
+  physical_parent="$(canonical_directory "$expected_parent")"
+  [ "$physical_parent" = "$expected_parent" ] ||
+    die "$label parent must not traverse a symlink or physical path alias: $relative"
 }
 
 assert_valid_opc_archive() {
@@ -2407,6 +2413,42 @@ done < "$evidence_root/codex-transcript.jsonl"
     }
   ]
 ' "$isolation_root/transcript-array.json" > "$isolation_root/COMMANDS.json"
+/usr/bin/jq -e '
+  def command_body:
+    sub("^/bin/(?:sh|bash|zsh) -c [\"\u0027]?"; "") |
+    sub("[\"\u0027]$"; "");
+  def approved_executable:
+    test(
+      "^(?:(?:/usr)?/bin/)?(?:" +
+      "office-(?:native|wasm)|office-permission-canary|" +
+      "awk|cat|cksum|cmp|comm|cp|cut|diff|echo|false|file|find|" +
+      "grep|head|jq|ls|mkdir|mv|paste|printf|pwd|readlink|rg|rm|" +
+      "sed|sha256sum|shasum|sort|stat|tail|test|touch|tr|uniq|" +
+      "unzip|wc|zip|zipinfo)(?:[[:space:]]|$)"
+    );
+  def has_detachment_syntax:
+    test("[\\r\\n\\t`]") or
+    test("\\$\\(") or
+    test("<\\(") or
+    test(">\\(") or
+    test("(^|[^&>])&([^&>]|$)") or
+    test(
+      "(^|[[:space:]/])(?:setsid|nohup|disown|daemonize|" +
+      "systemd-run|start-stop-daemon|launchctl|crontab|at|xargs|" +
+      "python[0-9.]*|node|ruby|perl|lua|osascript|open)" +
+      "([[:space:]]|$)";
+      "i"
+    ) or
+    test("(^|[[:space:]])find[[:space:]].*-(?:exec|execdir|ok|okdir)([[:space:]]|$)");
+  type == "array" and
+  length > 0 and
+  all(.[].command;
+    (type == "string") and
+    (length > 0) and
+    (command_body | approved_executable and (has_detachment_syntax | not))
+  )
+' "$isolation_root/COMMANDS.json" >/dev/null ||
+  die "Codex transcript contains a command outside the non-detaching acceptance policy"
 /usr/bin/install -m 0600 "$isolation_root/COMMANDS.json" \
   "$evidence_root/COMMANDS.json"
 write_host_command_transcript

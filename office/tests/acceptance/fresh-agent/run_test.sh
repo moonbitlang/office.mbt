@@ -657,11 +657,15 @@ chmod 0600 "$codex_bin_dir/mode"
     'fi' \
     'emit_started expected-refusal "false"' \
     'emit_completed expected-refusal "false" 1 ""' \
+    'if [ "$mode" = "detaching-command" ]; then' \
+    '  emit_started detached "setsid /bin/sleep 60"' \
+    '  emit_completed detached "setsid /bin/sleep 60" 0 ""' \
+    'fi' \
     'stop_after=' \
     'case "$mode" in' \
-    '  spoof-office|missing-create|pre-canary|completion-before-start|fractional-exit|out-of-domain-exit|missing-turn-completed|turn-failed) stop_after=all/help ;;' \
+    '  spoof-office|missing-create|pre-canary|completion-before-start|fractional-exit|out-of-domain-exit|missing-turn-completed|turn-failed|detaching-command) stop_after=all/help ;;' \
     '  format-redirection-spoof|newline-mask|help-only|comment-spoof|uppercase-result-path|wrong-result-schema|invalid-artifact|generic-zip-artifact|decoy-opc-root|nested-content-types|nested-relationships|oversized-zip-entry|zip-symlink-artifact) stop_after=native/xlsx/create ;;' \
-    '  duplicate-result-path|reused-event-id) stop_after=native/xlsx/batch ;;' \
+    '  duplicate-result-path|aliased-result-parent|reused-event-id) stop_after=native/xlsx/batch ;;' \
     '  input-redirection|cross-format) stop_after=native/xlsx/validate ;;' \
     'esac' \
     'if [ "$mode" != "no-office" ]; then' \
@@ -695,6 +699,8 @@ chmod 0600 "$codex_bin_dir/mode"
     '          *) run_args="$package" ;;' \
     '        esac' \
     '        result="$runtime-$format-$verb-$index.json"' \
+    '        if [ "$mode" = "aliased-result-parent" ] && [ "$runtime/$format/$verb" = "native/xlsx/create" ]; then /bin/mkdir -m 0700 results; /bin/ln -s results aliases; result=results/create.json; fi' \
+    '        if [ "$mode" = "aliased-result-parent" ] && [ "$runtime/$format/$verb" = "native/xlsx/batch" ]; then result=aliases/batch.json; fi' \
     '        if [ "$mode" = "duplicate-result-path" ] && { [ "$runtime/$format/$verb" = "native/xlsx/create" ] || [ "$runtime/$format/$verb" = "native/xlsx/batch" ]; }; then result=duplicate-result.json; fi' \
     '        if [ "$mode" = "uppercase-result-path" ] && [ "$runtime/$format/$verb" = "native/xlsx/create" ]; then result=Uppercase-result.json; fi' \
     '        if [ "$mode" = "spoof-office" ]; then cmd="echo office-$runtime $verb $run_args --json > $result"; else cmd="office-$runtime $verb $run_args --json > $result"; fi' \
@@ -1246,7 +1252,7 @@ expect_failure format-redirection-spoof 1 'canonical result-bearing workflow: na
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'newline-mask\n' > "$codex_bin_dir/mode"
-expect_failure newline-mask 1 'canonical result-bearing workflow: native/xlsx/create' \
+expect_failure newline-mask 1 'non-detaching acceptance policy' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/newline-mask-probe" "$case_root/newline-mask-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
@@ -1274,6 +1280,14 @@ expect_failure duplicate-result-path 1 'required office.xlsx.create/1 result' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/duplicate-result-probe" \
   "$case_root/duplicate-result-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'aliased-result-parent\n' > "$codex_bin_dir/mode"
+expect_failure aliased-result-parent 1 \
+  'must not traverse a symlink or physical path alias' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/aliased-result-probe" \
+  "$case_root/aliased-result-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'uppercase-result-path\n' > "$codex_bin_dir/mode"
@@ -1351,6 +1365,13 @@ printf 'pre-canary\n' > "$codex_bin_dir/mode"
 expect_failure pre-canary 1 'transcript lifecycle' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/pre-canary-probe" "$case_root/pre-canary-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'detaching-command\n' > "$codex_bin_dir/mode"
+expect_failure detaching-command 1 'non-detaching acceptance policy' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/detaching-command-probe" \
+  "$case_root/detaching-command-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 for lifecycle_mode in \
