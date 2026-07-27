@@ -286,17 +286,22 @@ with stderr retained separately, the exact live canary as the first command,
 host-bound events for all 58 required runtime/format/operation workflows, a
 strict per-target final object, and the exact nine-line machine-readable summary
 in `probe-result.md`. Each non-help workflow must end in one unique JSON result
-redirection and is accepted only when the command grammar, operation-specific
-schema/format/postconditions, and referenced Office ZIP or preview artifact all
+written through the wrapper-only `--attest-result` protocol. The wrapper invokes
+the installed command, atomically publishes its JSON, and emits canonical
+completion-time byte counts and SHA-256 digests for the result and every named
+Office/preview file in that same Codex command event. Final bytes must still
+match those event-time digests before the operation-specific
+schema/format/postconditions and referenced Office ZIP or preview artifact
 validate. Office packages are subject to fixed compressed/expanded-size and
 entry-count limits, case-folded entry uniqueness, safe part paths, and exact
 content-type, root-relationship, main-part, and main-namespace checks. Probe
 paths must be lowercase and may not traverse a symlinked parent, so
 command-event IDs and result paths remain globally and physically unique on
-both case-sensitive and case-insensitive filesystems. Input redirection,
-comments, cross-format package decoys, help/version modes, shell substitution,
-detachment syntax, unapproved executables, and status-masking control operators
-are rejected.
+both case-sensitive and case-insensitive filesystems. A quote-aware parser
+normalizes the actual first token and permits only one simple command; input
+redirection, comments, cross-format package decoys, help/version modes, shell
+substitution or globbing, detachment syntax, unapproved executables, and every
+control operator are rejected.
 `BASELINE PASS` requires all four runtime/format outcomes to pass and no P0-P2
 gap. `BASELINE FAIL` returns 3.
 
@@ -307,7 +312,8 @@ The evidence directory contains:
 - `permission-canary.log`, host-derived `COMMANDS.json` and `WORKFLOWS.json`,
   `codex-transcript.jsonl`, separate `codex-stderr.log`, final message, and exit
   status; `WORKFLOWS.json` binds every accepted event to result, primary
-  artifact, optional produced-output paths, and their SHA-256 digests;
+  artifact, optional produced-output paths, and their completion-time byte
+  lengths and SHA-256 digests;
 - the agent-authored semantic result `probe-result.md` and the host-generated
   `probe-transcript.md`, which renders every paired command event in start
   order; and

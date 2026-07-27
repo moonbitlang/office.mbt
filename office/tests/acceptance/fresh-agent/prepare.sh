@@ -987,6 +987,12 @@ install -m 0400 \
 install -m 0500 \
   "$snapshot/office/tests/acceptance/fresh-agent/permission-canary.sh" \
   "$stage/control/permission-canary.sh"
+install -m 0400 \
+  "$snapshot/office/tests/acceptance/fresh-agent/attest.py" \
+  "$stage/control/attest.py"
+install -m 0400 \
+  "$snapshot/office/tests/acceptance/fresh-agent/command_policy.py" \
+  "$stage/control/command-policy.py"
 install -m 0500 "$snapshot_inventory" "$stage/control/inventory.sh"
 install -m 0400 "$snapshot_build_lock" "$stage/control/build-lock.json"
 install -m 0400 "$source_toolchain_manifest" \
@@ -1017,6 +1023,8 @@ runner_sha256="$(sha256_file "$stage/control/run.sh")"
 prompt_sha256="$(sha256_file "$stage/control/prompt.md")"
 schema_sha256="$(sha256_file "$stage/control/final.schema.json")"
 canary_sha256="$(sha256_file "$stage/control/permission-canary.sh")"
+attest_sha256="$(sha256_file "$stage/control/attest.py")"
+command_policy_sha256="$(sha256_file "$stage/control/command-policy.py")"
 private_sha256="$(sha256_file "$stage/control/private.json")"
 inventory_sha256="$(sha256_file "$stage/control/inventory.sh")"
 installed_build_lock_sha256="$(sha256_file "$stage/control/build-lock.json")"
@@ -1030,7 +1038,7 @@ moon_sha256="$(sha256_file "$moon_bin")"
 moonc_sha256="$(sha256_file "$moonc_bin")"
 
 jq -n \
-  --arg schema "office.fresh-agent.candidate/4" \
+  --arg schema "office.fresh-agent.candidate/5" \
   --arg candidate_head "$expected_head" \
   --arg source_tree "$expected_tree" \
   --arg build_platform "$build_platform" \
@@ -1052,6 +1060,8 @@ jq -n \
   --arg prompt_sha256 "$prompt_sha256" \
   --arg schema_sha256 "$schema_sha256" \
   --arg canary_sha256 "$canary_sha256" \
+  --arg attest_sha256 "$attest_sha256" \
+  --arg command_policy_sha256 "$command_policy_sha256" \
   --arg private_sha256 "$private_sha256" \
   --arg inventory_sha256 "$inventory_sha256" \
   '{
@@ -1080,6 +1090,8 @@ jq -n \
       {path: "control/prompt.md", kind: "file", mode: "0400", sha256: $prompt_sha256},
       {path: "control/final.schema.json", kind: "file", mode: "0400", sha256: $schema_sha256},
       {path: "control/permission-canary.sh", kind: "file", mode: "0500", sha256: $canary_sha256},
+      {path: "control/attest.py", kind: "file", mode: "0400", sha256: $attest_sha256},
+      {path: "control/command-policy.py", kind: "file", mode: "0400", sha256: $command_policy_sha256},
       {path: "control/private.json", kind: "file", mode: "0400", sha256: $private_sha256},
       {path: "control/inventory.sh", kind: "file", mode: "0500", sha256: $inventory_sha256},
       {path: "control/build-lock.json", kind: "file", mode: "0400", sha256: $build_lock_sha256},
