@@ -114,17 +114,84 @@ make_candidate() {
     "$install_root/control"
   printf '%s\n' \
     '#!/bin/sh' \
+    'set -eu' \
     'case "${TMPDIR:-}" in */.office-f1b-isolation.*/tmp) ;; *) exit 70 ;; esac' \
-    'if [ "${1:-}" = help ]; then printf '\''{"data":{"schema":"office.capabilities/test","fingerprint":"test:fingerprint"}}\n'\''; else printf "fake-office %s\\n" "${1:-help}"; fi' \
+    'case "${1:-}" in *.wasm) shift ;; esac' \
+    'verb=${1:-help}' \
+    'shift || true' \
+    'if [ "$verb" = help ]; then' \
+    '  printf '\''{"data":{"schema":"office.capabilities/test","fingerprint":"test:fingerprint"}}\n'\''' \
+    '  exit 0' \
+    'fi' \
+    'format=""; source_file=""; output_file=""; pending=""' \
+    'for arg in "$@"; do' \
+    '  case "$pending" in' \
+    '    format) format=$arg; pending=""; continue ;;' \
+    '    output) output_file=$arg; case "$arg" in *.xlsx) format=xlsx ;; *.docx) format=docx ;; esac; pending=""; continue ;;' \
+    '  esac' \
+    '  case "$arg" in' \
+    '    --format) pending=format ;;' \
+    '    --out|--output) pending=output ;;' \
+    '    xlsx|docx) [ -n "$format" ] || format=$arg ;;' \
+    '    *.xlsx) [ -n "$format" ] || format=xlsx; [ -n "$source_file" ] || source_file=$arg ;;' \
+    '    *.docx) [ -n "$format" ] || format=docx; [ -n "$source_file" ] || source_file=$arg ;;' \
+    '  esac' \
+    'done' \
+    '[ -n "$format" ] || exit 71' \
+    'make_package() {' \
+    '  package=$1' \
+    '  case "$package" in /*) package_path=$package ;; *) package_path=$PWD/$package ;; esac' \
+    '  /bin/mkdir -p "$(/usr/bin/dirname -- "$package_path")"' \
+    '  package_tmp="$TMPDIR/fake-office-package-$$"' \
+    '  /bin/rm -rf -- "$package_tmp"' \
+    '  /bin/mkdir -m 0700 "$package_tmp"' \
+    '  printf '\''<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>\n'\'' > "$package_tmp/[Content_Types].xml"' \
+    '  (cd "$package_tmp" && /usr/bin/zip -q "$package_path" "[Content_Types].xml")' \
+    '  /bin/rm -rf -- "$package_tmp"' \
+    '}' \
+    '[ -n "$source_file" ] || source_file="fixture.$format"' \
+    'make_package "$source_file"' \
+    'artifact=$source_file' \
+    'case "$verb" in' \
+    '  template|replay|annotate)' \
+    '    [ -n "$output_file" ] || output_file="produced-$verb.$format"' \
+    '    make_package "$output_file"' \
+    '    artifact=$output_file' \
+    '    ;;' \
+    '  preview)' \
+    '    [ -n "$output_file" ] || output_file=preview.html' \
+    '    printf '\''<!doctype html><title>fake preview</title>\n'\'' > "$output_file"' \
+    '    ;;' \
+    'esac' \
+    'case "$verb/$format" in' \
+    '  create/xlsx) result_schema=office.xlsx.create/1 ;;' \
+    '  batch/xlsx) result_schema=office.xlsx.batch/1 ;;' \
+    '  batch/docx) result_schema=office.docx.batch/1 ;;' \
+    '  identify/*) result_schema=office.identify/1 ;;' \
+    '  outline/xlsx) result_schema=office.xlsx.outline/1 ;;' \
+    '  outline/docx) result_schema=office.docx.outline/1 ;;' \
+    '  get/xlsx) result_schema=office.xlsx.element/1 ;;' \
+    '  get/docx) result_schema=office.docx.element/1 ;;' \
+    '  text/xlsx) result_schema=office.xlsx.text/1 ;;' \
+    '  text/docx) result_schema=office.docx.text/1 ;;' \
+    '  query/xlsx) result_schema=office.xlsx.query/1 ;;' \
+    '  query/docx) result_schema=office.docx.query/1 ;;' \
+    '  validate/*) result_schema=office.validate/1 ;;' \
+    '  issues/*) result_schema=office.issues/1 ;;' \
+    '  preview/*) result_schema=office.preview/1 ;;' \
+    '  template/*) result_schema=office.template/1 ;;' \
+    '  dump/*) result_schema=office.dump/1 ;;' \
+    '  replay/*) result_schema=office.replay/1 ;;' \
+    '  raw/xlsx) result_schema=office.raw.inventory/1 ;;' \
+    '  raw/docx) result_schema=office.raw.part/1 ;;' \
+    '  annotate/docx) result_schema=office.docx.annotation-batch/1 ;;' \
+    '  *) exit 72 ;;' \
+    'esac' \
+    '/usr/bin/jq -cn --arg verb "$verb" --arg format "$format" --arg schema "$result_schema" --arg source "$source_file" --arg output "$artifact" --arg produced "$output_file" '\''if $verb == "dump" then {schema:$schema,format:$format,source:{file:$source},ops:[{}]} else {schema:"office.output/1",success:true,data:({schema:$schema,format:$format} + if $verb == "create" or $verb == "batch" then {transaction:{format:$format,output:$output,committed:true,dry_run:false,changed:true}} elif $verb == "identify" then {file:$source} elif $verb == "outline" or $verb == "get" then {file:$source,path:"/"} elif $verb == "text" or $verb == "query" then {file:$source,returned:1} elif $verb == "validate" or $verb == "issues" then {file:$source,valid:true,error_count:0} elif $verb == "preview" then {file:$source,output:$produced,bytes_written:1} elif $verb == "template" then {output:$output,replaced:1,transaction:{committed:true}} elif $verb == "replay" then {output:$output,bytes_written:1,ops_applied:1} elif $verb == "raw" and $format == "xlsx" then {part_count:1} elif $verb == "raw" and $format == "docx" then {content:"<document/>"} elif $verb == "annotate" then {output:$output,ops_applied:1,transaction:{committed:true}} else {} end)} end'\''' \
     > "$install_root/bin/office-native"
   /usr/bin/install -m 0500 "$script_dir/office-wasm" \
     "$install_root/bin/office-wasm"
-  printf '%s\n' \
-    '#!/bin/sh' \
-    'shift' \
-    'case "${TMPDIR:-}" in */.office-f1b-isolation.*/tmp) ;; *) exit 70 ;; esac' \
-    'if [ "${1:-}" = help ]; then printf '\''{"data":{"schema":"office.capabilities/test","fingerprint":"test:fingerprint"}}\n'\''; else printf "fake-office %s\\n" "${1:-help}"; fi' \
-    > "$install_root/libexec/moonrun"
+  /bin/cp "$install_root/bin/office-native" "$install_root/libexec/moonrun"
   printf 'fake wasm\n' > "$install_root/libexec/office.wasm"
   /usr/bin/install -m 0500 "$script_dir/run.sh" \
     "$install_root/control/run.sh"
@@ -367,6 +434,7 @@ chmod 0600 "$codex_bin_dir/mode"
     'test -n "$output"' \
     '/usr/bin/grep -q "office-permission-canary" "$probe/prompt-seen.txt"' \
     'candidate=$(CDPATH= cd -- "$(/usr/bin/dirname "$schema")/.." && pwd)' \
+    'cd "$probe"' \
     'emit_started() {' \
     '  id=$1; cmd=$2' \
     '  /usr/bin/jq -cn --arg id "$id" --arg cmd "$cmd" '\''{type:"item.started",item:{id:$id,type:"command_execution",command:$cmd,aggregated_output:"",exit_code:null,status:"in_progress"}}'\''' \
@@ -411,22 +479,48 @@ chmod 0600 "$codex_bin_dir/mode"
     '      if [ "$format" = "xlsx" ]; then verbs="create batch identify outline get text query validate issues preview template dump replay raw"; else verbs="batch identify outline get text query validate issues preview template dump replay raw annotate"; fi' \
     '      for verb in $verbs; do' \
     '        if [ "$mode" = "missing-create" ] && [ "$runtime/$format/$verb" = "native/xlsx/create" ]; then continue; fi' \
-    '      index=$((index + 1))' \
-    '      if [ "$mode" = "spoof-office" ]; then cmd="echo office-$runtime $verb sample.$format --json"; else cmd="office-$runtime $verb sample.$format --json"; fi' \
-    '      if [ "$mode" = "format-redirection-spoof" ] && [ "$runtime/$format/$verb" = "native/xlsx/create" ]; then cmd="office-native create missing-target --json > proof.xlsx"; fi' \
-    '      if [ "$mode" = "newline-mask" ] && [ "$runtime/$format/$verb" = "native/xlsx/create" ]; then cmd=$(/usr/bin/printf "office-native create sample.xlsx --json\\ntrue"); fi' \
-    '      emit_started "cmd-$index" "$cmd"' \
-    '      if [ "$mode" = "spoof-office" ]; then body="spoof"; status=0; else' \
-    '        set +e' \
-    '        body=$("office-$runtime" "$verb" "sample.$format" --json 2>&1)' \
-    '        status=$?' \
-    '        set -e' \
-    '      fi' \
-    '      emit_completed "cmd-$index" "$cmd" "$status" "$body"' \
+    '        index=$((index + 1))' \
+    '        package="$runtime-$format-base.$format"' \
+    '        produced="$runtime-$format-$verb.$format"' \
+    '        preview="$runtime-$format-preview.html"' \
+    '        case "$verb/$format" in' \
+    '          create/xlsx) run_args="xlsx $package" ;;' \
+    '          batch/docx) run_args="--format docx $package fixture.json" ;;' \
+    '          batch/xlsx) run_args="$package fixture.json" ;;' \
+    '          preview/*) run_args="$package --output $preview" ;;' \
+    '          template/*|annotate/*) run_args="$package fixture.json --out $produced" ;;' \
+    '          replay/*) run_args="fixture.json --output $produced" ;;' \
+    '          raw/xlsx) run_args="list $package" ;;' \
+    '          raw/docx) run_args="read $package part:/document" ;;' \
+    '          *) run_args="$package" ;;' \
+    '        esac' \
+    '        result="$runtime-$format-$verb-$index.json"' \
+    '        if [ "$mode" = "duplicate-result-path" ] && { [ "$runtime/$format/$verb" = "native/xlsx/create" ] || [ "$runtime/$format/$verb" = "native/xlsx/batch" ]; }; then result=duplicate-result.json; fi' \
+    '        if [ "$mode" = "spoof-office" ]; then cmd="echo office-$runtime $verb $run_args --json > $result"; else cmd="office-$runtime $verb $run_args --json > $result"; fi' \
+    '        if [ "$mode" = "format-redirection-spoof" ] && [ "$runtime/$format/$verb" = "native/xlsx/create" ]; then cmd="office-native create missing-target --json > proof.xlsx"; fi' \
+    '        if [ "$mode" = "newline-mask" ] && [ "$runtime/$format/$verb" = "native/xlsx/create" ]; then cmd=$(/usr/bin/printf "office-native create xlsx sample.xlsx --json > result.json\\ntrue"); fi' \
+    '        if [ "$mode" = "help-only" ] && [ "$runtime/$format/$verb" = "native/xlsx/create" ]; then cmd="office-native create --help proof.xlsx --json > $result"; fi' \
+    '        if [ "$mode" = "input-redirection" ] && [ "$runtime/$format/$verb" = "native/xlsx/validate" ]; then cmd="office-native validate real.docx --json < claimed.xlsx > $result"; fi' \
+    '        if [ "$mode" = "comment-spoof" ] && [ "$runtime/$format/$verb" = "native/xlsx/create" ]; then cmd="office-native create xlsx proof.xlsx # attested --json > $result"; fi' \
+    '        if [ "$mode" = "cross-format" ] && [ "$runtime/$format/$verb" = "native/xlsx/validate" ]; then cmd="office-native validate real.docx claimed.xlsx --json > $result"; fi' \
+    '        event_id="cmd-$index"' \
+    '        if [ "$mode" = "reused-event-id" ] && { [ "$runtime/$format/$verb" = "native/xlsx/create" ] || [ "$runtime/$format/$verb" = "native/xlsx/batch" ]; }; then event_id=reused-workflow; fi' \
+    '        emit_started "$event_id" "$cmd"' \
+    '        if [ "$mode" = "spoof-office" ]; then body="spoof"; status=0; else' \
+    '          set +e' \
+    '          "office-$runtime" "$verb" $run_args --json > "$result" 2> "$result.stderr"' \
+    '          status=$?' \
+    '          set -e' \
+    '          body=$(/bin/cat "$result.stderr")' \
+    '          /bin/rm -f "$result.stderr"' \
+    '        fi' \
+    '        emit_completed "$event_id" "$cmd" "$status" "$body"' \
     '      done' \
     '    done' \
     '  done' \
     'fi' \
+    'if [ "$mode" = "wrong-result-schema" ]; then printf '\''{"schema":"office.output/1","success":true,"data":{"schema":"office.identify/1","format":"xlsx","file":"native-xlsx-base.xlsx"}}\n'\'' > native-xlsx-create-2.json; fi' \
+    'if [ "$mode" = "invalid-artifact" ]; then printf '\''not an Office package\n'\'' > native-xlsx-base.xlsx; fi' \
     'if [ "$mode" = "exit19" ]; then exit 19; fi' \
     'verdict="BASELINE PASS"; outcome="PASS"; gaps="[]"' \
     'if [ "$mode" = "fail" ]; then verdict="BASELINE FAIL"; outcome="FAIL"; gaps='\''[{"severity":"P1","summary":"fake failure"}]'\''; fi' \
@@ -500,10 +594,24 @@ evidence="$case_root/evidence"
 [ "$(/usr/bin/jq 'length' "$evidence/COMMANDS.json")" -eq 60 ] ||
   fail "host-derived command inventory"
 /usr/bin/jq -e '
-  .schema == "office.fresh-agent.workflows/1" and
+  .schema == "office.fresh-agent.workflows/2" and
   .required_count == 58 and
   (.workflows | length) == 58 and
-  (.workflows | all((.events | length) > 0))
+  (.workflows | all((.events | length) > 0)) and
+  ([.workflows[].events[].event_id] as $ids |
+    ($ids | length) == 58 and ($ids | unique | length) == 58) and
+  ([.workflows[].events[].result.path | select(. != null)] as $paths |
+    ($paths | length) == 56 and ($paths | unique | length) == 56) and
+  (.workflows | all(
+    if .format == "all" then
+      (.events | all(.artifact == null and .result.path == null))
+    else
+      (.events | all(
+        (.artifact.sha256 | test("^[0-9a-f]{64}$")) and
+        (.result.path | type) == "string"
+      ))
+    end
+  ))
 ' "$evidence/WORKFLOWS.json" >/dev/null ||
   fail "host-derived workflow matrix"
 [ ! -e "$probe/probe-transcript.md" ] ||
@@ -829,21 +937,65 @@ expect_failure spoof-office 1 'exact isolated help result for native' \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'missing-create\n' > "$codex_bin_dir/mode"
-expect_failure missing-create 1 'required workflow: native/xlsx/create' \
+expect_failure missing-create 1 'canonical result-bearing workflow: native/xlsx/create' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/missing-create-probe" "$case_root/missing-create-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'format-redirection-spoof\n' > "$codex_bin_dir/mode"
-expect_failure format-redirection-spoof 1 'required workflow: native/xlsx/create' \
+expect_failure format-redirection-spoof 1 'canonical result-bearing workflow: native/xlsx/create' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/format-spoof-probe" "$case_root/format-spoof-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'newline-mask\n' > "$codex_bin_dir/mode"
-expect_failure newline-mask 1 'required workflow: native/xlsx/create' \
+expect_failure newline-mask 1 'canonical result-bearing workflow: native/xlsx/create' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/newline-mask-probe" "$case_root/newline-mask-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+for spoof_mode in help-only comment-spoof; do
+  printf '%s\n' "$spoof_mode" > "$codex_bin_dir/mode"
+  expect_failure "$spoof_mode" 1 \
+    'canonical result-bearing workflow: native/xlsx/create' \
+    "$runner" "$head" "$candidate_sha" \
+    "$case_root/$spoof_mode-probe" "$case_root/$spoof_mode-evidence" \
+    "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+done
+
+for spoof_mode in input-redirection cross-format; do
+  printf '%s\n' "$spoof_mode" > "$codex_bin_dir/mode"
+  expect_failure "$spoof_mode" 1 \
+    'canonical result-bearing workflow: native/xlsx/validate' \
+    "$runner" "$head" "$candidate_sha" \
+    "$case_root/$spoof_mode-probe" "$case_root/$spoof_mode-evidence" \
+    "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+done
+
+printf 'duplicate-result-path\n' > "$codex_bin_dir/mode"
+expect_failure duplicate-result-path 1 'workflow result violates' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/duplicate-result-probe" \
+  "$case_root/duplicate-result-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'wrong-result-schema\n' > "$codex_bin_dir/mode"
+expect_failure wrong-result-schema 1 'workflow result violates' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/wrong-schema-probe" "$case_root/wrong-schema-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'invalid-artifact\n' > "$codex_bin_dir/mode"
+expect_failure invalid-artifact 1 'not a structurally valid Office ZIP package' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/invalid-artifact-probe" \
+  "$case_root/invalid-artifact-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'reused-event-id\n' > "$codex_bin_dir/mode"
+expect_failure reused-event-id 1 'transcript lifecycle' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/reused-event-probe" "$case_root/reused-event-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'incomplete-report\n' > "$codex_bin_dir/mode"

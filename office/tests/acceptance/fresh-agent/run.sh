@@ -689,41 +689,358 @@ write_host_command_transcript() {
     "$evidence_root/probe-transcript.md"
 }
 
+assert_safe_probe_relative_path() {
+  local relative="$1"
+  local label="$2"
+  local parent
+  case "$relative" in
+    "" | /* | . | .. | ./* | ../* | */../* | */.. | *//* | \
+      *$'\r'* | *$'\n'* | *$'\t'*)
+      die "$label is not a canonical relative probe path: $relative"
+      ;;
+    *[!A-Za-z0-9._/-]*)
+      die "$label contains a non-portable path character: $relative"
+      ;;
+  esac
+  parent="$(/usr/bin/dirname -- "$probe_root/$relative")"
+  [ -d "$parent" ] || die "$label parent is missing: $relative"
+  parent="$(canonical_directory "$parent")"
+  case "$parent/" in
+    "$probe_root/"*) ;;
+    *) die "$label escapes the probe directory: $relative" ;;
+  esac
+}
+
+assert_workflow_package() {
+  local relative="$1"
+  local format="$2"
+  local label="$3"
+  local relative_lower
+  assert_safe_probe_relative_path "$relative" "$label"
+  relative_lower="$(printf '%s' "$relative" | LC_ALL=C /usr/bin/tr '[:upper:]' '[:lower:]')"
+  case "$relative_lower" in
+    *."$format") ;;
+    *) die "$label does not name a .$format package: $relative" ;;
+  esac
+  assert_owned_private_file "$probe_root/$relative" "$label"
+  [ -s "$probe_root/$relative" ] || die "$label is empty: $relative"
+  /usr/bin/unzip -tqq -- "$probe_root/$relative" >/dev/null 2>&1 ||
+    die "$label is not a structurally valid Office ZIP package: $relative"
+}
+
+assert_workflow_output() {
+  local relative="$1"
+  local suffix="$2"
+  local label="$3"
+  local relative_lower
+  assert_safe_probe_relative_path "$relative" "$label"
+  relative_lower="$(printf '%s' "$relative" | LC_ALL=C /usr/bin/tr '[:upper:]' '[:lower:]')"
+  case "$relative_lower" in
+    *."$suffix") ;;
+    *) die "$label does not name a .$suffix file: $relative" ;;
+  esac
+  assert_owned_private_file "$probe_root/$relative" "$label"
+  [ -s "$probe_root/$relative" ] || die "$label is empty: $relative"
+}
+
+expected_workflow_schema() {
+  local format="$1"
+  local verb="$2"
+  case "$format/$verb" in
+    xlsx/create) printf '%s\n' office.xlsx.create/1 ;;
+    xlsx/batch) printf '%s\n' office.xlsx.batch/1 ;;
+    docx/batch) printf '%s\n' office.docx.batch/1 ;;
+    xlsx/identify | docx/identify) printf '%s\n' office.identify/1 ;;
+    xlsx/outline) printf '%s\n' office.xlsx.outline/1 ;;
+    docx/outline) printf '%s\n' office.docx.outline/1 ;;
+    xlsx/get) printf '%s\n' office.xlsx.element/1 ;;
+    docx/get) printf '%s\n' office.docx.element/1 ;;
+    xlsx/text) printf '%s\n' office.xlsx.text/1 ;;
+    docx/text) printf '%s\n' office.docx.text/1 ;;
+    xlsx/query) printf '%s\n' office.xlsx.query/1 ;;
+    docx/query) printf '%s\n' office.docx.query/1 ;;
+    xlsx/validate | docx/validate) printf '%s\n' office.validate/1 ;;
+    xlsx/issues | docx/issues) printf '%s\n' office.issues/1 ;;
+    xlsx/preview | docx/preview) printf '%s\n' office.preview/1 ;;
+    xlsx/template | docx/template) printf '%s\n' office.template/1 ;;
+    xlsx/dump | docx/dump) printf '%s\n' office.dump/1 ;;
+    xlsx/replay | docx/replay) printf '%s\n' office.replay/1 ;;
+    xlsx/raw) printf '%s\n' office.raw.inventory/1 ;;
+    docx/raw) printf '%s\n' office.raw.part/1 ;;
+    docx/annotate) printf '%s\n' office.docx.annotation-batch/1 ;;
+    *) die "no result schema is registered for workflow $format/$verb" ;;
+  esac
+}
+
+validate_workflow_event() {
+  local runtime="$1"
+  local format="$2"
+  local verb="$3"
+  local match="$4"
+  local event_id
+  local command
+  local result_relative
+  local result_file
+  local result_schema
+  local artifact_relative
+  local artifact_json
+  local produced_relative=""
+  local produced_json=null
+
+  event_id="$(/usr/bin/jq -er '.event_id' <<<"$match")"
+  command="$(/usr/bin/jq -er '.command' <<<"$match")"
+  result_relative="$(/usr/bin/jq -er '.result_path' <<<"$match")"
+  assert_safe_probe_relative_path "$result_relative" \
+    "workflow result for $runtime/$format/$verb"
+  result_file="$probe_root/$result_relative"
+  assert_owned_private_file "$result_file" \
+    "workflow result for $runtime/$format/$verb"
+  [ -s "$result_file" ] ||
+    die "workflow result is empty for $runtime/$format/$verb"
+  result_schema="$(expected_workflow_schema "$format" "$verb")"
+
+  /usr/bin/jq -e \
+    --arg expected_schema "$result_schema" \
+    --arg format "$format" \
+    --arg verb "$verb" '
+      def result_format:
+        .data.format // .data.transaction.format;
+      def successful_envelope:
+        .schema == "office.output/1" and
+        .success == true and
+        .data.schema == $expected_schema and
+        result_format == $format;
+      if $verb == "dump" then
+        .schema == $expected_schema and
+        .format == $format and
+        (.source.file | type) == "string" and
+        (.ops | type) == "array" and (.ops | length) > 0
+      elif $verb == "create" or $verb == "batch" then
+        successful_envelope and
+        .data.transaction.committed == true and
+        .data.transaction.dry_run == false and
+        .data.transaction.changed == true and
+        (.data.transaction.output | type) == "string"
+      elif $verb == "identify" then
+        successful_envelope and (.data.file | type) == "string"
+      elif $verb == "outline" then
+        successful_envelope and (.data.file | type) == "string"
+      elif $verb == "get" then
+        successful_envelope and
+        (.data.file | type) == "string" and
+        (.data.path | type) == "string"
+      elif $verb == "text" or $verb == "query" then
+        successful_envelope and
+        (.data.file | type) == "string" and
+        (.data.returned | type) == "number" and .data.returned > 0
+      elif $verb == "validate" or $verb == "issues" then
+        successful_envelope and
+        (.data.file | type) == "string" and
+        .data.valid == true and .data.error_count == 0
+      elif $verb == "preview" then
+        successful_envelope and
+        (.data.file | type) == "string" and
+        (.data.output | type) == "string" and
+        (.data.bytes_written | type) == "number" and .data.bytes_written > 0
+      elif $verb == "template" then
+        successful_envelope and
+        (.data.output | type) == "string" and
+        (.data.replaced | type) == "number" and .data.replaced > 0 and
+        .data.transaction.committed == true
+      elif $verb == "replay" then
+        successful_envelope and
+        (.data.output | type) == "string" and
+        (.data.bytes_written | type) == "number" and .data.bytes_written > 0 and
+        (.data.ops_applied | type) == "number" and .data.ops_applied > 0
+      elif $verb == "raw" and $format == "xlsx" then
+        successful_envelope and
+        (.data.part_count | type) == "number" and .data.part_count > 0
+      elif $verb == "raw" and $format == "docx" then
+        successful_envelope and
+        (.data.content | type) == "string" and (.data.content | length) > 0
+      elif $verb == "annotate" then
+        successful_envelope and
+        (.data.output | type) == "string" and
+        (.data.ops_applied | type) == "number" and .data.ops_applied > 0 and
+        .data.transaction.committed == true
+      else
+        successful_envelope
+      end
+    ' "$result_file" >/dev/null ||
+    die "workflow result violates the $result_schema contract for $runtime/$format/$verb"
+
+  case "$verb" in
+    create | batch)
+      artifact_relative="$(/usr/bin/jq -er \
+        '.data.transaction.output' "$result_file")"
+      ;;
+    identify | outline | get | text | query | validate | issues | preview)
+      artifact_relative="$(/usr/bin/jq -er '.data.file' "$result_file")"
+      ;;
+    template | replay | annotate)
+      artifact_relative="$(/usr/bin/jq -er '.data.output' "$result_file")"
+      ;;
+    dump)
+      artifact_relative="$(/usr/bin/jq -er '.source.file' "$result_file")"
+      ;;
+    raw)
+      artifact_relative="$(/usr/bin/jq -er '
+        if (.format_paths | length) == 1 then .format_paths[0]
+        else error("raw attestation must name exactly one package")
+        end
+      ' <<<"$match")"
+      ;;
+    *) die "no artifact rule is registered for $format/$verb" ;;
+  esac
+  /usr/bin/jq -e --arg path "$artifact_relative" \
+    '.tokens | index($path) != null' <<<"$match" >/dev/null ||
+    die "workflow result artifact is not an exact command argument for $runtime/$format/$verb"
+  assert_workflow_package "$artifact_relative" "$format" \
+    "workflow artifact for $runtime/$format/$verb"
+  artifact_json="$(/usr/bin/jq -cn \
+    --arg path "$artifact_relative" \
+    --arg sha256 "$(sha256_file "$probe_root/$artifact_relative")" \
+    '{path: $path, sha256: $sha256}')"
+
+  if [ "$verb" = "preview" ]; then
+    produced_relative="$(/usr/bin/jq -er '.data.output' "$result_file")"
+    /usr/bin/jq -e --arg path "$produced_relative" \
+      '.tokens | index($path) != null' <<<"$match" >/dev/null ||
+      die "preview output is not an exact command argument for $runtime/$format"
+    assert_workflow_output "$produced_relative" html \
+      "preview output for $runtime/$format"
+    produced_json="$(/usr/bin/jq -cn \
+      --arg path "$produced_relative" \
+      --arg sha256 "$(sha256_file "$probe_root/$produced_relative")" \
+      '{path: $path, sha256: $sha256}')"
+  fi
+
+  /usr/bin/jq -cn \
+    --arg event_id "$event_id" \
+    --arg command "$command" \
+    --arg result_path "$result_relative" \
+    --arg result_sha256 "$(sha256_file "$result_file")" \
+    --arg result_schema "$result_schema" \
+    --argjson artifact "$artifact_json" \
+    --argjson produced "$produced_json" '
+      {
+        event_id: $event_id,
+        command: $command,
+        result: {
+          path: $result_path,
+          sha256: $result_sha256,
+          schema: $result_schema
+        },
+        artifact: $artifact,
+        produced: $produced
+      }
+    '
+}
+
 record_workflow_evidence() {
   local runtime="$1"
   local format="$2"
   local verb="$3"
   local matches
-  matches="$(/usr/bin/jq -c \
-    --arg executable "office-$runtime" \
-    --arg format "$format" \
-    --arg verb "$verb" \
-    '
-      def masks_status:
-        test("[\\r\\n]") or
-        test("[;]|&&|[|][|]|(^|[^|])[|]([^|]|$)|(^|[^>])&([^>]|$)");
-      def standalone_command($executable; $verb):
-        test(
-          "^([[:space:]]*|/bin/(sh|bash|zsh) -l?c [^A-Za-z0-9_-]?)" +
-          $executable + "[[:space:]]+" + $verb + "([[:space:]]|$)"
-        ) and (masks_status | not);
-      def targets_format($format):
-        $format == "all" or
-        (split(">")[0] | ascii_downcase |
-          test("\\." + $format + "([^A-Za-z0-9._-]|$)"));
-      [
-        .[] |
-        select(
-          .status == "completed" and
-          .exit_code == 0 and
-          (.command | standalone_command($executable; $verb)) and
-          (.command | targets_format($format))
-        ) |
-        {event_id: .id, command: .command}
-      ]
-    ' "$isolation_root/COMMANDS.json")"
-  /usr/bin/jq -e 'length > 0' <<<"$matches" >/dev/null ||
-    die "Codex transcript does not record required workflow: $runtime/$format/$verb"
+  local validated_entries
+  local match
+  local help_file
+
+  if [ "$format" = "all" ] && [ "$verb" = "help" ]; then
+    help_file="$isolation_root/$runtime-help.json"
+    matches="$(/usr/bin/jq -c \
+      --arg bare "office-$runtime help all --json" \
+      --arg result_schema "$(/usr/bin/jq -er '.data.schema' "$help_file")" \
+      --arg result_sha256 "$(sha256_file "$help_file")" '
+        def exact_command($command):
+          . == $command or
+          . == ("/bin/sh -c '\''" + $command + "'\''") or
+          . == ("/bin/bash -c '\''" + $command + "'\''") or
+          . == ("/bin/zsh -c '\''" + $command + "'\''");
+        [
+          .[] |
+          select(
+            .status == "completed" and .exit_code == 0 and
+            (.command | exact_command($bare))
+          ) |
+          {
+            event_id: .id,
+            command,
+            result: {
+              path: null,
+              sha256: $result_sha256,
+              schema: $result_schema
+            },
+            artifact: null,
+            produced: null
+          }
+        ]
+      ' "$isolation_root/COMMANDS.json")"
+    /usr/bin/jq -e 'length == 1' <<<"$matches" >/dev/null ||
+      die "Codex transcript does not contain one canonical help workflow for $runtime"
+  else
+    matches="$(/usr/bin/jq -c \
+      --arg executable "office-$runtime" \
+      --arg format "$format" \
+      --arg opposite "$(if [ "$format" = xlsx ]; then printf docx; else printf xlsx; fi)" \
+      --arg verb "$verb" '
+        def command_body($executable):
+          if test("^" + $executable + " ") then .
+          elif test("^/bin/(?:sh|bash|zsh) -c '\''") then
+            capture(
+              "^/bin/(?:sh|bash|zsh) -c '\''(?<body>[^'\'']*)'\''$"
+            ).body
+          elif test("^/bin/(?:sh|bash|zsh) -c \\\"") then
+            capture(
+              "^/bin/(?:sh|bash|zsh) -c \\\"(?<body>(?:[^\\\"\\\\]|\\\\\\\")*)\\\"$"
+            ).body
+          else
+            empty
+          end;
+        def parsed_command($executable; $verb):
+          command_body($executable) as $body |
+          try ($body | capture(
+            "^" + $executable + " " + $verb +
+            " (?<args>[^\\r\\n\\t;<|&#`$>]+) --json > " +
+            "(?<result>[A-Za-z0-9][A-Za-z0-9._/-]*\\.json)$"
+          )) catch empty |
+          select((.args | gsub("\\\\\\\""; "") | contains("\\\\") | not)) |
+          (.args | gsub("\\\\\\\""; "\\\"") | gsub("[\\\"'\'']"; "") |
+            split(" ") | map(select(length > 0))) as $tokens |
+          select(all($tokens[];
+            test("^(?:--help|-h|help|--version|-V)(?:=|$)") | not)) |
+          select(($tokens | index("--json")) == null) |
+          select(
+            (.result | startswith("/") | not) and
+            all(.result | split("/")[]; . != "" and . != "." and . != "..")
+          ) |
+          ($tokens | map(select(test("\\." + $format + "$"; "i")))) as $format_paths |
+          select(($format_paths | length) > 0) |
+          select(all($tokens[]; test("\\." + $opposite + "$"; "i") | not)) |
+          {
+            result_path: .result,
+            tokens: $tokens,
+            format_paths: $format_paths
+          };
+        [
+          .[] |
+          select(.status == "completed" and .exit_code == 0) |
+          . as $event |
+          ($event.command | parsed_command($executable; $verb)) |
+          . + {event_id: $event.id, command: $event.command}
+        ]
+      ' "$isolation_root/COMMANDS.json")"
+    /usr/bin/jq -e 'length > 0' <<<"$matches" >/dev/null ||
+      die "Codex transcript does not record a canonical result-bearing workflow: $runtime/$format/$verb"
+    validated_entries="$isolation_root/workflow-$runtime-$format-$verb.jsonl"
+    : > "$validated_entries"
+    while IFS= read -r match; do
+      validate_workflow_event "$runtime" "$format" "$verb" "$match" \
+        >> "$validated_entries"
+    done < <(/usr/bin/jq -c '.[]' <<<"$matches")
+    matches="$(/usr/bin/jq -s '.' "$validated_entries")"
+  fi
+
   /usr/bin/jq -cn \
     --arg runtime "$runtime" \
     --arg format "$format" \
@@ -889,7 +1206,7 @@ if [ -n "$bwrap_input" ] || [ -n "$expected_bwrap_sha256" ]; then
   assert_sha256 "$expected_bwrap_sha256" "EXPECTED_BWRAP_SHA256"
 fi
 
-for tool in jq shasum awk find sort stat id mktemp install wc tr readlink nc uname ps sleep; do
+for tool in jq shasum awk find sort stat id mktemp install wc tr readlink nc unzip uname ps sleep; do
   require_command "$tool"
 done
 netcat_bin="$(command -v nc)"
@@ -1575,7 +1892,7 @@ for runtime in native wasm; do
   done
 done
 /usr/bin/jq -s \
-  --arg schema "office.fresh-agent.workflows/1" \
+  --arg schema "office.fresh-agent.workflows/2" \
   '{
     schema: $schema,
     required_count: length,
@@ -1583,19 +1900,37 @@ done
   }' "$workflow_entries" > "$isolation_root/WORKFLOWS.json"
 /usr/bin/jq -e '
   keys == ["required_count", "schema", "workflows"] and
-  .schema == "office.fresh-agent.workflows/1" and
+  .schema == "office.fresh-agent.workflows/2" and
   .required_count == 58 and
   (.workflows | length) == 58 and
   (.workflows | unique_by([.runtime, .format, .operation]) | length) == 58 and
+  ([.workflows[].events[].event_id] as $ids |
+    ($ids | length) == ($ids | unique | length)) and
+  ([.workflows[].events[].result.path | select(. != null)] as $paths |
+    ($paths | length) == ($paths | unique | length)) and
   (.workflows | all(
     keys == ["events", "format", "operation", "runtime"] and
     (.runtime == "native" or .runtime == "wasm") and
     (.format == "all" or .format == "xlsx" or .format == "docx") and
     (.events | length) > 0 and
     (.events | all(
-      keys == ["command", "event_id"] and
+      keys == ["artifact", "command", "event_id", "produced", "result"] and
       (.command | type) == "string" and
-      (.event_id | type) == "string"
+      (.event_id | type) == "string" and (.event_id | length) > 0 and
+      (.result | keys) == ["path", "schema", "sha256"] and
+      (.result.path == null or (.result.path | type) == "string") and
+      (.result.schema | type) == "string" and
+      (.result.sha256 | test("^[0-9a-f]{64}$")) and
+      (.artifact == null or (
+        (.artifact | keys) == ["path", "sha256"] and
+        (.artifact.path | type) == "string" and
+        (.artifact.sha256 | test("^[0-9a-f]{64}$"))
+      )) and
+      (.produced == null or (
+        (.produced | keys) == ["path", "sha256"] and
+        (.produced.path | type) == "string" and
+        (.produced.sha256 | test("^[0-9a-f]{64}$"))
+      ))
     ))
   ))
 ' "$isolation_root/WORKFLOWS.json" >/dev/null ||
