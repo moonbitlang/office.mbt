@@ -247,6 +247,16 @@ reject_overlap() {
   fi
 }
 
+assert_empty_directory() {
+  local path="$1"
+  local label="$2"
+  local first_entry
+  if ! first_entry="$(/usr/bin/find "$path" -mindepth 1 -print -quit)"; then
+    die "could not inspect $label for unexpected content"
+  fi
+  [ -z "$first_entry" ] || die "$label is not empty"
+}
+
 reject_protected_location() {
   local path="$1"
   local label="$2"
@@ -488,10 +498,14 @@ EOF
   expected_directories="$(printf '%s\n' bin control libexec | LC_ALL=C /usr/bin/sort)"
   [ "$actual_directories" = "$expected_directories" ] ||
     die "candidate prefix contains an unexpected or missing directory"
-  if [ -n "$(
+  local unsupported_entry
+  if ! unsupported_entry="$(
     /usr/bin/find "$root" -mindepth 1 \
       ! -type d ! -type f ! -type l -print -quit
-  )" ]; then
+  )"; then
+    die "could not inspect the candidate filesystem entry types"
+  fi
+  if [ -n "$unsupported_entry" ]; then
     die "candidate prefix contains an unsupported filesystem entry"
   fi
 
@@ -509,6 +523,69 @@ run_codex() {
     LANG=C \
     LC_ALL=C \
     "${codex_argv[@]}" "$@"
+}
+
+remove_isolated_auth() {
+  local staged_auth="${isolated_codex_state:-}/auth.json"
+  if [ -n "${isolated_codex_state:-}" ] &&
+    { [ -e "$staged_auth" ] || [ -L "$staged_auth" ]; }; then
+    /bin/rm -f -- "$staged_auth" 2>/dev/null || true
+  fi
+}
+
+terminate_supervised_codex() {
+  local attempt
+  local pid="${codex_pid:-}"
+  local pgid="${codex_pgid:-}"
+  remove_isolated_auth
+  [ -n "$pid" ] || return 0
+  if [ -n "$pgid" ] && [ "$pgid" = "$pid" ]; then
+    if /bin/kill -0 "-$pgid" 2>/dev/null; then
+      /bin/kill -TERM "-$pgid" 2>/dev/null || true
+      for attempt in {1..20}; do
+        /bin/kill -0 "-$pgid" 2>/dev/null || break
+        /bin/sleep 0.1
+      done
+      if /bin/kill -0 "-$pgid" 2>/dev/null; then
+        /bin/kill -KILL "-$pgid" 2>/dev/null || true
+      fi
+    fi
+  elif /bin/kill -0 "$pid" 2>/dev/null; then
+    /bin/kill -TERM "$pid" 2>/dev/null || true
+    for attempt in {1..20}; do
+      /bin/kill -0 "$pid" 2>/dev/null || break
+      /bin/sleep 0.1
+    done
+    /bin/kill -KILL "$pid" 2>/dev/null || true
+  fi
+  wait "$pid" 2>/dev/null || true
+  codex_pid=""
+  codex_pgid=""
+}
+
+arm_codex_supervision() {
+  local pid="$1"
+  local observed_pgid
+  codex_pid="$pid"
+  codex_pgid="$pid"
+  if /bin/kill -0 "$pid" 2>/dev/null; then
+    observed_pgid="$(
+      /bin/ps -o pgid= -p "$pid" 2>/dev/null | /usr/bin/tr -d ' '
+    )"
+    if [ -n "$observed_pgid" ] && [ "$observed_pgid" != "$pid" ]; then
+      terminate_supervised_codex
+      die "Codex child did not enter its dedicated process group"
+    fi
+  fi
+}
+
+wait_for_supervised_codex() {
+  set +e
+  wait "$codex_pid"
+  supervised_codex_status="$?"
+  set -e
+  codex_pid=""
+  codex_pgid=""
 }
 
 verify_codex_runtime() {
@@ -812,7 +889,7 @@ if [ -n "$bwrap_input" ] || [ -n "$expected_bwrap_sha256" ]; then
   assert_sha256 "$expected_bwrap_sha256" "EXPECTED_BWRAP_SHA256"
 fi
 
-for tool in jq shasum awk find sort stat id mktemp install wc tr readlink nc uname; do
+for tool in jq shasum awk find sort stat id mktemp install wc tr readlink nc uname ps sleep; do
   require_command "$tool"
 done
 netcat_bin="$(command -v nc)"
@@ -921,10 +998,14 @@ isolation_root="$(/usr/bin/mktemp -d "$probe_parent/.office-f1b-isolation.XXXXXX
 chmod 0700 "$isolation_root"
 network_listener_pid=""
 ambient_write_path=""
+codex_pid=""
+codex_pgid=""
 
 cleanup() {
   local status="$1"
   trap - EXIT HUP INT TERM
+  terminate_supervised_codex
+  remove_isolated_auth
   if [ -n "${network_listener_pid:-}" ]; then
     /bin/kill "$network_listener_pid" 2>/dev/null || true
     wait "$network_listener_pid" 2>/dev/null || true
@@ -933,7 +1014,8 @@ cleanup() {
     /bin/rmdir "$ambient_write_path" 2>/dev/null || true
   fi
   if [ -n "${isolation_root:-}" ] && [ -d "$isolation_root" ]; then
-    chmod -R u+w -- "$isolation_root" 2>/dev/null || true
+    chmod u+rwx -- "$isolation_root" 2>/dev/null || true
+    chmod -R u+rwx -- "$isolation_root" 2>/dev/null || true
     /bin/rm -rf -- "$isolation_root"
   fi
   exit "$status"
@@ -982,8 +1064,8 @@ printf '%s\n' 'host-writable policy sentinel' > "$policy_host_marker"
 [ -f "$policy_host_marker" ] ||
   die "policy read-only canary is not writable before sandboxing"
 /bin/rm -f -- "$policy_host_marker"
-[ "$(/usr/bin/find "$policy_readonly_root" -mindepth 1 -print -quit)" = "" ] ||
-  die "policy read-only canary preflight left unexpected content"
+assert_empty_directory "$policy_readonly_root" \
+  "policy read-only canary directory before sandboxing"
 
 /bin/cp -R "$install_root/." "$candidate_root/"
 chmod 0500 "$candidate_root" "$candidate_root/bin" \
@@ -1158,7 +1240,7 @@ chmod 0600 "$config_tmp"
 /bin/mv "$config_tmp" "$config_file"
 config_sha256_before="$(sha256_file "$config_file")"
 
-set +e
+set -m
 run_codex sandbox \
   --include-managed-config \
   -P fresh_agent \
@@ -1176,9 +1258,11 @@ run_codex sandbox \
   LANG=C \
   LC_ALL=C \
   "$isolated_launcher_bin/office-permission-canary" \
-  > "$evidence_root/permission-canary.log" 2>&1
-canary_status="$?"
-set -e
+  > "$evidence_root/permission-canary.log" 2>&1 &
+arm_codex_supervision "$!"
+set +m
+wait_for_supervised_codex
+canary_status="$supervised_codex_status"
 if [ "$canary_status" -ne 0 ]; then
   echo "error: Codex permission-profile canary log follows" >&2
   /bin/cat "$evidence_root/permission-canary.log" >&2
@@ -1199,12 +1283,11 @@ if ! printf '%s\n' 'host-writable policy sentinel' > "$policy_host_marker"; then
   die "policy read-only canary lost host write access after sandboxing"
 fi
 /bin/rm -f -- "$policy_host_marker"
-[ "$(/usr/bin/find "$policy_readonly_root" -mindepth 1 -print -quit)" = "" ] ||
-  die "policy read-only canary left unexpected content"
-[ "$(/usr/bin/find "$probe_root" -mindepth 1 -print -quit)" = "" ] ||
-  die "permission canary left the probe directory non-empty"
-[ "$(/usr/bin/find "$isolated_tmp" -mindepth 1 -print -quit)" = "" ] ||
-  die "permission canary left the isolated scratch directory non-empty"
+assert_empty_directory "$policy_readonly_root" \
+  "policy read-only canary directory after sandboxing"
+assert_empty_directory "$probe_root" "probe directory after permission canary"
+assert_empty_directory "$isolated_tmp" \
+  "isolated scratch directory after permission canary"
 verify_codex_runtime
 
 runner_sha256="$(sha256_file "$candidate_root/control/run.sh")"
@@ -1314,7 +1397,7 @@ verify_codex_runtime
 # since the isolation root was created.
 /usr/bin/install -m 0600 "$auth_json" "$isolated_codex_state/auth.json"
 
-set +e
+set -m
 run_codex exec \
   --ephemeral \
   --skip-git-repo-check \
@@ -1333,14 +1416,15 @@ run_codex exec \
   --output-last-message "$evidence_root/final-message.json" \
   - < "$candidate_root/control/prompt.md" \
   > "$evidence_root/codex-transcript.jsonl" \
-  2> "$evidence_root/codex-stderr.log"
-codex_status="$?"
-set -e
+  2> "$evidence_root/codex-stderr.log" &
+arm_codex_supervision "$!"
+set +m
+wait_for_supervised_codex
+codex_status="$supervised_codex_status"
 
 printf 'codex_exit_status=%s\n' "$codex_status" \
   > "$evidence_root/codex-exit-status.txt"
-chmod u+w "$isolated_codex_state/auth.json" 2>/dev/null || true
-/bin/rm -f -- "$isolated_codex_state/auth.json"
+remove_isolated_auth
 
 verify_candidate "$install_root" "$expected_candidate_sha256"
 verify_candidate "$candidate_root" "$expected_candidate_sha256"
@@ -1353,8 +1437,8 @@ verify_codex_runtime
   die "probe directory identity changed during the probe"
 [ "$(stat_identity "$evidence_root")" = "$evidence_identity" ] ||
   die "evidence directory identity changed during the probe"
-[ "$(/usr/bin/find "$isolated_tmp" -mindepth 1 -print -quit)" = "" ] ||
-  die "Office probe left the isolated child scratch directory non-empty"
+assert_empty_directory "$isolated_tmp" \
+  "isolated scratch directory after Office probe"
 
 [ "$codex_status" -eq 0 ] || {
   echo "error: Codex probe exited with status $codex_status" >&2

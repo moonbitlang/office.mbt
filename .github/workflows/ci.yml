@@ -83,6 +83,8 @@ jobs:
           moonrun_bin=$(command -v moonrun)
           test "$(git rev-parse --verify HEAD)" = "$head"
           test -z "$(git status --porcelain=v1 --untracked-files=all)"
+          PERL5OPT=-MOfficeF1BMustNotLoad \
+          TAR_OPTIONS=--office-f1b-must-not-be-read \
           office/tests/acceptance/fresh-agent/prepare.sh \
             "$head" "$prefix" \
             "$moon_bin" "$moonc_bin" "$moonrun_bin"
@@ -207,6 +209,8 @@ jobs:
           test -z "$(git status --porcelain=v1 --untracked-files=all)"
           (
             cd /var/tmp
+            PERL5OPT=-MOfficeF1BMustNotLoad \
+            TAR_OPTIONS=--office-f1b-must-not-be-read \
             "$prepare" \
               "$head" "$prefix" \
               "$moon_bin" "$moonc_bin" "$moonrun_bin"
