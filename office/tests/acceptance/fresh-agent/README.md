@@ -65,9 +65,12 @@ is copied from the snapshot, never from the mutable checkout.
 CI installs the immutable MoonBit snapshot named by the locked `moonc` version
 (`0.10.5+5be960077`), rather than the mutable `nightly` CDN alias. Any deliberate
 toolchain upgrade must update that workflow version and both platform inventories
-in `build-lock.json` together. The generic installer omits its nightly-only LLVM
-bundle when given an exact version, so CI explicitly finishes the same LLVM then
-wasm-gc bundle sequence before the locked inventory is checked.
+in `build-lock.json` together. CI also verifies each official platform installer
+against its tracked SHA-256 before executing it; on Unix, that script sets file
+modes that are part of the reviewed closure. The generic Unix installer
+omits its nightly-only LLVM bundle when given an exact version, so CI explicitly
+finishes the same LLVM then wasm-gc bundle sequence before the locked inventory is
+checked.
 
 The absent destination is atomically reserved before the build. Fixed
 subtrees are published without clobbering, directory modes are locked, and
