@@ -388,7 +388,7 @@ toolchain_archive="$scratch/toolchain.tar"
 moon_toolchain_root="$scratch/toolchain"
 mkdir -m 0700 "$moon_toolchain_root"
 /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
-  /usr/bin/tar -xf "$toolchain_archive" -C "$moon_toolchain_root"
+  /usr/bin/tar -xpf "$toolchain_archive" -C "$moon_toolchain_root"
 staged_toolchain_manifest="$scratch/staged-toolchain.manifest"
 "$snapshot_inventory" \
   "$moon_toolchain_root" \
@@ -399,7 +399,8 @@ staged_toolchain_manifest="$scratch/staged-toolchain.manifest"
   {
     echo "error: staged toolchain inventory diff follows" >&2
     /usr/bin/diff -u "$source_toolchain_manifest" \
-      "$staged_toolchain_manifest" >&2 || true
+      "$staged_toolchain_manifest" |
+      /usr/bin/sed -n '1,200p' >&2 || true
     die "privately staged Moon toolchain differs from the pinned source closure"
   }
 
