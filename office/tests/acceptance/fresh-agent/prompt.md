@@ -43,6 +43,9 @@ Rules:
 - Do not hide failed attempts. A typed diagnostic that lets you correct an
   input counts as useful discoverability evidence; an undocumented workaround
   is a gap.
+- Every claimed observation or diagnostic in `probe-result.md` must be backed
+  by a retained command event. Clearly label an inference as an inference; do
+  not present an unrecorded utility or sandbox failure as observed evidence.
 
 Exercise these outcomes:
 

@@ -1,10 +1,14 @@
 # Installed-command fresh-agent probe
 
-This is the constrained installed-command half of the F1b baseline. It builds one exact commit from
-a fresh exported snapshot, publishes native and Wasm commands outside the
-checkout, and gives a new Codex session only those commands and their installed
-help. The task prompt contains outcomes, not product command syntax, JSON
-examples, repository paths, or corrective hints.
+This is the constrained, protocol-driven installed-command half of the F1b
+baseline. It builds one exact commit from a fresh exported snapshot, publishes
+native and Wasm commands outside the checkout, and gives a new Codex session
+only those commands and their installed help. Installed help remains the only
+product documentation and the prompt contains no JSON contract examples or
+repository paths. The prompt deliberately prescribes the coverage matrix and a
+canonical evidence-command grammar, so this gate measures installed-command
+task completion under that protocol; it is not an uncoached discoverability
+experiment.
 
 The scripts are security gates. Execute them directly so their fixed
 `#!/bin/bash -p` interpreter can reject `BASH_ENV` startup hooks. Invoking them
@@ -208,14 +212,25 @@ values through an EXIT trap on success or failure. The runner itself never
 changes host policy; self-hosted machines must provide a supported namespace
 configuration administratively.
 
+The network-denial canary requires `nc` with the OpenBSD/BSD listener form
+`nc -l -k HOST PORT` and Info-ZIP `unzip`. Ubuntu hosts should install
+`netcat-openbsd`; macOS supplies the compatible BSD utility. Before staging the
+real Codex credential, the runner feature-tests the listener by opening a
+random loopback port and connecting to it. An unsupported dialect, failed bind,
+or failed connection aborts the run.
+
 ## Evidence and cleanup
 
 Successful full completion requires a zero Codex status, valid JSONL on stdout
 with stderr retained separately, the exact live canary as the first command,
 host-bound events for all 58 required runtime/format/operation workflows, a
 strict per-target final object, and the exact nine-line machine-readable summary
-in `probe-result.md`. Format-bearing evidence must name its target before any
-output redirection and cannot contain status-masking control operators.
+in `probe-result.md`. Each non-help workflow must end in one unique JSON result
+redirection and is accepted only when the command grammar, operation-specific
+schema/format/postconditions, and referenced Office ZIP or preview artifact all
+validate. Command-event IDs and result paths are globally unique. Input
+redirection, comments, cross-format package decoys, help/version modes, shell
+substitution, and status-masking control operators are rejected.
 `BASELINE PASS` requires all four runtime/format outcomes to pass and no P0-P2
 gap. `BASELINE FAIL` returns 3.
 
@@ -225,7 +240,8 @@ The evidence directory contains:
   `RUN-PREFLIGHT.json`, and `RUN.json`;
 - `permission-canary.log`, host-derived `COMMANDS.json` and `WORKFLOWS.json`,
   `codex-transcript.jsonl`, separate `codex-stderr.log`, final message, and exit
-  status;
+  status; `WORKFLOWS.json` binds every accepted event to result, primary
+  artifact, optional produced-output paths, and their SHA-256 digests;
 - the agent-authored semantic result `probe-result.md` and the host-generated
   `probe-transcript.md`, which renders every paired command event in start
   order; and
@@ -235,9 +251,9 @@ The evidence directory contains:
 The run manifests record the selected bubblewrap strategy (`system` or
 `private`), exact digest, and whether it was privately staged.
 
-Publish the complete non-secret evidence directory (for example as a CI
-artifact or an unlisted durable review attachment), not hashes without their
-recomputable inputs.
+Publish both complete non-secret probe and evidence directories (for example as
+a CI artifact or an unlisted durable review attachment), not hashes without
+their recomputable result and artifact inputs.
 
 The normal EXIT/HUP/INT/TERM trap deletes the isolated Codex home and credential
 copy. SIGKILL and machine failure cannot run a trap; use a one-shot private
