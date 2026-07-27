@@ -325,12 +325,18 @@ chmod 0600 "$codex_bin_dir/mode"
     '  case " $* " in *" --include-managed-config "*) ;; *) exit 62 ;; esac' \
     '  case " $* " in *" -P fresh_agent "*) ;; *) exit 63 ;; esac' \
     '  if [ "$mode" = "sandbox-fail" ]; then echo "sandbox diagnostic" >&2; exit 41; fi' \
+    '  if [ "$mode" = "unreadable-policy" ]; then chmod 0300 "$policy_readonly"; fi' \
     '  /bin/mkdir -p "$TMPDIR/codex-bwrap-synthetic-mount-targets-fake"' \
     '  : > "$TMPDIR/codex-bwrap-synthetic-mount-targets-fake/lock"' \
     '  printf "FRESH-AGENT PERMISSION CANARY PASS\\n"' \
     '  exit 0' \
     'fi' \
     'test "$command" = "exec"' \
+    'if [ "$mode" = "ignore-term" ]; then' \
+    '  printf "%s\n" "$$" > "$mode_file.child-pid"' \
+    '  trap "" HUP INT TERM' \
+    '  while :; do /bin/sleep 1; done' \
+    'fi' \
     'ephemeral=0; strict=0; json=0; ignore_rules=0; skip_git=0' \
     'probe=""; output=""; schema=""; model=""; reasoning=""; permission=""' \
     'while [ "$#" -gt 0 ]; do' \
@@ -659,6 +665,54 @@ set -e
 [ "$hostile_prepare_status" -eq 2 ] || fail "hostile prepare BASH_ENV usage status"
 [ ! -e "$hostile_marker" ] || fail "hostile BASH_ENV executed before prepare"
 
+hostile_perl_lib="$test_root/hostile-perl"
+hostile_perl_marker="$test_root/hostile-perl-marker"
+/bin/mkdir -m 0700 "$hostile_perl_lib"
+printf '%s\n' \
+  'BEGIN { my $path = $ENV{OFFICE_F1B_HOSTILE_MARKER}; open my $fh, ">", $path or die $!; print {$fh} "pwned"; close $fh; } 1;' \
+  > "$hostile_perl_lib/OfficeF1BHostile.pm"
+set +e
+PERL5OPT=-MOfficeF1BHostile PERL5LIB="$hostile_perl_lib" \
+  OFFICE_F1B_HOSTILE_MARKER="$hostile_perl_marker" \
+  "$runner" "0000000000000000000000000000000000000000" "$candidate_sha" \
+  "$case_root/hostile-perl-probe" "$case_root/hostile-perl-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha" \
+  >"$test_root/hostile-perl.stdout" 2>"$test_root/hostile-perl.stderr"
+hostile_perl_status="$?"
+set -e
+[ "$hostile_perl_status" -eq 1 ] || fail "hostile Perl environment status"
+[ ! -e "$hostile_perl_marker" ] || fail "ambient Perl startup hook executed"
+
+failed_git_root="$test_root/failed-git-root"
+failed_git_toolchain="$test_root/failed-git-toolchain"
+/bin/mkdir -p -m 0700 \
+  "$failed_git_root/office/tests/acceptance/fresh-agent" \
+  "$failed_git_root/install-parent" \
+  "$failed_git_toolchain/bin"
+for fake_tool in moon moonc moonrun; do
+  /usr/bin/install -m 0500 /usr/bin/true \
+    "$failed_git_toolchain/bin/$fake_tool"
+done
+/usr/bin/install -m 0500 "$script_dir/prepare.sh" \
+  "$failed_git_root/office/tests/acceptance/fresh-agent/prepare.sh"
+/usr/bin/install -m 0500 "$script_dir/inventory.sh" \
+  "$failed_git_root/office/tests/acceptance/fresh-agent/inventory.sh"
+/usr/bin/install -m 0400 "$script_dir/build-lock.json" \
+  "$failed_git_root/office/tests/acceptance/fresh-agent/build-lock.json"
+/usr/bin/git -C "$failed_git_root" init -q
+/usr/bin/git -C "$failed_git_root" add .
+/usr/bin/git -C "$failed_git_root" \
+  -c user.name=fixture -c user.email=fixture@example.invalid \
+  commit -qm fixture
+failed_git_head="$(/usr/bin/git -C "$failed_git_root" rev-parse HEAD)"
+chmod 0000 "$failed_git_root/.git/index"
+expect_failure failed-git-status 1 'could not inspect candidate checkout status' \
+  "$failed_git_root/office/tests/acceptance/fresh-agent/prepare.sh" \
+  "$failed_git_head" "$failed_git_root/install-parent/candidate" \
+  "$failed_git_toolchain/bin/moon" \
+  "$failed_git_toolchain/bin/moonc" \
+  "$failed_git_toolchain/bin/moonrun"
+
 expect_failure indirect-bash 2 'execute run.sh directly' \
   /bin/bash "$runner"
 expect_failure indirect-prepare-bash 2 'execute prepare.sh directly' \
@@ -668,6 +722,13 @@ printf 'sandbox-fail\n' > "$codex_bin_dir/mode"
 expect_failure sandbox-fail 1 'sandbox diagnostic' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/sandbox-fail-probe" "$case_root/sandbox-fail-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'unreadable-policy\n' > "$codex_bin_dir/mode"
+expect_failure unreadable-policy 1 'could not inspect policy read-only canary' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/unreadable-policy-probe" \
+  "$case_root/unreadable-policy-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'old-version\n' > "$codex_bin_dir/mode"
@@ -681,6 +742,51 @@ expect_failure codex-status 19 'Codex probe exited with status 19' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/status-probe" "$case_root/status-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'ignore-term\n' > "$codex_bin_dir/mode"
+signal_probe="$case_root/signal-probe"
+signal_evidence="$case_root/signal-evidence"
+signal_stdout="$test_root/signal.stdout"
+signal_stderr="$test_root/signal.stderr"
+"$runner" "$head" "$candidate_sha" \
+  "$signal_probe" "$signal_evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha" \
+  >"$signal_stdout" 2>"$signal_stderr" &
+signal_runner_pid="$!"
+signal_child_pid=""
+staged_auth=""
+for attempt in {1..100}; do
+  if [ -s "$codex_bin_dir/mode.child-pid" ]; then
+    signal_child_pid="$(/bin/cat "$codex_bin_dir/mode.child-pid")"
+    staged_auth="$(/usr/bin/find "$case_root" -path \
+      '*/.office-f1b-isolation.*/codex/auth.json' -print -quit)"
+    [ -n "$staged_auth" ] && break
+  fi
+  /bin/sleep 0.1
+done
+[ -n "$signal_child_pid" ] || fail "signal test did not start the fake Codex child"
+[ -n "$staged_auth" ] && [ -f "$staged_auth" ] ||
+  fail "signal test did not stage the isolated credential"
+signal_started_at="$SECONDS"
+/bin/kill -TERM "$signal_runner_pid"
+set +e
+wait "$signal_runner_pid"
+signal_status="$?"
+set -e
+[ "$signal_status" -eq 143 ] ||
+  fail "signal cleanup status: expected 143, found $signal_status"
+[ $((SECONDS - signal_started_at)) -le 5 ] ||
+  fail "signal cleanup exceeded its bounded escalation window"
+if /bin/kill -0 "$signal_child_pid" 2>/dev/null; then
+  fail "TERM-ignoring fake Codex child survived runner cleanup"
+fi
+[ -f "$case_root/auth.json" ] || fail "signal cleanup removed the source credential"
+[ ! -e "$staged_auth" ] && [ ! -L "$staged_auth" ] ||
+  fail "signal cleanup retained the staged credential"
+if /usr/bin/find "$case_root" -maxdepth 1 -type d \
+  -name '.office-f1b-isolation.*' | /usr/bin/grep -q .; then
+  fail "signal cleanup retained the isolation root"
+fi
 
 printf 'malformed\n' > "$codex_bin_dir/mode"
 expect_failure malformed-final 1 'required structured result' \

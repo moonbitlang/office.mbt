@@ -171,6 +171,17 @@ reject_overlap() {
   fi
 }
 
+require_clean_checkout() {
+  local status_output
+  if ! status_output="$(
+    trusted_git -C "$source_root" status --porcelain=v1 --untracked-files=all
+  )"; then
+    die "could not inspect candidate checkout status"
+  fi
+  [ -z "$status_output" ] ||
+    die "candidate checkout has tracked or untracked changes"
+}
+
 [ "$#" -eq 5 ] || usage
 expected_head="$1"
 install_input="$2"
@@ -219,9 +230,7 @@ case "$expected_tree" in
   *) die "candidate source tree must be a lowercase 40-character object id" ;;
 esac
 
-if [ -n "$(trusted_git -C "$source_root" status --porcelain=v1 --untracked-files=all)" ]; then
-  die "candidate checkout has tracked or untracked changes"
-fi
+require_clean_checkout
 
 inventory_script="$script_dir/inventory.sh"
 build_lock="$script_dir/build-lock.json"
@@ -625,9 +634,7 @@ install -m 0400 "$scratch/CANDIDATE.json" "$stage/CANDIDATE.json"
   die "candidate HEAD changed during preparation"
 [ "$(trusted_git -C "$source_root" rev-parse --verify "$expected_head^{tree}")" = "$expected_tree" ] ||
   die "candidate source tree changed during preparation"
-if [ -n "$(trusted_git -C "$source_root" status --porcelain=v1 --untracked-files=all)" ]; then
-  die "candidate checkout changed during preparation"
-fi
+require_clean_checkout
 
 final_source_toolchain_manifest="$scratch/final-source-toolchain.manifest"
 "$snapshot_inventory" \
