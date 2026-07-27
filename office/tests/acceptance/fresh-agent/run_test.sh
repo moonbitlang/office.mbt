@@ -88,6 +88,54 @@ sha256_file() {
 ' "$script_dir/final.schema.json" >/dev/null ||
   fail "structured output schema has strict target and gap evidence"
 
+inventory_root_a="$test_root/inventory-a"
+inventory_root_b="$test_root/inventory-relocated-longer"
+/bin/mkdir -m 0700 \
+  "$inventory_root_a" \
+  "$inventory_root_b" \
+  "$inventory_root_a/lib" \
+  "$inventory_root_b/lib"
+/bin/mkdir -p -m 0700 \
+  "$inventory_root_a/lib/core/_build/native/release/bundle" \
+  "$inventory_root_b/lib/core/_build/native/release/bundle"
+inventory_root_a="$(
+  unset CDPATH
+  cd -P -- "$inventory_root_a" >/dev/null
+  pwd -P
+)"
+inventory_root_b="$(
+  unset CDPATH
+  cd -P -- "$inventory_root_b" >/dev/null
+  pwd -P
+)"
+printf '{"root":"%s"}\n' "$inventory_root_a" \
+  > "$inventory_root_a/lib/core/_build/packages.json"
+printf '{"root":"%s"}\n' "$inventory_root_a" \
+  > "$inventory_root_b/lib/core/_build/packages.json"
+printf 'generated database A\n' \
+  > "$inventory_root_a/lib/core/_build/native/release/bundle/bundle.moon_db"
+printf 'different generated database B\n' \
+  > "$inventory_root_b/lib/core/_build/native/release/bundle/bundle.moon_db"
+printf 'stable payload\n' > "$inventory_root_a/payload.txt"
+printf 'stable payload\n' > "$inventory_root_b/payload.txt"
+"$script_dir/inventory.sh" \
+  "$inventory_root_a" "$test_root/inventory-a.manifest" relocation \
+  lib payload.txt
+"$script_dir/inventory.sh" \
+  "$inventory_root_b" "$test_root/inventory-b.manifest" relocation \
+  --root-alias "$inventory_root_a" lib payload.txt
+/usr/bin/cmp "$test_root/inventory-a.manifest" \
+  "$test_root/inventory-b.manifest" >/dev/null ||
+  fail "inventory manifest is not relocatable"
+printf 'changed payload\n' > "$inventory_root_b/payload.txt"
+"$script_dir/inventory.sh" \
+  "$inventory_root_b" "$test_root/inventory-changed.manifest" relocation \
+  --root-alias "$inventory_root_a" lib payload.txt
+if /usr/bin/cmp -s "$test_root/inventory-a.manifest" \
+  "$test_root/inventory-changed.manifest"; then
+  fail "inventory normalization concealed a non-root content change"
+fi
+
 make_candidate() {
   local install_root="$1"
   local source_root="${2:-$root}"
