@@ -621,9 +621,13 @@ case "$build_platform" in
     done
     ;;
 esac
-mapfile -t host_inventory_entries < <(
+sorted_host_inventory_entries=()
+while IFS= read -r host_inventory_entry; do
+  sorted_host_inventory_entries+=("$host_inventory_entry")
+done < <(
   printf '%s\n' "${host_inventory_entries[@]}" | LC_ALL=C /usr/bin/sort
 )
+host_inventory_entries=("${sorted_host_inventory_entries[@]}")
 build_host_manifest="$scratch/build-host.manifest"
 "$snapshot_inventory" \
   "$host_inventory_root" \
