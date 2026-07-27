@@ -1468,37 +1468,74 @@ done < "$evidence_root/codex-transcript.jsonl"
     . == "/bin/bash -c '\''office-permission-canary'\''" or
     . == "/bin/zsh -c office-permission-canary" or
     . == "/bin/zsh -c '\''office-permission-canary'\''";
-  ([.[] | select(.type == "item.started" and .item.type == "command_execution") | .item]) as $started |
-  ([.[] | select(.type == "item.completed" and .item.type == "command_execution") | .item]) as $completed |
-  ([.[] | select(.item?.type == "command_execution")][0]) as $first_event |
+  (to_entries) as $events |
+  ([$events[] | select(.value.type == "thread.started")]) as $thread_started |
+  ([$events[] | select(.value.type == "turn.started")]) as $turn_started |
+  ([$events[] | select(.value.type == "turn.completed")]) as $turn_completed |
+  ([$events[] | select(.value.type == "turn.failed")]) as $turn_failed |
+  ([$events[] |
+    select(.value.type == "item.started" and
+      .value.item.type == "command_execution") |
+    {index: .key, item: .value.item}]) as $started |
+  ([$events[] |
+    select(.value.type == "item.completed" and
+      .value.item.type == "command_execution") |
+    {index: .key, item: .value.item}]) as $completed |
+  ([$events[] | select(.value.item?.type == "command_execution")][0]) as $first_event |
+  ($events | length) > 0 and
+  ($thread_started | length) == 1 and
+  $thread_started[0].key == 0 and
+  ($turn_started | length) == 1 and
+  ($turn_completed | length) == 1 and
+  ($turn_failed | length) == 0 and
+  $turn_started[0].key < $turn_completed[0].key and
+  $turn_completed[0].key == (($events | length) - 1) and
   ($started | length) > 0 and
-  ($started | map(.id) | length) == ($started | map(.id) | unique | length) and
-  ($completed | map(.id) | length) == ($completed | map(.id) | unique | length) and
-  ($started | map({id, command}) | sort_by(.id)) ==
-    ($completed | map({id, command}) | sort_by(.id)) and
+  ($started | map(.item.id) | length) ==
+    ($started | map(.item.id) | unique | length) and
+  ($completed | map(.item.id) | length) ==
+    ($completed | map(.item.id) | unique | length) and
+  ($started | map(.item | {id, command}) | sort_by(.id)) ==
+    ($completed | map(.item | {id, command}) | sort_by(.id)) and
+  all($started[];
+    . as $start |
+    ([$completed[] | select(.item.id == $start.item.id)]) as $terminals |
+    ($terminals | length) == 1 and
+    $start.index > $turn_started[0].key and
+    $terminals[0].index > $start.index and
+    $terminals[0].index < $turn_completed[0].key) and
   all($completed[];
-    (.exit_code | type) == "number" and
-    (.aggregated_output | type) == "string" and
-    ((.status == "completed" and .exit_code == 0) or
-     (.status == "failed" and .exit_code != 0))) and
-  $first_event.type == "item.started" and
-  ($first_event.item.command | exact_canary_command) and
-  ([ $completed[] | select(.id == $first_event.item.id) ][0] |
+    (.item.exit_code | type) == "number" and
+    .item.exit_code == (.item.exit_code | floor) and
+    .item.exit_code >= 0 and .item.exit_code <= 255 and
+    (.item.aggregated_output | type) == "string" and
+    ((.item.status == "completed" and .item.exit_code == 0) or
+     (.item.status == "failed" and .item.exit_code >= 1))) and
+  $first_event.value.type == "item.started" and
+  ($first_event.value.item.command | exact_canary_command) and
+  ([ $completed[] |
+    select(.item.id == $first_event.value.item.id) ][0].item |
     .exit_code == 0 and
     .aggregated_output == "FRESH-AGENT PERMISSION CANARY PASS\n" and
     (.command | exact_canary_command))
 ' "$isolation_root/transcript-array.json" >/dev/null ||
-  die "Codex command events were incomplete or the first live command was not the exact permission canary"
+  die "Codex transcript lifecycle, command pairing, exit domain, or first live canary was invalid"
 
 /usr/bin/jq '
-  ([.[] | select(.type == "item.started" and .item.type == "command_execution") | .item]) as $started |
-  ([.[] | select(.type == "item.completed" and .item.type == "command_execution") | .item]) as $completed |
+  ([to_entries[] |
+    select(.value.type == "item.started" and
+      .value.item.type == "command_execution") |
+    {index: .key, item: .value.item}]) as $started |
+  ([to_entries[] |
+    select(.value.type == "item.completed" and
+      .value.item.type == "command_execution") |
+    {index: .key, item: .value.item}]) as $completed |
   [
     $started[] as $start |
-    ($completed | map(select(.id == $start.id))[0]) |
+    ($completed | map(select(.item.id == $start.item.id))[0].item) |
     {
-      id: $start.id,
-      command: $start.command,
+      id: $start.item.id,
+      command: $start.item.command,
       status,
       exit_code,
       output_bytes: (.aggregated_output | utf8bytelength)
