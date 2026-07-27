@@ -115,6 +115,7 @@ def main():
             "../../replacement",
             "--json",
         ],
+        ["identify", "input-evidence/event-a/000.xlsx", "--json"],
     ]
     for arguments in unsafe:
         expect_rejected(policy, arguments)

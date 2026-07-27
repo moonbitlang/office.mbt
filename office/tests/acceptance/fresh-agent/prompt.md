@@ -8,6 +8,8 @@ Rules:
   it with another command. Stop and report `BASELINE FAIL` if it does not print
   exactly `FRESH-AGENT PERMISSION CANARY PASS` with exit status zero.
 - Work only in the current empty directory.
+- The wrapper may create `input-evidence/` while attesting commands. It is
+  host-managed provenance: do not inspect, modify, rename, or remove it.
 - Do not inspect a source checkout, repository files, package registry, prior
   transcripts, or the internet. Do not use MoonBit tooling or legacy
   format-specific Office commands.

@@ -974,6 +974,9 @@ install -m 0400 \
   "$snapshot/office/tests/acceptance/fresh-agent/attest.py" \
   "$stage/control/attest.py"
 install -m 0400 \
+  "$snapshot/office/tests/acceptance/fresh-agent/argument_policy.py" \
+  "$stage/control/argument-policy.py"
+install -m 0400 \
   "$snapshot/office/tests/acceptance/fresh-agent/auth_guard.py" \
   "$stage/control/auth-guard.py"
 install -m 0400 \
@@ -1023,6 +1026,7 @@ prompt_sha256="$(sha256_file "$stage/control/prompt.md")"
 schema_sha256="$(sha256_file "$stage/control/final.schema.json")"
 canary_sha256="$(sha256_file "$stage/control/permission-canary.sh")"
 attest_sha256="$(sha256_file "$stage/control/attest.py")"
+argument_policy_sha256="$(sha256_file "$stage/control/argument-policy.py")"
 auth_guard_sha256="$(sha256_file "$stage/control/auth-guard.py")"
 command_policy_sha256="$(sha256_file "$stage/control/command-policy.py")"
 opc_policy_sha256="$(sha256_file "$stage/control/opc-policy.py")"
@@ -1072,6 +1076,7 @@ jq -n \
   --arg schema_sha256 "$schema_sha256" \
   --arg canary_sha256 "$canary_sha256" \
   --arg attest_sha256 "$attest_sha256" \
+  --arg argument_policy_sha256 "$argument_policy_sha256" \
   --arg auth_guard_sha256 "$auth_guard_sha256" \
   --arg command_policy_sha256 "$command_policy_sha256" \
   --arg opc_policy_sha256 "$opc_policy_sha256" \
@@ -1108,6 +1113,7 @@ jq -n \
       {path: "control/final.schema.json", kind: "file", mode: "0400", sha256: $schema_sha256},
       {path: "control/permission-canary.sh", kind: "file", mode: "0500", sha256: $canary_sha256},
       {path: "control/attest.py", kind: "file", mode: "0400", sha256: $attest_sha256},
+      {path: "control/argument-policy.py", kind: "file", mode: "0400", sha256: $argument_policy_sha256},
       {path: "control/auth-guard.py", kind: "file", mode: "0400", sha256: $auth_guard_sha256},
       {path: "control/command-policy.py", kind: "file", mode: "0400", sha256: $command_policy_sha256},
       {path: "control/opc-policy.py", kind: "file", mode: "0400", sha256: $opc_policy_sha256},

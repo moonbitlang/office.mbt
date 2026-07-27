@@ -88,6 +88,10 @@ fail() {
   "$script_dir/attest.py" ||
   fail "atomic completion-attestation unit tests"
 /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+  /usr/bin/python3 -I "$script_dir/argument_policy_test.py" \
+  "$script_dir/argument_policy.py" ||
+  fail "Office filesystem-argument policy unit tests"
+/usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
   /usr/bin/python3 -I "$script_dir/auth_guard_test.py" \
   "$script_dir/auth_guard.py" ||
   fail "held-FD credential guard unit tests"
@@ -213,6 +217,8 @@ make_candidate() {
   local schema_sha
   local canary_sha
   local attest_sha
+  local argument_policy_sha
+  local auth_guard_sha
   local command_policy_sha
   local opc_policy_sha
   local transcript_policy_sha
@@ -337,6 +343,8 @@ make_candidate() {
     "$install_root/control/permission-canary.sh"
   /usr/bin/install -m 0400 "$script_dir/attest.py" \
     "$install_root/control/attest.py"
+  /usr/bin/install -m 0400 "$script_dir/argument_policy.py" \
+    "$install_root/control/argument-policy.py"
   /usr/bin/install -m 0400 "$script_dir/auth_guard.py" \
     "$install_root/control/auth-guard.py"
   /usr/bin/install -m 0400 "$script_dir/command_policy.py" \
@@ -568,6 +576,7 @@ make_candidate() {
   schema_sha="$(sha256_file "$install_root/control/final.schema.json")"
   canary_sha="$(sha256_file "$install_root/control/permission-canary.sh")"
   attest_sha="$(sha256_file "$install_root/control/attest.py")"
+  argument_policy_sha="$(sha256_file "$install_root/control/argument-policy.py")"
   auth_guard_sha="$(sha256_file "$install_root/control/auth-guard.py")"
   command_policy_sha="$(sha256_file "$install_root/control/command-policy.py")"
   opc_policy_sha="$(sha256_file "$install_root/control/opc-policy.py")"
@@ -600,6 +609,7 @@ make_candidate() {
     --arg schema_sha "$schema_sha" \
     --arg canary_sha "$canary_sha" \
     --arg attest_sha "$attest_sha" \
+    --arg argument_policy_sha "$argument_policy_sha" \
     --arg auth_guard_sha "$auth_guard_sha" \
     --arg command_policy_sha "$command_policy_sha" \
     --arg opc_policy_sha "$opc_policy_sha" \
@@ -636,6 +646,7 @@ make_candidate() {
         {path: "control/final.schema.json", kind: "file", mode: "0400", sha256: $schema_sha},
         {path: "control/permission-canary.sh", kind: "file", mode: "0500", sha256: $canary_sha},
         {path: "control/attest.py", kind: "file", mode: "0400", sha256: $attest_sha},
+        {path: "control/argument-policy.py", kind: "file", mode: "0400", sha256: $argument_policy_sha},
         {path: "control/auth-guard.py", kind: "file", mode: "0400", sha256: $auth_guard_sha},
         {path: "control/command-policy.py", kind: "file", mode: "0400", sha256: $command_policy_sha},
         {path: "control/opc-policy.py", kind: "file", mode: "0400", sha256: $opc_policy_sha},
@@ -884,6 +895,8 @@ chmod 0600 "$codex_bin_dir/mode"
     '  duplicate-result-path|aliased-result-parent|reused-event-id) stop_after=native/xlsx/batch ;;' \
     '  input-redirection|cross-format) stop_after=native/xlsx/validate ;;' \
     'esac' \
+    '/usr/bin/printf "{}\\n" > fixture.json' \
+    'chmod 0600 fixture.json' \
     'if [ "$mode" != "no-office" ]; then' \
     '  index=0' \
     '  for runtime in native wasm; do' \
@@ -1037,6 +1050,7 @@ evidence="$case_root/evidence"
   .harness.credential_guard.delayed_staging == true and
   .harness.credential_guard.source_open == "component-wise O_NOFOLLOW retained FD" and
   (.harness.credential_guard.policy_sha256 | test("^[0-9a-f]{64}$")) and
+  (.harness.argument_policy_sha256 | test("^[0-9a-f]{64}$")) and
   .harness.job_identity.inherited_fd == 9 and
   .harness.job_identity.detached_member_discovery == "lsof" and
   (.harness.job_identity.sentinel_sha256 | test("^[0-9a-f]{64}$")) and
@@ -1069,6 +1083,8 @@ evidence="$case_root/evidence"
   (.artifacts | map(.path) | index("WORKFLOWS.json")) != null and
   (.artifacts | map(.path) | index("closure/candidate/control/build-host.json")) != null and
   (.artifacts | map(.path) | index("closure/probe/probe-result.md")) != null and
+  (.artifacts | map(.path) |
+    any(startswith("closure/probe/input-evidence/event-"))) and
   (.artifacts | map(.path) | index("closure/runtime/RUNTIME.json")) != null and
   (.artifacts | map(.path) | index("closure/runtime/codex")) != null and
   (.artifacts[] | select(.path == "closure/candidate/bin/office")) == {
@@ -1088,7 +1104,7 @@ evidence="$case_root/evidence"
 [ "$(/usr/bin/jq 'length' "$evidence/COMMANDS.json")" -eq 61 ] ||
   fail "host-derived command inventory"
 /usr/bin/jq -e '
-  .schema == "office.fresh-agent.workflows/3" and
+  .schema == "office.fresh-agent.workflows/4" and
   .required_count == 58 and
   (.workflows | length) == 58 and
   (.workflows | all((.events | length) == 1)) and
@@ -1098,11 +1114,16 @@ evidence="$case_root/evidence"
     ($paths | length) == 56 and ($paths | unique | length) == 56) and
   (.workflows | all(
     if .format == "all" then
-      (.events | all(.artifact == null and .result.path == null))
+      (.events | all(.artifact == null and .inputs == [] and .result.path == null))
     else
       (.events | all(
         (.artifact.sha256 | test("^[0-9a-f]{64}$")) and
         (.artifact.bytes | type) == "number" and .artifact.bytes > 0 and
+        (.inputs | type) == "array" and
+        (.inputs | all(
+          (.snapshot.path | startswith("input-evidence/event-")) and
+          (.snapshot.sha256 | test("^[0-9a-f]{64}$"))
+        )) and
         (.result.bytes | type) == "number" and .result.bytes > 0 and
         (.result.path | type) == "string"
       ))
