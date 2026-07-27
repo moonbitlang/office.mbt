@@ -84,6 +84,10 @@ fail() {
   "$script_dir/attest.py" ||
   fail "atomic completion-attestation unit tests"
 /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+  /usr/bin/python3 -I "$script_dir/opc_policy_test.py" \
+  "$script_dir/opc_policy.py" ||
+  fail "bounded OPC-policy unit tests"
+/usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
   /usr/bin/python3 -I "$script_dir/transcript_policy_test.py" \
   "$script_dir/transcript_policy.py" ||
   fail "bounded transcript-policy unit tests"
@@ -198,6 +202,7 @@ make_candidate() {
   local canary_sha
   local attest_sha
   local command_policy_sha
+  local opc_policy_sha
   local transcript_policy_sha
   local private_sha
   local inventory_sha
@@ -258,7 +263,7 @@ make_candidate() {
     '    main_xml="<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body/></w:document>"' \
     '  fi' \
     '  /bin/mkdir -p "$package_tmp/$(/usr/bin/dirname -- "$main_part")"' \
-    '  printf "%s\n" "<?xml version=\"1.0\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Override PartName=\"/$main_part\" ContentType=\"$main_content_type\"/></Types>" > "$package_tmp/[Content_Types].xml"' \
+    '  printf "%s\n" "<?xml version=\"1.0\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Override PartName=\"/$main_part\" ContentType=\"$main_content_type\"/></Types>" > "$package_tmp/[Content_Types].xml"' \
     '  printf "%s\n" "<?xml version=\"1.0\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"$main_part\"/></Relationships>" > "$package_tmp/_rels/.rels"' \
     '  printf "%s\n" "$main_xml" > "$package_tmp/$main_part"' \
     '  (cd "$package_tmp" && /usr/bin/zip -q "$package_path" "[Content_Types].xml" "_rels/.rels" "$main_part")' \
@@ -320,6 +325,8 @@ make_candidate() {
     "$install_root/control/attest.py"
   /usr/bin/install -m 0400 "$script_dir/command_policy.py" \
     "$install_root/control/command-policy.py"
+  /usr/bin/install -m 0400 "$script_dir/opc_policy.py" \
+    "$install_root/control/opc-policy.py"
   /usr/bin/install -m 0400 "$script_dir/transcript_policy.py" \
     "$install_root/control/transcript-policy.py"
   /usr/bin/install -m 0500 "$script_dir/inventory.sh" \
@@ -466,6 +473,7 @@ make_candidate() {
   canary_sha="$(sha256_file "$install_root/control/permission-canary.sh")"
   attest_sha="$(sha256_file "$install_root/control/attest.py")"
   command_policy_sha="$(sha256_file "$install_root/control/command-policy.py")"
+  opc_policy_sha="$(sha256_file "$install_root/control/opc-policy.py")"
   transcript_policy_sha="$(sha256_file "$install_root/control/transcript-policy.py")"
   private_sha="$(sha256_file "$install_root/control/private.json")"
   inventory_sha="$(sha256_file "$install_root/control/inventory.sh")"
@@ -490,6 +498,7 @@ make_candidate() {
     --arg canary_sha "$canary_sha" \
     --arg attest_sha "$attest_sha" \
     --arg command_policy_sha "$command_policy_sha" \
+    --arg opc_policy_sha "$opc_policy_sha" \
     --arg transcript_policy_sha "$transcript_policy_sha" \
     --arg private_sha "$private_sha" \
     --arg inventory_sha "$inventory_sha" \
@@ -521,6 +530,7 @@ make_candidate() {
         {path: "control/permission-canary.sh", kind: "file", mode: "0500", sha256: $canary_sha},
         {path: "control/attest.py", kind: "file", mode: "0400", sha256: $attest_sha},
         {path: "control/command-policy.py", kind: "file", mode: "0400", sha256: $command_policy_sha},
+        {path: "control/opc-policy.py", kind: "file", mode: "0400", sha256: $opc_policy_sha},
         {path: "control/transcript-policy.py", kind: "file", mode: "0400", sha256: $transcript_policy_sha},
         {path: "control/private.json", kind: "file", mode: "0400", sha256: $private_sha},
         {path: "control/inventory.sh", kind: "file", mode: "0500", sha256: $inventory_sha},
@@ -701,9 +711,10 @@ chmod 0600 "$codex_bin_dir/mode"
     'canary_body=${canary_body%_}' \
     'emit_completed canary "/bin/sh -c '\''office-permission-canary'\''" 0 "$canary_body"' \
     'if [ "$mode" = "oversized-transcript" ]; then' \
-    '  oversized_body=$(/bin/dd if=/dev/zero bs=1048576 count=2 2>/dev/null | /usr/bin/tr "\\000" x)' \
     '  emit_started oversized-transcript "true"' \
-    '  emit_completed oversized-transcript "true" 0 "$oversized_body"' \
+    '  /usr/bin/printf '\''{"type":"item.completed","item":{"id":"oversized-transcript","type":"command_execution","command":"true","aggregated_output":"'\''' \
+    '  /bin/dd if=/dev/zero bs=1048576 count=2 2>/dev/null | /usr/bin/tr "\\000" x' \
+    '  /usr/bin/printf '\''","exit_code":0,"status":"completed"}}\\n'\''' \
     'fi' \
     'if [ "$mode" = "completion-before-start" ]; then' \
     '  emit_completed lifecycle-order "true" 0 ""' \
