@@ -515,7 +515,7 @@ chmod 0600 "$codex_bin_dir/mode"
     'mode=$(/bin/cat "$mode_file")' \
     'if [ "${1:-}" = "--version" ]; then' \
     '  if [ "$mode" = "version-hang" ]; then trap "" HUP INT TERM; while :; do /bin/sleep 1; done; fi' \
-    '  if [ "$mode" = "old-version" ]; then echo "codex-cli 0.144.9"; else echo "codex-cli 0.145.0"; fi' \
+    '  if [ "$mode" = "old-version" ]; then echo "codex-cli 0.144.9"; elif [ "$mode" = "prerelease-version" ]; then echo "codex-cli 0.145.0-rc.1"; else echo "codex-cli 0.145.0"; fi' \
     '  exit 0' \
     'fi' \
     'config="$CODEX_HOME/config.toml"' \
@@ -562,6 +562,17 @@ chmod 0600 "$codex_bin_dir/mode"
     '  if [ "$mode" = "canary-hang" ]; then trap "" HUP INT TERM; while :; do /bin/sleep 1; done; fi' \
     '  if [ "$mode" = "sandbox-fail" ]; then echo "sandbox diagnostic" >&2; exit 41; fi' \
     '  if [ "$mode" = "unreadable-policy" ]; then chmod 0300 "$policy_readonly"; fi' \
+    '  if [ "$mode" = "dead-listener" ]; then' \
+    '    ancestor=$PPID; listener_pid=' \
+    '    for ancestor_hop in 1 2 3; do' \
+    '      listener_pid=$(/bin/ps -axo pid=,ppid=,args= | /usr/bin/awk -v parent="$ancestor" '\''$2 == parent && / -l -k 127[.]0[.]0[.]1 / { print $1; exit }'\'')' \
+    '      test -z "$listener_pid" || break' \
+    '      ancestor=$(/bin/ps -o ppid= -p "$ancestor" | /usr/bin/tr -d " ")' \
+    '      test -n "$ancestor" || break' \
+    '    done' \
+    '    test -n "$listener_pid"' \
+    '    /bin/kill "$listener_pid"' \
+    '  fi' \
     '  /bin/mkdir -p "$TMPDIR/codex-bwrap-synthetic-mount-targets-fake"' \
     '  : > "$TMPDIR/codex-bwrap-synthetic-mount-targets-fake/lock"' \
     '  printf "FRESH-AGENT PERMISSION CANARY PASS\\n"' \
@@ -579,6 +590,7 @@ chmod 0600 "$codex_bin_dir/mode"
     'fi' \
     'if [ "$mode" = "ignore-term" ]; then' \
     '  printf "%s\n" "$$" > "$mode_file.child-pid"' \
+    '  chmod 0500 "$CODEX_HOME"' \
     '  trap "" HUP INT TERM' \
     '  while :; do /bin/sleep 1; done' \
     'fi' \
@@ -1071,6 +1083,19 @@ printf 'old-version\n' > "$codex_bin_dir/mode"
 expect_failure old-version 1 '0.145.0 or newer is required' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/old-probe" "$case_root/old-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'prerelease-version\n' > "$codex_bin_dir/mode"
+expect_failure prerelease-version 1 'prerelease builds are not accepted' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/prerelease-probe" "$case_root/prerelease-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'dead-listener\n' > "$codex_bin_dir/mode"
+expect_failure dead-listener 1 \
+  'listener is not live after the permission canary' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/dead-listener-probe" "$case_root/dead-listener-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'version-hang\n' > "$codex_bin_dir/mode"
