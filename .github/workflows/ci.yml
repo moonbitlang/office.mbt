@@ -10,9 +10,15 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# `nightly` is a mutable CDN alias, while the fresh-agent build lock binds the
+# complete toolchain closure. Install the immutable moonc-version snapshot that
+# the lock describes so an unrelated nightly publication cannot break the gate.
+env:
+  MOONBIT_TOOLCHAIN_VERSION: "0.10.5+5be960077"
+
 jobs:
   transaction-platforms:
-    name: office transactional editing (${{ matrix.os }}, nightly)
+    name: office transactional editing (${{ matrix.os }}, pinned nightly)
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     env:
@@ -40,17 +46,19 @@ jobs:
         shell: bash
         run: test "$(git rev-parse --verify HEAD)" = "$EXPECTED_HEAD"
 
-      - name: Set up MoonBit (nightly, Unix)
+      - name: Set up MoonBit (pinned nightly, Unix)
         if: runner.os != 'Windows'
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s nightly
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s "$MOONBIT_TOOLCHAIN_VERSION"
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+          "$HOME/.moon/bin/moon" -C "$HOME/.moon/lib/core" bundle --warn-list -a --target llvm
+          "$HOME/.moon/bin/moon" -C "$HOME/.moon/lib/core" bundle --warn-list -a --target wasm-gc --quiet
 
-      - name: Set up MoonBit (nightly, Windows)
+      - name: Set up MoonBit (pinned nightly, Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         env:
-          MOONBIT_INSTALL_VERSION: nightly
+          MOONBIT_INSTALL_VERSION: ${{ env.MOONBIT_TOOLCHAIN_VERSION }}
         run: |
           Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
           irm https://cli.moonbitlang.com/install/powershell.ps1 | iex
@@ -130,7 +138,7 @@ jobs:
           moon test --target native office/docx
 
   test:
-    name: check + test (mbtexcel + docx2html + office + pdflite, nightly)
+    name: check + test (mbtexcel + docx2html + office + pdflite, pinned nightly)
     runs-on: ubuntu-24.04
     # Native tests take ~10 minutes; everything else is small. Fail loudly if
     # something (e.g. an accidental whole-workspace exe build pulling in
@@ -175,10 +183,12 @@ jobs:
       # moonbitlang/async >= 0.20 (wasm filesystem support) and its xlsx CLI
       # targets the wasm backend, both of which need nightly. `moon work sync`
       # has aligned the workspace members on async@0.20.2 + x@0.4.43.
-      - name: Set up MoonBit (nightly)
+      - name: Set up MoonBit (pinned nightly snapshot)
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s nightly
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s "$MOONBIT_TOOLCHAIN_VERSION"
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+          "$HOME/.moon/bin/moon" -C "$HOME/.moon/lib/core" bundle --warn-list -a --target llvm
+          "$HOME/.moon/bin/moon" -C "$HOME/.moon/lib/core" bundle --warn-list -a --target wasm-gc --quiet
 
       - name: MoonBit versions
         run: moon version --all
