@@ -314,6 +314,9 @@ verify_candidate() {
   local expected_files
   local actual_directories
   local expected_directories
+  local build_platform
+  local toolchain_header
+  local dependency_header
 
   assert_owned_directory_mode "$root" "0500" "candidate root"
   for relative in bin control libexec; do
@@ -328,20 +331,27 @@ verify_candidate() {
     --arg head "$expected_head" \
     '
       keys == ["build", "candidate_head", "files", "schema", "symlinks"] and
-      .schema == "office.fresh-agent.candidate/2" and
+      .schema == "office.fresh-agent.candidate/3" and
       .candidate_head == $head and
       (.build | keys) == [
-        "dependency_tree_sha256",
+        "build_lock_sha256",
+        "dependency_manifest_sha256",
         "moon_sha256",
         "moon_version",
         "moonc_sha256",
         "moonc_version",
         "moonrun_version",
-        "source_tree"
+        "platform",
+        "source_tree",
+        "toolchain_manifest_sha256"
       ] and
-      (.build.dependency_tree_sha256 | test("^[0-9a-f]{64}$")) and
+      (.build.build_lock_sha256 | test("^[0-9a-f]{64}$")) and
+      (.build.dependency_manifest_sha256 | test("^[0-9a-f]{64}$")) and
+      (.build.toolchain_manifest_sha256 | test("^[0-9a-f]{64}$")) and
       (.build.moonc_sha256 | test("^[0-9a-f]{64}$")) and
       (.build.moon_sha256 | test("^[0-9a-f]{64}$")) and
+      (.build.platform == "darwin-arm64" or
+        .build.platform == "linux-x86_64") and
       (.build.source_tree | test("^[0-9a-f]{40}$")) and
       (.files | map(keys == ["kind", "mode", "path", "sha256"]) | all) and
       (.files | map(.path)) == [
@@ -353,7 +363,11 @@ verify_candidate() {
         "control/prompt.md",
         "control/final.schema.json",
         "control/permission-canary.sh",
-        "control/private.json"
+        "control/private.json",
+        "control/inventory.sh",
+        "control/build-lock.json",
+        "control/toolchain.manifest",
+        "control/dependencies.manifest"
       ] and
       (.files | map(.kind == "file") | all) and
       (.files | map(.sha256 | test("^[0-9a-f]{64}$")) | all) and
@@ -387,7 +401,46 @@ control/prompt.md|0400
 control/final.schema.json|0400
 control/permission-canary.sh|0500
 control/private.json|0400
+control/inventory.sh|0500
+control/build-lock.json|0400
+control/toolchain.manifest|0400
+control/dependencies.manifest|0400
 EOF
+
+  while IFS='|' read -r field relative; do
+    [ "$(/usr/bin/jq -er --arg field "$field" '.build[$field]' "$manifest")" = \
+      "$(/usr/bin/jq -er --arg path "$relative" \
+        '.files[] | select(.path == $path) | .sha256' "$manifest")" ] ||
+      die "candidate build provenance does not bind $relative"
+  done <<'EOF'
+build_lock_sha256|control/build-lock.json
+toolchain_manifest_sha256|control/toolchain.manifest
+dependency_manifest_sha256|control/dependencies.manifest
+EOF
+  build_platform="$(/usr/bin/jq -er '.build.platform' "$manifest")"
+  /usr/bin/jq -e \
+    --arg platform "$build_platform" \
+    --arg toolchain_sha256 \
+      "$(/usr/bin/jq -er '.build.toolchain_manifest_sha256' "$manifest")" \
+    --arg dependency_sha256 \
+      "$(/usr/bin/jq -er '.build.dependency_manifest_sha256' "$manifest")" \
+    '
+      .schema == "office.fresh-agent.build-lock/1" and
+      .dependencies.manifest_sha256 == $dependency_sha256 and
+      ([.toolchains[] | select(
+        .platform == $platform and
+        .manifest_sha256 == $toolchain_sha256
+      )] | length) == 1
+    ' "$root/control/build-lock.json" >/dev/null ||
+    die "retained build lock contradicts the candidate provenance"
+  IFS= read -r toolchain_header < "$root/control/toolchain.manifest" || true
+  [ "$toolchain_header" = \
+    "office.fresh-agent.tree-manifest/1"$'\t'"$build_platform" ] ||
+    die "retained toolchain inventory has an unexpected header"
+  IFS= read -r dependency_header < "$root/control/dependencies.manifest" || true
+  [ "$dependency_header" = \
+    "office.fresh-agent.tree-manifest/1"$'\t'"dependencies" ] ||
+    die "retained dependency inventory has an unexpected header"
 
   [ -L "$root/bin/office" ] ||
     die "candidate office alias is not a symlink"
@@ -409,10 +462,14 @@ EOF
       bin/office-native \
       bin/office-wasm \
       control/final.schema.json \
+      control/build-lock.json \
+      control/dependencies.manifest \
+      control/inventory.sh \
       control/permission-canary.sh \
       control/private.json \
       control/prompt.md \
       control/run.sh \
+      control/toolchain.manifest \
       libexec/moonrun \
       libexec/office.wasm |
       LC_ALL=C /usr/bin/sort

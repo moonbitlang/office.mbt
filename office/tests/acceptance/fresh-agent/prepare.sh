@@ -28,7 +28,7 @@ die() {
 }
 
 usage() {
-  echo "usage: $0 EXPECTED_FULL_HEAD ABSENT_INSTALL_PREFIX MOON_BIN MOON_SHA256 MOONC_BIN MOONC_SHA256 MOONRUN_BIN MOONRUN_SHA256" >&2
+  echo "usage: $0 EXPECTED_FULL_HEAD ABSENT_INSTALL_PREFIX MOON_BIN MOONC_BIN MOONRUN_BIN" >&2
   exit 2
 }
 
@@ -171,42 +171,25 @@ reject_overlap() {
   fi
 }
 
-[ "$#" -eq 8 ] || usage
+[ "$#" -eq 5 ] || usage
 expected_head="$1"
 install_input="$2"
 moon_input="$3"
-expected_moon_sha256="$4"
-moonc_input="$5"
-expected_moonc_sha256="$6"
-moonrun_input="$7"
-expected_moonrun_sha256="$8"
+moonc_input="$4"
+moonrun_input="$5"
 
 case "$expected_head" in
   [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;;
   *) die "EXPECTED_FULL_HEAD must be a lowercase 40-character commit id" ;;
 esac
 
-for tool in git jq shasum awk sed find sort tar cmp install mktemp stat id basename dirname mv ln env; do
+for tool in git jq shasum awk sed find sort tar cmp install mktemp stat id basename dirname mv ln env perl uname; do
   require_command "$tool"
 done
-
-case "$expected_moon_sha256:$expected_moonc_sha256:$expected_moonrun_sha256" in
-  *[!0-9a-f:]* | *:*:*:* | :* | *:) die "Moon tool hashes must be lowercase SHA-256 values" ;;
-esac
-[ "${#expected_moon_sha256}" -eq 64 ] &&
-  [ "${#expected_moonc_sha256}" -eq 64 ] &&
-  [ "${#expected_moonrun_sha256}" -eq 64 ] ||
-  die "Moon tool hashes must be lowercase 64-character SHA-256 values"
 
 moon_bin="$(canonical_regular_file "$moon_input" "Moon compiler")"
 moonc_bin="$(canonical_regular_file "$moonc_input" "Moon code generator")"
 moonrun_bin="$(canonical_regular_file "$moonrun_input" "Moon runtime")"
-[ "$(sha256_file "$moon_bin")" = "$expected_moon_sha256" ] ||
-  die "Moon compiler hash does not match the caller-supplied digest"
-[ "$(sha256_file "$moonc_bin")" = "$expected_moonc_sha256" ] ||
-  die "Moon code-generator hash does not match the caller-supplied digest"
-[ "$(sha256_file "$moonrun_bin")" = "$expected_moonrun_sha256" ] ||
-  die "Moon runtime hash does not match the caller-supplied digest"
 
 moon_bin_dir="$(canonical_directory "$(/usr/bin/dirname -- "$moon_bin")")"
 [ "$(canonical_directory "$(/usr/bin/dirname -- "$moonc_bin")")" = "$moon_bin_dir" ] ||
@@ -214,6 +197,10 @@ moon_bin_dir="$(canonical_directory "$(/usr/bin/dirname -- "$moon_bin")")"
 [ "$(canonical_directory "$(/usr/bin/dirname -- "$moonrun_bin")")" = "$moon_bin_dir" ] ||
   die "Moon compiler and runtime must belong to one toolchain"
 moon_toolchain_root="$(canonical_directory "$moon_bin_dir/..")"
+[ "$moon_bin" = "$moon_toolchain_root/bin/moon" ] &&
+  [ "$moonc_bin" = "$moon_toolchain_root/bin/moonc" ] &&
+  [ "$moonrun_bin" = "$moon_toolchain_root/bin/moonrun" ] ||
+  die "Moon tools must use the canonical bin/moon, bin/moonc, and bin/moonrun paths"
 
 script_dir="$(canonical_directory "$(/usr/bin/dirname -- "${BASH_SOURCE[0]}")")"
 source_root="$(canonical_directory "$script_dir/../../../..")"
@@ -235,6 +222,82 @@ esac
 if [ -n "$(trusted_git -C "$source_root" status --porcelain=v1 --untracked-files=all)" ]; then
   die "candidate checkout has tracked or untracked changes"
 fi
+
+inventory_script="$script_dir/inventory.sh"
+build_lock="$script_dir/build-lock.json"
+[ -f "$inventory_script" ] && [ ! -L "$inventory_script" ] &&
+  [ -x "$inventory_script" ] ||
+  die "tracked inventory helper must be an executable regular file"
+[ -f "$build_lock" ] && [ ! -L "$build_lock" ] ||
+  die "tracked build lock must be a regular file"
+/usr/bin/jq -e '
+  keys == ["dependencies", "schema", "toolchains"] and
+  .schema == "office.fresh-agent.build-lock/1" and
+  (.dependencies | keys) == ["entries", "manifest_sha256"] and
+  (.dependencies.entries | type) == "array" and
+  (.dependencies.entries | length) > 0 and
+  (.dependencies.entries | all(type == "string" and length > 0)) and
+  (.dependencies.entries | unique | length) ==
+    (.dependencies.entries | length) and
+  (.dependencies.manifest_sha256 | test("^[0-9a-f]{64}$")) and
+  (.toolchains | type) == "array" and
+  (.toolchains | length) > 0 and
+  (.toolchains | map(.platform) | unique | length) ==
+    (.toolchains | length) and
+  (.toolchains | all(
+    keys == ["entries", "manifest_sha256", "moon_version",
+      "moonc_version", "moonrun_version", "platform"] and
+    (.platform | type) == "string" and
+    (.entries | type) == "array" and
+    (.entries | length) > 0 and
+    (.entries | all(type == "string" and length > 0)) and
+    (.entries | unique | length) == (.entries | length) and
+    (.manifest_sha256 | test("^[0-9a-f]{64}$")) and
+    (.moon_version | type) == "string" and
+    (.moonc_version | type) == "string" and
+    (.moonrun_version | type) == "string"
+  ))
+' "$build_lock" >/dev/null || die "tracked build lock failed strict validation"
+
+case "$(/usr/bin/uname -s) $(/usr/bin/uname -m)" in
+  "Darwin arm64") build_platform=darwin-arm64 ;;
+  "Linux x86_64") build_platform=linux-x86_64 ;;
+  *) die "fresh candidate preparation has no pinned toolchain for this platform" ;;
+esac
+[ "$(/usr/bin/jq --arg platform "$build_platform" \
+  '[.toolchains[] | select(.platform == $platform)] | length' "$build_lock")" = "1" ] ||
+  die "build lock does not contain exactly one toolchain for $build_platform"
+expected_toolchain_manifest_sha256="$(/usr/bin/jq -er \
+  --arg platform "$build_platform" \
+  '.toolchains[] | select(.platform == $platform) | .manifest_sha256' \
+  "$build_lock")"
+expected_moon_version="$(/usr/bin/jq -er \
+  --arg platform "$build_platform" \
+  '.toolchains[] | select(.platform == $platform) | .moon_version' \
+  "$build_lock")"
+expected_moonc_version="$(/usr/bin/jq -er \
+  --arg platform "$build_platform" \
+  '.toolchains[] | select(.platform == $platform) | .moonc_version' \
+  "$build_lock")"
+expected_moonrun_version="$(/usr/bin/jq -er \
+  --arg platform "$build_platform" \
+  '.toolchains[] | select(.platform == $platform) | .moonrun_version' \
+  "$build_lock")"
+expected_dependency_manifest_sha256="$(
+  /usr/bin/jq -er '.dependencies.manifest_sha256' "$build_lock"
+)"
+toolchain_entries=()
+while IFS= read -r entry; do
+  toolchain_entries+=("$entry")
+done < <(/usr/bin/jq -er \
+  --arg platform "$build_platform" \
+  '.toolchains[] | select(.platform == $platform) | .entries[]' \
+  "$build_lock")
+dependency_entries=()
+while IFS= read -r entry; do
+  dependency_entries+=("$entry")
+done < <(/usr/bin/jq -er '.dependencies.entries[]' "$build_lock")
+build_lock_sha256="$(sha256_file "$build_lock")"
 
 git_common_dir="$(trusted_git -C "$source_root" rev-parse --git-common-dir)"
 case "$git_common_dir" in
@@ -300,6 +363,49 @@ trusted_git -C "$source_root" archive --format=tar "$expected_tree" \
 /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
   /usr/bin/tar -xf "$source_archive" -C "$snapshot"
 
+snapshot_inventory="$snapshot/office/tests/acceptance/fresh-agent/inventory.sh"
+snapshot_build_lock="$snapshot/office/tests/acceptance/fresh-agent/build-lock.json"
+[ "$(sha256_file "$snapshot_inventory")" = "$(sha256_file "$inventory_script")" ] ||
+  die "exported inventory helper differs from the exact checkout"
+[ "$(sha256_file "$snapshot_build_lock")" = "$build_lock_sha256" ] ||
+  die "exported build lock differs from the exact checkout"
+
+approved_toolchain_root="$moon_toolchain_root"
+source_toolchain_manifest="$scratch/source-toolchain.manifest"
+"$snapshot_inventory" \
+  "$approved_toolchain_root" \
+  "$source_toolchain_manifest" \
+  "$build_platform" \
+  "${toolchain_entries[@]}"
+[ "$(sha256_file "$source_toolchain_manifest")" = \
+  "$expected_toolchain_manifest_sha256" ] ||
+  die "complete Moon toolchain inventory does not match the tracked build lock"
+
+toolchain_archive="$scratch/toolchain.tar"
+/usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+  /usr/bin/tar -C "$approved_toolchain_root" -cf "$toolchain_archive" \
+    "${toolchain_entries[@]}"
+moon_toolchain_root="$scratch/toolchain"
+mkdir -m 0700 "$moon_toolchain_root"
+/usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+  /usr/bin/tar -xf "$toolchain_archive" -C "$moon_toolchain_root"
+staged_toolchain_manifest="$scratch/staged-toolchain.manifest"
+"$snapshot_inventory" \
+  "$moon_toolchain_root" \
+  "$staged_toolchain_manifest" \
+  "$build_platform" \
+  "${toolchain_entries[@]}"
+/usr/bin/cmp "$source_toolchain_manifest" "$staged_toolchain_manifest" ||
+  die "privately staged Moon toolchain differs from the pinned source closure"
+
+moon_bin="$moon_toolchain_root/bin/moon"
+moonc_bin="$moon_toolchain_root/bin/moonc"
+moonrun_bin="$moon_toolchain_root/bin/moonrun"
+for tool_path in "$moon_bin" "$moonc_bin" "$moonrun_bin"; do
+  [ -f "$tool_path" ] && [ ! -L "$tool_path" ] && [ -x "$tool_path" ] ||
+    die "staged Moon tool is not an executable regular file: $tool_path"
+done
+
 build_home="$scratch/home"
 build_moon_home="$scratch/moon-home"
 build_tmp="$scratch/tmp"
@@ -328,12 +434,43 @@ run_moon version --all > "$toolchain_versions"
 moon_version="$(/usr/bin/sed -n '1p' "$toolchain_versions")"
 moonc_version="$(/usr/bin/sed -n '2p' "$toolchain_versions")"
 moonrun_version="$(/usr/bin/sed -n '3p' "$toolchain_versions")"
+[ "$(printf '%s\n' "$moon_version" | /usr/bin/awk \
+  '{$NF=""; sub(/[[:space:]]+$/, ""); print}')" = "$expected_moon_version" ] ||
+  die "Moon driver version does not match the tracked build lock"
+[ "$(printf '%s\n' "$moonc_version" | /usr/bin/awk \
+  '{$NF=""; sub(/[[:space:]]+$/, ""); print}')" = "$expected_moonc_version" ] ||
+  die "Moon code-generator version does not match the tracked build lock"
+[ "$(printf '%s\n' "$moonrun_version" | /usr/bin/awk \
+  '{$NF=""; sub(/[[:space:]]+$/, ""); print}')" = "$expected_moonrun_version" ] ||
+  die "Moon runtime version does not match the tracked build lock"
+moon_version="$expected_moon_version"
+moonc_version="$expected_moonc_version"
+moonrun_version="$expected_moonrun_version"
+
+resolve_log="$scratch/resolve.log"
+if ! (
+  cd "$snapshot"
+  run_moon update
+  run_moon install
+) >"$resolve_log" 2>&1; then
+  echo "error: pinned dependency resolution failed; complete log follows" >&2
+  cat "$resolve_log" >&2
+  exit 1
+fi
+
+dependency_manifest="$scratch/dependencies.manifest"
+"$snapshot_inventory" \
+  "$snapshot/.mooncakes" \
+  "$dependency_manifest" \
+  dependencies \
+  "${dependency_entries[@]}"
+[ "$(sha256_file "$dependency_manifest")" = \
+  "$expected_dependency_manifest_sha256" ] ||
+  die "resolved dependency inventory does not match the tracked build lock"
 
 build_log="$scratch/build.log"
 if ! (
   cd "$snapshot"
-  run_moon update
-  run_moon build --release --target native office/cmd/office
   run_moon build --frozen --release --target native office/cmd/office
   run_moon build --frozen --release --target wasm office/cmd/office
 ) >"$build_log" 2>&1; then
@@ -349,21 +486,22 @@ wasm_artifact="$snapshot/_build/wasm/release/build/bobzhang/office/cmd/office/of
 [ -f "$wasm_artifact" ] ||
   die "Wasm release artifact was not built"
 
-dependency_hashes="$scratch/dependency-files.sha256"
-(
-  cd "$snapshot"
-  find .mooncakes -type f ! -name .moon-lock -print |
-    LC_ALL=C sort |
-    while IFS= read -r dependency_file; do
-      printf '%s  %s\n' \
-        "$(sha256_file "$snapshot/$dependency_file")" \
-        "$dependency_file"
-    done
-) > "$dependency_hashes"
-[ -s "$dependency_hashes" ] ||
-  die "fresh build did not materialize a dependency tree"
-dependency_tree_sha256="$(sha256_file "$dependency_hashes")"
-
+postbuild_dependency_manifest="$scratch/postbuild-dependencies.manifest"
+"$snapshot_inventory" \
+  "$snapshot/.mooncakes" \
+  "$postbuild_dependency_manifest" \
+  dependencies \
+  "${dependency_entries[@]}"
+/usr/bin/cmp "$dependency_manifest" "$postbuild_dependency_manifest" ||
+  die "dependency closure changed during frozen release builds"
+postbuild_toolchain_manifest="$scratch/postbuild-toolchain.manifest"
+"$snapshot_inventory" \
+  "$moon_toolchain_root" \
+  "$postbuild_toolchain_manifest" \
+  "$build_platform" \
+  "${toolchain_entries[@]}"
+/usr/bin/cmp "$staged_toolchain_manifest" "$postbuild_toolchain_manifest" ||
+  die "pinned Moon toolchain changed during frozen release builds"
 mkdir -m 0700 "$stage/bin" "$stage/libexec" "$stage/control"
 install -m 0500 "$native_artifact" "$stage/bin/office-native"
 install -m 0500 \
@@ -383,6 +521,12 @@ install -m 0400 \
 install -m 0500 \
   "$snapshot/office/tests/acceptance/fresh-agent/permission-canary.sh" \
   "$stage/control/permission-canary.sh"
+install -m 0500 "$snapshot_inventory" "$stage/control/inventory.sh"
+install -m 0400 "$snapshot_build_lock" "$stage/control/build-lock.json"
+install -m 0400 "$source_toolchain_manifest" \
+  "$stage/control/toolchain.manifest"
+install -m 0400 "$dependency_manifest" \
+  "$stage/control/dependencies.manifest"
 ln -s office-native "$stage/bin/office"
 
 jq -n \
@@ -405,19 +549,26 @@ prompt_sha256="$(sha256_file "$stage/control/prompt.md")"
 schema_sha256="$(sha256_file "$stage/control/final.schema.json")"
 canary_sha256="$(sha256_file "$stage/control/permission-canary.sh")"
 private_sha256="$(sha256_file "$stage/control/private.json")"
+inventory_sha256="$(sha256_file "$stage/control/inventory.sh")"
+installed_build_lock_sha256="$(sha256_file "$stage/control/build-lock.json")"
+toolchain_manifest_sha256="$(sha256_file "$stage/control/toolchain.manifest")"
+dependency_manifest_sha256="$(sha256_file "$stage/control/dependencies.manifest")"
 moon_sha256="$(sha256_file "$moon_bin")"
 moonc_sha256="$(sha256_file "$moonc_bin")"
 
 jq -n \
-  --arg schema "office.fresh-agent.candidate/2" \
+  --arg schema "office.fresh-agent.candidate/3" \
   --arg candidate_head "$expected_head" \
   --arg source_tree "$expected_tree" \
+  --arg build_platform "$build_platform" \
+  --arg build_lock_sha256 "$installed_build_lock_sha256" \
+  --arg toolchain_manifest_sha256 "$toolchain_manifest_sha256" \
+  --arg dependency_manifest_sha256 "$dependency_manifest_sha256" \
   --arg moon_version "$moon_version" \
   --arg moon_sha256 "$moon_sha256" \
   --arg moonc_version "$moonc_version" \
   --arg moonc_sha256 "$moonc_sha256" \
   --arg moonrun_version "$moonrun_version" \
-  --arg dependency_tree_sha256 "$dependency_tree_sha256" \
   --arg native_sha256 "$native_sha256" \
   --arg wasm_wrapper_sha256 "$wasm_wrapper_sha256" \
   --arg moonrun_sha256 "$moonrun_sha256" \
@@ -427,17 +578,21 @@ jq -n \
   --arg schema_sha256 "$schema_sha256" \
   --arg canary_sha256 "$canary_sha256" \
   --arg private_sha256 "$private_sha256" \
+  --arg inventory_sha256 "$inventory_sha256" \
   '{
     schema: $schema,
     candidate_head: $candidate_head,
     build: {
       source_tree: $source_tree,
+      platform: $build_platform,
+      build_lock_sha256: $build_lock_sha256,
+      toolchain_manifest_sha256: $toolchain_manifest_sha256,
+      dependency_manifest_sha256: $dependency_manifest_sha256,
       moon_version: $moon_version,
       moon_sha256: $moon_sha256,
       moonc_version: $moonc_version,
       moonc_sha256: $moonc_sha256,
-      moonrun_version: $moonrun_version,
-      dependency_tree_sha256: $dependency_tree_sha256
+      moonrun_version: $moonrun_version
     },
     files: [
       {path: "bin/office-native", kind: "file", mode: "0500", sha256: $native_sha256},
@@ -448,7 +603,11 @@ jq -n \
       {path: "control/prompt.md", kind: "file", mode: "0400", sha256: $prompt_sha256},
       {path: "control/final.schema.json", kind: "file", mode: "0400", sha256: $schema_sha256},
       {path: "control/permission-canary.sh", kind: "file", mode: "0500", sha256: $canary_sha256},
-      {path: "control/private.json", kind: "file", mode: "0400", sha256: $private_sha256}
+      {path: "control/private.json", kind: "file", mode: "0400", sha256: $private_sha256},
+      {path: "control/inventory.sh", kind: "file", mode: "0500", sha256: $inventory_sha256},
+      {path: "control/build-lock.json", kind: "file", mode: "0400", sha256: $build_lock_sha256},
+      {path: "control/toolchain.manifest", kind: "file", mode: "0400", sha256: $toolchain_manifest_sha256},
+      {path: "control/dependencies.manifest", kind: "file", mode: "0400", sha256: $dependency_manifest_sha256}
     ],
     symlinks: [
       {path: "bin/office", target: "office-native"}
@@ -464,12 +623,14 @@ if [ -n "$(trusted_git -C "$source_root" status --porcelain=v1 --untracked-files
   die "candidate checkout changed during preparation"
 fi
 
-[ "$(sha256_file "$moon_bin")" = "$expected_moon_sha256" ] ||
-  die "Moon compiler changed during candidate preparation"
-[ "$(sha256_file "$moonc_bin")" = "$expected_moonc_sha256" ] ||
-  die "Moon code generator changed during candidate preparation"
-[ "$(sha256_file "$moonrun_bin")" = "$expected_moonrun_sha256" ] ||
-  die "Moon runtime changed during candidate preparation"
+final_source_toolchain_manifest="$scratch/final-source-toolchain.manifest"
+"$snapshot_inventory" \
+  "$approved_toolchain_root" \
+  "$final_source_toolchain_manifest" \
+  "$build_platform" \
+  "${toolchain_entries[@]}"
+/usr/bin/cmp "$source_toolchain_manifest" "$final_source_toolchain_manifest" ||
+  die "approved Moon toolchain source changed during candidate preparation"
 [ "$(stat_identity "$install_parent")" = "$install_parent_identity" ] ||
   die "install parent identity changed during candidate preparation"
 [ "$(stat_identity "$install_root")" = "$install_identity" ] ||

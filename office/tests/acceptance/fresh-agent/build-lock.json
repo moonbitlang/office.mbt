@@ -1,0 +1,41 @@
+{
+  "schema": "office.fresh-agent.build-lock/1",
+  "dependencies": {
+    "entries": [
+      ".moon-lock",
+      "moonbitlang",
+      "tonyfettes"
+    ],
+    "manifest_sha256": "5693d0346519d62e3fe52ce224ce93476004301576ed299a85c6e9ea81bf975d"
+  },
+  "toolchains": [
+    {
+      "platform": "darwin-arm64",
+      "entries": [
+        "CREDITS.md",
+        "bin",
+        "include",
+        "lib",
+        "share"
+      ],
+      "manifest_sha256": "d2c5beb1e3df01e1a2350683978b32376f5f8bd88716176abac1bfdbc6a26219",
+      "moon_version": "moon 0.1.20260724 (5f1406a 2026-07-24)",
+      "moonc_version": "moonc v0.10.5+5be960077 (2026-07-24)",
+      "moonrun_version": "moonrun 0.1.20260724 (5f1406a 2026-07-24)"
+    },
+    {
+      "platform": "linux-x86_64",
+      "entries": [
+        "CREDITS.md",
+        "bin",
+        "include",
+        "lib",
+        "share"
+      ],
+      "manifest_sha256": "d656a974b636cd5724cba9ac675151a5c695df4421069ae5486fb748e19cbf93",
+      "moon_version": "moon 0.1.20260724 (5f1406a 2026-07-24)",
+      "moonc_version": "moonc v0.10.5+5be960077 (2026-07-24)",
+      "moonrun_version": "moonrun 0.1.20260724 (5f1406a 2026-07-24)"
+    }
+  ]
+}

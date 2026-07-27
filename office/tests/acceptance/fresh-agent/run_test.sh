@@ -101,6 +101,11 @@ make_candidate() {
   local schema_sha
   local canary_sha
   local private_sha
+  local inventory_sha
+  local build_lock_sha
+  local toolchain_manifest_sha
+  local dependency_manifest_sha
+  local build_platform
 
   /bin/mkdir -m 0700 \
     "$install_root" \
@@ -129,6 +134,8 @@ make_candidate() {
     "$install_root/control/final.schema.json"
   /usr/bin/install -m 0500 "$script_dir/permission-canary.sh" \
     "$install_root/control/permission-canary.sh"
+  /usr/bin/install -m 0500 "$script_dir/inventory.sh" \
+    "$install_root/control/inventory.sh"
   chmod 0500 \
     "$install_root/bin/office-native" \
     "$install_root/libexec/moonrun"
@@ -146,6 +153,43 @@ make_candidate() {
     }' > "$install_root/control/private.json"
   chmod 0400 "$install_root/control/private.json"
 
+  case "$(/usr/bin/uname -s) $(/usr/bin/uname -m)" in
+    "Darwin arm64") build_platform=darwin-arm64 ;;
+    "Linux x86_64") build_platform=linux-x86_64 ;;
+    *) fail "unsupported runner-test platform" ;;
+  esac
+  printf 'office.fresh-agent.tree-manifest/1\t%s\n' "$build_platform" \
+    > "$install_root/control/toolchain.manifest"
+  printf 'office.fresh-agent.tree-manifest/1\tdependencies\n' \
+    > "$install_root/control/dependencies.manifest"
+  chmod 0400 \
+    "$install_root/control/toolchain.manifest" \
+    "$install_root/control/dependencies.manifest"
+  toolchain_manifest_sha="$(
+    sha256_file "$install_root/control/toolchain.manifest"
+  )"
+  dependency_manifest_sha="$(
+    sha256_file "$install_root/control/dependencies.manifest"
+  )"
+  /usr/bin/jq -n \
+    --arg schema "office.fresh-agent.build-lock/1" \
+    --arg platform "$build_platform" \
+    --arg toolchain_sha "$toolchain_manifest_sha" \
+    --arg dependency_sha "$dependency_manifest_sha" \
+    '{
+      schema: $schema,
+      dependencies: {entries: ["fixture"], manifest_sha256: $dependency_sha},
+      toolchains: [{
+        platform: $platform,
+        entries: ["fixture"],
+        manifest_sha256: $toolchain_sha,
+        moon_version: "fake-moon 1",
+        moonc_version: "fake-moonc 1",
+        moonrun_version: "fake-moonrun 1"
+      }]
+    }' > "$install_root/control/build-lock.json"
+  chmod 0400 "$install_root/control/build-lock.json"
+
   native_sha="$(sha256_file "$install_root/bin/office-native")"
   wasm_wrapper_sha="$(sha256_file "$install_root/bin/office-wasm")"
   moonrun_sha="$(sha256_file "$install_root/libexec/moonrun")"
@@ -155,10 +199,16 @@ make_candidate() {
   schema_sha="$(sha256_file "$install_root/control/final.schema.json")"
   canary_sha="$(sha256_file "$install_root/control/permission-canary.sh")"
   private_sha="$(sha256_file "$install_root/control/private.json")"
+  inventory_sha="$(sha256_file "$install_root/control/inventory.sh")"
+  build_lock_sha="$(sha256_file "$install_root/control/build-lock.json")"
 
   /usr/bin/jq -n \
-    --arg schema "office.fresh-agent.candidate/2" \
+    --arg schema "office.fresh-agent.candidate/3" \
     --arg candidate_head "$head" \
+    --arg build_platform "$build_platform" \
+    --arg build_lock_sha "$build_lock_sha" \
+    --arg toolchain_manifest_sha "$toolchain_manifest_sha" \
+    --arg dependency_manifest_sha "$dependency_manifest_sha" \
     --arg native_sha "$native_sha" \
     --arg wasm_wrapper_sha "$wasm_wrapper_sha" \
     --arg moonrun_sha "$moonrun_sha" \
@@ -168,17 +218,21 @@ make_candidate() {
     --arg schema_sha "$schema_sha" \
     --arg canary_sha "$canary_sha" \
     --arg private_sha "$private_sha" \
+    --arg inventory_sha "$inventory_sha" \
     '{
       schema: $schema,
       candidate_head: $candidate_head,
       build: {
         source_tree: ("c" * 40),
+        platform: $build_platform,
+        build_lock_sha256: $build_lock_sha,
+        toolchain_manifest_sha256: $toolchain_manifest_sha,
+        dependency_manifest_sha256: $dependency_manifest_sha,
         moon_version: "fake-moon 1",
         moon_sha256: ("a" * 64),
         moonc_version: "fake-moonc 1",
         moonc_sha256: ("d" * 64),
-        moonrun_version: "fake-moonrun 1",
-        dependency_tree_sha256: ("b" * 64)
+        moonrun_version: "fake-moonrun 1"
       },
       files: [
         {path: "bin/office-native", kind: "file", mode: "0500", sha256: $native_sha},
@@ -189,7 +243,11 @@ make_candidate() {
         {path: "control/prompt.md", kind: "file", mode: "0400", sha256: $prompt_sha},
         {path: "control/final.schema.json", kind: "file", mode: "0400", sha256: $schema_sha},
         {path: "control/permission-canary.sh", kind: "file", mode: "0500", sha256: $canary_sha},
-        {path: "control/private.json", kind: "file", mode: "0400", sha256: $private_sha}
+        {path: "control/private.json", kind: "file", mode: "0400", sha256: $private_sha},
+        {path: "control/inventory.sh", kind: "file", mode: "0500", sha256: $inventory_sha},
+        {path: "control/build-lock.json", kind: "file", mode: "0400", sha256: $build_lock_sha},
+        {path: "control/toolchain.manifest", kind: "file", mode: "0400", sha256: $toolchain_manifest_sha},
+        {path: "control/dependencies.manifest", kind: "file", mode: "0400", sha256: $dependency_manifest_sha}
       ],
       symlinks: [
         {path: "bin/office", target: "office-native"}
