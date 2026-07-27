@@ -88,6 +88,10 @@ fail() {
   "$script_dir/attest.py" ||
   fail "atomic completion-attestation unit tests"
 /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+  /usr/bin/python3 -I "$script_dir/auth_guard_test.py" \
+  "$script_dir/auth_guard.py" ||
+  fail "held-FD credential guard unit tests"
+/usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
   /usr/bin/python3 -I "$script_dir/opc_policy_test.py" \
   "$script_dir/opc_policy.py" ||
   fail "bounded OPC-policy unit tests"
@@ -333,6 +337,8 @@ make_candidate() {
     "$install_root/control/permission-canary.sh"
   /usr/bin/install -m 0400 "$script_dir/attest.py" \
     "$install_root/control/attest.py"
+  /usr/bin/install -m 0400 "$script_dir/auth_guard.py" \
+    "$install_root/control/auth-guard.py"
   /usr/bin/install -m 0400 "$script_dir/command_policy.py" \
     "$install_root/control/command-policy.py"
   /usr/bin/install -m 0400 "$script_dir/opc_policy.py" \
@@ -562,6 +568,7 @@ make_candidate() {
   schema_sha="$(sha256_file "$install_root/control/final.schema.json")"
   canary_sha="$(sha256_file "$install_root/control/permission-canary.sh")"
   attest_sha="$(sha256_file "$install_root/control/attest.py")"
+  auth_guard_sha="$(sha256_file "$install_root/control/auth-guard.py")"
   command_policy_sha="$(sha256_file "$install_root/control/command-policy.py")"
   opc_policy_sha="$(sha256_file "$install_root/control/opc-policy.py")"
   transcript_policy_sha="$(sha256_file "$install_root/control/transcript-policy.py")"
@@ -593,6 +600,7 @@ make_candidate() {
     --arg schema_sha "$schema_sha" \
     --arg canary_sha "$canary_sha" \
     --arg attest_sha "$attest_sha" \
+    --arg auth_guard_sha "$auth_guard_sha" \
     --arg command_policy_sha "$command_policy_sha" \
     --arg opc_policy_sha "$opc_policy_sha" \
     --arg transcript_policy_sha "$transcript_policy_sha" \
@@ -628,6 +636,7 @@ make_candidate() {
         {path: "control/final.schema.json", kind: "file", mode: "0400", sha256: $schema_sha},
         {path: "control/permission-canary.sh", kind: "file", mode: "0500", sha256: $canary_sha},
         {path: "control/attest.py", kind: "file", mode: "0400", sha256: $attest_sha},
+        {path: "control/auth-guard.py", kind: "file", mode: "0400", sha256: $auth_guard_sha},
         {path: "control/command-policy.py", kind: "file", mode: "0400", sha256: $command_policy_sha},
         {path: "control/opc-policy.py", kind: "file", mode: "0400", sha256: $opc_policy_sha},
         {path: "control/transcript-policy.py", kind: "file", mode: "0400", sha256: $transcript_policy_sha},
@@ -670,6 +679,7 @@ chmod 0600 "$codex_bin_dir/mode"
 {
   printf '%s\n' '#!/bin/sh' 'set -eu'
   printf 'mode_file=%q\n' "$codex_bin_dir/mode"
+  printf 'auth_source=%q\n' "$case_root/auth.json"
   printf '%s\n' \
     'mode=$(/bin/cat "$mode_file")' \
     ': <&9' \
@@ -745,12 +755,20 @@ chmod 0600 "$codex_bin_dir/mode"
     '    test -n "$listener_pid"' \
     '    /bin/kill "$listener_pid"' \
     '  fi' \
+    '  if [ -d "$isolation_root/auth-guard" ]; then' \
+    '    /bin/mv "$auth_source" "$auth_source.held.$$"' \
+    '    /usr/bin/printf "{}\\n" > "$auth_source"' \
+    '    chmod 0600 "$auth_source"' \
+    '  fi' \
     '  /bin/mkdir -p "$TMPDIR/codex-bwrap-synthetic-mount-targets-fake"' \
     '  : > "$TMPDIR/codex-bwrap-synthetic-mount-targets-fake/lock"' \
     '  printf "FRESH-AGENT PERMISSION CANARY PASS\\n"' \
     '  exit 0' \
     'fi' \
     'test "$command" = "exec"' \
+    'test -f "$CODEX_HOME/auth.json"' \
+    '/usr/bin/jq -e '\''type == "object" and keys == []'\'' "$CODEX_HOME/auth.json" >/dev/null' \
+    'test ! -e "$isolation_root/auth-guard"' \
     'if [ "$mode" = "orphan-child" ]; then' \
     '  (trap "" HUP INT TERM; while :; do /bin/sleep 1; done) &' \
     '  printf "%s\n" "$!" > "$mode_file.child-pid"' \
@@ -1016,6 +1034,9 @@ evidence="$case_root/evidence"
   .codex.version == "codex-cli 0.145.0" and
   .codex.privately_staged == true and
   .codex.bubblewrap == null and
+  .harness.credential_guard.delayed_staging == true and
+  .harness.credential_guard.source_open == "component-wise O_NOFOLLOW retained FD" and
+  (.harness.credential_guard.policy_sha256 | test("^[0-9a-f]{64}$")) and
   .harness.job_identity.inherited_fd == 9 and
   .harness.job_identity.detached_member_discovery == "lsof" and
   (.harness.job_identity.sentinel_sha256 | test("^[0-9a-f]{64}$")) and
@@ -1257,7 +1278,7 @@ if [ "$(/usr/bin/uname -s)" = "Linux" ]; then
 fi
 
 /bin/ln -s "$case_root/auth.json" "$case_root/auth-link.json"
-expect_failure auth-symlink 1 'must be regular' \
+expect_failure auth-symlink 1 'PATH_SYMLINK' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/auth-link-probe" "$case_root/auth-link-evidence" \
   "$case_root/auth-link.json" "$codex_bin_dir/codex" "$codex_sha"
