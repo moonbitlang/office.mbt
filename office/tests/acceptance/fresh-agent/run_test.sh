@@ -385,6 +385,18 @@ chmod 0600 "$codex_bin_dir/mode"
     'canary_body=$(/usr/bin/printf "FRESH-AGENT PERMISSION CANARY PASS\\n_")' \
     'canary_body=${canary_body%_}' \
     'emit_completed canary "/bin/sh -c '\''office-permission-canary'\''" 0 "$canary_body"' \
+    'if [ "$mode" = "completion-before-start" ]; then' \
+    '  emit_completed lifecycle-order "true" 0 ""' \
+    '  emit_started lifecycle-order "true"' \
+    'fi' \
+    'if [ "$mode" = "fractional-exit" ]; then' \
+    '  emit_started fractional-exit "true"' \
+    '  /usr/bin/jq -cn '\''{type:"item.completed",item:{id:"fractional-exit",type:"command_execution",command:"true",aggregated_output:"",exit_code:0.5,status:"completed"}}'\''' \
+    'fi' \
+    'if [ "$mode" = "out-of-domain-exit" ]; then' \
+    '  emit_started out-of-domain-exit "false"' \
+    '  emit_completed out-of-domain-exit "false" 256 ""' \
+    'fi' \
     'emit_started expected-refusal "false"' \
     'emit_completed expected-refusal "false" 1 ""' \
     'if [ "$mode" != "no-office" ]; then' \
@@ -430,7 +442,11 @@ chmod 0600 "$codex_bin_dir/mode"
     'else' \
     '  /usr/bin/jq -n --arg verdict "$verdict" --arg outcome "$outcome" --argjson gaps "$gaps" '\''{verdict:$verdict,result_path:"probe-result.md",targets:{native:{xlsx:$outcome,docx:$outcome},wasm:{xlsx:$outcome,docx:$outcome}},gaps:$gaps}'\'' > "$output"' \
     'fi' \
-    '/usr/bin/jq -cn '\''{type:"turn.completed",usage:{input_tokens:1,output_tokens:1}}'\'''
+    'if [ "$mode" = "turn-failed" ]; then' \
+    '  /usr/bin/jq -cn '\''{type:"turn.failed",error:{message:"fixture"}}'\''' \
+    'elif [ "$mode" != "missing-turn-completed" ]; then' \
+    '  /usr/bin/jq -cn '\''{type:"turn.completed",usage:{input_tokens:1,output_tokens:1}}'\''' \
+    'fi'
 } > "$codex_bin_dir/codex"
 chmod 0500 "$codex_bin_dir/codex"
 codex_sha="$(sha256_file "$codex_bin_dir/codex")"
@@ -837,10 +853,24 @@ expect_failure incomplete-report 1 'structured outcome: Native XLSX' \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'pre-canary\n' > "$codex_bin_dir/mode"
-expect_failure pre-canary 1 'first live command was not the exact permission canary' \
+expect_failure pre-canary 1 'transcript lifecycle' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/pre-canary-probe" "$case_root/pre-canary-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+for lifecycle_mode in \
+  completion-before-start \
+  fractional-exit \
+  out-of-domain-exit \
+  missing-turn-completed \
+  turn-failed; do
+  printf '%s\n' "$lifecycle_mode" > "$codex_bin_dir/mode"
+  expect_failure "$lifecycle_mode" 1 'transcript lifecycle' \
+    "$runner" "$head" "$candidate_sha" \
+    "$case_root/$lifecycle_mode-probe" \
+    "$case_root/$lifecycle_mode-evidence" \
+    "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+done
 
 printf 'fail\n' > "$codex_bin_dir/mode"
 expect_failure baseline-fail 3 '' \
