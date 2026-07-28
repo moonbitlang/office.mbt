@@ -109,14 +109,12 @@ Host-derived scenario contract:
   RUNTIME/xlsx/refusal-target.xlsx --json`; it must return the typed
   `office.transaction.output_exists` error. Then run exactly
   `cmp RUNTIME/xlsx/refusal-before.xlsx RUNTIME/xlsx/refusal-target.xlsx`.
-- For each DOCX runtime, create exactly
-  `{"schema":"docx.batch/2","ops":[{"op":"f1b_invalid_operation","params":{}}]}`
-  at `RUNTIME/docx/refusal.json`. Run `test ! -e
-  RUNTIME/docx/refusal-output.docx`, then, without `--attest-result`, exactly
-  `office-RUNTIME batch --format docx RUNTIME/docx/refusal-output.docx
-  RUNTIME/docx/refusal.json --json`, then repeat the absence test. It must emit
-  the typed `office.docx.batch_parse` failure and leave no transaction staging artifact.
-  Do not hide or redirect either negative command's JSON diagnostic.
+- After your process exits, the host will independently run the exact malformed
+  DOCX batch probe against both installed runtimes. It will immediately attest
+  the typed `office.docx.batch_parse` failure, output absence, unchanged script,
+  and transaction-staging cleanup. Do not create or use `host-refusal`; that
+  directory is reserved for host-owned evidence. Do not hide or redirect the
+  XLSX negative command's JSON diagnostic.
 
 Exercise these outcomes:
 
@@ -138,9 +136,9 @@ Exercise these outcomes:
    merge and read it back; use the discovered annotation contract to add and
    resolve/reply to a comment and read the result back; validate it and list
    issues; render and compare two deterministic previews; dump, replay, and
-   prove the projected dump reaches a fixpoint; read the main document through
-   the raw command; and provoke one typed malformed-input failure that creates
-   neither an output nor a staging artifact.
+   prove the projected dump reaches a fixpoint; and read the main document
+   through the raw command. The host-owned post-exit probe supplies the DOCX
+   malformed-input refusal evidence; do not duplicate it in the agent workflow.
 4. Compare native and Wasm results. Classify every target-specific warning you
    actually observe from installed help or command output. Do not assume a
    warning is acceptable or documented; distinguish a bounded, evidenced

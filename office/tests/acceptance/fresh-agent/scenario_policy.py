@@ -839,7 +839,131 @@ def one_command(commands, argv, status, label):
     return matches[0]
 
 
-def validate_refusal(root, commands, raw_outputs, indexes, runtime, format_name, final):
+def host_docx_refusal_map(root, value):
+    value = require_object(value, "host DOCX refusal evidence")
+    if (
+        set(value) != {"schema", "required_count", "refusals"}
+        or value.get("schema") != "office.fresh-agent.docx-refusals/1"
+        or value.get("required_count") != 2
+        or not isinstance(value.get("refusals"), list)
+        or len(value["refusals"]) != 2
+    ):
+        fail("host DOCX refusal evidence has the wrong shape")
+    result = {}
+    expected_keys = {
+        "command",
+        "diagnostic",
+        "error_code",
+        "exit_status",
+        "output",
+        "output_absent_after",
+        "output_absent_before",
+        "postcondition",
+        "runtime",
+        "script",
+        "sequence",
+        "staging_after",
+        "staging_before",
+    }
+    for sequence, runtime in enumerate(RUNTIMES, start=1):
+        entry = value["refusals"][sequence - 1]
+        directory = "host-refusal/%s" % runtime
+        script_path = directory + "/refusal.json"
+        output_path = directory + "/host-refusal-output.docx"
+        diagnostic_path = directory + "/diagnostic.json"
+        expected_command = [
+            "office-%s" % runtime,
+            "batch",
+            "--format",
+            "docx",
+            output_path,
+            script_path,
+            "--json",
+        ]
+        if (
+            not isinstance(entry, dict)
+            or set(entry) != expected_keys
+            or entry.get("runtime") != runtime
+            or entry.get("sequence") != sequence
+            or entry.get("command") != expected_command
+            or entry.get("error_code") != "office.docx.batch_parse"
+            or not isinstance(entry.get("exit_status"), int)
+            or isinstance(entry.get("exit_status"), bool)
+            or not 0 < entry["exit_status"] <= 255
+            or entry.get("output") != output_path
+            or entry.get("output_absent_before") is not True
+            or entry.get("output_absent_after") is not True
+            or entry.get("staging_before") != []
+            or entry.get("staging_after") != []
+            or entry.get("postcondition") != "immediate-after-process-exit"
+        ):
+            fail("host DOCX refusal evidence is invalid for %s" % runtime)
+        if (
+            not isinstance(entry.get("script"), dict)
+            or entry["script"].get("path") != script_path
+        ):
+            fail("host DOCX refusal script path is invalid for %s" % runtime)
+        script = read_record(
+            root,
+            entry["script"],
+            "%s host DOCX refusal script" % runtime,
+            parse_json=True,
+        )
+        validate_docx_refusal_script(script)
+        if (
+            not isinstance(entry.get("diagnostic"), dict)
+            or entry["diagnostic"].get("path") != diagnostic_path
+        ):
+            fail("host DOCX refusal diagnostic path is invalid for %s" % runtime)
+        diagnostic = read_record(
+            root,
+            entry["diagnostic"],
+            "%s host DOCX refusal diagnostic" % runtime,
+            parse_json=True,
+        )
+        diagnostic_error = (
+            diagnostic.get("error") if isinstance(diagnostic, dict) else None
+        )
+        if (
+            not isinstance(diagnostic, dict)
+            or diagnostic.get("schema") != "office.output/1"
+            or diagnostic.get("success") is not False
+            or not isinstance(diagnostic_error, dict)
+            or diagnostic_error.get("code") != "office.docx.batch_parse"
+        ):
+            fail("host DOCX refusal diagnostic is invalid for %s" % runtime)
+        if os.path.lexists(os.path.join(root, output_path)):
+            fail("host DOCX refusal output now exists for %s" % runtime)
+        leftovers = [
+            name
+            for name in os.listdir(os.path.join(root, directory))
+            if ".office-tmp-" in name or ".office-output-tmp-" in name
+        ]
+        if leftovers:
+            fail("host DOCX refusal staging now exists for %s" % runtime)
+        result[runtime] = {
+            "diagnostic": entry["diagnostic"],
+            "diagnostic_semantic_sha256": value_sha256(diagnostic),
+            "error_code": entry["error_code"],
+            "execution": "host-controlled-immediate",
+            "exit_status": entry["exit_status"],
+            "output": output_path,
+            "script": entry["script"],
+            "script_semantic_sha256": value_sha256(script),
+        }
+    return result
+
+
+def validate_refusal(
+    root,
+    commands,
+    raw_outputs,
+    indexes,
+    runtime,
+    format_name,
+    final,
+    host_docx_refusals,
+):
     directory = "%s/%s" % (runtime, format_name)
     executable = "office-%s" % runtime
     if format_name == "xlsx":
@@ -903,72 +1027,19 @@ def validate_refusal(root, commands, raw_outputs, indexes, runtime, format_name,
             "preserved": target_record,
         }
 
-    output = directory + "/refusal-output.docx"
-    script = directory + "/refusal.json"
-    absent_argv = ["test", "!", "-e", output]
-    absence = [
-        command
-        for command in commands
-        if command_basename_argv(command) == absent_argv
-        and command.get("status") == "completed"
-    ]
-    if len(absence) != 2:
-        fail("%s DOCX refusal needs before/after absence checks" % runtime)
-    refusal = one_command(
-        commands,
-        [
-            executable,
-            "batch",
-            "--format",
-            "docx",
-            output,
-            script,
-            "--json",
-        ],
-        "failed",
-        "%s DOCX malformed-input refusal" % runtime,
-    )
-    if not (
-        indexes[absence[0]["id"]]
-        < indexes[refusal["id"]]
-        < indexes[absence[1]["id"]]
-    ):
-        fail("%s DOCX refusal evidence is out of order" % runtime)
-    _, refusal_payload = inspect_bound_file(
-        root,
-        script,
-        "%s DOCX refusal script" % runtime,
-        MAX_JSON_BYTES,
-    )
-    try:
-        refusal_value = json.loads(refusal_payload.decode("utf-8"))
-    except (UnicodeError, ValueError) as error:
-        raise ScenarioError("%s DOCX refusal script is not strict JSON" % runtime) from error
-    refusal_digest = validate_docx_refusal_script(refusal_value)
-    code = parse_failure_result(
-        raw_outputs[refusal["id"]],
-        "office.docx.batch_parse",
-    )
-    if os.path.lexists(os.path.join(root, output)):
-        fail("%s DOCX refusal published an output" % runtime)
-    physical_directory = os.path.join(root, directory)
-    leftovers = [
-        name
-        for name in os.listdir(physical_directory)
-        if ".office-tmp-" in name or ".office-output-tmp-" in name
-    ]
-    if leftovers:
-        fail("%s DOCX refusal left transaction staging artifacts" % runtime)
-    return {
-        "absence_events": [absence[0]["id"], absence[1]["id"]],
-        "error_code": code,
-        "failure_event": refusal["id"],
-        "output": output,
-        "script_sha256": refusal_digest,
-    }
+    return host_docx_refusals[runtime]
 
 
-def validate_scenario(root, commands, workflows, raw_outputs, indexes, runtime, format_name):
+def validate_scenario(
+    root,
+    commands,
+    workflows,
+    raw_outputs,
+    indexes,
+    host_docx_refusals,
+    runtime,
+    format_name,
+):
     canonical = {
         operation: baseline_event(workflows, runtime, format_name, operation)
         for operation in (
@@ -1203,6 +1274,7 @@ def validate_scenario(root, commands, workflows, raw_outputs, indexes, runtime, 
         runtime,
         format_name,
         final,
+        host_docx_refusals,
     )
     semantic_results = {}
     for operation in COMPARE_OPERATIONS:
@@ -1238,7 +1310,7 @@ def validate_scenario(root, commands, workflows, raw_outputs, indexes, runtime, 
     }
 
 
-def build_document(root, commands, raw_commands, workflows):
+def build_document(root, commands, raw_commands, workflows, host_docx_refusals):
     raw_outputs, indexes = raw_output_maps(commands, raw_commands)
     mapped_workflows = workflow_map(workflows)
     scenarios = []
@@ -1251,6 +1323,7 @@ def build_document(root, commands, raw_commands, workflows):
                     mapped_workflows,
                     raw_outputs,
                     indexes,
+                    host_docx_refusals,
                     runtime,
                     format_name,
                 )
@@ -1283,6 +1356,16 @@ def build_document(root, commands, raw_commands, workflows):
             fail("native/Wasm semantic read results differ for %s" % format_name)
         if native["package_semantics"] != wasm["package_semantics"]:
             fail("native/Wasm package semantics differ for %s" % format_name)
+        if format_name == "docx":
+            for field in (
+                "diagnostic_semantic_sha256",
+                "error_code",
+                "execution",
+                "exit_status",
+                "script_semantic_sha256",
+            ):
+                if native["refusal"][field] != wasm["refusal"][field]:
+                    fail("native/Wasm DOCX refusal %s differs" % field)
         cross_runtime[format_name] = {
             "dump_fixpoint_sha256": native["dump_fixpoint_sha256"],
             "preview_semantic_sha256": native["preview"]["semantic_sha256"],
@@ -1323,21 +1406,39 @@ def atomic_write_json(path, value):
 
 
 def main(argv):
-    if len(argv) != 7 or argv[1] not in ("build", "verify"):
+    if len(argv) != 8 or argv[1] not in ("build", "verify"):
         print(
             "usage: scenario_policy.py build|verify PROBE_ROOT COMMANDS "
-            "RAW_COMMANDS WORKFLOWS SCENARIOS",
+            "RAW_COMMANDS WORKFLOWS DOCX_REFUSALS SCENARIOS",
             file=sys.stderr,
         )
         return 64
-    mode, root, commands_path, raw_path, workflows_path, scenarios_path = argv[1:]
+    (
+        mode,
+        root,
+        commands_path,
+        raw_path,
+        workflows_path,
+        docx_refusals_path,
+        scenarios_path,
+    ) = argv[1:]
     root = os.path.realpath(root)
     if not os.path.isdir(root):
         fail("probe root is not a directory")
     commands = load_json_file(commands_path, "command ledger")
     raw_commands = load_json_file(raw_path, "raw command ledger", 64 * 1024 * 1024)
     workflows = load_json_file(workflows_path, "workflow ledger")
-    expected = build_document(root, commands, raw_commands, workflows)
+    host_docx_refusals = host_docx_refusal_map(
+        root,
+        load_json_file(docx_refusals_path, "host DOCX refusal evidence"),
+    )
+    expected = build_document(
+        root,
+        commands,
+        raw_commands,
+        workflows,
+        host_docx_refusals,
+    )
     if mode == "build":
         atomic_write_json(scenarios_path, expected)
     else:
