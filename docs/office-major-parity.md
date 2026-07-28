@@ -52,7 +52,7 @@ surface.
 | R1: replayable semantic XLSX/DOCX dump | [#167](https://github.com/moonbitlang/office.mbt/issues/167) | Complete via #192, #193, #195, and #197-#204; #194 and #196 were superseded |
 | T1: scalar XLSX/DOCX template merge | [#168](https://github.com/moonbitlang/office.mbt/issues/168) | Complete via #205, #206, and #208 |
 | T1-R: bounded XLSX/DOCX row repetition | [#207](https://github.com/moonbitlang/office.mbt/issues/207) | Complete via #210-#214 |
-| F1b: installed-command baseline acceptance | [#169](https://github.com/moonbitlang/office.mbt/issues/169) | Open and unblocked; task matrix landed via [#218](https://github.com/moonbitlang/office.mbt/pull/218) and installed contracts via [#228](https://github.com/moonbitlang/office.mbt/pull/228); the uncoached probe does not close #139 |
+| F1b: installed-command baseline acceptance | [#169](https://github.com/moonbitlang/office.mbt/issues/169) | Open and unblocked; task matrix landed via [#218](https://github.com/moonbitlang/office.mbt/pull/218) and installed contracts via [#228](https://github.com/moonbitlang/office.mbt/pull/228); the constrained protocol-driven probe does not close #139 |
 | F1a: unified agent entrypoint | [#220](https://github.com/moonbitlang/office.mbt/issues/220) | Complete via [#225](https://github.com/moonbitlang/office.mbt/pull/225) |
 | F1 help input contracts | [#223](https://github.com/moonbitlang/office.mbt/issues/223) | Complete via [#228](https://github.com/moonbitlang/office.mbt/pull/228) |
 | N0a: exact DOCX lexical token map | [#219](https://github.com/moonbitlang/office.mbt/issues/219) | Complete via [#224](https://github.com/moonbitlang/office.mbt/pull/224); first foundation only |
@@ -86,10 +86,10 @@ double-counted. S1 remains an independent status item rather than a parity row.
 
 | Slice | Acceptance boundary | Depends on |
 | --- | --- | --- |
-| F1 matrix | [PR #218](https://github.com/moonbitlang/office.mbt/pull/218) supplies checked-in native/Wasm task acceptance without claiming the uncoached installed-command result. | Landed on `main` |
+| F1 matrix | [PR #218](https://github.com/moonbitlang/office.mbt/pull/218) supplies checked-in native/Wasm task acceptance without claiming the constrained installed-command result. | Landed on `main` |
 | F1a: unified agent entrypoint | [#220](https://github.com/moonbitlang/office.mbt/issues/220) makes the repository skill lead with `office help all --json`; [PR #225](https://github.com/moonbitlang/office.mbt/pull/225) is landed. | F1 matrix |
 | F1 help input contracts | [#223](https://github.com/moonbitlang/office.mbt/issues/223) exposes the exact consumed JSON schemas and bounded examples through installed `office help`; [PR #228](https://github.com/moonbitlang/office.mbt/pull/228) is landed. | A2; landed on `main` |
-| F1b: installed-command baseline ([#169](https://github.com/moonbitlang/office.mbt/issues/169)) | An uncoached fresh agent completes the documented workflows from installed help, without repository-only schema docs or hidden coaching; exact-head gates and an `ultra` review pass. Record the initial baseline result without closing #139 or claiming completion of the major ledger. | F1a, #223 |
+| F1b: installed-command baseline ([#169](https://github.com/moonbitlang/office.mbt/issues/169)) | A brand-new agent completes the documented workflows from installed help under the checked-in coverage/evidence protocol. The prompt prescribes the matrix and evidence grammar but provides no repository-only schema docs or JSON examples. Exact-head gates and an `ultra` review pass. Record the initial baseline result without closing #139 or claiming completion of the major ledger. | F1a, #223 |
 
 ### Existing-DOCX targeted editing
 

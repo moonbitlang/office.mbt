@@ -253,7 +253,11 @@ make_candidate() {
     'shift || true' \
     'raw_action=${1:-}' \
     'if [ "$verb" = help ]; then' \
-    '  printf '\''{"data":{"schema":"office.capabilities/test","fingerprint":"test:fingerprint"}}\n'\''' \
+    '  if [ "$raw_action" = schemas ]; then' \
+    '    printf '\''{"schema":"office.output/1","success":true,"data":{"schema":"office.input-contracts/1","fingerprint":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","contracts":[{"id":"xlsx.batch/2","fingerprint":"sha256:1111111111111111111111111111111111111111111111111111111111111111","summary":"xlsx batch","consumed_by":["office batch"]},{"id":"docx.batch/2","fingerprint":"sha256:2222222222222222222222222222222222222222222222222222222222222222","summary":"docx batch","consumed_by":["office batch"]},{"id":"office.template.data/1","fingerprint":"sha256:3333333333333333333333333333333333333333333333333333333333333333","summary":"template data","consumed_by":["office template"]},{"id":"docx.annotation-batch/1","fingerprint":"sha256:4444444444444444444444444444444444444444444444444444444444444444","summary":"annotations","consumed_by":["office annotate"]}]}}\n'\''' \
+    '  else' \
+    '    printf '\''{"schema":"office.output/1","success":true,"data":{"schema":"office.capabilities/2","fingerprint":"test:fingerprint","records":[{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"test:fingerprint","kind":"command","name":"raw"}]}}\n'\''' \
+    '  fi' \
     '  exit 0' \
     'fi' \
     'format=""; source_file=""; output_file=""; script_file=""; pending=""' \
@@ -309,6 +313,7 @@ make_candidate() {
     'case "$verb" in' \
     '  batch)' \
     '    if [ -n "$output_file" ]; then make_package "$output_file"; artifact=$output_file; fi' \
+    '    if [ "${OFFICE_F1B_WRONG_OUTPUT_ROLE:-}" = 1 ]; then artifact=$source_file; fi' \
     '    ;;' \
     '  template|replay|annotate)' \
     '    [ -n "$output_file" ] || output_file="produced-$verb.$format"' \
@@ -914,7 +919,7 @@ chmod 0600 "$codex_bin_dir/mode"
     'case "$mode" in' \
     '  spoof-office|missing-create|pre-canary|completion-before-start|fractional-exit|out-of-domain-exit|missing-turn-completed|turn-failed|detaching-command|oversized-transcript) stop_after=all/help ;;' \
     '  format-redirection-spoof|newline-mask|help-only|comment-spoof|uppercase-result-path|wrong-result-schema|invalid-artifact|generic-zip-artifact|decoy-opc-root|nested-content-types|nested-relationships|oversized-zip-entry|zip-symlink-artifact) stop_after=native/xlsx/create ;;' \
-    '  duplicate-result-path|aliased-result-parent|reused-event-id) stop_after=native/xlsx/batch ;;' \
+    '  duplicate-result-path|aliased-result-parent|reused-event-id|wrong-output-role) stop_after=native/xlsx/batch ;;' \
     '  input-redirection|cross-format) stop_after=native/xlsx/validate ;;' \
     'esac' \
     'for runtime in native wasm; do' \
@@ -935,7 +940,12 @@ chmod 0600 "$codex_bin_dir/mode"
     '    index=$((index + 1))' \
     '    if [ "$mode" = "spoof-office" ]; then cmd="echo office-$runtime help all --json"; else cmd="office-$runtime help all --json"; fi' \
     '    emit_started "cmd-$index" "$cmd"' \
-    '    if [ "$mode" = "spoof-office" ]; then body="spoof"; status=0; else body=$("office-$runtime" help all --json 2>&1); status=$?; fi' \
+    '    if [ "$mode" = "spoof-office" ]; then body="spoof"; status=0; elif [ "$mode" = "incomplete-help" ] && [ "$runtime" = native ]; then body='\''{"schema":"office.output/1","success":true,"data":{"schema":"office.capabilities/2","fingerprint":"test:fingerprint","records":[]}}'\''; status=0; else body=$("office-$runtime" help all --json 2>&1); status=$?; fi' \
+    '    emit_completed "cmd-$index" "$cmd" "$status" "$body"' \
+    '    index=$((index + 1))' \
+    '    if [ "$mode" = "spoof-office" ]; then cmd="echo office-$runtime help schemas --json"; else cmd="office-$runtime help schemas --json"; fi' \
+    '    emit_started "cmd-$index" "$cmd"' \
+    '    if [ "$mode" = "spoof-office" ]; then body="spoof"; status=0; else body=$("office-$runtime" help schemas --json 2>&1); status=$?; fi' \
     '    emit_completed "cmd-$index" "$cmd" "$status" "$body"' \
     '  done' \
     '  if [ "$stop_after" != all/help ]; then' \
@@ -1009,7 +1019,11 @@ chmod 0600 "$codex_bin_dir/mode"
     '            if [ "$mode" = "zip-symlink-artifact" ]; then : > symlink-target; /bin/ln -s symlink-target package-link; /usr/bin/zip -q -y "$package" package-link; /bin/rm -f package-link symlink-target; fi' \
     '          fi' \
     '          set +e' \
-    '          "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
+    '          if [ "$mode" = "wrong-output-role" ] && [ "$runtime/$format/$verb" = "native/xlsx/batch" ]; then' \
+    '            OFFICE_F1B_WRONG_OUTPUT_ROLE=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
+    '          else' \
+    '            "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
+    '          fi' \
     '          status=$?' \
     '          set -e' \
     '          body=$(/bin/cat "$result.attestation"; /bin/cat "$result.stderr"; /usr/bin/printf _)' \
@@ -1212,10 +1226,10 @@ evidence="$case_root/evidence"
     --manifest "$evidence/EVIDENCE.json" \
     --timeout-seconds 30 ||
   fail "independent evidence manifest verification"
-[ "$(/usr/bin/jq 'length' "$evidence/COMMANDS.json")" -eq 83 ] ||
+[ "$(/usr/bin/jq 'length' "$evidence/COMMANDS.json")" -eq 85 ] ||
   fail "host-derived command inventory"
 /usr/bin/jq -e '
-  .schema == "office.fresh-agent.workflows/4" and
+  .schema == "office.fresh-agent.workflows/5" and
   .required_count == 58 and
   (.workflows | length) == 58 and
   (.workflows | all((.events | length) == 1)) and
@@ -1723,6 +1737,12 @@ expect_failure spoof-office 1 'exact isolated help result for native' \
   "$case_root/spoof-office-probe" "$case_root/spoof-office-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
+printf 'incomplete-help\n' > "$codex_bin_dir/mode"
+expect_failure incomplete-help 1 'complete baseline capability inventory' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/incomplete-help-probe" "$case_root/incomplete-help-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
 printf 'shallow-scenario\n' > "$codex_bin_dir/mode"
 expect_failure shallow-scenario 1 \
   'host-derived scenario semantics failed validation' \
@@ -1781,6 +1801,13 @@ expect_failure duplicate-result-path 1 \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/duplicate-result-probe" \
   "$case_root/duplicate-result-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'wrong-output-role\n' > "$codex_bin_dir/mode"
+expect_failure wrong-output-role 1 'wrong command path role' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/wrong-output-role-probe" \
+  "$case_root/wrong-output-role-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'aliased-result-parent\n' > "$codex_bin_dir/mode"

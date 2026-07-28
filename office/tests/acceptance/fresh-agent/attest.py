@@ -18,7 +18,7 @@ MAX_INPUT_SNAPSHOT_BYTES = 128 * 1024 * 1024
 BOUND_SUFFIXES = (".xlsx", ".docx", ".html")
 SNAPSHOT_SUFFIXES = (".xlsx", ".docx", ".html", ".json", ".xml")
 INPUT_EVIDENCE_ROOT = "input-evidence"
-ATTESTATION_SCHEMA = "office.fresh-agent.command-attestation/2"
+ATTESTATION_SCHEMA = "office.fresh-agent.command-attestation/3"
 ATTESTATION_PREFIX = "OFFICE_F1B_ATTESTATION\t"
 
 
@@ -533,24 +533,34 @@ def run_and_attest(target, result_path, arguments):
         result = digest_regular_file(
             root_fd, result_path, MAX_RESULT_BYTES, "Office JSON result"
         )
-        paths = sorted(
-            {
-                argument
-                for argument in arguments
-                if not argument.startswith("-")
-                and argument.lower().endswith(BOUND_SUFFIXES)
-            }
+        bound_references = sorted(
+            (
+                reference
+                for reference in references
+                if reference["path"].lower().endswith(BOUND_SUFFIXES)
+            ),
+            key=lambda reference: reference["path"],
         )
-        if not paths:
+        paths = [reference["path"] for reference in bound_references]
+        if not bound_references:
             raise AttestationError("Office command names no package or preview file")
+        if len(paths) != len(set(paths)):
+            raise AttestationError("Office command binds one file in multiple path roles")
         files = []
-        for path in paths:
+        for reference in bound_references:
+            path = reference["path"]
             safe_relative_path(path, "bound file path")
-            files.append(
-                digest_regular_file(
-                    root_fd, path, MAX_BOUND_FILE_BYTES, "bound Office file"
-                )
+            record = digest_regular_file(
+                root_fd, path, MAX_BOUND_FILE_BYTES, "bound Office file"
             )
+            record.update(
+                {
+                    "access": reference["access"],
+                    "argument_index": reference["argument_index"],
+                    "role": reference["role"],
+                }
+            )
+            files.append(record)
         value = {
             "files": files,
             "inputs": input_records,

@@ -54,7 +54,7 @@ def main():
             "access": "output",
             "argument_index": 3,
             "path": "fresh.docx",
-            "role": "package",
+            "role": "package-output",
         },
         {
             "access": "input",

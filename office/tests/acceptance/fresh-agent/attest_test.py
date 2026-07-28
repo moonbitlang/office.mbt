@@ -12,7 +12,7 @@ from pathlib import Path
 
 
 PREFIX = "OFFICE_F1B_ATTESTATION\t"
-SCHEMA = "office.fresh-agent.command-attestation/2"
+SCHEMA = "office.fresh-agent.command-attestation/3"
 
 
 def write_executable(path, lines):
@@ -86,7 +86,14 @@ def main():
         completed = run_helper(attester, root, read_target, "result.json")
         value = parse_attestation(completed)
         assert value["result"]["path"] == "result.json"
-        assert value["files"][0]["path"] == "sample.xlsx"
+        assert value["files"][0] == {
+            "access": "input",
+            "argument_index": 1,
+            "bytes": len(source_bytes),
+            "path": "sample.xlsx",
+            "role": "package",
+            "sha256": hashlib.sha256(source_bytes).hexdigest(),
+        }
         assert value["inputs"][0] == {
             "access": "input",
             "argument_index": 1,

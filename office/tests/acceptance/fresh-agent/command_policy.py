@@ -64,7 +64,7 @@ SNAPSHOT_PATH = re.compile(
     r"input-evidence/event-[0-9a-f]{32}/"
     r"[0-9]{3}(?:[.]input|[.](?:xlsx|docx|html|json|xml))"
 )
-ATTESTATION_SCHEMA = "office.fresh-agent.command-attestation/2"
+ATTESTATION_SCHEMA = "office.fresh-agent.command-attestation/3"
 ATTESTATION_PREFIX = "OFFICE_F1B_ATTESTATION\t"
 
 
@@ -269,16 +269,44 @@ def parse_attestation(output, result_path, product_arguments, path_references):
     validate_digest_record(value["result"], "attestation result")
     if value["result"]["path"] != result_path:
         fail("attestation result path does not match --attest-result")
+    expected_files = sorted(
+        (
+            reference
+            for reference in path_references
+            if reference["path"].lower().endswith((".xlsx", ".docx", ".html"))
+        ),
+        key=lambda reference: reference["path"],
+    )
     files = value["files"]
-    if not isinstance(files, list) or not files:
+    if (
+        not isinstance(files, list)
+        or not files
+        or len(files) != len(expected_files)
+    ):
         fail("attestation must bind at least one Office or preview file")
     paths = []
-    for index, record in enumerate(files):
-        validate_digest_record(record, "attestation file %d" % index)
+    for index, (record, expected) in enumerate(zip(files, expected_files)):
+        if not isinstance(record, dict) or set(record) != {
+            "access",
+            "argument_index",
+            "bytes",
+            "path",
+            "role",
+            "sha256",
+        }:
+            fail("attestation file %d has an unexpected shape" % index)
+        validate_digest_record(
+            {key: record[key] for key in ("bytes", "path", "sha256")},
+            "attestation file %d" % index,
+        )
+        for field in ("access", "argument_index", "path", "role"):
+            if record[field] != expected[field]:
+                fail(
+                    "attestation file %d contradicts its Office argument %s"
+                    % (index, field)
+                )
         if not record["path"].lower().endswith((".xlsx", ".docx", ".html")):
             fail("attestation file has an unsupported suffix: %s" % record["path"])
-        if record["path"] not in product_arguments:
-            fail("attestation file is not an exact Office argument: %s" % record["path"])
         paths.append(record["path"])
     if paths != sorted(set(paths)):
         fail("attestation file paths must be sorted and unique")

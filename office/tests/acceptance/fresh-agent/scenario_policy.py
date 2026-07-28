@@ -163,9 +163,11 @@ def inspect_bound_file(root, relative, label, max_bytes=MAX_BOUND_BYTES):
 
 def validate_digest_record(record, label):
     core_keys = {"bytes", "path", "sha256"}
+    bound_keys = core_keys | {"access", "argument_index", "role"}
     if not isinstance(record, dict) or set(record) not in (
         core_keys,
         core_keys | {"schema"},
+        bound_keys,
     ):
         fail("%s has an unexpected digest-record shape" % label)
     if "schema" in record and (
@@ -183,7 +185,51 @@ def validate_digest_record(record, label):
         record["sha256"]
     ):
         fail("%s has an invalid SHA-256 digest" % label)
+    if set(record) == bound_keys:
+        if record["access"] not in ("input", "input-output", "output"):
+            fail("%s has an invalid path access" % label)
+        if (
+            not isinstance(record["argument_index"], int)
+            or isinstance(record["argument_index"], bool)
+            or record["argument_index"] < 0
+        ):
+            fail("%s has an invalid argument index" % label)
+        if not isinstance(record["role"], str) or not record["role"]:
+            fail("%s has an invalid path role" % label)
     return {key: record[key] for key in core_keys}
+
+
+def validate_artifact_role(event, operation, label):
+    artifact = event.get("artifact")
+    validate_digest_record(artifact, label + " artifact")
+    if "role" not in artifact:
+        fail("%s artifact omits its command path role" % label)
+    if operation == "batch":
+        accepted = (
+            artifact["role"] == "package-output"
+            and artifact["access"] == "output"
+        ) or (
+            artifact["role"] == "package"
+            and artifact["access"] == "input-output"
+        )
+    elif operation in ("create", "template", "replay", "annotate"):
+        accepted = (
+            artifact["role"] == "package-output"
+            and artifact["access"] == "output"
+        )
+    else:
+        accepted = artifact["role"] == "package" and artifact["access"] == "input"
+    if not accepted:
+        fail("%s follows the wrong command path role" % label)
+    produced = event.get("produced")
+    if operation == "preview":
+        validate_digest_record(produced, label + " preview output")
+        if "role" not in produced:
+            fail("%s preview output omits its command path role" % label)
+        if produced["role"] != "preview-output" or produced["access"] != "output":
+            fail("%s follows the wrong preview output role" % label)
+    elif produced is not None:
+        fail("%s unexpectedly records a produced side artifact" % label)
 
 
 def read_record(root, record, label, parse_json=False):
@@ -442,7 +488,7 @@ def raw_output_maps(commands, raw_commands):
 def workflow_map(workflows):
     if (
         not isinstance(workflows, dict)
-        or workflows.get("schema") != "office.fresh-agent.workflows/4"
+        or workflows.get("schema") != "office.fresh-agent.workflows/5"
         or not isinstance(workflows.get("workflows"), list)
     ):
         fail("workflow ledger has the wrong schema")
@@ -472,6 +518,11 @@ def baseline_event(workflows, runtime, format_name, operation):
     expected_path = "matrix-%s-%s-%s.json" % (runtime, format_name, operation)
     if event.get("result", {}).get("path") != expected_path:
         fail("canonical workflow result path must be %s" % expected_path)
+    validate_artifact_role(
+        event,
+        operation,
+        "%s/%s/%s" % (runtime, format_name, operation),
+    )
     return event
 
 

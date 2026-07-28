@@ -105,8 +105,9 @@ def classify_batch(arguments, references):
         target_access = "output" if format_name == "docx" else (
             "input" if out_positions else "input-output"
         )
+        target_role = "package-output" if target_access == "output" else "package"
         add_reference(
-            references, arguments, positionals[0], "package", target_access
+            references, arguments, positionals[0], target_role, target_access
         )
     if len(positionals) > 1:
         add_reference(references, arguments, positionals[1], "script", "input")
