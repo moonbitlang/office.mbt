@@ -35,6 +35,26 @@ def build_candidate(root):
         make_directory(os.path.join(candidate, name))
     native_payload = b"fixture native command\n"
     write_file(os.path.join(candidate, "bin", "office-native"), native_payload, 0o500)
+    scenario_payload = b'''#!/usr/bin/env python3
+import os
+import sys
+
+if len(sys.argv) != 7 or sys.argv[1] != "verify":
+    sys.exit(64)
+if not os.path.isdir(sys.argv[2]):
+    sys.exit(1)
+for path in sys.argv[3:]:
+    if not os.path.isfile(path):
+        sys.exit(1)
+if open(sys.argv[6], "rb").read() != b"SCENARIOS.json\\n":
+    sys.exit(1)
+sys.exit(0)
+'''
+    write_file(
+        os.path.join(candidate, "control", "scenario-policy.py"),
+        scenario_payload,
+        0o400,
+    )
     os.symlink("office-native", os.path.join(candidate, "bin", "office"))
     manifest = {
         "build": {},
@@ -45,7 +65,13 @@ def build_candidate(root):
                 "mode": "0500",
                 "path": "bin/office-native",
                 "sha256": sha256(native_payload),
-            }
+            },
+            {
+                "kind": "file",
+                "mode": "0400",
+                "path": "control/scenario-policy.py",
+                "sha256": sha256(scenario_payload),
+            },
         ],
         "schema": "office.fresh-agent.candidate/5",
         "symlinks": [{"path": "bin/office", "target": "office-native"}],
@@ -159,6 +185,8 @@ def write_top_level_evidence(evidence, mode, manifest_payload):
         names.update(
             {
                 "COMMANDS.json",
+                "RAW-COMMANDS.json",
+                "SCENARIOS.json",
                 "WORKFLOWS.json",
                 "codex-exit-status.txt",
                 "codex-stderr.log",
@@ -226,6 +254,31 @@ def baseline_roundtrip(policy, root):
         raise AssertionError("candidate alias was not preserved as a symlink")
     write_top_level_evidence(evidence, "baseline", manifest_payload)
     pending = os.path.join(root, "EVIDENCE.pending.json")
+    scenario_path = os.path.join(evidence, "SCENARIOS.json")
+    with open(scenario_path, "wb") as stream:
+        stream.write(b"invalid scenario evidence\n")
+    expect_failure(
+        policy,
+        [
+            "manifest",
+            "--evidence-root",
+            evidence,
+            "--mode",
+            "baseline",
+            "--candidate-head",
+            HEAD,
+            "--candidate-sha256",
+            candidate_sha,
+            "--output",
+            pending,
+            "--timeout-seconds",
+            "10",
+        ],
+        "non-reproducible scenario evidence",
+        "scenario evidence does not reproduce",
+    )
+    with open(scenario_path, "wb") as stream:
+        stream.write(b"SCENARIOS.json\n")
     expect_success(
         policy,
         [

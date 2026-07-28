@@ -162,8 +162,16 @@ def inspect_bound_file(root, relative, label, max_bytes=MAX_BOUND_BYTES):
 
 
 def validate_digest_record(record, label):
-    if not isinstance(record, dict) or set(record) != {"bytes", "path", "sha256"}:
+    core_keys = {"bytes", "path", "sha256"}
+    if not isinstance(record, dict) or set(record) not in (
+        core_keys,
+        core_keys | {"schema"},
+    ):
         fail("%s has an unexpected digest-record shape" % label)
+    if "schema" in record and (
+        not isinstance(record["schema"], str) or not record["schema"]
+    ):
+        fail("%s has an invalid result schema" % label)
     safe_relative_path(record["path"], label + " path")
     if (
         not isinstance(record["bytes"], int)
@@ -175,17 +183,18 @@ def validate_digest_record(record, label):
         record["sha256"]
     ):
         fail("%s has an invalid SHA-256 digest" % label)
+    return {key: record[key] for key in core_keys}
 
 
 def read_record(root, record, label, parse_json=False):
-    validate_digest_record(record, label)
+    expected = validate_digest_record(record, label)
     observed, payload = inspect_bound_file(
         root,
         record["path"],
         label,
         MAX_JSON_BYTES if parse_json else MAX_BOUND_BYTES,
     )
-    if observed != record:
+    if observed != expected:
         fail("%s changed after its recorded event" % label)
     if not parse_json:
         return None
