@@ -323,7 +323,12 @@ make_candidate() {
     '  exit 2' \
     'fi' \
     'if [ "$verb/$format" = batch/xlsx ] && [ -n "$output_file" ] && [ -e "$output_file" ]; then' \
-    '  /usr/bin/jq -cn '\''{schema:"office.output/1",success:false,error:{code:"office.transaction.output_exists",message:"output exists"}}'\''' \
+    '  if [ -e "$PWD/force-host-xlsx-corruption" ] && [ "${output_file##*/}" = refusal-target.xlsx ]; then /usr/bin/printf corrupt > "$output_file"; fi' \
+    '  if [ -e "$PWD/force-host-xlsx-divergent" ] && [ "$runtime" = wasm ]; then' \
+    '    /usr/bin/jq -cn --arg output "$output_file" '\''{schema:"office.output/1",success:false,error:{code:"office.transaction.output_exists",message:"output exists",details:{output:$output}},warnings:[{code:"office.fixture.divergent_refusal",message:"Wasm-only refusal divergence"}]}'\''' \
+    '  else' \
+    '    /usr/bin/jq -cn --arg output "$output_file" '\''{schema:"office.output/1",success:false,error:{code:"office.transaction.output_exists",message:"output exists",details:{output:$output}}}'\''' \
+    '  fi' \
     '  exit 2' \
     'fi' \
     '[ -n "$source_file" ] || source_file="fixture.$format"' \
@@ -960,11 +965,10 @@ chmod 0600 "$codex_bin_dir/mode"
     '  chmod 0700 "$runtime" "$runtime/xlsx" "$runtime/docx"' \
     '  /usr/bin/printf "%s\\n" '\''{"schema":"xlsx.batch/2","ops":[{"op":"set","params":{"sheet":"Data","cell":"A1","value":"F1B-XLSX-REPRESENTATIVE-V1"}},{"op":"set","params":{"sheet":"Data","cell":"B2","value":30}},{"op":"set","params":{"sheet":"Data","cell":"B3","value":70}},{"op":"formula","params":{"sheet":"Data","cell":"B4","formula":"=SUM(B2:B3)"}},{"op":"set","params":{"sheet":"Data","cell":"A5","value":"{{agent_name}}"}},{"op":"chart","params":{"sheet":"Data","anchor":"D2","type":"col","categories":"A2:A3","values":"B2:B3","name":"F1B","title":"Representative"}}]}'\'' > "$runtime/xlsx/batch.json"' \
     '  /usr/bin/printf "%s\\n" '\''{"schema":"office.template.data/1","values":{"agent_name":"F1B-XLSX-TEMPLATE-V1"}}'\'' > "$runtime/xlsx/template.json"' \
-    '  /usr/bin/printf "%s\\n" '\''{"schema":"xlsx.batch/2","ops":[{"op":"set","params":{"sheet":"Data","cell":"A9","value":"refusal"}}]}'\'' > "$runtime/xlsx/refusal.json"' \
     '  /usr/bin/printf "%s\\n" '\''{"schema":"docx.batch/2","ops":[{"op":"paragraph","params":{"text":"F1B-DOCX-HEADING-V1","style":"Heading1"}},{"op":"paragraph","params":{"text":"{{agent_name}}"}},{"op":"paragraph","params":{"text":"F1B-DOCX-LIST-V1","list":{"ordered":true}}},{"op":"table","params":{"header_rows":1,"rows":[[{"text":"kind"},{"text":"value"}],[{"text":"marker"},{"text":"F1B-DOCX-TABLE-V1"}]]}},{"op":"paragraph","params":{"runs":[{"link":{"href":"https://example.invalid/f1b","text":"F1B link"}}]}}]}'\'' > "$runtime/docx/batch.json"' \
     '  /usr/bin/printf "%s\\n" '\''{"schema":"office.template.data/1","values":{"agent_name":"F1B-DOCX-TEMPLATE-V1"}}'\'' > "$runtime/docx/template.json"' \
     '  /usr/bin/printf "%s\\n" '\''{"schema":"docx.annotation-batch/1","ops":[{"op":"comment_add","anchor":{"at":"/docx/body/p[2]"},"author":"Reviewer","body":["F1B-DOCX-COMMENT-V1"],"label":"root"},{"op":"comment_reply","parent":{"label":"root"},"author":"Author","body":["F1B-DOCX-REPLY-V1"],"label":"answer"},{"op":"comment_resolve","target":{"label":"root"}}]}'\'' > "$runtime/docx/annotation.json"' \
-    '  chmod 0600 "$runtime/xlsx/batch.json" "$runtime/xlsx/template.json" "$runtime/xlsx/refusal.json" "$runtime/docx/batch.json" "$runtime/docx/template.json" "$runtime/docx/annotation.json"' \
+    '  chmod 0600 "$runtime/xlsx/batch.json" "$runtime/xlsx/template.json" "$runtime/docx/batch.json" "$runtime/docx/template.json" "$runtime/docx/annotation.json"' \
     'done' \
     'if [ "$mode" != "no-office" ]; then' \
     '  index=0' \
@@ -1118,37 +1122,15 @@ chmod 0600 "$codex_bin_dir/mode"
     '          emit_completed "cmd-$index" "$extra_cmd" "$extra_status" "$extra_body"' \
     '        fi' \
     '      done' \
-    '      if [ -z "$stop_after" ] && [ "$mode" != "shallow-scenario" ]; then' \
-    '        if [ "$format" = "xlsx" ]; then' \
-    '          refusal_target="$directory/refusal-target.xlsx"' \
-    '          refusal_before="$directory/refusal-before.xlsx"' \
-    '          index=$((index + 1)); refusal_cmd="cp $final $refusal_target"' \
-    '          emit_started "cmd-$index" "$refusal_cmd"' \
-    '          set +e; /bin/cp "$final" "$refusal_target"; refusal_status=$?; set -e' \
-    '          emit_completed "cmd-$index" "$refusal_cmd" "$refusal_status" ""' \
-    '          index=$((index + 1)); refusal_cmd="cp $refusal_target $refusal_before"' \
-    '          emit_started "cmd-$index" "$refusal_cmd"' \
-    '          set +e; /bin/cp "$refusal_target" "$refusal_before"; refusal_status=$?; set -e' \
-    '          emit_completed "cmd-$index" "$refusal_cmd" "$refusal_status" ""' \
-    '          index=$((index + 1)); refusal_cmd="office-$runtime batch $final $directory/refusal.json --out $refusal_target --json"' \
-    '          emit_started "cmd-$index" "$refusal_cmd"' \
-    '          set +e' \
-    '          refusal_body=$("office-$runtime" batch "$final" "$directory/refusal.json" --out "$refusal_target" --json 2>&1)' \
-    '          refusal_status=$?' \
-    '          set -e' \
-    '          emit_completed "cmd-$index" "$refusal_cmd" "$refusal_status" "$refusal_body"' \
-    '          index=$((index + 1)); refusal_cmd="cmp $refusal_before $refusal_target"' \
-    '          emit_started "cmd-$index" "$refusal_cmd"' \
-    '          set +e; /usr/bin/cmp "$refusal_before" "$refusal_target"; refusal_status=$?; set -e' \
-    '          emit_completed "cmd-$index" "$refusal_cmd" "$refusal_status" ""' \
-    '        fi' \
-    '      fi' \
     '    done' \
     '  done' \
     '  fi' \
     'fi' \
     'if [ "$mode" = "host-script-rewrite" ]; then : > force-host-script-rewrite; chmod 0600 force-host-script-rewrite; fi' \
     'if [ "$mode" = "host-staging" ]; then : > force-host-staging; chmod 0600 force-host-staging; fi' \
+    'if [ "$mode" = "host-xlsx-corruption" ]; then : > force-host-xlsx-corruption; chmod 0600 force-host-xlsx-corruption; fi' \
+    'if [ "$mode" = "host-xlsx-divergent" ]; then : > force-host-xlsx-divergent; chmod 0600 force-host-xlsx-divergent; fi' \
+    'if [ "$mode" = "agent-xlsx-corrupt-restore" ]; then /bin/cp native/xlsx/templated.xlsx native/xlsx/legacy-refusal.xlsx; /usr/bin/printf corrupt > native/xlsx/legacy-refusal.xlsx; /bin/cp native/xlsx/templated.xlsx native/xlsx/legacy-refusal.xlsx; fi' \
     'if [ "$mode" = "wrong-result-schema" ]; then printf '\''{"schema":"office.output/1","success":true,"data":{"schema":"office.identify/1","format":"xlsx","file":"native/xlsx/created.xlsx"}}\n'\'' > matrix-native-xlsx-create.json; fi' \
     'if [ "$mode" = "exit19" ]; then exit 19; fi' \
     'verdict="BASELINE PASS"; outcome="PASS"; gaps="[]"' \
@@ -1198,6 +1180,7 @@ evidence="$case_root/evidence"
   .integrity.bubblewrap == null and
   (.evidence.raw_commands_sha256 | test("^[0-9a-f]{64}$")) and
   (.evidence.workflows_sha256 | test("^[0-9a-f]{64}$")) and
+  (.evidence.xlsx_refusals_sha256 | test("^[0-9a-f]{64}$")) and
   (.evidence.docx_refusals_sha256 | test("^[0-9a-f]{64}$")) and
   (.evidence.scenarios_sha256 | test("^[0-9a-f]{64}$"))
 ' "$evidence/RUN.json" >/dev/null ||
@@ -1243,6 +1226,7 @@ evidence="$case_root/evidence"
   (.artifacts | map(.path) | index("COMMANDS.json")) != null and
   (.artifacts | map(.path) | index("RAW-COMMANDS.json")) != null and
   (.artifacts | map(.path) | index("WORKFLOWS.json")) != null and
+  (.artifacts | map(.path) | index("XLSX-REFUSALS.json")) != null and
   (.artifacts | map(.path) | index("DOCX-REFUSALS.json")) != null and
   (.artifacts | map(.path) | index("SCENARIOS.json")) != null and
   (.artifacts | map(.path) | index("closure/candidate/control/build-host.json")) != null and
@@ -1265,7 +1249,7 @@ evidence="$case_root/evidence"
     --manifest "$evidence/EVIDENCE.json" \
     --timeout-seconds 30 ||
   fail "independent evidence manifest verification"
-[ "$(/usr/bin/jq 'length' "$evidence/COMMANDS.json")" -eq 79 ] ||
+[ "$(/usr/bin/jq 'length' "$evidence/COMMANDS.json")" -eq 71 ] ||
   fail "host-derived command inventory"
 /usr/bin/jq -e '
   .schema == "office.fresh-agent.workflows/5" and
@@ -1295,6 +1279,25 @@ evidence="$case_root/evidence"
   ))
 ' "$evidence/WORKFLOWS.json" >/dev/null ||
   fail "host-derived workflow matrix"
+/usr/bin/jq -e '
+  keys == ["refusals", "required_count", "schema"] and
+  .schema == "office.fresh-agent.xlsx-refusals/1" and
+  .required_count == 2 and
+  [.refusals[].runtime] == ["native", "wasm"] and
+  [.refusals[].sequence] == [1, 2] and
+  (.refusals | all(
+    .error_code == "office.transaction.output_exists" and
+    (.exit_status | type) == "number" and .exit_status > 0 and
+    .target_exists_before == true and .target_exists_after == true and
+    .before.sha256 == .target.sha256 and .before.bytes == .target.bytes and
+    .staging_before == [] and .staging_after == [] and
+    .postcondition == "immediate-after-process-exit" and
+    (.source.sha256 | test("^[0-9a-f]{64}$")) and
+    (.script.sha256 | test("^[0-9a-f]{64}$")) and
+    (.diagnostic.sha256 | test("^[0-9a-f]{64}$"))
+  ))
+' "$evidence/XLSX-REFUSALS.json" >/dev/null ||
+  fail "host-controlled XLSX refusal evidence"
 /usr/bin/jq -e '
   keys == ["refusals", "required_count", "schema"] and
   .schema == "office.fresh-agent.docx-refusals/1" and
@@ -1337,14 +1340,16 @@ evidence="$case_root/evidence"
        .package_semantics.final.annotations == "add-reply-resolve" and
        .package_semantics.final.external_hyperlink == true
      end) and
-    (if .format == "xlsx" then
-       .refusal.error_code == "office.transaction.output_exists"
-     else
-       .refusal.error_code == "office.docx.batch_parse" and
-       .refusal.execution == "host-controlled-immediate" and
-       (.refusal.script_semantic_sha256 | test("^[0-9a-f]{64}$")) and
-       (.refusal.diagnostic_semantic_sha256 | test("^[0-9a-f]{64}$"))
-     end) and
+    .refusal.error_code ==
+      (if .format == "xlsx" then
+         "office.transaction.output_exists"
+       else
+         "office.docx.batch_parse"
+       end) and
+    .refusal.execution == "host-controlled-immediate" and
+    (.refusal.script_semantic_sha256 | test("^[0-9a-f]{64}$")) and
+    (.refusal.diagnostic_semantic_sha256 | test("^[0-9a-f]{64}$")) and
+    (.refusal.diagnostic_core.error.message | type) == "string" and
     (if .format == "xlsx" then
        .raw_semantics == {chart_part:true, workbook_part:true, worksheet_part:true}
      else
@@ -1365,7 +1370,7 @@ evidence="$case_root/evidence"
   fail "host-derived semantic scenarios"
 [ ! -e "$probe/probe-transcript.md" ] ||
   fail "agent unexpectedly authored the command transcript"
-[ "$(/usr/bin/grep -c '^## Event ' "$evidence/probe-transcript.md")" -eq 79 ] ||
+[ "$(/usr/bin/grep -c '^## Event ' "$evidence/probe-transcript.md")" -eq 71 ] ||
   fail "host transcript event count"
 ledger_sha="$(sha256_file "$evidence/COMMANDS.json")"
 raw_sha="$(sha256_file "$evidence/codex-transcript.jsonl")"
@@ -1378,6 +1383,20 @@ raw_sha="$(sha256_file "$evidence/codex-transcript.jsonl")"
 /usr/bin/grep -qx 'FRESH-AGENT PERMISSION CANARY PASS' \
   "$evidence/permission-canary.log" ||
   fail "permission canary evidence"
+
+printf 'agent-xlsx-corrupt-restore\n' > "$codex_bin_dir/mode"
+"$runner" \
+  "$head" \
+  "$candidate_sha" \
+  "$case_root/agent-xlsx-corrupt-restore-probe" \
+  "$case_root/agent-xlsx-corrupt-restore-evidence" \
+  "$case_root/auth.json" \
+  "$codex_bin_dir/codex" \
+  "$codex_sha" \
+  > "$case_root/agent-xlsx-corrupt-restore.stdout"
+/usr/bin/grep -Fq "verdict=BASELINE PASS" \
+  "$case_root/agent-xlsx-corrupt-restore.stdout" ||
+  fail "agent-side XLSX corrupt/restore cannot replace host refusal evidence"
 [ "$(/usr/bin/head -n 1 "$evidence/probe-result.md")" = \
   "Verdict: BASELINE PASS" ] ||
   fail "exact result verdict header"
@@ -1921,6 +1940,22 @@ expect_failure host-staging 1 \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/host-staging-probe" \
   "$case_root/host-staging-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'host-xlsx-corruption\n' > "$codex_bin_dir/mode"
+expect_failure host-xlsx-corruption 1 \
+  'host XLSX refusal changed its existing target: native' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/host-xlsx-corruption-probe" \
+  "$case_root/host-xlsx-corruption-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'host-xlsx-divergent\n' > "$codex_bin_dir/mode"
+expect_failure host-xlsx-divergent 1 \
+  'unclassified Wasm-only diagnostic differs for xlsx' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/host-xlsx-divergent-probe" \
+  "$case_root/host-xlsx-divergent-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'missing-create\n' > "$codex_bin_dir/mode"

@@ -114,20 +114,16 @@ Host-derived scenario contract:
 - The canonical XLSX raw inventory must name its workbook, worksheet, and chart
   parts. The canonical DOCX raw read must return `/document` content containing
   its heading, list, table, and merged-template markers.
-- For each XLSX runtime, copy the final package to
-  `RUNTIME/xlsx/refusal-target.xlsx`, then copy that target to
-  `RUNTIME/xlsx/refusal-before.xlsx`. Create a valid bounded XLSX batch script
-  at `RUNTIME/xlsx/refusal.json`. Run, without `--attest-result`, exactly
-  `office-RUNTIME batch FINAL RUNTIME/xlsx/refusal.json --out
-  RUNTIME/xlsx/refusal-target.xlsx --json`; it must return the typed
-  `office.transaction.output_exists` error. Then run exactly
-  `cmp RUNTIME/xlsx/refusal-before.xlsx RUNTIME/xlsx/refusal-target.xlsx`.
-- After your process exits, the host will independently run the exact malformed
-  DOCX batch probe against both installed runtimes. It will immediately attest
-  the typed `office.docx.batch_parse` failure, output absence, unchanged script,
-  and transaction-staging cleanup. Do not create or use `host-refusal`; that
-  directory is reserved for host-owned evidence. Do not hide or redirect the
-  XLSX negative command's JSON diagnostic.
+- After your process exits, the host will independently run both negative
+  publication probes against both installed runtimes. For XLSX it copies the
+  canonical final package to an existing target, invokes a valid batch with
+  `--out`, and immediately attests the complete
+  `office.transaction.output_exists` envelope plus byte preservation. For DOCX
+  it invokes the exact malformed fresh-document batch and immediately attests
+  the complete `office.docx.batch_parse` envelope, output absence, unchanged
+  script, and transaction-staging cleanup. Do not create or use `host-refusal`
+  or `host-xlsx-refusal`; those directories are reserved for host-owned
+  evidence. Do not duplicate either negative probe in the agent workflow.
 
 Exercise these outcomes:
 
@@ -140,8 +136,8 @@ Exercise these outcomes:
    get, text, and query; validate it and list issues; render the same preview
    twice and prove determinism; apply a scalar template merge and read it back;
    dump, replay, and prove the projected dump reaches a fixpoint; inspect its
-   raw part inventory; and provoke one typed publication refusal that leaves an
-   existing output byte-identical.
+   raw part inventory. The host-owned post-exit probe supplies the typed
+   publication-refusal and existing-output preservation evidence.
 3. For each runtime in its own subdirectory, complete one representative DOCX
    workflow: use the discovered fresh-document batch contract to author a
    heading, placeholder-bearing paragraph, list, table, and hyperlink; identify

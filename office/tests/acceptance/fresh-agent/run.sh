@@ -2265,6 +2265,220 @@ run_host_docx_refusal_probes() {
 }
 
 
+run_host_xlsx_refusal_probes() {
+  local evidence_file="$1"
+  local workflows_file="$2"
+  local host_root="$probe_root/host-xlsx-refusal"
+  local records="$isolation_root/host-xlsx-refusal-records.jsonl"
+  local payload='{"schema":"xlsx.batch/2","ops":[{"op":"set","params":{"sheet":"Data","cell":"A9","value":"refusal"}}]}'
+
+  [ ! -e "$host_root" ] && [ ! -L "$host_root" ] ||
+    die "host XLSX refusal root already exists"
+  [ ! -e "$evidence_file" ] && [ ! -L "$evidence_file" ] ||
+    die "host XLSX refusal evidence already exists"
+  /bin/mkdir -m 0700 "$host_root"
+  : > "$records"
+  /bin/chmod 0600 "$records"
+
+  local sequence=0
+  for runtime in native wasm; do
+    sequence=$((sequence + 1))
+    local directory="$host_root/$runtime"
+    local source_relative
+    local source
+    local script_relative="host-xlsx-refusal/$runtime/refusal.json"
+    local target_relative="host-xlsx-refusal/$runtime/refusal-target.xlsx"
+    local before_relative="host-xlsx-refusal/$runtime/refusal-before.xlsx"
+    local diagnostic_relative="host-xlsx-refusal/$runtime/diagnostic.json"
+    local script="$probe_root/$script_relative"
+    local target="$probe_root/$target_relative"
+    local before="$probe_root/$before_relative"
+    local diagnostic="$probe_root/$diagnostic_relative"
+    local stderr_file="$directory/stderr.log"
+    local source_sha256
+    local source_bytes
+    local script_sha256_before
+    local script_sha256_after
+    local script_bytes
+    local before_sha256
+    local before_bytes
+    local target_sha256
+    local target_bytes
+    local status
+
+    source_relative="$(
+      /usr/bin/jq -er --arg runtime "$runtime" '
+        [.workflows[] |
+          select(
+            .runtime == $runtime and .format == "xlsx" and
+            .operation == "template"
+          ) |
+          .events[0].artifact.path] |
+        if length == 1 then .[0]
+        else error("missing canonical XLSX final artifact")
+        end
+      ' "$workflows_file"
+    )" || die "host XLSX refusal cannot locate the final package: $runtime"
+    source="$probe_root/$source_relative"
+    assert_owned_private_file "$source" "host XLSX refusal source"
+    source_sha256="$(sha256_file "$source")"
+    source_bytes="$(stat_size "$source")"
+
+    /bin/mkdir -m 0700 "$directory"
+    /bin/cp -- "$source" "$target"
+    /bin/cp -- "$target" "$before"
+    /bin/chmod 0600 "$target" "$before"
+    /usr/bin/printf '%s\n' "$payload" > "$script"
+    /bin/chmod 0600 "$script"
+    assert_owned_private_file "$target" "host XLSX refusal target"
+    assert_owned_private_file "$before" "host XLSX refusal before-image"
+    assert_owned_private_file "$script" "host XLSX refusal script"
+    if /usr/bin/find "$directory" -maxdepth 1 \
+      \( -name '.office-tmp-*' -o -name '.office-output-tmp-*' \) \
+      -print -quit | /usr/bin/grep -q .; then
+      die "host XLSX refusal has staging before execution: $runtime"
+    fi
+    script_sha256_before="$(sha256_file "$script")"
+    script_bytes="$(stat_size "$script")"
+    before_sha256="$(sha256_file "$before")"
+    before_bytes="$(stat_size "$before")"
+
+    set +e
+    (
+      cd -P -- "$probe_root"
+      PATH=/usr/bin:/bin:/usr/sbin:/sbin
+      TMPDIR="$isolated_tmp"
+      LANG=C
+      LC_ALL=C
+      export PATH TMPDIR LANG LC_ALL
+      "$candidate_root/bin/office-$runtime" batch \
+        "$source_relative" "$script_relative" \
+        --out "$target_relative" --json \
+        > "$diagnostic" 2> "$stderr_file"
+    )
+    status="$?"
+    set -e
+
+    # These are the first observations after process exit. The Codex process
+    # has already terminated and never had access to this host-owned root.
+    target_sha256="$(sha256_file "$target")"
+    target_bytes="$(stat_size "$target")"
+    [ "$target_sha256" = "$before_sha256" ] &&
+      [ "$target_bytes" = "$before_bytes" ] ||
+      die "host XLSX refusal changed its existing target: $runtime"
+    if /usr/bin/find "$directory" -maxdepth 1 \
+      \( -name '.office-tmp-*' -o -name '.office-output-tmp-*' \) \
+      -print -quit | /usr/bin/grep -q .; then
+      die "host XLSX refusal left transaction staging: $runtime"
+    fi
+    script_sha256_after="$(sha256_file "$script")"
+    [ "$script_sha256_after" = "$script_sha256_before" ] ||
+      die "host XLSX refusal script changed during execution: $runtime"
+    [ "$status" -gt 0 ] && [ "$status" -le 255 ] ||
+      die "host XLSX refusal returned an invalid status: $runtime ($status)"
+    assert_owned_private_file "$diagnostic" "host XLSX refusal diagnostic"
+    assert_owned_private_file "$stderr_file" "host XLSX refusal stderr"
+    [ "$(stat_size "$diagnostic")" -gt 0 ] ||
+      die "host XLSX refusal diagnostic is empty: $runtime"
+    if ! /usr/bin/jq -s -e '
+      length == 1 and
+      .[0].schema == "office.output/1" and
+      .[0].success == false and
+      (. [0].error | type) == "object" and
+      .[0].error.code == "office.transaction.output_exists" and
+      (. [0].error.message | type) == "string" and
+      (. [0].error.message | length) > 0 and
+      (. [0].error.details | type) == "object"
+    ' "$diagnostic" >/dev/null; then
+      die "host XLSX refusal returned the wrong typed diagnostic: $runtime"
+    fi
+
+    /usr/bin/jq -n \
+      --arg runtime "$runtime" \
+      --argjson sequence "$sequence" \
+      --argjson exit_status "$status" \
+      --arg source_path "$source_relative" \
+      --arg source_sha256 "$source_sha256" \
+      --argjson source_bytes "$source_bytes" \
+      --arg script_path "$script_relative" \
+      --arg script_sha256 "$script_sha256_before" \
+      --argjson script_bytes "$script_bytes" \
+      --arg diagnostic_path "$diagnostic_relative" \
+      --arg diagnostic_sha256 "$(sha256_file "$diagnostic")" \
+      --argjson diagnostic_bytes "$(stat_size "$diagnostic")" \
+      --arg before_path "$before_relative" \
+      --arg before_sha256 "$before_sha256" \
+      --argjson before_bytes "$before_bytes" \
+      --arg target_path "$target_relative" \
+      --arg target_sha256 "$target_sha256" \
+      --argjson target_bytes "$target_bytes" \
+      '{
+        runtime: $runtime,
+        sequence: $sequence,
+        command: [
+          ("office-" + $runtime), "batch", $source_path, $script_path,
+          "--out", $target_path, "--json"
+        ],
+        source: {
+          path: $source_path,
+          sha256: $source_sha256,
+          bytes: $source_bytes
+        },
+        script: {
+          path: $script_path,
+          sha256: $script_sha256,
+          bytes: $script_bytes
+        },
+        diagnostic: {
+          path: $diagnostic_path,
+          sha256: $diagnostic_sha256,
+          bytes: $diagnostic_bytes
+        },
+        before: {
+          path: $before_path,
+          sha256: $before_sha256,
+          bytes: $before_bytes
+        },
+        target: {
+          path: $target_path,
+          sha256: $target_sha256,
+          bytes: $target_bytes
+        },
+        exit_status: $exit_status,
+        error_code: "office.transaction.output_exists",
+        target_exists_before: true,
+        target_exists_after: true,
+        staging_before: [],
+        staging_after: [],
+        postcondition: "immediate-after-process-exit"
+      }' >> "$records"
+  done
+
+  /usr/bin/jq -s '{
+    schema: "office.fresh-agent.xlsx-refusals/1",
+    required_count: length,
+    refusals: .
+  }' "$records" > "$evidence_file"
+  /bin/chmod 0600 "$evidence_file"
+  assert_owned_private_file "$evidence_file" "host XLSX refusal evidence"
+  /usr/bin/jq -e '
+    keys == ["refusals", "required_count", "schema"] and
+    .schema == "office.fresh-agent.xlsx-refusals/1" and
+    .required_count == 2 and
+    [.refusals[].runtime] == ["native", "wasm"] and
+    (.refusals | all(
+      .error_code == "office.transaction.output_exists" and
+      .target_exists_before == true and .target_exists_after == true and
+      .before.sha256 == .target.sha256 and
+      .before.bytes == .target.bytes and
+      .staging_before == [] and .staging_after == [] and
+      .postcondition == "immediate-after-process-exit"
+    ))
+  ' "$evidence_file" >/dev/null ||
+    die "host XLSX refusal evidence failed strict validation"
+}
+
+
 ensure_postprocess_deadline() {
   if (( ${postprocess_deadline:-0} == 0 )); then
     postprocess_deadline=$((SECONDS + postprocess_timeout_seconds))
@@ -3273,6 +3487,12 @@ done
 /usr/bin/install -m 0600 "$isolation_root/WORKFLOWS.json" \
   "$evidence_root/WORKFLOWS.json"
 require_postprocess_budget "workflow evidence aggregation"
+host_xlsx_refusals="$isolation_root/XLSX-REFUSALS.json"
+run_host_xlsx_refusal_probes \
+  "$host_xlsx_refusals" "$isolation_root/WORKFLOWS.json"
+/usr/bin/install -m 0600 "$host_xlsx_refusals" \
+  "$evidence_root/XLSX-REFUSALS.json"
+require_postprocess_budget "host XLSX refusal probes"
 /usr/bin/install -m 0600 "$isolation_root/raw-commands.json" \
   "$evidence_root/RAW-COMMANDS.json"
 if ! /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
@@ -3281,6 +3501,7 @@ if ! /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
   "$isolation_root/COMMANDS.json" \
   "$isolation_root/raw-commands.json" \
   "$isolation_root/WORKFLOWS.json" \
+  "$host_xlsx_refusals" \
   "$host_docx_refusals" \
   "$isolation_root/SCENARIOS.json"; then
   die "host-derived scenario semantics failed validation"
@@ -3392,6 +3613,7 @@ fi
   --arg commands_sha256 "$(sha256_file "$evidence_root/COMMANDS.json")" \
   --arg raw_commands_sha256 "$(sha256_file "$evidence_root/RAW-COMMANDS.json")" \
   --arg workflows_sha256 "$(sha256_file "$evidence_root/WORKFLOWS.json")" \
+  --arg xlsx_refusals_sha256 "$(sha256_file "$evidence_root/XLSX-REFUSALS.json")" \
   --arg docx_refusals_sha256 "$(sha256_file "$evidence_root/DOCX-REFUSALS.json")" \
   --arg scenarios_sha256 "$(sha256_file "$evidence_root/SCENARIOS.json")" \
   --arg final_message_sha256 "$(sha256_file "$evidence_root/final-message.json")" \
@@ -3416,6 +3638,7 @@ fi
       commands_sha256: $commands_sha256,
       raw_commands_sha256: $raw_commands_sha256,
       workflows_sha256: $workflows_sha256,
+      xlsx_refusals_sha256: $xlsx_refusals_sha256,
       docx_refusals_sha256: $docx_refusals_sha256,
       scenarios_sha256: $scenarios_sha256,
       final_message_sha256: $final_message_sha256

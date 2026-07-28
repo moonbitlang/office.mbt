@@ -843,6 +843,26 @@ def validate_docx_refusal_script(value):
     return value_sha256(value)
 
 
+def validate_xlsx_refusal_script(value):
+    value = require_object(value, "XLSX refusal script")
+    expected = {
+        "schema": "xlsx.batch/2",
+        "ops": [
+            {
+                "op": "set",
+                "params": {
+                    "sheet": "Data",
+                    "cell": "A9",
+                    "value": "refusal",
+                },
+            }
+        ],
+    }
+    if canonical_bytes(value) != canonical_bytes(expected):
+        fail("XLSX refusal script must match the exact semantic fixture")
+    return value_sha256(value)
+
+
 def validate_template_data(value, format_name):
     value = require_object(value, "%s template data" % format_name)
     if value.get("schema") != "office.template.data/1":
@@ -1009,6 +1029,11 @@ def parse_failure_result(output, expected_code=None):
         value = json.loads(output.strip())
     except ValueError as error:
         raise ScenarioError("failed Office event is not one JSON diagnostic") from error
+    normalize_failure_envelope(value, expected_code, "failed Office event")
+    return value["error"]["code"]
+
+
+def normalize_failure_envelope(value, expected_code, label):
     if (
         not isinstance(value, dict)
         or value.get("schema") != "office.output/1"
@@ -1016,11 +1041,20 @@ def parse_failure_result(output, expected_code=None):
         or not isinstance(value.get("error"), dict)
         or not isinstance(value["error"].get("code"), str)
         or not value["error"]["code"].startswith("office.")
+        or not isinstance(value["error"].get("message"), str)
+        or not value["error"]["message"]
     ):
-        fail("failed Office event lacks an office.output/1 typed error")
+        fail("%s lacks a complete office.output/1 typed error" % label)
     if expected_code is not None and value["error"]["code"] != expected_code:
-        fail("failed Office event has unexpected code %s" % value["error"]["code"])
-    return value["error"]["code"]
+        fail("%s has unexpected code %s" % (label, value["error"]["code"]))
+    if "details" in value["error"] and not isinstance(
+        value["error"]["details"], dict
+    ):
+        fail("%s has malformed error details" % label)
+    for field in DIAGNOSTIC_FIELDS:
+        if field in value and not isinstance(value[field], list):
+            fail("%s has malformed %s" % (label, field))
+    return value
 
 
 def preview_projection(value, format_name):
@@ -1342,28 +1376,6 @@ def supplemental_file(command, suffix, label):
     return matches[0]
 
 
-def exact_commands(commands, argv):
-    return [command for command in commands if command.get("argv") == argv]
-
-
-def command_basename_argv(command):
-    argv = command.get("argv")
-    if not isinstance(argv, list) or not argv:
-        return argv
-    return [os.path.basename(argv[0])] + argv[1:]
-
-
-def one_command(commands, argv, status, label):
-    matches = [
-        command
-        for command in commands
-        if command_basename_argv(command) == argv and command.get("status") == status
-    ]
-    if len(matches) != 1:
-        fail("scenario needs exactly one %s command" % label)
-    return matches[0]
-
-
 def host_docx_refusal_map(root, value):
     value = require_object(value, "host DOCX refusal evidence")
     if (
@@ -1446,17 +1458,15 @@ def host_docx_refusal_map(root, value):
             "%s host DOCX refusal diagnostic" % runtime,
             parse_json=True,
         )
-        diagnostic_error = (
-            diagnostic.get("error") if isinstance(diagnostic, dict) else None
+        normalize_failure_envelope(
+            diagnostic,
+            "office.docx.batch_parse",
+            "%s host DOCX refusal diagnostic" % runtime,
         )
-        if (
-            not isinstance(diagnostic, dict)
-            or diagnostic.get("schema") != "office.output/1"
-            or diagnostic.get("success") is not False
-            or not isinstance(diagnostic_error, dict)
-            or diagnostic_error.get("code") != "office.docx.batch_parse"
-        ):
-            fail("host DOCX refusal diagnostic is invalid for %s" % runtime)
+        diagnostic_core, diagnostics = split_runtime_diagnostics(
+            diagnostic,
+            runtime,
+        )
         if os.path.lexists(os.path.join(root, output_path)):
             fail("host DOCX refusal output now exists for %s" % runtime)
         leftovers = [
@@ -1468,7 +1478,9 @@ def host_docx_refusal_map(root, value):
             fail("host DOCX refusal staging now exists for %s" % runtime)
         result[runtime] = {
             "diagnostic": entry["diagnostic"],
-            "diagnostic_semantic_sha256": value_sha256(diagnostic),
+            "diagnostic_core": diagnostic_core,
+            "diagnostic_semantic_sha256": value_sha256(diagnostic_core),
+            "diagnostics": diagnostics,
             "error_code": entry["error_code"],
             "execution": "host-controlled-immediate",
             "exit_status": entry["exit_status"],
@@ -1479,88 +1491,174 @@ def host_docx_refusal_map(root, value):
     return result
 
 
+def host_xlsx_refusal_map(root, value):
+    value = require_object(value, "host XLSX refusal evidence")
+    if (
+        set(value) != {"schema", "required_count", "refusals"}
+        or value.get("schema") != "office.fresh-agent.xlsx-refusals/1"
+        or value.get("required_count") != 2
+        or not isinstance(value.get("refusals"), list)
+        or len(value["refusals"]) != 2
+    ):
+        fail("host XLSX refusal evidence has the wrong shape")
+    expected_keys = {
+        "before",
+        "command",
+        "diagnostic",
+        "error_code",
+        "exit_status",
+        "postcondition",
+        "runtime",
+        "script",
+        "sequence",
+        "source",
+        "staging_after",
+        "staging_before",
+        "target",
+        "target_exists_after",
+        "target_exists_before",
+    }
+    result = {}
+    for sequence, runtime in enumerate(RUNTIMES, start=1):
+        entry = value["refusals"][sequence - 1]
+        directory = "host-xlsx-refusal/%s" % runtime
+        script_path = directory + "/refusal.json"
+        before_path = directory + "/refusal-before.xlsx"
+        target_path = directory + "/refusal-target.xlsx"
+        diagnostic_path = directory + "/diagnostic.json"
+        if not isinstance(entry, dict) or set(entry) != expected_keys:
+            fail("host XLSX refusal evidence is malformed for %s" % runtime)
+        source = entry.get("source")
+        expected_command = [
+            "office-%s" % runtime,
+            "batch",
+            source.get("path") if isinstance(source, dict) else None,
+            script_path,
+            "--out",
+            target_path,
+            "--json",
+        ]
+        if (
+            entry.get("runtime") != runtime
+            or entry.get("sequence") != sequence
+            or entry.get("command") != expected_command
+            or entry.get("error_code") != "office.transaction.output_exists"
+            or not isinstance(entry.get("exit_status"), int)
+            or isinstance(entry.get("exit_status"), bool)
+            or not 0 < entry["exit_status"] <= 255
+            or entry.get("target_exists_before") is not True
+            or entry.get("target_exists_after") is not True
+            or entry.get("staging_before") != []
+            or entry.get("staging_after") != []
+            or entry.get("postcondition") != "immediate-after-process-exit"
+        ):
+            fail("host XLSX refusal evidence is invalid for %s" % runtime)
+        records = {
+            "source": (source, None),
+            "before": (entry.get("before"), before_path),
+            "target": (entry.get("target"), target_path),
+            "script": (entry.get("script"), script_path),
+            "diagnostic": (entry.get("diagnostic"), diagnostic_path),
+        }
+        for label, (record, expected_path) in records.items():
+            if not isinstance(record, dict) or (
+                expected_path is not None and record.get("path") != expected_path
+            ):
+                fail("host XLSX refusal %s record is invalid for %s" % (label, runtime))
+        source_record, _ = inspect_bound_file(
+            root,
+            source["path"],
+            "%s host XLSX refusal source" % runtime,
+        )
+        before_record, _ = inspect_bound_file(
+            root,
+            before_path,
+            "%s host XLSX refusal before-image" % runtime,
+        )
+        target_record, _ = inspect_bound_file(
+            root,
+            target_path,
+            "%s host XLSX refusal target" % runtime,
+        )
+        if (
+            source_record != source
+            or before_record != entry["before"]
+            or target_record != entry["target"]
+            or before_record["sha256"] != target_record["sha256"]
+            or before_record["bytes"] != target_record["bytes"]
+        ):
+            fail("host XLSX refusal did not preserve its target for %s" % runtime)
+        script = read_record(
+            root,
+            entry["script"],
+            "%s host XLSX refusal script" % runtime,
+            parse_json=True,
+        )
+        validate_xlsx_refusal_script(script)
+        diagnostic = read_record(
+            root,
+            entry["diagnostic"],
+            "%s host XLSX refusal diagnostic" % runtime,
+            parse_json=True,
+        )
+        normalize_failure_envelope(
+            diagnostic,
+            "office.transaction.output_exists",
+            "%s host XLSX refusal diagnostic" % runtime,
+        )
+        diagnostic_core, diagnostics = split_runtime_diagnostics(
+            diagnostic,
+            runtime,
+        )
+        leftovers = [
+            name
+            for name in os.listdir(os.path.join(root, directory))
+            if ".office-tmp-" in name or ".office-output-tmp-" in name
+        ]
+        if leftovers:
+            fail("host XLSX refusal staging now exists for %s" % runtime)
+        result[runtime] = {
+            "diagnostic": entry["diagnostic"],
+            "diagnostic_core": diagnostic_core,
+            "diagnostic_semantic_sha256": value_sha256(diagnostic_core),
+            "diagnostics": diagnostics,
+            "error_code": entry["error_code"],
+            "execution": "host-controlled-immediate",
+            "exit_status": entry["exit_status"],
+            "preserved": target_record,
+            "script": entry["script"],
+            "script_semantic_sha256": value_sha256(script),
+            "source": source_record,
+        }
+    return result
+
+
 def validate_refusal(
-    root,
-    commands,
-    raw_outputs,
-    indexes,
     runtime,
     format_name,
     final,
+    host_xlsx_refusals,
     host_docx_refusals,
 ):
-    directory = "%s/%s" % (runtime, format_name)
-    executable = "office-%s" % runtime
-    if format_name == "xlsx":
-        target = directory + "/refusal-target.xlsx"
-        before = directory + "/refusal-before.xlsx"
-        script = directory + "/refusal.json"
-        copy_target = one_command(
-            commands,
-            ["cp", final["path"], target],
-            "completed",
-            "%s XLSX refusal target copy" % runtime,
-        )
-        copy_before = one_command(
-            commands,
-            ["cp", target, before],
-            "completed",
-            "%s XLSX refusal before-image copy" % runtime,
-        )
-        refusal = one_command(
-            commands,
-            [
-                executable,
-                "batch",
-                final["path"],
-                script,
-                "--out",
-                target,
-                "--json",
-            ],
-            "failed",
-            "%s XLSX typed publication refusal" % runtime,
-        )
-        comparison = one_command(
-            commands,
-            ["cmp", before, target],
-            "completed",
-            "%s XLSX refusal comparison" % runtime,
-        )
-        if not (
-            indexes[copy_target["id"]]
-            < indexes[copy_before["id"]]
-            < indexes[refusal["id"]]
-            < indexes[comparison["id"]]
-        ):
-            fail("%s XLSX refusal evidence is out of order" % runtime)
-        code = parse_failure_result(
-            raw_outputs[refusal["id"]],
-            "office.transaction.output_exists",
-        )
-        before_record, _ = inspect_bound_file(root, before, "XLSX refusal before-image")
-        target_record, _ = inspect_bound_file(root, target, "XLSX refusal target")
-        if (
-            before_record["sha256"] != target_record["sha256"]
-            or before_record["bytes"] != target_record["bytes"]
-        ):
-            fail("%s XLSX refusal changed its existing target" % runtime)
-        return {
-            "comparison_event": comparison["id"],
-            "error_code": code,
-            "failure_event": refusal["id"],
-            "preserved": target_record,
-        }
-
-    return host_docx_refusals[runtime]
+    refusal = (
+        host_xlsx_refusals[runtime]
+        if format_name == "xlsx"
+        else host_docx_refusals[runtime]
+    )
+    if format_name == "xlsx" and (
+        refusal["source"]["path"] != final["path"]
+        or refusal["source"]["sha256"] != final["sha256"]
+        or refusal["source"]["bytes"] != final["bytes"]
+    ):
+        fail("%s XLSX host refusal did not consume the canonical final package" % runtime)
+    return refusal
 
 
 def validate_scenario(
     root,
     commands,
     workflows,
-    raw_outputs,
-    indexes,
+    host_xlsx_refusals,
     host_docx_refusals,
     runtime,
     format_name,
@@ -1856,17 +1954,15 @@ def validate_scenario(
         fail("%s/%s replayed package changes representative semantics" % (runtime, format_name))
 
     refusal = validate_refusal(
-        root,
-        commands,
-        raw_outputs,
-        indexes,
         runtime,
         format_name,
         final,
+        host_xlsx_refusals,
         host_docx_refusals,
     )
     semantic_results = {}
     diagnostic_inventory = []
+    add_diagnostics(diagnostic_inventory, "refusal", refusal["diagnostics"])
     for operation, event in canonical.items():
         value = result_json(
             root,
@@ -1910,8 +2006,15 @@ def validate_scenario(
     }
 
 
-def build_document(root, commands, raw_commands, workflows, host_docx_refusals):
-    raw_outputs, indexes = raw_output_maps(commands, raw_commands)
+def build_document(
+    root,
+    commands,
+    raw_commands,
+    workflows,
+    host_xlsx_refusals,
+    host_docx_refusals,
+):
+    raw_output_maps(commands, raw_commands)
     mapped_workflows = workflow_map(workflows)
     scenarios = []
     for runtime in RUNTIMES:
@@ -1921,8 +2024,7 @@ def build_document(root, commands, raw_commands, workflows, host_docx_refusals):
                     root,
                     commands,
                     mapped_workflows,
-                    raw_outputs,
-                    indexes,
+                    host_xlsx_refusals,
                     host_docx_refusals,
                     runtime,
                     format_name,
@@ -1963,16 +2065,15 @@ def build_document(root, commands, raw_commands, workflows, host_docx_refusals):
             wasm["diagnostic_inventory"],
             format_name,
         )
-        if format_name == "docx":
-            for field in (
-                "diagnostic_semantic_sha256",
-                "error_code",
-                "execution",
-                "exit_status",
-                "script_semantic_sha256",
-            ):
-                if native["refusal"][field] != wasm["refusal"][field]:
-                    fail("native/Wasm DOCX refusal %s differs" % field)
+        for field in (
+            "diagnostic_semantic_sha256",
+            "error_code",
+            "execution",
+            "exit_status",
+            "script_semantic_sha256",
+        ):
+            if native["refusal"][field] != wasm["refusal"][field]:
+                fail("native/Wasm %s refusal %s differs" % (format_name, field))
         cross_runtime[format_name] = {
             "diagnostics": diagnostic_classification,
             "dump_fixpoint_sha256": native["dump_fixpoint_sha256"],
@@ -2014,10 +2115,10 @@ def atomic_write_json(path, value):
 
 
 def main(argv):
-    if len(argv) != 8 or argv[1] not in ("build", "verify"):
+    if len(argv) != 9 or argv[1] not in ("build", "verify"):
         print(
             "usage: scenario_policy.py build|verify PROBE_ROOT COMMANDS "
-            "RAW_COMMANDS WORKFLOWS DOCX_REFUSALS SCENARIOS",
+            "RAW_COMMANDS WORKFLOWS XLSX_REFUSALS DOCX_REFUSALS SCENARIOS",
             file=sys.stderr,
         )
         return 64
@@ -2027,6 +2128,7 @@ def main(argv):
         commands_path,
         raw_path,
         workflows_path,
+        xlsx_refusals_path,
         docx_refusals_path,
         scenarios_path,
     ) = argv[1:]
@@ -2036,6 +2138,10 @@ def main(argv):
     commands = load_json_file(commands_path, "command ledger")
     raw_commands = load_json_file(raw_path, "raw command ledger", 64 * 1024 * 1024)
     workflows = load_json_file(workflows_path, "workflow ledger")
+    host_xlsx_refusals = host_xlsx_refusal_map(
+        root,
+        load_json_file(xlsx_refusals_path, "host XLSX refusal evidence"),
+    )
     host_docx_refusals = host_docx_refusal_map(
         root,
         load_json_file(docx_refusals_path, "host DOCX refusal evidence"),
@@ -2045,6 +2151,7 @@ def main(argv):
         commands,
         raw_commands,
         workflows,
+        host_xlsx_refusals,
         host_docx_refusals,
     )
     if mode == "build":
