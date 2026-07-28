@@ -84,7 +84,9 @@ Host-derived scenario contract:
   `https://example.invalid/f1b`.
 - Template data must use `office.template.data/1`, key `agent_name`, and value
   `F1B-XLSX-TEMPLATE-V1` for XLSX or `F1B-DOCX-TEMPLATE-V1` for DOCX. The
-  canonical `text` result must read that exact value back.
+  canonical `text` result must read that exact value back. The canonical
+  `get` result must also read back `F1B-XLSX-REPRESENTATIVE-V1` for XLSX or
+  `F1B-DOCX-HEADING-V1` for DOCX; choose a selector that includes that marker.
 - The DOCX annotation script must use `docx.annotation-batch/1` and, in order,
   add a comment whose body contains `F1B-DOCX-COMMENT-V1`, reply with a body
   containing `F1B-DOCX-REPLY-V1`, and resolve the added root comment. The
@@ -93,14 +95,21 @@ Host-derived scenario contract:
 - Write the canonical preview to `RUNTIME/FORMAT/preview-1.html`. Run a second
   attested preview of the same final package to
   `RUNTIME/FORMAT/preview-2.html`, using result path
-  `scenario-RUNTIME-FORMAT-preview-2.json`. The host compares both final bytes
-  and both reports.
+  `scenario-RUNTIME-FORMAT-preview-2.json`. Both previews must render the
+  representative and merged-template markers (plus the XLSX chart, or the
+  DOCX list, table, and hyperlink). The host compares both final bytes, both
+  reports, and those rendered semantics.
 - After canonical dump -> canonical replay, run an attested dump of the replayed
   package using `scenario-RUNTIME-FORMAT-dump-2.json`. The host removes only
   source identity and requires the complete remaining dump (including replay
   metadata, ordered ops, assets, residuals, warnings, and stats) to be
   identical. It also compares those projections and core read results across
-  native and Wasm.
+  native and Wasm. The dump must itself contain the representative authored
+  operations, and the replayed package must retain the same package semantics;
+  a self-consistent but unrelated dump is not evidence.
+- The canonical XLSX raw inventory must name its workbook, worksheet, and chart
+  parts. The canonical DOCX raw read must return `/document` content containing
+  its heading, list, table, and merged-template markers.
 - For each XLSX runtime, copy the final package to
   `RUNTIME/xlsx/refusal-target.xlsx`, then copy that target to
   `RUNTIME/xlsx/refusal-before.xlsx`. Create a valid bounded XLSX batch script

@@ -233,7 +233,18 @@ def main(argv):
         "format": "xlsx",
         "source": {"file": "source.xlsx"},
         "replay": {"batch_schema": "xlsx.batch/2", "create": {}},
-        "ops": [{"op": "set", "params": {}}],
+        "ops": [
+            {
+                "op": "set",
+                "params": {"value": policy.XLSX_CONTENT_MARKER},
+            },
+            {
+                "op": "set",
+                "params": {"value": policy.TEMPLATE_MARKERS["xlsx"]},
+            },
+            {"op": "formula", "params": {"formula": "SUM(A1:A2)"}},
+            {"op": "chart", "params": {"values": "A1:A2"}},
+        ],
         "assets": {},
         "residual": [{"code": "ignored-by-fixpoint"}],
         "warnings": [],
@@ -279,8 +290,100 @@ def main(argv):
     )
     assert normalized == {
         "file": "$runtime/xlsx/final.xlsx",
+        "warnings": ["target detail"],
         "data": ["$runtime/xlsx/final.xlsx"],
     }
+    core, diagnostics = policy.split_runtime_diagnostics(normalized, "native")
+    assert "warnings" not in core
+    assert diagnostics == [
+        {
+            "field": "warnings",
+            "location": "$.warnings",
+            "value": "target detail",
+        }
+    ]
+    counters, diagnostics = policy.split_runtime_diagnostics(
+        {"stats": {"warnings": 2}},
+        "native",
+    )
+    assert counters == {"stats": {"warnings": 2}}
+    assert diagnostics == []
+    common = {
+        "field": "warnings",
+        "location": "$.warnings",
+        "operation": "batch",
+        "value": {"code": "office.shared", "message": "shared"},
+    }
+    limitation = {
+        "field": "warnings",
+        "location": "$.warnings",
+        "operation": "batch",
+        "value": policy.WASM_COMMIT_WARNING,
+    }
+    classification = policy.classify_runtime_diagnostics(
+        [common],
+        [common, limitation],
+        "xlsx",
+    )
+    assert classification["target_limitations"] == [limitation]
+    unknown = {**limitation, "value": {"code": "office.unknown"}}
+    expect_rejected(
+        policy,
+        lambda: policy.classify_runtime_diagnostics(
+            [common],
+            [common, limitation, unknown],
+            "xlsx",
+        ),
+    )
+
+    preview_payload = (
+        '<p>%s</p><p>%s</p><figure class="chart">chart</figure>'
+        % (policy.XLSX_CONTENT_MARKER, policy.TEMPLATE_MARKERS["xlsx"])
+    )
+    assert policy.preview_content_projection(preview_payload, "xlsx")[
+        "representative_content"
+    ]
+    expect_rejected(
+        policy,
+        lambda: policy.preview_content_projection("<title>canned</title>", "xlsx"),
+    )
+
+    raw_xlsx = {
+        "schema": "office.output/1",
+        "success": True,
+        "data": {
+            "schema": "office.raw.inventory/1",
+            "parts": [
+                {"name": "xl/workbook.xml"},
+                {"name": "xl/worksheets/sheet1.xml"},
+                {"name": "xl/charts/chart1.xml"},
+            ],
+        },
+    }
+    assert policy.validate_raw_semantics(raw_xlsx, "xlsx")["chart_part"]
+    raw_docx = {
+        "schema": "office.output/1",
+        "success": True,
+        "data": {
+            "schema": "office.raw.part/1",
+            "content": " ".join(
+                (
+                    policy.DOCX_HEADING_MARKER,
+                    policy.DOCX_LIST_MARKER,
+                    policy.DOCX_TABLE_MARKER,
+                    policy.TEMPLATE_MARKERS["docx"],
+                )
+            ),
+        },
+    }
+    assert policy.validate_raw_semantics(raw_docx, "docx")[
+        "main_document_content"
+    ]
+    raw_docx["data"]["content"] = "<document/>"
+    expect_rejected(
+        policy,
+        lambda: policy.validate_raw_semantics(raw_docx, "docx"),
+    )
 
     shallow_xlsx = xlsx_batch(policy)
     shallow_xlsx["ops"] = shallow_xlsx["ops"][:-1]
