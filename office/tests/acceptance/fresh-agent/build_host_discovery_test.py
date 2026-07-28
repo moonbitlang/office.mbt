@@ -4,6 +4,7 @@
 import json
 import os
 import platform
+import runpy
 import shlex
 import subprocess
 import sys
@@ -49,6 +50,23 @@ def runner_owned_compiler(root, compiler):
     return wrapper
 
 
+def assert_inventory_does_not_expand_symlinked_parent(policy, root):
+    actual = os.path.join(root, "actual")
+    alias = os.path.join(root, "alias")
+    os.mkdir(actual, 0o700)
+    os.symlink(actual, alias)
+    tool = os.path.join(actual, "tool")
+    with open(tool, "wb") as stream:
+        stream.write(b"fixture")
+    selected = os.path.join(alias, "tool")
+    namespace = runpy.run_path(policy, run_name="build_host_discovery_policy")
+    record = namespace["path_record"](selected, "symlink-parent fixture")
+    inventory_paths = set()
+    namespace["add_record_paths"](record, inventory_paths)
+    if inventory_paths != {selected}:
+        raise AssertionError("inventory expanded a symlinked parent directory")
+
+
 def discover(policy, root, suffix, inputs):
     output_json = os.path.join(root, "discovery-%s.json" % suffix)
     output_paths = os.path.join(root, "paths-%s.txt" % suffix)
@@ -90,6 +108,7 @@ def main(argv):
     policy = os.path.abspath(argv[1])
     host_inputs = platform_inputs()
     with tempfile.TemporaryDirectory(prefix="build-host-discovery-test.") as root:
+        assert_inventory_does_not_expand_symlinked_parent(policy, root)
         inputs = (
             host_inputs[0],
             runner_owned_compiler(root, host_inputs[1]),
