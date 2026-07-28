@@ -1212,6 +1212,17 @@ wait_for_supervised_codex() {
     echo "error: Codex probe exceeded its bounded resource policy" >&2
     /bin/cat "$probe_resource_violation_file" >&2
     supervised_codex_status=125
+  elif [ "$leader_status" -eq 128 ] &&
+    /usr/bin/grep -Fq 'fork: Resource temporarily unavailable' \
+      "$evidence_root/codex-stderr.log"; then
+    # On platforms that enforce RLIMIT_NPROC before the sampling monitor can
+    # observe an over-limit child, Bash reports the same bounded-process
+    # refusal directly. Normalize that kernel-enforced outcome to the runner's
+    # resource-policy status.
+    echo "error: Codex probe exceeded its bounded resource policy" >&2
+    printf 'Codex job reached the OS process ceiling (limit %s processes)\n' \
+      "$probe_max_processes" >&2
+    supervised_codex_status=125
   else
     supervised_codex_status="$leader_status"
   fi
