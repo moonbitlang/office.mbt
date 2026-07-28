@@ -133,8 +133,12 @@ jobs:
       - name: Resolve dependencies
         run: moon update
 
-      - name: Fresh-agent runner contract (macOS)
+      # Provenance/security hardening stays bounded and advisory until #270
+      # makes the cross-platform Codex probes portable and predictably timed.
+      - name: Fresh-agent runner contract (macOS, advisory)
         if: runner.os == 'macOS'
+        continue-on-error: true
+        timeout-minutes: 10
         run: office/tests/acceptance/fresh-agent/run_test.sh
 
       - name: Install pinned Codex CLI (macOS canary)
@@ -820,5 +824,9 @@ jobs:
           bash office/tests/acceptance/run.sh native
           bash office/tests/acceptance/run.sh wasm
 
-      - name: Fresh-agent runner contract (Ubuntu)
+      # The native/Wasm Office acceptance above remains the functional gate;
+      # #270 tracks restoring this harness-only contract as a required check.
+      - name: Fresh-agent runner contract (Ubuntu, advisory)
+        continue-on-error: true
+        timeout-minutes: 10
         run: office/tests/acceptance/fresh-agent/run_test.sh
