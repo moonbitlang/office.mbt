@@ -4,6 +4,7 @@
 import json
 import os
 import platform
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -36,6 +37,16 @@ def platform_inputs():
     if system == "Linux" and machine == "x86_64":
         return "linux-x86_64", "/usr/bin/cc", "/usr/bin/ar", "-"
     raise AssertionError("unsupported test host: %s/%s" % (system, machine))
+
+
+def runner_owned_compiler(root, compiler):
+    wrapper = os.path.join(root, "runner-owned-cc")
+    with open(wrapper, "w", encoding="utf-8", newline="\n") as stream:
+        stream.write("#!/bin/sh\nexec %s \"$@\"\n" % shlex.quote(compiler))
+    os.chmod(wrapper, 0o700)
+    if os.stat(wrapper).st_uid != os.geteuid():
+        raise AssertionError("compiler fixture is not runner-owned")
+    return wrapper
 
 
 def discover(policy, root, suffix, inputs):
@@ -77,8 +88,14 @@ def main(argv):
         print("usage: build_host_discovery_test.py DISCOVERY_POLICY", file=sys.stderr)
         return 2
     policy = os.path.abspath(argv[1])
-    inputs = platform_inputs()
+    host_inputs = platform_inputs()
     with tempfile.TemporaryDirectory(prefix="build-host-discovery-test.") as root:
+        inputs = (
+            host_inputs[0],
+            runner_owned_compiler(root, host_inputs[1]),
+            host_inputs[2],
+            host_inputs[3],
+        )
         first_json, first_paths = discover(policy, root, "first", inputs)
         second_json, second_paths = discover(policy, root, "second", inputs)
         if first_json != second_json or first_paths != second_paths:
