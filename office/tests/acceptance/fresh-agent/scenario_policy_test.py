@@ -95,6 +95,41 @@ def annotation_script(policy):
     }
 
 
+def annotation_result():
+    return {
+        "schema": "office.output/1",
+        "success": True,
+        "data": {
+            "schema": "office.docx.annotation-batch/1",
+            "ops_applied": 3,
+            "results": [
+                {
+                    "op": "comment_add",
+                    "comment_id": "0",
+                    "done": None,
+                    "anchor": "/docx/body/p[1]",
+                },
+                {
+                    "op": "comment_reply",
+                    "comment_id": "1",
+                    "done": None,
+                    "target": "0",
+                },
+                {
+                    "op": "comment_resolve",
+                    "comment_id": "0",
+                    "done": True,
+                    "target": "0",
+                },
+            ],
+            "labels": [
+                {"label": "root", "comment_id": "0"},
+                {"label": "reply", "comment_id": "1"},
+            ],
+        },
+    }
+
+
 def write_fixture(path, entries):
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as archive:
         for name, payload in entries.items():
@@ -164,7 +199,7 @@ def xlsx_fixture(policy, final):
     }
 
 
-def docx_fixture(policy, final):
+def docx_fixture(policy, final, resolve_reply=False):
     template = policy.TEMPLATE_MARKERS["docx"] if final else "{{agent_name}}"
     document = (
         '<w:document xmlns:w="%s" xmlns:r="%s"><w:body>'
@@ -194,14 +229,26 @@ def docx_fixture(policy, final):
     }
     if final:
         entries["word/comments.xml"] = (
-            '<w:comments xmlns:w="%s"><w:comment w:id="0"><w:p><w:r><w:t>%s</w:t></w:r></w:p></w:comment>'
-            '<w:comment w:id="1"><w:p><w:r><w:t>%s</w:t></w:r></w:p></w:comment></w:comments>'
-            % (policy.WORD_NS, policy.COMMENT_MARKER, policy.REPLY_MARKER)
+            '<w:comments xmlns:w="%s" xmlns:w14="%s"><w:comment w:id="0">'
+            '<w:p w14:paraId="00000001"><w:r><w:t>%s</w:t></w:r></w:p></w:comment>'
+            '<w:comment w:id="1"><w:p w14:paraId="00000002"><w:r><w:t>%s</w:t>'
+            '</w:r></w:p></w:comment></w:comments>'
+            % (
+                policy.WORD_NS,
+                policy.WORD_2010_NS,
+                policy.COMMENT_MARKER,
+                policy.REPLY_MARKER,
+            )
         )
         entries["word/commentsExtended.xml"] = (
-            '<w15:commentsEx xmlns:w15="%s"><w15:commentEx w15:paraId="00000001" w15:done="1"/>'
-            '<w15:commentEx w15:paraId="00000002" w15:paraIdParent="00000001" w15:done="0"/>'
-            '</w15:commentsEx>' % policy.WORD_2012_NS
+            '<w15:commentsEx xmlns:w15="%s"><w15:commentEx w15:paraId="00000001" w15:done="%s"/>'
+            '<w15:commentEx w15:paraId="00000002" w15:paraIdParent="00000001" w15:done="%s"/>'
+            '</w15:commentsEx>'
+            % (
+                policy.WORD_2012_NS,
+                "0" if resolve_reply else "1",
+                "1" if resolve_reply else "0",
+            )
         )
     return entries
 
@@ -262,7 +309,14 @@ def main(argv):
             },
         }
         assert len(policy.validate_template_data(value, format_name)) == 64
-    assert len(policy.validate_annotation_script(annotation_script(policy))) == 64
+    annotation_contract = policy.validate_annotation_script(annotation_script(policy))
+    assert len(annotation_contract["sha256"]) == 64
+    annotation_ids = policy.validate_annotation_result(
+        annotation_result(),
+        annotation_contract,
+        "test annotation result",
+    )
+    assert annotation_ids == {"root_comment_id": "0", "reply_comment_id": "1"}
     assert len(
         policy.validate_docx_refusal_script(
             {
@@ -492,6 +546,23 @@ def main(argv):
         policy,
         lambda: policy.validate_annotation_script(shallow_annotation),
     )
+    wrong_target_annotation = annotation_script(policy)
+    wrong_target_annotation["ops"][2]["target"]["label"] = "reply"
+    expect_rejected(
+        policy,
+        lambda: policy.validate_annotation_script(wrong_target_annotation),
+    )
+    wrong_target_result = annotation_result()
+    wrong_target_result["data"]["results"][2]["comment_id"] = "1"
+    wrong_target_result["data"]["results"][2]["target"] = "1"
+    expect_rejected(
+        policy,
+        lambda: policy.validate_annotation_result(
+            wrong_target_result,
+            annotation_contract,
+            "wrong-target annotation result",
+        ),
+    )
     expect_rejected(policy, lambda: policy.parse_failure_result("false\n"))
     expect_rejected(
         policy,
@@ -573,7 +644,16 @@ def main(argv):
                 with open(path, "rb") as stream:
                     digest = hashlib.sha256(stream.read()).hexdigest()
                 record = {"bytes": info.st_size, "path": relative, "sha256": digest}
-                semantics = inspector(root, record, relative, final)
+                if format_name == "docx" and final:
+                    semantics = inspector(
+                        root,
+                        record,
+                        relative,
+                        final,
+                        expected_annotation_ids=annotation_ids,
+                    )
+                else:
+                    semantics = inspector(root, record, relative, final)
                 assert semantics["template_state"] == (
                     "merged" if final else "placeholder"
                 )
@@ -582,6 +662,28 @@ def main(argv):
                         xlsx_batch(policy),
                         final=final,
                     )
+        wrong_thread_path = os.path.join(root, "safe", "docx-wrong-thread.zip")
+        write_fixture(
+            wrong_thread_path,
+            docx_fixture(policy, True, resolve_reply=True),
+        )
+        wrong_thread_info = os.stat(wrong_thread_path)
+        with open(wrong_thread_path, "rb") as stream:
+            wrong_thread_digest = hashlib.sha256(stream.read()).hexdigest()
+        expect_rejected(
+            policy,
+            lambda: policy.inspect_docx_semantics(
+                root,
+                {
+                    "bytes": wrong_thread_info.st_size,
+                    "path": "safe/docx-wrong-thread.zip",
+                    "sha256": wrong_thread_digest,
+                },
+                "wrong-target DOCX thread",
+                True,
+                expected_annotation_ids=annotation_ids,
+            ),
+        )
         payload_path = os.path.join(root, "safe", "value.json")
         with open(payload_path, "wb") as stream:
             stream.write(b'{"value":1}\n')

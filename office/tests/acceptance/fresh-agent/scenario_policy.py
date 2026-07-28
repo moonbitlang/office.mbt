@@ -70,6 +70,7 @@ SPREADSHEET_DRAWING_NS = (
 WORD_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
 OFFICE_REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+WORD_2010_NS = "http://schemas.microsoft.com/office/word/2010/wordml"
 WORD_2012_NS = "http://schemas.microsoft.com/office/word/2012/wordml"
 MAX_PACKAGE_ENTRIES = 4096
 MAX_SEMANTIC_XML_BYTES = 16 * 1024 * 1024
@@ -707,7 +708,13 @@ def inspect_xlsx_semantics(root, record, label, final):
         }
 
 
-def inspect_docx_semantics(root, record, label, final):
+def inspect_docx_semantics(
+    root,
+    record,
+    label,
+    final,
+    expected_annotation_ids=None,
+):
     with open_semantic_package(root, record, label) as archive:
         document = package_xml(archive, "word/document.xml", label)
         paragraphs = list(document.iter("{%s}p" % WORD_NS))
@@ -760,25 +767,84 @@ def inspect_docx_semantics(root, record, label, final):
         }
         if final:
             comments = package_xml(archive, "word/comments.xml", label)
-            comments_text = element_text(comments, WORD_NS)
+            marker_comments = []
+            reply_comments = []
+            for comment in comments.iter("{%s}comment" % WORD_NS):
+                text = element_text(comment, WORD_NS)
+                if COMMENT_MARKER in text:
+                    marker_comments.append(comment)
+                if REPLY_MARKER in text:
+                    reply_comments.append(comment)
+            if (
+                len(marker_comments) != 1
+                or len(reply_comments) != 1
+                or marker_comments[0] is reply_comments[0]
+            ):
+                fail("%s does not identify one distinct root and reply comment" % label)
+            root_comment = marker_comments[0]
+            reply_comment = reply_comments[0]
+            root_comment_id = root_comment.get("{%s}id" % WORD_NS)
+            reply_comment_id = reply_comment.get("{%s}id" % WORD_NS)
+            if (
+                not isinstance(root_comment_id, str)
+                or not root_comment_id
+                or not isinstance(reply_comment_id, str)
+                or not reply_comment_id
+                or root_comment_id == reply_comment_id
+            ):
+                fail("%s has invalid representative comment identities" % label)
+            if expected_annotation_ids is not None and (
+                root_comment_id
+                != expected_annotation_ids.get("root_comment_id")
+                or reply_comment_id
+                != expected_annotation_ids.get("reply_comment_id")
+            ):
+                fail("%s comment identities differ from the annotation result" % label)
+
+            def last_para_id(comment, role):
+                paragraphs = list(comment.iter("{%s}p" % WORD_NS))
+                if not paragraphs:
+                    fail("%s %s comment has no body paragraph" % (label, role))
+                para_id = paragraphs[-1].get("{%s}paraId" % WORD_2010_NS)
+                if not isinstance(para_id, str) or re.fullmatch(
+                    r"[0-9A-Fa-f]{8}", para_id
+                ) is None:
+                    fail("%s %s comment has no canonical paraId" % (label, role))
+                return para_id.upper()
+
+            root_para_id = last_para_id(root_comment, "root")
+            reply_para_id = last_para_id(reply_comment, "reply")
+            if root_para_id == reply_para_id:
+                fail("%s root and reply comments reuse one paraId" % label)
             extended = package_xml(archive, "word/commentsExtended.xml", label)
             records = list(extended.iter("{%s}commentEx" % WORD_2012_NS))
-            resolved = any(
-                record.get("{%s}done" % WORD_2012_NS) in ("1", "true")
-                for record in records
-            )
-            reply = any(
-                record.get("{%s}paraIdParent" % WORD_2012_NS) is not None
-                for record in records
-            )
+            by_para_id = {}
+            for record in records:
+                para_id = record.get("{%s}paraId" % WORD_2012_NS)
+                if not isinstance(para_id, str) or re.fullmatch(
+                    r"[0-9A-Fa-f]{8}", para_id
+                ) is None:
+                    continue
+                key = para_id.upper()
+                if key in by_para_id:
+                    fail("%s has duplicate commentsExtended paraId records" % label)
+                by_para_id[key] = record
+            root_record = by_para_id.get(root_para_id)
+            reply_record = by_para_id.get(reply_para_id)
+            if root_record is None or reply_record is None:
+                fail("%s lacks commentsExtended records for the representative thread" % label)
+            root_done = root_record.get("{%s}done" % WORD_2012_NS)
+            root_parent = root_record.get("{%s}paraIdParent" % WORD_2012_NS)
+            reply_done = reply_record.get("{%s}done" % WORD_2012_NS)
+            reply_parent = reply_record.get("{%s}paraIdParent" % WORD_2012_NS)
             if (
-                COMMENT_MARKER not in comments_text
-                or REPLY_MARKER not in comments_text
-                or len(list(comments.iter("{%s}comment" % WORD_NS))) < 2
-                or not resolved
-                or not reply
+                root_done not in ("1", "true")
+                or root_parent is not None
+                or reply_done not in (None, "0", "false")
+                or not isinstance(reply_parent, str)
+                or reply_parent.upper() != root_para_id
             ):
-                fail("%s lacks the authored comment, reply, or resolved thread state" % label)
+                fail("%s does not resolve the marker-bearing root thread" % label)
             result["annotations"] = "add-reply-resolve"
         return result
 
@@ -876,26 +942,102 @@ def validate_template_data(value, format_name):
 
 def validate_annotation_script(value):
     value = require_object(value, "DOCX annotation script")
-    if value.get("schema") != "docx.annotation-batch/1":
-        fail("DOCX annotation script has the wrong schema")
+    if set(value) != {"schema", "ops"} or value.get("schema") != "docx.annotation-batch/1":
+        fail("DOCX annotation script has the wrong shape or schema")
     operations = value.get("ops")
-    if not isinstance(operations, list) or len(operations) < 3:
-        fail("DOCX annotation script needs add, reply, and resolve operations")
+    if not isinstance(operations, list) or len(operations) != 3:
+        fail("DOCX annotation script needs exactly add, reply, and resolve operations")
     names = [entry.get("op") if isinstance(entry, dict) else None for entry in operations]
-    required = ("comment_add", "comment_reply", "comment_resolve")
-    positions = []
-    for name in required:
-        try:
-            positions.append(names.index(name))
-        except ValueError as error:
-            raise ScenarioError("DOCX annotation script omits %s" % name) from error
-    if positions != sorted(positions):
-        fail("DOCX annotation add, reply, and resolve operations are out of order")
-    if not json_contains(operations[positions[0]], COMMENT_MARKER):
+    required = ["comment_add", "comment_reply", "comment_resolve"]
+    if names != required:
+        fail("DOCX annotation script must contain exact ordered add, reply, and resolve operations")
+    add, reply, resolve = operations
+    if not isinstance(add.get("body"), list) or not json_contains(
+        add["body"], COMMENT_MARKER
+    ):
         fail("DOCX annotation add omits its marker body")
-    if not json_contains(operations[positions[1]], REPLY_MARKER):
+    if not isinstance(reply.get("body"), list) or not json_contains(
+        reply["body"], REPLY_MARKER
+    ):
         fail("DOCX annotation reply omits its marker body")
-    return value_sha256(value)
+    root_label = add.get("label")
+    reply_label = reply.get("label")
+    if (
+        not isinstance(root_label, str)
+        or not 1 <= len(root_label) <= 80
+        or not isinstance(reply_label, str)
+        or not 1 <= len(reply_label) <= 80
+        or reply_label == root_label
+    ):
+        fail("DOCX annotation add and reply need distinct bounded labels")
+    if reply.get("parent") != {"label": root_label}:
+        fail("DOCX annotation reply must target the marker-bearing root label")
+    if resolve.get("target") != {"label": root_label}:
+        fail("DOCX annotation resolve must target the marker-bearing root label")
+    return {
+        "reply_label": reply_label,
+        "root_label": root_label,
+        "sha256": value_sha256(value),
+    }
+
+
+def validate_annotation_result(value, contract, label):
+    if (
+        not isinstance(value, dict)
+        or value.get("schema") != "office.output/1"
+        or value.get("success") is not True
+        or not isinstance(value.get("data"), dict)
+    ):
+        fail("%s is not a successful annotation result" % label)
+    data = value["data"]
+    results = data.get("results")
+    labels = data.get("labels")
+    if (
+        data.get("schema") != "office.docx.annotation-batch/1"
+        or data.get("ops_applied") != 3
+        or not isinstance(results, list)
+        or len(results) != 3
+        or not isinstance(labels, list)
+        or len(labels) != 2
+    ):
+        fail("%s does not report the exact annotation workflow" % label)
+    label_map = {}
+    for entry in labels:
+        if not isinstance(entry, dict) or set(entry) != {"label", "comment_id"}:
+            fail("%s has a malformed annotation label mapping" % label)
+        name = entry.get("label")
+        comment_id = entry.get("comment_id")
+        if (
+            not isinstance(name, str)
+            or name in label_map
+            or not isinstance(comment_id, str)
+            or not 1 <= len(comment_id) <= 80
+        ):
+            fail("%s has an invalid annotation label mapping" % label)
+        label_map[name] = comment_id
+    if set(label_map) != {contract["root_label"], contract["reply_label"]}:
+        fail("%s labels do not match the retained annotation script" % label)
+    root_id = label_map[contract["root_label"]]
+    reply_id = label_map[contract["reply_label"]]
+    if root_id == reply_id or any(not isinstance(entry, dict) for entry in results):
+        fail("%s has invalid annotation result identities" % label)
+    add, reply, resolve = results
+    if (
+        add.get("op") != "comment_add"
+        or add.get("comment_id") != root_id
+        or add.get("done") is not None
+        or add.get("target") is not None
+        or reply.get("op") != "comment_reply"
+        or reply.get("comment_id") != reply_id
+        or reply.get("done") is not None
+        or reply.get("target") != root_id
+        or resolve.get("op") != "comment_resolve"
+        or resolve.get("comment_id") != root_id
+        or resolve.get("done") is not True
+        or resolve.get("target") != root_id
+    ):
+        fail("%s does not bind reply and resolve to the added root comment" % label)
+    return {"reply_comment_id": reply_id, "root_comment_id": root_id}
 
 
 def dump_projection(value, format_name, expected_ops=None):
@@ -1738,6 +1880,7 @@ def validate_scenario(
     template_digest = validate_template_data(template_data, format_name)
     final_event = canonical["template"]
     annotation_digest = None
+    annotation_ids = None
     if format_name == "docx":
         lineage.append(
             require_lineage(
@@ -1752,21 +1895,18 @@ def validate_scenario(
             "%s DOCX annotation input" % runtime,
             parse_json=True,
         )
-        annotation_digest = validate_annotation_script(annotation)
+        annotation_contract = validate_annotation_script(annotation)
+        annotation_digest = annotation_contract["sha256"]
         annotation_result = result_json(
             root,
             canonical["annotate"],
             "%s DOCX annotation result" % runtime,
         )
-        data = annotation_result.get("data", {})
-        if (
-            data.get("ops_applied", 0) < 3
-            or not json_contains(data.get("results"), "comment_add")
-            or not json_contains(data.get("results"), "comment_reply")
-            or not json_contains(data.get("results"), "comment_resolve")
-            or not json_contains(data.get("results"), True)
-        ):
-            fail("%s DOCX annotation result does not prove add/reply/resolve" % runtime)
+        annotation_ids = validate_annotation_result(
+            annotation_result,
+            annotation_contract,
+            "%s DOCX annotation result" % runtime,
+        )
         final_event = canonical["annotate"]
     final = final_event["artifact"]
     if format_name == "xlsx":
@@ -1787,6 +1927,7 @@ def validate_scenario(
             final,
             "%s DOCX final package" % runtime,
             final=True,
+            expected_annotation_ids=annotation_ids,
         )
     for operation in FINAL_CONSUMERS:
         lineage.append(
