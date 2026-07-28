@@ -311,7 +311,9 @@ make_candidate() {
     '  fi' \
     '  /bin/rm -rf -- "$package_tmp"' \
     '}' \
-    'if [ "$verb/$format" = batch/docx ] && [ "${source_file##*/}" = refusal-output.docx ] && /usr/bin/jq -e '\''(.schema == "docx.batch/2") and (.ops == [{"op":"f1b_invalid_operation","params":{}}])'\'' "$script_file" >/dev/null; then' \
+    'if [ "$verb/$format" = batch/docx ] && { [ "${source_file##*/}" = refusal-output.docx ] || [ "${source_file##*/}" = host-refusal-output.docx ]; } && /usr/bin/jq -e '\''(.schema == "docx.batch/2") and (.ops == [{"op":"f1b_invalid_operation","params":{}}])'\'' "$script_file" >/dev/null; then' \
+    '  if [ -e "$PWD/force-host-script-rewrite" ]; then /usr/bin/printf "%s\n" '\''{"schema":"docx.batch/2","ops":[]}'\'' > "$script_file"; fi' \
+    '  if [ -e "$PWD/force-host-staging" ]; then : > "$(/usr/bin/dirname -- "$source_file")/.office-tmp-fixture"; fi' \
     '  /usr/bin/jq -cn '\''{schema:"office.output/1",success:false,error:{code:"office.docx.batch_parse",message:"unknown op"}}'\''' \
     '  exit 2' \
     'fi' \
@@ -943,8 +945,7 @@ chmod 0600 "$codex_bin_dir/mode"
     '  /usr/bin/printf "%s\\n" '\''{"schema":"docx.batch/2","ops":[{"op":"paragraph","params":{"text":"F1B-DOCX-HEADING-V1","style":"Heading1"}},{"op":"paragraph","params":{"text":"{{agent_name}}"}},{"op":"paragraph","params":{"text":"F1B-DOCX-LIST-V1","list":{"ordered":true}}},{"op":"table","params":{"header_rows":1,"rows":[[{"text":"kind"},{"text":"value"}],[{"text":"marker"},{"text":"F1B-DOCX-TABLE-V1"}]]}},{"op":"paragraph","params":{"runs":[{"link":{"href":"https://example.invalid/f1b","text":"F1B link"}}]}}]}'\'' > "$runtime/docx/batch.json"' \
     '  /usr/bin/printf "%s\\n" '\''{"schema":"office.template.data/1","values":{"agent_name":"F1B-DOCX-TEMPLATE-V1"}}'\'' > "$runtime/docx/template.json"' \
     '  /usr/bin/printf "%s\\n" '\''{"schema":"docx.annotation-batch/1","ops":[{"op":"comment_add","anchor":{"at":"/docx/body/p[2]"},"author":"Reviewer","body":["F1B-DOCX-COMMENT-V1"],"label":"root"},{"op":"comment_reply","parent":{"label":"root"},"author":"Author","body":["F1B-DOCX-REPLY-V1"],"label":"answer"},{"op":"comment_resolve","target":{"label":"root"}}]}'\'' > "$runtime/docx/annotation.json"' \
-    '  /usr/bin/printf "%s\\n" '\''{"schema":"docx.batch/2","ops":[{"op":"f1b_invalid_operation","params":{}}]}'\'' > "$runtime/docx/refusal.json"' \
-    '  chmod 0600 "$runtime/xlsx/batch.json" "$runtime/xlsx/template.json" "$runtime/xlsx/refusal.json" "$runtime/docx/batch.json" "$runtime/docx/template.json" "$runtime/docx/annotation.json" "$runtime/docx/refusal.json"' \
+    '  chmod 0600 "$runtime/xlsx/batch.json" "$runtime/xlsx/template.json" "$runtime/xlsx/refusal.json" "$runtime/docx/batch.json" "$runtime/docx/template.json" "$runtime/docx/annotation.json"' \
     'done' \
     'if [ "$mode" != "no-office" ]; then' \
     '  index=0' \
@@ -1103,29 +1104,14 @@ chmod 0600 "$codex_bin_dir/mode"
     '          emit_started "cmd-$index" "$refusal_cmd"' \
     '          set +e; /usr/bin/cmp "$refusal_before" "$refusal_target"; refusal_status=$?; set -e' \
     '          emit_completed "cmd-$index" "$refusal_cmd" "$refusal_status" ""' \
-    '        else' \
-    '          refusal_output="$directory/refusal-output.docx"' \
-    '          refusal_cmd="test ! -e $refusal_output"' \
-    '          index=$((index + 1)); emit_started "cmd-$index" "$refusal_cmd"' \
-    '          set +e; /bin/test ! -e "$refusal_output"; refusal_status=$?; set -e' \
-    '          emit_completed "cmd-$index" "$refusal_cmd" "$refusal_status" ""' \
-    '          index=$((index + 1)); refusal_cmd="office-$runtime batch --format docx $refusal_output $directory/refusal.json --json"' \
-    '          emit_started "cmd-$index" "$refusal_cmd"' \
-    '          set +e' \
-    '          refusal_body=$("office-$runtime" batch --format docx "$refusal_output" "$directory/refusal.json" --json 2>&1)' \
-    '          refusal_status=$?' \
-    '          set -e' \
-    '          emit_completed "cmd-$index" "$refusal_cmd" "$refusal_status" "$refusal_body"' \
-    '          index=$((index + 1)); refusal_cmd="test ! -e $refusal_output"' \
-    '          emit_started "cmd-$index" "$refusal_cmd"' \
-    '          set +e; /bin/test ! -e "$refusal_output"; refusal_status=$?; set -e' \
-    '          emit_completed "cmd-$index" "$refusal_cmd" "$refusal_status" ""' \
     '        fi' \
     '      fi' \
     '    done' \
     '  done' \
     '  fi' \
     'fi' \
+    'if [ "$mode" = "host-script-rewrite" ]; then : > force-host-script-rewrite; chmod 0600 force-host-script-rewrite; fi' \
+    'if [ "$mode" = "host-staging" ]; then : > force-host-staging; chmod 0600 force-host-staging; fi' \
     'if [ "$mode" = "wrong-result-schema" ]; then printf '\''{"schema":"office.output/1","success":true,"data":{"schema":"office.identify/1","format":"xlsx","file":"native/xlsx/created.xlsx"}}\n'\'' > matrix-native-xlsx-create.json; fi' \
     'if [ "$mode" = "exit19" ]; then exit 19; fi' \
     'verdict="BASELINE PASS"; outcome="PASS"; gaps="[]"' \
@@ -1175,6 +1161,7 @@ evidence="$case_root/evidence"
   .integrity.bubblewrap == null and
   (.evidence.raw_commands_sha256 | test("^[0-9a-f]{64}$")) and
   (.evidence.workflows_sha256 | test("^[0-9a-f]{64}$")) and
+  (.evidence.docx_refusals_sha256 | test("^[0-9a-f]{64}$")) and
   (.evidence.scenarios_sha256 | test("^[0-9a-f]{64}$"))
 ' "$evidence/RUN.json" >/dev/null ||
   fail "final run manifest"
@@ -1219,6 +1206,7 @@ evidence="$case_root/evidence"
   (.artifacts | map(.path) | index("COMMANDS.json")) != null and
   (.artifacts | map(.path) | index("RAW-COMMANDS.json")) != null and
   (.artifacts | map(.path) | index("WORKFLOWS.json")) != null and
+  (.artifacts | map(.path) | index("DOCX-REFUSALS.json")) != null and
   (.artifacts | map(.path) | index("SCENARIOS.json")) != null and
   (.artifacts | map(.path) | index("closure/candidate/control/build-host.json")) != null and
   (.artifacts | map(.path) | index("closure/probe/probe-result.md")) != null and
@@ -1240,7 +1228,7 @@ evidence="$case_root/evidence"
     --manifest "$evidence/EVIDENCE.json" \
     --timeout-seconds 30 ||
   fail "independent evidence manifest verification"
-[ "$(/usr/bin/jq 'length' "$evidence/COMMANDS.json")" -eq 85 ] ||
+[ "$(/usr/bin/jq 'length' "$evidence/COMMANDS.json")" -eq 79 ] ||
   fail "host-derived command inventory"
 /usr/bin/jq -e '
   .schema == "office.fresh-agent.workflows/5" and
@@ -1271,6 +1259,23 @@ evidence="$case_root/evidence"
 ' "$evidence/WORKFLOWS.json" >/dev/null ||
   fail "host-derived workflow matrix"
 /usr/bin/jq -e '
+  keys == ["refusals", "required_count", "schema"] and
+  .schema == "office.fresh-agent.docx-refusals/1" and
+  .required_count == 2 and
+  [.refusals[].runtime] == ["native", "wasm"] and
+  [.refusals[].sequence] == [1, 2] and
+  (.refusals | all(
+    .error_code == "office.docx.batch_parse" and
+    (.exit_status | type) == "number" and .exit_status > 0 and
+    .output_absent_before == true and .output_absent_after == true and
+    .staging_before == [] and .staging_after == [] and
+    .postcondition == "immediate-after-process-exit" and
+    (.script.sha256 | test("^[0-9a-f]{64}$")) and
+    (.diagnostic.sha256 | test("^[0-9a-f]{64}$"))
+  ))
+' "$evidence/DOCX-REFUSALS.json" >/dev/null ||
+  fail "host-controlled DOCX refusal evidence"
+/usr/bin/jq -e '
   .schema == "office.fresh-agent.scenarios/1" and
   .required_count == 4 and
   (.scenarios | length) == 4 and
@@ -1293,7 +1298,14 @@ evidence="$case_root/evidence"
        .package_semantics.final.annotations == "add-reply-resolve" and
        .package_semantics.final.external_hyperlink == true
      end) and
-    (.refusal.error_code | startswith("office."))
+    (if .format == "xlsx" then
+       .refusal.error_code == "office.transaction.output_exists"
+     else
+       .refusal.error_code == "office.docx.batch_parse" and
+       .refusal.execution == "host-controlled-immediate" and
+       (.refusal.script_semantic_sha256 | test("^[0-9a-f]{64}$")) and
+       (.refusal.diagnostic_semantic_sha256 | test("^[0-9a-f]{64}$"))
+     end)
   )) and
   ([.scenarios[] | .runtime + "/" + .format] | unique) ==
     ["native/docx", "native/xlsx", "wasm/docx", "wasm/xlsx"]
@@ -1301,7 +1313,7 @@ evidence="$case_root/evidence"
   fail "host-derived semantic scenarios"
 [ ! -e "$probe/probe-transcript.md" ] ||
   fail "agent unexpectedly authored the command transcript"
-[ "$(/usr/bin/grep -c '^## Event ' "$evidence/probe-transcript.md")" -eq 85 ] ||
+[ "$(/usr/bin/grep -c '^## Event ' "$evidence/probe-transcript.md")" -eq 79 ] ||
   fail "host transcript event count"
 ledger_sha="$(sha256_file "$evidence/COMMANDS.json")"
 raw_sha="$(sha256_file "$evidence/codex-transcript.jsonl")"
@@ -1781,6 +1793,22 @@ expect_failure empty-semantic-package 1 \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/empty-semantic-package-probe" \
   "$case_root/empty-semantic-package-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'host-script-rewrite\n' > "$codex_bin_dir/mode"
+expect_failure host-script-rewrite 1 \
+  'host DOCX refusal script changed during execution: native' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/host-script-rewrite-probe" \
+  "$case_root/host-script-rewrite-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'host-staging\n' > "$codex_bin_dir/mode"
+expect_failure host-staging 1 \
+  'host DOCX refusal left transaction staging: native' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/host-staging-probe" \
+  "$case_root/host-staging-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'missing-create\n' > "$codex_bin_dir/mode"

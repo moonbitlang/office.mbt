@@ -39,14 +39,16 @@ def build_candidate(root):
 import os
 import sys
 
-if len(sys.argv) != 7 or sys.argv[1] != "verify":
+if len(sys.argv) != 8 or sys.argv[1] != "verify":
     sys.exit(64)
 if not os.path.isdir(sys.argv[2]):
     sys.exit(1)
 for path in sys.argv[3:]:
     if not os.path.isfile(path):
         sys.exit(1)
-if open(sys.argv[6], "rb").read() != b"SCENARIOS.json\\n":
+if open(sys.argv[6], "rb").read() != b"DOCX-REFUSALS.json\\n":
+    sys.exit(1)
+if open(sys.argv[7], "rb").read() != b"SCENARIOS.json\\n":
     sys.exit(1)
 sys.exit(0)
 '''
@@ -185,6 +187,7 @@ def write_top_level_evidence(evidence, mode, manifest_payload):
         names.update(
             {
                 "COMMANDS.json",
+                "DOCX-REFUSALS.json",
                 "RAW-COMMANDS.json",
                 "SCENARIOS.json",
                 "WORKFLOWS.json",

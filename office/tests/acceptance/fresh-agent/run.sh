@@ -2115,6 +2115,156 @@ extract_isolated_contracts() {
     die "installed $runtime help did not produce the complete consumed-contract inventory"
 }
 
+
+run_host_docx_refusal_probes() {
+  local evidence_file="$1"
+  local host_root="$probe_root/host-refusal"
+  local records="$isolation_root/host-docx-refusal-records.jsonl"
+  local payload='{"schema":"docx.batch/2","ops":[{"op":"f1b_invalid_operation","params":{}}]}'
+
+  [ ! -e "$host_root" ] && [ ! -L "$host_root" ] ||
+    die "host DOCX refusal root already exists"
+  [ ! -e "$evidence_file" ] && [ ! -L "$evidence_file" ] ||
+    die "host DOCX refusal evidence already exists"
+  /bin/mkdir -m 0700 "$host_root"
+  : > "$records"
+  /bin/chmod 0600 "$records"
+
+  local sequence=0
+  for runtime in native wasm; do
+    sequence=$((sequence + 1))
+    local directory="$host_root/$runtime"
+    local script_relative="host-refusal/$runtime/refusal.json"
+    local output_relative="host-refusal/$runtime/host-refusal-output.docx"
+    local diagnostic_relative="host-refusal/$runtime/diagnostic.json"
+    local script="$probe_root/$script_relative"
+    local output="$probe_root/$output_relative"
+    local diagnostic="$probe_root/$diagnostic_relative"
+    local stderr_file="$directory/stderr.log"
+    local script_sha256_before
+    local script_sha256_after
+    local script_bytes
+    local status
+
+    /bin/mkdir -m 0700 "$directory"
+    /usr/bin/printf '%s\n' "$payload" > "$script"
+    /bin/chmod 0600 "$script"
+    assert_owned_private_file "$script" "host DOCX refusal script"
+    [ ! -e "$output" ] && [ ! -L "$output" ] ||
+      die "host DOCX refusal output exists before execution: $runtime"
+    if /usr/bin/find "$directory" -maxdepth 1 \
+      \( -name '.office-tmp-*' -o -name '.office-output-tmp-*' \) \
+      -print -quit | /usr/bin/grep -q .; then
+      die "host DOCX refusal has staging before execution: $runtime"
+    fi
+    script_sha256_before="$(sha256_file "$script")"
+    script_bytes="$(stat_size "$script")"
+
+    set +e
+    (
+      cd -P -- "$probe_root"
+      PATH=/usr/bin:/bin:/usr/sbin:/sbin
+      TMPDIR="$isolated_tmp"
+      LANG=C
+      LC_ALL=C
+      export PATH TMPDIR LANG LC_ALL
+      "$candidate_root/bin/office-$runtime" batch --format docx \
+        "$output_relative" "$script_relative" --json \
+        > "$diagnostic" 2> "$stderr_file"
+    )
+    status="$?"
+    set -e
+
+    # These are deliberately the first observations after process exit. No
+    # agent command can replace the script or erase transaction staging: the
+    # agent has exited, and this host-owned probe root did not exist before.
+    [ ! -e "$output" ] && [ ! -L "$output" ] ||
+      die "host DOCX refusal published an output: $runtime"
+    if /usr/bin/find "$directory" -maxdepth 1 \
+      \( -name '.office-tmp-*' -o -name '.office-output-tmp-*' \) \
+      -print -quit | /usr/bin/grep -q .; then
+      die "host DOCX refusal left transaction staging: $runtime"
+    fi
+    script_sha256_after="$(sha256_file "$script")"
+    [ "$script_sha256_after" = "$script_sha256_before" ] ||
+      die "host DOCX refusal script changed during execution: $runtime"
+    [ "$status" -gt 0 ] && [ "$status" -le 255 ] ||
+      die "host DOCX refusal returned an invalid status: $runtime ($status)"
+    assert_owned_private_file "$diagnostic" "host DOCX refusal diagnostic"
+    assert_owned_private_file "$stderr_file" "host DOCX refusal stderr"
+    [ "$(stat_size "$diagnostic")" -gt 0 ] ||
+      die "host DOCX refusal diagnostic is empty: $runtime"
+    if ! /usr/bin/jq -s -e '
+      length == 1 and
+      .[0].schema == "office.output/1" and
+      .[0].success == false and
+      .[0].error.code == "office.docx.batch_parse"
+    ' "$diagnostic" >/dev/null; then
+      die "host DOCX refusal returned the wrong typed diagnostic: $runtime"
+    fi
+
+    /usr/bin/jq -n \
+      --arg runtime "$runtime" \
+      --argjson sequence "$sequence" \
+      --argjson exit_status "$status" \
+      --arg script_path "$script_relative" \
+      --arg script_sha256 "$script_sha256_before" \
+      --argjson script_bytes "$script_bytes" \
+      --arg diagnostic_path "$diagnostic_relative" \
+      --arg diagnostic_sha256 "$(sha256_file "$diagnostic")" \
+      --argjson diagnostic_bytes "$(stat_size "$diagnostic")" \
+      --arg output "$output_relative" \
+      '{
+        runtime: $runtime,
+        sequence: $sequence,
+        command: [
+          ("office-" + $runtime), "batch", "--format", "docx",
+          $output, $script_path, "--json"
+        ],
+        script: {
+          path: $script_path,
+          sha256: $script_sha256,
+          bytes: $script_bytes
+        },
+        diagnostic: {
+          path: $diagnostic_path,
+          sha256: $diagnostic_sha256,
+          bytes: $diagnostic_bytes
+        },
+        exit_status: $exit_status,
+        error_code: "office.docx.batch_parse",
+        output: $output,
+        output_absent_before: true,
+        output_absent_after: true,
+        staging_before: [],
+        staging_after: [],
+        postcondition: "immediate-after-process-exit"
+      }' >> "$records"
+  done
+
+  /usr/bin/jq -s '{
+    schema: "office.fresh-agent.docx-refusals/1",
+    required_count: length,
+    refusals: .
+  }' "$records" > "$evidence_file"
+  /bin/chmod 0600 "$evidence_file"
+  assert_owned_private_file "$evidence_file" "host DOCX refusal evidence"
+  /usr/bin/jq -e '
+    keys == ["refusals", "required_count", "schema"] and
+    .schema == "office.fresh-agent.docx-refusals/1" and
+    .required_count == 2 and
+    [.refusals[].runtime] == ["native", "wasm"] and
+    (.refusals | all(
+      .error_code == "office.docx.batch_parse" and
+      .output_absent_before == true and .output_absent_after == true and
+      .staging_before == [] and .staging_after == [] and
+      .postcondition == "immediate-after-process-exit"
+    ))
+  ' "$evidence_file" >/dev/null ||
+    die "host DOCX refusal evidence failed strict validation"
+}
+
+
 ensure_postprocess_deadline() {
   if (( ${postprocess_deadline:-0} == 0 )); then
     postprocess_deadline=$((SECONDS + postprocess_timeout_seconds))
@@ -3001,6 +3151,11 @@ require_postprocess_budget "command input snapshot validation"
 /usr/bin/install -m 0600 "$isolation_root/COMMANDS.json" \
   "$evidence_root/COMMANDS.json"
 write_host_command_transcript
+host_docx_refusals="$isolation_root/DOCX-REFUSALS.json"
+run_host_docx_refusal_probes "$host_docx_refusals"
+/usr/bin/install -m 0600 "$host_docx_refusals" \
+  "$evidence_root/DOCX-REFUSALS.json"
+require_postprocess_budget "host DOCX refusal probes"
 
 extract_isolated_help native "$isolation_root/native-help.json"
 extract_isolated_help wasm "$isolation_root/wasm-help.json"
@@ -3126,6 +3281,7 @@ if ! /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
   "$isolation_root/COMMANDS.json" \
   "$isolation_root/raw-commands.json" \
   "$isolation_root/WORKFLOWS.json" \
+  "$host_docx_refusals" \
   "$isolation_root/SCENARIOS.json"; then
   die "host-derived scenario semantics failed validation"
 fi
@@ -3236,6 +3392,7 @@ fi
   --arg commands_sha256 "$(sha256_file "$evidence_root/COMMANDS.json")" \
   --arg raw_commands_sha256 "$(sha256_file "$evidence_root/RAW-COMMANDS.json")" \
   --arg workflows_sha256 "$(sha256_file "$evidence_root/WORKFLOWS.json")" \
+  --arg docx_refusals_sha256 "$(sha256_file "$evidence_root/DOCX-REFUSALS.json")" \
   --arg scenarios_sha256 "$(sha256_file "$evidence_root/SCENARIOS.json")" \
   --arg final_message_sha256 "$(sha256_file "$evidence_root/final-message.json")" \
   '{
@@ -3259,6 +3416,7 @@ fi
       commands_sha256: $commands_sha256,
       raw_commands_sha256: $raw_commands_sha256,
       workflows_sha256: $workflows_sha256,
+      docx_refusals_sha256: $docx_refusals_sha256,
       scenarios_sha256: $scenarios_sha256,
       final_message_sha256: $final_message_sha256
     }
