@@ -711,15 +711,24 @@ def preview_projection(value, format_name):
             fail("%s preview result omits %s" % (format_name, field))
         projection[field] = data[field]
     truncation = data.get("truncation")
-    required = ("max_rows", "max_cols", "truncated_sheets", "images_omitted")
+    numeric_fields = ("max_rows", "max_cols", "images_omitted")
     if not isinstance(truncation, dict) or any(
         not isinstance(truncation.get(field), int)
         or isinstance(truncation.get(field), bool)
         or truncation[field] < 0
-        for field in required
+        for field in numeric_fields
     ):
         fail("%s preview result omits truncation evidence" % format_name)
-    projection["truncation"] = truncation
+    truncated_sheets = truncation.get("truncated_sheets")
+    if not isinstance(truncated_sheets, list) or any(
+        not isinstance(name, str) or not name or len(name) > 80
+        for name in truncated_sheets
+    ):
+        fail("%s preview result has invalid truncated sheet names" % format_name)
+    projection["truncation"] = {
+        **{field: truncation[field] for field in numeric_fields},
+        "truncated_sheets": truncated_sheets,
+    }
     return projection
 
 

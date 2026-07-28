@@ -330,7 +330,33 @@ jobs:
             --arg head "$head" \
             '.schema == "office.fresh-agent.candidate/5"
               and .candidate_head == $head
-              and (.files | length) == 22
+              and (.files | map(.path)) == [
+                "bin/office-native",
+                "bin/office-wasm",
+                "libexec/moonrun",
+                "libexec/office.wasm",
+                "control/run.sh",
+                "control/prompt.md",
+                "control/final.schema.json",
+                "control/permission-canary.sh",
+                "control/attest.py",
+                "control/argument-policy.py",
+                "control/auth-guard.py",
+                "control/command-policy.py",
+                "control/opc-policy.py",
+                "control/transcript-policy.py",
+                "control/scenario-policy.py",
+                "control/evidence-policy.py",
+                "control/private.json",
+                "control/inventory.sh",
+                "control/build-lock.json",
+                "control/toolchain.manifest",
+                "control/dependencies.manifest",
+                "control/build-host.json",
+                "control/build-host.manifest",
+                "control/build-host-discovery.py",
+                "control/build-host-discovery.json"
+              ]
               and .symlinks == [
                 {path: "bin/office", target: "office-native"}
               ]' \
