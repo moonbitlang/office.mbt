@@ -1,12 +1,66 @@
 # OfficeCLI parity handoff
 
-Last updated: 2026-07-26 (Asia/Shanghai)
+Last updated: 2026-07-28 (Asia/Shanghai)
 
 This file is the handoff for the non-PPT OfficeCLI parity effort tracked by
 [#139](https://github.com/moonbitlang/office.mbt/issues/139). PowerPoint and MCP
 are deliberate non-goals. There are no third-party compatibility obligations,
 so future work should prefer a clean, durable contract over compatibility
 aliases.
+
+## Big picture at this handoff
+
+This repository is no longer missing the basic agent-facing Office shell. On
+current `main`, one unified `office` command can discover its own contracts and
+perform bounded XLSX and DOCX read, create, batch, template, annotate, validate,
+issues, preview, raw-OOXML, dump, and replay workflows. Native and Wasm are both
+first-class acceptance targets. The remaining draft F1b landing in PR #237 is
+the proof that a brand-new Codex session can discover and complete representative
+installed-command workflows without repository-only instructions.
+
+That phase boundary is significant, but it is not the end of the broader
+OfficeCLI parity program. Merging #237 completes the installed-command baseline
+and closes #169; it does not close the 384-row non-PPT delivery ledger or epic
+#139. The next relay should treat the baseline as a stable platform and resume
+the dependency-ordered feature ledger through small PRs, beginning with N0b4
+#234. Do not turn the ledger row count into a percentage: the rows deliberately
+have different implementation and validation weight.
+
+Functionality is the current product priority. PR #237 must prove real XLSX and
+DOCX outcomes, deterministic behavior, cross-runtime agreement, and typed
+atomic refusal. Additional security-grade build/runtime provenance is useful
+hardening but is not part of the functional F1b merge gate; it is recorded
+separately in #267, #268, and #269 so it cannot silently expand this already
+large PR.
+
+## PR #237 closeout checkpoint
+
+- Worktree: `/Users/dii/git/mbtexcel-worktrees/f1b-installed-baseline-20260724`
+- Branch: `agent/f1b-installed-baseline`
+- The branch contains current `origin/main` (`484390e5` at this checkpoint), so
+  no stale-base rebase is pending.
+- Functional semantic-scenario work is committed through `9ff66cd8`. It makes
+  the retained acceptance evidence prove actual XLSX and DOCX
+  create/batch/template/annotate/read/preview/dump/replay workflows rather than
+  command-shaped success alone. It also checks deterministic previews,
+  dump/replay/dump fixpoints, native/Wasm semantic agreement, and typed refusal
+  with mutation atomicity, and independently recomputes the scenario claims
+  from retained ledgers and artifacts.
+- Local functional gates on 2026-07-28 are green: focused scenario and evidence
+  policy tests pass; shell syntax and Python compilation pass; `moon check`
+  reports 0 errors; `moon test` passes 2,011/2,011 Wasm tests and 3,089/3,089
+  native tests. The very long adversarial `run_test.sh` matrix was exercised
+  through its successful scenario/evidence path and many negative cases, but
+  the final quiet local run was intentionally stopped after the product
+  priority changed to functional completeness. Do not record that local matrix
+  as a full PASS; exact-head GitHub CI remains authoritative for it.
+- Before merge, commit this handoff, run `moon info && moon fmt`, obtain a
+  brand-new ephemeral `gpt-5.6-sol` Ultra review of the exact HEAD with
+  functional correctness and maintainability as its merge criteria, push that
+  exact HEAD, and require its GitHub CI matrix to be green. If either gate finds
+  a real functional or maintainability blocker, fix only that blocker and
+  repeat both exact-head gates. Otherwise mark #237 ready, merge it, close #169,
+  update #139 with the baseline result, and stop without opening another PR.
 
 ## Landing state
 
@@ -222,6 +276,14 @@ projection foundation under #221; whole-run N0c1 #222 and partial-boundary N0c2
 #236 follow it. XLSX VML hardening #256/#257 is independent. The four
 non-blocking baseline residuals are already filed as #260-#263 and must not be
 folded into an unrelated feature PR.
+
+Three additional non-blocking harness-hardening issues preserve the unresolved
+parts of the earlier security-focused Ultra review without holding the
+functional baseline open: #267 pre-verifies the complete build closure, #268
+binds native-loader and script-interpreter closures, and #269 closes the
+remaining provenance schemas and independent recomputation surfaces. Each is a
+future dedicated small PR (or smaller issue split), not an invitation to extend
+#237.
 
 The dependency-ordered small-PR plan for closing the broader agent-relevant
 OfficeCLI gaps now lives in `docs/office-major-parity.md`. Give every proposed
