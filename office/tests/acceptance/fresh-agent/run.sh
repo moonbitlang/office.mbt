@@ -1167,6 +1167,7 @@ supervised_codex_leader_is_running() {
 wait_for_supervised_codex() {
   local operation="$1"
   local timeout_seconds="$2"
+  local stderr_log="$3"
   local deadline=$((SECONDS + timeout_seconds))
   local timed_out=0
   local resource_exceeded=0
@@ -1212,9 +1213,9 @@ wait_for_supervised_codex() {
     echo "error: Codex probe exceeded its bounded resource policy" >&2
     /bin/cat "$probe_resource_violation_file" >&2
     supervised_codex_status=125
-  elif [ "$leader_status" -eq 128 ] &&
+  elif [ "$leader_status" -ne 0 ] &&
     /usr/bin/grep -Fq 'fork: Resource temporarily unavailable' \
-      "$evidence_root/codex-stderr.log"; then
+      "$stderr_log"; then
     # On platforms that enforce RLIMIT_NPROC before the sampling monitor can
     # observe an over-limit child, Bash reports the same bounded-process
     # refusal directly. Normalize that kernel-enforced outcome to the runner's
@@ -2915,12 +2916,13 @@ run_codex --version >"$codex_version_stdout" 2>"$codex_version_stderr" &
 arm_codex_supervision "$!"
 set +m
 wait_for_supervised_codex \
-  "version probe" "$codex_version_timeout_seconds"
+  "version probe" "$codex_version_timeout_seconds" "$codex_version_stderr"
 codex_version_status="$supervised_codex_status"
 if [ "$codex_version_status" -ne 0 ]; then
   /bin/cat "$codex_version_stderr" >&2
-  if [ "$codex_version_status" -eq 124 ]; then
-    exit 124
+  if [ "$codex_version_status" -eq 124 ] ||
+    [ "$codex_version_status" -eq 125 ]; then
+    exit "$codex_version_status"
   fi
   die "Codex version probe failed with status $codex_version_status"
 fi
@@ -3077,15 +3079,16 @@ run_codex sandbox \
 arm_codex_supervision "$!"
 set +m
 wait_for_supervised_codex \
-  "permission canary" "$codex_canary_timeout_seconds"
+  "permission canary" "$codex_canary_timeout_seconds" \
+  "$evidence_root/permission-canary.log"
 canary_status="$supervised_codex_status"
 assert_loopback_listener_reachable ||
   die "loopback denial-canary listener is not live after the permission canary"
 if [ "$canary_status" -ne 0 ]; then
   echo "error: Codex permission-profile canary log follows" >&2
   /bin/cat "$evidence_root/permission-canary.log" >&2
-  if [ "$canary_status" -eq 124 ]; then
-    exit 124
+  if [ "$canary_status" -eq 124 ] || [ "$canary_status" -eq 125 ]; then
+    exit "$canary_status"
   fi
   die "Codex permission-profile canary failed; see $evidence_root/permission-canary.log"
 fi
@@ -3280,7 +3283,8 @@ arm_codex_supervision "$!"
 set +m
 start_probe_resource_monitor "$codex_pgid"
 wait_for_supervised_codex \
-  "installed-command probe" "$codex_probe_timeout_seconds"
+  "installed-command probe" "$codex_probe_timeout_seconds" \
+  "$evidence_root/codex-stderr.log"
 codex_status="$supervised_codex_status"
 stop_probe_resource_monitor
 if [ -s "$probe_resource_violation_file" ] && [ "$codex_status" -eq 0 ]; then
