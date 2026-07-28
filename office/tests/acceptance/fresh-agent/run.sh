@@ -1821,6 +1821,18 @@ validate_workflow_event() {
     end
   ' <<<"$match")" ||
     die "workflow artifact lacks completion-time evidence for $runtime/$format/$verb"
+  /usr/bin/jq -e --arg verb "$verb" '
+    if $verb == "batch" then
+      (.role == "package-output" and .access == "output") or
+      (.role == "package" and .access == "input-output")
+    elif $verb == "create" or $verb == "template" or
+         $verb == "replay" or $verb == "annotate" then
+      .role == "package-output" and .access == "output"
+    else
+      .role == "package" and .access == "input"
+    end
+  ' <<<"$artifact_json" >/dev/null ||
+    die "workflow result follows the wrong command path role for $runtime/$format/$verb"
   /usr/bin/jq -e \
     --arg sha256 "$(sha256_file "$probe_root/$artifact_relative")" \
     --argjson bytes "$(stat_size "$probe_root/$artifact_relative")" '
@@ -1843,6 +1855,10 @@ validate_workflow_event() {
       end
     ' <<<"$match")" ||
       die "preview output lacks completion-time evidence for $runtime/$format"
+    /usr/bin/jq -e '
+      .role == "preview-output" and .access == "output"
+    ' <<<"$produced_json" >/dev/null ||
+      die "preview result follows the wrong command output role for $runtime/$format"
     /usr/bin/jq -e \
       --arg sha256 "$(sha256_file "$probe_root/$produced_relative")" \
       --argjson bytes "$(stat_size "$probe_root/$produced_relative")" '
@@ -2016,13 +2032,76 @@ extract_isolated_help() {
     ' "$isolation_root/transcript-array.json" > "$output" ||
     die "Codex transcript lacks one exact isolated help result for $runtime"
   /usr/bin/jq -e '
-    (.data | type) == "object" and
-    (.data.schema | type) == "string" and
-    (.data.schema | length) > 0 and
-    (.data.fingerprint | type) == "string" and
-    (.data.fingerprint | length) > 0
+    .data.fingerprint as $fingerprint |
+    ([.data.records[] | select(.kind == "command") | .name] | sort) as $commands |
+    keys == ["data", "schema", "success"] and
+    .schema == "office.output/1" and .success == true and
+    (.data | keys) == ["fingerprint", "records", "schema"] and
+    .data.schema == "office.capabilities/2" and
+    (.data.fingerprint | type) == "string" and (.data.fingerprint | length) > 0 and
+    (.data.records | type) == "array" and (.data.records | length) >= 18 and
+    ([.data.records[] | select(.kind == "format") | .name] | sort) == ["docx", "xlsx"] and
+    (["annotate", "batch", "create", "dump", "get", "help", "identify",
+      "issues", "outline", "preview", "query", "raw", "replay", "template",
+      "text", "validate"] - $commands | length) == 0 and
+    (.data.records | all(
+      .schema == "office.capability/2" and
+      .fingerprint == $fingerprint
+    ))
   ' "$output" >/dev/null ||
-    die "installed $runtime help did not produce a capability identity"
+    die "installed $runtime help did not produce the complete baseline capability inventory"
+}
+
+extract_isolated_contracts() {
+  local runtime="$1"
+  local output="$2"
+  local bare="office-$runtime help schemas --json"
+  /usr/bin/jq -er \
+    --arg bare "$bare" \
+    '
+      def exact_command($command):
+        . == $command or
+        . == ("/bin/sh -c '\''" + $command + "'\''") or
+        . == ("/bin/bash -c '\''" + $command + "'\''") or
+        . == ("/bin/zsh -c '\''" + $command + "'\''");
+      [
+        .[] |
+        select(
+          .type == "item.completed" and
+          .item.type == "command_execution" and
+          .item.status == "completed" and
+          .item.exit_code == 0 and
+          (.item.command | exact_command($bare))
+        ) |
+        .item.aggregated_output
+      ] |
+      if length == 1 then .[0]
+      else error("expected exactly one canonical isolated contract-inventory command")
+      end
+    ' "$isolation_root/transcript-array.json" > "$output" ||
+    die "Codex transcript lacks one exact installed contract inventory for $runtime"
+  /usr/bin/jq -e '
+    keys == ["data", "schema", "success"] and
+    .schema == "office.output/1" and .success == true and
+    (.data | keys) == ["contracts", "fingerprint", "schema"] and
+    .data.schema == "office.input-contracts/1" and
+    (.data.fingerprint | test("^sha256:[0-9a-f]{64}$")) and
+    (.data.contracts | type) == "array" and (.data.contracts | length) == 4 and
+    ([.data.contracts[].id] | sort) == [
+      "docx.annotation-batch/1",
+      "docx.batch/2",
+      "office.template.data/1",
+      "xlsx.batch/2"
+    ] and
+    (.data.contracts | all(
+      keys == ["consumed_by", "fingerprint", "id", "summary"] and
+      (.fingerprint | test("^sha256:[0-9a-f]{64}$")) and
+      (.summary | type) == "string" and (.summary | length) > 0 and
+      (.consumed_by | type) == "array" and (.consumed_by | length) > 0 and
+      (.consumed_by | all(type == "string" and length > 0))
+    ))
+  ' "$output" >/dev/null ||
+    die "installed $runtime help did not produce the complete consumed-contract inventory"
 }
 
 ensure_postprocess_deadline() {
@@ -2914,6 +2993,8 @@ write_host_command_transcript
 
 extract_isolated_help native "$isolation_root/native-help.json"
 extract_isolated_help wasm "$isolation_root/wasm-help.json"
+extract_isolated_contracts native "$isolation_root/native-contracts.json"
+extract_isolated_contracts wasm "$isolation_root/wasm-contracts.json"
 /usr/bin/jq -S -c . "$isolation_root/native-help.json" \
   > "$isolation_root/native-help.canonical.json"
 /usr/bin/jq -S -c . "$isolation_root/wasm-help.json" \
@@ -2922,6 +3003,14 @@ extract_isolated_help wasm "$isolation_root/wasm-help.json"
   "$isolation_root/native-help.canonical.json" \
   "$isolation_root/wasm-help.canonical.json" ||
   die "installed native and Wasm capability help differ"
+/usr/bin/jq -S -c . "$isolation_root/native-contracts.json" \
+  > "$isolation_root/native-contracts.canonical.json"
+/usr/bin/jq -S -c . "$isolation_root/wasm-contracts.json" \
+  > "$isolation_root/wasm-contracts.canonical.json"
+/usr/bin/cmp \
+  "$isolation_root/native-contracts.canonical.json" \
+  "$isolation_root/wasm-contracts.canonical.json" ||
+  die "installed native and Wasm input-contract inventories differ"
 observed_capability_schema="$(
   /usr/bin/jq -er '.data.schema' "$isolation_root/native-help.json"
 )"
@@ -2941,7 +3030,7 @@ for runtime in native wasm; do
   done
 done
 /usr/bin/jq -s \
-  --arg schema "office.fresh-agent.workflows/4" \
+  --arg schema "office.fresh-agent.workflows/5" \
   '{
     schema: $schema,
     required_count: length,
@@ -2949,7 +3038,7 @@ done
   }' "$workflow_entries" > "$isolation_root/WORKFLOWS.json"
 /usr/bin/jq -e '
   keys == ["required_count", "schema", "workflows"] and
-  .schema == "office.fresh-agent.workflows/4" and
+  .schema == "office.fresh-agent.workflows/5" and
   .required_count == 58 and
   (.workflows | length) == 58 and
   (.workflows | unique_by([.runtime, .format, .operation]) | length) == 58 and
@@ -2973,8 +3062,13 @@ done
       (.result.schema | type) == "string" and
       (.result.sha256 | test("^[0-9a-f]{64}$")) and
       (.artifact == null or (
-        (.artifact | keys) == ["bytes", "path", "sha256"] and
+        (.artifact | keys) == ["access", "argument_index", "bytes", "path", "role", "sha256"] and
+        (.artifact.access == "input" or .artifact.access == "input-output" or .artifact.access == "output") and
+        (.artifact.argument_index | type) == "number" and
+        .artifact.argument_index == (.artifact.argument_index | floor) and
+        .artifact.argument_index >= 0 and
         (.artifact.path | type) == "string" and
+        (.artifact.role | type) == "string" and (.artifact.role | length) > 0 and
         (.artifact.bytes | type) == "number" and
         .artifact.bytes == (.artifact.bytes | floor) and .artifact.bytes > 0 and
         (.artifact.sha256 | test("^[0-9a-f]{64}$"))
@@ -2995,8 +3089,13 @@ done
         (.snapshot.sha256 | test("^[0-9a-f]{64}$"))
       )) and
       (.produced == null or (
-        (.produced | keys) == ["bytes", "path", "sha256"] and
+        (.produced | keys) == ["access", "argument_index", "bytes", "path", "role", "sha256"] and
+        .produced.access == "output" and
+        (.produced.argument_index | type) == "number" and
+        .produced.argument_index == (.produced.argument_index | floor) and
+        .produced.argument_index >= 0 and
         (.produced.path | type) == "string" and
+        .produced.role == "preview-output" and
         (.produced.bytes | type) == "number" and
         .produced.bytes == (.produced.bytes | floor) and .produced.bytes > 0 and
         (.produced.sha256 | test("^[0-9a-f]{64}$"))

@@ -15,8 +15,10 @@ Rules:
   format-specific Office commands.
 - Your only product documentation is the installed command help. Run
   `office-native help all --json` and `office-wasm help all --json` as separate,
-  direct commands without redirection. Discover consumed JSON contracts through
-  installed help; do not guess them from prior knowledge.
+  direct commands without redirection. Then run `office-native help schemas
+  --json` and `office-wasm help schemas --json` the same way and use that complete
+  four-contract inventory to discover the consumed JSON contracts; do not guess
+  them from prior knowledge.
 - Shell utilities such as `jq`, `shasum`, `cmp`, and ZIP inspectors are allowed
   for assertions, but all Office creation, reading, mutation, validation,
   preview, dump/replay, and template work must use the installed commands.

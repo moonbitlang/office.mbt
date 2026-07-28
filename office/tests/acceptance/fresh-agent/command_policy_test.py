@@ -89,7 +89,14 @@ def main():
 
     result = {"bytes": 17, "path": "result.json", "sha256": "1" * 64}
     files = [
-        {"bytes": 101, "path": "sample.xlsx", "sha256": "2" * 64},
+        {
+            "access": "input",
+            "argument_index": 1,
+            "bytes": 101,
+            "path": "sample.xlsx",
+            "role": "package",
+            "sha256": "2" * 64,
+        },
     ]
     inputs = [
         {
@@ -108,7 +115,7 @@ def main():
         "files": files,
         "inputs": inputs,
         "result": result,
-        "schema": "office.fresh-agent.command-attestation/2",
+        "schema": "office.fresh-agent.command-attestation/3",
     }
     output = policy.ATTESTATION_PREFIX + json.dumps(
         attestation, sort_keys=True, separators=(",", ":")
@@ -129,6 +136,20 @@ def main():
     ]
     assert normalized["attestation"] == attestation
     assert normalized["stdout_path"] is None
+
+    wrong_role = json.loads(json.dumps(attestation))
+    wrong_role["files"][0]["role"] = "package-output"
+    wrong_role_output = policy.ATTESTATION_PREFIX + json.dumps(
+        wrong_role, sort_keys=True, separators=(",", ":")
+    ) + "\n"
+    expect_event_rejected(
+        policy,
+        completed_event(
+            "office-native identify sample.xlsx --json "
+            "--attest-result result.json",
+            wrong_role_output,
+        ),
+    )
 
     traversal_event = {
         "aggregated_output": "typed refusal\n",
