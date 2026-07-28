@@ -64,6 +64,7 @@ ACCEPTANCE_GET_SELECTORS = frozenset(
         "/docx/body/p[1]",
     }
 )
+ACCEPTANCE_RAW_SELECTORS = frozenset({"/document"})
 SHELLS = frozenset({"/bin/sh", "/bin/bash", "/bin/zsh"})
 HEX_SHA256 = re.compile(r"^[0-9a-f]{64}$")
 SNAPSHOT_PATH = re.compile(
@@ -186,6 +187,8 @@ def reject_shell_expansion(body):
             word_start = True
         elif char in "*?[":
             fail("unquoted shell globbing is not allowed")
+        elif char in "{}":
+            fail("unquoted shell brace expansion is not allowed")
         elif char == "~" and word_start:
             fail("tilde expansion is not allowed")
         else:
@@ -442,6 +445,13 @@ def normalize_event(event, seen_results):
                 and argv[1] == "get"
                 and index == 3
                 and argument in ACCEPTANCE_GET_SELECTORS
+            ):
+                continue
+            if (
+                len(argv) > 4
+                and argv[1:3] == ["raw", "read"]
+                and index == 4
+                and argument in ACCEPTANCE_RAW_SELECTORS
             ):
                 continue
             fail("absolute Office arguments are not allowed")

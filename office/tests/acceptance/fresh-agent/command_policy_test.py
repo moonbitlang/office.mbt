@@ -59,6 +59,10 @@ def main():
     assert argv[0] == "jq"
     assert redirect is None
 
+    argv, redirect = policy.parse_simple_command("printf '%s\\n' '{literal,braces}'")
+    assert argv == ["printf", "%s\\n", "{literal,braces}"]
+    assert redirect is None
+
     unsafe_commands = [
         "/bin/bash -c 'printf ok; \"setsid\" -f /bin/sleep 600'",
         '"setsid" -f sleeper',
@@ -74,6 +78,7 @@ def main():
         "test -f a && rm a",
         "sleep 1 &",
         "printf ok # hide a second command",
+        "/bin/bash -c 'cat {safe,/etc/passwd}'",
         "printf 'ok' >result.json",
         "printf 'ok' 2> result.log",
         "head -c 100000000 /dev/zero",
@@ -149,6 +154,28 @@ def main():
     assert selector_normalized["product_argv"][3] == (
         '/xlsx/sheet[name="Data"]/range[A1:B5]'
     )
+
+    raw_attestation = json.loads(json.dumps(attestation))
+    raw_attestation["files"][0].update(
+        argument_index=2,
+        path="sample.docx",
+    )
+    raw_attestation["inputs"][0].update(
+        argument_index=2,
+        path="sample.docx",
+    )
+    raw_output = policy.ATTESTATION_PREFIX + json.dumps(
+        raw_attestation, sort_keys=True, separators=(",", ":")
+    ) + "\n"
+    raw_normalized = policy.normalize_event(
+        completed_event(
+            "office-native raw read sample.docx /document --json "
+            "--attest-result result.json",
+            raw_output,
+        ),
+        set(),
+    )
+    assert raw_normalized["product_argv"][4] == "/document"
 
     expect_event_rejected(
         policy,
