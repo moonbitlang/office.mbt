@@ -199,12 +199,23 @@ def xlsx_fixture(policy, final):
     }
 
 
-def docx_fixture(policy, final, resolve_reply=False):
+def docx_fixture(policy, final, resolve_reply=False, anchor_paragraph=1):
     template = policy.TEMPLATE_MARKERS["docx"] if final else "{{agent_name}}"
+    anchor_start = '<w:commentRangeStart w:id="0"/>'
+    anchor_end = (
+        '<w:commentRangeEnd w:id="0"/>'
+        '<w:r><w:commentReference w:id="0"/></w:r>'
+    )
+
+    def anchored(paragraph, content):
+        if final and paragraph == anchor_paragraph:
+            return anchor_start + content + anchor_end
+        return content
+
     document = (
         '<w:document xmlns:w="%s" xmlns:r="%s"><w:body>'
-        '<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>%s</w:t></w:r></w:p>'
-        '<w:p><w:r><w:t>%s</w:t></w:r></w:p>'
+        '<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr>%s</w:p>'
+        '<w:p>%s</w:p>'
         '<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/></w:numPr></w:pPr><w:r><w:t>%s</w:t></w:r></w:p>'
         '<w:tbl><w:tr><w:tc><w:p><w:r><w:t>%s</w:t></w:r></w:p></w:tc></w:tr></w:tbl>'
         '<w:p><w:hyperlink r:id="rId1"><w:r><w:t>F1B link</w:t></w:r></w:hyperlink></w:p>'
@@ -212,8 +223,11 @@ def docx_fixture(policy, final, resolve_reply=False):
         % (
             policy.WORD_NS,
             policy.OFFICE_REL_NS,
-            policy.DOCX_HEADING_MARKER,
-            template,
+            anchored(
+                1,
+                '<w:r><w:t>%s</w:t></w:r>' % policy.DOCX_HEADING_MARKER,
+            ),
+            anchored(2, '<w:r><w:t>%s</w:t></w:r>' % template),
             policy.DOCX_LIST_MARKER,
             policy.DOCX_TABLE_MARKER,
         )
@@ -316,7 +330,11 @@ def main(argv):
         annotation_contract,
         "test annotation result",
     )
-    assert annotation_ids == {"root_comment_id": "0", "reply_comment_id": "1"}
+    assert annotation_ids == {
+        "root_comment_id": "0",
+        "reply_comment_id": "1",
+        "root_anchor": "/docx/body/p[1]",
+    }
     assert len(
         policy.validate_docx_refusal_script(
             {
@@ -563,6 +581,16 @@ def main(argv):
             "wrong-target annotation result",
         ),
     )
+    wrong_anchor_result = annotation_result()
+    wrong_anchor_result["data"]["results"][0]["anchor"] = "/docx/body/p[2]"
+    expect_rejected(
+        policy,
+        lambda: policy.validate_annotation_result(
+            wrong_anchor_result,
+            annotation_contract,
+            "wrong-anchor annotation result",
+        ),
+    )
     expect_rejected(policy, lambda: policy.parse_failure_result("false\n"))
     expect_rejected(
         policy,
@@ -680,6 +708,28 @@ def main(argv):
                     "sha256": wrong_thread_digest,
                 },
                 "wrong-target DOCX thread",
+                True,
+                expected_annotation_ids=annotation_ids,
+            ),
+        )
+        wrong_anchor_path = os.path.join(root, "safe", "docx-wrong-anchor.zip")
+        write_fixture(
+            wrong_anchor_path,
+            docx_fixture(policy, True, anchor_paragraph=2),
+        )
+        wrong_anchor_info = os.stat(wrong_anchor_path)
+        with open(wrong_anchor_path, "rb") as stream:
+            wrong_anchor_digest = hashlib.sha256(stream.read()).hexdigest()
+        expect_rejected(
+            policy,
+            lambda: policy.inspect_docx_semantics(
+                root,
+                {
+                    "bytes": wrong_anchor_info.st_size,
+                    "path": "safe/docx-wrong-anchor.zip",
+                    "sha256": wrong_anchor_digest,
+                },
+                "wrong-anchor DOCX thread",
                 True,
                 expected_annotation_ids=annotation_ids,
             ),
