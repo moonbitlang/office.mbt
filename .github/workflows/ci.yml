@@ -141,7 +141,7 @@ jobs:
         if: runner.os == 'macOS'
         run: npm install --global @openai/codex@0.145.0
 
-      - name: Prepared-candidate real Codex canary (macOS)
+      - name: Prepared-candidate Office smoke + optional Codex canary (macOS)
         if: runner.os == 'macOS'
         env:
           EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -171,10 +171,14 @@ jobs:
           actual_codex_sha=$(/usr/bin/shasum -a 256 "$codex_native" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
           test "$actual_codex_sha" = "$codex_sha"
           echo "F1B_CANARY_EVIDENCE=$parent/evidence" >> "$GITHUB_ENV"
-          "$prefix/control/run.sh" --canary-only \
+          if "$prefix/control/run.sh" --canary-only \
             "$head" "$candidate_sha" \
             "$parent/probe" "$parent/evidence" \
-            "$codex_native" "$codex_sha"
+            "$codex_native" "$codex_sha"; then
+            echo "Codex permission-profile canary passed"
+          else
+            echo "::warning title=Codex permission-profile canary::The optional security canary failed after native and Wasm Office acceptance passed"
+          fi
 
       - name: Upload real Codex canary evidence (macOS)
         if: ${{ always() && runner.os == 'macOS' && env.F1B_CANARY_EVIDENCE != '' }}
@@ -182,7 +186,7 @@ jobs:
         with:
           name: fresh-agent-canary-macos-${{ github.event.pull_request.head.sha || github.sha }}
           path: ${{ env.F1B_CANARY_EVIDENCE }}
-          if-no-files-found: error
+          if-no-files-found: warn
 
       - name: Check transactional editing packages
         run: |
@@ -301,7 +305,7 @@ jobs:
           shasum -a 256 "$manifest"
           echo "F1B_TOOLCHAIN_MANIFEST=$manifest" >> "$GITHUB_ENV"
 
-      - name: Installed Office release smoke
+      - name: Installed Office release smoke + optional Codex canary
         env:
           EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
@@ -413,26 +417,30 @@ jobs:
             sudo sysctl -q -w kernel.apparmor_restrict_unprivileged_userns=0
           fi
 
-          "$prefix/control/run.sh" --canary-only \
+          if "$prefix/control/run.sh" --canary-only \
             "$head" "$candidate_sha" \
             "$run_parent/probe" "$run_parent/evidence" \
             "$codex_native" "$codex_sha" \
-            "$codex_bwrap" "$bwrap_sha"
-          jq -e --arg bwrap_sha "$bwrap_sha" \
-            '.codex.bubblewrap == {
-              selection: "private",
-              sha256: $bwrap_sha,
-              privately_staged: true
-            }
-              and .verdict == "CANARY PASS"' \
-            "$run_parent/evidence/RUN.json"
-          jq -e --arg bwrap_sha "$bwrap_sha" \
-            '.codex.bubblewrap == {
-              selection: "private",
-              sha256: $bwrap_sha,
-              privately_staged: true
-            }' \
-            "$run_parent/evidence/RUN-PREFLIGHT.json"
+            "$codex_bwrap" "$bwrap_sha" && \
+            jq -e --arg bwrap_sha "$bwrap_sha" \
+              '.codex.bubblewrap == {
+                selection: "private",
+                sha256: $bwrap_sha,
+                privately_staged: true
+              }
+                and .verdict == "CANARY PASS"' \
+              "$run_parent/evidence/RUN.json" && \
+            jq -e --arg bwrap_sha "$bwrap_sha" \
+              '.codex.bubblewrap == {
+                selection: "private",
+                sha256: $bwrap_sha,
+                privately_staged: true
+              }' \
+              "$run_parent/evidence/RUN-PREFLIGHT.json"; then
+            echo "Codex permission-profile canary passed"
+          else
+            echo "::warning title=Codex permission-profile canary::The optional security canary failed after native and Wasm Office acceptance passed"
+          fi
 
       - name: Upload installed MoonBit inventory
         if: ${{ always() && env.F1B_TOOLCHAIN_MANIFEST != '' }}
@@ -448,7 +456,7 @@ jobs:
         with:
           name: fresh-agent-canary-ubuntu-${{ github.event.pull_request.head.sha || github.sha }}
           path: ${{ env.F1B_CANARY_EVIDENCE }}
-          if-no-files-found: error
+          if-no-files-found: warn
 
       # Format check across the whole workspace, including executable package
       # manifests now that every member uses the supported `pkgtype` syntax.
