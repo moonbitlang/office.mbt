@@ -454,6 +454,7 @@ verify_candidate() {
         "control/command-policy.py",
         "control/opc-policy.py",
         "control/transcript-policy.py",
+        "control/scenario-policy.py",
         "control/evidence-policy.py",
         "control/private.json",
         "control/inventory.sh",
@@ -502,6 +503,7 @@ control/auth-guard.py|0400
 control/command-policy.py|0400
 control/opc-policy.py|0400
 control/transcript-policy.py|0400
+control/scenario-policy.py|0400
 control/evidence-policy.py|0400
 control/private.json|0400
 control/inventory.sh|0500
@@ -718,6 +720,7 @@ EOF
       control/command-policy.py \
       control/opc-policy.py \
       control/transcript-policy.py \
+      control/scenario-policy.py \
       control/evidence-policy.py \
       control/build-lock.json \
       control/dependencies.manifest \
@@ -1927,6 +1930,7 @@ record_workflow_evidence() {
       --arg executable "office-$runtime" \
       --arg format "$format" \
       --arg opposite "$(if [ "$format" = xlsx ]; then printf docx; else printf xlsx; fi)" \
+      --arg result_path "matrix-$runtime-$format-$verb.json" \
       --arg verb "$verb" '
         def parsed_command($executable; $verb):
           select(.product_argv != null) |
@@ -1935,7 +1939,8 @@ record_workflow_evidence() {
             ($tokens | length) >= 3 and
             $tokens[0] == $executable and
             $tokens[1] == $verb and
-            $tokens[-1] == "--json"
+            $tokens[-1] == "--json" and
+            .attestation.result.path == $result_path
           ) |
           select(all($tokens[];
             test("^(?:--help|-h|help|--version|-V)(?:=|$)") | not)) |
@@ -3003,6 +3008,20 @@ done
 /usr/bin/install -m 0600 "$isolation_root/WORKFLOWS.json" \
   "$evidence_root/WORKFLOWS.json"
 require_postprocess_budget "workflow evidence aggregation"
+/usr/bin/install -m 0600 "$isolation_root/raw-commands.json" \
+  "$evidence_root/RAW-COMMANDS.json"
+if ! /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C \
+  /usr/bin/python3 -I "$candidate_root/control/scenario-policy.py" build \
+  "$probe_root" \
+  "$isolation_root/COMMANDS.json" \
+  "$isolation_root/raw-commands.json" \
+  "$isolation_root/WORKFLOWS.json" \
+  "$isolation_root/SCENARIOS.json"; then
+  die "host-derived scenario semantics failed validation"
+fi
+/usr/bin/install -m 0600 "$isolation_root/SCENARIOS.json" \
+  "$evidence_root/SCENARIOS.json"
+require_postprocess_budget "scenario evidence aggregation"
 
 /usr/bin/jq -e '
   keys == ["gaps", "result_path", "targets", "verdict"] and
@@ -3105,7 +3124,9 @@ fi
   --arg raw_transcript_sha256 "$(sha256_file "$evidence_root/codex-transcript.jsonl")" \
   --arg stderr_sha256 "$(sha256_file "$evidence_root/codex-stderr.log")" \
   --arg commands_sha256 "$(sha256_file "$evidence_root/COMMANDS.json")" \
+  --arg raw_commands_sha256 "$(sha256_file "$evidence_root/RAW-COMMANDS.json")" \
   --arg workflows_sha256 "$(sha256_file "$evidence_root/WORKFLOWS.json")" \
+  --arg scenarios_sha256 "$(sha256_file "$evidence_root/SCENARIOS.json")" \
   --arg final_message_sha256 "$(sha256_file "$evidence_root/final-message.json")" \
   '{
     schema: $schema,
@@ -3126,7 +3147,9 @@ fi
       raw_codex_transcript_sha256: $raw_transcript_sha256,
       codex_stderr_sha256: $stderr_sha256,
       commands_sha256: $commands_sha256,
+      raw_commands_sha256: $raw_commands_sha256,
       workflows_sha256: $workflows_sha256,
+      scenarios_sha256: $scenarios_sha256,
       final_message_sha256: $final_message_sha256
     }
   }' > "$isolation_root/RUN.json"

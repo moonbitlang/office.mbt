@@ -9,6 +9,7 @@ import re
 import shutil
 import signal
 import stat
+import subprocess
 import sys
 import tempfile
 import time
@@ -26,8 +27,10 @@ BASELINE_FILES = {
     "CANDIDATE.json",
     "COMMANDS.json",
     "CONFIG.toml",
+    "RAW-COMMANDS.json",
     "RUN-PREFLIGHT.json",
     "RUN.json",
+    "SCENARIOS.json",
     "WORKFLOWS.json",
     "codex-exit-status.txt",
     "codex-stderr.log",
@@ -770,6 +773,57 @@ def validate_run_anchors(evidence_root, candidate_head, candidate_sha256):
             raise PolicyError("%s does not bind the evidence candidate" % name)
 
 
+def validate_scenario_evidence(evidence_root, budget):
+    policy_path = os.path.join(
+        evidence_root,
+        "closure",
+        "candidate",
+        "control",
+        "scenario-policy.py",
+    )
+    require_regular(
+        policy_path,
+        "retained scenario policy",
+        private=True,
+        owned=True,
+        single_link=True,
+    )
+    budget.check_deadline()
+    remaining = budget.deadline - time.monotonic()
+    if remaining <= 0:
+        raise PolicyError("evidence processing exceeded its deadline")
+    command = [
+        sys.executable,
+        "-I",
+        policy_path,
+        "verify",
+        os.path.join(evidence_root, "closure", "probe"),
+        os.path.join(evidence_root, "COMMANDS.json"),
+        os.path.join(evidence_root, "RAW-COMMANDS.json"),
+        os.path.join(evidence_root, "WORKFLOWS.json"),
+        os.path.join(evidence_root, "SCENARIOS.json"),
+    ]
+    try:
+        result = subprocess.run(
+            command,
+            cwd=evidence_root,
+            env={"PATH": "/usr/bin:/bin", "LANG": "C", "LC_ALL": "C"},
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            close_fds=True,
+            timeout=remaining,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise PolicyError("retained scenario verification exceeded its deadline") from error
+    if result.returncode != 0:
+        raise PolicyError(
+            "scenario evidence does not reproduce from the retained probe closure"
+        )
+    budget.check_deadline()
+
+
 def manifest_document(args, budget):
     validate_head(args.candidate_head)
     validate_digest(args.candidate_sha256, "candidate manifest digest")
@@ -783,6 +837,8 @@ def manifest_document(args, budget):
     validate_run_anchors(
         args.evidence_root, args.candidate_head, args.candidate_sha256
     )
+    if args.mode == "baseline":
+        validate_scenario_evidence(args.evidence_root, budget)
     file_count = sum(artifact["kind"] == "file" for artifact in artifacts)
     return {
         "artifact_count": len(artifacts),

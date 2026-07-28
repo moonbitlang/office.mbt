@@ -226,6 +226,7 @@ make_candidate() {
   local command_policy_sha
   local opc_policy_sha
   local transcript_policy_sha
+  local scenario_policy_sha
   local private_sha
   local inventory_sha
   local build_lock_sha
@@ -255,7 +256,7 @@ make_candidate() {
     '  printf '\''{"data":{"schema":"office.capabilities/test","fingerprint":"test:fingerprint"}}\n'\''' \
     '  exit 0' \
     'fi' \
-    'format=""; source_file=""; output_file=""; pending=""' \
+    'format=""; source_file=""; output_file=""; script_file=""; pending=""' \
     'for arg in "$@"; do' \
     '  case "$pending" in' \
     '    format) format=$arg; pending=""; continue ;;' \
@@ -267,6 +268,7 @@ make_candidate() {
     '    xlsx|docx) [ -n "$format" ] || format=$arg ;;' \
     '    *.xlsx) [ -n "$format" ] || format=xlsx; [ -n "$source_file" ] || source_file=$arg ;;' \
     '    *.docx) [ -n "$format" ] || format=docx; [ -n "$source_file" ] || source_file=$arg ;;' \
+    '    *.json) [ -n "$script_file" ] || script_file=$arg ;;' \
     '  esac' \
     'done' \
     '[ -n "$format" ] || exit 71' \
@@ -293,10 +295,21 @@ make_candidate() {
     '  (cd "$package_tmp" && /usr/bin/zip -q "$package_path" "[Content_Types].xml" "_rels/.rels" "$main_part")' \
     '  /bin/rm -rf -- "$package_tmp"' \
     '}' \
+    'if [ "$verb/$format" = batch/docx ] && [ "${source_file##*/}" = refusal-output.docx ]; then' \
+    '  /usr/bin/jq -cn '\''{schema:"office.output/1",success:false,error:{code:"office.docx.batch_parse",message:"unknown op"}}'\''' \
+    '  exit 2' \
+    'fi' \
+    'if [ "$verb/$format" = batch/xlsx ] && [ -n "$output_file" ] && [ -e "$output_file" ]; then' \
+    '  /usr/bin/jq -cn '\''{schema:"office.output/1",success:false,error:{code:"office.transaction.output_exists",message:"output exists"}}'\''' \
+    '  exit 2' \
+    'fi' \
     '[ -n "$source_file" ] || source_file="fixture.$format"' \
     '[ -f "$source_file" ] || make_package "$source_file"' \
     'artifact=$source_file' \
     'case "$verb" in' \
+    '  batch)' \
+    '    if [ -n "$output_file" ]; then make_package "$output_file"; artifact=$output_file; fi' \
+    '    ;;' \
     '  template|replay|annotate)' \
     '    [ -n "$output_file" ] || output_file="produced-$verb.$format"' \
     '    make_package "$output_file"' \
@@ -331,7 +344,7 @@ make_candidate() {
     '  annotate/docx) result_schema=office.docx.annotation-batch/1 ;;' \
     '  *) exit 72 ;;' \
     'esac' \
-    '/usr/bin/jq -cn --arg verb "$verb" --arg format "$format" --arg schema "$result_schema" --arg source "$source_file" --arg output "$artifact" --arg produced "$output_file" '\''if $verb == "dump" then {schema:$schema,format:$format,source:{file:$source},ops:[{}]} else {schema:"office.output/1",success:true,data:({schema:$schema,format:$format} + if $verb == "create" or $verb == "batch" then {transaction:{format:$format,output:$output,committed:true,dry_run:false,changed:true}} elif $verb == "identify" then {file:$source} elif $verb == "outline" or $verb == "get" then {file:$source,path:"/"} elif $verb == "text" or $verb == "query" then {file:$source,returned:1} elif $verb == "validate" or $verb == "issues" then {file:$source,valid:true,error_count:0} elif $verb == "preview" then {file:$source,output:$produced,bytes_written:1} elif $verb == "template" then {output:$output,replaced:1,transaction:{committed:true}} elif $verb == "replay" then {output:$output,bytes_written:1,ops_applied:1} elif $verb == "raw" and $schema == "office.raw.inventory/1" then {part_count:1} elif $verb == "raw" and $format == "docx" then {content:"<document/>"} elif $verb == "annotate" then {output:$output,ops_applied:1,transaction:{committed:true}} else {} end)} end'\''' \
+    '/usr/bin/jq -cn --arg verb "$verb" --arg format "$format" --arg schema "$result_schema" --arg source "$source_file" --arg output "$artifact" --arg produced "$output_file" '\''if $verb == "dump" then {schema:$schema,format:$format,source:{file:$source,bytes:1,sha256:("a"*64)},replay:{batch_schema:(if $format == "xlsx" then "xlsx.batch/2" else "docx.batch/2" end),create:{},limits:{}},ops:[{op:"fixture",params:{format:$format}}],assets:{},residual:[],warnings:[],stats:{ops:1,assets:0,residual:0,warnings:0}} else {schema:"office.output/1",success:true,data:({schema:$schema,format:$format} + if $verb == "create" or $verb == "batch" then {transaction:{format:$format,output:$output,committed:true,dry_run:false,changed:true}} elif $verb == "identify" then {file:$source} elif $verb == "outline" and $format == "docx" then {file:$source,path:"/",counts:{comments:2}} elif $verb == "outline" or $verb == "get" then {file:$source,path:"/"} elif $verb == "text" then {file:$source,returned:1,entries:[{text:(if $format == "xlsx" then "F1B-XLSX-TEMPLATE-V1" else "F1B-DOCX-TEMPLATE-V1" end)}]} elif $verb == "query" then {file:$source,returned:1,matches:[{preview:(if $format == "xlsx" then "F1B-XLSX-TEMPLATE-V1" else "F1B-DOCX-TEMPLATE-V1" end)}]} elif $verb == "validate" or $verb == "issues" then {file:$source,valid:true,error_count:0} elif $verb == "preview" then {file:$source,output:$produced,bytes_written:50,charts_rendered:(if $format == "xlsx" then 1 else 0 end),charts_placeholder:0,images_embedded:0,truncation:{max_rows:200,max_cols:50,truncated_sheets:0,images_omitted:0}} elif $verb == "template" then {output:$output,replaced:1,transaction:{committed:true}} elif $verb == "replay" then {output:$output,bytes_written:1,ops_applied:1} elif $verb == "raw" and $schema == "office.raw.inventory/1" then {part_count:1} elif $verb == "raw" and $format == "docx" then {content:"<document/>"} elif $verb == "annotate" then {output:$output,ops_applied:3,results:[{op:"comment_add"},{op:"comment_reply"},{op:"comment_resolve",done:true}],labels:[{label:"root",comment_id:"0"}],transaction:{committed:true}} else {} end)} end'\''' \
     > "$install_root/bin/office-native"
   /usr/bin/install -m 0500 "$script_dir/office-wasm" \
     "$install_root/bin/office-wasm"
@@ -357,6 +370,8 @@ make_candidate() {
     "$install_root/control/opc-policy.py"
   /usr/bin/install -m 0400 "$script_dir/transcript_policy.py" \
     "$install_root/control/transcript-policy.py"
+  /usr/bin/install -m 0400 "$script_dir/scenario_policy.py" \
+    "$install_root/control/scenario-policy.py"
   /usr/bin/install -m 0400 "$script_dir/evidence_policy.py" \
     "$install_root/control/evidence-policy.py"
   /usr/bin/install -m 0400 "$script_dir/build_host_discovery.py" \
@@ -585,6 +600,7 @@ make_candidate() {
   command_policy_sha="$(sha256_file "$install_root/control/command-policy.py")"
   opc_policy_sha="$(sha256_file "$install_root/control/opc-policy.py")"
   transcript_policy_sha="$(sha256_file "$install_root/control/transcript-policy.py")"
+  scenario_policy_sha="$(sha256_file "$install_root/control/scenario-policy.py")"
   evidence_policy_sha="$(sha256_file "$install_root/control/evidence-policy.py")"
   build_host_discovery_policy_sha="$(
     sha256_file "$install_root/control/build-host-discovery.py"
@@ -618,6 +634,7 @@ make_candidate() {
     --arg command_policy_sha "$command_policy_sha" \
     --arg opc_policy_sha "$opc_policy_sha" \
     --arg transcript_policy_sha "$transcript_policy_sha" \
+    --arg scenario_policy_sha "$scenario_policy_sha" \
     --arg evidence_policy_sha "$evidence_policy_sha" \
     --arg private_sha "$private_sha" \
     --arg inventory_sha "$inventory_sha" \
@@ -655,6 +672,7 @@ make_candidate() {
         {path: "control/command-policy.py", kind: "file", mode: "0400", sha256: $command_policy_sha},
         {path: "control/opc-policy.py", kind: "file", mode: "0400", sha256: $opc_policy_sha},
         {path: "control/transcript-policy.py", kind: "file", mode: "0400", sha256: $transcript_policy_sha},
+        {path: "control/scenario-policy.py", kind: "file", mode: "0400", sha256: $scenario_policy_sha},
         {path: "control/evidence-policy.py", kind: "file", mode: "0400", sha256: $evidence_policy_sha},
         {path: "control/private.json", kind: "file", mode: "0400", sha256: $private_sha},
         {path: "control/inventory.sh", kind: "file", mode: "0500", sha256: $inventory_sha},
@@ -899,8 +917,18 @@ chmod 0600 "$codex_bin_dir/mode"
     '  duplicate-result-path|aliased-result-parent|reused-event-id) stop_after=native/xlsx/batch ;;' \
     '  input-redirection|cross-format) stop_after=native/xlsx/validate ;;' \
     'esac' \
-    '/usr/bin/printf "{}\\n" > fixture.json' \
-    'chmod 0600 fixture.json' \
+    'for runtime in native wasm; do' \
+    '  /bin/mkdir -p "$runtime/xlsx" "$runtime/docx"' \
+    '  chmod 0700 "$runtime" "$runtime/xlsx" "$runtime/docx"' \
+    '  /usr/bin/printf "%s\\n" '\''{"schema":"xlsx.batch/2","ops":[{"op":"set","params":{"sheet":"Data","cell":"A1","value":"F1B-XLSX-REPRESENTATIVE-V1"}},{"op":"set","params":{"sheet":"Data","cell":"B2","value":30}},{"op":"set","params":{"sheet":"Data","cell":"B3","value":70}},{"op":"formula","params":{"sheet":"Data","cell":"B4","formula":"=SUM(B2:B3)"}},{"op":"set","params":{"sheet":"Data","cell":"A5","value":"{{agent_name}}"}},{"op":"chart","params":{"sheet":"Data","anchor":"D2","type":"col","categories":"A2:A3","values":"B2:B3","name":"F1B","title":"Representative"}}]}'\'' > "$runtime/xlsx/batch.json"' \
+    '  /usr/bin/printf "%s\\n" '\''{"schema":"office.template.data/1","values":{"agent_name":"F1B-XLSX-TEMPLATE-V1"}}'\'' > "$runtime/xlsx/template.json"' \
+    '  /usr/bin/printf "%s\\n" '\''{"schema":"xlsx.batch/2","ops":[{"op":"set","params":{"sheet":"Data","cell":"A9","value":"refusal"}}]}'\'' > "$runtime/xlsx/refusal.json"' \
+    '  /usr/bin/printf "%s\\n" '\''{"schema":"docx.batch/2","ops":[{"op":"paragraph","params":{"text":"F1B-DOCX-HEADING-V1","style":"Heading1"}},{"op":"paragraph","params":{"text":"{{agent_name}}"}},{"op":"paragraph","params":{"text":"F1B-DOCX-LIST-V1","list":{"ordered":true}}},{"op":"table","params":{"header_rows":1,"rows":[[{"text":"kind"},{"text":"value"}],[{"text":"marker"},{"text":"F1B-DOCX-TABLE-V1"}]]}},{"op":"paragraph","params":{"runs":[{"link":{"href":"https://example.invalid/f1b","text":"F1B link"}}]}}]}'\'' > "$runtime/docx/batch.json"' \
+    '  /usr/bin/printf "%s\\n" '\''{"schema":"office.template.data/1","values":{"agent_name":"F1B-DOCX-TEMPLATE-V1"}}'\'' > "$runtime/docx/template.json"' \
+    '  /usr/bin/printf "%s\\n" '\''{"schema":"docx.annotation-batch/1","ops":[{"op":"comment_add","anchor":{"at":"/docx/body/p[2]"},"author":"Reviewer","body":["F1B-DOCX-COMMENT-V1"],"label":"root"},{"op":"comment_reply","parent":{"label":"root"},"author":"Author","body":["F1B-DOCX-REPLY-V1"],"label":"answer"},{"op":"comment_resolve","target":{"label":"root"}}]}'\'' > "$runtime/docx/annotation.json"' \
+    '  /usr/bin/printf "%s\\n" '\''{"schema":"docx.batch/2","ops":[{"op":"unknown","params":{}}]}'\'' > "$runtime/docx/refusal.json"' \
+    '  chmod 0600 "$runtime/xlsx/batch.json" "$runtime/xlsx/template.json" "$runtime/xlsx/refusal.json" "$runtime/docx/batch.json" "$runtime/docx/template.json" "$runtime/docx/annotation.json" "$runtime/docx/refusal.json"' \
+    'done' \
     'if [ "$mode" != "no-office" ]; then' \
     '  index=0' \
     '  for runtime in native wasm; do' \
@@ -913,25 +941,38 @@ chmod 0600 "$codex_bin_dir/mode"
     '  if [ "$stop_after" != all/help ]; then' \
     '    for runtime in native wasm; do' \
     '    for format in xlsx docx; do' \
-    '      if [ "$format" = "xlsx" ]; then verbs="create batch identify outline get text query validate issues preview template dump replay raw"; else verbs="batch identify outline get text query validate issues preview template dump replay raw annotate"; fi' \
+    '      directory="$runtime/$format"' \
+    '      if [ "$format" = "xlsx" ]; then' \
+    '        created="$directory/created.xlsx"' \
+    '        batched="$directory/batched.xlsx"' \
+    '        final="$directory/templated.xlsx"' \
+    '        replayed="$directory/replayed.xlsx"' \
+    '        verbs="create batch template identify outline get text query validate issues preview dump replay raw"' \
+    '      else' \
+    '        authored="$directory/authored.docx"' \
+    '        templated="$directory/templated.docx"' \
+    '        final="$directory/annotated.docx"' \
+    '        replayed="$directory/replayed.docx"' \
+    '        verbs="batch template annotate identify outline get text query validate issues preview dump replay raw"' \
+    '      fi' \
     '      for verb in $verbs; do' \
     '        if [ "$mode" = "missing-create" ] && [ "$runtime/$format/$verb" = "native/xlsx/create" ]; then continue; fi' \
     '        index=$((index + 1))' \
-    '        package="$runtime-$format-base.$format"' \
-    '        produced="$runtime-$format-$verb.$format"' \
-    '        preview="$runtime-$format-preview.html"' \
+    '        package="$final"' \
     '        case "$verb/$format" in' \
-    '          create/xlsx) run_args="xlsx $package" ;;' \
-    '          batch/docx) run_args="--format docx $package fixture.json" ;;' \
-    '          batch/xlsx) run_args="$package fixture.json" ;;' \
-    '          preview/*) run_args="$package --output $preview" ;;' \
-    '          template/*|annotate/*) run_args="$package fixture.json --out $produced" ;;' \
-    '          replay/*) run_args="fixture.json --output $produced" ;;' \
-    '          raw/xlsx) run_args="list $package" ;;' \
-    '          raw/docx) run_args="read $package part:/document" ;;' \
-    '          *) run_args="$package" ;;' \
+    '          create/xlsx) package="$created"; run_args="xlsx $created" ;;' \
+    '          batch/xlsx) package="$batched"; run_args="$created $directory/batch.json --out $batched" ;;' \
+    '          template/xlsx) package="$final"; run_args="$batched $directory/template.json --out $final" ;;' \
+    '          batch/docx) package="$authored"; run_args="--format docx $authored $directory/batch.json" ;;' \
+    '          template/docx) package="$templated"; run_args="$authored $directory/template.json --out $templated" ;;' \
+    '          annotate/docx) package="$final"; run_args="$templated $directory/annotation.json --out $final" ;;' \
+    '          preview/*) run_args="$final --output $directory/preview-1.html" ;;' \
+    '          replay/*) package="$replayed"; run_args="matrix-$runtime-$format-dump.json --output $replayed" ;;' \
+    '          raw/xlsx) run_args="list $final" ;;' \
+    '          raw/docx) run_args="read $final part:/document" ;;' \
+    '          *) run_args="$final" ;;' \
     '        esac' \
-    '        result="$runtime-$format-$verb-$index.json"' \
+    '        result="matrix-$runtime-$format-$verb.json"' \
     '        if [ "$mode" = "aliased-result-parent" ] && [ "$runtime/$format/$verb" = "native/xlsx/create" ]; then /bin/mkdir -m 0700 results; /bin/ln -s results aliases; result=results/create.json; fi' \
     '        if [ "$mode" = "aliased-result-parent" ] && [ "$runtime/$format/$verb" = "native/xlsx/batch" ]; then result=aliases/batch.json; fi' \
     '        if [ "$mode" = "duplicate-result-path" ] && { [ "$runtime/$format/$verb" = "native/xlsx/create" ] || [ "$runtime/$format/$verb" = "native/xlsx/batch" ]; }; then result=duplicate-result.json; fi' \
@@ -977,6 +1018,26 @@ chmod 0600 "$codex_bin_dir/mode"
     '        fi' \
     '        emit_completed "$event_id" "$cmd" "$status" "$body"' \
     '        if [ "$stop_after" = "$runtime/$format/$verb" ]; then break 3; fi' \
+    '        supplemental_verb=""' \
+    '        if [ -z "$stop_after" ] && [ "$mode" != "shallow-scenario" ]; then' \
+    '          case "$verb" in' \
+    '            preview) supplemental_verb=preview; supplemental_args="$final --output $directory/preview-2.html"; supplemental_result="scenario-$runtime-$format-preview-2.json" ;;' \
+    '            replay) supplemental_verb=dump; supplemental_args="$replayed"; supplemental_result="scenario-$runtime-$format-dump-2.json" ;;' \
+    '          esac' \
+    '        fi' \
+    '        if [ -n "$supplemental_verb" ]; then' \
+    '          index=$((index + 1))' \
+    '          supplemental_cmd="office-$runtime $supplemental_verb $supplemental_args --json --attest-result $supplemental_result"' \
+    '          emit_started "cmd-$index" "$supplemental_cmd"' \
+    '          set +e' \
+    '          "office-$runtime" "$supplemental_verb" $supplemental_args --json --attest-result "$supplemental_result" > "$supplemental_result.attestation" 2> "$supplemental_result.stderr"' \
+    '          supplemental_status=$?' \
+    '          set -e' \
+    '          supplemental_body=$(/bin/cat "$supplemental_result.attestation"; /bin/cat "$supplemental_result.stderr"; /usr/bin/printf _)' \
+    '          supplemental_body=${supplemental_body%_}' \
+    '          /bin/rm -f "$supplemental_result.attestation" "$supplemental_result.stderr"' \
+    '          emit_completed "cmd-$index" "$supplemental_cmd" "$supplemental_status" "$supplemental_body"' \
+    '        fi' \
     '        if [ "$mode" != "spoof-office" ] && [ "$runtime/$format/$verb" = "native/docx/raw" ]; then' \
     '          index=$((index + 1))' \
     '          extra_result=native-docx-raw-inventory-extra.json' \
@@ -991,11 +1052,53 @@ chmod 0600 "$codex_bin_dir/mode"
     '          emit_completed "cmd-$index" "$extra_cmd" "$extra_status" "$extra_body"' \
     '        fi' \
     '      done' \
+    '      if [ -z "$stop_after" ] && [ "$mode" != "shallow-scenario" ]; then' \
+    '        if [ "$format" = "xlsx" ]; then' \
+    '          refusal_target="$directory/refusal-target.xlsx"' \
+    '          refusal_before="$directory/refusal-before.xlsx"' \
+    '          index=$((index + 1)); refusal_cmd="cp $final $refusal_target"' \
+    '          emit_started "cmd-$index" "$refusal_cmd"' \
+    '          set +e; /bin/cp "$final" "$refusal_target"; refusal_status=$?; set -e' \
+    '          emit_completed "cmd-$index" "$refusal_cmd" "$refusal_status" ""' \
+    '          index=$((index + 1)); refusal_cmd="cp $refusal_target $refusal_before"' \
+    '          emit_started "cmd-$index" "$refusal_cmd"' \
+    '          set +e; /bin/cp "$refusal_target" "$refusal_before"; refusal_status=$?; set -e' \
+    '          emit_completed "cmd-$index" "$refusal_cmd" "$refusal_status" ""' \
+    '          index=$((index + 1)); refusal_cmd="office-$runtime batch $final $directory/refusal.json --out $refusal_target --json"' \
+    '          emit_started "cmd-$index" "$refusal_cmd"' \
+    '          set +e' \
+    '          refusal_body=$("office-$runtime" batch "$final" "$directory/refusal.json" --out "$refusal_target" --json 2>&1)' \
+    '          refusal_status=$?' \
+    '          set -e' \
+    '          emit_completed "cmd-$index" "$refusal_cmd" "$refusal_status" "$refusal_body"' \
+    '          index=$((index + 1)); refusal_cmd="cmp $refusal_before $refusal_target"' \
+    '          emit_started "cmd-$index" "$refusal_cmd"' \
+    '          set +e; /usr/bin/cmp "$refusal_before" "$refusal_target"; refusal_status=$?; set -e' \
+    '          emit_completed "cmd-$index" "$refusal_cmd" "$refusal_status" ""' \
+    '        else' \
+    '          refusal_output="$directory/refusal-output.docx"' \
+    '          refusal_cmd="test ! -e $refusal_output"' \
+    '          index=$((index + 1)); emit_started "cmd-$index" "$refusal_cmd"' \
+    '          set +e; /bin/test ! -e "$refusal_output"; refusal_status=$?; set -e' \
+    '          emit_completed "cmd-$index" "$refusal_cmd" "$refusal_status" ""' \
+    '          index=$((index + 1)); refusal_cmd="office-$runtime batch --format docx $refusal_output $directory/refusal.json --json"' \
+    '          emit_started "cmd-$index" "$refusal_cmd"' \
+    '          set +e' \
+    '          refusal_body=$("office-$runtime" batch --format docx "$refusal_output" "$directory/refusal.json" --json 2>&1)' \
+    '          refusal_status=$?' \
+    '          set -e' \
+    '          emit_completed "cmd-$index" "$refusal_cmd" "$refusal_status" "$refusal_body"' \
+    '          index=$((index + 1)); refusal_cmd="test ! -e $refusal_output"' \
+    '          emit_started "cmd-$index" "$refusal_cmd"' \
+    '          set +e; /bin/test ! -e "$refusal_output"; refusal_status=$?; set -e' \
+    '          emit_completed "cmd-$index" "$refusal_cmd" "$refusal_status" ""' \
+    '        fi' \
+    '      fi' \
     '    done' \
     '  done' \
     '  fi' \
     'fi' \
-    'if [ "$mode" = "wrong-result-schema" ]; then printf '\''{"schema":"office.output/1","success":true,"data":{"schema":"office.identify/1","format":"xlsx","file":"native-xlsx-base.xlsx"}}\n'\'' > native-xlsx-create-3.json; fi' \
+    'if [ "$mode" = "wrong-result-schema" ]; then printf '\''{"schema":"office.output/1","success":true,"data":{"schema":"office.identify/1","format":"xlsx","file":"native/xlsx/created.xlsx"}}\n'\'' > matrix-native-xlsx-create.json; fi' \
     'if [ "$mode" = "exit19" ]; then exit 19; fi' \
     'verdict="BASELINE PASS"; outcome="PASS"; gaps="[]"' \
     'if [ "$mode" = "fail" ]; then verdict="BASELINE FAIL"; outcome="FAIL"; gaps='\''[{"severity":"P1","summary":"fake failure"}]'\''; fi' \
@@ -1042,7 +1145,9 @@ evidence="$case_root/evidence"
   .integrity.privately_staged_candidate == true and
   .integrity.privately_staged_codex == true and
   .integrity.bubblewrap == null and
-  (.evidence.workflows_sha256 | test("^[0-9a-f]{64}$"))
+  (.evidence.raw_commands_sha256 | test("^[0-9a-f]{64}$")) and
+  (.evidence.workflows_sha256 | test("^[0-9a-f]{64}$")) and
+  (.evidence.scenarios_sha256 | test("^[0-9a-f]{64}$"))
 ' "$evidence/RUN.json" >/dev/null ||
   fail "final run manifest"
 /usr/bin/jq -e '
@@ -1084,7 +1189,9 @@ evidence="$case_root/evidence"
   .total_bytes > 0 and
   (.artifacts | map(.path) | index("codex-stderr.log")) != null and
   (.artifacts | map(.path) | index("COMMANDS.json")) != null and
+  (.artifacts | map(.path) | index("RAW-COMMANDS.json")) != null and
   (.artifacts | map(.path) | index("WORKFLOWS.json")) != null and
+  (.artifacts | map(.path) | index("SCENARIOS.json")) != null and
   (.artifacts | map(.path) | index("closure/candidate/control/build-host.json")) != null and
   (.artifacts | map(.path) | index("closure/probe/probe-result.md")) != null and
   (.artifacts | map(.path) |
@@ -1105,7 +1212,7 @@ evidence="$case_root/evidence"
     --manifest "$evidence/EVIDENCE.json" \
     --timeout-seconds 30 ||
   fail "independent evidence manifest verification"
-[ "$(/usr/bin/jq 'length' "$evidence/COMMANDS.json")" -eq 61 ] ||
+[ "$(/usr/bin/jq 'length' "$evidence/COMMANDS.json")" -eq 83 ] ||
   fail "host-derived command inventory"
 /usr/bin/jq -e '
   .schema == "office.fresh-agent.workflows/4" and
@@ -1135,9 +1242,28 @@ evidence="$case_root/evidence"
   ))
 ' "$evidence/WORKFLOWS.json" >/dev/null ||
   fail "host-derived workflow matrix"
+/usr/bin/jq -e '
+  .schema == "office.fresh-agent.scenarios/1" and
+  .required_count == 4 and
+  (.scenarios | length) == 4 and
+  (.cross_runtime | keys) == ["docx", "xlsx"] and
+  (.scenarios | all(
+    (.runtime == "native" or .runtime == "wasm") and
+    (.format == "xlsx" or .format == "docx") and
+    (.final_artifact.sha256 | test("^[0-9a-f]{64}$")) and
+    (.lineage | length) == 15 and
+    (.preview.sha256 | test("^[0-9a-f]{64}$")) and
+    (.preview.semantic_sha256 | test("^[0-9a-f]{64}$")) and
+    (.dump_fixpoint_sha256 | test("^[0-9a-f]{64}$")) and
+    (.refusal.error_code | startswith("office."))
+  )) and
+  ([.scenarios[] | .runtime + "/" + .format] | unique) ==
+    ["native/docx", "native/xlsx", "wasm/docx", "wasm/xlsx"]
+' "$evidence/SCENARIOS.json" >/dev/null ||
+  fail "host-derived semantic scenarios"
 [ ! -e "$probe/probe-transcript.md" ] ||
   fail "agent unexpectedly authored the command transcript"
-[ "$(/usr/bin/grep -c '^## Event ' "$evidence/probe-transcript.md")" -eq 61 ] ||
+[ "$(/usr/bin/grep -c '^## Event ' "$evidence/probe-transcript.md")" -eq 83 ] ||
   fail "host transcript event count"
 ledger_sha="$(sha256_file "$evidence/COMMANDS.json")"
 raw_sha="$(sha256_file "$evidence/codex-transcript.jsonl")"
@@ -1597,6 +1723,14 @@ expect_failure spoof-office 1 'exact isolated help result for native' \
   "$case_root/spoof-office-probe" "$case_root/spoof-office-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
+printf 'shallow-scenario\n' > "$codex_bin_dir/mode"
+expect_failure shallow-scenario 1 \
+  'host-derived scenario semantics failed validation' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/shallow-scenario-probe" \
+  "$case_root/shallow-scenario-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
 printf 'missing-create\n' > "$codex_bin_dir/mode"
 expect_failure missing-create 1 'exactly one canonical attested workflow: native/xlsx/create' \
   "$runner" "$head" "$candidate_sha" \
@@ -1643,7 +1777,7 @@ expect_failure cross-format 1 \
 
 printf 'duplicate-result-path\n' > "$codex_bin_dir/mode"
 expect_failure duplicate-result-path 1 \
-  'exactly one canonical attested workflow: native/xlsx/batch' \
+  'exactly one canonical attested workflow: native/xlsx/create' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/duplicate-result-probe" \
   "$case_root/duplicate-result-evidence" \
@@ -1651,7 +1785,7 @@ expect_failure duplicate-result-path 1 \
 
 printf 'aliased-result-parent\n' > "$codex_bin_dir/mode"
 expect_failure aliased-result-parent 1 \
-  'exactly one canonical attested workflow: native/xlsx/batch' \
+  'exactly one canonical attested workflow: native/xlsx/create' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/aliased-result-probe" \
   "$case_root/aliased-result-evidence" \

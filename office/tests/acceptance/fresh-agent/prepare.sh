@@ -989,6 +989,9 @@ install -m 0400 \
   "$snapshot/office/tests/acceptance/fresh-agent/transcript_policy.py" \
   "$stage/control/transcript-policy.py"
 install -m 0400 \
+  "$snapshot/office/tests/acceptance/fresh-agent/scenario_policy.py" \
+  "$stage/control/scenario-policy.py"
+install -m 0400 \
   "$snapshot/office/tests/acceptance/fresh-agent/evidence_policy.py" \
   "$stage/control/evidence-policy.py"
 install -m 0500 "$snapshot_inventory" "$stage/control/inventory.sh"
@@ -1031,6 +1034,7 @@ auth_guard_sha256="$(sha256_file "$stage/control/auth-guard.py")"
 command_policy_sha256="$(sha256_file "$stage/control/command-policy.py")"
 opc_policy_sha256="$(sha256_file "$stage/control/opc-policy.py")"
 transcript_policy_sha256="$(sha256_file "$stage/control/transcript-policy.py")"
+scenario_policy_sha256="$(sha256_file "$stage/control/scenario-policy.py")"
 evidence_policy_sha256="$(sha256_file "$stage/control/evidence-policy.py")"
 private_sha256="$(sha256_file "$stage/control/private.json")"
 inventory_sha256="$(sha256_file "$stage/control/inventory.sh")"
@@ -1081,6 +1085,7 @@ jq -n \
   --arg command_policy_sha256 "$command_policy_sha256" \
   --arg opc_policy_sha256 "$opc_policy_sha256" \
   --arg transcript_policy_sha256 "$transcript_policy_sha256" \
+  --arg scenario_policy_sha256 "$scenario_policy_sha256" \
   --arg evidence_policy_sha256 "$evidence_policy_sha256" \
   --arg private_sha256 "$private_sha256" \
   --arg inventory_sha256 "$inventory_sha256" \
@@ -1118,6 +1123,7 @@ jq -n \
       {path: "control/command-policy.py", kind: "file", mode: "0400", sha256: $command_policy_sha256},
       {path: "control/opc-policy.py", kind: "file", mode: "0400", sha256: $opc_policy_sha256},
       {path: "control/transcript-policy.py", kind: "file", mode: "0400", sha256: $transcript_policy_sha256},
+      {path: "control/scenario-policy.py", kind: "file", mode: "0400", sha256: $scenario_policy_sha256},
       {path: "control/evidence-policy.py", kind: "file", mode: "0400", sha256: $evidence_policy_sha256},
       {path: "control/private.json", kind: "file", mode: "0400", sha256: $private_sha256},
       {path: "control/inventory.sh", kind: "file", mode: "0500", sha256: $inventory_sha256},

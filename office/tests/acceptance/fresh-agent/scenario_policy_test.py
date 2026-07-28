@@ -229,6 +229,22 @@ def main(argv):
             policy.MAX_JSON_BYTES,
         )
         assert record["bytes"] == len(payload)
+        result_record = dict(record, schema="office.test/1")
+        assert policy.read_record(
+            root,
+            result_record,
+            "workflow result",
+            parse_json=True,
+        ) == {"value": 1}
+        expect_rejected(
+            policy,
+            lambda: policy.read_record(
+                root,
+                dict(result_record, unexpected=True),
+                "over-specified result",
+                parse_json=True,
+            ),
+        )
         os.symlink("value.json", os.path.join(root, "safe", "alias.json"))
         expect_rejected(
             policy,

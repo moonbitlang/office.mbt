@@ -38,7 +38,9 @@ Rules:
   `raw` successfully. For both DOCX runtimes, run `batch`, `identify`,
   `outline`, `get`, `text`, `query`, `validate`, `issues`, `preview`,
   `template`, `dump`, `replay`, `raw`, and `annotate` successfully. Each must
-  have exactly one successful host-attested command. It must be standalone: the
+  have exactly one successful canonical matrix command. Its wrapper result path
+  must be `matrix-RUNTIME-FORMAT-OPERATION.json`, substituting `native` or
+  `wasm` and `xlsx` or `docx`; help remains un-attested. It must be standalone: the
   Office executable must be the first token and the operation the second;
   product arguments must end with `--json`; and the wrapper-only pair
   `--attest-result <unique-result.json>` must end the command. Do not redirect
@@ -48,9 +50,11 @@ Rules:
   separate shell token. Each format-bearing invocation must name at least one package of the
   required format and no package of the other format. Do not use help/version
   modes or shell metasyntax in those attested invocations. If you need another
-  invocation of the same operation for exploration or determinism comparison,
-  run it without `--attest-result`; reserve that option for exactly one final
-  evidence event per runtime/format/operation tuple. The host validates the exact operation-specific result schema,
+  invocation of the same operation for exploration, run it without
+  `--attest-result`. The two supplemental scenario events described below are
+  the only exceptions: they use `scenario-RUNTIME-FORMAT-preview-2.json` and
+  `scenario-RUNTIME-FORMAT-dump-2.json`, so the host can distinguish them from
+  the canonical matrix. The host validates the exact operation-specific result schema,
   format, successful mutation/read postconditions, and resulting Office ZIP or
   preview artifact; it also rejects reused command-event IDs or result paths.
 - Do not hide failed attempts. A typed diagnostic that lets you correct an
@@ -59,6 +63,56 @@ Rules:
 - Every claimed observation or diagnostic in `probe-result.md` must be backed
   by a retained command event. Clearly label an inference as an inference; do
   not present an unrecorded utility or sandbox failure as observed evidence.
+
+Host-derived scenario contract:
+
+- Create private `native/xlsx`, `native/docx`, `wasm/xlsx`, and `wasm/docx`
+  directories. Keep every successful mutation stage at a distinct path so its
+  completion hash remains immutable. The XLSX lineage is create -> batch ->
+  template; the DOCX lineage is batch -> template -> annotate. Every canonical
+  read, validation, preview, dump, and raw event must consume the final package
+  of its lineage. Replay must consume the canonical dump result.
+- Use semantically identical scripts on native and Wasm. The preferred
+  `xlsx.batch/2` script must include the literal text
+  `F1B-XLSX-REPRESENTATIVE-V1`, a numeric cell, a formula, a supported chart,
+  and a literal `{{agent_name}}` cell. The `docx.batch/2` script must include a
+  `Heading1` paragraph `F1B-DOCX-HEADING-V1`, a literal `{{agent_name}}`
+  paragraph, a list item `F1B-DOCX-LIST-V1`, a table containing
+  `F1B-DOCX-TABLE-V1`, and a hyperlink to
+  `https://example.invalid/f1b`.
+- Template data must use `office.template.data/1`, key `agent_name`, and value
+  `F1B-XLSX-TEMPLATE-V1` for XLSX or `F1B-DOCX-TEMPLATE-V1` for DOCX. The
+  canonical `text` result must read that exact value back.
+- The DOCX annotation script must use `docx.annotation-batch/1` and, in order,
+  add a comment whose body contains `F1B-DOCX-COMMENT-V1`, reply with a body
+  containing `F1B-DOCX-REPLY-V1`, and resolve the added root comment. The
+  canonical annotation result must report all three operations, and the final
+  canonical outline must report at least two comments.
+- Write the canonical preview to `RUNTIME/FORMAT/preview-1.html`. Run a second
+  attested preview of the same final package to
+  `RUNTIME/FORMAT/preview-2.html`, using result path
+  `scenario-RUNTIME-FORMAT-preview-2.json`. The host compares both final bytes
+  and both reports.
+- After canonical dump -> canonical replay, run an attested dump of the replayed
+  package using `scenario-RUNTIME-FORMAT-dump-2.json`. The host removes only
+  source identity and requires replay metadata, ordered ops, and assets to be
+  identical. It also compares those projections and core read results across
+  native and Wasm.
+- For each XLSX runtime, copy the final package to
+  `RUNTIME/xlsx/refusal-target.xlsx`, then copy that target to
+  `RUNTIME/xlsx/refusal-before.xlsx`. Create a valid bounded XLSX batch script
+  at `RUNTIME/xlsx/refusal.json`. Run, without `--attest-result`, exactly
+  `office-RUNTIME batch FINAL RUNTIME/xlsx/refusal.json --out
+  RUNTIME/xlsx/refusal-target.xlsx --json`; it must return the typed
+  `office.transaction.output_exists` error. Then run exactly
+  `cmp RUNTIME/xlsx/refusal-before.xlsx RUNTIME/xlsx/refusal-target.xlsx`.
+- For each DOCX runtime, create an invalid `docx.batch/2` script at
+  `RUNTIME/docx/refusal.json`. Run `test ! -e
+  RUNTIME/docx/refusal-output.docx`, then, without `--attest-result`, exactly
+  `office-RUNTIME batch --format docx RUNTIME/docx/refusal-output.docx
+  RUNTIME/docx/refusal.json --json`, then repeat the absence test. It must emit
+  a typed `office.output/1` failure and leave no transaction staging artifact.
+  Do not hide or redirect either negative command's JSON diagnostic.
 
 Exercise these outcomes:
 
