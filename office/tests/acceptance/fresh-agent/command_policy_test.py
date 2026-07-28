@@ -137,6 +137,30 @@ def main():
     assert normalized["attestation"] == attestation
     assert normalized["stdout_path"] is None
 
+    selector_normalized = policy.normalize_event(
+        completed_event(
+            "office-native get sample.xlsx "
+            "'/xlsx/sheet[name=\"Data\"]/range[A1:B5]' --json "
+            "--attest-result result.json",
+            output,
+        ),
+        set(),
+    )
+    assert selector_normalized["product_argv"][3] == (
+        '/xlsx/sheet[name="Data"]/range[A1:B5]'
+    )
+
+    expect_event_rejected(
+        policy,
+        {
+            "aggregated_output": "typed refusal\n",
+            "command": "office-native get sample.xlsx /tmp/private --json",
+            "exit_code": 2,
+            "id": "absolute-get",
+            "status": "failed",
+        },
+    )
+
     wrong_role = json.loads(json.dumps(attestation))
     wrong_role["files"][0]["role"] = "package-output"
     wrong_role_output = policy.ATTESTATION_PREFIX + json.dumps(

@@ -294,11 +294,15 @@ make_candidate() {
     '    printf "%s\n" '\''<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Data" sheetId="1" r:id="rId1"/></sheets></workbook>'\'' > "$package_tmp/xl/workbook.xml"' \
     '    printf "%s\n" '\''<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/></Relationships>'\'' > "$package_tmp/xl/_rels/workbook.xml.rels"' \
     '    printf "%s\n" "<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" count=\"2\" uniqueCount=\"2\"><si><t>$content_marker</t></si><si><t>$stage_text</t></si></sst>" > "$package_tmp/xl/sharedStrings.xml"' \
-    '    printf "%s\n" '\''<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1"><v>30</v></c><c r="C1"><f>SUM(B1:B1)</f><v>30</v></c><c r="D1" t="s"><v>1</v></c></row></sheetData><drawing r:id="rId1"/></worksheet>'\'' > "$package_tmp/xl/worksheets/sheet1.xml"' \
+    '    if [ "${OFFICE_F1B_INCONSISTENT_SEMANTICS:-}" = 1 ]; then' \
+    '      printf "%s\n" '\''<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1"><v>30</v></c><c r="C1"><f>SUM(B1:B1)</f><v>30</v></c><c r="D1" t="s"><v>1</v></c></row></sheetData><drawing r:id="rId1"/></worksheet>'\'' > "$package_tmp/xl/worksheets/sheet1.xml"' \
+    '    else' \
+    '      printf "%s\n" '\''<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c></row><row r="2"><c r="B2"><v>30</v></c></row><row r="3"><c r="B3"><v>70</v></c></row><row r="4"><c r="B4"><f>SUM(B2:B3)</f></c></row><row r="5"><c r="A5" t="s"><v>1</v></c></row></sheetData><drawing r:id="rId1"/></worksheet>'\'' > "$package_tmp/xl/worksheets/sheet1.xml"' \
+    '    fi' \
     '    printf "%s\n" '\''<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>'\'' > "$package_tmp/xl/worksheets/_rels/sheet1.xml.rels"' \
-    '    printf "%s\n" '\''<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><xdr:graphicFrame><c:chart r:id="rId1"/></xdr:graphicFrame></xdr:wsDr>'\'' > "$package_tmp/xl/drawings/drawing1.xml"' \
+    '    printf "%s\n" '\''<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><xdr:twoCellAnchor><xdr:from><xdr:col>3</xdr:col><xdr:row>1</xdr:row></xdr:from><xdr:graphicFrame><c:chart r:id="rId1"/></xdr:graphicFrame></xdr:twoCellAnchor></xdr:wsDr>'\'' > "$package_tmp/xl/drawings/drawing1.xml"' \
     '    printf "%s\n" '\''<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/></Relationships>'\'' > "$package_tmp/xl/drawings/_rels/drawing1.xml.rels"' \
-    '    printf "%s\n" '\''<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart><c:plotArea><c:barChart><c:ser/></c:barChart></c:plotArea></c:chart></c:chartSpace>'\'' > "$package_tmp/xl/charts/chart1.xml"' \
+    '    printf "%s\n" '\''<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:title><c:tx><c:rich><a:p><a:r><a:t>Representative</a:t></a:r></a:p></c:rich></c:tx></c:title><c:plotArea><c:barChart><c:barDir val="col"/><c:ser><c:tx><c:v>F1B</c:v></c:tx><c:cat><c:strRef><c:f>Data!A2:A3</c:f></c:strRef></c:cat><c:val><c:numRef><c:f>Data!B2:B3</c:f></c:numRef></c:val></c:ser></c:barChart></c:plotArea></c:chart></c:chartSpace>'\'' > "$package_tmp/xl/charts/chart1.xml"' \
     '    (cd "$package_tmp" && /usr/bin/zip -q "$package_path" "[Content_Types].xml" "_rels/.rels" "xl/workbook.xml" "xl/_rels/workbook.xml.rels" "xl/sharedStrings.xml" "xl/worksheets/sheet1.xml" "xl/worksheets/_rels/sheet1.xml.rels" "xl/drawings/drawing1.xml" "xl/drawings/_rels/drawing1.xml.rels" "xl/charts/chart1.xml")' \
     '  else' \
     '    /bin/mkdir -p "$package_tmp/word/_rels"' \
@@ -370,6 +374,14 @@ make_candidate() {
     '  annotate/docx) result_schema=office.docx.annotation-batch/1 ;;' \
     '  *) exit 72 ;;' \
     'esac' \
+    'if [ "$verb/$format" = dump/xlsx ]; then' \
+    '  /usr/bin/jq -cn --arg source "$source_file" --arg canned "${OFFICE_F1B_CANNED_DUMP:-0}" '\''([{op:"set",params:{sheet:"Data",cell:"A1",value:"F1B-XLSX-REPRESENTATIVE-V1"}},{op:"set",params:{sheet:"Data",cell:"B2",value:(if $canned == "1" then 31 else 30 end)}},{op:"set",params:{sheet:"Data",cell:"B3",value:70}},{op:"formula",params:{sheet:"Data",cell:"B4",formula:"SUM(B2:B3)"}},{op:"set",params:{sheet:"Data",cell:"A5",value:"F1B-XLSX-TEMPLATE-V1"}},{op:"chart",params:{sheet:"Data",anchor:"D2",type:"col",categories:"A2:A3",values:"B2:B3",name:"F1B",title:"Representative"}}]) as $ops | {schema:"office.dump/1",format:"xlsx",source:{file:$source,bytes:1,sha256:("a"*64)},replay:{batch_schema:"xlsx.batch/2",create:{},limits:{}},ops:$ops,assets:{},residual:[],warnings:[],stats:{ops:6,assets:0,residual:0,warnings:0}}'\''' \
+    '  exit 0' \
+    'fi' \
+    'if [ "$verb/$format" = get/xlsx ]; then' \
+    '  /usr/bin/jq -cn --arg source "$source_file" --arg canned "${OFFICE_F1B_CANNED_GET:-0}" '\''{schema:"office.output/1",success:true,data:{schema:"office.xlsx.element/1",file:$source,format:"xlsx",path:"/xlsx/sheet[name=\"Data\"]/range[A1:B5]",kind:"range",stability:"snapshot-relative",parent:"/xlsx/sheet[name=\"Data\"]",reference:"A1:B5",cells:[{path:"/xlsx/sheet[name=\"Data\"]/cell[A1]",reference:"A1",row:1,column:1,value:"F1B-XLSX-REPRESENTATIVE-V1",raw:{type:"string",value:"F1B-XLSX-REPRESENTATIVE-V1"}},{path:"/xlsx/sheet[name=\"Data\"]/cell[B2]",reference:"B2",row:2,column:2,value:(if $canned == "1" then "31" else "30" end),raw:{type:"number",value:(if $canned == "1" then 31 else 30 end)}},{path:"/xlsx/sheet[name=\"Data\"]/cell[B3]",reference:"B3",row:3,column:2,value:"70",raw:{type:"number",value:70}},{path:"/xlsx/sheet[name=\"Data\"]/cell[B4]",reference:"B4",row:4,column:2,formula:"SUM(B2:B3)"},{path:"/xlsx/sheet[name=\"Data\"]/cell[A5]",reference:"A5",row:5,column:1,value:"F1B-XLSX-TEMPLATE-V1",raw:{type:"string",value:"F1B-XLSX-TEMPLATE-V1"}}],styles:{},scanned_cells:10,returned:5}}'\''' \
+    '  exit 0' \
+    'fi' \
     '/usr/bin/jq -cn --arg verb "$verb" --arg format "$format" --arg schema "$result_schema" --arg source "$source_file" --arg output "$artifact" --arg produced "$output_file" --arg runtime "$runtime" --arg canned_get "${OFFICE_F1B_CANNED_GET:-0}" --arg canned_raw "${OFFICE_F1B_CANNED_RAW:-0}" --arg canned_dump "${OFFICE_F1B_CANNED_DUMP:-0}" --arg unknown_warning "${OFFICE_F1B_UNKNOWN_WARNING:-0}" '\''def commit_warnings: [{code:"office.transaction.path_based_commit_semantics",message:"publication uses moonbitlang/async path APIs; atomic rename is guaranteed, but hostile concurrent directory-entry replacement is outside the portable contract"}] + (if $runtime == "wasm" then [{code:"office.transaction.wasm_commit_semantics",message:"Wasm uses normalized paths and a same-directory rename, but host-independent realpath, symlink identity, and parent-directory durability are unavailable"}] else [] end); def envelope($data): {schema:"office.output/1",success:true,data:$data} + (if $unknown_warning == "1" then {warnings:[{code:"office.fixture.unclassified_target_warning",message:"unclassified target warning"}]} elif $verb == "create" or $verb == "batch" or $verb == "template" or $verb == "replay" or $verb == "annotate" then {warnings:commit_warnings} else {} end); if $verb == "dump" then (if $canned_dump == "1" then [{op:"fixture",params:{format:$format}}] elif $format == "xlsx" then [{op:"set",params:{sheet:"Data",cell:"A1",value:"F1B-XLSX-REPRESENTATIVE-V1"}},{op:"set",params:{sheet:"Data",cell:"A5",value:"F1B-XLSX-TEMPLATE-V1"}},{op:"set",params:{sheet:"Data",cell:"B2",value:30}},{op:"formula",params:{sheet:"Data",cell:"B4",formula:"SUM(B2:B3)"}},{op:"chart",params:{sheet:"Data",anchor:"D2",categories:"A2:A3",values:"B2:B3"}}] else [{op:"paragraph",params:{text:"F1B-DOCX-HEADING-V1",style:"Heading1"}},{op:"paragraph",params:{text:"F1B-DOCX-TEMPLATE-V1"}},{op:"paragraph",params:{text:"F1B-DOCX-LIST-V1",list:{ordered:true}}},{op:"table",params:{rows:[["F1B-DOCX-TABLE-V1"]]}},{op:"paragraph",params:{runs:[{link:{href:"https://example.invalid/f1b",text:"F1B link"}}]}},{op:"comment",params:{body:"F1B-DOCX-COMMENT-V1"}},{op:"comment",params:{body:"F1B-DOCX-REPLY-V1",reply_to:5}}] end) as $ops | {schema:$schema,format:$format,source:{file:$source,bytes:1,sha256:("a"*64)},replay:{batch_schema:(if $format == "xlsx" then "xlsx.batch/2" else "docx.batch/2" end),create:{},limits:{}},ops:$ops,assets:{},residual:[],warnings:[],stats:{ops:($ops|length),assets:0,residual:0,warnings:0}} else envelope({schema:$schema,format:$format} + if $verb == "create" or $verb == "batch" then {transaction:{format:$format,output:$output,committed:true,dry_run:false,changed:true}} elif $verb == "identify" then {file:$source} elif $verb == "outline" and $format == "docx" then {file:$source,path:"/",counts:{comments:2}} elif $verb == "outline" then {file:$source,path:"/"} elif $verb == "get" and $canned_get == "1" then {file:$source,path:"/"} elif $verb == "get" and $format == "xlsx" then {file:$source,path:"/xlsx/sheet[name=Data]/range[A1:A5]",cells:[{raw:{value:"F1B-XLSX-REPRESENTATIVE-V1"}},{raw:{value:"F1B-XLSX-TEMPLATE-V1"}}]} elif $verb == "get" then {file:$source,path:"/docx/body/p[1]",text:"F1B-DOCX-HEADING-V1"} elif $verb == "text" then {file:$source,returned:1,entries:[{text:(if $format == "xlsx" then "F1B-XLSX-TEMPLATE-V1" else "F1B-DOCX-TEMPLATE-V1" end)}]} elif $verb == "query" then {file:$source,returned:1,matches:[{preview:(if $format == "xlsx" then "F1B-XLSX-TEMPLATE-V1" else "F1B-DOCX-TEMPLATE-V1" end)}]} elif $verb == "validate" or $verb == "issues" then {file:$source,valid:true,error_count:0} elif $verb == "preview" then {file:$source,output:$produced,bytes_written:50,charts_rendered:(if $format == "xlsx" then 1 else 0 end),charts_placeholder:0,images_embedded:0,truncation:{max_rows:1000,max_cols:256,truncated_sheets:[],images_omitted:0}} elif $verb == "template" then {output:$output,replaced:1,transaction:{committed:true}} elif $verb == "replay" then {output:$output,bytes_written:1,ops_applied:1} elif $verb == "raw" and $schema == "office.raw.inventory/1" and $canned_raw == "1" then {part_count:1,parts:[]} elif $verb == "raw" and $schema == "office.raw.inventory/1" then {part_count:3,parts:[{name:"xl/workbook.xml"},{name:"xl/worksheets/sheet1.xml"},{name:"xl/charts/chart1.xml"}]} elif $verb == "raw" and $format == "docx" and $canned_raw == "1" then {content:"<document/>"} elif $verb == "raw" and $format == "docx" then {content:"<document>F1B-DOCX-HEADING-V1 F1B-DOCX-TEMPLATE-V1 F1B-DOCX-LIST-V1 F1B-DOCX-TABLE-V1</document>"} elif $verb == "annotate" then {output:$output,ops_applied:3,results:[{op:"comment_add"},{op:"comment_reply"},{op:"comment_resolve",done:true}],labels:[{label:"root",comment_id:"0"}],transaction:{committed:true}} else {} end) end'\''' \
     > "$install_root/bin/office-native"
   /usr/bin/install -m 0500 "$script_dir/office-wasm" \
@@ -996,6 +1008,8 @@ chmod 0600 "$codex_bin_dir/mode"
     '          batch/docx) package="$authored"; run_args="--format docx $authored $directory/batch.json" ;;' \
     '          template/docx) package="$templated"; run_args="$authored $directory/template.json --out $templated" ;;' \
     '          annotate/docx) package="$final"; run_args="$templated $directory/annotation.json --out $final" ;;' \
+    '          get/xlsx) run_args="$final '\''/xlsx/sheet[name=\"Data\"]/range[A1:B5]'\''" ;;' \
+    '          get/docx) run_args="$final '\''/docx/body/p[1]'\''" ;;' \
     '          preview/*) run_args="$final --output $directory/preview-1.html" ;;' \
     '          replay/*) package="$replayed"; run_args="matrix-$runtime-$format-dump.json --output $replayed" ;;' \
     '          raw/xlsx) run_args="list $final" ;;' \
@@ -1045,6 +1059,8 @@ chmod 0600 "$codex_bin_dir/mode"
     '            OFFICE_F1B_EMPTY_SEMANTICS=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
     '          elif [ "$mode" = "empty-replay-package" ] && [ "$runtime/$format/$verb" = "native/xlsx/replay" ]; then' \
     '            OFFICE_F1B_EMPTY_SEMANTICS=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
+    '          elif [ "$mode" = "inconsistent-replay-package" ] && [ "$runtime/$format/$verb" = "native/xlsx/replay" ]; then' \
+    '            OFFICE_F1B_INCONSISTENT_SEMANTICS=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
     '          elif [ "$mode" = "canned-get" ] && [ "$runtime/$format/$verb" = "native/xlsx/get" ]; then' \
     '            OFFICE_F1B_CANNED_GET=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
     '          elif [ "$mode" = "canned-raw" ] && [ "$runtime/$format/$verb" = "native/xlsx/raw" ]; then' \
@@ -1825,7 +1841,7 @@ expect_failure shallow-scenario 1 \
 
 printf 'empty-semantic-package\n' > "$codex_bin_dir/mode"
 expect_failure empty-semantic-package 1 \
-  'lacks representative XLSX content' \
+  'has the wrong XLSX template state' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/empty-semantic-package-probe" \
   "$case_root/empty-semantic-package-evidence" \
@@ -1841,7 +1857,7 @@ expect_failure unknown-runtime-warning 1 \
 
 printf 'canned-get\n' > "$codex_bin_dir/mode"
 expect_failure canned-get 1 \
-  'get result omits its representative marker' \
+  'XLSX get returns the wrong value at B2' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/canned-get-probe" "$case_root/canned-get-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
@@ -1870,17 +1886,25 @@ expect_failure canned-preview 1 \
 
 printf 'canned-dump\n' > "$codex_bin_dir/mode"
 expect_failure canned-dump 1 \
-  'xlsx dump omits representative semantics' \
+  'XLSX dump does not match the retained batch semantics' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/canned-dump-probe" "$case_root/canned-dump-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'empty-replay-package\n' > "$codex_bin_dir/mode"
 expect_failure empty-replay-package 1 \
-  'replayed package lacks representative XLSX content' \
+  'replayed package has the wrong XLSX template state' \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/empty-replay-package-probe" \
   "$case_root/empty-replay-package-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'inconsistent-replay-package\n' > "$codex_bin_dir/mode"
+expect_failure inconsistent-replay-package 1 \
+  'replayed package has unexpected representative worksheet cell B1' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/inconsistent-replay-package-probe" \
+  "$case_root/inconsistent-replay-package-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'host-script-rewrite\n' > "$codex_bin_dir/mode"

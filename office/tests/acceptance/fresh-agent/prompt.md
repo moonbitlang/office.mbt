@@ -74,19 +74,23 @@ Host-derived scenario contract:
   template; the DOCX lineage is batch -> template -> annotate. Every canonical
   read, validation, preview, dump, and raw event must consume the final package
   of its lineage. Replay must consume the canonical dump result.
-- Use semantically identical scripts on native and Wasm. The preferred
-  `xlsx.batch/2` script must include the literal text
-  `F1B-XLSX-REPRESENTATIVE-V1`, a numeric cell, a formula, a supported chart,
-  and a literal `{{agent_name}}` cell. The `docx.batch/2` script must include a
+- Use semantically identical scripts on native and Wasm. The `xlsx.batch/2`
+  script must contain exactly these ordered operations on sheet `Data`: set
+  `A1` to `F1B-XLSX-REPRESENTATIVE-V1`; set `B2` to numeric `30`; set `B3` to
+  numeric `70`; set formula `B4` to `=SUM(B2:B3)`; set `A5` to the literal
+  `{{agent_name}}`; and add a `col` chart anchored at `D2`, with categories
+  `A2:A3`, values `B2:B3`, series name `F1B`, and title `Representative`. The
+  `docx.batch/2` script must include a
   `Heading1` paragraph `F1B-DOCX-HEADING-V1`, a literal `{{agent_name}}`
   paragraph, a list item `F1B-DOCX-LIST-V1`, a table containing
   `F1B-DOCX-TABLE-V1`, and a hyperlink to
   `https://example.invalid/f1b`.
 - Template data must use `office.template.data/1`, key `agent_name`, and value
   `F1B-XLSX-TEMPLATE-V1` for XLSX or `F1B-DOCX-TEMPLATE-V1` for DOCX. The
-  canonical `text` result must read that exact value back. The canonical
-  `get` result must also read back `F1B-XLSX-REPRESENTATIVE-V1` for XLSX or
-  `F1B-DOCX-HEADING-V1` for DOCX; choose a selector that includes that marker.
+  canonical `text` result must read that exact value back. The canonical XLSX
+  `get` must use selector `/xlsx/sheet[name="Data"]/range[A1:B5]` so it reads
+  back all five authored cells, including exact numeric and formula semantics.
+  The canonical DOCX `get` must read back `F1B-DOCX-HEADING-V1`.
 - The DOCX annotation script must use `docx.annotation-batch/1` and, in order,
   add a comment whose body contains `F1B-DOCX-COMMENT-V1`, reply with a body
   containing `F1B-DOCX-REPLY-V1`, and resolve the added root comment. The

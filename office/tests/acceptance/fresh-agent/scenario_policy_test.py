@@ -3,6 +3,7 @@
 
 import importlib.util
 import hashlib
+import copy
 import os
 import sys
 import tempfile
@@ -27,45 +28,7 @@ def expect_rejected(policy, action):
 def xlsx_batch(policy):
     return {
         "schema": "xlsx.batch/2",
-        "ops": [
-            {
-                "op": "set",
-                "params": {
-                    "sheet": "Sheet1",
-                    "cell": "A1",
-                    "value": policy.XLSX_CONTENT_MARKER,
-                },
-            },
-            {
-                "op": "set",
-                "params": {"sheet": "Sheet1", "cell": "B2", "value": 21},
-            },
-            {
-                "op": "formula",
-                "params": {
-                    "sheet": "Sheet1",
-                    "cell": "B4",
-                    "formula": "SUM(B2:B3)",
-                },
-            },
-            {
-                "op": "chart",
-                "params": {
-                    "sheet": "Sheet1",
-                    "anchor": "D2",
-                    "categories": "A2:A3",
-                    "values": "B2:B3",
-                },
-            },
-            {
-                "op": "set",
-                "params": {
-                    "sheet": "Sheet1",
-                    "cell": "A5",
-                    "value": "{{agent_name}}",
-                },
-            },
-        ],
+        "ops": policy.representative_xlsx_batch_ops(),
     }
 
 
@@ -142,21 +105,61 @@ def write_fixture(path, entries):
 def xlsx_fixture(policy, final):
     template = policy.TEMPLATE_MARKERS["xlsx"] if final else "{{agent_name}}"
     return {
+        "xl/workbook.xml": (
+            '<workbook xmlns="%s" xmlns:r="%s"><sheets>'
+            '<sheet name="Data" sheetId="1" r:id="rId1"/>'
+            '</sheets></workbook>' % (policy.XLSX_NS, policy.OFFICE_REL_NS)
+        ),
+        "xl/_rels/workbook.xml.rels": (
+            '<Relationships xmlns="%s"><Relationship Id="rId1" '
+            'Type="%s/worksheet" Target="worksheets/sheet1.xml"/>'
+            '</Relationships>' % (policy.REL_NS, policy.OFFICE_REL_NS)
+        ),
         "xl/sharedStrings.xml": (
             '<sst xmlns="%s"><si><t>%s</t></si><si><t>%s</t></si></sst>'
             % (policy.XLSX_NS, policy.XLSX_CONTENT_MARKER, template)
         ),
         "xl/worksheets/sheet1.xml": (
-            '<worksheet xmlns="%s"><sheetData><row r="1">'
-            '<c r="A1" t="s"><v>0</v></c><c r="A2"><v>42</v></c>'
-            '<c r="A3"><f>SUM(A2:A2)</f><v>42</v></c>'
-            '<c r="A4" t="s"><v>1</v></c>'
-            '</row></sheetData></worksheet>' % policy.XLSX_NS
+            '<worksheet xmlns="%s" xmlns:r="%s"><sheetData>'
+            '<row r="1"><c r="A1" t="s"><v>0</v></c></row>'
+            '<row r="2"><c r="B2"><v>30</v></c></row>'
+            '<row r="3"><c r="B3"><v>70</v></c></row>'
+            '<row r="4"><c r="B4"><f>SUM(B2:B3)</f></c></row>'
+            '<row r="5"><c r="A5" t="s"><v>1</v></c></row>'
+            '</sheetData><drawing r:id="rId1"/></worksheet>'
+            % (policy.XLSX_NS, policy.OFFICE_REL_NS)
+        ),
+        "xl/worksheets/_rels/sheet1.xml.rels": (
+            '<Relationships xmlns="%s"><Relationship Id="rId1" '
+            'Type="%s/drawing" Target="../drawings/drawing1.xml"/>'
+            '</Relationships>' % (policy.REL_NS, policy.OFFICE_REL_NS)
+        ),
+        "xl/drawings/drawing1.xml": (
+            '<xdr:wsDr xmlns:xdr="%s" xmlns:c="%s" xmlns:r="%s">'
+            '<xdr:twoCellAnchor><xdr:from><xdr:col>3</xdr:col>'
+            '<xdr:row>1</xdr:row></xdr:from><xdr:graphicFrame>'
+            '<c:chart r:id="rId1"/></xdr:graphicFrame></xdr:twoCellAnchor>'
+            '</xdr:wsDr>'
+            % (
+                policy.SPREADSHEET_DRAWING_NS,
+                policy.CHART_NS,
+                policy.OFFICE_REL_NS,
+            )
+        ),
+        "xl/drawings/_rels/drawing1.xml.rels": (
+            '<Relationships xmlns="%s"><Relationship Id="rId1" '
+            'Type="%s/chart" Target="../charts/chart1.xml"/>'
+            '</Relationships>' % (policy.REL_NS, policy.OFFICE_REL_NS)
         ),
         "xl/charts/chart1.xml": (
-            '<c:chartSpace xmlns:c="%s"><c:chart><c:plotArea>'
-            '<c:barChart><c:ser/></c:barChart>'
-            '</c:plotArea></c:chart></c:chartSpace>' % policy.CHART_NS
+            '<c:chartSpace xmlns:c="%s" xmlns:a="%s"><c:chart>'
+            '<c:title><c:tx><c:rich><a:p><a:r><a:t>Representative</a:t>'
+            '</a:r></a:p></c:rich></c:tx></c:title><c:plotArea>'
+            '<c:barChart><c:barDir val="col"/><c:ser><c:tx><c:v>F1B</c:v>'
+            '</c:tx><c:cat><c:strRef><c:f>\'Data\'!A2:A3</c:f></c:strRef>'
+            '</c:cat><c:val><c:numRef><c:f>\'Data\'!B2:B3</c:f></c:numRef>'
+            '</c:val></c:ser></c:barChart></c:plotArea></c:chart></c:chartSpace>'
+            % (policy.CHART_NS, policy.DRAWING_NS)
         ),
     }
 
@@ -203,6 +206,47 @@ def docx_fixture(policy, final):
     return entries
 
 
+def xlsx_get_result(policy):
+    path = '/xlsx/sheet[name="Data"]/range[A1:B5]'
+    cells = []
+    expected = policy.expected_xlsx_projection(xlsx_batch(policy), final=True)
+    for reference in ("A1", "B2", "B3", "B4", "A5"):
+        row, column = policy.xlsx_reference_coordinates(reference, "test get")
+        semantic = expected["cells"][reference]
+        cell = {
+            "path": '/xlsx/sheet[name="Data"]/cell[%s]' % reference,
+            "reference": reference,
+            "row": row,
+            "column": column,
+        }
+        if semantic["kind"] == "formula":
+            cell["formula"] = semantic["formula"]
+        else:
+            cell["value"] = str(semantic["value"])
+            cell["raw"] = {
+                "type": semantic["kind"],
+                "value": semantic["value"],
+            }
+        cells.append(cell)
+    return {
+        "schema": "office.output/1",
+        "success": True,
+        "data": {
+            "schema": "office.xlsx.element/1",
+            "format": "xlsx",
+            "path": path,
+            "kind": "range",
+            "stability": "snapshot-relative",
+            "parent": '/xlsx/sheet[name="Data"]',
+            "reference": "A1:B5",
+            "cells": cells,
+            "styles": {},
+            "scanned_cells": 10,
+            "returned": 5,
+        },
+    }
+
+
 def main(argv):
     if len(argv) != 2:
         raise SystemExit("usage: scenario_policy_test.py SCENARIO_POLICY")
@@ -228,29 +272,34 @@ def main(argv):
         )
     ) == 64
 
+    expected_dump_ops = policy.expected_xlsx_dump_ops(xlsx_batch(policy), final=True)
     dump = {
         "schema": "office.dump/1",
         "format": "xlsx",
         "source": {"file": "source.xlsx"},
         "replay": {"batch_schema": "xlsx.batch/2", "create": {}},
-        "ops": [
-            {
-                "op": "set",
-                "params": {"value": policy.XLSX_CONTENT_MARKER},
-            },
-            {
-                "op": "set",
-                "params": {"value": policy.TEMPLATE_MARKERS["xlsx"]},
-            },
-            {"op": "formula", "params": {"formula": "SUM(A1:A2)"}},
-            {"op": "chart", "params": {"values": "A1:A2"}},
-        ],
+        "ops": expected_dump_ops,
         "assets": {},
         "residual": [{"code": "ignored-by-fixpoint"}],
         "warnings": [],
-        "stats": {"ops": 1},
+        "stats": {"ops": len(expected_dump_ops)},
     }
-    assert set(policy.dump_projection(dump, "xlsx")) == set(dump) - {"source"}
+    assert set(
+        policy.dump_projection(dump, "xlsx", expected_ops=expected_dump_ops)
+    ) == set(dump) - {"source"}
+
+    get_result = xlsx_get_result(policy)
+    get_projection = policy.validate_xlsx_get_semantics(
+        get_result,
+        policy.expected_xlsx_projection(xlsx_batch(policy), final=True),
+    )
+    assert [cell["reference"] for cell in get_projection["cells"]] == [
+        "A1",
+        "B2",
+        "B3",
+        "B4",
+        "A5",
+    ]
 
     preview = {
         "schema": "office.output/1",
@@ -388,6 +437,9 @@ def main(argv):
     shallow_xlsx = xlsx_batch(policy)
     shallow_xlsx["ops"] = shallow_xlsx["ops"][:-1]
     expect_rejected(policy, lambda: policy.validate_xlsx_batch(shallow_xlsx))
+    wrong_xlsx = xlsx_batch(policy)
+    wrong_xlsx["ops"][1]["params"]["cell"] = "B1"
+    expect_rejected(policy, lambda: policy.validate_xlsx_batch(wrong_xlsx))
     shallow_docx = docx_batch(policy)
     shallow_docx["ops"] = shallow_docx["ops"][:-1]
     expect_rejected(policy, lambda: policy.validate_docx_batch(shallow_docx))
@@ -399,7 +451,34 @@ def main(argv):
     )
     expect_rejected(policy, lambda: policy.parse_failure_result("false\n"))
     bad_dump = dict(dump, residual="lost")
-    expect_rejected(policy, lambda: policy.dump_projection(bad_dump, "xlsx"))
+    expect_rejected(
+        policy,
+        lambda: policy.dump_projection(
+            bad_dump,
+            "xlsx",
+            expected_ops=expected_dump_ops,
+        ),
+    )
+    wrong_dump = copy.deepcopy(dump)
+    wrong_dump["ops"][1]["params"]["value"] = 31
+    expect_rejected(
+        policy,
+        lambda: policy.dump_projection(
+            wrong_dump,
+            "xlsx",
+            expected_ops=expected_dump_ops,
+        ),
+    )
+    wrong_get = copy.deepcopy(get_result)
+    wrong_get["data"]["cells"][1]["raw"]["value"] = 31
+    wrong_get["data"]["cells"][1]["value"] = "31"
+    expect_rejected(
+        policy,
+        lambda: policy.validate_xlsx_get_semantics(
+            wrong_get,
+            policy.expected_xlsx_projection(xlsx_batch(policy), final=True),
+        ),
+    )
     bad_preview = {
         **preview,
         "data": {**preview["data"], "charts_rendered": -1},
@@ -443,6 +522,11 @@ def main(argv):
                 assert semantics["template_state"] == (
                     "merged" if final else "placeholder"
                 )
+                if format_name == "xlsx":
+                    assert semantics["projection"] == policy.expected_xlsx_projection(
+                        xlsx_batch(policy),
+                        final=final,
+                    )
         payload_path = os.path.join(root, "safe", "value.json")
         with open(payload_path, "wb") as stream:
             stream.write(b'{"value":1}\n')

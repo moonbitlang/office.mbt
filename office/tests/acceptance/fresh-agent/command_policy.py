@@ -58,6 +58,12 @@ APPROVED_UTILITIES = frozenset(
 OFFICE_COMMANDS = frozenset(
     {"office-native", "office-wasm", "office-permission-canary"}
 )
+ACCEPTANCE_GET_SELECTORS = frozenset(
+    {
+        '/xlsx/sheet[name="Data"]/range[A1:B5]',
+        "/docx/body/p[1]",
+    }
+)
 SHELLS = frozenset({"/bin/sh", "/bin/bash", "/bin/zsh"})
 HEX_SHA256 = re.compile(r"^[0-9a-f]{64}$")
 SNAPSHOT_PATH = re.compile(
@@ -428,7 +434,16 @@ def normalize_event(event, seen_results):
                 path_references = ARGUMENT_POLICY.classify_office_paths(argv[1:])
             except ARGUMENT_POLICY.ArgumentPolicyError as exc:
                 fail(str(exc))
-        if any(argument.startswith("/") for argument in argv[1:]):
+        for index, argument in enumerate(argv[1:], start=1):
+            if not argument.startswith("/"):
+                continue
+            if (
+                len(argv) > 3
+                and argv[1] == "get"
+                and index == 3
+                and argument in ACCEPTANCE_GET_SELECTORS
+            ):
+                continue
             fail("absolute Office arguments are not allowed")
     elif name == "office-permission-canary":
         if argv != ["office-permission-canary"] or redirect_path is not None:

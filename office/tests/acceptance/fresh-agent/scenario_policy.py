@@ -63,6 +63,10 @@ COMMENT_MARKER = "F1B-DOCX-COMMENT-V1"
 REPLY_MARKER = "F1B-DOCX-REPLY-V1"
 XLSX_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 CHART_NS = "http://schemas.openxmlformats.org/drawingml/2006/chart"
+DRAWING_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
+SPREADSHEET_DRAWING_NS = (
+    "http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"
+)
 WORD_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
 OFFICE_REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -355,6 +359,300 @@ def element_text(element, namespace):
     )
 
 
+def representative_xlsx_batch_ops():
+    return [
+        {
+            "op": "set",
+            "params": {
+                "sheet": "Data",
+                "cell": "A1",
+                "value": XLSX_CONTENT_MARKER,
+            },
+        },
+        {
+            "op": "set",
+            "params": {"sheet": "Data", "cell": "B2", "value": 30},
+        },
+        {
+            "op": "set",
+            "params": {"sheet": "Data", "cell": "B3", "value": 70},
+        },
+        {
+            "op": "formula",
+            "params": {
+                "sheet": "Data",
+                "cell": "B4",
+                "formula": "=SUM(B2:B3)",
+            },
+        },
+        {
+            "op": "set",
+            "params": {
+                "sheet": "Data",
+                "cell": "A5",
+                "value": "{{%s}}" % TEMPLATE_KEY,
+            },
+        },
+        {
+            "op": "chart",
+            "params": {
+                "sheet": "Data",
+                "anchor": "D2",
+                "type": "col",
+                "categories": "A2:A3",
+                "values": "B2:B3",
+                "name": "F1B",
+                "title": "Representative",
+            },
+        },
+    ]
+
+
+def expected_xlsx_projection(batch, final):
+    operations = batch.get("ops") if isinstance(batch, dict) else None
+    if canonical_bytes(operations) != canonical_bytes(representative_xlsx_batch_ops()):
+        fail("representative XLSX batch does not match the exact semantic fixture")
+    cells = {}
+    chart = None
+    for entry in operations:
+        operation = entry["op"]
+        params = entry["params"]
+        if operation == "set":
+            value = params["value"]
+            if value == "{{%s}}" % TEMPLATE_KEY and final:
+                value = TEMPLATE_MARKERS["xlsx"]
+            cells[params["cell"]] = {
+                "kind": "number" if isinstance(value, (int, float)) else "string",
+                "value": value,
+            }
+        elif operation == "formula":
+            cells[params["cell"]] = {
+                "formula": params["formula"].removeprefix("="),
+                "kind": "formula",
+            }
+        elif operation == "chart":
+            chart = {
+                key: params[key]
+                for key in (
+                    "anchor",
+                    "categories",
+                    "name",
+                    "title",
+                    "type",
+                    "values",
+                )
+            }
+    return {"cells": cells, "chart": chart}
+
+
+def expected_xlsx_dump_ops(batch, final):
+    expected_xlsx_projection(batch, final)
+    operations = json.loads(json.dumps(batch["ops"]))
+    for entry in operations:
+        params = entry["params"]
+        if entry["op"] == "set" and params.get("value") == "{{%s}}" % TEMPLATE_KEY:
+            params["value"] = TEMPLATE_MARKERS["xlsx"] if final else params["value"]
+        if entry["op"] == "formula":
+            params["formula"] = params["formula"].removeprefix("=")
+    return operations
+
+
+def resolved_relationship_target(source_name, target, expected_pattern, label):
+    if not isinstance(target, str) or not target:
+        fail("%s relationship target is invalid" % label)
+    if target.startswith("/"):
+        name = target.lstrip("/")
+    else:
+        name = os.path.normpath(
+            os.path.join(os.path.dirname(source_name), target)
+        ).replace(os.sep, "/")
+    if not re.fullmatch(expected_pattern, name):
+        fail("%s relationship target is not canonical" % label)
+    return name
+
+
+def relationship_target(
+    archive,
+    source_name,
+    relationship_id,
+    relationship_kind,
+    expected_pattern,
+    label,
+):
+    relationship_name = "%s/_rels/%s.rels" % (
+        os.path.dirname(source_name),
+        os.path.basename(source_name),
+    )
+    relationships = package_xml(archive, relationship_name, label)
+    matches = [
+        node
+        for node in relationships.iter("{%s}Relationship" % REL_NS)
+        if node.get("Id") == relationship_id
+        and node.get("Type", "").endswith("/%s" % relationship_kind)
+    ]
+    if len(matches) != 1:
+        fail("%s needs exactly one %s relationship" % (label, relationship_kind))
+    return resolved_relationship_target(
+        source_name,
+        matches[0].get("Target"),
+        expected_pattern,
+        label,
+    )
+
+
+def xlsx_data_sheet(archive, label):
+    workbook = package_xml(archive, "xl/workbook.xml", label)
+    sheets = [
+        node
+        for node in workbook.iter("{%s}sheet" % XLSX_NS)
+        if node.get("name") == "Data"
+    ]
+    if len(sheets) != 1:
+        fail("%s needs exactly one Data worksheet" % label)
+    relationship_id = sheets[0].get("{%s}id" % OFFICE_REL_NS)
+    name = relationship_target(
+        archive,
+        "xl/workbook.xml",
+        relationship_id,
+        "worksheet",
+        r"xl/worksheets/sheet[0-9]+\.xml",
+        "%s Data worksheet" % label,
+    )
+    return name, package_xml(archive, name, label)
+
+
+def xlsx_cell_semantic(cell, shared, label):
+    formula = cell.find("{%s}f" % XLSX_NS)
+    if formula is not None and (formula.text or "").strip():
+        return {"formula": formula.text.strip().removeprefix("="), "kind": "formula"}
+    kind = cell.get("t")
+    value = cell.find("{%s}v" % XLSX_NS)
+    if kind == "s" and value is not None and value.text is not None:
+        try:
+            return {"kind": "string", "value": shared[int(value.text)]}
+        except (ValueError, IndexError) as error:
+            raise ScenarioError("%s has an invalid shared string" % label) from error
+    if kind == "inlineStr":
+        inline = cell.find("{%s}is" % XLSX_NS)
+        if inline is not None:
+            return {"kind": "string", "value": element_text(inline, XLSX_NS)}
+    if value is None or value.text is None:
+        fail("%s has an empty representative XLSX cell" % label)
+    raw = value.text.strip()
+    try:
+        number = int(raw) if re.fullmatch(r"-?[0-9]+", raw) else float(raw)
+    except ValueError as error:
+        raise ScenarioError("%s has a non-numeric representative cell" % label) from error
+    if isinstance(number, float) and not math.isfinite(number):
+        fail("%s has a non-finite representative cell" % label)
+    return {"kind": "number", "value": number}
+
+
+def normalized_chart_reference(value, label):
+    match = re.fullmatch(r"(?:'Data'|Data)!([^!]+)", value or "")
+    if match is None:
+        fail("%s chart reference does not target Data" % label)
+    return match.group(1).replace("$", "")
+
+
+def cell_reference(column, row, label):
+    try:
+        column_number = int(column)
+        row_number = int(row)
+    except (TypeError, ValueError) as error:
+        raise ScenarioError("%s has an invalid chart anchor" % label) from error
+    if column_number < 0 or row_number < 0:
+        fail("%s has an invalid chart anchor" % label)
+    letters = ""
+    value = column_number + 1
+    while value:
+        value, remainder = divmod(value - 1, 26)
+        letters = chr(ord("A") + remainder) + letters
+    return "%s%s" % (letters, row_number + 1)
+
+
+def xlsx_chart_projection(archive, sheet_name, sheet_root, label):
+    drawings = sheet_root.findall("{%s}drawing" % XLSX_NS)
+    if len(drawings) != 1:
+        fail("%s needs exactly one worksheet drawing" % label)
+    drawing_name = relationship_target(
+        archive,
+        sheet_name,
+        drawings[0].get("{%s}id" % OFFICE_REL_NS),
+        "drawing",
+        r"xl/drawings/drawing[0-9]+\.xml",
+        "%s worksheet drawing" % label,
+    )
+    drawing_root = package_xml(archive, drawing_name, label)
+    references = []
+    for kind in ("twoCellAnchor", "oneCellAnchor"):
+        for anchor in drawing_root.findall(
+            "{%s}%s" % (SPREADSHEET_DRAWING_NS, kind)
+        ):
+            chart_nodes = list(anchor.iter("{%s}chart" % CHART_NS))
+            if len(chart_nodes) == 1:
+                references.append((anchor, chart_nodes[0]))
+            elif chart_nodes:
+                fail("%s drawing anchor repeats its chart reference" % label)
+    if len(references) != 1:
+        fail("%s needs exactly one anchored chart reference" % label)
+    anchor, chart_reference = references[0]
+    start = anchor.find("{%s}from" % SPREADSHEET_DRAWING_NS)
+    if start is None:
+        fail("%s chart omits its start anchor" % label)
+    column = start.findtext("{%s}col" % SPREADSHEET_DRAWING_NS)
+    row = start.findtext("{%s}row" % SPREADSHEET_DRAWING_NS)
+    anchor_reference = cell_reference(column, row, label)
+    chart_name = relationship_target(
+        archive,
+        drawing_name,
+        chart_reference.get("{%s}id" % OFFICE_REL_NS),
+        "chart",
+        r"xl/charts/chart[0-9]+\.xml",
+        "%s drawing chart" % label,
+    )
+    chart_names = sorted(
+        info.filename
+        for info in archive.infolist()
+        if re.fullmatch(r"xl/charts/chart[0-9]+\.xml", info.filename)
+    )
+    if chart_names != [chart_name]:
+        fail("%s needs exactly one connected chart part" % label)
+    chart_root = package_xml(archive, chart_name, label)
+    charts = list(chart_root.iter("{%s}barChart" % CHART_NS))
+    if len(charts) != 1:
+        fail("%s needs exactly one column chart" % label)
+    direction = charts[0].find("{%s}barDir" % CHART_NS)
+    series = charts[0].findall("{%s}ser" % CHART_NS)
+    if direction is None or direction.get("val") != "col" or len(series) != 1:
+        fail("%s has the wrong chart type or series count" % label)
+    item = series[0]
+    category = item.find("{%s}cat" % CHART_NS)
+    values = item.find("{%s}val" % CHART_NS)
+    category_formula = (
+        category.find(".//{%s}f" % CHART_NS) if category is not None else None
+    )
+    value_formula = values.find(".//{%s}f" % CHART_NS) if values is not None else None
+    name = item.find("{%s}tx/{%s}v" % (CHART_NS, CHART_NS))
+    title = "".join(node.text or "" for node in chart_root.iter("{%s}t" % DRAWING_NS))
+    if name is None or not (name.text or "") or not title:
+        fail("%s chart omits its series name or title" % label)
+    return {
+        "anchor": anchor_reference,
+        "categories": normalized_chart_reference(
+            category_formula.text if category_formula is not None else None,
+            label,
+        ),
+        "name": name.text,
+        "title": title,
+        "type": "col",
+        "values": normalized_chart_reference(
+            value_formula.text if value_formula is not None else None,
+            label,
+        ),
+    }
+
+
 def inspect_xlsx_semantics(root, record, label, final):
     with open_semantic_package(root, record, label) as archive:
         shared = []
@@ -369,69 +667,40 @@ def inspect_xlsx_semantics(root, record, label, final):
                 element_text(item, XLSX_NS)
                 for item in shared_root.findall("{%s}si" % XLSX_NS)
             ]
-        strings = []
-        numeric = formula = False
         worksheets = sorted(
             info.filename
             for info in archive.infolist()
             if re.fullmatch(r"xl/worksheets/sheet[0-9]+\.xml", info.filename)
         )
-        if not worksheets:
-            fail("%s has no worksheets" % label)
-        for name in worksheets:
-            root_element = package_xml(archive, name, label)
-            for cell in root_element.iter("{%s}c" % XLSX_NS):
-                formula_node = cell.find("{%s}f" % XLSX_NS)
-                if formula_node is not None and (formula_node.text or "").strip():
-                    formula = True
-                kind = cell.get("t")
-                value = cell.find("{%s}v" % XLSX_NS)
-                if kind == "s" and value is not None and value.text is not None:
-                    try:
-                        index = int(value.text)
-                        strings.append(shared[index])
-                    except (ValueError, IndexError) as error:
-                        raise ScenarioError("%s has an invalid shared string" % label) from error
-                elif kind == "inlineStr":
-                    inline = cell.find("{%s}is" % XLSX_NS)
-                    if inline is not None:
-                        strings.append(element_text(inline, XLSX_NS))
-                elif kind in ("str", "e"):
-                    if kind == "str" and value is not None:
-                        strings.append(value.text or "")
-                elif value is not None and value.text is not None:
-                    try:
-                        numeric = numeric or math.isfinite(float(value.text))
-                    except ValueError:
-                        pass
-        chart = False
-        chart_series = 0
-        for info in archive.infolist():
-            if not re.fullmatch(r"xl/charts/chart[0-9]+\.xml", info.filename):
-                continue
-            chart_root = package_xml(archive, info.filename, label)
-            for kind in ("barChart", "lineChart", "pieChart"):
-                for chart_node in chart_root.iter("{%s}%s" % (CHART_NS, kind)):
-                    series = list(chart_node.findall("{%s}ser" % CHART_NS))
-                    if series:
-                        chart = True
-                        chart_series += len(series)
-        joined = "\n".join(strings)
-        expected = TEMPLATE_MARKERS["xlsx"] if final else "{{%s}}" % TEMPLATE_KEY
-        forbidden = "{{%s}}" % TEMPLATE_KEY if final else TEMPLATE_MARKERS["xlsx"]
-        if (
-            XLSX_CONTENT_MARKER not in strings
-            or expected not in strings
-            or forbidden in joined
-            or not numeric
-            or not formula
-            or not chart
-        ):
-            fail("%s lacks representative XLSX content, formula, chart, or template state" % label)
+        if len(worksheets) != 1:
+            fail("%s needs exactly one worksheet" % label)
+        expected_cells = {"A1", "A5", "B2", "B3", "B4"}
+        cells = {}
+        sheet_name, sheet_root = xlsx_data_sheet(archive, label)
+        for cell in sheet_root.iter("{%s}c" % XLSX_NS):
+            reference = cell.get("r")
+            if reference not in expected_cells:
+                fail("%s has unexpected representative worksheet cell %s" % (label, reference))
+            if reference in cells:
+                fail("%s repeats representative cell %s" % (label, reference))
+            cells[reference] = xlsx_cell_semantic(cell, shared, label)
+        if set(cells) != expected_cells:
+            fail("%s omits one or more representative XLSX cells" % label)
+        projection = {
+            "cells": cells,
+            "chart": xlsx_chart_projection(archive, sheet_name, sheet_root, label),
+        }
+        template_value = cells["A5"].get("value")
+        expected_template = (
+            TEMPLATE_MARKERS["xlsx"] if final else "{{%s}}" % TEMPLATE_KEY
+        )
+        if template_value != expected_template:
+            fail("%s has the wrong XLSX template state" % label)
         return {
-            "chart_series": chart_series,
-            "formula": formula,
-            "numeric": numeric,
+            "chart_series": 1,
+            "formula": True,
+            "numeric": True,
+            "projection": projection,
             "representative_marker": True,
             "template_state": "merged" if final else "placeholder",
             "worksheets": len(worksheets),
@@ -516,35 +785,12 @@ def inspect_docx_semantics(root, record, label, final):
 
 def validate_xlsx_batch(value):
     value = require_object(value, "representative XLSX batch")
-    if value.get("schema") != "xlsx.batch/2" or not isinstance(value.get("ops"), list):
-        fail("representative XLSX batch must use xlsx.batch/2")
-    text = number = formula = chart = placeholder = False
-    for entry in value["ops"]:
-        if not isinstance(entry, dict) or set(entry) != {"op", "params"}:
-            continue
-        operation = entry["op"]
-        params = entry["params"]
-        if not isinstance(params, dict):
-            continue
-        if operation == "set" and params.get("value") == XLSX_CONTENT_MARKER:
-            text = True
-        if (
-            operation == "set"
-            and isinstance(params.get("value"), (int, float))
-            and not isinstance(params.get("value"), bool)
-        ):
-            number = True
-        if operation == "formula" and isinstance(params.get("formula"), str):
-            formula = bool(params["formula"])
-        if operation == "chart" and all(
-            isinstance(params.get(key), str) and params[key]
-            for key in ("sheet", "anchor", "categories", "values")
-        ):
-            chart = True
-        if operation == "set" and params.get("value") == "{{%s}}" % TEMPLATE_KEY:
-            placeholder = True
-    if not all((text, number, formula, chart, placeholder)):
-        fail("representative XLSX batch omits text, number, formula, chart, or template input")
+    expected = {
+        "schema": "xlsx.batch/2",
+        "ops": representative_xlsx_batch_ops(),
+    }
+    if canonical_bytes(value) != canonical_bytes(expected):
+        fail("representative XLSX batch must match the exact semantic fixture")
     return value_sha256(value)
 
 
@@ -632,7 +878,7 @@ def validate_annotation_script(value):
     return value_sha256(value)
 
 
-def dump_projection(value, format_name):
+def dump_projection(value, format_name, expected_ops=None):
     value = require_object(value, "%s dump" % format_name)
     if value.get("schema") != "office.dump/1" or value.get("format") != format_name:
         fail("%s dump has the wrong schema or format" % format_name)
@@ -645,7 +891,11 @@ def dump_projection(value, format_name):
             fail("%s dump omits %s loss evidence" % (format_name, field))
     if not isinstance(value.get("stats"), dict):
         fail("%s dump omits stats" % format_name)
-    if format_name == "xlsx":
+    if format_name == "xlsx" and expected_ops is not None:
+        if canonical_bytes(value["ops"]) != canonical_bytes(expected_ops):
+            fail("XLSX dump does not match the retained batch semantics")
+        required = ()
+    elif format_name == "xlsx":
         required = (
             XLSX_CONTENT_MARKER,
             TEMPLATE_MARKERS["xlsx"],
@@ -667,6 +917,89 @@ def dump_projection(value, format_name):
     if missing:
         fail("%s dump omits representative semantics: %s" % (format_name, ", ".join(missing)))
     return {key: item for key, item in value.items() if key != "source"}
+
+
+def xlsx_reference_coordinates(reference, label):
+    match = re.fullmatch(r"([A-Z]+)([1-9][0-9]*)", reference or "")
+    if match is None:
+        fail("%s has an invalid cell reference" % label)
+    column = 0
+    for character in match.group(1):
+        column = column * 26 + ord(character) - ord("A") + 1
+    return int(match.group(2)), column
+
+
+def validate_xlsx_get_semantics(value, expected):
+    value = require_object(value, "representative XLSX get result")
+    data = value.get("data")
+    expected_path = '/xlsx/sheet[name="Data"]/range[A1:B5]'
+    if (
+        value.get("schema") != "office.output/1"
+        or value.get("success") is not True
+        or not isinstance(data, dict)
+        or data.get("schema") != "office.xlsx.element/1"
+        or data.get("format") != "xlsx"
+        or data.get("path") != expected_path
+        or data.get("kind") != "range"
+        or data.get("stability") != "snapshot-relative"
+        or data.get("parent") != '/xlsx/sheet[name="Data"]'
+        or data.get("reference") != "A1:B5"
+        or data.get("scanned_cells") != 10
+        or data.get("returned") != 5
+        or not isinstance(data.get("styles"), dict)
+        or not isinstance(data.get("cells"), list)
+    ):
+        fail("XLSX get does not inspect the exact representative range")
+    expected_order = ["A1", "B2", "B3", "B4", "A5"]
+    if len(data["cells"]) != len(expected_order) or [
+        cell.get("reference") if isinstance(cell, dict) else None
+        for cell in data["cells"]
+    ] != expected_order:
+        fail("XLSX get does not return the exact representative cells")
+    projection = []
+    for cell, reference in zip(data["cells"], expected_order):
+        if not isinstance(cell, dict):
+            fail("XLSX get contains a malformed representative cell")
+        row, column = xlsx_reference_coordinates(reference, "XLSX get")
+        if (
+            cell.get("path")
+            != '/xlsx/sheet[name="Data"]/cell[%s]' % reference
+            or cell.get("row") != row
+            or cell.get("column") != column
+        ):
+            fail("XLSX get misidentifies representative cell %s" % reference)
+        expected_cell = expected["cells"].get(reference)
+        if expected_cell is None:
+            fail("XLSX get returned an unexpected representative cell")
+        if expected_cell["kind"] == "formula":
+            if (
+                cell.get("formula") != expected_cell["formula"]
+                or cell.get("raw") is not None
+                or "value" in cell
+            ):
+                fail("XLSX get returns the wrong formula at %s" % reference)
+            semantic = {
+                "formula": cell["formula"],
+                "kind": "formula",
+                "reference": reference,
+            }
+        else:
+            expected_raw = {
+                "type": expected_cell["kind"],
+                "value": expected_cell["value"],
+            }
+            if (
+                canonical_bytes(cell.get("raw")) != canonical_bytes(expected_raw)
+                or cell.get("value") != str(expected_cell["value"])
+            ):
+                fail("XLSX get returns the wrong value at %s" % reference)
+            semantic = {
+                "kind": expected_cell["kind"],
+                "reference": reference,
+                "value": expected_cell["value"],
+            }
+        projection.append(semantic)
+    return {"cells": projection, "path": expected_path}
 
 
 def parse_failure_result(output, expected_code=None):
@@ -1263,6 +1596,7 @@ def validate_scenario(
     )
     if format_name == "xlsx":
         batch_digest = validate_xlsx_batch(batch_script)
+        authored_expected = expected_xlsx_projection(batch_script, final=False)
         lineage.append(
             require_lineage(
                 canonical["create"]["artifact"],
@@ -1279,6 +1613,10 @@ def validate_scenario(
             "%s XLSX authored package" % runtime,
             final=False,
         )
+        if canonical_bytes(batch_semantics["projection"]) != canonical_bytes(
+            authored_expected
+        ):
+            fail("%s XLSX authored package does not match its retained batch" % runtime)
     else:
         batch_semantics = inspect_docx_semantics(
             root,
@@ -1334,12 +1672,17 @@ def validate_scenario(
         final_event = canonical["annotate"]
     final = final_event["artifact"]
     if format_name == "xlsx":
+        final_expected = expected_xlsx_projection(batch_script, final=True)
         final_semantics = inspect_xlsx_semantics(
             root,
             final,
             "%s XLSX final package" % runtime,
             final=True,
         )
+        if canonical_bytes(final_semantics["projection"]) != canonical_bytes(
+            final_expected
+        ):
+            fail("%s XLSX final package does not match its retained batch" % runtime)
     else:
         final_semantics = inspect_docx_semantics(
             root,
@@ -1367,9 +1710,10 @@ def validate_scenario(
         canonical["get"],
         "%s/%s representative get result" % (runtime, format_name),
     )
-    get_marker = XLSX_CONTENT_MARKER if format_name == "xlsx" else DOCX_HEADING_MARKER
-    if not json_contains(get_result, get_marker):
-        fail("%s/%s get result omits its representative marker" % (runtime, format_name))
+    if format_name == "xlsx":
+        validate_xlsx_get_semantics(get_result, final_expected)
+    elif not json_contains(get_result, DOCX_HEADING_MARKER):
+        fail("%s/docx get result omits its representative marker" % runtime)
     raw_result = result_json(
         root,
         canonical["raw"],
@@ -1446,7 +1790,16 @@ def validate_scenario(
         fail("%s/%s preview output is not deterministic" % (runtime, format_name))
 
     dump_1 = result_json(root, canonical["dump"], "%s/%s first dump" % (runtime, format_name))
-    dump_1_projection = dump_projection(dump_1, format_name)
+    expected_dump_ops = (
+        expected_xlsx_dump_ops(batch_script, final=True)
+        if format_name == "xlsx"
+        else None
+    )
+    dump_1_projection = dump_projection(
+        dump_1,
+        format_name,
+        expected_ops=expected_dump_ops,
+    )
     lineage.append(
         require_lineage(
             canonical["dump"]["result"],
@@ -1478,7 +1831,11 @@ def validate_scenario(
         dump_2,
         "%s/%s second dump" % (runtime, format_name),
     )
-    dump_2_projection = dump_projection(dump_2_value, format_name)
+    dump_2_projection = dump_projection(
+        dump_2_value,
+        format_name,
+        expected_ops=expected_dump_ops,
+    )
     if dump_1_projection != dump_2_projection:
         fail("%s/%s dump projection did not reach a fixpoint" % (runtime, format_name))
     if format_name == "xlsx":
