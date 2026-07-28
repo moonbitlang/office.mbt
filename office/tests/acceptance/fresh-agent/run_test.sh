@@ -308,7 +308,11 @@ make_candidate() {
     '    /bin/mkdir -p "$package_tmp/word/_rels"' \
     '    printf "%s\n" '\''<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/><Override PartName="/word/commentsExtended.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml"/></Types>'\'' > "$package_tmp/[Content_Types].xml"' \
     '    printf "%s\n" '\''<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'\'' > "$package_tmp/_rels/.rels"' \
-    '    printf "%s\n" "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:body><w:p><w:pPr><w:pStyle w:val=\"Heading1\"/></w:pPr><w:r><w:t>F1B-DOCX-HEADING-V1</w:t></w:r></w:p><w:p><w:r><w:t>$stage_text</w:t></w:r></w:p><w:p><w:pPr><w:numPr><w:ilvl w:val=\"0\"/></w:numPr></w:pPr><w:r><w:t>F1B-DOCX-LIST-V1</w:t></w:r></w:p><w:tbl><w:tr><w:tc><w:p><w:r><w:t>F1B-DOCX-TABLE-V1</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:p><w:hyperlink r:id=\"rIdLink\"><w:r><w:t>F1B link</w:t></w:r></w:hyperlink></w:p></w:body></w:document>" > "$package_tmp/word/document.xml"' \
+    '    anchor_start="<w:commentRangeStart w:id=\"0\"/>"' \
+    '    anchor_end="<w:commentRangeEnd w:id=\"0\"/><w:r><w:commentReference w:id=\"0\"/></w:r>"' \
+    '    heading_anchor_start=; heading_anchor_end=; template_anchor_start=$anchor_start; template_anchor_end=$anchor_end' \
+    '    if [ "${OFFICE_F1B_WRONG_ANNOTATION_ANCHOR:-}" = 1 ]; then heading_anchor_start=$anchor_start; heading_anchor_end=$anchor_end; template_anchor_start=; template_anchor_end=; fi' \
+    '    printf "%s\n" "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:body><w:p><w:pPr><w:pStyle w:val=\"Heading1\"/></w:pPr>$heading_anchor_start<w:r><w:t>F1B-DOCX-HEADING-V1</w:t></w:r>$heading_anchor_end</w:p><w:p>$template_anchor_start<w:r><w:t>$stage_text</w:t></w:r>$template_anchor_end</w:p><w:p><w:pPr><w:numPr><w:ilvl w:val=\"0\"/></w:numPr></w:pPr><w:r><w:t>F1B-DOCX-LIST-V1</w:t></w:r></w:p><w:tbl><w:tr><w:tc><w:p><w:r><w:t>F1B-DOCX-TABLE-V1</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:p><w:hyperlink r:id=\"rIdLink\"><w:r><w:t>F1B link</w:t></w:r></w:hyperlink></w:p></w:body></w:document>" > "$package_tmp/word/document.xml"' \
     '    printf "%s\n" '\''<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/f1b" TargetMode="External"/><Relationship Id="rIdComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/><Relationship Id="rIdCommentsEx" Type="http://schemas.microsoft.com/office/2011/relationships/commentsExtended" Target="commentsExtended.xml"/></Relationships>'\'' > "$package_tmp/word/_rels/document.xml.rels"' \
     '    printf "%s\n" '\''<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"><w:comment w:id="0"><w:p w14:paraId="00000001"><w:r><w:t>F1B-DOCX-COMMENT-V1</w:t></w:r></w:p></w:comment><w:comment w:id="1"><w:p w14:paraId="00000002"><w:r><w:t>F1B-DOCX-REPLY-V1</w:t></w:r></w:p></w:comment></w:comments>'\'' > "$package_tmp/word/comments.xml"' \
     '    printf "%s\n" '\''<w15:commentsEx xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml"><w15:commentEx w15:paraId="00000001" w15:done="1"/><w15:commentEx w15:paraId="00000002" w15:paraIdParent="00000001" w15:done="0"/></w15:commentsEx>'\'' > "$package_tmp/word/commentsExtended.xml"' \
@@ -1069,6 +1073,8 @@ chmod 0600 "$codex_bin_dir/mode"
     '            OFFICE_F1B_EMPTY_SEMANTICS=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
     '          elif [ "$mode" = "inconsistent-replay-package" ] && [ "$runtime/$format/$verb" = "native/xlsx/replay" ]; then' \
     '            OFFICE_F1B_INCONSISTENT_SEMANTICS=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
+    '          elif [ "$mode" = "wrong-annotation-anchor" ] && [ "$runtime/$format/$verb" = "native/docx/annotate" ]; then' \
+    '            OFFICE_F1B_WRONG_ANNOTATION_ANCHOR=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
     '          elif [ "$mode" = "canned-get" ] && [ "$runtime/$format/$verb" = "native/xlsx/get" ]; then' \
     '            OFFICE_F1B_CANNED_GET=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
     '          elif [ "$mode" = "canned-raw" ] && [ "$runtime/$format/$verb" = "native/xlsx/raw" ]; then' \
@@ -1868,6 +1874,14 @@ expect_failure wrong-annotation-target 1 \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/wrong-annotation-target-probe" \
   "$case_root/wrong-annotation-target-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'wrong-annotation-anchor\n' > "$codex_bin_dir/mode"
+expect_failure wrong-annotation-anchor 1 \
+  'root comment anchor differs from the annotation result' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/wrong-annotation-anchor-probe" \
+  "$case_root/wrong-annotation-anchor-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'empty-semantic-package\n' > "$codex_bin_dir/mode"

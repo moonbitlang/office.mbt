@@ -801,6 +801,45 @@ def inspect_docx_semantics(
             ):
                 fail("%s comment identities differ from the annotation result" % label)
 
+            anchor_tags = {
+                "{%s}commentRangeStart" % WORD_NS: "start",
+                "{%s}commentRangeEnd" % WORD_NS: "end",
+                "{%s}commentReference" % WORD_NS: "reference",
+            }
+            document_events = [
+                anchor_tags[node.tag]
+                for node in document.iter()
+                if node.tag in anchor_tags
+                and node.get("{%s}id" % WORD_NS) == root_comment_id
+            ]
+            body = document.find("{%s}body" % WORD_NS)
+            if body is None:
+                fail("%s has no DOCX body for the representative comment" % label)
+            body_paragraphs = [
+                child for child in body if child.tag == "{%s}p" % WORD_NS
+            ]
+            anchored_events = []
+            for index, paragraph in enumerate(body_paragraphs, start=1):
+                for node in paragraph.iter():
+                    if (
+                        node.tag in anchor_tags
+                        and node.get("{%s}id" % WORD_NS) == root_comment_id
+                    ):
+                        anchored_events.append((anchor_tags[node.tag], index))
+            if (
+                document_events != ["start", "end", "reference"]
+                or [event for event, _index in anchored_events]
+                != ["start", "end", "reference"]
+                or len({index for _event, index in anchored_events}) != 1
+            ):
+                fail("%s does not materialize one canonical root comment anchor" % label)
+            root_anchor = "/docx/body/p[%d]" % anchored_events[0][1]
+            if (
+                expected_annotation_ids is not None
+                and root_anchor != expected_annotation_ids.get("root_anchor")
+            ):
+                fail("%s root comment anchor differs from the annotation result" % label)
+
             def last_para_id(comment, role):
                 paragraphs = list(comment.iter("{%s}p" % WORD_NS))
                 if not paragraphs:
@@ -846,6 +885,7 @@ def inspect_docx_semantics(
             ):
                 fail("%s does not resolve the marker-bearing root thread" % label)
             result["annotations"] = "add-reply-resolve"
+            result["annotation_anchor"] = root_anchor
         return result
 
 
@@ -974,8 +1014,17 @@ def validate_annotation_script(value):
         fail("DOCX annotation reply must target the marker-bearing root label")
     if resolve.get("target") != {"label": root_label}:
         fail("DOCX annotation resolve must target the marker-bearing root label")
+    anchor = add.get("anchor")
+    if (
+        not isinstance(anchor, dict)
+        or set(anchor) != {"at"}
+        or not isinstance(anchor.get("at"), str)
+        or re.fullmatch(r"/docx/body/p\[[1-9][0-9]*\]", anchor["at"]) is None
+    ):
+        fail("DOCX annotation add needs one canonical paragraph anchor")
     return {
         "reply_label": reply_label,
+        "root_anchor": anchor["at"],
         "root_label": root_label,
         "sha256": value_sha256(value),
     }
@@ -1026,6 +1075,8 @@ def validate_annotation_result(value, contract, label):
         add.get("op") != "comment_add"
         or add.get("comment_id") != root_id
         or add.get("done") is not None
+        or add.get("anchor") != contract["root_anchor"]
+        or add.get("anchor_to") is not None
         or add.get("target") is not None
         or reply.get("op") != "comment_reply"
         or reply.get("comment_id") != reply_id
@@ -1037,7 +1088,11 @@ def validate_annotation_result(value, contract, label):
         or resolve.get("target") != root_id
     ):
         fail("%s does not bind reply and resolve to the added root comment" % label)
-    return {"reply_comment_id": reply_id, "root_comment_id": root_id}
+    return {
+        "reply_comment_id": reply_id,
+        "root_anchor": contract["root_anchor"],
+        "root_comment_id": root_id,
+    }
 
 
 def dump_projection(value, format_name, expected_ops=None):
