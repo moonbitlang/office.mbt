@@ -90,20 +90,6 @@ def validate_logical_path(path, label):
     return path
 
 
-def prefix_symlinks(path):
-    current = "/"
-    links = []
-    for component in path.strip("/").split("/")[:-1]:
-        current = os.path.join(current, component)
-        try:
-            info = os.lstat(current)
-        except OSError as error:
-            raise DiscoveryError("could not inspect path prefix: %s" % current) from error
-        if stat.S_ISLNK(info.st_mode):
-            links.append(current)
-    return links
-
-
 def path_record(path, label, executable=False):
     selected = validate_logical_path(path, label)
     try:
@@ -144,7 +130,6 @@ def path_record(path, label, executable=False):
 def add_record_paths(record, inventory_paths):
     selected = record["selected_path"]
     inventory_paths.add(selected)
-    inventory_paths.update(prefix_symlinks(selected))
 
 
 def compiler_query(compiler, arguments, environment, label, multiline=False, accepted=(0,)):
