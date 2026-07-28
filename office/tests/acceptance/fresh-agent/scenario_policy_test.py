@@ -2,9 +2,11 @@
 """Focused semantic tests for host-derived fresh-agent scenario evidence."""
 
 import importlib.util
+import hashlib
 import os
 import sys
 import tempfile
+import zipfile
 
 
 def load_policy(path):
@@ -130,6 +132,77 @@ def annotation_script(policy):
     }
 
 
+def write_fixture(path, entries):
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as archive:
+        for name, payload in entries.items():
+            archive.writestr(name, payload)
+    os.chmod(path, 0o600)
+
+
+def xlsx_fixture(policy, final):
+    template = policy.TEMPLATE_MARKERS["xlsx"] if final else "{{agent_name}}"
+    return {
+        "xl/sharedStrings.xml": (
+            '<sst xmlns="%s"><si><t>%s</t></si><si><t>%s</t></si></sst>'
+            % (policy.XLSX_NS, policy.XLSX_CONTENT_MARKER, template)
+        ),
+        "xl/worksheets/sheet1.xml": (
+            '<worksheet xmlns="%s"><sheetData><row r="1">'
+            '<c r="A1" t="s"><v>0</v></c><c r="A2"><v>42</v></c>'
+            '<c r="A3"><f>SUM(A2:A2)</f><v>42</v></c>'
+            '<c r="A4" t="s"><v>1</v></c>'
+            '</row></sheetData></worksheet>' % policy.XLSX_NS
+        ),
+        "xl/charts/chart1.xml": (
+            '<c:chartSpace xmlns:c="%s"><c:chart><c:plotArea>'
+            '<c:barChart><c:ser/></c:barChart>'
+            '</c:plotArea></c:chart></c:chartSpace>' % policy.CHART_NS
+        ),
+    }
+
+
+def docx_fixture(policy, final):
+    template = policy.TEMPLATE_MARKERS["docx"] if final else "{{agent_name}}"
+    document = (
+        '<w:document xmlns:w="%s" xmlns:r="%s"><w:body>'
+        '<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>%s</w:t></w:r></w:p>'
+        '<w:p><w:r><w:t>%s</w:t></w:r></w:p>'
+        '<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/></w:numPr></w:pPr><w:r><w:t>%s</w:t></w:r></w:p>'
+        '<w:tbl><w:tr><w:tc><w:p><w:r><w:t>%s</w:t></w:r></w:p></w:tc></w:tr></w:tbl>'
+        '<w:p><w:hyperlink r:id="rId1"><w:r><w:t>F1B link</w:t></w:r></w:hyperlink></w:p>'
+        '</w:body></w:document>'
+        % (
+            policy.WORD_NS,
+            policy.OFFICE_REL_NS,
+            policy.DOCX_HEADING_MARKER,
+            template,
+            policy.DOCX_LIST_MARKER,
+            policy.DOCX_TABLE_MARKER,
+        )
+    )
+    entries = {
+        "word/document.xml": document,
+        "word/_rels/document.xml.rels": (
+            '<Relationships xmlns="%s"><Relationship Id="rId1" '
+            'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" '
+            'Target="%s" TargetMode="External"/></Relationships>'
+            % (policy.REL_NS, policy.DOCX_LINK_TARGET)
+        ),
+    }
+    if final:
+        entries["word/comments.xml"] = (
+            '<w:comments xmlns:w="%s"><w:comment w:id="0"><w:p><w:r><w:t>%s</w:t></w:r></w:p></w:comment>'
+            '<w:comment w:id="1"><w:p><w:r><w:t>%s</w:t></w:r></w:p></w:comment></w:comments>'
+            % (policy.WORD_NS, policy.COMMENT_MARKER, policy.REPLY_MARKER)
+        )
+        entries["word/commentsExtended.xml"] = (
+            '<w15:commentsEx xmlns:w15="%s"><w15:commentEx w15:paraId="00000001" w15:done="1"/>'
+            '<w15:commentEx w15:paraId="00000002" w15:paraIdParent="00000001" w15:done="0"/>'
+            '</w15:commentsEx>' % policy.WORD_2012_NS
+        )
+    return entries
+
+
 def main(argv):
     if len(argv) != 2:
         raise SystemExit("usage: scenario_policy_test.py SCENARIO_POLICY")
@@ -146,6 +219,14 @@ def main(argv):
         }
         assert len(policy.validate_template_data(value, format_name)) == 64
     assert len(policy.validate_annotation_script(annotation_script(policy))) == 64
+    assert len(
+        policy.validate_docx_refusal_script(
+            {
+                "schema": "docx.batch/2",
+                "ops": [{"op": "f1b_invalid_operation", "params": {}}],
+            }
+        )
+    ) == 64
 
     dump = {
         "schema": "office.dump/1",
@@ -155,12 +236,10 @@ def main(argv):
         "ops": [{"op": "set", "params": {}}],
         "assets": {},
         "residual": [{"code": "ignored-by-fixpoint"}],
+        "warnings": [],
+        "stats": {"ops": 1},
     }
-    assert set(policy.dump_projection(dump, "xlsx")) == {
-        "assets",
-        "ops",
-        "replay",
-    }
+    assert set(policy.dump_projection(dump, "xlsx")) == set(dump) - {"source"}
 
     preview = {
         "schema": "office.output/1",
@@ -171,7 +250,12 @@ def main(argv):
             "charts_rendered": 1,
             "charts_placeholder": 0,
             "images_embedded": 0,
-            "truncation": {"truncated_sheets": 0},
+            "truncation": {
+                "max_rows": 200,
+                "max_cols": 50,
+                "truncated_sheets": 0,
+                "images_omitted": 0,
+            },
         },
     }
     assert policy.preview_projection(preview, "xlsx")["charts_rendered"] == 1
@@ -211,6 +295,13 @@ def main(argv):
         lambda: policy.validate_annotation_script(shallow_annotation),
     )
     expect_rejected(policy, lambda: policy.parse_failure_result("false\n"))
+    bad_dump = dict(dump, residual="lost")
+    expect_rejected(policy, lambda: policy.dump_projection(bad_dump, "xlsx"))
+    bad_preview = {
+        **preview,
+        "data": {**preview["data"], "charts_rendered": -1},
+    }
+    expect_rejected(policy, lambda: policy.preview_projection(bad_preview, "xlsx"))
     expect_rejected(
         policy,
         lambda: policy.safe_relative_path("../private.json", "test path"),
@@ -218,6 +309,23 @@ def main(argv):
     with tempfile.TemporaryDirectory(prefix="scenario-policy-test.") as root:
         os.chmod(root, 0o700)
         os.mkdir(os.path.join(root, "safe"), 0o700)
+        for format_name, builder, inspector in (
+            ("xlsx", xlsx_fixture, policy.inspect_xlsx_semantics),
+            ("docx", docx_fixture, policy.inspect_docx_semantics),
+        ):
+            for final in (False, True):
+                stage = "final" if final else "authored"
+                path = os.path.join(root, "safe", "%s-%s.zip" % (format_name, stage))
+                write_fixture(path, builder(policy, final))
+                relative = "safe/%s-%s.zip" % (format_name, stage)
+                info = os.stat(path)
+                with open(path, "rb") as stream:
+                    digest = hashlib.sha256(stream.read()).hexdigest()
+                record = {"bytes": info.st_size, "path": relative, "sha256": digest}
+                semantics = inspector(root, record, relative, final)
+                assert semantics["template_state"] == (
+                    "merged" if final else "placeholder"
+                )
         payload_path = os.path.join(root, "safe", "value.json")
         with open(payload_path, "wb") as stream:
             stream.write(b'{"value":1}\n')
