@@ -251,14 +251,14 @@ refused at parse, and neither publishes anything.
   $ office.exe batch --format docx d3-bad.docx d3-bad-style.json --json > d3-bad.json 2>&1; echo $?
   1
   $ jq -c '{success,code:.error.code}' d3-bad.json
-  {"success":false,"code":"office.docx.invalid_script"}
+  {"success":false,"code":"office.docx.batch_parse"}
   $ test ! -e d3-bad.docx; echo $?
   0
   $ printf '%s\n' '{"schema":"docx.batch/2","schema":"x","ops":[]}' > d3-dup.json
   $ office.exe batch --format docx d3-dup.docx d3-dup.json --json > d3-dup-result.json 2>&1; echo $?
   1
   $ jq -c '{success,code:.error.code}' d3-dup-result.json
-  {"success":false,"code":"office.docx.invalid_script"}
+  {"success":false,"code":"office.docx.batch_parse"}
   $ test ! -e d3-dup.docx; echo $?
   0
 

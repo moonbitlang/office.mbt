@@ -166,6 +166,19 @@ jq -e '.error.code == "office.replay.invalid_dump"' "$work/replay-invalid.json" 
 docx_create="$(json office.docx.create/1 create docx "$work/docx-blank.docx" --json)"
 jq -e '.success == true and .data.transaction.committed == true' >/dev/null <<<"$docx_create" || fail "docx create"
 
+# The exact malformed-script contract is exercised through this same command
+# path in both source-tree and installed native/Wasm acceptance modes.
+printf '%s\n' \
+  '{"schema":"docx.batch/2","ops":[{"op":"f1b_invalid_operation","params":{}}]}' \
+  >"$work/docx-refusal.json"
+expect_failure "$work/docx-refusal-result.json" batch --format docx \
+  "$work/docx-refusal-output.docx" "$work/docx-refusal.json" --json
+jq -e '.error.code == "office.docx.batch_parse"' \
+  "$work/docx-refusal-result.json" >/dev/null || fail "docx refusal code"
+[ ! -e "$work/docx-refusal-output.docx" ] || fail "docx refusal wrote output"
+[ -z "$(find "$work" -maxdepth 1 \( -name '.office-tmp-*' -o -name '.office-output-tmp-*' \) -print -quit)" ] ||
+  fail "docx refusal left a staging artifact"
+
 docx_batch="$(json office.docx.batch/1 batch --format docx "$work/docx-template.docx" "$work/docx.batch.json" --json)"
 jq -e '.success == true and .data.ops == 3 and .data.transaction.committed == true' >/dev/null <<<"$docx_batch" || fail "docx batch"
 [ "$(json office.identify/1 identify "$work/docx-template.docx" --json | jq -r '.data.format')" = "docx" ] || fail "docx identify"
