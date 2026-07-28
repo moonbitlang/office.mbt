@@ -28,6 +28,7 @@ BASELINE_FILES = {
     "COMMANDS.json",
     "CONFIG.toml",
     "DOCX-REFUSALS.json",
+    "XLSX-REFUSALS.json",
     "RAW-COMMANDS.json",
     "RUN-PREFLIGHT.json",
     "RUN.json",
@@ -802,6 +803,7 @@ def validate_scenario_evidence(evidence_root, budget):
         os.path.join(evidence_root, "COMMANDS.json"),
         os.path.join(evidence_root, "RAW-COMMANDS.json"),
         os.path.join(evidence_root, "WORKFLOWS.json"),
+        os.path.join(evidence_root, "XLSX-REFUSALS.json"),
         os.path.join(evidence_root, "DOCX-REFUSALS.json"),
         os.path.join(evidence_root, "SCENARIOS.json"),
     ]

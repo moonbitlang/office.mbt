@@ -271,6 +271,23 @@ def main(argv):
             }
         )
     ) == 64
+    assert len(
+        policy.validate_xlsx_refusal_script(
+            {
+                "schema": "xlsx.batch/2",
+                "ops": [
+                    {
+                        "op": "set",
+                        "params": {
+                            "sheet": "Data",
+                            "cell": "A9",
+                            "value": "refusal",
+                        },
+                    }
+                ],
+            }
+        )
+    ) == 64
 
     expected_dump_ops = policy.expected_xlsx_dump_ops(xlsx_batch(policy), final=True)
     dump = {
@@ -322,12 +339,38 @@ def main(argv):
 
     failure = (
         '{"schema":"office.output/1","success":false,'
-        '"error":{"code":"office.transaction.output_exists"}}'
+        '"error":{"code":"office.transaction.output_exists",'
+        '"message":"output exists","details":{"output":"native/x.xlsx"}}}'
     )
     assert policy.parse_failure_result(
         failure,
         "office.transaction.output_exists",
     ) == "office.transaction.output_exists"
+    failure_core, failure_diagnostics = policy.split_runtime_diagnostics(
+        policy.normalize_failure_envelope(
+            {
+                "schema": "office.output/1",
+                "success": False,
+                "error": {
+                    "code": "office.transaction.output_exists",
+                    "message": "output exists",
+                    "details": {"output": "native/x.xlsx"},
+                },
+                "warnings": [{"code": "office.test", "message": "warning"}],
+            },
+            "office.transaction.output_exists",
+            "test refusal",
+        ),
+        "native",
+    )
+    assert failure_core["error"]["details"]["output"] == "$runtime/x.xlsx"
+    assert failure_diagnostics == [
+        {
+            "field": "warnings",
+            "location": "$.warnings",
+            "value": {"code": "office.test", "message": "warning"},
+        }
+    ]
 
     normalized = policy.normalize_runtime_paths(
         {
@@ -450,6 +493,18 @@ def main(argv):
         lambda: policy.validate_annotation_script(shallow_annotation),
     )
     expect_rejected(policy, lambda: policy.parse_failure_result("false\n"))
+    expect_rejected(
+        policy,
+        lambda: policy.normalize_failure_envelope(
+            {
+                "schema": "office.output/1",
+                "success": False,
+                "error": {"code": "office.transaction.output_exists"},
+            },
+            "office.transaction.output_exists",
+            "incomplete refusal",
+        ),
+    )
     bad_dump = dict(dump, residual="lost")
     expect_rejected(
         policy,
