@@ -248,7 +248,8 @@ make_candidate() {
     '#!/bin/sh' \
     'set -eu' \
     'case "${TMPDIR:-}" in */.office-f1b-isolation.*/tmp) ;; *) exit 70 ;; esac' \
-    'case "${1:-}" in *.wasm) shift ;; esac' \
+    'runtime=native' \
+    'case "${1:-}" in *.wasm) runtime=wasm; shift ;; esac' \
     'verb=${1:-help}' \
     'shift || true' \
     'raw_action=${1:-}' \
@@ -336,7 +337,13 @@ make_candidate() {
     '    ;;' \
     '  preview)' \
     '    [ -n "$output_file" ] || output_file=preview.html' \
-    '    printf '\''<!doctype html><title>fake preview</title>\n'\'' > "$output_file"' \
+    '    if [ "${OFFICE_F1B_CANNED_PREVIEW:-}" = 1 ]; then' \
+    '      printf '\''<!doctype html><title>fake preview</title>\n'\'' > "$output_file"' \
+    '    elif [ "$format" = xlsx ]; then' \
+    '      printf '\''<!doctype html><p>F1B-XLSX-REPRESENTATIVE-V1</p><p>F1B-XLSX-TEMPLATE-V1</p><figure class="chart">Representative</figure>\n'\'' > "$output_file"' \
+    '    else' \
+    '      printf '\''<!doctype html><h1>F1B-DOCX-HEADING-V1</h1><p>F1B-DOCX-TEMPLATE-V1</p><ol><li>F1B-DOCX-LIST-V1</li></ol><table><tr><td>F1B-DOCX-TABLE-V1</td></tr></table><a href="https://example.invalid/f1b">F1B link</a>\n'\'' > "$output_file"' \
+    '    fi' \
     '    ;;' \
     'esac' \
     'case "$verb/$format" in' \
@@ -363,7 +370,7 @@ make_candidate() {
     '  annotate/docx) result_schema=office.docx.annotation-batch/1 ;;' \
     '  *) exit 72 ;;' \
     'esac' \
-    '/usr/bin/jq -cn --arg verb "$verb" --arg format "$format" --arg schema "$result_schema" --arg source "$source_file" --arg output "$artifact" --arg produced "$output_file" '\''if $verb == "dump" then {schema:$schema,format:$format,source:{file:$source,bytes:1,sha256:("a"*64)},replay:{batch_schema:(if $format == "xlsx" then "xlsx.batch/2" else "docx.batch/2" end),create:{},limits:{}},ops:[{op:"fixture",params:{format:$format}}],assets:{},residual:[],warnings:[],stats:{ops:1,assets:0,residual:0,warnings:0}} else {schema:"office.output/1",success:true,data:({schema:$schema,format:$format} + if $verb == "create" or $verb == "batch" then {transaction:{format:$format,output:$output,committed:true,dry_run:false,changed:true}} elif $verb == "identify" then {file:$source} elif $verb == "outline" and $format == "docx" then {file:$source,path:"/",counts:{comments:2}} elif $verb == "outline" or $verb == "get" then {file:$source,path:"/"} elif $verb == "text" then {file:$source,returned:1,entries:[{text:(if $format == "xlsx" then "F1B-XLSX-TEMPLATE-V1" else "F1B-DOCX-TEMPLATE-V1" end)}]} elif $verb == "query" then {file:$source,returned:1,matches:[{preview:(if $format == "xlsx" then "F1B-XLSX-TEMPLATE-V1" else "F1B-DOCX-TEMPLATE-V1" end)}]} elif $verb == "validate" or $verb == "issues" then {file:$source,valid:true,error_count:0} elif $verb == "preview" then {file:$source,output:$produced,bytes_written:50,charts_rendered:(if $format == "xlsx" then 1 else 0 end),charts_placeholder:0,images_embedded:0,truncation:{max_rows:200,max_cols:50,truncated_sheets:0,images_omitted:0}} elif $verb == "template" then {output:$output,replaced:1,transaction:{committed:true}} elif $verb == "replay" then {output:$output,bytes_written:1,ops_applied:1} elif $verb == "raw" and $schema == "office.raw.inventory/1" then {part_count:1} elif $verb == "raw" and $format == "docx" then {content:"<document/>"} elif $verb == "annotate" then {output:$output,ops_applied:3,results:[{op:"comment_add"},{op:"comment_reply"},{op:"comment_resolve",done:true}],labels:[{label:"root",comment_id:"0"}],transaction:{committed:true}} else {} end)} end'\''' \
+    '/usr/bin/jq -cn --arg verb "$verb" --arg format "$format" --arg schema "$result_schema" --arg source "$source_file" --arg output "$artifact" --arg produced "$output_file" --arg runtime "$runtime" --arg canned_get "${OFFICE_F1B_CANNED_GET:-0}" --arg canned_raw "${OFFICE_F1B_CANNED_RAW:-0}" --arg canned_dump "${OFFICE_F1B_CANNED_DUMP:-0}" --arg unknown_warning "${OFFICE_F1B_UNKNOWN_WARNING:-0}" '\''def commit_warnings: [{code:"office.transaction.path_based_commit_semantics",message:"publication uses moonbitlang/async path APIs; atomic rename is guaranteed, but hostile concurrent directory-entry replacement is outside the portable contract"}] + (if $runtime == "wasm" then [{code:"office.transaction.wasm_commit_semantics",message:"Wasm uses normalized paths and a same-directory rename, but host-independent realpath, symlink identity, and parent-directory durability are unavailable"}] else [] end); def envelope($data): {schema:"office.output/1",success:true,data:$data} + (if $unknown_warning == "1" then {warnings:[{code:"office.fixture.unclassified_target_warning",message:"unclassified target warning"}]} elif $verb == "create" or $verb == "batch" or $verb == "template" or $verb == "replay" or $verb == "annotate" then {warnings:commit_warnings} else {} end); if $verb == "dump" then (if $canned_dump == "1" then [{op:"fixture",params:{format:$format}}] elif $format == "xlsx" then [{op:"set",params:{sheet:"Data",cell:"A1",value:"F1B-XLSX-REPRESENTATIVE-V1"}},{op:"set",params:{sheet:"Data",cell:"A5",value:"F1B-XLSX-TEMPLATE-V1"}},{op:"set",params:{sheet:"Data",cell:"B2",value:30}},{op:"formula",params:{sheet:"Data",cell:"B4",formula:"SUM(B2:B3)"}},{op:"chart",params:{sheet:"Data",anchor:"D2",categories:"A2:A3",values:"B2:B3"}}] else [{op:"paragraph",params:{text:"F1B-DOCX-HEADING-V1",style:"Heading1"}},{op:"paragraph",params:{text:"F1B-DOCX-TEMPLATE-V1"}},{op:"paragraph",params:{text:"F1B-DOCX-LIST-V1",list:{ordered:true}}},{op:"table",params:{rows:[["F1B-DOCX-TABLE-V1"]]}},{op:"paragraph",params:{runs:[{link:{href:"https://example.invalid/f1b",text:"F1B link"}}]}},{op:"comment",params:{body:"F1B-DOCX-COMMENT-V1"}},{op:"comment",params:{body:"F1B-DOCX-REPLY-V1",reply_to:5}}] end) as $ops | {schema:$schema,format:$format,source:{file:$source,bytes:1,sha256:("a"*64)},replay:{batch_schema:(if $format == "xlsx" then "xlsx.batch/2" else "docx.batch/2" end),create:{},limits:{}},ops:$ops,assets:{},residual:[],warnings:[],stats:{ops:($ops|length),assets:0,residual:0,warnings:0}} else envelope({schema:$schema,format:$format} + if $verb == "create" or $verb == "batch" then {transaction:{format:$format,output:$output,committed:true,dry_run:false,changed:true}} elif $verb == "identify" then {file:$source} elif $verb == "outline" and $format == "docx" then {file:$source,path:"/",counts:{comments:2}} elif $verb == "outline" then {file:$source,path:"/"} elif $verb == "get" and $canned_get == "1" then {file:$source,path:"/"} elif $verb == "get" and $format == "xlsx" then {file:$source,path:"/xlsx/sheet[name=Data]/range[A1:A5]",cells:[{raw:{value:"F1B-XLSX-REPRESENTATIVE-V1"}},{raw:{value:"F1B-XLSX-TEMPLATE-V1"}}]} elif $verb == "get" then {file:$source,path:"/docx/body/p[1]",text:"F1B-DOCX-HEADING-V1"} elif $verb == "text" then {file:$source,returned:1,entries:[{text:(if $format == "xlsx" then "F1B-XLSX-TEMPLATE-V1" else "F1B-DOCX-TEMPLATE-V1" end)}]} elif $verb == "query" then {file:$source,returned:1,matches:[{preview:(if $format == "xlsx" then "F1B-XLSX-TEMPLATE-V1" else "F1B-DOCX-TEMPLATE-V1" end)}]} elif $verb == "validate" or $verb == "issues" then {file:$source,valid:true,error_count:0} elif $verb == "preview" then {file:$source,output:$produced,bytes_written:50,charts_rendered:(if $format == "xlsx" then 1 else 0 end),charts_placeholder:0,images_embedded:0,truncation:{max_rows:200,max_cols:50,truncated_sheets:0,images_omitted:0}} elif $verb == "template" then {output:$output,replaced:1,transaction:{committed:true}} elif $verb == "replay" then {output:$output,bytes_written:1,ops_applied:1} elif $verb == "raw" and $schema == "office.raw.inventory/1" and $canned_raw == "1" then {part_count:1,parts:[]} elif $verb == "raw" and $schema == "office.raw.inventory/1" then {part_count:3,parts:[{name:"xl/workbook.xml"},{name:"xl/worksheets/sheet1.xml"},{name:"xl/charts/chart1.xml"}]} elif $verb == "raw" and $format == "docx" and $canned_raw == "1" then {content:"<document/>"} elif $verb == "raw" and $format == "docx" then {content:"<document>F1B-DOCX-HEADING-V1 F1B-DOCX-TEMPLATE-V1 F1B-DOCX-LIST-V1 F1B-DOCX-TABLE-V1</document>"} elif $verb == "annotate" then {output:$output,ops_applied:3,results:[{op:"comment_add"},{op:"comment_reply"},{op:"comment_resolve",done:true}],labels:[{label:"root",comment_id:"0"}],transaction:{committed:true}} else {} end) end'\''' \
     > "$install_root/bin/office-native"
   /usr/bin/install -m 0500 "$script_dir/office-wasm" \
     "$install_root/bin/office-wasm"
@@ -1036,6 +1043,20 @@ chmod 0600 "$codex_bin_dir/mode"
     '            OFFICE_F1B_WRONG_OUTPUT_ROLE=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
     '          elif [ "$mode" = "empty-semantic-package" ] && [ "$runtime/$format/$verb" = "native/xlsx/batch" ]; then' \
     '            OFFICE_F1B_EMPTY_SEMANTICS=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
+    '          elif [ "$mode" = "empty-replay-package" ] && [ "$runtime/$format/$verb" = "native/xlsx/replay" ]; then' \
+    '            OFFICE_F1B_EMPTY_SEMANTICS=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
+    '          elif [ "$mode" = "canned-get" ] && [ "$runtime/$format/$verb" = "native/xlsx/get" ]; then' \
+    '            OFFICE_F1B_CANNED_GET=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
+    '          elif [ "$mode" = "canned-raw" ] && [ "$runtime/$format/$verb" = "native/xlsx/raw" ]; then' \
+    '            OFFICE_F1B_CANNED_RAW=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
+    '          elif [ "$mode" = "canned-docx-raw" ] && [ "$runtime/$format/$verb" = "native/docx/raw" ]; then' \
+    '            OFFICE_F1B_CANNED_RAW=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
+    '          elif [ "$mode" = "canned-preview" ] && [ "$runtime/$format/$verb" = "native/xlsx/preview" ]; then' \
+    '            OFFICE_F1B_CANNED_PREVIEW=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
+    '          elif [ "$mode" = "canned-dump" ] && [ "$runtime/$format/$verb" = "native/xlsx/dump" ]; then' \
+    '            OFFICE_F1B_CANNED_DUMP=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
+    '          elif [ "$mode" = "unknown-runtime-warning" ] && [ "$runtime/$format/$verb" = "wasm/xlsx/get" ]; then' \
+    '            OFFICE_F1B_UNKNOWN_WARNING=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
     '          else' \
     '            "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
     '          fi' \
@@ -1288,8 +1309,10 @@ evidence="$case_root/evidence"
     (.preview.sha256 | test("^[0-9a-f]{64}$")) and
     (.preview.semantic_sha256 | test("^[0-9a-f]{64}$")) and
     (.dump_fixpoint_sha256 | test("^[0-9a-f]{64}$")) and
+    (.diagnostic_inventory | type) == "array" and
     .package_semantics.authored.template_state == "placeholder" and
     .package_semantics.final.template_state == "merged" and
+    .package_semantics.replayed == .package_semantics.final and
     (if .format == "xlsx" then
        .package_semantics.final.formula == true and
        .package_semantics.final.numeric == true and
@@ -1305,7 +1328,20 @@ evidence="$case_root/evidence"
        .refusal.execution == "host-controlled-immediate" and
        (.refusal.script_semantic_sha256 | test("^[0-9a-f]{64}$")) and
        (.refusal.diagnostic_semantic_sha256 | test("^[0-9a-f]{64}$"))
+     end) and
+    (if .format == "xlsx" then
+       .raw_semantics == {chart_part:true, workbook_part:true, worksheet_part:true}
+     else
+       .raw_semantics.main_document_content == true
      end)
+  )) and
+  (.cross_runtime | all(
+    (.diagnostics.shared_sha256 | test("^[0-9a-f]{64}$")) and
+    (.diagnostics.target_limitations | length) > 0 and
+    (.diagnostics.target_limitations | all(
+      .field == "warnings" and
+      .value.code == "office.transaction.wasm_commit_semantics"
+    ))
   )) and
   ([.scenarios[] | .runtime + "/" + .format] | unique) ==
     ["native/docx", "native/xlsx", "wasm/docx", "wasm/xlsx"]
@@ -1793,6 +1829,58 @@ expect_failure empty-semantic-package 1 \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/empty-semantic-package-probe" \
   "$case_root/empty-semantic-package-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'unknown-runtime-warning\n' > "$codex_bin_dir/mode"
+expect_failure unknown-runtime-warning 1 \
+  'unclassified Wasm-only diagnostic differs for xlsx' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/unknown-runtime-warning-probe" \
+  "$case_root/unknown-runtime-warning-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'canned-get\n' > "$codex_bin_dir/mode"
+expect_failure canned-get 1 \
+  'get result omits its representative marker' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/canned-get-probe" "$case_root/canned-get-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'canned-raw\n' > "$codex_bin_dir/mode"
+expect_failure canned-raw 1 \
+  'XLSX raw inventory omits workbook, worksheet, or chart parts' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/canned-raw-probe" "$case_root/canned-raw-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'canned-docx-raw\n' > "$codex_bin_dir/mode"
+expect_failure canned-docx-raw 1 \
+  'DOCX raw main document omits representative content' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/canned-docx-raw-probe" \
+  "$case_root/canned-docx-raw-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'canned-preview\n' > "$codex_bin_dir/mode"
+expect_failure canned-preview 1 \
+  'xlsx preview omits representative content' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/canned-preview-probe" "$case_root/canned-preview-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'canned-dump\n' > "$codex_bin_dir/mode"
+expect_failure canned-dump 1 \
+  'xlsx dump omits representative semantics' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/canned-dump-probe" "$case_root/canned-dump-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'empty-replay-package\n' > "$codex_bin_dir/mode"
+expect_failure empty-replay-package 1 \
+  'replayed package lacks representative XLSX content' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/empty-replay-package-probe" \
+  "$case_root/empty-replay-package-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'host-script-rewrite\n' > "$codex_bin_dir/mode"

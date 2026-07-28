@@ -40,6 +40,15 @@ COMPARE_OPERATIONS = (
     "issues",
     "raw",
 )
+DIAGNOSTIC_FIELDS = ("diagnostics", "messages", "warnings")
+WASM_COMMIT_WARNING = {
+    "code": "office.transaction.wasm_commit_semantics",
+    "message": (
+        "Wasm uses normalized paths and a same-directory rename, but "
+        "host-independent realpath, symlink identity, and parent-directory "
+        "durability are unavailable"
+    ),
+}
 XLSX_CONTENT_MARKER = "F1B-XLSX-REPRESENTATIVE-V1"
 DOCX_HEADING_MARKER = "F1B-DOCX-HEADING-V1"
 DOCX_LIST_MARKER = "F1B-DOCX-LIST-V1"
@@ -260,6 +269,17 @@ def read_record(root, record, label, parse_json=False):
         return json.loads(payload.decode("utf-8"))
     except (UnicodeError, ValueError) as error:
         raise ScenarioError("%s is not one strict UTF-8 JSON value" % label) from error
+
+
+def read_text_record(root, record, label):
+    expected = validate_digest_record(record, label)
+    observed, payload = inspect_bound_file(root, record["path"], label, MAX_JSON_BYTES)
+    if observed != expected:
+        fail("%s changed after its recorded event" % label)
+    try:
+        return payload.decode("utf-8")
+    except UnicodeError as error:
+        raise ScenarioError("%s is not strict UTF-8 text" % label) from error
 
 
 def load_json_file(path, label, max_bytes=MAX_JSON_BYTES):
@@ -625,6 +645,27 @@ def dump_projection(value, format_name):
             fail("%s dump omits %s loss evidence" % (format_name, field))
     if not isinstance(value.get("stats"), dict):
         fail("%s dump omits stats" % format_name)
+    if format_name == "xlsx":
+        required = (
+            XLSX_CONTENT_MARKER,
+            TEMPLATE_MARKERS["xlsx"],
+            "formula",
+            "chart",
+        )
+    else:
+        required = (
+            DOCX_HEADING_MARKER,
+            DOCX_LIST_MARKER,
+            DOCX_TABLE_MARKER,
+            DOCX_LINK_TARGET,
+            TEMPLATE_MARKERS["docx"],
+            COMMENT_MARKER,
+            REPLY_MARKER,
+            "comment",
+        )
+    missing = [marker for marker in required if not json_contains(value["ops"], marker)]
+    if missing:
+        fail("%s dump omits representative semantics: %s" % (format_name, ", ".join(missing)))
     return {key: item for key, item in value.items() if key != "source"}
 
 
@@ -691,9 +732,151 @@ def normalize_runtime_paths(value, runtime):
         return {
             key: normalize_runtime_paths(item, runtime)
             for key, item in value.items()
-            if key not in ("diagnostics", "messages", "warnings")
         }
     return value
+
+
+def split_runtime_diagnostics(value, runtime, location="$"):
+    """Normalize one result while retaining every diagnostic-like array."""
+    if isinstance(value, list):
+        core = []
+        diagnostics = []
+        for index, item in enumerate(value):
+            child, found = split_runtime_diagnostics(
+                item,
+                runtime,
+                "%s[%d]" % (location, index),
+            )
+            core.append(child)
+            diagnostics.extend(found)
+        return core, diagnostics
+    if isinstance(value, dict):
+        core = {}
+        diagnostics = []
+        for key, item in value.items():
+            child_location = "%s.%s" % (location, key)
+            if key in DIAGNOSTIC_FIELDS and isinstance(item, list):
+                for diagnostic in item:
+                    diagnostics.append(
+                        {
+                            "field": key,
+                            "location": child_location,
+                            "value": normalize_runtime_paths(diagnostic, runtime),
+                        }
+                    )
+                continue
+            child, found = split_runtime_diagnostics(item, runtime, child_location)
+            core[key] = child
+            diagnostics.extend(found)
+        return core, diagnostics
+    return normalize_runtime_paths(value, runtime), []
+
+
+def add_diagnostics(inventory, operation, found):
+    for diagnostic in found:
+        inventory.append({"operation": operation, **diagnostic})
+
+
+def sorted_diagnostics(inventory):
+    return sorted(inventory, key=canonical_bytes)
+
+
+def classify_runtime_diagnostics(native, wasm, format_name):
+    native_remaining = list(native)
+    wasm_remaining = list(wasm)
+    shared = []
+    for diagnostic in list(native_remaining):
+        try:
+            index = wasm_remaining.index(diagnostic)
+        except ValueError:
+            continue
+        shared.append(diagnostic)
+        native_remaining.remove(diagnostic)
+        del wasm_remaining[index]
+    if native_remaining:
+        fail("native-only diagnostics differ for %s" % format_name)
+    target_limitations = []
+    for diagnostic in wasm_remaining:
+        if (
+            diagnostic.get("field") == "warnings"
+            and diagnostic.get("value") == WASM_COMMIT_WARNING
+        ):
+            target_limitations.append(diagnostic)
+            continue
+        fail("unclassified Wasm-only diagnostic differs for %s" % format_name)
+    if not target_limitations:
+        fail("%s does not expose its classified Wasm commit limitation" % format_name)
+    return {
+        "shared_sha256": value_sha256(sorted_diagnostics(shared)),
+        "target_limitations": sorted_diagnostics(target_limitations),
+    }
+
+
+def preview_content_projection(payload, format_name):
+    if format_name == "xlsx":
+        required = (
+            XLSX_CONTENT_MARKER,
+            TEMPLATE_MARKERS["xlsx"],
+            '<figure class="chart"',
+        )
+    else:
+        required = (
+            DOCX_HEADING_MARKER,
+            DOCX_LIST_MARKER,
+            DOCX_TABLE_MARKER,
+            DOCX_LINK_TARGET,
+            TEMPLATE_MARKERS["docx"],
+        )
+    missing = [marker for marker in required if marker not in payload]
+    if missing:
+        fail("%s preview omits representative content: %s" % (format_name, ", ".join(missing)))
+    return {"representative_content": True, "required_markers": list(required)}
+
+
+def validate_raw_semantics(value, format_name):
+    value = require_object(value, "%s raw result" % format_name)
+    data = value.get("data")
+    if (
+        value.get("schema") != "office.output/1"
+        or value.get("success") is not True
+        or not isinstance(data, dict)
+    ):
+        fail("%s raw result has the wrong envelope" % format_name)
+    if format_name == "xlsx":
+        if data.get("schema") != "office.raw.inventory/1" or not isinstance(
+            data.get("parts"), list
+        ):
+            fail("XLSX raw result omits its part inventory")
+        names = [
+            part["name"].lstrip("/")
+            for part in data["parts"]
+            if isinstance(part, dict) and isinstance(part.get("name"), str)
+        ]
+        if (
+            "xl/workbook.xml" not in names
+            or not any(
+                re.fullmatch(r"xl/worksheets/sheet[0-9]+\.xml", name)
+                for name in names
+            )
+            or not any(
+                re.fullmatch(r"xl/charts/chart[0-9]+\.xml", name)
+                for name in names
+            )
+        ):
+            fail("XLSX raw inventory omits workbook, worksheet, or chart parts")
+        return {"chart_part": True, "workbook_part": True, "worksheet_part": True}
+    content = data.get("content")
+    if data.get("schema") != "office.raw.part/1" or not isinstance(content, str):
+        fail("DOCX raw result omits the main document content")
+    required = (
+        DOCX_HEADING_MARKER,
+        DOCX_LIST_MARKER,
+        DOCX_TABLE_MARKER,
+        TEMPLATE_MARKERS["docx"],
+    )
+    if any(marker not in content for marker in required):
+        fail("DOCX raw main document omits representative content")
+    return {"main_document_content": True, "required_markers": list(required)}
 
 
 def raw_output_maps(commands, raw_commands):
@@ -1170,6 +1353,20 @@ def validate_scenario(
     )
     if not json_contains(text_result, TEMPLATE_MARKERS[format_name]):
         fail("%s/%s text result omits the template marker" % (runtime, format_name))
+    get_result = result_json(
+        root,
+        canonical["get"],
+        "%s/%s representative get result" % (runtime, format_name),
+    )
+    get_marker = XLSX_CONTENT_MARKER if format_name == "xlsx" else DOCX_HEADING_MARKER
+    if not json_contains(get_result, get_marker):
+        fail("%s/%s get result omits its representative marker" % (runtime, format_name))
+    raw_result = result_json(
+        root,
+        canonical["raw"],
+        "%s/%s representative raw result" % (runtime, format_name),
+    )
+    raw_semantics = validate_raw_semantics(raw_result, format_name)
     if format_name == "docx":
         outline = result_json(root, canonical["outline"], "%s DOCX outline" % runtime)
         comments = outline.get("data", {}).get("counts", {}).get("comments")
@@ -1222,8 +1419,18 @@ def validate_scenario(
     ):
         fail("%s/%s preview reports are not deterministic" % (runtime, format_name))
     second_preview = supplemental_file(preview_2, ".html", "second preview")
-    read_record(root, first_preview, "first preview")
-    read_record(root, second_preview, "second preview")
+    first_preview_content = preview_content_projection(
+        read_text_record(root, first_preview, "first preview"),
+        format_name,
+    )
+    second_preview_content = preview_content_projection(
+        read_text_record(root, second_preview, "second preview"),
+        format_name,
+    )
+    if first_preview_content != second_preview_content:
+        fail("%s/%s preview content semantics are not deterministic" % (runtime, format_name))
+    preview_1_projection["content"] = first_preview_content
+    preview_2_projection["content"] = second_preview_content
     if first_preview["sha256"] != second_preview["sha256"] or first_preview[
         "bytes"
     ] != second_preview["bytes"]:
@@ -1265,6 +1472,22 @@ def validate_scenario(
     dump_2_projection = dump_projection(dump_2_value, format_name)
     if dump_1_projection != dump_2_projection:
         fail("%s/%s dump projection did not reach a fixpoint" % (runtime, format_name))
+    if format_name == "xlsx":
+        replayed_semantics = inspect_xlsx_semantics(
+            root,
+            replayed,
+            "%s XLSX replayed package" % runtime,
+            final=True,
+        )
+    else:
+        replayed_semantics = inspect_docx_semantics(
+            root,
+            replayed,
+            "%s DOCX replayed package" % runtime,
+            final=True,
+        )
+    if replayed_semantics != final_semantics:
+        fail("%s/%s replayed package changes representative semantics" % (runtime, format_name))
 
     refusal = validate_refusal(
         root,
@@ -1277,16 +1500,25 @@ def validate_scenario(
         host_docx_refusals,
     )
     semantic_results = {}
-    for operation in COMPARE_OPERATIONS:
+    diagnostic_inventory = []
+    for operation, event in canonical.items():
         value = result_json(
             root,
-            canonical[operation],
+            event,
             "%s/%s %s result" % (runtime, format_name, operation),
         )
-        semantic_results[operation] = normalize_runtime_paths(value, runtime)
+        core, found = split_runtime_diagnostics(value, runtime)
+        add_diagnostics(diagnostic_inventory, operation, found)
+        if operation in COMPARE_OPERATIONS:
+            semantic_results[operation] = core
+    for operation, value in (("preview-2", preview_2_result), ("dump-2", dump_2_value)):
+        _, found = split_runtime_diagnostics(value, runtime)
+        add_diagnostics(diagnostic_inventory, operation, found)
+    diagnostic_inventory = sorted_diagnostics(diagnostic_inventory)
     return {
         "annotation_script_sha256": annotation_digest,
         "batch_script_sha256": batch_digest,
+        "diagnostic_inventory": diagnostic_inventory,
         "dump_fixpoint_sha256": value_sha256(dump_1_projection),
         "final_artifact": final,
         "format": format_name,
@@ -1294,6 +1526,7 @@ def validate_scenario(
         "package_semantics": {
             "authored": batch_semantics,
             "final": final_semantics,
+            "replayed": replayed_semantics,
         },
         "preview": {
             "bytes": first_preview["bytes"],
@@ -1303,6 +1536,7 @@ def validate_scenario(
             "sha256": first_preview["sha256"],
         },
         "refusal": refusal,
+        "raw_semantics": raw_semantics,
         "runtime": runtime,
         "semantic_results": semantic_results,
         "template_data_sha256": template_digest,
@@ -1356,6 +1590,13 @@ def build_document(root, commands, raw_commands, workflows, host_docx_refusals):
             fail("native/Wasm semantic read results differ for %s" % format_name)
         if native["package_semantics"] != wasm["package_semantics"]:
             fail("native/Wasm package semantics differ for %s" % format_name)
+        if native["raw_semantics"] != wasm["raw_semantics"]:
+            fail("native/Wasm raw semantics differ for %s" % format_name)
+        diagnostic_classification = classify_runtime_diagnostics(
+            native["diagnostic_inventory"],
+            wasm["diagnostic_inventory"],
+            format_name,
+        )
         if format_name == "docx":
             for field in (
                 "diagnostic_semantic_sha256",
@@ -1367,6 +1608,7 @@ def build_document(root, commands, raw_commands, workflows, host_docx_refusals):
                 if native["refusal"][field] != wasm["refusal"][field]:
                     fail("native/Wasm DOCX refusal %s differs" % field)
         cross_runtime[format_name] = {
+            "diagnostics": diagnostic_classification,
             "dump_fixpoint_sha256": native["dump_fixpoint_sha256"],
             "preview_semantic_sha256": native["preview"]["semantic_sha256"],
             "semantic_results_sha256": value_sha256(native["semantic_results"]),
