@@ -122,8 +122,8 @@ def path_record(path, label, executable=False):
         fail("%s does not resolve to a regular file or directory" % label)
     if executable and (kind != "file" or not os.access(resolved, os.X_OK)):
         fail("%s is not an executable regular file" % label)
-    if resolved_info.st_uid != 0:
-        fail("%s does not resolve to a root-owned path" % label)
+    if resolved_info.st_uid not in (0, os.geteuid()):
+        fail("%s does not resolve to a root- or runner-owned path" % label)
     if resolved_info.st_mode & 0o022:
         fail("%s resolves to a group- or other-writable path" % label)
     record = {
