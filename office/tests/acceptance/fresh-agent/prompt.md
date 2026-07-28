@@ -97,7 +97,8 @@ Host-derived scenario contract:
   and both reports.
 - After canonical dump -> canonical replay, run an attested dump of the replayed
   package using `scenario-RUNTIME-FORMAT-dump-2.json`. The host removes only
-  source identity and requires replay metadata, ordered ops, and assets to be
+  source identity and requires the complete remaining dump (including replay
+  metadata, ordered ops, assets, residuals, warnings, and stats) to be
   identical. It also compares those projections and core read results across
   native and Wasm.
 - For each XLSX runtime, copy the final package to
@@ -108,12 +109,13 @@ Host-derived scenario contract:
   RUNTIME/xlsx/refusal-target.xlsx --json`; it must return the typed
   `office.transaction.output_exists` error. Then run exactly
   `cmp RUNTIME/xlsx/refusal-before.xlsx RUNTIME/xlsx/refusal-target.xlsx`.
-- For each DOCX runtime, create an invalid `docx.batch/2` script at
-  `RUNTIME/docx/refusal.json`. Run `test ! -e
+- For each DOCX runtime, create exactly
+  `{"schema":"docx.batch/2","ops":[{"op":"f1b_invalid_operation","params":{}}]}`
+  at `RUNTIME/docx/refusal.json`. Run `test ! -e
   RUNTIME/docx/refusal-output.docx`, then, without `--attest-result`, exactly
   `office-RUNTIME batch --format docx RUNTIME/docx/refusal-output.docx
   RUNTIME/docx/refusal.json --json`, then repeat the absence test. It must emit
-  a typed `office.output/1` failure and leave no transaction staging artifact.
+  the typed `office.docx.batch_parse` failure and leave no transaction staging artifact.
   Do not hide or redirect either negative command's JSON diagnostic.
 
 Exercise these outcomes:

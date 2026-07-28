@@ -3,11 +3,14 @@
 
 import hashlib
 import json
+import math
 import os
 import re
 import stat
 import sys
 import tempfile
+import zipfile
+from xml.etree import ElementTree
 
 
 MAX_JSON_BYTES = 8 * 1024 * 1024
@@ -49,6 +52,15 @@ TEMPLATE_MARKERS = {
 }
 COMMENT_MARKER = "F1B-DOCX-COMMENT-V1"
 REPLY_MARKER = "F1B-DOCX-REPLY-V1"
+XLSX_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+CHART_NS = "http://schemas.openxmlformats.org/drawingml/2006/chart"
+WORD_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
+OFFICE_REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+WORD_2012_NS = "http://schemas.microsoft.com/office/word/2012/wordml"
+MAX_PACKAGE_ENTRIES = 4096
+MAX_SEMANTIC_XML_BYTES = 16 * 1024 * 1024
+MAX_SEMANTIC_TOTAL_BYTES = 64 * 1024 * 1024
 
 
 class ScenarioError(Exception):
@@ -284,6 +296,204 @@ def require_object(value, label):
     return value
 
 
+def open_semantic_package(root, record, label):
+    read_record(root, record, label)
+    path = os.path.join(root, record["path"])
+    try:
+        archive = zipfile.ZipFile(path, "r")
+    except (OSError, zipfile.BadZipFile) as error:
+        raise ScenarioError("%s is not a readable Office package" % label) from error
+    entries = archive.infolist()
+    if not entries or len(entries) > MAX_PACKAGE_ENTRIES:
+        archive.close()
+        fail("%s has an invalid package entry count" % label)
+    total = sum(entry.file_size for entry in entries)
+    if total > MAX_SEMANTIC_TOTAL_BYTES:
+        archive.close()
+        fail("%s is too large for semantic verification" % label)
+    return archive
+
+
+def package_xml(archive, name, label, required=True):
+    try:
+        info = archive.getinfo(name)
+    except KeyError:
+        if required:
+            fail("%s omits %s" % (label, name))
+        return None
+    if info.file_size <= 0 or info.file_size > MAX_SEMANTIC_XML_BYTES:
+        fail("%s has an invalid %s size" % (label, name))
+    try:
+        return ElementTree.fromstring(archive.read(info))
+    except (OSError, ElementTree.ParseError, RuntimeError) as error:
+        raise ScenarioError("%s has malformed %s" % (label, name)) from error
+
+
+def element_text(element, namespace):
+    return "".join(
+        node.text or "" for node in element.iter("{%s}t" % namespace)
+    )
+
+
+def inspect_xlsx_semantics(root, record, label, final):
+    with open_semantic_package(root, record, label) as archive:
+        shared = []
+        shared_root = package_xml(
+            archive,
+            "xl/sharedStrings.xml",
+            label,
+            required=False,
+        )
+        if shared_root is not None:
+            shared = [
+                element_text(item, XLSX_NS)
+                for item in shared_root.findall("{%s}si" % XLSX_NS)
+            ]
+        strings = []
+        numeric = formula = False
+        worksheets = sorted(
+            info.filename
+            for info in archive.infolist()
+            if re.fullmatch(r"xl/worksheets/sheet[0-9]+\.xml", info.filename)
+        )
+        if not worksheets:
+            fail("%s has no worksheets" % label)
+        for name in worksheets:
+            root_element = package_xml(archive, name, label)
+            for cell in root_element.iter("{%s}c" % XLSX_NS):
+                formula_node = cell.find("{%s}f" % XLSX_NS)
+                if formula_node is not None and (formula_node.text or "").strip():
+                    formula = True
+                kind = cell.get("t")
+                value = cell.find("{%s}v" % XLSX_NS)
+                if kind == "s" and value is not None and value.text is not None:
+                    try:
+                        index = int(value.text)
+                        strings.append(shared[index])
+                    except (ValueError, IndexError) as error:
+                        raise ScenarioError("%s has an invalid shared string" % label) from error
+                elif kind == "inlineStr":
+                    inline = cell.find("{%s}is" % XLSX_NS)
+                    if inline is not None:
+                        strings.append(element_text(inline, XLSX_NS))
+                elif kind in ("str", "e"):
+                    if kind == "str" and value is not None:
+                        strings.append(value.text or "")
+                elif value is not None and value.text is not None:
+                    try:
+                        numeric = numeric or math.isfinite(float(value.text))
+                    except ValueError:
+                        pass
+        chart = False
+        chart_series = 0
+        for info in archive.infolist():
+            if not re.fullmatch(r"xl/charts/chart[0-9]+\.xml", info.filename):
+                continue
+            chart_root = package_xml(archive, info.filename, label)
+            for kind in ("barChart", "lineChart", "pieChart"):
+                for chart_node in chart_root.iter("{%s}%s" % (CHART_NS, kind)):
+                    series = list(chart_node.findall("{%s}ser" % CHART_NS))
+                    if series:
+                        chart = True
+                        chart_series += len(series)
+        joined = "\n".join(strings)
+        expected = TEMPLATE_MARKERS["xlsx"] if final else "{{%s}}" % TEMPLATE_KEY
+        forbidden = "{{%s}}" % TEMPLATE_KEY if final else TEMPLATE_MARKERS["xlsx"]
+        if (
+            XLSX_CONTENT_MARKER not in strings
+            or expected not in strings
+            or forbidden in joined
+            or not numeric
+            or not formula
+            or not chart
+        ):
+            fail("%s lacks representative XLSX content, formula, chart, or template state" % label)
+        return {
+            "chart_series": chart_series,
+            "formula": formula,
+            "numeric": numeric,
+            "representative_marker": True,
+            "template_state": "merged" if final else "placeholder",
+            "worksheets": len(worksheets),
+        }
+
+
+def inspect_docx_semantics(root, record, label, final):
+    with open_semantic_package(root, record, label) as archive:
+        document = package_xml(archive, "word/document.xml", label)
+        paragraphs = list(document.iter("{%s}p" % WORD_NS))
+        paragraph_texts = [element_text(paragraph, WORD_NS) for paragraph in paragraphs]
+        heading = any(
+            text == DOCX_HEADING_MARKER
+            and paragraph.find(
+                "{%s}pPr/{%s}pStyle" % (WORD_NS, WORD_NS)
+            ) is not None
+            and paragraph.find(
+                "{%s}pPr/{%s}pStyle" % (WORD_NS, WORD_NS)
+            ).get("{%s}val" % WORD_NS) == "Heading1"
+            for paragraph, text in zip(paragraphs, paragraph_texts)
+        )
+        listed = any(
+            DOCX_LIST_MARKER in text
+            and paragraph.find("{%s}pPr/{%s}numPr" % (WORD_NS, WORD_NS)) is not None
+            for paragraph, text in zip(paragraphs, paragraph_texts)
+        )
+        table = any(
+            DOCX_TABLE_MARKER in element_text(node, WORD_NS)
+            for node in document.iter("{%s}tbl" % WORD_NS)
+        )
+        relationships = package_xml(
+            archive,
+            "word/_rels/document.xml.rels",
+            label,
+        )
+        hyperlink_ids = {
+            node.get("{%s}id" % OFFICE_REL_NS)
+            for node in document.iter("{%s}hyperlink" % WORD_NS)
+        }
+        hyperlink = any(
+            relationship.get("Id") in hyperlink_ids
+            and relationship.get("Target") == DOCX_LINK_TARGET
+            and relationship.get("TargetMode") == "External"
+            for relationship in relationships.iter("{%s}Relationship" % REL_NS)
+        )
+        document_text = "\n".join(paragraph_texts)
+        expected = TEMPLATE_MARKERS["docx"] if final else "{{%s}}" % TEMPLATE_KEY
+        forbidden = "{{%s}}" % TEMPLATE_KEY if final else TEMPLATE_MARKERS["docx"]
+        if not all((heading, listed, table, hyperlink)) or expected not in document_text or forbidden in document_text:
+            fail("%s lacks representative DOCX structure or template state" % label)
+        result = {
+            "external_hyperlink": True,
+            "heading": True,
+            "list": True,
+            "table": True,
+            "template_state": "merged" if final else "placeholder",
+        }
+        if final:
+            comments = package_xml(archive, "word/comments.xml", label)
+            comments_text = element_text(comments, WORD_NS)
+            extended = package_xml(archive, "word/commentsExtended.xml", label)
+            records = list(extended.iter("{%s}commentEx" % WORD_2012_NS))
+            resolved = any(
+                record.get("{%s}done" % WORD_2012_NS) in ("1", "true")
+                for record in records
+            )
+            reply = any(
+                record.get("{%s}paraIdParent" % WORD_2012_NS) is not None
+                for record in records
+            )
+            if (
+                COMMENT_MARKER not in comments_text
+                or REPLY_MARKER not in comments_text
+                or len(list(comments.iter("{%s}comment" % WORD_NS))) < 2
+                or not resolved
+                or not reply
+            ):
+                fail("%s lacks the authored comment, reply, or resolved thread state" % label)
+            result["annotations"] = "add-reply-resolve"
+        return result
+
+
 def validate_xlsx_batch(value):
     value = require_object(value, "representative XLSX batch")
     if value.get("schema") != "xlsx.batch/2" or not isinstance(value.get("ops"), list):
@@ -353,6 +563,20 @@ def validate_docx_batch(value):
     return value_sha256(value)
 
 
+def validate_docx_refusal_script(value):
+    value = require_object(value, "DOCX refusal script")
+    if set(value) != {"schema", "ops"} or value.get("schema") != "docx.batch/2":
+        fail("DOCX refusal script must use the exact docx.batch/2 shape")
+    operations = value.get("ops")
+    if (
+        not isinstance(operations, list)
+        or operations
+        != [{"op": "f1b_invalid_operation", "params": {}}]
+    ):
+        fail("DOCX refusal script must contain the prescribed unknown operation")
+    return value_sha256(value)
+
+
 def validate_template_data(value, format_name):
     value = require_object(value, "%s template data" % format_name)
     if value.get("schema") != "office.template.data/1":
@@ -396,11 +620,12 @@ def dump_projection(value, format_name):
         fail("%s dump omits its replay projection" % format_name)
     if not isinstance(value.get("assets"), dict):
         fail("%s dump assets must be an object" % format_name)
-    return {
-        "assets": value["assets"],
-        "ops": value["ops"],
-        "replay": value["replay"],
-    }
+    for field in ("residual", "warnings"):
+        if not isinstance(value.get(field), list):
+            fail("%s dump omits %s loss evidence" % (format_name, field))
+    if not isinstance(value.get("stats"), dict):
+        fail("%s dump omits stats" % format_name)
+    return {key: item for key, item in value.items() if key != "source"}
 
 
 def parse_failure_result(output, expected_code=None):
@@ -437,12 +662,23 @@ def preview_projection(value, format_name):
         fail("%s preview result has the wrong envelope" % format_name)
     projection = {"format": format_name}
     for field in ("charts_rendered", "charts_placeholder", "images_embedded"):
-        if not isinstance(data.get(field), int) or isinstance(data.get(field), bool):
+        if (
+            not isinstance(data.get(field), int)
+            or isinstance(data.get(field), bool)
+            or data[field] < 0
+        ):
             fail("%s preview result omits %s" % (format_name, field))
         projection[field] = data[field]
-    if not isinstance(data.get("truncation"), dict):
+    truncation = data.get("truncation")
+    required = ("max_rows", "max_cols", "truncated_sheets", "images_omitted")
+    if not isinstance(truncation, dict) or any(
+        not isinstance(truncation.get(field), int)
+        or isinstance(truncation.get(field), bool)
+        or truncation[field] < 0
+        for field in required
+    ):
         fail("%s preview result omits truncation evidence" % format_name)
-    projection["truncation"] = data["truncation"]
+    projection["truncation"] = truncation
     return projection
 
 
@@ -698,7 +934,21 @@ def validate_refusal(root, commands, raw_outputs, indexes, runtime, format_name,
         < indexes[absence[1]["id"]]
     ):
         fail("%s DOCX refusal evidence is out of order" % runtime)
-    code = parse_failure_result(raw_outputs[refusal["id"]])
+    _, refusal_payload = inspect_bound_file(
+        root,
+        script,
+        "%s DOCX refusal script" % runtime,
+        MAX_JSON_BYTES,
+    )
+    try:
+        refusal_value = json.loads(refusal_payload.decode("utf-8"))
+    except (UnicodeError, ValueError) as error:
+        raise ScenarioError("%s DOCX refusal script is not strict JSON" % runtime) from error
+    refusal_digest = validate_docx_refusal_script(refusal_value)
+    code = parse_failure_result(
+        raw_outputs[refusal["id"]],
+        "office.docx.batch_parse",
+    )
     if os.path.lexists(os.path.join(root, output)):
         fail("%s DOCX refusal published an output" % runtime)
     physical_directory = os.path.join(root, directory)
@@ -714,6 +964,7 @@ def validate_refusal(root, commands, raw_outputs, indexes, runtime, format_name,
         "error_code": code,
         "failure_event": refusal["id"],
         "output": output,
+        "script_sha256": refusal_digest,
     }
 
 
@@ -758,6 +1009,20 @@ def validate_scenario(root, commands, workflows, raw_outputs, indexes, runtime, 
         )
     else:
         batch_digest = validate_docx_batch(batch_script)
+    if format_name == "xlsx":
+        batch_semantics = inspect_xlsx_semantics(
+            root,
+            canonical["batch"]["artifact"],
+            "%s XLSX authored package" % runtime,
+            final=False,
+        )
+    else:
+        batch_semantics = inspect_docx_semantics(
+            root,
+            canonical["batch"]["artifact"],
+            "%s DOCX authored package" % runtime,
+            final=False,
+        )
     lineage.append(
         require_lineage(
             canonical["batch"]["artifact"],
@@ -805,6 +1070,20 @@ def validate_scenario(root, commands, workflows, raw_outputs, indexes, runtime, 
             fail("%s DOCX annotation result does not prove add/reply/resolve" % runtime)
         final_event = canonical["annotate"]
     final = final_event["artifact"]
+    if format_name == "xlsx":
+        final_semantics = inspect_xlsx_semantics(
+            root,
+            final,
+            "%s XLSX final package" % runtime,
+            final=True,
+        )
+    else:
+        final_semantics = inspect_docx_semantics(
+            root,
+            final,
+            "%s DOCX final package" % runtime,
+            final=True,
+        )
     for operation in FINAL_CONSUMERS:
         lineage.append(
             require_lineage(
@@ -940,6 +1219,10 @@ def validate_scenario(root, commands, workflows, raw_outputs, indexes, runtime, 
         "final_artifact": final,
         "format": format_name,
         "lineage": lineage,
+        "package_semantics": {
+            "authored": batch_semantics,
+            "final": final_semantics,
+        },
         "preview": {
             "bytes": first_preview["bytes"],
             "first": first_preview["path"],
@@ -998,10 +1281,13 @@ def build_document(root, commands, raw_commands, workflows):
             fail("native/Wasm preview semantics differ for %s" % format_name)
         if native["semantic_results"] != wasm["semantic_results"]:
             fail("native/Wasm semantic read results differ for %s" % format_name)
+        if native["package_semantics"] != wasm["package_semantics"]:
+            fail("native/Wasm package semantics differ for %s" % format_name)
         cross_runtime[format_name] = {
             "dump_fixpoint_sha256": native["dump_fixpoint_sha256"],
             "preview_semantic_sha256": native["preview"]["semantic_sha256"],
             "semantic_results_sha256": value_sha256(native["semantic_results"]),
+            "package_semantics_sha256": value_sha256(native["package_semantics"]),
         }
     for scenario in scenarios:
         del scenario["semantic_results"]

@@ -280,26 +280,38 @@ make_candidate() {
     '  package=$1' \
     '  case "$package" in /*) package_path=$package ;; *) package_path=$PWD/$package ;; esac' \
     '  /bin/mkdir -p "$(/usr/bin/dirname -- "$package_path")"' \
+    '  case "${package_path##*/}" in batched.xlsx|authored.docx) stage_text="{{agent_name}}" ;; *.xlsx) stage_text=F1B-XLSX-TEMPLATE-V1 ;; *) stage_text=F1B-DOCX-TEMPLATE-V1 ;; esac' \
+    '  content_marker=F1B-XLSX-REPRESENTATIVE-V1' \
+    '  if [ "${OFFICE_F1B_EMPTY_SEMANTICS:-}" = 1 ]; then content_marker=EMPTY; stage_text=EMPTY; fi' \
     '  package_tmp="$TMPDIR/fake-office-package-$$"' \
     '  /bin/rm -rf -- "$package_tmp"' \
     '  /bin/mkdir -m 0700 "$package_tmp" "$package_tmp/_rels"' \
     '  if [ "$format" = xlsx ]; then' \
-    '    main_part=xl/workbook.xml' \
-    '    main_content_type=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml' \
-    '    main_xml="<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"/>"' \
+    '    /bin/mkdir -p "$package_tmp/xl/_rels" "$package_tmp/xl/worksheets/_rels" "$package_tmp/xl/drawings/_rels" "$package_tmp/xl/charts"' \
+    '    printf "%s\n" "<?xml version=\"1.0\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/><Override PartName=\"/xl/worksheets/sheet1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/sharedStrings.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml\"/><Override PartName=\"/xl/drawings/drawing1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.drawing+xml\"/><Override PartName=\"/xl/charts/chart1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.drawingml.chart+xml\"/></Types>" > "$package_tmp/[Content_Types].xml"' \
+    '    printf "%s\n" '\''<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'\'' > "$package_tmp/_rels/.rels"' \
+    '    printf "%s\n" '\''<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Data" sheetId="1" r:id="rId1"/></sheets></workbook>'\'' > "$package_tmp/xl/workbook.xml"' \
+    '    printf "%s\n" '\''<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/></Relationships>'\'' > "$package_tmp/xl/_rels/workbook.xml.rels"' \
+    '    printf "%s\n" "<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" count=\"2\" uniqueCount=\"2\"><si><t>$content_marker</t></si><si><t>$stage_text</t></si></sst>" > "$package_tmp/xl/sharedStrings.xml"' \
+    '    printf "%s\n" '\''<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1"><v>30</v></c><c r="C1"><f>SUM(B1:B1)</f><v>30</v></c><c r="D1" t="s"><v>1</v></c></row></sheetData><drawing r:id="rId1"/></worksheet>'\'' > "$package_tmp/xl/worksheets/sheet1.xml"' \
+    '    printf "%s\n" '\''<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>'\'' > "$package_tmp/xl/worksheets/_rels/sheet1.xml.rels"' \
+    '    printf "%s\n" '\''<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><xdr:graphicFrame><c:chart r:id="rId1"/></xdr:graphicFrame></xdr:wsDr>'\'' > "$package_tmp/xl/drawings/drawing1.xml"' \
+    '    printf "%s\n" '\''<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/></Relationships>'\'' > "$package_tmp/xl/drawings/_rels/drawing1.xml.rels"' \
+    '    printf "%s\n" '\''<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart><c:plotArea><c:barChart><c:ser/></c:barChart></c:plotArea></c:chart></c:chartSpace>'\'' > "$package_tmp/xl/charts/chart1.xml"' \
+    '    (cd "$package_tmp" && /usr/bin/zip -q "$package_path" "[Content_Types].xml" "_rels/.rels" "xl/workbook.xml" "xl/_rels/workbook.xml.rels" "xl/sharedStrings.xml" "xl/worksheets/sheet1.xml" "xl/worksheets/_rels/sheet1.xml.rels" "xl/drawings/drawing1.xml" "xl/drawings/_rels/drawing1.xml.rels" "xl/charts/chart1.xml")' \
     '  else' \
-    '    main_part=word/document.xml' \
-    '    main_content_type=application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml' \
-    '    main_xml="<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body/></w:document>"' \
+    '    /bin/mkdir -p "$package_tmp/word/_rels"' \
+    '    printf "%s\n" '\''<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/><Override PartName="/word/commentsExtended.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml"/></Types>'\'' > "$package_tmp/[Content_Types].xml"' \
+    '    printf "%s\n" '\''<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'\'' > "$package_tmp/_rels/.rels"' \
+    '    printf "%s\n" "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:body><w:p><w:pPr><w:pStyle w:val=\"Heading1\"/></w:pPr><w:r><w:t>F1B-DOCX-HEADING-V1</w:t></w:r></w:p><w:p><w:r><w:t>$stage_text</w:t></w:r></w:p><w:p><w:pPr><w:numPr><w:ilvl w:val=\"0\"/></w:numPr></w:pPr><w:r><w:t>F1B-DOCX-LIST-V1</w:t></w:r></w:p><w:tbl><w:tr><w:tc><w:p><w:r><w:t>F1B-DOCX-TABLE-V1</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:p><w:hyperlink r:id=\"rIdLink\"><w:r><w:t>F1B link</w:t></w:r></w:hyperlink></w:p></w:body></w:document>" > "$package_tmp/word/document.xml"' \
+    '    printf "%s\n" '\''<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/f1b" TargetMode="External"/><Relationship Id="rIdComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/><Relationship Id="rIdCommentsEx" Type="http://schemas.microsoft.com/office/2011/relationships/commentsExtended" Target="commentsExtended.xml"/></Relationships>'\'' > "$package_tmp/word/_rels/document.xml.rels"' \
+    '    printf "%s\n" '\''<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="0"><w:p><w:r><w:t>F1B-DOCX-COMMENT-V1</w:t></w:r></w:p></w:comment><w:comment w:id="1"><w:p><w:r><w:t>F1B-DOCX-REPLY-V1</w:t></w:r></w:p></w:comment></w:comments>'\'' > "$package_tmp/word/comments.xml"' \
+    '    printf "%s\n" '\''<w15:commentsEx xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml"><w15:commentEx w15:paraId="00000001" w15:done="1"/><w15:commentEx w15:paraId="00000002" w15:paraIdParent="00000001" w15:done="0"/></w15:commentsEx>'\'' > "$package_tmp/word/commentsExtended.xml"' \
+    '    (cd "$package_tmp" && /usr/bin/zip -q "$package_path" "[Content_Types].xml" "_rels/.rels" "word/document.xml" "word/_rels/document.xml.rels" "word/comments.xml" "word/commentsExtended.xml")' \
     '  fi' \
-    '  /bin/mkdir -p "$package_tmp/$(/usr/bin/dirname -- "$main_part")"' \
-    '  printf "%s\n" "<?xml version=\"1.0\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Override PartName=\"/$main_part\" ContentType=\"$main_content_type\"/></Types>" > "$package_tmp/[Content_Types].xml"' \
-    '  printf "%s\n" "<?xml version=\"1.0\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"$main_part\"/></Relationships>" > "$package_tmp/_rels/.rels"' \
-    '  printf "%s\n" "$main_xml" > "$package_tmp/$main_part"' \
-    '  (cd "$package_tmp" && /usr/bin/zip -q "$package_path" "[Content_Types].xml" "_rels/.rels" "$main_part")' \
     '  /bin/rm -rf -- "$package_tmp"' \
     '}' \
-    'if [ "$verb/$format" = batch/docx ] && [ "${source_file##*/}" = refusal-output.docx ]; then' \
+    'if [ "$verb/$format" = batch/docx ] && [ "${source_file##*/}" = refusal-output.docx ] && /usr/bin/jq -e '\''(.schema == "docx.batch/2") and (.ops == [{"op":"f1b_invalid_operation","params":{}}])'\'' "$script_file" >/dev/null; then' \
     '  /usr/bin/jq -cn '\''{schema:"office.output/1",success:false,error:{code:"office.docx.batch_parse",message:"unknown op"}}'\''' \
     '  exit 2' \
     'fi' \
@@ -931,7 +943,7 @@ chmod 0600 "$codex_bin_dir/mode"
     '  /usr/bin/printf "%s\\n" '\''{"schema":"docx.batch/2","ops":[{"op":"paragraph","params":{"text":"F1B-DOCX-HEADING-V1","style":"Heading1"}},{"op":"paragraph","params":{"text":"{{agent_name}}"}},{"op":"paragraph","params":{"text":"F1B-DOCX-LIST-V1","list":{"ordered":true}}},{"op":"table","params":{"header_rows":1,"rows":[[{"text":"kind"},{"text":"value"}],[{"text":"marker"},{"text":"F1B-DOCX-TABLE-V1"}]]}},{"op":"paragraph","params":{"runs":[{"link":{"href":"https://example.invalid/f1b","text":"F1B link"}}]}}]}'\'' > "$runtime/docx/batch.json"' \
     '  /usr/bin/printf "%s\\n" '\''{"schema":"office.template.data/1","values":{"agent_name":"F1B-DOCX-TEMPLATE-V1"}}'\'' > "$runtime/docx/template.json"' \
     '  /usr/bin/printf "%s\\n" '\''{"schema":"docx.annotation-batch/1","ops":[{"op":"comment_add","anchor":{"at":"/docx/body/p[2]"},"author":"Reviewer","body":["F1B-DOCX-COMMENT-V1"],"label":"root"},{"op":"comment_reply","parent":{"label":"root"},"author":"Author","body":["F1B-DOCX-REPLY-V1"],"label":"answer"},{"op":"comment_resolve","target":{"label":"root"}}]}'\'' > "$runtime/docx/annotation.json"' \
-    '  /usr/bin/printf "%s\\n" '\''{"schema":"docx.batch/2","ops":[{"op":"unknown","params":{}}]}'\'' > "$runtime/docx/refusal.json"' \
+    '  /usr/bin/printf "%s\\n" '\''{"schema":"docx.batch/2","ops":[{"op":"f1b_invalid_operation","params":{}}]}'\'' > "$runtime/docx/refusal.json"' \
     '  chmod 0600 "$runtime/xlsx/batch.json" "$runtime/xlsx/template.json" "$runtime/xlsx/refusal.json" "$runtime/docx/batch.json" "$runtime/docx/template.json" "$runtime/docx/annotation.json" "$runtime/docx/refusal.json"' \
     'done' \
     'if [ "$mode" != "no-office" ]; then' \
@@ -1012,7 +1024,7 @@ chmod 0600 "$codex_bin_dir/mode"
     '              if [ "$mode" = "nested-content-types" ]; then printf "%s\n" '\''<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Wrapper><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/></Wrapper></Types>'\'' > "$opc_tmp/[Content_Types].xml"; fi' \
     '              if [ "$mode" = "nested-relationships" ]; then printf "%s\n" '\''<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Wrapper><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Wrapper></Relationships>'\'' > "$opc_tmp/_rels/.rels"; fi' \
     '              /bin/rm -f -- "$package_path"' \
-    '              (cd "$opc_tmp" && /usr/bin/zip -q "$package_path" "[Content_Types].xml" "_rels/.rels" "xl/workbook.xml")' \
+    '              (cd "$opc_tmp" && /usr/bin/find "[Content_Types].xml" _rels xl -type f -print | LC_ALL=C /usr/bin/sort | /usr/bin/zip -q "$package_path" -@)' \
     '              /bin/rm -rf -- "$opc_tmp"' \
     '            fi' \
     '            if [ "$mode" = "oversized-zip-entry" ]; then /bin/dd if=/dev/zero of=oversized.bin bs=1048576 count=65 2>/dev/null; /usr/bin/zip -q "$package" oversized.bin; /bin/rm -f oversized.bin; fi' \
@@ -1021,6 +1033,8 @@ chmod 0600 "$codex_bin_dir/mode"
     '          set +e' \
     '          if [ "$mode" = "wrong-output-role" ] && [ "$runtime/$format/$verb" = "native/xlsx/batch" ]; then' \
     '            OFFICE_F1B_WRONG_OUTPUT_ROLE=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
+    '          elif [ "$mode" = "empty-semantic-package" ] && [ "$runtime/$format/$verb" = "native/xlsx/batch" ]; then' \
+    '            OFFICE_F1B_EMPTY_SEMANTICS=1 "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
     '          else' \
     '            "office-$runtime" "$verb" $run_args --json --attest-result "$result" > "$result.attestation" 2> "$result.stderr"' \
     '          fi' \
@@ -1121,7 +1135,7 @@ chmod 0600 "$codex_bin_dir/mode"
     'if [ "$mode" = "incomplete-report" ]; then' \
     '  printf "%s\\n\\n# Probe result\\n" "$header" > "$probe/probe-result.md"' \
     'else' \
-    '  printf "%s\\nNative XLSX: %s\\nNative DOCX: %s\\nWasm XLSX: %s\\nWasm DOCX: %s\\nCapability schema: office.capabilities/test\\nCapability fingerprint: test:fingerprint\\nDiscoverability: %s\\nNative/Wasm comparison: %s\\n\\n# Probe result\\n" "$header" "$outcome" "$outcome" "$outcome" "$outcome" "$outcome" "$outcome" > "$probe/probe-result.md"' \
+    '  printf "%s\\nNative XLSX: %s\\nNative DOCX: %s\\nWasm XLSX: %s\\nWasm DOCX: %s\\nCapability schema: office.capabilities/2\\nCapability fingerprint: test:fingerprint\\nDiscoverability: %s\\nNative/Wasm comparison: %s\\n\\n# Probe result\\n" "$header" "$outcome" "$outcome" "$outcome" "$outcome" "$outcome" "$outcome" > "$probe/probe-result.md"' \
     'fi' \
     'if [ "$mode" = "malformed" ]; then' \
     '  printf "{\\n" > "$output"' \
@@ -1269,6 +1283,16 @@ evidence="$case_root/evidence"
     (.preview.sha256 | test("^[0-9a-f]{64}$")) and
     (.preview.semantic_sha256 | test("^[0-9a-f]{64}$")) and
     (.dump_fixpoint_sha256 | test("^[0-9a-f]{64}$")) and
+    .package_semantics.authored.template_state == "placeholder" and
+    .package_semantics.final.template_state == "merged" and
+    (if .format == "xlsx" then
+       .package_semantics.final.formula == true and
+       .package_semantics.final.numeric == true and
+       .package_semantics.final.chart_series > 0
+     else
+       .package_semantics.final.annotations == "add-reply-resolve" and
+       .package_semantics.final.external_hyperlink == true
+     end) and
     (.refusal.error_code | startswith("office."))
   )) and
   ([.scenarios[] | .runtime + "/" + .format] | unique) ==
@@ -1277,7 +1301,7 @@ evidence="$case_root/evidence"
   fail "host-derived semantic scenarios"
 [ ! -e "$probe/probe-transcript.md" ] ||
   fail "agent unexpectedly authored the command transcript"
-[ "$(/usr/bin/grep -c '^## Event ' "$evidence/probe-transcript.md")" -eq 83 ] ||
+[ "$(/usr/bin/grep -c '^## Event ' "$evidence/probe-transcript.md")" -eq 85 ] ||
   fail "host transcript event count"
 ledger_sha="$(sha256_file "$evidence/COMMANDS.json")"
 raw_sha="$(sha256_file "$evidence/codex-transcript.jsonl")"
@@ -1749,6 +1773,14 @@ expect_failure shallow-scenario 1 \
   "$runner" "$head" "$candidate_sha" \
   "$case_root/shallow-scenario-probe" \
   "$case_root/shallow-scenario-evidence" \
+  "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
+
+printf 'empty-semantic-package\n' > "$codex_bin_dir/mode"
+expect_failure empty-semantic-package 1 \
+  'lacks representative XLSX content' \
+  "$runner" "$head" "$candidate_sha" \
+  "$case_root/empty-semantic-package-probe" \
+  "$case_root/empty-semantic-package-evidence" \
   "$case_root/auth.json" "$codex_bin_dir/codex" "$codex_sha"
 
 printf 'missing-create\n' > "$codex_bin_dir/mode"
