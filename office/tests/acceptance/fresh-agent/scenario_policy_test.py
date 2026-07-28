@@ -264,7 +264,7 @@ def main(argv):
             "truncation": {
                 "max_rows": 200,
                 "max_cols": 50,
-                "truncated_sheets": 0,
+                "truncated_sheets": ["Wide"],
                 "images_omitted": 0,
             },
         },
@@ -405,6 +405,20 @@ def main(argv):
         "data": {**preview["data"], "charts_rendered": -1},
     }
     expect_rejected(policy, lambda: policy.preview_projection(bad_preview, "xlsx"))
+    bad_truncation = {
+        **preview,
+        "data": {
+            **preview["data"],
+            "truncation": {
+                **preview["data"]["truncation"],
+                "truncated_sheets": 0,
+            },
+        },
+    }
+    expect_rejected(
+        policy,
+        lambda: policy.preview_projection(bad_truncation, "xlsx"),
+    )
     expect_rejected(
         policy,
         lambda: policy.safe_relative_path("../private.json", "test path"),
