@@ -2,13 +2,18 @@
 set -euo pipefail
 
 target="${1:-wasm}"
+installed_command="${2:-}"
 case "$target" in
   native|wasm) ;;
   *)
-    echo "usage: $0 [native|wasm]" >&2
+    echo "usage: $0 [native|wasm] [INSTALLED-OFFICE-COMMAND]" >&2
     exit 2
     ;;
 esac
+if [ "$#" -gt 2 ]; then
+  echo "usage: $0 [native|wasm] [INSTALLED-OFFICE-COMMAND]" >&2
+  exit 2
+fi
 
 here="$(cd "$(dirname "$0")" && pwd)"
 work="$(mktemp -d "${TMPDIR:-/tmp}/office-acceptance-${target}.XXXXXX")"
@@ -19,13 +24,22 @@ fail() {
   exit 1
 }
 
-if ! moon build --target "$target" office/cmd/office >"$work/build.log" 2>&1; then
-  cat "$work/build.log" >&2
-  fail "office build"
+if [ -n "$installed_command" ]; then
+  [ -f "$installed_command" ] && [ -x "$installed_command" ] ||
+    fail "installed Office command is not executable: $installed_command"
+else
+  if ! moon build --target "$target" office/cmd/office >"$work/build.log" 2>&1; then
+    cat "$work/build.log" >&2
+    fail "office build"
+  fi
 fi
 
 office() {
-  moon run --target "$target" office/cmd/office -- "$@"
+  if [ -n "$installed_command" ]; then
+    "$installed_command" "$@"
+  else
+    moon run --target "$target" office/cmd/office -- "$@"
+  fi
 }
 
 json() {

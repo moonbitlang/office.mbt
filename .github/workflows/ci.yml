@@ -25,7 +25,7 @@ jobs:
   transaction-platforms:
     name: office transactional editing (${{ matrix.os }}, pinned nightly)
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 60
     env:
       EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
     strategy:
@@ -159,6 +159,10 @@ jobs:
           office/tests/acceptance/fresh-agent/prepare.sh \
             "$head" "$prefix" \
             "$moon_bin" "$moonc_bin" "$moonrun_bin"
+          bash office/tests/acceptance/run.sh native \
+            "$prefix/bin/office-native"
+          bash office/tests/acceptance/run.sh wasm \
+            "$prefix/bin/office-wasm"
           candidate_sha=$(/usr/bin/shasum -a 256 "$prefix/CANDIDATE.json" | /usr/bin/awk '{print substr($1, length($1) - 63)}')
           codex_native=$(find "$(npm root -g)/@openai" -type f \
             -path '*/vendor/*/bin/codex' -print | head -n 1)
@@ -206,7 +210,7 @@ jobs:
     # Native tests take ~10 minutes; everything else is small. Fail loudly if
     # something (e.g. an accidental whole-workspace exe build pulling in
     # pdflite's pathological markdown CLI) blows the budget.
-    timeout-minutes: 45
+    timeout-minutes: 75
     env:
       EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
@@ -318,6 +322,10 @@ jobs:
               "$head" "$prefix" \
               "$moon_bin" "$moonc_bin" "$moonrun_bin"
           )
+          bash office/tests/acceptance/run.sh native \
+            "$prefix/bin/office-native"
+          bash office/tests/acceptance/run.sh wasm \
+            "$prefix/bin/office-wasm"
           jq -e \
             --arg head "$head" \
             '.schema == "office.fresh-agent.candidate/5"
