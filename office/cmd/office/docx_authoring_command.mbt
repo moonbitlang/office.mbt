@@ -166,7 +166,7 @@ async fn run_docx_batch(matches : @argparse.Matches) -> Unit {
     _ =>
       raise CliFailure(
         @lib.protocol_error(
-          "office.docx.invalid_script", "the authoring script is not valid UTF-8",
+          "office.docx.batch_parse", "the authoring script is not valid UTF-8",
         ),
       )
   }
@@ -174,7 +174,7 @@ async fn run_docx_batch(matches : @argparse.Matches) -> Unit {
     @office_docx.DocxAuthorParseError(reason) =>
       raise CliFailure(
         @lib.protocol_error(
-          "office.docx.invalid_script",
+          "office.docx.batch_parse",
           "invalid authoring script: " + bounded_text(reason, 240),
         ),
       )
