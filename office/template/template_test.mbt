@@ -106,8 +106,9 @@ test "the scan budget is charged and enforced" {
   let budget = Ref(10)
   ignore(@template.scan_placeholders(["12345"], budget))
   assert_eq(budget.val, 5)
-  match (try? @template.scan_placeholders(["123456"], budget)) {
-    Err(@template.TemplateScanBudgetExceeded(_)) => ()
+  try @template.scan_placeholders(["123456"], budget) |> ignore catch {
+    @template.TemplateScanBudgetExceeded(_) => ()
+  } noraise {
     _ => fail("expected the budget to reject")
   }
 }
@@ -151,12 +152,13 @@ test "template data parses and types values" {
 ///|
 test "template data rejections" {
   let reject = (text : String, needle : String) => {
-    match (try? @template.parse_template_data(text)) {
-      Err(@template.TemplateDataError(reason)) =>
+    try @template.parse_template_data(text) |> ignore catch {
+      @template.TemplateDataError(reason) =>
         if !reason.contains(needle) {
           fail("expected reason containing '\{needle}', got: " + reason)
         }
-      Ok(_) => fail("expected rejection for needle '\{needle}'")
+    } noraise {
+      _ => fail("expected rejection for needle '\{needle}'")
     }
   }
   reject("not json", "not valid JSON")
@@ -193,23 +195,28 @@ test "template data rejections" {
 
 ///|
 test "template data bounds" {
-  match
-    (try? @template.parse_template_data(
+  try
+    @template.parse_template_data(
       "{\"schema\":\"office.template.data/1\",\"values\":{\"a\":\"xy\"}}",
       max_value_units=1,
-    )) {
-    Err(@template.TemplateDataError(reason)) =>
+    )
+    |> ignore
+  catch {
+    @template.TemplateDataError(reason) =>
       assert_true(reason.contains("exceeds"))
-    Ok(_) => fail("expected the value bound to reject")
+  } noraise {
+    _ => fail("expected the value bound to reject")
   }
-  match
-    (try? @template.parse_template_data(
+  try
+    @template.parse_template_data(
       "{\"schema\":\"office.template.data/1\",\"values\":{\"a\":1,\"b\":2}}",
       max_keys=1,
-    )) {
-    Err(@template.TemplateDataError(reason)) =>
-      assert_true(reason.contains("limit"))
-    Ok(_) => fail("expected the key bound to reject")
+    )
+    |> ignore
+  catch {
+    @template.TemplateDataError(reason) => assert_true(reason.contains("limit"))
+  } noraise {
+    _ => fail("expected the key bound to reject")
   }
 }
 
@@ -218,27 +225,36 @@ test "template data bounds" {
 /// duplicate gate, and overflowing numerals cannot smuggle "Infinity"
 /// into published documents.
 test "escaped keys and non-finite numbers are rejected" {
-  match
-    (try? @template.parse_template_data(
+  try
+    @template.parse_template_data(
       "{\"schema\":\"office.template.data/1\",\"values\":{\"a\":1,\"\\u0061\":2}}",
-    )) {
-    Err(@template.TemplateDataError(reason)) =>
+    )
+    |> ignore
+  catch {
+    @template.TemplateDataError(reason) =>
       assert_true(reason.contains("escape sequences"))
-    Ok(_) => fail("a \\u-spelled duplicate key must not parse")
+  } noraise {
+    _ => fail("a \\u-spelled duplicate key must not parse")
   }
-  match
-    (try? @template.parse_template_data(
+  try
+    @template.parse_template_data(
       "{\"schema\":\"office.template.data/1\",\"values\":{\"n\":1e309}}",
-    )) {
-    Err(@template.TemplateDataError(reason)) =>
+    )
+    |> ignore
+  catch {
+    @template.TemplateDataError(reason) =>
       assert_true(reason.contains("finite"))
-    Ok(_) => fail("an overflowing numeral must not parse")
+  } noraise {
+    _ => fail("an overflowing numeral must not parse")
   }
-  match
-    (try? @template.parse_template_data(
+  try
+    @template.parse_template_data(
       "{\"schema\":\"office.template.data/1\",\"values\":{\"n\":-1e309}}",
-    )) {
-    Err(@template.TemplateDataError(_)) => ()
-    Ok(_) => fail("a negative overflowing numeral must not parse")
+    )
+    |> ignore
+  catch {
+    @template.TemplateDataError(_) => ()
+  } noraise {
+    _ => fail("a negative overflowing numeral must not parse")
   }
 }

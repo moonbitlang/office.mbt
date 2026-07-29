@@ -79,10 +79,8 @@ pub struct RowStateEntry {
 ///|
 /// Highest 1-based row of a cell or range reference, None when unparsable.
 fn reference_max_row(reference : String) -> Int? {
-  match (try? parse_range_ref(reference)) {
-    Ok((_, _, max_row, _)) => Some(max_row)
-    Err(_) => None
-  }
+  let (_, _, max_row, _) = parse_range_ref(reference) catch { _ => return None }
+  Some(max_row)
 }
 
 ///|
@@ -167,9 +165,10 @@ fn ExtentAccumulator::entry(
 /// for sqref extraction from stored conditional-format / data-validation
 /// markup without materializing the full parse.
 fn raw_attr_sqref(xml : String) -> String? {
-  match (try? attr_value(xml, "sqref")) {
-    Ok(Some(value)) => Some(unescape_xml_text(value))
-    _ => None
+  let raw = attr_value(xml, "sqref") catch { _ => return None }
+  match raw {
+    Some(value) => Some(unescape_xml_text(value))
+    None => None
   }
 }
 
@@ -456,14 +455,18 @@ pub fn Workbook::sheet_row_state_inventory(
       }
       Some(owned)
     }
-    let scan = try? adjust_defined_name_refers_to_for_sheet(
-      name.refers_to,
-      sheet.name(),
-      probe,
-    )
-    if scan is Err(_) {
-      adjusted.present = true
-      adjusted.opaque = true
+    try
+      adjust_defined_name_refers_to_for_sheet(
+        name.refers_to,
+        sheet.name(),
+        probe,
+      )
+      |> ignore
+    catch {
+      _ => {
+        adjusted.present = true
+        adjusted.opaque = true
+      }
     }
     ignore(visited.val)
     // a sheet-scoped name is static-hazardous whenever ANY of its text
@@ -497,12 +500,11 @@ fn name_has_unqualified_content(
   refers_to : String,
   sheet_name : String,
 ) -> Bool {
-  let marked = try? adjust_defined_name_refers_to_for_sheet(
-    refers_to,
-    sheet_name,
-    _ => Some(""),
-  )
-  guard marked is Ok(scanned) else { return true }
+  let scanned = adjust_defined_name_refers_to_for_sheet(refers_to, sheet_name, _ => {
+    Some("")
+  }) catch {
+    _ => return true
+  }
   let plain_prefix = sheet_name + "!"
   let quoted_prefix = "'" + escape_sheet_name(sheet_name) + "'!"
   let mut leftover = scanned
@@ -579,16 +581,12 @@ pub fn Worksheet::conditional_formats_provably_literal(
   if self.x14_data_bars.length() > 0 {
     return false
   }
-  match (try? self.get_conditional_formats()) {
-    Ok(parsed) => {
-      let mut modeled = 0
-      for _, options in parsed {
-        modeled += options.length()
-      }
-      modeled == raw_rules
-    }
-    Err(_) => false
+  let parsed = self.get_conditional_formats() catch { _ => return false }
+  let mut modeled = 0
+  for _, options in parsed {
+    modeled += options.length()
   }
+  modeled == raw_rules
 }
 
 ///|
@@ -738,13 +736,15 @@ pub fn Worksheet::raw_data_validation_criteria(
       continue
     }
     let root_tag = trimmed.substring(start=0, end=root_end)
-    let validation_type = match (try? attr_value(root_tag, "type")) {
-      Ok(Some(value)) => unescape_xml_text(value)
-      Ok(None) => "none"
-      Err(_) => {
+    let raw_type = attr_value(root_tag, "type") catch {
+      _ => {
         out.push(opaque)
         continue
       }
+    }
+    let validation_type = match raw_type {
+      Some(value) => unescape_xml_text(value)
+      None => "none"
     }
     let sqref = match raw_attr_sqref(root_tag) {
       Some(value) => value

@@ -406,27 +406,29 @@ fn cf_dv_policy_check(
         report, sheet_name, "conditional formats whose criteria cannot be proven literal",
       )
     }
-    match (try? worksheet.get_conditional_formats()) {
-      Ok(rules) =>
-        for sqref, options in rules {
-          for opts in options {
-            if cf_rule_formula_bearing(opts) {
-              push_policy_finding(
-                report,
-                "\{sheet_name}!\{sqref}",
-                "a conditional format with formula criteria",
-              )
-            }
-          }
-          if sqref_intersects_template(sheet_name, sqref) {
+    // only the read can raise here; the loop body calls nothing that does,
+    // so catching around it keeps the same errors as the previous `try?`
+    try {
+      for sqref, options in worksheet.get_conditional_formats() {
+        for opts in options {
+          if cf_rule_formula_bearing(opts) {
             push_policy_finding(
               report,
               "\{sheet_name}!\{sqref}",
-              "a multi-row conditional format intersects the template row",
+              "a conditional format with formula criteria",
             )
           }
         }
-      Err(_) =>
+        if sqref_intersects_template(sheet_name, sqref) {
+          push_policy_finding(
+            report,
+            "\{sheet_name}!\{sqref}",
+            "a multi-row conditional format intersects the template row",
+          )
+        }
+      }
+    } catch {
+      _ =>
         push_policy_finding(
           report, sheet_name, "conditional formats this reader cannot fully interpret",
         )

@@ -50,13 +50,18 @@ test "docx replay refuses wrong formats and schemas" {
     residual: [],
     warnings: [],
   }
-  match (try? @dump.replay_docx_dump({ ..base, format: "xlsx" })) {
-    Err(@dump.ReplayInvalidFormat(_)) => ()
+  try @dump.replay_docx_dump({ ..base, format: "xlsx" }) |> ignore catch {
+    @dump.ReplayInvalidFormat(_) => ()
+    _ => fail("expected a format refusal")
+  } noraise {
     _ => fail("expected a format refusal")
   }
-  match
-    (try? @dump.replay_docx_dump({ ..base, batch_schema: "docx.batch/1" })) {
-    Err(@dump.ReplayInvalidFormat(_)) => ()
+  try
+    @dump.replay_docx_dump({ ..base, batch_schema: "docx.batch/1" }) |> ignore
+  catch {
+    @dump.ReplayInvalidFormat(_) => ()
+    _ => fail("expected a schema refusal")
+  } noraise {
     _ => fail("expected a schema refusal")
   }
 }
@@ -89,10 +94,11 @@ test "docx replay fails typed when an image asset is missing" {
     residual: [],
     warnings: [],
   }
-  match (try? @dump.replay_docx_dump(envelope)) {
-    Err(@dump.ReplayFailed(_)) => ()
-    Err(_) => fail("expected ReplayFailed")
-    Ok(_) => fail("a dangling asset path must not replay")
+  try @dump.replay_docx_dump(envelope) |> ignore catch {
+    @dump.ReplayFailed(_) => ()
+    _ => fail("expected ReplayFailed")
+  } noraise {
+    _ => fail("a dangling asset path must not replay")
   }
 }
 

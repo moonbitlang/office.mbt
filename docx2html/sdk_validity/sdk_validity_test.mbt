@@ -1785,8 +1785,11 @@ async test "L1 round 1: the plan survives hostile packages or fails closed" {
   // The READER refuses the package outright — fail-closed one layer
   // earlier than the plan's sentinel (which stays as a belt for any
   // future tolerant-read path).
-  let read_attempt = try? @docx2html.read_docx_annotated(broken_bytes)
-  inspect(read_attempt is Err(_), content="true")
+  try @docx2html.read_docx_annotated(broken_bytes) |> ignore catch {
+    _ => ()
+  } noraise {
+    _ => fail("the reader must refuse a package with broken content types")
+  }
 }
 
 ///|

@@ -36,9 +36,8 @@ fn replay_ops_traced(
       error => return ChunkParseFailed(base, base + chunk.length(), "\{error}")
     }
     for offset, op in parsed {
-      match (try? @batch.apply_op(workbook, op)) {
-        Ok(_) => ()
-        Err(error) => return FailedAt(base + offset, "\{error}")
+      @batch.apply_op(workbook, op) catch {
+        error => return FailedAt(base + offset, "\{error}")
       }
     }
     base += chunk.length()

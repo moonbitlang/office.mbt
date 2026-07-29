@@ -33,7 +33,12 @@ test "a dump document parses back and replays" {
 
 ///|
 fn rejects(document : Json) -> Bool {
-  (try? @dump.parse_dump_envelope(document)) is Err(_)
+  try {
+    @dump.parse_dump_envelope(document) |> ignore
+    false
+  } catch {
+    _ => true
+  }
 }
 
 ///|
@@ -169,8 +174,8 @@ test "docx envelopes and asset integrity at parse" {
   assert_true(good.create_sheet is None)
   assert_eq(good.assets.length(), 1)
   // a lying digest is a malformed dump
-  match
-    (try? @dump.parse_dump_envelope(
+  try
+    @dump.parse_dump_envelope(
       document(
         keyed(
           "sha256-0000000000000000000000000000000000000000000000000000000000000000",
@@ -181,14 +186,17 @@ test "docx envelopes and asset integrity at parse" {
           }),
         ),
       ),
-    )) {
-    Err(@dump.DumpParseError(reason)) =>
+    )
+    |> ignore
+  catch {
+    @dump.DumpParseError(reason) =>
       assert_true(reason.contains("does not hash"))
-    Ok(_) => fail("a lying digest must not parse")
+  } noraise {
+    _ => fail("a lying digest must not parse")
   }
   // a size mismatch is a malformed dump
-  match
-    (try? @dump.parse_dump_envelope(
+  try
+    @dump.parse_dump_envelope(
       document(
         keyed(
           id,
@@ -199,13 +207,16 @@ test "docx envelopes and asset integrity at parse" {
           }),
         ),
       ),
-    )) {
-    Err(@dump.DumpParseError(reason)) => assert_true(reason.contains("bytes"))
-    Ok(_) => fail("a size mismatch must not parse")
+    )
+    |> ignore
+  catch {
+    @dump.DumpParseError(reason) => assert_true(reason.contains("bytes"))
+  } noraise {
+    _ => fail("a size mismatch must not parse")
   }
   // invalid base64 is a malformed dump
-  match
-    (try? @dump.parse_dump_envelope(
+  try
+    @dump.parse_dump_envelope(
       document(
         keyed(
           id,
@@ -216,13 +227,16 @@ test "docx envelopes and asset integrity at parse" {
           }),
         ),
       ),
-    )) {
-    Err(@dump.DumpParseError(reason)) => assert_true(reason.contains("base64"))
-    Ok(_) => fail("invalid base64 must not parse")
+    )
+    |> ignore
+  catch {
+    @dump.DumpParseError(reason) => assert_true(reason.contains("base64"))
+  } noraise {
+    _ => fail("invalid base64 must not parse")
   }
   // an xlsx envelope still requires its create sheet
-  match
-    (try? @dump.parse_dump_envelope(
+  try
+    @dump.parse_dump_envelope(
       Json::object({
         "schema": Json::string("office.dump/1"),
         "format": Json::string("xlsx"),
@@ -233,8 +247,11 @@ test "docx envelopes and asset integrity at parse" {
         "ops": Json::array([]),
         "stats": Json::object({ "ops": Json::number(0) }),
       }),
-    )) {
-    Err(@dump.DumpParseError(reason)) => assert_true(reason.contains("sheet"))
-    Ok(_) => fail("an xlsx dump without a create sheet must not parse")
+    )
+    |> ignore
+  catch {
+    @dump.DumpParseError(reason) => assert_true(reason.contains("sheet"))
+  } noraise {
+    _ => fail("an xlsx dump without a create sheet must not parse")
   }
 }

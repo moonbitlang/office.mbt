@@ -880,12 +880,9 @@ test "an inline list value with a comma stays honest" {
   // faithful (re-split) op or disclose a residual — never a mangled op
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Data"))
-  let created = try? workbook.add_data_validation_list("Data", "B1:B5", [
-    "plain", "with,comma",
-  ])
-  guard created is Ok(_) else {
+  workbook.add_data_validation_list("Data", "B1:B5", ["plain", "with,comma"]) catch {
     // the source engine itself refuses; nothing to dump — vacuously fine
-    return
+    _ => return
   }
   let envelope = @dump.dump_xlsx_workbook(
     workbook,
