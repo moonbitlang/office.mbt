@@ -216,9 +216,9 @@ fn render_container_segment(
   // characters (']' and '=' break the grammar; '/' breaks segmentation).
   if occurrences == 1 &&
     id != "" &&
-    id.find("]").is_empty() &&
-    id.find("=").is_empty() &&
-    id.find("/").is_empty() {
+    id.find("]") is None &&
+    id.find("=") is None &&
+    id.find("/") is None {
     ("\{container_kind}[@id=\{id}]", false)
   } else {
     ("\{container_kind}[\{ordinal}]", true)
