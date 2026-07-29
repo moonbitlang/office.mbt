@@ -105,7 +105,7 @@ those records are the executable sources of truth.
 
 ## SDK API
 
-`bobzhang/office/xlsx` exposes the same boundaries to MoonBit callers:
+`bobzhang/office-lib/xlsx` exposes the same boundaries to MoonBit callers:
 
 - `parse_batch(BytesView)` returns an opaque bounded plan;
 - `transact_batch(TransactionOptions, BatchPlan)` applies and publishes it; and
