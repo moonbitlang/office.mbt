@@ -41,7 +41,7 @@ async test "author_document folds a rich script and round-trips" {
       ),
     )
     let options = @transaction.create_transaction_options(output)
-    let result = @docx.author_document(options, script, Map::new())
+    let result = @docx.author_document(options, script, Map([]))
     assert_true(result.transaction.committed)
     assert_eq(result.report.comments, 1)
     assert_eq(result.report.footnotes, 1)
@@ -91,7 +91,7 @@ async test "author_document --dry-run validates without publishing" {
       ),
     )
     let options = @transaction.create_transaction_options(output, dry_run=true)
-    let result = @docx.author_document(options, script, Map::new())
+    let result = @docx.author_document(options, script, Map([]))
     assert_false(result.transaction.committed)
     assert_false(@afs.exists(output))
   }

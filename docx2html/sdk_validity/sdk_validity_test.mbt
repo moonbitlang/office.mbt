@@ -315,7 +315,7 @@ async test "office authored document is schema-valid" {
       ),
     ),
   )
-  let authored = @docx_impl.author_docx_bytes(script, Map::new())
+  let authored = @docx_impl.author_docx_bytes(script, Map([]))
   validate_docx_via_sdk(dir, "office_authored_document", authored)
 }
 
