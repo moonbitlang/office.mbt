@@ -408,7 +408,7 @@ pub fn resolve_annotation_path(
   }
   resolve_steps(
     container,
-    parsed.steps[1:].to_array(),
+    parsed.steps[1:].to_owned(),
     path,
     root_prefix=rendered,
   )

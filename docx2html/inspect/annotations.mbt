@@ -108,7 +108,7 @@ fn annotation_story_element(
   )
   let normalized = normalized_path(
     "\{story}/\{head_rendered}",
-    parsed.steps[1:].to_array(),
+    parsed.steps[1:].to_owned(),
   )
   if parsed.steps.length() > 1 {
     // A body element inside the annotation: the ordinary element payload
@@ -124,7 +124,7 @@ fn annotation_story_element(
     element_attributes(target, out)
     let coverage_key = normalized_path(
       "\{story}/\{container_kind}[\{ordinal}]",
-      parsed.steps[1:].to_array(),
+      parsed.steps[1:].to_owned(),
     )
     let covering = annotated.annotations().covering_comment_ids(coverage_key)
     if covering.length() > 0 {
