@@ -556,7 +556,7 @@ targets.
 
 ## D1 preservation contract
 
-`bobzhang/office/docx` promotes the existing byte-span DOCX machinery into the
+`bobzhang/office-lib/docx` promotes the existing byte-span DOCX machinery into the
 bounded A4 transaction boundary:
 
 - sessions have no public constructor: only `transact_docx` can combine its

@@ -18,6 +18,7 @@ chmod +x "$SANDBOX/scripts/ensure_dotnet.sh" \
   "$SANDBOX/scripts/validate_docx.sh" \
   "$SANDBOX/scripts/validate_xlsx.sh"
 
+grep -Fq 'name = "bobzhang/office-lib"' "$MODULE/moon.mod"
 grep -Fq '"bobzhang/mbtexcel@0.1.9"' "$MODULE/moon.mod"
 grep -Fq '"bobzhang/docx2html@0.2.0"' "$MODULE/moon.mod"
 test -x "$SANDBOX/scripts/validate_docx.sh"

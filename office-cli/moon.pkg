@@ -1,0 +1,8 @@
+import {
+  "bobzhang/office-lib/cmd/office" @office_cli,
+  "moonbitlang/async",
+}
+
+supported_targets = "native+wasm"
+
+pkgtype(kind: "executable")

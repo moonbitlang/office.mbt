@@ -17,18 +17,19 @@ description: >-
 Use the unified `office` command for every DOCX/XLSX workflow unless the
 legacy-only table below names the exact missing capability.
 
-Run from the repository root:
+Run from any directory after installing `moonx`:
 
 ```
-moon run --target wasm office/cmd/office -- help all --json
-moon run --target wasm office/cmd/office -- <command> <args...>
+moonx bobzhang/office help all --json
+moonx bobzhang/office <command> <args...>
 ```
 
-The WebAssembly target is the default for untrusted documents. It cannot spawn
+Arguments after `bobzhang/office` are passed directly to the command; do not
+insert a `--` separator. The WebAssembly target is the default for untrusted documents. It cannot spawn
 programs or open network connections, and the unified CLI also applies bounded
 package, XML, scan, output, and mutation limits. It can still read or write the
 paths supplied to it and consume CPU within those limits. For trusted files,
-`--target native` is a faster drop-in.
+`moonx --target native bobzhang/office ...` is a faster drop-in.
 
 ## Default workflow
 
@@ -59,8 +60,8 @@ Ordinary `--json` commands emit one `office.output/1` success/failure envelope.
 
 ## Command map
 
-The logical syntax below uses the compiled command name `office`; prepend the
-`moon run --target wasm office/cmd/office --` launcher shown above.
+The logical syntax below uses the command name `office`; replace that token with
+the `moonx bobzhang/office` launcher shown above.
 
 | Goal | Command |
 | --- | --- |

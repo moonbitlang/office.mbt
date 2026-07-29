@@ -1,6 +1,6 @@
 # Atomic Office transactions
 
-`bobzhang/office/transaction` is the single publication boundary for future
+`bobzhang/office-lib/transaction` is the single publication boundary for future
 DOCX and XLSX mutations. Format adapters may inspect and transform package
 bytes in memory, but they do not write destination files themselves.
 

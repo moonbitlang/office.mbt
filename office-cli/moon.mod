@@ -1,8 +1,8 @@
-name = "bobzhang/office-lib"
+name = "bobzhang/office"
 
 version = "0.1.0"
 
-readme = "README.mbt.md"
+readme = "README.md"
 
 repository = "https://github.com/moonbitlang/office.mbt"
 
@@ -10,14 +10,11 @@ license = "Apache-2.0"
 
 keywords = [ "office", "xlsx", "docx", "ooxml", "cli" ]
 
-description = "Agent-oriented XLSX and DOCX tooling for MoonBit"
+description = "Agent-oriented XLSX and DOCX command-line tooling"
 
 import {
-  "bobzhang/mbtexcel@0.1.9",
-  "bobzhang/docx2html@0.2.0",
+  "bobzhang/office-lib@0.1.0",
   "moonbitlang/async@0.20.2",
-  "moonbitlang/x@0.4.43",
-  "tonyfettes/unicode@0.3.3",
 }
 
 preferred_target = "native"

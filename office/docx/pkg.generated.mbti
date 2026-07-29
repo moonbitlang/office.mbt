@@ -1,11 +1,11 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/office/docx"
+package "bobzhang/office-lib/docx"
 
 import {
   "bobzhang/docx2html/batch",
   "bobzhang/docx2html/splice",
-  "bobzhang/office/template",
-  "bobzhang/office/transaction",
+  "bobzhang/office-lib/template",
+  "bobzhang/office-lib/transaction",
   "moonbitlang/core/debug",
 }
 

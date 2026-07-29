@@ -5,7 +5,8 @@ Tracking issue: [#155](https://github.com/moonbitlang/office.mbt/issues/155).
 The repository is a development workspace, but Mooncakes publishes each module
 independently. Workspace resolution can therefore hide a dependency that does
 not exist in the registry. A green source CI run is necessary, but it is not
-evidence that `bobzhang/office` can be installed from published artifacts.
+evidence that `moonx bobzhang/office` can be installed from published
+artifacts.
 
 ## Required order
 
@@ -19,20 +20,27 @@ For the transaction and bounded-DOCX release train introduced by A4 and D2:
    require its native, Wasm, and publish-dry-run checks to pass;
 5. publish `bobzhang/docx2html@0.2.0` from `docx2html/`;
 6. wait until that exact immutable version resolves from Mooncakes;
-7. with Office's source manifest already staged to require
+7. with the Office implementation manifest already staged to require
    `docx2html@0.2.0`, run `scripts/check_office_registry_release.sh` (or the manual
    `office-registry-release-check` GitHub workflow) and require every native,
    Wasm, transaction, raw, DOCX, SDK-validation, and publish-dry-run check to
    pass. Both test commands are unfiltered full-module runs, so the Office root
    integration suite cannot be hidden by green child-package checks;
-8. only then publish `bobzhang/office@0.1.0` from `office/`.
+8. publish `bobzhang/office-lib@0.1.0` from `office/` and wait until that exact
+   immutable version resolves from Mooncakes;
+9. run `scripts/check_office_cli_registry_release.sh` outside `moon.work` and
+   require its native, Wasm, smoke, and publish-dry-run checks to pass;
+10. publish `bobzhang/office@0.1.0` from `office-cli/`;
+11. wait for registry propagation, then verify the public entry point without
+    an argument separator: `moonx bobzhang/office help all --json`.
 
-Never publish `office@0.1.0` first. Its manifest intentionally requires
-`mbtexcel@0.1.9`, which contains the strict bounded ZIP reader used by the
-transaction gate, and `docx2html@0.2.0`, which contains the bounded annotated
-reader used by DOCX commands. Repointing either dependency to its previous
-version would make a workspace build green while producing a broken or
-materially weaker registry artifact.
+Never publish `office@0.1.0` first. The executable intentionally requires
+`office-lib@0.1.0`; that implementation in turn requires `mbtexcel@0.1.9`,
+which contains the strict bounded ZIP reader used by the transaction gate, and
+`docx2html@0.2.0`, which contains the bounded annotated reader used by DOCX
+commands. Repointing any dependency to a previous version would make a
+workspace build green while producing a broken or materially weaker registry
+artifact.
 
 ## Intentional source-breaking boundary
 

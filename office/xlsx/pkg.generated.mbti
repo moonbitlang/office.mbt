@@ -1,10 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/office/xlsx"
+package "bobzhang/office-lib/xlsx"
 
 import {
   "bobzhang/mbtexcel/batch",
-  "bobzhang/office/template",
-  "bobzhang/office/transaction",
+  "bobzhang/office-lib/template",
+  "bobzhang/office-lib/transaction",
   "moonbitlang/core/debug",
 }
 

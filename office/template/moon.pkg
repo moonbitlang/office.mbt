@@ -3,7 +3,7 @@ import {
 }
 
 import {
-  "bobzhang/office/template",
+  "bobzhang/office-lib/template",
 } for "test"
 
 supported_targets = "native+js+wasm"

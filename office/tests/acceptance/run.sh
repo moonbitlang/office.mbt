@@ -28,7 +28,7 @@ if [ -n "$installed_command" ]; then
   [ -f "$installed_command" ] && [ -x "$installed_command" ] ||
     fail "installed Office command is not executable: $installed_command"
 else
-  if ! moon build --target "$target" office/cmd/office >"$work/build.log" 2>&1; then
+  if ! moon build --target "$target" office-cli >"$work/build.log" 2>&1; then
     cat "$work/build.log" >&2
     fail "office build"
   fi
@@ -38,7 +38,7 @@ office() {
   if [ -n "$installed_command" ]; then
     "$installed_command" "$@"
   else
-    moon run --target "$target" office/cmd/office -- "$@"
+    moon run --target "$target" office-cli -- "$@"
   fi
 }
 

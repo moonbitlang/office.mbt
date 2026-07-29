@@ -3,9 +3,9 @@ import {
   "bobzhang/mbtexcel/batch",
   "bobzhang/mbtexcel/xlsx" @engine,
   "bobzhang/mbtexcel/zip",
-  "bobzhang/office",
-  "bobzhang/office/template",
-  "bobzhang/office/transaction",
+  "bobzhang/office-lib" @office,
+  "bobzhang/office-lib/template",
+  "bobzhang/office-lib/transaction",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -13,7 +13,7 @@ import {
 import {
   "bobzhang/mbtexcel/xlsx" @engine,
   "bobzhang/mbtexcel/zip",
-  "bobzhang/office",
+  "bobzhang/office-lib" @office,
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,
   "moonbitlang/core/encoding/utf8",
