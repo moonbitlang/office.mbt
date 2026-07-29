@@ -328,7 +328,7 @@ pub fn parse_annotation_batch(
       "ops carries \{op_items.length()} entries; the limit is \{MAX_ANNOTATION_OPS}",
     )
   }
-  let labels_seen : Set[String] = Set::new()
+  let labels_seen : Set[String] = Set([])
   fn check_label(label : String?) -> Unit raise DocxAnnotationParseError {
     match label {
       Some(name) => {
@@ -499,7 +499,7 @@ pub async fn transact_docx_annotations(
       }
       let base_allowance = budget.max_splice_materialized_bytes()
       let original_bytes = annotation_archive_payload_bytes(archive)
-      let union : Set[String] = Set::new()
+      let union : Set[String] = Set([])
       let minted : Map[String, String] = {}
       let mut current = archive
       fn resolve_ref(ref : CommentRef) -> String raise {

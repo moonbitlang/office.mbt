@@ -817,7 +817,7 @@ pub async fn transact_docx_template_document(
         changed: false,
       },
       values: data.values,
-      used_keys: Set::new(),
+      used_keys: Set([]),
       budget: Ref(docx_template_scan_budget),
       edits: [],
       checks: [],
@@ -842,7 +842,7 @@ pub async fn transact_docx_template_document(
     docx_collect_paragraphs(children, "", body_paragraphs)
     // ---- region resolution and the row-safety gate (all read-only) ----
     let plans : Array[DocxRegionPlan] = []
-    let claimed_paths : Set[String] = Set::new()
+    let claimed_paths : Set[String] = Set([])
     for region in data.regions {
       let location = "region \"" + region.name + "\""
       guard region.address is TableRow(story~, table~, row~) else {
@@ -987,7 +987,7 @@ pub async fn transact_docx_template_document(
         // each record scan tracks its OWN used keys so per-record unused
         // is exact (a key consumed by another region must not mask this
         // record's unused key — codex #213 round 1)
-        let record_used : Set[String] = Set::new()
+        let record_used : Set[String] = Set([])
         let record_state : DocxMergeState = {
           report: state.report,
           values: merged,

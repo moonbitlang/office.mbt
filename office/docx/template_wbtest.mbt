@@ -23,7 +23,7 @@ fn template_wb_state() -> DocxMergeState {
       changed: false,
     },
     values: { "k": @template.TextValue("VALUE") },
-    used_keys: Set::new(),
+    used_keys: Set([]),
     budget: Ref(1_000_000),
     edits: [],
     checks: [],

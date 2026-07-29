@@ -205,9 +205,9 @@ fn merge_template_workbook(
   workbook : @engine.Workbook,
   values : Map[String, @template.TemplateValue],
   allow_missing~ : Bool,
-  claimed_rows? : Set[String] = Set::new(),
+  claimed_rows? : Set[String] = Set([]),
   skipped_cells? : Ref[Int] = Ref(0),
-  pre_used_keys? : Set[String] = Set::new(),
+  pre_used_keys? : Set[String] = Set([]),
 ) -> XlsxTemplateReport raise {
   let budget = Ref(template_scan_budget)
   let report : XlsxTemplateReport = {
@@ -227,7 +227,7 @@ fn merge_template_workbook(
     unused_total: 0,
     changed: false,
   }
-  let used_keys : Set[String] = Set::new()
+  let used_keys : Set[String] = Set([])
   // values keys the REGION pass consumes (region placeholders resolve
   // from values whenever the key is absent from records, and the parser
   // bars record/values collisions, so region-present values keys are
@@ -236,7 +236,7 @@ fn merge_template_workbook(
   for key in pre_used_keys {
     used_keys.add(key)
   }
-  let missing_keys : Set[String] = Set::new()
+  let missing_keys : Set[String] = Set([])
   // collect edits first, apply after the scan: applying mid-iteration
   // would mutate the cells array being walked
   let text_edits : Array[(String, String, String)] = []

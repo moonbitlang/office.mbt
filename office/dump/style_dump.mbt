@@ -44,7 +44,7 @@ fn dump_sheet_styles(
   // styled cells in row-major order (dedup by reference, first wins). An
   // explicit style reference is dumped even when its id is 0: the first
   // cellXfs entry can itself be non-plain.
-  let seen : Set[String] = Set::new()
+  let seen : Set[String] = Set([])
   let styled : Array[@xlsx.Cell] = []
   for cell in worksheet.cells {
     if seen.contains(cell.reference) {
@@ -282,7 +282,7 @@ fn extract_borders(
   // reproduce faithfully, every emitted side must share the same color:
   // track how many sides were emitted and how many distinct colors they
   // carry (an uncolored side counts as a distinct "no color").
-  let colors : Set[String] = Set::new()
+  let colors : Set[String] = Set([])
   let mut emitted_sides = 0
   let mut uncolored_sides = 0
   for border in borders {

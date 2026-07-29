@@ -168,7 +168,7 @@ fn check_duplicate_keys(
       }
       frames.push({
         is_object: unit == '{'.to_int(),
-        seen: Set::new(),
+        seen: Set([]),
         expecting_key: unit == '{'.to_int(),
         label,
         pending_key: "",
