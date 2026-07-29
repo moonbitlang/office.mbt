@@ -396,7 +396,7 @@ fn validate_key_data(key_data : KeyData) -> Unit raise XlsxError {
   if key_data.salt_value.length() != key_data.salt_size {
     raise InvalidEncryptionInfo(msg="salt size mismatch")
   }
-  let hash = hash_parts(key_data.hash_algorithm, [Bytes::default()])
+  let hash = hash_parts(key_data.hash_algorithm, [b""])
   if hash.length() != key_data.hash_size {
     raise InvalidEncryptionInfo(msg="hash size mismatch")
   }
@@ -821,7 +821,7 @@ fn standard_decrypt(
     if password_verified {
       raise InvalidEncryptedPackage(msg="decrypted package size is invalid")
     }
-    return { bytes: Bytes::default(), password_verified: false }
+    return { bytes: Default::default(), password_verified: false }
   }
   let raw_size = raw_size_u64.to_int()
   { bytes: decrypted[:raw_size].to_owned(), password_verified }
@@ -1098,7 +1098,7 @@ test "hash vectors" {
     content="a9993e364706816aba3e25717850c26c9cd0d89d",
   )
   inspect(
-    bytes_to_hex(@crypto.hash_concat("sha1", [Bytes::default()])),
+    bytes_to_hex(@crypto.hash_concat("sha1", [b""])),
     content="da39a3ee5e6b4b0d3255bfef95601890afd80709",
   )
   inspect(
