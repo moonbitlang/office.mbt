@@ -1779,7 +1779,7 @@ test "L0: a self-closing paragraph rewrites to open form by its own span" {
   )
   let spliced = @splice.splice_docx(original, plan)
   debug_inspect(@opc.validate_docx_package(spliced), content="[]")
-  let after = @docx2html.read_docx_annotated(spliced[:])
+  let after = @docx2html.read_docx_annotated(spliced)
   guard after.body_paragraph_span("p[1]") is Some(rewritten)
   inspect(rewritten.self_closing(), content="false")
   // Fidelity: everything outside the rewritten node's own span is the
@@ -1844,7 +1844,7 @@ test "L0 review round 1: a self-closing run rewrites by its own span (alternate 
   )
   let spliced = @splice.splice_docx(original, plan)
   debug_inspect(@opc.validate_docx_package(spliced), content="[]")
-  let after = @docx2html.read_docx_annotated(spliced[:])
+  let after = @docx2html.read_docx_annotated(spliced)
   guard after.body_run_span("p[1]/r[1]") is Some(rewritten)
   inspect(rewritten.self_closing(), content="false")
   guard after.result().document is Document(children~, ..)
@@ -1868,7 +1868,7 @@ test "story_run_span matches body_run_span for the body story" {
       @document.run([@document.text("beta")]),
     ]),
   ])
-  let annotated = @docx2html.read_docx_annotated(bytes[:])
+  let annotated = @docx2html.read_docx_annotated(bytes)
   guard annotated.body_run_span("p[1]/r[2]") is Some(by_body)
   guard annotated.story_run_span("/body", "p[1]/r[2]") is Some(by_story)
   inspect(by_story.byte_start() == by_body.byte_start(), content="true")
@@ -1907,7 +1907,7 @@ test "story_row_span resolves table rows in the body story" {
       ]),
     ]),
   ])
-  let annotated = @docx2html.read_docx_annotated(bytes[:])
+  let annotated = @docx2html.read_docx_annotated(bytes)
   guard annotated.story_row_span("/body", "tbl[1]/tr[2]") is Some(span)
   let part = annotated.main_story_source().part()
   let archive = @mbtzip.read(bytes)

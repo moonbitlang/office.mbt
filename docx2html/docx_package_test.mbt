@@ -364,8 +364,8 @@ test "the blank document passes structural validation and round-trips" {
   let bytes = @docx2html.new_blank_docx()
   // Structural tier (the SDK tier gates this same output in
   // docx2html/sdk_validity).
-  debug_inspect(@opc.validate_docx_package(bytes[:]), content="[]")
-  let result = @docx2html.read_docx_package(bytes[:])
+  debug_inspect(@opc.validate_docx_package(bytes), content="[]")
+  let result = @docx2html.read_docx_package(bytes)
   debug_inspect(result.messages, content="[]")
   debug_inspect(
     result.sections,
@@ -378,5 +378,5 @@ test "the blank document passes structural validation and round-trips" {
   guard result.document is Document(children~, ..)
   debug_inspect(children.length(), content="1")
   // The converter elides the empty paragraph.
-  inspect(@docx2html.convert(bytes[:]).value, content="")
+  inspect(@docx2html.convert(bytes).value, content="")
 }

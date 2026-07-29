@@ -14,14 +14,14 @@ test "docx dump replays to an equivalent document" {
     @document.paragraph([@document.run([@document.text("Body text")])]),
   ]
   let bytes = @word.write_docx(body)
-  let annotated = @word.read_docx_annotated(bytes[:])
+  let annotated = @word.read_docx_annotated(bytes)
   let d1 = @dump.dump_docx_document(
     annotated,
     source_file="rt.docx",
     source_bytes=bytes.length(),
   )
   let replayed_bytes = @dump.replay_docx_dump(d1)
-  let replayed = @word.read_docx_annotated(replayed_bytes[:])
+  let replayed = @word.read_docx_annotated(replayed_bytes)
   let d2 = @dump.dump_docx_document(
     replayed,
     source_file="rt.docx",
@@ -146,7 +146,7 @@ test "chunked docx replay remaps note ids across scripts" {
     warnings: [],
   }
   let bytes = @dump.replay_docx_dump(envelope)
-  let annotated = @word.read_docx_annotated(bytes[:])
+  let annotated = @word.read_docx_annotated(bytes)
   // both notes must exist as distinct bodies with their own text
   let bodies = annotated.footnote_bodies()
   let mut first = false
