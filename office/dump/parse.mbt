@@ -145,7 +145,7 @@ pub fn parse_dump_envelope(
   }
   let source = match fields.get("source") {
     Some(Object(source)) => source
-    _ => Map::new()
+    _ => Map([])
   }
   {
     format,

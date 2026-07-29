@@ -15,7 +15,7 @@ test "author_docx_bytes builds a structurally valid package" {
       #|]}
     ),
   )
-  let bytes = @docx.author_docx_bytes(script, Map::new())
+  let bytes = @docx.author_docx_bytes(script, Map([]))
   // the built package passes the structural validity tier
   let findings = @opc.validate_docx_package(bytes)
   assert_eq(findings.length(), 0)
@@ -32,7 +32,7 @@ test "author_docx_bytes refuses over the serialization ceiling with a typed limi
   )
   // a 1-byte output ceiling cannot hold a real package
   try
-    @docx.author_docx_bytes(script, Map::new(), limits={
+    @docx.author_docx_bytes(script, Map([]), limits={
       max_output_bytes: 1,
       max_entries: 64,
       max_entry_uncompressed_bytes: 1 << 20,
@@ -80,7 +80,7 @@ test "author_docx_bytes refuses over the emitted-media part ceiling" {
   )
   // the parts ceiling is checked BEFORE build_body, so no image bytes are
   // needed to trip it
-  try @docx.author_docx_bytes(script, Map::new()) |> ignore catch {
+  try @docx.author_docx_bytes(script, Map([])) |> ignore catch {
     WriteResourceLimit(kind~, ..) => assert_eq(kind, "media_parts")
     err => fail("expected a media-parts limit, got: \{err.description()}")
   } noraise {
