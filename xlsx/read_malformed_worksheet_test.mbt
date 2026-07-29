@@ -174,7 +174,7 @@ test "cfRule without type is tolerated and malformed protection is rejected" {
     None => -1
   }
   inspect(
-    "ranges=\{no_type_formats.size()} rules=\{rule_count}",
+    "ranges=\{no_type_formats.length()} rules=\{rule_count}",
     content=(
       #|ranges=1 rules=0
     ),

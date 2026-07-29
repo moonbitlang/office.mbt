@@ -34,7 +34,7 @@ test "document parser: scalar-only document yields empty regions" {
     "{\"schema\": \"office.template.data/1\", \"values\": {\"name\": \"Ada\", \"count\": 3}}",
   )
   assert_eq(data.regions.length(), 0)
-  assert_eq(data.values.size(), 2)
+  assert_eq(data.values.length(), 2)
   assert_eq(data.values.get("name"), Some(@template.TextValue("Ada")))
   assert_eq(data.values.get("count"), Some(@template.NumberValue(3)))
 }

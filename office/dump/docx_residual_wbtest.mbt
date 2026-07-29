@@ -303,7 +303,7 @@ test "run-nested images hoist and capture assets" {
   assert_true(out[1].stringify().contains("logo"))
   assert_true(out[2].stringify().contains("after"))
   assert_true(out[2].stringify().contains("\"bold\":true"))
-  assert_eq(ctx.assets.size(), 1)
+  assert_eq(ctx.assets.length(), 1)
   assert_eq(residual.length(), 0)
   // dedup: the same payload again adds no asset
   let out2 : Array[Json] = []
@@ -322,7 +322,7 @@ test "run-nested images hoist and capture assets" {
     in_note_body=false,
     plain=false,
   )
-  assert_eq(ctx.assets.size(), 1)
+  assert_eq(ctx.assets.length(), 1)
   // a conflicting content type on the duplicate is disclosed
   let out3 : Array[Json] = []
   docx_run_specs(
@@ -391,7 +391,7 @@ test "run-nested images hoist and capture assets" {
   guard tiff is [entry] else { fail("expected one residual") }
   assert_eq(entry.code, "docx.image_content_type_unsupported")
   assert_true(entry.asset is Some(_))
-  assert_eq(ctx_tiff.assets.size(), 1)
+  assert_eq(ctx_tiff.assets.length(), 1)
 }
 
 ///|
@@ -532,7 +532,7 @@ test "links and images inside note bodies degrade honestly" {
   assert_true(codes.contains("docx.link_dropped"))
   assert_true(codes.contains("docx.annotation_image_dropped"))
   // no asset captured for the disclosed-in-note image
-  assert_eq(ctx.assets.size(), 0)
+  assert_eq(ctx.assets.length(), 0)
   // and the emitted op parses through the real batch parser
   ignore(
     @docx_batch.parse_batch(
@@ -599,7 +599,7 @@ test "dedup-first unsupported type cannot poison a later supported use" {
   for spec in out2 {
     assert_false(spec.stringify().contains("\"image\":"))
   }
-  assert_eq(ctx.assets.size(), 1)
+  assert_eq(ctx.assets.length(), 1)
   let unsupported = residual.filter(entry => {
     entry.code == "docx.image_content_type_unsupported"
   })
@@ -640,8 +640,8 @@ test "unsniffable image payloads residualize via the writer oracle" {
   })
   guard unwritable is [entry] else { fail("expected one unwritable residual") }
   assert_true(entry.asset is Some(_))
-  assert_eq(ctx.assets.size(), 1)
-  assert_eq(ctx.image_verdicts.size(), 1)
+  assert_eq(ctx.assets.length(), 1)
+  assert_eq(ctx.image_verdicts.length(), 1)
 }
 
 ///|

@@ -1093,7 +1093,7 @@ pub async fn transact_docx_template_document(
         }
       }
     }
-    state.report.distinct_keys_used = state.used_keys.size()
+    state.report.distinct_keys_used = state.used_keys.length()
     docx_run_fidelity_pass(state, session, annotated)
     // ---- clone materialization (exact accounting BEFORE building) ----
     let replacements : Array[(Int, Int, Bytes)] = []

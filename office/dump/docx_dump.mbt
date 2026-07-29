@@ -1178,7 +1178,7 @@ fn docx_table_params(
     let mut verdict = true
     for position in empty_positions {
       if position == at {
-        if pending.size() > 0 {
+        if pending.length() > 0 {
           grid_reject(
             "a row consisting only of vertical-merge continuations is not expressible in \{@docx_batch.SCHEMA_BATCH_V2}",
           )
