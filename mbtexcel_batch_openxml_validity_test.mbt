@@ -55,7 +55,7 @@ async test "mbtexcel batch-built workbook is OpenXML-valid" {
   // Structural sanity before the heavyweight oracle.
   let problems = @xlsx.validate_ooxml_package(bytes)
   if problems.length() != 0 {
-    fail("structural validation failed: \{to_repr(problems)}")
+    fail("structural validation failed: \{Repr(problems)}")
   }
   let stamp = @env.now()
     .to_string()
