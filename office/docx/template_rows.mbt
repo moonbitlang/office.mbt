@@ -1194,7 +1194,7 @@ pub async fn transact_docx_template_document(
       if state.report.unsupported_total == 0 {
         for entry in planned {
           let (plan, clones) = entry
-          let builder = @buffer.new()
+          let builder = Buffer()
           for clone in clones {
             builder.write_bytes(clone)
           }
@@ -1316,7 +1316,7 @@ fn docx_build_row_clone(
     previous_end = edit.end
   }
   let row = part_bytes[span_start:span_end]
-  let builder = @buffer.new()
+  let builder = Buffer()
   let mut cursor = 0
   for edit in edits {
     builder.write_bytesview(row[cursor:edit.start])
