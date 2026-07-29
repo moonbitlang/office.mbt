@@ -126,7 +126,7 @@ test "malformed dumps are rejected" {
 /// reconstructed only when their integrity holds — the payload must
 /// decode, match its declared size, and hash to its own id.
 test "docx envelopes and asset integrity at parse" {
-  let payload : Bytes = "asset-bytes"
+  let payload : Bytes = b"asset-bytes"
   let data = @b64.encode(payload)
   let id = "sha256-" + @dump.sha256_hex_bytes(payload)
   let keyed = (key : String, entry : Json) => {
