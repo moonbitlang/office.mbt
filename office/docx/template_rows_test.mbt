@@ -149,7 +149,7 @@ async test "docx region merge clones the row and keeps everything else" {
     let mut rows = 0
     let mut search = 0
     while search < document.length() {
-      match document.substring(start=search).find("<w:tr") {
+      match document[search:].to_owned().find("<w:tr") {
         Some(offset) => {
           rows += 1
           search = search + offset + 1

@@ -48,7 +48,7 @@ fn dump_sheet_validations(
         if stored.length() >= 2 &&
           stored.has_prefix("\"") &&
           stored.has_suffix("\"") {
-          let inner = stored.substring(start=1, end=stored.length() - 1)
+          let inner = stored[1:stored.length() - 1].to_owned()
           let values : Array[Json] = []
           for value in inner.split(",") {
             values.push(Json::string(value.to_owned()))

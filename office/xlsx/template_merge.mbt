@@ -154,9 +154,7 @@ fn substitute_cell_text(
     if next_match_at < next_escape_at {
       let matched = scan.matches[match_index]
       match_index += 1
-      builder.write_string(
-        text.substring(start=cursor, end=matched.span.start_offset),
-      )
+      builder.write_string(text[cursor:matched.span.start_offset].to_owned())
       match resolve(matched.key) {
         Some(value) => {
           builder.write_string(value.render())
@@ -166,26 +164,21 @@ fn substitute_cell_text(
         None =>
           // allow-missing: the literal placeholder stays
           builder.write_string(
-            text.substring(
-              start=matched.span.start_offset,
-              end=matched.span.end_offset,
-            ),
+            text[matched.span.start_offset:matched.span.end_offset].to_owned(),
           )
       }
       cursor = matched.span.end_offset
     } else {
       let escape = scan.escapes[escape_index]
       escape_index += 1
-      builder.write_string(
-        text.substring(start=cursor, end=escape.start_offset),
-      )
+      builder.write_string(text[cursor:escape.start_offset].to_owned())
       builder.write_string("{{")
       outcome.escapes_applied += 1
       rewrote = true
       cursor = escape.end_offset
     }
   }
-  builder.write_string(text.substring(start=cursor, end=units))
+  builder.write_string(text[cursor:units].to_owned())
   if rewrote {
     let final_text = builder.to_string()
     if final_text != text {
