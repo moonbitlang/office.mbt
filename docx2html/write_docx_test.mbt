@@ -1915,7 +1915,7 @@ test "story_row_span resolves table rows in the body story" {
     fail("main story part missing")
   }
   let text = @utf8.decode(
-    source[span.byte_start():span.byte_end()].to_bytes(),
+    source[span.byte_start():span.byte_end()].to_owned(),
     ignore_bom=true,
   )
   inspect(text.has_prefix("<w:tr"), content="true")
