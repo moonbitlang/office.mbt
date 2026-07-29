@@ -20,10 +20,11 @@ pub fn sanitize_utf16_lossy(text : String) -> (String, Int) {
       index += 1
       continue
     }
-    // NOT `text[start:index]`: the slice operator guards against splitting a
-    // surrogate pair and traps when a boundary lands on a trailing surrogate,
-    // which is exactly the case this function exists to handle. Both indices
-    // are already bounded by the loop (0 <= start <= index < length).
+    // NOT `text[start:index]`: the slice operator rejects a boundary that
+    // lands on a trailing surrogate, which is exactly the case this function
+    // exists to handle. `unsafe_substring` is what the deprecated `substring`
+    // called once its bounds guard passed, and the loop already establishes
+    // 0 <= start <= index < text.length().
     out.write_string(text.unsafe_substring(start~, end=index))
     out.write_char('\u{FFFD}')
     replaced += 1
@@ -33,7 +34,8 @@ pub fn sanitize_utf16_lossy(text : String) -> (String, Int) {
   if replaced == 0 {
     (text, 0)
   } else {
-    // same reason as above: `start` can sit on a trailing surrogate
+    // same reason as above: `start` can sit on a trailing surrogate. Loop exit
+    // gives index == text.length() and start <= index, so this is in bounds.
     out.write_string(text.unsafe_substring(start~, end=text.length()))
     (out.to_string(), replaced)
   }

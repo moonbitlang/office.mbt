@@ -79,8 +79,8 @@ fn plain_range_rows(range : String) -> (Int, Int)? {
 
   match range.find(":") {
     Some(pos) => {
-      let left = cell_row(range[0:pos].to_owned())
-      let right = cell_row(range[pos + 1:].to_owned())
+      let left = cell_row(range.substring(start=0, end=pos))
+      let right = cell_row(range.substring(start=pos + 1))
       match (left, right) {
         (Some(a), Some(b)) =>
           Some((if a < b { a } else { b }, if a > b { a } else { b }))
