@@ -1,9 +1,9 @@
 # Preservation-safe DOCX edit sessions
 
-`bobzhang/office/docx` is the transaction-owned editing boundary for existing
+`bobzhang/office-lib/docx` is the transaction-owned editing boundary for existing
 WordprocessingML packages.
 
-Use `transact_docx` with normal `bobzhang/office/transaction` options. The edit
+Use `transact_docx` with normal `bobzhang/office-lib/transaction` options. The edit
 callback receives a `DocxEditSession` over an isolated shallow fork of the
 transaction-owned bounded ZIP archive, one annotation/span index,
 source-part fingerprints, an opaque transaction-derived splice budget, and an

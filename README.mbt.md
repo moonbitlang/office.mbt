@@ -309,23 +309,23 @@ test "validate output" {
 
 ## Unified Office command
 
-`office/cmd/office` is the agent-oriented facade for DOCX and XLSX packages.
+`moonx bobzhang/office` is the agent-oriented facade for DOCX and XLSX packages.
 Its registry-driven help, format detection, validated raw OOXML fallback, and
 structured reads use versioned JSON envelopes and explicit resource limits:
 
 ```sh
-moon run office/cmd/office -- help docx
-moon run office/cmd/office -- identify report.docx --json
-moon run office/cmd/office -- outline report.docx --json
-moon run office/cmd/office -- get report.docx '/docx/body/p[1]' --json
-moon run office/cmd/office -- text report.docx --under '/docx/comments/comment[id="0"]'
-moon run office/cmd/office -- query report.docx --kind paragraph --text revenue --ignore-case --json
-moon run office/cmd/office -- outline book.xlsx --json
-moon run office/cmd/office -- get book.xlsx '/xlsx/sheet[name="Data"]/range[A1:C12]' --json
-moon run office/cmd/office -- text book.xlsx --under '/xlsx/sheet[name="Data"]' --json
-moon run office/cmd/office -- query book.xlsx 'cell[type=formula]' --under '/xlsx/sheet[name="Data"]' --json
-moon run office/cmd/office -- create xlsx new-book.xlsx --sheet Data --json
-moon run office/cmd/office -- batch new-book.xlsx changes.json --out revised.xlsx --json
+moonx bobzhang/office help docx
+moonx bobzhang/office identify report.docx --json
+moonx bobzhang/office outline report.docx --json
+moonx bobzhang/office get report.docx '/docx/body/p[1]' --json
+moonx bobzhang/office text report.docx --under '/docx/comments/comment[id="0"]'
+moonx bobzhang/office query report.docx --kind paragraph --text revenue --ignore-case --json
+moonx bobzhang/office outline book.xlsx --json
+moonx bobzhang/office get book.xlsx '/xlsx/sheet[name="Data"]/range[A1:C12]' --json
+moonx bobzhang/office text book.xlsx --under '/xlsx/sheet[name="Data"]' --json
+moonx bobzhang/office query book.xlsx 'cell[type=formula]' --under '/xlsx/sheet[name="Data"]' --json
+moonx bobzhang/office create xlsx new-book.xlsx --sheet Data --json
+moonx bobzhang/office batch new-book.xlsx changes.json --out revised.xlsx --json
 ```
 
 DOCX results use the `office.docx.{outline,element,text,query}/1` family and

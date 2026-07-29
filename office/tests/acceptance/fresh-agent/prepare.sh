@@ -721,7 +721,7 @@ native_plan="$scratch/native-build-plan.txt"
 if ! (
   cd "$snapshot"
   run_moon build --frozen --release --target native --dry-run -v \
-    office/cmd/office
+    office-cli
 ) >"$native_plan_raw" 2>&1; then
   echo "error: native build planning failed; complete log follows" >&2
   cat "$native_plan_raw" >&2
@@ -868,16 +868,16 @@ build_host_json="$scratch/build-host.json"
 build_log="$scratch/build.log"
 if ! (
   cd "$snapshot"
-  run_moon build --frozen --release --target native office/cmd/office
-  run_moon build --frozen --release --target wasm office/cmd/office
+  run_moon build --frozen --release --target native office-cli
+  run_moon build --frozen --release --target wasm office-cli
 ) >"$build_log" 2>&1; then
   echo "error: fresh release build failed; complete build log follows" >&2
   cat "$build_log" >&2
   exit 1
 fi
 
-native_artifact="$snapshot/_build/native/release/build/bobzhang/office/cmd/office/office.exe"
-wasm_artifact="$snapshot/_build/wasm/release/build/bobzhang/office/cmd/office/office.wasm"
+native_artifact="$snapshot/_build/native/release/build/bobzhang/office/office.exe"
+wasm_artifact="$snapshot/_build/wasm/release/build/bobzhang/office/office.wasm"
 [ -x "$native_artifact" ] ||
   die "native release artifact was not built"
 [ -f "$wasm_artifact" ] ||

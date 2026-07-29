@@ -523,7 +523,7 @@ jobs:
       # part of an hour (moonc expands the CJK cmapdata constants into code) —
       # a cost no CI run should pay. See the repo quality roadmap.
       - name: Build CLIs (native)
-        run: moon build --target native cmd/xlsx docx2html/cmd/docx2html docx2html/cmd/docx office/cmd/office pdflite/cmd/main
+        run: moon build --target native cmd/xlsx docx2html/cmd/docx2html docx2html/cmd/docx office-cli pdflite/cmd/main
 
       # Run the cram docs from a stub project so `moon cram test` does not
       # trigger a build of every workspace executable (which would include the
@@ -539,7 +539,7 @@ jobs:
           STUB="$RUNNER_TEMP/moon-cram-stub"
           mkdir -p "$STUB"
           printf 'name = "bobzhang/cramstub"\nversion = "0.1.0"\n' > "$STUB/moon.mod"
-          export PATH="$GITHUB_WORKSPACE/_build/native/debug/build/bobzhang/mbtexcel/cmd/xlsx:$GITHUB_WORKSPACE/_build/native/debug/build/bobzhang/docx2html/cmd/docx2html:$GITHUB_WORKSPACE/_build/native/debug/build/bobzhang/docx2html/cmd/docx:$GITHUB_WORKSPACE/_build/native/debug/build/bobzhang/office/cmd/office:$PATH"
+          export PATH="$GITHUB_WORKSPACE/_build/native/debug/build/bobzhang/mbtexcel/cmd/xlsx:$GITHUB_WORKSPACE/_build/native/debug/build/bobzhang/docx2html/cmd/docx2html:$GITHUB_WORKSPACE/_build/native/debug/build/bobzhang/docx2html/cmd/docx:$GITHUB_WORKSPACE/_build/native/debug/build/bobzhang/office:$PATH"
           cd "$STUB"
           moon cram test "$GITHUB_WORKSPACE/cmd/xlsx/cram"
           moon cram test "$GITHUB_WORKSPACE/docx2html/tests/cram"
@@ -596,43 +596,43 @@ jobs:
           echo "validate -> $v"; test "$v" = "valid"
           # The canonical office CLI dispatches by verified package content,
           # not extension alone. Exercise both supported formats under wasm.
-          moon build --target wasm office/cmd/office
-          f=$(moon run --target wasm office/cmd/office -- identify ci.xlsx 2>office-wasm.err) || { echo "office xlsx identify failed; stderr:"; cat office-wasm.err; exit 1; }
+          moon build --target wasm office-cli
+          f=$(moon run --target wasm office-cli -- identify ci.xlsx 2>office-wasm.err) || { echo "office xlsx identify failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "office identify xlsx -> $f"; test "$f" = "xlsx"
-          f=$(moon run --target wasm office/cmd/office -- identify docx2html/tests/cram/fixtures/single-paragraph.docx 2>office-wasm.err) || { echo "office docx identify failed; stderr:"; cat office-wasm.err; exit 1; }
+          f=$(moon run --target wasm office-cli -- identify docx2html/tests/cram/fixtures/single-paragraph.docx 2>office-wasm.err) || { echo "office docx identify failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "office identify docx -> $f"; test "$f" = "docx"
-          o=$(moon run --target wasm office/cmd/office -- identify ci.xlsx --json 2>office-wasm.err) || { echo "office JSON identify failed; stderr:"; cat office-wasm.err; exit 1; }
+          o=$(moon run --target wasm office-cli -- identify ci.xlsx --json 2>office-wasm.err) || { echo "office JSON identify failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$o" | jq -e '.schema == "office.output/1"
             and .success == true
             and .data.schema == "office.identify/1"
             and .data.format == "xlsx"'
-          h=$(moon run --target wasm office/cmd/office -- help all --json 2>office-wasm.err) || { echo "office JSON help failed; stderr:"; cat office-wasm.err; exit 1; }
+          h=$(moon run --target wasm office-cli -- help all --json 2>office-wasm.err) || { echo "office JSON help failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$h" | jq -e '.schema == "office.output/1"
             and .success == true
             and .data.schema == "office.capabilities/2"
             and (.data.fingerprint | test("^crc32:[0-9a-f]{8}$"))
             and ([.data.records[].name] == ["docx", "xlsx", "help", "identify", "outline", "get", "text", "query", "validate", "dump", "replay", "issues", "preview", "create", "template", "annotate", "batch", "raw"])'
-          moon run --target wasm office/cmd/office -- help all --jsonl 2>office-wasm.err \
+          moon run --target wasm office-cli -- help all --jsonl 2>office-wasm.err \
             | jq -se 'length == 18 and all(.[]; .schema == "office.capability/2")'
-          moon run --target wasm office/cmd/office -- help schemas 2>office-wasm.err \
+          moon run --target wasm office-cli -- help schemas 2>office-wasm.err \
             | grep -q '^Consumed input contracts$'
-          hs=$(moon run --target wasm office/cmd/office -- help schemas --json 2>office-wasm.err)
+          hs=$(moon run --target wasm office-cli -- help schemas --json 2>office-wasm.err)
           echo "$hs" | jq -e '.success == true and .data.schema == "office.input-contracts/1" and (.data.contracts | length) == 4'
-          moon run --target wasm office/cmd/office -- help schemas --jsonl 2>office-wasm.err \
+          moon run --target wasm office-cli -- help schemas --jsonl 2>office-wasm.err \
             | jq -e '.schema == "office.input-contracts/1" and (.contracts | length) == 4'
-          moon run --target wasm office/cmd/office -- help schema docx.batch/2 2>office-wasm.err \
+          moon run --target wasm office-cli -- help schema docx.batch/2 2>office-wasm.err \
             | jq -e '.schema == "office.input-contract/1" and .id == "docx.batch/2"'
-          hc=$(moon run --target wasm office/cmd/office -- help schema docx.batch/2 --json 2>office-wasm.err)
+          hc=$(moon run --target wasm office-cli -- help schema docx.batch/2 --json 2>office-wasm.err)
           echo "$hc" | jq -e '.success == true and .data.schema == "office.input-contract/1" and .data.id == "docx.batch/2"'
-          moon run --target wasm office/cmd/office -- help schema docx.batch/2 --jsonl 2>office-wasm.err \
+          moon run --target wasm office-cli -- help schema docx.batch/2 --jsonl 2>office-wasm.err \
             | jq -e '.schema == "office.input-contract/1" and .id == "docx.batch/2"'
-          v=$(moon run --target wasm office/cmd/office -- validate ci.xlsx --json 2>office-wasm.err) || { echo "office wasm validate failed; stderr:"; cat office-wasm.err; exit 1; }
+          v=$(moon run --target wasm office-cli -- validate ci.xlsx --json 2>office-wasm.err) || { echo "office wasm validate failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$v" | jq -e '.schema == "office.output/1"
             and .success == true
             and .data.schema == "office.validate/1"
             and .data.valid == true
             and .data.error_count == 0'
-          if moon run --target wasm office/cmd/office -- help xlxs --json >office-wasm-error.json 2>office-wasm.err; then
+          if moon run --target wasm office-cli -- help xlxs --json >office-wasm-error.json 2>office-wasm.err; then
             echo "expected unknown office help format to fail"
             exit 1
           fi
@@ -649,42 +649,42 @@ jobs:
           xlsx_sheet="$RUNNER_TEMP/office-book1-sheet2.xml"
           xlsx_sheet_valid="$RUNNER_TEMP/office-book1-sheet2-valid.xml"
           xlsx_fixture="$RUNNER_TEMP/office-Book1-valid.xlsx"
-          moon run --target wasm office/cmd/office -- raw read "$xlsx_source" /Sheet2 --output "$xlsx_sheet" >/dev/null
+          moon run --target wasm office-cli -- raw read "$xlsx_source" /Sheet2 --output "$xlsx_sheet" >/dev/null
           sed -e 's/ref="F11:H11"/ref="F11:F11"/' -e 's/<f t="shared" si="0"><\/f>/<f t="shared" si="1"><\/f>/' "$xlsx_sheet" >"$xlsx_sheet_valid"
-          moon run --target wasm office/cmd/office -- raw replace "$xlsx_source" /Sheet2 --xml-file "$xlsx_sheet_valid" --out "$xlsx_fixture" --json >/dev/null
-          xo=$(moon run --target wasm office/cmd/office -- outline "$xlsx_fixture" --json 2>office-wasm.err) || { echo "office XLSX outline failed; stderr:"; cat office-wasm.err; exit 1; }
+          moon run --target wasm office-cli -- raw replace "$xlsx_source" /Sheet2 --xml-file "$xlsx_sheet_valid" --out "$xlsx_fixture" --json >/dev/null
+          xo=$(moon run --target wasm office-cli -- outline "$xlsx_fixture" --json 2>office-wasm.err) || { echo "office XLSX outline failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$xo" | jq -e '.success == true
             and .data.schema == "office.xlsx.outline/1"
             and .data.path == "/xlsx/workbook"
             and [.data.sheets[].path] == ["/xlsx/sheet[name=\"Sheet1\"]", "/xlsx/sheet[name=\"Sheet2\"]"]'
           singleton_fixture=fixtures/excelize/test/OverflowNumericCell.xlsx
-          xs=$(moon run --target wasm office/cmd/office -- outline "$singleton_fixture" --json 2>office-wasm.err) || { echo "office XLSX singleton outline failed; stderr:"; cat office-wasm.err; exit 1; }
+          xs=$(moon run --target wasm office-cli -- outline "$singleton_fixture" --json 2>office-wasm.err) || { echo "office XLSX singleton outline failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$xs" | jq -e '.success == true
             and .data.sheets[0].used_range.reference == "A1:A1"
             and .data.sheets[0].used_range.path == "/xlsx/sheet[name=\"Sheet1\"]/range[A1:A1]"'
-          xsg=$(moon run --target wasm office/cmd/office -- get "$singleton_fixture" '/xlsx/sheet[1]/range[A1:A1]' --json 2>office-wasm.err) || { echo "office XLSX singleton get failed; stderr:"; cat office-wasm.err; exit 1; }
+          xsg=$(moon run --target wasm office-cli -- get "$singleton_fixture" '/xlsx/sheet[1]/range[A1:A1]' --json 2>office-wasm.err) || { echo "office XLSX singleton get failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$xsg" | jq -e '.success == true
             and .data.reference == "A1:A1"
             and [.data.cells[].reference] == ["A1"]'
-          xg=$(moon run --target wasm office/cmd/office -- get "$xlsx_fixture" '/xlsx/sheet[1]/range[A19:B19]' --json 2>office-wasm.err) || { echo "office XLSX get failed; stderr:"; cat office-wasm.err; exit 1; }
+          xg=$(moon run --target wasm office-cli -- get "$xlsx_fixture" '/xlsx/sheet[1]/range[A19:B19]' --json 2>office-wasm.err) || { echo "office XLSX get failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$xg" | jq -e '.success == true
             and .data.schema == "office.xlsx.element/1"
             and .data.path == "/xlsx/sheet[name=\"Sheet1\"]/range[A19:B19]"
             and [.data.cells[].reference] == ["A19", "B19"]
             and .data.cells[1].formula == "SUM(Sheet2!D2,Sheet2!D11)"'
-          xt=$(moon run --target wasm office/cmd/office -- text "$xlsx_fixture" --under '/xlsx/sheet[name="Sheet1"]' --offset 1 --limit 2 --json 2>office-wasm.err) || { echo "office XLSX text failed; stderr:"; cat office-wasm.err; exit 1; }
+          xt=$(moon run --target wasm office-cli -- text "$xlsx_fixture" --under '/xlsx/sheet[name="Sheet1"]' --offset 1 --limit 2 --json 2>office-wasm.err) || { echo "office XLSX text failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$xt" | jq -e '.success == true
             and .data.schema == "office.xlsx.text/1"
             and .data.matched_total == 5
             and [.data.entries[].text] == ["237", "Column1"]'
-          xq=$(moon run --target wasm office/cmd/office -- query "$xlsx_fixture" 'cell[type=formula][formula~=IF]' --under '/xlsx/sheet[name="Sheet2"]' --json 2>office-wasm.err) || { echo "office XLSX query failed; stderr:"; cat office-wasm.err; exit 1; }
+          xq=$(moon run --target wasm office-cli -- query "$xlsx_fixture" 'cell[type=formula][formula~=IF]' --under '/xlsx/sheet[name="Sheet2"]' --json 2>office-wasm.err) || { echo "office XLSX query failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$xq" | jq -e '.success == true
             and .data.schema == "office.xlsx.query/1"
             and .data.matched_total == 4
             and [.data.matches[].reference] == ["F11", "G11", "H11", "I11"]'
           # Fresh creation and strict batch mutation use the same async,
           # bounded transaction path on wasm as native.
-          xc=$(moon run --target wasm office/cmd/office -- create xlsx ci-office-created.xlsx --sheet Data --json 2>office-wasm.err) || { echo "office XLSX create failed; stderr:"; cat office-wasm.err; exit 1; }
+          xc=$(moon run --target wasm office-cli -- create xlsx ci-office-created.xlsx --sheet Data --json 2>office-wasm.err) || { echo "office XLSX create failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$xc" | jq -e '.success == true
             and .data.schema == "office.xlsx.create/1"
             and .data.sheet == "Data"
@@ -692,52 +692,52 @@ jobs:
           cat >ci-office-batch.json <<'JSON'
           {"schema":"xlsx.batch/1","ops":[{"op":"set","params":{"sheet":"Data","cell":"A1","value":"wasm"}},{"op":"formula","params":{"sheet":"Data","cell":"B1","formula":"=LEN(A1)"}}]}
           JSON
-          xb=$(moon run --target wasm office/cmd/office -- batch ci-office-created.xlsx ci-office-batch.json --out ci-office-batched.xlsx --json 2>office-wasm.err) || { echo "office XLSX batch failed; stderr:"; cat office-wasm.err; exit 1; }
+          xb=$(moon run --target wasm office-cli -- batch ci-office-created.xlsx ci-office-batch.json --out ci-office-batched.xlsx --json 2>office-wasm.err) || { echo "office XLSX batch failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$xb" | jq -e '.success == true
             and .data.schema == "office.xlsx.batch/1"
             and .data.stats.operation_count == 2
             and .data.stats.touched_cells == 2
             and .data.transaction.committed == true
             and any(.warnings[]; .code == "office.xlsx.full_rewrite")'
-          xbg=$(moon run --target wasm office/cmd/office -- get ci-office-batched.xlsx '/xlsx/sheet[name="Data"]/range[A1:B1]' --json 2>office-wasm.err) || { echo "office XLSX batch readback failed; stderr:"; cat office-wasm.err; exit 1; }
+          xbg=$(moon run --target wasm office-cli -- get ci-office-batched.xlsx '/xlsx/sheet[name="Data"]/range[A1:B1]' --json 2>office-wasm.err) || { echo "office XLSX batch readback failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$xbg" | jq -e '.success == true
             and .data.cells[0].raw.value == "wasm"
             and .data.cells[1].formula == "LEN(A1)"'
           # Fresh DOCX creation and authoring (D3) run through the same wasm
           # async transaction path.
-          dc=$(moon run --target wasm office/cmd/office -- create docx ci-office-created.docx --json 2>office-wasm.err) || { echo "office DOCX create failed; stderr:"; cat office-wasm.err; exit 1; }
+          dc=$(moon run --target wasm office-cli -- create docx ci-office-created.docx --json 2>office-wasm.err) || { echo "office DOCX create failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$dc" | jq -e '.success == true
             and .data.schema == "office.docx.create/1"
             and .data.format == "docx"
             and .data.transaction.committed == true'
           printf '{"schema": "docx.batch/2", "ops": [{"op": "paragraph", "params": {"text": "Heading", "style": "Heading1"}}, {"op": "paragraph", "params": {"runs": [{"text": "body", "bold": true}]}}, {"op": "comment", "params": {"on": 0, "text": "note", "author": "CI"}}]}' > ci-office-author.json
-          db=$(moon run --target wasm office/cmd/office -- batch --format docx ci-office-authored.docx ci-office-author.json --json 2>office-wasm.err) || { echo "office DOCX authoring failed; stderr:"; cat office-wasm.err; exit 1; }
+          db=$(moon run --target wasm office-cli -- batch --format docx ci-office-authored.docx ci-office-author.json --json 2>office-wasm.err) || { echo "office DOCX authoring failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$db" | jq -e '.success == true
             and .data.schema == "office.docx.batch/1"
             and .data.ops == 3
             and .data.comments == 1
             and .data.transaction.committed == true'
-          dbt=$(moon run --target wasm office/cmd/office -- text ci-office-authored.docx --json 2>office-wasm.err) || { echo "office DOCX authoring readback failed; stderr:"; cat office-wasm.err; exit 1; }
+          dbt=$(moon run --target wasm office-cli -- text ci-office-authored.docx --json 2>office-wasm.err) || { echo "office DOCX authoring readback failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$dbt" | jq -e '.success == true
             and (.data.entries[0].text == "Heading")
             and (.data.entries[1].text == "body")'
           # DOCX structured reads share one canonical bounded projection.
           # Drive every command through the wasm async filesystem path.
-          o=$(moon run --target wasm office/cmd/office -- outline docx2html/tests/cram/fixtures/single-paragraph.docx --json 2>office-wasm.err) || { echo "office DOCX outline failed; stderr:"; cat office-wasm.err; exit 1; }
+          o=$(moon run --target wasm office-cli -- outline docx2html/tests/cram/fixtures/single-paragraph.docx --json 2>office-wasm.err) || { echo "office DOCX outline failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$o" | jq -e '.success == true
             and .data.schema == "office.docx.outline/1"
             and .data.counts.paragraphs == 1
             and [.data.stories[].path] == ["/docx/body", "/docx/footnotes", "/docx/endnotes", "/docx/comments"]'
-          g=$(moon run --target wasm office/cmd/office -- get docx2html/tests/cram/fixtures/commented.docx '/docx/comments/comment[id="0"]' --json 2>office-wasm.err) || { echo "office DOCX get failed; stderr:"; cat office-wasm.err; exit 1; }
+          g=$(moon run --target wasm office-cli -- get docx2html/tests/cram/fixtures/commented.docx '/docx/comments/comment[id="0"]' --json 2>office-wasm.err) || { echo "office DOCX get failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$g" | jq -e '.success == true
             and .data.schema == "office.docx.element/1"
             and .data.stability == "stable"
             and .data.metadata.author == "Ada Lovelace"'
-          t=$(moon run --target wasm office/cmd/office -- text docx2html/tests/cram/fixtures/header-footer.docx --json 2>office-wasm.err) || { echo "office DOCX text failed; stderr:"; cat office-wasm.err; exit 1; }
+          t=$(moon run --target wasm office-cli -- text docx2html/tests/cram/fixtures/header-footer.docx --json 2>office-wasm.err) || { echo "office DOCX text failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$t" | jq -e '.success == true
             and .data.schema == "office.docx.text/1"
             and [.data.entries[].path] == ["/docx/body/p[1]", "/docx/body/p[2]", "/docx/header[1]/p[1]", "/docx/header[2]/p[1]", "/docx/footer[1]/p[1]"]'
-          q=$(moon run --target wasm office/cmd/office -- query docx2html/tests/cram/fixtures/tiny-picture.docx --kind picture --json 2>office-wasm.err) || { echo "office DOCX query failed; stderr:"; cat office-wasm.err; exit 1; }
+          q=$(moon run --target wasm office-cli -- query docx2html/tests/cram/fixtures/tiny-picture.docx --kind picture --json 2>office-wasm.err) || { echo "office DOCX query failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$q" | jq -e '.success == true
             and .data.schema == "office.docx.query/1"
             and .data.matched_total == 1
@@ -745,28 +745,28 @@ jobs:
           # Raw OOXML uses the same async filesystem and A4 transaction on
           # wasm. Exercise relationship-derived aliases, dry-run preservation,
           # atomic separate-output publication, and both Office formats.
-          r=$(moon run --target wasm office/cmd/office -- raw list ci.xlsx --json 2>office-wasm.err) || { echo "office raw list failed; stderr:"; cat office-wasm.err; exit 1; }
+          r=$(moon run --target wasm office-cli -- raw list ci.xlsx --json 2>office-wasm.err) || { echo "office raw list failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$r" | jq -e '.schema == "office.output/1"
             and .success == true
             and .data.schema == "office.raw.inventory/1"
             and any(.data.parts[]; .aliases | index("/Data"))'
-          r=$(moon run --target wasm office/cmd/office -- raw read docx2html/tests/cram/fixtures/single-paragraph.docx /document --json 2>office-wasm.err) || { echo "office raw DOCX read failed; stderr:"; cat office-wasm.err; exit 1; }
+          r=$(moon run --target wasm office-cli -- raw read docx2html/tests/cram/fixtures/single-paragraph.docx /document --json 2>office-wasm.err) || { echo "office raw DOCX read failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$r" | jq -e '.success == true
             and .data.schema == "office.raw.part/1"
             and (.data.content | contains("Walking on imported air"))'
           cp ci.xlsx ci-raw-before.xlsx
-          r=$(moon run --target wasm office/cmd/office -- raw edit ci.xlsx /Data --path '/x:worksheet/x:sheetData/x:row[1]' --action set-attribute --attribute ht --value 15 --dry-run --json 2>office-wasm.err) || { echo "office raw dry-run failed; stderr:"; cat office-wasm.err; exit 1; }
+          r=$(moon run --target wasm office-cli -- raw edit ci.xlsx /Data --path '/x:worksheet/x:sheetData/x:row[1]' --action set-attribute --attribute ht --value 15 --dry-run --json 2>office-wasm.err) || { echo "office raw dry-run failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$r" | jq -e '.success == true
             and .data.change.action == "set-attribute"
             and .data.transaction.dry_run == true
             and .data.transaction.committed == false
             and .data.transaction.preservation.changed == ["xl/worksheets/sheet1.xml"]'
           cmp ci.xlsx ci-raw-before.xlsx
-          r=$(moon run --target wasm office/cmd/office -- raw edit ci.xlsx /Data --path '/x:worksheet/x:sheetData/x:row[1]' --action set-attribute --attribute ht --value 15 --out ci-raw.xlsx --json 2>office-wasm.err) || { echo "office raw commit failed; stderr:"; cat office-wasm.err; exit 1; }
+          r=$(moon run --target wasm office-cli -- raw edit ci.xlsx /Data --path '/x:worksheet/x:sheetData/x:row[1]' --action set-attribute --attribute ht --value 15 --out ci-raw.xlsx --json 2>office-wasm.err) || { echo "office raw commit failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$r" | jq -e '.success == true
             and .data.transaction.committed == true
             and .data.transaction.preservation.changed == ["xl/worksheets/sheet1.xml"]'
-          r=$(moon run --target wasm office/cmd/office -- raw read ci-raw.xlsx /Data --json 2>office-wasm.err) || { echo "office raw readback failed; stderr:"; cat office-wasm.err; exit 1; }
+          r=$(moon run --target wasm office-cli -- raw read ci-raw.xlsx /Data --json 2>office-wasm.err) || { echo "office raw readback failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "$r" | jq -e '.success == true and (.data.content | contains("ht=\"15\""))'
           # The docx agent CLI also targets wasm end to end: build it and
           # drive its convert subcommand over a committed fixture. Keep the
