@@ -13,6 +13,6 @@ pub fn hash_concat(algorithm : String, parts : ArrayView[BytesView]) -> Bytes {
     "sha256" => sha256_hash(data)
     "sha384" => sha384_hash(data)
     "sha512" => sha512_hash(data)
-    _ => Bytes::default()
+    _ => Default::default()
   }
 }

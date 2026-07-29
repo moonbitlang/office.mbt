@@ -83,7 +83,7 @@ fn cfb_builder_new() -> CfbBuilder {
     sectors: [
       {
         cls_id: header_cls_id,
-        content: Bytes::default(),
+        content: Default::default(),
         name: "Root Entry",
         c: -1,
         l: -1,
@@ -821,7 +821,7 @@ fn cfb_read(
       }
     }
   }
-  let mut mini_stream : Bytes = Bytes::default()
+  let mut mini_stream : Bytes = Default::default()
   if root_entry.size > 0 && root_entry.start != end_of_chain {
     let root_sector_count = (root_entry.size + sector_size - 1) / sector_size
     let root_chain = read_sector_chain(
@@ -882,7 +882,7 @@ fn CfbReader::read_stream(
         raise InvalidEncryptionInfo(msg="cfb entry is not a stream")
       }
       if item.size == 0 {
-        return Bytes::default()
+        return Default::default()
       }
       if item.size < 0x1000 {
         if self.mini_stream.length() == 0 {
@@ -1006,7 +1006,7 @@ test "cfb wb: prepare and read-chain guard branches" {
   builder.put("Root Entry/a", b"a")
   builder.put("Root Entry/b", b"b")
   builder.sectors[1].type_id = 0
-  builder.sectors[2].cls_id = Bytes::default()
+  builder.sectors[2].cls_id = Default::default()
   builder.prepare()
   let mut found_b = false
   for sector in builder.sectors {
@@ -1089,7 +1089,7 @@ test "cfb wb: large builder/write and cfb_read difat branches" {
   let builder = cfb_builder_new()
   let big = Bytes::make(8_388_608, (0x41).to_byte())
   builder.put("BigStream", big)
-  builder.sectors[1].cls_id = Bytes::default()
+  builder.sectors[1].cls_id = Default::default()
   let bytes = builder.write()
   inspect(bytes.length() > 0, content="true")
 
@@ -1162,13 +1162,13 @@ test "cfb wb: cfb_read short/signature/invalid-name branches" {
 ///|
 test "cfb wb: read_stream guard branches" {
   let not_found : CfbReader = {
-    bytes: Bytes::default(),
+    bytes: b"",
     sector_size: 512,
     mini_sector_size: 64,
     fat: [],
     mini_fat: [],
     entries: [],
-    mini_stream: Bytes::default(),
+    mini_stream: Default::default(),
   }
   let missing : Result[Bytes, Error] = Ok(not_found.read_stream("missing")) catch {
     e => Err(e)
@@ -1179,13 +1179,13 @@ test "cfb wb: read_stream guard branches" {
   )
 
   let not_stream : CfbReader = {
-    bytes: Bytes::default(),
+    bytes: b"",
     sector_size: 512,
     mini_sector_size: 64,
     fat: [],
     mini_fat: [],
     entries: [{ name: "x", type_id: 5, start: 0, size: 1 }],
-    mini_stream: Bytes::default(),
+    mini_stream: Default::default(),
   }
   let not_stream_result : Result[Bytes, Error] = Ok(not_stream.read_stream("x")) catch {
     e => Err(e)
@@ -1197,24 +1197,24 @@ test "cfb wb: read_stream guard branches" {
   )
 
   let zero_size : CfbReader = {
-    bytes: Bytes::default(),
+    bytes: b"",
     sector_size: 512,
     mini_sector_size: 64,
     fat: [],
     mini_fat: [],
     entries: [{ name: "x", type_id: 2, start: 0, size: 0 }],
-    mini_stream: Bytes::default(),
+    mini_stream: Default::default(),
   }
   inspect(zero_size.read_stream("x"), content="b\"\"")
 
   let mini_missing : CfbReader = {
-    bytes: Bytes::default(),
+    bytes: b"",
     sector_size: 512,
     mini_sector_size: 64,
     fat: [],
     mini_fat: [],
     entries: [{ name: "x", type_id: 2, start: 0, size: 1 }],
-    mini_stream: Bytes::default(),
+    mini_stream: Default::default(),
   }
   let mini_missing_result : Result[Bytes, Error] = Ok(
     mini_missing.read_stream("x"),
@@ -1228,7 +1228,7 @@ test "cfb wb: read_stream guard branches" {
   )
 
   let mini_oob : CfbReader = {
-    bytes: Bytes::default(),
+    bytes: b"",
     sector_size: 512,
     mini_sector_size: 64,
     fat: [],
@@ -1246,7 +1246,7 @@ test "cfb wb: read_stream guard branches" {
   )
 
   let mini_chain_oob : CfbReader = {
-    bytes: Bytes::default(),
+    bytes: b"",
     sector_size: 512,
     mini_sector_size: 64,
     fat: [],
@@ -1266,7 +1266,7 @@ test "cfb wb: read_stream guard branches" {
   )
 
   let mini_chain_long : CfbReader = {
-    bytes: Bytes::default(),
+    bytes: b"",
     sector_size: 512,
     mini_sector_size: 64,
     fat: [],
@@ -1300,7 +1300,7 @@ test "cfb wb: locate/write-msat/write-directory residual branches" {
   inspect(msat.position > 0, content="true")
 
   let directory = cfb_builder_new()
-  directory.sectors[0].cls_id = Bytes::default()
+  directory.sectors[0].cls_id = Default::default()
   directory.write_directory_entry([1, 0, 0, 0, 1, 0, 0, 0])
   inspect(directory.position > 0, content="true")
 }
