@@ -6,6 +6,7 @@ import {
   "bobzhang/mbtexcel/batch",
   "bobzhang/mbtexcel/inspect",
   "bobzhang/mbtexcel/xlsx",
+  "moonbitlang/core/debug",
   "moonbitlang/core/encoding/base64",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
@@ -15,7 +16,6 @@ import {
 import {
   "bobzhang/docx2html" @word,
   "moonbitlang/core/encoding/base64" @b64,
-  "bobzhang/docx2html/batch" @docx_batch,
   "bobzhang/docx2html/document",
   "bobzhang/docx2html/docx",
   "bobzhang/mbtexcel/batch",
