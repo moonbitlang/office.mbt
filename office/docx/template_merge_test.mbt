@@ -32,7 +32,7 @@ async test "docx template substitutes body and header stories" {
           ),
         )
       } else {
-        payload.to_bytes()
+        payload.to_owned()
       }
       rebuilt.add(name, replaced)
     }
@@ -104,7 +104,7 @@ async test "docx template refuses missing keys without publishing" {
           text.replace(old="Walking on imported air", new="Hi {{missing}}"),
         )
       } else {
-        payload.to_bytes()
+        payload.to_owned()
       }
       rebuilt.add(name, replaced)
     }
@@ -163,7 +163,7 @@ async fn docx_template_bytes_case(
         ),
       )
     } else {
-      payload.to_bytes()
+      payload.to_owned()
     }
     rebuilt.add(name, replaced)
   }

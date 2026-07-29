@@ -97,7 +97,7 @@ fn docx_region_fixture_with(
       replaced = true
       rebuilt.add(name, @utf8.encode(injected))
     } else {
-      rebuilt.add(name, payload.to_bytes())
+      rebuilt.add(name, payload.to_owned())
     }
   }
   if !replaced {
@@ -391,7 +391,7 @@ async test "docx region unused keys attribute per region, not globally" {
           }
           rebuilt.add(name, @utf8.encode(injected))
         } else {
-          rebuilt.add(name, payload.to_bytes())
+          rebuilt.add(name, payload.to_owned())
         }
       }
       @zip.write(rebuilt)
