@@ -653,7 +653,7 @@ fn raw_direct_child_text(
   let mut index = content_start
   let mut depth = 0
   while index < xml.length() {
-    let offset = match xml[index:].to_owned().find("<") {
+    let offset = match xml.substring(start=index).find("<") {
       Some(pos) => pos
       None => return Some("")
     }
@@ -684,15 +684,17 @@ fn raw_direct_child_text(
     let name_end = start + 1 + element.length()
     let is_match = depth == 0 &&
       name_end < xml.length() &&
-      xml[start + 1:name_end].to_owned() == element &&
+      xml.substring(start=start + 1, end=name_end) == element &&
       raw_name_boundary(xml[name_end])
     if is_match {
       if self_closing {
         return Some("")
       }
-      match xml[tag_end:].to_owned().find(close) {
+      match xml.substring(start=tag_end).find(close) {
         Some(rel) =>
-          return Some(unescape_xml_text(xml[tag_end:tag_end + rel].to_owned()))
+          return Some(
+            unescape_xml_text(xml.substring(start=tag_end, end=tag_end + rel)),
+          )
         None => return None
       }
     }
@@ -735,7 +737,7 @@ pub fn Worksheet::raw_data_validation_criteria(
       out.push(opaque)
       continue
     }
-    let root_tag = trimmed[0:root_end].to_owned()
+    let root_tag = trimmed.substring(start=0, end=root_end)
     let validation_type = match (try? attr_value(root_tag, "type")) {
       Ok(Some(value)) => unescape_xml_text(value)
       Ok(None) => "none"
