@@ -1744,7 +1744,7 @@ pub fn docx_dump_op_chunks(ops : Array[Json]) -> Array[Array[Json]] {
     } else {
       ops.length()
     }
-    chunks.push(ops[start:end].to_array())
+    chunks.push(ops[start:end].to_owned())
     start = end
   }
   chunks
