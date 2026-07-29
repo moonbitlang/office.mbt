@@ -96,7 +96,7 @@ fn dump_sheet_styles(
       )
     }
     if extract.unexpressible.length() > 0 &&
-      not(ctx.reported.contains(first.style_id)) {
+      !ctx.reported.contains(first.style_id) {
       ctx.reported.add(first.style_id)
       residual.push({
         code: "xlsx.style_attributes_unexpressible",
@@ -164,7 +164,7 @@ fn extract_style(style : @xlsx.Style) -> StyleExtract {
         Some(color) if is_hex6(color) && color_plain =>
           params["font_color"] = Json::string(color)
         Some(_) => unexpressible.push("font_color_nonrgb")
-        None => if not(color_plain) { unexpressible.push("font_color_nonrgb") }
+        None => if !color_plain { unexpressible.push("font_color_nonrgb") }
       }
       if font.size is Some(_) {
         unexpressible.push("font_size")
