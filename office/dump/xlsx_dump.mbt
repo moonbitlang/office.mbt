@@ -322,10 +322,7 @@ fn dump_sheet_cells(
 fn range_cell_count(range : String) -> Int64? {
   let (start, end) = match range.find(":") {
     Some(colon) =>
-      (
-        range.substring(start=0, end=colon),
-        range.substring(start=colon + 1, end=range.length()),
-      )
+      (range[0:colon].to_owned(), range[colon + 1:range.length()].to_owned())
     None => (range, range)
   }
   guard (try? @xlsx.cell_name_to_coordinates(start)) is Ok((c1, r1)) else {
@@ -364,7 +361,7 @@ fn dump_sheet_merges(
   let keyed : Array[(Int, Int, String)] = []
   for range in merges {
     let start = match range.find(":") {
-      Some(colon) => range.substring(start=0, end=colon)
+      Some(colon) => range[0:colon].to_owned()
       None => range
     }
     let (col, row) = @xlsx.cell_name_to_coordinates(start) catch {

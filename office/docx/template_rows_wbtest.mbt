@@ -39,8 +39,7 @@ test "row gate: paraId and textId strip cleanly" {
   let mut index = outcome.strip_spans.length() - 1
   while index >= 0 {
     let (start, end) = outcome.strip_spans[index]
-    rebuilt = rebuilt.substring(start=0, end=start) +
-      rebuilt.substring(start=end)
+    rebuilt = rebuilt[0:start].to_owned() + rebuilt[end:].to_owned()
     index -= 1
   }
   assert_eq(

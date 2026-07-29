@@ -277,7 +277,7 @@ fn region_row_lexical_gate(
     // strings/objects/booleans stay with the structured parser; only
     // number-shaped tokens are judged lexically here
     guard first is ('0'..='9') || first == '-' else { return }
-    guard parse_strict_row_literal(text.substring(start=token_start, end=index))
+    guard parse_strict_row_literal(text[token_start:index].to_owned())
       is Some(_) else {
       raise TemplateDataError(row_bounds_message(labels[2]))
     }

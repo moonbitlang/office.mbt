@@ -390,8 +390,8 @@ priv enum DefinedRefRowBound {
 fn defined_ref_row_bound(text : String) -> DefinedRefRowBound {
   match text.find(":") {
     Some(pos) => {
-      let left = text.substring(start=0, end=pos)
-      let right = text.substring(start=pos + 1)
+      let left = text[0:pos].to_owned()
+      let right = text[pos + 1:].to_owned()
       match (parse_cell_ref(left), parse_cell_ref(right)) {
         (Some((r1, _, _, _)), Some((r2, _, _, _))) =>
           return BoundedRows(if r1 > r2 { r1 } else { r2 })
@@ -567,7 +567,7 @@ pub fn Worksheet::conditional_formats_provably_literal(
     }
     let mut search = 0
     while search < xml.length() {
-      match xml.substring(start=search).find(xml_probe_cfrule) {
+      match xml[search:].to_owned().find(xml_probe_cfrule) {
         Some(offset) => {
           raw_rules += 1
           search = search + offset + 1

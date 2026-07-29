@@ -296,7 +296,7 @@ fn chart_svg_tag_vals(xml : String, tag : String) -> Array[String] {
     let element_end = scan
     // tokenize `name = "value"` pairs sequentially; values are consumed
     // atomically, so text inside a value can never read as a name
-    let body = xml.substring(start=after, end=element_end)
+    let body = xml[after:element_end].to_owned()
     let mut cursor = 0
     while cursor < body.length() {
       while cursor < body.length() &&
