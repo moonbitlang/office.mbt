@@ -213,8 +213,8 @@ fn table_header_span(table : @xlsx.Table) -> (Int, Int, Int) raise {
   let (start, end) = match table.range_ref.find(":") {
     Some(colon) =>
       (
-        table.range_ref.substring(start=0, end=colon),
-        table.range_ref.substring(start=colon + 1, end=table.range_ref.length()),
+        table.range_ref[0:colon].to_owned(),
+        table.range_ref[colon + 1:table.range_ref.length()].to_owned(),
       )
     None => (table.range_ref, table.range_ref)
   }
@@ -398,6 +398,6 @@ fn bounded_reason(reason : String) -> String {
   if reason.length() <= 160 {
     reason
   } else {
-    reason.substring(start=0, end=160) + "\u{2026}"
+    reason[0:160].to_owned() + "\u{2026}"
   }
 }

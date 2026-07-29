@@ -101,10 +101,10 @@ fn parse_bracket_ordinal(text : String, start : Int) -> (Int, Int)? {
 fn parse_table_row_path(path : String) -> TemplateRegionAddress? {
   guard path.has_prefix("/docx/") else { return None }
   let mut index = "/docx/".length()
-  let story = if path.substring(start=index).has_prefix("body/") {
+  let story = if path[index:].to_owned().has_prefix("body/") {
     index += "body/".length()
     BodyStory
-  } else if path.substring(start=index).has_prefix("header") {
+  } else if path[index:].to_owned().has_prefix("header") {
     index += "header".length()
     guard parse_bracket_ordinal(path, index) is Some((ordinal, next)) &&
       ordinal <= MAX_TEMPLATE_STORY_ORDINAL &&
@@ -114,7 +114,7 @@ fn parse_table_row_path(path : String) -> TemplateRegionAddress? {
     }
     index = next + 1
     HeaderStory(ordinal)
-  } else if path.substring(start=index).has_prefix("footer") {
+  } else if path[index:].to_owned().has_prefix("footer") {
     index += "footer".length()
     guard parse_bracket_ordinal(path, index) is Some((ordinal, next)) &&
       ordinal <= MAX_TEMPLATE_STORY_ORDINAL &&
@@ -127,7 +127,7 @@ fn parse_table_row_path(path : String) -> TemplateRegionAddress? {
   } else {
     return None
   }
-  guard path.substring(start=index).has_prefix("tbl") else { return None }
+  guard path[index:].to_owned().has_prefix("tbl") else { return None }
   index += "tbl".length()
   guard parse_bracket_ordinal(path, index) is Some((table, after_table)) &&
     after_table < path.length() &&
@@ -135,7 +135,7 @@ fn parse_table_row_path(path : String) -> TemplateRegionAddress? {
     return None
   }
   index = after_table + 1
-  guard path.substring(start=index).has_prefix("tr") else { return None }
+  guard path[index:].to_owned().has_prefix("tr") else { return None }
   index += "tr".length()
   guard parse_bracket_ordinal(path, index) is Some((row, after_row)) &&
     after_row == path.length() else {
@@ -277,7 +277,7 @@ fn region_row_lexical_gate(
     // strings/objects/booleans stay with the structured parser; only
     // number-shaped tokens are judged lexically here
     guard first is ('0'..='9') || first == '-' else { return }
-    guard parse_strict_row_literal(text.substring(start=token_start, end=index))
+    guard parse_strict_row_literal(text[token_start:index].to_owned())
       is Some(_) else {
       raise TemplateDataError(row_bounds_message(labels[2]))
     }

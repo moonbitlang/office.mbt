@@ -20,7 +20,11 @@ pub fn sanitize_utf16_lossy(text : String) -> (String, Int) {
       index += 1
       continue
     }
-    out.write_string(text.substring(start~, end=index))
+    // NOT `text[start:index]`: the slice operator guards against splitting a
+    // surrogate pair and traps when a boundary lands on a trailing surrogate,
+    // which is exactly the case this function exists to handle. Both indices
+    // are already bounded by the loop (0 <= start <= index < length).
+    out.write_string(text.unsafe_substring(start~, end=index))
     out.write_char('\u{FFFD}')
     replaced += 1
     index += 1
@@ -29,7 +33,8 @@ pub fn sanitize_utf16_lossy(text : String) -> (String, Int) {
   if replaced == 0 {
     (text, 0)
   } else {
-    out.write_string(text.substring(start~, end=text.length()))
+    // same reason as above: `start` can sit on a trailing surrogate
+    out.write_string(text.unsafe_substring(start~, end=text.length()))
     (out.to_string(), replaced)
   }
 }

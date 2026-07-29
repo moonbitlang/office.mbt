@@ -460,7 +460,7 @@ fn row_safety_gate(
         let prefix = if attr_name == "xmlns" {
           ""
         } else {
-          attr_name.substring(start="xmlns:".length())
+          attr_name["xmlns:".length():].to_owned()
         }
         tag_bindings[prefix] = uri
       }
@@ -468,11 +468,7 @@ fn row_safety_gate(
     frames.push(tag_bindings)
     // resolve and judge the element
     let (element_prefix, element_local) = match raw_name.find(":") {
-      Some(pos) =>
-        (
-          raw_name.substring(start=0, end=pos),
-          raw_name.substring(start=pos + 1),
-        )
+      Some(pos) => (raw_name[0:pos].to_owned(), raw_name[pos + 1:].to_owned())
       None => ("", raw_name)
     }
     let element_ns = match resolve(element_prefix) {
@@ -513,10 +509,7 @@ fn row_safety_gate(
       }
       let (attr_prefix, attr_local) = match attr_name.find(":") {
         Some(pos) =>
-          (
-            attr_name.substring(start=0, end=pos),
-            attr_name.substring(start=pos + 1),
-          )
+          (attr_name[0:pos].to_owned(), attr_name[pos + 1:].to_owned())
         None => ("", attr_name)
       }
       // default namespaces never apply to attributes
@@ -681,8 +674,7 @@ fn part_bindings_at(part : BytesView, offset : Int) -> Map[String, String]? {
         }
       } else if attr_name.has_prefix("xmlns:") {
         match row_attr_value(part, value_start, cursor) {
-          Some(uri) =>
-            bindings[attr_name.substring(start="xmlns:".length())] = uri
+          Some(uri) => bindings[attr_name["xmlns:".length():].to_owned()] = uri
           None => return None
         }
       }

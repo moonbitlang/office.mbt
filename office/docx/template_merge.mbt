@@ -155,10 +155,10 @@ fn find_unit(text : String, from : Int, wanted : Int) -> Int? {
 ///|
 fn decode_numeric_entity(entity : String) -> String? {
   guard entity.has_prefix("&#") && entity.has_suffix(";") else { return None }
-  let body = entity.substring(start=2, end=entity.length() - 1)
+  let body = entity[2:entity.length() - 1].to_owned()
   let mut value = 0
   if body.has_prefix("x") || body.has_prefix("X") {
-    for unit in body.substring(start=1, end=body.length()) {
+    for unit in body[1:body.length()].to_owned() {
       let code = unit.to_int()
       let digit = if code >= '0'.to_int() && code <= '9'.to_int() {
         code - '0'.to_int()
@@ -618,7 +618,7 @@ fn DocxMergeState::scan_paragraph(
         let replacement = if matched.span.start_segment == index {
           match self.values.get(matched.key) {
             Some(value) => value.render()
-            None => original.substring(start=local_start, end=local_end)
+            None => original[local_start:local_end].to_owned()
           }
         } else {
           ""
@@ -650,11 +650,11 @@ fn DocxMergeState::scan_paragraph(
     let mut cursor = 0
     for edit in piece_edits {
       let (local_start, local_end, replacement) = edit
-      builder.write_string(original.substring(start=cursor, end=local_start))
+      builder.write_string(original[cursor:local_start].to_owned())
       builder.write_string(replacement)
       cursor = local_end
     }
-    builder.write_string(original.substring(start=cursor, end=length))
+    builder.write_string(original[cursor:length].to_owned())
     let final_text = builder.to_string()
     if final_text != original {
       self.edits.push({
