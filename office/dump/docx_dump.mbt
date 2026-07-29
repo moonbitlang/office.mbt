@@ -1349,7 +1349,7 @@ pub fn dump_docx_document(
   }
   let ctx : DocxDumpContext = {
     assets: {},
-    total_asset_bytes: Ref::new(0),
+    total_asset_bytes: Ref(0),
     residual: [],
     footnote_bodies,
     endnote_bodies,

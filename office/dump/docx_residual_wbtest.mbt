@@ -5,7 +5,7 @@
 fn wb_ctx(residual : Array[DumpResidual]) -> DocxDumpContext {
   {
     assets: {},
-    total_asset_bytes: Ref::new(0),
+    total_asset_bytes: Ref(0),
     residual,
     footnote_bodies: {},
     endnote_bodies: {},
@@ -401,7 +401,7 @@ test "note references dump their bodies with honest edge handling" {
   let residual : Array[DumpResidual] = []
   let ctx : DocxDumpContext = {
     assets: {},
-    total_asset_bytes: Ref::new(0),
+    total_asset_bytes: Ref(0),
     residual,
     footnote_bodies: {
       "1": [
@@ -487,7 +487,7 @@ test "links and images inside note bodies degrade honestly" {
   let residual : Array[DumpResidual] = []
   let ctx : DocxDumpContext = {
     assets: {},
-    total_asset_bytes: Ref::new(0),
+    total_asset_bytes: Ref(0),
     residual,
     footnote_bodies: {
       "1": [

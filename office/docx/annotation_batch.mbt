@@ -474,7 +474,7 @@ pub async fn transact_docx_annotations(
   options : @transaction.TransactionOptions,
   batch : AnnotationBatch,
 ) -> DocxAnnotationBatchResult {
-  let collected : Ref[DocxAnnotationReport?] = Ref::new(None)
+  let collected : Ref[DocxAnnotationReport?] = Ref(None)
   let report = @transaction.transact(
     options,
     (format, _original, archive, budget) => {

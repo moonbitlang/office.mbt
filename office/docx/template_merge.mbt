@@ -743,7 +743,7 @@ pub async fn transact_docx_template(
   values : Map[String, @template.TemplateValue],
   allow_missing~ : Bool,
 ) -> DocxTemplateResult {
-  let collected : Ref[DocxTemplateReport?] = Ref::new(None)
+  let collected : Ref[DocxTemplateReport?] = Ref(None)
   let report = transact_docx(options, session => {
     let state : DocxMergeState = {
       report: {
@@ -766,7 +766,7 @@ pub async fn transact_docx_template(
       },
       values,
       used_keys: Set::new(),
-      budget: Ref::new(docx_template_scan_budget),
+      budget: Ref(docx_template_scan_budget),
       edits: [],
       checks: [],
       allow_missing,

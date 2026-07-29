@@ -206,10 +206,10 @@ fn merge_template_workbook(
   values : Map[String, @template.TemplateValue],
   allow_missing~ : Bool,
   claimed_rows? : Set[String] = Set::new(),
-  skipped_cells? : Ref[Int] = Ref::new(0),
+  skipped_cells? : Ref[Int] = Ref(0),
   pre_used_keys? : Set[String] = Set::new(),
 ) -> XlsxTemplateReport raise {
-  let budget = Ref::new(template_scan_budget)
+  let budget = Ref(template_scan_budget)
   let report : XlsxTemplateReport = {
     placeholders_found: 0,
     replaced: 0,
@@ -374,7 +374,7 @@ pub async fn transact_template(
   values : Map[String, @template.TemplateValue],
   allow_missing~ : Bool,
 ) -> XlsxTemplateResult {
-  let collected : Ref[XlsxTemplateReport?] = Ref::new(None)
+  let collected : Ref[XlsxTemplateReport?] = Ref(None)
   let validator = xlsx_transaction_validator()
   let identifier = xlsx_transaction_identifier()
   let report = @transaction.transact(

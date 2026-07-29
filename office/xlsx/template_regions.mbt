@@ -862,9 +862,9 @@ pub async fn transact_template_document(
   data : @template.TemplateData,
   allow_missing~ : Bool,
 ) -> XlsxTemplateDocumentResult {
-  let collected : Ref[XlsxTemplateReport?] = Ref::new(None)
-  let region_outcomes : Ref[Array[XlsxRegionOutcome]] = Ref::new([])
-  let skipped_cells : Ref[Int] = Ref::new(0)
+  let collected : Ref[XlsxTemplateReport?] = Ref(None)
+  let region_outcomes : Ref[Array[XlsxRegionOutcome]] = Ref([])
+  let skipped_cells : Ref[Int] = Ref(0)
   let validator = xlsx_transaction_validator()
   let identifier = xlsx_transaction_identifier()
   let report = @transaction.transact(
@@ -877,7 +877,7 @@ pub async fn transact_template_document(
         )
       }
       let workbook = read_transaction_workbook(archive)
-      let scan_budget = Ref::new(template_scan_budget)
+      let scan_budget = Ref(template_scan_budget)
       let preflight : XlsxTemplateReport = {
         placeholders_found: 0,
         replaced: 0,
