@@ -557,7 +557,7 @@ test "links and images inside note bodies degrade honestly" {
 test "dedup-first unsupported type cannot poison a later supported use" {
   let residual : Array[DumpResidual] = []
   let ctx = wb_ctx(residual)
-  let payload : Bytes = "shared-payload-bytes"
+  let payload : Bytes = b"shared-payload-bytes"
   // first occurrence: TIFF — carried as an asset, disclosed, no op
   let out1 : Array[Json] = []
   docx_run_specs(
@@ -623,7 +623,7 @@ test "unsniffable image payloads residualize via the writer oracle" {
       @document.Image(@document.Image::{
         content_type: "image/png",
         alt_text: None,
-        data: "definitely-not-a-png",
+        data: b"definitely-not-a-png",
       }),
     ],
     @document.run_properties(),
