@@ -72,7 +72,7 @@ async test "region merge clones, fills, and shifts the footer" {
     assert_true(result.scalar_cells_skipped >= 2)
     assert_true(result.report.changed)
     // read the published workbook back
-    let published = @engine.read(@afs.read_file(output).binary()[:])
+    let published = @engine.read(@afs.read_file(output).binary())
     guard published.sheet("Items") is Some(sheet) else {
       fail("published sheet missing")
     }
@@ -135,7 +135,7 @@ async test "two regions report final coordinates after upper insertions" {
     assert_eq(result.regions[1].name, "lower")
     assert_eq(result.regions[1].output_rows_start, 8)
     assert_eq(result.regions[1].output_rows_count, 2)
-    let published = @engine.read(@afs.read_file(output).binary()[:])
+    let published = @engine.read(@afs.read_file(output).binary())
     match published.get_cell_value_raw("Data", "A8") {
       Some(Numeric(value)) => assert_eq(value, 10)
       other =>
@@ -339,7 +339,7 @@ async test "missing record keys refuse strictly and publish under allow-missing"
     )
     assert_eq(relaxed.report.missing_total, 1)
     assert_true(relaxed.report.changed)
-    let published = @engine.read(@afs.read_file(output).binary()[:])
+    let published = @engine.read(@afs.read_file(output).binary())
     match published.get_cell_value_raw("Items", "B3") {
       Some(String(text)) => assert_eq(text, "{{qty}}")
       other => fail("expected the literal placeholder, got \{to_repr(other)}")
@@ -364,7 +364,7 @@ async test "single-record regions fill in place without inserting" {
       allow_missing=false,
     )
     assert_eq(result.regions[0].output_rows_count, 1)
-    let published = @engine.read(@afs.read_file(output).binary()[:])
+    let published = @engine.read(@afs.read_file(output).binary())
     match published.get_cell_value_raw("Items", "A3") {
       Some(String(text)) => assert_eq(text, "footer")
       other =>
@@ -400,7 +400,7 @@ async test "scalar-only documents behave exactly like transact_template" {
     assert_eq(result.regions.length(), 0)
     assert_eq(result.scalar_cells_skipped, 0)
     assert_eq(result.report.replaced, 1)
-    let published = @engine.read(@afs.read_file(output).binary()[:])
+    let published = @engine.read(@afs.read_file(output).binary())
     match published.get_cell_value_raw("Data", "A1") {
       Some(String(text)) => assert_eq(text, "Hello world")
       other => fail("expected the scalar substitution, got \{to_repr(other)}")
@@ -440,7 +440,7 @@ async test "values keys used only inside regions are not reported unused" {
     )
     assert_eq(result.report.unused_total, 0)
     assert_eq(result.report.unused.length(), 0)
-    let published = @engine.read(@afs.read_file(output).binary()[:])
+    let published = @engine.read(@afs.read_file(output).binary())
     match published.get_cell_value_raw("Data", "A3") {
       Some(String(text)) => assert_eq(text, "Gadget (pcs)")
       other =>

@@ -11,7 +11,7 @@ fn wb_row_bindings() -> Map[String, String] {
 ///|
 fn wb_gate(xml : String) -> RowGateOutcome {
   let bytes = @utf8.encode(xml)
-  row_safety_gate(bytes[:], wb_row_bindings())
+  row_safety_gate(bytes, wb_row_bindings())
 }
 
 ///|
@@ -133,7 +133,7 @@ test "part root bindings seed w and w14" {
   // query INSIDE the body, where the root's declarations are in scope
   let text = @utf8.decode(part)
   guard text.find("<w:body") is Some(body_at) else { fail("body missing") }
-  guard part_bindings_at(part[:], body_at + 1) is Some(bindings) else {
+  guard part_bindings_at(part, body_at + 1) is Some(bindings) else {
     fail("root bindings must parse")
   }
   assert_eq(bindings.get("w"), Some(wml_ns))
@@ -151,13 +151,13 @@ test "part bindings walk sees ancestors and respects closes" {
   let text = @utf8.decode(part)
   // inside the table: w2 (bound on w:tbl) is in scope
   guard text.find("<w:tr") is Some(tr_at) else { fail("tr missing") }
-  guard part_bindings_at(part[:], tr_at) is Some(inside) else {
+  guard part_bindings_at(part, tr_at) is Some(inside) else {
     fail("bindings at tr must parse")
   }
   assert_eq(inside.get("w2"), Some(wml_ns))
   // after the self-closing paragraph: its q binding is out of scope
   guard text.find("<w:p/>") is Some(after_at) else { fail("plain p missing") }
-  guard part_bindings_at(part[:], after_at) is Some(outside) else {
+  guard part_bindings_at(part, after_at) is Some(outside) else {
     fail("bindings after must parse")
   }
   assert_eq(outside.get("q"), None)

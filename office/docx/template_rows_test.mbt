@@ -66,7 +66,7 @@ fn docx_region_data(records : String) -> @template.TemplateData raise {
 ///|
 async fn published_document_xml(path : String) -> String {
   let bytes = @afs.read_file(path).binary()
-  let archive = @zip.read(bytes[:])
+  let archive = @zip.read(bytes)
   guard archive.get("word/document.xml") is Some(part) else {
     fail("published document.xml missing")
   }
@@ -82,7 +82,7 @@ fn docx_region_fixture_with(
   new_text : String,
 ) -> Bytes raise {
   let base = docx_region_fixture()
-  let archive = @zip.read(base[:])
+  let archive = @zip.read(base)
   let rebuilt = @zip.Archive::new()
   let mut replaced = false
   for entry in archive.entries() {
@@ -376,7 +376,7 @@ async test "docx region unused keys attribute per region, not globally" {
     // "shared" is unused in region A (tr[2], which uses only item/qty)
     // but consumed in region B (tr[3]); region A record 0 must report it
     let two_row = {
-      let archive = @zip.read(docx_region_fixture()[:])
+      let archive = @zip.read(docx_region_fixture())
       let rebuilt = @zip.Archive::new()
       for entry in archive.entries() {
         let name = entry.name()

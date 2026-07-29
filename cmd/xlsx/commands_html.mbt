@@ -52,7 +52,7 @@ async fn run_html(m : @argparse.Matches) -> Unit {
     // access to the output's directory tree — which can clobber the
     // input directly regardless — so it grants no capability a local
     // spreadsheet tool must defend against.
-    write_file_replacing(out, @encoding/utf8.encode(document[:]))
+    write_file_replacing(out, @encoding/utf8.encode(document))
     println("wrote \{out}")
   }
 }

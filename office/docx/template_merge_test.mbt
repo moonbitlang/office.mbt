@@ -13,7 +13,7 @@ async test "docx template substitutes body and header stories" {
     let source_bytes = @afs.read_file(
       "../docx2html/tests/cram/fixtures/header-footer.docx",
     ).binary()
-    let archive = @zip.read(source_bytes[:])
+    let archive = @zip.read(source_bytes)
     let rebuilt = @zip.Archive::new()
     for entry in archive.entries() {
       let name = entry.name()
@@ -65,7 +65,7 @@ async test "docx template substitutes body and header stories" {
     assert_false(changed.contains("word/footer1.xml"))
     // the published document carries the substitutions
     let published = @afs.read_file(output).binary()
-    let out_archive = @zip.read(published[:])
+    let out_archive = @zip.read(published)
     guard out_archive.get("word/document.xml") is Some(document) else {
       fail("missing document part")
     }
@@ -93,7 +93,7 @@ async test "docx template refuses missing keys without publishing" {
     let source_bytes = @afs.read_file(
       "../docx2html/tests/cram/fixtures/single-paragraph.docx",
     ).binary()
-    let archive = @zip.read(source_bytes[:])
+    let archive = @zip.read(source_bytes)
     let rebuilt = @zip.Archive::new()
     for entry in archive.entries() {
       let name = entry.name()
@@ -149,7 +149,7 @@ async fn docx_template_bytes_case(
   let source_bytes = @afs.read_file(
     "../docx2html/tests/cram/fixtures/single-paragraph.docx",
   ).binary()
-  let archive = @zip.read(source_bytes[:])
+  let archive = @zip.read(source_bytes)
   let rebuilt = @zip.Archive::new()
   for entry in archive.entries() {
     let name = entry.name()

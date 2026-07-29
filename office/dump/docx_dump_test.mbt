@@ -38,7 +38,7 @@ fn docx_fixpoint_ops(envelope : @dump.DumpEnvelope) -> Array[Json] raise {
     images[id] = @b64.decode(asset.data)
   }
   let bytes = docx_assemble(envelope.ops, images)
-  let annotated = @word.read_docx_annotated(bytes[:])
+  let annotated = @word.read_docx_annotated(bytes)
   let redump = @dump.dump_docx_document(
     annotated,
     source_file="fixpoint.docx",
@@ -77,7 +77,7 @@ test "docx paragraphs and runs dump and fixpoint" {
     ]),
   ]
   let bytes = @word.write_docx(body)
-  let annotated = @word.read_docx_annotated(bytes[:])
+  let annotated = @word.read_docx_annotated(bytes)
   let envelope = @dump.dump_docx_document(
     annotated,
     source_file="para.docx",
@@ -134,7 +134,7 @@ test "docx tables dump with spans and header rows" {
     ),
   ]
   let bytes = @word.write_docx(body)
-  let annotated = @word.read_docx_annotated(bytes[:])
+  let annotated = @word.read_docx_annotated(bytes)
   let envelope = @dump.dump_docx_document(
     annotated,
     source_file="table.docx",
@@ -163,7 +163,7 @@ test "docx tab text survives the round trip" {
     ]),
   ]
   let bytes = @word.write_docx(body)
-  let annotated = @word.read_docx_annotated(bytes[:])
+  let annotated = @word.read_docx_annotated(bytes)
   let envelope = @dump.dump_docx_document(
     annotated,
     source_file="tab.docx",
@@ -199,7 +199,7 @@ test "docx images ride as assets and survive the fixpoint" {
     ]),
   ]
   let bytes = @word.write_docx(body)
-  let annotated = @word.read_docx_annotated(bytes[:])
+  let annotated = @word.read_docx_annotated(bytes)
   let d1 = @dump.dump_docx_document(
     annotated,
     source_file="img.docx",
@@ -242,7 +242,7 @@ test "docx footnotes dump their bodies and survive the fixpoint" {
     }),
   ]
   let bytes = docx_assemble(script_ops, {})
-  let annotated = @word.read_docx_annotated(bytes[:])
+  let annotated = @word.read_docx_annotated(bytes)
   let d1 = @dump.dump_docx_document(
     annotated,
     source_file="fn.docx",
@@ -289,7 +289,7 @@ test "docx comments anchor, thread, and survive the fixpoint" {
     }),
   ]
   let bytes = docx_assemble(script_ops, {})
-  let annotated = @word.read_docx_annotated(bytes[:])
+  let annotated = @word.read_docx_annotated(bytes)
   let d1 = @dump.dump_docx_document(
     annotated,
     source_file="cm.docx",
@@ -338,7 +338,7 @@ test "docx vertically merged tables survive the fixpoint" {
     ),
   ]
   let bytes = @word.write_docx(body)
-  let annotated = @word.read_docx_annotated(bytes[:])
+  let annotated = @word.read_docx_annotated(bytes)
   let d1 = @dump.dump_docx_document(
     annotated,
     source_file="vmerge.docx",

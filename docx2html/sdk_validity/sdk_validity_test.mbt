@@ -416,7 +416,7 @@ async test "a commented document is schema-valid and the annotation index reads 
   builder.add_part("word/footnotes.xml", @utf8.encode(footnotes))
   let bytes = builder.build()
   validate_docx_via_sdk(dir, "commented_conformance", bytes)
-  let annotated = @docx2html.read_docx_annotated(bytes[:])
+  let annotated = @docx2html.read_docx_annotated(bytes)
   let index = annotated.annotations()
   debug_inspect(index.warnings(), content="[]")
   debug_inspect(index.comments().length(), content="4")
@@ -642,7 +642,7 @@ async test "a docx.batch/2 script with comments is schema-valid and round-trips"
   }
   let bytes = @docx2html.write_docx_with_comments(body, comments)
   validate_docx_via_sdk(dir, "batch2_commented", bytes)
-  let annotated = @docx2html.read_docx_annotated(bytes[:])
+  let annotated = @docx2html.read_docx_annotated(bytes)
   let index = annotated.annotations()
   debug_inspect(index.warnings(), content="[]")
   debug_inspect(index.comments().length(), content="2")
@@ -747,7 +747,7 @@ async test "a written comment thread is schema-valid and reads back threaded" {
     ]),
   ])
   validate_docx_via_sdk(dir, "k2_thread", bytes)
-  let annotated = @docx2html.read_docx_annotated(bytes[:])
+  let annotated = @docx2html.read_docx_annotated(bytes)
   let index = annotated.annotations()
   debug_inspect(index.warnings(), content="[]")
   debug_inspect(index.comments().length(), content="3")
@@ -815,7 +815,7 @@ async test "written footnotes and endnotes are schema-valid and read back" {
     ],
   )
   validate_docx_via_sdk(dir, "k3_notes", bytes)
-  let annotated = @docx2html.read_docx_annotated(bytes[:])
+  let annotated = @docx2html.read_docx_annotated(bytes)
   let index = annotated.annotations()
   debug_inspect(index.warnings(), content="[]")
   debug_inspect(index.footnotes().length(), content="2")

@@ -29,7 +29,7 @@ fn annotation_fixture() -> Bytes raise {
 ///|
 async fn published_part(path : String, part : String) -> String? {
   let bytes = @afs.read_file(path).binary()
-  let archive = @zip.read(bytes[:])
+  let archive = @zip.read(bytes)
   match archive.get(part) {
     Some(payload) => Some(@utf8.decode(payload))
     None => None
