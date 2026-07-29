@@ -246,7 +246,7 @@ fn validate_table_ops(
   // (e.g. a range at the grid boundary the expansion refuses) can never
   // replay; residualize it here so a chunk parse failure below always
   // means a non-candidate dump bug
-  let parse_dropped : Set[Int] = Set::new()
+  let parse_dropped : Set[Int] = Set([])
   for candidate in candidates {
     let script = Json::object({
       "schema": Json::string(XLSX_BATCH_SCHEMA),
@@ -268,7 +268,7 @@ fn validate_table_ops(
   // even after the last candidate was dropped
   for ;; {
     check_cancelled(cancelled)
-    let dropped : Set[Int] = Set::new()
+    let dropped : Set[Int] = Set([])
     match replay_ops_traced(create_sheet, current_ops) {
       FailedAt(index, message) => {
         // only a candidate table op may fail in context; anything else is

@@ -168,7 +168,7 @@ fn region_policy_check(
       "\" cannot be adjusted for repetition (v1 requires none)",
     )
   }
-  let affected : Set[String] = Set::new()
+  let affected : Set[String] = Set([])
   for plan in plans {
     affected.add(plan.sheet)
   }
@@ -599,7 +599,7 @@ fn plan_template_regions(
   budget : Ref[Int],
 ) -> (Array[RegionPlan], Set[String]) raise {
   let plans : Array[RegionPlan] = []
-  let claimed : Set[String] = Set::new()
+  let claimed : Set[String] = Set([])
   for region in data.regions {
     guard region.address is SheetRow(sheet~, row~) else {
       push_policy_finding(
@@ -815,7 +815,7 @@ fn apply_template_regions(
   }
   if changed {
     report.changed = true
-    let cleared : Set[String] = Set::new()
+    let cleared : Set[String] = Set([])
     for plan in plans {
       if cleared.contains(plan.sheet) {
         continue
@@ -916,9 +916,9 @@ pub async fn transact_template_document(
         region_sheet_check(workbook, planned_regions, preflight)
         planned
       } else {
-        ([], Set::new())
+        ([], Set([]))
       }
-      let region_value_keys : Set[String] = Set::new()
+      let region_value_keys : Set[String] = Set([])
       for plan in plans {
         for key, _ in plan.key_occurrences {
           if data.values.contains(key) {

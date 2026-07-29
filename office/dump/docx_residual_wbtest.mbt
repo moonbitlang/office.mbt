@@ -9,7 +9,7 @@ fn wb_ctx(residual : Array[DumpResidual]) -> DocxDumpContext {
     residual,
     footnote_bodies: {},
     endnote_bodies: {},
-    used_notes: Set::new(),
+    used_notes: Set([]),
     image_verdicts: {},
   }
 }
@@ -414,7 +414,7 @@ test "note references dump their bodies with honest edge handling" {
       ],
     },
     endnote_bodies: {},
-    used_notes: Set::new(),
+    used_notes: Set([]),
     image_verdicts: {},
   }
   let out : Array[Json] = []
@@ -510,7 +510,7 @@ test "links and images inside note bodies degrade honestly" {
       ],
     },
     endnote_bodies: {},
-    used_notes: Set::new(),
+    used_notes: Set([]),
     image_verdicts: {},
   }
   let out : Array[Json] = []

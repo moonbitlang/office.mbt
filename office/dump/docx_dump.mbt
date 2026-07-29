@@ -1353,7 +1353,7 @@ pub fn dump_docx_document(
     residual: [],
     footnote_bodies,
     endnote_bodies,
-    used_notes: Set::new(),
+    used_notes: Set([]),
     image_verdicts: {},
   }
   let residual = ctx.residual
@@ -1531,7 +1531,7 @@ fn dump_docx_comments(
     bodies[id] = body
   }
   let emitted : Map[String, Int] = {}
-  let dropped : Set[String] = Set::new()
+  let dropped : Set[String] = Set([])
   let drop = (id : String, reason : String) => {
     dropped.add(id)
     ctx.residual.push(

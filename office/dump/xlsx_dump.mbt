@@ -180,7 +180,7 @@ fn dump_sheet_cells(
   // so dedup by reference keeping the first before sorting. Sorting on the
   // now-unique (row, col) is total, so the emitted order is deterministic
   // regardless of the sort's stability.
-  let seen : Set[String] = Set::new()
+  let seen : Set[String] = Set([])
   let cells : Array[@xlsx.Cell] = []
   for cell in worksheet.cells {
     if seen.contains(cell.reference) {
@@ -874,7 +874,7 @@ fn dump_workbook_residuals(
   // match (a distinct name like `_xlnm._FilterDatabaseNote` is a real
   // drop).
   // sheet lookup is case-insensitive, so normalize both sides
-  let filter_sheets : Set[String] = Set::new()
+  let filter_sheets : Set[String] = Set([])
   for sheet in workbook.get_sheet_list() {
     if (try? workbook.get_auto_filter(sheet)) is Ok(Some(_)) {
       filter_sheets.add(sheet.to_lower())
@@ -1036,11 +1036,7 @@ pub fn dump_xlsx_workbook(
   for name in rest {
     ops.push(dump_op("add-sheet", { "name": Json::string(name) }))
   }
-  let style_ctx : StyleContext = {
-    workbook,
-    extracts: {},
-    reported: Set::new(),
-  }
+  let style_ctx : StyleContext = { workbook, extracts: {}, reported: Set([]) }
   for name in worksheet_names {
     check_cancelled(cancelled)
     guard workbook.sheet(name) is Some(worksheet) else { continue }

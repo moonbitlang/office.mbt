@@ -765,7 +765,7 @@ pub async fn transact_docx_template(
         changed: false,
       },
       values,
-      used_keys: Set::new(),
+      used_keys: Set([]),
       budget: Ref(docx_template_scan_budget),
       edits: [],
       checks: [],
@@ -869,7 +869,7 @@ fn docx_run_fidelity_pass(
   // zero-width runs a span crosses (dropped in-run pictures live
   // there) and runs under missing-key matches (unsupported outranks
   // missing)
-  let checked : Set[String] = Set::new()
+  let checked : Set[String] = Set([])
   for check in state.checks {
     let check_key = check.part + "\u{0}" + check.run_path
     if checked.contains(check_key) {
