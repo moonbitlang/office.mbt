@@ -188,7 +188,7 @@ test "merged anchor spans and covered cells are skipped" {
   assert_true(document.contains("rowspan=\"2\""))
   // 1 anchor + 1 plain cell on row 1, no covered cells emitted there:
   // count td occurrences on the first body row by a crude split.
-  let first_row = document.split("<tr>").collect()[1].to_string()
+  let first_row = document.split("<tr>").collect()[1].to_owned()
   let mut tds = 0
   for i in 0..<(first_row.length() - 3) {
     if first_row[i] == '<' && first_row[i + 1] == 't' && first_row[i + 2] == 'd' {

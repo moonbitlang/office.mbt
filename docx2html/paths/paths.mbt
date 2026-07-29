@@ -463,7 +463,7 @@ pub fn resolve_relative(
   }
   let steps : Array[PathStep] = []
   for segment in steps_path.split("/") {
-    steps.push(parse_step(segment.to_string(), "\{prefix}/\{steps_path}"))
+    steps.push(parse_step(segment.to_owned(), "\{prefix}/\{steps_path}"))
   }
   resolve_steps(container, steps, "\{prefix}/\{steps_path}", root_prefix=prefix)
 }
