@@ -1,6 +1,6 @@
 ///|
 fn scan(segments : Array[String]) -> @template.TemplateScan raise {
-  @template.scan_placeholders(segments, Ref::new(1_000_000))
+  @template.scan_placeholders(segments, Ref(1_000_000))
 }
 
 ///|
@@ -103,7 +103,7 @@ test "adjacent and boundary placeholders" {
 
 ///|
 test "the scan budget is charged and enforced" {
-  let budget = Ref::new(10)
+  let budget = Ref(10)
   ignore(@template.scan_placeholders(["12345"], budget))
   assert_eq(budget.val, 5)
   match (try? @template.scan_placeholders(["123456"], budget)) {

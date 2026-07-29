@@ -1010,7 +1010,7 @@ pub fn dump_xlsx_workbook(
   let ops : Array[Json] = []
   let table_candidates : Array[TableCandidate] = []
   let assets : Map[String, DumpAsset] = {}
-  let total_asset_bytes : Ref[Int] = Ref::new(0)
+  let total_asset_bytes : Ref[Int] = Ref(0)
   let residual : Array[DumpResidual] = []
   let warnings : Array[DumpWarning] = []
   let sheet_names = workbook.get_sheet_list()
