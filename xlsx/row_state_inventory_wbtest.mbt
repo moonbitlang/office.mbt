@@ -204,7 +204,7 @@ test "stored formula presence counts empty formula text" {
 
 ///|
 test "package feature detection classifies the raw part list" {
-  let names : Map[String, String] = {}
+  let names : Map[String, String] = Map([])
   for
     physical in [
       "[Content_Types].xml", "_rels/.rels", "xl/workbook.xml", "xl/_rels/workbook.xml.rels",
@@ -236,7 +236,7 @@ test "package feature detection classifies the raw part list" {
 
 ///|
 test "package feature detection stays quiet for a conventional package" {
-  let names : Map[String, String] = {}
+  let names : Map[String, String] = Map([])
   for
     physical in [
       "[Content_Types].xml", "_rels/.rels", "xl/workbook.xml", "xl/_rels/workbook.xml.rels",
@@ -347,7 +347,7 @@ test "inventory handling labels match actual insert behavior" {
 
 ///|
 test "package feature detection: declared content types beat inert paths" {
-  let names : Map[String, String] = {}
+  let names : Map[String, String] = Map([])
   for
     physical in [
       "xl/media/link.xml", "xl/media/macro.xml", "xl/preservedDrawingParts/part1.bin",
@@ -405,7 +405,7 @@ test "library output with rich features stays classified" {
 
 ///|
 test "package feature detection: exact type identities, no alias overreach" {
-  let names : Map[String, String] = {}
+  let names : Map[String, String] = Map([])
   for physical in ["xl/media/wrapper.xml", "xl/externalLinks/odd.xml"] {
     names[physical.to_lower()] = physical
   }

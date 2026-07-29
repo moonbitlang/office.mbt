@@ -500,7 +500,7 @@ pub async fn transact_docx_annotations(
       let base_allowance = budget.max_splice_materialized_bytes()
       let original_bytes = annotation_archive_payload_bytes(archive)
       let union : Set[String] = Set([])
-      let minted : Map[String, String] = {}
+      let minted : Map[String, String] = Map([])
       let mut current = archive
       fn resolve_ref(ref : CommentRef) -> String raise {
         match ref {

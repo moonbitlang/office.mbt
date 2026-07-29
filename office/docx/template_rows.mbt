@@ -413,7 +413,7 @@ fn row_safety_gate(
     // and same-tag namespace declarations
     let attrs : Array[(String, Int, Int, Int, Int)] = []
     // (raw name, token_start, token_end, value_start, value_end)
-    let tag_bindings : Map[String, String] = {}
+    let tag_bindings : Map[String, String] = Map([])
     let mut cursor = name_end
     while cursor < inner_end {
       let ws_start = cursor
@@ -633,7 +633,7 @@ fn part_bindings_at(part : BytesView, offset : Int) -> Map[String, String]? {
     let self_closing = part[tag_end - 1] == b'/'
     // exclude the self-closing slash from attribute scanning
     let attr_limit = if self_closing { tag_end - 1 } else { tag_end }
-    let bindings : Map[String, String] = {}
+    let bindings : Map[String, String] = Map([])
     let mut cursor = index + 1
     while cursor < attr_limit &&
           (row_byte_is_name(part[cursor]) || part[cursor] == b':') {
@@ -685,7 +685,7 @@ fn part_bindings_at(part : BytesView, offset : Int) -> Map[String, String]? {
     }
     index = tag_end + 1
   }
-  let flattened : Map[String, String] = {}
+  let flattened : Map[String, String] = Map([])
   for frame in frames {
     for prefix, uri in frame {
       flattened[prefix] = uri
@@ -969,7 +969,7 @@ pub async fn transact_docx_template_document(
         if aborted {
           break
         }
-        let merged : Map[String, @template.TemplateValue] = {}
+        let merged : Map[String, @template.TemplateValue] = Map([])
         for key, value in data.values {
           merged[key] = value
         }

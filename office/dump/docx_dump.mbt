@@ -316,13 +316,13 @@ fn docx_note_spec(
         )
     }
   }
-  let body_spec : Map[String, Json] = {}
+  let body_spec : Map[String, Json] = Map([])
   if paragraphs.length() == 0 {
     body_spec["text"] = Json::string("")
   } else {
     body_spec["paragraphs"] = Json::array(paragraphs)
   }
-  let outer : Map[String, Json] = {}
+  let outer : Map[String, Json] = Map([])
   outer[note_type] = Json::object(body_spec)
   Some(Json::object(outer))
 }
@@ -760,7 +760,7 @@ fn docx_inline_specs(
               ),
             )
           } else if link_runs.length() > 0 {
-            let link : Map[String, Json] = {}
+            let link : Map[String, Json] = Map([])
             match href {
               Some(value) if href_ok => link["href"] = Json::string(value)
               _ => ()
@@ -893,7 +893,7 @@ fn docx_paragraph_params(
   in_note_body~ : Bool,
   plain~ : Bool,
 ) -> Map[String, Json] {
-  let params : Map[String, Json] = {}
+  let params : Map[String, Json] = Map([])
   match properties.style_id {
     Some(style) =>
       if docx_writable_style(style) {
@@ -1049,7 +1049,7 @@ fn docx_table_params(
                     )
                 }
               }
-              let cell_spec : Map[String, Json] = {}
+              let cell_spec : Map[String, Json] = Map([])
               if paragraphs.length() == 0 {
                 cell_spec["text"] = Json::string("")
               } else {
@@ -1173,7 +1173,7 @@ fn docx_table_params(
   // judged at their positions against the live pending state: an active
   // merge there means the batch grammar cannot express the table (every
   // script row needs a cell); no active merge means the row just drops.
-  let pending : Map[Int, (Int, Int)] = {} // start column -> (remaining, width)
+  let pending : Map[Int, (Int, Int)] = Map([]) // start column -> (remaining, width)
   let judge_empties = (at : Int) => {
     let mut verdict = true
     for position in empty_positions {
@@ -1337,12 +1337,12 @@ pub fn dump_docx_document(
 ) -> DumpEnvelope raise DumpError {
   let package_result = annotated.result()
   let ops : Array[Json] = []
-  let footnote_bodies : Map[String, Array[@document.DocumentElement]] = {}
+  let footnote_bodies : Map[String, Array[@document.DocumentElement]] = Map([])
   for entry in annotated.footnote_bodies() {
     let (id, body) = entry
     footnote_bodies[id] = body
   }
-  let endnote_bodies : Map[String, Array[@document.DocumentElement]] = {}
+  let endnote_bodies : Map[String, Array[@document.DocumentElement]] = Map([])
   for entry in annotated.endnote_bodies() {
     let (id, body) = entry
     endnote_bodies[id] = body
@@ -1402,7 +1402,7 @@ pub fn dump_docx_document(
   // comment anchors are op-index ranges over PARAGRAPH ops; collect each
   // covering comment's span while walking (the annotation index keys on
   // the story-relative /body/p[K] selector, K counting paragraphs only)
-  let comment_spans : Map[String, (Int, Int)] = {}
+  let comment_spans : Map[String, (Int, Int)] = Map([])
   let mut paragraph_ordinal = 0
   let annotations = annotated.annotations()
   for block, element in children {
@@ -1525,12 +1525,12 @@ fn dump_docx_comments(
     )
     return
   }
-  let bodies : Map[String, Array[@document.DocumentElement]] = {}
+  let bodies : Map[String, Array[@document.DocumentElement]] = Map([])
   for entry in annotated.comment_bodies() {
     let (id, body) = entry
     bodies[id] = body
   }
-  let emitted : Map[String, Int] = {}
+  let emitted : Map[String, Int] = Map([])
   let dropped : Set[String] = Set([])
   let drop = (id : String, reason : String) => {
     dropped.add(id)
@@ -1564,7 +1564,7 @@ fn dump_docx_comments(
           continue
         }
       }
-      let params : Map[String, Json] = {}
+      let params : Map[String, Json] = Map([])
       match info.parent_id() {
         Some(parent) =>
           if dropped.contains(parent) {
@@ -1717,7 +1717,7 @@ fn docx_self_check_ops(
   // failure here unreachable from source content — reaching it means a
   // dump bug, which must be loud, never a replay-time user failure.
   check_cancelled(cancelled)
-  let images : Map[String, Bytes] = {}
+  let images : Map[String, Bytes] = Map([])
   for id, asset in assets {
     images[id] = @base64.decode(asset.data) catch {
       _ => raise DumpSelfCheckFailed("asset \{id} does not decode")

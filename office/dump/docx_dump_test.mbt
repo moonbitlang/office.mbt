@@ -6,7 +6,7 @@
 fn docx_assemble(ops : Array[Json], images : Map[String, Bytes]) -> Bytes raise {
   // route through the REAL replay engine so every fixpoint test also
   // exercises the exact path `office replay` runs
-  let assets : Map[String, @dump.DumpAsset] = {}
+  let assets : Map[String, @dump.DumpAsset] = Map([])
   for id, data in images {
     assets[id] = {
       content_type: "image/png",
@@ -33,7 +33,7 @@ fn docx_assemble(ops : Array[Json], images : Map[String, Bytes]) -> Bytes raise 
 /// stream is a fixpoint: parse → build → write bytes → read → dump, with
 /// the envelope's assets injected as the image payloads.
 fn docx_fixpoint_ops(envelope : @dump.DumpEnvelope) -> Array[Json] raise {
-  let images : Map[String, Bytes] = {}
+  let images : Map[String, Bytes] = Map([])
   for id, asset in envelope.assets {
     images[id] = @b64.decode(asset.data)
   }

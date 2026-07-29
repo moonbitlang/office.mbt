@@ -130,7 +130,7 @@ test "docx envelopes and asset integrity at parse" {
   let data = @b64.encode(payload)
   let id = "sha256-" + @dump.sha256_hex_bytes(payload)
   let keyed = (key : String, entry : Json) => {
-    let map : Map[String, Json] = {}
+    let map : Map[String, Json] = Map([])
     map[key] = entry
     Json::object(map)
   }
