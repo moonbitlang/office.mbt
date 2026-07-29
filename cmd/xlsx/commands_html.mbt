@@ -75,7 +75,7 @@ fn lexical_normalize(path : String) -> String {
   let absolute = path.has_prefix("/")
   let out : Array[String] = []
   for segment in path.split("/") {
-    let segment = segment.to_string()
+    let segment = segment.to_owned()
     if segment == "" || segment == "." {
       continue
     }

@@ -32,7 +32,7 @@ fn dump_sheet_validations(
   }
   for validation in validations {
     for region in validation.sqref.split(" ") {
-      let region_text = region.to_string()
+      let region_text = region.to_owned()
       if region_text == "" {
         continue
       }
@@ -51,7 +51,7 @@ fn dump_sheet_validations(
           let inner = stored.substring(start=1, end=stored.length() - 1)
           let values : Array[Json] = []
           for value in inner.split(",") {
-            values.push(Json::string(value.to_string()))
+            values.push(Json::string(value.to_owned()))
           }
           params["values"] = Json::array(values)
         } else if stored != "" {

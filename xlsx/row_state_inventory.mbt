@@ -715,7 +715,7 @@ pub fn Worksheet::raw_data_validation_criteria(
 ) -> Array[RawDataValidationCriteria] {
   let out : Array[RawDataValidationCriteria] = []
   for xml in self.data_validations {
-    let trimmed = xml.trim(chars=" \t\r\n").to_string()
+    let trimmed = xml.trim(chars=" \t\r\n").to_owned()
     let opaque : RawDataValidationCriteria = {
       validation_type: "opaque",
       sqref: "",
