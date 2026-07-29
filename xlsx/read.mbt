@@ -4087,8 +4087,7 @@ fn read_zip_archive_core_unchecked(
     rich_value_images,
     rich_value_media,
     package_features: detect_package_features(part_names, name => {
-      match (try? content_types.content_type_for(name)) {
-        Ok(Some(value)) => Some(value)
+      content_types.content_type_for(name) catch {
         _ => None
       }
     }),

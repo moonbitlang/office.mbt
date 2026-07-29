@@ -15,9 +15,8 @@ fn dump_sheet_validations(
   candidates : Array[TableCandidate],
   residual : Array[DumpResidual],
 ) -> Unit {
-  let validations = match (try? workbook.get_data_validations(sheet)) {
-    Ok(validations) => validations
-    Err(error) => {
+  let validations = workbook.get_data_validations(sheet) catch {
+    error => {
       residual.push({
         code: "xlsx.validation_unsupported",
         severity: "dropped",
@@ -144,8 +143,9 @@ fn validation_replayed_faithfully(
   region : String,
   ordinal : Int,
 ) -> Bool {
-  let replayed_validations = (try? replayed.get_data_validations(sheet)).unwrap_or([],
-  )
+  let replayed_validations = replayed.get_data_validations(sheet) catch {
+    _ => []
+  }
   let mut found : @xlsx.DataValidation? = None
   let mut seen = 0
   for validation in replayed_validations {

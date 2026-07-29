@@ -137,9 +137,8 @@ fn table_replayed_faithfully(
   candidate_sheet : String,
   wanted : @xlsx.Table,
 ) -> Bool {
-  guard (try? replayed.sheet(candidate_sheet)) is Ok(Some(sheet)) else {
-    return false
-  }
+  // Workbook::sheet does not raise, so the old `try?` here was vacuous
+  guard replayed.sheet(candidate_sheet) is Some(sheet) else { return false }
   let mut found : @xlsx.Table? = None
   for table in sheet.tables {
     if table.name == wanted.name {
@@ -160,22 +159,19 @@ fn table_replayed_faithfully(
     return false
   }
   // header-row cells must be untouched by table creation
-  guard (try? table_header_span(wanted)) is Ok((row, c1, c2)) else {
-    return false
-  }
+  let (row, c1, c2) = table_header_span(wanted) catch { _ => return false }
   for col in c1..<=c2 {
-    guard (try? @xlsx.coordinates_to_cell_name(col, row)) is Ok(reference) else {
-      return false
-    }
-    let source_value = try? source.get_cell_value_raw(
-      candidate_sheet, reference,
-    )
-    let replayed_value = try? replayed.get_cell_value_raw(
-      candidate_sheet, reference,
-    )
-    match (source_value, replayed_value) {
-      (Ok(a), Ok(b)) => if !cell_values_equal(a, b) { return false }
+    let reference = @xlsx.coordinates_to_cell_name(col, row) catch {
       _ => return false
+    }
+    let source_value = source.get_cell_value_raw(candidate_sheet, reference) catch {
+      _ => return false
+    }
+    let replayed_value = replayed.get_cell_value_raw(candidate_sheet, reference) catch {
+      _ => return false
+    }
+    if !cell_values_equal(source_value, replayed_value) {
+      return false
     }
     // a header formula must survive as a formula: table creation can
     // synthesize a literal whose text happens to equal the cached value,
@@ -184,25 +180,25 @@ fn table_replayed_faithfully(
     // shared-formula followers with empty stored text — presence, not
     // text, is what a follower loses.
     let source_info = match source.sheet(candidate_sheet) {
-      Some(source_sheet) => try? source_sheet.get_cell_formula_info_rc(row, col)
+      Some(source_sheet) =>
+        source_sheet.get_cell_formula_info_rc(row, col) catch {
+          _ => return false
+        }
       None => return false
     }
     let replayed_info = match replayed.sheet(candidate_sheet) {
       Some(replayed_sheet) =>
-        try? replayed_sheet.get_cell_formula_info_rc(row, col)
+        replayed_sheet.get_cell_formula_info_rc(row, col) catch {
+          _ => return false
+        }
       None => return false
     }
+    if (source_info is Some(_)) != (replayed_info is Some(_)) {
+      return false
+    }
     match (source_info, replayed_info) {
-      (Ok(a), Ok(b)) => {
-        if (a is Some(_)) != (b is Some(_)) {
-          return false
-        }
-        match (a, b) {
-          (Some(sa), Some(sb)) => if sa.formula != sb.formula { return false }
-          _ => ()
-        }
-      }
-      _ => return false
+      (Some(sa), Some(sb)) => if sa.formula != sb.formula { return false }
+      _ => ()
     }
   }
   true
@@ -252,9 +248,11 @@ fn validate_table_ops(
       "schema": Json::string(XLSX_BATCH_SCHEMA),
       "ops": Json::array([ops[candidate.op_index]]),
     })
-    if (try? @batch.parse_script(script)) is Err(error) {
-      parse_dropped.add(candidate.op_index)
-      residual.push(table_residual(candidate, "\{error}"))
+    try @batch.parse_script(script) |> ignore catch {
+      error => {
+        parse_dropped.add(candidate.op_index)
+        residual.push(table_residual(candidate, "\{error}"))
+      }
     }
   }
   let mut current_ops = ops

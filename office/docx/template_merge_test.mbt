@@ -117,19 +117,22 @@ async test "docx template refuses missing keys without publishing" {
     )
     let output = directory + "/never.docx"
     let values : Map[String, @template.TemplateValue] = {}
-    match
-      (try? @docx.transact_docx_template(
+    try
+      @docx.transact_docx_template(
         @transaction.transaction_options(input, output_path=output),
         values,
         allow_missing=false,
-      )) {
-      Err(@docx.DocxTemplateRefused(report)) => {
+      )
+      |> ignore
+    catch {
+      @docx.DocxTemplateRefused(report) => {
         assert_eq(report.missing_total, 1)
         assert_eq(report.missing[0].location, "/docx/body/p[1]")
         assert_eq(report.missing[0].detail, "missing")
       }
-      Err(_) => fail("expected the typed refusal")
-      Ok(_) => fail("a missing key must refuse")
+      _ => fail("expected the typed refusal")
+    } noraise {
+      _ => fail("a missing key must refuse")
     }
     if @afs.exists(output) {
       fail("refusal must not publish")
@@ -175,20 +178,23 @@ async fn docx_template_bytes_case(
     permission=0o600,
   )
   let output = directory + "/bytes-out.docx"
-  match
-    (try? @docx.transact_docx_template(
+  try
+    @docx.transact_docx_template(
       @transaction.transaction_options(input, output_path=output),
       values,
       allow_missing~,
-    )) {
-    Err(@docx.DocxTemplateRefused(report)) => {
+    )
+    |> ignore
+  catch {
+    @docx.DocxTemplateRefused(report) => {
       if @afs.exists(output) {
         fail("refusal must not publish")
       }
       report
     }
-    Err(error) => raise error
-    Ok(_) => fail("expected the typed refusal")
+    error => raise error
+  } noraise {
+    _ => fail("expected the typed refusal")
   }
 }
 

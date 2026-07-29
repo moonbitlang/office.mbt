@@ -180,8 +180,8 @@ fn docx_image_spec(
       let verdict = match ctx.image_verdicts.get(id) {
         Some(cached) => cached
         None => {
-          let verdict = match
-            (try? @word.write_docx([
+          let verdict = try {
+            @word.write_docx([
               @document.paragraph([
                 @document.run([
                   @document.Image(@document.Image::{
@@ -191,9 +191,11 @@ fn docx_image_spec(
                   }),
                 ]),
               ]),
-            ])) {
-            Ok(_) => None
-            Err(error) => Some("\{to_repr(error)}")
+            ])
+            |> ignore
+            None
+          } catch {
+            error => Some("\{to_repr(error)}")
           }
           ctx.image_verdicts[id] = verdict
           verdict
@@ -1608,12 +1610,14 @@ fn dump_docx_comments(
         // break replay; validate against the REAL writer contract by
         // constructing a spec — zero mirror drift
         Some(date) if docx_attribute_ok(date) =>
-          match
-            (try? @word.comment_spec(author="probe", date~, from=0, to=0, [
+          try {
+            @word.comment_spec(author="probe", date~, from=0, to=0, [
               @document.paragraph([]),
-            ])) {
-            Ok(_) => params["date"] = Json::string(date)
-            Err(_) =>
+            ])
+            |> ignore
+            params["date"] = Json::string(date)
+          } catch {
+            _ =>
               ctx.residual.push(
                 docx_residual(
                   "docx.comment_metadata_dropped",
@@ -1705,11 +1709,10 @@ fn docx_self_check_ops(
       "schema": Json::string(@docx_batch.SCHEMA_BATCH_V2),
       "ops": Json::array(chunk),
     })
-    match (try? @docx_batch.parse_batch(script)) {
-      Ok(_) => ()
-      Err(error) =>
-        raise DumpSelfCheckFailed("docx op chunk rejected: \{error}")
-    }
+    (@docx_batch.parse_batch(script) catch {
+      error => raise DumpSelfCheckFailed("docx op chunk rejected: \{error}")
+    })
+    |> ignore
   }
   // the parse check cannot see writer-only contracts (grid geometry,
   // image payload sniffing, comment metadata), so run the FULL assembly
@@ -1723,13 +1726,13 @@ fn docx_self_check_ops(
       _ => raise DumpSelfCheckFailed("asset \{id} does not decode")
     }
   }
-  match (try? docx_assemble_ops(ops, images)) {
-    Ok(_) => ()
-    Err(ReplayInvalidFormat(reason)) | Err(ReplayFailed(reason)) =>
+  (docx_assemble_ops(ops, images) catch {
+    ReplayInvalidFormat(reason) | ReplayFailed(reason) =>
       raise DumpSelfCheckFailed(
         "the assembled document does not write: " + reason,
       )
-  }
+  })
+  |> ignore
 }
 
 ///|

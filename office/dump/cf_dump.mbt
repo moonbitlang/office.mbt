@@ -17,9 +17,8 @@ fn dump_sheet_conditional_formats(
   candidates : Array[TableCandidate],
   residual : Array[DumpResidual],
 ) -> Unit {
-  let formats = match (try? workbook.get_conditional_formats(sheet)) {
-    Ok(formats) => formats
-    Err(error) => {
+  let formats = workbook.get_conditional_formats(sheet) catch {
+    error => {
       // the reader parses the sheet's retained rule fragments all-or-
       // nothing; a read failure must surface, never a silent empty section
       residual.push({
@@ -166,8 +165,8 @@ fn cf_rule_params(
   }
   match rule.format {
     Some(style_id) => {
-      guard (try? workbook.get_conditional_style(style_id)) is Ok(style) else {
-        return Some("rule references a missing highlight style")
+      let style = workbook.get_conditional_style(style_id) catch {
+        _ => return Some("rule references a missing highlight style")
       }
       // the cf op expresses exactly fill / font_color / bold / italic; a
       // dxf carrying anything more can never rebuild equal, so disclose it
@@ -240,20 +239,20 @@ fn conditional_replayed_faithfully(
   sqref : String,
   ordinal : Int,
 ) -> Bool {
-  guard (try? replayed.get_conditional_formats(sheet)) is Ok(formats) else {
-    return false
+  let formats = replayed.get_conditional_formats(sheet) catch {
+    _ => return false
   }
   guard formats.get(sqref) is Some(rules) else { return false }
   guard rules.get(ordinal) is Some(actual) else { return false }
   let format_faithful = match (wanted.format, actual.format) {
     (None, None) => true
     (Some(wanted_id), Some(actual_id)) =>
-      match
-        (
-          try? source.get_conditional_style(wanted_id),
-          try? replayed.get_conditional_style(actual_id),
-        ) {
-        (Ok(wanted_style), Ok(actual_style)) => wanted_style == actual_style
+      // either lookup failing means "not faithful", as before; both are pure
+      // reads, so evaluating them inside one `try` changes nothing observable
+      try
+        source.get_conditional_style(wanted_id) ==
+        replayed.get_conditional_style(actual_id)
+      catch {
         _ => false
       }
     _ => false

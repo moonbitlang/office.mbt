@@ -325,12 +325,10 @@ fn range_cell_count(range : String) -> Int64? {
       (range[0:colon].to_owned(), range[colon + 1:range.length()].to_owned())
     None => (range, range)
   }
-  guard (try? @xlsx.cell_name_to_coordinates(start)) is Ok((c1, r1)) else {
-    return None
+  let (c1, r1) = @xlsx.cell_name_to_coordinates(start) catch {
+    _ => return None
   }
-  guard (try? @xlsx.cell_name_to_coordinates(end)) is Ok((c2, r2)) else {
-    return None
-  }
+  let (c2, r2) = @xlsx.cell_name_to_coordinates(end) catch { _ => return None }
   let cols = (c2 - c1).abs() + 1
   let rows = (r2 - r1).abs() + 1
   Some(cols.to_int64() * rows.to_int64())
@@ -776,8 +774,11 @@ fn dump_sheet_coverage_residuals(
     })
   }
   // non-default primary sheet-view state (RTL, grid lines, zoom, …)
-  if (try? workbook.get_sheet_view(sheet, 0)) is Ok(view) &&
-    sheet_view_is_nondefault(view) {
+  // an unreadable view is not a residual, exactly as the previous `try?`
+  // treated a raise as "no finding"; the predicate itself cannot raise
+  if (sheet_view_is_nondefault(workbook.get_sheet_view(sheet, 0)) catch {
+      _ => false
+    }) {
     residual.push({
       code: "xlsx.sheet_view_state_dropped",
       severity: "dropped",
@@ -845,13 +846,10 @@ fn sheet_scroll_anchor(
   if pane_anchor != "" {
     return pane_anchor
   }
-  match (try? workbook.get_sheet_view(sheet, 0)) {
-    Ok(view) =>
-      match view.top_left_cell {
-        Some(cell) => cell
-        None => "A1"
-      }
-    Err(_) => "A1"
+  let view = workbook.get_sheet_view(sheet, 0) catch { _ => return "A1" }
+  match view.top_left_cell {
+    Some(cell) => cell
+    None => "A1"
   }
 }
 
@@ -864,7 +862,9 @@ fn dump_workbook_residuals(
   residual : Array[DumpResidual],
 ) -> Unit raise {
   let document = Json::object({ "scope": Json::string("workbook") })
-  let defined = (try? workbook.get_defined_names()).unwrap_or([])
+  // get_defined_names does not raise, so the old `try?`/unwrap_or fallback
+  // was unreachable
+  let defined = workbook.get_defined_names()
   // The auto-filter internal name `_xlnm._FilterDatabase` is reconstructed
   // by a replayed `filter` op, so exclude it — but ONLY when it names a
   // sheet that actually has an auto-filter, and only on an exact-name
@@ -873,7 +873,7 @@ fn dump_workbook_residuals(
   // sheet lookup is case-insensitive, so normalize both sides
   let filter_sheets : Set[String] = Set([])
   for sheet in workbook.get_sheet_list() {
-    if (try? workbook.get_auto_filter(sheet)) is Ok(Some(_)) {
+    if (workbook.get_auto_filter(sheet) catch { _ => None }) is Some(_) {
       filter_sheets.add(sheet.to_lower())
     }
   }
