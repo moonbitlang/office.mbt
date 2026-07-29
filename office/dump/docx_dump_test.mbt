@@ -209,7 +209,7 @@ test "docx images ride as assets and survive the fixpoint" {
   assert_true(document.contains("\"image\":"))
   assert_true(document.contains("sha256-"))
   assert_true(document.contains("the logo"))
-  assert_eq(d1.assets.size(), 1)
+  assert_eq(d1.assets.length(), 1)
   assert_false(document.contains("docx.images_not_dumped"))
   let d2_ops = docx_fixpoint_ops(d1)
   assert_eq(Json::array(d1.ops).stringify(), Json::array(d2_ops).stringify())

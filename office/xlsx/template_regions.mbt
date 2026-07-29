@@ -667,7 +667,7 @@ fn plan_template_regions(
     if malformed_here {
       continue
     }
-    if key_occurrences.size() == 0 {
+    if key_occurrences.length() == 0 {
       push_policy_finding(
         report,
         region_location(region.name),

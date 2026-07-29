@@ -193,7 +193,7 @@ pub fn Worksheet::row_state_inventory(self : Worksheet) -> Array[RowStateEntry] 
       handling: ShiftedByInsert,
     })
   }
-  if self.row_dimensions.size() > 0 {
+  if self.row_dimensions.length() > 0 {
     let mut max_row = 0
     for row, _ in self.row_dimensions {
       if row > max_row {
@@ -576,7 +576,7 @@ pub fn Worksheet::conditional_formats_provably_literal(
       }
     }
   }
-  if self.x14_data_bars.size() > 0 {
+  if self.x14_data_bars.length() > 0 {
     return false
   }
   match (try? self.get_conditional_formats()) {

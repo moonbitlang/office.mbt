@@ -265,11 +265,11 @@ fn parse_scalar_entries(
   prefix : String,
   container : String,
 ) -> Map[String, TemplateValue] raise TemplateDataError {
-  if entries.size() > max_keys {
+  if entries.length() > max_keys {
     raise TemplateDataError(
       prefix +
       container +
-      " carries \{entries.size()} keys; the limit is \{max_keys}",
+      " carries \{entries.length()} keys; the limit is \{max_keys}",
     )
   }
   let values : Map[String, TemplateValue] = {}

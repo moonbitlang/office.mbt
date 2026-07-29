@@ -167,7 +167,7 @@ test "docx envelopes and asset integrity at parse" {
   )
   assert_eq(good.format, "docx")
   assert_true(good.create_sheet is None)
-  assert_eq(good.assets.size(), 1)
+  assert_eq(good.assets.length(), 1)
   // a lying digest is a malformed dump
   match
     (try? @dump.parse_dump_envelope(

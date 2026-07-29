@@ -137,7 +137,7 @@ test "template data parses and types values" {
       #|}
     ),
   )
-  assert_eq(values.size(), 4)
+  assert_eq(values.length(), 4)
   assert_eq(values.get("customer"), Some(@template.TextValue("Ada")))
   assert_eq(values.get("total"), Some(@template.NumberValue(1234.5)))
   assert_eq(values.get("paid"), Some(@template.BoolValue(true)))

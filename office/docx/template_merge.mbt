@@ -823,7 +823,7 @@ pub async fn transact_docx_template(
         }
       }
     }
-    state.report.distinct_keys_used = state.used_keys.size()
+    state.report.distinct_keys_used = state.used_keys.length()
     docx_run_fidelity_pass(state, session, annotated)
     docx_emit_scalar_edits(state, session, annotated)
     collected.val = Some(state.report)

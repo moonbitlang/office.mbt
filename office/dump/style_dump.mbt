@@ -323,11 +323,11 @@ fn extract_borders(
   }
   // a single uniform color across every emitted side is expressible; a mix
   // of colors, or some colored and some uncolored sides, is not
-  if emitted_sides > 0 && colors.size() == 1 && uncolored_sides == 0 {
+  if emitted_sides > 0 && colors.length() == 1 && uncolored_sides == 0 {
     for color in colors {
       params["border_color"] = Json::string(color)
     }
-  } else if colors.size() > 1 || (colors.size() == 1 && uncolored_sides > 0) {
+  } else if colors.length() > 1 || (colors.length() == 1 && uncolored_sides > 0) {
     unexpressible.push("border_per_side_color")
   }
 }

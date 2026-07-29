@@ -351,7 +351,7 @@ fn merge_template_workbook(
       }
     }
   }
-  report.distinct_keys_used = used_keys.size()
+  report.distinct_keys_used = used_keys.length()
   ignore(missing_keys)
   report
 }

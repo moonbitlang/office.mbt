@@ -340,14 +340,14 @@ pub fn parse_template_document(
   match fields.get("regions") {
     None => ()
     Some(Object(region_entries)) => {
-      if region_entries.size() == 0 {
+      if region_entries.length() == 0 {
         raise TemplateDataError(
           "regions must name at least one region when present",
         )
       }
-      if region_entries.size() > max_regions {
+      if region_entries.length() > max_regions {
         raise TemplateDataError(
-          "regions carries \{region_entries.size()} entries; the limit is \{max_regions}",
+          "regions carries \{region_entries.length()} entries; the limit is \{max_regions}",
         )
       }
       let mut total_rows = 0
