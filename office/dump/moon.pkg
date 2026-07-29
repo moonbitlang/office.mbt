@@ -21,7 +21,7 @@ import {
   "bobzhang/mbtexcel/batch",
   "bobzhang/mbtexcel/xlsx",
   "bobzhang/mbtexcel/zip",
-  "bobzhang/office/dump",
+  "bobzhang/office-lib/dump",
 } for "test"
 
 supported_targets = "native+js+wasm"

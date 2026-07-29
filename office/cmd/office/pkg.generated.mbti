@@ -1,7 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/office/cmd/office"
+package "bobzhang/office-lib/cmd/office"
 
 // Values
+pub async fn run() -> Unit
 
 // Errors
 type CliError

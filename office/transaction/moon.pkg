@@ -1,5 +1,5 @@
 import {
-  "bobzhang/office",
+  "bobzhang/office-lib" @office,
   "bobzhang/mbtexcel/zip",
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,

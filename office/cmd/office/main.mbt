@@ -210,7 +210,7 @@ async fn run_cli(args : Array[String]) -> Unit {
 }
 
 ///|
-async fn main {
+pub async fn run() -> Unit {
   let argv = @env.args()
   let args = if argv.length() > 0 { argv[1:].to_owned() } else { [] }
   let mode = output_mode_from_args(args)

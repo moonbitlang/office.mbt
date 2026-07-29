@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/office/internal/input_contract"
+package "bobzhang/office-lib/internal/input_contract"
 
 // Values
 pub const SCHEMA_INVENTORY : String = "office.input-contracts/1"

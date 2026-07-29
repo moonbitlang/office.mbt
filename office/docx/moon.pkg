@@ -1,6 +1,6 @@
 import {
-  "bobzhang/office",
-  "bobzhang/office/transaction",
+  "bobzhang/office-lib" @office,
+  "bobzhang/office-lib/transaction",
   "bobzhang/mbtexcel/zip",
   "bobzhang/docx2html/batch" @docxbatch,
   "bobzhang/docx2html/core" @docxcore,
@@ -9,7 +9,7 @@ import {
   "bobzhang/docx2html/opc",
   "bobzhang/docx2html/splice",
   "bobzhang/docx2html/xml",
-  "bobzhang/office/template",
+  "bobzhang/office-lib/template",
   "moonbitlang/core/debug",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
@@ -18,8 +18,8 @@ import {
 import {
   "bobzhang/docx2html" @word_fixture,
   "bobzhang/mbtexcel/zip",
-  "bobzhang/office/template",
-  "bobzhang/office/transaction",
+  "bobzhang/office-lib/template",
+  "bobzhang/office-lib/transaction",
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,
   "moonbitlang/core/encoding/utf8",

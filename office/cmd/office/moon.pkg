@@ -13,14 +13,14 @@ import {
   "bobzhang/mbtexcel/xlsx",
   "bobzhang/mbtexcel/xlsx2html",
   "bobzhang/mbtexcel/zip",
-  "bobzhang/office" @lib,
-  "bobzhang/office/raw",
-  "bobzhang/office/transaction",
-  "bobzhang/office/docx" @office_docx,
-  "bobzhang/office/dump",
-  "bobzhang/office/internal/input_contract",
-  "bobzhang/office/template",
-  "bobzhang/office/xlsx" @office_xlsx,
+  "bobzhang/office-lib" @lib,
+  "bobzhang/office-lib/raw",
+  "bobzhang/office-lib/transaction",
+  "bobzhang/office-lib/docx" @office_docx,
+  "bobzhang/office-lib/dump",
+  "bobzhang/office-lib/internal/input_contract",
+  "bobzhang/office-lib/template",
+  "bobzhang/office-lib/xlsx" @office_xlsx,
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,
   "moonbitlang/core/argparse",
@@ -34,5 +34,3 @@ import {
 }
 
 supported_targets = "native+wasm"
-
-pkgtype(kind: "executable")

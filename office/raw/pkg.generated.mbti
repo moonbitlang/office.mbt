@@ -1,21 +1,21 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/office/raw"
+package "bobzhang/office-lib/raw"
 
 import {
   "bobzhang/mbtexcel/zip",
-  "bobzhang/office",
+  "bobzhang/office-lib",
 }
 
 // Values
-pub fn raw_edit(@office.DocumentFormat, Bytes, RawEditRequest) -> RawMutation raise RawError
+pub fn raw_edit(@office-lib.DocumentFormat, Bytes, RawEditRequest) -> RawMutation raise RawError
 
-pub fn raw_edit_archive(@office.DocumentFormat, @zip.Archive, RawEditRequest, max_package_bytes~ : Int) -> RawMutation raise RawError
+pub fn raw_edit_archive(@office-lib.DocumentFormat, @zip.Archive, RawEditRequest, max_package_bytes~ : Int) -> RawMutation raise RawError
 
 pub fn raw_edit_request(String, String, RawAction, xml? : String, attribute? : String, value? : String, namespaces? : Array[(String, String)], all? : Bool) -> RawEditRequest raise RawError
 
-pub fn raw_identify(StringView, BytesView) -> @office.DocumentFormat raise RawError
+pub fn raw_identify(StringView, BytesView) -> @office-lib.DocumentFormat raise RawError
 
-pub fn raw_identify_archive(StringView, @zip.Archive) -> @office.DocumentFormat raise RawError
+pub fn raw_identify_archive(StringView, @zip.Archive) -> @office-lib.DocumentFormat raise RawError
 
 pub fn raw_inventory(StringView, BytesView) -> RawInventory raise RawError
 
@@ -23,9 +23,9 @@ pub fn raw_namespace_binding(String) -> (String, String) raise RawError
 
 pub fn raw_read(StringView, BytesView, String) -> RawPartData raise RawError
 
-pub fn raw_replace_part(@office.DocumentFormat, Bytes, String, String) -> RawMutation raise RawError
+pub fn raw_replace_part(@office-lib.DocumentFormat, Bytes, String, String) -> RawMutation raise RawError
 
-pub fn raw_replace_part_archive(@office.DocumentFormat, @zip.Archive, String, String, max_package_bytes~ : Int) -> RawMutation raise RawError
+pub fn raw_replace_part_archive(@office-lib.DocumentFormat, @zip.Archive, String, String, max_package_bytes~ : Int) -> RawMutation raise RawError
 
 pub fn resolve_raw_action(StringView) -> RawAction?
 
@@ -35,7 +35,7 @@ pub(all) suberror RawError {
 }
 #deprecated
 pub fn RawError::output(Self, &Logger) -> Unit
-pub fn RawError::to_protocol_error(Self) -> @office.ProtocolError
+pub fn RawError::to_protocol_error(Self) -> @office-lib.ProtocolError
 #deprecated
 pub fn RawError::to_string(Self) -> String
 pub impl Show for RawError
@@ -64,10 +64,10 @@ pub struct RawEditRequest {
 }
 
 pub struct RawInventory {
-  format : @office.DocumentFormat
+  format : @office-lib.DocumentFormat
   parts : ReadOnlyArray[RawPartInfo]
 }
-pub fn RawInventory::document_format(Self) -> @office.DocumentFormat
+pub fn RawInventory::document_format(Self) -> @office-lib.DocumentFormat
 pub fn RawInventory::part_records(Self) -> ReadOnlyArray[RawPartInfo]
 pub fn RawInventory::to_json(Self) -> Json
 
@@ -84,11 +84,11 @@ pub fn RawMutation::to_json(Self) -> Json
 type RawPackageResult
 
 pub struct RawPartData {
-  format : @office.DocumentFormat
+  format : @office-lib.DocumentFormat
   info : RawPartInfo
   bytes : Bytes
 }
-pub fn RawPartData::document_format(Self) -> @office.DocumentFormat
+pub fn RawPartData::document_format(Self) -> @office-lib.DocumentFormat
 pub fn RawPartData::part_info(Self) -> RawPartInfo
 pub fn RawPartData::payload_bytes(Self) -> Bytes
 pub fn RawPartData::xml_text(Self) -> String raise RawError

@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/office/dump"
+package "bobzhang/office-lib/dump"
 
 import {
   "bobzhang/docx2html/docx",
