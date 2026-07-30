@@ -485,7 +485,7 @@ test "global paraId validation preserves XML resource failures" {
   let bytes = fixture_docx(document)
   let archive = try! @mbtzip.read(bytes)
   let annotated = @docx.read_docx_annotated(bytes)
-  guard archive.get("word/document.xml") is Some(main)
+  guard! archive.get("word/document.xml") is Some(main)
   let budget = @xml.xml_read_budget(
     max_source_units=main.length() - 1,
     max_tokens=4096,
@@ -1226,7 +1226,7 @@ test "comment resolution matches decoded ids on default-namespaced entries" {
     done=true,
   )
   let result = @mbtzip.read(@splice.splice_docx(source, plan))
-  guard result.get("word/commentsExtended.xml") is Some(bytes)
+  guard! result.get("word/commentsExtended.xml") is Some(bytes)
   let actual = @utf8.decode(bytes, ignore_bom=true)
   assert_true(
     actual.contains("<commentEx w15:paraId=\"ABCD000&#x31;\" w15:done=\"1\"/>"),
@@ -1262,7 +1262,7 @@ test "comment reply and resolution reuse paraIds under encoded namespace URIs" {
   )
   let resolved = @splice.splice_docx(source, resolution)
   let resolved_archive = @mbtzip.read(resolved)
-  guard resolved_archive.get("word/comments.xml") is Some(resolved_comments)
+  guard! resolved_archive.get("word/comments.xml") is Some(resolved_comments)
   assert_eq(@utf8.decode(resolved_comments, ignore_bom=true), comments)
   debug_inspect(
     @docx.read_docx_annotated(resolved).annotations().comments()[0].done(),
@@ -1281,7 +1281,7 @@ test "comment reply and resolution reuse paraIds under encoded namespace URIs" {
   inspect(reply_id, content="1")
   let replied = @splice.splice_docx(source, reply_plan)
   let replied_archive = @mbtzip.read(replied)
-  guard replied_archive.get("word/comments.xml") is Some(replied_comments)
+  guard! replied_archive.get("word/comments.xml") is Some(replied_comments)
   let replied_text = @utf8.decode(replied_comments, ignore_bom=true)
   assert_true(replied_text.contains("<w:p q:paraId=\"ABCD0001\"/>"))
   let verified = @docx.read_docx_annotated(replied)
@@ -1313,7 +1313,7 @@ test "comment resolution accepts arbitrarily padded numeric references" {
     done=true,
   )
   let result = @mbtzip.read(@splice.splice_docx(source, plan))
-  guard result.get("word/commentsExtended.xml") is Some(bytes)
+  guard! result.get("word/commentsExtended.xml") is Some(bytes)
   let actual = @utf8.decode(bytes, ignore_bom=true)
   assert_true(
     actual.contains(
@@ -1344,7 +1344,7 @@ test "comment resolution skips greater-than signs inside prolog PIs" {
     done=true,
   )
   let result = @mbtzip.read(@splice.splice_docx(source, plan))
-  guard result.get("word/commentsExtended.xml") is Some(bytes)
+  guard! result.get("word/commentsExtended.xml") is Some(bytes)
   let actual = @utf8.decode(bytes, ignore_bom=true)
   assert_true(actual.has_prefix("<?producer x > <fake ?>"))
   assert_true(actual.contains("w15:paraId=\"ABCD0001\" w15:done=\"1\""))
@@ -1378,17 +1378,17 @@ test "comment resolution chooses an unshadowed namespace and preserves prefixed 
     done=true,
   )
   let result = @mbtzip.read(@splice.splice_docx(source, plan))
-  guard result.get("word/comments.xml") is Some(comments_bytes)
+  guard! result.get("word/comments.xml") is Some(comments_bytes)
   let comments_text = @utf8.decode(comments_bytes, ignore_bom=true)
   assert_true(comments_text.contains("xmlns:mbtw14=\"\{w14}\""))
   assert_true(comments_text.contains("mc:Ignorable=\"q mbtw14\""))
   assert_true(comments_text.contains("mbtw14:paraId="))
   assert_false(comments_text.contains(" w14:paraId="))
-  guard result.get("word/_rels/document.xml.rels") is Some(rels_bytes)
+  guard! result.get("word/_rels/document.xml.rels") is Some(rels_bytes)
   let rels_text = @utf8.decode(rels_bytes, ignore_bom=true)
   assert_true(rels_text.contains("<pr:Relationship "))
   assert_true(rels_text.contains("commentsExtended.xml"))
-  guard result.get("[Content_Types].xml") is Some(types_bytes)
+  guard! result.get("[Content_Types].xml") is Some(types_bytes)
   let types_text = @utf8.decode(types_bytes, ignore_bom=true)
   assert_true(
     types_text.contains("<ct:Override PartName=\"/word/commentsExtended.xml\""),
@@ -1426,7 +1426,7 @@ test "comment mutation preserves Unicode namespace prefixes" {
     err => fail("Unicode-prefix splice failed: \{repr(err)}")
   }
   let result = @mbtzip.read(spliced)
-  guard result.get("word/commentsExtended.xml") is Some(bytes)
+  guard! result.get("word/commentsExtended.xml") is Some(bytes)
   let actual = @utf8.decode(bytes, ignore_bom=true)
   assert_true(actual.contains("δ:paraId=\"ABCD0001\" δ:done=\"1\""))
   assert_false(actual.contains("Î"))

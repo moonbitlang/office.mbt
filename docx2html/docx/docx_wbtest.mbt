@@ -633,7 +633,7 @@ test "section relationship index ignores deterministic hash clustering" {
   }
   let index = RelationshipIndex::build({ relationships: entries })
   for ordinal, id in ids {
-    guard index.by_id.get(id) is Some(matches)
+    guard! index.by_id.get(id) is Some(matches)
     assert_eq(matches.length(), 1)
     assert_eq(matches[0].target, "header\{ordinal}.xml")
   }
@@ -653,7 +653,7 @@ test "section relationship index handles long shared-prefix ids" {
   }
   let index = RelationshipIndex::build({ relationships: entries })
   for ordinal in 0..<800 {
-    guard index.by_id.get(common + ordinal.to_string()) is Some(matches)
+    guard! index.by_id.get(common + ordinal.to_string()) is Some(matches)
     assert_eq(matches.length(), 1)
     assert_eq(matches[0].target, "header\{ordinal}.xml")
   }
@@ -4430,7 +4430,7 @@ test "comment addition covers a newly created Relationships part by Override" {
     assert_eq(@opc.validate_docx_package(updated), [])
     let archive = @mbtzip.read(updated)
     assert_true(archive.get("word/_rels/document.xml.rels") is Some(_))
-    guard archive.get("[Content_Types].xml") is Some(types_bytes)
+    guard! archive.get("[Content_Types].xml") is Some(types_bytes)
     let types = @utf8.decode(types_bytes, ignore_bom=true)
     assert_true(
       types.contains(
@@ -4689,12 +4689,12 @@ test "comment addition wires prefixed and self-closing OPC metadata" {
   )
   assert_eq(id, "0")
   let result = @mbtzip.read(@splice.splice_docx(original, plan))
-  guard result.get("word/_rels/document.xml.rels") is Some(rels_bytes)
+  guard! result.get("word/_rels/document.xml.rels") is Some(rels_bytes)
   let rels_text = @utf8.decode(rels_bytes, ignore_bom=true)
   assert_true(rels_text.contains("<pr:Relationships"))
   assert_true(rels_text.contains("<pr:Relationship "))
   assert_true(rels_text.contains("</pr:Relationships>"))
-  guard result.get("[Content_Types].xml") is Some(types_bytes)
+  guard! result.get("[Content_Types].xml") is Some(types_bytes)
   let types_text = @utf8.decode(types_bytes, ignore_bom=true)
   assert_true(
     types_text.contains("<ct:Override PartName=\"/word/comments.xml\""),
@@ -4786,11 +4786,11 @@ test "comment addition honors MCE-selected relocated comments relationships" {
     let updated = @splice.splice_docx(source, plan)
     assert_eq(@opc.validate_docx_package(updated), [])
     let archive = @mbtzip.read(updated)
-    guard archive.get("word/annotations/comments.xml") is Some(bytes)
+    guard! archive.get("word/annotations/comments.xml") is Some(bytes)
     let comments = @utf8.decode(bytes, ignore_bom=true)
     assert_true(comments.contains("<w:comment "))
     assert_true(archive.get("word/comments.xml") is None)
-    guard archive.get("word/_rels/document.xml.rels") is Some(rels_bytes)
+    guard! archive.get("word/_rels/document.xml.rels") is Some(rels_bytes)
     let rels = @utf8.decode(rels_bytes, ignore_bom=true)
     assert_false(rels.contains("rIdAnnotate"))
     assert_eq(read_docx_annotated(updated).annotations().comments().length(), 1)
@@ -4839,7 +4839,7 @@ test "annotation mutations separate Unicode logical paths from ZIP spelling" {
   assert_true(
     commented_archive.get("d%C3%AFr/_rels/document.xml.rels") is Some(_),
   )
-  guard commented_archive.get("[Content_Types].xml") is Some(types_bytes)
+  guard! commented_archive.get("[Content_Types].xml") is Some(types_bytes)
   let types_text = @utf8.decode(types_bytes, ignore_bom=true)
   assert_true(types_text.contains("PartName=\"/dïr/comments.xml\""))
   assert_false(types_text.contains("PartName=\"/d%C3%AFr/comments.xml\""))
@@ -4859,7 +4859,7 @@ test "annotation mutations separate Unicode logical paths from ZIP spelling" {
   assert_eq(@opc.validate_docx_package(replied), [])
   let replied_archive = @mbtzip.read(replied)
   assert_true(replied_archive.get("d%C3%AFr/commentsExtended.xml") is Some(_))
-  guard replied_archive.get("[Content_Types].xml") is Some(replied_types)
+  guard! replied_archive.get("[Content_Types].xml") is Some(replied_types)
   let replied_types_text = @utf8.decode(replied_types, ignore_bom=true)
   assert_true(
     replied_types_text.contains("PartName=\"/dïr/commentsExtended.xml\""),

@@ -373,7 +373,7 @@ test "L1: story roots project with insertion offsets" {
   let source =
     #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="0" w:author="A"><w:p><w:r><w:t>x</w:t></w:r></w:p></w:comment></w:comments>
   let scan = scan_story(@utf8.encode(source))
-  guard scan.root() is Some(root)
+  guard! scan.root() is Some(root)
   inspect(root.kind, content="comments")
   assert_eq(root.close_tag_start, span_source_offset(source, "</w:comments>"))
   assert_eq(root.content_start, span_source_offset(source, "<w:comment "))
@@ -383,6 +383,6 @@ test "L1: story roots project with insertion offsets" {
       "<w:comments xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>",
     ),
   )
-  guard empty.root() is Some(empty_root)
+  guard! empty.root() is Some(empty_root)
   inspect(empty_root.content_start, content="-1")
 }

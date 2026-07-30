@@ -628,7 +628,7 @@ async test "a docx.batch/2 script with comments is schema-valid and round-trips"
   let body = script.build_body(Map([]))
   let comments = []
   for comment in script.build_comments() {
-    guard (comment.from_block(), comment.to_block()) is (Some(from), Some(to))
+    guard! (comment.from_block(), comment.to_block()) is (Some(from), Some(to))
     comments.push(
       @docx2html.comment_spec(
         author=comment.author(),
@@ -859,9 +859,9 @@ async test "L0 spike: a comment splices into an existing document byte-preservin
   let annotated = @docx2html.read_docx_annotated(original)
   let main_part = annotated.main_story_part()
   inspect(main_part, content="word/document.xml")
-  guard annotated.body_paragraph_span("p[2]") is Some(span)
-  guard span.content_start() is Some(content_start)
-  guard span.close_tag_start() is Some(close_start)
+  guard! annotated.body_paragraph_span("p[2]") is Some(span)
+  guard! span.content_start() is Some(content_start)
+  guard! span.close_tag_start() is Some(close_start)
   // Fragments are namespace-SELF-CONTAINED: every spliced element
   // declares the WML binding for its own prefix, so correctness does
   // not depend on what the surrounding document happened to bind (the
@@ -899,9 +899,9 @@ async test "L0 spike: a comment splices into an existing document byte-preservin
   // Wire the new part: a relationship in the main part's .rels and an
   // Override in [Content_Types].xml — themselves span edits.
   let archive = @mbtzip.read(original)
-  guard archive.get("word/_rels/document.xml.rels") is Some(rels_bytes)
+  guard! archive.get("word/_rels/document.xml.rels") is Some(rels_bytes)
   let rels_text = @utf8.decode(rels_bytes, ignore_bom=true)
-  guard rels_text.find("</Relationships>") is Some(rels_at)
+  guard! rels_text.find("</Relationships>") is Some(rels_at)
   plan.edit_part(
     "word/_rels/document.xml.rels",
     @splice.span_edit(
@@ -912,9 +912,9 @@ async test "L0 spike: a comment splices into an existing document byte-preservin
       ),
     ),
   )
-  guard archive.get("[Content_Types].xml") is Some(types_bytes)
+  guard! archive.get("[Content_Types].xml") is Some(types_bytes)
   let types_text = @utf8.decode(types_bytes, ignore_bom=true)
-  guard types_text.find("</Types>") is Some(types_at)
+  guard! types_text.find("</Types>") is Some(types_at)
   plan.edit_part(
     "[Content_Types].xml",
     @splice.span_edit(
@@ -956,8 +956,8 @@ async test "L0 spike: a comment splices into an existing document byte-preservin
   // MANUAL splice of the original bytes — byte-identical outside the
   // two declared spans.
   let out = @mbtzip.read(spliced)
-  guard archive.get(main_part) is Some(original_doc)
-  guard out.get(main_part) is Some(spliced_doc)
+  guard! archive.get(main_part) is Some(original_doc)
+  guard! out.get(main_part) is Some(spliced_doc)
   let expected = Buffer()
   expected.write_bytesview(original_doc[0:content_start])
   expected.write_bytes(@utf8.encode(start_fragment))
@@ -968,7 +968,7 @@ async test "L0 spike: a comment splices into an existing document byte-preservin
   // ...and BOTH other edited parts reconstruct the same way — a
   // regression that canonicalizes unrelated bytes inside an allowed
   // part would otherwise hide inside the matrix.
-  guard out.get("word/_rels/document.xml.rels") is Some(spliced_rels)
+  guard! out.get("word/_rels/document.xml.rels") is Some(spliced_rels)
   let expected_rels = Buffer()
   expected_rels.write_bytesview(rels_bytes[0:rels_at])
   expected_rels.write_bytes(
@@ -978,7 +978,7 @@ async test "L0 spike: a comment splices into an existing document byte-preservin
   )
   expected_rels.write_bytesview(rels_bytes[rels_at:])
   inspect(spliced_rels == expected_rels.contents(), content="true")
-  guard out.get("[Content_Types].xml") is Some(spliced_types)
+  guard! out.get("[Content_Types].xml") is Some(spliced_types)
   let expected_types = Buffer()
   expected_types.write_bytesview(types_bytes[0:types_at])
   expected_types.write_bytes(
@@ -991,7 +991,7 @@ async test "L0 spike: a comment splices into an existing document byte-preservin
   // The mutated-part matrix: ONLY the operation's row may differ.
   let changed : Array[String] = []
   for entry in archive.entries() {
-    guard out.get(entry.name()) is Some(new_bytes)
+    guard! out.get(entry.name()) is Some(new_bytes)
     if new_bytes != entry.data() {
       changed.push(entry.name())
     }
@@ -1078,9 +1078,9 @@ async test "L0: self-contained fragments survive hostile prefix bindings" {
   )
   let original = builder.build()
   let annotated = @docx2html.read_docx_annotated(original)
-  guard annotated.body_paragraph_span("p[1]") is Some(span)
-  guard span.content_start() is Some(content_start)
-  guard span.close_tag_start() is Some(close_start)
+  guard! annotated.body_paragraph_span("p[1]") is Some(span)
+  guard! span.content_start() is Some(content_start)
+  guard! span.close_tag_start() is Some(close_start)
   let wml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
   let plan = @splice.SplicePlan::new()
   plan.edit_part(
@@ -1155,9 +1155,9 @@ async test "L0: equal-offset insertions splice in plan order" {
   builder.add_part("word/styles.xml", @utf8.encode(styles))
   let original = builder.build()
   let annotated = @docx2html.read_docx_annotated(original)
-  guard annotated.body_paragraph_span("p[1]") is Some(span)
-  guard span.content_start() is Some(content_start)
-  guard span.close_tag_start() is Some(close_start)
+  guard! annotated.body_paragraph_span("p[1]") is Some(span)
+  guard! span.content_start() is Some(content_start)
+  guard! span.close_tag_start() is Some(close_start)
   inspect(content_start == close_start, content="true")
   let wml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
   let plan = @splice.SplicePlan::new()
@@ -1188,8 +1188,8 @@ async test "L0: equal-offset insertions splice in plan order" {
     ),
   )
   let archive = @mbtzip.read(original)
-  guard archive.get("word/_rels/document.xml.rels") is Some(rels_bytes)
-  guard @utf8.decode(rels_bytes, ignore_bom=true).find("</Relationships>")
+  guard! archive.get("word/_rels/document.xml.rels") is Some(rels_bytes)
+  guard! @utf8.decode(rels_bytes, ignore_bom=true).find("</Relationships>")
     is Some(rels_at)
   plan.edit_part(
     "word/_rels/document.xml.rels",
@@ -1201,8 +1201,8 @@ async test "L0: equal-offset insertions splice in plan order" {
       ),
     ),
   )
-  guard archive.get("[Content_Types].xml") is Some(types_bytes)
-  guard @utf8.decode(types_bytes, ignore_bom=true).find("</Types>")
+  guard! archive.get("[Content_Types].xml") is Some(types_bytes)
+  guard! @utf8.decode(types_bytes, ignore_bom=true).find("</Types>")
     is Some(types_at)
   plan.edit_part(
     "[Content_Types].xml",
@@ -1218,10 +1218,10 @@ async test "L0: equal-offset insertions splice in plan order" {
   validate_docx_via_sdk(dir, "l0_equal_offset", spliced)
   // Order proof at the byte level: start marker precedes the end marker.
   let out = @mbtzip.read(spliced)
-  guard out.get("word/document.xml") is Some(doc)
+  guard! out.get("word/document.xml") is Some(doc)
   let text = @utf8.decode(doc, ignore_bom=true)
-  guard text.find("commentRangeStart") is Some(start_at)
-  guard text.find("commentRangeEnd") is Some(end_at)
+  guard! text.find("commentRangeStart") is Some(start_at)
+  guard! text.find("commentRangeEnd") is Some(end_at)
   inspect(start_at < end_at, content="true")
   let after = @docx2html.read_docx_annotated(spliced)
   debug_inspect(after.annotations().warnings(), content="[]")
@@ -1290,16 +1290,16 @@ async test "L1: plan_comment_addition splices a comment into an existing documen
   )
   // Fidelity: the mutated main part is the manual splice of the
   // original bytes with the (deterministic) builder fragments.
-  guard annotated.body_paragraph_span("p[2]") is Some(span)
-  guard span.content_start() is Some(content_start)
-  guard span.close_tag_start() is Some(close_start)
+  guard! annotated.body_paragraph_span("p[2]") is Some(span)
+  guard! span.content_start() is Some(content_start)
+  guard! span.close_tag_start() is Some(close_start)
   let (start_fragment, end_fragment) = @docx_impl.comment_anchor_fragments(
     id="0",
   )
   let archive = @mbtzip.read(original)
   let out = @mbtzip.read(spliced)
-  guard archive.get("word/document.xml") is Some(original_doc)
-  guard out.get("word/document.xml") is Some(spliced_doc)
+  guard! archive.get("word/document.xml") is Some(original_doc)
+  guard! out.get("word/document.xml") is Some(spliced_doc)
   let expected = Buffer()
   expected.write_bytesview(original_doc[0:content_start])
   expected.write_bytes(@utf8.encode(start_fragment))
@@ -1354,9 +1354,9 @@ async test "L1 and L2 preserve true Strict OOXML comment dialect end to end" {
   let added = @splice.splice_docx(original, add_plan)
   validate_docx_via_sdk(dir, "strict_comment_added", added)
   let added_archive = @mbtzip.read(added)
-  guard added_archive.get("word/document.xml") is Some(document_bytes)
-  guard added_archive.get("word/comments.xml") is Some(comments_bytes)
-  guard added_archive.get("word/_rels/document.xml.rels") is Some(rels_bytes)
+  guard! added_archive.get("word/document.xml") is Some(document_bytes)
+  guard! added_archive.get("word/comments.xml") is Some(comments_bytes)
+  guard! added_archive.get("word/_rels/document.xml.rels") is Some(rels_bytes)
   let document_text = @utf8.decode(document_bytes, ignore_bom=true)
   let comments_text = @utf8.decode(comments_bytes, ignore_bom=true)
   let rels_text = @utf8.decode(rels_bytes, ignore_bom=true)
@@ -1383,7 +1383,7 @@ async test "L1 and L2 preserve true Strict OOXML comment dialect end to end" {
   let replied = @splice.splice_docx(added, reply_plan)
   validate_docx_via_sdk(dir, "strict_comment_replied", replied)
   let replied_archive = @mbtzip.read(replied)
-  guard replied_archive.get("word/comments.xml") is Some(replied_comments)
+  guard! replied_archive.get("word/comments.xml") is Some(replied_comments)
   let replied_text = @utf8.decode(replied_comments, ignore_bom=true)
   assert_true(replied_text.contains(strict_wml))
   assert_false(replied_text.contains(transitional_wml))
@@ -1512,7 +1512,7 @@ async test "L1 round 1: the plan survives hostile packages or fails closed" {
   )
   let spliced_sq = @splice.splice_docx(single_quoted, plan_sq)
   let out_sq = @mbtzip.read(spliced_sq)
-  guard out_sq.get("word/_rels/document.xml.rels") is Some(rels_after)
+  guard! out_sq.get("word/_rels/document.xml.rels") is Some(rels_after)
   let rels_after_text = @utf8.decode(rels_after, ignore_bom=true)
   inspect(
     rels_after_text.find("Id=\"rIdAnnotate2\"") is Some(_),
@@ -1855,8 +1855,8 @@ async test "L2: reply and resolve retrofit a K1-era document" {
   // else identical. (Checked structurally: the original body text of
   // BOTH parent paragraphs still reads back verbatim.)
   guard after_reply.comment_bodies()[0] is (_, parent_body)
-  guard parent_body[1] is Paragraph(children=tail_children, ..)
-  guard tail_children is [Run(children=tail_runs, ..)]
+  guard! parent_body[1] is Paragraph(children=tail_children, ..)
+  guard! tail_children is [Run(children=tail_runs, ..)]
   debug_inspect(
     tail_runs,
     content=(
@@ -2026,7 +2026,7 @@ async test "L2 round 1: entry-level splicing preserves foreign thread content" {
   let resolved_v = @splice.splice_docx(vendor_package, plan_v)
   validate_docx_via_sdk(dir, "l2r1_vendor_preserved", resolved_v)
   let out_v = @mbtzip.read(resolved_v)
-  guard out_v.get("word/commentsExtended.xml") is Some(extended_after)
+  guard! out_v.get("word/commentsExtended.xml") is Some(extended_after)
   let extended_text = @utf8.decode(extended_after, ignore_bom=true)
   // Vendor bytes, the "on" spelling, and Ignorable tokens all intact;
   // only comment 1's done value flipped.
@@ -2089,7 +2089,7 @@ async test "L2 round 1: entry-level splicing preserves foreign thread content" {
     done=true,
   )
   let resolved_c = @splice.splice_docx(case_package, plan_c)
-  guard @mbtzip.read(resolved_c).get("word/commentsExtended.xml")
+  guard! @mbtzip.read(resolved_c).get("word/commentsExtended.xml")
     is Some(case_after)
   let case_text = @utf8.decode(case_after, ignore_bom=true)
   inspect(
@@ -2097,7 +2097,7 @@ async test "L2 round 1: entry-level splicing preserves foreign thread content" {
     content="true",
   )
   // Exactly ONE commentEx (no case-duplicate appended).
-  guard case_text.find("commentEx") is Some(first_ex)
+  guard! case_text.find("commentEx") is Some(first_ex)
   inspect(
     case_text.view(start_offset=first_ex + 9).to_owned().find("<w15:commentEx")
     is Some(_),
@@ -2233,7 +2233,7 @@ async test "L2 round 1: OPC targets and root retrofit adversaries" {
   let resolved = @splice.splice_docx(hostile_package, plan)
   validate_docx_via_sdk(dir, "l2r1_retrofit_adversaries", resolved)
   let out = @mbtzip.read(resolved)
-  guard out.get("word/comments.xml") is Some(comments_after)
+  guard! out.get("word/comments.xml") is Some(comments_after)
   let comments_text = @utf8.decode(comments_after, ignore_bom=true)
   // Stamped with the FOREIGN prefix; the header's id was avoided.
   inspect(
@@ -2245,7 +2245,7 @@ async test "L2 round 1: OPC targets and root retrofit adversaries" {
     content="false",
   )
   // No duplicate mc:Ignorable was inserted (order independence).
-  guard comments_text.find("mc:Ignorable") is Some(first_ignorable)
+  guard! comments_text.find("mc:Ignorable") is Some(first_ignorable)
   inspect(
     comments_text
     .view(start_offset=first_ignorable + 1)
