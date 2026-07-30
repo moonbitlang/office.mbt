@@ -148,7 +148,7 @@ fn check_duplicate_keys(
           // escaped keys raised above, so the raw span IS the key text —
           // labels and the callback want characters, not the identity
           // encoding the seen-set uses
-          let literal = text.substring(start=string_start, end=index - 1)
+          let literal = text[string_start:index-1].to_owned()
           frame.pending_key = literal
           if on_member is Some(_) {
             // deferred: a duplicate ANYWHERE must win over member-gate
@@ -272,7 +272,7 @@ fn parse_scalar_entries(
       " carries \{entries.length()} keys; the limit is \{max_keys}",
     )
   }
-  let values : Map[String, TemplateValue] = {}
+  let values : Map[String, TemplateValue] = Map([])
   for key, value in entries {
     if !template_key_ok(key) {
       raise TemplateDataError(
@@ -333,3 +333,10 @@ fn parse_scalar_entries(
   }
   values
 }
+
+///|
+pub extend TemplateDataError with @debug.Debug::{to_repr}
+///|
+pub extend TemplateValue with Eq::{not_equal, equal}
+///|
+pub extend TemplateValue with @debug.Debug::{to_repr}

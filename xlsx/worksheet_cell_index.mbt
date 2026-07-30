@@ -116,7 +116,7 @@ test "duplicate coordinates resolve to the first stored cell" {
   inspect(workbook.get_cell_value("S", "A1").unwrap_or(""), content="first")
   match workbook.get_cell_value_raw("S", "A1") {
     Some(String(text)) => inspect(text, content="first")
-    other => fail("unexpected raw value: \{to_repr(other)}")
+    other => fail("unexpected raw value: \{Repr(other)}")
   }
 }
 

@@ -79,8 +79,8 @@ fn plain_range_rows(range : String) -> (Int, Int)? {
 
   match range.find(":") {
     Some(pos) => {
-      let left = cell_row(range.substring(start=0, end=pos))
-      let right = cell_row(range.substring(start=pos + 1))
+      let left = cell_row(range[:pos].to_owned())
+      let right = cell_row(range[pos+1:].to_owned())
       match (left, right) {
         (Some(a), Some(b)) =>
           Some((if a < b { a } else { b }, if a > b { a } else { b }))
@@ -363,7 +363,7 @@ fn cf_dv_policy_check(
   plans : Array[RegionPlan],
   report : XlsxTemplateReport,
 ) -> Unit {
-  let template_rows : Map[String, Array[Int]] = {}
+  let template_rows : Map[String, Array[Int]] = Map([])
   for plan in plans {
     match template_rows.get(plan.sheet) {
       Some(rows) => rows.push(plan.row)
@@ -470,8 +470,8 @@ fn region_sheet_check(
   report : XlsxTemplateReport,
 ) -> Unit raise {
   // group inserted counts and template rows per sheet
-  let inserted_per_sheet : Map[String, Int] = {}
-  let rows_per_sheet : Map[String, Array[Int]] = {}
+  let inserted_per_sheet : Map[String, Int] = Map([])
+  let rows_per_sheet : Map[String, Array[Int]] = Map([])
   for plan in plans {
     let inserted = plan.records.length() - 1
     inserted_per_sheet[plan.sheet] = match inserted_per_sheet.get(plan.sheet) {
@@ -631,7 +631,7 @@ fn plan_template_regions(
     }
     claimed.add(claim_key)
     // scan the template row's string cells
-    let key_occurrences : Map[String, Int] = {}
+    let key_occurrences : Map[String, Int] = Map([])
     let mut malformed_here = false
     for cell in worksheet.cells {
       if cell.row != row {
@@ -738,7 +738,7 @@ fn apply_template_regions(
       a.sheet.compare(b.sheet)
     }
   })
-  let outcomes : Map[String, XlsxRegionOutcome] = {}
+  let outcomes : Map[String, XlsxRegionOutcome] = Map([])
   let mut changed = false
   for plan in order {
     let count = plan.records.length()
@@ -1018,3 +1018,8 @@ pub async fn transact_template_document(
     transaction: report,
   }
 }
+
+///|
+pub extend XlsxRegionOutcome with Eq::{not_equal, equal}
+///|
+pub extend XlsxRegionOutcome with @debug.Debug::{to_repr}

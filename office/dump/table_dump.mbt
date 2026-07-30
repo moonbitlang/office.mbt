@@ -339,7 +339,7 @@ fn remove_dropped(
   dropped : Set[Int],
 ) -> (Array[Json], Array[TableCandidate]) {
   let next_ops : Array[Json] = []
-  let index_map : Map[Int, Int] = {}
+  let index_map : Map[Int, Int] = Map([])
   for index, op in ops {
     if !dropped.contains(index) {
       index_map[index] = next_ops.length()
@@ -396,6 +396,6 @@ fn bounded_reason(reason : String) -> String {
   if reason.length() <= 160 {
     reason
   } else {
-    reason.substring(start=0, end=160) + "\u{2026}"
+    reason[:160].to_owned() + "\u{2026}"
   }
 }

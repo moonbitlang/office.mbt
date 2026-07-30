@@ -51,7 +51,7 @@ test "docx replay refuses wrong formats and schemas" {
     warnings: [],
   }
   try @dump.replay_docx_dump({ ..base, format: "xlsx" }) |> ignore catch {
-    @dump.ReplayInvalidFormat(_) => ()
+    ReplayInvalidFormat(_) => ()
     _ => fail("expected a format refusal")
   } noraise {
     _ => fail("expected a format refusal")
@@ -59,7 +59,7 @@ test "docx replay refuses wrong formats and schemas" {
   try
     @dump.replay_docx_dump({ ..base, batch_schema: "docx.batch/1" }) |> ignore
   catch {
-    @dump.ReplayInvalidFormat(_) => ()
+    ReplayInvalidFormat(_) => ()
     _ => fail("expected a schema refusal")
   } noraise {
     _ => fail("expected a schema refusal")
@@ -95,7 +95,7 @@ test "docx replay fails typed when an image asset is missing" {
     warnings: [],
   }
   try @dump.replay_docx_dump(envelope) |> ignore catch {
-    @dump.ReplayFailed(_) => ()
+    ReplayFailed(_) => ()
     _ => fail("expected ReplayFailed")
   } noraise {
     _ => fail("a dangling asset path must not replay")
@@ -153,7 +153,7 @@ test "chunked docx replay remaps note ids across scripts" {
   let mut second = false
   for entry in bodies {
     let (_, body) = entry
-    let rendered = "\{to_repr(body)}"
+    let rendered = "\{Repr(body)}"
     if rendered.contains("first chunk note") {
       first = true
     }
