@@ -10,11 +10,14 @@ import {
   // test deps 
   "bobzhang/mbtexcel/demos",
   "moonbitlang/async",
+  // These two are reported `unused_package` on js, but the native-gated
+  // tests in demos_openxml_validity_test.mbt use them. Not removable.
   "moonbitlang/async/fs" @async/fs,
   "moonbitlang/async/process",
   "moonbitlang/core/encoding/utf8" @encoding/utf8,
   "moonbitlang/core/env",
   "bobzhang/mbtexcel/zip",
+  // likewise reported unused on js only
   "bobzhang/mbtexcel/batch",
   "moonbitlang/core/json",
   "moonbitlang/core/test",

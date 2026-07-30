@@ -7,6 +7,8 @@ import {
   "moonbitlang/core/encoding/utf8" @encoding/utf8,
   "moonbitlang/core/encoding/utf16" @encoding/utf16,
   "moonbitlang/async/io" @async/io,
+  // NOT removable despite `unused_package`: io.mbt's filesystem path uses it
+  // on native and wasm, so the warning only fires on js and wasm-gc.
   "moonbitlang/async/fs" @async/fs,
   "moonbitlang/async",
   "moonbitlang/core/random",

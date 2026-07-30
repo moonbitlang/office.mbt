@@ -1,11 +1,13 @@
 import {
   "moonbitlang/core/debug",
   "bobzhang/docx2html" @docx,
-  "moonbitlang/async",
   "moonbitlang/async/fs" @afs,
 }
 
 import {
+  // only the whitebox tests need this (their `async test` declarations);
+  // it is unused by the package's own code, hence the move out of `import`
+  "moonbitlang/async",
   "moonbitlang/core/encoding/base64",
   "moonbitlang/core/encoding/utf8" @encoding/utf8,
 } for "wbtest"

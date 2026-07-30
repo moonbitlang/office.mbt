@@ -1,5 +1,5 @@
 import {
-  "bobzhang/office-lib" @office,
+  "bobzhang/office-lib",
   "bobzhang/office-lib/xlsx",
   "bobzhang/office-lib/transaction",
   "bobzhang/mbtexcel" @excel,
