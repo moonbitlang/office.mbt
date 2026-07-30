@@ -1,5 +1,5 @@
 ///|
-enum OutputMode {
+priv enum OutputMode {
   Human
   JsonDocument
   JsonLines

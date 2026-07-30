@@ -20,13 +20,13 @@ let xlsx_cli_max_metadata_items : Int = 10_000
 let xlsx_cli_max_metadata_string_chars : Int = 8 * 1024 * 1024
 
 ///|
-enum XlsxSheetContent {
+priv enum XlsxSheetContent {
   Worksheet(@xlsx.Worksheet)
   ChartSheet(@xlsx.ChartSheet)
 }
 
 ///|
-struct XlsxSheetTarget {
+priv struct XlsxSheetTarget {
   name : String
   index : Int
   path : String
@@ -34,7 +34,7 @@ struct XlsxSheetTarget {
 }
 
 ///|
-struct XlsxProjection {
+priv struct XlsxProjection {
   file : String
   workbook : @xlsx.Workbook
   sheets : Array[XlsxSheetTarget]
@@ -44,7 +44,7 @@ struct XlsxProjection {
 }
 
 ///|
-struct XlsxRect {
+priv struct XlsxRect {
   col_lo : Int
   row_lo : Int
   col_hi : Int
@@ -52,7 +52,7 @@ struct XlsxRect {
 }
 
 ///|
-enum XlsxResolvedSelector {
+priv enum XlsxResolvedSelector {
   Workbook(path~ : String)
   Sheet(XlsxSheetTarget)
   Cell(XlsxSheetTarget, XlsxRect, path~ : String)
@@ -60,7 +60,7 @@ enum XlsxResolvedSelector {
 }
 
 ///|
-struct XlsxCellSnapshot {
+priv struct XlsxCellSnapshot {
   path : String
   reference : String
   row : Int
@@ -74,20 +74,20 @@ struct XlsxCellSnapshot {
 }
 
 ///|
-struct XlsxScanRegion {
+priv struct XlsxScanRegion {
   sheet : XlsxSheetTarget
   rect : XlsxRect
 }
 
 ///|
-struct XlsxStringBudget {
+priv struct XlsxStringBudget {
   maximum : Int
   per_value_maximum : Int
   mut used : Int
 }
 
 ///|
-struct XlsxScanBudget {
+priv struct XlsxScanBudget {
   maximum : Int
   strings : XlsxStringBudget
   formatting : XlsxFormatBudget
@@ -97,19 +97,19 @@ struct XlsxScanBudget {
 }
 
 ///|
-struct XlsxFormatBudget {
+priv struct XlsxFormatBudget {
   maximum : Int
   mut used : Int
 }
 
 ///|
-struct XlsxFormulaBudget {
+priv struct XlsxFormulaBudget {
   maximum : Int
   mut used : Int
 }
 
 ///|
-struct XlsxMetadataBudget {
+priv struct XlsxMetadataBudget {
   maximum_items : Int
   maximum_string_chars : Int
   mut items : Int
@@ -120,7 +120,7 @@ struct XlsxMetadataBudget {
 /// Command-local budget for the stored-cell records inspected while deriving
 /// worksheet used ranges. One instance must be shared across every worksheet
 /// participating in a single command result.
-struct XlsxStoredCellBudget {
+priv struct XlsxStoredCellBudget {
   maximum : Int
   mut used : Int
 }
@@ -128,7 +128,7 @@ struct XlsxStoredCellBudget {
 ///|
 /// Command-wide budget for conditional-format metadata inspected while
 /// producing workbook and sheet summaries.
-struct XlsxConditionalFormatBudget {
+priv struct XlsxConditionalFormatBudget {
   maximum_ranges : Int
   maximum_work_units : Int
   mut ranges : Int

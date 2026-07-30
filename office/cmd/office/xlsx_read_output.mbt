@@ -1,5 +1,5 @@
 ///|
-enum XlsxCellFilter {
+priv enum XlsxCellFilter {
   PresentCells
   TextCells
   QueryCells(Array[PreparedXlsxCellPredicate], OfficeQueryWorkBudget)
@@ -15,7 +15,7 @@ let xlsx_cli_scan_yield_cells : Int = 256
 let xlsx_cli_scan_yield_work_units : Int = 64 * 1024
 
 ///|
-struct XlsxCellPage {
+priv struct XlsxCellPage {
   cells : Array[XlsxCellSnapshot]
   matched_total : Int
   scanned_cells : Int
@@ -23,13 +23,13 @@ struct XlsxCellPage {
 }
 
 ///|
-enum XlsxRetainedJsonKind {
+priv enum XlsxRetainedJsonKind {
   RetainedCellJson
   RetainedTextJson
 }
 
 ///|
-struct XlsxJsonRetention {
+priv struct XlsxJsonRetention {
   budget : OfficeOutputBudget
   records : Array[Json]
   kind : XlsxRetainedJsonKind

@@ -26,13 +26,13 @@ let docx_cli_query_preview_chars : Int = 160
 let docx_cli_heading_preview_chars : Int = 512
 
 ///|
-struct DocxPropertyPredicate {
+priv struct DocxPropertyPredicate {
   name : String
   value : String
 }
 
 ///|
-struct DocxQuerySpec {
+priv struct DocxQuerySpec {
   under : String?
   kind : String?
   text : String?
@@ -44,7 +44,7 @@ struct DocxQuerySpec {
 }
 
 ///|
-struct PreparedDocxQuery {
+priv struct PreparedDocxQuery {
   spec : DocxQuerySpec
   scope_path : String?
   scope_prefix : String?
@@ -72,7 +72,7 @@ async fn PreparedDocxQuery::build(
 }
 
 ///|
-struct BoundedOfficePayload {
+priv struct BoundedOfficePayload {
   data : Json
   budget : OfficeOutputBudget
   warnings : Array[@lib.ProtocolWarning]
@@ -82,7 +82,7 @@ struct BoundedOfficePayload {
 /// Counts compact JSON output before allocation and bounds retained records
 /// while they are produced. The counter measures Unicode scalar characters,
 /// including the successful command's explicit trailing line feed.
-struct OfficeOutputBudget {
+priv struct OfficeOutputBudget {
   format : String
   maximum : Int
   mut used : Int
@@ -1050,7 +1050,7 @@ async fn docx_outline_payload(
 }
 
 ///|
-struct DocxHumanWriter {
+priv struct DocxHumanWriter {
   format : String
   maximum : Int
   output : StringBuilder

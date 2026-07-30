@@ -29,7 +29,7 @@ let office_read_max_parser_items : Int = 500_000
 let office_read_max_parser_work_units : Int = 256 * 1024 * 1024
 
 ///|
-struct OfficeReadPackage {
+priv struct OfficeReadPackage {
   file : String
   format : @lib.DocumentFormat
   bytes : Bytes

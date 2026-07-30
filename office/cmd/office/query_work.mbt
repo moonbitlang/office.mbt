@@ -8,7 +8,7 @@ let office_cli_max_query_predicate_work_units : Int = 128 * 1024 * 1024
 let office_cli_query_yield_work_units : Int = 4096
 
 ///|
-struct OfficeQueryWorkBudget {
+priv struct OfficeQueryWorkBudget {
   format : String
   maximum : Int
   mut used : Int
@@ -42,7 +42,7 @@ fn OfficeQueryWorkBudget::charge(
 ///|
 /// A Knuth-Morris-Pratt literal pattern. The failure table is compiled once
 /// per command, making every value match linear in the scanned text.
-struct OfficeLinearPattern {
+priv struct OfficeLinearPattern {
   characters : Array[Char]
   failure : Array[Int]
   ignore_case : Bool

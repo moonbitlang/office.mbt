@@ -11,7 +11,7 @@ impl Show for CliError with fn output(self, logger) {
 }
 
 ///|
-suberror CliFailure {
+priv suberror CliFailure {
   CliFailure(@lib.ProtocolError)
 }
 
