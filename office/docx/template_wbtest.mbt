@@ -22,7 +22,7 @@ fn template_wb_state() -> DocxMergeState {
       stories_scanned: [],
       changed: false,
     },
-    values: { "k": @template.TextValue("VALUE") },
+    values: { "k": TextValue("VALUE") },
     used_keys: Set([]),
     budget: Ref(1_000_000),
     edits: [],
@@ -61,10 +61,10 @@ test "split placeholders substitute across two and three runs" {
 ///|
 test "brace pairs in unrewritable content refuse in every split shape" {
   // whole pair inside an opaque run's text
-  let opaque = template_wb_state()
-  wb_scan(opaque, [@document.run([@document.tab(), @document.text("{{k}}")])])
-  assert_eq(opaque.report.unsupported_total, 1)
-  assert_eq(opaque.report.replaced, 0)
+  let state = template_wb_state()
+  wb_scan(state, [@document.run([@document.tab(), @document.text("{{k}}")])])
+  assert_eq(state.report.unsupported_total, 1)
+  assert_eq(state.report.replaced, 0)
   // pair split across bare sibling texts (renders adjacently)
   let bare = template_wb_state()
   wb_scan(bare, [@document.text("{"), @document.text("{k}}")])
@@ -79,7 +79,7 @@ test "brace pairs in unrewritable content refuse in every split shape" {
   let field = template_wb_state()
   wb_scan(field, [
     @document.run([
-      @document.Hyperlink(
+      Hyperlink(
         children=[@document.run([@document.text("{{k}}")])],
         href=Some("https://example.com/"),
         anchor=None,
@@ -105,7 +105,7 @@ test "separators and zero-width elements follow rendering semantics" {
   let bookmark = template_wb_state()
   wb_scan(bookmark, [
     @document.run([@document.text("{")]),
-    @document.BookmarkStart("mark"),
+    BookmarkStart("mark"),
     @document.run([@document.text("{k}}")]),
   ])
   assert_eq(bookmark.report.replaced, 1)
@@ -114,7 +114,7 @@ test "separators and zero-width elements follow rendering semantics" {
   let marked = template_wb_state()
   wb_scan(marked, [
     @document.run([@document.text("{")]),
-    @document.NoteReference(note_type="footnote", note_id="1"),
+    NoteReference(note_type="footnote", note_id="1"),
     @document.run([@document.text("{k}}")]),
   ])
   assert_eq(marked.report.replaced, 0)
@@ -148,7 +148,7 @@ test "hyperlink parents and zero-width boundaries" {
   let before = template_wb_state()
   wb_scan(before, [
     @document.run([@document.text("{{k}}")]),
-    @document.Hyperlink(
+    Hyperlink(
       children=[@document.run([@document.text("tail")])],
       href=Some("https://example.com/"),
       anchor=None,
@@ -160,7 +160,7 @@ test "hyperlink parents and zero-width boundaries" {
   // hyperlink placeholder immediately before a direct run substitutes
   let inside = template_wb_state()
   wb_scan(inside, [
-    @document.Hyperlink(
+    Hyperlink(
       children=[@document.run([@document.text("{{k}}")])],
       href=Some("https://example.com/"),
       anchor=None,
@@ -175,7 +175,7 @@ test "hyperlink parents and zero-width boundaries" {
   let empty_between = template_wb_state()
   wb_scan(empty_between, [
     @document.run([@document.text("{{k}}")]),
-    @document.Hyperlink(
+    Hyperlink(
       children=[@document.run([])],
       href=Some("https://example.com/"),
       anchor=None,
@@ -189,7 +189,7 @@ test "hyperlink parents and zero-width boundaries" {
   let crossing = template_wb_state()
   wb_scan(crossing, [
     @document.run([@document.text("{{k")]),
-    @document.Hyperlink(
+    Hyperlink(
       children=[@document.run([@document.text("}}")])],
       href=Some("https://example.com/"),
       anchor=None,
@@ -224,7 +224,7 @@ test "split placeholders in out-of-scope stories are flagged" {
       [
         @document.paragraph([
           @document.run([@document.text("{")]),
-          @document.BookmarkStart("m"),
+          BookmarkStart("m"),
           @document.run([@document.text("{k}}")]),
         ]),
       ],
@@ -253,7 +253,7 @@ test "escapes crossing hyperlink parents refuse" {
   let state = template_wb_state()
   wb_scan(state, [
     @document.run([@document.text("\\")]),
-    @document.Hyperlink(
+    Hyperlink(
       children=[@document.run([@document.text("{{k}}")])],
       href=Some("https://example.com/"),
       anchor=None,

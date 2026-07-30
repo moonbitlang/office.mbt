@@ -511,7 +511,7 @@ fn read_xml_part(
     context.xml_budget,
   ) catch {
     _ if (context.cancelled)() => raise Cancelled
-    @docx_core.ResourceLimit(_) =>
+    ResourceLimit(_) =>
       raise ResourceLimit(
         kind="xml_preflight_work_units",
         limit=context.xml_work_limit,
@@ -545,7 +545,7 @@ fn read_relationships_part(
     context.xml_budget,
   ) catch {
     _ if (context.cancelled)() => raise Cancelled
-    @docx_core.ResourceLimit(_) =>
+    ResourceLimit(_) =>
       raise ResourceLimit(
         kind="xml_preflight_work_units",
         limit=context.xml_work_limit,
@@ -2040,7 +2040,7 @@ pub fn detect_format(
     max_total_preserved_source_bytes=preserved_limit,
     cancelled~,
   ) catch {
-    @zip.ResourceLimitExceeded(kind~, limit~, actual~) =>
+    ResourceLimitExceeded(kind~, limit~, actual~) =>
       raise ResourceLimit(kind~, limit~, actual~)
     _ if cancelled() => raise Cancelled
     _ => raise InvalidPackage("archive is not a readable ZIP")
