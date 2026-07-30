@@ -60,3 +60,6 @@ pub fn replay_xlsx_dump(
   }
   workbook
 }
+
+///|
+pub extend ReplayError with @debug.Debug::{to_repr}

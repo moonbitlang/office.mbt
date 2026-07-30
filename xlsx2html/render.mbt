@@ -127,7 +127,7 @@ fn find_chart_sheet(
 priv struct MergeSpan {
   colspan : Int
   rowspan : Int
-} derive(@debug.Debug)
+}
 
 ///|
 fn render_worksheet(
@@ -396,3 +396,8 @@ fn render_chart_sheet(
   }
   body.write_string("</section>\n")
 }
+
+///|
+pub extend RenderError with @debug.Debug::{to_repr}
+///|
+pub extend RenderError with Show::{to_string, output}
