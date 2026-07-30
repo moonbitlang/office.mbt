@@ -240,7 +240,7 @@ fn HeaderFooterCollector::section(
     }
     match self.resolve_part(rel_id, is_header~) {
       Some(index) => {
-        let section_ref : @document.SectionRef = { variant, part: index }
+        let section_ref = @document.SectionRef::{ variant, part: index }
         if is_header {
           headers.push(section_ref)
         } else {

@@ -142,7 +142,7 @@ fn PdfDocument::pdf_text_read_cid_widths2(
             guard index + 4 < values.length() && last_code >= first_code else {
               raise CIDWidths2Expected
             }
-            let width = {
+            let width = PdfCIDVerticalWidth::{
               width: self.pdf_text_cid_number(
                 values[index + 2],
                 CIDWidths2Expected,

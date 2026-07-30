@@ -1525,7 +1525,7 @@ test "PdfDocument applies indirect external CMap text segmentation and CID mappi
 
 ///|
 test "PdfTextExtractor keeps external CMap text lookup precedence" {
-  let composite : @pdflite.PdfCompositeCIDFont = {
+  let composite = @pdflite.PdfCompositeCIDFont::{
     cid_system_info: {
       registry: text_cmap_bytes_for_test([65]),
       ordering: text_cmap_bytes_for_test([73]),

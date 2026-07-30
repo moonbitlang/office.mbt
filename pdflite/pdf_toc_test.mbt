@@ -91,7 +91,7 @@ test "pdf_toc_of_utf8 builds cpdftoc font text runs" {
 test "pdf_toc_of_utf8 collates consecutive fontpack runs" {
   let first = toc_standard_font_for_test()
   let second = toc_bold_font_for_test()
-  let pack : @pdflite.PdfFontPack = {
+  let pack = @pdflite.PdfFontPack::{
     fonts: [first, second],
     entries: [
       { codepoint: 65, font_index: 0, charcode: 1 },
@@ -265,7 +265,7 @@ test "PdfDocument toc_type_elements builds untagged TOC runs" {
   let target : @destination.PdfDestination = DestFit(
     TargetPageObject(page_refs[0]),
   )
-  let bookmark : @bookmark.PdfBookmark = {
+  let bookmark = @bookmark.PdfBookmark::{
     level: 0,
     text: toc_pdfdoc_for_test("Chapter"),
     target,
@@ -347,7 +347,7 @@ test "PdfDocument toc_type_elements adds structure tags and dot leaders" {
   let target : @destination.PdfDestination = DestFit(
     TargetPageObject(page_refs[0]),
   )
-  let bookmark : @bookmark.PdfBookmark = {
+  let bookmark = @bookmark.PdfBookmark::{
     level: 1,
     text: toc_pdfdoc_for_test("A"),
     target,
@@ -428,7 +428,7 @@ test "PdfDocument toc_typeset_pages uses first-page cropbox geometry" {
   let target : @destination.PdfDestination = DestFit(
     TargetPageObject(page_refs[0]),
   )
-  let bookmark : @bookmark.PdfBookmark = {
+  let bookmark = @bookmark.PdfBookmark::{
     level: 0,
     text: toc_pdfdoc_for_test("Chapter"),
     target,
@@ -499,7 +499,7 @@ test "PdfDocument toc_typeset_pages uses first-page cropbox geometry" {
 test "PdfDocument toc_insert_pages prepends pages and shifts labels" {
   let base = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
   let page_refs = try! base.page_reference_numbers()
-  let bookmark : @bookmark.PdfBookmark = {
+  let bookmark = @bookmark.PdfBookmark::{
     level: 0,
     text: toc_pdfdoc_for_test("Second"),
     target: DestFit(TargetPageObject(page_refs[1])),
@@ -555,7 +555,7 @@ test "PdfDocument toc_insert_pages prepends pages and shifts labels" {
 test "PdfDocument toc_add_bookmark prepends generated bookmark" {
   let base = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
   let page_refs = try! base.page_reference_numbers()
-  let existing : @bookmark.PdfBookmark = {
+  let existing = @bookmark.PdfBookmark::{
     level: 0,
     text: toc_pdfdoc_for_test("Existing"),
     target: DestFit(TargetPageObject(page_refs[1])),
@@ -585,7 +585,7 @@ test "PdfDocument toc_add_bookmark prepends generated bookmark" {
 test "PdfDocument toc_with_fontpack composes non-structured TOC" {
   let base = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
   let page_refs = try! base.page_reference_numbers()
-  let source_bookmark : @bookmark.PdfBookmark = {
+  let source_bookmark = @bookmark.PdfBookmark::{
     level: 0,
     text: toc_pdfdoc_for_test("Second"),
     target: DestFit(TargetPageObject(page_refs[1])),
@@ -659,7 +659,7 @@ test "PdfDocument toc_with_fontpack composes non-structured TOC" {
 test "PdfDocument toc_with_source handles cpdftoc font-source dispatch" {
   let base = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
   let page_refs = try! base.page_reference_numbers()
-  let source_bookmark : @bookmark.PdfBookmark = {
+  let source_bookmark = @bookmark.PdfBookmark::{
     level: 0,
     text: toc_pdfdoc_for_test("Second"),
     target: DestFit(TargetPageObject(page_refs[1])),
@@ -714,7 +714,7 @@ test "PdfDocument toc_with_source handles cpdftoc font-source dispatch" {
 test "pdf_typeset_table_of_contents preserves cpdftoc argument order" {
   let base = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
   let page_refs = try! base.page_reference_numbers()
-  let source_bookmark : @bookmark.PdfBookmark = {
+  let source_bookmark = @bookmark.PdfBookmark::{
     level: 0,
     text: toc_pdfdoc_for_test("Second"),
     target: DestFit(TargetPageObject(page_refs[1])),

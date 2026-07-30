@@ -159,7 +159,7 @@ fn PdfDocument::pdf_draw_make_structure_tree(
   self : PdfDocument,
   data : ArrayView[PdfDrawStructureData],
 ) -> Array[PdfDrawStructureNode] raise @core.PdfError {
-  let index : Ref[Int] = { val: 0 }
+  let index = Ref::{ val: 0 }
   pdf_draw_make_structure_tree_items(
     data,
     index,

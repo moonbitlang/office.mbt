@@ -89,7 +89,7 @@ test "private function helpers cover parser and evaluator guards" {
     fail("expected clamp range arity failure")
   }
 
-  let sampled : PdfSampledFunction = {
+  let sampled = PdfSampledFunction::{
     size: [2],
     order: 1,
     encode: [0.0, 1.0],
@@ -97,7 +97,7 @@ test "private function helpers cover parser and evaluator guards" {
     bits_per_sample: 1,
     samples: [0, 1],
   }
-  let sampled_function : PdfFunction = {
+  let sampled_function = PdfFunction::{
     domain: [0.0, 1.0],
     range: Some([0.0, 1.0]),
     func: PdfFunctionSampled(sampled),
@@ -132,7 +132,7 @@ test "private function helpers cover parser and evaluator guards" {
   guard bad_table_index is Err(@core.PdfError::BadFunctionEvaluation(_)) else {
     fail("expected sampled table index failure")
   }
-  let missing_sampled_range : PdfFunction = {
+  let missing_sampled_range = PdfFunction::{
     domain: [0.0, 1.0],
     range: None,
     func: PdfFunctionSampled(sampled),
@@ -147,7 +147,7 @@ test "private function helpers cover parser and evaluator guards" {
   guard missing_range is Err(@core.PdfError::BadFunctionEvaluation(_)) else {
     fail("expected sampled range")
   }
-  let bad_decode_sampled : PdfSampledFunction = {
+  let bad_decode_sampled = PdfSampledFunction::{
     size: [2],
     order: 1,
     encode: [0.0, 1.0],
@@ -166,17 +166,17 @@ test "private function helpers cover parser and evaluator guards" {
     fail("expected sampled output arity failure")
   }
 
-  let interpolation : PdfFunction = {
+  let interpolation = PdfFunction::{
     domain: [0.0, 1.0],
     range: None,
     func: PdfFunctionInterpolation({ c0: [0.0], c1: [1.0], n: 1.0 }),
   }
-  let stitching : PdfStitchingFunction = {
+  let stitching = PdfStitchingFunction::{
     functions: [interpolation],
     bounds: [],
     stitch_encode: [0.0, 1.0],
   }
-  let stitching_function : PdfFunction = {
+  let stitching_function = PdfFunction::{
     domain: [0.0, 1.0],
     range: None,
     func: PdfFunctionStitching(stitching),

@@ -312,7 +312,7 @@ test "pdf_fontpack_of_standard_font maps Unicode codepoints to charcodes" {
 test "PdfFontPack::get_char follows cpdf duplicate and missing semantics" {
   let first = embed_standard_font_for_test()
   let second = embed_bold_font_for_test()
-  let pack : @pdflite.PdfFontPack = {
+  let pack = @pdflite.PdfFontPack::{
     fonts: [first, second],
     entries: [
       { codepoint: 65, font_index: 0, charcode: 41 },

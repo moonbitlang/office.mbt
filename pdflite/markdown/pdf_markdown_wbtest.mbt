@@ -82,7 +82,7 @@ test "private positioned chunk compare preserves stream order for equal origins"
 ///|
 test "private positioned text array treats large integer adjustment as space" {
   let chunks : Array[PdfMarkdownTextChunk] = []
-  let next_index : Ref[Int] = { val: 0 }
+  let next_index = Ref::{ val: 0 }
   let extractor = @pdflite.pdf_text_extractor_of_font_real(
     PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding }),
   )
@@ -292,7 +292,7 @@ test "private table detector rejects numeric-dominated total rows" {
 
 ///|
 test "private Markdown glyph filter keeps notdef non-control fallbacks" {
-  let glyph : @pdflite.PdfTextGlyph = {
+  let glyph = @pdflite.PdfTextGlyph::{
     glyphname: pdf_markdown_notdef_name(),
     codepoints: [0x41],
   }

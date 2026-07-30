@@ -720,7 +720,7 @@ test "build revalidates relationship metadata from raw state" {
       external: false,
     },
   ]
-  let builder : PackageBuilder = {
+  let builder = PackageBuilder::{
     parts: [("word/document.xml", b"<d/>")],
     defaults: SortedMap([
       ("rels", "application/vnd.openxmlformats-package.relationships+xml"),
@@ -781,7 +781,7 @@ test "build revalidates relationship metadata from raw state" {
 
 ///|
 test "build revalidates part names from raw state" {
-  let builder : PackageBuilder = {
+  let builder = PackageBuilder::{
     parts: [("word/document.xml", b"<d/>"), ("word/document.xml", b"<d/>")],
     defaults: SortedMap([("xml", "application/xml")]),
     overrides: SortedMap([]),
@@ -803,7 +803,7 @@ test "build revalidates part names from raw state" {
 
 ///|
 test "build revalidates content-type defaults from raw state" {
-  let builder : PackageBuilder = {
+  let builder = PackageBuilder::{
     parts: [],
     defaults: SortedMap([("bad.ext", "application/xml")]),
     overrides: SortedMap([]),

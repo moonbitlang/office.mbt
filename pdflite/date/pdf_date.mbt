@@ -238,9 +238,9 @@ pub fn pdf_date_of_view(bytes : BytesView) -> PdfDate raise @core.PdfError {
     index += 4
     value
   }
-  let hour_offset : Ref[Int] = { val: 0 }
-  let minute_offset : Ref[Int] = { val: 0 }
-  let offset_sign : Ref[Int] = { val: 0 }
+  let hour_offset = Ref::{ val: 0 }
+  let minute_offset = Ref::{ val: 0 }
+  let offset_sign = Ref::{ val: 0 }
   let (month, next_index) = pdf_date_parse_optional_two(
     bytes, index, 1, hour_offset, minute_offset, offset_sign,
   )
@@ -263,7 +263,7 @@ pub fn pdf_date_of_view(bytes : BytesView) -> PdfDate raise @core.PdfError {
   pdf_date_parse_local_time(
     bytes, next_index, hour_offset, minute_offset, offset_sign,
   )
-  let date = {
+  let date = PdfDate::{
     year,
     month,
     day,

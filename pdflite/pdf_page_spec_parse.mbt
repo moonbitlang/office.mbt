@@ -32,7 +32,11 @@ pub fn PdfDocument::parse_pagespec(
   spec : String,
 ) -> Array[Int] raise @core.PdfError {
   let end_page = self.endpage()
-  let context = { end_page, document: self, source: spec }
+  let context = PdfDocumentPageSpecContext::{
+    end_page,
+    document: self,
+    source: spec,
+  }
   @spec.pdf_parse_pagespec_with_selectors(
     end_page,
     spec,

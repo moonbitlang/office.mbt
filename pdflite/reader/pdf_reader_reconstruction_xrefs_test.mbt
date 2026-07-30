@@ -164,14 +164,14 @@ test "reconstructed xref coverage ignores xref stream sections without offsets" 
 
 ///|
 test "reconstructed xref coverage skips free trailer root entries" {
-  let root_entry : @reader.PdfClassicXRefEntry = {
+  let root_entry = @reader.PdfClassicXRefEntry::{
     object_number: 3,
     offset: 30,
     generation: 0,
     in_use: false,
     object_stream: None,
   }
-  let ordinary_free : @reader.PdfClassicXRefEntry = {
+  let ordinary_free = @reader.PdfClassicXRefEntry::{
     object_number: 4,
     offset: 40,
     generation: 0,

@@ -576,7 +576,7 @@ test "PdfDocument ocg_coalesce removes duplicate names and rewrites references" 
     20,
     PdfDictionary([(key_custom, PdfIndirect(11))]),
   )
-  let duplicate_content : @ocg.PdfOptionalContent = {
+  let duplicate_content = @ocg.PdfOptionalContent::{
     ocgs: [
       (
         10,
@@ -674,7 +674,7 @@ test "PdfDocument read_optional_content_groups rejects unresolved trailer root" 
 ///|
 test "PdfDocument write_optional_content_groups builds readable OCG data" {
   let doc = ocg_catalog_document_for_test()
-  let usage : @ocg.PdfOcgUsage = {
+  let usage = @ocg.PdfOcgUsage::{
     creator_info: Some(
       (ocg_bytes_for_test("tool"), ocg_name_for_test("/Artwork")),
     ),
@@ -705,7 +705,7 @@ test "PdfDocument write_optional_content_groups builds readable OCG data" {
     ..@ocg.pdf_ocg_default_config(),
     base_state: OcgUnchanged,
   }
-  let content : @ocg.PdfOptionalContent = {
+  let content = @ocg.PdfOptionalContent::{
     ocgs: [
       (
         7,
@@ -735,7 +735,7 @@ test "PdfDocument write_optional_content_groups builds readable OCG data" {
 ///|
 test "PdfDocument write_optional_content_groups reserves explicit OCG numbers before usage objects" {
   let doc = ocg_catalog_document_for_test()
-  let usage : @ocg.PdfOcgUsage = {
+  let usage = @ocg.PdfOcgUsage::{
     creator_info: Some(
       (ocg_bytes_for_test("tool"), ocg_name_for_test("/Artwork")),
     ),
@@ -749,7 +749,7 @@ test "PdfDocument write_optional_content_groups reserves explicit OCG numbers be
     user: None,
     page_element_subtype: Some(ocg_name_for_test("/FG")),
   }
-  let content : @ocg.PdfOptionalContent = {
+  let content = @ocg.PdfOptionalContent::{
     ocgs: [
       (
         10,
@@ -784,7 +784,7 @@ test "PdfDocument write_optional_content_groups preserves trailer-root catalog e
   let key_page_mode = ocg_name_for_test("/PageMode")
   let key_ocproperties = ocg_name_for_test("/OCProperties")
   let doc = ocg_conflicting_root_document_for_test(false)
-  let content : @ocg.PdfOptionalContent = {
+  let content = @ocg.PdfOptionalContent::{
     ocgs: [],
     default_config: {
       ..@ocg.pdf_ocg_default_config(),
@@ -879,7 +879,7 @@ test "PdfDocument remove_optional_content_groups preserves trailer-root catalog 
 ///|
 test "PdfDocument optional content helpers require a root catalog" {
   let doc = @pdflite.pdf_document_empty()
-  let content : @ocg.PdfOptionalContent = {
+  let content = @ocg.PdfOptionalContent::{
     ocgs: [],
     default_config: @ocg.pdf_ocg_default_config(),
     configs: [],

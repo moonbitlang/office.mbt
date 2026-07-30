@@ -191,7 +191,7 @@ fn bookmark_single_outline_doc_for_test(
 
 ///|
 test "pdf_string_of_bookmark renders CamlPDF debug line as bytes" {
-  let bookmark : @bookmark.PdfBookmark = {
+  let bookmark = @bookmark.PdfBookmark::{
     level: 1,
     text: bookmark_bytes_from_ints_for_test([65, 0xFF]),
     target: DestFit(TargetPageObject(7)),
@@ -1286,7 +1286,7 @@ test "PdfDocument bookmarks_open_to_level rewrites open state" {
 
 ///|
 test "pdf_change_bookmark rewrites page-object destinations" {
-  let bookmark : @bookmark.PdfBookmark = {
+  let bookmark = @bookmark.PdfBookmark::{
     level: 0,
     text: bookmark_bytes_for_test("Top"),
     target: DestFitR(TargetPageObject(10), 1.0, 2.0, 3.0, 4.0),
@@ -1318,7 +1318,7 @@ test "pdf_change_bookmark rewrites page-object destinations" {
 ///|
 test "PdfDocument transform_bookmark transforms bookmark target" {
   let doc = @pdflite.pdf_document_empty()
-  let bookmark : @bookmark.PdfBookmark = {
+  let bookmark = @bookmark.PdfBookmark::{
     level: 0,
     text: bookmark_bytes_for_test("Top"),
     target: DestFitH(TargetPageObject(7), Some(5.0)),

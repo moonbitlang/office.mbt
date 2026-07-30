@@ -87,7 +87,7 @@ fn pdf_aesv2_encrypt_pdf_object_with_iv_provider(
   iv_provider : (Int) -> @core.PdfBytes raise @core.PdfError,
   no_encrypt_metadata : Bool,
 ) -> @syntax.PdfObject raise @core.PdfError {
-  let iv_index : Ref[Int] = { val: 0 }
+  let iv_index = Ref::{ val: 0 }
   pdf_aes_encrypt_pdf_object_with_data_encryptor(
     object,
     iv_provider,
@@ -112,7 +112,7 @@ fn pdf_aesv3_encrypt_pdf_object_with_iv_provider(
   iv_provider : (Int) -> @core.PdfBytes raise @core.PdfError,
   no_encrypt_metadata : Bool,
 ) -> @syntax.PdfObject raise @core.PdfError {
-  let iv_index : Ref[Int] = { val: 0 }
+  let iv_index = Ref::{ val: 0 }
   pdf_aes_encrypt_pdf_object_with_data_encryptor(
     object,
     iv_provider,

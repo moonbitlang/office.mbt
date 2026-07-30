@@ -141,7 +141,7 @@ test "PdfDocument rotate_contents transforms content annotations patterns and de
     @geometry.point2(50.0, 50.0),
     -@math.PI / 2.0,
   )
-  let content_matrix : @geometry.TransformMatrix = {
+  let content_matrix = @geometry.TransformMatrix::{
     a: 0.0,
     b: -1.0,
     c: 1.0,

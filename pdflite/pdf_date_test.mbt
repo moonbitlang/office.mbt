@@ -26,7 +26,7 @@ test "pdf_date_of_string parses full PDF dates" {
 test "pdf_date byte APIs parse borrowed PDF date slices" {
   let wrapped = b"xxD:20240203040506+08'30'yy"
   let view = wrapped[2:wrapped.length() - 2]
-  let expected : @date.PdfDate = {
+  let expected = @date.PdfDate::{
     year: 2024,
     month: 2,
     day: 3,
@@ -47,7 +47,7 @@ test "pdf_date byte APIs parse borrowed PDF date slices" {
 ///|
 test "pdf_date object APIs bridge PDF strings and typed dates" {
   let object : @syntax.PdfObject = PdfString(b"D:20240203040506+08'30'")
-  let expected : @date.PdfDate = {
+  let expected = @date.PdfDate::{
     year: 2024,
     month: 2,
     day: 3,

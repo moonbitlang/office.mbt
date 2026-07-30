@@ -76,7 +76,7 @@ test "private text ToUnicode CMap helpers reject malformed ranges" {
     fail("expected missing unicode bfrange line")
   }
   @test.assert_eq(invalid_bfrange_entries, [])
-  let pending : PdfTextCMapBFRangeArray = { first: 1, last: 2, unicodes: [] }
+  let pending = PdfTextCMapBFRangeArray::{ first: 1, last: 2, unicodes: [] }
   let pending_entries : Array[(Int, @core.PdfBytes)] = []
   let append_result = pdf_text_append_pending_bfrange_array(
     pending_entries, pending, b"<0041>]",
@@ -95,7 +95,7 @@ test "private text ToUnicode CMap helpers reject malformed ranges" {
 
 ///|
 test "private external CMap helpers cover malformed and compact sections" {
-  let empty_parsed : PdfParsedCMap = {
+  let empty_parsed = PdfParsedCMap::{
     map: [],
     cid_map: [],
     notdef_map: [],
@@ -114,7 +114,7 @@ test "private external CMap helpers cover malformed and compact sections" {
     ),
     [1, 2],
   )
-  let identity_base_parsed : PdfParsedCMap = {
+  let identity_base_parsed = PdfParsedCMap::{
     map: [],
     cid_map: [],
     notdef_map: [],
@@ -184,7 +184,7 @@ test "private external CMap helpers cover malformed and compact sections" {
   guard odd_identity is Err(_) else {
     fail("expected odd identity CMap text to raise")
   }
-  let mixed_identity_base_parsed : PdfParsedCMap = {
+  let mixed_identity_base_parsed = PdfParsedCMap::{
     map: [],
     cid_map: [],
     notdef_map: [],
@@ -202,7 +202,7 @@ test "private external CMap helpers cover malformed and compact sections" {
     ),
     [0x0041],
   )
-  let two_byte_parsed : PdfParsedCMap = {
+  let two_byte_parsed = PdfParsedCMap::{
     map: [],
     cid_map: [],
     notdef_map: [],
@@ -217,7 +217,7 @@ test "private external CMap helpers cover malformed and compact sections" {
     PdfExternalCMap(2, two_byte_parsed).uses_two_byte_codes(),
     true,
   )
-  let mixed_parsed : PdfParsedCMap = {
+  let mixed_parsed = PdfParsedCMap::{
     map: [],
     cid_map: [],
     notdef_map: [],
@@ -546,7 +546,7 @@ test "private direct Unicode predefined CMap helpers cover malformed scalars" {
     None,
   )
 
-  let composite : PdfCompositeCIDFont = {
+  let composite = PdfCompositeCIDFont::{
     cid_system_info: {
       registry: cmap_wbtest_text_bytes([82]),
       ordering: cmap_wbtest_text_bytes([79]),

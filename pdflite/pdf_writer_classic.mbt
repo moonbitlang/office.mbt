@@ -138,7 +138,7 @@ fn pdf_writer_push_classic_sparse_xref_and_trailer(
   previous_xref : Int,
 ) -> Unit raise @core.PdfError {
   pdf_writer_push_ascii(output, "xref\n")
-  let xref_index : Ref[Int] = { val: 0 }
+  let xref_index = Ref::{ val: 0 }
   let mut run_start = -1
   let mut run_length = 0
   for number in entry_numbers {

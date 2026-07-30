@@ -76,7 +76,7 @@ test "PdfEncoding debug names preserve CamlPDF forms" {
     @pdflite.PdfMacExpertEncoding.debug_name(),
     "MacExpertEncoding",
   )
-  let difference : @pdflite.PdfEncodingDifference = {
+  let difference = @pdflite.PdfEncodingDifference::{
     name: text_encoding_name_for_test("/A"),
     code: 65,
   }

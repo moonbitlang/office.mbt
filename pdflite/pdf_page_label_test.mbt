@@ -61,7 +61,7 @@ test "@label.PdfPageLabelStyle converts to and from CamlPDF names" {
 
 ///|
 test "@label.pdf_string_of_page_label renders CamlPDF debug bytes" {
-  let no_prefix : @label.PdfPageLabel = {
+  let no_prefix = @label.PdfPageLabel::{
     label_style: PageLabelDecimalArabic,
     label_prefix: None,
     start_page: 1,
@@ -77,7 +77,7 @@ test "@label.pdf_string_of_page_label renders CamlPDF debug bytes" {
     ),
   )
   let prefix = page_label_bytes_from_ints_for_test([65, 0xFF])
-  let label : @label.PdfPageLabel = {
+  let label = @label.PdfPageLabel::{
     label_style: PageLabelLowercaseRoman,
     label_prefix: Some(prefix),
     start_page: 3,
@@ -497,7 +497,7 @@ test "PdfDocument page label APIs require a root catalog" {
 
 ///|
 test "@label.pdf_page_label_complete supplies a basic first range" {
-  let later : @label.PdfPageLabel = {
+  let later = @label.PdfPageLabel::{
     label_style: PageLabelUppercaseRoman,
     label_prefix: None,
     start_page: 3,
@@ -518,13 +518,13 @@ test "@label.pdf_page_label_complete supplies a basic first range" {
 ///|
 test "pdf_page_label_add_label inserts a bounded label range" {
   let basic = @label.pdf_page_label_basic
-  let appendix : @label.PdfPageLabel = {
+  let appendix = @label.PdfPageLabel::{
     label_style: PageLabelUppercaseLetters,
     label_prefix: Some(page_label_bytes_for_test("A-")),
     start_page: 10,
     start_value: 1,
   }
-  let inserted : @label.PdfPageLabel = {
+  let inserted = @label.PdfPageLabel::{
     label_style: PageLabelLowercaseRoman,
     label_prefix: Some(page_label_bytes_for_test("intro-")),
     start_page: 3,
@@ -539,13 +539,13 @@ test "pdf_page_label_add_label inserts a bounded label range" {
 ///|
 test "pdf_page_label_add_label avoids redundant continuation labels" {
   let basic = @label.pdf_page_label_basic
-  let next : @label.PdfPageLabel = {
+  let next = @label.PdfPageLabel::{
     label_style: PageLabelDecimalArabic,
     label_prefix: Some(page_label_bytes_for_test("p.")),
     start_page: 6,
     start_value: 1,
   }
-  let inserted : @label.PdfPageLabel = {
+  let inserted = @label.PdfPageLabel::{
     label_style: PageLabelNoLabelPrefixOnly,
     label_prefix: Some(page_label_bytes_for_test("cover")),
     start_page: 3,
@@ -566,19 +566,19 @@ test "pdf_page_label_add_label avoids redundant continuation labels" {
 ///|
 test "pdf_page_label_add_label removes overlapped ranges" {
   let basic = @label.pdf_page_label_basic
-  let old_inner : @label.PdfPageLabel = {
+  let old_inner = @label.PdfPageLabel::{
     label_style: PageLabelLowercaseRoman,
     label_prefix: None,
     start_page: 4,
     start_value: 1,
   }
-  let after : @label.PdfPageLabel = {
+  let after = @label.PdfPageLabel::{
     label_style: PageLabelUppercaseLetters,
     label_prefix: None,
     start_page: 8,
     start_value: 1,
   }
-  let inserted : @label.PdfPageLabel = {
+  let inserted = @label.PdfPageLabel::{
     label_style: PageLabelDecimalArabic,
     label_prefix: Some(page_label_bytes_for_test("new-")),
     start_page: 3,
@@ -598,13 +598,13 @@ test "pdf_page_label_add_label removes overlapped ranges" {
 ///|
 test "pdf_page_label_add_label replaces an existing same-start label" {
   let basic = @label.pdf_page_label_basic
-  let old : @label.PdfPageLabel = {
+  let old = @label.PdfPageLabel::{
     label_style: PageLabelLowercaseRoman,
     label_prefix: None,
     start_page: 4,
     start_value: 1,
   }
-  let inserted : @label.PdfPageLabel = {
+  let inserted = @label.PdfPageLabel::{
     label_style: PageLabelUppercaseRoman,
     label_prefix: None,
     start_page: 4,
@@ -723,7 +723,7 @@ test "@label.pdf_page_label_of_page_number returns a single-page label" {
 
 ///|
 test "pdf_page_label_coalesce removes redundant adjacent ranges" {
-  let first : @label.PdfPageLabel = {
+  let first = @label.PdfPageLabel::{
     label_style: PageLabelDecimalArabic,
     label_prefix: None,
     start_page: 1,
@@ -1000,7 +1000,7 @@ test "PdfDocument add_page_labels_json rejects malformed JSON" {
 ///|
 test "PdfDocument add_page_labels preserves an existing page one label" {
   let document = try! @pdflite.pdf_blank_document(10.0, 10.0, 5)
-  let original : @label.PdfPageLabel = {
+  let original = @label.PdfPageLabel::{
     label_style: PageLabelLowercaseRoman,
     label_prefix: Some(page_label_bytes_for_test("pre-")),
     start_page: 1,

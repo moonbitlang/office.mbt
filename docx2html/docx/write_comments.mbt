@@ -481,7 +481,7 @@ pub fn write_docx_with_annotations(
     }
   }
   let blocks : Array[XmlNode] = []
-  let ctx : WriteContext = {
+  let ctx = WriteContext::{
     used_styles: Set([]),
     uses_lists: false,
     next_relationship: 3,

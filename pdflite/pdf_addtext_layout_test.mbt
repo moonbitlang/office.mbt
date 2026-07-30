@@ -190,7 +190,7 @@ test "pdf_addtext_width_of_selected_font scales parsed font widths" {
 test "pdf_addtext_width_of_fontpack sums mapped codepoint widths" {
   let metrics : Array[Double] = [ for _ in 0..<256 => 0.0 ]
   metrics[66] = 610.0
-  let pack : @pdflite.PdfFontPack = {
+  let pack = @pdflite.PdfFontPack::{
     fonts: [
       addtext_layout_standard_font_for_test(),
       addtext_layout_simple_font_with_metrics_for_test(Some(metrics)),
@@ -204,7 +204,7 @@ test "pdf_addtext_width_of_fontpack sums mapped codepoint widths" {
     try! @pdflite.pdf_addtext_width_of_fontpack(pack, 10.0, "ABC"),
     12.77,
   )
-  let bad_pack : @pdflite.PdfFontPack = {
+  let bad_pack = @pdflite.PdfFontPack::{
     fonts: [addtext_layout_simple_font_with_metrics_for_test(None)],
     entries: [{ codepoint: 65, font_index: 0, charcode: 65 }],
   }
@@ -243,7 +243,7 @@ test "PdfDocument addtext_calc_textwidth measures fontpacks from UTF-8" {
   let page = @page.pdf_page_blank(@geometry.paper_a4)
   let metrics : Array[Double] = [ for _ in 0..<256 => 0.0 ]
   metrics[66] = 610.0
-  let pack : @pdflite.PdfFontPack = {
+  let pack = @pdflite.PdfFontPack::{
     fonts: [
       addtext_layout_standard_font_for_test(),
       addtext_layout_simple_font_with_metrics_for_test(Some(metrics)),
@@ -347,7 +347,7 @@ test "pdf_addtext_line_widths wrapper handles fontpacks" {
   let page = @page.pdf_page_blank(@geometry.paper_a4)
   let metrics : Array[Double] = [ for _ in 0..<256 => 0.0 ]
   metrics[66] = 610.0
-  let pack : @pdflite.PdfFontPack = {
+  let pack = @pdflite.PdfFontPack::{
     fonts: [
       addtext_layout_standard_font_for_test(),
       addtext_layout_simple_font_with_metrics_for_test(Some(metrics)),
@@ -428,7 +428,7 @@ test "pdf_addtext_measurement_bytes follows cpdf selected-font modes" {
     ),
     [65, 226, 152, 131, 66],
   )
-  let pack : @pdflite.PdfFontPack = { fonts: [font], entries: [] }
+  let pack = @pdflite.PdfFontPack::{ fonts: [font], entries: [] }
   @test.assert_eq(
     try! @pdflite.pdf_addtext_measurement_bytes(
       Some(font),
@@ -852,7 +852,7 @@ test "pdf_addtext_get_urls_line reports malformed URL markers" {
 
 ///|
 test "pdf_addtext_process_text_with_time applies replacements before strftime" {
-  let page_calls : Ref[Int] = { val: 0 }
+  let page_calls = Ref::{ val: 0 }
   let replacements : Array[(String, () -> String)] = [
     (
       "%Page",
@@ -885,9 +885,9 @@ test "pdf_addtext_process_text_with_time applies replacements before strftime" {
 
 ///|
 test "pdf_addtext_process_text_with_time keeps lazy replacement order" {
-  let absent_calls : Ref[Int] = { val: 0 }
-  let one_calls : Ref[Int] = { val: 0 }
-  let two_calls : Ref[Int] = { val: 0 }
+  let absent_calls = Ref::{ val: 0 }
+  let one_calls = Ref::{ val: 0 }
+  let two_calls = Ref::{ val: 0 }
   let replacements : Array[(String, () -> String)] = [
     (
       "%Absent",
@@ -926,7 +926,7 @@ test "pdf_addtext_process_text_with_time keeps lazy replacement order" {
 
 ///|
 test "pdf_addtext_process_text_with_time ignores empty replacement markers" {
-  let calls : Ref[Int] = { val: 0 }
+  let calls = Ref::{ val: 0 }
   let replacements : Array[(String, () -> String)] = [
     (
       "",
@@ -1027,7 +1027,7 @@ test "pdf_addtext_lines_for_rotation reverses upside-down rotations" {
 
 ///|
 test "pdf_addtext_expand_lines_with_time expands replacements and strips URLs" {
-  let page_calls : Ref[Int] = { val: 0 }
+  let page_calls = Ref::{ val: 0 }
   let replacements : Array[(String, () -> String)] = [
     (
       "%Page",
@@ -1092,7 +1092,7 @@ test "pdf_addtext_bates_number formats optional zero padding" {
 
 ///|
 test "pdf_addtext_replacement_pairs builds cpdf addtext fields" {
-  let values : @addtext.PdfAddTextReplacementValues = {
+  let values = @addtext.PdfAddTextReplacementValues::{
     page_number: 5,
     end_page: 12,
     filename: "input.pdf",

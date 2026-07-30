@@ -353,7 +353,7 @@ test "pdf_addtext_text_ops builds simple font text stamps" {
 test "pdf_addtext_text_ops switches fontpack runs" {
   let regular = addtext_standard_font_for_test()
   let bold = addtext_simple_font_for_test(700.0)
-  let pack : @pdflite.PdfFontPack = {
+  let pack = @pdflite.PdfFontPack::{
     fonts: [regular, bold],
     entries: [
       { codepoint: 65, font_index: 0, charcode: 1 },
@@ -1318,7 +1318,7 @@ test "PdfDocument addtexts_with_source uses first premade fontpack font" {
     font: PdfTimesRoman,
     encoding: PdfWinAnsiEncoding,
   })
-  let pack : @pdflite.PdfFontPack = { fonts: [first, second], entries: [] }
+  let pack = @pdflite.PdfFontPack::{ fonts: [first, second], entries: [] }
   let stamped = try! document.addtexts_with_source(
     [1],
     "A",
@@ -1420,7 +1420,7 @@ test "PdfDocument addtexts_with_source delegates existing named fonts" {
 test "pdf_addtexts_with_source skips empty visible text before resolving sources" {
   let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
   let before = document.object_count()
-  let empty_pack : @pdflite.PdfFontPack = { fonts: [], entries: [] }
+  let empty_pack = @pdflite.PdfFontPack::{ fonts: [], entries: [] }
   let stamped = try! @pdflite.pdf_addtexts_with_source(
     document,
     [1],
@@ -1442,7 +1442,7 @@ test "pdf_addtexts_with_source skips empty visible text before resolving sources
 ///|
 test "pdf_addtexts_with_source rejects empty premade fontpacks" {
   let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
-  let empty_pack : @pdflite.PdfFontPack = { fonts: [], entries: [] }
+  let empty_pack = @pdflite.PdfFontPack::{ fonts: [], entries: [] }
   let result : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_addtexts_with_source(
       document,

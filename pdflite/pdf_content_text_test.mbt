@@ -485,7 +485,7 @@ test "cpdfcontent vertical predicate mirrors source CMap cases" {
     encoding: PdfPredefinedCMap(content_text_name_for_test("/CNS-EUC-V")),
   })
   @test.assert_eq(other_predefined_v.content_is_vertical(), false)
-  let parsed_vertical : @pdflite.PdfParsedCMap = {
+  let parsed_vertical = @pdflite.PdfParsedCMap::{
     map: [],
     cid_map: [],
     notdef_map: [],
@@ -613,7 +613,7 @@ test "cpdfcontent text layout mirrors horizontal process_tj placement" {
     ),
     encoding: PdfWinAnsiEncoding,
   })
-  let layout : @pdflite.PdfContentTextLayout = {
+  let layout = @pdflite.PdfContentTextLayout::{
     font_size: 10.0,
     horizontal_scaling: 0.8,
     character_spacing: 1.0,
@@ -698,7 +698,7 @@ test "cpdfcontent text layout mirrors vertical process_tj placement" {
     composite,
     encoding: PdfPredefinedCMap(content_text_name_for_test("/Identity-V")),
   })
-  let layout : @pdflite.PdfContentTextLayout = {
+  let layout = @pdflite.PdfContentTextLayout::{
     font_size: 10.0,
     horizontal_scaling: 0.25,
     character_spacing: 1.0,
@@ -750,7 +750,7 @@ test "cpdfcontent TJ layout applies horizontal numeric adjustments" {
     fontmetrics: Some([ for _ in 0..<256 => 500.0 ]),
     encoding: PdfWinAnsiEncoding,
   })
-  let layout : @pdflite.PdfContentTextLayout = {
+  let layout = @pdflite.PdfContentTextLayout::{
     font_size: 10.0,
     horizontal_scaling: 0.8,
     character_spacing: 1.0,
@@ -811,7 +811,7 @@ test "cpdfcontent TJ layout applies vertical numeric adjustments" {
     composite,
     encoding: PdfPredefinedCMap(content_text_name_for_test("/Identity-V")),
   })
-  let layout : @pdflite.PdfContentTextLayout = {
+  let layout = @pdflite.PdfContentTextLayout::{
     font_size: 10.0,
     horizontal_scaling: 0.5,
     character_spacing: 0.0,

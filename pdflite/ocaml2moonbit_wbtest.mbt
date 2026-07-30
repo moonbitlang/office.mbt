@@ -29,7 +29,7 @@ test "Scalar literals narrow by type context" {
 
 ///|
 test "Primitive refs and growable arrays are explicit mutable containers" {
-  let counter : Ref[Int] = { val: 0 }
+  let counter = Ref::{ val: 0 }
   counter.val += 1
   let bytes : Array[Byte] = [1, 2, 3]
   bytes[1] = 255
@@ -141,7 +141,7 @@ fn apply_raising_callback_for_test(
 
 ///|
 test "Callback parameters use function types and can capture refs" {
-  let delta : Ref[Int] = { val: 1 }
+  let delta = Ref::{ val: 1 }
   @test.assert_eq(
     apply_callback_twice_for_test(
       fn(value) {
