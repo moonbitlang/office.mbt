@@ -45,7 +45,6 @@ pub struct DocxEditSession {
   priv max_comment_fragment_bytes : Int
   priv splice_limits : @splice.SpliceLimits
   priv splice_materialized_allowance : Int
-  priv splice_token_allowance : Int
   priv xml_budget : @xml.XmlReadBudget
   priv mut plan : @splice.SplicePlan
   priv mut plan_mode : DocxEditPlanMode
@@ -259,7 +258,6 @@ fn open_edit_session(
     ),
     splice_limits,
     splice_materialized_allowance: budget.max_splice_materialized_bytes(),
-    splice_token_allowance: budget.max_splice_xml_tokens(),
     xml_budget,
     plan: @splice.SplicePlan::new(),
     plan_mode: Empty,
@@ -724,8 +722,4 @@ fn DocxEditSession::construction_byte_allowance(self : DocxEditSession) -> Int {
   self.splice_materialized_allowance
 }
 
-///|
-/// The transaction-derived XML token ceiling, same purpose.
-fn DocxEditSession::construction_token_allowance(self : DocxEditSession) -> Int {
-  self.splice_token_allowance
-}
+
