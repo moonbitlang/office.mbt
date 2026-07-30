@@ -677,11 +677,15 @@ pub async fn transact_docx_annotations(
 
 ///|
 pub extend DocxAnnotationOpResult with Eq::{not_equal, equal}
+
 ///|
 pub extend DocxAnnotationOpResult with @debug.Debug::{to_repr}
+
 ///|
 pub extend DocxAnnotationParseError with @debug.Debug::{to_repr}
+
 ///|
 pub extend DocxAnnotationReport with Eq::{not_equal, equal}
+
 ///|
 pub extend DocxAnnotationReport with @debug.Debug::{to_repr}

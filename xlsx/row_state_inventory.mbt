@@ -682,17 +682,14 @@ fn raw_direct_child_text(
     let name_end = start + 1 + element.length()
     let is_match = depth == 0 &&
       name_end < xml.length() &&
-      xml[start+1:name_end] == element &&
+      xml[start + 1:name_end] == element &&
       raw_name_boundary(xml[name_end])
     if is_match {
       if self_closing {
         return Some("")
       }
       match xml[tag_end:].find(close) {
-        Some(rel) =>
-          return Some(
-            unescape_xml_text(xml[tag_end:tag_end+rel]),
-          )
+        Some(rel) => return Some(unescape_xml_text(xml[tag_end:tag_end + rel]))
         None => return None
       }
     }
@@ -772,21 +769,30 @@ pub fn Worksheet::raw_data_validation_criteria(
 
 ///|
 pub extend RawDataValidationCriteria with Eq::{not_equal, equal}
+
 ///|
 pub extend RawDataValidationCriteria with @debug.Debug::{to_repr}
+
 ///|
 pub extend RowStateClass with Eq::{not_equal, equal}
+
 ///|
 pub extend RowStateClass with @debug.Debug::{to_repr}
+
 ///|
 pub extend RowStateEntry with Eq::{not_equal, equal}
+
 ///|
 pub extend RowStateEntry with @debug.Debug::{to_repr}
+
 ///|
 pub extend RowStateExtent with Eq::{not_equal, equal}
+
 ///|
 pub extend RowStateExtent with @debug.Debug::{to_repr}
+
 ///|
 pub extend RowStateHandling with Eq::{not_equal, equal}
+
 ///|
 pub extend RowStateHandling with @debug.Debug::{to_repr}

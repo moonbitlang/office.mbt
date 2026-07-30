@@ -879,7 +879,7 @@ pub async fn transact_docx_template_document(
           plans.push({
             name: region.name,
             source_location: "/docx/body/" + tr_path,
-              span_start: span.byte_start(),
+            span_start: span.byte_start(),
             span_end: span.byte_end(),
             strip_spans: gate.strip_spans,
             paragraphs: row_paragraphs,
@@ -1309,5 +1309,6 @@ fn docx_build_row_clone(
 
 ///|
 pub extend DocxRegionOutcome with Eq::{not_equal, equal}
+
 ///|
 pub extend DocxRegionOutcome with @debug.Debug::{to_repr}
