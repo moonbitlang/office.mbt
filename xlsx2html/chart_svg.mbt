@@ -151,11 +151,11 @@ fn chart_ref_separator(reference : String) -> Int? {
 fn chart_ref_parts(reference : String) -> (String, String)? {
   guard chart_ref_separator(reference) is Some(bang) else { return None }
   let sheet_raw = reference[:bang]
-  let range_raw = reference[bang+1:]
+  let range_raw = reference[bang + 1:]
   let sheet = (if sheet_raw.length() >= 2 &&
     sheet_raw.has_prefix("'") &&
     sheet_raw.has_suffix("'") {
-    sheet_raw[1:sheet_raw.length()-1].replace_all(old="''", new="'")
+    sheet_raw[1:sheet_raw.length() - 1].replace_all(old="''", new="'")
   } else {
     sheet_raw
   }).to_owned()

@@ -163,7 +163,9 @@ fn substitute_cell_text(
         }
         None =>
           // allow-missing: the literal placeholder stays
-          builder.write_string(text[matched.span.start_offset:matched.span.end_offset].to_owned())
+          builder.write_string(
+            text[matched.span.start_offset:matched.span.end_offset].to_owned(),
+          )
       }
       cursor = matched.span.end_offset
     } else {
@@ -429,11 +431,15 @@ pub async fn transact_template(
 
 ///|
 pub extend XlsxTemplateFinding with Eq::{not_equal, equal}
+
 ///|
 pub extend XlsxTemplateFinding with @debug.Debug::{to_repr}
+
 ///|
 pub extend XlsxTemplateRefused with @debug.Debug::{to_repr}
+
 ///|
 pub extend XlsxTemplateReport with Eq::{not_equal, equal}
+
 ///|
 pub extend XlsxTemplateReport with @debug.Debug::{to_repr}
