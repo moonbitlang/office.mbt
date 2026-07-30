@@ -184,7 +184,7 @@ fn docx_image_spec(
             @word.write_docx([
               @document.paragraph([
                 @document.run([
-                  @document.Image(@document.Image::{
+                  Image({
                     content_type: carried_type,
                     alt_text: None,
                     data: image.data,
