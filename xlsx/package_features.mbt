@@ -260,5 +260,6 @@ pub fn Workbook::first_table_with_source_formulas(
 
 ///|
 pub extend XlsxPackageFeatures with Eq::{not_equal, equal}
+
 ///|
 pub extend XlsxPackageFeatures with @debug.Debug::{to_repr}

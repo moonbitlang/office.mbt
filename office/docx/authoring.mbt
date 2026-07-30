@@ -170,7 +170,9 @@ pub async fn author_document(
 
 ///|
 pub extend DocxAuthorParseError with @debug.Debug::{to_repr}
+
 ///|
 pub extend DocxAuthorReport with Eq::{not_equal, equal}
+
 ///|
 pub extend DocxAuthorReport with @debug.Debug::{to_repr}

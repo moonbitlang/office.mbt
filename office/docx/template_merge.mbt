@@ -981,11 +981,15 @@ fn docx_emit_scalar_edits(
 
 ///|
 pub extend DocxTemplateFinding with Eq::{not_equal, equal}
+
 ///|
 pub extend DocxTemplateFinding with @debug.Debug::{to_repr}
+
 ///|
 pub extend DocxTemplateRefused with @debug.Debug::{to_repr}
+
 ///|
 pub extend DocxTemplateReport with Eq::{not_equal, equal}
+
 ///|
 pub extend DocxTemplateReport with @debug.Debug::{to_repr}

@@ -148,7 +148,7 @@ fn check_duplicate_keys(
           // escaped keys raised above, so the raw span IS the key text —
           // labels and the callback want characters, not the identity
           // encoding the seen-set uses
-          let literal = text[string_start:index-1].to_owned()
+          let literal = text[string_start:index - 1].to_owned()
           frame.pending_key = literal
           if on_member is Some(_) {
             // deferred: a duplicate ANYWHERE must win over member-gate
@@ -336,7 +336,9 @@ fn parse_scalar_entries(
 
 ///|
 pub extend TemplateDataError with @debug.Debug::{to_repr}
+
 ///|
 pub extend TemplateValue with Eq::{not_equal, equal}
+
 ///|
 pub extend TemplateValue with @debug.Debug::{to_repr}

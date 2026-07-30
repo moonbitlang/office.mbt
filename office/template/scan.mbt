@@ -237,19 +237,27 @@ pub fn scan_placeholders(
 
 ///|
 pub extend MalformedPlaceholder with Eq::{not_equal, equal}
+
 ///|
 pub extend MalformedPlaceholder with @debug.Debug::{to_repr}
+
 ///|
 pub extend PlaceholderMatch with Eq::{not_equal, equal}
+
 ///|
 pub extend PlaceholderMatch with @debug.Debug::{to_repr}
+
 ///|
 pub extend TemplateScan with Eq::{not_equal, equal}
+
 ///|
 pub extend TemplateScan with @debug.Debug::{to_repr}
+
 ///|
 pub extend TemplateScanError with @debug.Debug::{to_repr}
+
 ///|
 pub extend TemplateSpan with Eq::{not_equal, equal}
+
 ///|
 pub extend TemplateSpan with @debug.Debug::{to_repr}

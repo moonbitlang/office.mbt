@@ -399,5 +399,6 @@ fn render_chart_sheet(
 
 ///|
 pub extend RenderError with @debug.Debug::{to_repr}
+
 ///|
 pub extend RenderError with Show::{to_string, output}

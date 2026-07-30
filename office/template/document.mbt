@@ -363,10 +363,7 @@ pub fn parse_template_document(
           raise TemplateDataError("region \"" + name + "\" must be an object")
         }
         for key, _ in region_fields {
-          if key != "sheet" &&
-            key != "row" &&
-            key != "path" &&
-            key != "records" {
+          if key != "sheet" && key != "row" && key != "path" && key != "records" {
             raise TemplateDataError(
               "region \"" +
               name +
@@ -444,13 +441,18 @@ pub fn parse_template_document(
 
 ///|
 pub extend TemplateData with @debug.Debug::{to_repr}
+
 ///|
 pub extend TemplateRegion with @debug.Debug::{to_repr}
+
 ///|
 pub extend TemplateRegionAddress with Eq::{not_equal, equal}
+
 ///|
 pub extend TemplateRegionAddress with @debug.Debug::{to_repr}
+
 ///|
 pub extend TemplateStory with Eq::{not_equal, equal}
+
 ///|
 pub extend TemplateStory with @debug.Debug::{to_repr}
