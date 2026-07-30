@@ -37,6 +37,7 @@ pub fn template_key_ok(String) -> Bool
 pub suberror TemplateDataError {
   TemplateDataError(String)
 } derive(@debug.Debug)
+pub fn TemplateDataError::to_repr(Self) -> @debug.Repr
 
 pub suberror TemplateScanError {
   TemplateScanBudgetExceeded(String)
@@ -93,7 +94,10 @@ pub(all) enum TemplateValue {
   NumberValue(Double)
   BoolValue(Bool)
 } derive(Eq, @debug.Debug)
+pub fn TemplateValue::equal(Self, Self) -> Bool
+pub fn TemplateValue::not_equal(Self, Self) -> Bool
 pub fn TemplateValue::render(Self) -> String
+pub fn TemplateValue::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

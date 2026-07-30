@@ -36,10 +36,12 @@ pub suberror DumpError {
   DumpUnsupported(String)
   DumpSelfCheckFailed(String)
 } derive(@debug.Debug)
+pub fn DumpError::to_repr(Self) -> @debug.Repr
 
 pub suberror DumpParseError {
   DumpParseError(String)
 } derive(@debug.Debug)
+pub fn DumpParseError::to_repr(Self) -> @debug.Repr
 
 pub suberror ReplayError {
   ReplayInvalidFormat(String)
@@ -52,6 +54,9 @@ pub(all) struct DumpAsset {
   size : Int
   data : String
 } derive(Eq, ToJson)
+pub fn DumpAsset::equal(Self, Self) -> Bool
+pub fn DumpAsset::not_equal(Self, Self) -> Bool
+pub fn DumpAsset::to_json(Self) -> Json
 
 pub(all) struct DumpEnvelope {
   format : String
@@ -76,11 +81,17 @@ pub(all) struct DumpResidual {
   asset : String?
   detail : String
 } derive(Eq, ToJson)
+pub fn DumpResidual::equal(Self, Self) -> Bool
+pub fn DumpResidual::not_equal(Self, Self) -> Bool
+pub fn DumpResidual::to_json(Self) -> Json
 
 pub(all) struct DumpWarning {
   code : String
   message : String
 } derive(Eq, ToJson)
+pub fn DumpWarning::equal(Self, Self) -> Bool
+pub fn DumpWarning::not_equal(Self, Self) -> Bool
+pub fn DumpWarning::to_json(Self) -> Json
 
 // Type aliases
 
