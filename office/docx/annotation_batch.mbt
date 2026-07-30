@@ -63,7 +63,7 @@ pub suberror DocxAnnotationParseError {
 priv enum CommentRef {
   ById(String)
   ByLabel(String)
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 priv enum AnnotationOp {
@@ -346,10 +346,10 @@ pub fn parse_annotation_batch(
     }
   }
 
-  fn check_ref(ref : CommentRef) -> Unit raise DocxAnnotationParseError {
+  fn check_ref(reference : CommentRef) -> Unit raise DocxAnnotationParseError {
     // forward references are forbidden: a label must be minted by an
     // EARLIER op (already in labels_seen at parse time)
-    match ref {
+    match reference {
       ByLabel(name) =>
         if !labels_seen.contains(name) {
           raise annotation_parse_error(
@@ -500,10 +500,10 @@ pub async fn transact_docx_annotations(
       let base_allowance = budget.max_splice_materialized_bytes()
       let original_bytes = annotation_archive_payload_bytes(archive)
       let union : Set[String] = Set([])
-      let minted : Map[String, String] = {}
+      let minted : Map[String, String] = Map([])
       let mut current = archive
-      fn resolve_ref(ref : CommentRef) -> String raise {
-        match ref {
+      fn resolve_ref(reference : CommentRef) -> String raise {
+        match reference {
           ById(id) => id
           ByLabel(label) =>
             match minted.get(label) {
@@ -674,3 +674,14 @@ pub async fn transact_docx_annotations(
   }
   { report: result, transaction: report }
 }
+
+///|
+pub extend DocxAnnotationOpResult with Eq::{not_equal, equal}
+///|
+pub extend DocxAnnotationOpResult with @debug.Debug::{to_repr}
+///|
+pub extend DocxAnnotationParseError with @debug.Debug::{to_repr}
+///|
+pub extend DocxAnnotationReport with Eq::{not_equal, equal}
+///|
+pub extend DocxAnnotationReport with @debug.Debug::{to_repr}

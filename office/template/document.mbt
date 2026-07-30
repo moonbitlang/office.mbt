@@ -101,10 +101,10 @@ fn parse_bracket_ordinal(text : String, start : Int) -> (Int, Int)? {
 fn parse_table_row_path(path : String) -> TemplateRegionAddress? {
   guard path.has_prefix("/docx/") else { return None }
   let mut index = "/docx/".length()
-  let story = if path.substring(start=index).has_prefix("body/") {
+  let story = if path[index:].has_prefix("body/") {
     index += "body/".length()
     BodyStory
-  } else if path.substring(start=index).has_prefix("header") {
+  } else if path[index:].has_prefix("header") {
     index += "header".length()
     guard parse_bracket_ordinal(path, index) is Some((ordinal, next)) &&
       ordinal <= MAX_TEMPLATE_STORY_ORDINAL &&
@@ -114,7 +114,7 @@ fn parse_table_row_path(path : String) -> TemplateRegionAddress? {
     }
     index = next + 1
     HeaderStory(ordinal)
-  } else if path.substring(start=index).has_prefix("footer") {
+  } else if path[index:].has_prefix("footer") {
     index += "footer".length()
     guard parse_bracket_ordinal(path, index) is Some((ordinal, next)) &&
       ordinal <= MAX_TEMPLATE_STORY_ORDINAL &&
@@ -127,7 +127,7 @@ fn parse_table_row_path(path : String) -> TemplateRegionAddress? {
   } else {
     return None
   }
-  guard path.substring(start=index).has_prefix("tbl") else { return None }
+  guard path[index:].has_prefix("tbl") else { return None }
   index += "tbl".length()
   guard parse_bracket_ordinal(path, index) is Some((table, after_table)) &&
     after_table < path.length() &&
@@ -135,7 +135,7 @@ fn parse_table_row_path(path : String) -> TemplateRegionAddress? {
     return None
   }
   index = after_table + 1
-  guard path.substring(start=index).has_prefix("tr") else { return None }
+  guard path[index:].has_prefix("tr") else { return None }
   index += "tr".length()
   guard parse_bracket_ordinal(path, index) is Some((row, after_row)) &&
     after_row == path.length() else {
@@ -362,16 +362,16 @@ pub fn parse_template_document(
         guard region_value is Object(region_fields) else {
           raise TemplateDataError("region \"" + name + "\" must be an object")
         }
-        for member, _ in region_fields {
-          if member != "sheet" &&
-            member != "row" &&
-            member != "path" &&
-            member != "records" {
+        for key, _ in region_fields {
+          if key != "sheet" &&
+            key != "row" &&
+            key != "path" &&
+            key != "records" {
             raise TemplateDataError(
               "region \"" +
               name +
               "\" has unknown member \"" +
-              member +
+              key +
               "\" (expected sheet, row, path, records)",
             )
           }
@@ -441,3 +441,16 @@ pub fn parse_template_document(
   }
   { values, regions }
 }
+
+///|
+pub extend TemplateData with @debug.Debug::{to_repr}
+///|
+pub extend TemplateRegion with @debug.Debug::{to_repr}
+///|
+pub extend TemplateRegionAddress with Eq::{not_equal, equal}
+///|
+pub extend TemplateRegionAddress with @debug.Debug::{to_repr}
+///|
+pub extend TemplateStory with Eq::{not_equal, equal}
+///|
+pub extend TemplateStory with @debug.Debug::{to_repr}
