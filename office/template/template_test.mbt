@@ -202,8 +202,7 @@ test "template data bounds" {
     )
     |> ignore
   catch {
-    TemplateDataError(reason) =>
-      assert_true(reason.contains("exceeds"))
+    TemplateDataError(reason) => assert_true(reason.contains("exceeds"))
   } noraise {
     _ => fail("expected the value bound to reject")
   }
@@ -242,8 +241,7 @@ test "escaped keys and non-finite numbers are rejected" {
     )
     |> ignore
   catch {
-    TemplateDataError(reason) =>
-      assert_true(reason.contains("finite"))
+    TemplateDataError(reason) => assert_true(reason.contains("finite"))
   } noraise {
     _ => fail("an overflowing numeral must not parse")
   }

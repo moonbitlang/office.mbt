@@ -37,10 +37,7 @@ fn wb_run_specs(
 test "inexpressible paragraph content residualizes and text degrades" {
   let residual : Array[DumpResidual] = []
   let params = docx_paragraph_params(
-    [
-      BookmarkStart("m"),
-      @document.run([@document.text("styled away")]),
-    ],
+    [BookmarkStart("m"), @document.run([@document.text("styled away")])],
     @document.paragraph_properties(
       style_id=Some("FancyQuote"),
       alignment=Some("weird"),
@@ -280,11 +277,7 @@ test "run-nested images hoist and capture assets" {
   docx_run_specs(
     [
       @document.text("before"),
-      Image({
-        content_type: "image/png",
-        alt_text: Some("logo"),
-        data: payload,
-      }),
+      Image({ content_type: "image/png", alt_text: Some("logo"), data: payload }),
       @document.text("after"),
     ],
     @document.run_properties(is_bold=true),
@@ -308,13 +301,7 @@ test "run-nested images hoist and capture assets" {
   // dedup: the same payload again adds no asset
   let out2 : Array[Json] = []
   docx_run_specs(
-    [
-      Image({
-        content_type: "image/png",
-        alt_text: None,
-        data: payload,
-      }),
-    ],
+    [Image({ content_type: "image/png", alt_text: None, data: payload })],
     @document.run_properties(),
     1,
     ctx,
@@ -326,13 +313,7 @@ test "run-nested images hoist and capture assets" {
   // a conflicting content type on the duplicate is disclosed
   let out3 : Array[Json] = []
   docx_run_specs(
-    [
-      Image({
-        content_type: "image/jpeg",
-        alt_text: None,
-        data: payload,
-      }),
-    ],
+    [Image({ content_type: "image/jpeg", alt_text: None, data: payload })],
     @document.run_properties(),
     2,
     ctx,
@@ -349,13 +330,7 @@ test "run-nested images hoist and capture assets" {
   // for the parser to infer from)
   let out4 : Array[Json] = []
   docx_run_specs(
-    [
-      Image({
-        content_type: "",
-        alt_text: None,
-        data: payload,
-      }),
-    ],
+    [Image({ content_type: "", alt_text: None, data: payload })],
     @document.run_properties(),
     3,
     ctx,
@@ -374,13 +349,7 @@ test "run-nested images hoist and capture assets" {
   let ctx_tiff = wb_ctx(tiff)
   let out5 : Array[Json] = []
   docx_run_specs(
-    [
-      Image({
-        content_type: "image/tiff",
-        alt_text: None,
-        data: payload,
-      }),
-    ],
+    [Image({ content_type: "image/tiff", alt_text: None, data: payload })],
     @document.run_properties(),
     0,
     ctx_tiff,
@@ -419,10 +388,7 @@ test "note references dump their bodies with honest edge handling" {
   }
   let out : Array[Json] = []
   docx_run_specs(
-    [
-      @document.text("ref"),
-      NoteReference(note_type="footnote", note_id="1"),
-    ],
+    [@document.text("ref"), NoteReference(note_type="footnote", note_id="1")],
     @document.run_properties(),
     0,
     ctx,
@@ -500,11 +466,7 @@ test "links and images inside note bodies degrade honestly" {
             target_frame=None,
           ),
           @document.run([
-            Image({
-              content_type: "image/png",
-              alt_text: None,
-              data: b"\x89",
-            }),
+            Image({ content_type: "image/png", alt_text: None, data: b"\x89" }),
           ]),
         ]),
       ],
@@ -561,13 +523,7 @@ test "dedup-first unsupported type cannot poison a later supported use" {
   // first occurrence: TIFF — carried as an asset, disclosed, no op
   let out1 : Array[Json] = []
   docx_run_specs(
-    [
-      Image({
-        content_type: "image/tiff",
-        alt_text: None,
-        data: payload,
-      }),
-    ],
+    [Image({ content_type: "image/tiff", alt_text: None, data: payload })],
     @document.run_properties(),
     0,
     ctx,
@@ -582,13 +538,7 @@ test "dedup-first unsupported type cannot poison a later supported use" {
   // residualize instead
   let out2 : Array[Json] = []
   docx_run_specs(
-    [
-      Image({
-        content_type: "image/png",
-        alt_text: None,
-        data: payload,
-      }),
-    ],
+    [Image({ content_type: "image/png", alt_text: None, data: payload })],
     @document.run_properties(),
     1,
     ctx,

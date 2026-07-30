@@ -31,11 +31,7 @@ test "package validator matches the mutation gate verdicts" {
   rebuilt.add("xl/extra.bin", b"\x00\x01")
   let tampered_bytes = @zip.write(rebuilt)
   let tampered = read_validator_archive(tampered_bytes)
-  let findings = (validator.validate)(
-    Xlsx,
-    tampered_bytes,
-    tampered,
-  )
+  let findings = (validator.validate)(Xlsx, tampered_bytes, tampered)
   assert_true(findings.length() > 0)
   assert_true(findings[0].code == "office.xlsx.package")
   // a non-XLSX candidate is rejected before any parsing

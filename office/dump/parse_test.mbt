@@ -189,8 +189,7 @@ test "docx envelopes and asset integrity at parse" {
     )
     |> ignore
   catch {
-    DumpParseError(reason) =>
-      assert_true(reason.contains("does not hash"))
+    DumpParseError(reason) => assert_true(reason.contains("does not hash"))
   } noraise {
     _ => fail("a lying digest must not parse")
   }
