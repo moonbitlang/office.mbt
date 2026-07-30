@@ -8,7 +8,7 @@ let docx_cli_max_query_text_scan_chars : Int = 16 * 1024 * 1024
 let docx_cli_text_yield_work_units : Int = 4096
 
 ///|
-struct DocxTextBudget {
+priv struct DocxTextBudget {
   resource : String
   maximum : Int
   reported_maximum : Int
@@ -17,7 +17,7 @@ struct DocxTextBudget {
 }
 
 ///|
-struct DocxTextCollector {
+priv struct DocxTextCollector {
   maximum : Int
   reported_maximum : Int
   reported_offset : Int
@@ -33,7 +33,7 @@ struct DocxTextCollector {
 }
 
 ///|
-struct DocxCollectedText {
+priv struct DocxCollectedText {
   text : String
   scanned : Int
   truncated : Bool
