@@ -202,7 +202,8 @@ test "styles_in_use dedupes by kind and records first-use order" {
     ),
   ])
   let payload = @inspect.outline(doc, file="styles.docx")
-  guard! payload is Object(fields) && fields.get("styles_in_use") is Some(styles)
+  guard! payload is Object(fields) &&
+    fields.get("styles_in_use") is Some(styles)
   json_inspect(styles, content=[
     { "kind": "paragraph", "id": "Heading1" },
     { "kind": "run", "name": "Strong" },
