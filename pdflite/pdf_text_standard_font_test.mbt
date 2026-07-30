@@ -302,7 +302,7 @@ test "PdfTextExtractor text_width uses font metrics" {
     .text_width(text_standard_font_bytes_for_test([65, 66, 67])),
     1450.0,
   )
-  let composite : @pdflite.PdfCompositeCIDFont = {
+  let composite = @pdflite.PdfCompositeCIDFont::{
     cid_system_info: {
       registry: text_standard_font_bytes_for_test([65]),
       ordering: text_standard_font_bytes_for_test([73]),

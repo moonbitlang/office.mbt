@@ -234,7 +234,7 @@ test "pdf draw document-aware fontpacks render text runs and resources" {
   let state = @pdflite.pdf_draw_render_state_new()
   let regular = draw_standard_font_for_test(PdfHelvetica)
   let bold = draw_standard_font_for_test(PdfHelveticaBold)
-  let pack : @pdflite.PdfFontPack = {
+  let pack = @pdflite.PdfFontPack::{
     fonts: [regular, bold],
     entries: [
       { codepoint: 65, font_index: 0, charcode: 1 },

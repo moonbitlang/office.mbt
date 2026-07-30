@@ -239,7 +239,7 @@ pub fn PdfDocument::add_bookmarks(
     let root = self.pdf_bookmark_catalog()
     let pdf = self.copy()
     let base_object_number = self.objects.max_object_number()
-    let source : Ref[Int] = { val: 0 }
+    let source = Ref::{ val: 0 }
     let nodes = pdf_bookmark_make_nodes(
       bookmarks,
       0,

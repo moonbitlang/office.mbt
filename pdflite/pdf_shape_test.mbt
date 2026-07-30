@@ -159,7 +159,7 @@ test "cpdfcontent path geometry computes segment and path bounds" {
     10.0,
     20.0,
   )
-  let path : @shape.PdfPath = {
+  let path = @shape.PdfPath::{
     winding_rule: PdfPathNonZero,
     subpaths: [
       {
@@ -171,7 +171,7 @@ test "cpdfcontent path geometry computes segment and path bounds" {
   }
   assert_rectangle_for_shape_test(path.bounds(), -5.0, -3.0, 10.0, 20.0)
   @test.assert_eq(@shape.pdf_path_bounds(path), path.bounds())
-  let empty : @shape.PdfPath = { winding_rule: PdfPathEvenOdd, subpaths: [] }
+  let empty = @shape.PdfPath::{ winding_rule: PdfPathEvenOdd, subpaths: [] }
   assert_rectangle_for_shape_test(empty.bounds(), 0.0, 0.0, 0.0, 0.0)
 }
 
@@ -193,7 +193,7 @@ test "cpdfcontent path geometry transforms segments and paths" {
     }
     _ => fail("expected transformed bezier")
   }
-  let path : @shape.PdfPath = {
+  let path = @shape.PdfPath::{
     winding_rule: PdfPathEvenOdd,
     subpaths: [
       {
@@ -223,7 +223,7 @@ test "cpdfcontent path geometry transforms segments and paths" {
 
 ///|
 test "cpdfcontent path geometry emits content bounding box quads" {
-  let path : @shape.PdfPath = {
+  let path = @shape.PdfPath::{
     winding_rule: PdfPathEvenOdd,
     subpaths: [
       {
@@ -262,7 +262,7 @@ test "cpdfcontent path geometry emits content bounding box quads" {
   assert_content_bbox_for_shape_test(
     stroked, 0.0, 3.0, 0.0, 18.0, 8.0, 18.0, 8.0, 3.0,
   )
-  let empty : @shape.PdfPath = { winding_rule: PdfPathEvenOdd, subpaths: [] }
+  let empty = @shape.PdfPath::{ winding_rule: PdfPathEvenOdd, subpaths: [] }
   @test.assert_eq(
     @pdflite.pdf_path_content_bounding_box(
       empty, @geometry.transform_identity_matrix, 1.0, false,
@@ -283,12 +283,12 @@ test "cpdfcontent path geometry serializes drawn path content JSON" {
     @geometry.point2(9.0, 10.0),
     @geometry.point2(11.0, 12.0),
   )
-  let subpath : @shape.PdfPathSubpath = {
+  let subpath = @shape.PdfPathSubpath::{
     hole: PdfPathHole,
     closure: PdfPathClosed,
     segments: [straight, bezier],
   }
-  let drawn : @shape.PdfDrawnPath = {
+  let drawn = @shape.PdfDrawnPath::{
     stroked: true,
     filled: false,
     path: { winding_rule: PdfPathEvenOdd, subpaths: [subpath] },

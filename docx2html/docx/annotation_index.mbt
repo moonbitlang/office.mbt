@@ -897,7 +897,7 @@ fn read_docx_annotated_zip(
   messages.append(parts.comments_result.messages)
   messages.append(document_result.messages)
   messages.append(collector.messages)
-  let package_result : DocxPackageResult = {
+  let package_result = DocxPackageResult::{
     document: document_result.document,
     headers: collector.headers,
     footers: collector.footers,
@@ -1893,7 +1893,7 @@ fn build_comments(
       }
     }
     for id in story_ids {
-      let bucket : CommentStoryMarkers = {
+      let bucket = CommentStoryMarkers::{
         story,
         scan,
         markers: story_markers.get(id).unwrap_or([]),
@@ -2393,7 +2393,7 @@ fn build_notes(
       "footnote" => footnote_refs.get(note_id).unwrap_or([])
       _ => endnote_refs.get(note_id).unwrap_or([])
     }
-    let info : NoteInfo = { id: note_id, references: refs }
+    let info = NoteInfo::{ id: note_id, references: refs }
     if note.note_type == "footnote" {
       // Duplicate ids make [@id=...] ambiguous — the plan-locked
       // diagnostic (comments get theirs at definition parse).

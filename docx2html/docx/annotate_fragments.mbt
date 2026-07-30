@@ -53,7 +53,7 @@ pub fn comment_definition_fragment(
       message="paraId stamping needs exactly one id per body paragraph",
     )
   }
-  let ctx : WriteContext = {
+  let ctx = WriteContext::{
     used_styles: Set([]),
     uses_lists: false,
     next_relationship: 3,

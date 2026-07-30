@@ -31,7 +31,7 @@ fn text_cmap_predefined_font_descriptor_for_test() -> @pdflite.PdfFontDescriptor
 
 ///|
 test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
-  let composite : @pdflite.PdfCompositeCIDFont = {
+  let composite = @pdflite.PdfCompositeCIDFont::{
     cid_system_info: {
       registry: text_cmap_predefined_bytes_for_test([65]),
       ordering: text_cmap_predefined_bytes_for_test([73]),
@@ -74,7 +74,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     value => Ok(value)
   }
   guard odd is Err(BadText) else { fail("expected @core.PdfError::BadText") }
-  let cid_font_v_data : @pdflite.PdfCIDKeyedFont = {
+  let cid_font_v_data = @pdflite.PdfCIDKeyedFont::{
     basefont: text_cmap_predefined_name_for_test("/TopVertical"),
     composite,
     encoding: PdfPredefinedCMap(

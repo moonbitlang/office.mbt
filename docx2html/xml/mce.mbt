@@ -753,7 +753,7 @@ fn MceProcessor::process_element(
   mce_require_must_understand(scope)
   let attributes = self.filter_attributes(element)
   let children = self.process_children(element.children)
-  let output_element : XmlElement = { name: element.name, attributes, children }
+  let output_element = XmlElement::{ name: element.name, attributes, children }
   self.leave_element(scope)
   [XmlElement(output_element)]
 }

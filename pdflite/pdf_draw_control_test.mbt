@@ -514,7 +514,7 @@ test "pdf draw control image data helpers propagate parser errors" {
 ///|
 test "pdf draw control text helpers add fontpack once and font text ops" {
   let control = @pdflite.pdf_draw_control_new()
-  let pack : @pdflite.PdfFontPack = { fonts: [], entries: [] }
+  let pack = @pdflite.PdfFontPack::{ fonts: [], entries: [] }
   control.set_font("F0", 10.0)
   control.set_fontpack(Some(pack))
   control.begin_text_section()
@@ -547,8 +547,8 @@ test "pdf draw control text helpers add fontpack once and font text ops" {
 ///|
 test "pdf draw control default fontpack helper appends once" {
   let control = @pdflite.pdf_draw_control_new()
-  let first : @pdflite.PdfFontPack = { fonts: [], entries: [] }
-  let second : @pdflite.PdfFontPack = {
+  let first = @pdflite.PdfFontPack::{ fonts: [], entries: [] }
+  let second = @pdflite.PdfFontPack::{
     fonts: [draw_control_standard_font_for_test(PdfHelvetica)],
     entries: [],
   }
@@ -599,7 +599,7 @@ test "pdf draw control exposes font state readers" {
   @test.assert_eq(@pdflite.pdf_getfontsize(control), 9.5)
   @test.assert_eq(@pdflite.pdf_getindent(control), Some(4.0))
 
-  let pack : @pdflite.PdfFontPack = { fonts: [], entries: [] }
+  let pack = @pdflite.PdfFontPack::{ fonts: [], entries: [] }
   control.set_fontpack(Some(pack))
   @test.assert_eq(control.fontpack_initialized(), false)
   try! control.add_default_fontpack(control.font_name())

@@ -241,9 +241,7 @@ test "private page tree readers cover guard branches" {
     fail("expected quick missing kids")
   }
 
-  let last_mediabox : Ref[@syntax.PdfObject] = {
-    val: pdf_page_default_mediabox(),
-  }
+  let last_mediabox = Ref::{ val: pdf_page_default_mediabox() }
   let branch_pages = try! doc.pdf_pages_of_node(
     PdfDictionary([(pdf_page_kids_key(), PdfArray([PdfDictionary([])]))]),
     None,

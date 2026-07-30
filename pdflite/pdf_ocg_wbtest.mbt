@@ -165,7 +165,7 @@ test "private OCG individual and public reader guard malformed roots" {
 
 ///|
 test "private OCG copy and merge helpers cover optional fields" {
-  let usage : @ocg.PdfOcgUsage = {
+  let usage = @ocg.PdfOcgUsage::{
     creator_info: Some((ocg_wb_text("creator"), ocg_wb_name("/Subtype"))),
     language: Some((ocg_wb_text("en"), None)),
     export_state: Some(pdf_ocg_off_name()),
@@ -205,7 +205,7 @@ test "private OCG copy and merge helpers cover optional fields" {
   let doc = pdf_document_empty()
   doc.set_root(1)
   doc.add_object_given_number(1, PdfDictionary([]))
-  let content : @ocg.PdfOptionalContent = {
+  let content = @ocg.PdfOptionalContent::{
     ocgs: [
       (
         1,
@@ -321,7 +321,7 @@ test "private OCG writers cover event and optional usage/config forms" {
 test "private OCG empty optional paths stay stable" {
   let doc = pdf_document_empty()
   let empty_usage = doc.pdf_ocg_read_usage(PdfDictionary([]))
-  let expected_usage : @ocg.PdfOcgUsage = {
+  let expected_usage = @ocg.PdfOcgUsage::{
     creator_info: None,
     language: None,
     export_state: None,

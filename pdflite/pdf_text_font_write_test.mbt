@@ -210,7 +210,7 @@ test "PdfDocument write_font writes Type3 fonts" {
   let d1_stream = text_font_write_type3_charproc_stream_for_test([
     Op_d1(600.0, 0.0, 0.0, -20.0, 600.0, 700.0),
   ])
-  let fontmatrix : @geometry.TransformMatrix = {
+  let fontmatrix = @geometry.TransformMatrix::{
     a: 0.001,
     b: 0.0,
     c: 0.0,

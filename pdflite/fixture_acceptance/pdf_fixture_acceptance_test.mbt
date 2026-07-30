@@ -2224,7 +2224,7 @@ fn fixture_acceptance_assert_cpdf_logo_boxes_and_transparency_for_test(
   @test.assert_eq(document.endpage(), 1)
   let pages = document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 1)
-  let logo_box : @geometry.PdfRectangle = {
+  let logo_box = @geometry.PdfRectangle::{
     min_x: 0.0,
     min_y: 0.0,
     max_x: 56.693,
@@ -2530,7 +2530,7 @@ fn fixture_acceptance_assert_cpdf_source_logo_rest_merged_for_test(
 ) -> Unit raise {
   let pages = document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 1)
-  let logo_box : @geometry.PdfRectangle = {
+  let logo_box = @geometry.PdfRectangle::{
     min_x: 0.0,
     min_y: 0.0,
     max_x: 56.693,
@@ -4018,7 +4018,7 @@ fn fixture_acceptance_cpdf_source_ocg_layer_for_test(text : String) -> Bytes {
 
 ///|
 fn fixture_acceptance_cpdf_source_ocg_content_for_test() -> @ocg.PdfOptionalContent {
-  let usage : @ocg.PdfOcgUsage = {
+  let usage = @ocg.PdfOcgUsage::{
     creator_info: Some(
       (
         fixture_acceptance_cpdf_source_ocg_layer_for_test("fixture"),

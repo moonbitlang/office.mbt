@@ -218,7 +218,7 @@ fn crypt_wb_aesv3_r5_random_for_test(
 
 ///|
 test "private encryption password settings reject AESV3" {
-  let values : @crypt_core.PdfEncryptionValues = {
+  let values = @crypt_core.PdfEncryptionValues::{
     crypt_type: PdfCryptAESV3(false),
     user_entry: Bytes::new(0),
     owner_entry: Bytes::new(0),
@@ -707,7 +707,7 @@ test "private encryption values authenticate R2 and R3 user entries" {
     file_id=b"doc-id",
   )).encryption_values()
   let r3_entry = r3_values.user_entry
-  let r3_values_with_entry_prefix : @crypt_core.PdfEncryptionValues = {
+  let r3_values_with_entry_prefix = @crypt_core.PdfEncryptionValues::{
     crypt_type: PdfCryptARC4(128, 3),
     user_entry: r3_entry[:16].to_owned(),
     owner_entry: r3_values.owner_entry,
@@ -722,7 +722,7 @@ test "private encryption values authenticate R2 and R3 user entries" {
     try! r3_values_with_entry_prefix.authenticate_user_password(Bytes::new(0)),
     true,
   )
-  let r3_values_with_short_entry : @crypt_core.PdfEncryptionValues = {
+  let r3_values_with_short_entry = @crypt_core.PdfEncryptionValues::{
     crypt_type: PdfCryptARC4(128, 3),
     user_entry: r3_entry[:8].to_owned(),
     owner_entry: r3_values.owner_entry,
@@ -941,7 +941,7 @@ test "PdfDocument AESV3 decrypt preserves parser-private object states" {
 
 ///|
 test "private AESV3 saved dictionary requires permissions entry" {
-  let values : @crypt_core.PdfEncryptionValues = {
+  let values = @crypt_core.PdfEncryptionValues::{
     crypt_type: PdfCryptAESV3(false),
     user_entry: Bytes::new(48),
     owner_entry: Bytes::new(48),
@@ -983,7 +983,7 @@ test "private AESV3 CBC no-padding encryption rejects partial blocks" {
 
 ///|
 test "private document decrypt supports ISO AESV3 object crypt with a file key" {
-  let values : @crypt_core.PdfEncryptionValues = {
+  let values = @crypt_core.PdfEncryptionValues::{
     crypt_type: PdfCryptAESV3(true),
     user_entry: Bytes::new(0),
     owner_entry: Bytes::new(0),
@@ -1129,7 +1129,7 @@ test "private user password entry handles MD5 padding boundary file IDs" {
     ).length(),
     16,
   )
-  let values : @crypt_core.PdfEncryptionValues = {
+  let values = @crypt_core.PdfEncryptionValues::{
     crypt_type: PdfCryptARC4(128, 4),
     user_entry,
     owner_entry: owner,

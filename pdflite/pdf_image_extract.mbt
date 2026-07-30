@@ -17,7 +17,7 @@ pub fn PdfDocument::extract_images_files(
 ) -> Array[PdfExtractedImageFile] raise @core.PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(page_numbers, pages.length(), "images")
-  let state : PdfImageExtractionRunState = {
+  let state = PdfImageExtractionRunState::{
     serial: { val: 0 },
     written: [],
     jbig2: { next_jbig2_serial: { val: 0 }, globals: [] },
@@ -125,7 +125,7 @@ pub fn PdfDocument::extract_single_image_files(
   object_number : Int,
   stem : String,
 ) -> Array[PdfExtractedImageFile] raise @core.PdfError {
-  let state : PdfImageExtractionState = {
+  let state = PdfImageExtractionState::{
     next_jbig2_serial: { val: 0 },
     globals: [],
   }

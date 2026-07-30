@@ -91,7 +91,7 @@ test "pdf_texttopdf_of_utf8_with_newlines skips unmapped glyphs" {
 test "pdf_texttopdf_of_utf8_with_newlines switches font runs" {
   let regular = texttopdf_standard_font_for_test()
   let bold = texttopdf_bold_font_for_test()
-  let pack : @pdflite.PdfFontPack = {
+  let pack = @pdflite.PdfFontPack::{
     fonts: [regular, bold],
     entries: [
       { codepoint: 65, font_index: 0, charcode: 65 },
@@ -116,7 +116,7 @@ test "pdf_texttopdf_of_utf8_with_newlines switches font runs" {
 ///|
 test "pdf_texttopdf_of_utf8_with_newlines rejects invalid charcodes" {
   let font = texttopdf_standard_font_for_test()
-  let pack : @pdflite.PdfFontPack = {
+  let pack = @pdflite.PdfFontPack::{
     fonts: [font],
     entries: [{ codepoint: 65, font_index: 0, charcode: 300 }],
   }

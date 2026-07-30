@@ -231,7 +231,7 @@ test "cpdfcontent state applies colour path-state operators" {
 ///|
 test "cpdfcontent state serializes path drawing state JSON" {
   let clipping_path = content_state_clipping_path_for_test()
-  let state : @pdflite.PdfContentPathState = {
+  let state = @pdflite.PdfContentPathState::{
     clipping_path: [clipping_path],
     colourspace_stroke: PdfDeviceRGB,
     colourspace_non_stroke: PdfPatternWithBaseColourSpace(PdfDeviceCMYK),
@@ -281,7 +281,7 @@ test "cpdfcontent state serializes path drawing state JSON" {
 ///|
 test "cpdfcontent state serializes glyph and clipping-only state JSON" {
   let clipping_path = content_state_clipping_path_for_test()
-  let clipping_state : @pdflite.PdfContentClippingState = {
+  let clipping_state = @pdflite.PdfContentClippingState::{
     clipping_path: [clipping_path],
   }
   let clipping_expected = Json::object(
@@ -292,7 +292,7 @@ test "cpdfcontent state serializes glyph and clipping-only state JSON" {
     @pdflite.pdf_content_clipping_state_content_json(clipping_state),
     clipping_expected,
   )
-  let glyph_state : @pdflite.PdfContentGlyphState = {
+  let glyph_state = @pdflite.PdfContentGlyphState::{
     rendering_mode: 3,
     knockout: true,
     font: "/F1",
@@ -317,7 +317,7 @@ test "cpdfcontent state serializes glyph and clipping-only state JSON" {
 
 ///|
 test "cpdfcontent state serializes content object JSON" {
-  let drawn : @shape.PdfDrawnPath = {
+  let drawn = @shape.PdfDrawnPath::{
     stroked: true,
     filled: false,
     path: content_state_clipping_path_for_test(),
@@ -399,7 +399,7 @@ test "cpdfcontent state serializes content object JSON" {
 
 ///|
 test "cpdfcontent state serializes content JSON entries" {
-  let clipping_state : @pdflite.PdfContentClippingState = {
+  let clipping_state = @pdflite.PdfContentClippingState::{
     clipping_path: [content_state_clipping_path_for_test()],
   }
   let state : @pdflite.PdfContentState = PdfContentStateClipping(clipping_state)
@@ -408,7 +408,7 @@ test "cpdfcontent state serializes content JSON entries" {
   )
   @test.assert_eq(state.content_json(), state_json)
   @test.assert_eq(@pdflite.pdf_content_state_content_json(state), state_json)
-  let bbox : @pdflite.PdfContentBoundingBox = {
+  let bbox = @pdflite.PdfContentBoundingBox::{
     x0: 0.0,
     y0: 1.0,
     x1: 2.0,
@@ -433,7 +433,7 @@ test "cpdfcontent state serializes content JSON entries" {
     @pdflite.pdf_content_bounding_box_content_json(bbox),
     bbox_json,
   )
-  let entry : @pdflite.PdfContentJsonEntry = {
+  let entry = @pdflite.PdfContentJsonEntry::{
     object: PdfContentImageObject("Im1"),
     state,
     bounding_box: bbox,

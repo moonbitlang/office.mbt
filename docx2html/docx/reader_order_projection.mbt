@@ -875,7 +875,7 @@ fn ReaderOrderWalker::emit_paragraph(
   from_text_box : Bool,
   output : Array[ReaderOrderParagraph],
 ) -> Unit raise DocxError {
-  let state : ReaderOrderInlineState = {
+  let state = ReaderOrderInlineState::{
     current: self.new_reader_order_paragraph(from_text_box),
     source_by_identity: Map([]),
     completed: [],
@@ -918,7 +918,7 @@ fn ReaderOrderWalker::ensure_reader_order_source(
   }
   let element = self.elements[paragraph_identity]
   self.budget.charge_contributor()
-  let source : ReaderOrderParagraphSource = {
+  let source = ReaderOrderParagraphSource::{
     identity: paragraph_identity,
     source_span: reader_order_element_span(element),
     runs: [],
@@ -1278,7 +1278,7 @@ fn project_reader_order_from_source_tree(
     }
     None => Array::make(elements.length(), false)
   }
-  let walker : ReaderOrderWalker = {
+  let walker = ReaderOrderWalker::{
     elements,
     projection_visible: reader_order_projection_visibility(
       source_tree, budget, reader_image_outputs,

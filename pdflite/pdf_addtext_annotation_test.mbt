@@ -221,7 +221,7 @@ test "pdf_addtext_url_annotation_geometry applies rotation before offset" {
 
 ///|
 test "pdf_addtext_url_annotation_widths measures span prefixes" {
-  let span : @addtext.PdfAddTextUrl = { url: "u", start: 1, end: 4 }
+  let span = @addtext.PdfAddTextUrl::{ url: "u", start: 1, end: 4 }
   @test.assert_eq(
     try! @pdflite.pdf_addtext_url_annotation_widths("abcde", span, fn(prefix) {
       prefix.length().to_double() * 2.0
@@ -232,7 +232,7 @@ test "pdf_addtext_url_annotation_widths measures span prefixes" {
 
 ///|
 test "pdf_addtext_url_annotation_widths uses UTF-8 byte offsets" {
-  let span : @addtext.PdfAddTextUrl = { url: "u", start: 2, end: 3 }
+  let span = @addtext.PdfAddTextUrl::{ url: "u", start: 2, end: 3 }
   @test.assert_eq(
     try! @pdflite.pdf_addtext_url_annotation_widths("éx", span, fn(prefix) {
       @utf8.encode(prefix).length().to_double()

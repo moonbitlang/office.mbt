@@ -1148,8 +1148,8 @@ test "pdf_object_of_colour_space writes supported colour spaces" {
       ]),
     ),
   )
-  let whitepoint : @pdflite.PdfTristimulusPoint = { x: 0.9, y: 1.0, z: 1.1 }
-  let blackpoint : @pdflite.PdfTristimulusPoint = { x: 0.1, y: 0.2, z: 0.3 }
+  let whitepoint = @pdflite.PdfTristimulusPoint::{ x: 0.9, y: 1.0, z: 1.1 }
+  let blackpoint = @pdflite.PdfTristimulusPoint::{ x: 0.1, y: 0.2, z: 0.3 }
   @test.assert_eq(
     @pdflite.pdf_object_of_colour_space(PdfCalGray(whitepoint, blackpoint, 2.2)),
     Some(

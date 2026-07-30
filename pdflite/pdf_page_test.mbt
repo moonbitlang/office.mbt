@@ -1085,8 +1085,8 @@ test "PdfDocument process_xobjects materializes deferred form streams" {
       (page_name_for_test("/Fm1"), PdfIndirect(20)),
     ]),
   }
-  let seen_data : Ref[@syntax.PdfStreamData?] = { val: None }
-  let seen_length : Ref[@syntax.PdfObject?] = { val: None }
+  let seen_data = Ref::{ val: None }
+  let seen_length = Ref::{ val: None }
   try! doc.process_xobjects(page, fn(_, _, streams) raise @core.PdfError {
     if streams.length() < 0 {
       raise ParseStreamExpected
@@ -1131,7 +1131,7 @@ test "PdfDocument process_xobjects skips non-form xobjects" {
       (page_name_for_test("/Im1"), PdfIndirect(21)),
     ]),
   }
-  let calls : Ref[Int] = { val: 0 }
+  let calls = Ref::{ val: 0 }
   try! doc.process_xobjects(page, fn(_, _, streams) raise @core.PdfError {
     if streams.length() < 0 {
       raise ParseStreamExpected
@@ -1311,7 +1311,7 @@ test "PdfDocument process_xobjects validates xobject resources" {
   guard non_stream is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected @core.PdfError::ParseStreamExpected for non-stream form")
   }
-  let calls : Ref[Int] = { val: 0 }
+  let calls = Ref::{ val: 0 }
   try! doc.process_xobjects(@page.pdf_page_blank(@geometry.paper_a4), fn(
     _,
     _,

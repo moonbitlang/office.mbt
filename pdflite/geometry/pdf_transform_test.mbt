@@ -127,7 +127,7 @@ test "Transform debug strings preserve CamlPDF transform ordering" {
 
 ///|
 test "TransformMatrix debug string renders matrix components" {
-  let matrix : @geometry.TransformMatrix = {
+  let matrix = @geometry.TransformMatrix::{
     a: 1.0,
     b: 2.0,
     c: 3.0,
@@ -258,7 +258,7 @@ test "TransformMatrix inversion reverses a transform" {
 
 ///|
 test "TransformMatrix inversion reports non-invertable matrices" {
-  let matrix : @geometry.TransformMatrix = {
+  let matrix = @geometry.TransformMatrix::{
     a: 0.0,
     b: 0.0,
     c: 0.0,
@@ -280,7 +280,7 @@ test "TransformMatrix inversion reports non-invertable matrices" {
 
 ///|
 test "TransformMatrix inversion rejects overflow-scaled matrices" {
-  let matrix : @geometry.TransformMatrix = {
+  let matrix = @geometry.TransformMatrix::{
     a: 1.0e308,
     b: 0.0,
     c: 0.0,
@@ -317,7 +317,7 @@ test "TransformMatrix decompose mirrors CamlPDF scalar components" {
     @geometry.transform_decompose(@geometry.transform_identity_matrix),
     @geometry.transform_identity_matrix.decompose(),
   )
-  let degenerate : @geometry.TransformMatrix = {
+  let degenerate = @geometry.TransformMatrix::{
     a: 0.0,
     b: 0.0,
     c: 0.0,
@@ -337,7 +337,7 @@ test "TransformMatrix decompose mirrors CamlPDF scalar components" {
 
 ///|
 test "transform_recompose rebuilds decomposed matrix components" {
-  let parts : @geometry.TransformDecomposition = {
+  let parts = @geometry.TransformDecomposition::{
     scale: 2.0,
     aspect: 3.0,
     rotation: 0.25,

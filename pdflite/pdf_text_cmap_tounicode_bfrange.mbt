@@ -209,7 +209,7 @@ fn pdf_text_append_tounicode_bfrange_entry(
           match (pdf_text_bytes_to_int(source), pdf_text_bytes_to_int(stop)) {
             (Some(first), Some(last)) if first <= last => {
               let value_start = pdf_text_skip_cmap_whitespace(line, after_stop)
-              let pending : PdfTextCMapBFRangeArray = {
+              let pending = PdfTextCMapBFRangeArray::{
                 first,
                 last,
                 unicodes: [],

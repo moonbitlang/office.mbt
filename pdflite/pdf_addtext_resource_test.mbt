@@ -149,7 +149,7 @@ test "pdf_addtext_allocate_font_names reserves fontpack placeholders" {
   let f1 = addtext_resource_name_for_test("/F1")
   let f2 = addtext_resource_name_for_test("/F2")
   let fontdict : @syntax.PdfObject = PdfDictionary([(f0, PdfInteger(1))])
-  let pack : @pdflite.PdfFontPack = {
+  let pack = @pdflite.PdfFontPack::{
     fonts: [
       addtext_resource_standard_font_for_test(),
       addtext_resource_simple_font_for_test(700.0),
@@ -339,7 +339,7 @@ test "pdf_addtext_resource_setup installs fontpack resources" {
     ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: PdfDictionary([(font_key, PdfDictionary([(f0, PdfInteger(1))]))]),
   }
-  let pack : @pdflite.PdfFontPack = {
+  let pack = @pdflite.PdfFontPack::{
     fonts: [
       addtext_resource_standard_font_for_test(),
       addtext_resource_simple_font_for_test(700.0),

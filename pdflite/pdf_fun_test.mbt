@@ -77,7 +77,7 @@ test "PdfCalculatorOp debug strings preserve CamlPDF calculator syntax" {
 
 ///|
 test "PdfFunction debug strings cover all CamlPDF function kinds" {
-  let interpolation : @pdflite.PdfFunction = {
+  let interpolation = @pdflite.PdfFunction::{
     func: PdfFunctionInterpolation({ c0: [0.0], c1: [1.0], n: 2.0 }),
     domain: [0.0, 1.0],
     range: Some([0.0, 1.0]),
@@ -90,7 +90,7 @@ test "PdfFunction debug strings cover all CamlPDF function kinds" {
     interpolation.debug_string(),
     @pdflite.pdf_string_of_function(interpolation),
   )
-  let sampled : @pdflite.PdfFunction = {
+  let sampled = @pdflite.PdfFunction::{
     func: PdfFunctionSampled({
       size: [2],
       order: 1,
@@ -106,7 +106,7 @@ test "PdfFunction debug strings cover all CamlPDF function kinds" {
     sampled.debug_string(),
     "Domain...\n0 1\nnull range\nSampled\nsize: 2\norder: 1\nencode:\n0 1\ndecode:\n0 255\noriginal bits per sample..\n8\ndata:\n0 255",
   )
-  let calculator : @pdflite.PdfFunction = {
+  let calculator = @pdflite.PdfFunction::{
     func: PdfFunctionCalculator({
       operations: [PdfCalculatorInt(1), PdfCalculatorAdd],
     }),
@@ -117,7 +117,7 @@ test "PdfFunction debug strings cover all CamlPDF function kinds" {
     calculator.debug_string(),
     "Domain...\n\n\nCalculator:\n{1 add}",
   )
-  let stitching : @pdflite.PdfFunction = {
+  let stitching = @pdflite.PdfFunction::{
     func: PdfFunctionStitching({
       functions: [interpolation, calculator],
       bounds: [0.5],
@@ -264,7 +264,7 @@ test "PdfDocument parse_function reads and evaluates Type 3 stitching functions"
 ///|
 test "PdfDocument pdf_object_of_function writes interpolation functions" {
   let doc = @pdflite.pdf_document_empty()
-  let function : @pdflite.PdfFunction = {
+  let function = @pdflite.PdfFunction::{
     domain: [0.0, 1.0],
     range: Some([0.0, 2.0]),
     func: PdfFunctionInterpolation({ c0: [0.0], c1: [2.0], n: 1.0 }),
@@ -289,17 +289,17 @@ test "PdfDocument pdf_object_of_function writes interpolation functions" {
 ///|
 test "PdfDocument pdf_object_of_function writes stitching child objects" {
   let doc = @pdflite.pdf_document_empty()
-  let first : @pdflite.PdfFunction = {
+  let first = @pdflite.PdfFunction::{
     domain: [0.0, 1.0],
     range: None,
     func: PdfFunctionInterpolation({ c0: [0.0], c1: [0.0], n: 1.0 }),
   }
-  let second : @pdflite.PdfFunction = {
+  let second = @pdflite.PdfFunction::{
     domain: [0.0, 1.0],
     range: None,
     func: PdfFunctionInterpolation({ c0: [1.0], c1: [1.0], n: 1.0 }),
   }
-  let function : @pdflite.PdfFunction = {
+  let function = @pdflite.PdfFunction::{
     domain: [0.0, 1.0],
     range: Some([0.0, 1.0]),
     func: PdfFunctionStitching({
@@ -354,7 +354,7 @@ test "PdfDocument pdf_object_of_function writes stitching child objects" {
 ///|
 test "PdfDocument pdf_object_of_function writes sampled and calculator common entries" {
   let doc = @pdflite.pdf_document_empty()
-  let sampled : @pdflite.PdfFunction = {
+  let sampled = @pdflite.PdfFunction::{
     domain: [0.0, 1.0],
     range: Some([0.0, 1.0]),
     func: PdfFunctionSampled({
@@ -374,7 +374,7 @@ test "PdfDocument pdf_object_of_function writes sampled and calculator common en
       (fun_name_for_test("/Range"), PdfArray([PdfReal(0.0), PdfReal(1.0)])),
     ]),
   )
-  let calculator : @pdflite.PdfFunction = {
+  let calculator = @pdflite.PdfFunction::{
     domain: [],
     range: None,
     func: PdfFunctionCalculator({

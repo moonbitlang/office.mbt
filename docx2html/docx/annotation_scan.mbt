@@ -883,7 +883,7 @@ fn scan_story(
   ])
   let mut seq = 0
   let mut projection_open_count = 0
-  let work : AnnotationScanWork = {
+  let work = AnnotationScanWork::{
     projection_opens: 0,
     emitted_nodes: 0,
     emitted_markers: 0,

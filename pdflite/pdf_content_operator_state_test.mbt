@@ -532,7 +532,7 @@ test "cpdfcontent operator state collects nonrecursive content entries" {
   let resources = @syntax.pdf_dictionary([
     (font_resource_key, @syntax.pdf_dictionary([(f1_key, PdfIndirect(7))])),
   ])
-  let mediabox : @geometry.PdfRectangle = {
+  let mediabox = @geometry.PdfRectangle::{
     min_x: 0.0,
     min_y: 0.0,
     max_x: 100.0,
@@ -614,7 +614,7 @@ test "cpdfcontent operator state recursively collects Form XObject entries" {
     (font_resource_key, @syntax.pdf_dictionary([(fpage_key, PdfIndirect(8))])),
     (xobject_key, @syntax.pdf_dictionary([(form_name, form_xobject)])),
   ])
-  let mediabox : @geometry.PdfRectangle = {
+  let mediabox = @geometry.PdfRectangle::{
     min_x: 0.0,
     min_y: 0.0,
     max_x: 100.0,
@@ -669,7 +669,7 @@ test "cpdfcontent operator state recursively collects image XObject entries" {
       ]),
     ),
   ])
-  let mediabox : @geometry.PdfRectangle = {
+  let mediabox = @geometry.PdfRectangle::{
     min_x: 0.0,
     min_y: 0.0,
     max_x: 100.0,
@@ -866,7 +866,7 @@ test "cpdfcontent operator state emits image entries from current CTM" {
     ..initial,
     ctm: @geometry.transform_translate(5.0, 6.0),
   }
-  let bounding_box : @pdflite.PdfContentBoundingBox = {
+  let bounding_box = @pdflite.PdfContentBoundingBox::{
     x0: 5.0,
     y0: 6.0,
     x1: 5.0,

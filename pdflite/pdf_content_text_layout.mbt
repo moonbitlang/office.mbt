@@ -42,7 +42,7 @@ fn pdf_content_text_divisor(font : PdfFont) -> Double {
 fn pdf_content_text_render_matrix(
   layout : PdfContentTextLayout,
 ) -> @geometry.TransformMatrix {
-  let parameters : @geometry.TransformMatrix = {
+  let parameters = @geometry.TransformMatrix::{
     a: layout.font_size * layout.horizontal_scaling,
     b: 0.0,
     c: 0.0,
