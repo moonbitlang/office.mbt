@@ -57,17 +57,22 @@ pub(all) struct TemplateData {
   values : Map[String, TemplateValue]
   regions : Array[TemplateRegion]
 } derive(@debug.Debug)
+pub fn TemplateData::to_repr(Self) -> @debug.Repr
 
 pub(all) struct TemplateRegion {
   name : String
   address : TemplateRegionAddress
   records : Array[Map[String, TemplateValue]]
 } derive(@debug.Debug)
+pub fn TemplateRegion::to_repr(Self) -> @debug.Repr
 
 pub(all) enum TemplateRegionAddress {
   SheetRow(sheet~ : String, row~ : Int)
   TableRow(story~ : TemplateStory, table~ : Int, row~ : Int)
 } derive(Eq, @debug.Debug)
+pub fn TemplateRegionAddress::equal(Self, Self) -> Bool
+pub fn TemplateRegionAddress::not_equal(Self, Self) -> Bool
+pub fn TemplateRegionAddress::to_repr(Self) -> @debug.Repr
 
 pub(all) struct TemplateScan {
   matches : Array[PlaceholderMatch]
@@ -87,6 +92,9 @@ pub(all) enum TemplateStory {
   HeaderStory(Int)
   FooterStory(Int)
 } derive(Eq, @debug.Debug)
+pub fn TemplateStory::equal(Self, Self) -> Bool
+pub fn TemplateStory::not_equal(Self, Self) -> Bool
+pub fn TemplateStory::to_repr(Self) -> @debug.Repr
 
 pub(all) enum TemplateValue {
   TextValue(String)
