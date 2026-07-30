@@ -53,8 +53,7 @@ fn checked_docx_create_options(
     dry_run=matches.flags.get_or_default("dry-run", false),
     overwrite=matches.flags.get_or_default("overwrite", false),
   ) catch {
-    TransactionError(..) as error =>
-      raise transaction_failure(error)
+    TransactionError(..) as error => raise transaction_failure(error)
   }
 }
 

@@ -99,7 +99,6 @@ async fn run_dump(matches : @argparse.Matches) -> Unit {
         error => raise dump_failure(error, file)
       }
     }
-
   }
   match mode {
     JsonDocument => println(envelope.to_json_document().stringify(indent=2))

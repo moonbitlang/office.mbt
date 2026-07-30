@@ -5,12 +5,14 @@
 // binary-specific (argument parsing, help text, error-prefix mapping in
 // `main`) stays in the respective `cmd` package.
 
+///|
 /// The HTML or Markdown output target.
 pub(all) enum CliOutputFormat {
   Html
   Markdown
 } derive(Debug, Eq)
 
+///|
 /// CLI arguments parsed for the docx2html converter.
 pub(all) struct CliOptions {
   input_path : String
@@ -21,6 +23,7 @@ pub(all) struct CliOptions {
   pretty_print : Bool
 } derive(Debug, Eq)
 
+///|
 /// CLI-facing error wrapper.
 pub(all) suberror CliError {
   CliError(String)

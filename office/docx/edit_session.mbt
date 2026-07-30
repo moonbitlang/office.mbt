@@ -721,5 +721,3 @@ pub async fn transact_docx(
 fn DocxEditSession::construction_byte_allowance(self : DocxEditSession) -> Int {
   self.splice_materialized_allowance
 }
-
-
