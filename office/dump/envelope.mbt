@@ -217,13 +217,18 @@ pub fn sha256_hex_string(text : String) -> String {
 
 ///|
 pub extend DumpAsset with Eq::{not_equal, equal}
+
 ///|
 pub extend DumpAsset with ToJson::{to_json}
+
 ///|
 pub extend DumpResidual with Eq::{not_equal, equal}
+
 ///|
 pub extend DumpResidual with ToJson::{to_json}
+
 ///|
 pub extend DumpWarning with Eq::{not_equal, equal}
+
 ///|
 pub extend DumpWarning with ToJson::{to_json}

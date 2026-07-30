@@ -328,10 +328,7 @@ test "docx vertically merged tables survive the fixpoint" {
   let body : Array[@document.DocumentElement] = [
     Table(
       children=[
-        TableRow(
-          children=[cell("merged", 2), cell("top", 1)],
-          is_header=false,
-        ),
+        TableRow(children=[cell("merged", 2), cell("top", 1)], is_header=false),
         TableRow(children=[cell("bottom", 1)], is_header=false),
       ],
       properties={ style_id: None, style_name: None },

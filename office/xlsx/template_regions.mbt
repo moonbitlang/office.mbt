@@ -80,7 +80,7 @@ fn plain_range_rows(range : String) -> (Int, Int)? {
   match range.find(":") {
     Some(pos) => {
       let left = cell_row(range[:pos].to_owned())
-      let right = cell_row(range[pos+1:].to_owned())
+      let right = cell_row(range[pos + 1:].to_owned())
       match (left, right) {
         (Some(a), Some(b)) =>
           Some((if a < b { a } else { b }, if a > b { a } else { b }))
@@ -1021,5 +1021,6 @@ pub async fn transact_template_document(
 
 ///|
 pub extend XlsxRegionOutcome with Eq::{not_equal, equal}
+
 ///|
 pub extend XlsxRegionOutcome with @debug.Debug::{to_repr}
