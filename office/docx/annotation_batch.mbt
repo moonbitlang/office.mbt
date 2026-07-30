@@ -63,7 +63,7 @@ pub suberror DocxAnnotationParseError {
 priv enum CommentRef {
   ById(String)
   ByLabel(String)
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 priv enum AnnotationOp {

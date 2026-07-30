@@ -721,7 +721,7 @@ fn dump_sheet_coverage_residuals(
   sheet : String,
   unsupported_charts : Int,
   residual : Array[DumpResidual],
-) -> Unit raise {
+) -> Unit {
   let counts : Array[(String, Int)] = [
     ("xlsx.charts_not_dumped", unsupported_charts),
     ("xlsx.hyperlinks_not_dumped", worksheet.hyperlinks.length()),
@@ -860,7 +860,7 @@ fn sheet_scroll_anchor(
 fn dump_workbook_residuals(
   workbook : @xlsx.Workbook,
   residual : Array[DumpResidual],
-) -> Unit raise {
+) -> Unit {
   let document = Json::object({ "scope": Json::string("workbook") })
   // get_defined_names does not raise, so the old `try?`/unwrap_or fallback
   // was unreachable

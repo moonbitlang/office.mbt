@@ -863,7 +863,7 @@ fn docx_run_fidelity_pass(
   state : DocxMergeState,
   session : DocxEditSession,
   annotated : @word.DocxAnnotatedResult,
-) -> Unit raise {
+) -> Unit {
   // fidelity gate: every run ANY match or escape touches must store
   // bytes that decode to exactly its model text — including interior
   // zero-width runs a span crosses (dropped in-run pictures live
