@@ -107,7 +107,7 @@ test "the scan budget is charged and enforced" {
   ignore(@template.scan_placeholders(["12345"], budget))
   assert_eq(budget.val, 5)
   try @template.scan_placeholders(["123456"], budget) |> ignore catch {
-    @template.TemplateScanBudgetExceeded(_) => ()
+    TemplateScanBudgetExceeded(_) => ()
   } noraise {
     _ => fail("expected the budget to reject")
   }
@@ -139,9 +139,9 @@ test "template data parses and types values" {
     ),
   )
   assert_eq(values.length(), 4)
-  assert_eq(values.get("customer"), Some(@template.TextValue("Ada")))
-  assert_eq(values.get("total"), Some(@template.NumberValue(1234.5)))
-  assert_eq(values.get("paid"), Some(@template.BoolValue(true)))
+  assert_eq(values.get("customer"), Some(TextValue("Ada")))
+  assert_eq(values.get("total"), Some(NumberValue(1234.5)))
+  assert_eq(values.get("paid"), Some(BoolValue(true)))
   // deterministic rendering
   assert_eq(@template.TemplateValue::render(TextValue("x")), "x")
   assert_eq(@template.TemplateValue::render(NumberValue(42.0)), "42")
@@ -153,7 +153,7 @@ test "template data parses and types values" {
 test "template data rejections" {
   let reject = (text : String, needle : String) => {
     try @template.parse_template_data(text) |> ignore catch {
-      @template.TemplateDataError(reason) =>
+      TemplateDataError(reason) =>
         if !reason.contains(needle) {
           fail("expected reason containing '\{needle}', got: " + reason)
         }
@@ -202,7 +202,7 @@ test "template data bounds" {
     )
     |> ignore
   catch {
-    @template.TemplateDataError(reason) =>
+    TemplateDataError(reason) =>
       assert_true(reason.contains("exceeds"))
   } noraise {
     _ => fail("expected the value bound to reject")
@@ -214,7 +214,7 @@ test "template data bounds" {
     )
     |> ignore
   catch {
-    @template.TemplateDataError(reason) => assert_true(reason.contains("limit"))
+    TemplateDataError(reason) => assert_true(reason.contains("limit"))
   } noraise {
     _ => fail("expected the key bound to reject")
   }
@@ -231,7 +231,7 @@ test "escaped keys and non-finite numbers are rejected" {
     )
     |> ignore
   catch {
-    @template.TemplateDataError(reason) =>
+    TemplateDataError(reason) =>
       assert_true(reason.contains("escape sequences"))
   } noraise {
     _ => fail("a \\u-spelled duplicate key must not parse")
@@ -242,7 +242,7 @@ test "escaped keys and non-finite numbers are rejected" {
     )
     |> ignore
   catch {
-    @template.TemplateDataError(reason) =>
+    TemplateDataError(reason) =>
       assert_true(reason.contains("finite"))
   } noraise {
     _ => fail("an overflowing numeral must not parse")
@@ -253,7 +253,7 @@ test "escaped keys and non-finite numbers are rejected" {
     )
     |> ignore
   catch {
-    @template.TemplateDataError(_) => ()
+    TemplateDataError(_) => ()
   } noraise {
     _ => fail("a negative overflowing numeral must not parse")
   }

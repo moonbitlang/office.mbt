@@ -13,7 +13,7 @@ import {
 import {
   "bobzhang/mbtexcel/xlsx" @engine,
   "bobzhang/mbtexcel/zip",
-  "bobzhang/office-lib" @office,
+  "bobzhang/office-lib",
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,
   "moonbitlang/core/encoding/utf8",

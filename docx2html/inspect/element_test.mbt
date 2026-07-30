@@ -248,7 +248,7 @@ test "path errors are agent-correctable" {
 ///|
 test "resolve_path returns the element itself" {
   let element = @inspect.resolve_path(sample_document(), "/body/tbl[1]")
-  guard element is Table(..)
+  guard! element is Table(..)
 }
 
 ///|

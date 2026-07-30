@@ -44,13 +44,13 @@ pub fn parse_docx_authoring_script(
   text : String,
 ) -> @docxbatch.BatchScript raise DocxAuthorParseError {
   @docxbatch.check_script_text(text) catch {
-    @docxbatch.BatchError(message) => raise DocxAuthorParseError(message)
+    BatchError(message) => raise DocxAuthorParseError(message)
   }
   let document = @json.parse(text) catch {
     _ => raise DocxAuthorParseError("the authoring script is not valid JSON")
   }
   @docxbatch.parse_batch(document) catch {
-    @docxbatch.BatchError(message) => raise DocxAuthorParseError(message)
+    BatchError(message) => raise DocxAuthorParseError(message)
   }
 }
 
@@ -91,7 +91,7 @@ fn author_docx_failure(
   error : @docxcore.DocxError,
 ) -> @transaction.TransactionError raise @transaction.TransactionError {
   match error {
-    @docxcore.WriteResourceLimit(kind~, limit~, actual~, ..) =>
+    WriteResourceLimit(kind~, limit~, actual~, ..) =>
       docx_failure(
         "office.docx.resource_limit",
         "the authored DOCX exceeded its bounded construction policy",
@@ -167,3 +167,10 @@ pub async fn author_document(
     transaction: report,
   }
 }
+
+///|
+pub extend DocxAuthorParseError with @debug.Debug::{to_repr}
+///|
+pub extend DocxAuthorReport with Eq::{not_equal, equal}
+///|
+pub extend DocxAuthorReport with @debug.Debug::{to_repr}

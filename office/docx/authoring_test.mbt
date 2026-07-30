@@ -101,7 +101,7 @@ async test "author_document --dry-run validates without publishing" {
 test "parse_docx_authoring_script rejects malformed input" {
   fn expect(text : String, fragment : String) -> Unit raise {
     try @docx.parse_docx_authoring_script(text) |> ignore catch {
-      @docx.DocxAuthorParseError(message) =>
+      DocxAuthorParseError(message) =>
         assert_true(message.contains(fragment))
     } noraise {
       _ => fail("expected refusal: " + fragment)

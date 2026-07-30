@@ -38,7 +38,7 @@ test "inexpressible paragraph content residualizes and text degrades" {
   let residual : Array[DumpResidual] = []
   let params = docx_paragraph_params(
     [
-      @document.BookmarkStart("m"),
+      BookmarkStart("m"),
       @document.run([@document.text("styled away")]),
     ],
     @document.paragraph_properties(
@@ -91,7 +91,7 @@ test "degenerate tables residualize instead of aborting" {
   let residual : Array[DumpResidual] = []
   let empty = docx_table_params(
     [],
-    @document.TableProperties::{ style_id: None, style_name: None },
+    { style_id: None, style_name: None },
     0,
     wb_ctx(residual),
   )
@@ -102,10 +102,10 @@ test "degenerate tables residualize instead of aborting" {
   let mixed : Array[DumpResidual] = []
   let params = docx_table_params(
     [
-      @document.TableRow(children=[], is_header=true),
-      @document.TableRow(
+      TableRow(children=[], is_header=true),
+      TableRow(
         children=[
-          @document.TableCell(
+          TableCell(
             children=[
               @document.paragraph([@document.run([@document.text("x")])]),
             ],
@@ -116,7 +116,7 @@ test "degenerate tables residualize instead of aborting" {
         is_header=false,
       ),
     ],
-    @document.TableProperties::{ style_id: None, style_name: None },
+    { style_id: None, style_name: None },
     0,
     wb_ctx(mixed),
   )
@@ -135,14 +135,14 @@ test "comment references are silent in body, disclosed in bodies" {
   // empty segment (that would grow the paragraph every replay cycle)
   let residual : Array[DumpResidual] = []
   let specs = wb_run_specs(
-    [@document.text("kept"), @document.CommentReference("7")],
+    [@document.text("kept"), CommentReference("7")],
     @document.run_properties(),
     residual,
   )
   assert_eq(specs.length(), 1)
   assert_eq(residual.length(), 0)
   let mark_only = wb_run_specs(
-    [@document.CommentReference("7")],
+    [CommentReference("7")],
     @document.run_properties(),
     residual,
   )
@@ -152,7 +152,7 @@ test "comment references are silent in body, disclosed in bodies" {
   let plain_res : Array[DumpResidual] = []
   let out : Array[Json] = []
   docx_run_specs(
-    [@document.CommentReference("7")],
+    [CommentReference("7")],
     @document.run_properties(),
     0,
     wb_ctx(plain_res),
@@ -177,7 +177,7 @@ test "parser-hostile values residualize and the ops still parse" {
   let runs : Array[Json] = []
   docx_inline_specs(
     [
-      @document.Hyperlink(
+      Hyperlink(
         children=[@document.run([@document.text("dead link text")])],
         href=None,
         anchor=None,
@@ -232,10 +232,10 @@ test "parser-hostile values residualize and the ops still parse" {
   }
   let params = docx_table_params(
     [
-      @document.TableRow(children=[cell(64, 1)], is_header=false),
-      @document.TableRow(children=[cell(1, 5)], is_header=false),
+      TableRow(children=[cell(64, 1)], is_header=false),
+      TableRow(children=[cell(1, 5)], is_header=false),
     ],
-    @document.TableProperties::{ style_id: None, style_name: None },
+    { style_id: None, style_name: None },
     0,
     wb_ctx(spans),
   )
@@ -280,7 +280,7 @@ test "run-nested images hoist and capture assets" {
   docx_run_specs(
     [
       @document.text("before"),
-      @document.Image(@document.Image::{
+      Image({
         content_type: "image/png",
         alt_text: Some("logo"),
         data: payload,
@@ -309,7 +309,7 @@ test "run-nested images hoist and capture assets" {
   let out2 : Array[Json] = []
   docx_run_specs(
     [
-      @document.Image(@document.Image::{
+      Image({
         content_type: "image/png",
         alt_text: None,
         data: payload,
@@ -327,7 +327,7 @@ test "run-nested images hoist and capture assets" {
   let out3 : Array[Json] = []
   docx_run_specs(
     [
-      @document.Image(@document.Image::{
+      Image({
         content_type: "image/jpeg",
         alt_text: None,
         data: payload,
@@ -350,7 +350,7 @@ test "run-nested images hoist and capture assets" {
   let out4 : Array[Json] = []
   docx_run_specs(
     [
-      @document.Image(@document.Image::{
+      Image({
         content_type: "",
         alt_text: None,
         data: payload,
@@ -375,7 +375,7 @@ test "run-nested images hoist and capture assets" {
   let out5 : Array[Json] = []
   docx_run_specs(
     [
-      @document.Image(@document.Image::{
+      Image({
         content_type: "image/tiff",
         alt_text: None,
         data: payload,
@@ -421,7 +421,7 @@ test "note references dump their bodies with honest edge handling" {
   docx_run_specs(
     [
       @document.text("ref"),
-      @document.NoteReference(note_type="footnote", note_id="1"),
+      NoteReference(note_type="footnote", note_id="1"),
     ],
     @document.run_properties(),
     0,
@@ -438,7 +438,7 @@ test "note references dump their bodies with honest edge handling" {
   // an unknown id residualizes
   let out2 : Array[Json] = []
   docx_run_specs(
-    [@document.NoteReference(note_type="footnote", note_id="9")],
+    [NoteReference(note_type="footnote", note_id="9")],
     @document.run_properties(),
     1,
     ctx,
@@ -452,7 +452,7 @@ test "note references dump their bodies with honest edge handling" {
   // a note reference inside a note body is forbidden by the grammar
   let out3 : Array[Json] = []
   docx_run_specs(
-    [@document.NoteReference(note_type="footnote", note_id="1")],
+    [NoteReference(note_type="footnote", note_id="1")],
     @document.run_properties(),
     2,
     ctx,
@@ -493,14 +493,14 @@ test "links and images inside note bodies degrade honestly" {
       "1": [
         @document.paragraph([
           @document.run([@document.text("see ")]),
-          @document.Hyperlink(
+          Hyperlink(
             children=[@document.run([@document.text("the source")])],
             href=Some("https://example.com/"),
             anchor=None,
             target_frame=None,
           ),
           @document.run([
-            @document.Image(@document.Image::{
+            Image({
               content_type: "image/png",
               alt_text: None,
               data: b"\x89",
@@ -515,7 +515,7 @@ test "links and images inside note bodies degrade honestly" {
   }
   let out : Array[Json] = []
   docx_run_specs(
-    [@document.NoteReference(note_type="footnote", note_id="1")],
+    [NoteReference(note_type="footnote", note_id="1")],
     @document.run_properties(),
     0,
     ctx,
@@ -562,7 +562,7 @@ test "dedup-first unsupported type cannot poison a later supported use" {
   let out1 : Array[Json] = []
   docx_run_specs(
     [
-      @document.Image(@document.Image::{
+      Image({
         content_type: "image/tiff",
         alt_text: None,
         data: payload,
@@ -583,7 +583,7 @@ test "dedup-first unsupported type cannot poison a later supported use" {
   let out2 : Array[Json] = []
   docx_run_specs(
     [
-      @document.Image(@document.Image::{
+      Image({
         content_type: "image/png",
         alt_text: None,
         data: payload,
@@ -620,7 +620,7 @@ test "unsniffable image payloads residualize via the writer oracle" {
   let out : Array[Json] = []
   docx_run_specs(
     [
-      @document.Image(@document.Image::{
+      Image({
         content_type: "image/png",
         alt_text: None,
         data: b"definitely-not-a-png",
@@ -659,8 +659,8 @@ test "table grid geometry the writer rejects residualizes" {
   // 32 + 32 = 64 effective columns in one row
   let overflow : Array[DumpResidual] = []
   let wide = docx_table_params(
-    [@document.TableRow(children=[cell(32), cell(32)], is_header=false)],
-    @document.TableProperties::{ style_id: None, style_name: None },
+    [TableRow(children=[cell(32), cell(32)], is_header=false)],
+    { style_id: None, style_name: None },
     0,
     wb_ctx(overflow),
   )
@@ -672,10 +672,10 @@ test "table grid geometry the writer rejects residualizes" {
   let uneven : Array[DumpResidual] = []
   let ragged = docx_table_params(
     [
-      @document.TableRow(children=[cell(1), cell(1)], is_header=false),
-      @document.TableRow(children=[cell(1)], is_header=false),
+      TableRow(children=[cell(1), cell(1)], is_header=false),
+      TableRow(children=[cell(1)], is_header=false),
     ],
-    @document.TableProperties::{ style_id: None, style_name: None },
+    { style_id: None, style_name: None },
     0,
     wb_ctx(uneven),
   )
@@ -687,10 +687,10 @@ test "table grid geometry the writer rejects residualizes" {
   let fine : Array[DumpResidual] = []
   let ok = docx_table_params(
     [
-      @document.TableRow(children=[cell(1), cell(1)], is_header=false),
-      @document.TableRow(children=[cell(2)], is_header=false),
+      TableRow(children=[cell(1), cell(1)], is_header=false),
+      TableRow(children=[cell(2)], is_header=false),
     ],
-    @document.TableProperties::{ style_id: None, style_name: None },
+    { style_id: None, style_name: None },
     0,
     wb_ctx(fine),
   )
@@ -720,10 +720,10 @@ test "vmerge tables gate by placement, not raw widths" {
   let merged : Array[DumpResidual] = []
   let ok = docx_table_params(
     [
-      @document.TableRow(children=[cell(1, 2), cell(1, 1)], is_header=false),
-      @document.TableRow(children=[cell(1, 1)], is_header=false),
+      TableRow(children=[cell(1, 2), cell(1, 1)], is_header=false),
+      TableRow(children=[cell(1, 1)], is_header=false),
     ],
-    @document.TableProperties::{ style_id: None, style_name: None },
+    { style_id: None, style_name: None },
     0,
     wb_ctx(merged),
   )
@@ -738,11 +738,11 @@ test "vmerge tables gate by placement, not raw widths" {
   let stripped : Array[DumpResidual] = []
   let dropped = docx_table_params(
     [
-      @document.TableRow(children=[cell(1, 2), cell(1, 2)], is_header=false),
-      @document.TableRow(children=[], is_header=false),
-      @document.TableRow(children=[cell(1, 1), cell(1, 1)], is_header=false),
+      TableRow(children=[cell(1, 2), cell(1, 2)], is_header=false),
+      TableRow(children=[], is_header=false),
+      TableRow(children=[cell(1, 1), cell(1, 1)], is_header=false),
     ],
-    @document.TableProperties::{ style_id: None, style_name: None },
+    { style_id: None, style_name: None },
     0,
     wb_ctx(stripped),
   )
@@ -756,12 +756,12 @@ test "vmerge tables gate by placement, not raw widths" {
   let after_merge : Array[DumpResidual] = []
   let below = docx_table_params(
     [
-      @document.TableRow(children=[cell(1, 2), cell(1, 1)], is_header=false),
-      @document.TableRow(children=[cell(1, 1)], is_header=false),
-      @document.TableRow(children=[], is_header=false),
-      @document.TableRow(children=[cell(1, 1), cell(1, 1)], is_header=false),
+      TableRow(children=[cell(1, 2), cell(1, 1)], is_header=false),
+      TableRow(children=[cell(1, 1)], is_header=false),
+      TableRow(children=[], is_header=false),
+      TableRow(children=[cell(1, 1), cell(1, 1)], is_header=false),
     ],
-    @document.TableProperties::{ style_id: None, style_name: None },
+    { style_id: None, style_name: None },
     0,
     wb_ctx(after_merge),
   )
@@ -781,10 +781,10 @@ test "vmerge tables gate by placement, not raw widths" {
   let plain : Array[DumpResidual] = []
   let survives = docx_table_params(
     [
-      @document.TableRow(children=[], is_header=false),
-      @document.TableRow(children=[cell(1, 1)], is_header=false),
+      TableRow(children=[], is_header=false),
+      TableRow(children=[cell(1, 1)], is_header=false),
     ],
-    @document.TableProperties::{ style_id: None, style_name: None },
+    { style_id: None, style_name: None },
     0,
     wb_ctx(plain),
   )
@@ -794,10 +794,10 @@ test "vmerge tables gate by placement, not raw widths" {
   let ragged : Array[DumpResidual] = []
   let rejected = docx_table_params(
     [
-      @document.TableRow(children=[cell(1, 1), cell(1, 1)], is_header=false),
-      @document.TableRow(children=[cell(1, 1)], is_header=false),
+      TableRow(children=[cell(1, 1), cell(1, 1)], is_header=false),
+      TableRow(children=[cell(1, 1)], is_header=false),
     ],
-    @document.TableProperties::{ style_id: None, style_name: None },
+    { style_id: None, style_name: None },
     0,
     wb_ctx(ragged),
   )
@@ -816,7 +816,7 @@ test "blank image alt drops with disclosure" {
   let out : Array[Json] = []
   docx_run_specs(
     [
-      @document.Image(@document.Image::{
+      Image({
         content_type: "image/png",
         alt_text: Some(" "),
         data: b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\x0d\x49\x44\x41\x54\x78\x9c\x63\xf8\xcf\xc0\xf0\x1f\x00\x00\x00\x05\x00\x01\x5f\xc9\x8e\xd2\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82",

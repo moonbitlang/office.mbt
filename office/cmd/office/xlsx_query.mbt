@@ -8,7 +8,7 @@ let xlsx_cli_max_query_predicates : Int = 16
 let xlsx_cli_max_query_value_chars : Int = 1024
 
 ///|
-enum XlsxCellKind {
+priv enum XlsxCellKind {
   Formula
   Number
   StringValue
@@ -17,7 +17,7 @@ enum XlsxCellKind {
 }
 
 ///|
-enum XlsxNumberOperator {
+priv enum XlsxNumberOperator {
   Greater
   GreaterOrEqual
   Less
@@ -27,7 +27,7 @@ enum XlsxNumberOperator {
 }
 
 ///|
-enum XlsxCellPredicate {
+priv enum XlsxCellPredicate {
   HasType(XlsxCellKind)
   ValueCompare(XlsxNumberOperator, Double)
   HasFormula
@@ -37,7 +37,7 @@ enum XlsxCellPredicate {
 }
 
 ///|
-enum PreparedXlsxCellPredicate {
+priv enum PreparedXlsxCellPredicate {
   PreparedHasType(XlsxCellKind)
   PreparedValueCompare(XlsxNumberOperator, Double)
   PreparedHasFormula
@@ -47,7 +47,7 @@ enum PreparedXlsxCellPredicate {
 }
 
 ///|
-struct XlsxQuerySpec {
+priv struct XlsxQuerySpec {
   selector : String
   predicates : Array[XlsxCellPredicate]
   offset : Int

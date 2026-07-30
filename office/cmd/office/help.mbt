@@ -1,5 +1,5 @@
 ///|
-enum HelpQuery {
+priv enum HelpQuery {
   Overview
   All
   Schemas

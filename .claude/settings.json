@@ -1,0 +1,5 @@
+{
+  "env": {
+    "MOONBIT_NEW_NATIVE": "1"
+  }
+}

@@ -24,3 +24,4 @@ _mbtexcel_check
 .openseek/
 tools/**/bin/
 tools/**/obj/
+.claude/

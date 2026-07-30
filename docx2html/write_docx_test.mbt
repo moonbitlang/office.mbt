@@ -43,7 +43,7 @@ test "written documents are structurally valid and round-trip semantically" {
   // Semantic round trip: the reader reconstructs the written body, ENRICHED
   // with the style names it resolves from the emitted styles part (the one
   // deliberate asymmetry — write takes ids, read resolves names too).
-  guard result.document is Document(children~, ..)
+  guard! result.document is Document(children~, ..)
   let expected = sample_body()
   expected[0] = @docx2html.paragraph(
     [@docx2html.run([@docx2html.text("Quarterly Report")])],
@@ -56,7 +56,7 @@ test "written documents are structurally valid and round-trip semantically" {
   // The written heading is recognized by this repo's own heading detection
   // (style id + emitted styles part with the Mammoth-convention name).
   let payload = @inspect.outline(result.document, file="w.docx")
-  guard payload is Object(fields) && fields.get("headings") is Some(headings)
+  guard! payload is Object(fields) && fields.get("headings") is Some(headings)
   json_inspect(headings, content=[
     {
       "level": 1,
@@ -89,9 +89,9 @@ test "font size survives the write-read round trip exactly" {
     ]),
   ])
   let result = @docx2html.read_docx_package(bytes)
-  guard result.document is Document(children~, ..)
-  guard children is [Paragraph(children=inner, ..)]
-  guard inner is [Run(properties~, ..)]
+  guard! result.document is Document(children~, ..)
+  guard! children is [Paragraph(children=inner, ..)]
+  guard! inner is [Run(properties~, ..)]
   debug_inspect(properties.font_size, content="Some(14)")
 }
 
@@ -233,7 +233,7 @@ test "all-flags formatting round-trips exactly" {
     ]),
   ]
   let result = @docx2html.read_docx_package(@docx2html.write_docx(body))
-  guard result.document is Document(children~, ..)
+  guard! result.document is Document(children~, ..)
   assert_eq(children, body)
 }
 
@@ -280,7 +280,7 @@ test "tables round-trip: header rows, column spans, and row spans" {
   debug_inspect(result.messages, content="[]")
   // The reader strips vMerge continuation cells and reconstructs row_span —
   // exactly the input body.
-  guard result.document is Document(children~, ..)
+  guard! result.document is Document(children~, ..)
   assert_eq(children, body)
 }
 
@@ -398,10 +398,10 @@ test "review round 1 (F2): merge-overlap rejection and the empty-cell asymmetry"
     ]),
   ]
   let result = @docx2html.read_docx_package(@docx2html.write_docx(body))
-  guard result.document is Document(children~, ..)
-  guard children is [Table(children=rows, ..)]
-  guard rows is [TableRow(children=cells, ..)]
-  guard cells is [TableCell(children=first_cell, ..), _]
+  guard! result.document is Document(children~, ..)
+  guard! children is [Table(children=rows, ..)]
+  guard! rows is [TableRow(children=cells, ..)]
+  guard! cells is [TableCell(children=first_cell, ..), _]
   debug_inspect(
     first_cell,
     content=(
@@ -448,7 +448,7 @@ test "lists round-trip: ordered and unordered at several levels" {
   debug_inspect(@opc.validate_docx_package(bytes), content="[]")
   let result = @docx2html.read_docx_package(bytes)
   debug_inspect(result.messages, content="[]")
-  guard result.document is Document(children~, ..)
+  guard! result.document is Document(children~, ..)
   assert_eq(children, body)
   // The converter renders the shallow levels as real lists; its deep-level
   // fallback to a plain paragraph for level 9 is pre-existing Mammoth
@@ -509,7 +509,7 @@ test "hyperlinks and images round-trip" {
   debug_inspect(@opc.validate_docx_package(bytes), content="[]")
   let result = @docx2html.read_docx_package(bytes)
   debug_inspect(result.messages, content="[]")
-  guard result.document is Document(children~, ..)
+  guard! result.document is Document(children~, ..)
   assert_eq(children, body)
   // The converter emits a data-URI img and a real link.
   inspect(
@@ -529,7 +529,7 @@ test "image dimensions are parsed from real headers" {
     ]),
   ])
   let archive = @mbtzip.read(bytes)
-  guard archive.get("word/document.xml") is Some(doc)
+  guard! archive.get("word/document.xml") is Some(doc)
   let text = @utf8.decode(doc, ignore_bom=true)
   inspect(text.find("cx=\"95250\" cy=\"95250\"") is Some(_), content="true")
 }
@@ -635,7 +635,7 @@ test "multiple images and images inside hyperlinks and cells round-trip" {
   debug_inspect(@opc.validate_docx_package(bytes), content="[]")
   let result = @docx2html.read_docx_package(bytes)
   debug_inspect(result.messages, content="[]")
-  guard result.document is Document(children~, ..)
+  guard! result.document is Document(children~, ..)
   assert_eq(children, body)
   // Three distinct media parts were emitted.
   let archive = @mbtzip.read(bytes)
@@ -658,7 +658,7 @@ test "F4 round 2: wide-image extents and direct header truncation pins" {
     @docx2html.paragraph([@docx2html.run([@docx2html.image("image/png", wide)])]),
   ])
   let archive = @mbtzip.read(bytes)
-  guard archive.get("word/document.xml") is Some(doc)
+  guard! archive.get("word/document.xml") is Some(doc)
   let text = @utf8.decode(doc, ignore_bom=true)
   inspect(text.find("cx=\"2857500000\"") is Some(_), content="true")
   // PNG whose IHDR length field is not 13 is rejected.
@@ -759,7 +759,7 @@ test "review round 3 (batch): XML-unrepresentable characters and highlight 'none
   // A lone surrogate reaches the writer only via parsed input (MoonBit
   // literals cannot spell one), and U+FFFF is a valid scalar but outside
   // XML 1.0's character set.
-  guard @json.parse("\"a\\ud800b\"") is String(lone_surrogate)
+  guard! @json.parse("\"a\\ud800b\"") is String(lone_surrogate)
   expect_unsupported(
     [@docx2html.paragraph([@docx2html.run([@docx2html.text(lone_surrogate)])])],
     "text contains a character XML cannot represent (code 55296",
@@ -853,8 +853,8 @@ test "review round 2 (batch): a batch-built document reads back with the scripte
   let bytes = @docx2html.write_docx(script.build_body(Map([])))
   let result = @docx2html.read_docx_package(bytes)
   debug_inspect(result.messages.length(), content="0")
-  guard result.document is Document(children~, ..)
-  guard children
+  guard! result.document is Document(children~, ..)
+  guard! children
     is [
       Paragraph(properties=title_props, ..),
       Paragraph(children=styled_children, properties=styled_props),
@@ -866,7 +866,7 @@ test "review round 2 (batch): a batch-built document reads back with the scripte
   // documented write/read asymmetry this test tolerates).
   debug_inspect(title_props.style_name, content="Some(\"heading 2\")")
   debug_inspect(styled_props.alignment, content="Some(\"center\")")
-  guard styled_children
+  guard! styled_children
     is [
       Run(properties=loud, ..),
       Run(properties=down, ..),
@@ -876,9 +876,9 @@ test "review round 2 (batch): a batch-built document reads back with the scripte
   debug_inspect(loud.is_all_caps, content="true")
   debug_inspect(loud.font_size, content="Some(14)")
   debug_inspect(loud.highlight, content="Some(\"yellow\")")
-  debug_inspect(to_repr(down.vertical_alignment), content="Subscript")
+  debug_inspect(Repr(down.vertical_alignment), content="Subscript")
   debug_inspect(link_href, content="Some(\"https://example.com/x\")")
-  guard link_children is [Run(properties=link_run, ..)]
+  guard! link_children is [Run(properties=link_run, ..)]
   debug_inspect(link_run.is_italic, content="true")
   debug_inspect(
     list_props.numbering,
@@ -886,14 +886,14 @@ test "review round 2 (batch): a batch-built document reads back with the scripte
       #|Some({ is_ordered: true, level: 3 })
     ),
   )
-  guard table_rows
+  guard! table_rows
     is [
       TableRow(children=header_cells, is_header=header_flag),
       TableRow(children=data_cells, ..),
     ]
   debug_inspect(header_flag, content="true")
   debug_inspect(header_cells.length(), content="2")
-  guard data_cells is [TableCell(col_span~, ..)]
+  guard! data_cells is [TableCell(col_span~, ..)]
   debug_inspect(col_span, content="2")
 }
 
@@ -952,7 +952,7 @@ test "K1: written comments round-trip through the annotation index" {
   let annotated = @docx2html.read_docx_annotated(bytes)
   // The agent-facing outline inventory: both comments, dense ids, no
   // diagnostics.
-  guard @inspect.annotated_outline(annotated, file="c.docx") is Object(outline)
+  guard! @inspect.annotated_outline(annotated, file="c.docx") is Object(outline)
   json_inspect(outline.get("comments"), content=[
     [
       { "id": "0", "author": "Reviewer", "anchored_to": "/body/p[1]" },
@@ -1024,7 +1024,7 @@ test "K1: written comments round-trip through the annotation index" {
     },
   )
   // Reverse link: a covered body paragraph names its covering comment.
-  guard @inspect.annotated_element(annotated, file="c.docx", path="/body/p[2]")
+  guard! @inspect.annotated_element(annotated, file="c.docx", path="/body/p[2]")
     is Object(covered)
   json_inspect(covered.get("comment_ids"), content=[["1"]])
 }
@@ -1049,7 +1049,7 @@ test "K1: anchors are emitted in the canonical intra-paragraph shape" {
     ),
   ])
   let archive = @mbtzip.read(bytes)
-  guard archive.get("word/document.xml") is Some(doc)
+  guard! archive.get("word/document.xml") is Some(doc)
   let text = @utf8.decode(doc, ignore_bom=true)
   // Range starts sit right after pPr, in ascending id order.
   inspect(
@@ -1068,7 +1068,7 @@ test "K1: anchors are emitted in the canonical intra-paragraph shape" {
     content="true",
   )
   // Definitions: dense ids and verbatim metadata in word/comments.xml.
-  guard archive.get("word/comments.xml") is Some(part)
+  guard! archive.get("word/comments.xml") is Some(part)
   let comments_text = @utf8.decode(part, ignore_bom=true)
   inspect(
     comments_text.find("<w:comment w:id=\"0\" w:author=\"A\">") is Some(_),
@@ -1084,7 +1084,7 @@ test "K1: anchors are emitted in the canonical intra-paragraph shape" {
     content="true",
   )
   // The comments part hangs off the MAIN document part, found by type.
-  guard archive.get("word/_rels/document.xml.rels") is Some(rels)
+  guard! archive.get("word/_rels/document.xml.rels") is Some(rels)
   inspect(
     @utf8.decode(rels, ignore_bom=true).find(
       "officeDocument/2006/relationships/comments",
@@ -1223,7 +1223,7 @@ test "K1: a comment on an empty paragraph round-trips" {
   ])
   debug_inspect(@opc.validate_docx_package(bytes), content="[]")
   let annotated = @docx2html.read_docx_annotated(bytes)
-  guard @inspect.annotated_element(
+  guard! @inspect.annotated_element(
       annotated,
       file="b.docx",
       path="/comments/comment[@id=0]",
@@ -1339,7 +1339,7 @@ test "K2: a threaded, resolved conversation round-trips through the index" {
   ])
   debug_inspect(@opc.validate_docx_package(bytes), content="[]")
   let annotated = @docx2html.read_docx_annotated(bytes)
-  guard @inspect.annotated_outline(annotated, file="t.docx") is Object(outline)
+  guard! @inspect.annotated_outline(annotated, file="t.docx") is Object(outline)
   json_inspect(outline.get("comments"), content=[
     [
       { "id": "0", "author": "Ada", "done": false, "anchored_to": "/body/p[1]" },
@@ -1371,7 +1371,7 @@ test "K2: a threaded, resolved conversation round-trips through the index" {
   // Byte level: the parent's commentEx key is its SECOND paragraph's
   // paraId; the reply links via paraIdParent; done round-trips.
   let archive = @mbtzip.read(bytes)
-  guard archive.get("word/comments.xml") is Some(comments_part)
+  guard! archive.get("word/comments.xml") is Some(comments_part)
   let comments_text = @utf8.decode(comments_part, ignore_bom=true)
   inspect(comments_text.find("mc:Ignorable=\"w14\"") is Some(_), content="true")
   // Dense paraIds: parent paragraphs 1+2, reply bodies 3 and 4.
@@ -1382,7 +1382,7 @@ test "K2: a threaded, resolved conversation round-trips through the index" {
     ] {
     inspect(comments_text.find(stamp) is Some(_), content="true")
   }
-  guard archive.get("word/commentsExtended.xml") is Some(extended_part)
+  guard! archive.get("word/commentsExtended.xml") is Some(extended_part)
   let extended_text = @utf8.decode(extended_part, ignore_bom=true)
   inspect(extended_text.find("mc:Ignorable=\"w15\"") is Some(_), content="true")
   inspect(
@@ -1407,7 +1407,7 @@ test "K2: a threaded, resolved conversation round-trips through the index" {
     content="true",
   )
   // Replies are anchorless: only the parent's markers exist in the body.
-  guard archive.get("word/document.xml") is Some(doc)
+  guard! archive.get("word/document.xml") is Some(doc)
   let text = @utf8.decode(doc, ignore_bom=true)
   inspect(text.find("commentRangeStart w:id=\"1\"") is Some(_), content="false")
   inspect(text.find("commentReference w:id=\"1\"") is Some(_), content="false")
@@ -1424,7 +1424,7 @@ test "K2: threading-free output stays byte-identical to the K1 writer" {
   )
   let archive = @mbtzip.read(bytes)
   inspect(archive.get("word/commentsExtended.xml") is Some(_), content="false")
-  guard archive.get("word/comments.xml") is Some(part)
+  guard! archive.get("word/comments.xml") is Some(part)
   inspect(
     @utf8.decode(part, ignore_bom=true).find("w14") is Some(_),
     content="false",
@@ -1480,7 +1480,7 @@ test "K2: resolve-without-reply triggers the extended part on its own" {
   )
   debug_inspect(@opc.validate_docx_package(bytes), content="[]")
   let archive = @mbtzip.read(bytes)
-  guard archive.get("word/commentsExtended.xml") is Some(part)
+  guard! archive.get("word/commentsExtended.xml") is Some(part)
   let extended_text = @utf8.decode(part, ignore_bom=true)
   inspect(
     extended_text.find(
@@ -1532,7 +1532,7 @@ test "K3: written footnotes and endnotes round-trip through the index" {
   )
   debug_inspect(@opc.validate_docx_package(bytes), content="[]")
   let annotated = @docx2html.read_docx_annotated(bytes)
-  guard @inspect.annotated_outline(annotated, file="n.docx") is Object(outline)
+  guard! @inspect.annotated_outline(annotated, file="n.docx") is Object(outline)
   json_inspect(outline.get("messages"), content=[[]])
   json_inspect(outline.get("counts"), content=[
     {
@@ -1567,7 +1567,7 @@ test "K3: written footnotes and endnotes round-trip through the index" {
     "/body/p[1]/r[2]",
   ])
   // Note bodies are readable stories.
-  guard @inspect.annotated_element(
+  guard! @inspect.annotated_element(
       annotated,
       file="n.docx",
       path="/footnotes/note[@id=2]/p[2]",
@@ -1577,7 +1577,7 @@ test "K3: written footnotes and endnotes round-trip through the index" {
   // Byte level: plumbing ids -1/0, content ids from 1, the in-note mark
   // run heading the first paragraph.
   let archive = @mbtzip.read(bytes)
-  guard archive.get("word/footnotes.xml") is Some(part)
+  guard! archive.get("word/footnotes.xml") is Some(part)
   let text = @utf8.decode(part, ignore_bom=true)
   inspect(
     text.find("w:type=\"separator\" w:id=\"-1\"") is Some(_) ||
@@ -1589,7 +1589,7 @@ test "K3: written footnotes and endnotes round-trip through the index" {
     is Some(_),
     content="true",
   )
-  guard archive.get("word/endnotes.xml") is Some(endnote_part)
+  guard! archive.get("word/endnotes.xml") is Some(endnote_part)
   inspect(
     @utf8.decode(endnote_part, ignore_bom=true).find(
       "<w:endnote w:id=\"1\"><w:p><w:r><w:endnoteRef/></w:r>",
@@ -1705,12 +1705,12 @@ test "L0: body paragraph spans resolve through the public query" {
   inspect(annotated.main_story_part(), content="word/document.xml")
   // The heading paragraph: content_start sits past its pPr, and the
   // interior slice holds exactly the run.
-  guard annotated.body_paragraph_span("p[1]") is Some(span)
+  guard! annotated.body_paragraph_span("p[1]") is Some(span)
   inspect(span.self_closing(), content="false")
-  guard span.content_start() is Some(content_start)
-  guard span.close_tag_start() is Some(close_start)
+  guard! span.content_start() is Some(content_start)
+  guard! span.close_tag_start() is Some(close_start)
   let archive = @mbtzip.read(bytes)
-  guard archive.get("word/document.xml") is Some(part)
+  guard! archive.get("word/document.xml") is Some(part)
   let text = @utf8.decode(part, ignore_bom=true)
   let interior = text
     .view(start_offset=content_start, end_offset=close_start)
@@ -1765,7 +1765,7 @@ test "L0: a self-closing paragraph rewrites to open form by its own span" {
   builder.add_part("word/styles.xml", @utf8.encode(styles))
   let original = builder.build()
   let annotated = @docx2html.read_docx_annotated(original)
-  guard annotated.body_paragraph_span("p[1]") is Some(span)
+  guard! annotated.body_paragraph_span("p[1]") is Some(span)
   inspect(span.self_closing(), content="true")
   inspect(span.content_start() is Some(_), content="false")
   let plan = @splice.SplicePlan::new()
@@ -1780,21 +1780,21 @@ test "L0: a self-closing paragraph rewrites to open form by its own span" {
   let spliced = @splice.splice_docx(original, plan)
   debug_inspect(@opc.validate_docx_package(spliced), content="[]")
   let after = @docx2html.read_docx_annotated(spliced)
-  guard after.body_paragraph_span("p[1]") is Some(rewritten)
+  guard! after.body_paragraph_span("p[1]") is Some(rewritten)
   inspect(rewritten.self_closing(), content="false")
   // Fidelity: everything outside the rewritten node's own span is the
   // original bytes.
   let archive = @mbtzip.read(original)
   let out = @mbtzip.read(spliced)
-  guard archive.get("word/document.xml") is Some(before_doc)
-  guard out.get("word/document.xml") is Some(after_doc)
+  guard! archive.get("word/document.xml") is Some(before_doc)
+  guard! out.get("word/document.xml") is Some(after_doc)
   let expected = Buffer()
   expected.write_bytesview(before_doc[0:span.byte_start()])
   expected.write_bytes(@utf8.encode("<w:p><w:r><w:t>filled</w:t></w:r></w:p>"))
   expected.write_bytesview(before_doc[span.byte_end():])
   inspect(after_doc == expected.contents(), content="true")
-  guard archive.get("word/styles.xml") is Some(styles_before)
-  guard out.get("word/styles.xml") is Some(styles_after)
+  guard! archive.get("word/styles.xml") is Some(styles_before)
+  guard! out.get("word/styles.xml") is Some(styles_after)
   inspect(styles_before == styles_after, content="true")
 }
 
@@ -1830,7 +1830,7 @@ test "L0 review round 1: a self-closing run rewrites by its own span (alternate 
   let original = builder.build()
   let annotated = @docx2html.read_docx_annotated(original)
   // The run is found under the ALTERNATE prefix and flagged interiorless.
-  guard annotated.body_run_span("p[1]/r[1]") is Some(run_span)
+  guard! annotated.body_run_span("p[1]/r[1]") is Some(run_span)
   inspect(run_span.self_closing(), content="true")
   let wml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
   let plan = @splice.SplicePlan::new()
@@ -1845,11 +1845,11 @@ test "L0 review round 1: a self-closing run rewrites by its own span (alternate 
   let spliced = @splice.splice_docx(original, plan)
   debug_inspect(@opc.validate_docx_package(spliced), content="[]")
   let after = @docx2html.read_docx_annotated(spliced)
-  guard after.body_run_span("p[1]/r[1]") is Some(rewritten)
+  guard! after.body_run_span("p[1]/r[1]") is Some(rewritten)
   inspect(rewritten.self_closing(), content="false")
-  guard after.result().document is Document(children~, ..)
-  guard children is [Paragraph(children=inner, ..), ..]
-  guard inner is [Run(children=run_children, ..), ..]
+  guard! after.result().document is Document(children~, ..)
+  guard! children is [Paragraph(children=inner, ..), ..]
+  guard! inner is [Run(children=run_children, ..), ..]
   debug_inspect(
     run_children,
     content=(
@@ -1869,8 +1869,8 @@ test "story_run_span matches body_run_span for the body story" {
     ]),
   ])
   let annotated = @docx2html.read_docx_annotated(bytes)
-  guard annotated.body_run_span("p[1]/r[2]") is Some(by_body)
-  guard annotated.story_run_span("/body", "p[1]/r[2]") is Some(by_story)
+  guard! annotated.body_run_span("p[1]/r[2]") is Some(by_body)
+  guard! annotated.story_run_span("/body", "p[1]/r[2]") is Some(by_story)
   inspect(by_story.byte_start() == by_body.byte_start(), content="true")
   inspect(by_story.byte_end() == by_body.byte_end(), content="true")
   inspect(by_story.content_start() == by_body.content_start(), content="true")
@@ -1908,7 +1908,7 @@ test "story_row_span resolves table rows in the body story" {
     ]),
   ])
   let annotated = @docx2html.read_docx_annotated(bytes)
-  guard annotated.story_row_span("/body", "tbl[1]/tr[2]") is Some(span)
+  guard! annotated.story_row_span("/body", "tbl[1]/tr[2]") is Some(span)
   let part = annotated.main_story_source().part()
   let archive = @mbtzip.read(bytes)
   guard archive.get(part) is Some(source) else {

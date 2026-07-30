@@ -23,7 +23,7 @@ let docx_cli_max_warnings : Int = 128
 let docx_cli_projection_yield_elements : Int = 256
 
 ///|
-enum DocxProjectionRole {
+priv enum DocxProjectionRole {
   StoryRoot
   AnnotationCollection
   AnnotationItem
@@ -31,7 +31,7 @@ enum DocxProjectionRole {
 }
 
 ///|
-struct DocxProjectionEntry {
+priv struct DocxProjectionEntry {
   path : String
   parent : String?
   kind : String
@@ -46,7 +46,7 @@ struct DocxProjectionEntry {
 }
 
 ///|
-struct DocxProjection {
+priv struct DocxProjection {
   file : String
   annotated : @docx.DocxAnnotatedResult
   entries : Array[DocxProjectionEntry]
@@ -57,13 +57,13 @@ struct DocxProjection {
 }
 
 ///|
-struct AnnotationDetails {
+priv struct AnnotationDetails {
   metadata : Json
   properties : Map[String, String]
 }
 
 ///|
-struct AnnotationStoryPlan {
+priv struct AnnotationStoryPlan {
   story : String
   kind : String
   pairs : Array[(String, Array[@document.DocumentElement])]
@@ -74,7 +74,7 @@ struct AnnotationStoryPlan {
 }
 
 ///|
-struct AnnotationProjectionIndex {
+priv struct AnnotationProjectionIndex {
   comments : Array[@docx.CommentInfo]
   comment_anchors : @sorted_map.SortedMap[String, Json]
   footnote_references : @sorted_map.SortedMap[String, Json]
@@ -82,7 +82,7 @@ struct AnnotationProjectionIndex {
 }
 
 ///|
-struct DocxProjectionBuilder {
+priv struct DocxProjectionBuilder {
   max_elements : Int
   entries : Array[DocxProjectionEntry]
   entry_index : @sorted_map.SortedMap[String, Int]
