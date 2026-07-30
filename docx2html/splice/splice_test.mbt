@@ -66,7 +66,7 @@ test "L0: splicing edits exactly the spans and preserves everything else" {
   let plan = @splice.SplicePlan::new()
   // Insert <x/> before </r> in a.xml (offset computed, not guessed).
   let a_text = "<r><a/></r>"
-  guard a_text.find("</r>") is Some(insert_at)
+  guard! a_text.find("</r>") is Some(insert_at)
   plan.edit_part(
     "a.xml",
     @splice.span_edit(start=insert_at, end=insert_at, @utf8.encode("<x/>")),
@@ -75,10 +75,10 @@ test "L0: splicing edits exactly the spans and preserves everything else" {
   let spliced = @splice.splice_docx(original, plan)
   let output = @mbtzip.read(spliced)
   // The edited part is the manual splice of the original bytes.
-  guard output.get("a.xml") is Some(a_bytes)
+  guard! output.get("a.xml") is Some(a_bytes)
   inspect(@utf8.decode(a_bytes, ignore_bom=true), content="<r><a/><x/></r>")
   // Untouched entries: payload equality AND kept compression method.
-  guard output.get("b.bin") is Some(b_bytes)
+  guard! output.get("b.bin") is Some(b_bytes)
   inspect(b_bytes == b"\x00\x01\x02\x03binary payload", content="true")
   let mut b_compression = ""
   for entry in output.entries() {
@@ -102,7 +102,7 @@ test "L0: splicing edits exactly the spans and preserves everything else" {
   let unchanged = @splice.splice_docx(original, @splice.SplicePlan::new())
   assert_eq(unchanged, original)
   let repacked = @mbtzip.read(unchanged)
-  guard repacked.get("c.xml") is Some(c_bytes)
+  guard! repacked.get("c.xml") is Some(c_bytes)
   inspect(c_bytes == @utf8.encode("<c/>"), content="true")
 }
 
@@ -121,12 +121,12 @@ test "L0: archive validation ignores deterministic hash clustering" {
 test "D1: source-pinned plans compose and serialize through a hard ceiling" {
   let original = tiny_package()
   let archive = @mbtzip.read(original)
-  guard archive.get("a.xml") is Some(a_bytes)
-  guard archive.get("c.xml") is Some(c_bytes)
+  guard! archive.get("a.xml") is Some(a_bytes)
+  guard! archive.get("c.xml") is Some(c_bytes)
   let first = @splice.SplicePlan::new()
   first.pin_part("a.xml", a_bytes)
   let a_text = "<r><a/></r>"
-  guard a_text.find("</r>") is Some(a_insert)
+  guard! a_text.find("</r>") is Some(a_insert)
   first.edit_part(
     "a.xml",
     @splice.span_edit(start=a_insert, end=a_insert, @utf8.encode("<x/>")),
@@ -298,7 +298,7 @@ test "D1: splice XML parser budget is shared across edited parts" {
 ///|
 test "D1: stale, unpinned, conflicting, and noncanonical plans fail closed" {
   let archive = @mbtzip.read(tiny_package())
-  guard archive.get("a.xml") is Some(a_bytes)
+  guard! archive.get("a.xml") is Some(a_bytes)
   let pinned = @splice.SplicePlan::new()
   pinned.pin_part("a.xml", a_bytes)
   pinned.edit_part(
@@ -569,20 +569,20 @@ test "L0: duplicate zip entries and foreign encodings fail closed" {
   let utf8_bytes = @mbtzip.write(utf8_decl)
   let plan_utf8 = @splice.SplicePlan::new()
   let source = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><r></r>"
-  guard source.find("</r>") is Some(at)
+  guard! source.find("</r>") is Some(at)
   plan_utf8.edit_part(
     "u.xml",
     @splice.span_edit(start=at, end=at, @utf8.encode("<ok/>")),
   )
   let out = @mbtzip.read(@splice.splice_docx(utf8_bytes, plan_utf8))
-  guard out.get("u.xml") is Some(u_bytes)
+  guard! out.get("u.xml") is Some(u_bytes)
   inspect(
     @utf8.decode(u_bytes, ignore_bom=true).find("<ok/>") is Some(_),
     content="true",
   )
   // The declaration is part of the edited result's semantics, so changing a
   // valid UTF-8 source to a foreign declaration must be rejected as well.
-  guard source.find("UTF-8") is Some(encoding_at)
+  guard! source.find("UTF-8") is Some(encoding_at)
   let rewritten_declaration = @splice.SplicePlan::new()
   rewritten_declaration.edit_part(
     "u.xml",
@@ -655,13 +655,13 @@ test "L0 review round 2: 'encoding' inside a quoted value cannot fool the gate" 
   canonical.add("c.xml", @utf8.encode(canonical_source))
   let canonical_bytes = @mbtzip.write(canonical)
   let plan_ok = @splice.SplicePlan::new()
-  guard canonical_source.find("</r>") is Some(at)
+  guard! canonical_source.find("</r>") is Some(at)
   plan_ok.edit_part(
     "c.xml",
     @splice.span_edit(start=at, end=at, @utf8.encode("<fine/>")),
   )
   let out = @mbtzip.read(@splice.splice_docx(canonical_bytes, plan_ok))
-  guard out.get("c.xml") is Some(c_bytes)
+  guard! out.get("c.xml") is Some(c_bytes)
   inspect(
     @utf8.decode(c_bytes, ignore_bom=true).find("<fine/>") is Some(_),
     content="true",
@@ -671,7 +671,7 @@ test "L0 review round 2: 'encoding' inside a quoted value cannot fool the gate" 
   plain.add("p.xml", @utf8.encode("<?xml version=\"1.0\"?><r></r>"))
   let plain_bytes = @mbtzip.write(plain)
   let plan_plain = @splice.SplicePlan::new()
-  guard "<?xml version=\"1.0\"?><r></r>".find("</r>") is Some(plain_at)
+  guard! "<?xml version=\"1.0\"?><r></r>".find("</r>") is Some(plain_at)
   plan_plain.edit_part(
     "p.xml",
     @splice.span_edit(start=plain_at, end=plain_at, @utf8.encode("<ok/>")),
@@ -710,12 +710,12 @@ test "L0 review round 3: the declaration walker enforces the XML grammar" {
   pi.add("pi.xml", @utf8.encode(pi_source))
   let pi_bytes = @mbtzip.write(pi)
   let pi_plan = @splice.SplicePlan::new()
-  guard pi_source.find("</r>") is Some(pi_at)
+  guard! pi_source.find("</r>") is Some(pi_at)
   pi_plan.edit_part(
     "pi.xml",
     @splice.span_edit(start=pi_at, end=pi_at, @utf8.encode("<ok/>")),
   )
-  guard @mbtzip.read(@splice.splice_docx(pi_bytes, pi_plan)).get("pi.xml")
+  guard! @mbtzip.read(@splice.splice_docx(pi_bytes, pi_plan)).get("pi.xml")
     is Some(pi_result)
   inspect(
     @utf8.decode(pi_result, ignore_bom=true),
@@ -751,7 +751,7 @@ test "L0 review round 4: the declaration grammar is positional" {
   fine.add("f.xml", @utf8.encode(fine_source))
   let fine_bytes = @mbtzip.write(fine)
   let plan_fine = @splice.SplicePlan::new()
-  guard fine_source.find("</r>") is Some(at)
+  guard! fine_source.find("</r>") is Some(at)
   plan_fine.edit_part(
     "f.xml",
     @splice.span_edit(start=at, end=at, @utf8.encode("<ok/>")),
@@ -794,12 +794,12 @@ test "default splice budget accepts ordinary namespace-dense OOXML" {
   let archive = @mbtzip.Archive::new()
   archive.add("word/document.xml", @utf8.encode(source_text))
   let plan = @splice.SplicePlan::new()
-  guard source_text.find("</w:body>") is Some(insert_at)
+  guard! source_text.find("</w:body>") is Some(insert_at)
   plan.edit_part(
     "word/document.xml",
     @splice.span_edit(start=insert_at, end=insert_at, b""),
   )
   let result = @mbtzip.read(@splice.splice_docx(@mbtzip.write(archive), plan))
-  guard result.get("word/document.xml") is Some(actual)
+  guard! result.get("word/document.xml") is Some(actual)
   assert_eq(@utf8.decode(actual, ignore_bom=true), source_text)
 }
