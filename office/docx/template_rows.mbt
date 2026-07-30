@@ -21,16 +21,6 @@ let w14_ns : String = "http://schemas.microsoft.com/office/word/2010/wordml"
 let xml_builtin_ns : String = "http://www.w3.org/XML/1998/namespace"
 
 ///|
-/// One attribute token: expanded name plus the byte span of the WHOLE
-/// token including its leading whitespace run (deleting the span leaves
-/// well-formed remaining whitespace).
-priv struct RowAttrToken {
-  name : String
-  token_start : Int
-  token_end : Int
-}
-
-///|
 /// The gate's outcome over one row region: spans to strip from every
 /// clone (paraId/textId attribute tokens, ascending), or the first
 /// refusal (byte offset + reason).
@@ -125,8 +115,8 @@ fn row_attr_value(bytes : BytesView, start : Int, end : Int) -> String? {
 /// constructs, proofErr range markers, drawings, pictures, fields,
 /// content controls, vertical merges, nested tables, unknown
 /// namespaces — refuses.
-fn row_element_allowed(local : String) -> Bool {
-  match local {
+fn row_element_allowed(element : String) -> Bool {
+  match element {
     "tr"
     | "trPr"
     | "trHeight"
@@ -413,7 +403,7 @@ fn row_safety_gate(
     // and same-tag namespace declarations
     let attrs : Array[(String, Int, Int, Int, Int)] = []
     // (raw name, token_start, token_end, value_start, value_end)
-    let tag_bindings : Map[String, String] = {}
+    let tag_bindings : Map[String, String] = Map([])
     let mut cursor = name_end
     while cursor < inner_end {
       let ws_start = cursor
@@ -633,7 +623,7 @@ fn part_bindings_at(part : BytesView, offset : Int) -> Map[String, String]? {
     let self_closing = part[tag_end - 1] == b'/'
     // exclude the self-closing slash from attribute scanning
     let attr_limit = if self_closing { tag_end - 1 } else { tag_end }
-    let bindings : Map[String, String] = {}
+    let bindings : Map[String, String] = Map([])
     let mut cursor = index + 1
     while cursor < attr_limit &&
           (row_byte_is_name(part[cursor]) || part[cursor] == b':') {
@@ -685,7 +675,7 @@ fn part_bindings_at(part : BytesView, offset : Int) -> Map[String, String]? {
     }
     index = tag_end + 1
   }
-  let flattened : Map[String, String] = {}
+  let flattened : Map[String, String] = Map([])
   for frame in frames {
     for prefix, uri in frame {
       flattened[prefix] = uri
@@ -724,7 +714,6 @@ let docx_clone_byte_guard : Int = 8 * 1024 * 1024
 priv struct DocxRegionPlan {
   name : String
   source_location : String
-  tr_path : String
   span_start : Int
   span_end : Int
   strip_spans : Array[(Int, Int)]
@@ -890,8 +879,7 @@ pub async fn transact_docx_template_document(
           plans.push({
             name: region.name,
             source_location: "/docx/body/" + tr_path,
-            tr_path,
-            span_start: span.byte_start(),
+              span_start: span.byte_start(),
             span_end: span.byte_end(),
             strip_spans: gate.strip_spans,
             paragraphs: row_paragraphs,
@@ -969,7 +957,7 @@ pub async fn transact_docx_template_document(
         if aborted {
           break
         }
-        let merged : Map[String, @template.TemplateValue] = {}
+        let merged : Map[String, @template.TemplateValue] = Map([])
         for key, value in data.values {
           merged[key] = value
         }
@@ -1318,3 +1306,8 @@ fn docx_build_row_clone(
   builder.write_bytesview(row[cursor:])
   Some(builder.contents())
 }
+
+///|
+pub extend DocxRegionOutcome with Eq::{not_equal, equal}
+///|
+pub extend DocxRegionOutcome with @debug.Debug::{to_repr}

@@ -116,7 +116,7 @@ async test "docx template refuses missing keys without publishing" {
       permission=0o600,
     )
     let output = directory + "/never.docx"
-    let values : Map[String, @template.TemplateValue] = {}
+    let values : Map[String, @template.TemplateValue] = Map([])
     try
       @docx.transact_docx_template(
         @transaction.transaction_options(input, output_path=output),
@@ -211,7 +211,7 @@ async test "a dropped in-run picture cannot be crossed by a placeholder" {
     let report = docx_template_bytes_case(
       directory,
       "<w:r><w:t>{</w:t></w:r><w:r><w:pict></w:pict></w:r><w:r><w:t>{k}}</w:t></w:r>",
-      { "k": @template.TextValue("VALUE") },
+      { "k": TextValue("VALUE") },
       false,
     )
     assert_true(report.unsupported_total >= 1)

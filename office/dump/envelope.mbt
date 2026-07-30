@@ -98,7 +98,7 @@ pub fn DumpEnvelope::to_json_document(self : DumpEnvelope) -> Json {
     "replay": Json::object(replay),
     "ops": Json::array(self.ops),
     "assets": {
-      let assets : Map[String, Json] = {}
+      let assets : Map[String, Json] = Map([])
       for id, asset in self.assets {
         assets[id] = asset.to_json()
       }
@@ -214,3 +214,16 @@ pub fn sha256_hex_bytes(data : BytesView) -> String {
 pub fn sha256_hex_string(text : String) -> String {
   @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(text)))
 }
+
+///|
+pub extend DumpAsset with Eq::{not_equal, equal}
+///|
+pub extend DumpAsset with ToJson::{to_json}
+///|
+pub extend DumpResidual with Eq::{not_equal, equal}
+///|
+pub extend DumpResidual with ToJson::{to_json}
+///|
+pub extend DumpWarning with Eq::{not_equal, equal}
+///|
+pub extend DumpWarning with ToJson::{to_json}

@@ -44,7 +44,7 @@ fn docx_offset_note_refs(
             "built note reference carries a non-numeric id '\{note_id}'",
           )
         }
-        @document.DocumentElement::NoteReference(
+        NoteReference(
           note_type~,
           note_id=(index + offset).to_string(),
         )
@@ -89,11 +89,11 @@ fn docx_assemble_ops(
       "ops": Json::array(chunk),
     })
     let parsed = @docx_batch.parse_batch(script) catch {
-      @docx_batch.BatchError(message) =>
+      BatchError(message) =>
         raise ReplayFailed("op chunk \{chunk_index} does not parse: " + message)
     }
     let chunk_body = parsed.build_body(images) catch {
-      @docx_batch.BatchError(message) =>
+      BatchError(message) =>
         raise ReplayFailed("op chunk \{chunk_index} does not build: " + message)
     }
     // offsets are captured BEFORE this chunk contributes anything: block
@@ -113,7 +113,7 @@ fn docx_assemble_ops(
       }
     }
     let batch_footnotes = parsed.build_footnotes() catch {
-      @docx_batch.BatchError(message) =>
+      BatchError(message) =>
         raise ReplayFailed(
           "op chunk \{chunk_index} footnotes do not build: " + message,
         )
@@ -123,13 +123,13 @@ fn docx_assemble_ops(
         @word.note_spec(note.body()) catch {
           error =>
             raise ReplayFailed(
-              "op chunk \{chunk_index} footnote spec rejected: \{to_repr(error)}",
+              "op chunk \{chunk_index} footnote spec rejected: \{Repr(error)}",
             )
         },
       )
     }
     let batch_endnotes = parsed.build_endnotes() catch {
-      @docx_batch.BatchError(message) =>
+      BatchError(message) =>
         raise ReplayFailed(
           "op chunk \{chunk_index} endnotes do not build: " + message,
         )
@@ -139,13 +139,13 @@ fn docx_assemble_ops(
         @word.note_spec(note.body()) catch {
           error =>
             raise ReplayFailed(
-              "op chunk \{chunk_index} endnote spec rejected: \{to_repr(error)}",
+              "op chunk \{chunk_index} endnote spec rejected: \{Repr(error)}",
             )
         },
       )
     }
     let batch_comments = parsed.build_comments() catch {
-      @docx_batch.BatchError(message) =>
+      BatchError(message) =>
         raise ReplayFailed(
           "op chunk \{chunk_index} comments do not build: " + message,
         )
@@ -164,7 +164,7 @@ fn docx_assemble_ops(
           ) catch {
             error =>
               raise ReplayFailed(
-                "op chunk \{chunk_index} comment reply rejected: \{to_repr(error)}",
+                "op chunk \{chunk_index} comment reply rejected: \{Repr(error)}",
               )
           }
         (None, Some(from), Some(to)) =>
@@ -179,7 +179,7 @@ fn docx_assemble_ops(
           ) catch {
             error =>
               raise ReplayFailed(
-                "op chunk \{chunk_index} comment spec rejected: \{to_repr(error)}",
+                "op chunk \{chunk_index} comment spec rejected: \{Repr(error)}",
               )
           }
         _ =>
@@ -192,7 +192,7 @@ fn docx_assemble_ops(
   }
   @word.write_docx_with_annotations(body, comments~, footnotes~, endnotes~) catch {
     error =>
-      raise ReplayFailed("the writer rejected the assembly: \{to_repr(error)}")
+      raise ReplayFailed("the writer rejected the assembly: \{Repr(error)}")
   }
 }
 
@@ -212,7 +212,7 @@ pub fn replay_docx_dump(envelope : DumpEnvelope) -> Bytes raise ReplayError {
       "unsupported batch schema '\{envelope.batch_schema}' (expected \{@docx_batch.SCHEMA_BATCH_V2})",
     )
   }
-  let images : Map[String, Bytes] = {}
+  let images : Map[String, Bytes] = Map([])
   for id, asset in envelope.assets {
     images[id] = @base64.decode(asset.data) catch {
       _ => raise ReplayInvalidFormat("asset \{id} payload is not valid base64")
