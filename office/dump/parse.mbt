@@ -7,6 +7,9 @@ pub suberror DumpParseError {
 } derive(@debug.Debug)
 
 ///|
+pub extend DumpParseError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 fn require_object(
   value : Json,
   what : String,
