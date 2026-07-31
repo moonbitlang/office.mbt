@@ -22,7 +22,7 @@ fn expect_document_error(
       max_total_region_rows~,
     )
   catch {
-    @template.TemplateDataError(message) => assert_eq(message, expected)
+    TemplateDataError(message) => assert_eq(message, expected)
   } noraise {
     _ => fail("expected refusal: " + expected)
   }
@@ -35,8 +35,8 @@ test "document parser: scalar-only document yields empty regions" {
   )
   assert_eq(data.regions.length(), 0)
   assert_eq(data.values.length(), 2)
-  assert_eq(data.values.get("name"), Some(@template.TextValue("Ada")))
-  assert_eq(data.values.get("count"), Some(@template.NumberValue(3)))
+  assert_eq(data.values.get("name"), Some(TextValue("Ada")))
+  assert_eq(data.values.get("count"), Some(NumberValue(3)))
 }
 
 ///|
@@ -55,16 +55,16 @@ test "document parser: both addressing forms parse structurally" {
   assert_eq(data.regions[1].name, "terms")
   assert_eq(
     data.regions[0].address,
-    @template.SheetRow(sheet="Line Items", row=5),
+    SheetRow(sheet="Line Items", row=5),
   )
   assert_eq(
     data.regions[1].address,
-    @template.TableRow(story=@template.BodyStory, table=1, row=2),
+    TableRow(story=BodyStory, table=1, row=2),
   )
   assert_eq(data.regions[0].records.length(), 2)
   assert_eq(
     data.regions[0].records[1].get("item"),
-    Some(@template.TextValue("Gadget")),
+    Some(TextValue("Gadget")),
   )
   assert_eq(data.regions[1].records.length(), 1)
 }
@@ -80,11 +80,11 @@ test "document parser: header and footer table paths parse; merge layers decide 
   )
   assert_eq(
     data.regions[0].address,
-    @template.TableRow(story=@template.HeaderStory(2), table=1, row=1),
+    TableRow(story=HeaderStory(2), table=1, row=1),
   )
   assert_eq(
     data.regions[1].address,
-    @template.TableRow(story=@template.FooterStory(1), table=3, row=4),
+    TableRow(story=FooterStory(1), table=3, row=4),
   )
 }
 
@@ -95,7 +95,7 @@ test "document parser: scalar parser still rejects regions (staged rollout stays
       "{\"schema\": \"office.template.data/1\", \"values\": {}, \"regions\": {}}",
     )
   catch {
-    @template.TemplateDataError(message) =>
+    TemplateDataError(message) =>
       assert_eq(
         message, "unknown top-level member \"regions\" (expected schema, values)",
       )
@@ -275,7 +275,7 @@ test "document parser: record string bounds use the shared limit" {
       max_value_units=1,
     )
   catch {
-    @template.TemplateDataError(message) =>
+    TemplateDataError(message) =>
       assert_eq(
         message, "region \"items\" record 0: value for \"k\" exceeds 1 units",
       )
