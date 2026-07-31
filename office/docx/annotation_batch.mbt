@@ -68,7 +68,7 @@ pub extend DocxAnnotationParseError with @moonbitlang/core/debug.Debug::{
 priv enum CommentRef {
   ById(String)
   ByLabel(String)
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 priv enum AnnotationOp {

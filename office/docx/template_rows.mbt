@@ -21,16 +21,6 @@ let w14_ns : String = "http://schemas.microsoft.com/office/word/2010/wordml"
 let xml_builtin_ns : String = "http://www.w3.org/XML/1998/namespace"
 
 ///|
-/// One attribute token: expanded name plus the byte span of the WHOLE
-/// token including its leading whitespace run (deleting the span leaves
-/// well-formed remaining whitespace).
-priv struct RowAttrToken {
-  name : String
-  token_start : Int
-  token_end : Int
-}
-
-///|
 /// The gate's outcome over one row region: spans to strip from every
 /// clone (paraId/textId attribute tokens, ascending), or the first
 /// refusal (byte offset + reason).
@@ -730,7 +720,6 @@ let docx_clone_byte_guard : Int = 8 * 1024 * 1024
 priv struct DocxRegionPlan {
   name : String
   source_location : String
-  tr_path : String
   span_start : Int
   span_end : Int
   strip_spans : Array[(Int, Int)]
@@ -896,7 +885,6 @@ pub async fn transact_docx_template_document(
           plans.push({
             name: region.name,
             source_location: "/docx/body/" + tr_path,
-            tr_path,
             span_start: span.byte_start(),
             span_end: span.byte_end(),
             strip_spans: gate.strip_spans,

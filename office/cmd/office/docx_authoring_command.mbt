@@ -54,10 +54,6 @@ fn checked_docx_create_options(
     overwrite=matches.flags.get_or_default("overwrite", false),
   ) catch {
     TransactionError(..) as error => raise transaction_failure(error)
-    error =>
-      raise unexpected_cli_failure(
-        "office.docx.create_failed", "DOCX creation option validation", error,
-      )
   }
 }
 
