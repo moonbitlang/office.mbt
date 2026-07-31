@@ -38,6 +38,12 @@ pub(all) enum TemplateStory {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend TemplateStory with Eq::{not_equal, equal}
+
+///|
+pub extend TemplateStory with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Exactly one addressing form per region: a spreadsheet row
 /// (`{"sheet": ..., "row": ...}`, structured so sheet names never need a
 /// quoting grammar) or a DOCX table-row ordinal path
@@ -49,6 +55,12 @@ pub(all) enum TemplateRegionAddress {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend TemplateRegionAddress with Eq::{not_equal, equal}
+
+///|
+pub extend TemplateRegionAddress with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// One repeating region: the template row it addresses and the records to
 /// merge, one cloned row per record, in document order.
 pub(all) struct TemplateRegion {
@@ -58,12 +70,18 @@ pub(all) struct TemplateRegion {
 } derive(@debug.Debug)
 
 ///|
+pub extend TemplateRegion with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// A parsed template data document. `regions` is empty for scalar-only
 /// documents; iteration order follows the data document.
 pub(all) struct TemplateData {
   values : Map[String, TemplateValue]
   regions : Array[TemplateRegion]
 } derive(@debug.Debug)
+
+///|
+pub extend TemplateData with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Parses ordinal digits from `text[start..)` up to a closing bracket:
