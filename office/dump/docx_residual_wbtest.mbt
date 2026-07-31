@@ -38,7 +38,7 @@ test "inexpressible paragraph content residualizes and text degrades" {
   let residual : Array[DumpResidual] = []
   let params = docx_paragraph_params(
     [
-      @document.BookmarkStart("m"),
+      BookmarkStart("m"),
       @document.run([@document.text("styled away")]),
     ],
     @document.paragraph_properties(
@@ -135,7 +135,7 @@ test "comment references are silent in body, disclosed in bodies" {
   // empty segment (that would grow the paragraph every replay cycle)
   let residual : Array[DumpResidual] = []
   let specs = wb_run_specs(
-    [@document.text("kept"), @document.CommentReference("7")],
+    [@document.text("kept"), CommentReference("7")],
     @document.run_properties(),
     residual,
   )
