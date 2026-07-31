@@ -545,7 +545,7 @@ test "cf literal proof: formula cfvos, x14 state, and skipped rules disprove" {
 ///|
 test "raw dv criteria preserve quote doubling and mark x14 opaque" {
   let workbook = Workbook::new()
-  let sheet = workbook.add_sheet("Data")
+  let _ = workbook.add_sheet("Data")
   let list = DataValidation::new(true)
   list.set_range(TextValue("\"It\"\"s,ok\""), TextValue(""), List, Between)
   list.set_sqref("A1")
