@@ -64,7 +64,7 @@ test "docx paragraphs and runs dump and fixpoint" {
     ),
     @document.paragraph([
       @document.run([@document.text("Plain intro with a ")]),
-      @document.Hyperlink(
+      Hyperlink(
         children=[@document.run([@document.text("link")])],
         href=Some("https://example.com/"),
         anchor=None,
@@ -114,12 +114,12 @@ test "docx tables dump with spans and header rows" {
     )
   }
   let body : Array[@document.DocumentElement] = [
-    @document.Table(
+    Table(
       children=[
-        @document.TableRow(children=[cell("H1"), cell("H2")], is_header=true),
-        @document.TableRow(
+        TableRow(children=[cell("H1"), cell("H2")], is_header=true),
+        TableRow(
           children=[
-            @document.TableCell(
+            TableCell(
               children=[
                 @document.paragraph([@document.run([@document.text("wide")])]),
               ],
@@ -130,7 +130,7 @@ test "docx tables dump with spans and header rows" {
           is_header=false,
         ),
       ],
-      properties=@document.TableProperties::{ style_id: None, style_name: None },
+      properties={ style_id: None, style_name: None },
     ),
   ]
   let bytes = @word.write_docx(body)
@@ -190,7 +190,7 @@ test "docx images ride as assets and survive the fixpoint" {
         properties=@document.run_properties(is_bold=true),
       ),
       @document.run([
-        @document.Image(@document.Image::{
+        Image({
           content_type: "image/png",
           alt_text: Some("the logo"),
           data: payload,
@@ -326,15 +326,15 @@ test "docx vertically merged tables survive the fixpoint" {
     )
   }
   let body : Array[@document.DocumentElement] = [
-    @document.Table(
+    Table(
       children=[
-        @document.TableRow(
+        TableRow(
           children=[cell("merged", 2), cell("top", 1)],
           is_header=false,
         ),
-        @document.TableRow(children=[cell("bottom", 1)], is_header=false),
+        TableRow(children=[cell("bottom", 1)], is_header=false),
       ],
-      properties=@document.TableProperties::{ style_id: None, style_name: None },
+      properties={ style_id: None, style_name: None },
     ),
   ]
   let bytes = @word.write_docx(body)

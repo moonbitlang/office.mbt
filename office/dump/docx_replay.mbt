@@ -44,7 +44,7 @@ fn docx_offset_note_refs(
             "built note reference carries a non-numeric id '\{note_id}'",
           )
         }
-        @document.DocumentElement::NoteReference(
+        NoteReference(
           note_type~,
           note_id=(index + offset).to_string(),
         )
@@ -89,11 +89,11 @@ fn docx_assemble_ops(
       "ops": Json::array(chunk),
     })
     let parsed = @docx_batch.parse_batch(script) catch {
-      @docx_batch.BatchError(message) =>
+      BatchError(message) =>
         raise ReplayFailed("op chunk \{chunk_index} does not parse: " + message)
     }
     let chunk_body = parsed.build_body(images) catch {
-      @docx_batch.BatchError(message) =>
+      BatchError(message) =>
         raise ReplayFailed("op chunk \{chunk_index} does not build: " + message)
     }
     // offsets are captured BEFORE this chunk contributes anything: block
@@ -113,7 +113,7 @@ fn docx_assemble_ops(
       }
     }
     let batch_footnotes = parsed.build_footnotes() catch {
-      @docx_batch.BatchError(message) =>
+      BatchError(message) =>
         raise ReplayFailed(
           "op chunk \{chunk_index} footnotes do not build: " + message,
         )
@@ -129,7 +129,7 @@ fn docx_assemble_ops(
       )
     }
     let batch_endnotes = parsed.build_endnotes() catch {
-      @docx_batch.BatchError(message) =>
+      BatchError(message) =>
         raise ReplayFailed(
           "op chunk \{chunk_index} endnotes do not build: " + message,
         )
@@ -145,7 +145,7 @@ fn docx_assemble_ops(
       )
     }
     let batch_comments = parsed.build_comments() catch {
-      @docx_batch.BatchError(message) =>
+      BatchError(message) =>
         raise ReplayFailed(
           "op chunk \{chunk_index} comments do not build: " + message,
         )
