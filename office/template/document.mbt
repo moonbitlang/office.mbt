@@ -362,16 +362,16 @@ pub fn parse_template_document(
         guard region_value is Object(region_fields) else {
           raise TemplateDataError("region \"" + name + "\" must be an object")
         }
-        for member, _ in region_fields {
-          if member != "sheet" &&
-            member != "row" &&
-            member != "path" &&
-            member != "records" {
+        for field, _ in region_fields {
+          if field != "sheet" &&
+            field != "row" &&
+            field != "path" &&
+            field != "records" {
             raise TemplateDataError(
               "region \"" +
               name +
               "\" has unknown member \"" +
-              member +
+              field +
               "\" (expected sheet, row, path, records)",
             )
           }
