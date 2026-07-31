@@ -21,11 +21,11 @@ async fn with_region_dir(run : async (String) -> Unit) -> Unit {
 fn region_fixture() -> Bytes raise {
   let workbook = @engine.Workbook::new()
   let sheet = workbook.add_sheet("Items")
-  sheet.set_cell_value("A1", @engine.CellValue::String("Invoice {{company}}"))
-  sheet.set_cell_value("A2", @engine.CellValue::String("{{item}}"))
-  sheet.set_cell_value("B2", @engine.CellValue::String("{{qty}}"))
-  sheet.set_cell_value("C2", @engine.CellValue::String("unit"))
-  sheet.set_cell_value("A3", @engine.CellValue::String("footer"))
+  sheet.set_cell_value("A1", String("Invoice {{company}}"))
+  sheet.set_cell_value("A2", String("{{item}}"))
+  sheet.set_cell_value("B2", String("{{qty}}"))
+  sheet.set_cell_value("C2", String("unit"))
+  sheet.set_cell_value("A3", String("footer"))
   @engine.write(workbook)
 }
 
@@ -107,8 +107,8 @@ async test "two regions report final coordinates after upper insertions" {
   with_region_dir() <| directory => {
     let workbook = @engine.Workbook::new()
     let sheet = workbook.add_sheet("Data")
-    sheet.set_cell_value("A2", @engine.CellValue::String("{{a}}"))
-    sheet.set_cell_value("A6", @engine.CellValue::String("{{b}}"))
+    sheet.set_cell_value("A2", String("{{a}}"))
+    sheet.set_cell_value("A6", String("{{b}}"))
     let input = directory + "/two.xlsx"
     @afs.write_file(
       input,
@@ -197,7 +197,7 @@ async test "region refusal matrix" {
     let with_formula = {
       let workbook = @engine.Workbook::new()
       let sheet = workbook.add_sheet("Items")
-      sheet.set_cell_value("A2", @engine.CellValue::String("{{item}} {{qty}}"))
+      sheet.set_cell_value("A2", String("{{item}} {{qty}}"))
       ignore(workbook.add_sheet("Other"))
       workbook.set_cell_formula("Other", "B1", "1+1")
       @engine.write(workbook)
@@ -221,7 +221,7 @@ async test "region refusal matrix" {
             let sheet = workbook.add_sheet("Items")
             sheet.set_cell_value(
               "A2",
-              @engine.CellValue::String("{{item}} {{qty}}"),
+              String("{{item}} {{qty}}"),
             )
             workbook.set_defined_name(
               @engine.DefinedName::new("total_band", "Items!$A$2:$B$2"),
@@ -236,7 +236,7 @@ async test "region refusal matrix" {
             let sheet = workbook.add_sheet("Items")
             sheet.set_cell_value(
               "A2",
-              @engine.CellValue::String("{{item}} {{qty}}"),
+              String("{{item}} {{qty}}"),
             )
             workbook.add_comment("Items", {
               cell: "D9",
@@ -257,7 +257,7 @@ async test "region refusal matrix" {
             let sheet = workbook.add_sheet("Items")
             sheet.set_cell_value(
               "A2",
-              @engine.CellValue::String("{{item}} {{qty}}"),
+              String("{{item}} {{qty}}"),
             )
             workbook.merge_cells("Items", "A1:A3")
             @engine.write(workbook)
@@ -270,7 +270,7 @@ async test "region refusal matrix" {
             let sheet = workbook.add_sheet("Items")
             sheet.set_cell_value(
               "A2",
-              @engine.CellValue::String("{{item}} {{qty}}"),
+              String("{{item}} {{qty}}"),
             )
             @engine.write(workbook)
           },
@@ -380,7 +380,7 @@ async test "scalar-only documents behave exactly like transact_template" {
   with_region_dir() <| directory => {
     let workbook = @engine.Workbook::new()
     let sheet = workbook.add_sheet("Data")
-    sheet.set_cell_value("A1", @engine.CellValue::String("Hello {{who}}"))
+    sheet.set_cell_value("A1", String("Hello {{who}}"))
     let input = directory + "/scalar.xlsx"
     @afs.write_file(
       input,
@@ -417,7 +417,7 @@ async test "values keys used only inside regions are not reported unused" {
     // cell references it
     sheet.set_cell_value(
       "A2",
-      @engine.CellValue::String("{{item}} ({{unit_label}})"),
+      String("{{item}} ({{unit_label}})"),
     )
     let input = directory + "/regiononly.xlsx"
     @afs.write_file(
@@ -457,9 +457,9 @@ async test "formula-free CF and literal-list DV publish; formula criteria refuse
     let clean = {
       let workbook = @engine.Workbook::new()
       let sheet = workbook.add_sheet("Items")
-      sheet.set_cell_value("A2", @engine.CellValue::String("{{item}}"))
+      sheet.set_cell_value("A2", String("{{item}}"))
       let other = workbook.add_sheet("Meta")
-      other.set_cell_value("A1", @engine.CellValue::Numeric(1))
+      other.set_cell_value("A1", Numeric(1))
       let bar = @engine.ConditionalFormatOptions::new("data_bar")
       workbook.set_conditional_format("Meta", "A1:A4", [bar])
       let list = @engine.DataValidation::new(true)
@@ -486,15 +486,15 @@ async test "formula-free CF and literal-list DV publish; formula criteria refuse
     let custom = {
       let workbook = @engine.Workbook::new()
       let sheet = workbook.add_sheet("Items")
-      sheet.set_cell_value("A2", @engine.CellValue::String("{{item}}"))
+      sheet.set_cell_value("A2", String("{{item}}"))
       let other = workbook.add_sheet("Meta")
-      other.set_cell_value("A1", @engine.CellValue::Numeric(1))
+      other.set_cell_value("A1", Numeric(1))
       let rule = @engine.DataValidation::new(true)
       rule.set_range(
-        @engine.DataValidationFormula::TextValue("LEN(TRIM(B1))>0"),
-        @engine.DataValidationFormula::TextValue(""),
-        @engine.DataValidationType::Custom,
-        @engine.DataValidationOperator::Between,
+        TextValue("LEN(TRIM(B1))>0"),
+        TextValue(""),
+        Custom,
+        Between,
       )
       rule.set_sqref("B1")
       workbook.add_data_validation("Meta", rule)
@@ -519,7 +519,7 @@ async test "a malformed region template row counts once" {
   with_region_dir() <| directory => {
     let workbook = @engine.Workbook::new()
     let sheet = workbook.add_sheet("Items")
-    sheet.set_cell_value("A2", @engine.CellValue::String("{{bad key}}"))
+    sheet.set_cell_value("A2", String("{{bad key}}"))
     let input = directory + "/malformed.xlsx"
     @afs.write_file(
       input,
@@ -558,9 +558,9 @@ async test "icon-set formula cfvos refuse even though the options hide them" {
   with_region_dir() <| directory => {
     let workbook = @engine.Workbook::new()
     let sheet = workbook.add_sheet("Items")
-    sheet.set_cell_value("A2", @engine.CellValue::String("{{item}}"))
+    sheet.set_cell_value("A2", String("{{item}}"))
     let other = workbook.add_sheet("Meta")
-    other.set_cell_value("A1", @engine.CellValue::Numeric(1))
+    other.set_cell_value("A1", Numeric(1))
     other.add_conditional_format_xml(
       (
         #|<conditionalFormatting sqref="B1:B9"><cfRule type="iconSet" priority="1"><iconSet iconSet="4Arrows"><cfvo type="min"/><cfvo type="percent" val="25"/><cfvo type="formula" val="$Z$1"/><cfvo type="percent" val="75"/></iconSet></cfRule></conditionalFormatting>
@@ -586,9 +586,9 @@ async test "two-operand comparisons and concatenated list sources refuse" {
     let between_ref = {
       let workbook = @engine.Workbook::new()
       let sheet = workbook.add_sheet("Items")
-      sheet.set_cell_value("A2", @engine.CellValue::String("{{item}}"))
+      sheet.set_cell_value("A2", String("{{item}}"))
       let other = workbook.add_sheet("Meta")
-      other.set_cell_value("A1", @engine.CellValue::Numeric(1))
+      other.set_cell_value("A1", Numeric(1))
       let rule = @engine.ConditionalFormatOptions::new("cell")
       rule.criteria = "between"
       rule.min_value = "1"
@@ -604,15 +604,15 @@ async test "two-operand comparisons and concatenated list sources refuse" {
     let concat_list = {
       let workbook = @engine.Workbook::new()
       let sheet = workbook.add_sheet("Items")
-      sheet.set_cell_value("A2", @engine.CellValue::String("{{item}}"))
+      sheet.set_cell_value("A2", String("{{item}}"))
       let other = workbook.add_sheet("Meta")
-      other.set_cell_value("A1", @engine.CellValue::Numeric(1))
+      other.set_cell_value("A1", Numeric(1))
       let rule = @engine.DataValidation::new(true)
       rule.set_range(
-        @engine.DataValidationFormula::TextValue("\"prefix\"&D1"),
-        @engine.DataValidationFormula::TextValue(""),
-        @engine.DataValidationType::List,
-        @engine.DataValidationOperator::Between,
+        TextValue("\"prefix\"&D1"),
+        TextValue(""),
+        List,
+        Between,
       )
       rule.set_sqref("B1")
       workbook.add_data_validation("Meta", rule)
@@ -632,9 +632,9 @@ async test "two-operand comparisons and concatenated list sources refuse" {
     let between_ok = {
       let workbook = @engine.Workbook::new()
       let sheet = workbook.add_sheet("Items")
-      sheet.set_cell_value("A2", @engine.CellValue::String("{{item}}"))
+      sheet.set_cell_value("A2", String("{{item}}"))
       let other = workbook.add_sheet("Meta")
-      other.set_cell_value("A1", @engine.CellValue::Numeric(1))
+      other.set_cell_value("A1", Numeric(1))
       let rule = @engine.ConditionalFormatOptions::new("cell")
       rule.criteria = "between"
       rule.min_value = "1"
@@ -659,24 +659,24 @@ async test "escaped-quote list literals publish on the raw proof" {
   with_region_dir() <| directory => {
     let workbook = @engine.Workbook::new()
     let sheet = workbook.add_sheet("Items")
-    sheet.set_cell_value("A2", @engine.CellValue::String("{{item}}"))
+    sheet.set_cell_value("A2", String("{{item}}"))
     let other = workbook.add_sheet("Meta")
-    other.set_cell_value("A1", @engine.CellValue::Numeric(1))
+    other.set_cell_value("A1", Numeric(1))
     let list = @engine.DataValidation::new(true)
     list.set_range(
-      @engine.DataValidationFormula::TextValue("\"It\"\"s,ok\""),
-      @engine.DataValidationFormula::TextValue(""),
-      @engine.DataValidationType::List,
-      @engine.DataValidationOperator::Between,
+      TextValue("\"It\"\"s,ok\""),
+      TextValue(""),
+      List,
+      Between,
     )
     list.set_sqref("B1")
     workbook.add_data_validation("Meta", list)
     let empty = @engine.DataValidation::new(true)
     empty.set_range(
-      @engine.DataValidationFormula::TextValue("\"\""),
-      @engine.DataValidationFormula::TextValue(""),
-      @engine.DataValidationType::List,
-      @engine.DataValidationOperator::Between,
+      TextValue("\"\""),
+      TextValue(""),
+      List,
+      Between,
     )
     empty.set_sqref("B2")
     workbook.add_data_validation("Meta", empty)

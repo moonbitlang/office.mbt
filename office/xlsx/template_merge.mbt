@@ -122,12 +122,12 @@ fn substitute_cell_text(
       match resolve(only.key) {
         Some(NumberValue(number)) => {
           outcome.replaced = 1
-          outcome.typed_edit = Some(@engine.CellValue::Numeric(number))
+          outcome.typed_edit = Some(Numeric(number))
           return outcome
         }
         Some(BoolValue(flag)) => {
           outcome.replaced = 1
-          outcome.typed_edit = Some(@engine.CellValue::Bool(flag))
+          outcome.typed_edit = Some(Bool(flag))
           return outcome
         }
         _ => ()
