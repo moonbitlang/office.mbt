@@ -14,6 +14,9 @@ pub suberror DocxAuthorParseError {
 } derive(@debug.Debug)
 
 ///|
+pub extend DocxAuthorParseError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Per-document authoring counts for the result record.
 pub(all) struct DocxAuthorReport {
   ops : Int
@@ -21,6 +24,12 @@ pub(all) struct DocxAuthorReport {
   footnotes : Int
   endnotes : Int
 } derive(Eq, @debug.Debug)
+
+///|
+pub extend DocxAuthorReport with Eq::{not_equal, equal}
+
+///|
+pub extend DocxAuthorReport with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Result of one fresh-authoring transaction.

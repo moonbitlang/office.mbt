@@ -15,6 +15,12 @@ pub(all) struct DocxTemplateFinding {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend DocxTemplateFinding with Eq::{not_equal, equal}
+
+///|
+pub extend DocxTemplateFinding with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 pub(all) struct DocxTemplateReport {
   mut placeholders_found : Int
   mut replaced : Int
@@ -35,10 +41,19 @@ pub(all) struct DocxTemplateReport {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend DocxTemplateReport with Eq::{not_equal, equal}
+
+///|
+pub extend DocxTemplateReport with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Raised when strict findings refuse publication.
 pub suberror DocxTemplateRefused {
   DocxTemplateRefused(DocxTemplateReport)
 } derive(@debug.Debug)
+
+///|
+pub extend DocxTemplateRefused with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 let docx_template_finding_limit : Int = 64

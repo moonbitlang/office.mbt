@@ -9,6 +9,9 @@ pub suberror DumpError {
 } derive(@debug.Debug)
 
 ///|
+pub extend DumpError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// The XLSX batch schema every dump op stream targets.
 pub const XLSX_BATCH_SCHEMA : String = @inspect.SCHEMA_BATCH_V2
 

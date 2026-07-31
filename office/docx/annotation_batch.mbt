@@ -58,6 +58,11 @@ pub suberror DocxAnnotationParseError {
 } derive(@debug.Debug)
 
 ///|
+pub extend DocxAnnotationParseError with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// A reference to a comment: an existing engine id, or a label minted
 /// earlier in the same script.
 priv enum CommentRef {
@@ -105,6 +110,12 @@ pub(all) struct DocxAnnotationOpResult {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend DocxAnnotationOpResult with Eq::{not_equal, equal}
+
+///|
+pub extend DocxAnnotationOpResult with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// The complete annotation-batch outcome.
 pub(all) struct DocxAnnotationReport {
   mut ops_applied : Int
@@ -113,6 +124,12 @@ pub(all) struct DocxAnnotationReport {
   changed_parts : Array[String]
   mut changed : Bool
 } derive(Eq, @debug.Debug)
+
+///|
+pub extend DocxAnnotationReport with Eq::{not_equal, equal}
+
+///|
+pub extend DocxAnnotationReport with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Result of one strict annotation-batch transaction.

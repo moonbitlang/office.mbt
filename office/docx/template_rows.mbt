@@ -706,6 +706,12 @@ pub(all) struct DocxRegionOutcome {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend DocxRegionOutcome with Eq::{not_equal, equal}
+
+///|
+pub extend DocxRegionOutcome with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Result of one strict document-level DOCX template transaction.
 pub struct DocxTemplateDocumentResult {
   report : DocxTemplateReport
