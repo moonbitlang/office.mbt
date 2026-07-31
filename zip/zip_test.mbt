@@ -49,7 +49,7 @@ test "zip deflate roundtrip (data descriptor)" {
   let bytes = @zip.write(archive)
   let parsed = @zip.read(bytes)
   inspect(parsed.get("a.txt") == Some(b"hello"), content="true")
-  guard parsed.entries()[0] is entry else { fail("expected parsed entry") }
+  guard parsed.entries()[0] is entry
   assert_true(entry.compression() is Deflate)
   assert_true(entry.data_descriptor())
   let limited = @zip.read_limited(

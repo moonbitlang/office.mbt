@@ -468,7 +468,7 @@ pub fn Workbook::sheet_row_state_inventory(
   let mut unadjusted_scoped = false
   for name in self.defined_names {
     let visited = Ref(0)
-    let probe = fn(ref_text : StringView) -> String? raise XlsxError {
+    let probe : (StringView) -> String? raise XlsxError = fn(ref_text) {
       visited.val = visited.val + 1
       let owned = ref_text.to_owned()
       adjusted.present = true

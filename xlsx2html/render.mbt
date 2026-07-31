@@ -133,7 +133,7 @@ fn find_chart_sheet(
 priv struct MergeSpan {
   colspan : Int
   rowspan : Int
-} derive(@debug.Debug)
+}
 
 ///|
 fn render_worksheet(

@@ -28,7 +28,7 @@ fn chart_svg_probe_options(typ : @xlsx.ChartType) -> @xlsx.ChartOptions raise {
 test "bar chart renders as inline SVG" {
   let workbook = chart_svg_probe_workbook()
   workbook.add_chart_with_options("Data", "D2", chart_svg_probe_options(Col))
-  let html = render_workbook(workbook, title="chart probe")
+  let html = @xlsx2html.render_workbook(workbook, title="chart probe")
   assert_true(html.contains("<figure class=\"chart\""))
   assert_true(html.contains("role=\"img\""))
   assert_true(
@@ -51,7 +51,7 @@ test "line and pie charts render marks" {
     "D2",
     chart_svg_probe_options(Line),
   )
-  let line_html = render_workbook(line_workbook, title="line probe")
+  let line_html = @xlsx2html.render_workbook(line_workbook, title="line probe")
   assert_true(line_html.contains("<polyline fill=\"none\" stroke=\"#4472c4\""))
   let pie_workbook = chart_svg_probe_workbook()
   pie_workbook.add_chart_with_options(
@@ -59,7 +59,7 @@ test "line and pie charts render marks" {
     "D2",
     chart_svg_probe_options(Pie),
   )
-  let pie_html = render_workbook(pie_workbook, title="pie probe")
+  let pie_html = @xlsx2html.render_workbook(pie_workbook, title="pie probe")
   assert_true(pie_html.contains("<path fill=\"#4472c4\""))
   assert_true(pie_html.contains("<path fill=\"#ed7d31\""))
 }
@@ -70,7 +70,7 @@ test "line and pie charts render marks" {
 test "unsupported chart kinds keep the labeled placeholder" {
   let workbook = chart_svg_probe_workbook()
   workbook.add_chart_with_options("Data", "D2", chart_svg_probe_options(Radar))
-  let html = render_workbook(workbook, title="radar probe")
+  let html = @xlsx2html.render_workbook(workbook, title="radar probe")
   assert_true(html.contains("chart-placeholder"))
   assert_true(html.contains("[radarChart]"))
   assert_false(html.contains("<figure class=\"chart\""))
@@ -83,7 +83,7 @@ test "chart series names cannot inject markup" {
   let workbook = chart_svg_probe_workbook()
   workbook.set_cell("Data", "B1", "<script>alert(1)</script>")
   workbook.add_chart_with_options("Data", "D2", chart_svg_probe_options(Col))
-  let html = render_workbook(workbook, title="inject probe")
+  let html = @xlsx2html.render_workbook(workbook, title="inject probe")
   assert_false(html.contains("<script>"))
   assert_true(html.contains("&lt;script&gt;"))
 }
@@ -95,6 +95,6 @@ test "non-numeric chart values are skipped and reported" {
   let workbook = chart_svg_probe_workbook()
   workbook.set_cell("Data", "B3", "not a number")
   workbook.add_chart_with_options("Data", "D2", chart_svg_probe_options(Col))
-  let html = render_workbook(workbook, title="gap probe")
+  let html = @xlsx2html.render_workbook(workbook, title="gap probe")
   assert_true(html.contains("1 non-numeric values skipped"))
 }
