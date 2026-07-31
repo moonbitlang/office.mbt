@@ -44,10 +44,7 @@ fn docx_offset_note_refs(
             "built note reference carries a non-numeric id '\{note_id}'",
           )
         }
-        NoteReference(
-          note_type~,
-          note_id=(index + offset).to_string(),
-        )
+        NoteReference(note_type~, note_id=(index + offset).to_string())
       }
       Paragraph(children~, properties~) =>
         Paragraph(children=children.map(walk), properties~)

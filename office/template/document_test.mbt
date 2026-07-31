@@ -53,19 +53,10 @@ test "document parser: both addressing forms parse structurally" {
   // document order is preserved
   assert_eq(data.regions[0].name, "items")
   assert_eq(data.regions[1].name, "terms")
-  assert_eq(
-    data.regions[0].address,
-    SheetRow(sheet="Line Items", row=5),
-  )
-  assert_eq(
-    data.regions[1].address,
-    TableRow(story=BodyStory, table=1, row=2),
-  )
+  assert_eq(data.regions[0].address, SheetRow(sheet="Line Items", row=5))
+  assert_eq(data.regions[1].address, TableRow(story=BodyStory, table=1, row=2))
   assert_eq(data.regions[0].records.length(), 2)
-  assert_eq(
-    data.regions[0].records[1].get("item"),
-    Some(TextValue("Gadget")),
-  )
+  assert_eq(data.regions[0].records[1].get("item"), Some(TextValue("Gadget")))
   assert_eq(data.regions[1].records.length(), 1)
 }
 

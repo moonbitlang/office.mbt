@@ -219,10 +219,7 @@ async test "region refusal matrix" {
           {
             let workbook = @engine.Workbook::new()
             let sheet = workbook.add_sheet("Items")
-            sheet.set_cell_value(
-              "A2",
-              String("{{item}} {{qty}}"),
-            )
+            sheet.set_cell_value("A2", String("{{item}} {{qty}}"))
             workbook.set_defined_name(
               @engine.DefinedName::new("total_band", "Items!$A$2:$B$2"),
             )
@@ -234,10 +231,7 @@ async test "region refusal matrix" {
           {
             let workbook = @engine.Workbook::new()
             let sheet = workbook.add_sheet("Items")
-            sheet.set_cell_value(
-              "A2",
-              String("{{item}} {{qty}}"),
-            )
+            sheet.set_cell_value("A2", String("{{item}} {{qty}}"))
             workbook.add_comment("Items", {
               cell: "D9",
               author: "a",
@@ -255,10 +249,7 @@ async test "region refusal matrix" {
           {
             let workbook = @engine.Workbook::new()
             let sheet = workbook.add_sheet("Items")
-            sheet.set_cell_value(
-              "A2",
-              String("{{item}} {{qty}}"),
-            )
+            sheet.set_cell_value("A2", String("{{item}} {{qty}}"))
             workbook.merge_cells("Items", "A1:A3")
             @engine.write(workbook)
           },
@@ -268,10 +259,7 @@ async test "region refusal matrix" {
           {
             let workbook = @engine.Workbook::new()
             let sheet = workbook.add_sheet("Items")
-            sheet.set_cell_value(
-              "A2",
-              String("{{item}} {{qty}}"),
-            )
+            sheet.set_cell_value("A2", String("{{item}} {{qty}}"))
             @engine.write(workbook)
           },
           "table-row addressing applies to DOCX merges",
@@ -415,10 +403,7 @@ async test "values keys used only inside regions are not reported unused" {
     let sheet = workbook.add_sheet("Data")
     // "unit_label" resolves from values inside every clone; no scalar
     // cell references it
-    sheet.set_cell_value(
-      "A2",
-      String("{{item}} ({{unit_label}})"),
-    )
+    sheet.set_cell_value("A2", String("{{item}} ({{unit_label}})"))
     let input = directory + "/regiononly.xlsx"
     @afs.write_file(
       input,
@@ -608,12 +593,7 @@ async test "two-operand comparisons and concatenated list sources refuse" {
       let other = workbook.add_sheet("Meta")
       other.set_cell_value("A1", Numeric(1))
       let rule = @engine.DataValidation::new(true)
-      rule.set_range(
-        TextValue("\"prefix\"&D1"),
-        TextValue(""),
-        List,
-        Between,
-      )
+      rule.set_range(TextValue("\"prefix\"&D1"), TextValue(""), List, Between)
       rule.set_sqref("B1")
       workbook.add_data_validation("Meta", rule)
       @engine.write(workbook)
@@ -663,21 +643,11 @@ async test "escaped-quote list literals publish on the raw proof" {
     let other = workbook.add_sheet("Meta")
     other.set_cell_value("A1", Numeric(1))
     let list = @engine.DataValidation::new(true)
-    list.set_range(
-      TextValue("\"It\"\"s,ok\""),
-      TextValue(""),
-      List,
-      Between,
-    )
+    list.set_range(TextValue("\"It\"\"s,ok\""), TextValue(""), List, Between)
     list.set_sqref("B1")
     workbook.add_data_validation("Meta", list)
     let empty = @engine.DataValidation::new(true)
-    empty.set_range(
-      TextValue("\"\""),
-      TextValue(""),
-      List,
-      Between,
-    )
+    empty.set_range(TextValue("\"\""), TextValue(""), List, Between)
     empty.set_sqref("B2")
     workbook.add_data_validation("Meta", empty)
     let input = directory + "/quotes.xlsx"
