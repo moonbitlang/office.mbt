@@ -705,7 +705,7 @@ pub fn write_docx_with_annotations(
   ) catch {
     // Preserve a typed write ceiling breach; flatten every other package
     // assembly failure to Unsupported as before.
-    @opc.PackageLimitExceeded(kind~, limit~, actual~) =>
+    PackageLimitExceeded(kind~, limit~, actual~) =>
       raise WriteResourceLimit(
         kind~,
         limit~,

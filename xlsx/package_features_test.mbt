@@ -14,7 +14,7 @@ test "package features: API-built workbooks carry none" {
 test "package features: injected external-link part raises the flag through read" {
   let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Data")
-  sheet.set_cell_value("A1", @xlsx.CellValue::String("x"))
+  sheet.set_cell_value("A1", String("x"))
   let base = @xlsx.write(workbook)
   let clean = @xlsx.read(base)
   assert_eq(clean.package_features(), @xlsx.XlsxPackageFeatures::none())
