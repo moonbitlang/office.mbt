@@ -21,7 +21,7 @@ test "package validator matches the mutation gate verdicts" {
   let bytes = @engine.write(workbook)
   let archive = read_validator_archive(bytes)
   let validator = @xlsx.package_validator()
-  let clean = (validator.validate)(@office.DocumentFormat::Xlsx, bytes, archive)
+  let clean = (validator.validate)(Xlsx, bytes, archive)
   assert_true(clean is [])
   // an uncovered binary part is a package-graph defect the shared gate
   // reports as a bounded finding rather than a parse failure; the tampered
@@ -32,7 +32,7 @@ test "package validator matches the mutation gate verdicts" {
   let tampered_bytes = @zip.write(rebuilt)
   let tampered = read_validator_archive(tampered_bytes)
   let findings = (validator.validate)(
-    @office.DocumentFormat::Xlsx,
+    Xlsx,
     tampered_bytes,
     tampered,
   )
@@ -40,7 +40,7 @@ test "package validator matches the mutation gate verdicts" {
   assert_true(findings[0].code == "office.xlsx.package")
   // a non-XLSX candidate is rejected before any parsing
   let wrong = try {
-    (validator.validate)(@office.DocumentFormat::Docx, bytes, archive) |> ignore
+    (validator.validate)(Docx, bytes, archive) |> ignore
     false
   } catch {
     _ => true
