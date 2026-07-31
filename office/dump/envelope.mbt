@@ -98,7 +98,7 @@ pub fn DumpEnvelope::to_json_document(self : DumpEnvelope) -> Json {
     "replay": Json::object(replay),
     "ops": Json::array(self.ops),
     "assets": {
-      let assets : Map[String, Json] = {}
+      let assets : Map[String, Json] = Map([])
       for id, asset in self.assets {
         assets[id] = asset.to_json()
       }

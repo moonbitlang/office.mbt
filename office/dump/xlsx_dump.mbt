@@ -1006,7 +1006,7 @@ pub fn dump_xlsx_workbook(
 ) -> DumpEnvelope raise {
   let ops : Array[Json] = []
   let table_candidates : Array[TableCandidate] = []
-  let assets : Map[String, DumpAsset] = {}
+  let assets : Map[String, DumpAsset] = Map([])
   let total_asset_bytes : Ref[Int] = Ref(0)
   let residual : Array[DumpResidual] = []
   let warnings : Array[DumpWarning] = []
