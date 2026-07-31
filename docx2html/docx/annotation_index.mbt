@@ -126,6 +126,9 @@ pub enum AnnotationBoundary {
 } derive(Eq)
 
 ///|
+pub extend AnnotationBoundary with Eq::{not_equal, equal}
+
+///|
 pub impl Show for AnnotationBoundary with fn output(self, logger) {
   logger.write_string(
     match self {
@@ -136,6 +139,9 @@ pub impl Show for AnnotationBoundary with fn output(self, logger) {
     },
   )
 }
+
+///|
+pub extend AnnotationBoundary with Show::{to_string, output}
 
 ///|
 /// One anchor of a comment: a paired range (start+end), a dangling

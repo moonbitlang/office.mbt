@@ -17,11 +17,17 @@ pub suberror RenderError {
 } derive(@debug.Debug)
 
 ///|
+pub extend RenderError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 pub impl Show for RenderError with fn output(self, logger) {
   match self {
     SheetNotFound(name~) => logger.write_string("sheet '\{name}' not found")
   }
 }
+
+///|
+pub extend RenderError with Show::{to_string, output}
 
 ///|
 /// Renders the workbook (or one sheet, case-insensitively) to a complete
