@@ -876,7 +876,7 @@ test "review round 2 (batch): a batch-built document reads back with the scripte
   debug_inspect(loud.is_all_caps, content="true")
   debug_inspect(loud.font_size, content="Some(14)")
   debug_inspect(loud.highlight, content="Some(\"yellow\")")
-  debug_inspect(to_repr(down.vertical_alignment), content="Subscript")
+  debug_inspect(Repr(down.vertical_alignment), content="Subscript")
   debug_inspect(link_href, content="Some(\"https://example.com/x\")")
   guard link_children is [Run(properties=link_run, ..)]
   debug_inspect(link_run.is_italic, content="true")
