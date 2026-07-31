@@ -272,7 +272,7 @@ fn parse_scalar_entries(
       " carries \{entries.length()} keys; the limit is \{max_keys}",
     )
   }
-  let values : Map[String, TemplateValue] = {}
+  let values : Map[String, TemplateValue] = Map([])
   for key, value in entries {
     if !template_key_ok(key) {
       raise TemplateDataError(
