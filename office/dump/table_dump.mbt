@@ -396,6 +396,6 @@ fn bounded_reason(reason : String) -> String {
   if reason.length() <= 160 {
     reason
   } else {
-    reason.substring(start=0, end=160) + "\u{2026}"
+    reason[0:160].to_owned() + "\u{2026}"
   }
 }
