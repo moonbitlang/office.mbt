@@ -346,7 +346,9 @@ pub fn parse_annotation_batch(
     }
   }
 
-  fn check_ref(comment_ref : CommentRef) -> Unit raise DocxAnnotationParseError {
+  fn check_ref(
+    comment_ref : CommentRef,
+  ) -> Unit raise DocxAnnotationParseError {
     // forward references are forbidden: a label must be minted by an
     // EARLIER op (already in labels_seen at parse time)
     match comment_ref {
