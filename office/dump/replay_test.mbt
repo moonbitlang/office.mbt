@@ -593,7 +593,7 @@ test "replay rejects an unexpected batch schema even with no ops" {
       assert_eq(
         message, "unsupported XLSX batch schema 'xlsx.batch/3' (accepted: xlsx.batch/1, xlsx.batch/2)",
       )
-    error => fail("expected ReplayInvalidFormat")
+    _ => fail("expected ReplayInvalidFormat")
   } noraise {
     _ => fail("expected replay to reject an unexpected batch schema")
   }
@@ -615,7 +615,7 @@ test "replay rejects a non-xlsx envelope" {
   }
   try ignore(@dump.replay_xlsx_dump(envelope)) catch {
     ReplayInvalidFormat(_) => ()
-    error => fail("expected ReplayInvalidFormat")
+    _ => fail("expected ReplayInvalidFormat")
   } noraise {
     _ => fail("expected replay to reject a docx envelope")
   }

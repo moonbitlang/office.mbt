@@ -151,9 +151,7 @@ async test "dangling relationships classify at the detector and the failure enve
       source,
       findings,
     )
-    guard office_validation_failure(source, 1, data) is CliFailure(failure) else {
-      fail("expected a validation failure value")
-    }
+    guard office_validation_failure(source, 1, data) is CliFailure(failure)
     assert_true(failure.code == "office.validation_failed")
     guard failure.details is Some(Object(details)) else {
       fail("expected complete details")
