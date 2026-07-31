@@ -17,6 +17,12 @@ pub(all) enum RowStateHandling {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend RowStateHandling with Eq::{not_equal, equal}
+
+///|
+pub extend RowStateHandling with @debug.Debug::{to_repr}
+
+///|
 /// The row extent a class occupies.
 pub(all) enum RowStateExtent {
   /// Parsed positions; the highest 1-based row addressed.
@@ -27,6 +33,12 @@ pub(all) enum RowStateExtent {
   /// Present but carries no row semantics (view / pane presentation state).
   Positionless
 } derive(Eq, @debug.Debug)
+
+///|
+pub extend RowStateExtent with Eq::{not_equal, equal}
+
+///|
+pub extend RowStateExtent with @debug.Debug::{to_repr}
 
 ///|
 pub(all) enum RowStateClass {
@@ -70,11 +82,23 @@ pub(all) enum RowStateClass {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend RowStateClass with Eq::{not_equal, equal}
+
+///|
+pub extend RowStateClass with @debug.Debug::{to_repr}
+
+///|
 pub struct RowStateEntry {
   class : RowStateClass
   extent : RowStateExtent
   handling : RowStateHandling
 } derive(Eq, @debug.Debug)
+
+///|
+pub extend RowStateEntry with Eq::{not_equal, equal}
+
+///|
+pub extend RowStateEntry with @debug.Debug::{to_repr}
 
 ///|
 /// Highest 1-based row of a cell or range reference, None when unparsable.
@@ -604,6 +628,12 @@ pub struct RawDataValidationCriteria {
   formula1 : String
   formula2 : String
 } derive(Eq, @debug.Debug)
+
+///|
+pub extend RawDataValidationCriteria with Eq::{not_equal, equal}
+
+///|
+pub extend RawDataValidationCriteria with @debug.Debug::{to_repr}
 
 ///|
 fn raw_tag_end(xml : String, from : Int) -> Int? {

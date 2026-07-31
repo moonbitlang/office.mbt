@@ -27,6 +27,12 @@ pub struct XlsxPackageFeatures {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend XlsxPackageFeatures with Eq::{not_equal, equal}
+
+///|
+pub extend XlsxPackageFeatures with @debug.Debug::{to_repr}
+
+///|
 pub fn XlsxPackageFeatures::none() -> XlsxPackageFeatures {
   {
     external_links: false,
