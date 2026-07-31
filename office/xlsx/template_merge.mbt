@@ -16,6 +16,12 @@ pub(all) struct XlsxTemplateFinding {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend XlsxTemplateFinding with Eq::{not_equal, equal}
+
+///|
+pub extend XlsxTemplateFinding with @debug.Debug::{to_repr}
+
+///|
 /// The complete merge outcome for one workbook.
 pub(all) struct XlsxTemplateReport {
   mut placeholders_found : Int
@@ -38,11 +44,20 @@ pub(all) struct XlsxTemplateReport {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend XlsxTemplateReport with Eq::{not_equal, equal}
+
+///|
+pub extend XlsxTemplateReport with @debug.Debug::{to_repr}
+
+///|
 /// Raised when strict findings refuse publication; the report carries
 /// every bounded finding for the caller's failure envelope.
 pub suberror XlsxTemplateRefused {
   XlsxTemplateRefused(XlsxTemplateReport)
 } derive(@debug.Debug)
+
+///|
+pub extend XlsxTemplateRefused with @debug.Debug::{to_repr}
 
 ///|
 let template_finding_limit : Int = 64

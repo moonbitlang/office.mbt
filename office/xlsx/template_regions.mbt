@@ -29,6 +29,12 @@ pub(all) struct XlsxRegionOutcome {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend XlsxRegionOutcome with Eq::{not_equal, equal}
+
+///|
+pub extend XlsxRegionOutcome with @debug.Debug::{to_repr}
+
+///|
 /// Result of one strict document-level template transaction.
 pub struct XlsxTemplateDocumentResult {
   report : XlsxTemplateReport
