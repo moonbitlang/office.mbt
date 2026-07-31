@@ -143,7 +143,7 @@ fn is_hex6(value : String) -> Bool {
 /// Extracts the batch `style` op parameters a `Style` can express, and
 /// records every retained attribute the op vocabulary cannot reproduce.
 fn extract_style(style : @xlsx.Style) -> StyleExtract {
-  let params : Map[String, Json] = {}
+  let params : Map[String, Json] = Map([])
   let unexpressible : Array[String] = []
 
   // font: bold / italic / RGB color are expressible; everything else is not

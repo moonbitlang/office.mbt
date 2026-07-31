@@ -212,7 +212,7 @@ pub fn replay_docx_dump(envelope : DumpEnvelope) -> Bytes raise ReplayError {
       "unsupported batch schema '\{envelope.batch_schema}' (expected \{@docx_batch.SCHEMA_BATCH_V2})",
     )
   }
-  let images : Map[String, Bytes] = {}
+  let images : Map[String, Bytes] = Map([])
   for id, asset in envelope.assets {
     images[id] = @base64.decode(asset.data) catch {
       _ => raise ReplayInvalidFormat("asset \{id} payload is not valid base64")
