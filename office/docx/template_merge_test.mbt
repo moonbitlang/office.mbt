@@ -116,7 +116,7 @@ async test "docx template refuses missing keys without publishing" {
       permission=0o600,
     )
     let output = directory + "/never.docx"
-    let values : Map[String, @template.TemplateValue] = {}
+    let values : Map[String, @template.TemplateValue] = Map([])
     try
       @docx.transact_docx_template(
         @transaction.transaction_options(input, output_path=output),
