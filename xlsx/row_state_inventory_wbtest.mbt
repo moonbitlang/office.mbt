@@ -548,10 +548,10 @@ test "raw dv criteria preserve quote doubling and mark x14 opaque" {
   let sheet = workbook.add_sheet("Data")
   let list = DataValidation::new(true)
   list.set_range(
-    DataValidationFormula::TextValue("\"It\"\"s,ok\""),
-    DataValidationFormula::TextValue(""),
-    DataValidationType::List,
-    DataValidationOperator::Between,
+    TextValue("\"It\"\"s,ok\""),
+    TextValue(""),
+    List,
+    Between,
   )
   list.set_sqref("A1")
   workbook.add_data_validation("Data", list)

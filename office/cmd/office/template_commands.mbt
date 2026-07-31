@@ -183,7 +183,7 @@ async fn run_template(matches : @argparse.Matches) -> Unit {
       )
   }
   let data = @template.parse_template_document(data_text) catch {
-    @template.TemplateDataError(reason) =>
+    TemplateDataError(reason) =>
       raise CliFailure(
         @lib.protocol_error(
           "office.template.invalid_data",

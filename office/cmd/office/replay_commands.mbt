@@ -36,7 +36,7 @@ async fn run_replay(matches : @argparse.Matches) -> Unit {
       )
   }
   let envelope = @dump.parse_dump_envelope(document) catch {
-    @dump.DumpParseError(reason) =>
+    DumpParseError(reason) =>
       raise CliFailure(
         @lib.protocol_error(
           "office.replay.invalid_dump",
