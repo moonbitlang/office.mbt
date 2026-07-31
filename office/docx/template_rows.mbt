@@ -125,8 +125,8 @@ fn row_attr_value(bytes : BytesView, start : Int, end : Int) -> String? {
 /// constructs, proofErr range markers, drawings, pictures, fields,
 /// content controls, vertical merges, nested tables, unknown
 /// namespaces — refuses.
-fn row_element_allowed(local : String) -> Bool {
-  match local {
+fn row_element_allowed(tag : String) -> Bool {
+  match tag {
     "tr"
     | "trPr"
     | "trHeight"

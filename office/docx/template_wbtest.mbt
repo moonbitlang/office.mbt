@@ -61,10 +61,10 @@ test "split placeholders substitute across two and three runs" {
 ///|
 test "brace pairs in unrewritable content refuse in every split shape" {
   // whole pair inside an opaque run's text
-  let opaque = template_wb_state()
-  wb_scan(opaque, [@document.run([@document.tab(), @document.text("{{k}}")])])
-  assert_eq(opaque.report.unsupported_total, 1)
-  assert_eq(opaque.report.replaced, 0)
+  let state = template_wb_state()
+  wb_scan(state, [@document.run([@document.tab(), @document.text("{{k}}")])])
+  assert_eq(state.report.unsupported_total, 1)
+  assert_eq(state.report.replaced, 0)
   // pair split across bare sibling texts (renders adjacently)
   let bare = template_wb_state()
   wb_scan(bare, [@document.text("{"), @document.text("{k}}")])

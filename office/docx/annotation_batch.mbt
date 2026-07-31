@@ -346,10 +346,10 @@ pub fn parse_annotation_batch(
     }
   }
 
-  fn check_ref(ref : CommentRef) -> Unit raise DocxAnnotationParseError {
+  fn check_ref(comment_ref : CommentRef) -> Unit raise DocxAnnotationParseError {
     // forward references are forbidden: a label must be minted by an
     // EARLIER op (already in labels_seen at parse time)
-    match ref {
+    match comment_ref {
       ByLabel(name) =>
         if !labels_seen.contains(name) {
           raise annotation_parse_error(
@@ -502,8 +502,8 @@ pub async fn transact_docx_annotations(
       let union : Set[String] = Set([])
       let minted : Map[String, String] = {}
       let mut current = archive
-      fn resolve_ref(ref : CommentRef) -> String raise {
-        match ref {
+      fn resolve_ref(comment_ref : CommentRef) -> String raise {
+        match comment_ref {
           ById(id) => id
           ByLabel(label) =>
             match minted.get(label) {
