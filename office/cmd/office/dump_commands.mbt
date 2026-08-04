@@ -35,9 +35,9 @@ fn dump_failure(error : Error, file : String) -> CliFailure {
 ///|
 /// Opens a DOCX package through the same tolerant, budgeted annotated
 /// reader the validate/issues commands use.
-async fn open_docx_annotated_package(
+fn open_docx_annotated_package(
   source : OfficeReadPackage,
-) -> @docx.DocxAnnotatedResult {
+) -> @docx.DocxAnnotatedResult raise CliFailure {
   let main_document_part = validate_docx_read_archive(
     source.file,
     source.archive,
@@ -99,14 +99,6 @@ async fn run_dump(matches : @argparse.Matches) -> Unit {
         error => raise dump_failure(error, file)
       }
     }
-    _ =>
-      raise CliFailure(
-        @lib.protocol_error(
-          "office.dump.unsupported_format",
-          "dump supports XLSX and DOCX packages",
-          details=Json::object({ "format": Json::string(source.format.name()) }),
-        ),
-      )
   }
   match mode {
     JsonDocument => println(envelope.to_json_document().stringify(indent=2))
