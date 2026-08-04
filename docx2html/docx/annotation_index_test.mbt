@@ -1444,7 +1444,9 @@ test "comment mutation preserves Unicode namespace prefixes" {
     err => fail("Unicode-prefix splice failed: \{repr(err)}")
   }
   let result = @mbtzip.read(spliced)
-  guard result.get("word/commentsExtended.xml") is Some(bytes) else { fail("expected commentsExtended.xml") }
+  guard result.get("word/commentsExtended.xml") is Some(bytes) else {
+    fail("expected commentsExtended.xml")
+  }
   let actual = @utf8.decode(bytes, ignore_bom=true)
   assert_true(actual.contains("δ:paraId=\"ABCD0001\" δ:done=\"1\""))
   assert_false(actual.contains("Î"))

@@ -582,7 +582,9 @@ test "L0: duplicate zip entries and foreign encodings fail closed" {
   )
   // The declaration is part of the edited result's semantics, so changing a
   // valid UTF-8 source to a foreign declaration must be rejected as well.
-  guard source.find("UTF-8") is Some(encoding_at) else { fail("expected UTF-8") }
+  guard source.find("UTF-8") is Some(encoding_at) else {
+    fail("expected UTF-8")
+  }
   let rewritten_declaration = @splice.SplicePlan::new()
   rewritten_declaration.edit_part(
     "u.xml",
@@ -718,7 +720,9 @@ test "L0 review round 3: the declaration walker enforces the XML grammar" {
     @splice.span_edit(start=pi_at, end=pi_at, @utf8.encode("<ok/>")),
   )
   guard @mbtzip.read(@splice.splice_docx(pi_bytes, pi_plan)).get("pi.xml")
-    is Some(pi_result) else { fail("expected pi.xml") }
+    is Some(pi_result) else {
+    fail("expected pi.xml")
+  }
   inspect(
     @utf8.decode(pi_result, ignore_bom=true),
     content="<?xml-stylesheet type=\"text/xsl\" href=\"style.xsl\"?><?xmlversion version=\"1.0\"?><r><ok/></r>",
@@ -796,12 +800,16 @@ test "default splice budget accepts ordinary namespace-dense OOXML" {
   let archive = @mbtzip.Archive::new()
   archive.add("word/document.xml", @utf8.encode(source_text))
   let plan = @splice.SplicePlan::new()
-  guard source_text.find("</w:body>") is Some(insert_at) else { fail("expected </w:body>") }
+  guard source_text.find("</w:body>") is Some(insert_at) else {
+    fail("expected </w:body>")
+  }
   plan.edit_part(
     "word/document.xml",
     @splice.span_edit(start=insert_at, end=insert_at, b""),
   )
   let result = @mbtzip.read(@splice.splice_docx(@mbtzip.write(archive), plan))
-  guard result.get("word/document.xml") is Some(actual) else { fail("expected document.xml") }
+  guard result.get("word/document.xml") is Some(actual) else {
+    fail("expected document.xml")
+  }
   assert_eq(@utf8.decode(actual, ignore_bom=true), source_text)
 }

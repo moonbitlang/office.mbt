@@ -183,8 +183,8 @@ test "field hyperlinks count one span per wrapped run" {
   }
   guard counts is Object(count_fields) &&
     count_fields.get("hyperlinks") is Some(hyperlinks) else {
-      fail("expected hyperlinks")
-    }
+    fail("expected hyperlinks")
+  }
   json_inspect(hyperlinks, content=2)
 }
 

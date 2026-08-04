@@ -84,9 +84,7 @@ test "read_docx_package surfaces sections and header/footer stories" {
     ).value,
     "First page header\n\n",
   )
-  guard doc_package.footers is [footer] else {
-    fail("expected single footer")
-  }
+  guard doc_package.footers is [footer] else { fail("expected single footer") }
   assert_eq(
     @docx2html.extract_raw_text_from_document(@docx2html.document(footer.body)).value,
     "Footer text\n\n",
@@ -284,9 +282,7 @@ test "a malformed header part warns and is skipped, not fatal" {
   )
   let result = @docx2html.read_docx_package(bytes)
   debug_inspect(result.headers, content="[]")
-  guard result.sections is [section] else {
-    fail("expected single section")
-  }
+  guard result.sections is [section] else { fail("expected single section") }
   debug_inspect(section.headers, content="[]")
   debug_inspect(
     result.messages,
@@ -385,7 +381,9 @@ test "the blank document passes structural validation and round-trips" {
   )
   debug_inspect(result.headers, content="[]")
   // One empty paragraph, nothing else.
-  guard result.document is Document(children~, ..) else { fail("expected Document") }
+  guard result.document is Document(children~, ..) else {
+    fail("expected Document")
+  }
   debug_inspect(children.length(), content="1")
   // The converter elides the empty paragraph.
   inspect(@docx2html.convert(bytes).value, content="")

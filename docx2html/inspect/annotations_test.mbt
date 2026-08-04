@@ -43,9 +43,7 @@ test "J2: cross-story comment_ids on annotation-body paths, id-form and ordinal"
   let annotated = @docx_impl.read_docx_annotated(commented_fixture())
   for path in ["/comments/comment[@id=0]/p[1]", "/comments/comment[1]/p[1]"] {
     let payload = @inspect.annotated_element(annotated, file="f.docx", path~)
-    guard payload is Object(map) else {
-      fail("expected Object")
-    }
+    guard payload is Object(map) else { fail("expected Object") }
     guard map.get("comment_ids") is Some(Array(ids)) else {
       fail("expected comment_ids")
     }

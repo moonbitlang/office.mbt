@@ -633,9 +633,7 @@ test "section relationship index ignores deterministic hash clustering" {
   }
   let index = RelationshipIndex::build({ relationships: entries })
   for ordinal, id in ids {
-    guard index.by_id.get(id) is Some(matches) else {
-      fail("expected match")
-    }
+    guard index.by_id.get(id) is Some(matches) else { fail("expected match") }
     assert_eq(matches.length(), 1)
     assert_eq(matches[0].target, "header\{ordinal}.xml")
   }
@@ -4796,11 +4794,15 @@ test "comment addition honors MCE-selected relocated comments relationships" {
     let updated = @splice.splice_docx(source, plan)
     assert_eq(@opc.validate_docx_package(updated), [])
     let archive = @mbtzip.read(updated)
-    guard archive.get("word/annotations/comments.xml") is Some(bytes) else { fail("expected comments") }
+    guard archive.get("word/annotations/comments.xml") is Some(bytes) else {
+      fail("expected comments")
+    }
     let comments = @utf8.decode(bytes, ignore_bom=true)
     assert_true(comments.contains("<w:comment "))
     assert_true(archive.get("word/comments.xml") is None)
-    guard archive.get("word/_rels/document.xml.rels") is Some(rels_bytes) else { fail("expected rels") }
+    guard archive.get("word/_rels/document.xml.rels") is Some(rels_bytes) else {
+      fail("expected rels")
+    }
     let rels = @utf8.decode(rels_bytes, ignore_bom=true)
     assert_false(rels.contains("rIdAnnotate"))
     assert_eq(read_docx_annotated(updated).annotations().comments().length(), 1)
@@ -4849,7 +4851,9 @@ test "annotation mutations separate Unicode logical paths from ZIP spelling" {
   assert_true(
     commented_archive.get("d%C3%AFr/_rels/document.xml.rels") is Some(_),
   )
-  guard commented_archive.get("[Content_Types].xml") is Some(types_bytes) else { fail("expected content types") }
+  guard commented_archive.get("[Content_Types].xml") is Some(types_bytes) else {
+    fail("expected content types")
+  }
   let types_text = @utf8.decode(types_bytes, ignore_bom=true)
   assert_true(types_text.contains("PartName=\"/dïr/comments.xml\""))
   assert_false(types_text.contains("PartName=\"/d%C3%AFr/comments.xml\""))
@@ -4869,7 +4873,9 @@ test "annotation mutations separate Unicode logical paths from ZIP spelling" {
   assert_eq(@opc.validate_docx_package(replied), [])
   let replied_archive = @mbtzip.read(replied)
   assert_true(replied_archive.get("d%C3%AFr/commentsExtended.xml") is Some(_))
-  guard replied_archive.get("[Content_Types].xml") is Some(replied_types) else { fail("expected content types") }
+  guard replied_archive.get("[Content_Types].xml") is Some(replied_types) else {
+    fail("expected content types")
+  }
   let replied_types_text = @utf8.decode(replied_types, ignore_bom=true)
   assert_true(
     replied_types_text.contains("PartName=\"/dïr/commentsExtended.xml\""),
