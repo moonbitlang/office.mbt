@@ -199,4 +199,3 @@ pub using @geometry {type PdfRectangle}
 pub using @geometry {type Point2}
 
 // Traits
-

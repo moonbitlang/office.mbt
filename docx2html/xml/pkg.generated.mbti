@@ -95,4 +95,3 @@ pub(all) enum XmlSourceEncoding {
 // Type aliases
 
 // Traits
-

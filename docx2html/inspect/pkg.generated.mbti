@@ -37,4 +37,3 @@ pub fn text_lines(@document.DocumentElement, headers? : Array[@document.HeaderFo
 pub using @paths {type PathError}
 
 // Traits
-

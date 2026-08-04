@@ -21,4 +21,3 @@ pub fn pdf_text_zapfdingbats_glyphname(Int) -> String?
 // Type aliases
 
 // Traits
-

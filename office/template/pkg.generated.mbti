@@ -123,4 +123,3 @@ pub fn TemplateValue::to_repr(Self) -> @debug.Repr
 // Type aliases
 
 // Traits
-

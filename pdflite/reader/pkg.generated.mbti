@@ -199,4 +199,3 @@ pub(all) struct PdfXRefSection {
 // Type aliases
 
 // Traits
-

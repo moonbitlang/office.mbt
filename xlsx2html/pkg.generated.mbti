@@ -40,4 +40,3 @@ pub impl Show for RenderError
 // Type aliases
 
 // Traits
-

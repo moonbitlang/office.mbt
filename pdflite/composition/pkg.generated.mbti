@@ -31,4 +31,3 @@ pub fn PdfCompositionEntry::to_repr(Self) -> @debug.Repr
 // Type aliases
 
 // Traits
-

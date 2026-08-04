@@ -268,4 +268,3 @@ pub fn VerticalAlignment::to_repr(Self) -> @debug.Repr
 // Type aliases
 
 // Traits
-

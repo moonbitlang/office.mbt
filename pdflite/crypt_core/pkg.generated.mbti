@@ -152,4 +152,3 @@ pub fn PdfSavedEncryption::to_repr(Self) -> @debug.Repr
 // Type aliases
 
 // Traits
-

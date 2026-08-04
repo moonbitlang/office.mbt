@@ -97,4 +97,3 @@ pub fn DumpWarning::to_json(Self) -> Json
 // Type aliases
 
 // Traits
-

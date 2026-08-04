@@ -46,4 +46,3 @@ pub fn PdfBookmarkColour::to_repr(Self) -> @debug.Repr
 // Type aliases
 
 // Traits
-

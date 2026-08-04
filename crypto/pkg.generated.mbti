@@ -41,4 +41,3 @@ pub fn AesSchedule::encrypt_block_in_place(Self, Array[Byte]) -> Unit raise Cryp
 // Type aliases
 
 // Traits
-

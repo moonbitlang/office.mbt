@@ -18,10 +18,10 @@
         "lib",
         "share"
       ],
-      "manifest_sha256": "407a9ca102ce96327866391004bd5306f6e81741721dd35d63dd59e2686ae899",
-      "moon_version": "moon 0.1.20260724 (5f1406a 2026-07-24)",
-      "moonc_version": "moonc v0.10.5+5be960077 (2026-07-24)",
-      "moonrun_version": "moonrun 0.1.20260724 (5f1406a 2026-07-24)"
+      "manifest_sha256": "de0bb51afe120259ae4296c99ae283acb1978a907e2c5d7a0d0020e1477ec355",
+      "moon_version": "moon 0.1.20260731 (11c377b 2026-07-31)",
+      "moonc_version": "moonc v0.10.5+001eef869-nightly (2026-07-31)",
+      "moonrun_version": "moonrun 0.1.20260731 (11c377b 2026-07-31)"
     },
     {
       "platform": "linux-x86_64",
@@ -32,10 +32,10 @@
         "lib",
         "share"
       ],
-      "manifest_sha256": "9f79b8b0bf8dbc12f47685e6d2e93cc9649b99e9ef5be93fd1c5ffa15091ab04",
-      "moon_version": "moon 0.1.20260724 (5f1406a 2026-07-24)",
-      "moonc_version": "moonc v0.10.5+5be960077 (2026-07-24)",
-      "moonrun_version": "moonrun 0.1.20260724 (5f1406a 2026-07-24)"
+      "manifest_sha256": "7c742f64506c27f744e3748e14c046315d763e570b65c62263cdee3623f5098b",
+      "moon_version": "moon 0.1.20260731 (11c377b 2026-07-31)",
+      "moonc_version": "moonc v0.10.5+001eef869-nightly (2026-07-31)",
+      "moonrun_version": "moonrun 0.1.20260731 (11c377b 2026-07-31)"
     }
   ]
 }

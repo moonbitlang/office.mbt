@@ -225,4 +225,3 @@ pub let pdf_text_uhc_vertical_codepoint_table : Array[(Int, Int)]
 // Type aliases
 
 // Traits
-

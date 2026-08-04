@@ -27,4 +27,3 @@ pub fn pdf_flate_encode_with_level(Bytes, Int) -> Bytes raise @core.PdfError
 // Type aliases
 
 // Traits
-
