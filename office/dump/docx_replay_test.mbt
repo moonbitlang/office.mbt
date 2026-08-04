@@ -153,7 +153,7 @@ test "chunked docx replay remaps note ids across scripts" {
   let mut second = false
   for entry in bodies {
     let (_, body) = entry
-    let rendered = "\{Repr(body)}"
+    let rendered = "\{repr(body)}"
     if rendered.contains("first chunk note") {
       first = true
     }

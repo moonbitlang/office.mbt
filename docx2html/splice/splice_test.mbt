@@ -83,7 +83,7 @@ test "L0: splicing edits exactly the spans and preserves everything else" {
   let mut b_compression = ""
   for entry in output.entries() {
     if entry.name() == "b.bin" {
-      b_compression = "\{Repr(entry.compression())}"
+      b_compression = "\{repr(entry.compression())}"
     }
   }
   inspect(b_compression, content="Store")
