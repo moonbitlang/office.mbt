@@ -560,7 +560,7 @@ fn agile_verify_password(
   if verifier_hash_value.length() < size {
     return false
   }
-  expected_hash[:size].equal(verifier_hash_value[:size])
+  expected_hash[:size] == verifier_hash_value[:size]
 }
 
 ///|
@@ -744,7 +744,7 @@ fn standard_password_verified(
     verifier_block[40:40 + encrypted_hash_size],
   )
   let expected = hash_parts("sha1", [verifier])
-  expected[:hash_size].equal(verifier_hash[:hash_size])
+  expected[:hash_size] == verifier_hash[:hash_size]
 }
 
 ///|
