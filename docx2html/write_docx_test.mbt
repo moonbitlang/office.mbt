@@ -290,7 +290,9 @@ test "tables round-trip: header rows, column spans, and row spans" {
   debug_inspect(result.messages, content="[]")
   // The reader strips vMerge continuation cells and reconstructs row_span —
   // exactly the input body.
-  guard result.document is Document(children~, ..) else { fail("expected Document") }
+  guard result.document is Document(children~, ..) else {
+    fail("expected Document")
+  }
   assert_eq(children, body)
 }
 
@@ -408,7 +410,9 @@ test "review round 1 (F2): merge-overlap rejection and the empty-cell asymmetry"
     ]),
   ]
   let result = @docx2html.read_docx_package(@docx2html.write_docx(body))
-  guard result.document is Document(children~, ..) else { fail("expected Document") }
+  guard result.document is Document(children~, ..) else {
+    fail("expected Document")
+  }
   guard children is [Table(children=rows, ..)] else { fail("expected Table") }
   guard rows is [TableRow(children=cells, ..)] else {
     fail("expected TableRow")
@@ -462,7 +466,9 @@ test "lists round-trip: ordered and unordered at several levels" {
   debug_inspect(@opc.validate_docx_package(bytes), content="[]")
   let result = @docx2html.read_docx_package(bytes)
   debug_inspect(result.messages, content="[]")
-  guard result.document is Document(children~, ..) else { fail("expected Document") }
+  guard result.document is Document(children~, ..) else {
+    fail("expected Document")
+  }
   assert_eq(children, body)
   // The converter renders the shallow levels as real lists; its deep-level
   // fallback to a plain paragraph for level 9 is pre-existing Mammoth
@@ -523,7 +529,9 @@ test "hyperlinks and images round-trip" {
   debug_inspect(@opc.validate_docx_package(bytes), content="[]")
   let result = @docx2html.read_docx_package(bytes)
   debug_inspect(result.messages, content="[]")
-  guard result.document is Document(children~, ..) else { fail("expected Document") }
+  guard result.document is Document(children~, ..) else {
+    fail("expected Document")
+  }
   assert_eq(children, body)
   // The converter emits a data-URI img and a real link.
   inspect(
@@ -651,7 +659,9 @@ test "multiple images and images inside hyperlinks and cells round-trip" {
   debug_inspect(@opc.validate_docx_package(bytes), content="[]")
   let result = @docx2html.read_docx_package(bytes)
   debug_inspect(result.messages, content="[]")
-  guard result.document is Document(children~, ..) else { fail("expected Document") }
+  guard result.document is Document(children~, ..) else {
+    fail("expected Document")
+  }
   assert_eq(children, body)
   // Three distinct media parts were emitted.
   let archive = @mbtzip.read(bytes)
@@ -873,7 +883,9 @@ test "review round 2 (batch): a batch-built document reads back with the scripte
   let bytes = @docx2html.write_docx(script.build_body(Map([])))
   let result = @docx2html.read_docx_package(bytes)
   debug_inspect(result.messages.length(), content="0")
-  guard result.document is Document(children~, ..) else { fail("expected Document") }
+  guard result.document is Document(children~, ..) else {
+    fail("expected Document")
+  }
   guard children
     is [
       Paragraph(properties=title_props, ..),
@@ -1083,7 +1095,9 @@ test "K1: anchors are emitted in the canonical intra-paragraph shape" {
     ),
   ])
   let archive = @mbtzip.read(bytes)
-  guard archive.get("word/document.xml") is Some(doc) else { fail("expected document.xml") }
+  guard archive.get("word/document.xml") is Some(doc) else {
+    fail("expected document.xml")
+  }
   let text = @utf8.decode(doc, ignore_bom=true)
   // Range starts sit right after pPr, in ascending id order.
   inspect(
