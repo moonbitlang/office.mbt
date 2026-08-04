@@ -398,4 +398,3 @@ pub fn PdfNumberSet::contains(Self, Int) -> Bool
 pub type PdfBytes = Bytes
 
 // Traits
-

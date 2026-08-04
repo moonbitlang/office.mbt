@@ -82,4 +82,3 @@ pub fn Message::to_repr(Self) -> @debug.Repr
 // Type aliases
 
 // Traits
-

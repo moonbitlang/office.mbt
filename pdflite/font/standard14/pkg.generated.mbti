@@ -62,4 +62,3 @@ pub using @afm {type PdfAfmData}
 pub type PdfBytes = Bytes
 
 // Traits
-

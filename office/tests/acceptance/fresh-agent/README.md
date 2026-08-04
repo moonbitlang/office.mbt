@@ -63,7 +63,7 @@ after the build and retained with the candidate. Every tracked controller asset
 is copied from the snapshot, never from the mutable checkout.
 
 CI installs the immutable MoonBit snapshot named by the locked `moonc` version
-(`0.10.5+5be960077`), rather than the mutable `nightly` CDN alias. Any deliberate
+(`0.10.5+001eef869-nightly`), rather than the mutable `nightly` CDN alias. Any deliberate
 toolchain upgrade must update that workflow version and both platform inventories
 in `build-lock.json` together. CI downloads the exact platform distribution and
 core archives and verifies both tracked SHA-256 digests before either archive is

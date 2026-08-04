@@ -64,4 +64,3 @@ pub fn write_with_password(@xlsx.Workbook, String) -> Bytes raise @xlsx.XlsxErro
 // Type aliases
 
 // Traits
-

@@ -35,4 +35,3 @@ pub fn demo_tracker_heatmap_bytes() -> Bytes raise @xlsx.XlsxError
 // Type aliases
 
 // Traits
-

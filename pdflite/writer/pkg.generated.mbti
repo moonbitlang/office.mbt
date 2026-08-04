@@ -49,4 +49,3 @@ pub using @crypt_core {type PdfEncryptionMethod}
 pub using @crypt_core {type PdfPermission}
 
 // Traits
-

@@ -54,4 +54,3 @@ pub fn CliOutputFormat::to_repr(Self) -> @debug.Repr
 // Type aliases
 
 // Traits
-

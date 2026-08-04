@@ -86,4 +86,3 @@ pub fn BatchScript::op_count(Self) -> Int
 // Type aliases
 
 // Traits
-

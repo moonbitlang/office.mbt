@@ -125,4 +125,3 @@ pub fn XmlStartTagScanner::parent_namespace_uri(Self) -> String?
 // Type aliases
 
 // Traits
-

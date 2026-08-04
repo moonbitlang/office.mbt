@@ -59,4 +59,3 @@ pub fn PdfDrawColour::to_repr(Self) -> @debug.Repr
 // Type aliases
 
 // Traits
-

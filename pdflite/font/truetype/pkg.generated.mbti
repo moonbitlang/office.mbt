@@ -147,4 +147,3 @@ pub fn PdfTrueTypeTableRecord::to_repr(Self) -> @debug.Repr
 // Type aliases
 
 // Traits
-

@@ -72,4 +72,3 @@ pub struct BatchPlanStats {
 // Type aliases
 
 // Traits
-

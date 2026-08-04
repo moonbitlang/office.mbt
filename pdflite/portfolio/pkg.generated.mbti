@@ -30,4 +30,3 @@ pub fn PdfPortfolioEntry::to_repr(Self) -> @debug.Repr
 pub type PdfBytes = Bytes
 
 // Traits
-

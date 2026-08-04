@@ -55,4 +55,3 @@ pub fn pdf_run_length_encode_view(BytesView) -> Bytes
 // Type aliases
 
 // Traits
-

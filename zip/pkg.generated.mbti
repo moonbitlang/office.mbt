@@ -66,4 +66,3 @@ pub fn Entry::name(Self) -> String
 // Type aliases
 
 // Traits
-

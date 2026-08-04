@@ -128,4 +128,3 @@ pub using @syntax {type PdfObject}
 pub using @geometry {type PdfRectangle}
 
 // Traits
-
