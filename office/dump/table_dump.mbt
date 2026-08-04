@@ -339,7 +339,7 @@ fn remove_dropped(
   dropped : Set[Int],
 ) -> (Array[Json], Array[TableCandidate]) {
   let next_ops : Array[Json] = []
-  let index_map : Map[Int, Int] = {}
+  let index_map : Map[Int, Int] = Map([])
   for index, op in ops {
     if !dropped.contains(index) {
       index_map[index] = next_ops.length()
