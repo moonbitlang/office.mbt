@@ -24,6 +24,9 @@ pub suberror TemplateDataError {
 } derive(@debug.Debug)
 
 ///|
+pub extend TemplateDataError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// One substitutable value, typed so a whole-cell XLSX placeholder can
 /// keep the value's native type.
 pub(all) enum TemplateValue {
@@ -31,6 +34,12 @@ pub(all) enum TemplateValue {
   NumberValue(Double)
   BoolValue(Bool)
 } derive(Eq, @debug.Debug)
+
+///|
+pub extend TemplateValue with Eq::{not_equal, equal}
+
+///|
+pub extend TemplateValue with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Deterministic text form used for substring substitution: strings pass
@@ -272,7 +281,7 @@ fn parse_scalar_entries(
       " carries \{entries.length()} keys; the limit is \{max_keys}",
     )
   }
-  let values : Map[String, TemplateValue] = {}
+  let values : Map[String, TemplateValue] = Map([])
   for key, value in entries {
     if !template_key_ok(key) {
       raise TemplateDataError(

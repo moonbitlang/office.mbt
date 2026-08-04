@@ -22,6 +22,9 @@ pub suberror TemplateScanError {
 } derive(@debug.Debug)
 
 ///|
+pub extend TemplateScanError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// A half-open region of the scanned text in segment coordinates:
 /// `[start, end)` where each endpoint is (segment index, code-unit offset
 /// within that segment). CANONICAL FORM: an end landing exactly on a
@@ -38,11 +41,23 @@ pub(all) struct TemplateSpan {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend TemplateSpan with Eq::{not_equal, equal}
+
+///|
+pub extend TemplateSpan with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// One well-formed placeholder occurrence.
 pub(all) struct PlaceholderMatch {
   key : String
   span : TemplateSpan
 } derive(Eq, @debug.Debug)
+
+///|
+pub extend PlaceholderMatch with Eq::{not_equal, equal}
+
+///|
+pub extend PlaceholderMatch with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// One `{{` that forms neither a placeholder nor an escape. The span
@@ -53,12 +68,24 @@ pub(all) struct MalformedPlaceholder {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend MalformedPlaceholder with Eq::{not_equal, equal}
+
+///|
+pub extend MalformedPlaceholder with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// The complete result of scanning one hard-break-free region.
 pub(all) struct TemplateScan {
   matches : Array[PlaceholderMatch]
   escapes : Array[TemplateSpan]
   malformed : Array[MalformedPlaceholder]
 } derive(Eq, @debug.Debug)
+
+///|
+pub extend TemplateScan with Eq::{not_equal, equal}
+
+///|
+pub extend TemplateScan with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// The placeholder key grammar: `[A-Za-z_][A-Za-z0-9_.-]{0,63}`.
