@@ -6,6 +6,9 @@ pub suberror ReplayError {
 } derive(@debug.Debug)
 
 ///|
+pub extend ReplayError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Replays an `office.dump/1` XLSX envelope by applying its ordered batch
 /// ops through the same engine that authored them: the create sheet first,
 /// then every op in stream order. Apply-time validation runs here as it
