@@ -103,7 +103,7 @@ async fn run_annotate(matches : @argparse.Matches) -> Unit {
       )
   }
   let batch = @office_docx.parse_annotation_batch(script_text) catch {
-    @office_docx.DocxAnnotationParseError(reason) =>
+    DocxAnnotationParseError(reason) =>
       raise CliFailure(
         @lib.protocol_error(
           "office.annotate.invalid_script",

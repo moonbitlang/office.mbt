@@ -7828,13 +7828,13 @@ test "TEXT contains formatter failures at the formula boundary" {
   sheet.set_cell_formula("A1", "TEXT(0,\"" + format + "\")")
   match workbook.calc_cell_typed("Sheet1", "A1") {
     Some(String(text)) => assert_true(text.contains("%"))
-    other => fail("zero TEXT scaling should stay finite, got \{to_repr(other)}")
+    other => fail("zero TEXT scaling should stay finite, got \{repr(other)}")
   }
   sheet.set_cell_formula("A2", "TEXT(1,\"" + format + "\")")
   inspect(workbook.calc_cell_value("Sheet1", "A2"), content="#VALUE!")
   match workbook.calc_cell_typed("Sheet1", "A2") {
     Some(Error(code)) => inspect(code, content="#VALUE!")
     other =>
-      fail("TEXT formatter failure should be an error, got \{to_repr(other)}")
+      fail("TEXT formatter failure should be an error, got \{repr(other)}")
   }
 }

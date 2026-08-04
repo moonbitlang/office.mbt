@@ -22,12 +22,12 @@ fn xml_encoding(bytes : BytesView) -> String? {
   }
   let prefix_len = if len < 256 { len } else { 256 }
   let prefix = bytes[:prefix_len]
-  let start = if prefix_len >= 3 && prefix[:3].equal(b"\xEF\xBB\xBF") {
+  let start = if prefix_len >= 3 && prefix[:3] == b"\xEF\xBB\xBF" {
     3
   } else {
     0
   }
-  if prefix_len < start + 5 || !prefix[start:start + 5].equal(b"<?xml") {
+  if prefix_len < start + 5 || prefix[start:start + 5] != b"<?xml" {
     return None
   }
   let (needle, quote) = match prefix.find(b"encoding=\"") {

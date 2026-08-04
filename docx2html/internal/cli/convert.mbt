@@ -6,12 +6,14 @@
 // `main`) stays in the respective `cmd` package.
 
 ///|
+/// Output format for document conversion.
 pub(all) enum CliOutputFormat {
   Html
   Markdown
 } derive(Debug, Eq)
 
 ///|
+/// Command-line options for document conversion.
 pub(all) struct CliOptions {
   input_path : String
   output_path : String?
@@ -22,6 +24,7 @@ pub(all) struct CliOptions {
 } derive(Debug, Eq)
 
 ///|
+/// Errors from the CLI document converter.
 pub(all) suberror CliError {
   CliError(String)
 } derive(Eq)

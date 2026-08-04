@@ -135,7 +135,7 @@ test "docx envelopes and asset integrity at parse" {
   let data = @b64.encode(payload)
   let id = "sha256-" + @dump.sha256_hex_bytes(payload)
   let keyed = (key : String, entry : Json) => {
-    let map : Map[String, Json] = {}
+    let map : Map[String, Json] = Map([])
     map[key] = entry
     Json::object(map)
   }
@@ -189,8 +189,7 @@ test "docx envelopes and asset integrity at parse" {
     )
     |> ignore
   catch {
-    @dump.DumpParseError(reason) =>
-      assert_true(reason.contains("does not hash"))
+    DumpParseError(reason) => assert_true(reason.contains("does not hash"))
   } noraise {
     _ => fail("a lying digest must not parse")
   }
@@ -210,7 +209,7 @@ test "docx envelopes and asset integrity at parse" {
     )
     |> ignore
   catch {
-    @dump.DumpParseError(reason) => assert_true(reason.contains("bytes"))
+    DumpParseError(reason) => assert_true(reason.contains("bytes"))
   } noraise {
     _ => fail("a size mismatch must not parse")
   }
@@ -230,7 +229,7 @@ test "docx envelopes and asset integrity at parse" {
     )
     |> ignore
   catch {
-    @dump.DumpParseError(reason) => assert_true(reason.contains("base64"))
+    DumpParseError(reason) => assert_true(reason.contains("base64"))
   } noraise {
     _ => fail("invalid base64 must not parse")
   }
@@ -250,7 +249,7 @@ test "docx envelopes and asset integrity at parse" {
     )
     |> ignore
   catch {
-    @dump.DumpParseError(reason) => assert_true(reason.contains("sheet"))
+    DumpParseError(reason) => assert_true(reason.contains("sheet"))
   } noraise {
     _ => fail("an xlsx dump without a create sheet must not parse")
   }

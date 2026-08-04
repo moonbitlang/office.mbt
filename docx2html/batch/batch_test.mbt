@@ -96,17 +96,23 @@ test "a full script parses and builds the expected body" {
   )
   let body = script.build_body({ "dot.png": b"\x89PNG fake" })
   debug_inspect(body.length(), content="4")
-  guard body[0] is Paragraph(properties~, ..)
+  guard body[0] is Paragraph(properties~, ..) else {
+    fail("unexpected element")
+  }
   debug_inspect(properties.style_id, content="Some(\"Heading1\")")
-  guard body[2] is Paragraph(properties=list_props, ..)
+  guard body[2] is Paragraph(properties=list_props, ..) else {
+    fail("expected Paragraph")
+  }
   debug_inspect(
     list_props.numbering,
     content=(
       #|Some({ is_ordered: true, level: 2 })
     ),
   )
-  guard body[3] is Table(children~, ..)
-  guard children is [TableRow(is_header~, ..), _]
+  guard body[3] is Table(children~, ..) else { fail("expected Table") }
+  guard children is [TableRow(is_header~, ..), _] else {
+    fail("expected TableRow")
+  }
   debug_inspect(is_header, content="true")
 }
 
@@ -939,9 +945,13 @@ test "K3: footnote and endnote inline keys parse with dense indexes" {
   )
   // The built body carries the dense per-kind references.
   let body = script.build_body(Map([]))
-  guard body[0] is Paragraph(children~, ..)
-  guard children[1] is Run(children=ref_children, ..)
-  guard ref_children[0] is NoteReference(note_type~, note_id~)
+  guard body[0] is Paragraph(children~, ..) else { fail("expected Paragraph") }
+  guard children[1] is Run(children=ref_children, ..) else {
+    fail("expected Run")
+  }
+  guard ref_children[0] is NoteReference(note_type~, note_id~) else {
+    fail("expected NoteReference")
+  }
   inspect(note_type, content="footnote")
   inspect(note_id, content="0")
 }

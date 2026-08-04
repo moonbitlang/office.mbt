@@ -431,7 +431,7 @@ pub fn splice_docx(
   let archive = @mbtzip.read(original) catch {
     err =>
       raise InvalidZip(
-        message="could not read the original package: \{to_repr(err)}",
+        message="could not read the original package: \{repr(err)}",
       )
   }
   let output = build_spliced_archive(archive, plan, false, None)
@@ -443,7 +443,7 @@ pub fn splice_docx(
   }
   @mbtzip.write(output) catch {
     err =>
-      raise InvalidZip(message="could not repack the package: \{to_repr(err)}")
+      raise InvalidZip(message="could not repack the package: \{repr(err)}")
   }
 }
 
@@ -468,7 +468,7 @@ pub fn splice_docx_archive(
         message="the spliced package exceeds the output limit of \{limit} bytes",
       )
     err =>
-      raise InvalidZip(message="could not repack the package: \{to_repr(err)}")
+      raise InvalidZip(message="could not repack the package: \{repr(err)}")
   }
 }
 
@@ -1106,7 +1106,7 @@ fn validate_spliced_xml(
     }
     err =>
       raise Unsupported(
-        message="splicing '\{name}' produced malformed XML (\{to_repr(err)}); refusing to emit",
+        message="splicing '\{name}' produced malformed XML (\{repr(err)}); refusing to emit",
       )
   } noraise {
     _ => ()

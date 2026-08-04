@@ -127,7 +127,7 @@ fn find_chart_sheet(
 priv struct MergeSpan {
   colspan : Int
   rowspan : Int
-} derive(@debug.Debug)
+}
 
 ///|
 fn render_worksheet(
@@ -396,3 +396,11 @@ fn render_chart_sheet(
   }
   body.write_string("</section>\n")
 }
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend RenderError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend RenderError with Show::{to_string, output}

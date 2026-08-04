@@ -16,11 +16,23 @@ pub(all) struct DumpResidual {
 } derive(Eq, ToJson)
 
 ///|
+pub extend DumpResidual with Eq::{not_equal, equal}
+
+///|
+pub extend DumpResidual with ToJson::{to_json}
+
+///|
 /// One non-fatal dump diagnostic.
 pub(all) struct DumpWarning {
   code : String
   message : String
 } derive(Eq, ToJson)
+
+///|
+pub extend DumpWarning with Eq::{not_equal, equal}
+
+///|
+pub extend DumpWarning with ToJson::{to_json}
 
 ///|
 /// One captured binary asset, content-addressed by its SHA-256 digest.
@@ -31,6 +43,12 @@ pub(all) struct DumpAsset {
   size : Int
   data : String
 } derive(Eq, ToJson)
+
+///|
+pub extend DumpAsset with Eq::{not_equal, equal}
+
+///|
+pub extend DumpAsset with ToJson::{to_json}
 
 ///|
 /// A complete semantic dump: ordered batch ops in the target engine's exact
@@ -98,7 +116,7 @@ pub fn DumpEnvelope::to_json_document(self : DumpEnvelope) -> Json {
     "replay": Json::object(replay),
     "ops": Json::array(self.ops),
     "assets": {
-      let assets : Map[String, Json] = {}
+      let assets : Map[String, Json] = Map([])
       for id, asset in self.assets {
         assets[id] = asset.to_json()
       }

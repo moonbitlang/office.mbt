@@ -204,7 +204,7 @@ test "stored formula presence counts empty formula text" {
 
 ///|
 test "package feature detection classifies the raw part list" {
-  let names : Map[String, String] = {}
+  let names : Map[String, String] = Map([])
   for
     physical in [
       "[Content_Types].xml", "_rels/.rels", "xl/workbook.xml", "xl/_rels/workbook.xml.rels",
@@ -236,7 +236,7 @@ test "package feature detection classifies the raw part list" {
 
 ///|
 test "package feature detection stays quiet for a conventional package" {
-  let names : Map[String, String] = {}
+  let names : Map[String, String] = Map([])
   for
     physical in [
       "[Content_Types].xml", "_rels/.rels", "xl/workbook.xml", "xl/_rels/workbook.xml.rels",
@@ -347,7 +347,7 @@ test "inventory handling labels match actual insert behavior" {
 
 ///|
 test "package feature detection: declared content types beat inert paths" {
-  let names : Map[String, String] = {}
+  let names : Map[String, String] = Map([])
   for
     physical in [
       "xl/media/link.xml", "xl/media/macro.xml", "xl/preservedDrawingParts/part1.bin",
@@ -405,7 +405,7 @@ test "library output with rich features stays classified" {
 
 ///|
 test "package feature detection: exact type identities, no alias overreach" {
-  let names : Map[String, String] = {}
+  let names : Map[String, String] = Map([])
   for physical in ["xl/media/wrapper.xml", "xl/externalLinks/odd.xml"] {
     names[physical.to_lower()] = physical
   }
@@ -545,14 +545,9 @@ test "cf literal proof: formula cfvos, x14 state, and skipped rules disprove" {
 ///|
 test "raw dv criteria preserve quote doubling and mark x14 opaque" {
   let workbook = Workbook::new()
-  let sheet = workbook.add_sheet("Data")
+  workbook.add_sheet("Data") |> ignore
   let list = DataValidation::new(true)
-  list.set_range(
-    DataValidationFormula::TextValue("\"It\"\"s,ok\""),
-    DataValidationFormula::TextValue(""),
-    DataValidationType::List,
-    DataValidationOperator::Between,
-  )
+  list.set_range(TextValue("\"It\"\"s,ok\""), TextValue(""), List, Between)
   list.set_sqref("A1")
   workbook.add_data_validation("Data", list)
   // the write/read round trip goes through the raw store

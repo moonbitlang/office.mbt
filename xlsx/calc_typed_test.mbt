@@ -41,27 +41,27 @@ test "calc_cell_typed returns the typed computed value per kind" {
   sheet.set_cell_formula("B6", "NA()") // error #N/A
   match workbook.calc_cell_typed("S", "B1") {
     Some(Numeric(number)) => inspect(number, content="6")
-    other => fail("B1 should be numeric, got \{to_repr(other)}")
+    other => fail("B1 should be numeric, got \{repr(other)}")
   }
   match workbook.calc_cell_typed("S", "B2") {
     Some(String(text)) => inspect(text, content="xy")
-    other => fail("B2 should be a string, got \{to_repr(other)}")
+    other => fail("B2 should be a string, got \{repr(other)}")
   }
   match workbook.calc_cell_typed("S", "B3") {
     Some(Bool(flag)) => inspect(flag, content="true")
-    other => fail("B3 should be a bool, got \{to_repr(other)}")
+    other => fail("B3 should be a bool, got \{repr(other)}")
   }
   match workbook.calc_cell_typed("S", "B4") {
     Some(Bool(flag)) => inspect(flag, content="false")
-    other => fail("B4 should be a bool, got \{to_repr(other)}")
+    other => fail("B4 should be a bool, got \{repr(other)}")
   }
   match workbook.calc_cell_typed("S", "B5") {
     Some(Error(code)) => inspect(code, content="#DIV/0!")
-    other => fail("B5 should be an error, got \{to_repr(other)}")
+    other => fail("B5 should be an error, got \{repr(other)}")
   }
   match workbook.calc_cell_typed("S", "B6") {
     Some(Error(code)) => inspect(code, content="#N/A")
-    other => fail("B6 should be an error, got \{to_repr(other)}")
+    other => fail("B6 should be an error, got \{repr(other)}")
   }
   // Every one stays consistent with the raw string form.
   for reference in ["B1", "B2", "B3", "B4", "B5", "B6"] {
@@ -79,15 +79,15 @@ test "calc_cell_typed reads stored values and reports an empty cell as None" {
   // A non-formula cell reports its stored value, typed.
   match workbook.calc_cell_typed("S", "A1") {
     Some(Numeric(number)) => inspect(number, content="42")
-    other => fail("A1 should be numeric, got \{to_repr(other)}")
+    other => fail("A1 should be numeric, got \{repr(other)}")
   }
   match workbook.calc_cell_typed("S", "A2") {
     Some(String(text)) => inspect(text, content="hello")
-    other => fail("A2 should be a string, got \{to_repr(other)}")
+    other => fail("A2 should be a string, got \{repr(other)}")
   }
   match workbook.calc_cell_typed("S", "A3") {
     Some(Bool(flag)) => inspect(flag, content="true")
-    other => fail("A3 should be a bool, got \{to_repr(other)}")
+    other => fail("A3 should be a bool, got \{repr(other)}")
   }
   // A blank cell is an empty result, distinct from an empty string.
   assert_true(workbook.calc_cell_typed("S", "Z9") is None)
@@ -97,7 +97,7 @@ test "calc_cell_typed reads stored values and reports an empty cell as None" {
   // The row/col overload agrees with the A1 form.
   match workbook.calc_cell_typed_rc("S", 1, 1) {
     Some(Numeric(number)) => inspect(number, content="42")
-    other => fail("A1 (rc) should be numeric, got \{to_repr(other)}")
+    other => fail("A1 (rc) should be numeric, got \{repr(other)}")
   }
 }
 
@@ -111,7 +111,7 @@ test "calc_cell_typed surfaces a computed empty string distinct from a blank" {
   sheet.set_cell_formula("A1", "IF(TRUE,\"\",\"x\")")
   match workbook.calc_cell_typed("S", "A1") {
     Some(String(text)) => inspect(text, content="")
-    other => fail("A1 should be an (empty) string, got \{to_repr(other)}")
+    other => fail("A1 should be an (empty) string, got \{repr(other)}")
   }
   assert_true(workbook.calc_cell_typed("S", "B9") is None)
   assert_typed_consistent(workbook, "S", "A1")

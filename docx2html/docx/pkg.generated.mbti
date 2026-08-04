@@ -101,6 +101,10 @@ pub enum AnnotationBoundary {
   InsideEnd
   After
 } derive(Eq)
+pub fn AnnotationBoundary::equal(Self, Self) -> Bool
+pub fn AnnotationBoundary::not_equal(Self, Self) -> Bool
+pub fn AnnotationBoundary::output(Self, &Logger) -> Unit
+pub fn AnnotationBoundary::to_string(Self) -> String
 pub impl Show for AnnotationBoundary
 
 pub struct AnnotationIndex {

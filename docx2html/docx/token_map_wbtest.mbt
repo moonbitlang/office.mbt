@@ -20,7 +20,7 @@ fn assert_reader_oracle(source : String) -> Unit raise {
   let mapped = map_of(source)
   assert_eq(mapped.projection, reader_projection_of(source))
   try @xml.read_xml_string_strict("<t>" + source + "</t>") |> ignore catch {
-    error => fail("strict oracle rejected accepted source: \{to_repr(error)}")
+    error => fail("strict oracle rejected accepted source: \{repr(error)}")
   } noraise {
     _ => ()
   }

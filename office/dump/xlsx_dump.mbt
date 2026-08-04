@@ -9,6 +9,9 @@ pub suberror DumpError {
 } derive(@debug.Debug)
 
 ///|
+pub extend DumpError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// The XLSX batch schema every dump op stream targets.
 pub const XLSX_BATCH_SCHEMA : String = @inspect.SCHEMA_BATCH_V2
 
@@ -721,7 +724,7 @@ fn dump_sheet_coverage_residuals(
   sheet : String,
   unsupported_charts : Int,
   residual : Array[DumpResidual],
-) -> Unit raise {
+) -> Unit {
   let counts : Array[(String, Int)] = [
     ("xlsx.charts_not_dumped", unsupported_charts),
     ("xlsx.hyperlinks_not_dumped", worksheet.hyperlinks.length()),
@@ -860,7 +863,7 @@ fn sheet_scroll_anchor(
 fn dump_workbook_residuals(
   workbook : @xlsx.Workbook,
   residual : Array[DumpResidual],
-) -> Unit raise {
+) -> Unit {
   let document = Json::object({ "scope": Json::string("workbook") })
   // get_defined_names does not raise, so the old `try?`/unwrap_or fallback
   // was unreachable
@@ -1006,7 +1009,7 @@ pub fn dump_xlsx_workbook(
 ) -> DumpEnvelope raise {
   let ops : Array[Json] = []
   let table_candidates : Array[TableCandidate] = []
-  let assets : Map[String, DumpAsset] = {}
+  let assets : Map[String, DumpAsset] = Map([])
   let total_asset_bytes : Ref[Int] = Ref(0)
   let residual : Array[DumpResidual] = []
   let warnings : Array[DumpWarning] = []

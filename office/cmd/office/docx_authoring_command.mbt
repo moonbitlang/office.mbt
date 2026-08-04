@@ -53,12 +53,7 @@ fn checked_docx_create_options(
     dry_run=matches.flags.get_or_default("dry-run", false),
     overwrite=matches.flags.get_or_default("overwrite", false),
   ) catch {
-    @transaction.TransactionError(..) as error =>
-      raise transaction_failure(error)
-    error =>
-      raise unexpected_cli_failure(
-        "office.docx.create_failed", "DOCX creation option validation", error,
-      )
+    TransactionError(..) as error => raise transaction_failure(error)
   }
 }
 
@@ -171,7 +166,7 @@ async fn run_docx_batch(matches : @argparse.Matches) -> Unit {
       )
   }
   let script = @office_docx.parse_docx_authoring_script(script_text) catch {
-    @office_docx.DocxAuthorParseError(reason) =>
+    DocxAuthorParseError(reason) =>
       raise CliFailure(
         @lib.protocol_error(
           "office.docx.batch_parse",

@@ -1237,6 +1237,12 @@ pub struct RawDataValidationCriteria {
   formula1 : String
   formula2 : String
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn RawDataValidationCriteria::equal(Self, Self) -> Bool
+#deprecated
+pub fn RawDataValidationCriteria::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn RawDataValidationCriteria::to_repr(Self) -> @debug.Repr
 
 pub struct ReadLimits {
   // private fields
@@ -1349,24 +1355,48 @@ pub(all) enum RowStateClass {
   DefinedNameReferences
   SheetScopedNamesUnadjusted
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn RowStateClass::equal(Self, Self) -> Bool
+#deprecated
+pub fn RowStateClass::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn RowStateClass::to_repr(Self) -> @debug.Repr
 
 pub struct RowStateEntry {
   class : RowStateClass
   extent : RowStateExtent
   handling : RowStateHandling
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn RowStateEntry::equal(Self, Self) -> Bool
+#deprecated
+pub fn RowStateEntry::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn RowStateEntry::to_repr(Self) -> @debug.Repr
 
 pub(all) enum RowStateExtent {
   RowsUpTo(Int)
   WholeSheet
   Positionless
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn RowStateExtent::equal(Self, Self) -> Bool
+#deprecated
+pub fn RowStateExtent::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn RowStateExtent::to_repr(Self) -> @debug.Repr
 
 pub(all) enum RowStateHandling {
   ShiftedByInsert
   StaticOnWrite
   DroppedByWriter
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn RowStateHandling::equal(Self, Self) -> Bool
+#deprecated
+pub fn RowStateHandling::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn RowStateHandling::to_repr(Self) -> @debug.Repr
 
 pub struct RowStream {
   cells : Array[Cell]
@@ -2350,7 +2380,13 @@ pub struct XlsxPackageFeatures {
   first_vml_part : String?
   first_unknown_part : String?
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn XlsxPackageFeatures::equal(Self, Self) -> Bool
 pub fn XlsxPackageFeatures::none() -> Self
+#deprecated
+pub fn XlsxPackageFeatures::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn XlsxPackageFeatures::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

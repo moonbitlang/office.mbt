@@ -37,43 +37,59 @@ pub fn template_key_ok(String) -> Bool
 pub suberror TemplateDataError {
   TemplateDataError(String)
 } derive(@debug.Debug)
+pub fn TemplateDataError::to_repr(Self) -> @debug.Repr
 
 pub suberror TemplateScanError {
   TemplateScanBudgetExceeded(String)
 } derive(@debug.Debug)
+pub fn TemplateScanError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub(all) struct MalformedPlaceholder {
   span : TemplateSpan
   reason : String
 } derive(Eq, @debug.Debug)
+pub fn MalformedPlaceholder::equal(Self, Self) -> Bool
+pub fn MalformedPlaceholder::not_equal(Self, Self) -> Bool
+pub fn MalformedPlaceholder::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PlaceholderMatch {
   key : String
   span : TemplateSpan
 } derive(Eq, @debug.Debug)
+pub fn PlaceholderMatch::equal(Self, Self) -> Bool
+pub fn PlaceholderMatch::not_equal(Self, Self) -> Bool
+pub fn PlaceholderMatch::to_repr(Self) -> @debug.Repr
 
 pub(all) struct TemplateData {
   values : Map[String, TemplateValue]
   regions : Array[TemplateRegion]
 } derive(@debug.Debug)
+pub fn TemplateData::to_repr(Self) -> @debug.Repr
 
 pub(all) struct TemplateRegion {
   name : String
   address : TemplateRegionAddress
   records : Array[Map[String, TemplateValue]]
 } derive(@debug.Debug)
+pub fn TemplateRegion::to_repr(Self) -> @debug.Repr
 
 pub(all) enum TemplateRegionAddress {
   SheetRow(sheet~ : String, row~ : Int)
   TableRow(story~ : TemplateStory, table~ : Int, row~ : Int)
 } derive(Eq, @debug.Debug)
+pub fn TemplateRegionAddress::equal(Self, Self) -> Bool
+pub fn TemplateRegionAddress::not_equal(Self, Self) -> Bool
+pub fn TemplateRegionAddress::to_repr(Self) -> @debug.Repr
 
 pub(all) struct TemplateScan {
   matches : Array[PlaceholderMatch]
   escapes : Array[TemplateSpan]
   malformed : Array[MalformedPlaceholder]
 } derive(Eq, @debug.Debug)
+pub fn TemplateScan::equal(Self, Self) -> Bool
+pub fn TemplateScan::not_equal(Self, Self) -> Bool
+pub fn TemplateScan::to_repr(Self) -> @debug.Repr
 
 pub(all) struct TemplateSpan {
   start_segment : Int
@@ -81,19 +97,28 @@ pub(all) struct TemplateSpan {
   end_segment : Int
   end_offset : Int
 } derive(Eq, @debug.Debug)
+pub fn TemplateSpan::equal(Self, Self) -> Bool
+pub fn TemplateSpan::not_equal(Self, Self) -> Bool
+pub fn TemplateSpan::to_repr(Self) -> @debug.Repr
 
 pub(all) enum TemplateStory {
   BodyStory
   HeaderStory(Int)
   FooterStory(Int)
 } derive(Eq, @debug.Debug)
+pub fn TemplateStory::equal(Self, Self) -> Bool
+pub fn TemplateStory::not_equal(Self, Self) -> Bool
+pub fn TemplateStory::to_repr(Self) -> @debug.Repr
 
 pub(all) enum TemplateValue {
   TextValue(String)
   NumberValue(Double)
   BoolValue(Bool)
 } derive(Eq, @debug.Debug)
+pub fn TemplateValue::equal(Self, Self) -> Bool
+pub fn TemplateValue::not_equal(Self, Self) -> Bool
 pub fn TemplateValue::render(Self) -> String
+pub fn TemplateValue::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

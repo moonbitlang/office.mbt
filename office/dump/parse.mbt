@@ -7,6 +7,9 @@ pub suberror DumpParseError {
 } derive(@debug.Debug)
 
 ///|
+pub extend DumpParseError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 fn require_object(
   value : Json,
   what : String,
@@ -110,7 +113,7 @@ pub fn parse_dump_envelope(
   // with a lying digest is malformed, not a deferred replay failure.
   // Duplicate JSON keys resolve last-wins in the parsed map, so the entry
   // checked here is exactly the one replay will use.
-  let assets : Map[String, DumpAsset] = {}
+  let assets : Map[String, DumpAsset] = Map([])
   match fields.get("assets") {
     Some(Object(entries)) =>
       for id, entry in entries {

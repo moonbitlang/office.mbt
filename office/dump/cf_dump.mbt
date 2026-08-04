@@ -28,7 +28,7 @@ fn dump_sheet_conditional_formats(
         location: Json::object({ "sheet": Json::string(sheet) }),
         asset: None,
         detail: "the sheet's stored conditional formats could not be read, so all of them are dropped: " +
-        bounded_reason("\{to_repr(error)}"),
+        bounded_reason("\{repr(error)}"),
       })
       return
     }

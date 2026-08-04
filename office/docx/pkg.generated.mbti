@@ -46,14 +46,20 @@ pub async fn transact_docx_template_document(@transaction.TransactionOptions, @t
 pub suberror DocxAnnotationParseError {
   DocxAnnotationParseError(String)
 } derive(@debug.Debug)
+#deprecated
+pub fn DocxAnnotationParseError::to_repr(Self) -> @debug.Repr
 
 pub suberror DocxAuthorParseError {
   DocxAuthorParseError(String)
 } derive(@debug.Debug)
+#deprecated
+pub fn DocxAuthorParseError::to_repr(Self) -> @debug.Repr
 
 pub suberror DocxTemplateRefused {
   DocxTemplateRefused(DocxTemplateReport)
 } derive(@debug.Debug)
+#deprecated
+pub fn DocxTemplateRefused::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub struct AnnotationBatch {
@@ -73,6 +79,12 @@ pub(all) struct DocxAnnotationOpResult {
   anchor_to : String?
   target : String?
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn DocxAnnotationOpResult::equal(Self, Self) -> Bool
+#deprecated
+pub fn DocxAnnotationOpResult::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn DocxAnnotationOpResult::to_repr(Self) -> @debug.Repr
 
 pub(all) struct DocxAnnotationReport {
   mut ops_applied : Int
@@ -81,6 +93,12 @@ pub(all) struct DocxAnnotationReport {
   changed_parts : Array[String]
   mut changed : Bool
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn DocxAnnotationReport::equal(Self, Self) -> Bool
+#deprecated
+pub fn DocxAnnotationReport::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn DocxAnnotationReport::to_repr(Self) -> @debug.Repr
 
 pub(all) struct DocxAuthorReport {
   ops : Int
@@ -88,6 +106,12 @@ pub(all) struct DocxAuthorReport {
   footnotes : Int
   endnotes : Int
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn DocxAuthorReport::equal(Self, Self) -> Bool
+#deprecated
+pub fn DocxAuthorReport::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn DocxAuthorReport::to_repr(Self) -> @debug.Repr
 
 pub struct DocxAuthorResult {
   report : DocxAuthorReport
@@ -126,6 +150,12 @@ pub(all) struct DocxRegionOutcome {
   replaced : Int
   escapes_applied : Int
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn DocxRegionOutcome::equal(Self, Self) -> Bool
+#deprecated
+pub fn DocxRegionOutcome::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn DocxRegionOutcome::to_repr(Self) -> @debug.Repr
 
 pub struct DocxTemplateDocumentResult {
   report : DocxTemplateReport
@@ -138,6 +168,12 @@ pub(all) struct DocxTemplateFinding {
   location : String
   detail : String
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn DocxTemplateFinding::equal(Self, Self) -> Bool
+#deprecated
+pub fn DocxTemplateFinding::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn DocxTemplateFinding::to_repr(Self) -> @debug.Repr
 
 pub(all) struct DocxTemplateReport {
   mut placeholders_found : Int
@@ -157,6 +193,12 @@ pub(all) struct DocxTemplateReport {
   stories_scanned : Array[String]
   mut changed : Bool
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn DocxTemplateReport::equal(Self, Self) -> Bool
+#deprecated
+pub fn DocxTemplateReport::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn DocxTemplateReport::to_repr(Self) -> @debug.Repr
 
 pub struct DocxTemplateResult {
   report : DocxTemplateReport
