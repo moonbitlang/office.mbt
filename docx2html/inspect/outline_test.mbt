@@ -139,7 +139,7 @@ test "heading detection follows the Mammoth default style-map convention" {
     styled_paragraph("", Some("Heading1"), None),
   ])
   let payload = @inspect.outline(doc, file="headings.docx")
-  guard payload is Object(fields) && fields.get("headings") is Some(headings)
+  guard payload is Object(fields) && fields.get("headings") is Some(headings) else { fail("expected headings") }
   json_inspect(headings, content=[
     { "level": 3, "text": "by id", "style_id": "Heading3" },
     { "level": 2, "text": "by name", "style_name": "Heading 2" },
@@ -176,9 +176,9 @@ test "field hyperlinks count one span per wrapped run" {
     ]),
   ])
   let payload = @inspect.outline(doc, file="fields.docx")
-  guard payload is Object(fields) && fields.get("counts") is Some(counts)
+  guard payload is Object(fields) && fields.get("counts") is Some(counts) else { fail("expected counts") }
   guard counts is Object(count_fields) &&
-    count_fields.get("hyperlinks") is Some(hyperlinks)
+    count_fields.get("hyperlinks") is Some(hyperlinks) else { fail("expected hyperlinks") }
   json_inspect(hyperlinks, content=2)
 }
 
@@ -202,7 +202,7 @@ test "styles_in_use dedupes by kind and records first-use order" {
     ),
   ])
   let payload = @inspect.outline(doc, file="styles.docx")
-  guard payload is Object(fields) && fields.get("styles_in_use") is Some(styles)
+  guard payload is Object(fields) && fields.get("styles_in_use") is Some(styles) else { fail("expected styles") }
   json_inspect(styles, content=[
     { "kind": "paragraph", "id": "Heading1" },
     { "kind": "run", "name": "Strong" },
@@ -215,7 +215,7 @@ test "reader errors surface with error severity" {
   let payload = @inspect.outline(@document.document([]), file="bad.docx", messages=[
     @core.error("broken relationship"),
   ])
-  guard payload is Object(fields) && fields.get("messages") is Some(messages)
+  guard payload is Object(fields) && fields.get("messages") is Some(messages) else { fail("expected messages") }
   json_inspect(messages, content=[
     { "severity": "error", "text": "broken relationship" },
   ])

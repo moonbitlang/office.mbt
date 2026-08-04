@@ -43,7 +43,7 @@ test "written documents are structurally valid and round-trip semantically" {
   // Semantic round trip: the reader reconstructs the written body, ENRICHED
   // with the style names it resolves from the emitted styles part (the one
   // deliberate asymmetry — write takes ids, read resolves names too).
-  guard result.document is Document(children~, ..)
+  guard result.document is Document(children~, ..) else { fail("expected Document") }
   let expected = sample_body()
   expected[0] = @docx2html.paragraph(
     [@docx2html.run([@docx2html.text("Quarterly Report")])],
@@ -56,7 +56,7 @@ test "written documents are structurally valid and round-trip semantically" {
   // The written heading is recognized by this repo's own heading detection
   // (style id + emitted styles part with the Mammoth-convention name).
   let payload = @inspect.outline(result.document, file="w.docx")
-  guard payload is Object(fields) && fields.get("headings") is Some(headings)
+  guard payload is Object(fields) && fields.get("headings") is Some(headings) else { fail("expected headings") }
   json_inspect(headings, content=[
     {
       "level": 1,
@@ -89,9 +89,9 @@ test "font size survives the write-read round trip exactly" {
     ]),
   ])
   let result = @docx2html.read_docx_package(bytes)
-  guard result.document is Document(children~, ..)
-  guard children is [Paragraph(children=inner, ..)]
-  guard inner is [Run(properties~, ..)]
+  guard result.document is Document(children~, ..) else { fail("expected Document") }
+  guard children is [Paragraph(children=inner, ..)] else { fail("expected Paragraph") }
+  guard inner is [Run(properties~, ..)] else { fail("expected Run") }
   debug_inspect(properties.font_size, content="Some(14)")
 }
 
@@ -233,7 +233,7 @@ test "all-flags formatting round-trips exactly" {
     ]),
   ]
   let result = @docx2html.read_docx_package(@docx2html.write_docx(body))
-  guard result.document is Document(children~, ..)
+  guard result.document is Document(children~, ..) else { fail("expected Document") }
   assert_eq(children, body)
 }
 
@@ -280,7 +280,7 @@ test "tables round-trip: header rows, column spans, and row spans" {
   debug_inspect(result.messages, content="[]")
   // The reader strips vMerge continuation cells and reconstructs row_span —
   // exactly the input body.
-  guard result.document is Document(children~, ..)
+  guard result.document is Document(children~, ..) else { fail("expected Document") }
   assert_eq(children, body)
 }
 
@@ -398,10 +398,10 @@ test "review round 1 (F2): merge-overlap rejection and the empty-cell asymmetry"
     ]),
   ]
   let result = @docx2html.read_docx_package(@docx2html.write_docx(body))
-  guard result.document is Document(children~, ..)
-  guard children is [Table(children=rows, ..)]
-  guard rows is [TableRow(children=cells, ..)]
-  guard cells is [TableCell(children=first_cell, ..), _]
+  guard result.document is Document(children~, ..) else { fail("expected Document") }
+  guard children is [Table(children=rows, ..)] else { fail("expected Table") }
+  guard rows is [TableRow(children=cells, ..)] else { fail("expected TableRow") }
+  guard cells is [TableCell(children=first_cell, ..), _] else { fail("expected TableCell") }
   debug_inspect(
     first_cell,
     content=(
@@ -448,7 +448,7 @@ test "lists round-trip: ordered and unordered at several levels" {
   debug_inspect(@opc.validate_docx_package(bytes), content="[]")
   let result = @docx2html.read_docx_package(bytes)
   debug_inspect(result.messages, content="[]")
-  guard result.document is Document(children~, ..)
+  guard result.document is Document(children~, ..) else { fail("expected Document") }
   assert_eq(children, body)
   // The converter renders the shallow levels as real lists; its deep-level
   // fallback to a plain paragraph for level 9 is pre-existing Mammoth
@@ -509,7 +509,7 @@ test "hyperlinks and images round-trip" {
   debug_inspect(@opc.validate_docx_package(bytes), content="[]")
   let result = @docx2html.read_docx_package(bytes)
   debug_inspect(result.messages, content="[]")
-  guard result.document is Document(children~, ..)
+  guard result.document is Document(children~, ..) else { fail("expected Document") }
   assert_eq(children, body)
   // The converter emits a data-URI img and a real link.
   inspect(
@@ -529,7 +529,7 @@ test "image dimensions are parsed from real headers" {
     ]),
   ])
   let archive = @mbtzip.read(bytes)
-  guard archive.get("word/document.xml") is Some(doc)
+  guard archive.get("word/document.xml") is Some(doc) else { fail("expected document.xml") }
   let text = @utf8.decode(doc, ignore_bom=true)
   inspect(text.find("cx=\"95250\" cy=\"95250\"") is Some(_), content="true")
 }
@@ -635,7 +635,7 @@ test "multiple images and images inside hyperlinks and cells round-trip" {
   debug_inspect(@opc.validate_docx_package(bytes), content="[]")
   let result = @docx2html.read_docx_package(bytes)
   debug_inspect(result.messages, content="[]")
-  guard result.document is Document(children~, ..)
+  guard result.document is Document(children~, ..) else { fail("expected Document") }
   assert_eq(children, body)
   // Three distinct media parts were emitted.
   let archive = @mbtzip.read(bytes)
@@ -658,7 +658,7 @@ test "F4 round 2: wide-image extents and direct header truncation pins" {
     @docx2html.paragraph([@docx2html.run([@docx2html.image("image/png", wide)])]),
   ])
   let archive = @mbtzip.read(bytes)
-  guard archive.get("word/document.xml") is Some(doc)
+  guard archive.get("word/document.xml") is Some(doc) else { fail("expected document.xml") }
   let text = @utf8.decode(doc, ignore_bom=true)
   inspect(text.find("cx=\"2857500000\"") is Some(_), content="true")
   // PNG whose IHDR length field is not 13 is rejected.
@@ -759,7 +759,7 @@ test "review round 3 (batch): XML-unrepresentable characters and highlight 'none
   // A lone surrogate reaches the writer only via parsed input (MoonBit
   // literals cannot spell one), and U+FFFF is a valid scalar but outside
   // XML 1.0's character set.
-  guard @json.parse("\"a\\ud800b\"") is String(lone_surrogate)
+  guard @json.parse("\"a\\ud800b\"") is String(lone_surrogate) else { fail("expected String") }
   expect_unsupported(
     [@docx2html.paragraph([@docx2html.run([@docx2html.text(lone_surrogate)])])],
     "text contains a character XML cannot represent (code 55296",
@@ -853,14 +853,14 @@ test "review round 2 (batch): a batch-built document reads back with the scripte
   let bytes = @docx2html.write_docx(script.build_body(Map([])))
   let result = @docx2html.read_docx_package(bytes)
   debug_inspect(result.messages.length(), content="0")
-  guard result.document is Document(children~, ..)
+  guard result.document is Document(children~, ..) else { fail("expected Document") }
   guard children
     is [
       Paragraph(properties=title_props, ..),
       Paragraph(children=styled_children, properties=styled_props),
       Paragraph(properties=list_props, ..),
       Table(children=table_rows, ..),
-    ]
+    ] else { fail("expected children list") }
   debug_inspect(title_props.style_id, content="Some(\"Heading2\")")
   // Style names are enriched from the styles part on read (the one
   // documented write/read asymmetry this test tolerates).
@@ -871,14 +871,14 @@ test "review round 2 (batch): a batch-built document reads back with the scripte
       Run(properties=loud, ..),
       Run(properties=down, ..),
       Hyperlink(children=link_children, href=link_href, ..),
-    ]
+    ] else { fail("expected styled_children list") }
   debug_inspect(loud.is_bold, content="true")
   debug_inspect(loud.is_all_caps, content="true")
   debug_inspect(loud.font_size, content="Some(14)")
   debug_inspect(loud.highlight, content="Some(\"yellow\")")
   debug_inspect(Repr(down.vertical_alignment), content="Subscript")
   debug_inspect(link_href, content="Some(\"https://example.com/x\")")
-  guard link_children is [Run(properties=link_run, ..)]
+  guard link_children is [Run(properties=link_run, ..)] else { fail("expected Run") }
   debug_inspect(link_run.is_italic, content="true")
   debug_inspect(
     list_props.numbering,
@@ -890,10 +890,10 @@ test "review round 2 (batch): a batch-built document reads back with the scripte
     is [
       TableRow(children=header_cells, is_header=header_flag),
       TableRow(children=data_cells, ..),
-    ]
+    ] else { fail("expected table rows") }
   debug_inspect(header_flag, content="true")
   debug_inspect(header_cells.length(), content="2")
-  guard data_cells is [TableCell(col_span~, ..)]
+  guard data_cells is [TableCell(col_span~, ..)] else { fail("expected TableCell") }
   debug_inspect(col_span, content="2")
 }
 
@@ -952,7 +952,7 @@ test "K1: written comments round-trip through the annotation index" {
   let annotated = @docx2html.read_docx_annotated(bytes)
   // The agent-facing outline inventory: both comments, dense ids, no
   // diagnostics.
-  guard @inspect.annotated_outline(annotated, file="c.docx") is Object(outline)
+  guard @inspect.annotated_outline(annotated, file="c.docx") is Object(outline) else { fail("expected outline") }
   json_inspect(outline.get("comments"), content=[
     [
       { "id": "0", "author": "Reviewer", "anchored_to": "/body/p[1]" },
@@ -1025,7 +1025,7 @@ test "K1: written comments round-trip through the annotation index" {
   )
   // Reverse link: a covered body paragraph names its covering comment.
   guard @inspect.annotated_element(annotated, file="c.docx", path="/body/p[2]")
-    is Object(covered)
+    is Object(covered) else { fail("expected Object") }
   json_inspect(covered.get("comment_ids"), content=[["1"]])
 }
 
@@ -1049,7 +1049,7 @@ test "K1: anchors are emitted in the canonical intra-paragraph shape" {
     ),
   ])
   let archive = @mbtzip.read(bytes)
-  guard archive.get("word/document.xml") is Some(doc)
+  guard archive.get("word/document.xml") is Some(doc) else { fail("expected document.xml") }
   let text = @utf8.decode(doc, ignore_bom=true)
   // Range starts sit right after pPr, in ascending id order.
   inspect(
@@ -1068,7 +1068,7 @@ test "K1: anchors are emitted in the canonical intra-paragraph shape" {
     content="true",
   )
   // Definitions: dense ids and verbatim metadata in word/comments.xml.
-  guard archive.get("word/comments.xml") is Some(part)
+  guard archive.get("word/comments.xml") is Some(part) else { fail("expected comments.xml") }
   let comments_text = @utf8.decode(part, ignore_bom=true)
   inspect(
     comments_text.find("<w:comment w:id=\"0\" w:author=\"A\">") is Some(_),
@@ -1084,7 +1084,7 @@ test "K1: anchors are emitted in the canonical intra-paragraph shape" {
     content="true",
   )
   // The comments part hangs off the MAIN document part, found by type.
-  guard archive.get("word/_rels/document.xml.rels") is Some(rels)
+  guard archive.get("word/_rels/document.xml.rels") is Some(rels) else { fail("expected rels") }
   inspect(
     @utf8.decode(rels, ignore_bom=true).find(
       "officeDocument/2006/relationships/comments",
@@ -1228,7 +1228,7 @@ test "K1: a comment on an empty paragraph round-trips" {
       file="b.docx",
       path="/comments/comment[@id=0]",
     )
-    is Object(payload)
+    is Object(payload) else { fail("expected Object") }
   json_inspect(payload.get("anchors"), content=[
     [
       {

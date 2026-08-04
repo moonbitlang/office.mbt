@@ -403,7 +403,7 @@ test "external relationships skip resolution and emit TargetMode" {
   debug_inspect(@opc.validate_docx_package(bytes), content="[]")
   // The rels part carries TargetMode="External" for the hyperlink.
   let archive = @mbtzip.read(bytes)
-  guard archive.get("word/_rels/document.xml.rels") is Some(rels)
+  guard archive.get("word/_rels/document.xml.rels") is Some(rels) else { fail("expected rels") }
   let text = @utf8.decode(rels, ignore_bom=true)
   inspect(text.find("TargetMode=\"External\"") is Some(_), content="true")
 }
