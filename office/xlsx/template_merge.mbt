@@ -16,6 +16,12 @@ pub(all) struct XlsxTemplateFinding {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend XlsxTemplateFinding with Eq::{not_equal, equal}
+
+///|
+pub extend XlsxTemplateFinding with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// The complete merge outcome for one workbook.
 pub(all) struct XlsxTemplateReport {
   mut placeholders_found : Int
@@ -38,11 +44,20 @@ pub(all) struct XlsxTemplateReport {
 } derive(Eq, @debug.Debug)
 
 ///|
+pub extend XlsxTemplateReport with Eq::{not_equal, equal}
+
+///|
+pub extend XlsxTemplateReport with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Raised when strict findings refuse publication; the report carries
 /// every bounded finding for the caller's failure envelope.
 pub suberror XlsxTemplateRefused {
   XlsxTemplateRefused(XlsxTemplateReport)
 } derive(@debug.Debug)
+
+///|
+pub extend XlsxTemplateRefused with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 let template_finding_limit : Int = 64
@@ -122,12 +137,12 @@ fn substitute_cell_text(
       match resolve(only.key) {
         Some(NumberValue(number)) => {
           outcome.replaced = 1
-          outcome.typed_edit = Some(@engine.CellValue::Numeric(number))
+          outcome.typed_edit = Some(Numeric(number))
           return outcome
         }
         Some(BoolValue(flag)) => {
           outcome.replaced = 1
-          outcome.typed_edit = Some(@engine.CellValue::Bool(flag))
+          outcome.typed_edit = Some(Bool(flag))
           return outcome
         }
         _ => ()
@@ -154,9 +169,7 @@ fn substitute_cell_text(
     if next_match_at < next_escape_at {
       let matched = scan.matches[match_index]
       match_index += 1
-      builder.write_string(
-        text[cursor:matched.span.start_offset].to_owned(),
-      )
+      builder.write_string(text[cursor:matched.span.start_offset].to_owned())
       match resolve(matched.key) {
         Some(value) => {
           builder.write_string(value.render())
@@ -165,15 +178,15 @@ fn substitute_cell_text(
         }
         None =>
           // allow-missing: the literal placeholder stays
-          builder.write_string(text[matched.span.start_offset:matched.span.end_offset].to_owned())
+          builder.write_string(
+            text[matched.span.start_offset:matched.span.end_offset].to_owned(),
+          )
       }
       cursor = matched.span.end_offset
     } else {
       let escape = scan.escapes[escape_index]
       escape_index += 1
-      builder.write_string(
-        text[cursor:escape.start_offset].to_owned(),
-      )
+      builder.write_string(text[cursor:escape.start_offset].to_owned())
       builder.write_string("{{")
       outcome.escapes_applied += 1
       rewrote = true
