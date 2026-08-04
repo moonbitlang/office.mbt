@@ -27,6 +27,12 @@ pub fn style_css(@xlsx.Style) -> String
 pub suberror RenderError {
   SheetNotFound(name~ : String)
 } derive(@debug.Debug)
+#deprecated
+pub fn RenderError::output(Self, &Logger) -> Unit
+#deprecated
+pub fn RenderError::to_repr(Self) -> @debug.Repr
+#deprecated
+pub fn RenderError::to_string(Self) -> String
 pub impl Show for RenderError
 
 // Types and methods
