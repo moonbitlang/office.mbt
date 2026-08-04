@@ -1187,9 +1187,15 @@ async test "L0: equal-offset insertions splice in plan order" {
   builder.add_part("word/styles.xml", @utf8.encode(styles))
   let original = builder.build()
   let annotated = @docx2html.read_docx_annotated(original)
-  guard annotated.body_paragraph_span("p[1]") is Some(span) else { fail("expected span") }
-  guard span.content_start() is Some(content_start) else { fail("expected content_start") }
-  guard span.close_tag_start() is Some(close_start) else { fail("expected close_start") }
+  guard annotated.body_paragraph_span("p[1]") is Some(span) else {
+    fail("expected span")
+  }
+  guard span.content_start() is Some(content_start) else {
+    fail("expected content_start")
+  }
+  guard span.close_tag_start() is Some(close_start) else {
+    fail("expected close_start")
+  }
   inspect(content_start == close_start, content="true")
   let wml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
   let plan = @splice.SplicePlan::new()
@@ -1220,7 +1226,9 @@ async test "L0: equal-offset insertions splice in plan order" {
     ),
   )
   let archive = @mbtzip.read(original)
-  guard archive.get("word/_rels/document.xml.rels") is Some(rels_bytes) else { fail("expected rels") }
+  guard archive.get("word/_rels/document.xml.rels") is Some(rels_bytes) else {
+    fail("expected rels")
+  }
   guard @utf8.decode(rels_bytes, ignore_bom=true).find("</Relationships>")
     is Some(rels_at) else {
     fail("expected </Relationships>")
@@ -1235,7 +1243,9 @@ async test "L0: equal-offset insertions splice in plan order" {
       ),
     ),
   )
-  guard archive.get("[Content_Types].xml") is Some(types_bytes) else { fail("expected content types") }
+  guard archive.get("[Content_Types].xml") is Some(types_bytes) else {
+    fail("expected content types")
+  }
   guard @utf8.decode(types_bytes, ignore_bom=true).find("</Types>")
     is Some(types_at) else {
     fail("expected </Types>")

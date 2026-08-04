@@ -241,7 +241,9 @@ test "all-flags formatting round-trips exactly" {
     ]),
   ]
   let result = @docx2html.read_docx_package(@docx2html.write_docx(body))
-  guard result.document is Document(children~, ..) else { fail("expected Document") }
+  guard result.document is Document(children~, ..) else {
+    fail("expected Document")
+  }
   assert_eq(children, body)
 }
 
@@ -672,7 +674,9 @@ test "F4 round 2: wide-image extents and direct header truncation pins" {
     @docx2html.paragraph([@docx2html.run([@docx2html.image("image/png", wide)])]),
   ])
   let archive = @mbtzip.read(bytes)
-  guard archive.get("word/document.xml") is Some(doc) else { fail("expected document.xml") }
+  guard archive.get("word/document.xml") is Some(doc) else {
+    fail("expected document.xml")
+  }
   let text = @utf8.decode(doc, ignore_bom=true)
   inspect(text.find("cx=\"2857500000\"") is Some(_), content="true")
   // PNG whose IHDR length field is not 13 is rejected.
@@ -1825,7 +1829,9 @@ test "L0: a self-closing paragraph rewrites to open form by its own span" {
   builder.add_part("word/styles.xml", @utf8.encode(styles))
   let original = builder.build()
   let annotated = @docx2html.read_docx_annotated(original)
-  guard annotated.body_paragraph_span("p[1]") is Some(span) else { fail("unexpected") }
+  guard annotated.body_paragraph_span("p[1]") is Some(span) else {
+    fail("unexpected")
+  }
   inspect(span.self_closing(), content="true")
   inspect(span.content_start() is Some(_), content="false")
   let plan = @splice.SplicePlan::new()
