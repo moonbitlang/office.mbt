@@ -40,7 +40,7 @@ pub fn new_blank_docx_limited(
   limits : @opc.PackageLimits,
 ) -> Bytes raise DocxError {
   blank_docx_builder().build_limited(limits) catch {
-    @opc.PackageLimitExceeded(kind~, limit~, actual~) =>
+    PackageLimitExceeded(kind~, limit~, actual~) =>
       raise WriteResourceLimit(
         kind~,
         limit~,

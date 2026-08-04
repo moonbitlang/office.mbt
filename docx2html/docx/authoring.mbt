@@ -60,11 +60,11 @@ pub fn author_docx_bytes(
     }
   }
   let body = script.build_body(images) catch {
-    @batch.BatchError(message) => raise Unsupported(message~)
+    BatchError(message) => raise Unsupported(message~)
   }
   let comments = []
   let batch_comments = script.build_comments() catch {
-    @batch.BatchError(message) => raise Unsupported(message~)
+    BatchError(message) => raise Unsupported(message~)
   }
   for comment in batch_comments {
     let spec = match
@@ -104,7 +104,7 @@ pub fn author_docx_bytes(
   let footnotes = []
   for
     note in (script.build_footnotes() catch {
-      @batch.BatchError(message) => raise Unsupported(message~)
+      BatchError(message) => raise Unsupported(message~)
     }) {
     footnotes.push(
       note_spec(note.body()) catch {
@@ -115,7 +115,7 @@ pub fn author_docx_bytes(
   let endnotes = []
   for
     note in (script.build_endnotes() catch {
-      @batch.BatchError(message) => raise Unsupported(message~)
+      BatchError(message) => raise Unsupported(message~)
     }) {
     endnotes.push(
       note_spec(note.body()) catch {
