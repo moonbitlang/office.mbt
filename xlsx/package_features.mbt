@@ -257,3 +257,10 @@ pub fn Workbook::first_table_with_source_formulas(
   }
   None
 }
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend XlsxPackageFeatures with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend XlsxPackageFeatures with @moonbitlang/core/debug.Debug::{to_repr}

@@ -1854,7 +1854,7 @@ async test "L2: reply and resolve retrofit a K1-era document" {
   // paraId attribute, and the appended reply definition — everything
   // else identical. (Checked structurally: the original body text of
   // BOTH parent paragraphs still reads back verbatim.)
-  guard after_reply.comment_bodies()[0] is (_, parent_body) else { fail("expected comment body") }
+  guard after_reply.comment_bodies()[0] is (_, parent_body)
   guard parent_body[1] is Paragraph(children=tail_children, ..) else { fail("expected Paragraph") }
   guard tail_children is [Run(children=tail_runs, ..)] else { fail("expected Run") }
   debug_inspect(

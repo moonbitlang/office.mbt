@@ -1339,7 +1339,7 @@ test "K2: a threaded, resolved conversation round-trips through the index" {
   ])
   debug_inspect(@opc.validate_docx_package(bytes), content="[]")
   let annotated = @docx2html.read_docx_annotated(bytes)
-  guard @inspect.annotated_outline(annotated, file="t.docx") is Object(outline)
+  guard @inspect.annotated_outline(annotated, file="t.docx") is Object(outline) else { fail("unexpected") }
   json_inspect(outline.get("comments"), content=[
     [
       { "id": "0", "author": "Ada", "done": false, "anchored_to": "/body/p[1]" },
@@ -1371,7 +1371,7 @@ test "K2: a threaded, resolved conversation round-trips through the index" {
   // Byte level: the parent's commentEx key is its SECOND paragraph's
   // paraId; the reply links via paraIdParent; done round-trips.
   let archive = @mbtzip.read(bytes)
-  guard archive.get("word/comments.xml") is Some(comments_part)
+  guard archive.get("word/comments.xml") is Some(comments_part) else { fail("unexpected") }
   let comments_text = @utf8.decode(comments_part, ignore_bom=true)
   inspect(comments_text.find("mc:Ignorable=\"w14\"") is Some(_), content="true")
   // Dense paraIds: parent paragraphs 1+2, reply bodies 3 and 4.
@@ -1382,7 +1382,7 @@ test "K2: a threaded, resolved conversation round-trips through the index" {
     ] {
     inspect(comments_text.find(stamp) is Some(_), content="true")
   }
-  guard archive.get("word/commentsExtended.xml") is Some(extended_part)
+  guard archive.get("word/commentsExtended.xml") is Some(extended_part) else { fail("unexpected") }
   let extended_text = @utf8.decode(extended_part, ignore_bom=true)
   inspect(extended_text.find("mc:Ignorable=\"w15\"") is Some(_), content="true")
   inspect(
@@ -1407,7 +1407,7 @@ test "K2: a threaded, resolved conversation round-trips through the index" {
     content="true",
   )
   // Replies are anchorless: only the parent's markers exist in the body.
-  guard archive.get("word/document.xml") is Some(doc)
+  guard archive.get("word/document.xml") is Some(doc) else { fail("unexpected") }
   let text = @utf8.decode(doc, ignore_bom=true)
   inspect(text.find("commentRangeStart w:id=\"1\"") is Some(_), content="false")
   inspect(text.find("commentReference w:id=\"1\"") is Some(_), content="false")
@@ -1424,7 +1424,7 @@ test "K2: threading-free output stays byte-identical to the K1 writer" {
   )
   let archive = @mbtzip.read(bytes)
   inspect(archive.get("word/commentsExtended.xml") is Some(_), content="false")
-  guard archive.get("word/comments.xml") is Some(part)
+  guard archive.get("word/comments.xml") is Some(part) else { fail("unexpected") }
   inspect(
     @utf8.decode(part, ignore_bom=true).find("w14") is Some(_),
     content="false",
@@ -1480,7 +1480,7 @@ test "K2: resolve-without-reply triggers the extended part on its own" {
   )
   debug_inspect(@opc.validate_docx_package(bytes), content="[]")
   let archive = @mbtzip.read(bytes)
-  guard archive.get("word/commentsExtended.xml") is Some(part)
+  guard archive.get("word/commentsExtended.xml") is Some(part) else { fail("unexpected") }
   let extended_text = @utf8.decode(part, ignore_bom=true)
   inspect(
     extended_text.find(
@@ -1532,7 +1532,7 @@ test "K3: written footnotes and endnotes round-trip through the index" {
   )
   debug_inspect(@opc.validate_docx_package(bytes), content="[]")
   let annotated = @docx2html.read_docx_annotated(bytes)
-  guard @inspect.annotated_outline(annotated, file="n.docx") is Object(outline)
+  guard @inspect.annotated_outline(annotated, file="n.docx") is Object(outline) else { fail("unexpected") }
   json_inspect(outline.get("messages"), content=[[]])
   json_inspect(outline.get("counts"), content=[
     {
@@ -1572,12 +1572,12 @@ test "K3: written footnotes and endnotes round-trip through the index" {
       file="n.docx",
       path="/footnotes/note[@id=2]/p[2]",
     )
-    is Object(second_para)
+    is Object(second_para) else { fail("unexpected") }
   json_inspect(second_para.get("text"), content=["longer source."])
   // Byte level: plumbing ids -1/0, content ids from 1, the in-note mark
   // run heading the first paragraph.
   let archive = @mbtzip.read(bytes)
-  guard archive.get("word/footnotes.xml") is Some(part)
+  guard archive.get("word/footnotes.xml") is Some(part) else { fail("unexpected") }
   let text = @utf8.decode(part, ignore_bom=true)
   inspect(
     text.find("w:type=\"separator\" w:id=\"-1\"") is Some(_) ||
@@ -1589,7 +1589,7 @@ test "K3: written footnotes and endnotes round-trip through the index" {
     is Some(_),
     content="true",
   )
-  guard archive.get("word/endnotes.xml") is Some(endnote_part)
+  guard archive.get("word/endnotes.xml") is Some(endnote_part) else { fail("unexpected") }
   inspect(
     @utf8.decode(endnote_part, ignore_bom=true).find(
       "<w:endnote w:id=\"1\"><w:p><w:r><w:endnoteRef/></w:r>",
@@ -1705,12 +1705,12 @@ test "L0: body paragraph spans resolve through the public query" {
   inspect(annotated.main_story_part(), content="word/document.xml")
   // The heading paragraph: content_start sits past its pPr, and the
   // interior slice holds exactly the run.
-  guard annotated.body_paragraph_span("p[1]") is Some(span)
+  guard annotated.body_paragraph_span("p[1]") is Some(span) else { fail("unexpected") }
   inspect(span.self_closing(), content="false")
-  guard span.content_start() is Some(content_start)
-  guard span.close_tag_start() is Some(close_start)
+  guard span.content_start() is Some(content_start) else { fail("unexpected") }
+  guard span.close_tag_start() is Some(close_start) else { fail("unexpected") }
   let archive = @mbtzip.read(bytes)
-  guard archive.get("word/document.xml") is Some(part)
+  guard archive.get("word/document.xml") is Some(part) else { fail("unexpected") }
   let text = @utf8.decode(part, ignore_bom=true)
   let interior = text
     .view(start_offset=content_start, end_offset=close_start)
@@ -1765,7 +1765,7 @@ test "L0: a self-closing paragraph rewrites to open form by its own span" {
   builder.add_part("word/styles.xml", @utf8.encode(styles))
   let original = builder.build()
   let annotated = @docx2html.read_docx_annotated(original)
-  guard annotated.body_paragraph_span("p[1]") is Some(span)
+  guard annotated.body_paragraph_span("p[1]") is Some(span) else { fail("unexpected") }
   inspect(span.self_closing(), content="true")
   inspect(span.content_start() is Some(_), content="false")
   let plan = @splice.SplicePlan::new()
@@ -1780,21 +1780,21 @@ test "L0: a self-closing paragraph rewrites to open form by its own span" {
   let spliced = @splice.splice_docx(original, plan)
   debug_inspect(@opc.validate_docx_package(spliced), content="[]")
   let after = @docx2html.read_docx_annotated(spliced)
-  guard after.body_paragraph_span("p[1]") is Some(rewritten)
+  guard after.body_paragraph_span("p[1]") is Some(rewritten) else { fail("unexpected") }
   inspect(rewritten.self_closing(), content="false")
   // Fidelity: everything outside the rewritten node's own span is the
   // original bytes.
   let archive = @mbtzip.read(original)
   let out = @mbtzip.read(spliced)
-  guard archive.get("word/document.xml") is Some(before_doc)
-  guard out.get("word/document.xml") is Some(after_doc)
+  guard archive.get("word/document.xml") is Some(before_doc) else { fail("unexpected") }
+  guard out.get("word/document.xml") is Some(after_doc) else { fail("unexpected") }
   let expected = Buffer()
   expected.write_bytesview(before_doc[0:span.byte_start()])
   expected.write_bytes(@utf8.encode("<w:p><w:r><w:t>filled</w:t></w:r></w:p>"))
   expected.write_bytesview(before_doc[span.byte_end():])
   inspect(after_doc == expected.contents(), content="true")
-  guard archive.get("word/styles.xml") is Some(styles_before)
-  guard out.get("word/styles.xml") is Some(styles_after)
+  guard archive.get("word/styles.xml") is Some(styles_before) else { fail("unexpected") }
+  guard out.get("word/styles.xml") is Some(styles_after) else { fail("unexpected") }
   inspect(styles_before == styles_after, content="true")
 }
 
@@ -1830,7 +1830,7 @@ test "L0 review round 1: a self-closing run rewrites by its own span (alternate 
   let original = builder.build()
   let annotated = @docx2html.read_docx_annotated(original)
   // The run is found under the ALTERNATE prefix and flagged interiorless.
-  guard annotated.body_run_span("p[1]/r[1]") is Some(run_span)
+  guard annotated.body_run_span("p[1]/r[1]") is Some(run_span) else { fail("unexpected") }
   inspect(run_span.self_closing(), content="true")
   let wml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
   let plan = @splice.SplicePlan::new()
@@ -1845,11 +1845,11 @@ test "L0 review round 1: a self-closing run rewrites by its own span (alternate 
   let spliced = @splice.splice_docx(original, plan)
   debug_inspect(@opc.validate_docx_package(spliced), content="[]")
   let after = @docx2html.read_docx_annotated(spliced)
-  guard after.body_run_span("p[1]/r[1]") is Some(rewritten)
+  guard after.body_run_span("p[1]/r[1]") is Some(rewritten) else { fail("unexpected") }
   inspect(rewritten.self_closing(), content="false")
-  guard after.result().document is Document(children~, ..)
-  guard children is [Paragraph(children=inner, ..), ..]
-  guard inner is [Run(children=run_children, ..), ..]
+  guard after.result().document is Document(children~, ..) else { fail("unexpected") }
+  guard children is [Paragraph(children=inner, ..), ..] else { fail("unexpected") }
+  guard inner is [Run(children=run_children, ..), ..] else { fail("unexpected") }
   debug_inspect(
     run_children,
     content=(
@@ -1869,8 +1869,8 @@ test "story_run_span matches body_run_span for the body story" {
     ]),
   ])
   let annotated = @docx2html.read_docx_annotated(bytes)
-  guard annotated.body_run_span("p[1]/r[2]") is Some(by_body)
-  guard annotated.story_run_span("/body", "p[1]/r[2]") is Some(by_story)
+  guard annotated.body_run_span("p[1]/r[2]") is Some(by_body) else { fail("unexpected") }
+  guard annotated.story_run_span("/body", "p[1]/r[2]") is Some(by_story) else { fail("unexpected") }
   inspect(by_story.byte_start() == by_body.byte_start(), content="true")
   inspect(by_story.byte_end() == by_body.byte_end(), content="true")
   inspect(by_story.content_start() == by_body.content_start(), content="true")
@@ -1908,7 +1908,7 @@ test "story_row_span resolves table rows in the body story" {
     ]),
   ])
   let annotated = @docx2html.read_docx_annotated(bytes)
-  guard annotated.story_row_span("/body", "tbl[1]/tr[2]") is Some(span)
+  guard annotated.story_row_span("/body", "tbl[1]/tr[2]") is Some(span) else { fail("unexpected") }
   let part = annotated.main_story_source().part()
   let archive = @mbtzip.read(bytes)
   guard archive.get(part) is Some(source) else {

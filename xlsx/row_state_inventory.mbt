@@ -110,12 +110,12 @@ fn sqref_max_row(sqref : String) -> Int? {
 priv struct ExtentAccumulator {
   mut present : Bool
   mut max_row : Int
-  mut opaque : Bool
+  mut is_opaque : Bool
 }
 
 ///|
 fn ExtentAccumulator::new() -> ExtentAccumulator {
-  { present: false, max_row: 0, opaque: false }
+  { present: false, max_row: 0, is_opaque: false }
 }
 
 ///|
@@ -126,7 +126,7 @@ fn ExtentAccumulator::add_reference(
   self.present = true
   match reference_max_row(reference) {
     Some(row) => if row > self.max_row { self.max_row = row }
-    None => self.opaque = true
+    None => self.is_opaque = true
   }
 }
 
@@ -138,7 +138,7 @@ fn ExtentAccumulator::add_sqref(
   self.present = true
   match sqref_max_row(sqref) {
     Some(row) => if row > self.max_row { self.max_row = row }
-    None => self.opaque = true
+    None => self.is_opaque = true
   }
 }
 
@@ -152,7 +152,7 @@ fn ExtentAccumulator::entry(
   if !self.present {
     return
   }
-  let extent = if self.opaque || self.max_row == 0 {
+  let extent = if self.is_opaque || self.max_row == 0 {
     WholeSheet
   } else {
     RowsUpTo(self.max_row)
@@ -215,7 +215,7 @@ pub fn Worksheet::row_state_inventory(self : Worksheet) -> Array[RowStateEntry] 
     cf.present = true
     match raw_attr_sqref(xml) {
       Some(sqref) => cf.add_sqref(sqref)
-      None => cf.opaque = true
+      None => cf.is_opaque = true
     }
   }
   cf.entry(ConditionalFormats, ShiftedByInsert, entries)
@@ -224,7 +224,7 @@ pub fn Worksheet::row_state_inventory(self : Worksheet) -> Array[RowStateEntry] 
     dv.present = true
     match raw_attr_sqref(xml) {
       Some(sqref) => dv.add_sqref(sqref)
-      None => dv.opaque = true
+      None => dv.is_opaque = true
     }
   }
   dv.entry(DataValidations, ShiftedByInsert, entries)
@@ -451,7 +451,7 @@ pub fn Workbook::sheet_row_state_inventory(
       match defined_ref_row_bound(owned) {
         BoundedRows(row) => if row > adjusted.max_row { adjusted.max_row = row }
         NoRowBound => ()
-        OpaqueRef => adjusted.opaque = true
+        OpaqueRef => adjusted.is_opaque = true
       }
       Some(owned)
     }
@@ -465,7 +465,7 @@ pub fn Workbook::sheet_row_state_inventory(
     catch {
       _ => {
         adjusted.present = true
-        adjusted.opaque = true
+        adjusted.is_opaque = true
       }
     }
     ignore(visited.val)
@@ -714,7 +714,7 @@ pub fn Worksheet::raw_data_validation_criteria(
   let out : Array[RawDataValidationCriteria] = []
   for xml in self.data_validations {
     let trimmed = xml.trim(chars=" \t\r\n").to_owned()
-    let opaque : RawDataValidationCriteria = {
+    let fallback : RawDataValidationCriteria = {
       validation_type: "opaque",
       sqref: "",
       formula1: "",
@@ -728,17 +728,17 @@ pub fn Worksheet::raw_data_validation_criteria(
     if !trimmed.has_prefix("<dataValidation") ||
       name_end >= trimmed.length() ||
       !raw_name_boundary(trimmed[name_end]) {
-      out.push(opaque)
+      out.push(fallback)
       continue
     }
     guard raw_tag_end(trimmed, 0) is Some(root_end) else {
-      out.push(opaque)
+      out.push(fallback)
       continue
     }
     let root_tag = trimmed[0:root_end].to_owned()
     let raw_type = attr_value(root_tag, "type") catch {
       _ => {
-        out.push(opaque)
+        out.push(fallback)
         continue
       }
     }
@@ -751,7 +751,7 @@ pub fn Worksheet::raw_data_validation_criteria(
       None => ""
     }
     if sqref == "" {
-      out.push(opaque)
+      out.push(fallback)
       continue
     }
     if root_end >= 2 && trimmed[root_end - 2] == '/' {
@@ -764,8 +764,48 @@ pub fn Worksheet::raw_data_validation_criteria(
     match (formula1, formula2) {
       (Some(first), Some(second)) =>
         out.push({ validation_type, sqref, formula1: first, formula2: second })
-      _ => out.push(opaque)
+      _ => out.push(fallback)
     }
   }
   out
 }
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend RowStateHandling with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend RowStateHandling with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend RowStateExtent with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend RowStateExtent with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend RowStateClass with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend RowStateClass with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend RowStateEntry with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend RowStateEntry with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend RawDataValidationCriteria with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend RawDataValidationCriteria with @moonbitlang/core/debug.Debug::{to_repr}

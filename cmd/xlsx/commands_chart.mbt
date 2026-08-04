@@ -6,7 +6,7 @@
 /// helper, re-raising its error in the CLI's format.
 fn parse_chart_type(name : String) -> @xl.ChartType raise CliError {
   @batch.chart_type_of(name) catch {
-    @batch.BatchError(message) => raise CliError("error: " + message)
+    BatchError(message) => raise CliError("error: " + message)
   }
 }
 

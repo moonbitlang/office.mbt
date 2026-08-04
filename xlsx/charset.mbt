@@ -189,7 +189,7 @@ test "builtin charset decode: Windows-1252 / Latin-1 / ASCII fold together" {
     ),
   )
   // an undefined Windows-1252 slot (0x81) passes through as its C1 control
-  guard builtin_charset_decode("cp1252", b"\x81") is Some(s)
+  guard builtin_charset_decode("cp1252", b"\x81") is Some(s) else { fail("expected cp1252 decode") }
   inspect(s.get_char(0).unwrap().to_int(), content="129")
 }
 
