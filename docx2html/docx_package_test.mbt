@@ -53,7 +53,9 @@ test "read_docx_package surfaces sections and header/footer stories" {
   debug_inspect(doc_package.messages, content="[]")
   // One body-final section referencing two headers (default + first) and
   // one footer; parts dedup by path, in first-reference order.
-  guard doc_package.sections is [section] else { fail("expected single section") }
+  guard doc_package.sections is [section] else {
+    fail("expected single section")
+  }
   debug_inspect(section.ends_after_paragraph, content="None")
   debug_inspect(
     section.headers,
@@ -67,7 +69,9 @@ test "read_docx_package surfaces sections and header/footer stories" {
       #|[{ variant: "default", part: 0 }]
     ),
   )
-  guard doc_package.headers is [default_header, first_header] else { fail("expected two headers") }
+  guard doc_package.headers is [default_header, first_header] else {
+    fail("expected two headers")
+  }
   assert_eq(
     @docx2html.extract_raw_text_from_document(
       @docx2html.document(default_header.body),
@@ -80,7 +84,9 @@ test "read_docx_package surfaces sections and header/footer stories" {
     ).value,
     "First page header\n\n",
   )
-  guard doc_package.footers is [footer] else { fail("expected single footer") }
+  guard doc_package.footers is [footer] else {
+    fail("expected single footer")
+  }
   assert_eq(
     @docx2html.extract_raw_text_from_document(@docx2html.document(footer.body)).value,
     "Footer text\n\n",
@@ -278,7 +284,9 @@ test "a malformed header part warns and is skipped, not fatal" {
   )
   let result = @docx2html.read_docx_package(bytes)
   debug_inspect(result.headers, content="[]")
-  guard result.sections is [section] else { fail("expected single section") }
+  guard result.sections is [section] else {
+    fail("expected single section")
+  }
   debug_inspect(section.headers, content="[]")
   debug_inspect(
     result.messages,
@@ -342,7 +350,9 @@ test "an explicit but unreadable override blocks inheritance of its variant" {
     ],
   )
   let result = @docx2html.read_docx_package(bytes)
-  guard result.sections is [first, second] else { fail("expected two sections") }
+  guard result.sections is [first, second] else {
+    fail("expected two sections")
+  }
   debug_inspect(
     first.headers,
     content=(

@@ -671,7 +671,9 @@ test "L0 review round 2: 'encoding' inside a quoted value cannot fool the gate" 
   plain.add("p.xml", @utf8.encode("<?xml version=\"1.0\"?><r></r>"))
   let plain_bytes = @mbtzip.write(plain)
   let plan_plain = @splice.SplicePlan::new()
-  guard "<?xml version=\"1.0\"?><r></r>".find("</r>") is Some(plain_at) else { fail("expected </r>") }
+  guard "<?xml version=\"1.0\"?><r></r>".find("</r>") is Some(plain_at) else {
+    fail("expected </r>")
+  }
   plan_plain.edit_part(
     "p.xml",
     @splice.span_edit(start=plain_at, end=plain_at, @utf8.encode("<ok/>")),

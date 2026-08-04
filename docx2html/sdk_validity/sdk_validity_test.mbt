@@ -628,7 +628,9 @@ async test "a docx.batch/2 script with comments is schema-valid and round-trips"
   let body = script.build_body(Map([]))
   let comments = []
   for comment in script.build_comments() {
-    guard (comment.from_block(), comment.to_block()) is (Some(from), Some(to)) else { fail("expected block") }
+    guard (comment.from_block(), comment.to_block()) is (Some(from), Some(to)) else {
+      fail("expected block")
+    }
     comments.push(
       @docx2html.comment_spec(
         author=comment.author(),
@@ -859,9 +861,15 @@ async test "L0 spike: a comment splices into an existing document byte-preservin
   let annotated = @docx2html.read_docx_annotated(original)
   let main_part = annotated.main_story_part()
   inspect(main_part, content="word/document.xml")
-  guard annotated.body_paragraph_span("p[2]") is Some(span) else { fail("expected span") }
-  guard span.content_start() is Some(content_start) else { fail("expected content_start") }
-  guard span.close_tag_start() is Some(close_start) else { fail("expected close_start") }
+  guard annotated.body_paragraph_span("p[2]") is Some(span) else {
+    fail("expected span")
+  }
+  guard span.content_start() is Some(content_start) else {
+    fail("expected content_start")
+  }
+  guard span.close_tag_start() is Some(close_start) else {
+    fail("expected close_start")
+  }
   // Fragments are namespace-SELF-CONTAINED: every spliced element
   // declares the WML binding for its own prefix, so correctness does
   // not depend on what the surrounding document happened to bind (the

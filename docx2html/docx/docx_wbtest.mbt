@@ -633,7 +633,9 @@ test "section relationship index ignores deterministic hash clustering" {
   }
   let index = RelationshipIndex::build({ relationships: entries })
   for ordinal, id in ids {
-    guard index.by_id.get(id) is Some(matches) else { fail("expected match") }
+    guard index.by_id.get(id) is Some(matches) else {
+      fail("expected match")
+    }
     assert_eq(matches.length(), 1)
     assert_eq(matches[0].target, "header\{ordinal}.xml")
   }
@@ -653,7 +655,9 @@ test "section relationship index handles long shared-prefix ids" {
   }
   let index = RelationshipIndex::build({ relationships: entries })
   for ordinal in 0..<800 {
-    guard index.by_id.get(common + ordinal.to_string()) is Some(matches) else { fail("expected match") }
+    guard index.by_id.get(common + ordinal.to_string()) is Some(matches) else {
+      fail("expected match")
+    }
     assert_eq(matches.length(), 1)
     assert_eq(matches[0].target, "header\{ordinal}.xml")
   }
@@ -4430,7 +4434,9 @@ test "comment addition covers a newly created Relationships part by Override" {
     assert_eq(@opc.validate_docx_package(updated), [])
     let archive = @mbtzip.read(updated)
     assert_true(archive.get("word/_rels/document.xml.rels") is Some(_))
-    guard archive.get("[Content_Types].xml") is Some(types_bytes) else { fail("expected content types") }
+    guard archive.get("[Content_Types].xml") is Some(types_bytes) else {
+      fail("expected content types")
+    }
     let types = @utf8.decode(types_bytes, ignore_bom=true)
     assert_true(
       types.contains(
@@ -4689,12 +4695,16 @@ test "comment addition wires prefixed and self-closing OPC metadata" {
   )
   assert_eq(id, "0")
   let result = @mbtzip.read(@splice.splice_docx(original, plan))
-  guard result.get("word/_rels/document.xml.rels") is Some(rels_bytes) else { fail("expected rels") }
+  guard result.get("word/_rels/document.xml.rels") is Some(rels_bytes) else {
+    fail("expected rels")
+  }
   let rels_text = @utf8.decode(rels_bytes, ignore_bom=true)
   assert_true(rels_text.contains("<pr:Relationships"))
   assert_true(rels_text.contains("<pr:Relationship "))
   assert_true(rels_text.contains("</pr:Relationships>"))
-  guard result.get("[Content_Types].xml") is Some(types_bytes) else { fail("expected content types") }
+  guard result.get("[Content_Types].xml") is Some(types_bytes) else {
+    fail("expected content types")
+  }
   let types_text = @utf8.decode(types_bytes, ignore_bom=true)
   assert_true(
     types_text.contains("<ct:Override PartName=\"/word/comments.xml\""),
