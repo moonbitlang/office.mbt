@@ -123,7 +123,7 @@ fn docx_assemble_ops(
         @word.note_spec(note.body()) catch {
           error =>
             raise ReplayFailed(
-              "op chunk \{chunk_index} footnote spec rejected: \{to_repr(error)}",
+              "op chunk \{chunk_index} footnote spec rejected: \{Repr(error)}",
             )
         },
       )
@@ -139,7 +139,7 @@ fn docx_assemble_ops(
         @word.note_spec(note.body()) catch {
           error =>
             raise ReplayFailed(
-              "op chunk \{chunk_index} endnote spec rejected: \{to_repr(error)}",
+              "op chunk \{chunk_index} endnote spec rejected: \{Repr(error)}",
             )
         },
       )
@@ -164,7 +164,7 @@ fn docx_assemble_ops(
           ) catch {
             error =>
               raise ReplayFailed(
-                "op chunk \{chunk_index} comment reply rejected: \{to_repr(error)}",
+                "op chunk \{chunk_index} comment reply rejected: \{Repr(error)}",
               )
           }
         (None, Some(from), Some(to)) =>
@@ -179,7 +179,7 @@ fn docx_assemble_ops(
           ) catch {
             error =>
               raise ReplayFailed(
-                "op chunk \{chunk_index} comment spec rejected: \{to_repr(error)}",
+                "op chunk \{chunk_index} comment spec rejected: \{Repr(error)}",
               )
           }
         _ =>
@@ -192,7 +192,7 @@ fn docx_assemble_ops(
   }
   @word.write_docx_with_annotations(body, comments~, footnotes~, endnotes~) catch {
     error =>
-      raise ReplayFailed("the writer rejected the assembly: \{to_repr(error)}")
+      raise ReplayFailed("the writer rejected the assembly: \{Repr(error)}")
   }
 }
 

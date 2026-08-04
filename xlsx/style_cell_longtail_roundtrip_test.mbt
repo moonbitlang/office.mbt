@@ -86,7 +86,7 @@ test "cell style gradient and pattern fills round-trip" {
     match style.fill {
       Some(fill) =>
         summary.write_string(
-          "A\{row}: typ=\{to_repr(fill.typ)} pattern=\{to_repr(fill.pattern)} shading=\{to_repr(fill.shading)} colors=\{to_repr(fill.colors)} transparency=\{to_repr(fill.transparency)} fg=\{to_repr(fill.fg_theme)}/\{to_repr(fill.fg_indexed)}/\{to_repr(fill.fg_tint)} bg=\{to_repr(fill.bg_theme)}/\{to_repr(fill.bg_indexed)}/\{to_repr(fill.bg_tint)}\n",
+          "A\{row}: typ=\{Repr(fill.typ)} pattern=\{Repr(fill.pattern)} shading=\{to_repr(fill.shading)} colors=\{to_repr(fill.colors)} transparency=\{to_repr(fill.transparency)} fg=\{to_repr(fill.fg_theme)}/\{to_repr(fill.fg_indexed)}/\{to_repr(fill.fg_tint)} bg=\{to_repr(fill.bg_theme)}/\{to_repr(fill.bg_indexed)}/\{to_repr(fill.bg_tint)}\n",
         )
       None => summary.write_string("A\{row}: no fill\n")
     }
@@ -239,7 +239,7 @@ test "excelize currency and custom number formats" {
     let style = parsed.get_style(
       parsed.get_cell_style("Sheet1", "A\{row}").unwrap(),
     )
-    summary.write_string("A\{row}: \{to_repr(style.number_format)}\n")
+    summary.write_string("A\{row}: \{Repr(style.number_format)}\n")
   }
   inspect(
     summary.to_string(),

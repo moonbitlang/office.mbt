@@ -36,7 +36,7 @@ test "picture positioning and hyperlinks round-trip" {
   let parsed = @xlsx.read(@xlsx.write(workbook))
   let one_cell = parsed.get_pictures("Sheet1", "A1")[0]
   inspect(
-    "\{one_cell.name}|\{one_cell.alt_text}|\{one_cell.hyperlink}|\{to_repr(one_cell.hyperlink_type)}|\{to_repr(one_cell.positioning)}",
+    "\{one_cell.name}|\{one_cell.alt_text}|\{one_cell.hyperlink}|\{Repr(one_cell.hyperlink_type)}|\{Repr(one_cell.positioning)}",
     content=(
       #|pic one|first picture|https://example.com/doc|External|OneCell
     ),
@@ -49,7 +49,7 @@ test "picture positioning and hyperlinks round-trip" {
   )
   let absolute = parsed.get_pictures("Sheet1", "C3")[0]
   inspect(
-    "\{absolute.hyperlink}|\{to_repr(absolute.hyperlink_type)}|\{to_repr(absolute.positioning)}",
+    "\{absolute.hyperlink}|\{Repr(absolute.hyperlink_type)}|\{Repr(absolute.positioning)}",
     content=(
       #|Sheet1!B2|Location|Absolute
     ),
@@ -247,7 +247,7 @@ test "table slicer round-trip" {
     ),
   )
   inspect(
-    "header=\{to_repr(got.display_header)} desc=\{got.item_desc} macro=\{got.macro_name} \{got.width}x\{got.height}",
+    "header=\{Repr(got.display_header)} desc=\{got.item_desc} macro=\{got.macro_name} \{got.width}x\{got.height}",
     content=(
       #|header=Some(false) desc=true macro=Slicer_Change 240x120
     ),
@@ -320,7 +320,7 @@ test "form control families round-trip" {
   let summary = StringBuilder()
   for control in controls {
     summary.write_string(
-      "\{control.cell}|\{control.control_type}|checked=\{to_repr(control.checked)}|link=\{to_repr(control.cell_link)}|cur=\{to_repr(control.current_val)}|range=\{to_repr(control.min_val)}..\{to_repr(control.max_val)}|inc=\{to_repr(control.inc_change)}|page=\{to_repr(control.page_change)}|horiz=\{to_repr(control.horizontally)}\n",
+      "\{control.cell}|\{control.control_type}|checked=\{Repr(control.checked)}|link=\{Repr(control.cell_link)}|cur=\{to_repr(control.current_val)}|range=\{to_repr(control.min_val)}..\{to_repr(control.max_val)}|inc=\{to_repr(control.inc_change)}|page=\{to_repr(control.page_change)}|horiz=\{to_repr(control.horizontally)}\n",
     )
   }
   inspect(

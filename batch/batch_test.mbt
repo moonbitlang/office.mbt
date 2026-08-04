@@ -307,15 +307,15 @@ test "a script covering every op kind applies like its CLI twins" {
   inspect(workbook.get_cell("Data", "A1").unwrap_or(""), content="Region")
   match workbook.get_cell_value_raw("Data", "B1") {
     Some(Numeric(n)) => inspect(n, content="42")
-    other => fail("B1 should be numeric, got \{to_repr(other)}")
+    other => fail("B1 should be numeric, got \{Repr(other)}")
   }
   match workbook.get_cell_value_raw("Data", "B2") {
     Some(Numeric(n)) => inspect(n, content="4.5")
-    other => fail("B2 should be numeric, got \{to_repr(other)}")
+    other => fail("B2 should be numeric, got \{Repr(other)}")
   }
   match workbook.get_cell_value_raw("Data", "C1") {
     Some(Bool(b)) => inspect(b, content="true")
-    other => fail("C1 should be bool, got \{to_repr(other)}")
+    other => fail("C1 should be bool, got \{Repr(other)}")
   }
   inspect(
     workbook.get_cell_formula("Data", "B3").unwrap_or(""),
@@ -343,7 +343,7 @@ test "a script covering every op kind applies like its CLI twins" {
   inspect(workbook.get_col_width("Data", 2).unwrap_or(0), content="16")
   match style.number_format {
     Some(Custom(code)) => inspect(code, content="#,##0.00")
-    other => fail("expected the custom number format, got \{to_repr(other)}")
+    other => fail("expected the custom number format, got \{Repr(other)}")
   }
   match style.fill {
     Some(fill) =>
@@ -1806,7 +1806,7 @@ test "non-finite numbers are rejected, finite ones follow IEEE semantics" {
   ignore(apply_script(workbook, rounding))
   match workbook.get_cell_value_raw("Data", "A1") {
     Some(Numeric(n)) => inspect(n, content="9007199254740992")
-    other => fail("expected the rounded double, got \{to_repr(other)}")
+    other => fail("expected the rounded double, got \{Repr(other)}")
   }
   for
     case in [

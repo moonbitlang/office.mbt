@@ -83,7 +83,7 @@ async test "region merge clones, fills, and shifts the footer" {
       match workbook.get_cell_value_raw("Items", reference) {
         Some(String(value)) => value
         Some(Numeric(value)) => "num:\{value}"
-        other => "other:\{to_repr(other)}"
+        other => "other:\{Repr(other)}"
       }
     }
 
@@ -140,7 +140,7 @@ async test "two regions report final coordinates after upper insertions" {
       Some(Numeric(value)) => assert_eq(value, 10)
       other =>
         fail(
-          "expected the lower region at its shifted row, got \{to_repr(other)}",
+          "expected the lower region at its shifted row, got \{Repr(other)}",
         )
     }
   }
@@ -342,7 +342,7 @@ async test "missing record keys refuse strictly and publish under allow-missing"
     let published = @engine.read(@afs.read_file(output).binary())
     match published.get_cell_value_raw("Items", "B3") {
       Some(String(text)) => assert_eq(text, "{{qty}}")
-      other => fail("expected the literal placeholder, got \{to_repr(other)}")
+      other => fail("expected the literal placeholder, got \{Repr(other)}")
     }
   }
 }
@@ -369,7 +369,7 @@ async test "single-record regions fill in place without inserting" {
       Some(String(text)) => assert_eq(text, "footer")
       other =>
         fail(
-          "the footer must not shift for a single record, got \{to_repr(other)}",
+          "the footer must not shift for a single record, got \{Repr(other)}",
         )
     }
   }
@@ -403,7 +403,7 @@ async test "scalar-only documents behave exactly like transact_template" {
     let published = @engine.read(@afs.read_file(output).binary())
     match published.get_cell_value_raw("Data", "A1") {
       Some(String(text)) => assert_eq(text, "Hello world")
-      other => fail("expected the scalar substitution, got \{to_repr(other)}")
+      other => fail("expected the scalar substitution, got \{Repr(other)}")
     }
   }
 }
@@ -444,7 +444,7 @@ async test "values keys used only inside regions are not reported unused" {
     match published.get_cell_value_raw("Data", "A3") {
       Some(String(text)) => assert_eq(text, "Gadget (pcs)")
       other =>
-        fail("expected the values fallback in the clone, got \{to_repr(other)}")
+        fail("expected the values fallback in the clone, got \{Repr(other)}")
     }
   }
 }
