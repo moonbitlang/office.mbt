@@ -155,7 +155,9 @@ fn chart_ref_parts(reference : String) -> (String, String)? {
   let sheet = if sheet_raw.length() >= 2 &&
     sheet_raw.has_prefix("'") &&
     sheet_raw.has_suffix("'") {
-    sheet_raw[1:sheet_raw.length() - 1].to_owned().replace_all(old="''", new="'")
+    sheet_raw[1:sheet_raw.length() - 1]
+    .to_owned()
+    .replace_all(old="''", new="'")
   } else {
     sheet_raw
   }

@@ -547,12 +547,7 @@ test "raw dv criteria preserve quote doubling and mark x14 opaque" {
   let workbook = Workbook::new()
   workbook.add_sheet("Data") |> ignore
   let list = DataValidation::new(true)
-  list.set_range(
-    TextValue("\"It\"\"s,ok\""),
-    TextValue(""),
-    List,
-    Between
-  )
+  list.set_range(TextValue("\"It\"\"s,ok\""), TextValue(""), List, Between)
   list.set_sqref("A1")
   workbook.add_data_validation("Data", list)
   // the write/read round trip goes through the raw store

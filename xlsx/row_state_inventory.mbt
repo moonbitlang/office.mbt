@@ -690,10 +690,7 @@ fn raw_direct_child_text(
         return Some("")
       }
       match xml[tag_end:].find(close) {
-        Some(rel) =>
-          return Some(
-            unescape_xml_text(xml[tag_end:tag_end + rel]),
-          )
+        Some(rel) => return Some(unescape_xml_text(xml[tag_end:tag_end + rel]))
         None => return None
       }
     }
@@ -809,4 +806,6 @@ pub extend RawDataValidationCriteria with Eq::{not_equal, equal}
 
 ///|
 #deprecated("implicit trait-method promotion is being removed; call via the trait")
-pub extend RawDataValidationCriteria with @moonbitlang/core/debug.Debug::{to_repr}
+pub extend RawDataValidationCriteria with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
