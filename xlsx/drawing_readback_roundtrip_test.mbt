@@ -320,7 +320,7 @@ test "form control families round-trip" {
   let summary = StringBuilder()
   for control in controls {
     summary.write_string(
-      "\{control.cell}|\{control.control_type}|checked=\{Repr(control.checked)}|link=\{Repr(control.cell_link)}|cur=\{to_repr(control.current_val)}|range=\{to_repr(control.min_val)}..\{to_repr(control.max_val)}|inc=\{to_repr(control.inc_change)}|page=\{to_repr(control.page_change)}|horiz=\{to_repr(control.horizontally)}\n",
+      "\{control.cell}|\{control.control_type}|checked=\{Repr(control.checked)}|link=\{Repr(control.cell_link)}|cur=\{Repr(control.current_val)}|range=\{Repr(control.min_val)}..\{Repr(control.max_val)}|inc=\{Repr(control.inc_change)}|page=\{Repr(control.page_change)}|horiz=\{Repr(control.horizontally)}\n",
     )
   }
   inspect(

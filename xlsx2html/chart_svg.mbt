@@ -86,7 +86,7 @@ fn chart_label(text : String) -> String {
     if text[end - 1].is_leading_surrogate() {
       end -= 1
     }
-    text.substring(start=0, end~) + "\u{2026}"
+    text[0:end].to_owned() + "\u{2026}"
   }
 }
 
@@ -150,14 +150,12 @@ fn chart_ref_separator(reference : String) -> Int? {
 /// not resolve (missing sheet, literal arrays).
 fn chart_ref_parts(reference : String) -> (String, String)? {
   guard chart_ref_separator(reference) is Some(bang) else { return None }
-  let sheet_raw = reference.substring(start=0, end=bang)
-  let range_raw = reference.substring(start=bang + 1, end=reference.length())
+  let sheet_raw = reference[0:bang].to_owned()
+  let range_raw = reference[bang + 1:reference.length()].to_owned()
   let sheet = if sheet_raw.length() >= 2 &&
     sheet_raw.has_prefix("'") &&
     sheet_raw.has_suffix("'") {
-    sheet_raw
-    .substring(start=1, end=sheet_raw.length() - 1)
-    .replace_all(old="''", new="'")
+    sheet_raw[1:sheet_raw.length() - 1].to_owned().replace_all(old="''", new="'")
   } else {
     sheet_raw
   }
@@ -239,7 +237,7 @@ fn chart_series_display_name(
     return reference
   }
   let first_cell = match range.find(":") {
-    Some(colon) => range.substring(start=0, end=colon)
+    Some(colon) => range[0:colon]
     None => range
   }
   match (workbook.get_cell_value_raw(sheet, first_cell) catch { _ => None }) {
@@ -309,7 +307,7 @@ fn chart_svg_tag_vals(xml : String, tag : String) -> Array[String] {
             !(body[cursor] is (' ' | '\t' | '\r' | '\n' | '=' | '/')) {
         cursor += 1
       }
-      let attr_name = body.substring(start=name_start, end=cursor)
+      let attr_name = body[name_start:cursor]
       guard attr_name != "" else {
         cursor += 1
         continue
@@ -334,7 +332,7 @@ fn chart_svg_tag_vals(xml : String, tag : String) -> Array[String] {
       }
       guard cursor < body.length() else { break }
       if attr_name == "val" {
-        out.push(body.substring(start=value_start, end=cursor))
+        out.push(body[value_start:cursor].to_owned())
       }
       cursor += 1
     }
