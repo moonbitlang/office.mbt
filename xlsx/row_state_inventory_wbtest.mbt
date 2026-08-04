@@ -551,7 +551,7 @@ test "raw dv criteria preserve quote doubling and mark x14 opaque" {
     TextValue("\"It\"\"s,ok\""),
     TextValue(""),
     List,
-    Between,
+    Between
   )
   list.set_sqref("A1")
   workbook.add_data_validation("Data", list)

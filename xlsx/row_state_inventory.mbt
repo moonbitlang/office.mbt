@@ -433,6 +433,7 @@ fn defined_ref_row_bound(text : String) -> DefinedRefRowBound {
 /// `DefinedNameReferences` (it IS rewritten and can overflow), while a
 /// sheet-scoped `$A$9` with no qualifier lands in
 /// `SheetScopedNamesUnadjusted` (its text never moves).
+#warnings("-unused_error_type")
 pub fn Workbook::sheet_row_state_inventory(
   self : Workbook,
   sheet_name : StringView,
