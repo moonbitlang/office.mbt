@@ -195,7 +195,7 @@ fn docx_image_spec(
             |> ignore
             None
           } catch {
-            error => Some("\{Repr(error)}")
+            error => Some("\{repr(error)}")
           }
           ctx.image_verdicts[id] = verdict
           verdict
@@ -1364,7 +1364,7 @@ pub fn dump_docx_document(
   for message in package_result.messages {
     warnings.push({
       code: "docx.reader_message",
-      message: bounded_reason("\{Repr(message)}"),
+      message: bounded_reason("\{repr(message)}"),
     })
   }
   if package_result.headers.length() > 0 {
