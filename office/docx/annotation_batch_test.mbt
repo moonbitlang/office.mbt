@@ -103,7 +103,7 @@ async test "annotation batch folds add, reply, and resolve in one script" {
 test "annotation batch parser refusals" {
   fn expect(text : String, fragment : String) -> Unit raise {
     try @docx.parse_annotation_batch(text) |> ignore catch {
-      @docx.DocxAnnotationParseError(message) =>
+      DocxAnnotationParseError(message) =>
         assert_true(message.contains(fragment))
     } noraise {
       _ => fail("expected refusal: " + fragment)
