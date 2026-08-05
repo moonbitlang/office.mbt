@@ -261,49 +261,52 @@ fn parse_style_matcher_suffixes(
   }
   let mut index = index
   while index < end {
-    if line[index] == '.' {
-      let (style_id, next, error) = parse_style_identifier(
-        line,
-        index + 1,
-        end,
-        "identifier",
-      )
-      match error {
-        Some(error) => return (suffixes, next, Some(error))
-        None => {
-          suffixes = { ..suffixes, style_id: Some(style_id) }
-          index = next
-        }
-      }
-    } else if line[index] == '[' {
-      let (style_name, next, error) = parse_style_name_suffix(
-        line,
-        index + 1,
-        end,
-      )
-      match error {
-        Some(error) => return (suffixes, next, Some(error))
-        None => {
-          suffixes = { ..suffixes, style_name, }
-          index = next
-        }
-      }
-    } else if allow_list && line[index] == ':' {
-      let (numbering, next, consumed, error) = parse_style_list_suffix_after_colon(
-        line, index, end,
-      )
-      match error {
-        Some(error) => return (suffixes, next, Some(error))
-        None =>
-          if consumed {
-            suffixes = { ..suffixes, numbering, }
+    match line[index] {
+      '.' => {
+        let (style_id, next, error) = parse_style_identifier(
+          line,
+          index + 1,
+          end,
+          "identifier",
+        )
+        match error {
+          Some(error) => return (suffixes, next, Some(error))
+          None => {
+            suffixes = { ..suffixes, style_id: Some(style_id) }
             index = next
-          } else {
-            return (suffixes, index, None)
           }
+        }
       }
-    } else {
-      return (suffixes, index, None)
+      '[' => {
+        let (style_name, next, error) = parse_style_name_suffix(
+          line,
+          index + 1,
+          end,
+        )
+        match error {
+          Some(error) => return (suffixes, next, Some(error))
+          None => {
+            suffixes = { ..suffixes, style_name, }
+            index = next
+          }
+        }
+      }
+      ':' if allow_list => {
+        let (numbering, next, consumed, error) = parse_style_list_suffix_after_colon(
+          line, index, end,
+        )
+        match error {
+          Some(error) => return (suffixes, next, Some(error))
+          None =>
+            if consumed {
+              suffixes = { ..suffixes, numbering, }
+              index = next
+            } else {
+              return (suffixes, index, None)
+            }
+        }
+      }
+      _ => return (suffixes, index, None)
     }
   }
   (suffixes, index, None)
@@ -634,38 +637,41 @@ fn parse_style_html_path_element(
   let mut index = first_index
   let attributes : Map[String, String] = Map([])
   while index < end {
-    if line[index] == '.' {
-      let (class_name, next, error) = parse_style_identifier(
-        line,
-        index + 1,
-        end,
-        "identifier",
-      )
-      match error {
-        Some(error) => return ParsedHtmlPathElementError(next, error)
-        None => {
-          match attributes.get("class") {
-            Some(existing) => attributes["class"] = existing + " " + class_name
-            None => attributes["class"] = class_name
+    match line[index] {
+      '.' => {
+        let (class_name, next, error) = parse_style_identifier(
+          line,
+          index + 1,
+          end,
+          "identifier",
+        )
+        match error {
+          Some(error) => return ParsedHtmlPathElementError(next, error)
+          None => {
+            match attributes.get("class") {
+              Some(existing) =>
+                attributes["class"] = existing + " " + class_name
+              None => attributes["class"] = class_name
+            }
+            index = next
           }
-          index = next
         }
       }
-    } else if line[index] == '[' {
-      let (name, value, next, error) = parse_style_attribute(
-        line,
-        index + 1,
-        end,
-      )
-      match error {
-        Some(error) => return ParsedHtmlPathElementError(next, error)
-        None => {
-          attributes[name] = value
-          index = next
+      '[' => {
+        let (name, value, next, error) = parse_style_attribute(
+          line,
+          index + 1,
+          end,
+        )
+        match error {
+          Some(error) => return ParsedHtmlPathElementError(next, error)
+          None => {
+            attributes[name] = value
+            index = next
+          }
         }
       }
-    } else {
-      break
+      _ => break
     }
   }
   let (next, consumed) = consume_style_option_identifier(
@@ -709,7 +715,7 @@ fn parse_style_tag_choices_after_start(
 
 ///|
 fn is_style_whitespace(char : UInt16) -> Bool {
-  char == ' ' || char == '\t' || char == '\n' || char == '\r'
+  char is (' ' | '\t' | '\n' | '\r')
 }
 
 ///|
@@ -822,14 +828,16 @@ fn read_style_identifier_after_start(
   let builder = StringBuilder()
   let mut index = index
   while index < end {
-    if line[index] == '\\' && index + 1 < end {
-      builder.write_string(line[index + 1:index + 2].to_owned())
-      index = index + 2
-    } else if is_style_identifier_part(line[index]) {
-      builder.write_string(line[index:index + 1].to_owned())
-      index = index + 1
-    } else {
-      break
+    match line[index] {
+      '\\' if index + 1 < end => {
+        builder.write_string(line[index + 1:index + 2].to_owned())
+        index = index + 2
+      }
+      char if is_style_identifier_part(char) => {
+        builder.write_string(line[index:index + 1].to_owned())
+        index = index + 1
+      }
+      _ => break
     }
   }
   (builder.to_string(), index)
@@ -847,14 +855,16 @@ fn parse_style_string(
   let builder = StringBuilder()
   let mut cursor = index + 1
   while cursor < end {
-    if line[cursor] == '\\' && cursor + 1 < end {
-      write_style_escape(builder, line, cursor + 1)
-      cursor = cursor + 2
-    } else if line[cursor] == '\'' {
-      return (builder.to_string(), cursor + 1, None)
-    } else {
-      builder.write_string(line[cursor:cursor + 1].to_owned())
-      cursor = cursor + 1
+    match line[cursor] {
+      '\\' if cursor + 1 < end => {
+        write_style_escape(builder, line, cursor + 1)
+        cursor = cursor + 2
+      }
+      '\'' => return (builder.to_string(), cursor + 1, None)
+      _ => {
+        builder.write_string(line[cursor:cursor + 1].to_owned())
+        cursor = cursor + 1
+      }
     }
   }
   (
@@ -875,7 +885,7 @@ fn parse_style_integer(
   index : Int,
   end : Int,
 ) -> (Int, Int, String?) {
-  if index >= end || line[index] < '0' || line[index] > '9' {
+  if index >= end || !(line[index] is ('0'..='9')) {
     return (0, index, Some(style_parse_error(line, index, end, "integer")))
   }
   let value_text = read_style_integer_token(line, index, end)
@@ -908,15 +918,12 @@ fn is_style_identifier_start(line : String, index : Int, end : Int) -> Bool {
 
 ///|
 fn is_style_identifier_start_char(char : UInt16) -> Bool {
-  (char >= 'a' && char <= 'z') ||
-  (char >= 'A' && char <= 'Z') ||
-  char == '-' ||
-  char == '_'
+  char is ('a'..='z' | 'A'..='Z' | '-' | '_')
 }
 
 ///|
 fn is_style_identifier_part(char : UInt16) -> Bool {
-  is_style_identifier_start_char(char) || (char >= '0' && char <= '9')
+  is_style_identifier_start_char(char) || char is ('0'..='9')
 }
 
 ///|
@@ -964,7 +971,7 @@ fn describe_style_token(line : String, index : Int, end : Int) -> String {
           line, index, end, "identifier",
         )
         "identifier \"" + identifier + "\""
-      } else if line[index] >= '0' && line[index] <= '9' {
+      } else if line[index] is ('0'..='9') {
         "integer \"" + read_style_integer_token(line, index, end) + "\""
       } else {
         "unrecognisedCharacter \"" + line[index:index + 1].to_owned() + "\""
@@ -1002,7 +1009,7 @@ fn read_unterminated_style_string_token(
 ///|
 fn read_style_integer_token(line : String, index : Int, end : Int) -> String {
   let mut cursor = index
-  while cursor < end && line[cursor] >= '0' && line[cursor] <= '9' {
+  while cursor < end && line[cursor] is ('0'..='9') {
     cursor = cursor + 1
   }
   line[index:cursor].to_owned()

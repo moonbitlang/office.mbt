@@ -2055,18 +2055,18 @@ fn BodyReader::read_children(
   for child in children {
     match child {
       XmlElement(element) =>
-        if element.name == "w:p" && is_deleted_paragraph(element) {
-          deleted_paragraph_contents.append(element.children)
-        } else if element.name == "w:p" &&
-          !deleted_paragraph_contents.is_empty() {
-          elements.append(
-            self.read_paragraph_elements_with_prefix(
-              element, deleted_paragraph_contents,
-            ),
-          )
-          deleted_paragraph_contents.clear()
-        } else {
-          elements.append(self.read_element(element))
+        match element.name {
+          "w:p" if is_deleted_paragraph(element) =>
+            deleted_paragraph_contents.append(element.children)
+          "w:p" if !deleted_paragraph_contents.is_empty() => {
+            elements.append(
+              self.read_paragraph_elements_with_prefix(
+                element, deleted_paragraph_contents,
+              ),
+            )
+            deleted_paragraph_contents.clear()
+          }
+          _ => elements.append(self.read_element(element))
         }
       XmlText(_) => ()
     }
@@ -2539,13 +2539,10 @@ fn read_unquoted_field_location(value : String, index : Int) -> String? {
 
 ///|
 fn read_until_field_whitespace(value : String, start : Int) -> String {
-  let mut index = start
-  while index < value.length() {
-    let char = value[index]
-    if is_field_whitespace(char) {
+  for index in start..<value.length() {
+    if is_field_whitespace(value[index]) {
       return value[start:index].to_owned()
     }
-    index = index + 1
   }
   value[start:].to_owned()
 }
@@ -2561,7 +2558,7 @@ fn skip_field_whitespace(value : String, start : Int) -> Int {
 
 ///|
 fn is_field_whitespace(char : UInt16) -> Bool {
-  char == ' ' || char == '\t' || char == '\n' || char == '\r'
+  char is (' ' | '\t' | '\n' | '\r')
 }
 
 ///|
@@ -3407,13 +3404,10 @@ fn find_uri_scheme_colon(uri : String) -> Int? {
     return None
   }
   for index in 1..<uri.length() {
-    let char = uri[index]
-    if char == ':' {
-      return Some(index)
-    } else if char == '/' || char == '\\' || char == '?' || char == '#' {
-      return None
-    } else if !is_uri_scheme_char(char) {
-      return None
+    match uri[index] {
+      ':' => return Some(index)
+      '/' | '\\' | '?' | '#' => return None
+      char => if !is_uri_scheme_char(char) { return None }
     }
   }
   None
@@ -3421,16 +3415,12 @@ fn find_uri_scheme_colon(uri : String) -> Int? {
 
 ///|
 fn is_uri_scheme_start(char : UInt16) -> Bool {
-  (char >= 'A' && char <= 'Z') || (char >= 'a' && char <= 'z')
+  char is ('A'..='Z' | 'a'..='z')
 }
 
 ///|
 fn is_uri_scheme_char(char : UInt16) -> Bool {
-  is_uri_scheme_start(char) ||
-  (char >= '0' && char <= '9') ||
-  char == '+' ||
-  char == '-' ||
-  char == '.'
+  is_uri_scheme_start(char) || char is ('0'..='9' | '+' | '-' | '.')
 }
 
 ///|
@@ -3470,14 +3460,11 @@ fn percent_decode_uri_path(path : String) -> String? {
 
 ///|
 fn hex_value(char : UInt16) -> Int? {
-  if char >= '0' && char <= '9' {
-    Some(char.to_int() - '0'.to_int())
-  } else if char >= 'A' && char <= 'F' {
-    Some(char.to_int() - 'A'.to_int() + 10)
-  } else if char >= 'a' && char <= 'f' {
-    Some(char.to_int() - 'a'.to_int() + 10)
-  } else {
-    None
+  match char {
+    '0'..='9' => Some(char.to_int() - '0'.to_int())
+    'A'..='F' => Some(char.to_int() - 'A'.to_int() + 10)
+    'a'..='f' => Some(char.to_int() - 'a'.to_int() + 10)
+    _ => None
   }
 }
 
@@ -3615,10 +3602,9 @@ fn parse_grid_span(value : String) -> Int {
 
 ///|
 fn decimal_digit_value(char : UInt16) -> Int? {
-  if char >= '0' && char <= '9' {
-    Some(char.to_int() - '0'.to_int())
-  } else {
-    None
+  match char {
+    '0'..='9' => Some(char.to_int() - '0'.to_int())
+    _ => None
   }
 }
 
