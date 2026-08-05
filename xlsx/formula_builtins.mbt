@@ -5397,10 +5397,8 @@ fn bitwise_values(
   name : String,
   values : ArrayView[FormulaValue],
 ) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  match (bitwise_number(values[0]), bitwise_number(values[1])) {
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  match (bitwise_number(v0), bitwise_number(v1)) {
     (Ok(num1), Ok(num2)) =>
       if num1 < 0.0 ||
         num1 > bitwise_max_value ||
@@ -6020,10 +6018,8 @@ fn variance_values(
 
 ///|
 fn trimmean_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  let percent = match value_as_number(values[1]) {
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  let percent = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6031,7 +6027,7 @@ fn trimmean_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     return Error(formula_error_num)
   }
   let numbers : Array[Double] = []
-  let list_values : Array[FormulaValue] = [values[0]]
+  let list_values : Array[FormulaValue] = [v0]
   for value in flatten_values(list_values) {
     match normalize_scalar(value) {
       Number(num) => numbers.push(num)
@@ -6224,22 +6220,20 @@ fn betainv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn normdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 4 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2, v3] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let mean = match value_as_number(values[1]) {
+  let mean = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let std_dev = match value_as_number(values[2]) {
+  let std_dev = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
-  let cumulative = match value_as_bool(values[3]) {
+  let cumulative = match value_as_bool(v3) {
     Ok(flag) => flag
     Err(err) => return err
   }
@@ -6256,18 +6250,16 @@ fn normdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn norminv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let probability = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let probability = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let mean = match value_as_number(values[1]) {
+  let mean = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let std_dev = match value_as_number(values[2]) {
+  let std_dev = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6287,14 +6279,12 @@ fn norminv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn norm_s_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let cumulative = match value_as_bool(values[1]) {
+  let cumulative = match value_as_bool(v1) {
     Ok(flag) => flag
     Err(err) => return err
   }
@@ -6304,10 +6294,8 @@ fn norm_s_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn norms_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 1 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6316,10 +6304,8 @@ fn norms_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn norm_s_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 1 {
-    return Error(formula_error_value)
-  }
-  let probability = match value_as_number(values[0]) {
+  guard values is [v0] else { return Error(formula_error_value) }
+  let probability = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6340,18 +6326,16 @@ fn norms_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn confidence_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let alpha = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let alpha = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let std_dev = match value_as_number(values[1]) {
+  let std_dev = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let size = match value_as_number(values[2]) {
+  let size = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6368,18 +6352,16 @@ fn confidence_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn confidence_t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let alpha = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let alpha = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let std_dev = match value_as_number(values[1]) {
+  let std_dev = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let size = match value_as_number(values[2]) {
+  let size = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6397,18 +6379,16 @@ fn confidence_t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn loginv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let probability = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let probability = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let mean = match value_as_number(values[1]) {
+  let mean = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let std_dev = match value_as_number(values[2]) {
+  let std_dev = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6425,10 +6405,8 @@ fn loginv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn gamma_value(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 1 {
-    return Error(formula_error_value)
-  }
-  let number = match value_as_number(values[0]) {
+  guard values is [v0] else { return Error(formula_error_value) }
+  let number = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6452,22 +6430,20 @@ fn gamma_cdf(x : Double, alpha : Double, beta : Double) -> Double {
 
 ///|
 fn gamma_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 4 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2, v3] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let alpha = match value_as_number(values[1]) {
+  let alpha = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let beta = match value_as_number(values[2]) {
+  let beta = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
-  let cumulative = match value_as_bool(values[3]) {
+  let cumulative = match value_as_bool(v3) {
     Ok(flag) => flag
     Err(err) => return err
   }
@@ -6525,18 +6501,16 @@ fn gammainv_double(
 
 ///|
 fn gamma_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let probability = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let probability = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let alpha = match value_as_number(values[1]) {
+  let alpha = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let beta = match value_as_number(values[2]) {
+  let beta = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6552,10 +6526,8 @@ fn gamma_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn gammaln_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 1 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6568,10 +6540,8 @@ fn gammaln_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn gammaln_precise_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 1 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6584,22 +6554,20 @@ fn gammaln_precise_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn lognorm_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 4 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2, v3] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let mean = match value_as_number(values[1]) {
+  let mean = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let std_dev = match value_as_number(values[2]) {
+  let std_dev = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
-  let cumulative = match value_as_bool(values[3]) {
+  let cumulative = match value_as_bool(v3) {
     Ok(flag) => flag
     Err(err) => return err
   }
@@ -6619,18 +6587,16 @@ fn lognorm_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn lognormdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let mean = match value_as_number(values[1]) {
+  let mean = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let std_dev = match value_as_number(values[2]) {
+  let std_dev = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6643,18 +6609,16 @@ fn lognormdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn expon_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let lambda = match value_as_number(values[1]) {
+  let lambda = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let cumulative = match value_as_bool(values[2]) {
+  let cumulative = match value_as_bool(v2) {
     Ok(flag) => flag
     Err(err) => return err
   }
@@ -6671,18 +6635,16 @@ fn expon_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn poisson_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let mean = match value_as_number(values[1]) {
+  let mean = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let cumulative = match value_as_bool(values[2]) {
+  let cumulative = match value_as_bool(v2) {
     Ok(flag) => flag
     Err(err) => return err
   }
@@ -6736,28 +6698,26 @@ fn binominv_double(n : Double, p : Double, alpha : Double) -> Double {
 
 ///|
 fn binomdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 4 {
-    return Error(formula_error_value)
-  }
-  let successes = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2, v3] else { return Error(formula_error_value) }
+  let successes = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let trials = match value_as_number(values[1]) {
+  let trials = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
   if successes < 0.0 || successes > trials {
     return Error(formula_error_num)
   }
-  let probability = match value_as_number(values[2]) {
+  let probability = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
   if probability < 0.0 || probability > 1.0 {
     return Error(formula_error_num)
   }
-  let cumulative = match value_as_bool(values[3]) {
+  let cumulative = match value_as_bool(v3) {
     Ok(flag) => flag
     Err(err) => return err
   }
@@ -6823,24 +6783,22 @@ fn binom_dist_range_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn binom_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let trials = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let trials = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
   if trials < 0.0 {
     return Error(formula_error_num)
   }
-  let probability = match value_as_number(values[1]) {
+  let probability = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
   if probability <= 0.0 || probability >= 1.0 {
     return Error(formula_error_num)
   }
-  let alpha = match value_as_number(values[2]) {
+  let alpha = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6889,29 +6847,29 @@ fn hypgeom_raw(
 
 ///|
 fn hypgeom_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 5 {
+  guard values is [v0, v1, v2, v3, v4] else {
     return Error(formula_error_value)
   }
-  let sample_s = match value_as_number(values[0]) {
+  let sample_s = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let number_sample = match value_as_number(values[1]) {
+  let number_sample = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let population_s = match value_as_number(values[2]) {
+  let population_s = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
-  let number_pop = match value_as_number(values[3]) {
+  let number_pop = match value_as_number(v3) {
     Ok(num) => num
     Err(err) => return err
   }
   if hypgeom_args_invalid(sample_s, number_sample, population_s, number_pop) {
     return Error(formula_error_num)
   }
-  let cumulative = match value_as_bool(values[4]) {
+  let cumulative = match value_as_bool(v4) {
     Ok(flag) => flag
     Err(err) => return err
   }
@@ -6931,22 +6889,20 @@ fn hypgeom_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn hypgeomdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 4 {
-    return Error(formula_error_value)
-  }
-  let sample_s = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2, v3] else { return Error(formula_error_value) }
+  let sample_s = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let number_sample = match value_as_number(values[1]) {
+  let number_sample = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let population_s = match value_as_number(values[2]) {
+  let population_s = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
-  let number_pop = match value_as_number(values[3]) {
+  let number_pop = match value_as_number(v3) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6959,22 +6915,20 @@ fn hypgeomdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn negbinom_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 4 {
-    return Error(formula_error_value)
-  }
-  let failures = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2, v3] else { return Error(formula_error_value) }
+  let failures = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let successes = match value_as_number(values[1]) {
+  let successes = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let probability = match value_as_number(values[2]) {
+  let probability = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
-  let cumulative = match value_as_bool(values[3]) {
+  let cumulative = match value_as_bool(v3) {
     Ok(flag) => flag
     Err(err) => return err
   }
@@ -6993,18 +6947,16 @@ fn negbinom_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn negbinomdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let failures = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let failures = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let successes = match value_as_number(values[1]) {
+  let successes = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let probability = match value_as_number(values[2]) {
+  let probability = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7019,10 +6971,8 @@ fn negbinomdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn gauss_value(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 1 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7032,10 +6982,8 @@ fn gauss_value(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn phi_value(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 1 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7045,18 +6993,16 @@ fn phi_value(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn tdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let degrees = match value_as_number(values[1]) {
+  let degrees = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let cumulative = match value_as_bool(values[2]) {
+  let cumulative = match value_as_bool(v2) {
     Ok(flag) => flag
     Err(err) => return err
   }
@@ -7079,14 +7025,12 @@ fn tdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn tdist_2t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let degrees = match value_as_number(values[1]) {
+  let degrees = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7099,14 +7043,12 @@ fn tdist_2t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn tdist_rt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let degrees = match value_as_number(values[1]) {
+  let degrees = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7122,18 +7064,16 @@ fn tdist_rt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn tdist_legacy_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let degrees = match value_as_number(values[1]) {
+  let degrees = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let tails = match value_as_number(values[2]) {
+  let tails = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7146,14 +7086,12 @@ fn tdist_legacy_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn tinv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  let probability = match value_as_number(values[0]) {
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  let probability = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let degrees = match value_as_number(values[1]) {
+  let degrees = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7174,14 +7112,12 @@ fn tinv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn tinv_2t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  let probability = match value_as_number(values[0]) {
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  let probability = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let degrees = match value_as_number(values[1]) {
+  let degrees = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7260,18 +7196,16 @@ fn ttest_unpaired(
 
 ///|
 fn ttest_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 4 {
-    return Error(formula_error_value)
-  }
-  let (array1, array2) = match (values[0], values[1]) {
+  guard values is [v0, v1, v2, v3] else { return Error(formula_error_value) }
+  let (array1, array2) = match (v0, v1) {
     (List(left), List(right)) => (left, right)
     _ => return Error(formula_error_num)
   }
-  let tails = match value_as_number(values[2]) {
+  let tails = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
-  let test_type = match value_as_number(values[3]) {
+  let test_type = match value_as_number(v3) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7416,14 +7350,12 @@ fn prob_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn chidist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let degrees = match value_as_number(values[1]) {
+  let degrees = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7433,14 +7365,12 @@ fn chidist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn chiinv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  let probability = match value_as_number(values[0]) {
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  let probability = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let degrees = match value_as_number(values[1]) {
+  let degrees = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7457,18 +7387,16 @@ fn chiinv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn chisq_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let degrees = match value_as_number(values[1]) {
+  let degrees = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let cumulative = match value_as_bool(values[2]) {
+  let cumulative = match value_as_bool(v2) {
     Ok(flag) => flag
     Err(err) => return err
   }
@@ -7488,14 +7416,12 @@ fn chisq_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn chisq_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  let probability = match value_as_number(values[0]) {
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  let probability = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let degrees = match value_as_number(values[1]) {
+  let degrees = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7581,22 +7507,20 @@ fn chitest_values(
 
 ///|
 fn fdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 4 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2, v3] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let deg1 = match value_as_number(values[1]) {
+  let deg1 = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let deg2 = match value_as_number(values[2]) {
+  let deg2 = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
-  let cumulative = match value_as_bool(values[3]) {
+  let cumulative = match value_as_bool(v3) {
     Ok(flag) => flag
     Err(err) => return err
   }
@@ -7620,18 +7544,16 @@ fn fdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn fdist_rt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let deg1 = match value_as_number(values[1]) {
+  let deg1 = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let deg2 = match value_as_number(values[2]) {
+  let deg2 = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7651,18 +7573,16 @@ fn fdist_rt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn finv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let probability = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let probability = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let deg1 = match value_as_number(values[1]) {
+  let deg1 = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let deg2 = match value_as_number(values[2]) {
+  let deg2 = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7683,18 +7603,16 @@ fn finv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn finv_rt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let probability = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let probability = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let deg1 = match value_as_number(values[1]) {
+  let deg1 = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let deg2 = match value_as_number(values[2]) {
+  let deg2 = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7741,21 +7659,19 @@ fn ftest_values(
   values : ArrayView[FormulaValue],
   ctx : CalcContext,
 ) -> FormulaValue raise XlsxError {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
+  guard values is [v0, v1] else { return Error(formula_error_value) }
   let left_range = range_from_expr_or_value(
     workbook,
     sheet_name,
     args[0],
-    values[0],
+    v0,
     ctx,
   )
   let right_range = range_from_expr_or_value(
     workbook,
     sheet_name,
     args[1],
-    values[1],
+    v1,
     ctx,
   )
   let (n1, accu1) = ftest_collect(left_range.values)
