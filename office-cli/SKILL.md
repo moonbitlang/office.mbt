@@ -34,7 +34,7 @@ still read or write the paths supplied to it and consume CPU within those
 limits. For trusted files, `moonx --target native bobzhang/office ...` is a
 faster drop-in.
 
-Pin a version when reproducibility matters: `moonx bobzhang/office@0.2.0 ...`.
+Pin a version when reproducibility matters: `moonx bobzhang/office@0.2.1 ...`.
 `@latest` refreshes the registry index before resolving.
 
 ## The CLI describes itself — prefer that over prose
@@ -169,6 +169,72 @@ single `data.cell` **object**, while a `range[A1:C12]` selector returns a
 Run `office help schema ID --json` before authoring any consumed JSON
 document. It is normative for `xlsx.batch/2`, `docx.batch/2`,
 `office.template.data/1`, and `docx.annotation-batch/1`.
+
+## Shapes that are easy to get wrong
+
+These four cost a failed run each if you guess. All are visible in
+`help schema`, but guessing is the natural failure.
+
+**1. A table cell is an object, not a string.** `rows` is an array of arrays
+of *cell objects*:
+
+```json
+{"op": "table", "params": {"header_rows": 1, "rows": [
+  [{"text": "Area"}, {"text": "Owner"}],
+  [{"text": "Cache"}, {"text": "Dana"}],
+  [{"text": "Payments", "col_span": 2}]
+]}}
+```
+
+A cell also takes `paragraphs` (for multi-paragraph cells) and `row_span`.
+Passing `[["Area","Owner"]]` fails.
+
+**2. Annotation ops have no `params`.** See the `annotate` bullet above —
+fields sit directly on the op.
+
+**3. `query` returns matched content in `preview`, not `text`.** A match is
+`{path, kind, role, stability, preview, preview_truncated, properties}`.
+Reading `.text` yields nothing and makes the command look broken.
+
+**4. Comments are not in `outline`.** `outline` reports `counts.comments`
+but no comment list. See below.
+
+## Reviewing a DOCX
+
+Writing comments is `annotate`; reading them back is two different commands,
+and neither is `outline`.
+
+```
+# the comment bodies, path-tagged
+office text FILE --under '/docx/comments' --json
+
+# one comment's thread metadata
+office get FILE '/docx/comments/comment[id="0"]' --json
+```
+
+`get` on a comment returns the fields a review loop needs under `metadata` —
+`author`, `anchors` resolving back to the body paragraphs the comment covers,
+plus `done` and `parent_id`:
+
+```json
+{"id": "0", "ordinal": 1, "author": "Reviewer", "done": true,
+ "anchors": [{"start": "/docx/body/p[5]", "end": "/docx/body/p[5]"}]}
+```
+
+**`done` and `parent_id` are present only when they apply.** An unresolved
+top-level comment has neither key, so read them defensively — treat a missing
+`done` as not resolved and a missing `parent_id` as top-level, rather than
+indexing them directly.
+
+To enumerate a whole thread, list bodies with `text --under '/docx/comments'`,
+then `get` each `comment[id="N"]` for its metadata.
+
+**Anchors are whole body paragraphs.** `anchor.at` (and `to`) must be
+`/docx/body/p[K]`. You cannot anchor a comment to a phrase, a run, a table
+cell, or a header — `/docx/body/p[2]/r[1]` is rejected with
+`anchor.at must be a single body paragraph`. Use `{"at": ..., "to": ...}` to
+span several paragraphs. If you need phrase-level review, quote the phrase in
+the comment body and anchor the paragraph that contains it.
 
 ## Legacy-only fallbacks
 
