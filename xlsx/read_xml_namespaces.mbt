@@ -82,6 +82,21 @@ let xlsx_drawing_core_element_namespaces : Array[String] = [
 ]
 
 ///|
+/// Namespace role of a single element seen by the DrawingML reader-structure
+/// validator. The concrete namespace URIs depend on the document dialect, so
+/// they are runtime values and cannot appear in patterns; classifying each
+/// element once lets the structural rules below be matched declaratively.
+/// `OtherNs` covers every namespace the readers do not consume, which the
+/// validator deliberately ignores.
+priv enum DrawingReaderNamespace {
+  DrawingNs
+  MainNs
+  ChartNs
+  SlicerNs
+  OtherNs
+}
+
+///|
 fn xlsx_drawing_anchor_name(local_name : StringView) -> Bool {
   local_name == "oneCellAnchor" ||
   local_name == "twoCellAnchor" ||
@@ -99,30 +114,11 @@ fn xlsx_drawing_unsupported_reader_object_name(local_name : StringView) -> Bool 
 }
 
 ///|
-fn drawing_reader_sequence_matches(
-  actual : ArrayView[String],
-  expected : ArrayView[String],
-) -> Bool {
-  if actual.length() != expected.length() {
-    return false
-  }
-  for i in 0..<actual.length() {
-    if actual[i] != expected[i] {
-      return false
-    }
-  }
-  true
-}
-
-///|
 fn validate_drawing_marker_grammar(
   marker_parent : StringView,
   sequence : ArrayView[String],
 ) -> Unit raise XlsxError {
-  if marker_parent != "" &&
-    !drawing_reader_sequence_matches(sequence, [
-      "col", "colOff", "row", "rowOff",
-    ]) {
+  if marker_parent != "" && !(sequence is ["col", "colOff", "row", "rowOff"]) {
     raise InvalidXml(msg="drawing marker children are invalid")
   }
 }
@@ -132,20 +128,11 @@ fn validate_drawing_anchor_grammar(
   anchor_name : StringView,
   sequence : ArrayView[String],
 ) -> Unit raise XlsxError {
-  let valid = if anchor_name == "oneCellAnchor" {
-    drawing_reader_sequence_matches(sequence, [
-      "from", "ext", "object", "clientData",
-    ])
-  } else if anchor_name == "twoCellAnchor" {
-    drawing_reader_sequence_matches(sequence, [
-      "from", "to", "object", "clientData",
-    ])
-  } else if anchor_name == "absoluteAnchor" {
-    drawing_reader_sequence_matches(sequence, [
-      "pos", "ext", "object", "clientData",
-    ])
-  } else {
-    false
+  let valid = match anchor_name {
+    "oneCellAnchor" => sequence is ["from", "ext", "object", "clientData"]
+    "twoCellAnchor" => sequence is ["from", "to", "object", "clientData"]
+    "absoluteAnchor" => sequence is ["pos", "ext", "object", "clientData"]
+    _ => false
   }
   if !valid {
     raise InvalidXml(msg="drawing anchor children are invalid")
@@ -348,43 +335,48 @@ fn validate_xlsx_drawing_reader_structure(
     if inside_shape_text_body && namespace_uri == main_namespace {
       let parent_name = scanner.parent_local_name().unwrap_or("")
       let parent_namespace = scanner.parent_namespace_uri()
-      if local_name == "p" {
-        if depth != 5 ||
-          parent_name != "txBody" ||
-          parent_namespace != Some(drawing_namespace) {
-          raise InvalidXml(msg="drawing text paragraph is misplaced")
+      match local_name {
+        "p" =>
+          if depth != 5 ||
+            parent_name != "txBody" ||
+            parent_namespace != Some(drawing_namespace) {
+            raise InvalidXml(msg="drawing text paragraph is misplaced")
+          }
+        "r" | "fld" | "br" => {
+          if depth != 6 ||
+            parent_name != "p" ||
+            parent_namespace != Some(main_namespace) {
+            raise InvalidXml(msg="drawing text run is misplaced")
+          }
+          text_container = local_name.to_owned()
+          text_run_properties_seen = false
+          text_value_seen = false
         }
-      } else if local_name == "r" || local_name == "fld" || local_name == "br" {
-        if depth != 6 ||
-          parent_name != "p" ||
-          parent_namespace != Some(main_namespace) {
-          raise InvalidXml(msg="drawing text run is misplaced")
+        "rPr" => {
+          if depth != 7 ||
+            parent_name != text_container ||
+            parent_namespace != Some(main_namespace) ||
+            text_container == "" {
+            raise InvalidXml(msg="drawing text properties are misplaced")
+          }
+          if text_run_properties_seen || text_value_seen {
+            raise InvalidXml(msg="drawing text run is invalid")
+          }
+          text_run_properties_seen = true
         }
-        text_container = local_name.to_owned()
-        text_run_properties_seen = false
-        text_value_seen = false
-      } else if local_name == "rPr" {
-        if depth != 7 ||
-          parent_name != text_container ||
-          parent_namespace != Some(main_namespace) ||
-          text_container == "" {
-          raise InvalidXml(msg="drawing text properties are misplaced")
+        "t" => {
+          if depth != 7 ||
+            (text_container != "r" && text_container != "fld") ||
+            parent_name != text_container ||
+            parent_namespace != Some(main_namespace) {
+            raise InvalidXml(msg="drawing text target is misplaced")
+          }
+          if text_value_seen {
+            raise InvalidXml(msg="drawing text run is invalid")
+          }
+          text_value_seen = true
         }
-        if text_run_properties_seen || text_value_seen {
-          raise InvalidXml(msg="drawing text run is invalid")
-        }
-        text_run_properties_seen = true
-      } else if local_name == "t" {
-        if depth != 7 ||
-          (text_container != "r" && text_container != "fld") ||
-          parent_name != text_container ||
-          parent_namespace != Some(main_namespace) {
-          raise InvalidXml(msg="drawing text target is misplaced")
-        }
-        if text_value_seen {
-          raise InvalidXml(msg="drawing text run is invalid")
-        }
-        text_value_seen = true
+        _ => ()
       }
       // Run-property parsing below is namespace-aware and only consumes
       // direct children of the validated rPr above. Other DrawingML text
@@ -399,480 +391,527 @@ fn validate_xlsx_drawing_reader_structure(
       }) {
       extension_depth = Some(depth)
     }
-    if namespace_uri == drawing_namespace &&
-      xlsx_drawing_anchor_name(local_name) {
-      if depth != 2 ||
-        scanner.parent_local_name() != Some("wsDr") ||
-        scanner.parent_namespace_uri() != Some(drawing_namespace) {
-        raise InvalidXml(msg="drawing anchor is misplaced")
-      }
-      in_reader_anchor = true
-      anchor_name = local_name.to_owned()
-      reader_object_seen = false
-      current_reader_object = ""
-      reader_payload_seen = false
-      from_seen = false
-      to_seen = false
-      anchor_pos_seen = false
-      anchor_ext_seen = false
-      client_data_seen = false
-      anchor_sequence.clear()
-    } else if namespace_uri == drawing_namespace &&
-      xlsx_drawing_reader_object_name(local_name) {
-      if depth != 3 ||
-        !in_reader_anchor ||
-        !xlsx_drawing_anchor_name(scanner.parent_local_name().unwrap_or("")) ||
-        scanner.parent_namespace_uri() != Some(drawing_namespace) {
-        raise InvalidXml(msg="drawing reader object is misplaced")
-      }
-      if reader_object_seen {
-        raise InvalidXml(msg="drawing anchor has multiple reader objects")
-      }
-      reader_object_seen = true
-      anchor_sequence.push("object")
-      current_reader_object = local_name.to_owned()
-      non_visual_container_seen = false
-      c_nv_pr_seen = false
-      c_nv_pic_pr_seen = false
-      blip_fill_seen = false
-      blip_seen = false
-      hyperlink_seen = false
-      pic_locks_seen = false
-      sp_pr_seen = false
-      xfrm_seen = false
-      xfrm_ext_seen = false
-      geometry_seen = false
-      shape_fill_seen = false
-      line_seen = false
-      line_fill_seen = false
-      color_seen = false
-      alpha_seen = false
-      text_body_seen = false
-      graphic_seen = false
-      graphic_data_seen = false
-    } else if namespace_uri == drawing_namespace &&
-      xlsx_drawing_unsupported_reader_object_name(local_name) {
-      if depth != 3 ||
-        !in_reader_anchor ||
-        !xlsx_drawing_anchor_name(scanner.parent_local_name().unwrap_or("")) ||
-        scanner.parent_namespace_uri() != Some(drawing_namespace) {
-        raise InvalidXml(msg="unsupported drawing reader object is misplaced")
-      }
-      if reader_object_seen {
-        raise InvalidXml(msg="drawing anchor has multiple reader objects")
-      }
-      // These are valid anchor payloads, but the semantic readers below do
-      // not model them. Ignore the complete subtree so nested `sp`, `pic`, or
-      // `graphicFrame` elements cannot be mistaken for direct anchor objects.
-      reader_object_seen = true
-      anchor_sequence.push("object")
-      current_reader_object = ""
-      unsupported_reader_object_depth = Some(depth)
-    } else if namespace_uri == drawing_namespace &&
-      (
-        local_name == "from" ||
-        local_name == "to" ||
-        local_name == "pos" ||
-        local_name == "ext" ||
-        local_name == "clientData"
-      ) {
-      if depth != 3 ||
-        !in_reader_anchor ||
-        scanner.parent_local_name() != Some(anchor_name) ||
-        scanner.parent_namespace_uri() != Some(drawing_namespace) {
-        raise InvalidXml(msg="drawing anchor reader target is misplaced")
-      }
-      anchor_sequence.push(local_name.to_owned())
-      if local_name == "from" {
-        if anchor_name == "absoluteAnchor" {
-          raise InvalidXml(msg="drawing anchor from target is misplaced")
+    let namespace_role : DrawingReaderNamespace = if namespace_uri ==
+      drawing_namespace {
+      DrawingNs
+    } else if namespace_uri == main_namespace {
+      MainNs
+    } else if namespace_uri == transitional_drawing_chart_namespace ||
+      namespace_uri == strict_drawing_chart_namespace {
+      ChartNs
+    } else if namespace_uri == drawing_slicer_namespace {
+      SlicerNs
+    } else {
+      OtherNs
+    }
+    match namespace_role {
+      DrawingNs =>
+        match local_name {
+          _ if xlsx_drawing_anchor_name(local_name) => {
+            if depth != 2 ||
+              scanner.parent_local_name() != Some("wsDr") ||
+              scanner.parent_namespace_uri() != Some(drawing_namespace) {
+              raise InvalidXml(msg="drawing anchor is misplaced")
+            }
+            in_reader_anchor = true
+            anchor_name = local_name.to_owned()
+            reader_object_seen = false
+            current_reader_object = ""
+            reader_payload_seen = false
+            from_seen = false
+            to_seen = false
+            anchor_pos_seen = false
+            anchor_ext_seen = false
+            client_data_seen = false
+            anchor_sequence.clear()
+          }
+          _ if xlsx_drawing_reader_object_name(local_name) => {
+            if depth != 3 ||
+              !in_reader_anchor ||
+              !xlsx_drawing_anchor_name(
+                scanner.parent_local_name().unwrap_or(""),
+              ) ||
+              scanner.parent_namespace_uri() != Some(drawing_namespace) {
+              raise InvalidXml(msg="drawing reader object is misplaced")
+            }
+            if reader_object_seen {
+              raise InvalidXml(msg="drawing anchor has multiple reader objects")
+            }
+            reader_object_seen = true
+            anchor_sequence.push("object")
+            current_reader_object = local_name.to_owned()
+            non_visual_container_seen = false
+            c_nv_pr_seen = false
+            c_nv_pic_pr_seen = false
+            blip_fill_seen = false
+            blip_seen = false
+            hyperlink_seen = false
+            pic_locks_seen = false
+            sp_pr_seen = false
+            xfrm_seen = false
+            xfrm_ext_seen = false
+            geometry_seen = false
+            shape_fill_seen = false
+            line_seen = false
+            line_fill_seen = false
+            color_seen = false
+            alpha_seen = false
+            text_body_seen = false
+            graphic_seen = false
+            graphic_data_seen = false
+          }
+          _ if xlsx_drawing_unsupported_reader_object_name(local_name) => {
+            if depth != 3 ||
+              !in_reader_anchor ||
+              !xlsx_drawing_anchor_name(
+                scanner.parent_local_name().unwrap_or(""),
+              ) ||
+              scanner.parent_namespace_uri() != Some(drawing_namespace) {
+              raise InvalidXml(
+                msg="unsupported drawing reader object is misplaced",
+              )
+            }
+            if reader_object_seen {
+              raise InvalidXml(msg="drawing anchor has multiple reader objects")
+            }
+            // These are valid anchor payloads, but the semantic readers below do
+            // not model them. Ignore the complete subtree so nested `sp`, `pic`, or
+            // `graphicFrame` elements cannot be mistaken for direct anchor objects.
+            reader_object_seen = true
+            anchor_sequence.push("object")
+            current_reader_object = ""
+            unsupported_reader_object_depth = Some(depth)
+          }
+          "from" | "to" | "pos" | "ext" | "clientData" => {
+            if depth != 3 ||
+              !in_reader_anchor ||
+              scanner.parent_local_name() != Some(anchor_name) ||
+              scanner.parent_namespace_uri() != Some(drawing_namespace) {
+              raise InvalidXml(msg="drawing anchor reader target is misplaced")
+            }
+            anchor_sequence.push(local_name.to_owned())
+            match local_name {
+              "from" => {
+                if anchor_name == "absoluteAnchor" {
+                  raise InvalidXml(
+                    msg="drawing anchor from target is misplaced",
+                  )
+                }
+                if from_seen {
+                  raise InvalidXml(
+                    msg="drawing anchor from target is duplicated",
+                  )
+                }
+                from_seen = true
+                marker_parent = "from"
+                marker_col_seen = false
+                marker_col_off_seen = false
+                marker_row_seen = false
+                marker_row_off_seen = false
+                marker_sequence.clear()
+              }
+              "to" => {
+                if anchor_name == "absoluteAnchor" {
+                  raise InvalidXml(msg="drawing anchor to target is misplaced")
+                }
+                if to_seen {
+                  raise InvalidXml(msg="drawing anchor to target is duplicated")
+                }
+                to_seen = true
+                marker_parent = "to"
+                marker_col_seen = false
+                marker_col_off_seen = false
+                marker_row_seen = false
+                marker_row_off_seen = false
+                marker_sequence.clear()
+              }
+              "pos" => {
+                if anchor_name != "absoluteAnchor" {
+                  raise InvalidXml(msg="drawing anchor pos target is misplaced")
+                }
+                if anchor_pos_seen {
+                  raise InvalidXml(
+                    msg="drawing anchor pos target is duplicated",
+                  )
+                }
+                anchor_pos_seen = true
+              }
+              "ext" => {
+                if anchor_ext_seen {
+                  raise InvalidXml(
+                    msg="drawing anchor ext target is duplicated",
+                  )
+                }
+                anchor_ext_seen = true
+              }
+              _ => {
+                if client_data_seen {
+                  raise InvalidXml(
+                    msg="drawing clientData target is duplicated",
+                  )
+                }
+                client_data_seen = true
+              }
+            }
+          }
+          "col" | "colOff" | "row" | "rowOff" => {
+            if depth != 4 ||
+              (marker_parent != "from" && marker_parent != "to") ||
+              scanner.parent_local_name() != Some(marker_parent) ||
+              scanner.parent_namespace_uri() != Some(drawing_namespace) {
+              raise InvalidXml(msg="drawing marker target is misplaced")
+            }
+            marker_sequence.push(local_name.to_owned())
+            match local_name {
+              "col" => {
+                if marker_col_seen {
+                  raise InvalidXml(
+                    msg="drawing marker col target is duplicated",
+                  )
+                }
+                marker_col_seen = true
+              }
+              "colOff" => {
+                if marker_col_off_seen {
+                  raise InvalidXml(
+                    msg="drawing marker colOff target is duplicated",
+                  )
+                }
+                marker_col_off_seen = true
+              }
+              "row" => {
+                if marker_row_seen {
+                  raise InvalidXml(
+                    msg="drawing marker row target is duplicated",
+                  )
+                }
+                marker_row_seen = true
+              }
+              _ => {
+                if marker_row_off_seen {
+                  raise InvalidXml(
+                    msg="drawing marker rowOff target is duplicated",
+                  )
+                }
+                marker_row_off_seen = true
+              }
+            }
+          }
+          "nvPicPr" | "nvSpPr" | "nvGraphicFramePr" => {
+            let expected = match current_reader_object {
+              "pic" => "nvPicPr"
+              "sp" => "nvSpPr"
+              _ => "nvGraphicFramePr"
+            }
+            if current_reader_object == "" ||
+              local_name != expected ||
+              depth != 4 ||
+              scanner.parent_local_name() != Some(current_reader_object) ||
+              scanner.parent_namespace_uri() != Some(drawing_namespace) {
+              raise InvalidXml(msg="drawing nonvisual target is misplaced")
+            }
+            if non_visual_container_seen {
+              raise InvalidXml(msg="drawing nonvisual target is duplicated")
+            }
+            non_visual_container_seen = true
+          }
+          "cNvPr" => {
+            let expected_parent = match current_reader_object {
+              "pic" => "nvPicPr"
+              "sp" => "nvSpPr"
+              _ => "nvGraphicFramePr"
+            }
+            if current_reader_object == "" ||
+              depth != 5 ||
+              scanner.parent_local_name() != Some(expected_parent) ||
+              scanner.parent_namespace_uri() != Some(drawing_namespace) {
+              raise InvalidXml(msg="drawing cNvPr target is misplaced")
+            }
+            if c_nv_pr_seen {
+              raise InvalidXml(msg="drawing cNvPr target is duplicated")
+            }
+            c_nv_pr_seen = true
+          }
+          "cNvPicPr" => {
+            if current_reader_object != "pic" ||
+              depth != 5 ||
+              scanner.parent_local_name() != Some("nvPicPr") ||
+              scanner.parent_namespace_uri() != Some(drawing_namespace) {
+              raise InvalidXml(msg="drawing cNvPicPr target is misplaced")
+            }
+            if c_nv_pic_pr_seen {
+              raise InvalidXml(msg="drawing cNvPicPr target is duplicated")
+            }
+            c_nv_pic_pr_seen = true
+          }
+          "blipFill" => {
+            if current_reader_object != "pic" ||
+              depth != 4 ||
+              scanner.parent_local_name() != Some("pic") ||
+              scanner.parent_namespace_uri() != Some(drawing_namespace) {
+              raise InvalidXml(msg="drawing blipFill target is misplaced")
+            }
+            if blip_fill_seen {
+              raise InvalidXml(msg="drawing blipFill target is duplicated")
+            }
+            blip_fill_seen = true
+          }
+          "spPr" => {
+            if (current_reader_object != "sp" && current_reader_object != "pic") ||
+              depth != 4 ||
+              scanner.parent_local_name() != Some(current_reader_object) ||
+              scanner.parent_namespace_uri() != Some(drawing_namespace) {
+              raise InvalidXml(msg="drawing spPr target is misplaced")
+            }
+            if sp_pr_seen {
+              raise InvalidXml(msg="drawing spPr target is duplicated")
+            }
+            sp_pr_seen = true
+          }
+          "txBody" => {
+            if current_reader_object != "sp" ||
+              depth != 4 ||
+              scanner.parent_local_name() != Some("sp") ||
+              scanner.parent_namespace_uri() != Some(drawing_namespace) {
+              raise InvalidXml(msg="drawing txBody target is misplaced")
+            }
+            if text_body_seen {
+              raise InvalidXml(msg="drawing txBody target is duplicated")
+            }
+            text_body_seen = true
+            text_body_depth = Some(depth)
+          }
+          _ =>
+            if depth == 3 &&
+              in_reader_anchor &&
+              scanner.parent_local_name() == Some(anchor_name) &&
+              scanner.parent_namespace_uri() == Some(drawing_namespace) {
+              raise InvalidXml(msg="drawing anchor content is invalid")
+            }
         }
-        if from_seen {
-          raise InvalidXml(msg="drawing anchor from target is duplicated")
+      MainNs =>
+        match local_name {
+          "graphic" => {
+            if depth != 4 ||
+              current_reader_object != "graphicFrame" ||
+              scanner.parent_local_name() != Some("graphicFrame") ||
+              scanner.parent_namespace_uri() != Some(drawing_namespace) {
+              raise InvalidXml(msg="drawing graphic element is misplaced")
+            }
+            if graphic_seen {
+              raise InvalidXml(msg="drawing graphic element is duplicated")
+            }
+            graphic_seen = true
+          }
+          "graphicData" => {
+            if depth != 5 ||
+              current_reader_object != "graphicFrame" ||
+              scanner.parent_local_name() != Some("graphic") ||
+              scanner.parent_namespace_uri() != Some(main_namespace) {
+              raise InvalidXml(msg="drawing graphicData element is misplaced")
+            }
+            if graphic_data_seen {
+              raise InvalidXml(msg="drawing graphicData element is duplicated")
+            }
+            graphic_data_seen = true
+            graphic_data_uri = workbook_scanner_attribute(scanner, "", "uri")
+          }
+          "blip" if current_reader_object == "pic" => {
+            if depth != 5 ||
+              scanner.parent_local_name() != Some("blipFill") ||
+              scanner.parent_namespace_uri() != Some(drawing_namespace) {
+              raise InvalidXml(msg="drawing blip target is misplaced")
+            }
+            if blip_seen {
+              raise InvalidXml(msg="drawing blip target is duplicated")
+            }
+            blip_seen = true
+            ignore(
+              drawing_reader_relationship_attribute(
+                scanner, relationship_namespace, other_relationship_namespace, "embed",
+                true,
+              ),
+            )
+          }
+          "hlinkClick" if current_reader_object == "pic" => {
+            if depth != 6 ||
+              scanner.parent_local_name() != Some("cNvPr") ||
+              scanner.parent_namespace_uri() != Some(drawing_namespace) {
+              raise InvalidXml(msg="drawing hyperlink target is misplaced")
+            }
+            if hyperlink_seen {
+              raise InvalidXml(msg="drawing hyperlink target is duplicated")
+            }
+            hyperlink_seen = true
+            ignore(
+              drawing_reader_relationship_attribute(
+                scanner, relationship_namespace, other_relationship_namespace, "id",
+                false,
+              ),
+            )
+          }
+          "picLocks" => {
+            if current_reader_object != "pic" ||
+              depth != 6 ||
+              scanner.parent_local_name() != Some("cNvPicPr") ||
+              scanner.parent_namespace_uri() != Some(drawing_namespace) {
+              raise InvalidXml(msg="drawing picLocks target is misplaced")
+            }
+            if pic_locks_seen {
+              raise InvalidXml(msg="drawing picLocks target is duplicated")
+            }
+            pic_locks_seen = true
+          }
+          "xfrm" if current_reader_object == "sp" => {
+            if depth != 5 ||
+              scanner.parent_local_name() != Some("spPr") ||
+              scanner.parent_namespace_uri() != Some(drawing_namespace) {
+              raise InvalidXml(msg="drawing xfrm target is misplaced")
+            }
+            if xfrm_seen {
+              raise InvalidXml(msg="drawing xfrm target is duplicated")
+            }
+            xfrm_seen = true
+          }
+          "ext" if current_reader_object == "sp" => {
+            if depth != 6 ||
+              scanner.parent_local_name() != Some("xfrm") ||
+              scanner.parent_namespace_uri() != Some(main_namespace) {
+              raise InvalidXml(msg="drawing shape ext target is misplaced")
+            }
+            if xfrm_ext_seen {
+              raise InvalidXml(msg="drawing shape ext target is duplicated")
+            }
+            xfrm_ext_seen = true
+          }
+          "prstGeom" if current_reader_object == "sp" => {
+            if depth != 5 ||
+              scanner.parent_local_name() != Some("spPr") ||
+              scanner.parent_namespace_uri() != Some(drawing_namespace) {
+              raise InvalidXml(msg="drawing geometry target is misplaced")
+            }
+            if geometry_seen {
+              raise InvalidXml(msg="drawing geometry target is duplicated")
+            }
+            geometry_seen = true
+          }
+          "solidFill" if current_reader_object == "sp" => {
+            let shape_fill = depth == 5 &&
+              scanner.parent_local_name() == Some("spPr") &&
+              scanner.parent_namespace_uri() == Some(drawing_namespace)
+            let line_fill = depth == 6 &&
+              scanner.parent_local_name() == Some("ln") &&
+              scanner.parent_namespace_uri() == Some(main_namespace)
+            if !shape_fill && !line_fill {
+              raise InvalidXml(msg="drawing solidFill target is misplaced")
+            }
+            if shape_fill {
+              if shape_fill_seen {
+                raise InvalidXml(msg="drawing shape fill target is duplicated")
+              }
+              shape_fill_seen = true
+            } else {
+              if line_fill_seen {
+                raise InvalidXml(msg="drawing line fill target is duplicated")
+              }
+              line_fill_seen = true
+            }
+            solid_fill_depth = Some(depth)
+            color_seen = false
+            alpha_seen = false
+          }
+          "srgbClr" if current_reader_object == "sp" => {
+            let fill_depth = solid_fill_depth.unwrap_or(-1)
+            if depth != fill_depth + 1 ||
+              scanner.parent_local_name() != Some("solidFill") ||
+              scanner.parent_namespace_uri() != Some(main_namespace) {
+              raise InvalidXml(msg="drawing color target is misplaced")
+            }
+            if color_seen {
+              raise InvalidXml(msg="drawing color target is duplicated")
+            }
+            color_seen = true
+            alpha_seen = false
+            color_depth = Some(depth)
+          }
+          "alpha" if current_reader_object == "sp" => {
+            let parent_depth = color_depth.unwrap_or(-1)
+            if depth != parent_depth + 1 ||
+              scanner.parent_local_name() != Some("srgbClr") ||
+              scanner.parent_namespace_uri() != Some(main_namespace) {
+              raise InvalidXml(msg="drawing alpha target is misplaced")
+            }
+            if alpha_seen {
+              raise InvalidXml(msg="drawing alpha target is duplicated")
+            }
+            alpha_seen = true
+          }
+          "ln" if current_reader_object == "sp" => {
+            if depth != 5 ||
+              scanner.parent_local_name() != Some("spPr") ||
+              scanner.parent_namespace_uri() != Some(drawing_namespace) {
+              raise InvalidXml(msg="drawing line target is misplaced")
+            }
+            if line_seen {
+              raise InvalidXml(msg="drawing line target is duplicated")
+            }
+            line_seen = true
+          }
+          "t" if current_reader_object == "sp" =>
+            match text_body_depth {
+              Some(body_depth) if depth > body_depth => ()
+              _ => raise InvalidXml(msg="drawing text target is misplaced")
+            }
+          _ => ()
         }
-        from_seen = true
-        marker_parent = "from"
-        marker_col_seen = false
-        marker_col_off_seen = false
-        marker_row_seen = false
-        marker_row_off_seen = false
-        marker_sequence.clear()
-      } else if local_name == "to" {
-        if anchor_name == "absoluteAnchor" {
-          raise InvalidXml(msg="drawing anchor to target is misplaced")
+      ChartNs =>
+        match local_name {
+          "chart" => {
+            if namespace_uri != chart_namespace ||
+              depth != 6 ||
+              scanner.parent_local_name() != Some("graphicData") ||
+              scanner.parent_namespace_uri() != Some(main_namespace) {
+              raise InvalidXml(msg="drawing chart payload is misplaced")
+            }
+            if graphic_data_uri != Some(chart_namespace) {
+              raise InvalidXml(msg="drawing chart graphicData URI is invalid")
+            }
+            if reader_payload_seen {
+              raise InvalidXml(
+                msg="drawing anchor has multiple reader payloads",
+              )
+            }
+            ignore(
+              drawing_reader_relationship_attribute(
+                scanner, relationship_namespace, other_relationship_namespace, "id",
+                true,
+              ),
+            )
+            reader_payload_seen = true
+          }
+          _ => ()
         }
-        if to_seen {
-          raise InvalidXml(msg="drawing anchor to target is duplicated")
+      SlicerNs =>
+        match local_name {
+          "slicer" => {
+            if depth != 6 ||
+              scanner.parent_local_name() != Some("graphicData") ||
+              scanner.parent_namespace_uri() != Some(main_namespace) {
+              raise InvalidXml(msg="drawing slicer payload is misplaced")
+            }
+            if graphic_data_uri != Some(drawing_slicer_namespace) {
+              raise InvalidXml(msg="drawing slicer graphicData URI is invalid")
+            }
+            if reader_payload_seen {
+              raise InvalidXml(
+                msg="drawing anchor has multiple reader payloads",
+              )
+            }
+            reader_payload_seen = true
+          }
+          _ => ()
         }
-        to_seen = true
-        marker_parent = "to"
-        marker_col_seen = false
-        marker_col_off_seen = false
-        marker_row_seen = false
-        marker_row_off_seen = false
-        marker_sequence.clear()
-      } else if local_name == "pos" {
-        if anchor_name != "absoluteAnchor" {
-          raise InvalidXml(msg="drawing anchor pos target is misplaced")
-        }
-        if anchor_pos_seen {
-          raise InvalidXml(msg="drawing anchor pos target is duplicated")
-        }
-        anchor_pos_seen = true
-      } else if local_name == "ext" {
-        if anchor_ext_seen {
-          raise InvalidXml(msg="drawing anchor ext target is duplicated")
-        }
-        anchor_ext_seen = true
-      } else {
-        if client_data_seen {
-          raise InvalidXml(msg="drawing clientData target is duplicated")
-        }
-        client_data_seen = true
-      }
-    } else if namespace_uri == drawing_namespace &&
-      (
-        local_name == "col" ||
-        local_name == "colOff" ||
-        local_name == "row" ||
-        local_name == "rowOff"
-      ) {
-      if depth != 4 ||
-        (marker_parent != "from" && marker_parent != "to") ||
-        scanner.parent_local_name() != Some(marker_parent) ||
-        scanner.parent_namespace_uri() != Some(drawing_namespace) {
-        raise InvalidXml(msg="drawing marker target is misplaced")
-      }
-      marker_sequence.push(local_name.to_owned())
-      if local_name == "col" {
-        if marker_col_seen {
-          raise InvalidXml(msg="drawing marker col target is duplicated")
-        }
-        marker_col_seen = true
-      } else if local_name == "colOff" {
-        if marker_col_off_seen {
-          raise InvalidXml(msg="drawing marker colOff target is duplicated")
-        }
-        marker_col_off_seen = true
-      } else if local_name == "row" {
-        if marker_row_seen {
-          raise InvalidXml(msg="drawing marker row target is duplicated")
-        }
-        marker_row_seen = true
-      } else {
-        if marker_row_off_seen {
-          raise InvalidXml(msg="drawing marker rowOff target is duplicated")
-        }
-        marker_row_off_seen = true
-      }
-    } else if namespace_uri == drawing_namespace &&
-      (
-        local_name == "nvPicPr" ||
-        local_name == "nvSpPr" ||
-        local_name == "nvGraphicFramePr"
-      ) {
-      let expected = if current_reader_object == "pic" {
-        "nvPicPr"
-      } else if current_reader_object == "sp" {
-        "nvSpPr"
-      } else {
-        "nvGraphicFramePr"
-      }
-      if current_reader_object == "" ||
-        local_name != expected ||
-        depth != 4 ||
-        scanner.parent_local_name() != Some(current_reader_object) ||
-        scanner.parent_namespace_uri() != Some(drawing_namespace) {
-        raise InvalidXml(msg="drawing nonvisual target is misplaced")
-      }
-      if non_visual_container_seen {
-        raise InvalidXml(msg="drawing nonvisual target is duplicated")
-      }
-      non_visual_container_seen = true
-    } else if namespace_uri == drawing_namespace && local_name == "cNvPr" {
-      let expected_parent = if current_reader_object == "pic" {
-        "nvPicPr"
-      } else if current_reader_object == "sp" {
-        "nvSpPr"
-      } else {
-        "nvGraphicFramePr"
-      }
-      if current_reader_object == "" ||
-        depth != 5 ||
-        scanner.parent_local_name() != Some(expected_parent) ||
-        scanner.parent_namespace_uri() != Some(drawing_namespace) {
-        raise InvalidXml(msg="drawing cNvPr target is misplaced")
-      }
-      if c_nv_pr_seen {
-        raise InvalidXml(msg="drawing cNvPr target is duplicated")
-      }
-      c_nv_pr_seen = true
-    } else if namespace_uri == drawing_namespace && local_name == "cNvPicPr" {
-      if current_reader_object != "pic" ||
-        depth != 5 ||
-        scanner.parent_local_name() != Some("nvPicPr") ||
-        scanner.parent_namespace_uri() != Some(drawing_namespace) {
-        raise InvalidXml(msg="drawing cNvPicPr target is misplaced")
-      }
-      if c_nv_pic_pr_seen {
-        raise InvalidXml(msg="drawing cNvPicPr target is duplicated")
-      }
-      c_nv_pic_pr_seen = true
-    } else if namespace_uri == drawing_namespace && local_name == "blipFill" {
-      if current_reader_object != "pic" ||
-        depth != 4 ||
-        scanner.parent_local_name() != Some("pic") ||
-        scanner.parent_namespace_uri() != Some(drawing_namespace) {
-        raise InvalidXml(msg="drawing blipFill target is misplaced")
-      }
-      if blip_fill_seen {
-        raise InvalidXml(msg="drawing blipFill target is duplicated")
-      }
-      blip_fill_seen = true
-    } else if namespace_uri == drawing_namespace && local_name == "spPr" {
-      if (current_reader_object != "sp" && current_reader_object != "pic") ||
-        depth != 4 ||
-        scanner.parent_local_name() != Some(current_reader_object) ||
-        scanner.parent_namespace_uri() != Some(drawing_namespace) {
-        raise InvalidXml(msg="drawing spPr target is misplaced")
-      }
-      if sp_pr_seen {
-        raise InvalidXml(msg="drawing spPr target is duplicated")
-      }
-      sp_pr_seen = true
-    } else if namespace_uri == drawing_namespace && local_name == "txBody" {
-      if current_reader_object != "sp" ||
-        depth != 4 ||
-        scanner.parent_local_name() != Some("sp") ||
-        scanner.parent_namespace_uri() != Some(drawing_namespace) {
-        raise InvalidXml(msg="drawing txBody target is misplaced")
-      }
-      if text_body_seen {
-        raise InvalidXml(msg="drawing txBody target is duplicated")
-      }
-      text_body_seen = true
-      text_body_depth = Some(depth)
-    } else if namespace_uri == main_namespace && local_name == "graphic" {
-      if depth != 4 ||
-        current_reader_object != "graphicFrame" ||
-        scanner.parent_local_name() != Some("graphicFrame") ||
-        scanner.parent_namespace_uri() != Some(drawing_namespace) {
-        raise InvalidXml(msg="drawing graphic element is misplaced")
-      }
-      if graphic_seen {
-        raise InvalidXml(msg="drawing graphic element is duplicated")
-      }
-      graphic_seen = true
-    } else if namespace_uri == main_namespace && local_name == "graphicData" {
-      if depth != 5 ||
-        current_reader_object != "graphicFrame" ||
-        scanner.parent_local_name() != Some("graphic") ||
-        scanner.parent_namespace_uri() != Some(main_namespace) {
-        raise InvalidXml(msg="drawing graphicData element is misplaced")
-      }
-      if graphic_data_seen {
-        raise InvalidXml(msg="drawing graphicData element is duplicated")
-      }
-      graphic_data_seen = true
-      graphic_data_uri = workbook_scanner_attribute(scanner, "", "uri")
-    } else if namespace_uri == main_namespace &&
-      local_name == "blip" &&
-      current_reader_object == "pic" {
-      if depth != 5 ||
-        scanner.parent_local_name() != Some("blipFill") ||
-        scanner.parent_namespace_uri() != Some(drawing_namespace) {
-        raise InvalidXml(msg="drawing blip target is misplaced")
-      }
-      if blip_seen {
-        raise InvalidXml(msg="drawing blip target is duplicated")
-      }
-      blip_seen = true
-      ignore(
-        drawing_reader_relationship_attribute(
-          scanner, relationship_namespace, other_relationship_namespace, "embed",
-          true,
-        ),
-      )
-    } else if namespace_uri == main_namespace &&
-      local_name == "hlinkClick" &&
-      current_reader_object == "pic" {
-      if depth != 6 ||
-        scanner.parent_local_name() != Some("cNvPr") ||
-        scanner.parent_namespace_uri() != Some(drawing_namespace) {
-        raise InvalidXml(msg="drawing hyperlink target is misplaced")
-      }
-      if hyperlink_seen {
-        raise InvalidXml(msg="drawing hyperlink target is duplicated")
-      }
-      hyperlink_seen = true
-      ignore(
-        drawing_reader_relationship_attribute(
-          scanner, relationship_namespace, other_relationship_namespace, "id", false,
-        ),
-      )
-    } else if namespace_uri == main_namespace && local_name == "picLocks" {
-      if current_reader_object != "pic" ||
-        depth != 6 ||
-        scanner.parent_local_name() != Some("cNvPicPr") ||
-        scanner.parent_namespace_uri() != Some(drawing_namespace) {
-        raise InvalidXml(msg="drawing picLocks target is misplaced")
-      }
-      if pic_locks_seen {
-        raise InvalidXml(msg="drawing picLocks target is duplicated")
-      }
-      pic_locks_seen = true
-    } else if namespace_uri == main_namespace &&
-      local_name == "xfrm" &&
-      current_reader_object == "sp" {
-      if depth != 5 ||
-        scanner.parent_local_name() != Some("spPr") ||
-        scanner.parent_namespace_uri() != Some(drawing_namespace) {
-        raise InvalidXml(msg="drawing xfrm target is misplaced")
-      }
-      if xfrm_seen {
-        raise InvalidXml(msg="drawing xfrm target is duplicated")
-      }
-      xfrm_seen = true
-    } else if namespace_uri == main_namespace &&
-      local_name == "ext" &&
-      current_reader_object == "sp" {
-      if depth != 6 ||
-        scanner.parent_local_name() != Some("xfrm") ||
-        scanner.parent_namespace_uri() != Some(main_namespace) {
-        raise InvalidXml(msg="drawing shape ext target is misplaced")
-      }
-      if xfrm_ext_seen {
-        raise InvalidXml(msg="drawing shape ext target is duplicated")
-      }
-      xfrm_ext_seen = true
-    } else if namespace_uri == main_namespace &&
-      local_name == "prstGeom" &&
-      current_reader_object == "sp" {
-      if depth != 5 ||
-        scanner.parent_local_name() != Some("spPr") ||
-        scanner.parent_namespace_uri() != Some(drawing_namespace) {
-        raise InvalidXml(msg="drawing geometry target is misplaced")
-      }
-      if geometry_seen {
-        raise InvalidXml(msg="drawing geometry target is duplicated")
-      }
-      geometry_seen = true
-    } else if namespace_uri == main_namespace &&
-      local_name == "solidFill" &&
-      current_reader_object == "sp" {
-      let shape_fill = depth == 5 &&
-        scanner.parent_local_name() == Some("spPr") &&
-        scanner.parent_namespace_uri() == Some(drawing_namespace)
-      let line_fill = depth == 6 &&
-        scanner.parent_local_name() == Some("ln") &&
-        scanner.parent_namespace_uri() == Some(main_namespace)
-      if !shape_fill && !line_fill {
-        raise InvalidXml(msg="drawing solidFill target is misplaced")
-      }
-      if shape_fill {
-        if shape_fill_seen {
-          raise InvalidXml(msg="drawing shape fill target is duplicated")
-        }
-        shape_fill_seen = true
-      } else {
-        if line_fill_seen {
-          raise InvalidXml(msg="drawing line fill target is duplicated")
-        }
-        line_fill_seen = true
-      }
-      solid_fill_depth = Some(depth)
-      color_seen = false
-      alpha_seen = false
-    } else if namespace_uri == main_namespace &&
-      local_name == "srgbClr" &&
-      current_reader_object == "sp" {
-      let fill_depth = solid_fill_depth.unwrap_or(-1)
-      if depth != fill_depth + 1 ||
-        scanner.parent_local_name() != Some("solidFill") ||
-        scanner.parent_namespace_uri() != Some(main_namespace) {
-        raise InvalidXml(msg="drawing color target is misplaced")
-      }
-      if color_seen {
-        raise InvalidXml(msg="drawing color target is duplicated")
-      }
-      color_seen = true
-      alpha_seen = false
-      color_depth = Some(depth)
-    } else if namespace_uri == main_namespace &&
-      local_name == "alpha" &&
-      current_reader_object == "sp" {
-      let parent_depth = color_depth.unwrap_or(-1)
-      if depth != parent_depth + 1 ||
-        scanner.parent_local_name() != Some("srgbClr") ||
-        scanner.parent_namespace_uri() != Some(main_namespace) {
-        raise InvalidXml(msg="drawing alpha target is misplaced")
-      }
-      if alpha_seen {
-        raise InvalidXml(msg="drawing alpha target is duplicated")
-      }
-      alpha_seen = true
-    } else if namespace_uri == main_namespace &&
-      local_name == "ln" &&
-      current_reader_object == "sp" {
-      if depth != 5 ||
-        scanner.parent_local_name() != Some("spPr") ||
-        scanner.parent_namespace_uri() != Some(drawing_namespace) {
-        raise InvalidXml(msg="drawing line target is misplaced")
-      }
-      if line_seen {
-        raise InvalidXml(msg="drawing line target is duplicated")
-      }
-      line_seen = true
-    } else if namespace_uri == main_namespace &&
-      local_name == "t" &&
-      current_reader_object == "sp" {
-      match text_body_depth {
-        Some(body_depth) if depth > body_depth => ()
-        _ => raise InvalidXml(msg="drawing text target is misplaced")
-      }
-    } else if (
-        namespace_uri == transitional_drawing_chart_namespace ||
-        namespace_uri == strict_drawing_chart_namespace
-      ) &&
-      local_name == "chart" {
-      if namespace_uri != chart_namespace ||
-        depth != 6 ||
-        scanner.parent_local_name() != Some("graphicData") ||
-        scanner.parent_namespace_uri() != Some(main_namespace) {
-        raise InvalidXml(msg="drawing chart payload is misplaced")
-      }
-      if graphic_data_uri != Some(chart_namespace) {
-        raise InvalidXml(msg="drawing chart graphicData URI is invalid")
-      }
-      if reader_payload_seen {
-        raise InvalidXml(msg="drawing anchor has multiple reader payloads")
-      }
-      ignore(
-        drawing_reader_relationship_attribute(
-          scanner, relationship_namespace, other_relationship_namespace, "id", true,
-        ),
-      )
-      reader_payload_seen = true
-    } else if namespace_uri == drawing_slicer_namespace &&
-      local_name == "slicer" {
-      if depth != 6 ||
-        scanner.parent_local_name() != Some("graphicData") ||
-        scanner.parent_namespace_uri() != Some(main_namespace) {
-        raise InvalidXml(msg="drawing slicer payload is misplaced")
-      }
-      if graphic_data_uri != Some(drawing_slicer_namespace) {
-        raise InvalidXml(msg="drawing slicer graphicData URI is invalid")
-      }
-      if reader_payload_seen {
-        raise InvalidXml(msg="drawing anchor has multiple reader payloads")
-      }
-      reader_payload_seen = true
-    } else if namespace_uri == drawing_namespace &&
-      depth == 3 &&
-      in_reader_anchor &&
-      scanner.parent_local_name() == Some(anchor_name) &&
-      scanner.parent_namespace_uri() == Some(drawing_namespace) {
-      raise InvalidXml(msg="drawing anchor content is invalid")
+      OtherNs => ()
     }
   }
   if marker_parent != "" {
@@ -1196,90 +1235,101 @@ fn validate_xlsx_worksheet_core(
       continue
     }
     let dialect = worksheet_namespace.unwrap_or("")
-    if local_name == "sheetData" {
-      if namespace_uri != dialect ||
-        scanner.depth() != 2 ||
-        scanner.parent_local_name() != Some("worksheet") ||
-        scanner.parent_namespace_uri() != worksheet_namespace {
-        raise InvalidXml(msg="worksheet sheetData element is misplaced")
-      }
-      if sheet_data_seen {
-        raise InvalidXml(msg="worksheet has multiple sheetData elements")
-      }
-      sheet_data_seen = true
-    } else if local_name == "row" {
-      if namespace_uri != dialect ||
-        scanner.depth() != 3 ||
-        scanner.parent_local_name() != Some("sheetData") ||
-        scanner.parent_namespace_uri() != worksheet_namespace {
-        raise InvalidXml(msg="worksheet row element is misplaced")
-      }
-    } else if local_name == "c" {
-      if namespace_uri != dialect ||
-        scanner.depth() != 4 ||
-        scanner.parent_local_name() != Some("row") ||
-        scanner.parent_namespace_uri() != worksheet_namespace {
-        raise InvalidXml(msg="worksheet cell element is misplaced")
-      }
-      cell_formula_seen = false
-      cell_value_seen = false
-      cell_inline_string_seen = false
-    } else if local_name == "f" || local_name == "v" || local_name == "is" {
-      if namespace_uri != dialect ||
-        scanner.depth() != 5 ||
-        scanner.parent_local_name() != Some("c") ||
-        scanner.parent_namespace_uri() != worksheet_namespace {
-        raise InvalidXml(msg="worksheet cell payload element is misplaced")
-      }
-      if local_name == "f" {
-        if cell_formula_seen {
-          raise InvalidXml(msg="worksheet cell has multiple formula elements")
+    match local_name {
+      "sheetData" => {
+        if namespace_uri != dialect ||
+          scanner.depth() != 2 ||
+          scanner.parent_local_name() != Some("worksheet") ||
+          scanner.parent_namespace_uri() != worksheet_namespace {
+          raise InvalidXml(msg="worksheet sheetData element is misplaced")
         }
-        cell_formula_seen = true
-      } else if local_name == "v" {
-        if cell_value_seen {
-          raise InvalidXml(msg="worksheet cell has multiple value elements")
+        if sheet_data_seen {
+          raise InvalidXml(msg="worksheet has multiple sheetData elements")
         }
-        cell_value_seen = true
-      } else {
-        if cell_inline_string_seen {
-          raise InvalidXml(
-            msg="worksheet cell has multiple inline string elements",
-          )
+        sheet_data_seen = true
+      }
+      "row" =>
+        if namespace_uri != dialect ||
+          scanner.depth() != 3 ||
+          scanner.parent_local_name() != Some("sheetData") ||
+          scanner.parent_namespace_uri() != worksheet_namespace {
+          raise InvalidXml(msg="worksheet row element is misplaced")
         }
-        cell_inline_string_seen = true
+      "c" => {
+        if namespace_uri != dialect ||
+          scanner.depth() != 4 ||
+          scanner.parent_local_name() != Some("row") ||
+          scanner.parent_namespace_uri() != worksheet_namespace {
+          raise InvalidXml(msg="worksheet cell element is misplaced")
+        }
+        cell_formula_seen = false
+        cell_value_seen = false
+        cell_inline_string_seen = false
       }
-    } else if local_name == "r" {
-      if namespace_uri != dialect ||
-        scanner.depth() != 6 ||
-        scanner.parent_local_name() != Some("is") ||
-        scanner.parent_namespace_uri() != worksheet_namespace {
-        raise InvalidXml(msg="worksheet inline string run is misplaced")
+      "f" | "v" | "is" => {
+        if namespace_uri != dialect ||
+          scanner.depth() != 5 ||
+          scanner.parent_local_name() != Some("c") ||
+          scanner.parent_namespace_uri() != worksheet_namespace {
+          raise InvalidXml(msg="worksheet cell payload element is misplaced")
+        }
+        match local_name {
+          "f" => {
+            if cell_formula_seen {
+              raise InvalidXml(
+                msg="worksheet cell has multiple formula elements",
+              )
+            }
+            cell_formula_seen = true
+          }
+          "v" => {
+            if cell_value_seen {
+              raise InvalidXml(msg="worksheet cell has multiple value elements")
+            }
+            cell_value_seen = true
+          }
+          _ => {
+            if cell_inline_string_seen {
+              raise InvalidXml(
+                msg="worksheet cell has multiple inline string elements",
+              )
+            }
+            cell_inline_string_seen = true
+          }
+        }
       }
-    } else if local_name == "t" {
-      let valid_parent = scanner.parent_local_name() == Some("is") ||
-        scanner.parent_local_name() == Some("r") ||
-        scanner.parent_local_name() == Some("rPh")
-      if namespace_uri != dialect ||
-        !valid_parent ||
-        scanner.parent_namespace_uri() != worksheet_namespace ||
-        (scanner.depth() != 6 && scanner.depth() != 7) {
-        raise InvalidXml(msg="worksheet inline string text is misplaced")
+      "r" =>
+        if namespace_uri != dialect ||
+          scanner.depth() != 6 ||
+          scanner.parent_local_name() != Some("is") ||
+          scanner.parent_namespace_uri() != worksheet_namespace {
+          raise InvalidXml(msg="worksheet inline string run is misplaced")
+        }
+      "t" => {
+        let valid_parent = scanner.parent_local_name()
+          is Some("is" | "r" | "rPh")
+        if namespace_uri != dialect ||
+          !valid_parent ||
+          scanner.parent_namespace_uri() != worksheet_namespace ||
+          (scanner.depth() != 6 && scanner.depth() != 7) {
+          raise InvalidXml(msg="worksheet inline string text is misplaced")
+        }
       }
-    } else if local_name == "cols" {
-      if namespace_uri != dialect ||
-        scanner.depth() != 2 ||
-        scanner.parent_local_name() != Some("worksheet") ||
-        scanner.parent_namespace_uri() != worksheet_namespace {
-        raise InvalidXml(msg="worksheet cols element is misplaced")
-      }
-    } else if local_name == "col" {
-      if namespace_uri != dialect ||
-        scanner.depth() != 3 ||
-        scanner.parent_local_name() != Some("cols") ||
-        scanner.parent_namespace_uri() != worksheet_namespace {
-        raise InvalidXml(msg="worksheet col element is misplaced")
-      }
+      "cols" =>
+        if namespace_uri != dialect ||
+          scanner.depth() != 2 ||
+          scanner.parent_local_name() != Some("worksheet") ||
+          scanner.parent_namespace_uri() != worksheet_namespace {
+          raise InvalidXml(msg="worksheet cols element is misplaced")
+        }
+      "col" =>
+        if namespace_uri != dialect ||
+          scanner.depth() != 3 ||
+          scanner.parent_local_name() != Some("cols") ||
+          scanner.parent_namespace_uri() != worksheet_namespace {
+          raise InvalidXml(msg="worksheet col element is misplaced")
+        }
+      _ => ()
     }
   }
 }
@@ -1427,6 +1477,102 @@ test "DrawingML canonicalization enforces anchor grammar and marker order" {
       _ => fail("unexpected drawing grammar error")
     } noraise {
       _ => fail("expected drawing grammar rejection")
+    }
+  }
+}
+
+///|
+/// Pins the ordering of the namespace/local-name dispatch in
+/// `validate_xlsx_drawing_reader_structure`. Every case below matches a
+/// specific structural rule that has to win over the anchor-content
+/// fallthrough, and the last two only reach their rule because the guarded
+/// DrawingML arms are skipped when the current reader object does not match,
+/// so an over-broad or reordered arm changes the reported diagnosis.
+test "DrawingML reader dispatch keeps branch precedence" {
+  let declarations = "xmlns:xdr=\"\{transitional_spreadsheet_drawing_namespace}\" xmlns:a=\"\{transitional_drawing_main_namespace}\" xmlns:c=\"\{transitional_drawing_chart_namespace}\" xmlns:sle=\"\{drawing_slicer_namespace}\" xmlns:r=\"\{transitional_relationship_attribute_namespace}\""
+  let cases : Array[(String, String)] = [
+    (
+      "<xdr:oneCellAnchor><xdr:bogus/></xdr:oneCellAnchor>", "drawing anchor content is invalid",
+    ),
+    (
+      "<xdr:oneCellAnchor><xdr:pic><xdr:nvSpPr/></xdr:pic></xdr:oneCellAnchor>",
+      "drawing nonvisual target is misplaced",
+    ),
+    (
+      "<xdr:absoluteAnchor><xdr:from/></xdr:absoluteAnchor>", "drawing anchor from target is misplaced",
+    ),
+    (
+      "<xdr:oneCellAnchor><xdr:grpSp/><xdr:pic/></xdr:oneCellAnchor>", "drawing anchor has multiple reader objects",
+    ),
+    (
+      "<xdr:oneCellAnchor><xdr:pic><a:blip/></xdr:pic></xdr:oneCellAnchor>", "drawing blip target is misplaced",
+    ),
+    (
+      "<xdr:oneCellAnchor><xdr:pic><xdr:nvPicPr><a:hlinkClick r:id=\"x\"/></xdr:nvPicPr></xdr:pic></xdr:oneCellAnchor>",
+      "drawing hyperlink target is misplaced",
+    ),
+    (
+      "<xdr:oneCellAnchor><xdr:graphicFrame><a:graphic><a:graphicData uri=\"urn:junk\"><c:chart r:id=\"x\"/></a:graphicData></a:graphic></xdr:graphicFrame></xdr:oneCellAnchor>",
+      "drawing chart graphicData URI is invalid",
+    ),
+    (
+      "<xdr:oneCellAnchor><xdr:graphicFrame><a:graphic><a:graphicData uri=\"urn:junk\"><sle:slicer/></a:graphicData></a:graphic></xdr:graphicFrame></xdr:oneCellAnchor>",
+      "drawing slicer graphicData URI is invalid",
+    ),
+    (
+      "<xdr:oneCellAnchor><xdr:sp><xdr:txBody><a:p><a:rPr/></a:p></xdr:txBody></xdr:sp></xdr:oneCellAnchor>",
+      "drawing text properties are misplaced",
+    ),
+    (
+      "<xdr:oneCellAnchor><xdr:sp><xdr:spPr><a:srgbClr/></xdr:spPr></xdr:sp></xdr:oneCellAnchor>",
+      "drawing color target is misplaced",
+    ),
+    (
+      "<xdr:oneCellAnchor><xdr:sp><a:t/></xdr:sp></xdr:oneCellAnchor>", "drawing text target is misplaced",
+    ),
+  ]
+  for case in cases {
+    let (body, expected) = case
+    let source = "<xdr:wsDr \{declarations}>\{body}</xdr:wsDr>"
+    try
+      canonicalize_xlsx_drawing_xml(source, default_max_xml_part_bytes)
+    catch {
+      InvalidXml(msg~) => inspect(msg, content=expected)
+      _ => fail("unexpected drawing dispatch error")
+    } noraise {
+      _ => fail("expected drawing dispatch rejection")
+    }
+  }
+}
+
+///|
+/// Pins the ordering of the local-name dispatch in
+/// `validate_xlsx_worksheet_core`, where the depth and parent rules attached to
+/// each core element decide which diagnosis a misplaced element receives.
+test "worksheet core dispatch keeps branch precedence" {
+  let cases : Array[(String, String)] = [
+    (
+      "<sheetData><sheetData/></sheetData>", "worksheet sheetData element is misplaced",
+    ),
+    ("<row/>", "worksheet row element is misplaced"),
+    (
+      "<sheetData><row><f>1</f></row></sheetData>", "worksheet cell payload element is misplaced",
+    ),
+    (
+      "<sheetData><row><c><t>a</t></c></row></sheetData>", "worksheet inline string text is misplaced",
+    ),
+  ]
+  for case in cases {
+    let (body, expected) = case
+    let source = "<worksheet xmlns=\"\{transitional_spreadsheet_namespace}\">\{body}</worksheet>"
+    let full = canonicalize_xlsx_xml(source)
+    try
+      canonicalize_xlsx_worksheet_core(source, full, default_max_xml_part_bytes)
+    catch {
+      InvalidXml(msg~) => inspect(msg, content=expected)
+      _ => fail("unexpected worksheet dispatch error")
+    } noraise {
+      _ => fail("expected worksheet dispatch rejection")
     }
   }
 }
