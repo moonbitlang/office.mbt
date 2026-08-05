@@ -230,6 +230,56 @@ async test "DOCX get distinguishes stable items and positional descendants" {
 }
 
 ///|
+/// `outline` used to report `counts.comments` and nothing else, so reading one
+/// review thread cost a `text --under /docx/comments` plus a `get` per comment.
+/// The thread fields must come back in the outline itself.
+async test "DOCX outline lists comment threads in one call" {
+  let projection = docx_read_test_projection()
+  let payload = docx_outline_payload(projection, max_output_chars=100_000).data
+  guard payload is Object(fields) &&
+    fields.get("comments") is Some(Array(records)) else {
+    fail("expected outline comment records")
+  }
+  guard fields.get("counts") is Some(Object(counts)) else {
+    fail("expected outline counts")
+  }
+  // The array and the count describe the same documents.
+  assert_eq(
+    Some(Json::number(records.length().to_double())),
+    counts.get("comments"),
+  )
+  guard records is [Object(first), ..] else {
+    fail("expected at least one comment record")
+  }
+  assert_eq(
+    first.get("path"),
+    Some(Json::string("/docx/comments/comment[id=\"0\"]")),
+  )
+  assert_eq(first.get("id"), Some(Json::string("0")))
+  assert_eq(first.get("author"), Some(Json::string("Ada")))
+  // Absent thread state must stay absent. Defaulting `done` to false here
+  // would make outline assert a resolution the document never recorded.
+  assert_eq(first.get("done"), None)
+  assert_eq(first.get("parent_id"), None)
+}
+
+///|
+/// A document with no comments still carries the key, so consumers can index
+/// it unconditionally.
+async test "DOCX outline emits an empty comment list rather than omitting it" {
+  let bytes = @word.write_docx_with_annotations([
+    @word.paragraph([@word.run([@word.text("Hi")])]),
+  ]) catch {
+    Unsupported(message~) => raise CliError(message)
+    error => raise error
+  }
+  let projection = open_docx_projection("blank.docx", bytes, 1000)
+  let payload = docx_outline_payload(projection, max_output_chars=100_000).data
+  guard payload is Object(fields) else { fail("expected outline object") }
+  assert_eq(fields.get("comments"), Some(Json::array([])))
+}
+
+///|
 async test "DOCX text and query paginate in deterministic document order" {
   let projection = docx_read_test_projection()
   let text = docx_text_payload(projection, None, None, 1, 3, 100_000).data
