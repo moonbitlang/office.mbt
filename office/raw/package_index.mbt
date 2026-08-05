@@ -171,61 +171,62 @@ fn decode_xml_bytes_with_encoding(
   name : String,
   bytes : BytesView,
 ) -> (String, @xml.XmlSourceEncoding) raise RawError {
-  if bytes.length() >= 2 && bytes[0] == 0xff && bytes[1] == 0xfe {
-    (
-      @utf16.decode(bytes, ignore_bom=true) catch {
-        _ =>
-          raise raw_error(
-            "office.raw.invalid_xml_encoding",
-            "part '/\{name}' is not valid UTF-8 or UTF-16 XML text",
-          )
-      },
-      Utf16LittleEndianWithBom,
-    )
-  } else if bytes.length() >= 2 && bytes[0] == 0xfe && bytes[1] == 0xff {
-    (
-      @utf16.decode(bytes, ignore_bom=true, endianness=Big) catch {
-        _ =>
-          raise raw_error(
-            "office.raw.invalid_xml_encoding",
-            "part '/\{name}' is not valid UTF-8 or UTF-16 XML text",
-          )
-      },
-      Utf16BigEndianWithBom,
-    )
-  } else if bytes.length() >= 2 && bytes[0] == b'<' && bytes[1] == 0x00 {
-    (
-      @utf16.decode(bytes) catch {
-        _ =>
-          raise raw_error(
-            "office.raw.invalid_xml_encoding",
-            "part '/\{name}' is not valid UTF-8 or UTF-16 XML text",
-          )
-      },
-      Utf16LittleEndian,
-    )
-  } else if bytes.length() >= 2 && bytes[0] == 0x00 && bytes[1] == b'<' {
-    (
-      @utf16.decode(bytes, endianness=Big) catch {
-        _ =>
-          raise raw_error(
-            "office.raw.invalid_xml_encoding",
-            "part '/\{name}' is not valid UTF-8 or UTF-16 XML text",
-          )
-      },
-      Utf16BigEndian,
-    )
-  } else {
-    (
-      @utf8.decode(bytes, ignore_bom=true) catch {
-        _ =>
-          raise raw_error(
-            "office.raw.invalid_xml_encoding",
-            "part '/\{name}' is not valid UTF-8 or UTF-16 XML text",
-          )
-      },
-      Utf8,
-    )
+  match bytes {
+    [0xff, 0xfe, ..] =>
+      (
+        @utf16.decode(bytes, ignore_bom=true) catch {
+          _ =>
+            raise raw_error(
+              "office.raw.invalid_xml_encoding",
+              "part '/\{name}' is not valid UTF-8 or UTF-16 XML text",
+            )
+        },
+        Utf16LittleEndianWithBom,
+      )
+    [0xfe, 0xff, ..] =>
+      (
+        @utf16.decode(bytes, ignore_bom=true, endianness=Big) catch {
+          _ =>
+            raise raw_error(
+              "office.raw.invalid_xml_encoding",
+              "part '/\{name}' is not valid UTF-8 or UTF-16 XML text",
+            )
+        },
+        Utf16BigEndianWithBom,
+      )
+    [b'<', 0x00, ..] =>
+      (
+        @utf16.decode(bytes) catch {
+          _ =>
+            raise raw_error(
+              "office.raw.invalid_xml_encoding",
+              "part '/\{name}' is not valid UTF-8 or UTF-16 XML text",
+            )
+        },
+        Utf16LittleEndian,
+      )
+    [0x00, b'<', ..] =>
+      (
+        @utf16.decode(bytes, endianness=Big) catch {
+          _ =>
+            raise raw_error(
+              "office.raw.invalid_xml_encoding",
+              "part '/\{name}' is not valid UTF-8 or UTF-16 XML text",
+            )
+        },
+        Utf16BigEndian,
+      )
+    _ =>
+      (
+        @utf8.decode(bytes, ignore_bom=true) catch {
+          _ =>
+            raise raw_error(
+              "office.raw.invalid_xml_encoding",
+              "part '/\{name}' is not valid UTF-8 or UTF-16 XML text",
+            )
+        },
+        Utf8,
+      )
   }
 }
 
@@ -728,9 +729,7 @@ fn raw_xml_element_has_child_element(element : @xml.XmlElement) -> Bool {
 
 ///|
 fn raw_is_ascii_hex_unit(unit : UInt16) -> Bool {
-  (unit >= b'0'.to_uint16() && unit <= b'9'.to_uint16()) ||
-  (unit >= b'a'.to_uint16() && unit <= b'f'.to_uint16()) ||
-  (unit >= b'A'.to_uint16() && unit <= b'F'.to_uint16())
+  unit is ('0'..='9' | 'a'..='f' | 'A'..='F')
 }
 
 ///|
@@ -1774,12 +1773,10 @@ fn RawPackage::resolve_part(
   selector : String,
 ) -> String raise RawError {
   validate_part_selector(selector)
-  let (mode, selected) = if selector.has_prefix("part:") {
-    ("part", selector[5:].to_owned())
-  } else if selector.has_prefix("alias:") {
-    ("alias", selector[6:].to_owned())
-  } else {
-    ("auto", selector)
+  let (mode, selected) = match selector {
+    [.. "part:", .. rest] => ("part", rest.to_owned())
+    [.. "alias:", .. rest] => ("alias", rest.to_owned())
+    _ => ("auto", selector)
   }
   let selected_limit = if mode == "alias" {
     raw_max_alias_length
