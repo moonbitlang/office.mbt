@@ -7,74 +7,73 @@ fn eval_function(
   ctx : CalcContext,
 ) -> FormulaValue raise XlsxError {
   if name == "ROW" {
-    return if args.length() == 0 {
-      match current_cell_rc(ctx) {
-        Some((row, _col)) => Number(Double::from_int(row))
-        None => Error(formula_error_value)
-      }
-    } else if args.length() == 1 {
-      match ref_bounds_opt(args[0]) {
-        Some((row1, _col1, row2, _col2)) => {
-          let row = if row1 < row2 { row1 } else { row2 }
-          Number(Double::from_int(row))
+    return match args {
+      [] =>
+        match current_cell_rc(ctx) {
+          Some((row, _col)) => Number(Double::from_int(row))
+          None => Error(formula_error_value)
         }
-        None => Error(formula_error_value)
-      }
-    } else {
-      Error(formula_error_value)
+      [arg] =>
+        match ref_bounds_opt(arg) {
+          Some((row1, _col1, row2, _col2)) => {
+            let row = if row1 < row2 { row1 } else { row2 }
+            Number(Double::from_int(row))
+          }
+          None => Error(formula_error_value)
+        }
+      _ => Error(formula_error_value)
     }
   }
   if name == "COLUMN" {
-    return if args.length() == 0 {
-      match current_cell_rc(ctx) {
-        Some((_row, col)) => Number(Double::from_int(col))
-        None => Error(formula_error_value)
-      }
-    } else if args.length() == 1 {
-      match ref_bounds_opt(args[0]) {
-        Some((_row1, col1, _row2, col2)) => {
-          let col = if col1 < col2 { col1 } else { col2 }
-          Number(Double::from_int(col))
+    return match args {
+      [] =>
+        match current_cell_rc(ctx) {
+          Some((_row, col)) => Number(Double::from_int(col))
+          None => Error(formula_error_value)
         }
-        None => Error(formula_error_value)
-      }
-    } else {
-      Error(formula_error_value)
+      [arg] =>
+        match ref_bounds_opt(arg) {
+          Some((_row1, col1, _row2, col2)) => {
+            let col = if col1 < col2 { col1 } else { col2 }
+            Number(Double::from_int(col))
+          }
+          None => Error(formula_error_value)
+        }
+      _ => Error(formula_error_value)
     }
   }
   if name == "ROWS" {
-    return if args.length() == 1 {
-      match ref_bounds_opt(args[0]) {
-        Some((row1, _col1, row2, _col2)) => {
-          let min_row = if row1 < row2 { row1 } else { row2 }
-          let max_row = if row1 > row2 { row1 } else { row2 }
-          Number(Double::from_int(max_row - min_row + 1))
+    return match args {
+      [arg] =>
+        match ref_bounds_opt(arg) {
+          Some((row1, _col1, row2, _col2)) => {
+            let min_row = if row1 < row2 { row1 } else { row2 }
+            let max_row = if row1 > row2 { row1 } else { row2 }
+            Number(Double::from_int(max_row - min_row + 1))
+          }
+          None => Error(formula_error_value)
         }
-        None => Error(formula_error_value)
-      }
-    } else {
-      Error(formula_error_value)
+      _ => Error(formula_error_value)
     }
   }
   if name == "COLUMNS" {
-    return if args.length() == 1 {
-      match ref_bounds_opt(args[0]) {
-        Some((_row1, col1, _row2, col2)) => {
-          let min_col = if col1 < col2 { col1 } else { col2 }
-          let max_col = if col1 > col2 { col1 } else { col2 }
-          Number(Double::from_int(max_col - min_col + 1))
+    return match args {
+      [arg] =>
+        match ref_bounds_opt(arg) {
+          Some((_row1, col1, _row2, col2)) => {
+            let min_col = if col1 < col2 { col1 } else { col2 }
+            let max_col = if col1 > col2 { col1 } else { col2 }
+            Number(Double::from_int(max_col - min_col + 1))
+          }
+          None => Error(formula_error_value)
         }
-        None => Error(formula_error_value)
-      }
-    } else {
-      Error(formula_error_value)
+      _ => Error(formula_error_value)
     }
   }
   if name == "FORMULATEXT" {
-    return if args.length() == 1 {
-      formula_text_value(workbook, sheet_name, args[0])
-    } else {
-      Error(formula_error_value)
+    return match args {
+      [arg] => formula_text_value(workbook, sheet_name, arg)
+      _ => Error(formula_error_value)
     }
   }
   let values : Array[FormulaValue] = []
@@ -91,407 +90,385 @@ fn eval_function(
     "AVERAGE" => average_values(values)
     "AVERAGEA" => averagea_values(values)
     "STDEV" | "STDEV.S" =>
-      if values.length() >= 1 {
-        stdev_values(false, values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => stdev_values(false, values)
+        [] => Error(formula_error_value)
       }
     "STDEVA" =>
-      if values.length() >= 1 {
-        stdev_values(true, values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => stdev_values(true, values)
+        [] => Error(formula_error_value)
       }
     "STDEVP" | "STDEV.P" =>
-      if values.length() >= 1 {
-        match variance_values(values, false, false) {
-          Number(variance) => {
-            let result = @math.pow(variance, 0.5)
-            Number(round_significant_digits(result, 15))
+      match values {
+        [_, ..] =>
+          match variance_values(values, false, false) {
+            Number(variance) => {
+              let result = @math.pow(variance, 0.5)
+              Number(round_significant_digits(result, 15))
+            }
+            value => value
           }
-          value => value
-        }
-      } else {
-        Error(formula_error_value)
+        [] => Error(formula_error_value)
       }
     "STDEVPA" =>
-      if values.length() >= 1 {
-        match variance_values(values, false, true) {
-          Number(variance) => {
-            let result = @math.pow(variance, 0.5)
-            Number(round_significant_digits(result, 15))
+      match values {
+        [_, ..] =>
+          match variance_values(values, false, true) {
+            Number(variance) => {
+              let result = @math.pow(variance, 0.5)
+              Number(round_significant_digits(result, 15))
+            }
+            value => value
           }
-          value => value
-        }
-      } else {
-        Error(formula_error_value)
+        [] => Error(formula_error_value)
       }
     "VAR" | "VAR.S" =>
-      if values.length() >= 1 {
-        variance_values(values, true, false)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => variance_values(values, true, false)
+        [] => Error(formula_error_value)
       }
     "VARA" =>
-      if values.length() >= 1 {
-        variance_values(values, true, true)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => variance_values(values, true, true)
+        [] => Error(formula_error_value)
       }
     "VARP" | "VAR.P" =>
-      if values.length() >= 1 {
-        variance_values(values, false, false)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => variance_values(values, false, false)
+        [] => Error(formula_error_value)
       }
     "VARPA" =>
-      if values.length() >= 1 {
-        variance_values(values, false, true)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => variance_values(values, false, true)
+        [] => Error(formula_error_value)
       }
     "TRIMMEAN" => trimmean_values(values)
     "AVEDEV" =>
-      if values.length() >= 1 {
-        avedev_values(values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => avedev_values(values)
+        [] => Error(formula_error_value)
       }
     "DEVSQ" =>
-      if values.length() >= 1 {
-        devsq_values(values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => devsq_values(values)
+        [] => Error(formula_error_value)
       }
     "GEOMEAN" =>
-      if values.length() >= 1 {
-        geomean_values(values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => geomean_values(values)
+        [] => Error(formula_error_value)
       }
     "HARMEAN" =>
-      if values.length() >= 1 {
-        harmean_values(values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => harmean_values(values)
+        [] => Error(formula_error_value)
       }
     "KURT" =>
-      if values.length() >= 1 {
-        kurt_values(values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => kurt_values(values)
+        [] => Error(formula_error_value)
       }
     "SKEW" =>
-      if values.length() >= 1 {
-        skew_values("SKEW", values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => skew_values("SKEW", values)
+        [] => Error(formula_error_value)
       }
     "SKEW.P" =>
-      if values.length() >= 1 {
-        skew_values("SKEW.P", values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => skew_values("SKEW.P", values)
+        [] => Error(formula_error_value)
       }
     "STANDARDIZE" =>
-      if values.length() == 3 {
-        standardize_values(values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, _, _] => standardize_values(values)
+        _ => Error(formula_error_value)
       }
     "LARGE" =>
-      if values.length() == 2 {
-        kth_values("LARGE", values[0], values[1])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] => kth_values("LARGE", v0, v1)
+        _ => Error(formula_error_value)
       }
     "SMALL" =>
-      if values.length() == 2 {
-        kth_values("SMALL", values[0], values[1])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] => kth_values("SMALL", v0, v1)
+        _ => Error(formula_error_value)
       }
     "MODE" =>
-      if values.length() >= 1 {
-        mode_values(values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => mode_values(values)
+        [] => Error(formula_error_value)
       }
     "MODE.SNGL" =>
-      if values.length() >= 1 {
-        mode_values(values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => mode_values(values)
+        [] => Error(formula_error_value)
       }
     "MODE.MULT" =>
-      if values.length() >= 1 {
-        mode_mult_values(values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => mode_mult_values(values)
+        [] => Error(formula_error_value)
       }
     "PERCENTILE" =>
-      if values.length() == 2 {
-        match value_as_number(values[1]) {
-          Ok(k) =>
-            if k < 0.0 || k > 1.0 {
-              Error(formula_error_na)
-            } else {
-              percentile_values(values[0], k, false, false)
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match value_as_number(v1) {
+            Ok(k) =>
+              if k < 0.0 || k > 1.0 {
+                Error(formula_error_na)
+              } else {
+                percentile_values(v0, k, false, false)
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "PERCENTILE.INC" =>
-      if values.length() == 2 {
-        match value_as_number(values[1]) {
-          Ok(k) =>
-            if k < 0.0 || k > 1.0 {
-              Error(formula_error_na)
-            } else {
-              percentile_values(values[0], k, false, false)
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match value_as_number(v1) {
+            Ok(k) =>
+              if k < 0.0 || k > 1.0 {
+                Error(formula_error_na)
+              } else {
+                percentile_values(v0, k, false, false)
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "PERCENTILE.EXC" =>
-      if values.length() == 2 {
-        match value_as_number(values[1]) {
-          Ok(k) =>
-            if k <= 0.0 || k >= 1.0 {
-              Error(formula_error_num)
-            } else {
-              percentile_values(values[0], k, true, true)
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match value_as_number(v1) {
+            Ok(k) =>
+              if k <= 0.0 || k >= 1.0 {
+                Error(formula_error_num)
+              } else {
+                percentile_values(v0, k, true, true)
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "PERCENTRANK" =>
-      if values.length() == 2 || values.length() == 3 {
-        match value_as_number(values[1]) {
-          Ok(x) => {
-            let significance = if values.length() == 3 {
-              match value_as_number(values[2]) {
-                Ok(num) => num
-                Err(err) => return err
+      match values {
+        [v0, v1] | [v0, v1, _] =>
+          match value_as_number(v1) {
+            Ok(x) => {
+              let significance = if values is [_, _, v2] {
+                match value_as_number(v2) {
+                  Ok(num) => num
+                  Err(err) => return err
+                }
+              } else {
+                3.0
               }
-            } else {
-              3.0
+              percentrank_values("PERCENTRANK", v0, x, significance)
             }
-            percentrank_values("PERCENTRANK", values[0], x, significance)
+            Err(err) => err
           }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "PERCENTRANK.INC" =>
-      if values.length() == 2 || values.length() == 3 {
-        match value_as_number(values[1]) {
-          Ok(x) => {
-            let significance = if values.length() == 3 {
-              match value_as_number(values[2]) {
-                Ok(num) => num
-                Err(err) => return err
+      match values {
+        [v0, v1] | [v0, v1, _] =>
+          match value_as_number(v1) {
+            Ok(x) => {
+              let significance = if values is [_, _, v2] {
+                match value_as_number(v2) {
+                  Ok(num) => num
+                  Err(err) => return err
+                }
+              } else {
+                3.0
               }
-            } else {
-              3.0
+              percentrank_values("PERCENTRANK.INC", v0, x, significance)
             }
-            percentrank_values("PERCENTRANK.INC", values[0], x, significance)
+            Err(err) => err
           }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "PERCENTRANK.EXC" =>
-      if values.length() == 2 || values.length() == 3 {
-        match value_as_number(values[1]) {
-          Ok(x) => {
-            let significance = if values.length() == 3 {
-              match value_as_number(values[2]) {
-                Ok(num) => num
-                Err(err) => return err
+      match values {
+        [v0, v1] | [v0, v1, _] =>
+          match value_as_number(v1) {
+            Ok(x) => {
+              let significance = if values is [_, _, v2] {
+                match value_as_number(v2) {
+                  Ok(num) => num
+                  Err(err) => return err
+                }
+              } else {
+                3.0
               }
-            } else {
-              3.0
+              percentrank_values("PERCENTRANK.EXC", v0, x, significance)
             }
-            percentrank_values("PERCENTRANK.EXC", values[0], x, significance)
+            Err(err) => err
           }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "QUARTILE" =>
-      if values.length() == 2 {
-        match value_as_number(values[1]) {
-          Ok(quart) => quartile_values("QUARTILE", values[0], quart, false)
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match value_as_number(v1) {
+            Ok(quart) => quartile_values("QUARTILE", v0, quart, false)
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "QUARTILE.INC" =>
-      if values.length() == 2 {
-        match value_as_number(values[1]) {
-          Ok(quart) => quartile_values("QUARTILE.INC", values[0], quart, false)
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match value_as_number(v1) {
+            Ok(quart) => quartile_values("QUARTILE.INC", v0, quart, false)
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "QUARTILE.EXC" =>
-      if values.length() == 2 {
-        match value_as_number(values[1]) {
-          Ok(quart) => quartile_values("QUARTILE.EXC", values[0], quart, true)
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match value_as_number(v1) {
+            Ok(quart) => quartile_values("QUARTILE.EXC", v0, quart, true)
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "RANK" | "RANK.EQ" =>
-      if values.length() == 2 || values.length() == 3 {
-        let order = if values.length() == 3 {
-          match value_as_number(values[2]) {
-            Ok(num) => Some(num)
-            Err(err) => return err
+      match values {
+        [v0, v1] | [v0, v1, _] => {
+          let order = if values is [_, _, v2] {
+            match value_as_number(v2) {
+              Ok(num) => Some(num)
+              Err(err) => return err
+            }
+          } else {
+            None
           }
-        } else {
-          None
+          rank_values(v0, v1, order)
         }
-        rank_values(values[0], values[1], order)
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "SIGN" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            Number(if num < 0.0 { -1.0 } else if num > 0.0 { 1.0 } else { 0.0 })
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              Number(
+                if num < 0.0 {
+                  -1.0
+                } else if num > 0.0 {
+                  1.0
+                } else {
+                  0.0
+                },
+              )
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "SERIESSUM" =>
-      if values.length() == 4 {
-        let x = match value_as_number(values[0]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let n = match value_as_number(values[1]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let m = match value_as_number(values[2]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let coefficients = list_from_value(values[3])
-        let mut result = 0.0
-        let mut idx = 0.0
-        for coefficient in coefficients {
-          if formula_value_string(coefficient) == "" {
-            continue
-          }
-          let num = match value_as_number(coefficient) {
+      match values {
+        [v0, v1, v2, v3] => {
+          let x = match value_as_number(v0) {
             Ok(num) => num
             Err(err) => return err
           }
-          result = result + num * @math.pow(x, n + m * idx)
-          idx = idx + 1.0
+          let n = match value_as_number(v1) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+          let m = match value_as_number(v2) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+          let coefficients = list_from_value(v3)
+          let mut result = 0.0
+          let mut idx = 0.0
+          for coefficient in coefficients {
+            if formula_value_string(coefficient) == "" {
+              continue
+            }
+            let num = match value_as_number(coefficient) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+            result = result + num * @math.pow(x, n + m * idx)
+            idx = idx + 1.0
+          }
+          Number(round_significant_digits(result, 15))
         }
-        Number(round_significant_digits(result, 15))
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "CORREL" =>
-      if values.length() == 2 {
-        correl_values(values[0], values[1])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] => correl_values(v0, v1)
+        _ => Error(formula_error_value)
       }
     "COVAR" =>
-      if values.length() == 2 {
-        covar_values("COVAR", values[0], values[1])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] => covar_values("COVAR", v0, v1)
+        _ => Error(formula_error_value)
       }
     "COVARIANCE.P" =>
-      if values.length() == 2 {
-        covar_values("COVARIANCE.P", values[0], values[1])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] => covar_values("COVARIANCE.P", v0, v1)
+        _ => Error(formula_error_value)
       }
     "COVARIANCE.S" =>
-      if values.length() == 2 {
-        covar_values("COVARIANCE.S", values[0], values[1])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] => covar_values("COVARIANCE.S", v0, v1)
+        _ => Error(formula_error_value)
       }
     "PEARSON" =>
-      if values.length() == 2 {
-        pearson_product_values("PEARSON", values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, _] => pearson_product_values("PEARSON", values)
+        _ => Error(formula_error_value)
       }
     "RSQ" =>
-      if values.length() == 2 {
-        pearson_product_values("RSQ", values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, _] => pearson_product_values("RSQ", values)
+        _ => Error(formula_error_value)
       }
     "SLOPE" =>
-      if values.length() == 2 {
-        pearson_product_values("SLOPE", values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, _] => pearson_product_values("SLOPE", values)
+        _ => Error(formula_error_value)
       }
     "INTERCEPT" =>
-      if values.length() == 2 {
-        pearson_product_values("INTERCEPT", values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, _] => pearson_product_values("INTERCEPT", values)
+        _ => Error(formula_error_value)
       }
     "FORECAST" =>
-      if values.length() == 3 {
-        pearson_product_values("FORECAST", values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, _, _] => pearson_product_values("FORECAST", values)
+        _ => Error(formula_error_value)
       }
     "FORECAST.LINEAR" =>
-      if values.length() == 3 {
-        pearson_product_values("FORECAST.LINEAR", values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, _, _] => pearson_product_values("FORECAST.LINEAR", values)
+        _ => Error(formula_error_value)
       }
     "GROWTH" =>
       trend_growth_values(workbook, sheet_name, "GROWTH", args, values, ctx)
     "TREND" =>
       trend_growth_values(workbook, sheet_name, "TREND", args, values, ctx)
     "FISHER" =>
-      if values.length() == 1 {
-        fisher_value(values[0])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] => fisher_value(v0)
+        _ => Error(formula_error_value)
       }
     "FISHERINV" =>
-      if values.length() == 1 {
-        fisherinv_value(values[0])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] => fisherinv_value(v0)
+        _ => Error(formula_error_value)
       }
     "STEYX" =>
-      if values.length() == 2 {
-        steyx_values(values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, _] => steyx_values(values)
+        _ => Error(formula_error_value)
       }
     "MEDIAN" => median_values(values)
     "MIN" => min_values(values)
@@ -501,19 +478,21 @@ fn eval_function(
     "COUNT" => count_values(values)
     "COUNTA" => counta_values(values)
     "COUNTBLANK" =>
-      if args.length() == 1 {
-        let range_values = eval_range_expr(workbook, sheet_name, args[0], ctx)
-        countblank_values(range_values)
-      } else {
-        Error(formula_error_value)
+      match args {
+        [a0] => {
+          let range_values = eval_range_expr(workbook, sheet_name, a0, ctx)
+          countblank_values(range_values)
+        }
+        _ => Error(formula_error_value)
       }
     "FREQUENCY" => frequency_values(workbook, sheet_name, args, values, ctx)
     "COUNTIF" =>
-      if args.length() == 2 {
-        let range_values = eval_range_expr(workbook, sheet_name, args[0], ctx)
-        countif_values(range_values, values[1])
-      } else {
-        Error(formula_error_value)
+      match args {
+        [a0, _] => {
+          let range_values = eval_range_expr(workbook, sheet_name, a0, ctx)
+          countif_values(range_values, values[1])
+        }
+        _ => Error(formula_error_value)
       }
     "COUNTIFS" =>
       if args.length() >= 2 {
@@ -547,12 +526,13 @@ fn eval_function(
     | "DSUM"
     | "DVAR"
     | "DVARP" =>
-      if args.length() == 3 {
-        let database = eval_range_expr(workbook, sheet_name, args[0], ctx)
-        let criteria = eval_range_expr(workbook, sheet_name, args[2], ctx)
-        database_values(name, database, values[1], criteria)
-      } else {
-        Error(formula_error_value)
+      match args {
+        [a0, _, a2] => {
+          let database = eval_range_expr(workbook, sheet_name, a0, ctx)
+          let criteria = eval_range_expr(workbook, sheet_name, a2, ctx)
+          database_values(name, database, values[1], criteria)
+        }
+        _ => Error(formula_error_value)
       }
     "DCOUNT" | "DCOUNTA" =>
       if args.length() >= 2 && args.length() <= 3 {
@@ -577,24 +557,26 @@ fn eval_function(
         Error(formula_error_value)
       }
     "DGET" =>
-      if args.length() == 3 {
-        let database = eval_range_expr(workbook, sheet_name, args[0], ctx)
-        let criteria = eval_range_expr(workbook, sheet_name, args[2], ctx)
-        dget_values(database, values[1], criteria)
-      } else {
-        Error(formula_error_value)
+      match args {
+        [a0, _, a2] => {
+          let database = eval_range_expr(workbook, sheet_name, a0, ctx)
+          let criteria = eval_range_expr(workbook, sheet_name, a2, ctx)
+          dget_values(database, values[1], criteria)
+        }
+        _ => Error(formula_error_value)
       }
     "SUMIF" =>
-      if args.length() == 2 || args.length() == 3 {
-        let range_values = eval_range_expr(workbook, sheet_name, args[0], ctx)
-        let sum_range = if args.length() == 3 {
-          Some(eval_range_expr(workbook, sheet_name, args[2], ctx))
-        } else {
-          None
+      match args {
+        [a0, _] | [a0, _, _] => {
+          let range_values = eval_range_expr(workbook, sheet_name, a0, ctx)
+          let sum_range = if args is [_, _, a2] {
+            Some(eval_range_expr(workbook, sheet_name, a2, ctx))
+          } else {
+            None
+          }
+          sumif_values(range_values, values[1], sum_range)
         }
-        sumif_values(range_values, values[1], sum_range)
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "SUMPRODUCT" =>
       if args.length() >= 1 {
@@ -630,28 +612,31 @@ fn eval_function(
       }
     "SUMSQ" => sumsq_values(values)
     "SUMX2MY2" =>
-      if args.length() == 2 {
-        let left = eval_range_expr(workbook, sheet_name, args[0], ctx)
-        let right = eval_range_expr(workbook, sheet_name, args[1], ctx)
-        sumx_values("SUMX2MY2", left, right)
-      } else {
-        Error(formula_error_value)
+      match args {
+        [a0, a1] => {
+          let left = eval_range_expr(workbook, sheet_name, a0, ctx)
+          let right = eval_range_expr(workbook, sheet_name, a1, ctx)
+          sumx_values("SUMX2MY2", left, right)
+        }
+        _ => Error(formula_error_value)
       }
     "SUMX2PY2" =>
-      if args.length() == 2 {
-        let left = eval_range_expr(workbook, sheet_name, args[0], ctx)
-        let right = eval_range_expr(workbook, sheet_name, args[1], ctx)
-        sumx_values("SUMX2PY2", left, right)
-      } else {
-        Error(formula_error_value)
+      match args {
+        [a0, a1] => {
+          let left = eval_range_expr(workbook, sheet_name, a0, ctx)
+          let right = eval_range_expr(workbook, sheet_name, a1, ctx)
+          sumx_values("SUMX2PY2", left, right)
+        }
+        _ => Error(formula_error_value)
       }
     "SUMXMY2" =>
-      if args.length() == 2 {
-        let left = eval_range_expr(workbook, sheet_name, args[0], ctx)
-        let right = eval_range_expr(workbook, sheet_name, args[1], ctx)
-        sumx_values("SUMXMY2", left, right)
-      } else {
-        Error(formula_error_value)
+      match args {
+        [a0, a1] => {
+          let left = eval_range_expr(workbook, sheet_name, a0, ctx)
+          let right = eval_range_expr(workbook, sheet_name, a1, ctx)
+          sumx_values("SUMXMY2", left, right)
+        }
+        _ => Error(formula_error_value)
       }
     "SUMIFS" =>
       if args.length() >= 3 {
@@ -690,16 +675,17 @@ fn eval_function(
         Error(formula_error_value)
       }
     "AVERAGEIF" =>
-      if args.length() == 2 || args.length() == 3 {
-        let range_values = eval_range_expr(workbook, sheet_name, args[0], ctx)
-        let average_range = if args.length() == 3 {
-          Some(eval_range_expr(workbook, sheet_name, args[2], ctx))
-        } else {
-          None
+      match args {
+        [a0, _] | [a0, _, _] => {
+          let range_values = eval_range_expr(workbook, sheet_name, a0, ctx)
+          let average_range = if args is [_, _, a2] {
+            Some(eval_range_expr(workbook, sheet_name, a2, ctx))
+          } else {
+            None
+          }
+          averageif_values(range_values, values[1], average_range)
         }
-        averageif_values(range_values, values[1], average_range)
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "AVERAGEIFS" =>
       if args.length() >= 3 {
@@ -803,617 +789,601 @@ fn eval_function(
     "GCD" => gcd_values(values)
     "LCM" => lcm_values(values)
     "COMBIN" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(num), Ok(chosen)) => combin_values(num, chosen)
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(num), Ok(chosen)) => combin_values(num, chosen)
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "COMBINA" | "_XLFN.COMBINA" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(num), Ok(chosen)) => {
-            let n = trunc_double(num)
-            let k = trunc_double(chosen)
-            if n < k {
-              Error(formula_error_value)
-            } else if n == 0.0 {
-              Number(n)
-            } else {
-              combin_values(n + k - 1.0, n - 1.0)
-            }
-          }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "COMPLEX" =>
-      if values.length() < 2 {
-        Error(formula_error_value)
-      } else if values.length() > 3 {
-        Error(formula_error_value)
-      } else {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(real), Ok(imag)) => {
-            let mut suffix = "i"
-            if values.length() == 3 {
-              match value_as_string(values[2]) {
-                Ok(text) => {
-                  let lower = text.to_lower()
-                  if lower != "i" && lower != "j" {
-                    return Error(formula_error_value)
-                  }
-                  suffix = lower
-                }
-                Err(err) => return err
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(num), Ok(chosen)) => {
+              let n = trunc_double(num)
+              let k = trunc_double(chosen)
+              if n < k {
+                Error(formula_error_value)
+              } else if n == 0.0 {
+                Number(n)
+              } else {
+                combin_values(n + k - 1.0, n - 1.0)
               }
             }
-            String(complex_to_string(complex_new(real, imag), suffix))
+            (Err(err), _) => err
+            (_, Err(err)) => err
           }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
+        _ => Error(formula_error_value)
+      }
+    "COMPLEX" =>
+      match values {
+        [v0, v1] | [v0, v1, _] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(real), Ok(imag)) => {
+              let mut suffix = "i"
+              if values is [_, _, v2] {
+                match value_as_string(v2) {
+                  Ok(text) => {
+                    let lower = text.to_lower()
+                    if lower != "i" && lower != "j" {
+                      return Error(formula_error_value)
+                    }
+                    suffix = lower
+                  }
+                  Err(err) => return err
+                }
+              }
+              String(complex_to_string(complex_new(real, imag), suffix))
+            }
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "FACT" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if num < 0.0 {
-              Error(formula_error_num)
-            } else {
-              Number(factorial_double(num))
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              if num < 0.0 {
+                Error(formula_error_num)
+              } else {
+                Number(factorial_double(num))
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "FACTDOUBLE" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if num < 0.0 {
-              Error(formula_error_num)
-            } else {
-              Number(double_factorial_double(num))
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              if num < 0.0 {
+                Error(formula_error_num)
+              } else {
+                Number(double_factorial_double(num))
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "MULTINOMIAL" => multinomial_values(values)
     "MDETERM" =>
-      if values.length() == 1 {
-        let range = range_from_expr_or_value(
-          workbook,
-          sheet_name,
-          args[0],
-          values[0],
-          ctx,
-        )
-        match number_matrix_from_range(range, true) {
-          Ok(matrix) => Number(matrix_det(matrix))
-          Err(err) => err
+      match values {
+        [v0] => {
+          let range = range_from_expr_or_value(
+            workbook,
+            sheet_name,
+            args[0],
+            v0,
+            ctx,
+          )
+          match number_matrix_from_range(range, true) {
+            Ok(matrix) => Number(matrix_det(matrix))
+            Err(err) => err
+          }
         }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "MINVERSE" =>
-      if values.length() == 1 {
-        let range = range_from_expr_or_value(
-          workbook,
-          sheet_name,
-          args[0],
-          values[0],
-          ctx,
-        )
-        match number_matrix_from_range(range, true) {
-          Ok(matrix) => {
-            let det_value = matrix_det(matrix)
-            if det_value == 0.0 {
-              Error(formula_error_num)
-            } else {
-              let adj = matrix_adjugate(matrix)
-              let scale = 1.0 / det_value
-              for row in 0..<adj.length() {
-                for col in 0..<adj[row].length() {
-                  let value = adj[row][col]
-                  if value == 0.0 && scale < 0.0 {
-                    adj[row][col] = -0.0
-                  } else {
-                    adj[row][col] = value * scale
+      match values {
+        [v0] => {
+          let range = range_from_expr_or_value(
+            workbook,
+            sheet_name,
+            args[0],
+            v0,
+            ctx,
+          )
+          match number_matrix_from_range(range, true) {
+            Ok(matrix) => {
+              let det_value = matrix_det(matrix)
+              if det_value == 0.0 {
+                Error(formula_error_num)
+              } else {
+                let adj = matrix_adjugate(matrix)
+                let scale = 1.0 / det_value
+                for row in 0..<adj.length() {
+                  for col in 0..<adj[row].length() {
+                    let value = adj[row][col]
+                    if value == 0.0 && scale < 0.0 {
+                      adj[row][col] = -0.0
+                    } else {
+                      adj[row][col] = value * scale
+                    }
                   }
                 }
+                List(matrix_values(adj))
               }
-              List(matrix_values(adj))
             }
+            Err(err) => err
           }
-          Err(err) => err
         }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "MMULT" =>
-      if values.length() == 2 {
-        match (values[0], values[1]) {
-          (Number(lhs), Number(rhs)) => Number(lhs * rhs)
-          _ => {
-            let left_range = range_from_expr_or_value(
-              workbook,
-              sheet_name,
-              args[0],
-              values[0],
-              ctx,
-            )
-            let right_range = range_from_expr_or_value(
-              workbook,
-              sheet_name,
-              args[1],
-              values[1],
-              ctx,
-            )
-            match
-              (
-                number_matrix_from_range(left_range, false),
-                number_matrix_from_range(right_range, false),
-              ) {
-              (Ok(left), Ok(right)) =>
-                match matrix_multiply(left, right) {
-                  Ok(matrix) => List(matrix_values(matrix))
-                  Err(err) => err
-                }
-              (Err(err), _) => err
-              (_, Err(err)) => err
-            }
-          }
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "MUNIT" | "_XLFN.MUNIT" =>
-      if values.length() == 1 {
-        match munit_dimension(values[0]) {
-          Ok(dimension) => List(munit_range_values(dimension).values)
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "TRANSPOSE" =>
-      if args.length() == 1 {
-        let base_range = range_from_expr_or_value(
-          workbook,
-          sheet_name,
-          args[0],
-          values[0],
-          ctx,
-        )
-        List(transpose_range_values(base_range).values)
-      } else {
-        Error(formula_error_value)
-      }
-    "PERMUT" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(num), Ok(chosen)) =>
-            if num < chosen {
-              Error(formula_error_na)
-            } else {
-              let result = factorial_double(num) /
-                factorial_double(num - chosen)
-              Number(round_half_away_from_zero(result))
-            }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "PERMUTATIONA" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(num), Ok(chosen)) => {
-            let number = Double::floor(num)
-            let number_chosen = Double::floor(chosen)
-            if number < 0.0 || number_chosen < 0.0 {
-              Error(formula_error_na)
-            } else {
-              Number(@math.pow(number, number_chosen))
-            }
-          }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "ABS" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => Number(abs_double(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "INT" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => Number(Double::floor(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "LN" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => Number(@math.ln(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "EXP" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => Number(@math.exp(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "DECIMAL" | "_XLFN.DECIMAL" =>
-      if values.length() == 2 {
-        match (value_as_string(values[0]), value_as_number(values[1])) {
-          (Ok(text), Ok(radix)) => {
-            let base = Double::to_int(trunc_double(radix))
-            let text_value = strip_hex_prefix(text)
-            let parsed = @string.parse_int(text_value, base~) catch {
-              _ => return Error(formula_error_value)
-            }
-            Number(Double::from_int(parsed))
-          }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "ROMAN" =>
-      if values.length() == 0 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(num) => {
-            let mut form = 0
-            if values.length() == 2 {
-              match value_as_number(values[1]) {
-                Ok(raw) => {
-                  let mut mode = Double::to_int(trunc_double(raw))
-                  if mode < 0 {
-                    mode = 0
-                  } else if mode > 4 {
-                    mode = 4
+      match values {
+        [v0, v1] =>
+          match (v0, v1) {
+            (Number(lhs), Number(rhs)) => Number(lhs * rhs)
+            _ => {
+              let left_range = range_from_expr_or_value(
+                workbook,
+                sheet_name,
+                args[0],
+                v0,
+                ctx,
+              )
+              let right_range = range_from_expr_or_value(
+                workbook,
+                sheet_name,
+                args[1],
+                v1,
+                ctx,
+              )
+              match
+                (
+                  number_matrix_from_range(left_range, false),
+                  number_matrix_from_range(right_range, false),
+                ) {
+                (Ok(left), Ok(right)) =>
+                  match matrix_multiply(left, right) {
+                    Ok(matrix) => List(matrix_values(matrix))
+                    Err(err) => err
                   }
-                  form = mode
-                }
-                Err(err) => return err
+                (Err(err), _) => err
+                (_, Err(err)) => err
               }
             }
-            String(roman_string(num, form))
           }
-          Err(err) => err
+        _ => Error(formula_error_value)
+      }
+    "MUNIT" | "_XLFN.MUNIT" =>
+      match values {
+        [v0] =>
+          match munit_dimension(v0) {
+            Ok(dimension) => List(munit_range_values(dimension).values)
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "TRANSPOSE" =>
+      match args {
+        [a0] => {
+          let base_range = range_from_expr_or_value(
+            workbook,
+            sheet_name,
+            a0,
+            values[0],
+            ctx,
+          )
+          List(transpose_range_values(base_range).values)
         }
+        _ => Error(formula_error_value)
+      }
+    "PERMUT" =>
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(num), Ok(chosen)) =>
+              if num < chosen {
+                Error(formula_error_na)
+              } else {
+                let result = factorial_double(num) /
+                  factorial_double(num - chosen)
+                Number(round_half_away_from_zero(result))
+              }
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "PERMUTATIONA" =>
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(num), Ok(chosen)) => {
+              let number = Double::floor(num)
+              let number_chosen = Double::floor(chosen)
+              if number < 0.0 || number_chosen < 0.0 {
+                Error(formula_error_na)
+              } else {
+                Number(@math.pow(number, number_chosen))
+              }
+            }
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "ABS" =>
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => Number(abs_double(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "INT" =>
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => Number(Double::floor(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "LN" =>
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => Number(@math.ln(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "EXP" =>
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => Number(@math.exp(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "DECIMAL" | "_XLFN.DECIMAL" =>
+      match values {
+        [v0, v1] =>
+          match (value_as_string(v0), value_as_number(v1)) {
+            (Ok(text), Ok(radix)) => {
+              let base = Double::to_int(trunc_double(radix))
+              let text_value = strip_hex_prefix(text)
+              let parsed = @string.parse_int(text_value, base~) catch {
+                _ => return Error(formula_error_value)
+              }
+              Number(Double::from_int(parsed))
+            }
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "ROMAN" =>
+      match values {
+        [v0] | [v0, _] =>
+          match value_as_number(v0) {
+            Ok(num) => {
+              let mut form = 0
+              if values is [_, v1] {
+                match value_as_number(v1) {
+                  Ok(raw) => {
+                    let mut mode = Double::to_int(trunc_double(raw))
+                    if mode < 0 {
+                      mode = 0
+                    } else if mode > 4 {
+                      mode = 4
+                    }
+                    form = mode
+                  }
+                  Err(err) => return err
+                }
+              }
+              String(roman_string(num, form))
+            }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ARABIC" | "_XLFN.ARABIC" =>
-      if values.length() == 1 {
-        match value_as_string(values[0]) {
-          Ok(text) => arabic_string_value(text)
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_string(v0) {
+            Ok(text) => arabic_string_value(text)
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "BASE" => base_values(values)
     "BIN2DEC" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(_) => bin2dec_string(formula_value_string(values[0]))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(_) => bin2dec_string(formula_value_string(v0))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "BIN2HEX" =>
-      if values.length() < 1 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(_) => {
-            let decimal = bin2dec_string(formula_value_string(values[0]))
-            match decimal {
-              Error(_) => decimal
-              _ => {
-                let new_values : Array[FormulaValue] = [decimal]
-                if values.length() == 2 {
-                  new_values.push(values[1])
+      match values {
+        [v0] | [v0, _] =>
+          match value_as_number(v0) {
+            Ok(_) => {
+              let decimal = bin2dec_string(formula_value_string(v0))
+              match decimal {
+                Error(_) => decimal
+                _ => {
+                  let new_values : Array[FormulaValue] = [decimal]
+                  if values is [_, places] {
+                    new_values.push(places)
+                  }
+                  dec2x_values("BIN2HEX", new_values)
                 }
-                dec2x_values("BIN2HEX", new_values)
               }
             }
+            Err(err) => err
           }
-          Err(err) => err
-        }
+        _ => Error(formula_error_value)
       }
     "BIN2OCT" =>
-      if values.length() < 1 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(_) => {
-            let decimal = bin2dec_string(formula_value_string(values[0]))
-            match decimal {
-              Error(_) => decimal
-              _ => {
-                let new_values : Array[FormulaValue] = [decimal]
-                if values.length() == 2 {
-                  new_values.push(values[1])
+      match values {
+        [v0] | [v0, _] =>
+          match value_as_number(v0) {
+            Ok(_) => {
+              let decimal = bin2dec_string(formula_value_string(v0))
+              match decimal {
+                Error(_) => decimal
+                _ => {
+                  let new_values : Array[FormulaValue] = [decimal]
+                  if values is [_, places] {
+                    new_values.push(places)
+                  }
+                  dec2x_values("BIN2OCT", new_values)
                 }
-                dec2x_values("BIN2OCT", new_values)
               }
             }
+            Err(err) => err
           }
-          Err(err) => err
-        }
+        _ => Error(formula_error_value)
       }
     "DEC2BIN" => dec2x_values("DEC2BIN", values)
     "DEC2HEX" => dec2x_values("DEC2HEX", values)
     "DEC2OCT" => dec2x_values("DEC2OCT", values)
     "HEX2BIN" =>
-      if values.length() < 1 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_string(values[0]) {
-          Ok(text) => {
-            let decimal = hex2dec_string(text)
-            match decimal {
-              Error(_) => decimal
-              _ => {
-                let new_values : Array[FormulaValue] = [decimal]
-                if values.length() == 2 {
-                  new_values.push(values[1])
+      match values {
+        [v0] | [v0, _] =>
+          match value_as_string(v0) {
+            Ok(text) => {
+              let decimal = hex2dec_string(text)
+              match decimal {
+                Error(_) => decimal
+                _ => {
+                  let new_values : Array[FormulaValue] = [decimal]
+                  if values is [_, places] {
+                    new_values.push(places)
+                  }
+                  dec2x_values("HEX2BIN", new_values)
                 }
-                dec2x_values("HEX2BIN", new_values)
               }
             }
+            Err(err) => err
           }
-          Err(err) => err
-        }
+        _ => Error(formula_error_value)
       }
     "HEX2DEC" =>
-      if values.length() == 1 {
-        match value_as_string(values[0]) {
-          Ok(text) => hex2dec_string(text)
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_string(v0) {
+            Ok(text) => hex2dec_string(text)
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "HEX2OCT" =>
-      if values.length() < 1 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_string(values[0]) {
-          Ok(text) => {
-            let decimal = hex2dec_string(text)
-            match decimal {
-              Error(_) => decimal
-              _ => {
-                let new_values : Array[FormulaValue] = [decimal]
-                if values.length() == 2 {
-                  new_values.push(values[1])
+      match values {
+        [v0] | [v0, _] =>
+          match value_as_string(v0) {
+            Ok(text) => {
+              let decimal = hex2dec_string(text)
+              match decimal {
+                Error(_) => decimal
+                _ => {
+                  let new_values : Array[FormulaValue] = [decimal]
+                  if values is [_, places] {
+                    new_values.push(places)
+                  }
+                  dec2x_values("HEX2OCT", new_values)
                 }
-                dec2x_values("HEX2OCT", new_values)
               }
             }
+            Err(err) => err
           }
-          Err(err) => err
-        }
+        _ => Error(formula_error_value)
       }
     "OCT2BIN" =>
-      if values.length() < 1 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(_) => {
-            let decimal = oct2dec_string(formula_value_string(values[0]))
-            let new_values : Array[FormulaValue] = [decimal]
-            if values.length() == 2 {
-              new_values.push(values[1])
+      match values {
+        [v0] | [v0, _] =>
+          match value_as_number(v0) {
+            Ok(_) => {
+              let decimal = oct2dec_string(formula_value_string(v0))
+              let new_values : Array[FormulaValue] = [decimal]
+              if values is [_, places] {
+                new_values.push(places)
+              }
+              dec2x_values("OCT2BIN", new_values)
             }
-            dec2x_values("OCT2BIN", new_values)
+            Err(err) => err
           }
-          Err(err) => err
-        }
+        _ => Error(formula_error_value)
       }
     "OCT2DEC" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(_) => oct2dec_string(formula_value_string(values[0]))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(_) => oct2dec_string(formula_value_string(v0))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "OCT2HEX" =>
-      if values.length() < 1 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(_) => {
-            let decimal = oct2dec_string(formula_value_string(values[0]))
-            let new_values : Array[FormulaValue] = [decimal]
-            if values.length() == 2 {
-              new_values.push(values[1])
+      match values {
+        [v0] | [v0, _] =>
+          match value_as_number(v0) {
+            Ok(_) => {
+              let decimal = oct2dec_string(formula_value_string(v0))
+              let new_values : Array[FormulaValue] = [decimal]
+              if values is [_, places] {
+                new_values.push(places)
+              }
+              dec2x_values("OCT2HEX", new_values)
             }
-            dec2x_values("OCT2HEX", new_values)
+            Err(err) => err
           }
-          Err(err) => err
-        }
+        _ => Error(formula_error_value)
       }
     "BESSELI" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(x), Ok(n)) => number_or_num_error(bessel_i(x, n))
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(x), Ok(n)) => number_or_num_error(bessel_i(x, n))
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "BESSELJ" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(x), Ok(n)) => number_or_num_error(bessel_j(x, n))
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(x), Ok(n)) => number_or_num_error(bessel_j(x, n))
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "BESSELK" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(x), Ok(n)) =>
-            if x <= 0.0 || n < 0.0 {
-              Error(formula_error_num)
-            } else {
-              let order = Double::floor(n)
-              let result = if order == 0.0 {
-                bessel_k0(x)
-              } else if order == 1.0 {
-                bessel_k1(x)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(x), Ok(n)) =>
+              if x <= 0.0 || n < 0.0 {
+                Error(formula_error_num)
               } else {
-                bessel_k2(x, n)
+                let order = Double::floor(n)
+                let result = if order == 0.0 {
+                  bessel_k0(x)
+                } else if order == 1.0 {
+                  bessel_k1(x)
+                } else {
+                  bessel_k2(x, n)
+                }
+                number_or_num_error(result)
               }
-              number_or_num_error(result)
-            }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "BESSELY" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(x), Ok(n)) =>
-            if x <= 0.0 || n < 0.0 {
-              Error(formula_error_num)
-            } else {
-              let order = Double::floor(n)
-              let result = if order == 0.0 {
-                bessel_y0(x)
-              } else if order == 1.0 {
-                bessel_y1(x)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(x), Ok(n)) =>
+              if x <= 0.0 || n < 0.0 {
+                Error(formula_error_num)
               } else {
-                bessel_y2(x, n)
+                let order = Double::floor(n)
+                let result = if order == 0.0 {
+                  bessel_y0(x)
+                } else if order == 1.0 {
+                  bessel_y1(x)
+                } else {
+                  bessel_y2(x, n)
+                }
+                number_or_num_error(result)
               }
-              number_or_num_error(result)
-            }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "DELTA" =>
-      if values.length() < 1 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        let number1 = match value_as_number(values[0]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let number2 = if values.length() == 2 {
-          match value_as_number(values[1]) {
+      match values {
+        [v0] | [v0, _] => {
+          let number1 = match value_as_number(v0) {
             Ok(num) => num
             Err(err) => return err
           }
-        } else {
-          0.0
+          let number2 = if values is [_, v1] {
+            match value_as_number(v1) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+          } else {
+            0.0
+          }
+          Number(if number1 == number2 { 1.0 } else { 0.0 })
         }
-        Number(if number1 == number2 { 1.0 } else { 0.0 })
+        _ => Error(formula_error_value)
       }
     "ERF" =>
-      if values.length() < 1 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(lower) =>
-            if values.length() == 2 {
-              match value_as_number(values[1]) {
-                Ok(upper) =>
-                  number_or_num_error(erf_double(upper) - erf_double(lower))
-                Err(err) => err
+      match values {
+        [v0] | [v0, _] =>
+          match value_as_number(v0) {
+            Ok(lower) =>
+              if values is [_, v1] {
+                match value_as_number(v1) {
+                  Ok(upper) =>
+                    number_or_num_error(erf_double(upper) - erf_double(lower))
+                  Err(err) => err
+                }
+              } else {
+                number_or_num_error(erf_double(lower))
               }
-            } else {
-              number_or_num_error(erf_double(lower))
-            }
-          Err(err) => err
-        }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ERFdotPRECISE" | "ERF.PRECISE" | "_XLFN.ERF.PRECISE" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(value) => number_or_num_error(erf_double(value))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(value) => number_or_num_error(erf_double(value))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ERFC" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(value) => number_or_num_error(erfc_double(value))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(value) => number_or_num_error(erfc_double(value))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ERFCdotPRECISE" | "ERFC.PRECISE" | "_XLFN.ERFC.PRECISE" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(value) => number_or_num_error(erfc_double(value))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(value) => number_or_num_error(erfc_double(value))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "WEIBULL" => weibull_value(values)
     "WEIBULLdotDIST" | "WEIBULL.DIST" | "_XLFN.WEIBULL.DIST" =>
@@ -1571,24 +1541,23 @@ fn eval_function(
     "ZdotTEST" | "Z.TEST" | "_XLFN.Z.TEST" => ztest_values(values)
     "ZTEST" => ztest_values(values)
     "GESTEP" =>
-      if values.length() < 1 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        let number = match value_as_number(values[0]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let step = if values.length() == 2 {
-          match value_as_number(values[1]) {
+      match values {
+        [v0] | [v0, _] => {
+          let number = match value_as_number(v0) {
             Ok(num) => num
             Err(err) => return err
           }
-        } else {
-          0.0
+          let step = if values is [_, v1] {
+            match value_as_number(v1) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+          } else {
+            0.0
+          }
+          Number(if number >= step { 1.0 } else { 0.0 })
         }
-        Number(if number >= step { 1.0 } else { 0.0 })
+        _ => Error(formula_error_value)
       }
     "BITAND" => bitwise_values("BITAND", values)
     "BITLSHIFT" => bitwise_values("BITLSHIFT", values)
@@ -1596,528 +1565,521 @@ fn eval_function(
     "BITRSHIFT" => bitwise_values("BITRSHIFT", values)
     "BITXOR" => bitwise_values("BITXOR", values)
     "ACOS" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.acos(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.acos(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ACOSH" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.acosh(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.acosh(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ACOT" | "_XLFN.ACOT" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.PI / 2.0 - @math.atan(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.PI / 2.0 - @math.atan(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ACOTH" | "_XLFN.ACOTH" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.atanh(1.0 / num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.atanh(1.0 / num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ASIN" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.asin(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.asin(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ASINH" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.asinh(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.asinh(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ATAN" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.atan(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.atan(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ATANH" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.atanh(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.atanh(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ATAN2" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(y), Ok(x)) => number_or_num_error(@math.atan2(x, y))
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(y), Ok(x)) => number_or_num_error(@math.atan2(x, y))
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "COS" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.cos(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.cos(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "COSH" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.cosh(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.cosh(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "SIN" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.sin(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.sin(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "SINH" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.sinh(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.sinh(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "TAN" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.tan(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.tan(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "TANH" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.tanh(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.tanh(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "COT" | "_XLFN.COT" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if num == 0.0 {
-              Error(formula_error_div)
-            } else {
-              number_or_num_error(1.0 / @math.tan(num))
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              if num == 0.0 {
+                Error(formula_error_div)
+              } else {
+                number_or_num_error(1.0 / @math.tan(num))
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "COTH" | "_XLFN.COTH" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if num == 0.0 {
-              Error(formula_error_div)
-            } else {
-              let exp_pos = @math.exp(num)
-              let exp_neg = @math.exp(-num)
-              number_or_num_error((exp_pos + exp_neg) / (exp_pos - exp_neg))
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              if num == 0.0 {
+                Error(formula_error_div)
+              } else {
+                let exp_pos = @math.exp(num)
+                let exp_neg = @math.exp(-num)
+                number_or_num_error((exp_pos + exp_neg) / (exp_pos - exp_neg))
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "CSC" | "_XLFN.CSC" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if num == 0.0 {
-              Error(formula_error_div)
-            } else {
-              number_or_num_error(1.0 / @math.sin(num))
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              if num == 0.0 {
+                Error(formula_error_div)
+              } else {
+                number_or_num_error(1.0 / @math.sin(num))
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "CSCH" | "_XLFN.CSCH" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if num == 0.0 {
-              Error(formula_error_div)
-            } else {
-              number_or_num_error(1.0 / @math.sinh(num))
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              if num == 0.0 {
+                Error(formula_error_div)
+              } else {
+                number_or_num_error(1.0 / @math.sinh(num))
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "SEC" | "_XLFN.SEC" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.cos(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.cos(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "SECH" | "_XLFN.SECH" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(1.0 / @math.cosh(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(1.0 / @math.cosh(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "DEGREES" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if num == 0.0 {
-              Error(formula_error_div)
-            } else {
-              Number(180.0 / @math.PI * num)
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              if num == 0.0 {
+                Error(formula_error_div)
+              } else {
+                Number(180.0 / @math.PI * num)
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "RADIANS" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => Number(@math.PI / 180.0 * num)
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => Number(@math.PI / 180.0 * num)
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "RAND" =>
-      if values.length() == 0 {
-        Number(formula_rand().double())
-      } else {
-        Error(formula_error_value)
+      match values {
+        [] => Number(formula_rand().double())
+        _ => Error(formula_error_value)
       }
     "RANDARRAY" | "_XLFN.RANDARRAY" => randarray_values(values)
     "RANDBETWEEN" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(bottom), Ok(top)) =>
-            if top < bottom {
-              Error(formula_error_num)
-            } else {
-              // Keep sampling overflow-safe for very wide bounds by staying in Double space.
-              let bottom_int = trunc_double(bottom)
-              let top_int = trunc_double(top)
-              let range = top_int - bottom_int + 1.0
-              let rand_value = Double::floor(formula_rand().double() * range)
-              Number(bottom_int + rand_value)
-            }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(bottom), Ok(top)) =>
+              if top < bottom {
+                Error(formula_error_num)
+              } else {
+                // Keep sampling overflow-safe for very wide bounds by staying in Double space.
+                let bottom_int = trunc_double(bottom)
+                let top_int = trunc_double(top)
+                let range = top_int - bottom_int + 1.0
+                let rand_value = Double::floor(formula_rand().double() * range)
+                Number(bottom_int + rand_value)
+              }
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "PI" =>
-      if values.length() == 0 {
-        Number(@math.PI)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [] => Number(@math.PI)
+        _ => Error(formula_error_value)
       }
     "SQRTPI" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => Number(@math.pow(num * @math.PI, 0.5))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => Number(@math.pow(num * @math.PI, 0.5))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "LOG" =>
-      if values.length() == 0 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(num) => {
-            let mut base = 10.0
-            if values.length() == 2 {
-              match value_as_number(values[1]) {
-                Ok(value) => base = value
-                Err(err) => return err
+      match values {
+        [v0] | [v0, _] =>
+          match value_as_number(v0) {
+            Ok(num) => {
+              let mut base = 10.0
+              if values is [_, v1] {
+                match value_as_number(v1) {
+                  Ok(value) => base = value
+                  Err(err) => return err
+                }
+              }
+              if num == 0.0 || base == 0.0 {
+                Error(formula_error_num)
+              } else if base == 1.0 {
+                Error(formula_error_div)
+              } else {
+                Number(@math.ln(num) / @math.ln(base))
               }
             }
-            if num == 0.0 || base == 0.0 {
-              Error(formula_error_num)
-            } else if base == 1.0 {
-              Error(formula_error_div)
-            } else {
-              Number(@math.ln(num) / @math.ln(base))
-            }
+            Err(err) => err
           }
-          Err(err) => err
-        }
+        _ => Error(formula_error_value)
       }
     "LOG10" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => Number(@math.log10(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => Number(@math.log10(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMABS" =>
-      if values.length() == 1 {
-        match parse_complex_value(values[0]) {
-          Ok(num) =>
-            number_or_num_error(round_significant_digits(complex_abs(num), 15))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match parse_complex_value(v0) {
+            Ok(num) =>
+              number_or_num_error(
+                round_significant_digits(complex_abs(num), 15),
+              )
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMAGINARY" =>
-      if values.length() == 1 {
-        match parse_complex_value(values[0]) {
-          Ok(num) => number_or_num_error(round_significant_digits(num.imag, 15))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match parse_complex_value(v0) {
+            Ok(num) =>
+              number_or_num_error(round_significant_digits(num.imag, 15))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMARGUMENT" =>
-      if values.length() == 1 {
-        match parse_complex_value(values[0]) {
-          Ok(num) =>
-            number_or_num_error(round_significant_digits(complex_arg(num), 15))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match parse_complex_value(v0) {
+            Ok(num) =>
+              number_or_num_error(
+                round_significant_digits(complex_arg(num), 15),
+              )
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMCONJUGATE" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) =>
-            String(complex_to_string(complex_conj(num), suffix))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) =>
+              String(complex_to_string(complex_conj(num), suffix))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMCOS" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) =>
-            String(complex_to_string(complex_cos(num), suffix))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) =>
+              String(complex_to_string(complex_cos(num), suffix))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMCOSH" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) =>
-            String(complex_to_string(complex_cosh(num), suffix))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) =>
+              String(complex_to_string(complex_cosh(num), suffix))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMCOT" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) =>
-            String(
-              complex_to_string(
-                complex_div(complex_cos(num), complex_sin(num)),
-                suffix,
-              ),
-            )
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) =>
+              String(
+                complex_to_string(
+                  complex_div(complex_cos(num), complex_sin(num)),
+                  suffix,
+                ),
+              )
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMCSC" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) => {
-            let result = complex_div(complex_new(1.0, 0.0), complex_sin(num))
-            if complex_is_invalid(result) {
-              Error(formula_error_num)
-            } else {
-              String(complex_to_string(result, suffix))
-            }
-          }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "IMCSCH" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) => {
-            let result = complex_div(complex_new(1.0, 0.0), complex_sinh(num))
-            if complex_is_invalid(result) {
-              Error(formula_error_num)
-            } else {
-              String(complex_to_string(result, suffix))
-            }
-          }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "IMDIV" =>
-      if values.length() == 2 {
-        match
-          (
-            parse_complex_value_with_suffix(values[0]),
-            parse_complex_value(values[1]),
-          ) {
-          (Ok((left, suffix)), Ok(right)) => {
-            let result = complex_div(left, right)
-            if complex_is_invalid(result) {
-              Error(formula_error_num)
-            } else {
-              String(complex_to_string(result, suffix))
-            }
-          }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "IMEXP" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) =>
-            String(complex_to_string(complex_exp(num), suffix))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "IMLN" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) => {
-            let result = complex_log(num)
-            if complex_is_invalid(result) {
-              Error(formula_error_num)
-            } else {
-              String(complex_to_string(result, suffix))
-            }
-          }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "IMLOG10" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) => {
-            let result = complex_scale(complex_log(num), 1.0 / @math.ln(10.0))
-            if complex_is_invalid(result) {
-              Error(formula_error_num)
-            } else {
-              String(complex_to_string(result, suffix))
-            }
-          }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "IMLOG2" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) => {
-            let result = complex_scale(complex_log(num), 1.0 / @math.ln(2.0))
-            if complex_is_invalid(result) {
-              Error(formula_error_num)
-            } else {
-              String(complex_to_string(result, suffix))
-            }
-          }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "IMPOWER" =>
-      if values.length() == 2 {
-        match
-          (
-            parse_complex_value_with_suffix(values[0]),
-            parse_complex_value(values[1]),
-          ) {
-          (Ok((base, suffix)), Ok(exponent)) =>
-            if base.real == 0.0 &&
-              base.imag == 0.0 &&
-              exponent.real == 0.0 &&
-              exponent.imag == 0.0 {
-              Error(formula_error_num)
-            } else {
-              let result = complex_pow(base, exponent)
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) => {
+              let result = complex_div(complex_new(1.0, 0.0), complex_sin(num))
               if complex_is_invalid(result) {
                 Error(formula_error_num)
               } else {
                 String(complex_to_string(result, suffix))
               }
             }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "IMCSCH" =>
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) => {
+              let result = complex_div(complex_new(1.0, 0.0), complex_sinh(num))
+              if complex_is_invalid(result) {
+                Error(formula_error_num)
+              } else {
+                String(complex_to_string(result, suffix))
+              }
+            }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "IMDIV" =>
+      match values {
+        [v0, v1] =>
+          match (parse_complex_value_with_suffix(v0), parse_complex_value(v1)) {
+            (Ok((left, suffix)), Ok(right)) => {
+              let result = complex_div(left, right)
+              if complex_is_invalid(result) {
+                Error(formula_error_num)
+              } else {
+                String(complex_to_string(result, suffix))
+              }
+            }
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "IMEXP" =>
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) =>
+              String(complex_to_string(complex_exp(num), suffix))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "IMLN" =>
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) => {
+              let result = complex_log(num)
+              if complex_is_invalid(result) {
+                Error(formula_error_num)
+              } else {
+                String(complex_to_string(result, suffix))
+              }
+            }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "IMLOG10" =>
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) => {
+              let result = complex_scale(complex_log(num), 1.0 / @math.ln(10.0))
+              if complex_is_invalid(result) {
+                Error(formula_error_num)
+              } else {
+                String(complex_to_string(result, suffix))
+              }
+            }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "IMLOG2" =>
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) => {
+              let result = complex_scale(complex_log(num), 1.0 / @math.ln(2.0))
+              if complex_is_invalid(result) {
+                Error(formula_error_num)
+              } else {
+                String(complex_to_string(result, suffix))
+              }
+            }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "IMPOWER" =>
+      match values {
+        [v0, v1] =>
+          match (parse_complex_value_with_suffix(v0), parse_complex_value(v1)) {
+            (Ok((base, suffix)), Ok(exponent)) =>
+              if base.real == 0.0 &&
+                base.imag == 0.0 &&
+                exponent.real == 0.0 &&
+                exponent.imag == 0.0 {
+                Error(formula_error_num)
+              } else {
+                let result = complex_pow(base, exponent)
+                if complex_is_invalid(result) {
+                  Error(formula_error_num)
+                } else {
+                  String(complex_to_string(result, suffix))
+                }
+              }
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMPRODUCT" => {
       let mut product = complex_new(1.0, 0.0)
@@ -2145,176 +2107,174 @@ fn eval_function(
       String(complex_to_string(product, "i"))
     }
     "IMREAL" =>
-      if values.length() == 1 {
-        match parse_complex_value(values[0]) {
-          Ok(num) => String(format_number(num.real))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match parse_complex_value(v0) {
+            Ok(num) => String(format_number(num.real))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMSEC" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) => {
-            let result = complex_div(complex_new(1.0, 0.0), complex_cos(num))
-            String(complex_to_string(result, suffix))
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) => {
+              let result = complex_div(complex_new(1.0, 0.0), complex_cos(num))
+              String(complex_to_string(result, suffix))
+            }
+            Err(err) => err
           }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "IMSECH" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) => {
-            let result = complex_div(complex_new(1.0, 0.0), complex_cosh(num))
-            String(complex_to_string(result, suffix))
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) => {
+              let result = complex_div(complex_new(1.0, 0.0), complex_cosh(num))
+              String(complex_to_string(result, suffix))
+            }
+            Err(err) => err
           }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "IMSIN" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) =>
-            String(complex_to_string(complex_sin(num), suffix))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) =>
+              String(complex_to_string(complex_sin(num), suffix))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMSINH" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) =>
-            String(complex_to_string(complex_sinh(num), suffix))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) =>
+              String(complex_to_string(complex_sinh(num), suffix))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMSQRT" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) =>
-            String(complex_to_string(complex_sqrt(num), suffix))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) =>
+              String(complex_to_string(complex_sqrt(num), suffix))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMSUB" =>
-      if values.length() == 2 {
-        match (parse_complex_value(values[0]), parse_complex_value(values[1])) {
-          (Ok(left), Ok(right)) =>
-            String(complex_to_string(complex_sub(left, right), "i"))
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match (parse_complex_value(v0), parse_complex_value(v1)) {
+            (Ok(left), Ok(right)) =>
+              String(complex_to_string(complex_sub(left, right), "i"))
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMSUM" =>
-      if values.length() >= 1 {
-        let mut result = complex_new(0.0, 0.0)
-        for value in flatten_values(values) {
-          match value {
-            Error(err) => return Error(err)
-            _ =>
-              match parse_complex_value(value) {
-                Ok(num) => result = complex_add(result, num)
-                Err(err) => return err
-              }
+      match values {
+        [_, ..] => {
+          let mut result = complex_new(0.0, 0.0)
+          for value in flatten_values(values) {
+            match value {
+              Error(err) => return Error(err)
+              _ =>
+                match parse_complex_value(value) {
+                  Ok(num) => result = complex_add(result, num)
+                  Err(err) => return err
+                }
+            }
           }
+          String(complex_to_string(result, "i"))
         }
-        String(complex_to_string(result, "i"))
-      } else {
-        Error(formula_error_value)
+        [] => Error(formula_error_value)
       }
     "IMTAN" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) =>
-            String(complex_to_string(complex_tan(num), suffix))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) =>
+              String(complex_to_string(complex_tan(num), suffix))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "FLOOR" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(num), Ok(significance)) =>
-            if significance < 0.0 && num >= 0.0 {
-              Error(formula_error_num)
-            } else {
-              let (whole, frac) = modf_double(num / significance)
-              let mut val = whole
-              if frac != 0.0 && num < 0.0 && frac < 0.0 {
-                val = val - 1.0
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(num), Ok(significance)) =>
+              if significance < 0.0 && num >= 0.0 {
+                Error(formula_error_num)
+              } else {
+                let (whole, frac) = modf_double(num / significance)
+                let mut val = whole
+                if frac != 0.0 && num < 0.0 && frac < 0.0 {
+                  val = val - 1.0
+                }
+                Number(val * significance)
               }
-              Number(val * significance)
-            }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "CEILING" =>
-      if values.length() == 0 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(num) => {
-            let mut significance = if num < 0.0 { -1.0 } else { 1.0 }
-            if values.length() > 1 {
-              match value_as_number(values[1]) {
-                Ok(value) => significance = value
-                Err(err) => return err
+      match values {
+        [v0] | [v0, _] =>
+          match value_as_number(v0) {
+            Ok(num) => {
+              let mut significance = if num < 0.0 { -1.0 } else { 1.0 }
+              if values is [_, v1] {
+                match value_as_number(v1) {
+                  Ok(value) => significance = value
+                  Err(err) => return err
+                }
+              }
+              if significance < 0.0 && num > 0.0 {
+                Error(formula_error_value)
+              } else if values is [_] {
+                Number(Double::ceil(num))
+              } else {
+                let (whole, frac) = modf_double(num / significance)
+                let mut val = whole
+                if frac > 0.0 {
+                  val = val + 1.0
+                }
+                Number(val * significance)
               }
             }
-            if significance < 0.0 && num > 0.0 {
-              Error(formula_error_value)
-            } else if values.length() == 1 {
-              Number(Double::ceil(num))
-            } else {
-              let (whole, frac) = modf_double(num / significance)
-              let mut val = whole
-              if frac > 0.0 {
-                val = val + 1.0
-              }
-              Number(val * significance)
-            }
+            Err(err) => err
           }
-          Err(err) => err
-        }
+        _ => Error(formula_error_value)
       }
     "CEILINGdotMATH" | "CEILING.MATH" | "_XLFN.CEILING.MATH" =>
-      if values.length() == 0 {
-        Error(formula_error_value)
-      } else if values.length() > 3 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if values.length() == 1 {
-              Number(Double::ceil(num))
-            } else {
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => Number(Double::ceil(num))
+            Err(err) => err
+          }
+        [v0, v1] | [v0, v1, _] =>
+          match value_as_number(v0) {
+            Ok(num) => {
               let mut significance = if num < 0.0 { -1.0 } else { 1.0 }
               let mut mode = 1.0
-              match value_as_number(values[1]) {
+              match value_as_number(v1) {
                 Ok(value) => significance = value
                 Err(err) => return err
               }
-              if values.length() > 2 {
-                match value_as_number(values[2]) {
+              if values is [_, _, v2] {
+                match value_as_number(v2) {
                   Ok(value) => mode = value
                   Err(err) => return err
                 }
@@ -2330,21 +2290,21 @@ fn eval_function(
               }
               Number(val * significance)
             }
-          Err(err) => err
-        }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "CEILINGdotPRECISE" | "CEILING.PRECISE" | "_XLFN.CEILING.PRECISE" =>
-      if values.length() == 0 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if values.length() == 1 {
-              Number(Double::ceil(num))
-            } else {
-              match value_as_number(values[1]) {
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => Number(Double::ceil(num))
+            Err(err) => err
+          }
+        [v0, v1] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              match value_as_number(v1) {
                 Ok(significance) => {
                   let abs_significance = abs_double(significance)
                   if abs_significance == 0.0 {
@@ -2360,29 +2320,28 @@ fn eval_function(
                 }
                 Err(err) => err
               }
-            }
-          Err(err) => err
-        }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "FLOORdotMATH" | "FLOOR.MATH" | "_XLFN.FLOOR.MATH" =>
-      if values.length() == 0 {
-        Error(formula_error_value)
-      } else if values.length() > 3 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if values.length() == 1 {
-              Number(Double::floor(num))
-            } else {
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => Number(Double::floor(num))
+            Err(err) => err
+          }
+        [v0, v1] | [v0, v1, _] =>
+          match value_as_number(v0) {
+            Ok(num) => {
               let mut significance = if num < 0.0 { -1.0 } else { 1.0 }
               let mut mode = 1.0
-              match value_as_number(values[1]) {
+              match value_as_number(v1) {
                 Ok(value) => significance = value
                 Err(err) => return err
               }
-              if values.length() > 2 {
-                match value_as_number(values[2]) {
+              if values is [_, _, v2] {
+                match value_as_number(v2) {
                   Ok(value) => mode = value
                   Err(err) => return err
                 }
@@ -2394,21 +2353,21 @@ fn eval_function(
               }
               Number(val * significance)
             }
-          Err(err) => err
-        }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "FLOORdotPRECISE" | "FLOOR.PRECISE" | "_XLFN.FLOOR.PRECISE" =>
-      if values.length() == 0 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if values.length() == 1 {
-              Number(Double::floor(num))
-            } else {
-              match value_as_number(values[1]) {
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => Number(Double::floor(num))
+            Err(err) => err
+          }
+        [v0, v1] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              match value_as_number(v1) {
                 Ok(significance) => {
                   let abs_significance = abs_double(significance)
                   if abs_significance == 0.0 {
@@ -2424,22 +2383,21 @@ fn eval_function(
                 }
                 Err(err) => err
               }
-            }
-          Err(err) => err
-        }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ISOdotCEILING" | "ISO.CEILING" | "_XLFN.ISO.CEILING" =>
-      if values.length() == 0 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if values.length() == 1 {
-              Number(Double::ceil(num))
-            } else {
-              match value_as_number(values[1]) {
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => Number(Double::ceil(num))
+            Err(err) => err
+          }
+        [v0, v1] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              match value_as_number(v1) {
                 Ok(significance) => {
                   let abs_significance = abs_double(significance)
                   if abs_significance == 0.0 {
@@ -2455,117 +2413,94 @@ fn eval_function(
                 }
                 Err(err) => err
               }
-            }
-          Err(err) => err
-        }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "TRUNC" =>
-      if values.length() == 1 || values.length() == 2 {
-        match value_as_number(values[0]) {
-          Ok(num) => {
-            let digits = if values.length() == 2 {
-              match value_as_number(values[1]) {
-                Ok(value) => Double::to_int(value)
-                Err(err) => return err
+      match values {
+        [v0] | [v0, _] =>
+          match value_as_number(v0) {
+            Ok(num) => {
+              let digits = if values is [_, v1] {
+                match value_as_number(v1) {
+                  Ok(value) => Double::to_int(value)
+                  Err(err) => return err
+                }
+              } else {
+                0
               }
-            } else {
-              0
+              Number(round_down_with_digits(num, digits))
             }
-            Number(round_down_with_digits(num, digits))
+            Err(err) => err
           }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "ROUND" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(num), Ok(digits)) =>
-            Number(round_with_digits(num, Double::to_int(digits)))
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(num), Ok(digits)) =>
+              Number(round_with_digits(num, Double::to_int(digits)))
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ROUNDUP" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(num), Ok(digits)) =>
-            Number(round_up_with_digits(num, Double::to_int(digits)))
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(num), Ok(digits)) =>
+              Number(round_up_with_digits(num, Double::to_int(digits)))
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ROUNDDOWN" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(num), Ok(digits)) =>
-            Number(round_down_with_digits(num, Double::to_int(digits)))
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(num), Ok(digits)) =>
+              Number(round_down_with_digits(num, Double::to_int(digits)))
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "SQRT" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if num < 0.0 {
-              Error(formula_error_num)
-            } else {
-              Number(@math.pow(num, 0.5))
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              if num < 0.0 {
+                Error(formula_error_num)
+              } else {
+                Number(@math.pow(num, 0.5))
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "POWER" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(lhs), Ok(rhs)) => Number(@math.pow(lhs, rhs))
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(lhs), Ok(rhs)) => Number(@math.pow(lhs, rhs))
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "EVEN" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => {
-            let sign = num < 0.0
-            let (whole, frac) = modf_double(num / 2.0)
-            let mut val = whole * 2.0
-            if frac != 0.0 {
-              if sign {
-                val = val - 2.0
-              } else {
-                val = val + 2.0
-              }
-            }
-            Number(val)
-          }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "ODD" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if num == 0.0 {
-              Number(1.0)
-            } else {
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => {
               let sign = num < 0.0
-              let (whole, frac) = modf_double((num - 1.0) / 2.0)
-              let mut val = whole * 2.0 + 1.0
+              let (whole, frac) = modf_double(num / 2.0)
+              let mut val = whole * 2.0
               if frac != 0.0 {
                 if sign {
                   val = val - 2.0
@@ -2575,65 +2510,88 @@ fn eval_function(
               }
               Number(val)
             }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "ODD" =>
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              if num == 0.0 {
+                Number(1.0)
+              } else {
+                let sign = num < 0.0
+                let (whole, frac) = modf_double((num - 1.0) / 2.0)
+                let mut val = whole * 2.0 + 1.0
+                if frac != 0.0 {
+                  if sign {
+                    val = val - 2.0
+                  } else {
+                    val = val + 2.0
+                  }
+                }
+                Number(val)
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "MROUND" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(num), Ok(multiple)) =>
-            if multiple == 0.0 {
-              Error(formula_error_num)
-            } else if (multiple < 0.0 && num > 0.0) ||
-              (multiple > 0.0 && num < 0.0) {
-              Error(formula_error_num)
-            } else {
-              let (whole, frac) = modf_double(num / multiple)
-              let mut rounded = whole
-              if trunc_double(frac + 0.5) > 0.0 {
-                rounded = rounded + 1.0
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(num), Ok(multiple)) =>
+              if multiple == 0.0 {
+                Error(formula_error_num)
+              } else if (multiple < 0.0 && num > 0.0) ||
+                (multiple > 0.0 && num < 0.0) {
+                Error(formula_error_num)
+              } else {
+                let (whole, frac) = modf_double(num / multiple)
+                let mut rounded = whole
+                if trunc_double(frac + 0.5) > 0.0 {
+                  rounded = rounded + 1.0
+                }
+                Number(rounded * multiple)
               }
-              Number(rounded * multiple)
-            }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "MOD" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(num), Ok(divisor)) =>
-            if divisor == 0.0 {
-              Error(formula_error_div)
-            } else {
-              let quotient = num / divisor
-              let truncated = Double::floor(quotient)
-              Number(num - divisor * truncated)
-            }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(num), Ok(divisor)) =>
+              if divisor == 0.0 {
+                Error(formula_error_div)
+              } else {
+                let quotient = num / divisor
+                let truncated = Double::floor(quotient)
+                Number(num - divisor * truncated)
+              }
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "QUOTIENT" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(num), Ok(divisor)) =>
-            if divisor == 0.0 {
-              Error(formula_error_div)
-            } else {
-              Number(trunc_double(num / divisor))
-            }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(num), Ok(divisor)) =>
+              if divisor == 0.0 {
+                Error(formula_error_div)
+              } else {
+                Number(trunc_double(num / divisor))
+              }
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "AND" =>
       if values.length() == 0 || values.length() > 30 {
@@ -2682,23 +2640,23 @@ fn eval_function(
         Bool(false)
       }
     "NOT" =>
-      if values.length() == 1 {
-        match normalize_scalar(values[0]) {
-          Error(err) => Error(err)
-          Bool(flag) => Bool(!flag)
-          Number(num) => Bool(!(num != 0.0))
-          String(text) =>
-            if text.to_upper() == "TRUE" {
-              Bool(false)
-            } else if text.to_upper() == "FALSE" {
-              Bool(true)
-            } else {
-              Error(formula_error_value)
-            }
-          _ => Error(formula_error_value)
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match normalize_scalar(v0) {
+            Error(err) => Error(err)
+            Bool(flag) => Bool(!flag)
+            Number(num) => Bool(!(num != 0.0))
+            String(text) =>
+              if text.to_upper() == "TRUE" {
+                Bool(false)
+              } else if text.to_upper() == "FALSE" {
+                Bool(true)
+              } else {
+                Error(formula_error_value)
+              }
+            _ => Error(formula_error_value)
+          }
+        _ => Error(formula_error_value)
       }
     "XOR" =>
       if values.length() == 0 {
