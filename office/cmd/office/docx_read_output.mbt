@@ -807,6 +807,38 @@ fn outline_style_record(entry : DocxProjectionEntry) -> Json? {
 }
 
 ///|
+/// Summarises one comment for `outline`.
+///
+/// The thread fields come from the projection metadata that `get` already
+/// exposes, so the two surfaces cannot disagree. `done` and `parent_id` are
+/// copied only when present: an unresolved top-level comment has neither, and
+/// inventing defaults here would make `outline` claim more than the document
+/// says.
+///
+/// `anchors` is deliberately reduced to the first anchor's `start` path. A
+/// comment can carry several anchors and each is a full record; `outline` is a
+/// bounded summary, and the complete set stays one `get` away.
+fn outline_comment_record(entry : DocxProjectionEntry) -> Json {
+  let fields : Map[String, Json] = { "path": Json::string(entry.path) }
+  guard entry.metadata is Object(metadata) else { return Json::object(fields) }
+  for name in ["id", "author", "done", "parent_id"] {
+    match metadata.get(name) {
+      Some(value) => fields[name] = value
+      None => ()
+    }
+  }
+  match metadata.get("anchors") {
+    Some(Array([Object(anchor), ..])) =>
+      match anchor.get("start") {
+        Some(start) => fields["anchor"] = start
+        None => ()
+      }
+    _ => ()
+  }
+  Json::object(fields)
+}
+
+///|
 fn outline_style_value_is_new(
   seen : Map[String, Set[String]],
   kind : String,
@@ -927,6 +959,7 @@ async fn docx_outline_payload(
   }
   let stories : Array[Json] = []
   let headings : Array[Json] = []
+  let comments : Array[Json] = []
   let images : Array[Json] = []
   let styles : Array[Json] = []
   let sections : Array[Json] = []
@@ -944,6 +977,7 @@ async fn docx_outline_payload(
     "counts": Json::object(count_fields),
     "stories": Json::array([]),
     "headings": Json::array([]),
+    "comments": Json::array([]),
     "styles_in_use": Json::array([]),
     "images": Json::array([]),
     "sections": Json::array([]),
@@ -967,6 +1001,11 @@ async fn docx_outline_payload(
       })
       bounded.budget.reserve_array_item(record, !stories.is_empty())
       stories.push(record)
+    }
+    if entry.kind == "comment" {
+      let record = outline_comment_record(entry)
+      bounded.budget.reserve_array_item(record, !comments.is_empty())
+      comments.push(record)
     }
     match entry.element {
       Some(element) => {
@@ -1039,6 +1078,7 @@ async fn docx_outline_payload(
       "counts": Json::object(count_fields),
       "stories": Json::array(stories),
       "headings": Json::array(headings),
+      "comments": Json::array(comments),
       "styles_in_use": Json::array(styles),
       "images": Json::array(images),
       "sections": Json::array(sections),

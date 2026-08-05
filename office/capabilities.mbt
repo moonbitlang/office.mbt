@@ -488,6 +488,9 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "headings", "array", false, "DOCX only: bounded heading previews",
         ),
         capability_field(
+          "comments", "array", false, "DOCX only: comment threads with author, resolved state, parent, and anchor paragraph; done and parent_id appear only when the document records them",
+        ),
+        capability_field(
           "styles_in_use", "array", false, "DOCX only: deduplicated referenced styles",
         ),
         capability_field("images", "array", false, "DOCX only: image metadata"),
@@ -1944,8 +1947,8 @@ fn capability_field_applies_to_format(
     match command_name {
       "outline" =>
         [
-          "scanned_elements", "counts", "stories", "headings", "styles_in_use", "images",
-          "sections", "diagnostics",
+          "scanned_elements", "counts", "stories", "headings", "comments", "styles_in_use",
+          "images", "sections", "diagnostics",
         ]
       "get" =>
         ["role", "source", "id", "children", "properties", "metadata", "text"]
