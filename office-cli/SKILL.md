@@ -34,7 +34,7 @@ still read or write the paths supplied to it and consume CPU within those
 limits. For trusted files, `moonx --target native bobzhang/office ...` is a
 faster drop-in.
 
-Pin a version when reproducibility matters: `moonx bobzhang/office@0.2.1 ...`.
+Pin a version when reproducibility matters: `moonx bobzhang/office@0.3.0 ...`.
 `@latest` refreshes the registry index before resolving.
 
 ## The CLI describes itself — prefer that over prose
@@ -196,38 +196,51 @@ fields sit directly on the op.
 `{path, kind, role, stability, preview, preview_truncated, properties}`.
 Reading `.text` yields nothing and makes the command look broken.
 
-**4. Comments are not in `outline`.** `outline` reports `counts.comments`
-but no comment list. See below.
+**4. `outline` summarises comment threads but does not carry their text.**
+Bodies come from `text --under '/docx/comments'`. See below.
 
 ## Reviewing a DOCX
 
-Writing comments is `annotate`; reading them back is two different commands,
-and neither is `outline`.
+`outline` returns the thread structure in one call — who commented, whether
+it is resolved, what replies what, and which paragraph each comment covers:
+
+```
+office outline FILE --json     # .data.comments[]
+```
+
+```json
+{"path": "/docx/comments/comment[id=\"0\"]", "id": "0",
+ "author": "Reviewer", "done": true, "anchor": "/docx/body/p[5]"}
+{"path": "/docx/comments/comment[id=\"1\"]", "id": "1",
+ "author": "Ravi", "done": false, "parent_id": "0"}
+```
+
+`done` and `parent_id` appear **only when the document records them** — an
+unresolved top-level comment has neither key. Treat a missing `done` as
+unresolved and a missing `parent_id` as top-level rather than indexing them.
+
+The comment *text* is not in the outline. For bodies, and for the full anchor
+records when one summary path is not enough:
 
 ```
 # the comment bodies, path-tagged
 office text FILE --under '/docx/comments' --json
 
-# one comment's thread metadata
+# one comment in full: every anchor, initials, date, body paragraph count
 office get FILE '/docx/comments/comment[id="0"]' --json
 ```
 
-`get` on a comment returns the fields a review loop needs under `metadata` —
-`author`, `anchors` resolving back to the body paragraphs the comment covers,
-plus `done` and `parent_id`:
+`get` on a comment returns the full record under `metadata` — `author`,
+`initials`, `date`, `body_paragraphs`, every `anchor`, plus `done` and
+`parent_id`:
 
 ```json
 {"id": "0", "ordinal": 1, "author": "Reviewer", "done": true,
  "anchors": [{"start": "/docx/body/p[5]", "end": "/docx/body/p[5]"}]}
 ```
 
-**`done` and `parent_id` are present only when they apply.** An unresolved
-top-level comment has neither key, so read them defensively — treat a missing
-`done` as not resolved and a missing `parent_id` as top-level, rather than
-indexing them directly.
-
-To enumerate a whole thread, list bodies with `text --under '/docx/comments'`,
-then `get` each `comment[id="N"]` for its metadata.
+Reach for `get` when the outline summary is not enough; for enumerating a
+thread, the outline alone is usually sufficient.
 
 **Anchors are whole body paragraphs.** `anchor.at` (and `to`) must be
 `/docx/body/p[K]`. You cannot anchor a comment to a phrase, a run, a table
