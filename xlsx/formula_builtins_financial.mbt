@@ -975,18 +975,16 @@ fn convert_temperature(
 
 ///|
 fn convert_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let number = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let number = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let from_unit = match value_as_string(values[1]) {
+  let from_unit = match value_as_string(v1) {
     Ok(value) => value
     Err(err) => return err
   }
-  let to_unit = match value_as_string(values[2]) {
+  let to_unit = match value_as_string(v2) {
     Ok(value) => value
     Err(err) => return err
   }
@@ -1159,14 +1157,12 @@ fn fv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn fvschedule_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  let principal = match value_as_number(values[0]) {
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  let principal = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let schedule = flatten_values([values[1]])
+  let schedule = flatten_values([v1])
   let mut result = principal
   for value in schedule {
     match normalize_scalar(value) {
@@ -1418,15 +1414,13 @@ fn irr_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn mirr_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let list_values = flatten_values([values[0]])
-  let finance_rate = match value_as_number(values[1]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let list_values = flatten_values([v0])
+  let finance_rate = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let reinvest_rate = match value_as_number(values[2]) {
+  let reinvest_rate = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -1595,18 +1589,16 @@ fn xirr_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn xnpv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let rate = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let rate = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
   if rate <= 0.0 {
     return Error(formula_error_value)
   }
-  let raw_values = flatten_values([values[1]])
-  let raw_dates = flatten_values([values[2]])
+  let raw_values = flatten_values([v1])
+  let raw_dates = flatten_values([v2])
   let (value_args, date_args) = match prepare_x_args(raw_values, raw_dates) {
     Ok(result) => result
     Err(err) => return err
@@ -1665,14 +1657,12 @@ fn dollar_fraction_values(
   name : String,
   values : ArrayView[FormulaValue],
 ) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  let dollar = match value_as_number(values[0]) {
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  let dollar = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let frac = match value_as_number(values[1]) {
+  let frac = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -1698,14 +1688,12 @@ fn dollar_fraction_values(
 
 ///|
 fn effect_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  let rate = match value_as_number(values[0]) {
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  let rate = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let npery = match value_as_number(values[1]) {
+  let npery = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -1718,14 +1706,12 @@ fn effect_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn nominal_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  let rate = match value_as_number(values[0]) {
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  let rate = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let npery = match value_as_number(values[1]) {
+  let npery = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -1927,30 +1913,30 @@ fn cumip_values(
   name : String,
   values : ArrayView[FormulaValue],
 ) -> FormulaValue {
-  if values.length() != 6 {
+  guard values is [v0, v1, v2, v3, v4, v5] else {
     return Error(formula_error_value)
   }
-  let rate = match value_as_number(values[0]) {
+  let rate = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let nper = match value_as_number(values[1]) {
+  let nper = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let pv = match value_as_number(values[2]) {
+  let pv = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
-  let start = match value_as_number(values[3]) {
+  let start = match value_as_number(v3) {
     Ok(num) => num
     Err(err) => return err
   }
-  let end = match value_as_number(values[4]) {
+  let end = match value_as_number(v4) {
     Ok(num) => num
     Err(err) => return err
   }
-  let typ = match value_as_number(values[5]) {
+  let typ = match value_as_number(v5) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -1991,22 +1977,20 @@ fn cumip_values(
 
 ///|
 fn ispmt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 4 {
-    return Error(formula_error_value)
-  }
-  let rate = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2, v3] else { return Error(formula_error_value) }
+  let rate = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let per = match value_as_number(values[1]) {
+  let per = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let nper = match value_as_number(values[2]) {
+  let nper = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
-  let pv = match value_as_number(values[3]) {
+  let pv = match value_as_number(v3) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -2027,18 +2011,16 @@ fn ispmt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn rri_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let nper = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let nper = match value_as_number(v0) {
     Ok(num) => num
     Err(_) => return Error(formula_error_num)
   }
-  let pv = match value_as_number(values[1]) {
+  let pv = match value_as_number(v1) {
     Ok(num) => num
     Err(_) => return Error(formula_error_num)
   }
-  let fv = match value_as_number(values[2]) {
+  let fv = match value_as_number(v2) {
     Ok(num) => num
     Err(_) => return Error(formula_error_num)
   }
@@ -2051,18 +2033,16 @@ fn rri_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn sln_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let cost = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let cost = match value_as_number(v0) {
     Ok(num) => num
     Err(_) => return Error(formula_error_num)
   }
-  let salvage = match value_as_number(values[1]) {
+  let salvage = match value_as_number(v1) {
     Ok(num) => num
     Err(_) => return Error(formula_error_num)
   }
-  let life = match value_as_number(values[2]) {
+  let life = match value_as_number(v2) {
     Ok(num) => num
     Err(_) => return Error(formula_error_num)
   }
@@ -2075,22 +2055,20 @@ fn sln_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn syd_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 4 {
-    return Error(formula_error_value)
-  }
-  let cost = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2, v3] else { return Error(formula_error_value) }
+  let cost = match value_as_number(v0) {
     Ok(num) => num
     Err(_) => return Error(formula_error_num)
   }
-  let salvage = match value_as_number(values[1]) {
+  let salvage = match value_as_number(v1) {
     Ok(num) => num
     Err(_) => return Error(formula_error_num)
   }
-  let life = match value_as_number(values[2]) {
+  let life = match value_as_number(v2) {
     Ok(num) => num
     Err(_) => return Error(formula_error_num)
   }
-  let per = match value_as_number(values[3]) {
+  let per = match value_as_number(v3) {
     Ok(num) => num
     Err(_) => return Error(formula_error_num)
   }
@@ -2419,18 +2397,16 @@ fn vdb_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn pduration_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let rate = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let rate = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let pv = match value_as_number(values[1]) {
+  let pv = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let fv = match value_as_number(values[2]) {
+  let fv = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -3287,14 +3263,12 @@ fn tbilleq_values(
   values : ArrayView[FormulaValue],
   use_1904_dates? : Bool = false,
 ) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let settlement = match value_as_date_serial(values[0], use_1904_dates~) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let settlement = match value_as_date_serial(v0, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
-  let maturity = match value_as_date_serial(values[1], use_1904_dates~) {
+  let maturity = match value_as_date_serial(v1, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -3302,7 +3276,7 @@ fn tbilleq_values(
   if dsm > 365.0 || maturity <= settlement {
     return Error(formula_error_num)
   }
-  let discount = match value_as_number(values[2]) {
+  let discount = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -3318,14 +3292,12 @@ fn tbillprice_values(
   values : ArrayView[FormulaValue],
   use_1904_dates? : Bool = false,
 ) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let settlement = match value_as_date_serial(values[0], use_1904_dates~) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let settlement = match value_as_date_serial(v0, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
-  let maturity = match value_as_date_serial(values[1], use_1904_dates~) {
+  let maturity = match value_as_date_serial(v1, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -3333,7 +3305,7 @@ fn tbillprice_values(
   if dsm > 365.0 || maturity <= settlement {
     return Error(formula_error_num)
   }
-  let discount = match value_as_number(values[2]) {
+  let discount = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -3349,14 +3321,12 @@ fn tbillyield_values(
   values : ArrayView[FormulaValue],
   use_1904_dates? : Bool = false,
 ) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let settlement = match value_as_date_serial(values[0], use_1904_dates~) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let settlement = match value_as_date_serial(v0, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
-  let maturity = match value_as_date_serial(values[1], use_1904_dates~) {
+  let maturity = match value_as_date_serial(v1, use_1904_dates~) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -3364,7 +3334,7 @@ fn tbillyield_values(
   if dsm > 365.0 || maturity <= settlement {
     return Error(formula_error_num)
   }
-  let pr = match value_as_number(values[2]) {
+  let pr = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -3501,13 +3471,8 @@ fn aggr_between(
       value = f(value, Double::from_int(idx))
     }
   } else {
-    let mut idx = start_int
-    while idx >= end_int {
+    for idx in start_int>=..end_int {
       value = f(value, Double::from_int(idx))
-      if idx == end_int {
-        break
-      }
-      idx = idx - 1
     }
   }
   value

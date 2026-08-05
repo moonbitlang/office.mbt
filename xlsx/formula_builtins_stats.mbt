@@ -370,18 +370,16 @@ fn skew_values(name : String, values : ArrayView[FormulaValue]) -> FormulaValue 
 
 ///|
 fn standardize_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let mean = match value_as_number(values[1]) {
+  let mean = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let stddev = match value_as_number(values[2]) {
+  let stddev = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -882,11 +880,9 @@ fn pearson_product_values(
 
 ///|
 fn steyx_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  let array_x = list_from_value(values[1])
-  let array_y = list_from_value(values[0])
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  let array_x = list_from_value(v1)
+  let array_y = list_from_value(v0)
   if array_x.length() != array_y.length() {
     return Error(formula_error_na)
   }
