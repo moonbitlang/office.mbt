@@ -7,74 +7,73 @@ fn eval_function(
   ctx : CalcContext,
 ) -> FormulaValue raise XlsxError {
   if name == "ROW" {
-    return if args.length() == 0 {
-      match current_cell_rc(ctx) {
-        Some((row, _col)) => Number(Double::from_int(row))
-        None => Error(formula_error_value)
-      }
-    } else if args.length() == 1 {
-      match ref_bounds_opt(args[0]) {
-        Some((row1, _col1, row2, _col2)) => {
-          let row = if row1 < row2 { row1 } else { row2 }
-          Number(Double::from_int(row))
+    return match args {
+      [] =>
+        match current_cell_rc(ctx) {
+          Some((row, _col)) => Number(Double::from_int(row))
+          None => Error(formula_error_value)
         }
-        None => Error(formula_error_value)
-      }
-    } else {
-      Error(formula_error_value)
+      [arg] =>
+        match ref_bounds_opt(arg) {
+          Some((row1, _col1, row2, _col2)) => {
+            let row = if row1 < row2 { row1 } else { row2 }
+            Number(Double::from_int(row))
+          }
+          None => Error(formula_error_value)
+        }
+      _ => Error(formula_error_value)
     }
   }
   if name == "COLUMN" {
-    return if args.length() == 0 {
-      match current_cell_rc(ctx) {
-        Some((_row, col)) => Number(Double::from_int(col))
-        None => Error(formula_error_value)
-      }
-    } else if args.length() == 1 {
-      match ref_bounds_opt(args[0]) {
-        Some((_row1, col1, _row2, col2)) => {
-          let col = if col1 < col2 { col1 } else { col2 }
-          Number(Double::from_int(col))
+    return match args {
+      [] =>
+        match current_cell_rc(ctx) {
+          Some((_row, col)) => Number(Double::from_int(col))
+          None => Error(formula_error_value)
         }
-        None => Error(formula_error_value)
-      }
-    } else {
-      Error(formula_error_value)
+      [arg] =>
+        match ref_bounds_opt(arg) {
+          Some((_row1, col1, _row2, col2)) => {
+            let col = if col1 < col2 { col1 } else { col2 }
+            Number(Double::from_int(col))
+          }
+          None => Error(formula_error_value)
+        }
+      _ => Error(formula_error_value)
     }
   }
   if name == "ROWS" {
-    return if args.length() == 1 {
-      match ref_bounds_opt(args[0]) {
-        Some((row1, _col1, row2, _col2)) => {
-          let min_row = if row1 < row2 { row1 } else { row2 }
-          let max_row = if row1 > row2 { row1 } else { row2 }
-          Number(Double::from_int(max_row - min_row + 1))
+    return match args {
+      [arg] =>
+        match ref_bounds_opt(arg) {
+          Some((row1, _col1, row2, _col2)) => {
+            let min_row = if row1 < row2 { row1 } else { row2 }
+            let max_row = if row1 > row2 { row1 } else { row2 }
+            Number(Double::from_int(max_row - min_row + 1))
+          }
+          None => Error(formula_error_value)
         }
-        None => Error(formula_error_value)
-      }
-    } else {
-      Error(formula_error_value)
+      _ => Error(formula_error_value)
     }
   }
   if name == "COLUMNS" {
-    return if args.length() == 1 {
-      match ref_bounds_opt(args[0]) {
-        Some((_row1, col1, _row2, col2)) => {
-          let min_col = if col1 < col2 { col1 } else { col2 }
-          let max_col = if col1 > col2 { col1 } else { col2 }
-          Number(Double::from_int(max_col - min_col + 1))
+    return match args {
+      [arg] =>
+        match ref_bounds_opt(arg) {
+          Some((_row1, col1, _row2, col2)) => {
+            let min_col = if col1 < col2 { col1 } else { col2 }
+            let max_col = if col1 > col2 { col1 } else { col2 }
+            Number(Double::from_int(max_col - min_col + 1))
+          }
+          None => Error(formula_error_value)
         }
-        None => Error(formula_error_value)
-      }
-    } else {
-      Error(formula_error_value)
+      _ => Error(formula_error_value)
     }
   }
   if name == "FORMULATEXT" {
-    return if args.length() == 1 {
-      formula_text_value(workbook, sheet_name, args[0])
-    } else {
-      Error(formula_error_value)
+    return match args {
+      [arg] => formula_text_value(workbook, sheet_name, arg)
+      _ => Error(formula_error_value)
     }
   }
   let values : Array[FormulaValue] = []
@@ -91,407 +90,385 @@ fn eval_function(
     "AVERAGE" => average_values(values)
     "AVERAGEA" => averagea_values(values)
     "STDEV" | "STDEV.S" =>
-      if values.length() >= 1 {
-        stdev_values(false, values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => stdev_values(false, values)
+        [] => Error(formula_error_value)
       }
     "STDEVA" =>
-      if values.length() >= 1 {
-        stdev_values(true, values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => stdev_values(true, values)
+        [] => Error(formula_error_value)
       }
     "STDEVP" | "STDEV.P" =>
-      if values.length() >= 1 {
-        match variance_values(values, false, false) {
-          Number(variance) => {
-            let result = @math.pow(variance, 0.5)
-            Number(round_significant_digits(result, 15))
+      match values {
+        [_, ..] =>
+          match variance_values(values, false, false) {
+            Number(variance) => {
+              let result = @math.pow(variance, 0.5)
+              Number(round_significant_digits(result, 15))
+            }
+            value => value
           }
-          value => value
-        }
-      } else {
-        Error(formula_error_value)
+        [] => Error(formula_error_value)
       }
     "STDEVPA" =>
-      if values.length() >= 1 {
-        match variance_values(values, false, true) {
-          Number(variance) => {
-            let result = @math.pow(variance, 0.5)
-            Number(round_significant_digits(result, 15))
+      match values {
+        [_, ..] =>
+          match variance_values(values, false, true) {
+            Number(variance) => {
+              let result = @math.pow(variance, 0.5)
+              Number(round_significant_digits(result, 15))
+            }
+            value => value
           }
-          value => value
-        }
-      } else {
-        Error(formula_error_value)
+        [] => Error(formula_error_value)
       }
     "VAR" | "VAR.S" =>
-      if values.length() >= 1 {
-        variance_values(values, true, false)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => variance_values(values, true, false)
+        [] => Error(formula_error_value)
       }
     "VARA" =>
-      if values.length() >= 1 {
-        variance_values(values, true, true)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => variance_values(values, true, true)
+        [] => Error(formula_error_value)
       }
     "VARP" | "VAR.P" =>
-      if values.length() >= 1 {
-        variance_values(values, false, false)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => variance_values(values, false, false)
+        [] => Error(formula_error_value)
       }
     "VARPA" =>
-      if values.length() >= 1 {
-        variance_values(values, false, true)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => variance_values(values, false, true)
+        [] => Error(formula_error_value)
       }
     "TRIMMEAN" => trimmean_values(values)
     "AVEDEV" =>
-      if values.length() >= 1 {
-        avedev_values(values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => avedev_values(values)
+        [] => Error(formula_error_value)
       }
     "DEVSQ" =>
-      if values.length() >= 1 {
-        devsq_values(values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => devsq_values(values)
+        [] => Error(formula_error_value)
       }
     "GEOMEAN" =>
-      if values.length() >= 1 {
-        geomean_values(values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => geomean_values(values)
+        [] => Error(formula_error_value)
       }
     "HARMEAN" =>
-      if values.length() >= 1 {
-        harmean_values(values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => harmean_values(values)
+        [] => Error(formula_error_value)
       }
     "KURT" =>
-      if values.length() >= 1 {
-        kurt_values(values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => kurt_values(values)
+        [] => Error(formula_error_value)
       }
     "SKEW" =>
-      if values.length() >= 1 {
-        skew_values("SKEW", values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => skew_values("SKEW", values)
+        [] => Error(formula_error_value)
       }
     "SKEW.P" =>
-      if values.length() >= 1 {
-        skew_values("SKEW.P", values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => skew_values("SKEW.P", values)
+        [] => Error(formula_error_value)
       }
     "STANDARDIZE" =>
-      if values.length() == 3 {
-        standardize_values(values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, _, _] => standardize_values(values)
+        _ => Error(formula_error_value)
       }
     "LARGE" =>
-      if values.length() == 2 {
-        kth_values("LARGE", values[0], values[1])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] => kth_values("LARGE", v0, v1)
+        _ => Error(formula_error_value)
       }
     "SMALL" =>
-      if values.length() == 2 {
-        kth_values("SMALL", values[0], values[1])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] => kth_values("SMALL", v0, v1)
+        _ => Error(formula_error_value)
       }
     "MODE" =>
-      if values.length() >= 1 {
-        mode_values(values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => mode_values(values)
+        [] => Error(formula_error_value)
       }
     "MODE.SNGL" =>
-      if values.length() >= 1 {
-        mode_values(values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => mode_values(values)
+        [] => Error(formula_error_value)
       }
     "MODE.MULT" =>
-      if values.length() >= 1 {
-        mode_mult_values(values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, ..] => mode_mult_values(values)
+        [] => Error(formula_error_value)
       }
     "PERCENTILE" =>
-      if values.length() == 2 {
-        match value_as_number(values[1]) {
-          Ok(k) =>
-            if k < 0.0 || k > 1.0 {
-              Error(formula_error_na)
-            } else {
-              percentile_values(values[0], k, false, false)
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match value_as_number(v1) {
+            Ok(k) =>
+              if k < 0.0 || k > 1.0 {
+                Error(formula_error_na)
+              } else {
+                percentile_values(v0, k, false, false)
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "PERCENTILE.INC" =>
-      if values.length() == 2 {
-        match value_as_number(values[1]) {
-          Ok(k) =>
-            if k < 0.0 || k > 1.0 {
-              Error(formula_error_na)
-            } else {
-              percentile_values(values[0], k, false, false)
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match value_as_number(v1) {
+            Ok(k) =>
+              if k < 0.0 || k > 1.0 {
+                Error(formula_error_na)
+              } else {
+                percentile_values(v0, k, false, false)
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "PERCENTILE.EXC" =>
-      if values.length() == 2 {
-        match value_as_number(values[1]) {
-          Ok(k) =>
-            if k <= 0.0 || k >= 1.0 {
-              Error(formula_error_num)
-            } else {
-              percentile_values(values[0], k, true, true)
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match value_as_number(v1) {
+            Ok(k) =>
+              if k <= 0.0 || k >= 1.0 {
+                Error(formula_error_num)
+              } else {
+                percentile_values(v0, k, true, true)
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "PERCENTRANK" =>
-      if values.length() == 2 || values.length() == 3 {
-        match value_as_number(values[1]) {
-          Ok(x) => {
-            let significance = if values.length() == 3 {
-              match value_as_number(values[2]) {
-                Ok(num) => num
-                Err(err) => return err
+      match values {
+        [v0, v1] | [v0, v1, _] =>
+          match value_as_number(v1) {
+            Ok(x) => {
+              let significance = if values is [_, _, v2] {
+                match value_as_number(v2) {
+                  Ok(num) => num
+                  Err(err) => return err
+                }
+              } else {
+                3.0
               }
-            } else {
-              3.0
+              percentrank_values("PERCENTRANK", v0, x, significance)
             }
-            percentrank_values("PERCENTRANK", values[0], x, significance)
+            Err(err) => err
           }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "PERCENTRANK.INC" =>
-      if values.length() == 2 || values.length() == 3 {
-        match value_as_number(values[1]) {
-          Ok(x) => {
-            let significance = if values.length() == 3 {
-              match value_as_number(values[2]) {
-                Ok(num) => num
-                Err(err) => return err
+      match values {
+        [v0, v1] | [v0, v1, _] =>
+          match value_as_number(v1) {
+            Ok(x) => {
+              let significance = if values is [_, _, v2] {
+                match value_as_number(v2) {
+                  Ok(num) => num
+                  Err(err) => return err
+                }
+              } else {
+                3.0
               }
-            } else {
-              3.0
+              percentrank_values("PERCENTRANK.INC", v0, x, significance)
             }
-            percentrank_values("PERCENTRANK.INC", values[0], x, significance)
+            Err(err) => err
           }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "PERCENTRANK.EXC" =>
-      if values.length() == 2 || values.length() == 3 {
-        match value_as_number(values[1]) {
-          Ok(x) => {
-            let significance = if values.length() == 3 {
-              match value_as_number(values[2]) {
-                Ok(num) => num
-                Err(err) => return err
+      match values {
+        [v0, v1] | [v0, v1, _] =>
+          match value_as_number(v1) {
+            Ok(x) => {
+              let significance = if values is [_, _, v2] {
+                match value_as_number(v2) {
+                  Ok(num) => num
+                  Err(err) => return err
+                }
+              } else {
+                3.0
               }
-            } else {
-              3.0
+              percentrank_values("PERCENTRANK.EXC", v0, x, significance)
             }
-            percentrank_values("PERCENTRANK.EXC", values[0], x, significance)
+            Err(err) => err
           }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "QUARTILE" =>
-      if values.length() == 2 {
-        match value_as_number(values[1]) {
-          Ok(quart) => quartile_values("QUARTILE", values[0], quart, false)
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match value_as_number(v1) {
+            Ok(quart) => quartile_values("QUARTILE", v0, quart, false)
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "QUARTILE.INC" =>
-      if values.length() == 2 {
-        match value_as_number(values[1]) {
-          Ok(quart) => quartile_values("QUARTILE.INC", values[0], quart, false)
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match value_as_number(v1) {
+            Ok(quart) => quartile_values("QUARTILE.INC", v0, quart, false)
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "QUARTILE.EXC" =>
-      if values.length() == 2 {
-        match value_as_number(values[1]) {
-          Ok(quart) => quartile_values("QUARTILE.EXC", values[0], quart, true)
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match value_as_number(v1) {
+            Ok(quart) => quartile_values("QUARTILE.EXC", v0, quart, true)
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "RANK" | "RANK.EQ" =>
-      if values.length() == 2 || values.length() == 3 {
-        let order = if values.length() == 3 {
-          match value_as_number(values[2]) {
-            Ok(num) => Some(num)
-            Err(err) => return err
+      match values {
+        [v0, v1] | [v0, v1, _] => {
+          let order = if values is [_, _, v2] {
+            match value_as_number(v2) {
+              Ok(num) => Some(num)
+              Err(err) => return err
+            }
+          } else {
+            None
           }
-        } else {
-          None
+          rank_values(v0, v1, order)
         }
-        rank_values(values[0], values[1], order)
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "SIGN" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            Number(if num < 0.0 { -1.0 } else if num > 0.0 { 1.0 } else { 0.0 })
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              Number(
+                if num < 0.0 {
+                  -1.0
+                } else if num > 0.0 {
+                  1.0
+                } else {
+                  0.0
+                },
+              )
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "SERIESSUM" =>
-      if values.length() == 4 {
-        let x = match value_as_number(values[0]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let n = match value_as_number(values[1]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let m = match value_as_number(values[2]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let coefficients = list_from_value(values[3])
-        let mut result = 0.0
-        let mut idx = 0.0
-        for coefficient in coefficients {
-          if formula_value_string(coefficient) == "" {
-            continue
-          }
-          let num = match value_as_number(coefficient) {
+      match values {
+        [v0, v1, v2, v3] => {
+          let x = match value_as_number(v0) {
             Ok(num) => num
             Err(err) => return err
           }
-          result = result + num * @math.pow(x, n + m * idx)
-          idx = idx + 1.0
+          let n = match value_as_number(v1) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+          let m = match value_as_number(v2) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+          let coefficients = list_from_value(v3)
+          let mut result = 0.0
+          let mut idx = 0.0
+          for coefficient in coefficients {
+            if formula_value_string(coefficient) == "" {
+              continue
+            }
+            let num = match value_as_number(coefficient) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+            result = result + num * @math.pow(x, n + m * idx)
+            idx = idx + 1.0
+          }
+          Number(round_significant_digits(result, 15))
         }
-        Number(round_significant_digits(result, 15))
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "CORREL" =>
-      if values.length() == 2 {
-        correl_values(values[0], values[1])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] => correl_values(v0, v1)
+        _ => Error(formula_error_value)
       }
     "COVAR" =>
-      if values.length() == 2 {
-        covar_values("COVAR", values[0], values[1])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] => covar_values("COVAR", v0, v1)
+        _ => Error(formula_error_value)
       }
     "COVARIANCE.P" =>
-      if values.length() == 2 {
-        covar_values("COVARIANCE.P", values[0], values[1])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] => covar_values("COVARIANCE.P", v0, v1)
+        _ => Error(formula_error_value)
       }
     "COVARIANCE.S" =>
-      if values.length() == 2 {
-        covar_values("COVARIANCE.S", values[0], values[1])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] => covar_values("COVARIANCE.S", v0, v1)
+        _ => Error(formula_error_value)
       }
     "PEARSON" =>
-      if values.length() == 2 {
-        pearson_product_values("PEARSON", values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, _] => pearson_product_values("PEARSON", values)
+        _ => Error(formula_error_value)
       }
     "RSQ" =>
-      if values.length() == 2 {
-        pearson_product_values("RSQ", values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, _] => pearson_product_values("RSQ", values)
+        _ => Error(formula_error_value)
       }
     "SLOPE" =>
-      if values.length() == 2 {
-        pearson_product_values("SLOPE", values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, _] => pearson_product_values("SLOPE", values)
+        _ => Error(formula_error_value)
       }
     "INTERCEPT" =>
-      if values.length() == 2 {
-        pearson_product_values("INTERCEPT", values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, _] => pearson_product_values("INTERCEPT", values)
+        _ => Error(formula_error_value)
       }
     "FORECAST" =>
-      if values.length() == 3 {
-        pearson_product_values("FORECAST", values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, _, _] => pearson_product_values("FORECAST", values)
+        _ => Error(formula_error_value)
       }
     "FORECAST.LINEAR" =>
-      if values.length() == 3 {
-        pearson_product_values("FORECAST.LINEAR", values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, _, _] => pearson_product_values("FORECAST.LINEAR", values)
+        _ => Error(formula_error_value)
       }
     "GROWTH" =>
       trend_growth_values(workbook, sheet_name, "GROWTH", args, values, ctx)
     "TREND" =>
       trend_growth_values(workbook, sheet_name, "TREND", args, values, ctx)
     "FISHER" =>
-      if values.length() == 1 {
-        fisher_value(values[0])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] => fisher_value(v0)
+        _ => Error(formula_error_value)
       }
     "FISHERINV" =>
-      if values.length() == 1 {
-        fisherinv_value(values[0])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] => fisherinv_value(v0)
+        _ => Error(formula_error_value)
       }
     "STEYX" =>
-      if values.length() == 2 {
-        steyx_values(values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_, _] => steyx_values(values)
+        _ => Error(formula_error_value)
       }
     "MEDIAN" => median_values(values)
     "MIN" => min_values(values)
@@ -501,19 +478,21 @@ fn eval_function(
     "COUNT" => count_values(values)
     "COUNTA" => counta_values(values)
     "COUNTBLANK" =>
-      if args.length() == 1 {
-        let range_values = eval_range_expr(workbook, sheet_name, args[0], ctx)
-        countblank_values(range_values)
-      } else {
-        Error(formula_error_value)
+      match args {
+        [a0] => {
+          let range_values = eval_range_expr(workbook, sheet_name, a0, ctx)
+          countblank_values(range_values)
+        }
+        _ => Error(formula_error_value)
       }
     "FREQUENCY" => frequency_values(workbook, sheet_name, args, values, ctx)
     "COUNTIF" =>
-      if args.length() == 2 {
-        let range_values = eval_range_expr(workbook, sheet_name, args[0], ctx)
-        countif_values(range_values, values[1])
-      } else {
-        Error(formula_error_value)
+      match args {
+        [a0, _] => {
+          let range_values = eval_range_expr(workbook, sheet_name, a0, ctx)
+          countif_values(range_values, values[1])
+        }
+        _ => Error(formula_error_value)
       }
     "COUNTIFS" =>
       if args.length() >= 2 {
@@ -547,12 +526,13 @@ fn eval_function(
     | "DSUM"
     | "DVAR"
     | "DVARP" =>
-      if args.length() == 3 {
-        let database = eval_range_expr(workbook, sheet_name, args[0], ctx)
-        let criteria = eval_range_expr(workbook, sheet_name, args[2], ctx)
-        database_values(name, database, values[1], criteria)
-      } else {
-        Error(formula_error_value)
+      match args {
+        [a0, _, a2] => {
+          let database = eval_range_expr(workbook, sheet_name, a0, ctx)
+          let criteria = eval_range_expr(workbook, sheet_name, a2, ctx)
+          database_values(name, database, values[1], criteria)
+        }
+        _ => Error(formula_error_value)
       }
     "DCOUNT" | "DCOUNTA" =>
       if args.length() >= 2 && args.length() <= 3 {
@@ -577,24 +557,26 @@ fn eval_function(
         Error(formula_error_value)
       }
     "DGET" =>
-      if args.length() == 3 {
-        let database = eval_range_expr(workbook, sheet_name, args[0], ctx)
-        let criteria = eval_range_expr(workbook, sheet_name, args[2], ctx)
-        dget_values(database, values[1], criteria)
-      } else {
-        Error(formula_error_value)
+      match args {
+        [a0, _, a2] => {
+          let database = eval_range_expr(workbook, sheet_name, a0, ctx)
+          let criteria = eval_range_expr(workbook, sheet_name, a2, ctx)
+          dget_values(database, values[1], criteria)
+        }
+        _ => Error(formula_error_value)
       }
     "SUMIF" =>
-      if args.length() == 2 || args.length() == 3 {
-        let range_values = eval_range_expr(workbook, sheet_name, args[0], ctx)
-        let sum_range = if args.length() == 3 {
-          Some(eval_range_expr(workbook, sheet_name, args[2], ctx))
-        } else {
-          None
+      match args {
+        [a0, _] | [a0, _, _] => {
+          let range_values = eval_range_expr(workbook, sheet_name, a0, ctx)
+          let sum_range = if args is [_, _, a2] {
+            Some(eval_range_expr(workbook, sheet_name, a2, ctx))
+          } else {
+            None
+          }
+          sumif_values(range_values, values[1], sum_range)
         }
-        sumif_values(range_values, values[1], sum_range)
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "SUMPRODUCT" =>
       if args.length() >= 1 {
@@ -630,28 +612,31 @@ fn eval_function(
       }
     "SUMSQ" => sumsq_values(values)
     "SUMX2MY2" =>
-      if args.length() == 2 {
-        let left = eval_range_expr(workbook, sheet_name, args[0], ctx)
-        let right = eval_range_expr(workbook, sheet_name, args[1], ctx)
-        sumx_values("SUMX2MY2", left, right)
-      } else {
-        Error(formula_error_value)
+      match args {
+        [a0, a1] => {
+          let left = eval_range_expr(workbook, sheet_name, a0, ctx)
+          let right = eval_range_expr(workbook, sheet_name, a1, ctx)
+          sumx_values("SUMX2MY2", left, right)
+        }
+        _ => Error(formula_error_value)
       }
     "SUMX2PY2" =>
-      if args.length() == 2 {
-        let left = eval_range_expr(workbook, sheet_name, args[0], ctx)
-        let right = eval_range_expr(workbook, sheet_name, args[1], ctx)
-        sumx_values("SUMX2PY2", left, right)
-      } else {
-        Error(formula_error_value)
+      match args {
+        [a0, a1] => {
+          let left = eval_range_expr(workbook, sheet_name, a0, ctx)
+          let right = eval_range_expr(workbook, sheet_name, a1, ctx)
+          sumx_values("SUMX2PY2", left, right)
+        }
+        _ => Error(formula_error_value)
       }
     "SUMXMY2" =>
-      if args.length() == 2 {
-        let left = eval_range_expr(workbook, sheet_name, args[0], ctx)
-        let right = eval_range_expr(workbook, sheet_name, args[1], ctx)
-        sumx_values("SUMXMY2", left, right)
-      } else {
-        Error(formula_error_value)
+      match args {
+        [a0, a1] => {
+          let left = eval_range_expr(workbook, sheet_name, a0, ctx)
+          let right = eval_range_expr(workbook, sheet_name, a1, ctx)
+          sumx_values("SUMXMY2", left, right)
+        }
+        _ => Error(formula_error_value)
       }
     "SUMIFS" =>
       if args.length() >= 3 {
@@ -690,16 +675,17 @@ fn eval_function(
         Error(formula_error_value)
       }
     "AVERAGEIF" =>
-      if args.length() == 2 || args.length() == 3 {
-        let range_values = eval_range_expr(workbook, sheet_name, args[0], ctx)
-        let average_range = if args.length() == 3 {
-          Some(eval_range_expr(workbook, sheet_name, args[2], ctx))
-        } else {
-          None
+      match args {
+        [a0, _] | [a0, _, _] => {
+          let range_values = eval_range_expr(workbook, sheet_name, a0, ctx)
+          let average_range = if args is [_, _, a2] {
+            Some(eval_range_expr(workbook, sheet_name, a2, ctx))
+          } else {
+            None
+          }
+          averageif_values(range_values, values[1], average_range)
         }
-        averageif_values(range_values, values[1], average_range)
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "AVERAGEIFS" =>
       if args.length() >= 3 {
@@ -803,617 +789,601 @@ fn eval_function(
     "GCD" => gcd_values(values)
     "LCM" => lcm_values(values)
     "COMBIN" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(num), Ok(chosen)) => combin_values(num, chosen)
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(num), Ok(chosen)) => combin_values(num, chosen)
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "COMBINA" | "_XLFN.COMBINA" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(num), Ok(chosen)) => {
-            let n = trunc_double(num)
-            let k = trunc_double(chosen)
-            if n < k {
-              Error(formula_error_value)
-            } else if n == 0.0 {
-              Number(n)
-            } else {
-              combin_values(n + k - 1.0, n - 1.0)
-            }
-          }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "COMPLEX" =>
-      if values.length() < 2 {
-        Error(formula_error_value)
-      } else if values.length() > 3 {
-        Error(formula_error_value)
-      } else {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(real), Ok(imag)) => {
-            let mut suffix = "i"
-            if values.length() == 3 {
-              match value_as_string(values[2]) {
-                Ok(text) => {
-                  let lower = text.to_lower()
-                  if lower != "i" && lower != "j" {
-                    return Error(formula_error_value)
-                  }
-                  suffix = lower
-                }
-                Err(err) => return err
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(num), Ok(chosen)) => {
+              let n = trunc_double(num)
+              let k = trunc_double(chosen)
+              if n < k {
+                Error(formula_error_value)
+              } else if n == 0.0 {
+                Number(n)
+              } else {
+                combin_values(n + k - 1.0, n - 1.0)
               }
             }
-            String(complex_to_string(complex_new(real, imag), suffix))
+            (Err(err), _) => err
+            (_, Err(err)) => err
           }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
+        _ => Error(formula_error_value)
+      }
+    "COMPLEX" =>
+      match values {
+        [v0, v1] | [v0, v1, _] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(real), Ok(imag)) => {
+              let mut suffix = "i"
+              if values is [_, _, v2] {
+                match value_as_string(v2) {
+                  Ok(text) => {
+                    let lower = text.to_lower()
+                    if lower != "i" && lower != "j" {
+                      return Error(formula_error_value)
+                    }
+                    suffix = lower
+                  }
+                  Err(err) => return err
+                }
+              }
+              String(complex_to_string(complex_new(real, imag), suffix))
+            }
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "FACT" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if num < 0.0 {
-              Error(formula_error_num)
-            } else {
-              Number(factorial_double(num))
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              if num < 0.0 {
+                Error(formula_error_num)
+              } else {
+                Number(factorial_double(num))
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "FACTDOUBLE" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if num < 0.0 {
-              Error(formula_error_num)
-            } else {
-              Number(double_factorial_double(num))
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              if num < 0.0 {
+                Error(formula_error_num)
+              } else {
+                Number(double_factorial_double(num))
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "MULTINOMIAL" => multinomial_values(values)
     "MDETERM" =>
-      if values.length() == 1 {
-        let range = range_from_expr_or_value(
-          workbook,
-          sheet_name,
-          args[0],
-          values[0],
-          ctx,
-        )
-        match number_matrix_from_range(range, true) {
-          Ok(matrix) => Number(matrix_det(matrix))
-          Err(err) => err
+      match values {
+        [v0] => {
+          let range = range_from_expr_or_value(
+            workbook,
+            sheet_name,
+            args[0],
+            v0,
+            ctx,
+          )
+          match number_matrix_from_range(range, true) {
+            Ok(matrix) => Number(matrix_det(matrix))
+            Err(err) => err
+          }
         }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "MINVERSE" =>
-      if values.length() == 1 {
-        let range = range_from_expr_or_value(
-          workbook,
-          sheet_name,
-          args[0],
-          values[0],
-          ctx,
-        )
-        match number_matrix_from_range(range, true) {
-          Ok(matrix) => {
-            let det_value = matrix_det(matrix)
-            if det_value == 0.0 {
-              Error(formula_error_num)
-            } else {
-              let adj = matrix_adjugate(matrix)
-              let scale = 1.0 / det_value
-              for row in 0..<adj.length() {
-                for col in 0..<adj[row].length() {
-                  let value = adj[row][col]
-                  if value == 0.0 && scale < 0.0 {
-                    adj[row][col] = -0.0
-                  } else {
-                    adj[row][col] = value * scale
+      match values {
+        [v0] => {
+          let range = range_from_expr_or_value(
+            workbook,
+            sheet_name,
+            args[0],
+            v0,
+            ctx,
+          )
+          match number_matrix_from_range(range, true) {
+            Ok(matrix) => {
+              let det_value = matrix_det(matrix)
+              if det_value == 0.0 {
+                Error(formula_error_num)
+              } else {
+                let adj = matrix_adjugate(matrix)
+                let scale = 1.0 / det_value
+                for row in 0..<adj.length() {
+                  for col in 0..<adj[row].length() {
+                    let value = adj[row][col]
+                    if value == 0.0 && scale < 0.0 {
+                      adj[row][col] = -0.0
+                    } else {
+                      adj[row][col] = value * scale
+                    }
                   }
                 }
+                List(matrix_values(adj))
               }
-              List(matrix_values(adj))
             }
+            Err(err) => err
           }
-          Err(err) => err
         }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "MMULT" =>
-      if values.length() == 2 {
-        match (values[0], values[1]) {
-          (Number(lhs), Number(rhs)) => Number(lhs * rhs)
-          _ => {
-            let left_range = range_from_expr_or_value(
-              workbook,
-              sheet_name,
-              args[0],
-              values[0],
-              ctx,
-            )
-            let right_range = range_from_expr_or_value(
-              workbook,
-              sheet_name,
-              args[1],
-              values[1],
-              ctx,
-            )
-            match
-              (
-                number_matrix_from_range(left_range, false),
-                number_matrix_from_range(right_range, false),
-              ) {
-              (Ok(left), Ok(right)) =>
-                match matrix_multiply(left, right) {
-                  Ok(matrix) => List(matrix_values(matrix))
-                  Err(err) => err
-                }
-              (Err(err), _) => err
-              (_, Err(err)) => err
-            }
-          }
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "MUNIT" | "_XLFN.MUNIT" =>
-      if values.length() == 1 {
-        match munit_dimension(values[0]) {
-          Ok(dimension) => List(munit_range_values(dimension).values)
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "TRANSPOSE" =>
-      if args.length() == 1 {
-        let base_range = range_from_expr_or_value(
-          workbook,
-          sheet_name,
-          args[0],
-          values[0],
-          ctx,
-        )
-        List(transpose_range_values(base_range).values)
-      } else {
-        Error(formula_error_value)
-      }
-    "PERMUT" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(num), Ok(chosen)) =>
-            if num < chosen {
-              Error(formula_error_na)
-            } else {
-              let result = factorial_double(num) /
-                factorial_double(num - chosen)
-              Number(round_half_away_from_zero(result))
-            }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "PERMUTATIONA" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(num), Ok(chosen)) => {
-            let number = Double::floor(num)
-            let number_chosen = Double::floor(chosen)
-            if number < 0.0 || number_chosen < 0.0 {
-              Error(formula_error_na)
-            } else {
-              Number(@math.pow(number, number_chosen))
-            }
-          }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "ABS" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => Number(abs_double(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "INT" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => Number(Double::floor(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "LN" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => Number(@math.ln(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "EXP" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => Number(@math.exp(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "DECIMAL" | "_XLFN.DECIMAL" =>
-      if values.length() == 2 {
-        match (value_as_string(values[0]), value_as_number(values[1])) {
-          (Ok(text), Ok(radix)) => {
-            let base = Double::to_int(trunc_double(radix))
-            let text_value = strip_hex_prefix(text)
-            let parsed = @string.parse_int(text_value, base~) catch {
-              _ => return Error(formula_error_value)
-            }
-            Number(Double::from_int(parsed))
-          }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "ROMAN" =>
-      if values.length() == 0 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(num) => {
-            let mut form = 0
-            if values.length() == 2 {
-              match value_as_number(values[1]) {
-                Ok(raw) => {
-                  let mut mode = Double::to_int(trunc_double(raw))
-                  if mode < 0 {
-                    mode = 0
-                  } else if mode > 4 {
-                    mode = 4
+      match values {
+        [v0, v1] =>
+          match (v0, v1) {
+            (Number(lhs), Number(rhs)) => Number(lhs * rhs)
+            _ => {
+              let left_range = range_from_expr_or_value(
+                workbook,
+                sheet_name,
+                args[0],
+                v0,
+                ctx,
+              )
+              let right_range = range_from_expr_or_value(
+                workbook,
+                sheet_name,
+                args[1],
+                v1,
+                ctx,
+              )
+              match
+                (
+                  number_matrix_from_range(left_range, false),
+                  number_matrix_from_range(right_range, false),
+                ) {
+                (Ok(left), Ok(right)) =>
+                  match matrix_multiply(left, right) {
+                    Ok(matrix) => List(matrix_values(matrix))
+                    Err(err) => err
                   }
-                  form = mode
-                }
-                Err(err) => return err
+                (Err(err), _) => err
+                (_, Err(err)) => err
               }
             }
-            String(roman_string(num, form))
           }
-          Err(err) => err
+        _ => Error(formula_error_value)
+      }
+    "MUNIT" | "_XLFN.MUNIT" =>
+      match values {
+        [v0] =>
+          match munit_dimension(v0) {
+            Ok(dimension) => List(munit_range_values(dimension).values)
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "TRANSPOSE" =>
+      match args {
+        [a0] => {
+          let base_range = range_from_expr_or_value(
+            workbook,
+            sheet_name,
+            a0,
+            values[0],
+            ctx,
+          )
+          List(transpose_range_values(base_range).values)
         }
+        _ => Error(formula_error_value)
+      }
+    "PERMUT" =>
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(num), Ok(chosen)) =>
+              if num < chosen {
+                Error(formula_error_na)
+              } else {
+                let result = factorial_double(num) /
+                  factorial_double(num - chosen)
+                Number(round_half_away_from_zero(result))
+              }
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "PERMUTATIONA" =>
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(num), Ok(chosen)) => {
+              let number = Double::floor(num)
+              let number_chosen = Double::floor(chosen)
+              if number < 0.0 || number_chosen < 0.0 {
+                Error(formula_error_na)
+              } else {
+                Number(@math.pow(number, number_chosen))
+              }
+            }
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "ABS" =>
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => Number(abs_double(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "INT" =>
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => Number(Double::floor(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "LN" =>
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => Number(@math.ln(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "EXP" =>
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => Number(@math.exp(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "DECIMAL" | "_XLFN.DECIMAL" =>
+      match values {
+        [v0, v1] =>
+          match (value_as_string(v0), value_as_number(v1)) {
+            (Ok(text), Ok(radix)) => {
+              let base = Double::to_int(trunc_double(radix))
+              let text_value = strip_hex_prefix(text)
+              let parsed = @string.parse_int(text_value, base~) catch {
+                _ => return Error(formula_error_value)
+              }
+              Number(Double::from_int(parsed))
+            }
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "ROMAN" =>
+      match values {
+        [v0] | [v0, _] =>
+          match value_as_number(v0) {
+            Ok(num) => {
+              let mut form = 0
+              if values is [_, v1] {
+                match value_as_number(v1) {
+                  Ok(raw) => {
+                    let mut mode = Double::to_int(trunc_double(raw))
+                    if mode < 0 {
+                      mode = 0
+                    } else if mode > 4 {
+                      mode = 4
+                    }
+                    form = mode
+                  }
+                  Err(err) => return err
+                }
+              }
+              String(roman_string(num, form))
+            }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ARABIC" | "_XLFN.ARABIC" =>
-      if values.length() == 1 {
-        match value_as_string(values[0]) {
-          Ok(text) => arabic_string_value(text)
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_string(v0) {
+            Ok(text) => arabic_string_value(text)
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "BASE" => base_values(values)
     "BIN2DEC" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(_) => bin2dec_string(formula_value_string(values[0]))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(_) => bin2dec_string(formula_value_string(v0))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "BIN2HEX" =>
-      if values.length() < 1 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(_) => {
-            let decimal = bin2dec_string(formula_value_string(values[0]))
-            match decimal {
-              Error(_) => decimal
-              _ => {
-                let new_values : Array[FormulaValue] = [decimal]
-                if values.length() == 2 {
-                  new_values.push(values[1])
+      match values {
+        [v0] | [v0, _] =>
+          match value_as_number(v0) {
+            Ok(_) => {
+              let decimal = bin2dec_string(formula_value_string(v0))
+              match decimal {
+                Error(_) => decimal
+                _ => {
+                  let new_values : Array[FormulaValue] = [decimal]
+                  if values is [_, places] {
+                    new_values.push(places)
+                  }
+                  dec2x_values("BIN2HEX", new_values)
                 }
-                dec2x_values("BIN2HEX", new_values)
               }
             }
+            Err(err) => err
           }
-          Err(err) => err
-        }
+        _ => Error(formula_error_value)
       }
     "BIN2OCT" =>
-      if values.length() < 1 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(_) => {
-            let decimal = bin2dec_string(formula_value_string(values[0]))
-            match decimal {
-              Error(_) => decimal
-              _ => {
-                let new_values : Array[FormulaValue] = [decimal]
-                if values.length() == 2 {
-                  new_values.push(values[1])
+      match values {
+        [v0] | [v0, _] =>
+          match value_as_number(v0) {
+            Ok(_) => {
+              let decimal = bin2dec_string(formula_value_string(v0))
+              match decimal {
+                Error(_) => decimal
+                _ => {
+                  let new_values : Array[FormulaValue] = [decimal]
+                  if values is [_, places] {
+                    new_values.push(places)
+                  }
+                  dec2x_values("BIN2OCT", new_values)
                 }
-                dec2x_values("BIN2OCT", new_values)
               }
             }
+            Err(err) => err
           }
-          Err(err) => err
-        }
+        _ => Error(formula_error_value)
       }
     "DEC2BIN" => dec2x_values("DEC2BIN", values)
     "DEC2HEX" => dec2x_values("DEC2HEX", values)
     "DEC2OCT" => dec2x_values("DEC2OCT", values)
     "HEX2BIN" =>
-      if values.length() < 1 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_string(values[0]) {
-          Ok(text) => {
-            let decimal = hex2dec_string(text)
-            match decimal {
-              Error(_) => decimal
-              _ => {
-                let new_values : Array[FormulaValue] = [decimal]
-                if values.length() == 2 {
-                  new_values.push(values[1])
+      match values {
+        [v0] | [v0, _] =>
+          match value_as_string(v0) {
+            Ok(text) => {
+              let decimal = hex2dec_string(text)
+              match decimal {
+                Error(_) => decimal
+                _ => {
+                  let new_values : Array[FormulaValue] = [decimal]
+                  if values is [_, places] {
+                    new_values.push(places)
+                  }
+                  dec2x_values("HEX2BIN", new_values)
                 }
-                dec2x_values("HEX2BIN", new_values)
               }
             }
+            Err(err) => err
           }
-          Err(err) => err
-        }
+        _ => Error(formula_error_value)
       }
     "HEX2DEC" =>
-      if values.length() == 1 {
-        match value_as_string(values[0]) {
-          Ok(text) => hex2dec_string(text)
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_string(v0) {
+            Ok(text) => hex2dec_string(text)
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "HEX2OCT" =>
-      if values.length() < 1 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_string(values[0]) {
-          Ok(text) => {
-            let decimal = hex2dec_string(text)
-            match decimal {
-              Error(_) => decimal
-              _ => {
-                let new_values : Array[FormulaValue] = [decimal]
-                if values.length() == 2 {
-                  new_values.push(values[1])
+      match values {
+        [v0] | [v0, _] =>
+          match value_as_string(v0) {
+            Ok(text) => {
+              let decimal = hex2dec_string(text)
+              match decimal {
+                Error(_) => decimal
+                _ => {
+                  let new_values : Array[FormulaValue] = [decimal]
+                  if values is [_, places] {
+                    new_values.push(places)
+                  }
+                  dec2x_values("HEX2OCT", new_values)
                 }
-                dec2x_values("HEX2OCT", new_values)
               }
             }
+            Err(err) => err
           }
-          Err(err) => err
-        }
+        _ => Error(formula_error_value)
       }
     "OCT2BIN" =>
-      if values.length() < 1 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(_) => {
-            let decimal = oct2dec_string(formula_value_string(values[0]))
-            let new_values : Array[FormulaValue] = [decimal]
-            if values.length() == 2 {
-              new_values.push(values[1])
+      match values {
+        [v0] | [v0, _] =>
+          match value_as_number(v0) {
+            Ok(_) => {
+              let decimal = oct2dec_string(formula_value_string(v0))
+              let new_values : Array[FormulaValue] = [decimal]
+              if values is [_, places] {
+                new_values.push(places)
+              }
+              dec2x_values("OCT2BIN", new_values)
             }
-            dec2x_values("OCT2BIN", new_values)
+            Err(err) => err
           }
-          Err(err) => err
-        }
+        _ => Error(formula_error_value)
       }
     "OCT2DEC" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(_) => oct2dec_string(formula_value_string(values[0]))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(_) => oct2dec_string(formula_value_string(v0))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "OCT2HEX" =>
-      if values.length() < 1 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(_) => {
-            let decimal = oct2dec_string(formula_value_string(values[0]))
-            let new_values : Array[FormulaValue] = [decimal]
-            if values.length() == 2 {
-              new_values.push(values[1])
+      match values {
+        [v0] | [v0, _] =>
+          match value_as_number(v0) {
+            Ok(_) => {
+              let decimal = oct2dec_string(formula_value_string(v0))
+              let new_values : Array[FormulaValue] = [decimal]
+              if values is [_, places] {
+                new_values.push(places)
+              }
+              dec2x_values("OCT2HEX", new_values)
             }
-            dec2x_values("OCT2HEX", new_values)
+            Err(err) => err
           }
-          Err(err) => err
-        }
+        _ => Error(formula_error_value)
       }
     "BESSELI" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(x), Ok(n)) => number_or_num_error(bessel_i(x, n))
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(x), Ok(n)) => number_or_num_error(bessel_i(x, n))
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "BESSELJ" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(x), Ok(n)) => number_or_num_error(bessel_j(x, n))
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(x), Ok(n)) => number_or_num_error(bessel_j(x, n))
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "BESSELK" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(x), Ok(n)) =>
-            if x <= 0.0 || n < 0.0 {
-              Error(formula_error_num)
-            } else {
-              let order = Double::floor(n)
-              let result = if order == 0.0 {
-                bessel_k0(x)
-              } else if order == 1.0 {
-                bessel_k1(x)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(x), Ok(n)) =>
+              if x <= 0.0 || n < 0.0 {
+                Error(formula_error_num)
               } else {
-                bessel_k2(x, n)
+                let order = Double::floor(n)
+                let result = if order == 0.0 {
+                  bessel_k0(x)
+                } else if order == 1.0 {
+                  bessel_k1(x)
+                } else {
+                  bessel_k2(x, n)
+                }
+                number_or_num_error(result)
               }
-              number_or_num_error(result)
-            }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "BESSELY" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(x), Ok(n)) =>
-            if x <= 0.0 || n < 0.0 {
-              Error(formula_error_num)
-            } else {
-              let order = Double::floor(n)
-              let result = if order == 0.0 {
-                bessel_y0(x)
-              } else if order == 1.0 {
-                bessel_y1(x)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(x), Ok(n)) =>
+              if x <= 0.0 || n < 0.0 {
+                Error(formula_error_num)
               } else {
-                bessel_y2(x, n)
+                let order = Double::floor(n)
+                let result = if order == 0.0 {
+                  bessel_y0(x)
+                } else if order == 1.0 {
+                  bessel_y1(x)
+                } else {
+                  bessel_y2(x, n)
+                }
+                number_or_num_error(result)
               }
-              number_or_num_error(result)
-            }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "DELTA" =>
-      if values.length() < 1 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        let number1 = match value_as_number(values[0]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let number2 = if values.length() == 2 {
-          match value_as_number(values[1]) {
+      match values {
+        [v0] | [v0, _] => {
+          let number1 = match value_as_number(v0) {
             Ok(num) => num
             Err(err) => return err
           }
-        } else {
-          0.0
+          let number2 = if values is [_, v1] {
+            match value_as_number(v1) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+          } else {
+            0.0
+          }
+          Number(if number1 == number2 { 1.0 } else { 0.0 })
         }
-        Number(if number1 == number2 { 1.0 } else { 0.0 })
+        _ => Error(formula_error_value)
       }
     "ERF" =>
-      if values.length() < 1 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(lower) =>
-            if values.length() == 2 {
-              match value_as_number(values[1]) {
-                Ok(upper) =>
-                  number_or_num_error(erf_double(upper) - erf_double(lower))
-                Err(err) => err
+      match values {
+        [v0] | [v0, _] =>
+          match value_as_number(v0) {
+            Ok(lower) =>
+              if values is [_, v1] {
+                match value_as_number(v1) {
+                  Ok(upper) =>
+                    number_or_num_error(erf_double(upper) - erf_double(lower))
+                  Err(err) => err
+                }
+              } else {
+                number_or_num_error(erf_double(lower))
               }
-            } else {
-              number_or_num_error(erf_double(lower))
-            }
-          Err(err) => err
-        }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ERFdotPRECISE" | "ERF.PRECISE" | "_XLFN.ERF.PRECISE" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(value) => number_or_num_error(erf_double(value))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(value) => number_or_num_error(erf_double(value))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ERFC" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(value) => number_or_num_error(erfc_double(value))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(value) => number_or_num_error(erfc_double(value))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ERFCdotPRECISE" | "ERFC.PRECISE" | "_XLFN.ERFC.PRECISE" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(value) => number_or_num_error(erfc_double(value))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(value) => number_or_num_error(erfc_double(value))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "WEIBULL" => weibull_value(values)
     "WEIBULLdotDIST" | "WEIBULL.DIST" | "_XLFN.WEIBULL.DIST" =>
@@ -1571,24 +1541,23 @@ fn eval_function(
     "ZdotTEST" | "Z.TEST" | "_XLFN.Z.TEST" => ztest_values(values)
     "ZTEST" => ztest_values(values)
     "GESTEP" =>
-      if values.length() < 1 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        let number = match value_as_number(values[0]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let step = if values.length() == 2 {
-          match value_as_number(values[1]) {
+      match values {
+        [v0] | [v0, _] => {
+          let number = match value_as_number(v0) {
             Ok(num) => num
             Err(err) => return err
           }
-        } else {
-          0.0
+          let step = if values is [_, v1] {
+            match value_as_number(v1) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+          } else {
+            0.0
+          }
+          Number(if number >= step { 1.0 } else { 0.0 })
         }
-        Number(if number >= step { 1.0 } else { 0.0 })
+        _ => Error(formula_error_value)
       }
     "BITAND" => bitwise_values("BITAND", values)
     "BITLSHIFT" => bitwise_values("BITLSHIFT", values)
@@ -1596,528 +1565,521 @@ fn eval_function(
     "BITRSHIFT" => bitwise_values("BITRSHIFT", values)
     "BITXOR" => bitwise_values("BITXOR", values)
     "ACOS" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.acos(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.acos(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ACOSH" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.acosh(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.acosh(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ACOT" | "_XLFN.ACOT" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.PI / 2.0 - @math.atan(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.PI / 2.0 - @math.atan(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ACOTH" | "_XLFN.ACOTH" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.atanh(1.0 / num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.atanh(1.0 / num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ASIN" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.asin(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.asin(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ASINH" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.asinh(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.asinh(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ATAN" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.atan(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.atan(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ATANH" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.atanh(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.atanh(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ATAN2" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(y), Ok(x)) => number_or_num_error(@math.atan2(x, y))
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(y), Ok(x)) => number_or_num_error(@math.atan2(x, y))
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "COS" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.cos(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.cos(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "COSH" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.cosh(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.cosh(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "SIN" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.sin(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.sin(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "SINH" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.sinh(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.sinh(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "TAN" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.tan(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.tan(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "TANH" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.tanh(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.tanh(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "COT" | "_XLFN.COT" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if num == 0.0 {
-              Error(formula_error_div)
-            } else {
-              number_or_num_error(1.0 / @math.tan(num))
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              if num == 0.0 {
+                Error(formula_error_div)
+              } else {
+                number_or_num_error(1.0 / @math.tan(num))
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "COTH" | "_XLFN.COTH" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if num == 0.0 {
-              Error(formula_error_div)
-            } else {
-              let exp_pos = @math.exp(num)
-              let exp_neg = @math.exp(-num)
-              number_or_num_error((exp_pos + exp_neg) / (exp_pos - exp_neg))
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              if num == 0.0 {
+                Error(formula_error_div)
+              } else {
+                let exp_pos = @math.exp(num)
+                let exp_neg = @math.exp(-num)
+                number_or_num_error((exp_pos + exp_neg) / (exp_pos - exp_neg))
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "CSC" | "_XLFN.CSC" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if num == 0.0 {
-              Error(formula_error_div)
-            } else {
-              number_or_num_error(1.0 / @math.sin(num))
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              if num == 0.0 {
+                Error(formula_error_div)
+              } else {
+                number_or_num_error(1.0 / @math.sin(num))
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "CSCH" | "_XLFN.CSCH" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if num == 0.0 {
-              Error(formula_error_div)
-            } else {
-              number_or_num_error(1.0 / @math.sinh(num))
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              if num == 0.0 {
+                Error(formula_error_div)
+              } else {
+                number_or_num_error(1.0 / @math.sinh(num))
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "SEC" | "_XLFN.SEC" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(@math.cos(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(@math.cos(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "SECH" | "_XLFN.SECH" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => number_or_num_error(1.0 / @math.cosh(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => number_or_num_error(1.0 / @math.cosh(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "DEGREES" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if num == 0.0 {
-              Error(formula_error_div)
-            } else {
-              Number(180.0 / @math.PI * num)
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              if num == 0.0 {
+                Error(formula_error_div)
+              } else {
+                Number(180.0 / @math.PI * num)
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "RADIANS" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => Number(@math.PI / 180.0 * num)
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => Number(@math.PI / 180.0 * num)
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "RAND" =>
-      if values.length() == 0 {
-        Number(formula_rand().double())
-      } else {
-        Error(formula_error_value)
+      match values {
+        [] => Number(formula_rand().double())
+        _ => Error(formula_error_value)
       }
     "RANDARRAY" | "_XLFN.RANDARRAY" => randarray_values(values)
     "RANDBETWEEN" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(bottom), Ok(top)) =>
-            if top < bottom {
-              Error(formula_error_num)
-            } else {
-              // Keep sampling overflow-safe for very wide bounds by staying in Double space.
-              let bottom_int = trunc_double(bottom)
-              let top_int = trunc_double(top)
-              let range = top_int - bottom_int + 1.0
-              let rand_value = Double::floor(formula_rand().double() * range)
-              Number(bottom_int + rand_value)
-            }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(bottom), Ok(top)) =>
+              if top < bottom {
+                Error(formula_error_num)
+              } else {
+                // Keep sampling overflow-safe for very wide bounds by staying in Double space.
+                let bottom_int = trunc_double(bottom)
+                let top_int = trunc_double(top)
+                let range = top_int - bottom_int + 1.0
+                let rand_value = Double::floor(formula_rand().double() * range)
+                Number(bottom_int + rand_value)
+              }
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "PI" =>
-      if values.length() == 0 {
-        Number(@math.PI)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [] => Number(@math.PI)
+        _ => Error(formula_error_value)
       }
     "SQRTPI" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => Number(@math.pow(num * @math.PI, 0.5))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => Number(@math.pow(num * @math.PI, 0.5))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "LOG" =>
-      if values.length() == 0 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(num) => {
-            let mut base = 10.0
-            if values.length() == 2 {
-              match value_as_number(values[1]) {
-                Ok(value) => base = value
-                Err(err) => return err
+      match values {
+        [v0] | [v0, _] =>
+          match value_as_number(v0) {
+            Ok(num) => {
+              let mut base = 10.0
+              if values is [_, v1] {
+                match value_as_number(v1) {
+                  Ok(value) => base = value
+                  Err(err) => return err
+                }
+              }
+              if num == 0.0 || base == 0.0 {
+                Error(formula_error_num)
+              } else if base == 1.0 {
+                Error(formula_error_div)
+              } else {
+                Number(@math.ln(num) / @math.ln(base))
               }
             }
-            if num == 0.0 || base == 0.0 {
-              Error(formula_error_num)
-            } else if base == 1.0 {
-              Error(formula_error_div)
-            } else {
-              Number(@math.ln(num) / @math.ln(base))
-            }
+            Err(err) => err
           }
-          Err(err) => err
-        }
+        _ => Error(formula_error_value)
       }
     "LOG10" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => Number(@math.log10(num))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => Number(@math.log10(num))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMABS" =>
-      if values.length() == 1 {
-        match parse_complex_value(values[0]) {
-          Ok(num) =>
-            number_or_num_error(round_significant_digits(complex_abs(num), 15))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match parse_complex_value(v0) {
+            Ok(num) =>
+              number_or_num_error(
+                round_significant_digits(complex_abs(num), 15),
+              )
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMAGINARY" =>
-      if values.length() == 1 {
-        match parse_complex_value(values[0]) {
-          Ok(num) => number_or_num_error(round_significant_digits(num.imag, 15))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match parse_complex_value(v0) {
+            Ok(num) =>
+              number_or_num_error(round_significant_digits(num.imag, 15))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMARGUMENT" =>
-      if values.length() == 1 {
-        match parse_complex_value(values[0]) {
-          Ok(num) =>
-            number_or_num_error(round_significant_digits(complex_arg(num), 15))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match parse_complex_value(v0) {
+            Ok(num) =>
+              number_or_num_error(
+                round_significant_digits(complex_arg(num), 15),
+              )
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMCONJUGATE" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) =>
-            String(complex_to_string(complex_conj(num), suffix))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) =>
+              String(complex_to_string(complex_conj(num), suffix))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMCOS" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) =>
-            String(complex_to_string(complex_cos(num), suffix))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) =>
+              String(complex_to_string(complex_cos(num), suffix))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMCOSH" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) =>
-            String(complex_to_string(complex_cosh(num), suffix))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) =>
+              String(complex_to_string(complex_cosh(num), suffix))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMCOT" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) =>
-            String(
-              complex_to_string(
-                complex_div(complex_cos(num), complex_sin(num)),
-                suffix,
-              ),
-            )
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) =>
+              String(
+                complex_to_string(
+                  complex_div(complex_cos(num), complex_sin(num)),
+                  suffix,
+                ),
+              )
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMCSC" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) => {
-            let result = complex_div(complex_new(1.0, 0.0), complex_sin(num))
-            if complex_is_invalid(result) {
-              Error(formula_error_num)
-            } else {
-              String(complex_to_string(result, suffix))
-            }
-          }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "IMCSCH" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) => {
-            let result = complex_div(complex_new(1.0, 0.0), complex_sinh(num))
-            if complex_is_invalid(result) {
-              Error(formula_error_num)
-            } else {
-              String(complex_to_string(result, suffix))
-            }
-          }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "IMDIV" =>
-      if values.length() == 2 {
-        match
-          (
-            parse_complex_value_with_suffix(values[0]),
-            parse_complex_value(values[1]),
-          ) {
-          (Ok((left, suffix)), Ok(right)) => {
-            let result = complex_div(left, right)
-            if complex_is_invalid(result) {
-              Error(formula_error_num)
-            } else {
-              String(complex_to_string(result, suffix))
-            }
-          }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "IMEXP" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) =>
-            String(complex_to_string(complex_exp(num), suffix))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "IMLN" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) => {
-            let result = complex_log(num)
-            if complex_is_invalid(result) {
-              Error(formula_error_num)
-            } else {
-              String(complex_to_string(result, suffix))
-            }
-          }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "IMLOG10" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) => {
-            let result = complex_scale(complex_log(num), 1.0 / @math.ln(10.0))
-            if complex_is_invalid(result) {
-              Error(formula_error_num)
-            } else {
-              String(complex_to_string(result, suffix))
-            }
-          }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "IMLOG2" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) => {
-            let result = complex_scale(complex_log(num), 1.0 / @math.ln(2.0))
-            if complex_is_invalid(result) {
-              Error(formula_error_num)
-            } else {
-              String(complex_to_string(result, suffix))
-            }
-          }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "IMPOWER" =>
-      if values.length() == 2 {
-        match
-          (
-            parse_complex_value_with_suffix(values[0]),
-            parse_complex_value(values[1]),
-          ) {
-          (Ok((base, suffix)), Ok(exponent)) =>
-            if base.real == 0.0 &&
-              base.imag == 0.0 &&
-              exponent.real == 0.0 &&
-              exponent.imag == 0.0 {
-              Error(formula_error_num)
-            } else {
-              let result = complex_pow(base, exponent)
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) => {
+              let result = complex_div(complex_new(1.0, 0.0), complex_sin(num))
               if complex_is_invalid(result) {
                 Error(formula_error_num)
               } else {
                 String(complex_to_string(result, suffix))
               }
             }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "IMCSCH" =>
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) => {
+              let result = complex_div(complex_new(1.0, 0.0), complex_sinh(num))
+              if complex_is_invalid(result) {
+                Error(formula_error_num)
+              } else {
+                String(complex_to_string(result, suffix))
+              }
+            }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "IMDIV" =>
+      match values {
+        [v0, v1] =>
+          match (parse_complex_value_with_suffix(v0), parse_complex_value(v1)) {
+            (Ok((left, suffix)), Ok(right)) => {
+              let result = complex_div(left, right)
+              if complex_is_invalid(result) {
+                Error(formula_error_num)
+              } else {
+                String(complex_to_string(result, suffix))
+              }
+            }
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "IMEXP" =>
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) =>
+              String(complex_to_string(complex_exp(num), suffix))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "IMLN" =>
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) => {
+              let result = complex_log(num)
+              if complex_is_invalid(result) {
+                Error(formula_error_num)
+              } else {
+                String(complex_to_string(result, suffix))
+              }
+            }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "IMLOG10" =>
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) => {
+              let result = complex_scale(complex_log(num), 1.0 / @math.ln(10.0))
+              if complex_is_invalid(result) {
+                Error(formula_error_num)
+              } else {
+                String(complex_to_string(result, suffix))
+              }
+            }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "IMLOG2" =>
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) => {
+              let result = complex_scale(complex_log(num), 1.0 / @math.ln(2.0))
+              if complex_is_invalid(result) {
+                Error(formula_error_num)
+              } else {
+                String(complex_to_string(result, suffix))
+              }
+            }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "IMPOWER" =>
+      match values {
+        [v0, v1] =>
+          match (parse_complex_value_with_suffix(v0), parse_complex_value(v1)) {
+            (Ok((base, suffix)), Ok(exponent)) =>
+              if base.real == 0.0 &&
+                base.imag == 0.0 &&
+                exponent.real == 0.0 &&
+                exponent.imag == 0.0 {
+                Error(formula_error_num)
+              } else {
+                let result = complex_pow(base, exponent)
+                if complex_is_invalid(result) {
+                  Error(formula_error_num)
+                } else {
+                  String(complex_to_string(result, suffix))
+                }
+              }
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMPRODUCT" => {
       let mut product = complex_new(1.0, 0.0)
@@ -2145,176 +2107,174 @@ fn eval_function(
       String(complex_to_string(product, "i"))
     }
     "IMREAL" =>
-      if values.length() == 1 {
-        match parse_complex_value(values[0]) {
-          Ok(num) => String(format_number(num.real))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match parse_complex_value(v0) {
+            Ok(num) => String(format_number(num.real))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMSEC" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) => {
-            let result = complex_div(complex_new(1.0, 0.0), complex_cos(num))
-            String(complex_to_string(result, suffix))
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) => {
+              let result = complex_div(complex_new(1.0, 0.0), complex_cos(num))
+              String(complex_to_string(result, suffix))
+            }
+            Err(err) => err
           }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "IMSECH" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) => {
-            let result = complex_div(complex_new(1.0, 0.0), complex_cosh(num))
-            String(complex_to_string(result, suffix))
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) => {
+              let result = complex_div(complex_new(1.0, 0.0), complex_cosh(num))
+              String(complex_to_string(result, suffix))
+            }
+            Err(err) => err
           }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "IMSIN" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) =>
-            String(complex_to_string(complex_sin(num), suffix))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) =>
+              String(complex_to_string(complex_sin(num), suffix))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMSINH" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) =>
-            String(complex_to_string(complex_sinh(num), suffix))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) =>
+              String(complex_to_string(complex_sinh(num), suffix))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMSQRT" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) =>
-            String(complex_to_string(complex_sqrt(num), suffix))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) =>
+              String(complex_to_string(complex_sqrt(num), suffix))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMSUB" =>
-      if values.length() == 2 {
-        match (parse_complex_value(values[0]), parse_complex_value(values[1])) {
-          (Ok(left), Ok(right)) =>
-            String(complex_to_string(complex_sub(left, right), "i"))
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match (parse_complex_value(v0), parse_complex_value(v1)) {
+            (Ok(left), Ok(right)) =>
+              String(complex_to_string(complex_sub(left, right), "i"))
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IMSUM" =>
-      if values.length() >= 1 {
-        let mut result = complex_new(0.0, 0.0)
-        for value in flatten_values(values) {
-          match value {
-            Error(err) => return Error(err)
-            _ =>
-              match parse_complex_value(value) {
-                Ok(num) => result = complex_add(result, num)
-                Err(err) => return err
-              }
+      match values {
+        [_, ..] => {
+          let mut result = complex_new(0.0, 0.0)
+          for value in flatten_values(values) {
+            match value {
+              Error(err) => return Error(err)
+              _ =>
+                match parse_complex_value(value) {
+                  Ok(num) => result = complex_add(result, num)
+                  Err(err) => return err
+                }
+            }
           }
+          String(complex_to_string(result, "i"))
         }
-        String(complex_to_string(result, "i"))
-      } else {
-        Error(formula_error_value)
+        [] => Error(formula_error_value)
       }
     "IMTAN" =>
-      if values.length() == 1 {
-        match parse_complex_value_with_suffix(values[0]) {
-          Ok((num, suffix)) =>
-            String(complex_to_string(complex_tan(num), suffix))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match parse_complex_value_with_suffix(v0) {
+            Ok((num, suffix)) =>
+              String(complex_to_string(complex_tan(num), suffix))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "FLOOR" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(num), Ok(significance)) =>
-            if significance < 0.0 && num >= 0.0 {
-              Error(formula_error_num)
-            } else {
-              let (whole, frac) = modf_double(num / significance)
-              let mut val = whole
-              if frac != 0.0 && num < 0.0 && frac < 0.0 {
-                val = val - 1.0
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(num), Ok(significance)) =>
+              if significance < 0.0 && num >= 0.0 {
+                Error(formula_error_num)
+              } else {
+                let (whole, frac) = modf_double(num / significance)
+                let mut val = whole
+                if frac != 0.0 && num < 0.0 && frac < 0.0 {
+                  val = val - 1.0
+                }
+                Number(val * significance)
               }
-              Number(val * significance)
-            }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "CEILING" =>
-      if values.length() == 0 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(num) => {
-            let mut significance = if num < 0.0 { -1.0 } else { 1.0 }
-            if values.length() > 1 {
-              match value_as_number(values[1]) {
-                Ok(value) => significance = value
-                Err(err) => return err
+      match values {
+        [v0] | [v0, _] =>
+          match value_as_number(v0) {
+            Ok(num) => {
+              let mut significance = if num < 0.0 { -1.0 } else { 1.0 }
+              if values is [_, v1] {
+                match value_as_number(v1) {
+                  Ok(value) => significance = value
+                  Err(err) => return err
+                }
+              }
+              if significance < 0.0 && num > 0.0 {
+                Error(formula_error_value)
+              } else if values is [_] {
+                Number(Double::ceil(num))
+              } else {
+                let (whole, frac) = modf_double(num / significance)
+                let mut val = whole
+                if frac > 0.0 {
+                  val = val + 1.0
+                }
+                Number(val * significance)
               }
             }
-            if significance < 0.0 && num > 0.0 {
-              Error(formula_error_value)
-            } else if values.length() == 1 {
-              Number(Double::ceil(num))
-            } else {
-              let (whole, frac) = modf_double(num / significance)
-              let mut val = whole
-              if frac > 0.0 {
-                val = val + 1.0
-              }
-              Number(val * significance)
-            }
+            Err(err) => err
           }
-          Err(err) => err
-        }
+        _ => Error(formula_error_value)
       }
     "CEILINGdotMATH" | "CEILING.MATH" | "_XLFN.CEILING.MATH" =>
-      if values.length() == 0 {
-        Error(formula_error_value)
-      } else if values.length() > 3 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if values.length() == 1 {
-              Number(Double::ceil(num))
-            } else {
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => Number(Double::ceil(num))
+            Err(err) => err
+          }
+        [v0, v1] | [v0, v1, _] =>
+          match value_as_number(v0) {
+            Ok(num) => {
               let mut significance = if num < 0.0 { -1.0 } else { 1.0 }
               let mut mode = 1.0
-              match value_as_number(values[1]) {
+              match value_as_number(v1) {
                 Ok(value) => significance = value
                 Err(err) => return err
               }
-              if values.length() > 2 {
-                match value_as_number(values[2]) {
+              if values is [_, _, v2] {
+                match value_as_number(v2) {
                   Ok(value) => mode = value
                   Err(err) => return err
                 }
@@ -2330,21 +2290,21 @@ fn eval_function(
               }
               Number(val * significance)
             }
-          Err(err) => err
-        }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "CEILINGdotPRECISE" | "CEILING.PRECISE" | "_XLFN.CEILING.PRECISE" =>
-      if values.length() == 0 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if values.length() == 1 {
-              Number(Double::ceil(num))
-            } else {
-              match value_as_number(values[1]) {
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => Number(Double::ceil(num))
+            Err(err) => err
+          }
+        [v0, v1] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              match value_as_number(v1) {
                 Ok(significance) => {
                   let abs_significance = abs_double(significance)
                   if abs_significance == 0.0 {
@@ -2360,29 +2320,28 @@ fn eval_function(
                 }
                 Err(err) => err
               }
-            }
-          Err(err) => err
-        }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "FLOORdotMATH" | "FLOOR.MATH" | "_XLFN.FLOOR.MATH" =>
-      if values.length() == 0 {
-        Error(formula_error_value)
-      } else if values.length() > 3 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if values.length() == 1 {
-              Number(Double::floor(num))
-            } else {
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => Number(Double::floor(num))
+            Err(err) => err
+          }
+        [v0, v1] | [v0, v1, _] =>
+          match value_as_number(v0) {
+            Ok(num) => {
               let mut significance = if num < 0.0 { -1.0 } else { 1.0 }
               let mut mode = 1.0
-              match value_as_number(values[1]) {
+              match value_as_number(v1) {
                 Ok(value) => significance = value
                 Err(err) => return err
               }
-              if values.length() > 2 {
-                match value_as_number(values[2]) {
+              if values is [_, _, v2] {
+                match value_as_number(v2) {
                   Ok(value) => mode = value
                   Err(err) => return err
                 }
@@ -2394,21 +2353,21 @@ fn eval_function(
               }
               Number(val * significance)
             }
-          Err(err) => err
-        }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "FLOORdotPRECISE" | "FLOOR.PRECISE" | "_XLFN.FLOOR.PRECISE" =>
-      if values.length() == 0 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if values.length() == 1 {
-              Number(Double::floor(num))
-            } else {
-              match value_as_number(values[1]) {
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => Number(Double::floor(num))
+            Err(err) => err
+          }
+        [v0, v1] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              match value_as_number(v1) {
                 Ok(significance) => {
                   let abs_significance = abs_double(significance)
                   if abs_significance == 0.0 {
@@ -2424,22 +2383,21 @@ fn eval_function(
                 }
                 Err(err) => err
               }
-            }
-          Err(err) => err
-        }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ISOdotCEILING" | "ISO.CEILING" | "_XLFN.ISO.CEILING" =>
-      if values.length() == 0 {
-        Error(formula_error_value)
-      } else if values.length() > 2 {
-        Error(formula_error_value)
-      } else {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if values.length() == 1 {
-              Number(Double::ceil(num))
-            } else {
-              match value_as_number(values[1]) {
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => Number(Double::ceil(num))
+            Err(err) => err
+          }
+        [v0, v1] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              match value_as_number(v1) {
                 Ok(significance) => {
                   let abs_significance = abs_double(significance)
                   if abs_significance == 0.0 {
@@ -2455,117 +2413,94 @@ fn eval_function(
                 }
                 Err(err) => err
               }
-            }
-          Err(err) => err
-        }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "TRUNC" =>
-      if values.length() == 1 || values.length() == 2 {
-        match value_as_number(values[0]) {
-          Ok(num) => {
-            let digits = if values.length() == 2 {
-              match value_as_number(values[1]) {
-                Ok(value) => Double::to_int(value)
-                Err(err) => return err
+      match values {
+        [v0] | [v0, _] =>
+          match value_as_number(v0) {
+            Ok(num) => {
+              let digits = if values is [_, v1] {
+                match value_as_number(v1) {
+                  Ok(value) => Double::to_int(value)
+                  Err(err) => return err
+                }
+              } else {
+                0
               }
-            } else {
-              0
+              Number(round_down_with_digits(num, digits))
             }
-            Number(round_down_with_digits(num, digits))
+            Err(err) => err
           }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "ROUND" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(num), Ok(digits)) =>
-            Number(round_with_digits(num, Double::to_int(digits)))
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(num), Ok(digits)) =>
+              Number(round_with_digits(num, Double::to_int(digits)))
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ROUNDUP" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(num), Ok(digits)) =>
-            Number(round_up_with_digits(num, Double::to_int(digits)))
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(num), Ok(digits)) =>
+              Number(round_up_with_digits(num, Double::to_int(digits)))
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "ROUNDDOWN" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(num), Ok(digits)) =>
-            Number(round_down_with_digits(num, Double::to_int(digits)))
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(num), Ok(digits)) =>
+              Number(round_down_with_digits(num, Double::to_int(digits)))
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "SQRT" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if num < 0.0 {
-              Error(formula_error_num)
-            } else {
-              Number(@math.pow(num, 0.5))
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              if num < 0.0 {
+                Error(formula_error_num)
+              } else {
+                Number(@math.pow(num, 0.5))
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "POWER" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(lhs), Ok(rhs)) => Number(@math.pow(lhs, rhs))
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(lhs), Ok(rhs)) => Number(@math.pow(lhs, rhs))
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "EVEN" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => {
-            let sign = num < 0.0
-            let (whole, frac) = modf_double(num / 2.0)
-            let mut val = whole * 2.0
-            if frac != 0.0 {
-              if sign {
-                val = val - 2.0
-              } else {
-                val = val + 2.0
-              }
-            }
-            Number(val)
-          }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "ODD" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if num == 0.0 {
-              Number(1.0)
-            } else {
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => {
               let sign = num < 0.0
-              let (whole, frac) = modf_double((num - 1.0) / 2.0)
-              let mut val = whole * 2.0 + 1.0
+              let (whole, frac) = modf_double(num / 2.0)
+              let mut val = whole * 2.0
               if frac != 0.0 {
                 if sign {
                   val = val - 2.0
@@ -2575,65 +2510,88 @@ fn eval_function(
               }
               Number(val)
             }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
+      }
+    "ODD" =>
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              if num == 0.0 {
+                Number(1.0)
+              } else {
+                let sign = num < 0.0
+                let (whole, frac) = modf_double((num - 1.0) / 2.0)
+                let mut val = whole * 2.0 + 1.0
+                if frac != 0.0 {
+                  if sign {
+                    val = val - 2.0
+                  } else {
+                    val = val + 2.0
+                  }
+                }
+                Number(val)
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "MROUND" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(num), Ok(multiple)) =>
-            if multiple == 0.0 {
-              Error(formula_error_num)
-            } else if (multiple < 0.0 && num > 0.0) ||
-              (multiple > 0.0 && num < 0.0) {
-              Error(formula_error_num)
-            } else {
-              let (whole, frac) = modf_double(num / multiple)
-              let mut rounded = whole
-              if trunc_double(frac + 0.5) > 0.0 {
-                rounded = rounded + 1.0
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(num), Ok(multiple)) =>
+              if multiple == 0.0 {
+                Error(formula_error_num)
+              } else if (multiple < 0.0 && num > 0.0) ||
+                (multiple > 0.0 && num < 0.0) {
+                Error(formula_error_num)
+              } else {
+                let (whole, frac) = modf_double(num / multiple)
+                let mut rounded = whole
+                if trunc_double(frac + 0.5) > 0.0 {
+                  rounded = rounded + 1.0
+                }
+                Number(rounded * multiple)
               }
-              Number(rounded * multiple)
-            }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "MOD" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(num), Ok(divisor)) =>
-            if divisor == 0.0 {
-              Error(formula_error_div)
-            } else {
-              let quotient = num / divisor
-              let truncated = Double::floor(quotient)
-              Number(num - divisor * truncated)
-            }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(num), Ok(divisor)) =>
+              if divisor == 0.0 {
+                Error(formula_error_div)
+              } else {
+                let quotient = num / divisor
+                let truncated = Double::floor(quotient)
+                Number(num - divisor * truncated)
+              }
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "QUOTIENT" =>
-      if values.length() == 2 {
-        match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(num), Ok(divisor)) =>
-            if divisor == 0.0 {
-              Error(formula_error_div)
-            } else {
-              Number(trunc_double(num / divisor))
-            }
-          (Err(err), _) => err
-          (_, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match (value_as_number(v0), value_as_number(v1)) {
+            (Ok(num), Ok(divisor)) =>
+              if divisor == 0.0 {
+                Error(formula_error_div)
+              } else {
+                Number(trunc_double(num / divisor))
+              }
+            (Err(err), _) => err
+            (_, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "AND" =>
       if values.length() == 0 || values.length() > 30 {
@@ -2682,23 +2640,23 @@ fn eval_function(
         Bool(false)
       }
     "NOT" =>
-      if values.length() == 1 {
-        match normalize_scalar(values[0]) {
-          Error(err) => Error(err)
-          Bool(flag) => Bool(!flag)
-          Number(num) => Bool(!(num != 0.0))
-          String(text) =>
-            if text.to_upper() == "TRUE" {
-              Bool(false)
-            } else if text.to_upper() == "FALSE" {
-              Bool(true)
-            } else {
-              Error(formula_error_value)
-            }
-          _ => Error(formula_error_value)
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match normalize_scalar(v0) {
+            Error(err) => Error(err)
+            Bool(flag) => Bool(!flag)
+            Number(num) => Bool(!(num != 0.0))
+            String(text) =>
+              if text.to_upper() == "TRUE" {
+                Bool(false)
+              } else if text.to_upper() == "FALSE" {
+                Bool(true)
+              } else {
+                Error(formula_error_value)
+              }
+            _ => Error(formula_error_value)
+          }
+        _ => Error(formula_error_value)
       }
     "XOR" =>
       if values.length() == 0 {
@@ -2732,552 +2690,567 @@ fn eval_function(
         }
       }
     "LEN" =>
-      if values.length() == 1 {
-        match value_as_string(values[0]) {
-          Ok(text) => Number(Double::from_int(text.length()))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_string(v0) {
+            Ok(text) => Number(Double::from_int(text.length()))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "LENB" =>
-      if values.length() == 1 {
-        match value_as_string(values[0]) {
-          Ok(text) => Number(Double::from_int(dbcs_byte_length(text)))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_string(v0) {
+            Ok(text) => Number(Double::from_int(dbcs_byte_length(text)))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "LOWER" =>
-      if values.length() == 1 {
-        match value_as_string(values[0]) {
-          Ok(text) => String(text.to_lower())
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_string(v0) {
+            Ok(text) => String(text.to_lower())
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "UPPER" =>
-      if values.length() == 1 {
-        match value_as_string(values[0]) {
-          Ok(text) => String(text.to_upper())
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_string(v0) {
+            Ok(text) => String(text.to_upper())
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "PROPER" =>
-      if values.length() == 1 {
-        match value_as_string(values[0]) {
-          Ok(text) => String(proper_case(text))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_string(v0) {
+            Ok(text) => String(proper_case(text))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "DBCS" =>
-      if values.length() == 1 {
-        match value_as_string(values[0]) {
-          Ok(text) =>
-            if dbcs_enabled(workbook) {
-              String(dbcs_convert(text))
-            } else {
-              String(text)
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_string(v0) {
+            Ok(text) =>
+              if dbcs_enabled(workbook) {
+                String(dbcs_convert(text))
+              } else {
+                String(text)
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "TRIM" =>
-      if values.length() == 1 {
-        match value_as_string(values[0]) {
-          Ok(text) => String(trim_excel_text(text))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_string(v0) {
+            Ok(text) => String(trim_excel_text(text))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "LEFT" =>
-      if values.length() == 1 || values.length() == 2 {
-        let text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let count = if values.length() == 2 {
-          match value_as_int(values[1]) {
-            Ok(num) => num
+      match values {
+        [v0] | [v0, _] => {
+          let text = match value_as_string(v0) {
+            Ok(text) => text
             Err(err) => return err
           }
-        } else {
-          1
+          let count = if values is [_, v1] {
+            match value_as_int(v1) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+          } else {
+            1
+          }
+          if count < 0 {
+            Error(formula_error_value)
+          } else {
+            let len = text.length()
+            let end = if count > len { len } else { count }
+            let start = 0
+            String(text.unsafe_substring(start~, end~))
+          }
         }
-        if count < 0 {
-          Error(formula_error_value)
-        } else {
-          let len = text.length()
-          let end = if count > len { len } else { count }
-          let start = 0
-          String(text.unsafe_substring(start~, end~))
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "LEFTB" =>
-      if values.length() == 1 || values.length() == 2 {
-        let text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let count = if values.length() == 2 {
-          match value_as_int(values[1]) {
-            Ok(num) => num
+      match values {
+        [v0] | [v0, _] => {
+          let text = match value_as_string(v0) {
+            Ok(text) => text
             Err(err) => return err
           }
-        } else {
-          1
-        }
-        if count < 0 {
-          Error(formula_error_value)
-        } else {
-          let len = dbcs_byte_length(text)
-          if count >= len {
-            String(text)
+          let count = if values is [_, v1] {
+            match value_as_int(v1) {
+              Ok(num) => num
+              Err(err) => return err
+            }
           } else {
-            String(dbcs_byte_range(text, 1, count))
+            1
+          }
+          if count < 0 {
+            Error(formula_error_value)
+          } else {
+            let len = dbcs_byte_length(text)
+            if count >= len {
+              String(text)
+            } else {
+              String(dbcs_byte_range(text, 1, count))
+            }
           }
         }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "RIGHT" =>
-      if values.length() == 1 || values.length() == 2 {
-        let text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let count = if values.length() == 2 {
-          match value_as_int(values[1]) {
-            Ok(num) => num
+      match values {
+        [v0] | [v0, _] => {
+          let text = match value_as_string(v0) {
+            Ok(text) => text
             Err(err) => return err
           }
-        } else {
-          1
+          let count = if values is [_, v1] {
+            match value_as_int(v1) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+          } else {
+            1
+          }
+          if count < 0 {
+            Error(formula_error_value)
+          } else {
+            let len = text.length()
+            let start = if count >= len { 0 } else { len - count }
+            let end = len
+            String(text.unsafe_substring(start~, end~))
+          }
         }
-        if count < 0 {
-          Error(formula_error_value)
-        } else {
-          let len = text.length()
-          let start = if count >= len { 0 } else { len - count }
-          let end = len
-          String(text.unsafe_substring(start~, end~))
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "RIGHTB" =>
-      if values.length() == 1 || values.length() == 2 {
-        let text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
+      match values {
+        [v0] | [v0, _] => {
+          let text = match value_as_string(v0) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          let count = if values is [_, v1] {
+            match value_as_int(v1) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+          } else {
+            1
+          }
+          if count < 0 {
+            Error(formula_error_value)
+          } else {
+            let len = dbcs_byte_length(text)
+            if count >= len {
+              String(text)
+            } else {
+              String(dbcs_byte_range(text, len - count + 1, count))
+            }
+          }
         }
-        let count = if values.length() == 2 {
-          match value_as_int(values[1]) {
+        _ => Error(formula_error_value)
+      }
+    "MID" =>
+      match values {
+        [v0, v1, v2] => {
+          let text = match value_as_string(v0) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          let start_num = match value_as_int(v1) {
             Ok(num) => num
             Err(err) => return err
           }
-        } else {
-          1
-        }
-        if count < 0 {
-          Error(formula_error_value)
-        } else {
-          let len = dbcs_byte_length(text)
-          if count >= len {
-            String(text)
+          let count = match value_as_int(v2) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+          if start_num <= 0 || count < 0 {
+            Error(formula_error_value)
           } else {
-            String(dbcs_byte_range(text, len - count + 1, count))
+            let len = text.length()
+            if start_num > len {
+              String("")
+            } else {
+              let start = start_num - 1
+              let mut end = start + count
+              if end > len {
+                end = len
+              }
+              String(text.unsafe_substring(start~, end~))
+            }
           }
         }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
-    "MID" =>
-      if values.length() == 3 {
-        let text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let start_num = match value_as_int(values[1]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let count = match value_as_int(values[2]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        if start_num <= 0 || count < 0 {
-          Error(formula_error_value)
-        } else {
-          let len = text.length()
-          if start_num > len {
+    "MIDB" =>
+      match values {
+        [v0, v1, v2] => {
+          let text = match value_as_string(v0) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          let start_num = match value_as_int(v1) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+          let count = match value_as_int(v2) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+          if start_num <= 0 || count < 0 {
+            Error(formula_error_value)
+          } else if count == 0 {
+            String("")
+          } else if start_num > dbcs_byte_length(text) {
             String("")
           } else {
-            let start = start_num - 1
+            String(dbcs_byte_range(text, start_num, count))
+          }
+        }
+        _ => Error(formula_error_value)
+      }
+    "REPT" =>
+      match values {
+        [v0, v1] => {
+          let text = match value_as_string(v0) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          let times = match value_as_int(v1) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+          if times < 0 {
+            Error(formula_error_value)
+          } else if times == 0 || text.length() == 0 {
+            String("")
+          } else if text.length() > max_cell_chars / times {
+            Error(formula_error_value)
+          } else {
+            String(text.repeat(times))
+          }
+        }
+        _ => Error(formula_error_value)
+      }
+    "REPLACE" =>
+      match values {
+        [v0, v1, v2, v3] => {
+          let text = match value_as_string(v0) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          let start_num = match value_as_int(v1) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+          let count = match value_as_int(v2) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+          let new_text = match value_as_string(v3) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          if start_num <= 0 || count < 0 {
+            Error(formula_error_value)
+          } else {
+            let len = text.length()
+            let mut start = start_num - 1
+            if start > len {
+              start = len
+            }
             let mut end = start + count
             if end > len {
               end = len
             }
-            String(text.unsafe_substring(start~, end~))
+            let sb = StringBuilder::new()
+            sb.write_view(text.unsafe_substring(start=0, end=start))
+            sb.write_view(new_text)
+            sb.write_view(text.unsafe_substring(start=end, end=len))
+            String(sb.to_string())
           }
         }
-      } else {
-        Error(formula_error_value)
-      }
-    "MIDB" =>
-      if values.length() == 3 {
-        let text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let start_num = match value_as_int(values[1]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let count = match value_as_int(values[2]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        if start_num <= 0 || count < 0 {
-          Error(formula_error_value)
-        } else if count == 0 {
-          String("")
-        } else if start_num > dbcs_byte_length(text) {
-          String("")
-        } else {
-          String(dbcs_byte_range(text, start_num, count))
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "REPT" =>
-      if values.length() == 2 {
-        let text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let times = match value_as_int(values[1]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        if times < 0 {
-          Error(formula_error_value)
-        } else if times == 0 || text.length() == 0 {
-          String("")
-        } else if text.length() > max_cell_chars / times {
-          Error(formula_error_value)
-        } else {
-          String(text.repeat(times))
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "REPLACE" =>
-      if values.length() == 4 {
-        let text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let start_num = match value_as_int(values[1]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let count = match value_as_int(values[2]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let new_text = match value_as_string(values[3]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        if start_num <= 0 || count < 0 {
-          Error(formula_error_value)
-        } else {
-          let len = text.length()
-          let mut start = start_num - 1
-          if start > len {
-            start = len
-          }
-          let mut end = start + count
-          if end > len {
-            end = len
-          }
-          let sb = StringBuilder::new()
-          sb.write_view(text.unsafe_substring(start=0, end=start))
-          sb.write_view(new_text)
-          sb.write_view(text.unsafe_substring(start=end, end=len))
-          String(sb.to_string())
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "REPLACEB" =>
-      if values.length() == 4 {
-        let text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let start_num = match value_as_int(values[1]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let count = match value_as_int(values[2]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let new_text = match value_as_string(values[3]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        if start_num <= 0 || count < 0 {
-          Error(formula_error_value)
-        } else {
-          let len = dbcs_byte_length(text)
-          let prefix_count = if start_num - 1 < len {
-            start_num - 1
-          } else {
-            len
+      match values {
+        [v0, v1, v2, v3] => {
+          let text = match value_as_string(v0) {
+            Ok(text) => text
+            Err(err) => return err
           }
-          let removed_end = start_num + count - 1
-          let suffix_start = if removed_end < len {
-            removed_end + 1
-          } else {
-            len + 1
-          }
-          let sb = StringBuilder::new()
-          sb.write_view(dbcs_byte_range(text, 1, prefix_count))
-          sb.write_view(new_text)
-          // suffix runs from just past the replaced range to end of string
-          sb.write_view(dbcs_byte_range(text, suffix_start, len))
-          String(sb.to_string())
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "SUBSTITUTE" =>
-      if values.length() == 3 || values.length() == 4 {
-        let text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let old_text = match value_as_string(values[1]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let new_text = match value_as_string(values[2]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        if old_text.length() == 0 {
-          Error(formula_error_value)
-        } else if values.length() == 4 {
-          let instance = match value_as_int(values[3]) {
+          let start_num = match value_as_int(v1) {
             Ok(num) => num
             Err(err) => return err
           }
-          if instance <= 0 {
+          let count = match value_as_int(v2) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+          let new_text = match value_as_string(v3) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          if start_num <= 0 || count < 0 {
             Error(formula_error_value)
           } else {
+            let len = dbcs_byte_length(text)
+            let prefix_count = if start_num - 1 < len {
+              start_num - 1
+            } else {
+              len
+            }
+            let removed_end = start_num + count - 1
+            let suffix_start = if removed_end < len {
+              removed_end + 1
+            } else {
+              len + 1
+            }
+            let sb = StringBuilder::new()
+            sb.write_view(dbcs_byte_range(text, 1, prefix_count))
+            sb.write_view(new_text)
+            // suffix runs from just past the replaced range to end of string
+            sb.write_view(dbcs_byte_range(text, suffix_start, len))
+            String(sb.to_string())
+          }
+        }
+        _ => Error(formula_error_value)
+      }
+    "SUBSTITUTE" =>
+      match values {
+        [v0, v1, v2] | [v0, v1, v2, _] => {
+          let text = match value_as_string(v0) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          let old_text = match value_as_string(v1) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          let new_text = match value_as_string(v2) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          if old_text.length() == 0 {
+            Error(formula_error_value)
+          } else if values is [_, _, _, v3] {
+            let instance = match value_as_int(v3) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+            if instance <= 0 {
+              Error(formula_error_value)
+            } else {
+              let mut index = 0
+              let mut count = 0
+              let len = text.length()
+              let pattern_len = old_text.length()
+              while true {
+                match find_substring_from(text, old_text, index) {
+                  Some(found) => {
+                    count = count + 1
+                    if count == instance {
+                      let sb = StringBuilder::new()
+                      sb.write_view(text.unsafe_substring(start=0, end=found))
+                      sb.write_view(new_text)
+                      let tail_start = found + pattern_len
+                      sb.write_view(
+                        text.unsafe_substring(start=tail_start, end=len),
+                      )
+                      return String(sb.to_string())
+                    }
+                    index = found + pattern_len
+                  }
+                  None => break
+                }
+              }
+              String(text)
+            }
+          } else {
             let mut index = 0
-            let mut count = 0
             let len = text.length()
             let pattern_len = old_text.length()
+            let sb = StringBuilder::new()
             while true {
               match find_substring_from(text, old_text, index) {
                 Some(found) => {
-                  count = count + 1
-                  if count == instance {
-                    let sb = StringBuilder::new()
-                    sb.write_view(text.unsafe_substring(start=0, end=found))
-                    sb.write_view(new_text)
-                    let tail_start = found + pattern_len
-                    sb.write_view(
-                      text.unsafe_substring(start=tail_start, end=len),
-                    )
-                    return String(sb.to_string())
-                  }
+                  sb.write_view(text.unsafe_substring(start=index, end=found))
+                  sb.write_view(new_text)
                   index = found + pattern_len
                 }
-                None => break
+                None => {
+                  sb.write_view(text.unsafe_substring(start=index, end=len))
+                  break
+                }
               }
             }
-            String(text)
+            String(sb.to_string())
           }
-        } else {
-          let mut index = 0
-          let len = text.length()
-          let pattern_len = old_text.length()
-          let sb = StringBuilder::new()
-          while true {
-            match find_substring_from(text, old_text, index) {
-              Some(found) => {
-                sb.write_view(text.unsafe_substring(start=index, end=found))
-                sb.write_view(new_text)
-                index = found + pattern_len
-              }
-              None => {
-                sb.write_view(text.unsafe_substring(start=index, end=len))
-                break
-              }
-            }
-          }
-          String(sb.to_string())
         }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "FIND" =>
-      if values.length() == 2 || values.length() == 3 {
-        let find_text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let within_text = match value_as_string(values[1]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let start_num = if values.length() == 3 {
-          match value_as_int(values[2]) {
-            Ok(num) => num
+      match values {
+        [v0, v1] | [v0, v1, _] => {
+          let find_text = match value_as_string(v0) {
+            Ok(text) => text
             Err(err) => return err
           }
-        } else {
-          1
-        }
-        if start_num <= 0 {
-          Error(formula_error_value)
-        } else {
-          let start = start_num - 1
-          let len = within_text.length()
-          if start > len {
-            Error(formula_error_value)
-          } else if find_text.length() == 0 {
-            Number(Double::from_int(start_num))
+          let within_text = match value_as_string(v1) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          let start_num = if values is [_, _, v2] {
+            match value_as_int(v2) {
+              Ok(num) => num
+              Err(err) => return err
+            }
           } else {
-            match find_substring_from(within_text, find_text, start) {
-              Some(idx) => Number(Double::from_int(idx + 1))
-              None => Error(formula_error_value)
+            1
+          }
+          if start_num <= 0 {
+            Error(formula_error_value)
+          } else {
+            let start = start_num - 1
+            let len = within_text.length()
+            if start > len {
+              Error(formula_error_value)
+            } else if find_text.length() == 0 {
+              Number(Double::from_int(start_num))
+            } else {
+              match find_substring_from(within_text, find_text, start) {
+                Some(idx) => Number(Double::from_int(idx + 1))
+                None => Error(formula_error_value)
+              }
             }
           }
         }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "FINDB" =>
-      if values.length() == 2 || values.length() == 3 {
-        let find_text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let within_text = match value_as_string(values[1]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let start_num = if values.length() == 3 {
-          match value_as_int(values[2]) {
-            Ok(num) => num
+      match values {
+        [v0, v1] | [v0, v1, _] => {
+          let find_text = match value_as_string(v0) {
+            Ok(text) => text
             Err(err) => return err
           }
-        } else {
-          1
+          let within_text = match value_as_string(v1) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          let start_num = if values is [_, _, v2] {
+            match value_as_int(v2) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+          } else {
+            1
+          }
+          match find_dbcs(within_text, find_text, start_num, false) {
+            Some(value) => Number(Double::from_int(value))
+            None => Error(formula_error_value)
+          }
         }
-        match find_dbcs(within_text, find_text, start_num, false) {
-          Some(value) => Number(Double::from_int(value))
-          None => Error(formula_error_value)
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "SEARCH" =>
-      if values.length() == 2 || values.length() == 3 {
-        let find_text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let within_text = match value_as_string(values[1]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let start_num = if values.length() == 3 {
-          match value_as_int(values[2]) {
-            Ok(num) => num
+      match values {
+        [v0, v1] | [v0, v1, _] => {
+          let find_text = match value_as_string(v0) {
+            Ok(text) => text
             Err(err) => return err
           }
-        } else {
-          1
-        }
-        if start_num <= 0 {
-          Error(formula_error_value)
-        } else {
-          let start = start_num - 1
-          let lower_text = within_text.to_lower()
-          let lower_find = find_text.to_lower()
-          let len = lower_text.length()
-          if start > len {
-            Error(formula_error_value)
-          } else if lower_find.length() == 0 {
-            Number(Double::from_int(start_num))
+          let within_text = match value_as_string(v1) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          let start_num = if values is [_, _, v2] {
+            match value_as_int(v2) {
+              Ok(num) => num
+              Err(err) => return err
+            }
           } else {
-            match wildcard_find(lower_text, lower_find, start) {
-              Some(idx) => Number(Double::from_int(idx + 1))
-              None => Error(formula_error_value)
+            1
+          }
+          if start_num <= 0 {
+            Error(formula_error_value)
+          } else {
+            let start = start_num - 1
+            let lower_text = within_text.to_lower()
+            let lower_find = find_text.to_lower()
+            let len = lower_text.length()
+            if start > len {
+              Error(formula_error_value)
+            } else if lower_find.length() == 0 {
+              Number(Double::from_int(start_num))
+            } else {
+              match wildcard_find(lower_text, lower_find, start) {
+                Some(idx) => Number(Double::from_int(idx + 1))
+                None => Error(formula_error_value)
+              }
             }
           }
         }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "SEARCHB" =>
-      if values.length() == 2 || values.length() == 3 {
-        let find_text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let within_text = match value_as_string(values[1]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let start_num = if values.length() == 3 {
-          match value_as_int(values[2]) {
-            Ok(num) => num
+      match values {
+        [v0, v1] | [v0, v1, _] => {
+          let find_text = match value_as_string(v0) {
+            Ok(text) => text
             Err(err) => return err
           }
-        } else {
-          1
+          let within_text = match value_as_string(v1) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          let start_num = if values is [_, _, v2] {
+            match value_as_int(v2) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+          } else {
+            1
+          }
+          let lower_find = find_text.to_lower()
+          let lower_text = within_text.to_lower()
+          match find_dbcs(lower_text, lower_find, start_num, true) {
+            Some(value) => Number(Double::from_int(value))
+            None => Error(formula_error_value)
+          }
         }
-        let lower_find = find_text.to_lower()
-        let lower_text = within_text.to_lower()
-        match find_dbcs(lower_text, lower_find, start_num, true) {
-          Some(value) => Number(Double::from_int(value))
-          None => Error(formula_error_value)
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "EXACT" =>
-      if values.length() == 2 {
-        let left = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
+      match values {
+        [v0, v1] => {
+          let left = match value_as_string(v0) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          let right = match value_as_string(v1) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          Bool(left == right)
         }
-        let right = match value_as_string(values[1]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        Bool(left == right)
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "FIXED" =>
       if values.length() >= 1 && values.length() <= 3 {
@@ -3309,63 +3282,65 @@ fn eval_function(
         Error(formula_error_value)
       }
     "VALUE" =>
-      if values.length() == 1 {
-        match value_as_number_text(values[0]) {
-          Ok(num) => Number(num)
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number_text(v0) {
+            Ok(num) => Number(num)
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "VALUETOTEXT" =>
-      if values.length() == 1 || values.length() == 2 {
-        let format = if values.length() == 2 {
-          match value_as_int(values[1]) {
-            Ok(num) => num
-            Err(err) => return err
+      match values {
+        [v0] | [v0, _] => {
+          let format = if values is [_, v1] {
+            match value_as_int(v1) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+          } else {
+            0
           }
-        } else {
-          0
-        }
-        if format != 0 && format != 1 {
-          Error(formula_error_value)
-        } else {
-          let text = formula_value_string(values[0])
-          match value_as_number(values[0]) {
-            Ok(_) => String(text)
-            Err(_) =>
-              if format == 1 {
-                String("\"" + text + "\"")
-              } else {
-                String(text)
-              }
+          if format != 0 && format != 1 {
+            Error(formula_error_value)
+          } else {
+            let text = formula_value_string(v0)
+            match value_as_number(v0) {
+              Ok(_) => String(text)
+              Err(_) =>
+                if format == 1 {
+                  String("\"" + text + "\"")
+                } else {
+                  String(text)
+                }
+            }
           }
         }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "TEXT" =>
-      if values.length() == 2 {
-        let format_text = match value_as_string(values[1]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        match value_as_number_text(values[0]) {
-          Ok(num) => {
-            let formatted = format_number_code(
-              format_number(num),
-              format_text,
-              Options::new(),
-              use_1904_format=ctx.use_1904_dates,
-            ) catch {
-              _ => return Error(formula_error_value)
-            }
-            String(formatted)
+      match values {
+        [v0, v1] => {
+          let format_text = match value_as_string(v1) {
+            Ok(text) => text
+            Err(err) => return err
           }
-          Err(err) => err
+          match value_as_number_text(v0) {
+            Ok(num) => {
+              let formatted = format_number_code(
+                format_number(num),
+                format_text,
+                Options::new(),
+                use_1904_format=ctx.use_1904_dates,
+              ) catch {
+                _ => return Error(formula_error_value)
+              }
+              String(formatted)
+            }
+            Err(err) => err
+          }
         }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "ARRAYTOTEXT" =>
       if values.length() == 1 || values.length() == 2 {
@@ -3591,108 +3566,208 @@ fn eval_function(
         Error(formula_error_value)
       }
     "DATE" =>
-      if values.length() == 3 {
-        match
-          (
-            value_as_int(values[0]),
-            value_as_int(values[1]),
-            value_as_int(values[2]),
-          ) {
-          (Ok(year), Ok(month), Ok(day)) =>
-            match
-              excel_serial_from_date(
-                year,
-                month,
-                day,
-                use_1904_dates=ctx.use_1904_dates,
-              ) {
-              Some(serial) => Number(serial)
-              None => Error(formula_error_num)
-            }
-          (Err(err), _, _) => err
-          (_, Err(err), _) => err
-          (_, _, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1, v2] =>
+          match (value_as_int(v0), value_as_int(v1), value_as_int(v2)) {
+            (Ok(year), Ok(month), Ok(day)) =>
+              match
+                excel_serial_from_date(
+                  year,
+                  month,
+                  day,
+                  use_1904_dates=ctx.use_1904_dates,
+                ) {
+                Some(serial) => Number(serial)
+                None => Error(formula_error_num)
+              }
+            (Err(err), _, _) => err
+            (_, Err(err), _) => err
+            (_, _, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "TIME" =>
-      if values.length() == 3 {
-        match
-          (
-            value_as_int(values[0]),
-            value_as_int(values[1]),
-            value_as_int(values[2]),
-          ) {
-          (Ok(hours), Ok(minutes), Ok(seconds)) =>
-            match excel_time_fraction(hours, minutes, seconds) {
-              Some(value) => Number(value)
-              None => Error(formula_error_num)
-            }
-          (Err(err), _, _) => err
-          (_, Err(err), _) => err
-          (_, _, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1, v2] =>
+          match (value_as_int(v0), value_as_int(v1), value_as_int(v2)) {
+            (Ok(hours), Ok(minutes), Ok(seconds)) =>
+              match excel_time_fraction(hours, minutes, seconds) {
+                Some(value) => Number(value)
+                None => Error(formula_error_num)
+              }
+            (Err(err), _, _) => err
+            (_, Err(err), _) => err
+            (_, _, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "DATEVALUE" =>
-      if values.length() == 1 {
-        let text = match value_as_string(values[0]) {
-          Ok(value) => value
-          Err(err) => return err
+      match values {
+        [v0] => {
+          let text = match value_as_string(v0) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          match parse_date_parts(text) {
+            Some((year, month, day)) =>
+              match
+                excel_serial_from_date(
+                  year,
+                  month,
+                  day,
+                  use_1904_dates=ctx.use_1904_dates,
+                ) {
+                Some(serial) => Number(serial)
+                None => Error(formula_error_value)
+              }
+            None => Error(formula_error_value)
+          }
         }
-        match parse_date_parts(text) {
-          Some((year, month, day)) =>
-            match
-              excel_serial_from_date(
-                year,
-                month,
-                day,
-                use_1904_dates=ctx.use_1904_dates,
-              ) {
-              Some(serial) => Number(serial)
-              None => Error(formula_error_value)
-            }
-          None => Error(formula_error_value)
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "TIMEVALUE" =>
-      if values.length() == 1 {
-        let text = match value_as_string(values[0]) {
-          Ok(value) => value
-          Err(err) => return err
+      match values {
+        [v0] => {
+          let text = match value_as_string(v0) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          match parse_time_parts(text) {
+            Some((hours, minutes, seconds)) =>
+              // parse_time_parts only yields non-negative components.
+              Number(excel_time_fraction(hours, minutes, seconds).unwrap())
+            None => Error(formula_error_value)
+          }
         }
-        match parse_time_parts(text) {
-          Some((hours, minutes, seconds)) =>
-            // parse_time_parts only yields non-negative components.
-            Number(excel_time_fraction(hours, minutes, seconds).unwrap())
-          None => Error(formula_error_value)
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "DATEDIF" =>
-      if values.length() == 3 {
-        let start_serial = match
-          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
+      match values {
+        [v0, v1, v2] => {
+          let start_serial = match
+            value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          let end_serial = match
+            value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          if start_serial > end_serial {
+            Error(formula_error_num)
+          } else if start_serial == end_serial {
+            Number(0.0)
+          } else {
+            let unit = match value_as_string(v2) {
+              Ok(text) => text.to_lower()
+              Err(err) => return err
+            }
+            let (sy, sm, sd) = match
+              date_parts_from_serial(
+                start_serial,
+                use_1904_dates=ctx.use_1904_dates,
+              ) {
+              Some(parts) => parts
+              None => return Error(formula_error_num)
+            }
+            let (ey, em, ed) = match
+              date_parts_from_serial(
+                end_serial,
+                use_1904_dates=ctx.use_1904_dates,
+              ) {
+              Some(parts) => parts
+              None => return Error(formula_error_num)
+            }
+            match unit {
+              "y" => {
+                let mut diff = ey - sy
+                if em < sm || (em == sm && ed < sd) {
+                  diff = diff - 1
+                }
+                Number(Double::from_int(diff))
+              }
+              "m" => {
+                let mut diff = (ey - sy) * 12 + (em - sm)
+                if ed < sd {
+                  diff = diff - 1
+                }
+                Number(Double::from_int(diff))
+              }
+              "d" => Number(end_serial - start_serial)
+              "ym" => {
+                let mut diff = em - sm
+                if ed < sd {
+                  diff = diff - 1
+                }
+                if diff < 0 {
+                  diff = diff + 12
+                }
+                Number(Double::from_int(diff))
+              }
+              "yd" => {
+                let mut target_year = sy
+                if em < sm || (em == sm && ed < sd) {
+                  target_year = sy + 1
+                }
+                let start_base = excel_serial_from_date(
+                  sy,
+                  sm,
+                  sd,
+                  use_1904_dates=ctx.use_1904_dates,
+                ).unwrap()
+                let end_base = excel_serial_from_date(
+                  target_year,
+                  em,
+                  ed,
+                  use_1904_dates=ctx.use_1904_dates,
+                ).unwrap()
+                Number(end_base - start_base)
+              }
+              "md" => {
+                let diff = if ed >= sd {
+                  ed - sd
+                } else {
+                  let (prev_year, prev_month) = normalize_year_month(ey, em - 1)
+                  let dim = days_in_month(prev_year, prev_month)
+                  dim - sd + ed
+                }
+                Number(Double::from_int(diff))
+              }
+              _ => Error(formula_error_value)
+            }
+          }
         }
-        let end_serial = match
-          value_as_date_serial(values[1], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
+        _ => Error(formula_error_value)
+      }
+    "DAYS" =>
+      match values {
+        [v0, v1] => {
+          let end_serial = match
+            value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          let start_serial = match
+            value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          Number(end_serial - start_serial)
         }
-        if start_serial > end_serial {
-          Error(formula_error_num)
-        } else if start_serial == end_serial {
-          Number(0.0)
-        } else {
-          let unit = match value_as_string(values[2]) {
-            Ok(text) => text.to_lower()
+        _ => Error(formula_error_value)
+      }
+    "DAYS360" =>
+      match values {
+        [v0, v1] | [v0, v1, _] => {
+          let start_serial = match
+            value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          let end_serial = match
+            value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
+            Ok(value) => value
             Err(err) => return err
           }
           let (sy, sm, sd) = match
@@ -3711,366 +3786,273 @@ fn eval_function(
             Some(parts) => parts
             None => return Error(formula_error_num)
           }
-          match unit {
-            "y" => {
-              let mut diff = ey - sy
-              if em < sm || (em == sm && ed < sd) {
-                diff = diff - 1
-              }
-              Number(Double::from_int(diff))
+          let mut start_day = sd
+          let mut end_day = ed
+          let end_year = ey
+          let mut end_month = em
+          let use_european = if values is [_, _, v2] {
+            match value_as_bool(v2) {
+              Ok(flag) => flag
+              Err(err) => return err
             }
-            "m" => {
-              let mut diff = (ey - sy) * 12 + (em - sm)
-              if ed < sd {
-                diff = diff - 1
-              }
-              Number(Double::from_int(diff))
+          } else {
+            false
+          }
+          if use_european {
+            if start_day == 31 {
+              start_day = 30
             }
-            "d" => Number(end_serial - start_serial)
-            "ym" => {
-              let mut diff = em - sm
-              if ed < sd {
-                diff = diff - 1
-              }
-              if diff < 0 {
-                diff = diff + 12
-              }
-              Number(Double::from_int(diff))
-            }
-            "yd" => {
-              let mut target_year = sy
-              if em < sm || (em == sm && ed < sd) {
-                target_year = sy + 1
-              }
-              let start_base = excel_serial_from_date(
-                sy,
-                sm,
-                sd,
-                use_1904_dates=ctx.use_1904_dates,
-              ).unwrap()
-              let end_base = excel_serial_from_date(
-                target_year,
-                em,
-                ed,
-                use_1904_dates=ctx.use_1904_dates,
-              ).unwrap()
-              Number(end_base - start_base)
-            }
-            "md" => {
-              let diff = if ed >= sd {
-                ed - sd
-              } else {
-                let (prev_year, prev_month) = normalize_year_month(ey, em - 1)
-                let dim = days_in_month(prev_year, prev_month)
-                dim - sd + ed
-              }
-              Number(Double::from_int(diff))
-            }
-            _ => Error(formula_error_value)
-          }
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "DAYS" =>
-      if values.length() == 2 {
-        let end_serial = match
-          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
-        }
-        let start_serial = match
-          value_as_date_serial(values[1], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
-        }
-        Number(end_serial - start_serial)
-      } else {
-        Error(formula_error_value)
-      }
-    "DAYS360" =>
-      if values.length() == 2 || values.length() == 3 {
-        let start_serial = match
-          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
-        }
-        let end_serial = match
-          value_as_date_serial(values[1], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
-        }
-        let (sy, sm, sd) = match
-          date_parts_from_serial(
-            start_serial,
-            use_1904_dates=ctx.use_1904_dates,
-          ) {
-          Some(parts) => parts
-          None => return Error(formula_error_num)
-        }
-        let (ey, em, ed) = match
-          date_parts_from_serial(end_serial, use_1904_dates=ctx.use_1904_dates) {
-          Some(parts) => parts
-          None => return Error(formula_error_num)
-        }
-        let mut start_day = sd
-        let mut end_day = ed
-        let end_year = ey
-        let mut end_month = em
-        let use_european = if values.length() == 3 {
-          match value_as_bool(values[2]) {
-            Ok(flag) => flag
-            Err(err) => return err
-          }
-        } else {
-          false
-        }
-        if use_european {
-          if start_day == 31 {
-            start_day = 30
-          }
-          if end_day == 31 {
-            end_day = 30
-          }
-        } else {
-          if days_in_month(sy, sm) == start_day {
-            start_day = 30
-          }
-          if end_day > 30 {
-            if start_day < 30 {
-              end_month = end_month + 1
-              end_day = 1
-            } else {
+            if end_day == 31 {
               end_day = 30
             }
-          }
-        }
-        let (norm_year, norm_month) = normalize_year_month(end_year, end_month)
-        let diff = (norm_year - sy) * 360 +
-          (norm_month - sm) * 30 +
-          (end_day - start_day)
-        Number(Double::from_int(diff))
-      } else {
-        Error(formula_error_value)
-      }
-    "ISOWEEKNUM" =>
-      if values.length() == 1 {
-        let serial = match
-          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
-        }
-        // Serial zero is the 1900 system's artificial day before its epoch,
-        // but is the real 1904-01-01 epoch in a date-1904 workbook.
-        if !ctx.use_1904_dates && serial < 1.0 {
-          return Error(formula_error_num)
-        }
-        // Excel assigns the fictitious 1900-02-29 (including its time
-        // fraction) to ISO week 9. It cannot pass through the Gregorian helper
-        // below because 1900 was not actually a leap year.
-        if is_1900_phantom_date_serial(serial, ctx.use_1904_dates) {
-          return Number(9.0)
-        }
-        let (year, month, day) = match
-          date_parts_from_serial(serial, use_1904_dates=ctx.use_1904_dates) {
-          Some(parts) => parts
-          None => return Error(formula_error_num)
-        }
-        match iso_week_number(year, month, day) {
-          Some(week) => Number(Double::from_int(week))
-          None => Error(formula_error_num)
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "EDATE" =>
-      if values.length() == 2 {
-        let (year, month, day) = match
-          date_parts_from_value(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(parts) => parts
-          Err(err) => return err
-        }
-        let months = match value_as_number(values[1]) {
-          Ok(num) => Double::to_int(trunc_double(num))
-          Err(err) => return err
-        }
-        let (new_year, new_month) = normalize_year_month(year, month + months)
-        let max_day = days_in_month(new_year, new_month)
-        let new_day = if day > max_day { max_day } else { day }
-        match
-          excel_serial_from_date(
-            new_year,
-            new_month,
-            new_day,
-            use_1904_dates=ctx.use_1904_dates,
-          ) {
-          Some(serial) => Number(serial)
-          None => Error(formula_error_num)
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "EOMONTH" =>
-      if values.length() == 2 {
-        let (year, month, _) = match
-          date_parts_from_value(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(parts) => parts
-          Err(err) => return err
-        }
-        let months = match value_as_number(values[1]) {
-          Ok(num) => Double::to_int(trunc_double(num))
-          Err(err) => return err
-        }
-        let (new_year, new_month) = normalize_year_month(year, month + months)
-        let new_day = days_in_month(new_year, new_month)
-        match
-          excel_serial_from_date(
-            new_year,
-            new_month,
-            new_day,
-            use_1904_dates=ctx.use_1904_dates,
-          ) {
-          Some(serial) => Number(serial)
-          None => Error(formula_error_num)
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "YEARFRAC" =>
-      if values.length() == 2 || values.length() == 3 {
-        let start_serial = match
-          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
-        }
-        let end_serial = match
-          value_as_date_serial(values[1], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
-        }
-        let basis = if values.length() == 3 {
-          match value_as_number(values[2]) {
-            Ok(num) => Double::to_int(trunc_double(num))
-            Err(err) => return err
-          }
-        } else {
-          0
-        }
-        yearfrac_value(
-          start_serial,
-          end_serial,
-          basis,
-          use_1904_dates=ctx.use_1904_dates,
-        )
-      } else {
-        Error(formula_error_value)
-      }
-    "WEEKDAY" =>
-      if values.length() == 1 || values.length() == 2 {
-        let (year, month, day) = match
-          date_parts_from_value(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(parts) => parts
-          Err(err) => return err
-        }
-        let mut return_type = 1
-        if values.length() == 2 {
-          return_type = match value_as_number(values[1]) {
-            Ok(num) => Double::to_int(trunc_double(num))
-            Err(err) => return err
-          }
-        }
-        if return_type == 2 {
-          return_type = 11
-        }
-        let weekday = weekday_sun1(year, month, day)
-        if return_type == 1 {
-          Number(Double::from_int(weekday))
-        } else if return_type == 3 {
-          let value = (weekday + 6 - 1) % 7
-          Number(Double::from_int(value))
-        } else if return_type >= 11 && return_type <= 17 {
-          let value = (weekday + 6 - (return_type - 10)) % 7 + 1
-          Number(Double::from_int(value))
-        } else {
-          Error(formula_error_value)
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "WEEKNUM" =>
-      if values.length() == 1 || values.length() == 2 {
-        let (year, month, day) = match
-          date_parts_from_value(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(parts) => parts
-          Err(err) => return err
-        }
-        let mut return_type = 1
-        if values.length() == 2 {
-          return_type = match value_as_number(values[1]) {
-            Ok(num) => Double::to_int(trunc_double(num))
-            Err(err) => return err
-          }
-        }
-        let days = day_of_year(year, month, day)
-        let mut week_mod = days % 7
-        if week_mod == 0 {
-          week_mod = 7
-        }
-        let mut week_num = (days + 6) / 7
-        let first_weekday = weekday_sun1(year, 1, 1) - 1
-        let offset = match return_type {
-          1 | 17 => 0
-          2 | 11 | 21 => 1
-          12 | 13 | 14 | 15 | 16 => return_type - 10
-          _ => return Error(formula_error_num)
-        }
-        let mut padding = offset + 7 - first_weekday
-        if padding > 7 {
-          padding = padding - 7
-        }
-        if week_mod > padding {
-          week_num = week_num + 1
-        }
-        if return_type == 21 && (first_weekday == 0 || first_weekday > 4) {
-          week_num = week_num - 1
-          if week_num < 1 {
-            week_num = 52
-            let prev_first_weekday = weekday_sun1(year - 1, 1, 1) - 1
-            if prev_first_weekday < 4 {
-              week_num = week_num + 1
+          } else {
+            if days_in_month(sy, sm) == start_day {
+              start_day = 30
+            }
+            if end_day > 30 {
+              if start_day < 30 {
+                end_month = end_month + 1
+                end_day = 1
+              } else {
+                end_day = 30
+              }
             }
           }
+          let (norm_year, norm_month) = normalize_year_month(
+            end_year, end_month,
+          )
+          let diff = (norm_year - sy) * 360 +
+            (norm_month - sm) * 30 +
+            (end_day - start_day)
+          Number(Double::from_int(diff))
         }
-        Number(Double::from_int(week_num))
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
+      }
+    "ISOWEEKNUM" =>
+      match values {
+        [v0] => {
+          let serial = match
+            value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          // Serial zero is the 1900 system's artificial day before its epoch,
+          // but is the real 1904-01-01 epoch in a date-1904 workbook.
+          if !ctx.use_1904_dates && serial < 1.0 {
+            return Error(formula_error_num)
+          }
+          // Excel assigns the fictitious 1900-02-29 (including its time
+          // fraction) to ISO week 9. It cannot pass through the Gregorian helper
+          // below because 1900 was not actually a leap year.
+          if is_1900_phantom_date_serial(serial, ctx.use_1904_dates) {
+            return Number(9.0)
+          }
+          let (year, month, day) = match
+            date_parts_from_serial(serial, use_1904_dates=ctx.use_1904_dates) {
+            Some(parts) => parts
+            None => return Error(formula_error_num)
+          }
+          match iso_week_number(year, month, day) {
+            Some(week) => Number(Double::from_int(week))
+            None => Error(formula_error_num)
+          }
+        }
+        _ => Error(formula_error_value)
+      }
+    "EDATE" =>
+      match values {
+        [v0, v1] => {
+          let (year, month, day) = match
+            date_parts_from_value(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok(parts) => parts
+            Err(err) => return err
+          }
+          let months = match value_as_number(v1) {
+            Ok(num) => Double::to_int(trunc_double(num))
+            Err(err) => return err
+          }
+          let (new_year, new_month) = normalize_year_month(year, month + months)
+          let max_day = days_in_month(new_year, new_month)
+          let new_day = if day > max_day { max_day } else { day }
+          match
+            excel_serial_from_date(
+              new_year,
+              new_month,
+              new_day,
+              use_1904_dates=ctx.use_1904_dates,
+            ) {
+            Some(serial) => Number(serial)
+            None => Error(formula_error_num)
+          }
+        }
+        _ => Error(formula_error_value)
+      }
+    "EOMONTH" =>
+      match values {
+        [v0, v1] => {
+          let (year, month, _) = match
+            date_parts_from_value(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok(parts) => parts
+            Err(err) => return err
+          }
+          let months = match value_as_number(v1) {
+            Ok(num) => Double::to_int(trunc_double(num))
+            Err(err) => return err
+          }
+          let (new_year, new_month) = normalize_year_month(year, month + months)
+          let new_day = days_in_month(new_year, new_month)
+          match
+            excel_serial_from_date(
+              new_year,
+              new_month,
+              new_day,
+              use_1904_dates=ctx.use_1904_dates,
+            ) {
+            Some(serial) => Number(serial)
+            None => Error(formula_error_num)
+          }
+        }
+        _ => Error(formula_error_value)
+      }
+    "YEARFRAC" =>
+      match values {
+        [v0, v1] | [v0, v1, _] => {
+          let start_serial = match
+            value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          let end_serial = match
+            value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          let basis = if values is [_, _, v2] {
+            match value_as_number(v2) {
+              Ok(num) => Double::to_int(trunc_double(num))
+              Err(err) => return err
+            }
+          } else {
+            0
+          }
+          yearfrac_value(
+            start_serial,
+            end_serial,
+            basis,
+            use_1904_dates=ctx.use_1904_dates,
+          )
+        }
+        _ => Error(formula_error_value)
+      }
+    "WEEKDAY" =>
+      match values {
+        [v0] | [v0, _] => {
+          let (year, month, day) = match
+            date_parts_from_value(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok(parts) => parts
+            Err(err) => return err
+          }
+          let mut return_type = 1
+          if values is [_, v1] {
+            return_type = match value_as_number(v1) {
+              Ok(num) => Double::to_int(trunc_double(num))
+              Err(err) => return err
+            }
+          }
+          if return_type == 2 {
+            return_type = 11
+          }
+          let weekday = weekday_sun1(year, month, day)
+          if return_type == 1 {
+            Number(Double::from_int(weekday))
+          } else if return_type == 3 {
+            let value = (weekday + 6 - 1) % 7
+            Number(Double::from_int(value))
+          } else if return_type >= 11 && return_type <= 17 {
+            let value = (weekday + 6 - (return_type - 10)) % 7 + 1
+            Number(Double::from_int(value))
+          } else {
+            Error(formula_error_value)
+          }
+        }
+        _ => Error(formula_error_value)
+      }
+    "WEEKNUM" =>
+      match values {
+        [v0] | [v0, _] => {
+          let (year, month, day) = match
+            date_parts_from_value(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok(parts) => parts
+            Err(err) => return err
+          }
+          let mut return_type = 1
+          if values is [_, v1] {
+            return_type = match value_as_number(v1) {
+              Ok(num) => Double::to_int(trunc_double(num))
+              Err(err) => return err
+            }
+          }
+          let days = day_of_year(year, month, day)
+          let mut week_mod = days % 7
+          if week_mod == 0 {
+            week_mod = 7
+          }
+          let mut week_num = (days + 6) / 7
+          let first_weekday = weekday_sun1(year, 1, 1) - 1
+          let offset = match return_type {
+            1 | 17 => 0
+            2 | 11 | 21 => 1
+            12 | 13 | 14 | 15 | 16 => return_type - 10
+            _ => return Error(formula_error_num)
+          }
+          let mut padding = offset + 7 - first_weekday
+          if padding > 7 {
+            padding = padding - 7
+          }
+          if week_mod > padding {
+            week_num = week_num + 1
+          }
+          if return_type == 21 && (first_weekday == 0 || first_weekday > 4) {
+            week_num = week_num - 1
+            if week_num < 1 {
+              week_num = 52
+              let prev_first_weekday = weekday_sun1(year - 1, 1, 1) - 1
+              if prev_first_weekday < 4 {
+                week_num = week_num + 1
+              }
+            }
+          }
+          Number(Double::from_int(week_num))
+        }
+        _ => Error(formula_error_value)
       }
     "NETWORKDAYS" =>
-      if values.length() == 2 || values.length() == 3 {
-        let start_serial = match
-          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
+      match values {
+        [v0, v1] | [v0, v1, _] => {
+          let start_serial = match
+            value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          let end_serial = match
+            value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          let holidays = if values is [_, _, v2] {
+            collect_holidays(v2, use_1904_dates=ctx.use_1904_dates)
+          } else {
+            []
+          }
+          networkdays_intl_value(
+            start_serial,
+            end_serial,
+            Number(1.0),
+            holidays,
+            use_1904_dates=ctx.use_1904_dates,
+          )
         }
-        let end_serial = match
-          value_as_date_serial(values[1], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
-        }
-        let holidays = if values.length() == 3 {
-          collect_holidays(values[2], use_1904_dates=ctx.use_1904_dates)
-        } else {
-          []
-        }
-        networkdays_intl_value(
-          start_serial,
-          end_serial,
-          Number(1.0),
-          holidays,
-          use_1904_dates=ctx.use_1904_dates,
-        )
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "NETWORKDAYS.INTL" =>
       if values.length() >= 2 && values.length() <= 4 {
@@ -4105,30 +4087,31 @@ fn eval_function(
         Error(formula_error_value)
       }
     "WORKDAY" =>
-      if values.length() == 2 || values.length() == 3 {
-        let start_serial = match
-          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
+      match values {
+        [v0, v1] | [v0, v1, _] => {
+          let start_serial = match
+            value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          let days = match value_as_number(v1) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+          let holidays = if values is [_, _, v2] {
+            collect_holidays(v2, use_1904_dates=ctx.use_1904_dates)
+          } else {
+            []
+          }
+          workday_intl_value(
+            start_serial,
+            days,
+            Number(1.0),
+            holidays,
+            use_1904_dates=ctx.use_1904_dates,
+          )
         }
-        let days = match value_as_number(values[1]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let holidays = if values.length() == 3 {
-          collect_holidays(values[2], use_1904_dates=ctx.use_1904_dates)
-        } else {
-          []
-        }
-        workday_intl_value(
-          start_serial,
-          days,
-          Number(1.0),
-          holidays,
-          use_1904_dates=ctx.use_1904_dates,
-        )
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "WORKDAY.INTL" =>
       if values.length() >= 2 && values.length() <= 4 {
@@ -4162,165 +4145,168 @@ fn eval_function(
         Error(formula_error_value)
       }
     "NOW" =>
-      if values.length() == 0 {
-        let now_ms = @env.now()
-        let total_seconds = UInt64::to_double(now_ms) / 1000.0
-        let days = Double::floor(total_seconds / 86400.0)
-        let seconds_in_day = total_seconds - days * 86400.0
-        let epoch_serial = if ctx.use_1904_dates { 24107.0 } else { 25569.0 }
-        let serial = days + epoch_serial + seconds_in_day / 86400.0
-        Number(serial)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [] => {
+          let now_ms = @env.now()
+          let total_seconds = UInt64::to_double(now_ms) / 1000.0
+          let days = Double::floor(total_seconds / 86400.0)
+          let seconds_in_day = total_seconds - days * 86400.0
+          let epoch_serial = if ctx.use_1904_dates { 24107.0 } else { 25569.0 }
+          let serial = days + epoch_serial + seconds_in_day / 86400.0
+          Number(serial)
+        }
+        _ => Error(formula_error_value)
       }
     "TODAY" =>
-      if values.length() == 0 {
-        let now_ms = @env.now()
-        let total_seconds = UInt64::to_double(now_ms) / 1000.0
-        let days = Double::floor(total_seconds / 86400.0)
-        let epoch_serial = if ctx.use_1904_dates { 24107.0 } else { 25569.0 }
-        Number(days + epoch_serial)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [] => {
+          let now_ms = @env.now()
+          let total_seconds = UInt64::to_double(now_ms) / 1000.0
+          let days = Double::floor(total_seconds / 86400.0)
+          let epoch_serial = if ctx.use_1904_dates { 24107.0 } else { 25569.0 }
+          Number(days + epoch_serial)
+        }
+        _ => Error(formula_error_value)
       }
     "YEAR" =>
-      if values.length() == 1 {
-        match
-          excel_serial_date_parts(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok((year, _, _)) => Number(Double::from_int(year))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match excel_serial_date_parts(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok((year, _, _)) => Number(Double::from_int(year))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "MONTH" =>
-      if values.length() == 1 {
-        match
-          excel_serial_date_parts(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok((_, month, _)) => Number(Double::from_int(month))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match excel_serial_date_parts(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok((_, month, _)) => Number(Double::from_int(month))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "DAY" =>
-      if values.length() == 1 {
-        match
-          excel_serial_date_parts(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok((_, _, day)) => Number(Double::from_int(day))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match excel_serial_date_parts(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok((_, _, day)) => Number(Double::from_int(day))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "HOUR" =>
-      if values.length() == 1 {
-        match excel_serial_parts(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok((_, _, _, hour, _, _)) => Number(Double::from_int(hour))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match excel_serial_parts(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok((_, _, _, hour, _, _)) => Number(Double::from_int(hour))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "MINUTE" =>
-      if values.length() == 1 {
-        match excel_serial_parts(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok((_, _, _, _, minute, _)) => Number(Double::from_int(minute))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match excel_serial_parts(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok((_, _, _, _, minute, _)) => Number(Double::from_int(minute))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "SECOND" =>
-      if values.length() == 1 {
-        match excel_serial_parts(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok((_, _, _, _, _, second)) => Number(Double::from_int(second))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match excel_serial_parts(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok((_, _, _, _, _, second)) => Number(Double::from_int(second))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "INDEX" =>
-      if args.length() == 2 || args.length() == 3 {
-        let range = eval_range_expr(workbook, sheet_name, args[0], ctx)
-        let row_num = match value_as_int(values[1]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let col_num = if args.length() == 3 {
-          match value_as_int(values[2]) {
+      match args {
+        [a0, _] | [a0, _, _] => {
+          let range = eval_range_expr(workbook, sheet_name, a0, ctx)
+          let row_num = match value_as_int(values[1]) {
             Ok(num) => num
             Err(err) => return err
           }
-        } else {
-          1
+          let col_num = if args is [_, _, _] {
+            match value_as_int(values[2]) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+          } else {
+            1
+          }
+          if row_num <= 0 || col_num <= 0 {
+            Error(formula_error_value)
+          } else if row_num > range.rows || col_num > range.cols {
+            Error(formula_error_ref)
+          } else {
+            let index = (row_num - 1) * range.cols + (col_num - 1)
+            range.values[index]
+          }
         }
-        if row_num <= 0 || col_num <= 0 {
-          Error(formula_error_value)
-        } else if row_num > range.rows || col_num > range.cols {
-          Error(formula_error_ref)
-        } else {
-          let index = (row_num - 1) * range.cols + (col_num - 1)
-          range.values[index]
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "MATCH" =>
-      if args.length() == 2 || args.length() == 3 {
-        let lookup = values[0]
-        let range = eval_range_expr(workbook, sheet_name, args[1], ctx)
-        let match_type = if args.length() == 3 {
-          match value_as_int(values[2]) {
+      match args {
+        [_, a1] | [_, a1, _] => {
+          let lookup = values[0]
+          let range = eval_range_expr(workbook, sheet_name, a1, ctx)
+          let match_type = if args is [_, _, _] {
+            match value_as_int(values[2]) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+          } else {
+            1
+          }
+          match_range_value(lookup, range, match_type)
+        }
+        _ => Error(formula_error_value)
+      }
+    "VLOOKUP" =>
+      match args {
+        [_, a1, _] | [_, a1, _, _] => {
+          let lookup = values[0]
+          let table = eval_range_expr(workbook, sheet_name, a1, ctx)
+          let col_index = match value_as_int(values[2]) {
             Ok(num) => num
             Err(err) => return err
           }
-        } else {
-          1
-        }
-        match_range_value(lookup, range, match_type)
-      } else {
-        Error(formula_error_value)
-      }
-    "VLOOKUP" =>
-      if args.length() == 3 || args.length() == 4 {
-        let lookup = values[0]
-        let table = eval_range_expr(workbook, sheet_name, args[1], ctx)
-        let col_index = match value_as_int(values[2]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let range_lookup = if args.length() == 4 {
-          match lookup_range_flag(values[3]) {
-            Ok(flag) => flag
-            Err(err) => return err
+          let range_lookup = if args is [_, _, _, _] {
+            match lookup_range_flag(values[3]) {
+              Ok(flag) => flag
+              Err(err) => return err
+            }
+          } else {
+            true
           }
-        } else {
-          true
+          vlookup_value(lookup, table, col_index, range_lookup)
         }
-        vlookup_value(lookup, table, col_index, range_lookup)
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "HLOOKUP" =>
-      if args.length() == 3 || args.length() == 4 {
-        let lookup = values[0]
-        let table = eval_range_expr(workbook, sheet_name, args[1], ctx)
-        let row_index = match value_as_int(values[2]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let range_lookup = if args.length() == 4 {
-          match lookup_range_flag(values[3]) {
-            Ok(flag) => flag
+      match args {
+        [_, a1, _] | [_, a1, _, _] => {
+          let lookup = values[0]
+          let table = eval_range_expr(workbook, sheet_name, a1, ctx)
+          let row_index = match value_as_int(values[2]) {
+            Ok(num) => num
             Err(err) => return err
           }
-        } else {
-          true
+          let range_lookup = if args is [_, _, _, _] {
+            match lookup_range_flag(values[3]) {
+              Ok(flag) => flag
+              Err(err) => return err
+            }
+          } else {
+            true
+          }
+          hlookup_value(lookup, table, row_index, range_lookup)
         }
-        hlookup_value(lookup, table, row_index, range_lookup)
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "LOOKUP" =>
       if args.length() == 2 || args.length() == 3 {
@@ -4566,164 +4552,160 @@ fn eval_function(
         Error(formula_error_value)
       }
     "INDIRECT" =>
-      if values.length() == 1 || values.length() == 2 {
-        let ref_text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let a1 = if values.length() == 2 {
-          match value_as_bool(values[1]) {
-            Ok(flag) => flag
+      match values {
+        [v0] | [v0, _] => {
+          let ref_text = match value_as_string(v0) {
+            Ok(text) => text
             Err(err) => return err
           }
-        } else {
-          true
-        }
-        let (sheet_text, ref_part) = split_sheet_ref(ref_text)
-        let target_sheet = if sheet_text == "" {
-          sheet_name
-        } else {
-          sheet_text
-        }
-        if a1 {
-          match ref_part.find(":") {
-            Some(idx) => {
-              let start_token = ref_part.unsafe_substring(start=0, end=idx)
-              let end_token = ref_part.unsafe_substring(
-                start=idx + 1,
-                end=ref_part.length(),
-              )
-              let (start_ref, _start_end) = parse_range_ref_token(start_token) catch {
-                _ => return Error(formula_error_ref)
-              }
-              let (_end_start, end_ref) = parse_range_ref_token(end_token) catch {
-                _ => return Error(formula_error_ref)
-              }
-              List(
-                collect_range_values(
-                  workbook, target_sheet, start_ref, end_ref, ctx,
-                ),
-              )
+          let a1 = if values is [_, v1] {
+            match value_as_bool(v1) {
+              Ok(flag) => flag
+              Err(err) => return err
             }
-            None =>
-              match parse_cell_ref_token(ref_part) {
-                Some(reference) =>
-                  resolve_cell_value(workbook, target_sheet, reference, ctx)
-                None => {
-                  let (start_ref, end_ref) = parse_range_ref_token(ref_part) catch {
-                    _ => return Error(formula_error_ref)
-                  }
-                  List(
-                    collect_range_values(
-                      workbook, target_sheet, start_ref, end_ref, ctx,
-                    ),
-                  )
-                }
-              }
+          } else {
+            true
           }
-        } else {
-          match ref_part.find(":") {
-            Some(idx) => {
-              let start_token = ref_part.unsafe_substring(start=0, end=idx)
-              let end_token = ref_part.unsafe_substring(
-                start=idx + 1,
-                end=ref_part.length(),
-              )
-              let (row1, col1) = match parse_r1c1_token(start_token) {
-                Some(value) => value
-                None => return Error(formula_error_ref)
-              }
-              let (row2, col2) = match parse_r1c1_token(end_token) {
-                Some(value) => value
-                None => return Error(formula_error_ref)
-              }
-              let start_ref = cell_ref_from(row1, col1) catch {
-                _ => return Error(formula_error_ref)
-              }
-              let end_ref = cell_ref_from(row2, col2) catch {
-                _ => return Error(formula_error_ref)
-              }
-              List(
-                collect_range_values(
-                  workbook, target_sheet, start_ref, end_ref, ctx,
-                ),
-              )
-            }
-            None =>
-              match parse_r1c1_token(ref_part) {
-                Some((row, col)) => {
-                  let reference = cell_ref_from(row, col) catch {
-                    _ => return Error(formula_error_ref)
-                  }
-                  resolve_cell_value(workbook, target_sheet, reference, ctx)
+          let (sheet_text, ref_part) = split_sheet_ref(ref_text)
+          let target_sheet = if sheet_text == "" {
+            sheet_name
+          } else {
+            sheet_text
+          }
+          if a1 {
+            match ref_part.find(":") {
+              Some(idx) => {
+                let start_token = ref_part.unsafe_substring(start=0, end=idx)
+                let end_token = ref_part.unsafe_substring(
+                  start=idx + 1,
+                  end=ref_part.length(),
+                )
+                let (start_ref, _start_end) = parse_range_ref_token(start_token) catch {
+                  _ => return Error(formula_error_ref)
                 }
-                None => Error(formula_error_ref)
+                let (_end_start, end_ref) = parse_range_ref_token(end_token) catch {
+                  _ => return Error(formula_error_ref)
+                }
+                List(
+                  collect_range_values(
+                    workbook, target_sheet, start_ref, end_ref, ctx,
+                  ),
+                )
               }
+              None =>
+                match parse_cell_ref_token(ref_part) {
+                  Some(reference) =>
+                    resolve_cell_value(workbook, target_sheet, reference, ctx)
+                  None => {
+                    let (start_ref, end_ref) = parse_range_ref_token(ref_part) catch {
+                      _ => return Error(formula_error_ref)
+                    }
+                    List(
+                      collect_range_values(
+                        workbook, target_sheet, start_ref, end_ref, ctx,
+                      ),
+                    )
+                  }
+                }
+            }
+          } else {
+            match ref_part.find(":") {
+              Some(idx) => {
+                let start_token = ref_part.unsafe_substring(start=0, end=idx)
+                let end_token = ref_part.unsafe_substring(
+                  start=idx + 1,
+                  end=ref_part.length(),
+                )
+                let (row1, col1) = match parse_r1c1_token(start_token) {
+                  Some(value) => value
+                  None => return Error(formula_error_ref)
+                }
+                let (row2, col2) = match parse_r1c1_token(end_token) {
+                  Some(value) => value
+                  None => return Error(formula_error_ref)
+                }
+                let start_ref = cell_ref_from(row1, col1) catch {
+                  _ => return Error(formula_error_ref)
+                }
+                let end_ref = cell_ref_from(row2, col2) catch {
+                  _ => return Error(formula_error_ref)
+                }
+                List(
+                  collect_range_values(
+                    workbook, target_sheet, start_ref, end_ref, ctx,
+                  ),
+                )
+              }
+              None =>
+                match parse_r1c1_token(ref_part) {
+                  Some((row, col)) => {
+                    let reference = cell_ref_from(row, col) catch {
+                      _ => return Error(formula_error_ref)
+                    }
+                    resolve_cell_value(workbook, target_sheet, reference, ctx)
+                  }
+                  None => Error(formula_error_ref)
+                }
+            }
           }
         }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "CHAR" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => {
-            let code = Double::to_int(trunc_double(num))
-            if code < 0 || code > max_field_length {
-              Error(formula_error_value)
-            } else {
-              String(char_from_code(code))
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => {
+              let code = Double::to_int(trunc_double(num))
+              if code < 0 || code > max_field_length {
+                Error(formula_error_value)
+              } else {
+                String(char_from_code(code))
+              }
             }
+            Err(err) => err
           }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "UNICHAR" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if num <= 0.0 || num > 55295.0 {
-              Error(formula_error_value)
-            } else {
-              let code = Double::to_int(trunc_double(num))
-              String(char_from_code(code))
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              if num <= 0.0 || num > 55295.0 {
+                Error(formula_error_value)
+              } else {
+                let code = Double::to_int(trunc_double(num))
+                String(char_from_code(code))
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "CLEAN" =>
-      if values.length() == 1 {
-        clean_text_value(values[0])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] => clean_text_value(v0)
+        _ => Error(formula_error_value)
       }
     "ENCODEURL" =>
-      if values.length() == 1 {
-        encode_url_value(values[0])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] => encode_url_value(v0)
+        _ => Error(formula_error_value)
       }
     "BAHTTEXT" =>
-      if values.length() == 1 {
-        bahttext_values(values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_] => bahttext_values(values)
+        _ => Error(formula_error_value)
       }
     "CODE" =>
-      if values.length() == 1 {
-        code_value("CODE", values[0])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] => code_value("CODE", v0)
+        _ => Error(formula_error_value)
       }
     "UNICODE" =>
-      if values.length() == 1 {
-        code_value("UNICODE", values[0])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] => code_value("UNICODE", v0)
+        _ => Error(formula_error_value)
       }
     "HYPERLINK" =>
       if values.length() == 1 || values.length() == 2 {
@@ -4735,10 +4717,9 @@ fn eval_function(
         Error(formula_error_value)
       }
     "DISPIMG" | "_XLFN.DISPIMG" =>
-      if values.length() == 2 {
-        values[0]
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, _] => v0
+        _ => Error(formula_error_value)
       }
     "CHOOSE" =>
       if values.length() >= 2 {
@@ -4761,46 +4742,42 @@ fn eval_function(
       }
     "CONCAT" | "CONCATENATE" => concat_values(values)
     "IF" =>
-      if values.length() == 0 || values.length() > 3 {
-        Error(formula_error_value)
-      } else {
-        match value_as_bool(values[0]) {
-          Ok(cond) =>
-            if values.length() == 1 {
-              Bool(cond)
-            } else if cond {
-              values[1]
-            } else if values.length() >= 3 {
-              values[2]
-            } else {
-              Bool(false)
-            }
-          Err(err) => err
-        }
+      match values {
+        [v0] =>
+          match value_as_bool(v0) {
+            Ok(cond) => Bool(cond)
+            Err(err) => err
+          }
+        [v0, v1] =>
+          match value_as_bool(v0) {
+            Ok(cond) => if cond { v1 } else { Bool(false) }
+            Err(err) => err
+          }
+        [v0, v1, v2] =>
+          match value_as_bool(v0) {
+            Ok(cond) => if cond { v1 } else { v2 }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IFERROR" =>
-      if values.length() == 2 {
-        match normalize_scalar(values[0]) {
-          Error(_) => values[1]
-          Empty => Number(0.0)
-          _ => values[0]
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match normalize_scalar(v0) {
+            Error(_) => v1
+            Empty => Number(0.0)
+            _ => v0
+          }
+        _ => Error(formula_error_value)
       }
     "IFNA" =>
-      if values.length() == 2 {
-        match normalize_scalar(values[0]) {
-          Error(err) =>
-            if err == formula_error_na {
-              values[1]
-            } else {
-              values[0]
-            }
-          _ => values[0]
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match normalize_scalar(v0) {
+            Error(err) => if err == formula_error_na { v1 } else { v0 }
+            _ => v0
+          }
+        _ => Error(formula_error_value)
       }
     "IFS" =>
       if values.length() < 2 || values.length() % 2 != 0 {
@@ -4841,207 +4818,203 @@ fn eval_function(
         result
       }
     "ISBLANK" =>
-      if values.length() == 1 {
-        match normalize_scalar(values[0]) {
-          Empty => Bool(true)
-          _ => Bool(false)
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match normalize_scalar(v0) {
+            Empty => Bool(true)
+            _ => Bool(false)
+          }
+        _ => Error(formula_error_value)
       }
     "ISERR" =>
-      if values.length() == 1 {
-        match normalize_scalar(values[0]) {
-          Error(err) =>
-            Bool(is_known_error_code(err) && err != formula_error_na)
-          _ => Bool(false)
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match normalize_scalar(v0) {
+            Error(err) =>
+              Bool(is_known_error_code(err) && err != formula_error_na)
+            _ => Bool(false)
+          }
+        _ => Error(formula_error_value)
       }
     "ISEVEN" =>
-      if values.length() == 1 {
-        match normalize_scalar(values[0]) {
-          Empty => Bool(true)
-          _ =>
-            match value_as_number(values[0]) {
-              Ok(num) => {
-                let even = if num == 1.0 {
-                  false
-                } else {
-                  num == num / 2.0 * 2.0
+      match values {
+        [v0] =>
+          match normalize_scalar(v0) {
+            Empty => Bool(true)
+            _ =>
+              match value_as_number(v0) {
+                Ok(num) => {
+                  let even = if num == 1.0 {
+                    false
+                  } else {
+                    num == num / 2.0 * 2.0
+                  }
+                  Bool(even)
                 }
-                Bool(even)
+                Err(err) => err
               }
-              Err(err) => err
-            }
-        }
-      } else {
-        Error(formula_error_value)
+          }
+        _ => Error(formula_error_value)
       }
     "ISODD" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => {
-            let n = Double::to_int(num)
-            Bool(n != n / 2 * 2)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => {
+              let n = Double::to_int(num)
+              Bool(n != n / 2 * 2)
+            }
+            Err(err) => err
           }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "ISERROR" =>
-      if values.length() == 1 {
-        match normalize_scalar(values[0]) {
-          Error(err) => Bool(is_known_error_code(err))
-          _ => Bool(false)
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match normalize_scalar(v0) {
+            Error(err) => Bool(is_known_error_code(err))
+            _ => Bool(false)
+          }
+        _ => Error(formula_error_value)
       }
     "ISLOGICAL" =>
-      if values.length() == 1 {
-        match normalize_scalar(values[0]) {
-          Bool(_) => Bool(true)
-          String(text) => Bool(text == "TRUE" || text == "FALSE")
-          _ => Bool(false)
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match normalize_scalar(v0) {
+            Bool(_) => Bool(true)
+            String(text) => Bool(text == "TRUE" || text == "FALSE")
+            _ => Bool(false)
+          }
+        _ => Error(formula_error_value)
       }
     "ISNA" =>
-      if values.length() == 1 {
-        match normalize_scalar(values[0]) {
-          Error(err) => Bool(err == formula_error_na)
-          _ => Bool(false)
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match normalize_scalar(v0) {
+            Error(err) => Bool(err == formula_error_na)
+            _ => Bool(false)
+          }
+        _ => Error(formula_error_value)
       }
     "ISNUMBER" =>
-      if values.length() == 1 {
-        match normalize_scalar(values[0]) {
-          Number(_) => Bool(true)
-          _ => Bool(false)
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match normalize_scalar(v0) {
+            Number(_) => Bool(true)
+            _ => Bool(false)
+          }
+        _ => Error(formula_error_value)
       }
     "ISTEXT" =>
-      if values.length() == 1 {
-        match normalize_scalar(values[0]) {
-          String(text) =>
-            match parse_double_opt(text) {
-              Some(_) => Bool(false)
-              None => Bool(true)
-            }
-          _ => Bool(false)
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match normalize_scalar(v0) {
+            String(text) =>
+              match parse_double_opt(text) {
+                Some(_) => Bool(false)
+                None => Bool(true)
+              }
+            _ => Bool(false)
+          }
+        _ => Error(formula_error_value)
       }
     "ISNONTEXT" =>
-      if values.length() == 1 {
-        match normalize_scalar(values[0]) {
-          String(_) => Bool(false)
-          _ => Bool(true)
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match normalize_scalar(v0) {
+            String(_) => Bool(false)
+            _ => Bool(true)
+          }
+        _ => Error(formula_error_value)
       }
     "ISREF" =>
-      if args.length() == 1 {
-        Bool(is_ref_expr(args[0]))
-      } else {
-        Error(formula_error_value)
+      match args {
+        [a0] => Bool(is_ref_expr(a0))
+        _ => Error(formula_error_value)
       }
     "ISFORMULA" =>
-      if args.length() == 1 {
-        match args[0] {
-          Cell(sheet, reference) => {
-            let target_sheet = if sheet == "" { sheet_name } else { sheet }
-            Bool(cell_has_formula(workbook, target_sheet, reference))
+      match args {
+        [a0] =>
+          match a0 {
+            Cell(sheet, reference) => {
+              let target_sheet = if sheet == "" { sheet_name } else { sheet }
+              Bool(cell_has_formula(workbook, target_sheet, reference))
+            }
+            _ => Bool(false)
           }
-          _ => Bool(false)
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "ERRORdotTYPE" | "ERROR.TYPE" =>
-      if values.length() == 1 {
-        error_type_value(values[0])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] => error_type_value(v0)
+        _ => Error(formula_error_value)
       }
     "SHEET" =>
-      if args.length() == 0 {
-        match sheet_index_opt(workbook, sheet_name) {
-          Some(index) => Number(Double::from_int(index + 1))
-          None => Error(formula_error_na)
+      match args {
+        [] =>
+          match sheet_index_opt(workbook, sheet_name) {
+            Some(index) => Number(Double::from_int(index + 1))
+            None => Error(formula_error_na)
+          }
+        [arg] => {
+          let target_sheet = match arg {
+            Cell(sheet, _) => if sheet == "" { sheet_name } else { sheet }
+            Range(sheet, _, _) => if sheet == "" { sheet_name } else { sheet }
+            _ => formula_value_string(values[0])
+          }
+          match sheet_index_opt(workbook, target_sheet) {
+            Some(index) => Number(Double::from_int(index + 1))
+            None => Error(formula_error_na)
+          }
         }
-      } else if args.length() == 1 {
-        let target_sheet = match args[0] {
-          Cell(sheet, _) => if sheet == "" { sheet_name } else { sheet }
-          Range(sheet, _, _) => if sheet == "" { sheet_name } else { sheet }
-          _ => formula_value_string(values[0])
-        }
-        match sheet_index_opt(workbook, target_sheet) {
-          Some(index) => Number(Double::from_int(index + 1))
-          None => Error(formula_error_na)
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "SHEETS" =>
-      if args.length() == 0 {
-        Number(Double::from_int(workbook.sheets().length()))
-      } else if args.length() == 1 {
-        match args[0] {
-          Cell(_, _) | Range(_, _, _) => Number(1.0)
-          _ => Error(formula_error_na)
-        }
-      } else {
-        Error(formula_error_value)
+      match args {
+        [] => Number(Double::from_int(workbook.sheets().length()))
+        [arg] =>
+          match arg {
+            Cell(_, _) | Range(_, _, _) => Number(1.0)
+            _ => Error(formula_error_na)
+          }
+        _ => Error(formula_error_value)
       }
     "TYPE" =>
-      if values.length() == 1 {
-        type_value(values[0])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] => type_value(v0)
+        _ => Error(formula_error_value)
       }
     "T" =>
-      if values.length() == 1 {
-        match normalize_scalar(values[0]) {
-          Error(err) => Error(err)
-          Number(_) | Empty | List(_) => String("")
-          String(text) => String(text)
-          Bool(flag) => String(if flag { "TRUE" } else { "FALSE" })
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match normalize_scalar(v0) {
+            Error(err) => Error(err)
+            Number(_) | Empty | List(_) => String("")
+            String(text) => String(text)
+            Bool(flag) => String(if flag { "TRUE" } else { "FALSE" })
+          }
+        _ => Error(formula_error_value)
       }
     "NA" =>
-      if values.length() == 0 {
-        Error(formula_error_na)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [] => Error(formula_error_na)
+        _ => Error(formula_error_value)
       }
     "N" =>
-      if values.length() == 1 {
-        match normalize_scalar(values[0]) {
-          Error(err) => Error(err)
-          Number(num) => Number(num)
-          Bool(flag) => Number(if flag { 1.0 } else { 0.0 })
-          String(text) =>
-            match parse_double_opt(text) {
-              Some(num) => Number(num)
-              None => if text == "TRUE" { Number(1.0) } else { Number(0.0) }
-            }
-          Empty | List(_) => Number(0.0)
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match normalize_scalar(v0) {
+            Error(err) => Error(err)
+            Number(num) => Number(num)
+            Bool(flag) => Number(if flag { 1.0 } else { 0.0 })
+            String(text) =>
+              match parse_double_opt(text) {
+                Some(num) => Number(num)
+                None => if text == "TRUE" { Number(1.0) } else { Number(0.0) }
+              }
+            Empty | List(_) => Number(0.0)
+          }
+        _ => Error(formula_error_value)
       }
     _ =>
       if args.length() == 0 {
@@ -5397,10 +5370,8 @@ fn bitwise_values(
   name : String,
   values : ArrayView[FormulaValue],
 ) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  match (bitwise_number(values[0]), bitwise_number(values[1])) {
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  match (bitwise_number(v0), bitwise_number(v1)) {
     (Ok(num1), Ok(num2)) =>
       if num1 < 0.0 ||
         num1 > bitwise_max_value ||
@@ -6020,10 +5991,8 @@ fn variance_values(
 
 ///|
 fn trimmean_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  let percent = match value_as_number(values[1]) {
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  let percent = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6031,7 +6000,7 @@ fn trimmean_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     return Error(formula_error_num)
   }
   let numbers : Array[Double] = []
-  let list_values : Array[FormulaValue] = [values[0]]
+  let list_values : Array[FormulaValue] = [v0]
   for value in flatten_values(list_values) {
     match normalize_scalar(value) {
       Number(num) => numbers.push(num)
@@ -6224,22 +6193,20 @@ fn betainv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn normdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 4 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2, v3] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let mean = match value_as_number(values[1]) {
+  let mean = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let std_dev = match value_as_number(values[2]) {
+  let std_dev = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
-  let cumulative = match value_as_bool(values[3]) {
+  let cumulative = match value_as_bool(v3) {
     Ok(flag) => flag
     Err(err) => return err
   }
@@ -6256,18 +6223,16 @@ fn normdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn norminv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let probability = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let probability = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let mean = match value_as_number(values[1]) {
+  let mean = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let std_dev = match value_as_number(values[2]) {
+  let std_dev = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6287,14 +6252,12 @@ fn norminv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn norm_s_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let cumulative = match value_as_bool(values[1]) {
+  let cumulative = match value_as_bool(v1) {
     Ok(flag) => flag
     Err(err) => return err
   }
@@ -6304,10 +6267,8 @@ fn norm_s_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn norms_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 1 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6316,10 +6277,8 @@ fn norms_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn norm_s_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 1 {
-    return Error(formula_error_value)
-  }
-  let probability = match value_as_number(values[0]) {
+  guard values is [v0] else { return Error(formula_error_value) }
+  let probability = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6340,18 +6299,16 @@ fn norms_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn confidence_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let alpha = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let alpha = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let std_dev = match value_as_number(values[1]) {
+  let std_dev = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let size = match value_as_number(values[2]) {
+  let size = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6368,18 +6325,16 @@ fn confidence_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn confidence_t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let alpha = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let alpha = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let std_dev = match value_as_number(values[1]) {
+  let std_dev = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let size = match value_as_number(values[2]) {
+  let size = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6397,18 +6352,16 @@ fn confidence_t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn loginv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let probability = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let probability = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let mean = match value_as_number(values[1]) {
+  let mean = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let std_dev = match value_as_number(values[2]) {
+  let std_dev = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6425,10 +6378,8 @@ fn loginv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn gamma_value(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 1 {
-    return Error(formula_error_value)
-  }
-  let number = match value_as_number(values[0]) {
+  guard values is [v0] else { return Error(formula_error_value) }
+  let number = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6452,22 +6403,20 @@ fn gamma_cdf(x : Double, alpha : Double, beta : Double) -> Double {
 
 ///|
 fn gamma_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 4 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2, v3] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let alpha = match value_as_number(values[1]) {
+  let alpha = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let beta = match value_as_number(values[2]) {
+  let beta = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
-  let cumulative = match value_as_bool(values[3]) {
+  let cumulative = match value_as_bool(v3) {
     Ok(flag) => flag
     Err(err) => return err
   }
@@ -6525,18 +6474,16 @@ fn gammainv_double(
 
 ///|
 fn gamma_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let probability = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let probability = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let alpha = match value_as_number(values[1]) {
+  let alpha = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let beta = match value_as_number(values[2]) {
+  let beta = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6552,10 +6499,8 @@ fn gamma_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn gammaln_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 1 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6568,10 +6513,8 @@ fn gammaln_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn gammaln_precise_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 1 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6584,22 +6527,20 @@ fn gammaln_precise_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn lognorm_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 4 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2, v3] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let mean = match value_as_number(values[1]) {
+  let mean = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let std_dev = match value_as_number(values[2]) {
+  let std_dev = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
-  let cumulative = match value_as_bool(values[3]) {
+  let cumulative = match value_as_bool(v3) {
     Ok(flag) => flag
     Err(err) => return err
   }
@@ -6619,18 +6560,16 @@ fn lognorm_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn lognormdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let mean = match value_as_number(values[1]) {
+  let mean = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let std_dev = match value_as_number(values[2]) {
+  let std_dev = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6643,18 +6582,16 @@ fn lognormdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn expon_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let lambda = match value_as_number(values[1]) {
+  let lambda = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let cumulative = match value_as_bool(values[2]) {
+  let cumulative = match value_as_bool(v2) {
     Ok(flag) => flag
     Err(err) => return err
   }
@@ -6671,18 +6608,16 @@ fn expon_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn poisson_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let mean = match value_as_number(values[1]) {
+  let mean = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let cumulative = match value_as_bool(values[2]) {
+  let cumulative = match value_as_bool(v2) {
     Ok(flag) => flag
     Err(err) => return err
   }
@@ -6736,28 +6671,26 @@ fn binominv_double(n : Double, p : Double, alpha : Double) -> Double {
 
 ///|
 fn binomdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 4 {
-    return Error(formula_error_value)
-  }
-  let successes = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2, v3] else { return Error(formula_error_value) }
+  let successes = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let trials = match value_as_number(values[1]) {
+  let trials = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
   if successes < 0.0 || successes > trials {
     return Error(formula_error_num)
   }
-  let probability = match value_as_number(values[2]) {
+  let probability = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
   if probability < 0.0 || probability > 1.0 {
     return Error(formula_error_num)
   }
-  let cumulative = match value_as_bool(values[3]) {
+  let cumulative = match value_as_bool(v3) {
     Ok(flag) => flag
     Err(err) => return err
   }
@@ -6823,24 +6756,22 @@ fn binom_dist_range_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn binom_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let trials = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let trials = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
   if trials < 0.0 {
     return Error(formula_error_num)
   }
-  let probability = match value_as_number(values[1]) {
+  let probability = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
   if probability <= 0.0 || probability >= 1.0 {
     return Error(formula_error_num)
   }
-  let alpha = match value_as_number(values[2]) {
+  let alpha = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6889,29 +6820,29 @@ fn hypgeom_raw(
 
 ///|
 fn hypgeom_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 5 {
+  guard values is [v0, v1, v2, v3, v4] else {
     return Error(formula_error_value)
   }
-  let sample_s = match value_as_number(values[0]) {
+  let sample_s = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let number_sample = match value_as_number(values[1]) {
+  let number_sample = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let population_s = match value_as_number(values[2]) {
+  let population_s = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
-  let number_pop = match value_as_number(values[3]) {
+  let number_pop = match value_as_number(v3) {
     Ok(num) => num
     Err(err) => return err
   }
   if hypgeom_args_invalid(sample_s, number_sample, population_s, number_pop) {
     return Error(formula_error_num)
   }
-  let cumulative = match value_as_bool(values[4]) {
+  let cumulative = match value_as_bool(v4) {
     Ok(flag) => flag
     Err(err) => return err
   }
@@ -6931,22 +6862,20 @@ fn hypgeom_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn hypgeomdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 4 {
-    return Error(formula_error_value)
-  }
-  let sample_s = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2, v3] else { return Error(formula_error_value) }
+  let sample_s = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let number_sample = match value_as_number(values[1]) {
+  let number_sample = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let population_s = match value_as_number(values[2]) {
+  let population_s = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
-  let number_pop = match value_as_number(values[3]) {
+  let number_pop = match value_as_number(v3) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -6959,22 +6888,20 @@ fn hypgeomdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn negbinom_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 4 {
-    return Error(formula_error_value)
-  }
-  let failures = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2, v3] else { return Error(formula_error_value) }
+  let failures = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let successes = match value_as_number(values[1]) {
+  let successes = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let probability = match value_as_number(values[2]) {
+  let probability = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
-  let cumulative = match value_as_bool(values[3]) {
+  let cumulative = match value_as_bool(v3) {
     Ok(flag) => flag
     Err(err) => return err
   }
@@ -6993,18 +6920,16 @@ fn negbinom_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn negbinomdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let failures = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let failures = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let successes = match value_as_number(values[1]) {
+  let successes = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let probability = match value_as_number(values[2]) {
+  let probability = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7019,10 +6944,8 @@ fn negbinomdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn gauss_value(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 1 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7032,10 +6955,8 @@ fn gauss_value(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn phi_value(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 1 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7045,18 +6966,16 @@ fn phi_value(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn tdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let degrees = match value_as_number(values[1]) {
+  let degrees = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let cumulative = match value_as_bool(values[2]) {
+  let cumulative = match value_as_bool(v2) {
     Ok(flag) => flag
     Err(err) => return err
   }
@@ -7079,14 +6998,12 @@ fn tdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn tdist_2t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let degrees = match value_as_number(values[1]) {
+  let degrees = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7099,14 +7016,12 @@ fn tdist_2t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn tdist_rt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let degrees = match value_as_number(values[1]) {
+  let degrees = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7122,18 +7037,16 @@ fn tdist_rt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn tdist_legacy_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let degrees = match value_as_number(values[1]) {
+  let degrees = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let tails = match value_as_number(values[2]) {
+  let tails = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7146,14 +7059,12 @@ fn tdist_legacy_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn tinv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  let probability = match value_as_number(values[0]) {
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  let probability = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let degrees = match value_as_number(values[1]) {
+  let degrees = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7174,14 +7085,12 @@ fn tinv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn tinv_2t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  let probability = match value_as_number(values[0]) {
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  let probability = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let degrees = match value_as_number(values[1]) {
+  let degrees = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7260,18 +7169,16 @@ fn ttest_unpaired(
 
 ///|
 fn ttest_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 4 {
-    return Error(formula_error_value)
-  }
-  let (array1, array2) = match (values[0], values[1]) {
+  guard values is [v0, v1, v2, v3] else { return Error(formula_error_value) }
+  let (array1, array2) = match (v0, v1) {
     (List(left), List(right)) => (left, right)
     _ => return Error(formula_error_num)
   }
-  let tails = match value_as_number(values[2]) {
+  let tails = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
-  let test_type = match value_as_number(values[3]) {
+  let test_type = match value_as_number(v3) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7416,14 +7323,12 @@ fn prob_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn chidist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let degrees = match value_as_number(values[1]) {
+  let degrees = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7433,14 +7338,12 @@ fn chidist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn chiinv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  let probability = match value_as_number(values[0]) {
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  let probability = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let degrees = match value_as_number(values[1]) {
+  let degrees = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7457,18 +7360,16 @@ fn chiinv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn chisq_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let degrees = match value_as_number(values[1]) {
+  let degrees = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let cumulative = match value_as_bool(values[2]) {
+  let cumulative = match value_as_bool(v2) {
     Ok(flag) => flag
     Err(err) => return err
   }
@@ -7488,14 +7389,12 @@ fn chisq_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn chisq_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
-  let probability = match value_as_number(values[0]) {
+  guard values is [v0, v1] else { return Error(formula_error_value) }
+  let probability = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let degrees = match value_as_number(values[1]) {
+  let degrees = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7581,22 +7480,20 @@ fn chitest_values(
 
 ///|
 fn fdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 4 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2, v3] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let deg1 = match value_as_number(values[1]) {
+  let deg1 = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let deg2 = match value_as_number(values[2]) {
+  let deg2 = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
-  let cumulative = match value_as_bool(values[3]) {
+  let cumulative = match value_as_bool(v3) {
     Ok(flag) => flag
     Err(err) => return err
   }
@@ -7620,18 +7517,16 @@ fn fdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn fdist_rt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let x = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let x = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let deg1 = match value_as_number(values[1]) {
+  let deg1 = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let deg2 = match value_as_number(values[2]) {
+  let deg2 = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7651,18 +7546,16 @@ fn fdist_rt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn finv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let probability = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let probability = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let deg1 = match value_as_number(values[1]) {
+  let deg1 = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let deg2 = match value_as_number(values[2]) {
+  let deg2 = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7683,18 +7576,16 @@ fn finv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 
 ///|
 fn finv_rt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
-  if values.length() != 3 {
-    return Error(formula_error_value)
-  }
-  let probability = match value_as_number(values[0]) {
+  guard values is [v0, v1, v2] else { return Error(formula_error_value) }
+  let probability = match value_as_number(v0) {
     Ok(num) => num
     Err(err) => return err
   }
-  let deg1 = match value_as_number(values[1]) {
+  let deg1 = match value_as_number(v1) {
     Ok(num) => num
     Err(err) => return err
   }
-  let deg2 = match value_as_number(values[2]) {
+  let deg2 = match value_as_number(v2) {
     Ok(num) => num
     Err(err) => return err
   }
@@ -7741,21 +7632,19 @@ fn ftest_values(
   values : ArrayView[FormulaValue],
   ctx : CalcContext,
 ) -> FormulaValue raise XlsxError {
-  if values.length() != 2 {
-    return Error(formula_error_value)
-  }
+  guard values is [v0, v1] else { return Error(formula_error_value) }
   let left_range = range_from_expr_or_value(
     workbook,
     sheet_name,
     args[0],
-    values[0],
+    v0,
     ctx,
   )
   let right_range = range_from_expr_or_value(
     workbook,
     sheet_name,
     args[1],
-    values[1],
+    v1,
     ctx,
   )
   let (n1, accu1) = ftest_collect(left_range.values)
