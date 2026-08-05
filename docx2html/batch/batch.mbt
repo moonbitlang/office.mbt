@@ -1297,14 +1297,11 @@ fn lex_json_string(
     let mut value = 0
     for offset in 0..<4 {
       let c = units[at + offset].to_int()
-      let digit = if c >= '0'.to_int() && c <= '9'.to_int() {
-        c - '0'.to_int()
-      } else if c >= 'a'.to_int() && c <= 'f'.to_int() {
-        c - 'a'.to_int() + 10
-      } else if c >= 'A'.to_int() && c <= 'F'.to_int() {
-        c - 'A'.to_int() + 10
-      } else {
-        return None
+      let digit = match c {
+        '0'..='9' => c - '0'.to_int()
+        'a'..='f' => c - 'a'.to_int() + 10
+        'A'..='F' => c - 'A'.to_int() + 10
+        _ => return None
       }
       value = value * 16 + digit
     }
@@ -1322,41 +1319,35 @@ fn lex_json_string(
         return ("", "", None)
       }
       let escape = units[cursor + 1].to_int()
-      if escape == 'u'.to_int() {
-        match hex4(cursor + 2) {
-          Some(code) => {
-            decoded.push(code)
-            cursor += 6
+      match escape {
+        'u' =>
+          match hex4(cursor + 2) {
+            Some(code) => {
+              decoded.push(code)
+              cursor += 6
+            }
+            None => {
+              // Malformed \u escape: @json.parse reports it; keep scanning.
+              decoded.push('u'.to_int())
+              cursor += 2
+            }
           }
-          None => {
-            // Malformed \u escape: @json.parse reports it; keep scanning.
-            decoded.push('u'.to_int())
-            cursor += 2
+        _ => {
+          let code = match escape {
+            'n' => '\n'.to_int()
+            't' => '\t'.to_int()
+            'r' => '\r'.to_int()
+            'b' => 0x08
+            'f' => 0x0C
+            '"' => '"'.to_int()
+            '\\' => '\\'.to_int()
+            '/' => '/'.to_int()
+            // Invalid escape: @json.parse reports it; keep scanning.
+            _ => '?'.to_int()
           }
+          decoded.push(code)
+          cursor += 2
         }
-      } else {
-        let code = if escape == 'n'.to_int() {
-          '\n'.to_int()
-        } else if escape == 't'.to_int() {
-          '\t'.to_int()
-        } else if escape == 'r'.to_int() {
-          '\r'.to_int()
-        } else if escape == 'b'.to_int() {
-          0x08
-        } else if escape == 'f'.to_int() {
-          0x0C
-        } else if escape == '"'.to_int() {
-          '"'.to_int()
-        } else if escape == '\\'.to_int() {
-          '\\'.to_int()
-        } else if escape == '/'.to_int() {
-          '/'.to_int()
-        } else {
-          // Invalid escape: @json.parse reports it; keep scanning.
-          '?'.to_int()
-        }
-        decoded.push(code)
-        cursor += 2
       }
       continue
     }
@@ -1431,93 +1422,95 @@ pub fn check_script_text(text : String) -> Unit raise BatchError {
   }
   while index < length {
     let unit = units[index].to_int()
-    if unit == '{'.to_int() || unit == '['.to_int() {
-      frames.push({
-        is_object: unit == '{'.to_int(),
-        keys: SortedSet([]),
-        expecting_key: unit == '{'.to_int(),
-        pending_key: "",
-        index: 0,
-        entry: frame_entry(),
-      })
-      index += 1
-    } else if unit == '}'.to_int() || unit == ']'.to_int() {
-      let _ = frames.pop()
-      index += 1
-    } else if unit == ','.to_int() {
-      match frames.last() {
-        Some(frame) =>
-          if frame.is_object {
-            frame.expecting_key = true
-          } else {
-            frame.index += 1
-          }
-        None => ()
+    match unit {
+      '{' | '[' => {
+        frames.push({
+          is_object: unit is '{',
+          keys: SortedSet([]),
+          expecting_key: unit is '{',
+          pending_key: "",
+          index: 0,
+          entry: frame_entry(),
+        })
+        index += 1
       }
-      index += 1
-    } else if unit == ':'.to_int() {
-      match frames.last() {
-        Some(frame) if frame.is_object => frame.expecting_key = false
-        _ => ()
+      '}' | ']' => {
+        let _ = frames.pop()
+        index += 1
       }
-      index += 1
-    } else if unit == '"'.to_int() {
-      let (canonical, display, next) = lex_json_string(units, index + 1)
-      match next {
-        Some(next_index) => {
-          match frames.last() {
-            Some(frame) if frame.is_object && frame.expecting_key => {
-              if frame.keys.contains(canonical) {
-                raise BatchError(
-                  "\{render_scan_path(frames, None)} repeats the key \"\{display}\" (strict scripts must not rely on last-wins parsing)",
-                )
-              }
-              frame.keys.add(canonical)
-              frame.pending_key = display
+      ',' => {
+        match frames.last() {
+          Some(frame) =>
+            if frame.is_object {
+              frame.expecting_key = true
+            } else {
+              frame.index += 1
             }
-            _ => ()
+          None => ()
+        }
+        index += 1
+      }
+      ':' => {
+        match frames.last() {
+          Some(frame) if frame.is_object => frame.expecting_key = false
+          _ => ()
+        }
+        index += 1
+      }
+      '"' => {
+        let (canonical, display, next) = lex_json_string(units, index + 1)
+        match next {
+          Some(next_index) => {
+            match frames.last() {
+              Some(frame) if frame.is_object && frame.expecting_key => {
+                if frame.keys.contains(canonical) {
+                  raise BatchError(
+                    "\{render_scan_path(frames, None)} repeats the key \"\{display}\" (strict scripts must not rely on last-wins parsing)",
+                  )
+                }
+                frame.keys.add(canonical)
+                frame.pending_key = display
+              }
+              _ => ()
+            }
+            index = next_index
           }
-          index = next_index
-        }
-        None => return
-      }
-    } else if unit == '-'.to_int() ||
-      (unit >= '0'.to_int() && unit <= '9'.to_int()) {
-      let start = index
-      let mut cursor = index
-      let mut plain_integer = true
-      while cursor < length {
-        let c = units[cursor].to_int()
-        if c == '.'.to_int() || c == 'e'.to_int() || c == 'E'.to_int() {
-          plain_integer = false
-          cursor += 1
-        } else if c == '-'.to_int() ||
-          c == '+'.to_int() ||
-          (c >= '0'.to_int() && c <= '9'.to_int()) {
-          cursor += 1
-        } else {
-          break
+          None => return
         }
       }
-      if !plain_integer {
-        let lexeme_builder = StringBuilder::new()
-        for at in start..<cursor {
-          match units[at].to_int().to_char() {
-            Some(ch) => lexeme_builder.write_char(ch)
-            None => ()
+      '-' | '0'..='9' => {
+        let start = index
+        let mut cursor = index
+        let mut plain_integer = true
+        while cursor < length {
+          match units[cursor].to_int() {
+            '.' | 'e' | 'E' => {
+              plain_integer = false
+              cursor += 1
+            }
+            '-' | '+' | '0'..='9' => cursor += 1
+            _ => break
           }
         }
-        let leaf = match frames.last() {
-          Some(frame) if frame.is_object => Some(frame.pending_key)
-          _ => None
+        if !plain_integer {
+          let lexeme_builder = StringBuilder::new()
+          for at in start..<cursor {
+            match units[at].to_int().to_char() {
+              Some(ch) => lexeme_builder.write_char(ch)
+              None => ()
+            }
+          }
+          let leaf = match frames.last() {
+            Some(frame) if frame.is_object => Some(frame.pending_key)
+            _ => None
+          }
+          raise BatchError(
+            "\{render_scan_path(frames, leaf)} must be a plain decimal integer — docx batch scripts have no fractional fields (got '\{lexeme_builder.to_string()}')",
+          )
         }
-        raise BatchError(
-          "\{render_scan_path(frames, leaf)} must be a plain decimal integer — docx batch scripts have no fractional fields (got '\{lexeme_builder.to_string()}')",
-        )
+        index = cursor
       }
-      index = cursor
-    } else {
-      index += 1
+      _ => index += 1
     }
   }
 }

@@ -800,16 +800,20 @@ fn check_entry_name(name : String, findings : FindingCollector) -> String? {
     Some(logical) => if name.has_suffix("/") { None } else { Some(logical) }
     None => {
       for segment in item_path.split("/") {
-        if segment == "" {
-          findings.add(
-            "entry name contains an empty segment: \{findings.text(name)}",
-          )
-          return None
-        } else if segment == "." || segment == ".." {
-          findings.add(
-            "entry name contains a '\{segment}' segment: \{findings.text(name)}",
-          )
-          return None
+        match segment {
+          "" => {
+            findings.add(
+              "entry name contains an empty segment: \{findings.text(name)}",
+            )
+            return None
+          }
+          "." | ".." => {
+            findings.add(
+              "entry name contains a '\{segment}' segment: \{findings.text(name)}",
+            )
+            return None
+          }
+          _ => ()
         }
       }
       findings.add(
@@ -830,21 +834,22 @@ priv struct ContentTypes {
 fn is_media_type_token_char(character : Char) -> Bool {
   character.is_ascii_alphabetic() ||
   character.is_ascii_digit() ||
-  character == '!' ||
-  character == '#' ||
-  character == '$' ||
-  character == '%' ||
-  character == '&' ||
-  character.to_int() == 0x27 ||
-  character == '*' ||
-  character == '+' ||
-  character == '-' ||
-  character == '.' ||
-  character == '^' ||
-  character == '_' ||
-  character == '`' ||
-  character == '|' ||
-  character == '~'
+  character
+  is ('!'
+  | '#'
+  | '$'
+  | '%'
+  | '&'
+  | '*'
+  | '+'
+  | '-'
+  | '.'
+  | '^'
+  | '_'
+  | '`'
+  | '|'
+  | '~') ||
+  character.to_int() == 0x27
 }
 
 ///|
