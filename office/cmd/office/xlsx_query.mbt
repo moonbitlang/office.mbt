@@ -87,17 +87,16 @@ fn require_xlsx_query_number_value(
 ///|
 fn xlsx_query_quoted_literal_end(value : String) -> Int? {
   let mut escaped = false
-  let mut index = 1
-  while index < value.length() {
-    let character = value[index]
+  for index in 1..<value.length() {
     if escaped {
       escaped = false
-    } else if character == ('\\' : UInt16) {
-      escaped = true
-    } else if character == ('"' : UInt16) {
-      return Some(index)
+    } else {
+      match value[index] {
+        '\\' => escaped = true
+        '"' => return Some(index)
+        _ => ()
+      }
     }
-    index += 1
   }
   None
 }
@@ -176,22 +175,17 @@ fn parse_xlsx_number_predicate(
   rest : String,
   selector : String,
 ) -> XlsxCellPredicate raise CliFailure {
-  let (operator, number_text) = if rest.has_prefix(">=") {
-    (GreaterOrEqual, rest[2:].to_owned())
-  } else if rest.has_prefix("<=") {
-    (LessOrEqual, rest[2:].to_owned())
-  } else if rest.has_prefix("!=") {
-    (NotEqual, rest[2:].to_owned())
-  } else if rest.has_prefix(">") {
-    (Greater, rest[1:].to_owned())
-  } else if rest.has_prefix("<") {
-    (Less, rest[1:].to_owned())
-  } else if rest.has_prefix("=") {
-    (Equal, rest[1:].to_owned())
-  } else {
-    raise xlsx_query_failure(
-      "a value predicate requires one of >, >=, <, <=, =, or !=", selector,
-    )
+  let (operator, number_text) : (XlsxNumberOperator, String) = match rest {
+    [.. ">=", .. tail] => (GreaterOrEqual, tail.to_owned())
+    [.. "<=", .. tail] => (LessOrEqual, tail.to_owned())
+    [.. "!=", .. tail] => (NotEqual, tail.to_owned())
+    [.. ">", .. tail] => (Greater, tail.to_owned())
+    [.. "<", .. tail] => (Less, tail.to_owned())
+    [.. "=", .. tail] => (Equal, tail.to_owned())
+    _ =>
+      raise xlsx_query_failure(
+        "a value predicate requires one of >, >=, <, <=, =, or !=", selector,
+      )
   }
   let bounded = require_xlsx_query_number_value(
     "value comparison", number_text, selector,
@@ -215,41 +209,33 @@ fn parse_xlsx_predicate(
   body : String,
   selector : String,
 ) -> XlsxCellPredicate raise CliFailure {
-  let predicate = body
-  if predicate.has_prefix("type=") {
-    match predicate[5:].to_owned() {
-      "formula" => HasType(Formula)
-      "number" => HasType(Number)
-      "string" => HasType(StringValue)
-      "bool" => HasType(Boolean)
-      "error" => HasType(ErrorValue)
-      _ =>
-        raise xlsx_query_failure(
-          "type predicate expects formula, number, string, bool, or error", selector,
-        )
-    }
-  } else if predicate.has_prefix("value") {
-    parse_xlsx_number_predicate(predicate[5:].to_owned(), selector)
-  } else if predicate.has_prefix("formula~=") {
-    FormulaContains(
-      require_xlsx_query_literal(
-        "formula~=",
-        predicate[9:].to_owned(),
-        selector,
-      ),
-    )
-  } else if predicate == "formula" {
-    HasFormula
-  } else if predicate.has_prefix("text~=") {
-    TextContains(
-      require_xlsx_query_literal("text~=", predicate[6:].to_owned(), selector),
-    )
-  } else if predicate.has_prefix("text=") {
-    TextEquals(
-      require_xlsx_query_literal("text=", predicate[5:].to_owned(), selector),
-    )
-  } else {
-    raise xlsx_query_failure("unknown XLSX cell predicate", selector)
+  match body {
+    [.. "type=", .. kind] =>
+      match kind {
+        "formula" => HasType(Formula)
+        "number" => HasType(Number)
+        "string" => HasType(StringValue)
+        "bool" => HasType(Boolean)
+        "error" => HasType(ErrorValue)
+        _ =>
+          raise xlsx_query_failure(
+            "type predicate expects formula, number, string, bool, or error", selector,
+          )
+      }
+    [.. "value", .. tail] =>
+      parse_xlsx_number_predicate(tail.to_owned(), selector)
+    [.. "formula~=", .. tail] =>
+      FormulaContains(
+        require_xlsx_query_literal("formula~=", tail.to_owned(), selector),
+      )
+    "formula" => HasFormula
+    [.. "text~=", .. tail] =>
+      TextContains(
+        require_xlsx_query_literal("text~=", tail.to_owned(), selector),
+      )
+    [.. "text=", .. tail] =>
+      TextEquals(require_xlsx_query_literal("text=", tail.to_owned(), selector))
+    _ => raise xlsx_query_failure("unknown XLSX cell predicate", selector)
   }
 }
 
@@ -264,33 +250,36 @@ fn xlsx_query_predicate_close(
   selector : String,
 ) -> Int raise CliFailure {
   let mut depth = 0
-  let mut index = 0
   let mut in_string = false
   let mut escaped = false
-  while index < rest.length() {
+  for index in 0..<rest.length() {
     let character = rest[index]
     if in_string {
       if escaped {
         escaped = false
-      } else if character == ('\\' : UInt16) {
-        escaped = true
-      } else if character == ('"' : UInt16) {
-        in_string = false
+      } else {
+        match character {
+          '\\' => escaped = true
+          '"' => in_string = false
+          _ => ()
+        }
       }
-    } else if character == ('"' : UInt16) {
-      in_string = true
-    } else if character == ('[' : UInt16) {
-      depth += 1
-    } else if character == (']' : UInt16) {
-      depth -= 1
-      if depth == 0 {
-        return index
-      }
-      if depth < 0 {
-        break
+    } else {
+      match character {
+        '"' => in_string = true
+        '[' => depth += 1
+        ']' => {
+          depth -= 1
+          if depth == 0 {
+            return index
+          }
+          if depth < 0 {
+            break
+          }
+        }
+        _ => ()
       }
     }
-    index += 1
   }
   raise xlsx_query_failure("query selector is missing a closing ']'", selector)
 }

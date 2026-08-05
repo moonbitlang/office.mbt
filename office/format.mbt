@@ -122,43 +122,41 @@ fn media_type_equal(left : StringView, right : StringView) -> Bool {
 
 ///|
 fn is_media_type_token_char(char : Char) -> Bool {
-  char.is_ascii_alphabetic() ||
-  char.is_ascii_digit() ||
-  char == '!' ||
-  char == '#' ||
-  char == '$' ||
-  char == '%' ||
-  char == '&' ||
-  char.to_int() == 0x27 ||
-  char == '*' ||
-  char == '+' ||
-  char == '-' ||
-  char == '.' ||
-  char == '^' ||
-  char == '_' ||
-  char == '`' ||
-  char == '|' ||
-  char == '~'
+  char
+  is ('a'..='z'
+  | 'A'..='Z'
+  | '0'..='9'
+  | '!'
+  | '#'
+  | '$'
+  | '%'
+  | '&'
+  | '\''
+  | '*'
+  | '+'
+  | '-'
+  | '.'
+  | '^'
+  | '_'
+  | '`'
+  | '|'
+  | '~')
 }
 
 ///|
 fn is_media_type_quoted_char(char : Char) -> Bool {
-  let code = char.to_int()
-  char == '\t' ||
-  char == ' ' ||
-  code == 0x21 ||
-  (code >= 0x23 && code <= 0x5b) ||
-  (code >= 0x5d && code <= 0x7e) ||
-  (code >= 0x80 && code <= 0xff)
+  char
+  is ('\t'
+  | ' '
+  | '\u{21}'
+  | '\u{23}'..='\u{5b}'
+  | '\u{5d}'..='\u{7e}'
+  | '\u{80}'..='\u{ff}')
 }
 
 ///|
 fn is_media_type_quoted_pair_char(char : Char) -> Bool {
-  let code = char.to_int()
-  char == '\t' ||
-  char == ' ' ||
-  (code >= 0x21 && code <= 0x7e) ||
-  (code >= 0x80 && code <= 0xff)
+  char is ('\t' | ' ' | '\u{21}'..='\u{7e}' | '\u{80}'..='\u{ff}')
 }
 
 ///|
@@ -182,16 +180,14 @@ fn is_valid_media_type(value : StringView) -> Bool {
     return false
   }
   while index < chars.length() {
-    while index < chars.length() &&
-          (chars[index] == ' ' || chars[index] == '\t') {
+    while index < chars.length() && chars[index] is (' ' | '\t') {
       index = index + 1
     }
     if index >= chars.length() || chars[index] != ';' {
       return false
     }
     index = index + 1
-    while index < chars.length() &&
-          (chars[index] == ' ' || chars[index] == '\t') {
+    while index < chars.length() && chars[index] is (' ' | '\t') {
       index = index + 1
     }
     let parameter_start = index
@@ -208,19 +204,20 @@ fn is_valid_media_type(value : StringView) -> Bool {
       index = index + 1
       let mut closed = false
       while index < chars.length() {
-        if chars[index] == '"' {
-          closed = true
-          index = index + 1
-          break
-        }
-        if chars[index] == '\\' {
-          index = index + 1
-          if index >= chars.length() ||
-            !is_media_type_quoted_pair_char(chars[index]) {
-            return false
+        match chars[index] {
+          '"' => {
+            closed = true
+            index = index + 1
+            break
           }
-        } else if !is_media_type_quoted_char(chars[index]) {
-          return false
+          '\\' => {
+            index = index + 1
+            if index >= chars.length() ||
+              !is_media_type_quoted_pair_char(chars[index]) {
+              return false
+            }
+          }
+          char => if !is_media_type_quoted_char(char) { return false }
         }
         index = index + 1
       }
@@ -446,49 +443,57 @@ fn decode_xml_part(
       actual=bytes.length(),
     )
   }
-  let (text, source_encoding) : (String, @xml.XmlSourceEncoding) = if bytes.length() >=
-    2 &&
-    bytes[0] == 0xff &&
-    bytes[1] == 0xfe {
-    (
-      @utf16.decode(bytes, ignore_bom=true) catch {
-        _ =>
-          raise InvalidPackage("\{name} is not valid UTF-8 or UTF-16 XML text")
-      },
-      Utf16LittleEndianWithBom,
-    )
-  } else if bytes.length() >= 2 && bytes[0] == 0xfe && bytes[1] == 0xff {
-    (
-      @utf16.decode(bytes, ignore_bom=true, endianness=Big) catch {
-        _ =>
-          raise InvalidPackage("\{name} is not valid UTF-8 or UTF-16 XML text")
-      },
-      Utf16BigEndianWithBom,
-    )
-  } else if bytes.length() >= 2 && bytes[0] == b'<' && bytes[1] == 0x00 {
-    (
-      @utf16.decode(bytes) catch {
-        _ =>
-          raise InvalidPackage("\{name} is not valid UTF-8 or UTF-16 XML text")
-      },
-      Utf16LittleEndian,
-    )
-  } else if bytes.length() >= 2 && bytes[0] == 0x00 && bytes[1] == b'<' {
-    (
-      @utf16.decode(bytes, endianness=Big) catch {
-        _ =>
-          raise InvalidPackage("\{name} is not valid UTF-8 or UTF-16 XML text")
-      },
-      Utf16BigEndian,
-    )
-  } else {
-    (
-      @utf8.decode(bytes, ignore_bom=true) catch {
-        _ =>
-          raise InvalidPackage("\{name} is not valid UTF-8 or UTF-16 XML text")
-      },
-      Utf8,
-    )
+  let (text, source_encoding) : (String, @xml.XmlSourceEncoding) = match bytes {
+    [0xff, 0xfe, ..] =>
+      (
+        @utf16.decode(bytes, ignore_bom=true) catch {
+          _ =>
+            raise InvalidPackage(
+              "\{name} is not valid UTF-8 or UTF-16 XML text",
+            )
+        },
+        Utf16LittleEndianWithBom,
+      )
+    [0xfe, 0xff, ..] =>
+      (
+        @utf16.decode(bytes, ignore_bom=true, endianness=Big) catch {
+          _ =>
+            raise InvalidPackage(
+              "\{name} is not valid UTF-8 or UTF-16 XML text",
+            )
+        },
+        Utf16BigEndianWithBom,
+      )
+    [b'<', 0x00, ..] =>
+      (
+        @utf16.decode(bytes) catch {
+          _ =>
+            raise InvalidPackage(
+              "\{name} is not valid UTF-8 or UTF-16 XML text",
+            )
+        },
+        Utf16LittleEndian,
+      )
+    [0x00, b'<', ..] =>
+      (
+        @utf16.decode(bytes, endianness=Big) catch {
+          _ =>
+            raise InvalidPackage(
+              "\{name} is not valid UTF-8 or UTF-16 XML text",
+            )
+        },
+        Utf16BigEndian,
+      )
+    _ =>
+      (
+        @utf8.decode(bytes, ignore_bom=true) catch {
+          _ =>
+            raise InvalidPackage(
+              "\{name} is not valid UTF-8 or UTF-16 XML text",
+            )
+        },
+        Utf8,
+      )
   }
   context.checkpoint()
   { text, source_encoding }
@@ -566,20 +571,15 @@ fn read_relationships_part(
 fn has_uri_scheme(target : StringView) -> Bool {
   let mut index = 0
   for char in target {
-    if char == ':' {
-      return index > 0
-    }
-    if char == '/' || char == '?' || char == '#' {
-      return false
+    match char {
+      ':' => return index > 0
+      '/' | '?' | '#' => return false
+      _ => ()
     }
     let valid = if index == 0 {
-      char.is_ascii_alphabetic()
+      char is ('a'..='z' | 'A'..='Z')
     } else {
-      char.is_ascii_alphabetic() ||
-      char.is_ascii_digit() ||
-      char == '+' ||
-      char == '-' ||
-      char == '.'
+      char is ('a'..='z' | 'A'..='Z' | '0'..='9' | '+' | '-' | '.')
     }
     if !valid {
       return false
@@ -591,47 +591,27 @@ fn has_uri_scheme(target : StringView) -> Bool {
 
 ///|
 fn is_ascii_hex_digit(char : Char) -> Bool {
-  (char >= '0' && char <= '9') ||
-  (char >= 'A' && char <= 'F') ||
-  (char >= 'a' && char <= 'f')
+  char is ('0'..='9' | 'A'..='F' | 'a'..='f')
 }
 
 ///|
 fn is_uri_unreserved(char : Char) -> Bool {
-  char.is_ascii_alphabetic() ||
-  char.is_ascii_digit() ||
-  char == '-' ||
-  char == '.' ||
-  char == '_' ||
-  char == '~'
+  char is ('a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '.' | '_' | '~')
 }
 
 ///|
 fn is_uri_sub_delimiter(char : Char) -> Bool {
-  char == '!' ||
-  char == '$' ||
-  char == '&' ||
-  char.to_int() == 0x27 ||
-  char == '(' ||
-  char == ')' ||
-  char == '*' ||
-  char == '+' ||
-  char == ',' ||
-  char == ';' ||
-  char == '='
+  char is ('!' | '$' | '&' | '\'' | '(' | ')' | '*' | '+' | ',' | ';' | '=')
 }
 
 ///|
 fn is_uri_pchar(char : Char) -> Bool {
-  is_uri_unreserved(char) ||
-  is_uri_sub_delimiter(char) ||
-  char == ':' ||
-  char == '@'
+  is_uri_unreserved(char) || is_uri_sub_delimiter(char) || char is (':' | '@')
 }
 
 ///|
 fn is_uri_query_or_fragment_char(char : Char) -> Bool {
-  is_uri_pchar(char) || char == '/' || char == '?'
+  is_uri_pchar(char) || char is ('/' | '?')
 }
 
 ///|
@@ -681,20 +661,17 @@ fn is_iri_unreserved(char : Char) -> Bool {
 
 ///|
 fn is_iri_pchar(char : Char) -> Bool {
-  is_iri_unreserved(char) ||
-  is_uri_sub_delimiter(char) ||
-  char == ':' ||
-  char == '@'
+  is_iri_unreserved(char) || is_uri_sub_delimiter(char) || char is (':' | '@')
 }
 
 ///|
 fn is_iri_query_char(char : Char) -> Bool {
-  is_iri_pchar(char) || is_iri_private(char) || char == '/' || char == '?'
+  is_iri_pchar(char) || is_iri_private(char) || char is ('/' | '?')
 }
 
 ///|
 fn is_iri_fragment_char(char : Char) -> Bool {
-  is_iri_pchar(char) || char == '/' || char == '?'
+  is_iri_pchar(char) || char is ('/' | '?')
 }
 
 ///|
@@ -716,18 +693,21 @@ fn is_valid_uri_chars(
 ) -> Bool {
   let mut index = start
   while index < end {
-    if chars[index] == '%' {
-      if index + 2 >= end ||
-        !is_ascii_hex_digit(chars[index + 1]) ||
-        !is_ascii_hex_digit(chars[index + 2]) {
-        return false
+    match chars[index] {
+      '%' => {
+        if index + 2 >= end ||
+          !is_ascii_hex_digit(chars[index + 1]) ||
+          !is_ascii_hex_digit(chars[index + 2]) {
+          return false
+        }
+        index = index + 3
       }
-      index = index + 3
-    } else {
-      if !allowed(chars[index]) {
-        return false
+      char => {
+        if !allowed(char) {
+          return false
+        }
+        index = index + 1
       }
-      index = index + 1
     }
   }
   true
@@ -813,12 +793,8 @@ fn is_valid_ipv6_literal(
       if digits == 0 || digits > 4 {
         return false
       }
-      for digit_index = group_start
-          digit_index < index
-          digit_index = digit_index + 1 {
-        if !is_ascii_hex_digit(chars[digit_index]) {
-          return false
-        }
+      if !chars[group_start:index].all(is_ascii_hex_digit) {
+        return false
       }
       groups = groups + 1
     }
@@ -854,7 +830,7 @@ fn is_valid_ipv_future_literal(
   start : Int,
   end : Int,
 ) -> Bool {
-  if start >= end || (chars[start] != 'v' && chars[start] != 'V') {
+  if start >= end || !(chars[start] is ('v' | 'V')) {
     return false
   }
   let mut index = start + 1
@@ -887,8 +863,8 @@ fn is_valid_uri_authority(
 ) -> Bool {
   let mut host_start = start
   let mut userinfo_at = -1
-  for index = start; index < end; index = index + 1 {
-    if chars[index] == '@' {
+  for index in start..<end {
+    if chars[index] is '@' {
       if userinfo_at >= 0 {
         return false
       }
@@ -907,12 +883,9 @@ fn is_valid_uri_authority(
     host_start = userinfo_at + 1
   }
   if host_start < end && chars[host_start] == '[' {
-    let mut close = -1
-    for index = host_start + 1; index < end; index = index + 1 {
-      if chars[index] == ']' {
-        close = index
-        break
-      }
+    let close = match chars[host_start + 1:end].search(']') {
+      Some(offset) => host_start + 1 + offset
+      None => -1
     }
     if close < 0 ||
       (
@@ -927,22 +900,19 @@ fn is_valid_uri_authority(
     if chars[close + 1] != ':' {
       return false
     }
-    for index = close + 2; index < end; index = index + 1 {
-      if !chars[index].is_ascii_digit() {
-        return false
-      }
-    }
-    return true
+    return chars[close + 2:end].all(char => char.is_ascii_digit())
   }
   let mut port_at = -1
-  for index = host_start; index < end; index = index + 1 {
-    if chars[index] == ':' {
-      if port_at >= 0 {
-        return false
+  for index in host_start..<end {
+    match chars[index] {
+      ':' => {
+        if port_at >= 0 {
+          return false
+        }
+        port_at = index
       }
-      port_at = index
-    } else if chars[index] == '[' || chars[index] == ']' {
-      return false
+      '[' | ']' => return false
+      _ => ()
     }
   }
   let host_end = if port_at >= 0 { port_at } else { end }
@@ -954,32 +924,20 @@ fn is_valid_uri_authority(
   if !valid_reg_name {
     return false
   }
-  if port_at >= 0 {
-    for index = port_at + 1; index < end; index = index + 1 {
-      if !chars[index].is_ascii_digit() {
-        return false
-      }
-    }
+  if port_at >= 0 && !chars[port_at + 1:end].all(char => char.is_ascii_digit()) {
+    return false
   }
   true
 }
 
 ///|
 fn is_valid_uri_scheme(chars : ArrayView[Char], start : Int, end : Int) -> Bool {
-  if start >= end || !chars[start].is_ascii_alphabetic() {
+  if start >= end || !(chars[start] is ('a'..='z' | 'A'..='Z')) {
     return false
   }
-  for index = start + 1; index < end; index = index + 1 {
-    let char = chars[index]
-    if !char.is_ascii_alphabetic() &&
-      !char.is_ascii_digit() &&
-      char != '+' &&
-      char != '-' &&
-      char != '.' {
-      return false
-    }
-  }
-  true
+  chars[start + 1:end].all(char => {
+    char is ('a'..='z' | 'A'..='Z' | '0'..='9' | '+' | '-' | '.')
+  })
 }
 
 ///|
@@ -997,15 +955,16 @@ fn is_valid_resource_identifier_reference(
   let mut query_at = chars.length()
   let mut fragment_at = chars.length()
   for index, char in chars {
-    if char == '#' {
-      if fragment_at < chars.length() {
-        return false
+    match char {
+      '#' => {
+        if fragment_at < chars.length() {
+          return false
+        }
+        fragment_at = index
       }
-      fragment_at = index
-    } else if char == '?' &&
-      query_at == chars.length() &&
-      fragment_at == chars.length() {
-      query_at = index
+      '?' if query_at == chars.length() && fragment_at == chars.length() =>
+        query_at = index
+      _ => ()
     }
   }
   let hierarchy_end = if query_at < fragment_at {
@@ -1014,13 +973,14 @@ fn is_valid_resource_identifier_reference(
     fragment_at
   }
   let mut scheme_at = -1
-  for index = 0; index < hierarchy_end; index = index + 1 {
-    if chars[index] == ':' {
-      scheme_at = index
-      break
-    }
-    if chars[index] == '/' {
-      break
+  for index in 0..<hierarchy_end {
+    match chars[index] {
+      ':' => {
+        scheme_at = index
+        break
+      }
+      '/' => break
+      _ => ()
     }
   }
   let mut path_start = 0
@@ -1030,13 +990,11 @@ fn is_valid_resource_identifier_reference(
     }
     path_start = scheme_at + 1
   }
-  if path_start + 1 < hierarchy_end &&
-    chars[path_start] == '/' &&
-    chars[path_start + 1] == '/' {
+  if chars[path_start:hierarchy_end] is ['/', '/', ..] {
     let authority_start = path_start + 2
-    let mut authority_end = authority_start
-    while authority_end < hierarchy_end && chars[authority_end] != '/' {
-      authority_end = authority_end + 1
+    let authority_end = match chars[authority_start:hierarchy_end].search('/') {
+      Some(offset) => authority_start + offset
+      None => hierarchy_end
     }
     if !is_valid_uri_authority(
         chars, authority_start, authority_end, allow_iri_chars,
@@ -1108,28 +1066,26 @@ fn is_valid_office_file_path_chars(
 }
 
 ///|
+/// Index of the first `\` or `/` at or after `start`, or `chars.length()` when
+/// the remainder holds neither separator.
+fn next_path_separator(chars : ArrayView[Char], start : Int) -> Int {
+  match chars[start:].search_by(char => char is ('\\' | '/')) {
+    Some(offset) => start + offset
+    None => chars.length()
+  }
+}
+
+///|
 fn is_valid_office_unc_path(chars : ArrayView[Char]) -> Bool {
-  if chars.length() < 5 || chars[0] != '\\' || chars[1] != '\\' {
-    return false
-  }
-  let mut server_end = 2
-  while server_end < chars.length() &&
-        chars[server_end] != '\\' &&
-        chars[server_end] != '/' {
-    server_end = server_end + 1
-  }
+  guard chars.length() >= 5 && chars is ['\\', '\\', ..] else { return false }
+  let server_end = next_path_separator(chars, 2)
   if server_end == 2 ||
     server_end == chars.length() ||
     !is_valid_uri_chars(chars, 2, server_end, is_iri_reg_name_char) {
     return false
   }
   let share_start = server_end + 1
-  let mut share_end = share_start
-  while share_end < chars.length() &&
-        chars[share_end] != '\\' &&
-        chars[share_end] != '/' {
-    share_end = share_end + 1
-  }
+  let share_end = next_path_separator(chars, share_start)
   share_end > share_start &&
   is_valid_uri_chars(chars, share_start, share_end, is_iri_pchar) &&
   is_valid_office_file_path_chars(chars, share_end, chars.length())
@@ -1142,10 +1098,7 @@ fn is_valid_office_windows_file_iri(value : StringView) -> Bool {
     return false
   }
   let chars = owned["file:///".length():].to_array()
-  if chars.length() >= 3 &&
-    chars[0].is_ascii_alphabetic() &&
-    chars[1] == ':' &&
-    (chars[2] == '\\' || chars[2] == '/') {
+  if chars is ['a'..='z' | 'A'..='Z', ':', '\\' | '/', ..] {
     return is_valid_office_file_path_chars(chars, 2, chars.length())
   }
   is_valid_office_unc_path(chars)
@@ -1195,15 +1148,10 @@ fn is_xml_ncname_char(char : Char) -> Bool {
 ///|
 fn is_xml_ncname(value : StringView) -> Bool {
   let chars = value.to_array()
-  if chars.length() == 0 || !is_xml_ncname_start(chars[0]) {
+  guard chars is [first, .. rest] && is_xml_ncname_start(first) else {
     return false
   }
-  for index = 1; index < chars.length(); index = index + 1 {
-    if !is_xml_ncname_char(chars[index]) {
-      return false
-    }
-  }
-  true
+  rest.all(is_xml_ncname_char)
 }
 
 ///|
@@ -1369,18 +1317,22 @@ fn validate_package_structure(
         }
         let mut structural_error = false
         for segment in item_path.split("/") {
-          if segment == "" {
-            findings.push(
-              "entry name contains an empty segment: \{physical_name}",
-            )
-            structural_error = true
-            break
-          } else if segment == "." || segment == ".." {
-            findings.push(
-              "entry name contains a '\{segment}' segment: \{physical_name}",
-            )
-            structural_error = true
-            break
+          match segment {
+            "" => {
+              findings.push(
+                "entry name contains an empty segment: \{physical_name}",
+              )
+              structural_error = true
+              break
+            }
+            "." | ".." => {
+              findings.push(
+                "entry name contains a '\{segment}' segment: \{physical_name}",
+              )
+              structural_error = true
+              break
+            }
+            _ => ()
           }
         }
         if !structural_error {
@@ -1428,107 +1380,110 @@ fn validate_package_structure(
   for child in content_types.children {
     context.checkpoint()
     guard child is XmlElement(element) else { continue }
-    if element.name == CONTENT_TYPES_DEFAULT {
-      match unexpected_xml_attribute(element, ["Extension", "ContentType"]) {
-        Some(attribute) =>
-          findings.push(
-            "[Content_Types].xml: Default has undeclared attribute: \{attribute}",
-          )
-        None => ()
-      }
-      if !element.children.is_empty() {
-        findings.push("[Content_Types].xml: Default element is not empty")
-      }
-      match
-        (
-          element.attributes.get("Extension"),
-          element.attributes.get("ContentType"),
-        ) {
-        (Some(extension), Some(content_type)) if extension != "" &&
-          content_type != "" => {
-          if !@opc.is_valid_content_type_extension(extension) {
+    match element.name {
+      CONTENT_TYPES_DEFAULT => {
+        match unexpected_xml_attribute(element, ["Extension", "ContentType"]) {
+          Some(attribute) =>
             findings.push(
-              "[Content_Types].xml: Default has an invalid Extension: \{extension}",
+              "[Content_Types].xml: Default has undeclared attribute: \{attribute}",
             )
-            continue
-          }
-          if !is_valid_media_type(content_type) {
-            findings.push(
-              "[Content_Types].xml: Default has an invalid ContentType: \{content_type}",
-            )
-            continue
-          }
-          let extension = extension.to_lower()
-          if defaults.contains(extension) {
-            findings.push("duplicate content-type default: \{extension}")
-          } else {
-            defaults[extension] = content_type
-          }
+          None => ()
         }
-        _ =>
-          findings.push(
-            "[Content_Types].xml: Default missing Extension or ContentType",
-          )
-      }
-    } else if element.name == CONTENT_TYPES_OVERRIDE {
-      match unexpected_xml_attribute(element, ["PartName", "ContentType"]) {
-        Some(attribute) =>
-          findings.push(
-            "[Content_Types].xml: Override has undeclared attribute: \{attribute}",
-          )
-        None => ()
-      }
-      if !element.children.is_empty() {
-        findings.push("[Content_Types].xml: Override element is not empty")
-      }
-      match
-        (
-          element.attributes.get("PartName"),
-          element.attributes.get("ContentType"),
-        ) {
-        (Some(part_name), Some(content_type)) if content_type != "" => {
-          if !is_valid_media_type(content_type) {
-            findings.push(
-              "[Content_Types].xml: Override has an invalid ContentType: \{content_type}",
-            )
-            continue
-          }
-          if part_name.has_prefix("/") &&
-            opc_part_key(part_name[1:]) == opc_part_key("[Content_Types].xml") {
-            findings.push(
-              "content-type override names the reserved manifest: \{part_name}",
-            )
-            continue
-          }
-          match normalize_declared_part_name(part_name) {
-            Some(target) => {
-              let target_key = opc_part_key(target)
-              if overrides.contains(target_key) {
-                findings.push("duplicate content-type override: \{part_name}")
-              } else {
-                overrides[target_key] = content_type
-              }
-              if !package_parts.contains(target_key) {
-                findings.push(
-                  "content-type override names a missing part: \{part_name}",
-                )
-              }
-            }
-            None =>
+        if !element.children.is_empty() {
+          findings.push("[Content_Types].xml: Default element is not empty")
+        }
+        match
+          (
+            element.attributes.get("Extension"),
+            element.attributes.get("ContentType"),
+          ) {
+          (Some(extension), Some(content_type)) if extension != "" &&
+            content_type != "" => {
+            if !@opc.is_valid_content_type_extension(extension) {
               findings.push(
-                "content-type override has an invalid PartName: \{part_name}",
+                "[Content_Types].xml: Default has an invalid Extension: \{extension}",
               )
+              continue
+            }
+            if !is_valid_media_type(content_type) {
+              findings.push(
+                "[Content_Types].xml: Default has an invalid ContentType: \{content_type}",
+              )
+              continue
+            }
+            let extension = extension.to_lower()
+            if defaults.contains(extension) {
+              findings.push("duplicate content-type default: \{extension}")
+            } else {
+              defaults[extension] = content_type
+            }
           }
+          _ =>
+            findings.push(
+              "[Content_Types].xml: Default missing Extension or ContentType",
+            )
         }
-        _ =>
-          findings.push(
-            "[Content_Types].xml: Override missing PartName or ContentType",
-          )
       }
-    } else {
-      findings.push(
-        "[Content_Types].xml contains an unexpected element: \{element.name}",
-      )
+      CONTENT_TYPES_OVERRIDE => {
+        match unexpected_xml_attribute(element, ["PartName", "ContentType"]) {
+          Some(attribute) =>
+            findings.push(
+              "[Content_Types].xml: Override has undeclared attribute: \{attribute}",
+            )
+          None => ()
+        }
+        if !element.children.is_empty() {
+          findings.push("[Content_Types].xml: Override element is not empty")
+        }
+        match
+          (
+            element.attributes.get("PartName"),
+            element.attributes.get("ContentType"),
+          ) {
+          (Some(part_name), Some(content_type)) if content_type != "" => {
+            if !is_valid_media_type(content_type) {
+              findings.push(
+                "[Content_Types].xml: Override has an invalid ContentType: \{content_type}",
+              )
+              continue
+            }
+            if part_name.has_prefix("/") &&
+              opc_part_key(part_name[1:]) == opc_part_key("[Content_Types].xml") {
+              findings.push(
+                "content-type override names the reserved manifest: \{part_name}",
+              )
+              continue
+            }
+            match normalize_declared_part_name(part_name) {
+              Some(target) => {
+                let target_key = opc_part_key(target)
+                if overrides.contains(target_key) {
+                  findings.push("duplicate content-type override: \{part_name}")
+                } else {
+                  overrides[target_key] = content_type
+                }
+                if !package_parts.contains(target_key) {
+                  findings.push(
+                    "content-type override names a missing part: \{part_name}",
+                  )
+                }
+              }
+              None =>
+                findings.push(
+                  "content-type override has an invalid PartName: \{part_name}",
+                )
+            }
+          }
+          _ =>
+            findings.push(
+              "[Content_Types].xml: Override missing PartName or ContentType",
+            )
+        }
+      }
+      _ =>
+        findings.push(
+          "[Content_Types].xml contains an unexpected element: \{element.name}",
+        )
     }
   }
   for entry in archive.entries() {
@@ -1633,10 +1588,7 @@ fn validate_package_structure(
         continue
       }
       for attribute, _ in element.attributes {
-        if attribute != "Id" &&
-          attribute != "Type" &&
-          attribute != "Target" &&
-          attribute != "TargetMode" {
+        if !(attribute is ("Id" | "Type" | "Target" | "TargetMode")) {
           findings.push(
             "relationship in \{relationship_part} has an undeclared attribute: \{attribute}",
           )
@@ -1907,48 +1859,52 @@ fn format_from_archive(
   for child in content_types.children {
     context.checkpoint()
     guard child is XmlElement(element) else { continue }
-    if element.name == CONTENT_TYPES_DEFAULT {
-      let format = match element.attributes.get("ContentType") {
-        Some(content_type) => main_format_from_content_type(content_type)
-        None => None
+    match element.name {
+      CONTENT_TYPES_DEFAULT => {
+        let format = match element.attributes.get("ContentType") {
+          Some(content_type) => main_format_from_content_type(content_type)
+          None => None
+        }
+        guard format is Some(format) else { continue }
+        guard element.attributes.get("Extension") is Some(extension) &&
+          extension != "" else {
+          raise InvalidPackage("main content type default has no Extension")
+        }
+        main_defaults[extension.to_lower()] = format
       }
-      guard format is Some(format) else { continue }
-      guard element.attributes.get("Extension") is Some(extension) &&
-        extension != "" else {
-        raise InvalidPackage("main content type default has no Extension")
+      CONTENT_TYPES_OVERRIDE => {
+        let format = match element.attributes.get("ContentType") {
+          Some(content_type) => main_format_from_content_type(content_type)
+          None => None
+        }
+        let part_name = match element.attributes.get("PartName") {
+          Some(part_name) => part_name
+          None =>
+            if format is Some(_) {
+              raise InvalidPackage("main content type override has no PartName")
+            } else {
+              continue
+            }
+        }
+        let normalized = match normalize_declared_part_name(part_name) {
+          Some(part_name) => part_name
+          None =>
+            if format is Some(_) {
+              raise InvalidPackage(
+                "main content type override has an invalid PartName",
+              )
+            } else {
+              continue
+            }
+        }
+        overridden_parts[opc_part_key(normalized)] = true
+        match format {
+          Some(Xlsx) => xlsx_main_parts.push(normalized)
+          Some(Docx) => docx_main_parts.push(normalized)
+          None => ()
+        }
       }
-      main_defaults[extension.to_lower()] = format
-    } else if element.name == CONTENT_TYPES_OVERRIDE {
-      let format = match element.attributes.get("ContentType") {
-        Some(content_type) => main_format_from_content_type(content_type)
-        None => None
-      }
-      let part_name = match element.attributes.get("PartName") {
-        Some(part_name) => part_name
-        None =>
-          if format is Some(_) {
-            raise InvalidPackage("main content type override has no PartName")
-          } else {
-            continue
-          }
-      }
-      let normalized = match normalize_declared_part_name(part_name) {
-        Some(part_name) => part_name
-        None =>
-          if format is Some(_) {
-            raise InvalidPackage(
-              "main content type override has an invalid PartName",
-            )
-          } else {
-            continue
-          }
-      }
-      overridden_parts[opc_part_key(normalized)] = true
-      match format {
-        Some(Xlsx) => xlsx_main_parts.push(normalized)
-        Some(Docx) => docx_main_parts.push(normalized)
-        None => ()
-      }
+      _ => ()
     }
   }
   if !main_defaults.is_empty() {
