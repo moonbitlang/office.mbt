@@ -2690,552 +2690,567 @@ fn eval_function(
         }
       }
     "LEN" =>
-      if values.length() == 1 {
-        match value_as_string(values[0]) {
-          Ok(text) => Number(Double::from_int(text.length()))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_string(v0) {
+            Ok(text) => Number(Double::from_int(text.length()))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "LENB" =>
-      if values.length() == 1 {
-        match value_as_string(values[0]) {
-          Ok(text) => Number(Double::from_int(dbcs_byte_length(text)))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_string(v0) {
+            Ok(text) => Number(Double::from_int(dbcs_byte_length(text)))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "LOWER" =>
-      if values.length() == 1 {
-        match value_as_string(values[0]) {
-          Ok(text) => String(text.to_lower())
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_string(v0) {
+            Ok(text) => String(text.to_lower())
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "UPPER" =>
-      if values.length() == 1 {
-        match value_as_string(values[0]) {
-          Ok(text) => String(text.to_upper())
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_string(v0) {
+            Ok(text) => String(text.to_upper())
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "PROPER" =>
-      if values.length() == 1 {
-        match value_as_string(values[0]) {
-          Ok(text) => String(proper_case(text))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_string(v0) {
+            Ok(text) => String(proper_case(text))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "DBCS" =>
-      if values.length() == 1 {
-        match value_as_string(values[0]) {
-          Ok(text) =>
-            if dbcs_enabled(workbook) {
-              String(dbcs_convert(text))
-            } else {
-              String(text)
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_string(v0) {
+            Ok(text) =>
+              if dbcs_enabled(workbook) {
+                String(dbcs_convert(text))
+              } else {
+                String(text)
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "TRIM" =>
-      if values.length() == 1 {
-        match value_as_string(values[0]) {
-          Ok(text) => String(trim_excel_text(text))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_string(v0) {
+            Ok(text) => String(trim_excel_text(text))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "LEFT" =>
-      if values.length() == 1 || values.length() == 2 {
-        let text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let count = if values.length() == 2 {
-          match value_as_int(values[1]) {
-            Ok(num) => num
+      match values {
+        [v0] | [v0, _] => {
+          let text = match value_as_string(v0) {
+            Ok(text) => text
             Err(err) => return err
           }
-        } else {
-          1
+          let count = if values is [_, v1] {
+            match value_as_int(v1) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+          } else {
+            1
+          }
+          if count < 0 {
+            Error(formula_error_value)
+          } else {
+            let len = text.length()
+            let end = if count > len { len } else { count }
+            let start = 0
+            String(text.unsafe_substring(start~, end~))
+          }
         }
-        if count < 0 {
-          Error(formula_error_value)
-        } else {
-          let len = text.length()
-          let end = if count > len { len } else { count }
-          let start = 0
-          String(text.unsafe_substring(start~, end~))
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "LEFTB" =>
-      if values.length() == 1 || values.length() == 2 {
-        let text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let count = if values.length() == 2 {
-          match value_as_int(values[1]) {
-            Ok(num) => num
+      match values {
+        [v0] | [v0, _] => {
+          let text = match value_as_string(v0) {
+            Ok(text) => text
             Err(err) => return err
           }
-        } else {
-          1
-        }
-        if count < 0 {
-          Error(formula_error_value)
-        } else {
-          let len = dbcs_byte_length(text)
-          if count >= len {
-            String(text)
+          let count = if values is [_, v1] {
+            match value_as_int(v1) {
+              Ok(num) => num
+              Err(err) => return err
+            }
           } else {
-            String(dbcs_byte_range(text, 1, count))
+            1
+          }
+          if count < 0 {
+            Error(formula_error_value)
+          } else {
+            let len = dbcs_byte_length(text)
+            if count >= len {
+              String(text)
+            } else {
+              String(dbcs_byte_range(text, 1, count))
+            }
           }
         }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "RIGHT" =>
-      if values.length() == 1 || values.length() == 2 {
-        let text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let count = if values.length() == 2 {
-          match value_as_int(values[1]) {
-            Ok(num) => num
+      match values {
+        [v0] | [v0, _] => {
+          let text = match value_as_string(v0) {
+            Ok(text) => text
             Err(err) => return err
           }
-        } else {
-          1
+          let count = if values is [_, v1] {
+            match value_as_int(v1) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+          } else {
+            1
+          }
+          if count < 0 {
+            Error(formula_error_value)
+          } else {
+            let len = text.length()
+            let start = if count >= len { 0 } else { len - count }
+            let end = len
+            String(text.unsafe_substring(start~, end~))
+          }
         }
-        if count < 0 {
-          Error(formula_error_value)
-        } else {
-          let len = text.length()
-          let start = if count >= len { 0 } else { len - count }
-          let end = len
-          String(text.unsafe_substring(start~, end~))
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "RIGHTB" =>
-      if values.length() == 1 || values.length() == 2 {
-        let text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
+      match values {
+        [v0] | [v0, _] => {
+          let text = match value_as_string(v0) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          let count = if values is [_, v1] {
+            match value_as_int(v1) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+          } else {
+            1
+          }
+          if count < 0 {
+            Error(formula_error_value)
+          } else {
+            let len = dbcs_byte_length(text)
+            if count >= len {
+              String(text)
+            } else {
+              String(dbcs_byte_range(text, len - count + 1, count))
+            }
+          }
         }
-        let count = if values.length() == 2 {
-          match value_as_int(values[1]) {
+        _ => Error(formula_error_value)
+      }
+    "MID" =>
+      match values {
+        [v0, v1, v2] => {
+          let text = match value_as_string(v0) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          let start_num = match value_as_int(v1) {
             Ok(num) => num
             Err(err) => return err
           }
-        } else {
-          1
-        }
-        if count < 0 {
-          Error(formula_error_value)
-        } else {
-          let len = dbcs_byte_length(text)
-          if count >= len {
-            String(text)
+          let count = match value_as_int(v2) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+          if start_num <= 0 || count < 0 {
+            Error(formula_error_value)
           } else {
-            String(dbcs_byte_range(text, len - count + 1, count))
+            let len = text.length()
+            if start_num > len {
+              String("")
+            } else {
+              let start = start_num - 1
+              let mut end = start + count
+              if end > len {
+                end = len
+              }
+              String(text.unsafe_substring(start~, end~))
+            }
           }
         }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
-    "MID" =>
-      if values.length() == 3 {
-        let text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let start_num = match value_as_int(values[1]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let count = match value_as_int(values[2]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        if start_num <= 0 || count < 0 {
-          Error(formula_error_value)
-        } else {
-          let len = text.length()
-          if start_num > len {
+    "MIDB" =>
+      match values {
+        [v0, v1, v2] => {
+          let text = match value_as_string(v0) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          let start_num = match value_as_int(v1) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+          let count = match value_as_int(v2) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+          if start_num <= 0 || count < 0 {
+            Error(formula_error_value)
+          } else if count == 0 {
+            String("")
+          } else if start_num > dbcs_byte_length(text) {
             String("")
           } else {
-            let start = start_num - 1
+            String(dbcs_byte_range(text, start_num, count))
+          }
+        }
+        _ => Error(formula_error_value)
+      }
+    "REPT" =>
+      match values {
+        [v0, v1] => {
+          let text = match value_as_string(v0) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          let times = match value_as_int(v1) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+          if times < 0 {
+            Error(formula_error_value)
+          } else if times == 0 || text.length() == 0 {
+            String("")
+          } else if text.length() > max_cell_chars / times {
+            Error(formula_error_value)
+          } else {
+            String(text.repeat(times))
+          }
+        }
+        _ => Error(formula_error_value)
+      }
+    "REPLACE" =>
+      match values {
+        [v0, v1, v2, v3] => {
+          let text = match value_as_string(v0) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          let start_num = match value_as_int(v1) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+          let count = match value_as_int(v2) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+          let new_text = match value_as_string(v3) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          if start_num <= 0 || count < 0 {
+            Error(formula_error_value)
+          } else {
+            let len = text.length()
+            let mut start = start_num - 1
+            if start > len {
+              start = len
+            }
             let mut end = start + count
             if end > len {
               end = len
             }
-            String(text.unsafe_substring(start~, end~))
+            let sb = StringBuilder::new()
+            sb.write_view(text.unsafe_substring(start=0, end=start))
+            sb.write_view(new_text)
+            sb.write_view(text.unsafe_substring(start=end, end=len))
+            String(sb.to_string())
           }
         }
-      } else {
-        Error(formula_error_value)
-      }
-    "MIDB" =>
-      if values.length() == 3 {
-        let text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let start_num = match value_as_int(values[1]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let count = match value_as_int(values[2]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        if start_num <= 0 || count < 0 {
-          Error(formula_error_value)
-        } else if count == 0 {
-          String("")
-        } else if start_num > dbcs_byte_length(text) {
-          String("")
-        } else {
-          String(dbcs_byte_range(text, start_num, count))
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "REPT" =>
-      if values.length() == 2 {
-        let text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let times = match value_as_int(values[1]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        if times < 0 {
-          Error(formula_error_value)
-        } else if times == 0 || text.length() == 0 {
-          String("")
-        } else if text.length() > max_cell_chars / times {
-          Error(formula_error_value)
-        } else {
-          String(text.repeat(times))
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "REPLACE" =>
-      if values.length() == 4 {
-        let text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let start_num = match value_as_int(values[1]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let count = match value_as_int(values[2]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let new_text = match value_as_string(values[3]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        if start_num <= 0 || count < 0 {
-          Error(formula_error_value)
-        } else {
-          let len = text.length()
-          let mut start = start_num - 1
-          if start > len {
-            start = len
-          }
-          let mut end = start + count
-          if end > len {
-            end = len
-          }
-          let sb = StringBuilder::new()
-          sb.write_view(text.unsafe_substring(start=0, end=start))
-          sb.write_view(new_text)
-          sb.write_view(text.unsafe_substring(start=end, end=len))
-          String(sb.to_string())
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "REPLACEB" =>
-      if values.length() == 4 {
-        let text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let start_num = match value_as_int(values[1]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let count = match value_as_int(values[2]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let new_text = match value_as_string(values[3]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        if start_num <= 0 || count < 0 {
-          Error(formula_error_value)
-        } else {
-          let len = dbcs_byte_length(text)
-          let prefix_count = if start_num - 1 < len {
-            start_num - 1
-          } else {
-            len
+      match values {
+        [v0, v1, v2, v3] => {
+          let text = match value_as_string(v0) {
+            Ok(text) => text
+            Err(err) => return err
           }
-          let removed_end = start_num + count - 1
-          let suffix_start = if removed_end < len {
-            removed_end + 1
-          } else {
-            len + 1
-          }
-          let sb = StringBuilder::new()
-          sb.write_view(dbcs_byte_range(text, 1, prefix_count))
-          sb.write_view(new_text)
-          // suffix runs from just past the replaced range to end of string
-          sb.write_view(dbcs_byte_range(text, suffix_start, len))
-          String(sb.to_string())
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "SUBSTITUTE" =>
-      if values.length() == 3 || values.length() == 4 {
-        let text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let old_text = match value_as_string(values[1]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let new_text = match value_as_string(values[2]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        if old_text.length() == 0 {
-          Error(formula_error_value)
-        } else if values.length() == 4 {
-          let instance = match value_as_int(values[3]) {
+          let start_num = match value_as_int(v1) {
             Ok(num) => num
             Err(err) => return err
           }
-          if instance <= 0 {
+          let count = match value_as_int(v2) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+          let new_text = match value_as_string(v3) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          if start_num <= 0 || count < 0 {
             Error(formula_error_value)
           } else {
+            let len = dbcs_byte_length(text)
+            let prefix_count = if start_num - 1 < len {
+              start_num - 1
+            } else {
+              len
+            }
+            let removed_end = start_num + count - 1
+            let suffix_start = if removed_end < len {
+              removed_end + 1
+            } else {
+              len + 1
+            }
+            let sb = StringBuilder::new()
+            sb.write_view(dbcs_byte_range(text, 1, prefix_count))
+            sb.write_view(new_text)
+            // suffix runs from just past the replaced range to end of string
+            sb.write_view(dbcs_byte_range(text, suffix_start, len))
+            String(sb.to_string())
+          }
+        }
+        _ => Error(formula_error_value)
+      }
+    "SUBSTITUTE" =>
+      match values {
+        [v0, v1, v2] | [v0, v1, v2, _] => {
+          let text = match value_as_string(v0) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          let old_text = match value_as_string(v1) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          let new_text = match value_as_string(v2) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          if old_text.length() == 0 {
+            Error(formula_error_value)
+          } else if values is [_, _, _, v3] {
+            let instance = match value_as_int(v3) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+            if instance <= 0 {
+              Error(formula_error_value)
+            } else {
+              let mut index = 0
+              let mut count = 0
+              let len = text.length()
+              let pattern_len = old_text.length()
+              while true {
+                match find_substring_from(text, old_text, index) {
+                  Some(found) => {
+                    count = count + 1
+                    if count == instance {
+                      let sb = StringBuilder::new()
+                      sb.write_view(text.unsafe_substring(start=0, end=found))
+                      sb.write_view(new_text)
+                      let tail_start = found + pattern_len
+                      sb.write_view(
+                        text.unsafe_substring(start=tail_start, end=len),
+                      )
+                      return String(sb.to_string())
+                    }
+                    index = found + pattern_len
+                  }
+                  None => break
+                }
+              }
+              String(text)
+            }
+          } else {
             let mut index = 0
-            let mut count = 0
             let len = text.length()
             let pattern_len = old_text.length()
+            let sb = StringBuilder::new()
             while true {
               match find_substring_from(text, old_text, index) {
                 Some(found) => {
-                  count = count + 1
-                  if count == instance {
-                    let sb = StringBuilder::new()
-                    sb.write_view(text.unsafe_substring(start=0, end=found))
-                    sb.write_view(new_text)
-                    let tail_start = found + pattern_len
-                    sb.write_view(
-                      text.unsafe_substring(start=tail_start, end=len),
-                    )
-                    return String(sb.to_string())
-                  }
+                  sb.write_view(text.unsafe_substring(start=index, end=found))
+                  sb.write_view(new_text)
                   index = found + pattern_len
                 }
-                None => break
+                None => {
+                  sb.write_view(text.unsafe_substring(start=index, end=len))
+                  break
+                }
               }
             }
-            String(text)
+            String(sb.to_string())
           }
-        } else {
-          let mut index = 0
-          let len = text.length()
-          let pattern_len = old_text.length()
-          let sb = StringBuilder::new()
-          while true {
-            match find_substring_from(text, old_text, index) {
-              Some(found) => {
-                sb.write_view(text.unsafe_substring(start=index, end=found))
-                sb.write_view(new_text)
-                index = found + pattern_len
-              }
-              None => {
-                sb.write_view(text.unsafe_substring(start=index, end=len))
-                break
-              }
-            }
-          }
-          String(sb.to_string())
         }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "FIND" =>
-      if values.length() == 2 || values.length() == 3 {
-        let find_text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let within_text = match value_as_string(values[1]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let start_num = if values.length() == 3 {
-          match value_as_int(values[2]) {
-            Ok(num) => num
+      match values {
+        [v0, v1] | [v0, v1, _] => {
+          let find_text = match value_as_string(v0) {
+            Ok(text) => text
             Err(err) => return err
           }
-        } else {
-          1
-        }
-        if start_num <= 0 {
-          Error(formula_error_value)
-        } else {
-          let start = start_num - 1
-          let len = within_text.length()
-          if start > len {
-            Error(formula_error_value)
-          } else if find_text.length() == 0 {
-            Number(Double::from_int(start_num))
+          let within_text = match value_as_string(v1) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          let start_num = if values is [_, _, v2] {
+            match value_as_int(v2) {
+              Ok(num) => num
+              Err(err) => return err
+            }
           } else {
-            match find_substring_from(within_text, find_text, start) {
-              Some(idx) => Number(Double::from_int(idx + 1))
-              None => Error(formula_error_value)
+            1
+          }
+          if start_num <= 0 {
+            Error(formula_error_value)
+          } else {
+            let start = start_num - 1
+            let len = within_text.length()
+            if start > len {
+              Error(formula_error_value)
+            } else if find_text.length() == 0 {
+              Number(Double::from_int(start_num))
+            } else {
+              match find_substring_from(within_text, find_text, start) {
+                Some(idx) => Number(Double::from_int(idx + 1))
+                None => Error(formula_error_value)
+              }
             }
           }
         }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "FINDB" =>
-      if values.length() == 2 || values.length() == 3 {
-        let find_text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let within_text = match value_as_string(values[1]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let start_num = if values.length() == 3 {
-          match value_as_int(values[2]) {
-            Ok(num) => num
+      match values {
+        [v0, v1] | [v0, v1, _] => {
+          let find_text = match value_as_string(v0) {
+            Ok(text) => text
             Err(err) => return err
           }
-        } else {
-          1
+          let within_text = match value_as_string(v1) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          let start_num = if values is [_, _, v2] {
+            match value_as_int(v2) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+          } else {
+            1
+          }
+          match find_dbcs(within_text, find_text, start_num, false) {
+            Some(value) => Number(Double::from_int(value))
+            None => Error(formula_error_value)
+          }
         }
-        match find_dbcs(within_text, find_text, start_num, false) {
-          Some(value) => Number(Double::from_int(value))
-          None => Error(formula_error_value)
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "SEARCH" =>
-      if values.length() == 2 || values.length() == 3 {
-        let find_text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let within_text = match value_as_string(values[1]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let start_num = if values.length() == 3 {
-          match value_as_int(values[2]) {
-            Ok(num) => num
+      match values {
+        [v0, v1] | [v0, v1, _] => {
+          let find_text = match value_as_string(v0) {
+            Ok(text) => text
             Err(err) => return err
           }
-        } else {
-          1
-        }
-        if start_num <= 0 {
-          Error(formula_error_value)
-        } else {
-          let start = start_num - 1
-          let lower_text = within_text.to_lower()
-          let lower_find = find_text.to_lower()
-          let len = lower_text.length()
-          if start > len {
-            Error(formula_error_value)
-          } else if lower_find.length() == 0 {
-            Number(Double::from_int(start_num))
+          let within_text = match value_as_string(v1) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          let start_num = if values is [_, _, v2] {
+            match value_as_int(v2) {
+              Ok(num) => num
+              Err(err) => return err
+            }
           } else {
-            match wildcard_find(lower_text, lower_find, start) {
-              Some(idx) => Number(Double::from_int(idx + 1))
-              None => Error(formula_error_value)
+            1
+          }
+          if start_num <= 0 {
+            Error(formula_error_value)
+          } else {
+            let start = start_num - 1
+            let lower_text = within_text.to_lower()
+            let lower_find = find_text.to_lower()
+            let len = lower_text.length()
+            if start > len {
+              Error(formula_error_value)
+            } else if lower_find.length() == 0 {
+              Number(Double::from_int(start_num))
+            } else {
+              match wildcard_find(lower_text, lower_find, start) {
+                Some(idx) => Number(Double::from_int(idx + 1))
+                None => Error(formula_error_value)
+              }
             }
           }
         }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "SEARCHB" =>
-      if values.length() == 2 || values.length() == 3 {
-        let find_text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let within_text = match value_as_string(values[1]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let start_num = if values.length() == 3 {
-          match value_as_int(values[2]) {
-            Ok(num) => num
+      match values {
+        [v0, v1] | [v0, v1, _] => {
+          let find_text = match value_as_string(v0) {
+            Ok(text) => text
             Err(err) => return err
           }
-        } else {
-          1
+          let within_text = match value_as_string(v1) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          let start_num = if values is [_, _, v2] {
+            match value_as_int(v2) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+          } else {
+            1
+          }
+          let lower_find = find_text.to_lower()
+          let lower_text = within_text.to_lower()
+          match find_dbcs(lower_text, lower_find, start_num, true) {
+            Some(value) => Number(Double::from_int(value))
+            None => Error(formula_error_value)
+          }
         }
-        let lower_find = find_text.to_lower()
-        let lower_text = within_text.to_lower()
-        match find_dbcs(lower_text, lower_find, start_num, true) {
-          Some(value) => Number(Double::from_int(value))
-          None => Error(formula_error_value)
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "EXACT" =>
-      if values.length() == 2 {
-        let left = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
+      match values {
+        [v0, v1] => {
+          let left = match value_as_string(v0) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          let right = match value_as_string(v1) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+          Bool(left == right)
         }
-        let right = match value_as_string(values[1]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        Bool(left == right)
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "FIXED" =>
       if values.length() >= 1 && values.length() <= 3 {
@@ -3267,63 +3282,65 @@ fn eval_function(
         Error(formula_error_value)
       }
     "VALUE" =>
-      if values.length() == 1 {
-        match value_as_number_text(values[0]) {
-          Ok(num) => Number(num)
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number_text(v0) {
+            Ok(num) => Number(num)
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "VALUETOTEXT" =>
-      if values.length() == 1 || values.length() == 2 {
-        let format = if values.length() == 2 {
-          match value_as_int(values[1]) {
-            Ok(num) => num
-            Err(err) => return err
+      match values {
+        [v0] | [v0, _] => {
+          let format = if values is [_, v1] {
+            match value_as_int(v1) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+          } else {
+            0
           }
-        } else {
-          0
-        }
-        if format != 0 && format != 1 {
-          Error(formula_error_value)
-        } else {
-          let text = formula_value_string(values[0])
-          match value_as_number(values[0]) {
-            Ok(_) => String(text)
-            Err(_) =>
-              if format == 1 {
-                String("\"" + text + "\"")
-              } else {
-                String(text)
-              }
+          if format != 0 && format != 1 {
+            Error(formula_error_value)
+          } else {
+            let text = formula_value_string(v0)
+            match value_as_number(v0) {
+              Ok(_) => String(text)
+              Err(_) =>
+                if format == 1 {
+                  String("\"" + text + "\"")
+                } else {
+                  String(text)
+                }
+            }
           }
         }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "TEXT" =>
-      if values.length() == 2 {
-        let format_text = match value_as_string(values[1]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        match value_as_number_text(values[0]) {
-          Ok(num) => {
-            let formatted = format_number_code(
-              format_number(num),
-              format_text,
-              Options::new(),
-              use_1904_format=ctx.use_1904_dates,
-            ) catch {
-              _ => return Error(formula_error_value)
-            }
-            String(formatted)
+      match values {
+        [v0, v1] => {
+          let format_text = match value_as_string(v1) {
+            Ok(text) => text
+            Err(err) => return err
           }
-          Err(err) => err
+          match value_as_number_text(v0) {
+            Ok(num) => {
+              let formatted = format_number_code(
+                format_number(num),
+                format_text,
+                Options::new(),
+                use_1904_format=ctx.use_1904_dates,
+              ) catch {
+                _ => return Error(formula_error_value)
+              }
+              String(formatted)
+            }
+            Err(err) => err
+          }
         }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "ARRAYTOTEXT" =>
       if values.length() == 1 || values.length() == 2 {
@@ -3549,108 +3566,208 @@ fn eval_function(
         Error(formula_error_value)
       }
     "DATE" =>
-      if values.length() == 3 {
-        match
-          (
-            value_as_int(values[0]),
-            value_as_int(values[1]),
-            value_as_int(values[2]),
-          ) {
-          (Ok(year), Ok(month), Ok(day)) =>
-            match
-              excel_serial_from_date(
-                year,
-                month,
-                day,
-                use_1904_dates=ctx.use_1904_dates,
-              ) {
-              Some(serial) => Number(serial)
-              None => Error(formula_error_num)
-            }
-          (Err(err), _, _) => err
-          (_, Err(err), _) => err
-          (_, _, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1, v2] =>
+          match (value_as_int(v0), value_as_int(v1), value_as_int(v2)) {
+            (Ok(year), Ok(month), Ok(day)) =>
+              match
+                excel_serial_from_date(
+                  year,
+                  month,
+                  day,
+                  use_1904_dates=ctx.use_1904_dates,
+                ) {
+                Some(serial) => Number(serial)
+                None => Error(formula_error_num)
+              }
+            (Err(err), _, _) => err
+            (_, Err(err), _) => err
+            (_, _, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "TIME" =>
-      if values.length() == 3 {
-        match
-          (
-            value_as_int(values[0]),
-            value_as_int(values[1]),
-            value_as_int(values[2]),
-          ) {
-          (Ok(hours), Ok(minutes), Ok(seconds)) =>
-            match excel_time_fraction(hours, minutes, seconds) {
-              Some(value) => Number(value)
-              None => Error(formula_error_num)
-            }
-          (Err(err), _, _) => err
-          (_, Err(err), _) => err
-          (_, _, Err(err)) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1, v2] =>
+          match (value_as_int(v0), value_as_int(v1), value_as_int(v2)) {
+            (Ok(hours), Ok(minutes), Ok(seconds)) =>
+              match excel_time_fraction(hours, minutes, seconds) {
+                Some(value) => Number(value)
+                None => Error(formula_error_num)
+              }
+            (Err(err), _, _) => err
+            (_, Err(err), _) => err
+            (_, _, Err(err)) => err
+          }
+        _ => Error(formula_error_value)
       }
     "DATEVALUE" =>
-      if values.length() == 1 {
-        let text = match value_as_string(values[0]) {
-          Ok(value) => value
-          Err(err) => return err
+      match values {
+        [v0] => {
+          let text = match value_as_string(v0) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          match parse_date_parts(text) {
+            Some((year, month, day)) =>
+              match
+                excel_serial_from_date(
+                  year,
+                  month,
+                  day,
+                  use_1904_dates=ctx.use_1904_dates,
+                ) {
+                Some(serial) => Number(serial)
+                None => Error(formula_error_value)
+              }
+            None => Error(formula_error_value)
+          }
         }
-        match parse_date_parts(text) {
-          Some((year, month, day)) =>
-            match
-              excel_serial_from_date(
-                year,
-                month,
-                day,
-                use_1904_dates=ctx.use_1904_dates,
-              ) {
-              Some(serial) => Number(serial)
-              None => Error(formula_error_value)
-            }
-          None => Error(formula_error_value)
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "TIMEVALUE" =>
-      if values.length() == 1 {
-        let text = match value_as_string(values[0]) {
-          Ok(value) => value
-          Err(err) => return err
+      match values {
+        [v0] => {
+          let text = match value_as_string(v0) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          match parse_time_parts(text) {
+            Some((hours, minutes, seconds)) =>
+              // parse_time_parts only yields non-negative components.
+              Number(excel_time_fraction(hours, minutes, seconds).unwrap())
+            None => Error(formula_error_value)
+          }
         }
-        match parse_time_parts(text) {
-          Some((hours, minutes, seconds)) =>
-            // parse_time_parts only yields non-negative components.
-            Number(excel_time_fraction(hours, minutes, seconds).unwrap())
-          None => Error(formula_error_value)
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "DATEDIF" =>
-      if values.length() == 3 {
-        let start_serial = match
-          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
+      match values {
+        [v0, v1, v2] => {
+          let start_serial = match
+            value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          let end_serial = match
+            value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          if start_serial > end_serial {
+            Error(formula_error_num)
+          } else if start_serial == end_serial {
+            Number(0.0)
+          } else {
+            let unit = match value_as_string(v2) {
+              Ok(text) => text.to_lower()
+              Err(err) => return err
+            }
+            let (sy, sm, sd) = match
+              date_parts_from_serial(
+                start_serial,
+                use_1904_dates=ctx.use_1904_dates,
+              ) {
+              Some(parts) => parts
+              None => return Error(formula_error_num)
+            }
+            let (ey, em, ed) = match
+              date_parts_from_serial(
+                end_serial,
+                use_1904_dates=ctx.use_1904_dates,
+              ) {
+              Some(parts) => parts
+              None => return Error(formula_error_num)
+            }
+            match unit {
+              "y" => {
+                let mut diff = ey - sy
+                if em < sm || (em == sm && ed < sd) {
+                  diff = diff - 1
+                }
+                Number(Double::from_int(diff))
+              }
+              "m" => {
+                let mut diff = (ey - sy) * 12 + (em - sm)
+                if ed < sd {
+                  diff = diff - 1
+                }
+                Number(Double::from_int(diff))
+              }
+              "d" => Number(end_serial - start_serial)
+              "ym" => {
+                let mut diff = em - sm
+                if ed < sd {
+                  diff = diff - 1
+                }
+                if diff < 0 {
+                  diff = diff + 12
+                }
+                Number(Double::from_int(diff))
+              }
+              "yd" => {
+                let mut target_year = sy
+                if em < sm || (em == sm && ed < sd) {
+                  target_year = sy + 1
+                }
+                let start_base = excel_serial_from_date(
+                  sy,
+                  sm,
+                  sd,
+                  use_1904_dates=ctx.use_1904_dates,
+                ).unwrap()
+                let end_base = excel_serial_from_date(
+                  target_year,
+                  em,
+                  ed,
+                  use_1904_dates=ctx.use_1904_dates,
+                ).unwrap()
+                Number(end_base - start_base)
+              }
+              "md" => {
+                let diff = if ed >= sd {
+                  ed - sd
+                } else {
+                  let (prev_year, prev_month) = normalize_year_month(ey, em - 1)
+                  let dim = days_in_month(prev_year, prev_month)
+                  dim - sd + ed
+                }
+                Number(Double::from_int(diff))
+              }
+              _ => Error(formula_error_value)
+            }
+          }
         }
-        let end_serial = match
-          value_as_date_serial(values[1], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
+        _ => Error(formula_error_value)
+      }
+    "DAYS" =>
+      match values {
+        [v0, v1] => {
+          let end_serial = match
+            value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          let start_serial = match
+            value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          Number(end_serial - start_serial)
         }
-        if start_serial > end_serial {
-          Error(formula_error_num)
-        } else if start_serial == end_serial {
-          Number(0.0)
-        } else {
-          let unit = match value_as_string(values[2]) {
-            Ok(text) => text.to_lower()
+        _ => Error(formula_error_value)
+      }
+    "DAYS360" =>
+      match values {
+        [v0, v1] | [v0, v1, _] => {
+          let start_serial = match
+            value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          let end_serial = match
+            value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
+            Ok(value) => value
             Err(err) => return err
           }
           let (sy, sm, sd) = match
@@ -3669,366 +3786,273 @@ fn eval_function(
             Some(parts) => parts
             None => return Error(formula_error_num)
           }
-          match unit {
-            "y" => {
-              let mut diff = ey - sy
-              if em < sm || (em == sm && ed < sd) {
-                diff = diff - 1
-              }
-              Number(Double::from_int(diff))
+          let mut start_day = sd
+          let mut end_day = ed
+          let end_year = ey
+          let mut end_month = em
+          let use_european = if values is [_, _, v2] {
+            match value_as_bool(v2) {
+              Ok(flag) => flag
+              Err(err) => return err
             }
-            "m" => {
-              let mut diff = (ey - sy) * 12 + (em - sm)
-              if ed < sd {
-                diff = diff - 1
-              }
-              Number(Double::from_int(diff))
+          } else {
+            false
+          }
+          if use_european {
+            if start_day == 31 {
+              start_day = 30
             }
-            "d" => Number(end_serial - start_serial)
-            "ym" => {
-              let mut diff = em - sm
-              if ed < sd {
-                diff = diff - 1
-              }
-              if diff < 0 {
-                diff = diff + 12
-              }
-              Number(Double::from_int(diff))
-            }
-            "yd" => {
-              let mut target_year = sy
-              if em < sm || (em == sm && ed < sd) {
-                target_year = sy + 1
-              }
-              let start_base = excel_serial_from_date(
-                sy,
-                sm,
-                sd,
-                use_1904_dates=ctx.use_1904_dates,
-              ).unwrap()
-              let end_base = excel_serial_from_date(
-                target_year,
-                em,
-                ed,
-                use_1904_dates=ctx.use_1904_dates,
-              ).unwrap()
-              Number(end_base - start_base)
-            }
-            "md" => {
-              let diff = if ed >= sd {
-                ed - sd
-              } else {
-                let (prev_year, prev_month) = normalize_year_month(ey, em - 1)
-                let dim = days_in_month(prev_year, prev_month)
-                dim - sd + ed
-              }
-              Number(Double::from_int(diff))
-            }
-            _ => Error(formula_error_value)
-          }
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "DAYS" =>
-      if values.length() == 2 {
-        let end_serial = match
-          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
-        }
-        let start_serial = match
-          value_as_date_serial(values[1], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
-        }
-        Number(end_serial - start_serial)
-      } else {
-        Error(formula_error_value)
-      }
-    "DAYS360" =>
-      if values.length() == 2 || values.length() == 3 {
-        let start_serial = match
-          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
-        }
-        let end_serial = match
-          value_as_date_serial(values[1], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
-        }
-        let (sy, sm, sd) = match
-          date_parts_from_serial(
-            start_serial,
-            use_1904_dates=ctx.use_1904_dates,
-          ) {
-          Some(parts) => parts
-          None => return Error(formula_error_num)
-        }
-        let (ey, em, ed) = match
-          date_parts_from_serial(end_serial, use_1904_dates=ctx.use_1904_dates) {
-          Some(parts) => parts
-          None => return Error(formula_error_num)
-        }
-        let mut start_day = sd
-        let mut end_day = ed
-        let end_year = ey
-        let mut end_month = em
-        let use_european = if values.length() == 3 {
-          match value_as_bool(values[2]) {
-            Ok(flag) => flag
-            Err(err) => return err
-          }
-        } else {
-          false
-        }
-        if use_european {
-          if start_day == 31 {
-            start_day = 30
-          }
-          if end_day == 31 {
-            end_day = 30
-          }
-        } else {
-          if days_in_month(sy, sm) == start_day {
-            start_day = 30
-          }
-          if end_day > 30 {
-            if start_day < 30 {
-              end_month = end_month + 1
-              end_day = 1
-            } else {
+            if end_day == 31 {
               end_day = 30
             }
-          }
-        }
-        let (norm_year, norm_month) = normalize_year_month(end_year, end_month)
-        let diff = (norm_year - sy) * 360 +
-          (norm_month - sm) * 30 +
-          (end_day - start_day)
-        Number(Double::from_int(diff))
-      } else {
-        Error(formula_error_value)
-      }
-    "ISOWEEKNUM" =>
-      if values.length() == 1 {
-        let serial = match
-          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
-        }
-        // Serial zero is the 1900 system's artificial day before its epoch,
-        // but is the real 1904-01-01 epoch in a date-1904 workbook.
-        if !ctx.use_1904_dates && serial < 1.0 {
-          return Error(formula_error_num)
-        }
-        // Excel assigns the fictitious 1900-02-29 (including its time
-        // fraction) to ISO week 9. It cannot pass through the Gregorian helper
-        // below because 1900 was not actually a leap year.
-        if is_1900_phantom_date_serial(serial, ctx.use_1904_dates) {
-          return Number(9.0)
-        }
-        let (year, month, day) = match
-          date_parts_from_serial(serial, use_1904_dates=ctx.use_1904_dates) {
-          Some(parts) => parts
-          None => return Error(formula_error_num)
-        }
-        match iso_week_number(year, month, day) {
-          Some(week) => Number(Double::from_int(week))
-          None => Error(formula_error_num)
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "EDATE" =>
-      if values.length() == 2 {
-        let (year, month, day) = match
-          date_parts_from_value(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(parts) => parts
-          Err(err) => return err
-        }
-        let months = match value_as_number(values[1]) {
-          Ok(num) => Double::to_int(trunc_double(num))
-          Err(err) => return err
-        }
-        let (new_year, new_month) = normalize_year_month(year, month + months)
-        let max_day = days_in_month(new_year, new_month)
-        let new_day = if day > max_day { max_day } else { day }
-        match
-          excel_serial_from_date(
-            new_year,
-            new_month,
-            new_day,
-            use_1904_dates=ctx.use_1904_dates,
-          ) {
-          Some(serial) => Number(serial)
-          None => Error(formula_error_num)
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "EOMONTH" =>
-      if values.length() == 2 {
-        let (year, month, _) = match
-          date_parts_from_value(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(parts) => parts
-          Err(err) => return err
-        }
-        let months = match value_as_number(values[1]) {
-          Ok(num) => Double::to_int(trunc_double(num))
-          Err(err) => return err
-        }
-        let (new_year, new_month) = normalize_year_month(year, month + months)
-        let new_day = days_in_month(new_year, new_month)
-        match
-          excel_serial_from_date(
-            new_year,
-            new_month,
-            new_day,
-            use_1904_dates=ctx.use_1904_dates,
-          ) {
-          Some(serial) => Number(serial)
-          None => Error(formula_error_num)
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "YEARFRAC" =>
-      if values.length() == 2 || values.length() == 3 {
-        let start_serial = match
-          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
-        }
-        let end_serial = match
-          value_as_date_serial(values[1], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
-        }
-        let basis = if values.length() == 3 {
-          match value_as_number(values[2]) {
-            Ok(num) => Double::to_int(trunc_double(num))
-            Err(err) => return err
-          }
-        } else {
-          0
-        }
-        yearfrac_value(
-          start_serial,
-          end_serial,
-          basis,
-          use_1904_dates=ctx.use_1904_dates,
-        )
-      } else {
-        Error(formula_error_value)
-      }
-    "WEEKDAY" =>
-      if values.length() == 1 || values.length() == 2 {
-        let (year, month, day) = match
-          date_parts_from_value(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(parts) => parts
-          Err(err) => return err
-        }
-        let mut return_type = 1
-        if values.length() == 2 {
-          return_type = match value_as_number(values[1]) {
-            Ok(num) => Double::to_int(trunc_double(num))
-            Err(err) => return err
-          }
-        }
-        if return_type == 2 {
-          return_type = 11
-        }
-        let weekday = weekday_sun1(year, month, day)
-        if return_type == 1 {
-          Number(Double::from_int(weekday))
-        } else if return_type == 3 {
-          let value = (weekday + 6 - 1) % 7
-          Number(Double::from_int(value))
-        } else if return_type >= 11 && return_type <= 17 {
-          let value = (weekday + 6 - (return_type - 10)) % 7 + 1
-          Number(Double::from_int(value))
-        } else {
-          Error(formula_error_value)
-        }
-      } else {
-        Error(formula_error_value)
-      }
-    "WEEKNUM" =>
-      if values.length() == 1 || values.length() == 2 {
-        let (year, month, day) = match
-          date_parts_from_value(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(parts) => parts
-          Err(err) => return err
-        }
-        let mut return_type = 1
-        if values.length() == 2 {
-          return_type = match value_as_number(values[1]) {
-            Ok(num) => Double::to_int(trunc_double(num))
-            Err(err) => return err
-          }
-        }
-        let days = day_of_year(year, month, day)
-        let mut week_mod = days % 7
-        if week_mod == 0 {
-          week_mod = 7
-        }
-        let mut week_num = (days + 6) / 7
-        let first_weekday = weekday_sun1(year, 1, 1) - 1
-        let offset = match return_type {
-          1 | 17 => 0
-          2 | 11 | 21 => 1
-          12 | 13 | 14 | 15 | 16 => return_type - 10
-          _ => return Error(formula_error_num)
-        }
-        let mut padding = offset + 7 - first_weekday
-        if padding > 7 {
-          padding = padding - 7
-        }
-        if week_mod > padding {
-          week_num = week_num + 1
-        }
-        if return_type == 21 && (first_weekday == 0 || first_weekday > 4) {
-          week_num = week_num - 1
-          if week_num < 1 {
-            week_num = 52
-            let prev_first_weekday = weekday_sun1(year - 1, 1, 1) - 1
-            if prev_first_weekday < 4 {
-              week_num = week_num + 1
+          } else {
+            if days_in_month(sy, sm) == start_day {
+              start_day = 30
+            }
+            if end_day > 30 {
+              if start_day < 30 {
+                end_month = end_month + 1
+                end_day = 1
+              } else {
+                end_day = 30
+              }
             }
           }
+          let (norm_year, norm_month) = normalize_year_month(
+            end_year, end_month,
+          )
+          let diff = (norm_year - sy) * 360 +
+            (norm_month - sm) * 30 +
+            (end_day - start_day)
+          Number(Double::from_int(diff))
         }
-        Number(Double::from_int(week_num))
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
+      }
+    "ISOWEEKNUM" =>
+      match values {
+        [v0] => {
+          let serial = match
+            value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          // Serial zero is the 1900 system's artificial day before its epoch,
+          // but is the real 1904-01-01 epoch in a date-1904 workbook.
+          if !ctx.use_1904_dates && serial < 1.0 {
+            return Error(formula_error_num)
+          }
+          // Excel assigns the fictitious 1900-02-29 (including its time
+          // fraction) to ISO week 9. It cannot pass through the Gregorian helper
+          // below because 1900 was not actually a leap year.
+          if is_1900_phantom_date_serial(serial, ctx.use_1904_dates) {
+            return Number(9.0)
+          }
+          let (year, month, day) = match
+            date_parts_from_serial(serial, use_1904_dates=ctx.use_1904_dates) {
+            Some(parts) => parts
+            None => return Error(formula_error_num)
+          }
+          match iso_week_number(year, month, day) {
+            Some(week) => Number(Double::from_int(week))
+            None => Error(formula_error_num)
+          }
+        }
+        _ => Error(formula_error_value)
+      }
+    "EDATE" =>
+      match values {
+        [v0, v1] => {
+          let (year, month, day) = match
+            date_parts_from_value(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok(parts) => parts
+            Err(err) => return err
+          }
+          let months = match value_as_number(v1) {
+            Ok(num) => Double::to_int(trunc_double(num))
+            Err(err) => return err
+          }
+          let (new_year, new_month) = normalize_year_month(year, month + months)
+          let max_day = days_in_month(new_year, new_month)
+          let new_day = if day > max_day { max_day } else { day }
+          match
+            excel_serial_from_date(
+              new_year,
+              new_month,
+              new_day,
+              use_1904_dates=ctx.use_1904_dates,
+            ) {
+            Some(serial) => Number(serial)
+            None => Error(formula_error_num)
+          }
+        }
+        _ => Error(formula_error_value)
+      }
+    "EOMONTH" =>
+      match values {
+        [v0, v1] => {
+          let (year, month, _) = match
+            date_parts_from_value(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok(parts) => parts
+            Err(err) => return err
+          }
+          let months = match value_as_number(v1) {
+            Ok(num) => Double::to_int(trunc_double(num))
+            Err(err) => return err
+          }
+          let (new_year, new_month) = normalize_year_month(year, month + months)
+          let new_day = days_in_month(new_year, new_month)
+          match
+            excel_serial_from_date(
+              new_year,
+              new_month,
+              new_day,
+              use_1904_dates=ctx.use_1904_dates,
+            ) {
+            Some(serial) => Number(serial)
+            None => Error(formula_error_num)
+          }
+        }
+        _ => Error(formula_error_value)
+      }
+    "YEARFRAC" =>
+      match values {
+        [v0, v1] | [v0, v1, _] => {
+          let start_serial = match
+            value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          let end_serial = match
+            value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          let basis = if values is [_, _, v2] {
+            match value_as_number(v2) {
+              Ok(num) => Double::to_int(trunc_double(num))
+              Err(err) => return err
+            }
+          } else {
+            0
+          }
+          yearfrac_value(
+            start_serial,
+            end_serial,
+            basis,
+            use_1904_dates=ctx.use_1904_dates,
+          )
+        }
+        _ => Error(formula_error_value)
+      }
+    "WEEKDAY" =>
+      match values {
+        [v0] | [v0, _] => {
+          let (year, month, day) = match
+            date_parts_from_value(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok(parts) => parts
+            Err(err) => return err
+          }
+          let mut return_type = 1
+          if values is [_, v1] {
+            return_type = match value_as_number(v1) {
+              Ok(num) => Double::to_int(trunc_double(num))
+              Err(err) => return err
+            }
+          }
+          if return_type == 2 {
+            return_type = 11
+          }
+          let weekday = weekday_sun1(year, month, day)
+          if return_type == 1 {
+            Number(Double::from_int(weekday))
+          } else if return_type == 3 {
+            let value = (weekday + 6 - 1) % 7
+            Number(Double::from_int(value))
+          } else if return_type >= 11 && return_type <= 17 {
+            let value = (weekday + 6 - (return_type - 10)) % 7 + 1
+            Number(Double::from_int(value))
+          } else {
+            Error(formula_error_value)
+          }
+        }
+        _ => Error(formula_error_value)
+      }
+    "WEEKNUM" =>
+      match values {
+        [v0] | [v0, _] => {
+          let (year, month, day) = match
+            date_parts_from_value(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok(parts) => parts
+            Err(err) => return err
+          }
+          let mut return_type = 1
+          if values is [_, v1] {
+            return_type = match value_as_number(v1) {
+              Ok(num) => Double::to_int(trunc_double(num))
+              Err(err) => return err
+            }
+          }
+          let days = day_of_year(year, month, day)
+          let mut week_mod = days % 7
+          if week_mod == 0 {
+            week_mod = 7
+          }
+          let mut week_num = (days + 6) / 7
+          let first_weekday = weekday_sun1(year, 1, 1) - 1
+          let offset = match return_type {
+            1 | 17 => 0
+            2 | 11 | 21 => 1
+            12 | 13 | 14 | 15 | 16 => return_type - 10
+            _ => return Error(formula_error_num)
+          }
+          let mut padding = offset + 7 - first_weekday
+          if padding > 7 {
+            padding = padding - 7
+          }
+          if week_mod > padding {
+            week_num = week_num + 1
+          }
+          if return_type == 21 && (first_weekday == 0 || first_weekday > 4) {
+            week_num = week_num - 1
+            if week_num < 1 {
+              week_num = 52
+              let prev_first_weekday = weekday_sun1(year - 1, 1, 1) - 1
+              if prev_first_weekday < 4 {
+                week_num = week_num + 1
+              }
+            }
+          }
+          Number(Double::from_int(week_num))
+        }
+        _ => Error(formula_error_value)
       }
     "NETWORKDAYS" =>
-      if values.length() == 2 || values.length() == 3 {
-        let start_serial = match
-          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
+      match values {
+        [v0, v1] | [v0, v1, _] => {
+          let start_serial = match
+            value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          let end_serial = match
+            value_as_date_serial(v1, use_1904_dates=ctx.use_1904_dates) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          let holidays = if values is [_, _, v2] {
+            collect_holidays(v2, use_1904_dates=ctx.use_1904_dates)
+          } else {
+            []
+          }
+          networkdays_intl_value(
+            start_serial,
+            end_serial,
+            Number(1.0),
+            holidays,
+            use_1904_dates=ctx.use_1904_dates,
+          )
         }
-        let end_serial = match
-          value_as_date_serial(values[1], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
-        }
-        let holidays = if values.length() == 3 {
-          collect_holidays(values[2], use_1904_dates=ctx.use_1904_dates)
-        } else {
-          []
-        }
-        networkdays_intl_value(
-          start_serial,
-          end_serial,
-          Number(1.0),
-          holidays,
-          use_1904_dates=ctx.use_1904_dates,
-        )
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "NETWORKDAYS.INTL" =>
       if values.length() >= 2 && values.length() <= 4 {
@@ -4063,30 +4087,31 @@ fn eval_function(
         Error(formula_error_value)
       }
     "WORKDAY" =>
-      if values.length() == 2 || values.length() == 3 {
-        let start_serial = match
-          value_as_date_serial(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok(value) => value
-          Err(err) => return err
+      match values {
+        [v0, v1] | [v0, v1, _] => {
+          let start_serial = match
+            value_as_date_serial(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          let days = match value_as_number(v1) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+          let holidays = if values is [_, _, v2] {
+            collect_holidays(v2, use_1904_dates=ctx.use_1904_dates)
+          } else {
+            []
+          }
+          workday_intl_value(
+            start_serial,
+            days,
+            Number(1.0),
+            holidays,
+            use_1904_dates=ctx.use_1904_dates,
+          )
         }
-        let days = match value_as_number(values[1]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let holidays = if values.length() == 3 {
-          collect_holidays(values[2], use_1904_dates=ctx.use_1904_dates)
-        } else {
-          []
-        }
-        workday_intl_value(
-          start_serial,
-          days,
-          Number(1.0),
-          holidays,
-          use_1904_dates=ctx.use_1904_dates,
-        )
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "WORKDAY.INTL" =>
       if values.length() >= 2 && values.length() <= 4 {
@@ -4120,165 +4145,168 @@ fn eval_function(
         Error(formula_error_value)
       }
     "NOW" =>
-      if values.length() == 0 {
-        let now_ms = @env.now()
-        let total_seconds = UInt64::to_double(now_ms) / 1000.0
-        let days = Double::floor(total_seconds / 86400.0)
-        let seconds_in_day = total_seconds - days * 86400.0
-        let epoch_serial = if ctx.use_1904_dates { 24107.0 } else { 25569.0 }
-        let serial = days + epoch_serial + seconds_in_day / 86400.0
-        Number(serial)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [] => {
+          let now_ms = @env.now()
+          let total_seconds = UInt64::to_double(now_ms) / 1000.0
+          let days = Double::floor(total_seconds / 86400.0)
+          let seconds_in_day = total_seconds - days * 86400.0
+          let epoch_serial = if ctx.use_1904_dates { 24107.0 } else { 25569.0 }
+          let serial = days + epoch_serial + seconds_in_day / 86400.0
+          Number(serial)
+        }
+        _ => Error(formula_error_value)
       }
     "TODAY" =>
-      if values.length() == 0 {
-        let now_ms = @env.now()
-        let total_seconds = UInt64::to_double(now_ms) / 1000.0
-        let days = Double::floor(total_seconds / 86400.0)
-        let epoch_serial = if ctx.use_1904_dates { 24107.0 } else { 25569.0 }
-        Number(days + epoch_serial)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [] => {
+          let now_ms = @env.now()
+          let total_seconds = UInt64::to_double(now_ms) / 1000.0
+          let days = Double::floor(total_seconds / 86400.0)
+          let epoch_serial = if ctx.use_1904_dates { 24107.0 } else { 25569.0 }
+          Number(days + epoch_serial)
+        }
+        _ => Error(formula_error_value)
       }
     "YEAR" =>
-      if values.length() == 1 {
-        match
-          excel_serial_date_parts(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok((year, _, _)) => Number(Double::from_int(year))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match excel_serial_date_parts(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok((year, _, _)) => Number(Double::from_int(year))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "MONTH" =>
-      if values.length() == 1 {
-        match
-          excel_serial_date_parts(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok((_, month, _)) => Number(Double::from_int(month))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match excel_serial_date_parts(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok((_, month, _)) => Number(Double::from_int(month))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "DAY" =>
-      if values.length() == 1 {
-        match
-          excel_serial_date_parts(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok((_, _, day)) => Number(Double::from_int(day))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match excel_serial_date_parts(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok((_, _, day)) => Number(Double::from_int(day))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "HOUR" =>
-      if values.length() == 1 {
-        match excel_serial_parts(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok((_, _, _, hour, _, _)) => Number(Double::from_int(hour))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match excel_serial_parts(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok((_, _, _, hour, _, _)) => Number(Double::from_int(hour))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "MINUTE" =>
-      if values.length() == 1 {
-        match excel_serial_parts(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok((_, _, _, _, minute, _)) => Number(Double::from_int(minute))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match excel_serial_parts(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok((_, _, _, _, minute, _)) => Number(Double::from_int(minute))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "SECOND" =>
-      if values.length() == 1 {
-        match excel_serial_parts(values[0], use_1904_dates=ctx.use_1904_dates) {
-          Ok((_, _, _, _, _, second)) => Number(Double::from_int(second))
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match excel_serial_parts(v0, use_1904_dates=ctx.use_1904_dates) {
+            Ok((_, _, _, _, _, second)) => Number(Double::from_int(second))
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "INDEX" =>
-      if args.length() == 2 || args.length() == 3 {
-        let range = eval_range_expr(workbook, sheet_name, args[0], ctx)
-        let row_num = match value_as_int(values[1]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let col_num = if args.length() == 3 {
-          match value_as_int(values[2]) {
+      match args {
+        [a0, _] | [a0, _, _] => {
+          let range = eval_range_expr(workbook, sheet_name, a0, ctx)
+          let row_num = match value_as_int(values[1]) {
             Ok(num) => num
             Err(err) => return err
           }
-        } else {
-          1
+          let col_num = if args is [_, _, _] {
+            match value_as_int(values[2]) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+          } else {
+            1
+          }
+          if row_num <= 0 || col_num <= 0 {
+            Error(formula_error_value)
+          } else if row_num > range.rows || col_num > range.cols {
+            Error(formula_error_ref)
+          } else {
+            let index = (row_num - 1) * range.cols + (col_num - 1)
+            range.values[index]
+          }
         }
-        if row_num <= 0 || col_num <= 0 {
-          Error(formula_error_value)
-        } else if row_num > range.rows || col_num > range.cols {
-          Error(formula_error_ref)
-        } else {
-          let index = (row_num - 1) * range.cols + (col_num - 1)
-          range.values[index]
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "MATCH" =>
-      if args.length() == 2 || args.length() == 3 {
-        let lookup = values[0]
-        let range = eval_range_expr(workbook, sheet_name, args[1], ctx)
-        let match_type = if args.length() == 3 {
-          match value_as_int(values[2]) {
+      match args {
+        [_, a1] | [_, a1, _] => {
+          let lookup = values[0]
+          let range = eval_range_expr(workbook, sheet_name, a1, ctx)
+          let match_type = if args is [_, _, _] {
+            match value_as_int(values[2]) {
+              Ok(num) => num
+              Err(err) => return err
+            }
+          } else {
+            1
+          }
+          match_range_value(lookup, range, match_type)
+        }
+        _ => Error(formula_error_value)
+      }
+    "VLOOKUP" =>
+      match args {
+        [_, a1, _] | [_, a1, _, _] => {
+          let lookup = values[0]
+          let table = eval_range_expr(workbook, sheet_name, a1, ctx)
+          let col_index = match value_as_int(values[2]) {
             Ok(num) => num
             Err(err) => return err
           }
-        } else {
-          1
-        }
-        match_range_value(lookup, range, match_type)
-      } else {
-        Error(formula_error_value)
-      }
-    "VLOOKUP" =>
-      if args.length() == 3 || args.length() == 4 {
-        let lookup = values[0]
-        let table = eval_range_expr(workbook, sheet_name, args[1], ctx)
-        let col_index = match value_as_int(values[2]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let range_lookup = if args.length() == 4 {
-          match lookup_range_flag(values[3]) {
-            Ok(flag) => flag
-            Err(err) => return err
+          let range_lookup = if args is [_, _, _, _] {
+            match lookup_range_flag(values[3]) {
+              Ok(flag) => flag
+              Err(err) => return err
+            }
+          } else {
+            true
           }
-        } else {
-          true
+          vlookup_value(lookup, table, col_index, range_lookup)
         }
-        vlookup_value(lookup, table, col_index, range_lookup)
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "HLOOKUP" =>
-      if args.length() == 3 || args.length() == 4 {
-        let lookup = values[0]
-        let table = eval_range_expr(workbook, sheet_name, args[1], ctx)
-        let row_index = match value_as_int(values[2]) {
-          Ok(num) => num
-          Err(err) => return err
-        }
-        let range_lookup = if args.length() == 4 {
-          match lookup_range_flag(values[3]) {
-            Ok(flag) => flag
+      match args {
+        [_, a1, _] | [_, a1, _, _] => {
+          let lookup = values[0]
+          let table = eval_range_expr(workbook, sheet_name, a1, ctx)
+          let row_index = match value_as_int(values[2]) {
+            Ok(num) => num
             Err(err) => return err
           }
-        } else {
-          true
+          let range_lookup = if args is [_, _, _, _] {
+            match lookup_range_flag(values[3]) {
+              Ok(flag) => flag
+              Err(err) => return err
+            }
+          } else {
+            true
+          }
+          hlookup_value(lookup, table, row_index, range_lookup)
         }
-        hlookup_value(lookup, table, row_index, range_lookup)
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "LOOKUP" =>
       if args.length() == 2 || args.length() == 3 {
@@ -4524,164 +4552,160 @@ fn eval_function(
         Error(formula_error_value)
       }
     "INDIRECT" =>
-      if values.length() == 1 || values.length() == 2 {
-        let ref_text = match value_as_string(values[0]) {
-          Ok(text) => text
-          Err(err) => return err
-        }
-        let a1 = if values.length() == 2 {
-          match value_as_bool(values[1]) {
-            Ok(flag) => flag
+      match values {
+        [v0] | [v0, _] => {
+          let ref_text = match value_as_string(v0) {
+            Ok(text) => text
             Err(err) => return err
           }
-        } else {
-          true
-        }
-        let (sheet_text, ref_part) = split_sheet_ref(ref_text)
-        let target_sheet = if sheet_text == "" {
-          sheet_name
-        } else {
-          sheet_text
-        }
-        if a1 {
-          match ref_part.find(":") {
-            Some(idx) => {
-              let start_token = ref_part.unsafe_substring(start=0, end=idx)
-              let end_token = ref_part.unsafe_substring(
-                start=idx + 1,
-                end=ref_part.length(),
-              )
-              let (start_ref, _start_end) = parse_range_ref_token(start_token) catch {
-                _ => return Error(formula_error_ref)
-              }
-              let (_end_start, end_ref) = parse_range_ref_token(end_token) catch {
-                _ => return Error(formula_error_ref)
-              }
-              List(
-                collect_range_values(
-                  workbook, target_sheet, start_ref, end_ref, ctx,
-                ),
-              )
+          let a1 = if values is [_, v1] {
+            match value_as_bool(v1) {
+              Ok(flag) => flag
+              Err(err) => return err
             }
-            None =>
-              match parse_cell_ref_token(ref_part) {
-                Some(reference) =>
-                  resolve_cell_value(workbook, target_sheet, reference, ctx)
-                None => {
-                  let (start_ref, end_ref) = parse_range_ref_token(ref_part) catch {
-                    _ => return Error(formula_error_ref)
-                  }
-                  List(
-                    collect_range_values(
-                      workbook, target_sheet, start_ref, end_ref, ctx,
-                    ),
-                  )
-                }
-              }
+          } else {
+            true
           }
-        } else {
-          match ref_part.find(":") {
-            Some(idx) => {
-              let start_token = ref_part.unsafe_substring(start=0, end=idx)
-              let end_token = ref_part.unsafe_substring(
-                start=idx + 1,
-                end=ref_part.length(),
-              )
-              let (row1, col1) = match parse_r1c1_token(start_token) {
-                Some(value) => value
-                None => return Error(formula_error_ref)
-              }
-              let (row2, col2) = match parse_r1c1_token(end_token) {
-                Some(value) => value
-                None => return Error(formula_error_ref)
-              }
-              let start_ref = cell_ref_from(row1, col1) catch {
-                _ => return Error(formula_error_ref)
-              }
-              let end_ref = cell_ref_from(row2, col2) catch {
-                _ => return Error(formula_error_ref)
-              }
-              List(
-                collect_range_values(
-                  workbook, target_sheet, start_ref, end_ref, ctx,
-                ),
-              )
-            }
-            None =>
-              match parse_r1c1_token(ref_part) {
-                Some((row, col)) => {
-                  let reference = cell_ref_from(row, col) catch {
-                    _ => return Error(formula_error_ref)
-                  }
-                  resolve_cell_value(workbook, target_sheet, reference, ctx)
+          let (sheet_text, ref_part) = split_sheet_ref(ref_text)
+          let target_sheet = if sheet_text == "" {
+            sheet_name
+          } else {
+            sheet_text
+          }
+          if a1 {
+            match ref_part.find(":") {
+              Some(idx) => {
+                let start_token = ref_part.unsafe_substring(start=0, end=idx)
+                let end_token = ref_part.unsafe_substring(
+                  start=idx + 1,
+                  end=ref_part.length(),
+                )
+                let (start_ref, _start_end) = parse_range_ref_token(start_token) catch {
+                  _ => return Error(formula_error_ref)
                 }
-                None => Error(formula_error_ref)
+                let (_end_start, end_ref) = parse_range_ref_token(end_token) catch {
+                  _ => return Error(formula_error_ref)
+                }
+                List(
+                  collect_range_values(
+                    workbook, target_sheet, start_ref, end_ref, ctx,
+                  ),
+                )
               }
+              None =>
+                match parse_cell_ref_token(ref_part) {
+                  Some(reference) =>
+                    resolve_cell_value(workbook, target_sheet, reference, ctx)
+                  None => {
+                    let (start_ref, end_ref) = parse_range_ref_token(ref_part) catch {
+                      _ => return Error(formula_error_ref)
+                    }
+                    List(
+                      collect_range_values(
+                        workbook, target_sheet, start_ref, end_ref, ctx,
+                      ),
+                    )
+                  }
+                }
+            }
+          } else {
+            match ref_part.find(":") {
+              Some(idx) => {
+                let start_token = ref_part.unsafe_substring(start=0, end=idx)
+                let end_token = ref_part.unsafe_substring(
+                  start=idx + 1,
+                  end=ref_part.length(),
+                )
+                let (row1, col1) = match parse_r1c1_token(start_token) {
+                  Some(value) => value
+                  None => return Error(formula_error_ref)
+                }
+                let (row2, col2) = match parse_r1c1_token(end_token) {
+                  Some(value) => value
+                  None => return Error(formula_error_ref)
+                }
+                let start_ref = cell_ref_from(row1, col1) catch {
+                  _ => return Error(formula_error_ref)
+                }
+                let end_ref = cell_ref_from(row2, col2) catch {
+                  _ => return Error(formula_error_ref)
+                }
+                List(
+                  collect_range_values(
+                    workbook, target_sheet, start_ref, end_ref, ctx,
+                  ),
+                )
+              }
+              None =>
+                match parse_r1c1_token(ref_part) {
+                  Some((row, col)) => {
+                    let reference = cell_ref_from(row, col) catch {
+                      _ => return Error(formula_error_ref)
+                    }
+                    resolve_cell_value(workbook, target_sheet, reference, ctx)
+                  }
+                  None => Error(formula_error_ref)
+                }
+            }
           }
         }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "CHAR" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => {
-            let code = Double::to_int(trunc_double(num))
-            if code < 0 || code > max_field_length {
-              Error(formula_error_value)
-            } else {
-              String(char_from_code(code))
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => {
+              let code = Double::to_int(trunc_double(num))
+              if code < 0 || code > max_field_length {
+                Error(formula_error_value)
+              } else {
+                String(char_from_code(code))
+              }
             }
+            Err(err) => err
           }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "UNICHAR" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) =>
-            if num <= 0.0 || num > 55295.0 {
-              Error(formula_error_value)
-            } else {
-              let code = Double::to_int(trunc_double(num))
-              String(char_from_code(code))
-            }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) =>
+              if num <= 0.0 || num > 55295.0 {
+                Error(formula_error_value)
+              } else {
+                let code = Double::to_int(trunc_double(num))
+                String(char_from_code(code))
+              }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "CLEAN" =>
-      if values.length() == 1 {
-        clean_text_value(values[0])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] => clean_text_value(v0)
+        _ => Error(formula_error_value)
       }
     "ENCODEURL" =>
-      if values.length() == 1 {
-        encode_url_value(values[0])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] => encode_url_value(v0)
+        _ => Error(formula_error_value)
       }
     "BAHTTEXT" =>
-      if values.length() == 1 {
-        bahttext_values(values)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [_] => bahttext_values(values)
+        _ => Error(formula_error_value)
       }
     "CODE" =>
-      if values.length() == 1 {
-        code_value("CODE", values[0])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] => code_value("CODE", v0)
+        _ => Error(formula_error_value)
       }
     "UNICODE" =>
-      if values.length() == 1 {
-        code_value("UNICODE", values[0])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] => code_value("UNICODE", v0)
+        _ => Error(formula_error_value)
       }
     "HYPERLINK" =>
       if values.length() == 1 || values.length() == 2 {
@@ -4693,10 +4717,9 @@ fn eval_function(
         Error(formula_error_value)
       }
     "DISPIMG" | "_XLFN.DISPIMG" =>
-      if values.length() == 2 {
-        values[0]
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, _] => v0
+        _ => Error(formula_error_value)
       }
     "CHOOSE" =>
       if values.length() >= 2 {
@@ -4719,46 +4742,42 @@ fn eval_function(
       }
     "CONCAT" | "CONCATENATE" => concat_values(values)
     "IF" =>
-      if values.length() == 0 || values.length() > 3 {
-        Error(formula_error_value)
-      } else {
-        match value_as_bool(values[0]) {
-          Ok(cond) =>
-            if values.length() == 1 {
-              Bool(cond)
-            } else if cond {
-              values[1]
-            } else if values.length() >= 3 {
-              values[2]
-            } else {
-              Bool(false)
-            }
-          Err(err) => err
-        }
+      match values {
+        [v0] =>
+          match value_as_bool(v0) {
+            Ok(cond) => Bool(cond)
+            Err(err) => err
+          }
+        [v0, v1] =>
+          match value_as_bool(v0) {
+            Ok(cond) => if cond { v1 } else { Bool(false) }
+            Err(err) => err
+          }
+        [v0, v1, v2] =>
+          match value_as_bool(v0) {
+            Ok(cond) => if cond { v1 } else { v2 }
+            Err(err) => err
+          }
+        _ => Error(formula_error_value)
       }
     "IFERROR" =>
-      if values.length() == 2 {
-        match normalize_scalar(values[0]) {
-          Error(_) => values[1]
-          Empty => Number(0.0)
-          _ => values[0]
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match normalize_scalar(v0) {
+            Error(_) => v1
+            Empty => Number(0.0)
+            _ => v0
+          }
+        _ => Error(formula_error_value)
       }
     "IFNA" =>
-      if values.length() == 2 {
-        match normalize_scalar(values[0]) {
-          Error(err) =>
-            if err == formula_error_na {
-              values[1]
-            } else {
-              values[0]
-            }
-          _ => values[0]
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0, v1] =>
+          match normalize_scalar(v0) {
+            Error(err) => if err == formula_error_na { v1 } else { v0 }
+            _ => v0
+          }
+        _ => Error(formula_error_value)
       }
     "IFS" =>
       if values.length() < 2 || values.length() % 2 != 0 {
@@ -4799,207 +4818,203 @@ fn eval_function(
         result
       }
     "ISBLANK" =>
-      if values.length() == 1 {
-        match normalize_scalar(values[0]) {
-          Empty => Bool(true)
-          _ => Bool(false)
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match normalize_scalar(v0) {
+            Empty => Bool(true)
+            _ => Bool(false)
+          }
+        _ => Error(formula_error_value)
       }
     "ISERR" =>
-      if values.length() == 1 {
-        match normalize_scalar(values[0]) {
-          Error(err) =>
-            Bool(is_known_error_code(err) && err != formula_error_na)
-          _ => Bool(false)
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match normalize_scalar(v0) {
+            Error(err) =>
+              Bool(is_known_error_code(err) && err != formula_error_na)
+            _ => Bool(false)
+          }
+        _ => Error(formula_error_value)
       }
     "ISEVEN" =>
-      if values.length() == 1 {
-        match normalize_scalar(values[0]) {
-          Empty => Bool(true)
-          _ =>
-            match value_as_number(values[0]) {
-              Ok(num) => {
-                let even = if num == 1.0 {
-                  false
-                } else {
-                  num == num / 2.0 * 2.0
+      match values {
+        [v0] =>
+          match normalize_scalar(v0) {
+            Empty => Bool(true)
+            _ =>
+              match value_as_number(v0) {
+                Ok(num) => {
+                  let even = if num == 1.0 {
+                    false
+                  } else {
+                    num == num / 2.0 * 2.0
+                  }
+                  Bool(even)
                 }
-                Bool(even)
+                Err(err) => err
               }
-              Err(err) => err
-            }
-        }
-      } else {
-        Error(formula_error_value)
+          }
+        _ => Error(formula_error_value)
       }
     "ISODD" =>
-      if values.length() == 1 {
-        match value_as_number(values[0]) {
-          Ok(num) => {
-            let n = Double::to_int(num)
-            Bool(n != n / 2 * 2)
+      match values {
+        [v0] =>
+          match value_as_number(v0) {
+            Ok(num) => {
+              let n = Double::to_int(num)
+              Bool(n != n / 2 * 2)
+            }
+            Err(err) => err
           }
-          Err(err) => err
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "ISERROR" =>
-      if values.length() == 1 {
-        match normalize_scalar(values[0]) {
-          Error(err) => Bool(is_known_error_code(err))
-          _ => Bool(false)
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match normalize_scalar(v0) {
+            Error(err) => Bool(is_known_error_code(err))
+            _ => Bool(false)
+          }
+        _ => Error(formula_error_value)
       }
     "ISLOGICAL" =>
-      if values.length() == 1 {
-        match normalize_scalar(values[0]) {
-          Bool(_) => Bool(true)
-          String(text) => Bool(text == "TRUE" || text == "FALSE")
-          _ => Bool(false)
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match normalize_scalar(v0) {
+            Bool(_) => Bool(true)
+            String(text) => Bool(text == "TRUE" || text == "FALSE")
+            _ => Bool(false)
+          }
+        _ => Error(formula_error_value)
       }
     "ISNA" =>
-      if values.length() == 1 {
-        match normalize_scalar(values[0]) {
-          Error(err) => Bool(err == formula_error_na)
-          _ => Bool(false)
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match normalize_scalar(v0) {
+            Error(err) => Bool(err == formula_error_na)
+            _ => Bool(false)
+          }
+        _ => Error(formula_error_value)
       }
     "ISNUMBER" =>
-      if values.length() == 1 {
-        match normalize_scalar(values[0]) {
-          Number(_) => Bool(true)
-          _ => Bool(false)
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match normalize_scalar(v0) {
+            Number(_) => Bool(true)
+            _ => Bool(false)
+          }
+        _ => Error(formula_error_value)
       }
     "ISTEXT" =>
-      if values.length() == 1 {
-        match normalize_scalar(values[0]) {
-          String(text) =>
-            match parse_double_opt(text) {
-              Some(_) => Bool(false)
-              None => Bool(true)
-            }
-          _ => Bool(false)
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match normalize_scalar(v0) {
+            String(text) =>
+              match parse_double_opt(text) {
+                Some(_) => Bool(false)
+                None => Bool(true)
+              }
+            _ => Bool(false)
+          }
+        _ => Error(formula_error_value)
       }
     "ISNONTEXT" =>
-      if values.length() == 1 {
-        match normalize_scalar(values[0]) {
-          String(_) => Bool(false)
-          _ => Bool(true)
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match normalize_scalar(v0) {
+            String(_) => Bool(false)
+            _ => Bool(true)
+          }
+        _ => Error(formula_error_value)
       }
     "ISREF" =>
-      if args.length() == 1 {
-        Bool(is_ref_expr(args[0]))
-      } else {
-        Error(formula_error_value)
+      match args {
+        [a0] => Bool(is_ref_expr(a0))
+        _ => Error(formula_error_value)
       }
     "ISFORMULA" =>
-      if args.length() == 1 {
-        match args[0] {
-          Cell(sheet, reference) => {
-            let target_sheet = if sheet == "" { sheet_name } else { sheet }
-            Bool(cell_has_formula(workbook, target_sheet, reference))
+      match args {
+        [a0] =>
+          match a0 {
+            Cell(sheet, reference) => {
+              let target_sheet = if sheet == "" { sheet_name } else { sheet }
+              Bool(cell_has_formula(workbook, target_sheet, reference))
+            }
+            _ => Bool(false)
           }
-          _ => Bool(false)
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "ERRORdotTYPE" | "ERROR.TYPE" =>
-      if values.length() == 1 {
-        error_type_value(values[0])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] => error_type_value(v0)
+        _ => Error(formula_error_value)
       }
     "SHEET" =>
-      if args.length() == 0 {
-        match sheet_index_opt(workbook, sheet_name) {
-          Some(index) => Number(Double::from_int(index + 1))
-          None => Error(formula_error_na)
+      match args {
+        [] =>
+          match sheet_index_opt(workbook, sheet_name) {
+            Some(index) => Number(Double::from_int(index + 1))
+            None => Error(formula_error_na)
+          }
+        [arg] => {
+          let target_sheet = match arg {
+            Cell(sheet, _) => if sheet == "" { sheet_name } else { sheet }
+            Range(sheet, _, _) => if sheet == "" { sheet_name } else { sheet }
+            _ => formula_value_string(values[0])
+          }
+          match sheet_index_opt(workbook, target_sheet) {
+            Some(index) => Number(Double::from_int(index + 1))
+            None => Error(formula_error_na)
+          }
         }
-      } else if args.length() == 1 {
-        let target_sheet = match args[0] {
-          Cell(sheet, _) => if sheet == "" { sheet_name } else { sheet }
-          Range(sheet, _, _) => if sheet == "" { sheet_name } else { sheet }
-          _ => formula_value_string(values[0])
-        }
-        match sheet_index_opt(workbook, target_sheet) {
-          Some(index) => Number(Double::from_int(index + 1))
-          None => Error(formula_error_na)
-        }
-      } else {
-        Error(formula_error_value)
+        _ => Error(formula_error_value)
       }
     "SHEETS" =>
-      if args.length() == 0 {
-        Number(Double::from_int(workbook.sheets().length()))
-      } else if args.length() == 1 {
-        match args[0] {
-          Cell(_, _) | Range(_, _, _) => Number(1.0)
-          _ => Error(formula_error_na)
-        }
-      } else {
-        Error(formula_error_value)
+      match args {
+        [] => Number(Double::from_int(workbook.sheets().length()))
+        [arg] =>
+          match arg {
+            Cell(_, _) | Range(_, _, _) => Number(1.0)
+            _ => Error(formula_error_na)
+          }
+        _ => Error(formula_error_value)
       }
     "TYPE" =>
-      if values.length() == 1 {
-        type_value(values[0])
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] => type_value(v0)
+        _ => Error(formula_error_value)
       }
     "T" =>
-      if values.length() == 1 {
-        match normalize_scalar(values[0]) {
-          Error(err) => Error(err)
-          Number(_) | Empty | List(_) => String("")
-          String(text) => String(text)
-          Bool(flag) => String(if flag { "TRUE" } else { "FALSE" })
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match normalize_scalar(v0) {
+            Error(err) => Error(err)
+            Number(_) | Empty | List(_) => String("")
+            String(text) => String(text)
+            Bool(flag) => String(if flag { "TRUE" } else { "FALSE" })
+          }
+        _ => Error(formula_error_value)
       }
     "NA" =>
-      if values.length() == 0 {
-        Error(formula_error_na)
-      } else {
-        Error(formula_error_value)
+      match values {
+        [] => Error(formula_error_na)
+        _ => Error(formula_error_value)
       }
     "N" =>
-      if values.length() == 1 {
-        match normalize_scalar(values[0]) {
-          Error(err) => Error(err)
-          Number(num) => Number(num)
-          Bool(flag) => Number(if flag { 1.0 } else { 0.0 })
-          String(text) =>
-            match parse_double_opt(text) {
-              Some(num) => Number(num)
-              None => if text == "TRUE" { Number(1.0) } else { Number(0.0) }
-            }
-          Empty | List(_) => Number(0.0)
-        }
-      } else {
-        Error(formula_error_value)
+      match values {
+        [v0] =>
+          match normalize_scalar(v0) {
+            Error(err) => Error(err)
+            Number(num) => Number(num)
+            Bool(flag) => Number(if flag { 1.0 } else { 0.0 })
+            String(text) =>
+              match parse_double_opt(text) {
+                Some(num) => Number(num)
+                None => if text == "TRUE" { Number(1.0) } else { Number(0.0) }
+              }
+            Empty | List(_) => Number(0.0)
+          }
+        _ => Error(formula_error_value)
       }
     _ =>
       if args.length() == 0 {
