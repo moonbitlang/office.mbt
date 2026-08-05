@@ -166,9 +166,7 @@ fn relationship_ipv6_literal_valid(
       if digits == 0 || digits > 4 {
         return false
       }
-      for digit_index = group_start
-          digit_index < index
-          digit_index = digit_index + 1 {
+      for digit_index in group_start..<index {
         if !relationship_ascii_hex_digit(characters[digit_index]) {
           return false
         }
@@ -239,7 +237,7 @@ fn relationship_iri_authority_valid(
 ) -> Bool {
   let mut host_start = start
   let mut userinfo_at = -1
-  for index = start; index < end; index = index + 1 {
+  for index in start..<end {
     if characters[index] == '@' {
       if userinfo_at >= 0 {
         return false
@@ -257,7 +255,7 @@ fn relationship_iri_authority_valid(
   }
   if host_start < end && characters[host_start] == '[' {
     let mut close = -1
-    for index = host_start + 1; index < end; index = index + 1 {
+    for index in (host_start + 1)..<end {
       if characters[index] == ']' {
         close = index
         break
@@ -280,7 +278,7 @@ fn relationship_iri_authority_valid(
     if characters[close + 1] != ':' {
       return false
     }
-    for index = close + 2; index < end; index = index + 1 {
+    for index in (close + 2)..<end {
       if !characters[index].is_ascii_digit() {
         return false
       }
@@ -288,7 +286,7 @@ fn relationship_iri_authority_valid(
     return true
   }
   let mut port_at = -1
-  for index = host_start; index < end; index = index + 1 {
+  for index in host_start..<end {
     if characters[index] == ':' {
       if port_at >= 0 {
         return false
@@ -305,7 +303,7 @@ fn relationship_iri_authority_valid(
     return false
   }
   if port_at >= 0 {
-    for index = port_at + 1; index < end; index = index + 1 {
+    for index in (port_at + 1)..<end {
       if !characters[index].is_ascii_digit() {
         return false
       }
@@ -323,7 +321,7 @@ fn relationship_uri_scheme_valid(
   if start >= end || !characters[start].is_ascii_alphabetic() {
     return false
   }
-  for index = start + 1; index < end; index = index + 1 {
+  for index in (start + 1)..<end {
     let character = characters[index]
     if !character.is_ascii_alphabetic() &&
       !character.is_ascii_digit() &&
@@ -362,7 +360,7 @@ fn relationship_iri_reference_valid(value : StringView) -> Bool {
     fragment_at
   }
   let mut scheme_at = -1
-  for index = 0; index < hierarchy_end; index = index + 1 {
+  for index in 0..<hierarchy_end {
     if characters[index] == ':' {
       scheme_at = index
       break

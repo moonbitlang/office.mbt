@@ -301,8 +301,7 @@ fn opc_part_name_identity_tokens(
 ) -> Array[OpcPartNameIdentityToken] raise ParseXmlError {
   let tokens : Array[OpcPartNameIdentityToken] = []
   let mut segment_start = 0
-  let mut index = 0
-  while index <= name.length() {
+  for index in 0..<=name.length() {
     if index % 4096 == 0 && cancelled() {
       raise ReadCancelled
     }
@@ -344,7 +343,6 @@ fn opc_part_name_identity_tokens(
       }
       segment_start = index + 1
     }
-    index = index + 1
   }
   tokens
 }
@@ -359,8 +357,7 @@ pub fn opc_part_name_identity_node_count_cancellable(
 ) -> Int raise ParseXmlError {
   let mut count = 0
   let mut segment_start = 0
-  let mut index = 0
-  while index <= name.length() {
+  for index in 0..<=name.length() {
     if index % 4096 == 0 && cancelled() {
       raise ReadCancelled
     }
@@ -389,7 +386,6 @@ pub fn opc_part_name_identity_node_count_cancellable(
       }
       segment_start = index + 1
     }
-    index = index + 1
   }
   count
 }

@@ -3086,8 +3086,7 @@ fn parse_col_dimensions(
     }
     dimension_work.val = dimension_work.val + span
     let dim = { width, hidden, outline_level, style_id: style }
-    let mut col = min_col
-    while col <= max_col {
+    for col in min_col..<=max_col {
       if !dims.contains(col) {
         if materialized_dimensions.val >= max_materialized_dimensions {
           raise ResourceLimitExceeded(
@@ -3100,7 +3099,6 @@ fn parse_col_dimensions(
         materialized_dimensions.val = next
       }
       dims[col] = dim
-      col = col + 1
     }
   }
   dims

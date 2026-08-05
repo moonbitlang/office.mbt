@@ -1289,7 +1289,7 @@ fn is_xml_ncname(value : StringView) -> Bool {
   if chars.length() == 0 || chars[0] == ':' || !is_xml_name_start_char(chars[0]) {
     return false
   }
-  for index = 1; index < chars.length(); index = index + 1 {
+  for index in 1..<chars.length() {
     if chars[index] == ':' || !is_xml_name_char(chars[index]) {
       return false
     }
@@ -1874,7 +1874,7 @@ fn is_valid_xml_encoding_name(value : StringView) -> Bool {
   if chars.length() == 0 || !chars[0].is_ascii_alphabetic() {
     return false
   }
-  for index = 1; index < chars.length(); index = index + 1 {
+  for index in 1..<chars.length() {
     let char = chars[index]
     if !char.is_ascii_alphabetic() &&
       !char.is_ascii_digit() &&

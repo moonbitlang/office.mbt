@@ -1456,10 +1456,8 @@ fn pad_left_int(value : Int, width : Int) -> String {
     return text
   }
   let sb = StringBuilder::new()
-  let mut i = text.length()
-  while i < width {
+  for _ in text.length()..<width {
     sb.write_char('0')
-    i = i + 1
   }
   sb.write_view(text)
   sb.to_string()
@@ -1472,10 +1470,8 @@ fn pad_left_int64(value : Int64, width : Int) -> String {
     return text
   }
   let sb = StringBuilder::new()
-  let mut i = text.length()
-  while i < width {
+  for _ in text.length()..<width {
     sb.write_char('0')
-    i = i + 1
   }
   sb.write_view(text)
   sb.to_string()
@@ -1488,10 +1484,8 @@ fn pad_left_uint64(value : UInt64, width : Int) -> String {
     return text
   }
   let sb = StringBuilder::new()
-  let mut i = text.length()
-  while i < width {
+  for _ in text.length()..<width {
     sb.write_char('0')
-    i = i + 1
   }
   sb.write_view(text)
   sb.to_string()

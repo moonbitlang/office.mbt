@@ -1858,8 +1858,7 @@ fn calc_ipmt(
   let mut interest = 0.0
   let mut principal = 0.0
   let per_int = Double::to_int(per)
-  let mut i = 1
-  while i <= per_int {
+  for i in 1..<=per_int {
     if typ != 0.0 && i == 1 {
       interest = 0.0
     } else {
@@ -1867,7 +1866,6 @@ fn calc_ipmt(
     }
     principal = pmt - interest
     capital = capital + principal
-    i = i + 1
   }
   (interest, principal)
 }
@@ -2017,14 +2015,12 @@ fn ispmt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut num = 0.0
   let per_int = Double::to_int(per)
   let nper_int = Double::to_int(nper)
-  let mut i = 0
-  while i <= per_int {
+  for i in 0..<=per_int {
     num = rate * pr * -1.0
     pr = pr - payment
     if i == nper_int {
       num = 0.0
     }
-    i = i + 1
   }
   number_or_num_error(round_significant_digits(num, 15))
 }
@@ -2844,14 +2840,12 @@ fn duration_calc(
   let mut duration = 0.0
   let mut price = 0.0
   let coups_int = Double::to_int(trunc_double(coups))
-  let mut t = 1
-  while t < coups_int {
+  for t in 1..<coups_int {
     let t_value = Double::from_int(t)
     let t_diff = t_value + diff
     let add = coupon_cash / @math.pow(yld_factor, t_diff)
     price = price + add
     duration = duration + t_diff * add
-    t = t + 1
   }
   let add = (coupon_cash + 100.0) / @math.pow(yld_factor, coups + diff)
   price = price + add
@@ -3503,10 +3497,8 @@ fn aggr_between(
   let start_int = Double::to_int(trunc_double(start_period))
   let end_int = Double::to_int(trunc_double(end_period))
   if start_int <= end_int {
-    let mut idx = start_int
-    while idx <= end_int {
+    for idx in start_int..<=end_int {
       value = f(value, Double::from_int(idx))
-      idx = idx + 1
     }
   } else {
     let mut idx = start_int
