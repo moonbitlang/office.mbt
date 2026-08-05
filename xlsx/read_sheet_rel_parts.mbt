@@ -453,8 +453,7 @@ fn resolve_slicer_sources_after_read(
   }
   for sheet in workbook.sheets {
     let slicers = sheet.slicers
-    let mut i = 0
-    while i < slicers.length() {
+    for i in 0..<slicers.length() {
       let slicer = slicers[i]
       match slicer_cache_defs.get(slicer.cache) {
         Some(def) => {
@@ -529,7 +528,6 @@ fn resolve_slicer_sources_after_read(
         }
         None => ()
       }
-      i = i + 1
     }
   }
 }

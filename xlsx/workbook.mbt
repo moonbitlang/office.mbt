@@ -3252,8 +3252,7 @@ pub fn Workbook::add_table(
   let column_names : Array[String] = []
   let seen : Array[String] = []
   let mut idx = 0
-  let mut col = min_col
-  while col <= max_col {
+  for col in min_col..<=max_col {
     idx = idx + 1
     let cell = cell_ref_from(header_row, col)
     let raw = match self.get_cell_value(sheet_name, cell, raw=true) {
@@ -3269,7 +3268,6 @@ pub fn Workbook::add_table(
     }
     seen.push(name.to_lower())
     column_names.push(name)
-    col = col + 1
   }
   let mut table_name = options.name
   if table_name == "" {
@@ -3470,8 +3468,7 @@ fn Workbook::add_pivot_table_with_options(
     raise InvalidPivotTable(msg="pivot data range invalid")
   }
   let field_names : Array[String] = []
-  let mut col = min_col
-  while col <= max_col {
+  for col in min_col..<=max_col {
     let axis = cell_ref_from(header_row, col)
     let value = match
       self.get_cell_value(data_sheet, axis, options=self.options) {
@@ -3482,7 +3479,6 @@ fn Workbook::add_pivot_table_with_options(
       raise InvalidPivotTable(msg="pivot field name empty")
     }
     field_names.push(value)
-    col = col + 1
   }
   let field_index : Map[String, Int] = Map([])
   for i, name in field_names {

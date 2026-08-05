@@ -202,7 +202,7 @@ test "raw namespace bindings are bounded and expanded-name matching is prefix ne
     )
   }
   let too_many = []
-  for index = 0; index < 33; index = index + 1 {
+  for index in 0..<33 {
     too_many.push(("p\{index}", "https://example.test/\{index}"))
   }
   inspect(
@@ -257,7 +257,7 @@ test "raw scanners reject deterministic punctuation and control fuzz corpora" {
       "office.raw.invalid_path",
     )
   }
-  for code = 0; code < 0x20; code = code + 1 {
+  for code in 0..<0x20 {
     if code == 0x09 || code == 0x0a || code == 0x0d {
       continue
     }

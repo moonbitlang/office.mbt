@@ -200,8 +200,7 @@ fn raw_numeric_entity(entity : String, part : String) -> String raise RawError {
   if start >= entity.length() {
     raise raw_xml_scan_error(part, "encountered an empty numeric XML entity")
   }
-  let mut codepoint = 0
-  for index = start; index < entity.length(); index = index + 1 {
+  let codepoint = for index in start..<entity.length(); codepoint = 0 {
     let character = entity[index]
     let digit = if character >= '0' && character <= '9' {
       character.to_int() - '0'.to_int()
@@ -217,7 +216,29 @@ fn raw_numeric_entity(entity : String, part : String) -> String raise RawError {
     if codepoint > (0x10ffff - digit) / base {
       raise raw_xml_scan_error(part, "numeric XML entity is out of range")
     }
-    codepoint = codepoint * base + digit
+    continue codepoint * base + digit
+  } nobreak {
+    codepoint
+  } where {
+    proof_invariant: codepoint >= 0 && codepoint <= 0x10ffff,
+    proof_reasoning: (
+      #| `codepoint` is the Horner accumulation of the digits scanned so far, so
+      #| it starts at 0 and each step replaces it with `codepoint * base + digit`
+      #| where `0 <= digit < base` and `base` is 10 or 16.
+      #|
+      #| The guard `codepoint > (0x10ffff - digit) / base` is checked before the
+      #| update, so the update only runs when
+      #| `codepoint <= (0x10ffff - digit) / base`, hence
+      #| `codepoint * base + digit <= 0x10ffff`. The accumulator therefore never
+      #| overflows `Int` and the upper bound of the invariant is re-established
+      #| by every `continue`; the lower bound holds because digits are
+      #| non-negative. An out-of-range entity escapes by `raise` before the
+      #| invariant could be broken.
+      #|
+      #| Termination: `index` ranges over `start..<entity.length()` with both
+      #| bounds fixed, so the loop runs a bounded number of steps and `nobreak`
+      #| yields the fully accumulated codepoint.
+    ),
   }
   match Int::to_char(codepoint) {
     Some(character) if raw_xml_character(character) => character.to_string()
@@ -648,10 +669,9 @@ fn raw_find_sequence(
   if sequence.length() == 0 {
     return Some(start)
   }
-  let mut offset = start
-  while offset <= bytes.length() - sequence.length() {
+  for offset in start..<=(bytes.length() - sequence.length()) {
     let mut matched = true
-    for index = 0; index < sequence.length(); index = index + 1 {
+    for index in 0..<sequence.length() {
       if bytes[offset + index] != sequence[index] {
         matched = false
         break
@@ -660,7 +680,6 @@ fn raw_find_sequence(
     if matched {
       return Some(offset)
     }
-    offset = offset + 1
   }
   None
 }
@@ -674,7 +693,7 @@ fn raw_starts_with_at(
   if offset < 0 || offset + sequence.length() > bytes.length() {
     return false
   }
-  for index = 0; index < sequence.length(); index = index + 1 {
+  for index in 0..<sequence.length() {
     if bytes[offset + index] != sequence[index] {
       return false
     }

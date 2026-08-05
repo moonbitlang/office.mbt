@@ -45,7 +45,7 @@ fn assert_archive_metadata_preserved(
   let left = @zip.read(before)
   let right = @zip.read(after)
   assert_eq(left.entries().length(), right.entries().length())
-  for index = 0; index < left.entries().length(); index = index + 1 {
+  for index in 0..<left.entries().length() {
     let original = left.entries()[index]
     let candidate = right.entries()[index]
     assert_eq(original.name(), candidate.name())
@@ -66,7 +66,7 @@ fn assert_archive_metadata_preserved(
 fn raw_test_mixed_zip_policies(source : BytesView) -> Bytes raise {
   let parsed = @zip.read(source)
   let output = @zip.Archive::new()
-  for index = 0; index < parsed.entries().length(); index = index + 1 {
+  for index in 0..<parsed.entries().length() {
     let entry = parsed.entries()[index]
     output.add(
       entry.name(),
@@ -561,7 +561,7 @@ test "raw all selection is capped before edits are materialized" {
   ignore(
     document.write_string("<w:document xmlns:w=\"\{word_namespace}\"><w:body>"),
   )
-  for index = 1; index <= 257; index = index + 1 {
+  for index in 1..<=257 {
     document.write_string(word_paragraph(index.to_string())) |> ignore
   }
   document.write_string("<w:sectPr/></w:body></w:document>") |> ignore

@@ -611,11 +611,9 @@ pub fn RowStream::next(self : RowStream) -> Array[String]? {
     end_index = end_index + 1
   }
   let values : Array[String] = Array::make(max_col, "")
-  let mut i = self.index
-  while i < end_index {
+  for i in self.index..<end_index {
     let cell = self.cells[i]
     values[cell.col - 1] = cell.value
-    i = i + 1
   }
   self.index = end_index
   Some(values)

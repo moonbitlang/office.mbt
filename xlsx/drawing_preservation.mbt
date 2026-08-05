@@ -160,8 +160,7 @@ fn normalized_drawing_object_id(value : StringView) -> String {
     return ""
   }
   let mut first_nonzero = 0
-  let mut index = 0
-  while index < value.length() {
+  for index in 0..<value.length() {
     let unit = value[index]
     if unit < ('0' : UInt16) || unit > ('9' : UInt16) {
       return value.to_owned()
@@ -169,7 +168,6 @@ fn normalized_drawing_object_id(value : StringView) -> String {
     if unit == ('0' : UInt16) && first_nonzero == index {
       first_nonzero = first_nonzero + 1
     }
-    index = index + 1
   }
   if first_nonzero == value.length() {
     "0"

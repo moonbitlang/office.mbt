@@ -20,18 +20,14 @@ fn optional_value(matches : @argparse.Matches, name : String) -> String? {
 fn edit_distance(left : String, right : String) -> Int {
   let left_chars = left.to_array()
   let right_chars = right.to_array()
-  let mut previous = Array::make(right_chars.length() + 1, 0)
-  for index = 0; index <= right_chars.length(); index = index + 1 {
-    previous[index] = index
+  let seed = Array::make(right_chars.length() + 1, 0)
+  for index in 0..<=right_chars.length() {
+    seed[index] = index
   }
-  for left_index = 0
-      left_index < left_chars.length()
-      left_index = left_index + 1 {
+  let last = for left_index in 0..<left_chars.length(); previous = seed {
     let current = Array::make(right_chars.length() + 1, 0)
     current[0] = left_index + 1
-    for right_index = 0
-        right_index < right_chars.length()
-        right_index = right_index + 1 {
+    for right_index in 0..<right_chars.length() {
       let cost = if left_chars[left_index] == right_chars[right_index] {
         0
       } else {
@@ -42,9 +38,25 @@ fn edit_distance(left : String, right : String) -> Int {
       let deletion = previous[right_index + 1] + 1
       current[right_index + 1] = substitution.min(insertion).min(deletion)
     }
-    previous = current
+    continue current
+  } nobreak {
+    previous
+  } where {
+    proof_invariant: previous.length() == right_chars.length() + 1,
+    proof_reasoning: (
+      #| `previous` is the previous row of the Wagner-Fischer matrix: on entry to
+      #| iteration `left_index` it holds `previous[j] = distance(left[:left_index],
+      #| right[:j])`. The row is allocated once per iteration with
+      #| `right_chars.length() + 1` cells and every cell is written before it is
+      #| read by the next iteration (cell 0 by `current[0]`, cells `1..=n` by the
+      #| inner range loop), so the length invariant holds for the seed row and is
+      #| re-established by each `continue current`. The loop always terminates
+      #| because `left_index` ranges over `0..<left_chars.length()`, so `nobreak`
+      #| yields the final row and `last[right_chars.length()]` is the full
+      #| edit distance.
+    ),
   }
-  previous[right_chars.length()]
+  last[right_chars.length()]
 }
 
 ///|

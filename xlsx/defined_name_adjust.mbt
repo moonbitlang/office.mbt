@@ -360,8 +360,7 @@ fn adjust_defined_name_refers_to_for_sheet(
     if prefix.length() == 0 {
       return None
     }
-    let mut pos = start
-    while pos + prefix.length() <= text.length() {
+    for pos in start..<=(text.length() - prefix.length()) {
       if (pos & 4095) == 0 {
         check_read_cancelled(cancelled)
       }
@@ -375,7 +374,6 @@ fn adjust_defined_name_refers_to_for_sheet(
       if matched {
         return Some(pos)
       }
-      pos = pos + 1
     }
     None
   }

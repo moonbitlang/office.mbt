@@ -4460,7 +4460,7 @@ fn remap_duplicated_x14_ids(
   let builder = StringBuilder::new()
   builder.write_view(chunks[0])
   let mut counter = start_counter
-  for index = 1; index < chunks.length(); index = index + 1 {
+  for index in 1..<chunks.length() {
     let chunk = chunks[index]
     let end = match chunk.find("</x14:id>") {
       Some(value) => value
@@ -5651,13 +5651,11 @@ fn adjust_table_after_col_insert(
   if col > min_col && col <= max_col {
     let insert_index = col - min_col
     let base = columns.length() + 1
-    let mut i = 0
-    while i < count {
+    for i in 0..<count {
       if (i & 4095) == 0 {
         check_read_cancelled(cancelled)
       }
       columns.insert(insert_index + i, table_default_column_name(base + i))
-      i = i + 1
     }
   }
   let start_ref = cell_ref_from(min_row, new_min_col)
@@ -5696,13 +5694,11 @@ fn adjust_table_after_col_remove(
         let overlap_end = if end_col < max_col { end_col } else { max_col }
         let remove_count = overlap_end - overlap_start + 1
         let remove_index = overlap_start - min_col
-        let mut i = 0
-        while i < remove_count {
+        for i in 0..<remove_count {
           if (i & 4095) == 0 {
             check_read_cancelled(cancelled)
           }
           ignore(columns.remove(remove_index))
-          i = i + 1
         }
       }
       let start_ref = cell_ref_from(min_row, new_min_col)

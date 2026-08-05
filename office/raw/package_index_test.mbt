@@ -166,7 +166,7 @@ fn forge_raw_test_central_uncompressed_sizes(
 ) -> (Bytes, Int) {
   let bytes = source.to_array()
   let mut count = 0
-  for offset = 0; offset + 27 < bytes.length(); offset = offset + 1 {
+  for offset in 0..<(bytes.length() - 27) {
     if bytes[offset] == b'P' &&
       bytes[offset + 1] == b'K' &&
       bytes[offset + 2] == b'\x01' &&
@@ -575,7 +575,7 @@ fn sheet_ordinal_gap_fixture() -> Bytes raise {
 fn alias_budget_xlsx_fixture() -> Bytes raise {
   let sheets = StringBuilder::new()
   let relationships = StringBuilder::new()
-  for index = 1; index <= 2049; index = index + 1 {
+  for index in 1..<=2049 {
     sheets.write_string(
       "<sheet name=\"Sheet\{index}\" sheetId=\"\{index}\" r:id=\"r\{index}\"/>",
     )

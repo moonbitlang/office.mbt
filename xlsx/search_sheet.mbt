@@ -170,13 +170,11 @@ fn regex_search(text : StringView, pattern : StringView) -> Bool {
     let memo : Map[(Int, Int), Bool] = Map([])
     return sheet_regex_match_from(chars, tokens, 0, 0, memo, anchor_end)
   }
-  let mut start = 0
-  while start <= chars.length() {
+  for start in 0..<=chars.length() {
     let memo : Map[(Int, Int), Bool] = Map([])
     if sheet_regex_match_from(chars, tokens, start, 0, memo, anchor_end) {
       return true
     }
-    start = start + 1
   }
   false
 }

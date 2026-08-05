@@ -5069,15 +5069,13 @@ fn normalize_complex_text(text : StringView) -> String {
 fn split_complex_body(body : String) -> (String, String) {
   let chars = body.to_array()
   let mut split = -1
-  let mut idx = 1
-  while idx < chars.length() {
+  for idx in 1..<chars.length() {
     let ch = chars[idx]
     if (ch == '+' || ch == '-') &&
       chars[idx - 1] != 'e' &&
       chars[idx - 1] != 'E' {
       split = idx
     }
-    idx = idx + 1
   }
   if split < 0 {
     ("0", body)
