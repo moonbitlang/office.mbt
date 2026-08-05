@@ -1,3 +1,12 @@
 #!/bin/sh
+#
+# Keep the commit-time gate cheap and non-mutating: `moon check` only.
+# The formatting and interface gates live in `pre-push`, because `moon fmt`
+# and `moon info` rewrite files — doing that mid-commit would leave the
+# rewritten copies unstaged and the commit subtly wrong.
 
-moon check
+set -e
+
+if command -v moon >/dev/null 2>&1; then
+  moon check
+fi

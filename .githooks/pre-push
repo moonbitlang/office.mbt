@@ -1,0 +1,8 @@
+#!/bin/sh
+#
+# Run the checks CI runs first, before the push rather than after it.
+# See .githooks/README.md.
+
+set -e
+
+exec "$(git rev-parse --show-toplevel)/scripts/ci/local-gate.sh"
