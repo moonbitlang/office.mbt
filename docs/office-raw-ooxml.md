@@ -178,6 +178,27 @@ updates instead of per-element map copies. The complete post-edit size is
 checked with overflow-safe arithmetic before repeated splice buffers are
 allocated.
 
+Those preflight ceilings come in two sizes, and a part is charged the one that
+matches what it is. `[Content_Types].xml` and the `.rels` parts are package
+metadata that OPC keeps small, so they get the metadata ceilings. Content parts
+get the larger ceilings the span-edit scanner already applies; a main part is
+never charged a metadata ceiling merely because the resolver needed something
+from it.
+
+Resolving the Transitional-versus-Strict relationship dialect needs only the
+main part's document element, so it reads only that. The probe walks the
+prologue and the root start tag within a 64 KiB window and stops; it never
+visits the body, so the size of a document places no ceiling on `list`, `read`,
+or opening a package for an edit. This is exact rather than approximate,
+because the document element has no ancestors and therefore binds every prefix
+it uses itself. The window is charged before each step of the prologue walk and
+before the start tag's attributes are decoded, and exceeding it is reported as
+`office.raw.resource_limit` naming the `xml_root_probe_bytes` guard, its
+ceiling, the measured value, and the part. Everything else the probe rejects —
+a DTD, character data before the document element, an unterminated comment or
+start tag, an unbound root prefix — is reported as malformed XML, including in
+parts far larger than the window.
+
 The transaction materializes each ZIP exactly once. The complete bounded raw
 identifier consumes an isolated fork of the already materialized input archive;
 generic Office DOM parsing cannot precede this boundary. Archive-backed public
