@@ -34,7 +34,7 @@ still read or write the paths supplied to it and consume CPU within those
 limits. For trusted files, `moonx --target native bobzhang/office ...` is a
 faster drop-in.
 
-Pin a version when reproducibility matters: `moonx bobzhang/office@0.3.0 ...`.
+Pin a version when reproducibility matters: `moonx bobzhang/office@0.4.0 ...`.
 `@latest` refreshes the registry index before resolving.
 
 ## The CLI describes itself — prefer that over prose
@@ -189,7 +189,7 @@ single `data.cell` **object**, while a `range[A1:C12]` selector returns a
 
 Run `office help schema ID --json` before authoring any consumed JSON
 document. It is normative for `xlsx.batch/2`, `docx.batch/2`,
-`office.template.data/1`, and `docx.annotation-batch/1`.
+`docx.edit/1`, `office.template.data/1`, and `docx.annotation-batch/1`.
 
 ## Shapes that are easy to get wrong
 
