@@ -484,13 +484,30 @@ pub fn TransactionBudget::max_validation_message_chars(
 }
 
 ///|
-/// Maximum XML markup-token count allowed while a splice validates one
-/// materialized part. The fixed ratio reserves ample working memory for the
-/// strict parser's tree, strings, maps, and arrays.
+/// Maximum XML markup-token count allowed while a splice indexes its source
+/// package and validates one materialized part. The fixed ratio reserves
+/// working memory for the strict parser's tree, strings, maps, and arrays in
+/// proportion to the materialization allowance the ratio is derived from.
+///
+/// One token per 8 materialized bytes. The previous ratio of one per 64 was
+/// calibrated against markup far sparser than OOXML: the strict parser charges
+/// one token per ~2.8 source bytes on tracked-change body markup, where every
+/// `w:ins`/`w:del` carries `w:id`, `w:author`, and `w:date`. At 64 bytes per
+/// token the guard fired after ~1,100 redlined paragraphs (~360 KB of
+/// `word/document.xml`) while 96% of the materialization allowance it is a
+/// proxy for was still unspent, so packages the read commands parse without
+/// complaint could not be edited at all (#338).
+///
+/// At 8 bytes per token the guard admits ~2.9 MB of that dense markup under
+/// the default 8 MiB allowance, and remains a real ceiling for markup whose
+/// expanded names are short: such parts materialize almost nothing per element,
+/// so allocation count is the only thing bounding them. The ratio keeps the
+/// guard proportional, so a transaction granted a smaller live-memory envelope
+/// still scales down with it.
 pub fn TransactionBudget::max_splice_xml_tokens(
   self : TransactionBudget,
 ) -> Int {
-  let tokens = self.max_splice_materialized_bytes / 64
+  let tokens = self.max_splice_materialized_bytes / 8
   if tokens > 0 {
     tokens
   } else {

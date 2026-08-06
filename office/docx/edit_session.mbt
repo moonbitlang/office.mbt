@@ -54,7 +54,37 @@ pub struct DocxEditSession {
 let candidate_xml_source_units : Int = 8 * 1024 * 1024
 
 ///|
-let candidate_xml_tokens : Int = 131_072
+/// Markup-token ceiling shared by the bounded package identifier, the package
+/// validator, and every candidate parse: one token per 8 bytes of the source
+/// allowance above.
+///
+/// The ratio is the whole point. It used to be one token per 64 source bytes,
+/// which assumes markup far sparser than OOXML actually is. Measured against
+/// tracked-change body markup — the densest real DOCX content, where every
+/// `w:ins`/`w:del` carries `w:id`, `w:author`, and `w:date` — the strict
+/// parser charges one token per ~2.8 source bytes. At 64 bytes per token the
+/// guard therefore fired at ~4% of `candidate_xml_source_units`, refusing
+/// ~1,100 redlined paragraphs (~360 KB of `word/document.xml`) while all three
+/// ceilings it accompanies still had over 90% of their allowance left (#338).
+/// That also broke parity: `outline`, `text`, and `dump` read such a document
+/// happily under the CLI's own 1 Mi-token ceiling, but `annotate`, `edit`, and
+/// `validate` refused it, and the refusal was rendered as malformed XML.
+///
+/// At one token per 8 source bytes the token guard alone would admit ~2.9 MB
+/// of that dense markup, and it matches the read commands token for token. It
+/// is no longer what decides: `candidate_xml_materialized_chars` now binds
+/// first, at ~2,860 fully redlined paragraphs (~965 KB of `word/document.xml`,
+/// which materializes 8 MiB of expanded names, attribute values, and text).
+/// That ceiling is left alone on purpose. It is the honest memory guard of the
+/// three, and an edit transaction holds strictly more live state than a read —
+/// source archive, source index, splice plan, and candidate package at once —
+/// so it legitimately parses under a tighter envelope than `dump` does.
+///
+/// The token guard stays real rather than becoming a formality. Markup with
+/// short expanded names materializes almost nothing per element, so allocation
+/// count, not characters, is what has to be bounded there: 1.5 M unprefixed
+/// `<a/>` elements are still refused, and refused by this guard.
+let candidate_xml_tokens : Int = candidate_xml_source_units / 8
 
 ///|
 let candidate_xml_materialized_chars : Int = 8 * 1024 * 1024
@@ -192,16 +222,25 @@ fn open_edit_session(
     let duplicate = findings.search_by(fn(finding) {
       finding.has_prefix("duplicate entry name:")
     })
-    let code = if duplicate is Some(_) {
-      "office.docx.duplicate_part"
+    // A bounded-parse refusal and a structural defect are different verdicts
+    // and must not share a summary line: the first says the package was too
+    // large for this transaction's envelope, the second says it is broken.
+    let (code, summary) = if duplicate is Some(_) {
+      (
+        "office.docx.duplicate_part", "source DOCX failed strict package validation",
+      )
     } else if validation.resource_limit() is Some(_) {
-      "office.docx.resource_limit"
+      (
+        "office.docx.resource_limit", "source DOCX exceeded an XML resource limit during strict package validation",
+      )
     } else {
-      "office.docx.invalid_package"
+      (
+        "office.docx.invalid_package", "source DOCX failed strict package validation",
+      )
     }
     raise docx_failure(
       code,
-      "source DOCX failed strict package validation",
+      summary,
       details=Json::object({
         "reported_finding_count": Json::number(findings.length().to_double()),
         "findings_truncated": Json::boolean(findings_truncated),
@@ -566,16 +605,24 @@ fn package_identifier() -> @transaction.TransactionIdentifier raise @transaction
       let duplicate = findings.search_by(fn(finding) {
         finding.has_prefix("duplicate entry name:")
       })
-      let code = if duplicate is Some(_) {
-        "office.docx.duplicate_part"
+      // As in `open_edit_session`: exhausting a bounded parse is not evidence
+      // that the package is defective, so it gets its own summary line.
+      let (code, summary) = if duplicate is Some(_) {
+        (
+          "office.docx.duplicate_part", "bounded DOCX package identification failed",
+        )
       } else if validation.resource_limit() is Some(_) {
-        "office.docx.resource_limit"
+        (
+          "office.docx.resource_limit", "bounded DOCX package identification exceeded an XML resource limit",
+        )
       } else {
-        "office.docx.invalid_package"
+        (
+          "office.docx.invalid_package", "bounded DOCX package identification failed",
+        )
       }
       raise docx_failure(
         code,
-        "bounded DOCX package identification failed",
+        summary,
         details=Json::object({
           "identifier": Json::string(bounded_identifier_name),
           "reported_finding_count": Json::number(findings.length().to_double()),

@@ -203,6 +203,13 @@ priv struct FindingCollector {
   max_zip_total_entry_name_chars : Int
   mut zip_entry_name_chars : Int
   xml_budget : @xml.XmlReadBudget
+  // The caller-configured XML ceilings are retained alongside the budget so a
+  // refusal can quote the exact number it hit. `XmlReadBudget` only tracks what
+  // is left, and a spent budget cannot say what it started with.
+  max_xml_source_units : Int
+  max_xml_tokens : Int
+  max_xml_materialized_chars : Int
+  max_xml_token_chars : Int
   cancelled : () -> Bool
   mut truncated : Bool
   mut resource_limit : DocxValidationResourceLimit?
@@ -221,6 +228,14 @@ fn FindingCollector::new_with_xml_limits(
   max_xml_token_chars : Int,
   cancelled : () -> Bool,
 ) -> FindingCollector {
+  fn clamp(value : Int) -> Int {
+    if value > 0 {
+      value
+    } else {
+      0
+    }
+  }
+
   {
     findings: [],
     max_findings: if max_findings > 0 {
@@ -263,6 +278,10 @@ fn FindingCollector::new_with_xml_limits(
       },
       cancelled~,
     ),
+    max_xml_source_units: clamp(max_xml_source_units),
+    max_xml_tokens: clamp(max_xml_tokens),
+    max_xml_materialized_chars: clamp(max_xml_materialized_chars),
+    max_xml_token_chars: clamp(max_xml_token_chars),
     cancelled,
     truncated: false,
     resource_limit: None,
@@ -342,6 +361,75 @@ fn FindingCollector::mark_resource_limit(
 ) -> Unit {
   if self.resource_limit is None {
     self.resource_limit = xml_validation_resource_limit(error)
+  }
+}
+
+///|
+/// The caller-configured ceiling behind one XML guard. `XmlNestingDepth` is a
+/// fixed parser constant rather than a caller-supplied dimension, and the ZIP
+/// guards never reach this path, so both report no configured value.
+fn FindingCollector::xml_limit_value(
+  self : FindingCollector,
+  limit : DocxValidationResourceLimit,
+) -> Int? {
+  match limit {
+    XmlSourceUnits => Some(self.max_xml_source_units)
+    XmlTokens => Some(self.max_xml_tokens)
+    XmlTokenLength => Some(self.max_xml_token_chars)
+    XmlMaterializedCharacters => Some(self.max_xml_materialized_chars)
+    _ => None
+  }
+}
+
+///|
+/// Records one bounded-parse refusal.
+///
+/// Exhausting a resource guard is not a well-formedness verdict: the parse
+/// stopped at the ceiling, so the part may be entirely valid XML that simply
+/// needs more of a guarded resource than this parse was allowed to spend.
+/// Reporting it as "malformed XML" sent readers hunting for corruption that
+/// does not exist (#338), so resource exhaustion gets its own wording naming
+/// the guard, its configured ceiling, the lower bound on what the part
+/// actually needed, and the part itself.
+///
+/// The parser aborts on the charge that would cross the ceiling, so the true
+/// requirement is only known to exceed it; `actual at least limit + 1` states
+/// exactly that and never overstates.
+fn FindingCollector::add_xml_resource_limit(
+  self : FindingCollector,
+  name : String,
+  error : @core.DocxError,
+  limit : DocxValidationResourceLimit,
+) -> Unit {
+  let detail = match self.xml_limit_value(limit) {
+    Some(value) => {
+      let actual = if value < 2147483647 { value + 1 } else { value }
+      "(guard \{limit.name()}, limit \{value}, actual at least \{actual})"
+    }
+    None => "(guard \{limit.name()})"
+  }
+  self.add(
+    "XML resource limit exceeded in \{self.text(name)}: \{self.text(error.description())} \{detail}",
+  )
+}
+
+///|
+/// Records one XML parse failure under the wording its typed cause deserves:
+/// a resource guard reports as a bounded-parse refusal, everything else as
+/// malformed content. Classification reads the typed error, never the
+/// diagnostic text, so a crafted part name cannot move a finding between the
+/// two classes.
+fn FindingCollector::add_xml_parse_failure(
+  self : FindingCollector,
+  name : String,
+  error : @core.DocxError,
+) -> Unit {
+  match xml_validation_resource_limit(error) {
+    Some(limit) => self.add_xml_resource_limit(name, error, limit)
+    None =>
+      self.add(
+        "malformed XML in \{self.text(name)}: \{self.text(error.description())}",
+      )
   }
 }
 
@@ -1953,9 +2041,7 @@ fn parse_xml_part(
     }
     err => {
       findings.mark_resource_limit(err)
-      findings.add(
-        "malformed XML in \{findings.text(name)}: \{findings.text(err.description())}",
-      )
+      findings.add_xml_parse_failure(name, err)
       return None
     }
   }
@@ -1978,9 +2064,7 @@ fn parse_relationships_part(
     }
     err => {
       findings.mark_resource_limit(err)
-      findings.add(
-        "malformed XML in \{findings.text(name)}: \{findings.text(err.description())}",
-      )
+      findings.add_xml_parse_failure(name, err)
       return None
     }
   }
