@@ -109,6 +109,57 @@ fn ScannedRevision::container_path(self : ScannedRevision) -> String? {
 }
 
 ///|
+/// One element-name occurrence to rewrite in place, as the byte range of
+/// the LOCAL NAME only (never the prefix, never the attributes). Rejecting a
+/// deletion turns each `w:delText` back into `w:t` by overwriting exactly
+/// these ranges, so the source namespace prefix, `xml:space`, and every
+/// surrounding byte survive verbatim. `close_start` is -1 for the
+/// self-closing form, which has no closing tag to rewrite.
+priv struct ScannedNameEdit {
+  open_start : Int
+  open_end : Int
+  mut close_start : Int
+  mut close_end : Int
+  replacement : String
+}
+
+///|
+/// One tracked-change ELEMENT located in the original bytes, with the byte
+/// extent a resolver needs to unwrap or remove it.
+///
+/// This is deliberately a SEPARATE record from `ScannedRevision`, which
+/// describes the revisions the reader's projection retains and is therefore
+/// purged whenever a subtree is retracted (a merged cell, a deleted row).
+/// Mutation cares about bytes, not about the projection: a site is recorded
+/// for every tracked-change element in the part, is never retracted, and is
+/// never gated on suppression — an element the resolver cannot see is an
+/// element it would silently leave behind.
+///
+/// `supported` is false for every construct outside the resolvable set
+/// (property revisions such as `w:rPr/w:ins` and `w:trPr/w:del`, moves, and
+/// every `*PrChange`). Those still have to be RECORDED so a selection that
+/// reaches one can refuse instead of half-resolving the document.
+priv struct ScannedRevisionSite {
+  local_name : String
+  supported : Bool
+  id : String?
+  author : String?
+  date : String?
+  container_path : String?
+  byte_start : Int
+  // -1 for the self-closing form (no interior).
+  content_start : Int
+  mut close_tag_start : Int
+  mut byte_end : Int
+  // Whether the element's own start tag binds any namespace prefix. Unwrapping
+  // such an element would drop the binding while its former children keep
+  // using it, so an unwrap resolution has to refuse.
+  declares_namespaces : Bool
+  // `w:delText`/`w:delInstrText` names inside a deletion, in document order.
+  name_edits : Array[ScannedNameEdit]
+}
+
+///|
 /// One located marker. `seq` is a total document order shared with node
 /// intervals; `container_path` is the innermost open projection node
 /// ("p[2]/r[1]", story-relative) or None at story level; `after_child`
@@ -441,6 +492,9 @@ priv struct StoryScan {
   // markers: a revision is a range container, not a point, and it survives
   // in stories the reader flattens (w:ins) or drops (w:del) entirely.
   revisions : Array[ScannedRevision]
+  // Every tracked-change ELEMENT in the part, with byte extents, in document
+  // order. Never purged and never suppression-gated (see ScannedRevisionSite).
+  revision_sites : Array[ScannedRevisionSite]
   warnings : Array[String]
   story_level_positions : Map[Int, StoryLevelMarkerPosition]
   // The story's ROOT element span (kind = its local name, path = "").
@@ -581,6 +635,12 @@ fn StoryScan::revisions(self : StoryScan) -> Array[ScannedRevision] {
 }
 
 ///|
+/// Every tracked-change ELEMENT with byte extents, in document order.
+fn StoryScan::revision_sites(self : StoryScan) -> Array[ScannedRevisionSite] {
+  self.revision_sites
+}
+
+///|
 /// Non-fatal scan diagnostics.
 fn StoryScan::warnings(self : StoryScan) -> Array[String] {
   self.warnings
@@ -689,6 +749,13 @@ priv struct ScanFrame {
   node_checkpoint : Int
   marker_checkpoint : Int
   revision_checkpoint : Int
+  // Index into StoryScan.revision_sites when THIS element is a tracked-change
+  // element, else -1. Its closing tag fills in the site's closing offsets.
+  revision_site_index : Int
+  // Index into the enclosing site's name_edits when THIS element is a
+  // `w:delText`/`w:delInstrText`, else -1. Its closing tag fills in the
+  // record's closing-name range.
+  name_edit_index : Int
 }
 
 ///|
@@ -887,6 +954,92 @@ fn revision_kind(uri : String, local_name : String) -> ScanRevisionKind? {
 }
 
 ///|
+/// Every WML element that RECORDS a tracked change, whether or not the
+/// resolver can act on it. Content insertions and deletions are the two the
+/// resolver handles; the rest are recorded so a selection reaching one can
+/// refuse loudly. Keeping the whole vocabulary in one place is what makes
+/// "accept everything by Reviewer" honest: a construct missing from this list
+/// would survive publication with no finding.
+fn is_revision_site_name(uri : String, local_name : String) -> Bool {
+  if !is_wml_uri(uri) {
+    return false
+  }
+  local_name
+  is ("ins"
+  | "del"
+  // paired moves: resolving one half as a plain insertion or deletion
+  // would corrupt the other half, so they are recorded, never acted on
+  | "moveFrom"
+  | "moveTo"
+  | "moveFromRangeStart"
+  | "moveFromRangeEnd"
+  | "moveToRangeStart"
+  | "moveToRangeEnd"
+  // property revisions: these carry the PREVIOUS properties, and accepting
+  // or rejecting one rewrites a property container, not a content range
+  | "rPrChange"
+  | "pPrChange"
+  | "tblPrChange"
+  | "trPrChange"
+  | "tcPrChange"
+  | "sectPrChange"
+  | "tblGridChange"
+  | "tblPrExChange"
+  | "numberingChange"
+  // table-structure revisions
+  | "cellIns"
+  | "cellDel"
+  | "cellMerge"
+  // custom-XML range revisions
+  | "customXmlInsRangeStart"
+  | "customXmlInsRangeEnd"
+  | "customXmlDelRangeStart"
+  | "customXmlDelRangeEnd"
+  | "customXmlMoveFromRangeStart"
+  | "customXmlMoveFromRangeEnd"
+  | "customXmlMoveToRangeStart"
+  | "customXmlMoveToRangeEnd")
+}
+
+///|
+/// The element name a deleted text run reverts to when its deletion is
+/// rejected. `w:delText` is `w:t` and `w:delInstrText` is `w:instrText`;
+/// nothing else is a deleted-text carrier.
+fn deleted_text_replacement(uri : String, local_name : String) -> String? {
+  if !is_wml_uri(uri) {
+    return None
+  }
+  match local_name {
+    "delText" => Some("t")
+    "delInstrText" => Some("instrText")
+    _ => None
+  }
+}
+
+///|
+/// The byte range of a tag's LOCAL NAME. `name_start` points at the first
+/// byte of the QName (just past '<', or just past '</'); the range returned
+/// excludes any namespace prefix and its colon, so overwriting it renames the
+/// element without disturbing its prefix binding.
+fn tag_local_name_span(
+  part : BytesView,
+  name_start : Int,
+  limit : Int,
+) -> (Int, Int) {
+  let mut at = name_start
+  while at < limit && !is_name_end(part[at]) {
+    at += 1
+  }
+  let mut local_start = name_start
+  for scan in name_start..<at {
+    if part[scan] == b':' {
+      local_start = scan + 1
+    }
+  }
+  (local_start, at)
+}
+
+///|
 fn split_qualified_name(name : String) -> (String, String) {
   match name.find(":") {
     Some(colon) => (name[0:colon].to_owned(), name[colon + 1:].to_owned())
@@ -957,6 +1110,7 @@ fn scan_story(
   let elements : Array[ScannedElement] = []
   let markers : Array[ScannedMarker] = []
   let revisions : Array[ScannedRevision] = []
+  let revision_sites : Array[ScannedRevisionSite] = []
   let owns_warning_collector = warning_collector is None
   let warnings = match warning_collector {
     Some(value) => value
@@ -1101,6 +1255,31 @@ fn scan_story(
             None => ()
           }
           seq += 1
+          // Byte extents for the mutation-facing site records. Both are
+          // filled here, at the CLOSING tag, because that is the first
+          // moment either offset is known.
+          if frame.revision_site_index >= 0 &&
+            frame.revision_site_index < revision_sites.length() {
+            let site = revision_sites[frame.revision_site_index]
+            site.close_tag_start = index
+            site.byte_end = close_end
+          }
+          if frame.name_edit_index >= 0 {
+            match nearest_revision_site(frames, revision_sites) {
+              Some(site) =>
+                if frame.name_edit_index < site.name_edits.length() {
+                  let record = site.name_edits[frame.name_edit_index]
+                  let (local_start, local_end) = tag_local_name_span(
+                    part,
+                    index + 2,
+                    close_end,
+                  )
+                  record.close_start = local_start
+                  record.close_end = local_end
+                }
+              None => ()
+            }
+          }
           for prefix in frame.declared {
             match namespaces.get(prefix) {
               Some(stack) => {
@@ -1579,6 +1758,93 @@ fn scan_story(
         None => ()
       }
     }
+    // The mutation-facing site record. Recorded for EVERY tracked-change
+    // element regardless of suppression or property context: the resolver
+    // must be able to see (and refuse on) constructs the reader's projection
+    // drops, or "accept everything" would quietly leave them behind.
+    let revision_site_index = if is_revision_site_name(uri, local_name) {
+      let id = attribute_value(
+        attributes,
+        "id",
+        namespaces,
+        prefer_last=source_budget is Some(_),
+      )
+      let author = attribute_value(
+        attributes,
+        "author",
+        namespaces,
+        prefer_last=source_budget is Some(_),
+      )
+      let date = attribute_value(
+        attributes,
+        "date",
+        namespaces,
+        prefer_last=source_budget is Some(_),
+      )
+      path_budget.charge(
+        local_name.length() +
+        id.map(String::length).unwrap_or(0) +
+        author.map(String::length).unwrap_or(0) +
+        date.map(String::length).unwrap_or(0),
+      )
+      let container_path = match current_projection() {
+        Some(frame) => frame.projection_path
+        None => None
+      }
+      revision_sites.push({
+        local_name,
+        // Only a CONTENT insertion or deletion is resolvable. The same
+        // element names inside a property container mark an inserted or
+        // deleted PARAGRAPH MARK (or table row), which is a different edit.
+        supported: local_name is ("ins" | "del") && !inside_properties,
+        id,
+        author,
+        date,
+        container_path,
+        byte_start: index,
+        content_start: if self_closing {
+          -1
+        } else {
+          tag_end
+        },
+        close_tag_start: -1,
+        byte_end: if self_closing {
+          tag_end
+        } else {
+          -1
+        },
+        declares_namespaces: !declared.is_empty(),
+        name_edits: [],
+      })
+      revision_sites.length() - 1
+    } else {
+      -1
+    }
+    // A deleted-text carrier records the byte range of its own name in both
+    // tags, so rejecting the enclosing deletion can rename it in place.
+    let name_edit_index = match deleted_text_replacement(uri, local_name) {
+      Some(replacement) =>
+        match nearest_revision_site(frames, revision_sites) {
+          Some(site) => {
+            path_budget.charge(replacement.length())
+            let (local_start, local_end) = tag_local_name_span(
+              part,
+              index + 1,
+              tag_end,
+            )
+            site.name_edits.push({
+              open_start: local_start,
+              open_end: local_end,
+              close_start: -1,
+              close_end: -1,
+              replacement,
+            })
+            site.name_edits.length() - 1
+          }
+          None => -1
+        }
+      None => -1
+    }
     let mut counter_owner : StableStringMap[Int]? = None
     let mut projection_kind_value : String? = None
     let mut projection_open_order = -1
@@ -1819,6 +2085,8 @@ fn scan_story(
         node_checkpoint: nodes.length(),
         marker_checkpoint: markers.length(),
         revision_checkpoint: revisions.length(),
+        revision_site_index,
+        name_edit_index,
       })
     }
     index = tag_end
@@ -1839,6 +2107,7 @@ fn scan_story(
     elements,
     markers,
     revisions,
+    revision_sites,
     warnings: if owns_warning_collector {
       warnings.finish()
     } else {
@@ -1945,6 +2214,23 @@ fn nearest_counters(
 
 ///|
 /// The innermost open frame whose PROJECTION kind matches.
+/// The innermost open DELETION site, or None when no ancestor is one.
+/// Deleted-text carriers attach to the deletion that encloses them, so a
+/// `w:delText` inside `<w:ins><w:del>` belongs to the inner `w:del`.
+fn nearest_revision_site(
+  frames : Array[ScanFrame],
+  sites : Array[ScannedRevisionSite],
+) -> ScannedRevisionSite? {
+  for at = frames.length() - 1; at >= 0; at = at - 1 {
+    let index = frames[at].revision_site_index
+    if index >= 0 && index < sites.length() && sites[index].local_name == "del" {
+      return Some(sites[index])
+    }
+  }
+  None
+}
+
+///|
 fn nearest_frame_by_kind(
   frames : Array[ScanFrame],
   kind : String,

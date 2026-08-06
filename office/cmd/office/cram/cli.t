@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:77feb79a
+    Fingerprint: crc32:489853b6
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:77feb79a","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","template","edit","annotate","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:489853b6","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","template","edit","annotate","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:77feb79a","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:77feb79a","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:77feb79a","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:77feb79a","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:77feb79a","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:77feb79a","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:77feb79a","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:77feb79a","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:77feb79a","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:77feb79a","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:77feb79a","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:77feb79a","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:77feb79a","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:77feb79a","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:77feb79a","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:77feb79a","kind":"command","name":"edit"},{"schema":"office.capability/2","fingerprint":"crc32:77feb79a","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:77feb79a","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:77feb79a","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"edit"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"raw"}]
 
 Installed help exposes every consumed JSON input contract without requiring
 repository-only documentation. Inventory and individual records are versioned;
@@ -55,7 +55,7 @@ an unknown ID fails nonzero with a bounded typed suggestion.
     xlsx.batch/2 — Strict transactional spreadsheet mutation script
     docx.batch/2 — Strict fresh-DOCX authoring script with comments and notes
     office.template.data/1 — Strict non-executable scalar and repeating-region template data
-    docx.edit/1 — Strict preservation-safe literal find & replace script for an existing DOCX
+    docx.edit/1 — Strict preservation-safe literal find & replace, or tracked-change accept/reject, script for an existing DOCX
     docx.annotation-batch/1 — Strict preservation-safe comment mutation script for an existing DOCX
   Use 'office help schema <id> --json' for the exact contract.
 
@@ -943,6 +943,120 @@ itself, and unknown script members are rejected outright.
   > SCRIPT
   $ office.exe edit edit-base.docx edit-bad.json --out edit-bad.docx --json 2>&1 | jq -c '{success,code:.error.code,message:.error.message}'
   {"success":false,"code":"office.edit.invalid_script","message":"invalid edit script: ops[0].params has unknown member \"regex\""}
+
+The same command RESOLVES tracked changes. `office outline` reports what is
+pending and `office text` keeps returning the accepted view; accept_revision
+and reject_revision are how an agent turns either view into settled text. The
+fixture below is the OOXML worked example: a deletion and the insertion that
+replaced it, side by side in one paragraph.
+
+  $ cp "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" rev-base.docx
+  $ office.exe raw edit rev-base.docx /document --path '/w:document/w:body/w:p[1]' --action replace --xml '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:r><w:t xml:space="preserve">The revenue was </w:t></w:r><w:del w:id="1" w:author="Reviewer" w:date="2026-01-01T00:00:00Z"><w:r><w:delText xml:space="preserve">flat</w:delText></w:r></w:del><w:ins w:id="2" w:author="Reviewer" w:date="2026-01-01T00:00:00Z"><w:r><w:t xml:space="preserve">up 18%</w:t></w:r></w:ins><w:r><w:t xml:space="preserve"> this quarter.</w:t></w:r></w:p>' >/dev/null
+  $ office.exe outline rev-base.docx --json | jq -c '{insertions:.data.counts.insertions,deletions:.data.counts.deletions,ids:[.data.revisions[]|"\(.type)#\(.id)"]}'
+  {"insertions":1,"deletions":1,"ids":["del#1","ins#2"]}
+
+Accepting everything unwraps the insertion and removes the deletion with its
+content: the reviewer's sentence becomes the settled text, and the outline
+reports no pending revision at all.
+
+  $ cat > rev-accept.json <<'SCRIPT'
+  > {"schema":"docx.edit/1","ops":[{"op":"accept_revision","params":{"all":true}}]}
+  > SCRIPT
+  $ office.exe edit rev-base.docx rev-accept.json --out rev-accepted.docx
+  edit: 2 revision(s) resolved across 1 op(s) -> rev-accepted.docx
+  $ office.exe text rev-accepted.docx
+  /docx/body/p[1]\tThe revenue was up 18% this quarter. (esc)
+  $ office.exe outline rev-accepted.docx --json | jq -c '{insertions:.data.counts.insertions,deletions:.data.counts.deletions,revisions:.data.revisions}'
+  {"insertions":0,"deletions":0,"revisions":[]}
+  $ office.exe validate rev-accepted.docx
+  valid docx
+
+Rejecting everything is the mirror image, and it is the subtler direction:
+the deleted text has to come BACK, which means every w:delText is renamed to
+w:t in place — the run keeps its xml:space and everything else it had.
+
+  $ cat > rev-reject.json <<'SCRIPT'
+  > {"schema":"docx.edit/1","ops":[{"op":"reject_revision","params":{"all":true}}]}
+  > SCRIPT
+  $ office.exe edit rev-base.docx rev-reject.json --out rev-rejected.docx
+  edit: 2 revision(s) resolved across 1 op(s) -> rev-rejected.docx
+  $ office.exe text rev-rejected.docx
+  /docx/body/p[1]\tThe revenue was flat this quarter. (esc)
+  $ office.exe outline rev-rejected.docx --json | jq -c '{insertions:.data.counts.insertions,deletions:.data.counts.deletions,revisions:.data.revisions}'
+  {"insertions":0,"deletions":0,"revisions":[]}
+  $ office.exe raw read rev-rejected.docx /word/document.xml | grep -q 'delText' && echo still deleted || echo no delText left
+  no delText left
+  $ office.exe raw read rev-rejected.docx /word/document.xml | grep -o '<w:t xml:space="preserve">flat</w:t>'
+  <w:t xml:space="preserve">flat</w:t>
+  $ office.exe validate rev-rejected.docx
+  valid docx
+
+Selection is by the stable w:id, by author, by type, or all — never by
+ordinal position. Rejecting revision 1 alone leaves revision 2 pending, so
+the document is still under review and the outline still says so.
+
+  $ cat > rev-one.json <<'SCRIPT'
+  > {"schema":"docx.edit/1","ops":[{"op":"reject_revision","params":{"id":"1"}}]}
+  > SCRIPT
+  $ office.exe edit rev-base.docx rev-one.json --out rev-one.docx --json | jq -c '{success,resolved:.data.revisions_resolved,selector:.data.results[0].selector,matched:.data.results[0].matched,find:.data.results[0].find,locations:[.data.locations[].detail],changed:.data.transaction.preservation.changed}'
+  {"success":true,"resolved":1,"selector":{"id":"1","author":null,"type":null,"all":false},"matched":1,"find":null,"locations":["reject w:del id=\"1\" author=\"Reviewer\""],"changed":["word/document.xml"]}
+  $ office.exe outline rev-one.docx --json | jq -c '[.data.revisions[]|"\(.type)#\(.id)"]'
+  ["ins#2"]
+  $ office.exe text rev-one.docx
+  /docx/body/p[1]\tThe revenue was flatup 18% this quarter. (esc)
+
+A dry run resolves, validates, and publishes nothing, leaving the input
+byte-identical.
+
+  $ cp rev-base.docx rev-before.docx
+  $ office.exe edit rev-base.docx rev-accept.json --out rev-dry.docx --dry-run
+  edit: 2 revision(s) resolved across 1 op(s) -> rev-dry.docx
+  $ test -f rev-dry.docx || echo not published
+  not published
+  $ cmp -s rev-base.docx rev-before.docx && echo input unchanged
+  input unchanged
+
+A selector that matches nothing refuses: a mistyped author must never look
+like a finished review.
+
+  $ cat > rev-miss.json <<'SCRIPT'
+  > {"schema":"docx.edit/1","ops":[{"op":"accept_revision","params":{"author":"Nobody"}}]}
+  > SCRIPT
+  $ office.exe edit rev-base.docx rev-miss.json --out rev-never.docx --json 2>&1 | jq -c '{success,code:.error.code,unmatched:[.error.details.unmatched[].detail]}'
+  {"success":false,"code":"office.edit.unmatched_revision","unmatched":["the selector matched no tracked change"]}
+  $ test -f rev-never.docx || echo not published
+  not published
+
+Property revisions, moves, and every *PrChange are OUT OF SCOPE — and a
+selection that reaches one refuses rather than resolving the rest. Leaving a
+paragraph-mark insertion behind would mean "accept everything" quietly
+returned a document still under review.
+
+  $ cp "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" rev-excluded.docx
+  $ office.exe raw edit rev-excluded.docx /document --path '/w:document/w:body/w:p[1]' --action replace --xml '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:pPr><w:rPr><w:ins w:id="4" w:author="Reviewer"/></w:rPr></w:pPr><w:r><w:t>body</w:t></w:r></w:p>' >/dev/null
+  $ office.exe edit rev-excluded.docx rev-accept.json --out rev-excluded-out.docx --json 2>&1 | jq -c '{success,code:.error.code,unsupported:[.error.details.unsupported[].detail]}'
+  {"success":false,"code":"office.edit.unsupported_revision","unsupported":["w:ins id=\"4\" author=\"Reviewer\": w:ins is a property, move, or structure revision, which this build does not resolve"]}
+  $ test -f rev-excluded-out.docx || echo not published
+  not published
+
+  $ cp "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" rev-move.docx
+  $ office.exe raw edit rev-move.docx /document --path '/w:document/w:body/w:p[1]' --action replace --xml '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:moveFrom w:id="5" w:author="Reviewer"><w:r><w:t>moved</w:t></w:r></w:moveFrom></w:p>' >/dev/null
+  $ office.exe edit rev-move.docx rev-accept.json --out rev-move-out.docx --json 2>&1 | jq -c '{success,code:.error.code,unsupported:[.error.details.unsupported[].detail]}'
+  {"success":false,"code":"office.edit.unsupported_revision","unsupported":["w:moveFrom id=\"5\" author=\"Reviewer\": w:moveFrom is a property, move, or structure revision, which this build does not resolve"]}
+
+One script never mixes the two op families: their byte spans are resolved
+against the same snapshot, and a replacement landing inside a revision the
+same script removes has no defined outcome.
+
+  $ cat > rev-mixed.json <<'SCRIPT'
+  > {"schema":"docx.edit/1","ops":[
+  >  {"op":"replace_text","params":{"find":"a","replace":"b"}},
+  >  {"op":"accept_revision","params":{"all":true}}
+  > ]}
+  > SCRIPT
+  $ office.exe edit rev-base.docx rev-mixed.json --out rev-mixed.docx --json 2>&1 | jq -c '{success,code:.error.code,message:.error.message}'
+  {"success":false,"code":"office.edit.invalid_script","message":"invalid edit script: ops[1] mixes \"accept_revision\" with replace_text; a script resolves revisions or replaces text, never both"}
+
 
 The annotate command mutates the comments of an EXISTING DOCX through a
 strict docx.annotation-batch/1 script folded over the preservation-safe

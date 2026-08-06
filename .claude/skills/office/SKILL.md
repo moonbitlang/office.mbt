@@ -76,7 +76,7 @@ the `moonx bobzhang/office` launcher shown above.
 | Publish deterministic offline HTML | `office preview FILE --output OUT.html [--overwrite] [--json\|--jsonl]` |
 | Create a blank validated file | `office create xlsx OUT.xlsx [--sheet NAME] [--dry-run] [--overwrite] [--json]` or `office create docx OUT.docx [--dry-run] [--overwrite] [--json]` |
 | Merge strict placeholders/row regions | `office template FILE DATA.json --out OUT [--dry-run] [--overwrite] [--allow-missing] [--json\|--jsonl]` |
-| Replace literal text in an existing DOCX | `office edit FILE SCRIPT.json --out OUT.docx [--dry-run] [--overwrite] [--allow-unmatched] [--json\|--jsonl]` |
+| Replace literal text, or accept/reject tracked changes, in an existing DOCX | `office edit FILE SCRIPT.json --out OUT.docx [--dry-run] [--overwrite] [--allow-unmatched] [--json\|--jsonl]` |
 | Add/reply/resolve DOCX comments | `office annotate FILE SCRIPT.json --out OUT.docx [--dry-run] [--overwrite] [--json\|--jsonl]` |
 | Mutate an XLSX transactionally | `office batch BOOK.xlsx SCRIPT.json [--out OUT.xlsx] [--dry-run] [--overwrite] [--json]` |
 | Author a fresh DOCX from ops | `office batch --format docx OUT.docx SCRIPT.json [--dry-run] [--overwrite] [--json]` |
@@ -132,6 +132,17 @@ mutation before reusing them.
   story — refuses with `office.edit.unsupported_context` rather than being
   silently skipped, and an op that finds nothing refuses with
   `office.edit.unmatched_find` unless `--allow-unmatched` is passed.
+- `edit` also RESOLVES tracked changes, through the same `docx.edit/1` script:
+  `accept_revision` and `reject_revision` with `{"id"}`, `{"author"}`,
+  `{"type": "ins"|"del"}`, or `{"all": true}`. Spelled selector fields are
+  conjunctive; `id` is the stable `w:id` handle `outline` reports, and ordinal
+  position is never a selector. Accepting an insertion (or rejecting a
+  deletion) unwraps the element and keeps its runs; rejecting an insertion (or
+  accepting a deletion) removes the element and its content. Property
+  revisions, moves, and every `*PrChange` are out of scope: a selection
+  reaching one refuses with `office.edit.unsupported_revision` rather than
+  resolving the rest. One script is entirely `replace_text` or entirely
+  revision ops — mixing them is rejected.
 - `annotate` is the preservation-safe existing-DOCX mutation surface. It
   consumes `docx.annotation-batch/1` with `comment_add`, `comment_reply`,
   `comment_resolve`, and `comment_unresolve` ops and publishes a separate

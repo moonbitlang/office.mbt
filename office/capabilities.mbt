@@ -1190,7 +1190,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
     },
     {
       name: "edit",
-      summary: "Replace literal text in an existing DOCX through a strict edit script",
+      summary: "Replace literal text or accept/reject tracked changes in an existing DOCX through a strict edit script",
       usage: "office edit FILE SCRIPT.json --out OUT.docx [--dry-run] [--overwrite] [--allow-unmatched] [--json|--jsonl]",
       formats: ["docx"],
       aliases: [],
@@ -1199,7 +1199,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "file", "path", true, "existing .docx package (never modified in place)",
         ),
         capability_field(
-          "script", "docx.edit/1-file", true, "strict replace_text script. `find` is LITERAL text — never a regular expression or wildcard — matched across run boundaries; `replace` may be empty to delete the matched text; `occurrence` omitted replaces every occurrence in document order, `occurrence: N` replaces only the Nth",
+          "script", "docx.edit/1-file", true, "strict replace_text OR accept_revision/reject_revision script; one script never mixes the two families. replace_text: `find` is LITERAL text — never a regular expression or wildcard — matched across run boundaries; `replace` may be empty to delete the matched text; `occurrence` omitted replaces every occurrence in document order, `occurrence: N` replaces only the Nth. accept_revision/reject_revision select tracked changes by `id` (the stable w:id handle), `author`, `type` (ins|del), or `all: true`; spelled selector fields are conjunctive",
         ),
         capability_field(
           "out", "path", true, "destination .docx; created atomically, refused when present unless --overwrite",
@@ -1238,31 +1238,34 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "ops_applied", "number", true, "operations in the script",
         ),
         capability_field(
-          "replacements", "number", true, "text spans rewritten across every operation",
+          "replacements", "number", true, "text spans rewritten across every operation; always 0 for a revision script",
         ),
         capability_field(
-          "results", "array(object)", true, "per op: op, find, replace, occurrence (null when every occurrence is replaced), matched (occurrences seen), replacements (spans rewritten) — all bounded",
+          "revisions_resolved", "number", true, "distinct tracked changes accepted or rejected; always 0 for a replace_text script",
         ),
         capability_field(
-          "unmatched", "array(finding)", true, "operations that found fewer occurrences than they require (bounded); refuses unless --allow-unmatched",
+          "results", "array(object)", true, "per op: op, find, replace, occurrence, selector, matched, replacements, resolved — all bounded, with one fixed key set. A replace_text entry nulls selector and reports matched (occurrences seen) and replacements (spans rewritten); a revision entry nulls find, replace, and occurrence, carries selector {id, author, type, all}, and reports matched (revisions selected) and resolved",
+        ),
+        capability_field(
+          "unmatched", "array(finding)", true, "operations that found fewer occurrences than they require, or revision selectors that matched no tracked change (bounded); refuses unless --allow-unmatched",
         ),
         capability_field(
           "unmatched_total", "number", true, "unmatched operations before bounding",
         ),
         capability_field(
-          "unsupported", "array(finding)", true, "matches the edit cannot rewrite safely — content a byte-span run rewrite cannot own, matches crossing a hyperlink boundary, and matches in footnote, endnote, or comment stories (bounded)",
+          "unsupported", "array(finding)", true, "matches the edit cannot rewrite safely — content a byte-span run rewrite cannot own, matches crossing a hyperlink boundary, and matches in footnote, endnote, or comment stories — and selected tracked changes outside the resolvable set: property revisions (w:rPr/w:ins paragraph marks, w:trPr/w:del rows), moves, every *PrChange, revisions wrapping rows or block content, and revisions in footnote, endnote, or comment stories (bounded)",
         ),
         capability_field(
           "unsupported_total", "number", true, "unsupported matches before bounding",
         ),
         capability_field(
-          "conflicts", "array(finding)", true, "paragraph locations where two operations match overlapping text (bounded)",
+          "conflicts", "array(finding)", true, "paragraph locations where two operations match overlapping text, where accept_revision and reject_revision both select one tracked change, or where a selected revision contains another revision (bounded)",
         ),
         capability_field(
           "conflicts_total", "number", true, "overlapping match sites before bounding",
         ),
         capability_field(
-          "locations", "array(finding)", true, "canonical paragraph location and needle for each rewritten span (bounded)",
+          "locations", "array(finding)", true, "canonical paragraph location and needle for each rewritten span, or the accepted/rejected revision for each resolved tracked change (bounded)",
         ),
         capability_field(
           "locations_truncated", "boolean", true, "whether locations omitted later sites",
@@ -1271,7 +1274,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "stories_scanned", "array(string)", true, "the stories the edit scanned: /body, then /header[K] and /footer[K]",
         ),
         capability_field(
-          "transaction", "object", true, "office.transaction/2 report; preservation is authoritative. Matches are found in the ORIGINAL snapshot — operations never see each other's output — and applied as byte-span run rewrites, so all unrelated OOXML survives; the replacement inherits the formatting of the run the match started in; nothing is published on any refusal, and a zero-replacement run reuses the exact input bytes",
+          "transaction", "object", true, "office.transaction/2 report; preservation is authoritative. Matches and revisions are resolved against the ORIGINAL snapshot — operations never see each other's output — and applied as byte-span edits, so all unrelated OOXML survives; a replacement inherits the formatting of the run the match started in; accepting an insertion or rejecting a deletion unwraps the element and keeps its runs (each w:delText is renamed back to w:t in place), while rejecting an insertion or accepting a deletion removes the element and its content; nothing is published on any refusal, and a zero-change run reuses the exact input bytes",
         ),
       ],
       output_modes: ["human", "json", "jsonl"],

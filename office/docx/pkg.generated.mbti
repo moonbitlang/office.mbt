@@ -28,6 +28,8 @@ pub const MAX_EDIT_REPLACE_UNITS : Int = 65536
 
 pub const MAX_EDIT_SCAN_UNITS : Int = 67108864
 
+pub const MAX_REVISION_SELECTOR_UNITS : Int = 4096
+
 pub const SCHEMA_ANNOTATION_BATCH : String = "docx.annotation-batch/1"
 
 pub const SCHEMA_ANNOTATION_RESULT : String = "office.docx.annotation-batch/1"
@@ -159,8 +161,13 @@ pub(all) struct DocxEditOpResult {
   find : String
   replace : String
   occurrence : Int?
+  selector_id : String?
+  selector_author : String?
+  selector_type : String?
+  selector_all : Bool
   mut matched : Int
   mut replacements : Int
+  mut resolved : Int
 } derive(Eq, @debug.Debug)
 #deprecated
 pub fn DocxEditOpResult::equal(Self, Self) -> Bool
@@ -172,6 +179,7 @@ pub fn DocxEditOpResult::to_repr(Self) -> @debug.Repr
 pub(all) struct DocxEditReport {
   mut ops_applied : Int
   mut replacements : Int
+  mut revisions_resolved : Int
   results : Array[DocxEditOpResult]
   unmatched : Array[DocxTemplateFinding]
   mut unmatched_total : Int

@@ -155,6 +155,7 @@ pub fn DocxAnnotatedResult::header_story_sources(Self) -> Array[DocxStoryPartSou
 pub fn DocxAnnotatedResult::main_story_part(Self) -> String
 pub fn DocxAnnotatedResult::main_story_source(Self) -> DocxStoryPartSource
 pub fn DocxAnnotatedResult::result(Self) -> DocxPackageResult
+pub fn DocxAnnotatedResult::revision_spans(Self) -> Array[RevisionSpan]
 pub fn DocxAnnotatedResult::story_paragraph_span(Self, String, String) -> NodeSpan?
 pub fn DocxAnnotatedResult::story_root_span(Self, String) -> NodeSpan?
 pub fn DocxAnnotatedResult::story_row_span(Self, String, String) -> NodeSpan?
@@ -224,6 +225,30 @@ pub fn RevisionInfo::date(Self) -> String?
 pub fn RevisionInfo::id(Self) -> String?
 pub fn RevisionInfo::kind(Self) -> String
 pub fn RevisionInfo::path(Self) -> String
+
+pub struct RevisionNameEdit {
+  // private fields
+}
+pub fn RevisionNameEdit::end(Self) -> Int
+pub fn RevisionNameEdit::replacement(Self) -> String
+pub fn RevisionNameEdit::start(Self) -> Int
+
+pub struct RevisionSpan {
+  // private fields
+}
+pub fn RevisionSpan::author(Self) -> String?
+pub fn RevisionSpan::byte_end(Self) -> Int
+pub fn RevisionSpan::byte_start(Self) -> Int
+pub fn RevisionSpan::close_tag_start(Self) -> Int?
+pub fn RevisionSpan::container_path(Self) -> String?
+pub fn RevisionSpan::content_start(Self) -> Int?
+pub fn RevisionSpan::date(Self) -> String?
+pub fn RevisionSpan::declares_namespaces(Self) -> Bool
+pub fn RevisionSpan::id(Self) -> String?
+pub fn RevisionSpan::kind(Self) -> String
+pub fn RevisionSpan::name_edits(Self) -> Array[RevisionNameEdit]
+pub fn RevisionSpan::story(Self) -> String
+pub fn RevisionSpan::supported(Self) -> Bool
 
 // Type aliases
 

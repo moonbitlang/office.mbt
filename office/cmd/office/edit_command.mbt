@@ -35,13 +35,43 @@ fn edit_report_json(
   report : @office_docx.DocxEditReport,
   transaction? : Json,
 ) -> Json {
+  let optional_text = (value : String?) => {
+    match value {
+      Some(text) => Json::string(bounded_text(text, 160))
+      None => Json::null()
+    }
+  }
   let results = report.results.map(entry => {
+    // A revision op has no needle and a replace_text op has no selector, so
+    // each entry carries the whole key set with the inapplicable half null.
+    // A fixed shape is what lets an agent read `results[]` without first
+    // branching on `op`.
+    let revision = entry.op != "replace_text"
     let fields : Map[String, Json] = {
       "op": Json::string(entry.op),
-      "find": Json::string(bounded_text(entry.find, 160)),
-      "replace": Json::string(bounded_text(entry.replace, 160)),
+      "find": if revision {
+        Json::null()
+      } else {
+        Json::string(bounded_text(entry.find, 160))
+      },
+      "replace": if revision {
+        Json::null()
+      } else {
+        Json::string(bounded_text(entry.replace, 160))
+      },
+      "selector": if revision {
+        Json::object({
+          "id": optional_text(entry.selector_id),
+          "author": optional_text(entry.selector_author),
+          "type": optional_text(entry.selector_type),
+          "all": Json::boolean(entry.selector_all),
+        })
+      } else {
+        Json::null()
+      },
       "matched": Json::number(entry.matched.to_double()),
       "replacements": Json::number(entry.replacements.to_double()),
+      "resolved": Json::number(entry.resolved.to_double()),
     }
     fields["occurrence"] = match entry.occurrence {
       Some(ordinal) => Json::number(ordinal.to_double())
@@ -57,6 +87,7 @@ fn edit_report_json(
     "output": Json::string(bounded_text(output, 160)),
     "ops_applied": Json::number(report.ops_applied.to_double()),
     "replacements": Json::number(report.replacements.to_double()),
+    "revisions_resolved": Json::number(report.revisions_resolved.to_double()),
     "results": Json::array(results),
     "unmatched": edit_findings_json(report.unmatched),
     "unmatched_total": Json::number(report.unmatched_total.to_double()),
@@ -136,14 +167,36 @@ async fn run_edit(matches : @argparse.Matches) -> Unit {
     allow_unmatched~,
   ) catch {
     @office_docx.DocxEditRefused(report) => {
-      // strict findings: precedence unsupported > conflicts > unmatched
+      // strict findings: precedence unsupported > conflicts > unmatched.
+      // A script is entirely replace_text or entirely revision ops, so the
+      // op family names the failure precisely rather than generically.
+      let revisions = report.results.search_by(entry => {
+          entry.op != "replace_text"
+        })
+        is Some(_)
       let (code, message) = if report.unsupported_total > 0 {
-        (
-          "office.edit.unsupported_context", "a match reaches content the edit cannot rewrite safely",
-        )
+        if revisions {
+          (
+            "office.edit.unsupported_revision", "a selected tracked change is outside the resolvable set",
+          )
+        } else {
+          (
+            "office.edit.unsupported_context", "a match reaches content the edit cannot rewrite safely",
+          )
+        }
       } else if report.conflicts_total > 0 {
+        if revisions {
+          (
+            "office.edit.conflicting_revisions", "two operations disagree about a tracked change, or one revision is nested in another",
+          )
+        } else {
+          (
+            "office.edit.overlapping_matches", "two operations match overlapping text",
+          )
+        }
+      } else if revisions {
         (
-          "office.edit.overlapping_matches", "two operations match overlapping text",
+          "office.edit.unmatched_revision", "a revision selector matched no tracked change",
         )
       } else {
         (
@@ -176,12 +229,25 @@ async fn run_edit(matches : @argparse.Matches) -> Unit {
   match mode {
     JsonDocument => println(@lib.output_success(record).stringify(indent=2))
     JsonLines => println(@lib.output_success(record).stringify())
-    Human =>
+    Human => {
+      // A script is entirely one op family, so the line reports the unit that
+      // family actually produces rather than always printing both.
+      let revisions = result.report.results.search_by(entry => {
+          entry.op != "replace_text"
+        })
+        is Some(_)
+      let done = if revisions {
+        "\{result.report.revisions_resolved} revision(s) resolved"
+      } else {
+        "\{result.report.replacements} replacement(s)"
+      }
       println(
-        "edit: \{result.report.replacements} replacement(s) across " +
-        "\{result.report.ops_applied} op(s) -> " +
+        "edit: " +
+        done +
+        " across \{result.report.ops_applied} op(s) -> " +
         human_text(output, 160),
       )
+    }
   }
 }
 
