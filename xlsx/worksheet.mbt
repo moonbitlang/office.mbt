@@ -1541,6 +1541,23 @@ pub fn Worksheet::add_pivot_table_xml(
 }
 
 ///|
+/// Adds a pivot table whose XML this package generated, stamping it with the
+/// cache id that `table_xml` already declares as `cacheId` so the writer keeps
+/// the two in sync instead of allocating a fresh one.
+fn Worksheet::add_generated_pivot_table(
+  self : Worksheet,
+  table_xml : String,
+  cache_definition_xml : String,
+  name : String,
+  cache_id : Int,
+) -> PivotTable raise XlsxError {
+  self.ensure_stream_idle()
+  let pivot = PivotTable::new(table_xml, cache_definition_xml, name~, cache_id~)
+  self.pivot_tables.push(pivot)
+  pivot
+}
+
+///|
 pub fn Worksheet::delete_pivot_table(
   self : Worksheet,
   name : StringView,

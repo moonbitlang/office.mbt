@@ -1209,13 +1209,27 @@ fn clone_sparkline_groups(
 }
 
 ///|
-fn clone_pivot_tables(values : ArrayView[PivotTable]) -> Array[PivotTable] {
+/// Copies pivot tables. `preserve_ids` keeps the part/cache numbering, which is
+/// what a read-only accessor wants; sheet copies leave it off so the writer
+/// allocates fresh part numbers for the duplicated pivots.
+fn clone_pivot_tables(
+  values : ArrayView[PivotTable],
+  preserve_ids? : Bool = false,
+) -> Array[PivotTable] {
   let out : Array[PivotTable] = []
   for value in values {
     out.push({
       name: value.name,
-      table_id: 0,
-      cache_id: 0,
+      table_id: if preserve_ids {
+        value.table_id
+      } else {
+        0
+      },
+      cache_id: if preserve_ids {
+        value.cache_id
+      } else {
+        0
+      },
       table_xml: value.table_xml,
       cache_definition_xml: value.cache_definition_xml,
       cache_records_xml: value.cache_records_xml,
@@ -3518,21 +3532,44 @@ fn Workbook::add_pivot_table_with_options(
   if pivot_name.length() > 255 {
     raise InvalidPivotTable(msg="pivot table name too long")
   }
-  let cache_id_guess = 1
+  let cache_id = self.next_pivot_cache_id()
   let cache_xml = write_pivot_cache_definition_xml(
     data_sheet, data_ref, field_names,
   )
   let table_xml = write_pivot_table_definition_xml(
-    pivot_name, cache_id_guess, pivot_ref, field_names, row_fields, col_fields, page_fields,
+    pivot_name, cache_id, pivot_ref, field_names, row_fields, col_fields, page_fields,
     data_fields, opts,
   )
-  self.add_pivot_table_xml(
-    pivot_sheet,
-    table_xml,
-    cache_xml,
-    cache_records_xml="",
-    name=pivot_name,
-  )
+  let sheet = self.require_sheet(pivot_sheet)
+  sheet.add_generated_pivot_table(table_xml, cache_xml, pivot_name, cache_id)
+}
+
+///|
+/// Allocates the cache id for the next generated pivot cache.
+///
+/// Excel resolves a pivot's cache by matching the `cacheId` in the pivot table
+/// part against the `<pivotCache cacheId="..." r:id="..."/>` entries in
+/// `xl/workbook.xml`, so that id has to be decided before the table XML is
+/// written rather than left at a fixed 1 for every pivot.
+///
+/// This mirrors the writer's own allocator: `write` seeds its `next_cache_id`
+/// with `max(cache_id over every pivot) + 1` and hands ids out from there to
+/// pivots that still carry 0 (those added from caller-supplied XML). Returning
+/// the same value keeps the generated `cacheId`, the
+/// `xl/pivotCache/pivotCacheDefinition<id>.xml` part name, the pivot table's
+/// relationship and the workbook `<pivotCaches>` entry consistent, and can
+/// never collide with an id the writer allocates later because the writer
+/// always starts above the maximum id already assigned.
+fn Workbook::next_pivot_cache_id(self : Workbook) -> Int {
+  let mut max_id = 0
+  for sheet in self.sheets {
+    for pivot in sheet.pivot_tables {
+      if pivot.cache_id > max_id {
+        max_id = pivot.cache_id
+      }
+    }
+  }
+  max_id + 1
 }
 
 ///|
@@ -3541,7 +3578,7 @@ pub fn Workbook::get_pivot_tables(
   sheet_name : StringView,
 ) -> Array[PivotTable] raise XlsxError {
   let sheet = self.require_sheet(sheet_name)
-  clone_pivot_tables(sheet.pivot_tables())
+  clone_pivot_tables(sheet.pivot_tables(), preserve_ids=true)
 }
 
 ///|
