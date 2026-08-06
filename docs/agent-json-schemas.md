@@ -538,6 +538,7 @@ to 8 MiB each and 32 MiB in aggregate.
 | `counts` | object | body/header/footer story counts plus note, comment, paragraph, run, table, row, cell, hyperlink, and image counts, plus `insertions` and `deletions` (tracked changes, counted apart because they distort the accepted view in opposite directions) |
 | `stories` | array | `{path, kind, children, stability, source}` roots in deterministic story order |
 | `headings` | array | `{path, level, text, text_truncated}` bounded previews |
+| `comments` | array | comment threads in document order: `{path, id?, author?, done?, parent_id?, anchor?}` where `anchor` is the first anchor's start paragraph and `parent_id` marks a reply. `done` and `parent_id` are present only when the document records them, so treat a missing `done` as unresolved and a missing `parent_id` as top-level. Comment *text* is not here — read it with `text --under '/docx/comments'` |
 | `revisions` | array | unaccepted tracked changes in document order: `{type, path?, id?, author?, date?}` where `type` is `ins` or `del` and `path` is the containing paragraph. `id`, `author`, and `date` are copied only when the document records them. Read-only: `text` still returns the accepted view |
 | `styles_in_use` | array | first-use-deduplicated `{kind, id?, name?}` |
 | `images` | array | `{path, content_type, bytes, alt_text?}`; never image data |
