@@ -149,3 +149,53 @@ test "shape new happy path with options" {
   inspect(shape.locked, content="false")
   debug_inspect(shape.positioning, content="TwoCell")
 }
+
+///|
+/// DrawingML's `ST_ShapeType` (ECMA-376 Part 1, 20.1.10.56) is an enumeration
+/// of case-SENSITIVE tokens, and most of them carry a capital. Writing
+/// `roundRect` as `roundrect` puts a value outside the enumeration into
+/// `<a:prstGeom prst="...">`, which Excel does not recognise.
+///
+/// Every pre-existing shape test used `rect`, which is unaffected by
+/// case-folding — which is exactly why this went unnoticed.
+test "preset shape tokens keep their case through write and read" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  // One token per spelling hazard in ST_ShapeType: interior capital,
+  // leading-abbreviation capital, a multi-hump token, and an all-lowercase
+  // control that case-folding could never have broken.
+  let tokens = ["roundRect", "rtTriangle", "lightningBolt", "rect"]
+  for index, token in tokens {
+    workbook.add_shape("Sheet1", @xlsx.Shape::new("A\{index + 1}", token))
+  }
+  let written = @xlsx.write(workbook)
+  let archive = @zip.read(written) catch {
+    err => fail("zip read failed: \{repr(err)}")
+  }
+  let drawing = match archive.get("xl/drawings/drawing1.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("drawing decode failed")
+      }
+    None => fail("drawing part missing")
+  }
+  // The serialized attribute must carry the exact token, never a folded one.
+  for token in tokens {
+    assert_true(drawing.contains("prst=\"\{token}\""))
+  }
+  for folded in ["roundrect", "rttriangle", "lightningbolt"] {
+    assert_false(drawing.contains("prst=\"\{folded}\""))
+  }
+  // The reader already preserves the token verbatim, so a correct writer
+  // makes the pair round-trip.
+  let parsed = @xlsx.read(written)
+  inspect(
+    parsed
+    .sheet("Sheet1")
+    .unwrap()
+    .shapes()
+    .map(shape => shape.shape_type)
+    .join(","),
+    content="roundRect,rtTriangle,lightningBolt,rect",
+  )
+}

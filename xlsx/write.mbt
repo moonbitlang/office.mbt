@@ -1286,7 +1286,13 @@ fn write_drawing_xml(
     sb.write_view("          <a:ext cx=\"\{cx}\" cy=\"\{cy}\"/>\n")
     sb.write_view("        </a:xfrm>\n")
     sb.write_view("        <a:prstGeom prst=\"")
-    sb.write_xml_attr(shape.shape_type.to_lower())
+    // DrawingML's ST_ShapeType (ECMA-376 Part 1, 20.1.10.56) is an enumeration
+    // of case-SENSITIVE tokens, and most of them carry a capital:
+    // `roundRect`, `rtTriangle`, `halfFrame`, `noSmoking`, `lightningBolt`.
+    // Case-folding here emitted a value outside the enumeration, which Excel
+    // does not recognise. The reader already preserves the token verbatim, so
+    // folding on write also broke round-tripping.
+    sb.write_xml_attr(shape.shape_type)
     sb.write_view("\"><a:avLst/></a:prstGeom>\n")
     if shape.fill_color != "" {
       let fill = shape.fill_color.replace_all(old="#", new="").to_upper()

@@ -177,10 +177,12 @@ test "shapes survive read and rewrite" {
   let drawing_xml = @encoding/utf8.decode(
     second.get("xl/drawings/drawing1.xml").unwrap(),
   )
-  // The writer lowercases the preset name, so camelCase presets like
-  // roundRect are emitted as prst="roundrect" — not a valid ST_ShapeType
-  // value; documented here as current behavior (potential parity fix).
-  inspect(drawing_xml.contains("prst=\"roundrect\""), content="true")
+  // The preset name survives read + rewrite exactly. ST_ShapeType is a
+  // case-sensitive enumeration, so the camelCase token must reach the file
+  // intact — the writer used to case-fold it to prst="roundrect", which is
+  // not a member of the enumeration.
+  inspect(drawing_xml.contains("prst=\"roundRect\""), content="true")
+  inspect(drawing_xml.contains("prst=\"roundrect\""), content="false")
   inspect(drawing_xml.contains("prst=\"ellipse\""), content="true")
   inspect(drawing_xml.contains("hello shape"), content="true")
   inspect(drawing_xml.contains("macro=\"Shape2_Click\""), content="true")
