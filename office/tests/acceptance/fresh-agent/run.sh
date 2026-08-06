@@ -2098,10 +2098,11 @@ extract_isolated_contracts() {
     (.data | keys) == ["contracts", "fingerprint", "schema"] and
     .data.schema == "office.input-contracts/1" and
     (.data.fingerprint | test("^sha256:[0-9a-f]{64}$")) and
-    (.data.contracts | type) == "array" and (.data.contracts | length) == 4 and
+    (.data.contracts | type) == "array" and (.data.contracts | length) == 5 and
     ([.data.contracts[].id] | sort) == [
       "docx.annotation-batch/1",
       "docx.batch/2",
+      "docx.edit/1",
       "office.template.data/1",
       "xlsx.batch/2"
     ] and

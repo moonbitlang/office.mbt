@@ -435,6 +435,117 @@ fn template_input_contract() -> InputContractCore {
 }
 
 ///|
+fn edit_operation(name : String) -> Json {
+  let (entries, required, constraints) = match name {
+    "replace_text" =>
+      (
+        [
+          ("find", "literal_text"),
+          ("replace", "literal_text_or_empty"),
+          ("occurrence", "plain-integer(1..max_occurrence)"),
+        ],
+        ["find", "replace"],
+        [
+          "find is LITERAL: no regular expressions, no wildcards, no escaping", "occurrence omitted replaces EVERY occurrence in document order",
+          "occurrence N replaces only the Nth occurrence and leaves the rest untouched",
+          "an empty replace deletes the matched text",
+        ],
+      )
+    _ => ([], [], ["unknown parser operation"])
+  }
+  Json::object({
+    "op": Json::string(name),
+    "params": contract_object(
+      name + "_params",
+      entries,
+      required~,
+      constraints~,
+    ),
+  })
+}
+
+///|
+fn edit_input_contract() -> InputContractCore {
+  let operations : Array[Json] = []
+  for name in @office_docx.docx_edit_operation_names_list() {
+    operations.push(edit_operation(name))
+  }
+  {
+    id: @office_docx.SCHEMA_DOCX_EDIT,
+    summary: "Strict preservation-safe literal find & replace script for an existing DOCX",
+    consumed_by: ["office edit INPUT.docx SCRIPT.json --out OUTPUT.docx"],
+    envelope: contract_envelope(
+      [
+        ("schema", "literal(docx.edit/1)"),
+        ("ops", "nonempty-array(edit_operation)"),
+      ],
+      ["schema", "ops"],
+    ),
+    definitions: [
+      contract_object(
+        "edit_operation",
+        [("op", "enum(operations[].op)"), ("params", "operation.params")],
+        required=["op", "params"],
+      ),
+      contract_type("literal_text", "nonempty-string", constraints=[
+        "matched verbatim, across run boundaries; never interpreted as a pattern",
+        "all C0 controls (tab included), DEL, CR, and LF are forbidden", "unpaired surrogates and U+FFFE/U+FFFF are forbidden",
+      ]),
+      contract_type("literal_text_or_empty", "string", constraints=[
+        "the empty string deletes the matched text", "same character restrictions as literal_text",
+      ]),
+    ],
+    operations,
+    constraints: [
+      "unknown envelope members, operations, and params are rejected", "every operation matches the ORIGINAL document snapshot; operations never see each other's output",
+      "two operations whose matches overlap refuse; matches that merely touch both apply",
+      "the body, header, and footer stories are edited; a needle found in a footnote, endnote, or comment story refuses",
+      "a match reaching content a byte-span run rewrite cannot own, or crossing a hyperlink boundary, refuses",
+      "an operation that finds fewer occurrences than it requires refuses unless --allow-unmatched",
+      "the replacement inherits the formatting of the run the match started in",
+    ],
+    limits: Json::object({
+      "max_script_bytes": Json::number(office_edit_max_script_bytes.to_double()),
+      "max_ops": Json::number(@office_docx.MAX_EDIT_OPS.to_double()),
+      "max_find_utf16_units": Json::number(
+        @office_docx.MAX_EDIT_FIND_UNITS.to_double(),
+      ),
+      "max_replace_utf16_units": Json::number(
+        @office_docx.MAX_EDIT_REPLACE_UNITS.to_double(),
+      ),
+      "max_occurrence": Json::number(
+        @office_docx.MAX_EDIT_OCCURRENCE.to_double(),
+      ),
+      "max_scan_units": Json::number(
+        @office_docx.MAX_EDIT_SCAN_UNITS.to_double(),
+      ),
+    }),
+    examples: [
+      Json::object({
+        "schema": Json::string(@office_docx.SCHEMA_DOCX_EDIT),
+        "ops": Json::array([
+          Json::object({
+            "op": Json::string("replace_text"),
+            "params": Json::object({
+              "find": Json::string("draft"),
+              "replace": Json::string("final"),
+            }),
+          }),
+          Json::object({
+            "op": Json::string("replace_text"),
+            "params": Json::object({
+              "find": Json::string("Q3"),
+              "replace": Json::string("Q4"),
+              "occurrence": Json::number(1.0),
+            }),
+          }),
+        ]),
+      }),
+    ],
+  }
+}
+
+///|
 fn annotation_operation(name : String) -> Json {
   let (entries, required, constraints) = match name {
     "comment_add" =>
@@ -581,6 +692,7 @@ fn input_contract_cores() -> Array[InputContractCore] {
     xlsx_input_contract(),
     docx_input_contract(),
     template_input_contract(),
+    edit_input_contract(),
     annotation_input_contract(),
   ]
 }
