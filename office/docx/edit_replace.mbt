@@ -48,8 +48,16 @@ pub const MAX_EDIT_SCAN_UNITS : Int = 64 * 1024 * 1024
 let docx_edit_finding_limit : Int = 64
 
 ///|
+/// Largest `id` or `author` a revision selector may carry, in UTF-16 code
+/// units. Both are matched against attributes the source spelled, so a
+/// selector longer than any legal attribute can only ever match nothing.
+pub const MAX_REVISION_SELECTOR_UNITS : Int = 4096
+
+///|
 /// The parser-owned operation vocabulary, in stable order.
-let docx_edit_operation_names : Array[String] = ["replace_text"]
+let docx_edit_operation_names : Array[String] = [
+  "replace_text", "accept_revision", "reject_revision",
+]
 
 ///|
 /// Returns the edit operation vocabulary accepted by this build.
@@ -74,29 +82,72 @@ priv struct DocxReplaceOp {
 }
 
 ///|
+/// One parsed revision-resolution operation. The selector fields are
+/// CONJUNCTIVE: every field the script spells must match, so `{"author":
+/// "Reviewer", "type": "del"}` selects Reviewer's deletions and nothing else.
+/// `all` is the explicit "no filter" form and may not be combined.
+priv struct DocxRevisionOp {
+  // true accepts the selected revisions, false rejects them
+  accept : Bool
+  id : String?
+  author : String?
+  kind : String?
+  all : Bool
+}
+
+///|
+/// A script resolves revisions or replaces text, never both.
+///
+/// The two op families resolve their byte spans against the SAME immutable
+/// source snapshot, so a replacement landing inside a revision that the same
+/// script removes has no defined outcome. Refusing the combination at parse
+/// time makes the intent explicit — the caller runs two transactions and sees
+/// each result — and mirrors the session's existing rule that semantic and
+/// generic plans may not be composed.
+priv enum DocxEditProgram {
+  ReplaceProgram(Array[DocxReplaceOp])
+  RevisionProgram(Array[DocxRevisionOp])
+}
+
+///|
 /// A parsed, validated `docx.edit/1` script.
 pub struct DocxEditScript {
-  priv ops : Array[DocxReplaceOp]
+  priv program : DocxEditProgram
 }
 
 ///|
 /// Number of operations in the script.
 pub fn DocxEditScript::length(self : DocxEditScript) -> Int {
-  self.ops.length()
+  match self.program {
+    ReplaceProgram(ops) => ops.length()
+    RevisionProgram(ops) => ops.length()
+  }
 }
 
 ///|
-/// One operation's outcome.
+/// One operation's outcome. `find`/`replace`/`occurrence` describe a
+/// `replace_text` op; `selector_*` describe a revision op. Exactly one family
+/// is meaningful per entry, and the serializer nulls out the other.
 pub(all) struct DocxEditOpResult {
   op : String
   find : String
   replace : String
   occurrence : Int?
-  // occurrences seen in editable stories, whether or not they were
-  // selected by `occurrence`
+  // revision selector, as spelled; `selector_all` is the explicit no-filter
+  // form. All absent/false for replace_text.
+  selector_id : String?
+  selector_author : String?
+  selector_type : String?
+  selector_all : Bool
+  // replace_text: occurrences seen in editable stories, whether or not they
+  // were selected by `occurrence`. Revision ops: revisions this selector
+  // matched, whether or not they could be resolved.
   mut matched : Int
   // spans actually rewritten
   mut replacements : Int
+  // revisions this op resolved. Two ops selecting the SAME revision with the
+  // same action each count it, while the report total counts it once.
+  mut resolved : Int
 } derive(Eq, @debug.Debug)
 
 ///|
@@ -104,6 +155,8 @@ pub(all) struct DocxEditOpResult {
 pub(all) struct DocxEditReport {
   mut ops_applied : Int
   mut replacements : Int
+  // distinct tracked-change elements resolved across every operation
+  mut revisions_resolved : Int
   results : Array[DocxEditOpResult]
   unmatched : Array[DocxTemplateFinding]
   mut unmatched_total : Int
@@ -236,7 +289,8 @@ pub fn parse_docx_edit_script(
       "ops carries \{items.length()} entries; the limit is \{MAX_EDIT_OPS}",
     )
   }
-  let ops : Array[DocxReplaceOp] = []
+  let replacements : Array[DocxReplaceOp] = []
+  let revisions : Array[DocxRevisionOp] = []
   for index, item in items {
     guard item is Object(entry) else {
       raise docx_edit_parse_error("ops[\{index}] must be an object")
@@ -252,6 +306,24 @@ pub fn parse_docx_edit_script(
     }
     guard entry.get("params") is Some(Object(params)) else {
       raise docx_edit_parse_error("ops[\{index}] needs a \"params\" object")
+    }
+    if kind is ("accept_revision" | "reject_revision") {
+      guard replacements.is_empty() else {
+        raise docx_edit_parse_error(
+          "ops[\{index}] mixes \"" +
+          kind +
+          "\" with replace_text; a script resolves revisions or replaces text, never both",
+        )
+      }
+      revisions.push(
+        parse_docx_revision_op(params, kind == "accept_revision", index),
+      )
+      continue
+    }
+    guard revisions.is_empty() else {
+      raise docx_edit_parse_error(
+        "ops[\{index}] mixes replace_text with a revision op; a script resolves revisions or replaces text, never both",
+      )
     }
     docx_edit_reject_unknown(
       params,
@@ -291,9 +363,89 @@ pub fn parse_docx_edit_script(
           "ops[\{index}].params.occurrence must be a number when present",
         )
     }
-    ops.push({ find, replace, occurrence })
+    replacements.push({ find, replace, occurrence })
   }
-  { ops, }
+  if revisions.is_empty() {
+    { program: ReplaceProgram(replacements) }
+  } else {
+    { program: RevisionProgram(revisions) }
+  }
+}
+
+///|
+/// Parses one `accept_revision`/`reject_revision` params object.
+fn parse_docx_revision_op(
+  params : Map[String, Json],
+  accept : Bool,
+  index : Int,
+) -> DocxRevisionOp raise DocxEditParseError {
+  docx_edit_reject_unknown(
+    params,
+    ["id", "author", "type", "all"],
+    "ops[\{index}].params",
+  )
+  fn selector_text(key : String) -> String? raise DocxEditParseError {
+    match params.get(key) {
+      None => None
+      Some(String(value)) => {
+        if value.length() == 0 {
+          raise docx_edit_parse_error(
+            "ops[\{index}].params.\{key} must not be empty",
+          )
+        }
+        if value.length() > MAX_REVISION_SELECTOR_UNITS {
+          raise docx_edit_parse_error(
+            "ops[\{index}].params.\{key} is \{value.length()} units; the limit is \{MAX_REVISION_SELECTOR_UNITS}",
+          )
+        }
+        if !docx_edit_text_ok(value) {
+          raise docx_edit_parse_error(
+            "ops[\{index}].params.\{key} carries characters no XML attribute can spell",
+          )
+        }
+        Some(value)
+      }
+      _ =>
+        raise docx_edit_parse_error(
+          "ops[\{index}].params.\{key} must be a string when present",
+        )
+    }
+  }
+
+  let id = selector_text("id")
+  let author = selector_text("author")
+  let kind = match selector_text("type") {
+    None => None
+    Some(value) => {
+      guard value is ("ins" | "del") else {
+        raise docx_edit_parse_error(
+          "ops[\{index}].params.type must be \"ins\" or \"del\"",
+        )
+      }
+      Some(value)
+    }
+  }
+  let all = match params.get("all") {
+    None => false
+    // `all: false` is never written on purpose: it reads like a selector but
+    // constrains nothing, so it is rejected rather than silently ignored.
+    Some(True) => true
+    _ =>
+      raise docx_edit_parse_error(
+        "ops[\{index}].params.all must be true when present; omit it to select by id, author, or type",
+      )
+  }
+  if all && (id is Some(_) || author is Some(_) || kind is Some(_)) {
+    raise docx_edit_parse_error(
+      "ops[\{index}].params.all cannot be combined with id, author, or type",
+    )
+  }
+  if !all && id is None && author is None && kind is None {
+    raise docx_edit_parse_error(
+      "ops[\{index}].params needs at least one of id, author, type, or all",
+    )
+  }
+  { accept, id, author, kind, all }
 }
 
 ///|
@@ -480,23 +632,43 @@ pub async fn transact_docx_edit(
   script : DocxEditScript,
   allow_unmatched~ : Bool,
 ) -> DocxEditResult {
+  match script.program {
+    ReplaceProgram(ops) => transact_docx_replace(options, ops, allow_unmatched~)
+    RevisionProgram(ops) =>
+      transact_docx_revisions(options, ops, allow_unmatched~)
+  }
+}
+
+///|
+/// The literal find & replace half of `transact_docx_edit`.
+async fn transact_docx_replace(
+  options : @transaction.TransactionOptions,
+  ops : Array[DocxReplaceOp],
+  allow_unmatched~ : Bool,
+) -> DocxEditResult {
   let collected : Ref[DocxEditReport?] = Ref(None)
   let report = transact_docx(options, session => {
-    let results = script.ops.map(op => {
+    let results = ops.map(op => {
       (
         {
           op: "replace_text",
           find: op.find,
           replace: op.replace,
           occurrence: op.occurrence,
+          selector_id: None,
+          selector_author: None,
+          selector_type: None,
+          selector_all: false,
           matched: 0,
           replacements: 0,
+          resolved: 0,
         } : DocxEditOpResult)
     })
     let state : DocxEditState = {
       report: {
-        ops_applied: script.ops.length(),
+        ops_applied: ops.length(),
         replacements: 0,
+        revisions_resolved: 0,
         results,
         unmatched: [],
         unmatched_total: 0,
@@ -509,7 +681,7 @@ pub async fn transact_docx_edit(
         stories_scanned: [],
         changed: false,
       },
-      ops: script.ops,
+      ops,
       budget: Ref(MAX_EDIT_SCAN_UNITS),
       edits: [],
       checks: [],

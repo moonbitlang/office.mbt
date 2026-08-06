@@ -23,7 +23,7 @@ test "input contract inventory is stable, ordered, and versioned" {
     fields.get("fingerprint"),
     Some(
       Json::string(
-        "sha256:71968a52940499741d54b956b9d35dd07de7041e3680737f06b80a44bfd72b51",
+        "sha256:f03ad6d9494397b24fcea92ef00ab0354a82f5aef941f575318b843bda64e6e1",
       ),
     ),
   )

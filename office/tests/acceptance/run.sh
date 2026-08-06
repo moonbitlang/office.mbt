@@ -216,6 +216,45 @@ expect_failure "$work/docx-edit-link-result.json" edit "$work/docx-filled.docx" 
 jq -e '.error.code == "office.edit.unsupported_context" and (.error.details.unsupported[0].detail | test("hyperlink"))' "$work/docx-edit-link-result.json" >/dev/null || fail "docx edit hyperlink refusal"
 [ ! -e "$work/docx-edit-link.docx" ] || fail "docx edit hyperlink refusal wrote output"
 
+# Tracked-change resolution on the same command: accepting everything keeps the
+# insertion and drops the deletion, rejecting everything does the reverse (which
+# means restoring w:delText as w:t), and outline reports nothing pending after
+# either. A selection reaching an out-of-scope construct refuses.
+json office.raw.result/1 raw edit "$work/docx-filled.docx" /document \
+  --path '/w:document/w:body/w:p[1]' --action replace \
+  --xml '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:r><w:t xml:space="preserve">The revenue was </w:t></w:r><w:del w:id="1" w:author="Reviewer" w:date="2026-01-01T00:00:00Z"><w:r><w:delText xml:space="preserve">flat</w:delText></w:r></w:del><w:ins w:id="2" w:author="Reviewer" w:date="2026-01-01T00:00:00Z"><w:r><w:t xml:space="preserve">up 18%</w:t></w:r></w:ins><w:r><w:t xml:space="preserve"> this quarter.</w:t></w:r></w:p>' \
+  --out "$work/docx-tracked.docx" --json >/dev/null
+jq -e '.data.counts.insertions == 1 and .data.counts.deletions == 1 and ([.data.revisions[].id] == ["1","2"])' >/dev/null <<<"$(json office.docx.outline/1 outline "$work/docx-tracked.docx" --json)" || fail "docx tracked outline"
+
+printf '%s\n' '{"schema":"docx.edit/1","ops":[{"op":"accept_revision","params":{"all":true}}]}' >"$work/docx-accept.json"
+docx_accept="$(json office.docx.edit/1 edit "$work/docx-tracked.docx" "$work/docx-accept.json" --out "$work/docx-accepted.docx" --json)"
+jq -e '.success == true and .data.revisions_resolved == 2 and .data.transaction.preservation.changed == ["word/document.xml"]' >/dev/null <<<"$docx_accept" || fail "docx accept_revision"
+jq -e '.data.text == "The revenue was up 18% this quarter."' >/dev/null <<<"$(json office.docx.element/1 get "$work/docx-accepted.docx" '/docx/body/p[1]' --json)" || fail "docx accept readback"
+jq -e '.data.counts.insertions == 0 and .data.counts.deletions == 0 and (.data.revisions | length) == 0' >/dev/null <<<"$(json office.docx.outline/1 outline "$work/docx-accepted.docx" --json)" || fail "docx accept outline"
+jq -e '.data.valid == true and .data.error_count == 0' >/dev/null <<<"$(json office.validate/1 validate "$work/docx-accepted.docx" --json)" || fail "docx accept validate"
+
+printf '%s\n' '{"schema":"docx.edit/1","ops":[{"op":"reject_revision","params":{"author":"Reviewer"}}]}' >"$work/docx-reject.json"
+docx_reject="$(json office.docx.edit/1 edit "$work/docx-tracked.docx" "$work/docx-reject.json" --out "$work/docx-rejected.docx" --json)"
+jq -e '.success == true and .data.revisions_resolved == 2' >/dev/null <<<"$docx_reject" || fail "docx reject_revision"
+jq -e '.data.text == "The revenue was flat this quarter."' >/dev/null <<<"$(json office.docx.element/1 get "$work/docx-rejected.docx" '/docx/body/p[1]' --json)" || fail "docx reject readback"
+jq -e '.data.counts.insertions == 0 and .data.counts.deletions == 0' >/dev/null <<<"$(json office.docx.outline/1 outline "$work/docx-rejected.docx" --json)" || fail "docx reject outline"
+jq -e '.data.valid == true and .data.error_count == 0' >/dev/null <<<"$(json office.validate/1 validate "$work/docx-rejected.docx" --json)" || fail "docx reject validate"
+
+printf '%s\n' '{"schema":"docx.edit/1","ops":[{"op":"accept_revision","params":{"id":"404"}}]}' >"$work/docx-revision-miss.json"
+expect_failure "$work/docx-revision-miss-result.json" edit "$work/docx-tracked.docx" \
+  "$work/docx-revision-miss.json" --out "$work/docx-revision-never.docx" --json
+jq -e '.error.code == "office.edit.unmatched_revision"' "$work/docx-revision-miss-result.json" >/dev/null || fail "docx revision unmatched code"
+[ ! -e "$work/docx-revision-never.docx" ] || fail "docx revision refusal wrote output"
+
+json office.raw.result/1 raw edit "$work/docx-filled.docx" /document \
+  --path '/w:document/w:body/w:p[1]' --action replace \
+  --xml '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:pPr><w:rPr><w:ins w:id="4" w:author="Reviewer"/></w:rPr></w:pPr><w:r><w:t>body</w:t></w:r></w:p>' \
+  --out "$work/docx-paramark.docx" --json >/dev/null
+expect_failure "$work/docx-paramark-result.json" edit "$work/docx-paramark.docx" \
+  "$work/docx-accept.json" --out "$work/docx-paramark-out.docx" --json
+jq -e '.error.code == "office.edit.unsupported_revision" and (.error.details.unsupported[0].detail | test("property"))' "$work/docx-paramark-result.json" >/dev/null || fail "docx property revision refusal"
+[ ! -e "$work/docx-paramark-out.docx" ] || fail "docx property revision refusal wrote output"
+
 docx_annotate="$(json office.docx.annotation-batch/1 annotate "$work/docx-filled.docx" "$work/annotation.json" --out "$work/docx-reviewed.docx" --json)"
 jq -e '.success == true and .data.ops_applied == 3 and (.data.labels | length) == 2 and (.data.changed_parts | index("word/document.xml")) != null' >/dev/null <<<"$docx_annotate" || fail "docx annotate"
 jq -e '.data.metadata.done == true and .data.metadata.author == "Reviewer"' >/dev/null <<<"$(json office.docx.element/1 get "$work/docx-reviewed.docx" '/docx/comments/comment[id="0"]' --json)" || fail "docx annotation readback"

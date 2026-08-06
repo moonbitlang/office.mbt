@@ -61,6 +61,205 @@ pub fn NodeSpan::self_closing(self : NodeSpan) -> Bool {
 }
 
 ///|
+/// One element-name rewrite: the byte range of an element's LOCAL NAME in
+/// the original part, and the name it becomes. Rejecting a deletion turns
+/// every `w:delText` back into `w:t` through these ranges, which leaves the
+/// namespace prefix, `xml:space`, and every other byte of the tag untouched.
+pub struct RevisionNameEdit {
+  priv start : Int
+  priv end : Int
+  priv replacement : String
+}
+
+///|
+/// Offset of the first byte of the local name.
+pub fn RevisionNameEdit::start(self : RevisionNameEdit) -> Int {
+  self.start
+}
+
+///|
+/// Offset just past the last byte of the local name (exclusive).
+pub fn RevisionNameEdit::end(self : RevisionNameEdit) -> Int {
+  self.end
+}
+
+///|
+/// The local name that replaces the range ("t" or "instrText").
+pub fn RevisionNameEdit::replacement(self : RevisionNameEdit) -> String {
+  self.replacement
+}
+
+///|
+/// One tracked-change ELEMENT in the original bytes: what it is, who
+/// recorded it, and the byte extent a resolver needs to unwrap or remove it.
+///
+/// This is the MUTATION view of a revision and is deliberately wider than
+/// `AnnotationIndex::revisions`, which is the READING view. Reading reports
+/// the content insertions and deletions the reader's projection retains;
+/// resolving must additionally see every construct it cannot act on, because
+/// a construct it cannot see is a construct it would silently leave behind.
+/// `supported` separates the two: it is true only for content `w:ins` and
+/// `w:del`, false for property revisions, moves, and every `*PrChange`.
+pub struct RevisionSpan {
+  priv story : String
+  priv kind : String
+  priv supported : Bool
+  priv id : String?
+  priv author : String?
+  priv date : String?
+  priv container_path : String?
+  priv byte_start : Int
+  priv byte_end : Int
+  priv content_start : Int
+  priv close_tag_start : Int
+  priv declares_namespaces : Bool
+  priv name_edits : Array[RevisionNameEdit]
+}
+
+///|
+/// The story key the span's offsets index into ("/body", "/header[1]").
+pub fn RevisionSpan::story(self : RevisionSpan) -> String {
+  self.story
+}
+
+///|
+/// The WML local name of the element ("ins", "del", "moveFrom", "rPrChange").
+pub fn RevisionSpan::kind(self : RevisionSpan) -> String {
+  self.kind
+}
+
+///|
+/// True only for a content `w:ins`/`w:del` a resolver can accept or reject.
+pub fn RevisionSpan::supported(self : RevisionSpan) -> Bool {
+  self.supported
+}
+
+///|
+/// The w:id attribute, as spelled, when present.
+pub fn RevisionSpan::id(self : RevisionSpan) -> String? {
+  self.id
+}
+
+///|
+/// The w:author attribute, as spelled, when present.
+pub fn RevisionSpan::author(self : RevisionSpan) -> String? {
+  self.author
+}
+
+///|
+/// The w:date attribute, LEXICAL (never converted), when present.
+pub fn RevisionSpan::date(self : RevisionSpan) -> String? {
+  self.date
+}
+
+///|
+/// The story-relative projection path of the innermost containing node
+/// ("p[2]", "tbl[1]/tr[1]/tc[1]/p[1]"), or None at story level.
+pub fn RevisionSpan::container_path(self : RevisionSpan) -> String? {
+  self.container_path
+}
+
+///|
+/// Offset of the '<' of the element's open tag.
+pub fn RevisionSpan::byte_start(self : RevisionSpan) -> Int {
+  self.byte_start
+}
+
+///|
+/// Offset just past the '>' that ends the element (exclusive).
+pub fn RevisionSpan::byte_end(self : RevisionSpan) -> Int {
+  self.byte_end
+}
+
+///|
+/// Offset just past the '>' of the open tag, or None for the self-closing
+/// form — which has no content to keep, so all four resolutions of it
+/// collapse to removing the element.
+pub fn RevisionSpan::content_start(self : RevisionSpan) -> Int? {
+  if self.content_start < 0 {
+    None
+  } else {
+    Some(self.content_start)
+  }
+}
+
+///|
+/// Offset of the '<' of the close tag, or None for the self-closing form.
+pub fn RevisionSpan::close_tag_start(self : RevisionSpan) -> Int? {
+  if self.close_tag_start < 0 {
+    None
+  } else {
+    Some(self.close_tag_start)
+  }
+}
+
+///|
+/// True when the element's own start tag binds a namespace prefix. Unwrapping
+/// it would drop the binding while its former children still use it, so an
+/// unwrap resolution must refuse; removing the whole element stays safe.
+pub fn RevisionSpan::declares_namespaces(self : RevisionSpan) -> Bool {
+  self.declares_namespaces
+}
+
+///|
+/// The `w:delText`/`w:delInstrText` names inside this deletion, in document
+/// order; empty for an insertion. Rejecting the deletion applies all of them.
+pub fn RevisionSpan::name_edits(self : RevisionSpan) -> Array[RevisionNameEdit] {
+  self.name_edits.copy()
+}
+
+///|
+/// Every tracked-change element across every scanned story, in story order
+/// then document order. Offsets index into the part that backs each story.
+///
+/// The list is complete BY CONSTRUCTION: the scanner records a site for every
+/// tracked-change element it walks, without the suppression and projection
+/// gates the reading index applies, and retraction never removes one. A
+/// resolver can therefore treat an empty result as proof that the package
+/// carries no tracked changes at all.
+pub fn DocxAnnotatedResult::revision_spans(
+  self : DocxAnnotatedResult,
+) -> Array[RevisionSpan] {
+  let spans : Array[RevisionSpan] = []
+  for entry in self.index.scans {
+    let (story, scan) = entry
+    for site in scan.revision_sites() {
+      let name_edits : Array[RevisionNameEdit] = []
+      for record in site.name_edits {
+        name_edits.push({
+          start: record.open_start,
+          end: record.open_end,
+          replacement: record.replacement,
+        })
+        if record.close_start >= 0 {
+          name_edits.push({
+            start: record.close_start,
+            end: record.close_end,
+            replacement: record.replacement,
+          })
+        }
+      }
+      spans.push({
+        story,
+        kind: site.local_name,
+        supported: site.supported,
+        id: site.id,
+        author: site.author,
+        date: site.date,
+        container_path: site.container_path,
+        byte_start: site.byte_start,
+        byte_end: site.byte_end,
+        content_start: site.content_start,
+        close_tag_start: site.close_tag_start,
+        declares_namespaces: site.declares_namespaces,
+        name_edits,
+      })
+    }
+  }
+  spans
+}
+
+///|
 /// The zip entry name of the MAIN document part the body-story spans
 /// index into (resolved through the officeDocument relationship, never
 /// hardcoded).
@@ -366,6 +565,121 @@ test "L0 review round 1: run spans mirror paragraph spans (rPr, self-closing)" {
   assert_eq(r1_close, span_source_offset(source, "</w:r>"))
   // The self-closing <w:r/> has no interior.
   assert_eq(r2_content, -1)
+}
+
+///|
+/// Site extents are checked against offsets COMPUTED from the source text, so
+/// the assertions stay honest if the fixture is ever reformatted.
+test "M0: revision sites carry the element's exact byte extent" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>a</w:t></w:r><w:del w:id="1" w:author="R"><w:r><w:delText xml:space="preserve">gone</w:delText></w:r></w:del><w:ins w:id="2" w:author="R"><w:r><w:t>new</w:t></w:r></w:ins><w:ins w:id="3"/></w:p></w:body></w:document>
+  let scan = scan_story(@utf8.encode(source))
+  let sites = scan.revision_sites()
+  inspect(sites.length(), content="3")
+  let deletion = sites[0]
+  inspect(deletion.local_name, content="del")
+  inspect(deletion.supported, content="true")
+  inspect(deletion.container_path.unwrap_or(""), content="p[1]")
+  assert_eq(deletion.byte_start, span_source_offset(source, "<w:del "))
+  assert_eq(
+    deletion.content_start,
+    span_source_offset(source, "<w:r><w:delText"),
+  )
+  assert_eq(deletion.close_tag_start, span_source_offset(source, "</w:del>"))
+  assert_eq(deletion.byte_end, span_source_offset(source, "<w:ins w:id=\"2\""))
+  // The name edits address the LOCAL NAME only: rewriting them renames the
+  // element without touching the prefix, xml:space, or anything else.
+  inspect(deletion.name_edits.length(), content="1")
+  let name = deletion.name_edits[0]
+  assert_eq(source[name.open_start:name.open_end].to_owned(), "delText")
+  assert_eq(source[name.close_start:name.close_end].to_owned(), "delText")
+  assert_eq(name.replacement, "t")
+  assert_eq(name.open_start, span_source_offset(source, "delText xml:space"))
+  let insertion = sites[1]
+  inspect(insertion.local_name, content="ins")
+  assert_eq(
+    insertion.byte_start,
+    span_source_offset(source, "<w:ins w:id=\"2\""),
+  )
+  assert_eq(
+    insertion.byte_end,
+    span_source_offset(source, "<w:ins w:id=\"3\"/>"),
+  )
+  // The self-closing form reports no interior at all.
+  let empty = sites[2]
+  inspect(empty.content_start, content="-1")
+  inspect(empty.close_tag_start, content="-1")
+  assert_eq(empty.byte_start, span_source_offset(source, "<w:ins w:id=\"3\"/>"))
+  assert_eq(empty.byte_end, span_source_offset(source, "</w:p>"))
+}
+
+///|
+/// Every tracked-change construct is RECORDED, including the ones no resolver
+/// in this build can act on. A construct the mutation layer cannot see is a
+/// construct it would silently leave behind, so `supported` — not omission —
+/// is what separates the resolvable set from the rest.
+test "M0: unresolvable tracked-change constructs are recorded, not skipped" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:rPr><w:ins w:id="1" w:author="R"/></w:rPr></w:pPr><w:r><w:rPr><w:b/><w:rPrChange w:id="2" w:author="R"><w:rPr/></w:rPrChange></w:rPr><w:t>a</w:t></w:r><w:moveFrom w:id="3" w:author="R"><w:r><w:t>m</w:t></w:r></w:moveFrom><w:ins w:id="4" w:author="R"><w:r><w:t>n</w:t></w:r></w:ins></w:p></w:body></w:document>
+  let scan = scan_story(@utf8.encode(source))
+  let shape : Array[String] = []
+  for site in scan.revision_sites() {
+    shape.push("\{site.local_name}:\{site.supported}")
+  }
+  assert_eq(shape, [
+    "ins:false", "rPrChange:false", "moveFrom:false", "ins:true",
+  ])
+  // The READING view is unchanged by any of this: it still reports only the
+  // content revisions the reader's projection retains.
+  let read : Array[String] = []
+  for revision in scan.revisions() {
+    read.push("\{revision.kind()}:\{revision.id().unwrap_or("")}")
+  }
+  assert_eq(read, ["ins:4"])
+}
+
+///|
+/// The two views diverge on purpose where the reader RETRACTS a subtree. A
+/// vertically merged continuation cell does not exist in the projection, so
+/// its revisions leave the reading index — but their bytes are still in the
+/// part, so their sites must survive.
+test "M0: retracting a subtree drops read revisions but keeps their sites" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>a</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:ins w:id="7" w:author="R"><w:r><w:t>hidden</w:t></w:r></w:ins></w:p></w:tc></w:tr></w:tbl></w:body></w:document>
+  let scan = scan_story(@utf8.encode(source))
+  inspect(scan.revisions().length(), content="0")
+  inspect(scan.revision_sites().length(), content="1")
+  inspect(scan.revision_sites()[0].id.unwrap_or(""), content="7")
+}
+
+///|
+/// A deleted table ROW is a property revision the reader removes wholesale.
+/// The site still records it, so a resolver asked to accept everything
+/// refuses instead of publishing a document that still holds a pending row
+/// deletion.
+test "M0: a deleted table row is recorded as an unresolvable site" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:tbl><w:tr><w:trPr><w:del w:id="5" w:author="R"/></w:trPr><w:tc><w:p><w:r><w:t>a</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>
+  let scan = scan_story(@utf8.encode(source))
+  inspect(scan.revisions().length(), content="0")
+  let sites = scan.revision_sites()
+  inspect(sites.length(), content="1")
+  inspect(sites[0].local_name, content="del")
+  inspect(sites[0].supported, content="false")
+}
+
+///|
+/// Prefix spelling never enters the decision: a WML-bound prefix that is not
+/// `w` is still a revision, and a `w`-prefixed element bound to some other
+/// namespace is not.
+test "M0: revision sites are matched by namespace, never by prefix" {
+  let source =
+    #|<x:document xmlns:x="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w="urn:not-wml"><x:body><x:p><x:ins x:id="1" x:author="R"><x:r><x:t>a</x:t></x:r></x:ins><w:ins w:id="2"/></x:p></x:body></x:document>
+  let scan = scan_story(@utf8.encode(source))
+  let sites = scan.revision_sites()
+  inspect(sites.length(), content="1")
+  inspect(sites[0].id.unwrap_or(""), content="1")
+  inspect(sites[0].declares_namespaces, content="false")
 }
 
 ///|

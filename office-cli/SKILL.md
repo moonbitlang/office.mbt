@@ -94,7 +94,7 @@ Replace the `office` token below with the `moonx bobzhang/office` launcher.
 | Publish deterministic offline HTML | `office preview FILE --output OUT.html [--overwrite] [--json\|--jsonl]` |
 | Create a blank validated file | `office create xlsx OUT.xlsx [--sheet NAME] [--dry-run] [--overwrite] [--json]` or `office create docx OUT.docx [--dry-run] [--overwrite] [--json]` |
 | Merge strict placeholders/row regions | `office template FILE DATA.json --out OUT [--dry-run] [--overwrite] [--allow-missing] [--json\|--jsonl]` |
-| Replace literal text in an existing DOCX | `office edit FILE SCRIPT.json --out OUT.docx [--dry-run] [--overwrite] [--allow-unmatched] [--json\|--jsonl]` |
+| Replace literal text, or accept/reject tracked changes, in an existing DOCX | `office edit FILE SCRIPT.json --out OUT.docx [--dry-run] [--overwrite] [--allow-unmatched] [--json\|--jsonl]` |
 | Add/reply/resolve DOCX comments | `office annotate FILE SCRIPT.json --out OUT.docx [--dry-run] [--overwrite] [--json\|--jsonl]` |
 | Mutate an XLSX transactionally | `office batch BOOK.xlsx SCRIPT.json [--out OUT.xlsx] [--dry-run] [--overwrite] [--json]` |
 | Author a fresh DOCX from ops | `office batch --format docx OUT.docx SCRIPT.json [--dry-run] [--overwrite] [--json]` |
@@ -156,6 +156,14 @@ single `data.cell` **object**, while a `range[A1:C12]` selector returns a
   story — refuses with `office.edit.unsupported_context` rather than being
   silently skipped, and an op that finds nothing refuses with
   `office.edit.unmatched_find` unless `--allow-unmatched` is passed.
+- `edit` also RESOLVES tracked changes, through the same `docx.edit/1` script:
+  `accept_revision` and `reject_revision` with `{"id"}`, `{"author"}`,
+  `{"type": "ins"|"del"}`, or `{"all": true}`. Spelled selector fields are
+  conjunctive; `id` is the stable `w:id` handle `outline` reports, and ordinal
+  position is never a selector. Accepting an insertion (or rejecting a
+  deletion) unwraps the element and keeps its runs; rejecting an insertion (or
+  accepting a deletion) removes the element and its content. One script is
+  entirely `replace_text` or entirely revision ops — mixing them is rejected.
 - `annotate` is the preservation-safe existing-DOCX mutation surface. It
   consumes `docx.annotation-batch/1` with `comment_add`, `comment_reply`,
   `comment_resolve`, and `comment_unresolve` ops and publishes a separate
@@ -277,10 +285,28 @@ and deletions are counted apart because they distort the accepted view in
 opposite directions: an insertion shows words nobody has agreed to, a deletion
 hides words that are still in the file.
 
-`revisions` is read-only. The CLI cannot accept or reject a tracked change, and
-`text` deliberately keeps returning the accepted view. Paragraph-mark and
-table-row revisions (`w:rPr/w:ins`, `w:trPr/w:del`) are property revisions and
-are not listed.
+`text` deliberately keeps returning the accepted view whatever you do. To
+change what the document actually says, resolve the revisions with `office
+edit`:
+
+```json
+{"schema": "docx.edit/1", "ops": [
+  {"op": "accept_revision", "params": {"author": "Reviewer"}}
+]}
+```
+
+Select by `id` (the stable `w:id` above), `author`, `type` (`ins`/`del`), or
+`all: true`; spelled fields are conjunctive. On the fixture above, accepting
+everything yields "The revenue was up 18% this quarter." and rejecting
+everything yields "The revenue was flat this quarter." `revisions_resolved`
+reports the count, and `outline` on the output reports nothing pending.
+
+Paragraph-mark and table-row revisions (`w:rPr/w:ins`, `w:trPr/w:del`), moves
+(`w:moveFrom`/`w:moveTo`), and every `*PrChange` are out of scope: they are not
+listed by `outline`, and a selection that REACHES one refuses with
+`office.edit.unsupported_revision` instead of resolving the rest — so a partial
+review can never masquerade as a finished one. A revision nested inside another
+refuses too (`office.edit.conflicting_revisions`); resolve the inner one first.
 
 **Anchors are whole body paragraphs.** `anchor.at` (and `to`) must be
 `/docx/body/p[K]`. You cannot anchor a comment to a phrase, a run, a table

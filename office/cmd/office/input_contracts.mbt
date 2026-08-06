@@ -451,6 +451,27 @@ fn edit_operation(name : String) -> Json {
           "an empty replace deletes the matched text",
         ],
       )
+    "accept_revision" | "reject_revision" =>
+      (
+        [
+          ("id", "revision_selector_text"),
+          ("author", "revision_selector_text"),
+          ("type", "enum(ins,del)"),
+          ("all", "literal(true)"),
+        ],
+        [],
+        [
+          "spelled selector fields are CONJUNCTIVE: {\"author\":\"Reviewer\",\"type\":\"del\"} selects only Reviewer's deletions",
+          "id is the w:id attribute AS SPELLED — the stable handle; ordinal position is never a selector",
+          "all: true selects every tracked change and cannot be combined with id, author, or type",
+          "at least one of id, author, type, or all is required; all: false is rejected",
+          if name == "accept_revision" {
+            "accepting w:ins unwraps it and keeps its runs; accepting w:del removes it and its content"
+          } else {
+            "rejecting w:ins removes it and its content; rejecting w:del unwraps it and renames each w:delText back to w:t"
+          },
+        ],
+      )
     _ => ([], [], ["unknown parser operation"])
   }
   Json::object({
@@ -472,7 +493,7 @@ fn edit_input_contract() -> InputContractCore {
   }
   {
     id: @office_docx.SCHEMA_DOCX_EDIT,
-    summary: "Strict preservation-safe literal find & replace script for an existing DOCX",
+    summary: "Strict preservation-safe literal find & replace, or tracked-change accept/reject, script for an existing DOCX",
     consumed_by: ["office edit INPUT.docx SCRIPT.json --out OUTPUT.docx"],
     envelope: contract_envelope(
       [
@@ -494,15 +515,23 @@ fn edit_input_contract() -> InputContractCore {
       contract_type("literal_text_or_empty", "string", constraints=[
         "the empty string deletes the matched text", "same character restrictions as literal_text",
       ]),
+      contract_type("revision_selector_text", "nonempty-string", constraints=[
+        "compared verbatim against the attribute the source spelled; never a pattern",
+        "a revision whose attribute is absent is never selected by that field",
+      ]),
     ],
     operations,
     constraints: [
-      "unknown envelope members, operations, and params are rejected", "every operation matches the ORIGINAL document snapshot; operations never see each other's output",
+      "unknown envelope members, operations, and params are rejected", "one script is entirely replace_text or entirely accept_revision/reject_revision; mixing the two families is rejected",
+      "every operation matches the ORIGINAL document snapshot; operations never see each other's output",
       "two operations whose matches overlap refuse; matches that merely touch both apply",
-      "the body, header, and footer stories are edited; a needle found in a footnote, endnote, or comment story refuses",
+      "the body, header, and footer stories are edited; a needle or tracked change found in a footnote, endnote, or comment story refuses",
       "a match reaching content a byte-span run rewrite cannot own, or crossing a hyperlink boundary, refuses",
-      "an operation that finds fewer occurrences than it requires refuses unless --allow-unmatched",
+      "an operation that finds fewer occurrences than it requires, or a selector that matches no tracked change, refuses unless --allow-unmatched",
       "the replacement inherits the formatting of the run the match started in",
+      "resolvable tracked changes are content w:ins and w:del inside a paragraph or hyperlink; a selection reaching a property revision (w:rPr/w:ins paragraph marks, w:trPr/w:del rows), a move (w:moveFrom/w:moveTo), any *PrChange, or a revision wrapping rows or block content refuses",
+      "a selected revision that contains another revision refuses; resolve the inner one first",
+      "accept_revision and reject_revision selecting the same revision refuses",
     ],
     limits: Json::object({
       "max_script_bytes": Json::number(office_edit_max_script_bytes.to_double()),
@@ -518,6 +547,9 @@ fn edit_input_contract() -> InputContractCore {
       ),
       "max_scan_units": Json::number(
         @office_docx.MAX_EDIT_SCAN_UNITS.to_double(),
+      ),
+      "max_revision_selector_utf16_units": Json::number(
+        @office_docx.MAX_REVISION_SELECTOR_UNITS.to_double(),
       ),
     }),
     examples: [
@@ -538,6 +570,37 @@ fn edit_input_contract() -> InputContractCore {
               "replace": Json::string("Q4"),
               "occurrence": Json::number(1.0),
             }),
+          }),
+        ]),
+      }),
+      // Accept everything one reviewer proposed. `office outline` lists the
+      // ids and authors this selector matches.
+      Json::object({
+        "schema": Json::string(@office_docx.SCHEMA_DOCX_EDIT),
+        "ops": Json::array([
+          Json::object({
+            "op": Json::string("accept_revision"),
+            "params": Json::object({ "author": Json::string("Reviewer") }),
+          }),
+        ]),
+      }),
+      // Reject one specific tracked change by its stable w:id.
+      Json::object({
+        "schema": Json::string(@office_docx.SCHEMA_DOCX_EDIT),
+        "ops": Json::array([
+          Json::object({
+            "op": Json::string("reject_revision"),
+            "params": Json::object({ "id": Json::string("7") }),
+          }),
+        ]),
+      }),
+      // Accept every tracked change in the document.
+      Json::object({
+        "schema": Json::string(@office_docx.SCHEMA_DOCX_EDIT),
+        "ops": Json::array([
+          Json::object({
+            "op": Json::string("accept_revision"),
+            "params": Json::object({ "all": Json::boolean(true) }),
           }),
         ]),
       }),
