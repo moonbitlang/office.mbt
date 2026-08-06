@@ -51,6 +51,11 @@ priv struct DocxProjection {
   annotated : @docx.DocxAnnotatedResult
   entries : Array[DocxProjectionEntry]
   entry_index : @sorted_map.SortedMap[String, Int]
+  // Tracked changes, already reduced to canonical-path records. They have no
+  // projection entry of their own: the reader flattens `w:ins` into the
+  // accepted text and drops `w:del`, so this is the only surface that says
+  // the document has unaccepted edits at all.
+  revisions : Array[Json]
   warnings : Array[@lib.ProtocolWarning]
   cancelled : () -> Bool
   mut work_since_yield : Int
@@ -79,6 +84,7 @@ priv struct AnnotationProjectionIndex {
   comment_anchors : @sorted_map.SortedMap[String, Json]
   footnote_references : @sorted_map.SortedMap[String, Json]
   endnote_references : @sorted_map.SortedMap[String, Json]
+  revisions : Array[Json]
 }
 
 ///|
@@ -676,6 +682,57 @@ async fn index_comment_anchors(
 }
 
 ///|
+/// Reduces one tracked change to an outline record.
+///
+/// `author`, `date` and `id` are copied ONLY when the document records
+/// them: all three are optional in CT_TrackChange, and a defaulted author
+/// or timestamp would make the outline attribute an edit nobody made. The
+/// same rule already governs `done`/`parent_id` on comment records.
+///
+/// `path` names the containing paragraph and is omitted when that
+/// paragraph has no addressable canonical selector (an annotation item
+/// whose id falls outside office.selector/1). The revision is still
+/// reported: a tracked change the caller cannot address is far better than
+/// a tracked change the caller never hears about.
+fn outline_revision_record(
+  revision : @docx.RevisionInfo,
+  path_roots : @sorted_map.SortedMap[String, String],
+) -> Json {
+  let fields : Map[String, Json] = { "type": Json::string(revision.kind()) }
+  match canonical_index_path(revision.path(), path_roots) {
+    Some(canonical) => fields["path"] = Json::string(canonical)
+    None => ()
+  }
+  match revision.id() {
+    Some(value) => fields["id"] = Json::string(value)
+    None => ()
+  }
+  match revision.author() {
+    Some(value) => fields["author"] = Json::string(value)
+    None => ()
+  }
+  match revision.date() {
+    Some(value) => fields["date"] = Json::string(value)
+    None => ()
+  }
+  Json::object(fields)
+}
+
+///|
+async fn index_revisions(
+  revisions : Array[@docx.RevisionInfo],
+  path_roots : @sorted_map.SortedMap[String, String],
+  builder : DocxProjectionBuilder,
+) -> Array[Json] {
+  let output : Array[Json] = []
+  for revision in revisions {
+    builder.cooperate()
+    output.push(outline_revision_record(revision, path_roots))
+  }
+  output
+}
+
+///|
 async fn index_note_references(
   notes : @sorted_map.SortedMap[String, @docx.NoteInfo],
   path_roots : @sorted_map.SortedMap[String, String],
@@ -714,6 +771,7 @@ async fn annotation_projection_index(
     endnote_references: index_note_references(
       endnote_infos, path_roots, builder,
     ),
+    revisions: index_revisions(annotations.revisions(), path_roots, builder),
   }
 }
 
@@ -988,6 +1046,7 @@ async fn projection_from_annotated(
     annotated,
     entries: builder.entries,
     entry_index: builder.entry_index,
+    revisions: annotations.revisions,
     warnings: builder.warnings,
     cancelled,
     work_since_yield: 0,

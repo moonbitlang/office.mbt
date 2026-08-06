@@ -924,6 +924,29 @@ fn reader_diagnostics(
 }
 
 ///|
+/// Splits the projection's tracked changes into (insertions, deletions).
+///
+/// `outline` reports the two separately rather than conflating them into
+/// one `revisions` total. They distort the accepted view that `text`
+/// returns in OPPOSITE directions — an insertion shows words nobody has
+/// agreed to yet, a deletion hides words that are still in the file — so a
+/// caller deciding whether to look closer needs to know which happened.
+/// The `revisions` array length is their sum.
+async fn docx_revision_counts(projection : DocxProjection) -> (Int, Int) {
+  let mut insertions = 0
+  let mut deletions = 0
+  for record in projection.revisions {
+    projection.cooperate()
+    if record is Object(fields) && fields.get("type") is Some(String("del")) {
+      deletions += 1
+    } else {
+      insertions += 1
+    }
+  }
+  (insertions, deletions)
+}
+
+///|
 async fn docx_outline_payload(
   projection : DocxProjection,
   max_output_chars? : Int = docx_cli_default_max_output_chars,
@@ -942,6 +965,7 @@ async fn docx_outline_payload(
       endnotes += 1
     }
   }
+  let (insertions, deletions) = docx_revision_counts(projection)
   let count_fields : Map[String, Json] = {
     "body_stories": Json::number(counts.get("body").unwrap_or(0).to_double()),
     "headers": Json::number(counts.get("header").unwrap_or(0).to_double()),
@@ -949,6 +973,8 @@ async fn docx_outline_payload(
     "footnotes": Json::number(footnotes.to_double()),
     "endnotes": Json::number(endnotes.to_double()),
     "comments": Json::number(counts.get("comment").unwrap_or(0).to_double()),
+    "insertions": Json::number(insertions.to_double()),
+    "deletions": Json::number(deletions.to_double()),
     "paragraphs": Json::number(counts.get("p").unwrap_or(0).to_double()),
     "runs": Json::number(counts.get("r").unwrap_or(0).to_double()),
     "tables": Json::number(counts.get("tbl").unwrap_or(0).to_double()),
@@ -960,6 +986,7 @@ async fn docx_outline_payload(
   let stories : Array[Json] = []
   let headings : Array[Json] = []
   let comments : Array[Json] = []
+  let revisions : Array[Json] = []
   let images : Array[Json] = []
   let styles : Array[Json] = []
   let sections : Array[Json] = []
@@ -978,6 +1005,7 @@ async fn docx_outline_payload(
     "stories": Json::array([]),
     "headings": Json::array([]),
     "comments": Json::array([]),
+    "revisions": Json::array([]),
     "styles_in_use": Json::array([]),
     "images": Json::array([]),
     "sections": Json::array([]),
@@ -988,6 +1016,11 @@ async fn docx_outline_payload(
     projection.warnings,
     max_output_chars,
   )
+  for record in projection.revisions {
+    projection.cooperate()
+    bounded.budget.reserve_array_item(record, !revisions.is_empty())
+    revisions.push(record)
+  }
   projection.cooperate(work=docx_cli_projection_yield_elements)
   for entry in projection.entries {
     projection.cooperate()
@@ -1079,6 +1112,7 @@ async fn docx_outline_payload(
       "stories": Json::array(stories),
       "headings": Json::array(headings),
       "comments": Json::array(comments),
+      "revisions": Json::array(revisions),
       "styles_in_use": Json::array(styles),
       "images": Json::array(images),
       "sections": Json::array(sections),
@@ -1349,6 +1383,14 @@ async fn docx_outline_human(
   output.begin_line()
   output.write_plain(
     "paragraphs: \{counts.get("p").unwrap_or(0)}; tables: \{counts.get("tbl").unwrap_or(0)}; images: \{counts.get("image").unwrap_or(0)}; comments: \{counts.get("comment").unwrap_or(0)}; footnotes/endnotes: \{counts.get("note").unwrap_or(0)}",
+  )
+  // Tracked changes reach the human summary too. A reader who never asks
+  // for `--json` would otherwise see a settled document and never learn
+  // that some of the text they just read is an unaccepted edit.
+  let (insertions, deletions) = docx_revision_counts(projection)
+  output.begin_line()
+  output.write_plain(
+    "tracked insertions: \{insertions}; tracked deletions: \{deletions}",
   )
   projection.cooperate(work=docx_cli_projection_yield_elements)
   for entry in projection.entries {

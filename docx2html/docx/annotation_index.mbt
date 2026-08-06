@@ -281,6 +281,59 @@ pub fn CommentInfo::anchors(self : CommentInfo) -> Array[AnnotationAnchor] {
 }
 
 ///|
+/// One tracked change: what kind of revision it is, who made it, when they
+/// said they made it, and the projection path of the paragraph that contains
+/// it.
+///
+/// The reader flattens `w:ins` into the accepted text and drops `w:del`
+/// entirely, so a revision has no representation in the parsed document at
+/// all. This record is the only place the identity survives, and it is
+/// read-only: `text` still returns the accepted view, unchanged.
+///
+/// `id`, `author` and `date` are the attributes AS SPELLED and stay absent
+/// when the source omits them. All three are optional in CT_TrackChange; a
+/// defaulted author or date would make the index assert authorship the
+/// document never recorded.
+pub struct RevisionInfo {
+  priv kind : String
+  priv id : String?
+  priv author : String?
+  priv date : String?
+  priv path : String
+}
+
+///|
+/// "ins" for an insertion, "del" for a deletion.
+pub fn RevisionInfo::kind(self : RevisionInfo) -> String {
+  self.kind
+}
+
+///|
+/// The w:id attribute, as spelled, when present.
+pub fn RevisionInfo::id(self : RevisionInfo) -> String? {
+  self.id
+}
+
+///|
+/// The w:author attribute, when present.
+pub fn RevisionInfo::author(self : RevisionInfo) -> String? {
+  self.author
+}
+
+///|
+/// The w:date attribute, LEXICAL (never converted), when present.
+pub fn RevisionInfo::date(self : RevisionInfo) -> String? {
+  self.date
+}
+
+///|
+/// The story-qualified projection path of the containing paragraph
+/// ("/body/p[2]"), degrading to the nearest verifiable ancestor.
+pub fn RevisionInfo::path(self : RevisionInfo) -> String {
+  self.path
+}
+
+///|
 /// One footnote/endnote: its id and every body position referencing it
 /// (multi-reference notes are representable per the plan).
 pub struct NoteInfo {
@@ -375,6 +428,7 @@ pub struct AnnotationIndex {
   priv comments : Array[CommentInfo]
   priv footnotes : Array[NoteInfo]
   priv endnotes : Array[NoteInfo]
+  priv revisions : Array[RevisionInfo]
   priv warnings : Array[String]
   priv spans : Array[AnchorSpan]
   // Publicly addressable stories only (body, rendered header/footer stories,
@@ -408,6 +462,16 @@ pub fn AnnotationIndex::footnotes(self : AnnotationIndex) -> Array[NoteInfo] {
 pub fn AnnotationIndex::endnotes(self : AnnotationIndex) -> Array[NoteInfo] {
   // Defensive copy: internal state must not be mutable through the API.
   self.endnotes.copy()
+}
+
+///|
+/// Tracked changes across every publicly addressable story, in document
+/// order (story order, then position within the story).
+pub fn AnnotationIndex::revisions(
+  self : AnnotationIndex,
+) -> Array[RevisionInfo] {
+  // Defensive copy: internal state must not be mutable through the API.
+  self.revisions.copy()
 }
 
 ///|
@@ -1568,6 +1632,7 @@ fn build_annotation_index(
   let (footnotes, endnotes) = build_notes(
     parts, scans, warnings, ctx, degraded, path_budget, policy,
   )
+  let revisions = build_revisions(scans, warnings, ctx, degraded, path_budget)
   // The legacy projection grammar has no escaping inside [@id=...]. Unique
   // ids that are empty or contain a path delimiter therefore fall back to a
   // snapshot-relative ordinal path. Surface that loss of stable identity so
@@ -1603,6 +1668,7 @@ fn build_annotation_index(
     comments,
     footnotes,
     endnotes,
+    revisions,
     warnings: warnings.finish(),
     spans,
     scans,
@@ -2341,6 +2407,52 @@ fn marker_path(
   path_budget : AnnotationPathBudget,
 ) -> String raise DocxError {
   marker_position(story, marker, scan, path_budget).0
+}
+
+///|
+/// Collects every tracked-change container the scanner located, in story
+/// order then document position, and resolves each one to the projection
+/// path of its containing paragraph.
+///
+/// A revision is reported at PARAGRAPH granularity for the same reason a
+/// point comment anchor is: `w:ins` wraps runs, and a run-level path would
+/// name a node the reader flattened away. Where no paragraph encloses the
+/// revision (a malformed story), the container path itself is used, and
+/// `verify_position` degrades it to the nearest ancestor the parsed
+/// document agrees exists.
+fn build_revisions(
+  scans : Array[(String, StoryScan)],
+  warnings : AnnotationWarningCollector,
+  ctx : VerifyContext,
+  degraded : StableStringSet,
+  path_budget : AnnotationPathBudget,
+) -> Array[RevisionInfo] raise DocxError {
+  let revisions : Array[RevisionInfo] = []
+  for entry in scans {
+    let (story, scan) = entry
+    for revision in scan.revisions() {
+      let container = match
+        paragraph_prefix(revision.container_path(), path_budget) {
+        Some(paragraph) => Some(paragraph)
+        None => revision.container_path()
+      }
+      let raw = match container {
+        Some(path) => {
+          path_budget.charge(story.length() + 1 + path.length())
+          "\{story}/\{path}"
+        }
+        None => story
+      }
+      revisions.push({
+        kind: "\{revision.kind()}",
+        id: revision.id(),
+        author: revision.author(),
+        date: revision.date(),
+        path: verify_position(ctx, raw, warnings, degraded, path_budget),
+      })
+    }
+  }
+  revisions
 }
 
 ///|

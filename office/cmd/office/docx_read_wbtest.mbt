@@ -280,6 +280,141 @@ async test "DOCX outline emits an empty comment list rather than omitting it" {
 }
 
 ///|
+/// Wraps one hand-written main story in a minimal valid package.
+///
+/// The `@word` writer has no tracked-change support and this slice adds
+/// none — revision visibility is read-only — so the story XML is spelled
+/// out. Everything else is built by the OPC package builder, which is the
+/// same machinery the other fixtures use.
+fn tracked_changes_docx(body_xml : String) -> Bytes raise {
+  let builder = @opc.PackageBuilder::new()
+  builder.add_default(
+    "rels", "application/vnd.openxmlformats-package.relationships+xml",
+  )
+  builder.add_default("xml", "application/xml")
+  builder.add_override(
+    "/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+  )
+  builder.add_relationship(
+    "rId1", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "word/document.xml",
+  )
+  builder.add_part(
+    "word/document.xml",
+    @utf8.encode(
+      "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>\{body_xml}<w:sectPr/></w:body></w:document>",
+    ),
+  )
+  builder.build()
+}
+
+///|
+/// One reviewer replaced "flat" with "up 18%" and nobody has accepted it.
+const TRACKED_REPLACEMENT_XML : String =
+  #|<w:p><w:r><w:t xml:space="preserve">The revenue was </w:t></w:r><w:del w:id="1" w:author="Reviewer" w:date="2026-01-01T00:00:00Z"><w:r><w:delText xml:space="preserve">flat</w:delText></w:r></w:del><w:ins w:id="2" w:author="Reviewer" w:date="2026-01-01T00:00:00Z"><w:r><w:t xml:space="preserve">up 18%</w:t></w:r></w:ins><w:r><w:t xml:space="preserve"> this quarter.</w:t></w:r></w:p>
+
+///|
+async fn tracked_changes_projection(body_xml : String) -> DocxProjection {
+  open_docx_projection("tracked.docx", tracked_changes_docx(body_xml), 1000)
+}
+
+///|
+/// The reader flattens `w:ins` and drops `w:del`, so author, date, and id
+/// never reach the document model. Without this array an agent reads "the
+/// revenue was up 18%" as settled fact, not as an unaccepted edit that
+/// replaced "flat" — silent confidence, which is worse than an error.
+async test "DOCX outline surfaces tracked insertions and deletions" {
+  let projection = tracked_changes_projection(TRACKED_REPLACEMENT_XML)
+  let payload = docx_outline_payload(projection, max_output_chars=100_000).data
+  guard payload is Object(fields) &&
+    fields.get("revisions") is Some(Array(records)) else {
+    fail("expected outline revision records")
+  }
+  guard fields.get("counts") is Some(Object(counts)) else {
+    fail("expected outline counts")
+  }
+  // Insertions and deletions are counted apart because they distort the
+  // accepted view in opposite directions; together they must still account
+  // for exactly the records emitted.
+  json_inspect(counts.get("insertions"), content=[1])
+  json_inspect(counts.get("deletions"), content=[1])
+  assert_eq(records.length(), 2)
+  // Document order, and each record names the paragraph that contains it.
+  json_inspect(records, content=[
+    {
+      "type": "del",
+      "path": "/docx/body/p[1]",
+      "id": "1",
+      "author": "Reviewer",
+      "date": "2026-01-01T00:00:00Z",
+    },
+    {
+      "type": "ins",
+      "path": "/docx/body/p[1]",
+      "id": "2",
+      "author": "Reviewer",
+      "date": "2026-01-01T00:00:00Z",
+    },
+  ])
+}
+
+///|
+/// `w:date` is optional in CT_TrackChange. Defaulting it here would make
+/// `outline` assert a revision time the document never recorded — the same
+/// rule that keeps `done`/`parent_id` off an unresolved comment.
+async test "DOCX outline omits a revision date the document never recorded" {
+  let dated_nowhere =
+    #|<w:p><w:ins w:id="9" w:author="Ada"><w:r><w:t>new</w:t></w:r></w:ins></w:p>
+  let projection = tracked_changes_projection(dated_nowhere)
+  let payload = docx_outline_payload(projection, max_output_chars=100_000).data
+  guard payload is Object(fields) &&
+    fields.get("revisions") is Some(Array([Object(record)])) else {
+    fail("expected exactly one outline revision record")
+  }
+  assert_eq(record.get("author"), Some(Json::string("Ada")))
+  assert_eq(record.get("date"), None)
+  assert_eq(record.get("type"), Some(Json::string("ins")))
+}
+
+///|
+/// A document with no tracked changes still carries the key, so consumers
+/// can index it unconditionally.
+async test "DOCX outline emits an empty revision list rather than omitting it" {
+  let bytes = @word.write_docx_with_annotations([
+    @word.paragraph([@word.run([@word.text("Hi")])]),
+  ]) catch {
+    Unsupported(message~) => raise CliError(message)
+    error => raise error
+  }
+  let projection = open_docx_projection("blank.docx", bytes, 1000)
+  let payload = docx_outline_payload(projection, max_output_chars=100_000).data
+  guard payload is Object(fields) else { fail("expected outline object") }
+  assert_eq(fields.get("revisions"), Some(Json::array([])))
+  guard fields.get("counts") is Some(Object(counts)) else {
+    fail("expected outline counts")
+  }
+  json_inspect(counts.get("insertions"), content=[0])
+  json_inspect(counts.get("deletions"), content=[0])
+}
+
+///|
+/// Regression guard on the surface that already works. `text` returns the
+/// ACCEPTED view — insertion in, deletion out — and this slice is read-only
+/// visibility, so that must not move.
+async test "DOCX text still returns the accepted view of a tracked document" {
+  let projection = tracked_changes_projection(TRACKED_REPLACEMENT_XML)
+  let payload = docx_text_payload(projection, None, None, 0, 10, 100_000).data
+  guard payload is Object(fields) &&
+    fields.get("entries") is Some(Array([Object(first), ..])) else {
+    fail("expected a text entry")
+  }
+  assert_eq(
+    first.get("text"),
+    Some(Json::string("The revenue was up 18% this quarter.")),
+  )
+}
+
+///|
 async test "DOCX text and query paginate in deterministic document order" {
   let projection = docx_read_test_projection()
   let text = docx_text_payload(projection, None, None, 1, 3, 100_000).data
@@ -610,6 +745,7 @@ async test "duplicate annotation ids stay positional and stable lookup is ambigu
     annotated,
     entries: builder.entries,
     entry_index: builder.entry_index,
+    revisions: annotation_index.revisions,
     warnings: builder.warnings,
     cancelled: () => false,
     work_since_yield: 0,

@@ -114,6 +114,7 @@ pub fn AnnotationIndex::comments(Self) -> Array[CommentInfo]
 pub fn AnnotationIndex::covering_comment_ids(Self, String) -> Array[String]
 pub fn AnnotationIndex::endnotes(Self) -> Array[NoteInfo]
 pub fn AnnotationIndex::footnotes(Self) -> Array[NoteInfo]
+pub fn AnnotationIndex::revisions(Self) -> Array[RevisionInfo]
 pub fn AnnotationIndex::warnings(Self) -> Array[String]
 
 pub struct CommentInfo {
@@ -214,6 +215,15 @@ pub fn NoteInfo::references(Self) -> Array[String]
 pub struct NoteSpec {
   // private fields
 }
+
+pub struct RevisionInfo {
+  // private fields
+}
+pub fn RevisionInfo::author(Self) -> String?
+pub fn RevisionInfo::date(Self) -> String?
+pub fn RevisionInfo::id(Self) -> String?
+pub fn RevisionInfo::kind(Self) -> String
+pub fn RevisionInfo::path(Self) -> String
 
 // Type aliases
 

@@ -242,6 +242,33 @@ office get FILE '/docx/comments/comment[id="0"]' --json
 Reach for `get` when the outline summary is not enough; for enumerating a
 thread, the outline alone is usually sufficient.
 
+**`text` shows the accepted view of a tracked document.** Insertions read as
+ordinary text and deletions are gone, so a paragraph that says "revenue was up
+18%" may be an unaccepted edit that replaced "flat". Nothing in `text` or `get`
+says so. `outline` does:
+
+```
+office outline FILE --json     # .data.counts.insertions / .deletions, .data.revisions[]
+```
+
+```json
+{"type": "del", "path": "/docx/body/p[1]", "id": "1",
+ "author": "Reviewer", "date": "2026-01-01T00:00:00Z"}
+{"type": "ins", "path": "/docx/body/p[1]", "id": "2", "author": "Reviewer"}
+```
+
+Check `counts.insertions` and `counts.deletions` before reporting anything from
+a document as settled. `author`, `date`, and `id` appear **only when the
+document records them** — the insertion above spells no `w:date`. Insertions
+and deletions are counted apart because they distort the accepted view in
+opposite directions: an insertion shows words nobody has agreed to, a deletion
+hides words that are still in the file.
+
+`revisions` is read-only. The CLI cannot accept or reject a tracked change, and
+`text` deliberately keeps returning the accepted view. Paragraph-mark and
+table-row revisions (`w:rPr/w:ins`, `w:trPr/w:del`) are property revisions and
+are not listed.
+
 **Anchors are whole body paragraphs.** `anchor.at` (and `to`) must be
 `/docx/body/p[K]`. You cannot anchor a comment to a phrase, a run, a table
 cell, or a header — `/docx/body/p[2]/r[1]` is rejected with
