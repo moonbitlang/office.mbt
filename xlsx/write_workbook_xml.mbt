@@ -90,6 +90,19 @@ fn write_workbook_xml(
     Some(value) => sb.write_view(value)
     None => ()
   }
+  // CT_Workbook (ECMA-376 Part 1, §18.2.27) is an xsd:sequence, so child order
+  // is normative: fileVersion, fileSharing, workbookPr, workbookProtection,
+  // bookViews, sheets, functionGroups, externalReferences, definedNames,
+  // calcPr, ... , pivotCaches, ... , extLst. `workbookProtection` therefore has
+  // to precede `bookViews`; emitting it after `sheets` makes Excel reject the
+  // whole workbook as corrupt and decline to repair it.
+  match workbook.workbook_protection {
+    Some(value) =>
+      sb.write_view(
+        write_workbook_protection_xml(value, budget?=sb.remaining_budget()),
+      )
+    None => ()
+  }
   if sheets.length() > 0 {
     let active_index = workbook.active_sheet_index()
     let safe_active = if active_index < 0 || active_index >= sheets.length() {
@@ -157,13 +170,6 @@ fn write_workbook_xml(
     if wrote {
       sb.write_view("  </definedNames>\n")
     }
-  }
-  match workbook.workbook_protection {
-    Some(value) =>
-      sb.write_view(
-        write_workbook_protection_xml(value, budget?=sb.remaining_budget()),
-      )
-    None => ()
   }
   match
     write_calc_pr_xml(workbook.calc_props(), budget?=sb.remaining_budget()) {
