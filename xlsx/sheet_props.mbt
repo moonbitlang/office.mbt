@@ -551,14 +551,22 @@ pub struct PageBreak {
 } derive(Debug)
 
 ///|
-let default_page_margins : PageLayoutMarginsOptions = PageLayoutMarginsOptions::with_values(
-  top=0.75,
-  bottom=0.75,
-  left=0.7,
-  right=0.7,
-  header=0.3,
-  footer=0.3,
-)
+/// Excel's built-in "Normal" page margins, in inches.
+///
+/// This is a function, not a `let`: `PageLayoutMarginsOptions` is a struct with
+/// `mut` fields, so a shared binding would be an alias every caller could write
+/// through. Building a fresh value per call is what makes that impossible —
+/// see the note on `page_margins_with_defaults`.
+fn default_page_margins() -> PageLayoutMarginsOptions {
+  PageLayoutMarginsOptions::with_values(
+    top=0.75,
+    bottom=0.75,
+    left=0.7,
+    right=0.7,
+    header=0.3,
+    footer=0.3,
+  )
+}
 
 ///|
 let default_sheet_base_col_width = 8
@@ -578,12 +586,18 @@ fn default_sheet_props() -> SheetPropsOptions {
 }
 
 ///|
-let default_page_layout : PageLayoutOptions = PageLayoutOptions::with_values(
-  size=0,
-  orientation="portrait",
-  first_page_number=1,
-  adjust_to=100,
-)
+/// Excel's built-in page setup: Letter paper, portrait, no scaling.
+///
+/// A function rather than a `let` for the same reason as
+/// `default_page_margins`.
+fn default_page_layout() -> PageLayoutOptions {
+  PageLayoutOptions::with_values(
+    size=0,
+    orientation="portrait",
+    first_page_number=1,
+    adjust_to=100,
+  )
+}
 
 ///|
 let supported_page_orientation : Array[String] = ["portrait", "landscape"]
@@ -706,12 +720,18 @@ fn sheet_props_is_empty(options : SheetPropsOptions) -> Bool {
 }
 
 ///|
+/// Fills the caller's margins in over Excel's defaults, returning a value the
+/// caller owns outright.
+///
+/// `merged` is mutated in place, so it must never be anything the rest of the
+/// process can still see: `default_page_margins()` returns a freshly built
+/// struct on every call, which is what keeps that true.
 fn page_margins_with_defaults(
   options : PageLayoutMarginsOptions?,
 ) -> PageLayoutMarginsOptions {
   match options {
     Some(value) => {
-      let merged = default_page_margins
+      let merged = default_page_margins()
       match value.top {
         Some(v) => merged.top = Some(v)
         None => ()
@@ -746,15 +766,17 @@ fn page_margins_with_defaults(
       }
       merged
     }
-    None => default_page_margins
+    None => default_page_margins()
   }
 }
 
 ///|
+/// Fills the caller's page setup in over Excel's defaults. See
+/// `page_margins_with_defaults` for why the base is a call and not a constant.
 fn page_layout_with_defaults(options : PageLayoutOptions?) -> PageLayoutOptions {
   match options {
     Some(value) => {
-      let merged = default_page_layout
+      let merged = default_page_layout()
       match value.size {
         Some(v) => merged.size = Some(v)
         None => ()
@@ -789,6 +811,6 @@ fn page_layout_with_defaults(options : PageLayoutOptions?) -> PageLayoutOptions 
       }
       merged
     }
-    None => default_page_layout
+    None => default_page_layout()
   }
 }
