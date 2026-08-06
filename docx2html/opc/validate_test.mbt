@@ -1566,3 +1566,85 @@ test "content types enforce ST_Extension and quoted media characters" {
     }),
   )
 }
+
+///|
+/// #338: a bounded-parse refusal and a malformed document are different
+/// verdicts, and reporting the first as the second sent readers hunting for
+/// corruption that did not exist. A resource-limit finding must name the
+/// guard, its configured ceiling, a lower bound on what the part actually
+/// needed, and the part — and must never say "malformed".
+test "XML resource-limit findings name the guard, ceiling, and part" {
+  let archive = try! @mbtzip.read(minimal_docx())
+  let (token_findings, _) = @opc.validate_docx_archive_limited(
+    archive,
+    max_findings=4,
+    max_message_chars=512,
+    max_xml_source_units=4096,
+    max_xml_tokens=7,
+    max_xml_materialized_chars=4096,
+    max_xml_token_chars=1024,
+  )
+  guard token_findings.search_by(finding => {
+      finding.contains("XML token budget exceeded")
+    })
+    is Some(index) else {
+    fail("token exhaustion produced no finding")
+  }
+  inspect(
+    token_findings[index],
+    content="XML resource limit exceeded in [Content_Types].xml: XML token budget exceeded (guard xml-tokens, limit 7, actual at least 8)",
+  )
+  for finding in token_findings {
+    assert_false(finding.contains("malformed"))
+  }
+  // The same for the source-unit guard, so the wording is not special-cased to
+  // one dimension.
+  let (source_findings, _) = @opc.validate_docx_archive_limited(
+    archive,
+    max_findings=4,
+    max_message_chars=512,
+    max_xml_source_units=5,
+    max_xml_tokens=4096,
+    max_xml_materialized_chars=4096,
+    max_xml_token_chars=1024,
+  )
+  guard source_findings.search_by(finding => {
+      finding.contains("XML source budget exceeded")
+    })
+    is Some(source_index) else {
+    fail("source exhaustion produced no finding")
+  }
+  inspect(
+    source_findings[source_index],
+    content="XML resource limit exceeded in [Content_Types].xml: XML source budget exceeded (guard xml-source-units, limit 5, actual at least 6)",
+  )
+}
+
+///|
+/// The regression that would matter most if the fix above were done wrongly:
+/// content that really is broken must still be reported as malformed, and must
+/// not be laundered into a resource-limit refusal. Classification reads the
+/// typed parser error, never the diagnostic text, so neither class can be
+/// reached by writing the other's words into a part name.
+test "genuinely malformed XML is still reported as malformed" {
+  let unclosed = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p></w:body></w:document>"
+  let report = @opc.validate_docx_archive_report_limited(
+    try! @mbtzip.read(minimal_docx(document=Some(unclosed))),
+    max_findings=8,
+    max_message_chars=512,
+    max_xml_source_units=1024 * 1024,
+    max_xml_tokens=4096,
+    max_xml_materialized_chars=1024 * 1024,
+    max_xml_token_chars=4096,
+  )
+  // Not a resource refusal: nothing was exhausted, the markup is simply wrong.
+  assert_true(report.resource_limit() is None)
+  guard report
+    .findings()
+    .search_by(finding => finding.has_prefix("malformed XML in"))
+    is Some(index) else {
+    fail("malformed markup lost its malformed verdict")
+  }
+  assert_true(report.findings()[index].contains("word/document.xml"))
+  assert_false(report.findings()[index].contains("XML resource limit exceeded"))
+}
