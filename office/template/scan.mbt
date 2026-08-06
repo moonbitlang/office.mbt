@@ -108,6 +108,66 @@ pub fn template_key_ok(key : String) -> Bool {
 }
 
 ///|
+/// Scans the segments' concatenated text for NON-OVERLAPPING occurrences
+/// of a LITERAL needle, left to right, sharing the placeholder scanner's
+/// segment cursor: a match may span segment boundaries exactly like a
+/// placeholder, and the returned spans use the same canonical form. The
+/// needle is never interpreted — there is no escaping, no wildcard, and
+/// no regular-expression syntax, matching `query --text`.
+///
+/// Matching is over UTF-16 code units. A well-formed needle can neither
+/// begin nor end inside a surrogate pair, so every returned endpoint is
+/// a valid slicing boundary.
+///
+/// An empty needle matches nothing (callers must reject it earlier).
+/// `budget` is charged the scanned length plus one unit per comparison,
+/// so a pathological needle cannot buy unbounded work.
+pub fn scan_literal(
+  segments : Array[String],
+  needle : String,
+  budget : Ref[Int],
+) -> Array[TemplateSpan] raise TemplateScanError {
+  let needle_units = needle.code_units()
+  let needle_length = needle_units.length()
+  let starts : Array[Int] = []
+  let mut total = 0
+  for segment in segments {
+    starts.push(total)
+    total += segment.code_units().length()
+  }
+  budget.val -= total
+  if budget.val < 0 {
+    raise TemplateScanBudgetExceeded(
+      "template scan work exceeds the configured ceiling",
+    )
+  }
+  let spans : Array[TemplateSpan] = []
+  guard needle_length > 0 && needle_length <= total else { return spans }
+  let cursor : ScanCursor = { segments, starts, total }
+  let mut position = 0
+  while position + needle_length <= total {
+    let mut probe = 0
+    while probe < needle_length &&
+          cursor.unit_at(position + probe) == needle_units[probe].to_int() {
+      probe += 1
+    }
+    budget.val -= probe + 1
+    if budget.val < 0 {
+      raise TemplateScanBudgetExceeded(
+        "template scan work exceeds the configured ceiling",
+      )
+    }
+    if probe == needle_length {
+      spans.push(cursor.span(position, position + needle_length))
+      position += needle_length
+    } else {
+      position += 1
+    }
+  }
+  spans
+}
+
+///|
 priv struct ScanCursor {
   segments : Array[String]
   // flattened (segment, offset) pairs are recomputed from a linear

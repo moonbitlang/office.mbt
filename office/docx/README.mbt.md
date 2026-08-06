@@ -120,5 +120,8 @@ The session's CRC/length fingerprints are descriptive; stale-plan safety uses
 exact byte equality. The lower-level `bobzhang/docx2html/splice` API remains
 available for callers that intentionally do not need the transaction boundary.
 
-This package does not yet provide paragraph, run, table, tracked-change, or
-template-merge mutations. PowerPoint and MCP remain out of scope.
+Text substitution on an existing document is limited to the `{{key}}` template
+merge and to literal find & replace (`transact_docx_edit`); both rewrite run
+text through the session's byte spans. This package does not yet provide
+paragraph, run, table, or tracked-change mutations. PowerPoint and MCP remain
+out of scope.

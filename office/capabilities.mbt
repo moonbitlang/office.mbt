@@ -1189,6 +1189,95 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
       variants: [],
     },
     {
+      name: "edit",
+      summary: "Replace literal text in an existing DOCX through a strict edit script",
+      usage: "office edit FILE SCRIPT.json --out OUT.docx [--dry-run] [--overwrite] [--allow-unmatched] [--json|--jsonl]",
+      formats: ["docx"],
+      aliases: [],
+      inputs: [
+        capability_field(
+          "file", "path", true, "existing .docx package (never modified in place)",
+        ),
+        capability_field(
+          "script", "docx.edit/1-file", true, "strict replace_text script. `find` is LITERAL text — never a regular expression or wildcard — matched across run boundaries; `replace` may be empty to delete the matched text; `occurrence` omitted replaces every occurrence in document order, `occurrence: N` replaces only the Nth",
+        ),
+        capability_field(
+          "out", "path", true, "destination .docx; created atomically, refused when present unless --overwrite",
+        ),
+        capability_field(
+          "dry-run", "boolean", false, "run the full edit and validation without publishing",
+        ),
+        capability_field(
+          "overwrite", "boolean", false, "replace an existing destination",
+        ),
+        capability_field(
+          "allow-unmatched", "boolean", false, "report operations that found too few occurrences instead of refusing",
+        ),
+        capability_field(
+          "json", "boolean", false, "emit one office.output/1 JSON document",
+        ),
+        capability_field(
+          "jsonl", "boolean", false, "emit one office.output/1 line",
+        ),
+      ],
+      outputs: [
+        capability_field(
+          "schema", "literal(office.docx.edit/1)", true, "versioned literal-edit result schema",
+        ),
+        capability_field("file", "string", true, "the edited source path"),
+        capability_field(
+          "format", "literal(docx)", true, "edited document format",
+        ),
+        capability_field(
+          "script_file", "string", true, "the consumed script path",
+        ),
+        capability_field(
+          "output", "string", true, "the publication destination",
+        ),
+        capability_field(
+          "ops_applied", "number", true, "operations in the script",
+        ),
+        capability_field(
+          "replacements", "number", true, "text spans rewritten across every operation",
+        ),
+        capability_field(
+          "results", "array(object)", true, "per op: op, find, replace, occurrence (null when every occurrence is replaced), matched (occurrences seen), replacements (spans rewritten) — all bounded",
+        ),
+        capability_field(
+          "unmatched", "array(finding)", true, "operations that found fewer occurrences than they require (bounded); refuses unless --allow-unmatched",
+        ),
+        capability_field(
+          "unmatched_total", "number", true, "unmatched operations before bounding",
+        ),
+        capability_field(
+          "unsupported", "array(finding)", true, "matches the edit cannot rewrite safely — content a byte-span run rewrite cannot own, matches crossing a hyperlink boundary, and matches in footnote, endnote, or comment stories (bounded)",
+        ),
+        capability_field(
+          "unsupported_total", "number", true, "unsupported matches before bounding",
+        ),
+        capability_field(
+          "conflicts", "array(finding)", true, "paragraph locations where two operations match overlapping text (bounded)",
+        ),
+        capability_field(
+          "conflicts_total", "number", true, "overlapping match sites before bounding",
+        ),
+        capability_field(
+          "locations", "array(finding)", true, "canonical paragraph location and needle for each rewritten span (bounded)",
+        ),
+        capability_field(
+          "locations_truncated", "boolean", true, "whether locations omitted later sites",
+        ),
+        capability_field(
+          "stories_scanned", "array(string)", true, "the stories the edit scanned: /body, then /header[K] and /footer[K]",
+        ),
+        capability_field(
+          "transaction", "object", true, "office.transaction/2 report; preservation is authoritative. Matches are found in the ORIGINAL snapshot — operations never see each other's output — and applied as byte-span run rewrites, so all unrelated OOXML survives; the replacement inherits the formatting of the run the match started in; nothing is published on any refusal, and a zero-replacement run reuses the exact input bytes",
+        ),
+      ],
+      output_modes: ["human", "json", "jsonl"],
+      variants: [],
+    },
+    {
       name: "annotate",
       summary: "Mutate DOCX comments through a strict annotation script",
       usage: "office annotate FILE SCRIPT.json --out OUT.docx [--dry-run] [--overwrite] [--json|--jsonl]",

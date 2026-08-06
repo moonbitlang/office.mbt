@@ -360,15 +360,15 @@ jobs:
             and .success == true
             and .data.schema == "office.capabilities/2"
             and (.data.fingerprint | test("^crc32:[0-9a-f]{8}$"))
-            and ([.data.records[].name] == ["docx", "xlsx", "help", "identify", "outline", "get", "text", "query", "validate", "dump", "replay", "issues", "preview", "create", "template", "annotate", "batch", "raw"])'
+            and ([.data.records[].name] == ["docx", "xlsx", "help", "identify", "outline", "get", "text", "query", "validate", "dump", "replay", "issues", "preview", "create", "template", "edit", "annotate", "batch", "raw"])'
           moon run --target wasm office-cli -- help all --jsonl 2>office-wasm.err \
-            | jq -se 'length == 18 and all(.[]; .schema == "office.capability/2")'
+            | jq -se 'length == 19 and all(.[]; .schema == "office.capability/2")'
           moon run --target wasm office-cli -- help schemas 2>office-wasm.err \
             | grep -q '^Consumed input contracts$'
           hs=$(moon run --target wasm office-cli -- help schemas --json 2>office-wasm.err)
-          echo "$hs" | jq -e '.success == true and .data.schema == "office.input-contracts/1" and (.data.contracts | length) == 4'
+          echo "$hs" | jq -e '.success == true and .data.schema == "office.input-contracts/1" and (.data.contracts | length) == 5'
           moon run --target wasm office-cli -- help schemas --jsonl 2>office-wasm.err \
-            | jq -e '.schema == "office.input-contracts/1" and (.contracts | length) == 4'
+            | jq -e '.schema == "office.input-contracts/1" and (.contracts | length) == 5'
           moon run --target wasm office-cli -- help schema docx.batch/2 2>office-wasm.err \
             | jq -e '.schema == "office.input-contract/1" and .id == "docx.batch/2"'
           hc=$(moon run --target wasm office-cli -- help schema docx.batch/2 --json 2>office-wasm.err)

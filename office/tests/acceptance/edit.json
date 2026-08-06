@@ -1,0 +1,7 @@
+{
+  "schema": "docx.edit/1",
+  "ops": [
+    {"op": "replace_text", "params": {"find": "Quarterly", "replace": "Annual"}},
+    {"op": "replace_text", "params": {"find": "Region", "replace": "Territory"}}
+  ]
+}

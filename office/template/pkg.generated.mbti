@@ -29,6 +29,8 @@ pub fn parse_template_data(String, max_keys? : Int, max_value_units? : Int) -> M
 
 pub fn parse_template_document(String, max_keys? : Int, max_value_units? : Int, max_regions? : Int, max_region_records? : Int, max_total_region_rows? : Int) -> TemplateData raise TemplateDataError
 
+pub fn scan_literal(Array[String], String, @ref.Ref[Int]) -> Array[TemplateSpan] raise TemplateScanError
+
 pub fn scan_placeholders(Array[String], @ref.Ref[Int]) -> TemplateScan raise TemplateScanError
 
 pub fn template_key_ok(String) -> Bool

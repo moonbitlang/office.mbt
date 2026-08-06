@@ -23,7 +23,7 @@ test "input contract inventory is stable, ordered, and versioned" {
     fields.get("fingerprint"),
     Some(
       Json::string(
-        "sha256:e8bd5b7a53f47189b7de5cd06a00a1163e5e1d7978658ecc7c9c8ea548ac538a",
+        "sha256:71968a52940499741d54b956b9d35dd07de7041e3680737f06b80a44bfd72b51",
       ),
     ),
   )
@@ -42,7 +42,7 @@ test "input contract inventory is stable, ordered, and versioned" {
     assert_eq(fingerprint.length(), 71)
   }
   assert_eq(ids, [
-    "xlsx.batch/2", "docx.batch/2", "office.template.data/1", "docx.annotation-batch/1",
+    "xlsx.batch/2", "docx.batch/2", "office.template.data/1", "docx.edit/1", "docx.annotation-batch/1",
   ])
 }
 
@@ -60,6 +60,9 @@ test "every advertised example passes its production parser" {
   for example in annotation_input_contract().examples {
     ignore(@office_docx.parse_annotation_batch(example.stringify()))
   }
+  for example in edit_input_contract().examples {
+    ignore(@office_docx.parse_docx_edit_script(example.stringify()))
+  }
 }
 
 ///|
@@ -76,6 +79,25 @@ test "operation inventories come from their production parser owners" {
   assert_eq(
     contract_operation_names(annotation_input_contract().operations, "name"),
     @office_docx.annotation_batch_operation_names(),
+  )
+  assert_eq(
+    contract_operation_names(edit_input_contract().operations, "op"),
+    @office_docx.docx_edit_operation_names_list(),
+  )
+  guard edit_input_contract().limits is Object(edit_limits) else {
+    fail("contract limits must be objects")
+  }
+  assert_eq(
+    edit_limits.get("max_ops"),
+    Some(Json::number(@office_docx.MAX_EDIT_OPS.to_double())),
+  )
+  assert_eq(
+    edit_limits.get("max_find_utf16_units"),
+    Some(Json::number(@office_docx.MAX_EDIT_FIND_UNITS.to_double())),
+  )
+  assert_eq(
+    edit_limits.get("max_occurrence"),
+    Some(Json::number(@office_docx.MAX_EDIT_OCCURRENCE.to_double())),
   )
   guard docx_input_contract().limits is Object(docx_limits) &&
     template_input_contract().limits is Object(template_limits) &&

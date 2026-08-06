@@ -146,6 +146,7 @@ fn build_command() -> @argparse.Command {
       create_command(),
       batch_command(),
       template_command(),
+      edit_command(),
       annotate_command(),
       raw_command(),
     ],
@@ -169,6 +170,7 @@ fn is_implemented_command(name : StringView) -> Bool {
     | "create"
     | "batch"
     | "template"
+    | "edit"
     | "annotate"
     | "raw" => true
     _ => false
@@ -196,6 +198,7 @@ async fn run_cli(args : Array[String]) -> Unit {
         "create" => run_create(values)
         "batch" => run_batch(values)
         "template" => run_template(values)
+        "edit" => run_edit(values)
         "annotate" => run_annotate(values)
         "raw" => run_raw(values)
         _ => ()

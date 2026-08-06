@@ -92,6 +92,7 @@ cp "$here/xlsx.batch.json" "$work/xlsx.batch.json"
 cp "$here/docx.batch.json" "$work/docx.batch.json"
 cp "$here/template-data.json" "$work/template-data.json"
 cp "$here/annotation.json" "$work/annotation.json"
+cp "$here/edit.json" "$work/edit.json"
 
 # Discovery is schema-driven and advertises the complete supported command set.
 capabilities="$(json office.capabilities/2 help all --json)"
@@ -102,7 +103,7 @@ jq -e '
   ([.data.records[].name] == [
     "docx", "xlsx", "help", "identify", "outline", "get", "text",
     "query", "validate", "dump", "replay", "issues", "preview",
-    "create", "template", "annotate", "batch", "raw"
+    "create", "template", "edit", "annotate", "batch", "raw"
   ])
 ' >/dev/null <<<"$capabilities" || fail "capability registry"
 
@@ -190,6 +191,30 @@ jq -e '.data.matched_total == 1 and .data.matches[0].kind == "hyperlink"' >/dev/
 docx_template="$(json office.template/1 template "$work/docx-template.docx" "$work/template-data.json" --out "$work/docx-filled.docx" --json)"
 jq -e '.success == true and .data.replaced == 2 and .data.transaction.preservation.changed == ["word/document.xml"]' >/dev/null <<<"$docx_template" || fail "docx template"
 jq -e '.data.text == "Quarterly report for Ada Lovelace"' >/dev/null <<<"$(json office.docx.element/1 get "$work/docx-filled.docx" '/docx/body/p[1]' --json)" || fail "docx template readback"
+
+# Literal find & replace on an existing document: preservation-safe byte-span
+# run rewrites, a typed refusal when a needle is absent, and a typed refusal
+# when a match would have to cross a hyperlink boundary.
+docx_edit="$(json office.docx.edit/1 edit "$work/docx-filled.docx" "$work/edit.json" --out "$work/docx-edited.docx" --json)"
+jq -e '.success == true and .data.replacements == 2 and .data.transaction.preservation.changed == ["word/document.xml"]' >/dev/null <<<"$docx_edit" || fail "docx edit"
+jq -e '.data.text == "Annual report for Ada Lovelace"' >/dev/null <<<"$(json office.docx.element/1 get "$work/docx-edited.docx" '/docx/body/p[1]' --json)" || fail "docx edit readback"
+jq -e '.data.valid == true and .data.error_count == 0' >/dev/null <<<"$(json office.validate/1 validate "$work/docx-edited.docx" --json)" || fail "docx edit validate"
+
+printf '%s\n' \
+  '{"schema":"docx.edit/1","ops":[{"op":"replace_text","params":{"find":"nowhere at all","replace":"x"}}]}' \
+  >"$work/docx-edit-miss.json"
+expect_failure "$work/docx-edit-miss-result.json" edit "$work/docx-filled.docx" \
+  "$work/docx-edit-miss.json" --out "$work/docx-edit-never.docx" --json
+jq -e '.error.code == "office.edit.unmatched_find"' "$work/docx-edit-miss-result.json" >/dev/null || fail "docx edit unmatched code"
+[ ! -e "$work/docx-edit-never.docx" ] || fail "docx edit refusal wrote output"
+
+printf '%s\n' \
+  '{"schema":"docx.edit/1","ops":[{"op":"replace_text","params":{"find":"the published","replace":"the archived"}}]}' \
+  >"$work/docx-edit-link.json"
+expect_failure "$work/docx-edit-link-result.json" edit "$work/docx-filled.docx" \
+  "$work/docx-edit-link.json" --out "$work/docx-edit-link.docx" --json
+jq -e '.error.code == "office.edit.unsupported_context" and (.error.details.unsupported[0].detail | test("hyperlink"))' "$work/docx-edit-link-result.json" >/dev/null || fail "docx edit hyperlink refusal"
+[ ! -e "$work/docx-edit-link.docx" ] || fail "docx edit hyperlink refusal wrote output"
 
 docx_annotate="$(json office.docx.annotation-batch/1 annotate "$work/docx-filled.docx" "$work/annotation.json" --out "$work/docx-reviewed.docx" --json)"
 jq -e '.success == true and .data.ops_applied == 3 and (.data.labels | length) == 2 and (.data.changed_parts | index("word/document.xml")) != null' >/dev/null <<<"$docx_annotate" || fail "docx annotate"
