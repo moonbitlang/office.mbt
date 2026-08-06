@@ -535,9 +535,10 @@ to 8 MiB each and 32 MiB in aggregate.
 | `schema` | string | `"office.docx.outline/1"` |
 | `file`, `format` | string | input path and literal `"docx"` |
 | `scanned_elements` | number | total bounded projection nodes |
-| `counts` | object | body/header/footer story counts plus note, comment, paragraph, run, table, row, cell, hyperlink, and image counts |
+| `counts` | object | body/header/footer story counts plus note, comment, paragraph, run, table, row, cell, hyperlink, and image counts, plus `insertions` and `deletions` (tracked changes, counted apart because they distort the accepted view in opposite directions) |
 | `stories` | array | `{path, kind, children, stability, source}` roots in deterministic story order |
 | `headings` | array | `{path, level, text, text_truncated}` bounded previews |
+| `revisions` | array | unaccepted tracked changes in document order: `{type, path?, id?, author?, date?}` where `type` is `ins` or `del` and `path` is the containing paragraph. `id`, `author`, and `date` are copied only when the document records them. Read-only: `text` still returns the accepted view |
 | `styles_in_use` | array | first-use-deduplicated `{kind, id?, name?}` |
 | `images` | array | `{path, content_type, bytes, alt_text?}`; never image data |
 | `sections` | array | effective header/footer references |

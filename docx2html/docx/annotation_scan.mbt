@@ -44,6 +44,71 @@ impl Show for ScanMarkerKind with fn output(self, logger) {
 }
 
 ///|
+/// A tracked-change container the scanner can locate. The reader flattens
+/// `w:ins` and drops `w:del`, so neither survives into the parsed tree:
+/// revision identity exists only here, in the raw bytes.
+priv enum ScanRevisionKind {
+  Insertion
+  Deletion
+}
+
+///|
+impl Show for ScanRevisionKind with fn output(self, logger) {
+  logger.write_string(
+    match self {
+      Insertion => "ins"
+      Deletion => "del"
+    },
+  )
+}
+
+///|
+/// One located tracked-change container. `author`/`date`/`id` are the
+/// attributes AS SPELLED and stay absent when the source omits them —
+/// `w:date` is optional in CT_TrackChange, and inventing one would make
+/// the index assert a revision time the document never recorded.
+/// `container_path` follows the marker contract above; document order is
+/// the array order, so no separate sequence number is retained (adding one
+/// would perturb the existing marker/node sequence arithmetic for no reader).
+priv struct ScannedRevision {
+  kind : ScanRevisionKind
+  id : String?
+  author : String?
+  date : String?
+  container_path : String?
+}
+
+///|
+/// Insertion or deletion.
+fn ScannedRevision::kind(self : ScannedRevision) -> ScanRevisionKind {
+  self.kind
+}
+
+///|
+/// The w:id attribute, as spelled, when present.
+fn ScannedRevision::id(self : ScannedRevision) -> String? {
+  self.id
+}
+
+///|
+/// The w:author attribute, as spelled, when present.
+fn ScannedRevision::author(self : ScannedRevision) -> String? {
+  self.author
+}
+
+///|
+/// The w:date attribute, LEXICAL (never converted), when present.
+fn ScannedRevision::date(self : ScannedRevision) -> String? {
+  self.date
+}
+
+///|
+/// The innermost open projection node, or None at story level.
+fn ScannedRevision::container_path(self : ScannedRevision) -> String? {
+  self.container_path
+}
+
+///|
 /// One located marker. `seq` is a total document order shared with node
 /// intervals; `container_path` is the innermost open projection node
 /// ("p[2]/r[1]", story-relative) or None at story level; `after_child`
@@ -372,6 +437,10 @@ priv struct StoryScan {
   nodes : Array[ScannedNode]
   elements : Array[ScannedElement]
   markers : Array[ScannedMarker]
+  // Tracked-change containers in document order. Retained separately from
+  // markers: a revision is a range container, not a point, and it survives
+  // in stories the reader flattens (w:ins) or drops (w:del) entirely.
+  revisions : Array[ScannedRevision]
   warnings : Array[String]
   story_level_positions : Map[Int, StoryLevelMarkerPosition]
   // The story's ROOT element span (kind = its local name, path = "").
@@ -395,6 +464,7 @@ priv struct AnnotationScanWork {
   mut projection_opens : Int
   mut emitted_nodes : Int
   mut emitted_markers : Int
+  mut emitted_revisions : Int
   mut ordering_steps : Int
   mut story_position_steps : Int
   mut retraction_calls : Int
@@ -505,6 +575,12 @@ fn StoryScan::markers(self : StoryScan) -> Array[ScannedMarker] {
 }
 
 ///|
+/// Tracked-change containers, in document order.
+fn StoryScan::revisions(self : StoryScan) -> Array[ScannedRevision] {
+  self.revisions
+}
+
+///|
 /// Non-fatal scan diagnostics.
 fn StoryScan::warnings(self : StoryScan) -> Array[String] {
   self.warnings
@@ -523,12 +599,13 @@ fn StoryScan::story_level_position(
 /// callers cannot depend on instrumentation details.
 fn StoryScan::complexity_counters(
   self : StoryScan,
-) -> (Int, Int, Int, Int, Int, Int, Int) {
+) -> (Int, Int, Int, Int, Int, Int, Int, Int) {
   let work = self.work
   (
     work.projection_opens,
     work.emitted_nodes,
     work.emitted_markers,
+    work.emitted_revisions,
     work.ordering_steps,
     work.story_position_steps,
     work.retraction_calls,
@@ -611,6 +688,7 @@ priv struct ScanFrame {
   // everything accumulated earlier in the story.
   node_checkpoint : Int
   marker_checkpoint : Int
+  revision_checkpoint : Int
 }
 
 ///|
@@ -794,6 +872,21 @@ fn marker_kind(uri : String, local_name : String) -> ScanMarkerKind? {
 }
 
 ///|
+/// A tracked-change container the scanner records. `w:moveFrom`/`w:moveTo`
+/// are deliberately out of scope: they are a paired MOVE, and reporting one
+/// half of a move as a plain deletion would misdescribe the edit.
+fn revision_kind(uri : String, local_name : String) -> ScanRevisionKind? {
+  if !is_wml_uri(uri) {
+    return None
+  }
+  match local_name {
+    "ins" => Some(Insertion)
+    "del" => Some(Deletion)
+    _ => None
+  }
+}
+
+///|
 fn split_qualified_name(name : String) -> (String, String) {
   match name.find(":") {
     Some(colon) => (name[0:colon].to_owned(), name[colon + 1:].to_owned())
@@ -863,6 +956,7 @@ fn scan_story(
   let nodes : Array[ScannedNode] = []
   let elements : Array[ScannedElement] = []
   let markers : Array[ScannedMarker] = []
+  let revisions : Array[ScannedRevision] = []
   let owns_warning_collector = warning_collector is None
   let warnings = match warning_collector {
     Some(value) => value
@@ -887,6 +981,7 @@ fn scan_story(
     projection_opens: 0,
     emitted_nodes: 0,
     emitted_markers: 0,
+    emitted_revisions: 0,
     ordering_steps: 0,
     story_position_steps: 0,
     retraction_calls: 0,
@@ -1045,7 +1140,7 @@ fn scan_story(
                   cell.local_name == "tc" &&
                   cell.vmerge_continue &&
                   table.origin_columns.contains(cell.grid_column) {
-                  retract_cell(cell, elements, nodes, markers, work)
+                  retract_cell(cell, elements, nodes, markers, revisions, work)
                 }
               _ => ()
             }
@@ -1063,6 +1158,7 @@ fn scan_story(
                     elements,
                     nodes,
                     markers,
+                    revisions,
                     work,
                   )
                 }
@@ -1427,6 +1523,62 @@ fn scan_story(
         None => ()
       }
     }
+    // Tracked-change containers are located from the CONTAINER's own frame,
+    // because `w:del` suppresses everything inside itself: gating on
+    // `suppressed` (as markers do) would make every deletion invisible,
+    // which is exactly the blind spot this record exists to close. An
+    // `inherited_suppression` gate still applies, so a revision the reader
+    // drops wholesale (inside an unselected mc:Choice branch) stays out.
+    //
+    // DELIBERATE LIMIT: property-container revisions are not recorded.
+    // `w:rPr/w:ins` marks an inserted PARAGRAPH MARK and `w:trPr/w:del` a
+    // deleted table ROW; both are revisions of a property, not of content,
+    // and the row case is retracted from the projection anyway, leaving no
+    // path to name. Content revisions are the ones a review agent reads.
+    if !inherited_suppression && !inside_properties {
+      match revision_kind(uri, local_name) {
+        Some(kind) => {
+          let id = attribute_value(
+            attributes,
+            "id",
+            namespaces,
+            prefer_last=source_budget is Some(_),
+          )
+          let author = attribute_value(
+            attributes,
+            "author",
+            namespaces,
+            prefer_last=source_budget is Some(_),
+          )
+          let date = attribute_value(
+            attributes,
+            "date",
+            namespaces,
+            prefer_last=source_budget is Some(_),
+          )
+          // Charge the retained metadata before it is stored, so a story
+          // padded with revision attributes cannot outgrow the scanner's
+          // cumulative retention allowance.
+          path_budget.charge(
+            id.map(String::length).unwrap_or(0) +
+            author.map(String::length).unwrap_or(0) +
+            date.map(String::length).unwrap_or(0),
+          )
+          let container_path = match current_projection() {
+            Some(frame) => frame.projection_path
+            None => None
+          }
+          revisions.push({ kind, id, author, date, container_path })
+          work.emitted_revisions += 1
+          if author is None {
+            warnings.add(
+              "annotation scanner: a w:\{kind} revision has no w:author attribute",
+            )
+          }
+        }
+        None => ()
+      }
+    }
     let mut counter_owner : StableStringMap[Int]? = None
     let mut projection_kind_value : String? = None
     let mut projection_open_order = -1
@@ -1666,6 +1818,7 @@ fn scan_story(
         registered_columns: [],
         node_checkpoint: nodes.length(),
         marker_checkpoint: markers.length(),
+        revision_checkpoint: revisions.length(),
       })
     }
     index = tag_end
@@ -1685,6 +1838,7 @@ fn scan_story(
     nodes,
     elements,
     markers,
+    revisions,
     warnings: if owns_warning_collector {
       warnings.finish()
     } else {
@@ -1817,14 +1971,19 @@ fn purge_subtree(
   frame : ScanFrame,
   nodes : Array[ScannedNode],
   markers : Array[ScannedMarker],
+  revisions : Array[ScannedRevision],
   work : AnnotationScanWork,
 ) -> Unit {
   work.retraction_calls += 1
   work.retraction_steps += 1 +
     (nodes.length() - frame.node_checkpoint) +
-    (markers.length() - frame.marker_checkpoint)
+    (markers.length() - frame.marker_checkpoint) +
+    (revisions.length() - frame.revision_checkpoint)
   nodes.truncate(frame.node_checkpoint)
   markers.truncate(frame.marker_checkpoint)
+  // A retracted subtree has no projection node left to attach a revision
+  // path to, so its revisions go with it — the same rule markers follow.
+  revisions.truncate(frame.revision_checkpoint)
 }
 
 ///|
@@ -1836,6 +1995,7 @@ fn retract_row(
   elements : Array[ScannedElement],
   nodes : Array[ScannedNode],
   markers : Array[ScannedMarker],
+  revisions : Array[ScannedRevision],
   work : AnnotationScanWork,
 ) -> Unit {
   if row.element_index >= 0 && row.element_index < elements.length() {
@@ -1850,7 +2010,7 @@ fn retract_row(
       row.projection_path = None
       row.counter_owner = None
       row.suppressed = true
-      purge_subtree(row, nodes, markers, work)
+      purge_subtree(row, nodes, markers, revisions, work)
       // Roll back exactly the origins this row's cells introduced —
       // the reader never lets a deleted row participate in merging.
       match table {
@@ -1874,6 +2034,7 @@ fn retract_cell(
   elements : Array[ScannedElement],
   nodes : Array[ScannedNode],
   markers : Array[ScannedMarker],
+  revisions : Array[ScannedRevision],
   work : AnnotationScanWork,
 ) -> Unit {
   match (cell.projection_path, cell.counter_owner) {
@@ -1888,7 +2049,7 @@ fn retract_cell(
       if cell.element_index >= 0 && cell.element_index < elements.length() {
         elements[cell.element_index].retracted_by_vmerge = true
       }
-      purge_subtree(cell, nodes, markers, work)
+      purge_subtree(cell, nodes, markers, revisions, work)
     }
     _ => ()
   }
@@ -2176,8 +2337,10 @@ fn bytes_range_has_ascii_suffix(
 
 ///|
 /// Filters before materialization. Namespace declarations are needed to
-/// resolve names; source-retaining reader projection additionally needs the
-/// few attributes that make BodyReader emit zero versus one logical element.
+/// resolve names; tracked-change containers additionally need the CT_TrackChange
+/// attributes that say who revised the document and when; source-retaining
+/// reader projection additionally needs the few attributes that make BodyReader
+/// emit zero versus one logical element.
 fn annotation_attribute_is_relevant(
   part : BytesView,
   start : Int,
@@ -2189,6 +2352,8 @@ fn annotation_attribute_is_relevant(
   bytes_range_has_ascii_suffix(part, start, end, ":id") ||
   bytes_range_has_ascii_suffix(part, start, end, ":type") ||
   bytes_range_has_ascii_suffix(part, start, end, ":val") ||
+  bytes_range_has_ascii_suffix(part, start, end, ":author") ||
+  bytes_range_has_ascii_suffix(part, start, end, ":date") ||
   (
     retain_projection_attributes &&
     (
@@ -2547,6 +2712,98 @@ test "scanner: projection paths, marker containment, and document order" {
   }
   debug_inspect(markers[0].seq() < covered_open, content="true")
   debug_inspect(covered_close < markers[1].seq(), content="true")
+}
+
+///|
+test "scanner: tracked-change containers survive the reader's flattening" {
+  // The reader flattens w:ins into the accepted text and drops w:del
+  // wholesale, so neither reaches the parsed tree. The scan is the only
+  // place the revision identity exists.
+  let scan = scan_text(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|<w:body>
+      #|<w:p><w:r><w:t>The revenue was </w:t></w:r>
+      #|<w:del w:id="1" w:author="Reviewer" w:date="2026-01-01T00:00:00Z"><w:r><w:delText>flat</w:delText></w:r></w:del>
+      #|<w:ins w:id="2" w:author="Reviewer"><w:r><w:t>up 18%</w:t></w:r></w:ins>
+      #|</w:p>
+      #|<w:tbl><w:tr><w:tc><w:p><w:ins w:id="3" w:author="Ravi"><w:r><w:t>cell</w:t></w:r></w:ins></w:p></w:tc></w:tr></w:tbl>
+      #|</w:body>
+      #|</w:document>
+    ),
+  )
+  let found : Array[String] = []
+  for revision in scan.revisions() {
+    found.push(
+      "\{revision.kind()} id=\{revision.id().unwrap_or("-")} author=\{revision.author().unwrap_or("-")} date=\{revision.date().unwrap_or("-")} in=\{revision.container_path().unwrap_or("<story>")}",
+    )
+  }
+  // The dateless insertion reports "-", not a substituted timestamp: w:date
+  // is optional in CT_TrackChange and defaulting it would invent a fact.
+  debug_inspect(
+    found,
+    content=(
+      #|[
+      #|  "del id=1 author=Reviewer date=2026-01-01T00:00:00Z in=p[1]",
+      #|  "ins id=2 author=Reviewer date=- in=p[1]",
+      #|  "ins id=3 author=Ravi date=- in=tbl[1]/tr[1]/tc[1]/p[1]",
+      #|]
+    ),
+  )
+  debug_inspect(scan.warnings().length(), content="0")
+}
+
+///|
+test "scanner: revisions the reader never renders are not reported" {
+  // An unselected mc:Choice branch is dropped by the reader, so a revision
+  // inside it describes text nobody reads. Property-container revisions
+  // (an inserted paragraph MARK, a deleted table ROW) are deliberately out
+  // of scope for the same reason markers are: they revise a property, not
+  // content, and the deleted row is retracted from the projection entirely.
+  let scan = scan_text(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">
+      #|<w:body>
+      #|<w:p><w:pPr><w:rPr><w:ins w:id="1" w:author="Mark"/></w:rPr></w:pPr><w:r><w:t>a</w:t></w:r></w:p>
+      #|<w:p><mc:AlternateContent><mc:Choice><w:ins w:id="2" w:author="Hidden"><w:r><w:t>x</w:t></w:r></w:ins></mc:Choice><mc:Fallback><w:r><w:t>b</w:t></w:r></mc:Fallback></mc:AlternateContent></w:p>
+      #|<w:tbl><w:tr><w:trPr><w:del w:id="3" w:author="Row"/></w:trPr><w:tc><w:p><w:ins w:id="4" w:author="Gone"><w:r><w:t>c</w:t></w:r></w:ins></w:p></w:tc></w:tr></w:tbl>
+      #|<w:p><w:ins w:id="5" w:author="Kept"><w:r><w:t>d</w:t></w:r></w:ins></w:p>
+      #|</w:body>
+      #|</w:document>
+    ),
+  )
+  let found : Array[String] = []
+  for revision in scan.revisions() {
+    found.push("\{revision.kind()} id=\{revision.id().unwrap_or("-")}")
+  }
+  // Only the revision inside a rendered paragraph survives. id=4 was
+  // retracted with its deleted row; id=1 and id=3 are property revisions;
+  // id=2 sits in a branch the reader discards.
+  debug_inspect(
+    found,
+    content=(
+      #|["ins id=5"]
+    ),
+  )
+}
+
+///|
+test "scanner: a revision without an author is reported and diagnosed" {
+  let scan = scan_text(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|<w:body><w:p><w:ins w:id="1"><w:r><w:t>x</w:t></w:r></w:ins></w:p></w:body>
+      #|</w:document>
+    ),
+  )
+  guard scan.revisions() is [revision] else { fail("expected one revision") }
+  debug_inspect(revision.author(), content="None")
+  debug_inspect(
+    scan.warnings(),
+    content=(
+      #|["annotation scanner: a w:ins revision has no w:author attribute"]
+    ),
+  )
 }
 
 ///|
@@ -3023,6 +3280,7 @@ test "scanner complexity: alternating late row and cell retractions stay linear"
     projection_opens,
     emitted_nodes,
     emitted_markers,
+    emitted_revisions,
     ordering_steps,
     story_position_steps,
     retraction_calls,
@@ -3032,7 +3290,8 @@ test "scanner complexity: alternating late row and cell retractions stay linear"
   // Checkpoint truncation can discard each emitted item at most once. Any
   // retained-prefix scan would violate this structural work bound.
   assert_true(
-    retraction_steps <= retraction_calls + emitted_nodes + emitted_markers,
+    retraction_steps <=
+    retraction_calls + emitted_nodes + emitted_markers + emitted_revisions,
   )
   // Open-order reconstruction visits one slot per projection open and each
   // surviving node once; story fallback visits every retained marker and

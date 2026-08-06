@@ -1006,6 +1006,72 @@ test "annotation story paths cannot alias body or comments under another kind" {
 }
 
 ///|
+fn revision_summary(revision : @docx.RevisionInfo) -> String {
+  "\{revision.kind()} id=\{revision.id().unwrap_or("-")} author=\{revision.author().unwrap_or("-")} date=\{revision.date().unwrap_or("-")} at=\{revision.path()}"
+}
+
+///|
+/// The reader flattens `w:ins` into the accepted text and drops `w:del`
+/// entirely, so who revised the document — and when — survives nowhere in
+/// the parsed model. The index resolves each tracked change to the
+/// projection path of its containing paragraph, story-qualified, so a
+/// caller can address the paragraph it affects.
+test "the annotation index reports tracked changes per containing paragraph" {
+  let body =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t xml:space="preserve">The revenue was </w:t></w:r><w:del w:id="1" w:author="Reviewer" w:date="2026-01-01T00:00:00Z"><w:r><w:delText>flat</w:delText></w:r></w:del><w:ins w:id="2" w:author="Reviewer"><w:r><w:t>up 18%</w:t></w:r></w:ins></w:p><w:tbl><w:tr><w:tc><w:p><w:ins w:id="3" w:author="Ravi"><w:r><w:t>cell</w:t></w:r></w:ins></w:p></w:tc></w:tr></w:tbl></w:body></w:document>
+  let revisions = @docx.read_docx_annotated(fixture_docx(body))
+    .annotations()
+    .revisions()
+    .map(revision_summary)
+  // `date` degrades to "-" for the insertion, which spells no w:date: an
+  // optional attribute the document omits must not gain a default here.
+  inspect(
+    revisions.join("\n"),
+    content=(
+      #|del id=1 author=Reviewer date=2026-01-01T00:00:00Z at=/body/p[1]
+      #|ins id=2 author=Reviewer date=- at=/body/p[1]
+      #|ins id=3 author=Ravi date=- at=/body/tbl[1]/tr[1]/tc[1]/p[1]
+    ),
+  )
+}
+
+///|
+/// Tracked changes are not a body-story privilege: a header carries them
+/// too, and the path must name the header story it lives in.
+test "the annotation index reports tracked changes in header stories" {
+  let header =
+    #|<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:ins w:id="4" w:author="Ada" w:date="2026-02-02T00:00:00Z"><w:r><w:t>draft</w:t></w:r></w:ins></w:p></w:hdr>
+  let fixture = referenced_header_fixture(
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml",
+    header,
+  )
+  let revisions = @docx.read_docx_annotated(fixture)
+    .annotations()
+    .revisions()
+    .map(revision_summary)
+  inspect(
+    revisions.join("\n"),
+    content="ins id=4 author=Ada date=2026-02-02T00:00:00Z at=/header[1]/p[1]",
+  )
+}
+
+///|
+/// A document nobody has revised reports nothing — the array is empty, not
+/// a fabricated placeholder.
+test "the annotation index reports no tracked changes for a settled document" {
+  let body =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>settled</w:t></w:r></w:p></w:body></w:document>
+  inspect(
+    @docx.read_docx_annotated(fixture_docx(body))
+    .annotations()
+    .revisions()
+    .map(revision_summary)
+    .join("\n"),
+    content="",
+  )
+}
+
+///|
 test "typed annotation relationships require matching expanded story roots" {
   let header_type = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header"
   let header_content_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"

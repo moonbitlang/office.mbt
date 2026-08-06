@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:d7915544
+    Fingerprint: crc32:eb16c094
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:d7915544","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","template","annotate","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:eb16c094","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","template","annotate","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:d7915544","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:d7915544","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:d7915544","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:d7915544","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:d7915544","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:d7915544","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:d7915544","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:d7915544","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:d7915544","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:d7915544","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:d7915544","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:d7915544","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:d7915544","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:d7915544","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:d7915544","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:d7915544","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:d7915544","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:d7915544","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:eb16c094","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:eb16c094","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:eb16c094","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:eb16c094","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:eb16c094","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:eb16c094","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:eb16c094","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:eb16c094","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:eb16c094","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:eb16c094","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:eb16c094","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:eb16c094","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:eb16c094","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:eb16c094","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:eb16c094","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:eb16c094","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:eb16c094","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:eb16c094","kind":"command","name":"raw"}]
 
 Installed help exposes every consumed JSON input contract without requiring
 repository-only documentation. Inventory and individual records are versioned;
@@ -277,7 +277,7 @@ get resolves a canonical path, text emits path-tagged paragraphs, and query
 uses deterministic document order and declared predicates.
 
   $ office.exe outline "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" --json | jq -c '{success,schema:.data.schema,counts:.data.counts,stories:[.data.stories[].path]}'
-  {"success":true,"schema":"office.docx.outline/1","counts":{"body_stories":1,"headers":0,"footers":0,"footnotes":0,"endnotes":0,"comments":0,"paragraphs":1,"runs":1,"tables":0,"rows":0,"cells":0,"hyperlinks":0,"images":0},"stories":["/docx/body","/docx/footnotes","/docx/endnotes","/docx/comments"]}
+  {"success":true,"schema":"office.docx.outline/1","counts":{"body_stories":1,"headers":0,"footers":0,"footnotes":0,"endnotes":0,"comments":0,"insertions":0,"deletions":0,"paragraphs":1,"runs":1,"tables":0,"rows":0,"cells":0,"hyperlinks":0,"images":0},"stories":["/docx/body","/docx/footnotes","/docx/endnotes","/docx/comments"]}
 
   $ office.exe get "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" '/docx/body/p[1]'
   Walking on imported air
@@ -299,6 +299,20 @@ Comment metadata includes canonicalized anchors into the body story.
 
   $ office.exe text "$TESTDIR/../../../../docx2html/tests/cram/fixtures/commented.docx" --under '/docx/comments/comment[id="0"]' --json | jq -c '{under:.data.under,entries:[.data.entries[]|{path,text}],matched_total:.data.matched_total}'
   {"under":"/docx/comments/comment[id=\"0\"]","entries":[{"path":"/docx/comments/comment[id=\"0\"]/p[1]","text":"Please cite a source here."}],"matched_total":1}
+
+Tracked changes have no representation in the document model: the reader
+flattens w:ins into the accepted text and drops w:del, so author and date are
+lost. Outline reports them, and text keeps returning the accepted view — a
+review agent must be able to tell "up 18%" is an unaccepted edit that replaced
+"flat", not settled fact.
+
+  $ cp "$TESTDIR/../../../../docx2html/tests/cram/fixtures/single-paragraph.docx" tracked.docx
+  $ office.exe raw edit tracked.docx /document --path '/w:document/w:body/w:p[1]' --action replace --xml '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:r><w:t xml:space="preserve">The revenue was </w:t></w:r><w:del w:id="1" w:author="Reviewer" w:date="2026-01-01T00:00:00Z"><w:r><w:delText xml:space="preserve">flat</w:delText></w:r></w:del><w:ins w:id="2" w:author="Reviewer"><w:r><w:t xml:space="preserve">up 18%</w:t></w:r></w:ins><w:r><w:t xml:space="preserve"> this quarter.</w:t></w:r></w:p>' --json | jq -c '{success,matches:.data.change.match_count}'
+  {"success":true,"matches":1}
+  $ office.exe outline tracked.docx --json | jq -c '{insertions:.data.counts.insertions,deletions:.data.counts.deletions,revisions:.data.revisions}'
+  {"insertions":1,"deletions":1,"revisions":[{"type":"del","path":"/docx/body/p[1]","id":"1","author":"Reviewer","date":"2026-01-01T00:00:00Z"},{"type":"ins","path":"/docx/body/p[1]","id":"2","author":"Reviewer"}]}
+  $ office.exe text tracked.docx --json | jq -r '.data.entries[0].text'
+  The revenue was up 18% this quarter.
 
 The query kind aliases include hyperlinks. This uses the raw editor to make a
 valid internal-anchor hyperlink fixture without relying on an external file.
