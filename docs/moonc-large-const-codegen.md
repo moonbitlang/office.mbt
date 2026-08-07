@@ -3,6 +3,34 @@
 Draft upstream report — measured in this repo (`moonbitlang/mbtexcel` monorepo).
 File as a moonc issue, or use internally; the repro is self-contained.
 
+## Status: resolved (2026-08-07)
+
+Two changes fixed this; the report below describes the historical state.
+
+1. **Library side** (`ddab90c1`): the cmap tuple-array literals were
+   flattened to `ReadOnlyArray[Int]` data plus small unpack helpers
+   (`pdflite/text/cmapdata/pdf_text_cmap_unpack.mbt`). These literals lower
+   to static C struct initializers (`Moonbit_make_static_rc` + plain int
+   data) instead of ~410 bytes of constructor code per tuple.
+   `unicodedata` was already compressed `Bytes` chunks.
+2. **Toolchain side** (`2924917a`, nightly 0.10.5+001eef869): the debug
+   native pipeline no longer generates C for the main translation unit at
+   all — `moonc link-core` emits an object file directly
+   (`-target aarch64-apple-darwin`, observed on macOS). Release mode still
+   generates C.
+
+Measured on 2026-08-07 (Apple clang 21, arm64, deps cached):
+
+- `moon build --target native pdflite/markdown/cmd` (debug, what CI runs):
+  **3.8 s** clean rebuild of all repo packages; no `cmd.c` exists.
+- `moon build --release --target native pdflite/markdown/cmd`: **11.4 s**;
+  `cmd.c` is 17 MB / 378 K lines (was 87 MB / 1.93 M), dominated by static
+  data arrays, and compiles in seconds under `-O2`.
+- `moon build --target native` (whole workspace, debug): **12.4 s**.
+
+The CI job that builds only selected CLIs (`.github/workflows/ci.yml`,
+cli-smoke) keeps that shape for leanness, not to dodge this bug.
+
 ## Summary
 
 The native backend lowers large in-source constant data into generated C
@@ -61,5 +89,6 @@ text stack, so its generated translation unit contains the expanded tables;
 ## Workaround options on the library side
 
 - Restructure `cmapdata`/`unicodedata` as compact `Bytes` blobs parsed at
-  first use (also shrinks the source tree); tracked as a follow-up in this
-  repo's quality roadmap.
+  first use (also shrinks the source tree). Done in spirit as `ddab90c1`:
+  `cmapdata` became flat `ReadOnlyArray[Int]` tables unpacked at load, and
+  `unicodedata` was already compressed `Bytes` chunks — see Status above.
