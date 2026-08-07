@@ -1,0 +1,50 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pagelayout/linebreak"
+
+import {
+  "bobzhang/pagelayout/fonts",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn break_lines(String, Array[Double], Double, Double) -> Array[LineRange]
+
+pub fn can_break_at(String, Int) -> Bool
+
+pub fn is_cjk(Int) -> Bool
+
+pub fn measure(String, @fonts.FaceMetrics, Double, fallback_face? : @fonts.FaceMetrics) -> Measured
+
+// Errors
+
+// Types and methods
+pub(all) struct LineRange {
+  start : Int
+  end : Int
+  width_pt : Double
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn LineRange::equal(Self, Self) -> Bool
+#deprecated
+pub fn LineRange::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn LineRange::to_json(Self) -> Json
+#deprecated
+pub fn LineRange::to_repr(Self) -> @debug.Repr
+
+pub(all) struct Measured {
+  advances_pt : Array[Double]
+  fallback : Array[Bool]
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn Measured::equal(Self, Self) -> Bool
+#deprecated
+pub fn Measured::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn Measured::to_json(Self) -> Json
+#deprecated
+pub fn Measured::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits
