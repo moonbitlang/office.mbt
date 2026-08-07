@@ -1,0 +1,35 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pagelayout/fonts"
+
+// Values
+pub fn bundled_families() -> Array[String]
+
+pub fn cjk_fallback() -> FaceMetrics
+
+pub fn face(String, bold? : Bool, italic? : Bool) -> FaceMetrics
+
+pub fn resolve_family(String) -> String
+
+// Errors
+
+// Types and methods
+pub struct FaceMetrics {
+  family : String
+  bold : Bool
+  italic : Bool
+  units_per_em : Int
+  ascender : Int
+  descender : Int
+  line_gap : Int
+  advances : Array[Int]
+  cmap : Map[Int, Int]
+}
+pub fn FaceMetrics::advance_pt(Self, Int, Double) -> Double
+pub fn FaceMetrics::ascent_pt(Self, Double) -> Double
+pub fn FaceMetrics::descent_pt(Self, Double) -> Double
+pub fn FaceMetrics::has_char(Self, Int) -> Bool
+pub fn FaceMetrics::line_height_pt(Self, Double) -> Double
+
+// Type aliases
+
+// Traits

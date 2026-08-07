@@ -12,4 +12,8 @@ keywords = [ "layout", "pagination", "docx", "svg", "pdf", "typesetting" ]
 
 description = "Paginated document layout engine: format-neutral page-model IR with SVG/PDF backends."
 
+import {
+  "bobzhang/pdflite@0.1.41",
+}
+
 warnings = "+a-unused_optional_argument-unused_default_value-missing_invariant-missing_reasoning"
