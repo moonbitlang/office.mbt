@@ -1,0 +1,203 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pagelayout"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub let black : Color
+
+// Errors
+
+// Types and methods
+pub(all) struct Color {
+  r : Int
+  g : Int
+  b : Int
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn Color::equal(Self, Self) -> Bool
+#deprecated
+pub fn Color::not_equal(Self, Self) -> Bool
+pub fn Color::to_hex(Self) -> String
+#deprecated
+pub fn Color::to_json(Self) -> Json
+#deprecated
+pub fn Color::to_repr(Self) -> @debug.Repr
+
+pub(all) struct EighthPoints(Int) derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn EighthPoints::equal(Self, Self) -> Bool
+#deprecated
+pub fn EighthPoints::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn EighthPoints::to_json(Self) -> Json
+pub fn EighthPoints::to_pt(Self) -> Double
+#deprecated
+pub fn EighthPoints::to_repr(Self) -> @debug.Repr
+
+pub(all) struct Emu(Int) derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn Emu::equal(Self, Self) -> Bool
+#deprecated
+pub fn Emu::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn Emu::to_json(Self) -> Json
+pub fn Emu::to_pt(Self) -> Double
+#deprecated
+pub fn Emu::to_repr(Self) -> @debug.Repr
+
+pub(all) struct FontSpec {
+  family : String
+  bold : Bool
+  italic : Bool
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn FontSpec::equal(Self, Self) -> Bool
+#deprecated
+pub fn FontSpec::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn FontSpec::to_json(Self) -> Json
+#deprecated
+pub fn FontSpec::to_repr(Self) -> @debug.Repr
+
+pub(all) struct GlyphRun {
+  font : Int
+  size_pt : Double
+  x_pt : Double
+  baseline_pt : Double
+  text : String
+  advances_pt : Array[Double]
+  color : Color
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn GlyphRun::equal(Self, Self) -> Bool
+#deprecated
+pub fn GlyphRun::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn GlyphRun::to_json(Self) -> Json
+#deprecated
+pub fn GlyphRun::to_repr(Self) -> @debug.Repr
+pub fn GlyphRun::width_pt(Self) -> Double
+
+pub(all) struct HalfPoints(Int) derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn HalfPoints::equal(Self, Self) -> Bool
+#deprecated
+pub fn HalfPoints::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn HalfPoints::to_json(Self) -> Json
+pub fn HalfPoints::to_pt(Self) -> Double
+#deprecated
+pub fn HalfPoints::to_repr(Self) -> @debug.Repr
+
+pub(all) struct ImageItem {
+  x_pt : Double
+  y_pt : Double
+  w_pt : Double
+  h_pt : Double
+  data : Bytes
+  mime : String
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn ImageItem::equal(Self, Self) -> Bool
+#deprecated
+pub fn ImageItem::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn ImageItem::to_json(Self) -> Json
+#deprecated
+pub fn ImageItem::to_repr(Self) -> @debug.Repr
+
+pub(all) struct LinkRegion {
+  x_pt : Double
+  y_pt : Double
+  w_pt : Double
+  h_pt : Double
+  target : String
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn LinkRegion::equal(Self, Self) -> Bool
+#deprecated
+pub fn LinkRegion::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn LinkRegion::to_json(Self) -> Json
+#deprecated
+pub fn LinkRegion::to_repr(Self) -> @debug.Repr
+
+pub(all) struct Page {
+  width_pt : Double
+  height_pt : Double
+  items : Array[PageItem]
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn Page::equal(Self, Self) -> Bool
+#deprecated
+pub fn Page::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn Page::to_json(Self) -> Json
+#deprecated
+pub fn Page::to_repr(Self) -> @debug.Repr
+
+pub(all) enum PageItem {
+  Text(GlyphRun)
+  Rect(RectItem)
+  Image(ImageItem)
+  Link(LinkRegion)
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PageItem::equal(Self, Self) -> Bool
+#deprecated
+pub fn PageItem::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PageItem::to_json(Self) -> Json
+#deprecated
+pub fn PageItem::to_repr(Self) -> @debug.Repr
+
+pub(all) struct PageModel {
+  fonts : Array[FontSpec]
+  pages : Array[Page]
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PageModel::add_font(Self, FontSpec) -> Int
+#deprecated
+pub fn PageModel::equal(Self, Self) -> Bool
+pub fn PageModel::new() -> Self
+#deprecated
+pub fn PageModel::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PageModel::to_json(Self) -> Json
+#deprecated
+pub fn PageModel::to_repr(Self) -> @debug.Repr
+
+pub(all) struct RectItem {
+  x_pt : Double
+  y_pt : Double
+  w_pt : Double
+  h_pt : Double
+  fill : Color?
+  stroke : Color?
+  stroke_w_pt : Double
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn RectItem::equal(Self, Self) -> Bool
+#deprecated
+pub fn RectItem::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn RectItem::to_json(Self) -> Json
+#deprecated
+pub fn RectItem::to_repr(Self) -> @debug.Repr
+
+pub(all) struct Twips(Int) derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn Twips::equal(Self, Self) -> Bool
+#deprecated
+pub fn Twips::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn Twips::to_json(Self) -> Json
+pub fn Twips::to_pt(Self) -> Double
+#deprecated
+pub fn Twips::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

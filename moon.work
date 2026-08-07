@@ -3,5 +3,6 @@ members = [
   "./docx2html",
   "./office",
   "./office-cli",
+  "./pagelayout",
   "./pdflite",
 ]
