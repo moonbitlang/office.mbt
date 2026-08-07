@@ -1,0 +1,11 @@
+import {
+  "bobzhang/pagelayout",
+  "bobzhang/pagelayout/fonts",
+  "bobzhang/pagelayout/linebreak",
+  "moonbitlang/core/debug",
+}
+
+import {
+  "bobzhang/pagelayout",
+  "bobzhang/pagelayout/fonts",
+} for "test"
