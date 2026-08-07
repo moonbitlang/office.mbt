@@ -276,6 +276,8 @@ fn raw_relationship_xml_budget(source : String) -> @xml.XmlReadBudget {
 }
 
 ///|
+/// Parses a package *metadata* part: `[Content_Types].xml` and the `.rels`
+/// parts, which OPC keeps small by construction.
 fn parse_xml_bytes(
   name : String,
   bytes : BytesView,
@@ -287,6 +289,53 @@ fn parse_xml_bytes(
         "office.raw.invalid_xml",
         "part '/\{name}' is not well-formed strict XML",
       )
+  }
+}
+
+///|
+/// Parses a *content* part under the content budget.
+///
+/// A main part is not package metadata, and charging one against the
+/// `raw_metadata_*` ceilings refuses valid documents (#342). Content parts get
+/// the same ceilings the span-edit scanner already applies.
+fn parse_content_xml_bytes(
+  name : String,
+  bytes : BytesView,
+) -> @xml.XmlElement raise RawError {
+  if bytes.length() == 0 || bytes.length() > raw_max_edit_part_bytes {
+    raise raw_xml_resource_limit(
+      name,
+      "content_xml_bytes",
+      raw_max_edit_part_bytes,
+      bytes.length(),
+    )
+  }
+  let text = decode_xml_bytes(name, bytes)
+  preflight_raw_content_xml(name, @utf8.encode(text))
+  @xml.read_xml_string_strict(text) catch {
+    _ =>
+      raise raw_error(
+        "office.raw.invalid_xml",
+        "part '/\{name}' is not well-formed strict XML",
+      )
+  }
+}
+
+///|
+/// Reads only the expanded name of a part's document element.
+///
+/// The scanner reads UTF-8; UTF-16 parts, which this package supports
+/// everywhere else, are normalized first. That transcode is linear in the part
+/// and bounded by the ZIP entry ceiling, and no real OOXML producer emits
+/// UTF-16, so the common path never leaves the bounded window.
+fn root_expanded_name_of_part(
+  name : String,
+  bytes : BytesView,
+) -> String raise RawError {
+  match bytes {
+    [0xff, 0xfe, ..] | [0xfe, 0xff, ..] | [b'<', 0x00, ..] | [0x00, b'<', ..] =>
+      raw_root_expanded_name(name, @utf8.encode(decode_xml_bytes(name, bytes)))
+    _ => raw_root_expanded_name(name, bytes)
   }
 }
 
@@ -1305,7 +1354,7 @@ fn add_xlsx_aliases(pkg : RawPackage) -> Unit raise RawError {
         "package is missing workbook part '/\{pkg.main_part}'",
       )
   }
-  let workbook = parse_xml_bytes(pkg.main_part, workbook_bytes)
+  let workbook = parse_content_xml_bytes(pkg.main_part, workbook_bytes)
   let workbook_namespace = xml_name_uri(workbook.name)
   if workbook_namespace != transitional_spreadsheet_namespace &&
     workbook_namespace != strict_spreadsheet_namespace {
@@ -1385,8 +1434,9 @@ fn relationship_prefix_for_main(pkg : RawPackage) -> String raise RawError {
         "package is missing main part '/\{pkg.main_part}'",
       )
   }
-  let root = parse_xml_bytes(pkg.main_part, bytes)
-  let root_uri = xml_name_uri(root.name)
+  // Only the document element's namespace decides the relationship dialect, so
+  // probe the root tag instead of materializing a content part (#342).
+  let root_uri = xml_name_uri(root_expanded_name_of_part(pkg.main_part, bytes))
   match (pkg.format, root_uri) {
     (Docx, "http://schemas.openxmlformats.org/wordprocessingml/2006/main")
     | (Xlsx, "http://schemas.openxmlformats.org/spreadsheetml/2006/main") =>

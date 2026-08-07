@@ -5,6 +5,18 @@ let raw_max_edit_part_bytes : Int = 16 * 1024 * 1024
 let raw_max_xml_nodes = 100_000
 
 ///|
+/// Ceiling on the byte prefix of a part that may precede the end of its
+/// document element's start tag.
+///
+/// This is the only budget `raw_root_expanded_name` charges, because that
+/// probe answers a question about the document element alone and never visits
+/// the rest of the part. Real OOXML parts spend about sixty bytes on an XML
+/// declaration before their root tag, so 64 KiB leaves ample room for producer
+/// comments and processing instructions while still refusing a part that
+/// buries its document element behind an unbounded prologue.
+let raw_max_root_probe_bytes : Int = 64 * 1024
+
+///|
 let raw_max_path_candidates = 4096
 
 ///|
@@ -637,6 +649,133 @@ fn preflight_raw_xml(
 }
 
 ///|
+/// Preflights a content part under the same budget the span-edit scanner
+/// applies. Content parts are the ones a document grows: they get the
+/// `raw_max_xml_*` ceilings, never the `raw_metadata_*` ones.
+fn preflight_raw_content_xml(
+  part : String,
+  bytes : BytesView,
+) -> Unit raise RawError {
+  preflight_raw_xml(part, bytes, {
+    max_nodes: raw_max_xml_nodes,
+    max_attributes: raw_max_xml_attributes,
+    max_namespace_declarations: raw_max_xml_namespace_declarations,
+    max_text_bytes: raw_max_edit_part_bytes,
+    max_attribute_value_bytes: raw_max_xml_attribute_value_bytes,
+    max_expanded_name_bytes: raw_max_expanded_name_bytes,
+    max_namespace_scope_work: raw_max_namespace_scope_work,
+  })
+}
+
+///|
+fn raw_check_root_probe_offset(
+  part : String,
+  offset : Int,
+) -> Unit raise RawError {
+  if offset > raw_max_root_probe_bytes {
+    raise raw_xml_resource_limit(
+      part, "xml_root_probe_bytes", raw_max_root_probe_bytes, offset,
+    )
+  }
+}
+
+///|
+/// Locates the `>` that closes the start tag beginning at `start`, tracking
+/// quoting only well enough to skip attribute values that legally contain it.
+///
+/// This measures the tag so `raw_root_expanded_name` can charge the root-probe
+/// ceiling before the real lexer materializes any attribute value. It is a
+/// locator, not a second lexer: when it reports no terminator the lexer still
+/// runs and produces the precise malformed-XML diagnosis.
+fn raw_start_tag_terminator(bytes : BytesView, start : Int) -> Int? {
+  let mut quote = b'\x00'
+  for offset in (start + 1)..<bytes.length() {
+    let value = bytes[offset]
+    if quote != b'\x00' {
+      if value == quote {
+        quote = b'\x00'
+      }
+    } else if value == b'"' || value == b'\'' {
+      quote = value
+    } else if value == b'>' {
+      return Some(offset)
+    }
+  }
+  None
+}
+
+///|
+/// Reads the expanded name of a part's document element without parsing the
+/// part.
+///
+/// This is exact rather than a heuristic. The document element has no
+/// ancestors, so every namespace prefix it may legally use is either bound by
+/// a declaration on the element itself or is the reserved `xml` prefix; the
+/// prologue plus the root start tag therefore determine its expanded name
+/// completely. Callers that only need a part's OOXML dialect get their answer
+/// from `raw_max_root_probe_bytes` of source rather than by materializing a
+/// content part under a budget sized for package metadata.
+///
+/// Work is bounded ahead of the answer: the prologue walk charges the ceiling
+/// before every step, and the start tag is measured and charged before
+/// `raw_scan_open_tag` decodes a single attribute value.
+fn raw_root_expanded_name(
+  part : String,
+  bytes : BytesView,
+) -> String raise RawError {
+  let prologue_start = if raw_starts_with_at(bytes, 0, b"\xEF\xBB\xBF") {
+    3
+  } else {
+    0
+  }
+  let root_start = for offset = prologue_start {
+    raw_check_root_probe_offset(part, offset)
+    if offset >= bytes.length() {
+      raise raw_xml_scan_error(part, "part contains no document element")
+    }
+    if raw_byte_is_space(bytes[offset]) {
+      continue offset + 1
+    }
+    if raw_starts_with_at(bytes, offset, b"<!--") {
+      match raw_find_sequence(bytes, offset + 4, b"-->") {
+        Some(finish) => continue finish + 3
+        None => raise raw_xml_scan_error(part, "comment is unterminated")
+      }
+    }
+    if raw_starts_with_at(bytes, offset, b"<?") {
+      match raw_find_sequence(bytes, offset + 2, b"?>") {
+        Some(finish) => continue finish + 2
+        None =>
+          raise raw_xml_scan_error(
+            part, "processing instruction is unterminated",
+          )
+      }
+    }
+    if raw_starts_with_at(bytes, offset, b"<!") {
+      raise raw_xml_scan_error(
+        part, "DTD and declaration nodes are not supported",
+      )
+    }
+    if bytes[offset] != b'<' {
+      raise raw_xml_scan_error(
+        part, "character data precedes the document element",
+      )
+    }
+    break offset
+  }
+  match raw_start_tag_terminator(bytes, root_start) {
+    Some(gt) => raw_check_root_probe_offset(part, gt + 1)
+    None => ()
+  }
+  let tag = raw_scan_open_tag(part, bytes, root_start)
+  let namespaces : StableStringMap[String] = SortedMap([
+    ("xml", "http://www.w3.org/XML/1998/namespace"),
+  ])
+  let _ = raw_apply_namespace_declarations(part, tag, namespaces)
+  raw_expand_source_name(part, tag.name, namespaces, attribute=false)
+}
+
+///|
 fn preflight_raw_metadata_xml(
   part : String,
   bytes : BytesView,
@@ -937,15 +1076,7 @@ fn scan_raw_xml(
       "part '/\{part}' is UTF-16; span edits require UTF-8 XML",
     )
   }
-  preflight_raw_xml(part, bytes, {
-    max_nodes: raw_max_xml_nodes,
-    max_attributes: raw_max_xml_attributes,
-    max_namespace_declarations: raw_max_xml_namespace_declarations,
-    max_text_bytes: raw_max_edit_part_bytes,
-    max_attribute_value_bytes: raw_max_xml_attribute_value_bytes,
-    max_expanded_name_bytes: raw_max_expanded_name_bytes,
-    max_namespace_scope_work: raw_max_namespace_scope_work,
-  })
+  preflight_raw_content_xml(part, bytes)
   let text = @utf8.decode(bytes, ignore_bom=true) catch {
     _ =>
       raise raw_error(

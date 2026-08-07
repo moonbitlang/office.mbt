@@ -1449,14 +1449,32 @@ test "raw resolver rejects collisions and namespace-spoofed OPC metadata before 
     "office.raw.invalid_relationship",
   )
 
+  // The metadata byte ceiling still guards the parts OPC keeps small.
+  let oversized_manifest = raw_test_replace_entry(
+    original,
+    "[Content_Types].xml",
+    Bytes::make(8 * 1024 * 1024 + 1, b'x'),
+  )
+  let (manifest_code, manifest_details) = raw_inventory_error(
+    oversized_manifest,
+  )
+  assert_eq(manifest_code, "office.raw.resource_limit")
+  assert_true(manifest_details.contains("metadata_xml_bytes"))
+
+  // A main content part is not metadata, so 8 MiB of character data is a
+  // malformed document element and not a metadata budget refusal (#342).
   let oversized_main = raw_test_replace_entry(
     original,
     "word/document.xml",
     Bytes::make(8 * 1024 * 1024 + 1, b'x'),
   )
-  let (oversized_code, oversized_details) = raw_inventory_error(oversized_main)
-  assert_eq(oversized_code, "office.raw.resource_limit")
-  assert_true(oversized_details.contains("metadata_xml_bytes"))
+  let (main_code, main_message) = raw_inventory_message_for(
+    "limits.docx", oversized_main,
+  )
+  assert_eq(main_code, "office.raw.invalid_xml")
+  assert_true(
+    main_message.contains("character data precedes the document element"),
+  )
 }
 
 ///|
@@ -1613,15 +1631,17 @@ test "raw alias construction enforces its per-part budget incrementally" {
 }
 
 ///|
+/// The metadata preflight is exercised through `[Content_Types].xml`, which is
+/// a part OPC keeps small by construction. Content parts deliberately do not
+/// reach these ceilings; see the root-probe tests for what guards them.
 test "raw metadata preflight bounds namespace expansion and scope work" {
   let original = @word.new_blank_docx()
+  let types_open = "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\""
   let oversized_uri = "urn:" + "x".repeat(2046)
   let oversized_namespace = raw_test_replace_entry(
     original,
-    "word/document.xml",
-    @utf8.encode(
-      "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:q=\"\{oversized_uri}\"><w:body><w:sectPr/></w:body></w:document>",
-    ),
+    "[Content_Types].xml",
+    @utf8.encode("\{types_open} xmlns:q=\"\{oversized_uri}\"/>"),
   )
   let (uri_code, uri_details) = raw_inventory_error(oversized_namespace)
   assert_eq(uri_code, "office.raw.resource_limit")
@@ -1629,17 +1649,14 @@ test "raw metadata preflight bounds namespace expansion and scope work" {
 
   let bounded_uri = "urn:" + "x".repeat(2044)
   let expanded = StringBuilder::new()
-  expanded.write_string(
-    "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:q=\"\{bounded_uri}\"><w:body>",
-  )
-  |> ignore
+  expanded.write_string("\{types_open} xmlns:q=\"\{bounded_uri}\">") |> ignore
   for _ in 0..<2100 {
     expanded.write_string("<q:x/>") |> ignore
   }
-  expanded.write_string("<w:sectPr/></w:body></w:document>") |> ignore
+  expanded.write_string("</Types>") |> ignore
   let expanded_package = raw_test_replace_entry(
     original,
-    "word/document.xml",
+    "[Content_Types].xml",
     @utf8.encode(expanded.to_string()),
   )
   let (expanded_code, expanded_details) = raw_inventory_error(expanded_package)
@@ -1647,26 +1664,228 @@ test "raw metadata preflight bounds namespace expansion and scope work" {
   assert_true(expanded_details.contains("xml_expanded_name_bytes"))
 
   let scoped = StringBuilder::new()
-  scoped.write_string(
-    "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"",
-  )
-  |> ignore
+  scoped.write_string(types_open) |> ignore
   for index in 0..<200 {
     scoped.write_string(" xmlns:p\{index}=\"urn:p\{index}\"") |> ignore
   }
-  scoped.write_string("><w:body>") |> ignore
+  scoped.write_string(">") |> ignore
   for _ in 0..<2500 {
-    scoped.write_string("<w:p/>") |> ignore
+    scoped.write_string("<x/>") |> ignore
   }
-  scoped.write_string("<w:sectPr/></w:body></w:document>") |> ignore
+  scoped.write_string("</Types>") |> ignore
   let scoped_package = raw_test_replace_entry(
     original,
-    "word/document.xml",
+    "[Content_Types].xml",
     @utf8.encode(scoped.to_string()),
   )
   let (scope_code, scope_details) = raw_inventory_error(scoped_package)
   assert_eq(scope_code, "office.raw.resource_limit")
   assert_true(scope_details.contains("xml_namespace_scope_work"))
+}
+
+///|
+fn raw_large_document_docx(paragraphs : Int) -> Bytes raise {
+  let document = StringBuilder::new()
+  document.write_string("<w:document xmlns:w=\"\{word_namespace}\"><w:body>")
+  |> ignore
+  for index in 0..<paragraphs {
+    document.write_string("<w:p><w:r><w:t>Item \{index}</w:t></w:r></w:p>")
+    |> ignore
+  }
+  document.write_string("<w:sectPr/></w:body></w:document>") |> ignore
+  raw_test_replace_entry(
+    @word.new_blank_docx(),
+    "word/document.xml",
+    @utf8.encode(document.to_string()),
+  )
+}
+
+///|
+fn raw_malformed_main_docx(document : String) -> Bytes raise {
+  raw_test_replace_entry(
+    @word.new_blank_docx(),
+    "word/document.xml",
+    @utf8.encode(document),
+  )
+}
+
+///|
+/// Regression for #342. `relationship_prefix_for_main` parsed the whole main
+/// part under `raw_metadata_max_nodes`, so every raw verb refused a valid
+/// document of more than 16,384 elements with
+/// `office.raw.resource_limit` / `xml_elements` (limit 16384, actual 16385)
+/// while `outline`, `text`, and `dump` read the same package.
+test "raw verbs read a main part past the metadata element budget" {
+  let data = raw_large_document_docx(6000)
+  let inventory = @raw.raw_inventory("large.docx", data)
+  inspect(inventory.format.name(), content="docx")
+  debug_inspect(
+    inventory_alias_target(inventory, "/document"),
+    content="Some(\"word/document.xml\")",
+  )
+  inspect(@raw.raw_identify("large.docx", data).name(), content="docx")
+  let document = @raw.raw_read("large.docx", data, "/document")
+  inspect(document.xml_text().contains("<w:t>Item 5999</w:t>"), content="true")
+
+  // The edit verbs share the open path and then apply the content budget.
+  let request = @raw.raw_edit_request(
+    "/document",
+    "/w:document/w:body",
+    SetAttribute,
+    attribute="xml:space",
+    value="preserve",
+  )
+  let edited = @raw.raw_edit(Docx, data, request)
+  inspect(
+    @raw.raw_read("large.docx", edited.result_bytes(data), "/document")
+    .xml_text()
+    .contains("<w:body xml:space=\"preserve\">"),
+    content="true",
+  )
+  let replaced = @raw.raw_replace_part(
+    Docx,
+    data,
+    "/document",
+    "<w:document xmlns:w=\"\{word_namespace}\"><w:body><w:sectPr/></w:body></w:document>",
+  )
+  inspect(replaced.part_name(), content="word/document.xml")
+}
+
+///|
+/// The root probe replaces a whole-part budget with one that fits what it
+/// actually reads, so that budget still has to refuse a hostile part.
+test "raw root probe bounds the prologue and the document start tag" {
+  let buried = StringBuilder::new()
+  buried.write_string("<!--") |> ignore
+  buried.write_string("c".repeat(70_000)) |> ignore
+  buried.write_string("--><w:document xmlns:w=\"\{word_namespace}\"/>")
+  |> ignore
+  let (prologue_code, prologue_details) = raw_inventory_error_for(
+    "prologue.docx",
+    raw_malformed_main_docx(buried.to_string()),
+  )
+  assert_eq(prologue_code, "office.raw.resource_limit")
+  inspect(
+    prologue_details,
+    content=(
+      #|{"part":"/word/document.xml","kind":"xml_root_probe_bytes","limit":65536,"actual":70007}
+    ),
+  )
+  let padded = StringBuilder::new()
+  padded.write_string("<w:document xmlns:w=\"\{word_namespace}\"") |> ignore
+  for index in 0..<2000 {
+    padded.write_string(" w:pad\{index}=\"\{"p".repeat(30)}\"") |> ignore
+  }
+  padded.write_string("><w:body><w:sectPr/></w:body></w:document>") |> ignore
+  let (tag_code, tag_details) = raw_inventory_error_for(
+    "root-tag.docx",
+    raw_malformed_main_docx(padded.to_string()),
+  )
+  assert_eq(tag_code, "office.raw.resource_limit")
+  assert_true(tag_details.contains("\"kind\":\"xml_root_probe_bytes\""))
+  assert_true(tag_details.contains("\"limit\":65536"))
+  assert_true(tag_details.contains("\"part\":\"/word/document.xml\""))
+}
+
+///|
+/// A resource refusal and a malformed part must stay distinguishable. The
+/// probe reports its own ceiling and nothing else, and every other rejection
+/// it makes is malformed XML — including one past the probe window, which a
+/// truncating implementation would have misreported as a budget refusal.
+test "raw root probe reports malformed main parts as malformed" {
+  let malformed : Array[(String, String)] = [
+    (
+      "<!DOCTYPE w:document><w:document xmlns:w=\"\{word_namespace}\"/>",
+      "DTD and declaration nodes are not supported",
+    ),
+    (
+      "prelude<w:document xmlns:w=\"\{word_namespace}\"/>",
+      "character data precedes the document element",
+    ),
+    (
+      "<z:document xmlns:w=\"\{word_namespace}\"/>",
+      "uses an unbound namespace prefix",
+    ),
+    ("<w:document xmlns:w=\"\{word_namespace}\"", "start tag is unterminated"),
+    (
+      "<!-- unterminated <w:document xmlns:w=\"\{word_namespace}\"/>",
+      "comment is unterminated",
+    ),
+    ("", "part contains no document element"),
+  ]
+  for entry in malformed {
+    let (code, message) = raw_inventory_message_for(
+      "malformed.docx",
+      raw_malformed_main_docx(entry.0),
+    )
+    assert_eq(code, "office.raw.invalid_xml")
+    assert_true(message.contains(entry.1))
+  }
+  let large = StringBuilder::new()
+  large.write_string(
+    "<w:document xmlns:w=\"\{word_namespace}\" broken><w:body>",
+  )
+  |> ignore
+  for _ in 0..<20_000 {
+    large.write_string("<w:p/>") |> ignore
+  }
+  large.write_string("</w:body></w:document>") |> ignore
+  let (large_code, large_message) = raw_inventory_message_for(
+    "large-malformed.docx",
+    raw_malformed_main_docx(large.to_string()),
+  )
+  assert_eq(large_code, "office.raw.invalid_xml")
+  assert_true(large_message.contains("attribute is missing '='"))
+}
+
+///|
+fn raw_large_workbook_xlsx(defined_names : Int, compact : Bool) -> Bytes raise {
+  let workbook = StringBuilder::new()
+  workbook.write_string(
+    "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets><sheet name=\"Moved\" sheetId=\"1\" r:id=\"rId1\"/></sheets><definedNames>",
+  )
+  |> ignore
+  for index in 0..<defined_names {
+    if compact {
+      workbook.write_string("<definedName/>") |> ignore
+    } else {
+      workbook.write_string(
+        "<definedName name=\"n\{index}\">Moved!$A$1</definedName>",
+      )
+      |> ignore
+    }
+  }
+  workbook.write_string("</definedNames></workbook>") |> ignore
+  raw_test_replace_entry(
+    relocated_xlsx_fixture(),
+    "custom/book.xml",
+    @utf8.encode(workbook.to_string()),
+  )
+}
+
+///|
+/// The XLSX workbook probe needs the sheet list, so it still materializes the
+/// part — but under the content budget, not the metadata one (#342).
+test "raw XLSX workbook aliases use the content element budget" {
+  let data = raw_large_workbook_xlsx(20_000, false)
+  let inventory = @raw.raw_inventory("large.xlsx", data)
+  inspect(inventory.format.name(), content="xlsx")
+  debug_inspect(
+    inventory_alias_target(inventory, "/sheet[1]"),
+    content="Some(\"data/first.xml\")",
+  )
+  debug_inspect(
+    inventory_alias_target(inventory, "/Moved"),
+    content="Some(\"data/first.xml\")",
+  )
+  let (code, details) = raw_inventory_error_for(
+    "huge.xlsx",
+    raw_large_workbook_xlsx(100_000, true),
+  )
+  assert_eq(code, "office.raw.resource_limit")
+  assert_true(details.contains("\"kind\":\"xml_elements\""))
+  assert_true(details.contains("\"limit\":100000"))
+  assert_true(details.contains("\"part\":\"/custom/book.xml\""))
 }
 
 ///|
