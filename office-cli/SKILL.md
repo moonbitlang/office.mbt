@@ -472,6 +472,10 @@ if [ "$fail" -eq 0 ]; then
 else
   echo "GATE FAIL - $fail check(s) rejected. Do not deliver."
 fi
+# Last command on purpose: it sets the exit status without `exit`, so
+# `bash gate.sh && deliver` cannot deliver a rejected document, and pasting
+# the block into an interactive shell does not close it.
+[ "$fail" -eq 0 ]
 ```
 
 The gate never calls `exit`, on purpose: pasting it into your working shell
