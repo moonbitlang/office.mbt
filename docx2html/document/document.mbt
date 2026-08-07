@@ -236,6 +236,12 @@ pub(all) enum DocumentElement {
   )
   Break(BreakType)
   BookmarkStart(String)
+  /// A WML FIELD: `instruction` is the field code WITHOUT the surrounding
+  /// spaces (`PAGE`, `NUMPAGES`), `result` the cached result text a
+  /// non-updating consumer displays until the field is recalculated. This is
+  /// an AUTHORING-SIDE node — the reader projects a read field's cached
+  /// result as ordinary runs and never produces this variant.
+  Field(instruction~ : String, result~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -349,6 +355,13 @@ pub fn table_cell(
 /// Builds a bookmark-start element.
 pub fn bookmark_start(name : String) -> DocumentElement {
   BookmarkStart(name)
+}
+
+///|
+/// Builds a field element: `instruction` is the field code without its
+/// surrounding spaces (`PAGE`, `NUMPAGES`), `result` the cached result text.
+pub fn field(instruction : String, result? : String = "") -> DocumentElement {
+  Field(instruction~, result~)
 }
 
 ///|

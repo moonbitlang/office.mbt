@@ -116,7 +116,10 @@ mutation before reusing them.
   after all operations pass; prefer `--out` when preserving the source matters.
 - DOCX `batch --format docx` consumes `docx.batch/2` (and accepts
   `docx.batch/1`) and only authors a fresh destination. It does not edit an
-  existing DOCX and does not accept `--out`.
+  existing DOCX and does not accept `--out`. `docx.batch/2` authors running
+  headers/footers (`header`/`footer` ops, default/first/even variants) and
+  LIVE page numbers (`{"field": {"type": "PAGE"}}` / `NUMPAGES`) — never write
+  a static "Page 1" into a footer.
 - `template` never modifies its template. It substitutes non-executable
   `{{key}}` placeholders from flat scalar data and optional marked-row regions
   into a separate output.

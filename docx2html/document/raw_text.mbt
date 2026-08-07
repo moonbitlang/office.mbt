@@ -11,6 +11,9 @@ pub fn DocumentElement::to_raw_text(self : DocumentElement) -> String {
     Table(children~, ..) => children_to_raw_text(children)
     TableRow(children~, ..) => children_to_raw_text(children)
     TableCell(children~, ..) => children_to_raw_text(children)
+    // A field contributes its CACHED result: that is what a consumer which
+    // does not recalculate fields displays.
+    Field(result~, ..) => result
     _ => ""
   }
 }

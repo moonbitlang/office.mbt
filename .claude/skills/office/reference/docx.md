@@ -22,7 +22,7 @@ moon run --target wasm docx2html/cmd/docx2html -- [options] <input.docx> [output
 | `get <file> <path> [--json]` | One element by path. Bare: its raw text. `--json`: the structured `docx.element/1` payload (kind, formatting, children). Path errors say what exists (`'/body' has 3 'p' children (wanted index 9)`), so they are self-correcting. |
 | `validate <file>` | Portable structural validation (archive + CRCs, content types, relationships, main part). Prints `valid` / one finding per line; **exit code is the gate**. |
 | `create <out.docx>` | A minimal blank, schema-valid document. |
-| `batch <out.docx> <script.json> [--dry-run]` | **Author a new document** from a `docx.batch/1` op script — headings, styled runs, hyperlinks, images, lists, tables with spans, in one shot. `docx.batch/2` additionally supports `comment` ops and inline foot/endnotes. |
+| `batch <out.docx> <script.json> [--dry-run]` | **Author a new document** from a `docx.batch/1` op script — headings, styled runs, hyperlinks, images, lists, tables with spans, in one shot. `docx.batch/2` additionally supports `comment` ops, inline foot/endnotes, `header`/`footer` story ops (default/first/even variants), and live `{"field": {"type": "PAGE"}}` page-number runs. |
 | `annotate <add\|reply\|resolve\|unresolve> <in.docx> <out.docx> …` | **Comment on an EXISTING document** by byte-preserving surgery (see below). |
 | `convert <in.docx> [out]` | Same conversion engine as `docx2html` (HTML/Markdown), agent-CLI flavored. |
 

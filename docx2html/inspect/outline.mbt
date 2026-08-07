@@ -183,7 +183,8 @@ fn Walk::visit(self : Walk, element : @document.DocumentElement) -> Unit {
     | Checkbox(_)
     | NoteReference(_)
     | CommentReference(_)
-    | Break(_) => ()
+    | Break(_)
+    | Field(..) => ()
   }
 }
 

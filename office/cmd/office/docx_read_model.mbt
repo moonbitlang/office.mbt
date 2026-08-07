@@ -276,6 +276,10 @@ fn DocxTextCollector::visit(
     | Table(children~, ..)
     | TableRow(children~, ..)
     | TableCell(children~, ..) => self.visit_all(children)
+    // The reader never produces a Field (it projects a read field's cached
+    // result as ordinary runs); a builder-constructed tree can, and the
+    // cached result is the text a non-updating consumer shows.
+    Field(result~, ..) => self.write_literal_string(result)
     Checkbox(_)
     | NoteReference(_)
     | CommentReference(_)
@@ -321,6 +325,7 @@ async fn DocxTextCollector::visit_cooperative(
     | Table(children~, ..)
     | TableRow(children~, ..)
     | TableCell(children~, ..) => self.visit_all_cooperative(children)
+    Field(result~, ..) => self.write_literal_string_cooperative(result)
     Checkbox(_)
     | NoteReference(_)
     | CommentReference(_)

@@ -142,7 +142,7 @@ fn docx_operation(name : String, params : String) -> Json {
     "op": Json::string(name),
     "params": Json::string(params),
     "schema_versions": contract_strings(
-      if name == "comment" {
+      if name is ("comment" | "header" | "footer") {
         [@docx_batch.SCHEMA_BATCH_V2]
       } else {
         [@docx_batch.SCHEMA_BATCH, @docx_batch.SCHEMA_BATCH_V2]
@@ -159,13 +159,14 @@ fn docx_input_contract() -> InputContractCore {
       "paragraph" => "paragraph"
       "table" => "table"
       "comment" => "comment"
+      "header" | "footer" => "story"
       _ => "unknown"
     }
     operations.push(docx_operation(name, params))
   }
   {
     id: @docx_batch.SCHEMA_BATCH_V2,
-    summary: "Strict fresh-DOCX authoring script with comments and notes",
+    summary: "Strict fresh-DOCX authoring script with comments, notes, header/footer stories, and page fields",
     consumed_by: ["office batch --format docx OUTPUT.docx SCRIPT.json"],
     envelope: contract_envelope(
       [("schema", "literal(docx.batch/2)"), ("ops", "array(docx_operation)")],
@@ -249,10 +250,21 @@ fn docx_input_contract() -> InputContractCore {
         [("text", "docx_text"), ("paragraphs", "nonempty-array(paragraph)")],
         constraints=["exactly-one(text,paragraphs)", "plain content only"],
       ),
+      contract_object(
+        "field",
+        [("type", "enum(PAGE|NUMPAGES)")],
+        required=["type"],
+        constraints=[
+          "emitted as a live w:fldChar begin/instrText/separate/end run sequence, never as static text",
+          "not allowed in comment or note bodies",
+        ],
+      ),
       contract_type(
         "run",
-        "one-of(text_run|{link:link}|{image:image}|{footnote:note_body}|{endnote:note_body})",
-        constraints=["notes require docx.batch/2 and cannot nest"],
+        "one-of(text_run|{link:link}|{image:image}|{footnote:note_body}|{endnote:note_body}|{field:field})",
+        constraints=[
+          "notes require docx.batch/2 and cannot nest", "fields require docx.batch/2",
+        ],
       ),
       contract_object(
         "table_cell",
@@ -290,12 +302,24 @@ fn docx_input_contract() -> InputContractCore {
           "exactly-one(on,reply_to)", "exactly-one(text,paragraphs)", "body is plain content",
         ],
       ),
+      contract_object(
+        "story",
+        [
+          ("variant", "enum(default|first|even,default=default)"),
+          ("text", "docx_text"),
+          ("paragraphs", "nonempty-array(paragraph)"),
+        ],
+        constraints=[
+          "exactly-one(text,paragraphs)", "body is plain content plus fields; hyperlinks, images and notes are rejected",
+          "each variant may be declared at most once per kind", "a first variant also emits w:titlePg; an even variant also emits word/settings.xml with w:evenAndOddHeaders",
+        ],
+      ),
     ],
     operations,
     constraints: [
       "docx.batch/1 is accepted as the paragraph/table-only subset", "unknown and duplicate members are rejected",
       "all numeric lexemes are plain decimal integers", "document text must be XML-serializable",
-      "the destination is fresh; existing documents are not mutated",
+      "the destination is fresh; existing documents are not mutated", "header and footer ops attach to the document's single section; they produce no body block and cannot be commented on",
     ],
     limits: Json::object({
       "max_script_bytes": Json::number(
@@ -338,6 +362,44 @@ fn docx_input_contract() -> InputContractCore {
               "on": Json::number(0.0),
               "author": Json::string("Reviewer"),
               "text": Json::string("Add a source."),
+            }),
+          }),
+        ]),
+      }),
+      // A paginated report: a running header plus a footer whose page number
+      // is a LIVE field, not the static text a reader would have to correct.
+      Json::object({
+        "schema": Json::string(@docx_batch.SCHEMA_BATCH_V2),
+        "ops": Json::array([
+          Json::object({
+            "op": Json::string("paragraph"),
+            "params": Json::object({ "text": Json::string("Body text") }),
+          }),
+          Json::object({
+            "op": Json::string("header"),
+            "params": Json::object({
+              "variant": Json::string("default"),
+              "text": Json::string("Quarterly findings"),
+            }),
+          }),
+          Json::object({
+            "op": Json::string("footer"),
+            "params": Json::object({
+              "paragraphs": Json::array([
+                Json::object({
+                  "align": Json::string("center"),
+                  "runs": Json::array([
+                    Json::object({ "text": Json::string("Page ") }),
+                    Json::object({
+                      "field": Json::object({ "type": Json::string("PAGE") }),
+                    }),
+                    Json::object({ "text": Json::string(" of ") }),
+                    Json::object({
+                      "field": Json::object({ "type": Json::string("NUMPAGES") }),
+                    }),
+                  ]),
+                }),
+              ]),
             }),
           }),
         ]),

@@ -326,7 +326,7 @@ output fail closed:
 
 ```mooncram
 $ printf '{"schema": "docx.batch/1", "ops": [{"op": "chart", "params": {}}]}' > bad.json; docx.exe batch out2.docx bad.json
-error: ops[0].op 'chart' is unknown (known ops: paragraph, table, comment)
+error: ops[0].op 'chart' is unknown (known ops: paragraph, table, comment, header, footer)
 [1]
 ```
 
@@ -534,6 +534,73 @@ between:
 ```mooncram
 $ printf 'not a png' > bad.png; printf '{"schema": "docx.batch/2", "ops": [{"op": "paragraph", "params": {"text": "target"}}, {"op": "comment", "params": {"on": 0, "text": "note", "author": "A"}}, {"op": "paragraph", "params": {"runs": [{"image": {"path": "bad.png", "content_type": "image/png"}}]}}]}' > interleaved.json; docx.exe batch outbad.docx interleaved.json
 error: ops[2]: could not read the image's dimensions from its image/png header
+[1]
+```
+
+## Batch With Headers, Footers, And Page Fields (`docx.batch/2`)
+
+`header` and `footer` ops author the section's `default`, `first`, and
+`even` variants. Each becomes its own part, wired through `sectPr`
+references, and reads back at its own story path. Story bodies are plain
+content (no hyperlinks, images, or notes — they would need relationships
+the part does not get) PLUS fields: `{"field": {"type": "PAGE"}}` emits a
+live `w:fldChar` field, so Word repaginates the number instead of showing
+whatever static text the author guessed.
+
+```mooncram
+$ cat > paginated.json <<'SCRIPT'
+> {
+>   "schema": "docx.batch/2",
+>   "ops": [
+>     {"op": "paragraph", "params": {"text": "Quarterly Report", "style": "Heading1"}},
+>     {"op": "header", "params": {"text": "ACME — internal"}},
+>     {"op": "footer", "params": {"paragraphs": [
+>       {"align": "center", "runs": [
+>         {"text": "Page "},
+>         {"field": {"type": "PAGE"}},
+>         {"text": " of "},
+>         {"field": {"type": "NUMPAGES"}}
+>       ]}
+>     ]}}
+>   ]
+> }
+> SCRIPT
+```
+
+```mooncram
+$ docx.exe batch paginated.docx paginated.json
+created paginated.docx (3 op(s))
+```
+
+```mooncram
+$ docx.exe validate paginated.docx
+valid
+```
+
+```mooncram
+$ docx.exe text paginated.docx
+[/body/p[1]] Quarterly Report
+[/header[1]/p[1]] ACME — internal
+[/footer[1]/p[1]] Page 1 of 1
+```
+
+```mooncram
+$ docx.exe outline paginated.docx | jq -c '.sections'
+[{"headers":[{"variant":"default","part":1}],"footers":[{"variant":"default","part":1}]}]
+```
+
+A section declares each variant at most once, and story content that
+would dangle is refused with the offending op's address:
+
+```mooncram
+$ printf '{"schema": "docx.batch/2", "ops": [{"op": "footer", "params": {"text": "a"}}, {"op": "footer", "params": {"text": "b"}}]}' > dupvariant.json; docx.exe batch outdup.docx dupvariant.json
+error: ops[1].params.variant 'default' was already declared by ops[0]; a section declares each footer variant at most once
+[1]
+```
+
+```mooncram
+$ printf '{"schema": "docx.batch/2", "ops": [{"op": "header", "params": {"paragraphs": [{"runs": [{"image": {"path": "logo.png"}}]}]}}]}' > storyimage.json; docx.exe batch outstory.docx storyimage.json
+error: ops[0].params.paragraphs[0].runs[0]: images are not allowed in header/footer stories (plain content only)
 [1]
 ```
 

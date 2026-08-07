@@ -320,6 +320,111 @@ async test "office authored document is schema-valid" {
 }
 
 ///|
+/// #95: the NEW part combinations — header/footer parts with their content
+/// types, relationships and `sectPr` references, the `titlePg` and
+/// `evenAndOddHeaders` flags that make the first/even variants take effect,
+/// and the complex `PAGE`/`NUMPAGES` field run sequence — must be
+/// Microsoft-schema-valid. `w:sectPr` and `w:rPr` are ENFORCED sequences, so
+/// a misordered reference or field run is exactly the kind of defect only the
+/// SDK catches; our structural validator would pass it.
+async test "an authored document with header/footer stories and page fields is schema-valid" {
+  let dir = fresh_scratch_dir()
+  let script = @batch.parse_batch(
+    @json.parse(
+      (
+        #|{"schema": "docx.batch/2", "ops": [
+        #|  {"op": "paragraph", "params": {"text": "Report", "style": "Heading1"}},
+        #|  {"op": "paragraph", "params": {"text": "body"}},
+        #|  {"op": "header", "params": {"variant": "default", "text": "ACME quarterly"}},
+        #|  {"op": "header", "params": {"variant": "first", "text": "Cover"}},
+        #|  {"op": "header", "params": {"variant": "even", "paragraphs": [
+        #|    {"align": "left", "runs": [{"text": "ACME", "bold": true}]}
+        #|  ]}},
+        #|  {"op": "footer", "params": {"variant": "default", "paragraphs": [
+        #|    {"align": "center", "runs": [
+        #|      {"text": "Page "},
+        #|      {"field": {"type": "PAGE"}},
+        #|      {"text": " of "},
+        #|      {"field": {"type": "NUMPAGES"}}
+        #|    ]}
+        #|  ]}},
+        #|  {"op": "comment", "params": {"on": 0, "text": "please revise", "author": "Ada"}}
+        #|]}
+      ),
+    ),
+  )
+  let authored = @docx_impl.author_docx_bytes(script, Map([]))
+  validate_docx_via_sdk(dir, "office_authored_stories", authored)
+}
+
+///|
+/// #95 NEGATIVE CONTROL: the SDK oracle must REJECT a deliberately corrupted
+/// package, otherwise a green run above proves nothing. Same document as the
+/// test before, with the `sectPr` child sequence broken — the header
+/// reference moved AFTER `pgSz`, which CT_SectPr's enforced order forbids and
+/// which our own structural validator happily accepts.
+async test "the SDK oracle rejects a misordered sectPr the structural tier accepts" {
+  let dir = fresh_scratch_dir()
+  let script = @batch.parse_batch(
+    @json.parse(
+      (
+        #|{"schema": "docx.batch/2", "ops": [
+        #|  {"op": "paragraph", "params": {"text": "body"}},
+        #|  {"op": "header", "params": {"variant": "default", "text": "ACME quarterly"}}
+        #|]}
+      ),
+    ),
+  )
+  let authored = @docx_impl.author_docx_bytes(script, Map([]))
+  let archive = @mbtzip.read(authored)
+  guard archive.get("word/document.xml") is Some(part) else {
+    fail("expected document.xml")
+  }
+  let document = @utf8.decode(part, ignore_bom=true)
+  let reference =
+    #|<w:headerReference r:id="rId3" w:type="default"/>
+  guard document.find(reference) is Some(_) else {
+    fail("expected a header reference to corrupt; got: \{document}")
+  }
+  let corrupted = document
+    .replace(old=reference, new="")
+    .replace(
+      old="<w:pgSz w:h=\"15840\" w:w=\"12240\"/>",
+      new="<w:pgSz w:h=\"15840\" w:w=\"12240\"/>" + reference,
+    )
+  // Prove the corruption actually landed: a document that merely LOST its
+  // reference would still be schema-valid, and the negative control would then
+  // be vacuous.
+  guard corrupted.find("/><w:headerReference") is Some(_) else {
+    fail("the sectPr corruption did not apply; got: \{corrupted}")
+  }
+  let rebuilt = @mbtzip.Archive::new()
+  for entry in archive.entries() {
+    let name = entry.name()
+    if name == "word/document.xml" {
+      rebuilt.add(name, @utf8.encode(corrupted))
+    } else {
+      rebuilt.add(name, archive.get(name).unwrap())
+    }
+  }
+  let broken = @mbtzip.write(rebuilt)
+  // Our structural tier still accepts it: ordering inside sectPr is a SCHEMA
+  // rule, not an OPC rule. That is precisely why the SDK gate exists.
+  assert_eq(@opc.validate_docx_package(broken).length(), 0)
+  let rejected = try {
+    validate_docx_via_sdk(dir, "office_authored_stories_corrupt", broken)
+    false
+  } catch {
+    _ => true
+  }
+  if !rejected {
+    fail(
+      "the OpenXML SDK accepted a misordered sectPr; the positive gates above prove nothing",
+    )
+  }
+}
+
+///|
 /// Phase-2 J1: the annotated-comments CONFORMANCE fixture must be
 /// Microsoft-schema-valid AND the annotation index must read it back with
 /// the plan's semantics. (The tolerant-reader NEGATIVE fixtures live in
