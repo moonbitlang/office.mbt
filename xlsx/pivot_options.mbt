@@ -197,6 +197,112 @@ fn write_pivot_cache_definition_xml(
 }
 
 ///|
+/// The `<location>` attributes of a pivot table, all of them derived from the
+/// field layout rather than fixed (ECMA-376 Part 1, 18.10.1.49 `location`,
+/// `CT_Location`).
+priv struct PivotLocation {
+  /// `firstHeaderRow`: row of the PivotTable header, relative to the top left
+  /// cell of `ref`.
+  first_header_row : Int
+  /// `firstDataRow`: row of the first PivotTable data row, relative to the top
+  /// left cell of `ref`.
+  first_data_row : Int
+  /// `firstDataCol`: column of the first PivotTable data column, relative to
+  /// the top left cell of `ref`.
+  first_data_col : Int
+  /// `rowPageCount` / `colPageCount`: rows and columns the page (filter) field
+  /// area occupies. Both are `0` (the schema default, omitted from the output)
+  /// when the pivot has no page fields.
+  row_page_count : Int
+  col_page_count : Int
+}
+
+///|
+/// Derives the `<location>` attributes from the axes a pivot table actually
+/// uses. Excel refreshes these pivots on load (`refreshOnLoad="1"` on the cache
+/// definition, no cached records), so `<location>` is what tells it how much
+/// room the refreshed layout needs; a location that contradicts the fields is
+/// what made page-field pivots unplaceable (issue #264).
+///
+/// Frame of reference: the standard only says `@ref` is "the first row of the
+/// PivotTable", but [MS-OI29500]'s implementer note on Part 1 18.10.1.49
+/// records that "Office assumes that @ref specifies the range of the PivotTable
+/// **excluding** the page fields". The filter block therefore sits *above*
+/// `ref` and never shifts the row offsets below it; only `rowPageCount` /
+/// `colPageCount` describe it. The same note records that Office bounds
+/// `firstHeaderRow` by `firstDataRow`.
+///
+/// Each attribute, and where its value comes from:
+///
+/// * `firstDataCol` — width of the row-label area. Compact form collapses every
+///   row field into a single shared column; outline and tabular form give each
+///   row field its own column. With no row fields at all there is still the one
+///   corner column that carries the grand-total label, hence the floor of 1.
+///
+/// * `firstDataRow` — `firstHeaderRow` plus the height of the column-header
+///   block. That block has one row per column field, plus one more row for the
+///   implicit "Values" column field Excel materialises when several data fields
+///   share the column axis, and is at least one row tall (a pivot with no
+///   column fields still prints a header row of data-field captions).
+///
+/// * `firstHeaderRow` — 1 when a column-axis caption row sits above the header
+///   block, which is the case as soon as the column axis carries anything (a
+///   column field, or the implicit "Values" field of a multi-data pivot), else
+///   0. This stays within Office's `firstHeaderRow <= firstDataRow` bound
+///   because the header block is always at least one row tall.
+///
+/// * `rowPageCount` / `colPageCount` — the shape of the filter block, written
+///   only when the pivot has page fields. Per 18.10.1.49, "by default there is
+///   a single column of filter fields per page and the fields occupy as many
+///   rows as there are fields", i.e. one column and one row per page field.
+///   `pageOverThenDown` lays the same fields out across instead of down, which
+///   transposes the pair; that transposed form follows from the attribute's
+///   definition but was not checked against a real Excel-authored sample.
+fn pivot_location(
+  row_fields : ArrayView[(Int, PivotTableField)],
+  col_fields : ArrayView[(Int, PivotTableField)],
+  page_fields : ArrayView[(Int, PivotTableField)],
+  data_fields : ArrayView[(Int, PivotTableField)],
+  opts : PivotTableOptions,
+) -> PivotLocation {
+  // `classic_layout` forces compact="0" outline="0" on every axis field (see
+  // the pivotField writer below), so the row labels always get their own
+  // columns there.
+  let compact_rows = !opts.classic_layout &&
+    row_fields.length() > 0 &&
+    row_fields.iter().all(entry => entry.1.compact)
+  let first_data_col = if compact_rows || row_fields.length() < 1 {
+    1
+  } else {
+    row_fields.length()
+  }
+  let values_on_col_axis = data_fields.length() > 1
+  let col_axis_levels = col_fields.length() +
+    (if values_on_col_axis { 1 } else { 0 })
+  let header_rows = if col_axis_levels < 1 { 1 } else { col_axis_levels }
+  let first_header_row = if col_fields.length() > 0 || values_on_col_axis {
+    1
+  } else {
+    0
+  }
+  let page_count = page_fields.length()
+  let (row_page_count, col_page_count) = if page_count == 0 {
+    (0, 0)
+  } else if opts.page_over_then_down {
+    (1, page_count)
+  } else {
+    (page_count, 1)
+  }
+  {
+    first_header_row,
+    first_data_row: first_header_row + header_rows,
+    first_data_col,
+    row_page_count,
+    col_page_count,
+  }
+}
+
+///|
 fn write_pivot_table_definition_xml(
   name : String,
   cache_id : Int,
@@ -231,11 +337,21 @@ fn write_pivot_table_definition_xml(
     " createdVersion=\"3\" updatedVersion=\"3\" minRefreshableVersion=\"3\"",
   )
   sb.write_view(">\n")
+  let location = pivot_location(
+    row_fields, col_fields, page_fields, data_fields, opts,
+  )
   sb.write_view("  <location ref=\"")
   sb.write_view(escape_xml_attr(pivot_ref))
-  sb.write_view(
-    "\" firstHeaderRow=\"1\" firstDataRow=\"2\" firstDataCol=\"1\"/>\n",
-  )
+  sb.write_view("\" firstHeaderRow=\"\{location.first_header_row}\"")
+  sb.write_view(" firstDataRow=\"\{location.first_data_row}\"")
+  sb.write_view(" firstDataCol=\"\{location.first_data_col}\"")
+  // Both counts default to 0 in the schema, so they are only written for a
+  // pivot that actually has a filter area.
+  if location.row_page_count > 0 || location.col_page_count > 0 {
+    sb.write_view(" rowPageCount=\"\{location.row_page_count}\"")
+    sb.write_view(" colPageCount=\"\{location.col_page_count}\"")
+  }
+  sb.write_view("/>\n")
   let row_opts : Map[Int, PivotTableField] = Map([])
   for entry in row_fields {
     let (idx, field) = entry

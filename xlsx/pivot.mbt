@@ -9,11 +9,15 @@ pub struct PivotTable {
 }
 
 ///|
+/// Builds an in-memory pivot table. `cache_id` stays 0 for pivots whose XML the
+/// caller supplied, meaning "the writer picks a free id"; generated pivots pass
+/// the id that is already baked into `table_xml` as `cacheId`.
 fn PivotTable::new(
   table_xml : String,
   cache_definition_xml : String,
   cache_records_xml? : String = "",
   name? : String = "",
+  cache_id? : Int = 0,
 ) -> PivotTable raise XlsxError {
   if table_xml == "" {
     raise InvalidPivotTable(msg="pivot table xml empty")
@@ -29,7 +33,7 @@ fn PivotTable::new(
   {
     name,
     table_id: 0,
-    cache_id: 0,
+    cache_id,
     table_xml,
     cache_definition_xml,
     cache_records_xml: records,
