@@ -41,7 +41,14 @@ test "add_font interns equal specs" {
 }
 
 ///|
-test "page model round-trips through json" {
+test "color rgb constructor clamps channels" {
+  inspect(@pagelayout.Color::rgb(300, -5, 128).to_hex(), content="#ff0080")
+  let c = @pagelayout.Color::rgb(255, 128, 11)
+  inspect(c.to_hex(), content="#ff800b")
+}
+
+///|
+test "page model serializes to canonical json (one-way; no FromJson yet)" {
   let model = @pagelayout.PageModel::new()
   let font = model.add_font({ family: "Carlito", bold: false, italic: false })
   let page = @pagelayout.Page::{ width_pt: 612, height_pt: 792, items: [] }

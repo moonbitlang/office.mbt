@@ -4,6 +4,12 @@
 // points, y-down, origin at the page's top-left corner; text is positioned
 // by its baseline. Glyph runs carry their own advances so backends never
 // re-measure text.
+//
+// Derived `Eq` on these types is exact structural (IEEE) equality, meant
+// for snapshot tests on models built from the same code path; tolerance-
+// aware comparison of rendered output belongs to the svgdiff golden layer.
+// Structural invariants the types cannot express are checked by
+// `PageModel::validate` (validate.mbt).
 
 ///|
 /// A font face a glyph run references, by index into `PageModel::fonts`.
@@ -16,8 +22,10 @@ pub(all) struct FontSpec {
 } derive(Eq, Debug, ToJson)
 
 ///|
-/// Solid sRGB color. No alpha in v1: solid colors keep the SVG output
-/// inside svgdiff's deterministic subset and match common document text.
+/// Solid sRGB color; each channel is 0..=255 (checked by
+/// `PageModel::validate`, clamped on entry by `Color::rgb`). No alpha in
+/// v1: solid colors keep the SVG output inside svgdiff's deterministic
+/// subset and match common document text.
 pub(all) struct Color {
   r : Int
   g : Int
@@ -29,17 +37,30 @@ pub(all) struct Color {
 pub let black : Color = { r: 0, g: 0, b: 0 }
 
 ///|
-/// Lowercase `#rrggbb`, the form both the SVG emitter and tests use.
-pub fn Color::to_hex(self : Color) -> String {
-  let sb = StringBuilder()
-  sb <+ "#"
-  for v in [self.r, self.g, self.b] {
-    let clamped = if v < 0 { 0 } else if v > 255 { 255 } else { v }
-    let digits = "0123456789abcdef"
-    sb <+ "\{digits.get_char(clamped / 16).unwrap()}"
-    sb <+ "\{digits.get_char(clamped % 16).unwrap()}"
+/// Build a color, clamping each channel into 0..=255. Frontends convert
+/// untrusted document values through this so every encoding of the model
+/// (Eq, JSON, hex) agrees.
+pub fn Color::rgb(r : Int, g : Int, b : Int) -> Color {
+  fn clamp(v : Int) -> Int {
+    if v < 0 {
+      0
+    } else if v > 255 {
+      255
+    } else {
+      v
+    }
   }
-  sb.to_string()
+
+  { r: clamp(r), g: clamp(g), b: clamp(b) }
+}
+
+///|
+/// Lowercase `#rrggbb`, the form both the SVG emitter and tests use.
+/// Channels are formatted modulo the valid range (see `Color::rgb`).
+pub fn Color::to_hex(self : Color) -> String {
+  let clamped = Color::rgb(self.r, self.g, self.b)
+  let packed = (clamped.r << 16) | (clamped.g << 8) | clamped.b
+  "#" + packed.to_string(radix=16).pad_start(6, '0')
 }
 
 ///|

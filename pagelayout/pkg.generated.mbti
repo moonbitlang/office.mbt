@@ -20,6 +20,7 @@ pub(all) struct Color {
 pub fn Color::equal(Self, Self) -> Bool
 #deprecated
 pub fn Color::not_equal(Self, Self) -> Bool
+pub fn Color::rgb(Int, Int, Int) -> Self
 pub fn Color::to_hex(Self) -> String
 #deprecated
 pub fn Color::to_json(Self) -> Json
@@ -168,6 +169,7 @@ pub fn PageModel::not_equal(Self, Self) -> Bool
 pub fn PageModel::to_json(Self) -> Json
 #deprecated
 pub fn PageModel::to_repr(Self) -> @debug.Repr
+pub fn PageModel::validate(Self) -> Array[String]
 
 pub(all) struct RectItem {
   x_pt : Double
