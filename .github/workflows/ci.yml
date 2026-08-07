@@ -266,20 +266,21 @@ jobs:
           linux-archive-sha256: ${{ env.MOONBIT_LINUX_ARCHIVE_SHA256 }}
           unix-core-sha256: ${{ env.MOONBIT_UNIX_CORE_SHA256 }}
 
-      # Build only the CLIs the cram docs exercise. Deliberately NOT
-      # `moon build --target native` for the whole workspace: pdflite's
-      # markdown CLI generates an 87MB C file that takes gcc/clang the better
-      # part of an hour (moonc expands the CJK cmapdata constants into code) —
-      # a cost no CI run should pay. See the repo quality roadmap.
+      # Build only the CLIs the cram docs exercise — the rest of the workspace
+      # is not needed by this job. (This split originally dodged a pathological
+      # compile: the markdown CLI's CJK cmap tables expanded into an 87MB
+      # generated C file that took gcc/clang the better part of an hour. That
+      # is fixed — the tables are flat ReadOnlyArray data lowered to static C
+      # arrays, and the pinned toolchain links debug executables straight to
+      # object code. See docs/moonc-large-const-codegen.md.)
       - name: Build CLIs (native)
         run: moon build --target native cmd/xlsx docx2html/cmd/docx2html docx2html/cmd/docx office-cli pdflite/cmd/main
 
       # Run the cram docs from a stub project so `moon cram test` does not
-      # trigger a build of every workspace executable (which would include the
-      # pathological markdown CLI above — this is also how pdflite's own CI
-      # runs its cram). PATH supplies xlsx.exe/docx2html.exe/docx.exe for the
-      # docs that invoke them by name; pdflite's doc takes its CLI and fixture
-      # via env.
+      # trigger a build of every workspace executable (keeps the job lean;
+      # this is also how pdflite's own CI runs its cram). PATH supplies
+      # xlsx.exe/docx2html.exe/docx.exe for the docs that invoke them by name;
+      # pdflite's doc takes its CLI and fixture via env.
       - name: Cram tests (xlsx, docx2html, office, pdflite CLIs)
         env:
           PDFLITE_CLI: ${{ github.workspace }}/_build/native/debug/build/bobzhang/pdflite/cmd/main/main.exe
