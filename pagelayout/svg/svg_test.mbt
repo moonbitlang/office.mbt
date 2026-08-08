@@ -5,6 +5,7 @@ fn hello_model() -> @pagelayout.PageModel {
       runs: [
         {
           text: "Hello SVG",
+          field: NotAField,
           style: {
             family: "Calibri",
             size_pt: 12,
@@ -41,6 +42,7 @@ test "special characters are xml-escaped" {
       runs: [
         {
           text: "a<b & \"c\" 'd'>",
+          field: NotAField,
           style: {
             family: "Calibri",
             size_pt: 12,
@@ -65,6 +67,7 @@ test "bold and italic faces emit weight and style attributes" {
       runs: [
         {
           text: "BI",
+          field: NotAField,
           style: {
             family: "Calibri",
             size_pt: 12,
@@ -145,6 +148,7 @@ test "multi-page models render one svg per page" {
       runs: [
         {
           text: "p1",
+          field: NotAField,
           style: {
             family: "Calibri",
             size_pt: 12,
@@ -161,6 +165,7 @@ test "multi-page models render one svg per page" {
       runs: [
         {
           text: "p2",
+          field: NotAField,
           style: {
             family: "Calibri",
             size_pt: 12,

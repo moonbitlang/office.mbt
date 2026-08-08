@@ -7,6 +7,8 @@ import {
 }
 
 // Values
+pub fn field_kind(String) -> FieldKind
+
 pub fn layout_paragraph(ParagraphInput, Double) -> ParagraphLayout
 
 // Errors
@@ -26,6 +28,20 @@ pub fn Alignment::not_equal(Self, Self) -> Bool
 pub fn Alignment::to_json(Self) -> Json
 #deprecated
 pub fn Alignment::to_repr(Self) -> @debug.Repr
+
+pub(all) enum FieldKind {
+  NotAField
+  PageNumber
+  PageCount
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn FieldKind::equal(Self, Self) -> Bool
+#deprecated
+pub fn FieldKind::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn FieldKind::to_json(Self) -> Json
+#deprecated
+pub fn FieldKind::to_repr(Self) -> @debug.Repr
 
 pub(all) struct LineBox {
   baseline_pt : Double
@@ -62,6 +78,7 @@ pub(all) struct ParagraphInput {
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn ParagraphInput::equal(Self, Self) -> Bool
+pub fn ParagraphInput::has_fields(Self) -> Bool
 #deprecated
 pub fn ParagraphInput::not_equal(Self, Self) -> Bool
 #deprecated
@@ -122,11 +139,14 @@ pub fn PlacedRun::to_repr(Self) -> @debug.Repr
 pub(all) struct RunInput {
   text : String
   style : RunStyle
+  field : FieldKind
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn RunInput::equal(Self, Self) -> Bool
+pub fn RunInput::evaluate(Self, Int, Int) -> Self
 #deprecated
 pub fn RunInput::not_equal(Self, Self) -> Bool
+pub fn RunInput::plain(String, RunStyle) -> Self
 #deprecated
 pub fn RunInput::to_json(Self) -> Json
 #deprecated

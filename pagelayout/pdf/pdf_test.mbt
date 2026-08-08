@@ -23,7 +23,7 @@ fn style(size_pt : Double) -> @paragraph.RunStyle {
 ///|
 fn para(text : String) -> @paragraph.ParagraphInput {
   {
-    runs: [{ text, style: style(12) }],
+    runs: [{ text, style: style(12), field: NotAField }],
     style: @paragraph.ParagraphStyle::default(),
   }
 }

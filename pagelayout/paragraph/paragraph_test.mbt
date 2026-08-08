@@ -17,7 +17,7 @@ fn para(
 ) -> @paragraph.ParagraphInput {
   let style = @paragraph.ParagraphStyle::default()
   {
-    runs: [{ text, style: plain_style(12) }],
+    runs: [{ text, style: plain_style(12), field: NotAField }],
     style: { ..style, align, indent_first_pt: first },
   }
 }
@@ -131,8 +131,8 @@ test "multi-style runs keep their boundaries" {
   }
   let input = @paragraph.ParagraphInput::{
     runs: [
-      { text: "normal ", style: plain_style(12) },
-      { text: "bold", style: bold },
+      { text: "normal ", style: plain_style(12), field: NotAField },
+      { text: "bold", style: bold, field: NotAField },
     ],
     style: @paragraph.ParagraphStyle::default(),
   }

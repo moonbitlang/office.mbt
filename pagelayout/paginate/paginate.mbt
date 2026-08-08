@@ -399,14 +399,48 @@ fn stamp_furniture(
   let width = section.page_width_pt -
     section.margin_left_pt -
     section.margin_right_pt
-  let header_items = furniture_items(model, furniture.header, width)
-  let footer_items = furniture_items(model, furniture.footer, width)
-  // the footer's last baseline sits footer_pt above the page bottom, so
-  // a taller footer grows upward rather than off the page
-  let footer_top = section.page_height_pt -
+  // Furniture holding a PAGE or NUMPAGES field renders differently on
+  // every page, so it is laid out per page; furniture without fields is
+  // laid out once and reused, which is the common case.
+  let total = model.pages.length()
+  let varies = furniture_varies(furniture)
+  let mut header_items = furniture_items(
+    model,
+    furniture.header,
+    width,
+    1,
+    total,
+  )
+  let mut footer_items = furniture_items(
+    model,
+    furniture.footer,
+    width,
+    1,
+    total,
+  )
+  let mut footer_top = section.page_height_pt -
     section.footer_pt -
     furniture_height(footer_items)
-  for page in model.pages {
+  for index, page in model.pages {
+    if varies && index > 0 {
+      header_items = furniture_items(
+        model,
+        furniture.header,
+        width,
+        index + 1,
+        total,
+      )
+      footer_items = furniture_items(
+        model,
+        furniture.footer,
+        width,
+        index + 1,
+        total,
+      )
+      footer_top = section.page_height_pt -
+        section.footer_pt -
+        furniture_height(footer_items)
+    }
     for entry in header_items {
       let (dy, item) = entry
       page.items.push(
@@ -429,6 +463,8 @@ fn furniture_items(
   model : @pagelayout.PageModel,
   blocks : Array[Block],
   width : Double,
+  page_number : Int,
+  page_count : Int,
 ) -> Array[(Double, @pagelayout.PageItem)] {
   let out : Array[(Double, @pagelayout.PageItem)] = []
   // paragraphs stack, so each one's lines are offset by what came before
@@ -436,7 +472,18 @@ fn furniture_items(
   for block in blocks {
     match block {
       Paragraph(input~, ..) => {
-        let laid = @paragraph.layout_paragraph(input, width)
+        // a PAGE or NUMPAGES run takes the real value here, where the
+        // page is finally known
+        let resolved = if input.has_fields() {
+          let runs : Array[@paragraph.RunInput] = []
+          for run in input.runs {
+            runs.push(run.evaluate(page_number, page_count))
+          }
+          @paragraph.ParagraphInput::{ ..input, runs, }
+        } else {
+          input
+        }
+        let laid = @paragraph.layout_paragraph(resolved, width)
         for line in laid.lines {
           for run in line.runs {
             let font = model.add_font(run.font)
@@ -491,6 +538,20 @@ fn furniture_items(
     }
   }
   out
+}
+
+///|
+/// Whether any furniture block holds a field, and so must be laid out
+/// again for each page.
+fn furniture_varies(furniture : PageFurniture) -> Bool {
+  for blocks in [furniture.header, furniture.footer] {
+    for block in blocks {
+      if block is Paragraph(input~, ..) && input.has_fields() {
+        return true
+      }
+    }
+  }
+  false
 }
 
 ///|

@@ -9,7 +9,13 @@ fn style(family : String, size_pt : Double) -> @paragraph.RunStyle {
 fn mixed_model() -> @pagelayout.PageModel {
   @paginate.paginate([
     @paginate.Block::paragraph({
-      runs: [{ text: "Hello 布局引擎 text", style: style("Calibri", 12) }],
+      runs: [
+        {
+          text: "Hello 布局引擎 text",
+          style: style("Calibri", 12),
+          field: NotAField,
+        },
+      ],
       style: @paragraph.ParagraphStyle::default(),
     }),
   ])
@@ -26,6 +32,7 @@ fn article_model() -> @pagelayout.PageModel {
           runs: [
             {
               text: "Layout Engine",
+              field: NotAField,
               style: {
                 family: "Cambria",
                 size_pt: 16,
@@ -44,6 +51,7 @@ fn article_model() -> @pagelayout.PageModel {
           {
             text: "The quick brown fox jumps over the lazy dog, then does it again to fill the measure.",
             style: style("Calibri", 11),
+            field: NotAField,
           },
         ],
         style: { ..base, align: AlignJustify, indent_first_pt: 18 },
