@@ -274,17 +274,19 @@ jobs:
       # arrays, and the pinned toolchain links debug executables straight to
       # object code. See docs/moonc-large-const-codegen.md.)
       - name: Build CLIs (native)
-        run: moon build --target native cmd/xlsx docx2html/cmd/docx2html docx2html/cmd/docx office-cli pdflite/cmd/main
+        run: moon build --target native cmd/xlsx docx2html/cmd/docx2html docx2html/cmd/docx office-cli pdflite/cmd/main pagelayout/cmd/pagelayout
 
       # Run the cram docs from a stub project so `moon cram test` does not
       # trigger a build of every workspace executable (keeps the job lean;
       # this is also how pdflite's own CI runs its cram). PATH supplies
       # xlsx.exe/docx2html.exe/docx.exe for the docs that invoke them by name;
       # pdflite's doc takes its CLI and fixture via env.
-      - name: Cram tests (xlsx, docx2html, office, pdflite CLIs)
+      - name: Cram tests (xlsx, docx2html, office, pdflite, pagelayout CLIs)
         env:
           PDFLITE_CLI: ${{ github.workspace }}/_build/native/debug/build/bobzhang/pdflite/cmd/main/main.exe
           PDFLITE_LOGO_PDF: ${{ github.workspace }}/pdflite/fixtures/camlpdf/logo.pdf
+          PAGELAYOUT_CLI: ${{ github.workspace }}/_build/native/debug/build/bobzhang/pagelayout/cmd/pagelayout/pagelayout.exe
+          PAGELAYOUT_DOCX: ${{ github.workspace }}/pagelayout/docx/fixture_render/single-paragraph.docx
         run: |
           STUB="$RUNNER_TEMP/moon-cram-stub"
           mkdir -p "$STUB"
@@ -295,6 +297,7 @@ jobs:
           moon cram test "$GITHUB_WORKSPACE/docx2html/tests/cram"
           moon cram test "$GITHUB_WORKSPACE/office/cmd/office/cram"
           moon cram test "$GITHUB_WORKSPACE/pdflite/tests/cram"
+          moon cram test "$GITHUB_WORKSPACE/pagelayout/tests/cram"
 
       # The mbtexcel library and xlsx CLI also target wasm end to end. Build the
       # CLI for wasm and drive it (filesystem read/write via the async runtime).
