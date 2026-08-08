@@ -179,3 +179,48 @@ test "a right stop never pulls text backwards" {
     assert_true(advance >= 0.0)
   }
 }
+
+///|
+test "a tab on a wrapped line measures from that line's origin" {
+  let run = @paragraph.RunStyle::{
+    family: "Calibri",
+    size_pt: 12,
+    bold: false,
+    italic: false,
+    color: @pagelayout.black,
+  }
+  // the first line fills the measure, so the tab lands on line two
+  let input = @paragraph.ParagraphInput::{
+    runs: [
+      {
+        text: "aaaa bbbb cccc dddd eeee ffff gggg hhhh\tX",
+        style: run,
+        field: NotAField,
+      },
+    ],
+    style: {
+      ..@paragraph.ParagraphStyle::default(),
+      tabs: {
+        stops: [{ position_pt: 60, align: TabLeft }],
+        default_interval_pt: 36,
+      },
+    },
+  }
+  let laid = @paragraph.layout_paragraph(input, 150)
+  assert_true(laid.lines.length() > 1)
+  // find the line holding the tab and check the text after it starts at
+  // the 60pt stop, measured from that line rather than the paragraph
+  let last = laid.lines[laid.lines.length() - 1]
+  let placed = last.runs[last.runs.length() - 1]
+  let mut x = placed.x_pt
+  let mut i = 0
+  while i < placed.text.length() {
+    if placed.text[i].to_int() == 0x09 {
+      x += placed.advances_pt[i]
+      break
+    }
+    x += placed.advances_pt[i]
+    i += 1
+  }
+  inspect(x, content="60")
+}
