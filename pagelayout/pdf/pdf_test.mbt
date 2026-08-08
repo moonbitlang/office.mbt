@@ -364,3 +364,36 @@ test "cid bytes that collide with pdf string delimiters are escaped" {
   let document = @pdflite.pdf_read_document_from_bytes(bytes)
   inspect(document.endpage(), content="1")
 }
+
+///|
+test "two documents sharing image bytes each carry their own XObject" {
+  // Object numbers are allocated per document. A cache that outlived one
+  // render made the second document reference an object the first had
+  // allocated — it kept the /XObject resource entry and lost the image,
+  // so the file was a dangling reference rather than a visible error.
+  let png = b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90\x77\x53\xde\x00\x00\x00\x0c\x49\x44\x41\x54\x08\xd7\x63\xf8\xcf\xc0\x00\x00\x03\x01\x01\x00\x18\xdd\x8d\xb0\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82"
+  fn build() {
+    let model = @pagelayout.PageModel::new()
+    let page = @pagelayout.Page::{ width_pt: 200, height_pt: 100, items: [] }
+    page.items.push(
+      Image({
+        x_pt: 10,
+        y_pt: 20,
+        w_pt: 50,
+        h_pt: 30,
+        data: png,
+        mime: "image/png",
+      }),
+    )
+    model.pages.push(page)
+    model
+  }
+
+  let first = @pdf.render_pdf(build())
+  let second = @pdf.render_pdf(build())
+  // the same model must render the same bytes however many came before
+  assert_eq(first.length(), second.length())
+  assert_true(first == second)
+  // and the image itself has to be present, not merely referenced
+  assert_true(as_text(second).contains("/Image"))
+}
