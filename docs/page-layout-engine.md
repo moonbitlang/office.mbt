@@ -1,7 +1,8 @@
 # Page layout engine: DOCX → page-model IR → SVG/PDF
 
 Design record for a paginated document renderer, decided 2026-08-07.
-Status: v1 in progress; this doc is the decision log and milestone map.
+This is the decision log and milestone map; see Status for what shipped
+and which decisions measurement reversed.
 
 ## Goal
 
@@ -25,6 +26,44 @@ TrueType parsing (`hmtx` advance widths), AFM metrics for the standard 14,
 CJK CMap machinery, and a PDF writer — and the large-constant-data compile
 cost that once made embedding data unattractive is resolved
 (`docs/moonc-large-const-codegen.md`).
+
+## Status (2026-08-08)
+
+v1 shipped, plus tables and lists. Merged in order: #357 design record,
+#358 IR, #359 fonts, #360 line breaking, #361 paragraphs, #362
+pagination, #363 SVG, #364 DOCX frontend, #365 CLI, #366–#368 tables,
+#369 numbering. A `.docx` renders to paginated SVG through
+`pagelayout/cmd/pagelayout`.
+
+Three decisions in this document were **reversed by measurement**, and
+the reasoning is worth keeping:
+
+1. **svgdiff cannot guard this backend.** Probed at 0.5.13: any document
+   carrying a `viewBox` or a `<text>` element reports
+   `analysis_status = "partial"`, and changing a `<text>` fill from
+   `#000000` to `#ff0000` yields **zero** differences — font-dependent
+   text semantics are outside its supported subset. Text is nearly
+   everything this backend emits. It also cost five third-party packages
+   inside the dependency closure that office's fresh-agent release gate
+   reviews and locks, which is how the problem surfaced (that job failed
+   with *resolved dependency inventory does not match the tracked build
+   lock*). Dropped; exact snapshots guard the goldens instead.
+
+2. **Font resolution needs the theme, not a default.** Real Word
+   documents rarely name a font in `docDefaults`; they write
+   `w:asciiTheme="minorHAnsi"` and let `theme1.xml` supply it. An early
+   hardcoded Calibri fallback looked correct on the first fixture purely
+   because that theme's `minorHAnsi` *is* Calibri — while every
+   `majorHAnsi` heading and every Word 365 (Aptos) document would have
+   rendered wrong.
+
+3. **`moon test --update` is not a verification step.** It froze wrong
+   answers into snapshots three separate times — a fixture asserted as US
+   Letter that is actually A4, the font coincidence above, and a list
+   whose labels read `1. 1.` instead of `1. 2.`. Each read as passing.
+   Snapshots here assert values derived from the **source format**
+   (twips, half-points, the OOXML attributes), never from the engine's
+   own output, so the arithmetic can be checked by hand.
 
 ## Architecture
 
@@ -60,7 +99,7 @@ DOCX ──(frontend: pagelayout/docx)──► engine input (paragraphs/runs/pr
 | 1 | Font source | Bundle metric-compatible fonts as compressed bytes | Determinism on every machine; embeddable in PDF later. Carlito (≈Calibri), Liberation Sans/Serif/Mono (≈Arial/Times New Roman/Courier New) — all SIL OFL. |
 | 2 | CJK | Bundle a CJK font too (Noto Sans CJK, SC first) | Full determinism for CJK accepted at the ~10–20 MB cost; layout gets real advances, SVG/PDF get a real embeddable font. Kinsoku break rules in the line breaker from day one. |
 | 3 | Location | New top-level `pagelayout/` package tree | Engine + IR are format-neutral; keeps `pdflite` a PDF library and leaves the door open for XLSX print rendering. |
-| 4 | Testing | svgdiff-guarded goldens + reference-free oracles | See below. `Milky2018/svgdiff` compares SVG semantically with typed reports; goldens stay stable under harmless formatting churn. |
+| 4 | Testing | Exact reviewed goldens + reference-free oracles | See below. Originally svgdiff-guarded; that was **reversed** once measured — see the Status section. |
 | 5 | Shaping | Latin + CJK only in v1 | Kerning via pair lookup is in scope; Arabic joining / Indic reordering (HarfBuzz territory) is explicitly out until a shaping strategy is chosen. |
 | 6 | Line breaking | Greedy first-fit (what Word does) | No paragraph-level optimization (Knuth-Plass) — simpler and closer to Word behavior. No hyphenation in v1. |
 
@@ -129,11 +168,11 @@ never re-measure. All lengths flow through typed unit conversions
    LibreOffice headless docx→pdf; compare page count (±1), per-page text
    assignment, and paragraph y-positions within a loose band.
 4. **Reviewed goldens**: a curated fixture corpus rendered to SVG, judged
-   by eye once, then frozen. `Milky2018/svgdiff` guards them from then on
-   (`compare` with the default profile; a test asserts
-   `analysis_status == "complete"` so the emitter provably stays inside
-   svgdiff's supported subset — solid fills, positioned text, data-URL
-   images, no filters/masks/animation).
+   by eye once, then frozen as **exact snapshots**. The emitter is
+   deterministic (fixed bundled metrics, fixed rounding), so these catch
+   every change including text position and colour.
+
+   This decision was reversed from the original plan; see Status.
 
 ## v1 fidelity tier
 
@@ -160,6 +199,12 @@ text, tracked-changes rendering, hyphenation.
 8. `pagelayout/docx` frontend (paragraphs/runs/styles/sectPr).
 9. CLI wiring + cram doc.
 
-Then, in rough order: tables, lists/numbering, headers/footers, images,
-the pdflite PDF backend (font embedding + CID subsetting), justification
+Tables (#366–#368) and lists/numbering (#369) followed.
+
+Remaining, in rough order: headers/footers, images, tab stops, the
+pdflite PDF backend (font embedding + CID subsetting), justification
 polish (CJK inter-character), XLSX print frontend.
+
+Known gaps are also recorded next to the code they affect — see the
+comment block at the end of `pagelayout/docx/read.mbt` — so they stay
+visible to whoever touches that parser rather than only living here.
