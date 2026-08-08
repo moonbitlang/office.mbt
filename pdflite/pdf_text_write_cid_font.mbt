@@ -149,7 +149,7 @@ fn PdfDocument::pdf_text_make_cid_keyed_font(
       root_entries.push(
         (
           pdf_text_tounicode_key_name,
-          PdfIndirect(self.pdf_text_write_tounicode(tounicode)),
+          PdfIndirect(self.pdf_text_write_tounicode_cid(tounicode)),
         ),
       )
     None => ()
