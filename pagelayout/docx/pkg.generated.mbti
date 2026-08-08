@@ -1,0 +1,112 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pagelayout/docx"
+
+import {
+  "bobzhang/docx2html/xml",
+  "bobzhang/pagelayout",
+  "bobzhang/pagelayout/paginate",
+  "bobzhang/pagelayout/paragraph",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn read_document(@xml.XmlElement, StyleSheet, theme? : ThemeFonts) -> DocxDocument
+
+pub fn read_docx(Bytes) -> DocxDocument raise
+
+pub fn read_para_props(@xml.XmlElement) -> (ParaProps, String?)
+
+pub fn read_run_props(@xml.XmlElement, theme? : ThemeFonts) -> RunProps
+
+pub fn read_section_props(@xml.XmlElement) -> @paginate.SectionProps
+
+pub fn read_stylesheet(@xml.XmlElement, theme? : ThemeFonts) -> StyleSheet
+
+pub fn read_theme(@xml.XmlElement) -> ThemeFonts
+
+pub fn render_docx(Bytes) -> @pagelayout.PageModel raise
+
+// Errors
+
+// Types and methods
+pub(all) struct DocxDocument {
+  blocks : Array[@paginate.Block]
+  section : @paginate.SectionProps
+  unsupported : Array[String]
+}
+
+pub(all) struct ParaProps {
+  align : @paragraph.Alignment?
+  indent_left : @pagelayout.Twips?
+  indent_right : @pagelayout.Twips?
+  indent_first : @pagelayout.Twips?
+  space_before : @pagelayout.Twips?
+  space_after : @pagelayout.Twips?
+  line_spacing : @paragraph.LineSpacing?
+  keep_lines : Bool?
+  keep_next : Bool?
+  widow_control : Bool?
+  page_break_before : Bool?
+} derive(Eq, ToJson, @debug.Debug)
+pub fn ParaProps::empty() -> Self
+#deprecated
+pub fn ParaProps::equal(Self, Self) -> Bool
+pub fn ParaProps::merge(Self, Self) -> Self
+#deprecated
+pub fn ParaProps::not_equal(Self, Self) -> Bool
+pub fn ParaProps::resolve(Self) -> @paragraph.ParagraphStyle
+#deprecated
+pub fn ParaProps::to_json(Self) -> Json
+#deprecated
+pub fn ParaProps::to_repr(Self) -> @debug.Repr
+
+pub(all) struct RunProps {
+  family : String?
+  size : @pagelayout.HalfPoints?
+  bold : Bool?
+  italic : Bool?
+  color : @pagelayout.Color?
+} derive(Eq, ToJson, @debug.Debug)
+pub fn RunProps::empty() -> Self
+#deprecated
+pub fn RunProps::equal(Self, Self) -> Bool
+pub fn RunProps::merge(Self, Self) -> Self
+#deprecated
+pub fn RunProps::not_equal(Self, Self) -> Bool
+pub fn RunProps::resolve(Self) -> @paragraph.RunStyle
+#deprecated
+pub fn RunProps::to_json(Self) -> Json
+#deprecated
+pub fn RunProps::to_repr(Self) -> @debug.Repr
+
+type StyleEntry
+
+pub struct StyleSheet {
+  default_run : RunProps
+  default_para : ParaProps
+  paragraph_styles : Map[String, StyleEntry]
+  character_styles : Map[String, StyleEntry]
+  default_paragraph_style : String?
+}
+pub fn StyleSheet::empty() -> Self
+pub fn StyleSheet::resolve_para(Self, String?, ParaProps) -> ParaProps
+pub fn StyleSheet::resolve_run(Self, String?, String?, RunProps) -> RunProps
+
+pub(all) struct ThemeFonts {
+  major : String?
+  minor : String?
+} derive(Eq, ToJson, @debug.Debug)
+pub fn ThemeFonts::empty() -> Self
+#deprecated
+pub fn ThemeFonts::equal(Self, Self) -> Bool
+#deprecated
+pub fn ThemeFonts::not_equal(Self, Self) -> Bool
+pub fn ThemeFonts::resolve(Self, String) -> String?
+#deprecated
+pub fn ThemeFonts::to_json(Self) -> Json
+#deprecated
+pub fn ThemeFonts::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits
