@@ -194,9 +194,10 @@ pub fn read_document(
       }
       // the body-level sectPr carries the final section's geometry
       "w:sectPr" => section = read_section_props(el)
+      "w:tbl" =>
+        blocks.push(@paginate.Block::table(read_table(el, sheet, theme~)))
       // block content this milestone does not lay out yet. Recording it
       // keeps the omission visible instead of silently losing text.
-      "w:tbl" => unsupported.push("table")
       "w:sdt" => unsupported.push("content control")
       _ => ()
     }
@@ -280,10 +281,11 @@ pub fn render_docx(docx : Bytes) -> @pagelayout.PageModel raise {
 // Known gaps, all surfaced by review and deliberately left for later
 // milestones rather than half-implemented:
 //
-//   * Tables (`w:tbl`) and content controls (`w:sdt`) at block level are
-//     not laid out; each occurrence is recorded in
-//     `DocxDocument::unsupported` so a caller can say the render is
-//     incomplete instead of presenting it as the whole document.
+//   * Content controls (`w:sdt`) at block level are not laid out; each
+//     occurrence is recorded in `DocxDocument::unsupported` so a caller
+//     can say the render is incomplete instead of presenting it as the
+//     whole document. Tables are laid out, but nested tables (a `w:tbl`
+//     inside a `w:tc`) are not yet.
 //   * Numbering (`w:numPr`) is not read, so list markers and the indents
 //     numbering.xml supplies for each level are missing.
 //   * `w:tab` reaches the engine as U+0009 but there is no tab-stop

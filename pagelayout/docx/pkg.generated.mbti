@@ -6,6 +6,7 @@ import {
   "bobzhang/pagelayout",
   "bobzhang/pagelayout/paginate",
   "bobzhang/pagelayout/paragraph",
+  "bobzhang/pagelayout/table",
   "moonbitlang/core/debug",
 }
 
@@ -21,6 +22,8 @@ pub fn read_run_props(@xml.XmlElement, theme? : ThemeFonts) -> RunProps
 pub fn read_section_props(@xml.XmlElement) -> @paginate.SectionProps
 
 pub fn read_stylesheet(@xml.XmlElement, theme? : ThemeFonts) -> StyleSheet
+
+pub fn read_table(@xml.XmlElement, StyleSheet, theme? : ThemeFonts) -> @table.Table
 
 pub fn read_theme(@xml.XmlElement) -> ThemeFonts
 

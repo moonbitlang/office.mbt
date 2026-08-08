@@ -5,6 +5,7 @@ import {
   "bobzhang/pagelayout",
   "bobzhang/pagelayout/paginate",
   "bobzhang/pagelayout/paragraph",
+  "bobzhang/pagelayout/table",
   "moonbitlang/core/debug",
 }
 

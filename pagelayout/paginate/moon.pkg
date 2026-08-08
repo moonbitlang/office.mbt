@@ -1,6 +1,7 @@
 import {
   "bobzhang/pagelayout",
   "bobzhang/pagelayout/paragraph",
+  "bobzhang/pagelayout/table",
   "moonbitlang/core/debug",
 }
 

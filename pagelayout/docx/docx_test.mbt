@@ -499,16 +499,106 @@ test "an empty paragraph keeps its paragraph-mark styling" {
 }
 
 ///|
-test "unsupported block content is reported, not silently dropped" {
+test "a table becomes a laid-out block, not an omission" {
   let doc = @docx.read_docx(
     docx_bytes(
       (
         #|<w:p><w:r><w:t>before</w:t></w:r></w:p>
-        #|<w:tbl><w:tr><w:tc><w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>
+        #|<w:tbl><w:tblGrid><w:gridCol w:w="2880"/><w:gridCol w:w="2880"/></w:tblGrid><w:tr><w:tc><w:p><w:r><w:t>a1</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>b1</w:t></w:r></w:p></w:tc></w:tr></w:tbl>
         #|<w:p><w:r><w:t>after</w:t></w:r></w:p>
       ),
     ),
   )
-  json_inspect(doc.unsupported, content=["table"])
-  inspect(doc.blocks.length(), content="2")
+  // paragraph, table, paragraph — nothing dropped
+  inspect(doc.blocks.length(), content="3")
+  json_inspect(doc.unsupported, content=[])
+  guard! doc.blocks[1] is TableBlock(table~, ..)
+  inspect(table.rows.length(), content="1")
+  inspect(table.rows[0].cells.length(), content="2")
+  inspect(table.column_count(), content="2")
+}
+
+///|
+test "content controls are still reported as unsupported" {
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:r><w:t>x</w:t></w:r></w:p>
+        #|<w:sdt><w:sdtContent><w:p><w:r><w:t>inside</w:t></w:r></w:p></w:sdtContent></w:sdt>
+      ),
+    ),
+  )
+  json_inspect(doc.unsupported, content=["content control"])
+}
+
+///|
+test "table properties parse into the model" {
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblLayout w:type="fixed"/><w:tblInd w:w="720" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="8" w:color="FF0000"/></w:tblBorders><w:tblCellMar><w:left w:w="200" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid><w:tr><w:trPr><w:tblHeader/><w:cantSplit/><w:trHeight w:val="1440" w:hRule="atLeast"/></w:trPr><w:tc><w:tcPr><w:gridSpan w:val="1"/><w:shd w:fill="EEEEEE"/></w:tcPr><w:p><w:r><w:t>h</w:t></w:r></w:p></w:tc></w:tr></w:tbl>
+      ),
+    ),
+  )
+  guard! doc.blocks[0] is TableBlock(table~, ..)
+  debug_inspect(table.layout, content="Fixed")
+  debug_inspect(table.width, content="Percent(5000)")
+  inspect(table.indent.to_pt(), content="36")
+  // the table border cascades down to the cell
+  guard! table.borders.top is Some(top)
+  inspect(top.color.to_hex(), content="#ff0000")
+  inspect(top.width.to_pt(), content="1")
+  let row = table.rows[0]
+  assert_true(row.header)
+  assert_true(row.cant_split)
+  inspect(row.min_height.unwrap().to_pt(), content="72")
+  let cell = row.cells[0]
+  // table cell margin inherited, cell shading read
+  inspect(cell.margins.left.to_pt(), content="10")
+  inspect(cell.shading.unwrap().to_hex(), content="#eeeeee")
+  guard! cell.borders.top is Some(_)
+}
+
+///|
+test "gridSpan and vMerge parse" {
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:tbl><w:tblGrid><w:gridCol w:w="1440"/><w:gridCol w:w="1440"/></w:tblGrid>
+        #|<w:tr><w:tc><w:tcPr><w:gridSpan w:val="2"/><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>wide</w:t></w:r></w:p></w:tc></w:tr>
+        #|<w:tr><w:tc><w:tcPr><w:gridSpan w:val="2"/><w:vMerge/></w:tcPr><w:p><w:r><w:t>cont</w:t></w:r></w:p></w:tc></w:tr>
+        #|</w:tbl>
+      ),
+    ),
+  )
+  guard! doc.blocks[0] is TableBlock(table~, ..)
+  inspect(table.rows[0].cells[0].grid_span, content="2")
+  debug_inspect(table.rows[0].cells[0].vmerge, content="VStart")
+  debug_inspect(table.rows[1].cells[0].vmerge, content="VContinue")
+}
+
+///|
+test "a table renders into the page model end to end" {
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:tbl><w:tblBorders><w:top w:val="single" w:sz="4"/><w:bottom w:val="single" w:sz="4"/></w:tblBorders><w:tblGrid><w:gridCol w:w="2880"/><w:gridCol w:w="2880"/></w:tblGrid>
+        #|<w:tr><w:tc><w:p><w:r><w:t>Name</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>Value</w:t></w:r></w:p></w:tc></w:tr>
+        #|<w:tr><w:tc><w:p><w:r><w:t>alpha</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>1</w:t></w:r></w:p></w:tc></w:tr>
+        #|</w:tbl>
+      ),
+    ),
+  )
+  let model = @paginate.paginate(doc.blocks, section=doc.section)
+  debug_inspect(model.validate(), content="[]")
+  assert_eq(model.pages.length(), 1)
+  // every cell's text made it through, in reading order
+  let sb = StringBuilder()
+  for item in model.pages[0].items {
+    if item is Text(run) {
+      sb.write_string(run.text)
+      sb.write_string("|")
+    }
+  }
+  inspect(sb.to_string(), content="Name|Value|alpha|1|")
 }
