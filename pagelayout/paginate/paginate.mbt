@@ -51,6 +51,15 @@ pub(all) enum Block {
   /// paragraph; rows split across pages unless a row says `cant_split`,
   /// and `w:tblHeader` rows repeat on each continuation.
   TableBlock(table~ : @table.Table, keep_next~ : Bool)
+  /// An image occupying its own block, at its authored size scaled down
+  /// to fit the measure. Images are atomic: one that does not fit the
+  /// remaining space moves to the next page.
+  ImageBlock(
+    width_pt~ : Double,
+    height_pt~ : Double,
+    data~ : Bytes,
+    mime~ : String
+  )
   PageBreak
 } derive(Eq, Debug, ToJson)
 
@@ -69,6 +78,17 @@ pub fn Block::paragraph(
 /// A table block with Word's defaults.
 pub fn Block::table(table : @table.Table, keep_next? : Bool = false) -> Block {
   TableBlock(table~, keep_next~)
+}
+
+///|
+/// An image block at its authored size.
+pub fn Block::image(
+  width_pt : Double,
+  height_pt : Double,
+  data : Bytes,
+  mime : String,
+) -> Block {
+  ImageBlock(width_pt~, height_pt~, data~, mime~)
 }
 
 ///|
@@ -97,9 +117,18 @@ priv struct LaidTable {
 
 ///|
 /// One block after measurement, ready to place.
+priv struct LaidImage {
+  width : Double
+  height : Double
+  data : Bytes
+  mime : String
+}
+
+///|
 priv enum LaidBlock {
   LaidPara(LaidParagraph)
   LaidTbl(LaidTable)
+  LaidImg(LaidImage)
   LaidBreak
 }
 
@@ -119,6 +148,23 @@ fn lay_blocks(
             keep_next,
           }),
         )
+      ImageBlock(width_pt~, height_pt~, data~, mime~) => {
+        // an image wider than the measure scales down, keeping its
+        // aspect ratio, as Word does
+        let scale = if width_pt > content_width && width_pt > 0.0 {
+          content_width / width_pt
+        } else {
+          1.0
+        }
+        out.push(
+          LaidImg({
+            width: width_pt * scale,
+            height: height_pt * scale,
+            data,
+            mime,
+          }),
+        )
+      }
       Paragraph(input~, keep_lines~, keep_next~, widow_control~) => {
         let layout = @paragraph.layout_paragraph(input, content_width)
         let slots : Array[LineSlot] = []
@@ -239,6 +285,7 @@ fn block_head_height(block : LaidBlock) -> Double {
         Some(first) => first.height_pt
         None => 0.0
       }
+    LaidImg(image) => image.height
   }
 }
 
@@ -423,6 +470,23 @@ fn furniture_items(
         }
         y += laid.height_pt
       }
+      // an image in a header or footer sits at the furniture's origin
+      ImageBlock(width_pt~, height_pt~, data~, mime~) => {
+        out.push(
+          (
+            0,
+            Image({
+              x_pt: 0,
+              y_pt: y,
+              w_pt: width_pt,
+              h_pt: height_pt,
+              data,
+              mime,
+            }),
+          ),
+        )
+        y += height_pt
+      }
       PageBreak => ()
     }
   }
@@ -483,6 +547,25 @@ pub fn paginate(
       }
       LaidTbl(tbl) => {
         place_table(cursor, tbl, paras, index)
+        continue
+      }
+      LaidImg(image) => {
+        // atomic: move a too-tall image to a fresh page, but place it
+        // anyway if it exceeds an empty page rather than looping
+        if image.height > cursor.remaining() && !cursor.at_page_top() {
+          cursor.break_page()
+        }
+        cursor.current().items.push(
+          Image({
+            x_pt: cursor.section.margin_left_pt,
+            y_pt: cursor.y,
+            w_pt: image.width,
+            h_pt: image.height,
+            data: image.data,
+            mime: image.mime,
+          }),
+        )
+        cursor.y += image.height
         continue
       }
       LaidPara(p) => p

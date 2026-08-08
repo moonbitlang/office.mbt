@@ -17,10 +17,12 @@ pub fn paginate(Array[Block], section? : SectionProps, furniture? : PageFurnitur
 pub(all) enum Block {
   Paragraph(input~ : @paragraph.ParagraphInput, keep_lines~ : Bool, keep_next~ : Bool, widow_control~ : Bool)
   TableBlock(table~ : @table.Table, keep_next~ : Bool)
+  ImageBlock(width_pt~ : Double, height_pt~ : Double, data~ : Bytes, mime~ : String)
   PageBreak
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn Block::equal(Self, Self) -> Bool
+pub fn Block::image(Double, Double, Bytes, String) -> Self
 #deprecated
 pub fn Block::not_equal(Self, Self) -> Bool
 pub fn Block::paragraph(@paragraph.ParagraphInput, keep_lines? : Bool, keep_next? : Bool, widow_control? : Bool) -> Self

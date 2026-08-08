@@ -18,6 +18,12 @@ fn namespace_map() -> Map[String, String] {
     "http://purl.oclc.org/ooxml/officeDocument/relationships": "r",
     "http://schemas.openxmlformats.org/drawingml/2006/main": "a",
     "http://purl.oclc.org/ooxml/drawingml/main": "a",
+    // inline/anchored drawings and the picture shape they wrap
+    "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing": "wp",
+    "http://purl.oclc.org/ooxml/drawingml/wordprocessingDrawing": "wp",
+    "http://schemas.openxmlformats.org/drawingml/2006/picture": "pic",
+    "http://purl.oclc.org/ooxml/drawingml/picture": "pic",
+    "http://purl.oclc.org/ooxml/drawingml/main": "a",
   }
 }
 
@@ -117,6 +123,19 @@ fn ends_with_page_break(runs : Array[@xml.XmlElement]) -> Bool {
 ///|
 /// Returns the block, whether a page break precedes it, and whether one
 /// follows it.
+/// Inline drawings in a paragraph, in document order.
+fn paragraph_images(para : @xml.XmlElement) -> Array[ImageRef] {
+  let out : Array[ImageRef] = []
+  for drawing in para.descendants_by_tag_name("w:drawing") {
+    match read_drawing(drawing) {
+      Some(image) => out.push(image)
+      None => ()
+    }
+  }
+  out
+}
+
+///|
 fn read_paragraph(
   para : @xml.XmlElement,
   sheet : StyleSheet,
@@ -251,6 +270,7 @@ pub fn read_document(
   sheet : StyleSheet,
   theme? : ThemeFonts = ThemeFonts::empty(),
   numbering? : @numbering.Numbering = @numbering.Numbering::empty(),
+  resolve_image? : (String) -> (Bytes, String)? = _ => None,
 ) -> DocxDocument {
   // list counters run for the whole document, in reading order
   let counters = @numbering.Counters::new()
@@ -274,6 +294,25 @@ pub fn read_document(
           blocks.push(PageBreak)
         }
         blocks.push(block)
+        // a paragraph's inline drawings follow it as their own blocks;
+        // true inline-with-text placement needs a run kind the paragraph
+        // model does not have
+        for image in paragraph_images(el) {
+          match resolve_image(image.relationship) {
+            Some(media) => {
+              let (data, mime) = media
+              blocks.push(
+                @paginate.Block::image(
+                  image.width.to_pt(),
+                  image.height.to_pt(),
+                  data,
+                  mime,
+                ),
+              )
+            }
+            None => unsupported.push("image")
+          }
+        }
         if breaks_after {
           blocks.push(PageBreak)
         }
@@ -363,16 +402,30 @@ pub fn read_docx(docx : Bytes) -> DocxDocument raise {
       )
     None => StyleSheet::empty()
   }
-  let parsed = read_document(document, sheet, theme~, numbering~)
-  // resolve the section's header/footer relationship ids to parts and
-  // lay their bodies out as furniture
-  let rels = match archive.get("word/_rels/document.xml.rels") {
+  let rels_for_images = match archive.get("word/_rels/document.xml.rels") {
     Some(part) =>
       read_relationships(
         @xml.read_xml_bytes_limited(part, default_budget(), namespace_map=ns),
       )
     None => Relationships::empty()
   }
+  fn resolve_image(id : String) -> (Bytes, String)? {
+    guard rels_for_images.part(id, "word/") is Some(path) else { return None }
+    guard media_type(path) is Some(mime) else { return None }
+    guard archive.get(path) is Some(bytes) else { return None }
+    Some((bytes.to_owned(), mime))
+  }
+
+  let parsed = read_document(
+    document,
+    sheet,
+    theme~,
+    numbering~,
+    resolve_image~,
+  )
+  // resolve the section's header/footer relationship ids to parts and
+  // lay their bodies out as furniture
+  let rels = rels_for_images
   fn furniture_blocks(id : String?) -> Array[@paginate.Block] raise {
     guard id is Some(value) else { return [] }
     guard rels.part(value, "word/") is Some(path) else { return [] }
