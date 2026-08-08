@@ -1,0 +1,8 @@
+import {
+  "bobzhang/pdflite/codec",
+  "bobzhang/pdflite/flate",
+}
+
+import {
+  "bobzhang/pdflite",
+} for "test"
