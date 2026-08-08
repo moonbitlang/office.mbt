@@ -20,8 +20,9 @@ fn PdfDocument::pdf_text_add_font_object(
 /// descriptors are supported. A TrueType descriptor may carry a `/FontFile2`
 /// or omit it: omitting one writes a non-embedded font the consumer
 /// substitutes, whose `/Widths` still govern spacing. `objnum` can force the
-/// destination object number for rewrite workflows. Unsupported font shapes —
-/// notably CID-keyed fonts — raise `@core.PdfError::FontWriteUnsupported`.
+/// destination object number for rewrite workflows. CID-keyed fonts are written
+/// as a `/Type0` root over a `/CIDFontType2` descendant. Remaining unsupported
+/// shapes raise `@core.PdfError::FontWriteUnsupported`.
 pub fn PdfDocument::write_font(
   self : PdfDocument,
   font : PdfFont,
@@ -70,6 +71,11 @@ pub fn PdfDocument::write_font(
         self.pdf_text_make_true_type_font(
           basefont, firstchar, lastchar, widths, descriptor, encoding,
         ),
+        objnum,
+      )
+    PdfFontCIDKeyed(cid) =>
+      self.pdf_text_add_font_object(
+        self.pdf_text_make_cid_keyed_font(cid),
         objnum,
       )
     _ => raise FontWriteUnsupported
