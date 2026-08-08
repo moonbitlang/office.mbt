@@ -1,0 +1,23 @@
+supported_targets = "native"
+
+import {
+  "bobzhang/pagelayout",
+  "bobzhang/pagelayout/fonts",
+  "bobzhang/pdflite",
+  "bobzhang/pdflite/content",
+  "bobzhang/pdflite/core",
+  "bobzhang/pdflite/geometry",
+  "bobzhang/pdflite/page",
+  "bobzhang/pdflite/syntax",
+  "moonbitlang/core/encoding/utf8",
+}
+
+import {
+  "bobzhang/pagelayout",
+  "bobzhang/pagelayout/docx",
+  "bobzhang/pagelayout/paginate",
+  "bobzhang/pagelayout/paragraph",
+  "bobzhang/pdflite",
+  "bobzhang/mbtexcel/zip",
+  "moonbitlang/core/encoding/utf8",
+} for "test"

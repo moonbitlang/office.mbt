@@ -64,7 +64,7 @@ async test "every glyph run lands inside its page" {
 /// values, so ordinary layout changes do not churn the test but dropping
 /// a table, a list, or a run does fail it.
 async test "no corpus document silently loses text" {
-  let floors = [2000, 7900, 107000]
+  let floors : ReadOnlyArray[Int] = [2000, 7900, 107000]
   for i, entry in corpus {
     let (name, path) = entry
     let model = render(path)
