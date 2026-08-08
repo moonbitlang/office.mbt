@@ -13,6 +13,9 @@ keywords = [ "layout", "pagination", "docx", "svg", "pdf", "typesetting" ]
 description = "Paginated document layout engine: format-neutral page-model IR with SVG/PDF backends."
 
 import {
+  "moonbitlang/async@0.20.2",
+  "bobzhang/docx2html@0.3.0",
+  "bobzhang/mbtexcel@0.1.9",
   "bobzhang/pdflite@0.1.41",
 }
 
