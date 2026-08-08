@@ -4,6 +4,7 @@ package "bobzhang/pagelayout/paginate"
 import {
   "bobzhang/pagelayout",
   "bobzhang/pagelayout/paragraph",
+  "bobzhang/pagelayout/table",
   "moonbitlang/core/debug",
 }
 
@@ -15,6 +16,7 @@ pub fn paginate(Array[Block], section? : SectionProps) -> @pagelayout.PageModel
 // Types and methods
 pub(all) enum Block {
   Paragraph(input~ : @paragraph.ParagraphInput, keep_lines~ : Bool, keep_next~ : Bool, widow_control~ : Bool)
+  TableBlock(table~ : @table.Table, keep_next~ : Bool)
   PageBreak
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
@@ -22,6 +24,7 @@ pub fn Block::equal(Self, Self) -> Bool
 #deprecated
 pub fn Block::not_equal(Self, Self) -> Bool
 pub fn Block::paragraph(@paragraph.ParagraphInput, keep_lines? : Bool, keep_next? : Bool, widow_control? : Bool) -> Self
+pub fn Block::table(@table.Table, keep_next? : Bool) -> Self
 #deprecated
 pub fn Block::to_json(Self) -> Json
 #deprecated

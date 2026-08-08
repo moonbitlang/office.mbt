@@ -39,6 +39,10 @@ pub(all) enum Block {
     keep_next~ : Bool,
     widow_control~ : Bool
   )
+  /// A table. `keep_next` glues it to the block that follows, as for a
+  /// paragraph; rows split across pages unless a row says `cant_split`,
+  /// and `w:tblHeader` rows repeat on each continuation.
+  TableBlock(table~ : @table.Table, keep_next~ : Bool)
   PageBreak
 } derive(Eq, Debug, ToJson)
 
@@ -51,6 +55,12 @@ pub fn Block::paragraph(
   widow_control? : Bool = true,
 ) -> Block {
   Paragraph(input~, keep_lines~, keep_next~, widow_control~)
+}
+
+///|
+/// A table block with Word's defaults.
+pub fn Block::table(table : @table.Table, keep_next? : Bool = false) -> Block {
+  TableBlock(table~, keep_next~)
 }
 
 ///|
@@ -71,15 +81,36 @@ priv struct LaidParagraph {
 }
 
 ///|
+/// A table measured against the content width, plus its keep rule.
+priv struct LaidTable {
+  layout : @table.TableLayoutResult
+  keep_next : Bool
+}
+
+///|
+/// One block after measurement, ready to place.
+priv enum LaidBlock {
+  LaidPara(LaidParagraph)
+  LaidTbl(LaidTable)
+  LaidBreak
+}
+
+///|
 fn lay_blocks(
   blocks : Array[Block],
   content_width : Double,
-) -> Array[LaidParagraph?] {
-  // None marks an explicit page break
-  let out : Array[LaidParagraph?] = []
+) -> Array[LaidBlock] {
+  let out : Array[LaidBlock] = []
   for block in blocks {
     match block {
-      PageBreak => out.push(None)
+      PageBreak => out.push(LaidBreak)
+      TableBlock(table~, keep_next~) =>
+        out.push(
+          LaidTbl({
+            layout: @table.layout_table(table, content_width),
+            keep_next,
+          }),
+        )
       Paragraph(input~, keep_lines~, keep_next~, widow_control~) => {
         let layout = @paragraph.layout_paragraph(input, content_width)
         let slots : Array[LineSlot] = []
@@ -93,7 +124,7 @@ fn lay_blocks(
           top += line.height_pt
         }
         out.push(
-          Some({
+          LaidPara({
             slots,
             space_before_pt: input.style.space_before_pt,
             space_after_pt: input.style.space_after_pt,
@@ -184,6 +215,106 @@ fn fitting_lines(
 }
 
 ///|
+/// How much room the start of `block` needs, for keep-next lookahead:
+/// a paragraph's space-before plus its first line, or a table's first
+/// row.
+fn block_head_height(block : LaidBlock) -> Double {
+  match block {
+    LaidBreak => 0.0
+    LaidPara(p) =>
+      match p.slots.get(0) {
+        Some(first) => p.space_before_pt + first.height_pt
+        None => 0.0
+      }
+    LaidTbl(t) =>
+      match t.layout.rows.get(0) {
+        Some(first) => first.height_pt
+        None => 0.0
+      }
+  }
+}
+
+///|
+/// Place a table, splitting between rows when it does not fit. A row
+/// marked `cant_split` moves whole to the next page rather than being
+/// broken; `w:tblHeader` rows repeat at the top of each continuation.
+fn place_table(
+  cursor : PageCursor,
+  tbl : LaidTable,
+  blocks : Array[LaidBlock],
+  index : Int,
+) -> Unit {
+  let layout = tbl.layout
+  let total = layout.rows.length()
+  if total == 0 {
+    return
+  }
+  let keep_next_extra = if tbl.keep_next && index + 1 < blocks.length() {
+    block_head_height(blocks[index + 1])
+  } else {
+    0.0
+  }
+  let mut start = 0
+  while start < total {
+    let continuation = start > 0
+    let header_height = if continuation {
+      @table.rows_height_pt(layout, start, start, repeat_header=true)
+    } else {
+      0.0
+    }
+    let room = cursor.remaining() - header_height
+    // how many rows fit
+    let mut fit = 0
+    let mut used = 0.0
+    for i in start..<total {
+      let next = used + layout.rows[i].height_pt
+      if next > room + 0.0001 {
+        break
+      }
+      used = next
+      fit += 1
+    }
+    // the tail must also leave room for a keep-next companion
+    if fit == total - start &&
+      used + keep_next_extra > room &&
+      !cursor.at_page_top() {
+      cursor.break_page()
+      continue
+    }
+    if fit == 0 {
+      if !cursor.at_page_top() {
+        cursor.break_page()
+        continue
+      }
+      // a single row taller than an empty page: place it and overflow
+      fit = 1
+    }
+    // rows are atomic in this engine — a row's lines are never split
+    // across pages — so `w:cantSplit` is already satisfied by placing
+    // whole rows. It becomes meaningful when cell content itself can
+    // break, which is a later milestone.
+    let items = @table.emit_rows(
+      cursor.model,
+      layout,
+      cursor.section.margin_left_pt,
+      cursor.y,
+      start,
+      start + fit,
+      repeat_header=continuation,
+    )
+    let page = cursor.current()
+    for item in items {
+      page.items.push(item)
+    }
+    cursor.y += header_height + used
+    start += fit
+    if start < total {
+      cursor.break_page()
+    }
+  }
+}
+
+///|
 /// Paginate `blocks` into `section`'s content box, honoring explicit page
 /// breaks, keep-lines, keep-next, and 2/2 widow-orphan control.
 /// Space-before is suppressed for paragraphs that start at the top of a
@@ -205,11 +336,15 @@ pub fn paginate(
   )
   for index, entry in paras {
     let para = match entry {
-      None => {
+      LaidBreak => {
         cursor.break_page()
         continue
       }
-      Some(p) => p
+      LaidTbl(tbl) => {
+        place_table(cursor, tbl, paras, index)
+        continue
+      }
+      LaidPara(p) => p
     }
     let total = para.slots.length()
     if total == 0 {
@@ -217,14 +352,7 @@ pub fn paginate(
     }
     // keep-next glues this paragraph's end to the next block's first line
     let keep_next_extra = if para.keep_next && index + 1 < paras.length() {
-      match paras[index + 1] {
-        Some(next) =>
-          match next.slots.get(0) {
-            Some(first) => next.space_before_pt + first.height_pt
-            None => 0.0
-          }
-        None => 0.0
-      }
+      block_head_height(paras[index + 1])
     } else {
       0.0
     }
