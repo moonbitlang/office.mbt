@@ -67,61 +67,60 @@ fn name(text : String) -> @core.PdfName {
 }
 
 ///|
-/// The font dictionary for one interned IR font, built directly rather
-/// than through `pdflite.write_font`: that helper requires a
-/// `/FontFile2`, and these faces carry metrics without outlines (see the
-/// module comment). Everything else is the same shape it would produce —
-/// a simple TrueType font with a descriptor and a `/Widths` array.
-fn font_object(document : @pdflite.PdfDocument, face : PdfFace) -> Int {
-  let first = 32
-  let last = 255
+/// The font object for one interned IR font: a simple TrueType font with
+/// a descriptor and a `/Widths` array from the same metrics the layout
+/// measured with, and no embedded program.
+fn font_object(document : @pdflite.PdfDocument, face : PdfFace) -> Int raise {
   let metrics = face.metrics
   let scale = 1000.0 / metrics.units_per_em.to_double()
-  fn scaled(v : Int) -> @syntax.PdfObject {
-    PdfInteger((v.to_double() * scale).round().to_int())
-  }
-
-  let basefont = name(base_font_name(face.spec))
-  let descriptor : @syntax.PdfObject = PdfDictionary([
-    (name("/Type"), PdfNameObject(name("/FontDescriptor"))),
-    (name("/FontName"), PdfNameObject(basefont)),
-    // nonsymbolic (bit 6); italic adds bit 7
-    (
-      name("/Flags"),
-      PdfInteger(if face.spec.italic { 0x20 | 0x40 } else { 0x20 }),
-    ),
-    (
-      name("/FontBBox"),
-      PdfArray([
-        PdfInteger(-1000),
-        PdfInteger(-500),
-        PdfInteger(2000),
-        PdfInteger(1500),
-      ]),
-    ),
-    (name("/ItalicAngle"), PdfInteger(if face.spec.italic { -12 } else { 0 })),
-    (name("/Ascent"), scaled(metrics.ascender)),
-    (name("/Descent"), scaled(metrics.descender)),
-    (name("/CapHeight"), scaled(metrics.ascender)),
-    (name("/StemV"), PdfInteger(if face.spec.bold { 160 } else { 80 })),
-  ])
-  let widths : Array[@syntax.PdfObject] = []
+  let first = 32
+  let last = 255
+  let widths : Array[Int] = []
   for code = first; code <= last; code = code + 1 {
     // advance_pt at 1000pt is exactly the 1/1000-em width PDF wants
-    widths.push(PdfInteger(metrics.advance_pt(code, 1000.0).round().to_int()))
+    widths.push(metrics.advance_pt(code, 1000.0).round().to_int())
   }
-  let descriptor_number = document.add_object(descriptor)
-  document.add_object(
-    PdfDictionary([
-      (name("/Type"), PdfNameObject(name("/Font"))),
-      (name("/Subtype"), PdfNameObject(name("/TrueType"))),
-      (name("/BaseFont"), PdfNameObject(basefont)),
-      (name("/FirstChar"), PdfInteger(first)),
-      (name("/LastChar"), PdfInteger(last)),
-      (name("/Widths"), PdfArray(widths)),
-      (name("/FontDescriptor"), PdfIndirect(descriptor_number)),
-      (name("/Encoding"), PdfNameObject(name("/WinAnsiEncoding"))),
-    ]),
+  let descriptor : @pdflite.PdfFontDescriptor = {
+    ascent: metrics.ascender.to_double() * scale,
+    descent: metrics.descender.to_double() * scale,
+    avgwidth: 0,
+    maxwidth: 0,
+    // nonsymbolic (bit 6); italic adds bit 7
+    flags: if face.spec.italic {
+      0x20 | 0x40
+    } else {
+      0x20
+    },
+    fontbbox: { min_x: -1000, min_y: -500, max_x: 2000, max_y: 1500 },
+    italicangle: if face.spec.italic {
+      -12.0
+    } else {
+      0.0
+    },
+    capheight: metrics.ascender.to_double() * scale,
+    xheight: 0,
+    stemv: if face.spec.bold {
+      160.0
+    } else {
+      80.0
+    },
+    // the bundled faces carry metrics without outlines, so there is no
+    // program to embed; pdflite writes a substitutable font
+    fontfile: None,
+    charset: None,
+    tounicode: None,
+  }
+  document.write_font(
+    PdfFontSimple({
+      fonttype: PdfTrueType,
+      basefont: Some(name(base_font_name(face.spec))),
+      firstchar: first,
+      lastchar: last,
+      widths,
+      fontdescriptor: Some(descriptor),
+      fontmetrics: None,
+      encoding: PdfWinAnsiEncoding,
+    }),
   )
 }
 
