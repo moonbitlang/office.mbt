@@ -15,7 +15,7 @@ Sources (all SIL OFL 1.1; see pagelayout/fonts/LICENSES/):
       https://github.com/google/fonts/tree/main/ofl/carlito
   - Liberation Sans/Serif/Mono 2.1.5 (Arial/Times New Roman/Courier New)
       https://github.com/liberationfonts/liberation-fonts (release 2.1.5)
-  - Noto Sans SC (CJK; variable font, default instance wght=400)
+  - Noto Sans SC (CJK; variable font, instanced at wght=400)
       https://github.com/google/fonts/tree/main/ofl/notosanssc
 
 Usage:
@@ -31,6 +31,7 @@ import zlib
 from pathlib import Path
 
 from fontTools.ttLib import TTFont
+from fontTools.varLib import instancer
 
 KEEP_TABLES = {"head", "hhea", "maxp", "hmtx", "cmap", "OS/2", "post"}
 # 8KB of compressed payload per generated function: the escaped literal
@@ -38,30 +39,40 @@ KEEP_TABLES = {"head", "hhea", "maxp", "hmtx", "cmap", "OS/2", "post"}
 # limit (warning 0033).
 CHUNK = 8 * 1024
 
-# (moonbit identifier, source file, family exposed to the resolver, bold, italic)
+# (moonbit identifier, source file, family exposed to the resolver, bold,
+#  italic, variable-font axes to instance at)
 FACES = [
-    ("carlito_regular", "Carlito-Regular.ttf", "Carlito", False, False),
-    ("carlito_bold", "Carlito-Bold.ttf", "Carlito", True, False),
-    ("carlito_italic", "Carlito-Italic.ttf", "Carlito", False, True),
-    ("carlito_bold_italic", "Carlito-BoldItalic.ttf", "Carlito", True, True),
-    ("liberation_sans_regular", "LiberationSans-Regular.ttf", "Liberation Sans", False, False),
-    ("liberation_sans_bold", "LiberationSans-Bold.ttf", "Liberation Sans", True, False),
-    ("liberation_sans_italic", "LiberationSans-Italic.ttf", "Liberation Sans", False, True),
-    ("liberation_sans_bold_italic", "LiberationSans-BoldItalic.ttf", "Liberation Sans", True, True),
-    ("liberation_serif_regular", "LiberationSerif-Regular.ttf", "Liberation Serif", False, False),
-    ("liberation_serif_bold", "LiberationSerif-Bold.ttf", "Liberation Serif", True, False),
-    ("liberation_serif_italic", "LiberationSerif-Italic.ttf", "Liberation Serif", False, True),
-    ("liberation_serif_bold_italic", "LiberationSerif-BoldItalic.ttf", "Liberation Serif", True, True),
-    ("liberation_mono_regular", "LiberationMono-Regular.ttf", "Liberation Mono", False, False),
-    ("liberation_mono_bold", "LiberationMono-Bold.ttf", "Liberation Mono", True, False),
-    ("liberation_mono_italic", "LiberationMono-Italic.ttf", "Liberation Mono", False, True),
-    ("liberation_mono_bold_italic", "LiberationMono-BoldItalic.ttf", "Liberation Mono", True, True),
-    ("noto_sans_sc_regular", "NotoSansSC-VF.ttf", "Noto Sans SC", False, False),
+    ("carlito_regular", "Carlito-Regular.ttf", "Carlito", False, False, None),
+    ("carlito_bold", "Carlito-Bold.ttf", "Carlito", True, False, None),
+    ("carlito_italic", "Carlito-Italic.ttf", "Carlito", False, True, None),
+    ("carlito_bold_italic", "Carlito-BoldItalic.ttf", "Carlito", True, True, None),
+    ("liberation_sans_regular", "LiberationSans-Regular.ttf", "Liberation Sans", False, False, None),
+    ("liberation_sans_bold", "LiberationSans-Bold.ttf", "Liberation Sans", True, False, None),
+    ("liberation_sans_italic", "LiberationSans-Italic.ttf", "Liberation Sans", False, True, None),
+    ("liberation_sans_bold_italic", "LiberationSans-BoldItalic.ttf", "Liberation Sans", True, True, None),
+    ("liberation_serif_regular", "LiberationSerif-Regular.ttf", "Liberation Serif", False, False, None),
+    ("liberation_serif_bold", "LiberationSerif-Bold.ttf", "Liberation Serif", True, False, None),
+    ("liberation_serif_italic", "LiberationSerif-Italic.ttf", "Liberation Serif", False, True, None),
+    ("liberation_serif_bold_italic", "LiberationSerif-BoldItalic.ttf", "Liberation Serif", True, True, None),
+    ("liberation_mono_regular", "LiberationMono-Regular.ttf", "Liberation Mono", False, False, None),
+    ("liberation_mono_bold", "LiberationMono-Bold.ttf", "Liberation Mono", True, False, None),
+    ("liberation_mono_italic", "LiberationMono-Italic.ttf", "Liberation Mono", False, True, None),
+    ("liberation_mono_bold_italic", "LiberationMono-BoldItalic.ttf", "Liberation Mono", True, True, None),
+    ("noto_sans_sc_regular", "NotoSansSC-VF.ttf", "Noto Sans SC", False, False, {"wght": 400}),
 ]
 
 
-def strip_to_metrics(path: Path) -> bytes:
+def strip_to_metrics(path: Path, axes: dict | None) -> bytes:
     font = TTFont(str(path), lazy=False)
+    if axes:
+        # A variable font's default master is whatever fvar names, which
+        # for Noto Sans SC is wght=100 (Thin) — not the weight body text
+        # is set in. Instancing pins the advances to the weight the PDF
+        # backend embeds outlines for; letting the two disagree would
+        # measure one width and draw another.
+        font = instancer.instantiateVariableFont(
+            font, axes, inplace=True, updateFontNames=False
+        )
     # fontTools stamps head.modified with the wall clock on save, and
     # head.checkSumAdjustment follows it. Left alone, regenerating this
     # bundle from unchanged sources produces different bytes every run.
@@ -121,8 +132,10 @@ def main() -> None:
         "fn bundled_faces() -> Array[(String, Bool, Bool, Array[Bytes])] {",
         "  [",
     ]
-    for ident, src, family, bold, italic in FACES:
-        raw, comp = emit_face(out_dir, ident, strip_to_metrics(font_dir / src))
+    for ident, src, family, bold, italic, axes in FACES:
+        raw, comp = emit_face(
+            out_dir, ident, strip_to_metrics(font_dir / src, axes)
+        )
         print(f"{ident:32} stripped {raw:8} B  compressed {comp:8} B")
         registry_lines.append(
             f'    ("{family}", {str(bold).lower()}, {str(italic).lower()}, {ident}_compressed()),'

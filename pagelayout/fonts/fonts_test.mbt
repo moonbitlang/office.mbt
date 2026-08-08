@@ -120,3 +120,17 @@ test "missing codepoints use the notdef advance" {
   assert_false(carlito.has_char(0x10FFF0))
   assert_true(carlito.advance_pt(0x10FFF0, 12) > 0)
 }
+
+///|
+test "Noto Sans SC is measured at the regular weight" {
+  // NotoSansSC-VF's fvar default is wght=100 (Thin), so a bundle built
+  // from the default master measures hairline text. The generator
+  // instances at 400 instead — the weight the PDF backend embeds
+  // outlines for. fonttools reports 608 font units for 'A' at wght=400
+  // against 574 at the Thin default.
+  let noto = @fonts.face("Noto Sans SC")
+  inspect(noto.advance_pt(0x0041, 1000), content="608")
+  // ideographs are full-width at every weight, which is why the wrong
+  // weight went unnoticed: the CJK advances never differed.
+  inspect(noto.advance_pt(0x4E2D, 1000), content="1000")
+}
