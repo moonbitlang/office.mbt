@@ -29,11 +29,27 @@ cost that once made embedding data unattractive is resolved
 
 ## Status (2026-08-08)
 
-v1 shipped, plus tables and lists. Merged in order: #357 design record,
+v1 shipped, plus tables, lists, and both backends. Merged in order: #357 design record,
 #358 IR, #359 fonts, #360 line breaking, #361 paragraphs, #362
 pagination, #363 SVG, #364 DOCX frontend, #365 CLI, #366–#368 tables,
-#369 numbering. A `.docx` renders to paginated SVG through
-`pagelayout/cmd/pagelayout`.
+#369–#370 numbering and lists, #372 the real-document corpus check,
+#373 the PDF backend. A `.docx` renders to paginated SVG *or* PDF
+through `pagelayout/cmd/pagelayout`.
+
+The PDF backend confirmed the architecture's central bet: because the
+IR carries absolute positions and per-character advances, the emitter
+is largely transcription, and the only real work was the coordinate
+flip and font resources.
+
+It also surfaced the cost of an earlier decision. Bundling
+**metrics-only** faces (#359) keeps ~150KB in the repository instead of
+~20MB, but a PDF `/FontFile2` needs glyph outlines, so fonts are
+*declared* with a `/Widths` array rather than embedded. Layout is
+unaffected — runs are positioned explicitly and `/Widths` governs
+spacing — but glyph shapes depend on the viewer, and CJK (which needs
+Type0/Identity-H over an embedded font) is not yet representable in the
+PDF output. Bundling full font programs is the deliberate size decision
+that unlocks both.
 
 Three decisions in this document were **reversed by measurement**, and
 the reasoning is worth keeping:
@@ -201,9 +217,9 @@ text, tracked-changes rendering, hyphenation.
 
 Tables (#366–#368) and lists/numbering (#369) followed.
 
-Remaining, in rough order: headers/footers, images, tab stops, the
-pdflite PDF backend (font embedding + CID subsetting), justification
-polish (CJK inter-character), XLSX print frontend.
+Remaining, in rough order: full font programs (unlocking PDF glyph
+embedding and CJK via Type0/Identity-H), headers/footers, images, tab
+stops, justification polish (CJK inter-character), XLSX print frontend.
 
 Known gaps are also recorded next to the code they affect — see the
 comment block at the end of `pagelayout/docx/read.mbt` — so they stay
