@@ -55,7 +55,7 @@ test "a tab advances the pen to its stop, not by a glyph width" {
     color: @pagelayout.black,
   }
   let input = @paragraph.ParagraphInput::{
-    runs: [{ text: "ab\tcd", style: run }],
+    runs: [{ text: "ab\tcd", style: run, field: NotAField }],
     style: {
       ..style,
       tabs: {
@@ -90,7 +90,7 @@ test "a right stop ends the following text at the stop" {
     color: @pagelayout.black,
   }
   let input = @paragraph.ParagraphInput::{
-    runs: [{ text: "Chapter\t9", style: run }],
+    runs: [{ text: "Chapter\t9", style: run, field: NotAField }],
     style: {
       ..style,
       tabs: {
@@ -120,7 +120,7 @@ test "a centre stop centres the following text on the stop" {
     color: @pagelayout.black,
   }
   let input = @paragraph.ParagraphInput::{
-    runs: [{ text: "a\tXY", style: run }],
+    runs: [{ text: "a\tXY", style: run, field: NotAField }],
     style: {
       ..style,
       tabs: {
@@ -157,7 +157,13 @@ test "a right stop never pulls text backwards" {
   }
   // the text before the tab already passes the stop
   let input = @paragraph.ParagraphInput::{
-    runs: [{ text: "a very long leading label indeed\tX", style: run }],
+    runs: [
+      {
+        text: "a very long leading label indeed\tX",
+        style: run,
+        field: NotAField,
+      },
+    ],
     style: {
       ..style,
       tabs: {

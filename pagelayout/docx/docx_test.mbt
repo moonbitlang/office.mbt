@@ -1199,3 +1199,143 @@ test "an image too wide for the measure scales down" {
   inspect(image.w_pt, content="468")
   inspect(image.h_pt, content="234")
 }
+
+///|
+// --- fields ---
+
+///|
+/// A footer holding a complex PAGE field, with "99" as the value Word
+/// cached when the document was last saved.
+fn docx_with_page_field(footer_body : String) -> Bytes raise {
+  let body =
+    #|<w:p><w:r><w:t>one</w:t></w:r></w:p>
+    #|<w:p><w:r><w:br w:type="page"/></w:r><w:r><w:t>two</w:t></w:r></w:p>
+    #|<w:sectPr><w:footerReference w:type="default" r:id="rF"/><w:pgMar w:top="1440" w:bottom="1440" w:left="1440" w:right="1440" w:header="720" w:footer="720"/></w:sectPr>
+  let ns =
+    #|xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+  let archive = @zip.Archive::new()
+  archive.add(
+    "word/document.xml",
+    @utf8.encode(
+      "<?xml version=\"1.0\"?><w:document " +
+      ns +
+      "><w:body>" +
+      body +
+      "</w:body></w:document>",
+    ),
+  )
+  archive.add(
+    "word/_rels/document.xml.rels",
+    @utf8.encode(
+      (
+        #|<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+        #|<Relationship Id="rF" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>
+        #|</Relationships>
+      ),
+    ),
+  )
+  archive.add(
+    "word/footer1.xml",
+    @utf8.encode(
+      "<?xml version=\"1.0\"?><w:ftr " + ns + ">" + footer_body + "</w:ftr>",
+    ),
+  )
+  @zip.write(archive)
+}
+
+///|
+test "a complex PAGE field is marked, not taken literally" {
+  let doc = @docx.read_docx(
+    docx_with_page_field(
+      (
+        #|<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>99</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>
+      ),
+    ),
+  )
+  guard! doc.furniture.footer[0] is Paragraph(input~, ..)
+  // the instruction run contributes no text; the result run is a field
+  inspect(input.runs.length(), content="1")
+  inspect(input.runs[0].text, content="99")
+  debug_inspect(input.runs[0].field, content="PageNumber")
+}
+
+///|
+test "each page's footer shows its own number, not the cached one" {
+  let doc = @docx.read_docx(
+    docx_with_page_field(
+      (
+        #|<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> PAGE </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>99</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>
+      ),
+    ),
+  )
+  let model = @paginate.paginate(
+    doc.blocks,
+    section=doc.section,
+    furniture=doc.furniture,
+  )
+  assert_eq(model.pages.length(), 2)
+  let numbers : Array[String] = []
+  for page in model.pages {
+    for item in page.items {
+      guard! item is Text(run)
+      if run.text is ("1" | "2" | "99") {
+        numbers.push(run.text)
+      }
+    }
+  }
+  json_inspect(numbers, content=["1", "2"])
+}
+
+///|
+test "NUMPAGES shows the document total on every page" {
+  let doc = @docx.read_docx(
+    docx_with_page_field(
+      (
+        #|<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> NUMPAGES </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>99</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>
+      ),
+    ),
+  )
+  let model = @paginate.paginate(
+    doc.blocks,
+    section=doc.section,
+    furniture=doc.furniture,
+  )
+  let totals : Array[String] = []
+  for page in model.pages {
+    for item in page.items {
+      guard! item is Text(run)
+      if run.text is ("2" | "99") {
+        totals.push(run.text)
+      }
+    }
+  }
+  // both pages report a two-page document
+  json_inspect(totals, content=["2", "2"])
+}
+
+///|
+test "a w:fldSimple PAGE field is evaluated too" {
+  let doc = @docx.read_docx(
+    docx_with_page_field(
+      (
+        #|<w:p><w:fldSimple w:instr=" PAGE "><w:r><w:t>99</w:t></w:r></w:fldSimple></w:p>
+      ),
+    ),
+  )
+  guard! doc.furniture.footer[0] is Paragraph(input~, ..)
+  debug_inspect(input.runs[0].field, content="PageNumber")
+}
+
+///|
+test "a field this engine cannot compute keeps its cached result" {
+  let doc = @docx.read_docx(
+    docx_with_page_field(
+      (
+        #|<w:p><w:fldSimple w:instr=" REF _Ref9 \h "><w:r><w:t>see section 4</w:t></w:r></w:fldSimple></w:p>
+      ),
+    ),
+  )
+  guard! doc.furniture.footer[0] is Paragraph(input~, ..)
+  debug_inspect(input.runs[0].field, content="NotAField")
+  inspect(input.runs[0].text, content="see section 4")
+}

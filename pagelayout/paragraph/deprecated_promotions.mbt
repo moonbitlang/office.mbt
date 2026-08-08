@@ -145,3 +145,15 @@ pub extend TabRuler with Eq::{not_equal, equal}
 ///|
 #deprecated("implicit trait-method promotion is being removed; call via the trait")
 pub extend TabRuler with ToJson::{to_json}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend FieldKind with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend FieldKind with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend FieldKind with ToJson::{to_json}

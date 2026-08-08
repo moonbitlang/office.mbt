@@ -21,7 +21,17 @@ pub(all) struct RunStyle {
 pub(all) struct RunInput {
   text : String
   style : RunStyle
+  /// What field produced this run's text, if any. A field's text is the
+  /// value cached when the document was saved; `evaluate` replaces it
+  /// with the real one once the layout knows the page.
+  field : FieldKind
 } derive(Eq, Debug, ToJson)
+
+///|
+/// A plain (non-field) run.
+pub fn RunInput::plain(text : String, style : RunStyle) -> RunInput {
+  { text, style, field: NotAField }
+}
 
 ///|
 /// Horizontal paragraph alignment.

@@ -4,6 +4,7 @@ fn body(text : String) -> @paragraph.ParagraphInput {
     runs: [
       {
         text,
+        field: NotAField,
         style: {
           family: "Calibri",
           size_pt: 12,

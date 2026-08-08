@@ -91,15 +91,29 @@ fn is_run_container(name : String) -> Bool {
 /// Every `w:r` of a paragraph in document order, descending through
 /// wrapper elements. `w:del` (tracked deletions) is skipped: its content
 /// is not displayed.
-fn collect_runs(el : @xml.XmlElement, out : Array[@xml.XmlElement]) -> Unit {
+fn collect_runs(
+  el : @xml.XmlElement,
+  out : Array[(@xml.XmlElement, String?)],
+  simple_field? : String? = None,
+) -> Unit {
   for child in el.children {
     guard child is XmlElement(node) else { continue }
     if node.name == "w:r" {
-      out.push(node)
+      out.push((node, simple_field))
     } else if node.name == "w:del" {
       continue
     } else if is_run_container(node.name) {
-      collect_runs(node, out)
+      // a w:fldSimple holds its whole field in one element, so its runs
+      // inherit the instruction rather than tracking begin/separate/end
+      let inherited = if node.name == "w:fldSimple" {
+        match node.attributes.get("w:instr") {
+          Some(instr) => Some(instr)
+          None => simple_field
+        }
+      } else {
+        simple_field
+      }
+      collect_runs(node, out, simple_field=inherited)
     }
   }
 }
@@ -108,8 +122,9 @@ fn collect_runs(el : @xml.XmlElement, out : Array[@xml.XmlElement]) -> Unit {
 /// Whether this paragraph ends with an explicit page break. Word's usual
 /// idiom puts `<w:br w:type="page"/>` at the END of the paragraph that
 /// finishes the page, so the break belongs AFTER this paragraph.
-fn ends_with_page_break(runs : Array[@xml.XmlElement]) -> Bool {
-  for run in runs {
+fn ends_with_page_break(runs : Array[(@xml.XmlElement, String?)]) -> Bool {
+  for entry in runs {
+    let (run, _) = entry
     for node in run.children {
       guard node is XmlElement(el) else { continue }
       if el.name == "w:br" && el.attributes.get("w:type") is Some("page") {
@@ -136,6 +151,14 @@ fn paragraph_images(para : @xml.XmlElement) -> Array[ImageRef] {
 }
 
 ///|
+/// Where a run sits relative to a complex field.
+priv enum FieldState {
+  FieldOutside
+  FieldInstruction
+  FieldResult
+}
+
+///|
 fn read_paragraph(
   para : @xml.XmlElement,
   sheet : StyleSheet,
@@ -150,9 +173,38 @@ fn read_paragraph(
   }
   let resolved_para = sheet.resolve_para(style_id, direct_para)
   let runs : Array[@paragraph.RunInput] = []
-  let source_runs : Array[@xml.XmlElement] = []
+  let source_runs : Array[(@xml.XmlElement, String?)] = []
   collect_runs(para, source_runs)
-  for run in source_runs {
+  // Word writes a field as either a self-contained w:fldSimple or a
+  // complex run sequence: fldChar begin, instrText, fldChar separate,
+  // the cached result, fldChar end. Tracking that state lets the result
+  // runs be marked with the instruction that produced them, so the
+  // layout can substitute a real value for the cached one.
+  let mut instruction = ""
+  let mut state = FieldOutside
+  for entry in source_runs {
+    let (run, simple_field) = entry
+    for child in run.children {
+      guard child is XmlElement(el) else { continue }
+      match (el.name, el.attributes.get("w:fldCharType")) {
+        ("w:fldChar", Some("begin")) => {
+          state = FieldInstruction
+          instruction = ""
+        }
+        ("w:fldChar", Some("separate")) => state = FieldResult
+        ("w:fldChar", Some("end")) => state = FieldOutside
+        ("w:instrText", _) =>
+          for node in el.children {
+            guard node is XmlText(part) else { continue }
+            instruction = instruction + part
+          }
+        _ => ()
+      }
+    }
+    // the instruction itself is not displayed
+    if state is FieldInstruction {
+      continue
+    }
     let text = run_text(run)
     if text.length() == 0 {
       continue
@@ -166,7 +218,15 @@ fn read_paragraph(
       None => (RunProps::empty(), None)
     }
     let style = sheet.resolve_run(style_id, char_style_id, direct_run).resolve()
-    runs.push({ text, style })
+    let field = if state is FieldResult {
+      @paragraph.field_kind(instruction)
+    } else {
+      match simple_field {
+        Some(instr) => @paragraph.field_kind(instr)
+        None => NotAField
+      }
+    }
+    runs.push({ text, style, field })
   }
   // an empty paragraph still occupies a line, styled by its paragraph
   // mark's run properties (w:pPr/w:rPr)
@@ -182,6 +242,7 @@ fn read_paragraph(
     runs.push({
       text: "",
       style: sheet.resolve_run(style_id, None, mark).resolve(),
+      field: NotAField,
     })
   }
   let mut style = resolved_para.resolve(default_tab_pt~)
@@ -242,7 +303,11 @@ fn read_paragraph(
             // item text to the level's indent as Word does
             SuffTab => "\t"
           }
-          runs.insert(0, { text: label + separator, style: marker_style })
+          runs.insert(0, {
+            text: label + separator,
+            style: marker_style,
+            field: NotAField,
+          })
         }
         None => ()
       }
