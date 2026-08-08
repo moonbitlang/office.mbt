@@ -342,3 +342,25 @@ test "metrics and outline programs agree on glyph ids" {
   // a real comparison, not a vacuous one over an empty map
   assert_true(compared > 30000)
 }
+
+///|
+test "cid bytes that collide with pdf string delimiters are escaped" {
+  // Identity-H writes glyph ids as raw two-byte codes inside a PDF
+  // string, so a glyph whose id contains 0x28, 0x29 or 0x5C would end or
+  // corrupt that string if written literally. These three characters are
+  // exactly that case in Noto Sans SC:
+  //   仰 U+4EF0 -> glyph 9000  = 0x2328  ('(')
+  //   仱 U+4EF1 -> glyph 9001  = 0x2329  (')')
+  //   两 U+4E24 -> glyph 8796  = 0x225C  ('\')
+  let model = @paginate.paginate([@paginate.Block::paragraph(para("仰仱两"))])
+  let bytes = @pdf.render_pdf(model)
+  let text = as_text(bytes)
+  // the full two-byte code, escaped: 0x23 0x28 -> `#\(`, and so on. The
+  // leading byte makes these precise rather than incidentally matched.
+  assert_true(text.contains("#\\("))
+  assert_true(text.contains("#\\)"))
+  assert_true(text.contains("\"\\\\"))
+  // and the document still reads back, which a broken string would stop
+  let document = @pdflite.pdf_read_document_from_bytes(bytes)
+  inspect(document.endpage(), content="1")
+}
