@@ -4,6 +4,7 @@ package "bobzhang/pagelayout/docx"
 import {
   "bobzhang/docx2html/xml",
   "bobzhang/pagelayout",
+  "bobzhang/pagelayout/numbering",
   "bobzhang/pagelayout/paginate",
   "bobzhang/pagelayout/paragraph",
   "bobzhang/pagelayout/table",
@@ -11,9 +12,11 @@ import {
 }
 
 // Values
-pub fn read_document(@xml.XmlElement, StyleSheet, theme? : ThemeFonts) -> DocxDocument
+pub fn read_document(@xml.XmlElement, StyleSheet, theme? : ThemeFonts, numbering? : @numbering.Numbering) -> DocxDocument
 
 pub fn read_docx(Bytes) -> DocxDocument raise
+
+pub fn read_numbering(@xml.XmlElement) -> @numbering.Numbering
 
 pub fn read_para_props(@xml.XmlElement) -> (ParaProps, String?)
 
@@ -23,7 +26,7 @@ pub fn read_section_props(@xml.XmlElement) -> @paginate.SectionProps
 
 pub fn read_stylesheet(@xml.XmlElement, theme? : ThemeFonts) -> StyleSheet
 
-pub fn read_table(@xml.XmlElement, StyleSheet, theme? : ThemeFonts) -> @table.Table
+pub fn read_table(@xml.XmlElement, StyleSheet, theme? : ThemeFonts, numbering? : @numbering.Numbering, counters? : @numbering.Counters) -> @table.Table
 
 pub fn read_theme(@xml.XmlElement) -> ThemeFonts
 
@@ -50,6 +53,8 @@ pub(all) struct ParaProps {
   keep_next : Bool?
   widow_control : Bool?
   page_break_before : Bool?
+  num_id : Int?
+  num_level : Int?
 } derive(Eq, ToJson, @debug.Debug)
 pub fn ParaProps::empty() -> Self
 #deprecated

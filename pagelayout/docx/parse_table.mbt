@@ -118,6 +118,8 @@ fn read_cell(
   theme : ThemeFonts,
   table_borders : @table.Borders,
   table_margins : @table.CellMargins,
+  numbering : @numbering.Numbering,
+  counters : @numbering.Counters,
 ) -> @table.Cell {
   let mut width : @table.Width = Auto
   let mut grid_span = 1
@@ -154,7 +156,13 @@ fn read_cell(
   for child in tc.children {
     guard child is XmlElement(el) else { continue }
     if el.name == "w:p" {
-      let (block, _, _) = read_paragraph(el, sheet, theme)
+      let (block, _, _) = read_paragraph(
+        el,
+        sheet,
+        theme,
+        numbering~,
+        counters~,
+      )
       if block is Paragraph(input~, ..) {
         content.push(input)
       }
@@ -178,6 +186,8 @@ fn read_row(
   theme : ThemeFonts,
   table_borders : @table.Borders,
   table_margins : @table.CellMargins,
+  numbering : @numbering.Numbering,
+  counters : @numbering.Counters,
 ) -> @table.Row {
   let mut header = false
   let mut cant_split = false
@@ -207,7 +217,11 @@ fn read_row(
   for child in tr.children {
     guard child is XmlElement(el) else { continue }
     if el.name == "w:tc" {
-      cells.push(read_cell(el, sheet, theme, table_borders, table_margins))
+      cells.push(
+        read_cell(
+          el, sheet, theme, table_borders, table_margins, numbering, counters,
+        ),
+      )
     }
   }
   @table.Row::new(cells, header~, cant_split~, min_height~)
@@ -219,6 +233,8 @@ pub fn read_table(
   tbl : @xml.XmlElement,
   sheet : StyleSheet,
   theme? : ThemeFonts = ThemeFonts::empty(),
+  numbering? : @numbering.Numbering = @numbering.Numbering::empty(),
+  counters? : @numbering.Counters = @numbering.Counters::new(),
 ) -> @table.Table {
   let mut width : @table.Width = Auto
   let mut layout : @table.TableLayout = Autofit
@@ -264,7 +280,9 @@ pub fn read_table(
   for child in tbl.children {
     guard child is XmlElement(el) else { continue }
     if el.name == "w:tr" {
-      rows.push(read_row(el, sheet, theme, borders, margins))
+      rows.push(
+        read_row(el, sheet, theme, borders, margins, numbering, counters),
+      )
     }
   }
   @table.Table::new(rows, grid~, width~, layout~, borders~, indent~)

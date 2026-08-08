@@ -82,6 +82,9 @@ pub(all) struct ParaProps {
   keep_next : Bool?
   widow_control : Bool?
   page_break_before : Bool?
+  /// `w:numPr`: the list instance and level this paragraph belongs to.
+  num_id : Int?
+  num_level : Int?
 } derive(Eq, Debug, ToJson)
 
 ///|
@@ -99,6 +102,8 @@ pub fn ParaProps::empty() -> ParaProps {
     keep_next: None,
     widow_control: None,
     page_break_before: None,
+    num_id: None,
+    num_level: None,
   }
 }
 
@@ -160,6 +165,16 @@ pub fn ParaProps::merge(self : ParaProps, over : ParaProps) -> ParaProps {
       over.page_break_before
     } else {
       self.page_break_before
+    },
+    num_id: if over.num_id is Some(_) {
+      over.num_id
+    } else {
+      self.num_id
+    },
+    num_level: if over.num_level is Some(_) {
+      over.num_level
+    } else {
+      self.num_level
     },
   }
 }

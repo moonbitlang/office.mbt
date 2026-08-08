@@ -111,6 +111,8 @@ fn read_paragraph(
   para : @xml.XmlElement,
   sheet : StyleSheet,
   theme : ThemeFonts,
+  numbering? : @numbering.Numbering = @numbering.Numbering::empty(),
+  counters? : @numbering.Counters = @numbering.Counters::new(),
 ) -> (@paginate.Block, Bool, Bool) {
   let (direct_para, style_id) = match para.first("w:pPr") {
     Some(ppr) => read_para_props(ppr)
@@ -152,8 +154,74 @@ fn read_paragraph(
       style: sheet.resolve_run(style_id, None, mark).resolve(),
     })
   }
+  let mut style = resolved_para.resolve()
+  // a numbered paragraph takes its indents from the numbering level
+  // unless the paragraph overrides them, and carries a label run
+  match (resolved_para.num_id, resolved_para.num_level) {
+    // numId 0 is OOXML's "numbering removed" sentinel (ECMA-376
+    // 17.9.18) — Word writes it to cancel numbering a style applied, so
+    // it must not produce a label
+    (Some(0), _) => ()
+    (Some(num_id), level_or_none) => {
+      let depth = level_or_none.unwrap_or(0)
+      let level = numbering.level(num_id, depth)
+      // Only indents written on the paragraph itself override the level.
+      // Testing the resolved value would let Word's stock ListParagraph
+      // style (w:ind left=720) suppress every level's indent and flatten
+      // the whole nesting hierarchy to one depth.
+      if direct_para.indent_left is None {
+        match level.indent_left {
+          Some(v) => style = { ..style, indent_left_pt: v.to_pt() }
+          None => ()
+        }
+      }
+      if direct_para.indent_first is None {
+        match level.indent_hanging {
+          Some(v) => style = { ..style, indent_first_pt: -v.to_pt() }
+          None =>
+            match level.indent_first {
+              Some(v) => style = { ..style, indent_first_pt: v.to_pt() }
+              None => ()
+            }
+        }
+      }
+      match counters.advance(numbering, num_id, depth) {
+        Some(label) => {
+          // Word styles a marker from the level's own w:rPr over the
+          // paragraph mark's, not from the first body run — otherwise a
+          // hyperlink or struck-through first run bleeds into the number.
+          let mark = match para.first("w:pPr") {
+            Some(ppr) =>
+              match ppr.first("w:rPr") {
+                Some(rpr) => read_run_props(rpr, theme~)
+                None => RunProps::empty()
+              }
+            None => RunProps::empty()
+          }
+          let mut marker_style = sheet
+            .resolve_run(style_id, None, mark)
+            .resolve()
+          match level.font_family {
+            Some(family) => marker_style = { ..marker_style, family, }
+            None => ()
+          }
+          let separator = match level.suffix {
+            SuffNothing => ""
+            SuffSpace => " "
+            // a tab would need a tab-stop model; the hanging indent
+            // already positions the text, so a space keeps the label
+            // from touching it
+            SuffTab => " "
+          }
+          runs.insert(0, { text: label + separator, style: marker_style })
+        }
+        None => ()
+      }
+    }
+    (None, _) => ()
+  }
   let block = @paginate.Block::paragraph(
-    { runs, style: resolved_para.resolve() },
+    { runs, style },
     keep_lines=resolved_para.keep_lines.unwrap_or(false),
     keep_next=resolved_para.keep_next.unwrap_or(false),
     widow_control=resolved_para.widow_control.unwrap_or(true),
@@ -172,7 +240,10 @@ pub fn read_document(
   document : @xml.XmlElement,
   sheet : StyleSheet,
   theme? : ThemeFonts = ThemeFonts::empty(),
+  numbering? : @numbering.Numbering = @numbering.Numbering::empty(),
 ) -> DocxDocument {
+  // list counters run for the whole document, in reading order
+  let counters = @numbering.Counters::new()
   let blocks : Array[@paginate.Block] = []
   let unsupported : Array[String] = []
   let body = document.first_or_empty("w:body")
@@ -182,7 +253,11 @@ pub fn read_document(
     match el.name {
       "w:p" => {
         let (block, breaks_before, breaks_after) = read_paragraph(
-          el, sheet, theme,
+          el,
+          sheet,
+          theme,
+          numbering~,
+          counters~,
         )
         if breaks_before && blocks.length() > 0 {
           blocks.push(PageBreak)
@@ -195,7 +270,11 @@ pub fn read_document(
       // the body-level sectPr carries the final section's geometry
       "w:sectPr" => section = read_section_props(el)
       "w:tbl" =>
-        blocks.push(@paginate.Block::table(read_table(el, sheet, theme~)))
+        blocks.push(
+          @paginate.Block::table(
+            read_table(el, sheet, theme~, numbering~, counters~),
+          ),
+        )
       // block content this milestone does not lay out yet. Recording it
       // keeps the omission visible instead of silently losing text.
       "w:sdt" => unsupported.push("content control")
@@ -243,6 +322,13 @@ pub fn read_docx(docx : Bytes) -> DocxDocument raise {
       )
     None => ThemeFonts::empty()
   }
+  let numbering = match archive.get("word/numbering.xml") {
+    Some(part) =>
+      read_numbering(
+        @xml.read_xml_bytes_limited(part, default_budget(), namespace_map=ns),
+      )
+    None => @numbering.Numbering::empty()
+  }
   let sheet = match archive.get("word/styles.xml") {
     Some(styles_part) =>
       read_stylesheet(
@@ -255,7 +341,7 @@ pub fn read_docx(docx : Bytes) -> DocxDocument raise {
       )
     None => StyleSheet::empty()
   }
-  read_document(document, sheet, theme~)
+  read_document(document, sheet, theme~, numbering~)
 }
 
 ///|
@@ -286,10 +372,10 @@ pub fn render_docx(docx : Bytes) -> @pagelayout.PageModel raise {
 //     can say the render is incomplete instead of presenting it as the
 //     whole document. Tables are laid out, but nested tables (a `w:tbl`
 //     inside a `w:tc`) are not yet.
-//   * Numbering (`w:numPr`) is not read, so list markers and the indents
-//     numbering.xml supplies for each level are missing.
 //   * `w:tab` reaches the engine as U+0009 but there is no tab-stop
-//     model, so tab-aligned layouts collapse.
+//     model, so tab-aligned layouts collapse. For the same reason a list
+//     level's `w:suff="tab"` renders as a space; the hanging indent
+//     already positions the text, so only the label-to-text gap differs.
 //   * Only the body-level `w:sectPr` is honored; paragraph-level section
 //     breaks do not change page geometry mid-document.
 //   * Part names are the conventional `word/...` paths rather than
