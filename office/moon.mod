@@ -16,7 +16,7 @@ import {
   "bobzhang/mbtexcel@0.1.9",
   "bobzhang/docx2html@0.3.0",
   "moonbitlang/async@0.20.2",
-  "moonbitlang/x@0.4.43",
+  "moonbitlang/x@0.4.48",
   "tonyfettes/unicode@0.3.3",
 }
 
