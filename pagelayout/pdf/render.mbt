@@ -187,30 +187,48 @@ pub fn render_pdf(model : @pagelayout.PageModel) -> Bytes raise {
         bold=spec.bold,
         italic=spec.italic,
       ),
+      // decided below, once the document's character set is known
+      composite: false,
     })
   }
 
   // one XObject per distinct image, for this document only
   let image_cache : Map[Bytes, Int] = Map([])
 
-  // A composite font embeds a subset of its program, so which characters
-  // the document uses has to be known before any font object is written.
-  let used_codepoints = collect_codepoints(model, faces)
+  // Both font shapes subset the program they embed, and the character set
+  // is also what decides which shape a font takes, so this has to be known
+  // before any font object is written.
+  let used_codepoints = collect_codepoints(model, faces.length())
+
+  // A font goes composite only when its text needs codes WinAnsi cannot
+  // express. Latin stays a simple font with an embedded program: that is
+  // the smaller, more widely understood shape, and it keeps `/Widths`
+  // rather than a `/W` array governing spacing.
+  for index, codepoints in used_codepoints {
+    let face = faces[index]
+    faces[index] = { ..face, composite: needs_composite(face, codepoints) }
+  }
 
   // one PDF font object per interned IR font, shared by every page
   let font_objects : Array[Int] = []
   for index, face in faces {
     font_objects.push(
-      match face.program {
-        Some(program) =>
-          composite_font_object(
-            document,
-            face,
-            program,
-            index,
-            used_codepoints[index],
-          )
-        None => font_object(document, face)
+      if face.is_composite() {
+        // guaranteed by needs_composite: a font only goes composite when
+        // it has a program to address glyphs in
+        match face.program {
+          Some(program) =>
+            composite_font_object(
+              document,
+              face,
+              program,
+              index,
+              used_codepoints[index],
+            )
+          None => font_object(document, face, index, used_codepoints[index])
+        }
+      } else {
+        font_object(document, face, index, used_codepoints[index])
       },
     )
   }
@@ -283,23 +301,23 @@ pub fn render_pdf(model : @pagelayout.PageModel) -> Bytes raise {
 ///|
 /// Which codepoints each interned font actually renders, in first-use
 /// order so the subset is a function of the document rather than of hash
-/// iteration. Only composite fonts are collected: a simple font embeds
-/// nothing, so its glyph coverage is the viewer's business.
+/// iteration. Every font is collected, because both shapes now subset the
+/// program they embed, and because the set is what decides which shape a
+/// font takes.
 fn collect_codepoints(
   model : @pagelayout.PageModel,
-  faces : Array[PdfFace],
+  font_count : Int,
 ) -> Array[Array[Int]] {
   let used : Array[Array[Int]] = []
   let seen : Array[Map[Int, Unit]] = []
-  for _ in faces {
+  for _ in 0..<font_count {
     used.push([])
     seen.push(Map([]))
   }
   for page in model.pages {
     for item in page.items {
       guard item is Text(run) else { continue }
-      guard faces.get(run.font) is Some(face) else { continue }
-      if !face.is_composite() {
+      if run.font < 0 || run.font >= font_count {
         continue
       }
       let mut i = 0

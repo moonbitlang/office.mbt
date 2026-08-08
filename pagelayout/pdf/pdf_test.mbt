@@ -255,14 +255,17 @@ test "cjk text is embedded as a composite font" {
 }
 
 ///|
-test "latin text stays a simple font" {
+test "latin text stays a simple font, but an embedded one" {
   let model = @paginate.paginate([@paginate.Block::paragraph(para("Hello"))])
   let text = as_text(@pdf.render_pdf(model))
-  // Carlito bundles no outlines, so nothing is embedded and the reader
-  // substitutes — which is harmless for Latin
+  // WinAnsi addresses everything here, so the font stays simple: smaller
+  // than a composite, and spaced by /Widths rather than a /W array
   assert_true(text.contains("/TrueType"))
   assert_false(text.contains("/Type0"))
-  assert_false(text.contains("/FontFile2"))
+  // but the program travels with the document, so the page renders the
+  // shapes it was laid out with rather than whatever the viewer picks
+  assert_true(text.contains("/FontFile2"))
+  assert_true(text.contains("+Carlito"))
 }
 
 ///|
@@ -396,4 +399,31 @@ test "two documents sharing image bytes each carry their own XObject" {
   assert_true(first == second)
   // and the image itself has to be present, not merely referenced
   assert_true(as_text(second).contains("/Image"))
+}
+
+///|
+test "a face goes composite only for characters it can actually draw" {
+  // Carlito has no han glyphs. Going composite for 中 would spell it as
+  // `.notdef` and then space the rest of the run by that glyph's width,
+  // losing the advance the layout chose — so the emitter must keep the
+  // font simple and break the run around the character instead.
+  let model = @pagelayout.PageModel::new()
+  let font = model.add_font({ family: "Carlito", bold: false, italic: false })
+  let page = @pagelayout.Page::{ width_pt: 300, height_pt: 100, items: [] }
+  page.items.push(
+    Text({
+      font,
+      size_pt: 12,
+      x_pt: 0,
+      baseline_pt: 20,
+      text: "ab中cd",
+      advances_pt: [6.0, 6.0, 12.0, 6.0, 6.0],
+      color: @pagelayout.black,
+    }),
+  )
+  model.pages.push(page)
+  let text = as_text(@pdf.render_pdf(model))
+  assert_false(text.contains("/Type0"))
+  // the tail still resumes at the position the layout gave it
+  assert_true(text.contains("1 0 0 1 24 80 Tm"))
 }

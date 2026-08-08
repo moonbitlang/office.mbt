@@ -65,13 +65,26 @@ test "outline lookup falls back within a family but never across" {
     @fontoutlines.outline_sfnt("Noto Sans SC", bold=true) is Some(_),
     content="true",
   )
+  // Carlito bundles all four faces, so a bold request gets the bold
+  // program rather than falling back to regular
+  inspect(
+    @fontoutlines.outline_sfnt("Carlito") ==
+    @fontoutlines.outline_sfnt("Carlito", bold=true),
+    content="false",
+  )
   // a family with no bundled program embeds nothing rather than something
   // wrong under the right name
-  inspect(@fontoutlines.outline_sfnt("Carlito") is None, content="true")
+  inspect(@fontoutlines.outline_sfnt("Comic Sans MS") is None, content="true")
   debug_inspect(
     @fontoutlines.outlined_families(),
     content=(
-      #|["Noto Sans SC"]
+      #|[
+      #|  "Carlito",
+      #|  "Liberation Sans",
+      #|  "Liberation Serif",
+      #|  "Liberation Mono",
+      #|  "Noto Sans SC",
+      #|]
     ),
   )
 }

@@ -63,17 +63,23 @@ MAX_LITERAL_CHARS = 60000
 
 # (moonbit identifier, source file, family, bold, italic, variable-font axes)
 FACES = [
-    (
-        "noto_sans_sc_regular",
-        "NotoSansSC-VF.ttf",
-        "Noto Sans SC",
-        False,
-        False,
-        # The fvar default is wght=100 (Thin), so the default master's
-        # outlines are *not* the regular weight. Instancing pins the
-        # weight text is actually laid out at.
-        {"wght": 400},
-    ),
+    ("carlito_regular", "Carlito-Regular.ttf", "Carlito", False, False, None),
+    ("carlito_bold", "Carlito-Bold.ttf", "Carlito", True, False, None),
+    ("carlito_italic", "Carlito-Italic.ttf", "Carlito", False, True, None),
+    ("carlito_bold_italic", "Carlito-BoldItalic.ttf", "Carlito", True, True, None),
+    ("liberation_sans_regular", "LiberationSans-Regular.ttf", "Liberation Sans", False, False, None),
+    ("liberation_sans_bold", "LiberationSans-Bold.ttf", "Liberation Sans", True, False, None),
+    ("liberation_sans_italic", "LiberationSans-Italic.ttf", "Liberation Sans", False, True, None),
+    ("liberation_sans_bold_italic", "LiberationSans-BoldItalic.ttf", "Liberation Sans", True, True, None),
+    ("liberation_serif_regular", "LiberationSerif-Regular.ttf", "Liberation Serif", False, False, None),
+    ("liberation_serif_bold", "LiberationSerif-Bold.ttf", "Liberation Serif", True, False, None),
+    ("liberation_serif_italic", "LiberationSerif-Italic.ttf", "Liberation Serif", False, True, None),
+    ("liberation_serif_bold_italic", "LiberationSerif-BoldItalic.ttf", "Liberation Serif", True, True, None),
+    ("liberation_mono_regular", "LiberationMono-Regular.ttf", "Liberation Mono", False, False, None),
+    ("liberation_mono_bold", "LiberationMono-Bold.ttf", "Liberation Mono", True, False, None),
+    ("liberation_mono_italic", "LiberationMono-Italic.ttf", "Liberation Mono", False, True, None),
+    ("liberation_mono_bold_italic", "LiberationMono-BoldItalic.ttf", "Liberation Mono", True, True, None),
+    ("noto_sans_sc_regular", "NotoSansSC-VF.ttf", "Noto Sans SC", False, False, {"wght": 400}),
 ]
 
 

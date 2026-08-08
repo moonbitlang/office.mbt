@@ -4,5 +4,58 @@
 
 ///|
 fn bundled_outlines() -> Array[(String, Bool, Bool, Array[Bytes])] {
-  [("Noto Sans SC", false, false, noto_sans_sc_regular_outline_armoured())]
+  [
+    ("Carlito", false, false, carlito_regular_outline_armoured()),
+    ("Carlito", true, false, carlito_bold_outline_armoured()),
+    ("Carlito", false, true, carlito_italic_outline_armoured()),
+    ("Carlito", true, true, carlito_bold_italic_outline_armoured()),
+    (
+      "Liberation Sans",
+      false,
+      false,
+      liberation_sans_regular_outline_armoured(),
+    ),
+    ("Liberation Sans", true, false, liberation_sans_bold_outline_armoured()),
+    ("Liberation Sans", false, true, liberation_sans_italic_outline_armoured()),
+    (
+      "Liberation Sans",
+      true,
+      true,
+      liberation_sans_bold_italic_outline_armoured(),
+    ),
+    (
+      "Liberation Serif",
+      false,
+      false,
+      liberation_serif_regular_outline_armoured(),
+    ),
+    ("Liberation Serif", true, false, liberation_serif_bold_outline_armoured()),
+    (
+      "Liberation Serif",
+      false,
+      true,
+      liberation_serif_italic_outline_armoured(),
+    ),
+    (
+      "Liberation Serif",
+      true,
+      true,
+      liberation_serif_bold_italic_outline_armoured(),
+    ),
+    (
+      "Liberation Mono",
+      false,
+      false,
+      liberation_mono_regular_outline_armoured(),
+    ),
+    ("Liberation Mono", true, false, liberation_mono_bold_outline_armoured()),
+    ("Liberation Mono", false, true, liberation_mono_italic_outline_armoured()),
+    (
+      "Liberation Mono",
+      true,
+      true,
+      liberation_mono_bold_italic_outline_armoured(),
+    ),
+    ("Noto Sans SC", false, false, noto_sans_sc_regular_outline_armoured()),
+  ]
 }
