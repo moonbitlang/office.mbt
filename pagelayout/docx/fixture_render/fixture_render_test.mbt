@@ -8,7 +8,7 @@ async test "real word document renders end to end" {
   let model = @paginate.paginate(doc.blocks, section=doc.section)
   debug_inspect(model.validate(), content="[]")
   assert_true(model.pages.length() >= 1)
-  // Word's default page is US Letter with 1in margins
+  // this fixture's sectPr declares A4 (11906 x 16838 twips)
   inspect(
     doc.section.page_width_pt,
     content=(
