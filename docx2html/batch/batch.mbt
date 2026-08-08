@@ -51,7 +51,70 @@ pub const MAX_GRID_COLUMNS : Int = 63
 /// The operation discriminator vocabulary accepted by this build. The Office
 /// input-contract help consumes this parser-owned inventory instead of
 /// maintaining a second list.
-let batch_operation_names : Array[String] = ["paragraph", "table", "comment"]
+let batch_operation_names : Array[String] = [
+  "paragraph", "table", "comment", "header", "footer",
+]
+
+///|
+/// Rendered once for the "unknown op" messages so the vocabulary cannot drift
+/// from `batch_operation_names`.
+fn known_operations() -> String {
+  batch_operation_names.join(", ")
+}
+
+///|
+/// The OOXML header/footer reference types a `header`/`footer` op may target.
+let story_variants : Array[String] = ["default", "first", "even"]
+
+///|
+/// The field instructions the writer can serialize. Deliberately the
+/// page-numbering pair only — enough for a paginated document, small enough
+/// that every accepted value is one this build actually emits correctly.
+let field_instructions : Array[String] = ["PAGE", "NUMPAGES"]
+
+///|
+/// What a paragraph's inline content may hold. `PlainContent` is the comment
+/// and note body rule (no hyperlinks, images, notes or fields);
+/// `StoryContent` is the header/footer rule — the same plain content, plus
+/// FIELDS, which need no relationship and are the point of the feature (a
+/// live `PAGE` field instead of static text).
+priv enum ContentPolicy {
+  BodyContent
+  PlainContent
+  StoryContent
+}
+
+///|
+/// Whether hyperlinks, images and note references are allowed here.
+fn ContentPolicy::allows_rich_content(self : ContentPolicy) -> Bool {
+  self is BodyContent
+}
+
+///|
+/// Whether field runs are allowed here.
+fn ContentPolicy::allows_fields(self : ContentPolicy) -> Bool {
+  self is (BodyContent | StoryContent)
+}
+
+///|
+/// How to name this content region in a refusal.
+fn ContentPolicy::label(self : ContentPolicy) -> String {
+  match self {
+    BodyContent => "body content"
+    PlainContent => "comment bodies"
+    StoryContent => "header/footer stories"
+  }
+}
+
+///|
+/// How to name this content region when refusing a NESTED note: comment and
+/// note bodies share one plain-content policy, so the refusal names both.
+fn ContentPolicy::nesting_label(self : ContentPolicy) -> String {
+  match self {
+    PlainContent => "comment or note bodies"
+    other => other.label()
+  }
+}
 
 ///|
 /// Returns the operation discriminator vocabulary in stable order.
@@ -120,6 +183,8 @@ priv enum InlineSpec {
   // A run holding one footnote/endnote reference; index is the dense
   // per-kind note index the writer consumes.
   NoteRefSpec(note_type~ : String, index~ : Int)
+  // A WML field (`PAGE`, `NUMPAGES`) — a run SEQUENCE once serialized.
+  FieldSpec(instruction~ : String)
 }
 
 ///|
@@ -162,6 +227,17 @@ priv enum ParsedOpKind {
   // Carries the comment's dense id (its index among comment ops), the
   // id replies thread to.
   Comment(Int)
+  // A header/footer op: produces no body block and cannot be commented on.
+  Story
+}
+
+///|
+/// One parsed `header`/`footer` op: which variant of which kind, and the
+/// story's paragraph specs.
+priv struct StoryOp {
+  at : String
+  variant : String
+  body : Array[ParagraphSpec]
 }
 
 ///|
@@ -189,6 +265,8 @@ pub struct BatchScript {
   priv ops : Array[OpSpec]
   priv image_paths : Array[String]
   priv comments : Array[CommentOp]
+  priv headers : Array[StoryOp]
+  priv footers : Array[StoryOp]
   priv footnotes : Array[(String, Array[ParagraphSpec])]
   priv endnotes : Array[(String, Array[ParagraphSpec])]
   priv total_ops : Int
@@ -351,6 +429,8 @@ pub fn parse_batch(script : Json) -> BatchScript raise BatchError {
   let seen_paths : StableStringSet = SortedSet([])
   let kinds : Array[ParsedOpKind] = []
   let comments : Array[CommentOp] = []
+  let headers : Array[StoryOp] = []
+  let footers : Array[StoryOp] = []
   let block_ops : Array[Int] = []
   // Notes only exist in /2; a None collector makes every note key an
   // addressed schema error under /1.
@@ -375,7 +455,7 @@ pub fn parse_batch(script : Json) -> BatchScript raise BatchError {
     }
     if !batch_operation_names.contains(op_name) {
       raise BatchError(
-        "\{at}.op '\{op_name}' is unknown (known ops: paragraph, table, comment)",
+        "\{at}.op '\{op_name}' is unknown (known ops: \{known_operations()})",
       )
     }
     match op_name {
@@ -410,9 +490,21 @@ pub fn parse_batch(script : Json) -> BatchScript raise BatchError {
           parse_comment(params, index, at, kinds, image_paths, seen_paths),
         )
       }
+      "header" | "footer" => {
+        if schema == SCHEMA_BATCH {
+          raise BatchError(
+            "\{at}.op '\{op_name}' needs \"schema\": \"\{SCHEMA_BATCH_V2}\" (this script declares \{SCHEMA_BATCH})",
+          )
+        }
+        kinds.push(Story)
+        let stories = if op_name == "header" { headers } else { footers }
+        stories.push(
+          parse_story(params, at, op_name, stories, image_paths, seen_paths),
+        )
+      }
       other =>
         raise BatchError(
-          "\{at}.op '\{other}' is unknown (known ops: paragraph, table, comment)",
+          "\{at}.op '\{other}' is unknown (known ops: \{known_operations()})",
         )
     }
   }
@@ -424,11 +516,60 @@ pub fn parse_batch(script : Json) -> BatchScript raise BatchError {
     ops,
     image_paths,
     comments,
+    headers,
+    footers,
     footnotes,
     endnotes,
     total_ops: ops_json.length(),
     block_ops,
   }
+}
+
+///|
+/// Parses one `header`/`footer` op: `variant` (default when omitted) plus the
+/// story body (`text` xor `paragraphs`, exactly like a comment body). Story
+/// content is PLAIN — hyperlinks, images and notes need relationships the
+/// header/footer part does not get — but FIELDS are allowed, which is what
+/// makes `{"field": {"type": "PAGE"}}` in a footer a real page number.
+/// A section declares each variant at most once per kind, so a repeat is
+/// refused here with the offending op's address rather than in the writer.
+fn parse_story(
+  params : Map[String, Json],
+  at : String,
+  kind : String,
+  existing : Array[StoryOp],
+  image_paths : Array[String],
+  seen_paths : StableStringSet,
+) -> StoryOp raise BatchError {
+  let at_params = at + ".params"
+  check_keys(params, ["variant", "text", "paragraphs"], at_params)
+  let variant = match optional_string(params, "variant", at_params) {
+    Some(variant) => {
+      if !story_variants.contains(variant) {
+        raise BatchError(
+          "\{at_params}.variant '\{variant}' is unknown (known: \{story_variants.join(", ")})",
+        )
+      }
+      variant
+    }
+    None => "default"
+  }
+  for earlier in existing {
+    if earlier.variant == variant {
+      raise BatchError(
+        "\{at_params}.variant '\{variant}' was already declared by \{earlier.at}; a section declares each \{kind} variant at most once",
+      )
+    }
+  }
+  let body = parse_comment_body(
+    params,
+    at_params,
+    image_paths,
+    seen_paths,
+    policy=StoryContent,
+    what="the \{kind} story",
+  )
+  { at, variant, body }
 }
 
 ///|
@@ -500,6 +641,10 @@ fn parse_comment(
       Comment(_) =>
         raise BatchError(
           "\{where_} targets another comment (ops[\{idx}]); comment anchors must be paragraph ops (to answer a comment, use reply_to)",
+        )
+      Story =>
+        raise BatchError(
+          "\{where_} targets a header/footer story (ops[\{idx}]); comment anchors must be paragraph ops in the body",
         )
     }
   }
@@ -605,6 +750,8 @@ fn parse_comment_body(
   at_params : String,
   image_paths : Array[String],
   seen_paths : StableStringSet,
+  policy? : ContentPolicy = PlainContent,
+  what? : String = "the comment body",
 ) -> Array[ParagraphSpec] raise BatchError {
   let body : Array[ParagraphSpec] = []
   match (params.get("text"), params.get("paragraphs")) {
@@ -638,7 +785,7 @@ fn parse_comment_body(
             "\{at_params}.paragraphs[\{paragraph_index}]",
             image_paths,
             seen_paths,
-            plain=true,
+            policy~,
           ),
         )
       }
@@ -646,9 +793,7 @@ fn parse_comment_body(
     (None, Some(_)) =>
       raise BatchError("\{at_params}.paragraphs must be an array")
     (None, None) =>
-      raise BatchError(
-        "\{at_params} needs text or paragraphs (the comment body)",
-      )
+      raise BatchError("\{at_params} needs text or paragraphs (\{what})")
   }
   body
 }
@@ -674,7 +819,7 @@ fn parse_paragraph(
   at : String,
   image_paths : Array[String],
   seen_paths : StableStringSet,
-  plain? : Bool = false,
+  policy? : ContentPolicy = BodyContent,
   notes? : NoteCollector? = None,
 ) -> ParagraphSpec raise BatchError {
   // `at` is the address of the paragraph object itself ("ops[3].params",
@@ -751,7 +896,7 @@ fn parse_paragraph(
             image_paths,
             seen_paths,
             allow_links=true,
-            plain~,
+            policy~,
             notes~,
           ),
         )
@@ -773,16 +918,16 @@ fn parse_inline(
   image_paths : Array[String],
   seen_paths : StableStringSet,
   allow_links~ : Bool,
-  plain? : Bool = false,
+  policy? : ContentPolicy = BodyContent,
   notes? : NoteCollector? = None,
 ) -> InlineSpec raise BatchError {
   guard json is Object(spec) else {
     raise BatchError("\{at} must be an object")
   }
   if spec.get("link") is Some(link_json) {
-    if plain {
+    if !policy.allows_rich_content() {
       raise BatchError(
-        "\{at}: hyperlinks are not allowed in comment bodies (plain content only)",
+        "\{at}: hyperlinks are not allowed in \{policy.label()} (plain content only)",
       )
     }
     if !allow_links {
@@ -839,7 +984,7 @@ fn parse_inline(
               image_paths,
               seen_paths,
               allow_links=false,
-              plain~,
+              policy~,
               notes~,
             ),
           )
@@ -854,8 +999,10 @@ fn parse_inline(
   }
   for note_type in (["footnote", "endnote"] : ReadOnlyArray[String]) {
     guard spec.get(note_type) is Some(note_json) else { continue }
-    if plain {
-      raise BatchError("\{at}: notes cannot nest inside comment or note bodies")
+    if !policy.allows_rich_content() {
+      raise BatchError(
+        "\{at}: notes cannot nest inside \{policy.nesting_label()}",
+      )
     }
     // allow_links=false means we are INSIDE a hyperlink's runs: keep
     // note references at top run level (the canonical shape).
@@ -889,10 +1036,38 @@ fn parse_inline(
     bodies.push(("\{at}.\{note_type}", body))
     return NoteRefSpec(note_type~, index~)
   }
-  if spec.get("image") is Some(image_json) {
-    if plain {
+  if spec.get("field") is Some(field_json) {
+    if !policy.allows_fields() {
       raise BatchError(
-        "\{at}: images are not allowed in comment bodies (plain content only)",
+        "\{at}: fields are not allowed in \{policy.label()} (plain content only)",
+      )
+    }
+    // A field is a run SEQUENCE once serialized, so it cannot sit inside a
+    // hyperlink's runs (allow_links=false means we are already inside one).
+    if !allow_links {
+      raise BatchError(
+        "\{at}.field: fields cannot sit inside hyperlinks (put the field in a top-level run)",
+      )
+    }
+    check_keys(spec, ["field"], at)
+    guard field_json is Object(field) else {
+      raise BatchError("\{at}.field must be an object")
+    }
+    check_keys(field, ["type"], at + ".field")
+    guard field.get("type") is Some(String(instruction)) else {
+      raise BatchError("\{at}.field.type must be a string")
+    }
+    if !field_instructions.contains(instruction) {
+      raise BatchError(
+        "\{at}.field.type '\{instruction}' is unsupported (known fields: \{field_instructions.join(", ")})",
+      )
+    }
+    return FieldSpec(instruction~)
+  }
+  if spec.get("image") is Some(image_json) {
+    if !policy.allows_rich_content() {
+      raise BatchError(
+        "\{at}: images are not allowed in \{policy.label()} (plain content only)",
       )
     }
     check_keys(spec, ["image"], at)
@@ -1786,7 +1961,74 @@ fn build_inline(
       }
     NoteRefSpec(note_type~, index~) =>
       @document.run([@document.note_reference(note_type, index.to_string())])
+    // The cached result a consumer that does not recalculate fields shows.
+    // `1` is what Word itself caches for a freshly inserted page number.
+    FieldSpec(instruction~) => @document.field(instruction, result="1")
   }
+}
+
+///|
+/// One built header/footer story: its OOXML variant, its script address for
+/// error attribution, and the built block content.
+pub struct BatchStory {
+  priv at : String
+  priv variant : String
+  priv body : Array[@document.DocumentElement]
+}
+
+///|
+/// The op address ("ops[4]") for error attribution.
+pub fn BatchStory::at(self : BatchStory) -> String {
+  self.at
+}
+
+///|
+/// The OOXML reference type: `default`, `first`, or `even`.
+pub fn BatchStory::variant(self : BatchStory) -> String {
+  self.variant
+}
+
+///|
+/// The built story paragraphs (a fresh copy).
+pub fn BatchStory::body(self : BatchStory) -> Array[@document.DocumentElement] {
+  self.body.copy()
+}
+
+///|
+/// Number of `header` and `footer` ops in the script.
+pub fn BatchScript::story_counts(self : BatchScript) -> (Int, Int) {
+  (self.headers.length(), self.footers.length())
+}
+
+///|
+/// Builds the writer-facing header stories, in op order.
+pub fn BatchScript::build_headers(
+  self : BatchScript,
+) -> Array[BatchStory] raise BatchError {
+  build_stories(self.headers)
+}
+
+///|
+/// Builds the writer-facing footer stories, in op order.
+pub fn BatchScript::build_footers(
+  self : BatchScript,
+) -> Array[BatchStory] raise BatchError {
+  build_stories(self.footers)
+}
+
+///|
+fn build_stories(specs : Array[StoryOp]) -> Array[BatchStory] raise BatchError {
+  let built : Array[BatchStory] = []
+  // Story content is plain, so unlike `build_body` no image bytes are needed.
+  let no_images : Map[String, Bytes] = Map([])
+  for spec in specs {
+    let body : Array[@document.DocumentElement] = []
+    for paragraph in spec.body {
+      body.push(build_paragraph(paragraph, no_images))
+    }
+    built.push({ at: spec.at, variant: spec.variant, body })
+  }
+  built
 }
 
 ///|
@@ -1899,7 +2141,7 @@ pub fn parse_annotate(json : Json) -> AnnotateEnvelope raise BatchError {
         "the envelope's comment.paragraphs[\{index}]",
         image_paths,
         seen_paths,
-        plain=true,
+        policy=PlainContent,
       ),
     )
   }

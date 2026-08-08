@@ -188,6 +188,36 @@ jq -e '.data.text == "Quarterly report for {{customer}}"' >/dev/null <<<"$(json 
 jq -e '.data.matched_total >= 8' >/dev/null <<<"$(json office.docx.text/1 text "$work/docx-template.docx" --json)" || fail "docx text"
 jq -e '.data.matched_total == 1 and .data.matches[0].kind == "hyperlink"' >/dev/null <<<"$(json office.docx.query/1 query "$work/docx-template.docx" --kind link --json)" || fail "docx query"
 
+# Header/footer authoring (#95): every variant becomes its own part, the
+# section references them, the reader surfaces each at its own story path, and
+# the footer's page number is a LIVE field rather than static text a reader
+# would have to correct by hand.
+cp "$here/docx.stories.json" "$work/docx.stories.json"
+docx_stories="$(json office.docx.batch/1 batch --format docx "$work/docx-stories.docx" "$work/docx.stories.json" --json)"
+jq -e '.success == true and .data.headers == 2 and .data.footers == 1 and .data.transaction.committed == true' >/dev/null <<<"$docx_stories" || fail "docx header/footer batch"
+jq -e '.data.valid == true and .data.error_count == 0' >/dev/null <<<"$(json office.validate/1 validate "$work/docx-stories.docx" --json)" || fail "docx header/footer validate"
+jq -e '
+  .data.counts.headers == 2 and
+  .data.counts.footers == 1 and
+  ([.data.stories[].path] | index("/docx/header[1]")) != null and
+  ([.data.stories[].path] | index("/docx/footer[1]")) != null and
+  (.data.sections[0].headers == [{"variant":"default","part":1},{"variant":"first","part":2}]) and
+  (.data.sections[0].footers == [{"variant":"default","part":1}])
+' >/dev/null <<<"$(json office.docx.outline/1 outline "$work/docx-stories.docx" --json)" || fail "docx header/footer outline"
+jq -e '.data.text == "ACME quarterly"' >/dev/null <<<"$(json office.docx.element/1 get "$work/docx-stories.docx" '/docx/header[1]/p[1]' --json)" || fail "docx header get"
+jq -e '.data.text == "Cover page"' >/dev/null <<<"$(json office.docx.element/1 get "$work/docx-stories.docx" '/docx/header[2]/p[1]' --json)" || fail "docx first-page header get"
+jq -e '
+  ([.data.entries[].path] | index("/docx/header[1]/p[1]")) != null and
+  ([.data.entries[].path] | index("/docx/footer[1]/p[1]")) != null
+' >/dev/null <<<"$(json office.docx.text/1 text "$work/docx-stories.docx" --json)" || fail "docx header/footer text"
+office raw read "$work/docx-stories.docx" /word/footer1.xml >"$work/docx-footer1.xml" 2>"$work/stderr.log" ||
+  { cat "$work/stderr.log" >&2; fail "docx footer raw read"; }
+grep -q 'w:fldChar w:fldCharType="begin"' "$work/docx-footer1.xml" || fail "docx footer page number is not a live field"
+grep -q '<w:instrText xml:space="preserve"> PAGE </w:instrText>' "$work/docx-footer1.xml" || fail "docx footer PAGE instruction"
+office raw read "$work/docx-stories.docx" /word/document.xml >"$work/docx-stories-document.xml" 2>"$work/stderr.log" ||
+  { cat "$work/stderr.log" >&2; fail "docx stories document raw read"; }
+grep -q '<w:titlePg/>' "$work/docx-stories-document.xml" || fail "docx first-page header without titlePg"
+
 docx_template="$(json office.template/1 template "$work/docx-template.docx" "$work/template-data.json" --out "$work/docx-filled.docx" --json)"
 jq -e '.success == true and .data.replaced == 2 and .data.transaction.preservation.changed == ["word/document.xml"]' >/dev/null <<<"$docx_template" || fail "docx template"
 jq -e '.data.text == "Quarterly report for Ada Lovelace"' >/dev/null <<<"$(json office.docx.element/1 get "$work/docx-filled.docx" '/docx/body/p[1]' --json)" || fail "docx template readback"

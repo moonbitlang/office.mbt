@@ -1,0 +1,17 @@
+{
+  "schema": "docx.batch/2",
+  "ops": [
+    {"op": "paragraph", "params": {"text": "Quarterly report", "style": "Heading1"}},
+    {"op": "paragraph", "params": {"text": "Revenue grew 12% in Q2."}},
+    {"op": "header", "params": {"variant": "default", "text": "ACME quarterly"}},
+    {"op": "header", "params": {"variant": "first", "text": "Cover page"}},
+    {"op": "footer", "params": {"variant": "default", "paragraphs": [
+      {"align": "center", "runs": [
+        {"text": "Page "},
+        {"field": {"type": "PAGE"}},
+        {"text": " of "},
+        {"field": {"type": "NUMPAGES"}}
+      ]}
+    ]}}
+  ]
+}

@@ -278,7 +278,7 @@ fn CommentBodyInputBudget::visit(
     BookmarkStart(value) | CommentReference(value) => self.charge_string(value)
     // These variants are rejected immediately by the semantic body check, so
     // their potentially large unreachable payloads need not be traversed.
-    Hyperlink(..) | NoteReference(..) | Image(_) => ()
+    Hyperlink(..) | NoteReference(..) | Image(_) | Field(..) => ()
     Tab | Checkbox(_) | Break(_) => ()
   }
 }
@@ -359,6 +359,10 @@ fn check_annotation_content(
       raise Unsupported(
         message="\{what} bodies cannot carry note references (notes nest in neither comments nor other notes)",
       )
+    Field(..) =>
+      raise Unsupported(
+        message="\{what} bodies are plain content: fields cannot be serialized into annotation parts",
+      )
     Document(children~, ..)
     | Paragraph(children~, ..)
     | Run(children~, ..)
@@ -412,8 +416,12 @@ pub fn write_docx_with_annotations(
   comments? : Array[CommentSpec] = [],
   footnotes? : Array[NoteSpec] = [],
   endnotes? : Array[NoteSpec] = [],
+  headers? : Array[HeaderFooterSpec] = [],
+  footers? : Array[HeaderFooterSpec] = [],
   limits? : @opc.PackageLimits,
 ) -> Bytes raise DocxError {
+  check_header_footer_variants(headers, kind="header")
+  check_header_footer_variants(footers, kind="footer")
   for index, note in footnotes {
     check_annotation_body(note.body, what="footnote") catch {
       Unsupported(message~) =>
@@ -527,7 +535,35 @@ pub fn write_docx_with_annotations(
       blocks.push(XmlElement(write_block(element, ctx)))
     }
   }
-  blocks.push(XmlElement(blank_section_properties()))
+  // Header/footer stories are written BEFORE the section properties, because
+  // the sectPr references carry the relationship ids their allocation
+  // returns. With no stories nothing is allocated and the section (and the
+  // whole package) is byte-identical to the story-free writer.
+  let (header_parts, header_references) = write_header_footer_parts(
+    headers,
+    ctx,
+    kind="header",
+  )
+  let (footer_parts, footer_references) = write_header_footer_parts(
+    footers,
+    ctx,
+    kind="footer",
+  )
+  let section_references : Array[XmlNode] = []
+  section_references.append(header_references)
+  section_references.append(footer_references)
+  let uses_first_page = has_variant(headers, "first") ||
+    has_variant(footers, "first")
+  let uses_even_pages = has_variant(headers, "even") ||
+    has_variant(footers, "even")
+  blocks.push(
+    XmlElement(
+      blank_section_properties(
+        references=section_references,
+        title_page=uses_first_page,
+      ),
+    ),
+  )
   // Comment bodies reuse the body writers and the same context (styles
   // and numbering are package-wide), but must not allocate document
   // relationships or media: those land in document.xml's rels part and
@@ -649,6 +685,18 @@ pub fn write_docx_with_annotations(
   } else {
     None
   }
+  // `w:evenAndOddHeaders` is a SETTINGS-part flag: without it Word ignores an
+  // even-page story entirely, so the part exists exactly when one does.
+  let settings_xml : String? = if uses_even_pages {
+    let _ = ctx.allocate_relationship(
+      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings",
+      "settings.xml",
+      external=false,
+    )
+    Some(even_and_odd_headers_settings_xml())
+  } else {
+    None
+  }
   let comments_extended_xml : String? = if needs_extended {
     let _ = ctx.allocate_relationship(
       "http://schemas.microsoft.com/office/2011/relationships/commentsExtended",
@@ -701,6 +749,9 @@ pub fn write_docx_with_annotations(
     comments_extended_xml~,
     footnotes_xml~,
     endnotes_xml~,
+    header_parts~,
+    footer_parts~,
+    settings_xml~,
     limits?,
   ) catch {
     // Preserve a typed write ceiling breach; flatten every other package

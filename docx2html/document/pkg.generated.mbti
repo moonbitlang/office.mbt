@@ -25,6 +25,8 @@ pub fn document_descendants_where(DocumentElement, (DocumentElement) -> Bool) ->
 
 pub fn extract_raw_text_from_document(DocumentElement) -> @core.ConversionResult
 
+pub fn field(String, result? : String) -> DocumentElement
+
 pub fn hyperlink(Array[DocumentElement], href? : String?, anchor? : String?, target_frame? : String?) -> DocumentElement
 
 pub fn identity_document_transform(DocumentElement) -> DocumentElement
@@ -113,6 +115,7 @@ pub(all) enum DocumentElement {
   TableCell(children~ : Array[DocumentElement], col_span~ : Int, row_span~ : Int)
   Break(BreakType)
   BookmarkStart(String)
+  Field(instruction~ : String, result~ : String)
 } derive(Eq, @debug.Debug)
 #deprecated
 pub fn DocumentElement::equal(Self, Self) -> Bool

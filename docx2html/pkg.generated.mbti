@@ -70,6 +70,8 @@ pub fn extract_raw_text_from_document(@document.DocumentElement) -> @core.Conver
 
 pub fn fresh_html_element(String, attributes? : Map[String, String], children? : Array[@html.HtmlNode], separator? : String) -> @html.HtmlNode
 
+pub fn header_footer_spec(variant~ : String, Array[@document.DocumentElement]) -> @docx.HeaderFooterSpec raise DocxError
+
 pub fn html_element(String, attributes? : Map[String, String], children? : Array[@html.HtmlNode], fresh? : Bool, separator? : String) -> @html.HtmlNode
 
 pub fn html_text(String) -> @html.HtmlNode
@@ -164,7 +166,7 @@ pub fn warning(String) -> @core.Message
 
 pub fn write_docx(Array[@document.DocumentElement]) -> Bytes raise DocxError
 
-pub fn write_docx_with_annotations(Array[@document.DocumentElement], comments? : Array[@docx.CommentSpec], footnotes? : Array[@docx.NoteSpec], endnotes? : Array[@docx.NoteSpec]) -> Bytes raise DocxError
+pub fn write_docx_with_annotations(Array[@document.DocumentElement], comments? : Array[@docx.CommentSpec], footnotes? : Array[@docx.NoteSpec], endnotes? : Array[@docx.NoteSpec], headers? : Array[@docx.HeaderFooterSpec], footers? : Array[@docx.HeaderFooterSpec]) -> Bytes raise DocxError
 
 pub fn write_docx_with_comments(Array[@document.DocumentElement], Array[@docx.CommentSpec]) -> Bytes raise DocxError
 

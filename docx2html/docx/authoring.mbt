@@ -123,5 +123,35 @@ pub fn author_docx_bytes(
       },
     )
   }
-  write_docx_with_annotations(body, comments~, footnotes~, endnotes~, limits?)
+  let headers = []
+  for
+    story in (script.build_headers() catch {
+      BatchError(message) => raise Unsupported(message~)
+    }) {
+    headers.push(
+      header_footer_spec(variant=story.variant(), story.body()) catch {
+        err => raise Unsupported(message="\{story.at()}: \{err.description()}")
+      },
+    )
+  }
+  let footers = []
+  for
+    story in (script.build_footers() catch {
+      BatchError(message) => raise Unsupported(message~)
+    }) {
+    footers.push(
+      header_footer_spec(variant=story.variant(), story.body()) catch {
+        err => raise Unsupported(message="\{story.at()}: \{err.description()}")
+      },
+    )
+  }
+  write_docx_with_annotations(
+    body,
+    comments~,
+    footnotes~,
+    endnotes~,
+    headers~,
+    footers~,
+    limits?,
+  )
 }

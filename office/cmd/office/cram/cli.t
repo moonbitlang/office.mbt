@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:489853b6
+    Fingerprint: crc32:747906f5
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -40,10 +40,10 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"formats":["xlsx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.query/1","constraints":["format=xlsx"]}]}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:489853b6","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","template","edit","annotate","batch","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:747906f5","names":["docx","xlsx","help","identify","outline","get","text","query","validate","dump","replay","issues","preview","create","template","edit","annotate","batch","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"edit"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:489853b6","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:747906f5","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:747906f5","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:747906f5","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:747906f5","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:747906f5","kind":"command","name":"outline"},{"schema":"office.capability/2","fingerprint":"crc32:747906f5","kind":"command","name":"get"},{"schema":"office.capability/2","fingerprint":"crc32:747906f5","kind":"command","name":"text"},{"schema":"office.capability/2","fingerprint":"crc32:747906f5","kind":"command","name":"query"},{"schema":"office.capability/2","fingerprint":"crc32:747906f5","kind":"command","name":"validate"},{"schema":"office.capability/2","fingerprint":"crc32:747906f5","kind":"command","name":"dump"},{"schema":"office.capability/2","fingerprint":"crc32:747906f5","kind":"command","name":"replay"},{"schema":"office.capability/2","fingerprint":"crc32:747906f5","kind":"command","name":"issues"},{"schema":"office.capability/2","fingerprint":"crc32:747906f5","kind":"command","name":"preview"},{"schema":"office.capability/2","fingerprint":"crc32:747906f5","kind":"command","name":"create"},{"schema":"office.capability/2","fingerprint":"crc32:747906f5","kind":"command","name":"template"},{"schema":"office.capability/2","fingerprint":"crc32:747906f5","kind":"command","name":"edit"},{"schema":"office.capability/2","fingerprint":"crc32:747906f5","kind":"command","name":"annotate"},{"schema":"office.capability/2","fingerprint":"crc32:747906f5","kind":"command","name":"batch"},{"schema":"office.capability/2","fingerprint":"crc32:747906f5","kind":"command","name":"raw"}]
 
 Installed help exposes every consumed JSON input contract without requiring
 repository-only documentation. Inventory and individual records are versioned;
@@ -53,7 +53,7 @@ an unknown ID fails nonzero with a bounded typed suggestion.
   Consumed input contracts
     Schema: office.input-contracts/1
     xlsx.batch/2 — Strict transactional spreadsheet mutation script
-    docx.batch/2 — Strict fresh-DOCX authoring script with comments and notes
+    docx.batch/2 — Strict fresh-DOCX authoring script with comments, notes, header/footer stories, and page fields
     office.template.data/1 — Strict non-executable scalar and repeating-region template data
     docx.edit/1 — Strict preservation-safe literal find & replace, or tracked-change accept/reject, script for an existing DOCX
     docx.annotation-batch/1 — Strict preservation-safe comment mutation script for an existing DOCX
@@ -66,13 +66,13 @@ an unknown ID fails nonzero with a bounded typed suggestion.
   {"schema":"office.input-contracts/1","contracts":["xlsx.batch/2","docx.batch/2","office.template.data/1","docx.edit/1","docx.annotation-batch/1"]}
 
   $ office.exe help schema docx.batch/2 | jq -c '{schema,id,definitions:(.definitions|length)}'
-  {"schema":"office.input-contract/1","id":"docx.batch/2","definitions":13}
+  {"schema":"office.input-contract/1","id":"docx.batch/2","definitions":15}
 
   $ office.exe help schema docx.batch/2 --json | jq -c '{schema,success,data:{schema:.data.schema,id:.data.id}}'
   {"schema":"office.output/1","success":true,"data":{"schema":"office.input-contract/1","id":"docx.batch/2"}}
 
   $ office.exe help schema docx.batch/2 --jsonl | jq -c '{schema,id,example_schema:.examples[0].schema,ops:[.operations[].op],limits:{max_ops:.limits.max_ops,max_table_columns:.limits.max_table_columns}}'
-  {"schema":"office.input-contract/1","id":"docx.batch/2","example_schema":"docx.batch/2","ops":["paragraph","table","comment"],"limits":{"max_ops":10000,"max_table_columns":63}}
+  {"schema":"office.input-contract/1","id":"docx.batch/2","example_schema":"docx.batch/2","ops":["paragraph","table","comment","header","footer"],"limits":{"max_ops":10000,"max_table_columns":63}}
 
   $ office.exe help schema docx.batc/2 --json > unknown-schema.json; echo $?
   1
@@ -101,7 +101,7 @@ all pass.
   {"name":"create","formats":["xlsx","docx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.create/1","inputs":["output","sheet","dry-run","overwrite","json"],"constraints":["format=xlsx","output-extension=.xlsx","create-new-by-default","transactional-publication","bounded-candidate-package","candidate-max-entry-bytes=12582912","candidate-max-uncompressed-bytes=25165824"]},{"name":"docx","result_schema":"office.docx.create/1","inputs":["output","dry-run","overwrite","json"],"constraints":["format=docx","output-extension=.docx","create-new-by-default","transactional-publication","bounded-candidate-package","blank-document-only"]}]}
 
   $ office.exe help batch --json | jq -c '.data.records[0] | {name,formats,variants:[.variants[]|{name,result_schema,outputs:[.outputs[].name],constraints}]}'
-  {"name":"batch","formats":["xlsx","docx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.batch/1","outputs":["stats","transaction"],"constraints":["format=xlsx","preferred-schema=xlsx.batch/2","accepted-schemas=xlsx.batch/1|xlsx.batch/2","overwrite-requires(out)","out-extension-must-match-input-format","transactional-publication","full-workbook-rewrite-on-change","zero-op-reuses-original","transaction-max-materialized-cells=32768","transaction-max-row-column-lines=32768","read-max-decoded-xml-bytes=16777216","read-max-markup-tokens=262144","read-max-materialized-row-column-dimensions=32768","read-max-row-column-dimension-work=32768","candidate-max-entry-bytes=12582912","candidate-max-uncompressed-bytes=25165824"]},{"name":"docx","result_schema":"office.docx.batch/1","outputs":["ops","comments","footnotes","endnotes","transaction"],"constraints":["format=docx","preferred-schema=docx.batch/2","accepts-schema=docx.batch/1","output-extension=.docx","fresh-authoring-only","create-new-by-default","out-not-accepted","transactional-publication","bounded-candidate-package","comments-and-notes-require=docx.batch/2","max-image-bytes=8388608","max-total-image-bytes=33554432"]}]}
+  {"name":"batch","formats":["xlsx","docx"],"variants":[{"name":"xlsx","result_schema":"office.xlsx.batch/1","outputs":["stats","transaction"],"constraints":["format=xlsx","preferred-schema=xlsx.batch/2","accepted-schemas=xlsx.batch/1|xlsx.batch/2","overwrite-requires(out)","out-extension-must-match-input-format","transactional-publication","full-workbook-rewrite-on-change","zero-op-reuses-original","transaction-max-materialized-cells=32768","transaction-max-row-column-lines=32768","read-max-decoded-xml-bytes=16777216","read-max-markup-tokens=262144","read-max-materialized-row-column-dimensions=32768","read-max-row-column-dimension-work=32768","candidate-max-entry-bytes=12582912","candidate-max-uncompressed-bytes=25165824"]},{"name":"docx","result_schema":"office.docx.batch/1","outputs":["ops","comments","footnotes","endnotes","headers","footers","transaction"],"constraints":["format=docx","preferred-schema=docx.batch/2","accepts-schema=docx.batch/1","output-extension=.docx","fresh-authoring-only","create-new-by-default","out-not-accepted","transactional-publication","bounded-candidate-package","comments-and-notes-require=docx.batch/2","headers-footers-require=docx.batch/2","header-footer-variants=default|first|even","header-footer-content=plain-blocks-and-fields","fields=PAGE|NUMPAGES","max-image-bytes=8388608","max-total-image-bytes=33554432"]}]}
 
   $ office.exe help batch --json | jq -c '.data.records[0].variants[] | select(.name=="xlsx") | .registry | {schema,preferred_schema,accepted_schemas,ops:(.ops|length)}'
   {"schema":"xlsx.capabilities/2","preferred_schema":"xlsx.batch/2","accepted_schemas":["xlsx.batch/1","xlsx.batch/2"],"ops":15}
@@ -219,6 +219,92 @@ help filters both create and batch to the requested format.
   /docx/body/p[1]	Report
   /docx/body/p[2]	body text
   /docx/comments/comment[id="0"]/p[1]	revise
+
+Header and footer ops author the section's variants (#95): each becomes its own
+part, wired through sectPr references, and reads back at its own story path. A
+footer page number is a LIVE field (w:fldChar begin/instrText/separate/end),
+never static text, so Word repaginates it.
+
+  $ printf '%s\n' '{"schema":"docx.batch/2","ops":[{"op":"paragraph","params":{"text":"Report","style":"Heading1"}},{"op":"header","params":{"text":"Quarterly findings"}},{"op":"footer","params":{"paragraphs":[{"align":"center","runs":[{"text":"Page "},{"field":{"type":"PAGE"}},{"text":" of "},{"field":{"type":"NUMPAGES"}}]}]}}]}' > d3-story.json
+  $ office.exe batch --format docx d3-story.docx d3-story.json --json | jq -c '{success,ops:.data.ops,headers:.data.headers,footers:.data.footers,committed:.data.transaction.committed}'
+  {"success":true,"ops":3,"headers":1,"footers":1,"committed":true}
+  $ office.exe validate d3-story.docx --json | jq -c '{valid:.data.valid,errors:.data.error_count}'
+  {"valid":true,"errors":0}
+  $ office.exe outline d3-story.docx --json | jq -c '{headers:.data.counts.headers,footers:.data.counts.footers,stories:[.data.stories[].path],sections:.data.sections}'
+  {"headers":1,"footers":1,"stories":["/docx/body","/docx/header[1]","/docx/footer[1]","/docx/footnotes","/docx/endnotes","/docx/comments"],"sections":[{"headers":[{"variant":"default","part":1}],"footers":[{"variant":"default","part":1}]}]}
+  $ office.exe text d3-story.docx --json | jq -rc '.data.entries[] | .path + "\t" + .text'
+  /docx/body/p[1]	Report
+  /docx/header[1]/p[1]	Quarterly findings
+  /docx/footer[1]/p[1]	Page 1 of 1
+  $ office.exe get d3-story.docx '/docx/header[1]/p[1]'
+  Quarterly findings
+  $ office.exe raw read d3-story.docx /word/footer1.xml | grep -o 'w:fldChar w:fldCharType="[a-z]*"' | sort | uniq -c | tr -s ' ' | sed 's/^ //'
+  2 w:fldChar w:fldCharType="begin"
+  2 w:fldChar w:fldCharType="end"
+  2 w:fldChar w:fldCharType="separate"
+  $ office.exe raw read d3-story.docx /word/footer1.xml | grep -c 'w:instrText xml:space="preserve"> PAGE <'
+  1
+
+The MUTATION reader is stricter than the tolerant projection: it re-resolves
+every section story reference and fails closed. Annotating the authored
+document therefore proves the references, relationships, and content types
+agree, and the stories survive a byte-preserving mutation.
+
+  $ printf '%s\n' '{"schema":"docx.annotation-batch/1","ops":[{"op":"comment_add","anchor":{"at":"/docx/body/p[1]"},"author":"Ada","body":["check"]}]}' > d3-story-annotate.json
+  $ office.exe annotate d3-story.docx d3-story-annotate.json --out d3-story-annotated.docx --json | jq -c '{success,ops:.data.ops_applied}'
+  {"success":true,"ops":1}
+  $ office.exe outline d3-story-annotated.docx --json | jq -c '{headers:.data.counts.headers,footers:.data.counts.footers,comments:.data.counts.comments}'
+  {"headers":1,"footers":1,"comments":1}
+  $ office.exe validate d3-story-annotated.docx --json | jq -c '{valid:.data.valid}'
+  {"valid":true}
+
+Everything the op vocabulary cannot yet re-express is a VISIBLE residual, not
+silent loss: dumping the authored document reports its stories.
+
+  $ office.exe dump d3-story.docx --json | jq -c '{ops:[.ops[].op],residual:[.residual[].code]}'
+  {"ops":["paragraph"],"residual":["docx.headers_not_dumped","docx.footers_not_dumped","docx.sections_not_dumped"]}
+
+The `first` and `even` variants carry the OOXML flags that make them take
+effect: titlePg in sectPr, and a settings part declaring evenAndOddHeaders.
+
+  $ printf '%s\n' '{"schema":"docx.batch/2","ops":[{"op":"paragraph","params":{"text":"x"}},{"op":"header","params":{"variant":"first","text":"Cover"}},{"op":"header","params":{"variant":"even","text":"Even"}},{"op":"header","params":{"variant":"default","text":"Odd"}}]}' > d3-variants.json
+  $ office.exe batch --format docx d3-variants.docx d3-variants.json --json | jq -c '{headers:.data.headers,footers:.data.footers}'
+  {"headers":3,"footers":0}
+  $ office.exe outline d3-variants.docx --json | jq -c '.data.sections[0].headers'
+  [{"variant":"default","part":1},{"variant":"first","part":2},{"variant":"even","part":3}]
+  $ office.exe raw list d3-variants.docx --json | jq -c '[.data.parts[].name] | map(select(startswith("/word/header") or . == "/word/settings.xml")) | sort'
+  ["/word/header1.xml","/word/header2.xml","/word/header3.xml","/word/settings.xml"]
+  $ office.exe raw read d3-variants.docx /word/document.xml | grep -c '<w:titlePg/>'
+  1
+  $ office.exe raw read d3-variants.docx /word/settings.xml | grep -c '<w:evenAndOddHeaders/>'
+  1
+
+Story ops are fail-closed: a repeated variant, a story hyperlink, and an
+unknown field type are all refused at parse with the offending op's address,
+and nothing is published.
+
+  $ printf '%s\n' '{"schema":"docx.batch/2","ops":[{"op":"header","params":{"text":"a"}},{"op":"header","params":{"text":"b"}}]}' > d3-dup-variant.json
+  $ office.exe batch --format docx d3-dupvar.docx d3-dup-variant.json --json > d3-dupvar.json 2>&1; echo $?
+  1
+  $ jq -rc '{success,code:.error.code,message:.error.message}' d3-dupvar.json
+  {"success":false,"code":"office.docx.batch_parse","message":"invalid authoring script: ops[1].params.variant 'default' was already declared by ops[0]; a section declares each header variant at most once"}
+  $ test ! -e d3-dupvar.docx; echo $?
+  0
+  $ printf '%s\n' '{"schema":"docx.batch/2","ops":[{"op":"footer","params":{"paragraphs":[{"runs":[{"link":{"href":"https://example.invalid/","text":"x"}}]}]}}]}' > d3-story-link.json
+  $ office.exe batch --format docx d3-storylink.docx d3-story-link.json --json > d3-storylink.json 2>&1; echo $?
+  1
+  $ jq -rc '.error.message' d3-storylink.json
+  invalid authoring script: ops[0].params.paragraphs[0].runs[0]: hyperlinks are not allowed in header/footer stories (plain content only)
+  $ printf '%s\n' '{"schema":"docx.batch/2","ops":[{"op":"paragraph","params":{"runs":[{"field":{"type":"TOC"}}]}}]}' > d3-bad-field.json
+  $ office.exe batch --format docx d3-badfield.docx d3-bad-field.json --json > d3-badfield.json 2>&1; echo $?
+  1
+  $ jq -rc '.error.message' d3-badfield.json
+  invalid authoring script: ops[0].params.runs[0].field.type 'TOC' is unsupported (known fields: PAGE, NUMPAGES)
+  $ printf '%s\n' '{"schema":"docx.batch/1","ops":[{"op":"header","params":{"text":"a"}}]}' > d3-story-v1.json
+  $ office.exe batch --format docx d3-storyv1.docx d3-story-v1.json --json > d3-storyv1.json 2>&1; echo $?
+  1
+  $ jq -rc '.error.message' d3-storyv1.json
+  invalid authoring script: ops[0].op 'header' needs "schema": "docx.batch/2" (this script declares docx.batch/1)
 
 Authoring embeds referenced images (bounded per image and in aggregate); the
 authored document reads back with the media in place.

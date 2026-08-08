@@ -657,6 +657,7 @@ fn docx_element_name(element : @document.DocumentElement) -> String {
     TableCell(..) => "a table cell"
     Break(_) => "a break"
     BookmarkStart(_) => "a bookmark"
+    Field(..) => "a field"
   }
 }
 

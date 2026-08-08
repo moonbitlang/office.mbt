@@ -1428,6 +1428,12 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
               "endnotes", "number", true, "endnote refs authored",
             ),
             capability_field(
+              "headers", "number", true, "header stories authored",
+            ),
+            capability_field(
+              "footers", "number", true, "footer stories authored",
+            ),
+            capability_field(
               "transaction",
               SCHEMA_TRANSACTION,
               true,
@@ -1445,6 +1451,10 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
             "transactional-publication",
             "bounded-candidate-package",
             "comments-and-notes-require=docx.batch/2",
+            "headers-footers-require=docx.batch/2",
+            "header-footer-variants=default|first|even",
+            "header-footer-content=plain-blocks-and-fields",
+            "fields=PAGE|NUMPAGES",
             "max-image-bytes=\{8 * 1024 * 1024}",
             "max-total-image-bytes=\{32 * 1024 * 1024}",
           ],

@@ -69,6 +69,11 @@ fn build_docx_package(
   comments_extended_xml~ : String?,
   footnotes_xml~ : String?,
   endnotes_xml~ : String?,
+  // (part name under word/, serialized story) per header and footer part, in
+  // relationship-allocation order.
+  header_parts~ : Array[(String, String)],
+  footer_parts~ : Array[(String, String)],
+  settings_xml~ : String?,
   limits? : @opc.PackageLimits,
 ) -> Bytes raise @opc.PackageBuildError {
   builder.add_default(
@@ -139,6 +144,31 @@ fn build_docx_package(
         "/word/endnotes.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml",
       )
       builder.add_part("word/endnotes.xml", @utf8.encode(xml))
+    }
+    None => ()
+  }
+  for part in header_parts {
+    let (name, xml) = part
+    builder.add_override(
+      "/word/\{name}",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml",
+    )
+    builder.add_part("word/\{name}", @utf8.encode(xml))
+  }
+  for part in footer_parts {
+    let (name, xml) = part
+    builder.add_override(
+      "/word/\{name}",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml",
+    )
+    builder.add_part("word/\{name}", @utf8.encode(xml))
+  }
+  match settings_xml {
+    Some(xml) => {
+      builder.add_override(
+        "/word/settings.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml",
+      )
+      builder.add_part("word/settings.xml", @utf8.encode(xml))
     }
     None => ()
   }
@@ -289,12 +319,87 @@ fn write_paragraph(
     nodes.push(node)
   }
   for child in children {
-    nodes.push(XmlElement(write_inline(child, ctx)))
+    match child {
+      // A WML field is a RUN SEQUENCE, not one run, so it is expanded here
+      // (paragraph level) rather than in write_inline, which returns a single
+      // element.
+      Field(instruction~, result~) =>
+        for element in write_field(instruction, result) {
+          nodes.push(XmlElement(element))
+        }
+      _ => nodes.push(XmlElement(write_inline(child, ctx)))
+    }
   }
   for node in trailing {
     nodes.push(node)
   }
   @xml.xml_element("w:p", children=nodes)
+}
+
+///|
+/// The field instructions this writer can serialize. Deliberately tiny: the
+/// page-numbering pair, which is what a paginated document needs. Anything
+/// else fails closed rather than emitting an instruction Word would show as
+/// an error.
+fn is_writable_field_instruction(instruction : String) -> Bool {
+  instruction is ("PAGE" | "NUMPAGES")
+}
+
+///|
+/// Serializes one field as the CANONICAL COMPLEX-FIELD run sequence:
+///
+///   <w:r><w:fldChar w:fldCharType="begin"/></w:r>
+///   <w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r>
+///   <w:r><w:fldChar w:fldCharType="separate"/></w:r>
+///   <w:r><w:t>1</w:t></w:r>            (the cached result, when non-empty)
+///   <w:r><w:fldChar w:fldCharType="end"/></w:r>
+///
+/// The complex form is chosen over `w:fldSimple` on purpose: this repository's
+/// own body reader has a begin/separate/end state machine and reads the result
+/// region as ordinary content, whereas `w:fldSimple` is not in its element
+/// vocabulary and would be dropped with an "unrecognised element" warning.
+/// It is also the shape Word itself writes when a page number is inserted.
+fn write_field(
+  instruction : String,
+  result : String,
+) -> Array[XmlElement] raise DocxError {
+  if !is_writable_field_instruction(instruction) {
+    raise Unsupported(
+      message="unsupported field instruction '\{instruction}' (this writer serializes PAGE and NUMPAGES)",
+    )
+  }
+  check_attribute_value("a field's cached result", result)
+  let elements = [
+    field_char_run("begin"),
+    @xml.xml_element("w:r", children=[
+      XmlElement(
+        @xml.xml_element(
+          "w:instrText",
+          attributes={ "xml:space": "preserve" },
+          children=[XmlText(" " + instruction + " ")],
+        ),
+      ),
+    ]),
+    field_char_run("separate"),
+  ]
+  if result != "" {
+    elements.push(
+      @xml.xml_element("w:r", children=[
+        XmlElement(@xml.xml_element("w:t", children=[XmlText(result)])),
+      ]),
+    )
+  }
+  elements.push(field_char_run("end"))
+  elements
+}
+
+///|
+fn field_char_run(kind : String) -> XmlElement {
+  @xml.xml_element("w:r", children=[
+    XmlElement(
+      @xml.xml_element("w:fldChar", attributes={ "w:fldCharType": kind }),
+    ),
+  ])
 }
 
 ///|
@@ -582,11 +687,26 @@ fn parse_note_index(text : String) -> Int? {
 }
 
 ///|
-fn blank_section_properties() -> XmlElement {
-  @xml.xml_element("w:sectPr", children=[
+/// The document's single section. CT_SectPr is an ENFORCED sequence: the
+/// header/footer references come first (EG_HdrFtrReferences), then
+/// EG_SectPrContents in schema order — of which this writer emits pgSz,
+/// pgMar and, when a `first` variant exists, titlePg (which is what makes
+/// Word honour a distinct first-page header/footer). With no references the
+/// output is byte-identical to the reference-free writer.
+fn blank_section_properties(
+  references? : Array[XmlNode] = [],
+  title_page? : Bool = false,
+) -> XmlElement {
+  let children : Array[XmlNode] = []
+  for reference in references {
+    children.push(reference)
+  }
+  children.push(
     XmlElement(
       @xml.xml_element("w:pgSz", attributes={ "w:w": "12240", "w:h": "15840" }),
     ),
+  )
+  children.push(
     XmlElement(
       @xml.xml_element("w:pgMar", attributes={
         "w:top": "1440",
@@ -598,7 +718,11 @@ fn blank_section_properties() -> XmlElement {
         "w:gutter": "0",
       }),
     ),
-  ])
+  )
+  if title_page {
+    children.push(XmlElement(@xml.xml_element("w:titlePg")))
+  }
+  @xml.xml_element("w:sectPr", children~)
 }
 
 ///|
@@ -709,5 +833,6 @@ fn block_kind_name(element : DocumentElement) -> String {
     TableCell(..) => "table cell"
     Break(_) => "break"
     BookmarkStart(_) => "bookmark"
+    Field(..) => "field"
   }
 }

@@ -512,13 +512,16 @@ without publishing.
 | `format` | string | `"docx"` |
 | `output` | string | bounded destination path |
 | `ops` / `comments` / `footnotes` / `endnotes` | number | authoring op counts applied |
+| `headers` / `footers` | number | header/footer stories authored |
 | `transaction` | object | `office.transaction/2` validation, preservation, and publication report |
 
 Fresh DOCX authoring from a `docx.batch/2` script (accepts `docx.batch/1`;
-comment and note ops require `/2`) — paragraphs, runs, headings
-(Normal/Heading1..6 only), ordered/unordered lists, tables (with col/row
-spans), hyperlinks, images, footnotes/endnotes, and threaded comments. This is
-distinct from XLSX `batch`: DOCX has no existing-document mutation (#95), so it
+comment, note, header/footer, and field ops require `/2`) — paragraphs, runs,
+headings (Normal/Heading1..6 only), ordered/unordered lists, tables (with
+col/row spans), hyperlinks, images, footnotes/endnotes, threaded comments,
+header/footer stories for the section's default/first/even variants, and live
+`PAGE`/`NUMPAGES` fields. Existing-document MUTATION is still out of scope: DOCX
+authoring is fresh-only, so it
 is selected with `--format docx`, publishes to the positional destination
 (never `--out`), and is no-replace by default (`--overwrite` to replace).
 Document properties are not authored (the writer has no path for them; a
@@ -1088,13 +1091,16 @@ capped at 10,000 ops; an empty `ops` array yields a blank document.
   under a still-open `row_span` is not written at all — as in the example,
   each spanned row lists FEWER cells, and rows must tile the same total
   width, at most 63 columns (ragged or wider tables fail).
-## `docx.batch/2` — authoring with comments (`docx batch <output> <script.json>`)
+## `docx.batch/2` — authoring with comments, stories, and fields (`docx batch <output> <script.json>`)
 
 `docx.batch/2` WIDENS `/1`: every `/1` script parses unchanged under
 either declaration, and everything above (strict validation, integer
 lexemes, character rules, fresh-document-only, atomicity, the op cap)
-applies verbatim. The one addition is the `comment` op — declaring
-`/2` is required to use it and changes nothing else.
+applies verbatim. The additions are the `comment`, `header`, and
+`footer` ops and the `{"field": ...}` run — declaring `/2` is required
+to use any of them and changes nothing else. A `/2` script that uses
+none of them produces BYTE-IDENTICAL output to the version that
+predated them.
 
 ```json
 {
@@ -1163,6 +1169,87 @@ applies verbatim. The one addition is the `comment` op — declaring
   dense per kind starting at 1 (`/footnotes/note[@id=1]`, …), with the
   separator/continuationSeparator plumbing and the in-note mark run
   handled by the writer.
+
+### `header` / `footer` ops and page fields (`/2`, #95)
+
+A paginated document needs two things `/1` had no way to express: a
+running header/footer, and a page number that Word recalculates.
+
+```json
+{
+  "schema": "docx.batch/2",
+  "ops": [
+    {"op": "paragraph", "params": {"text": "Quarterly Report", "style": "Heading1"}},
+    {"op": "header", "params": {"variant": "default", "text": "ACME — internal"}},
+    {"op": "header", "params": {"variant": "first", "text": "Cover"}},
+    {"op": "footer", "params": {"paragraphs": [
+      {"align": "center", "runs": [
+        {"text": "Page "},
+        {"field": {"type": "PAGE"}},
+        {"text": " of "},
+        {"field": {"type": "NUMPAGES"}}
+      ]}
+    ]}}
+  ]
+}
+```
+
+- **`variant`** (optional, default `"default"`): the OOXML reference
+  type — `default`, `first`, or `even`. A section declares each variant
+  at most ONCE per kind; a repeat is refused with the offending op's
+  address and the address of the op that already claimed it.
+- **Body** (required): exactly one of `text` (one plain paragraph) or
+  `paragraphs[]` — the same grammar as a comment body, so run
+  formatting, `style`, `align`, and `list` all work. Story content is
+  PLAIN: hyperlinks, images, and note references are rejected because
+  they would need relationships in the story's OWN
+  `word/_rels/headerN.xml.rels`, which this writer does not emit.
+  Fields ARE allowed, and are the point.
+- Story ops produce NO body block: they are not commentable, they do
+  not shift `on` / `reply_to` op indexes' meaning (those still name op
+  indexes), and `dump` does not yet re-express them (see the `residual`
+  code `docx.sections_not_dumped`).
+- Each story becomes its own part (`word/header1.xml`, …) with a
+  `w:hdr` / `w:ftr` root, its content-type override, a MAIN-part
+  relationship, and a `w:headerReference` / `w:footerReference` in
+  `sectPr`. References are emitted in the canonical order
+  default, first, even — headers then footers — regardless of op order,
+  so read-back is deterministic. They come FIRST inside `sectPr`, which
+  CT_SectPr's enforced sequence requires.
+- Two flags are emitted so the variants actually TAKE EFFECT in Word
+  rather than being silently ignored: a `first` story adds `w:titlePg`
+  to `sectPr`, and an `even` story adds `word/settings.xml` carrying
+  `w:evenAndOddHeaders`. Neither part/flag exists when the
+  corresponding variant is absent.
+- Read-back: `office outline` reports `counts.headers` / `counts.footers`
+  and `sections[].headers[]` / `sections[].footers[]` (`{variant, part}`
+  with a 1-based `part`), and the stories are addressable as
+  `/docx/header[n]` / `/docx/footer[n]`.
+- **`{"field": {"type": "PAGE"|"NUMPAGES"}}`** is a RUN entry
+  (exclusive within its run object), allowed in body paragraphs, table
+  cells, and header/footer stories — but NOT in comment or note bodies,
+  and not inside a hyperlink's runs. It serializes as the CANONICAL
+  COMPLEX FIELD:
+
+  ```xml
+  <w:r><w:fldChar w:fldCharType="begin"/></w:r>
+  <w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r>
+  <w:r><w:fldChar w:fldCharType="separate"/></w:r>
+  <w:r><w:t>1</w:t></w:r>
+  <w:r><w:fldChar w:fldCharType="end"/></w:r>
+  ```
+
+  The complex form is used rather than `w:fldSimple` because this
+  repository's own reader has a begin/separate/end state machine and
+  reads the result region as ordinary content, whereas `w:fldSimple` is
+  outside its element vocabulary and would be dropped with a warning.
+  The `<w:t>1</w:t>` is the CACHED RESULT — what a consumer that does
+  not recalculate fields displays — and is what `office text` reports
+  for the footer until the document is repaginated. Only `PAGE` and
+  `NUMPAGES` are accepted; every other instruction is refused.
+  Consequence for round-tripping: story text round-trips node for node,
+  but a field does NOT — the reader has no field node and gives back the
+  cached result as ordinary runs.
 
 ## `docx.annotate/1` — one comment for an existing document (`docx annotate add`)
 

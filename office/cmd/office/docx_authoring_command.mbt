@@ -39,6 +39,8 @@ fn docx_batch_result_json(
     "comments": Json::number(result.report.comments.to_double()),
     "footnotes": Json::number(result.report.footnotes.to_double()),
     "endnotes": Json::number(result.report.endnotes.to_double()),
+    "headers": Json::number(result.report.headers.to_double()),
+    "footers": Json::number(result.report.footers.to_double()),
     "transaction": result.transaction.to_json(),
   })
 }

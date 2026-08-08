@@ -240,6 +240,8 @@ pub fn write_docx_with_annotations(
   comments? : Array[@docx_impl.CommentSpec] = [],
   footnotes? : Array[@docx_impl.NoteSpec] = [],
   endnotes? : Array[@docx_impl.NoteSpec] = [],
+  headers? : Array[@docx_impl.HeaderFooterSpec] = [],
+  footers? : Array[@docx_impl.HeaderFooterSpec] = [],
 ) -> Bytes raise DocxError {
   bridge_core_error(() => {
     @docx_impl.write_docx_with_annotations(
@@ -247,8 +249,23 @@ pub fn write_docx_with_annotations(
       comments~,
       footnotes~,
       endnotes~,
+      headers~,
+      footers~,
     )
   })
+}
+
+///|
+/// Validates and builds one header or footer story for
+/// `write_docx_with_annotations`: `variant` is the OOXML reference type
+/// (`default`, `first`, `even`) and the body is block-level plain content
+/// (paragraphs and tables; fields allowed, hyperlinks/images/notes not).
+/// See `@docx.header_footer_spec`.
+pub fn header_footer_spec(
+  variant~ : String,
+  body : Array[DocumentElement],
+) -> @docx_impl.HeaderFooterSpec raise DocxError {
+  bridge_core_error(() => @docx_impl.header_footer_spec(variant~, body))
 }
 
 ///|

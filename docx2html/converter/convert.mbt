@@ -261,6 +261,10 @@ fn DocumentConverter::convert_element(
     }
     CommentReference(comment_id) =>
       self.convert_comment_reference(element, comment_id)
+    // Authoring-side only: the reader never produces a Field, but a caller
+    // may hand a hand-built tree to the converter. HTML has no live field,
+    // so the cached result is what a non-updating consumer would show.
+    Field(result~, ..) => if result == "" { [] } else { [html_text(result)] }
   }
 }
 

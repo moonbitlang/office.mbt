@@ -139,6 +139,8 @@ pub(all) struct DocxAuthorReport {
   comments : Int
   footnotes : Int
   endnotes : Int
+  headers : Int
+  footers : Int
 } derive(Eq, @debug.Debug)
 #deprecated
 pub fn DocxAuthorReport::equal(Self, Self) -> Bool

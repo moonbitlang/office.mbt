@@ -117,11 +117,27 @@ async fn run_batch(matches : @argparse.Matches) -> Unit {
       },
     )
   }
+  let batch_headers = script.build_headers() catch {
+    BatchError(message) => raise @cli.CliError("error: \{message}")
+  }
+  let batch_footers = script.build_footers() catch {
+    BatchError(message) => raise @cli.CliError("error: \{message}")
+  }
+  let headers = []
+  for story in batch_headers {
+    headers.push(story_spec(story))
+  }
+  let footers = []
+  for story in batch_footers {
+    footers.push(story_spec(story))
+  }
   let bytes = @docx2html.write_docx_with_annotations(
     body,
     comments~,
     footnotes~,
     endnotes~,
+    headers~,
+    footers~,
   ) catch {
     err => raise @cli.CliError(locate_writer_failure(script, body, err))
   }
@@ -180,6 +196,17 @@ fn docx_error_message(err : Error) -> String {
 /// script's block->op mapping names the right op even when comment ops
 /// are interleaved. Cheap, error-path-only, and it cannot diverge from
 /// the writer's real rules because it IS the writer.
+/// Builds one header/footer writer spec, attributing a refusal to the exact
+/// script op.
+fn story_spec(
+  story : @batch.BatchStory,
+) -> @docx_impl.HeaderFooterSpec raise @cli.CliError {
+  @docx2html.header_footer_spec(variant=story.variant(), story.body()) catch {
+    err => raise CliError("error: \{story.at()}: \{docx_error_message(err)}")
+  }
+}
+
+///|
 fn locate_writer_failure(
   script : @batch.BatchScript,
   body : Array[@docx2html.DocumentElement],

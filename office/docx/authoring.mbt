@@ -20,6 +20,8 @@ pub(all) struct DocxAuthorReport {
   comments : Int
   footnotes : Int
   endnotes : Int
+  headers : Int
+  footers : Int
 } derive(Eq, @debug.Debug)
 
 ///|
@@ -144,6 +146,7 @@ pub async fn author_document(
   images : Map[String, Bytes],
 ) -> DocxAuthorResult {
   let (footnotes, endnotes) = script.note_counts()
+  let (headers, footers) = script.story_counts()
   let report = @transaction.transact_create(
     options,
     Docx,
@@ -163,6 +166,8 @@ pub async fn author_document(
       comments: script.comment_count(),
       footnotes,
       endnotes,
+      headers,
+      footers,
     },
     transaction: report,
   }
