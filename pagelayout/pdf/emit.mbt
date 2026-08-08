@@ -64,19 +64,41 @@ fn winansi_code(codepoint : Int) -> Int? {
 priv struct PdfFace {
   spec : @pagelayout.FontSpec
   metrics : @fonts.FaceMetrics
-  /// The complete bundled sfnt, for families that ship outlines. Its
-  /// presence is what makes this font composite rather than simple:
-  /// there is no point addressing glyphs by index without the program
-  /// those indices refer to.
+  /// The complete bundled sfnt, for families that ship outlines. A face
+  /// without one is declared and not embedded, and the viewer substitutes.
   program : Bytes?
+  /// Whether this font is written as a Type0 composite rather than a
+  /// simple TrueType font. Decided from the characters the document
+  /// actually uses, not from the family — see `needs_composite`.
+  composite : Bool
 }
 
 ///|
-/// Whether this font is written as a Type0 composite. Only a composite
-/// font can address more than 256 codes, so it is what lets CJK render
-/// at all.
+/// Whether this font is written as a Type0 composite.
 fn PdfFace::is_composite(self : PdfFace) -> Bool {
-  self.program is Some(_)
+  self.composite
+}
+
+///|
+/// A font goes composite exactly when it can draw something WinAnsi
+/// cannot address — a codepoint outside the encoding that this face has a
+/// glyph for. That is what CJK requires and what nothing else does: a
+/// simple font is smaller, more widely understood, and spaces text from
+/// `/Widths` rather than a `/W` array, so it stays the default wherever it
+/// suffices.
+///
+/// Both halves matter. Without the encoding test every face would go
+/// composite needlessly; without the glyph test a face would go composite
+/// for a character it renders as `.notdef` anyway, and the run would then
+/// be spaced by that glyph's width instead of being broken around it at
+/// the advance the layout chose.
+fn needs_composite(face : PdfFace, codepoints : Array[Int]) -> Bool {
+  for codepoint in codepoints {
+    if winansi_code(codepoint) is None && face.metrics.has_char(codepoint) {
+      return true
+    }
+  }
+  false
 }
 
 ///|
@@ -113,23 +135,7 @@ fn composite_font_object(
   codepoints : Array[Int],
 ) -> Int raise {
   let metrics = face.metrics
-  let subset = @pdflite.pdf_truetype_subset_font(program, codepoints)
-  // /Length1 is the *uncompressed* program length, so it is taken before
-  // the stream is flated
-  let stream = @syntax.pdf_stream(
-    PdfDictionary([
-      (name("/Length"), PdfInteger(subset.length())),
-      (name("/Length1"), PdfInteger(subset.length())),
-    ]),
-    StreamGot(subset),
-  )
-  let fontfile = document.add_object(
-    @pdflite.pdf_encode_stream_with_filter(
-      @pdflite.PdfStreamFlate.filter_name(),
-      stream,
-      only_if_smaller=true,
-    ),
-  )
+  let fontfile = embedded_program(document, program, codepoints)
   // widths and ToUnicode are keyed by CID, which here is the glyph id
   let widths : Array[(Int, Double)] = []
   let tounicode : Array[(Int, @core.PdfBytes)] = []
@@ -245,7 +251,12 @@ fn name(text : String) -> @core.PdfName {
 /// The font object for one interned IR font: a simple TrueType font with
 /// a descriptor and a `/Widths` array from the same metrics the layout
 /// measured with, and no embedded program.
-fn font_object(document : @pdflite.PdfDocument, face : PdfFace) -> Int raise {
+fn font_object(
+  document : @pdflite.PdfDocument,
+  face : PdfFace,
+  index : Int,
+  codepoints : Array[Int],
+) -> Int raise {
   let metrics = face.metrics
   let first = 32
   let last = 255
@@ -254,13 +265,30 @@ fn font_object(document : @pdflite.PdfDocument, face : PdfFace) -> Int raise {
     // advance_pt at 1000pt is exactly the 1/1000-em width PDF wants
     widths.push(metrics.advance_pt(code, 1000.0).round().to_int())
   }
-  // the bundled Latin faces carry metrics without outlines, so there is
-  // no program to embed; pdflite writes a substitutable font
-  let descriptor = font_descriptor(face, None, None)
+  // A face with a bundled program is embedded so the page renders the
+  // shapes it was laid out with. Without one the font is only declared,
+  // and the viewer substitutes — harmless for Latin, since every run is
+  // positioned explicitly and `/Widths` governs spacing.
+  let (fontfile, basefont) : (@pdflite.PdfFontFile?, @core.PdfName) = match
+    face.program {
+    Some(program) =>
+      (
+        Some(PdfFontFile2(embedded_program(document, program, codepoints))),
+        name(
+          "/" +
+          subset_tag(index) +
+          "+" +
+          pdf_name_body(face.spec.family) +
+          style_suffix(face.spec),
+        ),
+      )
+    None => (None, name(base_font_name(face.spec)))
+  }
+  let descriptor = font_descriptor(face, fontfile, None)
   document.write_font(
     PdfFontSimple({
       fonttype: PdfTrueType,
-      basefont: Some(name(base_font_name(face.spec))),
+      basefont: Some(basefont),
       firstchar: first,
       lastchar: last,
       widths,
@@ -268,6 +296,32 @@ fn font_object(document : @pdflite.PdfDocument, face : PdfFace) -> Int raise {
       fontmetrics: None,
       encoding: PdfWinAnsiEncoding,
     }),
+  )
+}
+
+///|
+/// Subset a bundled program to the characters used and add it as a
+/// flate-compressed `/FontFile2` stream. `/Length1` is the *uncompressed*
+/// program length, so it is taken before the stream is encoded.
+fn embedded_program(
+  document : @pdflite.PdfDocument,
+  program : Bytes,
+  codepoints : Array[Int],
+) -> Int raise {
+  let subset = @pdflite.pdf_truetype_subset_font(program, codepoints)
+  let stream = @syntax.pdf_stream(
+    PdfDictionary([
+      (name("/Length"), PdfInteger(subset.length())),
+      (name("/Length1"), PdfInteger(subset.length())),
+    ]),
+    StreamGot(subset),
+  )
+  document.add_object(
+    @pdflite.pdf_encode_stream_with_filter(
+      @pdflite.PdfStreamFlate.filter_name(),
+      stream,
+      only_if_smaller=true,
+    ),
   )
 }
 
@@ -288,15 +342,19 @@ fn pdf_name_body(family : String) -> String {
 ///|
 /// `/BaseFont` names carry the style, as PDF expects: `Carlito-BoldItalic`.
 fn base_font_name(spec : @pagelayout.FontSpec) -> String {
-  let sb = StringBuilder()
-  sb.write_string("/")
-  sb.write_string(pdf_name_body(spec.family))
+  "/" + pdf_name_body(spec.family) + style_suffix(spec)
+}
+
+///|
+/// The style half of a `/BaseFont` name, as PDF expects it.
+fn style_suffix(spec : @pagelayout.FontSpec) -> String {
   if spec.bold && spec.italic {
-    sb.write_string("-BoldItalic")
+    "-BoldItalic"
   } else if spec.bold {
-    sb.write_string("-Bold")
+    "-Bold"
   } else if spec.italic {
-    sb.write_string("-Italic")
+    "-Italic"
+  } else {
+    ""
   }
-  sb.to_string()
 }
