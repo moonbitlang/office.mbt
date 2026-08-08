@@ -104,3 +104,52 @@ test "a font with no widths omits the W array rather than writing an empty one" 
   assert_true(text.contains("/Type0"))
   assert_false(text.contains("/W ["))
 }
+
+///|
+/// A composite font whose descriptor carries a ToUnicode map.
+fn cid_font_with_tounicode(
+  tounicode : Array[(Int, @core.PdfBytes)],
+) -> @pdflite.PdfFont {
+  let descriptor = { ..cid_descriptor(), tounicode: Some(tounicode) }
+  PdfFontCIDKeyed({
+    basefont: @core.pdf_name_of_bytes(b"/NotoSansSC"),
+    composite: {
+      cid_system_info: {
+        registry: b"Adobe",
+        ordering: b"Identity",
+        supplement: 0,
+      },
+      cid_basefont: @core.pdf_name_of_bytes(b"/NotoSansSC"),
+      cid_fontdescriptor: descriptor,
+      cid_widths: [],
+      cid_widths2: [],
+      cid_default_width: 1000,
+      cid_default_width2: [],
+    },
+    encoding: PdfPredefinedCMap(@core.pdf_name_of_bytes(b"/Identity-H")),
+  })
+}
+
+///|
+test "a composite font's ToUnicode declares a two-byte codespace" {
+  // U+4E2D at CID 8805 and U+6587 at CID 14750, the glyph ids Noto Sans SC
+  // gives those characters. A one-byte codespace would have a reader take
+  // the high byte of each CID for a whole character.
+  let text = cid_pdf_text(
+    cid_font_with_tounicode([(8805, b"\x4e\x2d"), (14750, b"\x65\x87")]),
+  )
+  assert_true(text.contains("<0000><FFFF>"))
+  assert_false(text.contains("<00><FF>"))
+  // codes are the CIDs the content stream writes, at the codespace's width
+  assert_true(text.contains("<2265><2265><4E2D>"))
+  assert_true(text.contains("<399e><399e><6587>"))
+  assert_true(text.contains("/ToUnicode"))
+}
+
+///|
+test "a composite ToUnicode pads CIDs to the codespace width" {
+  // CID 5 is one hex digit; written as <05> it would fall outside the
+  // two-byte codespace and be ignored.
+  let text = cid_pdf_text(cid_font_with_tounicode([(5, b"\x00\x41")]))
+  assert_true(text.contains("<0005><0005><0041>"))
+}
