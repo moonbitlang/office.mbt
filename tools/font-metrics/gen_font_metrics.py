@@ -62,6 +62,10 @@ FACES = [
 
 def strip_to_metrics(path: Path) -> bytes:
     font = TTFont(str(path), lazy=False)
+    # fontTools stamps head.modified with the wall clock on save, and
+    # head.checkSumAdjustment follows it. Left alone, regenerating this
+    # bundle from unchanged sources produces different bytes every run.
+    font.recalcTimestamp = False
     # post format 3 drops glyph names — smallest valid post table.
     post = font["post"]
     post.formatType = 3.0
