@@ -41,11 +41,13 @@ fn PdfDocument::pdf_text_make_true_type_font(
   descriptor : PdfFontDescriptor,
   encoding : PdfEncoding,
 ) -> @syntax.PdfObject raise @core.PdfError {
-  let ttf = match pdf_text_fontfile2_number(descriptor.fontfile) {
-    Some(number) => number
-    None => raise FontWriteUnsupported
-  }
-  let fontdescriptor = @syntax.PdfDictionary([
+  // `/FontFile2` is optional (PDF 32000-1 §9.8.1). A descriptor without
+  // one describes a font the consumer is expected to substitute, which
+  // is how a document references an installed font rather than carrying
+  // it. The widths in the font dictionary still govern spacing, so the
+  // layout is unaffected by which face the viewer picks.
+  let embedded = pdf_text_fontfile2_number(descriptor.fontfile)
+  let fontdescriptor_entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
     (pdf_text_type_key_name, PdfNameObject(pdf_text_font_descriptor_key_name)),
     (pdf_text_font_name_key_name, PdfNameObject(basefont)),
     (pdf_text_flags_key_name, PdfInteger(descriptor.flags)),
@@ -73,8 +75,15 @@ fn PdfDocument::pdf_text_make_true_type_font(
       pdf_text_max_width_key_name,
       pdf_text_integer_of_double(descriptor.maxwidth),
     ),
-    (pdf_text_font_file2_key_name, PdfIndirect(ttf)),
-  ])
+  ]
+  match embedded {
+    Some(number) =>
+      fontdescriptor_entries.push(
+        (pdf_text_font_file2_key_name, PdfIndirect(number)),
+      )
+    None => ()
+  }
+  let fontdescriptor = @syntax.PdfDictionary(fontdescriptor_entries)
   let fontdescriptor_number = self.add_object(fontdescriptor)
   let tounicode_entry = match descriptor.tounicode {
     Some(tounicode) =>

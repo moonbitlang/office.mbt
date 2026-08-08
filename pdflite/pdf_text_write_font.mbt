@@ -17,8 +17,11 @@ fn PdfDocument::pdf_text_add_font_object(
 /// Write a parsed font into the document and return its object number.
 ///
 /// Standard fonts, Type 3 fonts with descriptors, and TrueType fonts with
-/// descriptors are supported. `objnum` can force the destination object number
-/// for rewrite workflows. Unsupported font shapes raise `@core.PdfError::FontWriteUnsupported`.
+/// descriptors are supported. A TrueType descriptor may carry a `/FontFile2`
+/// or omit it: omitting one writes a non-embedded font the consumer
+/// substitutes, whose `/Widths` still govern spacing. `objnum` can force the
+/// destination object number for rewrite workflows. Unsupported font shapes —
+/// notably CID-keyed fonts — raise `@core.PdfError::FontWriteUnsupported`.
 pub fn PdfDocument::write_font(
   self : PdfDocument,
   font : PdfFont,
