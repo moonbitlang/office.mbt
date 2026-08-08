@@ -1,0 +1,9 @@
+import {
+  "bobzhang/pagelayout",
+}
+
+import {
+  "bobzhang/pagelayout",
+  "bobzhang/pagelayout/paragraph",
+  "bobzhang/pagelayout/paginate",
+} for "test"
