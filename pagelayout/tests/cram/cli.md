@@ -17,9 +17,10 @@ pagelayout 0.1.0
 ## Help
 
 ```mooncram
-$ "$PAGELAYOUT_CLI" --help | grep -E '^(Usage: pagelayout|  render|  info|  -V, --version)'
+$ "$PAGELAYOUT_CLI" --help | grep -E '^(Usage: pagelayout|  render|  pdf|  info|  -V, --version)'
 Usage: pagelayout <command>
   render  Render a DOCX to one SVG file per page.
+  pdf     Render a DOCX to a single PDF file.
   info    Report the page geometry and content a DOCX lays out to.
   -V, --version  Show version information.
 ```
@@ -63,6 +64,18 @@ rendering does not depend on the viewer's fonts.
 $ grep -o 'font-family="[^"]*"' page.svg; grep -c 'Walking on imported air' page.svg
 font-family="Carlito"
 1
+```
+
+## PDF
+
+The same document renders to a PDF, which begins with a version header
+and ends with the trailer every reader looks for.
+
+```mooncram
+$ "$PAGELAYOUT_CLI" pdf "$PAGELAYOUT_DOCX" out.pdf; head -c 8 out.pdf; echo; tail -c 6 out.pdf
+wrote 1 page(s)
+%PDF-1.7
+%%EOF
 ```
 
 ## Errors

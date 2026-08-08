@@ -26,7 +26,7 @@ priv enum Cmd {
 fn command() -> @argparse.Command {
   Command(
     "pagelayout",
-    about="Lay out and render DOCX documents to paginated SVG.",
+    about="Lay out and render DOCX documents to paginated SVG or PDF.",
     version="pagelayout " + cmd_version,
     subcommand_required=true,
     disable_help_subcommand=true,
