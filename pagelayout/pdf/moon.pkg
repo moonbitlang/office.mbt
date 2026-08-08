@@ -3,6 +3,7 @@ supported_targets = "native"
 import {
   "bobzhang/pagelayout",
   "bobzhang/pagelayout/fonts",
+  "bobzhang/pagelayout/fontoutlines",
   "bobzhang/pdflite",
   "bobzhang/pdflite/content",
   "bobzhang/pdflite/core",

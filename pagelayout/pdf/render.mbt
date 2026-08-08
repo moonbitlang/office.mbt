@@ -24,9 +24,14 @@ fn colour_of(c : @pagelayout.Color) -> (Double, Double, Double) {
 fn emit_run(
   ops : Array[@content.PdfContentOp],
   run : @pagelayout.GlyphRun,
+  face : PdfFace,
   resource : @core.PdfName,
   page_height : Double,
 ) -> Unit {
+  if face.is_composite() {
+    emit_run_composite(ops, run, face, resource, page_height)
+    return
+  }
   let codes : Array[Byte] = []
   let mut segment_x = run.x_pt
   let mut pending_x = run.x_pt
@@ -70,6 +75,65 @@ fn emit_run(
 }
 
 ///|
+/// The codepoint starting at UTF-16 code unit `i`, with the index just
+/// past it. The IR pairs one advance with each code unit and gives the
+/// trail half of a surrogate pair advance 0, so a run walks by code unit
+/// but encodes by character.
+fn codepoint_at(text : String, i : Int) -> (Int, Int) {
+  let unit = text[i].to_int()
+  if unit >= 0xD800 && unit <= 0xDBFF && i + 1 < text.length() {
+    let low = text[i + 1].to_int()
+    if low >= 0xDC00 && low <= 0xDFFF {
+      return (0x10000 + ((unit - 0xD800) << 10) + (low - 0xDC00), i + 2)
+    }
+  }
+  (unit, i + 1)
+}
+
+///|
+/// Emit one glyph run in a composite font. Every character encodes — a
+/// codepoint the face lacks maps to glyph 0 rather than breaking the
+/// string — so the whole run is one `Tj` of two-byte CIDs placed by a
+/// single `Tm`.
+fn emit_run_composite(
+  ops : Array[@content.PdfContentOp],
+  run : @pagelayout.GlyphRun,
+  face : PdfFace,
+  resource : @core.PdfName,
+  page_height : Double,
+) -> Unit {
+  let codes : Array[Byte] = []
+  let mut i = 0
+  while i < run.text.length() {
+    let (codepoint, next) = codepoint_at(run.text, i)
+    // Identity-H: the code is the glyph index itself
+    let glyph = face.metrics.cmap.get(codepoint).unwrap_or(0)
+    codes.push((glyph >> 8).to_byte())
+    codes.push((glyph & 0xFF).to_byte())
+    i = next
+  }
+  if codes.length() == 0 {
+    return
+  }
+  let (r, g, b) = colour_of(run.color)
+  ops.push(Op_BT)
+  ops.push(Op_Tf(resource, run.size_pt))
+  ops.push(Op_rg(r, g, b))
+  ops.push(
+    Op_Tm({
+      a: 1,
+      b: 0,
+      c: 0,
+      d: 1,
+      e: run.x_pt,
+      f: flip(page_height, run.baseline_pt),
+    }),
+  )
+  ops.push(Op_Tj(Bytes::from_array(codes)))
+  ops.push(Op_ET)
+}
+
+///|
 fn emit_rect(
   ops : Array[@content.PdfContentOp],
   rect : @pagelayout.RectItem,
@@ -105,22 +169,47 @@ fn emit_rect(
 ///|
 /// Render a page model to PDF bytes.
 ///
-/// Fonts are declared with widths from the bundled metrics but not
-/// embedded; see the module comment in emit.mbt for why, and for what
-/// that does and does not cost.
+/// Families with bundled outlines are embedded as Type0 composite fonts
+/// subset to the characters the document uses; the rest are declared with
+/// widths from the bundled metrics but not embedded. See the module
+/// comment in emit.mbt for why, and for what each choice costs.
 pub fn render_pdf(model : @pagelayout.PageModel) -> Bytes raise {
   let document = @pdflite.pdf_document_empty()
   document.set_version(1, 7)
+  let faces : Array[PdfFace] = []
+  for spec in model.fonts {
+    let family = @fonts.resolve_family(spec.family)
+    faces.push({
+      spec,
+      metrics: @fonts.face(family, bold=spec.bold, italic=spec.italic),
+      program: @fontoutlines.outline_sfnt(
+        family,
+        bold=spec.bold,
+        italic=spec.italic,
+      ),
+    })
+  }
+
+  // A composite font embeds a subset of its program, so which characters
+  // the document uses has to be known before any font object is written.
+  let used_codepoints = collect_codepoints(model, faces)
 
   // one PDF font object per interned IR font, shared by every page
   let font_objects : Array[Int] = []
-  for spec in model.fonts {
-    let metrics = @fonts.face(
-      @fonts.resolve_family(spec.family),
-      bold=spec.bold,
-      italic=spec.italic,
+  for index, face in faces {
+    font_objects.push(
+      match face.program {
+        Some(program) =>
+          composite_font_object(
+            document,
+            face,
+            program,
+            index,
+            used_codepoints[index],
+          )
+        None => font_object(document, face)
+      },
     )
-    font_objects.push(font_object(document, { spec, metrics }))
   }
   let pages : Array[@page.PdfPage] = []
   for model_page in model.pages {
@@ -134,7 +223,14 @@ pub fn render_pdf(model : @pagelayout.PageModel) -> Bytes raise {
           if !used.contains(number) {
             used.push(number)
           }
-          emit_run(ops, run, font_resource_name(number), model_page.height_pt)
+          guard faces.get(run.font) is Some(face) else { continue }
+          emit_run(
+            ops,
+            run,
+            face,
+            font_resource_name(number),
+            model_page.height_pt,
+          )
         }
         Rect(rect) => emit_rect(ops, rect, model_page.height_pt)
         Image(image) =>
@@ -179,6 +275,42 @@ pub fn render_pdf(model : @pagelayout.PageModel) -> Bytes raise {
   let page_root = document.add_pagetree(pages)
   ignore(document.add_root(page_root, []))
   @pdflite.pdf_write_document(document)
+}
+
+///|
+/// Which codepoints each interned font actually renders, in first-use
+/// order so the subset is a function of the document rather than of hash
+/// iteration. Only composite fonts are collected: a simple font embeds
+/// nothing, so its glyph coverage is the viewer's business.
+fn collect_codepoints(
+  model : @pagelayout.PageModel,
+  faces : Array[PdfFace],
+) -> Array[Array[Int]] {
+  let used : Array[Array[Int]] = []
+  let seen : Array[Map[Int, Unit]] = []
+  for _ in faces {
+    used.push([])
+    seen.push(Map([]))
+  }
+  for page in model.pages {
+    for item in page.items {
+      guard item is Text(run) else { continue }
+      guard faces.get(run.font) is Some(face) else { continue }
+      if !face.is_composite() {
+        continue
+      }
+      let mut i = 0
+      while i < run.text.length() {
+        let (codepoint, next) = codepoint_at(run.text, i)
+        if !seen[run.font].contains(codepoint) {
+          seen[run.font][codepoint] = ()
+          used[run.font].push(codepoint)
+        }
+        i = next
+      }
+    }
+  }
+  used
 }
 
 ///|

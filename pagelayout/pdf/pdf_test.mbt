@@ -235,3 +235,81 @@ test "an unembeddable image is skipped, not written as garbage" {
   let document = @pdflite.pdf_read_document_from_bytes(@pdf.render_pdf(model))
   inspect(document.endpage(), content="1")
 }
+
+///|
+test "cjk text is embedded as a composite font" {
+  let model = @paginate.paginate([
+    @paginate.Block::paragraph(para("中文测试")),
+  ])
+  let text = as_text(@pdf.render_pdf(model))
+  // a composite font: Type0 root, Identity-H, CIDFontType2 descendant
+  assert_true(text.contains("/Type0"))
+  assert_true(text.contains("/Identity-H"))
+  assert_true(text.contains("/CIDFontType2"))
+  // and the program itself, without which Identity-H's glyph indices
+  // would address whatever face the reader happened to substitute
+  assert_true(text.contains("/FontFile2"))
+  assert_true(text.contains("/CIDToGIDMap /Identity"))
+  // the subset tag PDF wants on an embedded subset
+  assert_true(text.contains("+NotoSansSC"))
+}
+
+///|
+test "latin text stays a simple font" {
+  let model = @paginate.paginate([@paginate.Block::paragraph(para("Hello"))])
+  let text = as_text(@pdf.render_pdf(model))
+  // Carlito bundles no outlines, so nothing is embedded and the reader
+  // substitutes — which is harmless for Latin
+  assert_true(text.contains("/TrueType"))
+  assert_false(text.contains("/Type0"))
+  assert_false(text.contains("/FontFile2"))
+}
+
+///|
+test "an embedded subset carries only the characters used" {
+  // one ideograph pulls in a handful of glyphs, not all 31,036
+  let small = @pdf.render_pdf(
+    @paginate.paginate([@paginate.Block::paragraph(para("中"))]),
+  )
+  let large = @pdf.render_pdf(
+    @paginate.paginate([
+      @paginate.Block::paragraph(
+        para(
+          "中文测试排版引擎确定性输出字体嵌入子集化效果显著",
+        ),
+      ),
+    ]),
+  )
+  // subsetting is what keeps a 10 MB face out of every document
+  assert_true(small.length() < 60000)
+  assert_true(large.length() > small.length())
+}
+
+///|
+test "rendering the same model twice is byte-identical" {
+  // subset tags come from the font's position in the model, not a
+  // process-global counter, so output stays a function of input
+  let model = @paginate.paginate([
+    @paginate.Block::paragraph(para("中文 mixed with Latin")),
+  ])
+  let first = @pdf.render_pdf(model)
+  let second = @pdf.render_pdf(model)
+  assert_eq(first.length(), second.length())
+  assert_true(first == second)
+}
+
+///|
+test "embedded cjk carries a ToUnicode map so the text stays extractable" {
+  let model = @paginate.paginate([@paginate.Block::paragraph(para("中文"))])
+  let text = as_text(@pdf.render_pdf(model))
+  // A composite font's codes are two bytes wide. Declaring a one-byte
+  // codespace still *renders* correctly — the glyphs do not care — but a
+  // reader then takes the high byte of every CID for a whole character,
+  // and pdftotext returns nothing for the page.
+  assert_true(text.contains("<0000><FFFF>"))
+  assert_false(text.contains("<00><FF>"))
+  // 中 is glyph 8805 (0x2265) and 文 glyph 14750 (0x399E) in Noto Sans SC;
+  // Identity-H writes those ids as the codes, so ToUnicode maps them back
+  assert_true(text.contains("<2265><2265><4E2D>"))
+  assert_true(text.contains("<399e><399e><6587>"))
+}
