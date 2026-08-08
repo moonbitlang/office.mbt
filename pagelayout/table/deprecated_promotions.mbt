@@ -109,3 +109,39 @@ pub extend Table with Eq::{not_equal, equal}
 ///|
 #deprecated("implicit trait-method promotion is being removed; call via the trait")
 pub extend Table with ToJson::{to_json}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend PlacedCell with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend PlacedCell with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend PlacedCell with ToJson::{to_json}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend PlacedRow with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend PlacedRow with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend PlacedRow with ToJson::{to_json}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend TableLayoutResult with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend TableLayoutResult with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend TableLayoutResult with ToJson::{to_json}

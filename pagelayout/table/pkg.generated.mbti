@@ -12,6 +12,12 @@ pub fn cell_span_pt(Array[Double], Int, Int) -> Double
 
 pub fn column_offset_pt(Array[Double], Int) -> Double
 
+pub fn emit_rows(@pagelayout.PageModel, TableLayoutResult, Double, Double, Int, Int, repeat_header? : Bool) -> Array[@pagelayout.PageItem]
+
+pub fn layout_table(Table, Double) -> TableLayoutResult
+
+pub fn rows_height_pt(TableLayoutResult, Int, Int, repeat_header? : Bool) -> Double
+
 // Errors
 
 // Types and methods
@@ -79,6 +85,42 @@ pub fn CellMargins::to_json(Self) -> Json
 #deprecated
 pub fn CellMargins::to_repr(Self) -> @debug.Repr
 
+pub(all) struct PlacedCell {
+  x_pt : Double
+  width_pt : Double
+  content_height_pt : Double
+  lines : Array[@paragraph.LineBox]
+  borders : Borders
+  margins : CellMargins
+  shading : @pagelayout.Color?
+  column : Int
+  grid_span : Int
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PlacedCell::equal(Self, Self) -> Bool
+#deprecated
+pub fn PlacedCell::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PlacedCell::to_json(Self) -> Json
+#deprecated
+pub fn PlacedCell::to_repr(Self) -> @debug.Repr
+
+pub(all) struct PlacedRow {
+  y_pt : Double
+  height_pt : Double
+  cells : Array[PlacedCell]
+  header : Bool
+  cant_split : Bool
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PlacedRow::equal(Self, Self) -> Bool
+#deprecated
+pub fn PlacedRow::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PlacedRow::to_json(Self) -> Json
+#deprecated
+pub fn PlacedRow::to_repr(Self) -> @debug.Repr
+
 pub(all) struct Row {
   cells : Array[Cell]
   header : Bool
@@ -128,6 +170,21 @@ pub fn TableLayout::not_equal(Self, Self) -> Bool
 pub fn TableLayout::to_json(Self) -> Json
 #deprecated
 pub fn TableLayout::to_repr(Self) -> @debug.Repr
+
+pub(all) struct TableLayoutResult {
+  width_pt : Double
+  height_pt : Double
+  columns : Array[Double]
+  rows : Array[PlacedRow]
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn TableLayoutResult::equal(Self, Self) -> Bool
+#deprecated
+pub fn TableLayoutResult::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn TableLayoutResult::to_json(Self) -> Json
+#deprecated
+pub fn TableLayoutResult::to_repr(Self) -> @debug.Repr
 
 pub(all) enum VMerge {
   VStart
