@@ -12,9 +12,13 @@ import {
 }
 
 // Values
-pub fn read_document(@xml.XmlElement, StyleSheet, theme? : ThemeFonts, numbering? : @numbering.Numbering) -> DocxDocument
+pub fn media_type(String) -> String?
+
+pub fn read_document(@xml.XmlElement, StyleSheet, theme? : ThemeFonts, numbering? : @numbering.Numbering, resolve_image? : (String) -> (Bytes, String)?) -> DocxDocument
 
 pub fn read_docx(Bytes) -> DocxDocument raise
+
+pub fn read_drawing(@xml.XmlElement) -> ImageRef?
 
 pub fn read_furniture_refs(@xml.XmlElement) -> FurnitureRefs
 
@@ -60,6 +64,20 @@ pub fn FurnitureRefs::not_equal(Self, Self) -> Bool
 pub fn FurnitureRefs::to_json(Self) -> Json
 #deprecated
 pub fn FurnitureRefs::to_repr(Self) -> @debug.Repr
+
+pub(all) struct ImageRef {
+  width : @pagelayout.Emu
+  height : @pagelayout.Emu
+  relationship : String
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn ImageRef::equal(Self, Self) -> Bool
+#deprecated
+pub fn ImageRef::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn ImageRef::to_json(Self) -> Json
+#deprecated
+pub fn ImageRef::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ParaProps {
   align : @paragraph.Alignment?

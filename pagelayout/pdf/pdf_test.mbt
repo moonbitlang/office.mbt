@@ -191,3 +191,47 @@ test "characters outside WinAnsi do not break the run that follows" {
   assert_true(text.contains("1 0 0 1 0 80 Tm"))
   assert_true(text.contains("1 0 0 1 24 80 Tm"))
 }
+
+///|
+test "an image becomes an XObject drawn at its box" {
+  let png = b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90\x77\x53\xde\x00\x00\x00\x0c\x49\x44\x41\x54\x08\xd7\x63\xf8\xcf\xc0\x00\x00\x03\x01\x01\x00\x18\xdd\x8d\xb0\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82"
+  let model = @pagelayout.PageModel::new()
+  let page = @pagelayout.Page::{ width_pt: 200, height_pt: 100, items: [] }
+  page.items.push(
+    Image({
+      x_pt: 10,
+      y_pt: 20,
+      w_pt: 50,
+      h_pt: 30,
+      data: png,
+      mime: "image/png",
+    }),
+  )
+  model.pages.push(page)
+  let text = as_text(@pdf.render_pdf(model))
+  // a PDF image fills the unit square, so the transform carries the
+  // size; the box's bottom edge is 100 - 20 - 30 = 50
+  assert_true(text.contains("50 0 0 30 10 50 cm"))
+  assert_true(text.contains("Do"))
+  assert_true(text.contains("/XObject"))
+}
+
+///|
+test "an unembeddable image is skipped, not written as garbage" {
+  let model = @pagelayout.PageModel::new()
+  let page = @pagelayout.Page::{ width_pt: 200, height_pt: 100, items: [] }
+  page.items.push(
+    Image({
+      x_pt: 0,
+      y_pt: 0,
+      w_pt: 10,
+      h_pt: 10,
+      data: b"not an image",
+      mime: "image/tiff",
+    }),
+  )
+  model.pages.push(page)
+  // still a readable PDF, just without the image
+  let document = @pdflite.pdf_read_document_from_bytes(@pdf.render_pdf(model))
+  inspect(document.endpage(), content="1")
+}

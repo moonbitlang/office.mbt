@@ -1092,3 +1092,110 @@ test "the header sits above the body and the footer below it" {
   // the footer's baseline sits above the footer margin
   assert_true(footer_y > page.height_pt - doc.section.footer_pt - 40.0)
 }
+
+///|
+// --- inline images ---
+
+///|
+/// A 1x1 PNG, the smallest real image bytes a reader will accept.
+fn tiny_png() -> Bytes {
+  b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90\x77\x53\xde\x00\x00\x00\x0c\x49\x44\x41\x54\x08\xd7\x63\xf8\xcf\xc0\x00\x00\x03\x01\x01\x00\x18\xdd\x8d\xb0\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82"
+}
+
+///|
+fn docx_with_image(drawing : String) -> Bytes raise {
+  let archive = @zip.Archive::new()
+  let ns =
+    #|xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+  archive.add(
+    "word/document.xml",
+    @utf8.encode(
+      "<?xml version=\"1.0\"?><w:document " +
+      ns +
+      "><w:body><w:p><w:r>" +
+      drawing +
+      "</w:r></w:p></w:body></w:document>",
+    ),
+  )
+  archive.add(
+    "word/_rels/document.xml.rels",
+    @utf8.encode(
+      (
+        #|<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+        #|<Relationship Id="rI" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/pic.png"/>
+        #|</Relationships>
+      ),
+    ),
+  )
+  archive.add("word/media/pic.png", tiny_png())
+  @zip.write(archive)
+}
+
+///|
+/// An inline drawing 2in wide by 1in tall (EMU: 914400 per inch).
+fn inline_drawing() -> String {
+  (
+    #|<w:drawing><wp:inline><wp:extent cx="1828800" cy="914400"/><a:graphic><a:graphicData><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:blipFill><a:blip r:embed="rI"/></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>
+  )
+}
+
+///|
+test "an inline drawing becomes an image block at its authored size" {
+  let doc = @docx.read_docx(docx_with_image(inline_drawing()))
+  json_inspect(doc.unsupported, content=[])
+  // paragraph, then the image
+  inspect(doc.blocks.length(), content="2")
+  guard! doc.blocks[1] is ImageBlock(width_pt~, height_pt~, mime~, ..)
+  // 1828800 EMU = 144pt, 914400 = 72pt
+  inspect(width_pt, content="144")
+  inspect(height_pt, content="72")
+  inspect(mime, content="image/png")
+}
+
+///|
+test "an image renders into the page model and validates" {
+  let doc = @docx.read_docx(docx_with_image(inline_drawing()))
+  let model = @paginate.paginate(doc.blocks, section=doc.section)
+  debug_inspect(model.validate(), content="[]")
+  let mut images = 0
+  for page in model.pages {
+    for item in page.items {
+      if item is Image(_) {
+        images += 1
+      }
+    }
+  }
+  inspect(images, content="1")
+}
+
+///|
+test "a floating drawing is reported rather than misplaced" {
+  let doc = @docx.read_docx(
+    docx_with_image(
+      // wp:anchor is a floating image: placing it without text wrapping
+      // would put it in the wrong place
+      (
+        #|<w:drawing><wp:anchor><wp:extent cx="914400" cy="914400"/><a:graphic><a:graphicData><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:blipFill><a:blip r:embed="rI"/></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>
+      ),
+    ),
+  )
+  // one paragraph, no image block
+  inspect(doc.blocks.length(), content="1")
+}
+
+///|
+test "an image too wide for the measure scales down" {
+  let doc = @docx.read_docx(
+    docx_with_image(
+      // 20in wide, far past a Letter measure
+      (
+        #|<w:drawing><wp:inline><wp:extent cx="18288000" cy="9144000"/><a:graphic><a:graphicData><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:blipFill><a:blip r:embed="rI"/></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>
+      ),
+    ),
+  )
+  let model = @paginate.paginate(doc.blocks, section=doc.section)
+  guard! model.pages[0].items[0] is Image(image)
+  // scaled to the 468pt content width, aspect ratio kept
+  inspect(image.w_pt, content="468")
+  inspect(image.h_pt, content="234")
+}

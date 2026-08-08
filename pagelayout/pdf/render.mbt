@@ -126,6 +126,7 @@ pub fn render_pdf(model : @pagelayout.PageModel) -> Bytes raise {
   for model_page in model.pages {
     let ops : Array[@content.PdfContentOp] = []
     let used : Array[Int] = []
+    let images : Array[Int] = []
     for item in model_page.items {
       match item {
         Text(run) => {
@@ -136,8 +137,25 @@ pub fn render_pdf(model : @pagelayout.PageModel) -> Bytes raise {
           emit_run(ops, run, font_resource_name(number), model_page.height_pt)
         }
         Rect(rect) => emit_rect(ops, rect, model_page.height_pt)
-        // images and links are not carried into PDF yet
-        Image(_) | Link(_) => ()
+        Image(image) =>
+          match image_object(document, image) {
+            Some(number) => {
+              if !images.contains(number) {
+                images.push(number)
+              }
+              emit_image(
+                ops,
+                image,
+                image_resource_name(number),
+                model_page.height_pt,
+              )
+            }
+            // a format pdflite cannot embed is skipped rather than
+            // written as something a reader would reject
+            None => ()
+          }
+        // link regions are geometry only; PDF annotations come later
+        Link(_) => ()
       }
     }
     let content = if ops.length() == 0 {
@@ -153,7 +171,7 @@ pub fn render_pdf(model : @pagelayout.PageModel) -> Bytes raise {
         PdfReal(model_page.width_pt),
         PdfReal(model_page.height_pt),
       ]),
-      resources: resources_of(used),
+      resources: resources_of(used, images),
       rotate: Rotate0,
       rest: PdfDictionary([]),
     })
@@ -172,10 +190,81 @@ fn font_resource_name(number : Int) -> @core.PdfName {
 }
 
 ///|
-fn resources_of(font_objects : Array[Int]) -> @syntax.PdfObject {
-  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = []
+fn resources_of(
+  font_objects : Array[Int],
+  image_objects : Array[Int],
+) -> @syntax.PdfObject {
+  let fonts : Array[(@core.PdfName, @syntax.PdfObject)] = []
   for number in font_objects {
-    entries.push((font_resource_name(number), PdfIndirect(number)))
+    fonts.push((font_resource_name(number), PdfIndirect(number)))
   }
-  PdfDictionary([(name("/Font"), PdfDictionary(entries))])
+  let entries : Array[(@core.PdfName, @syntax.PdfObject)] = [
+    (name("/Font"), PdfDictionary(fonts)),
+  ]
+  if image_objects.length() > 0 {
+    let xobjects : Array[(@core.PdfName, @syntax.PdfObject)] = []
+    for number in image_objects {
+      xobjects.push((image_resource_name(number), PdfIndirect(number)))
+    }
+    entries.push((name("/XObject"), PdfDictionary(xobjects)))
+  }
+  PdfDictionary(entries)
+}
+
+///|
+fn image_resource_name(number : Int) -> @core.PdfName {
+  name("/I" + number.to_string())
+}
+
+///|
+/// Add an image XObject, or None for a format pdflite cannot embed.
+/// Each distinct byte string is added once and shared across pages.
+fn image_object(
+  document : @pdflite.PdfDocument,
+  image : @pagelayout.ImageItem,
+) -> Int? {
+  match image_cache.get(image.data) {
+    Some(number) => return Some(number)
+    None => ()
+  }
+  // a malformed or unsupported image is skipped rather than aborting a
+  // whole document over one picture
+  let object = match image.mime {
+    "image/png" =>
+      @pdflite.pdf_image_object_of_png_data(document, image.data) catch {
+        _ => return None
+      }
+    "image/jpeg" =>
+      @pdflite.pdf_image_object_of_jpeg_data(image.data) catch {
+        _ => return None
+      }
+    _ => return None
+  }
+  let number = document.add_object(object)
+  image_cache[image.data] = number
+  Some(number)
+}
+
+///|
+/// Images repeat across pages (a logo in a header), so each distinct
+/// byte string becomes one XObject.
+let image_cache : Map[Bytes, Int] = Map([])
+
+///|
+/// Draw an image XObject into its box. A PDF image occupies the unit
+/// square, so the transform carries its size, and the y flip uses the
+/// box's bottom edge.
+fn emit_image(
+  ops : Array[@content.PdfContentOp],
+  image : @pagelayout.ImageItem,
+  resource : @core.PdfName,
+  page_height : Double,
+) -> Unit {
+  let y = flip(page_height, image.y_pt + image.h_pt)
+  ops.push(Op_q)
+  ops.push(
+    Op_cm({ a: image.w_pt, b: 0, c: 0, d: image.h_pt, e: image.x_pt, f: y }),
+  )
+  ops.push(Op_Do(resource))
+  ops.push(Op_Q)
 }
