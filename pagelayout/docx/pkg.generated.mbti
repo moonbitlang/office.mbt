@@ -14,7 +14,7 @@ import {
 // Values
 pub fn media_type(String) -> String?
 
-pub fn read_document(@xml.XmlElement, StyleSheet, theme? : ThemeFonts, numbering? : @numbering.Numbering, resolve_image? : (String) -> (Bytes, String)?) -> DocxDocument
+pub fn read_document(@xml.XmlElement, StyleSheet, theme? : ThemeFonts, numbering? : @numbering.Numbering, resolve_image? : (String) -> (Bytes, String)?, default_tab_pt? : Double) -> DocxDocument
 
 pub fn read_docx(Bytes) -> DocxDocument raise
 
@@ -93,6 +93,7 @@ pub(all) struct ParaProps {
   page_break_before : Bool?
   num_id : Int?
   num_level : Int?
+  tabs : Array[@paragraph.TabStop]?
 } derive(Eq, ToJson, @debug.Debug)
 pub fn ParaProps::empty() -> Self
 #deprecated
@@ -100,7 +101,7 @@ pub fn ParaProps::equal(Self, Self) -> Bool
 pub fn ParaProps::merge(Self, Self) -> Self
 #deprecated
 pub fn ParaProps::not_equal(Self, Self) -> Bool
-pub fn ParaProps::resolve(Self) -> @paragraph.ParagraphStyle
+pub fn ParaProps::resolve(Self, default_tab_pt? : Double) -> @paragraph.ParagraphStyle
 #deprecated
 pub fn ParaProps::to_json(Self) -> Json
 #deprecated

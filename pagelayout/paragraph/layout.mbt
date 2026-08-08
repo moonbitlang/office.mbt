@@ -67,6 +67,50 @@ pub fn layout_paragraph(
   }
   let text = sb.to_string()
 
+  // A tab is not a glyph: it advances the pen to the next stop, so its
+  // width depends on the text before it. Resolve those widths against a
+  // pen starting at the first line's indent. A tab on a wrapped line
+  // measures from the paragraph start rather than that line's, which is
+  // exact for the single-line label/value and table-of-contents rows
+  // tabs are overwhelmingly used for.
+  let first_indent = input.style.indent_left_pt + input.style.indent_first_pt
+  let mut pen = first_indent
+  for i in 0..<text.length() {
+    if text[i].to_int() != 0x09 {
+      pen += advances[i]
+      continue
+    }
+    let stop = input.style.tabs.next_stop_of(pen)
+    // A centre or right stop positions the text that FOLLOWS the tab, so
+    // it needs that text's width — measured to the next tab or the end
+    // of the paragraph, which is the span the stop governs.
+    let target = match stop.align {
+      TabLeft | TabBar | TabDecimal => stop.position_pt
+      TabCenter | TabRight => {
+        let mut span = 0.0
+        for j in (i + 1)..<text.length() {
+          if text[j].to_int() == 0x09 {
+            break
+          }
+          span += advances[j]
+        }
+        let placed = if stop.align is TabRight {
+          stop.position_pt - span
+        } else {
+          stop.position_pt - span / 2.0
+        }
+        // never pull text backwards past the pen
+        if placed < pen {
+          pen
+        } else {
+          placed
+        }
+      }
+    }
+    advances[i] = target - pen
+    pen = target
+  }
+
   // 2. break into lines
   let style = input.style
   let content_width = width_pt - style.indent_left_pt - style.indent_right_pt

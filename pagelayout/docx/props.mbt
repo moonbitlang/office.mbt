@@ -85,6 +85,8 @@ pub(all) struct ParaProps {
   /// `w:numPr`: the list instance and level this paragraph belongs to.
   num_id : Int?
   num_level : Int?
+  /// `w:tabs`, in authored order.
+  tabs : Array[@paragraph.TabStop]?
 } derive(Eq, Debug, ToJson)
 
 ///|
@@ -104,6 +106,7 @@ pub fn ParaProps::empty() -> ParaProps {
     page_break_before: None,
     num_id: None,
     num_level: None,
+    tabs: None,
   }
 }
 
@@ -176,6 +179,11 @@ pub fn ParaProps::merge(self : ParaProps, over : ParaProps) -> ParaProps {
     } else {
       self.num_level
     },
+    tabs: if over.tabs is Some(_) {
+      over.tabs
+    } else {
+      self.tabs
+    },
   }
 }
 
@@ -191,7 +199,10 @@ fn twips_pt(v : @pagelayout.Twips?) -> Double {
 /// Resolve to the layout engine's paragraph style. Word's defaults apply
 /// to anything unspecified: left-aligned, no indents or spacing, single
 /// line spacing.
-pub fn ParaProps::resolve(self : ParaProps) -> @paragraph.ParagraphStyle {
+pub fn ParaProps::resolve(
+  self : ParaProps,
+  default_tab_pt? : Double = 36.0,
+) -> @paragraph.ParagraphStyle {
   {
     align: self.align.unwrap_or(AlignLeft),
     indent_left_pt: twips_pt(self.indent_left),
@@ -200,5 +211,9 @@ pub fn ParaProps::resolve(self : ParaProps) -> @paragraph.ParagraphStyle {
     space_before_pt: twips_pt(self.space_before),
     space_after_pt: twips_pt(self.space_after),
     line_spacing: self.line_spacing.unwrap_or(Single),
+    tabs: {
+      stops: self.tabs.unwrap_or([]),
+      default_interval_pt: default_tab_pt,
+    },
   }
 }

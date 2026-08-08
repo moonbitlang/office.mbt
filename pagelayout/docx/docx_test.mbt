@@ -649,13 +649,13 @@ test "a numbered list gets labels and level indents" {
   )
   guard! doc.blocks[0] is Paragraph(input~, ..)
   // label run precedes the text
-  inspect(input.runs[0].text, content="1. ")
+  inspect(input.runs[0].text, content="1.\t")
   inspect(input.runs[1].text, content="first")
   // the level's indents apply: 720 twips left, 360 hanging
   inspect(input.style.indent_left_pt, content="36")
   inspect(input.style.indent_first_pt, content="-18")
   guard! doc.blocks[1] is Paragraph(input=second, ..)
-  inspect(second.runs[0].text, content="2. ")
+  inspect(second.runs[0].text, content="2.\t")
 }
 
 ///|
@@ -671,7 +671,7 @@ test "counters advance across the document, not per paragraph" {
     ),
   )
   guard! doc.blocks[0] is Paragraph(input~, ..)
-  inspect(input.runs[0].text, content="1. ")
+  inspect(input.runs[0].text, content="1.\t")
   // the unnumbered paragraph gets no label
   guard! doc.blocks[1] is Paragraph(input=body, ..)
   inspect(body.runs[0].text, content="interrupting body text")
@@ -680,7 +680,7 @@ test "counters advance across the document, not per paragraph" {
   inspect(
     third.runs[0].text,
     content=(
-      #|2. 
+      #|2.	
     ),
   )
 }
@@ -700,7 +700,7 @@ test "a bullet sublevel uses its glyph and deeper indent" {
   inspect(
     input.runs[0].text,
     content=(
-      #|• 
+      #|•	
     ),
   )
   inspect(
@@ -743,7 +743,7 @@ test "startOverride and lvlOverride reach the label" {
   inspect(
     input.runs[0].text,
     content=(
-      #|(E) 
+      #|(E)	
     ),
   )
 }
@@ -806,7 +806,7 @@ test "numStyleLink delegates to the definition that declares it" {
   inspect(
     input.runs[0].text,
     content=(
-      #|I) 
+      #|I)	
     ),
   )
 }
@@ -831,7 +831,7 @@ test "a list renders end to end with the label positioned" {
       sb.write_string("|")
     }
   }
-  inspect(sb.to_string(), content="1. |alpha|2. |beta|")
+  inspect(sb.to_string(), content="1.\t|alpha|2.\t|beta|")
   // left indent 36pt with an 18pt hanging indent puts the label at
   // 72 + 36 - 18 = 90, and the text one label-width further right
   guard! model.pages[0].items[0] is Text(first)
@@ -853,7 +853,7 @@ test "numId 0 cancels numbering instead of fabricating a label" {
     ),
   )
   guard! doc.blocks[0] is Paragraph(input~, ..)
-  inspect(input.runs[0].text, content="1. ")
+  inspect(input.runs[0].text, content="1.\t")
   guard! doc.blocks[1] is Paragraph(input=second, ..)
   // no label run at all — the paragraph starts with its own text
   inspect(second.runs[0].text, content="not numbered")
@@ -932,11 +932,11 @@ test "counters are shared with numbered paragraphs inside table cells" {
     ),
   )
   guard! doc.blocks[0] is Paragraph(input~, ..)
-  inspect(input.runs[0].text, content="1. ")
+  inspect(input.runs[0].text, content="1.\t")
   guard! doc.blocks[1] is TableBlock(table~, ..)
-  inspect(table.rows[0].cells[0].content[0].runs[0].text, content="2. ")
+  inspect(table.rows[0].cells[0].content[0].runs[0].text, content="2.\t")
   guard! doc.blocks[2] is Paragraph(input=after, ..)
-  inspect(after.runs[0].text, content="3. ")
+  inspect(after.runs[0].text, content="3.\t")
 }
 
 ///|
