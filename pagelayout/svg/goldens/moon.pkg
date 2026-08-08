@@ -1,0 +1,8 @@
+supported_targets = "native"
+
+import {
+  "bobzhang/pagelayout",
+  "bobzhang/pagelayout/paragraph",
+  "bobzhang/pagelayout/paginate",
+  "bobzhang/pagelayout/svg",
+} for "test"
