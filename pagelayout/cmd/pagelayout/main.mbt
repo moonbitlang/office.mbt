@@ -18,6 +18,7 @@ let exit_usage_error = 2
 ///|
 priv enum Cmd {
   RenderSvg(String, String)
+  RenderPdf(String, String)
   Info(String, Bool)
 }
 
@@ -39,6 +40,18 @@ fn command() -> @argparse.Command {
         PositionArg(
           "output",
           about="Output path; one page writes here, more pages write <output>-1.svg, -2.svg, ...",
+          num_args=@argparse.ValueRange::single(),
+        ),
+      ]),
+      Command("pdf", about="Render a DOCX to a single PDF file.", positionals=[
+        PositionArg(
+          "input",
+          about="Input DOCX path.",
+          num_args=@argparse.ValueRange::single(),
+        ),
+        PositionArg(
+          "output",
+          about="Output PDF path.",
           num_args=@argparse.ValueRange::single(),
         ),
       ]),
@@ -72,6 +85,8 @@ fn parse_args(args : ArrayView[String]) -> Cmd raise {
   match matches.subcommand {
     Some(("render", sub)) =>
       RenderSvg(single_value(sub, "input"), single_value(sub, "output"))
+    Some(("pdf", sub)) =>
+      RenderPdf(single_value(sub, "input"), single_value(sub, "output"))
     Some(("info", sub)) =>
       Info(single_value(sub, "input"), sub.flags.get("json").unwrap_or(false))
     Some((name, _)) => fail("unexpected subcommand: " + name)
@@ -99,6 +114,7 @@ async fn run(args : ArrayView[String]) -> Int {
   }
   let result = match cmd {
     RenderSvg(input, output) => render_svg(input, output)
+    RenderPdf(input, output) => render_pdf_file(input, output)
     Info(input, json) => info(input, json)
   }
   match result {
@@ -151,6 +167,27 @@ async fn render_svg(input : String, output : String) -> Result[Unit, String] {
         }
       }
       @stdio.stdout.write("wrote \{pages.length()} page(s)\n")
+      Ok(())
+    }
+  }
+}
+
+///|
+async fn render_pdf_file(
+  input : String,
+  output : String,
+) -> Result[Unit, String] {
+  let model = read_model(input) catch { err => return Err(err.to_string()) }
+  match model {
+    Err(message) => Err(message)
+    Ok(model) => {
+      let bytes = @pdf.render_pdf(model) catch {
+        err => return Err("cannot build PDF: " + err.to_string())
+      }
+      @fs.write_file(output, bytes, create_mode=CreateOrTruncate) catch {
+        err => return Err("cannot write '" + output + "': " + err.to_string())
+      }
+      @stdio.stdout.write("wrote \{model.pages.length()} page(s)\n")
       Ok(())
     }
   }
