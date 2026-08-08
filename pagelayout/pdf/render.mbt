@@ -190,6 +190,9 @@ pub fn render_pdf(model : @pagelayout.PageModel) -> Bytes raise {
     })
   }
 
+  // one XObject per distinct image, for this document only
+  let image_cache : Map[Bytes, Int] = Map([])
+
   // A composite font embeds a subset of its program, so which characters
   // the document uses has to be known before any font object is written.
   let used_codepoints = collect_codepoints(model, faces)
@@ -234,7 +237,7 @@ pub fn render_pdf(model : @pagelayout.PageModel) -> Bytes raise {
         }
         Rect(rect) => emit_rect(ops, rect, model_page.height_pt)
         Image(image) =>
-          match image_object(document, image) {
+          match image_object(document, image, image_cache) {
             Some(number) => {
               if !images.contains(number) {
                 images.push(number)
@@ -350,12 +353,18 @@ fn image_resource_name(number : Int) -> @core.PdfName {
 
 ///|
 /// Add an image XObject, or None for a format pdflite cannot embed.
-/// Each distinct byte string is added once and shared across pages.
+///
+/// Images repeat across pages (a logo in a header), so each distinct byte
+/// string becomes one XObject. The cache belongs to a single render:
+/// object numbers are allocated per document, so sharing it across
+/// documents would have the second one reference an object the first
+/// allocated and it does not contain.
 fn image_object(
   document : @pdflite.PdfDocument,
   image : @pagelayout.ImageItem,
+  cache : Map[Bytes, Int],
 ) -> Int? {
-  match image_cache.get(image.data) {
+  match cache.get(image.data) {
     Some(number) => return Some(number)
     None => ()
   }
@@ -373,14 +382,9 @@ fn image_object(
     _ => return None
   }
   let number = document.add_object(object)
-  image_cache[image.data] = number
+  cache[image.data] = number
   Some(number)
 }
-
-///|
-/// Images repeat across pages (a logo in a header), so each distinct
-/// byte string becomes one XObject.
-let image_cache : Map[Bytes, Int] = Map([])
 
 ///|
 /// Draw an image XObject into its box. A PDF image occupies the unit
