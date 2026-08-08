@@ -1,7 +1,12 @@
 ///|
 /// Build a .docx package from a document.xml body and an optional
 /// styles.xml, so tests state exactly the XML they exercise.
-fn docx_bytes(body : String, styles? : String, theme? : String) -> Bytes raise {
+fn docx_bytes(
+  body : String,
+  styles? : String,
+  theme? : String,
+  numbering? : String,
+) -> Bytes raise {
   let archive = @zip.Archive::new()
   let document = (
       #|<?xml version="1.0" encoding="UTF-8"?>
@@ -19,6 +24,18 @@ fn docx_bytes(body : String, styles? : String, theme? : String) -> Bytes raise {
         th +
         "</a:theme>"
       archive.add("word/theme/theme1.xml", @utf8.encode(theme_xml))
+    }
+    None => ()
+  }
+  match numbering {
+    Some(n) => {
+      let numbering_xml = (
+          #|<?xml version="1.0" encoding="UTF-8"?>
+          #|<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+        ) +
+        n +
+        "</w:numbering>"
+      archive.add("word/numbering.xml", @utf8.encode(numbering_xml))
     }
     None => ()
   }
@@ -601,4 +618,340 @@ test "a table renders into the page model end to end" {
     }
   }
   inspect(sb.to_string(), content="Name|Value|alpha|1|")
+}
+
+///|
+// --- lists ---
+
+///|
+/// A numbering.xml with one decimal instance (numId 1) whose level 0
+/// indents 720 twips with a 360 hanging indent, plus a bullet level 1.
+fn list_numbering() -> String {
+  (
+    #|<w:abstractNum w:abstractNumId="100">
+    #|<w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="decimal"/><w:lvlText w:val="%1."/><w:pPr><w:ind w:left="720" w:hanging="360"/></w:pPr></w:lvl>
+    #|<w:lvl w:ilvl="1"><w:numFmt w:val="bullet"/><w:lvlText w:val="•"/><w:pPr><w:ind w:left="1440" w:hanging="360"/></w:pPr></w:lvl>
+    #|</w:abstractNum>
+    #|<w:num w:numId="1"><w:abstractNumId w:val="100"/></w:num>
+  )
+}
+
+///|
+test "a numbered list gets labels and level indents" {
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>first</w:t></w:r></w:p>
+        #|<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>second</w:t></w:r></w:p>
+      ),
+      numbering=list_numbering(),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  // label run precedes the text
+  inspect(input.runs[0].text, content="1. ")
+  inspect(input.runs[1].text, content="first")
+  // the level's indents apply: 720 twips left, 360 hanging
+  inspect(input.style.indent_left_pt, content="36")
+  inspect(input.style.indent_first_pt, content="-18")
+  guard! doc.blocks[1] is Paragraph(input=second, ..)
+  inspect(second.runs[0].text, content="2. ")
+}
+
+///|
+test "counters advance across the document, not per paragraph" {
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>a</w:t></w:r></w:p>
+        #|<w:p><w:r><w:t>interrupting body text</w:t></w:r></w:p>
+        #|<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>b</w:t></w:r></w:p>
+      ),
+      numbering=list_numbering(),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  inspect(input.runs[0].text, content="1. ")
+  // the unnumbered paragraph gets no label
+  guard! doc.blocks[1] is Paragraph(input=body, ..)
+  inspect(body.runs[0].text, content="interrupting body text")
+  // and the list resumes at 2, as Word does
+  guard! doc.blocks[2] is Paragraph(input=third, ..)
+  inspect(
+    third.runs[0].text,
+    content=(
+      #|2. 
+    ),
+  )
+}
+
+///|
+test "a bullet sublevel uses its glyph and deeper indent" {
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>top</w:t></w:r></w:p>
+        #|<w:p><w:pPr><w:numPr><w:ilvl w:val="1"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>sub</w:t></w:r></w:p>
+      ),
+      numbering=list_numbering(),
+    ),
+  )
+  guard! doc.blocks[1] is Paragraph(input~, ..)
+  inspect(
+    input.runs[0].text,
+    content=(
+      #|• 
+    ),
+  )
+  inspect(
+    input.style.indent_left_pt,
+    content=(
+      #|72
+    ),
+  )
+}
+
+///|
+test "a paragraph's own indent overrides the level's" {
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr><w:ind w:left="2880"/></w:pPr><w:r><w:t>x</w:t></w:r></w:p>
+      ),
+      numbering=list_numbering(),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  inspect(input.style.indent_left_pt, content="144")
+}
+
+///|
+test "startOverride and lvlOverride reach the label" {
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="2"/></w:numPr></w:pPr><w:r><w:t>x</w:t></w:r></w:p>
+      ),
+      numbering=(
+        #|<w:abstractNum w:abstractNumId="100"><w:lvl w:ilvl="0"><w:numFmt w:val="decimal"/><w:lvlText w:val="%1."/></w:lvl></w:abstractNum>
+        #|<w:num w:numId="2"><w:abstractNumId w:val="100"/><w:lvlOverride w:ilvl="0"><w:startOverride w:val="5"/><w:lvl w:ilvl="0"><w:numFmt w:val="upperLetter"/><w:lvlText w:val="(%1)"/></w:lvl></w:lvlOverride></w:num>
+      ),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  // upperLetter starting at 5 is "E"
+  inspect(
+    input.runs[0].text,
+    content=(
+      #|(E) 
+    ),
+  )
+}
+
+///|
+test "w:suff nothing omits the separator" {
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>x</w:t></w:r></w:p>
+      ),
+      numbering=(
+        #|<w:abstractNum w:abstractNumId="100"><w:lvl w:ilvl="0"><w:numFmt w:val="decimal"/><w:lvlText w:val="%1."/><w:suff w:val="nothing"/></w:lvl></w:abstractNum>
+        #|<w:num w:numId="1"><w:abstractNumId w:val="100"/></w:num>
+      ),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  inspect(
+    input.runs[0].text,
+    content=(
+      #|1.
+    ),
+  )
+}
+
+///|
+test "the label takes the paragraph mark's formatting, not the first run's" {
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr><w:rPr><w:sz w:val="32"/></w:rPr></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="48"/></w:rPr><w:t>bold item</w:t></w:r></w:p>
+      ),
+      numbering=list_numbering(),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  // the paragraph mark says 16pt regular; the body run's bold 24pt must
+  // not bleed into the number
+  assert_false(input.runs[0].style.bold)
+  inspect(input.runs[0].style.size_pt, content="16")
+  assert_true(input.runs[1].style.bold)
+}
+
+///|
+test "numStyleLink delegates to the definition that declares it" {
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>x</w:t></w:r></w:p>
+      ),
+      numbering=(
+        #|<w:abstractNum w:abstractNumId="100"><w:styleLink w:val="MyList"/><w:lvl w:ilvl="0"><w:numFmt w:val="upperRoman"/><w:lvlText w:val="%1)"/></w:lvl></w:abstractNum>
+        #|<w:abstractNum w:abstractNumId="101"><w:numStyleLink w:val="MyList"/></w:abstractNum>
+        #|<w:num w:numId="1"><w:abstractNumId w:val="101"/></w:num>
+      ),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  inspect(
+    input.runs[0].text,
+    content=(
+      #|I) 
+    ),
+  )
+}
+
+///|
+test "a list renders end to end with the label positioned" {
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>alpha</w:t></w:r></w:p>
+        #|<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>beta</w:t></w:r></w:p>
+      ),
+      numbering=list_numbering(),
+    ),
+  )
+  let model = @paginate.paginate(doc.blocks, section=doc.section)
+  debug_inspect(model.validate(), content="[]")
+  let sb = StringBuilder()
+  for item in model.pages[0].items {
+    if item is Text(run) {
+      sb.write_string(run.text)
+      sb.write_string("|")
+    }
+  }
+  inspect(sb.to_string(), content="1. |alpha|2. |beta|")
+  // left indent 36pt with an 18pt hanging indent puts the label at
+  // 72 + 36 - 18 = 90, and the text one label-width further right
+  guard! model.pages[0].items[0] is Text(first)
+  inspect(first.x_pt, content="90")
+}
+
+///|
+// --- regressions from the list review ---
+
+///|
+test "numId 0 cancels numbering instead of fabricating a label" {
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>numbered</w:t></w:r></w:p>
+        #|<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="0"/></w:numPr></w:pPr><w:r><w:t>not numbered</w:t></w:r></w:p>
+      ),
+      numbering=list_numbering(),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  inspect(input.runs[0].text, content="1. ")
+  guard! doc.blocks[1] is Paragraph(input=second, ..)
+  // no label run at all — the paragraph starts with its own text
+  inspect(second.runs[0].text, content="not numbered")
+}
+
+///|
+test "a style's indent does not suppress the level's nesting" {
+  // Word writes every list item as ListParagraph + numPr, and its stock
+  // ListParagraph carries w:ind left=720 — which must not flatten the
+  // levels to one depth
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:pStyle w:val="ListParagraph"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>top</w:t></w:r></w:p>
+        #|<w:p><w:pPr><w:pStyle w:val="ListParagraph"/><w:numPr><w:ilvl w:val="1"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>sub</w:t></w:r></w:p>
+      ),
+      styles=(
+        #|<w:style w:type="paragraph" w:styleId="ListParagraph"><w:pPr><w:ind w:left="720"/></w:pPr></w:style>
+      ),
+      numbering=list_numbering(),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  guard! doc.blocks[1] is Paragraph(input=sub, ..)
+  // level 0 is 720 twips, level 1 is 1440 — they must differ
+  inspect(input.style.indent_left_pt, content="36")
+  inspect(sub.style.indent_left_pt, content="72")
+}
+
+///|
+test "a Symbol bullet keeps its own face" {
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>item</w:t></w:r></w:p>
+      ),
+      numbering=(
+        #|<w:abstractNum w:abstractNumId="100"><w:lvl w:ilvl="0"><w:numFmt w:val="bullet"/><w:lvlText w:val="\u{F0B7}"/><w:rPr><w:rFonts w:ascii="Symbol" w:hAnsi="Symbol"/></w:rPr></w:lvl></w:abstractNum>
+        #|<w:num w:numId="1"><w:abstractNumId w:val="100"/></w:num>
+      ),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  // the marker carries the level's font, not the body's
+  inspect(input.runs[0].style.family, content="Symbol")
+  inspect(input.runs[1].style.family, content="Calibri")
+}
+
+///|
+test "a bullet level with no lvlText does not leak a placeholder" {
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>x</w:t></w:r></w:p>
+      ),
+      numbering=(
+        #|<w:abstractNum w:abstractNumId="100"><w:lvl w:ilvl="0"><w:numFmt w:val="bullet"/></w:lvl></w:abstractNum>
+        #|<w:num w:numId="1"><w:abstractNumId w:val="100"/></w:num>
+      ),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  assert_false(input.runs[0].text.contains("%"))
+}
+
+///|
+test "counters are shared with numbered paragraphs inside table cells" {
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>before</w:t></w:r></w:p>
+        #|<w:tbl><w:tblGrid><w:gridCol w:w="2880"/></w:tblGrid><w:tr><w:tc><w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>in cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>
+        #|<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>after</w:t></w:r></w:p>
+      ),
+      numbering=list_numbering(),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  inspect(input.runs[0].text, content="1. ")
+  guard! doc.blocks[1] is TableBlock(table~, ..)
+  inspect(table.rows[0].cells[0].content[0].runs[0].text, content="2. ")
+  guard! doc.blocks[2] is Paragraph(input=after, ..)
+  inspect(after.runs[0].text, content="3. ")
+}
+
+///|
+test "a level's firstLine indent is read when there is no hanging" {
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>x</w:t></w:r></w:p>
+      ),
+      numbering=(
+        #|<w:abstractNum w:abstractNumId="100"><w:lvl w:ilvl="0"><w:numFmt w:val="decimal"/><w:lvlText w:val="%1."/><w:pPr><w:ind w:left="720" w:firstLine="360"/></w:pPr></w:lvl></w:abstractNum>
+        #|<w:num w:numId="1"><w:abstractNumId w:val="100"/></w:num>
+      ),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  inspect(input.style.indent_first_pt, content="18")
 }

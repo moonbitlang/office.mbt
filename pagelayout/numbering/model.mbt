@@ -61,6 +61,11 @@ pub(all) struct Level {
   /// Indents from the level's `w:pPr/w:ind`, in twips.
   indent_left : @pagelayout.Twips?
   indent_hanging : @pagelayout.Twips?
+  indent_first : @pagelayout.Twips?
+  /// The family from the level's own `w:rPr/w:rFonts`. Word's bullets are
+  /// private-use codepoints that only render in the face named here
+  /// (Symbol, Wingdings), so a marker must not inherit the body font.
+  font_family : String?
 } derive(Eq, Debug, ToJson)
 
 ///|
@@ -75,6 +80,8 @@ pub fn Level::default(depth : Int) -> Level {
     suffix: SuffTab,
     indent_left: None,
     indent_hanging: None,
+    indent_first: None,
+    font_family: None,
   }
 }
 
@@ -122,6 +129,10 @@ pub fn Numbering::new(
 /// for that depth. Unknown ids still produce a usable level rather than
 /// dropping the list marker.
 pub fn Numbering::level(self : Numbering, num_id : Int, depth : Int) -> Level {
+  // OOXML defines exactly nine levels; an out-of-range w:ilvl would
+  // otherwise produce a default whose %N has no counter and leak the
+  // literal placeholder into the rendered text
+  let depth = if depth < 0 { 0 } else if depth > 8 { 8 } else { depth }
   guard self.instances.get(num_id) is Some(instance) else {
     return Level::default(depth)
   }

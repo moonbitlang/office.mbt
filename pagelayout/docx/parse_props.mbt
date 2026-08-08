@@ -317,6 +317,24 @@ pub fn read_para_props(ppr : @xml.XmlElement) -> (ParaProps, String?) {
         props = { ..props, widow_control: Some(parse_toggle(el)) }
       "w:pageBreakBefore" =>
         props = { ..props, page_break_before: Some(parse_toggle(el)) }
+      "w:numPr" => {
+        match el.first("w:numId") {
+          Some(id) =>
+            match parse_int(attr(id, "w:val")) {
+              Some(v) => props = { ..props, num_id: Some(v) }
+              None => ()
+            }
+          None => ()
+        }
+        match el.first("w:ilvl") {
+          Some(lvl) =>
+            match parse_int(attr(lvl, "w:val")) {
+              Some(v) => props = { ..props, num_level: Some(v) }
+              None => ()
+            }
+          None => ()
+        }
+      }
       _ => ()
     }
   }

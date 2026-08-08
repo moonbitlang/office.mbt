@@ -149,6 +149,7 @@ pub fn Counters::advance(
   num_id : Int,
   depth : Int,
 ) -> String? {
+  let depth = if depth < 0 { 0 } else if depth > 8 { 8 } else { depth }
   let level = numbering.level(num_id, depth)
   let self_key = key(num_id, depth)
   // 1. bump this level

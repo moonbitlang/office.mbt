@@ -15,6 +15,8 @@ fn level(
     suffix: SuffTab,
     indent_left: None,
     indent_hanging: None,
+    indent_first: None,
+    font_family: None,
   }
 }
 
@@ -206,4 +208,16 @@ test "unknown numFmt values fall back to decimal, not blank" {
   debug_inspect(@numbering.number_format("bullet"), content="Bullet")
   debug_inspect(@numbering.number_format("none"), content="NoNumber")
   debug_inspect(@numbering.number_format("lowerRoman"), content="LowerRoman")
+}
+
+///|
+test "an out-of-range ilvl clamps instead of leaking a placeholder" {
+  let n = numbering_of([level(Decimal, "%1.")])
+  let c = @numbering.Counters::new()
+  // OOXML has nine levels; 12 must not produce "%13."
+  let label = c.advance(n, 1, 12).unwrap()
+  assert_false(label.contains("%"))
+  let deep = @numbering.Numbering::empty()
+  let c2 = @numbering.Counters::new()
+  assert_false(c2.advance(deep, 1, 40).unwrap().contains("%"))
 }
