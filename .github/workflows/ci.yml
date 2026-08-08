@@ -187,6 +187,13 @@ jobs:
         shell: bash
         run: moon version --all
 
+      # A freshly installed toolchain carries an empty registry index, so
+      # every dependency resolves to "module was not found in the registry"
+      # until this runs.
+      - name: Fetch the registry index
+        shell: bash
+        run: moon update
+
       - name: Type check the workspace
         shell: bash
         run: moon check --deny-warn
