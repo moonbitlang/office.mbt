@@ -176,6 +176,15 @@ Variable fonts are instanced at generation time (Noto Sans SC at
 wght=400), and `recalcTimestamp` is disabled so regeneration is a pure
 function of the inputs.
 
+Subsetting has a floor. pdflite's subsetter is cpdf-style: it preserves
+original glyph ids, which is what lets the CID be the glyph id and
+`/CIDToGIDMap` stay `/Identity`, but it therefore keeps `loca` and `hmtx`
+at full length. For a 31,036-glyph face that is ~250KB before any outline
+is included, so a one-ideograph document embeds roughly the same program
+as a one-page one — 275KB uncompressed, 52KB after flate. Shrinking that
+would mean renumbering glyphs and writing a `/CIDToGIDMap` stream; the
+trade was not worth it at this size.
+
 Family mapping (extendable): Calibri→Carlito, Arial→Liberation Sans,
 Times New Roman→Liberation Serif, Courier New→Liberation Mono,
 CJK families (SimSun, SimHei, MS Mincho/Gothic, Yu Mincho/Gothic, …)→Noto
