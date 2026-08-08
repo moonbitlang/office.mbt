@@ -955,3 +955,140 @@ test "a level's firstLine indent is read when there is no hanging" {
   guard! doc.blocks[0] is Paragraph(input~, ..)
   inspect(input.style.indent_first_pt, content="18")
 }
+
+///|
+// --- headers and footers ---
+
+///|
+/// A package with a header and footer part wired through _rels, which is
+/// how Word actually references them.
+fn docx_with_furniture(body : String) -> Bytes raise {
+  let archive = @zip.Archive::new()
+  let ns =
+    #|xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+  archive.add(
+    "word/document.xml",
+    @utf8.encode(
+      "<?xml version=\"1.0\"?><w:document " +
+      ns +
+      "><w:body>" +
+      body +
+      "</w:body></w:document>",
+    ),
+  )
+  archive.add(
+    "word/_rels/document.xml.rels",
+    @utf8.encode(
+      (
+        #|<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+        #|<Relationship Id="rH" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>
+        #|<Relationship Id="rF" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>
+        #|</Relationships>
+      ),
+    ),
+  )
+  archive.add(
+    "word/header1.xml",
+    @utf8.encode(
+      "<?xml version=\"1.0\"?><w:hdr " +
+      ns +
+      "><w:p><w:r><w:t>Running header</w:t></w:r></w:p></w:hdr>",
+    ),
+  )
+  archive.add(
+    "word/footer1.xml",
+    @utf8.encode(
+      "<?xml version=\"1.0\"?><w:ftr " +
+      ns +
+      "><w:p><w:r><w:t>Page footer</w:t></w:r></w:p></w:ftr>",
+    ),
+  )
+  @zip.write(archive)
+}
+
+///|
+test "header and footer parts resolve through _rels" {
+  let doc = @docx.read_docx(
+    docx_with_furniture(
+      (
+        #|<w:p><w:r><w:t>body</w:t></w:r></w:p>
+        #|<w:sectPr><w:headerReference w:type="default" r:id="rH"/><w:footerReference w:type="default" r:id="rF"/><w:pgMar w:top="1440" w:bottom="1440" w:left="1440" w:right="1440" w:header="720" w:footer="720"/></w:sectPr>
+      ),
+    ),
+  )
+  inspect(doc.furniture.header.length(), content="1")
+  inspect(doc.furniture.footer.length(), content="1")
+  // w:header/w:footer distances reach the section
+  inspect(doc.section.header_pt, content="36")
+  inspect(doc.section.footer_pt, content="36")
+}
+
+///|
+test "furniture is stamped on every page" {
+  let doc = @docx.read_docx(
+    docx_with_furniture(
+      (
+        #|<w:p><w:r><w:t>one</w:t></w:r></w:p>
+        #|<w:p><w:r><w:br w:type="page"/></w:r><w:r><w:t>two</w:t></w:r></w:p>
+        #|<w:sectPr><w:headerReference w:type="default" r:id="rH"/><w:footerReference w:type="default" r:id="rF"/><w:pgMar w:top="1440" w:bottom="1440" w:left="1440" w:right="1440" w:header="720" w:footer="720"/></w:sectPr>
+      ),
+    ),
+  )
+  let model = @paginate.paginate(
+    doc.blocks,
+    section=doc.section,
+    furniture=doc.furniture,
+  )
+  assert_eq(model.pages.length(), 2)
+  debug_inspect(model.validate(), content="[]")
+  // both pages carry the header and the footer
+  for page in model.pages {
+    let sb = StringBuilder()
+    for item in page.items {
+      if item is Text(run) {
+        sb.write_string(run.text)
+        sb.write_string("|")
+      }
+    }
+    let text = sb.to_string()
+    assert_true(text.contains("Running header"))
+    assert_true(text.contains("Page footer"))
+  }
+}
+
+///|
+test "the header sits above the body and the footer below it" {
+  let doc = @docx.read_docx(
+    docx_with_furniture(
+      (
+        #|<w:p><w:r><w:t>body</w:t></w:r></w:p>
+        #|<w:sectPr><w:headerReference w:type="default" r:id="rH"/><w:footerReference w:type="default" r:id="rF"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:bottom="1440" w:left="1440" w:right="1440" w:header="720" w:footer="720"/></w:sectPr>
+      ),
+    ),
+  )
+  let model = @paginate.paginate(
+    doc.blocks,
+    section=doc.section,
+    furniture=doc.furniture,
+  )
+  let page = model.pages[0]
+  let mut header_y = 0.0
+  let mut body_y = 0.0
+  let mut footer_y = 0.0
+  for item in page.items {
+    guard! item is Text(run)
+    if run.text.contains("Running header") {
+      header_y = run.baseline_pt
+    } else if run.text.contains("Page footer") {
+      footer_y = run.baseline_pt
+    } else {
+      body_y = run.baseline_pt
+    }
+  }
+  // header above body above footer, all inside the page
+  assert_true(header_y < body_y)
+  assert_true(body_y < footer_y)
+  assert_true(footer_y < page.height_pt)
+  // the footer's baseline sits above the footer margin
+  assert_true(footer_y > page.height_pt - doc.section.footer_pt - 40.0)
+}

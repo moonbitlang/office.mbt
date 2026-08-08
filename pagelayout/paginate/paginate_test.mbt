@@ -29,6 +29,8 @@ fn tiny_section(lines : Int) -> @paginate.SectionProps {
     margin_right_pt: 36,
     margin_bottom_pt: 72,
     margin_left_pt: 36,
+    header_pt: 18,
+    footer_pt: 18,
   }
 }
 

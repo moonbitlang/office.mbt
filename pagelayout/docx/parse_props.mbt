@@ -394,6 +394,16 @@ pub fn read_section_props(sectpr : @xml.XmlElement) -> @paginate.SectionProps {
             }
           None => ()
         }
+        match parse_twips(attr(el, "w:header")) {
+          Some(v) =>
+            section = { ..section, header_pt: @pagelayout.Twips(v).to_pt() }
+          None => ()
+        }
+        match parse_twips(attr(el, "w:footer")) {
+          Some(v) =>
+            section = { ..section, footer_pt: @pagelayout.Twips(v).to_pt() }
+          None => ()
+        }
       }
       _ => ()
     }

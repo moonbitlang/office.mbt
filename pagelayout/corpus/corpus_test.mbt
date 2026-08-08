@@ -21,6 +21,22 @@ async fn render(path : String) -> @pagelayout.PageModel {
 }
 
 ///|
+async test "the corpus documents carry their headers and footers" {
+  // the technical manual references header and footer parts through
+  // _rels; every page must carry them
+  let bytes = @afs.read_file(corpus[2].1).binary()
+  let doc = @docx.read_docx(bytes)
+  assert_true(doc.furniture.header.length() > 0)
+  let model = @paginate.paginate(
+    doc.blocks,
+    section=doc.section,
+    furniture=doc.furniture,
+  )
+  debug_inspect(model.validate(), content="[]")
+  assert_eq(@corpus.geometry_violations(model).length(), 0)
+}
+
+///|
 async test "every corpus document renders to a structurally valid model" {
   for entry in corpus {
     let (name, path) = entry
