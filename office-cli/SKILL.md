@@ -66,7 +66,9 @@ this document and the fingerprinted registry disagree, the registry wins.
    result, so `issues` and `preview` cannot evaluate them. Lint evaluates
    formula masters but not shared/array slave formulas — treat those slaves as
    an unresolved residual rather than claiming formula correctness.
-6. Generate a `preview` and visually inspect the HTML before delivery.
+6. Run the delivery gate in "Verify before you deliver" below before handing
+   anything over. `preview` publishes the HTML, but nothing in this toolchain
+   renders it to an image — see the ceiling statement in that section.
 
 Every documented failure exits non-zero, but a successful diagnostic command
 can still report warnings or formula findings with exit code zero. Inspect the
@@ -314,6 +316,207 @@ cell, or a header — `/docx/body/p[2]/r[1]` is rejected with
 `anchor.at must be a single body paragraph`. Use `{"at": ..., "to": ...}` to
 span several paragraphs. If you need phrase-level review, quote the phrase in
 the comment body and anchor the paragraph that contains it.
+
+## Verify before you deliver
+
+**Assume your first output is wrong, and go looking for how.** Verification
+here is a bug hunt, not a confirmation step. Exit code zero tells you the
+command succeeded; it says nothing about whether the document is correct. If
+your first inspection finds nothing, the usual explanation is that you did not
+inspect hard enough — read the document back from disk and look again.
+
+The defects this catches are dull and common, not exotic. A `{{client_name}}`
+placeholder shipped as finished prose. A `\$` or `\t` left behind by a shell
+quoting layer, rendering as literal backslash-dollar in the delivered file. A
+reviewer's question still open in a comment thread. A sentence that reads as
+settled fact but is an unaccepted insertion nobody has agreed to.
+
+### Minimum cycle before "done"
+
+Re-open the file from disk. Do not verify against the mutation report you just
+received — it describes what the command intended, not what a reader will see.
+
+1. `office validate FILE --json` — the schema gate. `.data.error_count` must
+   be `0`.
+2. `office issues FILE --json` — bounded actionable findings. This command
+   exits `0` while reporting them, so read `.data.findings`, never `$?`.
+3. `office text FILE --json` — the words a reader actually gets: typos, leaked
+   `{{placeholders}}`, `\$`/`\t`/`\n` escape artefacts. One call covers body
+   paragraphs, table cells, and comment bodies.
+4. `office outline FILE --json` — the structure `text` cannot show you. On a
+   DOCX: `.data.headings[].level` for hierarchy, `.data.comments[]` for open
+   threads, `.data.counts.insertions`/`.deletions` for pending redline.
+
+The outline payload is format-shaped. A DOCX outline carries `counts`,
+`headings`, `comments`, and `revisions`; an XLSX outline carries `sheets` and
+`sheet_count` and **none** of those keys. Index them on the wrong format and
+jq yields `null` or aborts, which is why the gate below branches on the format
+`identify` reports rather than probing blind.
+
+Unlike `text`, `outline` refuses rather than truncating: exceeding
+`--max-elements` returns `office.docx.resource_limit` with `success: false`,
+so a partial outline can never be mistaken for a whole one.
+
+Heading hierarchy is worth a look on every DOCX, because a skipped level is
+invisible in `text`:
+
+```
+office outline FILE.docx --json |
+  jq '[.data.headings[].level] as $l
+      | [range(1; $l|length) | select($l[.] - $l[.-1] > 1)] | length'
+```
+
+Non-zero means at least one H1→H3-style jump. It is deliberately *not* in the
+gate below: a skip is sometimes an intentional design choice, and every gate
+entry must have an unambiguous REJECT.
+
+When something fails, fix it and rerun the **whole** cycle. One fix routinely
+uncovers the next, and ordinal selectors shift under you after every mutation.
+
+### Delivery gate
+
+Copy this verbatim, set `FILE`, and do not hand the document over until it
+prints `GATE PASS`. Every REJECT is a defect in your output, not a false alarm
+to argue with.
+
+```bash
+# Two shims so the gate runs as written.
+office()    { moonx bobzhang/office "$@"; }
+xlsx_lint() { moonx bobzhang/mbtexcel/cmd/xlsx lint "$@"; }
+
+FILE="report.docx"          # the file you are about to hand over
+
+fail=0
+reject() { fail=$((fail + 1)); printf 'REJECT  %s\n' "$*"; }
+
+FMT=$(office identify "$FILE" --json | jq -r 'select(.success).data.format // empty')
+[ -n "$FMT" ] || reject "0 identify: not a readable DOCX/XLSX package"
+
+# Gate 1 - schema. Test `.success` first: a package that fails this early
+# carries an `error` object and no `.data` at all, so `.data.error_count`
+# would be null, and `null` is not `0`-and-not-an-error to a naive test.
+if office validate "$FILE" --json | jq -e '.success and .data.error_count == 0' >/dev/null; then
+  echo "OK      1 schema"
+else
+  reject "1 schema"
+  office validate "$FILE" --json | jq -c '.error // .data.findings[]'
+fi
+
+# Gate 2 - actionable findings. `issues` exits 0 while reporting them, so the
+# finding count is the gate and `$?` is not.
+if office issues "$FILE" --json | jq -e '.success and (.data.findings | length) == 0' >/dev/null; then
+  echo "OK      2 issues"
+else
+  reject "2 issues"
+  office issues "$FILE" --json | jq -c '.error // .data.findings[]'
+fi
+
+# Gate 3 - one complete text scan, captured once. Gate 4 means nothing unless
+# this succeeded AND covered the whole document: a truncated or failed scan
+# yields an empty stream, and an empty stream matches no leak pattern.
+TEXT=$(office text "$FILE" --limit 10000 --json)
+if printf '%s' "$TEXT" | jq -e '.success and .data.truncated == false' >/dev/null; then
+  echo "OK      3 text scan complete"
+
+  # Gate 4 - leaked template tokens and shell-escape artefacts. `grep -c`
+  # prints a count on every path, including the empty stream, so it cannot
+  # false-PASS the way `grep -q` silently does.
+  LEAK_RE='\{\{[^}]*\}\}|\\[nt]|\\\$|<TODO>|TODO|TBD|FIXME|[Ll]orem ipsum'
+  LEAK=$(printf '%s' "$TEXT" | jq -r '.data.entries[].text' | grep -cE "$LEAK_RE" || true)
+  if [ "${LEAK:-1}" -eq 0 ]; then
+    echo "OK      4 no leaked tokens"
+  else
+    reject "4 leaked token/escape artefact on $LEAK line(s)"
+    printf '%s' "$TEXT" | jq -r '.data.entries[] | "\(.path)\t\(.text)"' | grep -E "$LEAK_RE"
+  fi
+else
+  reject "3 text scan incomplete - page with --offset, or scope with --under"
+  reject "4 not evaluated: gate 3 produced no trustworthy text"
+  printf '%s' "$TEXT" | jq -c '.error // (.data | {truncated, returned, matched_total})'
+fi
+
+if [ "$FMT" = docx ]; then
+  # Gate 5 - unresolved comment threads. An unresolved comment spells no
+  # `done` key at all, so the test is `!= true` and never `== false`.
+  if office outline "$FILE" --json | jq -e '.success and ([.data.comments[] | select(.done != true)] | length) == 0' >/dev/null; then
+    echo "OK      5 comment threads resolved"
+  else
+    reject "5 unresolved comment thread(s)"
+    office outline "$FILE" --json | jq -c '.error // (.data.comments[] | select(.done != true))'
+  fi
+
+  # Gate 6 - pending tracked changes. `text` renders the accepted view, so
+  # redline is invisible to every other check in this gate.
+  if office outline "$FILE" --json | jq -e '.success and .data.counts.insertions == 0 and .data.counts.deletions == 0' >/dev/null; then
+    echo "OK      6 no pending revisions"
+  else
+    reject "6 unaccepted tracked changes"
+    office outline "$FILE" --json | jq -c '.error // (.data.counts | {insertions, deletions})'
+  fi
+fi
+
+if [ "$FMT" = xlsx ]; then
+  # Gate 7 - formulas, run unconditionally. A formula-free workbook reports
+  # finding_count 0 anyway, and no `=` heuristic over `text` is reliable: a
+  # formula carrying a cached value surfaces as that value, not its source.
+  if xlsx_lint "$FILE" | jq -e '.finding_count == 0' >/dev/null 2>&1; then
+    echo "OK      7 formulas evaluate clean"
+  else
+    reject "7 formula error(s)"
+    xlsx_lint "$FILE" 2>&1 | jq -c '.findings[]' 2>/dev/null || xlsx_lint "$FILE" 2>&1
+  fi
+fi
+
+if [ "$fail" -eq 0 ]; then
+  echo "GATE PASS - structurally verified. NOT visually verified."
+else
+  echo "GATE FAIL - $fail check(s) rejected. Do not deliver."
+fi
+# Last command on purpose: it sets the exit status without `exit`, so
+# `bash gate.sh && deliver` cannot deliver a rejected document, and pasting
+# the block into an interactive shell does not close it.
+[ "$fail" -eq 0 ]
+```
+
+The gate never calls `exit`, on purpose: pasting it into your working shell
+must not kill that shell, and one run should report every defect rather than
+stopping at the first.
+
+Three failure modes it is built to avoid, all of which false-PASS if you
+rewrite it casually:
+
+- **`.data` can be absent entirely.** A package that fails to open returns
+  `{"success": false, "error": {...}}` with no `.data`. `jq -e '.success and
+  ...'` rejects that; `jq '.data.error_count'` alone yields `null`.
+- **An empty stream matches nothing.** If `text` fails, piping its output into
+  `grep -q` finds no tokens and looks like a pass. Gate 4 therefore runs only
+  inside gate 3's success branch, and counts with `grep -c`.
+- **Exit codes are not findings.** `issues` and `xlsx lint` both exit `0`
+  while reporting problems. Only the counts decide.
+
+### What this gate does not cover
+
+It verifies **structure, not appearance**. A document that prints `GATE PASS`
+is structurally verified; it is not "looks right", and you should not describe
+it that way when you hand it over.
+
+`preview` writes HTML and nothing in this toolchain rasterises it, so there is
+no step at which you can *look* at the document. Everything that only exists
+once something renders is outside the gate:
+
+- pagination — page count, page breaks, orphaned headings, blank pages
+- layout and fit — column widths, truncated cells, overflowing tables, margins
+- typography as seen — font substitution, actual rendered sizes, spacing rhythm
+- anything a viewer computes at open time, including field results such as
+  `PAGE` or a table-of-contents page column
+
+Reading the `preview` HTML is still worth doing, and it is strictly better than
+nothing — but it is reading a DOM, not seeing a page. State that limitation
+when you deliver rather than letting a green gate imply more than it checked.
+
+XLSX formula coverage has its own edge, already noted above: `xlsx lint`
+evaluates formula masters, not shared/array slave formulas. Gate 7 passing
+means no master evaluated to an error, not that every formula is correct.
 
 ## Legacy-only fallbacks
 
