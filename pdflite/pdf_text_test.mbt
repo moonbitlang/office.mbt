@@ -205,7 +205,11 @@ test "PdfDocument write_font rejects unsupported font variants" {
   guard unsupported_encoding is Err(EncodingWriteUnsupported) else {
     fail("expected @core.PdfError::EncodingWriteUnsupported")
   }
-  let unsupported_truetype = try
+  // A TrueType descriptor without a `/FontFile2` is written as a
+  // non-embedded font rather than rejected: the entry is optional (PDF
+  // 32000-1 §9.8.1) and describes a face the consumer substitutes, whose
+  // `/Widths` still govern spacing.
+  let nonembedded_truetype = try
     doc.write_font(
       PdfFontSimple({
         fonttype: PdfTrueType,
@@ -223,8 +227,8 @@ test "PdfDocument write_font rejects unsupported font variants" {
   } noraise {
     value => Ok(value)
   }
-  guard unsupported_truetype is Err(FontWriteUnsupported) else {
-    fail("expected @core.PdfError::FontWriteUnsupported")
+  guard nonembedded_truetype is Ok(_) else {
+    fail("a TrueType font without /FontFile2 is written, not rejected")
   }
   let unsupported_truetype_encoding = try
     doc.write_font(
