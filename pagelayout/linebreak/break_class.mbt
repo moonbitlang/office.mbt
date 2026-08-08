@@ -44,8 +44,17 @@ pub fn is_cjk(codepoint : Int) -> Bool {
 }
 
 ///|
+/// Characters that hang at a line end and never trigger overflow. A tab
+/// is *not* one: its width is a computed advance to a stop, so trimming
+/// it would move the text that follows it.
 fn is_space(code_unit : Int) -> Bool {
-  code_unit == 0x20 || code_unit == 0x09
+  code_unit == 0x20
+}
+
+///|
+/// A tab is a break opportunity, like a space, but keeps its width.
+fn is_tab(code_unit : Int) -> Bool {
+  code_unit == 0x09
 }
 
 ///|
@@ -96,7 +105,7 @@ pub fn can_break_at(text : String, i : Int) -> Bool {
   if no_start.contains(next) || no_end.contains(prev) {
     return false
   }
-  if is_space(prev) && !is_space(next) {
+  if (is_space(prev) || is_tab(prev)) && !is_space(next) {
     return true
   }
   if prev == '-'.to_int() && next != '-'.to_int() && !is_space(next) {

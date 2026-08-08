@@ -317,6 +317,26 @@ pub fn read_para_props(ppr : @xml.XmlElement) -> (ParaProps, String?) {
         props = { ..props, widow_control: Some(parse_toggle(el)) }
       "w:pageBreakBefore" =>
         props = { ..props, page_break_before: Some(parse_toggle(el)) }
+      "w:tabs" => {
+        let stops : Array[@paragraph.TabStop] = []
+        for stop in el.elements_by_tag_name("w:tab") {
+          guard parse_twips(stop.attributes.get("w:pos")) is Some(pos) else {
+            continue
+          }
+          let align : @paragraph.TabAlign = match
+            stop.attributes.get("w:val").unwrap_or("left") {
+            "center" => TabCenter
+            "right" | "end" => TabRight
+            "decimal" => TabDecimal
+            "bar" => TabBar
+            // "clear" removes a stop inherited from a style; treating it
+            // as left keeps the column rather than losing it
+            _ => TabLeft
+          }
+          stops.push({ position_pt: @pagelayout.Twips(pos).to_pt(), align })
+        }
+        props = { ..props, tabs: Some(stops) }
+      }
       "w:numPr" => {
         match el.first("w:numId") {
           Some(id) =>

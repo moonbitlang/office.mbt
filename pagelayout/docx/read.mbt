@@ -142,6 +142,7 @@ fn read_paragraph(
   theme : ThemeFonts,
   numbering? : @numbering.Numbering = @numbering.Numbering::empty(),
   counters? : @numbering.Counters = @numbering.Counters::new(),
+  default_tab_pt? : Double = 36.0,
 ) -> (@paginate.Block, Bool, Bool) {
   let (direct_para, style_id) = match para.first("w:pPr") {
     Some(ppr) => read_para_props(ppr)
@@ -183,7 +184,7 @@ fn read_paragraph(
       style: sheet.resolve_run(style_id, None, mark).resolve(),
     })
   }
-  let mut style = resolved_para.resolve()
+  let mut style = resolved_para.resolve(default_tab_pt~)
   // a numbered paragraph takes its indents from the numbering level
   // unless the paragraph overrides them, and carries a label run
   match (resolved_para.num_id, resolved_para.num_level) {
@@ -237,10 +238,9 @@ fn read_paragraph(
           let separator = match level.suffix {
             SuffNothing => ""
             SuffSpace => " "
-            // a tab would need a tab-stop model; the hanging indent
-            // already positions the text, so a space keeps the label
-            // from touching it
-            SuffTab => " "
+            // now that tabs advance to a stop, w:suff="tab" aligns the
+            // item text to the level's indent as Word does
+            SuffTab => "\t"
           }
           runs.insert(0, { text: label + separator, style: marker_style })
         }
@@ -271,6 +271,7 @@ pub fn read_document(
   theme? : ThemeFonts = ThemeFonts::empty(),
   numbering? : @numbering.Numbering = @numbering.Numbering::empty(),
   resolve_image? : (String) -> (Bytes, String)? = _ => None,
+  default_tab_pt? : Double = 36.0,
 ) -> DocxDocument {
   // list counters run for the whole document, in reading order
   let counters = @numbering.Counters::new()
@@ -289,6 +290,7 @@ pub fn read_document(
           theme,
           numbering~,
           counters~,
+          default_tab_pt~,
         )
         if breaks_before && blocks.length() > 0 {
           blocks.push(PageBreak)
@@ -383,6 +385,26 @@ pub fn read_docx(docx : Bytes) -> DocxDocument raise {
       )
     None => ThemeFonts::empty()
   }
+  // w:defaultTabStop sets the interval tabs fall back to past the last
+  // explicit stop
+  let default_tab_pt = match archive.get("word/settings.xml") {
+    Some(part) => {
+      let settings = @xml.read_xml_bytes_limited(
+        part,
+        default_budget(),
+        namespace_map=ns,
+      )
+      match settings.first("w:defaultTabStop") {
+        Some(el) =>
+          match parse_twips(el.attributes.get("w:val")) {
+            Some(v) => @pagelayout.Twips(v).to_pt()
+            None => 36.0
+          }
+        None => 36.0
+      }
+    }
+    None => 36.0
+  }
   let numbering = match archive.get("word/numbering.xml") {
     Some(part) =>
       read_numbering(
@@ -422,6 +444,7 @@ pub fn read_docx(docx : Bytes) -> DocxDocument raise {
     theme~,
     numbering~,
     resolve_image~,
+    default_tab_pt~,
   )
   // resolve the section's header/footer relationship ids to parts and
   // lay their bodies out as furniture

@@ -90,6 +90,7 @@ pub(all) struct ParagraphStyle {
   space_before_pt : Double
   space_after_pt : Double
   line_spacing : LineSpacing
+  tabs : TabRuler
 } derive(Eq, ToJson, @debug.Debug)
 pub fn ParagraphStyle::default() -> Self
 #deprecated
@@ -146,6 +147,51 @@ pub fn RunStyle::not_equal(Self, Self) -> Bool
 pub fn RunStyle::to_json(Self) -> Json
 #deprecated
 pub fn RunStyle::to_repr(Self) -> @debug.Repr
+
+pub(all) enum TabAlign {
+  TabLeft
+  TabCenter
+  TabRight
+  TabDecimal
+  TabBar
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn TabAlign::equal(Self, Self) -> Bool
+#deprecated
+pub fn TabAlign::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn TabAlign::to_json(Self) -> Json
+#deprecated
+pub fn TabAlign::to_repr(Self) -> @debug.Repr
+
+pub(all) struct TabRuler {
+  stops : Array[TabStop]
+  default_interval_pt : Double
+} derive(Eq, ToJson, @debug.Debug)
+pub fn TabRuler::default() -> Self
+#deprecated
+pub fn TabRuler::equal(Self, Self) -> Bool
+pub fn TabRuler::next_stop(Self, Double) -> Double
+pub fn TabRuler::next_stop_of(Self, Double) -> TabStop
+#deprecated
+pub fn TabRuler::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn TabRuler::to_json(Self) -> Json
+#deprecated
+pub fn TabRuler::to_repr(Self) -> @debug.Repr
+
+pub(all) struct TabStop {
+  position_pt : Double
+  align : TabAlign
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn TabStop::equal(Self, Self) -> Bool
+#deprecated
+pub fn TabStop::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn TabStop::to_json(Self) -> Json
+#deprecated
+pub fn TabStop::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

@@ -54,6 +54,8 @@ pub(all) struct ParagraphStyle {
   space_before_pt : Double
   space_after_pt : Double
   line_spacing : LineSpacing
+  /// Where tabs in this paragraph advance to.
+  tabs : TabRuler
 } derive(Eq, Debug, ToJson)
 
 ///|
@@ -68,6 +70,7 @@ pub fn ParagraphStyle::default() -> ParagraphStyle {
     space_before_pt: 0,
     space_after_pt: 0,
     line_spacing: Single,
+    tabs: TabRuler::default(),
   }
 }
 

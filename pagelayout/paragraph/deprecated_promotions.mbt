@@ -109,3 +109,39 @@ pub extend ParagraphLayout with Eq::{not_equal, equal}
 ///|
 #deprecated("implicit trait-method promotion is being removed; call via the trait")
 pub extend ParagraphLayout with ToJson::{to_json}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend TabAlign with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend TabAlign with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend TabAlign with ToJson::{to_json}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend TabStop with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend TabStop with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend TabStop with ToJson::{to_json}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend TabRuler with @debug.Debug::{to_repr}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend TabRuler with Eq::{not_equal, equal}
+
+///|
+#deprecated("implicit trait-method promotion is being removed; call via the trait")
+pub extend TabRuler with ToJson::{to_json}
