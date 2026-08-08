@@ -1,0 +1,152 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pagelayout/paragraph"
+
+import {
+  "bobzhang/pagelayout",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn layout_paragraph(ParagraphInput, Double) -> ParagraphLayout
+
+// Errors
+
+// Types and methods
+pub(all) enum Alignment {
+  AlignLeft
+  AlignCenter
+  AlignRight
+  AlignJustify
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn Alignment::equal(Self, Self) -> Bool
+#deprecated
+pub fn Alignment::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn Alignment::to_json(Self) -> Json
+#deprecated
+pub fn Alignment::to_repr(Self) -> @debug.Repr
+
+pub(all) struct LineBox {
+  baseline_pt : Double
+  height_pt : Double
+  runs : Array[PlacedRun]
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn LineBox::equal(Self, Self) -> Bool
+#deprecated
+pub fn LineBox::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn LineBox::to_json(Self) -> Json
+#deprecated
+pub fn LineBox::to_repr(Self) -> @debug.Repr
+
+pub(all) enum LineSpacing {
+  Single
+  Multiple(Double)
+  Exact(Double)
+  AtLeast(Double)
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn LineSpacing::equal(Self, Self) -> Bool
+#deprecated
+pub fn LineSpacing::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn LineSpacing::to_json(Self) -> Json
+#deprecated
+pub fn LineSpacing::to_repr(Self) -> @debug.Repr
+
+pub(all) struct ParagraphInput {
+  runs : Array[RunInput]
+  style : ParagraphStyle
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn ParagraphInput::equal(Self, Self) -> Bool
+#deprecated
+pub fn ParagraphInput::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn ParagraphInput::to_json(Self) -> Json
+#deprecated
+pub fn ParagraphInput::to_repr(Self) -> @debug.Repr
+
+pub(all) struct ParagraphLayout {
+  height_pt : Double
+  lines : Array[LineBox]
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn ParagraphLayout::equal(Self, Self) -> Bool
+#deprecated
+pub fn ParagraphLayout::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn ParagraphLayout::to_json(Self) -> Json
+#deprecated
+pub fn ParagraphLayout::to_repr(Self) -> @debug.Repr
+
+pub(all) struct ParagraphStyle {
+  align : Alignment
+  indent_left_pt : Double
+  indent_right_pt : Double
+  indent_first_pt : Double
+  space_before_pt : Double
+  space_after_pt : Double
+  line_spacing : LineSpacing
+} derive(Eq, ToJson, @debug.Debug)
+pub fn ParagraphStyle::default() -> Self
+#deprecated
+pub fn ParagraphStyle::equal(Self, Self) -> Bool
+#deprecated
+pub fn ParagraphStyle::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn ParagraphStyle::to_json(Self) -> Json
+#deprecated
+pub fn ParagraphStyle::to_repr(Self) -> @debug.Repr
+
+pub(all) struct PlacedRun {
+  font : @pagelayout.FontSpec
+  size_pt : Double
+  x_pt : Double
+  text : String
+  advances_pt : Array[Double]
+  color : @pagelayout.Color
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PlacedRun::equal(Self, Self) -> Bool
+#deprecated
+pub fn PlacedRun::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PlacedRun::to_json(Self) -> Json
+#deprecated
+pub fn PlacedRun::to_repr(Self) -> @debug.Repr
+
+pub(all) struct RunInput {
+  text : String
+  style : RunStyle
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn RunInput::equal(Self, Self) -> Bool
+#deprecated
+pub fn RunInput::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn RunInput::to_json(Self) -> Json
+#deprecated
+pub fn RunInput::to_repr(Self) -> @debug.Repr
+
+pub(all) struct RunStyle {
+  family : String
+  size_pt : Double
+  bold : Bool
+  italic : Bool
+  color : @pagelayout.Color
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn RunStyle::equal(Self, Self) -> Bool
+#deprecated
+pub fn RunStyle::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn RunStyle::to_json(Self) -> Json
+#deprecated
+pub fn RunStyle::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits
