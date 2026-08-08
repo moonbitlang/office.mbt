@@ -34,12 +34,5 @@ fn noto_sans_sc_regular_chunk_5() -> Bytes {
 
 ///|
 fn noto_sans_sc_regular_compressed() -> Array[Bytes] {
-  [
-    noto_sans_sc_regular_chunk_0(),
-    noto_sans_sc_regular_chunk_1(),
-    noto_sans_sc_regular_chunk_2(),
-    noto_sans_sc_regular_chunk_3(),
-    noto_sans_sc_regular_chunk_4(),
-    noto_sans_sc_regular_chunk_5(),
-  ]
+  [noto_sans_sc_regular_chunk_0(), noto_sans_sc_regular_chunk_1(), noto_sans_sc_regular_chunk_2(), noto_sans_sc_regular_chunk_3(), noto_sans_sc_regular_chunk_4(), noto_sans_sc_regular_chunk_5()]
 }
