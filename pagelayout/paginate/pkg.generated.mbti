@@ -1,0 +1,50 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pagelayout/paginate"
+
+import {
+  "bobzhang/pagelayout",
+  "bobzhang/pagelayout/paragraph",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn paginate(Array[Block], section? : SectionProps) -> @pagelayout.PageModel
+
+// Errors
+
+// Types and methods
+pub(all) enum Block {
+  Paragraph(input~ : @paragraph.ParagraphInput, keep_lines~ : Bool, keep_next~ : Bool, widow_control~ : Bool)
+  PageBreak
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn Block::equal(Self, Self) -> Bool
+#deprecated
+pub fn Block::not_equal(Self, Self) -> Bool
+pub fn Block::paragraph(@paragraph.ParagraphInput, keep_lines? : Bool, keep_next? : Bool, widow_control? : Bool) -> Self
+#deprecated
+pub fn Block::to_json(Self) -> Json
+#deprecated
+pub fn Block::to_repr(Self) -> @debug.Repr
+
+pub(all) struct SectionProps {
+  page_width_pt : Double
+  page_height_pt : Double
+  margin_top_pt : Double
+  margin_right_pt : Double
+  margin_bottom_pt : Double
+  margin_left_pt : Double
+} derive(Eq, ToJson, @debug.Debug)
+pub fn SectionProps::default() -> Self
+#deprecated
+pub fn SectionProps::equal(Self, Self) -> Bool
+#deprecated
+pub fn SectionProps::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn SectionProps::to_json(Self) -> Json
+#deprecated
+pub fn SectionProps::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits
