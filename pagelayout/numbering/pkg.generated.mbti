@@ -1,0 +1,113 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pagelayout/numbering"
+
+import {
+  "bobzhang/pagelayout",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn format_counter(Int, NumberFormat) -> String
+
+pub fn number_format(String) -> NumberFormat
+
+// Errors
+
+// Types and methods
+pub(all) struct AbstractNum {
+  levels : Map[Int, Level]
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn AbstractNum::equal(Self, Self) -> Bool
+#deprecated
+pub fn AbstractNum::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn AbstractNum::to_json(Self) -> Json
+#deprecated
+pub fn AbstractNum::to_repr(Self) -> @debug.Repr
+
+pub struct Counters {
+  values : Map[String, Int]
+  started : Map[String, Unit]
+}
+pub fn Counters::advance(Self, Numbering, Int, Int) -> String?
+pub fn Counters::new() -> Self
+
+pub(all) struct Level {
+  format : NumberFormat
+  text : String
+  start : Int
+  restart : Int?
+  is_legal : Bool
+  suffix : Suffix
+  indent_left : @pagelayout.Twips?
+  indent_hanging : @pagelayout.Twips?
+} derive(Eq, ToJson, @debug.Debug)
+pub fn Level::default(Int) -> Self
+#deprecated
+pub fn Level::equal(Self, Self) -> Bool
+#deprecated
+pub fn Level::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn Level::to_json(Self) -> Json
+#deprecated
+pub fn Level::to_repr(Self) -> @debug.Repr
+
+pub(all) struct NumInstance {
+  abstract_id : Int
+  overrides : Map[Int, Level]
+  start_overrides : Map[Int, Int]
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn NumInstance::equal(Self, Self) -> Bool
+#deprecated
+pub fn NumInstance::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn NumInstance::to_json(Self) -> Json
+#deprecated
+pub fn NumInstance::to_repr(Self) -> @debug.Repr
+
+pub(all) enum NumberFormat {
+  Decimal
+  LowerLetter
+  UpperLetter
+  LowerRoman
+  UpperRoman
+  Bullet
+  NoNumber
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn NumberFormat::equal(Self, Self) -> Bool
+#deprecated
+pub fn NumberFormat::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn NumberFormat::to_json(Self) -> Json
+#deprecated
+pub fn NumberFormat::to_repr(Self) -> @debug.Repr
+
+pub struct Numbering {
+  abstracts : Map[Int, AbstractNum]
+  instances : Map[Int, NumInstance]
+}
+pub fn Numbering::empty() -> Self
+pub fn Numbering::level(Self, Int, Int) -> Level
+pub fn Numbering::new(Map[Int, AbstractNum], Map[Int, NumInstance]) -> Self
+pub fn Numbering::start_override(Self, Int, Int) -> Int?
+
+pub(all) enum Suffix {
+  SuffTab
+  SuffSpace
+  SuffNothing
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn Suffix::equal(Self, Self) -> Bool
+#deprecated
+pub fn Suffix::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn Suffix::to_json(Self) -> Json
+#deprecated
+pub fn Suffix::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits
