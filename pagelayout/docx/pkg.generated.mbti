@@ -16,9 +16,13 @@ pub fn read_document(@xml.XmlElement, StyleSheet, theme? : ThemeFonts, numbering
 
 pub fn read_docx(Bytes) -> DocxDocument raise
 
+pub fn read_furniture_refs(@xml.XmlElement) -> FurnitureRefs
+
 pub fn read_numbering(@xml.XmlElement) -> @numbering.Numbering
 
 pub fn read_para_props(@xml.XmlElement) -> (ParaProps, String?)
+
+pub fn read_relationships(@xml.XmlElement) -> Relationships
 
 pub fn read_run_props(@xml.XmlElement, theme? : ThemeFonts) -> RunProps
 
@@ -38,8 +42,24 @@ pub fn render_docx(Bytes) -> @pagelayout.PageModel raise
 pub(all) struct DocxDocument {
   blocks : Array[@paginate.Block]
   section : @paginate.SectionProps
+  furniture : @paginate.PageFurniture
+  furniture_refs : FurnitureRefs
   unsupported : Array[String]
 }
+
+pub(all) struct FurnitureRefs {
+  header_default : String?
+  footer_default : String?
+} derive(Eq, ToJson, @debug.Debug)
+pub fn FurnitureRefs::empty() -> Self
+#deprecated
+pub fn FurnitureRefs::equal(Self, Self) -> Bool
+#deprecated
+pub fn FurnitureRefs::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn FurnitureRefs::to_json(Self) -> Json
+#deprecated
+pub fn FurnitureRefs::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ParaProps {
   align : @paragraph.Alignment?
@@ -67,6 +87,14 @@ pub fn ParaProps::resolve(Self) -> @paragraph.ParagraphStyle
 pub fn ParaProps::to_json(Self) -> Json
 #deprecated
 pub fn ParaProps::to_repr(Self) -> @debug.Repr
+
+pub struct Relationships {
+  targets : Map[String, String]
+  types : Map[String, String]
+}
+pub fn Relationships::empty() -> Self
+pub fn Relationships::first_of_type(Self, String, String) -> String?
+pub fn Relationships::part(Self, String, String) -> String?
 
 pub(all) struct RunProps {
   family : String?

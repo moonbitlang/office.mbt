@@ -75,6 +75,8 @@ test "page geometry reaches the pdf mediabox" {
     margin_right_pt: 72,
     margin_bottom_pt: 72,
     margin_left_pt: 72,
+    header_pt: 36,
+    footer_pt: 36,
   }
   let model = @paginate.paginate(
     [@paginate.Block::paragraph(para("A4"))],

@@ -12,6 +12,10 @@ fn namespace_map() -> Map[String, String] {
   {
     "http://schemas.openxmlformats.org/wordprocessingml/2006/main": "w",
     "http://purl.oclc.org/ooxml/wordprocessingml/main": "w",
+    // the _rels parts use their own (default-prefixed) namespace
+    "http://schemas.openxmlformats.org/package/2006/relationships": "rel",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships": "r",
+    "http://purl.oclc.org/ooxml/officeDocument/relationships": "r",
     "http://schemas.openxmlformats.org/drawingml/2006/main": "a",
     "http://purl.oclc.org/ooxml/drawingml/main": "a",
   }
@@ -22,6 +26,12 @@ fn namespace_map() -> Map[String, String] {
 pub(all) struct DocxDocument {
   blocks : Array[@paginate.Block]
   section : @paginate.SectionProps
+  /// Running header and footer, laid out on every page. Empty unless
+  /// the package was read through `read_docx`, which can resolve the
+  /// relationship ids in `furniture_refs` to actual parts.
+  furniture : @paginate.PageFurniture
+  /// The header/footer relationship ids the section named.
+  furniture_refs : FurnitureRefs
   /// Block-level content this milestone does not lay out (tables,
   /// content controls), one entry per occurrence in document order.
   /// Non-empty means the render is incomplete — callers should say so
@@ -246,6 +256,7 @@ pub fn read_document(
   let counters = @numbering.Counters::new()
   let blocks : Array[@paginate.Block] = []
   let unsupported : Array[String] = []
+  let mut refs = FurnitureRefs::empty()
   let body = document.first_or_empty("w:body")
   let mut section = @paginate.SectionProps::default()
   for child in body.children {
@@ -268,7 +279,10 @@ pub fn read_document(
         }
       }
       // the body-level sectPr carries the final section's geometry
-      "w:sectPr" => section = read_section_props(el)
+      "w:sectPr" => {
+        section = read_section_props(el)
+        refs = read_furniture_refs(el)
+      }
       "w:tbl" =>
         blocks.push(
           @paginate.Block::table(
@@ -281,7 +295,15 @@ pub fn read_document(
       _ => ()
     }
   }
-  { blocks, section, unsupported }
+  {
+    blocks,
+    section,
+    furniture: @paginate.PageFurniture::none(),
+    // read_document cannot open package parts, so it reports the ids the
+    // section named and read_docx resolves them
+    furniture_refs: refs,
+    unsupported,
+  }
 }
 
 ///|
@@ -341,7 +363,52 @@ pub fn read_docx(docx : Bytes) -> DocxDocument raise {
       )
     None => StyleSheet::empty()
   }
-  read_document(document, sheet, theme~, numbering~)
+  let parsed = read_document(document, sheet, theme~, numbering~)
+  // resolve the section's header/footer relationship ids to parts and
+  // lay their bodies out as furniture
+  let rels = match archive.get("word/_rels/document.xml.rels") {
+    Some(part) =>
+      read_relationships(
+        @xml.read_xml_bytes_limited(part, default_budget(), namespace_map=ns),
+      )
+    None => Relationships::empty()
+  }
+  fn furniture_blocks(id : String?) -> Array[@paginate.Block] raise {
+    guard id is Some(value) else { return [] }
+    guard rels.part(value, "word/") is Some(path) else { return [] }
+    guard archive.get(path) is Some(part) else { return [] }
+    let root = @xml.read_xml_bytes_limited(
+      part,
+      default_budget(),
+      namespace_map=ns,
+    )
+    // a header/footer part's root is w:hdr or w:ftr, with the same body
+    // content a w:body holds
+    let blocks : Array[@paginate.Block] = []
+    for child in root.children {
+      guard child is XmlElement(el) else { continue }
+      match el.name {
+        "w:p" => {
+          let (block, _, _) = read_paragraph(el, sheet, theme, numbering~)
+          blocks.push(block)
+        }
+        // Word commonly builds a header from a table, to place text at
+        // both margins on one line
+        "w:tbl" =>
+          blocks.push(
+            @paginate.Block::table(read_table(el, sheet, theme~, numbering~)),
+          )
+        _ => ()
+      }
+    }
+    blocks
+  }
+
+  let furniture = @paginate.PageFurniture::{
+    header: furniture_blocks(parsed.furniture_refs.header_default),
+    footer: furniture_blocks(parsed.furniture_refs.footer_default),
+  }
+  { ..parsed, furniture, }
 }
 
 ///|
@@ -360,7 +427,7 @@ fn default_budget() -> @xml.XmlReadBudget {
 /// Read a `.docx` and paginate it in one step.
 pub fn render_docx(docx : Bytes) -> @pagelayout.PageModel raise {
   let doc = read_docx(docx)
-  @paginate.paginate(doc.blocks, section=doc.section)
+  @paginate.paginate(doc.blocks, section=doc.section, furniture=doc.furniture)
 }
 
 ///|
@@ -383,3 +450,39 @@ pub fn render_docx(docx : Bytes) -> @pagelayout.PageModel raise {
 //     document elsewhere is reported as missing.
 //   * Toggle properties merge last-wins through the style chain; ECMA-376
 //     §17.7.3 combines toggles set at multiple *style* levels by XOR.
+
+///|
+/// `w:headerReference`/`w:footerReference` entries from a `w:sectPr`:
+/// the relationship id naming each part. Only the `default` variant is
+/// carried today; `first` and `even` need per-page furniture selection,
+/// which pagination does not model yet.
+pub(all) struct FurnitureRefs {
+  header_default : String?
+  footer_default : String?
+} derive(Eq, Debug, ToJson)
+
+///|
+/// No header or footer referenced.
+pub fn FurnitureRefs::empty() -> FurnitureRefs {
+  { header_default: None, footer_default: None }
+}
+
+///|
+/// Read the header/footer references of a `w:sectPr`.
+pub fn read_furniture_refs(sectpr : @xml.XmlElement) -> FurnitureRefs {
+  let mut refs = FurnitureRefs::empty()
+  for child in sectpr.children {
+    guard child is XmlElement(el) else { continue }
+    if el.attributes.get("w:type").unwrap_or("default") != "default" {
+      continue
+    }
+    match (el.name, el.attributes.get("r:id")) {
+      ("w:headerReference", Some(v)) =>
+        refs = { ..refs, header_default: Some(v) }
+      ("w:footerReference", Some(v)) =>
+        refs = { ..refs, footer_default: Some(v) }
+      _ => ()
+    }
+  }
+  refs
+}

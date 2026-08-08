@@ -9,7 +9,7 @@ import {
 }
 
 // Values
-pub fn paginate(Array[Block], section? : SectionProps) -> @pagelayout.PageModel
+pub fn paginate(Array[Block], section? : SectionProps, furniture? : PageFurniture) -> @pagelayout.PageModel
 
 // Errors
 
@@ -30,6 +30,20 @@ pub fn Block::to_json(Self) -> Json
 #deprecated
 pub fn Block::to_repr(Self) -> @debug.Repr
 
+pub(all) struct PageFurniture {
+  header : Array[Block]
+  footer : Array[Block]
+} derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PageFurniture::equal(Self, Self) -> Bool
+pub fn PageFurniture::none() -> Self
+#deprecated
+pub fn PageFurniture::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PageFurniture::to_json(Self) -> Json
+#deprecated
+pub fn PageFurniture::to_repr(Self) -> @debug.Repr
+
 pub(all) struct SectionProps {
   page_width_pt : Double
   page_height_pt : Double
@@ -37,6 +51,8 @@ pub(all) struct SectionProps {
   margin_right_pt : Double
   margin_bottom_pt : Double
   margin_left_pt : Double
+  header_pt : Double
+  footer_pt : Double
 } derive(Eq, ToJson, @debug.Debug)
 pub fn SectionProps::default() -> Self
 #deprecated

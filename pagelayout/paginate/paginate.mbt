@@ -12,6 +12,12 @@ pub(all) struct SectionProps {
   margin_right_pt : Double
   margin_bottom_pt : Double
   margin_left_pt : Double
+  /// `w:pgMar w:header` — distance from the page's top edge to the top
+  /// of the header, which sits above the body's top margin.
+  header_pt : Double
+  /// `w:pgMar w:footer` — distance from the page's bottom edge to the
+  /// bottom of the footer.
+  footer_pt : Double
 } derive(Eq, Debug, ToJson)
 
 ///|
@@ -24,6 +30,8 @@ pub fn SectionProps::default() -> SectionProps {
     margin_right_pt: 72,
     margin_bottom_pt: 72,
     margin_left_pt: 72,
+    header_pt: 36,
+    footer_pt: 36,
   }
 }
 
@@ -319,9 +327,142 @@ fn place_table(
 /// breaks, keep-lines, keep-next, and 2/2 widow-orphan control.
 /// Space-before is suppressed for paragraphs that start at the top of a
 /// page (Word's behavior at automatic breaks).
+/// A header or footer: blocks repeated on every page of the section.
+pub(all) struct PageFurniture {
+  header : Array[Block]
+  footer : Array[Block]
+} derive(Eq, Debug, ToJson)
+
+///|
+/// No running header or footer.
+pub fn PageFurniture::none() -> PageFurniture {
+  { header: [], footer: [] }
+}
+
+///|
+/// Lay the furniture out once and stamp it onto every page. The header
+/// hangs from `header_pt` below the page top; the footer's *bottom* sits
+/// `footer_pt` above the page bottom, so it grows upward as it gets
+/// taller — which is how Word anchors them.
+fn stamp_furniture(
+  model : @pagelayout.PageModel,
+  section : SectionProps,
+  furniture : PageFurniture,
+) -> Unit {
+  let width = section.page_width_pt -
+    section.margin_left_pt -
+    section.margin_right_pt
+  let header_items = furniture_items(model, furniture.header, width)
+  let footer_items = furniture_items(model, furniture.footer, width)
+  // the footer's last baseline sits footer_pt above the page bottom, so
+  // a taller footer grows upward rather than off the page
+  let footer_top = section.page_height_pt -
+    section.footer_pt -
+    furniture_height(footer_items)
+  for page in model.pages {
+    for entry in header_items {
+      let (dy, item) = entry
+      page.items.push(
+        offset_item(item, section.margin_left_pt, section.header_pt + dy),
+      )
+    }
+    for entry in footer_items {
+      let (dy, item) = entry
+      page.items.push(
+        offset_item(item, section.margin_left_pt, footer_top + dy),
+      )
+    }
+  }
+}
+
+///|
+/// Lay furniture blocks out at `width`, returning each item with its y
+/// offset from the furniture's own top edge.
+fn furniture_items(
+  model : @pagelayout.PageModel,
+  blocks : Array[Block],
+  width : Double,
+) -> Array[(Double, @pagelayout.PageItem)] {
+  let out : Array[(Double, @pagelayout.PageItem)] = []
+  // paragraphs stack, so each one's lines are offset by what came before
+  let mut y = 0.0
+  for block in blocks {
+    match block {
+      Paragraph(input~, ..) => {
+        let laid = @paragraph.layout_paragraph(input, width)
+        for line in laid.lines {
+          for run in line.runs {
+            let font = model.add_font(run.font)
+            out.push(
+              (
+                y + line.baseline_pt,
+                Text({
+                  font,
+                  size_pt: run.size_pt,
+                  x_pt: run.x_pt,
+                  baseline_pt: 0,
+                  text: run.text,
+                  advances_pt: run.advances_pt,
+                  color: run.color,
+                }),
+              ),
+            )
+          }
+        }
+        y += laid.height_pt
+      }
+      // Word often builds a header from a table
+      TableBlock(table~, ..) => {
+        let laid = @table.layout_table(table, width)
+        let items = @table.emit_rows(model, laid, 0, y, 0, laid.rows.length())
+        for item in items {
+          match item {
+            Text(run) => out.push((run.baseline_pt, Text(run)))
+            other => out.push((0, other))
+          }
+        }
+        y += laid.height_pt
+      }
+      PageBreak => ()
+    }
+  }
+  out
+}
+
+///|
+fn furniture_height(items : Array[(Double, @pagelayout.PageItem)]) -> Double {
+  let mut tallest = 0.0
+  for entry in items {
+    let (dy, _) = entry
+    if dy > tallest {
+      tallest = dy
+    }
+  }
+  tallest
+}
+
+///|
+fn offset_item(
+  item : @pagelayout.PageItem,
+  dx : Double,
+  dy : Double,
+) -> @pagelayout.PageItem {
+  match item {
+    Text(run) => Text({ ..run, x_pt: run.x_pt + dx, baseline_pt: dy })
+    other => other
+  }
+}
+
+///|
+/// Paginate `blocks` into `section`'s content box, honoring explicit page
+/// breaks, keep-lines, keep-next, and 2/2 widow-orphan control.
+/// Space-before is suppressed for paragraphs that start at the top of a
+/// page (Word's behavior at automatic breaks). `furniture` is laid out
+/// once and stamped onto every page.
 pub fn paginate(
   blocks : Array[Block],
   section? : SectionProps = SectionProps::default(),
+  furniture? : PageFurniture = PageFurniture::none(),
 ) -> @pagelayout.PageModel {
   let cursor = PageCursor::{
     model: @pagelayout.PageModel::new(),
@@ -417,5 +558,6 @@ pub fn paginate(
   for page in cursor.pages {
     cursor.model.pages.push(page)
   }
+  stamp_furniture(cursor.model, section, furniture)
   cursor.model
 }
