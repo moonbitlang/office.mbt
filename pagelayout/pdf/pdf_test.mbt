@@ -313,3 +313,32 @@ test "embedded cjk carries a ToUnicode map so the text stays extractable" {
   assert_true(text.contains("<2265><2265><4E2D>"))
   assert_true(text.contains("<399e><399e><6587>"))
 }
+
+///|
+test "metrics and outline programs agree on glyph ids" {
+  // The renderer takes glyph ids from the *metrics* bundle and subsets
+  // the *outline* bundle by codepoint. The two are separate packages
+  // built by separate generators, so nothing but this checks that they
+  // describe the same glyph order — and if they drifted, every CJK page
+  // would draw the wrong characters while still looking well-formed.
+  guard @fontoutlines.outline_sfnt("Noto Sans SC") is Some(program) else {
+    fail("Noto Sans SC has no bundled outlines")
+  }
+  let from_program : Map[Int, Int] = Map([])
+  for entry in @pdflite.pdf_truetype_cmap_glyphs(program) {
+    from_program[entry.codepoint] = entry.glyph_index
+  }
+  let metrics = @fonts.face("Noto Sans SC")
+  let mut compared = 0
+  for codepoint, glyph in metrics.cmap {
+    match from_program.get(codepoint) {
+      Some(other) => {
+        assert_eq(glyph, other)
+        compared += 1
+      }
+      None => fail("outline program lacks U+\{codepoint} the metrics map")
+    }
+  }
+  // a real comparison, not a vacuous one over an empty map
+  assert_true(compared > 30000)
+}
