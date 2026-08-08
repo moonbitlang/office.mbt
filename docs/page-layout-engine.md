@@ -42,14 +42,48 @@ is largely transcription, and the only real work was the coordinate
 flip and font resources.
 
 It also surfaced the cost of an earlier decision. Bundling
-**metrics-only** faces (#359) keeps ~150KB in the repository instead of
-~20MB, but a PDF `/FontFile2` needs glyph outlines, so fonts are
-*declared* with a `/Widths` array rather than embedded. Layout is
-unaffected — runs are positioned explicitly and `/Widths` governs
-spacing — but glyph shapes depend on the viewer, and CJK (which needs
-Type0/Identity-H over an embedded font) is not yet representable in the
-PDF output. Bundling full font programs is the deliberate size decision
-that unlocks both.
+**metrics-only** faces (#359) kept ~150KB in the repository instead of
+~20MB, but a PDF `/FontFile2` needs glyph outlines, so fonts were
+*declared* with a `/Widths` array rather than embedded — which left CJK
+unrepresentable in PDF output, since a simple font's WinAnsi encoding is
+8-bit and cannot address more than 256 codes.
+
+**CJK now ships (#384–#389.)** Glyph outlines live in their own package,
+`pagelayout/fontoutlines`, apart from the metrics: every backend measures
+with metrics, only PDF embeds outlines, and an SVG or wasm build has no
+reason to carry ten megabytes of `glyf`. Families with a bundled program
+are written as Type0 composite fonts with Identity-H over a CIDFontType2
+descendant, subset to the characters the document actually uses; families
+without one keep the declared-not-embedded path, because for Latin a
+substituted face is cosmetic.
+
+Embedding is not optional for CJK the way it is for Latin. Under
+Identity-H a code *is* a glyph index into the embedded program, so a
+substituted face draws whatever glyphs sit at those indices — mojibake,
+not a near miss.
+
+Four things worth recording from that work:
+
+- **The `\xNN` cost was avoidable.** MoonBit byte escapes spend four
+  source characters per byte, which would have made the CJK face 23MB of
+  generated source. ASCII85 armour costs 1.25 and reuses pdflite's tested
+  decoder: 8.3MB instead, ~6MB packed, and it is write-once data that
+  never churns. The compile pathology feared in the original plan did not
+  materialise — all three targets build the blob in under two seconds.
+- **The bundled Noto was the wrong weight.** Noto Sans SC is a variable
+  font whose `fvar` default is wght=100, so the metrics bundle had been
+  measuring *Thin* since #359. Ideographs are full-width at every weight,
+  which is why it went unnoticed; the 482 proportional codepoints that
+  differ would have made layout measure a 574-unit `A` and draw a
+  608-unit one once outlines were embedded.
+- **Generation was not reproducible.** `fontTools` stamps `head.modified`
+  with the wall clock, so regenerating produced a fresh diff across all
+  seventeen data files every time. Fixed before the weight change, which
+  is what let that change read as the one-file diff it actually was.
+- **Rendering correctly is not the same as extracting correctly.**
+  pdflite's ToUnicode writer was built for simple fonts and declared a
+  one-byte codespace. Composite fonts rendered perfectly and `pdftotext`
+  returned *nothing*; only checking against poppler caught it.
 
 Three decisions in this document were **reversed by measurement**, and
 the reasoning is worth keeping:
@@ -113,7 +147,7 @@ DOCX ──(frontend: pagelayout/docx)──► engine input (paragraphs/runs/pr
 | # | Decision | Choice | Why |
 | --- | --- | --- | --- |
 | 1 | Font source | Bundle metric-compatible fonts as compressed bytes | Determinism on every machine; embeddable in PDF later. Carlito (≈Calibri), Liberation Sans/Serif/Mono (≈Arial/Times New Roman/Courier New) — all SIL OFL. |
-| 2 | CJK | Bundle a CJK font too (Noto Sans CJK, SC first) | Full determinism for CJK accepted at the ~10–20 MB cost; layout gets real advances, SVG/PDF get a real embeddable font. Kinsoku break rules in the line breaker from day one. |
+| 2 | CJK | Bundle a CJK font too (Noto Sans CJK, SC first) | Full determinism for CJK accepted at the size cost; layout gets real advances, PDF gets a real embeddable font. Kinsoku break rules in the line breaker from day one. **Shipped:** metrics from #359, outlines and Type0 embedding in #386/#389, at 6.25 MB compressed rather than the 10–20 MB estimated here. |
 | 3 | Location | New top-level `pagelayout/` package tree | Engine + IR are format-neutral; keeps `pdflite` a PDF library and leaves the door open for XLSX print rendering. |
 | 4 | Testing | Exact reviewed goldens + reference-free oracles | See below. Originally svgdiff-guarded; that was **reversed** once measured — see the Status section. |
 | 5 | Shaping | Latin + CJK only in v1 | Kerning via pair lookup is in scope; Arabic joining / Indic reordering (HarfBuzz territory) is explicitly out until a shaping strategy is chosen. |
@@ -125,9 +159,22 @@ Fonts ship as flate-compressed `Bytes` chunks in source (the
 `pdflite/text/unicodedata` pattern), decompressed and parsed once at first
 use through `pdflite/font/truetype`. The native backend lowers these to
 static C data — measured harmless after the moonc fix (see
-`docs/moonc-large-const-codegen.md`). If `moon`'s pre-build embed support
-fits the current `moon.pkg` format, generated chunks may be replaced by
-build-time embedding; that is an implementation detail behind the same API.
+`docs/moonc-large-const-codegen.md`), and re-measured for the multi-megabyte
+CJK outline blob, which builds in under two seconds on all three targets.
+
+Two packages, because the cost is lopsided. `pagelayout/fonts` holds
+metrics-only sfnts (~150KB) that every backend needs to measure with;
+`pagelayout/fontoutlines` holds full font programs that only the PDF
+backend needs to embed. Metrics chunks use `\xNN` byte escapes, which are
+fine at that size. Outlines use ASCII85 armour instead — pdflite already
+ships a tested decoder, and at 1.25 source characters per byte it costs a
+third of what escapes would. Chunks are cut on 4-byte boundaries so each
+is a whole number of ASCII85 groups that decodes independently, and sized
+to stay inside the js backend's 65535-character literal limit.
+
+Variable fonts are instanced at generation time (Noto Sans SC at
+wght=400), and `recalcTimestamp` is disabled so regeneration is a pure
+function of the inputs.
 
 Family mapping (extendable): Calibri→Carlito, Arial→Liberation Sans,
 Times New Roman→Liberation Serif, Courier New→Liberation Mono,
@@ -217,9 +264,12 @@ text, tracked-changes rendering, hyphenation.
 
 Tables (#366–#368) and lists/numbering (#369) followed.
 
-Remaining, in rough order: full font programs (unlocking PDF glyph
-embedding and CJK via Type0/Identity-H), headers/footers, images, tab
-stops, justification polish (CJK inter-character), XLSX print frontend.
+Headers/footers, images, tab stops, PAGE fields, and CJK font embedding
+followed. Remaining, in rough order: embedding the Latin faces too (so a
+PDF depends on nothing installed at all), first-page and even-page
+header/footer variants, true inline-with-text image placement, decimal
+tab stops, justification polish (CJK inter-character), XLSX print
+frontend.
 
 Known gaps are also recorded next to the code they affect — see the
 comment block at the end of `pagelayout/docx/read.mbt` — so they stay
