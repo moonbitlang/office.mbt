@@ -185,7 +185,7 @@ pub fn read_numbering(root : @xml.XmlElement) -> @numbering.Numbering {
         // only adopt levels the delegating definition lacks, so a partial
         // definition keeps what it declares
         match abstracts.get(id) {
-          Some(own) if own.levels.size() > 0 => ()
+          Some(own) if own.levels.length() > 0 => ()
           _ => abstracts[id] = source
         }
       None => ()
