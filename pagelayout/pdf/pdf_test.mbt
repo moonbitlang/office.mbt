@@ -472,6 +472,27 @@ test "images the backend cannot embed are reported, not just skipped" {
       #|[("image/x-wmf is not an embeddable image format", 2)]
     ),
   )
+  // The same bytes can carry two media types, and a reader that rejects
+  // them as one may accept them as the other, so the verdict cannot be
+  // cached on bytes alone. Here the PNG is embeddable and only the
+  // mislabelled copy is a loss.
+  let two_types = model_with(png, "image/x-wmf")
+  two_types.pages[0].items.push(
+    Image({
+      x_pt: 0,
+      y_pt: 40,
+      w_pt: 10,
+      h_pt: 10,
+      data: png,
+      mime: "image/png",
+    }),
+  )
+  debug_inspect(
+    @pdf.unembeddable_images(two_types),
+    content=(
+      #|[("image/x-wmf is not an embeddable image format", 1)]
+    ),
+  )
   // malformed bytes under a supported mime are caught rather than thrown
   debug_inspect(
     @pdf.unembeddable_images(model_with(b"\x89PNGnope", "image/png")),

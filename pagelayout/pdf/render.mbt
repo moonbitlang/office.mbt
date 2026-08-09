@@ -441,17 +441,20 @@ pub fn unembeddable_images(
   // Only successful conversions are cached by `render_pdf`, so a failing
   // image really is skipped at every occurrence — a header picture on
   // fifty pages is fifty holes, and reporting it once would understate
-  // that. The verdict per distinct byte string is cached here all the
-  // same, because re-decoding a broken PNG per page is pure waste.
-  let verdict : Map[Bytes, String?] = Map([])
+  // that. The verdict is cached all the same, because re-decoding a
+  // broken PNG per page is pure waste. It is keyed by bytes *and* type:
+  // the same bytes can appear under two media types, and the reader that
+  // rejects them as one may accept them as the other.
+  let verdict : Map[(Bytes, String), String?] = Map([])
   for page in model.pages {
     for item in page.items {
       guard item is Image(image) else { continue }
-      let why = match verdict.get(image.data) {
+      let key = (image.data, image.mime)
+      let why = match verdict.get(key) {
         Some(cached) => cached
         None => {
           let computed = image_verdict(document, image)
-          verdict[image.data] = computed
+          verdict[key] = computed
           computed
         }
       }
