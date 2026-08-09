@@ -42,7 +42,7 @@ The JSON surface reports the same facts plus the IR's own validity check.
 
 ```mooncram
 $ "$PAGELAYOUT_CLI" info "$PAGELAYOUT_DOCX" --json
-{"pages":1,"page_width_pt":595.3,"page_height_pt":841.9,"fonts":1,"runs":1,"characters":23,"valid":true,"dropped_characters":0,"uncovered_codepoints":0,"unembeddable_images":0}
+{"pages":1,"page_width_pt":595.3,"page_height_pt":841.9,"fonts":1,"runs":1,"characters":23,"valid":true,"dropped_characters":0,"uncovered_codepoints":0,"pdf_unembeddable_images":0}
 ```
 
 ## Render

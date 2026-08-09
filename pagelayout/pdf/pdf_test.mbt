@@ -497,7 +497,7 @@ test "images the backend cannot embed are reported, not just skipped" {
   debug_inspect(
     @pdf.unembeddable_images(model_with(b"\x89PNGnope", "image/png")),
     content=(
-      #|[("PNG this backend cannot read (interlaced or palette)", 1)]
+      #|[("PNG this backend cannot read", 1)]
     ),
   )
 }

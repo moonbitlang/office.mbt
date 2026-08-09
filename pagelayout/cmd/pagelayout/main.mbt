@@ -266,7 +266,7 @@ async fn info(input : String, json : Bool) -> Result[Unit, String] {
           "valid": (violations.length() == 0).to_json(),
           "dropped_characters": dropped.to_json(),
           "uncovered_codepoints": uncovered.length().to_json(),
-          "unembeddable_images": dropped_images.to_json(),
+          "pdf_unembeddable_images": dropped_images.to_json(),
         }
         @stdio.stdout.write(report.stringify() + "\n")
       } else {
@@ -283,7 +283,9 @@ async fn info(input : String, json : Bool) -> Result[Unit, String] {
         }
         for entry in unembeddable {
           let (reason, count) = entry
-          @stdio.stdout.write("dropped image: \{reason} x\{count}\n")
+          @stdio.stdout.write(
+            "dropped image (pdf backend): \{reason} x\{count}\n",
+          )
         }
         for violation in violations {
           @stdio.stdout.write("violation: \{violation}\n")

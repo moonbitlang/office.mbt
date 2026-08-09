@@ -492,7 +492,10 @@ fn image_verdict(
         None
       } catch {
         // pdflite reads baseline PNG only
-        _ => Some("PNG this backend cannot read (interlaced or palette)")
+        // The reader rejects interlaced and palette PNG by design, but
+        // also rejects malformed or truncated ones, so the reason cannot
+        // claim which without inspecting further.
+        _ => Some("PNG this backend cannot read")
       }
     "image/jpeg" =>
       try {
