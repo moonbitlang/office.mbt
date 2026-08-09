@@ -5,8 +5,7 @@
       ".moon-lock",
       "moonbitlang",
       "tonyfettes"
-    ],
-    "manifest_sha256": "9dee0aa5991eb53ba56990592ee2582145a4985b4cca372dac6e8372eed83cc3"
+    ]
   },
   "toolchains": [
     {

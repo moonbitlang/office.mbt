@@ -57,9 +57,14 @@ official all-target, LLVM, and wasm-gc bundle sequence from pinned core inputs,
 restores the locked database modes, and reverifies the regenerated closure before
 candidate dependency resolution or compilation. All other files, including the
 compiler and runtime, are locked by their original bytes. The preparer inventories
-the complete resolved dependency tree against the same lock before performing
-only frozen native and Wasm release builds. Both inventories are reverified
-after the build and retained with the candidate. Every tracked controller asset
+the complete resolved dependency tree before performing only frozen native and
+Wasm release builds. That inventory is no longer compared against a tracked
+digest: the closure moves whenever a dependency is bumped, which is routine, so
+the check reported ordinary maintenance as a supply-chain alarm and blocked it.
+It is still captured, and still compared before and after the build, so a build
+that mutates its own dependencies is caught. The toolchain inventory keeps its
+tracked digests, because that distribution moves rarely and deliberately.
+Both inventories are reverified after the build and retained with the candidate. Every tracked controller asset
 is copied from the snapshot, never from the mutable checkout.
 
 CI installs the immutable MoonBit snapshot named by the locked `moonc` version

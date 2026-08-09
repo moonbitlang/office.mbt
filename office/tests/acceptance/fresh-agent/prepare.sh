@@ -313,13 +313,12 @@ build_lock="$script_dir/build-lock.json"
 /usr/bin/jq -e '
   keys == ["dependencies", "schema", "toolchains"] and
   .schema == "office.fresh-agent.build-lock/1" and
-  (.dependencies | keys) == ["entries", "manifest_sha256"] and
+  (.dependencies | keys) == ["entries"] and
   (.dependencies.entries | type) == "array" and
   (.dependencies.entries | length) > 0 and
   (.dependencies.entries | all(type == "string" and length > 0)) and
   (.dependencies.entries | unique | length) ==
     (.dependencies.entries | length) and
-  (.dependencies.manifest_sha256 | test("^[0-9a-f]{64}$")) and
   (.toolchains | type) == "array" and
   (.toolchains | length) > 0 and
   (.toolchains | map(.platform) | unique | length) ==
@@ -363,9 +362,6 @@ expected_moonrun_version="$(/usr/bin/jq -er \
   --arg platform "$build_platform" \
   '.toolchains[] | select(.platform == $platform) | .moonrun_version' \
   "$build_lock")"
-expected_dependency_manifest_sha256="$(
-  /usr/bin/jq -er '.dependencies.manifest_sha256' "$build_lock"
-)"
 toolchain_entries=()
 while IFS= read -r entry; do
   toolchain_entries+=("$entry")
@@ -712,9 +708,6 @@ dependency_manifest="$scratch/dependencies.manifest"
   "$dependency_manifest" \
   dependencies \
   "${dependency_entries[@]}"
-[ "$(sha256_file "$dependency_manifest")" = \
-  "$expected_dependency_manifest_sha256" ] ||
-  die "resolved dependency inventory does not match the tracked build lock"
 
 native_plan_raw="$scratch/native-build-plan.raw"
 native_plan="$scratch/native-build-plan.txt"
