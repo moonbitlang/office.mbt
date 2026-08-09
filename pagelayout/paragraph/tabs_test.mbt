@@ -224,3 +224,54 @@ test "a tab on a wrapped line measures from that line's origin" {
   }
   inspect(x, content="60")
 }
+
+///|
+test "a decimal stop aligns the separator on the stop" {
+  let style = @paragraph.ParagraphStyle::default()
+  let run = @paragraph.RunStyle::{
+    family: "Calibri",
+    size_pt: 12,
+    bold: false,
+    italic: false,
+    color: @pagelayout.black,
+  }
+  fn place(text : String) {
+    let input = @paragraph.ParagraphInput::{
+      runs: [{ text, style: run, field: NotAField }],
+      style: {
+        ..style,
+        tabs: {
+          stops: [{ position_pt: 200, align: TabDecimal }],
+          default_interval_pt: 36,
+        },
+      },
+    }
+    @paragraph.layout_paragraph(input, 400).lines[0].runs[0]
+  }
+
+  // Amounts of different magnitudes must line up on the point, which is
+  // the entire purpose of a decimal column.
+  fn separator_x(text : String) {
+    let placed = place(text)
+    let mut x = placed.x_pt
+    let mut i = 0
+    while i < placed.text.length() {
+      if placed.text[i].to_int() == 0x2E {
+        return x
+      }
+      x += placed.advances_pt[i]
+      i = i + 1
+    }
+    -1.0
+  }
+
+  inspect(separator_x("Item\t1.50"), content="200")
+  inspect(separator_x("Item\t1234.75"), content="200")
+  // an integer has nothing to align, so Word right-aligns it instead
+  let whole = place("Item\t42")
+  let mut right = whole.x_pt
+  for advance in whole.advances_pt {
+    right += advance
+  }
+  inspect(right, content="200")
+}
