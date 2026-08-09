@@ -209,6 +209,21 @@ async fn info(input : String, json : Bool) -> Result[Unit, String] {
           }
         }
       }
+      // characters no bundled face can draw are dropped by the backends,
+      // so a document can render, validate, and still be missing content
+      let text = StringBuilder()
+      for page in model.pages {
+        for item in page.items {
+          if item is Text(run) {
+            text.write_string(run.text)
+          }
+        }
+      }
+      let uncovered = @fonts.uncovered(text.to_string())
+      let mut dropped = 0
+      for entry in uncovered {
+        dropped += entry.1
+      }
       let width = model.pages.get(0).map(p => p.width_pt).unwrap_or(0.0)
       let height = model.pages.get(0).map(p => p.height_pt).unwrap_or(0.0)
       let violations = model.validate()
@@ -221,6 +236,8 @@ async fn info(input : String, json : Bool) -> Result[Unit, String] {
           "runs": runs.to_json(),
           "characters": characters.to_json(),
           "valid": (violations.length() == 0).to_json(),
+          "dropped_characters": dropped.to_json(),
+          "uncovered_codepoints": uncovered.length().to_json(),
         }
         @stdio.stdout.write(report.stringify() + "\n")
       } else {
@@ -229,6 +246,12 @@ async fn info(input : String, json : Bool) -> Result[Unit, String] {
         @stdio.stdout.write("fonts: \{model.fonts.length()}\n")
         @stdio.stdout.write("runs: \{runs}\n")
         @stdio.stdout.write("characters: \{characters}\n")
+        for entry in uncovered {
+          let (codepoint, count) = entry
+          @stdio.stdout.write(
+            "dropped: U+\{codepoint.to_string(radix=16).to_upper()} x\{count} (no bundled face has this glyph)\n",
+          )
+        }
         for violation in violations {
           @stdio.stdout.write("violation: \{violation}\n")
         }

@@ -134,3 +134,27 @@ test "Noto Sans SC is measured at the regular weight" {
   // weight went unnoticed: the CJK advances never differed.
   inspect(noto.advance_pt(0x4E2D, 1000), content="1000")
 }
+
+///|
+test "characters no bundled face can draw are reported" {
+  // U+2A01 is the GRADE certainty symbol; a systematic review table uses
+  // dozens of them, and no bundled face has it, so every one is dropped.
+  debug_inspect(
+    @fonts.uncovered("⨁⨁⨁◯ High"),
+    content=(
+      #|[(10753, 3)]
+    ),
+  )
+  // U+25EF is covered by Noto Sans SC, so the fallback finds it and it is
+  // not reported — coverage is asked of the whole bundle, not one face
+  inspect(@fonts.uncovered("◯").length(), content="0")
+  // ordinary text reports nothing
+  inspect(@fonts.uncovered("Hello, world! 中文").length(), content="0")
+  // astral characters report one codepoint, not two surrogate halves
+  debug_inspect(
+    @fonts.uncovered("𝑝"),
+    content=(
+      #|[(119901, 1)]
+    ),
+  )
+}

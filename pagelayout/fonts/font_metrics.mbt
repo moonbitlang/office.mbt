@@ -179,3 +179,61 @@ pub fn face(
 pub fn cjk_fallback() -> FaceMetrics {
   face("Noto Sans SC")
 }
+
+///|
+/// Codepoints in `text` that no bundled face can draw, counted.
+///
+/// The layout falls back per character — requested face, then the CJK
+/// face — and a character neither covers is measured with `.notdef` and
+/// then dropped by the backends, because a simple font cannot encode it
+/// and a composite font would draw a blank box at the wrong width. That
+/// is a silent loss, so it needs reporting: a document whose evidence
+/// ratings or equation variables are missing still renders, still
+/// validates, and is still wrong.
+pub fn uncovered(text : String) -> Array[(Int, Int)] {
+  load_faces()
+  let counts : Map[Int, Int] = Map([])
+  let order : Array[Int] = []
+  let mut i = 0
+  while i < text.length() {
+    let unit = text[i].to_int()
+    // decode surrogate pairs so astral characters report their real
+    // codepoint rather than two halves
+    let codepoint = if unit >= 0xD800 && unit <= 0xDBFF && i + 1 < text.length() {
+      let low = text[i + 1].to_int()
+      if low >= 0xDC00 && low <= 0xDFFF {
+        i = i + 1
+        0x10000 + ((unit - 0xD800) << 10) + (low - 0xDC00)
+      } else {
+        unit
+      }
+    } else {
+      unit
+    }
+    i = i + 1
+    // control characters are layout instructions, not glyphs
+    if codepoint < 0x20 {
+      continue
+    }
+    match counts.get(codepoint) {
+      Some(n) => counts[codepoint] = n + 1
+      None =>
+        if !any_face_has(codepoint) {
+          counts[codepoint] = 1
+          order.push(codepoint)
+        }
+    }
+  }
+  [..order.map(fn(cp) { (cp, counts.get(cp).unwrap_or(0)) })]
+}
+
+///|
+/// Whether any bundled family can draw this codepoint.
+fn any_face_has(codepoint : Int) -> Bool {
+  for family in bundled_families() {
+    if face(family).has_char(codepoint) {
+      return true
+    }
+  }
+  false
+}
