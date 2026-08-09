@@ -192,8 +192,11 @@ pub fn render_pdf(model : @pagelayout.PageModel) -> Bytes raise {
     })
   }
 
-  // one XObject per distinct image, for this document only
-  let image_cache : Map[Bytes, Int] = Map([])
+  // one XObject per distinct image, for this document only. Keyed by
+  // media type as well as bytes: the same bytes under a different type
+  // are a different image as far as the reader is concerned, and reusing
+  // an earlier decode would draw a picture the document did not ask for.
+  let image_cache : Map[(Bytes, String), Int] = Map([])
 
   // Both font shapes subset the program they embed, and the character set
   // is also what decides which shape a font takes, so this has to be known
@@ -372,17 +375,18 @@ fn image_resource_name(number : Int) -> @core.PdfName {
 ///|
 /// Add an image XObject, or None for a format pdflite cannot embed.
 ///
-/// Images repeat across pages (a logo in a header), so each distinct byte
-/// string becomes one XObject. The cache belongs to a single render:
+/// Images repeat across pages (a logo in a header), so each distinct
+/// (bytes, media type) pair becomes one XObject. The cache belongs to a single render:
 /// object numbers are allocated per document, so sharing it across
 /// documents would have the second one reference an object the first
 /// allocated and it does not contain.
 fn image_object(
   document : @pdflite.PdfDocument,
   image : @pagelayout.ImageItem,
-  cache : Map[Bytes, Int],
+  cache : Map[(Bytes, String), Int],
 ) -> Int? {
-  match cache.get(image.data) {
+  let key = (image.data, image.mime)
+  match cache.get(key) {
     Some(number) => return Some(number)
     None => ()
   }
@@ -400,7 +404,7 @@ fn image_object(
     _ => return None
   }
   let number = document.add_object(object)
-  cache[image.data] = number
+  cache[key] = number
   Some(number)
 }
 
