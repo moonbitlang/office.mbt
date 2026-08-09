@@ -10,6 +10,8 @@ pub fn face(String, bold? : Bool, italic? : Bool) -> FaceMetrics
 
 pub fn resolve_family(String) -> String
 
+pub fn uncovered(String, String, bold? : Bool, italic? : Bool) -> Array[(Int, Int)]
+
 // Errors
 
 // Types and methods

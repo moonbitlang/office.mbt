@@ -14,7 +14,7 @@ import {
 // Values
 pub fn media_type(String) -> String?
 
-pub fn read_document(@xml.XmlElement, StyleSheet, theme? : ThemeFonts, numbering? : @numbering.Numbering, resolve_image? : (String) -> (Bytes, String)?, default_tab_pt? : Double) -> DocxDocument
+pub fn read_document(@xml.XmlElement, StyleSheet, theme? : ThemeFonts, numbering? : @numbering.Numbering, resolve_image? : (String) -> (Bytes, String)?, image_reason? : (String) -> String, default_tab_pt? : Double) -> DocxDocument
 
 pub fn read_docx(Bytes) -> DocxDocument raise
 

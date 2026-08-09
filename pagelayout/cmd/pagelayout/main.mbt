@@ -127,14 +127,29 @@ async fn run(args : ArrayView[String]) -> Int {
 }
 
 ///|
-async fn read_model(input : String) -> Result[@pagelayout_ir.PageModel, String] {
+async fn read_model(
+  input : String,
+) -> Result[(@pagelayout_ir.PageModel, Array[String]), String] {
   let bytes = @fs.read_file(input).binary() catch {
     err => return Err("cannot read '" + input + "': " + err.to_string())
   }
-  let model = @docx.render_docx(bytes) catch {
+  // read_docx rather than render_docx: the latter drops the frontend's
+  // record of what it could not lay out, and content the frontend
+  // rejected never reaches the backend to be counted there. A WMF image
+  // is dropped here, not by the PDF writer.
+  let doc = @docx.read_docx(bytes) catch {
     err => return Err("cannot lay out '" + input + "': " + err.to_string())
   }
-  Ok(model)
+  Ok(
+    (
+      @paginate.paginate(
+        doc.blocks,
+        section=doc.section,
+        furniture=doc.furniture,
+      ),
+      doc.unsupported,
+    ),
+  )
 }
 
 ///|
@@ -155,10 +170,10 @@ fn page_path(output : String, index : Int, total : Int) -> String {
 
 ///|
 async fn render_svg(input : String, output : String) -> Result[Unit, String] {
-  let model = read_model(input) catch { err => return Err(err.to_string()) }
-  match model {
+  let loaded = read_model(input) catch { err => return Err(err.to_string()) }
+  match loaded {
     Err(message) => Err(message)
-    Ok(model) => {
+    Ok((model, _unsupported)) => {
       let pages = @svg.render_pages(model)
       for index, page in pages {
         let path = page_path(output, index, pages.length())
@@ -177,10 +192,10 @@ async fn render_pdf_file(
   input : String,
   output : String,
 ) -> Result[Unit, String] {
-  let model = read_model(input) catch { err => return Err(err.to_string()) }
-  match model {
+  let loaded = read_model(input) catch { err => return Err(err.to_string()) }
+  match loaded {
     Err(message) => Err(message)
-    Ok(model) => {
+    Ok((model, _unsupported)) => {
       let bytes = @pdf.render_pdf(model) catch {
         err => return Err("cannot build PDF: " + err.to_string())
       }
@@ -195,10 +210,10 @@ async fn render_pdf_file(
 
 ///|
 async fn info(input : String, json : Bool) -> Result[Unit, String] {
-  let model = read_model(input) catch { err => return Err(err.to_string()) }
-  match model {
+  let loaded = read_model(input) catch { err => return Err(err.to_string()) }
+  match loaded {
     Err(message) => Err(message)
-    Ok(model) => {
+    Ok((model, unsupported)) => {
       let mut runs = 0
       let mut characters = 0
       for page in model.pages {
@@ -208,6 +223,49 @@ async fn info(input : String, json : Bool) -> Result[Unit, String] {
             characters += run.text.length()
           }
         }
+      }
+      // characters no bundled face can draw are dropped by the backends,
+      // so a document can render, validate, and still be missing content
+      // asked per run, because the fallback chain depends on the face the
+      // run is set in — a glyph some other bundled family happens to have
+      // is still dropped here
+      let dropped_counts : Map[Int, Int] = Map([])
+      let dropped_order : Array[Int] = []
+      for page in model.pages {
+        for item in page.items {
+          guard item is Text(run) else { continue }
+          guard model.fonts.get(run.font) is Some(spec) else { continue }
+          for
+            entry in @fonts.uncovered(
+              run.text,
+              spec.family,
+              bold=spec.bold,
+              italic=spec.italic,
+            ) {
+            let (codepoint, count) = entry
+            match dropped_counts.get(codepoint) {
+              Some(n) => dropped_counts[codepoint] = n + count
+              None => {
+                dropped_counts[codepoint] = count
+                dropped_order.push(codepoint)
+              }
+            }
+          }
+        }
+      }
+      let uncovered = [
+        ..dropped_order.map(fn(cp) { (cp, dropped_counts.get(cp).unwrap_or(0)) }),
+      ]
+      // images the PDF backend cannot embed leave the reserved space
+      // blank, so they are lost the same silent way glyphs are
+      let unembeddable = @pdf.unembeddable_images(model)
+      let mut dropped = 0
+      for entry in uncovered {
+        dropped += entry.1
+      }
+      let mut dropped_images = 0
+      for entry in unembeddable {
+        dropped_images += entry.1
       }
       let width = model.pages.get(0).map(p => p.width_pt).unwrap_or(0.0)
       let height = model.pages.get(0).map(p => p.height_pt).unwrap_or(0.0)
@@ -221,6 +279,10 @@ async fn info(input : String, json : Bool) -> Result[Unit, String] {
           "runs": runs.to_json(),
           "characters": characters.to_json(),
           "valid": (violations.length() == 0).to_json(),
+          "dropped_characters": dropped.to_json(),
+          "uncovered_codepoints": uncovered.length().to_json(),
+          "pdf_unembeddable_images": dropped_images.to_json(),
+          "not_laid_out": unsupported.length().to_json(),
         }
         @stdio.stdout.write(report.stringify() + "\n")
       } else {
@@ -229,6 +291,23 @@ async fn info(input : String, json : Bool) -> Result[Unit, String] {
         @stdio.stdout.write("fonts: \{model.fonts.length()}\n")
         @stdio.stdout.write("runs: \{runs}\n")
         @stdio.stdout.write("characters: \{characters}\n")
+        for entry in uncovered {
+          let (codepoint, count) = entry
+          @stdio.stdout.write(
+            "dropped: U+\{codepoint.to_string(radix=16).to_upper()} x\{count} (neither the run's face nor the CJK fallback has this glyph)\n",
+          )
+        }
+        for entry in unembeddable {
+          let (reason, count) = entry
+          @stdio.stdout.write(
+            "dropped image (pdf backend): \{reason} x\{count}\n",
+          )
+        }
+        // content the DOCX frontend declined never reaches a backend, so
+        // it is invisible to both checks above
+        for entry in unsupported {
+          @stdio.stdout.write("not laid out: \{entry}\n")
+        }
         for violation in violations {
           @stdio.stdout.write("violation: \{violation}\n")
         }

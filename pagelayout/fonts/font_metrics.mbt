@@ -179,3 +179,64 @@ pub fn face(
 pub fn cjk_fallback() -> FaceMetrics {
   face("Noto Sans SC")
 }
+
+///|
+/// Codepoints in `text` that the face this run is set in cannot draw,
+/// counted.
+///
+/// This asks the same question layout asks, and in the same order:
+/// the requested face, then the CJK fallback. Asking the whole bundle
+/// instead would under-report, because layout never reaches a third
+/// family — U+05D0 lives in Liberation but not in Carlito or Noto Sans
+/// SC, so Hebrew in a Carlito run is dropped even though *some* bundled
+/// face has the glyph.
+///
+/// A character neither face covers is measured with `.notdef` and then
+/// dropped by the backends: a simple font cannot encode it, and a
+/// composite font would draw a blank box at the wrong width. That is a
+/// silent loss worth reporting — a document whose evidence ratings or
+/// equation variables are missing still renders, still validates, and is
+/// still wrong.
+pub fn uncovered(
+  text : String,
+  family : String,
+  bold? : Bool = false,
+  italic? : Bool = false,
+) -> Array[(Int, Int)] {
+  load_faces()
+  let requested = face(resolve_family(family), bold~, italic~)
+  let fallback = cjk_fallback()
+  let counts : Map[Int, Int] = Map([])
+  let order : Array[Int] = []
+  let mut i = 0
+  while i < text.length() {
+    let unit = text[i].to_int()
+    // decode surrogate pairs so astral characters report their real
+    // codepoint rather than two halves
+    let codepoint = if unit >= 0xD800 && unit <= 0xDBFF && i + 1 < text.length() {
+      let low = text[i + 1].to_int()
+      if low >= 0xDC00 && low <= 0xDFFF {
+        i = i + 1
+        0x10000 + ((unit - 0xD800) << 10) + (low - 0xDC00)
+      } else {
+        unit
+      }
+    } else {
+      unit
+    }
+    i = i + 1
+    // control characters are layout instructions, not glyphs
+    if codepoint < 0x20 {
+      continue
+    }
+    match counts.get(codepoint) {
+      Some(n) => counts[codepoint] = n + 1
+      None =>
+        if !requested.has_char(codepoint) && !fallback.has_char(codepoint) {
+          counts[codepoint] = 1
+          order.push(codepoint)
+        }
+    }
+  }
+  [..order.map(fn(cp) { (cp, counts.get(cp).unwrap_or(0)) })]
+}

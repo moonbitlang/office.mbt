@@ -1,6 +1,8 @@
 import {
   "bobzhang/pagelayout" @pagelayout_ir,
   "bobzhang/pagelayout/docx",
+  "bobzhang/pagelayout/fonts",
+  "bobzhang/pagelayout/paginate",
   "bobzhang/pagelayout/pdf",
   "bobzhang/pagelayout/svg",
   "moonbitlang/async",

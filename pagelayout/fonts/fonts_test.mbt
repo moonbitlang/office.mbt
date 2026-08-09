@@ -134,3 +134,42 @@ test "Noto Sans SC is measured at the regular weight" {
   // weight went unnoticed: the CJK advances never differed.
   inspect(noto.advance_pt(0x4E2D, 1000), content="1000")
 }
+
+///|
+test "characters no bundled face can draw are reported" {
+  // U+2A01 is the GRADE certainty symbol; a systematic review table uses
+  // dozens of them, and no bundled face has it, so every one is dropped.
+  debug_inspect(
+    @fonts.uncovered("⨁⨁⨁◯ High", "Calibri"),
+    content=(
+      #|[(10753, 3)]
+    ),
+  )
+  // U+25EF is covered by Noto Sans SC, which is the fallback layout
+  // actually uses, so it renders and is not reported
+  inspect(@fonts.uncovered("◯", "Calibri").length(), content="0")
+  // ordinary text reports nothing
+  inspect(
+    @fonts.uncovered("Hello, world! 中文", "Calibri").length(),
+    content="0",
+  )
+  // astral characters report one codepoint, not two surrogate halves
+  debug_inspect(
+    @fonts.uncovered("𝑝", "Calibri"),
+    content=(
+      #|[(119901, 1)]
+    ),
+  )
+  // The answer depends on the face, because layout falls back only to the
+  // CJK face and never to a third family. U+05D0 is in Liberation but not
+  // in Carlito or Noto Sans SC, so Hebrew set in Calibri is dropped —
+  // asking the whole bundle would call this covered and say nothing while
+  // the renderer silently lost it.
+  debug_inspect(
+    @fonts.uncovered("א", "Calibri"),
+    content=(
+      #|[(1488, 1)]
+    ),
+  )
+  inspect(@fonts.uncovered("א", "Arial").length(), content="0")
+}
