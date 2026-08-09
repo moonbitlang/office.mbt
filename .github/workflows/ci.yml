@@ -131,6 +131,77 @@ jobs:
   # .NET 8 so `moon test` runs real schema validation of generated workbooks
   # and docx packages, exactly as the single job used to.
 
+  # Compatibility signal, deliberately NOT pinned.
+  #
+  # Every other job installs one immutable toolchain snapshot, which is the
+  # right call for reproducibility but means CI cannot see a compiler moving
+  # underneath it: a release that breaks the workspace stays invisible until
+  # somebody upgrades locally and hits it by hand. That is exactly how
+  # moonbitlang/x@0.4.43 came to fail on moonc 0.10.7 with CI fully green.
+  #
+  # This job floats on purpose. It installs from the mutable stable and
+  # nightly channels, so it has no archive digest to verify against and is
+  # therefore kept out of the verified-download path used everywhere else —
+  # it never feeds a release artifact. It is advisory: drift should report,
+  # not block, because the channel can break for reasons this repository
+  # does not own.
+  toolchain-drift:
+    name: toolchain drift (${{ matrix.channel }}, advisory)
+    needs: lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [latest, nightly]
+    env:
+      EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Assert exact workflow head
+        shell: bash
+        run: test "$(git rev-parse --verify HEAD)" = "$EXPECTED_HEAD"
+
+      - name: Install MoonBit (${{ matrix.channel }} channel)
+        shell: bash
+        env:
+          CHANNEL: ${{ matrix.channel }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh -o install.sh
+          if [ "$CHANNEL" = "latest" ]; then
+            bash install.sh
+          else
+            bash install.sh "$CHANNEL"
+          fi
+          rm -f install.sh
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Report the toolchain under test
+        shell: bash
+        run: moon version --all
+
+      # A freshly installed toolchain carries an empty registry index, so
+      # every dependency resolves to "module was not found in the registry"
+      # until this runs.
+      - name: Fetch the registry index
+        shell: bash
+        run: moon update
+
+      - name: Type check the workspace
+        shell: bash
+        run: moon check --deny-warn
+
+      - name: Test the workspace
+        shell: bash
+        run: moon test
+
   test-native:
     name: test (native)
     needs: lint
