@@ -112,3 +112,46 @@ async test "the corpus exercises tables, lists and multiple faces" {
   }
   assert_true(rects > 0)
 }
+
+///|
+/// Characters the engine cannot draw, per document, asked of the face
+/// each run is actually set in.
+fn dropped_characters(model : @pagelayout.PageModel) -> Int {
+  let mut total = 0
+  for page in model.pages {
+    for item in page.items {
+      guard item is Text(run) else { continue }
+      guard model.fonts.get(run.font) is Some(spec) else { continue }
+      for
+        entry in @fonts.uncovered(
+          run.text,
+          spec.family,
+          bold=spec.bold,
+          italic=spec.italic,
+        ) {
+        total += entry.1
+      }
+    }
+  }
+  total
+}
+
+///|
+async test "the corpus loses only the characters we have accounted for" {
+  // A floor on character count cannot see this: the systematic review
+  // drops 62 GRADE symbols out of thousands of characters, which is a
+  // rounding error against any floor but is the whole certainty column
+  // of the table. These numbers are the known coverage gap — no bundled
+  // face has U+2A01, and none has the mathematical italics — so a change
+  // here means either the gap closed or a new one opened, and both are
+  // worth stopping for.
+  let expected : ReadOnlyArray[Int] = [62, 0, 20]
+  for i, entry in corpus {
+    let (name, path) = entry
+    let dropped = dropped_characters(render(path))
+    if dropped != expected[i] {
+      println("\{name}: \{dropped} characters dropped, expected \{expected[i]}")
+    }
+    assert_eq(dropped, expected[i])
+  }
+}

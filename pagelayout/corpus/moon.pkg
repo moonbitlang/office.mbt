@@ -9,5 +9,6 @@ import {
   "moonbitlang/async/fs" @afs,
   "bobzhang/pagelayout",
   "bobzhang/pagelayout/docx",
+  "bobzhang/pagelayout/fonts",
   "bobzhang/pagelayout/paginate",
 } for "test"
