@@ -450,14 +450,33 @@ test "images the backend cannot embed are reported, not just skipped" {
   debug_inspect(
     @pdf.unembeddable_images(model_with(png, "image/x-wmf")),
     content=(
-      #|["image/x-wmf is not an embeddable image format"]
+      #|[("image/x-wmf is not an embeddable image format", 1)]
+    ),
+  )
+  // a failing image is skipped at every occurrence, because only
+  // successful conversions are cached, so the count has to say so
+  let repeated = model_with(png, "image/x-wmf")
+  repeated.pages[0].items.push(
+    Image({
+      x_pt: 0,
+      y_pt: 20,
+      w_pt: 10,
+      h_pt: 10,
+      data: png,
+      mime: "image/x-wmf",
+    }),
+  )
+  debug_inspect(
+    @pdf.unembeddable_images(repeated),
+    content=(
+      #|[("image/x-wmf is not an embeddable image format", 2)]
     ),
   )
   // malformed bytes under a supported mime are caught rather than thrown
   debug_inspect(
     @pdf.unembeddable_images(model_with(b"\x89PNGnope", "image/png")),
     content=(
-      #|["PNG this backend cannot read (interlaced or palette)"]
+      #|[("PNG this backend cannot read (interlaced or palette)", 1)]
     ),
   )
 }

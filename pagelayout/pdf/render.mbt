@@ -424,48 +424,76 @@ fn emit_image(
 }
 
 ///|
-/// Images this backend cannot embed, described one per occurrence.
+/// Images this backend cannot embed: one entry per distinct failure,
+/// with how many occurrences it accounts for.
 ///
 /// `render_pdf` skips them rather than abandoning a document over one
 /// picture, which keeps the page geometry right — the space an image
 /// occupies is reserved by layout, not by the backend — but leaves a
 /// blank where the picture belongs and says nothing. Callers that want to
 /// tell a user their screenshots are missing need to ask.
-pub fn unembeddable_images(model : @pagelayout.PageModel) -> Array[String] {
+pub fn unembeddable_images(
+  model : @pagelayout.PageModel,
+) -> Array[(String, Int)] {
   let document = @pdflite.pdf_document_empty()
   let reasons : Array[String] = []
-  let seen : Map[Bytes, Unit] = Map([])
+  let counts : Map[String, Int] = Map([])
+  // Only successful conversions are cached by `render_pdf`, so a failing
+  // image really is skipped at every occurrence — a header picture on
+  // fifty pages is fifty holes, and reporting it once would understate
+  // that. The verdict per distinct byte string is cached here all the
+  // same, because re-decoding a broken PNG per page is pure waste.
+  let verdict : Map[Bytes, String?] = Map([])
   for page in model.pages {
     for item in page.items {
       guard item is Image(image) else { continue }
-      if seen.contains(image.data) {
-        continue
-      }
-      seen[image.data] = ()
-      let why = match image.mime {
-        // pdflite reads neither interlaced nor palette PNG
-        "image/png" =>
-          try {
-            ignore(@pdflite.pdf_image_object_of_png_data(document, image.data))
-            None
-          } catch {
-            // pdflite reads baseline PNG only
-            _ => Some("PNG this backend cannot read (interlaced or palette)")
-          }
-        "image/jpeg" =>
-          try {
-            ignore(@pdflite.pdf_image_object_of_jpeg_data(image.data))
-            None
-          } catch {
-            _ => Some("JPEG this backend cannot read")
-          }
-        other => Some("\{other} is not an embeddable image format")
+      let why = match verdict.get(image.data) {
+        Some(cached) => cached
+        None => {
+          let computed = image_verdict(document, image)
+          verdict[image.data] = computed
+          computed
+        }
       }
       match why {
-        Some(message) => reasons.push(message)
+        Some(message) =>
+          match counts.get(message) {
+            Some(n) => counts[message] = n + 1
+            None => {
+              counts[message] = 1
+              reasons.push(message)
+            }
+          }
         None => ()
       }
     }
   }
-  reasons
+  [..reasons.map(fn(r) { (r, counts.get(r).unwrap_or(0)) })]
+}
+
+///|
+/// Why this image cannot be embedded, or None when it can.
+fn image_verdict(
+  document : @pdflite.PdfDocument,
+  image : @pagelayout.ImageItem,
+) -> String? {
+  match image.mime {
+    // pdflite reads neither interlaced nor palette PNG
+    "image/png" =>
+      try {
+        ignore(@pdflite.pdf_image_object_of_png_data(document, image.data))
+        None
+      } catch {
+        // pdflite reads baseline PNG only
+        _ => Some("PNG this backend cannot read (interlaced or palette)")
+      }
+    "image/jpeg" =>
+      try {
+        ignore(@pdflite.pdf_image_object_of_jpeg_data(image.data))
+        None
+      } catch {
+        _ => Some("JPEG this backend cannot read")
+      }
+    other => Some("\{other} is not an embeddable image format")
+  }
 }

@@ -181,17 +181,31 @@ pub fn cjk_fallback() -> FaceMetrics {
 }
 
 ///|
-/// Codepoints in `text` that no bundled face can draw, counted.
+/// Codepoints in `text` that the face this run is set in cannot draw,
+/// counted.
 ///
-/// The layout falls back per character — requested face, then the CJK
-/// face — and a character neither covers is measured with `.notdef` and
-/// then dropped by the backends, because a simple font cannot encode it
-/// and a composite font would draw a blank box at the wrong width. That
-/// is a silent loss, so it needs reporting: a document whose evidence
-/// ratings or equation variables are missing still renders, still
-/// validates, and is still wrong.
-pub fn uncovered(text : String) -> Array[(Int, Int)] {
+/// This asks the same question layout asks, and in the same order:
+/// the requested face, then the CJK fallback. Asking the whole bundle
+/// instead would under-report, because layout never reaches a third
+/// family — U+05D0 lives in Liberation but not in Carlito or Noto Sans
+/// SC, so Hebrew in a Carlito run is dropped even though *some* bundled
+/// face has the glyph.
+///
+/// A character neither face covers is measured with `.notdef` and then
+/// dropped by the backends: a simple font cannot encode it, and a
+/// composite font would draw a blank box at the wrong width. That is a
+/// silent loss worth reporting — a document whose evidence ratings or
+/// equation variables are missing still renders, still validates, and is
+/// still wrong.
+pub fn uncovered(
+  text : String,
+  family : String,
+  bold? : Bool = false,
+  italic? : Bool = false,
+) -> Array[(Int, Int)] {
   load_faces()
+  let requested = face(resolve_family(family), bold~, italic~)
+  let fallback = cjk_fallback()
   let counts : Map[Int, Int] = Map([])
   let order : Array[Int] = []
   let mut i = 0
@@ -218,22 +232,11 @@ pub fn uncovered(text : String) -> Array[(Int, Int)] {
     match counts.get(codepoint) {
       Some(n) => counts[codepoint] = n + 1
       None =>
-        if !any_face_has(codepoint) {
+        if !requested.has_char(codepoint) && !fallback.has_char(codepoint) {
           counts[codepoint] = 1
           order.push(codepoint)
         }
     }
   }
   [..order.map(fn(cp) { (cp, counts.get(cp).unwrap_or(0)) })]
-}
-
-///|
-/// Whether any bundled family can draw this codepoint.
-fn any_face_has(codepoint : Int) -> Bool {
-  for family in bundled_families() {
-    if face(family).has_char(codepoint) {
-      return true
-    }
-  }
-  false
 }

@@ -211,21 +211,46 @@ async fn info(input : String, json : Bool) -> Result[Unit, String] {
       }
       // characters no bundled face can draw are dropped by the backends,
       // so a document can render, validate, and still be missing content
-      let text = StringBuilder()
+      // asked per run, because the fallback chain depends on the face the
+      // run is set in — a glyph some other bundled family happens to have
+      // is still dropped here
+      let dropped_counts : Map[Int, Int] = Map([])
+      let dropped_order : Array[Int] = []
       for page in model.pages {
         for item in page.items {
-          if item is Text(run) {
-            text.write_string(run.text)
+          guard item is Text(run) else { continue }
+          guard model.fonts.get(run.font) is Some(spec) else { continue }
+          for
+            entry in @fonts.uncovered(
+              run.text,
+              spec.family,
+              bold=spec.bold,
+              italic=spec.italic,
+            ) {
+            let (codepoint, count) = entry
+            match dropped_counts.get(codepoint) {
+              Some(n) => dropped_counts[codepoint] = n + count
+              None => {
+                dropped_counts[codepoint] = count
+                dropped_order.push(codepoint)
+              }
+            }
           }
         }
       }
-      let uncovered = @fonts.uncovered(text.to_string())
+      let uncovered = [
+        ..dropped_order.map(fn(cp) { (cp, dropped_counts.get(cp).unwrap_or(0)) }),
+      ]
       // images the PDF backend cannot embed leave the reserved space
       // blank, so they are lost the same silent way glyphs are
       let unembeddable = @pdf.unembeddable_images(model)
       let mut dropped = 0
       for entry in uncovered {
         dropped += entry.1
+      }
+      let mut dropped_images = 0
+      for entry in unembeddable {
+        dropped_images += entry.1
       }
       let width = model.pages.get(0).map(p => p.width_pt).unwrap_or(0.0)
       let height = model.pages.get(0).map(p => p.height_pt).unwrap_or(0.0)
@@ -241,7 +266,7 @@ async fn info(input : String, json : Bool) -> Result[Unit, String] {
           "valid": (violations.length() == 0).to_json(),
           "dropped_characters": dropped.to_json(),
           "uncovered_codepoints": uncovered.length().to_json(),
-          "unembeddable_images": unembeddable.length().to_json(),
+          "unembeddable_images": dropped_images.to_json(),
         }
         @stdio.stdout.write(report.stringify() + "\n")
       } else {
@@ -253,11 +278,12 @@ async fn info(input : String, json : Bool) -> Result[Unit, String] {
         for entry in uncovered {
           let (codepoint, count) = entry
           @stdio.stdout.write(
-            "dropped: U+\{codepoint.to_string(radix=16).to_upper()} x\{count} (no bundled face has this glyph)\n",
+            "dropped: U+\{codepoint.to_string(radix=16).to_upper()} x\{count} (neither the run's face nor the CJK fallback has this glyph)\n",
           )
         }
-        for reason in unembeddable {
-          @stdio.stdout.write("dropped image: \{reason}\n")
+        for entry in unembeddable {
+          let (reason, count) = entry
+          @stdio.stdout.write("dropped image: \{reason} x\{count}\n")
         }
         for violation in violations {
           @stdio.stdout.write("violation: \{violation}\n")
