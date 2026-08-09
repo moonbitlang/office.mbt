@@ -452,6 +452,7 @@ pub fn read_docx(docx : Bytes) -> DocxDocument raise {
   }
   // w:defaultTabStop sets the interval tabs fall back to past the last
   // explicit stop
+  let mut even_and_odd = false
   let default_tab_pt = match archive.get("word/settings.xml") {
     Some(part) => {
       let settings = @xml.read_xml_bytes_limited(
@@ -459,6 +460,11 @@ pub fn read_docx(docx : Bytes) -> DocxDocument raise {
         default_budget(),
         namespace_map=ns,
       )
+      // the even/odd switch is document-wide, not per section
+      even_and_odd = match settings.first("w:evenAndOddHeaders") {
+        Some(el) => parse_toggle(el)
+        None => false
+      }
       match settings.first("w:defaultTabStop") {
         Some(el) =>
           match parse_twips(el.attributes.get("w:val")) {
@@ -545,9 +551,18 @@ pub fn read_docx(docx : Bytes) -> DocxDocument raise {
     blocks
   }
 
+  // the even/odd switch lives in settings.xml, which read_document cannot
+  // open, so it is merged in here
+  let refs = { ..parsed.furniture_refs, even_and_odd, }
   let furniture = @paginate.PageFurniture::{
-    header: furniture_blocks(parsed.furniture_refs.header_default),
-    footer: furniture_blocks(parsed.furniture_refs.footer_default),
+    header: furniture_blocks(refs.header_default),
+    footer: furniture_blocks(refs.footer_default),
+    first_header: furniture_blocks(refs.header_first),
+    first_footer: furniture_blocks(refs.footer_first),
+    even_header: furniture_blocks(refs.header_even),
+    even_footer: furniture_blocks(refs.footer_even),
+    title_page: refs.title_page,
+    even_and_odd: refs.even_and_odd,
   }
   { ..parsed, furniture, }
 }
@@ -600,12 +615,37 @@ pub fn render_docx(docx : Bytes) -> @pagelayout.PageModel raise {
 pub(all) struct FurnitureRefs {
   header_default : String?
   footer_default : String?
+  /// The `w:type="first"` variants, used on page one when the section
+  /// sets `w:titlePg` — a title page with no running head, or a different
+  /// one. Word ignores these references entirely without that flag, so
+  /// both halves are read and the flag decides.
+  header_first : String?
+  footer_first : String?
+  /// The `w:type="even"` variants, used on even-numbered pages when
+  /// `w:evenAndOddHeaders` is set in settings.xml. Word ignores these
+  /// without that setting, so the references and the flag are read
+  /// separately and combined at layout time.
+  header_even : String?
+  footer_even : String?
+  /// `w:titlePg`: whether page one takes the first-page variants.
+  title_page : Bool
+  /// `w:evenAndOddHeaders` from settings.xml, not from `w:sectPr`.
+  even_and_odd : Bool
 } derive(Eq, Debug, ToJson)
 
 ///|
 /// No header or footer referenced.
 pub fn FurnitureRefs::empty() -> FurnitureRefs {
-  { header_default: None, footer_default: None }
+  {
+    header_default: None,
+    footer_default: None,
+    header_first: None,
+    footer_first: None,
+    header_even: None,
+    footer_even: None,
+    title_page: false,
+    even_and_odd: false,
+  }
 }
 
 ///|
@@ -614,14 +654,24 @@ pub fn read_furniture_refs(sectpr : @xml.XmlElement) -> FurnitureRefs {
   let mut refs = FurnitureRefs::empty()
   for child in sectpr.children {
     guard child is XmlElement(el) else { continue }
-    if el.attributes.get("w:type").unwrap_or("default") != "default" {
+    if el.name == "w:titlePg" {
+      refs = { ..refs, title_page: parse_toggle(el) }
       continue
     }
-    match (el.name, el.attributes.get("r:id")) {
-      ("w:headerReference", Some(v)) =>
+    let kind = el.attributes.get("w:type").unwrap_or("default")
+    match (el.name, kind, el.attributes.get("r:id")) {
+      ("w:headerReference", "default", Some(v)) =>
         refs = { ..refs, header_default: Some(v) }
-      ("w:footerReference", Some(v)) =>
+      ("w:footerReference", "default", Some(v)) =>
         refs = { ..refs, footer_default: Some(v) }
+      ("w:headerReference", "first", Some(v)) =>
+        refs = { ..refs, header_first: Some(v) }
+      ("w:footerReference", "first", Some(v)) =>
+        refs = { ..refs, footer_first: Some(v) }
+      ("w:headerReference", "even", Some(v)) =>
+        refs = { ..refs, header_even: Some(v) }
+      ("w:footerReference", "even", Some(v)) =>
+        refs = { ..refs, footer_even: Some(v) }
       _ => ()
     }
   }

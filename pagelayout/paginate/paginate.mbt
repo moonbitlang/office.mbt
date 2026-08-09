@@ -378,12 +378,50 @@ fn place_table(
 pub(all) struct PageFurniture {
   header : Array[Block]
   footer : Array[Block]
+  /// What page one carries when `title_page` is set. Empty means the page
+  /// carries nothing — a title page with no running head is the usual
+  /// reason a document sets `w:titlePg` at all, so an empty first-page
+  /// variant is a real choice rather than a missing one.
+  first_header : Array[Block]
+  first_footer : Array[Block]
+  /// What even-numbered pages carry when `even_and_odd` is set.
+  even_header : Array[Block]
+  even_footer : Array[Block]
+  /// `w:titlePg`: whether page one takes the first-page variants.
+  title_page : Bool
+  /// `w:evenAndOddHeaders`: whether even pages take the even variants.
+  even_and_odd : Bool
 } derive(Eq, Debug, ToJson)
 
 ///|
 /// No running header or footer.
 pub fn PageFurniture::none() -> PageFurniture {
-  { header: [], footer: [] }
+  {
+    header: [],
+    footer: [],
+    first_header: [],
+    first_footer: [],
+    even_header: [],
+    even_footer: [],
+    title_page: false,
+    even_and_odd: false,
+  }
+}
+
+///|
+/// The header and footer a given page carries, by zero-based index.
+fn PageFurniture::for_page(
+  self : PageFurniture,
+  index : Int,
+) -> (Array[Block], Array[Block]) {
+  // page numbers are 1-based, so an even page is an odd index
+  if self.title_page && index == 0 {
+    (self.first_header, self.first_footer)
+  } else if self.even_and_odd && index % 2 == 1 {
+    (self.even_header, self.even_footer)
+  } else {
+    (self.header, self.footer)
+  }
 }
 
 ///|
@@ -403,40 +441,22 @@ fn stamp_furniture(
   // every page, so it is laid out per page; furniture without fields is
   // laid out once and reused, which is the common case.
   let total = model.pages.length()
-  let varies = furniture_varies(furniture)
-  let mut header_items = furniture_items(
-    model,
-    furniture.header,
-    width,
-    1,
-    total,
-  )
-  let mut footer_items = furniture_items(
-    model,
-    furniture.footer,
-    width,
-    1,
-    total,
-  )
+  // A title page carries different blocks from the rest, so the layout
+  // cannot be shared across that boundary however static the content is.
+  let varies = furniture_varies(furniture) ||
+    furniture.title_page ||
+    furniture.even_and_odd
+  let (first_header, first_footer) = furniture.for_page(0)
+  let mut header_items = furniture_items(model, first_header, width, 1, total)
+  let mut footer_items = furniture_items(model, first_footer, width, 1, total)
   let mut footer_top = section.page_height_pt -
     section.footer_pt -
     furniture_height(footer_items)
   for index, page in model.pages {
     if varies && index > 0 {
-      header_items = furniture_items(
-        model,
-        furniture.header,
-        width,
-        index + 1,
-        total,
-      )
-      footer_items = furniture_items(
-        model,
-        furniture.footer,
-        width,
-        index + 1,
-        total,
-      )
+      let (header, footer) = furniture.for_page(index)
+      header_items = furniture_items(model, header, width, index + 1, total)
+      footer_items = furniture_items(model, footer, width, index + 1, total)
       footer_top = section.page_height_pt -
         section.footer_pt -
         furniture_height(footer_items)

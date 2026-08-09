@@ -194,3 +194,131 @@ test "fonts are interned once across pages" {
   assert_eq(model.fonts.length(), 1)
   inspect(model.fonts[0].family, content="Carlito")
 }
+
+///|
+/// Furniture whose four variants are distinguishable by their text.
+fn variant_furniture(
+  title_page~ : Bool,
+  even_and_odd~ : Bool,
+) -> @paginate.PageFurniture {
+  fn head(text : String) {
+    [
+      @paginate.Block::paragraph({
+        runs: [
+          {
+            text,
+            style: {
+              family: "Carlito",
+              size_pt: 10,
+              bold: false,
+              italic: false,
+              color: @pagelayout.black,
+            },
+            field: NotAField,
+          },
+        ],
+        style: @paragraph.ParagraphStyle::default(),
+      }),
+    ]
+  }
+
+  {
+    header: head("DEFAULT"),
+    footer: [],
+    first_header: head("FIRST"),
+    first_footer: [],
+    even_header: head("EVEN"),
+    even_footer: [],
+    title_page,
+    even_and_odd,
+  }
+}
+
+///|
+/// Three pages, forced by explicit breaks so the test does not depend on
+/// how much text happens to fit.
+fn three_pages() -> Array[@paginate.Block] {
+  [
+    @paginate.Block::paragraph(body("one")),
+    PageBreak,
+    @paginate.Block::paragraph(body("two")),
+    PageBreak,
+    @paginate.Block::paragraph(body("three")),
+  ]
+}
+
+///|
+/// The header text stamped on each page, in page order.
+fn headers_of(model : @pagelayout.PageModel) -> Array[String] {
+  let out : Array[String] = []
+  for page in model.pages {
+    let mut found = ""
+    for item in page.items {
+      guard item is Text(run) else { continue }
+      if run.text == "DEFAULT" || run.text == "FIRST" || run.text == "EVEN" {
+        found = run.text
+      }
+    }
+    out.push(found)
+  }
+  out
+}
+
+///|
+test "w:titlePg gives page one its own header" {
+  // Without the flag the first-page reference is ignored, which is what
+  // Word does: the variants are only consulted when the section asks.
+  let pages = three_pages()
+  debug_inspect(
+    headers_of(
+      @paginate.paginate(
+        pages,
+        furniture=variant_furniture(title_page=false, even_and_odd=false),
+      ),
+    ),
+    content=(
+      #|["DEFAULT", "DEFAULT", "DEFAULT"]
+    ),
+  )
+  debug_inspect(
+    headers_of(
+      @paginate.paginate(
+        pages,
+        furniture=variant_furniture(title_page=true, even_and_odd=false),
+      ),
+    ),
+    content=(
+      #|["FIRST", "DEFAULT", "DEFAULT"]
+    ),
+  )
+}
+
+///|
+test "w:evenAndOddHeaders alternates by page number, not index" {
+  // Page numbers are 1-based, so the even variant lands on pages 2 and 4
+  // — indices 1 and 3.
+  let pages = three_pages()
+  debug_inspect(
+    headers_of(
+      @paginate.paginate(
+        pages,
+        furniture=variant_furniture(title_page=false, even_and_odd=true),
+      ),
+    ),
+    content=(
+      #|["DEFAULT", "EVEN", "DEFAULT"]
+    ),
+  )
+  // a title page wins over the even/odd alternation on page one
+  debug_inspect(
+    headers_of(
+      @paginate.paginate(
+        pages,
+        furniture=variant_furniture(title_page=true, even_and_odd=true),
+      ),
+    ),
+    content=(
+      #|["FIRST", "EVEN", "DEFAULT"]
+    ),
+  )
+}

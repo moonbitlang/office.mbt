@@ -54,6 +54,12 @@ pub(all) struct DocxDocument {
 pub(all) struct FurnitureRefs {
   header_default : String?
   footer_default : String?
+  header_first : String?
+  footer_first : String?
+  header_even : String?
+  footer_even : String?
+  title_page : Bool
+  even_and_odd : Bool
 } derive(Eq, ToJson, @debug.Debug)
 pub fn FurnitureRefs::empty() -> Self
 #deprecated

@@ -35,6 +35,12 @@ pub fn Block::to_repr(Self) -> @debug.Repr
 pub(all) struct PageFurniture {
   header : Array[Block]
   footer : Array[Block]
+  first_header : Array[Block]
+  first_footer : Array[Block]
+  even_header : Array[Block]
+  even_footer : Array[Block]
+  title_page : Bool
+  even_and_odd : Bool
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn PageFurniture::equal(Self, Self) -> Bool
