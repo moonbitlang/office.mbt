@@ -226,19 +226,34 @@ fn resolve_tabs(
     }
     let stop = ruler.next_stop_of(pen)
     let target = match stop.align {
-      TabLeft | TabBar | TabDecimal => stop.position_pt
-      TabCenter | TabRight => {
+      TabLeft | TabBar => stop.position_pt
+      TabCenter | TabRight | TabDecimal => {
+        // How far past the tab the text runs, and how far to its decimal
+        // separator. A decimal stop aligns the separator; centre and right
+        // use the whole span.
         let mut span = 0.0
+        let mut to_separator = -1.0
         for j in (i + 1)..<to {
           if text[j].to_int() == 0x09 {
             break
           }
+          if to_separator < 0.0 && text[j].to_int() == 0x2E {
+            to_separator = span
+          }
           span += advances[j]
         }
-        let placed = if stop.align is TabRight {
-          stop.position_pt - span
-        } else {
-          stop.position_pt - span / 2.0
+        let placed = match stop.align {
+          TabRight => stop.position_pt - span
+          TabCenter => stop.position_pt - span / 2.0
+          // A decimal stop with nothing to align on right-aligns instead,
+          // which is what Word does with an integer in a decimal column.
+          TabDecimal =>
+            if to_separator < 0.0 {
+              stop.position_pt - span
+            } else {
+              stop.position_pt - to_separator
+            }
+          TabLeft | TabBar => stop.position_pt
         }
         if placed < pen {
           pen
