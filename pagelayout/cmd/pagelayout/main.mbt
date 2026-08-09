@@ -220,6 +220,9 @@ async fn info(input : String, json : Bool) -> Result[Unit, String] {
         }
       }
       let uncovered = @fonts.uncovered(text.to_string())
+      // images the PDF backend cannot embed leave the reserved space
+      // blank, so they are lost the same silent way glyphs are
+      let unembeddable = @pdf.unembeddable_images(model)
       let mut dropped = 0
       for entry in uncovered {
         dropped += entry.1
@@ -238,6 +241,7 @@ async fn info(input : String, json : Bool) -> Result[Unit, String] {
           "valid": (violations.length() == 0).to_json(),
           "dropped_characters": dropped.to_json(),
           "uncovered_codepoints": uncovered.length().to_json(),
+          "unembeddable_images": unembeddable.length().to_json(),
         }
         @stdio.stdout.write(report.stringify() + "\n")
       } else {
@@ -251,6 +255,9 @@ async fn info(input : String, json : Bool) -> Result[Unit, String] {
           @stdio.stdout.write(
             "dropped: U+\{codepoint.to_string(radix=16).to_upper()} x\{count} (no bundled face has this glyph)\n",
           )
+        }
+        for reason in unembeddable {
+          @stdio.stdout.write("dropped image: \{reason}\n")
         }
         for violation in violations {
           @stdio.stdout.write("violation: \{violation}\n")

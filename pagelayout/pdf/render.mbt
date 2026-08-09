@@ -422,3 +422,50 @@ fn emit_image(
   ops.push(Op_Do(resource))
   ops.push(Op_Q)
 }
+
+///|
+/// Images this backend cannot embed, described one per occurrence.
+///
+/// `render_pdf` skips them rather than abandoning a document over one
+/// picture, which keeps the page geometry right — the space an image
+/// occupies is reserved by layout, not by the backend — but leaves a
+/// blank where the picture belongs and says nothing. Callers that want to
+/// tell a user their screenshots are missing need to ask.
+pub fn unembeddable_images(model : @pagelayout.PageModel) -> Array[String] {
+  let document = @pdflite.pdf_document_empty()
+  let reasons : Array[String] = []
+  let seen : Map[Bytes, Unit] = Map([])
+  for page in model.pages {
+    for item in page.items {
+      guard item is Image(image) else { continue }
+      if seen.contains(image.data) {
+        continue
+      }
+      seen[image.data] = ()
+      let why = match image.mime {
+        // pdflite reads neither interlaced nor palette PNG
+        "image/png" =>
+          try {
+            ignore(@pdflite.pdf_image_object_of_png_data(document, image.data))
+            None
+          } catch {
+            // pdflite reads baseline PNG only
+            _ => Some("PNG this backend cannot read (interlaced or palette)")
+          }
+        "image/jpeg" =>
+          try {
+            ignore(@pdflite.pdf_image_object_of_jpeg_data(image.data))
+            None
+          } catch {
+            _ => Some("JPEG this backend cannot read")
+          }
+        other => Some("\{other} is not an embeddable image format")
+      }
+      match why {
+        Some(message) => reasons.push(message)
+        None => ()
+      }
+    }
+  }
+  reasons
+}
