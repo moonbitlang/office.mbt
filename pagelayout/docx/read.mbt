@@ -336,6 +336,9 @@ pub fn read_document(
   theme? : ThemeFonts = ThemeFonts::empty(),
   numbering? : @numbering.Numbering = @numbering.Numbering::empty(),
   resolve_image? : (String) -> (Bytes, String)? = _ => None,
+  // Why `resolve_image` declined, for the unsupported record. Default
+  // keeps callers that do not resolve images at all compiling.
+  image_reason? : (String) -> String = _ => "image",
   default_tab_pt? : Double = 36.0,
 ) -> DocxDocument {
   // list counters run for the whole document, in reading order
@@ -377,7 +380,7 @@ pub fn read_document(
                 ),
               )
             }
-            None => unsupported.push("image")
+            None => unsupported.push(image_reason(image.relationship))
           }
         }
         if breaks_after {
@@ -509,12 +512,32 @@ pub fn read_docx(docx : Bytes) -> DocxDocument raise {
     Some((bytes.to_owned(), mime))
   }
 
+  // Why a drawing produced no image, for the record `read_docx` returns.
+  // "image" on its own told a caller nothing; the extension is what says
+  // whether the document used a format this engine declines (WMF, EMF,
+  // GIF) or whether the package is malformed.
+  fn image_reason(id : String) -> String {
+    guard rels_for_images.part(id, "word/") is Some(path) else {
+      return "image: relationship \{id} resolves to no package part"
+    }
+    guard media_type(path) is Some(_) else {
+      let dot = path.rev_find(".")
+      let ext = match dot {
+        Some(i) => path[i:].to_owned()
+        None => "(no extension)"
+      }
+      return "image: \{ext} is not a format this engine embeds"
+    }
+    "image: \{path} is missing from the package"
+  }
+
   let parsed = read_document(
     document,
     sheet,
     theme~,
     numbering~,
     resolve_image~,
+    image_reason~,
     default_tab_pt~,
   )
   // resolve the section's header/footer relationship ids to parts and
