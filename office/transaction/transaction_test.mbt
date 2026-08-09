@@ -1065,7 +1065,12 @@ async test "Wasm rejects ambiguous double-root output aliases" {
         },
       )
     })
-    assert_eq(code, "office.transaction.invalid_options")
+    // `//abs/path` and `/abs/path` name the same file. moonbitlang/x
+    // normalizes the double root away from 0.4.48 onward, so the alias
+    // guard now recognises this as naming the input rather than rejecting
+    // the path as malformed. Either way the write is refused before the
+    // mutation runs — the assertions below still hold unchanged.
+    assert_eq(code, "office.transaction.output_aliases_input")
     assert_false(called)
     assert_eq(@afs.read_file(input).binary(), original)
     assert_no_transaction_temp(directory)
