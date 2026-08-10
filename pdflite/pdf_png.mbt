@@ -11,7 +11,10 @@ let pdf_png_max_int64 : Int64 = 2147483647L
 /// Parsed PNG metadata and concatenated IDAT payload.
 ///
 /// This mirrors the small `Cpdfpng` surface needed for image insertion:
-/// non-palette, non-interlaced PNGs with their compressed IDAT bytes preserved.
+/// non-palette PNGs with their compressed IDAT bytes preserved. `idat` is
+/// always a *non-interlaced* datastream — an Adam7 source is rebuilt into
+/// the equivalent sequential one when it is read, so consumers never see
+/// interlacing.
 pub(all) struct PdfPNG {
   width : Int
   height : Int
@@ -103,8 +106,10 @@ fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise @core.PdfError {
     Some(byte) => byte.to_int()
     None => raise EndOfInput
   }
-  if interlace_method != 0 {
-    raise BadPNG("read_png: interlaced PNGs not supported")
+  if interlace_method != 0 && interlace_method != 1 {
+    raise BadPNG(
+      "read_png: unknown interlace method " + interlace_method.to_string(),
+    )
   }
   let idat_chunks : Array[@core.PdfBytes] = []
   let mut done = false
@@ -118,11 +123,18 @@ fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise @core.PdfError {
         }
     }
   }
-  { width, height, bit_depth, color_type, idat: pdf_png_concat(idat_chunks) }
+  let concatenated = pdf_png_concat(idat_chunks)
+  let idat = if interlace_method == 1 {
+    pdf_png_deinterlace(width, height, bit_depth, color_type, concatenated)
+  } else {
+    concatenated
+  }
+  { width, height, bit_depth, color_type, idat }
 }
 
 ///|
-/// Read a non-palette, non-interlaced PNG from a byte view.
+/// Read a non-palette PNG from a byte view, de-interlacing an Adam7 image
+/// into a sequential IDAT stream.
 pub fn pdf_read_png_view(data : BytesView) -> PdfPNG raise @core.PdfError {
   pdf_read_png_view_inner(data) catch {
     BadPNG(message) => raise BadPNG(message)
@@ -134,7 +146,8 @@ pub fn pdf_read_png_view(data : BytesView) -> PdfPNG raise @core.PdfError {
 }
 
 ///|
-/// Read a non-palette, non-interlaced PNG from owned bytes.
+/// Read a non-palette PNG from owned bytes, de-interlacing an Adam7 image
+/// into a sequential IDAT stream.
 pub fn pdf_read_png(data : @core.PdfBytes) -> PdfPNG raise @core.PdfError {
   pdf_read_png_view(data)
 }
