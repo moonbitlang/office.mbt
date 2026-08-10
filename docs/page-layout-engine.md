@@ -297,14 +297,18 @@ the fallback, and score 0.99+.
 
 Width ratios cannot establish a *point size* on their own — a substituted
 face or a letter-spacing difference produces the same 1.10 — so the cause
-is confirmed straight from the two PDFs' content streams rather than
-inferred from the harness:
+is read straight from the two PDFs' content streams rather than inferred
+from the harness:
 
-| | body-text `Tf` operator |
-|---|---|
-| LibreOffice reference | `10 Tf` |
-| pagelayout | `11 Tf`, 3,847 of 4,283 on the document |
+| | body-text `Tf` | text matrix | `Tz` / `Tc` / `Tw` |
+|---|---|---|---|
+| LibreOffice reference | `10 Tf` | positions with `Td` only; no `Tm`, no `cm` | none |
+| pagelayout | `11 Tf`, 3,847 of 4,283 | all 4,283 `Tm` are identity `(1,0,0,1)` | none |
 
+The transform columns are load-bearing, not decoration: a `Tf` operand is
+only the effective size if nothing scales the text around it, and `cm`,
+`Tm`, `Tz` and the font matrix all can. Neither stream carries any of
+them on text, so 10pt and 11pt are what actually reach the page.
 `pagelayout/docx/props.mbt` resolves an unspecified run size to 11pt.
 
 Stated no further than that goes. OOXML does not prescribe a size when

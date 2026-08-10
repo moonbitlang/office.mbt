@@ -73,9 +73,10 @@ Every fraction above is rounded to four places and most are computed over
 a different subset, so `--json` carries the raw counts: `comparable_words`
 is the denominator behind `sized` and `scale`, `co_paged_words` the one
 behind both drifts (a much smaller set -- 20,216 against 316 on the
-technical manual), and `missing_words` / `surplus_words` the exact
-integers behind `recall` and `precision`. One surplus word in twenty
-thousand rounds to a precision of 1.0; the count does not.
+technical manual), and `mis_sized_words` / `missing_words` /
+`surplus_words` the exact integers behind `sized`, `recall` and
+`precision`. One bad word in twenty thousand rounds those fractions to a
+perfect 1.0; the counts do not round.
 
 None of this establishes that two renders agree. Every column can be
 satisfied by output that still looks wrong -- nothing here checks glyph
@@ -197,10 +198,11 @@ class Score:
     comparable_words: int
     # The denominator behind both drifts, which is a different set again.
     co_paged_words: int
-    # Exact counts behind `recall` and `precision`. The fractions round to
-    # four places, so one surplus word in twenty thousand prints as a
+    # Exact counts behind `sized`, `recall` and `precision`. The fractions
+    # round to four places, so one bad word in twenty thousand prints as a
     # perfect 1.0 -- these do not round, and a tripwire that cannot see
     # the single-word case is not a tripwire.
+    mis_sized_words: int
     missing_words: int
     surplus_words: int
 
@@ -278,9 +280,11 @@ def render_reference(
     the document itself -- both of which silently compare our render of one
     file against LibreOffice's render of a different one.
 
-    It does not capture the rest of the environment LibreOffice renders
-    in -- installed fonts above all, but also the persistent profile and
-    any layout-affecting configuration. Those still need --refresh.
+    It is not a full fingerprint of the renderer. It does not capture the
+    environment LibreOffice draws in -- installed fonts above all, but
+    also the persistent profile and any layout-affecting configuration --
+    and a binary replaced in place while still reporting the same version
+    keeps the same identity. Those cases still need --refresh.
 
     The -env:UserInstallation flag is not optional: without it this collides
     with a running LibreOffice or stalls on first-run profile setup.
@@ -463,6 +467,7 @@ def score(document: str, ours: list[Word], ref: list[Word]) -> Score:
         matched_words=matched,
         comparable_words=len(ratios),
         co_paged_words=same_page,
+        mis_sized_words=len(ratios) - right_size,
         missing_words=missing,
         surplus_words=surplus,
     )
@@ -586,10 +591,13 @@ def main() -> int:
         if args.ratios:
             distributions.append((docx.stem, width_ratios(our_words, ref_words)))
 
-    histograms = {
-        name: {f"{value:.2f}": count for value, count in sorted(bucketed(ratios).items())}
-        for name, ratios in distributions
-    }
+    # Keyed by position, not by document name: two files of the same name
+    # in different directories share a stem, and a dict would give both
+    # rows whichever histogram was computed last.
+    histograms = [
+        {f"{value:.2f}": count for value, count in sorted(bucketed(ratios).items())}
+        for _, ratios in distributions
+    ]
 
     if args.ratios and not args.json:
         for name, ratios in distributions:
@@ -613,8 +621,8 @@ def main() -> int:
             # Carried inside the document rather than printed alongside it:
             # writing the histogram to stdout first would leave --json
             # emitting something no JSON parser accepts.
-            for row in payload:
-                row["ratio_histogram"] = histograms.get(row["document"], {})
+            for row, histogram in zip(payload, histograms):
+                row["ratio_histogram"] = histogram
         # allow_nan=False: every unavailable value is already None, and a
         # bare NaN would be JSON no strict parser accepts.
         print(json.dumps(payload, indent=2, allow_nan=False))
