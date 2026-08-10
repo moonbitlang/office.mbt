@@ -203,8 +203,9 @@ test "pdf_read_png rejects a truncated Adam7 stream" {
 ///|
 test "pdf_read_png rejects an interlaced image too tall to size" {
   // 1 x (2^31 - 1) in a 33-byte file. Rounding each pass extent up by
-  // adding the step first would wrap here, and every later guard would
-  // then read a tiny image and go on to ask for a two-gigabyte raster.
+  // adding the step first wraps here: four passes come out with negative
+  // heights, their contributions cancel against the one that does not,
+  // and the whole image bills itself at two bytes.
   let huge : Result[@pdflite.PdfPNG, Error] = try
     @pdflite.pdf_read_png(image_png_for_test(1, 2147483647, 1, 0, 1, []))
   catch {
@@ -212,8 +213,11 @@ test "pdf_read_png rejects an interlaced image too tall to size" {
   } noraise {
     value => Ok(value)
   }
-  // The message matters: any malformed PNG raises BadPNG somewhere, so
-  // only naming the guard proves this one stopped it.
+  // The message is the whole assertion. With no IDAT this input raises
+  // BadPNG either way -- as "truncated", once the wrapped geometry has
+  // talked the size guard down to two bytes -- so matching only the error
+  // type would pass against the very bug this pins. Give it those two
+  // bytes and the same wrap walks on into a two-gigabyte raster.
   guard huge is Err(@core.PdfError::BadPNG(message)) else {
     fail("expected an oversized interlaced PNG to raise BadPNG")
   }
@@ -222,10 +226,13 @@ test "pdf_read_png rejects an interlaced image too tall to size" {
 
 ///|
 test "pdf_read_png rejects an interlaced image too wide to filter" {
-  // 50,000,000 x 1 at 16-bit RGB: the byte count fits, but the bit
-  // product the shared predictor helpers recompute in `Int` does not, and
-  // a negative scanline width there yields an empty stream rather than an
-  // error.
+  // 50,000,000 x 1 at 16-bit RGB: the byte count fits in `Int`, but the
+  // bit product the shared predictor helpers recompute does not. Without
+  // the guard this input also raises BadPNG as "truncated" -- it carries
+  // no IDAT -- and only a stream that really did supply its 300MB would
+  // reach the negative scanline width and the empty image it yields. The
+  // guard rejects the dimensions up front, so neither depends on the
+  // data.
   let wide : Result[@pdflite.PdfPNG, Error] = try
     @pdflite.pdf_read_png(image_png_for_test(50000000, 1, 16, 2, 1, []))
   catch {
