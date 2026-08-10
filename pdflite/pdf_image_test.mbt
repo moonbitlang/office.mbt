@@ -765,7 +765,7 @@ test "pdf_read_png reads IHDR and concatenated IDAT chunks" {
 }
 
 ///|
-test "pdf_read_png rejects unsupported palette and interlaced inputs" {
+test "pdf_read_png rejects palette PNGs and unknown interlace methods" {
   let palette : Result[@pdflite.PdfPNG, Error] = try
     @pdflite.pdf_read_png(image_png_for_test(1, 1, 8, 3, 0, []))
   catch {
@@ -776,15 +776,17 @@ test "pdf_read_png rejects unsupported palette and interlaced inputs" {
   guard palette is Err(@core.PdfError::BadPNG(_)) else {
     fail("expected palette PNG to raise BadPNG")
   }
-  let interlaced : Result[@pdflite.PdfPNG, Error] = try
-    @pdflite.pdf_read_png(image_png_for_test(1, 1, 8, 2, 1, []))
+  // Adam7 (method 1) is now read; anything else is not a method PNG
+  // defines, so it stays an error rather than being guessed at.
+  let unknown : Result[@pdflite.PdfPNG, Error] = try
+    @pdflite.pdf_read_png(image_png_for_test(1, 1, 8, 2, 2, []))
   catch {
     err => Err(err)
   } noraise {
     value => Ok(value)
   }
-  guard interlaced is Err(@core.PdfError::BadPNG(_)) else {
-    fail("expected interlaced PNG to raise BadPNG")
+  guard unknown is Err(@core.PdfError::BadPNG(_)) else {
+    fail("expected an unknown interlace method to raise BadPNG")
   }
 }
 
