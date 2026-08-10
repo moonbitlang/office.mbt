@@ -67,9 +67,14 @@ fn pdf_png_check_bit_depth(
 ///|
 /// How many rows (or columns) a pass covers, given the full extent, the
 /// offset of its first sample, and its stride.
+///
+/// Rounds up as `(n - 1) / step + 1` rather than `(n + step - 1) / step`:
+/// `full` may be as large as an IHDR can declare, and adding to it first
+/// wraps into a negative extent that every later guard then reads as a
+/// small image.
 fn pdf_png_adam7_extent(full : Int, start : Int, step : Int) -> Int {
   if full > start {
-    (full - start + step - 1) / step
+    (full - start - 1) / step + 1
   } else {
     0
   }
@@ -78,16 +83,22 @@ fn pdf_png_adam7_extent(full : Int, start : Int, step : Int) -> Int {
 ///|
 /// Bytes one scanline of `columns` pixels occupies, computed in 64-bit so a
 /// hostile IHDR overflows into an error rather than a small positive size.
+///
+/// The bound is on the bit count rather than the byte count, because the
+/// shared predictor helpers recompute `colors * bits * columns + 7` in
+/// `Int` (`pdf_predictor_scanline_width`). A width that fits a byte count
+/// but wraps that product would leave the re-filter reading a negative
+/// scanline width and emitting an empty stream — a silently blank image
+/// rather than an error.
 fn pdf_png_stride(
   columns : Int,
   bits_per_pixel : Int,
 ) -> Int raise @core.PdfError {
-  let bits = columns.to_int64() * bits_per_pixel.to_int64()
-  let bytes = (bits + 7L) / 8L
-  if bytes > pdf_png_max_int64 {
+  let bits = columns.to_int64() * bits_per_pixel.to_int64() + 7L
+  if bits > pdf_png_max_int64 {
     raise BadPNG("read_png: interlaced scanline too wide")
   }
-  bytes.to_int()
+  (bits / 8L).to_int()
 }
 
 ///|
@@ -192,6 +203,11 @@ fn pdf_png_deinterlace(
       raise BadPNG("read_png: interlaced image too large")
     }
   }
+  // Short is fatal; long is not. A datastream carrying more than the pass
+  // geometry owes is malformed, but libpng renders it and the extra bytes
+  // change no pixel, so rejecting it would lose a picture a reader would
+  // otherwise show. This check cannot bound the inflate above it either —
+  // that needs a decoded-size limit in `@flate`, tracked separately.
   let filtered = @flate.pdf_flate_decode(idat)
   if filtered.length().to_int64() < filtered_length {
     raise BadPNG("read_png: truncated interlaced image data")

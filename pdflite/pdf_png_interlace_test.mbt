@@ -201,6 +201,45 @@ test "pdf_read_png rejects a truncated Adam7 stream" {
 }
 
 ///|
+test "pdf_read_png rejects an interlaced image too tall to size" {
+  // 1 x (2^31 - 1) in a 33-byte file. Rounding each pass extent up by
+  // adding the step first would wrap here, and every later guard would
+  // then read a tiny image and go on to ask for a two-gigabyte raster.
+  let huge : Result[@pdflite.PdfPNG, Error] = try
+    @pdflite.pdf_read_png(image_png_for_test(1, 2147483647, 1, 0, 1, []))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
+  // The message matters: any malformed PNG raises BadPNG somewhere, so
+  // only naming the guard proves this one stopped it.
+  guard huge is Err(@core.PdfError::BadPNG(message)) else {
+    fail("expected an oversized interlaced PNG to raise BadPNG")
+  }
+  @test.assert_eq(message, "read_png: interlaced image too large")
+}
+
+///|
+test "pdf_read_png rejects an interlaced image too wide to filter" {
+  // 50,000,000 x 1 at 16-bit RGB: the byte count fits, but the bit
+  // product the shared predictor helpers recompute in `Int` does not, and
+  // a negative scanline width there yields an empty stream rather than an
+  // error.
+  let wide : Result[@pdflite.PdfPNG, Error] = try
+    @pdflite.pdf_read_png(image_png_for_test(50000000, 1, 16, 2, 1, []))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
+  guard wide is Err(@core.PdfError::BadPNG(message)) else {
+    fail("expected an over-wide interlaced PNG to raise BadPNG")
+  }
+  @test.assert_eq(message, "read_png: interlaced scanline too wide")
+}
+
+///|
 test "pdf_read_png rejects a bit depth its colour type forbids" {
   // Four-bit RGBA is not a PNG the format allows; only greyscale packs
   // samples below a byte.
