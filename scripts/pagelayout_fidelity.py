@@ -112,8 +112,9 @@ withholds both drifts -- even though every word really is on the page the
 reference put it on. So a low `same page` means "we could not show these
 words are on the same page", which reordering alone is enough to cause.
 
-`recall` and `precision` are the exception: they bypass the alignment
-entirely and are unmoved by order.
+`pages`, `recall` and `precision` are the exceptions: page counts come
+from pdfinfo and the other two are multiset differences, so none of the
+three touches the alignment or moves with order.
 
 USAGE
 -----
@@ -376,8 +377,13 @@ def words_of(pdf: Path) -> list[Word]:
     words: list[Word] = []
     for number, line in enumerate(out.splitlines()[1:], start=2):
         parts = line.split("\t")
-        if len(parts) < 12 or parts[0] != "5":
+        # Level first, field count second. Testing them together sent a
+        # short level-5 row down the `continue` path, which is the silent
+        # skip this check exists to prevent.
+        if not parts or parts[0] != "5":
             continue
+        if len(parts) < 12:
+            die(f"{pdf.name}: truncated word row at line {number}: {line!r}")
         text = parts[11].strip()
         if not text:
             continue
@@ -499,7 +505,13 @@ def cell(value: float | None, width: int, places: int = 3) -> str:
 
 
 def report(scores: list[Score]) -> None:
-    name_width = max((len(s.document) for s in scores), default=8)
+    # Two files of the same name in different directories would otherwise
+    # print as two identical rows.
+    stems = Counter(s.document for s in scores)
+    labels = {
+        id(s): (s.path if stems[s.document] > 1 else s.document) for s in scores
+    }
+    name_width = max((len(label) for label in labels.values()), default=8)
     header = (
         f"{'document'.ljust(name_width)}  {'pages':>9}  {'sized':>6}  {'scale':>6}  "
         f"{'same pg':>7}  {'y drift':>8}  {'x drift':>8}  {'recall':>6}  "
@@ -518,7 +530,7 @@ def report(scores: list[Score]) -> None:
             # established which.
             flag = f"  <- {1 - s.sized:.0%} of the text is not the reference's width"
         print(
-            f"{s.document.ljust(name_width)}  {pages:>9}  {cell(s.sized, 6)}  "
+            f"{labels[id(s)].ljust(name_width)}  {pages:>9}  {cell(s.sized, 6)}  "
             f"{cell(s.scale, 6)}  {cell(s.same_page, 7)}  {y}  {x}  "
             f"{cell(s.recall, 6)}  {cell(s.precision, 6)}  {cell(s.aligned, 7)}{flag}"
         )
@@ -587,7 +599,10 @@ def main() -> int:
         die("no documents to score")
 
     ref_dir = args.work / "reference"
-    our_dir = args.work / "ours"
+    # Per-invocation, so two runs sharing a --work directory cannot write
+    # and read the same target: unlinking first stops a *stale* file being
+    # scored, but not a concurrent run's fresh one.
+    our_dir = args.work / f"ours-{os.getpid()}"
     profile = args.work / "profile"
     if args.refresh and ref_dir.exists():
         shutil.rmtree(ref_dir)

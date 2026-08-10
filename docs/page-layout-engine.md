@@ -307,17 +307,30 @@ from the harness:
 
 Every column past the first is load-bearing rather than decoration,
 because a `Tf` operand is only the effective size if nothing scales the
-text around it. `cm`, `Tm` and `Tz` can, and none is present on either
-side's text; a Type 3 font's `/FontMatrix` can too, and neither PDF
-contains a Type 3 font or a `/FontMatrix` at all. So 10pt and 11pt are
-what reach the page.
+text around it. Neither side carries a scaling `cm` or `Tz`; our 4,283
+`Tm` operators all have an identity linear component, so they translate
+without scaling; and a Type 3 font's `/FontMatrix` could scale glyphs
+from inside the font dictionary, but neither PDF contains a Type 3 font
+or a `/FontMatrix` at all. So 10pt and 11pt are what reach the page.
 
 That establishes the two sizes. What ties them to the measured 1.10 is an
-intervention: setting `pagelayout/docx/props.mbt`'s fallback to 10pt makes
-page 1's word boxes match the reference *exactly* — widths 12.00, 60.00,
-24.00, 24.00 and height 11.32 on both sides, positions within 0.1pt — and
-takes the document from 56 pages to 51. A substituted face or a spacing
-difference would not have been repaired by changing a point size.
+intervention — setting `pagelayout/docx/props.mbt`'s fallback to 10pt and
+re-measuring the whole distribution:
+
+| | `sized` | `scale` | 1.10 bucket | 1.00 bucket | pages |
+|---|---|---|---|---|---|
+| 11pt fallback | 0.035 | 1.101 | 94.5% | 3.5% | 56 |
+| 10pt fallback | **0.980** | **1.001** | **0%** | **98.0%** | 51 |
+
+The entire 1.10 mode disappears; 20,331 comparable words, none left in
+that bucket. A substituted face or a spacing difference would not have
+been repaired by changing a point size.
+
+Two things this does *not* say. It does not make the document correct —
+51 against a reference 48 means other causes remain, which is what the
+harness is for. And it does not close the substitution gap: the bundled
+faces are metric-compatible, so widths can converge to 1.001 while the
+outlines drawn stay different.
 
 Stated no further than that goes. OOXML does not prescribe a size when
 nothing in the style hierarchy specifies one — the consumer chooses — so
@@ -367,8 +380,8 @@ sensitive. Reference `A B C D` against ours `D C B A` matches a single
 word, scoring `aligned` and `same page` at 0.25 with both drifts
 withheld — though every word is on the page the reference put it on. A
 low `same page` means "we could not show these words are on the same
-page", and reordering alone causes that. Only `recall` and `precision`
-bypass the alignment and are unmoved by order.
+page", and reordering alone causes that. Only `pages`, `recall` and
+`precision` bypass the alignment and are unmoved by order.
 
 ## v1 fidelity tier
 
