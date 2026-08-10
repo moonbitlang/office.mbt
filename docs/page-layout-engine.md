@@ -266,47 +266,67 @@ leaves the page, no character is silently dropped. Those catch missing
 content, and cannot see a line that breaks two words early or a document
 that runs eight pages long.
 
-Five numbers per document, most diagnostic first: **scale** (median ratio
-of our word widths to the reference's), **pages**, **same page**
-(fraction of shared words paginating identically), **drift** (median
-vertical gap between words that share a page), and **recall** (fraction
-of reference words present anywhere in ours).
+Per document: **sized** (fraction of comparable words whose width matches
+within 0.5%), **scale** (median width ratio), **pages**, **same page**
+(fraction of the *reference's* words we put on the same page number),
+**drift** (median vertical gap among co-paged words), **recall**
+(fraction of reference words present anywhere in ours, as a multiset),
+and **aligned** (fraction of reference words matched to one of ours at
+all).
 
-`scale` earns its place at the front. Layout differences perturb it, but
-a systematic deviation means the text is being set at the wrong size and
-every other number is downstream of that — which is exactly what the
-first run found:
+`sized` leads because everything else is downstream of setting text at
+the wrong size — which is exactly what the first run found:
 
-| document | pages | scale | same page | drift | recall |
-|---|---|---|---|---|---|
-| reports-004f20 | 1 vs 2 | 1.001 | 1.000 | 1.6pt | 0.934 |
-| reports-015012 | 11 vs 11 | 1.001 | 0.745 | 65.9pt | 0.968 |
-| technical-028db | 56 vs 48 | **1.101** | 0.016 | — | 0.968 |
+| document | pages | sized | scale | same page | drift | recall | aligned |
+|---|---|---|---|---|---|---|---|
+| reports-004f20 | 1 vs 2 | 0.994 | 1.001 | 0.841 | 1.6pt | 0.934 | 0.841 |
+| reports-015012 | 11 vs 11 | 0.992 | 1.001 | 0.717 | 65.9pt | 0.968 | 0.963 |
+| technical-028db | 56 vs 48 | **0.035** | 1.101 | 0.015 | — | 0.968 | 0.927 |
 
 Recorded 2026-08-10, before any fix.
 
-The technical manual's 1.101 is not an accumulation of small differences:
-its word widths are uniformly ten percent wide, `11/10` exactly. It is
-the one corpus document whose `docDefaults` omits `w:sz`, and the
-frontend's fallback for that is 11pt — Word's *default template* value,
-not the *format's* default of 10pt. Its two siblings both write
-`sz="22"`, never reach the fallback, and score 1.001.
+The technical manual is not eight pages long by accumulation. **94.5% of
+its comparable words are exactly 1.10× the reference's width**, and 3.5%
+are 1.00× — those being the runs that carry an explicit `w:sz`. It is the
+one corpus document whose `docDefaults` omits `w:sz` entirely, and
+`pagelayout/docx/props.mbt` falls back to 11pt for runs that reach that
+point. LibreOffice uses 10pt for them, and 11/10 is the ratio observed.
 
-Two cautions the numbers do not carry themselves:
+Stated carefully, because the format does not settle it: OOXML does not
+prescribe a size when nothing in the style hierarchy specifies one — the
+consumer chooses. So this is a *compatibility* defect rather than a
+spec violation. What makes 11pt the wrong choice is its provenance: it
+is the value Word's default template writes into `docDefaults`
+explicitly, which says nothing about what to do when `docDefaults` is
+silent. The two sibling documents both write `sz="22"`, never reach the
+fallback, and score 0.99+.
+
+Three cautions the numbers do not carry themselves:
 
 - **LibreOffice is a proxy, not Word.** It has its own divergence, so a
   nonzero score is not automatically ours and a zero score would not
   prove parity. The useful question is whether a change moved a number
   toward the reference.
+- **`aligned` is the honesty column.** `sized`, `scale` and `drift` are
+  computed only over words the alignment could match, so they describe
+  only that much of the document. `same page` divides by the reference's
+  full word count precisely so that it cannot report agreement off a
+  handful of matches while the rest disagrees.
 - **Recall counts a multiset, deliberately.** Two renderers can walk a
-  table's cells in different orders while both drawing every cell, and a
-  sequence alignment scores those cells as missing — 0.841 against 0.934
-  on reports-004f20, all of the difference reordering rather than loss.
-  Loss and disorder are different defects; disorder belongs to `same
-  page`.
+  table's cells in different orders while both drawing every cell, and an
+  alignment scores those cells as missing. Loss and disorder are
+  different defects, and recall answers only whether the content is there
+  at all.
 
-`drift` is withheld below 0.5 `same page`: once pagination has diverged,
-the words still sharing a page number are there by coincidence.
+`drift` is withheld below 0.5 `same page` — in the table and in `--json`
+alike — because once pagination has diverged, the words still sharing a
+page number are there by coincidence.
+
+Two limits worth knowing. `same page` compares page numbers exactly, so
+one spurious early page shifts every later word and collapses the score;
+it is a blunt instrument for *where* pagination went wrong, not how
+badly. And nothing here measures word order *within* a page — a renderer
+that scrambled a page's words would still score well.
 
 ## v1 fidelity tier
 
