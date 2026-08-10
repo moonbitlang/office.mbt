@@ -303,7 +303,7 @@ from the harness:
 | | body-text `Tf` | text matrix | `Tz`/`Tc`/`Tw` | fonts |
 |---|---|---|---|---|
 | LibreOffice reference | `10 Tf` | `Td` only; no `Tm`, no `cm` | none | TrueType + Type1, no `/FontMatrix` |
-| pagelayout | `11 Tf`, 3,847 of 4,283 | 4,283 `Tm`, all identity | none | TrueType + Type0/CIDFontType2, no `/FontMatrix` |
+| pagelayout | `11 Tf`, 3,847 of 4,283 | 4,283 `Tm`, all translation-only | none | TrueType + Type0/CIDFontType2, no `/FontMatrix` |
 
 Every column past the first is load-bearing rather than decoration,
 because a `Tf` operand is only the effective size if nothing scales the
@@ -323,14 +323,17 @@ re-measuring the whole distribution:
 | 10pt fallback | **0.980** | **1.001** | **0%** | **98.0%** | 51 |
 
 The entire 1.10 mode disappears; 20,331 comparable words, none left in
-that bucket. A substituted face or a spacing difference would not have
-been repaired by changing a point size.
+that bucket. What that supports is precise and narrow: **the fallback
+size accounts for the observed 1.10 width mode.** It is not a proof that
+nothing else could have produced that mode — a proportional metric
+difference between two faces can be cancelled by a point-size change just
+as well — only that this cause is present and sufficient here.
 
-Two things this does *not* say. It does not make the document correct —
-51 against a reference 48 means other causes remain, which is what the
-harness is for. And it does not close the substitution gap: the bundled
-faces are metric-compatible, so widths can converge to 1.001 while the
-outlines drawn stay different.
+Two further things it does *not* say. It does not make the document
+correct: 51 against a reference 48 means other causes remain, which is
+what the harness is for. And it does not close the substitution gap; the
+bundled faces are metric-compatible, so widths converge to 1.001 while
+the outlines drawn stay different.
 
 Stated no further than that goes. OOXML does not prescribe a size when
 nothing in the style hierarchy specifies one — the consumer chooses — so

@@ -140,6 +140,7 @@ import shutil
 import statistics
 import subprocess
 import sys
+import tempfile
 from collections import Counter
 from dataclasses import dataclass, asdict
 from pathlib import Path
@@ -311,10 +312,10 @@ def render_reference(
     cached = outdir / f"{docx.stem}-{digest}.pdf"
     if cached.exists():
         return cached
-    staging = outdir / f".staging-{digest}"
-    if staging.exists():
-        shutil.rmtree(staging)
-    staging.mkdir(parents=True)
+    # Per-invocation staging. A name derived from the digest alone is
+    # shared by every concurrent run converting the same document, and
+    # they delete each other's work in progress.
+    staging = Path(tempfile.mkdtemp(prefix=".staging-", dir=outdir))
     run(
         [
             soffice,
@@ -601,13 +602,31 @@ def main() -> int:
     ref_dir = args.work / "reference"
     # Per-invocation, so two runs sharing a --work directory cannot write
     # and read the same target: unlinking first stops a *stale* file being
-    # scored, but not a concurrent run's fresh one.
-    our_dir = args.work / f"ours-{os.getpid()}"
+    # scored, but not a concurrent run's fresh one. Removed on the way out
+    # -- a directory per run would otherwise pile up a full set of PDFs
+    # each time, where the old fixed name stayed bounded.
+    args.work.mkdir(parents=True, exist_ok=True)
+    our_dir = Path(tempfile.mkdtemp(prefix="ours-", dir=args.work))
     profile = args.work / "profile"
     if args.refresh and ref_dir.exists():
         shutil.rmtree(ref_dir)
     profile.mkdir(parents=True, exist_ok=True)
 
+    try:
+        return measure(args, documents, soffice, ref_dir, our_dir, profile)
+    finally:
+        shutil.rmtree(our_dir, ignore_errors=True)
+
+
+def measure(
+    args,
+    documents: list[Path],
+    soffice: str,
+    ref_dir: Path,
+    our_dir: Path,
+    profile: Path,
+) -> int:
+    """The scoring run proper, split out so `main` can guarantee cleanup."""
     identity = renderer_identity(soffice)
     scores: list[Score] = []
     distributions: list[tuple[str, list[float]]] = []
