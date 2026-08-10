@@ -80,8 +80,8 @@ perfect 1.0; the counts do not round.
 
 None of this establishes that two renders agree. Every column can be
 satisfied by output that still looks wrong -- nothing here checks glyph
-shape, colour, rules, images, or word order within a page. The columns
-are tripwires for specific, known failures, not a proof of equivalence.
+shape, colour, rules, or images. The columns are tripwires for specific,
+known failures, not a proof of equivalence.
 
 HOW WORDS ARE COMPARED, AND WHAT THAT COSTS
 -------------------------------------------
@@ -104,8 +104,16 @@ Two consequences, both deliberate:
   missing. Loss and disorder are different defects, and recall answers
   only "is the content there at all".
 
-Nothing here measures word order *within* a page. A renderer that emitted
-a page's words in a scrambled order would score well on every column.
+No column is a dedicated order metric, but the alignment makes several of
+them order-sensitive in a way worth understanding before reading a low
+one as a placement defect. Reference `A B C D` against ours `D C B A`
+matches a single word, which scores `aligned` and `same page` at 0.25 and
+withholds both drifts -- even though every word really is on the page the
+reference put it on. So a low `same page` means "we could not show these
+words are on the same page", which reordering alone is enough to cause.
+
+`recall` and `precision` are the exception: they bypass the alignment
+entirely and are unmoved by order.
 
 USAGE
 -----
@@ -125,6 +133,7 @@ import argparse
 import difflib
 import hashlib
 import json
+import math
 import os
 import shutil
 import statistics
@@ -179,6 +188,10 @@ class Word:
 @dataclass
 class Score:
     document: str
+    # The input as given. `document` is only the stem, and two files of
+    # the same name in different directories produce identical stems, so a
+    # saved report needs this to say which row is which.
+    path: str
     pages_ours: int
     pages_ref: int
     sized: float | None
@@ -306,7 +319,7 @@ def render_reference(
             soffice,
             "--headless",
             "--norestore",
-            f"-env:UserInstallation=file://{profile}",
+            f"-env:UserInstallation={profile.resolve().as_uri()}",
             "--convert-to",
             "pdf",
             "--outdir",
@@ -324,9 +337,16 @@ def render_reference(
 
 
 def render_ours(cli: Path, docx: Path, outdir: Path) -> Path:
-    """Never cached: the point is to measure the build in front of us."""
+    """Never cached: the point is to measure the build in front of us.
+
+    The previous run's file is removed first. A CLI that exits 0 without
+    writing anything would otherwise leave it in place, and the existence
+    check below would accept it -- reporting the last build's numbers as
+    this one's, which is the worst lie this tool could tell.
+    """
     outdir.mkdir(parents=True, exist_ok=True)
     target = outdir / (docx.stem + ".pdf")
+    target.unlink(missing_ok=True)
     run([str(cli), "pdf", str(docx), str(target)], f"pagelayout on {docx.name}")
     if not target.exists():
         die(f"pagelayout produced no PDF for {docx.name}")
@@ -354,26 +374,26 @@ def words_of(pdf: Path) -> list[Word]:
         "utf8", "replace"
     )
     words: list[Word] = []
-    for line in out.splitlines()[1:]:
+    for number, line in enumerate(out.splitlines()[1:], start=2):
         parts = line.split("\t")
         if len(parts) < 12 or parts[0] != "5":
             continue
         text = parts[11].strip()
         if not text:
             continue
+        # A word row that will not parse is fatal, not skippable. Dropping
+        # it would quietly shrink the reference denominator, and every
+        # fraction measured against it would improve.
         try:
-            words.append(
-                Word(
-                    page=int(parts[1]),
-                    left=float(parts[6]),
-                    top=float(parts[7]),
-                    width=float(parts[8]),
-                    height=float(parts[9]),
-                    text=text,
-                )
-            )
+            page = int(parts[1])
+            box = [float(parts[i]) for i in (6, 7, 8, 9)]
         except ValueError:
-            continue
+            die(f"{pdf.name}: unparsable word row at line {number}: {line!r}")
+        if not all(math.isfinite(value) for value in box):
+            die(f"{pdf.name}: non-finite word geometry at line {number}: {line!r}")
+        words.append(
+            Word(page=page, left=box[0], top=box[1], width=box[2], height=box[3], text=text)
+        )
     return words
 
 
@@ -401,7 +421,7 @@ def bucketed(ratios: list[float]) -> dict[float, int]:
     return dict(Counter(round(r, 2) for r in ratios))
 
 
-def score(document: str, ours: list[Word], ref: list[Word]) -> Score:
+def score(document: str, path: str, ours: list[Word], ref: list[Word]) -> Score:
     """Align the two word streams and measure where they disagree."""
     matcher = difflib.SequenceMatcher(
         a=[w.text for w in ref], b=[w.text for w in ours], autojunk=False
@@ -452,6 +472,7 @@ def score(document: str, ours: list[Word], ref: list[Word]) -> Score:
 
     return Score(
         document=document,
+        path=path,
         pages_ours=0,  # filled from pdfinfo by the caller
         pages_ref=0,
         sized=fraction(right_size, len(ratios)),
@@ -524,8 +545,9 @@ def report(scores: list[Score]) -> None:
     )
     print(
         "None of these columns, together or apart, establishes that two renders agree.\n"
-        "Nothing here checks glyph shape, colour, rules, images, or word order within a\n"
-        "page. They are tripwires for known failures, not a proof of equivalence."
+        "Nothing here checks glyph shape, colour, rules or images. They are tripwires\n"
+        "for known failures, not a proof of equivalence. A low same page can also mean\n"
+        "only that the alignment could not match the words, which reordering causes."
     )
 
 
@@ -582,14 +604,14 @@ def main() -> int:
         reference = render_reference(soffice, identity, docx, ref_dir, profile)
         ours = render_ours(args.cli, docx, our_dir)
         our_words, ref_words = words_of(ours), words_of(reference)
-        result = score(docx.stem, our_words, ref_words)
+        result = score(docx.stem, str(docx), our_words, ref_words)
         # Page counts come from pdfinfo rather than the last word's page: a
         # trailing page holding only a picture has no words on it.
         result.pages_ours = page_count(ours)
         result.pages_ref = page_count(reference)
         scores.append(result)
         if args.ratios:
-            distributions.append((docx.stem, width_ratios(our_words, ref_words)))
+            distributions.append((str(docx), width_ratios(our_words, ref_words)))
 
     # Keyed by position, not by document name: two files of the same name
     # in different directories share a stem, and a dict would give both

@@ -300,16 +300,24 @@ face or a letter-spacing difference produces the same 1.10 — so the cause
 is read straight from the two PDFs' content streams rather than inferred
 from the harness:
 
-| | body-text `Tf` | text matrix | `Tz` / `Tc` / `Tw` |
-|---|---|---|---|
-| LibreOffice reference | `10 Tf` | positions with `Td` only; no `Tm`, no `cm` | none |
-| pagelayout | `11 Tf`, 3,847 of 4,283 | all 4,283 `Tm` are identity `(1,0,0,1)` | none |
+| | body-text `Tf` | text matrix | `Tz`/`Tc`/`Tw` | fonts |
+|---|---|---|---|---|
+| LibreOffice reference | `10 Tf` | `Td` only; no `Tm`, no `cm` | none | TrueType + Type1, no `/FontMatrix` |
+| pagelayout | `11 Tf`, 3,847 of 4,283 | 4,283 `Tm`, all identity | none | TrueType + Type0/CIDFontType2, no `/FontMatrix` |
 
-The transform columns are load-bearing, not decoration: a `Tf` operand is
-only the effective size if nothing scales the text around it, and `cm`,
-`Tm`, `Tz` and the font matrix all can. Neither stream carries any of
-them on text, so 10pt and 11pt are what actually reach the page.
-`pagelayout/docx/props.mbt` resolves an unspecified run size to 11pt.
+Every column past the first is load-bearing rather than decoration,
+because a `Tf` operand is only the effective size if nothing scales the
+text around it. `cm`, `Tm` and `Tz` can, and none is present on either
+side's text; a Type 3 font's `/FontMatrix` can too, and neither PDF
+contains a Type 3 font or a `/FontMatrix` at all. So 10pt and 11pt are
+what reach the page.
+
+That establishes the two sizes. What ties them to the measured 1.10 is an
+intervention: setting `pagelayout/docx/props.mbt`'s fallback to 10pt makes
+page 1's word boxes match the reference *exactly* — widths 12.00, 60.00,
+24.00, 24.00 and height 11.32 on both sides, positions within 0.1pt — and
+takes the document from 56 pages to 51. A substituted face or a spacing
+difference would not have been repaired by changing a point size.
 
 Stated no further than that goes. OOXML does not prescribe a size when
 nothing in the style hierarchy specifies one — the consumer chooses — so
@@ -349,11 +357,18 @@ alike — because once pagination has diverged, the words still sharing a
 page number are there by coincidence.
 
 **None of these columns establishes that two renders agree.** Nothing
-here checks glyph shape, colour, rules, images, or word order within a
-page, and `same page` compares page numbers exactly, so one spurious
-early page collapses the score without saying how badly the rest went
-wrong. They are tripwires for known failures, not a proof of
-equivalence.
+here checks glyph shape, colour, rules or images, and `same page`
+compares page numbers exactly, so one spurious early page collapses the
+score without saying how badly the rest went wrong. They are tripwires
+for known failures, not a proof of equivalence.
+
+One more reading trap: the alignment makes several columns order-
+sensitive. Reference `A B C D` against ours `D C B A` matches a single
+word, scoring `aligned` and `same page` at 0.25 with both drifts
+withheld — though every word is on the page the reference put it on. A
+low `same page` means "we could not show these words are on the same
+page", and reordering alone causes that. Only `recall` and `precision`
+bypass the alignment and are unmoved by order.
 
 ## v1 fidelity tier
 
