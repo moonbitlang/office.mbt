@@ -316,25 +316,29 @@ def render_reference(
     # shared by every concurrent run converting the same document, and
     # they delete each other's work in progress.
     staging = Path(tempfile.mkdtemp(prefix=".staging-", dir=outdir))
-    run(
-        [
-            soffice,
-            "--headless",
-            "--norestore",
-            f"-env:UserInstallation={profile.resolve().as_uri()}",
-            "--convert-to",
-            "pdf",
-            "--outdir",
-            str(staging),
-            str(docx),
-        ],
-        f"LibreOffice on {docx.name}",
-    )
-    produced = staging / (docx.stem + ".pdf")
-    if not produced.exists():
-        die(f"LibreOffice produced no PDF for {docx.name}")
-    produced.replace(cached)
-    shutil.rmtree(staging, ignore_errors=True)
+    # Cleaned however this ends: a wrapper that fails mid-conversion would
+    # otherwise leave a staging directory behind on every attempt.
+    try:
+        run(
+            [
+                soffice,
+                "--headless",
+                "--norestore",
+                f"-env:UserInstallation={profile.resolve().as_uri()}",
+                "--convert-to",
+                "pdf",
+                "--outdir",
+                str(staging),
+                str(docx),
+            ],
+            f"LibreOffice on {docx.name}",
+        )
+        produced = staging / (docx.stem + ".pdf")
+        if not produced.exists():
+            die(f"LibreOffice produced no PDF for {docx.name}")
+        produced.replace(cached)
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
     return cached
 
 
@@ -608,11 +612,16 @@ def main() -> int:
     args.work.mkdir(parents=True, exist_ok=True)
     our_dir = Path(tempfile.mkdtemp(prefix="ours-", dir=args.work))
     profile = args.work / "profile"
-    if args.refresh and ref_dir.exists():
-        shutil.rmtree(ref_dir)
-    profile.mkdir(parents=True, exist_ok=True)
-
+    # Everything after the mkdtemp belongs inside the guard, including the
+    # setup: a --work whose `profile` is an existing file raises here, and
+    # the directory just created would survive it.
     try:
+        if args.refresh and ref_dir.exists():
+            shutil.rmtree(ref_dir)
+        try:
+            profile.mkdir(parents=True, exist_ok=True)
+        except OSError as error:
+            die(f"cannot prepare the LibreOffice profile at {profile}: {error}")
         return measure(args, documents, soffice, ref_dir, our_dir, profile)
     finally:
         shutil.rmtree(our_dir, ignore_errors=True)
