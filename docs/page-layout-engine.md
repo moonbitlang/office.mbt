@@ -239,12 +239,152 @@ never re-measure. All lengths flow through typed unit conversions
 3. **Coarse cross-renderer calibration** (occasional, not per-commit):
    LibreOffice headless docx→pdf; compare page count (±1), per-page text
    assignment, and paragraph y-positions within a loose band.
+
+   Implemented as `scripts/pagelayout_fidelity.py`; see **Fidelity
+   harness** below.
 4. **Reviewed goldens**: a curated fixture corpus rendered to SVG, judged
    by eye once, then frozen as **exact snapshots**. The emitter is
    deterministic (fixed bundled metrics, fixed rounding), so these catch
    every change including text position and colour.
 
    This decision was reversed from the original plan; see Status.
+
+## Fidelity harness
+
+`scripts/pagelayout_fidelity.py` renders each corpus document twice — once
+through `pagelayout`, once through LibreOffice headless — and reports
+where they disagree. It needs LibreOffice and poppler, neither of which
+is in CI, so it is a command you run rather than a test that runs itself.
+
+```
+python3 scripts/pagelayout_fidelity.py            # whole corpus
+python3 scripts/pagelayout_fidelity.py --json     # machine-readable
+```
+
+The engine's own tests are reference-free: nothing crashes, no glyph
+leaves the page, no character is silently dropped. Those catch missing
+content, and cannot see a line that breaks two words early or a document
+that runs eight pages long.
+
+Per document: **sized** (fraction of comparable words whose width matches
+within 0.5%), **scale** (median width ratio), **pages**, **same page**
+(fraction of the *reference's* words we put on the same page number),
+**y/x drift** (median gap among co-paged words), **recall** (their words
+present in ours) and **precision** (ours present in theirs), both as
+multisets, and **aligned** (fraction of reference words matched at all).
+
+`sized` leads because everything else is downstream of text being set to
+the wrong width — which is exactly what the first run found:
+
+| document | pages | sized | scale | same page | y drift | x drift | recall | precis | aligned |
+|---|---|---|---|---|---|---|---|---|---|
+| reports-004f20 | 1 vs 2 | 0.994 | 1.001 | 0.841 | 1.6pt | 13.5pt | 0.934 | 0.983 | 0.841 |
+| reports-015012 | 11 vs 11 | 0.992 | 1.001 | 0.717 | 65.9pt | 0.3pt | 0.968 | 0.982 | 0.963 |
+| technical-028db | 56 vs 48 | **0.035** | 1.101 | 0.015 | — | — | 0.968 | 0.982 | 0.927 |
+
+Recorded 2026-08-10, before any fix. Splitting drift by axis pays for
+itself in the first two rows: reports-004f20 sets its lines at almost
+exactly the right height and puts them 13.5pt sideways of where the
+reference does, while reports-015012 has the opposite problem. One
+number would have averaged both into noise.
+
+The technical manual is not eight pages long by accumulation. Run
+`--ratios` on it and the distribution is bimodal: **94.5% of its
+comparable words fall in the 1.10 bucket and 3.5% in the 1.00 bucket**
+(buckets are ±0.005 wide). It is the one corpus document whose
+`docDefaults` omits `w:sz`; the two siblings write `sz="22"`, never reach
+the fallback, and score 0.99+.
+
+Width ratios cannot establish a *point size* on their own — a substituted
+face or a letter-spacing difference produces the same 1.10 — so the cause
+is read straight from the two PDFs' content streams rather than inferred
+from the harness:
+
+| | body-text `Tf` | text matrix | `Tz`/`Tc`/`Tw` | fonts |
+|---|---|---|---|---|
+| LibreOffice reference | `10 Tf` | `Td` only; no `Tm`, no `cm` | none | TrueType + Type1, no `/FontMatrix` |
+| pagelayout | `11 Tf`, 3,847 of 4,283 | 4,283 `Tm`, all translation-only | none | TrueType + Type0/CIDFontType2, no `/FontMatrix` |
+
+Every column past the first is load-bearing rather than decoration,
+because a `Tf` operand is only the effective size if nothing scales the
+text around it. Neither side carries a scaling `cm` or `Tz`; our 4,283
+`Tm` operators all have an identity linear component, so they translate
+without scaling; and a Type 3 font's `/FontMatrix` could scale glyphs
+from inside the font dictionary, but neither PDF contains a Type 3 font
+or a `/FontMatrix` at all. So 10pt and 11pt are what reach the page.
+
+That establishes the two sizes. What ties them to the measured 1.10 is an
+intervention — setting `pagelayout/docx/props.mbt`'s fallback to 10pt and
+re-measuring the whole distribution:
+
+| | `sized` | `scale` | 1.10 bucket | 1.00 bucket | pages |
+|---|---|---|---|---|---|
+| 11pt fallback | 0.035 | 1.101 | 94.5% | 3.5% | 56 |
+| 10pt fallback | **0.980** | **1.001** | **0%** | **98.0%** | 51 |
+
+The entire 1.10 mode disappears; 20,331 comparable words, none left in
+that bucket. What that supports is precise and narrow: **the fallback
+size accounts for the observed 1.10 width mode.** It is not a proof that
+nothing else could have produced that mode — a proportional metric
+difference between two faces can be cancelled by a point-size change just
+as well — only that this cause is present and sufficient here.
+
+Two further things it does *not* say. It does not make the document
+correct: 51 against a reference 48 means other causes remain, which is
+what the harness is for. And it does not close the substitution gap; the
+bundled faces are metric-compatible, so widths converge to 1.001 while
+the outlines drawn stay different.
+
+Stated no further than that goes. OOXML does not prescribe a size when
+nothing in the style hierarchy specifies one — the consumer chooses — so
+this is not a spec violation, and what is measured is a divergence from
+*LibreOffice*; nobody has yet put this document through Word. What makes
+11pt suspect rather than merely different is its provenance: it is the
+size recent Word templates write into `docDefaults` explicitly (alongside
+Calibri, now Aptos), and a value chosen for the case where `docDefaults`
+*does* specify a size says nothing about the case where it does not.
+
+Cautions the numbers do not carry themselves:
+
+- **LibreOffice is a proxy, not Word.** It has its own divergence, so a
+  nonzero score is not automatically ours and a zero score would not
+  prove parity. The useful question is whether a change moved a number
+  toward the reference.
+- **`aligned` is the honesty column.** `sized`, `scale` and the drifts
+  are computed only over words the alignment could match, so they
+  describe only that much of the document. Each has a *different*
+  denominator, and `--json` carries all of them as raw counts —
+  `comparable_words` for `sized`/`scale`, `co_paged_words` for the
+  drifts, which on the technical manual are 20,216 and 316 respectively.
+  `same page` divides by the reference's full word count precisely so
+  that it cannot report agreement off a handful of matches while the rest
+  disagrees.
+- **Recall and precision both count multisets.** Two renderers can walk a
+  table's cells in different orders while both drawing every cell, and an
+  alignment scores those cells as missing. Recall answers only whether
+  content is there at all; precision catches the opposite defect, content
+  we invent, which recall cannot see.
+- **`sized` measures width, not font size.** A substituted face or a
+  letter-spacing difference moves it too. It says the text is not the
+  reference's width; the cause needs diagnosing separately.
+
+Drift is withheld below 0.5 `same page` — in the table and in `--json`
+alike — because once pagination has diverged, the words still sharing a
+page number are there by coincidence.
+
+**None of these columns establishes that two renders agree.** Nothing
+here checks glyph shape, colour, rules or images, and `same page`
+compares page numbers exactly, so one spurious early page collapses the
+score without saying how badly the rest went wrong. They are tripwires
+for known failures, not a proof of equivalence.
+
+One more reading trap: the alignment makes several columns order-
+sensitive. Reference `A B C D` against ours `D C B A` matches a single
+word, scoring `aligned` and `same page` at 0.25 with both drifts
+withheld — though every word is on the page the reference put it on. A
+low `same page` means "we could not show these words are on the same
+page", and reordering alone causes that. Only `pages`, `recall` and
+`precision` bypass the alignment and are unmoved by order.
 
 ## v1 fidelity tier
 
