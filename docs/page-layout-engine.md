@@ -290,22 +290,31 @@ number would have averaged both into noise.
 
 The technical manual is not eight pages long by accumulation. Run
 `--ratios` on it and the distribution is bimodal: **94.5% of its
-comparable words are 1.10× the reference's width and 3.5% are 1.00×**.
-It is the one corpus document whose `docDefaults` omits `w:sz`, and
-`pagelayout/docx/props.mbt` falls back to 11pt for runs that reach that
-point; LibreOffice uses 10pt, and 11/10 is the ratio observed. The two
-sibling documents both write `sz="22"`, never reach the fallback, and
-score 0.99+.
+comparable words fall in the 1.10 bucket and 3.5% in the 1.00 bucket**
+(buckets are ±0.005 wide). It is the one corpus document whose
+`docDefaults` omits `w:sz`; the two siblings write `sz="22"`, never reach
+the fallback, and score 0.99+.
 
-Stated no further than the evidence goes. OOXML does not prescribe a size
-when nothing in the style hierarchy specifies one — the consumer chooses
-— so this is not a spec violation. And what is measured here is a
-divergence from *LibreOffice*; nobody has yet put this document through
-Word. What makes 11pt suspect rather than merely different is its
-provenance: it is the size recent Word templates write into `docDefaults`
-explicitly (alongside Calibri, now Aptos), and a value chosen for the
-case where `docDefaults` *does* specify a size says nothing about the
-case where it does not.
+Width ratios cannot establish a *point size* on their own — a substituted
+face or a letter-spacing difference produces the same 1.10 — so the cause
+is confirmed straight from the two PDFs' content streams rather than
+inferred from the harness:
+
+| | body-text `Tf` operator |
+|---|---|
+| LibreOffice reference | `10 Tf` |
+| pagelayout | `11 Tf`, 3,847 of 4,283 on the document |
+
+`pagelayout/docx/props.mbt` resolves an unspecified run size to 11pt.
+
+Stated no further than that goes. OOXML does not prescribe a size when
+nothing in the style hierarchy specifies one — the consumer chooses — so
+this is not a spec violation, and what is measured is a divergence from
+*LibreOffice*; nobody has yet put this document through Word. What makes
+11pt suspect rather than merely different is its provenance: it is the
+size recent Word templates write into `docDefaults` explicitly (alongside
+Calibri, now Aptos), and a value chosen for the case where `docDefaults`
+*does* specify a size says nothing about the case where it does not.
 
 Cautions the numbers do not carry themselves:
 
@@ -315,10 +324,13 @@ Cautions the numbers do not carry themselves:
   toward the reference.
 - **`aligned` is the honesty column.** `sized`, `scale` and the drifts
   are computed only over words the alignment could match, so they
-  describe only that much of the document; `--json` carries the exact
-  denominator as `comparable`. `same page` divides by the reference's
-  full word count precisely so that it cannot report agreement off a
-  handful of matches while the rest disagrees.
+  describe only that much of the document. Each has a *different*
+  denominator, and `--json` carries all of them as raw counts —
+  `comparable_words` for `sized`/`scale`, `co_paged_words` for the
+  drifts, which on the technical manual are 20,216 and 316 respectively.
+  `same page` divides by the reference's full word count precisely so
+  that it cannot report agreement off a handful of matches while the rest
+  disagrees.
 - **Recall and precision both count multisets.** Two renderers can walk a
   table's cells in different orders while both drawing every cell, and an
   alignment scores those cells as missing. Recall answers only whether

@@ -67,8 +67,15 @@ Reported per document:
               ours at all. This is the honesty column: `sized`, `scale`
               and the drifts are computed only over matched words, so a
               low `aligned` means they describe only that fraction of the
-              document and should be read with suspicion. The exact
-              denominator each one used is in `--json` as `comparable`.
+              document and should be read with suspicion.
+
+Every fraction above is rounded to four places and most are computed over
+a different subset, so `--json` carries the raw counts: `comparable_words`
+is the denominator behind `sized` and `scale`, `co_paged_words` the one
+behind both drifts (a much smaller set -- 20,216 against 316 on the
+technical manual), and `missing_words` / `surplus_words` the exact
+integers behind `recall` and `precision`. One surplus word in twenty
+thousand rounds to a precision of 1.0; the count does not.
 
 None of this establishes that two renders agree. Every column can be
 satisfied by output that still looks wrong -- nothing here checks glyph
@@ -184,10 +191,18 @@ class Score:
     ref_words: int
     our_words: int
     matched_words: int
-    # How many matched words actually carried a usable width ratio, which
-    # is the denominator behind `sized` and `scale`. Reported because a
-    # high `aligned` does not imply a high one of these.
+    # The denominator behind `sized` and `scale`: matched words that
+    # carried a usable width ratio. Reported because a high `aligned` does
+    # not imply a high one of these.
     comparable_words: int
+    # The denominator behind both drifts, which is a different set again.
+    co_paged_words: int
+    # Exact counts behind `recall` and `precision`. The fractions round to
+    # four places, so one surplus word in twenty thousand prints as a
+    # perfect 1.0 -- these do not round, and a tripwire that cannot see
+    # the single-word case is not a tripwire.
+    missing_words: int
+    surplus_words: int
 
 
 def die(message: str):
@@ -243,9 +258,13 @@ def renderer_identity(soffice: str) -> str:
     for the renderer that produced it: switching --soffice or upgrading
     LibreOffice otherwise reuses the old build's output and silently
     reports its pagination as the new one's.
+
+    The resolved path is included as well as the version string, because
+    two builds can report the same version and render differently -- a
+    patched build, or a wrapper.
     """
     version = run([soffice, "--version"], "LibreOffice --version", timeout=120)
-    return version.decode("utf8", "replace").strip() or soffice
+    return f"{Path(soffice).resolve()}\n{version.decode('utf8', 'replace').strip()}"
 
 
 def render_reference(
@@ -259,9 +278,9 @@ def render_reference(
     the document itself -- both of which silently compare our render of one
     file against LibreOffice's render of a different one.
 
-    It does not capture the installed fonts, which also change what
-    LibreOffice draws. A font change is the one environment shift that
-    still needs --refresh.
+    It does not capture the rest of the environment LibreOffice renders
+    in -- installed fonts above all, but also the persistent profile and
+    any layout-affecting configuration. Those still need --refresh.
 
     The -env:UserInstallation flag is not optional: without it this collides
     with a running LibreOffice or stalls on first-run profile setup.
@@ -373,6 +392,11 @@ def width_ratios(ours: list[Word], ref: list[Word]) -> list[float]:
     return ratios
 
 
+def bucketed(ratios: list[float]) -> dict[float, int]:
+    """Width ratios grouped to 0.01, for the `--ratios` histogram."""
+    return dict(Counter(round(r, 2) for r in ratios))
+
+
 def score(document: str, ours: list[Word], ref: list[Word]) -> Score:
     """Align the two word streams and measure where they disagree."""
     matcher = difflib.SequenceMatcher(
@@ -409,15 +433,16 @@ def score(document: str, ours: list[Word], ref: list[Word]) -> Score:
         return round(numerator / denominator, 4) if denominator else None
 
     # Denominator is every reference word, not every matched one: see the
-    # module docstring.
-    same_page_fraction = fraction(same_page, total)
+    # module docstring. The floor below tests the unrounded value, so a
+    # true 0.49995 is not rounded up into 0.5 and past the gate.
+    exact_same_page = same_page / total if total else 0.0
 
     # Withheld here rather than at print time, so the table and --json
     # cannot disagree about which numbers mean anything. A consumer
     # plotting drift over time must not be handed the one value the
     # report declares meaningless.
     def drift(values: list[float]) -> float | None:
-        if not values or (same_page_fraction or 0) < DRIFT_FLOOR:
+        if not values or exact_same_page < DRIFT_FLOOR:
             return None
         return round(statistics.median(values), 2)
 
@@ -427,7 +452,7 @@ def score(document: str, ours: list[Word], ref: list[Word]) -> Score:
         pages_ref=0,
         sized=fraction(right_size, len(ratios)),
         scale=round(statistics.median(ratios), 4) if ratios else None,
-        same_page=same_page_fraction,
+        same_page=fraction(same_page, total),
         y_drift_pt=drift(y_drifts),
         x_drift_pt=drift(x_drifts),
         recall=fraction(total - missing, total),
@@ -437,6 +462,9 @@ def score(document: str, ours: list[Word], ref: list[Word]) -> Score:
         our_words=len(ours),
         matched_words=matched,
         comparable_words=len(ratios),
+        co_paged_words=same_page,
+        missing_words=missing,
+        surplus_words=surplus,
     )
 
 
@@ -558,22 +586,38 @@ def main() -> int:
         if args.ratios:
             distributions.append((docx.stem, width_ratios(our_words, ref_words)))
 
-    if args.ratios:
+    histograms = {
+        name: {f"{value:.2f}": count for value, count in sorted(bucketed(ratios).items())}
+        for name, ratios in distributions
+    }
+
+    if args.ratios and not args.json:
         for name, ratios in distributions:
             print(f"\n{name}: width ratios over {len(ratios)} comparable words")
             if not ratios:
                 print("  (none)")
                 continue
-            buckets = Counter(round(r, 2) for r in ratios)
-            for value, count in sorted(buckets.most_common(10)):
+            # Every bucket, not the top N: a truncated histogram can hide
+            # the mode it was asked to show, and the shares would not sum
+            # to 1. Buckets are rounded to 0.01, so membership is "within
+            # half a percent of this value", not an exact ratio.
+            for value, count in sorted(bucketed(ratios).items()):
                 share = count / len(ratios)
-                print(f"  {value:>5.2f}  {count:>7}  {share:>6.1%}  {'#' * round(share * 40)}")
+                bar = "#" * round(share * 40)
+                print(f"  {value:>5.2f}  {count:>7}  {share:>6.1%}  {bar}")
         print()
 
     if args.json:
+        payload = [asdict(s) for s in scores]
+        if args.ratios:
+            # Carried inside the document rather than printed alongside it:
+            # writing the histogram to stdout first would leave --json
+            # emitting something no JSON parser accepts.
+            for row in payload:
+                row["ratio_histogram"] = histograms.get(row["document"], {})
         # allow_nan=False: every unavailable value is already None, and a
         # bare NaN would be JSON no strict parser accepts.
-        print(json.dumps([asdict(s) for s in scores], indent=2, allow_nan=False))
+        print(json.dumps(payload, indent=2, allow_nan=False))
     else:
         report(scores)
     return 0
