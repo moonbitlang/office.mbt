@@ -239,12 +239,74 @@ never re-measure. All lengths flow through typed unit conversions
 3. **Coarse cross-renderer calibration** (occasional, not per-commit):
    LibreOffice headless docx→pdf; compare page count (±1), per-page text
    assignment, and paragraph y-positions within a loose band.
+
+   Implemented as `scripts/pagelayout_fidelity.py`; see **Fidelity
+   harness** below.
 4. **Reviewed goldens**: a curated fixture corpus rendered to SVG, judged
    by eye once, then frozen as **exact snapshots**. The emitter is
    deterministic (fixed bundled metrics, fixed rounding), so these catch
    every change including text position and colour.
 
    This decision was reversed from the original plan; see Status.
+
+## Fidelity harness
+
+`scripts/pagelayout_fidelity.py` renders each corpus document twice — once
+through `pagelayout`, once through LibreOffice headless — and reports
+where they disagree. It needs LibreOffice and poppler, neither of which
+is in CI, so it is a command you run rather than a test that runs itself.
+
+```
+python3 scripts/pagelayout_fidelity.py            # whole corpus
+python3 scripts/pagelayout_fidelity.py --json     # machine-readable
+```
+
+The engine's own tests are reference-free: nothing crashes, no glyph
+leaves the page, no character is silently dropped. Those catch missing
+content, and cannot see a line that breaks two words early or a document
+that runs eight pages long.
+
+Five numbers per document, most diagnostic first: **scale** (median ratio
+of our word widths to the reference's), **pages**, **same page**
+(fraction of shared words paginating identically), **drift** (median
+vertical gap between words that share a page), and **recall** (fraction
+of reference words present anywhere in ours).
+
+`scale` earns its place at the front. Layout differences perturb it, but
+a systematic deviation means the text is being set at the wrong size and
+every other number is downstream of that — which is exactly what the
+first run found:
+
+| document | pages | scale | same page | drift | recall |
+|---|---|---|---|---|---|
+| reports-004f20 | 1 vs 2 | 1.001 | 1.000 | 1.6pt | 0.934 |
+| reports-015012 | 11 vs 11 | 1.001 | 0.745 | 65.9pt | 0.968 |
+| technical-028db | 56 vs 48 | **1.101** | 0.016 | — | 0.968 |
+
+Recorded 2026-08-10, before any fix.
+
+The technical manual's 1.101 is not an accumulation of small differences:
+its word widths are uniformly ten percent wide, `11/10` exactly. It is
+the one corpus document whose `docDefaults` omits `w:sz`, and the
+frontend's fallback for that is 11pt — Word's *default template* value,
+not the *format's* default of 10pt. Its two siblings both write
+`sz="22"`, never reach the fallback, and score 1.001.
+
+Two cautions the numbers do not carry themselves:
+
+- **LibreOffice is a proxy, not Word.** It has its own divergence, so a
+  nonzero score is not automatically ours and a zero score would not
+  prove parity. The useful question is whether a change moved a number
+  toward the reference.
+- **Recall counts a multiset, deliberately.** Two renderers can walk a
+  table's cells in different orders while both drawing every cell, and a
+  sequence alignment scores those cells as missing — 0.841 against 0.934
+  on reports-004f20, all of the difference reordering rather than loss.
+  Loss and disorder are different defects; disorder belongs to `same
+  page`.
+
+`drift` is withheld below 0.5 `same page`: once pagination has diverged,
+the words still sharing a page number are there by coincidence.
 
 ## v1 fidelity tier
 
