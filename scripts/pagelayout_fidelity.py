@@ -28,16 +28,19 @@ THE METRICS
 Reported per document:
 
   sized       Fraction of comparable words whose width matches the
-              reference within 0.5%. This is the sharpest signal
-              available: a low value means the text is being set at the
-              wrong size, and every other number is downstream of that.
+              reference within 0.5%. Usually the sharpest signal
+              available, and usually a font-size difference -- but it
+              measures *width*, and letter-spacing or a substituted face
+              with different advances would move it too, so read it as
+              "this text is not the width theirs is" and diagnose the
+              cause separately.
 
   scale       Median ratio of our word widths to the reference's, over
               the same words. Says which way `sized` is wrong and by how
               much -- 1.10 is a ten percent overset. Read it only when
               `sized` is already low; a median alone cannot tell a
               uniform error from a bimodal one, which is what `sized` is
-              for.
+              for. `--ratios` prints the whole distribution.
 
   pages       Page counts, from pdfinfo. The coarsest symptom and usually
               the last thing to converge.
@@ -45,17 +48,32 @@ Reported per document:
   same page   Fraction of the *reference's* words that we place on the
               same page number.
 
-  drift       Median vertical distance between comparable words that
-              share a page, in points.
+  y drift     Median vertical distance between comparable words that
+              share a page, in points. Line height and spacing land here.
+
+  x drift     The same horizontally. Indents, justification and tab stops
+              land here; a document can score a perfect y drift with
+              every line starting in the wrong place.
 
   recall      Fraction of reference words that appear anywhere in ours,
-              counted as a multiset.
+              counted as a multiset. Content we lose.
+
+  precision   Fraction of *our* words that appear anywhere in the
+              reference. Content we invent -- a word drawn twice, or
+              furniture the reference does not emit. Recall alone cannot
+              see it.
 
   aligned     Fraction of reference words that could be matched to one of
               ours at all. This is the honesty column: `sized`, `scale`
-              and `drift` are computed only over matched words, so a low
-              `aligned` means they describe only that fraction of the
-              document and should be read with suspicion.
+              and the drifts are computed only over matched words, so a
+              low `aligned` means they describe only that fraction of the
+              document and should be read with suspicion. The exact
+              denominator each one used is in `--json` as `comparable`.
+
+None of this establishes that two renders agree. Every column can be
+satisfied by output that still looks wrong -- nothing here checks glyph
+shape, colour, rules, images, or word order within a page. The columns
+are tripwires for specific, known failures, not a proof of equivalence.
 
 HOW WORDS ARE COMPARED, AND WHAT THAT COSTS
 -------------------------------------------
@@ -158,11 +176,18 @@ class Score:
     sized: float | None
     scale: float | None
     same_page: float | None
-    drift_pt: float | None
+    y_drift_pt: float | None
+    x_drift_pt: float | None
     recall: float | None
+    precision: float | None
     aligned: float | None
     ref_words: int
+    our_words: int
     matched_words: int
+    # How many matched words actually carried a usable width ratio, which
+    # is the denominator behind `sized` and `scale`. Reported because a
+    # high `aligned` does not imply a high one of these.
+    comparable_words: int
 
 
 def die(message: str):
@@ -187,9 +212,12 @@ def run(command: list[str], what: str, timeout: int = 600) -> bytes:
 
 def find_soffice(explicit: str | None) -> str:
     if explicit:
-        if not Path(explicit).exists():
+        # A bare name is a legitimate value; resolve it the way the shell
+        # would rather than insisting on a path that exists as written.
+        resolved = explicit if Path(explicit).exists() else shutil.which(explicit)
+        if not resolved:
             die(f"no LibreOffice binary at {explicit}")
-        return explicit
+        return resolved
     for candidate in SOFFICE_CANDIDATES:
         if Path(candidate).exists():
             return candidate
@@ -208,20 +236,41 @@ def require_poppler() -> None:
             die(f"{tool} not found. Install poppler (`brew install poppler`).")
 
 
-def render_reference(soffice: str, docx: Path, outdir: Path, profile: Path) -> Path:
-    """LibreOffice headless DOCX->PDF, cached by content.
+def renderer_identity(soffice: str) -> str:
+    """A stable tag for the reference renderer.
 
-    The cache name carries a hash of the source bytes. Keying on the file
-    name alone would reuse one document's reference for another of the same
-    name, and would survive an edit to the document itself -- both of which
-    compare our render of one file against LibreOffice's render of a
-    different one, silently.
+    Part of the cache key, because a cached PDF is only a valid reference
+    for the renderer that produced it: switching --soffice or upgrading
+    LibreOffice otherwise reuses the old build's output and silently
+    reports its pagination as the new one's.
+    """
+    version = run([soffice, "--version"], "LibreOffice --version", timeout=120)
+    return version.decode("utf8", "replace").strip() or soffice
+
+
+def render_reference(
+    soffice: str, identity: str, docx: Path, outdir: Path, profile: Path
+) -> Path:
+    """LibreOffice headless DOCX->PDF, cached by content and renderer.
+
+    The cache name carries a hash of the source bytes and of the renderer
+    identity. Keying on the file name alone would reuse one document's
+    reference for another of the same name, and would survive an edit to
+    the document itself -- both of which silently compare our render of one
+    file against LibreOffice's render of a different one.
+
+    It does not capture the installed fonts, which also change what
+    LibreOffice draws. A font change is the one environment shift that
+    still needs --refresh.
 
     The -env:UserInstallation flag is not optional: without it this collides
     with a running LibreOffice or stalls on first-run profile setup.
     """
     outdir.mkdir(parents=True, exist_ok=True)
-    digest = hashlib.sha256(docx.read_bytes()).hexdigest()[:12]
+    key = hashlib.sha256()
+    key.update(docx.read_bytes())
+    key.update(identity.encode("utf8"))
+    digest = key.hexdigest()[:16]
     cached = outdir / f"{docx.stem}-{digest}.pdf"
     if cached.exists():
         return cached
@@ -305,6 +354,25 @@ def words_of(pdf: Path) -> list[Word]:
     return words
 
 
+def width_ratios(ours: list[Word], ref: list[Word]) -> list[float]:
+    """Our width over theirs, for every word the alignment matched.
+
+    Split out so `--ratios` can show the distribution behind `scale`: a
+    median cannot distinguish a uniform error from a bimodal one, and the
+    difference decides whether one cause or several are in play.
+    """
+    matcher = difflib.SequenceMatcher(
+        a=[w.text for w in ref], b=[w.text for w in ours], autojunk=False
+    )
+    ratios = []
+    for block in matcher.get_matching_blocks():
+        for offset in range(block.size):
+            r = ref[block.a + offset]
+            if r.width > 0.5:  # a hairline box carries no usable ratio
+                ratios.append(ours[block.b + offset].width / r.width)
+    return ratios
+
+
 def score(document: str, ours: list[Word], ref: list[Word]) -> Score:
     """Align the two word streams and measure where they disagree."""
     matcher = difflib.SequenceMatcher(
@@ -312,7 +380,8 @@ def score(document: str, ours: list[Word], ref: list[Word]) -> Score:
     )
 
     ratios: list[float] = []
-    drifts: list[float] = []
+    y_drifts: list[float] = []
+    x_drifts: list[float] = []
     same_page = 0
     matched = 0
     for block in matcher.get_matching_blocks():
@@ -320,16 +389,21 @@ def score(document: str, ours: list[Word], ref: list[Word]) -> Score:
             r = ref[block.a + offset]
             o = ours[block.b + offset]
             matched += 1
-            if r.width > 0.5:  # a hairline box carries no usable ratio
+            if r.width > 0.5:
                 ratios.append(o.width / r.width)
             if r.page == o.page:
                 same_page += 1
-                drifts.append(abs(o.top - r.top))
+                y_drifts.append(abs(o.top - r.top))
+                x_drifts.append(abs(o.left - r.left))
 
     total = len(ref)
     right_size = sum(1 for x in ratios if abs(x - 1.0) <= SIZE_TOLERANCE)
-    # A multiset difference, not the alignment above: reordering is not loss.
-    missing = sum((Counter(w.text for w in ref) - Counter(w.text for w in ours)).values())
+    # Multiset differences, not the alignment above: reordering is neither
+    # loss nor invention. Recall is what we drop, precision what we add.
+    our_bag = Counter(w.text for w in ours)
+    ref_bag = Counter(w.text for w in ref)
+    missing = sum((ref_bag - our_bag).values())
+    surplus = sum((our_bag - ref_bag).values())
 
     def fraction(numerator: int, denominator: int) -> float | None:
         return round(numerator / denominator, 4) if denominator else None
@@ -342,11 +416,10 @@ def score(document: str, ours: list[Word], ref: list[Word]) -> Score:
     # cannot disagree about which numbers mean anything. A consumer
     # plotting drift over time must not be handed the one value the
     # report declares meaningless.
-    drift = (
-        round(statistics.median(drifts), 2)
-        if drifts and (same_page_fraction or 0) >= DRIFT_FLOOR
-        else None
-    )
+    def drift(values: list[float]) -> float | None:
+        if not values or (same_page_fraction or 0) < DRIFT_FLOOR:
+            return None
+        return round(statistics.median(values), 2)
 
     return Score(
         document=document,
@@ -355,11 +428,15 @@ def score(document: str, ours: list[Word], ref: list[Word]) -> Score:
         sized=fraction(right_size, len(ratios)),
         scale=round(statistics.median(ratios), 4) if ratios else None,
         same_page=same_page_fraction,
-        drift_pt=drift,
+        y_drift_pt=drift(y_drifts),
+        x_drift_pt=drift(x_drifts),
         recall=fraction(total - missing, total),
+        precision=fraction(len(ours) - surplus, len(ours)),
         aligned=fraction(matched, total),
         ref_words=total,
+        our_words=len(ours),
         matched_words=matched,
+        comparable_words=len(ratios),
     )
 
 
@@ -371,39 +448,51 @@ def report(scores: list[Score]) -> None:
     name_width = max((len(s.document) for s in scores), default=8)
     header = (
         f"{'document'.ljust(name_width)}  {'pages':>9}  {'sized':>6}  {'scale':>6}  "
-        f"{'same pg':>7}  {'drift':>8}  {'recall':>6}  {'aligned':>7}"
+        f"{'same pg':>7}  {'y drift':>8}  {'x drift':>8}  {'recall':>6}  "
+        f"{'precis':>6}  {'aligned':>7}"
     )
     print(header)
     print("-" * len(header))
     for s in scores:
         pages = f"{s.pages_ours} vs {s.pages_ref}"
-        drift = f"{s.drift_pt:>6.1f}pt" if s.drift_pt is not None else "      --"
+        y = f"{s.y_drift_pt:>6.1f}pt" if s.y_drift_pt is not None else "      --"
+        x = f"{s.x_drift_pt:>6.1f}pt" if s.x_drift_pt is not None else "      --"
         flag = ""
         if s.sized is not None and s.sized < 0.9:
-            flag = f"  <- {1 - s.sized:.0%} of the text is set at the wrong size"
+            # Deliberately says "width", not "font size": a substituted
+            # face or letter-spacing moves this too, and the tool has not
+            # established which.
+            flag = f"  <- {1 - s.sized:.0%} of the text is not the reference's width"
         print(
             f"{s.document.ljust(name_width)}  {pages:>9}  {cell(s.sized, 6)}  "
-            f"{cell(s.scale, 6)}  {cell(s.same_page, 7)}  {drift}  "
-            f"{cell(s.recall, 6)}  {cell(s.aligned, 7)}{flag}"
+            f"{cell(s.scale, 6)}  {cell(s.same_page, 7)}  {y}  {x}  "
+            f"{cell(s.recall, 6)}  {cell(s.precision, 6)}  {cell(s.aligned, 7)}{flag}"
         )
     print()
     print(
         "sized   fraction of comparable words whose width matches within 0.5%\n"
         "scale   median width ratio, ours over theirs -- which way sized is wrong\n"
+        "        (--ratios shows the distribution a median cannot)\n"
         "same pg fraction of THEIR words we put on the same page number\n"
-        "drift   median vertical gap among co-paged words; -- below "
-        f"{DRIFT_FLOOR:.1f} same pg,\n"
-        "        where the survivors are coincidence\n"
+        "y/x drift  median gap among co-paged words; -- below "
+        f"{DRIFT_FLOOR:.1f} same pg, where\n"
+        "        the survivors are coincidence. y is line height, x is indent\n"
         "recall  fraction of their words present anywhere in ours (multiset)\n"
+        "precis  fraction of OUR words present anywhere in theirs -- content we\n"
+        "        invent, which recall cannot see\n"
         "aligned fraction of their words matched to one of ours at all; sized,\n"
-        "        scale and drift describe only this much of the document\n"
+        "        scale and the drifts describe only this much of the document\n"
     )
     print(
         "LibreOffice is a proxy, not Word: it carries its own divergence from Word, so\n"
         "read these as a trend across commits rather than as a parity verdict. The\n"
         "bundled faces are metric-compatible substitutes, so glyph shapes stay\n"
-        "different even where every number here reaches its target. Nothing here\n"
-        "measures word order within a page."
+        "different even where every number here reaches its target.\n"
+    )
+    print(
+        "None of these columns, together or apart, establishes that two renders agree.\n"
+        "Nothing here checks glyph shape, colour, rules, images, or word order within a\n"
+        "page. They are tripwires for known failures, not a proof of equivalence."
     )
 
 
@@ -426,6 +515,11 @@ def main() -> int:
         help="discard cached reference renders and rebuild them",
     )
     parser.add_argument("--json", action="store_true", help="emit JSON")
+    parser.add_argument(
+        "--ratios",
+        action="store_true",
+        help="print the width-ratio distribution behind `scale`",
+    )
     args = parser.parse_args()
 
     require_poppler()
@@ -444,20 +538,37 @@ def main() -> int:
         shutil.rmtree(ref_dir)
     profile.mkdir(parents=True, exist_ok=True)
 
+    identity = renderer_identity(soffice)
     scores: list[Score] = []
+    distributions: list[tuple[str, list[float]]] = []
     for docx in documents:
         if not docx.exists():
             die(f"no such document: {docx}")
         if not args.json:
             print(f"scoring {docx.name} ...", file=sys.stderr)
-        reference = render_reference(soffice, docx, ref_dir, profile)
+        reference = render_reference(soffice, identity, docx, ref_dir, profile)
         ours = render_ours(args.cli, docx, our_dir)
-        result = score(docx.stem, words_of(ours), words_of(reference))
+        our_words, ref_words = words_of(ours), words_of(reference)
+        result = score(docx.stem, our_words, ref_words)
         # Page counts come from pdfinfo rather than the last word's page: a
         # trailing page holding only a picture has no words on it.
         result.pages_ours = page_count(ours)
         result.pages_ref = page_count(reference)
         scores.append(result)
+        if args.ratios:
+            distributions.append((docx.stem, width_ratios(our_words, ref_words)))
+
+    if args.ratios:
+        for name, ratios in distributions:
+            print(f"\n{name}: width ratios over {len(ratios)} comparable words")
+            if not ratios:
+                print("  (none)")
+                continue
+            buckets = Counter(round(r, 2) for r in ratios)
+            for value, count in sorted(buckets.most_common(10)):
+                share = count / len(ratios)
+                print(f"  {value:>5.2f}  {count:>7}  {share:>6.1%}  {'#' * round(share * 40)}")
+        print()
 
     if args.json:
         # allow_nan=False: every unavailable value is already None, and a
