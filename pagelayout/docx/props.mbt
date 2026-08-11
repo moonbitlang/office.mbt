@@ -63,10 +63,10 @@ pub fn RunProps::merge(self : RunProps, over : RunProps) -> RunProps {
 /// LibreOffice — the reference renderer the fidelity harness can run —
 /// chooses 10pt, read from its own content stream (`10 Tf`, no scaling
 /// transform). The corpus's technical manual is exactly such a document:
-/// at 11pt, 94.5% of its 20,216 comparable words measured exactly 1.10x
-/// the reference width, compounding to 56 pages against 48. Switching
-/// this constant erased that width mode entirely — 0% of 20,331 words
-/// after — so the constant accounts for the whole mode.
+/// at 11pt, 94.5% of its 20,216 comparable words fell in the 1.10
+/// width-ratio bucket, compounding to 56 pages against 48. Switching
+/// this constant erased that mode entirely — 0% of 20,331 comparable
+/// words after — so the constant accounts for the whole mode.
 pub fn RunProps::resolve(self : RunProps) -> @paragraph.RunStyle {
   {
     family: self.family.unwrap_or("Calibri"),

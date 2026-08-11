@@ -82,9 +82,9 @@ test "a fully unspecified run resolves to the silent-hierarchy defaults" {
 
 ///|
 test "docDefaults sz=22 renders at 11pt, untouched by the fallback" {
-  // Word's default template writes this exact declaration, so this is
-  // what nearly every real document carries: an explicit 22 half-points
-  // in docDefaults. It must land as 11pt — the silent-hierarchy fallback
+  // Word's default template writes this exact declaration — the usual
+  // recent-Word-template case: an explicit 22 half-points in
+  // docDefaults. It must land as 11pt; the silent-hierarchy fallback
   // above never fires for it.
   let doc = @docx.read_docx(
     docx_bytes(
