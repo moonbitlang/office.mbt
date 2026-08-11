@@ -323,7 +323,9 @@ re-measuring the whole distribution:
 | 10pt fallback | **0.980** | **1.001** | **0%** | **98.0%** | 51 |
 
 The entire 1.10 mode disappears; 20,331 comparable words, none left in
-that bucket. What that supports is precise and narrow: **the fallback
+that bucket. The 10pt fallback has since shipped — the 11pt row is the
+historical state this section documents the diagnosis of. What the
+measurement supports is precise and narrow: **the fallback
 size accounts for the observed 1.10 width mode.** It is not a proof that
 nothing else could have produced that mode — a proportional metric
 difference between two faces can be cancelled by a point-size change just

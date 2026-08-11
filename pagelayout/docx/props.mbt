@@ -52,14 +52,27 @@ pub fn RunProps::merge(self : RunProps, over : RunProps) -> RunProps {
 }
 
 ///|
-/// Resolve to the layout engine's run style, applying Word's defaults for
-/// anything still unspecified (Calibri 11pt, regular, black).
+/// Resolve to the layout engine's run style, filling anything still
+/// unspecified after the whole cascade (Calibri, 10pt, regular, black).
+///
+/// The size deserves its comment, because 11pt looks like the right
+/// answer and is not. 11pt is what recent Word templates write into
+/// `docDefaults` *explicitly* (`w:sz="22"`) — a document carrying that
+/// never reaches this fallback. OOXML itself prescribes nothing for a
+/// hierarchy that is silent all the way down; the consumer chooses, and
+/// LibreOffice — the reference renderer the fidelity harness can run —
+/// chooses 10pt, read from its own content stream (`10 Tf`, no scaling
+/// transform). The corpus's technical manual is exactly such a document:
+/// at 11pt, 94.5% of its 20,216 comparable words fell in the 1.10
+/// width-ratio bucket, compounding to 56 pages against 48. Switching
+/// this constant erased that mode entirely — 0% of 20,331 comparable
+/// words after — so the constant accounts for the whole mode.
 pub fn RunProps::resolve(self : RunProps) -> @paragraph.RunStyle {
   {
     family: self.family.unwrap_or("Calibri"),
     size_pt: match self.size {
       Some(hp) => hp.to_pt()
-      None => 11.0
+      None => 10.0
     },
     bold: self.bold.unwrap_or(false),
     italic: self.italic.unwrap_or(false),
