@@ -10,6 +10,51 @@ fn as_text(bytes : Bytes) -> String {
 }
 
 ///|
+/// Every page's decoded content stream, concatenated as searchable text.
+/// Page content is Flate-compressed on the way out, so a test asserting
+/// on operators must look at the decoded streams, not the file bytes —
+/// and at the *content* streams only. Decoding everything would let an
+/// operator assertion match bytes inside an image's pixels or a font
+/// program, passing on a coincidence rather than on the emitter.
+///
+/// Assertions about dictionaries (font types, /XObject) belong to
+/// `as_text` over the file bytes instead: this haystack can never
+/// contain them, so a negative would pass here vacuously.
+fn as_decoded_text(bytes : Bytes) -> String raise {
+  let document = @pdflite.pdf_decompress_pdf(
+    @pdflite.pdf_read_document_from_bytes(bytes),
+  )
+  let sb = StringBuilder()
+  for page in document.pages_of_pagetree() {
+    // pdflite's traversal resolves /Contents and surfaces only stream
+    // entries, so these guards catch unmaterialized data rather than
+    // every malformed shape.
+    for entry in page.content {
+      let stream = match entry {
+        PdfIndirect(number) => document.lookup_object_or_null(number)
+        direct => direct
+      }
+      guard stream is PdfStreamObject(inner) else {
+        fail("expected a page content stream")
+      }
+      guard inner.data is StreamGot(data) else {
+        fail("expected materialized content data")
+      }
+      sb.write_string(as_text(data))
+      sb.write_char('\n')
+    }
+  }
+  // An empty haystack satisfies every negative and fails every positive
+  // for reasons that have nothing to do with the emitter. All callers
+  // render at least one page with content, so emptiness is a harness
+  // defect, not a result.
+  if sb.is_empty() {
+    fail("no page content streams found")
+  }
+  sb.to_string()
+}
+
+///|
 fn style(size_pt : Double) -> @paragraph.RunStyle {
   {
     family: "Calibri",
@@ -107,7 +152,7 @@ test "the y axis is flipped from the IR's top-left origin" {
     }),
   )
   model.pages.push(page)
-  let text = as_text(@pdf.render_pdf(model))
+  let text = try! as_decoded_text(@pdf.render_pdf(model))
   // the text matrix places the baseline at 100 - 30
   assert_true(text.contains("1 0 0 1 10 70 Tm"))
 }
@@ -128,7 +173,7 @@ test "rects are flipped and filled" {
     }),
   )
   model.pages.push(page)
-  let text = as_text(@pdf.render_pdf(model))
+  let text = try! as_decoded_text(@pdf.render_pdf(model))
   // an IR rect anchored top-left at y=20 with height 5 sits at
   // 100 - 20 - 5 = 75 in PDF coordinates
   assert_true(text.contains("10 75 50 5 re"))
@@ -185,7 +230,7 @@ test "characters outside WinAnsi do not break the run that follows" {
     }),
   )
   model.pages.push(page)
-  let text = as_text(@pdf.render_pdf(model))
+  let text = try! as_decoded_text(@pdf.render_pdf(model))
   // "ab" is drawn at x=0 and "cd" resumes at 6+6+12 = 24, so the tail
   // keeps the position the layout gave it
   assert_true(text.contains("1 0 0 1 0 80 Tm"))
@@ -208,12 +253,16 @@ test "an image becomes an XObject drawn at its box" {
     }),
   )
   model.pages.push(page)
-  let text = as_text(@pdf.render_pdf(model))
+  let bytes = @pdf.render_pdf(model)
+  // the operators live in the page's content stream...
+  let content = try! as_decoded_text(bytes)
   // a PDF image fills the unit square, so the transform carries the
   // size; the box's bottom edge is 100 - 20 - 30 = 50
-  assert_true(text.contains("50 0 0 30 10 50 cm"))
-  assert_true(text.contains("Do"))
-  assert_true(text.contains("/XObject"))
+  assert_true(content.contains("50 0 0 30 10 50 cm"))
+  assert_true(content.contains("Do"))
+  // ...but /XObject is a resources-dictionary entry, visible in the file
+  // bytes directly since dictionaries are never compressed
+  assert_true(as_text(bytes).contains("/XObject"))
 }
 
 ///|
@@ -357,7 +406,7 @@ test "cid bytes that collide with pdf string delimiters are escaped" {
   //   两 U+4E24 -> glyph 8796  = 0x225C  ('\')
   let model = @paginate.paginate([@paginate.Block::paragraph(para("仰仱两"))])
   let bytes = @pdf.render_pdf(model)
-  let text = as_text(bytes)
+  let text = try! as_decoded_text(bytes)
   // the full two-byte code, escaped: 0x23 0x28 -> `#\(`, and so on. The
   // leading byte makes these precise rather than incidentally matched.
   assert_true(text.contains("#\\("))
@@ -422,10 +471,14 @@ test "a face goes composite only for characters it can actually draw" {
     }),
   )
   model.pages.push(page)
-  let text = as_text(@pdf.render_pdf(model))
-  assert_false(text.contains("/Type0"))
+  let bytes = @pdf.render_pdf(model)
+  // /Type0 would appear in the font dictionary, so its absence must be
+  // asserted against the file bytes — decoded page content can never
+  // contain a font-dictionary name, and the negative would pass there
+  // vacuously
+  assert_false(as_text(bytes).contains("/Type0"))
   // the tail still resumes at the position the layout gave it
-  assert_true(text.contains("1 0 0 1 24 80 Tm"))
+  assert_true(try! as_decoded_text(bytes).contains("1 0 0 1 24 80 Tm"))
 }
 
 ///|

@@ -281,7 +281,17 @@ pub fn render_pdf(model : @pagelayout.PageModel) -> Bytes raise {
     let content = if ops.length() == 0 {
       []
     } else {
-      [@pdflite.pdf_content_stream_of_ops(ops)]
+      // Page text compresses several-fold and was previously written
+      // raw — the only uncompressed streams of any size in the file.
+      // `only_if_smaller` keeps the rare page whose operators do not
+      // shrink (a page holding one short line) stored plainly.
+      [
+        @pdflite.pdf_encode_stream_with_encoding(
+          PdfStreamFlate,
+          @pdflite.pdf_content_stream_of_ops(ops),
+          only_if_smaller=true,
+        ),
+      ]
     }
     pages.push({
       content,
