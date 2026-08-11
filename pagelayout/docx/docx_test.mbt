@@ -926,6 +926,30 @@ test "a Symbol bullet keeps its own face" {
 }
 
 ///|
+test "a level's explicit size styles only its marker" {
+  // The level declares sz=22 in an otherwise-unsized document, so the
+  // marker must render at 11pt while the body text beside it stays on
+  // the 10pt silent-hierarchy fallback. Before the level's w:sz was
+  // read, both resolved to the fallback — invisibly so while that
+  // fallback happened to be 11pt.
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>item</w:t></w:r></w:p>
+      ),
+      numbering=(
+        #|<w:abstractNum w:abstractNumId="100"><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="decimal"/><w:lvlText w:val="%1."/><w:rPr><w:sz w:val="22"/></w:rPr></w:lvl></w:abstractNum>
+        #|<w:num w:numId="1"><w:abstractNumId w:val="100"/></w:num>
+      ),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  inspect(input.runs[0].text, content="1.\t")
+  inspect(input.runs[0].style.size_pt, content="11")
+  inspect(input.runs[1].style.size_pt, content="10")
+}
+
+///|
 test "a bullet level with no lvlText does not leak a placeholder" {
   let doc = @docx.read_docx(
     docx_bytes(

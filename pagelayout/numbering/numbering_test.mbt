@@ -17,6 +17,7 @@ fn level(
     indent_hanging: None,
     indent_first: None,
     font_family: None,
+    size: None,
   }
 }
 

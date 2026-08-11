@@ -66,6 +66,9 @@ pub(all) struct Level {
   /// private-use codepoints that only render in the face named here
   /// (Symbol, Wingdings), so a marker must not inherit the body font.
   font_family : String?
+  /// The size from the level's own `w:rPr/w:sz`, in half-points. A level
+  /// may size its marker independently of the paragraph text.
+  size : @pagelayout.HalfPoints?
 } derive(Eq, Debug, ToJson)
 
 ///|
@@ -82,6 +85,7 @@ pub fn Level::default(depth : Int) -> Level {
     indent_hanging: None,
     indent_first: None,
     font_family: None,
+    size: None,
   }
 }
 

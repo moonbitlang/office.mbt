@@ -38,8 +38,10 @@ fn read_level(lvl : @xml.XmlElement) -> (Int, @numbering.Level) {
       "w:isLgl" => level = { ..level, is_legal: parse_toggle(el) }
       // a level's own run properties style its marker. Word's bullets are
       // private-use codepoints that render only in the named face, so the
-      // family must travel with the level rather than inherit the body's.
-      "w:rPr" =>
+      // family must travel with the level rather than inherit the body's —
+      // and an explicit `w:sz` sizes the marker independently of the text
+      // beside it.
+      "w:rPr" => {
         match el.first("w:rFonts") {
           Some(fonts) =>
             match attr(fonts, "w:ascii") {
@@ -52,6 +54,15 @@ fn read_level(lvl : @xml.XmlElement) -> (Int, @numbering.Level) {
             }
           None => ()
         }
+        match el.first("w:sz") {
+          Some(sz) =>
+            match parse_half_points(attr(sz, "w:val")) {
+              Some(hp) => level = { ..level, size: Some(HalfPoints(hp)) }
+              None => ()
+            }
+          None => ()
+        }
+      }
       "w:suff" =>
         level = {
           ..level,
