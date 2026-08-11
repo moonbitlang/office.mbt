@@ -103,9 +103,12 @@ pub fn pdf_obj_of_jpeg2000_data(
 }
 
 ///|
+/// Components per pixel as far as the PDF predictor is concerned. Palette
+/// indices count as one component, like greyscale: the predictor runs
+/// over the index stream, not the colours it names.
 fn PdfPNG::pdf_image_png_components(self : PdfPNG) -> Int raise @core.PdfError {
   match self.color_type {
-    0 | 4 => 1
+    0 | 3 | 4 => 1
     2 | 6 => 3
     _ => raise BadPNG("obj_of_png_data unknown colortype")
   }
@@ -114,10 +117,27 @@ fn PdfPNG::pdf_image_png_components(self : PdfPNG) -> Int raise @core.PdfError {
 ///|
 fn PdfPNG::pdf_image_png_color_space(
   self : PdfPNG,
-) -> @core.PdfName raise @core.PdfError {
+) -> @syntax.PdfObject raise @core.PdfError {
   match self.color_type {
-    0 | 4 => pdf_image_device_gray_name()
-    2 | 6 => pdf_image_device_rgb_name()
+    0 | 4 => PdfNameObject(pdf_image_device_gray_name())
+    2 | 6 => PdfNameObject(pdf_image_device_rgb_name())
+    3 =>
+      match self.palette {
+        // PDF has indexed colour natively, so the palette maps straight
+        // onto `[/Indexed /DeviceRGB hival lookup]` and the IDAT keeps
+        // the compressed passthrough untouched — no inflate, no
+        // re-encode.
+        Some(plte) =>
+          PdfArray([
+            PdfNameObject(pdf_image_indexed_name()),
+            PdfNameObject(pdf_image_device_rgb_name()),
+            PdfInteger(plte.length() / 3 - 1),
+            PdfString(plte),
+          ])
+        // Unreachable off pdf_read_png, which rejects type 3 without a
+        // PLTE; guarded for a hand-built PdfPNG.
+        None => raise BadPNG("obj_of_png_data palette image without palette")
+      }
     _ => raise BadPNG("obj_of_png_data unknown colortype")
   }
 }
@@ -126,7 +146,7 @@ fn PdfPNG::pdf_image_png_color_space(
 fn pdf_image_png_dictionary(
   png : PdfPNG,
   data : @core.PdfBytes,
-  color_space : @core.PdfName,
+  color_space : @syntax.PdfObject,
   colors : Int,
   predictor : Bool,
 ) -> Array[(@core.PdfName, @syntax.PdfObject)] {
@@ -134,7 +154,7 @@ fn pdf_image_png_dictionary(
     (pdf_image_length_key(), PdfInteger(data.length())),
     (pdf_image_subtype_key(), PdfNameObject(pdf_image_image_name())),
     (pdf_image_bits_per_component_key(), PdfInteger(png.bit_depth)),
-    (pdf_image_colorspace_key(), PdfNameObject(color_space)),
+    (pdf_image_colorspace_key(), color_space),
     (pdf_image_width_key(), PdfInteger(png.width)),
     (pdf_image_height_key(), PdfInteger(png.height)),
     (pdf_image_filter_key(), PdfNameObject(PdfStreamFlate.filter_name())),
@@ -221,7 +241,7 @@ pub fn PdfDocument::pdf_image_object_of_png_data(
       let mask_entries = pdf_image_png_dictionary(
         png,
         mask,
-        pdf_image_device_gray_name(),
+        PdfNameObject(pdf_image_device_gray_name()),
         1,
         predictor,
       )

@@ -100,6 +100,9 @@ let pdf_image_device_gray_name_value : @core.PdfName = pdf_image_name(
 )
 
 ///|
+let pdf_image_indexed_name_value : @core.PdfName = pdf_image_name("/Indexed")
+
+///|
 let pdf_image_xobject_key_name : @core.PdfName = pdf_image_name("/XObject")
 
 ///|
@@ -328,6 +331,11 @@ fn pdf_image_device_rgb_name() -> @core.PdfName {
 ///|
 fn pdf_image_device_gray_name() -> @core.PdfName {
   pdf_image_device_gray_name_value
+}
+
+///|
+fn pdf_image_indexed_name() -> @core.PdfName {
+  pdf_image_indexed_name_value
 }
 
 ///|

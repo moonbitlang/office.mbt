@@ -485,16 +485,17 @@ fn image_verdict(
   image : @pagelayout.ImageItem,
 ) -> String? {
   match image.mime {
-    // pdflite reads greyscale and truecolour PNG, interlaced or not, but
-    // not palette PNG
+    // pdflite reads greyscale, truecolour and palette PNG, interlaced or
+    // not
     "image/png" =>
       try {
         ignore(@pdflite.pdf_image_object_of_png_data(document, image.data))
         None
       } catch {
-        // The reader rejects palette PNG by design, but also rejects
-        // malformed or truncated ones, so the reason cannot claim which
-        // without inspecting further.
+        // The reader rejects palette transparency by design — embedding
+        // it opaque would be quietly wrong — but also rejects malformed
+        // or truncated files, so the reason cannot claim which without
+        // inspecting further.
         _ => Some("PNG this backend cannot read")
       }
     "image/jpeg" =>

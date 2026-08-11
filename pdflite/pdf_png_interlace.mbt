@@ -30,7 +30,7 @@ let pdf_png_adam7_col_step : Array[Int] = [8, 8, 4, 4, 2, 2, 1]
 /// colour space names and so omits the alpha channel.
 fn pdf_png_channels(color_type : Int) -> Int raise @core.PdfError {
   match color_type {
-    0 => 1
+    0 | 3 => 1 // palette samples are indices: one channel, like greyscale
     2 => 3
     4 => 2
     6 => 4
@@ -48,10 +48,13 @@ fn pdf_png_check_bit_depth(
   bit_depth : Int,
 ) -> Unit raise @core.PdfError {
   let allowed = match bit_depth {
-    8 | 16 => true
-    // Only greyscale without alpha packs samples below a byte; every other
-    // colour type starts at 8 bits per sample.
-    1 | 2 | 4 => color_type == 0
+    8 => true
+    // Palette indices cap at one byte; every other colour type also
+    // allows 16-bit samples.
+    16 => color_type != 3
+    // Greyscale and palette pack samples below a byte; the sampled types
+    // start at 8 bits per sample.
+    1 | 2 | 4 => color_type == 0 || color_type == 3
     _ => false
   }
   if !allowed {
