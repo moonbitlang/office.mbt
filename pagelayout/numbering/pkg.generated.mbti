@@ -44,6 +44,7 @@ pub(all) struct Level {
   indent_hanging : @pagelayout.Twips?
   indent_first : @pagelayout.Twips?
   font_family : String?
+  size : @pagelayout.HalfPoints?
 } derive(Eq, ToJson, @debug.Debug)
 pub fn Level::default(Int) -> Self
 #deprecated

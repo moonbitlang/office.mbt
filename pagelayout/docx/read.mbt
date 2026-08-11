@@ -296,6 +296,10 @@ fn read_paragraph(
             Some(family) => marker_style = { ..marker_style, family, }
             None => ()
           }
+          match level.size {
+            Some(hp) => marker_style = { ..marker_style, size_pt: hp.to_pt() }
+            None => ()
+          }
           let separator = match level.suffix {
             SuffNothing => ""
             SuffSpace => " "
