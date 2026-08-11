@@ -147,9 +147,11 @@ pub struct StyleSheet {
   default_para : ParaProps
   paragraph_styles : Map[String, StyleEntry]
   character_styles : Map[String, StyleEntry]
+  table_styles : Map[String, StyleEntry]
   default_paragraph_style : String?
 }
 pub fn StyleSheet::empty() -> Self
+pub fn StyleSheet::for_table(Self, String?) -> Self
 pub fn StyleSheet::resolve_para(Self, String?, ParaProps) -> ParaProps
 pub fn StyleSheet::resolve_run(Self, String?, String?, RunProps) -> RunProps
 

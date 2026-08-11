@@ -241,11 +241,13 @@ pub fn read_table(
   let mut borders = @table.Borders::none()
   let mut margins = @table.CellMargins::default()
   let mut indent = @pagelayout.Twips(0)
+  let mut style_id : String? = None
   match tbl.first("w:tblPr") {
     Some(props) =>
       for child in props.children {
         guard child is XmlElement(el) else { continue }
         match el.name {
+          "w:tblStyle" => style_id = attr(el, "w:val")
           "w:tblW" => width = read_width(el)
           "w:tblLayout" =>
             layout = if attr(el, "w:type") is Some("fixed") {
@@ -276,12 +278,16 @@ pub fn read_table(
       }
     None => ()
   }
+  // Cell text resolves against a sheet whose cascade base carries the
+  // table style's run formatting, which is where OOXML places it: after
+  // the document defaults, before everything the cell says itself.
+  let cell_sheet = sheet.for_table(style_id)
   let rows : Array[@table.Row] = []
   for child in tbl.children {
     guard child is XmlElement(el) else { continue }
     if el.name == "w:tr" {
       rows.push(
-        read_row(el, sheet, theme, borders, margins, numbering, counters),
+        read_row(el, cell_sheet, theme, borders, margins, numbering, counters),
       )
     }
   }
