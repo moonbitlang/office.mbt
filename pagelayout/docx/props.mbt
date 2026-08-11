@@ -60,12 +60,13 @@ pub fn RunProps::merge(self : RunProps, over : RunProps) -> RunProps {
 /// `docDefaults` *explicitly* (`w:sz="22"`) — a document carrying that
 /// never reaches this fallback. OOXML itself prescribes nothing for a
 /// hierarchy that is silent all the way down; the consumer chooses, and
-/// reference renderers choose 10pt. The corpus's technical manual is
-/// exactly such a document, and at 11pt every unsized run measured 1.10x
-/// the reference width — compounding to 56 pages against 48. Read from
-/// both PDFs' content streams: LibreOffice sets its body text with
-/// `10 Tf`, and switching this constant erased the entire 1.10 width
-/// mode (94.5% of 20,331 words to 0%).
+/// LibreOffice — the reference renderer the fidelity harness can run —
+/// chooses 10pt, read from its own content stream (`10 Tf`, no scaling
+/// transform). The corpus's technical manual is exactly such a document:
+/// at 11pt, 94.5% of its 20,216 comparable words measured exactly 1.10x
+/// the reference width, compounding to 56 pages against 48. Switching
+/// this constant erased that width mode entirely — 0% of 20,331 words
+/// after — so the constant accounts for the whole mode.
 pub fn RunProps::resolve(self : RunProps) -> @paragraph.RunStyle {
   {
     family: self.family.unwrap_or("Calibri"),

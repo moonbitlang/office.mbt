@@ -65,9 +65,9 @@ test "a fully unspecified run resolves to the silent-hierarchy defaults" {
   // No docDefaults, no style, no direct rPr: nothing anywhere names a
   // size, which is a different case from Word's default template (that
   // writes sz="22" explicitly and never reaches the fallback). The
-  // format leaves this to the consumer; 10pt is what reference
-  // renderers choose, and what erased the corpus's 1.10x width error —
-  // see RunProps::resolve.
+  // format leaves this to the consumer; 10pt is what LibreOffice — the
+  // reference the harness can run — chooses, and what erased the
+  // corpus's 1.10x width error. See RunProps::resolve.
   let doc = @docx.read_docx(
     docx_bytes("<w:p><w:r><w:t>Hello</w:t></w:r></w:p>"),
   )
@@ -78,6 +78,23 @@ test "a fully unspecified run resolves to the silent-hierarchy defaults" {
   inspect(run.style.size_pt, content="10")
   assert_false(run.style.bold)
   inspect(run.style.color.to_hex(), content="#000000")
+}
+
+///|
+test "docDefaults sz=22 renders at 11pt, untouched by the fallback" {
+  // Word's default template writes this exact declaration, so this is
+  // what nearly every real document carries: an explicit 22 half-points
+  // in docDefaults. It must land as 11pt — the silent-hierarchy fallback
+  // above never fires for it.
+  let doc = @docx.read_docx(
+    docx_bytes(
+      "<w:p><w:r><w:t>Hello</w:t></w:r></w:p>",
+      styles=(
+        #|<w:docDefaults><w:rPrDefault><w:rPr><w:sz w:val="22"/></w:rPr></w:rPrDefault></w:docDefaults>
+      ),
+    ),
+  )
+  inspect(first_run(doc, 0).style.size_pt, content="11")
 }
 
 ///|
