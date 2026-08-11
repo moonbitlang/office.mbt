@@ -61,7 +61,13 @@ fn first_run(doc : @docx.DocxDocument, index : Int) -> @paragraph.RunInput {
 }
 
 ///|
-test "plain paragraph carries text and Word's defaults" {
+test "a fully unspecified run resolves to the silent-hierarchy defaults" {
+  // No docDefaults, no style, no direct rPr: nothing anywhere names a
+  // size, which is a different case from Word's default template (that
+  // writes sz="22" explicitly and never reaches the fallback). The
+  // format leaves this to the consumer; 10pt is what reference
+  // renderers choose, and what erased the corpus's 1.10x width error —
+  // see RunProps::resolve.
   let doc = @docx.read_docx(
     docx_bytes("<w:p><w:r><w:t>Hello</w:t></w:r></w:p>"),
   )
@@ -69,7 +75,7 @@ test "plain paragraph carries text and Word's defaults" {
   let run = first_run(doc, 0)
   inspect(run.text, content="Hello")
   inspect(run.style.family, content="Calibri")
-  inspect(run.style.size_pt, content="11")
+  inspect(run.style.size_pt, content="10")
   assert_false(run.style.bold)
   inspect(run.style.color.to_hex(), content="#000000")
 }
