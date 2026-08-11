@@ -765,18 +765,24 @@ test "pdf_read_png reads IHDR and concatenated IDAT chunks" {
 }
 
 ///|
-test "pdf_read_png rejects palette PNGs and unknown interlace methods" {
-  let palette : Result[@pdflite.PdfPNG, Error] = try
+test "pdf_read_png rejects a PLTE-less palette image and unknown interlace methods" {
+  // Palette PNGs are read now, so a type-3 image without its PLTE is
+  // rejected as malformed rather than as an unsupported colour type.
+  // The message is the assertion: this same input used to raise BadPNG
+  // as "only non-palette PNGs", and matching the type alone would keep
+  // passing if palette support regressed to a blanket rejection.
+  let plteless : Result[@pdflite.PdfPNG, Error] = try
     @pdflite.pdf_read_png(image_png_for_test(1, 1, 8, 3, 0, []))
   catch {
     err => Err(err)
   } noraise {
     value => Ok(value)
   }
-  guard palette is Err(@core.PdfError::BadPNG(_)) else {
-    fail("expected palette PNG to raise BadPNG")
+  guard plteless is Err(@core.PdfError::BadPNG(message)) else {
+    fail("expected a PLTE-less palette PNG to raise BadPNG")
   }
-  // Adam7 (method 1) is now read; anything else is not a method PNG
+  @test.assert_eq(message, "read_png: palette image without a PLTE chunk")
+  // Adam7 (method 1) is read; anything else is not a method PNG
   // defines, so it stays an error rather than being guessed at.
   let unknown : Result[@pdflite.PdfPNG, Error] = try
     @pdflite.pdf_read_png(image_png_for_test(1, 1, 8, 2, 2, []))

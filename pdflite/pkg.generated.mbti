@@ -3629,6 +3629,7 @@ pub(all) struct PdfPNG {
   bit_depth : Int
   color_type : Int
   idat : Bytes
+  palette : Bytes?
 } derive(Eq, ToJson, @debug.Debug)
 #deprecated
 pub fn PdfPNG::equal(Self, Self) -> Bool
