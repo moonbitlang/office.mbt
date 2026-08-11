@@ -140,6 +140,7 @@ fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise @core.PdfError {
   }
   let idat_chunks : Array[@core.PdfBytes] = []
   let mut palette : @core.PdfBytes? = None
+  let mut trns_entries : Int? = None
   let mut done = false
   while !done {
     try pdf_png_read_chunk(cursor) catch {
@@ -168,6 +169,7 @@ fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise @core.PdfError {
               raise BadPNG("read_png: palette transparency not supported")
             }
           }
+          trns_entries = Some(chunk_data.length())
         }
     }
   }
@@ -179,6 +181,16 @@ fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise @core.PdfError {
           plte.length().to_string() +
           " bytes",
         )
+      }
+      // tRNS may not name more entries than the palette has. Checked
+      // here rather than at the chunk, because the scan is
+      // order-independent and the palette may not have been seen yet.
+      match trns_entries {
+        Some(entries) =>
+          if entries > plte.length() / 3 {
+            raise BadPNG("read_png: tRNS longer than the palette")
+          }
+        None => ()
       }
       Some(plte)
     }
@@ -199,8 +211,8 @@ fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise @core.PdfError {
 
 ///|
 /// Read a PNG from a byte view, de-interlacing an Adam7 image into a
-/// sequential IDAT stream. Palette images carry their PLTE; palette
-/// transparency (tRNS) is refused rather than dropped.
+/// sequential IDAT stream. Palette images carry their PLTE; real palette
+/// transparency (a tRNS entry below 255) is refused rather than dropped.
 pub fn pdf_read_png_view(data : BytesView) -> PdfPNG raise @core.PdfError {
   pdf_read_png_view_inner(data) catch {
     BadPNG(message) => raise BadPNG(message)
@@ -213,8 +225,8 @@ pub fn pdf_read_png_view(data : BytesView) -> PdfPNG raise @core.PdfError {
 
 ///|
 /// Read a PNG from owned bytes, de-interlacing an Adam7 image into a
-/// sequential IDAT stream. Palette images carry their PLTE; palette
-/// transparency (tRNS) is refused rather than dropped.
+/// sequential IDAT stream. Palette images carry their PLTE; real palette
+/// transparency (a tRNS entry below 255) is refused rather than dropped.
 pub fn pdf_read_png(data : @core.PdfBytes) -> PdfPNG raise @core.PdfError {
   pdf_read_png_view(data)
 }

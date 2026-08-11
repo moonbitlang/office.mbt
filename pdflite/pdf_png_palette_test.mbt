@@ -243,6 +243,33 @@ test "an all-opaque tRNS declares no transparency and passes through" {
 }
 
 ///|
+test "a tRNS longer than the palette is malformed even when opaque" {
+  // Six alpha entries against a five-entry palette. All-opaque no longer
+  // refuses on transparency grounds, so the length has to be checked on
+  // its own: tRNS may not name entries the palette does not have.
+  let (_, _, palette, _) = png_palette_p8_for_test()
+  let file = png_palette_file_for_test(4, 2, 8, 0, [
+    ([0x50, 0x4C, 0x54, 0x45], palette),
+    (
+      [0x74, 0x52, 0x4E, 0x53],
+      png_palette_bytes_for_test([255, 255, 255, 255, 255, 255]),
+    ),
+    ([0x49, 0x44, 0x41, 0x54], @flate.pdf_flate_encode(b"\x00\x00\x00\x00\x00")),
+  ])
+  let bad : Result[@pdflite.PdfPNG, Error] = try
+    @pdflite.pdf_read_png(file)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
+  guard bad is Err(@core.PdfError::BadPNG(message)) else {
+    fail("expected an overlong tRNS to raise BadPNG")
+  }
+  @test.assert_eq(message, "read_png: tRNS longer than the palette")
+}
+
+///|
 test "pdf_read_png rejects a malformed or oversized PLTE" {
   // Four bytes is not a whole number of RGB triples.
   let ragged = png_palette_file_for_test(1, 1, 8, 0, [
