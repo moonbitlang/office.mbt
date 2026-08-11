@@ -10,6 +10,15 @@ fn as_text(bytes : Bytes) -> String {
 }
 
 ///|
+/// The rendered PDF with every stream decompressed, as searchable text.
+/// Page content is Flate-compressed on the way out, so a test asserting
+/// on operators must look at the decoded document, not the file bytes.
+fn as_decoded_text(bytes : Bytes) -> String raise {
+  let document = @pdflite.pdf_read_document_from_bytes(bytes)
+  as_text(@pdflite.pdf_write_document(@pdflite.pdf_decompress_pdf(document)))
+}
+
+///|
 fn style(size_pt : Double) -> @paragraph.RunStyle {
   {
     family: "Calibri",
@@ -107,7 +116,7 @@ test "the y axis is flipped from the IR's top-left origin" {
     }),
   )
   model.pages.push(page)
-  let text = as_text(@pdf.render_pdf(model))
+  let text = try! as_decoded_text(@pdf.render_pdf(model))
   // the text matrix places the baseline at 100 - 30
   assert_true(text.contains("1 0 0 1 10 70 Tm"))
 }
@@ -128,7 +137,7 @@ test "rects are flipped and filled" {
     }),
   )
   model.pages.push(page)
-  let text = as_text(@pdf.render_pdf(model))
+  let text = try! as_decoded_text(@pdf.render_pdf(model))
   // an IR rect anchored top-left at y=20 with height 5 sits at
   // 100 - 20 - 5 = 75 in PDF coordinates
   assert_true(text.contains("10 75 50 5 re"))
@@ -185,7 +194,7 @@ test "characters outside WinAnsi do not break the run that follows" {
     }),
   )
   model.pages.push(page)
-  let text = as_text(@pdf.render_pdf(model))
+  let text = try! as_decoded_text(@pdf.render_pdf(model))
   // "ab" is drawn at x=0 and "cd" resumes at 6+6+12 = 24, so the tail
   // keeps the position the layout gave it
   assert_true(text.contains("1 0 0 1 0 80 Tm"))
@@ -208,7 +217,7 @@ test "an image becomes an XObject drawn at its box" {
     }),
   )
   model.pages.push(page)
-  let text = as_text(@pdf.render_pdf(model))
+  let text = try! as_decoded_text(@pdf.render_pdf(model))
   // a PDF image fills the unit square, so the transform carries the
   // size; the box's bottom edge is 100 - 20 - 30 = 50
   assert_true(text.contains("50 0 0 30 10 50 cm"))
@@ -357,7 +366,7 @@ test "cid bytes that collide with pdf string delimiters are escaped" {
   //   两 U+4E24 -> glyph 8796  = 0x225C  ('\')
   let model = @paginate.paginate([@paginate.Block::paragraph(para("仰仱两"))])
   let bytes = @pdf.render_pdf(model)
-  let text = as_text(bytes)
+  let text = try! as_decoded_text(bytes)
   // the full two-byte code, escaped: 0x23 0x28 -> `#\(`, and so on. The
   // leading byte makes these precise rather than incidentally matched.
   assert_true(text.contains("#\\("))
@@ -422,7 +431,7 @@ test "a face goes composite only for characters it can actually draw" {
     }),
   )
   model.pages.push(page)
-  let text = as_text(@pdf.render_pdf(model))
+  let text = try! as_decoded_text(@pdf.render_pdf(model))
   assert_false(text.contains("/Type0"))
   // the tail still resumes at the position the layout gave it
   assert_true(text.contains("1 0 0 1 24 80 Tm"))
