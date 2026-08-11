@@ -10,12 +10,35 @@ fn as_text(bytes : Bytes) -> String {
 }
 
 ///|
-/// The rendered PDF with every stream decompressed, as searchable text.
+/// Every page's decoded content stream, concatenated as searchable text.
 /// Page content is Flate-compressed on the way out, so a test asserting
-/// on operators must look at the decoded document, not the file bytes.
+/// on operators must look at the decoded streams, not the file bytes —
+/// and at the *content* streams only. Decoding everything would let an
+/// operator assertion match bytes inside an image's pixels or a font
+/// program, passing on a coincidence rather than on the emitter.
 fn as_decoded_text(bytes : Bytes) -> String raise {
-  let document = @pdflite.pdf_read_document_from_bytes(bytes)
-  as_text(@pdflite.pdf_write_document(@pdflite.pdf_decompress_pdf(document)))
+  let document = @pdflite.pdf_decompress_pdf(
+    @pdflite.pdf_read_document_from_bytes(bytes),
+  )
+  let sb = StringBuilder()
+  for page in document.pages_of_pagetree() {
+    for entry in page.content {
+      // a parsed page's /Contents are indirect references
+      let stream = match entry {
+        PdfIndirect(number) => document.lookup_object_or_null(number)
+        direct => direct
+      }
+      guard stream is PdfStreamObject(inner) else {
+        fail("expected a page content stream")
+      }
+      guard inner.data is StreamGot(data) else {
+        fail("expected materialized content data")
+      }
+      sb.write_string(as_text(data))
+      sb.write_char('\n')
+    }
+  }
+  sb.to_string()
 }
 
 ///|
@@ -217,12 +240,16 @@ test "an image becomes an XObject drawn at its box" {
     }),
   )
   model.pages.push(page)
-  let text = try! as_decoded_text(@pdf.render_pdf(model))
+  let bytes = @pdf.render_pdf(model)
+  // the operators live in the page's content stream...
+  let content = try! as_decoded_text(bytes)
   // a PDF image fills the unit square, so the transform carries the
   // size; the box's bottom edge is 100 - 20 - 30 = 50
-  assert_true(text.contains("50 0 0 30 10 50 cm"))
-  assert_true(text.contains("Do"))
-  assert_true(text.contains("/XObject"))
+  assert_true(content.contains("50 0 0 30 10 50 cm"))
+  assert_true(content.contains("Do"))
+  // ...but /XObject is a resources-dictionary entry, visible in the file
+  // bytes directly since dictionaries are never compressed
+  assert_true(as_text(bytes).contains("/XObject"))
 }
 
 ///|
