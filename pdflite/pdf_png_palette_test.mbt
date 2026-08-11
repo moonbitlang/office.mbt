@@ -191,14 +191,15 @@ test "pdf_image_object_of_png_data embeds a palette image as /Indexed" {
 }
 
 ///|
-test "pdf_read_png rejects palette transparency rather than dropping it" {
+test "pdf_read_png rejects real palette transparency rather than dropping it" {
   // tRNS on a palette image names per-entry alpha. Embedding without it
   // would draw the image opaque — quietly wrong — so the reader refuses
-  // and the caller reports the image unreadable.
+  // and the caller reports the image unreadable. One entry below 255 is
+  // enough.
   let (_, _, palette, _) = png_palette_p8_for_test()
   let file = png_palette_file_for_test(4, 2, 8, 0, [
     ([0x50, 0x4C, 0x54, 0x45], palette),
-    ([0x74, 0x52, 0x4E, 0x53], png_palette_bytes_for_test([128])),
+    ([0x74, 0x52, 0x4E, 0x53], png_palette_bytes_for_test([255, 128])),
     ([0x49, 0x44, 0x41, 0x54], @flate.pdf_flate_encode(b"\x00\x00\x00\x00\x00")),
   ])
   let refused : Result[@pdflite.PdfPNG, Error] = try
@@ -212,6 +213,33 @@ test "pdf_read_png rejects palette transparency rather than dropping it" {
     fail("expected palette transparency to raise BadPNG")
   }
   @test.assert_eq(message, "read_png: palette transparency not supported")
+}
+
+///|
+test "an all-opaque tRNS declares no transparency and passes through" {
+  // Some encoders write a tRNS whose every entry is 255. Fully opaque is
+  // what the image would be without the chunk — PNG defines unlisted
+  // entries as opaque too — so rejecting it would lose a picture that
+  // renders identically either way.
+  let (sequential, _, palette, raster) = png_palette_p8_for_test()
+  // splice an all-opaque tRNS into the same picture
+  let file = png_palette_file_for_test(4, 2, 8, 0, [
+    ([0x50, 0x4C, 0x54, 0x45], palette),
+    (
+      [0x74, 0x52, 0x4E, 0x53],
+      png_palette_bytes_for_test([255, 255, 255, 255, 255]),
+    ),
+    (
+      [0x49, 0x44, 0x41, 0x54],
+      {
+        let source = try! @pdflite.pdf_read_png(sequential)
+        source.idat
+      },
+    ),
+  ])
+  let png = try! @pdflite.pdf_read_png(file)
+  @test.assert_eq(png.palette, Some(palette))
+  @test.assert_eq(png_interlace_raster_of_test(png, 1), raster)
 }
 
 ///|

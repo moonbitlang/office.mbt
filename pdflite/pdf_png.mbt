@@ -151,14 +151,23 @@ fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise @core.PdfError {
         } else if chunk_type == pdf_png_plte_chunk_type {
           palette = Some(chunk_data)
         } else if chunk_type == pdf_png_trns_chunk_type && color_type == 3 {
-          // A palette with per-entry alpha would need the transparency
-          // rebuilt as an /SMask, which forces a full decode this
-          // passthrough deliberately avoids. Refusing keeps the loss
+          // A palette with real per-entry alpha would need the
+          // transparency rebuilt as an /SMask, which forces a full decode
+          // this passthrough deliberately avoids. Refusing keeps the loss
           // visible (the caller reports the image unreadable) instead of
-          // drawing it opaque, which would be quietly wrong. tRNS on
-          // colour types 0/2 (a transparent colour key) stays ignored, as
-          // it always was.
-          raise BadPNG("read_png: palette transparency not supported")
+          // drawing it opaque, which would be quietly wrong.
+          //
+          // A tRNS whose entries are all 255 declares no transparency at
+          // all, though — every listed entry is fully opaque and PNG
+          // defines the unlisted rest as opaque too — so that common
+          // encoder artefact takes the normal path rather than losing the
+          // picture. tRNS on colour types 0/2 (a transparent colour key)
+          // stays ignored, as it always was.
+          for index in 0..<chunk_data.length() {
+            if chunk_data[index] != b'\xff' {
+              raise BadPNG("read_png: palette transparency not supported")
+            }
+          }
         }
     }
   }
