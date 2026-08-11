@@ -126,17 +126,21 @@ pub fn read_stylesheet(
 }
 
 ///|
-/// A sheet whose cascade base carries a table style's run formatting.
+/// A sheet whose cascade base carries a table style's formatting.
 ///
 /// OOXML places a table's style between the document defaults and the
 /// paragraph/character styles of the text inside its cells. Rather than
 /// threading a table-style parameter through every resolver, the style's
-/// run chain is merged onto `default_run` — the base every cascade starts
-/// from — so cell content resolved against the returned sheet gets
-/// exactly that ordering, and paragraph, character and direct formatting
-/// still override it. Conditional formats (`w:tblStylePr` for first rows
-/// and the like) are not consulted; this is the whole-table formatting
-/// only.
+/// run and paragraph chains are merged onto `default_run` and
+/// `default_para` — the bases every cascade starts from — so cell
+/// content resolved against the returned sheet gets that ordering, and
+/// paragraph, character and direct formatting still override it.
+///
+/// Two limits, one scoped and one shared with the whole cascade:
+/// conditional formats (`w:tblStylePr` for first rows and the like) are
+/// not consulted — this is the whole-table formatting only — and toggle
+/// properties merge last-wins rather than by ECMA-376 §17.7.3's XOR,
+/// like every other layer (see the known-gaps note in read.mbt).
 ///
 /// An unknown or absent id returns the sheet unchanged.
 pub fn StyleSheet::for_table(
@@ -145,12 +149,14 @@ pub fn StyleSheet::for_table(
 ) -> StyleSheet {
   guard style_id is Some(id) else { return self }
   guard self.table_styles.contains(id) else { return self }
-  let mut base = self.default_run
+  let mut run_base = self.default_run
+  let mut para_base = self.default_para
   for name in chain(self.table_styles, id) {
     guard! self.table_styles.get(name) is Some(entry)
-    base = base.merge(entry.run)
+    run_base = run_base.merge(entry.run)
+    para_base = para_base.merge(entry.para)
   }
-  { ..self, default_run: base }
+  { ..self, default_run: run_base, default_para: para_base }
 }
 
 ///|

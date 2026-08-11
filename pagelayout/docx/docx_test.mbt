@@ -611,6 +611,31 @@ test "a table style's size was always dropped, not merely diverging" {
 }
 
 ///|
+test "a table style's paragraph formatting reaches its cells too" {
+  // Table styles carry w:pPr as well as w:rPr, applied to every
+  // paragraph in the table. A centering table style must centre the
+  // cell's text while the body paragraph outside stays left-aligned.
+  let styles =
+    #|<w:style w:type="table" w:styleId="Centered"><w:pPr><w:jc w:val="center"/></w:pPr></w:style>
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:r><w:t>outside</w:t></w:r></w:p>
+        #|<w:tbl><w:tblPr><w:tblStyle w:val="Centered"/></w:tblPr><w:tblGrid><w:gridCol w:w="2880"/></w:tblGrid><w:tr><w:tc><w:p><w:r><w:t>inside</w:t></w:r></w:p></w:tc></w:tr></w:tbl>
+      ),
+      styles~,
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  debug_inspect(input.style.align, content="AlignLeft")
+  guard! doc.blocks[1] is TableBlock(table~, ..)
+  debug_inspect(
+    table.rows[0].cells[0].content[0].style.align,
+    content="AlignCenter",
+  )
+}
+
+///|
 test "content controls are still reported as unsupported" {
   let doc = @docx.read_docx(
     docx_bytes(
