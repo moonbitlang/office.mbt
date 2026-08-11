@@ -21,6 +21,7 @@ pub struct StyleSheet {
   default_para : ParaProps
   paragraph_styles : Map[String, StyleEntry]
   character_styles : Map[String, StyleEntry]
+  table_styles : Map[String, StyleEntry]
   default_paragraph_style : String?
 }
 
@@ -31,6 +32,7 @@ pub fn StyleSheet::empty() -> StyleSheet {
     default_run: RunProps::empty(),
     default_para: ParaProps::empty(),
     paragraph_styles: Map([]),
+    table_styles: Map([]),
     character_styles: Map([]),
     default_paragraph_style: None,
   }
@@ -113,10 +115,42 @@ pub fn read_stylesheet(
         if !sheet.character_styles.contains(id) {
           sheet.character_styles[id] = entry
         }
+      "table" =>
+        if !sheet.table_styles.contains(id) {
+          sheet.table_styles[id] = entry
+        }
       _ => ()
     }
   }
   { ..sheet, default_run, default_para, default_paragraph_style }
+}
+
+///|
+/// A sheet whose cascade base carries a table style's run formatting.
+///
+/// OOXML places a table's style between the document defaults and the
+/// paragraph/character styles of the text inside its cells. Rather than
+/// threading a table-style parameter through every resolver, the style's
+/// run chain is merged onto `default_run` — the base every cascade starts
+/// from — so cell content resolved against the returned sheet gets
+/// exactly that ordering, and paragraph, character and direct formatting
+/// still override it. Conditional formats (`w:tblStylePr` for first rows
+/// and the like) are not consulted; this is the whole-table formatting
+/// only.
+///
+/// An unknown or absent id returns the sheet unchanged.
+pub fn StyleSheet::for_table(
+  self : StyleSheet,
+  style_id : String?,
+) -> StyleSheet {
+  guard style_id is Some(id) else { return self }
+  guard self.table_styles.contains(id) else { return self }
+  let mut base = self.default_run
+  for name in chain(self.table_styles, id) {
+    guard! self.table_styles.get(name) is Some(entry)
+    base = base.merge(entry.run)
+  }
+  { ..self, default_run: base }
 }
 
 ///|

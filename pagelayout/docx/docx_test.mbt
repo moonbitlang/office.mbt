@@ -559,6 +559,58 @@ test "a table becomes a laid-out block, not an omission" {
 }
 
 ///|
+test "a table style's run formatting reaches its cells, and only its cells" {
+  // The table style declares sz=22 in an otherwise-unsized document, so
+  // cell text must render at 11pt while body text outside the table
+  // stays on the 10pt silent-hierarchy fallback. Before the table style
+  // was consulted at all, both resolved to the fallback — invisibly so
+  // while that fallback was 11pt.
+  let styles =
+    #|<w:style w:type="table" w:styleId="Grid"><w:rPr><w:sz w:val="22"/></w:rPr></w:style>
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:r><w:t>outside</w:t></w:r></w:p>
+        #|<w:tbl><w:tblPr><w:tblStyle w:val="Grid"/></w:tblPr><w:tblGrid><w:gridCol w:w="2880"/></w:tblGrid><w:tr><w:tc><w:p><w:r><w:t>inside</w:t></w:r></w:p></w:tc></w:tr></w:tbl>
+      ),
+      styles~,
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  inspect(input.runs[0].style.size_pt, content="10")
+  guard! doc.blocks[1] is TableBlock(table~, ..)
+  inspect(table.rows[0].cells[0].content[0].runs[0].style.size_pt, content="11")
+}
+
+///|
+test "a table style's size was always dropped, not merely diverging" {
+  // sz=36 has never coincided with any fallback, so this pins that the
+  // property is read at all — and that the cell's own cascade still wins
+  // over it: a paragraph style beats the table style, per the OOXML
+  // ordering.
+  let styles =
+    #|<w:style w:type="table" w:styleId="Big"><w:rPr><w:sz w:val="36"/><w:b/></w:rPr></w:style>
+    #|<w:style w:type="paragraph" w:styleId="Body"><w:rPr><w:sz w:val="20"/></w:rPr></w:style>
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:tbl><w:tblPr><w:tblStyle w:val="Big"/></w:tblPr><w:tblGrid><w:gridCol w:w="2880"/></w:tblGrid><w:tr><w:tc><w:p><w:r><w:t>plain</w:t></w:r></w:p></w:tc><w:tc><w:p><w:pPr><w:pStyle w:val="Body"/></w:pPr><w:r><w:t>styled</w:t></w:r></w:p></w:tc></w:tr></w:tbl>
+      ),
+      styles~,
+    ),
+  )
+  guard! doc.blocks[0] is TableBlock(table~, ..)
+  let plain = table.rows[0].cells[0].content[0].runs[0].style
+  inspect(plain.size_pt, content="18")
+  assert_true(plain.bold)
+  // the paragraph style's 10pt overrides the table style's 18pt; the
+  // bold, which Body does not address, survives from the table style
+  let styled = table.rows[0].cells[1].content[0].runs[0].style
+  inspect(styled.size_pt, content="10")
+  assert_true(styled.bold)
+}
+
+///|
 test "content controls are still reported as unsupported" {
   let doc = @docx.read_docx(
     docx_bytes(
