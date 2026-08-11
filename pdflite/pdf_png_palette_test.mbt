@@ -270,6 +270,37 @@ test "a tRNS longer than the palette is malformed even when opaque" {
 }
 
 ///|
+test "a duplicate tRNS chunk is malformed" {
+  // PNG allows one tRNS at most, and last-write-wins would let a second,
+  // shorter chunk hide that the first named entries the palette does not
+  // have: overlong 6, then conforming 5, against a 5-entry palette.
+  let (_, _, palette, _) = png_palette_p8_for_test()
+  let file = png_palette_file_for_test(4, 2, 8, 0, [
+    ([0x50, 0x4C, 0x54, 0x45], palette),
+    (
+      [0x74, 0x52, 0x4E, 0x53],
+      png_palette_bytes_for_test([255, 255, 255, 255, 255, 255]),
+    ),
+    (
+      [0x74, 0x52, 0x4E, 0x53],
+      png_palette_bytes_for_test([255, 255, 255, 255, 255]),
+    ),
+    ([0x49, 0x44, 0x41, 0x54], @flate.pdf_flate_encode(b"\x00\x00\x00\x00\x00")),
+  ])
+  let bad : Result[@pdflite.PdfPNG, Error] = try
+    @pdflite.pdf_read_png(file)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
+  guard bad is Err(@core.PdfError::BadPNG(message)) else {
+    fail("expected a duplicate tRNS to raise BadPNG")
+  }
+  @test.assert_eq(message, "read_png: duplicate tRNS chunk")
+}
+
+///|
 test "pdf_read_png rejects a malformed or oversized PLTE" {
   // Four bytes is not a whole number of RGB triples.
   let ragged = png_palette_file_for_test(1, 1, 8, 0, [

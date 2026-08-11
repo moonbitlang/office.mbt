@@ -169,6 +169,12 @@ fn pdf_read_png_view_inner(data : BytesView) -> PdfPNG raise @core.PdfError {
               raise BadPNG("read_png: palette transparency not supported")
             }
           }
+          // PNG allows one tRNS at most. Last-write-wins would let a
+          // second, shorter chunk hide that the first named entries the
+          // palette does not have.
+          if trns_entries is Some(_) {
+            raise BadPNG("read_png: duplicate tRNS chunk")
+          }
           trns_entries = Some(chunk_data.length())
         }
     }
