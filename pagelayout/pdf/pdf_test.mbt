@@ -16,14 +16,20 @@ fn as_text(bytes : Bytes) -> String {
 /// and at the *content* streams only. Decoding everything would let an
 /// operator assertion match bytes inside an image's pixels or a font
 /// program, passing on a coincidence rather than on the emitter.
+///
+/// Assertions about dictionaries (font types, /XObject) belong to
+/// `as_text` over the file bytes instead: this haystack can never
+/// contain them, so a negative would pass here vacuously.
 fn as_decoded_text(bytes : Bytes) -> String raise {
   let document = @pdflite.pdf_decompress_pdf(
     @pdflite.pdf_read_document_from_bytes(bytes),
   )
   let sb = StringBuilder()
   for page in document.pages_of_pagetree() {
+    // pdflite's traversal resolves /Contents and surfaces only stream
+    // entries, so these guards catch unmaterialized data rather than
+    // every malformed shape.
     for entry in page.content {
-      // a parsed page's /Contents are indirect references
       let stream = match entry {
         PdfIndirect(number) => document.lookup_object_or_null(number)
         direct => direct
@@ -37,6 +43,13 @@ fn as_decoded_text(bytes : Bytes) -> String raise {
       sb.write_string(as_text(data))
       sb.write_char('\n')
     }
+  }
+  // An empty haystack satisfies every negative and fails every positive
+  // for reasons that have nothing to do with the emitter. All callers
+  // render at least one page with content, so emptiness is a harness
+  // defect, not a result.
+  if sb.is_empty() {
+    fail("no page content streams found")
   }
   sb.to_string()
 }
@@ -458,10 +471,14 @@ test "a face goes composite only for characters it can actually draw" {
     }),
   )
   model.pages.push(page)
-  let text = try! as_decoded_text(@pdf.render_pdf(model))
-  assert_false(text.contains("/Type0"))
+  let bytes = @pdf.render_pdf(model)
+  // /Type0 would appear in the font dictionary, so its absence must be
+  // asserted against the file bytes — decoded page content can never
+  // contain a font-dictionary name, and the negative would pass there
+  // vacuously
+  assert_false(as_text(bytes).contains("/Type0"))
   // the tail still resumes at the position the layout gave it
-  assert_true(text.contains("1 0 0 1 24 80 Tm"))
+  assert_true(try! as_decoded_text(bytes).contains("1 0 0 1 24 80 Tm"))
 }
 
 ///|
