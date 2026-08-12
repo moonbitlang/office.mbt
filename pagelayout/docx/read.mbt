@@ -276,6 +276,7 @@ fn read_paragraph(
             }
         }
       }
+
       match counters.advance(numbering, num_id, depth) {
         Some(label) => {
           // Word styles a marker from the level's own w:rPr over the
@@ -317,6 +318,19 @@ fn read_paragraph(
       }
     }
     (None, _) => ()
+  }
+  // Applied once, here, where the indents are final: the style cascade's
+  // came with resolve(), and a numbering level's — which override them —
+  // just landed above. Inserting earlier would leave a stop derived from
+  // superseded indents in the ruler for a mid-paragraph tab to hit.
+  //
+  // w:doNotUseIndentAsNumberingTabStop — the narrower compat switch that
+  // disables this for the marker's suffix tab only — is not honored: the
+  // stop lives in the paragraph's shared ruler, and a marker-only stop
+  // would need the suffix tab resolved against its own. Recorded with
+  // the known gaps at the end of this file.
+  if sheet.hang_ind_tab {
+    style = style.with_hanging_tab_stop()
   }
   let block = @paginate.Block::paragraph(
     { runs, style },
@@ -460,6 +474,7 @@ pub fn read_docx(docx : Bytes) -> DocxDocument raise {
   // w:defaultTabStop sets the interval tabs fall back to past the last
   // explicit stop
   let mut even_and_odd = false
+  let mut hang_ind_tab = true
   let default_tab_pt = match archive.get("word/settings.xml") {
     Some(part) => {
       let settings = @xml.read_xml_bytes_limited(
@@ -471,6 +486,14 @@ pub fn read_docx(docx : Bytes) -> DocxDocument raise {
       even_and_odd = match settings.first("w:evenAndOddHeaders") {
         Some(el) => parse_toggle(el)
         None => false
+      }
+      match settings.first("w:compat") {
+        Some(compat) =>
+          match compat.first("w:noTabHangInd") {
+            Some(el) => if parse_toggle(el) { hang_ind_tab = false }
+            None => ()
+          }
+        None => ()
       }
       match settings.first("w:defaultTabStop") {
         Some(el) =>
@@ -502,6 +525,9 @@ pub fn read_docx(docx : Bytes) -> DocxDocument raise {
       )
     None => StyleSheet::empty()
   }
+  // document-wide compat state travels with the sheet, so table cells
+  // and furniture see it without more plumbing
+  let sheet = { ..sheet, hang_ind_tab, }
   let rels_for_images = match archive.get("word/_rels/document.xml.rels") {
     Some(part) =>
       read_relationships(
@@ -633,6 +659,11 @@ pub fn render_docx(docx : Bytes) -> @pagelayout.PageModel raise {
 //     document elsewhere is reported as missing.
 //   * Toggle properties merge last-wins through the style chain; ECMA-376
 //     §17.7.3 combines toggles set at multiple *style* levels by XOR.
+//   * `w:doNotUseIndentAsNumberingTabStop` is not honored. The hanging
+//     indent's implicit tab stop lives in the paragraph's shared ruler,
+//     and that compat switch would remove it for the marker's suffix tab
+//     only — which needs the suffix tab resolved against its own ruler.
+//     The document-wide `w:noTabHangInd` IS honored.
 
 ///|
 /// `w:headerReference`/`w:footerReference` entries from a `w:sectPr`:

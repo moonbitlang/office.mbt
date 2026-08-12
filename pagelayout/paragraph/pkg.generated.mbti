@@ -118,6 +118,7 @@ pub fn ParagraphStyle::not_equal(Self, Self) -> Bool
 pub fn ParagraphStyle::to_json(Self) -> Json
 #deprecated
 pub fn ParagraphStyle::to_repr(Self) -> @debug.Repr
+pub fn ParagraphStyle::with_hanging_tab_stop(Self) -> Self
 
 pub(all) struct PlacedRun {
   font : @pagelayout.FontSpec

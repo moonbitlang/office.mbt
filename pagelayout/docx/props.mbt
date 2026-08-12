@@ -216,7 +216,12 @@ pub fn ParaProps::resolve(
   self : ParaProps,
   default_tab_pt? : Double = 36.0,
 ) -> @paragraph.ParagraphStyle {
-  {
+  // The implicit hanging-indent tab stop is NOT inserted here: a
+  // numbering level's indents can still override these after resolution,
+  // and a stop derived from superseded indents would linger in the ruler
+  // for a mid-paragraph tab to hit. The reader applies
+  // ParagraphStyle::with_hanging_tab_stop once, where indents are final.
+  let resolved = @paragraph.ParagraphStyle::{
     align: self.align.unwrap_or(AlignLeft),
     indent_left_pt: twips_pt(self.indent_left),
     indent_right_pt: twips_pt(self.indent_right),
@@ -225,8 +230,30 @@ pub fn ParaProps::resolve(
     space_after_pt: twips_pt(self.space_after),
     line_spacing: self.line_spacing.unwrap_or(Single),
     tabs: {
-      stops: self.tabs.unwrap_or([]),
+      // Sorted by position: the ruler returns the first qualifying stop
+      // in array order, so an unsorted list — legal in a hand-built
+      // document even though Word writes ascending — would make a tab
+      // skip a nearer stop for a farther one that merely sorts earlier.
+      // The source index breaks position ties, because Array::sort_by is
+      // unstable and two authored stops at one position must keep their
+      // authored order — they differ in alignment.
+      stops: {
+        let indexed = []
+        for i, stop in self.tabs.unwrap_or([]) {
+          indexed.push((i, stop))
+        }
+        indexed.sort_by((a, b) => {
+          let by_position = a.1.position_pt.compare(b.1.position_pt)
+          if by_position != 0 {
+            by_position
+          } else {
+            a.0.compare(b.0)
+          }
+        })
+        indexed.map(pair => pair.1)
+      },
       default_interval_pt: default_tab_pt,
     },
   }
+  resolved
 }

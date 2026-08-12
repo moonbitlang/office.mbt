@@ -23,6 +23,9 @@ pub struct StyleSheet {
   character_styles : Map[String, StyleEntry]
   table_styles : Map[String, StyleEntry]
   default_paragraph_style : String?
+  /// `w:compat/w:noTabHangInd`: when set, a hanging indent supplies no
+  /// implicit tab stop. Document-wide, so it travels with the sheet.
+  hang_ind_tab : Bool
 }
 
 ///|
@@ -33,6 +36,7 @@ pub fn StyleSheet::empty() -> StyleSheet {
     default_para: ParaProps::empty(),
     paragraph_styles: Map([]),
     table_styles: Map([]),
+    hang_ind_tab: true,
     character_styles: Map([]),
     default_paragraph_style: None,
   }

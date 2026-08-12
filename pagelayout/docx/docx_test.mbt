@@ -6,6 +6,7 @@ fn docx_bytes(
   styles? : String,
   theme? : String,
   numbering? : String,
+  settings? : String,
 ) -> Bytes raise {
   let archive = @zip.Archive::new()
   let document = (
@@ -48,6 +49,18 @@ fn docx_bytes(
         s +
         "</w:styles>"
       archive.add("word/styles.xml", @utf8.encode(styles_xml))
+    }
+    None => ()
+  }
+  match settings {
+    Some(st) => {
+      let settings_xml = (
+          #|<?xml version="1.0" encoding="UTF-8"?>
+          #|<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+        ) +
+        st +
+        "</w:settings>"
+      archive.add("word/settings.xml", @utf8.encode(settings_xml))
     }
     None => ()
   }
@@ -1462,4 +1475,137 @@ test "a field this engine cannot compute keeps its cached result" {
   guard! doc.furniture.footer[0] is Paragraph(input~, ..)
   debug_inspect(input.runs[0].field, content="NotAField")
   inspect(input.runs[0].text, content="see section 4")
+}
+
+///|
+test "a level's off-grid hanging indent reaches the marker tab's ruler" {
+  // numbering ind: left=1352 twips (67.6pt), hanging=360 (18pt). The
+  // level's indents land after the style cascade resolves, so the
+  // implicit hanging stop has to be re-derived from them — this is the
+  // technical manual's exact geometry, where missing it started every
+  // numbered first line 4.4pt late and cascaded the paragraph's wraps.
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>item</w:t></w:r></w:p>
+      ),
+      numbering=(
+        #|<w:abstractNum w:abstractNumId="100"><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="lowerLetter"/><w:lvlText w:val="(%1)"/><w:pPr><w:ind w:left="1352" w:hanging="360"/></w:pPr></w:lvl></w:abstractNum>
+        #|<w:num w:numId="1"><w:abstractNumId w:val="100"/></w:num>
+      ),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  inspect(input.style.indent_left_pt, content="67.6")
+  inspect(input.style.indent_first_pt, content="-18")
+  debug_inspect(
+    input.style.tabs.stops,
+    content="[{ position_pt: 67.6, align: TabLeft }]",
+  )
+}
+
+///|
+test "a direct hanging indent gets the implicit stop too" {
+  // Same rule, other arrival path: these indents come from w:pPr through
+  // the cascade, not from a numbering level.
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:ind w:left="1352" w:hanging="360"/></w:pPr><w:r><w:t>x</w:t></w:r></w:p>
+      ),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  debug_inspect(
+    input.style.tabs.stops,
+    content="[{ position_pt: 67.6, align: TabLeft }]",
+  )
+}
+
+///|
+test "noTabHangInd disables the hanging indent's implicit stop" {
+  // The document-wide compat switch: with it, a tab in a hanging
+  // paragraph falls back to the default grid (72pt here), not the
+  // indent's text position.
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:ind w:left="1352" w:hanging="360"/></w:pPr><w:r><w:t>x</w:t></w:r></w:p>
+      ),
+      settings=(
+        #|<w:compat><w:noTabHangInd/></w:compat>
+      ),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  debug_inspect(input.style.tabs.stops, content="[]")
+}
+
+///|
+test "authored tab stops are sorted into position order" {
+  // The ruler returns the first qualifying stop in array order, so a
+  // hand-built document listing 100 before 50 would otherwise send a tab
+  // from the left past the nearer stop.
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:tabs><w:tab w:val="left" w:pos="2000"/><w:tab w:val="left" w:pos="1000"/></w:tabs></w:pPr><w:r><w:t>x</w:t></w:r></w:p>
+      ),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  debug_inspect(
+    input.style.tabs.stops,
+    content=(
+      #|[
+      #|  { position_pt: 50, align: TabLeft },
+      #|  { position_pt: 100, align: TabLeft },
+      #|]
+    ),
+  )
+}
+
+///|
+test "an authored stop at the hanging position keeps its alignment" {
+  // The implicit stop must not shadow or replace an explicit stop the
+  // author placed at the same position with a different alignment.
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:ind w:left="1352" w:hanging="360"/><w:tabs><w:tab w:val="right" w:pos="1352"/></w:tabs></w:pPr><w:r><w:t>x</w:t></w:r></w:p>
+      ),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  debug_inspect(
+    input.style.tabs.stops,
+    content="[{ position_pt: 67.6, align: TabRight }]",
+  )
+}
+
+///|
+test "equal-position stops keep authored order through the sort" {
+  // Seventeen stops — enough to leave the sorter's insertion-sort path,
+  // where an unstable sort may genuinely reorder — with two at 800 twips
+  // whose alignments differ. The authored right stop precedes the center
+  // one and must still precede it after sorting; a swap would change
+  // which alignment a tab arriving before 40pt receives.
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:tabs><w:tab w:val="left" w:pos="300"/><w:tab w:val="left" w:pos="500"/><w:tab w:val="left" w:pos="900"/><w:tab w:val="right" w:pos="800"/><w:tab w:val="left" w:pos="400"/><w:tab w:val="left" w:pos="600"/><w:tab w:val="left" w:pos="100"/><w:tab w:val="left" w:pos="1300"/><w:tab w:val="left" w:pos="700"/><w:tab w:val="left" w:pos="1100"/><w:tab w:val="left" w:pos="1200"/><w:tab w:val="left" w:pos="1400"/><w:tab w:val="left" w:pos="1500"/><w:tab w:val="left" w:pos="1600"/><w:tab w:val="center" w:pos="800"/><w:tab w:val="left" w:pos="200"/><w:tab w:val="left" w:pos="1000"/></w:tabs></w:pPr><w:r><w:t>x</w:t></w:r></w:p>
+      ),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  let stops = input.style.tabs.stops
+  inspect(stops.length(), content="17")
+  // 800tw = 40pt: the pair sits at indices 7 and 8 once sorted
+  debug_inspect(stops[7].align, content="TabRight")
+  debug_inspect(stops[8].align, content="TabCenter")
+  inspect(stops[7].position_pt, content="40")
+  inspect(stops[8].position_pt, content="40")
+  // and the ends are where sorting must put them
+  inspect(stops[0].position_pt, content="5")
+  inspect(stops[16].position_pt, content="80")
 }
