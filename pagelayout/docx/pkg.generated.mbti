@@ -149,6 +149,7 @@ pub struct StyleSheet {
   character_styles : Map[String, StyleEntry]
   table_styles : Map[String, StyleEntry]
   default_paragraph_style : String?
+  hang_ind_tab : Bool
 }
 pub fn StyleSheet::empty() -> Self
 pub fn StyleSheet::for_table(Self, String?) -> Self

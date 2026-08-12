@@ -230,7 +230,14 @@ pub fn ParaProps::resolve(
     space_after_pt: twips_pt(self.space_after),
     line_spacing: self.line_spacing.unwrap_or(Single),
     tabs: {
-      stops: self.tabs.unwrap_or([]),
+      // Sorted by position: the ruler returns the first qualifying stop
+      // in array order, so an unsorted list — legal in a hand-built
+      // document even though Word writes ascending — would make a tab
+      // skip a nearer stop for a farther one that merely sorts earlier.
+      stops: self.tabs
+      .unwrap_or([])
+      .copy()
+      ..sort_by((a, b) => a.position_pt.compare(b.position_pt)),
       default_interval_pt: default_tab_pt,
     },
   }

@@ -6,6 +6,7 @@ fn docx_bytes(
   styles? : String,
   theme? : String,
   numbering? : String,
+  settings? : String,
 ) -> Bytes raise {
   let archive = @zip.Archive::new()
   let document = (
@@ -48,6 +49,18 @@ fn docx_bytes(
         s +
         "</w:styles>"
       archive.add("word/styles.xml", @utf8.encode(styles_xml))
+    }
+    None => ()
+  }
+  match settings {
+    Some(st) => {
+      let settings_xml = (
+          #|<?xml version="1.0" encoding="UTF-8"?>
+          #|<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+        ) +
+        st +
+        "</w:settings>"
+      archive.add("word/settings.xml", @utf8.encode(settings_xml))
     }
     None => ()
   }
@@ -1506,5 +1519,66 @@ test "a direct hanging indent gets the implicit stop too" {
   debug_inspect(
     input.style.tabs.stops,
     content="[{ position_pt: 67.6, align: TabLeft }]",
+  )
+}
+
+///|
+test "noTabHangInd disables the hanging indent's implicit stop" {
+  // The document-wide compat switch: with it, a tab in a hanging
+  // paragraph falls back to the default grid (72pt here), not the
+  // indent's text position.
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:ind w:left="1352" w:hanging="360"/></w:pPr><w:r><w:t>x</w:t></w:r></w:p>
+      ),
+      settings=(
+        #|<w:compat><w:noTabHangInd/></w:compat>
+      ),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  debug_inspect(input.style.tabs.stops, content="[]")
+}
+
+///|
+test "authored tab stops are sorted into position order" {
+  // The ruler returns the first qualifying stop in array order, so a
+  // hand-built document listing 100 before 50 would otherwise send a tab
+  // from the left past the nearer stop.
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:tabs><w:tab w:val="left" w:pos="2000"/><w:tab w:val="left" w:pos="1000"/></w:tabs></w:pPr><w:r><w:t>x</w:t></w:r></w:p>
+      ),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  debug_inspect(
+    input.style.tabs.stops,
+    content=(
+      #|[
+      #|  { position_pt: 50, align: TabLeft },
+      #|  { position_pt: 100, align: TabLeft },
+      #|]
+    ),
+  )
+}
+
+///|
+test "an authored stop at the hanging position keeps its alignment" {
+  // The implicit stop must not shadow or replace an explicit stop the
+  // author placed at the same position with a different alignment.
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:ind w:left="1352" w:hanging="360"/><w:tabs><w:tab w:val="right" w:pos="1352"/></w:tabs></w:pPr><w:r><w:t>x</w:t></w:r></w:p>
+      ),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  debug_inspect(
+    input.style.tabs.stops,
+    content="[{ position_pt: 67.6, align: TabRight }]",
   )
 }
