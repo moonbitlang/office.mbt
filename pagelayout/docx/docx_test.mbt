@@ -1582,3 +1582,30 @@ test "an authored stop at the hanging position keeps its alignment" {
     content="[{ position_pt: 67.6, align: TabRight }]",
   )
 }
+
+///|
+test "equal-position stops keep authored order through the sort" {
+  // Seventeen stops — enough to leave the sorter's insertion-sort path,
+  // where an unstable sort may genuinely reorder — with two at 800 twips
+  // whose alignments differ. The authored right stop precedes the center
+  // one and must still precede it after sorting; a swap would change
+  // which alignment a tab arriving before 40pt receives.
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:tabs><w:tab w:val="left" w:pos="300"/><w:tab w:val="left" w:pos="500"/><w:tab w:val="left" w:pos="900"/><w:tab w:val="right" w:pos="800"/><w:tab w:val="left" w:pos="400"/><w:tab w:val="left" w:pos="600"/><w:tab w:val="left" w:pos="100"/><w:tab w:val="left" w:pos="1300"/><w:tab w:val="left" w:pos="700"/><w:tab w:val="left" w:pos="1100"/><w:tab w:val="left" w:pos="1200"/><w:tab w:val="left" w:pos="1400"/><w:tab w:val="left" w:pos="1500"/><w:tab w:val="left" w:pos="1600"/><w:tab w:val="center" w:pos="800"/><w:tab w:val="left" w:pos="200"/><w:tab w:val="left" w:pos="1000"/></w:tabs></w:pPr><w:r><w:t>x</w:t></w:r></w:p>
+      ),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  let stops = input.style.tabs.stops
+  inspect(stops.length(), content="17")
+  // 800tw = 40pt: the pair sits at indices 7 and 8 once sorted
+  debug_inspect(stops[7].align, content="TabRight")
+  debug_inspect(stops[8].align, content="TabCenter")
+  inspect(stops[7].position_pt, content="40")
+  inspect(stops[8].position_pt, content="40")
+  // and the ends are where sorting must put them
+  inspect(stops[0].position_pt, content="5")
+  inspect(stops[16].position_pt, content="80")
+}

@@ -234,10 +234,24 @@ pub fn ParaProps::resolve(
       // in array order, so an unsorted list — legal in a hand-built
       // document even though Word writes ascending — would make a tab
       // skip a nearer stop for a farther one that merely sorts earlier.
-      stops: self.tabs
-      .unwrap_or([])
-      .copy()
-      ..sort_by((a, b) => a.position_pt.compare(b.position_pt)),
+      // The source index breaks position ties, because Array::sort_by is
+      // unstable and two authored stops at one position must keep their
+      // authored order — they differ in alignment.
+      stops: {
+        let indexed = []
+        for i, stop in self.tabs.unwrap_or([]) {
+          indexed.push((i, stop))
+        }
+        indexed.sort_by((a, b) => {
+          let by_position = a.1.position_pt.compare(b.1.position_pt)
+          if by_position != 0 {
+            by_position
+          } else {
+            a.0.compare(b.0)
+          }
+        })
+        indexed.map(pair => pair.1)
+      },
       default_interval_pt: default_tab_pt,
     },
   }
