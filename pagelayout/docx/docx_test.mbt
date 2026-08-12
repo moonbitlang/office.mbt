@@ -1490,3 +1490,21 @@ test "a level's off-grid hanging indent reaches the marker tab's ruler" {
     content="[{ position_pt: 67.6, align: TabLeft }]",
   )
 }
+
+///|
+test "a direct hanging indent gets the implicit stop too" {
+  // Same rule, other arrival path: these indents come from w:pPr through
+  // the cascade, not from a numbering level.
+  let doc = @docx.read_docx(
+    docx_bytes(
+      (
+        #|<w:p><w:pPr><w:ind w:left="1352" w:hanging="360"/></w:pPr><w:r><w:t>x</w:t></w:r></w:p>
+      ),
+    ),
+  )
+  guard! doc.blocks[0] is Paragraph(input~, ..)
+  debug_inspect(
+    input.style.tabs.stops,
+    content="[{ position_pt: 67.6, align: TabLeft }]",
+  )
+}

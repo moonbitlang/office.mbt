@@ -276,10 +276,7 @@ fn read_paragraph(
             }
         }
       }
-      // The level's indents arrive after ParaProps::resolve built the
-      // ruler, so the hanging stop the marker's suffix tab aims for has
-      // to be re-derived from them.
-      style = style.with_hanging_tab_stop()
+
       match counters.advance(numbering, num_id, depth) {
         Some(label) => {
           // Word styles a marker from the level's own w:rPr over the
@@ -322,6 +319,11 @@ fn read_paragraph(
     }
     (None, _) => ()
   }
+  // Applied once, here, where the indents are final: the style cascade's
+  // came with resolve(), and a numbering level's — which override them —
+  // just landed above. Inserting earlier would leave a stop derived from
+  // superseded indents in the ruler for a mid-paragraph tab to hit.
+  style = style.with_hanging_tab_stop()
   let block = @paginate.Block::paragraph(
     { runs, style },
     keep_lines=resolved_para.keep_lines.unwrap_or(false),
